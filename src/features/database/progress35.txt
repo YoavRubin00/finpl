@@ -1,0 +1,106 @@
+# Progress Log — PRD 35: Neon PostgreSQL + Drizzle ORM Integration
+
+## Learnings
+
+### Patterns
+- (populated after first iteration)
+
+### Traps
+- (populated after first iteration)
+
+### Files modified
+- (populated after first iteration)
+
+---
+
+## Iteration 1 — US-001: Install dependencies + Drizzle config
+- Installed `drizzle-orm` + `@neondatabase/serverless` as runtime deps
+- Installed `drizzle-kit` as devDependency
+- Created `drizzle.config.ts` at project root (dialect: postgresql, out: ./src/db, schema: ./src/db/schema.ts)
+- Created placeholder `src/db/schema.ts` (will be populated by db pull in US-002)
+- Files affected: `package.json`, `package-lock.json`, `drizzle.config.ts`, `src/db/schema.ts`
+- Learnings for next cycles:
+  - Patterns: drizzle.config.ts uses `satisfies Config` for type safety
+  - Traps: Need placeholder schema.ts so tsc doesn't complain about missing imports later
+  - Helpful context: No new TS errors introduced; pre-existing errors in FeedSidebar, useClashStore, GlassOverlay confirmed
+---
+
+## Iteration 2 — US-002: Generate schema via db pull
+- Ran `DATABASE_URL=... npx drizzle-kit pull` successfully
+- Generated 3 files: `src/db/schema.ts`, `src/db/relations.ts`, `src/db/0000_confused_wallow.sql`
+- Schema contains all 6 tables: userProfiles (16 cols), moduleProgress (11 cols), inventory (9 cols), aiMentorUsage (4 cols), paperPortfolio (6 cols), paperTrades (8 cols) — 58 columns total
+- 5 foreign keys (all → userProfiles.id with CASCADE delete), 5 indexes, 3 check constraints
+- No new TS errors introduced
+- Files affected: `src/db/schema.ts`, `src/db/relations.ts`, `src/db/0000_confused_wallow.sql`
+- Learnings for next cycles:
+  - Patterns: drizzle-kit pull auto-generates relations.ts alongside schema.ts; also generates SQL migration file
+  - Patterns: All tables use uuid primary key with `uuid_generate_v4()` default
+  - Patterns: userProfiles is the root entity — all other tables FK to it
+  - Traps: DATABASE_URL must be passed as env var prefix to the command, not just in .env
+  - Helpful context: Schema uses `mode: 'string'` for timestamps — dates come back as ISO strings
+---
+
+## Iteration 3 — US-003: Create DB client
+- Created `src/db/client.ts` — singleton Drizzle instance using `neon()` HTTP driver + `drizzle()` wrapper
+- Imports all schema tables via `* as schema` for relational query support
+- DATABASE_URL fallback chain: `process.env.DATABASE_URL` → `process.env.EXPO_PUBLIC_DATABASE_URL` → empty string
+- No new TS errors introduced
+- Files affected: `src/db/client.ts`
+- Learnings for next cycles:
+  - Patterns: `drizzle-orm/neon-http` is the correct import path for Neon HTTP driver (not `drizzle-orm/neon-serverless`)
+  - Patterns: Passing `{ schema }` to `drizzle()` enables relational queries (db.query.userProfiles.findFirst etc.)
+  - Traps: None encountered
+  - Helpful context: The `db` export is fully typed — intellisense works for all 6 tables
+---
+
+## Iteration 4 — US-004: Sync user_profiles with useAuthStore
+- Created `src/db/sync/syncUserProfile.ts` with two exports:
+  - `upsertUserProfile(authId, data)` — insert or update via `onConflictDoUpdate` on `authId` unique constraint
+  - `fetchUserProfile(authId)` — select by authId, returns row or null
+- Hooked `upsertUserProfile` into `useAuthStore.signIn` as fire-and-forget (`.catch(() => {})`)
+- Uses email as authId (the unique identifier from the auth flow)
+- No new TS errors introduced
+- Files affected: `src/db/sync/syncUserProfile.ts` (new), `src/features/auth/useAuthStore.ts` (modified)
+- Learnings for next cycles:
+  - Patterns: `onConflictDoUpdate` with `target` pointing to a unique column is the Drizzle upsert pattern
+  - Patterns: Fire-and-forget with `.catch(() => {})` keeps UI non-blocking per PRD technical notes
+  - Patterns: `eq()` from `drizzle-orm` for WHERE clauses
+  - Traps: `authId` is the user identifier (email-based), not a UUID — userProfiles.id is the internal UUID PK
+  - Helpful context: UpsertUserProfileData interface covers all mutable columns; timestamps are auto-managed
+---
+
+## Iteration 5 — US-005: Sync module_progress with useChapterStore
+- Created `src/db/sync/syncModuleProgress.ts` with two exports:
+  - `upsertModuleProgress(authId, data)` — resolves authId → UUID via userProfiles, then upserts into module_progress using `(userId, moduleId)` composite unique constraint
+  - `fetchModuleProgress(authId)` — resolves authId → UUID, then selects all module_progress rows for that user
+- Helper `resolveUserId(authId)` looks up userProfiles.id by authId (email) — needed because module_progress.userId is a UUID FK, not the email
+- Hooked `upsertModuleProgress` into `useChapterStore.completeModule` as fire-and-forget (`.catch(() => {})`)
+- Passes quiz results (correct count, total attempts) and xpEarned from the store
+- No new TS errors introduced
+- Files affected: `src/db/sync/syncModuleProgress.ts` (new), `src/features/chapter-1-content/useChapterStore.ts` (modified), `src/features/database/PRD35_NeonDBIntegration.md` (updated)
+- Learnings for next cycles:
+  - Patterns: module_progress uses composite unique on (userId, moduleId) — pass both to `onConflictDoUpdate.target` as array
+  - Patterns: Need a `resolveUserId(authId)` helper since child tables FK to userProfiles.id (UUID), not authId (email)
+  - Patterns: Same fire-and-forget pattern as US-004 — `.catch(() => {})` keeps UI non-blocking
+  - Traps: Must resolve email → UUID before inserting into child tables; direct email won't work as userId
+  - Helpful context: `useAuthStore.getState().email` is the authId used across sync functions
+---
+
+## Iteration 6 — US-006: Sync inventory with useEconomyStore
+- Created `src/db/sync/syncInventory.ts` with two exports:
+  - `upsertInventory(authId, { xp, coins, gems })` — updates user_profiles row by authId with current economy values
+  - `fetchInventory(authId)` — selects xp, coins, gems from user_profiles by authId, returns object or null
+- Note: XP/coins/gems live on `user_profiles` table (not `inventory` table — that's for items like chests/boosters)
+- Used `db.update()` instead of upsert since the user profile row should already exist (created during sign-in via US-004)
+- Hooked into `useEconomyStore.addXP`, `addCoins`, `addGems` — after `set()`, reads updated state via `get()` and fires upsertInventory
+- authId sourced from `useAuthStore.getState().email` (same pattern as US-004/US-005)
+- No new TS errors introduced
+- Files affected: `src/db/sync/syncInventory.ts` (new), `src/features/economy/useEconomyStore.ts` (modified), `src/features/database/PRD35_NeonDBIntegration.md` (updated)
+- Learnings for next cycles:
+  - Patterns: Economy values (xp, coins, gems) are columns on user_profiles, not on the inventory table
+  - Patterns: `db.update().set().where()` is simpler than upsert when the row is guaranteed to exist
+  - Patterns: After Zustand `set()`, `get()` immediately reflects the new state (synchronous)
+  - Traps: Don't confuse `inventory` DB table (items) with economy/currency values (on user_profiles)
+  - Helpful context: spendCoins/spendGems not synced — could add later if needed for consistency
+---
+

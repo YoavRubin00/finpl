@@ -1,0 +1,99 @@
+# Progress Log — PRD 36: Avatar System
+
+## Learnings
+- `useAuthStore` is at `src/features/auth/useAuthStore.ts` — add avatarId + ownedAvatars + setAvatar there
+- `UserProfile` interface is in `src/features/auth/types.ts`
+- `ProfilingFlow.tsx` is at `src/features/onboarding/ProfilingFlow.tsx` — add new step at the end (before completeOnboarding call)
+- `SHOP_CATEGORIES` and `SHOP_ITEMS` are in `src/features/shop/shopItems.ts`
+- `ShopCategory` type is in `src/features/shop/types.ts`
+- `GlobalWealthHeader` is at `src/components/ui/GlobalWealthHeader.tsx`
+- `ProfileScreen` is at `src/features/profile/ProfileScreen.tsx`
+- Pre-existing TS errors (ignore): FeedSidebar.tsx CLASH.primary, useClashStore.ts XPSource, GlassOverlay.tsx expo-blur
+- Avatar bubbles: large circle (80px) with `CLASH.goldBorder` border + dark bg + emoji centered
+- ProfilingFlow pattern: add step to STEPS array, add case in renderStep switch, bump TOTAL_STEPS
+
+---
+
+## Iteration 1 — Add avatarId/ownedAvatars to UserProfile + setAvatar/addOwnedAvatar to useAuthStore
+- Added `avatarId: string | null` and `ownedAvatars: string[]` to `UserProfile` interface
+- Added `setAvatar(id)` and `addOwnedAvatar(id)` actions to `useAuthStore` (AuthState interface + implementations)
+- Updated `completeOnboarding` call in `ProfilingFlow.tsx` to include `avatarId: null, ownedAvatars: []`
+- Files affected: `src/features/auth/types.ts`, `src/features/auth/useAuthStore.ts`, `src/features/onboarding/ProfilingFlow.tsx`
+- Learnings for next cycles:
+  - `syncUserProfile.ts` uses its own interface (UpsertUserProfileData), not UserProfile — no changes needed there
+  - `buildChatPrompt.ts` only reads profile fields, doesn't construct UserProfile objects
+  - setAvatar uses immutable update with spread; addOwnedAvatar checks for duplicates before adding
+---
+
+## Iteration 2 — Create avatarData.ts with AVATAR_LIST
+- Created `src/features/avatars/avatarData.ts` with AvatarDefinition interface and AVATAR_LIST (6 free + 4 premium)
+- Exported helpers: FREE_AVATARS, PREMIUM_AVATARS, DEFAULT_AVATAR_EMOJI, getAvatarById(id)
+- Files affected: `src/features/avatars/avatarData.ts` (new)
+- Learnings for next cycles:
+  - `getAvatarById` accepts `string | null` for easy use with `useAuthStore` profile.avatarId
+  - FREE_AVATARS and PREMIUM_AVATARS are pre-filtered for direct use in AvatarPickerStep and Shop
+  - DEFAULT_AVATAR_EMOJI ('🎮') exported for ProfileScreen and GlobalWealthHeader fallback
+---
+
+## Iteration 3 — AvatarPickerStep in ProfilingFlow.tsx
+- Added `AvatarPickerStep` component as step 9 (stepIndex 8) in ProfilingFlow
+- Added `AvatarGridItem` sub-component with staggered entrance animation + scale bounce on selection
+- Grid layout: 3 columns (width "31%") showing 6 free avatars with emoji + Hebrew name
+- Gold border highlight (#d4a017) on selected avatar, matching CLASH.goldBorder
+- "המשך" (Continue) CTA fades in on first selection; calls onNext(avatarId) → slides to celebration
+- Bumped TOTAL_STEPS from 8 → 9, added 🦁 to STEP_MASCOTS
+- Added `avatarId: string | null` to Collected interface
+- Companion step now slides to "avatar" step; avatar step slides to "celebration"
+- handleDone passes `collected.avatarId ?? null` to completeOnboarding
+- Files affected: `src/features/onboarding/ProfilingFlow.tsx`, `src/features/avatars/PRD36_AvatarSystem.md`
+- Learnings for next cycles:
+  - ProfilingFlow uses 3-column grid (31% width) for avatars vs 2-column (48%) for other grid steps
+  - Avatar selection uses gold border (#d4a017) not purple (#7c3aed) to differentiate from other selections
+  - CTA button pattern: hidden initially (opacity 0, scale 0.8), animates in on first selection
+  - avatarId flows through Collected → handleDone → completeOnboarding; setAvatar is NOT called separately
+---
+
+## Iteration 4 — Show Avatar in ProfileScreen (US-002)
+- Replaced placeholder dark circle inside GoldCircleBadge with avatar emoji (fontSize 42) in 80×80 circle with CLASH.bgPrimary background
+- Added avatar Hebrew name label below the GoldCircleBadge (shown only when avatar is set)
+- Falls back to DEFAULT_AVATAR_EMOJI (🎮) when profile.avatarId is null
+- Imported `getAvatarById` and `DEFAULT_AVATAR_EMOJI` from `../avatars/avatarData`
+- Files affected: `src/features/profile/ProfileScreen.tsx`, `src/features/avatars/PRD36_AvatarSystem.md`
+- Learnings for next cycles:
+  - ProfileScreen already uses GoldCircleBadge with size={96} and glowing prop — just swap the child content
+  - profile?.avatarId uses optional chaining since profile can be null
+  - avatarNameLabel only renders when avatarDef exists (non-null avatarId that matches an avatar)
+  - Styles added: avatarInner (80px circle, CLASH.bgPrimary bg), avatarEmoji (fontSize 42), avatarNameLabel (13px, TEXT_SHADOW)
+---
+
+## Iteration 5 — Show Avatar in GlobalWealthHeader (US-003)
+- Added 32×32 avatar bubble at the right end of tokenRow in GlobalWealthHeader
+- Reads avatarId from useAuthStore, resolves emoji via getAvatarById, falls back to DEFAULT_AVATAR_EMOJI (🎮)
+- Tapping the bubble calls router.push("/(tabs)/profile") with haptic feedback
+- Styled with CLASH.goldBorder border, CLASH.bgPrimary bg, gold shadow glow, elevation 4
+- Imports added: useAuthStore, getAvatarById, DEFAULT_AVATAR_EMOJI
+- useRouter was already imported but not used in component body — now used via `const router = useRouter()`
+- Files affected: `src/components/ui/GlobalWealthHeader.tsx`, `src/features/avatars/PRD36_AvatarSystem.md`
+- Learnings for next cycles:
+  - tokenRow uses `justifyContent: 'space-between'` so adding a new element at the end naturally positions it at the far right
+  - Avatar bubble is a simple Pressable (not ResourcePill) since it doesn't need animated counter or plus button
+  - Profile route is `/(tabs)/profile` — matches expo-router file-based routing
+---
+
+## Iteration 6 — Premium Avatars in Shop (US-004)
+- First 3 sub-tasks (ShopCategory type, SHOP_CATEGORIES tab, SHOP_ITEMS entries) were already implemented in prior session
+- Wired avatar purchase logic in ShopScreen: imported useAuthStore, added avatarId/ownedAvatars/setAvatar/addOwnedAvatar selectors
+- Added `isAvatarItem` helper (checks `category === 'avatars'` and `id.startsWith('avatar-')`)
+- `handleBuyPress` now detects owned avatars → calls setAvatar + successHaptic directly (no modal, no cost)
+- `handleConfirm` now calls `addOwnedAvatar(rawId)` + `setAvatar(rawId)` + `successHaptic()` after successful gem spend for avatar items
+- Passed `isEquipped` and `isOwned` props to ShopItemCard based on avatarId/ownedAvatars state
+- ShopItemCard already had equipped/owned UI rendering (done in prior session): "✓ מצויד" badge, "החלף" swap button, "רכוש" buy button
+- Avatar item IDs use `avatar-` prefix; rawId extracted via `item.id.replace('avatar-', '')`
+- Files affected: `src/features/shop/ShopScreen.tsx`, `src/features/avatars/PRD36_AvatarSystem.md`
+- Learnings for next cycles:
+  - Avatar rawId (e.g. "king") maps to avatarData.ts avatarId; shop item id is "avatar-king"
+  - Owned avatars swap immediately without ConfirmModal (better UX — already purchased)
+  - New purchases go through ConfirmModal → handleConfirm → spendGems → addOwnedAvatar + setAvatar
+  - ShopItemCard isEquipped/isOwned props were already added in a prior session's partial work
+---
+

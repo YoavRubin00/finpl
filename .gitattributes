@@ -1,0 +1,16 @@
+# Force LF for EAS ignore file
+.easignore text eol=lf
+
+# Exclude heavy assets from EAS Build archive (git archive)
+assets/video/ export-ignore
+assets/videos/ export-ignore
+assets/comics/ export-ignore
+assets/infographics/ export-ignore
+assets/SOUND/ export-ignore
+notebooklm-py/ export-ignore
+skills/ export-ignore
+docs/ export-ignore
+scripts/ export-ignore
+generated/ export-ignore
+db/ export-ignore
+public/ export-ignore

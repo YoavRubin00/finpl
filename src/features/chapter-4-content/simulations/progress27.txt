@@ -1,0 +1,688 @@
+# Progress Log — PRD 27 (Chapter 4 Simulations — Growth)
+
+## Learnings
+(Notes discovered during implementation)
+
+## Pre-existing TS errors (safe to ignore)
+- FeedSidebar.tsx — CLASH.primary does not exist
+- useClashStore.ts — 'clash_win'/'clash_draw' not assignable to XPSource
+
+---
+
+## Iteration 1 — US-001: Define riskSlider types
+- Created `riskSliderTypes.ts` with AllocationMix, YearReturn, RiskSliderConfig, RiskSliderState, RiskLevel, RiskSliderScore
+- Files affected: `simulations/riskSliderTypes.ts`, `PRD27_Ch4_Sims.md`
+- Learnings for next cycles:
+  - Ch4 simulations dir exists but has no code files yet — only PRD and progress docs
+  - Follow same pattern as ch3 roboAdvisorTypes (Config → State → Score)
+  - RiskLevel exported as a separate type union for reuse
+---
+
+## Iteration 2 — US-002: Create market simulation data (riskSliderData.ts)
+- Created `riskSliderData.ts` with 10-year market history inspired by 2014-2024
+- Stock returns range -30% to +28%, bond returns -5% to +8% (realistic inverse correlation)
+- Pre-computed yearlyHistory for 11 allocation steps (0%, 10%, ... 100% stocks) via `buildYearHistory()`
+- Exported `riskSliderConfig` (RiskSliderConfig) + raw return arrays for hook flexibility
+- Initial investment: ₪100,000
+- Files affected: `simulations/riskSliderData.ts`, `PRD27_Ch4_Sims.md`, `progress27.txt`
+- Learnings for next cycles:
+  - `buildYearHistory` helper available — hook can reuse RAW_STOCK_RETURNS/RAW_BOND_RETURNS for any % (not just 10% steps)
+  - Year 6 is the crash year (-30% stocks, +8% bonds) — good for dramatic chart visuals
+  - Pattern matches roboAdvisorData.ts: constants → data arrays → config export
+---
+
+## Iteration 3 — US-003: Build simulation hook (useRiskSlider.ts)
+- Created `useRiskSlider.ts` with full slider-driven simulation logic
+- `setAllocation(0-100)` recomputes blended history, finalBalance, maxDrawdown, bestYear, worstYear live
+- `computeHistory()` uses RAW_STOCK_RETURNS/RAW_BOND_RETURNS for arbitrary % (not limited to 10% steps)
+- `calcMaxDrawdown()` tracks peak-to-trough decline as percentage
+- Auto-sweep mode: `startSweep()`/`stopSweep()` — advances 1% every 80ms from 0→100
+- `complete()` locks allocation, `score` computed via useMemo only when isComplete
+- `averageReturn` exposed as separate useMemo for live display
+- Initial state starts at 50/50 allocation
+- Files affected: `simulations/useRiskSlider.ts`, `PRD27_Ch4_Sims.md`, `progress27.txt`
+- Learnings for next cycles:
+  - Hook pattern: useState + useRef for intervals + useCallback for actions + useMemo for computed values
+  - Sweep uses useRef for current value to avoid stale closures in setInterval
+  - Score is null until isComplete — screen should check before rendering results
+  - getRiskLevel: ≤30 conservative, ≤60 balanced, >60 aggressive
+---
+
+## Iteration 4 — US-004: Build Risk Slider screen (RiskSliderScreen.tsx)
+- Created `RiskSliderScreen.tsx` with full premium UX:
+  - Hero line chart: 10-year portfolio growth with green (above initial) / red (below) line segments and data points
+  - Allocation bar: horizontal bar showing stock/bond split with color-coded segments
+  - Slider: @react-native-community/slider (newly installed) with blue→green track, disabled during sweep
+  - Stats panel: final value (animated scale on big changes), avg return, max drawdown, best/worst year
+  - Risk meter: gauge from שמרני to אגרסיבי with dynamic fill color (blue/purple/red)
+  - Auto-sweep toggle: 🎬 הרץ / ⏸ עצור button
+  - Complete button: "נעל הקצאה" triggers results phase
+  - Score screen: risk profile banner, summary, stats breakdown, key lesson, XP/Coins rewards, replay/continue
+- Installed `@react-native-community/slider` via `npx expo install`
+- Files affected: `simulations/RiskSliderScreen.tsx`, `PRD27_Ch4_Sims.md`, `progress27.txt`, `package.json`
+- Learnings for next cycles:
+  - @react-native-community/slider is now available project-wide
+  - Chart built with View-based line segments (position: absolute) — works on web, no SVG dependency needed
+  - AllocationBar pattern (horizontal flex bar) reusable for ETF Builder and Portfolio Manager screens
+  - RiskMeter pattern (fill bar with labels) reusable across sims
+  - Pre-existing web export error: `assets\comics\mod-1-3.jpg: Invalid JPG` — unrelated to sim code
+  - ScoreScreen pattern: emoji + label banner → GlowCards with stats → lesson → rewards → actions
+  - formatShekel helper: `₪${Math.round(n).toLocaleString('he-IL')}`
+---
+
+## Iteration 5 — US-005: Results and integration (RiskSlider)
+- Added max drawdown highlight card to ScoreScreen: "הרגע הכי קשה: התיק שלך ירד XX% מהשיא"
+- Created `simulations/index.ts` barrel export with RiskSliderScreen
+- Wired into LessonFlowScreen.tsx:
+  - Import from `../chapter-4-content/simulations`
+  - Added `mod-4-19` to MODULES_WITH_SIM set
+  - Added ternary branch at top of sim phase chain (before mod-3-18)
+- ScoreScreen already had: summary text, key lesson, +30 XP / +20 Coins rewards, replay/continue buttons
+- Files affected: `simulations/RiskSliderScreen.tsx`, `simulations/index.ts` (new), `LessonFlowScreen.tsx`, `PRD27_Ch4_Sims.md`, `progress27.txt`
+- Learnings for next cycles:
+  - Chapter 4 barrel export `index.ts` now exists — future sims just add to it
+  - Integration pattern: import → MODULES_WITH_SIM → ternary chain (newest module at top)
+  - Pre-existing web export error (`mod-1-3.jpg: Invalid JPG`) is unrelated to sim code — safe to ignore
+  - ScoreScreen already handles rewards via useEconomyStore.getState() in useEffect — no need to duplicate
+---
+
+## Iteration 6 — US-006: Define indexLive types
+- `indexLiveTypes.ts` already existed (created in prior session) with all required interfaces
+- SP500Year, IndexLiveConfig, IndexLiveState, IndexLiveScore — all match PRD spec
+- startYearRange stored as tuple [1980, 2020] for slider bounds
+- IndexLiveScore includes selectedReturn, bestReturn, worstReturn, yearsInvested, averageAnnualReturn
+- Typecheck passes — no errors
+- Files affected: `simulations/indexLiveTypes.ts` (pre-existing), `PRD27_Ch4_Sims.md`
+- Learnings for next cycles:
+  - File was already created but PRD wasn't marked — always check file existence before creating
+  - Pattern matches riskSliderTypes: Config → State → Score
+  - IndexLiveScore doesn't have a grade field (unlike RiskSliderScore) — may want to add in screen phase if needed
+  - Next up: US-007 — S&P 500 historical data (indexLiveData.ts)
+---
+
+## Iteration 7 — US-007: Create S&P 500 historical data (indexLiveData.ts)
+- Created `indexLiveData.ts` with 45 years of approximate S&P 500 annual returns (1980-2024)
+- Returns stored as Record<number, number> for easy year-based lookup
+- Key crashes included: 1987 (-22%), 2000-2002 (dot-com triple decline), 2008 (-38%), 2020 (-34%)
+- Key booms: 1995 (+34%), 1997 (+31%), 2013 (+30%), 2019 (+29%), 2021 (+27%)
+- `buildYearData()` builds SP500Year[] with normalized price starting at 100, cumulative return from 1980
+- Exports: `indexLiveConfig` (IndexLiveConfig), `SP500_ANNUAL_RETURNS` (raw Record), `SP500_YEAR_DATA` (pre-built array)
+- Initial investment: ₪10,000, start year range [1980, 2020]
+- 2020 modeled as -34% (capturing the crash narrative, not the full-year net recovery)
+- Files affected: `simulations/indexLiveData.ts` (new), `PRD27_Ch4_Sims.md`, `progress27.txt`
+- Learnings for next cycles:
+  - SP500_ANNUAL_RETURNS is a Record<number, number> — hook can iterate from any startYear to 2024
+  - SP500_YEAR_DATA has cumulative returns from 1980 — useful for the main chart
+  - Price is normalized (starts at 100) — hook should scale by (initialInvestment / 100) for ₪ values
+  - Pattern matches riskSliderData: constants → build function → config export + raw data export
+  - Next up: US-008 — Build simulation hook (useIndexLive.ts)
+---
+
+## Iteration 8 — US-008: Build simulation hook (useIndexLive.ts)
+- Created `useIndexLive.ts` with full slider-driven time machine logic
+- `setStartYear(1980-2020)` recomputes currentValue, totalReturn live
+- `computeValue()` iterates annual returns from startYear→2024 to get final ₪ value
+- `computeTotalReturn()` gives cumulative % return
+- `computeAverageAnnual()` uses geometric mean for proper annualized return
+- `computeYearPath()` builds year-by-year value array for chart rendering
+- `findBestWorstStartYears()` pre-computed once at module load — no recalc needed
+- Best/worst values exposed as `bestValue`/`worstValue` for comparison display
+- `yearPath` exposed for chart: Array<{ year, value }> from startYear to 2025
+- Default start year: 2000 (dot-com peak — dramatic for first impression)
+- Score is null until isComplete — screen should check before rendering results
+- Typecheck passes (only pre-existing FeedSidebar + useClashStore errors)
+- Files affected: `simulations/useIndexLive.ts` (new), `PRD27_Ch4_Sims.md`, `progress27.txt`
+- Learnings for next cycles:
+  - Hook pattern matches useRiskSlider: useState + useCallback for actions + useMemo for computed values
+  - No auto-sweep needed for this sim (single slider, not a continuous animation)
+  - yearPath includes startYear value AND year 2025 (value after 2024 return) — chart should render all points
+  - BEST_START and WORST_START are module-level constants — won't change, no need to recompute
+  - bestValue/worstValue are memoized but effectively constant (investment doesn't change)
+  - Next up: US-009 — Build Index Live screen (IndexLiveScreen.tsx)
+---
+
+## Iteration 9 — US-009: Build Index Live screen (IndexLiveScreen.tsx)
+- Created `IndexLiveScreen.tsx` with full Time Machine premium UX:
+  - Dark background (#0a0a1e) with golden (#d4af37) accent color throughout
+  - TimeDial component: year slider (1980-2020) with large golden year display, styled as a time machine dial
+  - AreaChart component: area chart showing growth from selected start year with:
+    - Line segments colored gold (above initial) / red (below initial)
+    - Semi-transparent area fill below the line
+    - Event markers (emoji) at 1987, 2000, 2008, 2020 crashes
+    - Smart X-axis labels (first, last, every 10th year)
+    - Data points at first, last, and every 5th position to avoid clutter
+  - Hero value counter: animated scale bounce on big value changes (>₪5K diff), golden text
+  - Stats panel: total return, average annual return, years invested
+  - Best/Worst context card: shows best start year, worst start year, and player's choice side by side
+  - Insight banner: "בכל נקודת התחלה — אם החזקת 15+ שנה — לא הפסדת"
+  - ScoreScreen: grade banner, your choice summary, best/worst comparison, worst case highlight (2007), key lesson, rewards (+30 XP, +20 Coins), replay/continue
+  - Haptics: tapHaptic on slider changes, successHaptic when value > 5x initial, heavyHaptic on complete
+  - Rewards granted via useEconomyStore.getState() in useEffect on completion
+- Typecheck passes (only pre-existing FeedSidebar + useClashStore errors)
+- Web export succeeds
+- Files affected: `simulations/IndexLiveScreen.tsx` (new), `PRD27_Ch4_Sims.md`, `progress27.txt`
+- Learnings for next cycles:
+  - Golden theme (#d4af37) with dark bg (#0a0a1e) creates distinct "Time Machine" feel vs Risk Slider's purple/green
+  - AreaChart pattern with event markers reusable for other historical data sims
+  - Smart point filtering (show every Nth) avoids visual clutter on long year ranges
+  - TimeDial component pattern (large year display + slider + end labels) good for any year-range selector
+  - Continue button uses gold bg with dark text (inverted from Risk Slider's green) for thematic consistency
+  - Next up: US-010 — Results and integration (IndexLive)
+---
+
+## Iteration 10 — US-010: Results and integration (IndexLive)
+- Updated ScoreScreen key lesson text to: "אי אפשר לתזמן את השוק. אפשר להיות בשוק. S&P 500 = +10% בממוצע."
+- ScoreScreen already had: best/worst/your choice summary, worst case highlight (2007), +30 XP / +20 Coins rewards, replay/continue
+- Added `IndexLiveScreen` to `simulations/index.ts` barrel export
+- Wired into LessonFlowScreen.tsx:
+  - Import IndexLiveScreen from `../chapter-4-content/simulations`
+  - Added `mod-4-20` to MODULES_WITH_SIM set
+  - Added ternary branch at top of sim phase chain (before mod-4-19)
+- Typecheck passes (only pre-existing FeedSidebar + useClashStore errors)
+- Web export succeeds
+- Files affected: `simulations/IndexLiveScreen.tsx`, `simulations/index.ts`, `LessonFlowScreen.tsx`, `PRD27_Ch4_Sims.md`, `progress27.txt`
+- Learnings for next cycles:
+  - IndexLive ScoreScreen was already fully built in US-009 — US-010 was mostly integration
+  - Integration pattern confirmed: import → MODULES_WITH_SIM → ternary chain (newest module at top)
+  - Barrel export now has RiskSliderScreen + IndexLiveScreen — future sims just add to it
+  - Next up: US-011 — Define ETF Builder types (etfBuilderTypes.ts)
+---
+
+## Iteration 11 — US-011: Define ETF Builder types (etfBuilderTypes.ts)
+- Created `etfBuilderTypes.ts` with all required interfaces
+- `ETFType` exported as union type: 'stocks' | 'bonds' | 'real-estate' | 'emerging'
+- `ETFProduct`: id, name, emoji, type, expenseRatio, topHoldings, annualReturn, riskLevel (1-5 literal union)
+- `ETFBuilderConfig`: availableETFs, maxETFs (5), budget (₪50,000)
+- `ETFAllocation`: separate interface for selectedETFs entries (etfId + percent)
+- `ETFBuilderState`: selectedETFs as ETFAllocation[], diversificationScore (0-100), estimatedReturn, estimatedRisk, isComplete
+- `ETFBuilderGrade`: 'S' | 'A' | 'B' | 'C' | 'F' (exported separately for reuse)
+- `ETFBuilderScore`: grade, diversification, geographicSpread, assetTypeSpread
+- Typecheck passes — only pre-existing FeedSidebar + useClashStore errors
+- Files affected: `simulations/etfBuilderTypes.ts` (new), `PRD27_Ch4_Sims.md`, `progress27.txt`
+- Learnings for next cycles:
+  - ETFAllocation is a separate interface (not inline) — hook can use it for add/remove/update operations
+  - riskLevel uses literal union `1 | 2 | 3 | 4 | 5` for type safety (not just number)
+  - annualReturn stored as decimal (0.10 = 10%) — consistent with riskSlider/indexLive patterns
+  - expenseRatio also decimal (0.03 = 0.03%) — data file should note this
+  - Pattern matches riskSliderTypes: Config → State → Score with separate type unions exported
+  - Next up: US-012 — Create ETF catalog data (etfBuilderData.ts)
+---
+
+## Iteration 12 — US-012: Create ETF catalog data (etfBuilderData.ts)
+- Created `etfBuilderData.ts` with 8 ETFs matching PRD specs exactly
+- ETFs: S&P 500, NASDAQ 100, אג"ח ממשלתי, TA-125, REIT Global, Emerging Markets, STOXX 600, Gold ETF
+- Each ETF has 5 real top holdings (companies/assets with allocation %)
+- Fee and return rates match PRD: S&P 500 (0.03%, 10%), NASDAQ (0.2%, 14%), Bonds (0.1%, 3%), TA-125 (0.25%, 8%), REIT (0.3%, 7%), EM (0.4%, 6%), STOXX (0.15%, 7%), Gold (0.25%, 5%)
+- Gold ETF typed as 'bonds' (defensive asset) since ETFType union only has 4 options — no 'commodity' type
+- Exported: `ETF_CATALOG` (ETFProduct[]) and `etfBuilderConfig` (ETFBuilderConfig)
+- Typecheck passes — only pre-existing FeedSidebar + useClashStore errors
+- Files affected: `simulations/etfBuilderData.ts` (new), `PRD27_Ch4_Sims.md`, `progress27.txt`
+- Learnings for next cycles:
+  - ETF_CATALOG is a flat array — hook can filter by type for diversification scoring
+  - Gold typed as 'bonds' — hook's assetTypeSpread calculation should treat it as defensive/alternative
+  - expenseRatio is decimal (0.03 = 0.03%) — display should multiply by 100 and add % sign
+  - annualReturn is decimal (0.10 = 10%) — consistent with prior sims
+  - Risk levels: bonds=1, gold=2, SP500/TA125/REIT/STOXX=3, NASDAQ/EM=4
+  - 4 geographic regions represented: US (SP500, NASDAQ), Israel (TA-125), Europe (STOXX), Global/EM (REIT, Emerging)
+  - Pattern matches riskSliderData/indexLiveData: constants → config export
+  - Next up: US-013 — Build ETF builder hook (useETFBuilder.ts)
+---
+
+## Iteration 13 — US-013: Build ETF builder hook (useETFBuilder.ts)
+- Created `useETFBuilder.ts` with full ETF selection and allocation logic
+- `addETF(id)` adds ETF to basket (max 5), auto-equalizes allocations
+- `removeETF(id)` removes ETF, re-equalizes remaining
+- `setAllocation(id, percent)` manually sets one ETF's %, distributes remainder proportionally to others
+- Diversification score: 0-100, based on unique asset types (50pts max, out of 4 types) + geographic regions (50pts max, out of 4 regions: us/israel/europe/global)
+- Geographic mapping: sp500/nasdaq→us, ta125→israel, europe-stoxx→europe, gov-bonds/reit/emerging/gold→global
+- `estimatedReturn`: weighted average of ETF annualReturns by allocation %
+- `estimatedRisk`: weighted average of ETF riskLevels (1-5) by allocation %
+- `totalExpenseRatio`: weighted average of expense ratios (exposed as useMemo)
+- Score computed on complete: grade (S/A/B/C/F) based on divScore + assetTypes + geoRegions thresholds
+- Grade thresholds: S(≥90 div, ≥3 types, ≥3 regions), A(≥70, ≥3 types), B(≥50, ≥2 types), C(≥25), F(else)
+- State blocked when isComplete — add/remove/setAllocation become no-ops
+- Files affected: `simulations/useETFBuilder.ts` (new), `PRD27_Ch4_Sims.md`, `progress27.txt`
+- Learnings for next cycles:
+  - Hook pattern matches useRiskSlider: useState + useCallback for mutations + useMemo for computed
+  - No auto-sweep/interval needed — this is a selection-based sim, not continuous
+  - totalExpenseRatio exposed separately (not in state) — screen can display it in stats panel
+  - Gold is mapped to 'global' geo and 'bonds' asset type — diversification scoring treats it as defensive/global
+  - Equal weight is default on add/remove; manual adjustment via setAllocation redistributes proportionally
+  - Score is null until isComplete — screen should check before rendering results
+  - Next up: US-014 — Build ETF Builder screen (ETFBuilderScreen.tsx)
+---
+
+## Iteration 14 — US-014: Build ETF Builder screen (ETFBuilderScreen.tsx)
+- Created `ETFBuilderScreen.tsx` with full premium UX:
+  - ETF shelf: scrollable list of 8 ETF cards with emoji, name, type label (Hebrew), return %, risk stars (★/☆), expense ratio
+  - Tap to toggle: cards toggle selected state with green border + checkmark. Unselected show + badge
+  - RTL layout: row-reverse for all card headers and stats, right-aligned text
+  - Holdings drawer: when ETF is added, animated FadeInDown drawer shows top 5 holdings with golden title
+  - Diversification meter: horizontal bar with animated fill (reanimated spring), color-coded (red/orange/yellow/green by score)
+  - Pie chart: horizontal stacked bar showing basket allocation by asset type color, with legend below
+  - Stats panel: 3 GlowCards in row — estimated return (green), risk (/5), expense ratio (%)
+  - Concentration warning: orange banner appears if all selected ETFs share the same asset type (≥2 selected)
+  - Complete button: "🔒 נעל את הסל" with count, disabled when basket empty
+  - Score screen: grade banner (S/A/B/C/F with color + Hebrew label), basket summary, 6 stat cards (diversification, asset types, regions, return, risk, expense), key lesson, +30 XP / +20 Coins rewards, replay/continue
+  - Rewards: useEconomyStore.getState() in useEffect, guarded by rewardsGranted ref
+  - Haptics: tapHaptic on toggle, heavyHaptic on complete, successHaptic on reward grant
+- Border-left color coded by ETF type (stocks=green, bonds=blue, real-estate=orange, emerging=purple)
+- Typecheck passes (only pre-existing FeedSidebar + useClashStore errors)
+- Web export succeeds
+- Files affected: `simulations/ETFBuilderScreen.tsx` (new), `PRD27_Ch4_Sims.md`, `progress27.txt`
+- Learnings for next cycles:
+  - Horizontal stacked bar works great as pie chart alternative — cross-platform, no SVG dependency
+  - TYPE_COLORS map (stocks→green, bonds→blue, real-estate→orange, emerging→purple) reusable for Portfolio Manager
+  - TYPE_LABELS map (Hebrew asset type names) reusable for Portfolio Manager
+  - ConcentrationWarning checks types.size > 1 — only shows when basket has ≥2 ETFs all same type
+  - HoldingsDrawer uses FadeInDown entering animation — smooth reveal on ETF selection
+  - DiversificationMeter uses reanimated shared value for smooth fill animation
+  - ScoreScreen follows established pattern: grade banner → summary → stat cards → lesson → rewards → actions
+  - No Slider component used in this screen (unlike RiskSlider/IndexLive) — selection-based interaction only
+  - expandedETF state tracks which ETF's holdings drawer is open (only one at a time)
+  - Next up: US-015 — Results and integration (ETFBuilder)
+---
+
+## Iteration 15 — US-015: Results and integration (ETFBuilder)
+- ScoreScreen already fully built in US-014 with:
+  - Grade based on diversification quality (S/A/B/C/F), not just returns
+  - Key lesson: "ETF = סל של 500+ מניות בעמלה זעירה. פיזור = הגנה."
+  - Rewards: +30 XP + 20 Coins via useEconomyStore.getState() in useEffect
+  - Replay/continue buttons
+- Added `ETFBuilderScreen` to `simulations/index.ts` barrel export
+- Wired into LessonFlowScreen.tsx:
+  - Import ETFBuilderScreen from `../chapter-4-content/simulations`
+  - Added `mod-4-21` to MODULES_WITH_SIM set
+  - Added ternary branch at top of sim phase chain (before mod-4-20)
+- Typecheck passes (only pre-existing FeedSidebar + useClashStore errors)
+- Web export succeeds
+- Files affected: `simulations/index.ts`, `LessonFlowScreen.tsx`, `PRD27_Ch4_Sims.md`, `progress27.txt`
+- Learnings for next cycles:
+  - ETFBuilder ScoreScreen was already fully built in US-014 — US-015 was purely integration (same as US-010 for IndexLive)
+  - Integration pattern confirmed: import → MODULES_WITH_SIM → ternary chain (newest module at top)
+  - Barrel export now has RiskSliderScreen + IndexLiveScreen + ETFBuilderScreen
+  - Next up: US-016 — Define Trading Simulator types (tradingSimTypes.ts)
+---
+
+## Iteration 16 — US-016: Define Trading Simulator types (tradingSimTypes.ts)
+- Created `tradingSimTypes.ts` with all required interfaces matching PRD spec
+- `StockTick`: time (tick index 0-29), price
+- `OrderType`: 'market' | 'limit' | 'stop-loss' (exported as type union)
+- `OrderStatus`: 'pending' | 'executed' | 'cancelled' (exported separately for reuse)
+- `TradeOrder`: type, triggerPrice?, executedPrice?, status
+- `TradingRound`: id, instruction (Hebrew), orderType, stockData (StockTick[]), targetLesson (Hebrew)
+- `TradingSimConfig`: rounds (TradingRound[]), startingCash (₪10,000)
+- `TradingSimState`: currentRound (0-2 index), cash, holdings (share count), orders (TradeOrder[]), pnl, isComplete
+- `TradingSimGrade`: 'S' | 'A' | 'B' | 'C' | 'F' (exported separately like ETFBuilderGrade)
+- `TradingSimScore`: grade, totalPnL, ordersExecuted, lessonsLearned (string[])
+- Typecheck passes — only pre-existing FeedSidebar + useClashStore errors
+- Files affected: `simulations/tradingSimTypes.ts` (new), `PRD27_Ch4_Sims.md`, `progress27.txt`
+- Learnings for next cycles:
+  - Pattern matches etfBuilderTypes/riskSliderTypes: Config → State → Score with separate type unions
+  - OrderStatus exported as its own type (not inline in TradeOrder) for cleaner hook status checks
+  - holdings is number (share count), not value — hook will compute value as holdings × currentPrice
+  - currentRound is 0-indexed (0, 1, 2) for 3 rounds — data file will have 3 TradingRound entries
+  - lessonsLearned in Score is string[] — one lesson per completed round
+  - targetLesson in TradingRound is the lesson text to show after that specific round completes
+  - StockTick.time is tick index (0-29), not timestamp — simpler for interval-based playback
+  - Next up: US-017 — Create trading round data (tradingSimData.ts)
+---
+
+## Iteration 17 — US-017: Create trading round data (tradingSimData.ts)
+- Created `tradingSimData.ts` with 3 trading rounds matching PRD specs
+- Round 1 (Market Order): TSLA around ₪250 with normal volatility (range 248-262), gradual uptrend. Player learns instant execution but no price control
+- Round 2 (Limit Order): starts ₪250, dips to ₪228 mid-round, recovers to ₪270. Limit at ₪230 triggers on tick 10. Player learns patience gets better price
+- Round 3 (Stop-Loss): starts ₪260, crashes steadily to ₪160. Stop-loss at ₪200 triggers on tick 14, saving from 30% further loss. Player learns automatic protection
+- Each round has exactly 30 price ticks (StockTick[]) built via `buildTicks()` helper
+- Exported: `TRADING_ROUNDS` (TradingRound[]), `tradingSimConfig` (TradingSimConfig)
+- Starting cash: ₪10,000
+- Typecheck passes — only pre-existing FeedSidebar + useClashStore errors
+- Files affected: `simulations/tradingSimData.ts` (new), `PRD27_Ch4_Sims.md`, `progress27.txt`
+- Learnings for next cycles:
+  - Price arrays are raw number[] → buildTicks() converts to StockTick[] with time index
+  - Round 2 limit buy target is ₪230 — tick 10 hits exactly 230, tick 11 dips to 228 (confirms trigger)
+  - Round 3 stop-loss at ₪200 — tick 14 hits exactly 200 (good for visual trigger moment)
+  - Round 1 market order has no specific trigger price — hook should execute at current tick price on player action
+  - targetLesson strings are in Hebrew, ready for display in score/instruction UI
+  - Pattern matches etfBuilderData/indexLiveData: constants → config export
+  - Next up: US-018 — Build trading sim hook (useTradingSim.ts)
+---
+
+## Iteration 18 — US-018: Build trading sim hook (useTradingSim.ts)
+- Created `useTradingSim.ts` with full tick-based trading simulation logic
+- Price ticks simulated at 200ms intervals via setInterval
+- `placeMarketOrder()` — executes immediately at current tick price, buys 10 shares
+- `placeLimitOrder(triggerPrice)` — sets pending order, executes when price ≤ triggerPrice
+- `placeStopLoss(triggerPrice)` — sets pending sell order, executes when price ≤ triggerPrice (sells all holdings)
+- Each round allows exactly one order (orderRef guards against duplicates)
+- Tick simulation checks pending orders at each new tick for limit/stop-loss triggers
+- `startRound()` resets tick counter and starts playback; `nextRound()` advances to next round or completes sim
+- On completion: remaining holdings auto-sold at final price, total P&L computed
+- `visibleTicks` memoized for chart rendering (slice of stockData up to currentTick)
+- `holdingsValue` computed live from holdings × currentPrice
+- Score: grade based on ordersExecuted count + P&L positivity (S=3+positive, A=3, B=2, C=1, F=0)
+- `lessonsLearned` collects targetLesson from all completed rounds
+- Exposed: state, config, currentRoundData, currentTick, currentPrice, visibleTicks, holdingsValue, isPlaying, roundComplete, score, + all actions
+- SHARES_PER_BUY = 10 — keeps math clean for demo purposes
+- Typecheck passes (only pre-existing FeedSidebar + useClashStore errors)
+- Files affected: `simulations/useTradingSim.ts` (new), `PRD27_Ch4_Sims.md`, `progress27.txt`
+- Learnings for next cycles:
+  - Hook uses useRef for orderRef (current pending order) to avoid stale closures in setInterval
+  - tickRef cleared on unmount and on reset — no memory leaks
+  - roundComplete state separate from isComplete (round vs simulation level)
+  - Stop-loss P&L calculation uses the market order's executed price as cost basis
+  - Screen will need: startRound button per round, order placement UI per order type, chart showing visibleTicks
+  - Round 3 stop-loss requires holdings from round 1 market order — rounds are sequential and state carries over
+  - Next up: US-019 — Build Trading Simulator screen (TradingSimScreen.tsx)
+---
+
+## Iteration 19 — US-019: Build Trading Simulator screen (TradingSimScreen.tsx)
+- Created `TradingSimScreen.tsx` with full premium brokerage UX:
+  - 3-phase round flow: pre-start (instruction + start button) → playing (live chart + order controls) → round complete (lesson + next button)
+  - LiveChart component: real-time line chart with green/red coloring based on price vs start, trigger price dashed line (for limit/stop-loss), execution marker emoji, current price dot
+  - Chart uses fixed scale from all ticks (prevents chart from jumping as new ticks arrive)
+  - InstructionBubble: animated hint with order type emoji + color, disappears when round starts
+  - OrderPanel: context-sensitive per round type — Market: big "קנה עכשיו" button with current price, Limit: preset ₪230 target button, Stop-Loss: preset ₪200 floor button (disabled if no holdings)
+  - PortfolioBar: horizontal 3-column display (cash, holdings value, P&L) with green/red P&L coloring
+  - Round progress indicator: 3 dots showing completed/active/upcoming rounds with type emojis
+  - Price animation: scale bounce on price changes >₪3
+  - Order execution detection: tracks order count changes to show execution marker on chart + successHaptic
+  - ScoreScreen: grade banner (S/A/B/C/F), total P&L hero display, round-by-round order breakdown, lessons learned per round, key lesson quote, +30 XP / +20 Coins rewards, replay/continue
+  - Order status card: "ממתין לביצוע..." / "פקודה בוצעה!" during play
+  - Dark brokerage theme: #0a0e1a bg, green/red/blue per order type
+- Trigger prices hardcoded to match round data: Limit=₪230, Stop-Loss=₪200
+- Haptics: tapHaptic on navigation, heavyHaptic on market order, successHaptic on execution + rewards
+- Rewards via useEconomyStore.getState() in useEffect, guarded by rewardsGranted ref
+- Typecheck passes (only pre-existing FeedSidebar + useClashStore errors)
+- Web export succeeds
+- Files affected: `simulations/TradingSimScreen.tsx` (new), `PRD27_Ch4_Sims.md`, `progress27.txt`
+- Learnings for next cycles:
+  - LiveChart pattern with fixed-scale allTicks + visible slice prevents chart jitter — reusable for any live-updating chart
+  - OrderPanel uses hardcoded trigger prices matching tradingSimData — if data changes, panel must update too
+  - Round progress indicator (3 dots with emojis) reusable pattern for multi-phase sims
+  - PortfolioBar computes P&L inline as (cash + holdingsValue - startingCash) — not from hook state.pnl which only updates on completion
+  - executedAtTick tracking via order count diffing — detects execution without needing hook callback
+  - ScoreScreen uses ORDER_TYPE_EMOJIS indexed by round number to label lessons — assumes 3 rounds in fixed order
+  - No Slider component used (unlike RiskSlider/IndexLive) — preset trigger prices keep UX simple for teaching
+  - Next up: US-020 — Results and integration (TradingSim)
+---
+
+## Iteration 20 — US-020: Results and integration (TradingSim)
+- ScoreScreen already fully built in US-019 with:
+  - Summary of 3 rounds: order type, executed price, status per round
+  - Total P&L hero display with green/red coloring
+  - Lessons learned per round (from targetLesson in data)
+  - Key lesson: "Market = מהיר אבל יקר. Limit = חכם אבל אולי לא יתמלא. Stop-Loss = הביטוח שלך."
+  - Rewards: +30 XP + 20 Coins via useEconomyStore.getState() in useEffect
+  - Replay/continue buttons
+- Added `TradingSimScreen` to `simulations/index.ts` barrel export
+- Wired into LessonFlowScreen.tsx:
+  - Import TradingSimScreen from `../chapter-4-content/simulations`
+  - Added `mod-4-22` to MODULES_WITH_SIM set
+  - Added ternary branch at top of sim phase chain (before mod-4-21)
+- Typecheck passes (only pre-existing FeedSidebar + useClashStore errors)
+- Web export succeeds
+- Files affected: `simulations/index.ts`, `LessonFlowScreen.tsx`, `PRD27_Ch4_Sims.md`, `progress27.txt`
+- Learnings for next cycles:
+  - TradingSim ScoreScreen was already fully built in US-019 — US-020 was purely integration (same pattern as US-010, US-015)
+  - Integration pattern confirmed: import → MODULES_WITH_SIM → ternary chain (newest module at top)
+  - Barrel export now has RiskSliderScreen + IndexLiveScreen + ETFBuilderScreen + TradingSimScreen
+  - Next up: US-021 — Define Dividend Tree types (dividendTreeTypes.ts)
+---
+
+## Iteration 21 — US-021: Define Dividend Tree types (dividendTreeTypes.ts)
+- Created `dividendTreeTypes.ts` with all required interfaces matching PRD spec
+- `DividendYear`: year, treeValue, dividendAmount, reinvested boolean
+- `DividendTreeConfig`: initialInvestment (₪10,000), dividendYield (0.03), stockGrowth (0.07), years (20)
+- `DividendTreeState`: currentYear, eatTree (value + totalDividendsTaken), plantTree (value), isPlaying, isComplete
+- `DividendTreeScore`: eatTotal, plantTotal, difference (plantTotal - eatTotal)
+- eatTree stores both current value and totalDividendsTaken (for final comparison: value + dividends)
+- plantTree only stores value (dividends are reinvested, so all value is in the tree)
+- Typecheck passes — only pre-existing FeedSidebar + useClashStore errors
+- Files affected: `simulations/dividendTreeTypes.ts` (new), `PRD27_Ch4_Sims.md`, `progress27.txt`
+- Learnings for next cycles:
+  - Pattern matches riskSliderTypes/tradingSimTypes: Config → State → Score
+  - No Grade type needed — score is purely numeric comparison (difference between eat vs plant)
+  - dividendYield and stockGrowth stored as decimals (0.03 = 3%, 0.07 = 7%) — consistent with prior sims
+  - eatTree.totalDividendsTaken separate from value — eatTotal = value + totalDividendsTaken for fair comparison
+  - isPlaying controls auto-advance animation; isComplete locks final state
+  - DividendYear interface available for year-by-year history arrays in hook (both paths)
+  - Next up: US-022 — Create dividend data (dividendTreeData.ts)
+---
+
+## Iteration 22 — US-022: Create dividend data (dividendTreeData.ts)
+- Created `dividendTreeData.ts` with pre-computed 20-year paths for both "Eat" and "Plant" strategies
+- "Eat" path: fixed share count (1 normalized share), stock price grows at 7%/year, dividends = shares × price × 3% yield, paid out (never reinvested)
+- "Plant" path (DRIP): shares grow each year by (shares × yield), stock price grows at 7%/year, dividends reinvested as new shares. Value = allShares × currentPrice
+- Both paths pre-computed via buildEatPath() and buildPlantPath() helper functions
+- Exported: `EAT_PATH` (DividendYear[]), `PLANT_PATH` (DividendYear[]), `dividendTreeConfig` (DividendTreeConfig)
+- Year 20 approximate values: Eat tree ≈ ₪38,697 + ₪7,810 total dividends ≈ ₪46,507 total. Plant tree ≈ ₪66,795 (≈1.4x more)
+- Uses normalized 1-share model with initialPrice = ₪10,000 — keeps math clean and accurate
+- Typecheck passes — only pre-existing FeedSidebar + useClashStore errors
+- Files affected: `simulations/dividendTreeData.ts` (new), `PRD27_Ch4_Sims.md`, `progress27.txt`
+- Learnings for next cycles:
+  - EAT_PATH and PLANT_PATH are pre-computed arrays — hook can use them directly or recompute for different speeds
+  - Normalized share model (1 share at ₪10K) avoids fractional share complexity in display
+  - Plant path shares grow by factor (1 + yield) each year — geometric growth on top of price growth
+  - At 3% yield + 7% growth over 20 years, DRIP advantage is ~1.4x — dramatic enough for visual impact
+  - DividendYear arrays are 1-indexed (year 1 through 20) — hook should handle year 0 (initial state) separately
+  - Pattern matches riskSliderData/indexLiveData: constants → build functions → pre-computed exports → config export
+  - Next up: US-023 — Build dividend tree hook (useDividendTree.ts)
+---
+
+## Iteration 23 — US-023: Build dividend tree hook (useDividendTree.ts)
+- Created `useDividendTree.ts` with full dual-path simulation logic
+- `advanceYear()` advances one year manually, reading from pre-computed EAT_PATH/PLANT_PATH
+- Auto-play mode: `startPlay()`/`stopPlay()` — advances 1 year every 750ms (20 years in 15 seconds)
+- `complete()` skips to final year immediately (sums all eat dividends, sets final values)
+- `reset()` returns to year 0 initial state
+- State tracks both trees in parallel: eatTree (value + totalDividendsTaken) and plantTree (value)
+- Auto-completes at year 20 (isComplete=true, isPlaying=false)
+- `eatHistory`/`plantHistory` memoized slices for chart rendering (up to currentYear)
+- `currentEatDividend`/`currentPlantDividend` exposed for per-year fruit display
+- Score computed on completion: eatTotal = value + dividends, plantTotal = reinvested value, difference
+- yearRef used for interval to avoid stale closures (same pattern as useRiskSlider sweepRef)
+- Typecheck passes — only pre-existing FeedSidebar + useClashStore errors
+- Files affected: `simulations/useDividendTree.ts` (new), `PRD27_Ch4_Sims.md`, `progress27.txt`
+- Learnings for next cycles:
+  - Hook pattern matches useRiskSlider: useState + useRef for intervals + useCallback for actions + useMemo for computed
+  - Auto-play interval 750ms × 20 years = 15 seconds — matches PRD spec for cinematic playback
+  - EAT_PATH/PLANT_PATH are pre-computed — hook reads from them directly, no recalculation needed
+  - eatHistory/plantHistory are DividendYear[] slices — screen can use them for chart data points
+  - currentEatDividend/currentPlantDividend available for animating fruit drops per year
+  - Score is null until isComplete — screen should check before rendering results
+  - advanceYear() can be used for step-by-step mode (manual advance button)
+  - complete() is useful for a "skip to end" button
+  - Next up: US-024 — Build Dividend Tree screen (DividendTreeScreen.tsx)
+---
+
+## Iteration 24 — US-024: Build Dividend Tree screen (DividendTreeScreen.tsx)
+- Created `DividendTreeScreen.tsx` with full premium UX:
+  - DualTreeView: two animated trees side by side. Left "🍽️ אוכל" (eat), Right "🌱 שותל" (plant/reinvest)
+  - AnimatedTree component: crown (3 layered rounded views) + trunk. Plant tree uses brighter green, eat tree uses muted green+brown
+  - Tree scale: plant tree grows from 0.7 to 1.8 via reanimated spring as value increases. Eat tree stays near 1.0
+  - Fruit animation: fruitOpacity shared value flashes on each year advance, fades to 0 (eat) or 0.3 (plant/reinvest)
+  - Year counter: dramatic golden center display between trees with year/20 format and golden border
+  - Value counters: below each tree with colored backgrounds (red-tinted for eat, green-tinted for plant). Plant value gets golden color when >1.2x eat
+  - Dividend tracking: eat side shows "🍎 נאכלו: ₪X" total, plant side shows "🌱 הושתלו חזרה"
+  - FruitCounter: per-year dividend display bar showing current year's dividend for both paths
+  - GrowthChart: dual line chart (red=eat, green=plant) comparing both paths with legend
+  - Controls: "⏭ שנה אחת" step button + "🎬 הרץ X שנים" auto-play button. During play: "⏸ עצור" stop button
+  - Info card at year 0: explains the setup (₪10K, 7% growth, 3% dividend)
+  - ScoreScreen: hero reveal showing "פי X.X" multiplier, side-by-side comparison (eat vs plant totals), difference highlight with golden text, key lesson, +30 XP / +20 Coins rewards, replay/continue
+  - Confetti explosion on completion
+  - Plant value bounce animation: scale pulse on >₪500 changes
+  - Haptics: heavyHaptic on play, tapHaptic on step/stop, successHaptic on rewards
+  - Rewards via useEconomyStore.getState() in useEffect, guarded by rewardsGranted ref
+  - Dark forest theme: #0a1a0a bg, green accents, golden highlights
+- Typecheck passes (only pre-existing FeedSidebar + useClashStore errors)
+- Web export succeeds
+- Files affected: `simulations/DividendTreeScreen.tsx` (new), `PRD27_Ch4_Sims.md`, `progress27.txt`
+- Learnings for next cycles:
+  - Tree built with layered View elements (3 crown circles + trunk rectangle) — no SVG needed, cross-platform
+  - Tree scale mapped to value/max ratio — plant tree visually grows while eat tree stays small
+  - Dual line chart (GrowthChart) reuses View-based line segment pattern from prior sims
+  - FruitCounter component shows per-year dividend amounts for both paths — useful context during auto-play
+  - ScoreScreen shows multiplier (plantTotal/eatTotal) as hero metric — more impactful than raw difference
+  - "שנה אחת" step button allows manual exploration in addition to auto-play
+  - Play button dynamically shows remaining years: "הרץ X שנים"
+  - Forest theme (#0a1a0a) distinct from Trading Sim's dark blue (#0a0e1a) and Index Live's dark purple (#0a0a1e)
+  - Next up: US-025 — Results and integration (DividendTree)
+---
+
+## Iteration 25 — US-025: Results and integration (DividendTree)
+- ScoreScreen already fully built in US-024 with:
+  - Side-by-side final comparison: eat total (value + dividends) vs plant total (reinvested value)
+  - Multiplier hero display: "פי X.X יתרון השתילה מחדש"
+  - Difference text: "אכלת ₪X סה״כ דיבידנדים + שווי. אם היית שותל — היה לך ₪Y (פי Z יותר!)"
+  - Key lesson: "דיבידנד שמחזירים לעץ = ריבית דריבית על סטרואידים."
+  - Rewards: +30 XP + 20 Coins via useEconomyStore.getState() in useEffect
+  - Confetti explosion on completion
+  - Replay/continue buttons
+- Added `DividendTreeScreen` to `simulations/index.ts` barrel export
+- Wired into LessonFlowScreen.tsx:
+  - Import DividendTreeScreen from `../chapter-4-content/simulations`
+  - Added `mod-4-23` to MODULES_WITH_SIM set
+  - Added ternary branch at top of sim phase chain (before mod-4-22)
+- Typecheck passes (only pre-existing FeedSidebar + useClashStore errors)
+- Web export succeeds
+- Files affected: `simulations/index.ts`, `LessonFlowScreen.tsx`, `PRD27_Ch4_Sims.md`, `progress27.txt`
+- Learnings for next cycles:
+  - DividendTree ScoreScreen was already fully built in US-024 — US-025 was purely integration (same pattern as US-010, US-015, US-020)
+  - Integration pattern confirmed: import → MODULES_WITH_SIM → ternary chain (newest module at top)
+  - Barrel export now has RiskSliderScreen + IndexLiveScreen + ETFBuilderScreen + TradingSimScreen + DividendTreeScreen
+  - Next up: US-026 — Define Portfolio Manager types (portfolioManagerTypes.ts)
+---
+
+## Iteration 26 — US-026: Define Portfolio Manager types (portfolioManagerTypes.ts)
+- Created `portfolioManagerTypes.ts` with all required interfaces matching PRD spec
+- `AssetClass`: id, name (Hebrew), emoji, color
+- `WorldEvent`: id, name (Hebrew), emoji, impacts as Record<string, number> (assetId → % change as decimal)
+- `PortfolioManagerConfig`: assetClasses, events, budget (₪200,000)
+- `PortfolioManagerState`: allocations (Record<string, number> summing to 100), portfolioValue, eventHistory (with valueBefore/valueAfter per event), currentEventIndex (-1=building, 0-4=events), isComplete
+- `PortfolioManagerGrade`: 'S' | 'A' | 'B' | 'C' | 'F' (exported separately like other sims)
+- `PortfolioManagerScore`: grade, finalValue, maxDrawdown (decimal), volatility (std dev), diversificationBonus (boolean: no asset >40%)
+- eventHistory stores valueBefore/valueAfter per event — useful for event-by-event breakdown chart in screen
+- currentEventIndex starts at -1 (building phase) — hook advances through 0-4 during event phase
+- impacts stored as decimals (-0.20 = -20%) — consistent with prior sims' return format
+- diversificationBonus is boolean (not numeric) — simpler than ETFBuilder's score-based approach
+- Typecheck passes — only pre-existing FeedSidebar + useClashStore errors
+- Files affected: `simulations/portfolioManagerTypes.ts` (new), `PRD27_Ch4_Sims.md`, `progress27.txt`
+- Learnings for next cycles:
+  - Pattern matches tradingSimTypes/etfBuilderTypes: Config → State → Score with separate Grade type
+  - allocations is Record<string, number> (not array) — simpler for slider-based allocation with 5 fixed assets
+  - eventHistory array grows as events fire — screen can iterate for breakdown chart
+  - currentEventIndex = -1 distinguishes building phase from event phase (0-4)
+  - maxDrawdown is worst single-event drop (not cumulative peak-to-trough like riskSlider)
+  - volatility = std dev of value changes — hook will need to compute this from eventHistory
+  - diversificationBonus triggers when no single asset > 40% — hook should check max(allocations) ≤ 40
+  - Next up: US-027 — Create asset and event data (portfolioManagerData.ts)
+---
+
+## Iteration 27 — US-027: Create asset and event data (portfolioManagerData.ts)
+- Created `portfolioManagerData.ts` with 5 asset classes and 5 world events matching PRD specs exactly
+- 5 asset classes: מניות US (green #4CAF50), אג"ח ממשלתי (blue #2196F3), נדל"ן (orange #FF9800), זהב (gold #FFD700), מניות שווקים מתפתחים (purple #9C27B0)
+- 5 events with impacts matching PRD: war (stocks -20%, bonds +5%, gold +15%), tech boom (US +25%, EM +10%, bonds -3%), pandemic (stocks -30%, bonds +8%, gold +20%, REIT -15%), rate hike (bonds -10%, REIT -8%, stocks -5%), global recovery (stocks +20%, EM +15%, REIT +12%)
+- Added gold and emerging impacts not explicitly in PRD but logically consistent: war→emerging -25%, tech boom→gold -5%/REIT +5%, pandemic→emerging -20%, rate hike→gold -2%/emerging -7%, recovery→gold -3%/bonds +2%
+- Budget: ₪200,000
+- Exported: `ASSET_CLASSES` (AssetClass[]), `WORLD_EVENTS` (WorldEvent[]), `portfolioManagerConfig` (PortfolioManagerConfig)
+- Typecheck passes — only pre-existing FeedSidebar + useClashStore errors
+- Files affected: `simulations/portfolioManagerData.ts` (new), `PRD27_Ch4_Sims.md`, `progress27.txt`
+- Learnings for next cycles:
+  - Asset IDs: 'us-stocks', 'gov-bonds', 'real-estate', 'gold', 'emerging' — hook must use these as keys
+  - All 5 events have impacts for all 5 asset classes — no missing entries, hook can safely access any combo
+  - Colors chosen to match ETFBuilder TYPE_COLORS where applicable (stocks=green, bonds=blue, real-estate=orange, emerging=purple)
+  - Gold color is #FFD700 — distinct from other assets, matches golden theme used in IndexLive
+  - Rate hike event is all-negative (everything drops) — this is the "stress test" event for diversification
+  - Global recovery is mostly positive — rewards staying invested through downturns
+  - Pattern matches etfBuilderData/tradingSimData: constants → config export
+  - Next up: US-028 — Build portfolio manager hook (usePortfolioManager.ts)
+---
+
+## Iteration 28 — US-028: Build portfolio manager hook (usePortfolioManager.ts)
+- Created `usePortfolioManager.ts` with full allocation + event simulation logic
+- Phase 1 (Building): `setAllocation(assetId, percent)` sets one asset's %, distributes remainder evenly to others. Locked when events start
+- Phase 2 (Events): `lockAndPlay()` fires first event immediately, then auto-fires remaining 4 at 3s intervals. `fireNextEvent()` also exposed for manual control
+- `applyEvent()` computes weighted portfolio impact: sum of (allocation weight × event impact per asset)
+- `isDiversified` computed via useMemo: max allocation ≤ 40%
+- `maxDrawdown`: worst single-event % drop across all events
+- `volatility`: std dev of absolute value changes across events
+- `stocksOnlyValue`: comparison ghost line showing 100% US stocks portfolio through same events
+- Grade logic: S (positive + diversified + low volatility), A (positive + diversified), B (positive OR small loss + diversified), C (moderate loss >-15%), F (else)
+- Score null until isComplete — screen should check before rendering results
+- Initial allocations: equal weight across 5 assets (20% each)
+- `reset()` clears interval timer and returns to initial state
+- `isBuilding` / `isPlayingEvents` convenience booleans exposed for screen phase management
+- eventTimerRef cleaned up on reset — no memory leaks
+- Typecheck passes (only pre-existing FeedSidebar + useClashStore errors)
+- Files affected: `simulations/usePortfolioManager.ts` (new), `PRD27_Ch4_Sims.md`, `progress27.txt`
+- Learnings for next cycles:
+  - Hook pattern matches useETFBuilder but adds interval-based auto-play like useRiskSlider/useDividendTree
+  - lockAndPlay() fires first event + starts 3s interval for remaining — screen gets dramatic timing built-in
+  - fireNextEvent() exposed separately for manual step-through (useful for "next event" button)
+  - stocksOnlyValue available for ghost/comparison line on screen chart
+  - isDiversified is a boolean (not a score) — simpler than ETFBuilder's 0-100 diversification score
+  - Grade thresholds use volatility in absolute ₪ terms (< ₪25K for S grade) — calibrated for ₪200K budget
+  - setAllocation distributes remainder evenly (not proportionally) — matches ETFBuilder pattern
+  - Screen will need: 5 linked sliders (sum to 100), lock button, event cards, value counter, donut chart, ghost line
+  - Next up: US-029 — Build Portfolio Manager screen (PortfolioManagerScreen.tsx)
+---
+
+## Iteration 29 — US-029: Build Portfolio Manager screen (PortfolioManagerScreen.tsx)
+- Created `PortfolioManagerScreen.tsx` with full premium UX:
+  - Phase 1 (Building): 5 colored AssetSlider components with @react-native-community/slider, each showing emoji + name + % with colored fill bar
+  - DonutChart: horizontal stacked bar (same pattern as ETFBuilder PieChart) with legend, updates live as sliders change
+  - Diversification indicator: green/orange border card showing whether portfolio is diversified (no asset >40%)
+  - "Lock Portfolio" button: purple themed (#7c3aed) with vault door animation (🔐 emoji scales up then fades)
+  - Phase 2 (Events): EventCard components slam in with FadeInDown.springify(), showing event emoji + name + total impact + per-asset breakdown
+  - ValueDisplay: animated value counter with scale bounce on >₪5K changes, heavyHaptic on drops, total return %, ghost comparison line
+  - Ghost comparison: shows "100% US stocks" value at all times for contrast
+  - Locked allocation badges: compact row showing final allocation during event phase
+  - Waiting indicator between events
+  - ScoreScreen: grade banner (S/A/B/C/F), final value hero, event-by-event breakdown, stats (max drawdown, volatility, diversification), ghost comparison card, max drawdown highlight, key lesson, +30 XP / +20 Coins rewards, replay/continue
+  - Events auto-play at 3s intervals via hook's lockAndPlay()
+  - Rewards via useEconomyStore.getState() in useEffect, guarded by rewardsGranted ref
+  - Haptics: tapHaptic on slider changes, heavyHaptic on lock + big drops, successHaptic on rewards
+- Dark brokerage theme: #0a0e1a bg, purple accents (#7c3aed/#a855f7) for lock/continue buttons
+- Typecheck passes (only pre-existing FeedSidebar + useClashStore errors)
+- Web export succeeds
+- Files affected: `simulations/PortfolioManagerScreen.tsx` (new), `PRD27_Ch4_Sims.md`, `progress27.txt`
+- Learnings for next cycles:
+  - AssetSlider uses transparent track tints + custom fill bar underneath for colored progress effect
+  - Vault animation uses withSequence (scale up → fade out) + setTimeout for phase transition — simple but effective
+  - EventCard shows per-asset impact breakdown (contribution = impact × weight × valueBefore) — detailed feedback
+  - ValueDisplay scale bounce uses prevValueRef to detect >₪5K changes — avoids animating on initial render
+  - ScoreScreen already includes all US-030 criteria (final value, breakdown, drawdown, lesson, rewards) — US-030 will be mostly integration
+  - Purple theme (#7c3aed) distinguishes Portfolio Manager from other sims (green=ETFBuilder, gold=IndexLive, dark blue=TradingSim, forest=DividendTree)
+  - DonutChart reuses exact same horizontal stacked bar pattern as ETFBuilder PieChart
+  - lockedAllocRow shows allocation badges during event phase — compact reference without full sliders
+  - Next up: US-030 — Results and integration (PortfolioManager)
+---
+
+## Iteration 30 — US-030: Results and integration (PortfolioManager)
+- ScoreScreen already fully built in US-029 with:
+  - Final portfolio value vs starting ₪200K with green/red coloring
+  - Event-by-event breakdown chart showing each event's emoji, name, and value change
+  - Max drawdown highlighted: "הרגע הכי קשה: התיק שלך ירד XX% באירוע אחד"
+  - Ghost comparison card: 100% US stocks vs player's portfolio
+  - Stats: max drawdown, volatility, diversification bonus
+  - Key lesson: "פיזור = הביטוח של המשקיע. אל תשימו הכל בסל אחד."
+  - Rewards: +30 XP + 20 Coins via useEconomyStore.getState() in useEffect
+  - Confetti explosion on completion
+  - Replay/continue buttons
+- Added `PortfolioManagerScreen` to `simulations/index.ts` barrel export
+- Wired into LessonFlowScreen.tsx:
+  - Import PortfolioManagerScreen from `../chapter-4-content/simulations`
+  - Added `mod-4-24` to MODULES_WITH_SIM set
+  - Added ternary branch at top of sim phase chain (before mod-4-23)
+- Typecheck passes (only pre-existing FeedSidebar + useClashStore errors)
+- Web export succeeds
+- Files affected: `simulations/index.ts`, `LessonFlowScreen.tsx`, `PRD27_Ch4_Sims.md`, `progress27.txt`
+- Learnings for next cycles:
+  - PortfolioManager ScoreScreen was already fully built in US-029 — US-030 was purely integration (same pattern as US-010, US-015, US-020, US-025)
+  - Integration pattern confirmed: import → MODULES_WITH_SIM → ternary chain (newest module at top)
+  - Barrel export now has all 6 Chapter 4 sims: RiskSliderScreen + IndexLiveScreen + ETFBuilderScreen + TradingSimScreen + DividendTreeScreen + PortfolioManagerScreen
+  - **PRD 27 is now COMPLETE** — all 30 user stories implemented across 6 simulations (modules 19-24)
+  - All 6 sims follow consistent pattern: types → data → hook → screen → integration
+  - All 6 sims have: premium themed UX, haptics, rewards (+30 XP / +20 Coins), score screens with grade/stats/lesson, replay/continue
+---

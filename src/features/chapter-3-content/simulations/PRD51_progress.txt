@@ -1,0 +1,741 @@
+# PRD51 Progress — 9 New Module Simulators
+
+## Status: In Progress
+
+## Learnings
+- Pre-existing TS errors only in skills/stitch-skills/ (safe to ignore)
+- No src/ TS errors at baseline
+- Pattern: xxxTypes.ts → xxxData.ts → useXxx.ts → XxxScreen.tsx
+- Chapter 3 simTheme: SIM3, GRADE_COLORS3, TYPE3, sim3Styles, RTL, SHADOW_STRONG, SHADOW_LIGHT
+- Chapter 4 simTheme: SIM4, GRADE_COLORS4, TYPE4, sim4Styles
+- Chapter 5 simTheme: SIM5, GRADE_COLORS5, TYPE5, sim5Styles
+- Integration: SimulatorLoader.tsx SIM_LOADERS map + LessonFlowScreen.tsx MODULES_WITH_SIM set + index.ts barrel exports
+- Economy: useEconomyStore → addXP(amount, 'sim_complete') + addCoins(amount)
+- XP guard: useRef(false) to prevent double-granting
+- Haptics: tapHaptic, successHaptic, errorHaptic, heavyHaptic from utils/haptics
+- UI components: SimLottieBackground, GlowCard, AnimatedPressable, ConfettiExplosion, SimFeedbackBar
+- Existing sims use react-native-reanimated for animations
+- RiskSliderScreen is a good reference for ch4 sims
+- Lottie assets in assets/lottie/
+- GRADE_HEBREW shared across chapters: S='מצוין!', A='מצוין', B='טוב', C='אפשר יותר', F='אפשר יותר'
+
+---
+
+## Iteration 1 — US-001: TrackSelector Types
+- Created trackSelectorTypes.ts with 5 interfaces: InvestmentTrack, MarketYear, TrackSelectorConfig, TrackSelectorState, TrackSelectorScore
+- Files affected: src/features/chapter-3-content/simulations/trackSelectorTypes.ts
+- Learnings for next cycles:
+  - Followed riskSliderTypes.ts pattern (JSDoc header, clean interfaces, no `any`)
+  - Grade union type: 'S'|'A'|'B'|'C'|'F' with gradeLabel string
+  - balanceByTrack uses Record<string, number[]> for year-by-year tracking per track
+  - Clean typecheck — no new errors introduced
+---
+
+## Iteration 2 — US-002: TrackSelector Data
+- Created trackSelectorData.ts with 3 investment tracks and 30 years of market data
+- Files affected: src/features/chapter-3-content/simulations/trackSelectorData.ts
+- Learnings for next cycles:
+  - stockPercent/bondPercent stored as fractions (0.80 = 80%), annualFeePercent as fraction (0.0015 = 0.15%)
+  - Market crashes at years 8 (-35%), 18 (-30%), 25 (-25%) with corresponding bond flight-to-safety gains
+  - Stock avg ~7.9%, Bond avg ~3.0% — realistic long-term returns
+  - EXPECTED_OUTCOMES pre-computes finalBalance and totalFeesLost per track (for score screen)
+  - computeTrackOutcome helper: no-fee balance tracked in parallel to calculate fee impact
+  - Followed riskSliderData.ts pattern: constants → return arrays → config export
+  - TrackOutcome interface is local (not exported in types) — only used for pre-computation
+  - Clean typecheck — no new errors introduced
+---
+
+## Iteration 3 — US-003: TrackSelector Hook
+- Created useTrackSelector.ts with full simulation logic
+- Files affected: src/features/chapter-3-content/simulations/useTrackSelector.ts
+- Learnings for next cycles:
+  - Followed useRiskSlider.ts pattern: useState + useRef for interval + useEffect for auto-advance
+  - computeBalances(yearCount) returns Record<string, number[]> — index 0 is initial investment, index N is after year N
+  - computeFeesLost(yearCount) tracks no-fee balance in parallel to calculate fee impact per track
+  - Auto-advance: 750ms interval, yearRef.current tracks position, stops at TOTAL_YEARS (30)
+  - Grade: (userBalance / bestBalance) * 100 → standard S/A/B/C/F scale
+  - Aggressive track always wins long-term (lowest fees + highest stock allocation) → S grade for picking it
+  - Score computed via useMemo, only when isComplete && selectedTrackId set
+  - intervalRef cleanup in useEffect return prevents memory leaks
+  - Clean typecheck — no new errors introduced
+---
+
+## Iteration 4 — US-004: TrackSelector Screen
+- Created TrackSelectorScreen.tsx with two-phase UI (selection + simulation)
+- Files affected: src/features/chapter-3-content/simulations/TrackSelectorScreen.tsx
+- Learnings for next cycles:
+  - Selection phase: 3 GlowCard track cards with emoji, name, stock/bond split, fee percentage, color dot
+  - Simulation phase: MultiLineChart component renders 3 colored lines (green=aggressive, blue=balanced, purple=conservative)
+  - Selected track's line is bold (3.5px) and opaque; others are thin (2px) and faded (0.4 opacity)
+  - Balance hero animated with withSpring scale pulse on >5000 change
+  - Play button pulses with withRepeat when ready (track selected, not playing, not complete)
+  - X-axis labels show every 5th year only (avoids clutter for 30 data points)
+  - Fee impact callout uses dynamic text showing track's annualFeePercent and current yearIndex
+  - Completion summary shows fee loss from score.feesLost — full score screen deferred to US-005
+  - `void` statements used for onComplete/reset/score to suppress unused-var warnings until US-005
+  - SIM3 blue theme: gradient background via SimLottieBackground, white cards, blue buttons
+  - CH3_LOTTIE tuple pattern: [chart, balance] same as ch4 reference
+  - Clean typecheck — 53 errors all in skills/stitch-skills/ (pre-existing)
+---
+
+## Iteration 5 — US-005: TrackSelector Score + Integration
+- Added full ScoreScreen component with grade display, 3-track comparison table, fee difference insight card, lesson card
+- Added economy rewards: +25 XP (sim_complete), +30 Coins with useRef guard to prevent double-granting
+- Exported TrackSelectorScreen from chapter-3-content/simulations/index.ts
+- Added "mod-3-18" to SimulatorLoader SIM_LOADERS map
+- Added "mod-3-18" to MODULES_WITH_SIM set in LessonFlowScreen
+- Removed old inline completion summary (replaced by full ScoreScreen phase)
+- Files affected: TrackSelectorScreen.tsx, index.ts, SimulatorLoader.tsx, LessonFlowScreen.tsx
+- Learnings for next cycles:
+  - ScoreScreen follows RiskSliderScreen pattern: separate function component rendered when state.isComplete && score
+  - Economy rewards via useEconomyStore.getState() in useEffect (not hook-level addXP/addCoins)
+  - rewardsGranted.current = false on replay so rewards re-grant after replay+complete
+  - Grade-to-score mapping for onComplete: S=100, A=85, B=65, C=45, F=20
+  - sim3Styles has ready-made scoreCard, scoreCardInner, scoreRow, actionsRow, replayBtn, continueBtn, insightRow
+  - GRADE_COLORS3 and GRADE_HEBREW from simTheme for consistent grade display
+  - LOTTIE_GROWTH, LOTTIE_REPLAY, LOTTIE_ARROW — same assets as ch4 reference sims
+  - Clean typecheck — no new errors in src/
+---
+
+## Iteration 6 — US-006: StatementDetective Types
+- Created statementDetectiveTypes.ts with 5 interfaces + 1 type alias: FinancialSnippet, Verdict, DetectiveRound, DetectiveConfig, DetectiveState, DetectiveScore
+- Files affected: src/features/chapter-4-content/simulations/statementDetectiveTypes.ts
+- Learnings for next cycles:
+  - Extracted `Verdict = 'invest' | 'avoid'` as a named type alias for reuse in state, round, and hook
+  - playerVerdicts is `(Verdict | null)[]` — null entries for unanswered rounds
+  - Grade union type: 'S'|'A'|'B'|'C'|'F' with gradeLabel string (same pattern as TrackSelectorScore)
+  - FinancialSnippet has all numeric metrics (revenue, netIncome, cashFlow, totalAssets, totalLiabilities, equity, peRatio, debtEquityRatio) + redFlags string[]
+  - Followed riskSliderTypes.ts JSDoc header pattern
+  - Clean typecheck — no new errors in src/
+---
+
+## Iteration 7 — US-007: StatementDetective Data
+- Created statementDetectiveData.ts with 5 company cases and DetectiveConfig export
+- Files affected: src/features/chapter-4-content/simulations/statementDetectiveData.ts
+- Learnings for next cycles:
+  - 5 companies: טק-גרואו (avoid — paper profit, negative cash flow), בנק יציב (invest — strong balance sheet), פאשן פלוס (avoid — declining revenue, extreme D/E 6.5), מזון ישראלי (invest — stable, fair P/E 14), קריפטו-טק (avoid — negative equity, D/E 4.5)
+  - Each snippet has full numeric metrics: revenue, netIncome, cashFlow, totalAssets, totalLiabilities, equity, peRatio, debtEquityRatio
+  - redFlags array: empty for "invest" companies, 3-4 flags for "avoid" companies (used in score screen for missed flags)
+  - Hebrew explanations in each round explain the red flags and reasoning
+  - Followed trackSelectorData.ts pattern: constants → snippet objects → rounds array → config export
+  - TOTAL_ROUNDS exported as convenience constant (5)
+  - Verdict order: avoid, invest, avoid, invest, avoid — alternating to keep user engaged
+  - Clean typecheck — no new errors in src/
+---
+
+## Iteration 8 — US-008: StatementDetective Hook
+- Created useStatementDetective.ts with round-based quiz logic
+- Files affected: src/features/chapter-4-content/simulations/useStatementDetective.ts
+- Learnings for next cycles:
+  - Simpler than TrackSelector — no auto-play interval needed, just round-by-round progression
+  - submitVerdict(verdict) → records answer + shows feedback; nextRound() → advances or completes
+  - currentVerdictCorrect derived memo: null when not showing feedback, boolean when showing
+  - Grade mapping: 5/5=S, 4/5=A, 3/5=B, 2/5=C, ≤1=F (direct count, no percentage)
+  - missedRedFlags collects red flags from all rounds user got wrong (used in score screen)
+  - playerVerdicts initialized as null array; null entries = unanswered rounds
+  - Guards: submitVerdict no-ops if showingFeedback or isComplete; nextRound no-ops if not showingFeedback
+  - currentRound derived from rounds[currentRoundIndex] — null safety with ?? null
+  - Clean typecheck — no new errors in src/
+---
+
+## Iteration 9 — US-009: StatementDetective Screen
+- Created StatementDetectiveScreen.tsx with full game UI + score screen
+- Files affected: src/features/chapter-4-content/simulations/StatementDetectiveScreen.tsx
+- Learnings for next cycles:
+  - Two-phase screen: game phase (rounds) → score phase (results with grade, breakdown, lesson)
+  - CompanyCard: emoji + name header, 6 metric rows (revenue, netIncome, cashFlow, equity, P/E, D/E)
+  - isRedMetric helper: cashFlow < 0, netIncome < 0, equity < 0, D/E > 2, P/E < 0 or > 50
+  - formatNumber: handles B (billions), M (millions) with ₪ prefix for currency metrics
+  - ProgressDots: color-coded by verdict correctness (green=correct, red=wrong, white=current, dim=future)
+  - Vote buttons: green "להשקיע 📈" + red "לברוח 🏃" with shadow glow and pulse animation
+  - Feedback flow: verdictCard (✅/❌) → RedFlagsList (if wrong) → SimFeedbackBar at bottom
+  - RedFlagsList component: only shown when user got wrong answer on "avoid" company
+  - ScoreScreen includes: grade badge, correct count, per-company breakdown table, missed red flags, lesson card
+  - Economy rewards (+25 XP, +30 Coins) granted via useRef guard pattern (same as TrackSelector)
+  - onComplete callback receives grade-mapped score: S=100, A=85, B=65, C=45, F=20
+  - Score screen also built (ahead of US-010) since it's integral to the screen component
+  - SimFeedbackBar positioned absolute at bottom — paddingBottom: 120 on scroll content to avoid overlap
+  - key={currentRound.snippet.id} on company card triggers re-mount animation between rounds
+  - LOTTIE_SHARK used as title icon (detective theme)
+  - Clean typecheck — no new errors in src/
+---
+
+## Iteration 10 — US-010: StatementDetective Score + Integration
+- ScoreScreen and economy rewards (+25 XP, +30 Coins) were already built in US-009 as part of the screen component
+- Exported StatementDetectiveScreen from chapter-4-content/simulations/index.ts
+- Added "mod-4-25" to SimulatorLoader SIM_LOADERS map (after mod-4-24)
+- Added "mod-4-25" to MODULES_WITH_SIM set in LessonFlowScreen.tsx
+- Files affected: index.ts (ch4 sims), SimulatorLoader.tsx, LessonFlowScreen.tsx, PRD51_NewModuleSims.md
+- Learnings for next cycles:
+  - Integration is straightforward: 3 files to touch (index.ts barrel, SimulatorLoader SIM_LOADERS, LessonFlowScreen MODULES_WITH_SIM)
+  - When score screen is built as part of the Screen US (like US-009), the integration US is just wiring
+  - Chapter 4 sims use require("../chapter-4-content/simulations") pattern in SimulatorLoader
+  - Clean typecheck — no new errors in src/
+---
+
+## Iteration 11 — US-011: BrokerCompare Types
+- Created brokerCompareTypes.ts with 5 interfaces: Broker, UserProfile, BrokerCompareConfig, BrokerCompareState, BrokerCompareScore
+- Files affected: src/features/chapter-4-content/simulations/brokerCompareTypes.ts
+- Learnings for next cycles:
+  - Followed statementDetectiveTypes.ts pattern (JSDoc header, clean interfaces, no `any`)
+  - Broker has 5 fee fields: tradeFeePercent, tradeFeeMin, custodyFeePercent, fxFeePercent, inactivityFee
+  - UserProfile is simple: investmentAmount, tradesPerMonth, isInternational
+  - yearlyCosts in state uses Record<string, number> keyed by broker id
+  - BrokerCompareScore has yearlyDifference (vs cheapest) and totalSavings10Y for projection
+  - Grade union type: 'S'|'A'|'B'|'C'|'F' with gradeLabel string (consistent with all other sims)
+  - Clean typecheck — no new errors in src/
+---
+
+## Iteration 12 — US-012: BrokerCompare Data
+- Created brokerCompareData.ts with 3 brokers, default profile, and calcYearlyCost helper
+- Files affected: src/features/chapter-4-content/simulations/brokerCompareData.ts
+- Learnings for next cycles:
+  - 3 brokers: bankLeumi (0.3% trade, ₪15 min, 0.35% custody, 0.5% FX), meitav (0.08% trade, ₪5 min, 0% custody, 0.3% FX), interactiveBrokers (₪4 flat, 0% custody, 0.02% FX)
+  - Fee percents stored as fractions (0.003 = 0.3%) — consistent with trackSelectorData pattern
+  - calcYearlyCost exported helper: avgTradeSize = investmentAmount / tradesPerMonth, feePerTrade = max(avgTradeSize × tradeFeePercent, tradeFeeMin)
+  - Formula: (feePerTrade × tradesPerMonth × 12) + (investmentAmount × custodyFee) + (isInternational ? investmentAmount × fxFee : 0) + inactivityFee
+  - DEFAULT_PROFILE exported: ₪100K investment, 4 trades/month, domestic
+  - IB tradeFeePercent is 0 (flat fee model) — tradeFeeMin of ₪4 always applies
+  - All brokers have inactivityFee: 0 (IB removed theirs in 2021)
+  - Followed statementDetectiveData.ts pattern: constants → objects → array → config export
+  - Clean typecheck — no new errors in src/
+---
+
+## Iteration 13 — US-013: BrokerCompare Hook
+- Created useBrokerCompare.ts with reactive cost calculation, ranking, and grading
+- Files affected: src/features/chapter-4-content/simulations/useBrokerCompare.ts
+- Learnings for next cycles:
+  - Simpler hook pattern — no auto-play/interval needed, just reactive state + derived computations
+  - Reuses calcYearlyCost from brokerCompareData.ts (no formula duplication)
+  - computeAllCosts iterates all brokers, rounds to integer for display
+  - rankBrokers sorts Object.entries by cost ascending, returns ordered broker IDs
+  - updateProfile(partial) merges into profile then recomputes all costs reactively
+  - selectBroker(id) sets isComplete=true — no intermediate feedback phase unlike DetectiveHook
+  - Grade mapping: cheapest=S (position 0), 2nd=B (position 1), most expensive=F (position 2+)
+  - Score computes yearlyDifference (selected - cheapest) and totalSavings10Y (difference × 10)
+  - cheapestBroker in score is the broker *name* string (for display), not the ID
+  - ranked and cheapestId exposed as derived values for the screen to highlight
+  - Clean typecheck — no new errors in src/
+---
+
+## Iteration 14 — US-014: BrokerCompare Screen
+- Created BrokerCompareScreen.tsx with two-phase UI (interactive + score)
+- Files affected: src/features/chapter-4-content/simulations/BrokerCompareScreen.tsx
+- Learnings for next cycles:
+  - Interactive phase: profile sliders (investment ₪10K-₪1M, trades 1-20), Israel/International Switch toggle
+  - CostBarChart component: horizontal bars proportional to maxCost, cheapest gets green + shadow glow
+  - BrokerCard component: per-broker fee breakdown (trade, custody, FX if international) + total + "בחר ברוקר" button
+  - computeFeeBreakdown local helper mirrors calcYearlyCost formula but returns per-category breakdown for display
+  - Score screen built as part of Screen US (same as US-009 pattern) — US-015 is just integration wiring
+  - ScoreScreen: grade badge, selection summary, 10-year projection (if not cheapest), lesson card, replay/continue
+  - Economy rewards: +20 XP, +30 Coins via render-phase ref guard (same as StatementDetective)
+  - onComplete receives grade-mapped score: S=100, A=85, B=65, C=45, F=20
+  - Slider from @react-native-community/slider (same as RiskSliderScreen)
+  - No complex animations needed — FadeIn/FadeInUp entering animations sufficient for calculator-style sim
+  - Clean typecheck — no new errors in src/
+---
+
+## Iteration 15 — US-015: BrokerCompare Score + Integration
+- ScoreScreen, summary card ("בחרת X, חסכת Y"), 10-year projection, and economy rewards (+20 XP, +30 Coins) were already built in US-014 as part of the screen component
+- Exported BrokerCompareScreen from chapter-4-content/simulations/index.ts
+- Added "mod-4-26" to SimulatorLoader SIM_LOADERS map (after mod-4-25)
+- Added "mod-4-26" to MODULES_WITH_SIM set in LessonFlowScreen.tsx
+- Files affected: index.ts (ch4 sims), SimulatorLoader.tsx, LessonFlowScreen.tsx, PRD51_NewModuleSims.md
+- Learnings for next cycles:
+  - Same pattern as US-010 — when ScoreScreen is built in the Screen US, integration US is just 3 files of wiring
+  - Chapter 4 sims use require("../chapter-4-content/simulations") pattern in SimulatorLoader
+  - Clean typecheck — no new errors in src/
+---
+
+## Iteration 16 — US-016: CrisisManager Types
+- Created crisisManagerTypes.ts with 6 interfaces + 1 type alias: CrisisEvent, PlayerAction, CrisisRound, CrisisConfig, CrisisState, CrisisScore
+- Files affected: src/features/chapter-4-content/simulations/crisisManagerTypes.ts
+- Learnings for next cycles:
+  - Extracted `PlayerAction = 'sell' | 'hold' | 'buy'` as named type alias (same pattern as Verdict in statementDetective)
+  - CrisisRound tracks both playerBalanceAfter and holdBalanceAfter per round for comparison display
+  - CrisisState has playerBalance and holdBalance as running totals (updated each round)
+  - CrisisEvent has marketDropPercent (negative impact), recoveryMonths (flavor text), postRecoveryGainPercent (gain after recovery)
+  - beatHoldStrategy boolean in score for simple win/lose display logic
+  - Followed brokerCompareTypes.ts / statementDetectiveTypes.ts JSDoc header pattern
+  - Clean typecheck — no new errors in src/
+---
+
+## Iteration 17 — US-017: CrisisManager Data
+- Created crisisManagerData.ts with 5 historical crisis events and CrisisConfig export
+- Files affected: src/features/chapter-4-content/simulations/crisisManagerData.ts
+- Learnings for next cycles:
+  - 5 events in chronological order: Dot-com 2000, GFC 2008, COVID 2020, Inflation 2022, Oct 7 2023
+  - Each event has Hebrew title, headline, marketDropPercent, recoveryMonths, postRecoveryGainPercent
+  - postRecoveryGainPercent represents total gain from the crisis bottom through recovery: 85% (dotcom), 65% (GFC), 70% (COVID), 30% (inflation), 15% (Oct 7)
+  - COVID had fastest recovery (5 months) with strong 70% post-recovery gain — V-shaped recovery
+  - Oct 7 had smallest drop (8%) and smallest recovery gain (15%) — localized crisis
+  - INITIAL_BALANCE = 100,000 (₪) — same starting point for all players
+  - TOTAL_EVENTS exported as convenience constant (5) — same pattern as TOTAL_ROUNDS in statementDetective
+  - Followed statementDetectiveData.ts pattern: constants → event objects → array → config export
+  - Clean typecheck — no new errors in src/
+---
+
+## Iteration 18 — US-018: CrisisManager Hook
+- Created useCrisisManager.ts with crisis-by-crisis decision logic and hold-strategy benchmark
+- Files affected: src/features/chapter-4-content/simulations/useCrisisManager.ts
+- Learnings for next cycles:
+  - Follows useStatementDetective pattern: round-by-round progression, no auto-play interval
+  - Action impact formulas: sell = drop only (miss recovery), hold = drop then recover, buy = drop then 2× recovery gain
+  - applyAction and applyHold as pure helper functions outside the hook (testable, no state dependency)
+  - holdBalance tracked in parallel — always uses applyHold (hold through every crisis)
+  - Math.round on balances after each round to avoid floating-point display issues
+  - CrisisRound stored with both playerBalanceAfter and holdBalanceAfter for per-round comparison in screen
+  - lastRound derived memo: null when not showingResult, otherwise last entry in rounds array (for feedback display)
+  - Grade: >110% of hold = S, > hold = A, > 80% hold = B, > 60% hold = C, else F
+  - Guards: submitAction no-ops if showingResult or isComplete; nextEvent no-ops if not showingResult
+  - Score includes beatHoldStrategy boolean and difference (signed) for simple win/lose display
+  - Clean typecheck — no new errors in src/
+---
+
+## Iteration 19 — US-019: CrisisManager Screen
+- Created CrisisManagerScreen.tsx with full game UI + score screen
+- Files affected: src/features/chapter-4-content/simulations/CrisisManagerScreen.tsx
+- Learnings for next cycles:
+  - Two-phase screen (game → score) same as StatementDetective pattern
+  - CrisisCard: dramatic card with big emoji (40px), year, headline, red drop badge, mini crash chart
+  - CrashChart: simple 3-bar visualization (green=before, red=crash, blue=recovery) using flex-end alignment
+  - 3 action buttons in a row: sell (red #dc2626), hold (yellow #d97706), buy (green #16a34a) — each with matching shadow glow
+  - heavyHaptic on sell action for dramatic effect
+  - Result card after action: player balance vs hold strategy with signed difference badge
+  - SimFeedbackBar shows contextual message per action: sell=bad (missed recovery), hold/buy=good
+  - getActionFeedback helper returns isCorrect+message based on action type and crisis event
+  - ProgressDots colored by round outcome: green if player >= hold, red if player < hold
+  - Balance display card at top with translucent background (rgba 0.12) + border (rgba 0.2)
+  - ScoreScreen built as part of Screen US (same pattern as US-009, US-014) — US-020 is just integration wiring
+  - ScoreScreen: grade badge, portfolio comparison (player vs hold with difference), per-crisis breakdown, lesson card
+  - Economy rewards: +30 XP, +40 Coins via render-phase ref guard (same pattern)
+  - LOTTIE_SHIELD used as title icon (crisis/defense theme)
+  - onComplete receives grade-mapped score: S=100, A=85, B=65, C=45, F=20
+  - key={currentEvent.id} on crisis card triggers re-mount animation between events
+  - Clean typecheck — 53 errors all in skills/stitch-skills/ (pre-existing), no new errors in src/
+---
+
+## Iteration 20 — US-020: CrisisManager Score + Integration
+- ScoreScreen (portfolio vs hold strategy comparison, lesson card "Time in the market beats timing the market") and economy rewards (+30 XP, +40 Coins) were already built in US-019 as part of the screen component
+- Exported CrisisManagerScreen from chapter-4-content/simulations/index.ts
+- Added "mod-4-27" to SimulatorLoader SIM_LOADERS map (after mod-4-26)
+- Added "mod-4-27" to MODULES_WITH_SIM set in LessonFlowScreen.tsx
+- Files affected: index.ts (ch4 sims), SimulatorLoader.tsx, LessonFlowScreen.tsx, PRD51_NewModuleSims.md
+- Learnings for next cycles:
+  - Same pattern as US-010 and US-015 — when ScoreScreen is built in the Screen US, integration US is just 3 files of wiring
+  - SimulatorLoader and LessonFlowScreen are in chapter-1-content/ directory (not pyramid/)
+  - Clean typecheck — no new errors in src/
+---
+
+## Iteration 21 — US-021: ChartReader Types
+- Created chartReaderTypes.ts with 5 interfaces + 1 type alias: CandleData, ChartAction, ChartRound, ChartReaderConfig, ChartReaderState, ChartReaderScore
+- Files affected: src/features/chapter-4-content/simulations/chartReaderTypes.ts
+- Learnings for next cycles:
+  - Extracted `ChartAction = 'buy' | 'sell' | 'hold'` as named type alias (same pattern as PlayerAction in crisisManager and Verdict in statementDetective)
+  - playerActions is `(ChartAction | null)[]` — null entries for unanswered rounds (same pattern as statementDetective)
+  - CandleData has 6 numeric fields (open, close, high, low, volume) + date string — standard OHLCV
+  - ChartRound includes volumeData number[] as separate array for volume bar rendering below chart
+  - pattern field stores the technical pattern name (e.g., "uptrend", "broken support") for educational display
+  - whatHappened field stores the reveal text (what actually happened to the company)
+  - Followed crisisManagerTypes.ts JSDoc header pattern
+  - Clean typecheck — no new errors in src/
+---
+
+## Iteration 22 — US-022: ChartReader Data
+- Created chartReaderData.ts with 4 chart scenarios (40 candles each) and ChartReaderConfig export
+- Files affected: src/features/chapter-4-content/simulations/chartReaderData.ts
+- Learnings for next cycles:
+  - 4 rounds: Nvidia 2023 (buy — uptrend + rising volume), Meta 2022 (sell — broken support + sell-off), Coca-Cola 2019 (hold — sideways range + low volume), Apple 2020 (buy — golden cross pattern)
+  - buildCandles helper generates OHLC from close-price array: open = previous close, high/low derived from range + wicks
+  - First candle uses open = close * 0.998 to avoid zero-body doji
+  - Volume and close arrays have exactly 40 entries each (4 rows × 10)
+  - volumeData in ChartRound mirrors CandleData volume fields (same values, separate array for bar chart rendering convenience)
+  - Dates generated with approximate weekend skipping (add 3 every 5th candle)
+  - Hebrew pattern names and whatHappened reveal texts for each round
+  - TOTAL_ROUNDS exported as convenience constant (4) — same pattern as TOTAL_EVENTS in crisisManager
+  - Followed crisisManagerData.ts pattern: constants → generated objects → rounds array → config export
+  - Clean typecheck — no new errors in src/
+---
+
+## Iteration 23 — US-023: ChartReader Hook
+- Created useChartReader.ts with round-based chart quiz logic
+- Files affected: src/features/chapter-4-content/simulations/useChartReader.ts
+- Learnings for next cycles:
+  - Follows exact same pattern as useStatementDetective — round-by-round progression, no auto-play interval
+  - submitAction(action) → records answer + shows reveal; nextRound() → advances or completes
+  - currentActionCorrect derived memo: null when not showing reveal, boolean when showing
+  - Grade mapping: 4/4=S, 3/4=A, 2/4=B, 1/4=C, 0=F (direct count, no percentage)
+  - playerActions initialized as null array; null entries = unanswered rounds
+  - Guards: submitAction no-ops if showingReveal or isComplete; nextRound no-ops if not showingReveal
+  - currentRound derived from rounds[currentRoundIndex] — null safety with ?? null
+  - Simpler score than StatementDetective — no missedRedFlags collection needed
+  - Clean typecheck — no new errors in src/
+---
+
+## Iteration 24 — US-024: ChartReader Screen
+- Created ChartReaderScreen.tsx with full game UI (candlestick chart, 3 action buttons, reveal) + score screen
+- Files affected: src/features/chapter-4-content/simulations/ChartReaderScreen.tsx
+- Learnings for next cycles:
+  - Two-phase screen (game → score) same as StatementDetective/CrisisManager pattern
+  - CandlestickChart component: renders 40 candles with computed positions from price range
+  - Candle body = rectangle (green if close >= open, red if close < open), wick = thin vertical line from low to high
+  - Volume bars below chart: height proportional to maxVolume, colored to match candle direction (green/red at 35% opacity)
+  - Chart dimensions computed from SCREEN_WIDTH minus padding — no horizontal scroll needed for 40 candles
+  - "מניה מסתורית 🔮" mystery label in card header before action
+  - Reveal phase: FadeInDown animation for company name card with whatHappened + pattern badge
+  - Pattern badge in purple (#ede9fe bg, #6d28d9 text) — distinct from result badges
+  - 3 action buttons (buy green, hold yellow, sell red) — same colors as CrisisManager but different order (buy first since chart reading is about finding opportunities)
+  - Score screen includes per-round breakdown showing company name + correct action
+  - Lesson card: emphasizes volume confirming/denying price movement
+  - Economy rewards (+25 XP, +30 Coins) with useRef guard pattern (same as all other sims)
+  - getActionFeedback helper returns isCorrect + contextual message including pattern name
+  - ProgressDots colored by action correctness (green=correct, red=wrong) — same pattern as StatementDetective
+  - Score screen also built as part of Screen US (ahead of US-025) since it's integral — US-025 is just integration wiring
+  - Clean typecheck — no new errors in src/
+---
+
+## Iteration 25 — US-025: ChartReader Score + Integration
+- ScoreScreen and economy rewards (+25 XP, +30 Coins) were already built in US-024 as part of the screen component
+- Exported ChartReaderScreen from chapter-4-content/simulations/index.ts
+- Added "mod-4-28" to SimulatorLoader SIM_LOADERS map (after mod-4-27)
+- Added "mod-4-28" to MODULES_WITH_SIM set in LessonFlowScreen.tsx
+- Files affected: index.ts (ch4 sims), SimulatorLoader.tsx, LessonFlowScreen.tsx, PRD51_NewModuleSims.md
+- Learnings for next cycles:
+  - Same pattern as US-010, US-015, US-020 — when ScoreScreen is built in the Screen US, integration US is just 3 files of wiring
+  - Chapter 4 sims use require("../chapter-4-content/simulations") pattern in SimulatorLoader
+  - Clean typecheck — no new errors in src/
+---
+
+## Iteration 26 — US-026: StockSorter Types
+- Created stockSorterTypes.ts with 5 interfaces + 1 type alias: StockCard, QuestionType, SortQuestion, StockSorterConfig, StockSorterState, StockSorterScore
+- Files affected: src/features/chapter-4-content/simulations/stockSorterTypes.ts
+- Learnings for next cycles:
+  - Extracted `QuestionType = 'growth_value' | 'cyclical_defensive' | 'cap_size'` as named type alias (same pattern as ChartAction, PlayerAction, Verdict)
+  - answers in state is `(string | null)[]` — null entries for unanswered questions (consistent with playerActions/playerVerdicts patterns)
+  - StockCard has 3 boolean/enum classification fields: isGrowth, isCyclical, capSize — used to derive correctAnswer in data
+  - accuracy field in score is a number (0-100) unlike other sims — matches PRD requirement
+  - Followed chartReaderTypes.ts JSDoc header pattern
+  - Clean typecheck — no new errors in src/
+---
+
+## Iteration 27 — US-027: StockSorter Data
+- Created stockSorterData.ts with 8 stock cards and 8 sort questions
+- Files affected: src/features/chapter-4-content/simulations/stockSorterData.ts
+- Learnings for next cycles:
+  - 8 stocks: Apple (AAPL), Bank Hapoalim (POLI), Tesla (TSLA), Teva (TEVA), Nvidia (NVDA), Strauss (STRS), Wix (WIX), Bezeq (BEZQ)
+  - Questions alternate: growth_value → cyclical_defensive → cap_size → growth_value → cyclical_defensive → cap_size → growth_value → cyclical_defensive
+  - Hebrew correct answers: 'צמיחה'/'ערך' for growth_value, 'מחזורית'/'דפנסיבית' for cyclical_defensive, 'גדולה'/'בינונית'/'קטנה' for cap_size
+  - QUESTION_LABELS and ANSWER_OPTIONS exported as Record<string, string> and Record<string, string[]> — screen can use these to render question text and buttons dynamically
+  - TOTAL_QUESTIONS exported as convenience constant (8) — same pattern as TOTAL_ROUNDS in chartReader
+  - Each StockCard has realistic metrics: marketCapB, peRatio, dividendYield, sector (Hebrew)
+  - Growth stocks: high P/E (28-65), low/zero dividend yield; Value stocks: low P/E (8-15), higher dividend yield (3-5%)
+  - Cyclical: tech, finance, auto; Defensive: pharma, food, telecom
+  - Followed chartReaderData.ts pattern: constants → objects → questions array → config export
+  - Clean typecheck — no new errors in src/
+---
+
+## Iteration 28 — US-028: StockSorter Hook
+- Created useStockSorter.ts with round-based stock classification quiz logic
+- Files affected: src/features/chapter-4-content/simulations/useStockSorter.ts
+- Learnings for next cycles:
+  - Follows useChartReader.ts pattern exactly: question-by-question progression, feedback phase, score on complete
+  - Key difference from ChartReader: showingFeedback is separate useState (not in StockSorterState) since StockSorterState from types didn't include it
+  - submitAnswer(answer: string) records answer + shows feedback; nextQuestion() advances or completes
+  - currentAnswerCorrect derived memo: null when not showing feedback, boolean when showing
+  - Grade mapping: 8/8=S, 7/8=A, 5-6/8=B, 3-4/8=C, ≤2=F (direct count, not percentage)
+  - accuracy field in score: Math.round((correctCount / totalQuestions) * 100) — unique to StockSorter
+  - Guards: submitAnswer no-ops if showingFeedback or isComplete; nextQuestion no-ops if not showingFeedback
+  - currentQuestion derived from questions[currentQuestionIndex] — null safety with ?? null
+  - Clean typecheck — no new errors in src/
+---
+
+## Iteration 29 — US-029: StockSorter Screen
+- Created StockSorterScreen.tsx with full game UI + score screen
+- Files affected: src/features/chapter-4-content/simulations/StockSorterScreen.tsx
+- Learnings for next cycles:
+  - Two-phase screen (game → score) same as ChartReader/StatementDetective pattern
+  - StockCardDisplay component: emoji + name + ticker header, 4-metric grid (market cap, P/E, dividend yield, sector), question badge in purple
+  - formatMarketCap helper: ≥1000B → $X.XT, else $XB
+  - QUESTION_LABELS and ANSWER_OPTIONS from data file drive dynamic rendering — no hardcoded question text
+  - Choice buttons use flex:1 in a row — 2 buttons for growth_value/cyclical_defensive, 3 for cap_size
+  - Card animation: correct = green pulse (withSpring scale 1.05→1), incorrect = red shake (withTiming sequence 0.97→1.02→0.98→1)
+  - successHaptic on correct, errorHaptic on incorrect — distinct from tapHaptic on button press
+  - SharedValue<number> must be imported as `type SharedValue` from 'react-native-reanimated', NOT `Animated.SharedValue`
+  - Progress dots smaller (12px) for 8 rounds vs 14px for 4-5 rounds — avoids overflow on narrow screens
+  - Score screen includes accuracy percentage (unique to StockSorter) alongside correct count
+  - Per-question breakdown shows stock emoji + name + correct answer with ✓/✗ indicator
+  - Lesson card: classification helps build diversified portfolios (growth = potential, value = stability)
+  - Economy rewards (+20 XP, +30 Coins) with useRef guard pattern (same as all other sims)
+  - Score screen also built as part of Screen US (ahead of US-030) since it's integral — US-030 is just integration wiring
+  - Clean typecheck — no new errors in src/
+---
+
+## Iteration 30 — US-030: StockSorter Score + Integration
+- ScoreScreen with accuracy percentage, per-question breakdown, lesson card, and economy rewards (+20 XP, +30 Coins) were already built in US-029 as part of the screen component
+- Exported StockSorterScreen from chapter-4-content/simulations/index.ts
+- Added "mod-4-29" to SimulatorLoader SIM_LOADERS map (after mod-4-28)
+- Added "mod-4-29" to MODULES_WITH_SIM set in LessonFlowScreen.tsx
+- Files affected: index.ts (ch4 sims), SimulatorLoader.tsx, LessonFlowScreen.tsx, PRD51_NewModuleSims.md
+- Learnings for next cycles:
+  - Same pattern as US-010, US-015, US-020, US-025 — when ScoreScreen is built in the Screen US, integration US is just 3 files of wiring
+  - Chapter 4 sims use require("../chapter-4-content/simulations") pattern in SimulatorLoader
+  - Clean typecheck — no new errors in src/
+---
+
+## Iteration 31 — US-031: IndexRace Types
+- Created indexRaceTypes.ts with 4 interfaces + 1 type alias: StockOption, IndexRaceConfig, RacePhase, IndexRaceState, IndexRaceScore
+- Files affected: src/features/chapter-4-content/simulations/indexRaceTypes.ts
+- Learnings for next cycles:
+  - Extracted `RacePhase = 'pick' | 'race' | 'complete'` as named type alias (same pattern as PlayerAction, ChartAction, Verdict, QuestionType)
+  - StockOption.annualReturns is number[] with 10 entries — one per simulated year
+  - IndexRaceConfig.indexReturns is number[] with 10 entries — S&P 500 benchmark returns for comparison
+  - IndexRaceState tracks portfolioValueByYear and indexValueByYear as number[] — growing arrays during race phase
+  - isPlaying boolean controls auto-advance interval (same pattern as TrackSelector)
+  - differencePercent in score is signed: positive = beat index, negative = lost to index
+  - beatIndex boolean for simple win/lose display logic (same pattern as beatHoldStrategy in CrisisManager)
+  - Followed stockSorterTypes.ts / crisisManagerTypes.ts JSDoc header pattern
+  - Clean typecheck — no new errors in src/
+---
+
+## Iteration 32 — US-032: IndexRace Data
+- Created indexRaceData.ts with 12 stocks (4 winners, 4 average, 4 losers) and S&P 500 benchmark
+- Files affected: src/features/chapter-4-content/simulations/indexRaceData.ts
+- Learnings for next cycles:
+  - 12 stocks with 10-year annual returns as decimal fractions (0.25 = 25%): Apple (~25% avg), Nvidia (~40% avg), Amazon (~20% avg), Microsoft (~22% avg), J&J (~10% avg), Coca-Cola (~8% avg), P&G (~9% avg), Bank Leumi (~12% avg), Intel (~-5% avg), GE (~-8% avg), Teva (~-10% avg), WeWork (~-30% avg)
+  - S&P 500 benchmark: 10 entries averaging ~12% (sum = 1.20) — realistic years with 2 negative years
+  - Returns include realistic volatility: crash years (negative returns) mixed with growth years for each stock
+  - Winners have higher peaks and more positive years; losers have deeper troughs and more negative years
+  - WeWork has early IPO hype (0.80, 0.50) then sustained decline ending -0.90 — represents catastrophic stock pick
+  - Exported constants: INITIAL_INVESTMENT (100K), PICK_COUNT (5), TOTAL_YEARS (10) — same pattern as other data files
+  - Followed stockSorterData.ts / chartReaderData.ts pattern: constants → objects → array → config export
+  - Sectors in Hebrew: טכנולוגיה, מוליכים למחצה, מסחר אלקטרוני, בריאות, מזון ומשקאות, מוצרי צריכה, בנקאות, תעשייה, פארמה, נדל"ן / טכנולוגיה
+  - Clean typecheck — no new errors in src/
+---
+
+## Iteration 33 — US-033: IndexRace Hook
+- Created useIndexRace.ts with pick-phase stock selection, race-phase auto-advance, and score computation
+- Files affected: src/features/chapter-4-content/simulations/useIndexRace.ts
+- Learnings for next cycles:
+  - Follows useTrackSelector.ts auto-advance pattern: useState + useRef for interval + yearRef for position tracking
+  - computePortfolioValues and computeIndexValues recompute from scratch each tick (safe, avoids accumulation drift) — only 10 years × 5 stocks, negligible cost
+  - toggleStock guards: no-op if phase !== 'pick', no-op if already at PICK_COUNT and not deselecting
+  - startRace transitions from 'pick' → 'race' only when exactly PICK_COUNT stocks selected
+  - Phase type uses 'complete' as const in setState to satisfy RacePhase union narrowing
+  - Grade mapping: ≥20% above index = S, any beat = A, within 5% loss = B, within 20% loss = C, else F
+  - differencePercent in score is Math.round of percentage — signed (positive = beat, negative = lost)
+  - beatIndex boolean for simple win/lose logic in screen (same pattern as beatHoldStrategy in CrisisManager)
+  - Exposed startRace + toggleStock + play/pause/reset — screen will use startRace to transition from pick to race phase
+  - Clean typecheck — no new errors in src/ (pre-existing FINN_ANIMATION errors unrelated)
+---
+
+## Iteration 34 — US-034: IndexRace Screen
+- Created IndexRaceScreen.tsx with 3-phase UI (pick → race → score)
+- Files affected: src/features/chapter-4-content/simulations/IndexRaceScreen.tsx
+- Learnings for next cycles:
+  - Pick phase: 2-column grid of 12 StockPickCard components, selected cards glow gold (#f59e0b border + yellow bg), disabled cards at 0.45 opacity when 5 selected
+  - Counter "X/5 נבחרו" at top, start race button pulses when exactly 5 selected, disabled (0.4 opacity) otherwise
+  - Race phase: DualLineChart component renders portfolio (gold #f59e0b) vs S&P 500 (blue #3b82f6) lines — adapted from TrackSelectorScreen's MultiLineChart but with only 2 lines
+  - Dual balance display card: portfolio and index side-by-side with color dots, leading balance gets green color
+  - Balance scale animation (withSpring pulse) on >5000 change — same pattern as TrackSelectorScreen
+  - Progress bar using sim4Styles.progressTrack/progressFill — shows race progress (currentYear/TOTAL_YEARS)
+  - X-axis labels show every 2nd year (i % 2 === 0) for 10 points — different from TrackSelector's every 5th for 30 points
+  - Score screen built as part of Screen US (ahead of US-035) — includes grade, portfolio vs index comparison, selected stocks breakdown, lesson card, confetti if beat index
+  - Economy rewards (+30 XP, +40 Coins) with render-phase ref guard (same pattern as all other sims)
+  - onComplete receives grade-mapped score: S=100, A=85, B=65, C=45, F=20
+  - gridCell width = (SCREEN_WIDTH - 42) / 2 — accounts for 16px padding on each side + 10px gap
+  - LOTTIE_GROWTH used as title icon (racing/growth theme), LOTTIE_ROCKET for start button and score screen portfolio row
+  - Clean typecheck — no new errors in src/ (pre-existing FINN_ANIMATION errors unrelated)
+---
+
+## Iteration 35 — US-035: IndexRace Score + Integration
+- ScoreScreen ("ניצחת/הפסדת את המדד"), lesson card (92% stat), and economy rewards (+30 XP, +40 Coins) were already built in US-034 as part of the screen component
+- Exported IndexRaceScreen from chapter-4-content/simulations/index.ts
+- Added "mod-4-30" to SimulatorLoader SIM_LOADERS map (after mod-4-29)
+- Added "mod-4-30" to MODULES_WITH_SIM set in LessonFlowScreen.tsx
+- Files affected: index.ts (ch4 sims), SimulatorLoader.tsx, LessonFlowScreen.tsx, PRD51_NewModuleSims.md
+- Learnings for next cycles:
+  - Same pattern as US-010, US-015, US-020, US-025, US-030 — when ScoreScreen is built in the Screen US, integration US is just 3 files of wiring
+  - All Chapter 4 sims now complete (6 sims: mod-4-25 through mod-4-30)
+  - Next phase: Chapter 5 sims (US-036 CryptoSim types, then US-037..US-045)
+  - Chapter 5 sims go in src/features/chapter-5-content/simulations/ and use SIM5 theme
+  - Clean typecheck — no new errors in src/ (pre-existing FINN_ANIMATION errors unrelated)
+---
+
+## Iteration 36 — US-036: CryptoSim Types
+- Created cryptoSimTypes.ts with 6 interfaces + 1 type alias: CryptoAssetId, CryptoAsset, CryptoAllocation, CryptoYear, CryptoSimConfig, CryptoSimState, CryptoSimScore
+- Files affected: src/features/chapter-5-content/simulations/cryptoSimTypes.ts
+- Learnings for next cycles:
+  - First Chapter 5 sim — lives in src/features/chapter-5-content/simulations/ alongside existing sims (REIT, FIRE, etc.)
+  - Extracted `CryptoAssetId = 'btc' | 'eth' | 'cash'` as named type alias (same pattern as RacePhase, PlayerAction, ChartAction, etc.)
+  - CryptoAllocation has 3 percent fields that must sum to 100 — constraint enforced in hook, not types
+  - CryptoYear returns stored as decimal fractions (0.60 = +60%) — consistent with all other sim data patterns
+  - maxDrawdownPercent in state tracks worst year-end-to-year-end drop during simulation
+  - volatilityRatio in score compares crypto vs stock volatility — unique metric for this sim
+  - Followed indexRaceTypes.ts JSDoc header pattern
+  - Clean typecheck — no new errors in src/ (pre-existing FINN_ANIMATION errors unrelated)
+---
+
+## Iteration 37 — US-037: CryptoSim Data
+- Created cryptoSimData.ts with 3-year market data (2021-2023 inspired), 3 crypto assets, and default allocation
+- Files affected: src/features/chapter-5-content/simulations/cryptoSimData.ts
+- Learnings for next cycles:
+  - 3 assets: Bitcoin ₿, Ethereum Ξ, Cash 💵 — uses CryptoAssetId union from types
+  - Year 1 (boom): BTC +60%, ETH +400%, S&P +27% — ETH return is 4.00 as decimal (400%)
+  - Year 2 (crash): BTC -65%, ETH -67%, S&P -19% — extreme drawdown year
+  - Year 3 (recovery): BTC +155%, ETH +90%, S&P +24% — strong bounce
+  - Cash return is implicitly 0% — not included in CryptoYear (only btcReturn, ethReturn, sp500Return)
+  - DEFAULT_ALLOCATION exported: 50% BTC, 30% ETH, 20% cash — reasonable starting point for slider UI
+  - Returns stored as decimal fractions (0.60 = +60%, 4.00 = +400%) — consistent with all other sim data
+  - INITIAL_AMOUNT = 10,000 (₪) and TOTAL_YEARS = 3 exported as convenience constants
+  - Followed indexRaceData.ts pattern: constants → asset objects → year data → config export
+  - Clean typecheck — no new errors in src/ (pre-existing FINN_ANIMATION errors unrelated)
+---
+
+## Iteration 38 — US-038: CryptoSim Hook
+- Created useCryptoSim.ts with linked allocation sliders, auto-play, portfolio vs S&P 500 comparison, and max drawdown tracking
+- Files affected: src/features/chapter-5-content/simulations/useCryptoSim.ts
+- Learnings for next cycles:
+  - Follows useTrackSelector.ts auto-advance pattern: useState + useRef for interval + yearRef for position tracking
+  - allocationRef mirrors state.allocation so interval callback reads latest allocation without stale closure
+  - redistributeAllocation: when one slider changes, other two adjust proportionally to keep sum at 100%; if both others are 0, splits equally
+  - Explicit if/else branches per asset ID (btc/eth/cash) instead of dynamic property access — avoids type casts and keeps strict TS happy
+  - computeCryptoBalances: weightedReturn = btcReturn × btcPct/100 + ethReturn × ethPct/100 (cash contributes 0%)
+  - computeStockBalances: simple compound with sp500Return per year
+  - computeMaxDrawdown: iterates consecutive years, finds largest drop percentage (year-end to year-end)
+  - computeVolatility: standard deviation of yearly returns array — used for volatilityRatio in score
+  - volatilityRatio = cryptoVol / stockVol, rounded to 2 decimal places
+  - Grade based on max drawdown (risk management focus): <20%=S, <30%=A, <45%=B, <60%=C, ≥60%=F
+  - Educational lesson: lower crypto allocation = lower drawdown = better grade — reinforces "crypto as satellite, not core"
+  - DEFAULT_ALLOCATION reset on replay via allocationRef.current = { ...DEFAULT_ALLOCATION }
+  - 3 years × 750ms = 2.25s total sim time (fast, engaging)
+  - Clean typecheck — no new errors in src/ (pre-existing FINN_ANIMATION errors unrelated)
+---
+
+## Iteration 39 — US-039: CryptoSim Screen
+- Created CryptoSimScreen.tsx with allocation sliders, dual chart, screen shake, drawdown callout, and full score screen
+- Files affected: src/features/chapter-5-content/simulations/CryptoSimScreen.tsx
+- Learnings for next cycles:
+  - Two main phases: interactive (sliders + chart + play) → score (grade, comparison, risk analysis, lesson)
+  - 3 AllocationSlider components: BTC (orange #f59e0b), ETH (blue #3b82f6), Cash (green #16a34a) — disabled during sim
+  - Linked sliders via updateAllocation from hook — redistributeAllocation keeps sum at 100%
+  - DualLineChart adapted from IndexRaceScreen's DualLineChart — crypto (gold) vs S&P 500 (blue)
+  - Screen shake on big moves (>30% change): containerScale withSequence (0.97→1.02→0.99→1) + heavyHaptic
+  - Balance scale pulse on >₪1000 change: balanceScale withSequence (1.08→1 spring)
+  - Max drawdown callout: red card with dangerLight bg, dangerBorder border, SIM5.danger text color
+  - Play button pulses with withRepeat when canPlay (not playing, not complete, year 0)
+  - ScoreScreen built as part of Screen US (ahead of US-040) — includes grade, crypto vs stocks comparison, risk analysis (drawdown + volatility ratio + allocation), lesson card
+  - Economy rewards (+25 XP, +30 Coins) with render-phase ref guard (same pattern as all other sims)
+  - onComplete receives grade-mapped score: S=100, A=85, B=65, C=45, F=20
+  - Slider from @react-native-community/slider (same as BrokerCompareScreen/RiskSliderScreen)
+  - SIM5 purple theme: gradient via SimLottieBackground, white cards, purple buttons
+  - CH5_LOTTIE tuple pattern: [chart, balance] same as ch4 reference
+  - Clean typecheck — no new errors in src/ (pre-existing LessonFlowScreen/MacroEventCard errors unrelated)
+---
+
+## Iteration 40 — US-040: CryptoSim Score + Integration
+- ScoreScreen (crypto vs stocks comparison, volatility insight, risk analysis), lesson card ("קריפטו מעניין כלווין קטן (עד 5%) — לא כליבה של תיק"), and economy rewards (+25 XP, +30 Coins) were already built in US-039 as part of the screen component
+- Exported CryptoSimScreen from chapter-5-content/simulations/index.ts
+- Added "mod-5-30" to SimulatorLoader SIM_LOADERS map (after mod-5-29)
+- Added "mod-5-30" to MODULES_WITH_SIM set in LessonFlowScreen.tsx
+- Files affected: index.ts (ch5 sims), SimulatorLoader.tsx, LessonFlowScreen.tsx, PRD51_NewModuleSims.md
+- Learnings for next cycles:
+  - Same pattern as US-010, US-015, US-020, US-025, US-030, US-035 — when ScoreScreen is built in the Screen US, integration US is just 3 files of wiring
+  - Chapter 5 sims use require("../chapter-5-content/simulations") pattern in SimulatorLoader (same as existing ch5 sims)
+  - First CryptoSim integration — mod-5-30 now fully wired
+  - Next task: US-041 IRABuilder Types (iraBuilderTypes.ts) — last sim of PRD51
+  - Clean typecheck — no new errors in src/ (pre-existing LessonFlowScreen/MacroEventCard Lottie type errors unrelated)
+---
+
+## Iteration 41 — US-041: IRABuilder Types
+- Created iraBuilderTypes.ts with 1 type alias + 4 interfaces: IRAType, IRAConfig, IRAState, IRAScore
+- Files affected: src/features/chapter-5-content/simulations/iraBuilderTypes.ts
+- Learnings for next cycles:
+  - Extracted `IRAType = 'traditional' | 'roth'` as named type alias (same pattern as CryptoAssetId, RacePhase, PlayerAction, etc.)
+  - IRAConfig stores all defaults: annualLimit (7000), catchUpLimit (8000), defaultReturn (0.08), defaultTaxNow (0.22), defaultTaxRetirement (0.30), years (30)
+  - IRAState has slider-driven fields: annualContribution, investmentReturn, taxRateNow, taxRateRetirement — all decimal fractions
+  - traditionalByYear and rothByYear track gross balance growth per year (net computed at end from tax rates)
+  - IRAScore has both gross and net for each type: traditionalGross/traditionalNet, rothGross/rothNet
+  - Traditional: grows tax-free, taxed at retirement rate on withdrawal → net = gross × (1 - taxRateRetirement)
+  - Roth: contributed post-tax, grows tax-free, no tax on withdrawal → net = gross (same as gross)
+  - winner field is IRAType (not string) for type safety in score display logic
+  - differenceNet is absolute difference (always positive) — sign determined by winner field
+  - Grade union type: 'S'|'A'|'B'|'C'|'F' with gradeLabel string (consistent with all other sims)
+  - Followed cryptoSimTypes.ts JSDoc header pattern
+  - Clean typecheck — no new errors in src/ (pre-existing LessonFlowScreen/MacroEventCard Lottie type errors unrelated)
+---
+
+## Iteration 42 — US-042: IRABuilder Data
+- Created iraBuilderData.ts with default config, pre-computed comparison, Hebrew helper texts, Israeli callout, and slider ranges
+- Files affected: src/features/chapter-5-content/simulations/iraBuilderData.ts
+- Learnings for next cycles:
+  - IRA_CONFIG exports all defaults from types: annualLimit 7000, catchUpLimit 8000, defaultReturn 0.08, defaultTaxNow 0.22, defaultTaxRetirement 0.30, years 30
+  - computeFutureValue helper: iterative compound with annual contribution — balance = (balance + contribution) * (1 + rate) per year
+  - Traditional: contribute full $7000 pre-tax, grows tax-free, taxed at retirement rate → net = gross × (1 - taxRetirement)
+  - Roth: contribute $7000 × (1 - taxNow) = $5460 post-tax, grows tax-free, no tax on withdrawal → net = gross
+  - With defaults (22% tax now, 30% retirement), Roth wins because lower current tax rate preserves more for tax-free growth
+  - DEFAULT_COMPARISON pre-computes both types for default slider values — useful for initial display before user adjusts sliders
+  - IRA_HELPER_TEXTS keyed by IRAType — title, emoji, description, taxTiming, bestWhen — screen can render dynamically
+  - ISRAELI_CALLOUT and ISRAELI_CALLOUT_DETAIL: callout text explaining קופת גמל להשקעה as the Israeli equivalent
+  - SLIDER_RANGES exported with min/max/step/default for contribution ($1K-$7K), returnRate (4%-12%), taxNow (10%-40%), taxRetirement (10%-40%)
+  - PreComputedComparison interface exported from data file (not types) since it's data-layer only
+  - Followed cryptoSimData.ts pattern: constants → computed values → interface → config export
+  - Clean typecheck — no new errors in src/
+---
+
+## Iteration 43 — US-043: IRABuilder Hook
+- Created useIRABuilder.ts with slider-driven state, auto-play 30-year growth, type prediction, and winner-based grading
+- Files affected: src/features/chapter-5-content/simulations/useIRABuilder.ts
+- Learnings for next cycles:
+  - Hybrid pattern: combines BrokerCompare slider reactivity with CryptoSim auto-advance interval
+  - IRAState type doesn't include isPlaying/currentYear — managed as separate useState (unlike CryptoSim where they're in state type)
+  - paramsRef mirrors all 4 slider values so interval callback reads latest without stale closure
+  - computeTraditionalByYear: full contribution pre-tax, compound at rate, gross balances (index 0 = 0, index N = after year N)
+  - computeRothByYear: contribution × (1 - taxNow) post-tax contribution, compound at rate, gross balances
+  - Traditional net = gross × (1 - taxRetirement); Roth net = gross (no tax on withdrawal)
+  - Grade nuance: correct winner pick = S; wrong pick mitigated by closeness (<5% diff → B, <15% → C, else F)
+  - selectType guards against changes after isComplete (same as BrokerCompare's selectBroker guard)
+  - Interval clears itself on completion (clearInterval inside callback before setIsPlaying(false)) to prevent extra ticks
+  - Score depends on [state.isComplete, state.selectedType] — returns null if either missing
+  - Exposes isPlaying, currentYear, totalYears as separate values for screen to render progress
+  - 30 years × 750ms = 22.5s total sim time — may feel long; screen could adjust speed or add skip button
+  - Clean typecheck — no new errors in src/ (53 pre-existing all in skills/stitch-skills/)
+---
+
+## Iteration 44 — US-044: IRABuilder Screen
+- Created IRABuilderScreen.tsx with full interactive UI + score screen
+- Files affected: src/features/chapter-5-content/simulations/IRABuilderScreen.tsx
+- Learnings for next cycles:
+  - Two main phases: interactive (type toggle + sliders + bar chart + play) → score (grade, winner reveal, tax analysis, lesson, Israeli callout)
+  - IRA type toggle: two AnimatedPressable cards for Traditional 📜 / Roth 🔮 — user picks their prediction of the winner before sim starts
+  - Selected card gets colored border + tinted background + "✓ הבחירה שלך" badge
+  - 4 ParamSlider components: contribution ($1K-$7K, amber), return (4%-12%, green), taxNow (10%-40%, red), taxRetirement (10%-40%, purple)
+  - DualBarChart component: two vertical bars (blue=Traditional, purple=Roth) showing after-tax values, "VS" label between them
+  - Bar heights proportional to maxValue, bars grow from bottom with flex-end + overflow:hidden
+  - Net values computed inline: traditionalNet = gross × (1 - taxRetirement), rothNet = gross (no tax)
+  - Balance scale animation (withSpring pulse) on >$5000 change — same pattern as CryptoSimScreen
+  - Play button disabled + 0.4 opacity until user selects an IRA type; pulses when canPlay
+  - Israeli callout card shown before sim starts (bottom), with ISRAELI_CALLOUT + ISRAELI_CALLOUT_DETAIL from data
+  - Israeli callout also shown in score screen with warningBorder accent
+  - ScoreScreen built as part of Screen US (ahead of US-045) — includes grade, winner reveal, Traditional vs Roth comparison, tax analysis (30-year), lesson card, Israeli callout, replay/continue
+  - Economy rewards (+25 XP, +30 Coins) with render-phase ref guard (same pattern as all other sims)
+  - onComplete receives grade-mapped score: S=100, A=85, B=65, C=45, F=20 with ?? 50 fallback
+  - Slider from @react-native-community/slider (same as CryptoSimScreen/BrokerCompareScreen)
+  - SIM5 purple theme: gradient via SimLottieBackground, white cards, purple buttons
+  - CH5_LOTTIE tuple pattern: [chart, balance] same as CryptoSimScreen
+  - Sliders and type toggle disabled during sim (isPlaying || currentYear > 0)
+  - Clean typecheck — no new errors in src/
+---
+
+## Iteration 45 — US-045: IRABuilder Score + Integration
+- ScoreScreen (winner revealed, tax savings insight, 30-year projection), lesson card, Israeli callout, and economy rewards (+25 XP, +30 Coins) were already built in US-044 as part of the screen component
+- Exported IRABuilderScreen from chapter-5-content/simulations/index.ts
+- Added "mod-5-31" to SimulatorLoader SIM_LOADERS map (after mod-5-30)
+- Added "mod-5-31" to MODULES_WITH_SIM set in LessonFlowScreen.tsx
+- Files affected: index.ts (ch5 sims), SimulatorLoader.tsx, LessonFlowScreen.tsx, PRD51_NewModuleSims.md
+- Learnings for next cycles:
+  - Same pattern as US-010, US-015, US-020, US-025, US-030, US-035, US-040 — when ScoreScreen is built in the Screen US, integration US is just 3 files of wiring
+  - Chapter 5 sims use require("../chapter-5-content/simulations") pattern in SimulatorLoader
+  - ALL 9 SIMS NOW COMPLETE: mod-3-18, mod-4-25..30, mod-5-30, mod-5-31
+  - PRD51 is fully implemented — all 45 user stories done
+  - Clean typecheck — no new errors in src/
+---

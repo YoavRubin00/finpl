@@ -1,0 +1,141 @@
+# Progress Log — PRD 40: Duo-Style Migration & Adaptive Theme
+
+## Learnings
+(Notes discovered during implementation)
+- useTheme() hook at src/hooks/useTheme.ts returns AppTheme interface
+- Light mode uses DUO from src/constants/theme.ts; Dark mode uses local DARK const in useTheme.ts
+- AppBackground already uses useTheme() — good reference for pattern
+- Pattern: `const theme = useTheme();` then `{ backgroundColor: theme.bg, color: theme.text }`
+- GlobalWealthHeader has hard-coded: #ffffff (bg), #e5e7eb (border), #1f2937 (text)
+- AnimatedTabBar has hard-coded: #fafafa (bg), static per-tab colors
+- SupercellButton DUO_COLORS is light-only, needs dark variant
+- Quiz/Lesson screens must NOT be changed (Clash style preserved)
+- DUO palette keys: bg, surface, border, text, textMuted, green, greenDark, greenSurface, blue, blueDark, blueSurface, orange, orangeDark, orangeSurface, red, redDark, purple, purpleDark
+
+## Prior Work (Already Complete)
+- US-001: Foundation & Theme — theme.ts DUO palette + useTheme hook + AppTheme interface
+- US-003: Snake Path — DuoLearnScreen zigzag nodes, unit banners, path connectors
+---
+
+## Iteration 1 — US-002: Header & Navigation Adaptive Theme
+- What was done: Imported useTheme() into GlobalWealthHeader and AnimatedTabBar, replaced all hard-coded light-mode colors with theme-adaptive values
+- Files affected:
+  - src/components/ui/GlobalWealthHeader.tsx — container bg/border, levelBadgeInner bg/border, levelText color, resourcePill bg/border, iconFrame bg/border, pillText default color, progressTrack bg, avatarBubble bg/border, ring stroke all use theme values
+  - src/components/ui/AnimatedTabBar.tsx — tabBar bg/borderTop, badge borderColor all use theme values
+- Learnings for next cycles:
+  - Pattern: keep static StyleSheet for layout, apply theme color overrides via inline style arrays `style={[s.static, { backgroundColor: theme.bg }]}`
+  - useTheme() can be called in sub-components (ResourcePill, AnimatedNumber, TabItem) — each gets own theme reference
+  - Currency colors (gold, blue, red, orange) and tab accent colors stay hard-coded vibrant — NOT themed
+  - Badge borderColor must match tab bar surface so the "cutout" effect works in both modes
+  - Ring SVG Circle stroke accepts dynamic prop values directly
+---
+
+## Iteration 2 — US-004a: SupercellButton Dark Mode
+- What was done: Imported useTheme() and useColorScheme into SupercellButton, added "default" and "red" to ButtonVariant, made duo "default" variant theme-adaptive (light=#e5e7eb / dark=#333333), kept colored variants vibrant in both modes, extended LEGACY_COLORS with default+red entries for type safety, legacy style untouched
+- Files affected:
+  - src/components/ui/SupercellButton.tsx — useTheme + useColorScheme imports, ButtonVariant expanded, DUO_COLORS typed as Exclude<ButtonVariant,"default">, LEGACY_COLORS extended, duo branch computes adaptive colors for "default" variant
+- Learnings for next cycles:
+  - Pattern: `variant === "default" ? { adaptive } : DUO_COLORS[variant]` — TypeScript narrows correctly with Exclude<> type on the static record
+  - theme.border maps exactly to the PRD-specified default bg (#e5e7eb light / #333333 dark)
+  - isDark detected via useColorScheme() === "dark" (same hook useTheme uses internally, safe to call alongside)
+  - Default variant shadow: light=#cbcfd5, dark=#262626 (slightly darker than bg for 3D effect)
+  - LEGACY_COLORS must cover all ButtonVariant keys — added default (gray gradient) and red (red gradient) to satisfy Record type
+---
+
+## Iteration 3 — US-004b: ShopScreen Dark Mode
+- What was done: Imported useTheme() into ShopScreen, applied theme-adaptive colors to structural elements (root bg, top bar, category tabs, empty state) while preserving gaming-themed gradient sections and bundle card styling
+- Files affected:
+  - src/features/shop/ShopScreen.tsx — root bg → theme.bg, balance pill bg → theme.surface, topBarTitle → theme.text, closeBtn bg/border → theme.surface/theme.border + icon → theme.textMuted, category tab active bg/border/text → theme.surface/theme.border/theme.text, emptyText → theme.textMuted
+- Learnings for next cycles:
+  - ShopScreen has heavy gaming chrome (LinearGradient sections, wooden planks, diamond patterns) — these create their own visual context and do NOT need useTheme()
+  - Only the "structural frame" of the screen (root bg, topBar, category tabs) needs adaptive theming
+  - Gradient sections span full width (marginHorizontal: -16) so root bg only visible at edges/gaps
+  - Currency accent colors (gold #d4a017, purple #c4b5fd) stay vibrant on themed surface — acceptable contrast
+  - Bundle card internals (light bg #f5f3ff/#fffbeb, dark text #1f2937) sit within dark gradient sections and read well regardless of system theme
+  - Pattern for gaming screens: theme the shell, leave the gradient "islands" alone
+---
+
+## Iteration 4 — US-004b: ProfileScreen Dark Mode
+- What was done: Imported useTheme() + useColorScheme into ProfileScreen, applied theme-adaptive colors to all structural elements (container bg, avatar inner, cards, action cards, duel stats, profile chips, streak strip, progress track), kept accent/vibrant colors (purple XP, gold coins, green level, red duels, orange streak, pro card gradient) unchanged
+- Files affected:
+  - src/features/profile/ProfileScreen.tsx — container bg → theme.bg, card bg/border → theme.surface/theme.border, all cardBigValue/displayName → theme.text, cardLabel/cardMuted/cardUnit → theme.textMuted, avatarInner bg → theme.surface, avatarNameLabel → theme.textMuted, duelStat bg → theme.bg (nested contrast), profileChip bg/border → theme.bg/theme.border, actionCard bg/border → theme.surface/theme.border, actionCardTitle → theme.text, actionCardSubtitle → theme.textMuted, ChevronRight → theme.textMuted, progressTrack bg → theme.border, levelPill → isDark rgba purple tint, streakStrip → isDark rgba orange tint, action icon tinted backgrounds → isDark rgba tints (purple/blue/green/amber)
+- Learnings for next cycles:
+  - Pattern: use theme.bg for nested surfaces within theme.surface cards to create depth contrast in both modes
+  - Accent-tinted icon backgrounds (e.g. #f5f3ff purple, #eff6ff blue) need dark-mode equivalents as rgba with ~0.15 opacity
+  - Streak strip and level pill use isDark && {} conditional pattern for mode-specific tint overrides
+  - Pro upgrade card stays untouched — it uses its own LinearGradient dark palette
+  - cardTopBorder colored strips (purple, gold, green, red, orange) stay vibrant — they're accent, not structural
+---
+
+## Iteration 5 — US-004b: MoreScreen Dark Mode
+- What was done: Imported useTheme() into MoreScreen and its sub-components (MoreRow, SectionHeader, Divider), applied theme-adaptive colors to all structural elements
+- Files affected:
+  - src/features/more/MoreScreen.tsx — container bg → theme.bg, all card wrappers bg/border → theme.surface/theme.border, MoreRow: rowLabel → theme.text, chevron → theme.textMuted, rowIcon bg/border → theme.surface/theme.border, pressed state → theme.border, SectionHeader title → theme.textMuted, Divider bg → theme.border, dangerCard bg → dark rgba red tint
+- Learnings for next cycles:
+  - Sub-components (MoreRow, SectionHeader, Divider) can each call useTheme() independently — no need to prop-drill
+  - Pressed row state uses theme.border as bg (subtle highlight in both modes)
+  - Danger card dark mode: use rgba(239,68,68,0.08) instead of #fff5f5 — detected via theme.bg comparison
+  - Row icon danger style overrides apply AFTER theme base, so danger rgba colors win correctly
+  - Badge accent colors (orange, purple) stay vibrant — not themed
+---
+
+## Iteration 6 — US-004b: FinFeedScreen Dark Mode
+- What was done: Imported useTheme() into FinFeedScreen, FeedHeader, and StreakPopup sub-components, applied theme-adaptive colors to structural elements (root bg, header bg, greeting text, streak popup card)
+- Files affected:
+  - src/features/finfeed/FinFeedScreen.tsx — root container bg → theme.bg, FeedHeader container bg → theme.bg, greetingLabel → theme.textMuted, playerName → theme.text, peekText → theme.textMuted, StreakPopup card bg → theme.bg, subtitle → theme.textMuted
+- Learnings for next cycles:
+  - FinFeedScreen has three independent component functions (FinFeedScreen, FeedHeader, StreakPopup) — each calls useTheme() independently
+  - Streak accent colors (#f59e0b amber) stay vibrant — not themed, they create their own visual context
+  - Feed item cards (FeedVideoItem, FeedQuoteItem, FeedComicItem, FeedModuleHookCard, MacroEventCard) are separate components that manage their own styling — NOT themed here
+  - Pattern: theme the structural shell (root bg, header, popups), leave feed card components alone
+  - StreakPopup uses theme.bg (not theme.surface) for the card to match the modal visual weight
+---
+
+## Iteration 7 — US-004b: PyramidScreen Dark Mode
+- What was done: Imported useTheme() into PyramidScreen and its sub-components (TrailConnector, SectionBanner, ModuleNode), applied theme-adaptive colors to all structural elements while preserving arena gradient accents
+- Files affected:
+  - src/features/pyramid/PyramidScreen.tsx — root bg → theme.bg, TrailConnector undone color → theme.border, SectionBanner locked bg → theme.border + locked text/icon → theme.textMuted, ModuleNode locked circle bg → theme.border + nodeTitle default → theme.text + locked title → theme.textMuted
+- Learnings for next cycles:
+  - PyramidScreen has four component functions (PyramidScreen, TrailConnector, SectionBanner, ModuleNode) — each calls useTheme() independently
+  - Arena gradients (active banners, module circles, pulse rings) stay vibrant — not themed, they create their own visual context
+  - nodeTitle has a static StyleSheet color (#1f2937) that needs inline override with { color: theme.text } for dark mode
+  - Locked state colors (#9ca3af → theme.textMuted, #e5e7eb → theme.border) map directly to theme values
+  - Trail undone segments (#d1d5db) map to theme.border — provides correct contrast in both modes
+  - Pattern: override StyleSheet colors with inline theme styles, conditional locked styles applied after default theme style
+---
+
+## Iteration 8 — US-004c: SavedItemsScreen Dark Mode
+- What was done: Imported useTheme() into SavedItemsScreen, applied theme-adaptive colors to all structural elements (container bg, header bg/border, title text, card bg/border, divider, row text, upsell text), kept green accent (#16a34a) and red delete (#ef4444) vibrant
+- Files affected:
+  - src/features/saved-items/SavedItemsScreen.tsx — container bg → theme.bg, header bg → theme.surface, header border → theme.border, headerTitle → theme.text, card bg → theme.surface, card border → theme.border, divider → theme.border, rowTitle → theme.text, rowDate → theme.textMuted, emptyText → theme.textMuted, upsellTitle → theme.text, upsellSubtitle → theme.textMuted
+- Learnings for next cycles:
+  - SavedItemsScreen is a simple list screen — all colors are structural, theming is straightforward
+  - Green accent colors (BackButton, sectionLabel, upsellButton) stay vibrant — not themed
+  - Red delete icon stays vibrant — it's a destructive action indicator
+  - Upsell button keeps its own green bg + white text — it's a CTA, not structural
+  - Pattern: style={[styles.static, { themeOverrides }]} works cleanly for all elements
+---
+
+## Iteration 9 — US-004c: SettingsScreen Dark Mode
+- What was done: Imported useTheme() into SettingsScreen and its sub-components (SectionHeader, Divider, SettingsRow), applied theme-adaptive colors to all structural elements while preserving green accent branding
+- Files affected:
+  - src/features/settings/SettingsScreen.tsx — container bg → theme.bg, header bg → theme.surface, header border → theme.border, headerTitle → theme.text, card bg → theme.surface, card border → theme.border, divider → theme.border, rowLabel → theme.text, rowSubtitle → theme.textMuted, sectionTitle → theme.textMuted, chevrons → theme.textMuted, rowPressed bg → theme.border, backButton/rowIcon green tints → isDark rgba(22,163,74,0.12/0.2)
+- Learnings for next cycles:
+  - SettingsScreen has four component functions (SettingsScreen, SectionHeader, Divider, SettingsRow) — each calls useTheme() independently
+  - isDark detection via theme.bg === "#1a1a1a" — avoids extra useColorScheme import
+  - Green tinted backgrounds (#f0fdf4) need dark-mode rgba equivalents: rgba(22,163,74,0.12) for bg, rgba(22,163,74,0.2) for border
+  - Switch trackColor/thumbColor stays as-is — green accent, not structural
+  - nameInput and valueText stay green (#16a34a) — they're interactive accent colors
+---
+
+## Iteration 10 — US-004c: PricingScreen Dark Mode
+- What was done: Imported useTheme() into PricingScreen, applied theme-adaptive colors to the body section (root bg, cloud transition bg, body bg, feature row text/borders, CTA text) while preserving the gradient hero and accent elements
+- Files affected:
+  - src/features/subscription/PricingScreen.tsx — root bg → theme.bg, cloudTransition bg → theme.bg, body bg → theme.bg, colHeaderFree → theme.textMuted, featureRow borderBottom → theme.border, borderTop → theme.border, featureLabel → theme.text, priceHint → theme.textMuted, noThanksText → theme.textMuted, finePrint → theme.textMuted
+- Learnings for next cycles:
+  - PricingScreen has its own local DUO palette (different from global DUO) — used for accent colors, not overridden
+  - Hero gradient, PRO badge, green CTA, navy button all stay vibrant — they're marketing/accent, not structural
+  - cloudTransition creates a visual bridge from gradient to body — its bg must match body bg for the arc illusion to work
+  - FeatureCell (Check/X icons) colors stay as-is — they're indicator colors, not text
+  - Pattern: theme only the "white body" section, leave the premium marketing chrome untouched
+---

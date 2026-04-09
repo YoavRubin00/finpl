@@ -1,0 +1,40 @@
+# Progress Log - PRD 17 (Learn Page Arena Configuration)
+
+## Learnings
+(Notes discovered during implementation will be added here per cycle)
+
+## Iteration 1 - US-001 & US-002 (Arena Basic Assembly, Colors, & Gamified Cards)
+- What was done:
+  - Renamed Arenas in `arenaConfig.ts` to match Chapter themes (Survival, Security, Stability, Growth, Freedom)
+  - Applied deep "Million Dollar App" gradients (emerald, sapphire, amethyst, gold, platinum).
+  - Added Reanimated scaling (onPressIn/Out) and heavy haptics to `ArenaStageCard.tsx` and `ArenaRankBadge.tsx`
+  - Added the bear mascot bouncing in dynamically in `ArenaStageCard.tsx`.
+- Files affected:
+  - `arenaConfig.ts`
+  - `ArenaStageCard.tsx`
+  - `ArenaRankBadge.tsx`
+- Learnings for next cycles:
+  - Traps: When using `react-native-reanimated` with `Animated.Image`, make sure the import is `import Animated from 'react-native-reanimated'` and not accidentally destructured `Image`.
+  - Solved: Fixed parsing errors in `ArenaRankBadge`.
+
+## Iteration 2 — US-004: End-of-Module Wisdom Flashes (Gold Aesthetic Upgrade)
+- What was done:
+  - Wisdom flash system was already 95% built (PRD12/PRD13): store, data (37 items), popup component, wired into root layout + LessonFlowScreen
+  - Upgraded WisdomPopupCard styling to "Million Dollar App" gold aesthetic:
+    - Replaced blue/purple scheme with gold foil theme (#d4a017 primary accent)
+    - Added LinearGradient background (dark gold/black tones)
+    - Added pulsing gold shimmer border via withRepeat(withSequence(...))
+    - Added goldGlowOuter shadow layer for outer gold glow
+    - Added gold accent line at card top via horizontal LinearGradient
+    - Changed entrance from SlideInDown to ZoomIn for premium feel
+    - Added successHaptic() on wisdom display
+    - Updated text/border colors to gold tones (badge, quote text, author, dismiss button)
+- Files affected:
+  - `src/features/wisdom-flashes/WisdomPopupCard.tsx`
+  - `src/features/pyramid/PRD17_ArenaRedesign.md`
+- Learnings for next cycles:
+  - Wisdom system fully wired: showRandomWisdom() at 4500ms in LessonFlowScreen, WisdomPopupCard mounted in root _layout.tsx
+  - Pre-existing TS errors in ArenaRankBadge.tsx (5 syntax errors) — not related to PRD17
+  - LinearGradient from expo-linear-gradient works well for rich gradient cards
+  - withRepeat + withSequence pattern is effective for pulsing glow effects
+---

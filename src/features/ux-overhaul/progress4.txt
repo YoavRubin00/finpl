@@ -1,0 +1,232 @@
+# Progress — PRD4: UX/UI Overhaul
+
+## Learnings
+- `lottie-ios` is not needed separately in Expo managed workflow; `lottie-react-native` handles it
+- `expo-haptics` was already installed from prior PRDs
+- `npx expo install` resolved all packages to SDK 55-compatible versions
+
+---
+
+## Iteration 1 — US-001: Install animation dependencies
+- Installed `@shopify/react-native-skia` (2.4.18), `lottie-react-native` (~7.3.4), `expo-linear-gradient` (~55.0.8)
+- `expo-haptics` already present
+- Files affected: package.json, package-lock.json
+- Learnings for next cycles:
+  - All animation deps are ready; US-002 can proceed to create shared animation utilities
+  - Skia version 2.4.18 is compatible with SDK 55
+  - No type errors introduced by new packages
+---
+
+## Iteration 2 — US-002: Shared animation utilities
+- Created `src/utils/animations.ts` with:
+  - Spring presets: SPRING_BOUNCY, SPRING_SMOOTH, SPRING_SNAPPY
+  - Timing presets: TIMING_FAST, TIMING_NORMAL, TIMING_SLOW (with Easing.out(cubic))
+  - Entrance configs: fadeInUp, fadeInScale, slideInLeft, slideInRight
+  - `useEntranceAnimation()` hook: takes an EntranceConfig + optional overrides, returns animated style using withDelay + withSpring on a single 0→1 progress shared value
+- Created `src/utils/haptics.ts` with: tapHaptic, successHaptic, errorHaptic, heavyHaptic wrappers around expo-haptics
+- Files affected: src/utils/animations.ts (new), src/utils/haptics.ts (new)
+- Learnings for next cycles:
+  - `useEntranceAnimation` uses a single progress value (0→1) and interpolates all properties from it — keeps the API simple
+  - WithTimingConfig and WithSpringConfig types are re-exported from reanimated for consumer convenience
+  - expo-haptics calls are fire-and-forget (no await needed) and silently no-op on web
+  - Entrance configs are plain objects, composable via spread — consumers can override delay/spring per-item for stagger effects
+---
+
+## Iteration 3 — US-003: Animated Tab Bar
+- Created `src/components/ui/AnimatedTabBar.tsx` — custom animated tab bar component:
+  - 5 tabs with lucide-react-native icons (Home, BookOpen, TrendingUp, MessageCircle, User) and Hebrew labels
+  - Active tab: icon scales to 1.2x via SPRING_BOUNCY, purple glow halo (violet at 30% opacity), label fades in
+  - Inactive tabs: 1x scale, zinc-500 color, label hidden
+  - Sliding indicator pill (24x3px violet bar) at top of tab bar, slides between tabs with SPRING_SNAPPY
+  - tapHaptic() fires on every tab press
+  - Dark background (#09090b) with warm bronze semi-transparent top border
+  - Arena tab hidden via `href: null` in layout
+- Updated `app/(tabs)/_layout.tsx`:
+  - Removed old TabIcon component and text-only tab rendering
+  - Uses `tabBar` prop to render custom AnimatedTabBar
+  - Explicitly lists all 5 visible tabs + arena (hidden)
+- Files affected: src/components/ui/AnimatedTabBar.tsx (new), app/(tabs)/_layout.tsx (modified)
+- Learnings for next cycles:
+  - `BottomTabBarProps` from `@react-navigation/bottom-tabs` provides state, descriptors, navigation — all needed for custom tab bar
+  - `state.routes` gives ordered route list; match against tab config by `route.name`
+  - `navigation.emit({ type: 'tabPress' })` must be called to support `tabPress` listeners and `canPreventDefault`
+  - Sliding indicator position = `activeIndex * tabWidth + tabWidth/2 - halfPillWidth`
+  - `pb-5` on tab bar accommodates safe area on iOS; works fine on web too
+  - Expo Router's `href: null` option hides a screen from tab bar while keeping it navigable
+---
+
+## Iteration 4 — US-004: XP & Coin earn animations
+- Created `src/components/ui/RewardPopup.tsx` — floating "+X XP" / "+X coins" text with spring scale-up and fade-out-up animation
+  - XP: violet (#a78bfa), Coins: gold (#facc15) with Coins icon from lucide
+  - Uses withSpring for scale bounce (SPRING_BOUNCY), withTiming for translateY drift and opacity fade
+  - Auto-removes via onComplete callback after animation finishes (~1.2s)
+- Created `src/components/ui/ParticleBurst.tsx` — particle burst using Reanimated Views (12 particles default)
+  - Particles burst outward radially with random spread, fade, and shrink over 600ms
+  - Configurable color: "violet" (4 purple shades) or "gold" (4 gold shades)
+  - Used Reanimated instead of Skia Canvas for simpler web compatibility — same visual result
+- Created `src/hooks/useRewardAnimation.tsx` with:
+  - `RewardAnimationProvider` — wraps app, renders overlay with active popups/particles
+  - `useRewardAnimation()` hook — exposes `triggerReward(amount, type)` for manual triggering
+  - Auto-subscribes to `useEconomyStore` via `subscribe()` — detects XP/coin increases and auto-triggers
+  - Coins animation has 200ms delay offset so XP and coin popups don't fully overlap
+  - `successHaptic()` fires on every reward trigger
+- Modified `app/_layout.tsx` to wrap `<Slot />` with `<RewardAnimationProvider>`
+- Files affected: src/components/ui/RewardPopup.tsx (new), src/components/ui/ParticleBurst.tsx (new), src/hooks/useRewardAnimation.tsx (new), app/_layout.tsx (modified), PRD4.md (updated)
+- Learnings for next cycles:
+  - Zustand's `subscribe(listener)` receives `(state, prevState)` — perfect for detecting value changes without hooks
+  - Using refs (`prevXP`, `prevCoins`) initialized to null prevents false-positive triggers on hydration
+  - Reanimated-based particles are simpler and more web-compatible than Skia Canvas for small particle counts
+  - Global overlay with `pointerEvents="none"` + `zIndex: 9999` allows animations to float above all screens
+  - `runOnJS(callback)()` is needed to call React state setters from Reanimated worklet callbacks
+---
+
+## Iteration 5 — US-005: Economy Header redesign
+- Redesigned `src/components/ui/EconomyHeader.tsx` with premium gaming look:
+  - XP display: violet pill with glow shadow (`shadowColor: #a78bfa`) + animated counter via `useAnimatedCounter` hook
+  - Coin display: gold pill with glow shadow + animated counter
+  - Streak: orange pill with pulsing glow animation when streak ≥ 3 (cycles every 1.6s via `withSequence`)
+  - XP progress bar: `LinearGradient` fill (violet → violet-light) + leading edge glow dot (8px circle with shadow)
+  - Progress bar width animates smoothly with `SPRING_SMOOTH`
+  - Number changes animate via custom `useAnimatedCounter` hook using `withSpring` (~600ms)
+  - Level-up triggers a violet flash overlay on the entire header + `heavyHaptic()`
+- `AnimatedNumber` component: uses `useAnimatedReaction` to watch shared value → `runOnJS(setDisplay)` for text updates
+- Files affected: src/components/ui/EconomyHeader.tsx (rewritten)
+- Learnings for next cycles:
+  - `Animated.SharedValue<T>` is not exported as a namespace member in all reanimated versions — use inferred return types instead
+  - `useAnimatedReaction(prepare, react)` is the correct way to bridge animated values to React state for text display
+  - `LinearGradient` from `expo-linear-gradient` works inside Animated.View for progress bars — wrap in `overflow-hidden rounded-full`
+  - Pulsing glow via `setInterval` + `withSequence` is reliable; cleanup interval on unmount
+  - `withSequence(withTiming(peak), withTiming(base))` creates smooth pulse loops
+  - Leading edge glow: absolute-position a View with same animated width, place a small glowing circle at `right: 0`
+---
+
+## Iteration 6 — US-006: Screen entrance animations
+- Added staggered entrance animations to all 5 main screens using `useEntranceAnimation()` from shared utils:
+  - **FinFeedScreen**: `AnimatedCard` wrapper component per FlatList item, `fadeInUp` with 50ms stagger delay per index
+  - **ArenaScreen**: `AnimatedChallengeWrapper` (fadeInScale, 80ms stagger) + `AnimatedLeaderboardWrapper` (fadeInUp, 60ms stagger offset 200ms)
+  - **ShopScreen**: `AnimatedShopItem` wrapper (fadeInUp, 70ms stagger)
+  - **PyramidScreen**: LayerRow internally uses `useEntranceAnimation` with `SPRING_BOUNCY`, bottom-to-top build via reversed delay: `(TOTAL_LAYERS - 1 - visualIndex) * 100ms`
+  - **ProfileScreen**: Individual animation hooks per section — avatar (fadeInScale + SPRING_BOUNCY), streak card (fadeInUp 100ms), XP card (fadeInUp 180ms), stats row (slideInLeft/slideInRight 260ms), profile info (fadeInUp 340ms), simulator CTA (fadeInUp 420ms)
+- Files affected: FinFeedScreen.tsx, ArenaScreen.tsx, ShopScreen.tsx, VisualPyramid.tsx, ProfileScreen.tsx (all modified)
+- Learnings for next cycles:
+  - For FlatList items, create a small wrapper component that calls `useEntranceAnimation` — hooks can't be used in map callbacks directly
+  - `Animated.View style={[styles.existingStyle, animatedStyle]}` merges static + animated styles cleanly
+  - Pyramid bottom-to-top: LAYERS array is ordered top-first (5→1), so delay formula is `(count - 1 - index) * stagger` to animate bottom layer first
+  - ProfileScreen sections benefit from per-section animation hooks with increasing delays — creates a cascading reveal effect
+  - `slideInLeft` and `slideInRight` used on the two side-by-side stat cards creates a satisfying "open curtain" effect
+  - All entrance animations are fire-and-forget on mount — no cleanup needed
+---
+
+## Iteration 7 — US-007: 3D-style Pyramid visualization
+- Rewrote `src/features/pyramid/VisualPyramid.tsx` with premium 3D-style pyramid:
+  - Isometric pyramid shape: each layer has a width percentage (95% bottom → 40% top), centered, creating a visual pyramid
+  - Each layer is a `LinearGradient`-filled block with 3D depth strips (white highlight top, dark shadow bottom)
+  - Layer theme colors: green (Survival), blue (Safety), violet (Stability), gold (Growth), diamond/white (Freedom)
+  - Unlocked layers have colored gradient + glow shadow (`shadowColor` matching theme)
+  - Locked layers: dark gradient (#1c1c1e → #27272a) with Lock icon
+  - Current layer: breathing glow animation via `withRepeat(withSequence)` cycling shadowOpacity 0.4↔0.9
+  - Floating star particles (Sparkles icon) bob up/down on unlocked layers with staggered timing
+  - Tooltip on tap: `fadeInScale` animated bubble showing layer name + progress %, toggles on/off
+  - Layer unlock detection: ref tracks previous layer, triggers full-screen color flash overlay on upgrade
+  - Haptic feedback (`tapHaptic()`) on every layer press
+  - Entrance animation: `fadeInScale` + `SPRING_BOUNCY`, bottom-to-top stagger (120ms per layer)
+  - Progress bar on current layer: white/70 fill on black/30 track
+  - Completed layers show a Check icon in white circle
+- Used Reanimated Views + expo-linear-gradient instead of Skia Canvas for better web compatibility (aligns with Non-Goals: "use 2D techniques to create depth illusion")
+- Files affected: src/features/pyramid/VisualPyramid.tsx (rewritten), PRD4.md (updated)
+- Learnings for next cycles:
+  - `WIDTH_PERCENTS` mapping per layer creates a convincing pyramid shape without complex path math
+  - LinearGradient + white/black strips at top/bottom edges simulate 3D block depth cheaply
+  - `withRepeat(withSequence(toHigh, toLow), -1, true)` is the pattern for breathing/pulsing animations — use `cancelAnimation` on cleanup
+  - Tooltip toggle state via `selectedLayer === layer` keeps only one tooltip visible at a time
+  - Layer unlock flash uses `StyleSheet.absoluteFill` overlay colored to the new layer's glow color
+  - Sparkles from lucide-react-native is a good lightweight alternative to custom particle system for ambient effects
+  - `useRef` to track previous state values is reliable for detecting state transitions in effects
+---
+
+## Iteration 8 — US-008: Streak celebration screen
+- Created `src/features/streak/StreakCelebrationScreen.tsx` — full-screen overlay celebration:
+  - Sequenced entrance: fire icon → streak number (bounce spring) → "ימים רצופים!" subtitle → bear mascot → weekly calendar → motivation text
+  - Fire icon uses breathing glow animation via `withRepeat(withSequence)` cycling opacity
+  - Large streak number with text shadow glow (orange, or gold for milestones)
+  - Bear mascot (mascot.png) with rotation spring + sparkle dots (3 colored circles positioned around bear)
+  - Weekly calendar row: 7 Hebrew day labels (א-ש), completed days show green checkmark, today has orange border
+  - Calendar days computed from streak count backwards from today
+  - Milestone detection (7/30/100): gold flash overlay via `milestoneFlash` animated value, larger number, gold color
+  - Auto-dismiss after 3 seconds via setTimeout, or tap anywhere to dismiss
+  - Dismiss animation: overlay fades out, then calls `onDismiss` via `runOnJS`
+  - `heavyHaptic()` fires on appearance
+- Created `src/hooks/useStreakCelebration.tsx` — provider + hook:
+  - `StreakCelebrationProvider` wraps app (inside RewardAnimationProvider)
+  - Subscribes to `useEconomyStore` — detects streak increases via ref-based prev tracking
+  - `useStreakCelebration()` hook exposes `showStreakCelebration()` for manual triggering
+  - Uses same subscribe pattern as RewardAnimationProvider (null-ref init to skip hydration)
+- Modified `app/_layout.tsx` to wrap `<Slot />` with `<StreakCelebrationProvider>`
+- Files affected: src/features/streak/StreakCelebrationScreen.tsx (new), src/hooks/useStreakCelebration.tsx (new), app/_layout.tsx (modified), PRD4.md (updated)
+- Learnings for next cycles:
+  - `bear-celebrating.png` asset does not exist — used `mascot.png` instead; PRD should be updated if specific pose assets are created
+  - Full-screen celebration overlays work well as context providers rendered at root level with zIndex above reward animations (10000 vs 9999)
+  - Sequenced animations via increasing `withDelay` offsets create a cinematic reveal effect
+  - `runOnJS(callback)()` in withTiming/withSpring completion callback is the correct way to trigger React state changes from animation end
+  - Hebrew weekday labels (א-ש) map directly to JS `getDay()` where 0=Sunday=א
+  - Pressable wrapping the entire overlay allows tap-to-dismiss while still showing the animation
+  - Milestone detection (7/30/100) adds gold color + flash overlay for extra drama
+---
+
+## Iteration 9 — US-009: Button & card micro-interactions
+- Created `src/components/ui/AnimatedPressable.tsx` — drop-in Pressable replacement:
+  - Uses `Animated.createAnimatedComponent(Pressable)` for Reanimated compatibility
+  - Press: scale to 0.95 with `SPRING_SNAPPY`, release: bounce back with `{ damping: 8, stiffness: 200 }` for overshoot
+  - `tapHaptic()` fires on `onPressIn` for immediate feedback
+  - Supports `disabled`, `hitSlop`, `noScale`, `noHaptic` props for flexibility
+- Created `src/components/ui/GlowCard.tsx` — card wrapper with animated border glow:
+  - Configurable `glowColor` (default #a78bfa neon-violet), `pressable` toggle
+  - Glow intensity animates from 0.35→0.8 shadow opacity on touch with `SPRING_SNAPPY`
+  - Optional `shimmer` prop: white stripe translates across card in 2.4s loop via `withRepeat(withTiming)`
+  - Base style: bg-zinc-900, rounded-20, padding-20, overflow-hidden
+- Replaced Pressable in main screens:
+  - **ShopScreen**: category filter tabs → AnimatedPressable
+  - **ShopItemCard**: Buy button → AnimatedPressable, outer card → GlowCard (color varies by canAfford)
+  - **ChallengeCard**: completion toggle → AnimatedPressable, outer card → GlowCard (violet when completed, zinc when not)
+  - **ConfirmModal**: Cancel/Buy buttons → AnimatedPressable (kept backdrop Pressable for modal dismissal)
+  - **ProfileScreen**: all floatCard Views → GlowCard (streak=orange, XP=violet, coins=gold, layer=green, profile=orange), Simulator CTA → AnimatedPressable
+  - **LessonCard**: full card Pressable → AnimatedPressable
+  - **ChatScreen**: suggestion chips + send button → AnimatedPressable
+- Removed `floatCard` style from ProfileScreen StyleSheet (GlowCard handles base styling)
+- Files affected: AnimatedPressable.tsx (new), GlowCard.tsx (new), ShopItemCard.tsx, ShopScreen.tsx, ChallengeCard.tsx, ConfirmModal.tsx, ProfileScreen.tsx, LessonCard.tsx, ChatScreen.tsx, PRD4.md (all modified)
+- Learnings for next cycles:
+  - `Animated.createAnimatedComponent(Pressable)` is the simplest way to get animated Pressable without adding `react-native-gesture-handler`
+  - `onPressIn`/`onPressOut` callbacks provide the best timing for press animations — `onPressIn` for immediate feedback, `onPressOut` for bounce-back
+  - Lower damping (8) on the release spring creates a satisfying overshoot bounce effect
+  - GlowCard uses `onTouchStart/End/Cancel` instead of Pressable to avoid wrapping children in another Pressable
+  - `interpolate` from Reanimated is useful for mapping glow intensity to shadow radius values
+  - Backdrop Pressable in modals (ConfirmModal) should NOT be replaced with AnimatedPressable since scale animation on full-screen overlay is undesirable
+  - `shimmer` uses a single progress 0→1 with `translateX` interpolation — simple and effective
+---
+
+## Iteration 10 — US-010: FinFeed card redesign
+- Redesigned `src/features/finfeed/LessonCard.tsx` with premium gaming card feel:
+  - Full-screen gradient background per category (3-color LinearGradient diagonal)
+  - Category badge pill at top with glow shadow + Hebrew labels (תקצוב, חיסכון, חוב, השקעות, מיסים, ביטוח)
+  - Title: font-weight 900, size 28, text shadow using category glow color
+  - XP reward: golden pill with Sparkles icon, gold border/bg tint, gold shadow glow
+  - Difficulty: 1-5 Star icons (filled gold vs empty zinc) from lucide-react-native
+  - PulsingCTA component: "Start Lesson" button with breathing glow via `withRepeat(withSequence)` cycling shadowOpacity 0.4↔0.9 and shadowRadius 8↔20
+  - Card has semi-transparent dark bg (rgba 0.85) with category-colored border and shadow
+- Added `difficulty` field (1-5) to `FeedLesson` interface and all `feedData.ts` entries
+- Updated `src/features/finfeed/FinFeedScreen.tsx`:
+  - Card scale/fade transition: active card = 1.0, inactive = 0.92 scale + 0.7 opacity, animated with `withSpring(SPRING_SMOOTH)` + `withTiming`
+  - Pull-to-refresh: `RefreshControl` with violet tint on dark bg, simulated 1.2s refresh
+  - Haptic on snap: `tapHaptic()` fires when `activeIndex` changes (tracked via prevActiveIndex ref)
+  - SpinRefreshIcon component (3 colored dots rotating) prepared but RefreshControl uses native indicator
+- Replaced old CATEGORY_EMOJI/CATEGORY_GLOW/CATEGORY_ACCENT/CATEGORY_CARD_BG maps with unified `CATEGORY_THEMES` record containing gradient, accent, glow, badgeBg, and Hebrew label
+- Files affected: types.ts (modified), feedData.ts (modified), LessonCard.tsx (rewritten), FinFeedScreen.tsx (rewritten), PRD4.md (updated)
+- Learnings for next cycles:
+  - `expo-linear-gradient` `colors` prop requires tuple type `[string, string, ...string[]]` — cast `readonly` arrays with `as [string, string, string]`
+  - `CATEGORY_THEMES` record pattern (single source of truth per category) is cleaner than multiple parallel Record maps
+  - PulsingCTA as a standalone component keeps the animation lifecycle (useEffect + cancelAnimation) isolated
+  - Card scale transition in FlatList: animating `useSharedValue` directly in render body (outside useEffect) works for simple derived animations — values update on every render with new `isActive`
+  - `RefreshControl` with custom colors (`tintColor`, `colors`, `progressBackgroundColor`) integrates well with dark theme
+  - Haptic on snap: compare `first.index !== prevActiveIndex.current` in `onViewableItemsChanged` to fire only on actual index change
+  - DifficultyStars: `Star` from lucide-react-native supports `fill` prop for filled/empty state
+---

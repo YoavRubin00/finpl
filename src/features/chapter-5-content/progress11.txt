@@ -1,0 +1,18 @@
+# Progress Log
+
+## Learnings
+- useChapterStore supports any chapter via Record<string, ChapterProgress> - no per-chapter changes needed
+- ChapterMapScreen uses CHAPTER_MAP registry - just add an entry to support a new chapter
+- InteractiveIntroCard is reusable across all chapters
+
+## Iteration 1 - US-001: Chapter 5 Content Data
+- chapter5Data.ts created with all 5 modules (mod-5-1 through mod-5-5)
+- Imports Chapter type from chapter-1-content/types.ts (no duplication)
+- Files affected: src/features/chapter-5-content/chapter5Data.ts
+
+## Iterations 2-5 - US-002 through US-005
+- All already implemented in prior PRDs (PRD8, PRD10)
+- Store, InteractiveIntroCard, ChapterMapScreen, ChapterSelectScreen, and PyramidScreen all support Chapter 5
+- No additional changes needed
+
+ALL TASKS COMPLETE.

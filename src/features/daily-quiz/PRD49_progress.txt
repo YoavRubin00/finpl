@@ -1,0 +1,16 @@
+# PRD 49 — Daily News Flash Quiz Progress
+
+## Pre-existing Infrastructure
+- macro-events feature (60+ events, MacroEventCard, useMacroEventStore) — pattern reference
+- marketApiService.ts — Yahoo Finance API pattern (cache, fallback)
+- Alpha Vantage API key in .env ✅
+- Google AI API key in .env ✅
+- FeedItem union type in finfeed/types.ts — already includes FeedMacroEvent
+- Haptics, Lottie, animations all available
+
+## Learnings
+- Feed integration: add to types.ts union → inject in FinFeedScreen pool → render in FlatList
+- Quiz card: follow MacroEventCard pattern (2 states: unanswered → answered)
+- Market API: follow marketApiService.ts cache pattern (todayKey check)
+- AI prompt: JSON-only structured output, validate before saving
+- Fallback quizzes: hash date to pick deterministic fallback

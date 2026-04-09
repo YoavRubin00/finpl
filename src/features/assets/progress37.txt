@@ -1,0 +1,80 @@
+# Progress Log — PRD 37: Passive Income & Asset Portfolio System
+
+## Learnings
+- `ReferredFriend` interface in `src/features/social/referralTypes.ts` — add `weeklyCoins` here
+- `ReferralState` interface in `src/features/social/referralTypes.ts` — add `totalDividendCoins`
+- `generateMockFriends()` in `src/features/social/referralData.ts` — add `weeklyCoins: Math.floor(Math.random()*400)+100`
+- `useReferralStore.ts` at `src/features/social/useReferralStore.ts` — `collectDividend()` calls `addXP()` + needs `addCoins()` too
+- `refreshWeeklyXP()` also needs to refresh `weeklyCoins` with same pattern
+- `partialize` in persist config must include `totalDividendCoins`
+- `DIVIDEND_PERCENT` = 0.05 — already defined in `referralData.ts`
+- `addCoins()` in `useEconomyStore.getState()` — already available, no import needed (same pattern as addXP)
+- `BridgeScreen.tsx` at `src/features/the-bridge/BridgeScreen.tsx` — find referral/dividend section
+- `AssetsScreen` should use `DiamondBackground`, `CLASH` theme, `SafeAreaView` — same as ProfileScreen
+- Route `/assets` — create `app/assets.tsx` + add `'assets'` to inContentRoute in `app/_layout.tsx`
+- Pre-existing TS errors (ignore): FeedSidebar.tsx CLASH.primary, useClashStore.ts XPSource, GlassOverlay.tsx expo-blur
+
+---
+
+## Iteration 1 — US-001: Extend Dividend to Include Coins
+- Added `weeklyCoins: number` to `ReferredFriend` interface
+- Added `totalDividendCoins: number` to `ReferralState` interface
+- Updated `generateMockFriends()` with `weeklyCoins: Math.floor(Math.random()*400)+100`
+- Updated `refreshWeeklyXP()` to also randomize `weeklyCoins` each week
+- Updated `collectDividend()` to compute `coinDividend` and call `economy.addCoins(coinDividend)`
+- Updated `partialize` to persist `totalDividendCoins`
+- Files affected: `referralTypes.ts`, `referralData.ts`, `useReferralStore.ts`
+- Learnings:
+  - `addCoins(amount)` in `useEconomyStore` takes just one arg (no source param unlike `addXP`)
+  - All 6 sub-tasks of US-001 are tightly coupled — must do together to avoid intermediate TS errors
+  - tsc passes with only pre-existing errors (GlassOverlay, FeedSidebar, useClashStore)
+---
+
+## Iteration 2 — US-002: Educational Copy in Referral UI
+- Added asset tagline below invite CTA: "כל חבר = נכס פיננסי שמניב לך 5% מהרווחים שלו"
+- Added "5% דיבידנד שבועי 💰" gold badge in dividend section header
+- Updated dividend section to show both XP and Coin stats (weekly + lifetime)
+- Updated collect button label to show both XP + Coins
+- Added success toast after collecting: "קיבלת דיבידנד מהנכסים שלך! 🎯"
+- Added collapsible educational tooltip explaining real-world dividend investing parallel
+- Files affected: `src/features/social/ReferralScreen.tsx`, `src/features/assets/PRD37_PassiveIncome.md`
+- Learnings:
+  - The referral/dividend UI lives in `ReferralScreen.tsx` (not BridgeScreen.tsx as PRD stated)
+  - `totalDividendCoins` available from `useReferralStore` (added in US-001)
+  - `weeklyCoins` on `ReferredFriend` provides per-friend coin data
+  - LayoutAnimation needs Android experimental flag enabled for collapsible sections
+  - Used `dividendJustCollected` + `!dividendAvailable` guard for success message visibility
+  - Imported `BookOpen`, `ChevronDown`, `ChevronUp` from lucide for edu tooltip toggle
+---
+
+## Iteration 3 — US-003: "הנכסים שלי" Assets Screen
+- All 5 sub-tasks found already implemented from a prior session
+- AssetsScreen.tsx has 4 sections: financial assets (Coins/Gems/XP), network assets (friend cards with yield), portfolio (Trading Hub link), summary (lifetime dividends + edu box)
+- app/assets.tsx exists as Expo Router entry (re-exports AssetsScreen)
+- 'assets' already in inContentRoute whitelist in app/_layout.tsx
+- ProfileScreen already has "📊 הנכסים שלי" CTA in actions section (lines 429-456)
+- Educational labels on every section (real-world parallels: "כמו מזומן, מניות ופיקדון בבנק", etc.)
+- tsc passes with only pre-existing errors (GlassOverlay, FeedSidebar, useClashStore)
+- Files verified: `AssetsScreen.tsx`, `app/assets.tsx`, `app/_layout.tsx`, `ProfileScreen.tsx`
+- Learnings:
+  - AssetsScreen uses DiamondBackground + SafeAreaView edges=["top","bottom"]
+  - Friend cards show weeklyCoins/weeklyXP + computed 5% yield per friend
+  - Dividend collect button in network section (canCollectDividend guard)
+  - Summary section has edu box explaining dividend investing parallel
+---
+
+## Iteration 4 — US-004: Animated Dividend Pill in ProfileScreen
+- Added dividend pill below avatar/name row with "💼 נכסים: X מטבעות + Y XP" text
+- Values pull from `totalDividendCoins` + `totalDividendXP` via `useReferralStore` selectors
+- Pulse animation (scale 1→1.06) via `withRepeat`/`withSequence` when `canCollectDividend()` is true
+- Pill wrapped in `AnimatedPressable` that navigates to `/assets`
+- Styled with indigo theme (matching assets card style): bg rgba(99,102,241,0.12), border rgba(99,102,241,0.35)
+- Files affected: `src/features/profile/ProfileScreen.tsx`, `src/features/assets/PRD37_PassiveIncome.md`
+- Learnings:
+  - `canCollectDividend()` is a method on the store, accessed via `useReferralStore((s) => s.canCollectDividend())`
+  - `dividendPulse` shared value needs cleanup guard via `dividendAvailable` dep in useEffect
+  - Pill placed inside the avatar `Animated.View` block, after the level/hearts row
+  - All 4 US-004 criteria implemented together since they form one atomic UI element
+  - tsc passes with only pre-existing errors (GlassOverlay, FeedSidebar, useClashStore)
+---
+

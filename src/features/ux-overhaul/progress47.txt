@@ -1,0 +1,59 @@
+כמוב# Progress Log — PRD 47: Simulator Visual Overhaul
+
+## Learnings
+
+### effectiveGlowColor pattern (GlowCard)
+When adding override props to existing components, compute a resolved value at the top of the function body (e.g. `const effectiveGlowColor = chapterGlow ?? glowColor`) and use that resolved value inside hooks. This avoids using conditional logic inside `useAnimatedStyle` which would violate React hooks rules.
+
+### SimLottieBackground gradient type
+`LinearGradient` from `expo-linear-gradient` accepts `readonly string[]` (or `[string, string, ...string[]]`). When combining a 2-element `chapterColors` tuple into a gradient, simply spread both colors — no need to repeat for a 3-stop gradient.
+
+### getChapterTheme fallback
+Since `OCEAN_CHAPTER_PALETTE` is `as const`, casting it to `Record<string, ChapterTheme>` is the cleanest way to allow dynamic key lookup with a `??` fallback, without TypeScript widening the return type.
+
+---
+
+## Iteration 1 — US-001: Shared Infrastructure
+- Added `ChapterTheme` type alias and `getChapterTheme(chapterId)` helper to `src/constants/theme.ts` (after OCEAN_CHAPTER_PALETTE, before CALM palette)
+- Updated `SimLottieBackground.tsx`: added `chapterColors?: readonly [string, string]` and `decoSize?: number` props; opacity raised to 0.15; removed `Dimensions` import (unused after DECO_SIZE became prop)
+- Updated `GlowCard.tsx`: added `chapterGlow?: string` prop; resolves to `effectiveGlowColor = chapterGlow ?? glowColor`; used in `useAnimatedStyle` for border/shadow color
+- Updated `SimFeedbackBar.tsx`: added `accentColor?: string` and `lottieSource?: ReturnType<typeof require>`; renders `LottieView` (28×28) when lottieSource provided, emoji otherwise; accentColor drives correct-bar border + text color
+- Files affected: `src/constants/theme.ts`, `src/components/ui/SimLottieBackground.tsx`, `src/components/ui/GlowCard.tsx`, `src/components/ui/SimFeedbackBar.tsx`, `src/features/ux-overhaul/PRD47_SimulatorOverhaul.md`
+- Learnings for next cycles:
+  - Patterns: Use `Record<string, ChapterTheme>` cast for dynamic palette lookup; `effectiveGlowColor` pattern for prop overrides inside hooks
+  - Traps: Do NOT use conditional inside `useAnimatedStyle` — resolve props above the hook
+  - Helpful context: All chapter sims import path is `../../../constants/theme` (3 levels up from chapter sim files)
+---
+
+## Iteration 3 — US-003: Chapter 1 Sims — CompoundSim, PayslipNinja, CarLoanRace
+- CompoundSimScreen.tsx: Removed ImageBackground+CHAT_BG+LottieView+StyleSheet → SimLottieBackground with LOTTIE_DIVIDENDS+LOTTIE_GRAPH. Replaced CH1 object with getChapterTheme('chapter-1') derived version. Added GlowCard around pillar comparison area and summary card. FadeInDown was already present.
+- PayslipNinjaScreen.tsx: Replaced CH1 with getChapterTheme-derived version. Removed ScrollView → View flex:1 padding:16. Updated SimLottieBackground chapterColors+lottieSources (document+check). Added GlowCard around ItemCard. Added accentColor to SimFeedbackBar.
+- CarLoanRaceScreen.tsx: Same CH1 transformation. Removed ScrollView → View. Updated SimLottieBackground to school-bus+decrease lotties + chapterColors. Added GlowCard around scenario card. Added accentColor to SimFeedbackBar.
+- Files affected: CompoundSimScreen.tsx, PayslipNinjaScreen.tsx, CarLoanRaceScreen.tsx, PRD47_SimulatorOverhaul.md
+- Learnings for next cycles:
+  - Patterns: Backward-compatible CH1 derivation — const _th1 = getChapterTheme('chapter-1'); const CH1 = { title: _th1.dark, accent: _th1.primary, cardBg: _th1.dim, ... }. This avoids mass search-replace while satisfying the acceptance criteria.
+  - Traps: CompoundSimScreen uses LottieView directly (not LottieIcon) for sea decorations — must remove LottieView import when removing those blocks. StyleSheet also needs removal if only used for absoluteFill.
+  - Helpful context: GlowCard default background is #1e1b2e (dark). Always override with style={{ backgroundColor: CH1.cardBg }} for chapter sims. Use padding:0 to remove default 20px padding when wrapping existing cards.
+---
+
+## Iteration 4 — US-004: Chapter 1 Sims — BankCombat, ShoppingCart, EmergencyFund
+- BankCombatScreen.tsx: Replaced CH1 local green constants with getChapterTheme-derived version. Removed ScrollView → View flex:1. Updated SimLottieBackground to building+shield lotties + chapterColors. Wrapped FeeAttackCard in GlowCard. Added accentColor to SimFeedbackBar. Removed ScrollView from react-native import.
+- ShoppingCartScreen.tsx: Same CH1 derivation. Removed outer ScrollView → View flex:1 (kept horizontal ScrollView inside MiniCart). Updated SimLottieBackground to trolley+price-tag lotties + chapterColors. Wrapped ItemCard in GlowCard.
+- EmergencyFundScreen.tsx: Same CH1 derivation. Removed ScrollView → View flex:1. Updated SimLottieBackground to money-bag+shield lotties + chapterColors. Wrapped SavingsChoiceButtons in GlowCard. Added accentColor to SimFeedbackBar. Removed ScrollView from react-native import.
+- Files affected: BankCombatScreen.tsx, ShoppingCartScreen.tsx, EmergencyFundScreen.tsx, PRD47_SimulatorOverhaul.md, progress47.txt
+- Learnings for next cycles:
+  - Patterns: Same backward-compatible CH1 derivation pattern works perfectly. Keep ScrollView in import if used for horizontal mini-cart or similar sub-components.
+  - Traps: Always check for nested ScrollView usage (horizontal) before removing from import. GlowCard wraps the main interaction card only — don't double-wrap existing card Views.
+  - Helpful context: All 3 Chapter 1 sims now done. Chapter 2 sims up next (use getChapterTheme('chapter-2') — sky-blue palette).
+---
+
+## Iteration 2 — US-002: Chapter 1 Sims — BudgetGame, MinusTrap, Snowball
+- BudgetGameScreen.tsx was already transformed in a previous session
+- MinusTrapGameScreen.tsx: Removed CH1 local object + StyleSheet.create → getChapterTheme('chapter-1') + inline styles. Added GlowCard import + wrapped ScenarioCard and ScoreScreen cards. Updated SimLottieBackground to fire+cross decorations + chapterColors={CH.gradient}. Added accentColor={CH.primary} to SimFeedbackBar. FadeInDown.delay().springify() on title and balance sections.
+- SnowballGameScreen.tsx: Same CH1→CH transformation. Removed ScrollView → View flex:1. Removed StyleSheet.create for scoreStyles → inline styles. Added GlowCard to PurchaseCard, BillChoiceModal, ScoreScreen. Updated SimLottieBackground with chapterColors. Added accentColor to SimFeedbackBar.
+- Files affected: MinusTrapGameScreen.tsx, SnowballGameScreen.tsx, PRD47_SimulatorOverhaul.md
+- Learnings for next cycles:
+  - Patterns: StyleSheet.create for scoreStyles → convert each row/label/value to inline style objects at use site
+  - Traps: Keep Dimensions import if used for animation sizing (SnowballVisual uses SCREEN_WIDTH)
+  - Helpful context: BudgetGameScreen already done serves as the gold-standard template for Chapter 1 sims
+---

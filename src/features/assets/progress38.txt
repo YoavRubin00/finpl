@@ -1,0 +1,101 @@
+# PRD 38 — Real Assets Portfolio Progress
+
+## Learnings (from prior PRDs)
+- Zustand stores must use `persist` with `AsyncStorage` + `partialize` for selective persistence
+- `useEconomyStore` exposes `addCoins(n)` and `spendCoins(n)` — `spendCoins` returns boolean (false if insufficient)
+- ISO date key pattern for daily reset: `new Date().toISOString().slice(0, 10)` → "2026-03-11"
+- Lottie files live in `assets/lottie/` — Money.json, Crown.json, gaming.json confirmed available
+- `GlowCard` from `src/components/ui/GlowCard.tsx` accepts `glowColor` prop
+- `AnimatedPressable` from `src/components/ui/AnimatedPressable.tsx` for spring-press buttons
+- `DiamondBackground` wraps screens for consistent dark BG
+- `useEntranceAnimation(fadeInUp, { delay })` pattern for staggered entrance animations
+- Import pattern: `import { useEconomyStore } from "../economy/useEconomyStore"` (relative, no barrel index)
+- No `any` — strict TypeScript; use `as const` for literal unions
+- `CLASH` theme: `CLASH.goldBorder`, `CLASH.textShadow` etc. from `src/constants/theme.ts`
+- `TITLE_TEXT`, `SUBTITLE_TEXT` from theme for consistent typography
+
+## Pre-existing TS errors (always ignore):
+- FeedSidebar.tsx — CLASH.primary does not exist
+- useClashStore.ts — XPSource mismatch
+- GlassOverlay.tsx — expo-blur not found
+
+---
+
+## Iteration 1 — US-001: Types + Data + Store
+- Created `realAssetsTypes.ts` with `RealAsset`, `AssetType`, `RealAssetsState` interfaces
+- Created `realAssetsData.ts` with 6 base assets, `getYieldForTier()`, `getBaseAsset()`, `ASSET_CATALOG`
+- Created `useRealAssetsStore.ts` with Zustand + AsyncStorage persist
+- Files affected: `realAssetsTypes.ts`, `realAssetsData.ts`, `useRealAssetsStore.ts`
+- Learnings for next cycles:
+  - Tier multiplier: T1=1x, T2=1.5x, T3=2.25x (50% compound per tier)
+  - `pendingIncome()` uses hoursSince(lastCollectedAt) × hourlyRate per asset
+  - `canCollectToday()` checks ISO date diff, not fixed 24h window
+  - `collectDailyIncome()` floors income to integer before awarding
+  - Upgrade cost doubles at T3 (upgradeCost × 2)
+  - `ASSET_CATALOG` export for UI consumption (read-only base assets)
+  - Store partializes only data fields, not actions
+---
+
+## Iteration 2 — US-002: AssetsScreen — נכסים ממשיים Section
+- Added "נכסים ממשיים" section between financial assets (section 1) and network assets (section 2)
+- 6-card catalog grid showing emoji, name, daily yield, tier dots (T1→T2→T3)
+- Card states: "קנה · X🪙" (unowned) | "שדרג ↑ · X🪙" (owned, upgradeable) | "בעלותך ✓" (max tier)
+- Owned cards get green glow border (borderColor: #16a34a, green shadow)
+- Purchase/upgrade confirm modal with educational description, concept tag pill, cost display
+- Gold collect income button at top of section: "💰 גבה הכנסה יומית — +X מטבעות" (visible only when pending > 0)
+- Files affected: `AssetsScreen.tsx`, `PRD38_RealAssets.md`
+- Learnings for next cycles:
+  - `ASSET_CATALOG` is readonly array of Omit<RealAsset, 'purchasedAt'|'lastCollectedAt'> — safe for UI display
+  - `ownedAssets[id]` must be typed with `as RealAsset | undefined` for safe access
+  - Modal uses `confirmAsset` state with `action: "buy" | "upgrade"` discriminator
+  - Grid uses `flexWrap: "wrap"` with `width: "48%"` + `flexGrow: 1` for 2-col layout
+  - Entrance animation delay shifted: realAssetsStyle at 150ms, subsequent sections delayed +50ms each
+  - `Zap` icon from lucide-react-native used for the section header (gold/yellow theme)
+---
+
+## Iteration 3 — US-003: DailyIncomeCard in PyramidScreen
+- `DailyIncomeCard.tsx` already existed from prior session with full implementation
+- `PyramidScreen.tsx` already had import and placement (line 16, line 43)
+- Component placed between `GlobalWealthHeader` and `DailyChallengePrompt` (above arena list)
+- Files affected: `PRD38_RealAssets.md` (marked complete)
+- No code changes needed — integration was already done
+- Learnings for next cycles:
+  - DailyIncomeCard returns null if no owned assets (safe to render unconditionally)
+  - Uses `FadeInDown.delay(80).springify()` entering animation
+  - Collect button uses `SPRING_BOUNCY` for scale animation (1 → 1.08 → 1)
+  - After collection, shows success state for 2.5s via setTimeout
+  - `hoursUntilNextCollection()` helper computes per-asset wait time
+  - Card uses compact row layout: emoji | text block (RTL aligned) | action button
+---
+
+## Iteration 4 — US-004: Dividend Pill in ProfileScreen (Real Assets upgrade)
+- Extended existing dividend pill to combine real assets + referral income
+- Pill now shows: "💼 נכסים: +X ביום · Y מצטבר" (combinedDailyIncome + combinedLifetime)
+- Added spring bounce animation (1→1.15→0.95→1.05→1) when `combinedDailyIncome` changes
+- Keeps existing pulse animation when dividendAvailable is true
+- Uses `useRef` to track previous income value for change detection
+- Files affected: `ProfileScreen.tsx`, `PRD38_RealAssets.md`
+- Learnings for next cycles:
+  - `useRealAssetsStore` selectors: `totalDailyIncome` (number), `lifetimeEarned` (number)
+  - `combinedDailyIncome = Math.round(realAssetsDailyIncome) + totalDividendCoins`
+  - `combinedLifetime = realAssetsLifetime + totalDividendCoins`
+  - Spring bounce uses `withSequence` of 4 `withTiming` calls for snappy feel
+  - `prevIncomeRef` pattern avoids stale closure issues with reanimated shared values
+  - Pill already navigated to `/assets` — no routing change needed
+---
+
+## Iteration 5 — US-005: PostStreakIncomeSplash (daily first-open overlay)
+- Fixed existing `PostStreakIncomeSplash.tsx` — fixed stale closure bug (was reading `pending` from render-time, now reads `useRealAssetsStore.getState()` at show time)
+- Moved integration from PyramidScreen to `app/_layout.tsx` (global scope, shows on any tab)
+- Increased delay from 1.5s → 3.5s to properly wait for streak celebration to finish
+- Three display states: (1) income collected → amount + celebration, (2) has assets but no pending → wait message, (3) no assets → teaser with CTA to /assets
+- Uses AsyncStorage ISO date key (`post-streak-income-shown-date`) for once-per-day logic
+- Files affected: `PostStreakIncomeSplash.tsx` (fixed), `app/_layout.tsx` (added import + render)
+- Learnings for next cycles:
+  - NEVER read store values in outer render scope for async useEffect — use `getState()` inside the timeout callback
+  - `hasAssetsAtShow` state captures the value at modal-open time, avoids re-render flicker
+  - PostStreakIncomeSplash is a Modal, so it can live anywhere in the tree (chose _layout for global access)
+  - 3.5s delay allows StreakCelebrationProvider (which fires on streak change) to complete its flow
+  - Bottom sheet pattern: `justifyContent: "flex-end"` + `SlideInDown.springify().damping(18)` for natural slide-up
+  - Pressable with `StyleSheet.absoluteFill` as backdrop + inner Pressable with `onPress={() => {}}` stops propagation
+---

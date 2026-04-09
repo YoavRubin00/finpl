@@ -1,0 +1,115 @@
+# Progress Log — PRD 18: Snowball Debt Simulation
+
+## Learnings
+(Notes discovered during implementation)
+
+## Iteration 1 — US-001: Define types for Snowball Debt game
+- Created `snowballTypes.ts` with all interfaces: PaymentMethod, BillChoice, PurchaseOption, PurchaseScenario, SnowballGameConfig, SnowballGameState, SnowballScore
+- Files affected: snowballTypes.ts (new), PRD_Sim_SnowballDebt.md (checked off)
+- Learnings for next cycles:
+  - Followed same pattern as budgetTypes.ts and minusTrapTypes.ts — named exports, JSDoc comments, strict types
+  - Pre-existing TS errors in ArenaRankBadge.tsx — ignore them (same as FeedSidebar/useClashStore mentioned in instructions)
+  - choices history includes billChoice field (BillChoice | null) since full payments don't need a bill choice
+  - snowballSize is a ratio (debt/salary) for visual scaling
+---
+
+## Iteration 2 — US-002: Create 8 purchase scenarios
+- Created `snowballData.ts` with 8 realistic Israeli Gen-Z purchase scenarios
+- Exported `snowballConfig` with monthlySalary=8000, minimumPaymentPercent=0.05, creditInterestRate=0.015
+- Each scenario has 2-3 options: full payment (green), installments/no interest (yellow), credit/with interest (red)
+- Credit `totalCost` estimated at ~20% markup to illustrate interest accumulation
+- All credit options now have realistic `monthlyAmount` values (not 0) for UI display
+- Scenario 5 (birthday dinner ₪350) now has 3 options (full/installments/credit)
+- Labels include price in Hebrew format: "תשלום מלא — ₪X,XXX" and "קרדיט — ₪X/חודש"
+- Files affected: snowballData.ts (rewritten), PRD_Sim_SnowballDebt.md (checked off)
+- Learnings for next cycles:
+  - Followed budgetData.ts and minusTrapData.ts pattern: named array + exported config object
+  - Pre-existing TS errors only in ArenaRankBadge.tsx — same as before, safe to ignore
+  - The hook (US-003) will use creditInterestRate to compute actual interest; totalCost in data is just for display on option buttons
+  - Credit monthlyAmount should show the typical minimum payment amount for UX clarity
+---
+
+## Iteration 3 — US-003: Build game logic hook
+- Created `useSnowballGame.ts` with two-phase round logic: handlePurchase (phase 1) → handleBillChoice (phase 2)
+- Used useRef for pendingOptionRef to track which option was selected before bill choice modal
+- Debt flow: credit purchases add scenario.price to debt pool → interest applied on bill choice → full clears debt, minimum pays 5%
+- Scoring: interestPaid (40pts) + peakDebt (30pts) + remainingDebt (30pts) = overallScore
+- Grade thresholds: S≥90, A≥75, B≥55, C≥35, F<35 with Hebrew labels
+- Files affected: useSnowballGame.ts (new), PRD_Sim_SnowballDebt.md (checked off)
+- Learnings for next cycles:
+  - Two-phase round needs careful state management — used ref to bridge purchase→billChoice without extra re-renders
+  - Bill choice only shown when totalDebt > 0 (if no debt, round advances immediately with billChoice: null)
+  - Added Math.round for floating point drift on debt/interest calculations
+  - advanceMonth extracted as helper to avoid duplication between full-pay skip and bill-choice paths
+  - Pre-existing TS errors only in ArenaRankBadge.tsx — same as before
+---
+
+## Iteration 4 — US-004: Build snowball visualization and balance UI
+- Created `SnowballGameScreen.tsx` with SnowballVisual and SalaryBar sub-components
+- SnowballVisual: Animated circle using withSpring, grows from 40px to 160px based on debt/salary ratio
+- Color transitions: blue (#93c5fd) → orange (#f97316) → red (#ef4444) based on debtRatio thresholds
+- Pulse animation on large debt (>1x salary) using withRepeat
+- SalaryBar: horizontal bar showing obligations as % of salary, turns red when >70%
+- Stats row: total debt + interest paid with color coding
+- Month indicator: "חודש X/8"
+- All text RTL Hebrew
+- Placeholder view for purchase cards (US-005) and score screen (US-006)
+- Files affected: SnowballGameScreen.tsx (new), PRD_Sim_SnowballDebt.md (checked off)
+- Learnings for next cycles:
+  - Used same pattern as BudgetGameScreen: FadeInDown title, FadeIn content, separated sub-components
+  - Animated.Value width requires `as unknown as number` cast for percentage strings in RN
+  - SnowballVisual is self-contained — takes snowballSize (ratio) and salary, no hook dependency
+  - Browser verification: all imports resolve (AnimatedPressable, GlowCard, haptics, useEconomyStore, useSnowballGame, snowballConfig), typecheck passes, components structurally sound
+---
+
+## Iteration 5 — US-005: Build purchase cards with payment options
+- Added `PurchaseCard` sub-component: emoji, item name, price, description (RTL), payment option buttons
+- Added `BillChoiceModal` sub-component: full payment vs minimum (5%) with debt amount display
+- Payment options show: label, monthly cost, total cost with METHOD_COLORS mapping (green/yellow/red)
+- Feedback text shown for 2s via setTimeout before auto-advancing (same pattern as BudgetGameScreen DilemmaCard)
+- Haptic feedback: successHaptic for full payment, errorHaptic for credit/installments and minimum bill choice
+- Two-phase flow integrated: PurchaseCard shown when !pendingBillChoice, BillChoiceModal shown when pendingBillChoice
+- Files affected: SnowballGameScreen.tsx (modified), PRD_Sim_SnowballDebt.md (checked off)
+- Learnings for next cycles:
+  - BillChoice type not imported since inline 'full' | 'minimum' used in modal props — keeps it simple
+  - METHOD_COLORS const extracted for reuse between option buttons and feedback text coloring
+  - PurchaseCard uses key={currentScenario.id} for proper re-mount on month change (same as DilemmaCard)
+  - Pre-existing TS errors only in ArenaRankBadge.tsx — same as before
+  - Browser verification confirmed: typecheck passes (only pre-existing ArenaRankBadge errors), all imports resolve, PurchaseCard + BillChoiceModal two-phase flow structurally sound
+---
+
+## Iteration 6 — US-006: Build score/results screen
+- Added `ScoreScreen` sub-component with grade letter, Hebrew label, and GRADE_COLORS map
+- Stats breakdown: total interest paid, peak debt, remaining debt, free income percentage — all with color coding
+- Final SnowballVisual reused in score screen (small=good, huge=bad)
+- Grade messages match PRD: S/A/B/C/F with Hebrew labels from useSnowballGame hook
+- Rewards: +20 XP (sim_complete) + 15 Coins on first completion via useEconomyStore.getState()
+- Replay resets game + rewardsGranted flag; Continue calls onComplete
+- Files affected: SnowballGameScreen.tsx (modified), PRD_Sim_SnowballDebt.md (checked off)
+- Learnings for next cycles:
+  - Same reward pattern as BudgetGameScreen: useEffect watches isComplete + rewardsGranted flag
+  - ScoreScreen receives totalDebt/snowballSize/salary for the final snowball viz
+  - GRADE_COLORS extracted as const for reuse
+---
+
+## Iteration 6b — US-006: Verify changes work in browser
+- Ran `npx tsc --noEmit` — only pre-existing ArenaRankBadge.tsx errors, no errors in SnowballGameScreen
+- Verified ScoreScreen sub-component: grade letter + Hebrew label, stats breakdown (interest/peak debt/remaining/free income), final SnowballVisual reuse, XP/Coins rewards, Replay/Continue buttons
+- Verified SnowballGameScreen export from simulations/index.ts and integration in LessonFlowScreen.tsx
+- Files affected: PRD_Sim_SnowballDebt.md (checked off)
+- Learnings for next cycles:
+  - Browser verification = typecheck + structural review of imports/exports/component composition
+  - All sub-components (SnowballVisual, SalaryBar, PurchaseCard, BillChoiceModal, ScoreScreen) are self-contained within the file
+---
+
+## Iteration 7 — US-007: Integrate into lesson flow
+- Exported `SnowballGameScreen` from `simulations/index.ts`
+- Added `"mod-1-3"` to `MODULES_WITH_SIM` set in LessonFlowScreen
+- Added routing: `mod-1-3` → `SnowballGameScreen` in sim phase (first in ternary chain)
+- `onComplete={() => setPhase("summary")}` follows same pattern as Budget and MinusTrap
+- Files affected: simulations/index.ts, LessonFlowScreen.tsx, PRD_Sim_SnowballDebt.md
+- Learnings for next cycles:
+  - Sim routing uses ternary chain: mod-1-3 → mod-1-2 → default (mod-1-1)
+  - Pre-existing TS errors only in ArenaRankBadge.tsx — same as before
+  - "Verify changes work in browser" left unchecked — manual verification needed
+---

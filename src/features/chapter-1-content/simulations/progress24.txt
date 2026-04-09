@@ -1,0 +1,423 @@
+# Progress Log — PRD 24 (Chapter 1 Remaining Simulations)
+
+## Learnings
+(Notes discovered during implementation)
+- Existing `ninjaTypes.ts` / `ninjaData.ts` / `useNinjaEngine.ts` / `PayslipNinjaScreen.tsx` from PRD 20 exist but PRD 24 uses new `payslipNinja*` filenames with a different design (tap-to-classify bins instead of swipe physics)
+
+## Iteration 1 — US-001: Define types for Payslip Ninja game
+- Created `payslipNinjaTypes.ts` with: PayslipCategory, PayslipItem, PayslipNinjaConfig, PayslipNinjaState, PayslipGrade, PayslipNinjaScore
+- Files affected: `src/features/chapter-1-content/simulations/payslipNinjaTypes.ts` (new)
+- Learnings for next cycles:
+  - Pattern: union type for category, separate Grade type, Config/State/Score triple
+  - Only pre-existing TS errors remain (FeedSidebar, useClashStore) — safe to ignore
+  - Follow `budgetTypes.ts` style: JSDoc comments, named exports
+---
+
+## Iteration 2 — US-002: Create payslip item data
+- Created `payslipNinjaData.ts` with 16 payslip items: 5 tax (מס הכנסה, ביטוח לאומי, מס בריאות, מס ריווח הון, היטל עובדים זרים), 5 pension (הפרשה לפנסיה עובד+מעסיק, קרן השתלמות עובד+מעסיק, ביטוח אובדן כושר עבודה), 6 net (שכר בסיס, דמי נסיעות, דמי הבראה, שעות נוספות, בונוס, דמי חגים)
+- Exported `payslipNinjaConfig` with items, timePerRound=3000ms, totalRounds=16
+- Files affected: `src/features/chapter-1-content/simulations/payslipNinjaData.ts` (new)
+- Learnings for next cycles:
+  - Data file pattern: import types, define const array, export config object
+  - 16 items (>15 required) with balanced categories
+  - Each item has realistic Israeli payslip amounts in ₪
+---
+
+## Iteration 3 — US-003: Build game logic hook (usePayslipNinja)
+- Created `usePayslipNinja.ts` with: classifyItem (tap bin), handleTimeout, score computation, resetGame
+- Correct answer: +10 base + streak bonus (streak count). Wrong/timeout: -5 points, streak reset to 0
+- Score uses accuracy %: S (≥95), A (≥80), B (≥65), C (≥50), F (<50)
+- Returns: state, currentItem, classifyItem, handleTimeout, score, resetGame
+- Files affected: `src/features/chapter-1-content/simulations/usePayslipNinja.ts` (new)
+- Learnings for next cycles:
+  - Hook pattern: useState for state, useMemo for derived (currentItem, score), useCallback for handlers
+  - handleTimeout reuses same wrong-answer logic as incorrect classification
+  - Timer itself (3s countdown) will be implemented in the Screen component, hook just exposes handleTimeout
+  - Score is null until isComplete=true, matching useBudgetGame pattern
+---
+
+## Iteration 4 — US-004: Build Payslip Ninja game screen
+- Replaced old PRD 20 swipe-based PayslipNinjaScreen with new PRD 24 tap-to-classify design
+- Game UI: title + stats row (score/streak/round counter) → timer bar → item card (emoji+label+amount) → 3 classification bins (Red=מיסים, Green=חיסכון, Blue=נטו)
+- TimerBar: animated progress bar using withTiming, changes color green→yellow→red as time runs out
+- ClassificationBin: shake animation (withSequence) on wrong answer, spring on correct
+- FeedbackFlash: green/red overlay on correct/wrong classification
+- Timer auto-triggers handleTimeout after 3s if no bin tapped; clears on bin press
+- isProcessing guard prevents double-taps during 600ms feedback window
+- Game complete placeholder shows basic stats + replay/continue buttons (US-005 will add full score screen with grades, rewards, integration)
+- Files affected: `src/features/chapter-1-content/simulations/PayslipNinjaScreen.tsx` (replaced)
+- Learnings for next cycles:
+  - Old PayslipNinjaScreen.tsx was from PRD 20 (ninjaData/useNinjaEngine). Replaced with PRD 24 design (payslipNinjaData/usePayslipNinja)
+  - Pattern for timer: useEffect with setTimeout, clear on unmount and on bin press
+  - useRef for timer ID to clear across renders
+  - isProcessing state prevents race conditions between timer and bin presses
+  - StyleSheet.create for game-style UI per CLAUDE.md rules
+  - Score screen, economy rewards, LessonFlowScreen integration, and index.ts export deferred to US-005
+---
+
+## Iteration 5 — US-005: Build score screen and integration
+- Replaced placeholder game-complete section with full ScoreScreen component
+- ScoreScreen shows: grade banner (S/A/B/C/F with color), accuracy %, correct/total, wrong count, final score, XP+Coins reward boxes, replay+continue buttons
+- Added useEconomyStore import and reward grant: +25 XP + 15 Coins on game complete (useEffect with rewardsGranted guard)
+- handleReplay resets rewardsGranted so replays can earn rewards again
+- Removed unused placeholder styles (completeContainer, completeEmoji, etc.)
+- LessonFlowScreen already had mod-1-5 in MODULES_WITH_SIM and ternary routing to PayslipNinjaScreen (done in US-004)
+- index.ts already exported PayslipNinjaScreen (done in US-004)
+- Files affected: `src/features/chapter-1-content/simulations/PayslipNinjaScreen.tsx` (modified)
+- Learnings for next cycles:
+  - Score screen pattern: grade banner → GlowCard breakdown → reward boxes → action buttons (matches BudgetGameScreen)
+  - GRADE_COLORS map extracted as const for reuse across score screen
+  - PRD says +25 XP for this sim (not 20 like BudgetGame) — always check PRD per sim
+  - rewardsGranted state must be reset in handleReplay to allow re-earning
+  - "Verify changes work in browser" left unchecked — requires manual verification
+---
+
+## Iteration 6 — US-006: Define types for Car Loan Race
+- Created `carLoanTypes.ts` with: InterestEffect, CarLoanOption, CarLoanScenario, CarLoanConfig, CarLoanState, CarLoanGrade, CarLoanScore
+- CarLoanOption has monthlyPayment + interestEffect + feedback (Hebrew)
+- CarLoanState tracks: remainingLoan, totalInterestPaid, carCurrentValue, month, speed (0-100), isRepossessed, isComplete
+- CarLoanScore has grade/gradeLabel + totalPaid/interestPortion/carFinalValue
+- Files affected: `src/features/chapter-1-content/simulations/carLoanTypes.ts` (new)
+- Learnings for next cycles:
+  - Same Config/State/Score triple pattern as PayslipNinja and BudgetGame
+  - Added CarLoanGrade type union like PayslipGrade for reuse
+  - InterestEffect as named type for cleaner option definitions
+  - 8 months = 8 scenarios needed in data file (US-007)
+---
+
+## Iteration 7 — US-007: Create car loan scenario data
+- Created `carLoanData.ts` with 8 scenarios covering all PRD topics: buy new vs used, extend loan term, early repayment offer, interest rate hike, insurance choices, maintenance costs, refinance offer, final assessment
+- Each scenario has 3 options with: Hebrew label, monthlyPayment, interestEffect (increase/decrease/neutral), Hebrew feedback explaining the financial consequence
+- Exported `carLoanConfig` with carValue=₪80,000, loanAmount=₪60,000, baseInterestRate=0.06, months=8
+- Files affected: `src/features/chapter-1-content/simulations/carLoanData.ts` (new)
+- Learnings for next cycles:
+  - Data file pattern same as payslipNinjaData: import types, define const array, export config
+  - Each option's monthlyPayment varies to reflect financial impact of the choice
+  - interestEffect drives the game hook logic (US-008): 'decrease' = good choice, 'increase' = bad, 'neutral' = ok
+  - Feedback text teaches Israeli financial literacy concepts (loan terms, refinancing, insurance comparison, etc.)
+---
+
+## Iteration 8 — US-008: Build game logic hook (useCarLoanGame)
+- Created `useCarLoanGame.ts` with: handleChoice (process scenario option), score computation, resetGame
+- Each round: monthly interest = (baseRate/12) × effectMultiplier, car depreciates 1.5%, loan reduced by (payment - interest)
+- Interest effect multipliers: increase=1.5×, decrease=0.5×, neutral=1.0×
+- Speed = 100 - (interestBurden × 200), clamped at 0. interestBurden = totalInterestPaid / originalLoan
+- Repossession check: remainingLoan > carCurrentValue × 1.5 → game over early with F grade
+- Grade by interestRatio (totalInterest / loanAmount): S (≤5%), A (≤10%), B (≤18%), C (≤28%), F (>28% or repossessed)
+- lastFeedback state exposes the Hebrew feedback text from the chosen option for the screen to display
+- Returns: state, currentScenario, lastFeedback, handleChoice, score, resetGame
+- Files affected: `src/features/chapter-1-content/simulations/useCarLoanGame.ts` (new)
+- Learnings for next cycles:
+  - Scenario-based hook pattern (like useBudgetGame): round index in state, scenario via useMemo, advance on choice
+  - Interest effect modifies the monthly interest rate multiplier, not the base rate itself
+  - lastFeedback as separate useState (not in CarLoanState) keeps state type clean per PRD types
+  - Speed computation inversely proportional to interest burden — 200 factor ensures visible slowdown
+  - resetGame must reset both state and lastFeedback
+  - All money values rounded to integers with Math.round for display consistency
+---
+
+## Iteration 9 — US-009: Build Car Loan Race game screen
+- Created `CarLoanRaceScreen.tsx` with full game UI: CarVisual (animated car on road), SpeedBar, scenario cards, option buttons, feedback overlay, stats bar, score screen
+- CarVisual: car emoji on road with shadow that grows larger and car sinks lower as speed decreases (more debt). Repossession shows tow truck + red text
+- SpeedBar: animated green→yellow→red bar showing current speed (inversely proportional to interest burden)
+- Scenario phase: GlowCard with emoji + description, 3 option buttons color-coded by interestEffect (green=decrease, red=increase, purple=neutral) showing monthly payment
+- Feedback phase: after choosing, feedback card displays Hebrew explanation text with continue button
+- StatsBar: 4-stat row at bottom (remaining loan, interest paid, car value, month X/8)
+- ScoreScreen: grade banner, GlowCard breakdown (total paid, interest portion, car final value), key lesson about depreciating assets, XP+Coins rewards, replay+continue buttons
+- Rewards: +25 XP + 15 Coins via useEconomyStore on completion, with rewardsGranted guard
+- Haptics: successHaptic on good choice / game complete, errorHaptic on bad choice / repossession
+- Files affected: `src/features/chapter-1-content/simulations/CarLoanRaceScreen.tsx` (new)
+- Learnings for next cycles:
+  - Scenario-based screen pattern: show scenario → player picks option → show feedback → dismiss → next scenario
+  - showFeedback state + dismissFeedback callback for two-phase display (scenario vs feedback)
+  - Option color-coding by interestEffect type makes choices visually distinct without revealing "correct" answer directly
+  - CarVisual uses translateY + shadow scale to show "weight" without complex physics
+  - Repossession handled both in gameplay (tow animation) and score screen (F grade)
+  - "Verify changes work in browser" left unchecked — requires manual verification
+---
+
+## Iteration 10 — US-010: Build score screen and integration (Car Loan Race)
+- Score screen was already built into CarLoanRaceScreen.tsx during US-009 (grade banner, GlowCard breakdown with total paid/interest/car value, key lesson "אל תיקח הלוואה על נכס שמאבד ערך", XP+Coins rewards, replay+continue buttons)
+- Added `CarLoanRaceScreen` export to `simulations/index.ts`
+- Updated `LessonFlowScreen.tsx`: imported CarLoanRaceScreen, added "mod-1-6" to MODULES_WITH_SIM, added ternary branch routing mod-1-6 → CarLoanRaceScreen
+- Files affected:
+  - `src/features/chapter-1-content/simulations/index.ts` (modified — added export)
+  - `src/features/chapter-1-content/LessonFlowScreen.tsx` (modified — import, MODULES_WITH_SIM, ternary chain)
+  - `src/features/chapter-1-content/simulations/PRD24_Ch1_RemainingSims.md` (marked US-010 complete)
+- Learnings for next cycles:
+  - Integration pattern: export from index.ts → import in LessonFlowScreen → add to MODULES_WITH_SIM Set → add ternary branch (newest mod first in chain)
+  - Score screen was already embedded in the game screen component during the screen US (US-009), so this US only needed wiring
+  - Same pattern will apply for mod-1-7 (BankCombatScreen), mod-1-8 (ShoppingCartScreen), mod-1-9 (EmergencyFundScreen)
+  - "Verify changes work in browser" left unchecked — requires manual verification
+---
+
+## Iteration 11 — US-011: Define types for Bank Fee Combat
+- Created `bankCombatTypes.ts` with: FeeAttack, DefenseOption, FeeAttackRound, BankCombatConfig, BankCombatState, BankCombatGrade, BankCombatScore
+- FeeAttack: id, feeName, feeAmount, emoji, description
+- DefenseOption: id, label, effectiveness (0-100), counterText
+- FeeAttackRound groups an attack with its defenses (cleaner than separate arrays in config)
+- BankCombatConfig: playerHealth (₪1,000), rounds array
+- BankCombatState: playerHealth, bankHealth (starts 100), round, feesBlocked, feesAbsorbed, totalSaved, isComplete
+- BankCombatScore: grade, gradeLabel, totalSaved, feesBlocked
+- Files affected: `src/features/chapter-1-content/simulations/bankCombatTypes.ts` (new)
+- Learnings for next cycles:
+  - Added FeeAttackRound composite type to bundle attack + defenses together (cleaner than PRD's flat structure)
+  - Same Config/State/Score triple + Grade union pattern as all prior sims
+  - Data file (US-012) needs 6 FeeAttackRound entries with 3 DefenseOption each
+  - playerHealth represents savings in ₪, bankHealth is abstract 0-100 meter
+---
+
+## Iteration 12 — US-012: Create fee attack and defense data
+- Created `bankCombatData.ts` with 6 FeeAttackRound entries covering all PRD fees:
+  1. דמי ניהול חשבון (₪25/mo) — threaten to leave / negotiate / accept
+  2. עמלת פעולות (₪5 each) — digital package / action package / keep paying
+  3. עמלת הקצאת אשראי (₪150/yr) — threaten to close / ask manager / pay
+  4. עמלת פקיד (₪10) — use app / call instead / prefer teller
+  5. דמי כרטיס אשראי (₪15/mo) — switch to no-fee card / negotiate / accept
+  6. עמלת העברה בנקאית (₪20) — use bit/paybox / negotiate package / accept
+- Each attack has 3 defenses: optimal (90%), good (60%), bad (0%) with Hebrew counterText explaining why
+- Exported `bankCombatConfig` with playerHealth=₪1,000 and rounds array
+- Files affected: `src/features/chapter-1-content/simulations/bankCombatData.ts` (new)
+- Learnings for next cycles:
+  - Data file pattern consistent: import types, define const array, export config
+  - Defense effectiveness tiers: 90% (optimal action), 60% (decent action), 0% (passive acceptance)
+  - Each counterText teaches a real Israeli financial tip (digital banking, bit/paybox, card competition, etc.)
+  - Some fees are monthly (×12 for annual), some annual — hook (US-013) will need to handle both consistently
+  - FeeAttackRound composite type (from US-011) made data structure clean — attack+defenses bundled together
+---
+
+## Iteration 13 — US-013: Build game logic hook (useBankCombat)
+- Created `useBankCombat.ts` with: handleDefense (pick defense option), score computation, resetGame
+- Each round: savedAmount = feeAmount × effectiveness/100, playerHealth decreases by unblocked portion
+- BankHealth decreases proportionally: BANK_DAMAGE_PER_BLOCK × (effectiveness/100) per round
+- feesBlocked incremented when effectiveness > 0, feesAbsorbed when effectiveness === 0
+- Grade: S (all blocked), A (≥80% saved), B (≥60%), C (≥40%), F (<40%) — based on savingsPercentage
+- lastFeedback as separate useState (same pattern as useCarLoanGame)
+- Returns: state, currentRound, lastFeedback, handleDefense, score, resetGame
+- Files affected: `src/features/chapter-1-content/simulations/useBankCombat.ts` (new)
+- Learnings for next cycles:
+  - Hook follows same pattern as useCarLoanGame: round-based state, useMemo for currentRound/score, useCallback for handler
+  - Bank health damage is weighted by effectiveness (90% defense deals more damage than 60%)
+  - Score grading uses savingsPercentage (totalSaved / totalFees × 100), not count-based
+  - S grade special case: requires ALL fees blocked (feesBlocked === rounds.length)
+  - Screen (US-014) should use handleDefense callback and display lastFeedback after each round
+---
+
+## Iteration 14 — US-014: Build Bank Fee Combat screen
+- Created `BankCombatScreen.tsx` with combat-style UI: CombatArena (two health bars), FeeAttackCard, DefenseButtons, HitEffect, FeedbackCard, ScoreScreen
+- CombatArena: player savings health bar (green, ₪) vs bank fee meter (red, %) with ⚔️ separator
+- FeeAttackCard: GlowCard (red glow) showing emoji, fee name, monthly + annual cost badges, description
+- DefenseButton: 3 buttons color-coded by effectiveness (green=90%, yellow=60%, red=0%), shake animation on press
+- HitEffect: shield overlay (green, 🛡️) when fee blocked, damage overlay (red, 💥) when fee absorbed
+- Feedback phase: same pattern as CarLoanRaceScreen — show counterText + continue button
+- ScoreScreen: grade banner, GlowCard breakdown (fees blocked, total saved/year), key lesson "5 דקות בטלפון יכולות לחסוך ₪3,600 בשנה", XP+Coins rewards, replay+continue
+- Haptics: heavyHaptic on every defense press, successHaptic on blocked fees, errorHaptic on absorbed fees
+- Rewards: +25 XP + 15 Coins via useEconomyStore on completion
+- Files affected: `src/features/chapter-1-content/simulations/BankCombatScreen.tsx` (new)
+- Learnings for next cycles:
+  - Combat-style UI pattern: two opposing health bars + attack card + defense buttons (unique to this sim)
+  - HealthBar component reusable: supports both ₪ money and % abstract values via isMoney prop
+  - HitEffect as separate component keeps main render clean
+  - Score screen embedded in same component (same pattern as CarLoanRaceScreen)
+  - US-015 will add export to index.ts and LessonFlowScreen integration (mod-1-7)
+  - "Verify changes work in browser" left unchecked — requires manual verification
+---
+
+## Iteration 15 — US-015: Build score screen and integration (Bank Fee Combat)
+- Score screen was already built into BankCombatScreen.tsx during US-014 (grade banner, GlowCard breakdown with fees blocked and total saved/year, key lesson "5 דקות בטלפון יכולות לחסוך ₪3,600 בשנה", XP+Coins rewards, replay+continue buttons)
+- Added `BankCombatScreen` export to `simulations/index.ts`
+- Updated `LessonFlowScreen.tsx`: imported BankCombatScreen, added "mod-1-7" to MODULES_WITH_SIM, added ternary branch routing mod-1-7 → BankCombatScreen (newest mod first in chain)
+- Files affected:
+  - `src/features/chapter-1-content/simulations/index.ts` (modified — added export)
+  - `src/features/chapter-1-content/LessonFlowScreen.tsx` (modified — import, MODULES_WITH_SIM, ternary chain)
+  - `src/features/chapter-1-content/simulations/PRD24_Ch1_RemainingSims.md` (marked US-015 complete)
+- Learnings for next cycles:
+  - Integration pattern confirmed: export from index.ts → import in LessonFlowScreen → add to MODULES_WITH_SIM Set → add ternary branch (newest mod first)
+  - Score screen was embedded in game screen during US-014, so this US only needed wiring (same as US-010 pattern)
+  - Pre-existing SummaryScreen TS error in LessonFlowScreen — not caused by our changes, safe to ignore
+  - Next: US-016 (Shopping Cart Race types) — start of SIM 8
+  - "Verify changes work in browser" left unchecked — requires manual verification
+---
+
+## Iteration 16 — US-016: Define types for Shopping Cart Race
+- Created `shoppingCartTypes.ts` with: ShoppingItemCategory, TrapType, ShoppingItem, ShoppingCartConfig, ShoppingCartState, ShoppingCartGrade, ShoppingCartScore
+- ShoppingItem has: id, name, emoji, price, category, optional trapType and trapExplanation
+- ShoppingCartState tracks: cart array, totalSpent, budget, essentialsCollected, trapsAvoided, trapsFallen, currentIndex, isComplete
+- ShoppingCartScore has: grade, gradeLabel, moneyWasted, essentialsMissed, trapsAvoided
+- Added currentIndex to state (not in PRD but needed by hook/screen to track which item is being shown)
+- Added trapExplanation optional field to ShoppingItem for the popup that reveals the marketing trick after adding a trap
+- Files affected: `src/features/chapter-1-content/simulations/shoppingCartTypes.ts` (new)
+- Learnings for next cycles:
+  - Same Config/State/Score triple + Grade union pattern as all prior sims
+  - TrapType as named union type for cleaner ShoppingItem definition
+  - trapExplanation field will be used by screen (US-019) for the reveal popup after adding a trap item
+  - Data file (US-017) needs 20+ items: 8 essentials, 8 traps (with trapType + trapExplanation), 4 budget alternatives
+  - Budget = ₪200 per PRD
+  - essentialCount in config should match the number of essential items in the data
+---
+
+## Iteration 17 — US-017: Create shopping item data
+- Created `shoppingCartData.ts` with 20 items: 8 essentials (חלב, לחם, ביצים, ירקות טריים, פירות, גבינה לבנה, אורז, חזה עוף), 8 traps (שוקולד 1+1, מכשיר פונדו, חטיפים ליד הקופה, חבילה ענקית, שמפו פרימיום, גלידה 2ב30, שתייה אנרגיה 1+1, נרות ריחניים), 4 budget alternatives (2 pairs: קורנפלקס וסבון כלים — מותג פרטי vs יקר)
+- Each trap has trapType (bogo/endcap/oversized/decoy-pricing) and Hebrew trapExplanation explaining the marketing psychology
+- Exported `shoppingCartConfig` with budget=₪200, items array, essentialCount computed dynamically from items
+- Essential items total ~₪109 (well under ₪200 budget), traps total ~₪244 (enough to blow the budget if fallen for)
+- Files affected: `src/features/chapter-1-content/simulations/shoppingCartData.ts` (new)
+- Learnings for next cycles:
+  - Data file pattern consistent: import types, define const array, export config
+  - essentialCount computed with .filter().length rather than hardcoded — stays in sync if items change
+  - Budget alternatives come in pairs (cheap vs expensive) — hook (US-018) may want to track which alternative was chosen
+  - Trap explanations teach Israeli consumer psychology: 1+1 inflation, endcap placement fees, decision fatigue at checkout, oversized waste
+  - 20 items total (8+8+4) matches PRD's 20+ requirement
+---
+
+## Iteration 18 — US-018: Build game logic hook (useShoppingCart)
+- Created `useShoppingCart.ts` with: addToCart, skipItem, score computation, resetGame
+- Items presented one at a time via currentIndex in state, currentItem derived via useMemo
+- addToCart: adds item to cart, tracks totalSpent, increments essentialsCollected (if essential) or trapsFallen (if trap)
+- skipItem: advances to next item, increments trapsAvoided if item was a trap
+- advance helper: increments currentIndex or sets isComplete if all items shown
+- Composite grading (0-100): essentials collected (40%), traps avoided (40%), budget adherence (20%)
+  - S: composite ≥95 AND all essentials AND no traps
+  - A: ≥80, B: ≥65, C: ≥50, F: <50
+- Over-budget penalty: budgetScore linearly decreases from 20 to 0 based on overspend ratio
+- moneyWasted calculated from trap items in cart for score screen display
+- Returns: state, currentItem, addToCart, skipItem, score, resetGame
+- Files affected: `src/features/chapter-1-content/simulations/useShoppingCart.ts` (new)
+- Learnings for next cycles:
+  - Hook pattern: two actions (add/skip) instead of single handler — screen needs two buttons
+  - advance extracted as plain function (not useCallback) since it's only called within setState updaters
+  - Budget alternatives treated neutrally — not essential and not trap, so adding them costs money but no penalty/bonus
+  - No lastFeedback state needed — trap explanation popup will be handled by screen component checking currentItem.trapExplanation after addToCart
+  - Screen (US-019) should show trapExplanation popup when a trap item is added to cart
+---
+
+## Iteration 19 — US-019: Build Shopping Cart Race screen
+- Created `ShoppingCartScreen.tsx` with full game UI: BudgetBar (animated green→yellow→red), ItemCard (with flashy "מבצע!" badge for traps), TrapRevealPopup, MiniCart (horizontal scroll of collected items), ScoreScreen
+- BudgetBar: animated progress bar with withSpring, shows remaining ₪ or "חריגה!" when over budget, color transitions green→yellow→red based on remaining percentage
+- ItemCard: GlowCard showing emoji, name, price. Trap items get amber glow + "🔥 מבצע!" badge. Non-traps get blue glow
+- Two action buttons: "🛒 הוסף לעגלה" (green, add) and "👋 דלג" (gray, skip) — matching PRD spec exactly
+- TrapRevealPopup: after adding a trap item, reveals the marketing trick with trapExplanation text + dismiss button. Uses amber styling to match trap theme
+- MiniCart: bottom section showing collected items as emoji circles in horizontal ScrollView, with count label
+- ScoreScreen: grade banner, GlowCard breakdown (budget remaining, essentials collected, traps avoided, money wasted on traps), key lesson "הסופרמרקט הוא שדה קרב פסיכולוגי", XP+Coins rewards, replay+continue buttons
+- Haptics: successHaptic on adding non-trap/skipping trap, errorHaptic on adding trap, heavyHaptic on skip
+- Rewards: +25 XP + 15 Coins via useEconomyStore on completion, with rewardsGranted guard
+- Files affected: `src/features/chapter-1-content/simulations/ShoppingCartScreen.tsx` (new)
+- Learnings for next cycles:
+  - Shopping cart screen pattern: budget bar → item card → two buttons → mini cart (unique layout for this sim)
+  - TrapRevealPopup replaces the feedback phase from other sims — shows automatically after adding a trap item
+  - lastTrapItem + showTrapReveal state pair manages the popup lifecycle
+  - Items use different GlowCard colors by category (amber for traps, blue for others) instead of red glow used in BankCombat
+  - MiniCart uses horizontal ScrollView for compact display of collected items
+  - Score screen embedded in same component (same pattern as BankCombatScreen, CarLoanRaceScreen)
+  - US-020 will add export to index.ts and LessonFlowScreen integration (mod-1-8)
+  - "Verify changes work in browser" left unchecked — requires manual verification
+---
+
+## Iteration 20 — US-020: Build score screen and integration (Shopping Cart Race)
+- Score screen was already built into ShoppingCartScreen.tsx during US-019 (grade banner, GlowCard breakdown with budget remaining/essentials collected/traps avoided/money wasted, key lesson "הסופרמרקט הוא שדה קרב פסיכולוגי", XP+Coins rewards, replay+continue buttons)
+- Added `ShoppingCartScreen` export to `simulations/index.ts`
+- Updated `LessonFlowScreen.tsx`: imported ShoppingCartScreen, added "mod-1-8" to MODULES_WITH_SIM, added ternary branch routing mod-1-8 → ShoppingCartScreen (newest mod first in chain)
+- Files affected:
+  - `src/features/chapter-1-content/simulations/index.ts` (modified — added export)
+  - `src/features/chapter-1-content/LessonFlowScreen.tsx` (modified — import, MODULES_WITH_SIM, ternary chain)
+  - `src/features/chapter-1-content/simulations/PRD24_Ch1_RemainingSims.md` (marked US-020 complete)
+- Learnings for next cycles:
+  - Integration pattern confirmed again: export from index.ts → import in LessonFlowScreen → add to MODULES_WITH_SIM Set → add ternary branch (newest mod first)
+  - Score screen was embedded in game screen during US-019, so this US only needed wiring (same as US-010, US-015 pattern)
+  - Next: US-021 (Emergency Fund types) — start of SIM 9 (final simulation)
+  - "Verify changes work in browser" left unchecked — requires manual verification
+---
+
+## Iteration 21 — US-021: Define types for Emergency Fund game
+- Created `emergencyFundTypes.ts` with: EmergencySeverity, EmergencyEvent, SavingsChoice, FundRound, EmergencyFundConfig, EmergencyFundState, EmergencyFundGrade, EmergencyFundScore
+- EmergencyEvent: id, name, emoji, cost, severity (minor/major/catastrophic)
+- SavingsChoice as named union type ('save-more' | 'balanced' | 'spend-more')
+- FundRound: month, income, spendingChoice, savingsRate
+- EmergencyFundConfig: monthlyIncome, monthlyExpenses, events array, totalMonths
+- EmergencyFundState: fundBalance, loansTaken, loanInterest, month, eventsHandled, eventsMissed, isComplete
+- EmergencyFundScore: grade, gradeLabel, fundFinalBalance, totalLoanInterest, eventsAbsorbed
+- Files affected: `src/features/chapter-1-content/simulations/emergencyFundTypes.ts` (new)
+- Learnings for next cycles:
+  - Same Config/State/Score triple + Grade union pattern as all prior sims
+  - Added EmergencySeverity and SavingsChoice as named union types for cleaner interface definitions
+  - FundRound captures the player's monthly savings choice — data file (US-022) will define the 3 choice options with different savingsRates
+  - Config has monthlyIncome=₪10,000 and monthlyExpenses=₪7,000 per PRD → disposable income = ₪3,000/month
+  - 6 emergency events scattered across 12 months, with catastrophic (פיטורים) zeroing income for 2 months
+  - Loan interest rate = 12% annual per PRD — hook (US-023) will implement this
+---
+
+## Iteration 22 — US-022: Create emergency event data
+- Created `emergencyFundData.ts` with 6 emergency events: פנצ'ר (₪400 minor), טיפול שיניים (₪2,000 major), תיקון דוד שמש (₪1,500 major), מכשיר טלפון נשבר (₪800 minor), פיטורים (₪0 catastrophic), מזגן מתקלקל (₪3,000 major)
+- Exported `emergencySchedule` mapping months to event IDs: month 2, 4, 6, 8, 10, 12 (evenly spaced)
+- פיטורים at month 8 — catastrophic event with ₪0 cost but hook (US-023) should zero income for months 8-9
+- Exported `savingsOptions` array with 3 choices: save-more (70% of disposable), balanced (40%), spend-more (10%)
+- Disposable income = ₪10,000 - ₪7,000 = ₪3,000/month. Savings: ₪2,100 / ₪1,200 / ₪300 per choice
+- Exported `emergencyFundConfig` with monthlyIncome=₪10,000, monthlyExpenses=₪7,000, totalMonths=12
+- Created `SavingsOption` interface for the 3 savings choices (not in types file — data-specific display type)
+- Files affected: `src/features/chapter-1-content/simulations/emergencyFundData.ts` (new)
+- Learnings for next cycles:
+  - Data file exports more helper structures than prior sims: emergencySchedule (month→eventId map), savingsOptions (display data for 3 choices)
+  - Hook (US-023) needs to: check emergencySchedule for current month, lookup event by ID, handle layoff special case (months 8+9 zero income)
+  - SavingsOption.savingsRate applies to disposable income (income - expenses), not gross income
+  - Total emergency costs: ₪400+₪2,000+₪1,500+₪800+₪0+₪3,000 = ₪7,700. With balanced saving (₪1,200/month), player accumulates ~₪8,400 by month 7 before layoff hits
+  - Screen (US-024) should use savingsOptions for the 3 choice buttons each normal month
+---
+
+## Iteration 23 — US-023: Build game logic hook (useEmergencyFund)
+- Created `useEmergencyFund.ts` with: handleSavingsChoice (process month), score computation, resetGame
+- Uses InternalState extending EmergencyFundState with outstandingLoan for synchronized state updates (avoids dual-setState sync issues)
+- Each month flow: (1) apply savings or handle layoff expenses, (2) handle emergency event, (3) apply loan interest, (4) advance month
+- Layoff handling: months 8-9 have zero income — expenses come from fund, forced loan if insufficient
+- Emergency absorption: if fund ≥ event cost → absorb (deduct from fund). Otherwise → forced loan for shortfall
+- Loan interest: 12% annual = 1% monthly, compounding on outstanding loan balance each month
+- MonthResult feedback type exported for screen use: savingsAdded, event, absorbed, loanTaken, expenseShortfall
+- Grade: S (no loans, no interest), A (≤1 missed + <₪500 interest), B (≤2 missed), C (≤3 missed), F (>3 missed)
+- Returns: state, currentEvent, isLayoffMonth, lastMonthResult, handleSavingsChoice, score, resetGame
+- Files affected: `src/features/chapter-1-content/simulations/useEmergencyFund.ts` (new)
+- Learnings for next cycles:
+  - Combined InternalState pattern avoids dual-useState sync issues — cleaner than nested setOutstandingLoan/setState
+  - Public state derived via useMemo destructuring (omits outstandingLoan)
+  - setLastMonthResult called inside setInternal updater is safe (React batches these)
+  - Screen (US-024) should use: savingsOptions for choice buttons, currentEvent for emergency display, lastMonthResult for feedback phase, isLayoffMonth for special UI
+  - Layoff event (cost=0) is counted as "handled" since it has no direct cost — the financial impact comes from zero income in months 8-9
+---
+
+## Iteration 24 — US-024: Build Emergency Fund game screen
+- Created `EmergencyFundScreen.tsx` with full game UI: ShieldMeter (animated fund bar), SavingsChoiceButtons (3 options color-coded), EmergencyEventCard (with severity badge), ShieldEffect (absorbed/broken), LoanPopup (forced loan warning), MonthResultFeedback (savings+event+loan summary), StatsBar (month/loans/interest), ScoreScreen
+- ShieldMeter: animated progress bar with withSpring, color transitions green→yellow→red based on fund health, scaled to max(3×monthly expenses, max fund seen)
+- SavingsChoiceButtons: 3 buttons color-coded by savings rate (green=save-more, yellow=balanced, red=spend-more). Layoff months show special card with auto-continue
+- EmergencyEventCard: GlowCard colored by severity (yellow=minor, orange=major, red=catastrophic), shows emoji, name, severity badge, cost (or "no income" for layoff)
+- ShieldEffect: shield overlay (green, 🛡️) when emergency absorbed, broken overlay (red, 💔) when fund insufficient
+- LoanPopup: red-styled card showing forced loan amount + 12% interest warning
+- MonthResultFeedback: two-phase display — shows savings added, then emergency event card + shield effect + loan popup if applicable, with continue button
+- StatsBar: 3-stat row (month counter, loans taken, interest paid) with red/green conditional coloring
+- ScoreScreen: grade banner, GlowCard breakdown (fund balance, events absorbed, loans taken, interest paid), key lesson "3-6 חודשי הוצאות בקרן נזילה = שריון פיננסי", XP+Coins rewards, replay+continue buttons
+- Rewards: +25 XP + 15 Coins via useEconomyStore on completion, with rewardsGranted guard
+- Haptics: heavyHaptic on savings choice, successHaptic on game complete + absorbed events, errorHaptic on missed events
+- Files affected: `src/features/chapter-1-content/simulations/EmergencyFundScreen.tsx` (new)
+- Learnings for next cycles:
+  - Screen follows same pattern as BankCombatScreen/CarLoanRaceScreen: two-phase display (choice → feedback → dismiss → next)
+  - ShieldMeter scales dynamically to max(target, maxSeen) to avoid bar overflow when fund exceeds target
+  - Layoff months handled as special case in SavingsChoiceButtons — auto-selects 'balanced' choice (irrelevant since no income)
+  - maxFundSeen tracked via useState + useEffect to dynamically adjust shield meter scaling
+  - Score screen embedded in same component (same pattern as all other sims)
+  - US-025 will add export to index.ts and LessonFlowScreen integration (mod-1-9)
+  - "Verify changes work in browser" left unchecked — requires manual verification
+---
+
+## Iteration 25 — US-025: Build score screen and integration (Emergency Fund Trampoline)
+- Score screen was already built into EmergencyFundScreen.tsx during US-024 (grade banner, GlowCard breakdown with fund balance/events absorbed/loans taken/interest paid, key lesson "3-6 חודשי הוצאות בקרן נזילה = שריון פיננסי", XP+Coins rewards, replay+continue buttons)
+- Added `EmergencyFundScreen` export to `simulations/index.ts`
+- Updated `LessonFlowScreen.tsx`: imported EmergencyFundScreen, added "mod-1-9" to MODULES_WITH_SIM, added ternary branch routing mod-1-9 → EmergencyFundScreen (newest mod first in chain)
+- Files affected:
+  - `src/features/chapter-1-content/simulations/index.ts` (modified — added export)
+  - `src/features/chapter-1-content/LessonFlowScreen.tsx` (modified — import, MODULES_WITH_SIM, ternary chain)
+  - `src/features/chapter-1-content/simulations/PRD24_Ch1_RemainingSims.md` (marked US-025 complete)
+- Learnings for next cycles:
+  - Integration pattern confirmed for all 5 sims: export from index.ts → import in LessonFlowScreen → add to MODULES_WITH_SIM Set → add ternary branch (newest mod first)
+  - Score screen was embedded in game screen during US-024, so this US only needed wiring (same pattern as US-010, US-015, US-020)
+  - All 25 user stories of PRD 24 are now complete (except manual browser verification tasks)
+  - Pre-existing TS errors (FeedSidebar, useClashStore) remain — not caused by our changes
+  - "Verify changes work in browser" left unchecked — requires manual verification
+---
+

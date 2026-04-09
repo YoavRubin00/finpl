@@ -1,0 +1,113 @@
+{
+  "expo": {
+    "name": "FinPlay",
+    "slug": "finpl",
+    "version": "1.0.0",
+    "scheme": "finpl",
+    "description": "FinPlay — Learn finance through play. Gamified financial literacy for Gen-Z.",
+    "platforms": [
+      "ios",
+      "android",
+      "web"
+    ],
+    "icon": "./assets/IMAGES/icon-1024.png",
+    "splash": {
+      "image": "./assets/IMAGES/icon-1024.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#0a1628"
+    },
+    "orientation": "portrait",
+    "userInterfaceStyle": "dark",
+    "assetBundlePatterns": [
+      "**/*"
+    ],
+    "web": {
+      "bundler": "metro",
+      "output": "single",
+      "moduleFormat": "esm"
+    },
+    "plugins": [
+      "expo-router",
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/IMAGES/notification-icon.png",
+          "color": "#0a3622",
+          "sounds": []
+        }
+      ],
+      [
+        "expo-font",
+        {
+          "fonts": [
+            "node_modules/@expo-google-fonts/heebo/400Regular/Heebo_400Regular.ttf",
+            "node_modules/@expo-google-fonts/heebo/500Medium/Heebo_500Medium.ttf",
+            "node_modules/@expo-google-fonts/heebo/600SemiBold/Heebo_600SemiBold.ttf",
+            "node_modules/@expo-google-fonts/heebo/700Bold/Heebo_700Bold.ttf",
+            "node_modules/@expo-google-fonts/heebo/800ExtraBold/Heebo_800ExtraBold.ttf",
+            "node_modules/@expo-google-fonts/heebo/900Black/Heebo_900Black.ttf"
+          ]
+        }
+      ],
+      "expo-video",
+      "expo-image",
+      "expo-audio",
+      "expo-asset",
+      "expo-apple-authentication"
+    ],
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "a2e40fb6-9966-44fa-950f-177df7f5d097"
+      }
+    },
+    "runtimeVersion": {
+      "policy": "sdkVersion"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/a2e40fb6-9966-44fa-950f-177df7f5d097"
+    },
+    "android": {
+      "package": "com.finplay.app",
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/IMAGES/icon-1024.png",
+        "backgroundColor": "#0a1628"
+      }
+    },
+    "ios": {
+      "bundleIdentifier": "com.finplay.app",
+      "buildNumber": "1",
+      "supportsTablet": false,
+      "usesAppleSignIn": true,
+      "infoPlist": {
+        "NSPrivacyPolicyURL": "https://yoavrubin00.github.io/finpl-pages/privacy-policy.html",
+        "ITSAppUsesNonExemptEncryption": false,
+        "NSUserTrackingUsageDescription": "FinPlay אינו עוקב אחריך בין אפליקציות. הרשאה זו מתבקשת רק כדי לכבד את העדפותיך.",
+        "NSPhotoLibraryUsageDescription": "FinPlay מבקש גישה לתמונות רק אם תבחר/י לשתף תמונת פרופיל.",
+        "NSCameraUsageDescription": "FinPlay מבקש גישה למצלמה רק אם תבחר/י לצלם תמונת פרופיל."
+      },
+      "privacyManifests": {
+        "NSPrivacyAccessedAPITypes": [
+          {
+            "NSPrivacyAccessedAPIType": "NSPrivacyAccessedAPICategoryUserDefaults",
+            "NSPrivacyAccessedAPITypeReasons": ["CA92.1"]
+          },
+          {
+            "NSPrivacyAccessedAPIType": "NSPrivacyAccessedAPICategoryFileTimestamp",
+            "NSPrivacyAccessedAPITypeReasons": ["C617.1"]
+          },
+          {
+            "NSPrivacyAccessedAPIType": "NSPrivacyAccessedAPICategorySystemBootTime",
+            "NSPrivacyAccessedAPITypeReasons": ["35F9.1"]
+          },
+          {
+            "NSPrivacyAccessedAPIType": "NSPrivacyAccessedAPICategoryDiskSpace",
+            "NSPrivacyAccessedAPITypeReasons": ["E174.1"]
+          }
+        ],
+        "NSPrivacyTracking": false,
+        "NSPrivacyCollectedDataTypes": []
+      }
+    }
+  }
+}

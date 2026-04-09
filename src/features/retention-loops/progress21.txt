@@ -1,0 +1,410 @@
+# Progress Log - PRD 21
+
+## Learnings
+(Notes discovered during implementation)
+
+## Pre-existing TS errors (safe to ignore)
+- FeedSidebar.tsx - CLASH.primary does not exist
+- useClashStore.ts - clash_win/clash_draw not assignable to XPSource
+
+---
+
+## Iteration 1 — Create GlobalWealthHeader.tsx (US-001)
+- Created `src/components/ui/GlobalWealthHeader.tsx`
+- Displays all 4 currencies: Streak (fire), Coins (gold), Gems (diamond), Hearts (red heart)
+- Level badge with crown icon + XP progress bar with gradient fill
+- Animated number counters (spring-based, same pattern as EconomyHeader)
+- Each pill is pressable → navigates to /shop with haptic feedback
+- Spring scale animation on pill press (0.92 bounce)
+- Level-up gold flash + heavy haptic
+- Streak glow pulse when streak ≥ 3
+- Hearts sourced from useSubscriptionStore (already has hearts system)
+- Gems sourced from useEconomyStore (already has gems field)
+- PRO users see ∞ for hearts
+- Files affected: `src/components/ui/GlobalWealthHeader.tsx` (new)
+- Learnings for next cycles:
+  - Hearts live in `useSubscriptionStore`, NOT `useEconomyStore`
+  - Gems already exist in `useEconomyStore` (just never displayed before)
+  - `HeartsUI.tsx` and `OutOfHeartsModal` already exist in `src/features/subscription/`
+  - Shop route: `/shop` (app/(tabs)/shop.tsx and app/shop/index.tsx both exist)
+  - Pills made slightly smaller than EconomyHeader (22px icon frame, 13px font, 6px padding) to fit 5 items in row
+---
+
+## Iteration 2 — Replace FeedHeader stat display in FinFeedScreen with GlobalWealthHeader (US-001)
+- Added `GlobalWealthHeader` import to `FinFeedScreen.tsx`
+- Placed `<GlobalWealthHeader />` at the top of `FeedHeader`, above the `DiamondBackground`
+- Removed redundant streak text from the greeting section (streak now shown in GlobalWealthHeader)
+- Removed unused `useEconomyStore` import and `streakText` style
+- Also marked "Display currencies" checkbox as complete (was already done in Iteration 1)
+- Files affected: `src/features/finfeed/FinFeedScreen.tsx`, `src/features/retention-loops/PRD21_UnifiedGamification.md`
+- Learnings for next cycles:
+  - FeedHeader is a local component inside FinFeedScreen.tsx (not exported)
+  - It serves as `ListHeaderComponent` for the FlatList — scrolls with content, not sticky
+  - GlobalWealthHeader placed above DiamondBackground gives a clean separation
+  - Next target: Replace ArenaStatsBar in PyramidScreen (US-001 continued)
+---
+
+## Iteration 3 — Replace ArenaStatsBar in PyramidScreen with GlobalWealthHeader (US-001)
+- Replaced `ArenaStatsBar` import + usage with `GlobalWealthHeader` in `PyramidScreen.tsx`
+- ArenaStatsBar showed only 3 stats (Streak, XP, Coins) — GlobalWealthHeader shows all 5 (Streak, Coins, Gems, Hearts, Level badge + XP progress bar)
+- `ArenaStatsBar.tsx` kept in place because `VisualPyramid.tsx` still imports it
+- `useEconomyStore` import kept in PyramidScreen — still used for `xp` (progression status)
+- No new TS errors introduced (only pre-existing ones from FeedSidebar/useClashStore)
+- Files affected: `src/features/pyramid/PyramidScreen.tsx`, `src/features/retention-loops/PRD21_UnifiedGamification.md`
+- Learnings for next cycles:
+  - GlobalWealthHeader scrolls with content inside PyramidScreen's ScrollView (same as old ArenaStatsBar)
+  - VisualPyramid.tsx is a separate older component that still uses ArenaStatsBar — may need updating later
+  - Next target: Ensure LessonFlowScreen includes GlobalWealthHeader layout (US-001 continued)
+---
+
+## Iteration 4 — Add GlobalWealthHeader to LessonFlowScreen (US-001)
+- Added `GlobalWealthHeader` at the top of `LessonFlowScreen`, above the Back+Mute toolbar
+- Removed standalone `HeartsDisplay` from quiz progress bar (hearts now shown in GlobalWealthHeader)
+- Removed `HeartsDisplay` import, added `GlobalWealthHeader` import
+- `OutOfHeartsModal` kept — still needed for out-of-hearts flow
+- Only pre-existing TS errors remain (FeedSidebar.tsx, useClashStore.ts)
+- Files affected: `src/features/chapter-1-content/LessonFlowScreen.tsx`, `src/features/retention-loops/PRD21_UnifiedGamification.md`
+- Learnings for next cycles:
+  - All 3 main screens (FinFeed, Pyramid, LessonFlow) now have GlobalWealthHeader — US-001 visual unification is nearly complete
+  - LessonFlowScreen is inside SafeAreaView with `px-5 pt-4` — GlobalWealthHeader renders cleanly within this padding
+  - `HeartsDisplay` was only used in LessonFlowScreen progress bar — safe to remove since GlobalWealthHeader covers it
+  - Next unchecked US-001 tasks: number animations on balance change, tapping currency opens Shop Modal
+---
+
+## Iteration 5 — Number animations on balance change (US-001)
+- Made HeartsRow use AnimatedNumber instead of static Text — hearts now spring-animate like coins/gems/streak
+- Added `trackedValue` prop to ResourcePill — triggers a scale pop (1 → 1.18 → 1) on value change, skipping initial mount
+- All 4 currency pills (streak, coins, gems, hearts) now have both counting animation AND scale pop on change
+- Files affected: `src/components/ui/GlobalWealthHeader.tsx`
+- Learnings for next cycles:
+  - AnimatedNumber already handled spring counting for streak/coins/gems — hearts was the only gap
+  - Scale pop uses withSequence(withSpring(1.18), withSpring(1)) — quick bounce, not disruptive
+  - isFirstRender ref pattern prevents pop on mount (same pattern as useAnimatedCounter)
+  - Next unchecked US-001 task: "Tapping any currency opens the Shop Modal" — already partially done (navigateToShop exists on all pills), may need a modal instead of navigation
+---
+
+## Iteration 6 — Tapping any currency opens the Shop Modal (US-001)
+- Created `src/stores/useShopModalStore.ts` — simple Zustand store with `{visible, open, close}`
+- Created `src/features/shop/ShopModal.tsx` — wraps shop content (categories, items, confirm modal) in a React Native `<Modal>` with slide-up animation and CLASH theme styling
+- Updated `GlobalWealthHeader.tsx` — replaced `useRouter` + `router.push("/shop")` with `useShopModalStore.open()`
+- Added `<ShopModal />` to root `app/_layout.tsx` so it's available globally across all screens
+- ShopModal has: close X button, coin balance badge, category tabs, item list, confirm modal — same functionality as ShopScreen but as an overlay
+- Files affected: `src/stores/useShopModalStore.ts` (new), `src/features/shop/ShopModal.tsx` (new), `src/components/ui/GlobalWealthHeader.tsx`, `app/_layout.tsx`
+- Learnings for next cycles:
+  - ShopModal mirrors ShopScreen logic — if ShopScreen gets new features (US-002), ShopModal should be updated too, or ideally extract shared logic
+  - `presentationStyle: "pageSheet"` gives native iOS sheet behavior; on Android falls back to full-screen slide
+  - The standalone `/shop` route still works for direct navigation (e.g., from tabs) — ShopModal is an overlay alternative triggered from GlobalWealthHeader
+  - US-001 is now FULLY COMPLETE — all 6 acceptance criteria checked off
+  - Next unchecked task: US-002 (Economy Breakdown & Shop Upgrade)
+---
+
+## Iteration 7 — Economy Breakdown & Shop Upgrade (US-002)
+- Added `spendGems()` method to `useEconomyStore` — atomic gem spending, mirrors `spendCoins` pattern
+- Updated `ShopItem` type: added optional `gemCost?: number` field
+- Added `'premium'` to `ShopCategory` union type
+- Added 2 gem sink items to `shopItems.ts`: "Skip Chest Timer" (5 gems), "Premium Avatar" (50 gems)
+- Added `💎 פרימיום` category to `SHOP_CATEGORIES`
+- Updated `ShopItemCard.tsx`: gem items show Diamond icon + purple styling; heart items get red glow card + red cost badge for visual highlighting
+- Updated `ConfirmModal.tsx`: supports `gemCost` prop — shows gem icon + purple text for gem purchases
+- Updated `ShopScreen.tsx`: shows gem balance badge (purple diamond) next to coin badge in header; PRO banner at top with Crown icon + gold border; gem spending logic for premium items
+- Updated `ShopModal.tsx`: identical changes — gem balance in header, PRO banner, gem spending support
+- PRO banner conditionally hidden when `isPro()` returns true
+- No new TS errors introduced (only pre-existing FeedSidebar + useClashStore errors)
+- Files affected: `useEconomyStore.ts`, `types.ts`, `shopItems.ts`, `ShopItemCard.tsx`, `ConfirmModal.tsx`, `ShopScreen.tsx`, `ShopModal.tsx`, `PRD21_UnifiedGamification.md`
+- Learnings for next cycles:
+  - `spendGems` follows exact same pattern as `spendCoins` — guard → check balance → atomic set
+  - ShopModal and ShopScreen share identical logic — future refactor could extract a shared hook (`useShopPurchase`)
+  - `isPro()` is a method on `useSubscriptionStore`, not a selector — must call it as `isPro()` not use as boolean
+  - Heart items now have distinct red glow + red cost badge — visually differentiates them from standard items
+  - Gem items have purple glow + Diamond icon — clear premium feel
+  - PRO banner uses CLASH gold palette with subtle transparency — matches game aesthetic
+  - Next unchecked task: US-003 (Integrated Hearts UX & PRO Upsell in Learning Flow)
+---
+
+## Iteration 8 — Heart Break Animation on Wrong Answer (US-003)
+- Added `HeartBreakOverlay` component inline in `LessonFlowScreen.tsx`
+- Animation sequence: heart appears (spring scale), red flash vignette, heart cracks apart (two halves separate with rotation), "-1 ❤️" floats upward, everything fades out (~1.4s total)
+- Uses 9 shared values: heartScale, heartOpacity, leftHalf, rightHalf, crackRotateLeft, crackRotateRight, minusY, minusOpacity, flashOpacity
+- Triggered in `handleWrongRevealed` when `useHeart()` returns true (heart consumed)
+- `heavyHaptic()` fires on heart loss for dramatic feel
+- Overlay is `pointerEvents="none"` so it doesn't block quiz interaction
+- Auto-dismisses via setTimeout after 1400ms
+- Only pre-existing TS errors remain (FeedSidebar, useClashStore)
+- Files affected: `src/features/chapter-1-content/LessonFlowScreen.tsx`, `src/features/retention-loops/PRD21_UnifiedGamification.md`
+- Learnings for next cycles:
+  - `useHeart()` returns true when a heart WAS consumed, false when no hearts available
+  - Heart break overlay uses `zIndex: 90` — below chapter-complete overlay (100) but above normal content
+  - The `💔` and `❤️‍🩹` emojis give a visual crack effect when separated with clipping
+  - `withDelay` from reanimated used to sequence phases without nested setTimeout chains
+  - Next unchecked US-003 task: Verify OutOfHeartsModal triggers correctly with 3 choices (currently missing coin refill option)
+---
+
+## Iteration 9 — OutOfHeartsModal 3-Choice Verification & Coin Refill (US-003)
+- Added coin refill button to `OutOfHeartsModal` — "🪙 מילוי לבבות — 200 מטבעות"
+- Modal now offers all 3 choices per PRD: (1) Pay 200 Coins to refill all hearts, (2) Upgrade to PRO, (3) Wait
+- Coin refill button uses `useEconomyStore.spendCoins(200)` + `restoreAllHearts()` atomically
+- Disabled state when user can't afford: grayed out button + "(חסרים X מטבעות)" subtext
+- Success haptic on coin refill, auto-dismisses modal
+- Gold styling for coin button (amber-700 bg, gold shadow) vs purple for PRO upgrade — clear visual hierarchy
+- Only pre-existing TS errors remain (FeedSidebar, useClashStore)
+- Files affected: `src/features/subscription/HeartsUI.tsx`, `src/features/retention-loops/PRD21_UnifiedGamification.md`
+- Learnings for next cycles:
+  - HEART_REFILL_COIN_COST = 200 (matches `heart-refill-full` in shopItems.ts)
+  - `successHaptic()` is the right haptic for positive purchase outcomes (vs `heavyHaptic` for losses)
+  - `useEconomyStore` imported from `../../features/economy/useEconomyStore` inside subscription feature — cross-feature import needed here since modal needs coin balance
+  - US-003 is now FULLY COMPLETE — both acceptance criteria checked off
+  - Next unchecked task: US-004 (Unified Chest Flow & UI)
+---
+
+## Iteration 10 — Chest Fly-to-Slot Animation in Summary (US-004)
+- Created `ChestFlyToSlot` overlay component in `LessonFlowScreen.tsx` (same pattern as HeartBreakOverlay)
+- Animation sequence: chest emoji appears at center (scale 1.2 → 1.3 bounce), then flies downward (translateY 320px) while spinning 360°, fades out at destination (~1s total)
+- When ChestRewardModal is dismissed, triggers fly animation → calls `useRetentionStore.grantChest()` to place chest in first empty slot
+- Added mini `ChestsRow` to `SummaryScreen` (between wisdom card and CONTINUE button) so user sees their inventory
+- Chest rarity → unlock time mapping: common=15min, rare=3hr, epic=8hr
+- Chest emoji by rarity: common=📦, rare=🏆, epic=💎
+- `successHaptic()` fires when chest lands in inventory
+- Only pre-existing TS errors remain (FeedSidebar, useClashStore)
+- Files affected: `src/features/chapter-1-content/LessonFlowScreen.tsx`, `src/features/retention-loops/PRD21_UnifiedGamification.md`
+- Learnings for next cycles:
+  - `useRetentionStore.grantChest()` returns false if all 4 slots are full — US-004 second checkbox needs to handle this case with gem prompt
+  - `ChestsRow` is a self-contained component with its own ChestRewardModal — works well as a mini inventory display in summary
+  - Fly animation uses zIndex 91 (above HeartBreakOverlay's 90, below chapter-complete's 100)
+  - `chestFly` state captures rarity from `chestModal` before clearing it, so the fly animation knows which icon/chest to show
+  - The fly destination (translateY: 320) targets roughly where ChestsRow sits in the summary scroll — not pixel-perfect but visually clear
+  - Next unchecked US-004 task: "If slots are full (4/4), prompt the user: Slots full! Spend 10 Gems to open one now, or discard."
+---
+
+## Iteration 11 — Slots Full Prompt (US-004)
+- Added `instantOpenOldestChest()` method to `useRetentionStore` — finds first non-null chest slot, grants its coin rewards, clears the slot
+- Created `SlotsFullModal` component inline in `LessonFlowScreen.tsx` — modal with purple gem theme, offers 2 options:
+  1. "💎 פתח תיבה — 10 ג׳מים" (spend 10 gems to instantly open oldest chest, freeing a slot)
+  2. "🗑️ ויתור" (discard the new chest)
+- Gem button shows disabled state with "(חסרים X ג׳מים)" when user can't afford
+- Modified `ChestRewardModal.onDismiss` to check `chestSlots` for empty slots before triggering fly animation
+- If no empty slot → shows `SlotsFullModal` instead of fly animation
+- On gem open: `spendGems(10)` → `instantOpenOldestChest()` → triggers fly animation for the new chest
+- On discard: dismisses modal with heavy haptic, chest is lost
+- `INSTANT_OPEN_GEM_COST = 10` constant for easy tuning
+- Only pre-existing TS errors remain (FeedSidebar, useClashStore)
+- Files affected: `src/features/retention-loops/useRetentionStore.ts`, `src/features/chapter-1-content/LessonFlowScreen.tsx`, `src/features/retention-loops/PRD21_UnifiedGamification.md`
+- Learnings for next cycles:
+  - `instantOpenOldestChest` finds first non-null slot (index 0 first) — oldest by position, not by time
+  - `SlotsFullModal` uses React Native `<Modal>` (not reanimated overlay) since it needs to block interaction
+  - The flow is: ChestRewardModal dismiss → check slots → if full show SlotsFullModal → on gem pay → fly animation → grantChest
+  - `slotsFullPrompt` state captures rarity so the fly animation knows which chest to show after gem payment
+  - Next unchecked US-004 task: "Integrate gem-spending logic into ChestsRow.tsx (allow users to click an unlocking chest and pay Gems to open it immediately)"
+---
+
+## Iteration 12 — Gem Instant-Open in ChestsRow (US-004)
+- Added `instantOpenChestById(chestId)` method to `useRetentionStore` — opens a specific chest by ID (regardless of status), returns coin reward
+- Added `GemInstantOpenModal` component in `ChestsRow.tsx` — purple gem-themed modal with confirm/cancel
+- Modified `ChestSlot` to accept `onGemOpen` callback — tapping an "unlocking" chest now triggers gem confirmation
+- Added small purple gem badge (💎 10) below the countdown timer on unlocking chests — visual hint that instant-open is available
+- `INSTANT_OPEN_GEM_COST = 10` — matches the constant used in LessonFlowScreen's SlotsFullModal
+- Gem button shows disabled state with "(חסרים X ג׳מים)" when user can't afford
+- Flow: tap unlocking chest → GemInstantOpenModal → confirm → `spendGems(10)` → `instantOpenChestById()` → ChestRewardModal with loot
+- Only pre-existing TS errors remain (FeedSidebar, useClashStore)
+- Files affected: `src/features/retention-loops/useRetentionStore.ts`, `src/features/retention-loops/ChestsRow.tsx`, `src/features/retention-loops/PRD21_UnifiedGamification.md`
+- Learnings for next cycles:
+  - `instantOpenChestById` differs from `instantOpenOldestChest` — takes a specific chestId, useful for user-initiated opens
+  - The gem badge on unlocking chests uses `fontSize: 9` to fit in the compact slot without overflowing
+  - `GemInstantOpenModal` uses ZoomIn.springify entering animation for consistency with ChestRewardModal
+  - US-004 is now FULLY COMPLETE — all 3 acceptance criteria checked off
+  - Next unchecked task: US-005 (Streak Multiplier System)
+---
+
+## Iteration 13 — Streak Multiplier in chestDrops.ts (US-005)
+- Added streak multiplier logic to `chestDrops.ts`: `getStreakMultiplier(streak)` returns `1 + Math.floor(streak / 7) * 0.10`
+- `generateChestDrop` now accepts optional `streak` param (default 0), applies multiplier to coins and XP (not gems)
+- Exported `getStreakMultiplier()` and `getStreakBonusPercent()` for use in UI (next checkbox)
+- Added `streakBonusPercent` field to `ChestDrop` interface for easy display in unboxing modal
+- Updated `LessonFlowScreen.tsx` call site: passes `useEconomyStore.getState().streak` to `generateChestDrop`
+- Only pre-existing TS errors remain (FeedSidebar, useClashStore)
+- Files affected: `src/features/retention-loops/chestDrops.ts`, `src/features/chapter-1-content/LessonFlowScreen.tsx`, `src/features/retention-loops/PRD21_UnifiedGamification.md`
+- Learnings for next cycles:
+  - `streak` lives in `useEconomyStore` state — accessed via `.getState().streak` in non-component code
+  - Multiplier only applies to coins and XP, NOT gems (gems are premium currency, not streak-affected)
+  - `streakBonusPercent` on ChestDrop makes it trivial to show "Streak Bonus +XX%" in ChestRewardModal (next task)
+  - `ChestRewardModal` in `ChestsRow.tsx` receives `rewards` prop — next task needs to also pass `streakBonusPercent` to show bonus badge
+  - `chestModal` state in LessonFlowScreen stores `{ visible, rarity, rewards }` — will need to add `streakBonusPercent` for UI display
+  - Next unchecked US-005 task: "Visually show 'Streak Bonus +XX%' during the chest unboxing sequence"
+---
+
+## Iteration 14 — Streak Bonus Visual in Chest Unboxing (US-005)
+- Added `streakBonusPercent` optional prop to `ChestRewardModal` in `ChestsRow.tsx`
+- When `streakBonusPercent > 0`, a flame-bordered badge appears below rewards: "🔥 Streak Bonus +XX% 🔥"
+- Badge uses orange/amber palette (bg rgba(249,115,22,0.15), border rgba(249,115,22,0.4), text #fb923c)
+- ZoomIn.springify().delay(1100) entering animation — appears after all reward pills have animated in
+- Updated `chestModal` state in `LessonFlowScreen.tsx` to include `streakBonusPercent` field
+- `streakBonusPercent` sourced from `ChestDrop.streakBonusPercent` (set in Iteration 13)
+- Tap hint delay bumped from 1000 to 1200 to accommodate streak badge animation
+- Files affected: `src/features/retention-loops/ChestsRow.tsx`, `src/features/chapter-1-content/LessonFlowScreen.tsx`, `src/features/retention-loops/PRD21_UnifiedGamification.md`
+- Learnings for next cycles:
+  - ChestRewardModal in ChestsRow is also used by `ChestsRow` itself (gem instant-open) — those calls don't pass `streakBonusPercent`, so badge correctly won't show (prop is optional, defaults to undefined)
+  - US-005 is now FULLY COMPLETE — both acceptance criteria checked off
+  - Next unchecked task: US-006 (Leveling Up — XP -> Level)
+---
+
+## Iteration 15 — XP → Level Mapping & Visual Level Ring (US-006)
+- XP → Level logic already existed: `getLevelFromXP()` in `src/utils/progression.ts`, `LEVEL_THRESHOLDS` in `src/constants/economy.ts` (6 levels: 0→0, 1→100, 2→250, 3→450, 4→700, 5→1000 XP)
+- `getPyramidStatus(xp)` already returns `{ level, progressToNextLevel }` — used by GlobalWealthHeader since Iteration 1
+- Added visual level ring: SVG circular progress arc around the level badge in `GlobalWealthHeader.tsx`
+- Ring uses `react-native-svg` `Circle` wrapped with `Animated.createAnimatedComponent` for smooth progress animation
+- Ring constants: RING_SIZE=42, RING_STROKE=3, animated `strokeDashoffset` driven by same `progressAnim` shared value as the bottom XP bar
+- Level badge inner circle shows Crown icon + level number (same as before, now inside the ring)
+- Ring track: subtle blue (rgba(42,90,140,0.4)), progress arc: CLASH.goldLight with round linecap, rotated -90° to start from top
+- No new TS errors (only pre-existing FeedSidebar + useClashStore)
+- Files affected: `src/components/ui/GlobalWealthHeader.tsx`, `src/features/retention-loops/PRD21_UnifiedGamification.md`
+- Learnings for next cycles:
+  - `Animated.createAnimatedComponent(Circle)` works for animating SVG props like `strokeDashoffset`
+  - `useAnimatedProps` is needed (not `useAnimatedStyle`) for SVG attribute animation
+  - The ring reuses the same `progressAnim` shared value as the bottom XP bar — they stay in sync
+  - `rotation="-90"` with `origin` centers the arc start at 12 o'clock position
+  - US-006 is now FULLY COMPLETE — both acceptance criteria checked off
+  - Next unchecked task: US-007 (Emotional UX — The "Finn" Mascot with Lottie)
+---
+
+## Iteration 16 — Install lottie-react-native (US-007)
+- `lottie-react-native` v7.3.4 was ALREADY installed and configured in the project
+- `@lottiefiles/dotlottie-react` v0.13.5 also present (alternative renderer)
+- Active usage confirmed in `src/features/chat/CompanionAvatar.tsx` — uses `LottieView` with ref-based frame control
+- Existing Lottie JSON files in `assets/lottie/`: warren-buffett.json, moshe-peled.json, rachel.json, robot.json
+- Pattern: `require("../../../assets/lottie/[name].json")` passed to `<LottieView source={...} />`
+- Animation states controlled via `ref.play(startFrame, endFrame)` with frame ranges defined in config
+- Only pre-existing TS errors remain (FeedSidebar, useClashStore)
+- Files affected: `src/features/retention-loops/PRD21_UnifiedGamification.md` (checkbox marked)
+- Learnings for next cycles:
+  - `LottieView` from `lottie-react-native` is the standard component — import as `import LottieView from "lottie-react-native"`
+  - Frame-range animation: `lottieRef.current.play(startFrame, endFrame)` for state-based animation switching
+  - `CompanionAnimationConfig` type defines `idleFrames`, `talkingFrames`, `thinkingFrames` as `[number, number]` tuples
+  - Existing companions have 4 Lottie files — Finn mascot will need a new JSON file at `assets/lottie/finn.json`
+  - For US-007 checkbox 2, need to create/obtain Lottie JSON for Finn with frame ranges for: Idle, Celebrate, Empathy/Sad, Thinking
+  - Next unchecked US-007 task: "Obtain/Export Lottie JSON animations for the 'Finn' mascot (Idle, Celebrate, Empathy/Sad, Thinking)"
+---
+
+## Iteration 17 — Finn Mascot Lottie JSON & Config (US-007)
+- Created `assets/lottie/finn.json` — valid Lottie JSON with 4 animation segments (240 frames @ 30fps)
+  - idle (0–59): gentle body sway/breathing, green body color
+  - celebrate (60–119): bouncy scale pop, golden body color, eyes widen
+  - empathy (120–179): sad droop, blue body color, eyes squint
+  - thinking (180–239): wobble/pulse, purple body color
+- Created `src/features/retention-loops/finnMascotConfig.ts` — typed config for Finn mascot:
+  - `FinnAnimationState` type: `"idle" | "celebrate" | "empathy" | "thinking"`
+  - `FinnAnimationConfig` interface with 4 frame range tuples
+  - `FINN_LOTTIE_SOURCE` — pre-loaded require() for LottieView source prop
+  - `FINN_ANIMATION` — frame ranges object
+  - `getFinnFrameRange(state)` — convenience function mapping state to frame range
+- Finn uses 4 states (Idle, Celebrate, Empathy, Thinking) vs companions' 3 states (Idle, Talking, Thinking) — separate type system, not extending CompanionAnimationConfig
+- No new TS errors (only pre-existing FeedSidebar + useClashStore)
+- Files affected: `assets/lottie/finn.json` (new), `src/features/retention-loops/finnMascotConfig.ts` (new), `src/features/retention-loops/PRD21_UnifiedGamification.md`
+- Learnings for next cycles:
+  - Finn Lottie JSON is a placeholder with shape animations — replace with professional art when available, keeping the same marker structure
+  - `getFinnFrameRange()` maps state to `[start, end]` tuple — use with `lottieRef.current.play(...getFinnFrameRange(state))`
+  - `FINN_LOTTIE_SOURCE` uses require() (same pattern as CompanionAvatar) — works with LottieView's source prop
+  - Finn config lives in `retention-loops/` not `chat/` — it's a gamification mascot, not a chat companion
+  - Body color changes per segment: green (idle), gold (celebrate), blue (empathy), purple (thinking) — visual state feedback even in placeholder
+  - Next unchecked US-007 task: "Integrate the Lottie mascot into InteractiveIntroCard to greet the user"
+---
+
+## Iteration 18 — Finn Mascot in InteractiveIntroCard (US-007)
+- Replaced placeholder gray circle in `InteractiveIntroCard` with Finn Lottie mascot
+- When no `videoAsset` is provided, Finn appears inside the gold-bordered circle playing idle animation (frames 0–59, looping)
+- Added `LottieView` with ref, `autoPlay` and `loop` for continuous idle greeting
+- Finn container: 120×120px circle with gold border, dark bg, overflow hidden — same CLASH aesthetic as before but now alive
+- Lottie view: 100×100px inside the container — slightly smaller for padding within the circle
+- `useEffect` triggers `finnRef.current.play(...FINN_ANIMATION.idleFrames)` when no video
+- Floating animation (floatY) still applies — Finn gently bobs up and down
+- Only pre-existing TS errors remain (FeedSidebar, useClashStore)
+- Files affected: `src/features/chapter-1-content/InteractiveIntroCard.tsx`, `src/features/retention-loops/PRD21_UnifiedGamification.md`
+- Learnings for next cycles:
+  - `LottieView` with `autoPlay` + `loop` handles idle well — the explicit `play()` in useEffect is a safety net
+  - The gold circle container with `overflow: "hidden"` clips the Lottie nicely into a circular frame
+  - `finnRef` typed as `useRef<LottieView>(null)` — same pattern as CompanionAvatar
+  - When `videoAsset` IS provided, the video player still shows (Finn only appears as fallback)
+  - Next unchecked US-007 task: "Integrate into QuizCard and LessonFlowScreen summary, changing state based on correct/wrong answers"
+---
+
+## Iteration 19 — Finn Mascot in QuizCard & SummaryScreen (US-007)
+- Added Finn Lottie mascot to `QuizCard` component — 72×72 circular frame above the question
+  - Starts in "thinking" state while user considers the answer
+  - Switches to "celebrate" on correct answer (green border)
+  - Switches to "empathy" on wrong answer (red border)
+  - Border color dynamically matches Finn state
+- Added Finn Lottie mascot to `SummaryScreen` — 100×100 circular frame above medals row
+  - "celebrate" state when all answers correct (perfect score)
+  - "idle" state when ≥ 50% correct (decent score)
+  - "empathy" state when < 50% correct (needs improvement)
+  - Border color matches state (green/gold/red)
+  - FadeIn entering animation (500ms)
+- Both use `useRef<LottieView>` + `useEffect` with `getFinnFrameRange()` to play correct segment
+- Imported `LottieView`, `FINN_LOTTIE_SOURCE`, `FINN_ANIMATION`, `getFinnFrameRange`, `FinnAnimationState`
+- Only pre-existing TS errors remain (FeedSidebar, useClashStore)
+- Files affected: `src/features/chapter-1-content/LessonFlowScreen.tsx`, `src/features/retention-loops/PRD21_UnifiedGamification.md`
+- Learnings for next cycles:
+  - QuizCard is an inline component in LessonFlowScreen — not a separate file
+  - SummaryScreen is also inline in LessonFlowScreen — same pattern
+  - `finnState` as React state (not shared value) works fine since it only changes on discrete events
+  - `summaryFinnState` is derived from `correctCount/totalCount` — no state needed, just a computed value
+  - US-007 is now FULLY COMPLETE — all 4 acceptance criteria checked off
+  - Next unchecked task: US-008 (Bouncy Micro-Interactions & Haptics)
+---
+
+## Iteration 20 — withSpring Bounce on All Primary Buttons (US-008)
+- Converted ALL remaining plain `Pressable` buttons in `LessonFlowScreen.tsx` to `AnimatedPressable` (which has built-in `withSpring` bounce + `tapHaptic()`)
+- Buttons converted:
+  - FlashcardCard nav bar: Close (✕), Prev (→), Next (←), Dots (⋯)
+  - SlotsFullModal: Gem open button, Discard button
+  - SummaryScreen: secondary "חזרה לפרקים" link
+  - Video skip button ("דלג")
+  - Top bar: Mute toggle, Back button ("חזרה")
+  - Chapter complete overlay (with `noScale` since it's a full-screen backdrop)
+- Removed unused `Pressable` from react-native import (all usages now go through AnimatedPressable)
+- Quiz options already used `AnimatedPressable` — no change needed there
+- AnimatedPressable provides: press-in scale 0.95 (SPRING_SNAPPY), press-out overshoot bounce (damping: 8, stiffness: 200), automatic `tapHaptic()`
+- Only pre-existing TS errors remain (FeedSidebar, useClashStore)
+- Files affected: `src/features/chapter-1-content/LessonFlowScreen.tsx`, `src/features/retention-loops/PRD21_UnifiedGamification.md`
+- Learnings for next cycles:
+  - `AnimatedPressable` already has `noScale` and `noHaptic` props — use `noScale` for full-screen overlays that shouldn't bounce
+  - Chapter complete overlay uses `noScale` because bouncing a full-screen backdrop looks odd
+  - All interactive buttons in LessonFlowScreen now have consistent spring bounce + haptic feedback
+  - Next unchecked US-008 task: "Expand the use of expo-haptics to trigger light ticks on small actions, and heavy success bursts on major wins"
+---
+
+## Iteration 21 — Expanded Haptics for Small Actions & Major Wins (US-008)
+- Added `mediumHaptic()` (Medium impact) and `doubleHeavyHaptic()` (double-tap Heavy impact with 150ms gap) to `haptics.ts`
+- **LessonFlowScreen haptic additions:**
+  - `tapHaptic()` on quiz advancement (moving to next quiz question)
+  - `mediumHaptic()` on phase transitions (flashcards→quizzes, quizzes→sim)
+  - `doubleHeavyHaptic()` on chapter complete overlay — dramatic double-burst for this major win
+  - `doubleHeavyHaptic()` on perfect score in SummaryScreen (all answers correct)
+  - `successHaptic()` on good score in SummaryScreen (≥50% correct)
+- **StreakCelebrationScreen haptic additions:**
+  - `doubleHeavyHaptic()` for milestone streaks (7, 30, 100 days) — replaces single heavyHaptic
+  - `successHaptic()` at 300ms delay when streak number animation lands — reinforces the visual bounce
+- Only pre-existing TS errors remain (FeedSidebar, useClashStore)
+- Files affected: `src/utils/haptics.ts`, `src/features/chapter-1-content/LessonFlowScreen.tsx`, `src/features/streak/StreakCelebrationScreen.tsx`, `src/features/retention-loops/PRD21_UnifiedGamification.md`
+- Learnings for next cycles:
+  - `Haptics.ImpactFeedbackStyle.Medium` fills the gap between Light (button taps) and Heavy (dramatic moments) — good for phase transitions
+  - `doubleHeavyHaptic()` uses setTimeout(150ms) for the second hit — feels like a satisfying double-tap, not a buzz
+  - SummaryScreen haptic fires on mount via `useEffect([], [])` — correctCount/totalCount are already resolved by the time SummaryScreen renders
+  - AnimatedPressable covers all button-level haptics already — the expansion focused on flow-level haptics (transitions, wins)
+  - ChestsRow, GlobalWealthHeader, DailySpinModal already had comprehensive haptic coverage — no changes needed
+  - Next unchecked US-008 task: "Add visual particle emitters (coin blasts, sparkles) on streak gains and level-ups"
+---
+
+## Iteration 22 — Visual Particle Emitters on Streak Gains & Level-Ups (US-008)
+- Added `ConfettiExplosion` to `StreakCelebrationScreen` — 30-particle burst fires 400ms after streak number animation lands
+- Added `SparkleOverlay` (density="high") to `StreakCelebrationScreen` — ambient gold sparkles during milestone celebrations (7/30/100 days)
+- Added `ConfettiExplosion` to `GlobalWealthHeader` — fires on level-up (when `prevLevel < level`), alongside existing gold flash + heavy haptic
+- `showConfetti` / `showLevelUpConfetti` state toggles control mount/unmount lifecycle — `onComplete` callback cleans up after 1200ms
+- Reused existing `ConfettiExplosion` (30 particles, 8 colors, physics gravity) and `SparkleOverlay` (configurable density) — no new components needed
+- Only pre-existing TS errors remain (FeedSidebar, useClashStore)
+- Files affected: `src/features/streak/StreakCelebrationScreen.tsx`, `src/components/ui/GlobalWealthHeader.tsx`, `src/features/retention-loops/PRD21_UnifiedGamification.md`
+- Learnings for next cycles:
+  - `ConfettiExplosion` self-cleans via `onComplete` after 1200ms — safe to mount/unmount with boolean state
+  - `SparkleOverlay` runs infinitely when mounted — perfect for milestone celebrations that last 3 seconds before auto-dismiss
+  - Confetti in GlobalWealthHeader uses `overflow: "hidden"` container — particles clip at header boundary, creating a contained burst effect
+  - US-008 is now FULLY COMPLETE — all 3 acceptance criteria checked off
+  - PRD 21 is now FULLY COMPLETE — all 8 User Stories (US-001 through US-008) have been implemented
+---

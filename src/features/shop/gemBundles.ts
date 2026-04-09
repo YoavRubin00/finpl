@@ -1,0 +1,67 @@
+import type { GemBundle } from './types';
+
+const DIAMOND_LOTTIE = require('../../../assets/lottie/Diamond.json');
+
+export const GEM_BUNDLES: GemBundle[] = [
+  {
+    id: 'gems-fistful',
+    name: 'חופן יהלומים',
+    gems: 80,
+    priceILS: 3.50,
+    priceLabel: '₪3.50',
+    emoji: '💎',
+    lottieSource: DIAMOND_LOTTIE,
+  },
+  {
+    id: 'gems-pouch',
+    name: 'שק יהלומים',
+    gems: 500,
+    priceILS: 17.90,
+    priceLabel: '₪17.90',
+    emoji: '💎',
+    lottieSource: DIAMOND_LOTTIE,
+    bonusLabel: '+25%',
+  },
+  {
+    id: 'gems-bucket',
+    name: 'דלי יהלומים',
+    gems: 1200,
+    priceILS: 35.90,
+    priceLabel: '₪35.90',
+    emoji: '💎💎',
+    lottieSource: DIAMOND_LOTTIE,
+    bonusLabel: '+33%',
+  },
+  {
+    id: 'gems-barrel',
+    name: 'חבית יהלומים',
+    gems: 2500,
+    priceILS: 69.90,
+    priceLabel: '₪69.90',
+    emoji: '💎💎💎',
+    lottieSource: DIAMOND_LOTTIE,
+    bonusLabel: '+50%',
+  },
+  {
+    id: 'gems-wagon',
+    name: 'עגלת יהלומים',
+    gems: 6500,
+    priceILS: 179.90,
+    priceLabel: '₪179.90',
+    emoji: '💎💎💎💎',
+    lottieSource: DIAMOND_LOTTIE,
+    isBestValue: true,
+    bonusLabel: '+80%',
+  },
+  {
+    id: 'gems-spire',
+    name: 'מגדל יהלומים',
+    gems: 14000,
+    priceILS: 349.90,
+    priceLabel: '₪349.90',
+    emoji: '💎💎💎💎💎',
+    lottieSource: DIAMOND_LOTTIE,
+    bonusLabel: '+100%',
+    isPromo: true,
+  },
+];

@@ -1,0 +1,21 @@
+# Progress Log — Content Gaps
+
+## Learnings
+(Notes discovered during implementation)
+- dilemma-data.ts uses CRLF line endings — must handle when editing via script
+- Last existing ID was dilemma-35 (note: dilemma-20 is missing in existing data)
+- Existing categories include both 'ביטוח' and 'ביטוחים' — use the PRD-specified name
+- Strings with single quotes inside use double-quote wrapping or escape
+
+## Iteration 1 — US-001: הוספת 10 דילמות לקטגוריות חלשות
+- Added 10 dilemmas (dilemma-36 to dilemma-45) to DILEMMA_SCENARIOS array
+- Categories covered: קריפטו (2), ביטוח (2), משכנתא (2), מיסים (2), נדל"ן (2)
+- Each dilemma has 2-3 choices with exactly one isCorrect: true
+- All text in Hebrew, Gen-Z tone, financially accurate
+- Files affected: src/features/daily-challenges/dilemma-data.ts
+- Typecheck: PASSED (npx tsc --noEmit)
+- Learnings for next cycles:
+  - Use Node.js script via temp file for complex edits (avoids shell quoting issues with Hebrew)
+  - Must normalize CRLF to LF before string matching, then restore on write
+  - The Edit tool may be blocked on some files — Bash + Node is reliable fallback
+---

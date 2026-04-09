@@ -1,0 +1,200 @@
+# PRD 50 — Minus Trap Simulator Overhaul (טינדר הוצאות) — Progress Log
+
+## Pre-existing Context
+
+### Existing files (FULL REWRITE needed):
+- `minusTrapTypes.ts` — current types: MinusOption, MinusScenario, MinusTrapGameConfig, MinusTrapGameState, MinusTrapScore
+- `minusTrapData.ts` — 4 scenarios with 3 options each, startingBalance: 2000
+- `useMinusTrapGame.ts` — hook with balance tracking, interest calc, scoring (S/A/B/C/F grades)
+- `MinusTrapGameScreen.tsx` — 677 lines, button-based UI with BalanceBar, ScenarioCard, ScoreScreen
+
+### Swipe pattern reference (REUSE these):
+- `src/features/myth-or-tachles/MythCardDeck.tsx` — Gesture.Pan() card deck, SWIPE_THRESHOLD=100, SWIPE_OUT_X=SCREEN_W*1.4, damping:15, stiffness:200, rotation ±18°, overlays
+- `src/components/ui/DoubleOrNothingModal.tsx` — swipe right/left with animated overlays
+
+### Key patterns:
+- Chapter 1 theme: `getChapterTheme('chapter-1')` stored in local const
+- `RTL_STYLE` = `{ writingDirection: 'rtl', textAlign: 'right' }`
+- `SimLottieBackground` wraps entire sim, `AnimatedPressable` for buttons
+- `SimFeedbackBar` for showing correct/wrong feedback
+- `ConfettiExplosion` for milestones
+- Haptics: `successHaptic`, `errorHaptic`, `heavyHaptic` from `utils/haptics`
+- Economy: `useEconomyStore` → `addXP(20, 'sim_complete')`, `addCoins(30)`
+
+### Game rules (from PRD):
+- Starting balance: ₪3,000
+- Minus threshold: ₪0 (screen flash, interest monster)
+- Game over: ₪-5,000 (screen shatters, "כרטיס נחסם")
+- Interest: below ₪0, every swipe-right costs extra 5% penalty
+- Mandatory expenses: skipping adds penalty later
+- Installment trap: iPhone adds ₪150 auto-deduct on future cards
+- Win: survive 18 cards without hitting -5000
+
+### Pre-existing TS errors (safe to ignore):
+- CreditScoreScreen.tsx:493 — `emoji` does not exist on `CreditEvent`
+- FeedSidebar.tsx — THEME.primary does not exist
+- useClashStore.ts — 'clash_win'/'clash_draw' not assignable to XPSource
+- GlassOverlay.tsx — expo-blur not found
+
+---
+
+## Iteration 1 — US-001: Types rewrite (minusTrapTypes.ts)
+- Rewrote `minusTrapTypes.ts` with new swipe card types alongside legacy types
+- Added: `SwipeCardType`, `SwipeCard`, `ActiveRecurring`, `QueuedPenalty`, `MinusTrapSwipeState`, `MinusTrapSwipeScore`, `MinusTrapSwipeConfig`
+- Extracted `MinusTrapGrade` type alias from `MinusTrapScore.grade` for reuse in both old and new score interfaces
+- Kept all legacy types (MinusOption, MinusScenario, etc.) to avoid breaking existing MinusTrapGameScreen imports
+- `QueuedPenalty` includes `triggersAtCard` field for delayed penalty logic (not in PRD spec but needed for penalty delay mechanics)
+- Files affected: `minusTrapTypes.ts`
+- Learnings for next cycles:
+  - Patterns: Legacy types must stay until US-004 rewrites the screen; `MinusTrapGrade` is the shared grade type
+  - Traps: `minusTrapSwipeTypes.ts` already exists as a stale earlier attempt — US-002/US-003 should import from `minusTrapTypes.ts` not the old swipe types file
+  - Helpful context: Only 1 pre-existing TS error appeared (CreditScoreScreen emoji), others may be conditionally compiled
+---
+
+## Iteration 2 — US-002: Data rewrite (minusTrapData.ts)
+- Rewrote `minusTrapData.ts` with 18 `SwipeCard` objects importing from `./minusTrapTypes`
+- Card order: salary first (mt-16), mixed wants/needs/traps, rent mid-game (mt-9), income near end
+- Order: salary → sushi → electricity → zara → parking ticket → iPhone trap → dinner → health insurance → rent → paphos → quick loan trap → supermarket → cat ER → cellular trap → PS5 → bonus → gym → tax refund
+- Exported `minusTrapSwipeConfig` with startingBalance: 3000, gameOverThreshold: -5000, overdraftInterestRate: 0.05
+- Credit traps use `recurringCost`: iPhone (150/card), loan (200/card), cellular (80/card)
+- Mandatory cards have `skipPenalty` and `penaltyDelay`: electricity (450, 2), parking (250, 2), health (500, 3), rent (99999, 0 = instant game over), cat (600, 0 = immediate)
+- Nothing imported `minusTrapData.ts` before this rewrite — safe to change freely
+- Files affected: `minusTrapData.ts`
+- Learnings for next cycles:
+  - Patterns: Old `minusTrapConfig` export name → now `minusTrapSwipeConfig` (same name as in `minusTrapSwipeData.ts` so the screen import can be swapped)
+  - Traps: `minusTrapSwipeData.ts` still exists with 15 old scenarios using old types from `minusTrapSwipeTypes.ts`. The SCREEN still imports from that file. US-003/004 must switch imports to `minusTrapData.ts` / `minusTrapTypes.ts`
+  - Helpful context: Rent skipPenalty is 99999 to guarantee game over if skipped; cat ER penaltyDelay is 0 for immediate penalty
+---
+
+## Iteration 3 — US-003: Game logic hook rewrite (useMinusTrapGame.ts)
+- Rewrote `useMinusTrapGame.ts` → `useMinusTrapSwipe(config)` hook using new PRD50 types
+- `swipeRight(card)`: deducts amount, applies recurring costs from activeRecurring, processes queued penalties, applies interest if negative, checks game over
+- `swipeLeft(card)`: if mandatory with skipPenalty → queues penalty with triggersAtCard = cardsPlayed + penaltyDelay; else just skips
+- Penalty processing: iterates QueuedPenalty[], applies those where triggersAtCard <= current card index
+- Recurring cost: each activeRecurring item's costPerCard deducted on every swipeRight before the card's own amount
+- Interest: `Math.round(Math.abs(balance) * rate)` applied on EVERY swipe (both directions) when negative
+- Game over: `balance <= gameOverThreshold` (-5000)
+- Score: base 100 − interestPenalty(max35) − penaltyPenalty(12/hit, max25) − minusPenalty(max20) + balanceBonus(10 if ended above starting)
+- Grades: S(90+), A(75+), B(55+), C(35+), F(<35); blocked = automatic F
+- swipeHistory tracked separately (not in MinusTrapSwipeState) to compute cardsSwipedRight/Left/totalSpent/totalSkipped
+- Files affected: `useMinusTrapGame.ts`
+- Learnings for next cycles:
+  - Patterns: Hook exports `{ state, currentCard, swipeRight, swipeLeft, score, resetGame }` — US-004 screen must call `swipeRight(card)` / `swipeLeft(card)` (not `handleSwipe(boolean)` like old hook)
+  - Traps: Screen still imports `useMinusTrapSwipeGame` from `./useMinusTrapSwipeGame` — US-004 must switch to `useMinusTrapSwipe` from `./useMinusTrapGame`
+  - Helpful context: `INITIAL_STATE` is a function (not const) because it needs `startingBalance` param
+---
+
+## Iteration 4 — US-004: Swipe Card Deck UI (MinusTrapGameScreen.tsx — part 1)
+- Full rewrite of MinusTrapGameScreen.tsx with Tinder-style card deck
+- Switched imports: `useMinusTrapSwipe` from `./useMinusTrapGame`, `minusTrapSwipeConfig` from `./minusTrapData`, types from `./minusTrapTypes`
+- SwipeableCard: MythCardDeck physics — SWIPE_THRESHOLD=100, SWIPE_OUT_X=SCREEN_W*1.4, ±18° rotation, damping:15/stiffness:200, translateY*0.3
+- Card design: 64px emoji, title, amount badge (red for expense, green for income), card type badge (רצון/חובה/מלכודת/הכנסה)
+- Swipe overlays: right = "קונה 💳" (green border), left = "מוותר ✋" (red border)
+- BackCard component for deck depth (2-3 stacked cards behind active card, scale 0.96/0.92, translateY offset)
+- BalanceHeader adapted: `gameOverThreshold` prop replaces `overdraftLimit`, progress bar uses Math.abs(gameOverThreshold)
+- ScoreScreen adapted to new `MinusTrapSwipeScore` fields (finalBalance, totalSpent, interestPaid, cardsSwipedRight/Left, grade)
+- Main screen: `swipeRight(card)` / `swipeLeft(card)` API, `isFinished = isGameOver || isComplete`, confetti on grade S or A
+- Files affected: `MinusTrapGameScreen.tsx`
+- Learnings for next cycles:
+  - Patterns: Screen now uses new PRD50 types/data/hook exclusively; old `minusTrapSwipeData.ts`, `minusTrapSwipeTypes.ts`, `useMinusTrapSwipeGame.ts` are now orphaned (can be deleted in US-009)
+  - Patterns: `CARD_TYPE_CONFIG` Record maps SwipeCardType → Hebrew label + colors; reuse for any future card type display
+  - Traps: `interpolate` with string `'clamp'` works fine (same as MythCardDeck); no need to import Extrapolation enum
+  - Traps: `state.isGameOver` = blocked (hit -5000); `state.isComplete` = survived all 18 cards — not the same as old `isBlocked` field
+  - Helpful context: US-005 will enhance BalanceHeader (animated bar, interest monster, red flash, game over shatter). US-006 will add mandatory warnings + penalty popups. US-007 will redo ScoreScreen as receipt. Current implementations are functional placeholders.
+---
+
+## Iteration 5 — US-005: Balance Bar + Interest Monster (MinusTrapGameScreen.tsx — part 2)
+- Enhanced BalanceHeader with 2 new props: `startingBalance`, `overdraftRate`
+- Progress bar now maps full range (gameOverThreshold → startingBalance) instead of only negative range: `(balance - threshold) / (starting - threshold) * 100`
+- Bar color: green (#10b981) when balance > 40% of starting, yellow (#f59e0b) when 0-40%, red (#ef4444) when negative
+- Balance text color: same logic but at 30% threshold for yellow
+- Pulsing red glow: `withRepeat(withSequence(opacity 1→0.3), -1, true)` overlay on header when negative
+- "מפלצת ריבית" badge: shows `₪{Math.round(abs(balance) * rate)} ריבית לכל פעולה` in red badge below balance when negative
+- RedFlashOverlay: trigger-based (counter increments on positive→negative crossing); `withSequence(opacity 0→0.45→0)` over 620ms; `pointerEvents="none"` to not block touches
+- GameOverOverlay: shakeX burst (±15→±10→±5→0 in 300ms), stamp slam (scale 3→1 with spring after 400ms delay), auto-dismiss after 2.5s via setTimeout
+- Main screen: `prevBalanceRef` tracks previous balance for negative-crossing detection; `gameOverAnimDone` state gates between GameOverOverlay and ScoreScreen; triple heavy haptic burst on game over; red flash on first negative entry
+- handleReplay resets all new state: gameOverAnimDone, flashTrigger, prevBalanceRef
+- Files affected: `MinusTrapGameScreen.tsx`
+- Learnings for next cycles:
+  - Patterns: BalanceHeader now takes `startingBalance` + `overdraftRate` props — future callers must pass these; `interestPerSwipe` is computed locally in the header, not from state
+  - Patterns: `showGameOverAnim` / `showScore` derived booleans control the 3-state render: gameplay → game over anim → score screen
+  - Traps: `withRepeat` with `true` for reverse makes the glow smoothly oscillate; forgetting `true` would make it jump back to start
+  - Traps: GameOverOverlay `onDismiss` must be stable (wrapped in `useCallback([], [])`) to avoid re-triggering the timeout effect
+  - Helpful context: US-006 should add mandatory card warnings ("חובה!" label on card) + penalty popup ("📨 התראה מהבנק!") — the penalty data is already in state.penalties from hook. US-007 should rewrite ScoreScreen to receipt style.
+---
+
+## Iteration 6 — US-006: Mandatory card warnings + penalty system UI
+- Added `MandatoryToast` component: slides in from top when user swipes left on a mandatory card, shows "⚠️ דילגת על {cardTitle}!", auto-dismisses after 2.2s with spring-in + timed fade-out
+- Added `PenaltyPopup` component: dramatic center overlay when a queued penalty triggers, shows "📨 התראה מהבנק! קנס ₪XXX" with scale-spring + timed fade-out after 2.9s
+- Added `RecurringCostChips` component: shows active recurring costs below balance bar as purple chips "{emoji} −₪{cost}/קלף", each chip fades in with FadeIn.duration(300)
+- Added mandatory badge on SwipeableCard: "⚠️ חובה!" red badge at top-left (type badge is top-right)
+- Penalty detection via `prevAppliedIdsRef` Set: compares current applied penalty cardIds vs previous snapshot to find newly triggered penalties
+- `handleSwipeLeft` now triggers toast + errorHaptic on mandatory cards
+- `handleReplay` resets all new state: mandatoryToast, penaltyPopup, prevAppliedIdsRef
+- Dismiss handlers use `useCallback([], [])` for stable refs (avoids re-triggering toast/popup effects)
+- Imported `ActiveRecurring` type for RecurringCostChips prop typing
+- Files affected: `MinusTrapGameScreen.tsx`
+- Learnings for next cycles:
+  - Patterns: Toast/popup use two-timer pattern: first timer starts exit animation, second timer calls onDismiss after animation completes; cleanup function clears both
+  - Patterns: `pointerEvents="none"` on both toast and popup overlays so they don't block card swipes during their brief display
+  - Patterns: RecurringCostChips uses `cards` prop to look up emoji per active recurring via `cards.find(c => c.id === r.id)`
+  - Traps: For penaltyDelay: 0 cards (cat ER, rent), both MandatoryToast AND PenaltyPopup fire simultaneously — this is intentional and works because toast is at top, popup is centered
+  - Traps: Rent skip (penalty 99999) triggers immediate game over which takes over the screen quickly; toast/popup may briefly appear but GameOverOverlay supersedes
+  - Helpful context: US-007 should rewrite ScoreScreen as receipt-style ("קבלה מודפסת") with line items, dashed border, grade stamp. US-008 adds haptics polish. Current haptics in US-006: errorHaptic on mandatory skip + penalty trigger.
+---
+
+## Iteration 7 — US-007: Receipt-style End Screen (סיכום חודש)
+- Rewrote ScoreScreen as "קבלה מודפסת" — cream/white card (#faf7f0) with dashed border (#d4c5a9)
+- Header: "סיכום החודש" + "מלכודת המינוס" + Hebrew date via `toLocaleDateString('he-IL')`
+- Purchase line items: built from `swipeHistory` (direction=right), each with emoji + title + amount, color-coded (red for expense, green for income)
+- Summary stats: יתרת סגירה, סה"כ הוצאות, סה"כ ריבית, קנסות, קלפים שנקנו/נדחו
+- Grade stamp: 4px border, rotated -8deg, color per grade (S=#10b981, F=#ef4444, etc.)
+- Educational takeaway: yellow callout (#fef3c7) with lesson about overdraft interest up to 15%/year
+- Wrapped in ScrollView for line item overflow; buttons preserved (replay + continue)
+- Added `SwipeHistoryEntry` interface to `minusTrapTypes.ts` for type-safe history tracking
+- Exposed `swipeHistory` from `useMinusTrapSwipe` hook return value
+- Replaced old `scoreRow/scoreLabel/scoreValue/scoreFooter` styles with 13 new receipt-prefixed styles
+- ScoreScreen now accepts `swipeHistory: SwipeHistoryEntry[]` + `cards: SwipeCard[]` props
+- Files affected: `minusTrapTypes.ts`, `useMinusTrapGame.ts`, `MinusTrapGameScreen.tsx`
+- Learnings for next cycles:
+  - Patterns: `swipeHistory` is now exposed from hook — screen passes it to ScoreScreen along with `minusTrapSwipeConfig.cards` for card lookups
+  - Patterns: Receipt uses `borderStyle: 'dashed'` on the outer card View (RN supports this natively)
+  - Patterns: Type predicate `(item): item is {...} => item !== null` used in `.filter()` chain for type-safe null removal
+  - Traps: `GlowCard` import and `LOTTIE_CROSS` const are now unused (were only in old ScoreScreen) — US-009 should clean these up
+  - Traps: ProfilingFlow.tsx:1926 error (`knowledge` prop missing) appeared in tsc output — new pre-existing error not in original list
+  - Helpful context: US-008 adds haptics + sound + polish. Current haptic calls: successHaptic on S/A grade, errorHaptic on others, heavyHaptic on swipe-right when negative, triple heavyHaptic burst on game over. US-008 should add: swipe-right tapHaptic, swipe-left light tapHaptic, penalty errorHaptic + warning sound, game complete successHaptic + confetti, 20 XP + 30 coins on completion (already implemented).
+---
+
+## Iteration 8 — US-008: Haptics, Sound & Polish
+- Swipe right: changed `successHaptic()` → `tapHaptic()` for normal balance; kept `heavyHaptic()` when in overdraft
+- Swipe left: added `tapHaptic()` for ALL left swipes (fires before mandatory-specific `errorHaptic()`)
+- Balance drop animation: BalanceHeader `pulseScale` now triggers on ANY balance decrease (not just negative), with stronger pulse (1.08) when negative vs (1.05) when positive; uses `prevBalRef` to detect drops
+- Penalty hit: added `playSound('modal_open_1')` warning sound alongside existing `errorHaptic()`
+- Enter minus: already done in US-005 (`heavyHaptic()` + red flash on positive→negative crossing)
+- Game over: already done in US-005 (triple `heavyHaptic()` burst at 0/150/300ms)
+- Game complete: already done (`successHaptic()` + confetti on grade S/A, `errorHaptic()` on others)
+- Award XP/coins: already done (20 XP + 30 coins via `useEconomyStore`)
+- Imported `tapHaptic` from `utils/haptics` and `useSoundEffect` hook from `hooks/useSoundEffect`
+- Added `playSound` to penalty detection effect dependency array for correctness
+- Files affected: `MinusTrapGameScreen.tsx`
+- Learnings for next cycles:
+  - Patterns: `useSoundEffect()` returns stable `playSound` callback — safe to add to dependency arrays without triggering re-renders
+  - Patterns: Available sounds: `btn_click_heavy`, `btn_click_soft_1-4`, `modal_open_1-4` — no dedicated "warning" sound, so `modal_open_1` used for penalty alerts
+  - Patterns: Available haptics: `tapHaptic` (light), `mediumHaptic`, `heavyHaptic`, `doubleHeavyHaptic`, `successHaptic`, `errorHaptic`
+  - Traps: `prevBalRef` in BalanceHeader is separate from `prevBalanceRef` in main screen (main tracks negative-crossing for red flash; BalanceHeader tracks drops for pulse animation)
+  - Helpful context: US-009 should clean up: unused `GlowCard` import, unused `LOTTIE_CROSS` const, verify exports in `simulations/index.ts`, verify SimulatorLoader mapping, run tsc
+---
+
+## Iteration 9 — US-009: TypeScript validation + integration cleanup
+- Ran `npx tsc --noEmit` — only 2 pre-existing errors remain (CreditScoreScreen emoji, ProfilingFlow knowledge prop); no new errors from PRD50 changes
+- Verified `MinusTrapGameScreen` exported from `simulations/index.ts` (line 2) ✅
+- Verified `SimulatorLoader.tsx` maps `mod-1-2` → `MinusTrapGameScreen` (line 19) ✅
+- Removed unused `GlowCard` import (was line 18) from MinusTrapGameScreen.tsx
+- Removed unused `LOTTIE_CROSS` const (was line 43) from MinusTrapGameScreen.tsx
+- Deleted 3 orphaned files from pre-PRD50 swipe attempt: `minusTrapSwipeTypes.ts`, `minusTrapSwipeData.ts`, `useMinusTrapSwipeGame.ts` — nothing else imported these
+- Files affected: `MinusTrapGameScreen.tsx`, `PRD50_MinusTrapOverhaul.md`, deleted 3 orphaned files
+- Learnings for next cycles:
+  - Patterns: ProfilingFlow.tsx:1926 `knowledge` prop error is new pre-existing (not in original list) — appeared after US-007
+  - Patterns: All PRD50 files are now: `minusTrapTypes.ts` (types), `minusTrapData.ts` (18 cards), `useMinusTrapGame.ts` (hook), `MinusTrapGameScreen.tsx` (UI)
+  - Helpful context: PRD50 is now COMPLETE — all US-001 through US-009 done ✅
+---

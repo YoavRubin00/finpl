@@ -1,0 +1,143 @@
+# Progress Log — PRD 34: AI Personalization Engine (FinBrain)
+
+## Learnings
+(Notes discovered during implementation)
+
+## Iteration 1 — US-001: Create useAITelemetryStore.ts
+- Created `types.ts` with TelemetryEvent, AIProfile, and all union types (PersonaLabel, MonetizationVector, RecommendedAction)
+- Created `useAITelemetryStore.ts` — Zustand + AsyncStorage persist, same pattern as useMacroEventStore
+- Store API: addEvent(), flush(), setProfile(), pendingCount(), shouldFlush(), reset()
+- BATCH_THRESHOLD = 10 events triggers shouldFlush()
+- Files affected: `src/features/ai-personalization/types.ts`, `src/features/ai-personalization/useAITelemetryStore.ts`
+- Learnings for next cycles:
+  - Types are ready for US-002 mock analyzeProfile() — import AIProfile and TelemetryEvent from ./types
+  - Store persist key: 'ai-telemetry-store'
+  - flush() returns events array AND clears the buffer — consumer calls flush(), passes to analyzeProfile()
+---
+
+## Iteration 2 — US-001: Hook telemetry into completeModule, recordQuizAnswer, and sim results
+- Added `useAITelemetryStore` import to `useChapterStore.ts`
+- `completeModule` now logs `module_complete` event with quiz score meta
+- `recordQuizAnswer` now logs `quiz_answer` event with correct flag + questionId meta
+- Added `useAITelemetryStore` import to `LessonFlowScreen.tsx`
+- Created `handleSimComplete` callback that logs `sim_decision` event then transitions to summary
+- Replaced all 29 inline `onComplete={() => setPhase("summary")}` sim callbacks with `onComplete={handleSimComplete}`
+- Files affected: `src/features/chapter-1-content/useChapterStore.ts`, `src/features/chapter-1-content/LessonFlowScreen.tsx`
+- Learnings for next cycles:
+  - `mod.id` is available in LessonFlowScreen for sim telemetry
+  - Quiz answers go through `recordQuizAnswer(moduleId, questionId, isCorrect)` in useChapterStore
+  - Module completion goes through `completeModule(moduleId)` in useChapterStore
+  - All sim screens use the same `onComplete` callback pattern — a single wrapper handles all 29 sims
+  - Next task: US-002 — mock analyzeProfile() function
+---
+
+## Iteration 3 — US-002: Mock AI Profile Analysis (analyzeProfile)
+- Created `analyzeProfile.ts` with deterministic heuristic-based mock (no real LLM)
+- Function signature: `analyzeProfile(events: TelemetryEvent[]): Promise<AIProfile>`
+- Derives persona from sim_decision risk meta, knowledge gaps from quiz accuracy, monetization vector from completion speed
+- Returns full AIProfile with persona, knowledgeGaps, monetizationVector, recommendedActions
+- 300ms simulated latency so callers handle async correctly
+- Added `processAndAnalyze()` to `useAITelemetryStore` — flushes events, runs analyzeProfile, stores result
+- Files affected: `src/features/ai-personalization/analyzeProfile.ts` (new), `src/features/ai-personalization/useAITelemetryStore.ts` (updated)
+- Learnings for next cycles:
+  - `analyzeProfile` is async — future swap to real edge function is drop-in replacement
+  - `processAndAnalyze()` on the store is the single entry point: flush + analyze + store
+  - Persona derivation keys off `meta.riskLevel` — sims should set this in their telemetry meta
+  - Knowledge gaps use moduleId as the gap label — may want to map to human-readable names later
+  - Next task: US-003 — ChapterMapScreen hidden/dynamic nodes based on AIProfile.recommendedActions
+---
+
+## Iteration 4 — US-003: ChapterMapScreen hidden/dynamic nodes
+- Created `hiddenModules.ts` with HiddenModuleDef interface and 3 hidden module stubs:
+  - UNLOCK_CRYPTO_NODE → chapter-4 (קריפטו מתקדם)
+  - UNLOCK_TAX_NODE → chapter-3 (תכנון מס חכם)
+  - UNLOCK_ADVANCED_INVESTING → chapter-5 (השקעות מתקדמות)
+- Exported `getUnlockedHiddenModules(chapterId, actions)` helper
+- Updated `ChapterMapScreen.tsx`:
+  - Reads `aiProfile` from `useAITelemetryStore`
+  - Filters hidden modules for current chapter via `getUnlockedHiddenModules`
+  - Renders hidden nodes after regular modules with purple glow animation (HiddenModuleGlow component)
+  - Uses react-native-reanimated pulsing opacity for glow effect
+  - Hidden nodes show 🧠 badge, "נפתח ע"י FinBrain" label, SparkleOverlay
+- Files affected: `src/features/ai-personalization/hiddenModules.ts` (new), `src/features/chapter-1-content/ChapterMapScreen.tsx` (updated)
+- Learnings for next cycles:
+  - Hidden modules use same Module type — can be navigated via same handleModulePress
+  - `getUnlockedHiddenModules` filters by both chapterId and recommendedActions
+  - HIDDEN_GLOW_COLOR is #c084fc (purple) — distinct from chapter glow colors
+  - Hidden module stubs have minimal content — expand later when content is ready
+  - Next task: US-003 AC#2 — render new module on map with glow when AI triggers UNLOCK_*, and adjust Feed algorithm
+---
+
+## Iteration 5 — US-003 AC#2 + AC#3: Mark glow rendering complete + Feed algorithm AI personalization
+- AC#2 (glow rendering) was already implemented in Iteration 4 — just needed checkbox marked
+- AC#3: Adjusted FinFeedScreen feed algorithm to boost items matching AIProfile.knowledgeGaps
+- Imported `useAITelemetryStore` in FinFeedScreen, read `aiProfile.knowledgeGaps`
+- Split feed pool into `boosted` (module-hooks/comics whose moduleId is in knowledgeGaps) and `rest`
+- Both groups shuffled independently, then interleaved with boosted items at every 3rd position
+- When no knowledgeGaps exist, feed behaves exactly as before (seeded shuffle)
+- Files affected: `src/features/finfeed/FinFeedScreen.tsx` (updated), `src/features/ai-personalization/PRD34_AIPersonalization.md` (updated)
+- Learnings for next cycles:
+  - Feed items with `moduleId` field: `module-hook` and `comic` types — both can be matched to knowledgeGaps
+  - Videos/quotes use `category` field, not moduleId — future improvement could map gaps to categories
+  - `seededShuffle` uses seed+1 for rest group to avoid identical shuffle patterns
+  - `aiProfile` added to useMemo deps to re-sort feed when profile changes
+  - Next task: US-004 AC#1 — Add `monetization_vector` to the LLM JSON schema
+---
+
+## Iteration 6 — US-004 AC#1: Add monetization_vector to the LLM JSON schema
+- Enhanced `types.ts` with `MonetizationTrigger`, `MonetizationOffer`, and `MonetizationContext` interfaces
+- `MonetizationTrigger` covers 6 emotional moments: after_failure, after_win, shop_browse, hearts_depleted, streak_at_risk, chapter_complete
+- `MonetizationOffer` has trigger, bundleKey, headline (Hebrew), subtext (Hebrew), urgency level
+- `MonetizationContext` wraps vector + offers array — lives on AIProfile as `monetizationContext`
+- Added `deriveMonetizationContext()` to `analyzeProfile.ts` — generates Hebrew copy per vector type
+- Enhanced `deriveMonetizationVector()` — now can derive 'Status Seeker' (high accuracy + fast completion)
+- Updated `deriveActions()` — adds `TRIGGER_TARGETED_IAP` when vector !== 'Unknown'
+- Files affected: `src/features/ai-personalization/types.ts`, `src/features/ai-personalization/analyzeProfile.ts`
+- Learnings for next cycles:
+  - `MonetizationOffer.bundleKey` is the key the DynamicIAPService will use to map to actual IAP product IDs
+  - Each vector gets 1-2 pre-built offers with Hebrew copy — DynamicIAPService will select based on trigger context
+  - `monetizationContext` is on AIProfile — DynamicIAPService reads from `useAITelemetryStore.profile.monetizationContext`
+  - 'Status Seeker' triggers when correctRatio > 85% AND avgDuration < 60s
+  - Aggressive persona gets a bonus champion_bundle offer regardless of vector
+  - Next task: US-004 AC#2 — Update useAITelemetryStore to track monetization signals
+---
+
+## Iteration 7 — US-004 AC#2: Track monetization signals in useAITelemetryStore
+- Added 5 new monetization event types to `TelemetryEventType`: `shop_browse`, `hearts_depleted`, `chest_unlock`, `iap_dismissed`, `iap_accepted`
+- Added `MonetizationSignalType` utility type (Extract of monetization events from TelemetryEventType)
+- Added `trackMonetizationSignal(signal, meta?)` convenience method to `useAITelemetryStore` — uses moduleId `_monetization` and sets `isMonetizationSignal: true` in meta
+- Enhanced `deriveMonetizationVector()` in `analyzeProfile.ts` — now prioritizes behavioral signals over completion-speed heuristic:
+  - `shopBrowses >= 3` or `chestUnlocks >= 2` → Impulse Buyer
+  - `iapAccepts >= 1` + high accuracy → Status Seeker
+  - `heartsDepleted >= 2` or hearts+dismissals → Anxious/Needs Security
+  - `iapDismissals >= 3` with no accepts → Frugal/Value Driven
+  - Falls back to original completion-speed heuristic when no monetization signals exist
+- Files affected: `src/features/ai-personalization/types.ts`, `src/features/ai-personalization/useAITelemetryStore.ts`, `src/features/ai-personalization/analyzeProfile.ts`
+- Learnings for next cycles:
+  - `trackMonetizationSignal` is the single entry point for all monetization telemetry — call from shop screen, heart depletion handler, chest UI, IAP modals
+  - moduleId `_monetization` is a sentinel value — won't collide with real module IDs
+  - `MonetizationSignalType` can be imported by UI components for type-safe signal tracking
+  - Monetization signals now take priority over speed heuristics — behavioral data is stronger signal
+  - Next task: US-004 AC#3 — Create a DynamicIAPService that customizes IAP copy/timing based on AI profile
+---
+
+## Iteration 8 — US-004 AC#3: DynamicIAPService
+- Created `DynamicIAPService.ts` — stateless service functions (no Zustand store needed)
+- Core API: `evaluateIAPOffer(trigger: MonetizationTrigger): IAPDecision`
+  - Reads `profile.monetizationContext.offers` from `useAITelemetryStore.getState()`
+  - Finds exact-match offer for the given trigger
+  - Returns `shouldShow`, `offer`, `displayDurationMs`, `entryDelayMs`
+- Anti-spam: 5-minute cooldown + max 3 offers per session
+- Urgency-based timing: high urgency = 500ms delay / 8s display, low = 2.5s delay / 5s display
+- Helper functions: `recordOfferShown()`, `recordOfferAccepted(bundleKey)`, `recordOfferDismissed(bundleKey)`
+- Accept/dismiss funcs log to telemetry via `trackMonetizationSignal` — closes the feedback loop
+- `resetIAPSession()` for app foreground / new session
+- Files affected: `src/features/ai-personalization/DynamicIAPService.ts` (new), `src/features/ai-personalization/PRD34_AIPersonalization.md` (updated)
+- Learnings for next cycles:
+  - `evaluateIAPOffer` is the single entry point — call from quiz failure handler, chapter complete, heart depletion, etc.
+  - Session state (lastShownTimestamp, offersShownThisSession) is module-scoped, not persisted — resets on app restart which is desired
+  - `useAITelemetryStore.getState()` used outside React (pure function, no hook) — valid Zustand pattern
+  - Accept/dismiss recording feeds back into `deriveMonetizationVector` on next analysis cycle
+  - Future UI: create an `IAPPopupModal` component that consumes the `IAPDecision` return value
+  - All PRD 34 tasks are now complete
+---

@@ -1,0 +1,152 @@
+# Progress Log
+
+## Learnings
+(Notes discovered during implementation)
+
+## Iteration 1 — US-001: Create types.ts
+- Created `types.ts` with interfaces: Chapter, Module, Flashcard, QuizQuestion, SimConcept
+- Files affected: `src/features/chapter-1-content/types.ts`
+- Learnings for next cycles:
+  - correctAnswer typed as `number` (index into options array) — chapter1Data.ts must use 0-based indices
+  - QuizQuestion.type is a union literal: 'multiple-choice' | 'scenario'
+  - All interfaces use `string` ids for flexibility
+  - npx tsc --noEmit runs clean with no output on success
+---
+
+## Iteration 2 — US-001: Create chapter1Data.ts
+- Created `chapter1Data.ts` with all 9 modules fully populated from PRD7 content, typed as `Chapter`
+- Files affected: `src/features/chapter-1-content/chapter1Data.ts`
+- Learnings for next cycles:
+  - correctAnswer uses 0-based index into options array (e.g., option B = index 1 when A=0)
+  - Each module has exactly 2 flashcards and 4 quizzes as per PRD structure
+  - IDs follow pattern: mod-1-{moduleNum}, fc-1-{moduleNum}-{n}, q-1-{moduleNum}-{n}, sim-1-{moduleNum}
+  - Some quiz correct answers are index 0 (not always 1) — mapped carefully from PRD letter answers
+  - chapter1Data is a named export const, not default export (per project conventions)
+---
+
+## Iteration 3 — US-001: Typecheck passes
+- Ran `npx tsc --noEmit` from project root — zero errors
+- Files affected: none (validation only)
+- Learnings for next cycles:
+  - Typecheck produces no output on success (exit code 0)
+  - US-001 fully complete, next is US-002: Chapter Progress Store (Zustand)
+  - US-002 requires: useChapterStore.ts with completedModules, quizResults, currentModuleIndex state + actions + economy integration + persist middleware
+---
+
+## Iteration 4 — US-002: Chapter Progress Store (Zustand)
+- Created `useChapterStore.ts` with full state, actions, economy integration, and persist middleware
+- Files affected: `src/features/chapter-1-content/useChapterStore.ts`
+- Learnings for next cycles:
+  - `completeModule` is idempotent — checks `completedModules.includes()` before adding
+  - Economy integration uses `useEconomyStore.getState()` pattern (same as arena/bridge stores)
+  - XP source is `"lesson_complete"` (from XPSource union type in `src/types/economy.ts`)
+  - Constants: 30 XP + 10 Coins per module completion (as specified in PRD)
+  - `recordQuizAnswer` accumulates per-module results using `?? { correct: 0, total: 0 }` fallback
+  - Persist key is `"chapter-store"`, partializes only data fields (not actions)
+  - Next task: US-003 LessonFlowScreen component
+---
+
+## Iteration 5 — US-003: Create LessonFlowScreen component with moduleId param
+- Created `LessonFlowScreen.tsx` with `useLocalSearchParams<{ id: string }>()` to receive moduleId
+- Looks up module from `chapter1Data.modules` via `useMemo`
+- Manages flow state via `FlowPhase` type: "flashcards" | "quizzes" | "summary"
+- Tracks `flashcardIndex` and `quizIndex` for navigation within phases
+- Uses `useEntranceAnimation(fadeInUp)` for title and content entrance
+- Shows module title (RTL), phase indicator with progress count, and placeholder content per phase
+- Handles missing module with error screen
+- Files affected: `src/features/chapter-1-content/LessonFlowScreen.tsx`
+- Learnings for next cycles:
+  - Module lookup uses `chapter1Data.modules.find()` — returns `Module | undefined`
+  - `useLocalSearchParams<{ id: string }>()` from expo-router gives the moduleId
+  - Phase transitions will be needed: flashcards → quizzes → summary
+  - GlowCard and AnimatedPressable are available for interactive cards/buttons
+  - RewardPopup component exists for XP/Coins reward display
+  - successHaptic/errorHaptic from `utils/haptics` for quiz feedback
+  - Next checkbox: Display flashcards as swipeable/tappable cards with fade/slide animations
+---
+
+## Iteration 6 — US-003: Display flashcards as tappable cards with neon styling and animations
+- Replaced placeholder flashcard content with FlashcardCard subcomponent
+- FlashcardCard uses GlowCard (violet glow, pressable) wrapping card text in RTL
+- Each card mounts with slideInRight entrance animation via useEntranceAnimation
+- Key prop on FlashcardCard triggers re-mount animation when flashcardIndex changes
+- Tap advances to next card; after last card, transitions phase to "quizzes"
+- "לחץ להמשך" / "לחץ למעבר לשאלות" hint text below card
+- Separated phase rendering into conditional blocks (flashcards/quizzes/summary)
+- Files affected: `src/features/chapter-1-content/LessonFlowScreen.tsx`
+- Learnings for next cycles:
+  - FlashcardCard is a local function component (not exported) — keeps it simple
+  - Using `key={card.id}` on FlashcardCard forces remount → re-triggers useEntranceAnimation
+  - GlowCard has built-in pressable behavior with glow intensify on press
+  - slideInRight animates from translateX: 60 → 0 with opacity fade-in
+  - Phase transitions: handleFlashcardTap checks if last card, then setPhase("quizzes")
+  - Next checkbox: After flashcards, present quizzes one-by-one with tappable option buttons
+---
+
+## Iteration 7 — US-003: Present quizzes one-by-one with tappable option buttons
+- Replaced quiz placeholder with QuizCard subcomponent
+- QuizCard shows question text (RTL, bold) inside a sky-blue GlowCard (#38bdf8, non-pressable)
+- Each option rendered as AnimatedPressable with rounded border, dark bg, RTL text
+- Key prop on QuizCard uses quiz.id to trigger slideInRight re-mount animation on advance
+- handleQuizAnswer advances quizIndex; after last quiz transitions to "summary" phase
+- Feedback/scoring logic deferred to next task (green glow / red shake)
+- Files affected: `src/features/chapter-1-content/LessonFlowScreen.tsx`
+- Learnings for next cycles:
+  - GlowCard accepts `pressable={false}` to disable glow-on-touch (useful as container)
+  - AnimatedPressable provides scale + haptic by default — good for option buttons
+  - Quiz glow color differentiated from flashcard: sky-blue (#38bdf8) vs violet (#a78bfa)
+  - handleQuizAnswer receives optionIndex — will need to compare with quiz.correctAnswer for feedback
+  - Next checkbox: On answer: green glow + success feedback if correct, red shake + fail feedback if wrong
+---
+
+## Iteration 8 — US-003: Quiz answer feedback (green glow / red shake)
+- Added `AnswerState` interface tracking `selectedIndex` and `isCorrect`
+- QuizCard now receives `answerState` prop; when answered:
+  - GlowCard glow changes to green (#22c55e) on correct, red (#ef4444) on wrong
+  - Correct option gets green border, wrong selected option gets red border
+  - Shake animation (withSequence of translateX) on wrong answer
+  - successFeedback / failFeedback text displayed below options (RTL, colored)
+- `handleQuizAnswer` now: sets answerState, fires successHaptic/errorHaptic, calls `recordQuizAnswer` on store, auto-advances after 1800ms timeout
+- Options are disabled after answering (AnimatedPressable `disabled` prop)
+- Files affected: `src/features/chapter-1-content/LessonFlowScreen.tsx`
+- Learnings for next cycles:
+  - `useSharedValue` + `withSequence(withTiming(...))` for shake animation works well
+  - GlowCard `glowColor` can be changed dynamically for feedback coloring
+  - 1800ms auto-advance delay gives enough time to read feedback text
+  - `recordQuizAnswer` is called with (moduleId, questionId, isCorrect)
+  - answerState is reset to null before advancing to next quiz (key remount handles animation reset)
+  - Next checkbox: After all quizzes, show summary (X/Y correct) and grant XP/Coins, call completeModule
+---
+
+## Iteration 9 — US-003: Summary screen with score, rewards, and completeModule
+- Replaced summary placeholder with full summary phase UI
+- Shows X/Y correct score inside a GlowCard (green if perfect, violet otherwise)
+- Contextual feedback text based on score (perfect / passed / try again)
+- Static reward badges showing +30 XP and +10 Coins earned
+- "חזרה לפרקים" button navigates back via router.back()
+- useEffect on phase === "summary" calls completeModule(mod.id) once (guarded by completedRef)
+- RewardPopup animations: XP popup fires first, then coins popup chains via onComplete
+- successHaptic fires on module completion
+- Files affected: `src/features/chapter-1-content/LessonFlowScreen.tsx`
+- Learnings for next cycles:
+  - RewardPopup takes { amount, type: "xp" | "coins", onComplete } — chain them sequentially
+  - completeModule grants 30 XP + 10 Coins internally via useEconomyStore
+  - useRef boolean guard prevents double-calling completeModule on re-renders
+  - quizResults[moduleId] from store provides { correct, total } for summary display
+  - Next checkbox: Styling matches FinPlay dark/neon theme, RTL-ready
+---
+
+## Iteration 10 — US-003: Styling matches FinPlay dark/neon theme, RTL-ready
+- Added `RTL_STYLE` constant (`writingDirection: "rtl"`, `textAlign: "right"`) applied to all Hebrew text elements
+- Added neon progress bar (violet for flashcards, sky-blue for quizzes) that fills as user advances
+- Reward badges in summary styled to match EconomyHeader pattern: `bg-violet-950/60` with violet shadow glow for XP, `bg-yellow-950/40` with yellow shadow glow for Coins, plus matching borders
+- Cleaned up unused imports: `withSpring`, `SPRING_SNAPPY`, `I18nManager`
+- Removed redundant `text-right` className in favor of `style={RTL_STYLE}` for proper RTL rendering
+- Files affected: `src/features/chapter-1-content/LessonFlowScreen.tsx`
+- Learnings for next cycles:
+  - RTL in React Native requires `writingDirection: "rtl"` in style prop, not just `text-right` className
+  - Neon glow on badges uses `shadowColor` + `shadowOpacity` + `shadowRadius` (native shadow, not CSS)
+  - EconomyHeader uses `bg-violet-950/60` and `bg-yellow-950/40` as the canonical badge backgrounds
+  - Progress bar pattern: `h-1.5 bg-zinc-800 rounded-full` container with colored inner `View`
+  - Next checkbox: Typecheck passes (US-003)
+---

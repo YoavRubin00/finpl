@@ -1,0 +1,26 @@
+# PRD 39 — Duolingo-Style Learning Map Progress
+
+## Learnings (from prior PRDs)
+- `CHAPTER_MAP` pattern from `ChapterMapScreen.tsx` — reuse directly
+- Navigation to lesson: `router.push('/lesson/${mod.id}?chapterId=${chapterId}')`
+- Completion store: `useChapterStore((s) => s.progress[storeId]?.completedModules ?? [])`
+- Locked module unlock: Alert → spendCoins(50) → then navigate
+- `AnimatedPressable` from `src/components/ui/AnimatedPressable.tsx` for spring-press
+- `LinearGradient` from `expo-linear-gradient` for section banners
+- `useSharedValue + withRepeat(withSequence(...))` for pulsing current node
+- `Dimensions.get('window').width` for zigzag layout math
+- `FadeInDown.delay(index * 50)` for staggered node entrance
+
+## Pre-existing TS errors (always ignore):
+- FeedSidebar.tsx — CLASH.primary does not exist
+- useClashStore.ts — XPSource mismatch
+- GlassOverlay.tsx — expo-blur not found
+
+---
+
+## Iteration 1 — US-001: PRD + Progress Files
+- Created `PRD39_DuolingoMap.md` with full spec, component architecture, data sources
+- Created `progress39.txt` (this file)
+- Files affected: `PRD39_DuolingoMap.md`, `progress39.txt`
+---
+

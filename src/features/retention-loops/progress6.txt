@@ -1,0 +1,141 @@
+# Progress Log
+
+## Learnings
+(Notes discovered during implementation)
+
+## Iteration 1 — Create Chest Type (US-001)
+- Created `types.ts` with `Chest` interface, `ChestRarity`, and `ChestStatus` types
+- Added `unlockStartedAt` field (ISO timestamp) to support countdown timer logic later
+- Files affected: `src/features/retention-loops/types.ts`
+- Learnings for next cycles:
+  - Economy store pattern: Zustand + persist + AsyncStorage (see `src/features/economy/useEconomyStore.ts`)
+  - Named exports only (no default exports)
+  - Types go in feature-level `types.ts` file
+---
+
+## Iteration 2 — Create DailySpin state (US-001)
+- Added `DailySpin` interface to `types.ts` with `lastSpinDate: string | null` (ISO date "YYYY-MM-DD")
+- Files affected: `src/features/retention-loops/types.ts`
+- Learnings for next cycles:
+  - DailySpin follows same date-string pattern as economy store's `lastDailyTaskDate`
+  - Next task: Add mock data for 4 chest slots
+---
+
+## Iteration 3 — Add mock chest slots data (US-001)
+- Created `useRetentionStore.ts` with Zustand + persist + AsyncStorage pattern
+- Initialized `chestSlots` as `(Chest | null)[]` array (4 slots max, 2 mock chests + 2 null)
+- Mock chests: "Silver Chest" (common, 15min unlock), "Golden Chest" (rare, 180min unlock)
+- Included `dailySpin` state with `lastSpinDate: null`
+- Exported `MAX_CHEST_SLOTS` constant
+- Files affected: `src/features/retention-loops/useRetentionStore.ts`
+- Learnings for next cycles:
+  - Must explicitly type the return of Zustand's state creator (`(): RetentionState =>`) when initial values contain `null` to avoid TS inference narrowing `null` literal
+  - Store actions (`startUnlockingChest`, `openReadyChest`, `spinDailyWheel`, `grantChest`) are next task
+  - `chestSlots` uses `null` for empty slots rather than a sentinel object
+---
+
+## Iteration 4 — Create store actions (US-001)
+- Added 4 actions to `useRetentionStore`: `startUnlockingChest`, `openReadyChest`, `spinDailyWheel`, `grantChest`
+- `startUnlockingChest(chestId)`: sets status to "unlocking" + records `unlockStartedAt` timestamp. Only one chest can unlock at a time (Clash Royale pattern).
+- `openReadyChest(chestId)`: grants coins via `useEconomyStore.getState().addCoins()`, clears the slot to `null`, returns reward amount. Reward based on rarity (common=25, rare=75, epic=200).
+- `spinDailyWheel()`: idempotent per day (checks `todayISO()`), picks random reward from [20,30,50,75,100], grants coins, returns reward amount.
+- `grantChest(partialChest)`: finds first `null` slot, inserts chest with `status: "locked"`, returns boolean success.
+- Added `CHEST_COIN_REWARDS` and `DAILY_SPIN_REWARDS` as exported constants for UI reuse.
+- Cross-store interaction: retention store calls `useEconomyStore.getState()` directly (Zustand external access pattern).
+- Files affected: `src/features/retention-loops/useRetentionStore.ts`
+- Learnings for next cycles:
+  - Zustand allows cross-store calls via `useOtherStore.getState()` outside React — no hooks needed
+  - `partialize` in persist config excludes action functions automatically (only plain state serialized)
+  - Only one chest unlocking at a time — UI should reflect this constraint
+  - Next task: US-002 DailySpinModal component
+---
+
+## Iteration 5 — Create DailySpinModal component (US-002)
+- Created `DailySpinModal.tsx` with full modal component
+- Modal shell follows `UpgradeModal` pattern: `Modal` + `Pressable` backdrop + inner `Pressable` to prevent tap-through
+- Wheel UI: 5 segments positioned radially around a circular wheel with neon violet border glow
+- Spin animation: `react-native-reanimated` `withTiming` rotation (5 full spins + target angle, 3s duration, cubic ease-out)
+- Result phase: scale-in animation showing reward amount with "Collect" button
+- Store integration: calls `spinDailyWheel()` which returns coin amount and prevents re-spinning same day
+- Haptic feedback: `heavyHaptic()` on spin start, `successHaptic()` on reward reveal
+- Uses `useEntranceAnimation` for staggered modal/title entrance
+- Neon/Cyber-Finance styling: yellow glow on icons, violet wheel border glow, zinc-900 backgrounds
+- Handles `alreadySpun` state to show disabled button with "Already Spun Today" message
+- Files affected: `src/features/retention-loops/DailySpinModal.tsx`
+- Learnings for next cycles:
+  - `transformOrigin` in RN StyleSheet for segment positioning
+  - `runOnJS` required to call JS callbacks from reanimated worklet `withTiming` completion handler
+  - `DAILY_SPIN_REWARDS` exported from store as `readonly` tuple — use `as (typeof DAILY_SPIN_REWARDS)[number]` for indexOf
+  - Three-phase state machine (`idle` → `spinning` → `result`) keeps UI logic clean
+  - Next tasks: Display visual wheel/cards, spin animation, store update, styling, typecheck, browser verify
+---
+
+## Iteration 6 — Display visual Wheel of Fortune (US-002)
+- Replaced dot-based wheel segments with proper SVG pie-slice "Wheel of Fortune"
+- Used `react-native-svg` (`Svg`, `Path`, `G`, `Text`) to draw real pie slices with `buildSlicePath()` helper
+- Each slice shows reward value + "coins" label positioned at 60% radius using `polarToCartesian()`
+- 5 colored slices (violet, orange, cyan, yellow, pink) with dark stroke separators
+- Wheel is 200px diameter with violet border glow, yellow pointer triangle on top, center hub with Coins icon
+- Files affected: `src/features/retention-loops/DailySpinModal.tsx`
+- Learnings for next cycles:
+  - SVG arc path: `M cx cy L startX startY A r r 0 largeArc 1 endX endY Z` for pie slices
+  - `polarToCartesian` offsets by -90° so 0° = top of circle (standard for wheel UIs)
+  - `overflow: "hidden"` on wheel container clips SVG to circle boundary
+  - `as const` assertions needed for StyleSheet position/alignItems/overflow literal types
+  - `react-native-svg` Text uses `textAnchor` + `alignmentBaseline` for centering (not RN `textAlign`)
+  - Next tasks: Spin animation revealing reward, store update on complete, neon styling, typecheck, browser verify
+---
+
+## Iteration 7 — Verify spin animation & store update (US-002)
+- Confirmed spin animation already fully implemented in iteration 5-6: `handleSpin` triggers `withTiming` 5-spin rotation + target angle, `onSpinComplete` shows reward with `withSpring` scale-in
+- Confirmed `spinDailyWheel()` already updates `lastSpinDate` to today's ISO date string, preventing re-spin same day
+- `alreadySpun` check on line 78-79 correctly compares `lastSpinDate` against `todayISO()` to disable button
+- Typecheck passes (`npx tsc --noEmit` — clean)
+- Marked both "Spin animation" and "lastSpinDate update" acceptance criteria as complete
+- Files affected: `PRD6.md` (checkboxes only, no code changes needed)
+- Learnings for next cycles:
+  - Store update happens eagerly (before animation) — this is fine since the reward is determined upfront
+  - Next tasks: Neon/Cyber-Finance styling, typecheck, browser verify
+---
+
+## Iteration 8 — Neon/Cyber-Finance styling for DailySpinModal (US-002)
+- Applied violet glow border + shadow to modal card (matches `GlowCard` pattern: borderColor #7c3aed, shadowOpacity 0.4, shadowRadius 16)
+- Changed modal background from `bg-zinc-900` inline to `StyleSheet` `modalCard` style with `backgroundColor: #18181b` (matches GlowCard's dark zinc)
+- Replaced `border-zinc-800` with violet neon border glow
+- Added `buttonGlow` style to Spin and Collect buttons (violet shadow glow when active, no glow when disabled)
+- Changed title "Daily Spin" text color from `text-white` to `text-violet-300` for neon accent
+- Typecheck passes (`npx tsc --noEmit` — clean)
+- Files affected: `src/features/retention-loops/DailySpinModal.tsx`, `PRD6.md`
+- Learnings for next cycles:
+  - Neon card pattern: `borderColor: #7c3aed` + matching `shadowColor` with 0.3-0.5 opacity, 12-18 radius
+  - `GlowCard` component uses `#18181b` background, `borderRadius: 20`, `overflow: hidden`
+  - Active buttons get violet glow; disabled buttons have no glow (just `bg-zinc-700`)
+  - `tailwind.config.js` has `neon.violet` (#7c3aed) and `neon.violet-light` (#a78bfa) — use these consistently
+  - Next tasks: Typecheck passes (US-002), Verify changes work in browser (US-002)
+---
+
+## Iteration 9 — Typecheck passes (US-002)
+- Ran `npx tsc --noEmit` from project root — zero errors
+- No code changes needed; all DailySpinModal types were already correct from iterations 5-8
+- Files affected: `PRD6.md` (checkbox only)
+- Learnings for next cycles:
+  - Typecheck was already clean after iteration 7; re-confirmed after styling changes in iteration 8
+  - Next task: Verify changes work in browser (US-002)
+---
+
+## Iteration 10 — Add ChestsRow component to Home Screen (US-003)
+- Created `ChestsRow.tsx` component with 4 chest slots displayed in a horizontal row
+- Each slot shows: chest icon (rarity-colored), name, status badge (locked/unlocking/ready)
+- Empty slots show dashed border placeholder with "Empty" text and add-circle icon
+- Rarity colors: common=zinc-400, rare=yellow-400, epic=violet-400
+- Component is absolutely positioned at bottom of screen with semi-transparent bg (Clash Royale style)
+- Integrated into `FinFeedScreen.tsx` as overlay inside a wrapper `View` around FlatList
+- Wrapped FlatList + ChestsRow in `View style={{ flex: 1 }}` to allow absolute positioning
+- Typecheck passes (`npx tsc --noEmit` — clean)
+- Files affected: `src/features/retention-loops/ChestsRow.tsx` (new), `src/features/finfeed/FinFeedScreen.tsx` (modified)
+- Learnings for next cycles:
+  - ChestsRow uses `position: absolute, bottom: 0` overlay pattern — FlatList content may be hidden behind it, consider adding `contentContainerStyle={{ paddingBottom }}` later
+  - Status badge colors: locked=zinc-700, unlocking=yellow-800, ready=green-800
+  - `borderStyle: "dashed"` works in RN for empty slot placeholder
+  - Next tasks: Locked chest tap → "Start Unlocking" prompt, unlocking countdown timer, ready chest open animation
+---

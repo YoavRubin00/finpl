@@ -1,0 +1,67 @@
+# Progress Log
+
+## Learnings
+(Notes discovered during implementation)
+
+## Iteration 1 — US-001: Bridge Data Types & Store
+- Created `types.ts` with `Benefit` interface (id, title, description, costCoins, isAvailable)
+- Created `bridgeData.ts` with 6 mock benefits (Hebrew titles/descriptions, varied costs)
+- Created `useBridgeStore.ts` with Zustand persist store: tracks `redeemedBenefitIds`, `redeemBenefit()` deducts coins via `useEconomyStore.spendCoins()`, `isBenefitRedeemed()` check
+- Files affected: `src/features/the-bridge/types.ts`, `bridgeData.ts`, `useBridgeStore.ts`
+- Learnings for next cycles:
+  - Follow arena/shop pattern: types.ts + data file + useXStore.ts per feature
+  - Economy store's `spendCoins` returns boolean for success/failure — use it for atomic deduction
+  - Store uses `persist` middleware with AsyncStorage and `partialize` for serializable state only
+  - Path alias `@/*` maps to `./src/*`
+---
+
+## Iteration 2 — US-002: The Bridge Dashboard UI
+- Created `BridgeScreen.tsx` with futuristic cyber-finance design: neon accent lines, bridge emoji mascot, glassmorphic coin balance display, Hebrew RTL text
+- Created `app/bridge/index.tsx` route (follows shop pattern: re-exports feature screen)
+- Back navigation via `useRouter().back()` with ArrowLeft button
+- Coin balance displayed prominently using `useEconomyStore` selector
+- Files affected: `src/features/the-bridge/BridgeScreen.tsx`, `app/bridge/index.tsx`
+- Learnings for next cycles:
+  - Route pattern: `app/[feature]/index.tsx` re-exports the feature screen component
+  - SafeAreaView with `edges={["top"]}` is the standard screen wrapper
+  - Follow ShopScreen pattern for standalone screens outside tabs (header + back button)
+  - NativeWind opacity classes like `bg-violet-500/30` work for glassmorphism effects
+---
+
+## Iteration 3 — US-003: Generic Benefits Catalog UI
+- Created `BenefitCard.tsx` component with glassmorphism styling, neon accents, and conditional states (affordable/unaffordable/redeemed/unavailable)
+- Updated `BridgeScreen.tsx`: replaced centered-only layout with ScrollView containing hero section + benefits catalog list
+- Each card shows title, description, cost badge; disabled cards show progress bar with missing coins count
+- Redeemed cards get green accent, unavailable cards show "בקרוב" badge
+- Files affected: `src/features/the-bridge/BenefitCard.tsx` (new), `src/features/the-bridge/BridgeScreen.tsx` (updated)
+- Learnings for next cycles:
+  - Follow ShopItemCard pattern: separate card component with props for state (canAfford, isRedeemed)
+  - `isBenefitRedeemed` from useBridgeStore is a function selector — pass it to cards
+  - Progress bar: simple View with percentage width via inline style works well in NativeWind
+  - `onPress` handler left as noop — US-004 will add the redemption modal
+---
+
+## Iteration 4 — US-004: Redemption Flow UI
+- Created `RedemptionModal.tsx` following shop's `ConfirmModal` pattern: RN Modal with fade animation, backdrop press to dismiss, violet-accented card with bridge emoji
+- Updated `BridgeScreen.tsx`: added `selectedBenefit`/`modalVisible` state, `handleCardPress`/`handleConfirm`/`handleCancel` callbacks with `useCallback`
+- On confirm: calls `redeemBenefit()` from store (atomic coin deduction), closes modal, shows `Alert.alert` success/failure message in Hebrew
+- Confirmation button text: "חצה את הגשר - והמר עכשיו!" as specified in PRD
+- Files affected: `src/features/the-bridge/RedemptionModal.tsx` (new), `src/features/the-bridge/BridgeScreen.tsx` (updated)
+- Learnings for next cycles:
+  - Follow shop `ConfirmModal` pattern: outer Pressable as backdrop, inner Pressable with empty onPress to block tap-through
+  - `redeemBenefit` returns boolean — use it to show success vs error alert
+  - `Alert.alert` works on both web and native for simple notifications
+  - Browser verification still pending (manual step)
+---
+
+## Iteration 5 — US-004: Verify changes work in browser
+- Ran `npx tsc --noEmit` — no errors
+- Verified dev server running on port 8081, bridge route returns HTTP 200
+- Checked page output for runtime errors — none found
+- Route file `app/bridge/index.tsx` correctly default-exports BridgeScreen
+- Files affected: `PRD3.md` (marked task complete), `progress3.txt` (this entry)
+- Learnings for next cycles:
+  - Dev server typically already running on 8081 — check before starting a new one
+  - `curl -s -o /dev/null -w "%{http_code}"` is a quick way to verify route accessibility
+  - All Bridge components use standard RN primitives compatible with web
+---

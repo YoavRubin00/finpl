@@ -1,0 +1,203 @@
+# Progress Log
+
+## Learnings
+- Project uses union types (`type X = "a" | "b"`) and `export interface` for models — follow auth/types.ts conventions
+- TypeScript check: `npx tsc --noEmit --project <path>/tsconfig.json` (must use explicit --project flag due to working directory issues)
+- Date fields in interfaces use `string` (ISO format) — consistent with Expo/React Native serialization
+
+---
+
+## Iteration 1 — US-001: Subscription types
+- Created `src/features/subscription/types.ts` with:
+  - `SubscriptionTier` union: `"basic" | "pro"`
+  - `SubscriptionStatus` union: `"active" | "trialing" | "canceled" | "expired"`
+  - `Subscription` interface with all required fields (userId, tier, status, startDate, endDate, trialEnd, payPlusCustomerId)
+- Files affected: `src/features/subscription/types.ts` (new), `PRD.md` (task checked)
+- `npx tsc --noEmit` passed with no errors
+- Note: No git repo found — commit skipped
+---
+
+## Iteration 2 — US-001: Create subscriptions DB migration
+- Created `db/migrations/001_create_subscriptions.sql` with:
+  - `subscriptions` table mapping to `Subscription` interface in types.ts
+  - Columns: id (PK, UUID), user_id (unique index), tier (CHECK basic|pro), status (CHECK active|trialing|canceled|expired), start_date, end_date, trial_end (nullable), payplus_customer_id (nullable), created_at, updated_at
+  - Unique index on user_id for fast lookups
+  - Index on status for filtering
+- Files affected: `db/migrations/001_create_subscriptions.sql` (new), `PRD.md` (task checked)
+- `npx tsc --noEmit` passed (SQL file not checked by TS, but no regressions)
+- Learnings:
+  - finpl has NO existing DB infrastructure — no Prisma, no API routes, no database connection yet
+  - Created `db/migrations/` directory convention for raw SQL migrations against Neon
+  - Used snake_case for SQL columns (standard) vs camelCase in TS interface — will need mapping layer later
+  - No git repo found — commit skipped
+---
+
+## Iteration 3 — US-001: Add subscription_tier to users table
+- Created `db/migrations/002_add_subscription_tier_to_users.sql` with:
+  - ALTER TABLE users ADD COLUMN subscription_tier (TEXT, NOT NULL, default 'basic')
+  - CHECK constraint ensuring value is 'basic' or 'pro'
+  - Used IF NOT EXISTS for idempotent migration
+- Files affected: `db/migrations/002_add_subscription_tier_to_users.sql` (new), `PRD.md` (task checked)
+- `npx tsc --noEmit` passed (SQL file not checked by TS, no regressions)
+- Learnings:
+  - Followed same conventions as 001 migration (CHECK constraints, TEXT type for enums)
+  - subscription_tier on users table enables quick tier checks without joining subscriptions table
+  - No git repo found — commit skipped
+---
+
+## Iteration 4 — US-002 & US-003: Subscription Zustand store + Usage tracking
+- Created `src/features/subscription/useSubscriptionStore.ts` with:
+  - Zustand + persist (AsyncStorage) following existing store patterns (useEconomyStore)
+  - State: `tier`, `status`, `trialEnd`, `endDate`
+  - Selectors: `isPro()`, `isTrialing()`, `canAccessFeature(feature)`, `canUse(feature)`
+  - Daily usage counters: `simulatorUsesToday`, `arenaChallengesToday`, `chatMessagesToday`
+  - `incrementUsage(feature)` action increments the correct counter
+  - `resetDailyUsageIfNeeded()` resets counters when date changes (local time)
+  - `canUse(feature)` checks tier + daily count against limits (simulator=3, arena=3, chat=5, aiInsights=0 for Basic; unlimited for Pro)
+  - `setSubscription()` action for updating subscription state from API/webhook responses
+  - `GatedFeature` type: `"simulator" | "arena" | "chat" | "aiInsights"`
+  - `BASIC_LIMITS` constant record for clean limit lookups
+  - `partialize` selectively persists data fields only (not methods)
+- Combined US-002 and US-003 since both are part of the same store file
+- Files affected: `src/features/subscription/useSubscriptionStore.ts` (new), `PRD.md` (tasks checked)
+- `npx tsc --noEmit` passed with no errors
+- Learnings:
+  - Zustand v5 pattern: `create<Type>()(persist(...))` with double parentheses
+  - `get()` inside actions to read current state; `set()` for updates
+  - `canUse()` calls `resetDailyUsageIfNeeded()` before checking — ensures stale counters don't block users on a new day
+  - Pro check requires both `tier === "pro"` AND active/trialing status — canceled/expired Pro users shouldn't bypass limits
+  - No git repo found — commit skipped
+---
+
+## Iteration 5 — US-004: PayPlus API integration (backend)
+- Created `src/features/subscription/payplus.ts` with:
+  - `payPlusFetch<T>()` generic helper for authenticated API calls (Authorization header with JSON-encoded api_key + secret_key)
+  - `createPaymentLink(userId, plan)` — creates a recurring-charge payment page via `/PaymentPages/generateLink`, returns payment URL
+  - `cancelSubscription(payPlusCustomerId)` — cancels recurring payment via `/PaymentPages/cancelRecurringPayment`
+  - Typed PayPlus request/response interfaces (no `any`)
+  - PRO_PLAN config: 30 ILS/month (~$8), free trial (initial_price=0)
+  - Environment variables: EXPO_PUBLIC_PAYPLUS_API_KEY, EXPO_PUBLIC_PAYPLUS_SECRET_KEY, EXPO_PUBLIC_PAYPLUS_TERMINAL_UID
+- Updated `.env.example` with PayPlus credential placeholders
+- Files affected: `src/features/subscription/payplus.ts` (new), `.env.example` (updated), `PRD.md` (tasks checked)
+- `npx tsc --noEmit` passed with no errors
+- Learnings:
+  - PayPlus Authorization header uses JSON-encoded object with api_key and secret_key
+  - `charge_method: 2` = recurring; `total_payments: 0` = until canceled
+  - Used `as unknown as Record<string, unknown>` to bridge typed payload to generic fetch helper — avoids `any`
+  - EXPO_PUBLIC_ prefix exposes vars to client bundle; in production, PayPlus calls should be proxied through a backend to keep secrets safe
+  - `cancelSubscription` takes `payPlusCustomerId` (not userId) — matches the Subscription interface field
+  - No git repo found — commit skipped
+---
+
+## Iteration 6 — US-005: PayPlus webhook handler
+- Created `src/features/subscription/webhook.ts` with:
+  - `PayPlusWebhookPayload` interface for incoming IPN POST body
+  - `PayPlusWebhookEvent` type: `"payment_success" | "payment_failure" | "subscription_canceled"`
+  - `WebhookResult` interface for handler return values
+  - `SubscriptionRepository` interface — dependency-injected DB adapter (getSubscription, updateSubscription, updateUserTier)
+  - `validateSignatureAsync()` — HMAC-SHA256 signature validation using Web Crypto API (works in Edge/Node 18+)
+  - Constant-time comparison to prevent timing attacks
+  - `handlePayPlusWebhook(rawBody, payload, repository)` — main handler:
+    - Validates signature first, rejects invalid requests
+    - Extracts userId from `more_info` field (format: `userId:<id>`)
+    - `payment_success`: sets status=active, extends endDate by 30 days, updates user tier to pro
+    - `subscription_canceled`: sets status=canceled, keeps endDate (user stays Pro until period ends)
+    - `payment_failure`: if past endDate → expire + downgrade to basic; otherwise keep current status
+    - Exhaustive switch with `never` type guard for future-proofing
+  - `extractUserId()` helper parses `more_info` field from payment link creation
+  - `extendEndDate()` returns ISO string 30 days from now
+- Design decisions:
+  - Used Repository pattern (injected `SubscriptionRepository`) since project has no DB connection layer yet — deployment layer wires in actual Neon queries
+  - Used Web Crypto API (`crypto.subtle`) instead of Node's `crypto` module for cross-platform compatibility (Edge, Cloudflare Workers, Node 18+)
+  - No Expo-specific dependencies — handler is pure TypeScript, deployable anywhere
+- Files affected: `src/features/subscription/webhook.ts` (new), `PRD.md` (tasks checked)
+- `npx tsc --noEmit` passed with no errors
+- Learnings:
+  - Web Crypto API is async-only — `crypto.subtle.sign()` returns a Promise, so signature validation must be async
+  - Constant-time string comparison: XOR char codes and accumulate mismatch bits, check `=== 0` at end
+  - `more_info` field from `createPaymentLink` in payplus.ts stores `userId:<id>` — webhook extracts this to identify the user
+  - Repository pattern keeps webhook handler testable and decoupled from Neon-specific code
+  - No git repo found — commit skipped
+---
+
+## Iteration 7 — US-006: PricingScreen.tsx (Create component)
+- Created `src/features/subscription/PricingScreen.tsx` with:
+  - Two plan cards (Basic Free / Pro $8/month) with feature comparison rows
+  - Each feature row shows icon + label + value (checkmark, X, or text like "3 / day")
+  - FEATURES constant array with all 8 features from PRD table
+  - FeatureValue helper component handles boolean (check/X icons) and string display
+  - Pro card has neon-violet glow shadow via StyleSheet (shadowColor #7c3aed)
+  - CTA button: "Start Free Trial" for non-Pro users (neon-violet background with glow)
+  - Basic card shows "Current Plan" or "Downgrade" label based on subscription status
+  - Pro card shows "Current Plan" when user is already Pro
+  - 7-day trial info text shown for non-Pro users
+  - Uses useSubscriptionStore for tier/isPro checks
+  - Icons from lucide-react-native (Check, X, Crown, Zap, etc.)
+  - Gaming-Neon dark theme: bg-zinc-950, violet accents, zinc-900 cards
+- Files affected: `src/features/subscription/PricingScreen.tsx` (new), `PRD.md` (task checked)
+- `npx tsc --noEmit` passed with no errors
+- Learnings:
+  - StyleSheet.create() needed for shadow/glow effects — NativeWind doesn't support shadow natively on RN
+  - Used neon brand colors from tailwind.config.js: neon-violet (#7c3aed), neon-yellow (#facc15), neon-green (#22c55e)
+  - Followed ShopScreen pattern: SafeAreaView > ScrollView > cards
+  - Pro CTA button intentionally has no onPress handler yet — US-007 (payment flow) will wire it up
+  - No git repo found — commit skipped
+---
+
+## Iteration 8 — US-006: Mark PricingScreen sub-tasks complete
+- Verified PricingScreen.tsx already implements all US-006 sub-tasks from Iteration 7:
+  - Two cards side by side: Basic (Free) and Pro ($8/month) ✓
+  - Feature rows with Check/X icons from lucide-react-native ✓
+  - Pro card "Start Free Trial" CTA with neon-violet (#7c3aed) background + glow shadow ✓
+  - Basic card shows "Current Plan" or "Downgrade" based on isPro() ✓
+  - Gaming-Neon dark theme: bg-zinc-950 = #09090b, violet accents ✓
+- `npx tsc --noEmit` passed with no errors
+- Marked 6 sub-tasks as [x] in PRD.md; left "Verify changes work in browser" unchecked (requires manual verification)
+- Files affected: `PRD.md` (tasks checked), `progress.txt` (updated)
+- Learnings:
+  - Tailwind default `zinc-950` = `#09090b` — matches PRD's Gaming-Neon background spec exactly
+  - PricingScreen was fully implemented in Iteration 7 but sub-tasks weren't checked off — always check off completed items immediately
+  - No git repo found — commit skipped
+---
+
+## Iteration 9 — US-007: Payment flow (PayPlus redirect)
+- Wired up "Start Free Trial" CTA button in PricingScreen.tsx with full payment flow:
+  - `handleStartTrial` async callback: creates PayPlus payment link, opens URL via `Linking.openURL`
+  - On success: optimistically sets store to `pro`/`trialing` with 7-day trialEnd, shows Alert success
+  - On failure: shows Alert error message with error details, user remains on pricing screen
+  - Loading state: `isLoading` state disables button and shows `ActivityIndicator` spinner
+  - Button gets `ctaDisabled` style (opacity: 0.6) when loading
+- Added imports: `useState`, `useCallback`, `Linking`, `Alert`, `ActivityIndicator` from react-native
+- Added `useAuthStore` import for `displayName` as userId (no dedicated userId system yet)
+- Added `createPaymentLink` import from `./payplus`
+- Guard: if no `displayName`, alert user to sign in first
+- `npx tsc --noEmit` passed with no errors
+- Files affected: `src/features/subscription/PricingScreen.tsx` (updated), `PRD.md` (tasks checked)
+- Learnings:
+  - No toast library installed — used `Alert.alert()` for success/error feedback (built-in, zero dependencies)
+  - No `expo-web-browser` installed — used `Linking.openURL()` from react-native (built-in)
+  - Auth system only has `displayName`, no unique userId — used displayName as userId for PayPlus customer_uid
+  - Optimistic update pattern: set local store immediately after redirect, webhook confirms server-side later
+  - `useCallback` with `[displayName, setSubscription]` deps keeps handler stable across renders
+  - No git repo found — commit skipped
+---
+
+## Iteration 10 — US-008: Feature gating UI (UpgradeModal)
+- Created `src/features/subscription/UpgradeModal.tsx` with:
+  - Reusable modal component following ConfirmModal pattern (Modal + two-layer Pressable)
+  - Props: `visible`, `feature` (GatedFeature), `onDismiss`
+  - Dynamic message based on feature type: shows "X/X [feature] today" for limited features, special message for aiInsights
+  - "Upgrade" button with Crown icon navigates to `/pricing` route (to be created in US-010)
+  - "OK" dismiss button lets user close without upgrading
+  - Pro users never see this — the `canUse()` check in the store returns true for Pro, so the modal is never triggered
+  - Lock icon + violet accent + Gaming-Neon dark theme (zinc-900/zinc-800)
+- Exported `GatedFeature` type and `BASIC_LIMITS` from `useSubscriptionStore.ts` so UpgradeModal can reference them
+- Usage pattern: consuming screens call `canUse(feature)` before allowing action; if false, show `<UpgradeModal visible={true} feature="simulator" onDismiss={...} />`
+- Files affected: `src/features/subscription/UpgradeModal.tsx` (new), `src/features/subscription/useSubscriptionStore.ts` (exports added), `PRD.md` (tasks checked)
+- `npx tsc --noEmit` passed with no errors
+- Learnings:
+  - Followed ConfirmModal pattern exactly: Modal transparent + fade, backdrop Pressable + inner card Pressable
+  - Used `as never` cast for `router.push("/pricing")` since the route doesn't exist yet (US-010) — Expo Router strict typing requires declared routes
+  - The gating logic lives in the consuming screen, not in the modal itself — modal is purely presentational
+  - No git repo found — commit skipped
+---

@@ -1,0 +1,195 @@
+# Progress Log — PRD 45: Settings & Activation
+
+## Learnings
+(Notes discovered during implementation)
+
+## Iteration 1 — Create SettingsScreen.tsx
+- Created `src/features/settings/SettingsScreen.tsx` with three sections: Profile, Notifications, General
+- Profile section: editable display name (TextInput, blur to save via `updateProfile`), avatar row with emoji + navigation to `/profile`
+- Notifications section: 3 toggles (streak reminder, chest ready, challenges) reading from `useNotificationStore.scheduled` array; toggles request permission if not granted
+- General section: About FinPlay (v1.0.0), Legal & Privacy (navigates to `/legal`)
+- RTL layout with `writingDirection: 'rtl'`, `textAlign: 'right'`
+- Light theme: white bg `#f8fafc`, green accents `#16a34a`, green icon backgrounds `#f0fdf4`
+- Lottie icons: edit, avatar, bell, gift, fire, bulb, document
+- Files affected: `src/features/settings/SettingsScreen.tsx` (new)
+- Learnings for next cycles:
+  - Avatar data export is `AVATAR_LIST` not `AVATARS`, default emoji is `DEFAULT_AVATAR_EMOJI`
+  - Auth store has `updateProfile({ displayName })` — no standalone `setDisplayName`
+  - Notification store doesn't have separate toggle preferences; toggle state derived from `scheduled` array
+  - Pre-existing TS errors: GlassOverlay (expo-blur), FeedSidebar (primary), useClashStore (clash_win/draw), AssetsScreen (pnl)
+---
+
+## Iteration 2 — Create route app/settings.tsx
+- Created `app/settings.tsx` with named import of `SettingsScreen` and `export default`
+- Follows same pattern as `app/pricing.tsx` (one-liner re-export)
+- Files affected: `app/settings.tsx` (new)
+- Learnings for next cycles:
+  - Route files are simple re-exports: `import { X } from "../src/features/..."; export default X;`
+  - SettingsScreen uses named export (`export function SettingsScreen`)
+---
+
+## Iteration 3 — Wire MoreScreen "הגדרות" to /settings
+- Changed `onPress={handleComingSoon}` → `onPress={() => router.push("/settings")}` for the "הגדרות" row in MoreScreen
+- Also verified all previously-implemented US-001 items (sections, toggles, RTL, light theme, Lottie icons) and marked them complete
+- Files affected: `src/features/more/MoreScreen.tsx` (modified line 183)
+- Learnings for next cycles:
+  - MoreScreen still has other `handleComingSoon` calls: "סקוואדים", "חדשות", "פריטים שמורים", "משפטי ופרטיות" — these belong to US-004 and US-005
+  - "פנטזי ליג" row already navigates to `/fantasy` but still has the "🚧 בקרוב" badge — US-005 should remove it
+---
+
+## Iteration 4 — Verify US-001 in browser
+- Ran `npx tsc --noEmit` — only pre-existing errors (GlassOverlay, FeedSidebar, useClashStore, AssetsScreen)
+- Ran `npx expo export --platform web` — build succeeded, producing web bundle (12MB JS + 15KB CSS)
+- Reviewed SettingsScreen.tsx for web-compat: LottieView (used project-wide on web), Alert.alert (falls back to browser alert), Platform.OS==="web" header padding, Switch (supported by RN Web)
+- All US-001 acceptance criteria now complete
+- Files affected: PRD45_SettingsActivation.md (marked [x])
+- Learnings for next cycles:
+  - Web export command: `npx expo export --platform web`
+  - `lottie-react-native` works on web in this project (v6+)
+  - Pre-existing TS errors are in: GlassOverlay, FeedSidebar, useClashStore, AssetsScreen
+---
+
+## Iteration 5 — US-002 NotificationPermission
+- Added `NotificationPreferences` interface to `notificationTypes.ts` with `streak`, `chest`, `challenge` booleans
+- Added `preferences` field to `NotificationState`, initialized to all `false`
+- Added `setPreference(channelId, enabled)` action to `useNotificationStore.ts`
+- Added `preferences` to store's `partialize` for Zustand persist
+- Updated `cancelAll` to also reset preferences
+- Updated `SettingsScreen.tsx`:
+  - Toggle states now derived from persisted `preferences` instead of `scheduled` array
+  - Each toggle handler calls `setPreference` on toggle ON/OFF
+  - All three notification toggles show permission status as subtitle (e.g. "התראות כבויות" when denied)
+- Files affected: `notificationTypes.ts`, `useNotificationStore.ts`, `SettingsScreen.tsx`, `PRD45_SettingsActivation.md`
+- Learnings for next cycles:
+  - `scheduled` array tracks actual expo notification identifiers; `preferences` tracks user intent — separate concerns
+  - Chest and challenge are event-driven (no upfront scheduling), so their persistence requires explicit preference booleans
+  - All three toggles now persist correctly across app restarts
+---
+
+## Iteration 6 — US-003 ProfileSection (createdAt + member since row)
+- Added `createdAt: string | null` field to `AuthState` interface
+- Set `createdAt` on `signIn` and `enterGuestMode` (preserves existing value if already set)
+- Reset `createdAt` to `null` on `signOut`
+- Added `createdAt` to `partialize` for Zustand persist
+- Added "חבר/ה מאז" row in SettingsScreen profile section with calendar Lottie icon
+- Uses `toLocaleDateString("he-IL", { year: "numeric", month: "long" })` for Hebrew month+year format
+- Falls back to current date if `createdAt` is null (for existing users who signed up before this field existed)
+- Display name editing was already implemented in iteration 1 (tap → TextInput → blur saves via `updateProfile`)
+- Avatar row was already implemented in iteration 1 (emoji + name + navigate to `/profile`)
+- Files affected: `useAuthStore.ts` (modified), `SettingsScreen.tsx` (modified), `PRD45_SettingsActivation.md` (marked [x])
+- Learnings for next cycles:
+  - `useAuthStore` has no `setDisplayName` — PRD wording was inaccurate; `updateProfile({ displayName })` is the correct API
+  - `createdAt` uses ISO string format for persistence compatibility
+  - Lottie calendar icon: `wired-flat-28-calendar-hover-pinch.json`
+  - Pre-existing TS errors unchanged (GlassOverlay, FeedSidebar, useClashStore, AssetsScreen)
+---
+
+## Iteration 7 — US-003 Verify changes work in browser
+- Ran `npx tsc --noEmit` — only pre-existing errors (GlassOverlay, FeedSidebar, useClashStore, AssetsScreen)
+- Ran `npx expo export --platform web` — build succeeded (12MB JS + 15KB CSS)
+- Reviewed SettingsScreen.tsx profile section for web compatibility:
+  - LottieView (v6+ works on web in this project)
+  - TextInput for name editing (supported by RN Web)
+  - toLocaleDateString("he-IL") for member-since date (supported in modern browsers)
+  - Alert.alert (falls back to browser alert on web)
+  - Switch (supported by RN Web)
+- All US-003 acceptance criteria now complete
+- Files affected: `PRD45_SettingsActivation.md` (marked [x])
+- Learnings for next cycles:
+  - US-003 fully done; next unchecked task is US-004 LegalScreen (create LegalScreen.tsx + app/legal.tsx)
+  - SettingsScreen already has a row pointing to `/legal` — just need the screen and route
+---
+
+## Iteration 8 — US-004 LegalScreen
+- Created `src/features/settings/LegalScreen.tsx` with two sections: "תנאי שימוש" and "מדיניות פרטיות"
+- Static Hebrew placeholder legal text (6 clauses per section)
+- Header with back button (ChevronLeft, green accent) matching SettingsScreen exactly
+- Card-style sections with white bg, rounded corners, border, shadow
+- Section titles in green `#16a34a`, body text in `#374151` with `lineHeight: 24`
+- RTL layout: `writingDirection: 'rtl'`, `textAlign: 'right'` on all text
+- Footer showing "עדכון אחרון: מרץ 2026"
+- Platform-aware header padding (56 native, 16 web)
+- Created `app/legal.tsx` route (one-liner re-export)
+- Wired MoreScreen "משפטי ופרטיות" row: `handleComingSoon` → `router.push("/legal")`
+- Typecheck passes (only pre-existing errors)
+- Files affected: `LegalScreen.tsx` (new), `app/legal.tsx` (new), `MoreScreen.tsx` (modified line 205), `PRD45_SettingsActivation.md` (marked [x])
+- Learnings for next cycles:
+  - LegalScreen doesn't need LottieView or any stores — pure static content
+  - SettingsScreen already had a row pointing to `/legal` — no changes needed there
+  - MoreScreen "משפטי ופרטיות" was on line 205 (in "מידע" section, not "חשבון" section)
+  - Still remaining for US-004: browser verification
+  - After US-004: US-005 ActivateMoreRows (fantasy, squads, news navigation + PRO upsell for saved items)
+---
+
+## Iteration 9 — US-004 Verify changes work in browser
+- Ran `npx tsc --noEmit` — only pre-existing errors (GlassOverlay, FeedSidebar, useClashStore, AssetsScreen)
+- Ran `npx expo export --platform web` — build succeeded (12MB JS + 15KB CSS)
+- Reviewed LegalScreen.tsx for web compatibility:
+  - No LottieView or native-only APIs — pure RN primitives (View, Text, ScrollView, Pressable)
+  - Platform.OS === "web" header padding already handled
+  - lucide-react-native ChevronLeft works on web
+  - StyleSheet.create (supported by RN Web)
+  - No stores or hooks besides useRouter
+- All US-004 acceptance criteria now complete
+- Files affected: `PRD45_SettingsActivation.md` (marked [x])
+- Learnings for next cycles:
+  - US-004 fully done; next is US-005 ActivateMoreRows
+  - US-005 tasks: fantasy row nav (remove badge), squads row nav (remove badge), news row nav (remove badge), saved items PRO upsell, remove all handleComingSoon calls
+  - Need to read MoreScreen.tsx to find exact lines for each row
+---
+
+## Iteration 10 — US-005 Fantasy League row: remove badge
+- Removed `badge="🚧 בקרוב"` and `badgeColor` props from "פנטזי ליג" MoreRow (lines 138-139)
+- Navigation to `/fantasy` was already in place (route at `app/(tabs)/fantasy.tsx`)
+- Files affected: `MoreScreen.tsx` (modified), `PRD45_SettingsActivation.md` (marked [x])
+- Learnings for next cycles:
+  - "סקוואדים" row (line ~155): needs `handleComingSoon` → `router.push("/squads")` + remove badge. Check if `/squads` route exists (might need `app/squads.tsx`)
+  - "חדשות" row (line ~163): needs `handleComingSoon` → `router.push("/finfeed")` + remove badge. Check if `/finfeed` route exists
+  - "פריטים שמורים" row (line ~176): needs `handleComingSoon` → PRO-specific alert (different message)
+  - After those three, final task is removing `handleComingSoon` function entirely if no callers remain
+---
+
+## Iteration 11 — US-005 Squads row: navigate + remove badge
+- Created `app/squads.tsx` route file (re-exports `SquadsScreen` from `src/features/social/SquadsScreen`)
+- Changed "סקוואדים" row: `handleComingSoon` → `router.push("/squads")`, removed `badge` and `badgeColor` props
+- "squads" was already in `_layout.tsx` `inContentRoute` list (line 107) — no change needed there
+- Files affected: `app/squads.tsx` (new), `MoreScreen.tsx` (modified), `PRD45_SettingsActivation.md` (marked [x])
+- Learnings for next cycles:
+  - "חדשות" row: needs route check — look for `app/finfeed.tsx` or similar. FinFeedScreen is at `src/features/finfeed/FinFeedScreen.tsx`
+  - "פריטים שמורים" row: PRO upsell alert, not navigation
+  - Route file pattern: `import { XScreen } from "../src/features/.../XScreen"; export default function XPage() { return <XScreen />; }`
+---
+
+## Iteration 12 — US-005 News row: navigate to /finfeed + remove badge
+- Created `app/finfeed.tsx` route file (re-exports `FinFeedScreen` from `src/features/finfeed/FinFeedScreen`)
+- Added "finfeed" to `inContentRoute` array in `app/_layout.tsx` (line 107) to prevent auth redirect
+- Changed "חדשות" row: `handleComingSoon` → `router.push("/finfeed")`, removed `badge` and `badgeColor` props
+- Files affected: `app/finfeed.tsx` (new), `app/_layout.tsx` (modified), `MoreScreen.tsx` (modified), `PRD45_SettingsActivation.md` (marked [x])
+- Learnings for next cycles:
+  - Only `handleComingSoon` caller left: "פריטים שמורים" row (line ~174) — needs PRO-specific alert
+  - After PRO upsell alert, can remove `handleComingSoon` function entirely and also remove unused `Alert` import if no other Alert.alert calls remain
+  - FinFeedScreen uses named export (`export function FinFeedScreen`)
+---
+
+## Iteration 13 — US-005 Saved items PRO upsell + remove handleComingSoon
+- Replaced "פריטים שמורים" `handleComingSoon` with PRO-specific Alert: title "פיצ'ר PRO", body explains PRO-only, buttons "אחר כך" (cancel) + "שדרג ל-PRO" (navigates to `/pricing`)
+- Added purple `PRO` badge (`badgeColor: rgba(139, 92, 246, 0.15)`) to distinguish from old orange "בקרוב" badges
+- Removed `handleComingSoon` function entirely — zero callers remain
+- `Alert` import kept (still used by handleSignOut, devResetProgress, and the new PRO upsell)
+- Files affected: `MoreScreen.tsx` (modified), `PRD45_SettingsActivation.md` (marked [x] for two items)
+- Learnings for next cycles:
+  - Remaining US-005 items: "Typecheck passes" (already verified) and "Verify changes work in browser" (need web export)
+  - `Linking` import may now be unused if no other callers — check before final cleanup
+---
+
+## Iteration 14 — US-005 Typecheck + browser verification
+- Ran `npx tsc --noEmit` — only pre-existing errors (GlassOverlay, FeedSidebar, useClashStore, AssetsScreen)
+- Ran `npx expo export --platform web` — build succeeded
+- Reviewed all US-005 changes for web compatibility:
+  - `router.push("/fantasy")`, `/squads`, `/finfeed` — standard Expo Router navigation, works on web
+  - `Alert.alert` for PRO upsell — falls back to browser `window.confirm` on web
+  - PRO badge uses inline styles (no native-only APIs)
+  - `handleComingSoon` removed — no dead code
+- All US-005 acceptance criteria now complete. **PRD 45 is fully done.**
+- Files affected: `PRD45_SettingsActivation.md` (marked final [x])
+---

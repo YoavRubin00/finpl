@@ -1,0 +1,29 @@
+# Progress Log — PRD 33: Shop IAP Monetization
+
+## Learnings
+
+### Patterns
+- `GemBundle` type lives in `shop/types.ts` alongside `ShopItem`
+- `GEM_BUNDLES` data in `shop/gemBundles.ts` (3 bundles: Handful/Chest/Mountain)
+- `IAPModal` is a bottom-sheet modal — mock flow: `addGems` + confetti + dual haptics
+- `ShopScreen` wraps everything in a single `ScrollView` so gem carousel + coin tabs scroll together
+- Shop routing: `router.push('/shop' as never)` — use `as never` for TypeScript in Expo Router
+- `ConfettiExplosion` component from `src/components/ui/` — reusable for reward moments
+- Dual haptics: `tapHaptic()` → `notificationAsync(Success)` → `successHaptic()` for premium feel
+
+### Traps
+- `absoluteFillObject` deprecation warning in RN — harmless
+- Don't disable gem button — better to route to Shop instead (monetization pattern)
+
+### Files modified
+- `src/features/shop/types.ts` — added `GemBundle` interface
+- `src/features/shop/gemBundles.ts` — created with 3 bundles
+- `src/features/shop/IAPModal.tsx` — created (mock purchase + confetti + haptics)
+- `src/features/shop/ShopScreen.tsx` — gem carousel section above coin tabs
+- `src/features/subscription/HeartsUI.tsx` — gem refill button in OutOfHeartsModal
+- `src/features/retention-loops/ChestsRow.tsx` — route to Shop in GemInstantOpenModal
+
+---
+
+## Iteration 1-7 — All 7 steps COMPLETE
+All PRD33 user stories delivered. Typecheck clean throughout.

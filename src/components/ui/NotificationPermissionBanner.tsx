@@ -1,0 +1,37 @@
+/**
+ * NotificationPermissionBanner — Duolingo-style permission request banner.
+ * Shows when permission is not granted and user hasn't dismissed it this session.
+ */
+import { useNotificationStore } from "../../features/notifications/useNotificationStore";
+import { NotificationBanner } from "./NotificationBanner";
+import { FINN_STANDARD } from "../../features/retention-loops/finnMascotConfig";
+
+export function NotificationPermissionBanner() {
+  const permissionGranted = useNotificationStore((s) => s.permissionGranted);
+  const bannerDismissed = useNotificationStore((s) => s.bannerDismissed);
+  const requestPermission = useNotificationStore((s) => s.requestPermission);
+  const scheduleStreakReminder = useNotificationStore((s) => s.scheduleStreakReminder);
+  const dismissBanner = useNotificationStore((s) => s.dismissBanner);
+
+  const visible = !permissionGranted && !bannerDismissed;
+
+  const handleAllow = async () => {
+    const granted = await requestPermission();
+    if (granted) {
+      // Permission granted — schedule the daily streak reminder
+      scheduleStreakReminder(20).catch(() => {});
+    }
+  };
+
+  return (
+    <NotificationBanner
+      visible={visible}
+      message="אתה מפספס התראות מאיתנו"
+      actionLabel="אשר"
+      onAction={handleAllow}
+      onDismiss={dismissBanner}
+      duration={0}
+      imageSource={FINN_STANDARD}
+    />
+  );
+}

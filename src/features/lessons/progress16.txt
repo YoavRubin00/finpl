@@ -1,0 +1,4 @@
+# Progress Log
+
+## Learnings
+(Notes discovered during implementation)

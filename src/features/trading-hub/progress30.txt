@@ -1,0 +1,203 @@
+# Progress Log — PRD 30: Real-Time Trading Hub
+
+## Learnings
+
+### Patterns
+- Types-first approach: define all interfaces before any logic or UI
+- Keep types minimal — only what the PRD specifies, no over-engineering
+
+### Traps
+- (populated after first iteration)
+
+### Files modified
+- `src/features/trading-hub/tradingHubTypes.ts`
+
+---
+
+## Iteration 1 — US-001: Define Types (tradingHubTypes.ts)
+- Created `tradingHubTypes.ts` with all 6 type/interface definitions
+- Types: AssetType, Timeframe, TradableAsset, ChartDataPoint, ActivePosition, TradingState
+- Added `Timeframe` type ('1MIN' | '5MIN' | '1H' | '1D' | '1W') needed by PRD but not explicitly in US-001 checklist
+- Added `currentPrice` and `pnlPercent` to ActivePosition for live P&L tracking (US-005 requirement)
+- `npx tsc --noEmit` passes (no new errors)
+- Learnings:
+  - Patterns: Named exports only per CLAUDE.md conventions
+  - Traps: None encountered
+  - Helpful context: 5 pre-existing TS errors unrelated to this feature
+---
+
+## Iteration 2 — US-002: Curate Asset Metadata (tradingHubData.ts)
+- Created `tradingHubData.ts` with all 14 TradableAsset entries
+- Magnificent 7: AAPL, MSFT, NVDA, GOOGL, AMZN, META, TSLA
+- Indices: SPY, QQQ, TA125.TA
+- Commodities: XAU (Gold), XAG (Silver)
+- Crypto: BTC (₿), ETH (Ξ)
+- Each asset has a Gen-Z friendly Hebrew description (2 sentences max)
+- Added `ASSET_BY_ID` Map for O(1) lookups by ticker
+- `npx tsc --noEmit` passes (same 5 pre-existing errors, no new ones)
+- Learnings:
+  - Patterns: Export both array (TRADABLE_ASSETS) and map (ASSET_BY_ID) for different access patterns
+  - Traps: None encountered
+  - Helpful context: Crypto assets use actual currency symbols (₿, Ξ) instead of emoji
+---
+
+## Iteration 3 — US-003: Real-Time API Integration Service (marketApiService.ts)
+- Created `marketApiService.ts` with full Yahoo Finance unofficial REST integration
+- Functions: `fetchLatestPrice`, `fetchChartData`, `isMarketOpen`, `clearCache`
+- Yahoo Finance ticker mapping: BTC→BTC-USD, ETH→ETH-USD, XAU→GC=F, XAG→SI=F
+- Timeframe→Yahoo params: 1MIN→1m/1d, 5MIN→5m/1d, 1H→1h/5d, 1D→1d/1mo, 1W→1wk/6mo
+- Cache: Map<string, {data, fetchedAt}> with 60s TTL for both price and chart data
+- Fallback: deterministic seeded mock data per ticker if fetch fails (no crashes)
+- `isMarketOpen`: crypto always true; stocks/indices false on weekends + outside US market hours (14:30-21:00 UTC)
+- Typed Yahoo Finance response interfaces (no `any`)
+- `npx tsc --noEmit` passes (same 5 pre-existing errors, no new ones)
+- Learnings:
+  - Patterns: Separate cache per data type (priceCache vs chartCache) with shared `isFresh` helper
+  - Patterns: `toYahooTicker` mapping keeps asset IDs clean in UI while handling API-specific symbols
+  - Traps: Yahoo `timestamp` array is in seconds, must multiply by 1000 for JS milliseconds
+  - Traps: Yahoo `close` array may contain null values for gaps — must filter them out
+  - Helpful context: `encodeURIComponent` needed for tickers with dots (TA125.TA)
+---
+
+## Iteration 4 — US-004a: Asset Selector (TradingHubScreen.tsx)
+- Created `TradingHubScreen.tsx` with horizontal ScrollView asset carousel
+- Created `app/trading-hub/index.tsx` route (Expo Router)
+- Added "Trading Hub" entry to MoreScreen.tsx with CandlestickChart icon
+- 14 assets displayed as emoji circles, active item gets gold glow border + shadow + scale
+- RTL layout via `flexDirection: 'row-reverse'` on carousel content
+- Placeholder card for chart/trading interface (future US-004 items)
+- `npx tsc --noEmit` passes (same 5 pre-existing errors, no new ones)
+- Files: `src/features/trading-hub/TradingHubScreen.tsx`, `app/trading-hub/index.tsx`, `src/features/more/MoreScreen.tsx`
+- Learnings:
+  - Patterns: Default export for screen components (Expo Router requirement), named exports elsewhere
+  - Patterns: Use `flexDirection: 'row-reverse'` for RTL ScrollView (not `inverted` — that's FlatList-only)
+  - Traps: ScrollView has no `inverted` prop — causes TS error
+  - Helpful context: CLASH theme has goldBorder (#d4a017) and goldLight (#f5c842) for active states
+---
+
+## Iteration 5 — US-004b: Asset Info Bottom Sheet (AssetInfoSheet.tsx)
+- Created `AssetInfoSheet.tsx` — Modal bottom sheet triggered by tapping already-selected asset
+- Shows: large emoji icon, asset name, ticker, type badge (Hebrew label + color-coded), Hebrew description card, gold CTA button
+- Type badge colors: stock=blue, index=purple, commodity=gold, crypto=orange
+- Follows existing RedemptionModal pattern: Modal + Pressable overlay + LinearGradient bg + reanimated FadeInDown
+- Integrated into TradingHubScreen: second tap on active asset opens sheet, `ASSET_BY_ID` map lookup for O(1) access
+- `npx tsc --noEmit` passes (same 5 pre-existing errors, no new ones)
+- Files: `src/features/trading-hub/AssetInfoSheet.tsx` (new), `src/features/trading-hub/TradingHubScreen.tsx` (modified)
+- Learnings:
+  - Patterns: Reuse Modal+Pressable overlay pattern from RedemptionModal for consistent bottom sheet UX
+  - Patterns: "tap active = action, tap inactive = select" is clean carousel interaction pattern
+  - Traps: None encountered
+  - Helpful context: TYPE_LABELS map for Hebrew asset type names (מניה, מדד, סחורה, קריפטו)
+---
+
+## Iteration 6 — US-004c: Live Chart (LiveChart.tsx)
+- Created `LiveChart.tsx` — Skia bezier-curved line chart with right-side moving price tag
+- Uses `@shopify/react-native-skia` Canvas + Path (quadratic bezier curves matching SkiaInteractiveChart pattern)
+- Green line + gradient when price is rising (vs first data point), red when dropping
+- Right-side price tag: floating badge with formatted price, positioned at last data point Y
+- Dashed horizontal line at current price level for visual reference
+- Gradient fill beneath curve (green/red matching line color, fading to transparent)
+- Loading state shows ActivityIndicator + Hebrew text
+- FadeIn animation on chart render via reanimated
+- Integrated into TradingHubScreen: replaces placeholder with chart card + timeframe tabs
+- Timeframe tabs: 1MIN, 5MIN, 1H, 1D, 1W — switching triggers fetchChartData reload
+- Chart auto-loads on asset selection change or timeframe change
+- `npx tsc --noEmit` passes (same 5 pre-existing errors, no new ones)
+- Files: `src/features/trading-hub/LiveChart.tsx` (new), `src/features/trading-hub/TradingHubScreen.tsx` (modified)
+- Learnings:
+  - Patterns: Reuse SkiaInteractiveChart bezier path construction (Q cpX prev.py curr.px curr.py)
+  - Patterns: Right-side PADDING (56px) reserves space for price tag outside the chart area
+  - Patterns: Price normalization (min/max range) for Y-axis mapping keeps chart responsive to any price range
+  - Traps: Price tag Y must be clamped to prevent overflow above/below chart bounds
+  - Helpful context: `fontVariant: ['tabular-nums']` prevents price digits from shifting as values change
+---
+
+## Iteration 7 — US-004d: Trading Panel (TradingPanel.tsx)
+- Created `TradingPanel.tsx` — coin input field + BUY/SELL gradient buttons
+- Input: number-pad TextInput with RTL, MAX button to fill entire balance
+- Validation: amount must be >0 and ≤ user's coin balance, inline error messages in Hebrew
+- BUY (green gradient) = long position, SELL (red gradient) = short position
+- Deducts coins via `useEconomyStore.spendCoins` atomically before calling `onTrade`
+- Disabled state: buttons show muted dark colors when input is invalid
+- Integrated into TradingHubScreen: replaced placeholder, added `currentPrice` state from `fetchLatestPrice`
+- `loadChart` now fetches chart data and latest price in parallel via `Promise.all`
+- `handleTrade` callback stubbed — position creation deferred to US-005
+- `npx tsc --noEmit` passes (same 5 pre-existing errors, no new ones)
+- Files: `src/features/trading-hub/TradingPanel.tsx` (new), `src/features/trading-hub/TradingHubScreen.tsx` (modified), `src/features/trading-hub/PRD30_RealtimeTrading.md` (updated)
+- Learnings:
+  - Patterns: `onTrade` prop callback decouples UI from position management logic (clean handoff to US-005)
+  - Patterns: `Promise.all` for parallel price + chart fetch saves latency
+  - Patterns: RTL buttons — SELL on left, BUY on right matches Hebrew reading direction
+  - Traps: `spendCoins` returns boolean — must check success before calling `onTrade`
+  - Helpful context: `expo-linear-gradient` used across the app for gradient buttons
+---
+
+## Iteration 8 — US-005a: Buy/Sell Logic & Position Creation (useTradingStore.ts)
+- Created `useTradingStore.ts` — Zustand persisted store managing open positions
+- Actions: `openPosition` (creates ActivePosition with generated id + timestamp), `closePosition` (removes from array, returns snapshot), `updatePrices` (bulk-updates currentPrice + pnlPercent for all positions of an asset)
+- P&L calc: `(current - entry) / entry * 100` for buy, negated for sell (short positions profit when price drops)
+- Wired up `TradingHubScreen.handleTrade` to call `openPosition` instead of stub
+- Added `useEffect` to call `updatePrices` when `currentPrice` changes for the selected asset
+- Coin deduction was already handled by `TradingPanel.spendCoins` — no changes needed there
+- `npx tsc --noEmit` passes (same 5 pre-existing errors, no new ones)
+- Files: `src/features/trading-hub/useTradingStore.ts` (new), `src/features/trading-hub/TradingHubScreen.tsx` (modified), `src/features/trading-hub/PRD30_RealtimeTrading.md` (updated)
+- Learnings:
+  - Patterns: `persist` with `partialize` to only persist `positions` array (not actions)
+  - Patterns: `calcPnlPercent` as pure function outside store keeps logic testable
+  - Patterns: `closePosition` returns the closed position snapshot so the caller can compute final P&L for overlay
+  - Traps: Must guard `entryPrice === 0` to avoid division by zero in P&L calc
+  - Helpful context: `useEconomyStore.addCoins` exists for returning coins on position close
+---
+
+## Iteration 9 — US-005b: My Positions Section (MyPositions.tsx)
+- Created `MyPositions.tsx` — renders all open positions from `useTradingStore` with live P&L
+- Each position card shows: asset emoji + ticker, type badge (לונג/שורט), entry price, current price, P&L % badge (green/red), invested coins
+- Conditionally hidden when no positions exist (`return null`)
+- Wrapped TradingHubScreen content in vertical ScrollView to accommodate positions list below trading panel
+- Added `scrollContent` style with `paddingBottom: 32` for safe bottom spacing
+- RTL layout throughout: `row-reverse`, `textAlign: 'right'`, `writingDirection: 'rtl'`
+- `npx tsc --noEmit` passes (same 5 pre-existing errors, no new ones)
+- Files: `src/features/trading-hub/MyPositions.tsx` (new), `src/features/trading-hub/TradingHubScreen.tsx` (modified), `src/features/trading-hub/PRD30_RealtimeTrading.md` (updated)
+- Learnings:
+  - Patterns: Wrap screen content in ScrollView early when adding expandable sections — avoids layout overflow
+  - Patterns: Position cards use `ASSET_BY_ID.get()` for O(1) lookup of asset metadata (emoji)
+  - Patterns: P&L color coding: green (#22c55e) for profit, red (#ef4444) for loss — consistent with BUY/SELL button palette
+  - Traps: None encountered
+  - Helpful context: `fontVariant: ['tabular-nums']` used on price and P&L values to prevent digit shift
+---
+
+## Iteration 10 — US-005c: Live P&L Polling (TradingHubScreen.tsx)
+- Added 30-second polling interval that fetches latest prices for ALL assets with open positions
+- Uses `positionAssetKey` (sorted unique asset IDs string) as stable dependency to avoid restarting interval on every price update
+- Uses refs for `positions` and `selectedId` to read current values without triggering effect re-runs
+- When polled price matches selected asset, also updates local `currentPrice` state so chart price tag stays in sync
+- `npx tsc --noEmit` passes (same 5 pre-existing errors, no new ones)
+- Files: `src/features/trading-hub/TradingHubScreen.tsx` (modified), `src/features/trading-hub/PRD30_RealtimeTrading.md` (updated)
+- Learnings:
+  - Patterns: Use ref + stable derived key (sorted comma-joined IDs) to prevent setInterval restart loops when store data updates frequently
+  - Patterns: `positionsRef.current` inside interval callback reads latest positions without effect dependency
+  - Traps: Using `positions` array directly as useEffect dep causes infinite restart: poll → updatePrices → positions changes → effect re-runs
+  - Helpful context: 30s poll interval aligns with 60s cache TTL — at most 1 real API call per minute per asset
+---
+
+## Iteration 11 — US-005d: Close Position Button & Result Overlay (MyPositions.tsx)
+- Added "סגור פוזיציה" (Close Position) button to each position card with purple gradient
+- On close: calculates returned coins as `amountInvested * (1 + pnlPercent/100)`, floors at 0
+- Returns coins via `useEconomyStore.addCoins`
+- Shows Modal result overlay with:
+  - Celebratory (🎉) or consolation (📉) emoji based on profit/loss
+  - Asset info with long/short label
+  - Large P&L percentage badge (green/red)
+  - Coins summary: invested vs returned
+  - Motivational Hebrew message
+  - Gold gradient dismiss button
+- Overlay follows existing AssetInfoSheet/RedemptionModal pattern (Modal + LinearGradient bg)
+- `npx tsc --noEmit` passes (same 5 pre-existing errors, no new ones)
+- Files: `src/features/trading-hub/MyPositions.tsx` (modified), `src/features/trading-hub/PRD30_RealtimeTrading.md` (updated)
+- Learnings:
+  - Patterns: `closePosition` returns the snapshot of the closed position — use it to compute final P&L without needing the position in state
+  - Patterns: `Math.max(0, ...)` prevents negative coin returns (total loss scenario)
+  - Patterns: Use `<>` fragment wrapper when component renders both a list and a modal at the same level
+  - Traps: Must use `Math.round` on returned coins since P&L factor can produce fractional values
+  - Helpful context: PRD 30 is now fully complete — all 5 user stories implemented
+---

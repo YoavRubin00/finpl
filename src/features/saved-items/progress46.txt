@@ -1,0 +1,89 @@
+# Progress Log — PRD 46: Saved Content (PRO)
+
+## Learnings
+(Notes discovered during implementation)
+- useUpgradeModalStore uses `.show(feature)` not `.open(feature)` — PRD says open but code says show
+- GatedFeature type is: "simulator" | "arena" | "chat" | "aiInsights" | "saved_items" — added in US-003
+- Persist pattern: `persist((set, get) => ({...}), { name: "key", storage: createJSONStorage(() => AsyncStorage) })`
+
+## Iteration 1 — US-001: SavedItem Types + Zustand Store
+- Created `savedItemTypes.ts` with SavedItem interface (id, type, title, chapterId?, moduleId?, feedItemId?, savedAt)
+- Created `useSavedItemsStore.ts` with Zustand + persist (AsyncStorage key: "finplay-saved-items")
+- Actions: addItem (deduplicates by id, prepends, caps at 50), removeItem, isSaved, getByType
+- Max 50 items enforced by slicing after prepend
+- Files affected: savedItemTypes.ts, useSavedItemsStore.ts (both new)
+- Typecheck passes (only pre-existing errors)
+---
+
+## Iteration 2 — US-002: SavedItemsScreen
+- Created `src/features/saved-items/SavedItemsScreen.tsx` with full RTL, light theme UI
+- Created route `app/saved-items.tsx` (re-exports default from SavedItemsScreen)
+- Three sections: שיעורים (book lottie), סימולציות (gaming lottie), פיד (news lottie)
+- Each item row: title + formatted date (he-IL) + Trash2 delete icon with Alert confirm
+- Empty state: bookmark lottie + "עדיין לא שמרת תכנים"
+- Light theme: #f8fafc bg, white cards, #e5e7eb borders, #16a34a green accents
+- Header with BackButton (green) + right-aligned title
+- Navigation: lesson/sim → /lesson-flow with params (as never cast), feed → /(tabs)/learn
+- getSectionLottie() switch function avoids storing require() in typed array
+- Used `as never` cast on router.push to bypass Expo Router typed routes
+- Files affected: SavedItemsScreen.tsx (new), app/saved-items.tsx (new)
+- Typecheck passes (only pre-existing errors)
+---
+
+## Iteration 3 — US-003: Bookmark Button on LessonFlowScreen
+- Added `Bookmark` import from lucide-react-native to LessonFlowScreen
+- Added `useSavedItemsStore` import
+- Added bookmark state: `bookmarkId`, `isBookmarked`, `handleBookmarkPress` callback
+- Bookmark button placed next to mute button in header top bar (wrapped in a row View with gap: 8)
+- Filled green (#16a34a) when saved, outline with unitColors.bg when not
+- Non-PRO tap calls `useUpgradeModalStore.show("saved_items")`
+- PRO tap toggles addItem/removeItem with type "lesson", module title, chapterId, moduleId
+- Added `"saved_items"` to `GatedFeature` union type in useSubscriptionStore.ts
+- Added `saved_items: 0` to `BASIC_LIMITS` record
+- Added `saved_items` case to `getUsageCount` and `incrementUsage` switches
+- Added `saved_items` entry to `FEATURE_INFO` in UpgradeModal.tsx (Hebrew copy)
+- Files affected: LessonFlowScreen.tsx (modified), useSubscriptionStore.ts (modified), UpgradeModal.tsx (modified)
+- Learnings:
+  - GatedFeature is used in `getUsageCount` switch AND `incrementUsage` switch — both need updating
+  - UpgradeModal.tsx has a `FEATURE_INFO` Record<GatedFeature, ...> that must include all values
+  - Bookmark icon uses `fill` prop for filled state: `fill={isSaved ? color : "transparent"}`
+- Typecheck passes (only pre-existing errors)
+---
+
+## Iteration 4 — US-004: Bookmark Button on FinFeed Items
+- Added `Bookmark` icon from lucide-react-native to both FeedVideoItem and FeedQuoteItem
+- Imported `useSavedItemsStore` and `useUpgradeModalStore` in both components
+- FeedVideoItem already had `useSubscriptionStore` imported; added it to FeedQuoteItem
+- Bookmark ID pattern: `feed-${item.id}` — consistent prefix for feed items
+- Bookmark button positioned absolute top-left (top: 56, left: 16, zIndex: 10)
+- FeedVideoItem: semi-transparent dark bg (`rgba(0,0,0,0.4)`) since items have dark backgrounds
+- FeedQuoteItem: semi-transparent light bg (`rgba(255,255,255,0.7)`) since items have light gradient backgrounds
+- Both use 40x40 circle (borderRadius: 20) button
+- Filled green (#16a34a) when saved, outline when not (same pattern as LessonFlowScreen)
+- FeedQuoteItem outline color uses #6b7280 (gray) instead of white since bg is light
+- Non-PRO tap calls `showUpgradeModal("saved_items")`
+- PRO tap toggles addItem/removeItem with type "feed", item title, feedItemId
+- Bookmark button rendered in both FeedVideoItem render paths (localVideo and placeholder)
+- FeedVideoItem: defined bookmarkButton JSX variable once, reused in both render paths
+- Files affected: FeedVideoItem.tsx (modified), FeedQuoteItem.tsx (modified)
+- Typecheck passes (only pre-existing errors)
+---
+
+## Iteration 5 — US-005: Wire MoreScreen + Navigation
+- Replaced Alert.alert in MoreScreen "פריטים שמורים" row with `router.push("/saved-items" as never)`
+- Kept PRO badge and badgeColor on the row
+- Added PRO gating to SavedItemsScreen: imported useSubscriptionStore, isPro selector
+- Non-PRO users see full-screen upsell overlay with:
+  - Lottie "Pro Animation 3rd.json" (180x180)
+  - Title "פריטים שמורים" + subtitle explaining the feature
+  - Green (#16a34a) "שדרג ל-PRO" button → /pricing
+- PRO users see the saved items list normally (existing code)
+- Navigation already wired in US-002: lesson/sim → /lesson-flow with params, feed → /(tabs)/learn
+- Web build verified (npx expo export --platform web)
+- Files affected: MoreScreen.tsx (modified), SavedItemsScreen.tsx (modified)
+- Learnings:
+  - isPro pattern: `useSubscriptionStore((s) => s.tier === "pro" && s.status === "active")`
+  - Pro Animation lottie: `assets/lottie/Pro Animation 3rd.json`
+  - Upsell overlay replaces ScrollView entirely (conditional render, not overlay on top)
+- Typecheck passes (only pre-existing errors)
+---

@@ -1,0 +1,151 @@
+# Progress Log — PRD 20 (Payslip Ninja Simulation)
+
+## Learnings
+(Notes discovered during implementation)
+
+## Iteration 1 — US-001: Define types for Payslip Ninja Game
+- Created `ninjaTypes.ts` with NinjaItemType, NinjaItem, NinjaItemVelocity, NinjaGameState
+- Files affected: `simulations/ninjaTypes.ts`
+- Learnings for next cycles:
+  - Followed same pattern as budgetTypes.ts / minusTrapTypes.ts — interfaces with JSDoc comments
+  - NinjaItemVelocity extracted as separate interface for x/y (cleaner than inline)
+  - Pre-existing TS errors in FeedSidebar and useClashStore confirmed — safe to ignore
+---
+
+## Iteration 2 — US-002: Create scenario data and physics configuration
+- Created `ninjaData.ts` with NinjaPhysicsConfig, NinjaScenario, NinjaItemTemplate interfaces
+- Two scenarios: ₪12,000 (entry-level) and ₪20,000 (promoted) with realistic Israeli deductions
+- Physics config: gravity, launch speed, drift, spawn interval, item lifetime, hit radius
+- Bin classification: STATE_DEDUCTION_TYPES (tax, health → red) vs FUTURE_SAVINGS_TYPES (pension, bonus → green)
+- Helper functions: `getBinForType()` for bin routing, `spawnItem()` to materialise templates with random velocity
+- Files affected: `simulations/ninjaData.ts`, `simulations/PRD20_Sim_Mod5.md`
+- Learnings for next cycles:
+  - Used ReadonlySet for type classification sets (immutable, clean `.has()` checks)
+  - Separated NinjaItemTemplate (no velocity) from NinjaItem (with velocity) — engine adds velocity at spawn time
+  - Physics constants tuned for ~60FPS Reanimated loop (gravity 0.35, launchSpeedY -14)
+  - spawnItem randomises velocity within physics bounds so items fly in varied arcs
+---
+
+## Iteration 3 — US-003: Build 3D Physics & Gesture Engine
+- Created `useNinjaEngine.ts` with full physics game loop, slice gesture, and blade trail
+- Installed `react-native-gesture-handler` (was not in package.json)
+- Architecture: hybrid ref-based physics + React state for UI updates
+  - `flyingRef` holds mutable FlyingItem[] updated every frame (no re-renders)
+  - `useFrameCallback` from reanimated drives the 60FPS game loop
+  - React state synced only on events (slice, miss, game end)
+- Physics: items spawn below screen (y=1.1), fly upward with gravity pulling down, drift horizontally
+  - Positions normalised [0..1] then converted to pixels for rendering
+- Slice detection: `Gesture.Pan()` with `.runOnJS(true)`, checks Euclidean distance to each flying item
+- Blade trail: `useSharedValue<BladePoint[]>` with 200ms lifetime per point, cleared on gesture end
+- Game lifecycle: `startGame()` → spawns queue from scenario templates → `endGame()` on all cleared or 3 strikes
+- Summary computed on end: net salary, totalToState, totalToSavings, totalMissed
+- Exposed API: phase, gameState, slicedItems, summary, bladeTrail, sliceGesture, getItemPositions, startGame, resetGame
+- Files affected: `simulations/useNinjaEngine.ts`, `package.json` (added gesture-handler)
+- Learnings for next cycles:
+  - `useFrameCallback` runs on UI thread — used refs not state for per-frame data
+  - `.runOnJS(true)` on gesture needed since hit detection reads JS-side refs
+  - Pre-existing TS errors in FeedSidebar and useClashStore confirmed — safe to ignore
+  - screenHeight param needed for pixel conversion — screen component must measure and pass
+  - `getItemPositions()` returns current pixel coords for rendering; screen should call per-frame or use animated views
+---
+
+## Iteration 4 — US-004: Build the Game UI and "Million Dollar" Aesthetics
+- Created `PayslipNinjaScreen.tsx` with full game UI for all three phases (ready/playing/summary)
+- Architecture: position sync via `useFrameCallback` → `runOnJS(setItemPositions)` from engine's `getItemPositions()`
+- Sub-components: ReadyScreen (start button with pulsing glow), GrossCounter (animated scale pulse on net change + strike dots), FlyingItemView (3D pill shapes with colored borders/shadows based on bin type), BinIndicators (state/savings bins at bottom), SliceExplosion (8-particle radial burst on slice)
+- Blade trail rendered as purple glowing dots synced from engine's bladeTrail shared value
+- Slice feedback: heavyHaptic() on slice + particle explosion at item position; errorHaptic() on miss/strike
+- Background: Deep space aesthetic with layered dark gradient overlays (purple tint top, deep blue bottom)
+- Colour system: getItemColor/getItemGlow/getItemBg helpers — red family for state deductions (tax, health), green family for savings (pension, bonus)
+- Summary phase: placeholder UI (US-005 builds the full summary with bins logic, educational cards, and rewards)
+- Files affected: `simulations/PayslipNinjaScreen.tsx`, `simulations/PRD20_Sim_Mod5.md`
+- Learnings for next cycles:
+  - Two `useFrameCallback` hooks in the screen: one for item positions, one for blade trail — both use `runOnJS` to push to state
+  - Explosion position uses `getItemPositions()` at slice time to find where item was (fallback to screen center)
+  - `prevSlicedCount` ref tracks new slices via slicedItems.length comparison
+  - Pre-existing TS errors in FeedSidebar and useClashStore — still safe to ignore
+  - GestureDetector wraps the full playing phase View — required for pan gesture to work
+---
+
+## Iteration 5 — US-005 (part 1): Bins Logic — Fly-to-bin Animation
+- Added `FlyToBinItem` component: sliced items animate from slice position to correct bin (state=left red, savings=right green)
+- Animation: 450ms bezier ease with scale-down (1→0.3) and slight fade
+- Bin positions: STATE_BIN_X at 25% screen width, SAVINGS_BIN_X at 75%, BIN_Y at bottom - 60px
+- `BinIndicators` now receives stateTotal/savingsTotal and pulse booleans
+  - Shows accumulated ₪ amounts below each bin
+  - Bins pulse (scale 1→1.25→1 spring) when receiving a new item
+  - Visual intensity increases (border/bg opacity/shadow) when totals > 0
+- `handleFlyToBinDone` callback accumulates bin totals and toggles pulse trigger
+- Files affected: `simulations/PayslipNinjaScreen.tsx`, `simulations/PRD20_Sim_Mod5.md`
+- Learnings for next cycles:
+  - Used toggle pattern (setStatePulse(p => !p)) to re-trigger spring animation on each item arrival
+  - FlyToBinData created alongside SliceExplosionData in the same effect — both fire from same slice event
+  - Pre-existing TS errors in FeedSidebar and useClashStore — still safe to ignore
+---
+
+## Iteration 6 — US-005 (part 2): Game Ends After All Items Cleared
+- Added END_DELAY_MS (800ms) buffer between "all items cleared" and `endGame()` transition
+- `allClearedAtRef` records the frame timestamp when last item is sliced/missed
+- Once 800ms have elapsed after clearing, `endGame()` fires → summary phase
+- This ensures fly-to-bin animations (450ms) complete visually before the playing phase unmounts
+- Reset `allClearedAtRef` in both `startGame()` and `resetGame()`
+- Files affected: `simulations/useNinjaEngine.ts`, `simulations/PRD20_Sim_Mod5.md`
+- Learnings for next cycles:
+  - The "all items cleared" check already existed but fired immediately on next frame — too fast
+  - Using frame-based timestamp comparison (not setTimeout) keeps delay inside the game loop — cleaner and avoids race conditions
+  - Pre-existing TS errors in FeedSidebar and useClashStore — still safe to ignore
+---
+
+## Iteration 7 — US-005 (part 3): Summary Screen with Salary Breakdown
+- Replaced placeholder summary phase with full `SummaryScreen` component
+- Shows breakdown: Gross → State deductions (red) → Future savings (green) → Missed (grey, if any) → Net (blue)
+- Added `SummaryRow` helper component with staggered `FadeInUp` entry animations
+- Uses `GlowCard` with golden glow for the salary breakdown card
+- Imported `NinjaSummary` type from engine; added `MAX_STRIKES` constant to screen
+- Retained "שחק שוב" (replay) and "המשך" (continue) action buttons
+- Files affected: `simulations/PayslipNinjaScreen.tsx`, `simulations/PRD20_Sim_Mod5.md`
+- Learnings for next cycles:
+  - Pattern matches BudgetGameScreen's ScoreScreen — GlowCard wrapping breakdown rows + action buttons
+  - RTL layout: amounts on left, labels+emoji on right (flexDirection row with space-between)
+  - `summary` from engine provides all needed totals (grossSalary, netSalary, totalToState, totalToSavings, totalMissed)
+  - Pre-existing TS errors in FeedSidebar and useClashStore — still safe to ignore
+---
+
+## Iteration 8 — US-005 (part 4): Educational GlowCard — "פנסיה היא לא מס!"
+- Added green-glowing GlowCard to SummaryScreen between salary breakdown and action buttons
+- Card content: headline "פנסיה היא לא מס! זה הכסף שלך!" + explanatory text about pension/study fund
+- Staggered entry animation (FadeInUp delay 750ms) fitting within existing animation sequence
+- Bumped action buttons delay from 800→950ms to appear after the educational card
+- Files affected: `simulations/PayslipNinjaScreen.tsx`, `simulations/PRD20_Sim_Mod5.md`
+- Learnings for next cycles:
+  - GlowCard accepts glowColor prop — green (#22c55e) for savings/positive messaging
+  - RTL text alignment needed on both headline and body text
+  - Pre-existing TS errors in FeedSidebar and useClashStore — still safe to ignore
+---
+
+## Iteration 9 — US-005 (part 5): Reward +40 XP and +30 Coins
+- Added `useEconomyStore` import and reward constants (SIM_COMPLETE_XP=40, SIM_COMPLETE_COINS=30)
+- Added `rewardsGranted` state with `useEffect` guard — grants rewards once when phase transitions to 'summary'
+- Uses `useEconomyStore.getState().addXP/addCoins` pattern (outside render, same as all other sims)
+- Added reward badges (XP purple + Coins gold) to SummaryScreen between educational card and action buttons
+- Bumped action buttons animation delay from 950→1100ms to sequence after reward badges
+- `successHaptic()` fires on reward grant (satisfying completion feedback)
+- Files affected: `simulations/PayslipNinjaScreen.tsx`, `simulations/PRD20_Sim_Mod5.md`
+- Learnings for next cycles:
+  - Same reward pattern across all 5 sims: rewardsGranted guard + getState() calls + badge UI
+  - Pre-existing TS errors in FeedSidebar and useClashStore — still safe to ignore
+---
+
+## Iteration 10 — US-006: Integrate into chapter map
+- Added `mod-1-5` to `MODULES_WITH_SIM` set in LessonFlowScreen.tsx
+- Imported `PayslipNinjaScreen` from `./simulations` in LessonFlowScreen.tsx
+- Added `mod-1-5` branch at top of sim-phase ternary chain → renders `PayslipNinjaScreen`
+- Exported `PayslipNinjaScreen` from `simulations/index.ts`
+- Files affected: `LessonFlowScreen.tsx`, `simulations/index.ts`, `simulations/PRD20_Sim_Mod5.md`
+- Learnings for next cycles:
+  - Same integration pattern for all sims: add to MODULES_WITH_SIM set + import + ternary branch + index export
+  - New sim added at top of ternary chain (before mod-1-4) to match descending order pattern
+  - PayslipNinjaScreen already accepts `onComplete` prop — no changes needed to the screen itself
+  - Transition is smooth: same `contentStyle` animation wrapper as all other sim phases
+  - Pre-existing TS errors in FeedSidebar and useClashStore — still safe to ignore
+---

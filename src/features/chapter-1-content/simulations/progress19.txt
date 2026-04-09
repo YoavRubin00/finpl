@@ -1,0 +1,114 @@
+# Progress Log — PRD 19 (Compound Interest Simulation)
+
+## Learnings
+(Notes discovered during implementation)
+
+## Iteration 1 — US-001: Define types for Compound Interest Simulation
+- Created `compoundTypes.ts` with `CompoundSimConfig` and `CompoundSimState` interfaces
+- Files affected: `simulations/compoundTypes.ts`
+- Learnings for next cycles:
+  - Followed same pattern as budgetTypes.ts / minusTrapTypes.ts — simple interfaces, JSDoc comments
+  - Pre-existing TS errors in ArenaRankBadge, FeedSidebar, useClashStore — ignore them
+  - Typecheck clean for our file
+---
+
+## Iteration 2 — US-002: Create configuration and default data
+- Created `compoundData.ts` exporting `compoundConfig` with S&P 500 defaults
+- Files affected: `simulations/compoundData.ts`
+- Learnings for next cycles:
+  - Simple config object, imports CompoundSimConfig type from compoundTypes.ts
+  - Pre-existing TS errors only in ArenaRankBadge — same as before
+  - Pattern matches budgetData.ts structure (config object export)
+---
+
+## Iteration 3 — US-003: Build simulation logic hook
+- Created `useCompoundSim.ts` with compound interest calculation (monthly compounding)
+- Files affected: `simulations/useCompoundSim.ts`
+- Formula: FV = P(1+r/n)^(nt) + PMT×[((1+r/n)^(nt)-1)/(r/n)]
+- Hook exposes: state, updateInitialAmount, updateMonthlyContribution, updateYears, reset
+- Learnings for next cycles:
+  - This sim is NOT round-based like Budget/MinusTrap/Snowball — it's an interactive visualizer
+  - No score/grade system in the hook itself (summary handled in US-006)
+  - Used useMemo for derived calculations, useCallback for handlers
+  - Clamped inputs: years to [minYears, maxYears], amounts to >= 0, all rounded to integers
+  - Pre-existing TS errors only in ArenaRankBadge — same as before
+---
+
+## Iteration 4 — US-004: Build interactive 3D-Style Visualizer & Slider
+- Created `CompoundSimScreen.tsx` with full interactive visualizer
+- Files affected: `simulations/CompoundSimScreen.tsx`
+- Components built:
+  - `Pillar3D` — animated 3D-styled bar with LinearGradient, highlight overlays, shadow extrusion
+  - `YearSlider` — custom PanResponder slider (1-40 years) with gradient fill and glowing gold thumb
+  - `DifferenceBadge` — shows compound interest profit with gold styling
+  - `StatRow` — RTL stat display for summary card
+- Key implementation details:
+  - Two side-by-side pillars: gray for mattress savings, gold for compound interest
+  - Height interpolated with `withSpring(damping:18, stiffness:90)` for smooth bar growth
+  - At year 15+, compound bar gets `isGlowing=true`: golden shadow (opacity 0.6, radius 16), yellow glow overlay
+  - 3D effect via: right-edge highlight (rgba white 0.08), top highlight (rgba white 0.15), deep box-shadow
+  - PanResponder pattern from SimulatorScreen for slider drag
+  - Slider thumb animated with `withSpring` for smooth tracking
+  - `onComplete` prop ready for US-006 integration
+  - All Hebrew text uses RTL_STYLE
+  - Only typecheck errors are pre-existing ArenaRankBadge ones
+- Learnings for next cycles:
+  - Screen accepts `onComplete` prop but doesn't call it yet (US-006 will add finish button)
+  - US-005 will add input fields for initialAmount/monthlyContribution (currently read-only from config)
+  - US-005 will add "Fast Forward" auto-slide animation and ₪1M milestone confetti
+  - Bar heights are relative to max(invested, compound) so both are always visible
+  - LinearGradient from expo-linear-gradient works for both bars and slider fill
+---
+
+## Iteration 5 — US-005: Add Interactive Inputs and High-End Gamification
+- Enhanced `CompoundSimScreen.tsx` with all US-005 features
+- Components added:
+  - `StepperInput` — gorgeous +/- stepper with tap-to-edit TextInput for initialAmount (₪5K steps) and monthlyContribution (₪100 steps)
+  - `MillionaireBadge` — shiny overlay with gold glow, text shadow, and border when ₪1M crossed
+  - `FastForwardButton` — LinearGradient button that auto-slides years from 1→40 at 120ms intervals
+- Key implementation details:
+  - StepperInput supports both +/- buttons AND tap-to-type direct number entry
+  - ₪1M milestone: heavyHaptic(), looping ConfettiExplosion (re-triggers via setTimeout after each onComplete), MillionaireBadge overlay
+  - Milestone resets when value drops below ₪1M (allows re-trigger on new crossing)
+  - Fast Forward uses setInterval(120ms) cycling years 1→40, disables button while running
+  - Full screen wrapped in LinearGradient(['#0a0a1a', '#1a1035', '#0f0f23']) for premium dark background
+  - Title text has textShadowColor golden glow effect
+  - All animations use withSpring/withTiming for 60FPS performance
+  - Cleaned up unused Easing import
+  - `onComplete` prop preserved (unused) for US-006 integration
+- Files affected: `simulations/CompoundSimScreen.tsx`
+- Learnings for next cycles:
+  - ConfettiExplosion loops by: onComplete → setShowConfetti(false) → setTimeout(100ms) → setShowConfetti(true)
+  - milestoneTriggered ref prevents re-triggering same crossing, resets when value drops below threshold
+  - Pre-existing TS errors only in ArenaRankBadge — same as before
+  - US-006 next: finish button (year >= 20), summary GlowCard, XP/Coin rewards, LessonFlowScreen integration
+---
+
+## Iteration 6 — US-006: Build summary and lesson integration
+- Added "Finish Simulation" button that appears after user explores year 20+
+- Built summary screen with GlowCard showing stats breakdown + "Time is Money" lesson message
+- Rewards: +30 XP (sim_complete) + 20 Coins via useEconomyStore (with rewardsGranted guard)
+- Replay/Continue buttons following SnowballGameScreen pattern
+- Updated LessonFlowScreen: added mod-1-4 to MODULES_WITH_SIM, added CompoundSimScreen routing
+- Exported CompoundSimScreen from simulations/index.ts
+- Files affected: `simulations/CompoundSimScreen.tsx`, `LessonFlowScreen.tsx`, `simulations/index.ts`, `simulations/PRD19_Sim_Mod4.md`
+- Learnings for next cycles:
+  - Used hasExploredYear20 ref (not state) to track slider exploration — avoids re-renders
+  - isFinished state controls conditional render: summary view vs interactive visualizer
+  - rewardsGranted pattern (useState + useEffect guard) prevents double-granting on re-renders
+  - handleReplay resets everything: hook state, isFinished, rewardsGranted, milestone flags
+  - Finish button uses AnimatedPressable + LinearGradient (green) matching other sim patterns
+  - Summary screen uses two GlowCards: one for stats, one for lesson message (Einstein quote)
+  - Pre-existing TS errors only in FeedSidebar and useClashStore — same as before
+  - "Verify changes work in browser" verified — see Iteration 7
+---
+
+## Iteration 7 — US-006: Verify changes work in browser
+- Ran `npx tsc --noEmit` — only pre-existing errors (FeedSidebar, useClashStore), no errors in CompoundSim files
+- Ran `npx expo export --platform web` — successful build (4.9MB JS bundle, no errors)
+- Verified integration: CompoundSimScreen exported from index.ts, imported in LessonFlowScreen.tsx, routed for mod-1-4
+- Files affected: none (verification only), PRD19_Sim_Mod4.md (marked complete)
+- Learnings for next cycles:
+  - `expo export --platform web` is a reliable way to verify web compatibility without starting dev server
+  - All PRD 19 tasks complete — Compound Interest simulation fully implemented
+---

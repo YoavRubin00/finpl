@@ -1,0 +1,146 @@
+# Progress Log — PRD 22 (Companion Bot)
+
+## Learnings
+(Notes discovered during implementation)
+
+## Iteration 1 — US-001: Install Lottie and create companion animation assets
+- `lottie-react-native` was already installed in package.json (~7.3.4) — no install needed
+- Created `assets/lottie/` directory with 4 placeholder Lottie JSON files
+- Each file: 512x512, 30fps, 180 frames, with 3 markers (idle 0-59, talking 60-119, thinking 120-179)
+- Files: warren-buffett.json (golden), moshe-peled.json (orange), rachel.json (pink), robot.json (cyan)
+- Each has a simple ellipse shape with scale keyframes for visible animation per segment
+- Typecheck passes (only pre-existing errors in FeedSidebar + useClashStore)
+- Files affected: assets/lottie/*.json, src/features/chat/PRD22_CompanionBot.md
+- Learnings for next cycles:
+  - Lottie frame ranges: idle=0-59, talking=60-119, thinking=120-179 — use these in CompanionAnimationConfig
+  - Lottie files use `markers` array with `cm` (comment/name), `tm` (time/frame), `dr` (duration in frames)
+  - These are placeholders — can be replaced with real LottieFiles.com downloads later
+---
+
+## Iteration 2 — US-002: Define types and companion personality data
+- Created `src/features/chat/chatTypes.ts` with all required interfaces
+- `CompanionAnimationState`: union type 'idle' | 'talking' | 'thinking'
+- `CompanionAnimationConfig`: lottieSource + frame ranges for each state
+- `CompanionPersonality`: full personality config including animation config, imports CompanionId from auth/types
+- `ChatSuggestion`: text + optional moduleId
+- Typecheck passes (only pre-existing errors in FeedSidebar + useClashStore)
+- Files affected: src/features/chat/chatTypes.ts, src/features/chat/PRD22_CompanionBot.md
+- Learnings for next cycles:
+  - CompanionId type lives in `src/features/auth/types.ts` — import from there
+  - `lottieSource` is typed as string (path resolved at usage via require())
+  - Frame ranges from US-001: idle=0-59, talking=60-119, thinking=120-179
+---
+
+## Iteration 3 — US-003: Create companion personality data and curriculum knowledge base
+- Created `src/features/chat/chatData.ts` with all required exports
+- `COMPANION_PERSONALITIES`: Record<CompanionId, CompanionPersonality> with 4 companions, each with unique tone, greeting, placeholder, and animation config
+- `CURRICULUM_KNOWLEDGE`: single trimmed string covering all 28 modules across 5 chapters (topics and concepts, not raw flashcards)
+- `getContextualSuggestions(completedModules, currentChapterId)`: returns 3 ChatSuggestion items based on last completed module → chapter fallback → general fallback
+- MODULE_SUGGESTIONS covers all 28 module IDs with 3 Hebrew questions each
+- CHAPTER_FALLBACK_SUGGESTIONS covers all 5 chapters
+- GENERAL_SUGGESTIONS for brand-new users with no progress
+- Typecheck passes (only pre-existing errors in FeedSidebar + useClashStore)
+- Files affected: src/features/chat/chatData.ts, src/features/chat/PRD22_CompanionBot.md
+- Learnings for next cycles:
+  - chatData.ts imports CompanionId from auth/types and ChatSuggestion/CompanionPersonality from chatTypes
+  - Chapter IDs format: "chapter-1" through "chapter-5"
+  - Module IDs format: "mod-{chapter}-{number}" (e.g., mod-1-1 through mod-5-5)
+  - Chapter 5 modules use mod-5-1 through mod-5-5 (reset numbering)
+  - Chapters 1-4 use sequential numbering: mod-1-1..mod-1-9, mod-2-10..mod-2-14, mod-3-15..mod-3-18, mod-4-19..mod-4-24
+---
+
+## Iteration 4 — US-004: Build system prompt engine with companion personality + learning context
+- Created `src/features/chat/buildChatPrompt.ts` with `buildSystemPrompt` function
+- Function receives: displayName, profile (UserProfile), companionId, completedModules, currentChapterId
+- Prompt includes: companion personality/tone, user context (name, goal, knowledge level, age/birthYear), full CURRICULUM_KNOWLEDGE, learning progress (active chapter, completed modules, last module), educator guardrails (no financial advice, Hebrew only, concise answers)
+- Hebrew labels for financialGoal and knowledgeLevel mapped via Record objects
+- Typecheck passes (only pre-existing errors in FeedSidebar + useClashStore)
+- Files affected: src/features/chat/buildChatPrompt.ts, src/features/chat/PRD22_CompanionBot.md
+- Learnings for next cycles:
+  - UserProfile interface lives in `src/features/auth/types.ts` — has displayName, financialGoal, knowledgeLevel, ageGroup, birthYear, companionId, etc.
+  - buildSystemPrompt imports COMPANION_PERSONALITIES and CURRICULUM_KNOWLEDGE from chatData
+  - System prompt maxes at ~3-4KB — well within Gemini context limits
+  - The prompt instructs bot to tailor answers to last completed module and flag advanced topics
+---
+
+## Iteration 5 — US-005: Build animated companion avatar component with Lottie state machine
+- Created `src/features/chat/CompanionAvatar.tsx`
+- Component receives `companionId` and `animationState` props
+- Uses `LottieView` from `lottie-react-native` with `ref.play(startFrame, endFrame)` for state transitions
+- Lottie sources loaded via `require()` mapped by CompanionId
+- Color mapping: warren-buffett=#d4a017 (gold), moshe-peled=#f97316 (orange), rachel=#ec4899 (pink), robot=#22d3ee (cyan)
+- Avatar: 120x120 circular frame, 2px glowing border matching companion color, dark bg (#0a0a0a), deep shadow
+- Companion name displayed below avatar in bold white Hebrew text (16px, fontWeight 700)
+- Animation state machine: useEffect watches `animationState` changes and calls `ref.play(startFrame, endFrame)` — idle/talking/thinking
+- `lottie-react-native` v7.3.4 has web support (index.web.js) — works in browser
+- Typecheck passes (only pre-existing errors in FeedSidebar + useClashStore)
+- Files affected: src/features/chat/CompanionAvatar.tsx, src/features/chat/PRD22_CompanionBot.md
+- Learnings for next cycles:
+  - Lottie `require()` paths: `../../../assets/lottie/{name}.json` from `src/features/chat/`
+  - COMPANION_COLORS map is defined locally in CompanionAvatar — may need to export if US-006/US-008 need it
+  - LottieView `play(start, end)` method switches animation segments smoothly with loop=true
+  - Component is standalone — needs to be integrated into ChatScreen in US-006
+---
+
+## Iteration 6 — US-006: Redesign ChatScreen with animated companion and premium chat UI
+- Fully rewrote `ChatScreen.tsx` with new layout:
+  - Top section: `CompanionAvatar` centered with "הדמות המלווה שלך" subtitle, dark bg, bottom border
+  - Chat section: scrollable messages below with spring slide-in animations
+  - Avatar state machine: idle → thinking (API loading) → talking (3s after reply) → idle
+- Bot messages: dark card (#18181b) with 3px violet right border (#7c3aed), companion emoji mini-avatar (28x28 circle)
+- User messages: violet bubble (#5b21b6) aligned to left (RTL)
+- Typing indicator: 3 dots with staggered bouncing scale using `withRepeat` + `withSequence` + `withDelay`
+- Messages enter with `SlideInRight` (bot) and `SlideInLeft` (user) from reanimated's layout animations
+- First-time greeting: auto-injects companion's greeting on mount + sets talking state for 3s
+- Integrated `buildSystemPrompt` from US-004 with user progress from `useChapterStore`
+- Fallback system prompt for users without completed onboarding (no profile/displayName)
+- Input bar uses companion's `placeholder` text
+- Installed `@lottiefiles/dotlottie-react` — required by `lottie-react-native` v7.3.4 web support
+- Removed old generic FinBot header, static suggestions (moved to US-007), old `buildSystemPrompt` inline function
+- Typecheck passes (only pre-existing errors in FeedSidebar + useClashStore)
+- Web build passes (`npx expo export --platform web`)
+- Files affected: src/features/chat/ChatScreen.tsx, src/features/chat/PRD22_CompanionBot.md, package.json, package-lock.json
+- Learnings for next cycles:
+  - `lottie-react-native` v7.3.4 web requires `@lottiefiles/dotlottie-react` installed
+  - Reanimated layout animations (FadeIn, SlideInRight, SlideInLeft) work well for message entrances
+  - `useChapterStore` uses `currentChapterId` (default "ch-1") and `progress[chapterId].completedModules`
+  - CompanionAvatar is already integrated — US-007/US-008 can build on this ChatScreen
+  - Old SUGGESTION_PROMPTS removed — US-007 will add dynamic suggestions from `getContextualSuggestions()`
+  - Companion placeholder already in use — US-008 will add glow animation on focus
+---
+
+## Iteration 7 — US-007: Dynamic contextual suggestions based on learning progress
+- Replaced static suggestions with dynamic `getContextualSuggestions()` from chatData.ts
+- Added `useMemo` for suggestions derived from `completedModules` + `currentChapterId` (already in component from useChapterStore)
+- Added horizontal ScrollView with suggestion chips between messages and input bar
+- Chips use `AnimatedPressable` — tap fills the input field via `handleSuggestionTap`
+- RTL: `flexDirection: "row-reverse"` on container so chips flow right-to-left
+- Glow border: 1px violet (#7c3aed) border + shadowColor #7c3aed with 0.3 opacity, 6px radius
+- Chip bg: semi-transparent violet (rgba 124,58,237, 0.08), text color #c4b5fd (light violet)
+- Fallback chain: last completed module → chapter fallback → general suggestions (handled in getContextualSuggestions)
+- Typecheck passes (only pre-existing errors in FeedSidebar + useClashStore)
+- Web build passes (`npx expo export --platform web`)
+- Files affected: src/features/chat/ChatScreen.tsx, src/features/chat/PRD22_CompanionBot.md
+- Learnings for next cycles:
+  - Suggestion chips sit between ScrollView and inputBar in the layout hierarchy
+  - `handleSuggestionTap` sets input text — user still needs to press send
+  - `AnimatedPressable` reused from shared UI components
+  - US-008 will add glow animation on input focus — inputBar styles already exist to build on
+---
+
+## Iteration 8 — US-008: Premium input bar with companion-aware placeholder and glow
+- Added animated violet focus border glow using `interpolateColor` + `withTiming` on `focusProgress` shared value
+- Split `textInput` style into `textInputWrapper` (Animated.View with border) and `textInput` (inner TextInput, no border)
+- `onFocus` animates borderColor from #3f3f46 → #7c3aed, `onBlur` reverses
+- Send button pulse: `withRepeat` + `withSequence(withSpring(1.1), withSpring(1))` when `input.trim()` is non-empty, resets to scale 1 when empty
+- Wrapped send button in `Animated.View` with `sendPulseStyle` for the pulse transform
+- Placeholder text was already using `companion.placeholder` from US-006 — no change needed
+- Typecheck passes (only pre-existing errors in FeedSidebar + useClashStore)
+- Web build passes (`npx expo export --platform web`)
+- Files affected: src/features/chat/ChatScreen.tsx, src/features/chat/PRD22_CompanionBot.md
+- Learnings for next cycles:
+  - `interpolateColor` from reanimated works well for border color transitions on focus/blur
+  - Need to split border styling into a wrapper Animated.View since TextInput doesn't support animated styles directly
+  - Send pulse uses `useEffect` watching `input` to toggle pulse on/off
+  - All US-001 through US-008 are now complete — PRD 22 is done
+---

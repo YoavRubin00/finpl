@@ -1,0 +1,154 @@
+# Progress Log
+
+## Learnings
+(Notes discovered during implementation)
+
+## Iteration 1 — Add email field to AuthState
+- Added `email: string | null` to `AuthState` interface in `useAuthStore.ts`
+- Added `email: null` to initial state, signOut reset, and partialize config
+- Files affected: `src/features/auth/useAuthStore.ts`
+- Learnings for next cycles:
+  - Zustand partialize must include new fields for persistence
+  - signOut must reset new fields to null
+  - tsc runs clean with no errors from project root
+---
+
+## Iteration 2 — Add PasswordStrength type
+- Added `PasswordStrength` type (`"weak"` | `"medium"` | `"strong"`) to `src/features/auth/types.ts`
+- Placed at top of file before existing type exports
+- Files affected: `src/features/auth/types.ts`
+- Learnings for next cycles:
+  - types.ts contains all auth-related type aliases and the UserProfile interface
+  - Next task: create `password-utils.ts` with `getPasswordStrength` helper function
+---
+
+## Iteration 3 — Add getPasswordStrength helper
+- Created `src/features/auth/password-utils.ts` with `getPasswordStrength` function
+- Logic: <6 chars = weak, 8+ with letter+number+special = strong, everything else = medium
+- Imports `PasswordStrength` type from `./types`
+- Files affected: `src/features/auth/password-utils.ts`
+- Learnings for next cycles:
+  - password-utils.ts is a pure utility, no store dependency
+  - Special char regex uses `[^a-zA-Z0-9]` to catch any non-alphanumeric
+  - Next task: Update `signIn` action to accept `email` parameter alongside `displayName`
+---
+
+## Iteration 4 — Update signIn to accept email parameter
+- Updated `signIn` signature from `(displayName: string)` to `(displayName: string, email: string)` in AuthState interface and implementation
+- `signIn` now sets email in store: `set({ isAuthenticated: true, displayName, email })`
+- Updated legacy `SignInScreen.tsx` call site to pass empty string for email (`signIn(name.trim(), "")`) to maintain typecheck
+- Files affected: `src/features/auth/useAuthStore.ts`, `src/features/onboarding/SignInScreen.tsx`
+- Learnings for next cycles:
+  - SignInScreen.tsx is the old screen that will be replaced by LoginScreen in US-006
+  - Email is already in partialize config and signOut reset from Iteration 1
+  - US-001 is now fully complete; next is US-002 (RegisterScreen UI)
+---
+
+## Iteration 5 — RegisterScreen UI (US-002)
+- Created `src/features/auth/RegisterScreen.tsx` with full registration form
+- Mascot image at top (180px height, centered), FinPL title + Hebrew subtitle
+- Form fields: name, email, password (with eye toggle), confirm password (with eye toggle)
+- All labels and placeholders in Hebrew with RTL writingDirection
+- Password strength indicator: colored bar (red/yellow/green) with width (1/3, 2/3, full) + Hebrew labels
+- Register button disabled until: name ≥2 chars, valid email, strength ≥ medium, passwords match
+- Note: terms checkbox NOT yet included (US-003) — validation does NOT require it yet
+- Link at bottom navigates to sign-in
+- Dark theme (bg-zinc-950), neon-violet accents
+- Files affected: `src/features/auth/RegisterScreen.tsx`
+- Learnings for next cycles:
+  - Used ScrollView instead of plain View to handle keyboard overlap with many fields
+  - Eye toggle positioned with absolute left-3 inside password field container
+  - `require()` for mascot image assigned to const outside component to avoid re-evaluation
+  - Password strength uses Record<PasswordStrength, string> maps for labels/colors/widths
+  - Email validation: basic regex `/^[^\s@]+@[^\s@]+\.[^\s@]+$/`
+  - US-003 will add terms checkbox + update isValid to require termsAccepted
+  - "Verify changes work in browser" left unchecked — needs manual verification
+---
+
+## Iteration 6 — Terms of Service checkbox + page (US-003)
+- Added `termsAccepted` state to RegisterScreen, checkbox row with RTL layout (flex-row-reverse)
+- Checkbox uses violet fill + checkmark when checked, zinc border when unchecked
+- "תנאי השימוש והתקנון" is a nested Text with onPress navigating to /(auth)/terms
+- Updated `isValid` to require `termsAccepted`
+- Created `app/(auth)/terms.tsx` — static terms page with 5 sections of placeholder Hebrew text
+- Terms page has "← חזרה" back button using router.back()
+- Files affected: `src/features/auth/RegisterScreen.tsx`, `app/(auth)/terms.tsx`, `src/features/auth-redesign/PRD2.md`
+- Learnings for next cycles:
+  - Pressable `style` prop doesn't accept `writingDirection` (it's a TextStyle property, not ViewStyle) — use className flex-row-reverse for RTL instead
+  - Stack layout with headerShown:false means each page needs its own back navigation
+  - e.stopPropagation() on nested Text onPress to prevent parent Pressable toggle
+  - "Verify changes work in browser" left unchecked — needs manual verification
+---
+
+## Iteration 7 — LoginScreen UI (US-004)
+- Created `src/features/auth/LoginScreen.tsx` with login form
+- Same mascot + title header as RegisterScreen
+- Form fields: email, password (with eye toggle using absolute left-3 positioning)
+- "התחבר" button disabled until email valid and password non-empty
+- "שכחתי סיסמה" link below password navigates to /(auth)/forgot-password
+- "אין לך חשבון? הירשם" link at bottom navigates to /(auth)/register
+- Dark theme (bg-zinc-950), neon-violet accents, Hebrew text with RTL writingDirection
+- Files affected: `src/features/auth/LoginScreen.tsx`, `src/features/auth-redesign/PRD2.md`
+- Learnings for next cycles:
+  - LoginScreen is simpler than RegisterScreen — only 2 fields, no strength indicator, no terms
+  - Reused same patterns: SafeAreaView, KeyboardAvoidingView, ScrollView wrapper
+  - isValidEmail helper duplicated from RegisterScreen — could extract to shared util later
+  - "Verify changes work in browser" left unchecked — needs manual verification
+  - Next task: US-005 ForgotPasswordScreen
+---
+
+## Iteration 8 — ForgotPasswordScreen (US-005, first task)
+- Created `src/features/auth/ForgotPasswordScreen.tsx`
+- Single email input + "שלח קישור לאיפוס" button, disabled until valid email
+- On submit: sets `submitted` state to true, shows success message "קישור לאיפוס סיסמה נשלח למייל שלך" in green text inside a card
+- Back link "← חזרה להתחברות" uses router.back() to return to login
+- Same mascot + title header pattern, subtitle changed to "איפוס סיסמה"
+- Dark theme (bg-zinc-950), neon-violet accents
+- Files affected: `src/features/auth/ForgotPasswordScreen.tsx`, `src/features/auth-redesign/PRD2.md`
+- Learnings for next cycles:
+  - Used conditional rendering (submitted ternary) to swap form for success message
+  - No actual email sending — placeholder only per PRD non-goals
+  - Remaining US-005 tasks: single email input (done), submit button (done), success message (done), back link (done), dark theme (done), typecheck (done), verify in browser (unchecked)
+  - Next unchecked items: remaining US-005 checkboxes (already done above), then "Typecheck passes", then "Verify changes work in browser"
+---
+
+## Iteration 9 — Route wiring: sign-in.tsx renders LoginScreen (US-006, task 1)
+- Updated `app/(auth)/sign-in.tsx` to import and export `LoginScreen` from `src/features/auth/LoginScreen` instead of old `SignInScreen` from `src/features/onboarding/SignInScreen`
+- Files affected: `app/(auth)/sign-in.tsx`, `src/features/auth-redesign/PRD2.md`
+- Learnings for next cycles:
+  - Expo Router default export pattern: `export default LoginScreen` works because LoginScreen is a named export from the feature module
+  - Old SignInScreen still exists in `src/features/onboarding/` — can be removed after full migration
+  - Next task: Create `app/(auth)/register.tsx` rendering `RegisterScreen`
+---
+
+## Iteration 10 — Route wiring: register.tsx renders RegisterScreen (US-006, task 2)
+- Created `app/(auth)/register.tsx` with default export of `RegisterScreen` from `src/features/auth/RegisterScreen`
+- Follows same pattern as `sign-in.tsx`: import named export, re-export as default
+- Files affected: `app/(auth)/register.tsx`, `src/features/auth-redesign/PRD2.md`
+- Learnings for next cycles:
+  - All auth route files follow identical pattern: import named export → export default
+  - RegisterScreen uses named export (`export function RegisterScreen`)
+  - Next task: Create `app/(auth)/forgot-password.tsx` rendering `ForgotPasswordScreen`
+---
+
+## Iteration 11 — Route wiring: forgot-password.tsx renders ForgotPasswordScreen (US-006, task 3)
+- Created `app/(auth)/forgot-password.tsx` with default export of `ForgotPasswordScreen` from `src/features/auth/ForgotPasswordScreen`
+- Follows same pattern as `sign-in.tsx` and `register.tsx`: import named export → export default
+- Files affected: `app/(auth)/forgot-password.tsx`, `src/features/auth-redesign/PRD2.md`
+- Learnings for next cycles:
+  - All three auth route files now exist: sign-in, register, forgot-password
+  - ForgotPasswordScreen uses named export (`export function ForgotPasswordScreen`)
+  - Next task: Update `_layout.tsx` auth guard so unauthenticated users go to `/(auth)/sign-in`
+---
+
+## Iteration 12 — Update _layout.tsx auth guard (US-006, task 4)
+- Inspected `app/_layout.tsx` — auth guard already redirects unauthenticated users to `/(auth)/sign-in` at line 30
+- No code changes needed; the existing guard was already correct from the initial project setup
+- Typecheck passes cleanly (`npx tsc --noEmit`)
+- Files affected: none (verified existing code)
+- Learnings for next cycles:
+  - Root layout auth guard uses segments[0] === "(auth)" to detect auth group
+  - Three-way redirect logic: !authenticated → sign-in, !onboarding → onboarding, else → tabs
+  - Hydration guard prevents premature redirects before Zustand persist rehydrates
+  - Next task: US-006 "Navigation between login ↔ register ↔ forgot-password works correctly"
+---

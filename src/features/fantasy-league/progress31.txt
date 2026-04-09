@@ -1,0 +1,236 @@
+# PRD 31 Progress Log
+
+## Learnings (shared context for all iterations)
+- Reuse `TRADABLE_ASSETS` from `src/features/trading-hub/tradingHubData.ts` — no duplication
+- Reuse `fetchLatestPrice` from `src/features/trading-hub/marketApiService.ts`
+- Economy hooks: `useEconomyStore` at `src/features/economy/useEconomyStore.ts`
+- `app/(tabs)/fantasy.tsx` already exists — just import FantasyLeagueScreen
+- Fantasy Cash (FC) is league-only virtual currency, separate from in-game Coins
+- Pre-existing TS errors to ignore: FeedSidebar CLASH.primary, useClashStore XPSource, GlassOverlay expo-blur
+- Pattern: types → data → store → screen → integration (same as all PRDs)
+
+---
+
+## Iteration 1 — US-001 Types (fantasyTypes.ts)
+- Created `src/features/fantasy-league/fantasyTypes.ts` with all 5 interfaces
+- FantasyLeague, FantasyPosition, FantasyPortfolio, LeaderboardEntry, FantasyState
+- Files affected: fantasyTypes.ts (new), PRD31_FantasyLeague.md (marked complete)
+- Learnings for next cycles:
+  - FantasyState uses `| null` for currentLeague, portfolio, lastUpdated (clean init state)
+  - FantasyPosition.pnlPercent is computed; store should calc as `((currentPrice - buyPrice) / buyPrice) * 100`
+  - LeaderboardEntry.change is a string union, not a number
+---
+
+## Iteration 2 — US-002 Seeded League Data (fantasyData.ts)
+- Created `src/features/fantasy-league/fantasyData.ts`
+- `CURRENT_LEAGUE`: weekly league with dynamic Monday–Sunday bounds, budget 10,000 FC
+- `MOCK_LEADERBOARD`: 10 AI competitors with Hebrew names, pnl range -5% to +12%
+- Ranks 1–3 and 5–11 populated; rank 4 left open for local player (store will insert dynamically)
+- `getCurrentWeekBounds()` helper computes ISO strings for current week
+- Files affected: fantasyData.ts (new), PRD31_FantasyLeague.md (marked complete)
+- Learnings for next cycles:
+  - MOCK_LEADERBOARD has ranks 1-3 then 5-11; store's `getLeaderboard()` must merge local player and re-rank
+  - `CURRENT_LEAGUE` status is hardcoded 'active'; store may need to compute status from dates
+  - portfolioValue in mock entries is based on 10,000 FC starting budget
+---
+
+## Iteration 3 — US-003 Store (useFantasyStore.ts)
+- Created `src/features/fantasy-league/useFantasyStore.ts` with Zustand + AsyncStorage persist
+- Actions: initPortfolio, buyAsset, sellAsset, refreshPrices, computePortfolioValue, getLeaderboard
+- `buyAsset` takes assetName in addition to assetId (needed for FantasyPosition)
+- `getLeaderboard` merges local player (displayName 'אתה') into MOCK_LEADERBOARD, sorts by portfolioValue desc, re-ranks
+- `refreshPrices` uses Promise.all with try/catch per position — silently keeps old price on failure
+- Auto-refresh (30s setInterval) is NOT in the store — it belongs in the screen's useEffect (US-004)
+- `computePortfolioValue` is a derived getter, not stored state
+- pnlPercent formula: ((currentPrice - buyPrice) / buyPrice) * 100
+- Position IDs use incrementing `fp-N` counter (module-level)
+- Files affected: useFantasyStore.ts (new), PRD31_FantasyLeague.md (marked complete)
+- Learnings for next cycles:
+  - Screen (US-004) must call `initPortfolio(CURRENT_LEAGUE)` on mount if portfolio is null
+  - Screen should set up 30s setInterval for `refreshPrices()` in useEffect
+  - `buyAsset` silently no-ops if cost > cashRemaining — UI should validate before calling
+  - `sellAsset` returns void — screen needs to check if sale was profitable for XP reward (US-005)
+---
+
+## Iteration 4 — US-004a Wire app/fantasy.tsx to FantasyLeagueScreen
+- Created `src/features/fantasy-league/FantasyLeagueScreen.tsx` — basic screen shell
+- Updated `app/(tabs)/fantasy.tsx` to import and render FantasyLeagueScreen
+- Screen uses DiamondBackground + SafeAreaView pattern (consistent with other screens)
+- Auto-calls `initPortfolio(CURRENT_LEAGUE)` on mount if portfolio is null
+- Shows league name in header and current FC balance
+- Files affected: FantasyLeagueScreen.tsx (new), app/(tabs)/fantasy.tsx (modified), PRD31_FantasyLeague.md (marked complete)
+- Learnings for next cycles:
+  - Screen shell is ready — next tasks add countdown timer, tab switcher, leaderboard, portfolio views
+  - DiamondBackground provides gradient + diamond grid — no need for manual LinearGradient
+  - RTL const `{ writingDirection: 'rtl', textAlign: 'right' }` defined in screen for Hebrew text
+  - Store initializes on mount — subsequent screen features can assume portfolio exists
+---
+
+## Iteration 5 — US-004b Header Countdown Timer
+- Added `useCountdown(endDate)` custom hook to FantasyLeagueScreen.tsx
+- Hook uses `setInterval` at 1s for live countdown, returns formatted string (Xd HH:MM:SS or HH:MM:SS)
+- Shows 'הליגה הסתיימה' in red when league has ended
+- Timer displayed in a pill-shaped card below the league name with gold border
+- Files affected: FantasyLeagueScreen.tsx (modified), PRD31_FantasyLeague.md (marked complete)
+- Learnings for next cycles:
+  - `useCountdown` is defined inside the screen file — could be extracted if reused elsewhere
+  - Countdown uses `useCallback` with `endDate` dep to avoid recreating the compute function
+  - Timer pill uses CLASH.cardBg + goldBorder for consistent styling
+  - Next task: Leaderboard tab with animated rank list
+---
+
+## Iteration 6 — US-004c Leaderboard Tab
+- Added tab switcher (Leaderboard / My Portfolio) with pill-style toggle
+- Implemented `LeaderboardRow` component with Reanimated `FadeInDown` stagger (60ms delay per row)
+- Local player row highlighted with gold border (2px), gold background tint, gold glow shadow, star emoji
+- `RankBadge` component shows medal emojis for top 3, plain number for others
+- Each row shows: rank, change indicator (▲/▼), display name, portfolio value (FC), pnl%
+- Portfolio tab is a placeholder for next task
+- Added 30s `setInterval` for `refreshPrices()` in screen useEffect
+- `getLeaderboard()` called on every render to get merged + sorted leaderboard
+- Files affected: FantasyLeagueScreen.tsx (modified), PRD31_FantasyLeague.md (marked complete)
+- Learnings for next cycles:
+  - Tab state uses `TabId = 'leaderboard' | 'portfolio'` union type
+  - Reanimated `FadeInDown.delay(index * 60).springify()` gives nice stagger effect
+  - Gold glow uses `shadowColor: CLASH.goldLight, shadowOpacity: 0.4, shadowRadius: 12`
+  - Portfolio placeholder is ready to be replaced in next task (My Portfolio tab)
+  - `getLeaderboard()` is called directly in render — no memoization needed since it's cheap
+---
+
+## Iteration 7 — US-004d My Portfolio Tab
+- Replaced portfolio placeholder with full implementation in FantasyLeagueScreen.tsx
+- Portfolio summary card: total value (gold, large), pnl% (green/red), cash remaining
+- Positions list: each row shows asset name, quantity × price, PnL sparkline (color bar), total value, pnl%
+- `PnlSparkline` component: 5-segment rising bar chart, color-coded green/red, magnitude normalized to 0-3% range
+- `PositionRow` component: FadeInDown stagger animation (consistent with LeaderboardRow)
+- Empty state: centered icon + Hebrew text ("אין פוזיציות פתוחות") when no positions
+- Uses IIFE inside JSX for summary card to compute derived values cleanly
+- Files affected: FantasyLeagueScreen.tsx (modified), PRD31_FantasyLeague.md (marked complete)
+- Learnings for next cycles:
+  - `computePortfolioValue()` is now destructured from store in the screen component
+  - Portfolio tab uses same ScrollView pattern as leaderboard tab
+  - PositionRow will need swipe-to-sell gesture added in US-004 "Sell swipe" task
+  - Buy Assets button is the next unchecked task — should appear at bottom of portfolio tab
+---
+
+## Iteration 8 — US-004e Buy Assets Button + Asset Picker Sheet
+- Added "קנה נכסים" gold button at bottom of My Portfolio tab
+- Implemented `AssetPickerSheet` as a Modal-based bottom sheet with slide animation
+- Reuses `TRADABLE_ASSETS` from `src/features/trading-hub/tradingHubData.ts` — no duplication
+- `AssetRow` component: shows emoji symbol, asset name, type badge (Hebrew), live price via `fetchLatestPrice`
+- Type badges color-coded: stock=blue, index=purple, commodity=yellow, crypto=green
+- Prices fetched lazily per row on mount with ActivityIndicator loading state
+- `selectedAsset` state stored in screen — ready for US-005 buy flow wiring
+- `pickerVisible` boolean controls sheet visibility
+- Sheet has handle bar, "בחר נכס לקנייה" header, close button, scrollable asset list
+- FadeInDown stagger animation on asset rows (40ms per row)
+- Button uses gold background with glow shadow, matching design language
+- Files affected: FantasyLeagueScreen.tsx (modified), PRD31_FantasyLeague.md (marked complete)
+- Learnings for next cycles:
+  - `selectedAsset` is set when user taps an asset — US-005 should check this and open buy confirmation
+  - Sheet closes on asset select — US-005 should open a buy confirmation sheet/modal with quantity input
+  - `fetchLatestPrice` returns mock data on failure — prices always resolve
+  - TYPE_LABELS and TYPE_COLORS are module-level constants, reusable if needed
+  - Modal `animationType="slide"` gives native bottom-sheet feel without extra library
+---
+
+## Iteration 11 — US-005 Buy Confirmation Sheet
+- Added `BuyConfirmSheet` component to FantasyLeagueScreen.tsx
+- Shows selected asset name + symbol, fetches live price via `fetchLatestPrice`
+- Quantity control: +/- buttons with minimum of 1, displayed in gold pill
+- "Cost: X FC" display with cash remaining comparison
+- Over-budget validation: red border + background tint + Hebrew warning "חריגה מהתקציב!"
+- Confirm button disabled when price loading or over budget (greyed out)
+- Wired to `buyAsset(assetId, assetName, quantity, price)` from store on confirm
+- Sheet opens when `selectedAsset` is set (after picking from AssetPickerSheet), closes on confirm/cancel
+- `selectedAsset` reset to null clears the sheet
+- Files affected: FantasyLeagueScreen.tsx (modified), PRD31_FantasyLeague.md (marked complete)
+- Learnings for next cycles:
+  - BuyConfirmSheet resets quantity to 1 and re-fetches price each time asset changes (via useEffect on asset)
+  - `overBudget` state derived from cost vs cashRemaining — updates reactively
+  - Store `buyAsset` silently no-ops if cost > cashRemaining (double safety)
+  - Next task: US-005 Validate (quantity * price <= cashRemaining, red flash) — already implemented in this sheet
+  - Next unchecked: US-005 Confirm buy → buyAsset() + haptic feedback
+---
+
+## Iteration 9 — US-004 "Sell" Swipe on Position Rows
+- Added swipe-to-sell gesture on each PositionRow using `Swipeable` from react-native-gesture-handler
+- Swipe right-to-left reveals a red "מכור" (Sell) button with 💰 icon
+- Tapping the sell button calls `sellAsset(positionId, currentPrice)` from store and closes the swipeable
+- Used `useRef<Swipeable>` to programmatically close swipeable after sell action
+- `PositionRow` now receives `onSell` callback prop — screen wires it to `sellAsset` from store
+- `overshootRight={false}` prevents over-swiping past the action button
+- Files affected: FantasyLeagueScreen.tsx (modified), PRD31_FantasyLeague.md (marked complete)
+- Learnings for next cycles:
+  - `Swipeable` from react-native-gesture-handler works without explicit `GestureHandlerRootView` in Expo SDK 55 (expo-router wraps it)
+  - `renderRightActions` reveals on left-swipe (swipe towards left) — RTL-friendly for Hebrew UI
+  - Sell currently just removes position and returns cash — US-005 will add XP/Coins reward for profitable sells
+  - Swipeable ref `.close()` needed before executing sell to prevent visual glitch
+  - The `onSell` pattern keeps PositionRow pure — reward logic belongs in the screen/store layer (US-005)
+---
+
+## Iteration 10 — US-004 Animations (confetti burst on top-3 finish)
+- FadeInDown stagger and gold glow were already implemented in iterations 6-9
+- Added `ConfettiBurst` and `ConfettiPieceView` components using Reanimated v4
+- 30 confetti pieces with random positions, colors, sizes, and staggered delays
+- Each piece falls from top with rotation animation + fade out at 60% through
+- Confetti triggers when: league ended (`countdown === 'הליגה הסתיימה'`) AND local player rank <= 3
+- Uses `useRef` flag to prevent re-triggering on re-renders
+- `pointerEvents="none"` on overlay so confetti doesn't block interaction
+- Confetti rendered as `position: absolute` overlay inside DiamondBackground, above SafeAreaView
+- Files affected: FantasyLeagueScreen.tsx (modified), PRD31_FantasyLeague.md (marked complete)
+- Learnings for next cycles:
+  - Reanimated `useSharedValue` + `useAnimatedStyle` works well for per-piece animations
+  - `withDelay` + `withTiming` combo is simpler than spring for falling physics
+  - `useMemo` for piece generation prevents re-creating random values on re-render
+  - No external confetti library needed — 30 animated Views is lightweight enough
+  - `Easing.out(Easing.quad)` gives natural deceleration feel for falling pieces
+---
+
+## Iteration 13 — US-005 Sell with gain/loss display + XP reward
+- Added `SellResultToast` component: shows asset name, PnL in FC and %, color-coded green/red
+- Toast auto-dismisses after 2.5s via `setTimeout`
+- Modified `onSell` handler in portfolio tab to:
+  - Compute PnL (amount + percent) from position's buyPrice vs currentPrice before calling sellAsset
+  - Show SellResultToast with gain/loss details
+  - If profitable: award +30 XP (source: 'sim_complete') + 50 Coins via useEconomyStore + haptic feedback
+- Added `useEconomyStore` import + `SellResult` interface
+- Files affected: FantasyLeagueScreen.tsx (modified), PRD31_FantasyLeague.md (marked complete)
+- Learnings for next cycles:
+  - Must capture position data BEFORE calling `sellAsset()` since it removes the position from state
+  - `addXP` requires XPSource type — 'sim_complete' is the correct source for simulation/game rewards
+  - Toast is positioned `bottom: 100` to avoid tab bar overlap
+  - `successHaptic()` only fires on profitable sales — no haptic on loss
+  - Next unchecked: US-005 League end detection + results overlay + tiered rewards
+---
+
+## Iteration 12 — US-005 Confirm buy → buyAsset() + haptic feedback
+- Added `successHaptic()` call from `src/utils/haptics.ts` on buy confirmation in FantasyLeagueScreen
+- Haptic fires after `buyAsset()` call, before closing the sheet (setSelectedAsset(null))
+- `buyAsset()` was already wired from iteration 11 (BuyConfirmSheet) — this iteration adds the haptic feedback
+- Files affected: FantasyLeagueScreen.tsx (modified — import + onConfirm handler), PRD31_FantasyLeague.md (marked complete)
+- Learnings for next cycles:
+  - `src/utils/haptics.ts` provides `tapHaptic`, `successHaptic`, `errorHaptic`, `mediumHaptic`, `heavyHaptic`, `doubleHeavyHaptic`
+  - `successHaptic` is the right choice for buy confirmation (maps to iOS NotificationFeedbackType.Success)
+  - Next unchecked: US-005 Sell with gain/loss display + XP reward if profitable
+  - Then: US-005 League end detection + results overlay + tiered rewards
+---
+
+## Iteration 14 — US-005 League end detection + results overlay + tiered rewards
+- Added `LeagueResultsOverlay` component: Modal with fade animation, shows medal, rank, and reward breakdown
+- Added `LeagueReward` interface and `TIER_REWARDS` constant for rank-based reward tiers
+- `getRewardForRank()` helper returns tiered rewards (rank 1-3) or default (+50 XP, +100 Coins)
+- Reward tiers: Rank 1 (+300 XP, +500 Coins, +5 Gems), Rank 2 (+200 XP, +300 Coins, +3 Gems), Rank 3 (+100 XP, +150 Coins, +1 Gem), Others (+50 XP, +100 Coins)
+- `rewardsClaimedRef` prevents double-distribution on re-renders
+- League end detected via `countdown === 'הליגה הסתיימה'` (reuses existing useCountdown hook)
+- Rewards distributed via `addXP`, `addCoins`, `addGems` from useEconomyStore
+- `successHaptic()` fires on reward distribution
+- Overlay has gold glow for top-3, shows gems row only when gems > 0
+- Hebrew UI: "הליגה הסתיימה!", "סיימת במקום X", reward labels (ניסיון, מטבעות, יהלומים)
+- Files affected: FantasyLeagueScreen.tsx (modified), PRD31_FantasyLeague.md (marked complete)
+- Learnings for next cycles:
+  - All PRD 31 tasks are now complete
+  - `rewardsClaimedRef` + `confettiTriggeredRef` are separate refs — confetti only for top-3, rewards for all
+  - `addGems` is called conditionally (only when gems > 0) since `addGems(0)` is a no-op but cleaner to skip
+  - Modal `animationType="fade"` works better for overlay (vs "slide" for bottom sheets)
+---

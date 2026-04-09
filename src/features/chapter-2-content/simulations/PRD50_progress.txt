@@ -1,0 +1,147 @@
+# PRD 50 — Credit Score Simulator Overhaul — Progress Log
+
+## Pre-existing Context
+
+### Existing files (DO NOT rewrite):
+- `creditScoreTypes.ts` — all types already defined (NotificationSource, CreditEvent, CreditOption, etc.)
+- `creditScoreData.ts` — 5 scenarios with senderName, sourceType, severity, scoring
+- `useCreditScore.ts` — game logic hook (state, currentEvent, handleChoice, score, resetGame)
+
+### Known TS error in current code:
+- `CreditScoreScreen.tsx:493` — `currentEvent.emoji` does not exist on `CreditEvent` type
+- This is fixed in US-001 by removing the emoji prop
+
+### Key patterns:
+- Chapter 2 theme: `getChapterTheme('chapter-2')` stored in `CH2` const
+- `RTL_STYLE` = `{ writingDirection: 'rtl', textAlign: 'right' }`
+- `SimLottieBackground` wraps entire sim, `AnimatedPressable` for buttons
+- `SimFeedbackBar` for showing correct/wrong feedback
+- `ConfettiExplosion` for milestones
+- Haptics: `successHaptic`, `errorHaptic`, `heavyHaptic` from `utils/haptics`
+
+### Pre-existing TS errors (safe to ignore):
+- CreditScoreScreen.tsx:493 — `emoji` does not exist on `CreditEvent` (will be fixed in US-001)
+- FeedSidebar.tsx — THEME.primary does not exist
+- useClashStore.ts — 'clash_win'/'clash_draw' not assignable to XPSource
+- GlassOverlay.tsx — expo-blur not found
+
+---
+
+## Iteration 1 — US-001 NotificationCard (replace EventCard)
+- Renamed `EventCard` → `NotificationCard` with strict typed props (`NotificationSource` instead of `string?`)
+- Removed `emoji` prop — fixed the pre-existing TS bug (`currentEvent.emoji` does not exist on `CreditEvent`)
+- Replaced lucide-react-native icons (`MessageCircle`, `Landmark`, `CreditCard`, `ShieldAlert`) with PRD-spec emoji-based `SOURCE_ICONS: Record<NotificationSource, { emoji: string; color: string }>`
+- Added round counter pill badge (absolute-positioned top-left of notification card)
+- Simplified `pushContent` — removed big emoji display, kept description only
+- Added styles: `sourceEmoji`, `roundPill`, `roundPillText`; removed `pushEmoji` style
+- Files affected: `CreditScoreScreen.tsx`
+- Learnings for next cycles:
+  - `SOURCE_ICONS` is now emoji-based — US-005 (OptionButton restyle) should use `SOURCE_ICONS[event.sourceType].emoji` for option source icons
+  - No lucide-react-native dependency left in this file
+  - The `pushNotification` style (white card, rounded corners, shadow) remains unchanged — good base for the notification look
+  - `CreditEvent.sourceType` is `NotificationSource` (union type), not `string` — always use the typed version
+---
+
+## Iteration 2 — US-002 Floating Score Numbers animation
+- Added `FloatingNumber` component using `useSharedValue` + `withTiming` for `translateY` (0 → -80) and `opacity` (1 → 0), duration 1200ms
+- Added `lastImpact` (number | null) and `floatingKey` (number) state to `CreditScoreScreen`
+- `floatingKey` increments on each choice to force re-mount and restart animation
+- `lastImpact` set in `onOptionPress`, cleared in `dismissFeedback` and `handleReplay`
+- Wrapped `CreditGauge` in a `gaugeArea` View with `FloatingNumber` positioned absolutely at bottom
+- Green "+XX 📈" for positive impact, Red "−XX 📉" for negative — color matches feedback semantics
+- Files affected: `CreditScoreScreen.tsx`
+- Learnings for next cycles:
+  - `pointerEvents="none"` is a prop on `Animated.View`, not a style — used to prevent blocking touch events
+  - No `as const` needed inside `StyleSheet.create` — TS infers literal types correctly
+  - The `gaugeArea` wrapper can also be used by US-003 (flash overlay) since it wraps the gauge area
+  - `floatingKey` pattern (increment counter as key) is a clean way to retrigger entering animations
+---
+
+## Iteration 3 — US-003 Red/Green Flash overlay
+- Added `FlashOverlay` component using `useSharedValue` + `withSequence(withTiming, withTiming)` for opacity 0→1→0 over 0.3s
+- Green flash `rgba(34,197,94,0.15)` for correct, red flash `rgba(239,68,68,0.2)` for wrong
+- Positioned as `position: absolute` full-screen overlay with `pointerEvents="none"`
+- Reused existing `lastChoice` + `floatingKey` state — no new state needed
+- Rendered inside `SimLottieBackground` after confetti, keyed by `flash-${floatingKey}` to retrigger on each choice
+- Files affected: `CreditScoreScreen.tsx`
+- Learnings for next cycles:
+  - `FlashOverlay` is a fire-and-forget component — auto-animates on mount, no cleanup needed
+  - Reusing `floatingKey` as part of the key avoids adding redundant state counters
+  - The flash overlay renders on top of content but `pointerEvents="none"` ensures no touch blocking
+  - `withSequence` is the right tool for "pulse" animations (up then down)
+---
+
+## Iteration 4 — US-004 Enhanced Haptics per severity
+- Added `useEffect` that fires `heavyHaptic()` when `currentEvent` has `critical` severity
+- Wrong choice: added `setTimeout(() => heavyHaptic(), 200)` after `errorHaptic()` for punchy double-hit feedback
+- Milestone crossing (750/800): replaced single `heavyHaptic()` with `doubleHeavyHaptic()` (existing utility, 150ms gap)
+- Right choice: `successHaptic()` was already in place — no change needed
+- Imported `doubleHeavyHaptic` from `utils/haptics`
+- Files affected: `CreditScoreScreen.tsx`
+- Learnings for next cycles:
+  - `doubleHeavyHaptic` already exists in `utils/haptics.ts` — no need to implement inline setTimeout for double bursts
+  - The `useEffect` for critical haptic depends on `currentEvent` reference — hook returns a new ref each round so it triggers correctly
+  - Wrong-choice haptic pattern (error + delay + heavy) gives a satisfying "buzz-THUNK" feedback
+---
+
+## Iteration 5 — US-005 Option cards restyling (frosted glass Action Cards)
+- Restyled `OptionButton` from solid white cards to frosted glass action cards
+- Added `sourceType: NotificationSource` and `severity: CreditEventSeverity` props to `OptionButton`
+- Each option now shows source emoji icon (from `SOURCE_ICONS`) alongside the label text in RTL row layout
+- Background changed from `rgba(255,255,255,0.9)` to `rgba(255,255,255,0.08)` for frosted glass effect
+- Border now severity-tinted (uses `SEVERITY_CFG[severity].border`), shadow color matches severity text color
+- `borderRadius: 16` per spec, label color changed to `#e0f2fe` for contrast on dark glass background
+- Passed `sourceType` and `severity` from `currentEvent` to each `OptionButton` in render call
+- Files affected: `CreditScoreScreen.tsx`
+- Learnings for next cycles:
+  - `OptionButton` now receives event context (sourceType + severity) — future styling enhancements can use these
+  - `optionRow` uses `flexDirection: 'row-reverse'` for RTL — emoji appears on right, text fills remaining space
+  - Frosted glass aesthetic: very low alpha background + severity-colored border creates depth without opacity
+  - `shadowColor` set dynamically per severity for subtle glow effect matching the border tint
+---
+
+## Iteration 6 — US-006 Receipt-style End Screen
+- Redesigned `ScoreScreen` from GlowCard-based stats to a printed credit report receipt
+- Cream/white card (`#fef9ef`) with dashed border (`borderStyle: 'dashed'`) for receipt paper feel
+- Header: "דוח ריכוז נתונים — בנק ישראל" with date via `toLocaleDateString('he-IL')`
+- CreditGauge kept inside a dark strip (`rgba(15,23,42,0.85)`) to preserve white gauge text contrast
+- Stats table: ציון סופי, שיא, שפל, מגמה, בחירות נכונות X/5 — all RTL with `row-reverse`
+- 5 decision line items: maps `history[]` → `creditScoreConfig.events` to get sender name + source emoji + impact (+/- colored)
+- Educational takeaway in highlighted box at bottom (reused existing lesson text)
+- Grade stamp overlay: large letter (72px, `fontWeight: '900'`) rotated 15°, `opacity: 0.2`, positioned absolute
+- Added `history: ChoiceRecord[]` and `correctChoices: number` props to ScoreScreen (overlaps with US-007 data plumbing)
+- Imported `ChoiceRecord` type from `creditScoreTypes.ts`
+- Parent passes `state.history` and `state.correctChoices` to ScoreScreen
+- `scoreStyles` kept for replay/continue buttons (still used)
+- `receiptStyles` added as new StyleSheet for all receipt-specific styles
+- Files affected: `CreditScoreScreen.tsx`
+- Learnings for next cycles:
+  - `borderStyle: 'dashed'` works on both card border and separator lines in RN (only borders with non-zero width render)
+  - Dark gauge strip pattern: wrapping CreditGauge in a dark `View` preserves its white-text styling on a light receipt background
+  - `history` + `correctChoices` are now props on ScoreScreen — US-007 may be partially complete (check if additional plumbing is still needed)
+  - `GlowCard` import is now unused (removed from ScoreScreen) — clean up in US-008
+  - `position: 'absolute'` with percentage `top` works in RN for stamp positioning
+---
+
+## Iteration 7 — US-007 History data access in ScoreScreen
+- No code changes needed — all three requirements were already implemented in US-006:
+  1. `state.history` passed to `ScoreScreen` via parent call (line 549)
+  2. Each `ChoiceRecord` mapped to event title via `creditScoreConfig.events.find(e => e.id === rec.eventId)` (lines 399-412)
+  3. `ScoreScreen` props include `history: ChoiceRecord[]` (line 336)
+- Files affected: none (already complete from US-006)
+- Learnings for next cycles:
+  - When receipt design (US-006) required history data, the plumbing was done inline — always check prior iterations before implementing
+---
+
+## Iteration 8 — US-008 TypeScript validation + cleanup
+- Ran `npx tsc --noEmit` — zero project-specific errors (all errors are in `stitch-skills/` which is external)
+- Removed unused `GlowCard` import (leftover from pre-US-006 ScoreScreen)
+- Removed unused lottie consts: `LOTTIE_STAR`, `LOTTIE_TROPHY`, `LOTTIE_CHECK` (only declared, never referenced)
+- Removed unused styles: `container` (never referenced), `roundCounter` (replaced by `roundPill` in US-001)
+- Confirmed zero `any` types in the file
+- Files affected: `CreditScoreScreen.tsx`
+- Learnings for next cycles:
+  - Pre-existing TS errors (FeedSidebar, useClashStore, GlassOverlay) appear resolved — they no longer show in tsc output
+  - The old `emoji` TS bug (CreditScoreScreen:493) was fixed in US-001 and stays fixed
+  - PRD 50 overhaul is complete — all 8 user stories implemented and validated
+---

@@ -1,0 +1,201 @@
+# Progress Log — PRD 23 (Clash Royale UI Overhaul)
+
+## Learnings
+(Notes discovered during implementation)
+
+## Iteration 1 — US-001: Create DiamondBackground shared component
+- Created `src/components/ui/DiamondBackground.tsx`
+- Uses `react-native-svg` Pattern with diagonal Line elements for diamond grid
+- Base gradient via `expo-linear-gradient` (#1a3a5c → #0d2847)
+- Diamond lines: #2a5a8c at 10% opacity, 40px tile size
+- Component wraps children with flex:1 container
+- Files affected: `src/components/ui/DiamondBackground.tsx`, `PRD23_ClashRoyaleUI.md`
+- Learnings for next cycles:
+  - `react-native-svg` Pattern + Line works well for repeating geometric patterns
+  - Project-level `npx tsc --noEmit` is the correct typecheck (single-file check fails due to missing jsx flag)
+  - Pre-existing TS errors in FeedSidebar.tsx and useClashStore.ts — ignore them
+  - Named export pattern: `export function ComponentName`
+---
+
+## Iteration 2 — US-002: Create GoldBorderCard component
+- Created `src/components/ui/GoldBorderCard.tsx`
+- Uses gradient border trick: `LinearGradient` as outer wrapper with padding (2.5px) acting as border, inner `View` with dark bg
+- 5 variants (gold/blue/green/purple/orange) each with matching gradient border colors and inner glow overlay
+- Shimmer reused from GlowCard pattern: `withRepeat(withTiming(1, {duration: 2400}))`, translateX -200→400, 25deg rotation
+- Inner glow: absolute-fill View with variant's glow color as backgroundColor
+- Background: `rgba(10, 22, 40, 0.85)` — dark semi-transparent
+- Border radius: 16px outer, 13.5px inner (16 - borderWidth)
+- Files affected: `src/components/ui/GoldBorderCard.tsx`, `PRD23_ClashRoyaleUI.md`, `progress23.txt`
+- Learnings for next cycles:
+  - LinearGradient gradient border trick works well: gradient as bg + padding + inner view
+  - `colors` prop on LinearGradient needs `as unknown as [string, string]` cast when coming from a record
+  - Shimmer pattern is easily portable between components
+  - Shadow with glow color gives nice colored shadow effect on cards
+---
+
+## Iteration 3 — US-003: Create BannerRibbon header component
+- Created `src/components/ui/BannerRibbon.tsx`
+- Uses `react-native-svg` Polygon elements for left/right notch folds (trapezoid effect)
+- Main body: `expo-linear-gradient` (#1e40af → #2563eb) horizontal gradient
+- Gold borders: 2px solid #d4a017 Views at top and bottom of banner body
+- Notch SVGs: small triangular folds with gold edge highlights matching the top/bottom borders
+- Text: fontWeight 900, white, fontSize 17, letterSpacing 1, full text shadow
+- Banner height: 44px, 8px horizontal margin, full width
+- Props: `title: string`, `icon?: ReactNode` (icon renders to the right of title)
+- Files affected: `src/components/ui/BannerRibbon.tsx`, `PRD23_ClashRoyaleUI.md`, `progress23.txt`
+- Learnings for next cycles:
+  - SVG Polygon is effective for custom notch/fold shapes at banner edges
+  - Gold edge highlights on SVG notches create continuity with the gold border lines
+  - Banner pattern: wrapper row (notch + body + notch), body has border-top/gradient/border-bottom stack
+---
+
+## Iteration 4 — US-004: Create SupercellButton component
+- Created `src/components/ui/SupercellButton.tsx`
+- 4 variants (green/orange/blue/gold) each with gradient, border color, and top highlight
+- 3 sizes (sm/md/lg) with different minHeight, fontSize, paddingHorizontal
+- Press animation: scale 0.95 via reanimated spring (SPRING_SNAPPY)
+- Disabled state: opacity 0.5
+- Haptic feedback via `tapHaptic()` from `src/utils/haptics.ts`
+- Gradient border trick: outer View with 3px borderWidth + borderColor, inner LinearGradient fills
+- Top highlight: 1px absolute-positioned View at top with semi-transparent lighter shade
+- Text: fontWeight 900, white, textShadow (black, 2px offset, 4px radius)
+- Files affected: `src/components/ui/SupercellButton.tsx`, `PRD23_ClashRoyaleUI.md`, `progress23.txt`
+- Learnings for next cycles:
+  - Simpler gradient border approach for buttons: solid borderColor on outer View + LinearGradient fill (no padding trick needed since button border is single-color)
+  - `tapHaptic()` from utils/haptics.ts is the standard haptic call for button presses
+  - SPRING_SNAPPY from utils/animations.ts is the standard spring config for press feedback
+  - Animated.Text works for text with animated parent transforms
+---
+
+## Iteration 5 — US-005: Create GoldCircleBadge component
+- Created `src/components/ui/GoldCircleBadge.tsx`
+- Circle with 3px gold border (configurable via `borderColor` prop) and dark blue inner (#0d2847)
+- Glowing effect: animated shadowRadius pulsing 8→16 via `withRepeat(withSequence(...))`, 1200ms per phase
+- Badge: red (#ef4444) notification circle at top-right with white bold number, 2px dark border for contrast
+- Badge supports numbers up to 99+ (caps display at "99+")
+- Props: `children`, `size` (default 48), `borderColor` (default #d4a017), `glowing` (default false), `badge` (optional number)
+- Files affected: `src/components/ui/GoldCircleBadge.tsx`, `PRD23_ClashRoyaleUI.md`, `progress23.txt`
+- Learnings for next cycles:
+  - `withRepeat(withSequence(up, down), -1)` is the standard pattern for pulsing animations
+  - Animated shadow properties (shadowRadius) work well on iOS; on Android elevation handles it via `elevation` prop
+  - Badge positioning: absolute top-right with negative offset (-4) places it at the circle's edge
+  - Wrapper View around circle needed for badge absolute positioning context
+---
+
+## Iteration 6 — US-006: Create SparkleOverlay particle effect component
+- Created `src/components/ui/SparkleOverlay.tsx`
+- Individual `Sparkle` sub-component with its own animated shared value for performance
+- Each sparkle: random X position (distributed evenly across width), random delay (0-3s), random size (2-4px), random duration (3-5s), random travel distance (50-100px)
+- Animation: `withDelay` → `withRepeat(withSequence(up, reset))` for continuous looping per particle
+- Opacity curve: fade in 0→0.6 (first 30%), hold (30-70%), fade out 0.6→0 (last 30%) — computed in `useAnimatedStyle`
+- Density controls particle count: low=6, medium=9, high=12
+- `active` prop: when false, component returns null (no rendering overhead)
+- Container and sparkles all have `pointerEvents="none"` — doesn't block touches
+- Default color: gold (#f5c842) matching Clash Royale theme
+- Sparkle configs generated via `useMemo` to avoid re-randomizing on re-renders
+- Files affected: `src/components/ui/SparkleOverlay.tsx`, `PRD23_ClashRoyaleUI.md`, `progress23.txt`
+- Learnings for next cycles:
+  - `withDelay` + `withRepeat(withSequence(...))` is the pattern for staggered looping particles
+  - Individual animated components per particle is cleaner than trying to animate N items from one shared value
+  - Distributing sparkles evenly across X with small random offset prevents clustering
+  - `useMemo` on sparkle configs prevents layout shifts from re-randomization
+---
+
+## Iteration 7 — US-007: Update theme.ts with Clash Royale color palette
+- Added `CLASH` color namespace to `src/constants/theme.ts` alongside existing `THEME`
+- 15 named color constants covering backgrounds, gold accents, button gradients, ribbon blues, card bg, text shadow, and red badge
+- Exported as `as const` for literal type inference
+- Existing `THEME` object untouched — full backward compatibility
+- Files affected: `src/constants/theme.ts`, `PRD23_ClashRoyaleUI.md`, `progress23.txt`
+- Learnings for next cycles:
+  - `CLASH` namespace is now available for import: `import { CLASH } from '@/constants/theme'`
+  - All Clash Royale colors are centralized — use `CLASH.goldBorder` etc. instead of hardcoded hex in screen restyles
+  - Existing pre-existing TS errors unchanged (FeedSidebar, useClashStore)
+---
+
+## Iteration 8 — US-008: Restyle EconomyHeader with Clash Royale top bar
+- Restyled `EconomyHeader.tsx` with full Clash Royale treatment:
+  - Background: dark blue (#0d2847) with 1px gold bottom border at 40% opacity
+  - Level badge: 40px gold-bordered circle on far left with Crown icon + level number
+  - Resource pills: each has a 24px gold-bordered icon frame + bold white number with text shadow
+  - XP pill: purple Zap icon + animated XP counter
+  - Coins pill: gold Coins icon + animated counter + green "+" button (cosmetic)
+  - Streak pill: orange Flame icon with pulse glow animation (when streak ≥ 3)
+  - Progress bar: gold gradient (#d4a017 → #f5c842) instead of purple, with gold glow dot
+  - Level-up flash: changed from purple to gold (#f5c842)
+- All existing functionality preserved: animated counters, level-up flash, streak pulse
+- Migrated from NativeWind className to StyleSheet.create for precise Clash Royale styling
+- Imported and used `CLASH` constants from theme.ts throughout
+- Created `ResourcePill` sub-component for consistent pill rendering
+- Files affected: `src/components/ui/EconomyHeader.tsx`, `PRD23_ClashRoyaleUI.md`, `progress23.txt`
+- Learnings for next cycles:
+  - `CLASH` import from theme.ts works well — use for all screen restyles
+  - ResourcePill pattern (icon frame + text + optional plus button) is reusable
+  - StyleSheet.create gives more control than NativeWind for complex game-style UI
+  - Crown icon from lucide-react-native works well for level indicators
+  - Level badge: gold-bordered circle with Crown + number inside is a clean Clash Royale pattern
+---
+
+## Iteration 9 — US-009: Restyle AnimatedTabBar with Clash Royale bottom nav
+- Restyled `AnimatedTabBar.tsx` with full Clash Royale treatment:
+  - Background: dark navy (#0d2137) with gold top border (1px, #d4a017 at 30%)
+  - Active tab: gold circle frame (42px) with gold border + dark blue inner, gold glow halo behind
+  - Inactive tab: icon only, dimmed (#71717a), thinner stroke (1.8)
+  - Gold dot indicator at bottom (8px gold circle with glow shadow) replaces old violet pill
+  - Shop tab: brighter gold (#facc15) with gold glow, kept as special case
+  - Badge support: red notification badge (18px circle) at top-right of tab with white bold number, caps at "99+"
+  - Tab bar height: 68px min-height + 22px bottom padding (safe area)
+  - Labels: 10px bold with text shadow, only visible when active
+- Updated `app/(tabs)/_layout.tsx`: changed background from green (#0a3622) to dark blue (#0d2847)
+- Migrated from NativeWind className to StyleSheet.create for precise Clash Royale styling
+- Imported and used `CLASH` constants from theme.ts
+- Haptic feedback preserved via `tapHaptic()`
+- Removed unused imports (Crown, withRepeat, withSequence, withTiming, Easing)
+- Files affected: `src/components/ui/AnimatedTabBar.tsx`, `app/(tabs)/_layout.tsx`, `PRD23_ClashRoyaleUI.md`, `progress23.txt`
+- Learnings for next cycles:
+  - Inline gold circle frame (borderWidth + borderRadius + dark bg) is simpler than importing GoldCircleBadge for small frames
+  - Gold dot indicator with shadow glow looks cleaner than a sliding pill for CR style
+  - Badge positioning at top-right with negative offset and borderColor matching tab bar bg creates nice cutout effect
+  - `CLASH` import from theme.ts continues to work well for consistent color usage
+  - StyleSheet.create is preferred over NativeWind for game-style UI components (per progress notes)
+---
+
+## Iteration 10 — US-010: Restyle HomeScreen (FinFeed) with diamond background + gold cards
+- Restyled `FinFeedScreen.tsx` (main feed screen):
+  - Replaced background from green (THEME.cardBgSolid) to dark blue (CLASH.bgPrimary)
+  - FeedHeader: wrapped in DiamondBackground with diamond grid pattern
+  - Avatar: wrapped in GoldCircleBadge (62px, glowing) replacing plain bordered circle
+  - Player name: fontWeight 900, white, full text shadow (Supercell feel)
+  - Greeting label: lighter text (#e2e8f0) with text shadow
+  - Streak text: uses CLASH.orangeBtnLight with text shadow
+  - Added BannerRibbon "הפיד שלך" in header
+  - Scroll hint: gold color (CLASH.goldBorder) with text shadow, replacing zinc-500
+  - Removed unused imports (SafeAreaView, LinearGradient, useRouter, THEME)
+- Restyled `FeedVideoItem.tsx`:
+  - Background gradient: CLASH.bgSecondary → CLASH.bgPrimary → #071428 (dark blue)
+  - Top tag replaced with BannerRibbon ("וידאו • Layer X")
+  - Play button: wrapped in GoldCircleBadge (80px, glowing) with gold-colored Play icon
+  - Bottom content: wrapped in GoldBorderCard variant blue
+  - All text: white with CLASH.textShadow, bold weights
+  - Duration text: gold color (CLASH.goldLight)
+- Restyled `FeedQuoteItem.tsx`:
+  - Background gradient: deep blue-purple #1a1050 → CLASH.bgPrimary → #071428
+  - Top tag replaced with BannerRibbon ("קצת חוכמה 💡")
+  - Quote card: wrapped in GoldBorderCard variant purple (replacing plain bordered card)
+  - Quote icon: gold color (CLASH.goldLight) replacing THEME.gold
+  - Title: gold color (CLASH.goldLight) with text shadow
+  - Quote text: white with text shadow
+  - Author: slate gray (#94a3b8) with text shadow
+- All existing feed logic preserved: paging, viewability tracking, sidebar, feed data
+- RTL preserved: writingDirection 'rtl' on all Hebrew text, flex-row-reverse for greeting
+- LessonCard left as-is (not part of this US scope, will be handled by US-011 Learn screen)
+- Migrated fully from NativeWind className to StyleSheet.create for Clash Royale styling
+- Files affected: `src/features/finfeed/FinFeedScreen.tsx`, `src/features/finfeed/FeedVideoItem.tsx`, `src/features/finfeed/FeedQuoteItem.tsx`, `PRD23_ClashRoyaleUI.md`, `progress23.txt`
+- Learnings for next cycles:
+  - DiamondBackground works well as a wrapper inside a fixed-height container (not just flex:1 screens)
+  - GoldCircleBadge as a play button frame creates a premium feel — reuse for any circular icon frames
+  - BannerRibbon works well for section/type labels in feeds — cleaner than plain pill tags
+  - GoldBorderCard wrapping content areas (not full-screen items) gives the Clash Royale card feel without breaking paging layout
+  - CLASH imports consolidate all color references — no more scattered hardcoded hex values
+  - Feed item sub-components can be independently restyled without touching the main screen's logic
+---

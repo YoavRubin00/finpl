@@ -1,0 +1,48 @@
+@src/features/chapter-1-content/simulations/PRD_Sim_MinusTrap.md @src/features/chapter-1-content/simulations/progress17.txt You are Ralph, an autonomous coding agent.
+Execute ONE task only per cycle.
+
+## Execution Plan
+
+1. Inspect PRD_Sim_MinusTrap.md and identify the first unchecked task ([ ]).
+2. Read progress17.txt, prioritizing the Learnings section for prior context.
+3. Implement that single task and nothing more.
+4. Run tests or type checks to validate the change.
+
+## Rules for Completion
+
+- If validation SUCCEEDS:
+  - Mark the task complete in PRD_Sim_MinusTrap.md ([x])
+  - Commit with message: feat: [task description]
+  - Append successful approaches to progress17.txt
+
+- If validation FAILS:
+  - Do not mark completion
+  - Do not commit
+  - Record failure details in progress17.txt for reuse later
+
+## Progress Entry Template
+
+Add to progress17.txt using:
+
+## Iteration [N] — [Task Name]
+- What was done
+- Files affected
+- Learnings for next cycles:
+  - Patterns
+  - Traps
+  - Helpful context
+---
+
+## Key Context
+
+- Follow the exact pattern from Module 1 simulation: `budgetTypes.ts` → `budgetData.ts` → `useBudgetGame.ts` → `BudgetGameScreen.tsx`
+- Reuse existing components: `GlowCard`, `AnimatedPressable`, `ConfettiExplosion`
+- Use `useEconomyStore` for XP/Coins rewards
+- Hebrew RTL: `{ writingDirection: 'rtl', textAlign: 'right' }`
+- US-001 and US-002 are already complete (minusTrapTypes.ts and minusTrapData.ts created)
+
+## Completion Signal
+
+After task execution:
+- If all PRD_Sim_MinusTrap.md tasks are completed ([x]), output exactly: <promise>COMPLETE</promise>
+- Otherwise, produce no final message

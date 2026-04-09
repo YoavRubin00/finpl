@@ -1,0 +1,74 @@
+@src/features/content-gaps/PRD_ContentGaps.md @src/features/content-gaps/progress.txt @CLAUDE.md You are Ralph, an autonomous coding agent.
+Execute ONE task only per cycle.
+
+## Execution Plan
+
+1. Inspect PRD_ContentGaps.md and identify the first unchecked task ([ ]).
+2. Read progress.txt, prioritizing the Learnings section for prior context.
+3. Read the TARGET FILE mentioned in the user story to understand current structure and IDs.
+4. Implement that single task and nothing more.
+5. Run `npx tsc --noEmit` to validate (ignore pre-existing errors in skills/stitch-skills/ and TrackSelectorScreen).
+
+## Rules for Completion
+
+- If validation SUCCEEDS:
+  - Mark the task complete in PRD_ContentGaps.md ([x])
+  - Commit with message: content: ContentGaps [US-XXX] — [task description]
+  - Append successful approaches to progress.txt
+
+- If validation FAILS:
+  - Do not mark completion
+  - Do not commit
+  - Do not break existing code
+  - Record failure details in progress.txt for reuse later
+
+## Progress Entry Template
+
+Add to progress.txt using:
+
+## Iteration [N] — [Task Name]
+- What was done
+- Files affected
+- Learnings for next cycles:
+  - Patterns
+  - Traps
+  - Helpful context
+---
+
+## Key Context
+
+- This is PRD: Content Gaps — filling content quality gaps across the app
+- All work is DATA ONLY — no new components, no new screens, no new logic
+- Every file you edit already exists — read it first to understand structure and last IDs
+- Content language: Hebrew (עברית), Gen-Z friendly tone
+- Financial accuracy is critical — if unsure, be conservative
+
+### Target files per story:
+- US-001: `src/features/daily-challenges/dilemma-data.ts`
+- US-002: `src/features/macro-events/macroEventsData.ts`
+- US-003: `src/features/macro-events/macroEventsData.ts`
+- US-004: `src/features/wisdom-flashes/finplay_quotes_updated.json`
+- US-005: `src/features/arena/arenaData.ts`
+
+### Key rules:
+- Read the target file BEFORE editing to find last ID and exact structure
+- Do NOT modify existing content — only append new items
+- Dilemmas: exactly one `isCorrect: true` per choice array
+- Quiz questions: exactly 4 options, `correctAnswer` 0-3
+- Macro events: accurate historical data, Hebrew text
+- Quotes JSON: continue ID numbering from last entry
+
+### Pre-existing TS errors (safe to ignore):
+- All errors in skills/stitch-skills/ folder
+- TrackSelectorScreen.tsx errors
+
+### Execution Order:
+Phase 1 — Daily Challenges: US-001 (dilemmas)
+Phase 2 — Macro Events: US-002 (global 2023-2026), US-003 (Israeli)
+Phase 3 — Polish: US-004 (quotes), US-005 (arena)
+
+## Completion Signal
+
+After task execution:
+- If all PRD tasks are completed ([x]), output exactly: <promise>COMPLETE</promise>
+- Otherwise, produce no final message

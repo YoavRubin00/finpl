@@ -1,0 +1,221 @@
+# Progress Log
+
+## Learnings
+(Notes discovered during implementation)
+
+## Iteration 1 — Create chapter2Data.ts (US-001, checkbox 1)
+- Created `src/features/chapter-2-content/chapter2Data.ts` with all 5 modules (10-14)
+- Imported `Chapter` type from `../chapter-1-content/types` (no type duplication)
+- All content (videoHook, interactiveIntro, flashcards, quizzes, simConcept) populated from PRD8.md
+- Files affected: `chapter2Data.ts` (new), `PRD8.md` (marked checkbox)
+- Learnings for next cycles:
+  - Chapter 1 uses id pattern `mod-1-N`, chapter 2 uses `mod-2-N` (N=10..14)
+  - Quiz/flashcard IDs follow `q-2-N-M` / `fc-2-N-M` pattern
+  - Types are in `chapter-1-content/types.ts` — shared, not duplicated
+  - `npx tsc --noEmit --project <path>` works reliably for typecheck
+---
+
+## Iteration 2 — Re-export shared types (US-001, checkbox 2)
+- Created `src/features/chapter-2-content/types.ts` that re-exports all types from `chapter-1-content/types.ts`
+- Updated `chapter2Data.ts` import to use local `./types` instead of `../chapter-1-content/types`
+- No type duplication — pure `export type { ... } from` re-export
+- Files affected: `types.ts` (new), `chapter2Data.ts` (updated import), `PRD8.md` (marked checkbox)
+- Learnings for next cycles:
+  - Consumers of chapter-2-content can now import types from `./types` locally
+  - Re-export pattern keeps single source of truth in chapter-1-content
+---
+
+## Iteration 3 — Typecheck passes (US-001, checkbox 3)
+- Ran `npx tsc --noEmit --project tsconfig.json` from project root
+- Exit code 0, no errors — chapter2Data.ts and types.ts compile cleanly
+- Files affected: `PRD8.md` (marked checkbox)
+- Learnings for next cycles:
+  - tsconfig uses `moduleResolution: "bundler"` and `allowImportingTsExtensions: true`
+  - Path alias `@/*` maps to `./src/*`
+  - `skipLibCheck: true` is set — only project code is checked
+---
+
+## Iteration 4 — Extend useChapterStore for multi-chapter (US-002)
+- Refactored `useChapterStore` from flat state to per-chapter `progress: Record<string, ChapterProgress>`
+- Added `currentChapterId` field (defaults to `"ch-1"`)
+- Added `setCurrentChapter(chapterId)` action that lazily initializes empty progress
+- Added Zustand persist `version: 1` with `migrate` function to convert v0 flat data → v1 nested format
+- Updated `LessonFlowScreen.tsx` selector: `s.quizResults` → `s.progress[s.currentChapterId]?.quizResults ?? {}`
+- All actions (completeModule, recordQuizAnswer, setCurrentModule) now operate on `progress[currentChapterId]`
+- Files affected: `useChapterStore.ts` (rewritten), `LessonFlowScreen.tsx` (selector update), `PRD8.md` (3 checkboxes marked)
+- Learnings for next cycles:
+  - Zustand persist migration uses `version` + `migrate` callback — version 0 is implicit (no version field)
+  - Avoid putting getter methods on the store; use selectors in components instead
+  - `ChapterProgress` interface: `{ completedModules: string[], quizResults: Record<string, QuizResult>, currentModuleIndex: number }`
+  - Default chapter ID is `"ch-1"` — chapter 2 will use `"ch-2"`
+  - `emptyProgress` constant used for lazy chapter initialization
+---
+
+## Iteration 5 — Create ChapterSelectScreen component (US-003, checkbox 1)
+- Created `ChapterSelectScreen.tsx` with large cards for Chapter 1 (Survival), Chapter 2 (Security), and a locked Chapter 3 (Growth) placeholder
+- Each card shows: chapter number (פרק N), title (Hebrew), icon emoji, module count, progress bar with percentage
+- Locked chapters render dimmed (opacity 0.4) with lock icon and "בקרוב" text
+- Uses GlowCard with per-chapter glow colors (orange/cyan/violet), AnimatedPressable for press interaction
+- Completed chapters shimmer (shimmer=true when 100%)
+- RTL support: writingDirection + textAlign on all Hebrew text
+- Calls `setCurrentChapter(storeId)` on press (navigation to ChapterMapScreen deferred to US-004/US-005)
+- Typecheck passes (npx tsc --noEmit exit 0)
+- Files affected: `ChapterSelectScreen.tsx` (new), `PRD8.md` (marked checkbox)
+- Learnings for next cycles:
+  - Chapter store IDs are "ch-1", "ch-2" (not "chapter-1", "chapter-2")
+  - Chapter data IDs are "chapter-1", "chapter-2" (different from store IDs)
+  - GlowCard accepts `pressable={false}` to disable internal press handling when wrapped in AnimatedPressable
+  - Future chapters can be added to the `chapters` array with `locked: true`
+---
+
+## Iteration 6 — Verify ChapterSelectScreen card content (US-003, checkbox 2)
+- Confirmed that each card already renders all required elements from Iteration 5:
+  - Chapter number (פרק N) via `card.data.pyramidLayer`
+  - Title (Hebrew) via `card.data.title`
+  - Icon/emoji via `card.icon`
+  - Module count via `card.data.modules.length`
+  - Overall progress percentage via `getProgressPercent()` with progress bar
+- Typecheck passes (npx tsc --noEmit exit 0)
+- Files affected: `PRD8.md` (marked checkbox)
+- Learnings for next cycles:
+  - Checkbox was missed in Iteration 5 despite feature being implemented — always mark all satisfied checkboxes
+---
+
+## Iteration 7 — Add "intro" phase to FlowPhase type (US-003, checkbox 1)
+- Added `"intro"` to `FlowPhase` union type in `LessonFlowScreen.tsx`
+- Changed initial phase from `"flashcards"` to `"intro"`
+- Added intro phase rendering block: full-screen dark GlowCard with cyan neon title, `mod.interactiveIntro` text, and "בואו נתחיל" CTA button
+- CTA transitions to `"flashcards"` phase
+- Updated subtitle text to show "הקדמה" during intro phase
+- Hidden progress bar during intro phase (same as summary)
+- Flow order is now: intro → flashcards → quizzes → summary
+- Files affected: `LessonFlowScreen.tsx` (modified), `PRD8.md` (marked checkbox)
+- Learnings for next cycles:
+  - `interactiveIntro` field already exists on `Module` type — no type changes needed
+  - Intro phase is a simple card + CTA, no complex interaction yet (matches US-003 checkbox 2 scope for `InteractiveIntroCard` extraction)
+  - Progress bar hidden during intro and summary phases via `phase !== "intro" && phase !== "summary"`
+---
+
+## Iteration 8 — Create InteractiveIntroCard component (US-003, checkbox 2)
+- Extracted inline intro phase rendering from `LessonFlowScreen.tsx` into a standalone `InteractiveIntroCard` component
+- Component accepts `title`, `introText`, and `onStart` props
+- Renders full-screen dark GlowCard with cyan neon title, intro description text, and "בואו נתחיל" CTA button
+- Updated `LessonFlowScreen.tsx` to import and use `InteractiveIntroCard` instead of inline JSX
+- Typecheck passes (npx tsc --noEmit exit 0)
+- Files affected: `InteractiveIntroCard.tsx` (new), `LessonFlowScreen.tsx` (updated), `PRD8.md` (marked checkbox)
+- Learnings for next cycles:
+  - `InteractiveIntroCard` lives in `chapter-1-content/` alongside `LessonFlowScreen` since that's where it's consumed
+  - Component has its own `RTL_STYLE` constant (not shared from LessonFlowScreen) to stay self-contained
+  - Props are minimal: title + introText + onStart callback — no Module dependency for reusability
+---
+
+## Iteration 9 — Verify InteractiveIntroCard meets design spec (US-003, checkbox 3)
+- Verified existing `InteractiveIntroCard` already satisfies all requirements:
+  - Full-screen dark card: GlowCard with cyan glow inside flex-1 centered container
+  - Neon-accented title: `text-cyan-300` with `font-black`
+  - Intro description text: renders `introText` prop in `text-zinc-200`
+  - "בואו נתחיל" CTA button: AnimatedPressable with cyan border/bg, triggers `onStart`
+- Typecheck passes (npx tsc --noEmit exit 0)
+- Files affected: `PRD8.md` (marked checkbox)
+- Learnings for next cycles:
+  - This checkbox was already implemented in Iteration 8 but not marked — always cross-check AC against implementation
+  - InteractiveIntroCard design: GlowCard(cyan) + AnimatedPressable CTA, RTL text styling throughout
+---
+
+## Iteration 10 — Verify flow order intro → flashcards → quizzes → summary (US-003, checkbox 4)
+- Verified existing LessonFlowScreen already implements correct flow order:
+  - FlowPhase type: `"intro" | "flashcards" | "quizzes" | "summary"`
+  - Initial phase: `"intro"` (useState default)
+  - intro → flashcards: InteractiveIntroCard `onStart` callback
+  - flashcards → quizzes: after last flashcard tap
+  - quizzes → summary: after last quiz answer (1800ms delay)
+  - summary → exit: router.back()
+- Typecheck passes (npx tsc --noEmit exit 0)
+- Files affected: `PRD8.md` (marked checkbox)
+- Learnings for next cycles:
+  - Flow was already correct from Iteration 7 — this was a verification-only task
+  - Phase transitions use setTimeout(1800ms) for quiz feedback before advancing
+---
+
+## Iteration 11 — Typecheck passes (US-003, checkbox 5)
+- Ran `npx tsc --noEmit` from project root — exit code 0, zero errors
+- All US-003 changes (InteractiveIntroCard, intro phase, flow order) compile cleanly
+- Files affected: `PRD8.md` (marked checkbox)
+- Learnings for next cycles:
+  - Typecheck continues to pass cleanly with all chapter-2 and intro-phase additions
+  - Next unchecked item is US-003 checkbox 6: "Verify changes work in browser"
+---
+
+## Iteration 12 — Chapter card navigation to ChapterMapScreen (US-004, checkbox 3)
+- Created `ChapterMapScreen.tsx` in `chapter-1-content/` — reusable component that renders any chapter's module list based on route param `id`
+- Created `app/chapter/[id].tsx` route file that renders ChapterMapScreen
+- Updated `ChapterSelectScreen.tsx`: added `useRouter` import and `router.push(/chapter/${card.data.id})` on card press
+- Updated `LessonFlowScreen.tsx`: added `chapter2Data` import, `CHAPTER_DATA_MAP` lookup, and `chapterId` query param support so modules from both chapters can be found
+- ChapterMapScreen features: back button, chapter title/description, progress bar, module list with completed (green checkmark), current (pulsing glow), and locked (dimmed) states
+- Navigation flow: ChapterSelectScreen → `/chapter/chapter-1` or `/chapter/chapter-2` → ChapterMapScreen → `/lesson/mod-X-Y?chapterId=chapter-N` → LessonFlowScreen
+- Typecheck passes (npx tsc --noEmit exit 0)
+- Files affected: `ChapterMapScreen.tsx` (new), `app/chapter/[id].tsx` (new), `ChapterSelectScreen.tsx` (updated), `LessonFlowScreen.tsx` (updated), `PRD8.md` (marked checkbox)
+- Learnings for next cycles:
+  - ChapterMapScreen lives in `chapter-1-content/` since it's a shared/reusable component (used by US-005 too)
+  - Route param `id` maps to chapter data IDs: "chapter-1", "chapter-2" (not store IDs "ch-1", "ch-2")
+  - `CHAPTER_MAP` in ChapterMapScreen maps data ID → { data, storeId, glowColor }
+  - LessonFlowScreen now has `CHAPTER_DATA_MAP` and searches all chapters as fallback if no chapterId param
+  - Module navigation uses query param: `/lesson/${mod.id}?chapterId=${chapter.id}`
+  - Next unchecked items: US-004 checkboxes 4-7 (locked styling, theme, typecheck, browser verify)
+---
+
+## Iteration 13 — Verify locked chapters appear dimmed with lock icon (US-004, checkbox 4)
+- Verified existing `ChapterSelectScreen.tsx` already satisfies all requirements:
+  - Dimmed: `opacity: 0.4` applied via style when `card.locked` is true (line 95)
+  - Lock icon: 🔒 emoji rendered in `Text` component when locked (lines 115-117)
+  - Disabled: `disabled={card.locked}` prevents press interaction (line 94)
+  - "בקרוב" text shown for locked chapters (lines 147-154)
+  - Progress bar and module count hidden for locked chapters (line 120)
+- Typecheck passes (npx tsc --noEmit exit 0)
+- Files affected: `PRD8.md` (marked checkbox)
+- Learnings for next cycles:
+  - This was already implemented in Iteration 5 but checkbox wasn't marked — always cross-check AC after implementation
+  - Locked chapter pattern: opacity 0.4 + 🔒 icon + disabled + "בקרוב" text + hidden progress
+  - Next unchecked item: US-004 checkbox 5: "Styling matches FinPlay dark/neon theme"
+---
+
+## Iteration 14 — Styling matches FinPlay dark/neon theme (US-004, checkbox 5)
+- Verified existing ChapterSelectScreen and ChapterMapScreen already follow dark/neon theme:
+  - Dark base: `bg-zinc-950` on SafeAreaView (matches all other screens)
+  - GlowCard with per-chapter neon glow colors: orange (#f97316), cyan (#38bdf8), violet (#a78bfa) — matches tailwind neon palette
+  - AnimatedPressable for press interactions with spring animation
+  - Shimmer animation on 100% completed chapters (shimmer=true)
+  - Neon-colored progress bars using chapter glowColor
+  - White primary text, zinc-400 secondary text, zinc-500 tertiary — consistent with EconomyHeader & other components
+  - Locked state: opacity 0.4 + 🔒 icon + "בקרוב" text (zinc-600)
+  - ChapterMapScreen: completed modules = green (#22c55e) glow, current = chapter glow with shimmer, locked = zinc glow + 0.4 opacity
+- Typecheck passes (npx tsc --noEmit exit 0)
+- Files affected: `PRD8.md` (marked checkbox)
+- Learnings for next cycles:
+  - Both screens already used GlowCard/AnimatedPressable from shared UI library — no styling changes needed
+  - Neon theme colors from tailwind.config.js: violet (#7c3aed), violet-light (#a78bfa), yellow (#facc15), green (#22c55e)
+  - Next unchecked item: US-004 checkbox 6: "Typecheck passes"
+---
+
+## Iteration 15 — Typecheck passes (US-004, checkbox 6)
+- Ran `npx tsc --noEmit` from project root — exit code 0, zero errors
+- All US-004 changes (ChapterSelectScreen, ChapterMapScreen, navigation) compile cleanly
+- Files affected: `PRD8.md` (marked checkbox)
+- Learnings for next cycles:
+  - Typecheck continues to pass with all chapter-2 and multi-chapter additions
+  - Next unchecked item: US-004 checkbox 7: "Verify changes work in browser"
+---
+
+## Iteration 16 — Chapter 2 Map Screen verification (US-005, checkboxes 1-4)
+- Verified that ChapterMapScreen (created in Iteration 12) already fully supports Chapter 2:
+  - `CHAPTER_MAP` has "chapter-2" entry mapping to chapter2Data with storeId "ch-2" and cyan glow
+  - Renders chapter2Data modules (10-14) correctly via `chapter.modules` iteration
+  - `handleModulePress` navigates to `/lesson/${mod.id}?chapterId=${chapter.id}` — passes Chapter 2 data
+  - LessonFlowScreen has `CHAPTER_DATA_MAP` with "chapter-2" entry, looks up modules by chapterId param
+- Typecheck passes (npx tsc --noEmit exit 0)
+- Files affected: `PRD8.md` (marked 4 checkboxes)
+- Learnings for next cycles:
+  - US-005 was fully implemented as part of Iteration 12 (ChapterMapScreen creation) — only needed verification
+  - ChapterMapScreen is generic: adding future chapters only requires adding entries to CHAPTER_MAP and CHAPTER_DATA_MAP
+  - Next unchecked items: US-003/US-004/US-005 "Verify changes work in browser" (manual), then US-006
+---

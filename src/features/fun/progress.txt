@@ -1,0 +1,155 @@
+# Progress Log — Fun Features (PRD_FunFeatures)
+
+## Learnings
+(Notes discovered during implementation)
+
+## Iteration 1 — US-001: Zustand Store (useFunStore)
+- Created `src/stores/useFunStore.ts` with Zustand + persist + AsyncStorage
+- State: hasUnreadMail, mailContent, easterEggNodeId, lastMailDate, pizzaIndexSeen
+- Actions: refreshMail (date-gated), openMail, rollEasterEgg (20% chance), claimEasterEgg
+- Helper fns: getTodayDateString, pickRandom (both typed, no `any`)
+- Typecheck: PASS (0 errors in this file)
+- Learnings for next cycles:
+  - Follow useTutorialStore pattern: persist + createJSONStorage + onRehydrateStorage + _hydrated
+  - Store key: "fun-store"
+  - claimEasterEgg only clears state; XP/coin granting will happen in the UI layer (US-006) via useEconomyStore.addXP/addCoins
+  - refreshMail takes jokes/facts arrays as params so it doesn't import data — keeps store decoupled from content
+---
+
+## Iteration 2 — US-002: Captain Shark Jokes & Facts Data
+- Created `src/features/fun/finnJokesData.ts`
+- Exports: FINN_DAD_JOKES (21 items), FINN_FUN_FACTS (21 items), FINN_MEME_REACTIONS (12 items)
+- All content Hebrew, Gen-Z friendly, financially relevant
+- Typecheck: PASS (0 errors)
+- Learnings for next cycles:
+  - Store's refreshMail(jokes, facts) takes arrays as params — callers import from this file
+  - FINN_MEME_REACTIONS will be used by US-005 meme flashcards
+  - Pure data file, no dependencies — safe to import from any feature
+---
+
+## Status
+- US-001: DONE
+- US-002: DONE
+- US-003: DONE
+- US-004: DONE
+- US-005: DONE
+- US-006: DONE
+- US-007: DONE
+- US-008: DONE
+
+## Iteration 3 — US-003: Mail Icon in Header
+- Added mail Lottie icon (wired-flat-411-news-newspaper-hover-pinch.json, 20px) next to settings button in GlobalWealthHeader.tsx
+- Icon only visible when useFunStore().hasUnreadMail === true
+- Pulse animation via Reanimated withRepeat (scale 1→1.25→1, 800ms each way)
+- Pressing icon opens FinnMailModal (stub created for US-004)
+- refreshMail() called on header mount with FINN_DAD_JOKES/FINN_FUN_FACTS
+- Created stub FinnMailModal.tsx — minimal modal shell for US-004 to flesh out
+- Typecheck: PASS (0 errors)
+- Files affected: src/components/ui/GlobalWealthHeader.tsx, src/features/fun/FinnMailModal.tsx (new)
+- Learnings for next cycles:
+  - Mail icon lives inside shortcutIcons View, after Settings button
+  - showMailModal state + FinnMailModal rendered in GlobalWealthHeader
+  - FinnMailModal stub accepts { visible, onClose } props — US-004 will add full content
+  - refreshMail fires on mount alongside refillHearts in same useEffect
+  - Pulse uses mailPulse shared value, resets to 1 when hasUnreadMail=false
+---
+
+## Iteration 4 — US-004: FinnMailModal Full Content
+- Replaced stub FinnMailModal.tsx with full implementation
+- Modal shows: FINN_HAPPY WebP (100x100) + "דואר מקפטן שארק" title
+- Joke displayed in speech bubble style (light blue bg, border, triangle tail)
+- Fun fact displayed in info card style ("ידעת?" label + fact text)
+- "סגור" CTA button at bottom (STITCH blue #0ea5e9)
+- On open: calls useFunStore().openMail() to mark mail as read
+- X close button top-left (RTL layout)
+- Staggered FadeInDown animations following RedemptionModal pattern
+- STITCH design: white card, soft shadow, blue accents, rounded corners
+- Files affected: src/features/fun/FinnMailModal.tsx
+- Typecheck: PASS (0 errors)
+- Learnings for next cycles:
+  - FinnMailModal reads mailContent from useFunStore — requires refreshMail() to have been called first (done in GlobalWealthHeader on mount)
+  - openMail() called inline when visible && hasUnreadMail (no useEffect needed for this simple side-effect)
+  - Close button uses X from lucide-react-native, positioned top-left for RTL
+  - speechTail uses CSS triangle trick (border hack) for the bubble pointer
+  - Card is position: absolute inside centered overlay to avoid backdrop press issues
+---
+
+## Iteration 5 — US-005: Meme Break Flashcard Type
+- Added isMeme and memeImageUri optional fields to Flashcard interface in types.ts
+- Added meme card rendering branch in FlashcardCard (LessonFlowScreen.tsx): dark card (#1e293b) with optional meme image, Finn HAPPY avatar, reaction text bubble, and "המשך" button
+- Imported FINN_HAPPY from finnMascotConfig and FINN_MEME_REACTIONS from finnJokesData into LessonFlowScreen
+- Hidden title row and compacted progress bar margin for meme cards (same as comic cards)
+- Added 2 meme cards to chapter1Data.ts: meme-1-1 (after fc-1-1-3) and meme-1-2 (after fc-1-2-3) with Hebrew reaction texts
+- Meme cards are purely navigational — they advance flashcardIndex but grant no XP/progress by design (no special skip logic needed since XP is granted only in quiz/sim phases)
+- Files affected: src/features/chapter-1-content/types.ts, src/features/chapter-1-content/LessonFlowScreen.tsx, src/features/chapter-1-content/chapter1Data.ts
+- Typecheck: PASS (0 errors in modified files)
+- Learnings for next cycles:
+  - Meme card text falls back to random FINN_MEME_REACTIONS if card.text is empty
+  - memeImageUri supports any URI string via ExpoImage — future meme images can be added without code changes
+  - The ternary in FlashcardCard is now: isMeme → isComic → text (3-way branch)
+  - Title row and progress bar conditions updated to also hide/compact for isMeme
+  - No emoji in UI text per STITCH rules — reaction text is plain Hebrew
+---
+
+## Iteration 6 — US-006: Easter Egg Coin on Learning Map
+- Added `useFunStore`, `FlyingRewards`, `successHaptic` imports to DuoLearnScreen.tsx
+- Added `hasEasterEgg` and `onClaimEasterEgg` props to ModuleNode component
+- Added bouncing gold Lottie coin (28px) above completed nodes when easterEggNodeId matches
+- Coin uses `wired-flat-298-coins-hover-jump.json` with LottieView autoPlay + loop + FadeInDown entering
+- Added `easterEggNodeId` and `onClaimEasterEgg` props to ChapterSection, passed through to ModuleNode
+- In DuoLearnScreen main component:
+  - `useFocusEffect` rolls Easter egg on screen focus (collects all completedModules across all chapters)
+  - `handleClaimEasterEgg`: calls claimEasterEgg() + addXP(15, "chest_reward") + addCoins(10) + successHaptic()
+  - Shows staggered FlyingRewards (coins first, then XP 600ms later)
+- Easter egg coin is a Pressable inside the nodeCol View, positioned absolute top: -28, zIndex: 10
+- Files affected: src/features/pyramid/DuoLearnScreen.tsx, src/features/fun/PRD_FunFeatures.md
+- Typecheck: PASS (0 errors)
+- Learnings for next cycles:
+  - Easter egg state is managed entirely by useFunStore — roll on focus, claim on press
+  - XP/coin granting happens in UI layer via useEconomyStore.addXP/addCoins (as noted in US-001 learnings)
+  - XPSource "chest_reward" used for Easter egg XP (matches existing enum)
+  - FlyingRewards rendered at SafeAreaView level (not inside ScrollView) for correct positioning
+  - Coin overlay sits inside nodeCol View (same parent as the node circle) for correct relative positioning
+---
+
+## Iteration 7 — US-007: Pizza Index Screen
+- Created `src/features/fun/PizzaIndexScreen.tsx` — humorous stats screen with 4 GlowCard stat cards
+- Created `app/pizza-index.tsx` route file (Expo Router)
+- 4 stat cards: pizzas (XP/35), coffee days (streak), compound interest (coins x 1.05^10), mock leaderboard rank
+- Each card has: Lottie icon (coins/growth/bulb/trophy), Hebrew title, big value number, subtitle explanation
+- "שתף עם חברים" share button using RN Share API — builds Hebrew message with user stats
+- STITCH design: SimLottieBackground, GlowCard, blue accents, FINN_HAPPY avatar in header
+- BackButton, RTL text alignment, FadeInUp/FadeInDown staggered animations
+- Uses useEconomyStore for xp/coins/streak data
+- Files affected: src/features/fun/PizzaIndexScreen.tsx (new), app/pizza-index.tsx (new)
+- Typecheck: PASS (0 errors)
+- Learnings for next cycles:
+  - SimLottieBackground requires exactly 2 lottie sources (tuple type), not 1
+  - LottieView source type is not `number` — use `ReturnType<typeof require>` for require() results
+  - StatCard lottie assets reuse SIM_LOTTIE map entries (coins, growth, bulb, trophy)
+  - Share.share({ message }) pattern — same as ReferralScreen, DailyLearningSummary
+  - Route follows simple pattern: import component, export default wrapper (see scenario-lab.tsx)
+  - Mock leaderboard uses deterministic formula: 100 - xp/50 - streak*2 (clamped to min 1)
+  - String concatenation used instead of template literals for stat values (simpler, avoids escaping)
+  - Note: US-008 will add link from MoreScreen to /pizza-index route
+---
+
+
+## Iteration 8 — US-008: Integration in MoreScreen
+- Added "פינת הכיף" section between Features and Account sections in MoreScreen.tsx
+- Two rows: "דואר מקפטן שארק" (opens FinnMailModal) + "מדד הפיצות" (navigates to /pizza-index)
+- Mail row: wired-flat-411-news-newspaper-hover-pinch.json Lottie icon, "חדש" badge (STITCH_BLUE.primary) when useFunStore().hasUnreadMail is true
+- Pizza row: wired-flat-298-coins-hover-jump.json Lottie icon, navigates via router.push("/pizza-index")
+- FinnMailModal rendered inside SafeAreaView (after ScrollView) with showMailModal state
+- Added imports: useFunStore, FinnMailModal, useState
+- Renumbered existing sections (Account → 3, Info → 4) to accommodate new section 2
+- Animation delay staggered: Features 100ms → Fun 150ms → Account 200ms → Info 300ms → Actions 400ms
+- Files affected: src/features/more/MoreScreen.tsx, src/features/fun/PRD_FunFeatures.md, src/features/fun/progress.txt
+- Typecheck: PASS (0 errors)
+- Learnings for next cycles:
+  - MoreRow badge prop accepts string | undefined — use ternary with undefined for conditional badges
+  - badgeColor overrides default gray — STITCH_BLUE.primary (#0ea5e9) for "new" badge
+  - FinnMailModal pattern: { visible, onClose } — same as used in GlobalWealthHeader
+  - Fun section positioned between Features and Account per PRD spec
+  - All PRD Fun Features (US-001 through US-008) are now COMPLETE
+---

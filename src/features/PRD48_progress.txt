@@ -1,0 +1,310 @@
+# PRD 48 — Launch Readiness Progress
+
+## Already Done (pre-Ralph)
+- .easignore created and verified ✅
+- .env in .gitignore ✅
+- App name already "FinPlay" ✅
+- OAuth Client IDs configured (Web, iOS, Android) ✅
+- OAuth Consent Screen in production mode ✅
+- Terms screen exists (app/(auth)/terms.tsx) ✅
+- PRD 47 (Simulator Visual Overhaul) completed — all 29 sims ✅
+
+## Learnings
+- Icon/splash files: check `assets/IMAGES/` for available PNG files
+- ErrorBoundary must be a class component (hooks can't catch render errors)
+- Chapter 1 sims: follow same text-shadow pattern as Chapters 2-5
+- app/_layout.tsx is complex — ErrorBoundary should wrap outermost Stack
+
+## Iteration 1 — US-001: App Branding & Assets
+- Added `icon`, `splash`, `adaptiveIcon`, and `description` to app.json
+- Used `./assets/IMAGES/LOGOAPP.png` for icon, splash image, and adaptive icon foreground
+- Splash backgroundColor: `#0a1628` (dark navy, matches app theme)
+- Files affected: app.json, PRD48_LaunchReadiness.md
+- Learnings for next cycles:
+  - LOGOAPP.png exists and works for all icon/splash needs
+  - Pre-existing TS errors: expo-blur, FeedSidebar.primary, friends-clash XPSource — ignore these
+  - For a proper splash, a dedicated higher-res splash image (1284×2778) would be ideal but LOGOAPP.png works for now
+---
+
+## Iteration 2 — US-004: Static Terms/Privacy Page + app.json Privacy URL
+- Created `public/privacy-policy.html` — static RTL Hebrew page with all 8 terms sections + contact section
+- Content mirrors `app/(auth)/terms.tsx` SECTIONS array exactly, plus a contact email section
+- Styled to match app theme (dark navy bg #09111f, cyan headings #22d3ee)
+- Added `NSPrivacyPolicyURL` to `expo.ios.infoPlist` in app.json → `https://yrubin.github.io/finpl/privacy-policy.html`
+- Files affected: public/privacy-policy.html (new), app.json, PRD48_LaunchReadiness.md
+- Learnings for next cycles:
+  - Expo serves files from `public/` directory for web builds
+  - For store submission, page must be hosted at a public URL — GitHub Pages is the simplest option
+  - The URL in app.json assumes GitHub Pages hosting at `yrubin.github.io/finpl/` — update if hosting elsewhere
+  - Contact email updated to `yoav.finplay@gmail.com`
+---
+
+## Iteration 3 — US-008: Global ErrorBoundary
+- Created `src/components/ui/ErrorBoundary.tsx` — class component with gaming-neon error screen
+- Wraps outermost JSX in `app/_layout.tsx` (outside RewardAnimationProvider/StreakCelebrationProvider)
+- Error screen: dark navy bg (#09111f), red warning icon, Hebrew text, cyan retry button
+- Shows error.message in DEV mode only (monospace, truncated to 6 lines)
+- "נסה שוב" button resets error state to re-render children
+- Uses inline styles (not NativeWind) since error boundary must work even if styling system fails
+- Files affected: src/components/ui/ErrorBoundary.tsx (new), app/_layout.tsx, PRD48_LaunchReadiness.md
+- Learnings for next cycles:
+  - ErrorBoundary uses inline styles intentionally — if NativeWind/global.css fails, the error screen still renders
+  - `__DEV__` global is available in RN for dev-only UI
+  - Class component pattern: getDerivedStateFromError for state update, render for fallback UI
+---
+
+## Iteration 4 — US-005 (1/5): API Route — auth/verify
+- Created `app/api/auth/verify+api.ts` — first Expo API route in the project
+- POST endpoint accepts `{ provider: 'google' | 'email', token?, email?, displayName? }`
+- Google flow: verifies access token against Google userinfo API, extracts email + name
+- Email flow: accepts email + displayName directly (for email/password login)
+- Upserts user_profiles row in Neon DB using same pattern as syncUserProfile.ts
+- Returns full user profile after upsert
+- Server-side DB client created per-request (stateless, uses DATABASE_URL or EXPO_PUBLIC_DATABASE_URL)
+- Files affected: app/api/auth/verify+api.ts (new), PRD48_LaunchReadiness.md
+- Learnings for next cycles:
+  - Expo Router API routes use `+api.ts` suffix, export named HTTP methods (GET, POST, etc.)
+  - Routes use standard Web APIs (Request/Response), not Express-style req/res
+  - `Response.json()` is the standard way to return JSON responses
+  - Server-side code can access non-EXPO_PUBLIC_ env vars (DATABASE_URL)
+  - DB client uses same @neondatabase/serverless + drizzle-orm pattern as client code
+  - Remaining US-005 routes: sync/profile, sync/progress, sync/inventory, trading/quote
+---
+
+## Iteration 5 — US-005 (2/5): API Route — sync/profile
+- Created `app/api/sync/profile+api.ts` — GET + POST endpoints for user profile sync
+- GET `/api/sync/profile?authId=xxx` — fetches profile by authId, returns null if not found
+- POST `/api/sync/profile` — upserts profile by authId, mirrors syncUserProfile.ts fields exactly
+- Supports all UpsertUserProfileData fields: displayName, email, avatarUrl, level, xp, coins, gems, currentStreak, longestStreak, isPro
+- Returns full profile after upsert (same pattern as auth/verify)
+- Uses same getDb() helper pattern as auth/verify route
+- Files affected: app/api/sync/profile+api.ts (new), PRD48_LaunchReadiness.md
+- Learnings for next cycles:
+  - Expo API routes support multiple HTTP method exports in one file (GET, POST, PUT, etc.)
+  - GET endpoints receive params via URL searchParams, POST via request body
+  - The sync/progress route will need to resolve authId → userId (UUID) for the foreign key, same as syncModuleProgress.ts
+  - The sync/inventory route similarly needs authId → userId resolution
+  - Remaining US-005 routes: sync/progress, sync/inventory, trading/quote
+---
+
+## Iteration 6 — US-005 (3/5): API Route — sync/progress
+- Created `app/api/sync/progress+api.ts` — GET + POST endpoints for module progress sync
+- GET `/api/sync/progress?authId=xxx` — fetches all module progress rows for a user
+- POST `/api/sync/progress` — upserts module progress by (userId, moduleId) unique constraint
+- Resolves authId → internal UUID via helper function (same pattern as syncModuleProgress.ts)
+- Supports all moduleProgress fields: moduleName, status, quizScore, quizAttempts, bestScore, xpEarned
+- Sets completedAt automatically when status === 'completed'
+- Returns full progress array after upsert (all modules, not just the one updated)
+- POST returns 404 if authId doesn't resolve to a user (can't insert without userId FK)
+- Files affected: app/api/sync/progress+api.ts (new), PRD48_LaunchReadiness.md
+- Learnings for next cycles:
+  - resolveUserId helper is duplicated per route — could be extracted to a shared server util later
+  - The inventory route (next) follows the exact same authId → userId resolution pattern
+  - inventory table has (userId, itemId) unique constraint, similar to (userId, moduleId) in progress
+  - Remaining US-005 routes: sync/inventory, trading/quote
+---
+
+## Iteration 7 — US-005 (4/5): API Route — sync/inventory
+- Created `app/api/sync/inventory+api.ts` — GET + POST endpoints for inventory item sync
+- GET `/api/sync/inventory?authId=xxx` — fetches all inventory items for a user
+- POST `/api/sync/inventory` — upserts inventory item by (userId, itemId) unique constraint
+- Resolves authId → internal UUID via resolveUserId helper (same pattern as progress route)
+- Supports all inventory table fields: itemType (chest/streak_multiplier/booster/cosmetic), itemName, quantity, isActive, metadata (jsonb), expiresAt
+- POST requires itemId + itemType (both mandatory), validates before DB call
+- POST returns 404 if authId doesn't resolve to a user (can't insert without userId FK)
+- Returns full inventory array after upsert (all items, not just the one updated)
+- Files affected: app/api/sync/inventory+api.ts (new), PRD48_LaunchReadiness.md
+- Learnings for next cycles:
+  - resolveUserId helper is now duplicated in 3 routes — extraction to shared util would reduce duplication
+  - The trading/quote route (next) is different: it's a proxy to Alpha Vantage API, not a DB sync route
+  - trading/quote will need the ALPHA_VANTAGE_API_KEY env var on the server side
+  - Remaining US-005 routes: trading/quote
+---
+
+## Iteration 8 — US-005 (5/5): API Route — trading/quote
+- Created `app/api/trading/quote+api.ts` — GET endpoint proxying Yahoo Finance chart API
+- GET `/api/trading/quote?ticker=AAPL&timeframe=1D` — returns current price + chart data
+- Mirrors the Yahoo Finance logic from `src/features/trading-hub/marketApiService.ts` exactly
+- Includes same ticker mapping (BTC→BTC-USD, ETH→ETH-USD, XAU→GC=F, XAG→SI=F)
+- Includes same timeframe→interval/range mapping (1MIN, 5MIN, 1H, 1D, 1W)
+- Returns `{ ok, ticker, timeframe, price, chart: [{timestamp, price}] }`
+- Returns 502 if Yahoo Finance is unreachable, 404 if ticker not found
+- No DB access needed — this is a pure proxy route, unlike the sync routes
+- Files affected: app/api/trading/quote+api.ts (new), PRD48_LaunchReadiness.md
+- Learnings for next cycles:
+  - PRD said "Alpha Vantage" but actual code uses Yahoo Finance — route proxies Yahoo Finance
+  - No API key needed — Yahoo Finance v8 chart endpoint is unauthenticated
+  - US-005 is now COMPLETE — all 5 API routes are built
+  - Next task: US-006 (client-side migration) — replace direct Yahoo/DB calls with fetch to API routes
+  - The client-side `marketApiService.ts` already has mock fallback; when migrating, the API route can handle that server-side
+---
+
+## Iteration 9 — US-006 (1/2): Client-side migration — sync files to API routes
+- Rewrote all 3 sync files to use fetch() instead of direct Drizzle/Neon DB calls:
+  - `src/db/sync/syncUserProfile.ts` → calls `POST/GET /api/sync/profile`
+  - `src/db/sync/syncModuleProgress.ts` → calls `POST/GET /api/sync/progress`
+  - `src/db/sync/syncInventory.ts` → calls `POST /api/sync/profile` (economy lives on user_profiles, not inventory table)
+- Created `src/db/apiBase.ts` — helper to resolve API base URL:
+  - Uses `EXPO_PUBLIC_API_URL` env var if set
+  - Falls back to `expo-constants` hostUri (dev server URL) in development
+  - Caches result after first call
+- No changes needed to calling stores (useAuthStore, useEconomyStore, useChapterStore) — function signatures preserved exactly
+- Files affected: src/db/apiBase.ts (new), src/db/sync/syncUserProfile.ts, src/db/sync/syncModuleProgress.ts, src/db/sync/syncInventory.ts, PRD48_LaunchReadiness.md
+- Learnings for next cycles:
+  - syncInventory syncs economy (XP/coins/gems) to user_profiles — NOT the inventory table. Maps to profile API, not inventory API
+  - expo-constants is bundled with expo SDK 55, no explicit dep needed
+  - Function signatures unchanged = zero changes needed in consuming stores (fire-and-forget pattern preserved)
+  - src/db/client.ts still exists but is no longer imported by any sync file — only by API routes (server-side)
+  - Next sub-task: remove @neondatabase/serverless from client bundle (move to server-only)
+  - The marketApiService.ts Yahoo Finance migration is separate from the DB sync migration
+---
+
+## Iteration 10 — US-006 (2/2): Remove @neondatabase/serverless from client bundle
+- Deleted `src/db/client.ts` — the only client-side file that imported `@neondatabase/serverless`
+- Verified no client code (`src/**/*.ts(x)`) imports `client.ts` — all sync files already migrated to fetch in iteration 9
+- API routes (`app/api/**+api.ts`) import `neon` directly from `@neondatabase/serverless` — server-only, not bundled in client
+- API routes also import `src/db/schema.ts` directly — schema stays for server use
+- Package `@neondatabase/serverless` remains in `package.json` — still needed server-side by API routes
+- Files affected: src/db/client.ts (deleted), PRD48_LaunchReadiness.md
+- Learnings for next cycles:
+  - `src/db/schema.ts` and `src/db/relations.ts` are still used by API routes (server-side imports)
+  - Expo Router `+api.ts` files are server-only — their imports don't leak into the client bundle
+  - US-006 is now COMPLETE — all client-side DB dependencies removed
+  - Next priority: US-003 (remove EXPO_PUBLIC_DATABASE_URL from .env) — now safe since no client code uses it
+  - Remaining code-automatable tasks: US-008 (network errors), US-010 (Chapter 1 sims), US-011 (ProWelcomeScreen)
+---
+
+## Iteration 11 — US-003: Remove EXPO_PUBLIC_DATABASE_URL from client
+- Removed `EXPO_PUBLIC_DATABASE_URL` line from `.env` — DB URL no longer exposed to client bundle
+- Updated all 4 API routes to use only `DATABASE_URL` (removed fallback to EXPO_PUBLIC_DATABASE_URL):
+  - `app/api/auth/verify+api.ts`
+  - `app/api/sync/profile+api.ts`
+  - `app/api/sync/progress+api.ts`
+  - `app/api/sync/inventory+api.ts`
+- Marked both US-003 checkboxes complete (removal + API migration was already done in US-005/006)
+- Files affected: .env, 4 API route files, PRD48_LaunchReadiness.md
+- Learnings for next cycles:
+  - `DATABASE_URL` (non-public) is only accessible server-side — Expo strips non-EXPO_PUBLIC_ vars from client
+  - The duplicate env var existed because client code previously needed it; now only server API routes use DB
+  - `drizzle.config.ts` already used `DATABASE_URL` (no change needed)
+  - Zero references to EXPO_PUBLIC_DATABASE_URL remain in any .ts/.tsx/.js/.json files
+  - Next code-automatable tasks: US-008 (network error handling), US-010 (Chapter 1 sims), US-011 (ProWelcomeScreen)
+---
+
+## Iteration 12 — US-008: Network Error Handling (offline banner)
+- Installed `@react-native-community/netinfo` via `npx expo install`
+- Created `src/hooks/useNetworkStatus.ts` — hook wrapping NetInfo.addEventListener, returns { isConnected, isInternetReachable }
+- Created `src/components/ui/NetworkStatusBanner.tsx` — red banner with WifiOff icon + "אין חיבור לאינטרנט" message
+- Banner slides in from top (spring animation) when offline, slides out when back online
+- Uses same reanimated pattern as NotificationBanner but with persistent display (no auto-dismiss)
+- zIndex 1000 (above NotificationBanner's 999) so it always shows on top
+- Added NetworkStatusBanner to app/_layout.tsx inside StreakCelebrationProvider (alongside other global overlays)
+- Files affected: src/hooks/useNetworkStatus.ts (new), src/components/ui/NetworkStatusBanner.tsx (new), app/_layout.tsx, package.json
+- Learnings for next cycles:
+  - `@react-native-community/netinfo` is Expo SDK 55 compatible, installed via `npx expo install`
+  - NetInfo provides both `isConnected` (has network) and `isInternetReachable` (can reach internet) — check both
+  - NetInfoState fields can be null on first check, default to true to avoid false-positive offline banner
+  - Pre-existing TS errors unchanged: expo-blur, FeedSidebar.primary, friends-clash XPSource
+  - Remaining US-008 tasks: Sentry integration (expo-sentry)
+  - Next code-automatable tasks: US-009 (performance), US-010 (Chapter 1 sims), US-011 (ProWelcomeScreen)
+---
+
+## Iteration 13 — US-009: Lazy loading for simulation screens
+- Created `src/features/chapter-1-content/SimulatorLoader.tsx` — centralized sim loader using deferred `require()`
+- Replaced 5 static import lines (29 sim components) in LessonFlowScreen.tsx with single `SimulatorLoader` import
+- Replaced 59-line ternary chain (lines 1890-1948) with single `<SimulatorLoader moduleId={mod.id} onComplete={handleSimComplete} />`
+- SimulatorLoader uses `Record<string, () => SimScreen>` map with inline `require()` calls — modules only evaluated when first rendered
+- Component is `memo`-wrapped and uses `useMemo` on the resolved component to avoid re-requiring
+- LessonFlowScreen.tsx reduced by ~62 lines (5 import lines + 58 ternary lines → 2 lines)
+- Files affected: SimulatorLoader.tsx (new), LessonFlowScreen.tsx
+- Learnings for next cycles:
+  - Metro bundler includes all `require()` calls in the bundle regardless, but defers module evaluation until the function containing `require()` is called
+  - `React.lazy()` in React Native doesn't split bundles either — deferred `require()` achieves the same effect more simply with named exports
+  - All 29 module IDs must be kept in sync between MODULES_WITH_SIM set and SIM_LOADERS map
+  - Pre-existing TS errors unchanged: expo-blur, FeedSidebar.primary, friends-clash XPSource
+  - Next US-009 tasks: Lottie optimization, memory usage check (manual)
+  - Next code-automatable tasks: US-009 Lottie, US-010 (Chapter 1 sims), US-011 (ProWelcomeScreen)
+---
+
+## Iteration 14 — US-010: Chapter 1 sims text visibility (white text + shadows)
+- Applied white text + shadows pattern to all 9 Chapter 1 simulation screens
+- Added SHADOW_STRONG and SHADOW_LIGHT helper constants to each file for consistent shadow application
+- Changed gradient-facing text from dark colors (CH1.textPrimary '#1f2937', CH.text '#1f2937', CH_MUTED '#64748b') to:
+  - Primary text on gradient: '#ffffff' with strong shadow (rgba(0,0,0,0.5), offset 0/1, radius 4)
+  - Secondary text on gradient: '#e0f2fe' with light shadow (rgba(0,0,0,0.3), offset 0/1, radius 3)
+- Key rule: ONLY changed text directly on gradient background. Text inside GlowCards, panels with panelBg/cardBg, and buttons was left unchanged (they have light backgrounds where dark text is readable)
+- Files affected (all 9 Chapter 1 sims):
+  - BudgetGameScreen.tsx — BucketBar labels, progress indicator, ScoreScreen grade label
+  - PayslipNinjaScreen.tsx — statValue, statLabel, ScoreScreen grade label
+  - CarLoanRaceScreen.tsx — speedLabel, ScoreScreen grade label
+  - EmergencyFundScreen.tsx — shieldLabel, resultText, ScoreScreen grade label
+  - MinusTrapGameScreen.tsx — BalanceBar min/max labels, progress indicator, ScoreScreen grade label
+  - ShoppingCartScreen.tsx — budgetBarLabel, budgetBarSummary, progressIndicator, ScoreScreen grade label
+  - BankCombatScreen.tsx — healthBarLabel, roundIndicator, ScoreScreen grade label
+  - CompoundSimScreen.tsx — YearSlider year display, min/max labels, StepperInput label, summary title
+  - SnowballGameScreen.tsx — SnowballVisual status, stat labels, SalaryBar labels, ScoreScreen grade label
+- Learnings for next cycles:
+  - Chapter 1 was the ONLY chapter with dark `text` color (#1f2937) in OCEAN_CHAPTER_PALETTE — Chapters 2-5 all use #ffffff
+  - The theme `text` property was NOT changed (would break text inside GlowCards that use CH.text). Instead, gradient-facing text was individually updated.
+  - Pattern: titles/subtitles already had white+shadow from earlier iterations; this iteration completed the remaining gradient-facing elements
+  - Pre-existing TS errors unchanged: expo-blur, FeedSidebar.primary, friends-clash XPSource, shop priceLabel
+  - Next code-automatable tasks: US-008 Sentry, US-009 Lottie optimization, US-011 (ProWelcomeScreen)
+---
+
+## Iteration 15 — US-009: Lottie optimization — exclude unused files from build
+- Audited all 202 Lottie JSON files in assets/lottie/ against all .ts/.tsx source code
+- Found 85 files (3.8MB) not referenced by any source code — dead weight in builds
+- Added all 85 unused Lottie files to `.easignore` with descriptive comment
+- Build archive reduced by ~3.8MB (from already-reduced .easignore baseline)
+- 117 Lottie files remain in build — all actively referenced by source code
+- Files affected: .easignore
+- Learnings for next cycles:
+  - Total Lottie folder is 19MB; 3.8MB (20%) was unused — meaningful savings
+  - `.easignore` excludes files from EAS build archive only, not from git or local dev
+  - Files are excluded by exact path (assets/lottie/filename.json), not glob patterns
+  - Sea creatures subfolder (assets/lottie/sea/) — all 5 files are actively used
+  - Custom animations (finn.json, warren-buffett.json, etc.) — all actively used
+  - If new Lottie files are added in future, re-audit to keep .easignore current
+  - Pre-existing TS errors unchanged: expo-blur, Diamond, FeedSidebar.primary, friends-clash XPSource
+  - Next code-automatable tasks: US-008 Sentry, US-011 (ProWelcomeScreen)
+---
+
+## Iteration 16 — US-008: Sentry integration (error tracking)
+- Installed `@sentry/react-native` via `npx expo install` (SDK 55 compatible)
+- Created `src/lib/sentry.ts` — centralized init + captureException helper
+  - Reads DSN from `EXPO_PUBLIC_SENTRY_DSN` env var
+  - Gracefully skips init if no DSN configured (dev-friendly)
+  - Configures tracesSampleRate: 1.0 in dev, 0.2 in prod
+  - enableAutoSessionTracking for crash-free session metrics
+- Updated `src/components/ui/ErrorBoundary.tsx`:
+  - Added `componentDidCatch` to report uncaught render errors to Sentry
+  - Includes componentStack in error context for debugging
+- Updated `app/_layout.tsx` — calls `initSentry()` at module level (before any component renders)
+- Updated `app.json` — added `@sentry/react-native/expo` plugin with org/project placeholders
+- Files affected: src/lib/sentry.ts (new), src/components/ui/ErrorBoundary.tsx, app/_layout.tsx, app.json, package.json
+- Learnings for next cycles:
+  - `@sentry/react-native` is the correct package for Expo SDK 55 (not `sentry-expo` which is deprecated)
+  - Sentry must be initialized at module level (before React renders) for best coverage
+  - DSN is required for Sentry to actually send events — add `EXPO_PUBLIC_SENTRY_DSN=https://...@sentry.io/...` to .env
+  - The plugin in app.json needs real organization/project values from sentry.io dashboard
+  - `componentDidCatch` is the right place for error reporting; `getDerivedStateFromError` is for UI state only
+  - Pre-existing TS errors unchanged: expo-blur, FeedSidebar.primary, friends-clash XPSource
+  - Next code-automatable tasks: US-011 (ProWelcomeScreen Ocean Redesign)
+---
+
+## Iteration 17 — US-011: ProWelcomeScreen Ocean Redesign
+- Replaced `CHAT BACK.jpg` background with `HOMEPAGE.png` (ocean underwater scene with coral & fish)
+- Replaced generic bubble Lotties (Bubbles.json, jumping blue bubbles.json) with 4 sea creature Lotties:
+  - Fish (top-left), Dolphin (top-right), Starfish (bottom-left), Seahorse (bottom-right)
+  - Subtle opacity (0.25–0.35) and slow speeds (0.3–0.4) for ambient ocean feel
+- Increased dark overlay opacity from 0.45 → 0.55 for text readability on lighter ocean background
+- Kept all existing elements: confetti (2 layers), Crown Lottie, Finn mascot Lottie, ProBadge, benefits list, CTA
+- Files affected: src/features/subscription/ProWelcomeScreen.tsx, PRD48_LaunchReadiness.md
+- Learnings for next cycles:
+  - HOMEPAGE.png is portrait-oriented ocean underwater scene — ideal for phone backgrounds
+  - THEME.jpeg is landscape (Finn shark mascot) — better for marketing/web, not phone screens
+  - Sea creature Lotties in `assets/lottie/sea/` are all small (hover-pinch style) — good for ambient decoration
+  - Pre-existing TS errors unchanged: expo-blur, FeedSidebar.primary, friends-clash XPSource
+  - All code-automatable PRD48 tasks are now COMPLETE
+  - Remaining tasks are manual: SHA-1 fingerprint, OAuth verification, memory check, store submissions
+---

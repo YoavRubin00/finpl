@@ -1,0 +1,426 @@
+# PRD 32 Progress Log
+
+## Learnings (shared context for all iterations)
+- PRD 32 dir: `src/features/social/`
+- PRD 35 (Neon DB) is complete — Neon HTTP client available via `src/db/`
+- Economy store: `useEconomyStore` at `src/features/economy/useEconomyStore.ts`
+- Auth store: `useAuthStore` at `src/features/auth/useAuthStore.ts`
+- All new screens enter via "עוד" tab → `src/features/more/MoreScreen.tsx`
+- Expo Router navigation: `useRouter` from `expo-router`
+- CLASH theme: `import { CLASH } from '@/constants/theme'`
+- Shared UI: DiamondBackground, GoldBorderCard, SupercellButton, SparkleOverlay
+- Pattern: types → data → store → screen → integration
+- Pre-existing TS errors to ignore: FeedSidebar.tsx CLASH.primary, useClashStore.ts XPSource, GlassOverlay.tsx expo-blur
+- XPSource values: `lesson_complete | quiz_correct | streak_bonus | challenge_complete | onboarding | daily_task | sim_complete | chest_reward`
+
+---
+
+## Iteration 1 — US-001 AC1: Create DuelsScreen (lobby + matchmake)
+- Created types.ts with DuelMatch, DuelOpponent, DuelRecord, DuelStatus
+- Created duelData.ts with mock opponents, duel constants (60s, 8 questions, 50/10 coins)
+- Created useDuelsStore.ts with full game lifecycle: matchmaking → playing → finished
+  - Pulls questions from all 5 chapter quizzes, shuffles randomly
+  - Mock opponent with ~55% accuracy
+  - Awards coins via useEconomyStore on finish
+  - Persists win/loss/draw record to AsyncStorage
+- Created DuelsScreen.tsx with:
+  - Lobby: hero section, record card (W/L/D + win rate %), rules card, CTA button
+  - SearchingOverlay: animated swords icon + cancel button
+  - DuelGameplay: timer, scores, question card, 4 answer buttons
+  - DuelResults: win/loss overlay with coins earned, play again
+- Created app/duels/index.tsx route
+- Added "דו-קרב 1v1" entry in MoreScreen.tsx (Features section)
+- Files affected: types.ts, duelData.ts, useDuelsStore.ts, DuelsScreen.tsx, app/duels/index.tsx, MoreScreen.tsx
+- Learnings for next cycles:
+  - Route pattern: `app/[feature]/index.tsx` → default export wrapping feature screen
+  - MoreScreen row pattern: import icon, add MoreRow + Divider before existing rows
+  - QuizQuestion type imported from chapter-1-content/types.ts (shared across chapters)
+  - TEXT_SHADOW is a style spread, not a component
+  - heavyHaptic/tapHaptic from utils/haptics
+---
+
+## Iteration 2 — US-001 AC2: Fast-paced timer-based quiz mechanic
+- Removed 8-question cap; now draws full shuffled pool, game ends ONLY when 60s timer expires
+- Added AnswerFeedback type: shows correct/wrong flash for 600ms before advancing
+- Added animated TimerBar component: green→yellow→red gradient based on time remaining
+- Added StreakBadge: animated fire icon + count when streak ≥ 2, bounces on increment
+- Added "totalAnswered" counter displayed during gameplay
+- Question transitions use SlideInRight/SlideOutLeft animations
+- Answer buttons highlight green (correct) / orange (wrong) during feedback
+- Results screen now shows totalAnswered and bestStreak stats
+- Timer bubble color changes: green normally, red when ≤10s remaining
+- Files affected: types.ts, useDuelsStore.ts, DuelsScreen.tsx, PRD32_SocialAndAdaptiveAI.md
+- Learnings for next cycles:
+  - clearFeedback pattern: answer sets feedback → useEffect timeout → clearFeedback advances question
+  - questionKey state used to trigger Animated entering/exiting on same component position
+  - SupercellButton variant can be dynamically set for feedback coloring (blue/green/orange)
+  - Wraps question index to 0 if pool exhausted (unlikely in 60s but safe)
+  - DUEL_QUESTIONS_COUNT constant no longer needed (removed import)
+---
+
+## Iteration 3 — US-001 AC3: Award standard Economy Tokens (Coins + Gems)
+- Added DUEL_DRAW_COINS (15) and DUEL_WIN_GEMS (3) constants to duelData.ts
+- Updated finishMatch in useDuelsStore.ts:
+  - Win: 50 coins + 3 gems
+  - Draw: 15 coins (new, previously no draw reward)
+  - Loss: 10 coins (unchanged)
+- Updated DuelsScreen.tsx results overlay to show gems earned on win (purple text)
+- Updated rules card to mention gems and corrected "8 questions" to "60 seconds, as many as possible"
+- Files affected: duelData.ts, useDuelsStore.ts, DuelsScreen.tsx, PRD32_SocialAndAdaptiveAI.md
+- Learnings for next cycles:
+  - useEconomyStore.getState().addGems() works identically to addCoins() — both sync to Neon DB
+  - Draw scenario was previously unhandled for coin rewards (fell through to DUEL_LOSS_COINS)
+  - Gem color in UI: #a78bfa (violet-400)
+---
+
+## Iteration 4 — US-001 AC4: Track Duel Win/Loss ratio on Profile
+- Added `useDuelsStore` import + `duelRecord` selector to ProfileScreen.tsx
+- Added `Swords` icon from lucide-react-native
+- Added Duel W/L/D card between stats row and chests row:
+  - Only renders when user has played at least one duel
+  - Shows wins (green), losses (red), draws (gray) in 3 sub-boxes
+  - Shows win percentage below (excludes draws from denominator)
+  - GlowCard with red glow, Swords icon header
+- Added `duelCardStyle` entrance animation, shifted subsequent animations by +80ms delay
+- Files affected: ProfileScreen.tsx, PRD32_SocialAndAdaptiveAI.md, progress32.txt
+- Learnings for next cycles:
+  - useDuelsStore already persists `record` via partialize — no extra persistence needed
+  - GlowCard accepts `glowColor` prop for themed glow
+  - Profile section order: avatar → streak → XP → stats row → duel record → chests → profile info → actions
+  - Win rate formula excludes draws: wins / (wins + losses) * 100
+---
+
+## Iteration 5 — US-002 AC1: Create a Squads hub
+- Created squadTypes.ts with Squad, SquadMember, SquadTier, SquadChestReward types
+- Created squadData.ts with mock members, rival squads, tier thresholds/colors/labels, chest rewards, invite code generator, computeTier helper
+- Created useSquadsStore.ts with full lifecycle: createSquad, joinSquad, leaveSquad, contributeXP, claimWeeklyChest, resetWeekly
+  - Persists squad + hasClaimedWeeklyChest via partialize
+  - Uses email (not userId) from useAuthStore as member identifier
+  - Awards coins + gems via useEconomyStore on chest claim
+  - Mock: joinSquad accepts any 4+ char code, createSquad adds 3 mock members
+- Created SquadsScreen.tsx with:
+  - NoSquadView: tab switcher (create/join), name input or invite code input, SupercellButton CTA
+  - SquadHubView: squad info header (name, tier badge, weekly score), invite code row (shareable), members list sorted by XP, weekly chest section with claim button, rival leaderboard, leave button
+  - Back button, animated title row, subtitle
+- Created app/squads/index.tsx route
+- Added "סקוואדים" entry in MoreScreen.tsx (Features section, Users icon, purple #a78bfa)
+- Files affected: squadTypes.ts, squadData.ts, useSquadsStore.ts, SquadsScreen.tsx, app/squads/index.tsx, MoreScreen.tsx, PRD32_SocialAndAdaptiveAI.md
+- Learnings for next cycles:
+  - useAuthStore has no userId — use email as identifier
+  - Squad types are in separate file (squadTypes.ts) to avoid collision with duel types in types.ts
+  - SupercellButton supports disabled prop natively
+  - TIER_COLORS/TIER_LABELS pattern useful for tier-based UI rendering
+  - Share.share() used for invite code sharing (cross-platform)
+  - Members sorted by weeklyXP desc, leader (highest XP) gets Crown icon
+---
+
+## Iteration 6 — US-002 AC2: Allow users to create or join a Squad via invite code
+- Added MOCK_SQUAD_REGISTRY + SquadListing type + lookupSquadByCode() to squadData.ts
+  - 5 named squads with known codes (ALPHA1, WOLF22, SHARK3, CRYPT4, BANK55)
+  - Fallback: any 4+ char code generates a random squad (for demo flexibility)
+- Updated useSquadsStore.joinSquad to use lookupSquadByCode — joined squad now gets proper name, member count from listing
+- Added preview/confirmation step in SquadsScreen join flow:
+  - User enters code → taps "חפש סקוואד" → sees preview card (name, tier, member count, weekly XP)
+  - User confirms with "הצטרף לסקוואד" (green button) or cancels back
+  - Preview uses FadeInDown animation, CheckCircle icon for "found" state
+- Added Clipboard copy (expo-clipboard) before Share in SquadHubView invite code row
+- Installed expo-clipboard package
+- Files affected: squadData.ts, useSquadsStore.ts, SquadsScreen.tsx, PRD32_SocialAndAdaptiveAI.md, package.json
+- Learnings for next cycles:
+  - expo-clipboard: `Clipboard.setStringAsync(text)` — async, must await
+  - SquadListing interface exported from squadData.ts for use in screen
+  - Preview pattern: state stores lookup result, separate confirm handler calls onJoin
+  - SupercellButton variant="green" available for confirm actions
+  - Tab switching should clear preview state
+---
+
+## Iteration 7 — US-002 AC3: Aggregate XP from all squad members into a Weekly Squad Score
+- Added auto-contribution subscription: useEconomyStore.subscribe() watches XP changes and forwards deltas to useSquadsStore.contributeXP()
+- _prevXP tracker initialized from economy store state at module load time
+- Enhanced contributeXP to simulate mock member activity: each mock member earns 0-20% of user's XP per contribution (random, floor'd)
+- weeklyScore is always the sum of all members' weeklyXP, tier auto-updates via computeTier()
+- No circular dependency: squads store already imports economy store, subscription is at module level after store creation
+- Files affected: useSquadsStore.ts, PRD32_SocialAndAdaptiveAI.md, progress32.txt
+- Learnings for next cycles:
+  - Zustand subscribe() at module level is a clean way to bridge stores without circular deps
+  - _prevXP pattern avoids needing subscribeWithSelector middleware
+  - Mock member simulation keeps squad score growing organically alongside user activity
+  - Delta-based tracking (newXP - prevXP) correctly handles any XP source (lessons, quizzes, streaks, etc.)
+---
+
+## Iteration 8 — US-002 AC4: Distribute weekly Squad Chest based on tier and ranking
+- Added ranking-based reward multipliers in squadData.ts: 1st=2x, 2nd=1.5x, 3rd=1.25x, else 1x
+- Added computeChestReward(tier, rank) helper that applies rank multiplier to base tier rewards
+- Added getISOWeekKey(date) for weekly reset detection
+- Updated claimWeeklyChest in useSquadsStore.ts to use computeChestReward (tier + rank)
+- Added activeWeekKey persisted state + checkWeeklyReset() that auto-resets scores/chest when a new ISO week begins
+- Updated SquadHubView: calls checkWeeklyReset on mount, shows rank bonus badge (gold row with trophy icon) when squad is top 3
+- Chest reward display now reflects actual computed reward (tier × rank multiplier)
+- Files affected: squadData.ts, useSquadsStore.ts, SquadsScreen.tsx, PRD32_SocialAndAdaptiveAI.md
+- Learnings for next cycles:
+  - RANK_MULTIPLIERS record pattern: sparse map with fallback via ?? 1.0
+  - ISO week key comparison is a clean way to detect weekly rollover without cron/timers
+  - checkWeeklyReset in useEffect on mount ensures UI always shows current week's state
+  - computeChestReward centralizes tier+rank logic — both store and UI can call it consistently
+  - rankBonusRow style: gold-tinted background (#facc15 at 10%) for premium feel
+---
+
+## Iteration 9 — US-003 AC1: Overhaul chat logic to WhatsApp-style messaging app
+- Replaced large CompanionAvatar hero section (~30% of screen) with compact WhatsApp-style header bar (emoji avatar, companion name, online/typing status)
+- Added ChatMessage interface to chatTypes.ts with `timestamp: number` and `status: MessageStatus` fields
+- Added MessageStatus type: `"sent" | "delivered" | "read"` for read receipts
+- Added formatTime() helper for HH:MM timestamps shown inside each bubble
+- Added ReadReceipt component: single check (sent), double gray check (delivered), double blue check (read)
+- Message status lifecycle: sent → delivered (400ms delay) → read (when assistant replies)
+- Moved TypingIndicator into its own bubble with companion emoji avatar (WhatsApp-style)
+- Messages now fill from bottom using `flexGrow: 1, justifyContent: "flex-end"` on ScrollView contentContainer
+- Refactored all styles from single `styles` object to 4 organized StyleSheet groups: headerStyles, msgStyles, chipStyles, inputStyles
+- Bubbles restyled: removed violet right border on bot messages, user bubbles use indigo (#312e81), tail corners via asymmetric borderRadius
+- Header shows "מקליד..." (typing) when loading, "מחובר" (online) otherwise
+- Kept: CompanionAvatar component file (unused now but no deletion), all API logic, suggestion chips, input bar animations
+- Files affected: chatTypes.ts, ChatScreen.tsx, PRD32_SocialAndAdaptiveAI.md
+- Learnings for next cycles:
+  - ChatMessage replaces old Message interface — has timestamp + status fields
+  - CompanionAvatar import removed from ChatScreen but component file still exists (may be used elsewhere)
+  - Read receipt icons: Check and CheckCheck from lucide-react-native
+  - SlideInUp used instead of SlideInRight/SlideInLeft for WhatsApp-like message appearance
+  - markAllRead() helper pattern: maps over messages setting status to "read"
+  - _animationState prefixed with underscore — still set for potential future use but not rendered in header
+  - formatTime uses padStart for zero-padded 24h time
+---
+
+## Iteration 11 — US-003 AC3: Add context-awareness (chapter/module + pre-filled suggestions)
+- Added MODULE_NAMES mapping (28 entries) in chatData.ts — moduleId → Hebrew title for all modules across 5 chapters
+- Fixed ch5 MODULE_SUGGESTIONS keys: `mod-5-1..5` → `mod-5-25..29` to match actual chapter5Data.ts IDs
+- Added getContextAwareGreeting() function: generates personalized greeting per companion referencing user's last completed module
+- Aggregated completedModules across ALL chapters in ChatScreen.tsx (was only reading current chapter)
+- Updated suggestions to use allCompletedModules (cross-chapter) instead of single-chapter completedModules
+- Updated system prompt call to pass allCompletedModules so AI has full learning context
+- Enhanced system prompt with 2 new directives: reference learned material in answers + acknowledge recent completions
+- Files affected: chatData.ts, ChatScreen.tsx, buildChatPrompt.ts, PRD32_SocialAndAdaptiveAI.md
+- Learnings for next cycles:
+  - MODULE_NAMES is a flat Record<string, string> — easy to extend when new modules are added
+  - Object.values(progress).flatMap(cp => cp.completedModules) aggregates across all chapters
+  - getContextAwareGreeting returns companion-specific greeting with module name interpolation
+  - Ch5 module IDs are mod-5-25..29 (not mod-5-1..5) — sequential numbering across all chapters
+  - contextGreeting is memoized on [companionId, allCompletedModules] to avoid re-computation
+  - allCompletedModules replaces completedModules in sendMessage dependency array
+---
+
+## Iteration 10 — US-003 AC2: Ensure prompt persona is non-judgmental, casual, empathetic mentor
+- Added a dedicated "הגישה שלך" (your approach) section to the system prompt in buildChatPrompt.ts
+- 6 directive bullets enforcing: safe space (no stupid questions), no judgment on mistakes/debts, eye-level casual tone, emotional validation before explanation, simple everyday language, encouragement on progress
+- This persona layer applies to ALL 4 companions (Warren, Moshe, Rachel, Robot) — sits between personality and rules sections
+- Changed intro line from "דמות מלווה" (companion character) to "מנטור פיננסי" (financial mentor)
+- Files affected: buildChatPrompt.ts, PRD32_SocialAndAdaptiveAI.md
+- Learnings for next cycles:
+  - Persona section placed between personality and rules — personality defines HOW they talk, persona defines WHO they are emotionally
+  - Emotional validation pattern: acknowledge feeling → then educate ("מובן שזה מלחיץ" before explaining)
+  - All companions share the same empathetic base — individual tone (direct, warm, analytical) sits on top
+  - No type changes needed — purely prompt text modification
+---
+
+## Iteration 12 — US-004 AC1: Log concept tags on failed quiz questions
+- Added `conceptTag: string` field to QuizQuestion interface in types.ts
+- Tagged all 116 quiz questions across 5 chapter data files with module-specific concept tags:
+  - Ch1 (36q): budgeting_50_30_20, overdraft_trap, credit_minimum_payment, compound_interest, payslip_reading, consumer_loans, bank_fees_negotiation, marketing_traps, emergency_fund
+  - Ch2 (20q): credit_score, tax_credits, pension_basics, hishtalmut_fund, insurance
+  - Ch3 (16q): inflation, money_psychology, gemel_fund, robo_advisor
+  - Ch4 (24q): stocks_vs_bonds, index_funds, etf, trading_orders, dividends, diversification
+  - Ch5 (20q): fire_movement, mortgage_real_estate, reit, retirement_planning, estate_planning
+- Tagged 3 hidden module quizzes in hiddenModules.ts: crypto_advanced, tax_planning, advanced_investing
+- Created adaptiveTypes.ts with FailedConcept and QuestionFailure interfaces
+- Created useAdaptiveStore.ts with:
+  - logFailure(questionId, conceptTag, moduleId) — increments failCount per concept, appends to questionFailures log (max 200)
+  - getConsistentlyFailedConcepts() — returns concepts with failCount >= 2
+  - isConceptStruggledWith(tag) — boolean check for single concept
+  - clearConcept(tag) — removes concept data (for post-intervention reset)
+  - Persisted via AsyncStorage
+- Updated recordQuizAnswer in useChapterStore.ts:
+  - Added optional `conceptTag` param
+  - On wrong answer with conceptTag, calls useAdaptiveStore.logFailure()
+- Updated LessonFlowScreen.tsx handleCorrectAnswer + handleWrongRevealed to pass quiz.conceptTag
+- Files affected: types.ts, chapter1Data.ts, chapter2Data.ts, chapter3Data.ts, chapter4Data.ts, chapter5Data.ts, hiddenModules.ts, adaptiveTypes.ts, useAdaptiveStore.ts, useChapterStore.ts, LessonFlowScreen.tsx, PRD32_SocialAndAdaptiveAI.md
+- Learnings for next cycles:
+  - conceptTag is per-question but currently all questions in a module share the same tag — can be made more granular later
+  - useAdaptiveStore is in src/features/social/ per PRD32 convention
+  - CONSISTENT_FAILURE_THRESHOLD = 2 — triggers after 2 wrong answers on same concept
+  - clearConcept() should be called after successful AI Lifeline intervention (US-004 AC2/AC3)
+  - Chapters 2-4 types.ts re-export from chapter-1 types — conceptTag propagates automatically
+  - Duels pull questions from chapter data so they already have conceptTag (no duels-specific changes needed)
+  - Pre-existing TS errors unchanged (5 total: GlassOverlay, FeedSidebar×2, useClashStore×2)
+---
+
+## Iteration 13 — US-004 AC2: Trigger AI Lifeline intervention before user fails out
+- Created LifelineModal.tsx in src/features/social/ with:
+  - Full-screen modal with dark backdrop, animated card (FadeInDown + springify)
+  - CONCEPT_LABELS mapping: all 32 concept tags → Hebrew display names
+  - Sparkles icon header with gold glow circle
+  - Body text references the specific concept the user is struggling with (purple highlight)
+  - "דבר עם המנטור" CTA button → navigates to chat screen
+  - "אני בסדר, ממשיך" dismiss option
+  - Close X button (top-left for RTL)
+- Updated handleWrongRevealed in LessonFlowScreen.tsx:
+  - After heart is consumed + heart break animation, checks useAdaptiveStore.isConceptStruggledWith()
+  - If concept failCount ≥ 2 (CONSISTENT_FAILURE_THRESHOLD), triggers lifeline after 1600ms delay
+  - Delay ensures HeartBreakOverlay finishes (~1.5s) before lifeline modal appears
+- Added LifelineModal rendering in LessonFlowScreen overlay section (before OutOfHeartsModal)
+  - On accept: clears concept from adaptive store (prevents re-triggering) + navigates to /(tabs)/chat
+  - On dismiss: simply closes modal, user continues quiz
+- Files affected: LifelineModal.tsx (new), LessonFlowScreen.tsx
+- Learnings for next cycles:
+  - lifelineConcept state is string | null — null means hidden, string means show modal with that concept
+  - Timing: recordQuizAnswer → logFailure (updates adaptive store) → useHeart → heartBreak → 1600ms → lifeline check
+  - clearConcept(tag) on accept prevents repeated lifeline triggers for same concept in same session
+  - CONCEPT_LABELS fallback: unknown tags get underscores replaced with spaces
+  - Modal uses Modal component (not custom overlay) for proper z-index above all content
+  - Chat route is "/(tabs)/chat" — chat is a tab screen, not a standalone route
+---
+
+## Iteration 14 — US-004 AC3: AI generates customized, simplified explanation for failed concept
+- Added `activeLifelineConcept: string | null` + `setActiveLifelineConcept()` to useAdaptiveStore (non-persisted, transient)
+- Exported CONCEPT_LABELS and getConceptLabel from LifelineModal for reuse
+- Updated LessonFlowScreen onAccept: sets activeLifelineConcept before navigating to chat (then clears failure data)
+- Updated buildSystemPrompt to accept optional `lifelineConcept` parameter:
+  - Injects "🛟 התערבות חירום — הצלה (Lifeline)" section into system prompt
+  - Instructs AI to: start with emotional validation, explain concept from scratch with everyday examples, use one analogy, end with 1-2 check questions
+  - Forbids mentioning "failure" — uses "confusing" / "many people struggle with this" framing
+- Updated ChatScreen to detect lifeline mode on mount:
+  - Reads activeLifelineConcept from store, creates auto-generated user message asking for help
+  - Auto-triggers AI API call (Gemini) with lifeline-enriched system prompt
+  - Clears activeLifelineConcept from store to prevent re-triggering
+  - Follow-up messages in same session also get lifeline context in system prompt
+- Files affected: useAdaptiveStore.ts, LifelineModal.tsx, LessonFlowScreen.tsx, buildChatPrompt.ts, ChatScreen.tsx, PRD32_SocialAndAdaptiveAI.md
+- Learnings for next cycles:
+  - activeLifelineConcept is NOT persisted (excluded from partialize) — transient navigation state only
+  - lifelineConceptRef pattern: read store value into ref at component creation to avoid re-renders
+  - autoSendLifeline state triggers a useEffect that fires the Gemini API call (avoids calling sendMessage directly from mount effect)
+  - conceptLabel (Hebrew) passed to buildSystemPrompt, not the raw conceptTag — AI sees human-readable name
+  - System prompt lifeline section placed AFTER curriculum knowledge — highest priority instructions at end
+  - Pre-existing TS errors unchanged (5 total: GlassOverlay, FeedSidebar×2, useClashStore×2)
+---
+
+## Iteration 15 — US-005 AC1: Add an "Invite Friends" hub (Wealth Network)
+- Created referralTypes.ts with ReferredFriend, ReferralTier, ReferralTierInfo, ReferralState interfaces
+- Created referralData.ts with:
+  - 3-tier system: starter (0), gold_investor (3), whale (5) with Hebrew labels, colors, emojis
+  - computeReferralTier() and getNextTier() helpers
+  - generateReferralCode() — "FP-XXXXX" format, no ambiguous chars
+  - generateMockFriends() — seeded demo data with staggered join dates
+  - Constants: DIAMOND_CHEST_GEMS (10), DIVIDEND_PERCENT (5%)
+- Created useReferralStore.ts with:
+  - generateCode, addReferredFriend, claimDiamondChest (awards gems via economy store), collectDividend (awards XP)
+  - Persisted via AsyncStorage (referralCode, referredFriends, totalDividendXP, hasClaimedDiamondChest)
+  - Bootstrap at module level: auto-generates code + seeds 3 mock friends if empty
+- Created ReferralScreen.tsx ("רשת העושר") with:
+  - Back button + animated title (FadeInDown)
+  - Tier badge card (GoldBorderCard, variant changes per tier) showing current tier, count, progress to next
+  - Referral code card with copy-to-clipboard (expo-clipboard) + Share button
+  - Dividend section: weekly XP from friends (5%), collect button, total collected stat
+  - Diamond chest claim section: lists friends who completed onboarding with unclaimed chests
+  - Network tree: visual list of referred friends with avatars, weekly XP, connector lines, completion status borders
+  - Tier roadmap: all 3 tiers with lock/unlock status
+- Created app/referral/index.tsx route
+- Updated MoreScreen.tsx: replaced simple "הזמן חבר" (UserPlus) with "רשת העושר — הזמן חברים" (Gift icon, gold #facc15), navigates to /referral
+- Files affected: referralTypes.ts, referralData.ts, useReferralStore.ts, ReferralScreen.tsx, app/referral/index.tsx, MoreScreen.tsx, PRD32_SocialAndAdaptiveAI.md
+- Learnings for next cycles:
+  - ReferralScreen follows same DiamondBackground + GoldBorderCard + SupercellButton pattern as other social screens
+  - expo-clipboard already installed from US-002 (squads invite code)
+  - Mock friends bootstrap runs at module level after store creation (same pattern as squads)
+  - handleInvite function in MoreScreen is now unused (can be removed if desired)
+  - Tier progression: starter → gold_investor (3 refs) → whale (5 refs) — matches PRD AC3 requirements
+  - hasClaimedDiamondChest uses Record<string, boolean> keyed by friendId for per-friend tracking
+  - Dividend uses "chest_reward" XPSource since it's passive reward income
+  - Pre-existing TS errors unchanged (5 total: GlassOverlay, FeedSidebar×2, useClashStore×2)
+---
+
+## Iteration 16 — US-005 AC2: Diamond Chest Lottie celebration overlay
+- Created DiamondChestOverlay.tsx in src/features/social/:
+  - Full-screen Modal with dark backdrop (0.85 opacity)
+  - Confetti Lottie layer (full-screen, plays once on show)
+  - 3D Treasure Box Lottie animation (140×140, plays once)
+  - Diamond Lottie animation (60×60, loops for sparkle effect)
+  - Animated text: "ארגז יהלום!" title, friend name subtitle
+  - Reward badge: "+10 💎 Gems" in purple-tinted card
+  - "מעולה!" close button with gold background
+  - All content uses staggered FadeInUp animations (400-1000ms delays)
+  - ZoomIn.springify() for card entrance
+- Updated ReferralScreen.tsx:
+  - Added chestCelebration state (friendId + friendName or null)
+  - handleClaimChest now accepts full ReferredFriend object (was just friendId)
+  - Claims gems via store THEN shows celebration overlay
+  - Overlay dismisses via onClose → setChestCelebration(null)
+  - DiamondChestOverlay rendered after DiamondBackground (above scroll content)
+- Files affected: DiamondChestOverlay.tsx (new), ReferralScreen.tsx, PRD32_SocialAndAdaptiveAI.md
+- Learnings for next cycles:
+  - CLASH.primary does NOT exist — use CLASH.goldBorder (#d4a017) or CLASH.bgPrimary for backgrounds
+  - Available Lottie assets: Confetti.json, 3D Treasure Box.json, Diamond.json, Crown.json, Money.json
+  - LottieView ref pattern: ref.current?.play() in useEffect on visible trigger
+  - Confetti Lottie should be loop=false, positioned absolute full-screen, pointerEvents="none"
+  - Modal component handles z-index properly — preferred over custom overlay for celebrations
+  - Pre-existing TS errors unchanged (5 total: GlassOverlay, FeedSidebar×2, useClashStore×2)
+---
+
+## Iteration 17 — US-005 AC3: Status Unlocks (Gold Investor Frame + Whale Badge)
+- Added STATUS_UNLOCKS record and StatusUnlock interface to referralData.ts — defines cosmetic rewards per tier
+- Updated ProfileScreen.tsx:
+  - Imported useReferralStore + computeReferralTier
+  - Gold Investor frame (3+ referrals): changes GoldCircleBadge borderColor to bright gold (#facc15) + shows tier label below avatar
+  - Whale badge (5+ referrals): 3D holographic-style badge next to display name with purple glow (shadow + violet border)
+  - Both derived from referredFriends.length — no extra store state needed
+- Updated ReferralScreen.tsx tier roadmap:
+  - Each tier now shows its unlock reward description below the label
+  - roadmapRow restructured with roadmapInfo wrapper for multi-line content
+  - Unlock text color matches tier color when reached
+- Files affected: referralData.ts, ProfileScreen.tsx, ReferralScreen.tsx, PRD32_SocialAndAdaptiveAI.md
+- Learnings for next cycles:
+  - Status unlocks are purely computed from referral count — no persistence needed beyond what useReferralStore already stores
+  - GoldCircleBadge accepts borderColor prop — easy to theme per tier
+  - Whale badge uses shadowColor + shadowOpacity for holographic glow effect on iOS, elevation on Android
+  - roadmapInfo wrapper allows multi-line content without breaking flex layout
+  - Pre-existing TS errors unchanged (5 total: GlassOverlay, FeedSidebar×2, useClashStore×2)
+---
+
+## Iteration 18 — US-005 AC4: Passive Income Mechanic (The "Dividend")
+- Added `lastDividendWeek: string` to ReferralState for weekly collection tracking
+- Added `canCollectDividend()` method — compares lastDividendWeek against current ISO week key
+- Added `refreshWeeklyXP()` method — simulates mock friends earning new XP each week (50-349 range)
+- Added `getISOWeekKey()` helper to referralData.ts — returns "YYYY-WNN" format ISO week string
+- Updated `collectDividend()` to enforce once-per-week collection by setting lastDividendWeek on claim
+- Updated ReferralScreen.tsx:
+  - Calls refreshWeeklyXP() on mount to simulate friends' ongoing activity
+  - Shows "✅ נאסף השבוע" badge when dividend already collected this week
+  - Collect button only enabled when dividendAvailable AND weeklyDividend > 0
+  - Added collectedBadge + collectedText styles (green-tinted)
+- `lastDividendWeek` persisted via partialize — survives app restarts
+- Files affected: referralTypes.ts, referralData.ts, useReferralStore.ts, ReferralScreen.tsx, PRD32_SocialAndAdaptiveAI.md
+- Learnings for next cycles:
+  - ISO week key pattern reused from useSquadsStore (squadData.ts has its own copy) — could be shared utility later
+  - canCollectDividend is a method (not computed) because Zustand doesn't support derived getters natively
+  - refreshWeeklyXP guards against same-week refresh if already collected (preserves XP values user saw)
+  - collectedBadge uses green border + bg matching the app's success color (#4ade80)
+  - Pre-existing TS errors unchanged (5 total: GlassOverlay, FeedSidebar×2, useClashStore×2)
+---
+
+## Iteration 19 — US-005 AC5: Visual Network Tree displaying friend avatars
+- Replaced flat friend list with a proper visual tree layout (NetworkTreeView component)
+- Root node: user avatar (👤) with display name + current tier badge, gold-tinted border colored per tier
+- Trunk line connects root to horizontal branch line (gold, 80% width)
+- Friend nodes branch below with vertical connectors, arranged in a flex-wrap row
+- Each friend node shows: avatar emoji, display name (truncated), weekly XP, diamond emoji if chest claimed
+- Green border on friends who completed onboarding (same as before)
+- All nodes animate in with ZoomIn.springify() staggered by 100ms per friend
+- User display name pulled from useAuthStore
+- Removed old FriendNode component and associated styles (friendNode, connectorLine, friendRow, friendMeta, etc.)
+- Added treeStyles as separate StyleSheet to keep tree layout styles organized
+- Files affected: ReferralScreen.tsx, PRD32_SocialAndAdaptiveAI.md
+- Learnings for next cycles:
+  - useAuthStore.displayName can be null — fallback to "אני" for display
+  - ZoomIn.springify() gives a nice pop-in effect for tree nodes
+  - flex-wrap on friendsRow allows graceful handling of 5+ friends without overflow
+  - treeStyles separated from main styles to avoid naming collisions (friendName, friendAvatar exist in both contexts)
+  - computeReferralTier reused inside NetworkTreeView for root node tier coloring
+  - PRD 32 is now 100% COMPLETE — all 5 user stories fully implemented
+  - Pre-existing TS errors unchanged (5 total: GlassOverlay, FeedSidebar×2, useClashStore×2)
+---
+
