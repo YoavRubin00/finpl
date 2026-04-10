@@ -268,6 +268,7 @@ function VideoHookPlayer({ videoUri, hookText, onFinish, unitColors }: {
   unitColors: { bg: string; dim: string; glow: string; bottom: string };
 }) {
   const videoRef = useRef<VideoView>(null);
+  const [isFastMode, setIsFastMode] = useState(false);
   const player = useVideoPlayer(videoUri, (p) => {
     p.loop = false;
     p.play();
@@ -275,7 +276,6 @@ function VideoHookPlayer({ videoUri, hookText, onFinish, unitColors }: {
 
   useEffect(() => {
     const sub = player.addListener('playingChange', (e) => {
-      // When video finishes (stops playing and position is near end)
       if (!e.isPlaying && player.duration > 0 && player.currentTime >= player.duration - 0.5) {
         setTimeout(onFinish, 500);
       }
@@ -285,28 +285,43 @@ function VideoHookPlayer({ videoUri, hookText, onFinish, unitColors }: {
 
   return (
     <View style={{ flex: 1, backgroundColor: "#0a1628" }}>
-      <VideoView
-        ref={videoRef}
-        player={player}
+      <Pressable
         style={{ flex: 1 }}
-        contentFit="cover"
-        nativeControls={false}
-      />
+        onLongPress={() => { player.playbackRate = 1.8; setIsFastMode(true); }}
+        onPressOut={() => { player.playbackRate = 1.0; setIsFastMode(false); }}
+        delayLongPress={300}
+      >
+        <VideoView
+          ref={videoRef}
+          player={player}
+          style={{ flex: 1 }}
+          contentFit="cover"
+          nativeControls={false}
+        />
+      </Pressable>
+      {/* Fast mode indicator */}
+      {isFastMode && (
+        <View style={{ position: "absolute", top: "45%", alignSelf: "center", backgroundColor: "rgba(0,0,0,0.6)", borderRadius: 16, paddingHorizontal: 16, paddingVertical: 8 }} pointerEvents="none">
+          <Text style={{ fontSize: 16, fontWeight: "900", color: "#ffffff" }}>⚡ x1.8</Text>
+        </View>
+      )}
       {/* Hook text overlay — bottom */}
-      <View style={{ position: "absolute", bottom: 0, left: 0, right: 0, paddingHorizontal: 20, paddingBottom: 40, paddingTop: 60 }}>
-        <LinearGradient colors={["transparent", "rgba(0,0,0,0.85)"]} style={StyleSheet.absoluteFill} />
-        <Text style={{ fontSize: 22, fontWeight: "900", color: "#ffffff", writingDirection: "rtl", textAlign: "right", lineHeight: 32, textShadowColor: "rgba(0,0,0,0.8)", textShadowRadius: 8, textShadowOffset: { width: 0, height: 2 } }}>
-          {hookText}
-        </Text>
-      </View>
-      {/* Skip button */}
+      {hookText ? (
+        <View style={{ position: "absolute", bottom: 0, left: 0, right: 0, paddingHorizontal: 20, paddingBottom: 40, paddingTop: 60 }} pointerEvents="none">
+          <LinearGradient colors={["transparent", "rgba(0,0,0,0.85)"]} style={StyleSheet.absoluteFill} />
+          <Text style={{ fontSize: 22, fontWeight: "900", color: "#ffffff", writingDirection: "rtl", textAlign: "right", lineHeight: 32, textShadowColor: "rgba(0,0,0,0.8)", textShadowRadius: 8, textShadowOffset: { width: 0, height: 2 } }}>
+            {hookText}
+          </Text>
+        </View>
+      ) : null}
+      {/* Skip button — right side for RTL */}
       <Pressable
         onPress={onFinish}
-        style={{ position: "absolute", top: 50, left: 16, backgroundColor: "rgba(0,0,0,0.5)", borderRadius: 20, paddingHorizontal: 16, paddingVertical: 8 }}
+        style={{ position: "absolute", top: 50, right: 16, backgroundColor: "rgba(0,0,0,0.5)", borderRadius: 20, paddingHorizontal: 16, paddingVertical: 8 }}
         accessibilityRole="button"
         accessibilityLabel="דלג על הסרטון"
       >
-        <Text style={{ fontSize: 14, fontWeight: "700", color: "#ffffff" }}>דלג ←</Text>
+        <Text style={{ fontSize: 14, fontWeight: "700", color: "#ffffff" }}>דלג</Text>
       </Pressable>
     </View>
   );
@@ -1970,6 +1985,9 @@ export function LessonFlowScreen() {
   // Post-module celebration
   const [showPostCelebration, setShowPostCelebration] = useState(false);
   const [showBreakMessage, setShowBreakMessage] = useState(false);
+  // Shark Party — every 2 consecutive or 4 total completed modules
+  const [showPartyInvite, setShowPartyInvite] = useState(false);
+  const [showPartyVideo, setShowPartyVideo] = useState(false);
   const [quizIndex, setQuizIndex] = useState(0);
   const [consecutiveCorrect, setConsecutiveCorrect] = useState(0);
   const [showStreakPopup, setShowStreakPopup] = useState(false);
@@ -2169,6 +2187,20 @@ export function LessonFlowScreen() {
     const timer = setTimeout(() => setShowPostCelebration(true), 2000);
     return () => clearTimeout(timer);
   }, [chestClaimed, showDoubleOrNothing, currentModIdx, showPostCelebration, showBreakMessage]);
+
+  // Shark Party — trigger after every 4 total completed modules
+  useEffect(() => {
+    if (!chestClaimed || showDoubleOrNothing || showPostCelebration || showPartyInvite || showPartyVideo) return;
+    // Count total completed modules across all chapters
+    const totalCompleted = Object.values(progress).reduce(
+      (sum, ch) => sum + (ch?.completedModules?.length ?? 0), 0
+    );
+    // Show party every 4 completed modules (4, 8, 12, 16...)
+    if (totalCompleted > 0 && totalCompleted % 4 === 0) {
+      const timer = setTimeout(() => setShowPartyInvite(true), 3000);
+      return () => clearTimeout(timer);
+    }
+  }, [chestClaimed, showDoubleOrNothing, showPostCelebration, showPartyInvite, showPartyVideo, progress]);
 
   const moduleResult = mod ? quizResults[mod.id] : undefined;
   const correctCount = moduleResult?.correct ?? 0;
@@ -2628,6 +2660,7 @@ export function LessonFlowScreen() {
           <Animated.View style={[contentStyle, { flex: 1 }]}>
             <InteractiveIntroCard
               introText={mod.interactiveIntro}
+              audioUri={mod.introAudio?.uri}
               onStart={() => {
                 if (SIM_FIRST_MODULES.has(mod.id) && MODULES_WITH_SIM.has(mod.id)) {
                   setPhase("sim"); // Skip sim-intro for sim-first modules — go straight to sim
@@ -3283,6 +3316,41 @@ export function LessonFlowScreen() {
             <Text style={{ fontSize: 14, fontWeight: "600", color: "#94a3b8", textAlign: "center" }}>{"לחץ בכל מקום כדי לחזור"}</Text>
           </Animated.View>
         </Pressable>
+      )}
+
+      {/* ── Shark Party invite ── */}
+      {showPartyInvite && !showPartyVideo && (
+        <Pressable style={[StyleSheet.absoluteFill, { zIndex: 9994, backgroundColor: "rgba(0,0,0,0.7)", justifyContent: "center", alignItems: "center", padding: 24 }]} onPress={() => { setShowPartyInvite(false); goToNextSequentialModule(); }}>
+          <Animated.View entering={FadeInUp.duration(500)} style={{ backgroundColor: "#0f172a", borderRadius: 28, padding: 28, width: "100%", maxWidth: 340, alignItems: "center", borderWidth: 2, borderColor: "#0ea5e9" }}>
+            <View style={{ width: 120, height: 120, overflow: "hidden", marginBottom: 16 }} accessible={false}>
+              <LottieView
+                source={require("../../../assets/lottie/wired-flat-3263-trophy-circle-hover-roll.json")}
+                style={{ width: 120, height: 120 }}
+                autoPlay loop
+              />
+            </View>
+            <Text style={{ fontSize: 24, fontWeight: "900", color: "#ffffff", textAlign: "center", marginBottom: 8 }}>{"🎉 מסיבת הקפטן!"}</Text>
+            <Text style={{ fontSize: 15, fontWeight: "600", color: "#94a3b8", textAlign: "center", marginBottom: 24 }}>{"סיימת 4 מודולים! קפטן שארק מזמין אותך לחגוג"}</Text>
+            <Pressable onPress={() => { successHaptic(); setShowPartyVideo(true); }} style={{ width: "100%", backgroundColor: "#0ea5e9", borderRadius: 16, paddingVertical: 16, alignItems: "center", marginBottom: 12, borderBottomWidth: 4, borderBottomColor: "#0284c7" }} accessibilityRole="button" accessibilityLabel="הצטרפו למסיבה">
+              <Text style={{ fontSize: 18, fontWeight: "900", color: "#ffffff" }}>{"הצטרפו למסיבה! 🦈"}</Text>
+            </Pressable>
+            <Pressable onPress={() => { setShowPartyInvite(false); goToNextSequentialModule(); }} style={{ paddingVertical: 10 }} accessibilityRole="button" accessibilityLabel="המשך">
+              <Text style={{ fontSize: 14, fontWeight: "700", color: "#64748b" }}>{"ממשיכים ללמוד →"}</Text>
+            </Pressable>
+          </Animated.View>
+        </Pressable>
+      )}
+
+      {/* ── Shark Party video — full screen ── */}
+      {showPartyVideo && (
+        <View style={[StyleSheet.absoluteFill, { zIndex: 9994, backgroundColor: "#000000" }]}>
+          <VideoHookPlayer
+            videoUri="https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/video/sharkparty.mp4"
+            hookText=""
+            onFinish={() => { setShowPartyVideo(false); setShowPartyInvite(false); goToNextSequentialModule(); }}
+            unitColors={unitColors}
+          />
+        </View>
       )}
 
       {/* Flying rewards — rendered at top level so particles can reach the header */}
