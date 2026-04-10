@@ -415,7 +415,7 @@ export function MarketScreen() {
                                             <Text style={styles.comboDesc}>{owned}/{total} נכסים</Text>
                                         </View>
                                         <View style={[styles.comboBonusPill, { backgroundColor: "#f1f5f9" }]}>
-                                            <Text style={[styles.comboBonusText, { color: "#94a3b8" }]}>+{Math.round(combo.yieldBonus * 100)}%</Text>
+                                            <Text style={[styles.comboBonusText, { color: "#64748b" }]}>+{Math.round(combo.yieldBonus * 100)}%</Text>
                                         </View>
                                     </View>
                                 );
@@ -574,7 +574,7 @@ export function MarketScreen() {
                                                 <View style={{ flexDirection: "row-reverse", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
                                                     <Text style={{ fontSize: 15, fontWeight: "800", color: "#0f172a", writingDirection: "rtl" }}>{isBuy ? "עלות רכישה" : "עלות שדרוג"}</Text>
                                                     <View style={{ alignItems: "flex-start" }}>
-                                                        {voucherDiscount > 0 && <Text style={{ fontSize: 13, color: "#94a3b8", textDecorationLine: "line-through" }}>{rawCost.toLocaleString()}</Text>}
+                                                        {voucherDiscount > 0 && <Text style={{ fontSize: 13, color: "#64748b", textDecorationLine: "line-through" }}>{rawCost.toLocaleString()}</Text>}
                                                         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
                                                             <Text style={{ fontSize: 24, fontWeight: "900", color: "#0f172a" }}>{finalCost.toLocaleString()}</Text>
                                                             <GoldCoinIcon size={20} />
@@ -592,7 +592,7 @@ export function MarketScreen() {
                                                         setConfirmAsset(null);
                                                         setUseVoucherOnPurchase(false);
                                                     }}
-                                                    style={[styles.modalConfirmBtn, coins < finalCost && { backgroundColor: "#94a3b8", borderBottomColor: "#6b7280" }]}
+                                                    style={[styles.modalConfirmBtn, coins < finalCost && { backgroundColor: "#64748b", borderBottomColor: "#6b7280" }]}
                                                 >
                                                     <Text style={styles.modalConfirmText}>
                                                         {coins < finalCost ? `חסרים ${(finalCost - coins).toLocaleString()}` : isBuy ? "🛒 קנה במזומן" : "🚀 אשר שדרוג"}
@@ -649,7 +649,7 @@ export function MarketScreen() {
                                                                     setConfirmAsset(null);
                                                                     setUseVoucherOnPurchase(false);
                                                                 }}
-                                                                style={[styles.mortgageBtn, { flex: 1 }, !canAffordDown && { backgroundColor: "#94a3b8", borderBottomColor: "#6b7280" }]}
+                                                                style={[styles.mortgageBtn, { flex: 1 }, !canAffordDown && { backgroundColor: "#64748b", borderBottomColor: "#6b7280" }]}
                                                             >
                                                                 <Text style={styles.mortgageBtnText}>
                                                                     {canAffordDown ? `קנה (${dp.toLocaleString()})` : `חסרים ${(dp - coins).toLocaleString()}`}
@@ -818,7 +818,7 @@ const styles = StyleSheet.create({
     dealOrigPrice: {
         fontSize: 13,
         fontWeight: "600",
-        color: "#94a3b8",
+        color: "#64748b",
         textDecorationLine: "line-through",
     },
     dealPrice: {
@@ -1263,13 +1263,13 @@ const styles = StyleSheet.create({
     },
     modalCostLabel: {
         fontSize: 13,
-        color: "#94a3b8",
+        color: "#64748b",
         fontWeight: "700",
     },
     modalOrigCost: {
         fontSize: 14,
         fontWeight: "600",
-        color: "#94a3b8",
+        color: "#64748b",
         textDecorationLine: "line-through",
         marginBottom: 2,
     },
@@ -1319,7 +1319,7 @@ const styles = StyleSheet.create({
     mortgageDivider: {
         fontSize: 13,
         fontWeight: "700",
-        color: "#94a3b8",
+        color: "#64748b",
     },
     mortgageBtn: {
         backgroundColor: "#0891b2",

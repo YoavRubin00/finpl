@@ -587,7 +587,7 @@ const styles = StyleSheet.create({
   },
   hintArrow: {
     fontSize: 18,
-    color: '#94a3b8',
+    color: '#64748b',
   },
   hintLabel: {
     fontSize: 12,

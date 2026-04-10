@@ -41,7 +41,7 @@ export function RedemptionModal({ visible, benefit, onConfirm, onCancel }: Redem
 
           {/* Close button */}
           <Pressable onPress={onCancel} style={styles.closeBtn} hitSlop={12}>
-            <X size={18} color="#94a3b8" />
+            <X size={18} color="#64748b" />
           </Pressable>
 
           {/* Partner logo + name */}
@@ -199,7 +199,7 @@ const styles = StyleSheet.create({
   infoLabel: {
     fontSize: 11,
     fontWeight: '700',
-    color: '#94a3b8',
+    color: '#64748b',
     letterSpacing: 0.3,
   },
   infoValue: {
@@ -251,6 +251,6 @@ const styles = StyleSheet.create({
   cancelBtnText: {
     fontSize: 13,
     fontWeight: '600',
-    color: '#94a3b8',
+    color: '#64748b',
   },
 });

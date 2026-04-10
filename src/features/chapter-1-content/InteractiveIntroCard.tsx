@@ -51,13 +51,25 @@ function renderBoldText(text: string, accentColor: string): React.ReactNode[] {
   return result;
 }
 
+import { createAudioPlayer } from "expo-audio";
+
 interface InteractiveIntroCardProps {
   introText: string;
   onStart: () => void;
   unitColors: { bg: string; dim: string; glow: string; bottom: string };
+  audioUri?: string;
 }
 
-export const InteractiveIntroCard = React.memo(function InteractiveIntroCard({ introText, onStart, unitColors }: InteractiveIntroCardProps) {
+export const InteractiveIntroCard = React.memo(function InteractiveIntroCard({ introText, onStart, unitColors, audioUri }: InteractiveIntroCardProps) {
+  useEffect(() => {
+    if (!audioUri) return;
+    const player = createAudioPlayer({ uri: audioUri });
+    player.play();
+    return () => {
+      player.pause();
+      player.release();
+    };
+  }, [audioUri]);
   const displayText = cleanGlossaryMarkup(introText);
   const { playSound } = useSoundEffect();
   const textStyle = useEntranceAnimation(fadeInUp, { delay: 0 });

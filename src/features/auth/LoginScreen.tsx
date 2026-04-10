@@ -119,7 +119,7 @@ export function LoginScreen() {
             <TextInput
               style={{ ...inputStyle, marginBottom: 10 }}
               placeholder="אימייל"
-              placeholderTextColor="#94a3b8"
+              placeholderTextColor="#64748b"
               value={email}
               onChangeText={setEmail}
               keyboardType="email-address"
@@ -134,7 +134,7 @@ export function LoginScreen() {
               <TextInput
                 style={{ ...inputStyle, paddingLeft: 48 }}
                 placeholder="סיסמה"
-                placeholderTextColor="#94a3b8"
+                placeholderTextColor="#64748b"
                 value={password}
                 onChangeText={setPassword}
                 secureTextEntry={!showPassword}
@@ -193,7 +193,7 @@ export function LoginScreen() {
                 style={{
                   fontSize: 16,
                   fontWeight: "800",
-                  color: isValid ? "#ffffff" : "#94a3b8",
+                  color: isValid ? "#ffffff" : "#64748b",
                 }}
               >
                 התחבר
@@ -203,7 +203,7 @@ export function LoginScreen() {
             {/* Divider */}
             <View style={{ flexDirection: "row", alignItems: "center", marginVertical: 14 }}>
               <View style={{ flex: 1, height: 1, backgroundColor: "#e2e8f0" }} />
-              <Text style={{ marginHorizontal: 12, fontSize: 13, color: "#94a3b8" }}>או</Text>
+              <Text style={{ marginHorizontal: 12, fontSize: 13, color: "#64748b" }}>או</Text>
               <View style={{ flex: 1, height: 1, backgroundColor: "#e2e8f0" }} />
             </View>
 

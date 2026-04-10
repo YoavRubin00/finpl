@@ -1757,7 +1757,7 @@ function IntroStep({ onRegister, onGuest, onLoginSuccess }: IntroStepProps) {
           {/* Divider */}
           <View style={{ flexDirection: "row", alignItems: "center", marginVertical: 6 }}>
             <View style={{ flex: 1, height: 1, backgroundColor: "#e2e8f0" }} />
-            <Text style={{ marginHorizontal: 12, fontSize: 13, color: "#94a3b8" }}>או</Text>
+            <Text style={{ marginHorizontal: 12, fontSize: 13, color: "#64748b" }}>או</Text>
             <View style={{ flex: 1, height: 1, backgroundColor: "#e2e8f0" }} />
           </View>
 
@@ -1765,7 +1765,7 @@ function IntroStep({ onRegister, onGuest, onLoginSuccess }: IntroStepProps) {
           <TextInput
             style={inputStyle}
             placeholder="אימייל"
-            placeholderTextColor="#94a3b8"
+            placeholderTextColor="#64748b"
             value={email}
             onChangeText={setEmail}
             keyboardType="email-address"
@@ -1778,7 +1778,7 @@ function IntroStep({ onRegister, onGuest, onLoginSuccess }: IntroStepProps) {
             <TextInput
               style={{ ...inputStyle, paddingLeft: 48 }}
               placeholder="סיסמה"
-              placeholderTextColor="#94a3b8"
+              placeholderTextColor="#64748b"
               value={password}
               onChangeText={setPassword}
               secureTextEntry={!showPassword}
@@ -2255,7 +2255,7 @@ const styles = StyleSheet.create({
   },
   tapCardSub: {
     fontSize: 13,
-    color: "#9ca3af",
+    color: "#64748b",
     marginTop: 6,
     fontWeight: "500",
     writingDirection: "rtl",
@@ -2611,7 +2611,7 @@ const expertStyles = StyleSheet.create({
   },
   skipText: {
     fontSize: 13,
-    color: "#9ca3af",
+    color: "#64748b",
     fontWeight: "600",
   },
 });

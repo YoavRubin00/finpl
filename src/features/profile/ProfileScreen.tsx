@@ -545,7 +545,7 @@ export function ProfileScreen() {
         <Pressable style={stagePopupStyles.backdrop} onPress={() => setShowStagePopup(false)} accessibilityRole="button" accessibilityLabel="סגור חלון התקדמות">
           <Pressable style={stagePopupStyles.card} onPress={() => {}} accessibilityRole="none">
             <Pressable onPress={() => setShowStagePopup(false)} style={stagePopupStyles.closeBtn} accessibilityRole="button" accessibilityLabel="סגור" hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-              <X size={20} color="#94a3b8" />
+              <X size={20} color="#64748b" />
             </Pressable>
             <Text style={stagePopupStyles.emoji}>
               {LAYER_EMOJIS[layer] ?? "🌱"}
@@ -617,7 +617,7 @@ const stagePopupStyles = StyleSheet.create({
   subtitle: {
     fontSize: 14,
     fontWeight: "600",
-    color: "#94a3b8",
+    color: "#64748b",
     writingDirection: "rtl",
     textAlign: "center",
   },
@@ -858,7 +858,7 @@ const styles = StyleSheet.create({
   },
   cardMuted: {
     fontSize: 12,
-    color: "#9ca3af",
+    color: "#64748b",
     writingDirection: "rtl",
   },
   cardBigValue: {
@@ -869,7 +869,7 @@ const styles = StyleSheet.create({
   cardUnit: {
     fontSize: 14,
     fontWeight: "600",
-    color: "#9ca3af",
+    color: "#64748b",
   },
   cardEmoji: {
     fontSize: 32,
@@ -936,7 +936,7 @@ const styles = StyleSheet.create({
   },
   duelStatLabel: {
     fontSize: 10,
-    color: "#9ca3af",
+    color: "#64748b",
     fontWeight: "600",
     writingDirection: "rtl",
   },
@@ -951,7 +951,7 @@ const styles = StyleSheet.create({
   },
   profileChipLabel: {
     fontSize: 10,
-    color: "#9ca3af",
+    color: "#64748b",
     fontWeight: "600",
     textAlign: "right",
     writingDirection: "rtl",
@@ -988,7 +988,7 @@ const styles = StyleSheet.create({
   actionCardSubtitle: {
     fontSize: 10,
     fontWeight: "700",
-    color: "#9ca3af",
+    color: "#64748b",
     textTransform: "uppercase",
     letterSpacing: 0.5,
     textAlign: "right",

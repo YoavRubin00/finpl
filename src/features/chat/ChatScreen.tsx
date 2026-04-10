@@ -581,7 +581,7 @@ export function ChatScreen() {
           {/* Recent conversations strip — Pro only */}
           {isPro && messages.length > 2 && (
             <View style={headerStyles.recentStrip}>
-              <MessageCircle size={12} color="#94a3b8" />
+              <MessageCircle size={12} color="#64748b" />
               <Text style={headerStyles.recentLabel}>
                 {messages.filter((m) => m.role === "user").length} הודעות בשיחה הנוכחית
               </Text>
@@ -786,7 +786,7 @@ const headerStyles = StyleSheet.create({
   },
   recentLabel: {
     fontSize: 11,
-    color: "#94a3b8",
+    color: "#64748b",
     fontWeight: "600",
     writingDirection: "rtl",
   },
@@ -866,7 +866,7 @@ const msgStyles = StyleSheet.create({
   },
   timestamp: {
     fontSize: 10,
-    color: "#9ca3af",
+    color: "#64748b",
   },
 });
 

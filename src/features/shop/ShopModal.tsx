@@ -329,7 +329,7 @@ export function ShopModal() {
               >
                 <View style={ms.exchangeLeft}>
                   <Text style={ms.exchangeGems}>💎 {rate.gems}</Text>
-                  <ArrowRight size={14} color="#9ca3af" style={{ marginHorizontal: 6 }} />
+                  <ArrowRight size={14} color="#64748b" style={{ marginHorizontal: 6 }} />
                   <Text style={ms.exchangeCoins}> {rate.coins.toLocaleString()}</Text>
                   {rate.best && (
                     <View style={ms.bestRatePill}>
@@ -338,7 +338,7 @@ export function ShopModal() {
                   )}
                 </View>
                 <View style={[ms.exchangeBtn, !can && { backgroundColor: "#e5e7eb" }]}>
-                  <Text style={[ms.exchangeBtnText, !can && { color: "#9ca3af" }]}>
+                  <Text style={[ms.exchangeBtnText, !can && { color: "#64748b" }]}>
                     {can ? "המר" : "חסר"}
                   </Text>
                 </View>
@@ -472,7 +472,7 @@ const ms = StyleSheet.create({
   },
   sectionSub: {
     fontSize: 11,
-    color: "#9ca3af",
+    color: "#64748b",
     marginTop: 2,
   },
 
@@ -494,7 +494,7 @@ const ms = StyleSheet.create({
   },
   gemHeroSub: {
     fontSize: 12,
-    color: "#9ca3af",
+    color: "#64748b",
     marginTop: 4,
   },
 
@@ -539,7 +539,7 @@ const ms = StyleSheet.create({
   promoOldPrice: {
     fontSize: 13,
     fontWeight: "600",
-    color: "#9ca3af",
+    color: "#64748b",
     textDecorationLine: "line-through" as const,
   },
   promoPrice: {

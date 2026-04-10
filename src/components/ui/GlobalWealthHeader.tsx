@@ -702,7 +702,7 @@ const popupStyles = StyleSheet.create({
   roadmapLabel: {
     fontSize: 13,
     fontWeight: "700",
-    color: "#94a3b8",
+    color: "#64748b",
     textAlign: "right",
     writingDirection: "rtl",
   },

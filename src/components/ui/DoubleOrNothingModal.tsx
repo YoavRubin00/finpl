@@ -257,7 +257,7 @@ export function DoubleOrNothingModal({ visible, rewards, onResolve }: Props) {
             <View style={styles.rewardsRow}>
               {rewards.coins > 0 && (
                 <View style={wasCorrect ? styles.rewardBadgeCoin : styles.rewardBadgeDim}>
-                  <Text style={[styles.rewardAmount, !wasCorrect && { color: '#94a3b8' }]}>
+                  <Text style={[styles.rewardAmount, !wasCorrect && { color: '#64748b' }]}>
                     +{Math.round(rewards.coins * (wasCorrect ? 2 : 0))}
                   </Text>
                   <Text style={[styles.rewardLabel, !wasCorrect && { color: '#64748b' }]}>מטבעות</Text>
@@ -265,7 +265,7 @@ export function DoubleOrNothingModal({ visible, rewards, onResolve }: Props) {
               )}
               {rewards.xp > 0 && (
                 <View style={wasCorrect ? styles.rewardBadgeXp : styles.rewardBadgeDim}>
-                  <Text style={[styles.rewardAmount, wasCorrect ? { color: '#0284c7' } : { color: '#94a3b8' }]}>
+                  <Text style={[styles.rewardAmount, wasCorrect ? { color: '#0284c7' } : { color: '#64748b' }]}>
                     +{Math.round(rewards.xp * (wasCorrect ? 2 : 0))}
                   </Text>
                   <Text style={[styles.rewardLabel, wasCorrect ? { color: '#0369a1' } : { color: '#64748b' }]}>XP</Text>
@@ -273,7 +273,7 @@ export function DoubleOrNothingModal({ visible, rewards, onResolve }: Props) {
               )}
               {rewards.gems > 0 && (
                 <View style={wasCorrect ? styles.rewardBadgeGem : styles.rewardBadgeDim}>
-                  <Text style={[styles.rewardAmount, wasCorrect ? { color: '#2563eb' } : { color: '#94a3b8' }]}>
+                  <Text style={[styles.rewardAmount, wasCorrect ? { color: '#2563eb' } : { color: '#64748b' }]}>
                     +{Math.round(rewards.gems * (wasCorrect ? 2 : 0))}
                   </Text>
                   <Text style={[styles.rewardLabel, wasCorrect ? { color: '#1d4ed8' } : { color: '#64748b' }]}>ג'מס</Text>

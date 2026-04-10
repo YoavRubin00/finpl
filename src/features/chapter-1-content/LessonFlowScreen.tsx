@@ -444,7 +444,7 @@ function FlashcardCard({
             accessibilityRole="button"
             accessibilityLabel="סגור טיפ"
           >
-            <Text style={{ color: "#94a3b8", fontSize: 18, fontWeight: "600" }}>✕</Text>
+            <Text style={{ color: "#64748b", fontSize: 18, fontWeight: "600" }}>✕</Text>
           </Pressable>
         </Animated.View>
       )}
@@ -831,7 +831,7 @@ function QuizCard({
                   <Pressable onPress={() => setShowCalc(false)} style={{ width: 28, height: 28, borderRadius: 14, backgroundColor: "rgba(255,255,255,0.15)", alignItems: "center", justifyContent: "center" }} accessibilityRole="button" accessibilityLabel="סגור מחשבון" hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
                     <Text style={{ color: "#fff", fontSize: 14, fontWeight: "700" }}>✕</Text>
                   </Pressable>
-                  <Text style={{ color: "#9ca3af", fontSize: 12, fontWeight: "600" }}>מחשבון</Text>
+                  <Text style={{ color: "#64748b", fontSize: 12, fontWeight: "600" }}>מחשבון</Text>
                 </View>
                 <View style={{ backgroundColor: "#111827", borderRadius: 10, padding: 12, marginBottom: 10, alignItems: "flex-end" }}>
                   <Text style={{ color: "#ffffff", fontSize: 28, fontWeight: "700", fontVariant: ["tabular-nums"] }}>{calcDisplay}</Text>
@@ -915,7 +915,7 @@ function QuizCard({
                     accessibilityState={{ selected: isRevealed && idx === answerState?.selectedIndex, disabled: isRevealed || isWrong }}
                   >
                     <Text
-                      style={[RTL_STYLE, { fontSize: 13, lineHeight: 18, color: isWrong && !isRevealed ? "#9ca3af" : "#1f2937" }]}
+                      style={[RTL_STYLE, { fontSize: 13, lineHeight: 18, color: isWrong && !isRevealed ? "#64748b" : "#1f2937" }]}
                     >
                       {renderBoldText(option, onTermPress)}
                     </Text>
@@ -1128,7 +1128,7 @@ function SummaryScreen({
         {chestClaimed && wisdomItem && showWisdom && (
           <View style={{ width: "100%", paddingHorizontal: 4 }}>
             <View style={{ flexDirection: "row", alignItems: "center", gap: 6, marginBottom: 10 }}>
-              <Text style={{ color: "#94a3b8", fontSize: 13, fontWeight: "700", letterSpacing: 1.2 }}>➔  UP NEXT</Text>
+              <Text style={{ color: "#64748b", fontSize: 13, fontWeight: "700", letterSpacing: 1.2 }}>➔  UP NEXT</Text>
             </View>
             <View style={{
               backgroundColor: "#0c1929",
@@ -1800,7 +1800,7 @@ function SimIntroOverlay({
         </Text>
       </AnimatedPressable>
 
-      <Text style={{ marginTop: 6, fontSize: 10, color: "#94a3b8" }}>
+      <Text style={{ marginTop: 6, fontSize: 10, color: "#64748b" }}>
         {countdown}s
       </Text>
     </Animated.View>
@@ -2415,7 +2415,7 @@ export function LessonFlowScreen() {
             <ChevronLeft size={18} color="#6b7280" />
           </Pressable>
           <Pressable onPress={() => { setShowProGate(false); router.replace("/(tabs)" as never); }} accessibilityRole="button" accessibilityLabel="חזור">
-            <Text style={{ fontSize: 14, fontWeight: "600", color: "#9ca3af", writingDirection: "rtl" }}>חזור</Text>
+            <Text style={{ fontSize: 14, fontWeight: "600", color: "#64748b", writingDirection: "rtl" }}>חזור</Text>
           </Pressable>
         </View>
       </View>
@@ -3227,7 +3227,7 @@ export function LessonFlowScreen() {
               accessibilityRole="button"
               accessibilityLabel="סגור"
             >
-              <Text style={{ fontSize: 18, color: "#94a3b8", fontWeight: "700" }}>✕</Text>
+              <Text style={{ fontSize: 18, color: "#64748b", fontWeight: "700" }}>✕</Text>
             </Pressable>
             {/* Finn avatar */}
             <View style={{ width: 88, height: 88, borderRadius: 44, backgroundColor: "#f0f9ff", alignItems: "center", justifyContent: "center", borderWidth: 2, borderColor: "#0891b2" }}>
@@ -3313,7 +3313,7 @@ export function LessonFlowScreen() {
           <Animated.View entering={FadeInUp.duration(400)} style={{ backgroundColor: "#ffffff", borderRadius: 28, padding: 28, width: "100%", maxWidth: 340, alignItems: "center" }}>
             <ExpoImage source={FINN_EMPATHIC} accessible={false} style={{ width: 100, height: 100, marginBottom: 16 }} contentFit="contain" />
             <Text style={{ fontSize: 20, fontWeight: "900", color: "#0f172a", textAlign: "center", marginBottom: 8 }}>{"מצפה לראותך פה מחר! ❤️"}</Text>
-            <Text style={{ fontSize: 14, fontWeight: "600", color: "#94a3b8", textAlign: "center" }}>{"לחץ בכל מקום כדי לחזור"}</Text>
+            <Text style={{ fontSize: 14, fontWeight: "600", color: "#64748b", textAlign: "center" }}>{"לחץ בכל מקום כדי לחזור"}</Text>
           </Animated.View>
         </Pressable>
       )}
@@ -3330,7 +3330,7 @@ export function LessonFlowScreen() {
               />
             </View>
             <Text style={{ fontSize: 24, fontWeight: "900", color: "#ffffff", textAlign: "center", marginBottom: 8 }}>{"🎉 מסיבת הקפטן!"}</Text>
-            <Text style={{ fontSize: 15, fontWeight: "600", color: "#94a3b8", textAlign: "center", marginBottom: 24 }}>{"סיימת 4 מודולים! קפטן שארק מזמין אותך לחגוג"}</Text>
+            <Text style={{ fontSize: 15, fontWeight: "600", color: "#64748b", textAlign: "center", marginBottom: 24 }}>{"סיימת 4 מודולים! קפטן שארק מזמין אותך לחגוג"}</Text>
             <Pressable onPress={() => { successHaptic(); setShowPartyVideo(true); }} style={{ width: "100%", backgroundColor: "#0ea5e9", borderRadius: 16, paddingVertical: 16, alignItems: "center", marginBottom: 12, borderBottomWidth: 4, borderBottomColor: "#0284c7" }} accessibilityRole="button" accessibilityLabel="הצטרפו למסיבה">
               <Text style={{ fontSize: 18, fontWeight: "900", color: "#ffffff" }}>{"הצטרפו למסיבה! 🦈"}</Text>
             </Pressable>

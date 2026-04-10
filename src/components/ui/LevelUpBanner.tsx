@@ -253,7 +253,7 @@ const styles = StyleSheet.create({
   dismissText: {
     fontSize: 14,
     fontWeight: "600",
-    color: "#94a3b8",
+    color: "#64748b",
     writingDirection: "rtl",
   },
 });

@@ -174,8 +174,8 @@ export function AssetsScreen() {
                     accessibilityRole="button"
                     accessibilityLabel="הוסף נכס"
                   >
-                    <Plus size={24} color="#94a3b8" />
-                    <Text style={{ fontSize: 11, color: "#94a3b8", fontWeight: '700', marginTop: 4 }}>הוסף נכס</Text>
+                    <Plus size={24} color="#64748b" />
+                    <Text style={{ fontSize: 11, color: "#64748b", fontWeight: '700', marginTop: 4 }}>הוסף נכס</Text>
                   </AnimatedPressable>
                 </View>
               </View>
@@ -187,7 +187,7 @@ export function AssetsScreen() {
             <View style={styles.sectionHeader} accessibilityRole="header">
               <Text style={styles.sectionTitle}>📈 תיק השקעות</Text>
               {!tradingUnlocked && (
-                <Text style={{ fontSize: 11, color: '#94a3b8', fontWeight: '700' }}>🔒 נפתח ברמה 4</Text>
+                <Text style={{ fontSize: 11, color: '#64748b', fontWeight: '700' }}>🔒 נפתח ברמה 4</Text>
               )}
             </View>
 
@@ -292,7 +292,7 @@ export function AssetsScreen() {
                 accessibilityLabel="ניהול רשת החברים"
               >
                 <Text style={styles.friendsManageLinkText}>ניהול רשת החברים</Text>
-                <ChevronRight size={14} color="#94a3b8" style={{ transform: [{ scaleX: -1 }] }} />
+                <ChevronRight size={14} color="#64748b" style={{ transform: [{ scaleX: -1 }] }} />
               </AnimatedPressable>
             </View>
           </Animated.View>
@@ -452,7 +452,7 @@ const styles = StyleSheet.create({
   },
   holdingSub: {
     fontSize: 11,
-    color: '#94a3b8',
+    color: '#64748b',
     fontWeight: '600',
   },
   pnlBadge: {
@@ -546,7 +546,7 @@ const styles = StyleSheet.create({
   },
   moreFriends: {
     fontSize: 11,
-    color: '#94a3b8',
+    color: '#64748b',
     textAlign: 'center',
     fontWeight: '600',
   },
@@ -607,7 +607,7 @@ const styles = StyleSheet.create({
   friendsManageLinkText: {
     fontSize: 12,
     fontWeight: '700',
-    color: '#94a3b8',
+    color: '#64748b',
   },
   finnBanner: {
     flexDirection: 'row-reverse',

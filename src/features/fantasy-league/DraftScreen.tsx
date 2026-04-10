@@ -356,7 +356,7 @@ const styles = StyleSheet.create({
   },
   assetId: {
     fontSize: 10,
-    color: "#9ca3af",
+    color: "#64748b",
     fontWeight: "600",
   },
   assetPrice: {

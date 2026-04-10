@@ -65,7 +65,7 @@ export function createSIM(th: ChapterTheme) {
 
         textPrimary: '#0f172a',
         textSecondary: '#475569',
-        textMuted: '#94a3b8',
+        textMuted: '#64748b',
 
         success: '#16a34a',
         successLight: '#dcfce7',

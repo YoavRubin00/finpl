@@ -478,7 +478,7 @@ const styles = StyleSheet.create({
         left: '20%' as unknown as number,
         right: '20%' as unknown as number,
         height: 2,
-        backgroundColor: '#9ca3af',
+        backgroundColor: '#64748b',
         borderRadius: 1,
     },
     carWrapper: {

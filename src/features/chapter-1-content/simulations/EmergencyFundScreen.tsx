@@ -364,7 +364,7 @@ function MonthResultFeedback({
                     <Text style={[RTL, { fontSize: 14, fontWeight: '700', color: isGood ? '#0369a1' : '#b45309', lineHeight: 21 }]}>
                         {summaryText}
                     </Text>
-                    <Text style={{ fontSize: 11, color: '#94a3b8', marginTop: 4, textAlign: 'right', writingDirection: 'rtl' }}>
+                    <Text style={{ fontSize: 11, color: '#64748b', marginTop: 4, textAlign: 'right', writingDirection: 'rtl' }}>
                         לחץ להמשך
                     </Text>
                 </View>

@@ -385,18 +385,18 @@ function ArenaHeaderBanner({
         accessibilityState={{ disabled: isLocked }}
       >
         <View style={{ flex: 1, alignItems: "flex-end" }}>
-          <Text style={[styles.bannerSection, { color: isLocked ? "#9ca3af" : "rgba(255,255,255,0.85)" }]}>
+          <Text style={[styles.bannerSection, { color: isLocked ? "#64748b" : "rgba(255,255,255,0.85)" }]}>
             פרק {sectionIndex}
           </Text>
           <Text style={[styles.bannerTitle, { color: isLocked ? "#6b7280" : "#ffffff" }]}>
             {arena.name}
           </Text>
-          <Text style={[styles.bannerSubtitle, { color: isLocked ? "#9ca3af" : "rgba(255,255,255,0.85)" }]}>
+          <Text style={[styles.bannerSubtitle, { color: isLocked ? "#64748b" : "rgba(255,255,255,0.85)" }]}>
             {arena.subtitle}
           </Text>
         </View>
         {(() => {
-          if (isLocked) return <Lock size={26} color="#9ca3af" style={{ marginLeft: 14 }} />;
+          if (isLocked) return <Lock size={26} color="#64748b" style={{ marginLeft: 14 }} />;
           const Icon = ARENA_ICONS[arena.id];
           if (Icon) return <Icon size={26} color="rgba(255,255,255,0.85)" style={{ marginLeft: 14 }} />;
           return null;
@@ -405,7 +405,7 @@ function ArenaHeaderBanner({
       {!isLocked && onMindMap && (
         <Pressable
           onPress={onMindMap}
-          style={{ alignSelf: 'flex-start', backgroundColor: '#e0f2fe', borderRadius: 10, paddingHorizontal: 12, paddingVertical: 6, marginTop: 6, marginLeft: H_PAD, flexDirection: 'row', alignItems: 'center', gap: 4, borderWidth: 1, borderColor: '#bae6fd' }}
+          style={{ alignSelf: 'flex-start', backgroundColor: '#e0f2fe', borderRadius: 10, paddingHorizontal: 12, paddingVertical: 6, marginTop: 6, marginLeft: H_PAD, flexDirection: 'row-reverse', alignItems: 'center', gap: 4, borderWidth: 1, borderColor: '#bae6fd' }}
           accessibilityRole="button"
           accessibilityLabel="מפת הלמידה"
         >
@@ -593,6 +593,7 @@ function ModuleNode({
             onPress={() => onClaimEasterEgg?.()}
             accessibilityRole="button"
             accessibilityLabel="מטבע הפתעה! לחץ לאסוף"
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
             style={{
               position: "absolute",
               top: -28,
@@ -1053,7 +1054,7 @@ export function DuoLearnScreen() {
           {/* Header Row: Streak (Left) | Greeting (Right) */}
           <View style={[styles.greetingRow, { justifyContent: "space-between", paddingHorizontal: 16, paddingVertical: 10 }]}>
             {/* Left: Streak Flame */}
-            <View style={{ alignItems: "center", flexDirection: "row", gap: 4 }}>
+            <View style={{ alignItems: "center", flexDirection: "row-reverse", gap: 4 }}>
               <View style={{ width: 36, height: 36 }} accessible={false}>
                 <LottieView
                   source={require("../../../assets/lottie/wired-flat-2804-fire-flame-hover-pinch.json")}
@@ -1205,7 +1206,7 @@ export function DuoLearnScreen() {
           <Modal visible transparent animationType="fade" onRequestClose={() => setReplayModule(null)} accessibilityViewIsModal>
             <SafeAreaView style={{ flex: 1, backgroundColor: '#f0f9ff' }} edges={["top", "bottom"]}>
               {/* Header with close button */}
-              <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', paddingHorizontal: 16, paddingVertical: 8 }}>
+              <View style={{ flexDirection: 'row-reverse', alignItems: 'center', justifyContent: 'flex-end', paddingHorizontal: 16, paddingVertical: 8 }}>
                 <AnimatedPressable
                   onPress={() => setReplayModule(null)}
                   style={{ width: 38, height: 38, borderRadius: 19, backgroundColor: 'rgba(0,0,0,0.08)', alignItems: 'center', justifyContent: 'center' }}
@@ -1259,7 +1260,7 @@ export function DuoLearnScreen() {
               <Text style={{ fontSize: 20, fontFamily: "Heebo_700Bold", color: "#0f172a", textAlign: "center", marginBottom: 6, writingDirection: "rtl" }}>
                 מסלול הלמידה שלך
               </Text>
-              <Text style={{ fontSize: 13, fontFamily: "Heebo_400Regular", color: "#94a3b8", textAlign: "center", marginBottom: 20, writingDirection: "rtl" }}>
+              <Text style={{ fontSize: 13, fontFamily: "Heebo_400Regular", color: "#64748b", textAlign: "center", marginBottom: 20, writingDirection: "rtl" }}>
                 6 פרקים מהבסיס ועד חופש כלכלי
               </Text>
 
@@ -1319,7 +1320,7 @@ export function DuoLearnScreen() {
                           <Text style={{
                             fontSize: 15,
                             fontFamily: isCurrent ? "Heebo_700Bold" : "Heebo_500Medium",
-                            color: chapterUnlocked ? "#0f172a" : "#94a3b8",
+                            color: chapterUnlocked ? "#0f172a" : "#64748b",
                             writingDirection: "rtl",
                             textAlign: "right",
                           }}>
@@ -1349,7 +1350,7 @@ export function DuoLearnScreen() {
                               borderRadius: 2,
                             }} />
                           </View>
-                          <Text style={{ fontSize: 11, fontFamily: "Heebo_400Regular", color: "#94a3b8" }}>
+                          <Text style={{ fontSize: 11, fontFamily: "Heebo_400Regular", color: "#64748b" }}>
                             {completedCount}/{totalModules}
                           </Text>
                         </View>
@@ -1405,7 +1406,7 @@ const styles = StyleSheet.create({
     paddingTop: 4,
   },
   greetingRow: {
-    flexDirection: "row",
+    flexDirection: "row-reverse",
     alignItems: "center",
     justifyContent: "center",
     gap: 8,

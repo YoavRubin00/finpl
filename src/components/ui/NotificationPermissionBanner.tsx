@@ -10,17 +10,13 @@ export function NotificationPermissionBanner() {
   const permissionGranted = useNotificationStore((s) => s.permissionGranted);
   const bannerDismissed = useNotificationStore((s) => s.bannerDismissed);
   const requestPermission = useNotificationStore((s) => s.requestPermission);
-  const scheduleStreakReminder = useNotificationStore((s) => s.scheduleStreakReminder);
   const dismissBanner = useNotificationStore((s) => s.dismissBanner);
 
   const visible = !permissionGranted && !bannerDismissed;
 
   const handleAllow = async () => {
-    const granted = await requestPermission();
-    if (granted) {
-      // Permission granted — schedule the daily streak reminder
-      scheduleStreakReminder(20).catch(() => {});
-    }
+    await requestPermission();
+    // Finn scheduler (useFinnNotificationScheduler) handles all scheduling — 1/day max
   };
 
   return (

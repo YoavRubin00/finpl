@@ -123,7 +123,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     alignSelf: 'flex-end',
     gap: 4,
-    backgroundColor: '#94a3b8',
+    backgroundColor: '#64748b',
     borderRadius: 10,
     paddingHorizontal: 10,
     paddingVertical: 5,
@@ -147,7 +147,7 @@ const styles = StyleSheet.create({
   lockedText: {
     fontSize: 13,
     fontWeight: '800',
-    color: '#94a3b8',
+    color: '#64748b',
     writingDirection: 'rtl' as const,
   },
   gradeBadge: {

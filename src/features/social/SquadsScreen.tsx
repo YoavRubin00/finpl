@@ -211,7 +211,7 @@ const noSquadStyles = StyleSheet.create({
   label: {
     fontSize: 14,
     fontWeight: "700",
-    color: "#94a3b8",
+    color: "#64748b",
     textAlign: "right",
     writingDirection: "rtl",
   },
@@ -265,7 +265,7 @@ const noSquadStyles = StyleSheet.create({
   previewDetail: {
     fontSize: 13,
     fontWeight: "600",
-    color: "#94a3b8",
+    color: "#64748b",
   },
   previewDot: {
     fontSize: 13,
@@ -453,7 +453,7 @@ function SquadHubView() {
               if (isLocked) {
                 return (
                   <View style={{ gap: 8 }}>
-                    <Text style={{ fontSize: 13, color: '#94a3b8', textAlign: 'right', writingDirection: 'rtl' }}>
+                    <Text style={{ fontSize: 13, color: '#64748b', textAlign: 'right', writingDirection: 'rtl' }}>
                       זקוקים ל-1000 XP כדי לפתוח את התיבה יחד!
                     </Text>
                     <View style={{ height: 16, backgroundColor: 'rgba(255,255,255,0.06)', borderRadius: 8, overflow: 'hidden' }}>
@@ -585,7 +585,7 @@ const hubStyles = StyleSheet.create({
   scoreLabel: {
     fontSize: 11,
     fontWeight: "600",
-    color: "#94a3b8",
+    color: "#64748b",
     marginTop: 2,
   },
   codeRow: {
@@ -601,7 +601,7 @@ const hubStyles = StyleSheet.create({
   codeLabel: {
     fontSize: 13,
     fontWeight: "600",
-    color: "#94a3b8",
+    color: "#64748b",
   },
   codeText: {
     fontSize: 16,
@@ -657,7 +657,7 @@ const hubStyles = StyleSheet.create({
   chestDesc: {
     fontSize: 13,
     fontWeight: "600",
-    color: "#94a3b8",
+    color: "#64748b",
     textAlign: "right",
     writingDirection: "rtl",
   },
@@ -800,7 +800,7 @@ const screenStyles = StyleSheet.create({
   subtitle: {
     fontSize: 14,
     fontWeight: "600",
-    color: "#94a3b8",
+    color: "#64748b",
     textAlign: "right",
     writingDirection: "rtl",
     marginBottom: 8,

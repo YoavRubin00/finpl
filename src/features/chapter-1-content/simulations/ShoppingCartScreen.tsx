@@ -180,8 +180,8 @@ function SwipeableItemCard({
                 <Text style={{ fontSize: 11, color: '#16a34a', fontWeight: '700', marginTop: 2 }}>הוסף</Text>
             </View>
             <View style={{ position: 'absolute', left: 8, top: '40%', zIndex: 5, alignItems: 'center', opacity: 0.7 }}>
-                <Text style={{ fontSize: 24, color: '#94a3b8', fontWeight: '900' }}>✋</Text>
-                <Text style={{ fontSize: 11, color: '#94a3b8', fontWeight: '700', marginTop: 2 }}>דלג</Text>
+                <Text style={{ fontSize: 24, color: '#64748b', fontWeight: '900' }}>✋</Text>
+                <Text style={{ fontSize: 11, color: '#64748b', fontWeight: '700', marginTop: 2 }}>דלג</Text>
             </View>
 
             {/* Swipeable card */}

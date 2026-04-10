@@ -90,7 +90,7 @@ export const CALM = {
   lossSurface: '#fee2e2',
   textPrimary: '#1f2937',
   textSecondary: '#64748b',
-  textTertiary: '#94a3b8',
+  textTertiary: '#64748b',
   coinGold: '#ca8a04',
   coinSurface: '#fef3c7',
   buttonPrimary: '#0891b2',

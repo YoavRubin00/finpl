@@ -273,7 +273,7 @@ const styles = StyleSheet.create({
     freeHeader: {
         fontSize: 14,
         fontWeight: '700',
-        color: '#9ca3af',
+        color: '#64748b',
         writingDirection: 'rtl',
     },
     proBadge: {
@@ -315,7 +315,7 @@ const styles = StyleSheet.create({
     },
     limitText: {
         fontSize: 11,
-        color: '#9ca3af',
+        color: '#64748b',
         fontWeight: '600',
     },
 
@@ -359,7 +359,7 @@ const styles = StyleSheet.create({
     planLabel: {
         fontSize: 14,
         fontWeight: '700',
-        color: '#9ca3af',
+        color: '#64748b',
         writingDirection: 'rtl',
     },
     planLabelActive: {
@@ -375,7 +375,7 @@ const styles = StyleSheet.create({
     planPrice: {
         fontSize: 20,
         fontWeight: '900',
-        color: '#9ca3af',
+        color: '#64748b',
         marginTop: 2,
     },
     planPriceActive: {
@@ -388,7 +388,7 @@ const styles = StyleSheet.create({
         writingDirection: 'rtl',
     },
     planSubActive: {
-        color: '#9ca3af',
+        color: '#64748b',
     },
 
     /* CTA */
@@ -430,7 +430,7 @@ const styles = StyleSheet.create({
     },
     dismissText: {
         fontSize: 14,
-        color: '#9ca3af',
+        color: '#64748b',
         writingDirection: 'rtl',
     },
     finePrint: {

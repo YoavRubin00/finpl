@@ -339,7 +339,7 @@ const styles = StyleSheet.create({
   investedText: {
     fontSize: 12,
     fontWeight: '700',
-    color: '#94a3b8',
+    color: '#64748b',
     writingDirection: 'rtl',
   },
   pnlBadge: {
@@ -402,7 +402,7 @@ const styles = StyleSheet.create({
   resultAsset: {
     fontSize: 15,
     fontWeight: '700',
-    color: '#94a3b8',
+    color: '#64748b',
     marginBottom: 16,
     writingDirection: 'rtl',
   },

@@ -4,6 +4,7 @@ import { View, Text, Image, FlatList, Dimensions, StyleSheet, ViewToken, Pressab
 import { useFocusEffect, useScrollToTop } from "@react-navigation/native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import LottieView from "lottie-react-native";
+import { SafeLottie } from "../../components/ui/SafeLottie";
 import { useRouter } from "expo-router";
 import { Lock, FlaskConical } from "lucide-react-native";
 
@@ -234,7 +235,7 @@ function WelcomeCard({ height }: { height: number }) {
         {/* The Daily Concept First */}
         <Animated.View style={[welcomeStyles.conceptCard, bubble2Style]}>
            <View style={{ flexDirection: "row-reverse", alignItems: "center", gap: 8, justifyContent: "center", marginBottom: 6 }}>
-             <ExpoImage source={FINN_STANDARD} style={{ width: 28, height: 28 }} contentFit="contain" />
+             <ExpoImage source={FINN_STANDARD} style={{ width: 28, height: 28 }} contentFit="contain" accessible={false} />
              <Text style={welcomeStyles.quoteDailyLabel}>המושג היומי</Text>
            </View>
            <Text style={welcomeStyles.conceptTitle}>{dailyConcept.titleHe}</Text>
@@ -496,7 +497,7 @@ function FeedItemDecorations({ seed }: { seed: string }) {
         const src = FEED_DECO_SOURCES[((h >>> 0) + i * 7) % FEED_DECO_SOURCES.length] as number;
         return (
           <View key={i} style={{ position: "absolute" as const, opacity: 0.08, top: slot.top as `${number}%`, left: slot.left, right: slot.right }} accessible={false}>
-            <LottieView source={src as never} style={{ width: 34, height: 34 }} autoPlay loop speed={0.4}  />
+            <SafeLottie source={src as never} style={{ width: 34, height: 34 }} autoPlay loop speed={0.4}  />
           </View>
         );
       })}

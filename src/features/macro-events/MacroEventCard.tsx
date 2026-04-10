@@ -388,12 +388,12 @@ export const MacroEventCard = React.memo(function MacroEventCard({ item, isActiv
         {isAnswered && (
           <Animated.View style={styles.buttonsRow}>
             <View style={{ flex: 1, borderRadius: 16, borderWidth: 1.5, borderColor: event.direction === 'up' ? '#86efac' : '#e5e7eb', backgroundColor: event.direction === 'up' ? 'rgba(34,197,94,0.08)' : '#f9fafb', paddingVertical: 10, alignItems: 'center' }}>
-              <Text style={[styles.btnText, { color: event.direction === 'up' ? '#16a34a' : '#9ca3af' }]}>
+              <Text style={[styles.btnText, { color: event.direction === 'up' ? '#16a34a' : '#64748b' }]}>
                 {event.direction === 'up' ? '✅ 📈 עלה' : '📈 עלה'}
               </Text>
             </View>
             <View style={{ flex: 1, borderRadius: 16, borderWidth: 1.5, borderColor: event.direction === 'down' ? '#86efac' : '#e5e7eb', backgroundColor: event.direction === 'down' ? 'rgba(34,197,94,0.08)' : '#f9fafb', paddingVertical: 10, alignItems: 'center' }}>
-              <Text style={[styles.btnText, { color: event.direction === 'down' ? '#16a34a' : '#9ca3af' }]}>
+              <Text style={[styles.btnText, { color: event.direction === 'down' ? '#16a34a' : '#64748b' }]}>
                 {event.direction === 'down' ? '✅ 📉 ירד' : '📉 ירד'}
               </Text>
             </View>

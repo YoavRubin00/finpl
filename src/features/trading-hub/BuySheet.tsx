@@ -433,7 +433,7 @@ const styles = StyleSheet.create({
     disclaimer: {
         fontSize: 12,
         fontWeight: '600',
-        color: '#94a3b8',
+        color: '#64748b',
         textAlign: 'center',
         marginTop: 14,
     },

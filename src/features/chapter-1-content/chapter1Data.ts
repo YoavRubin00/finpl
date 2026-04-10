@@ -14,6 +14,7 @@ export const chapter1Data: Chapter = {
         'תראו את הגרף הזה... רגע, מה?!',
       interactiveIntro:
         'תדמיינו כסף שעובד בשבילכם גם כשאתם ישנים. נגלה יחד איך המנגנון המתמטי הפשוט של ריבית דריבית יכול להפוך סכומים קטנים לחיסכון משמעותי לאורך זמן, ולהיות המנוע שידחוף את העתיד הכלכלי שלכם קדימה.',
+      introAudio: { uri: 'https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/audio/intros/mod-1-1-intro.mp3' },
       flashcards: [{
           id: 'fc-1-4-1',
           text: 'הגדרה מתמטית: [[ריבית דריבית]] היא צבירת [[תשואה]] לא רק על קרן ההשקעה המקורית, אלא גם על הרווחים שנצברו בתקופות קודמות.',
@@ -148,6 +149,7 @@ export const chapter1Data: Chapter = {
       videoHookAsset: { uri: 'https://pub-34f62012f7364bb5bc3b560ea61b72ce.r2.dev/video/hook/module-1-2.mp4' },
       interactiveIntro:
         'המינוס אינו כסף פנוי, אלא הלוואה יקרה שנמצאת אצל רבים באופן קבוע בחשבון. נלמד לזהות נכון את העלויות של משיכת היתר, ואיך אפשר לנהל את הבלאגן ולחזור בבטחה אל הפלוס.',
+      introAudio: { uri: 'https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/audio/intros/mod-1-2-intro.mp3' },
       flashcards: [{
           id: 'fc-1-2-1',
           text: 'הגדרת משיכת יתר: המינוס אינו "יתרה פנויה" אלא הלוואה לזמן קצר, לרוב לא מובטחת, שהבנק מעמיד לרשותכם ב[[ריבית]] הגבוהה ביותר בשוק.',
@@ -329,6 +331,7 @@ export const chapter1Data: Chapter = {
       videoHookAsset: { uri: 'https://pub-34f62012f7364bb5bc3b560ea61b72ce.r2.dev/video/hook/module-3.mp4' },
       interactiveIntro:
         'כרטיס אשראי רחוק מלהיות כלי רע - מדובר במנגנון נהדר כשיודעים להשתמש בו. בואו נבין את היתרונות והחסרונות שלו, למה עסקאות תשלומים קטנות מצטברות, ואיך להשתמש בכרטיס בחוכמה לטובתכם.',
+      introAudio: { uri: 'https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/audio/intros/mod-1-3-intro.mp3' },
       flashcards: [{
           id: 'fc-1-3-1',
           text: 'מנגנון התשלום הנדחה: כרטיס [[אשראי]] הוא כלי המפריד בין פעולת הרכישה לבין פעולת התשלום בפועל. ניתוק זה מפחית את ה"כאב הפסיכולוגי" של התשלום ומעודד צריכת יתר.',
@@ -462,6 +465,7 @@ export const chapter1Data: Chapter = {
       videoHookAsset: { uri: 'https://pub-34f62012f7364bb5bc3b560ea61b72ce.r2.dev/video/hook/hook-1-1.mp4' },
       interactiveIntro:
         'תזרים יציב הוא הבסיס לצמיחה. תלמדו איך לחלק את העוגה בין הוצאות שוטפות וחיסכון, תוך כדי שמירה על המרחב ליהנות מהחיים ולבנות בסיס חזק לעתיד. הפורמולה המנצחת מתחילה כאן.',
+      introAudio: { uri: 'https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/audio/intros/mod-1-4-intro.mp3' },
       flashcards: [{
           id: 'fc-1-1-1',
           text: 'למה בכלל צריך [[תקציב]]? בבסיס הכלכלה עומדת הדילמה של משאבים מוגבלים מול רצונות אינסופיים. ניהול תקציב אינו "הגבלה" אלא כלי שעוזר לך להפיק את המקסימום מכל שקל פנוי.',
@@ -621,6 +625,7 @@ export const chapter1Data: Chapter = {
       videoHookAsset: { uri: 'https://pub-34f62012f7364bb5bc3b560ea61b72ce.r2.dev/video/hook/module-5.mp4' },
       interactiveIntro:
         'תלוש השכר הוא מסמך קריטי ששווה להכיר. נבין יחד בדיוק היכן ממוקם כל סעיף, מה ההבדל בין שכר הברוטו לנטו שמופקד למען העתיד, וכיצד קוראים נכון את הנתונים כדי לדעת לאן הולך הכסף.',
+      introAudio: { uri: 'https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/audio/intros/mod-1-5-intro.mp3' },
       flashcards: [{
           id: 'fc-1-5-1',
           text: 'הגדרת שכר ברוטו: זהו התגמול הכולל שהמעסיק משלם לעובד לפני כל ניכוי. זהו הבסיס לחישוב זכויות סוציאליות ([[פנסיה]], פיצויים).',
@@ -669,7 +674,7 @@ export const chapter1Data: Chapter = {
         },
         {
           id: 'fc-1-5-4',
-          text: 'דמי [[ביטוח]] לאומי וביטוח בריאות: מס חובה שנגבה מהשכר. עד 60% מהשכר הממוצע — שיעור מופחת (8.78% סה"כ), ומעל זה — שיעור מלא (12.17%). בתמורה מקבלים זכויות קצבה (אבטלה, נכות, זקנה) ושירותי בריאות ציבוריים.',
+          text: 'דמי [[ביטוח]] לאומי וביטוח בריאות: מס חובה שנגבה מהשכר. עד 60% מהשכר הממוצע — שיעור מופחת (3.5% ניכוי עובד), ומעל זה — שיעור מלא (12% ניכוי עובד). בתמורה מקבלים זכויות קצבה (אבטלה, נכות, זקנה) ושירותי בריאות ציבוריים.',
           diveMode: true,
           hideTextOnDive: true,
           zoomRegions: [[0, 0, 1], [0, 0, 1], [0, 0, 1], [0, 0, 1]],
@@ -798,6 +803,7 @@ export const chapter1Data: Chapter = {
       videoHookAsset: { uri: 'https://pub-34f62012f7364bb5bc3b560ea61b72ce.r2.dev/video/hook/module-6-1.mp4' },
       interactiveIntro:
         'הלוואות יכולות להיות כלי פיננסי או נטל כבד. במודול הזה נכיר את ההבדל החשוב בין הלוואה עסקית (או מינוף יצרני להגדלת הון), אל מול לקחת הלוואה לצורך צרכני, נבין מתי השימוש באשראי נכון וכדאי.',
+      introAudio: { uri: 'https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/audio/intros/mod-1-6-intro.mp3' },
       flashcards: [{
           id: 'fc-1-6-1',
           text: 'חוב יצרני מול חוב צרכני: חוב יצרני (מינוף) משמש לרכישת נכס שמניב [[תשואה]] גבוהה מעלות [[ריבית|הריבית]]. חוב צרכני משמש לרכישת מוצרים מתכלים ושוחק את העושר.',
@@ -975,6 +981,7 @@ export const chapter1Data: Chapter = {
       videoHookAsset: { uri: 'https://pub-34f62012f7364bb5bc3b560ea61b72ce.r2.dev/video/hook/module-7.mp4' },
       interactiveIntro:
         'עמלות הן הוצאות נלוות שאפשר לייעל. נלמד איך לנהל משא ומתן בצורה נעימה ומושכלת מול הבנקים והגופים, להבין באילו סעיפים ניתן לבקש הנחות, והיכן דיאלוג והשוואת שוק יעזרו לכם לחסוך מעט באופן עקבי.',
+      introAudio: { uri: 'https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/audio/intros/mod-1-7-intro.mp3' },
       flashcards: [
         {
           id: 'fc-1-7-1',
@@ -1150,6 +1157,7 @@ export const chapter1Data: Chapter = {
       videoHookAsset: { uri: 'https://pub-34f62012f7364bb5bc3b560ea61b72ce.r2.dev/video/hook/module-8.mp4' },
       interactiveIntro:
         'כל משווק רוצה שנקנה אצלו כמה שיותר. הגידו שלום לטריקים השיווקיים הנפוצים ואיך לקבל החלטות מודעות, להימנע מרכישות שאינן נחוצות ולזהות אילו מבצעים הם אכן משתלמים לך כלקוח.',
+      introAudio: { uri: 'https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/audio/intros/mod-1-8-intro.mp3' },
       flashcards: [
         {
           id: 'fc-1-8-1',
@@ -1325,6 +1333,7 @@ export const chapter1Data: Chapter = {
       videoHookAsset: { uri: 'https://pub-34f62012f7364bb5bc3b560ea61b72ce.r2.dev/video/hook/module-9.mp4' },
       interactiveIntro:
         'אירועים בלתי צפויים קורים לכולם ויכולים לפגוע בתזרים. בואו ונגלה למה חשוב כל כך לבנות מעטפת הגנה (קרן חירום), איך היא שומרת מעלויות במצבי משבר, והיכן כדאי לשמור סכומים לשעת הצורך.',
+      introAudio: { uri: 'https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/audio/intros/mod-1-9-intro.mp3' },
       flashcards: [
         {
           id: 'fc-1-9-1',

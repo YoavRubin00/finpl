@@ -15,6 +15,7 @@ export const chapter2Data: Chapter = {
       videoHookAsset: { uri: 'https://pub-34f62012f7364bb5bc3b560ea61b72ce.r2.dev/video/hook/module-10.mp4' },
       interactiveIntro:
         'דירוג אשראי הוא מערכת פיננסית שעוקבת אחרי ההתנהלות שלכם, ומשפיעה על היכולת לקבל הלוואות בתנאים טובים. יחד נלמד איך לבנות ולשמור על דירוג אשראי מנצח שיפתח בפניכם דלתות רבות בעתיד.',
+      introAudio: { uri: 'https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/audio/intros/mod-2-10-intro.mp3' },
       flashcards: [{
           id: 'fc-2-10-1',
           text: 'אסימטריה של מידע: בנקים סובלים מחוסר מידע לגבי אמינות הלווה. [[דירוג אשראי|דירוג האשראי]] (Credit Score) הוא הפתרון המוסדי לגישור על פער זה, המנבא את "הסתברות הפירעון" (Probability of Default) על בסיס התנהגות עבר.',
@@ -146,6 +147,7 @@ export const chapter2Data: Chapter = {
       videoHookAsset: { uri: 'https://pub-34f62012f7364bb5bc3b560ea61b72ce.r2.dev/video/hook/module-11.mp4' },
       interactiveIntro:
         'המדינה מעניקה למעשה החרגות והטבות מס חשובות, ורבים מאיתנו מפספסים אותן. נכיר את המנגנון של "נקודות הזיכוי" וכיצד ניתן להכיר את הזכויות שלכם כדי למקסם את שכר הנטו ביעילות.',
+      introAudio: { uri: 'https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/audio/intros/mod-2-11-intro.mp3' },
       flashcards: [{
           id: 'fc-2-11-1',
           text: 'שיטת המיסוי הפרוגרסיבית: ישראל מפעילה שיטת "מדרגות מס". ככל שהכנסתכם עולה, אחוז המס על השקל האחרון ([[מס הכנסה|מס]] שולי) עולה. זהו מנגנון לחלוקה מחדש של עושר.',
@@ -163,7 +165,7 @@ export const chapter2Data: Chapter = {
         },
         {
           id: 'fc-2-11-3',
-          text: 'נקודות זיכוי (Tax Credits): הטבת מס המופחתת ישירות מהסכום שאתם חייבים למדינה. כל נקודה שווה סכום שנתי קבוע (כ-3,000 ש"ח בקירוב ב-2024). הן הופכות שכר ברוטו לנטו גבוה יותר.',
+          text: 'נקודות זיכוי (Tax Credits): הטבת מס המופחתת ישירות מהסכום שאתם חייבים למדינה. כל נקודה שווה סכום שנתי קבוע (2,904 ₪ בשנה, נכון ל-2026). הן הופכות שכר ברוטו לנטו גבוה יותר.',
         },
         {
           id: 'fc-2-11-4',
@@ -184,7 +186,7 @@ export const chapter2Data: Chapter = {
           zoomRegions: [[0, 0, 1], [0, 0, 1], [0, 0, 1], [0, 0, 1]],
           finnExplanations: [
             '',
-            'נקודת זיכוי שווה כ-2,900₪ בשנה — בדקו שאתם מנצלים הכל.',
+            'נקודת זיכוי שווה 2,904₪ בשנה (242₪ לחודש) — בדקו שאתם מנצלים הכל.',
             'סטודנטים זכאים לנקודה שנתיים אחרי התואר — אל תפספסו.',
             'כסף שלא דורשים מהמדינה הוא כסף שנשאר על הרצפה.'
           ],
@@ -276,6 +278,7 @@ export const chapter2Data: Chapter = {
       videoHookAsset: { uri: 'https://pub-34f62012f7364bb5bc3b560ea61b72ce.r2.dev/video/hook/module-12.mp4' },
       interactiveIntro:
         'הפנסיה היא אחד ממכשירי החיסכון החשובים והחזקים ביותר, והיא עוגן שיכול להבטיח את איכות החיים שלנו בעתיד. נלמד איך עובדת המערכת וכיצד חיסכון קטן מגיל צעיר צובר תאוצה אדירה.',
+      introAudio: { uri: 'https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/audio/intros/mod-2-12-intro.mp3' },
       flashcards: [{
           id: 'fc-2-12-1',
           text: 'חוק [[פנסיה|פנסיית]] חובה: בישראל קיימת חובת הפרשה לפנסיה לכל עובד (שכיר ועצמאי). המטרה היא למנוע עוני בגיל זיקנה על ידי "חיסכון כפוי" לאורך שנות העבודה.',
@@ -407,6 +410,7 @@ export const chapter2Data: Chapter = {
       videoHookAsset: { uri: 'https://pub-34f62012f7364bb5bc3b560ea61b72ce.r2.dev/video/hook/module-13.mp4' },
       interactiveIntro:
         'קרן השתלמות נחשבת לאחת ממסגרות החיסכון המשתלמות ביותר בזכות הטבות המס שלה. בואו נבין יחד כיצד היא פועלת, מה הופך אותה לכל כך אטרקטיבית וכיצד ניתן למקסם את הצמיחה דרכה.',
+      introAudio: { uri: 'https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/audio/intros/mod-2-13-intro.mp3' },
       flashcards: [{
           id: 'fc-2-13-1',
           text: 'הטבת מס הונית — פטור מלא ממס רווחי הון: [[קרן השתלמות]] היא אפיק החיסכון היחיד לטווח בינוני בישראל המעניק פטור מלא ממס רווחי הון (25% מהרווח הריאלי) בעת המשיכה. זהו יתרון תשואתי עצום על פני כל השקעה אחרת בבנק או בבורסה.',
@@ -446,7 +450,7 @@ export const chapter2Data: Chapter = {
           finnExplanations: [
             '',
             'קרן השתלמות נזילה אחרי 6 שנים — החיסכון הכי משתלם.',
-            'הפקדה עד 15,600₪/שנה פטורה ממס רווחי הון לחלוטין.',
+            'הפקדה עד 20,520₪/שנה (לעצמאים, נכון ל-2026) פטורה ממס רווחי הון לחלוטין.',
             'זה הכלי הפיננסי הכי חכם שיש — נצלו אותו!'
           ],
           isComic: true,
@@ -537,6 +541,7 @@ export const chapter2Data: Chapter = {
       videoHookAsset: { uri: 'https://pub-34f62012f7364bb5bc3b560ea61b72ce.r2.dev/video/hook/module-14.mp4' },
       interactiveIntro:
         'שוק הביטוח מעניק לנו רשת ביטחון חשובה מול אירועים בלתי צפויים. נבין בפשטות מהי המשמעות של ניהול סיכונים בשגרה הפעילה, ואיך בוחרים בחוכמה את הכיסויים המדויקים וההכרחיים עבורנו.',
+      introAudio: { uri: 'https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/audio/intros/mod-2-14-intro.mp3' },
       flashcards: [{
           id: 'fc-2-14-1',
           text: 'עקרון העברת הסיכון: [[ביטוח]] הוא מנגנון כלכלי שבו הפרט מעביר סיכון לאירוע קטסטרופלי (אובדן הבית, גניבת רכב) לחברה בעלת הון גדול, תמורת תשלום פרמיה קבועה וידועה מראש.',

@@ -333,7 +333,7 @@ export function LifelineChatOverlay({ visible, conceptTag, onClose }: Props) {
                   value={input}
                   onChangeText={setInput}
                   placeholder="שאל שאלה..."
-                  placeholderTextColor="#94a3b8"
+                  placeholderTextColor="#64748b"
                   multiline
                   maxLength={500}
                   onSubmitEditing={sendMessage}
@@ -603,6 +603,6 @@ const st = StyleSheet.create({
   closeLockText: {
     fontSize: 14,
     fontWeight: "600",
-    color: "#94a3b8",
+    color: "#64748b",
   },
 });

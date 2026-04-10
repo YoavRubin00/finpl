@@ -100,7 +100,7 @@ export function SuggestScenarioScreen() {
             <TextInput
               style={styles.input}
               placeholder='לדוגמה: "קריסת מטבע דיגיטלי"'
-              placeholderTextColor="#94a3b8"
+              placeholderTextColor="#64748b"
               value={title}
               onChangeText={setTitle}
               maxLength={60}
@@ -116,7 +116,7 @@ export function SuggestScenarioScreen() {
             <TextInput
               style={[styles.input, styles.textArea]}
               placeholder="מה קורה בתרחיש? אילו החלטות המשתמש צריך לקבל? למה זה מעניין?"
-              placeholderTextColor="#94a3b8"
+              placeholderTextColor="#64748b"
               value={description}
               onChangeText={setDescription}
               maxLength={500}
@@ -142,7 +142,7 @@ export function SuggestScenarioScreen() {
               accessibilityRole="button"
               accessibilityLabel="שלח לצוות המומחים"
             >
-              <Send size={18} color={canSubmit ? '#fff' : '#94a3b8'} style={{ transform: [{ scaleX: -1 }] }} />
+              <Send size={18} color={canSubmit ? '#fff' : '#64748b'} style={{ transform: [{ scaleX: -1 }] }} />
               <Text style={[styles.submitText, !canSubmit && styles.submitTextDisabled]}>
                 שלח לצוות המומחים
               </Text>
@@ -249,7 +249,7 @@ const styles = StyleSheet.create({
   },
   charCount: {
     fontSize: 11,
-    color: '#94a3b8',
+    color: '#64748b',
     textAlign: 'left',
     marginTop: 4,
   },
@@ -280,7 +280,7 @@ const styles = StyleSheet.create({
     writingDirection: 'rtl',
   },
   submitTextDisabled: {
-    color: '#94a3b8',
+    color: '#64748b',
   },
 
   tipsCard: {

@@ -68,7 +68,7 @@ function RankBadge({ rank }: { rank: number }) {
     return <Text style={{ fontSize: 20 }}>{medals[rank]}</Text>;
   }
   return (
-    <Text style={{ fontSize: 16, fontWeight: '800', color: '#94a3b8', ...TEXT_SHADOW }}>
+    <Text style={{ fontSize: 16, fontWeight: '800', color: '#64748b', ...TEXT_SHADOW }}>
       {rank}
     </Text>
   );
@@ -78,7 +78,7 @@ function LeaderboardRow({ entry, index }: { entry: LeaderboardEntry; index: numb
   const isLocal = entry.playerId === 'local';
   const pnlColor = entry.pnlPercent >= 0 ? '#4ade80' : CLASH.redBadge;
   const changeIcon = entry.change === '+1' ? '▲' : entry.change === '-1' ? '▼' : '';
-  const changeColor = entry.change === '+1' ? '#4ade80' : entry.change === '-1' ? CLASH.redBadge : '#94a3b8';
+  const changeColor = entry.change === '+1' ? '#4ade80' : entry.change === '-1' ? CLASH.redBadge : '#64748b';
 
   return (
     <Animated.View
@@ -233,7 +233,7 @@ function PositionRow({
             <Text style={{ fontSize: 15, fontWeight: '700', color: '#e2e8f0', ...TEXT_SHADOW }}>
               {position.assetName}
             </Text>
-            <Text style={{ fontSize: 12, color: '#94a3b8', marginTop: 2 }}>
+            <Text style={{ fontSize: 12, color: '#64748b', marginTop: 2 }}>
               {position.quantity} × {position.currentPrice.toFixed(2)} FC
             </Text>
           </View>
@@ -292,7 +292,7 @@ function AssetRow({
     return () => { cancelled = true; };
   }, [asset.id]);
 
-  const typeColor = TYPE_COLORS[asset.type] ?? '#94a3b8';
+  const typeColor = TYPE_COLORS[asset.type] ?? '#64748b';
 
   return (
     <Animated.View entering={FadeInDown.delay(index * 40).springify()}>
@@ -418,7 +418,7 @@ function BuyConfirmSheet({
           {/* Header */}
           <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, marginBottom: 16 }}>
             <Pressable onPress={onClose} hitSlop={12}>
-              <Text style={{ fontSize: 16, color: '#94a3b8', fontWeight: '600' }}>✕</Text>
+              <Text style={{ fontSize: 16, color: '#64748b', fontWeight: '600' }}>✕</Text>
             </Pressable>
             <Text style={[{ fontSize: 18, fontWeight: '800', color: CLASH.goldLight, ...TEXT_SHADOW }, RTL]}>
               קנייה
@@ -505,7 +505,7 @@ function BuyConfirmSheet({
             }}
           >
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-              <Text style={[{ fontSize: 14, fontWeight: '600', color: '#94a3b8' }, RTL]}>
+              <Text style={[{ fontSize: 14, fontWeight: '600', color: '#64748b' }, RTL]}>
                 עלות
               </Text>
               <Text
@@ -523,7 +523,7 @@ function BuyConfirmSheet({
               <Text style={[{ fontSize: 12, fontWeight: '600', color: '#64748b' }, RTL]}>
                 מזומן פנוי
               </Text>
-              <Text style={{ fontSize: 14, fontWeight: '700', color: '#94a3b8' }}>
+              <Text style={{ fontSize: 14, fontWeight: '700', color: '#64748b' }}>
                 {cashRemaining.toLocaleString(undefined, { maximumFractionDigits: 0 })} FC
               </Text>
             </View>
@@ -619,7 +619,7 @@ function AssetPickerSheet({
             }}
           >
             <Pressable onPress={onClose} hitSlop={12}>
-              <Text style={{ fontSize: 16, color: '#94a3b8', fontWeight: '600' }}>✕</Text>
+              <Text style={{ fontSize: 16, color: '#64748b', fontWeight: '600' }}>✕</Text>
             </Pressable>
             <Text
               style={[
@@ -788,7 +788,7 @@ function LeagueResultsOverlay({
           <Text style={{ fontSize: 24, fontWeight: '900', color: isTopThree ? CLASH.goldLight : '#e2e8f0', ...TEXT_SHADOW, marginBottom: 4 }}>
             הליגה הסתיימה!
           </Text>
-          <Text style={[{ fontSize: 18, fontWeight: '700', color: '#94a3b8', marginBottom: 20 }, RTL]}>
+          <Text style={[{ fontSize: 18, fontWeight: '700', color: '#64748b', marginBottom: 20 }, RTL]}>
             סיימת במקום {rank}
           </Text>
 
@@ -810,16 +810,16 @@ function LeagueResultsOverlay({
             <View style={{ gap: 8 }}>
               <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
                 <Text style={{ fontSize: 16, fontWeight: '700', color: '#4ade80' }}>+{reward.xp} XP</Text>
-                <Text style={[{ fontSize: 14, color: '#94a3b8' }, RTL]}>ניסיון</Text>
+                <Text style={[{ fontSize: 14, color: '#64748b' }, RTL]}>ניסיון</Text>
               </View>
               <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
                 <Text style={{ fontSize: 16, fontWeight: '700', color: '#fbbf24' }}>+{reward.coins} Coins</Text>
-                <Text style={[{ fontSize: 14, color: '#94a3b8' }, RTL]}>מטבעות</Text>
+                <Text style={[{ fontSize: 14, color: '#64748b' }, RTL]}>מטבעות</Text>
               </View>
               {reward.gems > 0 && (
                 <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
                   <Text style={{ fontSize: 16, fontWeight: '700', color: '#a78bfa' }}>+{reward.gems} Gems</Text>
-                  <Text style={[{ fontSize: 14, color: '#94a3b8' }, RTL]}>יהלומים</Text>
+                  <Text style={[{ fontSize: 14, color: '#64748b' }, RTL]}>יהלומים</Text>
                 </View>
               )}
             </View>
@@ -887,7 +887,7 @@ function SellResultToast({ result, onDone }: { result: SellResult; onDone: () =>
         <Text style={[{ fontSize: 15, fontWeight: '800', color: '#e2e8f0', ...TEXT_SHADOW }, RTL]}>
           {result.assetName} נמכר
         </Text>
-        <Text style={[{ fontSize: 13, fontWeight: '600', color: '#94a3b8', marginTop: 2 }, RTL]}>
+        <Text style={[{ fontSize: 13, fontWeight: '600', color: '#64748b', marginTop: 2 }, RTL]}>
           {isProfitable ? '+30 XP, +50 Coins' : 'ללא רווח'}
         </Text>
       </View>
@@ -956,7 +956,7 @@ function EntryGateOverlay({
           <Text style={{ fontSize: 24, fontWeight: '900', color: CLASH.goldLight, ...TEXT_SHADOW, marginBottom: 8, textAlign: 'center' }}>
             ליגת הלווייתנים
           </Text>
-          <Text style={[{ fontSize: 16, fontWeight: '600', color: '#94a3b8', marginBottom: 20, textAlign: 'center' }, RTL]}>
+          <Text style={[{ fontSize: 16, fontWeight: '600', color: '#64748b', marginBottom: 20, textAlign: 'center' }, RTL]}>
             השתתף בליגת המסחר השבועית.
             בנה תיק, התחרה מול אחרים, וזכה בפרסי ענק!
           </Text>
@@ -1007,13 +1007,13 @@ function EntryGateOverlay({
               marginBottom: 12,
             })}
           >
-            <Text style={{ fontSize: 17, fontWeight: '900', color: !canAfford ? '#94a3b8' : '#0d2847' }}>
+            <Text style={{ fontSize: 17, fontWeight: '900', color: !canAfford ? '#64748b' : '#0d2847' }}>
               {canAfford ? 'היכנס לליגה' : 'אין מספיק מטבעות'}
             </Text>
           </Pressable>
           
           <Pressable onPress={onCancel} style={{ padding: 8 }}>
-            <Text style={{ color: '#94a3b8', fontSize: 15, fontWeight: '600' }}>חזור אחורה</Text>
+            <Text style={{ color: '#64748b', fontSize: 15, fontWeight: '600' }}>חזור אחורה</Text>
           </Pressable>
         </Animated.View>
       </View>
@@ -1167,7 +1167,7 @@ export function FantasyLeagueScreen() {
                   style={{
                     fontSize: 15,
                     fontWeight: '700',
-                    color: activeTab === tab.id ? '#0d2847' : '#94a3b8',
+                    color: activeTab === tab.id ? '#0d2847' : '#64748b',
                   }}
                 >
                   {tab.label}
@@ -1217,7 +1217,7 @@ export function FantasyLeagueScreen() {
                   >
                     {/* Total Value Row */}
                     <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-                      <Text style={[{ fontSize: 14, fontWeight: '600', color: '#94a3b8' }, RTL]}>
+                      <Text style={[{ fontSize: 14, fontWeight: '600', color: '#64748b' }, RTL]}>
                         שווי כולל
                       </Text>
                       <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: 8 }}>
@@ -1232,7 +1232,7 @@ export function FantasyLeagueScreen() {
 
                     {/* Cash Remaining Row */}
                     <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <Text style={[{ fontSize: 14, fontWeight: '600', color: '#94a3b8' }, RTL]}>
+                      <Text style={[{ fontSize: 14, fontWeight: '600', color: '#64748b' }, RTL]}>
                         מזומן פנוי
                       </Text>
                       <Text style={{ fontSize: 16, fontWeight: '700', color: '#e2e8f0', ...TEXT_SHADOW }}>
@@ -1273,7 +1273,7 @@ export function FantasyLeagueScreen() {
               ) : (
                 <View style={{ alignItems: 'center', paddingTop: 40 }}>
                   <Text style={{ fontSize: 48, marginBottom: 12 }}>📊</Text>
-                  <Text style={[{ fontSize: 16, fontWeight: '600', color: '#94a3b8' }, RTL]}>
+                  <Text style={[{ fontSize: 16, fontWeight: '600', color: '#64748b' }, RTL]}>
                     אין פוזיציות פתוחות
                   </Text>
                   <Text style={[{ fontSize: 14, color: 'rgba(148, 163, 184, 0.6)', marginTop: 4 }, RTL]}>

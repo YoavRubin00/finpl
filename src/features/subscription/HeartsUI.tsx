@@ -342,7 +342,7 @@ const styles = StyleSheet.create({
     coinRefillSubtext: {
         fontSize: 11,
         fontWeight: '600',
-        color: '#94a3b8',
+        color: '#64748b',
         marginTop: 2,
         writingDirection: 'rtl',
         textAlign: 'right',
@@ -379,7 +379,7 @@ const styles = StyleSheet.create({
     waitBtnText: {
         fontSize: 13,
         fontWeight: '600',
-        color: '#94a3b8',
+        color: '#64748b',
         writingDirection: 'rtl',
     },
     gemRefillBtn: {

@@ -48,7 +48,7 @@ function RecordBadge({ label, value, color }: { label: string; value: number; co
 const recordStyles = StyleSheet.create({
   badge: { alignItems: "center", minWidth: 60 },
   value: { fontSize: 28, fontWeight: "900", ...TEXT_SHADOW },
-  label: { fontSize: 12, fontWeight: "600", color: "#94a3b8", marginTop: 2 },
+  label: { fontSize: 12, fontWeight: "600", color: "#64748b", marginTop: 2 },
 });
 
 // ---------------------------------------------------------------------------
@@ -106,7 +106,7 @@ const searchStyles = StyleSheet.create({
   subtitle: {
     fontSize: 14,
     fontWeight: "500",
-    color: "#94a3b8",
+    color: "#64748b",
     marginTop: 6,
     writingDirection: "rtl",
   },
@@ -340,7 +340,7 @@ const gameStyles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 8,
   },
-  scoreLabel: { fontSize: 11, fontWeight: "600", color: "#94a3b8", writingDirection: "rtl" },
+  scoreLabel: { fontSize: 11, fontWeight: "600", color: "#64748b", writingDirection: "rtl" },
   scoreValue: { fontSize: 24, fontWeight: "900", color: "#fff", ...TEXT_SHADOW },
   timerCenter: { alignItems: "center", gap: 6 },
   timerBubble: {
@@ -512,7 +512,7 @@ const resultStyles = StyleSheet.create({
     marginTop: 8,
   },
   streakStat: { flexDirection: "row", alignItems: "center", gap: 4 },
-  duelStatText: { fontSize: 13, fontWeight: "700", color: "#94a3b8", writingDirection: "rtl" },
+  duelStatText: { fontSize: 13, fontWeight: "700", color: "#64748b", writingDirection: "rtl" },
   statsRow: { flexDirection: "row", justifyContent: "space-around", width: "100%", marginTop: 20 },
   actions: { width: "100%", marginTop: 24, gap: 10 },
 });

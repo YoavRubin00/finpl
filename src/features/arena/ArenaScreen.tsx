@@ -55,7 +55,7 @@ const LeaderboardRow = React.memo(function LeaderboardRow({
   isCurrentUser: boolean;
 }) {
   const isTop3 = rank <= 3;
-  const crownColors = ["#facc15", "#94a3b8", "#b45309"];
+  const crownColors = ["#facc15", "#64748b", "#b45309"];
 
   return (
     <View
@@ -290,7 +290,7 @@ const s = StyleSheet.create({
   rankText: {
     fontSize: 14,
     fontWeight: '900',
-    color: '#94a3b8',
+    color: '#64748b',
   },
   playerName: {
     flex: 1,
@@ -318,6 +318,6 @@ const s = StyleSheet.create({
   xpLabel: {
     fontSize: 10,
     fontWeight: '700',
-    color: '#94a3b8',
+    color: '#64748b',
   },
 });

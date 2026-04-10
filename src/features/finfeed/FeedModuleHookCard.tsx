@@ -273,7 +273,7 @@ const styles = StyleSheet.create({
     alignItems: "flex-end",
     marginBottom: 14,
     borderRightWidth: 3,
-    borderRightColor: "#94a3b8",
+    borderRightColor: "#64748b",
     paddingRight: 14,
   },
   chapterLabel: {

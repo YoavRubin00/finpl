@@ -234,7 +234,7 @@ const styles = StyleSheet.create({
   },
   emptyText: {
     fontSize: 16,
-    color: "#9ca3af",
+    color: "#64748b",
     marginTop: 16,
     writingDirection: "rtl",
     textAlign: "center",
@@ -295,7 +295,7 @@ const styles = StyleSheet.create({
   },
   rowDate: {
     fontSize: 12,
-    color: "#9ca3af",
+    color: "#64748b",
     marginTop: 2,
     writingDirection: "rtl",
     textAlign: "right",

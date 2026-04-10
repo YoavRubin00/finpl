@@ -64,7 +64,7 @@ export function LifelineModal({ visible, conceptTag, onAccept, onDismiss }: Life
         <Animated.View entering={FadeInDown.duration(400).springify()} style={styles.card}>
           {/* Close button */}
           <Pressable onPress={onDismiss} style={styles.closeBtn} hitSlop={12}>
-            <X size={20} color="#94a3b8" />
+            <X size={20} color="#64748b" />
           </Pressable>
 
           {/* Icon */}

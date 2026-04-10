@@ -38,6 +38,7 @@ export interface Module {
   videoHook: string;
   videoHookAsset?: { uri: string };
   interactiveIntro: string;
+  introAudio?: { uri: string };
   flashcards: Flashcard[];
   quizzes: QuizQuestion[];
   simConcept: SimConcept;

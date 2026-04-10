@@ -209,6 +209,6 @@ const styles = StyleSheet.create({
   skipText: {
     fontSize: 14,
     fontWeight: "600",
-    color: "#94a3b8",
+    color: "#64748b",
   },
 });

@@ -186,7 +186,7 @@ const styles = StyleSheet.create({
   },
   footerText: {
     fontSize: 12,
-    color: "#94a3b8",
+    color: "#64748b",
     fontWeight: "600",
   },
   bottomSpacer: {

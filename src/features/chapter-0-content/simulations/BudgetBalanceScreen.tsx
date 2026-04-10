@@ -234,7 +234,7 @@ const s = StyleSheet.create({
     position: "absolute",
     width: BEAM_W,
     height: 6,
-    backgroundColor: "#94a3b8",
+    backgroundColor: "#64748b",
     borderRadius: 3,
   },
   bowlLeft: {

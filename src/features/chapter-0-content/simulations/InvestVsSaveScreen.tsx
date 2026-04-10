@@ -188,7 +188,7 @@ const styles = StyleSheet.create({
   },
   columnDesc: {
     fontSize: 12,
-    color: "#9ca3af",
+    color: "#64748b",
     textAlign: "center",
   },
   divider: {

@@ -35,7 +35,7 @@ const LEGACY_COLORS: Record<
 > = {
   default: {
     gradient: ["#e5e7eb", "#d1d5db"],
-    border: "#9ca3af",
+    border: "#64748b",
     highlight: "rgba(229, 231, 235, 0.5)",
   },
   green: {

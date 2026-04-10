@@ -265,7 +265,7 @@ const styles = StyleSheet.create({
     author: {
         fontSize: 15,
         fontWeight: "600",
-        color: "#9ca3af",
+        color: "#64748b",
         textAlign: "right",
         writingDirection: "rtl",
     },

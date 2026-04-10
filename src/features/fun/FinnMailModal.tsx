@@ -45,7 +45,7 @@ export function FinnMailModal({ visible, onClose }: FinnMailModalProps) {
         >
           {/* Close button */}
           <Pressable onPress={handleClose} style={styles.closeBtn} hitSlop={12}>
-            <X size={18} color="#94a3b8" />
+            <X size={18} color="#64748b" />
           </Pressable>
 
           {/* Mail header image */}

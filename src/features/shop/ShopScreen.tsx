@@ -357,7 +357,7 @@ export function ShopScreen() {
       {/* ── FINN SPLASH on enter ── */}
       {showSplash && (
         <Pressable onPress={() => setShowSplash(false)} style={styles.finnSplash} accessibilityRole="button" accessibilityLabel="סגור מסך כניסה">
-          <Image source={{ uri: 'https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/images/finn/finn-shop.png' }} style={styles.finnSplashImg} resizeMode="cover" />
+          <Image source={{ uri: 'https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/images/finn/finn-shop.png' }} style={styles.finnSplashImg} resizeMode="cover" accessible={false} />
         </Pressable>
       )}
 
@@ -892,7 +892,7 @@ const styles = StyleSheet.create({
   exchangeArrow: {
     fontSize: 16,
     fontWeight: '800',
-    color: '#94a3b8',
+    color: '#64748b',
   },
   exchangeGems: { fontSize: 15, fontWeight: '800', color: '#0891b2' },
   exchangeCoins: { fontSize: 15, fontWeight: '800', color: '#b45309' },
@@ -967,7 +967,7 @@ const styles = StyleSheet.create({
   },
   emptyText: {
     fontSize: 14,
-    color: '#94a3b8',
+    color: '#64748b',
     writingDirection: 'rtl' as const,
   },
 

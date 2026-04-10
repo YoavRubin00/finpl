@@ -142,7 +142,7 @@ const styles = StyleSheet.create({
   },
   subtitle: {
     fontSize: 15,
-    color: "#94a3b8",
+    color: "#64748b",
     marginTop: 6,
     textAlign: "center",
   },

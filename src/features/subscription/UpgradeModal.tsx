@@ -98,7 +98,7 @@ export function UpgradeModal({ visible, feature, onDismiss }: UpgradeModalProps)
           >
             {/* Close button */}
             <Pressable onPress={onDismiss} style={styles.closeBtn} hitSlop={12} accessibilityLabel="סגור" accessibilityRole="button">
-              <X size={20} color="#94a3b8" />
+              <X size={20} color="#64748b" />
             </Pressable>
 
             {/* Crown Lottie */}

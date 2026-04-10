@@ -33,7 +33,7 @@ function RecordBadge({ label, value, color }: { label: string; value: number; co
 const recordStyles = StyleSheet.create({
   badge: { alignItems: "center", minWidth: 60 },
   value: { fontSize: 28, fontWeight: "900", ...TEXT_SHADOW },
-  label: { fontSize: 12, fontWeight: "600", color: "#94a3b8", marginTop: 2 },
+  label: { fontSize: 12, fontWeight: "600", color: "#64748b", marginTop: 2 },
 });
 
 // ---------------------------------------------------------------------------
@@ -151,7 +151,7 @@ const styles = StyleSheet.create({
   heroSubtitle: {
     fontSize: 15,
     fontWeight: "500",
-    color: "#94a3b8",
+    color: "#64748b",
     marginTop: 6,
     writingDirection: "rtl",
     textAlign: "center",

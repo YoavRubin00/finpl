@@ -3,6 +3,7 @@
  * Called from useNotificationSetup. Runs once per day on app open.
  */
 import { useEffect } from 'react';
+import * as Notifications from 'expo-notifications';
 import { useNotificationStore } from './useNotificationStore';
 import { useEconomyStore } from '../economy/useEconomyStore';
 import { getLevelFromXP } from '../../utils/progression';
@@ -37,6 +38,10 @@ export function useFinnNotificationScheduler() {
         const ctx = buildStreakContext(economy, level);
 
         const store = useNotificationStore.getState();
+
+        // ── Cancel ALL previously scheduled notifications to enforce 1/day cap ──
+        // This prevents stacking from legacy repeating schedules, chest timers, etc.
+        Notifications.cancelAllScheduledNotificationsAsync().catch(() => { /* fire-and-forget */ });
 
         // ── Max 1 notification per day. Pick the most relevant one by priority. ──
         // Priority: inactivity (urgent) > streak at-risk > morning motivation

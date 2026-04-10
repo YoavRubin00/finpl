@@ -302,7 +302,7 @@ const styles = StyleSheet.create({
     color: '#0f172a',
     ...RTL,
   },
-  titleDisabled: { color: '#94a3b8' },
+  titleDisabled: { color: '#64748b' },
   partnerName: {
     fontSize: 11,
     color: '#64748b',

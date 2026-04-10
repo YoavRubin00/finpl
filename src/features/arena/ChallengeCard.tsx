@@ -96,7 +96,7 @@ const s = StyleSheet.create({
     textAlign: 'right',
   },
   completedTitle: {
-    color: '#94a3b8',
+    color: '#64748b',
     textDecorationLine: 'line-through',
   },
   desc: {

@@ -240,7 +240,7 @@ const styles = StyleSheet.create({
     },
     scoreTotalText: {
         fontSize: 12,
-        color: '#9ca3af',
+        color: '#64748b',
         writingDirection: 'rtl',
     },
     deckWrapper: {
@@ -251,7 +251,7 @@ const styles = StyleSheet.create({
     },
     remaining: {
         textAlign: 'center',
-        color: '#9ca3af',
+        color: '#64748b',
         fontSize: 13,
         paddingBottom: 20,
         writingDirection: 'rtl',

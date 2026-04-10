@@ -8,6 +8,7 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated';
 import LottieView from 'lottie-react-native';
+import { SafeLottie } from "../../components/ui/SafeLottie";
 import { Lock } from 'lucide-react-native';
 import { tapHaptic, successHaptic, errorHaptic } from '../../utils/haptics';
 import { GoldCoinIcon } from '../../components/ui/GoldCoinIcon';
@@ -115,7 +116,7 @@ export const DailyQuizCard = React.memo(function DailyQuizCard({ quiz, locked = 
         <View
           style={[styles.card, { alignItems: 'center', opacity: 0.85, backgroundColor: '#f0f9ff', borderColor: '#bae6fd' }]}
         >
-          <Lock size={36} color="#94a3b8" />
+          <Lock size={36} color="#64748b" />
           <Text style={[styles.answeredTitle, { color: '#1e293b' }]}>🚨 מבזק פיננסי יומי</Text>
           <Text style={[styles.answeredSub, { marginTop: 4, color: '#64748b' }]}>נפתח בהגעה לשלב 1</Text>
         </View>
@@ -327,7 +328,7 @@ const styles = StyleSheet.create({
   },
   headerDate: {
     fontSize: 11,
-    color: '#94a3b8',
+    color: '#64748b',
     writingDirection: 'rtl' as const,
     textAlign: 'right' as const,
     marginTop: 2,
@@ -435,7 +436,7 @@ const styles = StyleSheet.create({
   },
   timerText: {
     fontSize: 12,
-    color: '#94a3b8',
+    color: '#64748b',
   },
   rewardResult: {
     alignSelf: 'center',

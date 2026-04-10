@@ -237,7 +237,7 @@ const styles = StyleSheet.create({
     left: 4,
     fontSize: 9,
     fontWeight: '600',
-    color: '#94a3b8',
+    color: '#64748b',
     fontVariant: ['tabular-nums'],
   },
   priceTag: {

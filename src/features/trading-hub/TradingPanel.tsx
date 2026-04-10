@@ -406,7 +406,7 @@ const styles = StyleSheet.create({
   balanceLabel: {
     fontSize: 13,
     fontWeight: '700',
-    color: '#94a3b8',
+    color: '#64748b',
     writingDirection: 'rtl',
   },
   balanceValue: {
@@ -514,7 +514,7 @@ const styles = StyleSheet.create({
   pendingTitle: {
     fontSize: 12,
     fontWeight: '800',
-    color: '#94a3b8',
+    color: '#64748b',
     textAlign: 'right',
     writingDirection: 'rtl',
   },
@@ -543,7 +543,7 @@ const styles = StyleSheet.create({
   pendingAmount: {
     fontSize: 12,
     fontWeight: '700',
-    color: '#94a3b8',
+    color: '#64748b',
   },
   cancelBtn: {
     backgroundColor: 'rgba(239,68,68,0.15)',
@@ -581,7 +581,7 @@ const styles = StyleSheet.create({
   posType: {
     fontSize: 11,
     fontWeight: '700',
-    color: '#94a3b8',
+    color: '#64748b',
     writingDirection: 'rtl',
   },
   posAsset: {
@@ -623,7 +623,7 @@ const styles = StyleSheet.create({
   emptyText: {
     fontSize: 14,
     fontWeight: '700',
-    color: '#94a3b8',
+    color: '#64748b',
     textAlign: 'center',
     writingDirection: 'rtl',
   },

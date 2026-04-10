@@ -208,7 +208,7 @@ export function ChapterMapScreen() {
                       <Text style={[TITLE_TEXT, { fontSize: 15, lineHeight: 22 }, RTL_STYLE]}>
                         {mod.title}
                       </Text>
-                      <Text style={{ fontSize: 11, color: '#94a3b8', marginTop: 3, ...TEXT_SHADOW }}>
+                      <Text style={{ fontSize: 11, color: '#64748b', marginTop: 3, ...TEXT_SHADOW }}>
                         {mod.flashcards.length} {"כרטיסים"} {" · "} {mod.quizzes.length} {"שאלות"}
                       </Text>
                     </View>
@@ -256,7 +256,7 @@ export function ChapterMapScreen() {
                             <Text style={[TITLE_TEXT, { fontSize: 15, lineHeight: 22, color: HIDDEN_GLOW_COLOR }, RTL_STYLE]}>
                               {mod.title}
                             </Text>
-                            <Text style={{ fontSize: 11, color: '#94a3b8', marginTop: 3, ...TEXT_SHADOW }}>
+                            <Text style={{ fontSize: 11, color: '#64748b', marginTop: 3, ...TEXT_SHADOW }}>
                               {"נפתח ע\"י FinBrain"} {" · "} {mod.flashcards.length} {"כרטיסים"}
                             </Text>
                           </View>

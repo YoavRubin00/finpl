@@ -16,7 +16,7 @@ import { Image as ExpoImage, type ImageSource } from "expo-image";
 import { LottieIcon } from "./LottieIcon";
 
 const BANNER_BG = "#ffffff";
-const BANNER_SHADOW = "#94a3b8";
+const BANNER_SHADOW = "#64748b";
 
 export interface NotificationBannerProps {
   message: string;
@@ -94,7 +94,7 @@ export function NotificationBanner({
         </Pressable>
       )}
       <Pressable onPress={dismiss} style={styles.closeBtn} hitSlop={14} accessibilityRole="button" accessibilityLabel="סגור התראה">
-        <X size={16} color="#94a3b8" strokeWidth={2.5} />
+        <X size={16} color="#64748b" strokeWidth={2.5} />
       </Pressable>
     </Animated.View>
   );

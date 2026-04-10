@@ -822,7 +822,7 @@ export function InsuranceShieldScreen({
               );
            })}
            {displayList.length === 0 && (
-              <Text style={{ textAlign: 'center', marginTop: 40, color: '#94a3b8', fontSize: 16 }}>אין ביטוחים ברשימה זו</Text>
+              <Text style={{ textAlign: 'center', marginTop: 40, color: '#64748b', fontSize: 16 }}>אין ביטוחים ברשימה זו</Text>
            )}
         </ScrollView>
 
@@ -1208,7 +1208,7 @@ const styles = StyleSheet.create({
     backgroundColor: SIM2.primary,
   },
   reviewTabText: {
-    color: '#94a3b8',
+    color: '#64748b',
     fontWeight: '700',
     fontSize: 16,
   },

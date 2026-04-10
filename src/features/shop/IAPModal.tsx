@@ -239,7 +239,7 @@ const styles = StyleSheet.create({
   },
   finePrint: {
     fontSize: 11,
-    color: '#94a3b8',
+    color: '#64748b',
     textAlign: 'center',
     writingDirection: 'rtl' as const,
   },

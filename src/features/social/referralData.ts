@@ -11,7 +11,7 @@ export const REFERRAL_TIERS: ReferralTierInfo[] = [
     tier: "starter",
     label: "מתחיל",
     requiredReferrals: 0,
-    color: "#94a3b8",
+    color: "#64748b",
     badgeEmoji: "🌱",
   },
   {

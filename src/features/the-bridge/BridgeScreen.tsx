@@ -317,7 +317,7 @@ export function BridgeScreen({ walkthroughAutoScroll }: BridgeScreenProps = {}) 
                     >
                       <View style={styles.statValueRow}>
                         <Text style={styles.statValue}>{redeemedCount}</Text>
-                        <Info size={12} color="#94a3b8" />
+                        <Info size={12} color="#64748b" />
                       </View>
                       <Text style={styles.statLabel}>הטבות הומרו</Text>
                     </Pressable>
@@ -335,7 +335,7 @@ export function BridgeScreen({ walkthroughAutoScroll }: BridgeScreenProps = {}) 
                     >
                       <View style={styles.statValueRow}>
                         <Text style={[styles.statValue, { color: '#0369a1' }]}>{savedValue}</Text>
-                        <Info size={12} color="#94a3b8" />
+                        <Info size={12} color="#64748b" />
                       </View>
                       <Text style={styles.statLabel}>חסכתם</Text>
                     </Pressable>
@@ -350,7 +350,7 @@ export function BridgeScreen({ walkthroughAutoScroll }: BridgeScreenProps = {}) 
                         <Text style={[styles.statValue, { color: '#0284c7' }]}>
                           {BRIDGE_BENEFITS.filter(b => !b.partnerAdSlot).length}
                         </Text>
-                        <Info size={12} color="#94a3b8" />
+                        <Info size={12} color="#64748b" />
                       </View>
                       <Text style={styles.statLabel}>הטבות זמינות</Text>
                     </Pressable>
@@ -659,7 +659,7 @@ const styles = StyleSheet.create({
     paddingVertical: 48,
   },
   emptyText: {
-    color: '#94a3b8',
+    color: '#64748b',
     fontSize: 13,
     ...RTL,
   },

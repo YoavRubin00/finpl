@@ -175,7 +175,7 @@ const chartStyles = StyleSheet.create({
   },
   yLabel: {
     fontSize: 10,
-    color: '#94a3b8',
+    color: '#64748b',
     fontWeight: '600',
     textAlign: 'right',
   },
@@ -229,7 +229,7 @@ const chartStyles = StyleSheet.create({
   },
   legendText: {
     fontSize: 11,
-    color: '#94a3b8',
+    color: '#64748b',
     fontWeight: '600',
   },
 });
@@ -486,7 +486,7 @@ export function PriceValueScreen({ onComplete }: PriceValueScreenProps) {
               styles.actionBtn,
               {
                 backgroundColor: canBuy && isUndervalued ? '#16a34a' : canBuy ? '#64748b' : '#cbd5e1',
-                borderBottomColor: canBuy && isUndervalued ? '#15803d' : canBuy ? '#475569' : '#94a3b8',
+                borderBottomColor: canBuy && isUndervalued ? '#15803d' : canBuy ? '#475569' : '#64748b',
               },
             ]}
             disabled={!canBuy}
@@ -502,7 +502,7 @@ export function PriceValueScreen({ onComplete }: PriceValueScreenProps) {
               styles.actionBtn,
               {
                 backgroundColor: canSell && !isUndervalued ? '#dc2626' : canSell ? '#64748b' : '#cbd5e1',
-                borderBottomColor: canSell && !isUndervalued ? '#b91c1c' : canSell ? '#475569' : '#94a3b8',
+                borderBottomColor: canSell && !isUndervalued ? '#b91c1c' : canSell ? '#475569' : '#64748b',
               },
             ]}
             disabled={!canSell}

@@ -12,6 +12,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import { ChevronLeft } from "lucide-react-native";
 import LottieView from "lottie-react-native";
+import { SafeLottie } from "../../components/ui/SafeLottie";
 import Animated, { FadeInDown, FadeInUp } from "react-native-reanimated";
 
 import { tapHaptic } from "../../utils/haptics";
@@ -166,31 +167,31 @@ export function MoreScreen() {
               <View style={styles.cardInner}>
                 <MoreRow
                   isFirst
-                  icon={<LottieView source={require('../../../assets/lottie/wired-flat-3136-big-shop-hover-pinch.json')} style={styles.lottieIcon} autoPlay loop  />}
+                  icon={<SafeLottie source={require('../../../assets/lottie/wired-flat-3136-big-shop-hover-pinch.json')} style={styles.lottieIcon} autoPlay loop  />}
                   label="חנות"
                   onPress={() => router.push("/(tabs)/shop" as never)}
                 />
                 <MoreRow
-                  icon={<LottieView source={require('../../../assets/lottie/wired-flat-433-cup-prize-hover-roll.json')} style={styles.lottieIcon} autoPlay loop  />}
+                  icon={<SafeLottie source={require('../../../assets/lottie/wired-flat-433-cup-prize-hover-roll.json')} style={styles.lottieIcon} autoPlay loop  />}
                   label="פנטזי ליג"
                   onPress={() => router.push("/fantasy")}
                   badge="בקרוב"
                   disabled
                 />
                 <MoreRow
-                  icon={<LottieView source={require('../../../assets/lottie/wired-flat-161-growth-hover-pinch.json')} style={styles.lottieIcon} autoPlay loop  />}
+                  icon={<SafeLottie source={require('../../../assets/lottie/wired-flat-161-growth-hover-pinch.json')} style={styles.lottieIcon} autoPlay loop  />}
                   label="לשחק עם המספרים"
                   onPress={() => router.push("/simulator")}
                 />
                 <MoreRow
-                  icon={<LottieView source={require('../../../assets/lottie/wired-flat-458-goal-target-hover-hit.json')} style={styles.lottieIcon} autoPlay loop  />}
+                  icon={<SafeLottie source={require('../../../assets/lottie/wired-flat-458-goal-target-hover-hit.json')} style={styles.lottieIcon} autoPlay loop  />}
                   label="דו-קרב 1v1"
                   onPress={() => router.push("/duels")}
                   badge="בקרוב"
                   disabled
                 />
                 <MoreRow
-                  icon={<LottieView source={require('../../../assets/lottie/wired-flat-957-team-work-hover-pinch.json')} style={styles.lottieIcon} autoPlay loop  />}
+                  icon={<SafeLottie source={require('../../../assets/lottie/wired-flat-957-team-work-hover-pinch.json')} style={styles.lottieIcon} autoPlay loop  />}
                   label="סקוואדים"
                   onPress={() => router.push("/squads")}
                   badge="בקרוב"
@@ -198,7 +199,7 @@ export function MoreScreen() {
                 />
                 <MoreRow
                   isLast
-                  icon={<LottieView source={require('../../../assets/lottie/wired-flat-411-news-newspaper-hover-pinch.json')} style={styles.lottieIcon} autoPlay loop  />}
+                  icon={<SafeLottie source={require('../../../assets/lottie/wired-flat-411-news-newspaper-hover-pinch.json')} style={styles.lottieIcon} autoPlay loop  />}
                   label="חדשות"
                   onPress={() => router.push("/finfeed")}
                   badge="בקרוב"
@@ -216,7 +217,7 @@ export function MoreScreen() {
               <View style={styles.cardInner}>
                 <MoreRow
                   isFirst
-                  icon={<LottieView source={require('../../../assets/lottie/wired-flat-411-news-newspaper-hover-pinch.json')} style={styles.lottieIcon} autoPlay loop  />}
+                  icon={<SafeLottie source={require('../../../assets/lottie/wired-flat-411-news-newspaper-hover-pinch.json')} style={styles.lottieIcon} autoPlay loop  />}
                   label="דואר מקפטן שארק"
                   onPress={() => setShowMailModal(true)}
                   badge={hasUnreadMail ? "חדש" : undefined}
@@ -224,7 +225,7 @@ export function MoreScreen() {
                 />
                 <MoreRow
                   isLast
-                  icon={<LottieView source={require('../../../assets/lottie/wired-flat-298-coins-hover-jump.json')} style={styles.lottieIcon} autoPlay loop  />}
+                  icon={<SafeLottie source={require('../../../assets/lottie/wired-flat-298-coins-hover-jump.json')} style={styles.lottieIcon} autoPlay loop  />}
                   label="מדד הפיצות"
                   onPress={() => router.push("/pizza-index")}
                 />
@@ -239,19 +240,19 @@ export function MoreScreen() {
               <View style={styles.cardInner}>
                 <MoreRow
                   isFirst
-                  icon={<LottieView source={require('../../../assets/lottie/wired-flat-400-bookmark-hover-flutter.json')} style={styles.lottieIcon} autoPlay loop  />}
+                  icon={<SafeLottie source={require('../../../assets/lottie/wired-flat-400-bookmark-hover-flutter.json')} style={styles.lottieIcon} autoPlay loop  />}
                   label="פריטים שמורים"
                   onPress={() => router.push("/saved-items" as never)}
                   badgeLottie
                 />
                 <MoreRow
-                  icon={<LottieView source={require('../../../assets/lottie/wired-flat-35-edit-hover-circle.json')} style={styles.lottieIcon} autoPlay loop  />}
+                  icon={<SafeLottie source={require('../../../assets/lottie/wired-flat-35-edit-hover-circle.json')} style={styles.lottieIcon} autoPlay loop  />}
                   label="הגדרות"
                   onPress={() => router.push("/settings")}
                 />
                 <MoreRow
                   isLast
-                  icon={<LottieView source={require('../../../assets/lottie/wired-flat-412-gift-hover-squeeze.json')} style={styles.lottieIcon} autoPlay loop  />}
+                  icon={<SafeLottie source={require('../../../assets/lottie/wired-flat-412-gift-hover-squeeze.json')} style={styles.lottieIcon} autoPlay loop  />}
                   label="רשת העושר — הזמן חברים"
                   onPress={() => router.push("/referral")}
                 />
@@ -266,23 +267,23 @@ export function MoreScreen() {
               <View style={styles.cardInner}>
                 <MoreRow
                   isFirst
-                  icon={<LottieView source={require('../../../assets/lottie/wired-flat-202-chat-hover-oscillate.json')} style={styles.lottieIcon} autoPlay loop  />}
+                  icon={<SafeLottie source={require('../../../assets/lottie/wired-flat-202-chat-hover-oscillate.json')} style={styles.lottieIcon} autoPlay loop  />}
                   label="קהילת WhatsApp"
                   onPress={() => Linking.openURL(WHATSAPP_URL).catch(() => Alert.alert("שגיאה"))}
                 />
                 <MoreRow
-                  icon={<LottieView source={require('../../../assets/lottie/wired-flat-142-share-arrow-hover-slide.json')} style={styles.lottieIcon} autoPlay loop  />}
+                  icon={<SafeLottie source={require('../../../assets/lottie/wired-flat-142-share-arrow-hover-slide.json')} style={styles.lottieIcon} autoPlay loop  />}
                   label="עקבו אחרינו באינסטגרם"
                   onPress={() => Linking.openURL(INSTAGRAM_URL).catch(() => Alert.alert("שגיאה"))}
                 />
                 <MoreRow
-                  icon={<LottieView source={require('../../../assets/lottie/wired-flat-56-document-hover-swipe.json')} style={styles.lottieIcon} autoPlay loop  />}
+                  icon={<SafeLottie source={require('../../../assets/lottie/wired-flat-56-document-hover-swipe.json')} style={styles.lottieIcon} autoPlay loop  />}
                   label="משפטי ופרטיות"
                   onPress={() => router.push("/legal")}
                 />
                 <MoreRow
                   isLast
-                  icon={<LottieView source={require('../../../assets/lottie/wired-flat-24-approved-checked-hover-pinch.json')} style={styles.lottieIcon} autoPlay loop  />}
+                  icon={<SafeLottie source={require('../../../assets/lottie/wired-flat-24-approved-checked-hover-pinch.json')} style={styles.lottieIcon} autoPlay loop  />}
                   label="הצהרת נגישות"
                   onPress={() => router.push("/accessibility-statement")}
                 />
@@ -297,7 +298,7 @@ export function MoreScreen() {
               <View style={styles.cardInner}>
                 <MoreRow
                   isFirst
-                  icon={<LottieView source={require('../../../assets/lottie/wired-flat-1432-erase-hover-pinch.json')} style={styles.lottieIcon} autoPlay loop  />}
+                  icon={<SafeLottie source={require('../../../assets/lottie/wired-flat-1432-erase-hover-pinch.json')} style={styles.lottieIcon} autoPlay loop  />}
                   label="איפוס התקדמות (Dev)"
                   onPress={() => {
                     Alert.alert("איפוס", "כל ההתקדמות תימחק. בטוח?", [
@@ -316,7 +317,7 @@ export function MoreScreen() {
                 />
                 <MoreRow
                   isLast
-                  icon={<LottieView source={require('../../../assets/lottie/wired-flat-3335-door-sign-hover-attempt.json')} style={styles.lottieIcon} autoPlay loop  />}
+                  icon={<SafeLottie source={require('../../../assets/lottie/wired-flat-3335-door-sign-hover-attempt.json')} style={styles.lottieIcon} autoPlay loop  />}
                   label="יציאה מהחשבון"
                   onPress={handleSignOut}
                   danger

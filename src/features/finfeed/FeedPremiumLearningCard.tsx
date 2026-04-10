@@ -75,7 +75,7 @@ function TapZonesCard({ item, onStartModule }: { item: FeedPremiumLearning; onSt
               </Text>
             </View>
             <Pressable onPress={() => setPopup(null)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }} style={{ position: 'absolute', top: 8, left: 8 }} accessibilityRole="button" accessibilityLabel="סגור">
-              <Text style={{ color: '#94a3b8', fontSize: 16, fontWeight: '600' }}>✕</Text>
+              <Text style={{ color: '#64748b', fontSize: 16, fontWeight: '600' }}>✕</Text>
             </Pressable>
           </Animated.View>
         )}

@@ -164,7 +164,7 @@ export function RegisterScreen() {
             <TextInput
               style={{ ...inputStyle, marginBottom: 8 }}
               placeholder="שם מלא"
-              placeholderTextColor="#94a3b8"
+              placeholderTextColor="#64748b"
               value={name}
               onChangeText={setName}
               autoCapitalize="words"
@@ -176,7 +176,7 @@ export function RegisterScreen() {
             <TextInput
               style={{ ...inputStyle, marginBottom: 8 }}
               placeholder="אימייל"
-              placeholderTextColor="#94a3b8"
+              placeholderTextColor="#64748b"
               value={email}
               onChangeText={setEmail}
               maxLength={254}
@@ -191,7 +191,7 @@ export function RegisterScreen() {
               <TextInput
                 style={{ ...inputStyle, paddingStart: 44 }}
                 placeholder="סיסמה"
-                placeholderTextColor="#94a3b8"
+                placeholderTextColor="#64748b"
                 value={password}
                 onChangeText={setPassword}
                 maxLength={128}
@@ -246,7 +246,7 @@ export function RegisterScreen() {
               <TextInput
                 style={{ ...inputStyle, paddingStart: 44 }}
                 placeholder="אישור סיסמה"
-                placeholderTextColor="#94a3b8"
+                placeholderTextColor="#64748b"
                 value={confirmPassword}
                 onChangeText={setConfirmPassword}
                 maxLength={128}
@@ -327,7 +327,7 @@ export function RegisterScreen() {
                   textAlign: "center",
                   fontSize: 15,
                   fontWeight: "700",
-                  color: isValid ? "#ffffff" : "#94a3b8",
+                  color: isValid ? "#ffffff" : "#64748b",
                 }}
               >
                 הירשם
@@ -337,7 +337,7 @@ export function RegisterScreen() {
             {/* Divider */}
             <View style={{ flexDirection: "row", alignItems: "center", marginVertical: 12 }}>
               <View style={{ flex: 1, height: 1, backgroundColor: "#e2e8f0" }} />
-              <Text style={{ marginHorizontal: 16, fontSize: 12, color: "#94a3b8" }}>או</Text>
+              <Text style={{ marginHorizontal: 16, fontSize: 12, color: "#64748b" }}>או</Text>
               <View style={{ flex: 1, height: 1, backgroundColor: "#e2e8f0" }} />
             </View>
 
