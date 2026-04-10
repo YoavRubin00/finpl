@@ -2101,6 +2101,16 @@ export function LessonFlowScreen() {
     };
   }, [phase, mod?.id, completeModule, mod, isLastModule, playSound]);
 
+  // Post-module celebration — only after wisdom + DoN are done, every other module
+  useEffect(() => {
+    if (!chestClaimed || showDoubleOrNothing || showPostCelebration || showBreakMessage) return;
+    // Show every other module (0, 2, 4... = yes, 1, 3, 5... = no)
+    if (currentModIdx % 2 !== 0) return;
+    // Wait 2s after chest claim + wisdom/DoN resolution
+    const timer = setTimeout(() => setShowPostCelebration(true), 2000);
+    return () => clearTimeout(timer);
+  }, [chestClaimed, showDoubleOrNothing, currentModIdx, showPostCelebration, showBreakMessage]);
+
   const moduleResult = mod ? quizResults[mod.id] : undefined;
   const correctCount = moduleResult?.correct ?? 0;
   const totalCount = moduleResult?.total ?? (mod?.quizzes.length ?? 0);
@@ -2755,8 +2765,6 @@ export function LessonFlowScreen() {
                           // 2s: auto-advance to "מודול הושלם"
                           setTimeout(() => {
                             setChestClaimed(true);
-                            // Show Finn celebration 1.5s after chest claim
-                            setTimeout(() => setShowPostCelebration(true), 1500);
                             if (shouldTriggerDoNRef.current) {
                               shouldTriggerDoNRef.current = false;
                               setTimeout(() => {
