@@ -657,10 +657,10 @@ export function ChatScreen() {
             onPress={() => setShowExtraQuestions(!showExtraQuestions)}
             style={chipStyles.extraChip}
             accessibilityRole="button"
-            accessibilityLabel={showExtraQuestions ? "הסתר שאלות נוספות" : "הצג שאלות נוספות"}
+            accessibilityLabel={showExtraQuestions ? "הסתר הצעות" : "הצג הצעות"}
           >
             <ChevronLeft size={14} color="#0369a1" />
-            <Text style={chipStyles.extraText}>שאלות נוספות</Text>
+            <Text style={chipStyles.extraText}>לא יודעים מה לשאול?</Text>
           </AnimatedPressable>
           {suggestions.slice(0, 2).map((suggestion, idx) => (
             <AnimatedPressable
