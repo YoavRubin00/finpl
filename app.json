@@ -77,7 +77,7 @@
     "ios": {
       "bundleIdentifier": "com.finplay.app",
       "buildNumber": "1",
-      "supportsTablet": false,
+      "supportsTablet": true,
       "usesAppleSignIn": true,
       "infoPlist": {
         "NSPrivacyPolicyURL": "https://yoavrubin00.github.io/finpl-pages/privacy-policy.html",
