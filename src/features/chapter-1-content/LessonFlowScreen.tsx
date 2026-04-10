@@ -4,7 +4,7 @@ import { View, Text, SafeAreaView, ScrollView, Image, StyleSheet, Modal, Pressab
 import { useIsFocused } from "@react-navigation/native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
-// Video hook disabled — expo-av crashes in Expo Go, needs native build
+import { useVideoPlayer, VideoView } from "expo-video";
 import { useAudioStore } from "../../stores/useAudioStore";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import Animated, {
@@ -257,7 +257,59 @@ function renderBoldText(text: string, onTermPress?: (term: string) => void): Rea
 }
 
 /* ------------------------------------------------------------------ */
-/*  VideoHookPlayer — disabled pending native build (expo-av crashes in Expo Go) */
+/*  VideoHookPlayer — full-screen video hook with title overlay         */
+/* ------------------------------------------------------------------ */
+
+function VideoHookPlayer({ videoUri, hookText, onFinish, unitColors }: {
+  videoUri: string;
+  hookText: string;
+  onFinish: () => void;
+  unitColors: { bg: string; dim: string; glow: string; bottom: string };
+}) {
+  const videoRef = useRef<VideoView>(null);
+  const player = useVideoPlayer(videoUri, (p) => {
+    p.loop = false;
+    p.play();
+  });
+
+  useEffect(() => {
+    const sub = player.addListener('playingChange', (e) => {
+      // When video finishes (stops playing and position is near end)
+      if (!e.isPlaying && player.duration > 0 && player.currentTime >= player.duration - 0.5) {
+        setTimeout(onFinish, 500);
+      }
+    });
+    return () => sub.remove();
+  }, [player, onFinish]);
+
+  return (
+    <View style={{ flex: 1, backgroundColor: "#0a1628" }}>
+      <VideoView
+        ref={videoRef}
+        player={player}
+        style={{ flex: 1 }}
+        contentFit="cover"
+        nativeControls={false}
+      />
+      {/* Hook text overlay — bottom */}
+      <View style={{ position: "absolute", bottom: 0, left: 0, right: 0, paddingHorizontal: 20, paddingBottom: 40, paddingTop: 60 }}>
+        <LinearGradient colors={["transparent", "rgba(0,0,0,0.85)"]} style={StyleSheet.absoluteFill} />
+        <Text style={{ fontSize: 22, fontWeight: "900", color: "#ffffff", writingDirection: "rtl", textAlign: "right", lineHeight: 32, textShadowColor: "rgba(0,0,0,0.8)", textShadowRadius: 8, textShadowOffset: { width: 0, height: 2 } }}>
+          {hookText}
+        </Text>
+      </View>
+      {/* Skip button */}
+      <Pressable
+        onPress={onFinish}
+        style={{ position: "absolute", top: 50, left: 16, backgroundColor: "rgba(0,0,0,0.5)", borderRadius: 20, paddingHorizontal: 16, paddingVertical: 8 }}
+        accessibilityRole="button"
+        accessibilityLabel="דלג על הסרטון"
+      >
+        <Text style={{ fontSize: 14, fontWeight: "700", color: "#ffffff" }}>דלג ←</Text>
+      </Pressable>
+    </View>
+  );
+}
 
 /* ------------------------------------------------------------------ */
 /*  FlashcardCard — mounts with a slide-in animation per card          */
@@ -2339,14 +2391,19 @@ export function LessonFlowScreen() {
     );
   }
 
-  // Video hook phase — skip directly to intro (video disabled pending native build)
-  useEffect(() => {
-    if (phase === "video") {
-      advanceFromVideo();
-    }
-  }, [phase]);
-
+  // Video hook phase — full-screen video with hook text overlay
+  if (phase === "video" && mod?.videoHookAsset) {
+    return (
+      <VideoHookPlayer
+        videoUri={(mod.videoHookAsset as { uri: string }).uri}
+        hookText={mod.videoHook ?? ""}
+        onFinish={advanceFromVideo}
+        unitColors={unitColors}
+      />
+    );
+  }
   if (phase === "video") {
+    advanceFromVideo();
     return <View style={{ flex: 1, backgroundColor: "#f8fafc" }} />;
   }
 
