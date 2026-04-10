@@ -72,7 +72,7 @@ import { LifelineModal } from "../social/LifelineModal";
 import { LifelineChatOverlay } from "../social/LifelineChatOverlay";
 import { ProBadge } from "../../components/ui/ProBadge";
 import LottieView from "lottie-react-native";
-import { FINN_LOTTIE_SOURCE, FINN_HELLO, FINN_STANDARD, FINN_HAPPY, getFinnSource, getFinnImage } from "../retention-loops/finnMascotConfig";
+import { FINN_LOTTIE_SOURCE, FINN_HELLO, FINN_STANDARD, FINN_HAPPY, FINN_EMPATHIC, getFinnSource, getFinnImage } from "../retention-loops/finnMascotConfig";
 import { FINN_MEME_REACTIONS } from "../fun/finnJokesData";
 import type { FinnAnimationState } from "../retention-loops/finnMascotConfig";
 import { FlashcardInfographic, FINN_MAP } from "./FlashcardInfographic";
@@ -1901,6 +1901,16 @@ export function LessonFlowScreen() {
   const [flashcardIndex, setFlashcardIndex] = useState(0);
   const [finnTransitionSource, setFinnTransitionSource] = useState<{ uri: string } | null>(null);
   const [finnTipText, setFinnTipText] = useState<string | null>(null);
+  // Mid-lesson Finn checkpoint
+  const [showMidCheckpoint, setShowMidCheckpoint] = useState(false);
+  const [checkpointReturnIndex, setCheckpointReturnIndex] = useState<number | null>(null);
+  const checkpointIndex = useMemo(() =>
+    mod && mod.flashcards.length >= 5 ? (2 + Math.round(Math.random())) : -1,
+    [mod?.id],
+  );
+  // Post-module celebration
+  const [showPostCelebration, setShowPostCelebration] = useState(false);
+  const [showBreakMessage, setShowBreakMessage] = useState(false);
   const [quizIndex, setQuizIndex] = useState(0);
   const [consecutiveCorrect, setConsecutiveCorrect] = useState(0);
   const [showStreakPopup, setShowStreakPopup] = useState(false);
@@ -2196,10 +2206,24 @@ export function LessonFlowScreen() {
     if (!mod) return;
     playSound('btn_click_soft_1');
 
+    // Return from checkpoint review → jump back to where we were
+    if (checkpointReturnIndex !== null) {
+      setFlashcardIndex(checkpointReturnIndex);
+      setCheckpointReturnIndex(null);
+      return;
+    }
+
     // Check if current card has a finnTip to show before advancing
     const currentCard = mod.flashcards[flashcardIndex];
     if (currentCard?.finnTip && !finnTipText) {
       setFinnTipText(currentCard.finnTip);
+      return;
+    }
+
+    // Mid-lesson Finn checkpoint — show once at random position (card 3 or 4)
+    if (flashcardIndex === checkpointIndex && !showMidCheckpoint && checkpointReturnIndex === null) {
+      mediumHaptic();
+      setShowMidCheckpoint(true);
       return;
     }
 
@@ -2220,7 +2244,7 @@ export function LessonFlowScreen() {
       setPhase("quizzes");
       setTimeout(() => setShowQuizIntro(true), 50);
     }
-  }, [mod, flashcardIndex, finnTipText]);
+  }, [mod, flashcardIndex, finnTipText, checkpointIndex, showMidCheckpoint, checkpointReturnIndex]);
 
   const handleDismissFinnTip = useCallback(() => {
     setFinnTipText(null);
@@ -2731,6 +2755,8 @@ export function LessonFlowScreen() {
                           // 2s: auto-advance to "מודול הושלם"
                           setTimeout(() => {
                             setChestClaimed(true);
+                            // Show Finn celebration 1.5s after chest claim
+                            setTimeout(() => setShowPostCelebration(true), 1500);
                             if (shouldTriggerDoNRef.current) {
                               shouldTriggerDoNRef.current = false;
                               setTimeout(() => {
@@ -3109,6 +3135,78 @@ export function LessonFlowScreen() {
           </Animated.View>
         </Pressable>
       )}
+      {/* ── Mid-lesson Finn checkpoint ── */}
+      {showMidCheckpoint && mod && (
+        <Pressable style={[StyleSheet.absoluteFill, { zIndex: 9996, backgroundColor: "rgba(0,0,0,0.5)", justifyContent: "flex-end" }]} onPress={() => { setShowMidCheckpoint(false); setFlashcardIndex((prev) => prev + 1); }}>
+          <Animated.View entering={FadeInUp.duration(400)} style={{ backgroundColor: "#ffffff", borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 24, paddingBottom: 36, borderWidth: 2, borderColor: "#0891b2", borderBottomWidth: 0 }}>
+            <View style={{ flexDirection: "row-reverse", alignItems: "center", gap: 12, marginBottom: 16 }}>
+              <ExpoImage source={FINN_STANDARD} style={{ width: 72, height: 72 }} contentFit="contain" />
+              <View style={{ flex: 1 }}>
+                <Text style={{ fontSize: 16, fontWeight: "900", color: "#0f172a", writingDirection: "rtl", textAlign: "right", lineHeight: 24 }}>
+                  {"מרגישים שאתם על? 🔥"}
+                </Text>
+                <Text style={{ fontSize: 14, fontWeight: "600", color: "#64748b", writingDirection: "rtl", textAlign: "right", marginTop: 4 }}>
+                  {"רוצים לחזור למשהו שלא הובן?"}
+                </Text>
+              </View>
+            </View>
+            {/* Previous card chips */}
+            <View style={{ flexDirection: "row-reverse", flexWrap: "wrap", gap: 8, marginBottom: 16 }}>
+              {mod.flashcards.slice(0, flashcardIndex).map((card, i) => {
+                const raw = card.text.replace(/\[\[([^|\]]+)\|?[^\]]*\]\]/g, '$1');
+                const colon = raw.indexOf(':');
+                const title = colon > 0 && colon < 40 ? raw.slice(0, colon).trim() : raw.slice(0, 25).trim() + '...';
+                return (
+                  <Pressable key={card.id} onPress={() => { tapHaptic(); setCheckpointReturnIndex(flashcardIndex); setShowMidCheckpoint(false); setFlashcardIndex(i); }} style={{ backgroundColor: "#f0f9ff", borderRadius: 12, paddingHorizontal: 14, paddingVertical: 8, borderWidth: 1, borderColor: "#bae6fd" }}>
+                    <Text style={{ fontSize: 13, fontWeight: "700", color: "#0369a1", writingDirection: "rtl" }}>{title}</Text>
+                  </Pressable>
+                );
+              })}
+            </View>
+            {/* Chat button */}
+            <Pressable onPress={() => { setShowMidCheckpoint(false); setShowChatOverlay(true); }} style={{ flexDirection: "row-reverse", alignItems: "center", justifyContent: "center", gap: 8, backgroundColor: "#0f172a", borderRadius: 14, paddingVertical: 12, marginBottom: 10 }}>
+              <Text style={{ fontSize: 15, fontWeight: "800", color: "#ffffff" }}>{"שאלו את שארק 🦈"}</Text>
+            </Pressable>
+            {/* Continue button */}
+            <Pressable onPress={() => { setShowMidCheckpoint(false); setFlashcardIndex((prev) => prev + 1); }} style={{ alignItems: "center", paddingVertical: 10 }}>
+              <Text style={{ fontSize: 14, fontWeight: "700", color: "#0891b2" }}>{"הכל ברור, קדימה! ✓"}</Text>
+            </Pressable>
+          </Animated.View>
+        </Pressable>
+      )}
+
+      {/* ── Post-module celebration ── */}
+      {showPostCelebration && !showBreakMessage && (
+        <Pressable style={[StyleSheet.absoluteFill, { zIndex: 9995, backgroundColor: "rgba(0,0,0,0.6)", justifyContent: "center", alignItems: "center", padding: 24 }]} onPress={() => {}}>
+          <Animated.View entering={FadeInUp.duration(500)} style={{ backgroundColor: "#ffffff", borderRadius: 28, padding: 28, width: "100%", maxWidth: 340, alignItems: "center", borderWidth: 2, borderColor: "#22c55e" }}>
+            <ExpoImage source={FINN_HAPPY} style={{ width: 100, height: 100, marginBottom: 16 }} contentFit="contain" />
+            <Text style={{ fontSize: 22, fontWeight: "900", color: "#0f172a", textAlign: "center", marginBottom: 6 }}>{"כל הכבוד! 🎉"}</Text>
+            <Text style={{ fontSize: 15, fontWeight: "600", color: "#64748b", textAlign: "center", marginBottom: 24 }}>{"סיימת את המודול!"}</Text>
+            {/* Continue option */}
+            <Pressable onPress={() => { successHaptic(); setShowPostCelebration(false); goToNextSequentialModule(); }} style={{ width: "100%", backgroundColor: "#22c55e", borderRadius: 16, paddingVertical: 16, alignItems: "center", marginBottom: 12, borderBottomWidth: 4, borderBottomColor: "#16a34a" }}>
+              <Text style={{ fontSize: 16, fontWeight: "900", color: "#ffffff" }}>{"ממשיכים לתרגל ולצמוח! 💪"}</Text>
+            </Pressable>
+            {/* Quit option */}
+            <Pressable onPress={() => { tapHaptic(); setShowBreakMessage(true); }} style={{ width: "100%", backgroundColor: "#f8fafc", borderRadius: 16, paddingVertical: 14, alignItems: "center", borderWidth: 1.5, borderColor: "#e2e8f0" }}>
+              <Text style={{ fontSize: 14, fontWeight: "700", color: "#64748b" }}>
+                {["עפתי לנטפליקס 📺", "עפתי לאינסטגרם 📱", "עפתי לטיקטוק 🎵", "אני הולך לישון 😴", "יש לי שווארמה שמחכה 🌯", "יש לי פיצה שמתקררת 🍕"][Math.floor(Math.random() * 6)]}
+              </Text>
+            </Pressable>
+          </Animated.View>
+        </Pressable>
+      )}
+
+      {/* ── Break farewell message ── */}
+      {showBreakMessage && (
+        <Pressable style={[StyleSheet.absoluteFill, { zIndex: 9995, backgroundColor: "rgba(0,0,0,0.6)", justifyContent: "center", alignItems: "center", padding: 24 }]} onPress={() => { setShowBreakMessage(false); setShowPostCelebration(false); router.replace("/(tabs)" as never); }}>
+          <Animated.View entering={FadeInUp.duration(400)} style={{ backgroundColor: "#ffffff", borderRadius: 28, padding: 28, width: "100%", maxWidth: 340, alignItems: "center" }}>
+            <ExpoImage source={FINN_EMPATHIC} style={{ width: 100, height: 100, marginBottom: 16 }} contentFit="contain" />
+            <Text style={{ fontSize: 20, fontWeight: "900", color: "#0f172a", textAlign: "center", marginBottom: 8 }}>{"מצפה לראותך פה מחר! ❤️"}</Text>
+            <Text style={{ fontSize: 14, fontWeight: "600", color: "#94a3b8", textAlign: "center" }}>{"לחץ בכל מקום כדי לחזור"}</Text>
+          </Animated.View>
+        </Pressable>
+      )}
+
       {/* Flying rewards — rendered at top level so particles can reach the header */}
       {flyingXp > 0 && (
         <View style={[StyleSheet.absoluteFill, { zIndex: 9999 }]} pointerEvents="none">
