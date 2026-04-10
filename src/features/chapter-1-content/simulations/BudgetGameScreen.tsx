@@ -1,3 +1,4 @@
+import { createAudioPlayer } from 'expo-audio';
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { View, Text, Pressable, StyleSheet, Dimensions, PanResponder } from 'react-native';
 import Animated, {
@@ -536,7 +537,16 @@ export function BudgetGameScreen({ onComplete }: { onComplete: () => void }) {
     } = useBudgetGame(budgetGameConfig);
 
   useSimReward(state.isComplete, SIM_COMPLETE_XP, SIM_COMPLETE_COINS);
-    const [rewardsGranted, setRewardsGranted] = useState(false);
+    
+    useEffect(() => {
+        const player = createAudioPlayer({ uri: 'https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/audio/sims/sim-budget-game.mp3' });
+        player.play();
+        return () => {
+            player.pause();
+            player.release();
+        };
+    }, []);
+const [rewardsGranted, setRewardsGranted] = useState(false);
 
     // Grant XP + coins when game completes
     useEffect(() => {

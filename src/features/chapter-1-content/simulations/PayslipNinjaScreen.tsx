@@ -1,3 +1,4 @@
+import { createAudioPlayer } from 'expo-audio';
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import Animated, {
@@ -350,7 +351,16 @@ export function PayslipNinjaScreen({ onComplete }: { onComplete: () => void }) {
     const safeTimeout = useTimeoutCleanup();
 
   useSimReward(state.isComplete, SIM_COMPLETE_XP, SIM_COMPLETE_COINS);
-    const [feedback, setFeedback] = useState<{ isCorrect: boolean; message: string } | null>(null);
+    
+    useEffect(() => {
+        const player = createAudioPlayer({ uri: 'https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/audio/sims/sim-payslip-ninja.mp3' });
+        player.play();
+        return () => {
+            player.pause();
+            player.release();
+        };
+    }, []);
+const [feedback, setFeedback] = useState<{ isCorrect: boolean; message: string } | null>(null);
     const [highlightedBin, setHighlightedBin] = useState<{
         category: PayslipCategory;
         type: 'correct' | 'wrong';

@@ -1,3 +1,4 @@
+import { createAudioPlayer } from 'expo-audio';
 import { useState, useCallback, useEffect } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import Animated, {
@@ -360,7 +361,16 @@ export function BankCombatScreen({ onComplete }: { onComplete: () => void }) {
     } = useBankCombat(bankCombatConfig);
 
   useSimReward(state.isComplete, SIM_COMPLETE_XP, SIM_COMPLETE_COINS);
-    const [showFeedback, setShowFeedback] = useState(false);
+    
+    useEffect(() => {
+        const player = createAudioPlayer({ uri: 'https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/audio/sims/sim-bank-combat.mp3' });
+        player.play();
+        return () => {
+            player.pause();
+            player.release();
+        };
+    }, []);
+const [showFeedback, setShowFeedback] = useState(false);
     const [hitType, setHitType] = useState<'shield' | 'damage' | null>(null);
 
     const onDefensePress = useCallback(

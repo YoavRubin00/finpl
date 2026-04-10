@@ -3,11 +3,12 @@ import { View, Text, Modal, Pressable, StyleSheet, PanResponder, Dimensions } fr
 import { Image as ExpoImage } from "expo-image";
 import Animated, { FadeIn, ZoomIn, FadeInDown } from "react-native-reanimated";
 import { FINN_HAPPY } from "../../features/retention-loops/finnMascotConfig";
+import { GoldCoinIcon } from "../ui/GoldCoinIcon";
 import { tapHaptic } from "../../utils/haptics";
 
 const SCREEN_W = Dimensions.get("window").width;
 const CARD_W = SCREEN_W - 64;
-const CARD_H = 220;
+const CARD_H = 300;
 const CELL_SIZE = 28;
 const COLS = Math.ceil(CARD_W / CELL_SIZE);
 const ROWS = Math.ceil(CARD_H / CELL_SIZE);
@@ -136,7 +137,10 @@ export function MapEasterEggModal({ visible, onClose, onClaim }: MapEasterEggMod
                 accessibilityRole="button"
                 accessibilityLabel="קבל פרס: 50 מטבעות"
               >
-                <Text style={styles.claimBtnText}>+50 מטבעות</Text>
+                <View style={{ flexDirection: "row-reverse", alignItems: "center", gap: 6 }}>
+                  <Text style={styles.claimBtnText}>+50</Text>
+                  <GoldCoinIcon size={24} />
+                </View>
               </Pressable>
             </Animated.View>
           )}

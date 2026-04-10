@@ -15,7 +15,7 @@ export const chapter5Data: Chapter = {
       videoHookAsset: { uri: 'https://pub-34f62012f7364bb5bc3b560ea61b72ce.r2.dev/video/hook/module-25.mp4' },
       interactiveIntro:
         'מה אם הייתם יכולים לדאוג למקורות הכנסה שמכסים את כלל ההוצאות שלכם כבר בגיל 40? נכיר את תנועת ה-FIRE ואת הנוסחה המעשית שתעזור לכם לחשב את "מספר היעד" לחופש כלכלי אמיתי.',
-      introAudio: { uri: 'https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/audio/intros/mod-5-25-intro.mp3' },
+      introAudio: { uri: 'https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/audio/intros/mod-5-25-v2.mp3' },
       flashcards: [{
           id: 'fc-5-25-1',
           text: 'הגדרת ה-FI (Financial Independence): הנקודה שבה ה[[תשואה]] הריאלית מהנכסים שלכם ([[נדל"ן]], [[מניה|מניות]], [[אג"ח]]) מכסה את כל הוצאות המחיה שלכם לנצח. בנקודה זו, העבודה הופכת לבחירה ולא לכורח קיומי.',
@@ -150,7 +150,7 @@ export const chapter5Data: Chapter = {
       videoHookAsset: { uri: 'https://pub-34f62012f7364bb5bc3b560ea61b72ce.r2.dev/video/hook/module-26.mp4' },
       interactiveIntro:
         'רכישת דירה נחשבת לצעד משמעותי בחיינו. בואו נבחן האם רכישת נדל"ן ולקיחת משכנתא הם תמיד הצעדים המשתלמים ביותר, ונגלה אילו אלטרנטיבות חכמות קיימות לניהול נכון של ההון העצמי.',
-      introAudio: { uri: 'https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/audio/intros/mod-5-26-intro.mp3' },
+      introAudio: { uri: 'https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/audio/intros/mod-5-26-v2.mp3' },
       flashcards: [{
           id: 'fc-5-26-1',
           text: 'מינוף [[משכנתא]]: לפי הוראות בנק ישראל, הבנק מממן עד 75% מערך דירה יחידה, עד 70% למשפרי דיור (מוכרים דירה וקונים אחרת), ועד 50% בלבד לדירה להשקעה. המינוף מאפשר קנייה של נכס גדול יותר, אך כל עלייה ב[[ריבית]] מכבידה ישירות על ההחזר החודשי.',
@@ -284,7 +284,7 @@ export const chapter5Data: Chapter = {
       videoHookAsset: { uri: 'https://pub-34f62012f7364bb5bc3b560ea61b72ce.r2.dev/video/hook/module-27.mp4' },
       interactiveIntro:
         'האם ידעתם שאפשר להשקיע בנדל"ן ללא הצורך לנהל שוכרים או לקחת משכנתא כבדה? נכיר דרך השקעה חכמה ישירות דרך שוק ההון – באמצעות קרנות ריט (REIT) וכיצד היא עובדת בפועל.',
-      introAudio: { uri: 'https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/audio/intros/mod-5-27-intro.mp3' },
+      introAudio: { uri: 'https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/audio/intros/mod-5-27-v2.mp3' },
       flashcards: [{
           id: 'fc-5-27-1',
           text: 'הגדרת [[REIT]]: Real Estate Investment Trust – חברה שקונה [[נדל"ן]] מניב (מרכזי קניות, מגדלי משרדים, מחסנים לוגיסטיים). לפי החוק, היא חייבת לחלק 90% מהרווחים כ[[דיבידנד]] למשקיעים.',
@@ -419,7 +419,7 @@ export const chapter5Data: Chapter = {
       videoHookAsset: { uri: 'https://pub-34f62012f7364bb5bc3b560ea61b72ce.r2.dev/video/hook/module-28.mp4' },
       interactiveIntro:
         'לקראת גיל הפרישה קיימות לא מעט החלטות פיננסיות משמעותיות שנוגעות למיסוי ולניהול החסכונות שלכם. בואו נלמד את הכללים המרכזיים שחשוב לזכור, כדי שתוכלו ליהנות בצורה המיטבית מהכסף שצברתם לאורך השנים.',
-      introAudio: { uri: 'https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/audio/intros/mod-5-28-intro.mp3' },
+      introAudio: { uri: 'https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/audio/intros/mod-5-28-v2.mp3' },
       flashcards: [{
           id: 'fc-5-28-1',
           text: 'קיבוע זכויות: תהליך קריטי שבו מודיעים ל[[מס הכנסה]] כיצד לנצל את הפטור ממס על ה[[פנסיה]]. במקום למשוך את הכסף ספונטנית ולשלם מס מיותר, "קיבוע" מאפשר לנצל את מלוא הפטורים ולחסוך מאות אלפי שקלים. חובה לעשות זאת לפני הפרישה.',
@@ -552,7 +552,7 @@ export const chapter5Data: Chapter = {
       videoHookAsset: { uri: 'https://pub-34f62012f7364bb5bc3b560ea61b72ce.r2.dev/video/hook/module-29.mp4' },
       interactiveIntro:
         'ניהול נכון של ההון המשפחתי נועד להבטיח שהמורשת שלכם תעבור הלאה בצורה החלקה והמדויקת ביותר. בואו נלמד כיצד להוריש בחכמה, למנוע מחלוקות עתידיות ולהבטיח שהמשפחה שלכם תטופל כראוי.',
-      introAudio: { uri: 'https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/audio/intros/mod-5-29-intro.mp3' },
+      introAudio: { uri: 'https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/audio/intros/mod-5-29-v2.mp3' },
       flashcards: [{
           id: 'fc-5-29-1',
           text: 'מוטבים מול יורשים: בקרן [[פנסיה]] וב[[ביטוח]] חיים יש מוטבים (אנשים שאתם רושמים ידנית). הם מקבלים את הכסף הרבה לפני היורשים החוקיים בצוואה – ומעל הצוואה. עדכנו אותם לאחר כל שינוי משפחתי!',
@@ -684,7 +684,7 @@ export const chapter5Data: Chapter = {
         'החבר שלי קנה ביטקוין ב-2017, עשה פי 10, ואז איבד הכל. מה הוא עשה לא נכון?',
       interactiveIntro:
         'קריפטו הוא אחד הנושאים הכי מדוברים בעולם הפיננסי – ואחד הכי לא מובנים. נפריד בין ההייפ למציאות, נבין מה זה באמת בלוקצ\'יין, ולמה ביטקוין שונה מ-10,000 מטבעות אחרים שאף אחד לא שמע עליהם.',
-      introAudio: { uri: 'https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/audio/intros/mod-5-30-intro.mp3' },
+      introAudio: { uri: 'https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/audio/intros/mod-5-30-v2.mp3' },
       flashcards: [{
           id: 'fc-5-30-1',
           text: 'בלוקצ\'יין (Blockchain): "ספר חשבונות" דיגיטלי מבוזר שלא ניתן לשנות או למחוק ממנו רשומות. כל "בלוק" מכיל עסקאות ומקושר לבלוק הקודם. היתרון: אין צורך בגוף מרכזי (כמו בנק) כדי לאמת עסקאות.',
@@ -817,7 +817,7 @@ export const chapter5Data: Chapter = {
         'יש לך חשבון שלא משלמים עליו מס עד גיל 60. שמעת על IRA? זה לא שם של דוד מאמריקה.',
       interactiveIntro:
         'תיק IRA (Individual Retirement Account) הוא כלי חיסכון פנסיוני פרטי שנפוץ מאוד בארה"ב ומשפיע גם על ישראלים שעובדים או משקיעים מעבר לים. נלמד את ההבדלים בין IRA מסורתי ל-Roth IRA ואיך הם משתלבים עם מערכת הפנסיה הישראלית.',
-      introAudio: { uri: 'https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/audio/intros/mod-5-31-intro.mp3' },
+      introAudio: { uri: 'https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/audio/intros/mod-5-31-v2.mp3' },
       flashcards: [{
           id: 'fc-5-31-1',
           text: 'IRA מסורתי (Traditional IRA): חשבון פרישה שבו ההפקדות מוכרות כהוצאה לצורכי מס (מורידות את ההכנסה החייבת). המס משולם רק ביום המשיכה, בגיל פרישה. היתרון: דחיית מס – הכסף גדל ללא "נגיסת" מס שנתית.',

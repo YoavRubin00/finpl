@@ -1945,7 +1945,7 @@ export function LessonFlowScreen() {
     // After completing the first module (mod-0-1), go to the general
     // learning page so the user sees the unlocked next module on the map.
     if (id === 'mod-0-1') {
-      router.replace("/(tabs)/learn" as never);
+      router.replace("/(tabs)" as never);
       return;
     }
     for (const ch of ALL_CHAPTERS_ORDERED) {
@@ -3248,39 +3248,39 @@ export function LessonFlowScreen() {
       )}
       {/* ── Mid-lesson Finn checkpoint ── */}
       {showMidCheckpoint && mod && (
-        <Pressable style={[StyleSheet.absoluteFill, { zIndex: 9996, backgroundColor: "rgba(0,0,0,0.5)", justifyContent: "flex-end" }]} onPress={() => { setShowMidCheckpoint(false); setFlashcardIndex((prev) => prev + 1); }}>
-          <Animated.View entering={FadeInUp.duration(400)} style={{ backgroundColor: "#ffffff", borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 24, paddingBottom: 36, borderWidth: 2, borderColor: "#0891b2", borderBottomWidth: 0 }}>
-            <View style={{ flexDirection: "row-reverse", alignItems: "center", gap: 12, marginBottom: 16 }}>
-              <ExpoImage source={FINN_STANDARD} accessible={false} style={{ width: 72, height: 72 }} contentFit="contain" />
+        <Pressable style={[StyleSheet.absoluteFill, { zIndex: 9996, backgroundColor: "rgba(0,0,0,0.4)", justifyContent: "flex-end" }]} onPress={() => { setShowMidCheckpoint(false); setFlashcardIndex((prev) => prev + 1); }}>
+          <Animated.View entering={FadeInUp.duration(400)} style={{ backgroundColor: "#f0f9ff", borderTopLeftRadius: 28, borderTopRightRadius: 28, padding: 22, paddingBottom: 28, borderWidth: 1.5, borderColor: "#bae6fd", borderBottomWidth: 0, maxHeight: "70%" }}>
+            <View style={{ flexDirection: "row-reverse", alignItems: "center", gap: 12, marginBottom: 14 }}>
+              <ExpoImage source={FINN_STANDARD} accessible={false} style={{ width: 64, height: 64 }} contentFit="contain" />
               <View style={{ flex: 1 }}>
-                <Text style={{ fontSize: 16, fontWeight: "900", color: "#0f172a", writingDirection: "rtl", textAlign: "right", lineHeight: 24 }}>
-                  {"מרגישים שאתם על? 🔥"}
+                <Text style={{ fontSize: 16, fontWeight: "800", color: "#0c4a6e", writingDirection: "rtl", textAlign: "right", lineHeight: 24 }}>
+                  {"איך הולך? 😊"}
                 </Text>
-                <Text style={{ fontSize: 14, fontWeight: "600", color: "#64748b", writingDirection: "rtl", textAlign: "right", marginTop: 4 }}>
+                <Text style={{ fontSize: 13, fontWeight: "600", color: "#64748b", writingDirection: "rtl", textAlign: "right", marginTop: 4 }}>
                   {"רוצים לחזור למשהו שלא הובן?"}
                 </Text>
               </View>
             </View>
             {/* Previous card chips */}
-            <View style={{ flexDirection: "row-reverse", flexWrap: "wrap", gap: 8, marginBottom: 16 }}>
+            <View style={{ flexDirection: "row-reverse", flexWrap: "wrap", gap: 8, marginBottom: 14 }}>
               {mod.flashcards.slice(0, flashcardIndex).map((card, i) => {
                 const raw = card.text.replace(/\[\[([^|\]]+)\|?[^\]]*\]\]/g, '$1');
                 const colon = raw.indexOf(':');
                 const title = colon > 0 && colon < 40 ? raw.slice(0, colon).trim() : raw.slice(0, 25).trim() + '...';
                 return (
-                  <Pressable key={card.id} onPress={() => { tapHaptic(); setCheckpointReturnIndex(flashcardIndex); setShowMidCheckpoint(false); setFlashcardIndex(i); }} style={{ backgroundColor: "#f0f9ff", borderRadius: 12, paddingHorizontal: 14, paddingVertical: 8, borderWidth: 1, borderColor: "#bae6fd" }}>
+                  <Pressable key={card.id} onPress={() => { tapHaptic(); setCheckpointReturnIndex(flashcardIndex); setShowMidCheckpoint(false); setFlashcardIndex(i); }} style={{ backgroundColor: "#e0f2fe", borderRadius: 12, paddingHorizontal: 14, paddingVertical: 8, borderWidth: 1, borderColor: "#7dd3fc" }}>
                     <Text style={{ fontSize: 13, fontWeight: "700", color: "#0369a1", writingDirection: "rtl" }}>{title}</Text>
                   </Pressable>
                 );
               })}
             </View>
             {/* Chat button */}
-            <Pressable onPress={() => { setShowMidCheckpoint(false); setShowChatOverlay(true); }} style={{ flexDirection: "row-reverse", alignItems: "center", justifyContent: "center", gap: 8, backgroundColor: "#0f172a", borderRadius: 14, paddingVertical: 12, marginBottom: 10 }}>
-              <Text style={{ fontSize: 15, fontWeight: "800", color: "#ffffff" }}>{"שאלו את שארק 🦈"}</Text>
+            <Pressable onPress={() => { setShowMidCheckpoint(false); setShowChatOverlay(true); }} style={{ flexDirection: "row-reverse", alignItems: "center", justifyContent: "center", gap: 8, backgroundColor: "#dbeafe", borderRadius: 14, paddingVertical: 12, marginBottom: 10, borderWidth: 1, borderColor: "#93c5fd" }}>
+              <Text style={{ fontSize: 15, fontWeight: "800", color: "#1e40af" }}>{"שאלו את שארק 🦈"}</Text>
             </Pressable>
             {/* Continue button */}
-            <Pressable onPress={() => { setShowMidCheckpoint(false); setFlashcardIndex((prev) => prev + 1); }} style={{ alignItems: "center", paddingVertical: 10 }}>
-              <Text style={{ fontSize: 14, fontWeight: "700", color: "#0891b2" }}>{"הכל ברור, קדימה! ✓"}</Text>
+            <Pressable onPress={() => { setShowMidCheckpoint(false); setFlashcardIndex((prev) => prev + 1); }} style={{ flexDirection: "row-reverse", alignItems: "center", justifyContent: "center", gap: 6, backgroundColor: "#38bdf8", borderRadius: 14, paddingVertical: 12, borderBottomWidth: 3, borderBottomColor: "#0284c7" }}>
+              <Text style={{ fontSize: 15, fontWeight: "800", color: "#ffffff" }}>{"הכל ברור, קדימה! ✓"}</Text>
             </Pressable>
           </Animated.View>
         </Pressable>

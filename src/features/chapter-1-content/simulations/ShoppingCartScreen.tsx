@@ -1,3 +1,4 @@
+import { createAudioPlayer } from 'expo-audio';
 import { useState, useCallback, useEffect, useRef, useMemo } from 'react';
 import { Image as ExpoImage } from "expo-image";
 import { View, Text, StyleSheet, ScrollView, PanResponder, Dimensions } from 'react-native';
@@ -418,7 +419,16 @@ export function ShoppingCartScreen({ onComplete }: { onComplete: () => void }) {
     } = useShoppingCart(shoppingCartConfig);
 
   useSimReward(state.isComplete, SIM_COMPLETE_XP, SIM_COMPLETE_COINS);
-    const [showTrapReveal, setShowTrapReveal] = useState(false);
+    
+    useEffect(() => {
+        const player = createAudioPlayer({ uri: 'https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/audio/sims/sim-shopping-cart.mp3' });
+        player.play();
+        return () => {
+            player.pause();
+            player.release();
+        };
+    }, []);
+const [showTrapReveal, setShowTrapReveal] = useState(false);
     const [lastTrapItem, setLastTrapItem] = useState<ShoppingItem | null>(null);
     const [rewardsGranted, setRewardsGranted] = useState(false);
     const [showFinnPopup, setShowFinnPopup] = useState(false);

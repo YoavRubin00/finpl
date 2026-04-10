@@ -611,6 +611,8 @@ interface CompoundSimScreenProps {
     onComplete?: () => void;
 }
 
+import { createAudioPlayer } from 'expo-audio';
+
 export function CompoundSimScreen({ onComplete }: CompoundSimScreenProps) {
     const { state, updateYears, updateInitialAmount, updateMonthlyContribution, reset } =
         useCompoundSim(compoundConfig);
@@ -619,6 +621,16 @@ export function CompoundSimScreen({ onComplete }: CompoundSimScreenProps) {
     const [isAutoRunning, setIsAutoRunning] = useState(false);
     const [showConfetti, setShowConfetti] = useState(false);
     const [isFinished, setIsFinished] = useState(false);
+
+    useEffect(() => {
+        if (isFinished) return;
+        const player = createAudioPlayer({ uri: 'https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/audio/sims/sim-compound-interest.mp3' });
+        player.play();
+        return () => {
+            player.pause();
+            player.release();
+        };
+    }, [isFinished]);
     const [rewardsGranted, setRewardsGranted] = useState(false);
     const [hasInteracted, setHasInteracted] = useState(false);
     // Auto-dismiss finger hint after 3 seconds

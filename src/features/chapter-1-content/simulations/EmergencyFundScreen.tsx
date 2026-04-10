@@ -1,3 +1,4 @@
+import { createAudioPlayer } from 'expo-audio';
 import { useState, useCallback, useEffect } from 'react';
 import { Image as ExpoImage } from 'expo-image';
 import { View, Text, StyleSheet, ScrollView, Pressable } from 'react-native';
@@ -556,7 +557,16 @@ export function EmergencyFundScreen({ onComplete }: { onComplete: () => void }) 
     } = useEmergencyFund(emergencyFundConfig);
 
   useSimReward(state.isComplete, SIM_COMPLETE_XP, SIM_COMPLETE_COINS);
-    const [showBriefing, setShowBriefing] = useState(true);
+    
+    useEffect(() => {
+        const player = createAudioPlayer({ uri: 'https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/audio/sims/sim-emergency-fund.mp3' });
+        player.play();
+        return () => {
+            player.pause();
+            player.release();
+        };
+    }, []);
+const [showBriefing, setShowBriefing] = useState(true);
     const [showFeedback, setShowFeedback] = useState(false);
     const [rewardsGranted, setRewardsGranted] = useState(false);
 

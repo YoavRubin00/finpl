@@ -49,31 +49,39 @@ const STEPS: WalkthroughStep[] = [
     title: "מסלול הלמידה",
     emoji: "📚",
     message: "כאן מסלול הלמידה שלך — שיעורים, חידונים וסימולציות שיהפכו אותך למומחה פיננסי.",
-    navigateTo: "/(tabs)/learn",
+    navigateTo: "/(tabs)",
     ctaLabel: "מה נלמד באפליקציה?",
     screenSignal: "learn",
   },
   {
     title: "מה נלמד באפליקציה?",
     emoji: "🎓",
-    message: "ברוכים הבאים לעולם הפיננסי — זה המודול הראשון שלך. בוא נציץ!",
-    navigateTo: "/lesson/mod-0-1?chapterId=chapter-0",
+    message: "6 פרקים, מאפס ועד מומחה — כל מה שצריך כדי להבין את עולם הכסף. גלול למטה ותראה!",
+    navigateTo: "/(tabs)",
     ctaLabel: "עכשיו לפיד",
-    screenSignal: "lesson-preview",
+    screenSignal: "learn",
   },
   {
     title: "הפיד היומי",
     emoji: "🎯",
     message: "כאן תמצא משחקים יומיים, דילמות כלכליות, מיתוסים ותוכן שמתעדכן כל יום.",
-    navigateTo: "/(tabs)/investments",
-    ctaLabel: "לצ'אט של שארק",
+    navigateTo: "/(tabs)/learn",
+    ctaLabel: "תבחרו איך ידברו איתכם",
     screenSignal: "feed",
+  },
+  {
+    title: "תבחרו סגנון לשארק",
+    emoji: "🦈",
+    message: "לפני שנמשיך — תבחרו איך תרצו ששארק ידבר איתכם! חכם? ישיר? חם? אנליטי?",
+    navigateTo: "/(tabs)/chat",
+    ctaLabel: "בחרתי!",
+    screenSignal: "chat",
   },
   {
     title: "הצ'אט של שארק",
     emoji: "💬",
-    message: "יש לך שאלה? שארק תמיד כאן — אפשר לשאול, להתייעץ, ולקבל הסבר אישי על כל נושא פיננסי.",
-    navigateTo: "/(tabs)/chat",
+    message: "כאן תוכלו לדבר על כל מה שקשור לכסף — שארק תמיד פה לשאלות, הסברים וייעוץ אישי.",
+    navigateTo: null,
     ctaLabel: "לחנות",
     screenSignal: "chat",
   },
@@ -90,7 +98,7 @@ const STEPS: WalkthroughStep[] = [
     emoji: "🌉",
     message: "הידע שלך שווה כסף אמיתי! בגשר תמיר את המטבעות שצברת להטבות ומוצרים פיננסיים בעולם האמיתי.",
     navigateTo: "/bridge",
-    ctaLabel: "בוא נתחיל ללמוד! 🚀",
+    ctaLabel: "בוא נתחיל ללמוד!",
     screenSignal: "bridge",
     isLast: true,
   },
@@ -152,10 +160,10 @@ export function AppWalkthroughOverlay() {
     if (step >= STEPS.length - 1) {
       completeWalkthrough();
       setActiveScreen(null);
-      // Navigate to the first module so the user starts learning for real
+      // Navigate to the general learning screen so the user sees the full path
       setTimeout(() => {
         try {
-          router.push("/lesson/mod-0-1?chapterId=chapter-0" as never);
+          router.push("/(tabs)" as never);
         } catch {}
       }, 200);
       return;
@@ -277,7 +285,7 @@ export function AppWalkthroughOverlay() {
                   accessibilityLabel="חזרה לשלב הקודם"
                   hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
                 >
-                  <ChevronRight size={22} color="#0ea5e9" />
+                  <ChevronRight size={22} color="#7dd3fc" />
                 </Pressable>
               )}
               <Pressable
@@ -335,7 +343,7 @@ const CARD_RADIUS = 28;
 const s = StyleSheet.create({
   overlay: {
     flex: 1,
-    backgroundColor: "rgba(10, 22, 40, 0.50)",
+    backgroundColor: "rgba(10, 22, 40, 0.18)",
   },
 
   /* ── Title pill ── */
@@ -375,9 +383,9 @@ const s = StyleSheet.create({
     color: "#0284c7",
   },
 
-  /* ── Bottom card ── */
+  /* ── Bottom card — blue theme ── */
   card: {
-    backgroundColor: "#ffffff",
+    backgroundColor: "#0c4a6e",
     borderRadius: CARD_RADIUS,
     paddingHorizontal: 22,
     paddingTop: 52,
@@ -385,7 +393,7 @@ const s = StyleSheet.create({
     marginBottom: 10,
     alignItems: "center",
     shadowColor: "#0ea5e9",
-    shadowOpacity: 0.25,
+    shadowOpacity: 0.4,
     shadowRadius: 28,
     shadowOffset: { width: 0, height: -6 },
     elevation: 14,
@@ -399,7 +407,7 @@ const s = StyleSheet.create({
     bottom: -1,
     borderRadius: CARD_RADIUS + 1,
     borderWidth: 1.5,
-    borderColor: "rgba(14, 165, 233, 0.35)",
+    borderColor: "rgba(56, 189, 248, 0.5)",
   },
 
   /* ── Finn ── */
@@ -414,7 +422,7 @@ const s = StyleSheet.create({
     width: 80,
     height: 80,
     borderRadius: 40,
-    backgroundColor: "rgba(56, 189, 248, 0.22)",
+    backgroundColor: "rgba(56, 189, 248, 0.35)",
   },
   finn: {
     width: 68,
@@ -425,14 +433,14 @@ const s = StyleSheet.create({
   message: {
     fontSize: 15,
     fontWeight: "600",
-    color: "#334155",
+    color: "#e0f2fe",
     lineHeight: 24,
     writingDirection: "rtl",
     textAlign: "center",
     marginBottom: 16,
   },
 
-  /* ── Dots — 6px for 7 steps ── */
+  /* ── Dots ── */
   dotsRow: {
     flexDirection: "row-reverse",
     justifyContent: "center",
@@ -443,10 +451,10 @@ const s = StyleSheet.create({
     width: 6,
     height: 6,
     borderRadius: 3,
-    backgroundColor: "#e2e8f0",
+    backgroundColor: "rgba(255,255,255,0.25)",
   },
   dotActive: {
-    backgroundColor: "#0ea5e9",
+    backgroundColor: "#38bdf8",
     width: 18,
     borderRadius: 3,
   },
@@ -459,48 +467,48 @@ const s = StyleSheet.create({
     width: "100%",
   },
 
-  /* ── Back button — 3D style ── */
+  /* ── Back button — blue card ── */
   backBtn: {
     width: 42,
     height: 42,
     borderRadius: 21,
-    backgroundColor: "#f0f9ff",
+    backgroundColor: "rgba(255,255,255,0.12)",
     borderWidth: 1.5,
-    borderColor: "#bae6fd",
+    borderColor: "rgba(56,189,248,0.4)",
     borderBottomWidth: 3,
-    borderBottomColor: "#7dd3fc",
+    borderBottomColor: "rgba(56,189,248,0.3)",
     alignItems: "center" as const,
     justifyContent: "center" as const,
-    shadowColor: "#0ea5e9",
+    shadowColor: "#38bdf8",
     shadowOpacity: 0.15,
     shadowRadius: 6,
     shadowOffset: { width: 0, height: 2 },
     elevation: 3,
   },
 
-  /* ── CTA — glow button ── */
+  /* ── CTA — uniform glow button ── */
   ctaBtn: {
-    borderRadius: 18,
+    borderRadius: 16,
     marginBottom: 10,
-    shadowColor: "#0ea5e9",
+    shadowColor: "#38bdf8",
     shadowOpacity: 0.45,
-    shadowRadius: 16,
-    shadowOffset: { width: 0, height: 6 },
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 4 },
     elevation: 10,
   },
   ctaGradient: {
-    borderRadius: 18,
-    paddingVertical: 22,
-    paddingHorizontal: 28,
+    borderRadius: 16,
+    height: 52,
+    paddingHorizontal: 20,
     flexDirection: "row-reverse",
     alignItems: "center",
     justifyContent: "center",
-    gap: 14,
+    gap: 10,
     borderBottomWidth: 3,
     borderBottomColor: "#0284c7",
   },
   ctaText: {
-    fontSize: 22,
+    fontSize: 17,
     fontWeight: "900",
     color: "#ffffff",
     letterSpacing: 0.3,
@@ -514,7 +522,7 @@ const s = StyleSheet.create({
   skipText: {
     fontSize: 14,
     fontWeight: "600",
-    color: "#64748b",
+    color: "rgba(255,255,255,0.55)",
     writingDirection: "rtl",
   },
 });

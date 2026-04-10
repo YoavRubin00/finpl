@@ -3,6 +3,7 @@ import { Image as ExpoImage } from "expo-image";
 import { View, Text, Pressable, StyleSheet, Modal, Image,
 } from 'react-native';
 import { useRouter } from 'expo-router';
+import { GoldCoinIcon } from '../../components/ui/GoldCoinIcon';
 import Animated, {
     useSharedValue,
     useAnimatedStyle,
@@ -207,13 +208,16 @@ export function OutOfHeartsModal({ visible, onDismiss, onUpgrade }: OutOfHeartsM
                         disabled={!canAffordRefill}
                     >
                         <View style={{ flex: 1, alignItems: 'flex-end' }}>
-                            <Text style={styles.coinRefillBtnText}>
-                                מילוי לבבות — {HEART_REFILL_COIN_COST} מטבעות
-                            </Text>
+                            <View style={{ flexDirection: 'row-reverse', alignItems: 'center', gap: 4 }}>
+                                <Text style={styles.coinRefillBtnText}>מילוי לבבות — {HEART_REFILL_COIN_COST}</Text>
+                                <GoldCoinIcon size={18} />
+                            </View>
                             {!canAffordRefill && (
-                                <Text style={styles.coinRefillSubtext}>
-                                    (חסרים {HEART_REFILL_COIN_COST - coins} מטבעות)
-                                </Text>
+                                <View style={{ flexDirection: 'row-reverse', alignItems: 'center', gap: 4 }}>
+                                    <Text style={styles.coinRefillSubtext}>(חסרים {HEART_REFILL_COIN_COST - coins}</Text>
+                                    <GoldCoinIcon size={14} />
+                                    <Text style={styles.coinRefillSubtext}>)</Text>
+                                </View>
                             )}
                         </View>
                         <Text style={styles.btnIcon}></Text>

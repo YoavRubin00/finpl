@@ -1,3 +1,4 @@
+import { createAudioPlayer } from 'expo-audio';
 import { useState, useCallback, useEffect } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import Animated, {
@@ -264,7 +265,16 @@ export function CarLoanRaceScreen({ onComplete }: { onComplete: () => void }) {
         resetGame,
     } = useCarLoanGame(carLoanConfig);
 
-    const [showFeedback, setShowFeedback] = useState(false);
+    
+    useEffect(() => {
+        const player = createAudioPlayer({ uri: 'https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/audio/sims/sim-car-loan.mp3' });
+        player.play();
+        return () => {
+            player.pause();
+            player.release();
+        };
+    }, []);
+const [showFeedback, setShowFeedback] = useState(false);
     const [lastChoiceCorrect, setLastChoiceCorrect] = useState(false);
     const [rewardsGranted, setRewardsGranted] = useState(false);
 

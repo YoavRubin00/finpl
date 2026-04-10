@@ -14,7 +14,7 @@ export const chapter0Data: Chapter = {
         'פעם אנשים שילמו עם פרות במקום כרטיס אשראי. תארו לכם לחתוך פרה כדי לקנות קפה...',
       interactiveIntro:
         'תשכחו מסחר חליפין קלישאתי של פרות תמורת שקים של חיטה. במודול הזה נבין לעומק מה זה בכלל "כסף", מה הופך חתיכת נייר (או מספר במסך) לבעלת ערך, ואיך אמון מניע את העולם.',
-      introAudio: { uri: 'https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/audio/intros/mod-0-1-intro.mp3' },
+      introAudio: { uri: 'https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/audio/intros/mod-0-1-v2.mp3' },
       flashcards: [
         {
           id: 'fc-0-1-1',
@@ -91,7 +91,7 @@ export const chapter0Data: Chapter = {
         'הגיע הזמן לדבר תכלס: בנק, עו"ש, ריבית. מה כל אלה אומרים?',
       interactiveIntro:
         'עושים סדר במושגים שכולם זורקים באוויר: בנק, פנסיה, עו"ש וריבית. מה הם אומרים תכלס ולמה הם כל כך חשובים מוקדם ככל האפשר?',
-      introAudio: { uri: 'https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/audio/intros/mod-0-2-intro.mp3' },
+      introAudio: { uri: 'https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/audio/intros/mod-0-2-v2.mp3' },
       flashcards: [
         {
           id: 'fc-0-2-1',
@@ -168,7 +168,7 @@ export const chapter0Data: Chapter = {
         'זוכרים שפעם יכולנו לקנות ארטיק קרח בשקל? היום זה דמיוני. מי גנב לנו את הערך?',
       interactiveIntro:
         'המחירים מסביב עולים, והסכום שיש לכם היום יקנה קצת פחות מחר עקב עליית המחירים. זוהי האינפלציה. בואו נבין את המנגנון הזה ואיך שומרים על ערך הכסף לאורך זמן.',
-      introAudio: { uri: 'https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/audio/intros/mod-0-3-intro.mp3' },
+      introAudio: { uri: 'https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/audio/intros/mod-0-3-v2.mp3' },
       flashcards: [
         {
           id: 'fc-0-3-1',
@@ -245,7 +245,7 @@ export const chapter0Data: Chapter = {
         'אז עשיתם כסף. לאן הוא הולך אחר כך? החוק הכי מיושן אך הכי נכון בעולם: תוציאו פחות ממה שנכנס.',
       interactiveIntro:
         'כאן נלמד את חוק הברזל הפשוט והחשוב ביותר בניהול תזרים: איך לוודא שההכנסות עולות על ההוצאות, ולבנות בסיס כלכלי חזק בזמן שממשיכים ליהנות מהדרך.',
-      introAudio: { uri: 'https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/audio/intros/mod-0-4-intro.mp3' },
+      introAudio: { uri: 'https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/audio/intros/mod-0-4-v2.mp3' },
       flashcards: [
         {
           id: 'fc-0-4-1',
@@ -302,7 +302,7 @@ export const chapter0Data: Chapter = {
         'הכסף שלכם יכול להיות העובד הכי חרוץ שלכם. למה לתת לו לשכב מתחת למזרן ולהתעצל?',
       interactiveIntro:
         'במודול הזה נגלה את היתרון העצום שבהשקעות. נבין איך השקעה מאפשרת לייצר צמיחה משמעותית לאורך זמן, ולהפוך את הכסף שלכם למנוע שדוחף אתכם קדימה.',
-      introAudio: { uri: 'https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/audio/intros/mod-0-5-intro.mp3' },
+      introAudio: { uri: 'https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/audio/intros/mod-0-5-v2.mp3' },
       flashcards: [
         {
           id: 'fc-0-5-1',
