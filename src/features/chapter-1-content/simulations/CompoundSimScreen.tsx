@@ -763,7 +763,7 @@ export function CompoundSimScreen({ onComplete }: CompoundSimScreenProps) {
 
                     {/* Finn presents the summary */}
                     <Animated.View entering={FadeIn.delay(50).duration(300)} style={{ alignItems: 'center', marginVertical: 2 }}>
-                        <ExpoImage source={FINN_HAPPY} style={{ width: 100, height: 100 }} contentFit="contain" />
+                        <ExpoImage source={FINN_HAPPY} accessible={false} style={{ width: 100, height: 100 }} contentFit="contain" />
                     </Animated.View>
 
                     {/* Summary GlowCard */}
@@ -815,7 +815,7 @@ export function CompoundSimScreen({ onComplete }: CompoundSimScreenProps) {
                 {/* Finn hint bubble */}
                 {!hasInteracted && (
                     <Animated.View entering={FadeInDown.delay(400).duration(350)} style={{ flexDirection: 'row-reverse', alignItems: 'center', gap: 8, marginTop: 6, backgroundColor: 'rgba(255,255,255,0.9)', padding: 8, borderRadius: 12, borderWidth: 1, borderColor: '#bae6fd' }}>
-                        <ExpoImage source={FINN_STANDARD} style={{ width: 36, height: 36, flexShrink: 0 }} contentFit="contain" />
+                        <ExpoImage source={FINN_STANDARD} accessible={false} style={{ width: 36, height: 36, flexShrink: 0 }} contentFit="contain" />
                         <Text style={{ flex: 1, fontSize: 12, fontWeight: '700', color: '#0369a1', textAlign: 'right', writingDirection: 'rtl', lineHeight: 18 }}>
                             תעריכו כמה ותנחשו. זו המטרה!
                         </Text>
@@ -834,7 +834,7 @@ export function CompoundSimScreen({ onComplete }: CompoundSimScreenProps) {
                     
                     {/* Finn explaining what Compound Interest is */}
                     <Animated.View entering={FadeInUp.delay(500).duration(400)} style={{ flexDirection: 'row-reverse', alignItems: 'center', marginTop: 12, backgroundColor: 'rgba(255,255,255,0.7)', padding: 10, borderRadius: 12, borderWidth: 1, borderColor: '#bae6fd' }}>
-                        <ExpoImage source={FINN_STANDARD} style={{ width: 44, height: 44 }} contentFit="contain" />
+                        <ExpoImage source={FINN_STANDARD} accessible={false} style={{ width: 44, height: 44 }} contentFit="contain" />
                         <Text style={[RTL, { flex: 1, fontSize: 13, color: '#0369a1', fontWeight: '700', marginRight: 8, lineHeight: 18 }]}>
                             אם אינך מבין מה זה אומר — בואו נלמד יחד.
                         </Text>

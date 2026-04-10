@@ -273,7 +273,7 @@ export function StreakCelebrationScreen({
         {/* Finn mascot — success celebration */}
         <Animated.View style={[styles.bearContainer, bearStyle]}>
           <ExpoImage
-            source={FINN_HAPPY}
+            source={FINN_HAPPY} accessible={false}
             style={{ width: 120, height: 120 }}
             contentFit="contain"
           />

@@ -12,10 +12,10 @@ const DECORATION_SOURCES: number[] = [
 
 // Stable positions seeded by screenName — no randomness at render time
 const POSITIONS = [
-  { top: '6%',  left: '4%'  },
-  { top: '22%', right: '6%' },
+  { top: '6%',  start: '4%'  },
+  { top: '22%', end: '6%' },
   { top: '40%', left: '2%'  },
-  { top: '58%', right: '3%' },
+  { top: '58%', end: '3%' },
   { top: '75%', left: '5%'  },
   { top: '90%', right: '7%' },
 ] as const;

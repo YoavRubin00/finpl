@@ -116,7 +116,7 @@ export const InteractiveIntroCard = React.memo(function InteractiveIntroCard({ i
 
         {/* Finn character — compact, free-floating */}
         <Animated.View style={[bearStyle, floatStyle, { alignSelf: 'center', marginTop: 14, marginBottom: 10 }]}>
-          <ExpoImage source={FINN_STANDARD}
+          <ExpoImage source={FINN_STANDARD} accessible={false}
             style={{ width: 140, height: 140 }} contentFit="contain" />
         </Animated.View>
       </View>

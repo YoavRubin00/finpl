@@ -4,7 +4,7 @@
  * US-007 of PRD_FunFeatures.
  */
 import React from "react";
-import { View, Text, StyleSheet, ScrollView, Share, Image } from "react-native";
+import { View, Text, StyleSheet, ScrollView, Share, Image, type ImageSourcePropType } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Image as ExpoImage } from "expo-image";
 import Animated, { FadeInUp, FadeInDown } from "react-native-reanimated";
@@ -41,7 +41,7 @@ interface StatCard {
   title: string;
   value: string;
   subtitle: string;
-  image: any;
+  image: ImageSourcePropType;
 }
 
 function buildStats(xp: number, coins: number, streak: number): StatCard[] {

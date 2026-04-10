@@ -122,7 +122,7 @@ export function PaywallScreen({ visible, onDismiss }: PaywallScreenProps) {
 
                     {/* Finn mascot */}
                     <Animated.View entering={FadeIn.duration(400)}>
-                        <ExpoImage source={FINN_STANDARD}
+                        <ExpoImage source={FINN_STANDARD} accessible={false}
                             style={styles.finn}
                            
                            

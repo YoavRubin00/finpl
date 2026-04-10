@@ -40,7 +40,7 @@ export const useAuthStore = create<AuthState>()(
       signIn: (displayName: string, email: string) => {
         set((state) => ({ isAuthenticated: true, isGuest: false, displayName, email, createdAt: state.createdAt ?? new Date().toISOString() }));
         // Fire-and-forget DB sync
-        upsertUserProfile(email, { displayName, email }).catch(() => {});
+        upsertUserProfile(email, { displayName, email }).catch(() => { /* fire-and-forget */ });
       },
 
       enterGuestMode: () => {
@@ -49,7 +49,7 @@ export const useAuthStore = create<AuthState>()(
 
       convertGuestToUser: (displayName: string, email: string) => {
         set({ isGuest: false, displayName, email });
-        upsertUserProfile(email, { displayName, email }).catch(() => {});
+        upsertUserProfile(email, { displayName, email }).catch(() => { /* fire-and-forget */ });
       },
 
       completeOnboarding: (profile: UserProfile) => {
@@ -79,7 +79,7 @@ export const useAuthStore = create<AuthState>()(
       },
 
       signOut: () => {
-        logoutRevenueCat().catch(() => {});
+        logoutRevenueCat().catch(() => { /* fire-and-forget */ });
         set({
           isAuthenticated: false,
           isGuest: false,
@@ -120,7 +120,7 @@ export const useAuthStore = create<AuthState>()(
         AsyncStorage.getAllKeys().then((keys) => {
           const toRemove = keys.filter((k) => k !== authKey);
           if (toRemove.length > 0) AsyncStorage.multiRemove(toRemove);
-        }).catch(() => {});
+        }).catch(() => { /* fire-and-forget */ });
       },
     }),
     {

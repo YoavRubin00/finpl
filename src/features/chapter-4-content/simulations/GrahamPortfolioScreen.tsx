@@ -431,7 +431,7 @@ function ResultModal({ visible, result, onReplay, onContinue }: ResultModalProps
 
           {/* Finn celebration */}
           <Animated.View entering={FadeInDown.duration(400)} style={{ alignItems: 'center' }}>
-            <ExpoImage source={FINN_HAPPY} style={{ width: 80, height: 80 }} contentFit="contain" />
+            <ExpoImage source={FINN_HAPPY} accessible={false} style={{ width: 80, height: 80 }} contentFit="contain" />
           </Animated.View>
 
           {/* Grade banner */}
@@ -513,7 +513,7 @@ function ResultModal({ visible, result, onReplay, onContinue }: ResultModalProps
               <View style={sim4Styles.scoreCardInner}>
                 <Text style={[TYPE4.cardTitle, RTL]}>גראהם אומר...</Text>
                 <View style={{ flexDirection: 'row-reverse', alignItems: 'flex-start', gap: 8 }}>
-                  <ExpoImage source={FINN_STANDARD} style={{ width: 40, height: 40 }} contentFit="contain" />
+                  <ExpoImage source={FINN_STANDARD} accessible={false} style={{ width: 40, height: 40 }} contentFit="contain" />
                   <Text style={[modalStyles.quoteText, RTL, { flex: 1 }]}>{quote}</Text>
                 </View>
               </View>
@@ -632,7 +632,7 @@ export function GrahamPortfolioScreen({ onComplete }: GrahamPortfolioScreenProps
           <View style={{ flexDirection: 'row-reverse', alignItems: 'center', gap: 8 }}>
             <LottieIcon source={SIM_LOTTIE.portfolio} size={32} />
             <Text accessibilityRole="header" style={[TYPE4.title, RTL]}>בנה תיק לפי גראהם</Text>
-            <ExpoImage source={FINN_STANDARD} style={{ width: 32, height: 32 }} contentFit="contain" />
+            <ExpoImage source={FINN_STANDARD} accessible={false} style={{ width: 32, height: 32 }} contentFit="contain" />
           </View>
           <Text style={[TYPE4.subtitle, RTL, { marginTop: 6 }]}>
             הקצה {formatShekel(BUDGET)} ל-10 מניות. גראהם ישפוט את הבחירות שלך.
@@ -699,7 +699,7 @@ export function GrahamPortfolioScreen({ onComplete }: GrahamPortfolioScreenProps
       {showFullNotif && (
         <Animated.View entering={FadeInUp.duration(400)} style={{ position: 'absolute', bottom: 16, left: 12, right: 12, zIndex: 50 }}>
           <View style={{ flexDirection: 'row-reverse', alignItems: 'center', gap: 8, backgroundColor: '#ffffff', borderRadius: 14, padding: 12, borderWidth: 1.5, borderColor: '#bae6fd', shadowColor: '#000', shadowOpacity: 0.1, shadowRadius: 10, elevation: 6 }}>
-            <ExpoImage source={FINN_STANDARD} style={{ width: 36, height: 36 }} contentFit="contain" />
+            <ExpoImage source={FINN_STANDARD} accessible={false} style={{ width: 36, height: 36 }} contentFit="contain" />
             <Text style={[RTL, { flex: 1, fontSize: 13, color: '#0369a1', fontWeight: '700' }]}>
               הגעת ל-100%! שנה את התמהיל או לחץ "בדוק את התיק"
             </Text>

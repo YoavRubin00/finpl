@@ -28,7 +28,7 @@ export function GuestProgressGate({ visible, onClose }: GuestProgressGateProps) 
     >
       <View style={styles.overlay}>
         <View style={styles.card}>
-          <ExpoImage source={FINN_STANDARD}
+          <ExpoImage source={FINN_STANDARD} accessible={false}
             style={styles.finn} contentFit="contain" />
 
           <Text style={styles.title} accessibilityRole="header">רוצה להמשיך?</Text>

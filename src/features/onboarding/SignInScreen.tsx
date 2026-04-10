@@ -51,7 +51,7 @@ export function SignInScreen() {
               autoCorrect={false}
               returnKeyType="done"
               onSubmitEditing={handleContinue}
-            accessibilityLabel="Your first name" />
+            accessibilityLabel="שמך הפרטי" />
           </View>
 
           {/* CTA */}

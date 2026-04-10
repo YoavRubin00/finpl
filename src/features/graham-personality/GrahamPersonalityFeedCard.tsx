@@ -85,7 +85,7 @@ export function GrahamPersonalityFeedCard({ isActive: _isActive }: Props) {
 
           {/* Finn avatar */}
           <View style={{ alignItems: 'center', marginBottom: 14 }}>
-            <ExpoImage source={FINN_STANDARD} style={{ width: 64, height: 64 }} contentFit="contain" />
+            <ExpoImage source={FINN_STANDARD} accessible={false} style={{ width: 64, height: 64 }} contentFit="contain" />
           </View>
 
           {/* CTA — full width */}

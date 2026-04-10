@@ -39,13 +39,11 @@ import type { CompanionId } from "../auth/types";
 import { ProBadge } from "../../components/ui/ProBadge";
 import { useTutorialStore } from "../../stores/useTutorialStore";
 import LottieView from "lottie-react-native";
+import { getApiBase } from "../../db/apiBase";
 
 /* ------------------------------------------------------------------ */
-/*  Gemini — direct client call (works in APK + dev)                   */
+/*  Gemini — routed through backend proxy (keeps API key server-side) */
 /* ------------------------------------------------------------------ */
-
-const GEMINI_KEY = process.env.EXPO_PUBLIC_GOOGLE_AI_API_KEY ?? '';
-const GEMINI_MODEL = 'gemini-2.5-flash';
 
 async function callGeminiDirect(
   systemPrompt: string,
@@ -53,17 +51,14 @@ async function callGeminiDirect(
 ): Promise<{ ok: boolean; reply: string }> {
   try {
     const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${GEMINI_KEY}`,
+      `${getApiBase()}/api/ai/chat`,
       {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          system_instruction: { parts: [{ text: systemPrompt }] },
-          contents: messages.map((m) => ({
-            role: m.role,
-            parts: [{ text: m.content }],
-          })),
-          generationConfig: { maxOutputTokens: 2500, thinkingConfig: { thinkingBudget: 0 } },
+          systemPrompt,
+          messages,
+          maxOutputTokens: 2500,
         }),
       },
     );
@@ -73,9 +68,7 @@ async function callGeminiDirect(
     }
 
     const data = await response.json();
-    const reply = data.candidates?.[0]?.content?.parts?.[0]?.text
-      ?? "סליחה, לא הצלחתי ליצור תשובה.";
-    return { ok: true, reply };
+    return { ok: true, reply: data.reply ?? "סליחה, לא הצלחתי ליצור תשובה." };
   } catch (_e) {
     return { ok: false, reply: "שגיאת רשת. בדוק את החיבור לאינטרנט." };
   }

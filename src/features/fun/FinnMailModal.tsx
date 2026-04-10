@@ -58,7 +58,7 @@ export function FinnMailModal({ visible, onClose }: FinnMailModalProps) {
           {/* Finn avatar */}
           <Animated.View entering={FadeInDown.delay(100).duration(300)} style={styles.avatarWrap}>
             <ExpoImage
-              source={FINN_HAPPY}
+              source={FINN_HAPPY} accessible={false}
               style={styles.avatar}
               contentFit="contain"
             />

@@ -179,7 +179,7 @@ export function SimulatorScreen() {
           </View>
 
           <View style={{ flex: 1, justifyContent: "center", alignItems: "center", paddingHorizontal: 24, gap: 16 }}>
-            <ExpoImage source={FINN_HAPPY} style={{ width: 100, height: 100 }} contentFit="contain" />
+            <ExpoImage source={FINN_HAPPY} accessible={false} style={{ width: 100, height: 100 }} contentFit="contain" />
             <Text style={{ fontSize: 14, fontWeight: "700", color: "#64748b", textAlign: "center", writingDirection: "rtl" }}>
               הכסף שלך בעוד {years} שנים
             </Text>
@@ -233,7 +233,7 @@ export function SimulatorScreen() {
         <View style={{ flex: 1, paddingHorizontal: 20, justifyContent: "space-between" }}>
           {/* Finn + Title */}
           <View style={{ alignItems: "center", marginTop: 4, marginBottom: 6 }}>
-            <ExpoImage source={FINN_STANDARD} style={{ width: 70, height: 70 }} contentFit="contain" />
+            <ExpoImage source={FINN_STANDARD} accessible={false} style={{ width: 70, height: 70 }} contentFit="contain" />
             <Text style={{ fontSize: 18, fontWeight: "900", color: "#0c4a6e", textAlign: "center", writingDirection: "rtl", marginTop: 4 }}>
               לשחק עם המספרים
             </Text>

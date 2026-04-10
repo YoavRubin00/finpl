@@ -63,7 +63,7 @@ export function QuizStartPopup({ visible, quizCount, onStart, unitColors }: Quiz
         <Animated.View style={[styles.card, cardStyle, { borderColor: unitColors.bg, shadowColor: unitColors.glow }]}>
           {/* Finn mascot */}
           <View style={styles.finnWrapper}>
-            <ExpoImage source={FINN_STANDARD}
+            <ExpoImage source={FINN_STANDARD} accessible={false}
               style={styles.finn} contentFit="contain" />
           </View>
 

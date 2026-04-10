@@ -63,7 +63,7 @@ export function MythFeedbackModal({ visible, card, wasCorrect, modifierWon, onNe
                 <Animated.View entering={FadeInDown.duration(300)} style={styles.content}>
                     {/* Finn + Result */}
                     <Animated.View entering={FadeInDown.duration(400)} style={{ alignItems: 'center' }}>
-                        <ExpoImage source={FINN_STANDARD} style={{ width: 160, height: 160 }} contentFit="contain" />
+                        <ExpoImage source={FINN_STANDARD} accessible={false} style={{ width: 160, height: 160 }} contentFit="contain" />
                     </Animated.View>
 
                     {/* Headline */}

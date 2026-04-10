@@ -534,11 +534,10 @@ export function FinFeedScreen() {
   const flatListRef = useRef<FlatList<FeedItem>>(null);
   useScrollToTop(flatListRef);
 
-  // Auto-scroll during walkthrough step 2 (feed tour) — scroll every 2s, start after 3s
-  const walkthroughStep = useTutorialStore((s) => s.appWalkthroughStep);
-  const hasSeenWalkthrough = useTutorialStore((s) => s.hasSeenAppWalkthrough);
+  // Continuous auto-scroll during walkthrough feed step — feels infinite
+  const walkthroughScreen = useTutorialStore((s) => s.walkthroughActiveScreen);
   useEffect(() => {
-    if (hasSeenWalkthrough || walkthroughStep !== 2) return;
+    if (walkthroughScreen !== 'feed') return;
     let scrollIdx = 0;
     const delay = setTimeout(() => {
       const interval = setInterval(() => {
@@ -546,13 +545,11 @@ export function FinFeedScreen() {
         try {
           flatListRef.current?.scrollToIndex({ index: scrollIdx, animated: true });
         } catch { /* safe — index may be out of range */ }
-      }, 2000);
-      // Auto-stop after 3 scrolls (6 seconds total scrolling)
-      const stop = setTimeout(() => clearInterval(interval), 6200);
-      return () => { clearInterval(interval); clearTimeout(stop); };
-    }, 3000);
+      }, 2500);
+      return () => clearInterval(interval);
+    }, 1500);
     return () => clearTimeout(delay);
-  }, [walkthroughStep, hasSeenWalkthrough]);
+  }, [walkthroughScreen]);
 
   // Wire module-level scroll helper for WelcomeCard
   _feedListScrollToIndex = (index: number) => {

@@ -202,7 +202,7 @@ function RevealCard({
             <Text style={[TYPE4.cardTitle, RTL]}>גראהם היה אומר:</Text>
           </View>
           <View style={{ flexDirection: 'row-reverse', alignItems: 'center', gap: 8 }}>
-            <ExpoImage source={FINN_STANDARD} style={{ width: 36, height: 36 }} contentFit="contain" />
+            <ExpoImage source={FINN_STANDARD} accessible={false} style={{ width: 36, height: 36 }} contentFit="contain" />
             <Text style={[TYPE4.cardBody, RTL, { flex: 1 }]}>{grahamLesson}</Text>
           </View>
         </View>
@@ -267,7 +267,7 @@ function ScoreScreenInner({ result, onReplay, onContinue }: ScoreScreenProps) {
       <ConfettiExplosion />
 
       <Animated.View entering={FadeInDown.duration(600)} style={{ alignItems: 'center' }}>
-        <ExpoImage source={FINN_HAPPY} style={{ width: 72, height: 72 }} contentFit="contain" />
+        <ExpoImage source={FINN_HAPPY} accessible={false} style={{ width: 72, height: 72 }} contentFit="contain" />
       </Animated.View>
 
       {/* Grade banner */}
@@ -458,7 +458,7 @@ export function CrisisTimelineScreen({ onComplete }: CrisisTimelineScreenProps) 
             <View style={{ padding: 16, gap: 10 }}>
               {/* Year + Finn + name */}
               <View style={{ flexDirection: 'row-reverse', alignItems: 'center', gap: 10 }}>
-                <ExpoImage source={FINN_STANDARD} style={{ width: 40, height: 40 }} contentFit="contain" />
+                <ExpoImage source={FINN_STANDARD} accessible={false} style={{ width: 40, height: 40 }} contentFit="contain" />
                 <View style={{ flex: 1, alignItems: 'flex-end' }}>
                   <Text style={crisisStyles.year}>{currentEvent.year}</Text>
                   <Text style={[crisisStyles.name, RTL]}>{currentEvent.name}</Text>

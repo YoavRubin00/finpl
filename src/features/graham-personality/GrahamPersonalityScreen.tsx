@@ -152,7 +152,7 @@ function ResultScreen({
 
       {/* Finn excited */}
       <Animated.View entering={FadeInDown.duration(500)} style={styles.finnContainer}>
-        <ExpoImage source={FINN_HAPPY} style={{ width: 85, height: 85 }} contentFit="contain" />
+        <ExpoImage source={FINN_HAPPY} accessible={false} style={{ width: 85, height: 85 }} contentFit="contain" />
       </Animated.View>
 
       {/* Profile Card */}
@@ -286,7 +286,7 @@ export function GrahamPersonalityScreen({ onComplete }: GrahamPersonalityScreenP
               <View style={styles.questionInner}>
                 <Text style={[styles.questionText, RTL]} numberOfLines={2} adjustsFontSizeToFit>{question.question}</Text>
                 <View style={styles.finnSmall}>
-                  <ExpoImage source={FINN_STANDARD} style={{ width: 100, height: 100 }} contentFit="contain" />
+                  <ExpoImage source={FINN_STANDARD} accessible={false} style={{ width: 100, height: 100 }} contentFit="contain" />
                 </View>
               </View>
             </GlowCard>

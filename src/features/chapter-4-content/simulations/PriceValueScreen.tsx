@@ -294,7 +294,7 @@ function ScoreScreen({ result, onReplay, onContinue }: ScoreScreenProps) {
       {/* Finn feedback bubble */}
       <Animated.View entering={FadeInDown.duration(500).delay(300)}>
         <View style={{ flexDirection: 'row-reverse', alignItems: 'flex-start', gap: 10, backgroundColor: '#ffffff', borderRadius: 16, padding: 14, borderWidth: 1.5, borderColor: '#bae6fd', marginBottom: 14 }}>
-          <ExpoImage source={FINN_HAPPY} style={{ width: 44, height: 44, flexShrink: 0 }} contentFit="contain" />
+          <ExpoImage source={FINN_HAPPY} accessible={false} style={{ width: 44, height: 44, flexShrink: 0 }} contentFit="contain" />
           <Text style={{ flex: 1, fontSize: 14, fontWeight: '700', color: '#0c4a6e', lineHeight: 22, writingDirection: 'rtl', textAlign: 'right' }}>
             {result.feedback}
           </Text>
@@ -424,7 +424,7 @@ export function PriceValueScreen({ onComplete }: PriceValueScreenProps) {
         {/* Finn hint — only first 2 months */}
         {state.currentIndex < 2 && (
           <View style={{ flexDirection: 'row-reverse', alignItems: 'center', gap: 8, backgroundColor: '#ffffff', borderRadius: 14, padding: 10, marginBottom: 6, borderWidth: 1, borderColor: '#bae6fd' }}>
-            <ExpoImage source={FINN_STANDARD} style={{ width: 36, height: 36 }} contentFit="contain" />
+            <ExpoImage source={FINN_STANDARD} accessible={false} style={{ width: 36, height: 36 }} contentFit="contain" />
             <Text style={{ flex: 1, fontSize: 13, fontWeight: '700', color: '#0c4a6e', lineHeight: 20, writingDirection: 'rtl', textAlign: 'right' }}>
               כשהמחיר (כחול) מתחת לערך (ירוק) — קנה! כשמעל — מכור.
             </Text>

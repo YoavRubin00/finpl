@@ -253,7 +253,7 @@ function ScoreScreen({
           elevation: 6,
           marginBottom: 14,
         }}>
-          <ExpoImage source={FINN_HAPPY} style={{ width: 64, height: 64, marginBottom: 8 }} contentFit="contain" />
+          <ExpoImage source={FINN_HAPPY} accessible={false} style={{ width: 64, height: 64, marginBottom: 8 }} contentFit="contain" />
           <Text accessibilityLiveRegion="polite" style={{ fontSize: 42, fontWeight: '900', color: '#0c4a6e', marginBottom: 4 }}>
             {GRADE_HEBREW[grade] ?? grade}
           </Text>
@@ -559,7 +559,7 @@ export function MarginSafetyScreen({ onComplete }: MarginSafetyScreenProps) {
               >
                 <View style={sim4Styles.scoreCardInner}>
                   <View style={sim4Styles.insightRow}>
-                    <ExpoImage source={FINN_STANDARD} style={{ width: 36, height: 36 }} contentFit="contain" />
+                    <ExpoImage source={FINN_STANDARD} accessible={false} style={{ width: 36, height: 36 }} contentFit="contain" />
                     <LottieIcon source={SIM_LOTTIE.bulb} size={22} style={{ marginTop: 2 }} />
                     <Text style={sim4Styles.insightText}>
                       {GRAHAM_SUMMARY[valuation.grade]}

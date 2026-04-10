@@ -516,7 +516,7 @@ function ModuleNode({
             style={[styles.characterWrapper, { left: charLeft }]}
           >
             <View style={{ width: CHAR_SIZE, height: CHAR_SIZE, overflow: "hidden" }}>
-              <ExpoImage source={FINN_STANDARD} style={{ width: CHAR_SIZE, height: CHAR_SIZE }} contentFit="contain" />
+              <ExpoImage source={FINN_STANDARD} accessible={false} style={{ width: CHAR_SIZE, height: CHAR_SIZE }} contentFit="contain" />
             </View>
           </Animated.View>
           {/* Speech bubble directly above Finn */}
@@ -871,6 +871,7 @@ function ChapterSection({
 export function DuoLearnScreen() {
   const router = useRouter();
   const isWalkthroughActive = !useTutorialStore((s) => s.hasSeenAppWalkthrough);
+  const walkthroughScreen = useTutorialStore((s) => s.walkthroughActiveScreen);
   const xp = useEconomyStore((s) => s.xp);
   const streak = useEconomyStore((s) => s.streak);
   const progress = useChapterStore((s) => s.progress);
@@ -989,6 +990,22 @@ export function DuoLearnScreen() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // Slow auto-scroll during walkthrough learn step so user sees there's more content
+  useEffect(() => {
+    if (walkthroughScreen !== 'learn') return;
+    scrollRef.current?.scrollTo({ y: 0, animated: false });
+    let y = 0;
+    const delay = setTimeout(() => {
+      const interval = setInterval(() => {
+        y += 80;
+        scrollRef.current?.scrollTo({ y, animated: true });
+        if (y >= 800) clearInterval(interval);
+      }, 1500);
+      return () => clearInterval(interval);
+    }, 1000);
+    return () => clearTimeout(delay);
+  }, [walkthroughScreen]);
+
   const handleModulePress = useCallback(
     (moduleId: string, chapterId: string, moduleIndex: number) => {
       // Check if module is already completed — show summary preview first
@@ -1061,7 +1078,7 @@ export function DuoLearnScreen() {
                   {displayName || "אורח"}
                 </Text>
               </View>
-              <ExpoImage source={FINN_STANDARD} style={{ width: 56, height: 56 }} contentFit="contain" />
+              <ExpoImage source={FINN_STANDARD} accessible={false} style={{ width: 56, height: 56 }} contentFit="contain" />
             </View>
           </View>
 

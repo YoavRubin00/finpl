@@ -3,6 +3,8 @@
  * Each function returns a standardized DataPoint for quiz generation.
  */
 
+import { getApiBase } from '../../db/apiBase';
+
 export interface DataPoint {
   value: string;
   label: string;
@@ -135,29 +137,24 @@ export async function fetchInterestRate(): Promise<DataPoint> {
   }
 }
 
-// ── S&P 500 — Alpha Vantage ──
+// ── S&P 500 — via server-side proxy (keeps API keys server-side) ──
 export async function fetchSP500(): Promise<DataPoint> {
   const cached = getCached('sp500');
   if (cached) return cached;
 
   try {
-    const apiKey = process.env.EXPO_PUBLIC_ALPHA_VANTAGE_API_KEY;
-    if (!apiKey) throw new Error('No Alpha Vantage key');
-
-    const url = `https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol=SPY&apikey=${apiKey}`;
-    const res = await fetch(url);
-    if (!res.ok) throw new Error(`AV API ${res.status}`);
+    const res = await fetch(`${getApiBase()}/api/trading/quote?ticker=SPY&timeframe=1D`);
+    if (!res.ok) throw new Error(`Quote API ${res.status}`);
     const json = await res.json();
 
-    const quote = json['Global Quote'];
-    if (!quote) throw new Error('No quote data');
-
-    const changePercent = quote['10. change percent']?.replace('%', '') ?? '0';
-    const change = Number(changePercent);
-    const direction = change > 0.1 ? 'up' : change < -0.1 ? 'down' : 'stable';
+    const chart: Array<{ price: number }> = json.chart ?? [];
+    const currentPrice: number = json.price ?? 0;
+    const prevPrice = chart.length >= 2 ? chart[chart.length - 2]?.price ?? currentPrice : currentPrice;
+    const changePct = prevPrice > 0 ? ((currentPrice - prevPrice) / prevPrice) * 100 : 0;
+    const direction = changePct > 0.1 ? 'up' : changePct < -0.1 ? 'down' : 'stable';
 
     const result: DataPoint = {
-      value: `${change >= 0 ? '+' : ''}${change.toFixed(1)}%`,
+      value: `${changePct >= 0 ? '+' : ''}${changePct.toFixed(1)}%`,
       label: 'S&P 500',
       direction,
       category: 'STOCK_INDEX',

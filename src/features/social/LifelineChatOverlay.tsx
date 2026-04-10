@@ -32,6 +32,7 @@ import { X, Send, Lock } from "lucide-react-native";
 import { useAuthStore } from "../auth/useAuthStore";
 import { useChapterStore } from "../chapter-1-content/useChapterStore";
 import { useSubscriptionStore } from "../subscription/useSubscriptionStore";
+import { getApiBase } from "../../db/apiBase";
 import { useUpgradeModalStore } from "../../stores/useUpgradeModalStore";
 import { COMPANION_PERSONALITIES } from "../chat/chatData";
 import { buildSystemPrompt } from "../chat/buildChatPrompt";
@@ -180,23 +181,21 @@ export function LifelineChatOverlay({ visible, conceptTag, onClose }: Props) {
       }));
 
       try {
-        const geminiKey = process.env.EXPO_PUBLIC_GOOGLE_AI_API_KEY ?? '';
         const response = await fetch(
-          `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${geminiKey}`,
+          `${getApiBase()}/api/ai/chat`,
           {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
-              system_instruction: { parts: [{ text: systemPrompt }] },
-              contents: chatMessages.map((m) => ({ role: m.role, parts: [{ text: m.content }] })),
-              generationConfig: { maxOutputTokens: 2048, thinkingConfig: { thinkingBudget: 0 } },
+              systemPrompt,
+              messages: chatMessages,
+              maxOutputTokens: 2048,
             }),
           },
         );
         if (!response.ok) throw new Error("AI service error");
         const data = await response.json();
-        const reply = data.candidates?.[0]?.content?.parts?.[0]?.text
-          ?? "סליחה, לא הצלחתי ליצור תשובה.";
+        const reply = data.reply ?? "סליחה, לא הצלחתי ליצור תשובה.";
         setMessages((prev) => [...prev, { role: "assistant", content: reply }]);
       } catch {
         setMessages((prev) => [

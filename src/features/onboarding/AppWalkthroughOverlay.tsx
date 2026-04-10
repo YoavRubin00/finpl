@@ -1,23 +1,30 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { Image as ExpoImage } from "expo-image";
-import { View, Text, Pressable, Modal, StyleSheet, Dimensions } from "react-native";
+import { View, Text, Pressable, Modal, StyleSheet } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import { LinearGradient } from "expo-linear-gradient";
-import Animated, { FadeIn, FadeInDown, FadeInUp } from "react-native-reanimated";
+import Animated, {
+  FadeInDown,
+  FadeInUp,
+  FadeIn,
+  useSharedValue,
+  useAnimatedStyle,
+  withRepeat,
+  withTiming,
+  useReducedMotion,
+} from "react-native-reanimated";
 import LottieView from "lottie-react-native";
+import { ChevronRight } from "lucide-react-native";
 import { useTutorialStore } from "../../stores/useTutorialStore";
 import { FINN_HELLO } from "../retention-loops/finnMascotConfig";
 import { tapHaptic } from "../../utils/haptics";
-import { useChapterStore } from "../chapter-1-content/useChapterStore";
-import { chapter0Data } from "../chapter-0-content/chapter0Data";
-import { chapter1Data } from "../chapter-1-content/chapter1Data";
-
-const { width: SW } = Dimensions.get("window");
 
 // ---------------------------------------------------------------------------
 // Steps
 // ---------------------------------------------------------------------------
+
+type ScreenSignal = 'learn' | 'lesson-preview' | 'feed' | 'chat' | 'shop' | 'bridge' | null;
 
 interface WalkthroughStep {
   title: string;
@@ -25,6 +32,7 @@ interface WalkthroughStep {
   message: string;
   navigateTo: string | null;
   ctaLabel: string;
+  screenSignal: ScreenSignal;
   isLast?: boolean;
 }
 
@@ -35,34 +43,55 @@ const STEPS: WalkthroughStep[] = [
     message: "אני אלווה אותך לאורך כל הדרך.\nבוא נעשה סיור קצר באפליקציה!",
     navigateTo: null,
     ctaLabel: "יאללה, קדימה!",
+    screenSignal: null,
   },
   {
     title: "מסלול הלמידה",
     emoji: "📚",
     message: "כאן מסלול הלמידה שלך — שיעורים, חידונים וסימולציות שיהפכו אותך למומחה פיננסי.",
     navigateTo: "/(tabs)/learn",
+    ctaLabel: "מה נלמד באפליקציה?",
+    screenSignal: "learn",
+  },
+  {
+    title: "מה נלמד באפליקציה?",
+    emoji: "🎓",
+    message: "ברוכים הבאים לעולם הפיננסי — זה המודול הראשון שלך. בוא נציץ!",
+    navigateTo: "/lesson/mod-0-1?chapterId=chapter-0",
     ctaLabel: "עכשיו לפיד",
+    screenSignal: "lesson-preview",
   },
   {
     title: "הפיד היומי",
     emoji: "🎯",
     message: "כאן תמצא משחקים יומיים, דילמות כלכליות, מיתוסים ותוכן שמתעדכן כל יום.",
     navigateTo: "/(tabs)/investments",
-    ctaLabel: "לעולם ההשקעות",
+    ctaLabel: "לצ'אט של שארק",
+    screenSignal: "feed",
   },
   {
-    title: "עולם ההשקעות",
-    emoji: "📈",
-    message: "כאן תנהל תיק השקעות וירטואלי — קנה ומכור נכסים כמו בשוק אמיתי, בלי סיכון.",
-    navigateTo: "/bridge",
+    title: "הצ'אט של שארק",
+    emoji: "💬",
+    message: "יש לך שאלה? שארק תמיד כאן — אפשר לשאול, להתייעץ, ולקבל הסבר אישי על כל נושא פיננסי.",
+    navigateTo: "/(tabs)/chat",
+    ctaLabel: "לחנות",
+    screenSignal: "chat",
+  },
+  {
+    title: "החנות",
+    emoji: "🏪",
+    message: "כאן תוכל להשתמש במטבעות הזהב שצברת — אייטמים, בוסטרים ועוד. מרוויחים זהב דרך למידה!",
+    navigateTo: "/(tabs)/shop",
     ctaLabel: "ומה עם הגשר?",
+    screenSignal: "shop",
   },
   {
     title: "הגשר",
     emoji: "🌉",
     message: "הידע שלך שווה כסף אמיתי! בגשר תמיר את המטבעות שצברת להטבות ומוצרים פיננסיים בעולם האמיתי.",
-    navigateTo: null,
+    navigateTo: "/bridge",
     ctaLabel: "בוא נתחיל ללמוד! 🚀",
+    screenSignal: "bridge",
     isLast: true,
   },
 ];
@@ -83,6 +112,24 @@ export function useWalkthroughGlowTarget(): "none" | "tab-learn" | "tab-investme
 // Component
 // ---------------------------------------------------------------------------
 
+// Pulsing glow behind Finn avatar
+function FinnPulse() {
+  const reducedMotion = useReducedMotion();
+  const pulse = useSharedValue(1);
+
+  useEffect(() => {
+    if (reducedMotion) return;
+    pulse.value = withRepeat(withTiming(1.25, { duration: 1800 }), -1, true);
+  }, [reducedMotion, pulse]);
+
+  const animStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: pulse.value }],
+    opacity: 2 - pulse.value, // 1.0 → 0.75
+  }));
+
+  return <Animated.View style={[s.finnGlow, animStyle]} />;
+}
+
 export function AppWalkthroughOverlay() {
   const hasSeenWalkthrough = useTutorialStore((s) => s.hasSeenAppWalkthrough);
   const step = useTutorialStore((s) => s.appWalkthroughStep);
@@ -90,8 +137,13 @@ export function AppWalkthroughOverlay() {
   const completeWalkthrough = useTutorialStore((s) => s.completeAppWalkthrough);
   const router = useRouter();
   const [transitioning, setTransitioning] = useState(false);
+  const reducedMotion = useReducedMotion();
+  // Key to force re-mount of content for enter/exit animation between steps
+  const [contentKey, setContentKey] = useState(0);
 
   const stepConfig = step >= 0 && step < STEPS.length ? STEPS[step] : null;
+
+  const setActiveScreen = useTutorialStore((s) => s.setWalkthroughActiveScreen);
 
   const handleNext = useCallback(() => {
     if (transitioning) return;
@@ -99,49 +151,57 @@ export function AppWalkthroughOverlay() {
 
     if (step >= STEPS.length - 1) {
       completeWalkthrough();
-      // The walkthrough itself counts as completing mod-0-1 (intro to money).
-      // Mark it done so the user jumps straight to mod-0-2 instead of redoing it.
-      try {
-        const chapterStore = useChapterStore.getState();
-        const completed0 = chapterStore.progress['ch-0']?.completedModules ?? [];
-        if (!completed0.includes('mod-0-1')) {
-          chapterStore.completeModule('mod-0-1');
-        }
-      } catch {}
+      setActiveScreen(null);
+      // Navigate to the first module so the user starts learning for real
       setTimeout(() => {
-        // Find the first incomplete module so the user lands on the next lesson.
         try {
-          const progress = useChapterStore.getState().progress;
-          const chapters = [
-            { data: chapter0Data, key: 'ch-0', routeId: 'chapter-0' },
-            { data: chapter1Data, key: 'ch-1', routeId: 'chapter-1' },
-          ];
-          let target = { moduleId: 'mod-0-2', chapterId: 'chapter-0' };
-          for (const ch of chapters) {
-            const completed = progress[ch.key]?.completedModules ?? [];
-            const next = ch.data.modules.find((m) => !completed.includes(m.id));
-            if (next) { target = { moduleId: next.id, chapterId: ch.routeId }; break; }
-          }
-          router.push(`/lesson/${target.moduleId}?chapterId=${target.chapterId}` as never);
+          router.push("/lesson/mod-0-1?chapterId=chapter-0" as never);
         } catch {}
       }, 200);
       return;
     }
 
-    const nextNav = STEPS[step].navigateTo;
-    if (nextNav) {
+    const nextConfig = STEPS[step + 1];
+    if (nextConfig.navigateTo) {
       setTransitioning(true);
       setTimeout(() => {
-        try { router.replace(nextNav as never); } catch {}
+        try { router.replace(nextConfig.navigateTo as never); } catch {}
         setTimeout(() => {
           setStep(step + 1);
+          setContentKey((k) => k + 1);
+          setActiveScreen(nextConfig.screenSignal);
           setTransitioning(false);
         }, 400);
       }, 100);
     } else {
       setStep(step + 1);
+      setContentKey((k) => k + 1);
+      setActiveScreen(nextConfig.screenSignal);
     }
-  }, [step, setStep, completeWalkthrough, router, transitioning]);
+  }, [step, setStep, completeWalkthrough, setActiveScreen, router, transitioning]);
+
+  const handleBack = useCallback(() => {
+    if (transitioning || step <= 0) return;
+    tapHaptic();
+
+    const prevConfig = STEPS[step - 1];
+    if (prevConfig.navigateTo) {
+      setTransitioning(true);
+      setTimeout(() => {
+        try { router.replace(prevConfig.navigateTo as never); } catch {}
+        setTimeout(() => {
+          setStep(step - 1);
+          setContentKey((k) => k + 1);
+          setActiveScreen(prevConfig.screenSignal);
+          setTransitioning(false);
+        }, 400);
+      }, 100);
+    } else {
+      setStep(step - 1);
+      setContentKey((k) => k + 1);
+      setActiveScreen(prevConfig.screenSignal);
+    }
+  }, [step, setStep, setActiveScreen, router, transitioning]);
 
   const handleSkip = useCallback(() => {
     tapHaptic();
@@ -150,14 +210,23 @@ export function AppWalkthroughOverlay() {
 
   if (hasSeenWalkthrough || step < 0 || !stepConfig) return null;
 
+  const enterAnim = reducedMotion ? undefined : FadeIn.duration(280);
+
   return (
     <Modal visible transparent animationType="fade" statusBarTranslucent accessibilityViewIsModal>
       <View style={s.overlay}>
-        {/* ── Top: Step title pill ── */}
+        {/* ── Top: Step title pill with counter ── */}
         <SafeAreaView edges={["top"]} style={{ alignItems: "center", paddingTop: 12 }}>
-          <Animated.View entering={FadeInDown.duration(400)} style={s.titlePill}>
+          <Animated.View
+            key={`pill-${contentKey}`}
+            entering={reducedMotion ? undefined : FadeInDown.duration(350)}
+            style={s.titlePill}
+          >
             <Text style={s.titleEmoji}>{stepConfig.emoji}</Text>
             <Text style={s.titleText} accessibilityRole="header">{stepConfig.title}</Text>
+            <View style={s.stepCounter}>
+              <Text style={s.stepCounterText}>{`${step + 1}/${STEPS.length}`}</Text>
+            </View>
           </Animated.View>
         </SafeAreaView>
 
@@ -166,13 +235,13 @@ export function AppWalkthroughOverlay() {
 
         {/* ── Bottom: Finn card + CTA ── */}
         <SafeAreaView edges={["bottom"]} style={{ paddingHorizontal: 16 }}>
-          <Animated.View entering={FadeInUp.duration(500)} style={s.card}>
+          <Animated.View entering={reducedMotion ? undefined : FadeInUp.duration(500)} style={s.card}>
             {/* Glow border */}
             <View style={s.glowBorder} />
 
-            {/* Finn avatar — floats above card */}
+            {/* Finn avatar — floats above card with pulsing glow */}
             <View style={s.finnWrap}>
-              <View style={s.finnGlow} />
+              <FinnPulse />
               <ExpoImage
                 source={FINN_HELLO}
                 style={s.finn}
@@ -181,42 +250,64 @@ export function AppWalkthroughOverlay() {
               />
             </View>
 
-            {/* Message */}
-            <Text style={s.message}>{stepConfig.message}</Text>
+            {/* Message — re-animates on step change */}
+            <Animated.Text
+              key={`msg-${contentKey}`}
+              entering={enterAnim}
+              style={s.message}
+            >
+              {stepConfig.message}
+            </Animated.Text>
 
-            {/* Dots */}
+            {/* Dots — smaller for 7 steps */}
             <View style={s.dotsRow} accessibilityLabel={`שלב ${step + 1} מתוך ${STEPS.length}`} accessibilityRole="text">
               {STEPS.map((_, i) => (
                 <View key={i} style={[s.dot, i === step && s.dotActive]} />
               ))}
             </View>
 
-            {/* CTA — big blue glow button */}
-            <Pressable
-              onPress={handleNext}
-              disabled={transitioning}
-              style={({ pressed }) => [s.ctaBtn, pressed && { transform: [{ scale: 0.97 }] }, transitioning && { opacity: 0.5 }]}
-              accessibilityRole="button"
-              accessibilityLabel={`${stepConfig.ctaLabel}, שלב ${step + 1} מתוך ${STEPS.length}`}
-              accessibilityState={{ disabled: transitioning }}
-            >
-              <LinearGradient
-                colors={["#0ea5e9", "#38bdf8", "#0ea5e9"]}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
-                style={s.ctaGradient}
+            {/* CTA row — back arrow (right in RTL) + big blue glow button */}
+            <View style={s.ctaRow}>
+              {step > 0 && (
+                <Pressable
+                  onPress={handleBack}
+                  disabled={transitioning}
+                  style={({ pressed }) => [s.backBtn, pressed && { transform: [{ scale: 0.93 }] }, transitioning && { opacity: 0.4 }]}
+                  accessibilityRole="button"
+                  accessibilityLabel="חזרה לשלב הקודם"
+                  hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
+                >
+                  <ChevronRight size={22} color="#0ea5e9" />
+                </Pressable>
+              )}
+              <Pressable
+                onPress={handleNext}
+                disabled={transitioning}
+                style={({ pressed }) => [s.ctaBtn, { flex: 1 }, pressed && { transform: [{ scale: 0.97 }] }, transitioning && { opacity: 0.5 }]}
+                accessibilityRole="button"
+                accessibilityLabel={`${stepConfig.ctaLabel}, שלב ${step + 1} מתוך ${STEPS.length}`}
+                accessibilityState={{ disabled: transitioning }}
               >
-                <Text style={s.ctaText}>{stepConfig.ctaLabel}</Text>
-                <View style={{ width: 32, height: 32, overflow: "hidden" }} accessible={false}>
-                  <LottieView
-                    source={require("../../../assets/lottie/wired-flat-3381-arrows-left-hover-pointing.json")}
-                    style={{ width: 32, height: 32 }}
-                    autoPlay
-                    loop
-                  />
-                </View>
-              </LinearGradient>
-            </Pressable>
+                <LinearGradient
+                  colors={["#0ea5e9", "#38bdf8", "#0ea5e9"]}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
+                  style={s.ctaGradient}
+                >
+                  <Text style={s.ctaText}>{stepConfig.ctaLabel}</Text>
+                  {!reducedMotion && (
+                    <View style={{ width: 32, height: 32, overflow: "hidden" }} accessible={false}>
+                      <LottieView
+                        source={require("../../../assets/lottie/wired-flat-3381-arrows-left-hover-pointing.json")}
+                        style={{ width: 32, height: 32 }}
+                        autoPlay
+                        loop
+                      />
+                    </View>
+                  )}
+                </LinearGradient>
+              </Pressable>
+            </View>
 
             {/* Skip */}
             <Pressable
@@ -244,7 +335,7 @@ const CARD_RADIUS = 28;
 const s = StyleSheet.create({
   overlay: {
     flex: 1,
-    backgroundColor: "rgba(10, 22, 40, 0.45)",
+    backgroundColor: "rgba(10, 22, 40, 0.50)",
   },
 
   /* ── Title pill ── */
@@ -252,15 +343,15 @@ const s = StyleSheet.create({
     flexDirection: "row-reverse",
     alignItems: "center",
     gap: 8,
-    backgroundColor: "rgba(255,255,255,0.95)",
+    backgroundColor: "rgba(255,255,255,0.97)",
     borderRadius: 999,
     paddingHorizontal: 22,
     paddingVertical: 10,
     shadowColor: "#0ea5e9",
-    shadowOpacity: 0.25,
-    shadowRadius: 16,
+    shadowOpacity: 0.3,
+    shadowRadius: 20,
     shadowOffset: { width: 0, height: 4 },
-    elevation: 8,
+    elevation: 10,
   },
   titleEmoji: {
     fontSize: 22,
@@ -270,6 +361,18 @@ const s = StyleSheet.create({
     fontWeight: "900",
     color: "#0c4a6e",
     writingDirection: "rtl",
+  },
+  stepCounter: {
+    backgroundColor: "#e0f2fe",
+    borderRadius: 10,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    marginStart: 4,
+  },
+  stepCounterText: {
+    fontSize: 12,
+    fontWeight: "800",
+    color: "#0284c7",
   },
 
   /* ── Bottom card ── */
@@ -282,10 +385,10 @@ const s = StyleSheet.create({
     marginBottom: 10,
     alignItems: "center",
     shadowColor: "#0ea5e9",
-    shadowOpacity: 0.2,
-    shadowRadius: 24,
+    shadowOpacity: 0.25,
+    shadowRadius: 28,
     shadowOffset: { width: 0, height: -6 },
-    elevation: 12,
+    elevation: 14,
     overflow: "visible",
   },
   glowBorder: {
@@ -296,7 +399,7 @@ const s = StyleSheet.create({
     bottom: -1,
     borderRadius: CARD_RADIUS + 1,
     borderWidth: 1.5,
-    borderColor: "rgba(14, 165, 233, 0.3)",
+    borderColor: "rgba(14, 165, 233, 0.35)",
   },
 
   /* ── Finn ── */
@@ -311,7 +414,7 @@ const s = StyleSheet.create({
     width: 80,
     height: 80,
     borderRadius: 40,
-    backgroundColor: "rgba(56, 189, 248, 0.2)",
+    backgroundColor: "rgba(56, 189, 248, 0.22)",
   },
   finn: {
     width: 68,
@@ -329,28 +432,54 @@ const s = StyleSheet.create({
     marginBottom: 16,
   },
 
-  /* ── Dots ── */
+  /* ── Dots — 6px for 7 steps ── */
   dotsRow: {
     flexDirection: "row-reverse",
     justifyContent: "center",
-    gap: 6,
+    gap: 5,
     marginBottom: 18,
   },
   dot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
+    width: 6,
+    height: 6,
+    borderRadius: 3,
     backgroundColor: "#e2e8f0",
   },
   dotActive: {
     backgroundColor: "#0ea5e9",
-    width: 22,
-    borderRadius: 4,
+    width: 18,
+    borderRadius: 3,
   },
 
-  /* ── CTA �� glow button ── */
-  ctaBtn: {
+  /* ── CTA row (RTL) ── */
+  ctaRow: {
+    flexDirection: "row-reverse",
+    alignItems: "center",
+    gap: 8,
     width: "100%",
+  },
+
+  /* ── Back button — 3D style ── */
+  backBtn: {
+    width: 42,
+    height: 42,
+    borderRadius: 21,
+    backgroundColor: "#f0f9ff",
+    borderWidth: 1.5,
+    borderColor: "#bae6fd",
+    borderBottomWidth: 3,
+    borderBottomColor: "#7dd3fc",
+    alignItems: "center" as const,
+    justifyContent: "center" as const,
+    shadowColor: "#0ea5e9",
+    shadowOpacity: 0.15,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 3,
+  },
+
+  /* ── CTA — glow button ── */
+  ctaBtn: {
     borderRadius: 18,
     marginBottom: 10,
     shadowColor: "#0ea5e9",
@@ -386,5 +515,6 @@ const s = StyleSheet.create({
     fontSize: 14,
     fontWeight: "600",
     color: "#64748b",
+    writingDirection: "rtl",
   },
 });

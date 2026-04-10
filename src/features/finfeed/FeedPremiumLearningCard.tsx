@@ -65,7 +65,7 @@ function TapZonesCard({ item, onStartModule }: { item: FeedPremiumLearning; onSt
               flexDirection: 'row-reverse', alignItems: 'center', gap: 10,
             }}
           >
-            <ExpoImage source={FINN_STANDARD} style={{ width: 40, height: 40, flexShrink: 0 }} contentFit="contain" />
+            <ExpoImage source={FINN_STANDARD} accessible={false} style={{ width: 40, height: 40, flexShrink: 0 }} contentFit="contain" />
             <View style={{ flex: 1 }}>
               <Text style={[RTL, { fontSize: 14, fontWeight: '800', color: '#0f172a', marginBottom: 2 }]}>
                 {popup === 'right' ? item.tapZoneRight.title : item.tapZoneLeft.title}
@@ -84,7 +84,7 @@ function TapZonesCard({ item, onStartModule }: { item: FeedPremiumLearning; onSt
       {/* Finn hint */}
       {finnText !== '' && (
         <View style={[styles.finnBubble, { marginTop: 8 }]}>
-          <ExpoImage source={FINN_STANDARD} style={{ width: 36, height: 36, flexShrink: 0 }} contentFit="contain" />
+          <ExpoImage source={FINN_STANDARD} accessible={false} style={{ width: 36, height: 36, flexShrink: 0 }} contentFit="contain" />
           <Text style={[styles.finnText, RTL]}>{finnText}</Text>
         </View>
       )}
@@ -190,7 +190,7 @@ export const FeedPremiumLearningCard = React.memo(function FeedPremiumLearningCa
     return (
       <View style={styles.container}>
         <Animated.View entering={FadeIn.duration(400)} style={styles.ctaCenter}>
-          <ExpoImage source={FINN_STANDARD} style={{ width: 90, height: 90 }} contentFit="contain" />
+          <ExpoImage source={FINN_STANDARD} accessible={false} style={{ width: 90, height: 90 }} contentFit="contain" />
           <Text style={[styles.ctaTitle, RTL]}>רוצה ללמוד עוד?</Text>
           <Text style={[styles.ctaSub, RTL]}>
             התחל את המודולה המלאה של {item.moduleTitle}
@@ -226,7 +226,7 @@ export const FeedPremiumLearningCard = React.memo(function FeedPremiumLearningCa
         
         {singleFinnText !== '' && (
           <View style={[styles.finnBubble, { marginTop: 8 }]}>
-            <ExpoImage source={FINN_STANDARD} style={{ width: 36, height: 36, flexShrink: 0 }} contentFit="contain" />
+            <ExpoImage source={FINN_STANDARD} accessible={false} style={{ width: 36, height: 36, flexShrink: 0 }} contentFit="contain" />
             <Text style={[styles.finnText, RTL]}>{singleFinnText}</Text>
           </View>
         )}
@@ -285,7 +285,7 @@ export const FeedPremiumLearningCard = React.memo(function FeedPremiumLearningCa
       {/* Finn explanation */}
       {finnText !== '' && (
         <Animated.View key={`finn-${step}`} entering={FadeInDown.delay(isDiveMode ? 400 : 200).duration(400)} style={styles.finnBubble}>
-          <ExpoImage source={FINN_STANDARD} style={{ width: 36, height: 36, flexShrink: 0 }} contentFit="contain" />
+          <ExpoImage source={FINN_STANDARD} accessible={false} style={{ width: 36, height: 36, flexShrink: 0 }} contentFit="contain" />
           <Text style={[styles.finnText, RTL]}>{finnText}</Text>
         </Animated.View>
       )}

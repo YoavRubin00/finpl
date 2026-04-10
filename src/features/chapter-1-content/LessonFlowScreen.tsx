@@ -60,6 +60,7 @@ import { CrashGameCard } from "../daily-challenges/CrashGameCard";
 import { MythFeedCard } from "../myth-or-tachles/MythFeedCard";
 import { DilemmaCard } from "../daily-challenges/DilemmaCard";
 import { FlyingRewards } from "../../components/ui/FlyingRewards";
+import { GoldCoinIcon } from "../../components/ui/GoldCoinIcon";
 import { DecorationOverlay } from "../../components/ui/DecorationOverlay";
 import { generateChestDrop } from "../retention-loops/chestDrops";
 import { useRetentionStore } from "../retention-loops/useRetentionStore";
@@ -409,7 +410,7 @@ function FlashcardCard({
           shadowColor: "#0c4a6e", shadowOpacity: 0.1, shadowRadius: 12,
           shadowOffset: { width: 0, height: 4 }, elevation: 8,
         }}>
-          <ExpoImage source={FINN_STANDARD} style={{ width: 52, height: 52, flexShrink: 0 }} contentFit="contain" />
+          <ExpoImage source={FINN_STANDARD} accessible={false} style={{ width: 52, height: 52, flexShrink: 0 }} contentFit="contain" />
           <View style={{ flex: 1 }}>
             <Text style={{ ...RTL_STYLE, fontSize: 12.5, lineHeight: 19, color: "#334155", fontWeight: "600" }}>
               משהו לא מובן? לחצו על המילים המודגשות לקבלת הסבר
@@ -443,7 +444,7 @@ function FlashcardCard({
             
             <View style={{ position: "absolute", bottom: 0, left: 0, right: 0, padding: 20, backgroundColor: card.memeImage ? "rgba(15, 23, 42, 0.85)" : "transparent" }}>
               <View style={{ flexDirection: "row-reverse", alignItems: "center", gap: 10 }}>
-                <ExpoImage source={FINN_HAPPY} style={{ width: 64, height: 64 }} contentFit="contain" />
+                <ExpoImage source={FINN_HAPPY} accessible={false} style={{ width: 64, height: 64 }} contentFit="contain" />
                 <View style={{ flex: 1, backgroundColor: "#334155", borderRadius: 14, padding: 14, borderWidth: 1, borderColor: "#475569" }}>
                   <Text style={{ writingDirection: "rtl", textAlign: "right", fontSize: 16, color: "#f8fafc", fontWeight: "700", lineHeight: 24 }}>
                     {card.text || FINN_MEME_REACTIONS[Math.floor(Math.random() * FINN_MEME_REACTIONS.length)]}
@@ -498,7 +499,7 @@ function FlashcardCard({
           {/* Dive mode: Finn's explanation bubble for comics */}
           {isDiveMode && card.finnExplanations && card.finnExplanations[diveStep] && (
             <Animated.View entering={FadeInUp.duration(300)} style={{ flexDirection: "row-reverse", alignItems: "center", gap: 8, marginHorizontal: 16, marginBottom: 8, backgroundColor: "#eff6ff", padding: 12, borderRadius: 12, borderWidth: 1, borderColor: "#bfdbfe" }}>
-              <ExpoImage source={FINN_STANDARD} style={{ width: 44, height: 44, flexShrink: 0 }} contentFit="contain" />
+              <ExpoImage source={FINN_STANDARD} accessible={false} style={{ width: 44, height: 44, flexShrink: 0 }} contentFit="contain" />
               <Text style={{ ...RTL_STYLE, fontSize: 14, color: "#1e3a8a", fontWeight: "600", flex: 1 }}>{card.finnExplanations[diveStep]}</Text>
             </Animated.View>
           )}
@@ -539,7 +540,7 @@ function FlashcardCard({
               {/* Dive mode: Finn's explanation bubble at the bottom */}
               {isDiveMode && card.finnExplanations && card.finnExplanations[diveStep] && (
                 <Animated.View entering={FadeInUp.duration(300)} style={{ flexDirection: "row-reverse", alignItems: "center", gap: 8, marginTop: 12, backgroundColor: "#eff6ff", padding: 12, borderRadius: 12, borderWidth: 1, borderColor: "#bfdbfe" }}>
-                  <ExpoImage source={FINN_STANDARD} style={{ width: 44, height: 44, flexShrink: 0 }} contentFit="contain" />
+                  <ExpoImage source={FINN_STANDARD} accessible={false} style={{ width: 44, height: 44, flexShrink: 0 }} contentFit="contain" />
                   <Text style={{ ...RTL_STYLE, fontSize: 14, color: "#1e3a8a", fontWeight: "600", flex: 1 }}>{card.finnExplanations[diveStep]}</Text>
                 </Animated.View>
               )}
@@ -1732,7 +1733,7 @@ function SimIntroOverlay({
     >
       {/* Finn + speech bubble */}
       <View style={{ flexDirection: "row-reverse", alignItems: "flex-start", gap: 10, width: "100%", marginBottom: 20 }}>
-        <ExpoImage source={FINN_HELLO} style={{ width: 80, height: 80, flexShrink: 0 }} contentFit="contain" />
+        <ExpoImage source={FINN_HELLO} accessible={false} style={{ width: 80, height: 80, flexShrink: 0 }} contentFit="contain" />
 
         <View style={{
           flex: 1, backgroundColor: "#ffffff", borderRadius: 20, borderTopRightRadius: 4,
@@ -1926,6 +1927,12 @@ export function LessonFlowScreen() {
 
   /** Navigate to user's next sequential module */
   function goToNextSequentialModule() {
+    // After completing the first module (mod-0-1), go to the general
+    // learning page so the user sees the unlocked next module on the map.
+    if (id === 'mod-0-1') {
+      router.replace("/(tabs)/learn" as never);
+      return;
+    }
     for (const ch of ALL_CHAPTERS_ORDERED) {
       const completed = progress[chapterStoreKey(ch.id)]?.completedModules ?? [];
       const nextIdx = ch.modules.findIndex((m) => !m.comingSoon && (isPro || !PRO_LOCKED_SIMS.has(m.id)) && !completed.includes(m.id));
@@ -2342,7 +2349,7 @@ export function LessonFlowScreen() {
     <Modal visible={showProGate} transparent animationType="fade" accessibilityViewIsModal>
       <View style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.6)", justifyContent: "center", alignItems: "center", paddingHorizontal: 28 }} accessibilityViewIsModal>
         <View style={{ backgroundColor: "#fff", borderRadius: 24, padding: 28, width: "100%", alignItems: "center", gap: 16 }}>
-          <ExpoImage source={FINN_STANDARD}
+          <ExpoImage source={FINN_STANDARD} accessible={false}
             style={{ width: 180, height: 180 }} contentFit="contain" />
           <Text style={{ fontSize: 20, fontWeight: "900", color: "#1f2937", textAlign: "center", writingDirection: "rtl" }} accessibilityRole="header">
             המודול הזה עדיין לא נפתח 🔒
@@ -2974,7 +2981,10 @@ export function LessonFlowScreen() {
               <View style={{ alignItems: 'center', backgroundColor: 'rgba(212,160,23,0.22)', borderRadius: 14, paddingHorizontal: 18, paddingVertical: 12, borderWidth: 1, borderColor: 'rgba(250,204,21,0.3)' }}>
                 <LottieView source={require("../../../assets/lottie/wired-flat-291-coin-dollar-hover-pinch.json")} style={{ width: 36, height: 36, marginBottom: 4 }} autoPlay loop />
                 <Text style={{ fontSize: 22, fontWeight: '900', color: '#facc15' }}>+{chestRewards.coins}</Text>
-                <Text style={{ fontSize: 12, color: '#fde68a', marginTop: 2 }}>מטבעות</Text>
+                <View style={{ flexDirection: 'row-reverse', alignItems: 'center', gap: 4, marginTop: 2 }}>
+                  <GoldCoinIcon size={14} />
+                  <Text style={{ fontSize: 12, color: '#fde68a' }}>מטבעות</Text>
+                </View>
               </View>
               {chestRewards.xp > 0 && (
                 <View style={{ alignItems: 'center', backgroundColor: 'rgba(14,165,233,0.18)', borderRadius: 14, paddingHorizontal: 18, paddingVertical: 12, borderWidth: 1, borderColor: 'rgba(56,189,248,0.3)' }}>
@@ -3104,7 +3114,10 @@ export function LessonFlowScreen() {
               </View>
               <View style={{ alignItems: "center", backgroundColor: "rgba(212,160,23,0.22)", borderRadius: 14, paddingHorizontal: 18, paddingVertical: 12, borderWidth: 1, borderColor: "rgba(250,204,21,0.3)" }}>
                 <Text style={{ fontSize: 22, fontWeight: "900", color: "#facc15" }}>+50</Text>
-                <Text style={{ fontSize: 12, color: "#fde68a", marginTop: 2 }}>מטבעות</Text>
+                <View style={{ flexDirection: "row-reverse", alignItems: "center", gap: 4, marginTop: 2 }}>
+                  <GoldCoinIcon size={14} />
+                  <Text style={{ fontSize: 12, color: "#fde68a" }}>מטבעות</Text>
+                </View>
               </View>
               <View style={{ alignItems: "center", backgroundColor: "rgba(59,130,246,0.22)", borderRadius: 14, paddingHorizontal: 18, paddingVertical: 12, borderWidth: 1, borderColor: "rgba(96,165,250,0.3)" }}>
                 <Text style={{ fontSize: 22, fontWeight: "900", color: "#60a5fa" }}>+10</Text>
@@ -3185,7 +3198,7 @@ export function LessonFlowScreen() {
             </Pressable>
             {/* Finn avatar */}
             <View style={{ width: 88, height: 88, borderRadius: 44, backgroundColor: "#f0f9ff", alignItems: "center", justifyContent: "center", borderWidth: 2, borderColor: "#0891b2" }}>
-              <ExpoImage source={FINN_STANDARD} style={{ width: 72, height: 72 }}
+              <ExpoImage source={FINN_STANDARD} accessible={false} style={{ width: 72, height: 72 }}
                 contentFit="contain" />
             </View>
             {/* Tip text */}
@@ -3205,7 +3218,7 @@ export function LessonFlowScreen() {
         <Pressable style={[StyleSheet.absoluteFill, { zIndex: 9996, backgroundColor: "rgba(0,0,0,0.5)", justifyContent: "flex-end" }]} onPress={() => { setShowMidCheckpoint(false); setFlashcardIndex((prev) => prev + 1); }}>
           <Animated.View entering={FadeInUp.duration(400)} style={{ backgroundColor: "#ffffff", borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 24, paddingBottom: 36, borderWidth: 2, borderColor: "#0891b2", borderBottomWidth: 0 }}>
             <View style={{ flexDirection: "row-reverse", alignItems: "center", gap: 12, marginBottom: 16 }}>
-              <ExpoImage source={FINN_STANDARD} style={{ width: 72, height: 72 }} contentFit="contain" />
+              <ExpoImage source={FINN_STANDARD} accessible={false} style={{ width: 72, height: 72 }} contentFit="contain" />
               <View style={{ flex: 1 }}>
                 <Text style={{ fontSize: 16, fontWeight: "900", color: "#0f172a", writingDirection: "rtl", textAlign: "right", lineHeight: 24 }}>
                   {"מרגישים שאתם על? 🔥"}
@@ -3244,7 +3257,7 @@ export function LessonFlowScreen() {
       {showPostCelebration && !showBreakMessage && (
         <Pressable style={[StyleSheet.absoluteFill, { zIndex: 9995, backgroundColor: "rgba(0,0,0,0.6)", justifyContent: "center", alignItems: "center", padding: 24 }]} onPress={() => {}}>
           <Animated.View entering={FadeInUp.duration(500)} style={{ backgroundColor: "#ffffff", borderRadius: 28, padding: 28, width: "100%", maxWidth: 340, alignItems: "center", borderWidth: 2, borderColor: "#22c55e" }}>
-            <ExpoImage source={FINN_HAPPY} style={{ width: 100, height: 100, marginBottom: 16 }} contentFit="contain" />
+            <ExpoImage source={FINN_HAPPY} accessible={false} style={{ width: 100, height: 100, marginBottom: 16 }} contentFit="contain" />
             <Text style={{ fontSize: 22, fontWeight: "900", color: "#0f172a", textAlign: "center", marginBottom: 6 }}>{"כל הכבוד! 🎉"}</Text>
             <Text style={{ fontSize: 15, fontWeight: "600", color: "#64748b", textAlign: "center", marginBottom: 24 }}>{"סיימת את המודול!"}</Text>
             {/* Continue option */}
@@ -3265,7 +3278,7 @@ export function LessonFlowScreen() {
       {showBreakMessage && (
         <Pressable style={[StyleSheet.absoluteFill, { zIndex: 9995, backgroundColor: "rgba(0,0,0,0.6)", justifyContent: "center", alignItems: "center", padding: 24 }]} onPress={() => { setShowBreakMessage(false); setShowPostCelebration(false); router.replace("/(tabs)" as never); }}>
           <Animated.View entering={FadeInUp.duration(400)} style={{ backgroundColor: "#ffffff", borderRadius: 28, padding: 28, width: "100%", maxWidth: 340, alignItems: "center" }}>
-            <ExpoImage source={FINN_EMPATHIC} style={{ width: 100, height: 100, marginBottom: 16 }} contentFit="contain" />
+            <ExpoImage source={FINN_EMPATHIC} accessible={false} style={{ width: 100, height: 100, marginBottom: 16 }} contentFit="contain" />
             <Text style={{ fontSize: 20, fontWeight: "900", color: "#0f172a", textAlign: "center", marginBottom: 8 }}>{"מצפה לראותך פה מחר! ❤️"}</Text>
             <Text style={{ fontSize: 14, fontWeight: "600", color: "#94a3b8", textAlign: "center" }}>{"לחץ בכל מקום כדי לחזור"}</Text>
           </Animated.View>

@@ -7,7 +7,7 @@ export interface Flashcard {
   isComic?: boolean; // If true, renders as a comic flashcard
   finnTip?: string; // If set, shows a Finn notification popup with this text before advancing
   isMeme?: boolean; // If true, renders as a meme break card (no XP/progress)
-  memeImage?: any; // The meme image (local require or uri)
+  memeImage?: ImageSourcePropType; // The meme image (local require or uri)
   diveMode?: boolean; // If true, renders as a single image with zoom steps
   hideTextOnDive?: boolean; // If true, the main text disappears when diveMode advances to step > 0
   zoomRegions?: [number, number, number][]; // [translateX, translateY, scale] for each step

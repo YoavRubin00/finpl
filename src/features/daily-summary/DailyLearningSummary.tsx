@@ -133,7 +133,7 @@ export function DailyLearningSummary() {
 
           {/* Share button */}
           <Pressable onPress={handleShare} style={styles.shareBtn}>
-            <ExpoImage source={FINN_STANDARD} style={{ width: 48, height: 48 }} contentFit="contain" />
+            <ExpoImage source={FINN_STANDARD} accessible={false} style={{ width: 48, height: 48 }} contentFit="contain" />
             <Text style={styles.shareBtnText}>שתף את היום שלך!</Text>
           </Pressable>
         </View>

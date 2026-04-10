@@ -79,7 +79,7 @@ function HeartButton({ itemId }: { itemId: string }) {
     }));
 
     return (
-        <Pressable onPress={handlePress} hitSlop={12}>
+        <Pressable onPress={handlePress} hitSlop={12} accessibilityRole="button" accessibilityLabel={isFav ? "הסר ממועדפים" : "הוסף למועדפים"}>
             <Animated.Text style={[{ fontSize: 22 }, animStyle]}>
                 {isFav ? '❤️' : '🤍'}
             </Animated.Text>
@@ -126,7 +126,7 @@ export function WisdomPopupCard() {
             exiting={FadeOut.duration(200)}
             style={styles.overlay}
         >
-            <Pressable style={styles.backdrop} onPress={dismiss} />
+            <Pressable style={styles.backdrop} onPress={dismiss} accessibilityRole="button" accessibilityLabel="סגור" />
 
             <Animated.View
                 entering={FadeIn.duration(200)}
@@ -190,7 +190,7 @@ export function WisdomPopupCard() {
                     )}
 
                     {/* Dismiss button — gold accent */}
-                    <Pressable onPress={dismiss} style={styles.dismissBtn}>
+                    <Pressable onPress={dismiss} style={styles.dismissBtn} accessibilityRole="button" accessibilityLabel="סגור ציטוט">
                         <Text style={[RTL_STYLE, styles.dismissText]}>הבנתי ✨</Text>
                     </Pressable>
                 </LinearGradient>

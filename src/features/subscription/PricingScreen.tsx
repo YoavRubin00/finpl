@@ -85,15 +85,25 @@ const SPARKLES = [
 // ── Feature value cell ───────────────────────────────────────────────────
 function FeatureCell({ value, isPro }: { value: string | boolean; isPro?: boolean }) {
   if (value === true) {
-    return <Check size={18} color={DUO.checkGreen} strokeWidth={3} />;
+    return (
+      <View style={{ backgroundColor: "rgba(34,197,94,0.12)", borderRadius: 10, paddingHorizontal: 8, paddingVertical: 4 }}>
+        <Check size={18} color={DUO.checkGreen} strokeWidth={3} />
+      </View>
+    );
   }
   if (value === false) {
-    return <X size={18} color={DUO.xGray} strokeWidth={2.5} />;
+    return (
+      <View style={{ backgroundColor: "rgba(148,163,184,0.1)", borderRadius: 10, paddingHorizontal: 8, paddingVertical: 4 }}>
+        <X size={16} color={DUO.xGray} strokeWidth={2.5} />
+      </View>
+    );
   }
   return (
-    <Text style={[styles.featureLimitText, isPro && styles.featureLimitTextPro]}>
-      {value}
-    </Text>
+    <View style={{ backgroundColor: isPro ? "rgba(8,145,178,0.1)" : "rgba(148,163,184,0.08)", borderRadius: 10, paddingHorizontal: 10, paddingVertical: 4 }}>
+      <Text style={[styles.featureLimitText, isPro && styles.featureLimitTextPro]}>
+        {value}
+      </Text>
+    </View>
   );
 }
 

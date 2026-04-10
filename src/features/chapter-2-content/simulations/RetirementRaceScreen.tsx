@@ -282,7 +282,7 @@ function ScoreScreen({
             {/* Key lesson — Finn speech bubble */}
             <Animated.View entering={FadeInUp.delay(500)}>
                 <View style={{ flexDirection: 'row-reverse', alignItems: 'center', gap: 10, backgroundColor: '#ffffff', borderRadius: 16, padding: 14, borderWidth: 1.5, borderColor: '#bae6fd', marginTop: 8 }}>
-                    <ExpoImage source={FINN_STANDARD} style={{ width: 50, height: 50, flexShrink: 0 }} contentFit="contain" />
+                    <ExpoImage source={FINN_STANDARD} accessible={false} style={{ width: 50, height: 50, flexShrink: 0 }} contentFit="contain" />
                     <Text style={{ flex: 1, fontSize: 15, fontWeight: '800', color: '#0c4a6e', lineHeight: 22, writingDirection: 'rtl', textAlign: 'right' }}>
                         המעסיק מכפיל. הזמן משגע. תתחילו היום.
                     </Text>

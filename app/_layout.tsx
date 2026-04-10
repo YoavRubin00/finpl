@@ -23,7 +23,7 @@ import { StreakCelebrationProvider } from "../src/hooks/useStreakCelebration";
 import { WisdomPopupCard } from "../src/features/wisdom-flashes/WisdomPopupCard";
 import { ShopModal } from "../src/features/shop/ShopModal";
 import { GlobalUpgradeModal } from "../src/features/subscription/UpgradeModal";
-import { useBackgroundMusic } from "../src/hooks/useBackgroundMusic";
+
 import { PostStreakIncomeSplash } from "../src/features/assets/PostStreakIncomeSplash";
 import { useNotificationSetup } from "../src/features/notifications/useNotifications";
 import { LoadingWisdom } from "../src/components/ui/LoadingWisdom";
@@ -85,7 +85,7 @@ export default function RootLayout() {
     Heebo_900Black,
   });
 
-  useBackgroundMusic();
+
   useNotificationSetup();
 
   // ── RevenueCat init ──

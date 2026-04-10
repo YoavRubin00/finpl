@@ -99,7 +99,7 @@ export function StreakAtRiskBanner() {
             </Text>
           </View>
           {/* Finn on left */}
-          <ExpoImage source={FINN_STANDARD} style={{ width: 96, height: 96 }} contentFit="contain" />
+          <ExpoImage source={FINN_STANDARD} accessible={false} style={{ width: 96, height: 96 }} contentFit="contain" />
         </Pressable>
       </Animated.View>
     </Animated.View>

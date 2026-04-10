@@ -14,7 +14,7 @@ export function FeedSkeleton() {
   return (
     <View style={styles.container}>
       <View style={styles.center}>
-        <ExpoImage source={FINN_STANDARD} style={{ width: 140, height: 140 }} contentFit="contain" />
+        <ExpoImage source={FINN_STANDARD} accessible={false} style={{ width: 140, height: 140 }} contentFit="contain" />
         <Text style={styles.title}>טוען את הפיד שלך...</Text>
       </View>
     </View>

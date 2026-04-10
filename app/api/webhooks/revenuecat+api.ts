@@ -30,7 +30,7 @@ export async function POST(request: Request): Promise<Response> {
   try {
     // 1. Secure the endpoint using an Authorization token
     const authHeader = request.headers.get('Authorization');
-    if (RC_WEBHOOK_SECRET && authHeader !== `Bearer ${RC_WEBHOOK_SECRET}` && authHeader !== RC_WEBHOOK_SECRET) {
+    if (RC_WEBHOOK_SECRET && authHeader !== `Bearer ${RC_WEBHOOK_SECRET}`) {
       return Response.json({ error: 'Unauthorized' }, { status: 401 });
     }
 

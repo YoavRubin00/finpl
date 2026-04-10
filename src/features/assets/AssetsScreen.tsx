@@ -121,7 +121,7 @@ export function AssetsScreen() {
           {/* Finn empty-state banner */}
           {!hasRealAssets && !hasPositions && (
             <View style={styles.finnBanner}>
-              <ExpoImage source={FINN_STANDARD} style={{ width: 128, height: 128 }} contentFit="contain" />
+              <ExpoImage source={FINN_STANDARD} accessible={false} style={{ width: 128, height: 128 }} contentFit="contain" />
               <View style={{ flex: 1, alignItems: 'flex-end' }}>
                 <Text style={styles.finnBannerTitle}>אין לך נכסים עדיין!</Text>
                 <Text style={styles.finnBannerSub}>הכסף שלך מתחת למזרן! תרכוש נכסים, ותמנף את הכסף שלך.</Text>

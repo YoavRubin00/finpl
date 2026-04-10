@@ -254,7 +254,7 @@ export const DilemmaCard = React.memo(function DilemmaCard({ isActive }: Props) 
         >
           <Animated.View entering={FadeInDown.duration(400)} style={styles.celebrationCard}>
             <Animated.View entering={ZoomIn.springify().damping(10)}>
-              <ExpoImage source={FINN_STANDARD} style={{ width: 200, height: 200 }} contentFit="contain" />
+              <ExpoImage source={FINN_STANDARD} accessible={false} style={{ width: 200, height: 200 }} contentFit="contain" />
             </Animated.View>
             <Text style={[styles.celebrationTitle, RTL]}>
               {selectedChoice?.isCorrect ? 'כל הכבוד! 🎉' : 'סיימת את האתגר!'}

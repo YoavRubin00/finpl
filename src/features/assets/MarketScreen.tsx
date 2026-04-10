@@ -160,7 +160,7 @@ export function MarketScreen() {
                 {/* Header Row with Back Button */}
                 <View style={{ flexDirection: "row-reverse", alignItems: "center", paddingHorizontal: 16, paddingTop: 12, paddingBottom: 4 }}>
                     <BackButton onPress={() => router.canGoBack() ? router.back() : router.replace("/investments" as never)} />
-                    <View style={{ flex: 1, alignItems: "center", marginLeft: 40 }}>
+                    <View style={{ flex: 1, alignItems: "center", marginStart: 40 }}>
                         <Text style={styles.pageTitle}>זירת הנכסים</Text>
                         <Text style={{ fontSize: 13, color: "#64748b", textAlign: "center", marginTop: 2 }}>
                             בנה אימפריה של נכסים מניבים
@@ -198,7 +198,7 @@ export function MarketScreen() {
                                         style={styles.dealContent}
                                     >
                                         <Text style={{ fontSize: 40 }}>{dealAsset.emoji}</Text>
-                                        <View style={{ flex: 1, alignItems: "flex-end", marginRight: 12 }}>
+                                        <View style={{ flex: 1, alignItems: "flex-end", marginEnd: 12 }}>
                                             <Text style={styles.dealName}>{dealAsset.name}</Text>
                                             <View style={{ flexDirection: "row-reverse", alignItems: "center", gap: 6, marginTop: 2 }}>
                                                 <Text style={styles.dealOrigPrice}>{dealAsset.baseCost.toLocaleString()}</Text>
@@ -231,7 +231,7 @@ export function MarketScreen() {
                                 style={styles.recCard}
                             >
                                 <Text style={{ fontSize: 32 }}>{recommended.emoji}</Text>
-                                <View style={{ flex: 1, alignItems: "flex-end", marginRight: 10 }}>
+                                <View style={{ flex: 1, alignItems: "flex-end", marginEnd: 10 }}>
                                     <Text style={styles.recName}>{recommended.name}</Text>
                                     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 3 }}>
                                         <Text style={styles.recSub}>{recommended.baseCost.toLocaleString()}</Text>
@@ -386,7 +386,7 @@ export function MarketScreen() {
                             {activeCombos.map((combo) => (
                                 <View key={combo.id} style={styles.comboCard}>
                                     <Text style={{ fontSize: 24 }}>{combo.emoji}</Text>
-                                    <View style={{ flex: 1, alignItems: "flex-end", marginRight: 10 }}>
+                                    <View style={{ flex: 1, alignItems: "flex-end", marginEnd: 10 }}>
                                         <Text style={styles.comboName}>{combo.name}</Text>
                                         <Text style={styles.comboDesc}>{combo.description}</Text>
                                     </View>
@@ -410,7 +410,7 @@ export function MarketScreen() {
                                 return (
                                     <View key={combo.id} style={[styles.comboCard, { opacity: 0.6 }]}>
                                         <Text style={{ fontSize: 24 }}>{combo.emoji}</Text>
-                                        <View style={{ flex: 1, alignItems: "flex-end", marginRight: 10 }}>
+                                        <View style={{ flex: 1, alignItems: "flex-end", marginEnd: 10 }}>
                                             <Text style={styles.comboName}>{combo.name}</Text>
                                             <Text style={styles.comboDesc}>{owned}/{total} נכסים</Text>
                                         </View>
@@ -665,7 +665,7 @@ export function MarketScreen() {
                                                                 }}
                                                                 style={{ backgroundColor: "#e0f2fe", borderRadius: 14, paddingHorizontal: 8, paddingVertical: 6, borderWidth: 1, borderColor: "#bae6fd", alignItems: "center", justifyContent: "center" }}
                                                             >
-                                                                <ExpoImage source={FINN_STANDARD} style={{ width: 32, height: 32 }} contentFit="contain" />
+                                                                <ExpoImage source={FINN_STANDARD} accessible={false} style={{ width: 32, height: 32 }} contentFit="contain" />
                                                             </Pressable>
                                                         </View>
                                                     </View>
@@ -695,7 +695,7 @@ export function MarketScreen() {
 
                                 {/* Finn */}
                                 <View style={{ alignItems: "center", marginBottom: 12 }}>
-                                    <ExpoImage source={FINN_STANDARD} style={{ width: 72, height: 72 }} contentFit="contain" />
+                                    <ExpoImage source={FINN_STANDARD} accessible={false} style={{ width: 72, height: 72 }} contentFit="contain" />
                                 </View>
 
                                 {/* Title */}

@@ -92,7 +92,7 @@ export const FeedScenarioCard = React.memo(function FeedScenarioCard({ item }: P
           >
             <Text style={styles.suggestText}>הצע תרחיש לצוות</Text>
             <View pointerEvents="none">
-              <ExpoImage source={FINN_STANDARD} style={{ width: 56, height: 56 }} contentFit="contain" />
+              <ExpoImage source={FINN_STANDARD} accessible={false} style={{ width: 56, height: 56 }} contentFit="contain" />
             </View>
           </Pressable>
         </View>

@@ -81,7 +81,7 @@ export function MapEasterEggModal({ visible, onClose, onClaim }: MapEasterEggMod
       <Animated.View entering={FadeIn.duration(300)} style={styles.overlay}>
         <Animated.View entering={ZoomIn.springify().damping(14)} style={styles.card}>
           {/* Finn */}
-          <ExpoImage source={FINN_HAPPY} style={{ width: 80, height: 80, alignSelf: "center" }} contentFit="contain" />
+          <ExpoImage source={FINN_HAPPY} accessible={false} style={{ width: 80, height: 80, alignSelf: "center" }} contentFit="contain" />
 
           <Text style={styles.title}>מצאת הפתעה!</Text>
           <Text style={styles.subtitle}>גרד עם האצבע כדי לחשוף את הפרס</Text>

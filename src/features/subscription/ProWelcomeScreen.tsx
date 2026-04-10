@@ -118,7 +118,7 @@ export function ProWelcomeScreen() {
           autoPlay
           loop
         />
-        <ExpoImage source={FINN_STANDARD}
+        <ExpoImage source={FINN_STANDARD} accessible={false}
           style={styles.finnLottie}
          
          

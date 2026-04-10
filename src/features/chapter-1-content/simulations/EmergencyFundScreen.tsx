@@ -359,7 +359,7 @@ function MonthResultFeedback({
                 shadowRadius: 12,
                 elevation: 8,
             }}>
-                <ExpoImage source={FINN_STANDARD} style={{ width: 48, height: 48, flexShrink: 0 }} contentFit="contain" />
+                <ExpoImage source={FINN_STANDARD} accessible={false} style={{ width: 48, height: 48, flexShrink: 0 }} contentFit="contain" />
                 <View style={{ flex: 1 }}>
                     <Text style={[RTL, { fontSize: 14, fontWeight: '700', color: isGood ? '#0369a1' : '#b45309', lineHeight: 21 }]}>
                         {summaryText}

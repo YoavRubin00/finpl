@@ -360,7 +360,7 @@ export const SwipeGameCard = React.memo(function SwipeGameCard({ isActive }: Pro
         {/* Final results */}
         {gameState === 'done' && (
           <Animated.View entering={FadeInDown.duration(400)} style={styles.resultsBox}>
-            <ExpoImage source={FINN_STANDARD} style={{ width: 64, height: 64 }} contentFit="contain" />
+            <ExpoImage source={FINN_STANDARD} accessible={false} style={{ width: 64, height: 64 }} contentFit="contain" />
             <Text style={[styles.resultTitle, RTL]}>
               {score >= 4 ? '🌟 מרשים!' : score >= 3 ? '👏 כל הכבוד!' : 'נסה שוב מחר!'}
             </Text>

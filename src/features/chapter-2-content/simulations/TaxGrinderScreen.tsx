@@ -345,7 +345,7 @@ function ScoreScreen({
 
             {/* Finn + tips */}
             <Animated.View entering={FadeInUp.delay(500)} style={{ flexDirection: 'row-reverse', alignItems: 'flex-start', gap: 10 }}>
-                <ExpoImage source={FINN_STANDARD} style={{ width: 56, height: 56, flexShrink: 0 }} contentFit="contain" />
+                <ExpoImage source={FINN_STANDARD} accessible={false} style={{ width: 56, height: 56, flexShrink: 0 }} contentFit="contain" />
 
                 <View style={{ flex: 1, gap: 8 }}>
                     <View style={[sim2Styles.scoreCard, { borderColor: gradeColor }]}>

@@ -250,7 +250,7 @@ export const InvestmentCard = React.memo(function InvestmentCard({ isActive }: P
           {showResult && selectedOption && (
             <Animated.View entering={FadeIn.duration(300)} style={styles.feedbackBox}>
               <View style={{ flexDirection: 'row-reverse', alignItems: 'center', gap: 8 }}>
-                <ExpoImage source={FINN_STANDARD} style={{ width: 72, height: 72 }} contentFit="contain" />
+                <ExpoImage source={FINN_STANDARD} accessible={false} style={{ width: 72, height: 72 }} contentFit="contain" />
                 <Text style={[styles.feedbackTitle, RTL, { flex: 1 }]}>💡 ניתוח</Text>
               </View>
               <Text style={[styles.feedbackText, RTL]}>{selectedOption.feedback}</Text>

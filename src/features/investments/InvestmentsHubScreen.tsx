@@ -114,7 +114,7 @@ export function InvestmentsHubScreen() {
               <Text style={s.finnMessage}>בנה את האימפריה{"\n"}הפיננסית שלך</Text>
             </View>
             <View style={s.finnLottieWrap}>
-              <ExpoImage source={FINN_STANDARD}
+              <ExpoImage source={FINN_STANDARD} accessible={false}
                 style={s.finnLottie}
                 contentFit="contain"
                />
@@ -131,7 +131,7 @@ export function InvestmentsHubScreen() {
                 <GoldCoinIcon size={22} />
                 <Text style={s.portfolioValue}>{coins.toLocaleString()}</Text>
               </View>
-              <Pressable style={s.pnlPill}>
+              <Pressable style={s.pnlPill} accessibilityRole="text" accessibilityLabel="רווח והפסד">
                 <Text style={s.pnlText}>
                   +{Math.round(totalPnl)} רווח/הפסד
                 </Text>
@@ -154,7 +154,7 @@ export function InvestmentsHubScreen() {
         {/* Trading Hub */}
         <Animated.View style={tradingStyle}>
           {isTradingUnlocked ? (
-            <Pressable onPress={() => router.push("/trading-hub" as never)} style={s.navCard}>
+            <Pressable onPress={() => router.push("/trading-hub" as never)} style={s.navCard} accessibilityRole="button" accessibilityLabel="זירת המסחר">
               <ChevronLeft size={20} color="#cbd5e1" />
               <View style={s.navTextCol}>
                 <Text style={s.navTitle}>מסחר בשוק ההון</Text>
@@ -185,7 +185,7 @@ export function InvestmentsHubScreen() {
 
         {/* Real Assets Market */}
         <Animated.View style={marketStyle}>
-          <Pressable onPress={() => router.push("/assets-market" as never)} style={s.navCard}>
+          <Pressable onPress={() => router.push("/assets-market" as never)} style={s.navCard} accessibilityRole="button" accessibilityLabel="שוק הנכסים">
             <ChevronLeft size={20} color="#cbd5e1" />
             <View style={s.navTextCol}>
               <Text style={s.navTitle}>זירת הנכסים</Text>
@@ -199,7 +199,7 @@ export function InvestmentsHubScreen() {
 
         {/* My Portfolio */}
         <Animated.View style={portfolioStyle}>
-          <Pressable onPress={() => router.push("/assets" as never)} style={s.navCard}>
+          <Pressable onPress={() => router.push("/assets" as never)} style={s.navCard} accessibilityRole="button" accessibilityLabel="הנכסים שלי">
             <ChevronLeft size={20} color="#cbd5e1" />
             <View style={s.navTextCol}>
               <Text style={s.navTitle}>הנכסים שלי</Text>

@@ -40,7 +40,7 @@ export function TransitionOverlay({
       <Animated.View entering={FadeIn.duration(200)} exiting={FadeOut.duration(150)} style={styles.overlay}>
         <Pressable style={StyleSheet.absoluteFill} onPress={onDismiss} accessibilityRole="button" accessibilityLabel="סגור" />
         <Animated.View entering={SlideInUp.duration(400)} exiting={SlideOutDown.duration(200)} style={styles.card}>
-          <ExpoImage source={FINN_STANDARD} style={{ width: 144, height: 144 }} contentFit="contain" />
+          <ExpoImage source={FINN_STANDARD} accessible={false} style={{ width: 144, height: 144 }} contentFit="contain" />
           <Text style={styles.message}>{message}</Text>
           {image && (
             <Image source={image} style={styles.heroImage} resizeMode="cover" />

@@ -22,6 +22,7 @@ interface Props {
 }
 
 function buildVideoHtml(videoUri: string): string {
+  try { new URL(videoUri); } catch { return ""; }
   return `<!DOCTYPE html>
 <html><head><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
 <style>
@@ -140,7 +141,7 @@ export const FeedModuleHookCard = React.memo(function FeedModuleHookCard({ item,
           <View style={styles.finnOrbWrap} pointerEvents="none" accessible={false}>
             <View style={styles.glowOrb} />
             <ExpoImage
-              source={FINN_STANDARD}
+              source={FINN_STANDARD} accessible={false}
               style={styles.finnOrbImage}
               contentFit="contain"
             />

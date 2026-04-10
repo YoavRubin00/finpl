@@ -66,7 +66,7 @@ export function LoginScreen() {
           resizeMode="cover"
         >
           <SafeAreaView edges={["top"]} style={{ alignItems: "center" }}>
-            <ExpoImage source={FINN_HELLO} style={{ width: 100, height: 100 }} contentFit="contain" />
+            <ExpoImage source={FINN_HELLO} accessible={false} style={{ width: 100, height: 100 }} contentFit="contain" />
             <Text
               style={{
                 textAlign: "center",

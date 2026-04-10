@@ -80,7 +80,7 @@ export function FeedNudgeBanner({
         <Text style={styles.message} numberOfLines={2}>
           {message}
         </Text>
-        <ExpoImage source={FINN_STANDARD} style={{ width: 72, height: 72 }} contentFit="contain" />
+        <ExpoImage source={FINN_STANDARD} accessible={false} style={{ width: 72, height: 72 }} contentFit="contain" />
       </Pressable>
     </Animated.View>
   );
@@ -90,14 +90,14 @@ const styles = StyleSheet.create({
   container: {
     position: "absolute",
     bottom: 20,
-    left: 16,
-    right: 16,
+    start: 16,
+    end: 16,
     zIndex: 999,
   },
   closeBtn: {
     position: "absolute",
     top: -8,
-    right: -4,
+    end: -4,
     zIndex: 10,
     width: 24,
     height: 24,

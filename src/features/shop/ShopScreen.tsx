@@ -22,6 +22,7 @@ import { useEconomyStore } from '../economy/useEconomyStore';
 import { useSubscriptionStore } from '../subscription/useSubscriptionStore';
 import { useAuthStore } from '../auth/useAuthStore';
 import { useRouter } from 'expo-router';
+import { useTutorialStore } from '../../stores/useTutorialStore';
 import { ShopItemCard } from './ShopItemCard';
 import { ConfirmModal } from './ConfirmModal';
 import { IAPModal } from './IAPModal';
@@ -278,6 +279,8 @@ export function ShopScreen() {
   const [activeCategory, setActiveCategory] = useState<ShopCategory>('hearts');
   const [pendingItem, setPendingItem] = useState<ShopItem | null>(null);
   const [selectedBundle, setSelectedBundle] = useState<AnyBundle | null>(null);
+  const shopScrollRef = useRef<ScrollView>(null);
+  const walkthroughScreen = useTutorialStore((s) => s.walkthroughActiveScreen);
 
   // Finn splash on enter — static 1.5s or tap to dismiss
   const [showSplash, setShowSplash] = useState(true);
@@ -286,6 +289,21 @@ export function ShopScreen() {
     const timer = setTimeout(() => setShowSplash(false), 1500);
     return () => clearTimeout(timer);
   }, []);
+
+  // Gentle auto-scroll during walkthrough shop step
+  useEffect(() => {
+    if (walkthroughScreen !== 'shop') return;
+    let y = 0;
+    const delay = setTimeout(() => {
+      const interval = setInterval(() => {
+        y += 100;
+        shopScrollRef.current?.scrollTo({ y, animated: true });
+        if (y >= 500) clearInterval(interval);
+      }, 2000);
+      return () => clearInterval(interval);
+    }, 1500);
+    return () => clearTimeout(delay);
+  }, [walkthroughScreen]);
 
   const gemsStyle = useStaggerIn(60);
   const exchangeStyle = useStaggerIn(200);
@@ -354,7 +372,7 @@ export function ShopScreen() {
           </Pressable>
         </View>
 
-        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scroll}>
+        <ScrollView ref={shopScrollRef} showsVerticalScrollIndicator={false} contentContainerStyle={styles.scroll}>
 
           {/* ── PRO VIP BANNER ── */}
           {isPro && (

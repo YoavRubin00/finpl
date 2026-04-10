@@ -524,7 +524,7 @@ export function ShoppingCartScreen({ onComplete }: { onComplete: () => void }) {
             {state.isComplete && showFinnPopup && (
                 <Animated.View entering={FadeIn.duration(300)} style={styles.finnOverlay}>
                     <View style={styles.finnCard}>
-                        <ExpoImage source={FINN_HAPPY} style={{ width: 120, height: 120, alignSelf: 'center', marginBottom: 8 }} contentFit="contain" />
+                        <ExpoImage source={FINN_HAPPY} accessible={false} style={{ width: 120, height: 120, alignSelf: 'center', marginBottom: 8 }} contentFit="contain" />
                         <Text style={[RTL, styles.finnMessageSoft]}>
                             גם אם קניתם 1+1 הכל בסדר!{'\n'}רק צריך להיות מודעים, ולהתנהל חכם
                         </Text>

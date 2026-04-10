@@ -286,7 +286,7 @@ function ScoreScreen({
       {/* Finn disclaimer */}
       <Animated.View entering={FadeInUp.delay(400)} style={{ marginTop: 10 }}>
         <View style={{ flexDirection: 'row-reverse', alignItems: 'flex-start', gap: 8, backgroundColor: '#ffffff', borderRadius: 14, padding: 12, borderWidth: 1.5, borderColor: '#e2e8f0' }}>
-          <ExpoImage source={FINN_STANDARD} style={{ width: 36, height: 36 }} contentFit="contain" />
+          <ExpoImage source={FINN_STANDARD} accessible={false} style={{ width: 36, height: 36 }} contentFit="contain" />
           <Text style={[RTL, { flex: 1, fontSize: 13, color: '#1e293b', fontWeight: '600', lineHeight: 20 }]}>
             קריאת דוחות היא חשובה, אבל היא אף פעם לא מספרת את כל הסיפור. מחיר המניה מושפע מאלמנטים רבים.
           </Text>
@@ -542,7 +542,7 @@ export function StatementDetectiveScreen({ onComplete }: StatementDetectiveScree
                 <Text style={{ fontSize: 14, color: '#64748b', fontWeight: '700' }}>✕</Text>
               </Pressable>
               <View style={{ flexDirection: 'row-reverse', alignItems: 'flex-start', gap: 10 }}>
-                <ExpoImage source={FINN_STANDARD} style={{ width: 48, height: 48 }} contentFit="contain" />
+                <ExpoImage source={FINN_STANDARD} accessible={false} style={{ width: 48, height: 48 }} contentFit="contain" />
                 <Text style={[RTL, { flex: 1, fontSize: 14, color: '#1e293b', fontWeight: '600', lineHeight: 22, paddingLeft: 30 }]}>
                   {currentRound.explanation}
                 </Text>

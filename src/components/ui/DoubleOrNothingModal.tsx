@@ -472,13 +472,13 @@ const styles = StyleSheet.create({
     zIndex: 10,
   },
   swipeOverlayUp: {
-    right: 16,
+    end: 16,
     backgroundColor: 'rgba(34,197,94,0.15)',
     borderWidth: 2,
     borderColor: '#22c55e',
   },
   swipeOverlayDown: {
-    left: 16,
+    start: 16,
     backgroundColor: 'rgba(239,68,68,0.15)',
     borderWidth: 2,
     borderColor: '#ef4444',

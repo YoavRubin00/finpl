@@ -35,6 +35,7 @@ import {
 } from "../../utils/animations";
 import { AnimatedPressable } from "../../components/ui/AnimatedPressable";
 import { GoldCircleBadge } from "../../components/ui/GoldCircleBadge";
+import { GoldCoinIcon } from "../../components/ui/GoldCoinIcon";
 import { useReferralStore } from "../social/useReferralStore";
 import { computeReferralTier } from "../social/referralData";
 import { getAvatarById, DEFAULT_AVATAR_EMOJI } from "../avatars/avatarData";
@@ -304,7 +305,10 @@ export function ProfileScreen() {
                 <View style={[styles.cardTopBorder, { backgroundColor: "#ca8a04", shadowColor: "#ca8a04" }]} />
                 <View style={styles.cardBody}>
                   <Text style={[styles.cardLabel, { color: theme.textMuted }]}>מטבעות</Text>
-                  <Text style={[styles.cardBigValue, { color: theme.text, fontSize: 24 }]}>{coins.toLocaleString('he-IL')}</Text>
+                  <View style={{ flexDirection: "row-reverse", alignItems: "center", justifyContent: "center", gap: 6 }}>
+                    <GoldCoinIcon size={22} />
+                    <Text style={[styles.cardBigValue, { color: theme.text, fontSize: 24 }]}>{coins.toLocaleString('he-IL')}</Text>
+                  </View>
                   <Text style={[styles.cardMuted, { color: theme.textMuted }]}>FinCoins</Text>
                 </View>
               </View>

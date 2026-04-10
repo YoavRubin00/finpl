@@ -46,7 +46,7 @@ export function SuggestScenarioScreen() {
       <View style={styles.container}>
         <View style={styles.successContainer}>
           <Animated.View entering={FadeInDown.duration(400)} style={{ alignSelf: 'center' }}>
-            <ExpoImage source={FINN_STANDARD} style={{ width: 240, height: 240 }} contentFit="contain" />
+            <ExpoImage source={FINN_STANDARD} accessible={false} style={{ width: 240, height: 240 }} contentFit="contain" />
           </Animated.View>
           <Animated.View entering={FadeInDown.duration(400).delay(200)}>
             <Text style={styles.successTitle}>תודה רבה! 🎉</Text>
@@ -86,7 +86,7 @@ export function SuggestScenarioScreen() {
         >
           {/* Intro */}
           <Animated.View entering={FadeInDown.duration(400)} style={styles.introRow}>
-            <ExpoImage source={FINN_STANDARD} style={{ width: 128, height: 128 }} contentFit="contain" />
+            <ExpoImage source={FINN_STANDARD} accessible={false} style={{ width: 128, height: 128 }} contentFit="contain" />
             <View style={styles.introBubble}>
               <Text style={styles.introText}>
                 יש לך רעיון לתרחיש כלכלי מעניין? ספר/י לנו ואולי הוא יהפוך למשחק באפליקציה! 💡

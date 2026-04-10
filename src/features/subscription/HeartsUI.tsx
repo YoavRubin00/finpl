@@ -176,7 +176,7 @@ export function OutOfHeartsModal({ visible, onDismiss, onUpgrade }: OutOfHeartsM
                             </View>
                         </View>
                         <Animated.View style={[styles.finnWrap, emojiStyle]}>
-                            <ExpoImage source={FINN_STANDARD} style={{ width: 110, height: 110 }} contentFit="contain" />
+                            <ExpoImage source={FINN_STANDARD} accessible={false} style={{ width: 110, height: 110 }} contentFit="contain" />
                         </Animated.View>
                     </View>
 

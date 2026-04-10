@@ -115,7 +115,7 @@ export function RegisterScreen() {
                 <Text style={{ fontSize: 36 }}>{getAvatarById(avatarId)?.emoji ?? DEFAULT_AVATAR_EMOJI}</Text>
               </View>
             ) : (
-              <ExpoImage source={FINN_HELLO} style={{ width: 100, height: 100 }} contentFit="contain" />
+              <ExpoImage source={FINN_HELLO} accessible={false} style={{ width: 100, height: 100 }} contentFit="contain" />
             )}
             <Text
               style={{

@@ -6,6 +6,7 @@ import { AnimatedPressable } from "../../components/ui/AnimatedPressable";
 import { STITCH } from "../../constants/theme";
 import { useDailyQuestsStore } from "./useDailyQuestsStore";
 import { successHaptic } from "../../utils/haptics";
+import { GoldCoinIcon } from "../../components/ui/GoldCoinIcon";
 
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const LOTTIE_CHECK = require("../../../assets/lottie/wired-flat-37-approve-hover-pinch.json") as unknown as AnimationObject;
@@ -78,7 +79,10 @@ export function DailyQuestsSheet({ visible, onClose }: DailyQuestsSheetProps) {
           {allDone && !rewardClaimed && (
             <Animated.View entering={FadeInDown.delay(400).duration(400)} style={styles.rewardCard}>
               <LottieIcon source={LOTTIE_CHEST as unknown as number} size={56} autoPlay loop />
-              <Text style={[styles.rewardText, RTL]}>100 XP + 50 מטבעות</Text>
+              <View style={{ flexDirection: "row-reverse", alignItems: "center", gap: 6 }}>
+                <Text style={[styles.rewardText, RTL]}>100 XP + 50</Text>
+                <GoldCoinIcon size={16} />
+              </View>
               <AnimatedPressable
                 onPress={handleClaim}
                 style={styles.claimBtn}

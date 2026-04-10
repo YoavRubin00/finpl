@@ -39,8 +39,8 @@ export function GoldCoinIcon({ size = 22 }: { size?: number }) {
       <View style={{
         position: 'absolute',
         top: 1,
-        left: 3,
-        right: 3,
+        start: 3,
+        end: 3,
         height: size * 0.35,
         borderRadius: size,
         backgroundColor: 'rgba(255,255,255,0.35)',

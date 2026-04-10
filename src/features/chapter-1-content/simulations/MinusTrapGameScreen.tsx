@@ -554,7 +554,7 @@ function ScoreScreen({
             <ScrollView contentContainerStyle={{ paddingBottom: 30, flexGrow: 1 }} showsVerticalScrollIndicator={false}>
                 {/* Grade + Finn */}
                 <View style={[simStyles.gradeContainer, { flexDirection: 'row-reverse', justifyContent: 'center', alignItems: 'center', gap: 12 }]}>
-                    <ExpoImage source={FINN_STANDARD} style={{ width: 60, height: 60 }} contentFit="contain" />
+                    <ExpoImage source={FINN_STANDARD} accessible={false} style={{ width: 60, height: 60 }} contentFit="contain" />
                     <View style={{ alignItems: 'center' }}>
                         <Text style={[simStyles.gradeText, { color: gradeColor }]}>
                             {GRADE_HEBREW[score.grade] ?? score.grade}

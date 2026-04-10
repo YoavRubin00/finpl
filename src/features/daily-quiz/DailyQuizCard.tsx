@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { View, Text, StyleSheet, Pressable } from 'react-native';
 import Animated, {
   useSharedValue,
@@ -15,13 +15,32 @@ import { ConfettiExplosion } from '../../components/ui/ConfettiExplosion';
 import { FlyingRewards } from '../../components/ui/FlyingRewards';
 import { useDailyQuizStore } from './useDailyQuizStore';
 import { useEconomyStore } from '../economy/useEconomyStore';
-import { stripGlossaryTags } from '../glossary/renderGlossaryText';
+import { stripGlossaryTags, renderGlossaryText } from '../glossary/renderGlossaryText';
+import { GlossaryTooltip } from '../glossary/GlossaryTooltip';
+import type { GlossaryEntry } from '../glossary/glossaryData';
 import type { DailyQuiz } from './dailyQuizTypes';
 
 /** Fix bidi issues in mixed Hebrew/English text — wraps English runs with RTL marks */
 function fixBidi(text: string): string {
   // Insert RLM (\u200F) before and after English/number runs so they don't break RTL flow
   return text.replace(/([A-Za-z0-9$%€£¥₪,.+\-]+(?:\s+[A-Za-z0-9$%€£¥₪,.+\-]+)*)/g, '\u200F$1\u200F');
+}
+
+/** Render text with clickable [[term]] glossary links */
+function GlossaryText({
+  text,
+  style,
+  onTermPress,
+}: {
+  text: string;
+  style: object;
+  onTermPress: (entry: GlossaryEntry) => void;
+}) {
+  const nodes = renderGlossaryText(fixBidi(text), {
+    highlightColor: '#0891b2',
+    onTermPress,
+  });
+  return <Text style={style}>{nodes}</Text>;
 }
 
 interface Props {
@@ -37,7 +56,13 @@ export const DailyQuizCard = React.memo(function DailyQuizCard({ quiz, locked = 
   const [showResult, setShowResult] = useState(false);
   const [showConfetti, setShowConfetti] = useState(false);
   const [showFlyingCoins, setShowFlyingCoins] = useState(false);
+  const [glossaryEntry, setGlossaryEntry] = useState<GlossaryEntry | null>(null);
   const answered = hasAnsweredToday();
+
+  const handleTermPress = useCallback((entry: GlossaryEntry) => {
+    tapHaptic();
+    setGlossaryEntry(entry);
+  }, []);
 
   // Pulsing glow for unanswered state
   const glow = useSharedValue(0.3);
@@ -164,17 +189,17 @@ export const DailyQuizCard = React.memo(function DailyQuizCard({ quiz, locked = 
             <Text style={styles.dataBadgeValue}>{quiz.sourceValue}</Text>
           </View>
 
-          {/* Citation — real news quote */}
+          {/* Citation — real news quote with glossary links */}
           {quiz.citation && (
             <View style={styles.citationBox}>
               <Text style={styles.citationLabel}>📰 אקטואלי</Text>
-              <Text style={styles.citationText}>{fixBidi(stripGlossaryTags(quiz.citation))}</Text>
-              {quiz.historicalExample ? <Text style={styles.citationHistory}>📖 {fixBidi(stripGlossaryTags(quiz.historicalExample))}</Text> : null}
+              <GlossaryText text={quiz.citation} style={styles.citationText} onTermPress={handleTermPress} />
+              {quiz.historicalExample ? <GlossaryText text={`📖 ${quiz.historicalExample}`} style={styles.citationHistory} onTermPress={handleTermPress} /> : null}
             </View>
           )}
 
-          {/* Question */}
-          <Text style={styles.question}>{fixBidi(stripGlossaryTags(quiz.question))}</Text>
+          {/* Question with glossary links */}
+          <GlossaryText text={quiz.question} style={styles.question} onTermPress={handleTermPress} />
 
           {/* Options */}
           <View style={styles.optionsContainer}>
@@ -197,15 +222,15 @@ export const DailyQuizCard = React.memo(function DailyQuizCard({ quiz, locked = 
                   <Animated.View
                     style={[styles.option, optionStyle]}
                   >
-                    <Text style={[
-                      styles.optionText,
-                      showResult && isCorrect && { color: '#38bdf8' },
-                      showResult && isSelected && !isCorrect && { color: '#f87171' },
-                    ]}>
-                      {showResult && isCorrect && '✅ '}
-                      {showResult && isSelected && !isCorrect && '❌ '}
-                      {fixBidi(stripGlossaryTags(option))}
-                    </Text>
+                    <GlossaryText
+                      text={`${showResult && isCorrect ? '✅ ' : ''}${showResult && isSelected && !isCorrect ? '❌ ' : ''}${option}`}
+                      style={[
+                        styles.optionText,
+                        showResult && isCorrect && { color: '#38bdf8' },
+                        showResult && isSelected && !isCorrect && { color: '#f87171' },
+                      ]}
+                      onTermPress={handleTermPress}
+                    />
                   </Animated.View>
                 </Pressable>
               );
@@ -216,7 +241,7 @@ export const DailyQuizCard = React.memo(function DailyQuizCard({ quiz, locked = 
           {showResult && (
             <Animated.View style={styles.explanationBox}>
               <Text style={styles.explanationTitle}>💡 תכל׳ס</Text>
-              <Text style={styles.explanationText}>{fixBidi(stripGlossaryTags(quiz.explanation))}</Text>
+              <GlossaryText text={quiz.explanation} style={styles.explanationText} onTermPress={handleTermPress} />
             </Animated.View>
           )}
 
@@ -239,6 +264,13 @@ export const DailyQuizCard = React.memo(function DailyQuizCard({ quiz, locked = 
           )}
         </View>
       </Animated.View>
+
+      {/* Glossary tooltip — slides up from bottom */}
+      <GlossaryTooltip
+        entry={glossaryEntry}
+        visible={glossaryEntry !== null}
+        onClose={() => setGlossaryEntry(null)}
+      />
     </View>
   );
 });

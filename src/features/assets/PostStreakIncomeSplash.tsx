@@ -16,6 +16,7 @@ import { useAuthStore } from "../auth/useAuthStore";
 import { useChapterStore } from "../chapter-1-content/useChapterStore";
 import { AnimatedPressable } from "../../components/ui/AnimatedPressable";
 import { useRouter } from "expo-router";
+import { GoldCoinIcon } from "../../components/ui/GoldCoinIcon";
 
 const SHOWN_KEY = "post-streak-income-shown-date";
 
@@ -91,7 +92,7 @@ export function PostStreakIncomeSplash() {
         exiting={FadeOut.duration(200)}
         style={styles.overlay}
       >
-        <Pressable style={StyleSheet.absoluteFill} onPress={handleDismiss} />
+        <Pressable style={StyleSheet.absoluteFill} onPress={handleDismiss} accessibilityRole="button" accessibilityLabel="סגור" />
 
         <Animated.View
           entering={FadeIn.duration(300)}
@@ -101,12 +102,15 @@ export function PostStreakIncomeSplash() {
           <View style={styles.handle} />
 
           {/* Finn Lottie */}
-          <ExpoImage source={FINN_STANDARD} style={{ width: 160, height: 160, marginBottom: 8 }} contentFit="contain" />
+          <ExpoImage source={FINN_STANDARD} accessible={false} style={{ width: 160, height: 160, marginBottom: 8 }} contentFit="contain" />
 
           {hasAssetsAtShow && collectedAmount > 0 ? (
             <>
               <Text style={styles.title}>הנכסים שלך עבדו בשבילך! 🌙</Text>
-              <Text style={styles.amount}>+{collectedAmount} </Text>
+              <View style={{ flexDirection: "row-reverse", alignItems: "center", justifyContent: "center", gap: 8 }}>
+                <GoldCoinIcon size={28} />
+                <Text style={styles.amount}>+{collectedAmount}</Text>
+              </View>
               <Text style={styles.subtitle}>
                 ההון שלך גדל בזמן שישנת — המטבעות כבר בחשבון!
               </Text>
@@ -136,7 +140,7 @@ export function PostStreakIncomeSplash() {
             </>
           )}
 
-          <Pressable onPress={handleDismiss} style={styles.dismissBtn}>
+          <Pressable onPress={handleDismiss} style={styles.dismissBtn} accessibilityRole="button" accessibilityLabel="סגור את ההודעה">
             <Text style={styles.dismissText}>תודה!</Text>
           </Pressable>
         </Animated.View>
