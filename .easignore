@@ -24,7 +24,11 @@ assets/videos/
 assets/comics/
 assets/infographics/
 assets/SOUND/
-# assets/IMAGES/ kept — contains required icons for build
+assets/AUDIO/
+assets/STOCK/
+assets/vercel_stage/
+assets/IMAGES/modules/
+# assets/IMAGES/{fun,graham,swipe,myths} + assets/webp/ kept — required by code
 
 # Unused Lottie animations (~3.8MB savings)
 # 85 files not referenced by any source code — excluded from build
