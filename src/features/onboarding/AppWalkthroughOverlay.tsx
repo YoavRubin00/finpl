@@ -285,7 +285,7 @@ export function AppWalkthroughOverlay() {
                   accessibilityLabel="חזרה לשלב הקודם"
                   hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
                 >
-                  <ChevronRight size={22} color="#7dd3fc" />
+                  <ChevronRight size={22} color="#0ea5e9" />
                 </Pressable>
               )}
               <Pressable
@@ -383,9 +383,9 @@ const s = StyleSheet.create({
     color: "#0284c7",
   },
 
-  /* ── Bottom card — blue theme ── */
+  /* ── Bottom card — light blue theme ── */
   card: {
-    backgroundColor: "#0c4a6e",
+    backgroundColor: "#e0f2fe",
     borderRadius: CARD_RADIUS,
     paddingHorizontal: 22,
     paddingTop: 52,
@@ -393,9 +393,9 @@ const s = StyleSheet.create({
     marginBottom: 10,
     alignItems: "center",
     shadowColor: "#0ea5e9",
-    shadowOpacity: 0.4,
-    shadowRadius: 28,
-    shadowOffset: { width: 0, height: -6 },
+    shadowOpacity: 0.3,
+    shadowRadius: 24,
+    shadowOffset: { width: 0, height: -4 },
     elevation: 14,
     overflow: "visible",
   },
@@ -407,7 +407,7 @@ const s = StyleSheet.create({
     bottom: -1,
     borderRadius: CARD_RADIUS + 1,
     borderWidth: 1.5,
-    borderColor: "rgba(56, 189, 248, 0.5)",
+    borderColor: "rgba(14, 165, 233, 0.35)",
   },
 
   /* ── Finn ── */
@@ -422,7 +422,7 @@ const s = StyleSheet.create({
     width: 80,
     height: 80,
     borderRadius: 40,
-    backgroundColor: "rgba(56, 189, 248, 0.35)",
+    backgroundColor: "rgba(56, 189, 248, 0.25)",
   },
   finn: {
     width: 68,
@@ -433,7 +433,7 @@ const s = StyleSheet.create({
   message: {
     fontSize: 15,
     fontWeight: "600",
-    color: "#e0f2fe",
+    color: "#0c4a6e",
     lineHeight: 24,
     writingDirection: "rtl",
     textAlign: "center",
@@ -451,7 +451,7 @@ const s = StyleSheet.create({
     width: 6,
     height: 6,
     borderRadius: 3,
-    backgroundColor: "rgba(255,255,255,0.25)",
+    backgroundColor: "#bae6fd",
   },
   dotActive: {
     backgroundColor: "#38bdf8",
@@ -467,19 +467,19 @@ const s = StyleSheet.create({
     width: "100%",
   },
 
-  /* ── Back button — blue card ── */
+  /* ── Back button ── */
   backBtn: {
     width: 42,
     height: 42,
     borderRadius: 21,
-    backgroundColor: "rgba(255,255,255,0.12)",
+    backgroundColor: "#ffffff",
     borderWidth: 1.5,
-    borderColor: "rgba(56,189,248,0.4)",
+    borderColor: "#7dd3fc",
     borderBottomWidth: 3,
-    borderBottomColor: "rgba(56,189,248,0.3)",
+    borderBottomColor: "#38bdf8",
     alignItems: "center" as const,
     justifyContent: "center" as const,
-    shadowColor: "#38bdf8",
+    shadowColor: "#0ea5e9",
     shadowOpacity: 0.15,
     shadowRadius: 6,
     shadowOffset: { width: 0, height: 2 },
@@ -522,7 +522,7 @@ const s = StyleSheet.create({
   skipText: {
     fontSize: 14,
     fontWeight: "600",
-    color: "rgba(255,255,255,0.55)",
+    color: "#64748b",
     writingDirection: "rtl",
   },
 });

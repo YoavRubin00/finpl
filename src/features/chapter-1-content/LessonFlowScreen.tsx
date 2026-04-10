@@ -1,6 +1,6 @@
 import { useState, useMemo, useCallback, useEffect, useRef } from "react";
 import { Image as ExpoImage } from "expo-image";
-import { View, Text, SafeAreaView, ScrollView, Image, StyleSheet, Modal, Pressable, Dimensions } from "react-native";
+import { View, Text, SafeAreaView, ScrollView, Image, StyleSheet, Modal, Pressable, Dimensions, ActivityIndicator } from "react-native";
 import { useIsFocused } from "@react-navigation/native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
@@ -269,19 +269,61 @@ function VideoHookPlayer({ videoUri, hookText, onFinish, unitColors }: {
 }) {
   const videoRef = useRef<VideoView>(null);
   const [isFastMode, setIsFastMode] = useState(false);
-  const player = useVideoPlayer(videoUri, (p) => {
-    p.loop = false;
-    p.play();
-  });
+  const [isLoading, setIsLoading] = useState(true);
+  const finishedRef = useRef(false);
+
+  const safeFinish = useCallback(() => {
+    if (finishedRef.current) return;
+    finishedRef.current = true;
+    onFinish();
+  }, [onFinish]);
+
+  let player: ReturnType<typeof useVideoPlayer>;
+  try {
+    // eslint-disable-next-line react-hooks/rules-of-hooks
+    player = useVideoPlayer(videoUri, (p) => {
+      p.loop = false;
+      p.play();
+    });
+  } catch {
+    // If player creation fails, skip video entirely
+    useEffect(() => { safeFinish(); }, [safeFinish]);
+    return <View style={{ flex: 1, backgroundColor: "#0a1628" }} />;
+  }
 
   useEffect(() => {
-    const sub = player.addListener('playingChange', (e) => {
-      if (!e.isPlaying && player.duration > 0 && player.currentTime >= player.duration - 0.5) {
-        setTimeout(onFinish, 500);
+    const subs: { remove: () => void }[] = [];
+
+    // Track playback end
+    subs.push(player.addListener('playingChange', (e: { isPlaying: boolean }) => {
+      if (e.isPlaying) {
+        setIsLoading(false);
       }
-    });
-    return () => sub.remove();
-  }, [player, onFinish]);
+      if (!e.isPlaying && player.duration > 0 && player.currentTime >= player.duration - 0.5) {
+        setTimeout(safeFinish, 500);
+      }
+    }));
+
+    // Track errors — skip video on failure
+    subs.push(player.addListener('statusChange', (e: { status: string; error?: unknown }) => {
+      if (e.status === 'error') {
+        safeFinish();
+      }
+      if (e.status === 'readyToPlay') {
+        setIsLoading(false);
+      }
+    }));
+
+    // Safety timeout — if video doesn't play within 10s, skip
+    const timeout = setTimeout(() => {
+      if (isLoading) safeFinish();
+    }, 10000);
+
+    return () => {
+      subs.forEach((s) => s.remove());
+      clearTimeout(timeout);
+    };
+  }, [player, safeFinish, isLoading]);
 
   return (
     <View style={{ flex: 1, backgroundColor: "#0a1628" }}>
@@ -299,6 +341,13 @@ function VideoHookPlayer({ videoUri, hookText, onFinish, unitColors }: {
           nativeControls={false}
         />
       </Pressable>
+      {/* Loading indicator */}
+      {isLoading && (
+        <View style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, justifyContent: "center", alignItems: "center" }} pointerEvents="none">
+          <ActivityIndicator size="large" color="#38bdf8" />
+          <Text style={{ fontSize: 14, fontWeight: "700", color: "#94a3b8", marginTop: 12 }}>טוען סרטון...</Text>
+        </View>
+      )}
       {/* Fast mode indicator */}
       {isFastMode && (
         <View style={{ position: "absolute", top: "45%", alignSelf: "center", backgroundColor: "rgba(0,0,0,0.6)", borderRadius: 16, paddingHorizontal: 16, paddingVertical: 8 }} pointerEvents="none">
@@ -316,7 +365,7 @@ function VideoHookPlayer({ videoUri, hookText, onFinish, unitColors }: {
       ) : null}
       {/* Skip button — right side for RTL */}
       <Pressable
-        onPress={onFinish}
+        onPress={safeFinish}
         style={{ position: "absolute", top: 50, right: 16, backgroundColor: "rgba(0,0,0,0.5)", borderRadius: 20, paddingHorizontal: 16, paddingVertical: 8 }}
         accessibilityRole="button"
         accessibilityLabel="דלג על הסרטון"
@@ -3254,7 +3303,7 @@ export function LessonFlowScreen() {
               <ExpoImage source={FINN_STANDARD} accessible={false} style={{ width: 64, height: 64 }} contentFit="contain" />
               <View style={{ flex: 1 }}>
                 <Text style={{ fontSize: 16, fontWeight: "800", color: "#0c4a6e", writingDirection: "rtl", textAlign: "right", lineHeight: 24 }}>
-                  {"איך הולך? 😊"}
+                  {"איך הולך?"}
                 </Text>
                 <Text style={{ fontSize: 13, fontWeight: "600", color: "#64748b", writingDirection: "rtl", textAlign: "right", marginTop: 4 }}>
                   {"רוצים לחזור למשהו שלא הובן?"}
