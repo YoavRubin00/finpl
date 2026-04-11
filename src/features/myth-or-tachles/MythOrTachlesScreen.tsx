@@ -11,7 +11,7 @@ import { MythCardDeck } from './MythCardDeck';
 import { MythFeedbackModal } from './MythFeedbackModal';
 import type { MythCard } from './mythTypes';
 
-const COIN_REWARD = 10;
+const COIN_REWARD = 50;
 
 interface Props {
     visible: boolean;

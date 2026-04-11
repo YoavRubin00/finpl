@@ -40,7 +40,7 @@ export const MAX_DILEMMA_DAILY = 1;
 
 /** Uniform rewards for all challenges. */
 export const CHALLENGE_XP_REWARD = 30;
-export const CHALLENGE_COIN_REWARD = 20;
+export const CHALLENGE_COIN_REWARD = 100;
 
 /** Play counts per date: { "2026-03-21": 2 } */
 export type PlayCountMap = Record<string, number>;

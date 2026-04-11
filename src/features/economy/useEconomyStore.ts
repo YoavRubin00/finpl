@@ -192,7 +192,7 @@ export const useEconomyStore = create<EconomyState>()(
         const { starterCapitalGranted } = get();
         if (starterCapitalGranted) return false;
         set((state) => ({
-          coins: state.coins + 500,
+          coins: state.coins + 2500,
           starterCapitalGranted: true,
         }));
         return true;

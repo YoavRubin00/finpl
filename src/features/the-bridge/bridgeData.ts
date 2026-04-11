@@ -10,7 +10,7 @@ export const BRIDGE_BENEFITS: Benefit[] = [
     partnerName: 'אלטשולר שחם טרייד',
     partnerLogo: '📈',
     lottieSource: require('../../../assets/lottie/wired-flat-161-growth-hover-pinch.json') as number,
-    costCoins: 1400,
+    costCoins: 8000,
     category: 'investments',
     isAvailable: true,
     reward: 'קורס שוק ההון בשווי ₪1,400 במתנה',

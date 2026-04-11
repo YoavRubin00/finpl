@@ -5,9 +5,9 @@ import { useEconomyStore } from '../economy/useEconomyStore';
 import type { MacroEvent } from './types';
 
 const XP_PER_CORRECT   = 10;
-const COINS_PER_CORRECT = 5;
+const COINS_PER_CORRECT = 25;
 const STREAK_BONUS_AT   = 5;
-const STREAK_BONUS_COINS = 15;
+const STREAK_BONUS_COINS = 75;
 const SESSION_LIMIT = 3;
 export const MACRO_COOLDOWN_MS = 4 * 60 * 60 * 1000; // 4 hours
 

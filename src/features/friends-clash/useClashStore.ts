@@ -145,10 +145,10 @@ export const useClashStore = create<ClashState>()(
         // Award XP/coins for win
         if (result === 'win') {
           useEconomyStore.getState().addXP(50, 'clash_win');
-          useEconomyStore.getState().addCoins(30);
+          useEconomyStore.getState().addCoins(150);
         } else if (result === 'draw') {
           useEconomyStore.getState().addXP(20, 'clash_draw');
-          useEconomyStore.getState().addCoins(10);
+          useEconomyStore.getState().addCoins(50);
         }
 
         // Mark invite completed

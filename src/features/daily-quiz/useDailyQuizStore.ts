@@ -27,8 +27,8 @@ export const useDailyQuizStore = create<DailyQuizState>()(
 
         const newStreak = wasCorrect ? state.streak + 1 : 0;
         const xpReward = wasCorrect ? 50 : 0;
-        const coinReward = wasCorrect ? 25 : 0;
-        const streakBonus = wasCorrect && newStreak >= 3 ? 20 : 0;
+        const coinReward = wasCorrect ? 120 : 0;
+        const streakBonus = wasCorrect && newStreak >= 3 ? 80 : 0;
 
         if (wasCorrect) {
           const economy = useEconomyStore.getState();

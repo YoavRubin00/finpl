@@ -7,7 +7,7 @@ export interface DailyQuest {
 }
 
 export const QUEST_XP_REWARD = 100;
-export const QUEST_COIN_REWARD = 50;
+export const QUEST_COIN_REWARD = 300;
 
 export const QUEST_TEMPLATES: Omit<DailyQuest, "id" | "isCompleted">[] = [
   {

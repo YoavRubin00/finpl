@@ -24,7 +24,7 @@ export const ONBOARDING_XP = 100;
 export const DAILY_TASK_XP = 20;
 
 /** Coins awarded for completing the daily task. */
-export const DAILY_TASK_COINS = 50;
+export const DAILY_TASK_COINS = 300;
 
 /**
  * Base XP multiplier for streak bonuses.

@@ -10,7 +10,7 @@ export const MOCK_OPPONENTS: DuelOpponent[] = [
 
 export const DUEL_DURATION_SEC = 60;
 export const DUEL_QUESTIONS_COUNT = 8;
-export const DUEL_WIN_COINS = 40;
-export const DUEL_LOSS_COINS = 5;
-export const DUEL_DRAW_COINS = 15;
+export const DUEL_WIN_COINS = 200;
+export const DUEL_LOSS_COINS = 25;
+export const DUEL_DRAW_COINS = 80;
 export const DUEL_WIN_GEMS = 2;

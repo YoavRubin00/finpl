@@ -8,7 +8,7 @@ import { useAITelemetryStore } from "../ai-personalization/useAITelemetryStore";
 import { useAdaptiveStore } from "../social/useAdaptiveStore";
 
 const MODULE_COMPLETE_XP = 30;
-const MODULE_COMPLETE_COINS = 25;
+const MODULE_COMPLETE_COINS = 150;
 const DEFAULT_CHAPTER_ID = "ch-1";
 
 interface QuizResult {

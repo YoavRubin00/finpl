@@ -8,13 +8,13 @@ const REWARD_RANGES: Record<ChestDropType, {
   gemChance: number;
 }> = {
   regular: {
-    coins: [20, 50],
+    coins: [100, 250],
     xp: [25, 45],
     gems: [0, 2],
     gemChance: 0.25,
   },
   premium: {
-    coins: [120, 200],
+    coins: [600, 1000],
     xp: [80, 150],
     gems: [5, 12],
     gemChance: 1,

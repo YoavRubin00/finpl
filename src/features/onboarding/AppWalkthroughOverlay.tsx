@@ -203,8 +203,11 @@ export function AppWalkthroughOverlay() {
           // All users → drop straight into the first lesson.
           // After finishing mod-0-1, the lesson's "continue" button
           // will return them to the main learning map.
-          router.push("/lesson/mod-0-1?chapterId=chapter-0" as never);
-        } catch {}
+          router.replace({ pathname: "/lesson/[id]", params: { id: "mod-0-1", chapterId: "chapter-0" } } as never);
+        } catch {
+          // Fallback: go to safe home tab
+          try { router.replace("/(tabs)" as never); } catch {}
+        }
       }, 200);
       return;
     }
@@ -218,7 +221,12 @@ export function AppWalkthroughOverlay() {
     if (nextConfig.navigateTo && !isAlreadyOnRoute(nextConfig.navigateTo)) {
       setTransitioning(true);
       setTimeout(() => {
-        try { router.replace(nextConfig.navigateTo as never); } catch {}
+        try {
+          router.replace(nextConfig.navigateTo as never);
+        } catch {
+          // Fallback to safe home if route fails to resolve
+          try { router.replace("/(tabs)" as never); } catch {}
+        }
         setTimeout(() => setTransitioning(false), 300);
       }, 50);
     }
