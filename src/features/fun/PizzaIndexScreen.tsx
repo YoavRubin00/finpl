@@ -4,21 +4,16 @@
  * US-007 of PRD_FunFeatures.
  */
 import React from "react";
-import { View, Text, StyleSheet, ScrollView, Share, Image, type ImageSourcePropType } from "react-native";
+import { View, Text, StyleSheet, ScrollView, Share, type ImageSourcePropType } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Image as ExpoImage } from "expo-image";
-import Animated, { FadeInUp, FadeInDown } from "react-native-reanimated";
-import LottieView from "lottie-react-native";
+import Animated, { FadeInUp } from "react-native-reanimated";
 
-import { useEconomyStore } from "../economy/useEconomyStore";
-import { FINN_HAPPY } from "../retention-loops/finnMascotConfig";
-import { GlowCard } from "../../components/ui/GlowCard";
+import { LinearGradient } from "expo-linear-gradient";
 import { AnimatedPressable } from "../../components/ui/AnimatedPressable";
 import { BackButton } from "../../components/ui/BackButton";
-import { SimLottieBackground } from "../../components/ui/SimLottieBackground";
-import { SIM_LOTTIE } from "../shared-sim/simLottieMap";
 import { tapHaptic, successHaptic } from "../../utils/haptics";
-import { RTL, SHADOW_STRONG, SHADOW_LIGHT } from "../shared-sim/simThemeBase";
+import { RTL, SHADOW_STRONG } from "../shared-sim/simThemeBase";
 
 // ── Theme ──
 const STITCH_BLUE = {
@@ -44,37 +39,54 @@ interface StatCard {
   image: ImageSourcePropType;
 }
 
-function buildStats(xp: number, coins: number, streak: number): StatCard[] {
-  const pizzas = Math.floor(xp / 35);
-  const compoundResult = Math.round(coins * Math.pow(1.05, 10));
+// ── Real financial pizza data ──
+const PIZZA_PRICE_2015 = 42;
+const PIZZA_PRICE_2026 = 58;
+function buildStats(): StatCard[] {
+  // Card 1: Pizza inflation — how prices changed
+  const inflationPct = Math.round(((PIZZA_PRICE_2026 - PIZZA_PRICE_2015) / PIZZA_PRICE_2015) * 100);
 
-  // Mock leaderboard rank — fun deterministic formula
-  const rank = Math.max(1, 100 - Math.floor(xp / 50) - streak * 2);
-  const rankSuffix = rank <= 3 ? "מקום על הפודיום!" : "מתוך 100 שחקנים";
+  // Card 2: Purchasing power — how many pizzas ₪1,000 buys today vs 10 years ago
+  const pizzas2015 = Math.floor(1000 / PIZZA_PRICE_2015);
+  const pizzas2026 = Math.floor(1000 / PIZZA_PRICE_2026);
+
+  // Card 3: Compound interest — if you saved ₪50/month (a pizza a week) for 10 years at 5%
+  const monthlyPizza = 50;
+  const years = 10;
+  const rate = 0.05;
+  const months = years * 12;
+  const futureValue = Math.round(
+    monthlyPizza * ((Math.pow(1 + rate / 12, months) - 1) / (rate / 12))
+  );
+  const totalDeposited = monthlyPizza * months;
+
+  // Card 4: Minimum wage — how many minutes of work to buy a pizza
+  const minWagePerHour = 32.3; // ₪ Israel 2026
+  const minutesPerPizza = Math.round((PIZZA_PRICE_2026 / minWagePerHour) * 60);
 
   return [
     {
-      title: "כמה פיצות שווה ה-XP שלך",
-      value: String(pizzas),
-      subtitle: xp + " XP = " + pizzas + " פיצות (35 XP לפיצה)",
+      title: "אינפלציה של פיצה",
+      value: "₪" + PIZZA_PRICE_2026,
+      subtitle: "ב-2015 פיצה עלתה ₪" + PIZZA_PRICE_2015 + ". היום ₪" + PIZZA_PRICE_2026 + " — עלייה של " + inflationPct + "% בעשור",
       image: IMAGE_PIZZA,
     },
     {
-      title: "כמה ימי קפה זה הרצף שלך",
-      value: String(streak),
-      subtitle: streak > 0 ? streak + " ימים רצופים = " + streak + " כוסות קפה בוקר" : "עדיין אין רצף — בוא נתחיל!",
+      title: "כוח הקנייה שלך נשחק",
+      value: pizzas2026 + " פיצות",
+      subtitle: "ב-₪1,000 היום תקנה " + pizzas2026 + " פיצות. לפני עשור היית קונה " + pizzas2015 + " — הפסדת " + (pizzas2015 - pizzas2026) + " פיצות",
       image: IMAGE_COFFEE,
     },
     {
-      title: "אם היית משקיע את המטבעות שלך בריבית דריבית",
-      value: coins > 0 ? String(compoundResult) : "0",
-      subtitle: coins > 0 ? coins + " מטבעות x 5% ל-10 שנים = " + compoundResult + " מטבעות" : "צבור מטבעות כדי לראות את הקסם",
+      title: "ויתרת על פיצה בשבוע? הנה מה שקיבלת",
+      value: "₪" + futureValue.toLocaleString(),
+      subtitle: "₪" + monthlyPizza + " בחודש x " + years + " שנים ב-5% = ₪" + futureValue.toLocaleString() + " (הפקדת רק ₪" + totalDeposited.toLocaleString() + ")",
       image: IMAGE_COMPOUND,
     },
     {
-      title: "הדירוג שלך בין חברי הסקוואד",
-      value: "#" + rank,
-      subtitle: rankSuffix,
+      title: "כמה דקות עבודה שווה פיצה?",
+      value: minutesPerPizza + " דק׳",
+      subtitle: "בשכר מינימום (₪" + minWagePerHour + "/שעה) צריך לעבוד " + minutesPerPizza + " דקות בשביל משולש פיצה אחד",
       image: IMAGE_RANK,
     },
   ];
@@ -94,10 +106,8 @@ function StatCardView({ card, index }: { card: StatCard; index: number }) {
         {/* Text content below image */}
         <View style={styles.statContent}>
           <Text style={[styles.statTitle, RTL]}>{card.title}</Text>
-          <View style={{ flexDirection: "row-reverse", alignItems: "baseline", gap: 8 }}>
-            <Text style={styles.statValue}>{card.value}</Text>
-            <Text style={[styles.statSubtitle, RTL]}>{card.subtitle}</Text>
-          </View>
+          <Text style={styles.statValue}>{card.value}</Text>
+          <Text style={[styles.statSubtitle, RTL]}>{card.subtitle}</Text>
         </View>
       </View>
     </Animated.View>
@@ -106,22 +116,16 @@ function StatCardView({ card, index }: { card: StatCard; index: number }) {
 
 // ── Main Screen ──
 export function PizzaIndexScreen() {
-  const xp = useEconomyStore((s) => s.xp);
-  const coins = useEconomyStore((s) => s.coins);
-  const streak = useEconomyStore((s) => s.streak);
-
-  const stats = buildStats(xp, coins, streak);
+  const stats = buildStats();
 
   const handleShare = async () => {
     tapHaptic();
-    const pizzas = Math.floor(xp / 35);
     const message = [
-      "מדד הפיצות שלי ב-FinPlay:",
-      "ה-XP שלי שווה " + pizzas + " פיצות",
-      "הרצף שלי: " + streak + " ימים",
-      "מטבעות בריבית דריבית: " + Math.round(coins * Math.pow(1.05, 10)),
+      "מדד הפיצות של FinPlay:",
+      "פיצה ב-2015: ₪" + PIZZA_PRICE_2015 + " → היום: ₪" + PIZZA_PRICE_2026,
+      "אם מוותרים על פיצה בשבוע ומשקיעים — אחרי 10 שנים יש ₪7,764!",
       "",
-      "בואו לשחק! FinPlay — לימוד פיננסי שזה כיף",
+      "בואו ללמוד פיננסים! FinPlay — לימוד פיננסי שזה כיף",
     ].join("\n");
 
     try {
@@ -133,11 +137,8 @@ export function PizzaIndexScreen() {
   };
 
   return (
-    <SimLottieBackground
-      lottieSources={[SIM_LOTTIE.network, SIM_LOTTIE.coins]}
-      chapterColors={["#f0f9ff", "#e0f2fe"]}
-    >
-      <SafeAreaView style={styles.safe} edges={["top"]}>
+    <LinearGradient colors={["#f0f9ff", "#e0f2fe"]} style={{ flex: 1 }}>
+      <SafeAreaView style={styles.safe} edges={["top", "bottom"]}>
         {/* Header */}
         <View style={{ flexDirection: 'row-reverse', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingVertical: 10 }}>
           <BackButton color={STITCH_BLUE.textPrimary} />
@@ -163,12 +164,6 @@ export function PizzaIndexScreen() {
               accessibilityRole="button"
               accessibilityLabel="שתף עם חברים"
             >
-              <LottieView
-                source={require("../../../assets/lottie/wired-flat-412-gift-hover-squeeze.json")}
-                style={{ width: 28, height: 28 }}
-                autoPlay
-                loop
-              />
               <Text style={styles.shareText}>שתף עם חברים</Text>
             </AnimatedPressable>
           </Animated.View>
@@ -176,7 +171,7 @@ export function PizzaIndexScreen() {
           <View style={styles.bottomSpacer} />
         </ScrollView>
       </SafeAreaView>
-    </SimLottieBackground>
+    </LinearGradient>
   );
 }
 
@@ -275,6 +270,6 @@ const styles = StyleSheet.create({
     color: "#ffffff",
   },
   bottomSpacer: {
-    height: 40,
+    height: 16,
   },
 });

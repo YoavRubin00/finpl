@@ -40,7 +40,7 @@ export function FinnMailModal({ visible, onClose }: FinnMailModalProps) {
 
         {/* Card */}
         <Animated.View
-          entering={FadeInDown.duration(400).springify().damping(16)}
+          entering={FadeInDown.duration(400).springify().damping(40).stiffness(200)}
           style={styles.card}
         >
           {/* Close button */}

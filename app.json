@@ -80,11 +80,28 @@
       "supportsTablet": true,
       "usesAppleSignIn": true,
       "infoPlist": {
-        "NSPrivacyPolicyURL": "https://yoavrubin00.github.io/finpl-pages/privacy-policy.html",
+        "NSPrivacyPolicyURL": "https://yoavrubin00.github.io/finpl/privacy-policy.html",
         "ITSAppUsesNonExemptEncryption": false,
         "NSUserTrackingUsageDescription": "FinPlay אינו עוקב אחריך בין אפליקציות. הרשאה זו מתבקשת רק כדי לכבד את העדפותיך.",
         "NSPhotoLibraryUsageDescription": "FinPlay מבקש גישה לתמונות רק אם תבחר/י לשתף תמונת פרופיל.",
-        "NSCameraUsageDescription": "FinPlay מבקש גישה למצלמה רק אם תבחר/י לצלם תמונת פרופיל."
+        "NSCameraUsageDescription": "FinPlay מבקש גישה למצלמה רק אם תבחר/י לצלם תמונת פרופיל.",
+        "NSAppTransportSecurity": {
+          "NSAllowsArbitraryLoads": true,
+          "NSExceptionDomains": {
+            "r2.dev": {
+              "NSIncludesSubdomains": true,
+              "NSExceptionAllowsInsecureHTTPLoads": false,
+              "NSExceptionRequiresForwardSecrecy": false,
+              "NSExceptionMinimumTLSVersion": "TLSv1.2"
+            },
+            "vercel-storage.com": {
+              "NSIncludesSubdomains": true,
+              "NSExceptionAllowsInsecureHTTPLoads": false,
+              "NSExceptionRequiresForwardSecrecy": false,
+              "NSExceptionMinimumTLSVersion": "TLSv1.2"
+            }
+          }
+        }
       },
       "privacyManifests": {
         "NSPrivacyAccessedAPITypes": [

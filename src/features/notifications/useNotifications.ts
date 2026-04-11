@@ -3,6 +3,7 @@ import * as Notifications from "expo-notifications";
 import { useRouter } from "expo-router";
 import { useNotificationStore } from "./useNotificationStore";
 import { useFinnNotificationScheduler } from "./useFinnNotificationScheduler";
+import { setPendingFeedScroll } from "../finfeed/FinFeedScreen";
 
 /**
  * Call once at the root layout level.
@@ -19,7 +20,12 @@ export function useNotificationSetup() {
   // Handle tap on notification while app is backgrounded/killed
   useEffect(() => {
     const sub = Notifications.addNotificationResponseReceivedListener((response) => {
-      const screen = response.notification.request.content.data?.screen as string | undefined;
+      const data = response.notification.request.content.data;
+      const screen = data?.screen as string | undefined;
+      const feedScrollIndex = data?.feedScrollIndex as number | undefined;
+      if (feedScrollIndex !== undefined) {
+        setPendingFeedScroll(feedScrollIndex);
+      }
       if (screen) {
         router.push(screen as never);
       }

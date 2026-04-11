@@ -13,7 +13,10 @@
     "preview": {
       "distribution": "internal",
       "resourceClass": "medium",
-      "channel": "preview"
+      "channel": "preview",
+      "android": {
+        "buildType": "apk"
+      }
     },
     "production": {
       "autoIncrement": true,

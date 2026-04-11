@@ -98,65 +98,58 @@ export function RegisterScreen() {
         style={{ flex: 1 }}
         behavior={Platform.OS === "ios" ? "padding" : "height"}
       >
-        {/* ── Top 30% — Light header with Finn/Avatar + title ── */}
-        <View
-          style={{ flex: 0.3, justifyContent: "flex-end", alignItems: "center", paddingBottom: 24, backgroundColor: "#ffffff" }}
-        >
-          <SafeAreaView edges={["top"]} style={{ alignItems: "center" }}>
-            {avatarId ? (
-              <View
-                accessible={false}
-                style={{
-                  height: 64, width: 64, alignItems: "center", justifyContent: "center",
-                  borderRadius: 32, borderWidth: 2, borderColor: "#0891b2",
-                  backgroundColor: "#f0f9ff",
-                }}
-              >
-                <Text style={{ fontSize: 36 }}>{getAvatarById(avatarId)?.emoji ?? DEFAULT_AVATAR_EMOJI}</Text>
-              </View>
-            ) : (
-              <ExpoImage source={FINN_HELLO} accessible={false} style={{ width: 100, height: 100 }} contentFit="contain" />
-            )}
-            <Text
+        {/* ── Compact header with Finn/Avatar + title ── */}
+        <SafeAreaView edges={["top"]} style={{ alignItems: "center", paddingBottom: 8, backgroundColor: "#ffffff" }}>
+          {avatarId ? (
+            <View
+              accessible={false}
               style={{
-                textAlign: "center",
-                fontSize: 34,
-                fontWeight: "900",
-                color: "#0891b2",
-                marginTop: 4,
-                writingDirection: "rtl",
+                height: 52, width: 52, alignItems: "center", justifyContent: "center",
+                borderRadius: 26, borderWidth: 2, borderColor: "#0891b2",
+                backgroundColor: "#f0f9ff",
               }}
             >
-              FinPlay
-            </Text>
-            <Text
-              style={{
-                textAlign: "center",
-                fontSize: 14,
-                fontWeight: "700",
-                color: "#64748b",
-                writingDirection: "rtl",
-                marginTop: 4,
-              }}
-            >
-              צור חשבון והתחל ללמוד
-            </Text>
-          </SafeAreaView>
-        </View>
+              <Text style={{ fontSize: 28 }}>{getAvatarById(avatarId)?.emoji ?? DEFAULT_AVATAR_EMOJI}</Text>
+            </View>
+          ) : (
+            <ExpoImage source={FINN_HELLO} accessible={false} style={{ width: 72, height: 72 }} contentFit="contain" />
+          )}
+          <Text
+            style={{
+              textAlign: "center",
+              fontSize: 28,
+              fontWeight: "900",
+              color: "#0891b2",
+              marginTop: 2,
+              writingDirection: "rtl",
+            }}
+          >
+            FinPlay
+          </Text>
+          <Text
+            style={{
+              textAlign: "center",
+              fontSize: 13,
+              fontWeight: "700",
+              color: "#64748b",
+              writingDirection: "rtl",
+              marginTop: 2,
+            }}
+          >
+            צור חשבון והתחל ללמוד
+          </Text>
+        </SafeAreaView>
 
-        {/* ── Bottom 70% — White form area with rounded top ── */}
+        {/* ── Form area ── */}
         <View
           style={{
-            flex: 0.7,
+            flex: 1,
             backgroundColor: "#ffffff",
-            borderTopLeftRadius: 28,
-            borderTopRightRadius: 28,
-            marginTop: -24,
-            paddingTop: 20,
+            paddingTop: 8,
           }}
         >
           <ScrollView
-            contentContainerStyle={{ paddingHorizontal: 24, paddingBottom: 32 }}
+            contentContainerStyle={{ paddingHorizontal: 24, paddingBottom: 16 }}
             showsVerticalScrollIndicator={false}
             keyboardShouldPersistTaps="handled"
           >

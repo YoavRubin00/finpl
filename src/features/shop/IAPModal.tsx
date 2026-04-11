@@ -7,6 +7,7 @@ import Animated, {
   SlideOutDown,
 } from 'react-native-reanimated';
 import * as Haptics from 'expo-haptics';
+import { LinearGradient } from 'expo-linear-gradient';
 import { tapHaptic, successHaptic } from '../../utils/haptics';
 import { LottieIcon } from '../../components/ui/LottieIcon';
 import { useEconomyStore } from '../economy/useEconomyStore';
@@ -94,7 +95,7 @@ export function IAPModal({ visible, bundle, onDismiss, onPurchaseSuccess }: IAPM
         <Pressable style={styles.backdrop} onPress={onDismiss} />
 
         <Animated.View
-          entering={SlideInDown.springify().damping(18)}
+          entering={SlideInDown.springify().damping(40).stiffness(200)}
           exiting={SlideOutDown.duration(250)}
           style={[styles.sheet, { borderColor: `${accentColor}55` }]}
         >
@@ -130,15 +131,23 @@ export function IAPModal({ visible, bundle, onDismiss, onPurchaseSuccess }: IAPM
           {/* CTA */}
           <Pressable
             onPress={handlePurchase}
-            style={({ pressed }) => [styles.buyBtn, { backgroundColor: btnColor, shadowColor: btnColor }, pressed && { opacity: 0.85 }]}
+            style={({ pressed }) => [styles.buyBtn, pressed && { opacity: 0.9, transform: [{ scale: 0.97 }] }]}
+            accessibilityRole="button"
+            accessibilityLabel={isCoins ? 'המר לזהב' : 'קנה עכשיו'}
           >
-            <Text style={[styles.buyBtnText, { color: btnTextColor }]}>
-              {isCoins ? '💎 המר לזהב' : '💳 רכישה'}
-            </Text>
+            <LinearGradient
+              colors={isCoins ? ['#d4a017', '#b8860b', '#d4a017'] : ['#0a2540', '#164e63', '#0a2540']}
+              start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
+              style={styles.buyBtnGradient}
+            >
+              <Text style={styles.buyBtnText}>
+                {isCoins ? '💎 המר לזהב' : '🛒 קנה עכשיו'}
+              </Text>
+            </LinearGradient>
           </Pressable>
 
           {/* Fine print */}
-          <Text style={styles.finePrint}>תשלום דרך חנות האפליקציות.</Text>
+          <Text style={styles.finePrint}>💳 התשלום מאובטח דרך חנות האפליקציות</Text>
         </Animated.View>
       </Animated.View>
     </Modal>
@@ -222,9 +231,8 @@ const styles = StyleSheet.create({
   },
   buyBtn: {
     borderRadius: 999,
-    paddingVertical: 16,
-    paddingHorizontal: 48,
-    alignItems: 'center',
+    overflow: 'hidden',
+    shadowColor: '#0a2540',
     shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.5,
     shadowRadius: 16,
@@ -232,9 +240,17 @@ const styles = StyleSheet.create({
     marginBottom: 14,
     width: '100%',
   },
+  buyBtnGradient: {
+    borderRadius: 999,
+    paddingVertical: 18,
+    paddingHorizontal: 48,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   buyBtnText: {
-    fontSize: 17,
+    fontSize: 19,
     fontWeight: '900',
+    color: '#ffffff',
     writingDirection: 'rtl' as const,
   },
   finePrint: {

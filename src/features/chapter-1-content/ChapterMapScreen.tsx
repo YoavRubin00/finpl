@@ -126,7 +126,7 @@ export function ChapterMapScreen() {
   };
 
   const handleBack = () => {
-    router.back();
+    router.replace('/(tabs)/learn' as never);
   };
 
   return (

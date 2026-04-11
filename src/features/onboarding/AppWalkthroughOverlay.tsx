@@ -2,8 +2,7 @@ import { useState, useCallback, useEffect } from "react";
 import { Image as ExpoImage } from "expo-image";
 import { View, Text, Pressable, Modal, StyleSheet } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { useRouter } from "expo-router";
-import { LinearGradient } from "expo-linear-gradient";
+import { useRouter, useSegments } from "expo-router";
 import Animated, {
   FadeInDown,
   FadeInUp,
@@ -14,8 +13,7 @@ import Animated, {
   withTiming,
   useReducedMotion,
 } from "react-native-reanimated";
-import LottieView from "lottie-react-native";
-import { ChevronRight } from "lucide-react-native";
+import { ChevronLeft, ChevronRight } from "lucide-react-native";
 import { useTutorialStore } from "../../stores/useTutorialStore";
 import { FINN_HELLO } from "../retention-loops/finnMascotConfig";
 import { tapHaptic } from "../../utils/haptics";
@@ -39,7 +37,7 @@ interface WalkthroughStep {
 const STEPS: WalkthroughStep[] = [
   {
     title: "היי! אני קפטן שארק",
-    emoji: "🦈",
+    emoji: "",
     message: "אני אלווה אותך לאורך כל הדרך.\nבוא נעשה סיור קצר באפליקציה!",
     navigateTo: null,
     ctaLabel: "יאללה, קדימה!",
@@ -48,39 +46,39 @@ const STEPS: WalkthroughStep[] = [
   {
     title: "מסלול הלמידה",
     emoji: "📚",
-    message: "כאן מסלול הלמידה שלך — שיעורים, חידונים וסימולציות שיהפכו אותך למומחה פיננסי.",
-    navigateTo: "/(tabs)",
+    message: "כאן מסלול הלמידה שלך. שיעורים, חידונים וסימולציות שיהפכו אותך למומחה פיננסי.",
+    navigateTo: "/(tabs)/index",
     ctaLabel: "מה נלמד באפליקציה?",
     screenSignal: "learn",
   },
   {
     title: "מה נלמד באפליקציה?",
     emoji: "🎓",
-    message: "6 פרקים, מאפס ועד מומחה — כל מה שצריך כדי להבין את עולם הכסף. גלול למטה ותראה!",
-    navigateTo: "/(tabs)",
+    message: "6 פרקים, מאפס ועד מומחה. כל מה שצריך כדי להבין את עולם הכסף. גלול למטה ותראה!",
+    navigateTo: "/(tabs)/index",
     ctaLabel: "עכשיו לפיד",
-    screenSignal: "learn",
+    screenSignal: "lesson-preview",
   },
   {
     title: "הפיד היומי",
     emoji: "🎯",
     message: "כאן תמצא משחקים יומיים, דילמות כלכליות, מיתוסים ותוכן שמתעדכן כל יום.",
     navigateTo: "/(tabs)/learn",
-    ctaLabel: "תבחרו איך ידברו איתכם",
+    ctaLabel: "המשך",
     screenSignal: "feed",
   },
   {
     title: "תבחרו סגנון לשארק",
     emoji: "🦈",
-    message: "לפני שנמשיך — תבחרו איך תרצו ששארק ידבר איתכם! חכם? ישיר? חם? אנליטי?",
+    message: "לפני שנמשיך, תבחרו איך תרצו ששארק ידבר איתכם! חכם? ישיר? חם? אנליטי?",
     navigateTo: "/(tabs)/chat",
-    ctaLabel: "בחרתי!",
+    ctaLabel: "יאללה לבחור!",
     screenSignal: "chat",
   },
   {
     title: "הצ'אט של שארק",
     emoji: "💬",
-    message: "כאן תוכלו לדבר על כל מה שקשור לכסף — שארק תמיד פה לשאלות, הסברים וייעוץ אישי.",
+    message: "כאן תוכלו לדבר על כל מה שקשור לכסף. שארק תמיד פה לשאלות והסברים.",
     navigateTo: null,
     ctaLabel: "לחנות",
     screenSignal: "chat",
@@ -88,7 +86,7 @@ const STEPS: WalkthroughStep[] = [
   {
     title: "החנות",
     emoji: "🏪",
-    message: "כאן תוכל להשתמש במטבעות הזהב שצברת — אייטמים, בוסטרים ועוד. מרוויחים זהב דרך למידה!",
+    message: "כאן תוכל להשתמש במטבעות הזהב שצברת. אייטמים, בוסטרים ועוד. מרוויחים זהב דרך למידה!",
     navigateTo: "/(tabs)/shop",
     ctaLabel: "ומה עם הגשר?",
     screenSignal: "shop",
@@ -144,84 +142,113 @@ export function AppWalkthroughOverlay() {
   const setStep = useTutorialStore((s) => s.setAppWalkthroughStep);
   const completeWalkthrough = useTutorialStore((s) => s.completeAppWalkthrough);
   const router = useRouter();
+  const segments = useSegments();
   const [transitioning, setTransitioning] = useState(false);
   const reducedMotion = useReducedMotion();
+  // Delay walkthrough by 2 seconds — only for the initial step
+  const [ready, setReady] = useState(step > 0);
+  useEffect(() => {
+    if (hasSeenWalkthrough || ready) return;
+    const timer = setTimeout(() => setReady(true), 2000);
+    return () => clearTimeout(timer);
+  }, [hasSeenWalkthrough, ready]);
+  // Track whether user pressed CTA on the chat-style step and is now choosing
+  const [waitingForChatChoice, setWaitingForChatChoice] = useState(false);
   // Key to force re-mount of content for enter/exit animation between steps
   const [contentKey, setContentKey] = useState(0);
 
   const stepConfig = step >= 0 && step < STEPS.length ? STEPS[step] : null;
 
   const setActiveScreen = useTutorialStore((s) => s.setWalkthroughActiveScreen);
+  const hasChosenChatStyle = useTutorialStore((s) => s.hasChosenChatStyle);
+
+  // Auto-advance from step 4 → 5 once user has chosen a chat style
+  useEffect(() => {
+    if (step === 4 && waitingForChatChoice && hasChosenChatStyle) {
+      setWaitingForChatChoice(false);
+      setStep(5);
+      setContentKey((k) => k + 1);
+      setActiveScreen("chat");
+    }
+  }, [step, waitingForChatChoice, hasChosenChatStyle, setStep, setActiveScreen]);
+
+  /** Check if we're already on the target route to avoid redundant navigation */
+  const isAlreadyOnRoute = useCallback((target: string | null) => {
+    if (!target) return true;
+    const currentPath = "/" + segments.join("/");
+    // Normalize: /(tabs)/index → /(tabs)/index, /(tabs) → /(tabs)
+    return currentPath === target || currentPath === target.replace(/\/index$/, "");
+  }, [segments]);
+
 
   const handleNext = useCallback(() => {
     if (transitioning) return;
     tapHaptic();
 
+    // Step 4 (chat style): pressing CTA hides overlay so user can pick a style
+    if (step === 4 && !hasChosenChatStyle) {
+      setWaitingForChatChoice(true);
+      setActiveScreen("chat");
+      if (!isAlreadyOnRoute("/(tabs)/chat")) {
+        try { router.replace("/(tabs)/chat" as never); } catch {}
+      }
+      return;
+    }
+
     if (step >= STEPS.length - 1) {
       completeWalkthrough();
       setActiveScreen(null);
-      // Navigate to the general learning screen so the user sees the full path
       setTimeout(() => {
         try {
-          router.push("/(tabs)" as never);
+          // All users → drop straight into the first lesson.
+          // After finishing mod-0-1, the lesson's "continue" button
+          // will return them to the main learning map.
+          router.push("/lesson/mod-0-1?chapterId=chapter-0" as never);
         } catch {}
       }, 200);
       return;
     }
 
     const nextConfig = STEPS[step + 1];
-    if (nextConfig.navigateTo) {
+    // First update the step (instant), then navigate if needed
+    setStep(step + 1);
+    setContentKey((k) => k + 1);
+    setActiveScreen(nextConfig.screenSignal);
+
+    if (nextConfig.navigateTo && !isAlreadyOnRoute(nextConfig.navigateTo)) {
       setTransitioning(true);
       setTimeout(() => {
         try { router.replace(nextConfig.navigateTo as never); } catch {}
-        setTimeout(() => {
-          setStep(step + 1);
-          setContentKey((k) => k + 1);
-          setActiveScreen(nextConfig.screenSignal);
-          setTransitioning(false);
-        }, 400);
-      }, 100);
-    } else {
-      setStep(step + 1);
-      setContentKey((k) => k + 1);
-      setActiveScreen(nextConfig.screenSignal);
+        setTimeout(() => setTransitioning(false), 300);
+      }, 50);
     }
-  }, [step, setStep, completeWalkthrough, setActiveScreen, router, transitioning]);
+  }, [step, setStep, completeWalkthrough, setActiveScreen, router, transitioning, isAlreadyOnRoute, hasChosenChatStyle]);
 
   const handleBack = useCallback(() => {
     if (transitioning || step <= 0) return;
     tapHaptic();
 
     const prevConfig = STEPS[step - 1];
-    if (prevConfig.navigateTo) {
-      setTransitioning(true);
-      setTimeout(() => {
-        try { router.replace(prevConfig.navigateTo as never); } catch {}
-        setTimeout(() => {
-          setStep(step - 1);
-          setContentKey((k) => k + 1);
-          setActiveScreen(prevConfig.screenSignal);
-          setTransitioning(false);
-        }, 400);
-      }, 100);
-    } else {
-      setStep(step - 1);
-      setContentKey((k) => k + 1);
-      setActiveScreen(prevConfig.screenSignal);
-    }
-  }, [step, setStep, setActiveScreen, router, transitioning]);
+    setStep(step - 1);
+    setContentKey((k) => k + 1);
+    setActiveScreen(prevConfig.screenSignal);
+    // No navigation on back — the overlay covers the screen anyway
+  }, [step, setStep, setActiveScreen, transitioning]);
 
   const handleSkip = useCallback(() => {
     tapHaptic();
     completeWalkthrough();
   }, [completeWalkthrough]);
 
-  if (hasSeenWalkthrough || step < 0 || !stepConfig) return null;
+  if (hasSeenWalkthrough || step < 0 || !stepConfig || !ready) return null;
+
+  // Hide overlay while user is choosing chat style
+  if (waitingForChatChoice && !hasChosenChatStyle) return null;
 
   const enterAnim = reducedMotion ? undefined : FadeIn.duration(280);
 
   return (
-    <Modal visible transparent animationType="fade" statusBarTranslucent accessibilityViewIsModal>
+    <Modal visible transparent animationType="fade" statusBarTranslucent accessibilityViewIsModal onRequestClose={handleSkip}>
       <View style={s.overlay}>
         {/* ── Top: Step title pill with counter ── */}
         <SafeAreaView edges={["top"]} style={{ alignItems: "center", paddingTop: 12 }}>
@@ -230,7 +257,7 @@ export function AppWalkthroughOverlay() {
             entering={reducedMotion ? undefined : FadeInDown.duration(350)}
             style={s.titlePill}
           >
-            <Text style={s.titleEmoji}>{stepConfig.emoji}</Text>
+            {stepConfig.emoji ? <Text style={s.titleEmoji}>{stepConfig.emoji}</Text> : null}
             <Text style={s.titleText} accessibilityRole="header">{stepConfig.title}</Text>
             <View style={s.stepCounter}>
               <Text style={s.stepCounterText}>{`${step + 1}/${STEPS.length}`}</Text>
@@ -274,46 +301,65 @@ export function AppWalkthroughOverlay() {
               ))}
             </View>
 
-            {/* CTA row — back arrow (right in RTL) + big blue glow button */}
-            <View style={s.ctaRow}>
-              {step > 0 && (
+            {/* Navigation row — back (right) + next (left) */}
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 10, width: "100%" }}>
+              {step > 0 ? (
                 <Pressable
                   onPress={handleBack}
                   disabled={transitioning}
-                  style={({ pressed }) => [s.backBtn, pressed && { transform: [{ scale: 0.93 }] }, transitioning && { opacity: 0.4 }]}
+                  style={{
+                    width: 52,
+                    height: 52,
+                    borderRadius: 16,
+                    backgroundColor: "#ffffff",
+                    borderWidth: 2,
+                    borderColor: "#38bdf8",
+                    borderBottomWidth: 4,
+                    borderBottomColor: "#0ea5e9",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    shadowColor: "#0ea5e9",
+                    shadowOpacity: 0.2,
+                    shadowRadius: 6,
+                    shadowOffset: { width: 0, height: 2 },
+                    elevation: 4,
+                    opacity: transitioning ? 0.4 : 1,
+                  }}
                   accessibilityRole="button"
                   accessibilityLabel="חזרה לשלב הקודם"
-                  hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
                 >
-                  <ChevronRight size={22} color="#0ea5e9" />
+                  <ChevronRight size={24} color="#0ea5e9" />
                 </Pressable>
+              ) : (
+                <View style={{ width: 52 }} />
               )}
               <Pressable
                 onPress={handleNext}
                 disabled={transitioning}
-                style={({ pressed }) => [s.ctaBtn, { flex: 1 }, pressed && { transform: [{ scale: 0.97 }] }, transitioning && { opacity: 0.5 }]}
+                style={{
+                  flex: 1,
+                  height: 52,
+                  backgroundColor: "#38bdf8",
+                  borderRadius: 16,
+                  alignItems: "center",
+                  justifyContent: "center",
+                  flexDirection: "row-reverse",
+                  gap: 6,
+                  borderBottomWidth: 4,
+                  borderBottomColor: "#0ea5e9",
+                  shadowColor: "#38bdf8",
+                  shadowOpacity: 0.4,
+                  shadowRadius: 10,
+                  shadowOffset: { width: 0, height: 3 },
+                  elevation: 6,
+                  opacity: transitioning ? 0.5 : 1,
+                }}
                 accessibilityRole="button"
                 accessibilityLabel={`${stepConfig.ctaLabel}, שלב ${step + 1} מתוך ${STEPS.length}`}
                 accessibilityState={{ disabled: transitioning }}
               >
-                <LinearGradient
-                  colors={["#0ea5e9", "#38bdf8", "#0ea5e9"]}
-                  start={{ x: 0, y: 0 }}
-                  end={{ x: 1, y: 1 }}
-                  style={s.ctaGradient}
-                >
-                  <Text style={s.ctaText}>{stepConfig.ctaLabel}</Text>
-                  {!reducedMotion && (
-                    <View style={{ width: 32, height: 32, overflow: "hidden" }} accessible={false}>
-                      <LottieView
-                        source={require("../../../assets/lottie/wired-flat-3381-arrows-left-hover-pointing.json")}
-                        style={{ width: 32, height: 32 }}
-                        autoPlay
-                        loop
-                      />
-                    </View>
-                  )}
-                </LinearGradient>
+                <Text style={{ color: "#ffffff", fontSize: 17, fontWeight: "900" }}>{stepConfig.ctaLabel}</Text>
+                <ChevronLeft size={20} color="#ffffff" />
               </Pressable>
             </View>
 
@@ -457,61 +503,6 @@ const s = StyleSheet.create({
     backgroundColor: "#38bdf8",
     width: 18,
     borderRadius: 3,
-  },
-
-  /* ── CTA row (RTL) ── */
-  ctaRow: {
-    flexDirection: "row-reverse",
-    alignItems: "center",
-    gap: 8,
-    width: "100%",
-  },
-
-  /* ── Back button ── */
-  backBtn: {
-    width: 42,
-    height: 42,
-    borderRadius: 21,
-    backgroundColor: "#ffffff",
-    borderWidth: 1.5,
-    borderColor: "#7dd3fc",
-    borderBottomWidth: 3,
-    borderBottomColor: "#38bdf8",
-    alignItems: "center" as const,
-    justifyContent: "center" as const,
-    shadowColor: "#0ea5e9",
-    shadowOpacity: 0.15,
-    shadowRadius: 6,
-    shadowOffset: { width: 0, height: 2 },
-    elevation: 3,
-  },
-
-  /* ── CTA — uniform glow button ── */
-  ctaBtn: {
-    borderRadius: 16,
-    marginBottom: 10,
-    shadowColor: "#38bdf8",
-    shadowOpacity: 0.45,
-    shadowRadius: 12,
-    shadowOffset: { width: 0, height: 4 },
-    elevation: 10,
-  },
-  ctaGradient: {
-    borderRadius: 16,
-    height: 52,
-    paddingHorizontal: 20,
-    flexDirection: "row-reverse",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 10,
-    borderBottomWidth: 3,
-    borderBottomColor: "#0284c7",
-  },
-  ctaText: {
-    fontSize: 17,
-    fontWeight: "900",
-    color: "#ffffff",
-    letterSpacing: 0.3,
   },
 
   /* ── Skip ── */

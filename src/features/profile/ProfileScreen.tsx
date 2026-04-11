@@ -44,7 +44,6 @@ import { ProfilingFlow } from "../onboarding/ProfilingFlow";
 import { useTheme } from "../../hooks/useTheme";
 import { ProBadge } from "../../components/ui/ProBadge";
 import { useStreakCelebration } from "../../hooks/useStreakCelebration";
-import { DailyLearningSummary } from "../daily-summary/DailyLearningSummary";
 import { useWalkthroughGlowTarget } from "../onboarding/AppWalkthroughOverlay";
 
 const GOAL_LABELS: Record<string, string> = {
@@ -360,10 +359,6 @@ export function ProfileScreen() {
             </Animated.View>
           )}
 
-          {/* Daily Learning Summary */}
-          <View style={{ marginBottom: 12 }}>
-            <DailyLearningSummary />
-          </View>
 
           {/* ── Actions ── */}
           <Animated.View style={[actionsStyle, { gap: 12 }]}>

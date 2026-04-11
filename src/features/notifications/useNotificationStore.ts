@@ -55,7 +55,7 @@ const CONTENT: Record<NotificationChannelId, Notifications.NotificationContentIn
   dailyChallenge: {
     title: "🎯 האתגר היומי מחכה לך!",
     body: "דילמה פיננסית חדשה — בוא לפתור ולצבור XP!",
-    data: { screen: "/(tabs)/learn" },
+    data: { screen: "/(tabs)/learn", feedScrollIndex: 0 },
   },
   marketHook: {
     title: "📊 השוקים זזים!",

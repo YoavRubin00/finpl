@@ -1099,7 +1099,12 @@ function OnboardingSlider({
       onPanResponderTerminationRequest: () => false,
       onPanResponderGrant: (evt) => {
         if (!interactedRef.current) { interactedRef.current = true; propsRef.current.onInteract?.(); }
-        updateVal(evt.nativeEvent.pageX);
+        // Re-measure on touch start — iOS measureInWindow from onLayout can be stale in nested ScrollViews
+        const pageX = evt.nativeEvent.pageX;
+        trackRef.current?.measureInWindow((x: number, _y: number, width: number) => {
+          layoutRef.current = { x, width };
+          updateVal(pageX);
+        });
       },
       onPanResponderMove: (evt) => updateVal(evt.nativeEvent.pageX),
     })
@@ -1254,7 +1259,7 @@ function SimOnboardingStep({ onNext }: { onNext: () => void }) {
             <View style={{ flexDirection: "row-reverse", alignItems: "center", gap: 8, backgroundColor: "rgba(8,145,178,0.06)", borderRadius: 14, padding: 12, borderWidth: 1, borderColor: "rgba(8,145,178,0.12)", width: "100%" }}>
               <ExpoImage source={FINN_STANDARD} style={{ width: 36, height: 36 }} contentFit="contain" />
               <Text style={{ flex: 1, fontSize: 13, fontWeight: "600", color: "#475569", writingDirection: "rtl", textAlign: "right", lineHeight: 19 }}>
-                גם אם עכשיו לא מבינים — אנחנו נלמד הכל יחד!
+                גם אם עכשיו לא מבינים, אנחנו נלמד הכל יחד!
               </Text>
             </View>
           </View>

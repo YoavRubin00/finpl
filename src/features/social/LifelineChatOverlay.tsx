@@ -39,6 +39,7 @@ import { buildSystemPrompt } from "../chat/buildChatPrompt";
 import { getConceptLabel } from "./LifelineModal";
 import type { CompanionId } from "../auth/types";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 /* ── Daily usage tracking ── */
 const DAILY_KEY = "lifeline_chat_date";
@@ -120,6 +121,7 @@ export function LifelineChatOverlay({ visible, conceptTag, onClose }: Props) {
   const allCompleted = Object.values(progress).flatMap((cp) => cp.completedModules);
   const currentChapter = useChapterStore((s) => s.currentChapterId);
   const conceptLabel = getConceptLabel(conceptTag);
+  const safeInsets = useSafeAreaInsets();
   const isPro = useSubscriptionStore((s) => s.isPro());
 
   // Check daily limit on open
@@ -237,8 +239,8 @@ export function LifelineChatOverlay({ visible, conceptTag, onClose }: Props) {
           behavior={Platform.OS === "ios" ? "padding" : undefined}
         >
           {/* Header */}
-          <Animated.View entering={FadeIn.duration(200)} style={st.header}>
-            <Pressable onPress={onClose} style={st.closeBtn} hitSlop={12}>
+          <Animated.View entering={FadeIn.duration(200)} style={[st.header, { paddingTop: safeInsets.top + 10 }]}>
+            <Pressable onPress={onClose} style={st.closeBtn} hitSlop={12} accessibilityRole="button" accessibilityLabel="סגור צ׳אט">
               <X size={22} color="#0e7490" />
             </Pressable>
             <View style={st.avatarHeader}>

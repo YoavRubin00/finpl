@@ -6,6 +6,7 @@ initSentry();
 import { Slot, useRouter, useSegments, useRootNavigationState } from "expo-router";
 import { useEffect, useState } from "react";
 import { View, Text, TextInput } from "react-native";
+import { setAudioModeAsync } from "expo-audio";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { useFonts } from "@expo-google-fonts/heebo";
 import {
@@ -87,6 +88,15 @@ export default function RootLayout() {
 
 
   useNotificationSetup();
+
+  // ── iOS audio session: allow sounds even when device is on Silent ──
+  useEffect(() => {
+    setAudioModeAsync({
+      playsInSilentMode: true,
+      interruptionMode: "doNotMix",
+      shouldPlayInBackground: false,
+    }).catch(() => { /* fail silently — not supported on web / older OS */ });
+  }, []);
 
   // ── RevenueCat init ──
   useEffect(() => {

@@ -184,6 +184,12 @@ function getDailyQuote(): { text: string; author: string; icon: string } {
 /** Module-level ref so WelcomeCard can scroll the feed list */
 let _feedListScrollToIndex: ((index: number) => void) | null = null;
 
+/** Pending scroll-to index — set externally, consumed on next focus */
+export let _pendingFeedScrollIndex: number | null = null;
+export function setPendingFeedScroll(index: number) {
+  _pendingFeedScrollIndex = index;
+}
+
 // -- Welcome Screen (full-screen first card with Finn + daily quote) --
 function WelcomeCard({ height }: { height: number }) {
   const router = useRouter();
@@ -546,7 +552,7 @@ export function FinFeedScreen() {
         try {
           flatListRef.current?.scrollToIndex({ index: scrollIdx, animated: true });
         } catch { /* safe — index may be out of range */ }
-      }, 2500);
+      }, 3000);
       return () => clearInterval(interval);
     }, 1500);
     return () => clearTimeout(delay);
@@ -583,6 +589,15 @@ export function FinFeedScreen() {
   // Show streak popup on focus — but DON'T reshuffle feed (preserves scroll position)
   useFocusEffect(
     useCallback(() => {
+      // Consume pending scroll (e.g. from daily challenge completion)
+      if (_pendingFeedScrollIndex !== null && listHeight > 0) {
+        const idx = _pendingFeedScrollIndex;
+        _pendingFeedScrollIndex = null;
+        setTimeout(() => {
+          flatListRef.current?.scrollToIndex({ index: idx, animated: true });
+        }, 300);
+      }
+
       // Show streak popup once per day, only on first app entry (skip during walkthrough)
       if (streak > 0 && !streakCheckedThisSession && useTutorialStore.getState().hasSeenAppWalkthrough) {
         streakCheckedThisSession = true;
@@ -790,12 +805,7 @@ export function FinFeedScreen() {
           />
         )}
         {item.type === "daily-quiz" && (
-          <View>
-            <Text style={{ fontSize: 18, fontWeight: "800", color: "#0f172a", textAlign: "right", writingDirection: "rtl", paddingHorizontal: 16, marginBottom: 8 }}>
-              מבזק פיננסי יומי
-            </Text>
-            <DailyQuizCard quiz={item.quiz} isActive={isActive} />
-          </View>
+          <DailyQuizCard quiz={item.quiz} isActive={isActive} />
         )}
         {item.type === "daily-dilemma" && (
           <View>

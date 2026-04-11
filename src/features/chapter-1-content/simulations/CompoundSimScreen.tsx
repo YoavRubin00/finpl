@@ -7,7 +7,6 @@ import {
     Dimensions,
     PanResponder,
     Pressable,
-    TextInput,
 } from 'react-native';
 import Animated, {
     useSharedValue,
@@ -435,8 +434,6 @@ function StepperInput({
     step: number;
     onChange: (v: number) => void;
 }) {
-    const [editText, setEditText] = useState<string | null>(null);
-
     const handleDecrement = () => {
         const next = Math.max(0, value - step);
         onChange(next);
@@ -446,14 +443,6 @@ function StepperInput({
     const handleIncrement = () => {
         onChange(value + step);
         tapHaptic();
-    };
-
-    const handleSubmitEdit = () => {
-        if (editText !== null) {
-            const parsed = parseInt(editText.replace(/[^0-9]/g, ''), 10);
-            onChange(isNaN(parsed) ? 0 : parsed);
-            setEditText(null);
-        }
     };
 
     return (
@@ -498,46 +487,22 @@ function StepperInput({
                     <Text style={{ color: SIM.dark, fontSize: 20, fontWeight: '700' }}>-</Text>
                 </Pressable>
 
-                {/* Value display / editable */}
-                {editText !== null ? (
-                    <TextInput
-                        value={editText}
-                        onChangeText={setEditText}
-                        onBlur={handleSubmitEdit}
-                        onSubmitEditing={handleSubmitEdit}
-                        keyboardType="numeric"
-                        autoFocus
-                        accessibilityLabel={label}
+                {/* Value display (read-only — no keyboard) */}
+                <View
+                    style={{ flex: 1, paddingVertical: 10 }}
+                    accessibilityLabel={`${label}: ${formatCurrency(value)}`}
+                >
+                    <Text
                         style={{
-                            flex: 1,
                             color: SIM.textPrimary,
-                            fontSize: 15,
-                            fontWeight: '700',
+                            fontSize: 16,
+                            fontWeight: '800',
                             textAlign: 'center',
-                            paddingVertical: 8,
                         }}
-                        selectTextOnFocus
-                    />
-                ) : (
-                    <Pressable
-                        onPress={() => setEditText(String(value))}
-                        accessibilityRole="button"
-                        accessibilityLabel={`ערוך ${label}`}
-                        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                        style={{ flex: 1, paddingVertical: 10 }}
                     >
-                        <Text
-                            style={{
-                                color: SIM.textPrimary,
-                                fontSize: 16,
-                                fontWeight: '800',
-                                textAlign: 'center',
-                            }}
-                        >
-                            {formatCurrency(value)}
-                        </Text>
-                    </Pressable>
-                )}
+                        {formatCurrency(value)}
+                    </Text>
+                </View>
 
                 {/* Plus button */}
                 <Pressable

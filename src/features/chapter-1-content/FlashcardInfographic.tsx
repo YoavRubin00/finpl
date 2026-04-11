@@ -15,7 +15,7 @@ import type { AnimationObject } from "lottie-react-native";
 
 /** Finn character illustrations — shown as full-screen transition between cards */
 export const FINN_MAP: Record<string, ImageSourcePropType> = {
-  "fc-0-3-2": { uri: 'https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/infographics/finn-inflation.png' },      // פרק 0 אינפלציה — תיבת אוצר נשחקת (בין כוח קנייה לנפגעים)
+  // fc-0-3-2 removed — Finn transition not useful in inflation module
   "fc-1-3-2": { uri: 'https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/infographics/finn-installments.png' },   // אשראי מתגלגל — כריש עם עוגן
   "fc-3-15-1": { uri: 'https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/infographics/finn-inflation.png' },     // אינפלציה — תיבת אוצר נשחקת
   "fc-4-23-1": { uri: 'https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/infographics/finn-passive.png' },       // דיבידנד — דגי זהב פסיביים

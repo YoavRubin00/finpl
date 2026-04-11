@@ -13,6 +13,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import LottieView from 'lottie-react-native';
 import { useRouter } from 'expo-router';
+import { setPendingFeedScroll } from '../finfeed/FinFeedScreen';
 import { tapHaptic, successHaptic, errorHaptic } from '../../utils/haptics';
 // glossary rendering available if needed: import { renderGlossaryText } from '../glossary/renderGlossaryText';
 import { ConfettiExplosion } from '../../components/ui/ConfettiExplosion';
@@ -276,7 +277,7 @@ export const DilemmaCard = React.memo(function DilemmaCard({ isActive }: Props) 
               </Animated.View>
             )}
             <Pressable
-              onPress={() => { setShowCelebration(false); router.replace("/(tabs)/learn" as never); }}
+              onPress={() => { setShowCelebration(false); setPendingFeedScroll(0); router.replace("/(tabs)/learn" as never); }}
               style={styles.celebrationBtn}
               accessibilityRole="button"
               accessibilityLabel="חזרה לפיד"

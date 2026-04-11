@@ -12,6 +12,7 @@ export const chapter1Data: Chapter = {
       title: 'ריבית דריבית',
       videoHook:
         'תראו את הגרף הזה... רגע, מה?!',
+      videoHookAsset: { uri: 'https://pub-34f62012f7364bb5bc3b560ea61b72ce.r2.dev/video/hook/module-4.mp4' },
       interactiveIntro:
         'תדמיינו כסף שעובד בשבילכם גם כשאתם ישנים. נגלה יחד איך המנגנון המתמטי הפשוט של ריבית דריבית יכול להפוך סכומים קטנים לחיסכון משמעותי לאורך זמן, ולהיות המנוע שידחוף את העתיד הכלכלי שלכם קדימה.',
       introAudio: { uri: 'https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/audio/intros/mod-1-1-v2.mp3' },
@@ -462,7 +463,7 @@ export const chapter1Data: Chapter = {
       title: 'תזרים ותקציב',
       videoHook:
         'הזמנתי סושי ב-200 שקל... ואז פתחתי את האפליקציה של הבנק.',
-      videoHookAsset: { uri: 'https://pub-34f62012f7364bb5bc3b560ea61b72ce.r2.dev/video/hook/hook-1-1.mp4' },
+      videoHookAsset: { uri: 'https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/video/hook/module-1-1.mp4' },
       interactiveIntro:
         'תזרים יציב הוא הבסיס לצמיחה. תלמדו איך לחלק את העוגה בין הוצאות שוטפות וחיסכון, תוך כדי שמירה על המרחב ליהנות מהחיים ולבנות בסיס חזק לעתיד. הפורמולה המנצחת מתחילה כאן.',
       introAudio: { uri: 'https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/audio/intros/mod-1-4-v2.mp3' },

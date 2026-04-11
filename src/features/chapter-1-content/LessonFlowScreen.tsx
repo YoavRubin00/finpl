@@ -233,7 +233,7 @@ function renderBoldText(text: string, onTermPress?: (term: string) => void): Rea
       result.push(
         <Text
           key={key++}
-          style={{ fontWeight: "900", color: "#0ea5e9", textDecorationLine: "underline", textDecorationStyle: "dashed" }}
+          style={{ fontWeight: "900", color: "#0ea5e9", textDecorationLine: "underline", textDecorationStyle: "solid", textDecorationColor: "#0ea5e9" }}
           onPress={() => onTermPress?.(lookupTerm)}
           suppressHighlighting
         >
@@ -271,6 +271,7 @@ function VideoHookPlayer({ videoUri, hookText, onFinish, unitColors }: {
   const [isFastMode, setIsFastMode] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const finishedRef = useRef(false);
+  const insets = useSafeAreaInsets();
 
   const safeFinish = useCallback(() => {
     if (finishedRef.current) return;
@@ -354,9 +355,11 @@ function VideoHookPlayer({ videoUri, hookText, onFinish, unitColors }: {
           <Text style={{ fontSize: 16, fontWeight: "900", color: "#ffffff" }}>⚡ x1.8</Text>
         </View>
       )}
+      {/* Safe area top overlay — trim video behind notch */}
+      <View style={{ position: "absolute", top: 0, left: 0, right: 0, height: insets.top, backgroundColor: "rgba(0,0,0,0.6)" }} pointerEvents="none" />
       {/* Hook text overlay — bottom */}
       {hookText ? (
-        <View style={{ position: "absolute", bottom: 0, left: 0, right: 0, paddingHorizontal: 20, paddingBottom: 40, paddingTop: 60 }} pointerEvents="none">
+        <View style={{ position: "absolute", bottom: 0, left: 0, right: 0, paddingHorizontal: 20, paddingBottom: Math.max(40, insets.bottom + 16), paddingTop: 60 }} pointerEvents="none">
           <LinearGradient colors={["transparent", "rgba(0,0,0,0.85)"]} style={StyleSheet.absoluteFill} />
           <Text style={{ fontSize: 22, fontWeight: "900", color: "#ffffff", writingDirection: "rtl", textAlign: "right", lineHeight: 32, textShadowColor: "rgba(0,0,0,0.8)", textShadowRadius: 8, textShadowOffset: { width: 0, height: 2 } }}>
             {hookText}
@@ -366,7 +369,7 @@ function VideoHookPlayer({ videoUri, hookText, onFinish, unitColors }: {
       {/* Skip button — right side for RTL */}
       <Pressable
         onPress={safeFinish}
-        style={{ position: "absolute", top: 50, right: 16, backgroundColor: "rgba(0,0,0,0.5)", borderRadius: 20, paddingHorizontal: 16, paddingVertical: 8 }}
+        style={{ position: "absolute", top: insets.top + 12, right: 16, backgroundColor: "rgba(0,0,0,0.5)", borderRadius: 20, paddingHorizontal: 16, paddingVertical: 8 }}
         accessibilityRole="button"
         accessibilityLabel="דלג על הסרטון"
       >
@@ -408,7 +411,7 @@ function FlashcardCard({
   const cardStyle = useEntranceAnimation(slideInLeft, { delay: 0 });
   const { playSound } = useSoundEffect();
   const [finnTipDismissed, setFinnTipDismissed] = useState(false);
-  const showFinnPopup = showFinnTip && index === 0 && !finnTipDismissed;
+  const showFinnPopup = showFinnTip && index === 1 && !finnTipDismissed;
 
   // Dive mode state
   const [diveStep, setDiveStep] = useState(0);
@@ -1889,6 +1892,14 @@ export function LessonFlowScreen() {
   const { id, chapterId, replay } = useLocalSearchParams<{ id: string; chapterId?: string; replay?: string }>();
   const isReplay = replay === '1';
   const router = useRouter();
+  /** Safe back: go back if possible, otherwise fall back to tabs home */
+  function safeGoBack() {
+    if (router.canGoBack()) {
+      router.back();
+    } else {
+      router.replace("/(tabs)/index" as never);
+    }
+  }
   const safeInsets = useSafeAreaInsets();
   const [activeGlossaryTerm, setActiveGlossaryTerm] = useState<string | null>(null);
   const [showChatOverlay, setShowChatOverlay] = useState(false);
@@ -1974,27 +1985,22 @@ export function LessonFlowScreen() {
   const [showProGate, setShowProGate] = useState(false);
 
   // Guard: show locked modal immediately if module isn't accessible
-  useEffect(() => {
-    if (mod && !isModuleAccessible) {
-      setShowProGate(true);
-    }
-  }, [mod, isModuleAccessible]);
-
   /** After hook video → check access before proceeding */
-  function advanceFromVideo() {
+  const advanceFromVideo = useCallback(() => {
     if (isModuleAccessible) {
       setPhase("intro");
     } else {
+      setPhase("intro"); // exit video phase so proGateModal can render
       setShowProGate(true);
     }
-  }
+  }, [isModuleAccessible]);
 
   /** Navigate to user's next sequential module */
   function goToNextSequentialModule() {
     // After completing the first module (mod-0-1), go to the general
     // learning page so the user sees the unlocked next module on the map.
     if (id === 'mod-0-1') {
-      router.replace("/(tabs)" as never);
+      router.replace("/(tabs)/index" as never);
       return;
     }
     for (const ch of ALL_CHAPTERS_ORDERED) {
@@ -2008,7 +2014,7 @@ export function LessonFlowScreen() {
         return;
       }
     }
-    router.replace("/(tabs)" as never);
+    router.replace("/(tabs)/index" as never);
   }
 
   const [phase, setPhase] = useState<FlowPhase>(() => {
@@ -2021,6 +2027,13 @@ export function LessonFlowScreen() {
   useEffect(() => {
     setVideoPlaying(phase === "video");
   }, [phase]);
+
+  // Show Pro gate for locked modules — but only after video finishes
+  useEffect(() => {
+    if (mod && !isModuleAccessible && phase !== "video") {
+      setShowProGate(true);
+    }
+  }, [mod, isModuleAccessible, phase]);
   const [flashcardIndex, setFlashcardIndex] = useState(0);
   const [finnTransitionSource, setFinnTransitionSource] = useState<{ uri: string } | null>(null);
   const [finnTipText, setFinnTipText] = useState<string | null>(null);
@@ -2427,7 +2440,7 @@ export function LessonFlowScreen() {
 
   // ── PRO Gate Modal (shown after hook video for inaccessible modules) ──
   const proGateModal = (
-    <Modal visible={showProGate} transparent animationType="fade" accessibilityViewIsModal>
+    <Modal visible={showProGate} transparent animationType="fade" accessibilityViewIsModal onRequestClose={() => { setShowProGate(false); safeGoBack(); }}>
       <View style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.6)", justifyContent: "center", alignItems: "center", paddingHorizontal: 28 }} accessibilityViewIsModal>
         <View style={{ backgroundColor: "#fff", borderRadius: 24, padding: 28, width: "100%", alignItems: "center", gap: 16 }}>
           <ExpoImage source={FINN_STANDARD} accessible={false}
@@ -2463,7 +2476,7 @@ export function LessonFlowScreen() {
             <Text style={{ fontSize: 16, fontWeight: "900", color: "#6b7280", writingDirection: "rtl" }}>המשך מאיפה שהפסקתי</Text>
             <ChevronLeft size={18} color="#6b7280" />
           </Pressable>
-          <Pressable onPress={() => { setShowProGate(false); router.replace("/(tabs)" as never); }} accessibilityRole="button" accessibilityLabel="חזור">
+          <Pressable onPress={() => { setShowProGate(false); safeGoBack(); }} accessibilityRole="button" accessibilityLabel="חזור">
             <Text style={{ fontSize: 14, fontWeight: "600", color: "#64748b", writingDirection: "rtl" }}>חזור</Text>
           </Pressable>
         </View>
@@ -2572,9 +2585,7 @@ export function LessonFlowScreen() {
               {mod.title}
             </Text>
             <AnimatedPressable
-              onPress={() => {
-                router.replace("/(tabs)" as never);
-              }}
+              onPress={safeGoBack}
               style={{
                 flexDirection: "row",
                 alignItems: "center",
@@ -2657,7 +2668,7 @@ export function LessonFlowScreen() {
             const barBorder = isOnFire ? '#ef4444' : '#d1d5db';
             const barHeight = isOnFire ? 16 : 14;
             return (
-              <View style={{ marginBottom: (phase === "flashcards" && (mod.flashcards[flashcardIndex]?.isComic || mod.flashcards[flashcardIndex]?.isMeme)) ? 2 : 6, transform: [{ scaleX: -1 }] }}>
+              <View style={{ marginTop: 8, marginBottom: (phase === "flashcards" && (mod.flashcards[flashcardIndex]?.isComic || mod.flashcards[flashcardIndex]?.isMeme)) ? 2 : 6, transform: [{ scaleX: -1 }] }}>
                 {/* Outer glow wrapper for fire effect */}
                 {isOnFire && (
                   <View style={{ position: 'absolute', top: -4, left: -4, right: -4, bottom: -4, borderRadius: 999, shadowColor: '#f97316', shadowOpacity: 0.9, shadowRadius: 20, shadowOffset: { width: 0, height: 0 }, elevation: 6 }} />
@@ -2732,7 +2743,7 @@ export function LessonFlowScreen() {
               total={mod.flashcards.length}
               onNext={handleFlashcardNext}
               onPrev={handleFlashcardPrev}
-              onClose={() => router.replace("/(tabs)" as never)}
+              onClose={() => router.replace("/(tabs)/index" as never)}
               onSkipAll={() => { mediumHaptic(); setFlashcardIndex(mod.flashcards.length - 1); }}
               unitColors={unitColors}
               onTermPress={setActiveGlossaryTerm}
@@ -2953,7 +2964,7 @@ export function LessonFlowScreen() {
                 }
               }}
               onBack={() => {
-                router.replace("/(tabs)" as never);
+                router.replace("/(tabs)/index" as never);
               }}
             />
             </ScrollView>
@@ -3298,7 +3309,7 @@ export function LessonFlowScreen() {
       {/* ── Mid-lesson Finn checkpoint ── */}
       {showMidCheckpoint && mod && (
         <Pressable style={[StyleSheet.absoluteFill, { zIndex: 9996, backgroundColor: "rgba(0,0,0,0.4)", justifyContent: "flex-end" }]} onPress={() => { setShowMidCheckpoint(false); setFlashcardIndex((prev) => prev + 1); }}>
-          <Animated.View entering={FadeInUp.duration(400)} style={{ backgroundColor: "#f0f9ff", borderTopLeftRadius: 28, borderTopRightRadius: 28, padding: 22, paddingBottom: 28, borderWidth: 1.5, borderColor: "#bae6fd", borderBottomWidth: 0, maxHeight: "70%" }}>
+          <Animated.View entering={FadeInUp.duration(400)} style={{ backgroundColor: "#f0f9ff", borderTopLeftRadius: 28, borderTopRightRadius: 28, padding: 22, paddingBottom: Math.max(28, safeInsets.bottom + 12), borderWidth: 1.5, borderColor: "#bae6fd", borderBottomWidth: 0, maxHeight: "70%" }}>
             <View style={{ flexDirection: "row-reverse", alignItems: "center", gap: 12, marginBottom: 14 }}>
               <ExpoImage source={FINN_STANDARD} accessible={false} style={{ width: 64, height: 64 }} contentFit="contain" />
               <View style={{ flex: 1 }}>
@@ -3312,23 +3323,23 @@ export function LessonFlowScreen() {
             </View>
             {/* Previous card chips */}
             <View style={{ flexDirection: "row-reverse", flexWrap: "wrap", gap: 8, marginBottom: 14 }}>
-              {mod.flashcards.slice(0, flashcardIndex).map((card, i) => {
+              {mod.flashcards.slice(0, flashcardIndex).filter(c => !c.isMeme).map((card, i) => {
                 const raw = card.text.replace(/\[\[([^|\]]+)\|?[^\]]*\]\]/g, '$1');
                 const colon = raw.indexOf(':');
                 const title = colon > 0 && colon < 40 ? raw.slice(0, colon).trim() : raw.slice(0, 25).trim() + '...';
                 return (
-                  <Pressable key={card.id} onPress={() => { tapHaptic(); setCheckpointReturnIndex(flashcardIndex); setShowMidCheckpoint(false); setFlashcardIndex(i); }} style={{ backgroundColor: "#e0f2fe", borderRadius: 12, paddingHorizontal: 14, paddingVertical: 8, borderWidth: 1, borderColor: "#7dd3fc" }}>
+                  <Pressable key={card.id} onPress={() => { tapHaptic(); setCheckpointReturnIndex(flashcardIndex); setShowMidCheckpoint(false); setFlashcardIndex(i); }} style={{ backgroundColor: "#e0f2fe", borderRadius: 12, paddingHorizontal: 14, paddingVertical: 8, borderWidth: 1, borderColor: "#7dd3fc" }} accessibilityRole="button" accessibilityLabel={`חזור ל: ${title}`}>
                     <Text style={{ fontSize: 13, fontWeight: "700", color: "#0369a1", writingDirection: "rtl" }}>{title}</Text>
                   </Pressable>
                 );
               })}
             </View>
             {/* Chat button */}
-            <Pressable onPress={() => { setShowMidCheckpoint(false); setShowChatOverlay(true); }} style={{ flexDirection: "row-reverse", alignItems: "center", justifyContent: "center", gap: 8, backgroundColor: "#dbeafe", borderRadius: 14, paddingVertical: 12, marginBottom: 10, borderWidth: 1, borderColor: "#93c5fd" }}>
+            <Pressable onPress={() => { setShowMidCheckpoint(false); setShowChatOverlay(true); }} style={{ flexDirection: "row-reverse", alignItems: "center", justifyContent: "center", gap: 8, backgroundColor: "#dbeafe", borderRadius: 14, paddingVertical: 12, marginBottom: 10, borderWidth: 1, borderColor: "#93c5fd" }} accessibilityRole="button" accessibilityLabel="שאלו את שארק">
               <Text style={{ fontSize: 15, fontWeight: "800", color: "#1e40af" }}>{"שאלו את שארק 🦈"}</Text>
             </Pressable>
             {/* Continue button */}
-            <Pressable onPress={() => { setShowMidCheckpoint(false); setFlashcardIndex((prev) => prev + 1); }} style={{ flexDirection: "row-reverse", alignItems: "center", justifyContent: "center", gap: 6, backgroundColor: "#38bdf8", borderRadius: 14, paddingVertical: 12, borderBottomWidth: 3, borderBottomColor: "#0284c7" }}>
+            <Pressable onPress={() => { setShowMidCheckpoint(false); setFlashcardIndex((prev) => prev + 1); }} style={{ flexDirection: "row-reverse", alignItems: "center", justifyContent: "center", gap: 6, backgroundColor: "#38bdf8", borderRadius: 14, paddingVertical: 12, borderBottomWidth: 3, borderBottomColor: "#0284c7" }} accessibilityRole="button" accessibilityLabel="הכל ברור, קדימה">
               <Text style={{ fontSize: 15, fontWeight: "800", color: "#ffffff" }}>{"הכל ברור, קדימה! ✓"}</Text>
             </Pressable>
           </Animated.View>
@@ -3358,7 +3369,7 @@ export function LessonFlowScreen() {
 
       {/* ── Break farewell message ── */}
       {showBreakMessage && (
-        <Pressable style={[StyleSheet.absoluteFill, { zIndex: 9995, backgroundColor: "rgba(0,0,0,0.6)", justifyContent: "center", alignItems: "center", padding: 24 }]} onPress={() => { setShowBreakMessage(false); setShowPostCelebration(false); router.replace("/(tabs)" as never); }}>
+        <Pressable style={[StyleSheet.absoluteFill, { zIndex: 9995, backgroundColor: "rgba(0,0,0,0.6)", justifyContent: "center", alignItems: "center", padding: 24 }]} onPress={() => { setShowBreakMessage(false); setShowPostCelebration(false); router.replace("/(tabs)/index" as never); }}>
           <Animated.View entering={FadeInUp.duration(400)} style={{ backgroundColor: "#ffffff", borderRadius: 28, padding: 28, width: "100%", maxWidth: 340, alignItems: "center" }}>
             <ExpoImage source={FINN_EMPATHIC} accessible={false} style={{ width: 100, height: 100, marginBottom: 16 }} contentFit="contain" />
             <Text style={{ fontSize: 20, fontWeight: "900", color: "#0f172a", textAlign: "center", marginBottom: 8 }}>{"מצפה לראותך פה מחר! ❤️"}</Text>

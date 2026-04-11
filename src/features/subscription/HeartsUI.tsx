@@ -189,7 +189,7 @@ export function OutOfHeartsModal({ visible, onDismiss, onUpgrade }: OutOfHeartsM
                     </View>
 
                     {/* Gem instant refill CTA */}
-                    <Pressable onPress={handleGemRefill} style={styles.gemRefillBtn}>
+                    <Pressable onPress={handleGemRefill} style={styles.gemRefillBtn} accessibilityRole="button" accessibilityLabel="מלא לבבות עם ג׳מס">
                         <Text style={styles.gemRefillBtnText}>
                             {gems >= HEART_REFILL_GEM_COST
                                 ? `מלא מיד — ${HEART_REFILL_GEM_COST} ג'מס`
@@ -206,6 +206,9 @@ export function OutOfHeartsModal({ visible, onDismiss, onUpgrade }: OutOfHeartsM
                             !canAffordRefill && styles.coinRefillBtnDisabled,
                         ]}
                         disabled={!canAffordRefill}
+                        accessibilityRole="button"
+                        accessibilityLabel="מלא לבבות עם מטבעות"
+                        accessibilityState={{ disabled: !canAffordRefill }}
                     >
                         <View style={{ flex: 1, alignItems: 'flex-end' }}>
                             <View style={{ flexDirection: 'row-reverse', alignItems: 'center', gap: 4 }}>
@@ -213,8 +216,9 @@ export function OutOfHeartsModal({ visible, onDismiss, onUpgrade }: OutOfHeartsM
                                 <GoldCoinIcon size={18} />
                             </View>
                             {!canAffordRefill && (
-                                <View style={{ flexDirection: 'row-reverse', alignItems: 'center', gap: 4 }}>
-                                    <Text style={styles.coinRefillSubtext}>(חסרים {HEART_REFILL_COIN_COST - coins}</Text>
+                                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, direction: 'rtl' }}>
+                                    <Text style={styles.coinRefillSubtext}>(חסרים</Text>
+                                    <Text style={styles.coinRefillSubtext}>{HEART_REFILL_COIN_COST - coins}</Text>
                                     <GoldCoinIcon size={14} />
                                     <Text style={styles.coinRefillSubtext}>)</Text>
                                 </View>
@@ -224,7 +228,7 @@ export function OutOfHeartsModal({ visible, onDismiss, onUpgrade }: OutOfHeartsM
                     </Pressable>
 
                     {/* Upgrade CTA */}
-                    <Pressable onPress={handleUpgrade} style={styles.upgradeBtn}>
+                    <Pressable onPress={handleUpgrade} style={styles.upgradeBtn} accessibilityRole="button" accessibilityLabel="שדרגו ל-Pro — לבבות אינסופיים">
                         <Text style={styles.upgradeBtnText}>
                             שדרגו ל-Pro — לבבות אינסופיים
                         </Text>
@@ -232,7 +236,7 @@ export function OutOfHeartsModal({ visible, onDismiss, onUpgrade }: OutOfHeartsM
                     </Pressable>
 
                     {/* Wait button */}
-                    <Pressable onPress={onDismiss} style={styles.waitBtn}>
+                    <Pressable onPress={onDismiss} style={styles.waitBtn} accessibilityRole="button" accessibilityLabel="אחכה לחידוש לבבות">
                         <Text style={styles.waitBtnText}>אחכה ⏳</Text>
                     </Pressable>
                 </Animated.View>

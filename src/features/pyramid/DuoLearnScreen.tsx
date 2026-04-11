@@ -991,6 +991,13 @@ export function DuoLearnScreen() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // Open roadmap modal during walkthrough lesson-preview step
+  useEffect(() => {
+    if (walkthroughScreen === 'lesson-preview') {
+      setRoadmapVisible(true);
+    }
+  }, [walkthroughScreen]);
+
   // Slow auto-scroll during walkthrough learn step so user sees there's more content
   useEffect(() => {
     if (walkthroughScreen !== 'learn') return;
@@ -1051,9 +1058,22 @@ export function DuoLearnScreen() {
           style={styles.scrollView}
         >
 
-          {/* Header Row: Streak (Left) | Greeting (Right) */}
+          {/* Header Row: Greeting+Finn (Right) | Streak (Left) */}
           <View style={[styles.greetingRow, { justifyContent: "space-between", paddingHorizontal: 16, paddingVertical: 10 }]}>
-            {/* Left: Streak Flame */}
+            {/* Right side: Greeting + Finn */}
+            <View style={{ flexDirection: "row-reverse", alignItems: "center", gap: 10 }}>
+              <ExpoImage source={FINN_STANDARD} accessible={false} style={{ width: 56, height: 56 }} contentFit="contain" />
+              <View style={{ alignItems: "flex-end" }}>
+                <Text style={[styles.greetingText, { fontSize: 15, color: "#64748b" }]}>
+                  {getGreeting()}
+                </Text>
+                <Text style={[styles.greetingText, { fontSize: 20, color: "#0f172a" }]}>
+                  {displayName || "אורח"}
+                </Text>
+              </View>
+            </View>
+
+            {/* Left side: Streak Flame */}
             <View style={{ alignItems: "center", flexDirection: "row-reverse", gap: 4 }}>
               <View style={{ width: 36, height: 36 }} accessible={false}>
                 <LottieView
@@ -1067,19 +1087,6 @@ export function DuoLearnScreen() {
               <Text style={{ fontSize: 18, fontWeight: "900", color: streak >= 8 ? "#a855f7" : streak >= 4 ? "#3b82f6" : "#f97316" }}>
                 {streak}
               </Text>
-            </View>
-
-            {/* Right: Greeting */}
-            <View style={{ flexDirection: "row-reverse", alignItems: "center", gap: 10 }}>
-              <View style={{ alignItems: "flex-end" }}>
-                <Text style={[styles.greetingText, { fontSize: 15, color: "#64748b" }]}>
-                  {getGreeting()}
-                </Text>
-                <Text style={[styles.greetingText, { fontSize: 20, color: "#0f172a" }]}>
-                  {displayName || "אורח"}
-                </Text>
-              </View>
-              <ExpoImage source={FINN_STANDARD} accessible={false} style={{ width: 56, height: 56 }} contentFit="contain" />
             </View>
           </View>
 

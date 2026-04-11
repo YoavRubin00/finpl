@@ -10,6 +10,7 @@ import {
   ActivityIndicator,
   Image,
   Linking,
+  Platform,
 } from "react-native";
 import LottieView from "lottie-react-native";
 import { FINN_STANDARD } from "../retention-loops/finnMascotConfig";
@@ -298,12 +299,12 @@ export function PricingScreen() {
               <Text style={styles.proofText}>
                 משתמשי פרו בעלי פי{" "}
                 <Text style={styles.proofHighlight}>3.1X</Text>
-                {"\n"}סיכויים לסיים את הקורס!
+                {"\n"}סיכויים לסיים את הלמידה!
               </Text>
             </Animated.View>
             
             {/* Added spacer to let body overlap smoothly without clipping text */}
-            <View style={{ height: 32 }} />
+            <View style={{ height: 12 }} />
           </SafeAreaView>
         </LinearGradient>
 
@@ -398,15 +399,21 @@ export function PricingScreen() {
                   </Text>
                 ) : null}
 
-                {/* Auto-renew disclosure (Apple 3.1.2(a) — required for auto-renewable subs) */}
+                {/* Auto-renew disclosure — platform-specific */}
                 <Text style={[styles.disclosure, { color: theme.textMuted }]}>
-                  המנוי מתחדש אוטומטית בסוף כל תקופה אלא אם בוטל לפחות 24 שעות לפני סוף התקופה. התשלום יחויב דרך חשבון Apple ID. ניתן לנהל ולבטל את המנוי בהגדרות החשבון ב-App Store.
+                  {Platform.OS === "ios"
+                    ? "המנוי מתחדש אוטומטית בסוף כל תקופה אלא אם בוטל לפחות 24 שעות לפני סוף התקופה. התשלום יחויב דרך חשבון Apple ID. ניתן לנהל ולבטל את המנוי בהגדרות החשבון ב-App Store."
+                    : "המנוי מתחדש אוטומטית בסוף כל תקופה אלא אם בוטל לפחות 24 שעות לפני סוף התקופה. התשלום יחויב דרך חשבון Google. ניתן לנהל ולבטל את המנוי בהגדרות המנויים ב-Google Play."}
                 </Text>
 
                 {/* Required: Terms of Use (EULA) + Privacy Policy links */}
                 <View style={styles.legalRow}>
                   <Pressable
-                    onPress={() => Linking.openURL("https://www.apple.com/legal/internet-services/itunes/dev/stdeula/")}
+                    onPress={() => Linking.openURL(
+                      Platform.OS === "ios"
+                        ? "https://www.apple.com/legal/internet-services/itunes/dev/stdeula/"
+                        : "https://play.google.com/intl/en/about/play-terms/"
+                    )}
                     accessibilityRole="link"
                     accessibilityLabel="תנאי שימוש"
                     hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
@@ -415,7 +422,7 @@ export function PricingScreen() {
                   </Pressable>
                   <Text style={[styles.legalSeparator, { color: theme.textMuted }]}> · </Text>
                   <Pressable
-                    onPress={() => Linking.openURL("https://yrubin.github.io/finpl/privacy-policy.html")}
+                    onPress={() => Linking.openURL("https://yoavrubin00.github.io/finpl/privacy-policy.html")}
                     accessibilityRole="link"
                     accessibilityLabel="מדיניות פרטיות"
                     hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
@@ -450,8 +457,8 @@ const styles = StyleSheet.create({
 
   // Hero
   heroGradient: {
-    paddingBottom: 16,
-    minHeight: 180,
+    paddingBottom: 4,
+    minHeight: 160,
     position: "relative",
     overflow: "hidden",
   },
@@ -467,17 +474,17 @@ const styles = StyleSheet.create({
   },
   mascotContainer: {
     alignItems: "center",
-    marginTop: -8,
+    marginTop: -12,
   },
   mascot: {
-    width: 220,
-    height: 220,
+    width: 160,
+    height: 160,
   },
   proofContainer: {
     alignItems: "center",
     paddingHorizontal: 32,
-    paddingBottom: 24,
-    marginTop: 0,
+    paddingBottom: 8,
+    marginTop: -4,
   },
   proofText: {
     fontSize: 18,
@@ -521,7 +528,7 @@ const styles = StyleSheet.create({
     flex: 1,
     borderTopLeftRadius: 36,
     borderTopRightRadius: 36,
-    marginTop: -40,
+    marginTop: -20,
     zIndex: 1,
   },
 

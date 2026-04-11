@@ -299,7 +299,7 @@ export function MoreScreen() {
                 <MoreRow
                   isFirst
                   icon={<SafeLottie source={require('../../../assets/lottie/wired-flat-1432-erase-hover-pinch.json')} style={styles.lottieIcon} autoPlay loop  />}
-                  label="איפוס התקדמות (Dev)"
+                  label="איפוס התקדמות"
                   onPress={() => {
                     Alert.alert("איפוס", "כל ההתקדמות תימחק. בטוח?", [
                       { text: "ביטול", style: "cancel" },

@@ -248,12 +248,12 @@ export const PREMIUM_LEARNING_ITEMS: FeedPremiumLearning[] = [
     moduleTitle: 'מחיר מול ערך',
     diveMode: true,
     zoomRegions: [
-      [0, 0, 0.85],         // Full view
-      [0, 0, 0.85],         // Top-left — "מחיר הוא תשלום"
+      [0, -15, 0.82],       // Full view
+      [0, -15, 0.82],       // Top-left — "מחיר הוא תשלום"
       [0, 30, 2.3],         // Center — chart
-      [0, 0, 0.85],         // Bottom-right — "שוק שותף אמוציונלי"
-      [0, 0, 0.85],         // Bottom — "מרווח ביטחון"
-      [0, 0, 0.85],         // Back to full
+      [0, -15, 0.82],       // Bottom-right — "שוק שותף אמוציונלי"
+      [0, -15, 0.82],       // Bottom — "מרווח ביטחון"
+      [0, -15, 0.82],       // Back to full
     ],
     infographics: GRAHAM_PRICE_VS_VALUE_CARDS,
     finnExplanations: [

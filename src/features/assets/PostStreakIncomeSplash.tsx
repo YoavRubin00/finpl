@@ -13,7 +13,8 @@ import { FINN_STANDARD } from "../retention-loops/finnMascotConfig";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useRealAssetsStore } from "./useRealAssetsStore";
 import { useAuthStore } from "../auth/useAuthStore";
-import { useChapterStore } from "../chapter-1-content/useChapterStore";
+import { useEconomyStore } from "../economy/useEconomyStore";
+import { getLevelFromXP } from "../../utils/progression";
 import { AnimatedPressable } from "../../components/ui/AnimatedPressable";
 import { useRouter } from "expo-router";
 import { GoldCoinIcon } from "../../components/ui/GoldCoinIcon";
@@ -54,10 +55,9 @@ export function PostStreakIncomeSplash() {
         const currentPending = Math.floor(store.pendingIncome());
         const currentHasAssets = Object.keys(store.ownedAssets).length > 0;
 
-        // Don't show "earn while sleeping" promo until chapter 2+
-        const chapterId = useChapterStore.getState().currentChapterId;
-        const isEarlyStage = chapterId === 'chapter-0' || chapterId === 'chapter-1';
-        if (!currentHasAssets && isEarlyStage) return;
+        // Don't show "earn while sleeping" promo until level 2+
+        const userLevel = getLevelFromXP(useEconomyStore.getState().xp);
+        if (!currentHasAssets && userLevel < 2) return;
 
         setHasAssetsAtShow(currentHasAssets);
 

@@ -252,7 +252,7 @@ function GemBundleCard({ bundle, onPress, index }: { bundle: GemBundle; onPress:
           end={{ x: 0, y: 1 }}
           style={styles2.gemPriceBtn}
         >
-          <Text style={styles2.gemPriceBtnText}>{bundle.priceLabel}</Text>
+          <Text style={styles2.gemPriceBtnText}>{bundle.priceLabel} ➤</Text>
         </LinearGradient>
       </AnimatedPressable>
     </Animated.View>
