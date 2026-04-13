@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import { View, Text, Pressable, StyleSheet, Platform, Modal } from "react-native";
 import { useRouter } from "expo-router";
-import { Flame, Heart, Crown, Plus, Settings } from "lucide-react-native";
+import { Flame, Heart, Crown, Plus, Settings, CalendarDays } from "lucide-react-native";
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -34,6 +34,7 @@ import { ProBadge } from "./ProBadge";
 import { LottieIcon } from "./LottieIcon";
 import { GoldCoinIcon } from "./GoldCoinIcon";
 import { useWalkthroughGlowTarget } from "../../features/onboarding/AppWalkthroughOverlay";
+import { StreakCalendarModal } from "../../features/streak/StreakCalendarModal";
 
 const AnimatedCircle = Animated.createAnimatedComponent(Circle);
 
@@ -192,6 +193,7 @@ export function GlobalWealthHeader({ compact = false }: GlobalWealthHeaderProps)
   const xp = useEconomyStore((st) => st.xp);
   const coins = useEconomyStore((st) => st.coins);
   const gems = useEconomyStore((st) => st.gems);
+  const streak = useEconomyStore((st) => st.streak);
   const isPro = useSubscriptionStore((st) => st.tier === "pro" && st.status === "active");
   const avatarId = useAuthStore((st) => st.profile?.avatarId ?? null);
   const avatarDef = getAvatarById(avatarId);
@@ -209,6 +211,7 @@ export function GlobalWealthHeader({ compact = false }: GlobalWealthHeaderProps)
 
   const { level, layer, layerName, progressToNextLevel, xpToNextLevel } = getPyramidStatus(xp);
   const [showLevelPopup, setShowLevelPopup] = useState(false);
+  const [showStreakCalendar, setShowStreakCalendar] = useState(false);
 
   const navigateToShop = useCallback(() => {
     tapHaptic();
@@ -406,6 +409,29 @@ export function GlobalWealthHeader({ compact = false }: GlobalWealthHeaderProps)
         </ResourcePill>
         </View>
 
+        {/* Streak pill */}
+        {streak > 0 && (
+          <View style={walkthroughActive ? { opacity: 0.3 } : undefined} pointerEvents={walkthroughActive ? "none" : "auto"}>
+            <ResourcePill
+              icon={
+                <LottieIcon
+                  source={require("../../../assets/lottie/wired-flat-2804-fire-flame-hover-pinch.json") as number}
+                  size={22}
+                  autoPlay
+                  loop
+                />
+              }
+              glowColor="#f97316"
+              onPress={() => setShowStreakCalendar(true)}
+              trackedValue={streak}
+              accessibilityLabel={`רצף ${streak} ימים — פתח לוח שנה`}
+            >
+              <AnimatedNumber value={streak} color="#f97316" />
+              <CalendarDays size={13} color="#f97316" style={{ marginLeft: 2, opacity: 0.7 }} />
+            </ResourcePill>
+          </View>
+        )}
+
         {/* Level badge with XP progress ring */}
         <Pressable
           onPress={() => {
@@ -500,6 +526,11 @@ export function GlobalWealthHeader({ compact = false }: GlobalWealthHeaderProps)
         progress={progressToNextLevel}
         xpToNext={xpToNextLevel}
         xp={xp}
+      />
+
+      <StreakCalendarModal
+        visible={showStreakCalendar}
+        onClose={() => setShowStreakCalendar(false)}
       />
     </View>
   );

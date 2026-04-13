@@ -336,6 +336,12 @@ export function ShopScreen() {
       else if (pendingItem.id === 'heart-refill-1') {
         const s = useSubscriptionStore.getState();
         if (s.hearts < 5) useSubscriptionStore.setState({ hearts: s.hearts + 1 });
+      } else if (pendingItem.id === 'streak-freeze') {
+        useEconomyStore.getState().addStreakFreezes(1);
+        successHaptic();
+      } else if (pendingItem.id === 'streak-freeze-bundle') {
+        useEconomyStore.getState().addStreakFreezes(3);
+        successHaptic();
       } else if (isAvatarItem(pendingItem)) {
         const rawId = pendingItem.id.replace('avatar-', '');
         addOwnedAvatar(rawId); setAvatar(rawId); successHaptic();

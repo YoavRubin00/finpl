@@ -35,11 +35,8 @@ import { useFireCalc } from './useFireCalc';
 import { LIFESTYLE_PRESETS } from './fireCalcData';
 import { SIM5, GRADE_COLORS5, SHADOW_STRONG, SHADOW_LIGHT, RTL, TYPE5, sim5Styles } from './simTheme';
 import { formatShekel } from '../../../utils/format';
-import { useSimReward } from '../../../hooks/useSimReward';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
-const SIM_COMPLETE_XP = 35;
-const SIM_COMPLETE_COINS = 40;
 
 /* ── Chapter-5 gradient for SimLottieBackground ── */
 const _th5 = getChapterTheme('chapter-5');
@@ -449,7 +446,6 @@ export function FIRECalcScreen({ onComplete }: FIRECalcScreenProps) {
     reset,
   } = useFireCalc();
 
-  useSimReward(state.isComplete, SIM_COMPLETE_XP, SIM_COMPLETE_COINS);
 
   const CH5_LOTTIE: [ReturnType<typeof require>, ReturnType<typeof require>] = [
     require('../../../../assets/lottie/wired-flat-2804-fire-flame-hover-pinch.json'),

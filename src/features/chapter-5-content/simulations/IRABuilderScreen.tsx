@@ -41,10 +41,7 @@ import {
   GRADE_HEBREW,
 } from './simTheme';
 import type { IRAType, IRAScore } from './iraBuilderTypes';
-import { useSimReward } from '../../../hooks/useSimReward';
 
-const SIM_COMPLETE_XP = 25;
-const SIM_COMPLETE_COINS = 30;
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
 const BAR_MAX_HEIGHT = 150;
@@ -431,7 +428,6 @@ export function IRABuilderScreen({ onComplete }: IRABuilderScreenProps) {
     reset,
   } = useIRABuilder();
 
-  useSimReward(state.isComplete, SIM_COMPLETE_XP, SIM_COMPLETE_COINS);
 
   const rewardsGranted = useRef(false);
 

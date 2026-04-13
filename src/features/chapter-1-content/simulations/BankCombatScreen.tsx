@@ -23,10 +23,7 @@ import { SimLottieBackground } from '../../../components/ui/SimLottieBackground'
 import { GlowCard } from '../../../components/ui/GlowCard';
 import { getChapterTheme } from '../../../constants/theme';
 import { SIM, GRADE_COLORS, GRADE_HEBREW, RTL, TYPE, simStyles } from './simTheme';
-import { useSimReward } from '../../../hooks/useSimReward';
 
-const SIM_COMPLETE_XP = 25;
-const SIM_COMPLETE_COINS = 30;
 
 /* ── Chapter theme — only .gradient used for SimLottieBackground ── */
 const _th1 = getChapterTheme('chapter-1');
@@ -360,7 +357,6 @@ export function BankCombatScreen({ onComplete }: { onComplete: () => void }) {
         resetGame,
     } = useBankCombat(bankCombatConfig);
 
-  useSimReward(state.isComplete, SIM_COMPLETE_XP, SIM_COMPLETE_COINS);
     
     useEffect(() => {
         const player = createAudioPlayer({ uri: 'https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/audio/sims/sim-bank-combat.mp3' });

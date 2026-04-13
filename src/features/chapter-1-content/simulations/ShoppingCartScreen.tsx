@@ -22,10 +22,7 @@ import { shoppingCartConfig } from './shoppingCartData';
 import type { ShoppingCartScore, ShoppingCartGrade, ShoppingItem } from './shoppingCartTypes';
 import { FINN_HAPPY } from '../../retention-loops/finnMascotConfig';
 import { SIM, GRADE_COLORS, GRADE_HEBREW, RTL, TYPE, simStyles } from './simTheme';
-import { useSimReward } from '../../../hooks/useSimReward';
 
-const SIM_COMPLETE_XP = 25;
-const SIM_COMPLETE_COINS = 30;
 
 /* ── Chapter theme (gradient only) ── */
 const _th1 = getChapterTheme('chapter-1');
@@ -418,7 +415,6 @@ export function ShoppingCartScreen({ onComplete }: { onComplete: () => void }) {
         resetGame,
     } = useShoppingCart(shoppingCartConfig);
 
-  useSimReward(state.isComplete, SIM_COMPLETE_XP, SIM_COMPLETE_COINS);
     
     useEffect(() => {
         const player = createAudioPlayer({ uri: 'https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/audio/sims/sim-shopping-cart.mp3' });

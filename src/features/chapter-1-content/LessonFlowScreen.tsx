@@ -1,4 +1,5 @@
 import { useState, useMemo, useCallback, useEffect, useRef } from "react";
+import { useShallow } from "zustand/react/shallow";
 import { Image as ExpoImage } from "expo-image";
 import { View, Text, SafeAreaView, ScrollView, Image, StyleSheet, Modal, Pressable, Dimensions, ActivityIndicator } from "react-native";
 import { useIsFocused } from "@react-navigation/native";
@@ -1922,7 +1923,7 @@ export function LessonFlowScreen() {
   const heartsCount = useSubscriptionStore((s) => s.getHearts());
   const recordQuizAnswer = useChapterStore((s) => s.recordQuizAnswer);
   const completeModule = useChapterStore((s) => s.completeModule);
-  const progress = useChapterStore((s) => s.progress);
+  const progress = useChapterStore(useShallow((s) => s.progress));
   const setCurrentChapter = useChapterStore((s) => s.setCurrentChapter);
   const setCurrentModule = useChapterStore((s) => s.setCurrentModule);
   const quizResults = useChapterStore(

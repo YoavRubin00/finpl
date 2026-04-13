@@ -22,12 +22,9 @@ import { getChapterTheme } from '../../../constants/theme';
 import { useTaxGrinder } from './useTaxGrinder';
 import { SIM2, GRADE_COLORS2, SHADOW_STRONG, RTL, TYPE2, sim2Styles } from './simTheme';
 import type { TaxGrinderScore } from './taxGrinderTypes';
-import { useSimReward } from '../../../hooks/useSimReward';
 
 const _th2 = getChapterTheme('chapter-2');
 
-const SIM_COMPLETE_XP = 30;
-const SIM_COMPLETE_COINS = 30;
 
 const BAR_MAX_HEIGHT = 180;
 const BAR_WIDTH = 90;
@@ -408,7 +405,6 @@ export function TaxGrinderScreen({ onComplete }: { onComplete: () => void }) {
         score,
     } = useTaxGrinder();
 
-  useSimReward(state.isComplete, SIM_COMPLETE_XP, SIM_COMPLETE_COINS);
     const [showConfetti, setShowConfetti] = useState(false);
     const [showScore, setShowScore] = useState(false);
     const [rewardsGranted, setRewardsGranted] = useState(false);

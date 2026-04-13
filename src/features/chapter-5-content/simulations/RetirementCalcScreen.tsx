@@ -41,7 +41,6 @@ import { SimLottieBackground } from '../../../components/ui/SimLottieBackground'
 import { SIM5, GRADE_COLORS5, GRADE_HEBREW, SHADOW_STRONG, SHADOW_LIGHT, RTL, TYPE5, sim5Styles } from './simTheme';
 import { getChapterTheme } from '../../../constants/theme';
 import { formatShekel } from '../../../utils/format';
-import { useSimReward } from '../../../hooks/useSimReward';
 
 /* ── Chapter-5 gradient (for SimLottieBackground) ── */
 const _th5 = getChapterTheme('chapter-5');
@@ -65,8 +64,6 @@ const LOTTIE_COIN = require('../../../../assets/lottie/wired-flat-291-coin-dolla
 const LOTTIE_TARGET = require('../../../../assets/lottie/wired-flat-458-goal-target-hover-hit.json');
 const LOTTIE_ARROW = require('../../../../assets/lottie/wired-flat-3381-arrows-left-hover-pointing.json');
 
-const SIM_COMPLETE_XP = 35;
-const SIM_COMPLETE_COINS = 40;
 
 // ── Sub-components ────────────────────────────────────────────────────
 
@@ -593,7 +590,6 @@ export function RetirementCalcScreen({ onComplete }: RetirementCalcScreenProps) 
   } = useRetirementCalc();
 
   const rewardsGranted = useRef(false);
-  useSimReward(state.isComplete, SIM_COMPLETE_XP, SIM_COMPLETE_COINS);
   const [phase, setPhase] = useState<'select' | 'sim'>('select');
 
   // Hero age animation

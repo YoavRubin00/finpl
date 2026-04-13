@@ -27,8 +27,6 @@ import { getChapterTheme } from '../../../constants/theme';
 import { SIM4, GRADE_COLORS4, SHADOW_STRONG, SHADOW_LIGHT, RTL, TYPE4, sim4Styles } from './simTheme';
 import { formatShekel } from '../../../utils/format';
 
-const SIM_COMPLETE_XP = 30;
-const SIM_COMPLETE_COINS = 40;
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
 

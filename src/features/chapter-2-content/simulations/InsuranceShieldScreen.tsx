@@ -28,7 +28,6 @@ import {
 import { getChapterTheme } from '../../../constants/theme';
 import { useInsuranceShield } from './useInsuranceShield';
 import { SIM2, GRADE_COLORS2, GRADE_HEBREW, SHADOW_STRONG, SHADOW_LIGHT, RTL, TYPE2, sim2Styles } from './simTheme';
-import { useSimReward } from '../../../hooks/useSimReward';
 import { useTimeoutCleanup } from '../../../hooks/useTimeoutCleanup';
 import type {
   InsuranceType,
@@ -42,8 +41,6 @@ const { width: SCREEN_W } = Dimensions.get('window');
 const SWIPE_THRESHOLD = 100;
 const SWIPE_OUT_X = SCREEN_W * 1.5;
 
-const SIM_COMPLETE_XP = 30;
-const SIM_COMPLETE_COINS = 30;
 
 /* ── Chapter-2 theme (keep only for gradient) ── */
 const _th2 = getChapterTheme('chapter-2');
@@ -520,7 +517,6 @@ export function InsuranceShieldScreen({
 
   const safeTimeout = useTimeoutCleanup();
 
-  useSimReward(state.isComplete, SIM_COMPLETE_XP, SIM_COMPLETE_COINS);
   const [showResult, setShowResult] = useState(false);
   const [lastResult, setLastResult] = useState<{
     covered: boolean;

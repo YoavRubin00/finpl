@@ -37,8 +37,6 @@ import {
 import type { StockOption, IndexRaceScore } from './indexRaceTypes';
 import { formatShekel } from '../../../utils/format';
 
-const SIM_COMPLETE_XP = 30;
-const SIM_COMPLETE_COINS = 40;
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
 const CHART_WIDTH = SCREEN_WIDTH - 80;

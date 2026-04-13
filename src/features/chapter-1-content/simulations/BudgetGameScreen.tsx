@@ -25,12 +25,9 @@ import type { DilemmaOption, BudgetScore } from './budgetTypes';
 import { SimLottieBackground } from '../../../components/ui/SimLottieBackground';
 import { getChapterTheme } from '../../../constants/theme';
 import { SIM, GRADE_COLORS, GRADE_HEBREW, RTL, TYPE, simStyles } from './simTheme';
-import { useSimReward } from '../../../hooks/useSimReward';
 
 const CH = getChapterTheme('chapter-1');
 
-const SIM_COMPLETE_XP = 20;
-const SIM_COMPLETE_COINS = 30;
 
 /* ── Lottie assets ── */
 const LOTTIE_CHART = require('../../../../assets/lottie/wired-flat-153-bar-chart-hover-pinch.json');
@@ -536,7 +533,6 @@ export function BudgetGameScreen({ onComplete }: { onComplete: () => void }) {
         resetGame,
     } = useBudgetGame(budgetGameConfig);
 
-  useSimReward(state.isComplete, SIM_COMPLETE_XP, SIM_COMPLETE_COINS);
     
     useEffect(() => {
         const player = createAudioPlayer({ uri: 'https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/audio/sims/sim-budget-game.mp3' });

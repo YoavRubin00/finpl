@@ -28,7 +28,6 @@ import { GlowCard } from '../../../components/ui/GlowCard';
 import { ConfettiExplosion } from '../../../components/ui/ConfettiExplosion';
 import { tapHaptic, heavyHaptic } from '../../../utils/haptics';
 import { SPRING_SNAPPY } from '../../../utils/animations';
-import { useSimReward } from '../../../hooks/useSimReward';
 import { useCrisisTimeline, type CrisisTimelineResult } from './useCrisisTimeline';
 import { CRISIS_EVENTS } from './crisisTimelineData';
 import { SIM_LOTTIE } from '../../shared-sim/simLottieMap';
@@ -36,8 +35,6 @@ import { FINN_STANDARD, FINN_HAPPY } from '../../retention-loops/finnMascotConfi
 import { SIM4, GRADE_COLORS4, GRADE_HEBREW, SHADOW_STRONG, SHADOW_LIGHT, RTL, TYPE4, sim4Styles } from './simTheme';
 import { getChapterTheme } from '../../../constants/theme';
 
-const SIM_COMPLETE_XP = 30;
-const SIM_COMPLETE_COINS = 40;
 
 const _th4 = getChapterTheme('chapter-4');
 
@@ -389,7 +386,6 @@ export function CrisisTimelineScreen({ onComplete }: CrisisTimelineScreenProps) 
     reset,
   } = useCrisisTimeline();
 
-  useSimReward(state.isComplete, SIM_COMPLETE_XP, SIM_COMPLETE_COINS);
 
   const cardScale = useSharedValue(1);
 

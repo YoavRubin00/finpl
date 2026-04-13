@@ -24,10 +24,7 @@ import { getChapterTheme } from '../../../constants/theme';
 import { useETFBuilder } from './useETFBuilder';
 import { SIM4, GRADE_COLORS4, GRADE_HEBREW, SHADOW_STRONG, SHADOW_LIGHT, RTL, TYPE4, sim4Styles } from './simTheme';
 import type { ETFProduct } from './etfBuilderTypes';
-import { useSimReward } from '../../../hooks/useSimReward';
 
-const SIM_COMPLETE_XP = 30;
-const SIM_COMPLETE_COINS = 40;
 
 /* ── Chapter 4 gradient (for SimLottieBackground) ── */
 const _th4 = getChapterTheme('chapter-4');
@@ -374,7 +371,6 @@ function ScoreScreen({
 export function ETFBuilderScreen({ onComplete }: ETFBuilderScreenProps) {
   const { state, config, totalExpenseRatio, score, addETF, removeETF, complete, reset } =
     useETFBuilder();
-  useSimReward(state.isComplete, SIM_COMPLETE_XP, SIM_COMPLETE_COINS);
   const [expandedETF, setExpandedETF] = useState<string | null>(null);
   const rewardsGranted = useRef(false);
 

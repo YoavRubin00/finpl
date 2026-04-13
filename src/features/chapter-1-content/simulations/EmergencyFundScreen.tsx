@@ -24,10 +24,7 @@ import { useEmergencyFund, MonthResult } from './useEmergencyFund';
 import { emergencyFundConfig, savingsOptions, SavingsOption, FUND_TARGET } from './emergencyFundData';
 import type { EmergencyFundScore, EmergencyFundGrade, EmergencyEvent } from './emergencyFundTypes';
 import { SIM, GRADE_COLORS, GRADE_HEBREW, SHADOW_STRONG, SHADOW_LIGHT, RTL, TYPE, simStyles } from './simTheme';
-import { useSimReward } from '../../../hooks/useSimReward';
 
-const SIM_COMPLETE_XP = 25;
-const SIM_COMPLETE_COINS = 30;
 
 /* ── Chapter theme (ocean-blue) — kept only for gradient ── */
 const _th1 = getChapterTheme('chapter-1');
@@ -556,7 +553,6 @@ export function EmergencyFundScreen({ onComplete }: { onComplete: () => void }) 
         resetGame,
     } = useEmergencyFund(emergencyFundConfig);
 
-  useSimReward(state.isComplete, SIM_COMPLETE_XP, SIM_COMPLETE_COINS);
     
     useEffect(() => {
         const player = createAudioPlayer({ uri: 'https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/audio/sims/sim-emergency-fund.mp3' });

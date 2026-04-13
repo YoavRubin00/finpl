@@ -40,10 +40,7 @@ import {
   GRADE_COLORS4,
 } from './simTheme';
 import type { StockSorterScore, SortQuestion } from './stockSorterTypes';
-import { useSimReward } from '../../../hooks/useSimReward';
 
-const SIM_COMPLETE_XP = 20;
-const SIM_COMPLETE_COINS = 30;
 
 /* ── Lottie assets ── */
 const LOTTIE_CHART = require('../../../../assets/lottie/wired-flat-153-bar-chart-hover-pinch.json');
@@ -312,7 +309,6 @@ export function StockSorterScreen({ onComplete }: StockSorterScreenProps) {
     reset,
   } = useStockSorter();
 
-  useSimReward(state.isComplete, SIM_COMPLETE_XP, SIM_COMPLETE_COINS);
 
   const rewardsGranted = useRef(false);
 

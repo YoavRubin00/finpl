@@ -92,6 +92,10 @@ export function ShopModal() {
         if (current < 5) {
           useSubscriptionStore.setState({ hearts: current + 1 });
         }
+      } else if (pendingItem.id === "streak-freeze") {
+        useEconomyStore.getState().addStreakFreezes(1);
+      } else if (pendingItem.id === "streak-freeze-bundle") {
+        useEconomyStore.getState().addStreakFreezes(3);
       }
     }
     setPendingItem(null);

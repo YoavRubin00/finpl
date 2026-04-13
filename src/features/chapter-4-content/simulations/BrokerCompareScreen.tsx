@@ -17,10 +17,7 @@ import { useBrokerCompare } from './useBrokerCompare';
 import { SIM4, SHADOW_STRONG, SHADOW_LIGHT, RTL, sim4Styles, GRADE_COLORS4 } from './simTheme';
 import type { Broker, UserProfile, BrokerCompareScore } from './brokerCompareTypes';
 import { formatShekel } from '../../../utils/format';
-import { useSimReward } from '../../../hooks/useSimReward';
 
-const SIM_COMPLETE_XP = 20;
-const SIM_COMPLETE_COINS = 30;
 
 /* ── Lottie assets ── */
 const LOTTIE_CHART = require('../../../../assets/lottie/wired-flat-153-bar-chart-hover-pinch.json');
@@ -315,7 +312,6 @@ export function BrokerCompareScreen({ onComplete }: BrokerCompareScreenProps) {
     reset,
   } = useBrokerCompare();
 
-  useSimReward(state.isComplete, SIM_COMPLETE_XP, SIM_COMPLETE_COINS);
 
   const rewardsGranted = useRef(false);
   const prevComplete = useRef(false);

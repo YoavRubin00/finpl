@@ -29,10 +29,7 @@ import { useRiskSlider } from './useRiskSlider';
 import { SIM4, SHADOW_STRONG, SHADOW_LIGHT, RTL, sim4Styles } from './simTheme';
 import type { RiskLevel, YearReturn } from './riskSliderTypes';
 import { formatShekel } from '../../../utils/format';
-import { useSimReward } from '../../../hooks/useSimReward';
 
-const SIM_COMPLETE_XP = 30;
-const SIM_COMPLETE_COINS = 40;
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
 const CHART_WIDTH = SCREEN_WIDTH - 80;
@@ -409,7 +406,6 @@ export function RiskSliderScreen({ onComplete }: RiskSliderScreenProps) {
     reset,
   } = useRiskSlider();
 
-  useSimReward(state.isComplete, SIM_COMPLETE_XP, SIM_COMPLETE_COINS);
 
   const rewardsGranted = useRef(false);
 

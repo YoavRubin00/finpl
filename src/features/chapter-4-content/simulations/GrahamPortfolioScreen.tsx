@@ -25,7 +25,6 @@ import { AnimatedPressable } from '../../../components/ui/AnimatedPressable';
 import { GlowCard } from '../../../components/ui/GlowCard';
 import { ConfettiExplosion } from '../../../components/ui/ConfettiExplosion';
 import { tapHaptic, heavyHaptic } from '../../../utils/haptics';
-import { useSimReward } from '../../../hooks/useSimReward';
 import { formatShekel } from '../../../utils/format';
 import { getChapterTheme } from '../../../constants/theme';
 import { SIM_LOTTIE } from '../../shared-sim/simLottieMap';
@@ -44,8 +43,6 @@ import {
   RTL,
 } from './simTheme';
 
-const SIM_COMPLETE_XP = 30;
-const SIM_COMPLETE_COINS = 40;
 
 const _th4 = getChapterTheme('chapter-4');
 
@@ -600,7 +597,6 @@ export function GrahamPortfolioScreen({ onComplete }: GrahamPortfolioScreenProps
     }
   }, [total, isComplete]);
 
-  useSimReward(isComplete, SIM_COMPLETE_XP, SIM_COMPLETE_COINS);
 
   const handleSliderChange = useCallback(
     (stockId: string, value: number) => {

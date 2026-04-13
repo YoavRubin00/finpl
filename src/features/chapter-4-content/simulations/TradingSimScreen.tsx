@@ -26,10 +26,7 @@ import { useTradingSim } from './useTradingSim';
 import type { StockTick, OrderType } from './tradingSimTypes';
 import { SIM4, GRADE_COLORS4, GRADE_HEBREW, SHADOW_STRONG, SHADOW_LIGHT, RTL, TYPE4, sim4Styles } from './simTheme';
 import { formatShekel } from '../../../utils/format';
-import { useSimReward } from '../../../hooks/useSimReward';
 
-const SIM_COMPLETE_XP = 30;
-const SIM_COMPLETE_COINS = 40;
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
 const CHART_WIDTH = SCREEN_WIDTH - 80;
@@ -663,7 +660,6 @@ export function TradingSimScreen({ onComplete }: TradingSimScreenProps) {
   const rewardsGranted = useRef(false);
 
   // Track which tick the order was executed at (for chart marker)
-  useSimReward(sim.state.isComplete, SIM_COMPLETE_XP, SIM_COMPLETE_COINS);
   const [executedAtTick, setExecutedAtTick] = useState<number | null>(null);
   const prevOrderCount = useRef(0);
 

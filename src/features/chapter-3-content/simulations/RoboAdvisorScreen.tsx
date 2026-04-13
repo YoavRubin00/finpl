@@ -22,7 +22,6 @@ import { useRoboAdvisor } from './useRoboAdvisor';
 import { SIM3, GRADE_COLORS3, GRADE_HEBREW, SHADOW_STRONG, SHADOW_LIGHT, RTL, TYPE3, sim3Styles } from './simTheme';
 import type { RiskQuestion, RiskOption } from './roboAdvisorTypes';
 import { formatShekel } from '../../../utils/format';
-import { useSimReward } from '../../../hooks/useSimReward';
 
 /* ── Chapter-3 theme (for gradient only) ── */
 const _th3 = getChapterTheme('chapter-3');
@@ -38,8 +37,6 @@ const LOTTIE_BRAIN = require('../../../../assets/lottie/wired-flat-426-brain-hov
 const LOTTIE_SHIELD = require('../../../../assets/lottie/wired-flat-457-shield-security-hover-pinch.json');
 const LOTTIE_ARROW = require('../../../../assets/lottie/wired-flat-3381-arrows-left-hover-pointing.json');
 
-const SIM_COMPLETE_XP = 30;
-const SIM_COMPLETE_COINS = 30;
 
 const GRADE_COLORS = GRADE_COLORS3 as Record<string, string>;
 
@@ -438,7 +435,6 @@ export function RoboAdvisorScreen({ onComplete }: RoboAdvisorScreenProps) {
   const buildingTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Track selected option IDs per question for quiz UI
-  useSimReward(state.isComplete, SIM_COMPLETE_XP, SIM_COMPLETE_COINS);
   const [quizSelections, setQuizSelections] = useState<Record<string, string>>({});
   // Rebalance indicator
   const [showRebalanceIndicator, setShowRebalanceIndicator] = useState(false);

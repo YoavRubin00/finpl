@@ -155,7 +155,7 @@ export default function RootLayout() {
       "trading-hub", "bridge", "clash",
       "duels", "squads", "referral", "fantasy", "assets", "assets-market", "finfeed",
       "scenario-lab", "suggest-scenario", "graham-personality", "legal", "settings",
-      "pizza-index", "accessibility-statement",
+      "pizza-index", "accessibility-statement", "fire-calculator",
     ].includes(segments[0] as string);
 
     if (!isAuthenticated) {

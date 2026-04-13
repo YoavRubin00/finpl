@@ -25,7 +25,6 @@ import { AnimatedPressable } from '../../../components/ui/AnimatedPressable';
 import { GlowCard } from '../../../components/ui/GlowCard';
 import { ConfettiExplosion } from '../../../components/ui/ConfettiExplosion';
 import { tapHaptic } from '../../../utils/haptics';
-import { useSimReward } from '../../../hooks/useSimReward';
 import { SIM_LOTTIE } from '../../shared-sim/simLottieMap';
 import { FINN_STANDARD, FINN_HAPPY } from '../../retention-loops/finnMascotConfig';
 import { useMarginSafety } from './useMarginSafety';
@@ -43,8 +42,6 @@ import {
 } from './simTheme';
 import { getChapterTheme } from '../../../constants/theme';
 
-const SIM_COMPLETE_XP = 30;
-const SIM_COMPLETE_COINS = 40;
 
 const _th4 = getChapterTheme('chapter-4');
 
@@ -346,7 +343,6 @@ export function MarginSafetyScreen({ onComplete }: MarginSafetyScreenProps) {
     reset,
   } = useMarginSafety();
 
-  useSimReward(allComplete, SIM_COMPLETE_XP, SIM_COMPLETE_COINS);
 
   // Mark current stock as completed when user views its valuation and taps "next"
   const handleNextStock = useCallback(() => {

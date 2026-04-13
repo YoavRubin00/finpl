@@ -20,10 +20,7 @@ import { useRetirementRace } from './useRetirementRace';
 import type { RetirementRaceScore } from './retirementRaceTypes';
 import { getChapterTheme } from '../../../constants/theme';
 import { SIM2, SHADOW_STRONG, RTL, TYPE2, sim2Styles } from './simTheme';
-import { useSimReward } from '../../../hooks/useSimReward';
 
-const SIM_COMPLETE_XP = 30;
-const SIM_COMPLETE_COINS = 30;
 
 const BAR_MAX_HEIGHT = 220;
 const BAR_WIDTH = 80;
@@ -323,7 +320,6 @@ export function RetirementRaceScreen({ onComplete }: { onComplete: () => void })
         score,
     } = useRetirementRace();
 
-  useSimReward(state.isComplete, SIM_COMPLETE_XP, SIM_COMPLETE_COINS);
     const [showOvertake, setShowOvertake] = useState(false);
     const [overtakeSeen, setOvertakeSeen] = useState(false);
     const [showConfetti, setShowConfetti] = useState(false);

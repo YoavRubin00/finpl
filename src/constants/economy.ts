@@ -36,9 +36,6 @@ export const STREAK_BONUS_BASE_XP = 10;
 /** XP awarded for opening the app (once per day). */
 export const LOGIN_BONUS_XP = 15;
 
-/** XP awarded for scrolling through FinFeed (once per day). */
-export const FEED_SCROLL_XP = 5;
-
 /** XP awarded for viewing a wisdom flash. */
 export const WISDOM_VIEWED_XP = 5;
 

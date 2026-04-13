@@ -27,10 +27,7 @@ import { useChartReader } from './useChartReader';
 import { TOTAL_ROUNDS } from './chartReaderData';
 import { SIM4, SHADOW_STRONG, SHADOW_LIGHT, RTL, sim4Styles, GRADE_COLORS4 } from './simTheme';
 import type { ChartAction, CandleData, ChartRound, ChartReaderScore } from './chartReaderTypes';
-import { useSimReward } from '../../../hooks/useSimReward';
 
-const SIM_COMPLETE_XP = 25;
-const SIM_COMPLETE_COINS = 30;
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
 const CHART_PADDING = 32; // 16px padding on each side
@@ -354,7 +351,6 @@ export function ChartReaderScreen({ onComplete }: ChartReaderScreenProps) {
     reset,
   } = useChartReader();
 
-  useSimReward(state.isComplete, SIM_COMPLETE_XP, SIM_COMPLETE_COINS);
 
   const rewardsGranted = useRef(false);
 

@@ -34,10 +34,7 @@ import { REIT_BUDGET, REIT_SECTORS } from './reitData';
 import { SimLottieBackground } from '../../../components/ui/SimLottieBackground';
 import { SIM5, GRADE_COLORS5, GRADE_HEBREW, SHADOW_STRONG, SHADOW_LIGHT, RTL, TYPE5, sim5Styles } from './simTheme';
 import { formatShekel } from '../../../utils/format';
-import { useSimReward } from '../../../hooks/useSimReward';
 
-const SIM_COMPLETE_XP = 35;
-const SIM_COMPLETE_COINS = 40;
 
 /* ── Lottie assets ── */
 const LOTTIE_BUILDING = require('../../../../assets/lottie/wired-flat-483-building-hover-blinking.json');
@@ -593,7 +590,6 @@ export function REITScreen({ onComplete }: REITScreenProps) {
     reset,
   } = useREIT();
 
-  useSimReward(state.isComplete, SIM_COMPLETE_XP, SIM_COMPLETE_COINS);
 
   const rewardsGranted = useRef(false);
 

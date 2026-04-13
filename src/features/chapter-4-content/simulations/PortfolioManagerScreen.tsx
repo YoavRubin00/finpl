@@ -33,10 +33,7 @@ import { ASSET_CLASSES, WORLD_EVENTS } from './portfolioManagerData';
 import { SIM4, GRADE_COLORS4, GRADE_HEBREW, SHADOW_STRONG, SHADOW_LIGHT, RTL, TYPE4, sim4Styles } from './simTheme';
 import { getChapterTheme } from '../../../constants/theme';
 import { formatShekel } from '../../../utils/format';
-import { useSimReward } from '../../../hooks/useSimReward';
 
-const SIM_COMPLETE_XP = 30;
-const SIM_COMPLETE_COINS = 40;
 
 const _th4 = getChapterTheme('chapter-4');
 
@@ -653,7 +650,6 @@ export function PortfolioManagerScreen({ onComplete }: PortfolioManagerScreenPro
     reset,
   } = usePortfolioManager();
   const rewardsGranted = useRef(false);
-  useSimReward(state.isComplete, SIM_COMPLETE_XP, SIM_COMPLETE_COINS);
   const [showVault, setShowVault] = useState(false);
   const vaultScale = useSharedValue(0);
 

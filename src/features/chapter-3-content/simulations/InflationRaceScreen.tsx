@@ -21,7 +21,6 @@ import { ConfettiExplosion } from '../../../components/ui/ConfettiExplosion';
 import { tapHaptic, successHaptic, heavyHaptic } from '../../../utils/haptics';
 import { useInflationRace } from './useInflationRace';
 import { SIM3, GRADE_COLORS3, GRADE_HEBREW, SHADOW_STRONG, SHADOW_LIGHT, RTL, sim3Styles } from './simTheme';
-import { useSimReward } from '../../../hooks/useSimReward';
 import type {
   InflatedProduct,
   InflationRaceScore,
@@ -43,8 +42,6 @@ const LOTTIE_TARGET = require('../../../../assets/lottie/wired-flat-458-goal-tar
 const LOTTIE_CHART = require('../../../../assets/lottie/wired-flat-153-bar-chart-hover-pinch.json');
 const LOTTIE_ARROW = require('../../../../assets/lottie/wired-flat-3381-arrows-left-hover-pointing.json');
 
-const SIM_COMPLETE_XP = 30;
-const SIM_COMPLETE_COINS = 30;
 
 /* ================================================================== */
 /*  ProductCard — single product in the grid                            */
@@ -242,7 +239,6 @@ export function InflationRaceScreen({
     score,
   } = useInflationRace();
 
-  useSimReward(state.isComplete, SIM_COMPLETE_XP, SIM_COMPLETE_COINS);
 
   const rewardsGranted = useRef(false);
 

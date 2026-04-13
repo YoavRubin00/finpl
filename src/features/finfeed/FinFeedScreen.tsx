@@ -753,8 +753,18 @@ export function FinFeedScreen() {
     const quizIdx = filteredMerged.findIndex((i) => i.type === 'daily-quiz');
     const quizItem = quizIdx >= 0 ? filteredMerged.splice(quizIdx, 1)[0] : null;
 
+    // Pin a macro-event at position 3 (after dilemma + quiz) so users always see one early
+    const macroIdx = filteredMerged.findIndex((i) => i.type === 'macro-event');
+    const pinnedMacro = macroIdx >= 0 ? filteredMerged.splice(macroIdx, 1)[0] : null;
+
     if (quizItem) filteredMerged.unshift(quizItem);
     filteredMerged.unshift({ id: 'daily-dilemma', type: 'daily-dilemma' });
+
+    // Insert pinned macro event at position 7
+    if (pinnedMacro) {
+      const insertAt = Math.min(7, filteredMerged.length);
+      filteredMerged.splice(insertAt, 0, pinnedMacro);
+    }
 
     return filteredMerged;
   }, [feedSeed, progress, aiProfile, completedScenarios]);
@@ -767,7 +777,6 @@ export function FinFeedScreen() {
 
   const viewabilityConfig = useRef({ itemVisiblePercentThreshold: 60 });
 
-  const feedScrollAwarded = useRef(false);
   const onViewableItemsChanged = useRef(({ viewableItems }: { viewableItems: ViewToken[] }) => {
     if (viewableItems.length > 0) {
       const idx = viewableItems[0].index ?? 0;
@@ -776,11 +785,6 @@ export function FinFeedScreen() {
       // Handle full-screen TikTok mode for videos
       const isVideo = viewableItems[0].item?.type === "video" || viewableItems[0].item?.type === "module-hook";
       useFeedInteractionsStore.getState().setIsVideoActive(isVideo);
-      // Award feed scroll XP after viewing 5+ items
-      if (idx >= 4 && !feedScrollAwarded.current) {
-        feedScrollAwarded.current = true;
-        useEconomyStore.getState().awardFeedScroll();
-      }
     }
   });
 

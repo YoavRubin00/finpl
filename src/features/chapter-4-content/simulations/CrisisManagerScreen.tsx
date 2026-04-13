@@ -28,10 +28,7 @@ import { TOTAL_EVENTS } from './crisisManagerData';
 import { SIM4, SHADOW_STRONG, SHADOW_LIGHT, RTL, sim4Styles, GRADE_COLORS4 } from './simTheme';
 import type { PlayerAction, CrisisEvent, CrisisRound, CrisisScore } from './crisisManagerTypes';
 import { formatShekel } from '../../../utils/format';
-import { useSimReward } from '../../../hooks/useSimReward';
 
-const SIM_COMPLETE_XP = 30;
-const SIM_COMPLETE_COINS = 40;
 
 /* ── Lottie assets ── */
 const LOTTIE_CHART = require('../../../../assets/lottie/wired-flat-153-bar-chart-hover-pinch.json');
@@ -310,7 +307,6 @@ export function CrisisManagerScreen({ onComplete }: CrisisManagerScreenProps) {
     reset,
   } = useCrisisManager();
 
-  useSimReward(state.isComplete, SIM_COMPLETE_XP, SIM_COMPLETE_COINS);
 
   const rewardsGranted = useRef(false);
 

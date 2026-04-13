@@ -21,12 +21,9 @@ import { creditScoreConfig } from './creditScoreData';
 import type { CreditOption, CreditEventSeverity, CreditScoreScore, CreditScoreGrade, NotificationSource, ChoiceRecord } from './creditScoreTypes';
 import { getChapterTheme } from '../../../constants/theme';
 import { SIM2, GRADE_COLORS2, GRADE_HEBREW, SHADOW_STRONG, SHADOW_LIGHT, RTL, TYPE2, sim2Styles } from './simTheme';
-import { useSimReward } from '../../../hooks/useSimReward';
 
 const _th2 = getChapterTheme('chapter-2');
 
-const SIM_COMPLETE_XP = 30;
-const SIM_COMPLETE_COINS = 30;
 
 /* ── Lottie assets ── */
 const LOTTIE_CHART = require('../../../../assets/lottie/wired-flat-153-bar-chart-hover-pinch.json');
@@ -483,7 +480,6 @@ const receiptStyles = StyleSheet.create({
 export function CreditScoreScreen({ onComplete }: { onComplete: () => void }) {
     const { state, currentEvent, handleChoice, score, resetGame } = useCreditScore();
 
-  useSimReward(state.isComplete, SIM_COMPLETE_XP, SIM_COMPLETE_COINS);
     const [showFeedback, setShowFeedback] = useState(false);
     const [lastChoice, setLastChoice] = useState<CreditOption | null>(null);
     const [showConfetti, setShowConfetti] = useState(false);

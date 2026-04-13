@@ -27,14 +27,11 @@ import { snowballConfig } from './snowballData';
 import type { PurchaseOption, PurchaseScenario, SnowballScore } from './snowballTypes';
 import { SIM, GRADE_COLORS, GRADE_HEBREW, SHADOW_LIGHT, RTL, TYPE, simStyles } from './simTheme';
 import { getChapterTheme } from '../../../constants/theme';
-import { useSimReward } from '../../../hooks/useSimReward';
 import { useTimeoutCleanup } from '../../../hooks/useTimeoutCleanup';
 
 const CH = getChapterTheme('chapter-1');
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
-const SIM_COMPLETE_XP = 20;
-const SIM_COMPLETE_COINS = 30;
 
 /* ── Lottie assets ── */
 const LOTTIE_GROWTH = require('../../../../assets/lottie/wired-flat-161-growth-hover-pinch.json');
@@ -600,7 +597,6 @@ export function SnowballGameScreen({ onComplete }: { onComplete: () => void }) {
         resetGame,
     } = useSnowballGame(snowballConfig);
 
-  useSimReward(state.isComplete, SIM_COMPLETE_XP, SIM_COMPLETE_COINS);
     
     useEffect(() => {
         const player = createAudioPlayer({ uri: 'https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/audio/sims/sim-snowball.mp3' });

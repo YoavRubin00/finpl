@@ -7,7 +7,6 @@ import {
   DAILY_TASK_COINS,
   STREAK_BONUS_BASE_XP,
   LOGIN_BONUS_XP,
-  FEED_SCROLL_XP,
   STREAK_7_BONUS_XP,
   STREAK_30_BONUS_XP,
 } from "../../constants/economy";
@@ -23,9 +22,11 @@ interface EconomyState {
   streak: number;
   lastDailyTaskDate: string | null; // ISO date string "YYYY-MM-DD"
   lastLoginBonusDate: string | null;
-  lastFeedScrollDate: string | null;
   starterCapitalGranted: boolean;
   pendingLevelUp: number | null; // new level number, null = none pending
+  activeDates: string[]; // ISO dates when user completed a task (bounded to 90 days)
+  frozenDates: string[]; // ISO dates when a streak freeze was auto-consumed
+  streakFreezes: number; // owned freeze items count
 
   addXP: (amount: number, source: XPSource) => void;
   addCoins: (amount: number) => void;
@@ -34,9 +35,9 @@ interface EconomyState {
   spendGems: (amount: number) => boolean;
   completeDailyTask: () => void;
   awardLoginBonus: () => void;
-  awardFeedScroll: () => void;
   grantStarterCapital: () => boolean;
   dismissLevelUp: () => void;
+  addStreakFreezes: (count: number) => void;
 }
 
 function todayISO(): string {
@@ -49,6 +50,23 @@ function yesterdayISO(): string {
   return d.toISOString().slice(0, 10);
 }
 
+function ninetyDaysAgoISO(): string {
+  const d = new Date();
+  d.setDate(d.getDate() - 90);
+  return d.toISOString().slice(0, 10);
+}
+
+function daysBetween(dateA: string, dateB: string): number {
+  return Math.floor(
+    (new Date(dateB + "T00:00:00").getTime() - new Date(dateA + "T00:00:00").getTime()) / 86400000
+  );
+}
+
+function trimDates(dates: string[]): string[] {
+  const cutoff = ninetyDaysAgoISO();
+  return dates.filter((d) => d >= cutoff);
+}
+
 export const useEconomyStore = create<EconomyState>()(
   persist(
     (set, get) => ({
@@ -58,9 +76,11 @@ export const useEconomyStore = create<EconomyState>()(
       streak: 0,
       lastDailyTaskDate: null,
       lastLoginBonusDate: null,
-      lastFeedScrollDate: null,
       starterCapitalGranted: false,
       pendingLevelUp: null,
+      activeDates: [],
+      frozenDates: [],
+      streakFreezes: 0,
 
       addXP: (amount: number, _source: XPSource) => {
         if (amount <= 0) return;
@@ -127,26 +147,47 @@ export const useEconomyStore = create<EconomyState>()(
       },
 
       completeDailyTask: () => {
-        const { lastDailyTaskDate, streak } = get();
+        const { lastDailyTaskDate, streak, streakFreezes, activeDates, frozenDates } = get();
         const today = todayISO();
 
         // Idempotent: already completed today
         if (lastDailyTaskDate === today) return;
 
         const isConsecutiveDay = lastDailyTaskDate === yesterdayISO();
-        const newStreak = isConsecutiveDay ? streak + 1 : 1;
-        const streakBonus = isConsecutiveDay ? STREAK_BONUS_BASE_XP * newStreak : 0;
+        const gap = lastDailyTaskDate ? daysBetween(lastDailyTaskDate, today) : 999;
+        const canFreeze = gap === 2 && streakFreezes > 0; // missed exactly 1 day
+
+        let newStreak: number;
+        let freezeConsumed = false;
+        if (isConsecutiveDay) {
+          newStreak = streak + 1;
+        } else if (canFreeze) {
+          newStreak = streak + 1;
+          freezeConsumed = true;
+        } else {
+          newStreak = 1;
+        }
+
+        const streakBonus = (isConsecutiveDay || freezeConsumed) ? STREAK_BONUS_BASE_XP * newStreak : 0;
 
         // Streak milestone bonuses
         let milestoneBonus = 0;
         if (newStreak === 7) milestoneBonus = STREAK_7_BONUS_XP;
         if (newStreak > 0 && newStreak % 30 === 0) milestoneBonus = STREAK_30_BONUS_XP;
 
+        const updatedActiveDates = trimDates([...activeDates, today]);
+        const updatedFrozenDates = freezeConsumed
+          ? trimDates([...frozenDates, yesterdayISO()])
+          : trimDates(frozenDates);
+
         set((state) => ({
           xp: state.xp + DAILY_TASK_XP + streakBonus + milestoneBonus,
           coins: state.coins + DAILY_TASK_COINS,
           streak: newStreak,
           lastDailyTaskDate: today,
+          activeDates: updatedActiveDates,
+          frozenDates: updatedFrozenDates,
+          streakFreezes: freezeConsumed ? state.streakFreezes - 1 : state.streakFreezes,
         }));
 
         // Cancel today's streak reminder — user already completed the daily task
@@ -162,30 +203,47 @@ export const useEconomyStore = create<EconomyState>()(
       },
 
       awardLoginBonus: () => {
-        const { lastLoginBonusDate, lastDailyTaskDate, streak } = get();
+        const { lastLoginBonusDate, lastDailyTaskDate, streak, streakFreezes, activeDates, frozenDates } = get();
         const today = todayISO();
         if (lastLoginBonusDate === today) return;
 
         // Update streak on daily login (same logic as completeDailyTask)
         const lastActive = lastDailyTaskDate ?? lastLoginBonusDate;
         const isConsecutiveDay = lastActive === yesterdayISO();
-        const newStreak = isConsecutiveDay ? streak + 1 : (lastActive === today ? streak : 1);
+        const gap = lastActive ? daysBetween(lastActive, today) : 999;
+        const canFreeze = gap === 2 && streakFreezes > 0;
+
+        let newStreak: number;
+        let freezeConsumed = false;
+        if (isConsecutiveDay) {
+          newStreak = streak + 1;
+        } else if (lastActive === today) {
+          newStreak = streak;
+        } else if (canFreeze) {
+          newStreak = streak + 1;
+          freezeConsumed = true;
+        } else {
+          newStreak = 1;
+        }
+
+        const updatedActiveDates = trimDates([...activeDates, today]);
+        const updatedFrozenDates = freezeConsumed
+          ? trimDates([...frozenDates, yesterdayISO()])
+          : trimDates(frozenDates);
 
         set((state) => ({
           xp: state.xp + LOGIN_BONUS_XP,
           streak: newStreak,
           lastLoginBonusDate: today,
+          activeDates: updatedActiveDates,
+          frozenDates: updatedFrozenDates,
+          streakFreezes: freezeConsumed ? state.streakFreezes - 1 : state.streakFreezes,
         }));
       },
 
-      awardFeedScroll: () => {
-        const { lastFeedScrollDate } = get();
-        const today = todayISO();
-        if (lastFeedScrollDate === today) return;
-        set((state) => ({
-          xp: state.xp + FEED_SCROLL_XP,
-          lastFeedScrollDate: today,
-        }));
+      addStreakFreezes: (count: number) => {
+        if (count <= 0) return;
+        set((state) => ({ streakFreezes: state.streakFreezes + count }));
       },
 
       grantStarterCapital: (): boolean => {
@@ -208,9 +266,33 @@ export const useEconomyStore = create<EconomyState>()(
         streak: state.streak,
         lastDailyTaskDate: state.lastDailyTaskDate,
         lastLoginBonusDate: state.lastLoginBonusDate,
-        lastFeedScrollDate: state.lastFeedScrollDate,
         starterCapitalGranted: state.starterCapitalGranted,
+        activeDates: state.activeDates,
+        frozenDates: state.frozenDates,
+        streakFreezes: state.streakFreezes,
       }),
+      onRehydrateStorage: () => (state) => {
+        if (!state) return;
+        // Migration: backfill activeDates for existing users who have a streak but no history
+        if (
+          state.streak > 0 &&
+          state.lastDailyTaskDate &&
+          (!state.activeDates || state.activeDates.length === 0)
+        ) {
+          const dates: string[] = [];
+          const last = new Date(state.lastDailyTaskDate + "T00:00:00");
+          for (let i = 0; i < Math.min(state.streak, 90); i++) {
+            const d = new Date(last);
+            d.setDate(last.getDate() - i);
+            dates.push(d.toISOString().slice(0, 10));
+          }
+          state.activeDates = dates;
+        }
+        // Ensure arrays exist (first-time upgrade from older store version)
+        if (!state.activeDates) state.activeDates = [];
+        if (!state.frozenDates) state.frozenDates = [];
+        if (state.streakFreezes == null) state.streakFreezes = 0;
+      },
     }
   )
 );

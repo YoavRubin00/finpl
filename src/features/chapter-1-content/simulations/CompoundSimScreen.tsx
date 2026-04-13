@@ -757,6 +757,9 @@ export function CompoundSimScreen({ onComplete }: CompoundSimScreenProps) {
                                 <StatRow label="סה״כ הושקע" value={formatCurrency(state.totalInvested)} valueColor={SIM.textMuted} />
                                 <StatRow label="סה״כ עם ריבית דריבית" value={formatCurrency(state.totalCompoundValue)} valueColor={SIM.textPrimary} bold />
                                 <StatRow label="רווח מריבית דריבית" value={formatCurrency(profit)} valueColor={SIM.success} bold />
+                                <Text style={{ fontSize: 11, color: '#94a3b8', textAlign: 'center', marginTop: 6, writingDirection: 'rtl' }}>
+                                    *מחושב לפי תשואה היסטורית של 10%
+                                </Text>
                             </View>
                         </GlowCard>
                     </Animated.View>

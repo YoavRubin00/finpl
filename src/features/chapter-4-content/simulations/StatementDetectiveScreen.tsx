@@ -30,10 +30,7 @@ import { useStatementDetective } from './useStatementDetective';
 import { SIM4, SHADOW_STRONG, SHADOW_LIGHT, RTL, sim4Styles, GRADE_COLORS4, GRADE_HEBREW } from './simTheme';
 import type { Verdict, FinancialSnippet, DetectiveScore } from './statementDetectiveTypes';
 import { formatShekel } from '../../../utils/format';
-import { useSimReward } from '../../../hooks/useSimReward';
 
-const SIM_COMPLETE_XP = 25;
-const SIM_COMPLETE_COINS = 30;
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
 
@@ -328,7 +325,6 @@ export function StatementDetectiveScreen({ onComplete }: StatementDetectiveScree
     reset,
   } = useStatementDetective();
 
-  useSimReward(state.isComplete, SIM_COMPLETE_XP, SIM_COMPLETE_COINS);
 
   const rewardsGranted = useRef(false);
 

@@ -2,7 +2,7 @@
 // PRD 39 — Duolingo-style Learn Screen
 // Refactored to match Duolingo visual layout per implementation_plan.md.resolved
 
-import { useState, useCallback, useRef, useEffect, useMemo } from "react";
+import React, { useState, useCallback, useRef, useEffect, useMemo } from "react";
 import { Image as ExpoImage } from "expo-image";
 import { ScrollView, View, Text, Pressable, Modal, Image, StyleSheet, Dimensions } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -156,16 +156,16 @@ function storeKey(chapterId: string): string {
 
 // Finn speech bubble phrases (cycles by modIndex, first is personalized)
 const FINN_PHRASES_STATIC = [
-  "בוא נלמד ביחד!",
-  "השלב הבא מחכה לך!",
+  "בוא נלמד!",
+  "השלב הבא!",
   "אני מאמין בך!",
-  "מוכן ללמוד?",
+  "מוכן?",
 ];
 
 function getFinnPhrase(index: number, displayName: string): string {
   const total = FINN_PHRASES_STATIC.length + 1;
   const slot = index % total;
-  if (slot === 0) return `קדימה ${displayName || "חבר"}, ממשיכים ללמוד ולהתפתח!`;
+  if (slot === 0) return `יאללה ${displayName || "חבר"}!`;
   return FINN_PHRASES_STATIC[slot - 1];
 }
 
@@ -246,7 +246,7 @@ function getNodeIcon(_type: NodeType, title: string, _state: "completed" | "acti
 // Path connector between nodes
 // ---------------------------------------------------------------------------
 
-function PathConnector({
+const PathConnector = React.memo(function PathConnector({
   fromOffsetX,
   toOffsetX,
   done,
@@ -348,7 +348,7 @@ function PathConnector({
       })}
     </View>
   );
-}
+});
 
 // ---------------------------------------------------------------------------
 // ArenaHeaderBanner — Duolingo "SECTION X, UNIT Y" style
@@ -716,7 +716,7 @@ function LockedModuleModal({ visible, onClose }: { visible: boolean; onClose: ()
 // Chapter section
 // ---------------------------------------------------------------------------
 
-function ChapterSection({
+const ChapterSection = React.memo(function ChapterSection({
   arena,
   chapter,
   completedModules,
@@ -863,7 +863,7 @@ function ChapterSection({
       </View>
     </Animated.View>
   );
-}
+});
 
 // ---------------------------------------------------------------------------
 // Main screen
@@ -1003,15 +1003,18 @@ export function DuoLearnScreen() {
     if (walkthroughScreen !== 'learn') return;
     scrollRef.current?.scrollTo({ y: 0, animated: false });
     let y = 0;
+    let interval: ReturnType<typeof setInterval> | null = null;
     const delay = setTimeout(() => {
-      const interval = setInterval(() => {
+      interval = setInterval(() => {
         y += 80;
         scrollRef.current?.scrollTo({ y, animated: true });
-        if (y >= 800) clearInterval(interval);
+        if (y >= 800 && interval) clearInterval(interval);
       }, 1500);
-      return () => clearInterval(interval);
     }, 1000);
-    return () => clearTimeout(delay);
+    return () => {
+      clearTimeout(delay);
+      if (interval) clearInterval(interval);
+    };
   }, [walkthroughScreen]);
 
   const handleModulePress = useCallback(
@@ -1045,6 +1048,12 @@ export function DuoLearnScreen() {
       scrollRef.current?.scrollTo({ y: 800, animated: true });
     }, 300);
   }, [skipIntroChapter]);
+
+  // Stable callbacks for ChapterSection (avoids inline arrow re-creation per render)
+  const handleLockedPress = useCallback(() => setLockedModalVisible(true), []);
+  const handleRoadmapPress = useCallback(() => setRoadmapVisible(true), []);
+  const handleQuestPress = useCallback(() => setQuestSheetVisible(true), []);
+  const handleMindMap = useCallback((idx: number) => { tapHaptic(); setMindMapChapter(idx); }, []);
 
   return (
     <View style={styles.root}>
@@ -1120,17 +1129,17 @@ export function DuoLearnScreen() {
                 sectionIndex={idx}
                 displayName={displayName}
                 onModulePress={handleModulePress}
-                onLockedPress={() => setLockedModalVisible(true)}
+                onLockedPress={handleLockedPress}
                 friendsOnModule={friendsOnModule}
                 easterEggNodeId={easterEggNodeId}
                 onClaimEasterEgg={handleClaimEasterEgg}
                 onSkipIntro={idx === 0 ? handleSkipIntro : undefined}
-                onChapterPress={() => setRoadmapVisible(true)}
-                onMindMap={() => { tapHaptic(); setMindMapChapter(idx); }}
+                onChapterPress={handleRoadmapPress}
+                onMindMap={() => handleMindMap(idx)}
                 questWidgetProps={hasActiveModule ? {
                   completedCount: questCompletedCount,
                   totalQuests: 3,
-                  onPress: () => setQuestSheetVisible(true),
+                  onPress: handleQuestPress,
                 } : undefined}
               />
             );

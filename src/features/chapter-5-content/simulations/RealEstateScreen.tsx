@@ -33,10 +33,7 @@ import type { YearSnapshot } from './useRealEstate';
 import type { MortgageOption, RealEstateScore } from './realEstateTypes';
 import { PROPERTY_PRICE, DOWN_PAYMENT, LOAN_AMOUNT, MORTGAGE_OPTIONS } from './realEstateData';
 import { formatShekel } from '../../../utils/format';
-import { useSimReward } from '../../../hooks/useSimReward';
 
-const SIM_COMPLETE_XP = 35;
-const SIM_COMPLETE_COINS = 40;
 
 /* ── Lottie assets ── */
 const LOTTIE_HOUSE = require('../../../../assets/lottie/wired-flat-63-home-hover-3d-roll.json');
@@ -502,7 +499,6 @@ export function RealEstateScreen({ onComplete }: RealEstateScreenProps) {
   ];
 
   const rewardsGranted = useRef(false);
-  useSimReward(state.isComplete, SIM_COMPLETE_XP, SIM_COMPLETE_COINS);
   const [phase, setPhase] = useState<'select' | 'sim'>('select');
 
   // Hero monthly payment animation

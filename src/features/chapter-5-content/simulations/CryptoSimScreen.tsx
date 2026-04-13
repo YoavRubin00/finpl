@@ -37,10 +37,7 @@ import {
 } from './simTheme';
 import type { CryptoSimScore, CryptoAssetId } from './cryptoSimTypes';
 import { formatShekel } from '../../../utils/format';
-import { useSimReward } from '../../../hooks/useSimReward';
 
-const SIM_COMPLETE_XP = 25;
-const SIM_COMPLETE_COINS = 30;
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
 const CHART_WIDTH = SCREEN_WIDTH - 80;
@@ -401,7 +398,6 @@ export function CryptoSimScreen({ onComplete }: CryptoSimScreenProps) {
     reset,
   } = useCryptoSim();
 
-  useSimReward(state.isComplete, SIM_COMPLETE_XP, SIM_COMPLETE_COINS);
 
   const rewardsGranted = useRef(false);
 

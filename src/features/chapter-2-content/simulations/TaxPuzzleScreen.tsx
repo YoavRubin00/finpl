@@ -22,7 +22,6 @@ import type { TaxCredit, CharacterProfile } from './taxPuzzleTypes';
 import { ATTRIBUTE_LABELS } from './taxPuzzleData';
 import { getChapterTheme } from '../../../constants/theme';
 import { SIM2, GRADE_COLORS2, GRADE_HEBREW, SHADOW_STRONG, SHADOW_LIGHT, RTL, TYPE2, sim2Styles } from './simTheme';
-import { useSimReward } from '../../../hooks/useSimReward';
 
 const GOLD = '#f59e0b';
 
@@ -243,7 +242,6 @@ export function TaxPuzzleScreen({ onComplete }: { onComplete: () => void }) {
         config,
     } = useTaxPuzzle();
 
-  useSimReward(state.isComplete, 30, 20);
     const [showConfetti, setShowConfetti] = useState(false);
     const [lastResult, setLastResult] = useState<'applied' | 'rejected' | null>(null);
     const [showTransition, setShowTransition] = useState(false);

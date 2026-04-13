@@ -184,6 +184,12 @@ export function MoreScreen() {
                   onPress={() => router.push("/simulator")}
                 />
                 <MoreRow
+                  icon={<SafeLottie source={require('../../../assets/lottie/wired-flat-489-rocket-space-hover-flying.json')} style={styles.lottieIcon} autoPlay loop  />}
+                  label="מחשבון חופש כלכלי"
+                  badge="חדש"
+                  onPress={() => router.push("/fire-calculator")}
+                />
+                <MoreRow
                   icon={<SafeLottie source={require('../../../assets/lottie/wired-flat-458-goal-target-hover-hit.json')} style={styles.lottieIcon} autoPlay loop  />}
                   label="דו-קרב 1v1"
                   onPress={() => router.push("/duels")}
