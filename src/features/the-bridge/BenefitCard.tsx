@@ -410,6 +410,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(186,230,253,0.4)',
     overflow: 'hidden',
     marginBottom: 4,
+    transform: [{ scaleX: -1 }],
   },
   progressFill: {
     height: '100%',

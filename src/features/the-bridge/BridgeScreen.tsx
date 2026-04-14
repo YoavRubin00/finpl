@@ -590,6 +590,7 @@ const styles = StyleSheet.create({
     borderRadius: 4,
     backgroundColor: 'rgba(186,230,253,0.4)',
     overflow: 'hidden',
+    transform: [{ scaleX: -1 }],
   },
   progressFill: {
     height: '100%',

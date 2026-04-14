@@ -65,8 +65,8 @@ export function HeartsDisplay() {
 /*  OutOfHeartsModal — dramatic overlay when hearts = 0                */
 /* ------------------------------------------------------------------ */
 
-const HEART_REFILL_COIN_COST = 400;
-const HEART_REFILL_GEM_COST = 50;
+const HEART_REFILL_COIN_COST = 1500;
+const HEART_REFILL_GEM_COST = 25;
 
 interface OutOfHeartsModalProps {
     visible: boolean;

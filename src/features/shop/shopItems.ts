@@ -1,13 +1,13 @@
 import type { ShopCategory, ShopItem } from './types';
 
 export const SHOP_ITEMS: readonly ShopItem[] = [
-  // ── לבבות ──
+  // ── לבבות (urgent — expensive in coins, cheap in gems → gem incentive) ──
   {
     id: 'heart-refill-1',
     category: 'hearts',
     name: 'מילוי לב אחד',
     description: 'מוסיף לב אחד באופן מיידי. בשביל מי שלא רוצה לחכות 4 שעות.',
-    coinCost: 500,
+    coinCost: 1500,
     emoji: '❤️',
     lottieSource: require('../../../assets/lottie/wired-flat-20-love-heart-hover-heartbeat.json'),
   },
@@ -16,7 +16,7 @@ export const SHOP_ITEMS: readonly ShopItem[] = [
     category: 'hearts',
     name: 'מילוי כל הלבבות',
     description: 'מחזיר את כל 5 הלבבות לתפוסה מלאה. חזרה לפעולה!',
-    coinCost: 1800,
+    coinCost: 5000,
     emoji: '💖',
     lottieSource: require('../../../assets/lottie/wired-flat-20-love-heart-hover-heartbeat.json'),
   },
@@ -27,7 +27,7 @@ export const SHOP_ITEMS: readonly ShopItem[] = [
     category: 'hints',
     name: 'רמז לשאלה',
     description: 'חושף תשובה אחת שגויה בקוויז בלי להפסיד XP.',
-    coinCost: 700,
+    coinCost: 1200,
     emoji: '💡',
     lottieSource: require('../../../assets/lottie/wired-flat-36-bulb-hover-blink.json'),
   },
@@ -36,7 +36,7 @@ export const SHOP_ITEMS: readonly ShopItem[] = [
     category: 'hints',
     name: 'חבילת רמזים (×5)',
     description: 'חמישה טוקני רמז במחיר מוזל. לעולם לא תיתקע.',
-    coinCost: 2800,
+    coinCost: 5000,
     emoji: '🎯',
     lottieSource: require('../../../assets/lottie/wired-flat-458-goal-target-hover-hit.json'),
   },
@@ -47,7 +47,7 @@ export const SHOP_ITEMS: readonly ShopItem[] = [
     category: 'protection',
     name: 'הקפאת סטריק',
     description: 'מגן על הסטריק שלך ליום אחד שפספסת. הופעל אוטומטית.',
-    coinCost: 1400,
+    coinCost: 3000,
     emoji: '🧊',
     lottieSource: require('../../../assets/lottie/wired-flat-457-shield-security-hover-pinch.json'),
   },
@@ -56,18 +56,18 @@ export const SHOP_ITEMS: readonly ShopItem[] = [
     category: 'protection',
     name: 'הקפאת סטריק (×3)',
     description: 'שלוש הקפאות סטריק. שמור על המומנטום שלך.',
-    coinCost: 3600,
+    coinCost: 7500,
     emoji: '🛡️',
     lottieSource: require('../../../assets/lottie/wired-flat-457-shield-security-hover-pinch.json'),
   },
 
-  // ── קוסמטיקה ──
+  // ── קוסמטיקה (aspirational — weeks of saving) ──
   {
     id: 'avatar-gold',
     category: 'cosmetics',
     name: 'מסגרת פרופיל זהב',
     description: 'מסגרת זהב פרימיום לאווטר שלך. תראה את ההתקדמות.',
-    coinCost: 3000,
+    coinCost: 8000,
     emoji: '👑',
     lottieSource: require('../../../assets/lottie/Crown.json'),
   },
@@ -76,7 +76,7 @@ export const SHOP_ITEMS: readonly ShopItem[] = [
     category: 'cosmetics',
     name: 'תג ניאון',
     description: 'תג זוהר שמופיע ליד השם שלך בלוח התוצאות.',
-    coinCost: 1800,
+    coinCost: 5000,
     emoji: '✨',
     lottieSource: require('../../../assets/lottie/wired-flat-2474-sparkles-glitter-hover-pinch.json'),
   },
@@ -85,7 +85,7 @@ export const SHOP_ITEMS: readonly ShopItem[] = [
     category: 'cosmetics',
     name: 'ערכת נושא סייבר',
     description: 'שנה את עיצוב הפירמידה לסגנון סייברפנק.',
-    coinCost: 6000,
+    coinCost: 15000,
     emoji: '🌐',
     lottieSource: require('../../../assets/lottie/wired-flat-1307-hub-network-hover-pinch.json'),
   },

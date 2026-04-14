@@ -19,7 +19,7 @@ import { useEconomyStore } from "../economy/useEconomyStore";
 import { tapHaptic, successHaptic, heavyHaptic } from "../../utils/haptics";
 import type { Chest, ChestRarity, ChestReward } from "./types";
 
-const INSTANT_OPEN_GEM_COST = 10;
+const INSTANT_OPEN_GEM_COST = 15;
 
 const RARITY_CONFIG: Record<ChestRarity, {
   colors: readonly [string, string];
