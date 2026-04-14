@@ -367,8 +367,10 @@ function VideoHookPlayer({ videoUri, hookText, onFinish, unitColors, fitContain,
           <Text style={{ fontSize: 16, fontWeight: "900", color: "#ffffff" }}>⚡ x1.8</Text>
         </View>
       )}
-      {/* Safe area top overlay — trim video behind notch */}
-      <View style={{ position: "absolute", top: 0, left: 0, right: 0, height: insets.top, backgroundColor: "rgba(0,0,0,0.6)" }} pointerEvents="none" />
+      {/* Safe area top overlay — only for full-screen video hooks (not flashcard videos) */}
+      {hookText ? (
+        <View style={{ position: "absolute", top: 0, left: 0, right: 0, height: insets.top, backgroundColor: "rgba(0,0,0,0.6)" }} pointerEvents="none" />
+      ) : null}
       {/* Hook text overlay — bottom */}
       {hookText ? (
         <View style={{ position: "absolute", bottom: 0, left: 0, right: 0, paddingHorizontal: 20, paddingBottom: Math.max(40, insets.bottom + 16), paddingTop: 60 }} pointerEvents="none">
@@ -423,7 +425,7 @@ function FlashcardCard({
   const cardStyle = useEntranceAnimation(slideInLeft, { delay: 0 });
   const { playSound } = useSoundEffect();
   const [finnTipDismissed, setFinnTipDismissed] = useState(false);
-  const showFinnPopup = showFinnTip && index === 1 && !finnTipDismissed;
+  const showFinnPopup = showFinnTip && index === 2 && !finnTipDismissed;
 
   // Dive mode state
   const [diveStep, setDiveStep] = useState(0);
@@ -2843,23 +2845,20 @@ export function LessonFlowScreen() {
         {/* ── Module infographic phase (before chest) ── */}
         {phase === "module-infographic" && mod && MODULE_INFOGRAPHIC_MAP[mod.id] && (
           <Animated.View entering={FadeIn.duration(400)} style={{ flex: 1, alignItems: "center", justifyContent: "center", paddingHorizontal: 16 }}>
-            <Text style={{ fontSize: 18, fontWeight: "900", color: "#1e293b", textAlign: "center", writingDirection: "rtl", marginBottom: 16 }}>
-              סיכום ויזואלי
-            </Text>
             <View style={{ borderRadius: 18, overflow: "hidden", shadowColor: "#0ea5e9", shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.15, shadowRadius: 16, elevation: 6, backgroundColor: "#fff" }}>
               <Image
                 source={MODULE_INFOGRAPHIC_MAP[mod.id]}
-                style={{ width: Dimensions.get("window").width - 48, height: (Dimensions.get("window").width - 48) * 1.6, borderRadius: 18 }}
+                style={{ width: Dimensions.get("window").width - 56, height: (Dimensions.get("window").width - 56) * 1.5, borderRadius: 18 }}
                 resizeMode="contain"
               />
             </View>
             <Pressable
               onPress={() => { tapHaptic(); setPhase("summary"); }}
-              style={{ marginTop: 20, backgroundColor: "#0ea5e9", borderRadius: 14, paddingVertical: 14, paddingHorizontal: 40, borderBottomWidth: 4, borderBottomColor: "#0369a1" }}
+              style={{ marginTop: 14, backgroundColor: "#0ea5e9", borderRadius: 14, paddingVertical: 14, paddingHorizontal: 40, borderBottomWidth: 4, borderBottomColor: "#0369a1" }}
               accessibilityRole="button"
-              accessibilityLabel="המשך לסיכום"
+              accessibilityLabel="המשך"
             >
-              <Text style={{ fontSize: 16, fontWeight: "800", color: "#fff" }}>המשך לסיכום</Text>
+              <Text style={{ fontSize: 16, fontWeight: "800", color: "#fff" }}>המשך</Text>
             </Pressable>
           </Animated.View>
         )}

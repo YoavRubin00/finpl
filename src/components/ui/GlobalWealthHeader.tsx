@@ -481,7 +481,7 @@ export function GlobalWealthHeader({ compact = false }: GlobalWealthHeaderProps)
                 </View>
               </View>
               <Text style={[s.profileNameCompact, isPro && { color: "#d97706" }]} numberOfLines={1}>
-                {useAuthStore.getState().displayName ?? "שחקן"}
+                {(useAuthStore.getState().displayName ?? "שחקן").split(" ")[0]}
               </Text>
             </Animated.View>
           </Pressable>

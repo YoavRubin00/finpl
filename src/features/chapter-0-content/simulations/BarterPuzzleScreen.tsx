@@ -228,15 +228,26 @@ export function BarterPuzzleScreen({
   }
 
   // Active game phases: reject, swap1, swap2, payDebt, moneyPhase
+  // Clear stale positions — only visible merchants should have registered positions
+  const visibleMerchantIds = new Set<string>();
   const visibleMerchants: Merchant[] = [];
   if (phase === "reject" || phase === "payDebt" || phase === "moneyPhase") {
     visibleMerchants.push(TARGET_MERCHANT);
+    visibleMerchantIds.add(TARGET_MERCHANT.id);
   }
   if (phase === "swap1" || phase === "moneyPhase") {
     visibleMerchants.push(SWAP_MERCHANTS[0]);
+    visibleMerchantIds.add(SWAP_MERCHANTS[0].id);
   }
   if (phase === "swap2" || phase === "moneyPhase") {
     visibleMerchants.push(SWAP_MERCHANTS[1]);
+    visibleMerchantIds.add(SWAP_MERCHANTS[1].id);
+  }
+  // Remove stale positions of merchants that are no longer visible
+  for (const id of Object.keys(merchantPositions.current)) {
+    if (!visibleMerchantIds.has(id)) {
+      delete merchantPositions.current[id];
+    }
   }
   // In moneyPhase show all
   if (phase === "moneyPhase" && !visibleMerchants.find((m) => m.id === TARGET_MERCHANT.id)) {

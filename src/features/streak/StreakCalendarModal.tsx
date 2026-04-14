@@ -8,6 +8,7 @@ import {
   Dimensions,
   Platform,
 } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Animated, {
   FadeIn,
   FadeInDown,
@@ -47,6 +48,7 @@ interface StreakCalendarModalProps {
 }
 
 export function StreakCalendarModal({ visible, onClose }: StreakCalendarModalProps) {
+  const insets = useSafeAreaInsets();
   const now = useMemo(() => new Date(), []);
   const [viewYear, setViewYear] = useState(now.getFullYear());
   const [viewMonth, setViewMonth] = useState(now.getMonth());
@@ -118,7 +120,7 @@ export function StreakCalendarModal({ visible, onClose }: StreakCalendarModalPro
       accessibilityViewIsModal
     >
       <Pressable style={styles.overlay} onPress={onClose}>
-        <Pressable style={styles.sheet} onPress={() => {}}>
+        <Pressable style={[styles.sheet, { paddingBottom: Math.max(24, insets.bottom + 12) }]} onPress={() => {}}>
           {/* Handle */}
           <View style={styles.handle} />
 
@@ -410,7 +412,7 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
     paddingHorizontal: 20,
-    paddingBottom: Platform.OS === "ios" ? 40 : 24,
+    paddingBottom: 24, // overridden dynamically with insets.bottom
     paddingTop: 12,
     maxHeight: "85%",
   },
@@ -491,7 +493,7 @@ const styles = StyleSheet.create({
 
   // Weekday row
   weekdayRow: {
-    flexDirection: "row",
+    flexDirection: "row-reverse",
     justifyContent: "center",
     gap: CELL_GAP,
     marginBottom: 6,
@@ -512,7 +514,7 @@ const styles = StyleSheet.create({
     gap: CELL_GAP,
   },
   gridRow: {
-    flexDirection: "row",
+    flexDirection: "row-reverse",
     justifyContent: "center",
     gap: CELL_GAP,
   },
