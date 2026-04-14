@@ -5,8 +5,10 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 interface AudioState {
     isVideoPlaying: boolean;
     musicEnabled: boolean;
+    sfxEnabled: boolean;
     setVideoPlaying: (playing: boolean) => void;
     toggleMusic: () => void;
+    toggleSfx: () => void;
 }
 
 export const useAudioStore = create<AudioState>()(
@@ -14,13 +16,15 @@ export const useAudioStore = create<AudioState>()(
         (set) => ({
             isVideoPlaying: false,
             musicEnabled: true,
+            sfxEnabled: true,
             setVideoPlaying: (playing) => set({ isVideoPlaying: playing }),
             toggleMusic: () => set((s) => ({ musicEnabled: !s.musicEnabled })),
+            toggleSfx: () => set((s) => ({ sfxEnabled: !s.sfxEnabled })),
         }),
         {
             name: 'audio-settings',
             storage: createJSONStorage(() => AsyncStorage),
-            partialize: (state) => ({ musicEnabled: state.musicEnabled }),
+            partialize: (state) => ({ musicEnabled: state.musicEnabled, sfxEnabled: state.sfxEnabled }),
         },
     ),
 );

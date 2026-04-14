@@ -2083,6 +2083,7 @@ export function LessonFlowScreen() {
   const [lifelineConcept, setLifelineConcept] = useState<string | null>(null);
   const [lifelineChatConcept, setLifelineChatConcept] = useState<string | null>(null);
   const [showChapterComplete, setShowChapterComplete] = useState(false);
+  const [showFinnBridgeNudge, setShowFinnBridgeNudge] = useState(false);
   const [chestFullScreen, setChestFullScreen] = useState(false);
   const [chestClaimed, setChestClaimed] = useState(false);
   const [chestRewards, setChestRewards] = useState<ChestReward | null>(null);
@@ -2248,6 +2249,10 @@ export function LessonFlowScreen() {
           doubleHeavyHaptic();
         }, 4500);
         setTimeout(() => setShowChapterComplete(false), 7500);
+        // Show Finn bridge nudge after chapter 0 completion
+        if (chapterId === "chapter-0") {
+          setTimeout(() => setShowFinnBridgeNudge(true), 8000);
+        }
       }
     }
     return () => {
@@ -3279,6 +3284,37 @@ export function LessonFlowScreen() {
           </Animated.View>
         </AnimatedPressable>
       )}
+      {/* Finn bridge nudge — after chapter 0 completion */}
+      {showFinnBridgeNudge && (
+        <Modal visible transparent animationType="fade" onRequestClose={() => setShowFinnBridgeNudge(false)}>
+          <Pressable style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.6)", justifyContent: "center", alignItems: "center", paddingHorizontal: 24 }} onPress={() => setShowFinnBridgeNudge(false)}>
+            <Pressable style={{ backgroundColor: "#e0f2fe", borderRadius: 24, padding: 24, width: "100%", maxWidth: 340, alignItems: "center" }} onPress={() => {}}>
+              <ExpoImage source={FINN_HAPPY} accessible={false} style={{ width: 80, height: 80, marginBottom: 12 }} contentFit="contain" />
+              <Text style={{ ...RTL_STYLE, fontSize: 18, fontWeight: "900", color: "#0c4a6e", marginBottom: 10, textAlign: "center" }}>
+                התחלת ללמוד אה? 🎉
+              </Text>
+              <Text style={{ ...RTL_STYLE, fontSize: 15, fontWeight: "600", color: "#334155", lineHeight: 24, textAlign: "center", marginBottom: 20 }}>
+                תכף נתחיל להשקיע ביחד באפליקציה, ואז משם נמשיך לעולם האמיתי! תכנס לעמוד הגשר לראות מה מצפה לנו
+              </Text>
+              <Pressable
+                onPress={() => { tapHaptic(); setShowFinnBridgeNudge(false); router.push("/bridge" as never); }}
+                style={{ backgroundColor: "#0ea5e9", borderRadius: 14, paddingVertical: 14, paddingHorizontal: 32, width: "100%", alignItems: "center", borderBottomWidth: 4, borderBottomColor: "#0369a1" }}
+                accessibilityRole="button"
+              >
+                <Text style={{ fontSize: 16, fontWeight: "800", color: "#fff" }}>קח אותי לגשר 🌉</Text>
+              </Pressable>
+              <Pressable
+                onPress={() => { tapHaptic(); setShowFinnBridgeNudge(false); }}
+                style={{ marginTop: 12, paddingVertical: 8 }}
+                accessibilityRole="button"
+              >
+                <Text style={{ fontSize: 13, fontWeight: "600", color: "#94a3b8" }}>אחר כך</Text>
+              </Pressable>
+            </Pressable>
+          </Pressable>
+        </Modal>
+      )}
+
       {/* Finn full-screen transition between flashcards */}
       {finnTransitionSource && (
         <Animated.View

@@ -1,5 +1,6 @@
 import { useCallback } from 'react';
 import { createAudioPlayer, AudioSource } from 'expo-audio';
+import { useAudioStore } from '../stores/useAudioStore';
 
 export type SoundEffectName =
     | 'btn_click_heavy'
@@ -10,7 +11,8 @@ export type SoundEffectName =
     | 'modal_open_1'
     | 'modal_open_2'
     | 'modal_open_3'
-    | 'modal_open_4';
+    | 'modal_open_4'
+    | 'bubble_transition';
 
 const SOUND_FILES: Record<SoundEffectName, AudioSource> = {
     'btn_click_heavy': { uri: 'https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/sound/btn_click_heavy.mp3' },
@@ -22,6 +24,7 @@ const SOUND_FILES: Record<SoundEffectName, AudioSource> = {
     'modal_open_2': { uri: 'https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/sound/modal_open_2.mp3' },
     'modal_open_3': { uri: 'https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/sound/modal_open_3.mp3' },
     'modal_open_4': { uri: 'https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/sound/modal_open_4.mp3' },
+    'bubble_transition': { uri: 'https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/sound/bubble_transition.mp3' },
 };
 
 /* ------------------------------------------------------------------ */
@@ -31,6 +34,7 @@ const SOUND_FILES: Record<SoundEffectName, AudioSource> = {
 export function useSoundEffect() {
     const playSound = useCallback(async (name: SoundEffectName) => {
         try {
+            if (!useAudioStore.getState().sfxEnabled) return;
             const source = SOUND_FILES[name];
             if (!source) return;
             const player = createAudioPlayer(source);

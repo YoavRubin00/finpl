@@ -7,18 +7,16 @@ import { successHaptic, mediumHaptic } from "../../../utils/haptics";
 
 export function InvestVsSaveScreen({ onComplete }: { onComplete: (score: number) => void }) {
   const [yearsPassed, setYearsPassed] = useState(0);
-  const [savings, setSavings] = useState(1000);
-  const [investment, setInvestment] = useState(1000);
+  const [savings, setSavings] = useState(3000);
+  const [investment, setInvestment] = useState(3000);
   const [isFinished, setIsFinished] = useState(false);
 
   const handleNextYear = () => {
     mediumHaptic();
-    if (yearsPassed < 10) {
+    if (yearsPassed < 20) {
       setYearsPassed(y => y + 1);
-      // Savings loses 2% to inflation each year effectively in value, or stays same nominally? Let's show nominal value but buying power decreases. 
-      // Nah, let's show an easy concept: Savings stays 1000. Investment grows 8% per year.
-      setSavings(s => s + 50); // Very little interest
-      setInvestment(i => Math.round(i * 1.08));
+      setSavings(s => s + 50); // Very little interest (~savings account)
+      setInvestment(i => Math.round(i * 1.10)); // 10% annual return
     } else {
       setIsFinished(true);
     }
@@ -47,7 +45,7 @@ export function InvestVsSaveScreen({ onComplete }: { onComplete: (score: number)
             <Text style={styles.icon}>🛏️</Text>
           </View>
           <Text style={styles.columnTitle}>מתחת למזרן</Text>
-          <Text style={styles.columnValue} accessibilityLiveRegion="polite">₪{savings}</Text>
+          <Text style={styles.columnValue} accessibilityLiveRegion="polite">₪{savings.toLocaleString()}</Text>
           <Text style={styles.columnDesc}>כמעט ולא צומח</Text>
         </View>
 
@@ -58,7 +56,7 @@ export function InvestVsSaveScreen({ onComplete }: { onComplete: (score: number)
             <Text style={styles.icon}>🌳</Text>
           </View>
           <Text style={styles.columnTitle}>השקעה חכמה</Text>
-          <Text style={[styles.columnValue, { color: "#10b981" }]} accessibilityLiveRegion="polite">₪{investment}</Text>
+          <Text style={[styles.columnValue, { color: "#10b981" }]} accessibilityLiveRegion="polite">₪{investment.toLocaleString()}</Text>
           <Text style={styles.columnDesc}>ריבית דריבית עושה קסמים</Text>
         </View>
       </View>
@@ -79,7 +77,7 @@ export function InvestVsSaveScreen({ onComplete }: { onComplete: (score: number)
       ) : (
         <View style={styles.navBar}>
           <AnimatedPressable
-            onPress={() => { if (yearsPassed > 0) { mediumHaptic(); setYearsPassed(y => y - 1); setSavings(s => s - 50); setInvestment(i => Math.round(i / 1.08)); } }}
+            onPress={() => { if (yearsPassed > 0) { mediumHaptic(); setYearsPassed(y => y - 1); setSavings(s => s - 50); setInvestment(i => Math.round(i / 1.10)); } }}
             disabled={yearsPassed === 0}
             style={{ padding: 8, opacity: yearsPassed === 0 ? 0.3 : 1 }}
             accessibilityRole="button"

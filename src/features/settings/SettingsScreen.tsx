@@ -141,6 +141,8 @@ export function SettingsScreen() {
   // Audio store
   const musicEnabled = useAudioStore((s) => s.musicEnabled);
   const toggleMusic = useAudioStore((s) => s.toggleMusic);
+  const sfxEnabled = useAudioStore((s) => s.sfxEnabled);
+  const toggleSfx = useAudioStore((s) => s.toggleSfx);
 
   // Chat tone
   const companionId: CompanionId = profile?.companionId ?? "warren-buffett";
@@ -539,6 +541,25 @@ export function SettingsScreen() {
                       thumbColor="#ffffff"
                       ios_backgroundColor={STITCH_BLUE.dim}
                       accessibilityLabel="מוזיקת רקע"
+                      accessibilityRole="switch"
+                    />
+                  }
+                />
+                <Divider />
+                <SettingsRow
+                  icon={
+                    <Text style={{ fontSize: 20 }}>🔊</Text>
+                  }
+                  label="צלילי מקשים"
+                  subtitle={sfxEnabled ? "מופעלים" : "כבויים"}
+                  right={
+                    <Switch
+                      value={sfxEnabled}
+                      onValueChange={toggleSfx}
+                      trackColor={{ false: STITCH_BLUE.dim, true: STITCH_BLUE.success }}
+                      thumbColor="#ffffff"
+                      ios_backgroundColor={STITCH_BLUE.dim}
+                      accessibilityLabel="צלילי מקשים"
                       accessibilityRole="switch"
                     />
                   }

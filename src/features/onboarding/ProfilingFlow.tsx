@@ -25,6 +25,8 @@ import Animated, {
   FadeInDown,
   FadeInUp,
 } from "react-native-reanimated";
+import { useSoundEffect } from "../../hooks/useSoundEffect";
+import { tapHaptic } from "../../utils/haptics";
 import { useEconomyStore } from "../economy/useEconomyStore";
 import { useAuthStore } from "../auth/useAuthStore";
 import { useGoogleAuth } from "../auth/useGoogleAuth";
@@ -1970,6 +1972,7 @@ export function ProfilingFlow({ mode = "onboarding", onRedoComplete }: Profiling
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
   const isGuest = useAuthStore((s) => s.isGuest);
   const displayName = useAuthStore((s) => s.displayName) ?? "You";
+  const { playSound } = useSoundEffect();
 
   const isRedo = mode === "redo";
   // Skip intro if user already registered/signed-in or is guest (came back from register screen)
@@ -2004,7 +2007,10 @@ export function ProfilingFlow({ mode = "onboarding", onRedoComplete }: Profiling
   const bubbleTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   function slide(nextStep: FlowStep, patch: Partial<Collected>) {
+    tapHaptic();
+    playSound('btn_click_soft_2');
     setShowBubbles(true);
+    playSound('bubble_transition');
     if (bubbleTimeout.current) clearTimeout(bubbleTimeout.current);
     bubbleTimeout.current = setTimeout(() => setShowBubbles(false), SLIDE_MS + 400);
 
