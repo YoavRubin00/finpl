@@ -332,8 +332,8 @@ function YearSlider({
                 {!hasInteracted && (
                     <Animated.View pointerEvents="none" style={[fingerStyle, { position: 'absolute', top: -75, marginLeft: -80, zIndex: 10, width: 190, alignItems: 'center' }]}>
                         <View style={{ flexDirection: 'row-reverse', alignItems: 'center', backgroundColor: '#ffffff', padding: 6, borderRadius: 12, marginBottom: 4, borderWidth: 1, borderColor: '#0891b2', shadowColor: '#000', shadowOffset: {width: 0, height: 4}, shadowOpacity: 0.1, shadowRadius: 6, elevation: 4 }}>
-                            <LottieIcon source={require('../../../../assets/lottie/finn.json') as number} size={32} autoPlay loop />
-                            <Text style={[RTL, { flex: 1, fontSize: 11, color: '#0369a1', fontWeight: '800', textAlign: 'center', marginRight: 4 }]}>
+                            <ExpoImage source={FINN_STANDARD} accessible={false} style={{ width: 32, height: 32 }} contentFit="contain" />
+                            <Text style={[RTL, { flex: 1, fontSize: 13, color: '#0369a1', fontWeight: '800', textAlign: 'center', marginRight: 4 }]}>
                                 תזיז את הכפתור קצת ותראה מה יכול להיות העתיד שלך!
                             </Text>
                         </View>
@@ -757,7 +757,7 @@ export function CompoundSimScreen({ onComplete }: CompoundSimScreenProps) {
                                 <StatRow label="סה״כ הושקע" value={formatCurrency(state.totalInvested)} valueColor={SIM.textMuted} />
                                 <StatRow label="סה״כ עם ריבית דריבית" value={formatCurrency(state.totalCompoundValue)} valueColor={SIM.textPrimary} bold />
                                 <StatRow label="רווח מריבית דריבית" value={formatCurrency(profit)} valueColor={SIM.success} bold />
-                                <Text style={{ fontSize: 11, color: '#94a3b8', textAlign: 'center', marginTop: 6, writingDirection: 'rtl' }}>
+                                <Text style={{ fontSize: 12, color: '#94a3b8', textAlign: 'center', marginTop: 6, writingDirection: 'rtl' }}>
                                     *מחושב לפי תשואה היסטורית של 10%
                                 </Text>
                             </View>
@@ -796,7 +796,7 @@ export function CompoundSimScreen({ onComplete }: CompoundSimScreenProps) {
                 {!hasInteracted && (
                     <Animated.View entering={FadeInDown.delay(400).duration(350)} style={{ flexDirection: 'row-reverse', alignItems: 'center', gap: 8, marginTop: 6, backgroundColor: 'rgba(255,255,255,0.9)', padding: 8, borderRadius: 12, borderWidth: 1, borderColor: '#bae6fd' }}>
                         <ExpoImage source={FINN_STANDARD} accessible={false} style={{ width: 36, height: 36, flexShrink: 0 }} contentFit="contain" />
-                        <Text style={{ flex: 1, fontSize: 12, fontWeight: '700', color: '#0369a1', textAlign: 'right', writingDirection: 'rtl', lineHeight: 18 }}>
+                        <Text style={{ flex: 1, fontSize: 13, fontWeight: '700', color: '#0369a1', textAlign: 'right', writingDirection: 'rtl', lineHeight: 19 }}>
                             תעריכו כמה ותנחשו. זו המטרה!
                         </Text>
                     </Animated.View>

@@ -15,10 +15,16 @@ export const chapter0Data: Chapter = {
       interactiveIntro:
         'תשכחו מסחר חליפין קלישאתי של פרות תמורת שקים של חיטה. במודול הזה נבין לעומק מה זה בכלל "כסף", מה הופך חתיכת נייר (או מספר במסך) לבעלת ערך, ואיך אמון מניע את העולם.',
       introAudio: { uri: 'https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/audio/intros/mod-0-1-v2.mp3' },
+      introImage: { uri: 'https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/0-1.jpg' },
       flashcards: [
         {
           id: 'fc-0-1-1',
           text: '[[סחר חליפין]]: בעבר, כדי לקנות משהו היית צריך לתת משהו פיזי בתמורה (למשל, שק תפוחי אדמה תמורת נעליים). הבעיה? זה מסורבל, כבד, ולא תמיד הצד השני רוצה את מה שיש לך.',
+        },
+        {
+          id: 'fc-0-1-video',
+          text: '',
+          videoUri: 'https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/0-1.mp4',
         },
         {
           id: 'fc-0-1-2',
@@ -107,6 +113,11 @@ export const chapter0Data: Chapter = {
           text: '[[ריבית]]: המחיר של הכסף. לקחת הלוואה? אתה משלם "דמי שכירות" על השימוש בכסף של מישהו אחר. חסכת בתוכנית מניבה? אתה מקבל בונוס על זה שהפנית את הכסף שלך אליהם.',
         },
         {
+          id: 'fc-0-2-video',
+          text: '',
+          videoUri: 'https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/0-2.mp4',
+        },
+        {
           id: 'fc-0-2-4',
           text: 'הלוואה ו[[אשראי]]: לקבל כסף עכשיו כדי לשלם עליו (יותר) בעתיד. קריטי לדעת: כשאתם פורסים ל"תשלומים בקליק" - אתם בעצם לוקחים הלוואה בריבית גבוהה.',
         },
@@ -170,6 +181,11 @@ export const chapter0Data: Chapter = {
         'המחירים מסביב עולים, והסכום שיש לכם היום יקנה קצת פחות מחר עקב עליית המחירים. זוהי האינפלציה. בואו נבין את המנגנון הזה ואיך שומרים על ערך הכסף לאורך זמן.',
       introAudio: { uri: 'https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/audio/intros/mod-0-3-v2.mp3' },
       flashcards: [
+        {
+          id: 'fc-0-3-video',
+          text: '',
+          videoUri: 'https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/0-3.mp4',
+        },
         {
           id: 'fc-0-3-1',
           text: 'מהי [[אינפלציה]]? במילים פשוטות: מצב שבו המחירים של מוצרים ושירותים עולים לאורך זמן. המשמעות היא שהכסף שלכם יכול לקנות מעט פחות היום ממה שיכול היה לקנות אתמול.',

@@ -81,7 +81,7 @@ import { FlashcardInfographic, FINN_MAP } from "./FlashcardInfographic";
 import { GlossaryTooltip } from "../../components/ui/GlossaryTooltip";
 import { ChatScreen } from "../chat/ChatScreen";
 
-type FlowPhase = "hero" | "intro" | "flashcards" | "quizzes" | "sim-intro" | "sim" | "summary" | "video";
+type FlowPhase = "hero" | "intro" | "flashcards" | "quizzes" | "sim-intro" | "sim" | "module-infographic" | "summary" | "video";
 
 /** Full-screen character art shown when first opening a module */
 const MODULE_HERO_MAP: Record<string, { uri: string } | number> = {
@@ -94,6 +94,15 @@ const MODULES_WITH_SIM = new Set(["mod-0-1", "mod-0-3", "mod-0-4", "mod-1-1", "m
 
 /** Modules where sim comes BEFORE flashcards (intro → sim → flashcards → quizzes → summary) */
 const SIM_FIRST_MODULES = new Set(["mod-0-1", "mod-1-1", "mod-2-12", "mod-2-13", "mod-3-18", "mod-4-20", "mod-4-22", "mod-4-23", "mod-4-27", "mod-4-b4"]);
+
+/** Modules with a NotebookLM-generated infographic shown before the summary/chest */
+const MODULE_INFOGRAPHIC_MAP: Record<string, { uri: string }> = {
+  "mod-0-1": { uri: 'https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/infographics/ch0-upgrade/mod-0-1-upgrade.png' },
+  "mod-0-2": { uri: 'https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/infographics/ch0-upgrade/mod-0-2-upgrade.png' },
+  "mod-0-3": { uri: 'https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/infographics/ch0-upgrade/mod-0-3-upgrade.png' },
+  "mod-0-4": { uri: 'https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/infographics/ch0-upgrade/mod-0-4-upgrade.png' },
+  "mod-0-5": { uri: 'https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/infographics/ch0-upgrade/mod-0-5-upgrade.png' },
+};
 
 const RTL_STYLE = { writingDirection: "rtl" as const, textAlign: "right" as const };
 
@@ -262,11 +271,13 @@ function renderBoldText(text: string, onTermPress?: (term: string) => void): Rea
 /*  VideoHookPlayer — full-screen video hook with title overlay         */
 /* ------------------------------------------------------------------ */
 
-function VideoHookPlayer({ videoUri, hookText, onFinish, unitColors }: {
+function VideoHookPlayer({ videoUri, hookText, onFinish, unitColors, fitContain, trimEnd = 0.5 }: {
   videoUri: string;
   hookText: string;
   onFinish: () => void;
   unitColors: { bg: string; dim: string; glow: string; bottom: string };
+  fitContain?: boolean;
+  trimEnd?: number;
 }) {
   const videoRef = useRef<VideoView>(null);
   const [isFastMode, setIsFastMode] = useState(false);
@@ -301,7 +312,7 @@ function VideoHookPlayer({ videoUri, hookText, onFinish, unitColors }: {
       if (e.isPlaying) {
         setIsLoading(false);
       }
-      if (!e.isPlaying && player.duration > 0 && player.currentTime >= player.duration - 0.5) {
+      if (!e.isPlaying && player.duration > 0 && player.currentTime >= player.duration - trimEnd) {
         setTimeout(safeFinish, 500);
       }
     }));
@@ -339,7 +350,7 @@ function VideoHookPlayer({ videoUri, hookText, onFinish, unitColors }: {
           ref={videoRef}
           player={player}
           style={{ flex: 1 }}
-          contentFit="cover"
+          contentFit={fitContain ? "contain" : "cover"}
           nativeControls={false}
         />
       </Pressable>
@@ -502,7 +513,10 @@ function FlashcardCard({
         </Animated.View>
       )}
 
-      {card.isMeme ? (
+      {card.videoUri ? (
+        /* ── Full-screen video flashcard ── */
+        <VideoHookPlayer videoUri={card.videoUri} hookText="" onFinish={handleNextBtn} unitColors={unitColors} />
+      ) : card.isMeme ? (
         /* ── Meme break card — humor pause, no XP ── */
         <View style={{ flex: 1 }}>
           <View style={{ flex: 1, backgroundColor: "#1e293b", borderRadius: 20, overflow: "hidden", position: "relative" }}>
@@ -1898,7 +1912,7 @@ export function LessonFlowScreen() {
     if (router.canGoBack()) {
       router.back();
     } else {
-      router.replace("/(tabs)/index" as never);
+      router.replace("/(tabs)" as never);
     }
   }
   const safeInsets = useSafeAreaInsets();
@@ -2001,7 +2015,7 @@ export function LessonFlowScreen() {
     // After completing the first module (mod-0-1), go to the general
     // learning page so the user sees the unlocked next module on the map.
     if (id === 'mod-0-1') {
-      router.replace("/(tabs)/index" as never);
+      router.replace("/(tabs)" as never);
       return;
     }
     for (const ch of ALL_CHAPTERS_ORDERED) {
@@ -2015,7 +2029,7 @@ export function LessonFlowScreen() {
         return;
       }
     }
-    router.replace("/(tabs)/index" as never);
+    router.replace("/(tabs)" as never);
   }
 
   const [phase, setPhase] = useState<FlowPhase>(() => {
@@ -2299,7 +2313,7 @@ export function LessonFlowScreen() {
       setPhase("sim-intro");
       mediumHaptic();
     } else {
-      setPhase("summary");
+      setPhase(mod.id && MODULE_INFOGRAPHIC_MAP[mod.id] ? "module-infographic" : "summary");
     }
   }, [mod, quizIndex]);
 
@@ -2362,7 +2376,7 @@ export function LessonFlowScreen() {
     if (mod && SIM_FIRST_MODULES.has(mod.id)) {
       setPhase("flashcards");
     } else {
-      setPhase("summary");
+      setPhase(mod && MODULE_INFOGRAPHIC_MAP[mod.id] ? "module-infographic" : "summary");
     }
   }, [mod]);
 
@@ -2624,7 +2638,7 @@ export function LessonFlowScreen() {
 
         <Animated.View style={titleStyle}>
           {/* Title row — hidden during intro, quizzes, sim, sim-intro, and comic flashcards */}
-          {!(phase === "flashcards" && (mod.flashcards[flashcardIndex]?.isComic || mod.flashcards[flashcardIndex]?.isMeme)) && phase !== "intro" && phase !== "quizzes" && phase !== "sim" && (phase as string) !== "sim-intro" && (() => {
+          {!(phase === "flashcards" && (mod.flashcards[flashcardIndex]?.isComic || mod.flashcards[flashcardIndex]?.isMeme || mod.flashcards[flashcardIndex]?.videoUri)) && phase !== "intro" && phase !== "quizzes" && phase !== "sim" && (phase as string) !== "sim-intro" && (() => {
             let titleText = mod.title;
             if (phase === "flashcards") {
               const cardText = mod.flashcards[flashcardIndex]?.text ?? "";
@@ -2669,7 +2683,7 @@ export function LessonFlowScreen() {
             const barBorder = isOnFire ? '#ef4444' : '#d1d5db';
             const barHeight = isOnFire ? 16 : 14;
             return (
-              <View style={{ marginTop: 8, marginBottom: (phase === "flashcards" && (mod.flashcards[flashcardIndex]?.isComic || mod.flashcards[flashcardIndex]?.isMeme)) ? 2 : 6, transform: [{ scaleX: -1 }] }}>
+              <View style={{ marginTop: 8, marginBottom: (phase === "flashcards" && (mod.flashcards[flashcardIndex]?.isComic || mod.flashcards[flashcardIndex]?.isMeme || mod.flashcards[flashcardIndex]?.videoUri)) ? 2 : 6, transform: [{ scaleX: -1 }] }}>
                 {/* Outer glow wrapper for fire effect */}
                 {isOnFire && (
                   <View style={{ position: 'absolute', top: -4, left: -4, right: -4, bottom: -4, borderRadius: 999, shadowColor: '#f97316', shadowOpacity: 0.9, shadowRadius: 20, shadowOffset: { width: 0, height: 0 }, elevation: 6 }} />
@@ -2722,6 +2736,7 @@ export function LessonFlowScreen() {
             <InteractiveIntroCard
               introText={mod.interactiveIntro}
               audioUri={mod.introAudio?.uri}
+              introImageUri={mod.introImage?.uri}
               onStart={() => {
                 if (SIM_FIRST_MODULES.has(mod.id) && MODULES_WITH_SIM.has(mod.id)) {
                   setPhase("sim"); // Skip sim-intro for sim-first modules — go straight to sim
@@ -2744,7 +2759,7 @@ export function LessonFlowScreen() {
               total={mod.flashcards.length}
               onNext={handleFlashcardNext}
               onPrev={handleFlashcardPrev}
-              onClose={() => router.replace("/(tabs)/index" as never)}
+              onClose={() => router.replace("/(tabs)" as never)}
               onSkipAll={() => { mediumHaptic(); setFlashcardIndex(mod.flashcards.length - 1); }}
               unitColors={unitColors}
               onTermPress={setActiveGlossaryTerm}
@@ -2822,6 +2837,30 @@ export function LessonFlowScreen() {
           <Animated.View style={[contentStyle, { flex: 1, marginHorizontal: -16 }]}>
             <SimulatorLoader moduleId={mod.id} onComplete={handleSimComplete} />
             {/* Skip button removed — users complete sims naturally */}
+          </Animated.View>
+        )}
+
+        {/* ── Module infographic phase (before chest) ── */}
+        {phase === "module-infographic" && mod && MODULE_INFOGRAPHIC_MAP[mod.id] && (
+          <Animated.View entering={FadeIn.duration(400)} style={{ flex: 1, alignItems: "center", justifyContent: "center", paddingHorizontal: 16 }}>
+            <Text style={{ fontSize: 18, fontWeight: "900", color: "#1e293b", textAlign: "center", writingDirection: "rtl", marginBottom: 16 }}>
+              סיכום ויזואלי
+            </Text>
+            <View style={{ borderRadius: 18, overflow: "hidden", shadowColor: "#0ea5e9", shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.15, shadowRadius: 16, elevation: 6, backgroundColor: "#fff" }}>
+              <Image
+                source={MODULE_INFOGRAPHIC_MAP[mod.id]}
+                style={{ width: Dimensions.get("window").width - 48, height: (Dimensions.get("window").width - 48) * 1.6, borderRadius: 18 }}
+                resizeMode="contain"
+              />
+            </View>
+            <Pressable
+              onPress={() => { tapHaptic(); setPhase("summary"); }}
+              style={{ marginTop: 20, backgroundColor: "#0ea5e9", borderRadius: 14, paddingVertical: 14, paddingHorizontal: 40, borderBottomWidth: 4, borderBottomColor: "#0369a1" }}
+              accessibilityRole="button"
+              accessibilityLabel="המשך לסיכום"
+            >
+              <Text style={{ fontSize: 16, fontWeight: "800", color: "#fff" }}>המשך לסיכום</Text>
+            </Pressable>
           </Animated.View>
         )}
 
@@ -2965,7 +3004,7 @@ export function LessonFlowScreen() {
                 }
               }}
               onBack={() => {
-                router.replace("/(tabs)/index" as never);
+                router.replace("/(tabs)" as never);
               }}
             />
             </ScrollView>
@@ -3324,7 +3363,7 @@ export function LessonFlowScreen() {
             </View>
             {/* Previous card chips */}
             <View style={{ flexDirection: "row-reverse", flexWrap: "wrap", gap: 8, marginBottom: 14 }}>
-              {mod.flashcards.slice(0, flashcardIndex).filter(c => !c.isMeme).map((card, i) => {
+              {mod.flashcards.slice(0, flashcardIndex).filter(c => !c.isMeme && !c.videoUri).map((card, i) => {
                 const raw = card.text.replace(/\[\[([^|\]]+)\|?[^\]]*\]\]/g, '$1');
                 const colon = raw.indexOf(':');
                 const title = colon > 0 && colon < 40 ? raw.slice(0, colon).trim() : raw.slice(0, 25).trim() + '...';
@@ -3370,7 +3409,7 @@ export function LessonFlowScreen() {
 
       {/* ── Break farewell message ── */}
       {showBreakMessage && (
-        <Pressable style={[StyleSheet.absoluteFill, { zIndex: 9995, backgroundColor: "rgba(0,0,0,0.6)", justifyContent: "center", alignItems: "center", padding: 24 }]} onPress={() => { setShowBreakMessage(false); setShowPostCelebration(false); router.replace("/(tabs)/index" as never); }}>
+        <Pressable style={[StyleSheet.absoluteFill, { zIndex: 9995, backgroundColor: "rgba(0,0,0,0.6)", justifyContent: "center", alignItems: "center", padding: 24 }]} onPress={() => { setShowBreakMessage(false); setShowPostCelebration(false); router.replace("/(tabs)" as never); }}>
           <Animated.View entering={FadeInUp.duration(400)} style={{ backgroundColor: "#ffffff", borderRadius: 28, padding: 28, width: "100%", maxWidth: 340, alignItems: "center" }}>
             <ExpoImage source={FINN_EMPATHIC} accessible={false} style={{ width: 100, height: 100, marginBottom: 16 }} contentFit="contain" />
             <Text style={{ fontSize: 20, fontWeight: "900", color: "#0f172a", textAlign: "center", marginBottom: 8 }}>{"מצפה לראותך פה מחר! ❤️"}</Text>
@@ -3382,6 +3421,7 @@ export function LessonFlowScreen() {
       {/* ── Shark Party invite ── */}
       {showPartyInvite && !showPartyVideo && (
         <Pressable style={[StyleSheet.absoluteFill, { zIndex: 9994, backgroundColor: "rgba(0,0,0,0.7)", justifyContent: "center", alignItems: "center", padding: 24 }]} onPress={() => { setShowPartyInvite(false); goToNextSequentialModule(); }}>
+          <ConfettiExplosion onComplete={() => {}} />
           <Animated.View entering={FadeInUp.duration(500)} style={{ backgroundColor: "#0f172a", borderRadius: 28, padding: 28, width: "100%", maxWidth: 340, alignItems: "center", borderWidth: 2, borderColor: "#0ea5e9" }}>
             <View style={{ width: 120, height: 120, overflow: "hidden", marginBottom: 16 }} accessible={false}>
               <LottieView
@@ -3410,6 +3450,8 @@ export function LessonFlowScreen() {
             hookText=""
             onFinish={() => { setShowPartyVideo(false); setShowPartyInvite(false); goToNextSequentialModule(); }}
             unitColors={unitColors}
+            fitContain
+            trimEnd={2.5}
           />
         </View>
       )}

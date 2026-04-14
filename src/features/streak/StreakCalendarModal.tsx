@@ -125,7 +125,7 @@ export function StreakCalendarModal({ visible, onClose }: StreakCalendarModalPro
 
           {/* ── Header: streak summary ── */}
           <Animated.View entering={FadeIn.duration(300)} style={styles.headerRow}>
-            <View style={styles.streakSummary}>
+            <View style={styles.streakSummary} accessibilityRole="text" accessibilityLabel={`רצף של ${streak} ימים`}>
               {Platform.OS === "web" ? (
                 <Text style={{ fontSize: 28 }}>🔥</Text>
               ) : (
@@ -162,16 +162,21 @@ export function StreakCalendarModal({ visible, onClose }: StreakCalendarModalPro
               onPress={goForward}
               style={[styles.navArrow, !canGoForward && styles.navArrowDisabled]}
               hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+              accessibilityRole="button"
+              accessibilityLabel="חודש הבא"
+              disabled={!canGoForward}
             >
               <ChevronLeft size={22} color={canGoForward ? "#374151" : "#d1d5db"} />
             </Pressable>
-            <Text style={styles.monthTitle}>
+            <Text style={styles.monthTitle} accessibilityRole="header">
               {HEBREW_MONTHS[viewMonth]} {viewYear}
             </Text>
             <Pressable
               onPress={goBack}
               style={styles.navArrow}
               hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+              accessibilityRole="button"
+              accessibilityLabel="חודש קודם"
             >
               <ChevronRight size={22} color="#374151" />
             </Pressable>
@@ -273,6 +278,8 @@ function DayCell({ day, status, date, onPress }: DayCellProps) {
       ]}
       onPress={isInteractive ? () => onPress(status, date) : undefined}
       disabled={!isInteractive}
+      accessibilityRole={isInteractive ? "button" : "text"}
+      accessibilityLabel={`יום ${day}${status === "active" ? " — פעיל" : status === "frozen" ? " — הקפאה" : status === "today" ? " — היום" : status === "missed" ? " — החמצה" : ""}`}
     >
       {status === "active" ? (
         <ActiveDayContent day={day} />

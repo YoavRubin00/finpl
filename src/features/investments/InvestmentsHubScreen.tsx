@@ -2,15 +2,16 @@
 // Investments Hub — central tab for Trading Hub + Real Assets (PRD 38/39)
 // ---------------------------------------------------------------------------
 
-import { useEffect } from "react";
-import { View, Text, Image, StyleSheet, Pressable } from "react-native";
+import { useEffect, useState, useCallback } from "react";
+import { View, Text, Image, StyleSheet, Pressable, Modal, Platform } from "react-native";
 import { Image as ExpoImage } from "expo-image";
-import Animated from "react-native-reanimated";
+import Animated, { FadeIn, FadeInDown } from "react-native-reanimated";
 import { useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { ChevronLeft, TrendingUp, Building2, Briefcase } from "lucide-react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import LottieView from "lottie-react-native";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { SafeLottie } from "../../components/ui/SafeLottie";
 import { useEntranceAnimation, fadeInUp, fadeInScale, SPRING_BOUNCY } from "../../utils/animations";
 import { FINN_STANDARD } from "../retention-loops/finnMascotConfig";
@@ -19,8 +20,11 @@ import { useTutorialStore } from "../../stores/useTutorialStore";
 import { useTradingStore } from "../trading-hub/useTradingStore";
 import { useRealAssetsStore } from "../assets/useRealAssetsStore";
 import { getPyramidStatus } from "../../utils/progression";
+import { tapHaptic } from "../../utils/haptics";
 import { Lock } from "lucide-react-native";
 import { GoldCoinIcon } from "../../components/ui/GoldCoinIcon";
+
+const ASSETS_INTRO_DISMISSED_KEY = "assets_market_intro_dismissed";
 
 export function InvestmentsHubScreen() {
   const router = useRouter();
@@ -53,6 +57,38 @@ export function InvestmentsHubScreen() {
     }, 2000);
     return () => clearTimeout(timer);
   }, [walkthroughStep, hasSeenWT, router]);
+
+  // ── Assets Market intro modal ──
+  const [showAssetsIntro, setShowAssetsIntro] = useState(false);
+  const [assetsIntroDismissed, setAssetsIntroDismissed] = useState(false);
+
+  useEffect(() => {
+    AsyncStorage.getItem(ASSETS_INTRO_DISMISSED_KEY).then((val) => {
+      if (val === "true") setAssetsIntroDismissed(true);
+    });
+  }, []);
+
+  const handleAssetsPress = useCallback(() => {
+    tapHaptic();
+    if (assetsIntroDismissed) {
+      router.push("/assets-market" as never);
+    } else {
+      setShowAssetsIntro(true);
+    }
+  }, [assetsIntroDismissed, router]);
+
+  const handleAssetsIntroContinue = useCallback(() => {
+    setShowAssetsIntro(false);
+    router.push("/assets-market" as never);
+  }, [router]);
+
+  const handleAssetsIntroDontShow = useCallback(() => {
+    tapHaptic();
+    AsyncStorage.setItem(ASSETS_INTRO_DISMISSED_KEY, "true");
+    setAssetsIntroDismissed(true);
+    setShowAssetsIntro(false);
+    router.push("/assets-market" as never);
+  }, [router]);
 
   const finnStyle = useEntranceAnimation(fadeInScale, { delay: 0, spring: SPRING_BOUNCY });
   const summaryStyle = useEntranceAnimation(fadeInUp, { delay: 60 });
@@ -186,7 +222,7 @@ export function InvestmentsHubScreen() {
 
         {/* Real Assets Market */}
         <Animated.View style={marketStyle}>
-          <Pressable onPress={() => router.push("/assets-market" as never)} style={s.navCard} accessibilityRole="button" accessibilityLabel="שוק הנכסים">
+          <Pressable onPress={handleAssetsPress} style={s.navCard} accessibilityRole="button" accessibilityLabel="שוק הנכסים">
             <ChevronLeft size={20} color="#cbd5e1" />
             <View style={s.navTextCol}>
               <Text style={s.navTitle}>זירת הנכסים</Text>
@@ -213,6 +249,70 @@ export function InvestmentsHubScreen() {
         </Animated.View>
 
       </View>
+
+      {/* ── Assets Market Intro Modal ── */}
+      <Modal
+        visible={showAssetsIntro}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowAssetsIntro(false)}
+        accessibilityViewIsModal
+      >
+        <Pressable style={s.introOverlay} onPress={() => setShowAssetsIntro(false)}>
+          <Pressable style={s.introSheet} onPress={() => {}}>
+            <Animated.View entering={FadeInDown.duration(300)}>
+              {/* Finn */}
+              <View style={s.introFinnWrap}>
+                <ExpoImage
+                  source={FINN_STANDARD}
+                  style={{ width: 80, height: 80 }}
+                  contentFit="contain"
+                  accessible={false}
+                />
+              </View>
+
+              {/* Title */}
+              <Text style={s.introTitle}>ברוכים הבאים לזירת הנכסים!</Text>
+
+              {/* Description */}
+              <Text style={s.introDesc}>
+                כאן תוכלו לרכוש נכסים אמיתיים כמו דירות, עסקים וחנויות.{"\n"}
+                כל נכס מייצר הכנסה פסיבית יומית שנכנסת ישירות לחשבון שלכם.{"\n\n"}
+                🏠 קנו נדל"ן והשכירו{"\n"}
+                🏪 רכשו עסקים ותנו להם לעבוד{"\n"}
+                📈 שדרגו נכסים להגדלת הרווחים
+              </Text>
+
+              {/* CTA — הבנתי */}
+              <Pressable
+                onPress={handleAssetsIntroContinue}
+                style={({ pressed }) => [s.introBtn, pressed && { opacity: 0.85, transform: [{ scale: 0.97 }] }]}
+                accessibilityRole="button"
+                accessibilityLabel="הבנתי, קח אותי לזירה"
+              >
+                <LinearGradient
+                  colors={["#3b82f6", "#2563eb"]}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
+                  style={s.introBtnGradient}
+                >
+                  <Text style={s.introBtnText}>הבנתי, קח אותי לזירה!</Text>
+                </LinearGradient>
+              </Pressable>
+
+              {/* Don't show again */}
+              <Pressable
+                onPress={handleAssetsIntroDontShow}
+                style={s.introDontShow}
+                accessibilityRole="button"
+                accessibilityLabel="אל תראה הסבר זה שוב"
+              >
+                <Text style={s.introDontShowText}>אל תראו לי הסבר זה שוב</Text>
+              </Pressable>
+            </Animated.View>
+          </Pressable>
+        </Pressable>
+      </Modal>
     </View>
   );
 }
@@ -383,5 +483,77 @@ const s = StyleSheet.create({
     alignItems: "center",
     gap: 4,
     marginTop: 2,
+  },
+
+  // ── Intro modal ──
+  introOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.5)",
+    justifyContent: "center",
+    alignItems: "center",
+    paddingHorizontal: 24,
+  },
+  introSheet: {
+    backgroundColor: "#ffffff",
+    borderRadius: 24,
+    paddingHorizontal: 24,
+    paddingTop: 28,
+    paddingBottom: 20,
+    width: "100%",
+    maxWidth: 380,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.15,
+    shadowRadius: 24,
+    elevation: 12,
+  },
+  introFinnWrap: {
+    alignSelf: "center",
+    marginBottom: 16,
+  },
+  introTitle: {
+    fontSize: 20,
+    fontWeight: "900",
+    color: "#1e293b",
+    textAlign: "center",
+    writingDirection: "rtl",
+    marginBottom: 12,
+  },
+  introDesc: {
+    fontSize: 15,
+    fontWeight: "600",
+    color: "#475569",
+    textAlign: "right",
+    writingDirection: "rtl",
+    lineHeight: 24,
+    marginBottom: 20,
+  },
+  introBtn: {
+    borderRadius: 16,
+    overflow: "hidden",
+    marginBottom: 12,
+  },
+  introBtnGradient: {
+    paddingVertical: 14,
+    paddingHorizontal: 32,
+    alignItems: "center",
+    borderRadius: 16,
+  },
+  introBtnText: {
+    fontSize: 16,
+    fontWeight: "800",
+    color: "#ffffff",
+  },
+  introDontShow: {
+    alignSelf: "center",
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+  },
+  introDontShowText: {
+    fontSize: 13,
+    fontWeight: "600",
+    color: "#94a3b8",
+    textAlign: "center",
+    writingDirection: "rtl",
   },
 });

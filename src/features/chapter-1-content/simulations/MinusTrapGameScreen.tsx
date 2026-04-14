@@ -175,7 +175,7 @@ function BalanceHeader({
                     </View>
                     {/* Interest monster badge */}
                     <View style={styles.interestBadge}>
-                        <Text style={{ fontSize: 12, color: '#fca5a5', fontWeight: '800' }}>
+                        <Text style={{ fontSize: 13, color: '#fca5a5', fontWeight: '800' }}>
                             🔥 ₪{interestPerSwipe} ריבית לכל פעולה
                         </Text>
                     </View>
@@ -471,7 +471,7 @@ function SwipeableCard({
             <Animated.View style={[styles.swipeCard, cardStyle]}>
                 {/* Card type badge */}
                 <View style={[styles.typeBadge, { backgroundColor: typeConfig.bgColor, borderColor: typeConfig.color }]}>
-                    <Text style={[RTL, { fontSize: 12, fontWeight: '700', color: typeConfig.color }]}>
+                    <Text style={[RTL, { fontSize: 13, fontWeight: '700', color: typeConfig.color }]}>
                         {typeConfig.label}
                     </Text>
                 </View>

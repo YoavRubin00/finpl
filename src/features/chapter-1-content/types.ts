@@ -8,6 +8,7 @@ export interface Flashcard {
   finnTip?: string; // If set, shows a Finn notification popup with this text before advancing
   isMeme?: boolean; // If true, renders as a meme break card (no XP/progress)
   memeImage?: ImageSourcePropType; // The meme image (local require or uri)
+  videoUri?: string; // If set, renders as a full-screen video flashcard
   diveMode?: boolean; // If true, renders as a single image with zoom steps
   hideTextOnDive?: boolean; // If true, the main text disappears when diveMode advances to step > 0
   zoomRegions?: [number, number, number][]; // [translateX, translateY, scale] for each step
@@ -39,6 +40,7 @@ export interface Module {
   videoHookAsset?: { uri: string };
   interactiveIntro: string;
   introAudio?: { uri: string };
+  introImage?: { uri: string };
   flashcards: Flashcard[];
   quizzes: QuizQuestion[];
   simConcept: SimConcept;

@@ -1,6 +1,8 @@
 import React, { useEffect } from "react";
 import { Image as ExpoImage } from "expo-image";
-import { View, Text, StyleSheet } from "react-native";
+import { View, Text, StyleSheet, Dimensions } from "react-native";
+
+const { width: SW } = Dimensions.get("window");
 import LottieView from "lottie-react-native";
 import Animated, {
   useSharedValue,
@@ -58,9 +60,10 @@ interface InteractiveIntroCardProps {
   onStart: () => void;
   unitColors: { bg: string; dim: string; glow: string; bottom: string };
   audioUri?: string;
+  introImageUri?: string;
 }
 
-export const InteractiveIntroCard = React.memo(function InteractiveIntroCard({ introText, onStart, unitColors, audioUri }: InteractiveIntroCardProps) {
+export const InteractiveIntroCard = React.memo(function InteractiveIntroCard({ introText, onStart, unitColors, audioUri, introImageUri }: InteractiveIntroCardProps) {
   useEffect(() => {
     if (!audioUri) return;
     const player = createAudioPlayer({ uri: audioUri });
@@ -99,6 +102,14 @@ export const InteractiveIntroCard = React.memo(function InteractiveIntroCard({ i
     <View style={{ flex: 1, justifyContent: 'space-between', alignItems: 'stretch', paddingHorizontal: 8 }}>
       {/* Scrollable content area */}
       <View style={{ flex: 1, justifyContent: 'center' }}>
+        {/* Finn character — above the text card when intro image is present */}
+        {introImageUri && (
+          <Animated.View style={[bearStyle, floatStyle, { alignSelf: 'center', marginBottom: 10 }]}>
+            <ExpoImage source={FINN_STANDARD} accessible={false}
+              style={{ width: 120, height: 120 }} contentFit="contain" />
+          </Animated.View>
+        )}
+
         {/* Description card — bright, chapter-colored with glow */}
         <Animated.View style={[textStyle, { marginBottom: 0 }]}>
           <View style={{
@@ -126,11 +137,23 @@ export const InteractiveIntroCard = React.memo(function InteractiveIntroCard({ i
           </View>
         </Animated.View>
 
-        {/* Finn character — compact, free-floating */}
-        <Animated.View style={[bearStyle, floatStyle, { alignSelf: 'center', marginTop: 14, marginBottom: 10 }]}>
-          <ExpoImage source={FINN_STANDARD} accessible={false}
-            style={{ width: 140, height: 140 }} contentFit="contain" />
-        </Animated.View>
+        {/* Intro image — between text card and button */}
+        {introImageUri ? (
+          <Animated.View style={[bearStyle, { alignSelf: 'center', marginTop: 16, marginBottom: 10 }]}>
+            <ExpoImage
+              source={{ uri: introImageUri }}
+              accessible={false}
+              style={{ width: SW * 0.85, height: SW * 0.42, borderRadius: 16 }}
+              contentFit="cover"
+            />
+          </Animated.View>
+        ) : (
+          /* Finn character — below text card (default) */
+          <Animated.View style={[bearStyle, floatStyle, { alignSelf: 'center', marginTop: 14, marginBottom: 10 }]}>
+            <ExpoImage source={FINN_STANDARD} accessible={false}
+              style={{ width: 140, height: 140 }} contentFit="contain" />
+          </Animated.View>
+        )}
       </View>
 
       {/* 3D Button with Lottie rocket — pinned to bottom */}

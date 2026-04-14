@@ -16,6 +16,8 @@ import Animated, {
     SlideOutLeft,
 } from 'react-native-reanimated';
 import LottieView from 'lottie-react-native';
+import { Image as ExpoImage } from 'expo-image';
+import { FINN_HAPPY } from '../../retention-loops/finnMascotConfig';
 import { AnimatedPressable } from '../../../components/ui/AnimatedPressable';
 import { SimFeedbackBar } from '../../../components/ui/SimFeedbackBar';
 import { LottieIcon } from '../../../components/ui/LottieIcon';
@@ -42,7 +44,6 @@ const LOTTIE_REPLAY = require('../../../../assets/lottie/wired-flat-142-share-ar
 const LOTTIE_ARROW = require('../../../../assets/lottie/wired-flat-3381-arrows-left-hover-pointing.json');
 const LOTTIE_SNOWFLAKE = require('../../../../assets/lottie/wired-flat-2441-natural-crystal-hover-pinch.json');
 const LOTTIE_DECREASE = require('../../../../assets/lottie/wired-flat-162-decrease-hover-pinch.json');
-const FINN_SOURCE = require('../../../../assets/lottie/finn.json');
 
 const MIN_SNOWBALL_SIZE = 36;
 const MAX_SNOWBALL_SIZE = SCREEN_WIDTH * 0.28;
@@ -532,14 +533,12 @@ function InsightModal({ onDismiss }: { onDismiss: () => void }) {
                 borderWidth: 1.5,
                 borderColor: SIM.cardBorder,
             }}>
-                <View accessible={false}>
-                    <LottieView
-                        source={FINN_SOURCE}
-                        style={{ width: 72, height: 72 }}
-                        autoPlay
-                        loop
-                    />
-                </View>
+                <ExpoImage
+                    source={FINN_HAPPY}
+                    style={{ width: 72, height: 72 }}
+                    contentFit="contain"
+                    accessible={false}
+                />
                 <Text
                     style={[
                         RTL,

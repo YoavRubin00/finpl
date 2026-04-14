@@ -59,6 +59,41 @@ const GRAHAM_PRICE_VS_VALUE_CARDS = [{ uri: `${BLOB}/graham-price-value/gv-1.png
 const GRAHAM_7_RULES_CARDS = [{ uri: `${BLOB}/graham-7-rules/gr-1.png?${V}` }];
 const GRAHAM_AP_STORY_CARDS = [{ uri: `${BLOB}/graham-ap-story/ga-1.png?${V}` }];
 
+/* ── Chapter 0: המבוא — portrait infographics per module ── */
+const MOD_0_1_CARDS = [
+  { uri: `${BLOB}/mod-0-1/fc-0-1-1.png` },
+  { uri: `${BLOB}/mod-0-1/fc-0-1-2.png` },
+  { uri: `${BLOB}/mod-0-1/fc-0-1-3.png` },
+  { uri: `${BLOB}/mod-0-1/fc-0-1-4.png` },
+  { uri: `${BLOB}/mod-0-1/fc-0-1-5.png` },
+];
+const MOD_0_2_CARDS = [
+  { uri: `${BLOB}/mod-0-2/fc-0-2-1.png` },
+  { uri: `${BLOB}/mod-0-2/fc-0-2-2.png` },
+  { uri: `${BLOB}/mod-0-2/fc-0-2-3.png` },
+  { uri: `${BLOB}/mod-0-2/fc-0-2-4.png` },
+  { uri: `${BLOB}/mod-0-2/fc-0-2-5.png` },
+];
+const MOD_0_3_CARDS = [
+  { uri: `${BLOB}/mod-0-3/fc-0-3-1.png` },
+  { uri: `${BLOB}/mod-0-3/fc-0-3-2.png` },
+  { uri: `${BLOB}/mod-0-3/fc-0-3-3.png` },
+  { uri: `${BLOB}/mod-0-3/fc-0-3-4.png` },
+  { uri: `${BLOB}/mod-0-3/fc-0-3-5.png` },
+];
+const MOD_0_4_CARDS = [
+  { uri: `${BLOB}/mod-0-4/fc-0-4-1.png` },
+  { uri: `${BLOB}/mod-0-4/fc-0-4-2.png` },
+  { uri: `${BLOB}/mod-0-4/fc-0-4-3.png` },
+  { uri: `${BLOB}/mod-0-4/fc-0-4-4.png` },
+];
+const MOD_0_5_CARDS = [
+  { uri: `${BLOB}/mod-0-5/fc-0-5-1.png` },
+  { uri: `${BLOB}/mod-0-5/fc-0-5-2.png` },
+  { uri: `${BLOB}/mod-0-5/fc-0-5-3.png` },
+  { uri: `${BLOB}/mod-0-5/fc-0-5-4.png` },
+];
+
 /** Premium learning carousel items for the feed */
 export const PREMIUM_LEARNING_ITEMS: FeedPremiumLearning[] = [
   {
@@ -306,6 +341,90 @@ export const PREMIUM_LEARNING_ITEMS: FeedPremiumLearning[] = [
       'מחיר המניה זה רק הצבעה רגעית. הערך האמיתי נקבע לפי ביצועי העסק לאורך זמן.',
       'מי שרוכש בהנחה משמעותית ושומר על מרווח ביטחון — מגן על הקרן מפני טעויות.',
       'הלקח: הפחד של אחרים הוא ההזדמנות שלכם. תבדקו מספרים, לא כותרות.',
+    ],
+  },
+  // ── Chapter 0: המבוא — infographic carousels ──
+  {
+    id: 'premium-mod-0-1',
+    type: 'premium-learning',
+    moduleId: 'mod-0-1',
+    moduleIndex: 0,
+    chapterId: 'chapter-0',
+    storeChapterId: 'ch-0',
+    moduleTitle: 'מה זה בכלל כסף?',
+    infographics: MOD_0_1_CARDS,
+    finnExplanations: [
+      'פעם שילמו בפרות ותפוחי אדמה. אבל מה קורה אם אף אחד לא רוצה מה שיש לך?',
+      'כסף הומצא בדיוק בשביל זה — אמצעי חליפין שכולם מסכימים על ערכו.',
+      'בניגוד לעגבניות שירקבו, כסף שומר את הערך שייצרת — לפחות בתיאוריה.',
+      'כסף הוא גם סרגל: בזכותו אנחנו יודעים כמה שעות עבודה שוות לאייפון.',
+      'היום הכסף שלנו מבוסס על אמון בלבד. אין זהב מאחוריו — רק הבטחה.',
+    ],
+  },
+  {
+    id: 'premium-mod-0-2',
+    type: 'premium-learning',
+    moduleId: 'mod-0-2',
+    moduleIndex: 1,
+    chapterId: 'chapter-0',
+    storeChapterId: 'ch-0',
+    moduleTitle: 'מושגי יסוד פיננסיים',
+    infographics: MOD_0_2_CARDS,
+    finnExplanations: [
+      'בנק זה חנות שמוכרת כסף. הוא לוקח ממך בזול ומוכר ליד שנייה ביוקר.',
+      'חשבון עו"ש — הבסיס שלך. משם נכנס ומשם יוצא כל הכסף.',
+      'ריבית — חרב פיפיות: אם אתה חוסך היא עובדת בשבילך, אם אתה לווה — נגדך.',
+      'אשראי נראה חינם, אבל מחכה לך בפינה עם חשבון.',
+      'פנסיה: טיפות קטנות שהופכות לבריכה אחרי 40 שנה. תתחילו מוקדם.',
+    ],
+  },
+  {
+    id: 'premium-mod-0-3',
+    type: 'premium-learning',
+    moduleId: 'mod-0-3',
+    moduleIndex: 2,
+    chapterId: 'chapter-0',
+    storeChapterId: 'ch-0',
+    moduleTitle: 'הגנב השקוף: אינפלציה',
+    infographics: MOD_0_3_CARDS,
+    finnExplanations: [
+      'אינפלציה — הגנב שלא רואים. הוא לא שובר דלתות, הוא שוחק את הכסף שלך בשקט.',
+      'כוח קנייה: אותם 100 שקל קונים היום פחות מאשר לפני 10 שנים.',
+      'מי שומר מזומן — מפסיד. מי שמחזיק בנכסים — מנצח.',
+      'ריבית ריאלית = ריבית מינוס אינפלציה. אם התוצאה שלילית — אתה מפסיד.',
+      'ההגנה: להשקיע בנכסים שעולים עם הזמן במקום לשמור מזומן נשחק.',
+    ],
+  },
+  {
+    id: 'premium-mod-0-4',
+    type: 'premium-learning',
+    moduleId: 'mod-0-4',
+    moduleIndex: 3,
+    chapterId: 'chapter-0',
+    storeChapterId: 'ch-0',
+    moduleTitle: 'כמה נכנס וכמה יוצא',
+    infographics: MOD_0_4_CARDS,
+    finnExplanations: [
+      'הכנסות מול הוצאות — המשוואה הכי חשובה בחיים הפיננסיים שלך.',
+      'תזרים חיובי = חופש. תזרים שלילי = לחץ. תבדקו לאיזה צד אתם.',
+      'מאזן חיובי — מדרגות ירוקות למעלה. מאזן שלילי — בור אדום למטה.',
+      'FOMO והטלפון שואב מטבעות. שימו לב כמה מנויים והוצאות "קטנות" יש לכם.',
+    ],
+  },
+  {
+    id: 'premium-mod-0-5',
+    type: 'premium-learning',
+    moduleId: 'mod-0-5',
+    moduleIndex: 4,
+    chapterId: 'chapter-0',
+    storeChapterId: 'ch-0',
+    moduleTitle: 'אז למה להשקיע?',
+    infographics: MOD_0_5_CARDS,
+    finnExplanations: [
+      'במקום שאתה תעבוד בשביל הכסף — תן לכסף לעבוד בשבילך.',
+      'ריבית דריבית: הרווחים מייצרים רווחים. לאורך זמן, הצמיחה מפלצתית.',
+      'מניות, אגח, נדלן, קרנות — כל אחד מתאים למצב אחר.',
+      'בטווח קצר — רכבת הרים. בטווח ארוך — הפסגה תמיד גבוהה יותר.',
     ],
   },
 ];

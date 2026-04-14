@@ -884,7 +884,7 @@ const treeStyles = StyleSheet.create({
   container: {
     alignItems: 'center',
     justifyContent: 'flex-end',
-    height: 160,
+    minHeight: 160,
   },
   treeWrap: {
     alignItems: 'center',
