@@ -218,13 +218,13 @@ export function AppWalkthroughOverlay() {
     setContentKey((k) => k + 1);
     setActiveScreen(nextConfig.screenSignal);
 
-    if (nextConfig.navigateTo && !isAlreadyOnRoute(nextConfig.navigateTo)) {
+    if (nextConfig.navigateTo) {
+      // Always navigate — even if already on the route — to ensure the screen is visible
       setTransitioning(true);
       setTimeout(() => {
         try {
           router.replace(nextConfig.navigateTo as never);
         } catch {
-          // Fallback to safe home if route fails to resolve
           try { router.replace("/(tabs)" as never); } catch {}
         }
         setTimeout(() => setTransitioning(false), 300);
@@ -259,7 +259,7 @@ export function AppWalkthroughOverlay() {
     <Modal visible transparent animationType="fade" statusBarTranslucent accessibilityViewIsModal onRequestClose={handleSkip}>
       <View style={s.overlay}>
         {/* ── Top: Step title pill with counter ── */}
-        <SafeAreaView edges={["top"]} style={{ alignItems: "center", paddingTop: 12 }}>
+        <SafeAreaView edges={["top"]} style={{ alignItems: "center", paddingTop: 20 }}>
           <Animated.View
             key={`pill-${contentKey}`}
             entering={reducedMotion ? undefined : FadeInDown.duration(350)}

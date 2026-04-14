@@ -33,6 +33,8 @@ import { AnimatedPressable } from "../../components/ui/AnimatedPressable";
 import { SwipeableModal } from "../../components/ui/SwipeableModal";
 import { NotificationPermissionBanner } from "../../components/ui/NotificationPermissionBanner";
 import { StreakAtRiskBanner } from "../streak/StreakAtRiskBanner";
+import { StreakCalendarModal } from "../streak/StreakCalendarModal";
+import { CalendarDays } from "lucide-react-native";
 import { FINN_STANDARD } from "../retention-loops/finnMascotConfig";
 import { FeedNudgeBanner } from "../../components/ui/FeedNudgeBanner";
 import { useFeedNudge } from "../../hooks/useFeedNudge";
@@ -880,6 +882,7 @@ export function DuoLearnScreen() {
   const displayName = useAuthStore((s) => s.displayName) ?? "";
   const { layer } = getPyramidStatus(xp);
   const [lockedModalVisible, setLockedModalVisible] = useState(false);
+  const [showStreakCalendar, setShowStreakCalendar] = useState(false);
   const [roadmapVisible, setRoadmapVisible] = useState(false);
   const [mindMapChapter, setMindMapChapter] = useState<number | null>(null);
   const [replayModule, setReplayModule] = useState<{ moduleId: string; chapterId: string; moduleIndex: number } | null>(null);
@@ -1059,6 +1062,7 @@ export function DuoLearnScreen() {
     <View style={styles.root}>
       {!isWalkthroughActive && <NotificationPermissionBanner />}
       {!isWalkthroughActive && <StreakAtRiskBanner />}
+      <StreakCalendarModal visible={showStreakCalendar} onClose={() => setShowStreakCalendar(false)} />
       <SafeAreaView style={{ flex: 1 }} edges={["left", "right"]}>
         <ScrollView
           ref={scrollRef}
@@ -1082,8 +1086,13 @@ export function DuoLearnScreen() {
               </View>
             </View>
 
-            {/* Left side: Streak Flame */}
-            <View style={{ alignItems: "center", flexDirection: "row-reverse", gap: 4 }}>
+            {/* Left side: Streak Flame + Calendar */}
+            <Pressable
+              onPress={() => { tapHaptic(); setShowStreakCalendar(true); }}
+              style={{ alignItems: "center", flexDirection: "row-reverse", gap: 4 }}
+              accessibilityRole="button"
+              accessibilityLabel={`רצף ${streak} ימים — פתח לוח שנה`}
+            >
               <View style={{ width: 36, height: 36 }} accessible={false}>
                 <LottieView
                   source={require("../../../assets/lottie/wired-flat-2804-fire-flame-hover-pinch.json")}
@@ -1096,7 +1105,8 @@ export function DuoLearnScreen() {
               <Text style={{ fontSize: 18, fontWeight: "900", color: streak >= 8 ? "#a855f7" : streak >= 4 ? "#3b82f6" : "#f97316" }}>
                 {streak}
               </Text>
-            </View>
+              <CalendarDays size={16} color={streak >= 8 ? "#a855f7" : streak >= 4 ? "#3b82f6" : "#f97316"} style={{ opacity: 0.7 }} />
+            </Pressable>
           </View>
 
           {/* Chapter sections */}

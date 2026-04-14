@@ -101,10 +101,11 @@ export function BarterPuzzleScreen({
     setSpeechKey((k) => k + 1);
     setHeldItem({ emoji: SWAP_MERCHANTS[0].gives, label: SWAP_MERCHANTS[0].givesLabel });
     setShowHint(false);
+    // Skip swap2+payDebt → go straight to coin phase after one barter trade
     setTimeout(() => {
-      setPhase("swap2");
       setSpeech("");
-    }, 800);
+      setPhase("coinDrop");
+    }, 1200);
   }, []);
 
   const handleSwap2 = useCallback(() => {
@@ -160,9 +161,9 @@ export function BarterPuzzleScreen({
 
   const handleDrop = useCallback(
     (x: number, y: number) => {
-      // Find closest merchant within 70px
+      // Find closest merchant within 120px
       let closestId = "";
-      let closestDist = 70;
+      let closestDist = 120;
       for (const [id, pos] of Object.entries(merchantPositions.current)) {
         const d = distance(x, y, pos.x, pos.y);
         if (d < closestDist) {
@@ -345,6 +346,12 @@ function MerchantSlot({
     }
   }, [onLayout]);
 
+  // Re-measure after entry animation settles (spring takes ~400ms)
+  useEffect(() => {
+    const timer = setTimeout(measureLayout, 500);
+    return () => clearTimeout(timer);
+  }, [measureLayout]);
+
   return (
     <Animated.View entering={FadeInDown.springify().damping(14)}>
       <View
@@ -383,6 +390,10 @@ function DraggableItem({
   const translateY = useSharedValue(0);
   const scale = useSharedValue(1);
 
+  // Keep a ref to the latest onDrop so PanResponder always uses the current phase
+  const onDropRef = useRef(onDrop);
+  onDropRef.current = onDrop;
+
   const panResponder = useRef(
     PanResponder.create({
       onStartShouldSetPanResponder: () => true,
@@ -398,7 +409,7 @@ function DraggableItem({
       onPanResponderRelease: (_, gesture) => {
         const dropX = gesture.moveX;
         const dropY = gesture.moveY;
-        const accepted = onDrop(dropX, dropY);
+        const accepted = onDropRef.current(dropX, dropY);
         if (!accepted) {
           // Spring back
           translateX.value = withSpring(0, SPRING_BOUNCY);

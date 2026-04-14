@@ -39,8 +39,7 @@ const HEBREW_MONTHS = [
 
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const FIRE_LOTTIE = require("../../../assets/lottie/wired-flat-2804-fire-flame-hover-pinch.json");
-// eslint-disable-next-line @typescript-eslint/no-var-requires
-const ICE_LOTTIE = require("../../../assets/lottie/wired-flat-2441-natural-crystal-hover-pinch.json");
+
 
 interface StreakCalendarModalProps {
   visible: boolean;
@@ -141,16 +140,7 @@ export function StreakCalendarModal({ visible, onClose }: StreakCalendarModalPro
             </View>
             {streakFreezes > 0 && (
               <View style={styles.freezeBadge}>
-                {Platform.OS === "web" ? (
-                  <Text style={styles.freezeEmoji}>🧊</Text>
-                ) : (
-                  <LottieView
-                    source={ICE_LOTTIE}
-                    style={{ width: 24, height: 24 }}
-                    autoPlay
-                    loop
-                  />
-                )}
+                <Text style={styles.freezeEmoji}>🧊</Text>
                 <Text style={styles.freezeCount}>×{streakFreezes}</Text>
               </View>
             )}
@@ -230,11 +220,7 @@ export function StreakCalendarModal({ visible, onClose }: StreakCalendarModalPro
               <Text style={styles.legendText}>פעיל</Text>
             </View>
             <View style={styles.legendItem}>
-              {Platform.OS === "web" ? (
-                <Text style={{ fontSize: 14 }}>🧊</Text>
-              ) : (
-                <LottieView source={ICE_LOTTIE} style={{ width: 18, height: 18 }} autoPlay loop />
-              )}
+              <Text style={{ fontSize: 14 }}>🧊</Text>
               <Text style={styles.legendText}>הקפאה</Text>
             </View>
             <View style={styles.legendItem}>
@@ -372,16 +358,7 @@ function FrozenDayContent({ day }: { day: number }) {
 
   return (
     <Animated.View style={[styles.frozenDayInner, glowStyle]}>
-      {Platform.OS === "web" ? (
-        <Text style={{ fontSize: 16 }}>🧊</Text>
-      ) : (
-        <LottieView
-          source={ICE_LOTTIE}
-          style={{ width: 22, height: 22 }}
-          autoPlay
-          loop
-        />
-      )}
+      <Text style={{ fontSize: 16 }}>🧊</Text>
       <Text style={[styles.dayNumber, styles.dayNumberFrozen]}>{day}</Text>
     </Animated.View>
   );
