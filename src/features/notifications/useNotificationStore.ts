@@ -43,12 +43,12 @@ const CONTENT: Record<NotificationChannelId, Notifications.NotificationContentIn
     data: { screen: "/squads" },
   },
   morning: {
-    title: "🦈 בוקר טוב מקפטן שארק!",
+    title: "בוקר טוב מקפטן שארק!",
     body: "טיפ פיננסי ליום חדש — בוא לגלות!",
     data: { screen: "/(tabs)/learn" },
   },
   inactivity: {
-    title: "🦈 קפטן שארק מתגעגע!",
+    title: "קפטן שארק מתגעגע!",
     body: "כבר לא ראינו אותך... בוא נלמד משהו חדש!",
     data: { screen: "/(tabs)/learn" },
   },

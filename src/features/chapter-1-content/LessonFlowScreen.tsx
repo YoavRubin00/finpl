@@ -62,6 +62,7 @@ import { MythFeedCard } from "../myth-or-tachles/MythFeedCard";
 import { DilemmaCard } from "../daily-challenges/DilemmaCard";
 import { FlyingRewards } from "../../components/ui/FlyingRewards";
 import { GoldCoinIcon } from "../../components/ui/GoldCoinIcon";
+import { useAuthStore } from "../auth/useAuthStore";
 import { DecorationOverlay } from "../../components/ui/DecorationOverlay";
 import { generateChestDrop } from "../retention-loops/chestDrops";
 import { useRetentionStore } from "../retention-loops/useRetentionStore";
@@ -1911,11 +1912,22 @@ export function LessonFlowScreen() {
   const router = useRouter();
   /** Safe back: go back if possible, otherwise fall back to tabs home */
   function safeGoBack() {
+    // Intercept exit during active lesson phases
+    if (phase === "flashcards" || phase === "quizzes" || phase === "sim") {
+      setShowExitConfirm(true);
+      return;
+    }
     if (router.canGoBack()) {
       router.back();
     } else {
       router.replace("/(tabs)" as never);
     }
+  }
+
+  function forceExit() {
+    setShowExitConfirm(false);
+    if (router.canGoBack()) router.back();
+    else router.replace("/(tabs)" as never);
   }
   const safeInsets = useSafeAreaInsets();
   const [activeGlossaryTerm, setActiveGlossaryTerm] = useState<string | null>(null);
@@ -2017,7 +2029,11 @@ export function LessonFlowScreen() {
     // After completing the first module (mod-0-1), go to the general
     // learning page so the user sees the unlocked next module on the map.
     if (id === 'mod-0-1') {
-      router.replace("/(tabs)" as never);
+      if (isGuest) {
+        setShowRegisterNudge(true); // Guest → register nudge first
+      } else {
+        router.replace("/pricing" as never); // Registered → Pro upsell
+      }
       return;
     }
     for (const ch of ALL_CHAPTERS_ORDERED) {
@@ -2084,6 +2100,9 @@ export function LessonFlowScreen() {
   const [lifelineChatConcept, setLifelineChatConcept] = useState<string | null>(null);
   const [showChapterComplete, setShowChapterComplete] = useState(false);
   const [showFinnBridgeNudge, setShowFinnBridgeNudge] = useState(false);
+  const [showExitConfirm, setShowExitConfirm] = useState(false);
+  const [showRegisterNudge, setShowRegisterNudge] = useState(false);
+  const isGuest = useAuthStore((s) => s.isGuest);
   const [chestFullScreen, setChestFullScreen] = useState(false);
   const [chestClaimed, setChestClaimed] = useState(false);
   const [chestRewards, setChestRewards] = useState<ChestReward | null>(null);
@@ -3315,6 +3334,70 @@ export function LessonFlowScreen() {
         </Modal>
       )}
 
+      {/* Exit interception modal — Duolingo-style */}
+      {showExitConfirm && (
+        <Modal visible transparent animationType="fade" onRequestClose={() => setShowExitConfirm(false)}>
+          <View style={{ flex: 1, backgroundColor: "rgba(8, 20, 40, 0.75)", justifyContent: "center", alignItems: "center", paddingHorizontal: 28 }}>
+            <View style={{ backgroundColor: "#0f2942", borderRadius: 28, padding: 28, width: "100%", maxWidth: 340, alignItems: "center", borderWidth: 1, borderColor: "rgba(56,189,248,0.15)" }}>
+              <ExpoImage source={FINN_EMPATHIC} accessible={false} style={{ width: 90, height: 90, marginBottom: 16 }} contentFit="contain" />
+              <Text style={{ ...RTL_STYLE, fontSize: 20, fontWeight: "900", color: "#ffffff", textAlign: "center", marginBottom: 8 }}>
+                חכו, יש רק עוד דקה{"\n"}לסיום המודולה!
+              </Text>
+              <Text style={{ ...RTL_STYLE, fontSize: 14, fontWeight: "600", color: "rgba(255,255,255,0.6)", textAlign: "center", marginBottom: 24 }}>
+                כמעט סיימת, אל תוותר עכשיו
+              </Text>
+              <Pressable
+                onPress={() => { tapHaptic(); setShowExitConfirm(false); }}
+                style={{ backgroundColor: "#0284c7", borderRadius: 16, paddingVertical: 16, width: "100%", alignItems: "center", borderBottomWidth: 4, borderBottomColor: "#0369a1" }}
+                accessibilityRole="button"
+                accessibilityLabel="נמשיך לשחק"
+              >
+                <Text style={{ fontSize: 17, fontWeight: "900", color: "#ffffff" }}>נמשיך לשחק</Text>
+              </Pressable>
+              <Pressable
+                onPress={forceExit}
+                style={{ marginTop: 16, paddingVertical: 8 }}
+                accessibilityRole="button"
+                accessibilityLabel="צא"
+              >
+                <Text style={{ fontSize: 14, fontWeight: "700", color: "#ef4444" }}>צא</Text>
+              </Pressable>
+            </View>
+          </View>
+        </Modal>
+      )}
+
+      {/* Registration nudge for guests after mod-0-1 */}
+      {showRegisterNudge && (
+        <Modal visible transparent animationType="fade" onRequestClose={() => { setShowRegisterNudge(false); router.replace("/pricing" as never); }}>
+          <Pressable style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.6)", justifyContent: "center", alignItems: "center", paddingHorizontal: 24 }} onPress={() => { setShowRegisterNudge(false); router.replace("/pricing" as never); }}>
+            <Pressable style={{ backgroundColor: "#e0f2fe", borderRadius: 24, padding: 24, width: "100%", maxWidth: 340, alignItems: "center" }} onPress={() => {}}>
+              <ExpoImage source={FINN_HAPPY} accessible={false} style={{ width: 80, height: 80, marginBottom: 12 }} contentFit="contain" />
+              <Text style={{ ...RTL_STYLE, fontSize: 18, fontWeight: "900", color: "#0c4a6e", marginBottom: 10, textAlign: "center" }}>
+                רוצה לשמור את ההתקדמות?
+              </Text>
+              <Text style={{ ...RTL_STYLE, fontSize: 15, fontWeight: "600", color: "#334155", lineHeight: 24, textAlign: "center", marginBottom: 20 }}>
+                הירשם בחינם כדי שהנתונים שלך לא יאבדו ותוכל להמשיך מאיפה שהפסקת
+              </Text>
+              <Pressable
+                onPress={() => { tapHaptic(); setShowRegisterNudge(false); router.push("/(auth)/register" as never); }}
+                style={{ backgroundColor: "#0ea5e9", borderRadius: 14, paddingVertical: 14, paddingHorizontal: 32, width: "100%", alignItems: "center", borderBottomWidth: 4, borderBottomColor: "#0369a1" }}
+                accessibilityRole="button"
+              >
+                <Text style={{ fontSize: 16, fontWeight: "800", color: "#fff" }}>הרשם</Text>
+              </Pressable>
+              <Pressable
+                onPress={() => { tapHaptic(); setShowRegisterNudge(false); router.replace("/pricing" as never); }}
+                style={{ marginTop: 12, paddingVertical: 8 }}
+                accessibilityRole="button"
+              >
+                <Text style={{ fontSize: 13, fontWeight: "600", color: "#94a3b8" }}>המשך</Text>
+              </Pressable>
+            </Pressable>
+          </Pressable>
+        </Modal>
+      )}
+
       {/* Finn full-screen transition between flashcards */}
       {finnTransitionSource && (
         <Animated.View
@@ -3411,7 +3494,7 @@ export function LessonFlowScreen() {
             </View>
             {/* Chat button */}
             <Pressable onPress={() => { setShowMidCheckpoint(false); setShowChatOverlay(true); }} style={{ flexDirection: "row-reverse", alignItems: "center", justifyContent: "center", gap: 8, backgroundColor: "#dbeafe", borderRadius: 14, paddingVertical: 12, marginBottom: 10, borderWidth: 1, borderColor: "#93c5fd" }} accessibilityRole="button" accessibilityLabel="שאלו את שארק">
-              <Text style={{ fontSize: 15, fontWeight: "800", color: "#1e40af" }}>{"שאלו את שארק 🦈"}</Text>
+              <Text style={{ fontSize: 15, fontWeight: "800", color: "#1e40af" }}>{"שאלו את שארק"}</Text>
             </Pressable>
             {/* Continue button */}
             <Pressable onPress={() => { setShowMidCheckpoint(false); setFlashcardIndex((prev) => prev + 1); }} style={{ flexDirection: "row-reverse", alignItems: "center", justifyContent: "center", gap: 6, backgroundColor: "#38bdf8", borderRadius: 14, paddingVertical: 12, borderBottomWidth: 3, borderBottomColor: "#0284c7" }} accessibilityRole="button" accessibilityLabel="הכל ברור, קדימה">
@@ -3468,7 +3551,7 @@ export function LessonFlowScreen() {
             <Text style={{ fontSize: 24, fontWeight: "900", color: "#ffffff", textAlign: "center", marginBottom: 8 }}>{"🎉 מסיבת הקפטן!"}</Text>
             <Text style={{ fontSize: 15, fontWeight: "600", color: "#64748b", textAlign: "center", marginBottom: 24 }}>{"סיימת 4 מודולים! קפטן שארק מזמין אותך לחגוג"}</Text>
             <Pressable onPress={() => { successHaptic(); setShowPartyVideo(true); }} style={{ width: "100%", backgroundColor: "#0ea5e9", borderRadius: 16, paddingVertical: 16, alignItems: "center", marginBottom: 12, borderBottomWidth: 4, borderBottomColor: "#0284c7" }} accessibilityRole="button" accessibilityLabel="הצטרפו למסיבה">
-              <Text style={{ fontSize: 18, fontWeight: "900", color: "#ffffff" }}>{"הצטרפו למסיבה! 🦈"}</Text>
+              <Text style={{ fontSize: 18, fontWeight: "900", color: "#ffffff" }}>{"הצטרפו למסיבה!"}</Text>
             </Pressable>
             <Pressable onPress={() => { setShowPartyInvite(false); goToNextSequentialModule(); }} style={{ paddingVertical: 10 }} accessibilityRole="button" accessibilityLabel="המשך">
               <Text style={{ fontSize: 14, fontWeight: "700", color: "#64748b" }}>{"ממשיכים ללמוד →"}</Text>

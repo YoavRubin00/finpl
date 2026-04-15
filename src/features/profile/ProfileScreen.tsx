@@ -63,10 +63,10 @@ const KNOWLEDGE_LABELS: Record<string, string> = {
 };
 
 const COMPANION_LABELS: Record<string, string> = {
-  "warren-buffett": "🦈 קפטן שארק — חכם",
-  "moshe-peled": "🦈 קפטן שארק — תכל'סי",
-  "rachel": "🦈 קפטן שארק — חם",
-  "robot": "🦈 קפטן שארק — אנליטי",
+  "warren-buffett": "קפטן שארק — חכם",
+  "moshe-peled": "קפטן שארק — תכל'סי",
+  "rachel": "קפטן שארק — חם",
+  "robot": "קפטן שארק — אנליטי",
 };
 
 const DAILY_LABELS: Record<number, string> = {

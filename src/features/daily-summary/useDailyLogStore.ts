@@ -144,7 +144,7 @@ export const useDailyLogStore = create<DailyLogState>()(
 
         lines.push(
           '',
-          'רוצים ללמוד על כסף בצורה כיפית? נסו את Finpl 🦈',
+          'רוצים ללמוד על כסף בצורה כיפית? נסו את Finpl',
         );
 
         return lines.join('\n');

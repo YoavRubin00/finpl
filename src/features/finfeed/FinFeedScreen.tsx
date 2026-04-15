@@ -24,7 +24,7 @@ import { LinearGradient } from "expo-linear-gradient";
 import { FINN_STANDARD } from "../retention-loops/finnMascotConfig";
 
 // Feed Data & Types
-import { MOCK_FEED_DATA, COMIC_FEED_ITEMS } from "./feedData";
+import { MOCK_FEED_DATA, COMIC_FEED_ITEMS, BENBEN_VIDEOS } from "./feedData";
 import { type FeedItem, type FeedModuleHook, type FeedQuote, type FeedFinnHero } from "./types";
 import { FeedVideoItem } from "./FeedVideoItem";
 import { FeedQuoteItem } from "./FeedQuoteItem";
@@ -760,9 +760,13 @@ export function FinFeedScreen() {
     if (quizItem) filteredMerged.unshift(quizItem);
     filteredMerged.unshift({ id: 'daily-dilemma', type: 'daily-dilemma' });
 
-    // Insert pinned macro event at position 7
+    // Insert pinned BENBEN creator video at position 7 (rotates each session)
+    const benbenVideo = BENBEN_VIDEOS[seed % BENBEN_VIDEOS.length];
+    filteredMerged.splice(Math.min(7, filteredMerged.length), 0, benbenVideo);
+
+    // Insert pinned macro event at position 8
     if (pinnedMacro) {
-      const insertAt = Math.min(7, filteredMerged.length);
+      const insertAt = Math.min(8, filteredMerged.length);
       filteredMerged.splice(insertAt, 0, pinnedMacro);
     }
 

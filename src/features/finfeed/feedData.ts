@@ -1,7 +1,24 @@
-import type { FeedItem, FeedComic } from "./types";
+import type { FeedItem, FeedComic, FeedVideo } from "./types";
 
 // Comics removed — will be replaced by NotebookLM summary infographics per module
 export const COMIC_FEED_ITEMS: FeedComic[] = [];
+
+const BENBEN_CDN = 'https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/video/benben';
+
+/** BENBEN creator videos — one is pinned at feed position 7, rotating each session */
+export const BENBEN_VIDEOS: FeedVideo[] = Array.from({ length: 12 }, (_, i) => ({
+  id: `benben-${i + 1}`,
+  type: "video" as const,
+  title: "טיפ פיננסי מבן בן",
+  description: "",
+  category: "Investing" as const,
+  videoId: `benben-${i + 1}`,
+  localVideo: { uri: `${BENBEN_CDN}/benben-${i + 1}.mp4` },
+  durationMinutes: 1,
+  pyramidLayer: 1 as const,
+  likes: 0,
+  saves: 0,
+}));
 
 export const MOCK_FEED_DATA: FeedItem[] = [
   {

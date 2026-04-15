@@ -69,7 +69,7 @@ const STEPS: WalkthroughStep[] = [
   },
   {
     title: "תבחרו סגנון לשארק",
-    emoji: "🦈",
+    emoji: "",
     message: "לפני שנמשיך, תבחרו איך תרצו ששארק ידבר איתכם! חכם? ישיר? חם? אנליטי?",
     navigateTo: "/(tabs)/chat",
     ctaLabel: "יאללה לבחור!",

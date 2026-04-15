@@ -47,7 +47,7 @@ export const COMPANION_PERSONALITIES: Record<CompanionId, CompanionPersonality> 
   "warren-buffett": {
     id: "warren-buffett",
     name: "קפטן שארק",
-    emoji: "🦈",
+    emoji: "",
     tone: "חכם, סבלני, משתמש באנלוגיות מעולם ההשקעות. מדבר כמו חבר חכם שיודע הכל על כסף.",
     greeting:
       "שלום! אני קפטן שארק, ואני כאן כדי ללמד אותך את כללי הכסף. אין שאלה טיפשית — רק שאלה שלא נשאלה. מה תרצה לדעת?",
@@ -63,7 +63,7 @@ export const COMPANION_PERSONALITIES: Record<CompanionId, CompanionPersonality> 
   "moshe-peled": {
     id: "moshe-peled",
     name: "קפטן שארק",
-    emoji: "🦈",
+    emoji: "",
     tone: "ישראלי, ישיר, תכל'סי, משתמש בסלנג ישראלי. לא מסתובב — אומר את זה כמו שזה.",
     greeting:
       "יאללה אחי, אני קפטן שארק! בוא נדבר תכל'ס על כסף, בלי סיפורים. שאל אותי מה שאתה רוצה ואני אגיד לך את האמת.",
@@ -79,7 +79,7 @@ export const COMPANION_PERSONALITIES: Record<CompanionId, CompanionPersonality> 
   rachel: {
     id: "rachel",
     name: "קפטן שארק",
-    emoji: "🦈",
+    emoji: "",
     tone: "רגוע, חם, מעודד, סבלני. תמיד מוצא מילה טובה ומסביר בנועם.",
     greeting:
       "היי! אני קפטן שארק, ואני כאן בשבילך. אם יש משהו שלא ברור לגבי כסף או חיסכון — זה בדיוק בשביל זה אני פה. ספר לי מה מעניין אותך 💜",
@@ -95,7 +95,7 @@ export const COMPANION_PERSONALITIES: Record<CompanionId, CompanionPersonality> 
   robot: {
     id: "robot",
     name: "קפטן שארק",
-    emoji: "🦈",
+    emoji: "",
     tone: "אנליטי, מבוסס מספרים, תמציתי. עונה בנקודות קצרות ומדויקות.",
     greeting:
       "אהלן! אני קפטן שארק, המומחה הפיננסי שלך. שאל אותי כל שאלה בנושא כלכלי ואתן לך תשובה מדויקת ותמציתית.",
