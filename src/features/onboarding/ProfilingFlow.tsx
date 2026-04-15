@@ -1184,13 +1184,13 @@ function SimOnboardingStep({ onNext }: { onNext: () => void }) {
   const autoSlideRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const startTimeRef = useRef(Date.now());
 
-  // Auto-slide monthly from ₪500 to ₪2,000 over 3s — runs once on mount
+  // Auto-slide monthly from ₪500 to ₪5,000 over 3s — runs once on mount
   useEffect(() => {
     startTimeRef.current = Date.now();
     autoSlideRef.current = setInterval(() => {
       const t = Math.min((Date.now() - startTimeRef.current) / 3000, 1);
       const eased = t * t; // simple ease-in for natural feel
-      const val = Math.round((500 + eased * 1500) / 50) * 50;
+      const val = Math.round((500 + eased * 4500) / 50) * 50;
       setMonthly(val);
       if (t >= 1) {
         if (autoSlideRef.current) clearInterval(autoSlideRef.current);
@@ -1209,7 +1209,7 @@ function SimOnboardingStep({ onNext }: { onNext: () => void }) {
     }
   }, [hasInteracted]);
 
-  const finalAmount = calculateCompoundInterest(monthly, years);
+  const finalAmount = calculateCompoundInterest(monthly, years, 0.10);
   const totalInvested = monthly * 12 * years;
   const totalGrowth = finalAmount - totalInvested;
   const growthPct = totalInvested > 0 ? ((totalGrowth / totalInvested) * 100).toFixed(0) : "0";
@@ -1219,7 +1219,7 @@ function SimOnboardingStep({ onNext }: { onNext: () => void }) {
   for (let s = 0; s <= CHART_STEPS; s++) {
     const t = s / CHART_STEPS;
     const yr = t * years;
-    const val = calculateCompoundInterest(monthly, yr);
+    const val = calculateCompoundInterest(monthly, yr, 0.10);
     chartData.push({ x: t, y: finalAmount > 0 ? val / finalAmount : 0, label: `שנה ${Math.round(yr)}` });
   }
 
@@ -1315,7 +1315,7 @@ function SimOnboardingStep({ onNext }: { onNext: () => void }) {
           {/* Sliders */}
           <Animated.View entering={FadeInDown.delay(300).springify()} style={[simStyles.slidersCard, { position: "relative" }]}>
             <OnboardingSlider
-              label="השקעה חודשית" value={monthly} min={50} max={5000} step={50}
+              label="השקעה חודשית" value={monthly} min={50} max={20000} step={50}
               prefix="₪" emoji="💰" accentColor="#0891b2" trackBg="#cffafe" onChange={setMonthly}
               onInteract={() => setHasInteracted(true)}
               showFingerHint={!hasInteracted}
