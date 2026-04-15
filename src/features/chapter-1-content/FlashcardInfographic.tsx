@@ -7,11 +7,14 @@
  * Generate with: bash scripts/generate_module_infographic.sh <module-id>
  */
 import { useState, useCallback, useEffect } from "react";
-import { View, Image, StyleSheet, Pressable, Modal } from "react-native";
+import { View, Image, StyleSheet, Pressable, Modal, Platform } from "react-native";
 import Animated, { useSharedValue, useAnimatedStyle, withTiming } from "react-native-reanimated";
+import { Image as ExpoImage } from "expo-image";
 import type { ImageSourcePropType, NativeSyntheticEvent, ImageLoadEventData } from "react-native";
 import LottieView from "lottie-react-native";
 import type { AnimationObject } from "lottie-react-native";
+
+const AnimatedExpoImage = Animated.createAnimatedComponent(ExpoImage);
 
 /** Finn character illustrations — shown as full-screen transition between cards */
 export const FINN_MAP: Record<string, ImageSourcePropType> = {
@@ -405,8 +408,11 @@ const LIGHT_BG_CARDS = new Set(["fc-1-4-4"]);
 /** Cards whose infographic should be shown smaller so text + image fits on one page */
 const COMPACT_CARDS = new Set(["fc-3-15-6", "fc-4-b1-1", "fc-4-b1-2", "fc-4-b1-3", "fc-4-25-0a"]);
 
-/** Cards whose infographic should be shown larger */
-const LARGE_CARDS = new Set<string>();
+/** Cards whose infographic should be shown larger (infographic-top layout) */
+const LARGE_CARDS = new Set([
+  "fc-1-5-1", "fc-1-5-2", "fc-1-5-3", "fc-1-5-4", "fc-1-5-5", "fc-1-5-6",
+  "fc-1-6-1", "fc-1-6-2", "fc-1-6-3", "fc-1-6-4", "fc-1-6-5", "fc-1-6-6",
+]);
 
 /** Cards whose infographic should fill the container edge-to-edge (cover instead of contain) */
 const COVER_CARDS = new Set(["fc-1-3-2"]);
@@ -488,8 +494,8 @@ export function FlashcardInfographic({ cardId, diveStep = 0, zoomRegions }: Prop
         </View>
       )}
       {source && (
-        <View style={[s.container, isLightBg && s.containerLight, { aspectRatio: ratio ?? 1.2, maxHeight: COMPACT_CARDS.has(cardId) ? 220 : 270 }]}>
-          <Animated.Image source={source as any} style={[s.image, zoomStyle]} resizeMode={COVER_CARDS.has(cardId) ? "cover" : "contain"} onLoad={handleLoad} />
+        <View style={[s.container, isLightBg && s.containerLight, { aspectRatio: ratio ?? 1.2, maxHeight: COMPACT_CARDS.has(cardId) ? 220 : LARGE_CARDS.has(cardId) ? undefined : 270 }]}>
+          <AnimatedExpoImage source={source as any} style={[s.image, zoomStyle]} contentFit={COVER_CARDS.has(cardId) ? "cover" : "contain"} onLoad={Platform.OS === 'web' ? undefined : handleLoad as any} />
           {lottieSource && (
             <View style={s.lottieFloatingBadge}>
               <LottieView

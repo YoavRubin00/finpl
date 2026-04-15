@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef, useMemo } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { View, Text, Pressable, StyleSheet, Dimensions } from "react-native";
 import { Image as ExpoImage } from "expo-image";
 import Animated, {
@@ -344,7 +344,7 @@ export function SharkLoveModal({
         >
           {/* XP card — Yellow */}
           <StatCard
-            label="TOTAL XP"
+            label="נק׳ ניסיון"
             icon={<Zap size={22} color="#ca8a04" fill="#facc15" />}
             value={xpEarned}
             bgColor="rgba(250,204,21,0.12)"

@@ -9,7 +9,7 @@ const BENBEN_CDN = 'https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/vide
 export const BENBEN_VIDEOS: FeedVideo[] = Array.from({ length: 12 }, (_, i) => ({
   id: `benben-${i + 1}`,
   type: "video" as const,
-  title: "טיפ פיננסי מבן בן",
+  title: "",
   description: "",
   category: "Investing" as const,
   videoId: `benben-${i + 1}`,

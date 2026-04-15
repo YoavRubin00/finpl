@@ -51,9 +51,9 @@ const SECTION_COLORS = {
 
 // ── Gem→Coin exchange rates ─────────────────────────────────────────────────
 const GEM_EXCHANGE_RATES = [
-  { gems: 10, coins: 1000 },
-  { gems: 25, coins: 10000 },
-  { gems: 50, coins: 100000, best: true },
+  { gems: 50, coins: 1000 },
+  { gems: 350, coins: 10000 },
+  { gems: 2500, coins: 100000, best: true },
 ];
 
 // ── Entrance stagger ────────────────────────────────────────────────────────

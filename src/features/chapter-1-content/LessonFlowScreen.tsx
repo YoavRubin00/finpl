@@ -107,6 +107,12 @@ const MODULE_INFOGRAPHIC_MAP: Record<string, { uri: string }> = {
   "mod-0-5": { uri: 'https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/infographics/ch0-upgrade/mod-0-5-upgrade.png' },
 };
 
+/** Cards that use infographic-top layout: big image at top, text hidden, Finn at bottom */
+const INFOGRAPHIC_TOP_CARDS = new Set([
+  "fc-1-5-1", "fc-1-5-2", "fc-1-5-3", "fc-1-5-4", "fc-1-5-5", "fc-1-5-6",
+  "fc-1-6-1", "fc-1-6-2", "fc-1-6-3", "fc-1-6-4", "fc-1-6-5", "fc-1-6-6",
+]);
+
 const RTL_STYLE = { writingDirection: "rtl" as const, textAlign: "right" as const };
 
 /** Summary infographic map — maps summary card IDs to portrait PNGs */
@@ -123,6 +129,7 @@ const SUMMARY_MAP: Record<string, { uri: string } | number | null> = {
   "fc-1-2-summary": { uri: 'https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/infographics/mod-1-2/summary-1-2.png' },
   "fc-1-3-summary": { uri: 'https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/infographics/mod-1-3/summary-1-3.png' },
   "fc-1-4-summary": { uri: 'https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/infographics/mod-1-1/summary-1-1.png' },
+  "fc-1-5-payslip": require("../../../assets/IMAGES/SACHAR.jpg") as number,
   "fc-1-5-summary": { uri: 'https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/infographics/mod-1-5/summary-1-5-v2.png' },
   "fc-1-6-summary": { uri: 'https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/infographics/mod-1-6/summary-1-6.png' },
   "fc-1-7-summary": { uri: 'https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/infographics/mod-1-7/summary-1-7.png' },
@@ -599,6 +606,50 @@ function FlashcardCard({
               </AnimatedPressable>
               <AnimatedPressable onPress={handleNextBtn} style={{ flex: 1, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6, backgroundColor: unitColors.bg, borderRadius: 16, paddingVertical: 14, borderBottomWidth: 3, borderBottomColor: unitColors.bottom ?? unitColors.bg }} accessibilityRole="button" accessibilityLabel="המשך">
                 <Text style={{ color: "#fff", fontSize: 16, fontWeight: "800" }}>{"המשך"}</Text>
+                <ChevronLeft size={18} color="#fff" />
+              </AnimatedPressable>
+            </View>
+          </View>
+        </View>
+      ) : INFOGRAPHIC_TOP_CARDS.has(card.id) ? (
+        /* ── Infographic-top layout: big image at top, text hidden, Finn at bottom ── */
+        <View style={{ flex: 1 }}>
+          {/* Infographic fills the top area */}
+          <View style={{ flex: 1, backgroundColor: "#ffffff", borderRadius: 20, overflow: "hidden", shadowColor: "#000", shadowOpacity: 0.12, shadowRadius: 16, shadowOffset: { width: 0, height: 4 }, elevation: 6, justifyContent: "center", alignItems: "center", padding: 8 }}>
+            <FlashcardInfographic cardId={card.id} diveStep={diveStep} zoomRegions={card.zoomRegions} />
+          </View>
+
+          {/* Finn explanation pinned at bottom */}
+          {isDiveMode && card.finnExplanations && card.finnExplanations[diveStep] ? (
+            <Animated.View entering={FadeInUp.duration(300)} style={{ flexDirection: "row-reverse", alignItems: "center", gap: 8, marginHorizontal: 8, marginTop: 10, marginBottom: 4, backgroundColor: "#eff6ff", padding: 12, borderRadius: 12, borderWidth: 1, borderColor: "#bfdbfe" }}>
+              <ExpoImage source={FINN_STANDARD} accessible={false} style={{ width: 44, height: 44, flexShrink: 0 }} contentFit="contain" />
+              <Text style={{ ...RTL_STYLE, fontSize: 14, color: "#1e3a8a", fontWeight: "600", flex: 1 }}>{card.finnExplanations[diveStep]}</Text>
+            </Animated.View>
+          ) : (
+            <View style={{ height: 10 }} />
+          )}
+
+          {/* Bottom navigation bar */}
+          <View style={{ paddingHorizontal: 8, paddingVertical: 8, paddingBottom: 16 }}>
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+              <AnimatedPressable
+                onPress={handlePrevBtn}
+                disabled={index === 0 && (!isDiveMode || diveStep === 0)}
+                style={{ padding: 8, opacity: (index === 0 && (!isDiveMode || diveStep === 0)) ? 0.3 : 1 }}
+                accessibilityRole="button"
+                accessibilityLabel="הקודם"
+              >
+                <ChevronRight size={28} color={unitColors.bg} />
+              </AnimatedPressable>
+              <AnimatedPressable
+                onPress={handleNextBtn}
+                style={{ flex: 1, backgroundColor: unitColors.bg, borderRadius: 16, paddingVertical: 14, alignItems: "center", justifyContent: "center", flexDirection: "row-reverse", gap: 6, borderBottomWidth: 3, borderBottomColor: unitColors.bottom }}
+                accessibilityRole="button"
+                accessibilityLabel={!isDiveMode || diveStep === totalDiveSteps - 1 ? (index === total - 1 ? "יאללה לקוויז" : "הבא") : "המשך זום"}
+              >
+                <Text style={{ color: "#fff", fontSize: 16, fontWeight: "800" }}>
+                  {(!isDiveMode || diveStep === totalDiveSteps - 1) ? (index === total - 1 ? "יאללה לקוויז!" : "המשך") : "המשך"}
+                </Text>
                 <ChevronLeft size={18} color="#fff" />
               </AnimatedPressable>
             </View>
@@ -2707,7 +2758,10 @@ export function LessonFlowScreen() {
               const cardText = mod.flashcards[flashcardIndex]?.text ?? "";
               const colonIdx = cardText.indexOf(":");
               if (colonIdx > 0 && colonIdx < 80) {
-                titleText = cardText.substring(0, colonIdx).replace(/\[\[|\]\]/g, "").trim();
+                titleText = cardText.substring(0, colonIdx)
+                  .replace(/\[\[([^|\]]+)\|?[^\]]*\]\]/g, "$1")
+                  .replace(/\s*\([A-Za-z][A-Za-z\s&/.,'%\-–—:;$#0-9]*\)\s*/g, " ")
+                  .trim();
               }
             }
             return (
@@ -3287,7 +3341,10 @@ export function LessonFlowScreen() {
       {/* Hearts & Paywall modals */}
       <OutOfHeartsModal
         visible={showOutOfHearts}
-        onDismiss={() => setShowOutOfHearts(false)}
+        onDismiss={() => {
+          setShowOutOfHearts(false);
+          router.replace("/(tabs)" as never);
+        }}
         onUpgrade={() => {
           setShowOutOfHearts(false);
           router.push('/pricing' as never);
@@ -3429,7 +3486,7 @@ export function LessonFlowScreen() {
                 חכו, יש רק עוד דקה{"\n"}לסיום המודולה!
               </Text>
               <Text style={{ ...RTL_STYLE, fontSize: 14, fontWeight: "600", color: "rgba(255,255,255,0.6)", textAlign: "center", marginBottom: 24 }}>
-                כמעט סיימת, אל תוותר עכשיו
+                כמעט סיימתם, אל תצאו עכשיו
               </Text>
               <Pressable
                 onPress={() => { tapHaptic(); setShowExitConfirm(false); }}

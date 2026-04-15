@@ -2008,7 +2008,6 @@ export function ProfilingFlow({ mode = "onboarding", onRedoComplete }: Profiling
 
   function slide(nextStep: FlowStep, patch: Partial<Collected>) {
     tapHaptic();
-    playSound('btn_click_soft_2');
     setShowBubbles(true);
     playSound('bubble_transition');
     if (bubbleTimeout.current) clearTimeout(bubbleTimeout.current);

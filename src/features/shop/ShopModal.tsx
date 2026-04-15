@@ -21,11 +21,11 @@ import type { ShopCategory, ShopItem, GemBundle } from "./types";
 const RTL = { writingDirection: "rtl" as const, textAlign: "right" as const };
 const ITEM_STAGGER = 70;
 
-// Gem → Coin exchange rates
+// Gem → Coin exchange rates (synced with ShopScreen)
 const GEM_EXCHANGE_RATES = [
-  { gems: 10, coins: 500 },
-  { gems: 25, coins: 1400 },
-  { gems: 50, coins: 3000, best: true as const },
+  { gems: 50, coins: 1000 },
+  { gems: 350, coins: 10000 },
+  { gems: 2500, coins: 100000, best: true as const },
 ];
 
 function AnimatedShopItem({

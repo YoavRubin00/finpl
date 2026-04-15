@@ -312,6 +312,20 @@ export const useSubscriptionStore = create<SubscriptionState>()(
     }),
     {
       name: "subscription-storage",
+      onRehydrateStorage: () => (state) => {
+        // Dev override: grant PRO to specific emails
+        if (!state) return;
+        try {
+          const auth = require("../auth/useAuthStore").useAuthStore.getState();
+          const DEV_PRO_EMAILS = ["yrubin00@gmail.com"];
+          if (auth.email && DEV_PRO_EMAILS.includes(auth.email) && state.tier !== "pro") {
+            state.tier = "pro";
+            state.status = "active";
+            state.hearts = 5;
+            state.lastHeartLostAt = null;
+          }
+        } catch { /* auth store may not be ready */ }
+      },
       version: 2,
       storage: createJSONStorage(() => AsyncStorage),
       partialize: (state) => ({
