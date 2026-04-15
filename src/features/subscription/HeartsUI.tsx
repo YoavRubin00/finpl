@@ -21,6 +21,7 @@ import { FINN_STANDARD } from '../retention-loops/finnMascotConfig';
 import { useSubscriptionStore, getTimeUntilNextHeart } from './useSubscriptionStore';
 import { useEconomyStore } from '../../features/economy/useEconomyStore';
 import { tapHaptic, successHaptic } from '../../utils/haptics';
+import { useRewardedAd } from '../../hooks/useRewardedAd';
 
 const MAX_HEARTS = 5;
 
@@ -142,6 +143,22 @@ export function OutOfHeartsModal({ visible, onDismiss, onUpgrade }: OutOfHeartsM
         }
     }, [onDismiss]);
 
+    const { showAd, isLoaded: adReady, isPro } = useRewardedAd();
+
+    const handleAdRefill = useCallback(() => {
+        tapHaptic();
+        showAd(() => {
+            // Reward: restore 1 heart
+            const store = useSubscriptionStore.getState();
+            const current = store.hearts ?? 0;
+            if (current < MAX_HEARTS) {
+                useSubscriptionStore.setState({ hearts: current + 1, lastHeartLostAt: null });
+            }
+            successHaptic();
+            onDismiss();
+        });
+    }, [showAd, onDismiss]);
+
     const handleGemRefill = useCallback(() => {
         tapHaptic();
         if (gems >= HEART_REFILL_GEM_COST) {
@@ -187,6 +204,14 @@ export function OutOfHeartsModal({ visible, onDismiss, onUpgrade }: OutOfHeartsM
                             <Heart key={i} size={22} color="#cbd5e1" fill="transparent" />
                         ))}
                     </View>
+
+                    {/* Watch ad for 1 heart — non-PRO only */}
+                    {!isPro && adReady && (
+                        <Pressable onPress={handleAdRefill} style={styles.adRefillBtn} accessibilityRole="button" accessibilityLabel="צפה בפרסומת לקבל לב">
+                            <Text style={styles.adRefillBtnText}>צפה בפרסומת — קבל לב חינם</Text>
+                            <Text style={styles.btnIcon}>🎬</Text>
+                        </Pressable>
+                    )}
 
                     {/* Gem instant refill CTA */}
                     <Pressable onPress={handleGemRefill} style={styles.gemRefillBtn} accessibilityRole="button" accessibilityLabel="מלא לבבות עם ג׳מס">
@@ -388,6 +413,30 @@ const styles = StyleSheet.create({
         fontSize: 13,
         fontWeight: '600',
         color: '#64748b',
+        writingDirection: 'rtl',
+    },
+    adRefillBtn: {
+        width: '100%',
+        flexDirection: 'row-reverse',
+        backgroundColor: '#0ea5e9',
+        borderRadius: 16,
+        paddingVertical: 14,
+        paddingHorizontal: 16,
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        marginBottom: 10,
+        borderBottomWidth: 4,
+        borderBottomColor: '#0369a1',
+        shadowColor: '#0ea5e9',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.3,
+        shadowRadius: 10,
+        elevation: 6,
+    },
+    adRefillBtnText: {
+        fontSize: 15,
+        fontWeight: '800',
+        color: '#ffffff',
         writingDirection: 'rtl',
     },
     gemRefillBtn: {

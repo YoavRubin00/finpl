@@ -114,6 +114,8 @@ export const PREMIUM_LEARNING_ITEMS: FeedPremiumLearning[] = [
       'כלל הברזל: תמדדו את עצמכם מדי חודש ותראו שהחסכונות באמת גדלים.',
       'תקציב נוקשה מדי יישבר. השאירו קצת אוויר גם לכיף ולהנאות הקטנות.'
     ],
+    finnAudioIndex: 1,
+    finnAudioUrl: 'https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/audios/modules/mod-1-4-expl-fSiyeT0ihxKPPganYfPZRFs5GjTIzI.mp3',
     infographics: MOD_1_4_CARDS,
   },
   {
@@ -134,6 +136,8 @@ export const PREMIUM_LEARNING_ITEMS: FeedPremiumLearning[] = [
       'דירוג אשראי: זהו תעודת הזהות הפיננסית שלכם. היסטוריית תשלומים חלקה תחסוך לכם אלפים.',
       'זכרו: כסף מפלסטיק עדיין מרגיש למר שוק כמו כסף אמיתי שתצטרכו להחזיר.'
     ],
+    finnAudioIndex: 4,
+    finnAudioUrl: 'https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/audios/modules/mod-1-3-expl-N29GD0bPYxjRjALApGE3ysw7HaSqvl.mp3',
     infographics: MOD_1_3_CARDS,
   },
   {
@@ -155,6 +159,8 @@ export const PREMIUM_LEARNING_ITEMS: FeedPremiumLearning[] = [
       'אפילו עמלות אפסיות מצטברות לאלפים לאורך זמן. היו מודעים למה שאתם משלמים.',
       'הכניסו את הריבית הדריבית לעבוד בשבילכם כבר היום.'
     ],
+    finnAudioIndex: 1,
+    finnAudioUrl: 'https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/audios/modules/mod-1-1-expl-joRaJDGt8BLPhC06JPqVtTjUMGCb6z.mp3',
     infographics: [{ uri: 'https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/infographics/mod-1-1/ribit.jpg' }],
   },
   {
@@ -175,6 +181,8 @@ export const PREMIUM_LEARNING_ITEMS: FeedPremiumLearning[] = [
       'ימי חופשה וימי מחלה: נכסים שלא מקבלים מספיק יחס. החוק מחייב לצבור אותם לטובתכם.',
       'נקודות זיכוי מקטינות אוטומטית את מס ההכנסה. אם לא תוודאו שהן מדויקות — אתם פשוט זורקים כסף.'
     ],
+    finnAudioIndex: 1,
+    finnAudioUrl: 'https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/audios/modules/mod-1-5-expl-TCWWOFOgiHRKKlAS4jy9nqXKEim6rj.mp3',
     infographics: MOD_1_5_CARDS,
   },
   {
@@ -193,6 +201,8 @@ export const PREMIUM_LEARNING_ITEMS: FeedPremiumLearning[] = [
       'לפעמים לקנות במזומן ולחסוך מראש יחסוך מאות או אלפי שקלים שהיו זורמים למלווים.',
       'אם לקחתם הלוואה מחוסר ברירה, עשו זאת בתבונה. בדקו את לוח ההחזרים ואל תסכימו לתנאים עיוורים.'
     ],
+    finnAudioIndex: 2,
+    finnAudioUrl: 'https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/audios/modules/mod-1-6-expl-woTiXDhjOf76YajIZe3RE8TAK3v9g2.mp3',
     infographics: MOD_1_6_CARDS,
   },
   // ── Graham "Intelligent Investor" carousels (Chapter 4) — Portrait + Dive Mode ──
@@ -213,6 +223,8 @@ export const PREMIUM_LEARNING_ITEMS: FeedPremiumLearning[] = [
       [0, -15, 0.82],         // "משם תלך כבר זום אאוט"
       [0, -15, 0.82],         // גם פה זום אאוט
     ],
+    finnAudioIndex: 3,
+    finnAudioUrl: 'https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/audios/modules/graham-mr-market-expl-vejF6jHglFcNHlBskDjl68wcOCtvtF.mp3',
     infographics: GRAHAM_MR_MARKET_CARDS,
     finnExplanations: [
       'הכירו את מר שוק — השותף הרגשני שמציע לכם מחיר חדש כל יום.',
@@ -240,6 +252,8 @@ export const PREMIUM_LEARNING_ITEMS: FeedPremiumLearning[] = [
       [-180, -250, 2.4],     // 'חפשו חברות...' - הכי למטה
       [0, 0, 0.85],          // Back to full
     ],
+    finnAudioIndex: 3,
+    finnAudioUrl: 'https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/audios/modules/graham-margin-safety-expl-Lu9pHtBh0IKcEelbAVN9yYJrALk3CT.mp3',
     infographics: GRAHAM_MARGIN_SAFETY_CARDS,
     finnExplanations: [
       'מרווח ביטחון — העיקרון הכי חשוב של גראהם. בואו נצלול!',
@@ -260,6 +274,8 @@ export const PREMIUM_LEARNING_ITEMS: FeedPremiumLearning[] = [
     moduleTitle: 'הגנתי vs. יוזם',
     diveMode: false,
     tapZones: true,
+    finnAudioIndex: 0,
+    finnAudioUrl: 'https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/audios/modules/graham-investor-types-expl-JsQ7VHJtMOi5Jo7JzK0LkhPUawt8kY.mp3',
     infographics: GRAHAM_INVESTOR_TYPES_CARDS,
     tapZoneLeft: {
       title: 'המשקיע ההגנתי',
@@ -290,6 +306,8 @@ export const PREMIUM_LEARNING_ITEMS: FeedPremiumLearning[] = [
       [0, -15, 0.82],       // Bottom — "מרווח ביטחון"
       [0, -15, 0.82],       // Back to full
     ],
+    finnAudioIndex: 4,
+    finnAudioUrl: 'https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/audios/modules/graham-price-value-expl-c2NwUjC4Eb75SSUK7idrtw6TQXPMvt.mp3',
     infographics: GRAHAM_PRICE_VS_VALUE_CARDS,
     finnExplanations: [
       'מחיר מול ערך — ההבדל שהופך אתכם ממהמרים למשקיעים.',
@@ -310,6 +328,8 @@ export const PREMIUM_LEARNING_ITEMS: FeedPremiumLearning[] = [
     moduleTitle: '7 כללי המשקיע הנבון',
     diveMode: false,
     singlePageView: true,
+    finnAudioIndex: 0,
+    finnAudioUrl: 'https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/audios/modules/graham-7-rules-expl-wTM5wY5Zt3EqWUgDfa1d8IxFuodxWe.mp3',
     infographics: GRAHAM_7_RULES_CARDS,
     finnExplanations: [
       'כל 7 הכללים יחד? מצאתם את המפתח להשקעה',
@@ -333,6 +353,8 @@ export const PREMIUM_LEARNING_ITEMS: FeedPremiumLearning[] = [
       [0, 0, 1],            // ברביעי זום אאוט
       [0, 0, 1],            // וגם בחמישי זום אאוט
     ],
+    finnAudioIndex: 5,
+    finnAudioUrl: 'https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/audios/modules/graham-ap-story-expl-NA2kicQH3Do8YfNT0Q6dBu4o6yUJK5.mp3',
     infographics: GRAHAM_AP_STORY_CARDS,
     finnExplanations: [
       'כשהפחד יוצר הזדמנות — סיפור אמיתי מהשוק. בואו נצלול!',
@@ -352,6 +374,8 @@ export const PREMIUM_LEARNING_ITEMS: FeedPremiumLearning[] = [
     chapterId: 'chapter-0',
     storeChapterId: 'ch-0',
     moduleTitle: 'מה זה בכלל כסף?',
+    finnAudioIndex: 2,
+    finnAudioUrl: 'https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/audios/modules/mod-0-1-expl-1vS4HBcoU2Apn2WgIsnEMgnldzytlP.mp3',
     infographics: MOD_0_1_CARDS,
     finnExplanations: [
       'פעם שילמו בפרות ותפוחי אדמה. אבל מה קורה אם אף אחד לא רוצה מה שיש לך?',
@@ -369,6 +393,8 @@ export const PREMIUM_LEARNING_ITEMS: FeedPremiumLearning[] = [
     chapterId: 'chapter-0',
     storeChapterId: 'ch-0',
     moduleTitle: 'מושגי יסוד פיננסיים',
+    finnAudioIndex: 0,
+    finnAudioUrl: 'https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/audios/modules/mod-0-2-expl-TNTCqDRP9F8xplU0CWdlvSMyCimGO5.mp3',
     infographics: MOD_0_2_CARDS,
     finnExplanations: [
       'בנק זה חנות שמוכרת כסף. הוא לוקח ממך בזול ומוכר ליד שנייה ביוקר.',
@@ -386,6 +412,8 @@ export const PREMIUM_LEARNING_ITEMS: FeedPremiumLearning[] = [
     chapterId: 'chapter-0',
     storeChapterId: 'ch-0',
     moduleTitle: 'הגנב השקוף: אינפלציה',
+    finnAudioIndex: 2,
+    finnAudioUrl: 'https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/audios/modules/mod-0-3-expl-9wOUjS1AnnfCXbpYheDEkret3RqbMs.mp3',
     infographics: MOD_0_3_CARDS,
     finnExplanations: [
       'אינפלציה — הגנב שלא רואים. הוא לא שובר דלתות, הוא שוחק את הכסף שלך בשקט.',
@@ -403,6 +431,8 @@ export const PREMIUM_LEARNING_ITEMS: FeedPremiumLearning[] = [
     chapterId: 'chapter-0',
     storeChapterId: 'ch-0',
     moduleTitle: 'כמה נכנס וכמה יוצא',
+    finnAudioIndex: 1,
+    finnAudioUrl: 'https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/audios/modules/mod-0-4-expl-l5nSDMZAzKKIZiAfyyHakhEsPJUgVr.mp3',
     infographics: MOD_0_4_CARDS,
     finnExplanations: [
       'הכנסות מול הוצאות — המשוואה הכי חשובה בחיים הפיננסיים שלך.',
@@ -419,6 +449,8 @@ export const PREMIUM_LEARNING_ITEMS: FeedPremiumLearning[] = [
     chapterId: 'chapter-0',
     storeChapterId: 'ch-0',
     moduleTitle: 'אז למה להשקיע?',
+    finnAudioIndex: 0,
+    finnAudioUrl: 'https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/audios/modules/mod-0-5-expl-eXzN2DFq3dezTs3tu7OpbZlFiKQz5k.mp3',
     infographics: MOD_0_5_CARDS,
     finnExplanations: [
       'במקום שאתה תעבוד בשביל הכסף — תן לכסף לעבוד בשבילך.',

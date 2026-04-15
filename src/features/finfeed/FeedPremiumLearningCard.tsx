@@ -1,5 +1,6 @@
-import React, { useCallback, useState, useRef } from 'react';
+import React, { useCallback, useState, useRef, useEffect } from 'react';
 import { Image as ExpoImage } from "expo-image";
+import { Audio } from 'expo-av';
 import {
   View,
   Text,
@@ -113,6 +114,45 @@ export const FeedPremiumLearningCard = React.memo(function FeedPremiumLearningCa
     : item.infographics.length;
   const [step, setStep] = useState(0);
   const isLastStep = step >= totalSteps;
+
+  // Audio Playback
+  useEffect(() => {
+    let soundObj: Audio.Sound | null = null;
+    let isActive = true;
+
+    async function loadAndPlay() {
+      if (_isActive && item.finnAudioUrl) {
+        // Condition: if we have step logic, check if it matches finnAudioIndex (default 0 for single/tap zones)
+        const targetStep = item.finnAudioIndex ?? 0;
+        const matchesStep = item.singlePageView || item.tapZones ? true : step === targetStep;
+
+        if (matchesStep) {
+          try {
+            const { sound } = await Audio.Sound.createAsync(
+              { uri: item.finnAudioUrl },
+              { shouldPlay: true }
+            );
+            if (isActive) {
+              soundObj = sound;
+            } else {
+              sound.unloadAsync();
+            }
+          } catch (e) {
+            console.log('Failed to play feed audio:', e);
+          }
+        }
+      }
+    }
+
+    loadAndPlay();
+
+    return () => {
+      isActive = false;
+      if (soundObj) {
+        soundObj.unloadAsync();
+      }
+    };
+  }, [step, _isActive, item.finnAudioUrl, item.finnAudioIndex, item.singlePageView, item.tapZones]);
 
   // Animated zoom for dive mode
   const zoomScale = useSharedValue(1);

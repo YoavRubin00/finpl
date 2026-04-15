@@ -145,6 +145,10 @@ export interface FeedPremiumLearning {
   tapZoneBottom?: { title: string; text: string };
   /** Single page view: just show image and finn text, no carousel or multiple zoom steps */
   singlePageView?: boolean;
+  /** Index of the finnExplanation step where audio should play */
+  finnAudioIndex?: number;
+  /** URL for the finn explanation audio clip */
+  finnAudioUrl?: string;
 }
 
 export interface FeedFinnHero {

@@ -63,15 +63,6 @@ export const SHOP_ITEMS: readonly ShopItem[] = [
 
   // ── קוסמטיקה (aspirational — weeks of saving) ──
   {
-    id: 'avatar-gold',
-    category: 'cosmetics',
-    name: 'מסגרת פרופיל זהב',
-    description: 'מסגרת זהב פרימיום לאווטר שלך. תראה את ההתקדמות.',
-    coinCost: 8000,
-    emoji: '👑',
-    lottieSource: require('../../../assets/lottie/Crown.json'),
-  },
-  {
     id: 'badge-neon',
     category: 'cosmetics',
     name: 'תג ניאון',

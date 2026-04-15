@@ -16,6 +16,8 @@ import Animated, {
 import { X } from "lucide-react-native";
 import { useRouter } from "expo-router";
 import { useEconomyStore } from "../economy/useEconomyStore";
+import { useRewardedAd } from "../../hooks/useRewardedAd";
+import { tapHaptic, successHaptic } from "../../utils/haptics";
 
 const DISMISSED_KEY = "streak_banner_dismissed_date";
 
@@ -28,6 +30,7 @@ function todayISO(): string {
 export function StreakAtRiskBanner() {
   const router = useRouter();
   const streak = useEconomyStore((s) => s.streak);
+  const { showAd, isLoaded: adReady, isPro } = useRewardedAd();
   const lastDailyTaskDate = useEconomyStore((s) => s.lastDailyTaskDate);
   const [dismissed, setDismissed] = useState(true); // hidden until we check storage
 
@@ -101,6 +104,25 @@ export function StreakAtRiskBanner() {
           {/* Finn on left */}
           <ExpoImage source={FINN_STANDARD} accessible={false} style={{ width: 96, height: 96 }} contentFit="contain" />
         </Pressable>
+
+        {/* Watch ad for free streak freeze — non-PRO only */}
+        {!isPro && adReady && (
+          <Pressable
+            onPress={() => {
+              tapHaptic();
+              showAd(() => {
+                useEconomyStore.getState().addStreakFreezes(1);
+                successHaptic();
+                dismiss();
+              });
+            }}
+            style={styles.adFreezeBtn}
+            accessibilityRole="button"
+            accessibilityLabel="צפה בפרסומת לקבל הקפאת סטריק"
+          >
+            <Text style={styles.adFreezeBtnText}>🎬 צפה בפרסומת — הקפאה חינם</Text>
+          </Pressable>
+        )}
       </Animated.View>
     </Animated.View>
   );
@@ -162,5 +184,22 @@ const styles = StyleSheet.create({
   },
   finnEmoji: {
     fontSize: 32,
+  },
+  adFreezeBtn: {
+    marginHorizontal: 14,
+    marginBottom: 12,
+    marginTop: -4,
+    backgroundColor: "#0284c7",
+    borderRadius: 12,
+    paddingVertical: 10,
+    alignItems: "center",
+    borderBottomWidth: 3,
+    borderBottomColor: "#0369a1",
+  },
+  adFreezeBtnText: {
+    fontSize: 13,
+    fontWeight: "800",
+    color: "#ffffff",
+    writingDirection: "rtl" as const,
   },
 });

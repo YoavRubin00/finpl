@@ -56,6 +56,7 @@ import { OutOfHeartsModal } from "../subscription/HeartsUI";
 import { GlobalWealthHeader } from "../../components/ui/GlobalWealthHeader";
 import { ConfettiExplosion } from "../../components/ui/ConfettiExplosion";
 import { DoubleOrNothingModal } from "../../components/ui/DoubleOrNothingModal";
+import { SharkLoveModal } from "../../components/ui/SharkLoveModal";
 import { InvestmentCard } from "../daily-challenges/InvestmentCard";
 import { CrashGameCard } from "../daily-challenges/CrashGameCard";
 import { MythFeedCard } from "../myth-or-tachles/MythFeedCard";
@@ -63,6 +64,7 @@ import { DilemmaCard } from "../daily-challenges/DilemmaCard";
 import { FlyingRewards } from "../../components/ui/FlyingRewards";
 import { GoldCoinIcon } from "../../components/ui/GoldCoinIcon";
 import { useAuthStore } from "../auth/useAuthStore";
+import { useRewardedAd } from "../../hooks/useRewardedAd";
 import { DecorationOverlay } from "../../components/ui/DecorationOverlay";
 import { generateChestDrop } from "../retention-loops/chestDrops";
 import { useRetentionStore } from "../retention-loops/useRetentionStore";
@@ -2080,6 +2082,9 @@ export function LessonFlowScreen() {
   // Post-module celebration
   const [showPostCelebration, setShowPostCelebration] = useState(false);
   const [showBreakMessage, setShowBreakMessage] = useState(false);
+  // Shark Love — every 3rd module completion
+  const [showSharkLove, setShowSharkLove] = useState(false);
+  const moduleStartTimeRef = useRef(Date.now());
   // Shark Party — every 2 consecutive or 4 total completed modules
   const [showPartyInvite, setShowPartyInvite] = useState(false);
   const [showPartyVideo, setShowPartyVideo] = useState(false);
@@ -2097,6 +2102,7 @@ export function LessonFlowScreen() {
   const heartsRowY = useRef(140);
   const heartsRowX = useRef(200);
   const [lifelineConcept, setLifelineConcept] = useState<string | null>(null);
+  const { showAd: showRewardedAd, isLoaded: adLoaded, isPro: isProForAds } = useRewardedAd();
   const [lifelineChatConcept, setLifelineChatConcept] = useState<string | null>(null);
   const [showChapterComplete, setShowChapterComplete] = useState(false);
   const [showFinnBridgeNudge, setShowFinnBridgeNudge] = useState(false);
@@ -2120,6 +2126,7 @@ export function LessonFlowScreen() {
   const chestGlowOpacity = useSharedValue(0.4);
   const chestBodyScale = useSharedValue(1);
   const [showDoubleOrNothing, setShowDoubleOrNothing] = useState(false);
+  const [showAdBonus, setShowAdBonus] = useState(false);
   const [pendingMultiplierRewards, setPendingMultiplierRewards] = useState<ChestReward | null>(null);
   const [flyingCoinsDown, setFlyingCoinsDown] = useState(0);
   const shouldTriggerDoNRef = useRef(false);
@@ -2153,6 +2160,8 @@ export function LessonFlowScreen() {
     setFlyingXp(0);
     setFlyingCoins(0);
     setFlyingCoinsDown(0);
+    setShowSharkLove(false);
+    moduleStartTimeRef.current = Date.now();
     shouldTriggerDoNRef.current = false;
     completedRef.current = false;
     chestAnimationStartedRef.current = false;
@@ -2214,7 +2223,35 @@ export function LessonFlowScreen() {
         setShowWisdom(true);
       }, 1400);
     }
-  }, [pendingMultiplierRewards, chapterId, id]);
+    // Offer ad bonus to non-PRO users after DoN resolves
+    if (!isPro) {
+      setTimeout(() => setShowAdBonus(true), 1800);
+    }
+  }, [pendingMultiplierRewards, chapterId, id, isPro]);
+
+  // Shark Love dismiss — chain into DoN or wisdom
+  const handleSharkLoveDismiss = useCallback(() => {
+    setShowSharkLove(false);
+    successHaptic();
+    // Compute isLast inline (same pattern as handleDoubleOrNothingResolve)
+    const chapters = chapterId ? (CHAPTER_DATA_MAP[chapterId]?.modules ?? []) : [];
+    const modIdx = chapters.findIndex((m) => m.id === id);
+    const isLast = modIdx === chapters.length - 1;
+    // If DoN was pending, show it now
+    if (shouldTriggerDoNRef.current) {
+      shouldTriggerDoNRef.current = false;
+      setTimeout(() => {
+        setShowDoubleOrNothing(true);
+        playSound('modal_open_4');
+      }, 500);
+    } else if (!isLast) {
+      // Otherwise show wisdom flash
+      setTimeout(() => {
+        useWisdomStore.getState().showRandomWisdom();
+        setShowWisdom(true);
+      }, 800);
+    }
+  }, [chapterId, id, playSound]);
 
   // Chapter context for progress display
   const chapterData = chapterId ? CHAPTER_DATA_MAP[chapterId] : undefined;
@@ -2281,19 +2318,19 @@ export function LessonFlowScreen() {
     };
   }, [phase, mod?.id, completeModule, mod, isLastModule, playSound]);
 
-  // Post-module celebration — only after wisdom + DoN are done, every other module
+  // Post-module celebration — only after wisdom + DoN + SharkLove are done, every other module
   useEffect(() => {
-    if (!chestClaimed || showDoubleOrNothing || showPostCelebration || showBreakMessage) return;
+    if (!chestClaimed || showDoubleOrNothing || showSharkLove || showPostCelebration || showBreakMessage) return;
     // Show every other module (0, 2, 4... = yes, 1, 3, 5... = no)
     if (currentModIdx % 2 !== 0) return;
     // Wait 2s after chest claim + wisdom/DoN resolution
     const timer = setTimeout(() => setShowPostCelebration(true), 2000);
     return () => clearTimeout(timer);
-  }, [chestClaimed, showDoubleOrNothing, currentModIdx, showPostCelebration, showBreakMessage]);
+  }, [chestClaimed, showDoubleOrNothing, showSharkLove, currentModIdx, showPostCelebration, showBreakMessage]);
 
   // Shark Party — trigger after every 4 total completed modules
   useEffect(() => {
-    if (!chestClaimed || showDoubleOrNothing || showPostCelebration || showPartyInvite || showPartyVideo) return;
+    if (!chestClaimed || showDoubleOrNothing || showSharkLove || showPostCelebration || showPartyInvite || showPartyVideo) return;
     // Count total completed modules across all chapters
     const totalCompleted = Object.values(progress).reduce(
       (sum, ch) => sum + (ch?.completedModules?.length ?? 0), 0
@@ -2985,7 +3022,16 @@ export function LessonFlowScreen() {
                           // 2s: auto-advance to "מודול הושלם"
                           setTimeout(() => {
                             setChestClaimed(true);
-                            if (shouldTriggerDoNRef.current) {
+                            // Shark Love — every 3rd completed module (3, 6, 9...)
+                            const totalCompletedNow = Object.values(progress).reduce(
+                              (sum, ch) => sum + (ch?.completedModules?.length ?? 0), 0
+                            );
+                            if (totalCompletedNow > 0 && totalCompletedNow % 3 === 0) {
+                              setTimeout(() => {
+                                setShowSharkLove(true);
+                                playSound('modal_open_4');
+                              }, 500);
+                            } else if (shouldTriggerDoNRef.current) {
                               shouldTriggerDoNRef.current = false;
                               setTimeout(() => {
                                 setShowDoubleOrNothing(true);
@@ -3064,6 +3110,45 @@ export function LessonFlowScreen() {
         rewards={{ coins: pendingMultiplierRewards?.coins ?? 0, xp: 0, gems: 0 }}
         onResolve={handleDoubleOrNothingResolve}
       />
+
+      {/* Ad bonus — double coins by watching ad (non-PRO only) */}
+      {showAdBonus && !isProForAds && adLoaded && (
+        <Modal visible transparent animationType="fade" onRequestClose={() => setShowAdBonus(false)}>
+          <View style={{ flex: 1, backgroundColor: "rgba(8, 20, 40, 0.75)", justifyContent: "center", alignItems: "center", paddingHorizontal: 28 }}>
+            <View style={{ backgroundColor: "#0f2942", borderRadius: 28, padding: 28, width: "100%", maxWidth: 340, alignItems: "center", borderWidth: 1, borderColor: "rgba(56,189,248,0.15)" }}>
+              <ExpoImage source={FINN_HAPPY} accessible={false} style={{ width: 80, height: 80, marginBottom: 12 }} contentFit="contain" />
+              <Text style={{ ...RTL_STYLE, fontSize: 20, fontWeight: "900", color: "#ffffff", textAlign: "center", marginBottom: 8 }}>
+                רוצה עוד מטבעות?
+              </Text>
+              <Text style={{ ...RTL_STYLE, fontSize: 14, fontWeight: "600", color: "rgba(255,255,255,0.6)", textAlign: "center", marginBottom: 24 }}>
+                צפה בסרטון קצר וקבל 200 מטבעות בונוס!
+              </Text>
+              <Pressable
+                onPress={() => {
+                  tapHaptic();
+                  setShowAdBonus(false);
+                  showRewardedAd(() => {
+                    useEconomyStore.getState().addCoins(200);
+                    successHaptic();
+                    setFlyingCoins(200);
+                  });
+                }}
+                style={{ backgroundColor: "#0284c7", borderRadius: 16, paddingVertical: 16, width: "100%", alignItems: "center", borderBottomWidth: 4, borderBottomColor: "#0369a1" }}
+                accessibilityRole="button"
+              >
+                <Text style={{ fontSize: 17, fontWeight: "900", color: "#ffffff" }}>צפה וקבל 🎬</Text>
+              </Pressable>
+              <Pressable
+                onPress={() => { tapHaptic(); setShowAdBonus(false); }}
+                style={{ marginTop: 16, paddingVertical: 8 }}
+                accessibilityRole="button"
+              >
+                <Text style={{ fontSize: 14, fontWeight: "700", color: "#94a3b8" }}>דלג</Text>
+              </Pressable>
+            </View>
+          </View>
+        </Modal>
+      )}
 
       {/* Full-screen chest reward takeover */}
       {/* Blue chest modal removed — chest opens in-place */}
@@ -3502,6 +3587,16 @@ export function LessonFlowScreen() {
             </Pressable>
           </Animated.View>
         </Pressable>
+      )}
+
+      {/* ── Shark Love — "עדיין תאהבו אותי?" every 3rd module ── */}
+      {showSharkLove && (
+        <SharkLoveModal
+          xpEarned={chestRewards?.xp ?? 30}
+          coinsEarned={chestRewards?.coins ?? 150}
+          elapsedSeconds={Math.round((Date.now() - moduleStartTimeRef.current) / 1000)}
+          onClaim={handleSharkLoveDismiss}
+        />
       )}
 
       {/* ── Post-module celebration ── */}
