@@ -29,12 +29,12 @@ All work is DATA ONLY — no new components, no new screens, no logic changes. E
   - [x] Typecheck passes
 
 ### US-003 — Fix top income tax bracket reference
-- [ ] Target: `src/features/chapter-2-content/chapter2Data.ts` (~line 500, successFeedback)
+- [x] Target: `src/features/chapter-2-content/chapter2Data.ts` (~line 500, successFeedback)
 - **Current (wrong):** References max bracket as "47%"
 - **Fix to:** "50% (47% + מס יסף 3% על הכנסות גבוהות)"
 - **Acceptance:**
-  - [ ] Max rate stated as 50%, with מס יסף breakdown
-  - [ ] Typecheck passes
+  - [x] Max rate stated as 50%, with מס יסף breakdown
+  - [x] Typecheck passes
 
 ### US-004 — Fix S&P 500 annual returns in indexRaceData
 - [ ] Target: `src/features/chapter-4-content/simulations/indexRaceData.ts` (~lines 22-25)

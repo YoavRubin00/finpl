@@ -18,3 +18,14 @@
   - US-003 target (successFeedback with 47% reference) is nearby — check ~lines 504-510 area
   - sed -i continues to work well for single-line Hebrew text replacements
 ---
+
+## Iteration 3 — US-003 Fix top income tax bracket reference
+- Fixed line 500: changed "עד 47% + ביטוח לאומי" → "עד 50%: 47% מס הכנסה + 3% מס יסף על הכנסות גבוהות, בתוספת ביטוח לאומי"
+- The 47% alone is wrong — full top rate in Israel is 50% (47% income tax + 3% מס יסף on high earners)
+- Files affected: src/features/chapter-2-content/chapter2Data.ts
+- Learnings for next cycles:
+  - The PRD mentioned "successFeedback" but the actual 47% was in the answer option text (line 500), not successFeedback
+  - Only one occurrence of 47% existed in the file after US-002 fix
+  - Pre-existing TS errors in daily-challenges and budget-ninja are unrelated, safe to ignore
+  - US-004 next: indexRaceData.ts S&P 500 total returns
+---
