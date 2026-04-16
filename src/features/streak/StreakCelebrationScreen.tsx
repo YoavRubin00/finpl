@@ -42,7 +42,8 @@ export function StreakCelebrationScreen({
   streak,
   onDismiss,
 }: StreakCelebrationScreenProps) {
-  const isMilestone = streak === 7 || streak === 30 || streak === 100;
+  const isMilestone = streak === 7 || streak === 30 || streak === 100 || streak === 365;
+  const grantedFreezeAt7 = streak === 7;
   const [showConfetti, setShowConfetti] = useState(false);
 
   // --- Animated values ---
@@ -193,13 +194,15 @@ export function StreakCelebrationScreen({
   }, [streak, todayIndex]);
 
   const milestoneText =
-    streak >= 100
-      ? "!אלוף האלופים 🏆"
-      : streak >= 30
-        ? "!חודש שלם 🌟"
-        : streak >= 7
-          ? "!שבוע מושלם"
-          : "";
+    streak >= 365
+      ? "!שנה מלאה 👑"
+      : streak >= 100
+        ? "!אלוף האלופים 🏆"
+        : streak >= 30
+          ? "!חודש שלם 🌟"
+          : streak >= 7
+            ? "!שבוע מושלם"
+            : "";
 
   return (
     <Pressable style={styles.pressableContainer} onPress={handleDismiss}>
@@ -266,6 +269,11 @@ export function StreakCelebrationScreen({
                  />
               )}
               <Text style={styles.milestoneLabel}>{milestoneText}</Text>
+            </View>
+          )}
+          {grantedFreezeAt7 && (
+            <View style={styles.freezeRewardRow}>
+              <Text style={styles.freezeRewardText}>🛡️ +1 מגן רצף</Text>
             </View>
           )}
         </Animated.View>
@@ -386,6 +394,23 @@ const styles = StyleSheet.create({
     color: "#facc15",
     textAlign: "center",
     marginTop: 4,
+  },
+  freezeRewardRow: {
+    marginTop: 10,
+    alignSelf: "center",
+    paddingHorizontal: 14,
+    paddingVertical: 6,
+    borderRadius: 12,
+    backgroundColor: "rgba(125, 211, 252, 0.18)",
+    borderWidth: 1.5,
+    borderColor: "rgba(125, 211, 252, 0.5)",
+  },
+  freezeRewardText: {
+    fontSize: 16,
+    fontWeight: "800",
+    color: "#bae6fd",
+    textAlign: "center",
+    writingDirection: "rtl" as const,
   },
   bearContainer: {
     marginTop: 24,

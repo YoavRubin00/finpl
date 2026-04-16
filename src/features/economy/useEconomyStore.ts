@@ -28,6 +28,10 @@ interface EconomyState {
   frozenDates: string[]; // ISO dates when a streak freeze was auto-consumed
   streakFreezes: number; // owned freeze items count
   pendingFreezeSaveAck: boolean; // true when freeze was consumed, cleared on modal dismiss
+  // Streak Repair (US-004) — offered ONCE per break if prev streak >= 3
+  pendingRepairOffer: boolean;
+  previousStreakBeforeBreak: number; // snapshot of streak immediately before it reset to 1
+  lastRepairOfferedAt: string | null; // ISO date — prevents repeat offers for the same break
 
   addXP: (amount: number, source: XPSource) => void;
   addCoins: (amount: number) => void;
@@ -40,6 +44,8 @@ interface EconomyState {
   dismissLevelUp: () => void;
   addStreakFreezes: (count: number) => void;
   dismissFreezeSaveAck: () => void;
+  repairStreak: (source: "coins" | "ad") => boolean; // true = succeeded
+  dismissRepairOffer: () => void;
 }
 
 function todayISO(): string {
@@ -84,6 +90,9 @@ export const useEconomyStore = create<EconomyState>()(
       frozenDates: [],
       streakFreezes: 0,
       pendingFreezeSaveAck: false,
+      pendingRepairOffer: false,
+      previousStreakBeforeBreak: 0,
+      lastRepairOfferedAt: null,
 
       addXP: (amount: number, _source: XPSource) => {
         if (amount <= 0) return;
@@ -162,6 +171,7 @@ export const useEconomyStore = create<EconomyState>()(
 
         let newStreak: number;
         let freezeConsumed = false;
+        let streakBroke = false;
         if (isConsecutiveDay) {
           newStreak = streak + 1;
         } else if (canFreeze) {
@@ -169,6 +179,7 @@ export const useEconomyStore = create<EconomyState>()(
           freezeConsumed = true;
         } else {
           newStreak = 1;
+          streakBroke = streak >= 3; // repair offer only for meaningful breaks
         }
 
         const streakBonus = (isConsecutiveDay || freezeConsumed) ? STREAK_BONUS_BASE_XP * newStreak : 0;
@@ -178,10 +189,15 @@ export const useEconomyStore = create<EconomyState>()(
         if (newStreak === 7) milestoneBonus = STREAK_7_BONUS_XP;
         if (newStreak > 0 && newStreak % 30 === 0) milestoneBonus = STREAK_30_BONUS_XP;
 
+        // 7-day milestone: auto-grant 1 streak freeze (welcome to Streak Society)
+        const grantFreeze = newStreak === 7;
+
         const updatedActiveDates = trimDates([...activeDates, today]);
         const updatedFrozenDates = freezeConsumed
           ? trimDates([...frozenDates, yesterdayISO()])
           : trimDates(frozenDates);
+
+        const netFreezeDelta = (grantFreeze ? 1 : 0) - (freezeConsumed ? 1 : 0);
 
         set((state) => ({
           xp: state.xp + DAILY_TASK_XP + streakBonus + milestoneBonus,
@@ -190,8 +206,11 @@ export const useEconomyStore = create<EconomyState>()(
           lastDailyTaskDate: today,
           activeDates: updatedActiveDates,
           frozenDates: updatedFrozenDates,
-          streakFreezes: freezeConsumed ? state.streakFreezes - 1 : state.streakFreezes,
+          streakFreezes: state.streakFreezes + netFreezeDelta,
           ...(freezeConsumed ? { pendingFreezeSaveAck: true } : {}),
+          ...(streakBroke && state.lastRepairOfferedAt !== today
+            ? { pendingRepairOffer: true, previousStreakBeforeBreak: streak }
+            : {}),
         }));
 
         // Cancel today's streak reminder — user already completed the daily task
@@ -219,6 +238,7 @@ export const useEconomyStore = create<EconomyState>()(
 
         let newStreak: number;
         let freezeConsumed = false;
+        let streakBroke = false;
         if (isConsecutiveDay) {
           newStreak = streak + 1;
         } else if (lastActive === today) {
@@ -228,12 +248,19 @@ export const useEconomyStore = create<EconomyState>()(
           freezeConsumed = true;
         } else {
           newStreak = 1;
+          streakBroke = streak >= 3;
         }
+
+        // 7-day milestone: auto-grant 1 streak freeze (same as completeDailyTask)
+        // Only grant if streak actually increased (not if awarded for same-day login)
+        const grantFreeze = newStreak === 7 && streak !== 7;
 
         const updatedActiveDates = trimDates([...activeDates, today]);
         const updatedFrozenDates = freezeConsumed
           ? trimDates([...frozenDates, yesterdayISO()])
           : trimDates(frozenDates);
+
+        const netFreezeDelta = (grantFreeze ? 1 : 0) - (freezeConsumed ? 1 : 0);
 
         set((state) => ({
           xp: state.xp + LOGIN_BONUS_XP,
@@ -241,8 +268,11 @@ export const useEconomyStore = create<EconomyState>()(
           lastLoginBonusDate: today,
           activeDates: updatedActiveDates,
           frozenDates: updatedFrozenDates,
-          streakFreezes: freezeConsumed ? state.streakFreezes - 1 : state.streakFreezes,
+          streakFreezes: state.streakFreezes + netFreezeDelta,
           ...(freezeConsumed ? { pendingFreezeSaveAck: true } : {}),
+          ...(streakBroke && state.lastRepairOfferedAt !== today
+            ? { pendingRepairOffer: true, previousStreakBeforeBreak: streak }
+            : {}),
         }));
       },
 
@@ -252,6 +282,30 @@ export const useEconomyStore = create<EconomyState>()(
       },
       dismissFreezeSaveAck: () => {
         set({ pendingFreezeSaveAck: false });
+      },
+
+      repairStreak: (source: "coins" | "ad") => {
+        const { pendingRepairOffer, previousStreakBeforeBreak, coins } = get();
+        if (!pendingRepairOffer || previousStreakBeforeBreak < 3) return false;
+        if (source === "coins") {
+          const REPAIR_COST = 200;
+          if (coins < REPAIR_COST) return false;
+          set((state) => ({ coins: state.coins - REPAIR_COST }));
+        }
+        // Both paths: restore streak to previous value and mark today active
+        const today = todayISO();
+        set((state) => ({
+          streak: previousStreakBeforeBreak,
+          lastDailyTaskDate: today,
+          activeDates: trimDates([...state.activeDates, today]),
+          pendingRepairOffer: false,
+          lastRepairOfferedAt: today,
+        }));
+        return true;
+      },
+
+      dismissRepairOffer: () => {
+        set({ pendingRepairOffer: false, lastRepairOfferedAt: todayISO() });
       },
 
       grantStarterCapital: (): boolean => {
