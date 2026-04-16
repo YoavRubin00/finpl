@@ -46,6 +46,7 @@ import { configureRevenueCat, loginRevenueCat } from "../src/services/revenueCat
 import { useSubscriptionStore } from "../src/features/subscription/useSubscriptionStore";
 import { AppWalkthroughOverlay } from "../src/features/onboarding/AppWalkthroughOverlay";
 import { StreakFreezeSaveModal } from "../src/features/streak/StreakFreezeSaveModal";
+import { StreakRepairModal } from "../src/features/streak/StreakRepairModal";
 import { useTutorialStore } from "../src/stores/useTutorialStore";
 
 // ── Global font override: all <Text> and <TextInput> use Heebo ──
@@ -92,6 +93,12 @@ function FreezeSaveModalGate() {
   const pending = useEconomyStore((s) => s.pendingFreezeSaveAck);
   const dismiss = useEconomyStore((s) => s.dismissFreezeSaveAck);
   return <StreakFreezeSaveModal visible={pending} onDismiss={dismiss} />;
+}
+
+function StreakRepairModalGate() {
+  const pending = useEconomyStore((s) => s.pendingRepairOffer);
+  const dismiss = useEconomyStore((s) => s.dismissRepairOffer);
+  return <StreakRepairModal visible={pending} onDismiss={dismiss} />;
 }
 
 export default function RootLayout() {
@@ -199,6 +206,7 @@ export default function RootLayout() {
             <NetworkStatusBanner />
             <LevelUpBanner />
             <FreezeSaveModalGate />
+            <StreakRepairModalGate />
           </StreakCelebrationProvider>
         </RewardAnimationProvider>
       </GlobalErrorBoundary>

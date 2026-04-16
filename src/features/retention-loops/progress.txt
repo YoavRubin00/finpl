@@ -37,3 +37,19 @@
   - Store freeze grant logic lives in TWO places (completeDailyTask + awardLoginBonus) — both already handled
   - StreakCelebrationScreen uses `grantedFreezeAt7` boolean derived from streak prop, not from store directly
 ---
+
+## Iteration 4 — US-004: Streak Repair (day-after-break offer)
+- Store logic was already fully implemented: repairStreak(source), dismissRepairOffer(), pendingRepairOffer, previousStreakBeforeBreak, lastRepairOfferedAt fields + break detection in both completeDailyTask and awardLoginBonus
+- Created src/features/streak/StreakRepairModal.tsx — modal with Finn empathic pose, 3 CTAs (coins repair, ad repair, decline)
+  - Follows exact pattern from StreakFreezeSaveModal: Modal transparent + fade, overlay + sheet, FadeIn/FadeInDown animations
+  - Coin repair costs 200 (REPAIR_COST constant), disabled when can't afford (opacity 0.4)
+  - Ad repair: TODO stub — calls repairStreak("ad") directly for now
+  - Decline calls dismissRepairOffer() which sets lastRepairOfferedAt to prevent repeat offers
+- Added StreakRepairModalGate function + render in app/_layout.tsx (after FreezeSaveModalGate)
+- Files affected: StreakRepairModal.tsx (new), _layout.tsx (import + gate + render)
+- Learnings for next cycles:
+  - Store logic can be ahead of UI — always check what exists before writing store code
+  - _layout.tsx hook/linter auto-applies pending edits — read after each attempt
+  - Modal gate pattern: tiny function component selecting store boolean + dismiss, rendered after Slot in providers
+  - REPAIR_COST = 200 is hardcoded in modal; if needed elsewhere, extract to constants/economy.ts
+---

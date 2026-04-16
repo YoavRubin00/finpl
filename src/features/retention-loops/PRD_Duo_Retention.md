@@ -49,7 +49,7 @@
   - [x] Typecheck passes
 
 ### US-004 — Streak Repair (day-after-break offer)
-- [ ] Target: new component in `src/features/streak/` + `useEconomyStore.ts`
+- [x] Target: new component in `src/features/streak/` + `useEconomyStore.ts`
 - **Problem:** When a streak breaks, it's gone silently. Duolingo offers "repair it for X" — recovers ~10% of lapsers.
 - **Fix:** On first open after a break (streak was ≥ 3 days):
   - Modal: "הרצף שלך (X ימים) נשבר 💔. נחזיר אותו?"
@@ -60,8 +60,8 @@
 - Only offered if previous streak was ≥ 3 days.
 - Restore logic: set `streakDays` back to previous value, reset `lastDailyTaskDate` to now.
 - **Acceptance:**
-  - [ ] Repair modal component + store method `repairStreak(source: 'coins' | 'ad')`
-  - [ ] One-shot per break, gated on previous streak ≥ 3
+  - [x] Repair modal component + store method `repairStreak(source: 'coins' | 'ad')`
+  - [x] One-shot per break, gated on previous streak ≥ 3
   - [x] Typecheck passes
 
 ### US-005 — Change Hearts refill from 4h to 5h
