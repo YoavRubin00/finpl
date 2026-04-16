@@ -158,16 +158,16 @@ function storeKey(chapterId: string): string {
 
 // Finn speech bubble phrases (cycles by modIndex, first is personalized)
 const FINN_PHRASES_STATIC = [
-  "בוא נלמד!",
+  "בואו נלמד!",
   "השלב הבא!",
-  "אני מאמין בך!",
-  "מוכן?",
+  "מאמין בכם!",
+  "מוכנים?",
 ];
 
 function getFinnPhrase(index: number, displayName: string): string {
   const total = FINN_PHRASES_STATIC.length + 1;
   const slot = index % total;
-  if (slot === 0) return `יאללה ${displayName || "חבר"}!`;
+  if (slot === 0) return `יאללה ${displayName || "חברים"}!`;
   return FINN_PHRASES_STATIC[slot - 1];
 }
 
@@ -1355,14 +1355,14 @@ export function DuoLearnScreen() {
                           <Text style={{
                             fontSize: 12,
                             fontFamily: "Heebo_400Regular",
-                            color: chapterUnlocked ? "#64748b" : "#cbd5e1",
+                            color: chapterUnlocked ? "#64748b" : "#94a3b8",
                             writingDirection: "rtl",
                             textAlign: "right",
                           }}>
                             {arena.subtitle}
                           </Text>
                         </View>
-                        {!chapterUnlocked && <Lock size={14} color="#cbd5e1" />}
+                        {!chapterUnlocked && <Lock size={14} color="#94a3b8" />}
                       </View>
 
                       {/* Progress bar for current/completed */}

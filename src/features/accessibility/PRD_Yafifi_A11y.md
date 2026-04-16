@@ -44,12 +44,12 @@ All work is UI-ONLY — no logic changes, no new components. Add props, fix colo
   - [x] Typecheck passes
 
 ### US-005 — Fix locked-chapter contrast in DuoLearnScreen
-- [ ] Target: `src/features/pyramid/DuoLearnScreen.tsx` lines 1358, 1365
+- [x] Target: `src/features/pyramid/DuoLearnScreen.tsx` lines 1358, 1365
 - **Problem:** Locked icon/text `#cbd5e1` on white = 1.69:1. Even non-text UI needs 3:1 per WCAG AA.
 - **Fix:** Replace `#cbd5e1` with `#94a3b8` (3.47:1) for locked state — still visually "locked" but meets contrast.
 - **Acceptance:**
-  - [ ] Locked elements use `#94a3b8` or darker
-  - [ ] Typecheck passes
+  - [x] Locked elements use `#94a3b8` or darker
+  - [x] Typecheck passes
 
 ### US-006 — Fix ProfilingFlow checkbox border
 - [x] Target: `src/features/onboarding/ProfilingFlow.tsx` line ~1686
