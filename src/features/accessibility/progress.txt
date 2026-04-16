@@ -1,0 +1,9 @@
+## Iteration 1 — US-001: Add accessibilityLabel to FinFeedScreen Pressables
+- Added accessibilityRole="button" and accessibilityLabel to the mail Pressable (line 278)
+- File already had accessible={false} on decorative elements
+- Files affected: src/features/finfeed/FinFeedScreen.tsx
+- Learnings:
+  - PRD says 43 Pressables but file was refactored - only 1 explicit Pressable remains
+  - Decorative wrappers already use accessible={false}
+  - Typecheck passes (pre-existing error in HigherLowerCard.tsx:302)
+---

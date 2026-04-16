@@ -1,6 +1,7 @@
 import React, { useCallback, useMemo, useRef, useState, useEffect } from "react";
 import { Image as ExpoImage } from "expo-image";
-import { View, Text, Image, FlatList, Dimensions, StyleSheet, ViewToken, Pressable, ImageBackground,  Modal } from "react-native";
+import { View, Text, Dimensions, StyleSheet, ViewToken, Pressable } from "react-native";
+import { FlashList, type FlashListRef } from "@shopify/flash-list";
 import { useFocusEffect, useScrollToTop } from "@react-navigation/native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import LottieView from "lottie-react-native";
@@ -20,12 +21,11 @@ import Animated, {
   withDelay,
   cancelAnimation,
 } from "react-native-reanimated";
-import { LinearGradient } from "expo-linear-gradient";
 import { FINN_STANDARD } from "../retention-loops/finnMascotConfig";
 
 // Feed Data & Types
 import { MOCK_FEED_DATA, COMIC_FEED_ITEMS, BENBEN_VIDEOS } from "./feedData";
-import { type FeedItem, type FeedModuleHook, type FeedQuote, type FeedFinnHero } from "./types";
+import { type FeedItem, type FeedModuleHook, type FeedQuote } from "./types";
 import { FeedVideoItem } from "./FeedVideoItem";
 import { FeedQuoteItem } from "./FeedQuoteItem";
 import { FeedComicItem } from "./FeedComicItem";
@@ -43,10 +43,8 @@ import { useTutorialStore } from "../../stores/useTutorialStore";
 import { useEconomyStore } from "../economy/useEconomyStore";
 import { useTheme } from "../../hooks/useTheme";
 import { MythFeedCard } from "../myth-or-tachles/MythFeedCard";
-import { FeedScenarioCard } from "./FeedScenarioCard";
 import { FeedPremiumLearningCard } from "./FeedPremiumLearningCard";
 import { PREMIUM_LEARNING_ITEMS } from "./premiumLearningData";
-import { SCENARIOS } from "../scenario-lab/scenarioLabData";
 import { useScenarioLabStore } from "../scenario-lab/useScenarioLabStore";
 import { DailyQuizCard } from "../daily-quiz/DailyQuizCard";
 import { useDailyQuizStore } from "../daily-quiz/useDailyQuizStore";
@@ -56,11 +54,12 @@ import { DilemmaCard } from "../daily-challenges/DilemmaCard";
 import { InvestmentCard } from "../daily-challenges/InvestmentCard";
 import { SwipeGameCard } from "../daily-challenges/SwipeGameCard";
 import { CrashGameCard } from "../daily-challenges/CrashGameCard";
+import { BullshitSwipeCard } from "./minigames/bullshit-swipe/BullshitSwipeCard";
+import { HigherLowerCard } from "./minigames/higher-lower/HigherLowerCard";
 import { GrahamPersonalityFeedCard } from "../graham-personality/GrahamPersonalityFeedCard";
+import { DiamondHandsCard } from "../diamond-hands";
 import { useStreakCelebration } from "../../hooks/useStreakCelebration";
-import { useDailyChallengesStore } from "../daily-challenges/use-daily-challenges-store";
 import { getPyramidStatus } from "../../utils/progression";
-import { TransitionOverlay } from "../../components/ui/TransitionOverlay";
 // Chapter data — all 5 chapters
 import { chapter1Data } from "../chapter-1-content/chapter1Data";
 import { chapter2Data } from "../chapter-2-content/chapter2Data";
@@ -81,14 +80,13 @@ import { FinnMailModal } from "../fun/FinnMailModal";
 import { FINN_DAD_JOKES, FINN_FUN_FACTS } from "../fun/finnJokesData";
 
 const { height: SCREEN_HEIGHT, width: SCREEN_WIDTH } = Dimensions.get("window");
-import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 // Module-level flag — prevents re-check within the same session
 let streakCheckedThisSession = false;
 
 const STREAK_POPUP_KEY = "streak_popup_last_date";
 
-// Stable FlatList helpers — avoids new references per render
+// Stable list helpers — avoids new references per render
 function FeedSeparator() { return <View style={{ height: 10 }} />; }
 function keyExtractor(item: FeedItem) { return item.id; }
 
@@ -279,6 +277,8 @@ function WelcomeCard({ height }: { height: number }) {
         {hasUnreadMail && (
           <Pressable
             onPress={() => { setShowMailModal(true); }}
+            accessibilityRole="button"
+            accessibilityLabel="דואר מקפטן שארק"
             style={{
               flexDirection: 'row-reverse', alignItems: 'center', gap: 6,
               backgroundColor: '#f0f9ff', borderRadius: 14, borderWidth: 1, borderColor: '#bae6fd',
@@ -495,8 +495,9 @@ function seedHash(s: string): number {
   return Math.abs(h);
 }
 
-function FeedItemDecorations({ seed }: { seed: string }) {
+function FeedItemDecorations({ seed, isActive }: { seed: string; isActive: boolean }) {
   const h = seedHash(seed);
+  if (!isActive) return null;
   return (
     <View style={StyleSheet.absoluteFill} pointerEvents="none">
       {FEED_DECO_SLOTS.map((slot, i) => {
@@ -538,7 +539,7 @@ export function FinFeedScreen() {
   const [feedSeed, setFeedSeed] = useState(() => Math.floor(Math.random() * 0x7fffffff));
   const { showStreakCelebration } = useStreakCelebration();
   const streakTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const flatListRef = useRef<FlatList<FeedItem>>(null);
+  const flatListRef = useRef<FlashListRef<FeedItem>>(null);
   useScrollToTop(flatListRef);
 
   // Continuous auto-scroll during walkthrough feed step — feels infinite
@@ -699,7 +700,10 @@ export function FinFeedScreen() {
       { id: 'daily-investment', type: 'daily-investment' as const },
       { id: 'crash-game', type: 'crash-game' as const },
       { id: 'swipe-game', type: 'swipe-game' },
+      { id: 'bullshit-swipe', type: 'bullshit-swipe' as const },
+      { id: 'higher-lower', type: 'higher-lower' as const },
       { id: 'graham-personality', type: 'graham-personality' } as const,
+      { id: 'diamond-hands', type: 'diamond-hands' as const },
     ];
     
     // Add daily quiz
@@ -773,23 +777,21 @@ export function FinFeedScreen() {
     return filteredMerged;
   }, [feedSeed, progress, aiProfile, completedScenarios]);
 
-  const getItemLayout = useCallback((_data: ArrayLike<FeedItem> | null | undefined, index: number) => ({
-    length: listHeight,
-    offset: listHeight * index,
-    index,
-  }), [listHeight]);
-
-  const viewabilityConfig = useRef({ itemVisiblePercentThreshold: 60 });
+  // Use viewAreaCoveragePercentThreshold so only the item covering the majority
+  // of the viewport is "active" — prevents the previous item's video from playing
+  // while the user is already on the next one (full-screen pager behavior).
+  const viewabilityConfig = useRef({ viewAreaCoveragePercentThreshold: 70, minimumViewTime: 100 });
 
   const onViewableItemsChanged = useRef(({ viewableItems }: { viewableItems: ViewToken[] }) => {
-    if (viewableItems.length > 0) {
-      const idx = viewableItems[0].index ?? 0;
-      setActiveItemIndex(idx);
+    if (viewableItems.length === 0) return;
+    // Pick the last viewable item (the one most recently entered the viewport
+    // while scrolling down); with 70% threshold there should usually be just one.
+    const active = viewableItems[viewableItems.length - 1];
+    const idx = active.index ?? 0;
+    setActiveItemIndex(idx);
 
-      // Handle full-screen TikTok mode for videos
-      const isVideo = viewableItems[0].item?.type === "video" || viewableItems[0].item?.type === "module-hook";
-      useFeedInteractionsStore.getState().setIsVideoActive(isVideo);
-    }
+    const isVideo = active.item?.type === "video" || active.item?.type === "module-hook";
+    useFeedInteractionsStore.getState().setIsVideoActive(isVideo);
   });
 
   const renderItem = ({ item, index }: { item: FeedItem; index: number }) => {
@@ -799,7 +801,7 @@ export function FinFeedScreen() {
     return (
       <View style={{ height: listHeight, width: SCREEN_WIDTH, justifyContent: "center", backgroundColor: showDecorations ? "#f0f9ff" : "#000", overflow: "hidden" }}>
         {/* Subtle sea + money Lottie background for non-video items */}
-        {showDecorations && <FeedItemDecorations seed={item.id} />}
+        {showDecorations && <FeedItemDecorations seed={item.id} isActive={isActive} />}
 
         {item.type === "video" && <FeedVideoItem item={item} isActive={isActive} />}
         {item.type === "quote" && <FeedQuoteItem item={item} isActive={isActive} />}
@@ -838,8 +840,17 @@ export function FinFeedScreen() {
         {item.type === "crash-game" && (
           <CrashGameCard isActive={isActive} />
         )}
+        {item.type === "bullshit-swipe" && (
+          <BullshitSwipeCard isActive={isActive} />
+        )}
+        {item.type === "higher-lower" && (
+          <HigherLowerCard isActive={isActive} />
+        )}
         {item.type === "graham-personality" && (
           <GrahamPersonalityFeedCard isActive={isActive} />
+        )}
+        {item.type === "diamond-hands" && (
+          <DiamondHandsCard isActive={isActive} />
         )}
         {/* Action Sidebar — videos only */}
         {item.type === "video" && (
@@ -857,7 +868,7 @@ export function FinFeedScreen() {
       if (listHeight === 0) setListHeight(e.nativeEvent.layout.height);
     }}>
       {listHeight > 0 && (
-        <FlatList
+        <FlashList
           ref={flatListRef}
           data={feedItems}
           renderItem={renderItem}
@@ -868,13 +879,10 @@ export function FinFeedScreen() {
           ListEmptyComponent={<FeedSkeleton />}
           showsVerticalScrollIndicator={false}
           pagingEnabled={true}
+          snapToInterval={listHeight}
+          decelerationRate="fast"
           viewabilityConfig={viewabilityConfig.current}
           onViewableItemsChanged={onViewableItemsChanged.current}
-          maxToRenderPerBatch={5}
-          updateCellsBatchingPeriod={50}
-          windowSize={7}
-          removeClippedSubviews
-          getItemLayout={getItemLayout}
         />
       )}
 
