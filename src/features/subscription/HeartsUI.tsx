@@ -22,6 +22,7 @@ import { useSubscriptionStore, getTimeUntilNextHeart } from './useSubscriptionSt
 import { useEconomyStore } from '../../features/economy/useEconomyStore';
 import { tapHaptic, successHaptic } from '../../utils/haptics';
 import { useRewardedAd } from '../../hooks/useRewardedAd';
+import { useChapterStore } from '../chapter-1-content/useChapterStore';
 
 const MAX_HEARTS = 5;
 
@@ -168,6 +169,49 @@ export function OutOfHeartsModal({ visible, onDismiss, onUpgrade, onHeartsRefill
         });
     }, [showAd, onDismiss, onHeartsRefilled]);
 
+    const startPracticeForHeart = useSubscriptionStore((s) => s.startPracticeForHeart);
+    const practiceRefillsToday = useSubscriptionStore((s) => s.practiceRefillsToday);
+    const practiceRefillDate = useSubscriptionStore((s) => s.practiceRefillDate);
+    const chapterProgress = useChapterStore((s) => s.progress);
+    const setCurrentChapter = useChapterStore((s) => s.setCurrentChapter);
+    const setCurrentModule = useChapterStore((s) => s.setCurrentModule);
+
+    const practiceCountToday = practiceRefillDate === new Date().toISOString().slice(0, 10)
+        ? practiceRefillsToday
+        : 0;
+    const canPractice = practiceCountToday < 2;
+
+    const handlePracticeRefill = useCallback(() => {
+        tapHaptic();
+        // Pick a random completed module across all chapters
+        const options: { chapterId: string; moduleId: string; moduleIndex: number }[] = [];
+        Object.entries(chapterProgress).forEach(([chapterId, prog]) => {
+            prog.completedModules.forEach((moduleId) => {
+                // Try to infer moduleIndex from the moduleId (e.g. "mod-1-3" → 2 = index)
+                const parts = moduleId.split("-");
+                const idx = Number(parts[parts.length - 1]);
+                options.push({ chapterId, moduleId, moduleIndex: Number.isFinite(idx) ? Math.max(0, idx - 1) : 0 });
+            });
+        });
+        if (options.length === 0) {
+            // No completed modules — nothing to practice, just dismiss
+            onDismiss();
+            return;
+        }
+        const ok = startPracticeForHeart();
+        if (!ok) {
+            onDismiss();
+            return;
+        }
+        const pick = options[Math.floor(Math.random() * options.length)];
+        setCurrentChapter(pick.chapterId);
+        setCurrentModule(pick.moduleIndex);
+        onDismiss();
+        // Convert store key (ch-1) → data id (chapter-1) for URL; replay=1 so no re-complete
+        const urlChapterId = `chapter-${pick.chapterId.split("-")[1]}`;
+        router.push(`/lesson/${pick.moduleId}?chapterId=${urlChapterId}&replay=1` as never);
+    }, [chapterProgress, startPracticeForHeart, setCurrentChapter, setCurrentModule, onDismiss, router]);
+
     const handleGemRefill = useCallback(() => {
         tapHaptic();
         if (gems >= HEART_REFILL_GEM_COST) {
@@ -223,6 +267,22 @@ export function OutOfHeartsModal({ visible, onDismiss, onUpgrade, onHeartsRefill
                         <Pressable onPress={handleAdRefill} style={styles.adRefillBtn} accessibilityRole="button" accessibilityLabel="צפו בפרסומת וקבלו לב חינם">
                             <Text style={styles.adRefillBtnText}>צפו בפרסומת — קבלו לב חינם</Text>
                             <Text style={styles.btnIcon}>🎬</Text>
+                        </Pressable>
+                    )}
+
+                    {/* Practice-to-Refill (US-006) — free, pedagogical, 2/day cap */}
+                    {canPractice && (
+                        <Pressable
+                            onPress={handlePracticeRefill}
+                            style={styles.practiceRefillBtn}
+                            accessibilityRole="button"
+                            accessibilityLabel={`תרגלו שיעור ישן וקבלו לב חינם — נותרו ${2 - practiceCountToday} היום`}
+                            hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
+                        >
+                            <Text style={styles.practiceRefillBtnText}>
+                                תרגלו שיעור ישן — קבלו לב (נותרו {2 - practiceCountToday} היום)
+                            </Text>
+                            <Text style={styles.btnIcon}>📚</Text>
                         </Pressable>
                     )}
 
@@ -450,6 +510,25 @@ const styles = StyleSheet.create({
         fontSize: 15,
         fontWeight: '800',
         color: '#ffffff',
+        writingDirection: 'rtl',
+    },
+    practiceRefillBtn: {
+        width: '100%',
+        flexDirection: 'row-reverse',
+        backgroundColor: '#7dd3fc',
+        borderRadius: 16,
+        paddingVertical: 14,
+        paddingHorizontal: 16,
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        marginBottom: 10,
+        borderBottomWidth: 3,
+        borderBottomColor: '#0284c7',
+    },
+    practiceRefillBtnText: {
+        fontSize: 15,
+        fontWeight: '800',
+        color: '#082f49',
         writingDirection: 'rtl',
     },
     gemRefillBtn: {

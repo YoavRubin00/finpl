@@ -73,7 +73,7 @@
   - [x] Typecheck passes
 
 ### US-006 — Practice-to-Refill (complete old lesson → heart)
-- [ ] Target: `src/features/subscription/HeartsUI.tsx` (`OutOfHeartsModal`) + lesson-completion handler
+- [x] Target: `src/features/subscription/HeartsUI.tsx` (`OutOfHeartsModal`) + lesson-completion handler
 - **Problem:** `OutOfHeartsModal` currently offers ad / coins / gem / Pro. Missing: "תרגל שיעור ישן וקבל לב" — this is Duo's #2 heart surface and reinforces mastery (pedagogically valuable).
 - **Fix:**
   - Add option to `OutOfHeartsModal`: "תרגל שיעור שכבר סיימת → +1 לב"
@@ -81,9 +81,9 @@
   - On lesson complete with no new XP (because already completed), grant `+1 heart`
   - Rate-limit: max 2 practice-refills per day
 - **Acceptance:**
-  - [ ] Practice option added to OutOfHeartsModal
-  - [ ] Practice flow grants +1 heart on completion
-  - [ ] Daily rate limit enforced
+  - [x] Practice option added to OutOfHeartsModal
+  - [x] Practice flow grants +1 heart on completion
+  - [x] Daily rate limit enforced
   - [x] Typecheck passes
 
 ### US-007 — Personalize notification time by lastDailyTaskDate

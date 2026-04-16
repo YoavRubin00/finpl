@@ -46,6 +46,11 @@ interface SubscriptionState {
   hearts: number;
   lastHeartLostAt: string | null;
 
+  // Practice-to-Refill (US-006) — complete old lesson → +1 heart, max 2/day
+  practiceRefillsToday: number;
+  practiceRefillDate: string | null;
+  pendingPracticeForHeart: boolean;
+
   // Selectors
   isPro: () => boolean;
   canAccessFeature: (feature: GatedFeature) => boolean;
@@ -68,6 +73,11 @@ interface SubscriptionState {
   useHeart: () => boolean;
   refillHearts: () => void;
   restoreAllHearts: () => void;
+
+  // Practice-to-Refill actions (US-006)
+  startPracticeForHeart: () => boolean; // true = under daily limit, flag set
+  grantPracticeHeart: () => boolean; // called at lesson completion; +1 heart if flag set
+  clearPracticeFlag: () => void; // bail-out if user navigates away
 
   // Pro actions
   upgradeToPro: () => void;
@@ -136,6 +146,9 @@ export const useSubscriptionStore = create<SubscriptionState>()(
       // Hearts
       hearts: MAX_HEARTS,
       lastHeartLostAt: null,
+      practiceRefillsToday: 0,
+      practiceRefillDate: null,
+      pendingPracticeForHeart: false,
 
       // Pro welcome
       hasSeenProWelcome: false,
@@ -246,6 +259,47 @@ export const useSubscriptionStore = create<SubscriptionState>()(
         set({ hearts: MAX_HEARTS, lastHeartLostAt: null });
       },
 
+      /* ---- Practice-to-Refill (US-006) ---- */
+
+      startPracticeForHeart: (): boolean => {
+        const MAX_PRACTICE_REFILLS_PER_DAY = 2;
+        const today = todayISO();
+        const { practiceRefillDate, practiceRefillsToday } = get();
+        const count = practiceRefillDate === today ? practiceRefillsToday : 0;
+        if (count >= MAX_PRACTICE_REFILLS_PER_DAY) return false;
+        set({ pendingPracticeForHeart: true });
+        return true;
+      },
+
+      grantPracticeHeart: (): boolean => {
+        const MAX_PRACTICE_REFILLS_PER_DAY = 2;
+        const today = todayISO();
+        const state = get();
+        if (!state.pendingPracticeForHeart) return false;
+        const count = state.practiceRefillDate === today ? state.practiceRefillsToday : 0;
+        if (count >= MAX_PRACTICE_REFILLS_PER_DAY) {
+          set({ pendingPracticeForHeart: false });
+          return false;
+        }
+        const currentHearts = state.hearts;
+        if (currentHearts >= MAX_HEARTS) {
+          set({ pendingPracticeForHeart: false });
+          return false;
+        }
+        set({
+          hearts: currentHearts + 1,
+          lastHeartLostAt: currentHearts + 1 >= MAX_HEARTS ? null : state.lastHeartLostAt,
+          practiceRefillsToday: count + 1,
+          practiceRefillDate: today,
+          pendingPracticeForHeart: false,
+        });
+        return true;
+      },
+
+      clearPracticeFlag: () => {
+        set({ pendingPracticeForHeart: false });
+      },
+
       /* ---- Pro actions ---- */
 
       upgradeToPro: () => {
@@ -339,6 +393,9 @@ export const useSubscriptionStore = create<SubscriptionState>()(
         hearts: state.hearts,
         lastHeartLostAt: state.lastHeartLostAt,
         hasSeenProWelcome: state.hasSeenProWelcome,
+        practiceRefillsToday: state.practiceRefillsToday,
+        practiceRefillDate: state.practiceRefillDate,
+        // pendingPracticeForHeart intentionally NOT persisted — transient flag
       }),
     }
   )

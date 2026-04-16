@@ -2338,6 +2338,11 @@ export function LessonFlowScreen() {
       successHaptic();
       playSound('modal_open_1');
 
+      // Practice-to-Refill (US-006): if this replay was started from OutOfHeartsModal, grant +1 heart
+      if (isReplay) {
+        useSubscriptionStore.getState().grantPracticeHeart();
+      }
+
       // Generate chest drop: premium for arena/chapter completion, regular for module
       // Skip rewards on replay
       if (!isReplay) {

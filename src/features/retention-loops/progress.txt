@@ -53,3 +53,25 @@
   - Modal gate pattern: tiny function component selecting store boolean + dismiss, rendered after Slot in providers
   - REPAIR_COST = 200 is hardcoded in modal; if needed elsewhere, extract to constants/economy.ts
 ---
+
+## Iteration 5 — US-006: Practice-to-Refill (complete old lesson → +1 heart)
+- Store logic already implemented by linter auto-apply: startPracticeForHeart(), grantPracticeHeart(), clearPracticeFlag() in useSubscriptionStore
+  - practiceRefillsToday + practiceRefillDate persisted via partialize; pendingPracticeForHeart intentionally transient
+  - MAX_PRACTICE_REFILLS_PER_DAY = 2 hardcoded in both methods
+  - grantPracticeHeart checks flag, daily limit, hearts < MAX, then grants +1 and clears flag
+- HeartsUI.tsx (OutOfHeartsModal): handler + CTA button auto-applied by linter
+  - Fixed navigation URL: store key (ch-1) → data id (chapter-1) conversion + added replay=1 param
+  - Practice CTA styled with light-blue bg (#7dd3fc), shows remaining refills count
+  - Hidden when daily limit (2) reached via canPractice boolean
+  - Picks random completed module from chapterProgress, navigates with replay=1
+- LessonFlowScreen.tsx: grantPracticeHeart() called in summary phase useEffect (line ~2342) when isReplay is true
+  - Single call in summary useEffect; no duplicate in chest handler
+  - Flag is cleared by grantPracticeHeart so subsequent replays without OutOfHeartsModal won't grant hearts
+- Files affected: useSubscriptionStore.ts, HeartsUI.tsx, LessonFlowScreen.tsx, PRD_Duo_Retention.md
+- Learnings for next cycles:
+  - Linter auto-applies store actions and UI when interface + initial state already exist — check file before writing
+  - Store key vs URL chapterId format mismatch: ch-1 (store) vs chapter-1 (URL) — always convert with split("-")[1]
+  - replay=1 URL param controls isReplay in LessonFlowScreen — essential for practice flow
+  - Practice heart integration best placed in summary useEffect (fires once via completedRef) not chest handler (may not fire for replays without chest)
+  - Sensitive file permissions can block Edit tool — use sed/python as fallback
+---
