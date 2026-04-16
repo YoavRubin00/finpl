@@ -75,3 +75,18 @@
   - Practice heart integration best placed in summary useEffect (fires once via completedRef) not chest handler (may not fire for replays without chest)
   - Sensitive file permissions can block Edit tool — use sed/python as fallback
 ---
+
+## Iteration 6 — US-007: Personalize notification time by lastDailyTaskDate
+- Scheduler side was already implemented: computePersonalizedHour() function + usage at line 56
+- Store side was missing: recentActivityHours field existed in interface + initial state but was never populated
+- Added recentActivityHours tracking in completeDailyTask set() call (line ~218)
+- Added recentActivityHours tracking in awardLoginBonus set() call (line ~282)
+- Added recentActivityHours to partialize config so it persists across sessions
+- Array keeps last 14 entries via slice(-13) + push pattern (13 old + 1 new = 14 max)
+- Files affected: useEconomyStore.ts (3 changes: partialize, completeDailyTask, awardLoginBonus), PRD_Duo_Retention.md
+- Learnings for next cycles:
+  - Store fields can exist in interface + initial state but never be populated — always grep for actual writes
+  - recentActivityHours uses sliding window: slice(-13) keeps last 13, then append current = 14 entries max
+  - partialize config must include any field that needs persistence — easy to miss for new fields
+  - Both completeDailyTask and awardLoginBonus need parallel changes (consistent with prior learnings)
+---

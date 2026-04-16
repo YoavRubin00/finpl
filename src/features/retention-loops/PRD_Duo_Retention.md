@@ -94,8 +94,8 @@
   - Schedule daily reminder 2h before that average (nudges into habit window)
   - Fallback to 20:00 if insufficient data (<7 days of activity)
 - **Acceptance:**
-  - [ ] Personalized send hour based on user's learning pattern
-  - [ ] Graceful fallback to 20:00 for new users
+  - [x] Personalized send hour based on user's learning pattern
+  - [x] Graceful fallback to 20:00 for new users
   - [x] Typecheck passes
 
 ### US-008 — Feed dailyGoalMinutes into notification tone

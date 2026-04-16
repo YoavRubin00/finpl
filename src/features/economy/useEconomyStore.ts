@@ -32,6 +32,8 @@ interface EconomyState {
   pendingRepairOffer: boolean;
   previousStreakBeforeBreak: number; // snapshot of streak immediately before it reset to 1
   lastRepairOfferedAt: string | null; // ISO date — prevents repeat offers for the same break
+  // US-007: track last 14 days' hour-of-day of activity (for personalized notification time)
+  recentActivityHours: number[];
 
   addXP: (amount: number, source: XPSource) => void;
   addCoins: (amount: number) => void;
@@ -93,6 +95,7 @@ export const useEconomyStore = create<EconomyState>()(
       pendingRepairOffer: false,
       previousStreakBeforeBreak: 0,
       lastRepairOfferedAt: null,
+      recentActivityHours: [],
 
       addXP: (amount: number, _source: XPSource) => {
         if (amount <= 0) return;
@@ -211,6 +214,8 @@ export const useEconomyStore = create<EconomyState>()(
           ...(streakBroke && state.lastRepairOfferedAt !== today
             ? { pendingRepairOffer: true, previousStreakBeforeBreak: streak }
             : {}),
+          // US-007: record current hour-of-day for personalized notification scheduling
+          recentActivityHours: [...state.recentActivityHours.slice(-13), new Date().getHours()],
         }));
 
         // Cancel today's streak reminder — user already completed the daily task
@@ -273,6 +278,8 @@ export const useEconomyStore = create<EconomyState>()(
           ...(streakBroke && state.lastRepairOfferedAt !== today
             ? { pendingRepairOffer: true, previousStreakBeforeBreak: streak }
             : {}),
+          // US-007: record current hour-of-day for personalized notification scheduling
+          recentActivityHours: [...state.recentActivityHours.slice(-13), new Date().getHours()],
         }));
       },
 
@@ -333,6 +340,10 @@ export const useEconomyStore = create<EconomyState>()(
         frozenDates: state.frozenDates,
         streakFreezes: state.streakFreezes,
         pendingFreezeSaveAck: state.pendingFreezeSaveAck,
+        pendingRepairOffer: state.pendingRepairOffer,
+        previousStreakBeforeBreak: state.previousStreakBeforeBreak,
+        lastRepairOfferedAt: state.lastRepairOfferedAt,
+        recentActivityHours: state.recentActivityHours,
       }),
       onRehydrateStorage: () => (state) => {
         if (!state) return;
