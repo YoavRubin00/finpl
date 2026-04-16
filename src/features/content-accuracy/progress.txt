@@ -29,3 +29,17 @@
   - Pre-existing TS errors in daily-challenges and budget-ninja are unrelated, safe to ignore
   - US-004 next: indexRaceData.ts S&P 500 total returns
 ---
+
+## Iteration 4 — US-004 Fix S&P 500 annual returns in indexRaceData
+- Converted all 10 S&P 500 annual returns (2011-2020) from price-only to total return (dividends reinvested)
+- Updated comment header to clarify "total-return" convention
+- Updated inline comment with correct percentage values
+- Values: 2011: +2.1%, 2012: +16.0%, 2013: +32.4%, 2014: +13.7%, 2015: +1.4%, 2016: +12.0%, 2017: +21.8%, 2018: -4.4%, 2019: +31.5%, 2020: +18.4%
+- Files affected: src/features/chapter-4-content/simulations/indexRaceData.ts
+- Learnings for next cycles:
+  - SP500_RETURNS array is at lines 22-25, comment block at lines 18-20
+  - sed with # delimiter works for pipe-containing comments
+  - US-005 target (ETH 2015 = 0) is in same file, line 106, annualReturns index [4] (5th element)
+  - Stock individual returns use total return already (e.g., AAPL 2019 +89%) — now consistent
+  - Typecheck: only pre-existing errors in skills/stitch-skills/ — safe to ignore
+---

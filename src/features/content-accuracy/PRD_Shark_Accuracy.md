@@ -37,7 +37,7 @@ All work is DATA ONLY — no new components, no new screens, no logic changes. E
   - [x] Typecheck passes
 
 ### US-004 — Fix S&P 500 annual returns in indexRaceData
-- [ ] Target: `src/features/chapter-4-content/simulations/indexRaceData.ts` (~lines 22-25)
+- [x] Target: `src/features/chapter-4-content/simulations/indexRaceData.ts` (~lines 22-25)
 - **Current (wrong/inconsistent):**
   - 2014: +11% → should be **+13.7%** (total return)
   - 2020: +16% → should be **+18.4%** (total return)
@@ -45,9 +45,9 @@ All work is DATA ONLY — no new components, no new screens, no logic changes. E
 - **Fix:** Convert all S&P 500 years to **total return** (dividends reinvested). Correct values 2011-2020:
   - 2011: +2.1%, 2012: +16.0%, 2013: +32.4%, 2014: +13.7%, 2015: +1.4%, 2016: +12.0%, 2017: +21.8%, 2018: −4.4%, 2019: +31.5%, 2020: +18.4%
 - **Acceptance:**
-  - [ ] All S&P 500 values are total-return, consistent with other assets
-  - [ ] Numbers match the published list above (±0.1% rounding)
-  - [ ] Typecheck passes
+  - [x] All S&P 500 values are total-return, consistent with other assets
+  - [x] Numbers match the published list above (±0.1% rounding)
+  - [x] Typecheck passes
 
 ### US-005 — Fix ETH 2015 return (cannot be 0)
 - [ ] Target: `src/features/chapter-4-content/simulations/indexRaceData.ts`
