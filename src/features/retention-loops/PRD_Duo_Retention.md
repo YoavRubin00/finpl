@@ -38,14 +38,14 @@
   - [x] Typecheck passes
 
 ### US-003 — Auto-grant Streak Freeze at 7-day milestone
-- [ ] Target: `src/features/streak/StreakCelebrationScreen.tsx` + `useEconomyStore.ts`
+- [x] Target: `src/features/streak/StreakCelebrationScreen.tsx` + `useEconomyStore.ts`
 - **Problem:** `StreakCelebrationScreen` celebrates 7/30/100 milestones but gives only XP/coins. Auto-granting a freeze at 7 days = "welcome to the club" reward = strong retention hook.
 - **Fix:** On 7-day milestone, also call `addStreakFreezes(1)`. Update celebration modal to show "+1 מגן רצף" as one of the rewards.
 - Also: add 365-day milestone (currently missing).
 - **Acceptance:**
-  - [ ] 7-day milestone grants 1 free streak freeze
-  - [ ] Celebration modal shows the freeze reward
-  - [ ] 365-day milestone added
+  - [x] 7-day milestone grants 1 free streak freeze
+  - [x] Celebration modal shows the freeze reward
+  - [x] 365-day milestone added
   - [x] Typecheck passes
 
 ### US-004 — Streak Repair (day-after-break offer)
@@ -65,11 +65,11 @@
   - [x] Typecheck passes
 
 ### US-005 — Change Hearts refill from 4h to 5h
-- [ ] Target: `src/features/subscription/useSubscriptionStore.ts:28`
+- [x] Target: `src/features/subscription/useSubscriptionStore.ts:28`
 - **Problem:** `HEART_REFILL_MS = 4 * 60 * 60 * 1000`. Duolingo A/B tested 4h/5h/6h and found **5h is the sweet spot** — aligns with overnight + after-school windows, creates natural anticipation without frustration.
 - **Fix:** `HEART_REFILL_MS = 5 * 60 * 60 * 1000`
 - **Acceptance:**
-  - [ ] Constant updated to 5 hours
+  - [x] Constant updated to 5 hours
   - [x] Typecheck passes
 
 ### US-006 — Practice-to-Refill (complete old lesson → heart)

@@ -24,3 +24,16 @@
   - Banner mount pattern in DuoLearnScreen: banners go before SafeAreaView, wrapped in !isWalkthroughActive guard
   - DuoLearnScreen is ~1760 lines — use offset reads to avoid loading everything
 ---
+
+## Iteration 3 — US-003: Auto-grant Streak Freeze at 7-day milestone + 365-day milestone
+- All three sub-tasks were already implemented in prior work:
+  - Store: completeDailyTask (line 182) and awardLoginBonus (line 238) both have `grantFreeze = newStreak === 7` logic
+  - UI: StreakCelebrationScreen line 46 `grantedFreezeAt7 = streak === 7` + freeze reward badge (lines 274-278)
+  - 365 milestone: already in isMilestone check (line 45) and milestoneText (line 197)
+- Only needed: mark PRD acceptance checkboxes
+- Files affected: PRD_Duo_Retention.md (checkbox updates only)
+- Learnings for next cycles:
+  - Check if implementation already exists before starting — code may be ahead of PRD checkboxes
+  - Store freeze grant logic lives in TWO places (completeDailyTask + awardLoginBonus) — both already handled
+  - StreakCelebrationScreen uses `grantedFreezeAt7` boolean derived from streak prop, not from store directly
+---
