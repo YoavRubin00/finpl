@@ -1,0 +1,14 @@
+## Iteration 1 — US-001: Streak Freeze Celebration Modal
+- Added pendingFreezeSaveAck boolean to EconomyState interface
+- Added dismissFreezeSaveAck() method to store
+- Set pendingFreezeSaveAck true in both completeDailyTask and awardLoginBonus when freeze is consumed
+- Persisted via partialize config
+- Created src/features/streak/StreakFreezeSaveModal.tsx — modal with Finn empathic pose, Hebrew copy, dual CTAs
+- Mounted via FreezeSaveModalGate in app/_layout.tsx — reads store flag, auto-shows on app open
+- Files affected: useEconomyStore.ts, StreakFreezeSaveModal.tsx (new), _layout.tsx
+- Learnings for next cycles:
+  - Economy store freeze logic exists in TWO places: completeDailyTask and awardLoginBonus — both need changes
+  - Modal pattern: transparent overlay + animated sheet + Finn image from finnMascotConfig.ts
+  - _layout.tsx mounts global modals after Slot inside StreakCelebrationProvider
+  - Use spread ...(condition ? { key: value } : {}) for conditional state updates in Zustand set
+---

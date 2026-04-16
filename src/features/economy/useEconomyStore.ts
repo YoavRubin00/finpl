@@ -1,6 +1,6 @@
 import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
-import AsyncStorage from "@react-native-async-storage/async-storage";
+import { zustandStorage } from '../../lib/zustandStorage';
 import type { XPSource } from "../../types/economy";
 import {
   DAILY_TASK_XP,
@@ -27,6 +27,7 @@ interface EconomyState {
   activeDates: string[]; // ISO dates when user completed a task (bounded to 90 days)
   frozenDates: string[]; // ISO dates when a streak freeze was auto-consumed
   streakFreezes: number; // owned freeze items count
+  pendingFreezeSaveAck: boolean; // true when freeze was consumed, cleared on modal dismiss
 
   addXP: (amount: number, source: XPSource) => void;
   addCoins: (amount: number) => void;
@@ -38,6 +39,7 @@ interface EconomyState {
   grantStarterCapital: () => boolean;
   dismissLevelUp: () => void;
   addStreakFreezes: (count: number) => void;
+  dismissFreezeSaveAck: () => void;
 }
 
 function todayISO(): string {
@@ -81,6 +83,7 @@ export const useEconomyStore = create<EconomyState>()(
       activeDates: [],
       frozenDates: [],
       streakFreezes: 0,
+      pendingFreezeSaveAck: false,
 
       addXP: (amount: number, _source: XPSource) => {
         if (amount <= 0) return;
@@ -188,6 +191,7 @@ export const useEconomyStore = create<EconomyState>()(
           activeDates: updatedActiveDates,
           frozenDates: updatedFrozenDates,
           streakFreezes: freezeConsumed ? state.streakFreezes - 1 : state.streakFreezes,
+          ...(freezeConsumed ? { pendingFreezeSaveAck: true } : {}),
         }));
 
         // Cancel today's streak reminder — user already completed the daily task
@@ -238,12 +242,16 @@ export const useEconomyStore = create<EconomyState>()(
           activeDates: updatedActiveDates,
           frozenDates: updatedFrozenDates,
           streakFreezes: freezeConsumed ? state.streakFreezes - 1 : state.streakFreezes,
+          ...(freezeConsumed ? { pendingFreezeSaveAck: true } : {}),
         }));
       },
 
       addStreakFreezes: (count: number) => {
         if (count <= 0) return;
         set((state) => ({ streakFreezes: state.streakFreezes + count }));
+      },
+      dismissFreezeSaveAck: () => {
+        set({ pendingFreezeSaveAck: false });
       },
 
       grantStarterCapital: (): boolean => {
@@ -258,7 +266,7 @@ export const useEconomyStore = create<EconomyState>()(
     }),
     {
       name: "economy-store",
-      storage: createJSONStorage(() => AsyncStorage),
+      storage: createJSONStorage(() => zustandStorage),
       partialize: (state) => ({
         xp: state.xp,
         coins: state.coins,
@@ -270,6 +278,7 @@ export const useEconomyStore = create<EconomyState>()(
         activeDates: state.activeDates,
         frozenDates: state.frozenDates,
         streakFreezes: state.streakFreezes,
+        pendingFreezeSaveAck: state.pendingFreezeSaveAck,
       }),
       onRehydrateStorage: () => (state) => {
         if (!state) return;

@@ -16,7 +16,7 @@ initSentry();
 
 import { Slot, useRouter, useSegments, useRootNavigationState } from "expo-router";
 import { useEffect, useState } from "react";
-import { View, Text, TextInput } from "react-native";
+import { Text, TextInput } from "react-native";
 import { setAudioModeAsync } from "expo-audio";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { useFonts } from "@expo-google-fonts/heebo";
@@ -45,6 +45,7 @@ import { LevelUpBanner } from "../src/components/ui/LevelUpBanner";
 import { configureRevenueCat, loginRevenueCat } from "../src/services/revenueCat";
 import { useSubscriptionStore } from "../src/features/subscription/useSubscriptionStore";
 import { AppWalkthroughOverlay } from "../src/features/onboarding/AppWalkthroughOverlay";
+import { StreakFreezeSaveModal } from "../src/features/streak/StreakFreezeSaveModal";
 import { useTutorialStore } from "../src/stores/useTutorialStore";
 
 // ── Global font override: all <Text> and <TextInput> use Heebo ──
@@ -86,6 +87,12 @@ const origInputRender = (TextInput as unknown as { render: Function }).render;
   };
   return origInputRender.call(this, newProps, ref);
 };
+
+function FreezeSaveModalGate() {
+  const pending = useEconomyStore((s) => s.pendingFreezeSaveAck);
+  const dismiss = useEconomyStore((s) => s.dismissFreezeSaveAck);
+  return <StreakFreezeSaveModal visible={pending} onDismiss={dismiss} />;
+}
 
 export default function RootLayout() {
   const [fontsLoaded] = useFonts({
@@ -156,6 +163,7 @@ export default function RootLayout() {
       "duels", "squads", "referral", "fantasy", "assets", "assets-market", "finfeed",
       "scenario-lab", "suggest-scenario", "graham-personality", "legal", "settings",
       "pizza-index", "accessibility-statement", "fire-calculator",
+      "tower-defense-boss",
     ].includes(segments[0] as string);
 
     if (!isAuthenticated) {
@@ -190,6 +198,7 @@ export default function RootLayout() {
             <WisdomPopupCard />
             <NetworkStatusBanner />
             <LevelUpBanner />
+            <FreezeSaveModalGate />
           </StreakCelebrationProvider>
         </RewardAnimationProvider>
       </GlobalErrorBoundary>
