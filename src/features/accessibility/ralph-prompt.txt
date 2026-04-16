@@ -1,0 +1,72 @@
+@src/features/accessibility/PRD_Yafifi_A11y.md @src/features/accessibility/progress.txt @CLAUDE.md You are Ralph, an autonomous coding agent.
+Execute ONE task only per cycle.
+
+## Execution Plan
+
+1. Inspect PRD_Yafifi_A11y.md and identify the first unchecked task ([ ]).
+2. Read progress.txt, prioritizing the Learnings section for prior context.
+3. Read the TARGET FILE mentioned in the user story.
+4. Implement that single task and nothing more.
+5. Run `npx tsc --noEmit` to validate (ignore pre-existing errors in skills/ and TrackSelectorScreen).
+
+## Rules for Completion
+
+- If validation SUCCEEDS:
+  - Mark the task complete in PRD_Yafifi_A11y.md ([x])
+  - Commit with message: a11y: Yafifi [US-XXX] — [task description]
+  - Append successful approaches to progress.txt
+
+- If validation FAILS:
+  - Do not mark completion
+  - Do not commit
+  - Record failure details in progress.txt
+
+## Progress Entry Template
+
+## Iteration [N] — [Task Name]
+- What was done
+- Files affected
+- Learnings for next cycles:
+  - Patterns
+  - Traps
+  - Helpful context
+---
+
+## Key Context
+
+- This is PRD: UX Polish — Accessibility, contrast, reduced motion
+- All work is UI-ONLY — no logic changes, no new components
+- Hebrew labels — use RTL writing direction where text is added
+- Theme: "Gaming-Neon", NativeWind + StyleSheet hybrid
+
+### Target files per story:
+- US-001: `src/features/finfeed/FinFeedScreen.tsx` (43 Pressables need labels)
+- US-002: `src/features/onboarding/ProfilingFlow.tsx` (41 Pressables need labels)
+- US-003: `src/features/chapter-1-content/LessonFlowScreen.tsx` (~35 missing labels)
+- US-004: `src/features/chapter-1-content/LessonFlowScreen.tsx` (color fix, lines 379, 3221, 3496, 3577)
+- US-005: `src/features/pyramid/DuoLearnScreen.tsx` (color fix, lines 1358, 1365)
+- US-006: `src/features/onboarding/ProfilingFlow.tsx` (checkbox border ~line 1686)
+- US-007: `src/features/finfeed/FinFeedScreen.tsx` (useReducedMotion gates)
+- US-008: `src/features/pyramid/DuoLearnScreen.tsx` (PulsingGlow at :429)
+- US-009: `src/features/pyramid/DuoLearnScreen.tsx` (hitSlop on small targets)
+
+### Key rules:
+- Read file BEFORE editing to find exact locations
+- For labels: Hebrew text, descriptive ("סגור", "המשך", "שלח", not "כפתור")
+- For useReducedMotion: import `useReducedMotion` from `react-native-reanimated`
+- Follow pattern in `src/components/ui/AnimatedPressable.tsx:48` for reduced-motion gate
+- Do NOT change any logic or behavior — only add a11y props / fix colors
+
+### Pre-existing TS errors (safe to ignore):
+- All errors in skills/stitch-skills/ folder
+
+### Execution Order:
+Phase 1 — Blockers (WCAG violations): US-001, US-002, US-004, US-005
+Phase 2 — Contrast + labels: US-003, US-006
+Phase 3 — Motion + targets: US-007, US-008, US-009
+
+## Completion Signal
+
+After task execution:
+- If all PRD tasks are completed ([x]), output exactly: <promise>COMPLETE</promise>
+- Otherwise, produce no final message

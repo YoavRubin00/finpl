@@ -24,7 +24,7 @@ import { payslipNinjaConfig } from './payslipNinjaData';
 import type { PayslipCategory, PayslipNinjaScore } from './payslipNinjaTypes';
 import { getChapterTheme } from '../../../constants/theme';
 import { GlowCard } from '../../../components/ui/GlowCard';
-import { SIM, GRADE_COLORS, GRADE_HEBREW, SHADOW_STRONG, SHADOW_LIGHT, RTL, TYPE, simStyles } from './simTheme';
+import { SIM, GRADE_COLORS, GRADE_HEBREW, RTL, TYPE, simStyles } from './simTheme';
 import { useTimeoutCleanup } from '../../../hooks/useTimeoutCleanup';
 
 

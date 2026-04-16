@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { zustandStorage } from '../../lib/zustandStorage';
 import type { RealAsset, RealAssetsState, PortfolioCombo, MilestoneId } from './realAssetsTypes';
 import { getBaseAsset, getYieldForTier, PORTFOLIO_COMBOS, ASSET_IDS, MORTGAGE_TERMS } from './realAssetsData';
 import { useEconomyStore } from '../economy/useEconomyStore';
@@ -315,7 +315,7 @@ export const useRealAssetsStore = create<RealAssetsState>()(
     }),
     {
       name: 'real-assets-store',
-      storage: createJSONStorage(() => AsyncStorage),
+      storage: createJSONStorage(() => zustandStorage),
       partialize: (state) => ({
         ownedAssets: state.ownedAssets,
         totalDailyIncome: state.totalDailyIncome,

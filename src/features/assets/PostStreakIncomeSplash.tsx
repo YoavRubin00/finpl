@@ -3,12 +3,11 @@
 
 import { useEffect, useState } from "react";
 import { Image as ExpoImage } from "expo-image";
-import { Modal, Text, Pressable, StyleSheet, View , Image } from "react-native";
+import { Modal, Text, Pressable, StyleSheet, View } from "react-native";
 import Animated, {
   FadeIn,
   FadeOut,
 } from "react-native-reanimated";
-import LottieView from "lottie-react-native";
 import { FINN_STANDARD } from "../retention-loops/finnMascotConfig";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useRealAssetsStore } from "./useRealAssetsStore";

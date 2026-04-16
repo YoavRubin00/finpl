@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Image as ExpoImage } from "expo-image";
-import { View, Text, Image, StyleSheet, Pressable } from 'react-native';
+import { View, Text, StyleSheet, Pressable } from 'react-native';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,

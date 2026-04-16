@@ -163,7 +163,7 @@ export const FeedQuoteItem = React.memo(function FeedQuoteItem({ item, isActive 
                                 <LottieView
                                     source={require("../../../assets/lottie/wired-flat-1634-light-spiral-bulb-4-hover-pinch.json")}
                                     style={{ width: 40, height: 40 }}
-                                    autoPlay loop speed={0.6}
+                                    autoPlay={isActive} loop={isActive} speed={0.6}
 
                                 />
                             </View>

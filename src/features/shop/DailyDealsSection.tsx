@@ -3,7 +3,6 @@ import { View, Text, StyleSheet, Pressable, Alert } from 'react-native';
 import { GoldCoinIcon } from '../../components/ui/GoldCoinIcon';
 import { useRouter } from 'expo-router';
 import { LottieIcon } from '../../components/ui/LottieIcon';
-import { AnimatedPressable } from '../../components/ui/AnimatedPressable';
 import { generateDailyDeals } from './dailyDeals';
 import { ConfirmModal } from './ConfirmModal';
 import { useEconomyStore } from '../economy/useEconomyStore';

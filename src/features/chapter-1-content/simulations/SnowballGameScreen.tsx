@@ -15,7 +15,6 @@ import Animated, {
     SlideInRight,
     SlideOutLeft,
 } from 'react-native-reanimated';
-import LottieView from 'lottie-react-native';
 import { Image as ExpoImage } from 'expo-image';
 import { FINN_HAPPY } from '../../retention-loops/finnMascotConfig';
 import { AnimatedPressable } from '../../../components/ui/AnimatedPressable';
@@ -23,11 +22,10 @@ import { SimFeedbackBar } from '../../../components/ui/SimFeedbackBar';
 import { LottieIcon } from '../../../components/ui/LottieIcon';
 import { SimLottieBackground } from '../../../components/ui/SimLottieBackground';
 import { successHaptic } from '../../../utils/haptics';
-import { useEconomyStore } from '../../economy/useEconomyStore';
 import { useSnowballGame } from './useSnowballGame';
 import { snowballConfig } from './snowballData';
 import type { PurchaseOption, PurchaseScenario, SnowballScore } from './snowballTypes';
-import { SIM, GRADE_COLORS, GRADE_HEBREW, SHADOW_LIGHT, RTL, TYPE, simStyles } from './simTheme';
+import { SIM, GRADE_COLORS, GRADE_HEBREW, RTL, TYPE, simStyles } from './simTheme';
 import { getChapterTheme } from '../../../constants/theme';
 import { useTimeoutCleanup } from '../../../hooks/useTimeoutCleanup';
 

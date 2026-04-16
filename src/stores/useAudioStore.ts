@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { zustandStorage } from '../lib/zustandStorage';
 
 interface AudioState {
     isVideoPlaying: boolean;
@@ -23,7 +23,7 @@ export const useAudioStore = create<AudioState>()(
         }),
         {
             name: 'audio-settings',
-            storage: createJSONStorage(() => AsyncStorage),
+            storage: createJSONStorage(() => zustandStorage),
             partialize: (state) => ({ musicEnabled: state.musicEnabled, sfxEnabled: state.sfxEnabled }),
         },
     ),

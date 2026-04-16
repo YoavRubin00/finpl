@@ -1,6 +1,6 @@
 import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
-import AsyncStorage from "@react-native-async-storage/async-storage";
+import { zustandStorage } from '../../lib/zustandStorage';
 import type { DraftPick, DraftState } from "./draftTypes";
 import { TOTAL_ROUNDS, getCurrentWeekId } from "./draftData";
 
@@ -54,7 +54,7 @@ export const useDraftStore = create<DraftState & DraftActions>()(
     }),
     {
       name: "draft-store-v1",
-      storage: createJSONStorage(() => AsyncStorage),
+      storage: createJSONStorage(() => zustandStorage),
       partialize: (s) => ({
         weekId: s.weekId,
         picks: s.picks,

@@ -68,5 +68,19 @@
       "\\tmp",
       "c:\\tmp"
     ]
+  },
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Write|Edit|NotebookEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "PYTHONIOENCODING=utf-8 python3 \"c:/Users/יואב רובין/.claude/projects/finpl/.claude/hooks/post-code-review-reminder.py\"",
+            "timeout": 10
+          }
+        ]
+      }
+    ]
   }
 }

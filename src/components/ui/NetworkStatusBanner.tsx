@@ -3,7 +3,7 @@
  * Uses the existing NotificationBanner animation pattern but with a red/warning theme.
  */
 import { useEffect } from "react";
-import { View, Text, Pressable, StyleSheet } from "react-native";
+import { Text, StyleSheet } from "react-native";
 import Animated, {
   useSharedValue,
   useAnimatedStyle,

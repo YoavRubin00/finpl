@@ -21,7 +21,6 @@ import { LottieIcon } from '../../../components/ui/LottieIcon';
 import { AnimatedPressable } from '../../../components/ui/AnimatedPressable';
 import { GlowCard } from '../../../components/ui/GlowCard';
 import { ConfettiExplosion } from '../../../components/ui/ConfettiExplosion';
-import { SimFeedbackBar } from '../../../components/ui/SimFeedbackBar';
 import { tapHaptic, successHaptic, heavyHaptic } from '../../../utils/haptics';
 import { useCrisisManager } from './useCrisisManager';
 import { TOTAL_EVENTS } from './crisisManagerData';
@@ -547,11 +546,12 @@ export function CrisisManagerScreen({ onComplete }: CrisisManagerScreenProps) {
 
               {/* Next button */}
               <AnimatedPressable onPress={handleNext} accessibilityRole="button" accessibilityLabel={state.currentEventIndex < TOTAL_EVENTS - 1 ? 'למשבר הבא' : 'לתוצאות'} style={styles.nextBtn}>
-                <Text style={styles.nextBtnText}>
-                  {state.currentEventIndex < TOTAL_EVENTS - 1
-                    ? 'למשבר הבא →'
-                    : 'לתוצאות →'}
+                <Text style={[styles.nextBtnText, { writingDirection: 'rtl' }]}>
+                  {state.currentEventIndex < TOTAL_EVENTS - 1 ? 'למשבר הבא' : 'לתוצאות'}
                 </Text>
+                <View style={{ position: 'absolute', left: 16 }} accessible={false}>
+                  <LottieIcon source={LOTTIE_ARROW} size={22} />
+                </View>
               </AnimatedPressable>
             </Animated.View>
           )}

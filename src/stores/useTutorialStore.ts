@@ -1,6 +1,6 @@
 import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
-import AsyncStorage from "@react-native-async-storage/async-storage";
+import { zustandStorage } from '../lib/zustandStorage';
 
 type WalkthroughScreen = 'learn' | 'lesson-preview' | 'feed' | 'chat' | 'shop' | 'bridge' | null;
 
@@ -41,7 +41,7 @@ export const useTutorialStore = create<TutorialState>()(
     }),
     {
       name: "tutorial-store-v9",
-      storage: createJSONStorage(() => AsyncStorage),
+      storage: createJSONStorage(() => zustandStorage),
       onRehydrateStorage: () => () => {
         useTutorialStore.setState({ _hydrated: true });
       },

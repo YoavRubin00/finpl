@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { zustandStorage } from '../../lib/zustandStorage';
 import { useEconomyStore } from '../economy/useEconomyStore';
 import { BRIDGE_BENEFITS } from './bridgeData';
 
@@ -51,7 +51,7 @@ export const useBridgeStore = create<BridgeState>()(
     }),
     {
       name: 'bridge-store',
-      storage: createJSONStorage(() => AsyncStorage),
+      storage: createJSONStorage(() => zustandStorage),
       partialize: (state) => ({
         redeemedBenefitIds: state.redeemedBenefitIds,
       }),

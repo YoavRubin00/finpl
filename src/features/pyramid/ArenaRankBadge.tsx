@@ -14,7 +14,6 @@ import {
   fadeInUp,
   SPRING_BOUNCY,
 } from "../../utils/animations";
-import { THEME } from "../../constants/theme";
 import { heavyHaptic } from "../../utils/haptics";
 import type { ArenaConfig } from "./arenaConfig";
 

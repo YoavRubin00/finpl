@@ -6,11 +6,11 @@
 
 import type { TimePoint, TradeAction } from './priceValueTypes';
 
-// ── Generate 120 months of data ──────────────────────────────────────────
+// ── Generate 36 months of data (condensed — one clear crash + bubble cycle) ──
 
 function generateData(): TimePoint[] {
   const points: TimePoint[] = [];
-  const monthlyGrowth = Math.pow(1.08, 1 / 12); // ~0.64% monthly
+  const monthlyGrowth = Math.pow(1.10, 1 / 12); // slightly faster intrinsic growth so the 3-year story feels meaty
   let intrinsic = 100;
 
   // Deterministic "random" noise using simple seed
@@ -20,14 +20,15 @@ function generateData(): TimePoint[] {
     return (seed / 2147483647) - 0.5; // -0.5 to +0.5
   }
 
-  // Define events: [startMonth, endMonth, direction multiplier]
-  // Crash 1: months 18-24 (-35%)
-  // Recovery 1: months 25-36
-  // Bubble: months 55-70 (+50% above value)
-  // Crash 2: months 78-86 (-40%)
-  // Recovery 2: months 87-100
+  // Events (compressed timeline, 36 months total):
+  // Crash: months 6-10 (-35%) — fast panic
+  // Recovery: months 11-16 (climb back)
+  // Bubble: months 20-24 (+50% above intrinsic)
+  // Correction: months 25-30 (bubble pops)
+  // Stabilization: months 31-35 (normalization)
 
-  for (let i = 0; i < 120; i++) {
+  const TOTAL = 36;
+  for (let i = 0; i < TOTAL; i++) {
     const year = Math.floor(i / 12) + 1;
     const month = (i % 12) + 1;
 
@@ -35,32 +36,24 @@ function generateData(): TimePoint[] {
 
     let priceBias = 0;
 
-    // Crash 1: months 18-24
-    if (i >= 18 && i <= 24) {
-      const progress = (i - 18) / 6;
+    // Crash: months 6-10
+    if (i >= 6 && i <= 10) {
+      const progress = (i - 6) / 4;
       priceBias = -0.35 * progress;
-    } else if (i > 24 && i <= 36) {
-      // Recovery from crash 1
-      const progress = (i - 24) / 12;
+    } else if (i > 10 && i <= 16) {
+      // Recovery
+      const progress = (i - 10) / 6;
       priceBias = -0.35 * (1 - progress);
     }
 
-    // Bubble: months 55-70
-    if (i >= 55 && i <= 62) {
-      const progress = (i - 55) / 7;
+    // Bubble: months 20-24
+    if (i >= 20 && i <= 24) {
+      const progress = (i - 20) / 4;
       priceBias += 0.50 * progress;
-    } else if (i > 62 && i <= 70) {
-      const progress = (i - 62) / 8;
+    } else if (i > 24 && i <= 30) {
+      // Correction / bubble burst
+      const progress = (i - 24) / 6;
       priceBias += 0.50 * (1 - progress);
-    }
-
-    // Crash 2: months 78-86
-    if (i >= 78 && i <= 86) {
-      const progress = (i - 78) / 8;
-      priceBias += -0.40 * progress;
-    } else if (i > 86 && i <= 100) {
-      const progress = (i - 86) / 14;
-      priceBias += -0.40 * (1 - progress);
     }
 
     const noise = nextRand() * 0.08; // ±4% noise

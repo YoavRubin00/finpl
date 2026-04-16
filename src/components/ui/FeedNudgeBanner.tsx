@@ -1,6 +1,6 @@
 import { useEffect } from "react";
 import { Image as ExpoImage } from "expo-image";
-import { View, Text, Pressable, Image, StyleSheet } from "react-native";
+import { Text, Pressable, StyleSheet } from "react-native";
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -8,7 +8,6 @@ import Animated, {
   withTiming,
   runOnJS,
 } from "react-native-reanimated";
-import LottieView from "lottie-react-native";
 import { ChevronLeft, X } from "lucide-react-native";
 import { FINN_STANDARD } from "../../features/retention-loops/finnMascotConfig";
 

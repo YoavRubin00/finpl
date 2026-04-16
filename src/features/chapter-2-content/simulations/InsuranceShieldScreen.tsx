@@ -16,7 +16,6 @@ import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import { SimLottieBackground } from '../../../components/ui/SimLottieBackground';
 import { LottieIcon } from '../../../components/ui/LottieIcon';
 import { AnimatedPressable } from '../../../components/ui/AnimatedPressable';
-import { GlowCard } from '../../../components/ui/GlowCard';
 import { ConfettiExplosion } from '../../../components/ui/ConfettiExplosion';
 import { SimFeedbackBar } from '../../../components/ui/SimFeedbackBar';
 import {

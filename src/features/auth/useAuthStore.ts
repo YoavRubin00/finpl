@@ -1,6 +1,7 @@
 import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { zustandStorage } from '../../lib/zustandStorage';
 import type { UserProfile } from "./types";
 import { upsertUserProfile, deleteUserProfile } from "../../db/sync/syncUserProfile";
 import { logoutRevenueCat } from "../../services/revenueCat";
@@ -125,7 +126,7 @@ export const useAuthStore = create<AuthState>()(
     }),
     {
       name: "auth-store-v2",
-      storage: createJSONStorage(() => AsyncStorage),
+      storage: createJSONStorage(() => zustandStorage),
       partialize: (state) => ({
         isAuthenticated: state.isAuthenticated,
         isGuest: state.isGuest,

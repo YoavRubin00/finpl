@@ -1,4 +1,3 @@
-import { useColorScheme } from "react-native";
 import { DUO } from "../constants/theme";
 
 const DARK = {

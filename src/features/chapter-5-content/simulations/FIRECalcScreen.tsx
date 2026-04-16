@@ -33,7 +33,7 @@ import { SimLottieBackground } from '../../../components/ui/SimLottieBackground'
 import { getChapterTheme } from '../../../constants/theme';
 import { useFireCalc } from './useFireCalc';
 import { LIFESTYLE_PRESETS } from './fireCalcData';
-import { SIM5, GRADE_COLORS5, SHADOW_STRONG, SHADOW_LIGHT, RTL, TYPE5, sim5Styles } from './simTheme';
+import { SIM5, SHADOW_STRONG, SHADOW_LIGHT, RTL, sim5Styles } from './simTheme';
 import { formatShekel } from '../../../utils/format';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;

@@ -4,11 +4,10 @@
  * "Plant" (DRIP reinvest) grows dramatically. 20-year auto-play cinematic mode.
  */
 
-import { useState, useCallback, useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, ScrollView, Dimensions } from 'react-native';
+import { useCallback, useEffect, useRef } from 'react';
+import { View, Text, StyleSheet, ScrollView } from 'react-native';
 import Animated, {
   FadeIn,
-  FadeInDown,
   FadeInUp,
   useSharedValue,
   useAnimatedStyle,
@@ -18,45 +17,28 @@ import Animated, {
 } from 'react-native-reanimated';
 import { AnimatedPressable } from '../../../components/ui/AnimatedPressable';
 import { GlowCard } from '../../../components/ui/GlowCard';
-import { ConfettiExplosion } from '../../../components/ui/ConfettiExplosion';
 import { LottieIcon } from '../../../components/ui/LottieIcon';
 import { tapHaptic, successHaptic, heavyHaptic } from '../../../utils/haptics';
 import { SimLottieBackground } from '../../../components/ui/SimLottieBackground';
 import { useDividendTree } from './useDividendTree';
 import { getChapterTheme } from '../../../constants/theme';
-import { SIM4, GRADE_COLORS4, SHADOW_STRONG, SHADOW_LIGHT, RTL, TYPE4, sim4Styles } from './simTheme';
+import { SIM4, SHADOW_STRONG, SHADOW_LIGHT, RTL } from './simTheme';
 import { formatShekel } from '../../../utils/format';
+import { DIVIDEND_COLORS as COLORS } from './components/dividendTreeConstants';
+import { DividendScoreScreen } from './components/DividendScoreScreen';
+import { GrowthChart } from './components/DividendGrowthChart';
 
-
-const SCREEN_WIDTH = Dimensions.get('window').width;
 
 /* ── Chapter 4 theme (gradient only) ── */
 const _th4 = getChapterTheme('chapter-4');
 
 /* ── Lottie assets ── */
 const LOTTIE_TREE = require('../../../../assets/lottie/wired-flat-443-tree-hover-pinch.json');
-const LOTTIE_CHART = require('../../../../assets/lottie/wired-flat-153-bar-chart-hover-pinch.json');
 const LOTTIE_BULB = require('../../../../assets/lottie/wired-flat-36-bulb-hover-blink.json');
-const LOTTIE_TARGET = require('../../../../assets/lottie/wired-flat-458-goal-target-hover-hit.json');
-const LOTTIE_REPLAY = require('../../../../assets/lottie/wired-flat-142-share-arrow-hover-slide.json');
 const LOTTIE_GROWTH = require('../../../../assets/lottie/wired-flat-161-growth-hover-pinch.json');
 const LOTTIE_DECREASE = require('../../../../assets/lottie/wired-flat-162-decrease-hover-pinch.json');
 const LOTTIE_PLAY = require('../../../../assets/lottie/wired-flat-29-play-pause-circle-hover-pinch.json');
 const LOTTIE_TROPHY = require('../../../../assets/lottie/wired-flat-3263-trophy-circle-hover-roll.json');
-const LOTTIE_ARROW = require('../../../../assets/lottie/wired-flat-3381-arrows-left-hover-pointing.json');
-
-// ── Theme colors ──────────────────────────────────────────────────────
-const COLORS = {
-  bg: '#f8fafc',
-  green: '#22c55e',
-  darkGreen: '#166534',
-  red: '#ef4444',
-  gold: '#d4af37',
-  goldDark: '#b8860b',
-  brown: '#8B4513',
-  eatBg: 'rgba(239,68,68,0.08)',
-  plantBg: 'rgba(34,197,94,0.08)',
-};
 
 // ── Helpers ───────────────────────────────────────────────────────────
 /* ================================================================== */
@@ -251,179 +233,6 @@ function DualTreeView({
 }
 
 /* ================================================================== */
-/*  GrowthChart — dual line chart comparing both paths                 */
-/* ================================================================== */
-
-function GrowthChart({
-  eatHistory,
-  plantHistory,
-  initialInvestment,
-}: {
-  eatHistory: Array<{ year: number; treeValue: number }>;
-  plantHistory: Array<{ year: number; treeValue: number }>;
-  initialInvestment: number;
-}) {
-  if (eatHistory.length < 2) return null;
-
-  const chartWidth = SCREEN_WIDTH - 80;
-  const chartHeight = 120;
-
-  // Include initial value at year 0
-  const allValues = [
-    initialInvestment,
-    ...eatHistory.map((y) => y.treeValue),
-    ...plantHistory.map((y) => y.treeValue),
-  ];
-  const maxVal = Math.max(...allValues) * 1.05;
-  const minVal = Math.min(...allValues) * 0.95;
-  const range = maxVal - minVal || 1;
-
-  const totalYears = 20;
-  const stepX = chartWidth / totalYears;
-
-  const getY = (val: number) => chartHeight - ((val - minVal) / range) * chartHeight;
-
-  // Build points for each path
-  const eatPoints = [
-    { x: 0, y: getY(initialInvestment) },
-    ...eatHistory.map((yr) => ({
-      x: yr.year * stepX,
-      y: getY(yr.treeValue),
-    })),
-  ];
-
-  const plantPoints = [
-    { x: 0, y: getY(initialInvestment) },
-    ...plantHistory.map((yr) => ({
-      x: yr.year * stepX,
-      y: getY(yr.treeValue),
-    })),
-  ];
-
-  return (
-    <Animated.View entering={FadeInUp.delay(100)}>
-      <GlowCard glowColor="rgba(34,197,94,0.12)" style={{ ...chartCardStyles.card, backgroundColor: SIM4.cardBg }}>
-        <View style={{ flexDirection: 'row-reverse', alignItems: 'center', gap: 8 }}>
-          <LottieIcon source={LOTTIE_CHART} size={22} />
-          <Text style={[chartCardStyles.title, RTL]}>השוואת צמיחה</Text>
-        </View>
-        <View style={chartCardStyles.chartContainer}>
-          {/* Y-axis */}
-          <View style={chartCardStyles.yAxis}>
-            <Text style={chartCardStyles.yLabel}>{formatShekel(maxVal)}</Text>
-            <Text style={chartCardStyles.yLabel}>{formatShekel((maxVal + minVal) / 2)}</Text>
-            <Text style={chartCardStyles.yLabel}>{formatShekel(minVal)}</Text>
-          </View>
-
-          {/* Chart area */}
-          <View style={[chartCardStyles.chartArea, { height: chartHeight }]}>
-            {/* Grid lines */}
-            <View style={[chartCardStyles.gridLine, { top: 0 }]} />
-            <View style={[chartCardStyles.gridLine, { top: chartHeight / 2 }]} />
-            <View style={[chartCardStyles.gridLine, { top: chartHeight }]} />
-
-            {/* Eat path line (red/orange) */}
-            {eatPoints.map((point, i) => {
-              if (i === 0) return null;
-              const prev = eatPoints[i - 1];
-              const dx = point.x - prev.x;
-              const dy = point.y - prev.y;
-              const length = Math.sqrt(dx * dx + dy * dy);
-              const angle = Math.atan2(dy, dx) * (180 / Math.PI);
-              return (
-                <View
-                  key={`eat-${i}`}
-                  style={[
-                    chartCardStyles.lineSegment,
-                    {
-                      left: prev.x,
-                      top: prev.y,
-                      width: length,
-                      transform: [{ rotate: `${angle}deg` }],
-                      backgroundColor: COLORS.red,
-                      opacity: 0.7,
-                    },
-                  ]}
-                />
-              );
-            })}
-
-            {/* Plant path line (green/gold) */}
-            {plantPoints.map((point, i) => {
-              if (i === 0) return null;
-              const prev = plantPoints[i - 1];
-              const dx = point.x - prev.x;
-              const dy = point.y - prev.y;
-              const length = Math.sqrt(dx * dx + dy * dy);
-              const angle = Math.atan2(dy, dx) * (180 / Math.PI);
-              return (
-                <View
-                  key={`plant-${i}`}
-                  style={[
-                    chartCardStyles.lineSegment,
-                    {
-                      left: prev.x,
-                      top: prev.y,
-                      width: length,
-                      transform: [{ rotate: `${angle}deg` }],
-                      backgroundColor: COLORS.green,
-                    },
-                  ]}
-                />
-              );
-            })}
-
-            {/* End dots */}
-            {eatPoints.length > 1 && (
-              <View
-                style={[
-                  chartCardStyles.dot,
-                  {
-                    left: eatPoints[eatPoints.length - 1].x - 4,
-                    top: eatPoints[eatPoints.length - 1].y - 4,
-                    backgroundColor: COLORS.red,
-                  },
-                ]}
-              />
-            )}
-            {plantPoints.length > 1 && (
-              <View
-                style={[
-                  chartCardStyles.dot,
-                  {
-                    left: plantPoints[plantPoints.length - 1].x - 4,
-                    top: plantPoints[plantPoints.length - 1].y - 4,
-                    backgroundColor: COLORS.green,
-                  },
-                ]}
-              />
-            )}
-          </View>
-        </View>
-
-        {/* Legend */}
-        <View style={chartCardStyles.legend}>
-          <View style={chartCardStyles.legendItem}>
-            <View style={[chartCardStyles.legendDot, { backgroundColor: COLORS.red }]} />
-            <View style={{ flexDirection: 'row-reverse', alignItems: 'center', gap: 4 }}>
-              <LottieIcon source={LOTTIE_DECREASE} size={16} />
-              <Text style={chartCardStyles.legendText}>אוכל</Text>
-            </View>
-          </View>
-          <View style={chartCardStyles.legendItem}>
-            <View style={[chartCardStyles.legendDot, { backgroundColor: COLORS.green }]} />
-            <View style={{ flexDirection: 'row-reverse', alignItems: 'center', gap: 4 }}>
-              <LottieIcon source={LOTTIE_GROWTH} size={16} />
-              <Text style={chartCardStyles.legendText}>שותל</Text>
-            </View>
-          </View>
-        </View>
-      </GlowCard>
-    </Animated.View>
-  );
-}
-
-/* ================================================================== */
 /*  FruitCounter — per-year dividend display                           */
 /* ================================================================== */
 
@@ -454,130 +263,6 @@ function FruitCounter({
         </View>
       </View>
     </Animated.View>
-  );
-}
-
-/* ================================================================== */
-/*  ScoreScreen — final comparison reveal                              */
-/* ================================================================== */
-
-function ScoreScreen({
-  score,
-  onReplay,
-  onContinue,
-}: {
-  score: NonNullable<ReturnType<typeof useDividendTree>['score']>;
-  onReplay: () => void;
-  onContinue: () => void;
-}) {
-  const [showConfetti, setShowConfetti] = useState(true);
-
-  const multiplier = score.plantTotal / score.eatTotal;
-  const diffPercent = ((score.difference / score.eatTotal) * 100).toFixed(0);
-
-  return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.scrollContent}>
-      {showConfetti && (
-        <ConfettiExplosion onComplete={() => setShowConfetti(false)} />
-      )}
-
-      {/* Hero reveal */}
-      <Animated.View entering={FadeInDown.springify().damping(22)} style={sim4Styles.gradeContainer}>
-        <View accessible={false}><LottieIcon source={LOTTIE_TREE} size={56} /></View>
-        <Text accessibilityLiveRegion="polite" style={[sim4Styles.gradeText, { color: COLORS.gold }]}>
-          פי {multiplier.toFixed(1)}
-        </Text>
-        <Text style={[sim4Styles.gradeLabel, { color: COLORS.gold }]}>
-          יתרון השתילה מחדש
-        </Text>
-      </Animated.View>
-
-      {/* Side-by-side comparison */}
-      <Animated.View entering={FadeInUp.delay(100)}>
-        <GlowCard glowColor="rgba(212,175,55,0.15)" style={{ ...styles.statsCard, backgroundColor: SIM4.cardBg }}>
-          <View style={{ flexDirection: 'row-reverse', alignItems: 'center', gap: 8, justifyContent: 'center' }}>
-            <LottieIcon source={LOTTIE_DECREASE} size={22} />
-            <Text style={[styles.statsTitle, { textAlign: 'center' }]}>
-              אכלת דיבידנדים vs
-            </Text>
-            <LottieIcon source={LOTTIE_GROWTH} size={22} />
-            <Text style={[styles.statsTitle, { textAlign: 'center' }]}>
-              שתלת מחדש
-            </Text>
-          </View>
-          <View style={scoreStyles.comparisonRow}>
-            <View style={scoreStyles.comparisonCol}>
-              <View style={{ flexDirection: 'row-reverse', alignItems: 'center', gap: 4 }}>
-                <LottieIcon source={LOTTIE_DECREASE} size={18} />
-                <Text style={scoreStyles.comparisonLabel}>אכלת</Text>
-              </View>
-              <Text style={[scoreStyles.comparisonValue, { color: COLORS.red }]}>
-                {formatShekel(score.eatTotal)}
-              </Text>
-              <Text style={scoreStyles.comparisonSub}>(שווי + דיבידנדים)</Text>
-            </View>
-            <View style={scoreStyles.vsBox}>
-              <Text style={scoreStyles.vsText}>VS</Text>
-            </View>
-            <View style={scoreStyles.comparisonCol}>
-              <View style={{ flexDirection: 'row-reverse', alignItems: 'center', gap: 4 }}>
-                <LottieIcon source={LOTTIE_GROWTH} size={18} />
-                <Text style={scoreStyles.comparisonLabel}>שתלת</Text>
-              </View>
-              <Text style={[scoreStyles.comparisonValue, { color: COLORS.gold }]}>
-                {formatShekel(score.plantTotal)}
-              </Text>
-              <Text style={scoreStyles.comparisonSub}>(הכל בעץ)</Text>
-            </View>
-          </View>
-        </GlowCard>
-      </Animated.View>
-
-      {/* Difference highlight */}
-      <Animated.View entering={FadeInUp.delay(200)}>
-        <GlowCard glowColor="rgba(34,197,94,0.15)" style={{ ...styles.statsCard, backgroundColor: SIM4.cardBg }}>
-          <View style={{ flexDirection: 'row-reverse', alignItems: 'center', gap: 8 }}>
-            <LottieIcon source={LOTTIE_BULB} size={22} />
-            <Text style={[styles.statsTitle, RTL]}>ההבדל</Text>
-          </View>
-          <Text style={scoreStyles.differenceText}>
-            אכלת {formatShekel(score.eatTotal)} סה״כ דיבידנדים + שווי.
-          </Text>
-          <Text style={scoreStyles.differenceText}>
-            אם היית שותל — היה לך {formatShekel(score.plantTotal)} (פי {multiplier.toFixed(1)} יותר!)
-          </Text>
-          <Text style={scoreStyles.differenceHighlight}>
-            הפרש: +{formatShekel(score.difference)} ({diffPercent}% יותר)
-          </Text>
-        </GlowCard>
-      </Animated.View>
-
-      {/* Key lesson */}
-      <Animated.View entering={FadeInUp.delay(300)}>
-        <GlowCard glowColor="rgba(212,175,55,0.15)" style={{ ...styles.statsCard, backgroundColor: SIM4.cardBg }}>
-          <View style={sim4Styles.insightRow}>
-            <LottieIcon source={LOTTIE_TARGET} size={22} />
-            <Text style={[sim4Styles.insightText, { flex: 1 }]}>
-              דיבידנד שמחזירים לעץ = ריבית דריבית על סטרואידים.
-            </Text>
-          </View>
-        </GlowCard>
-      </Animated.View>
-
-      {/* Actions */}
-      <Animated.View entering={FadeInUp.delay(500)} style={sim4Styles.actionsRow}>
-        <AnimatedPressable onPress={onReplay} accessibilityRole="button" accessibilityLabel="שחק שוב" style={sim4Styles.replayBtn}>
-          <View accessible={false}><LottieIcon source={LOTTIE_REPLAY} size={18} /></View>
-          <Text style={sim4Styles.replayText}>שחק שוב</Text>
-        </AnimatedPressable>
-        <AnimatedPressable onPress={onContinue} accessibilityRole="button" accessibilityLabel="המשך" style={sim4Styles.continueBtn}>
-          <Text style={sim4Styles.continueText}>המשך</Text>
-          <View style={{ position: 'absolute', left: 16 }} accessible={false}>
-            <LottieIcon source={LOTTIE_ARROW} size={22} />
-          </View>
-        </AnimatedPressable>
-      </Animated.View>
-    </ScrollView>
   );
 }
 
@@ -652,7 +337,7 @@ export function DividendTreeScreen({ onComplete }: DividendTreeScreenProps) {
   if (sim.state.isComplete && sim.score) {
     return (
       <SimLottieBackground lottieSources={CH4_LOTTIE} chapterColors={_th4.gradient}>
-      <ScoreScreen
+      <DividendScoreScreen
         score={sim.score}
         onReplay={handleReplay}
         onContinue={handleContinue}
@@ -1047,129 +732,3 @@ const fruitStyles = StyleSheet.create({
   },
 });
 
-const chartCardStyles = StyleSheet.create({
-  card: {
-    marginTop: 12,
-    padding: 16,
-    backgroundColor: SIM4.cardBg,
-  },
-  title: {
-    color: SIM4.textPrimary,
-    fontSize: 14,
-    fontWeight: '700',
-    marginBottom: 8,
-  },
-  chartContainer: {
-    flexDirection: 'row',
-    height: 140,
-  },
-  yAxis: {
-    width: 55,
-    justifyContent: 'space-between',
-    paddingVertical: 2,
-  },
-  yLabel: {
-    color: SIM4.textMuted,
-    fontSize: 9,
-    fontWeight: '600',
-    textAlign: 'right',
-  },
-  chartArea: {
-    flex: 1,
-    position: 'relative',
-  },
-  gridLine: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    height: 1,
-    backgroundColor: SIM4.cardBorder,
-  },
-  lineSegment: {
-    position: 'absolute',
-    height: 2.5,
-    borderRadius: 1.25,
-    transformOrigin: 'left center',
-  },
-  dot: {
-    position: 'absolute',
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    borderWidth: 1.5,
-    borderColor: SIM4.cardBg,
-  },
-  legend: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    gap: 24,
-    marginTop: 10,
-  },
-  legendItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-  },
-  legendDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-  },
-  legendText: {
-    color: SIM4.textMuted,
-    fontSize: 12,
-    fontWeight: '600',
-  },
-});
-
-const scoreStyles = StyleSheet.create({
-  comparisonRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginTop: 8,
-  },
-  comparisonCol: {
-    flex: 1,
-    alignItems: 'center',
-  },
-  comparisonLabel: {
-    color: SIM4.textPrimary,
-    fontSize: 14,
-    fontWeight: '700',
-    marginBottom: 4,
-  },
-  comparisonValue: {
-    fontSize: 22,
-    fontWeight: '900',
-  },
-  comparisonSub: {
-    color: SIM4.textMuted,
-    fontSize: 11,
-    fontWeight: '600',
-    marginTop: 2,
-  },
-  vsBox: {
-    width: 40,
-    alignItems: 'center',
-  },
-  vsText: {
-    color: SIM4.textMuted,
-    fontSize: 14,
-    fontWeight: '900',
-    letterSpacing: 2,
-  },
-  differenceText: {
-    color: SIM4.textPrimary,
-    fontSize: 14,
-    fontWeight: '600',
-    lineHeight: 22,
-    ...RTL,
-  },
-  differenceHighlight: {
-    color: COLORS.gold,
-    fontSize: 18,
-    fontWeight: '900',
-    marginTop: 8,
-    textAlign: 'center',
-  },
-});

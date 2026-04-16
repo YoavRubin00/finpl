@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { zustandStorage } from '../../lib/zustandStorage';
 import type { DailyQuiz, DailyQuizState } from './dailyQuizTypes';
 import { useEconomyStore } from '../economy/useEconomyStore';
 
@@ -50,7 +50,7 @@ export const useDailyQuizStore = create<DailyQuizState>()(
     }),
     {
       name: 'daily-quiz-store',
-      storage: createJSONStorage(() => AsyncStorage),
+      storage: createJSONStorage(() => zustandStorage),
       partialize: (state) => ({
         answeredDates: state.answeredDates,
         correctCount: state.correctCount,

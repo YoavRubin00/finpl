@@ -4,7 +4,7 @@
 
 import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
-import AsyncStorage from "@react-native-async-storage/async-storage";
+import { zustandStorage } from '../../lib/zustandStorage';
 import type { ReferralState, ReferredFriend } from "./referralTypes";
 import {
   generateReferralCode,
@@ -100,7 +100,7 @@ export const useReferralStore = create<ReferralState>()(
     }),
     {
       name: "referral-store",
-      storage: createJSONStorage(() => AsyncStorage),
+      storage: createJSONStorage(() => zustandStorage),
       partialize: (state) => ({
         referralCode: state.referralCode,
         referredFriends: state.referredFriends,

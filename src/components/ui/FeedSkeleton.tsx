@@ -4,8 +4,7 @@
  */
 import React from 'react';
 import { Image as ExpoImage } from "expo-image";
-import { View, Text, Image, Dimensions, StyleSheet } from 'react-native';
-import LottieView from 'lottie-react-native';
+import { View, Text, Dimensions, StyleSheet } from 'react-native';
 import { FINN_STANDARD } from '../../features/retention-loops/finnMascotConfig';
 
 const { height: SCREEN_HEIGHT, width: SCREEN_WIDTH } = Dimensions.get('window');

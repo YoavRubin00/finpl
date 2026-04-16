@@ -16,7 +16,6 @@ import Animated, {
 import { AnimatedPressable } from '../../../components/ui/AnimatedPressable';
 import { SimFeedbackBar } from '../../../components/ui/SimFeedbackBar';
 import { LottieIcon } from '../../../components/ui/LottieIcon';
-import { GlowCard } from '../../../components/ui/GlowCard';
 import { successHaptic, errorHaptic } from '../../../utils/haptics';
 import { useTimeoutCleanup } from '../../../hooks/useTimeoutCleanup';
 import { useBudgetGame } from './useBudgetGame';

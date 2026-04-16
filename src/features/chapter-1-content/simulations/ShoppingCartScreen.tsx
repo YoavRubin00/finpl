@@ -12,7 +12,6 @@ import Animated, {
     FadeOut,
 } from 'react-native-reanimated';
 import { SimLottieBackground } from '../../../components/ui/SimLottieBackground';
-import { GlowCard } from '../../../components/ui/GlowCard';
 import { LottieIcon } from '../../../components/ui/LottieIcon';
 import { getChapterTheme } from '../../../constants/theme';
 import { AnimatedPressable } from '../../../components/ui/AnimatedPressable';

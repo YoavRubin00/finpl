@@ -2,7 +2,6 @@ import { useEffect } from "react";
 import { Image as ExpoImage } from "expo-image";
 import { Text, Image, Modal, Pressable, StyleSheet, ImageSourcePropType } from "react-native";
 import Animated, { FadeIn, FadeOut, SlideInUp, SlideOutDown } from "react-native-reanimated";
-import LottieView from "lottie-react-native";
 import { FINN_STANDARD } from "../../features/retention-loops/finnMascotConfig";
 
 interface TransitionOverlayProps {

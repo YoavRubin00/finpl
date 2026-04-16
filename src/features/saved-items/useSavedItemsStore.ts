@@ -1,6 +1,6 @@
 import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
-import AsyncStorage from "@react-native-async-storage/async-storage";
+import { zustandStorage } from '../../lib/zustandStorage';
 import type { SavedItem } from "./savedItemTypes";
 
 const MAX_SAVED_ITEMS = 50;
@@ -47,7 +47,7 @@ export const useSavedItemsStore = create<SavedItemsState>()(
     }),
     {
       name: "finplay-saved-items",
-      storage: createJSONStorage(() => AsyncStorage),
+      storage: createJSONStorage(() => zustandStorage),
     },
   ),
 );

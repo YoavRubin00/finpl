@@ -1,6 +1,6 @@
 import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
-import AsyncStorage from "@react-native-async-storage/async-storage";
+import { zustandStorage } from '../../lib/zustandStorage';
 import { useEconomyStore } from "../economy/useEconomyStore";
 import { useAuthStore } from "../auth/useAuthStore";
 import { upsertModuleProgress } from "../../db/sync/syncModuleProgress";
@@ -25,12 +25,14 @@ interface ChapterProgress {
 interface ChapterState {
   currentChapterId: string;
   progress: Record<string, ChapterProgress>;
+  bossCompleted: Record<string, boolean>;
 
   setCurrentChapter: (chapterId: string) => void;
   completeModule: (moduleId: string) => void;
   recordQuizAnswer: (moduleId: string, questionId: string, isCorrect: boolean, conceptTag?: string) => void;
   setCurrentModule: (index: number) => void;
   skipIntroChapter: (moduleIds: string[]) => void;
+  markBossComplete: (chapterId: string) => void;
 }
 
 const emptyProgress: ChapterProgress = {
@@ -52,6 +54,13 @@ export const useChapterStore = create<ChapterState>()(
       currentChapterId: DEFAULT_CHAPTER_ID,
       progress: {
         [DEFAULT_CHAPTER_ID]: { ...emptyProgress },
+      },
+      bossCompleted: {},
+
+      markBossComplete: (chapterId: string) => {
+        set((state) => ({
+          bossCompleted: { ...state.bossCompleted, [chapterId]: true },
+        }));
       },
 
       setCurrentChapter: (chapterId: string) => {
@@ -175,7 +184,7 @@ export const useChapterStore = create<ChapterState>()(
     {
       name: "chapter-store",
       version: 1,
-      storage: createJSONStorage(() => AsyncStorage),
+      storage: createJSONStorage(() => zustandStorage),
       partialize: (state) => ({
         currentChapterId: state.currentChapterId,
         progress: state.progress,

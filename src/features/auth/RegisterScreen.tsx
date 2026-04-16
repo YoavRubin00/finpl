@@ -11,7 +11,6 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
-import { LottieIcon } from "../../components/ui/LottieIcon";
 import { FINN_HELLO } from "../retention-loops/finnMascotConfig";
 import { getPasswordStrength } from "./password-utils";
 import type { PasswordStrength } from "./types";

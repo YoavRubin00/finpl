@@ -1,7 +1,6 @@
 import React, { useState, useCallback, useRef, useEffect } from 'react';
 import { Image as ExpoImage } from "expo-image";
-import { View, Text, Image, StyleSheet, Dimensions } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
+import { View, Text, StyleSheet, Dimensions } from 'react-native';
 import { ChevronDown, ChevronUp } from 'lucide-react-native';
 import Animated, {
   useSharedValue,

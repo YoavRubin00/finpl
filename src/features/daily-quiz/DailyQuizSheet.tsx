@@ -1,7 +1,7 @@
 import { useState, useCallback } from 'react';
 import { View, Text, StyleSheet, Pressable, Modal, ScrollView } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import Animated, { FadeInDown, FadeIn } from 'react-native-reanimated';
+import Animated, { FadeInDown } from 'react-native-reanimated';
 import { tapHaptic, successHaptic, errorHaptic } from '../../utils/haptics';
 import { ConfettiExplosion } from '../../components/ui/ConfettiExplosion';
 import { useDailyQuizStore } from './useDailyQuizStore';

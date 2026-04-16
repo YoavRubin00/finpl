@@ -1,7 +1,7 @@
 import { createAudioPlayer } from 'expo-audio';
 import { useState, useCallback, useEffect } from 'react';
 import { Image as ExpoImage } from 'expo-image';
-import { View, Text, StyleSheet, ScrollView, Pressable } from 'react-native';
+import { View, Text, StyleSheet, Pressable } from 'react-native';
 import { FINN_STANDARD } from '../../retention-loops/finnMascotConfig';
 import Animated, {
     useSharedValue,
@@ -16,14 +16,12 @@ import { SimLottieBackground } from '../../../components/ui/SimLottieBackground'
 import { GlowCard } from '../../../components/ui/GlowCard';
 import { AnimatedPressable } from '../../../components/ui/AnimatedPressable';
 import { getChapterTheme } from '../../../constants/theme';
-import { SimFeedbackBar } from '../../../components/ui/SimFeedbackBar';
 import { LottieIcon } from '../../../components/ui/LottieIcon';
 import { successHaptic, errorHaptic, heavyHaptic } from '../../../utils/haptics';
-import { BackButton } from '../../../components/ui/BackButton';
 import { useEmergencyFund, MonthResult } from './useEmergencyFund';
 import { emergencyFundConfig, savingsOptions, SavingsOption, FUND_TARGET } from './emergencyFundData';
 import type { EmergencyFundScore, EmergencyFundGrade, EmergencyEvent } from './emergencyFundTypes';
-import { SIM, GRADE_COLORS, GRADE_HEBREW, SHADOW_STRONG, SHADOW_LIGHT, RTL, TYPE, simStyles } from './simTheme';
+import { SIM, GRADE_COLORS, GRADE_HEBREW, SHADOW_STRONG, RTL, TYPE, simStyles } from './simTheme';
 
 
 /* ── Chapter theme (ocean-blue) — kept only for gradient ── */

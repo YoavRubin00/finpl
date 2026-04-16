@@ -23,7 +23,6 @@ import { LottieIcon } from '../../../components/ui/LottieIcon';
 import { AnimatedPressable } from '../../../components/ui/AnimatedPressable';
 import { GlowCard } from '../../../components/ui/GlowCard';
 import { ConfettiExplosion } from '../../../components/ui/ConfettiExplosion';
-import { SimFeedbackBar } from '../../../components/ui/SimFeedbackBar';
 import { tapHaptic, successHaptic, errorHaptic } from '../../../utils/haptics';
 import { useStockSorter } from './useStockSorter';
 import {
@@ -547,10 +546,13 @@ export function StockSorterScreen({ onComplete }: StockSorterScreenProps) {
             </View>
 
             {/* Continue button */}
-            <AnimatedPressable onPress={handleNext} style={styles.nextBtn} accessibilityRole="button" accessibilityLabel="המשך">
-              <Text style={[styles.nextBtnText, { fontSize: 18 }]}>
-                {state.currentQuestionIndex < TOTAL_QUESTIONS - 1 ? 'למניה הבאה ➡️' : 'לתוצאות 🏁'}
+            <AnimatedPressable onPress={handleNext} style={styles.nextBtn} accessibilityRole="button" accessibilityLabel={state.currentQuestionIndex < TOTAL_QUESTIONS - 1 ? 'למניה הבאה' : 'לתוצאות'}>
+              <Text style={[styles.nextBtnText, { fontSize: 18, writingDirection: 'rtl' }]}>
+                {state.currentQuestionIndex < TOTAL_QUESTIONS - 1 ? 'למניה הבאה' : 'לתוצאות'}
               </Text>
+              <View style={{ position: 'absolute', left: 16 }} accessible={false}>
+                <LottieIcon source={LOTTIE_ARROW} size={22} />
+              </View>
             </AnimatedPressable>
           </View>
         </Animated.View>

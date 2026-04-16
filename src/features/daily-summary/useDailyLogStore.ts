@@ -5,10 +5,10 @@
  */
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { zustandStorage } from '../../lib/zustandStorage';
 
 export interface LearningEvent {
-  type: 'module' | 'quiz' | 'dilemma' | 'investment' | 'crash-game' | 'swipe-game' | 'macro-event';
+  type: 'module' | 'quiz' | 'dilemma' | 'investment' | 'crash-game' | 'swipe-game' | 'macro-event' | 'bullshit-swipe' | 'higher-lower' | 'budget-ninja' | 'price-slider' | 'cashout-rush';
   title: string;
   timestamp: number;
   xpEarned?: number;
@@ -152,7 +152,7 @@ export const useDailyLogStore = create<DailyLogState>()(
     }),
     {
       name: 'daily-log-store',
-      storage: createJSONStorage(() => AsyncStorage),
+      storage: createJSONStorage(() => zustandStorage),
       partialize: (state) => ({
         currentDate: state.currentDate,
         events: state.events,

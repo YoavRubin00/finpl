@@ -1,6 +1,6 @@
 import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
-import AsyncStorage from "@react-native-async-storage/async-storage";
+import { zustandStorage } from '../../lib/zustandStorage';
 import { useEconomyStore } from "../economy/useEconomyStore";
 import { DAILY_CHALLENGES } from "./arenaData";
 import type { ChallengeProgress } from "./types";
@@ -66,7 +66,7 @@ export const useArenaStore = create<ArenaState>()(
     }),
     {
       name: "arena-store",
-      storage: createJSONStorage(() => AsyncStorage),
+      storage: createJSONStorage(() => zustandStorage),
       partialize: (state) => ({ progress: state.progress }),
     }
   )

@@ -13,7 +13,7 @@ import {
   StyleSheet, Image,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { Send, Check, CheckCheck, MessageCircle, ChevronLeft, Settings } from "lucide-react-native";
+import { Send, Check, CheckCheck, MessageCircle, ChevronLeft } from "lucide-react-native";
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -38,7 +38,6 @@ import type { CompanionAnimationState, ChatMessage, MessageStatus } from "./chat
 import type { CompanionId } from "../auth/types";
 import { ProBadge } from "../../components/ui/ProBadge";
 import { useTutorialStore } from "../../stores/useTutorialStore";
-import LottieView from "lottie-react-native";
 import { getApiBase } from "../../db/apiBase";
 
 /* ------------------------------------------------------------------ */

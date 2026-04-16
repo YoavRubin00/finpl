@@ -360,6 +360,8 @@ function VideoHookPlayer({ videoUri, hookText, onFinish, unitColors, fitContain,
     <View style={{ flex: 1, backgroundColor: "#0a1628" }}>
       <Pressable
         style={{ flex: 1 }}
+        accessibilityRole="button"
+        accessibilityLabel="סרטון — לחיצה ארוכה להאצה"
         onLongPress={() => { player.playbackRate = 1.8; setIsFastMode(true); }}
         onPressOut={() => { player.playbackRate = 1.0; setIsFastMode(false); }}
         delayLongPress={300}
@@ -3210,6 +3212,7 @@ export function LessonFlowScreen() {
                 }}
                 style={{ backgroundColor: "#0284c7", borderRadius: 16, paddingVertical: 16, width: "100%", alignItems: "center", borderBottomWidth: 4, borderBottomColor: "#0369a1" }}
                 accessibilityRole="button"
+                accessibilityLabel="צפה בסרטון וקבל מטבעות"
               >
                 <Text style={{ fontSize: 17, fontWeight: "900", color: "#ffffff" }}>צפה וקבל 🎬</Text>
               </Pressable>
@@ -3217,6 +3220,7 @@ export function LessonFlowScreen() {
                 onPress={() => { tapHaptic(); setShowAdBonus(false); }}
                 style={{ marginTop: 16, paddingVertical: 8 }}
                 accessibilityRole="button"
+                accessibilityLabel="דלג"
               >
                 <Text style={{ fontSize: 14, fontWeight: "700", color: "#64748b" }}>דלג</Text>
               </Pressable>
@@ -3472,8 +3476,8 @@ export function LessonFlowScreen() {
       {/* Finn bridge nudge — after chapter 0 completion */}
       {showFinnBridgeNudge && (
         <Modal visible transparent animationType="fade" onRequestClose={() => setShowFinnBridgeNudge(false)}>
-          <Pressable style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.6)", justifyContent: "center", alignItems: "center", paddingHorizontal: 24 }} onPress={() => setShowFinnBridgeNudge(false)}>
-            <Pressable style={{ backgroundColor: "#e0f2fe", borderRadius: 24, padding: 24, width: "100%", maxWidth: 340, alignItems: "center" }} onPress={() => {}}>
+          <Pressable style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.6)", justifyContent: "center", alignItems: "center", paddingHorizontal: 24 }} onPress={() => setShowFinnBridgeNudge(false)} accessibilityRole="button" accessibilityLabel="סגור">
+            <Pressable style={{ backgroundColor: "#e0f2fe", borderRadius: 24, padding: 24, width: "100%", maxWidth: 340, alignItems: "center" }} onPress={() => {}} accessible={false}>
               <ExpoImage source={FINN_HAPPY} accessible={false} style={{ width: 80, height: 80, marginBottom: 12 }} contentFit="contain" />
               <Text style={{ ...RTL_STYLE, fontSize: 18, fontWeight: "900", color: "#0c4a6e", marginBottom: 10, textAlign: "center" }}>
                 התחלת ללמוד אה? 🎉
@@ -3485,6 +3489,7 @@ export function LessonFlowScreen() {
                 onPress={() => { tapHaptic(); setShowFinnBridgeNudge(false); router.push("/bridge" as never); }}
                 style={{ backgroundColor: "#0ea5e9", borderRadius: 14, paddingVertical: 14, paddingHorizontal: 32, width: "100%", alignItems: "center", borderBottomWidth: 4, borderBottomColor: "#0369a1" }}
                 accessibilityRole="button"
+                accessibilityLabel="קח אותי לגשר"
               >
                 <Text style={{ fontSize: 16, fontWeight: "800", color: "#fff" }}>קח אותי לגשר 🌉</Text>
               </Pressable>
@@ -3492,6 +3497,7 @@ export function LessonFlowScreen() {
                 onPress={() => { tapHaptic(); setShowFinnBridgeNudge(false); }}
                 style={{ marginTop: 12, paddingVertical: 8 }}
                 accessibilityRole="button"
+                accessibilityLabel="אחר כך"
               >
                 <Text style={{ fontSize: 13, fontWeight: "600", color: "#64748b" }}>אחר כך</Text>
               </Pressable>
@@ -3553,8 +3559,8 @@ export function LessonFlowScreen() {
       {/* Registration nudge for guests after mod-0-1 */}
       {showRegisterNudge && (
         <Modal visible transparent animationType="fade" onRequestClose={() => { setShowRegisterNudge(false); router.replace("/pricing" as never); }}>
-          <Pressable style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.6)", justifyContent: "center", alignItems: "center", paddingHorizontal: 24 }} onPress={() => { setShowRegisterNudge(false); router.replace("/pricing" as never); }}>
-            <Pressable style={{ backgroundColor: "#e0f2fe", borderRadius: 24, padding: 24, width: "100%", maxWidth: 340, alignItems: "center" }} onPress={() => {}}>
+          <Pressable style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.6)", justifyContent: "center", alignItems: "center", paddingHorizontal: 24 }} onPress={() => { setShowRegisterNudge(false); router.replace("/pricing" as never); }} accessibilityRole="button" accessibilityLabel="סגור">
+            <Pressable style={{ backgroundColor: "#e0f2fe", borderRadius: 24, padding: 24, width: "100%", maxWidth: 340, alignItems: "center" }} onPress={() => {}} accessible={false}>
               <ExpoImage source={FINN_HAPPY} accessible={false} style={{ width: 80, height: 80, marginBottom: 12 }} contentFit="contain" />
               <Text style={{ ...RTL_STYLE, fontSize: 18, fontWeight: "900", color: "#0c4a6e", marginBottom: 10, textAlign: "center" }}>
                 רוצה לשמור את ההתקדמות?
@@ -3566,6 +3572,7 @@ export function LessonFlowScreen() {
                 onPress={() => { tapHaptic(); setShowRegisterNudge(false); router.push("/(auth)/register" as never); }}
                 style={{ backgroundColor: "#0ea5e9", borderRadius: 14, paddingVertical: 14, paddingHorizontal: 32, width: "100%", alignItems: "center", borderBottomWidth: 4, borderBottomColor: "#0369a1" }}
                 accessibilityRole="button"
+                accessibilityLabel="הרשם"
               >
                 <Text style={{ fontSize: 16, fontWeight: "800", color: "#fff" }}>הרשם</Text>
               </Pressable>
@@ -3573,6 +3580,7 @@ export function LessonFlowScreen() {
                 onPress={() => { tapHaptic(); setShowRegisterNudge(false); router.replace("/pricing" as never); }}
                 style={{ marginTop: 12, paddingVertical: 8 }}
                 accessibilityRole="button"
+                accessibilityLabel="המשך"
               >
                 <Text style={{ fontSize: 13, fontWeight: "600", color: "#64748b" }}>המשך</Text>
               </Pressable>
@@ -3658,7 +3666,7 @@ export function LessonFlowScreen() {
       )}
       {/* ── Mid-lesson Finn checkpoint ── */}
       {showMidCheckpoint && mod && (
-        <Pressable style={[StyleSheet.absoluteFill, { zIndex: 9996, backgroundColor: "rgba(0,0,0,0.4)", justifyContent: "flex-end" }]} onPress={() => { setShowMidCheckpoint(false); setFlashcardIndex((prev) => prev + 1); }}>
+        <Pressable style={[StyleSheet.absoluteFill, { zIndex: 9996, backgroundColor: "rgba(0,0,0,0.4)", justifyContent: "flex-end" }]} onPress={() => { setShowMidCheckpoint(false); setFlashcardIndex((prev) => prev + 1); }} accessibilityRole="button" accessibilityLabel="סגור">
           <Animated.View entering={FadeInUp.duration(400)} style={{ backgroundColor: "#f0f9ff", borderTopLeftRadius: 28, borderTopRightRadius: 28, padding: 22, paddingBottom: Math.max(28, safeInsets.bottom + 12), borderWidth: 1.5, borderColor: "#bae6fd", borderBottomWidth: 0, maxHeight: "70%" }}>
             <View style={{ flexDirection: "row-reverse", alignItems: "center", gap: 12, marginBottom: 14 }}>
               <ExpoImage source={FINN_STANDARD} accessible={false} style={{ width: 64, height: 64 }} contentFit="contain" />
@@ -3708,17 +3716,17 @@ export function LessonFlowScreen() {
 
       {/* ── Post-module celebration ── */}
       {showPostCelebration && !showBreakMessage && (
-        <Pressable style={[StyleSheet.absoluteFill, { zIndex: 9995, backgroundColor: "rgba(0,0,0,0.6)", justifyContent: "center", alignItems: "center", padding: 24 }]} onPress={() => {}}>
+        <Pressable style={[StyleSheet.absoluteFill, { zIndex: 9995, backgroundColor: "rgba(0,0,0,0.6)", justifyContent: "center", alignItems: "center", padding: 24 }]} onPress={() => {}} accessible={false}>
           <Animated.View entering={FadeInUp.duration(500)} style={{ backgroundColor: "#ffffff", borderRadius: 28, padding: 28, width: "100%", maxWidth: 340, alignItems: "center", borderWidth: 2, borderColor: "#22c55e" }}>
             <ExpoImage source={FINN_HAPPY} accessible={false} style={{ width: 100, height: 100, marginBottom: 16 }} contentFit="contain" />
             <Text style={{ fontSize: 22, fontWeight: "900", color: "#0f172a", textAlign: "center", marginBottom: 6 }}>{"כל הכבוד! 🎉"}</Text>
             <Text style={{ fontSize: 15, fontWeight: "600", color: "#64748b", textAlign: "center", marginBottom: 24 }}>{"סיימת את המודול!"}</Text>
             {/* Continue option */}
-            <Pressable onPress={() => { successHaptic(); setShowPostCelebration(false); goToNextSequentialModule(); }} style={{ width: "100%", backgroundColor: "#22c55e", borderRadius: 16, paddingVertical: 16, alignItems: "center", marginBottom: 12, borderBottomWidth: 4, borderBottomColor: "#16a34a" }}>
+            <Pressable onPress={() => { successHaptic(); setShowPostCelebration(false); goToNextSequentialModule(); }} style={{ width: "100%", backgroundColor: "#22c55e", borderRadius: 16, paddingVertical: 16, alignItems: "center", marginBottom: 12, borderBottomWidth: 4, borderBottomColor: "#16a34a" }} accessibilityRole="button" accessibilityLabel="המשך למודול הבא">
               <Text style={{ fontSize: 16, fontWeight: "900", color: "#ffffff" }}>{"ממשיכים לתרגל ולצמוח! 💪"}</Text>
             </Pressable>
             {/* Quit option */}
-            <Pressable onPress={() => { tapHaptic(); setShowBreakMessage(true); }} style={{ width: "100%", backgroundColor: "#f8fafc", borderRadius: 16, paddingVertical: 14, alignItems: "center", borderWidth: 1.5, borderColor: "#e2e8f0" }}>
+            <Pressable onPress={() => { tapHaptic(); setShowBreakMessage(true); }} style={{ width: "100%", backgroundColor: "#f8fafc", borderRadius: 16, paddingVertical: 14, alignItems: "center", borderWidth: 1.5, borderColor: "#e2e8f0" }} accessibilityRole="button" accessibilityLabel="יציאה">
               <Text style={{ fontSize: 14, fontWeight: "700", color: "#64748b" }}>
                 {["עפתי לנטפליקס 📺", "עפתי לאינסטגרם 📱", "עפתי לטיקטוק 🎵", "אני הולך לישון 😴", "יש לי שווארמה שמחכה 🌯", "יש לי פיצה שמתקררת 🍕"][Math.floor(Math.random() * 6)]}
               </Text>
@@ -3729,7 +3737,7 @@ export function LessonFlowScreen() {
 
       {/* ── Break farewell message ── */}
       {showBreakMessage && (
-        <Pressable style={[StyleSheet.absoluteFill, { zIndex: 9995, backgroundColor: "rgba(0,0,0,0.6)", justifyContent: "center", alignItems: "center", padding: 24 }]} onPress={() => { setShowBreakMessage(false); setShowPostCelebration(false); router.replace("/(tabs)" as never); }}>
+        <Pressable style={[StyleSheet.absoluteFill, { zIndex: 9995, backgroundColor: "rgba(0,0,0,0.6)", justifyContent: "center", alignItems: "center", padding: 24 }]} onPress={() => { setShowBreakMessage(false); setShowPostCelebration(false); router.replace("/(tabs)" as never); }} accessibilityRole="button" accessibilityLabel="חזור לתפריט">
           <Animated.View entering={FadeInUp.duration(400)} style={{ backgroundColor: "#ffffff", borderRadius: 28, padding: 28, width: "100%", maxWidth: 340, alignItems: "center" }}>
             <ExpoImage source={FINN_EMPATHIC} accessible={false} style={{ width: 100, height: 100, marginBottom: 16 }} contentFit="contain" />
             <Text style={{ fontSize: 20, fontWeight: "900", color: "#0f172a", textAlign: "center", marginBottom: 8 }}>{"מצפה לראותך פה מחר! ❤️"}</Text>
@@ -3740,7 +3748,7 @@ export function LessonFlowScreen() {
 
       {/* ── Shark Party invite ── */}
       {showPartyInvite && !showPartyVideo && (
-        <Pressable style={[StyleSheet.absoluteFill, { zIndex: 9994, backgroundColor: "rgba(0,0,0,0.7)", justifyContent: "center", alignItems: "center", padding: 24 }]} onPress={() => { setShowPartyInvite(false); goToNextSequentialModule(); }}>
+        <Pressable style={[StyleSheet.absoluteFill, { zIndex: 9994, backgroundColor: "rgba(0,0,0,0.7)", justifyContent: "center", alignItems: "center", padding: 24 }]} onPress={() => { setShowPartyInvite(false); goToNextSequentialModule(); }} accessibilityRole="button" accessibilityLabel="סגור">
           <ConfettiExplosion onComplete={() => {}} />
           <Animated.View entering={FadeInUp.duration(500)} style={{ backgroundColor: "#0f172a", borderRadius: 28, padding: 28, width: "100%", maxWidth: 340, alignItems: "center", borderWidth: 2, borderColor: "#0ea5e9" }}>
             <View style={{ width: 120, height: 120, overflow: "hidden", marginBottom: 16 }} accessible={false}>

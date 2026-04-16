@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { zustandStorage } from '../../lib/zustandStorage';
 import { wisdomQuotes } from './wisdomData';
 import { psychWisdomFlashes } from './psychWisdomData';
 import type { WisdomItem } from './types';
@@ -83,7 +83,7 @@ export const useWisdomStore = create<WisdomState>()(
         {
             name: 'wisdom-store',
             version: 1,
-            storage: createJSONStorage(() => AsyncStorage),
+            storage: createJSONStorage(() => zustandStorage),
             partialize: (state) => ({
                 seenIds: state.seenIds,
                 favorites: state.favorites,

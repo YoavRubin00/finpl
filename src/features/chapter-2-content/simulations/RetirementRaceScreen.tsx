@@ -15,7 +15,6 @@ import { LottieIcon } from '../../../components/ui/LottieIcon';
 import { AnimatedPressable } from '../../../components/ui/AnimatedPressable';
 import { ConfettiExplosion } from '../../../components/ui/ConfettiExplosion';
 import { successHaptic, heavyHaptic, tapHaptic } from '../../../utils/haptics';
-import { useEconomyStore } from '../../economy/useEconomyStore';
 import { useRetirementRace } from './useRetirementRace';
 import type { RetirementRaceScore } from './retirementRaceTypes';
 import { getChapterTheme } from '../../../constants/theme';

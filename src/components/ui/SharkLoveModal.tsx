@@ -14,7 +14,8 @@ import Animated, {
   Easing,
 } from "react-native-reanimated";
 import { LinearGradient } from "expo-linear-gradient";
-import { Zap, Clock, Coins } from "lucide-react-native";
+import { Zap, Clock, Coins, Star } from "lucide-react-native";
+import { GoldCoinIcon } from "./GoldCoinIcon";
 import { FINN_HAPPY } from "../../features/retention-loops/finnMascotConfig";
 import { SPRING_BOUNCY, SPRING_SNAPPY } from "../../utils/animations";
 
@@ -342,37 +343,37 @@ export function SharkLoveModal({
           entering={FadeInDown.delay(700).duration(500)}
           style={styles.statsRow}
         >
-          {/* XP card — Yellow */}
+          {/* XP card — Blue */}
           <StatCard
             label="נק׳ ניסיון"
-            icon={<Zap size={22} color="#ca8a04" fill="#facc15" />}
+            icon={<Star size={22} color="#0284c7" fill="#38bdf8" />}
             value={xpEarned}
-            bgColor="rgba(250,204,21,0.12)"
-            borderColor="#ca8a04"
-            textColor="#facc15"
-            delay={800}
-          />
-
-          {/* Coins card — Green */}
-          <StatCard
-            label="מטבעות"
-            icon={<Coins size={22} color="#15803d" />}
-            value={coinsEarned}
-            bgColor="rgba(34,197,94,0.12)"
-            borderColor="#15803d"
-            textColor="#22c55e"
-            delay={1000}
-          />
-
-          {/* Time card — Blue */}
-          <StatCard
-            label="זמן"
-            icon={<Clock size={22} color="#0284c7" />}
-            value={elapsedSeconds}
-            suffix="time"
             bgColor="rgba(14,165,233,0.12)"
             borderColor="#0284c7"
             textColor="#38bdf8"
+            delay={800}
+          />
+
+          {/* Coins card — Gold */}
+          <StatCard
+            label="מטבעות"
+            icon={<GoldCoinIcon size={26} />}
+            value={coinsEarned}
+            bgColor="rgba(245,158,11,0.12)"
+            borderColor="#d97706"
+            textColor="#f59e0b"
+            delay={1000}
+          />
+
+          {/* Time card — Yellow */}
+          <StatCard
+            label="זמן"
+            icon={<Clock size={22} color="#ca8a04" />}
+            value={elapsedSeconds}
+            suffix="time"
+            bgColor="rgba(250,204,21,0.12)"
+            borderColor="#ca8a04"
+            textColor="#facc15"
             delay={1200}
           />
         </Animated.View>

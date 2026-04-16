@@ -28,7 +28,6 @@ import { ConfettiExplosion } from '../../../components/ui/ConfettiExplosion';
 import { tapHaptic, successHaptic, heavyHaptic } from '../../../utils/haptics';
 import { SPRING_SNAPPY } from '../../../utils/animations';
 import { useRetirementCalc } from './useRetirementCalc';
-import type { RetirementYearSnapshot } from './useRetirementCalc';
 import type { WithdrawalStrategy, RetirementCalcScore } from './retirementCalcTypes';
 import {
   PENSION_BALANCE,
@@ -38,7 +37,7 @@ import {
   INFLATION_RATE,
 } from './retirementCalcData';
 import { SimLottieBackground } from '../../../components/ui/SimLottieBackground';
-import { SIM5, GRADE_COLORS5, GRADE_HEBREW, SHADOW_STRONG, SHADOW_LIGHT, RTL, TYPE5, sim5Styles } from './simTheme';
+import { SIM5, GRADE_COLORS5, GRADE_HEBREW, SHADOW_STRONG, SHADOW_LIGHT, RTL, sim5Styles } from './simTheme';
 import { getChapterTheme } from '../../../constants/theme';
 import { formatShekel } from '../../../utils/format';
 

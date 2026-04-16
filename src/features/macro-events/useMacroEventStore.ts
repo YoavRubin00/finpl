@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { zustandStorage } from '../../lib/zustandStorage';
 import { useEconomyStore } from '../economy/useEconomyStore';
 import type { MacroEvent } from './types';
 
@@ -96,7 +96,7 @@ export const useMacroEventStore = create<MacroEventState>()(
     }),
     {
       name: 'macro-event-store',
-      storage: createJSONStorage(() => AsyncStorage),
+      storage: createJSONStorage(() => zustandStorage),
     }
   )
 );

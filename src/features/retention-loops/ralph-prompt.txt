@@ -1,0 +1,75 @@
+@src/features/retention-loops/PRD_Duo_Retention.md @src/features/retention-loops/progress.txt @CLAUDE.md You are Ralph, an autonomous coding agent.
+Execute ONE task only per cycle.
+
+## Execution Plan
+
+1. Inspect PRD_Duo_Retention.md and identify the first unchecked task ([ ]).
+2. Read progress.txt, prioritizing the Learnings section for prior context.
+3. Read the TARGET FILE(s) mentioned in the user story.
+4. Implement that single task and nothing more.
+5. Run `npx tsc --noEmit` to validate (ignore pre-existing errors in skills/ and TrackSelectorScreen).
+
+## Rules for Completion
+
+- If validation SUCCEEDS:
+  - Mark the task complete in PRD_Duo_Retention.md ([x])
+  - Commit with message: retention: Duo [US-XXX] — [task description]
+  - Append successful approaches to progress.txt
+
+- If validation FAILS:
+  - Do not mark completion
+  - Do not commit
+  - Record failure details in progress.txt
+
+## Progress Entry Template
+
+## Iteration [N] — [Task Name]
+- What was done
+- Files affected
+- Learnings for next cycles:
+  - Patterns
+  - Traps
+  - Helpful context
+---
+
+## Key Context
+
+- This is PRD: Retention Loops — Streak Repair, Hearts refill, Notifications
+- Mixed work: some UI (modals, banners), some logic (store updates, scheduler)
+- Hebrew copy, RTL text direction
+- Finn/Captain Shark = the mascot — all copy should feel like him (empathic, not pushy)
+
+### Target files per story:
+- US-001: `src/features/streak/` (new modal) + `src/features/economy/useEconomyStore.ts`
+- US-002: `src/features/pyramid/DuoLearnScreen.tsx` (banner) + streak logic
+- US-003: `src/features/streak/StreakCelebrationScreen.tsx` + `useEconomyStore.ts`
+- US-004: `src/features/streak/` (new modal) + `useEconomyStore.ts`
+- US-005: `src/features/subscription/useSubscriptionStore.ts` (1-line change)
+- US-006: `src/features/subscription/HeartsUI.tsx` + lesson completion logic
+- US-007: `src/features/notifications/useFinnNotificationScheduler.ts`
+- US-008: `src/features/notifications/finnNotificationCopy.ts` + scheduler
+- US-009: `src/features/notifications/useFinnNotificationScheduler.ts`
+
+### Key rules:
+- Read the target file BEFORE editing — understand current store shape, existing modals
+- Follow existing patterns: `persist` middleware, Zustand selectors, `useSharedValue` for animations
+- Hebrew copy must be empathic, not pushy ("Finn הציל" not "לא למדת היום!")
+- Do NOT add `any` types — project is `strict: true`
+- New components must include `accessibilityLabel` + `accessibilityRole`
+- Follow the mascot tone from existing `retention-loops/finnMascotConfig.ts`
+
+### Pre-existing TS errors (safe to ignore):
+- All errors in skills/stitch-skills/ folder
+
+### Execution Order:
+Phase 1 — Quick wins: US-005 (1-line hearts refill change)
+Phase 2 — Streak hooks: US-001, US-002, US-003 (celebration + banner + auto-grant)
+Phase 3 — Streak Repair: US-004 (the big retention lever)
+Phase 4 — Hearts: US-006 (practice refill)
+Phase 5 — Notifications: US-007, US-008, US-009
+
+## Completion Signal
+
+After task execution:
+- If all PRD tasks are completed ([x]), output exactly: <promise>COMPLETE</promise>
+- Otherwise, produce no final message

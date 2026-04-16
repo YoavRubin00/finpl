@@ -1,6 +1,6 @@
 import { useState, useCallback } from "react";
 import { Image as ExpoImage } from "expo-image";
-import { View, Text, Pressable, StyleSheet } from "react-native";
+import { Text, Pressable, StyleSheet } from "react-native";
 import Animated, { FadeIn, FadeInDown } from "react-native-reanimated";
 import { BridgeScreen } from "../../src/features/the-bridge/BridgeScreen";
 import { FINN_HAPPY } from "../../src/features/retention-loops/finnMascotConfig";

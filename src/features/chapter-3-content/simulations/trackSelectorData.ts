@@ -20,7 +20,7 @@ const INITIAL_INVESTMENT = 100_000;
 const TRACKS: InvestmentTrack[] = [
   {
     id: 'aggressive',
-    name: 'מנייתי',
+    name: 'מסלול מנייתי',
     emoji: '📈',
     stockPercent: 0.80,
     bondPercent: 0.20,
@@ -28,7 +28,7 @@ const TRACKS: InvestmentTrack[] = [
   },
   {
     id: 'balanced',
-    name: 'מאוזן',
+    name: 'מסלול כללי',
     emoji: '⚖️',
     stockPercent: 0.50,
     bondPercent: 0.50,
@@ -36,7 +36,7 @@ const TRACKS: InvestmentTrack[] = [
   },
   {
     id: 'conservative',
-    name: 'שמרני',
+    name: 'מסלול אג"ח',
     emoji: '🛡️',
     stockPercent: 0.20,
     bondPercent: 0.80,

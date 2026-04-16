@@ -1,6 +1,6 @@
 import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
-import AsyncStorage from "@react-native-async-storage/async-storage";
+import { zustandStorage } from '../../lib/zustandStorage';
 import type { Chest, ChestRarity, DailySpin } from "./types";
 import { useEconomyStore } from "../economy/useEconomyStore";
 import { useNotificationStore } from "../notifications/useNotificationStore";
@@ -173,7 +173,7 @@ export const useRetentionStore = create<RetentionState>()(
     }),
     {
       name: "retention-store",
-      storage: createJSONStorage(() => AsyncStorage),
+      storage: createJSONStorage(() => zustandStorage),
       partialize: (state) => ({
         chestSlots: state.chestSlots,
         dailySpin: state.dailySpin,

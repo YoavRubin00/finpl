@@ -8,7 +8,6 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated';
 import LottieView from 'lottie-react-native';
-import { SafeLottie } from "../../components/ui/SafeLottie";
 import { Lock } from 'lucide-react-native';
 import { tapHaptic, successHaptic, errorHaptic } from '../../utils/haptics';
 import { GoldCoinIcon } from '../../components/ui/GoldCoinIcon';

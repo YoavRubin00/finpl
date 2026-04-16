@@ -99,6 +99,7 @@ export function ProfileScreen() {
   const displayName = useAuthStore((s) => s.displayName);
   const profile = useAuthStore((s) => s.profile);
   const isPro = useSubscriptionStore((s) => s.tier === "pro" && s.status === "active");
+  const isMinor = profile?.ageGroup === "minor";
   const referredFriends = useReferralStore((s) => s.referredFriends);
   const { showStreakCelebration } = useStreakCelebration();
   const referralTier = computeReferralTier(referredFriends.length);
@@ -362,8 +363,8 @@ export function ProfileScreen() {
 
           {/* ── Actions ── */}
           <Animated.View style={[actionsStyle, { gap: 12 }]}>
-            {/* Bridge CTA */}
-            <AnimatedPressable
+            {/* Bridge CTA — hidden for minors (legal protection) */}
+            {!isMinor && <AnimatedPressable
               onPress={() => router.push("/bridge")}
               style={[styles.actionCard, { backgroundColor: theme.surface, borderColor: theme.border }]}
               accessibilityRole="button"
@@ -379,7 +380,7 @@ export function ProfileScreen() {
                   <LottieIcon source={require("../../../assets/lottie/wired-flat-1925-bridge-hover-pinch.json")} size={28} autoPlay loop active={isFocused} />
                 </View>
               </Animated.View>
-            </AnimatedPressable>
+            </AnimatedPressable>}
 
             {/* Assets CTA */}
             <AnimatedPressable

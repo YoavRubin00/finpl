@@ -1,5 +1,5 @@
 // Shared feedback bar for simulations — bright, friendly game-style
-import { View, Text, Image, StyleSheet } from "react-native";
+import { View, Text, StyleSheet } from "react-native";
 import { Image as ExpoImage } from "expo-image";
 import Animated, { FadeInUp } from "react-native-reanimated";
 import LottieView from "lottie-react-native";

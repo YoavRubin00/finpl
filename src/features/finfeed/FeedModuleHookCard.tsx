@@ -188,8 +188,8 @@ export const FeedModuleHookCard = React.memo(function FeedModuleHookCard({ item,
             <LottieView
               source={require("../../../assets/lottie/wired-flat-489-rocket-space-hover-flying.json")}
               style={{ width: 18, height: 18 }}
-              autoPlay
-              loop
+              autoPlay={isActive}
+              loop={isActive}
               speed={0.8}
 
             />

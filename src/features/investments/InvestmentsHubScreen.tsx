@@ -3,16 +3,15 @@
 // ---------------------------------------------------------------------------
 
 import { useEffect, useState, useCallback } from "react";
-import { View, Text, Image, StyleSheet, Pressable, Modal, Platform } from "react-native";
+import { View, Text, StyleSheet, Pressable, Modal } from "react-native";
 import { Image as ExpoImage } from "expo-image";
-import Animated, { FadeIn, FadeInDown } from "react-native-reanimated";
+import Animated, { FadeInDown } from "react-native-reanimated";
 import { useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { ChevronLeft, TrendingUp, Building2, Briefcase } from "lucide-react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import LottieView from "lottie-react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { SafeLottie } from "../../components/ui/SafeLottie";
 import { useEntranceAnimation, fadeInUp, fadeInScale, SPRING_BOUNCY } from "../../utils/animations";
 import { FINN_STANDARD } from "../retention-loops/finnMascotConfig";
 import { useEconomyStore } from "../economy/useEconomyStore";

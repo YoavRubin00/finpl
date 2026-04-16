@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { zustandStorage } from '../../lib/zustandStorage';
 import { ActivePosition, PendingLimitOrder } from './tradingHubTypes';
 
 interface TradingStore {
@@ -144,7 +144,7 @@ export const useTradingStore = create<TradingStore>()(
     }),
     {
       name: 'trading-store',
-      storage: createJSONStorage(() => AsyncStorage),
+      storage: createJSONStorage(() => zustandStorage),
       partialize: (state) => ({
         positions: state.positions,
         pendingOrders: state.pendingOrders,

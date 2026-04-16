@@ -22,7 +22,7 @@ import { SPRING_SNAPPY } from '../../../utils/animations';
 import { SimLottieBackground } from '../../../components/ui/SimLottieBackground';
 import { getChapterTheme } from '../../../constants/theme';
 import { useETFBuilder } from './useETFBuilder';
-import { SIM4, GRADE_COLORS4, GRADE_HEBREW, SHADOW_STRONG, SHADOW_LIGHT, RTL, TYPE4, sim4Styles } from './simTheme';
+import { SIM4, GRADE_COLORS4, GRADE_HEBREW, SHADOW_STRONG, SHADOW_LIGHT, RTL, sim4Styles } from './simTheme';
 import type { ETFProduct } from './etfBuilderTypes';
 
 

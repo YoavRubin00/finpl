@@ -1,5 +1,5 @@
 import React, { useEffect } from "react";
-import { Modal, View, StyleSheet, Pressable, Dimensions } from "react-native";
+import { Modal, StyleSheet, Pressable, Dimensions } from "react-native";
 import Animated, {
   useSharedValue,
   useAnimatedStyle,

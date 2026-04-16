@@ -323,6 +323,7 @@ export const chapter1Data: Chapter = {
         description:
           'אתה עובר בתוך מנהרה (העו"ש). ירידה מתחת לקו האפס גורמת ל"מפלצות ריבית" לנגוס בך ולהאט אותך.',
       },
+      interModuleGame: 'investment',
     },
     {
       id: 'mod-1-3',
@@ -617,6 +618,7 @@ export const chapter1Data: Chapter = {
         description:
           'נופלות הוצאות מהשמיים (המבורגר, חשבון חשמל, ביטוח) וצריך למיין אותן ל-3 סלים (50, 30, 20) לפני שהזמן נגמר.',
       },
+      interModuleGame: 'myth',
     },
     {
       id: 'mod-1-5',
@@ -997,6 +999,7 @@ export const chapter1Data: Chapter = {
         description:
           'אתה קונה אוטו בהלוואה, וככל שהריבית עולה האוטו נהיה איטי וכבד יותר עד שהבנק מעקל אותו.',
       },
+      interModuleGame: 'dilemma',
     },
     {
       id: 'mod-1-7',
@@ -1349,6 +1352,7 @@ export const chapter1Data: Chapter = {
         description:
           'דוחפים עגלה וצריך לאסוף רק מוצרי בסיס ולחמוק משלטי ניאון ענקיים של "מבצע!" שמאיטים אותך.',
       },
+      interModuleGame: 'crash',
     },
     {
       id: 'mod-1-9',

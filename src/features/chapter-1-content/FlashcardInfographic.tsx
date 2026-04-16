@@ -406,12 +406,17 @@ export const MODULE_SUMMARY_DECORATION: Record<string, { uri: string }> = {
 const LIGHT_BG_CARDS = new Set(["fc-1-4-4"]);
 
 /** Cards whose infographic should be shown smaller so text + image fits on one page */
-const COMPACT_CARDS = new Set(["fc-3-15-6", "fc-4-b1-1", "fc-4-b1-2", "fc-4-b1-3", "fc-4-25-0a"]);
+const COMPACT_CARDS = new Set(["fc-3-15-6", "fc-4-25-0a"]);
 
 /** Cards whose infographic should be shown larger (infographic-top layout) */
 const LARGE_CARDS = new Set([
   "fc-1-5-1", "fc-1-5-2", "fc-1-5-3", "fc-1-5-4", "fc-1-5-5", "fc-1-5-6",
   "fc-1-6-1", "fc-1-6-2", "fc-1-6-3", "fc-1-6-4", "fc-1-6-5", "fc-1-6-6",
+  // Graham bonus modules — use top-layout so image fills the upper area
+  "fc-4-b1-1", "fc-4-b1-2", "fc-4-b1-2b", "fc-4-b1-3",
+  "fc-4-b2-1", "fc-4-b2-2",
+  "fc-4-b3-1", "fc-4-b3-2",
+  "fc-4-b4-1", "fc-4-b4-2",
 ]);
 
 /** Cards whose infographic should fill the container edge-to-edge (cover instead of contain) */

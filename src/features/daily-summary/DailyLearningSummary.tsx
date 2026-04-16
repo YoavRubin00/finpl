@@ -3,7 +3,7 @@
  * Shows today's learning activities in a premium card with Share functionality.
  * Designed for the Profile screen.
  */
-import { View, Text, Image, StyleSheet, Pressable, Share } from 'react-native';
+import { View, Text, StyleSheet, Pressable, Share } from 'react-native';
 import { Image as ExpoImage } from "expo-image";
 import Animated, {
   FadeIn,
@@ -14,7 +14,6 @@ import Animated, {
   withSequence,
   withTiming,
 } from 'react-native-reanimated';
-import LottieView from 'lottie-react-native';
 import { FINN_STANDARD } from '../retention-loops/finnMascotConfig';
 import { useDailyLogStore, type LearningEvent } from './useDailyLogStore';
 import { useAuthStore } from '../auth/useAuthStore';
@@ -31,6 +30,11 @@ const EVENT_TYPE_LABELS: Record<LearningEvent['type'], { emoji: string; label: s
   'crash-game': { emoji: '📈', label: 'מרוץ הריבית' },
   'swipe-game': { emoji: '🐻', label: 'שורט או לונג' },
   'macro-event': { emoji: '🌍', label: 'אירוע מאקרו' },
+  'bullshit-swipe': { emoji: '🕵️', label: 'סוויפ הבולשיט' },
+  'higher-lower': { emoji: '⚖️', label: 'מי מנצח?' },
+  'budget-ninja': { emoji: '🥷', label: 'נינג׳ת התקציב' },
+  'price-slider': { emoji: '🎯', label: 'תמחור המציאות' },
+  'cashout-rush': { emoji: '🎰', label: 'עצור בשיא' },
 };
 
 export function DailyLearningSummary() {

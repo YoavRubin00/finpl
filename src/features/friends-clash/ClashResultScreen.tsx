@@ -2,7 +2,7 @@ import { View, Text, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Animated, { FadeIn, SlideInUp, ZoomIn } from 'react-native-reanimated';
 import { useRouter } from 'expo-router';
-import { Coins, Zap, ArrowLeft } from 'lucide-react-native';
+import { Coins, Zap } from 'lucide-react-native';
 import { useClashStore } from './useClashStore';
 import { useAuthStore } from '../auth/useAuthStore';
 import { AnimatedPressable } from '../../components/ui/AnimatedPressable';

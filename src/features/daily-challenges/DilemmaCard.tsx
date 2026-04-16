@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Image as ExpoImage } from "expo-image";
-import { View, Text, Image, StyleSheet, Pressable, Modal } from 'react-native';
+import { View, Text, StyleSheet, Pressable, Modal } from 'react-native';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -11,7 +11,6 @@ import Animated, {
   FadeInDown,
   ZoomIn,
 } from 'react-native-reanimated';
-import LottieView from 'lottie-react-native';
 import { useRouter } from 'expo-router';
 import { setPendingFeedScroll } from '../finfeed/FinFeedScreen';
 import { tapHaptic, successHaptic, errorHaptic } from '../../utils/haptics';

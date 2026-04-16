@@ -14,7 +14,6 @@ import {
 import { useRouter } from 'expo-router';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { ChevronRight, Send } from 'lucide-react-native';
-import LottieView from '../../components/ui/SafeLottieView';
 import { FINN_STANDARD } from '../retention-loops/finnMascotConfig';
 import { tapHaptic, successHaptic } from '../../utils/haptics';
 import { useScenarioLabStore } from './useScenarioLabStore';

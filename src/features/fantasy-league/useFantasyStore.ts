@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { zustandStorage } from '../../lib/zustandStorage';
 import type {
   FantasyLeague,
   FantasyPortfolio,
@@ -157,7 +157,7 @@ export const useFantasyStore = create<FantasyStore>()(
     }),
     {
       name: 'fantasy-store',
-      storage: createJSONStorage(() => AsyncStorage),
+      storage: createJSONStorage(() => zustandStorage),
       partialize: (state) => ({
         currentLeague: state.currentLeague,
         portfolio: state.portfolio,

@@ -13,15 +13,13 @@ import { useRouter } from "expo-router";
 import { ChevronLeft } from "lucide-react-native";
 import LottieView from "lottie-react-native";
 import { SafeLottie } from "../../components/ui/SafeLottie";
-import Animated, { FadeInDown, FadeInUp } from "react-native-reanimated";
+import Animated, { FadeInUp } from "react-native-reanimated";
 
 import { tapHaptic } from "../../utils/haptics";
 import { useAuthStore } from "../auth/useAuthStore";
-import { RTL, SIM4, TYPE4, SHADOW_LIGHT, SHADOW_STRONG } from "../chapter-4-content/simulations/simTheme";
+import { RTL, SHADOW_STRONG } from "../chapter-4-content/simulations/simTheme";
 import { AnimatedPressable } from "../../components/ui/AnimatedPressable";
 import { GlowCard } from "../../components/ui/GlowCard";
-import { SimLottieBackground } from "../../components/ui/SimLottieBackground";
-import { SIM_LOTTIE } from "../shared-sim/simLottieMap";
 import { BackButton } from "../../components/ui/BackButton";
 import { useFunStore } from "../../stores/useFunStore";
 import { FinnMailModal } from "../fun/FinnMailModal";

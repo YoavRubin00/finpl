@@ -32,7 +32,7 @@ import type { YearSnapshot, PhysicalComparison } from './useREIT';
 import type { REITSector, REITScore } from './reitTypes';
 import { REIT_BUDGET, REIT_SECTORS } from './reitData';
 import { SimLottieBackground } from '../../../components/ui/SimLottieBackground';
-import { SIM5, GRADE_COLORS5, GRADE_HEBREW, SHADOW_STRONG, SHADOW_LIGHT, RTL, TYPE5, sim5Styles } from './simTheme';
+import { SIM5, GRADE_COLORS5, GRADE_HEBREW, SHADOW_STRONG, SHADOW_LIGHT, RTL, sim5Styles } from './simTheme';
 import { formatShekel } from '../../../utils/format';
 
 

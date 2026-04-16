@@ -13,7 +13,6 @@ import Animated, {
 import { SimLottieBackground } from '../../../components/ui/SimLottieBackground';
 import { LottieIcon } from '../../../components/ui/LottieIcon';
 import { AnimatedPressable } from '../../../components/ui/AnimatedPressable';
-import { GlowCard } from '../../../components/ui/GlowCard';
 import { ConfettiExplosion } from '../../../components/ui/ConfettiExplosion';
 import { SimFeedbackBar } from '../../../components/ui/SimFeedbackBar';
 import { successHaptic, errorHaptic, heavyHaptic, tapHaptic } from '../../../utils/haptics';
@@ -21,7 +20,7 @@ import { useTaxPuzzle } from './useTaxPuzzle';
 import type { TaxCredit, CharacterProfile } from './taxPuzzleTypes';
 import { ATTRIBUTE_LABELS } from './taxPuzzleData';
 import { getChapterTheme } from '../../../constants/theme';
-import { SIM2, GRADE_COLORS2, GRADE_HEBREW, SHADOW_STRONG, SHADOW_LIGHT, RTL, TYPE2, sim2Styles } from './simTheme';
+import { SIM2, GRADE_COLORS2, GRADE_HEBREW, SHADOW_LIGHT, RTL, TYPE2, sim2Styles } from './simTheme';
 
 const GOLD = '#f59e0b';
 

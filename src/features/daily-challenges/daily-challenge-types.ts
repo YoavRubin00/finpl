@@ -50,6 +50,11 @@ export interface DailyChallengesState {
   investmentPlays: PlayCountMap;
   crashGamePlays: PlayCountMap;
   swipeGamePlays: PlayCountMap;
+  bullshitSwipePlays: PlayCountMap;
+  higherLowerPlays: PlayCountMap;
+  budgetNinjaPlays: PlayCountMap;
+  priceSliderPlays: PlayCountMap;
+  cashoutRushPlays: PlayCountMap;
   dilemmaCorrectCount: number;
   investmentTotalAnswered: number;
 
@@ -58,15 +63,30 @@ export interface DailyChallengesState {
   getInvestmentPlaysToday: () => number;
   getCrashGamePlaysToday: () => number;
   getSwipeGamePlaysToday: () => number;
+  getBullshitSwipePlaysToday: () => number;
+  getHigherLowerPlaysToday: () => number;
+  getBudgetNinjaPlaysToday: () => number;
+  getPriceSliderPlaysToday: () => number;
+  getCashoutRushPlaysToday: () => number;
 
   /** Returns true if max plays reached (respects pro status). */
   hasDilemmaAnsweredToday: () => boolean;
   hasInvestmentAnsweredToday: () => boolean;
   hasCrashGamePlayedToday: () => boolean;
   hasSwipeGamePlayedToday: () => boolean;
+  hasBullshitSwipePlayedToday: () => boolean;
+  hasHigherLowerPlayedToday: () => boolean;
+  hasBudgetNinjaPlayedToday: () => boolean;
+  hasPriceSliderPlayedToday: () => boolean;
+  hasCashoutRushPlayedToday: () => boolean;
 
   answerDilemma: (date: string, wasCorrect: boolean) => void;
   answerInvestment: (date: string) => void;
   playCrashGame: (date: string, coinsEarned: number) => void;
   playSwipeGame: (date: string, score: number) => void;
+  playBullshitSwipe: (date: string, score: number) => void;
+  playHigherLower: (date: string, wasCorrect: boolean) => void;
+  playBudgetNinja: (date: string, score: number) => void;
+  playPriceSlider: (date: string, accuracyPercent: number) => void;
+  playCashoutRush: (date: string, cashedOut: boolean) => void;
 }

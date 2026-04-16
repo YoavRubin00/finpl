@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect } from "react";
 import { ScrollView, View, Text, StyleSheet, Pressable, Modal } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { ShoppingCart, Clock, TrendingUp, Sparkles, Tag, Award } from "lucide-react-native";
+import { Clock, TrendingUp, Sparkles, Tag, Award } from "lucide-react-native";
 import Animated, {
     useSharedValue,
     useAnimatedStyle,
@@ -28,7 +28,6 @@ import {
 import type { RealAsset } from "./realAssetsTypes";
 import { AnimatedPressable } from "../../components/ui/AnimatedPressable";
 import { LottieIcon } from "../../components/ui/LottieIcon";
-import { SUBTITLE_TEXT } from "../../constants/theme";
 import { useRouter } from "expo-router";
 import { useIsFocused } from "@react-navigation/native";
 import { BackButton } from "../../components/ui/BackButton";

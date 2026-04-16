@@ -28,6 +28,7 @@ assets/AUDIO/
 assets/STOCK/
 assets/vercel_stage/
 assets/IMAGES/modules/
+assets/images/games/
 # assets/IMAGES/{fun,graham,swipe,myths} + assets/webp/ kept — required by code
 
 # Unused Lottie animations (~3.8MB savings)

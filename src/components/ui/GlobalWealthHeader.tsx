@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, useCallback } from "react";
-import { View, Text, Pressable, StyleSheet, Platform, Modal } from "react-native";
+import { View, Text, Pressable, StyleSheet, Modal } from "react-native";
 import { useRouter } from "expo-router";
-import { Flame, Heart, Crown, Plus, Settings, CalendarDays } from "lucide-react-native";
+import { Crown, Plus, Settings } from "lucide-react-native";
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -21,7 +21,6 @@ import { useSubscriptionStore } from "../../features/subscription/useSubscriptio
 import { useAuthStore } from "../../features/auth/useAuthStore";
 import { useFunStore } from "../../stores/useFunStore";
 import { FINN_DAD_JOKES, FINN_FUN_FACTS } from "../../features/fun/finnJokesData";
-import { FinnMailModal } from "../../features/fun/FinnMailModal";
 import { getAvatarById, DEFAULT_AVATAR_EMOJI } from "../../features/avatars/avatarData";
 import { getPyramidStatus } from "../../utils/progression";
 import { SPRING_SMOOTH } from "../../utils/animations";
@@ -30,7 +29,6 @@ import { CLASH } from "../../constants/theme";
 import LottieView from "lottie-react-native";
 import { ConfettiExplosion } from "./ConfettiExplosion";
 import { SparkleOverlay } from "./SparkleOverlay";
-import { ProBadge } from "./ProBadge";
 import { LottieIcon } from "./LottieIcon";
 import { GoldCoinIcon } from "./GoldCoinIcon";
 import { useWalkthroughGlowTarget } from "../../features/onboarding/AppWalkthroughOverlay";

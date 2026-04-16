@@ -181,4 +181,34 @@ export interface FeedGrahamPersonality {
   type: "graham-personality";
 }
 
-export type FeedItem = FeedVideo | FeedQuote | (FeedLesson & { type: "lesson" }) | FeedComic | FeedModuleHook | FeedMacroEvent | FeedScenario | FeedDailyQuiz | FeedMythCard | FeedPremiumLearning | FeedFinnHero | FeedDilemma | FeedInvestment | FeedCrashGame | FeedSwipeGame | FeedGrahamPersonality;
+export interface FeedBullshitSwipe {
+  id: string;
+  type: "bullshit-swipe";
+}
+
+export interface FeedHigherLower {
+  id: string;
+  type: "higher-lower";
+}
+
+export interface FeedBudgetNinja {
+  id: string;
+  type: "budget-ninja";
+}
+
+export interface FeedPriceSlider {
+  id: string;
+  type: "price-slider";
+}
+
+export interface FeedCashoutRush {
+  id: string;
+  type: "cashout-rush";
+}
+
+export interface FeedDiamondHands {
+  id: string;
+  type: "diamond-hands";
+}
+
+export type FeedItem = FeedVideo | FeedQuote | (FeedLesson & { type: "lesson" }) | FeedComic | FeedModuleHook | FeedMacroEvent | FeedScenario | FeedDailyQuiz | FeedMythCard | FeedPremiumLearning | FeedFinnHero | FeedDilemma | FeedInvestment | FeedCrashGame | FeedSwipeGame | FeedGrahamPersonality | FeedBullshitSwipe | FeedHigherLower | FeedBudgetNinja | FeedPriceSlider | FeedCashoutRush | FeedDiamondHands;

@@ -633,27 +633,7 @@ export function TrackSelectorScreen({ onComplete }: TrackSelectorScreenProps) {
           </Animated.View>
         )}
 
-        {/* Fee impact callout */}
-        {state.yearIndex > 0 && state.selectedTrackId && (
-          <Animated.View entering={FadeInUp.delay(100)}>
-            <GlowCard
-              glowColor="rgba(217,119,6,0.15)"
-              style={{ ...styles.feeCard, backgroundColor: SIM3.cardBg }}
-            >
-              <View style={styles.feeInner}>
-                <Text style={{ fontSize: 20 }}>💸</Text>
-                <Text style={[styles.feeText, RTL]}>
-                  דמי ניהול של{' '}
-                  {(
-                    (selectedTrack?.annualFeePercent ?? 0) * 100
-                  ).toFixed(2)}
-                  % נראים קטנים — אבל אחרי {state.yearIndex} שנים הם
-                  מצטברים!
-                </Text>
-              </View>
-            </GlowCard>
-          </Animated.View>
-        )}
+        {/* Fee impact callout removed from simulation phase */}
 
       </View>
     </SimLottieBackground>

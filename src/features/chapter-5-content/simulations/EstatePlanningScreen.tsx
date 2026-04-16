@@ -16,7 +16,6 @@ import Animated, {
   FadeInDown,
   FadeInUp,
 } from 'react-native-reanimated';
-import { LinearGradient } from 'expo-linear-gradient';
 import { AnimatedPressable } from '../../../components/ui/AnimatedPressable';
 import { LottieIcon } from '../../../components/ui/LottieIcon';
 import { GlowCard } from '../../../components/ui/GlowCard';
@@ -32,7 +31,7 @@ import {
 } from './estateData';
 import Slider from '@react-native-community/slider';
 import { SimLottieBackground } from '../../../components/ui/SimLottieBackground';
-import { SIM5, GRADE_COLORS5, GRADE_HEBREW, SHADOW_STRONG, SHADOW_LIGHT, RTL, TYPE5, sim5Styles } from './simTheme';
+import { SIM5, GRADE_COLORS5, GRADE_HEBREW, SHADOW_STRONG, SHADOW_LIGHT, RTL, sim5Styles } from './simTheme';
 import { getChapterTheme } from '../../../constants/theme';
 import { formatShekel } from '../../../utils/format';
 

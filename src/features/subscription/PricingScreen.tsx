@@ -34,7 +34,6 @@ import { useSubscriptionStore } from "./useSubscriptionStore";
 import { useAuthStore } from "../auth/useAuthStore";
 import { getOffering, purchasePackage, RC_ENTITLEMENT_PRO } from "../../services/revenueCat";
 import type { PurchasesPackage } from "../../services/revenueCat";
-import { SkeletonLoader } from "../../components/ui/SkeletonLoader";
 import { BackButton } from "../../components/ui/BackButton";
 import { useTheme } from "../../hooks/useTheme";
 

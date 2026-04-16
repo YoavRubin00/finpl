@@ -1,7 +1,6 @@
 import React, { useState, useMemo } from "react";
 import { ScrollView, View, Text, Pressable, StyleSheet } from "react-native";
 import { useIsFocused } from "@react-navigation/native";
-import { SafeAreaView } from "react-native-safe-area-context";
 import Animated from "react-native-reanimated";
 import { Trophy, Swords, ChevronRight } from "lucide-react-native";
 import { useArenaStore } from "./useArenaStore";
@@ -15,7 +14,7 @@ import { useEntranceAnimation, fadeInScale, fadeInUp, SPRING_BOUNCY } from "../.
 import { BannerRibbon } from "../../components/ui/BannerRibbon";
 import { GlowCard } from "../../components/ui/GlowCard";
 import { DecorationOverlay } from "../../components/ui/DecorationOverlay";
-import { TITLE_TEXT, SUBTITLE_TEXT } from "../../constants/theme";
+import { SUBTITLE_TEXT } from "../../constants/theme";
 import { tapHaptic } from "../../utils/haptics";
 
 const CHALLENGE_STAGGER = 80;

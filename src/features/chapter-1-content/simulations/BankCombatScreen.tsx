@@ -15,7 +15,6 @@ import { AnimatedPressable } from '../../../components/ui/AnimatedPressable';
 import { SimFeedbackBar } from '../../../components/ui/SimFeedbackBar';
 import { LottieIcon } from '../../../components/ui/LottieIcon';
 import { successHaptic, errorHaptic, heavyHaptic } from '../../../utils/haptics';
-import { useEconomyStore } from '../../economy/useEconomyStore';
 import { useBankCombat } from './useBankCombat';
 import { bankCombatConfig } from './bankCombatData';
 import type { BankCombatScore, DefenseOption } from './bankCombatTypes';

@@ -1,6 +1,6 @@
 import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
-import AsyncStorage from "@react-native-async-storage/async-storage";
+import { zustandStorage } from '../../lib/zustandStorage';
 
 interface FeedInteractionsState {
   likedIds: Record<string, boolean>;
@@ -48,7 +48,7 @@ export const useFeedInteractionsStore = create<FeedInteractionsState>()(
     }),
     {
       name: "feed-interactions-storage",
-      storage: createJSONStorage(() => AsyncStorage),
+      storage: createJSONStorage(() => zustandStorage),
       partialize: (s) => ({
         likedIds: s.likedIds,
         savedIds: s.savedIds,

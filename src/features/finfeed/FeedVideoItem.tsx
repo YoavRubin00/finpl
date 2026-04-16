@@ -118,9 +118,6 @@ export const FeedVideoItem = React.memo(function FeedVideoItem({ item, isActive 
     return (
       <View style={styles.container}>
         <LinearGradient colors={["#e0f2fe", "#bae6fd", "#e0f2fe"]} style={StyleSheet.absoluteFillObject} />
-        <View style={styles.topBanner}>
-          <BannerRibbon title={`וידאו • Layer ${item.pyramidLayer}`} />
-        </View>
         <View style={styles.centerPlay}>
           <GoldCircleBadge size={80} glowing>
             <Play size={36} color="#facc15" fill="#facc15" />
@@ -160,11 +157,6 @@ export const FeedVideoItem = React.memo(function FeedVideoItem({ item, isActive 
           </GoldCircleBadge>
         </View>
       )}
-
-      {/* Top banner */}
-      <View style={styles.topBanner} pointerEvents="none">
-        <BannerRibbon title={`וידאו • Layer ${item.pyramidLayer}`} />
-      </View>
 
       {/* Bookmark button */}
       <Pressable

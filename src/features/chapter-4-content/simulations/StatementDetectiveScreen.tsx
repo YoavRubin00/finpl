@@ -5,7 +5,7 @@
 
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { Image as ExpoImage } from "expo-image";
-import { View, Text, Pressable, Image, StyleSheet, ScrollView, Dimensions } from 'react-native';
+import { View, Text, Pressable, StyleSheet, ScrollView, Dimensions } from 'react-native';
 import Animated, {
   FadeIn,
   FadeInDown,
@@ -23,11 +23,10 @@ import { LottieIcon } from '../../../components/ui/LottieIcon';
 import { AnimatedPressable } from '../../../components/ui/AnimatedPressable';
 import { GlowCard } from '../../../components/ui/GlowCard';
 import { ConfettiExplosion } from '../../../components/ui/ConfettiExplosion';
-import { SimFeedbackBar } from '../../../components/ui/SimFeedbackBar';
-import { tapHaptic, successHaptic, errorHaptic } from '../../../utils/haptics';
+import { tapHaptic, successHaptic } from '../../../utils/haptics';
 import { FINN_STANDARD } from '../../retention-loops/finnMascotConfig';
 import { useStatementDetective } from './useStatementDetective';
-import { SIM4, SHADOW_STRONG, SHADOW_LIGHT, RTL, sim4Styles, GRADE_COLORS4, GRADE_HEBREW } from './simTheme';
+import { SIM4, SHADOW_STRONG, SHADOW_LIGHT, RTL, sim4Styles, GRADE_COLORS4 } from './simTheme';
 import type { Verdict, FinancialSnippet, DetectiveScore } from './statementDetectiveTypes';
 import { formatShekel } from '../../../utils/format';
 

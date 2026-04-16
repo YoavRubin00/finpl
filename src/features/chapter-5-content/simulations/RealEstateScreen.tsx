@@ -31,7 +31,7 @@ import { SIM5, GRADE_COLORS5, GRADE_HEBREW, SHADOW_STRONG, SHADOW_LIGHT, RTL, TY
 import { useRealEstate } from './useRealEstate';
 import type { YearSnapshot } from './useRealEstate';
 import type { MortgageOption, RealEstateScore } from './realEstateTypes';
-import { PROPERTY_PRICE, DOWN_PAYMENT, LOAN_AMOUNT, MORTGAGE_OPTIONS } from './realEstateData';
+import { PROPERTY_PRICE, DOWN_PAYMENT, LOAN_AMOUNT } from './realEstateData';
 import { formatShekel } from '../../../utils/format';
 
 

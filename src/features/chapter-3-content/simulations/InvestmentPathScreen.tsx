@@ -126,7 +126,7 @@ function PathVisualization({
               key={`ghost-${i}`}
               style={[
                 pathStyles.ghostDot,
-                { left: (withdrawnIndex + 1 + i) * segmentWidth + segmentWidth / 2 },
+                { right: (withdrawnIndex + 1 + i) * segmentWidth + segmentWidth / 2 },
               ]}
             />
           ))}
@@ -711,14 +711,7 @@ export function InvestmentPathScreen({
           </Animated.View>
         )}
 
-        {/* Next event button (after choosing) */}
-        {state.selectedOptionId !== null && !state.isComplete && !state.hasWithdrawn && (
-          <Animated.View entering={FadeInUp.delay(100)}>
-            <AnimatedPressable onPress={handleAdvance} style={styles.nextBtn} accessibilityRole="button" accessibilityLabel="המשך בדרך">
-              <Text style={styles.nextBtnText}>המשך בדרך</Text>
-            </AnimatedPressable>
-          </Animated.View>
-        )}
+        {/* Next event button removed as per user request — advancement is automatic on tap */}
 
         {/* Auto-play toggle */}
         {!state.hasWithdrawn && !state.isComplete && (
@@ -774,7 +767,7 @@ const pathStyles = StyleSheet.create({
     paddingHorizontal: 4,
   },
   track: {
-    flexDirection: 'row',
+    flexDirection: 'row-reverse',
     alignItems: 'center',
     height: 50,
   },
@@ -943,7 +936,7 @@ const styles = StyleSheet.create({
 
   /* Progress */
   progressRow: {
-    flexDirection: 'row',
+    flexDirection: 'row-reverse',
     alignItems: 'center',
     gap: 10,
     marginTop: 8,
@@ -962,9 +955,13 @@ const styles = StyleSheet.create({
     backgroundColor: SIM3.trackBg,
     borderRadius: 3,
     overflow: 'hidden',
+    flexDirection: 'row-reverse',
   },
   progressFill: {
-    height: '100%',
+    position: 'absolute',
+    right: 0,
+    top: 0,
+    bottom: 0,
     backgroundColor: SIM3.primary,
     borderRadius: 3,
   },
@@ -1012,6 +1009,8 @@ const styles = StyleSheet.create({
     bottom: 0,
     left: 0,
     right: 0,
+    top: 0,
+    zIndex: 10,
   },
   nextBtn: {
     backgroundColor: SIM3.btnPrimary,

@@ -69,6 +69,7 @@ export function ChapterMapScreen() {
   const router = useRouter();
 
   const progress = useChapterStore((s) => s.progress);
+  const bossCompleted = useChapterStore((s) => s.bossCompleted);
   const setCurrentChapter = useChapterStore((s) => s.setCurrentChapter);
   const setCurrentModule = useChapterStore((s) => s.setCurrentModule);
 
@@ -91,6 +92,13 @@ export function ChapterMapScreen() {
   const completedModules = chapterProgress?.completedModules ?? [];
   const completedCount = completedModules.length;
   const totalCount = chapter.modules.length;
+
+  useEffect(() => {
+    if (storeId !== "ch-1") return;
+    if (completedCount < totalCount) return;
+    if (bossCompleted[storeId]) return;
+    router.replace("/tower-defense-boss" as never);
+  }, [storeId, completedCount, totalCount, bossCompleted, router]);
 
   const hiddenModules = id
     ? getUnlockedHiddenModules(id, aiProfile?.recommendedActions ?? [])

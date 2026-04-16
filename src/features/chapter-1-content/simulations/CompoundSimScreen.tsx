@@ -30,7 +30,7 @@ import { ConfettiExplosion } from '../../../components/ui/ConfettiExplosion';
 import { tapHaptic, heavyHaptic, successHaptic } from '../../../utils/haptics';
 import { useCompoundSim } from './useCompoundSim';
 import { compoundConfig } from './compoundData';
-import { SIM, SHADOW_STRONG, SHADOW_LIGHT, RTL, TYPE, simStyles } from './simTheme';
+import { SIM, SHADOW_LIGHT, RTL, TYPE, simStyles } from './simTheme';
 import { useTimeoutCleanup } from '../../../hooks/useTimeoutCleanup';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');

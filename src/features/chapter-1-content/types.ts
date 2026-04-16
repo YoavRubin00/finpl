@@ -6,6 +6,7 @@ export interface Flashcard {
   imageUrl?: ImageSourcePropType; // e.g. require('../../assets/comics/mod1.png') or string URI
   isComic?: boolean; // If true, renders as a comic flashcard
   finnTip?: string; // If set, shows a Finn notification popup with this text before advancing
+  finnTipMood?: 'standard' | 'empathic' | 'happy'; // Controls which mascot expression is shown in the finnTip popup (default: standard)
   isMeme?: boolean; // If true, renders as a meme break card (no XP/progress)
   memeImage?: ImageSourcePropType; // The meme image (local require or uri)
   videoUri?: string; // If set, renders as a full-screen video flashcard
@@ -13,6 +14,8 @@ export interface Flashcard {
   hideTextOnDive?: boolean; // If true, the main text disappears when diveMode advances to step > 0
   zoomRegions?: [number, number, number][]; // [translateX, translateY, scale] for each step
   finnExplanations?: string[]; // Explanation text for each step in diveMode
+  isInteractiveChart?: boolean; // If true, renders a full-screen interactive chart component
+  chartId?: 'ta125_war_recovery'; // Identifier for which chart to render
 }
 
 export interface QuizQuestion {
@@ -49,8 +52,10 @@ export interface Module {
   bonusModule?: boolean;
   /** Label shown on bonus badge, e.g. "בונוס: המשקיע הנבון" */
   bonusLabel?: string;
-  /** Optional mini-game to show between this module and the next: 'investment' | 'crash' | 'myth' | 'dilemma' */
-  interModuleGame?: 'investment' | 'crash' | 'myth' | 'dilemma';
+  /** Optional mini-game to show between this module and the next */
+  interModuleGame?: 'investment' | 'crash' | 'myth' | 'dilemma' | 'macro-event';
+  /** When interModuleGame === 'macro-event', the specific macro event id to show */
+  interModuleMacroEventId?: string;
 }
 
 export interface Chapter {

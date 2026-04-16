@@ -5,7 +5,6 @@
 
 import { useState, useCallback, useEffect } from 'react';
 import { Image as ExpoImage } from "expo-image";
-import LottieView from 'lottie-react-native';
 import {
   View,
   Text,
@@ -35,7 +34,7 @@ import { usePriceValue } from './usePriceValue';
 import { PRICE_VALUE_DATA } from './priceValueData';
 import { SIM_LOTTIE } from '../../shared-sim/simLottieMap';
 import { FINN_STANDARD, FINN_HAPPY } from '../../retention-loops/finnMascotConfig';
-import { SIM4, GRADE_COLORS4, GRADE_HEBREW, SHADOW_STRONG, SHADOW_LIGHT, RTL, TYPE4, sim4Styles } from './simTheme';
+import { SIM4, GRADE_COLORS4, GRADE_HEBREW, SHADOW_STRONG, SHADOW_LIGHT, sim4Styles } from './simTheme';
 import { getChapterTheme } from '../../../constants/theme';
 
 
@@ -251,10 +250,11 @@ function ScoreScreen({ result, onReplay, onContinue }: ScoreScreenProps) {
       {/* Grade card — white, premium */}
       <Animated.View entering={FadeInDown.duration(500)}>
         <View style={{ backgroundColor: '#ffffff', borderRadius: 24, padding: 24, alignItems: 'center', shadowColor: '#000', shadowOpacity: 0.08, shadowRadius: 16, shadowOffset: { width: 0, height: 4 }, elevation: 6, marginBottom: 14 }}>
-          <LottieView
-            source={require('../../../../assets/lottie/fin-excited.json')}
-            style={{ width: 80, height: 80, marginBottom: 8 }}
-            autoPlay loop={false}
+          <ExpoImage
+            source={FINN_HAPPY}
+            style={{ width: 84, height: 84, marginBottom: 8 }}
+            contentFit="contain"
+            accessible={false}
           />
           <Text accessibilityLiveRegion="polite" style={{ fontSize: 38, fontWeight: '900', color: '#0c4a6e', marginBottom: 4 }}>
             {GRADE_HEBREW[result.grade] ?? result.grade}
@@ -263,6 +263,16 @@ function ScoreScreen({ result, onReplay, onContinue }: ScoreScreenProps) {
           <View style={{ backgroundColor: '#f0f9ff', borderRadius: 12, paddingHorizontal: 20, paddingVertical: 8, marginTop: 10, borderWidth: 1, borderColor: '#bae6fd' }}>
             <Text style={{ fontSize: 20, fontWeight: '900', color: '#0369a1' }}>{result.score}/100</Text>
           </View>
+        </View>
+      </Animated.View>
+
+      {/* Captain Shark core principle */}
+      <Animated.View entering={FadeInDown.duration(500).delay(80)}>
+        <View style={{ flexDirection: 'row-reverse', alignItems: 'center', gap: 10, backgroundColor: 'rgba(14,165,233,0.1)', borderRadius: 18, borderWidth: 1.5, borderColor: 'rgba(14,165,233,0.3)', padding: 12, marginBottom: 14 }}>
+          <ExpoImage source={FINN_STANDARD} style={{ width: 56, height: 56, flexShrink: 0 }} contentFit="contain" accessible={false} />
+          <Text style={{ flex: 1, fontSize: 14, fontWeight: '800', color: '#0369a1', lineHeight: 21, writingDirection: 'rtl', textAlign: 'right' }}>
+            🦈 קפטן שארק: "מחיר זה מה שאתה משלם. ערך זה מה שאתה מקבל." — קנה רק כשהערך גבוה מהמחיר.
+          </Text>
         </View>
       </Animated.View>
 
@@ -427,13 +437,23 @@ export function PriceValueScreen({ onComplete }: PriceValueScreenProps) {
           </View>
         )}
 
-        {/* Progress bar — RTL */}
-        <View style={{ transform: [{ scaleX: -1 }], marginBottom: 4 }}>
-          <View style={sim4Styles.progressTrack}>
-            <Animated.View
-              entering={FadeIn.duration(300)}
-              style={[sim4Styles.progressFill, { width: `${progress}%`, backgroundColor: SIM4.primary }]}
-            />
+        {/* Progress bar + month counter — RTL */}
+        <View style={{ marginBottom: 6 }}>
+          <View style={{ flexDirection: 'row-reverse', justifyContent: 'space-between', marginBottom: 4 }}>
+            <Text style={{ fontSize: 12, fontWeight: '800', color: SIM4.textSecondary, writingDirection: 'rtl' }}>
+              חודש {state.currentIndex + 1} מתוך {totalPoints}
+            </Text>
+            <Text style={{ fontSize: 12, fontWeight: '700', color: SIM4.textSecondary }}>
+              {Math.round(progress)}%
+            </Text>
+          </View>
+          <View style={{ transform: [{ scaleX: -1 }] }}>
+            <View style={sim4Styles.progressTrack}>
+              <Animated.View
+                entering={FadeIn.duration(300)}
+                style={[sim4Styles.progressFill, { width: `${progress}%`, backgroundColor: SIM4.primary }]}
+              />
+            </View>
           </View>
         </View>
 

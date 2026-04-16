@@ -1,6 +1,6 @@
 import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
-import AsyncStorage from "@react-native-async-storage/async-storage";
+import { zustandStorage } from '../../lib/zustandStorage';
 import type { QuizQuestion } from "../chapter-1-content/types";
 import type { AnswerFeedback, DuelMatch, DuelOpponent, DuelRecord, DuelStatus } from "./types";
 import { chapter1Data } from "../chapter-1-content/chapter1Data";
@@ -194,7 +194,7 @@ export const useDuelsStore = create<DuelsState>()(
     }),
     {
       name: "duels-store",
-      storage: createJSONStorage(() => AsyncStorage),
+      storage: createJSONStorage(() => zustandStorage),
       partialize: (state) => ({
         record: state.record,
       }),

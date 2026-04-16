@@ -1,6 +1,6 @@
 import { useCallback } from "react";
 import { Image as ExpoImage } from "expo-image";
-import { View, Text, Image, StyleSheet, Dimensions, ImageBackground, Pressable } from "react-native";
+import { View, Text, StyleSheet, Dimensions, ImageBackground, Pressable } from "react-native";
 import Animated, {
   FadeInDown,
   FadeInUp,

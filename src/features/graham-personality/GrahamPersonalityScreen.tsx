@@ -5,7 +5,7 @@
  */
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Image as ExpoImage } from "expo-image";
-import { View, Text, ScrollView, Dimensions, StyleSheet, Image } from 'react-native';
+import { View, Text, ScrollView, Dimensions, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import Animated, {
@@ -21,7 +21,7 @@ import Animated, {
   Easing,
 } from 'react-native-reanimated';
 import { useRouter } from 'expo-router';
-import { X, ArrowRight } from 'lucide-react-native';
+import { X } from 'lucide-react-native';
 
 import { LottieIcon } from '../../components/ui/LottieIcon';
 import { AnimatedPressable } from '../../components/ui/AnimatedPressable';
@@ -33,7 +33,7 @@ import {
   FINN_STANDARD,
   FINN_HAPPY,
 } from '../retention-loops/finnMascotConfig';
-import { SIM4, TYPE4, sim4Styles, RTL, SHADOW_STRONG, SHADOW_LIGHT } from '../chapter-4-content/simulations/simTheme';
+import { SIM4, RTL } from '../chapter-4-content/simulations/simTheme';
 import { tapHaptic, successHaptic } from '../../utils/haptics';
 
 import { useGrahamPersonality } from './useGrahamPersonality';

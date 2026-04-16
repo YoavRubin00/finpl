@@ -8,12 +8,9 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
-import { ChevronLeft } from "lucide-react-native";
 import Animated, { FadeInDown, FadeInUp } from "react-native-reanimated";
 
-import { tapHaptic } from "../../utils/haptics";
 import { RTL } from "../chapter-4-content/simulations/simTheme";
-import { AnimatedPressable } from "../../components/ui/AnimatedPressable";
 import { BackButton } from "../../components/ui/BackButton";
 
 // ---------------------------------------------------------------------------

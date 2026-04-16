@@ -446,28 +446,61 @@ function OrderPanel({
 }
 
 /* ================================================================== */
-/*  RoundLessonCard — shows after round completes                      */
+/*  SharkLessonCard — unified lesson and next button                   */
 /* ================================================================== */
 
-function RoundLessonCard({
+function SharkLessonCard({
   lesson,
   orderType,
+  isLastRound,
+  onNext,
 }: {
   lesson: string;
   orderType: OrderType;
+  isLastRound: boolean;
+  onNext: () => void;
 }) {
+  const [showBtn, setShowBtn] = useState(false);
+
+  useEffect(() => {
+    // Reset timer when lesson changes (new round)
+    setShowBtn(false);
+    const timer = setTimeout(() => setShowBtn(true), 3000);
+    return () => clearTimeout(timer);
+  }, [lesson]);
+
   return (
-    <Animated.View entering={FadeInUp.delay(200)}>
+    <Animated.View entering={FadeInDown.springify().damping(20).delay(200)} style={{ marginTop: 16 }}>
       <GlowCard
         glowColor={`${ORDER_TYPE_COLORS[orderType]}40`}
         style={styles.statsCard}
       >
-        <View style={{ flexDirection: 'row-reverse', alignItems: 'center', gap: 8 }}>
-          <LottieIcon source={LOTTIE_BULB} size={22} />
-          <Text style={[styles.lessonText, RTL, { flex: 1 }]}>
+        <View style={{ flexDirection: 'row-reverse', alignItems: 'flex-start', gap: 12 }}>
+          <Text style={{ fontSize: 32 }}>🦈</Text>
+          <Text style={[styles.lessonText, RTL, { flex: 1, lineHeight: 22, fontWeight: '700' }]}>
             {lesson}
           </Text>
         </View>
+
+        {showBtn && (
+          <Animated.View entering={FadeInUp}>
+            <AnimatedPressable
+              onPress={onNext}
+              style={[sim4Styles.continueBtn, { marginTop: 20, justifyContent: 'center' }]}
+              accessibilityRole="button"
+              accessibilityLabel={isLastRound ? 'סיום תרגול' : 'המשך'}
+            >
+              <View style={{ flexDirection: 'row-reverse', alignItems: 'center', gap: 6 }}>
+                <Text style={sim4Styles.continueText}>
+                  {isLastRound ? 'סיום תרגול' : 'המשך'}
+                </Text>
+                <View style={{ transform: [{ rotate: '180deg' }] }} accessible={false}>
+                  <LottieIcon source={isLastRound ? LOTTIE_TROPHY : LOTTIE_PLAY} size={22} />
+                </View>
+              </View>
+            </AnimatedPressable>
+          </Animated.View>
+        )}
       </GlowCard>
     </Animated.View>
   );
@@ -938,27 +971,12 @@ export function TradingSimScreen({ onComplete }: TradingSimScreenProps) {
 
       {/* Round complete: lesson + next button */}
       {sim.roundComplete && (
-        <>
-          <RoundLessonCard
-            lesson={sim.currentRoundData.targetLesson}
-            orderType={sim.currentRoundData.orderType}
-          />
-          <Animated.View entering={FadeInUp.delay(400)} style={styles.controlsRow}>
-            <AnimatedPressable
-              onPress={handleNextRound}
-              style={styles.nextBtn}
-              accessibilityRole="button"
-              accessibilityLabel={isLastRound ? 'סיום' : `סבב ${roundNum + 1}`}
-            >
-              <View style={{ flexDirection: 'row-reverse', alignItems: 'center', gap: 6 }}>
-                <View accessible={false}><LottieIcon source={isLastRound ? LOTTIE_TROPHY : LOTTIE_PLAY} size={22} /></View>
-                <Text style={styles.nextBtnText}>
-                  {isLastRound ? 'סיום' : `סבב ${roundNum + 1}`}
-                </Text>
-              </View>
-            </AnimatedPressable>
-          </Animated.View>
-        </>
+        <SharkLessonCard
+          lesson={sim.currentRoundData.targetLesson}
+          orderType={sim.currentRoundData.orderType}
+          isLastRound={isLastRound}
+          onNext={handleNextRound}
+        />
       )}
     </ScrollView>
     </SimLottieBackground>

@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { zustandStorage } from '../../lib/zustandStorage';
 import { useEconomyStore } from '../economy/useEconomyStore';
 import { getClashRound } from './clashQuestions';
 import type { ClashInvite, ClashSession } from './types';
@@ -174,7 +174,7 @@ export const useClashStore = create<ClashState>()(
     }),
     {
       name: 'clash-store',
-      storage: createJSONStorage(() => AsyncStorage),
+      storage: createJSONStorage(() => zustandStorage),
       partialize: (state) => ({
         invites: state.invites,
       }),

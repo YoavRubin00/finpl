@@ -311,6 +311,7 @@ const cardStyles = StyleSheet.create({
     borderRadius: 3,
     backgroundColor: '#e2e8f0',
     overflow: 'hidden',
+    flexDirection: 'row-reverse',
   },
   fillBar: {
     height: '100%',

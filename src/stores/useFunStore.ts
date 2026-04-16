@@ -1,6 +1,6 @@
 import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
-import AsyncStorage from "@react-native-async-storage/async-storage";
+import { zustandStorage } from '../lib/zustandStorage';
 
 interface MailContent {
   joke: string;
@@ -73,7 +73,7 @@ export const useFunStore = create<FunState>()(
     }),
     {
       name: "fun-store",
-      storage: createJSONStorage(() => AsyncStorage),
+      storage: createJSONStorage(() => zustandStorage),
       onRehydrateStorage: () => () => {
         useFunStore.setState({ _hydrated: true });
       },

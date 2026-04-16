@@ -73,6 +73,7 @@ interface OutOfHeartsModalProps {
     visible: boolean;
     onDismiss: () => void;
     onUpgrade: () => void;
+    onHeartsRefilled?: () => void;
 }
 
 function formatTime(ms: number): string {
@@ -84,7 +85,7 @@ function formatTime(ms: number): string {
     return `${m}:${String(s).padStart(2, '0')}`;
 }
 
-export function OutOfHeartsModal({ visible, onDismiss, onUpgrade }: OutOfHeartsModalProps) {
+export function OutOfHeartsModal({ visible, onDismiss, onUpgrade, onHeartsRefilled }: OutOfHeartsModalProps) {
     const router = useRouter();
     const lastHeartLostAt = useSubscriptionStore((s) => s.lastHeartLostAt);
     const getHearts = useSubscriptionStore((s) => s.getHearts);
@@ -139,9 +140,13 @@ export function OutOfHeartsModal({ visible, onDismiss, onUpgrade }: OutOfHeartsM
         if (success) {
             useSubscriptionStore.getState().restoreAllHearts();
             successHaptic();
-            onDismiss();
+            if (onHeartsRefilled) {
+                onHeartsRefilled();
+            } else {
+                onDismiss();
+            }
         }
-    }, [onDismiss]);
+    }, [onDismiss, onHeartsRefilled]);
 
     const { showAd, isLoaded: adReady, isPro } = useRewardedAd();
 
@@ -155,9 +160,13 @@ export function OutOfHeartsModal({ visible, onDismiss, onUpgrade }: OutOfHeartsM
                 useSubscriptionStore.setState({ hearts: current + 1, lastHeartLostAt: null });
             }
             successHaptic();
-            onDismiss();
+            if (onHeartsRefilled) {
+                onHeartsRefilled();
+            } else {
+                onDismiss();
+            }
         });
-    }, [showAd, onDismiss]);
+    }, [showAd, onDismiss, onHeartsRefilled]);
 
     const handleGemRefill = useCallback(() => {
         tapHaptic();
@@ -166,13 +175,17 @@ export function OutOfHeartsModal({ visible, onDismiss, onUpgrade }: OutOfHeartsM
             if (success) {
                 useSubscriptionStore.getState().restoreAllHearts();
                 successHaptic();
-                onDismiss();
+                if (onHeartsRefilled) {
+                    onHeartsRefilled();
+                } else {
+                    onDismiss();
+                }
             }
         } else {
             onDismiss();
             router.push('/shop' as never);
         }
-    }, [gems, onDismiss, router]);
+    }, [gems, onDismiss, onHeartsRefilled, router]);
 
     return (
         <Modal visible={visible} transparent animationType="fade" onRequestClose={onDismiss} accessibilityViewIsModal>
@@ -207,8 +220,8 @@ export function OutOfHeartsModal({ visible, onDismiss, onUpgrade }: OutOfHeartsM
 
                     {/* Watch ad for 1 heart — non-PRO only */}
                     {!isPro && adReady && (
-                        <Pressable onPress={handleAdRefill} style={styles.adRefillBtn} accessibilityRole="button" accessibilityLabel="צפה בפרסומת לקבל לב">
-                            <Text style={styles.adRefillBtnText}>צפה בפרסומת — קבל לב חינם</Text>
+                        <Pressable onPress={handleAdRefill} style={styles.adRefillBtn} accessibilityRole="button" accessibilityLabel="צפו בפרסומת וקבלו לב חינם">
+                            <Text style={styles.adRefillBtnText}>צפו בפרסומת — קבלו לב חינם</Text>
                             <Text style={styles.btnIcon}>🎬</Text>
                         </Pressable>
                     )}

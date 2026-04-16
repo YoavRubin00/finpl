@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { zustandStorage } from '../../lib/zustandStorage';
 import type { TelemetryEvent, TelemetryEventType, AIProfile, MonetizationSignalType } from './types';
 import { analyzeProfile } from './analyzeProfile';
 
@@ -97,7 +97,7 @@ export const useAITelemetryStore = create<AITelemetryState>()(
     }),
     {
       name: 'ai-telemetry-store',
-      storage: createJSONStorage(() => AsyncStorage),
+      storage: createJSONStorage(() => zustandStorage),
     },
   ),
 );

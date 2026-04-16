@@ -27,7 +27,6 @@ import { BuySheet } from './BuySheet';
 import { fetchChartData, fetchLatestPrice, clearCache, isDataLive } from './marketApiService';
 import { Timeframe, ChartDataPoint, VolatilityRating } from './tradingHubTypes';
 import { useTradingStore } from './useTradingStore';
-import { useEconomyStore } from '../economy/useEconomyStore';
 import { useTutorialStore } from '../../stores/useTutorialStore';
 import { TradingHubTutorial } from './TradingHubTutorial';
 

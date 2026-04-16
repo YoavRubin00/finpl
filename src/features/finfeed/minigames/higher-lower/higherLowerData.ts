@@ -1,0 +1,223 @@
+import type { HigherLowerScenario } from './types';
+
+const ILLUSTRATION_MATTRESS: number = require('../../../../../assets/webp/minigames/higher-lower/hl-mattress-vs-sp500.webp');
+const ILLUSTRATION_EARLY_LATE: number = require('../../../../../assets/webp/minigames/higher-lower/hl-early-vs-late-invest.webp');
+const ILLUSTRATION_CRYPTO_ETF: number = require('../../../../../assets/webp/minigames/higher-lower/hl-crypto-vs-etf.webp');
+
+const SCAM_GRAD: [string, string] = ['#94a3b8', '#64748b'];
+const COMFORT_GRAD: [string, string] = ['#1e3a8a', '#0f1e4a'];
+const GROWTH_GRAD: [string, string] = ['#7c3aed', '#a855f7'];
+const GOLD_GRAD: [string, string] = ['#d4a017', '#fbbf24'];
+const DANGER_GRAD: [string, string] = ['#dc2626', '#991b1b'];
+const NEUTRAL_GRAD: [string, string] = ['#0891b2', '#0e7490'];
+
+export const HIGHER_LOWER_SCENARIOS: HigherLowerScenario[] = [
+  {
+    id: 'hl-mattress-vs-sp500',
+    category: 'compound-interest',
+    question: 'מה יניב יותר אחרי 25 שנים?',
+    illustration: ILLUSTRATION_MATTRESS,
+    durationYears: 25,
+    leftSide: {
+      title: '1,000,000 ₪ במזרן',
+      subtitle: 'שומרים ולא נוגעים',
+      gradient: SCAM_GRAD,
+      textColor: '#ffffff',
+      finalValue: 1000000,
+      finalValueLabel: '₪',
+    },
+    rightSide: {
+      title: '2,000 ₪ בחודש ב-S&P 500',
+      subtitle: '7% ריאלי, 25 שנה',
+      gradient: GROWTH_GRAD,
+      textColor: '#ffffff',
+      finalValue: 1624000,
+      finalValueLabel: '₪',
+    },
+    correctSide: 'right',
+    explanation: 'כשמשקיעים 2,000 ₪ כל חודש במדד S&P 500 עם תשואה ריאלית ממוצעת של 7%, מגיעים אחרי 25 שנה ל־1.62M ₪. מיליון במזרן מאבד ערך לאינפלציה — וגם נומינלית, הריבית הדריבית של ההשקעה מנצחת.',
+    punchline: 'הכסף חייב לעבוד, לא לנוח במזרן',
+  },
+  {
+    id: 'hl-early-vs-late-invest',
+    category: 'time-in-market',
+    question: 'מי יגיע לפנסיה עם יותר כסף בגיל 65?',
+    illustration: ILLUSTRATION_EARLY_LATE,
+    durationYears: 43,
+    leftSide: {
+      title: 'יוסי מפקיד בגילאי 22-32',
+      subtitle: '2,000/חודש × 10 שנים בלבד, ואז נעצר',
+      gradient: GROWTH_GRAD,
+      textColor: '#ffffff',
+      finalValue: 3092000,
+      finalValueLabel: '₪',
+    },
+    rightSide: {
+      title: 'משה מפקיד בגילאי 32-65',
+      subtitle: '2,000/חודש × 33 שנים',
+      gradient: NEUTRAL_GRAD,
+      textColor: '#ffffff',
+      finalValue: 2854000,
+      finalValueLabel: '₪',
+    },
+    correctSide: 'left',
+    explanation: 'יוסי הפקיד בסך הכל 240K ₪ (10 שנים) והגיע ל־3.1M. משה הפקיד 792K ₪ (33 שנים) והגיע ל־2.85M. ההתחלה המוקדמת נתנה לכסף 33 שנה נוספות לצמוח — זה כוח הריבית הדריבית על זמן.',
+    punchline: 'זמן מנצח סכום. כל שנה של דחייה עולה ביוקר',
+  },
+  {
+    id: 'hl-crypto-vs-etf',
+    category: 'diversification',
+    question: 'איזה תיק מומלץ לחיסכון פנסיוני של 30 שנה?',
+    illustration: ILLUSTRATION_CRYPTO_ETF,
+    durationYears: 30,
+    leftSide: {
+      title: '100K ב-3 מטבעות קריפטו',
+      subtitle: 'ממוצע היסטורי תנודתי',
+      gradient: DANGER_GRAD,
+      textColor: '#ffffff',
+      finalValue: 0,
+      finalValueLabel: '₪ (תלוי בתרחיש)',
+    },
+    rightSide: {
+      title: '100K ב-ETF עולמי מפוזר',
+      subtitle: '7% ריאלי, דמי ניהול 0.3%',
+      gradient: COMFORT_GRAD,
+      textColor: '#ffffff',
+      finalValue: 761000,
+      finalValueLabel: '₪',
+    },
+    correctSide: 'right',
+    explanation: 'ETF מפוזר עם 7% ריאלי הופך 100K ל־761K תוך 30 שנה. תיק של 3 מטבעות קריפטו חשוף לתנודתיות של 70%+: הוא יכול לעלות פי 40 או לאבד 95%. לחיסכון פנסיוני — ודאות סטטיסטית מנצחת הימור.',
+    punchline: 'פיזור = חוסן. ריכוז = הימור',
+  },
+  {
+    id: 'hl-pay-debt-vs-invest',
+    category: 'debt-vs-invest',
+    question: 'יש לך 50K מזומן ו-50K חוב באשראי. מה חכם יותר?',
+    durationYears: 5,
+    leftSide: {
+      title: 'לפרוע את החוב',
+      subtitle: 'אשראי ב-14% APR',
+      gradient: GROWTH_GRAD,
+      textColor: '#ffffff',
+      finalValue: 46200,
+      finalValueLabel: '₪ חיסכון בריבית',
+    },
+    rightSide: {
+      title: 'להשקיע ב-ETF',
+      subtitle: 'תשואה ריאלית ~7%',
+      gradient: NEUTRAL_GRAD,
+      textColor: '#ffffff',
+      finalValue: 20100,
+      finalValueLabel: '₪ רווח',
+    },
+    correctSide: 'left',
+    explanation: 'חוב אשראי ב-14% זו "תשואה שלילית מובטחת". פירעון חוסך 46K בריבית ב-5 שנים. השקעה ב-7% תרוויח רק 20K. **תמיד תשלם חוב ב-14% לפני שתשקיע ב-7%** — זה חשבון בסיסי.',
+    punchline: 'חוב אשראי = תשואה שלילית של 14%',
+  },
+  {
+    id: 'hl-active-vs-passive',
+    category: 'fees-drag',
+    question: '100K ל-30 שנה. איזה אפיק יניב יותר?',
+    durationYears: 30,
+    leftSide: {
+      title: 'קרן אקטיבית',
+      subtitle: '10% ברוטו, 2% דמי ניהול',
+      gradient: DANGER_GRAD,
+      textColor: '#ffffff',
+      finalValue: 1006000,
+      finalValueLabel: '₪',
+    },
+    rightSide: {
+      title: 'קרן פסיבית (ETF מחקה)',
+      subtitle: '10% ברוטו, 0.1% דמי ניהול',
+      gradient: GROWTH_GRAD,
+      textColor: '#ffffff',
+      finalValue: 1707000,
+      finalValueLabel: '₪',
+    },
+    correctSide: 'right',
+    explanation: 'דמי ניהול של 2% לעומת 0.1% נראה קטן — אבל אחרי 30 שנה ההבדל הוא 700K ₪. דמי ניהול שוחקים ריבית דריבית באקספוננציאליות. 85% מהקרנות האקטיביות לא מכות את המדד לטווח ארוך.',
+    punchline: 'כל אחוז דמי ניהול = עשרות אחוזי הפסד על 30 שנה',
+  },
+  {
+    id: 'hl-employer-match',
+    category: 'tax-shelter',
+    question: 'אתה מפקיד 1,000/חודש. מעסיק מתאים 100% עד 6%. 30 שנה.',
+    durationYears: 30,
+    leftSide: {
+      title: 'בלי התאמת מעסיק',
+      subtitle: 'רק הפקדה שלך',
+      gradient: NEUTRAL_GRAD,
+      textColor: '#ffffff',
+      finalValue: 1133000,
+      finalValueLabel: '₪',
+    },
+    rightSide: {
+      title: 'עם התאמת מעסיק 100%',
+      subtitle: 'מעסיק מכפיל את ההפקדה',
+      gradient: GOLD_GRAD,
+      textColor: '#0f1e4a',
+      finalValue: 2267000,
+      finalValueLabel: '₪',
+    },
+    correctSide: 'right',
+    explanation: 'התאמת מעסיק היא "תשואה של 100% מיידית" על כל שקל שהפקדת. אם לא לוקחים את זה — זורקים כסף חינם. אחרי 30 שנה בתשואה של 7% — ההפרש הוא 1.13M ₪.',
+    punchline: 'התאמת מעסיק = כסף חינם. תמיד תקח',
+  },
+  {
+    id: 'hl-rent-vs-buy',
+    category: 'compound-interest',
+    question: '25 שנה: מה חכם יותר בתל אביב?',
+    durationYears: 25,
+    leftSide: {
+      title: 'לקנות דירה 2.5M',
+      subtitle: 'משכנתא 2M, 4.5%, 25 שנה',
+      gradient: GROWTH_GRAD,
+      textColor: '#ffffff',
+      finalValue: 4500000,
+      finalValueLabel: '₪ שווי',
+    },
+    rightSide: {
+      title: 'לשכור + להשקיע הפער',
+      subtitle: '7,500 שכ"ד + 4,500 ל-S&P',
+      gradient: NEUTRAL_GRAD,
+      textColor: '#ffffff',
+      finalValue: 3400000,
+      finalValueLabel: '₪ בתיק',
+    },
+    correctSide: 'left',
+    explanation: 'בתל אביב עלית ערך ממוצעת של 4-5% שנתי + קיצור חוב = בעל הדירה מחזיק בשווי ~4.5M. השוכר מרוויח 3.4M בתיק ההשקעות. בשוק הישראלי — קנייה מנצחת לטווח ארוך בזכות מינוף הנדל"ן.',
+    punchline: 'נדל"ן בישראל = מינוף + אינפלציה + שליטה',
+  },
+  {
+    id: 'hl-gemel-vs-savings',
+    category: 'tax-shelter',
+    question: '76K ₪ לשנה, 20 שנה. איפה זה ישב הכי יעיל?',
+    durationYears: 20,
+    leftSide: {
+      title: 'חיסכון בבנק',
+      subtitle: '3% נומינלי, 25% מס על רווחים',
+      gradient: SCAM_GRAD,
+      textColor: '#ffffff',
+      finalValue: 2060000,
+      finalValueLabel: '₪ נטו',
+    },
+    rightSide: {
+      title: 'קופת גמל להשקעה',
+      subtitle: '7% ריאלי, פטור ממס בגיל 60',
+      gradient: GOLD_GRAD,
+      textColor: '#0f1e4a',
+      finalValue: 3320000,
+      finalValueLabel: '₪ נטו',
+    },
+    correctSide: 'right',
+    explanation: 'גם קופת גמל להשקעה וגם חיסכון בנקאי ממוסים — אבל רק קופת גמל פטורה ממס רווחי הון אם מושכים בגיל 60+. ב-20 שנה עם 76K שנתי, ההפרש הוא 1.26M ₪ — בזכות ההטבה המיסויית וההזדמנות למסלול מנייתי.',
+    punchline: 'הטבות מס + ריבית דריבית = סופר-כוח',
+  },
+];
+
+export function getRandomScenario(date: string, playsToday: number): HigherLowerScenario {
+  const seed = date.split('-').reduce((acc, n) => acc + parseInt(n, 10), 0) + playsToday * 7;
+  return HIGHER_LOWER_SCENARIOS[seed % HIGHER_LOWER_SCENARIOS.length];
+}

@@ -25,7 +25,7 @@ import { SimLottieBackground } from '../../../components/ui/SimLottieBackground'
 import { getChapterTheme } from '../../../constants/theme';
 import { tapHaptic, successHaptic, heavyHaptic } from '../../../utils/haptics';
 import { useIndexLive } from './useIndexLive';
-import { SIM4, GRADE_COLORS4, SHADOW_STRONG, SHADOW_LIGHT, RTL, TYPE4, sim4Styles } from './simTheme';
+import { SIM4, SHADOW_STRONG, SHADOW_LIGHT, RTL, TYPE4, sim4Styles } from './simTheme';
 import { formatShekel } from '../../../utils/format';
 
 

@@ -1,10 +1,9 @@
-import { ScrollView, View, Text, StyleSheet, Share , Image } from "react-native";
+import { ScrollView, View, Text, StyleSheet, Share } from "react-native";
 import { Image as ExpoImage } from "expo-image";
 import { SafeAreaView } from "react-native-safe-area-context";
 import Animated from "react-native-reanimated";
 import { useRouter } from "expo-router";
-import LottieView from "lottie-react-native";
-import { Share2, Plus, TrendingUp, ChevronRight, Briefcase } from "lucide-react-native";
+import { Share2, Plus, ChevronRight, Briefcase } from "lucide-react-native";
 import { LottieIcon } from "../../components/ui/LottieIcon";
 import { BackButton } from "../../components/ui/BackButton";
 import { GlobalWealthHeader } from "../../components/ui/GlobalWealthHeader";

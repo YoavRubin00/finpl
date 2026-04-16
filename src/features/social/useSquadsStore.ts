@@ -1,6 +1,6 @@
 import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
-import AsyncStorage from "@react-native-async-storage/async-storage";
+import { zustandStorage } from '../../lib/zustandStorage';
 import type { Squad, SquadMember, SquadTier } from "./squadTypes";
 import {
   MOCK_MEMBERS,
@@ -168,7 +168,7 @@ export const useSquadsStore = create<SquadsState>()(
     }),
     {
       name: "squads-store",
-      storage: createJSONStorage(() => AsyncStorage),
+      storage: createJSONStorage(() => zustandStorage),
       partialize: (state) => ({
         squad: state.squad,
         hasClaimedWeeklyChest: state.hasClaimedWeeklyChest,

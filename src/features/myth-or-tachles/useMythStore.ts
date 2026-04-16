@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { zustandStorage } from '../../lib/zustandStorage';
 
 const SESSION_LIMIT = 3;
 export const MYTH_COOLDOWN_MS = 4 * 60 * 60 * 1000; // 4 hours
@@ -62,7 +62,7 @@ export const useMythStore = create<MythState>()(
         }),
         {
             name: 'myth-store-v1',
-            storage: createJSONStorage(() => AsyncStorage),
+            storage: createJSONStorage(() => zustandStorage),
             partialize: (state) => ({
                 seenIds: state.seenIds,
                 totalCorrect: state.totalCorrect,

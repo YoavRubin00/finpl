@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { zustandStorage } from '../../lib/zustandStorage';
 import { useEconomyStore } from '../economy/useEconomyStore';
 import { useSubscriptionStore } from '../subscription/useSubscriptionStore';
 import {
@@ -36,6 +36,11 @@ export const useDailyChallengesStore = create<DailyChallengesState>()(
       investmentPlays: {},
       crashGamePlays: {},
       swipeGamePlays: {},
+      bullshitSwipePlays: {},
+      higherLowerPlays: {},
+      budgetNinjaPlays: {},
+      priceSliderPlays: {},
+      cashoutRushPlays: {},
       dilemmaCorrectCount: 0,
       investmentTotalAnswered: 0,
 
@@ -43,11 +48,21 @@ export const useDailyChallengesStore = create<DailyChallengesState>()(
       getInvestmentPlaysToday: () => getPlays(get().investmentPlays, todayStr()),
       getCrashGamePlaysToday: () => getPlays(get().crashGamePlays, todayStr()),
       getSwipeGamePlaysToday: () => getPlays(get().swipeGamePlays, todayStr()),
+      getBullshitSwipePlaysToday: () => getPlays(get().bullshitSwipePlays, todayStr()),
+      getHigherLowerPlaysToday: () => getPlays(get().higherLowerPlays, todayStr()),
+      getBudgetNinjaPlaysToday: () => getPlays(get().budgetNinjaPlays, todayStr()),
+      getPriceSliderPlaysToday: () => getPlays(get().priceSliderPlays, todayStr()),
+      getCashoutRushPlaysToday: () => getPlays(get().cashoutRushPlays, todayStr()),
 
       hasDilemmaAnsweredToday: () => getPlays(get().dilemmaPlays, todayStr()) >= MAX_DILEMMA_DAILY,
       hasInvestmentAnsweredToday: () => isMaxed(get().investmentPlays, todayStr()),
       hasCrashGamePlayedToday: () => isMaxed(get().crashGamePlays, todayStr()),
       hasSwipeGamePlayedToday: () => false, // no limit — let user play freely
+      hasBullshitSwipePlayedToday: () => isMaxed(get().bullshitSwipePlays, todayStr()),
+      hasHigherLowerPlayedToday: () => isMaxed(get().higherLowerPlays, todayStr()),
+      hasBudgetNinjaPlayedToday: () => isMaxed(get().budgetNinjaPlays, todayStr()),
+      hasPriceSliderPlayedToday: () => isMaxed(get().priceSliderPlays, todayStr()),
+      hasCashoutRushPlayedToday: () => isMaxed(get().cashoutRushPlays, todayStr()),
 
       answerDilemma: (date: string, wasCorrect: boolean) => {
         const state = get();
@@ -108,15 +123,95 @@ export const useDailyChallengesStore = create<DailyChallengesState>()(
           swipeGamePlays: incrementPlays(state.swipeGamePlays, date),
         });
       },
+
+      playBullshitSwipe: (date: string, score: number) => {
+        const state = get();
+        if (isMaxed(state.bullshitSwipePlays, date)) return;
+
+        const economy = useEconomyStore.getState();
+        economy.addXP(CHALLENGE_XP_REWARD, 'daily_task');
+        if (score > 0) {
+          economy.addCoins(CHALLENGE_COIN_REWARD);
+        }
+
+        set({
+          bullshitSwipePlays: incrementPlays(state.bullshitSwipePlays, date),
+        });
+      },
+
+      playHigherLower: (date: string, wasCorrect: boolean) => {
+        const state = get();
+        if (isMaxed(state.higherLowerPlays, date)) return;
+
+        if (wasCorrect) {
+          const economy = useEconomyStore.getState();
+          economy.addXP(CHALLENGE_XP_REWARD, 'daily_task');
+          economy.addCoins(CHALLENGE_COIN_REWARD);
+        }
+
+        set({
+          higherLowerPlays: incrementPlays(state.higherLowerPlays, date),
+        });
+      },
+
+      playBudgetNinja: (date: string, score: number) => {
+        const state = get();
+        if (isMaxed(state.budgetNinjaPlays, date)) return;
+
+        const economy = useEconomyStore.getState();
+        economy.addXP(CHALLENGE_XP_REWARD, 'daily_task');
+        if (score > 0) {
+          economy.addCoins(CHALLENGE_COIN_REWARD);
+        }
+
+        set({
+          budgetNinjaPlays: incrementPlays(state.budgetNinjaPlays, date),
+        });
+      },
+
+      playPriceSlider: (date: string, accuracyPercent: number) => {
+        const state = get();
+        if (isMaxed(state.priceSliderPlays, date)) return;
+
+        const economy = useEconomyStore.getState();
+        economy.addXP(CHALLENGE_XP_REWARD, 'daily_task');
+        if (accuracyPercent >= 60) {
+          economy.addCoins(CHALLENGE_COIN_REWARD);
+        }
+
+        set({
+          priceSliderPlays: incrementPlays(state.priceSliderPlays, date),
+        });
+      },
+
+      playCashoutRush: (date: string, cashedOut: boolean) => {
+        const state = get();
+        if (isMaxed(state.cashoutRushPlays, date)) return;
+
+        const economy = useEconomyStore.getState();
+        economy.addXP(CHALLENGE_XP_REWARD, 'daily_task');
+        if (cashedOut) {
+          economy.addCoins(CHALLENGE_COIN_REWARD);
+        }
+
+        set({
+          cashoutRushPlays: incrementPlays(state.cashoutRushPlays, date),
+        });
+      },
     }),
     {
       name: 'daily-challenges-store',
-      storage: createJSONStorage(() => AsyncStorage),
+      storage: createJSONStorage(() => zustandStorage),
       partialize: (state) => ({
         dilemmaPlays: state.dilemmaPlays,
         investmentPlays: state.investmentPlays,
         crashGamePlays: state.crashGamePlays,
         swipeGamePlays: state.swipeGamePlays,
+        bullshitSwipePlays: state.bullshitSwipePlays,
+        higherLowerPlays: state.higherLowerPlays,
+        budgetNinjaPlays: state.budgetNinjaPlays,
+        priceSliderPlays: state.priceSliderPlays,
+        cashoutRushPlays: state.cashoutRushPlays,
         dilemmaCorrectCount: state.dilemmaCorrectCount,
         investmentTotalAnswered: state.investmentTotalAnswered,
       }),

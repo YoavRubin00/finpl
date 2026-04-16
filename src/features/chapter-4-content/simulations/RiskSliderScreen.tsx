@@ -5,7 +5,7 @@
  */
 
 import { useState, useCallback, useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, ScrollView, Dimensions } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, Dimensions, Alert } from 'react-native';
 import Animated, {
   FadeIn,
   FadeInDown,
@@ -491,7 +491,11 @@ export function RiskSliderScreen({ onComplete }: RiskSliderScreenProps) {
 
   const handleContinue = useCallback(() => {
     tapHaptic();
-    onComplete?.();
+    Alert.alert(
+      'שארק 🦈',
+      'אז למה לא להשקיע תמיד במניות? כי לטווח קצר מניות תנודתיות. יתכן שתהיה שנה דובית (ירידה של 20% בשוק) בדיוק כשנכנסתם.',
+      [{ text: 'הבנתי', onPress: () => onComplete?.() }]
+    );
   }, [onComplete]);
 
   const CH4_LOTTIE: [ReturnType<typeof require>, ReturnType<typeof require>] = [
@@ -527,9 +531,9 @@ export function RiskSliderScreen({ onComplete }: RiskSliderScreenProps) {
       {/* Slider */}
       <Animated.View entering={FadeInUp.delay(200)} style={riskSliderStyles.container}>
         <View style={riskSliderStyles.labelsRow}>
-          <Text style={[riskSliderStyles.endLabel, { color: '#7dd3fc' }]}>100% אג״ח</Text>
+          <Text style={[riskSliderStyles.endLabel, { color: '#7dd3fc', fontSize: 14 }]}>100% אג״ח</Text>
           <Text style={riskSliderStyles.currentValue}>{state.allocation.stockPercent}% מניות</Text>
-          <Text style={[riskSliderStyles.endLabel, { color: '#0ea5e9' }]}>100% מניות</Text>
+          <Text style={[riskSliderStyles.endLabel, { color: '#1e3a8a', fontSize: 14 }]}>100% מניות</Text>
         </View>
         <Slider
           value={state.allocation.stockPercent}

@@ -15,7 +15,6 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import { ChevronLeft } from "lucide-react-native";
 import LottieView from "lottie-react-native";
-import { LinearGradient } from "expo-linear-gradient";
 import Animated, { FadeInDown, FadeInUp } from "react-native-reanimated";
 
 import { tapHaptic } from "../../utils/haptics";
@@ -24,12 +23,10 @@ import { useNotificationStore } from "../notifications/useNotificationStore";
 import { useAudioStore } from "../../stores/useAudioStore";
 import { AVATAR_LIST, DEFAULT_AVATAR_EMOJI } from "../avatars/avatarData";
 import type { CompanionId } from "../auth/types";
-import { SIM4, TYPE4, RTL, SHADOW_LIGHT, SHADOW_STRONG } from "../chapter-4-content/simulations/simTheme";
+import { SIM4, RTL, SHADOW_LIGHT, SHADOW_STRONG } from "../chapter-4-content/simulations/simTheme";
 import { AnimatedPressable } from "../../components/ui/AnimatedPressable";
 import { BackButton } from "../../components/ui/BackButton";
 import { GlowCard } from "../../components/ui/GlowCard";
-import { SimLottieBackground } from "../../components/ui/SimLottieBackground";
-import { SIM_LOTTIE } from "../shared-sim/simLottieMap";
 
 // Stitch Premium Blue Theme
 const STITCH_BLUE = {

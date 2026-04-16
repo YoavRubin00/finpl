@@ -3,7 +3,7 @@
  * Screen: predict recovery times for 7 historical crises.
  */
 
-import { useState, useCallback } from 'react';
+import { useCallback } from 'react';
 import { Image as ExpoImage } from "expo-image";
 import {
   View,
@@ -433,7 +433,7 @@ export function CrisisTimelineScreen({ onComplete }: CrisisTimelineScreenProps) 
 
   return (
     <SimLottieBackground lottieSources={CH4_LOTTIE} chapterColors={_th4.gradient}>
-      <View style={{ flex: 1, padding: 12 }}>
+      <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 12, paddingBottom: 40 }} showsVerticalScrollIndicator={false}>
 
         {/* Progress */}
         <View style={styles.progressRow}>
@@ -501,7 +501,7 @@ export function CrisisTimelineScreen({ onComplete }: CrisisTimelineScreenProps) 
           />
         ) : null}
 
-      </View>
+      </ScrollView>
     </SimLottieBackground>
   );
 }

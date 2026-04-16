@@ -122,8 +122,8 @@ function CandlestickChart({ candles, volumeData }: { candles: CandleData[]; volu
           const wickTop = priceToY(c.high);
           const wickBottom = priceToY(c.low);
           const wickHeight = wickBottom - wickTop;
-          const xPos = i * candleWidth + (candleWidth - bodyWidth) / 2;
-          const wickX = i * candleWidth + candleWidth / 2 - wickWidth / 2;
+          const xPos = (totalCandles - 1 - i) * candleWidth + (candleWidth - bodyWidth) / 2;
+          const wickX = (totalCandles - 1 - i) * candleWidth + candleWidth / 2 - wickWidth / 2;
 
           return (
             <View key={i}>
@@ -165,7 +165,7 @@ function CandlestickChart({ candles, volumeData }: { candles: CandleData[]; volu
               key={i}
               style={{
                 position: 'absolute',
-                left: i * candleWidth + (candleWidth - bodyWidth) / 2,
+                left: (totalCandles - 1 - i) * candleWidth + (candleWidth - bodyWidth) / 2,
                 bottom: 0,
                 width: bodyWidth,
                 height: Math.max(barHeight, 1),
@@ -585,9 +585,12 @@ export function ChartReaderScreen({ onComplete }: ChartReaderScreenProps) {
 
               {/* Next round button */}
               <AnimatedPressable onPress={handleNext} accessibilityRole="button" accessibilityLabel={state.currentRoundIndex < TOTAL_ROUNDS - 1 ? 'לגרף הבא' : 'לתוצאות'} style={styles.nextBtn}>
-                <Text style={styles.nextBtnText}>
-                  {state.currentRoundIndex < TOTAL_ROUNDS - 1 ? 'לגרף הבא →' : 'לתוצאות →'}
+                <Text style={[styles.nextBtnText, { writingDirection: 'rtl' }]}>
+                  {state.currentRoundIndex < TOTAL_ROUNDS - 1 ? 'לגרף הבא' : 'לתוצאות'}
                 </Text>
+                <View style={{ position: 'absolute', left: 16 }} accessible={false}>
+                  <LottieIcon source={LOTTIE_ARROW} size={22} />
+                </View>
               </AnimatedPressable>
             </Animated.View>
           )}
@@ -723,7 +726,7 @@ const styles = StyleSheet.create({
 
 const dotStyles = StyleSheet.create({
   row: {
-    flexDirection: 'row',
+    flexDirection: 'row-reverse',
     justifyContent: 'center',
     gap: 10,
     marginTop: 14,

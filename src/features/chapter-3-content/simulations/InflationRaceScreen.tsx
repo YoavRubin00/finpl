@@ -1,6 +1,9 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { View, Text, StyleSheet, ScrollView } from 'react-native';
+import { Image as ExpoImage } from 'expo-image';
 import { getChapterTheme } from '../../../constants/theme';
+import { FINN_HAPPY } from '../../retention-loops/finnMascotConfig';
+import { GlossaryTooltip } from '../../../components/ui/GlossaryTooltip';
 import Animated, {
   FadeIn,
   FadeInDown,
@@ -120,11 +123,13 @@ function ScoreScreen({
   onContinue: () => void;
 }) {
   const [showConfetti, setShowConfetti] = useState(score.grade === 'S');
+  const [activeTerm, setActiveTerm] = useState<string | null>(null);
   const gradeColor = GRADE_COLORS3[score.grade];
   const unaffordable = products.filter((p) => !p.affordable);
 
   return (
     <View style={[styles.flex1, styles.scoreContainer]}>
+      <GlossaryTooltip term={activeTerm} onClose={() => setActiveTerm(null)} />
       {showConfetti && (
         <ConfettiExplosion onComplete={() => setShowConfetti(false)} />
       )}
@@ -195,6 +200,23 @@ function ScoreScreen({
             <Text style={sim3Styles.insightText}>
               אם הכסף לא צומח, הוא נעלם. אינפלציה היא הגנב השקט.
             </Text>
+          </View>
+
+          {/* Finn Notification */}
+          <View style={{ flexDirection: 'row-reverse', alignItems: 'center', gap: 12, marginTop: 12, backgroundColor: '#f0f9ff', padding: 12, borderRadius: 16, borderWidth: 1, borderColor: '#bae6fd' }}>
+            <ExpoImage source={FINN_HAPPY} style={{ width: 44, height: 44 }} contentFit="contain" />
+            <View style={{ flex: 1 }}>
+              <Text style={{ fontSize: 13, fontWeight: '700', color: '#0c4a6e', writingDirection: 'rtl', textAlign: 'right', lineHeight: 20 }}>
+                התרופה לאינפלציה- השקעה! גם נכסים סולידיים כמו{' '}
+                <Text 
+                  onPress={() => setActiveTerm('קרן כספית')} 
+                  style={{ color: '#0284c7', fontWeight: '900', textDecorationLine: 'underline' }}
+                >
+                  קרן כספית
+                </Text>{' '}
+                תגן עליכם ממנה.
+              </Text>
+            </View>
           </View>
         </View>
       </Animated.View>
@@ -514,8 +536,24 @@ export function InflationRaceScreen({
                   : styles.autoPlayBtn,
               ]}
             >
-              <View style={{ flexDirection: 'row-reverse', alignItems: 'center', gap: 6 }}>
-                <Text style={{ fontSize: 16 }}>👆</Text>
+              {!state.isAutoPlaying && (
+                <Text
+                  pointerEvents="none"
+                  style={{
+                    position: 'absolute',
+                    bottom: -28,
+                    alignSelf: 'center',
+                    fontSize: 38,
+                    textShadowColor: 'rgba(0,0,0,0.35)',
+                    textShadowOffset: { width: 0, height: 2 },
+                    textShadowRadius: 6,
+                    zIndex: 10,
+                  }}
+                >
+                  👆
+                </Text>
+              )}
+              <View style={{ flexDirection: 'row-reverse', alignItems: 'center', gap: 6, zIndex: 1 }}>
                 <LottieIcon source={LOTTIE_PLAY} size={18} />
                 <Text style={[styles.controlBtnText, !state.isAutoPlaying && { color: '#ffffff' }]}>
                   {state.isAutoPlaying ? 'עצור' : 'הפעל אוטומטי'}
@@ -536,7 +574,7 @@ export function InflationRaceScreen({
           >
             <View style={{ flexDirection: 'row-reverse', alignItems: 'center', gap: 6 }}>
               <LottieIcon source={state.showInvestedPath ? LOTTIE_REPLAY : LOTTIE_GROWTH} size={18} />
-              <Text style={styles.controlBtnText}>
+              <Text style={[styles.controlBtnText, state.showInvestedPath && { color: '#ffffff' }]}>
                 {state.showInvestedPath ? 'כסף רגיל' : 'הצג מושקע'}
               </Text>
             </View>
@@ -744,7 +782,7 @@ const styles = StyleSheet.create({
     borderRadius: 5,
   },
   sliderRange: {
-    flexDirection: 'row',
+    flexDirection: 'row-reverse',
     justifyContent: 'space-between',
     paddingHorizontal: 4,
   },
@@ -759,6 +797,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: 6,
     marginBottom: 6,
+    zIndex: 10,
+    overflow: 'visible',
   },
   controlBtn: {
     flex: 1,

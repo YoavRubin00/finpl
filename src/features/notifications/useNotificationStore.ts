@@ -1,7 +1,7 @@
 import * as Notifications from "expo-notifications";
 import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
-import AsyncStorage from "@react-native-async-storage/async-storage";
+import { zustandStorage } from '../../lib/zustandStorage';
 import type { NotificationChannelId, NotificationState } from "./notificationTypes";
 
 // ─── Default handler — show banners in foreground ───────────────────────────
@@ -393,7 +393,7 @@ export const useNotificationStore = create<NotificationState & NotificationActio
     }),
     {
       name: "notification-store",
-      storage: createJSONStorage(() => AsyncStorage),
+      storage: createJSONStorage(() => zustandStorage),
       partialize: (s) => ({
         permissionGranted: s.permissionGranted,
         scheduled: s.scheduled,

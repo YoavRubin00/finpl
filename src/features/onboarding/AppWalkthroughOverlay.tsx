@@ -15,6 +15,7 @@ import Animated, {
 } from "react-native-reanimated";
 import { ChevronLeft, ChevronRight } from "lucide-react-native";
 import { useTutorialStore } from "../../stores/useTutorialStore";
+import { useAuthStore } from "../auth/useAuthStore";
 import { FINN_HELLO } from "../retention-loops/finnMascotConfig";
 import { tapHaptic } from "../../utils/haptics";
 
@@ -156,8 +157,14 @@ export function AppWalkthroughOverlay() {
   const [waitingForChatChoice, setWaitingForChatChoice] = useState(false);
   // Key to force re-mount of content for enter/exit animation between steps
   const [contentKey, setContentKey] = useState(0);
+  const isMinor = useAuthStore((s) => s.profile?.ageGroup === "minor");
 
-  const stepConfig = step >= 0 && step < STEPS.length ? STEPS[step] : null;
+  // Filter out Bridge step for minors (legal protection — no real-money features)
+  const activeSteps = isMinor ? STEPS.filter((s) => s.screenSignal !== "bridge") : STEPS;
+  // Mark the new last step
+  const stepsWithLast = activeSteps.map((s, i) => i === activeSteps.length - 1 ? { ...s, isLast: true } : { ...s, isLast: false });
+
+  const stepConfig = step >= 0 && step < stepsWithLast.length ? stepsWithLast[step] : null;
 
   const setActiveScreen = useTutorialStore((s) => s.setWalkthroughActiveScreen);
   const hasChosenChatStyle = useTutorialStore((s) => s.hasChosenChatStyle);
@@ -195,7 +202,7 @@ export function AppWalkthroughOverlay() {
       return;
     }
 
-    if (step >= STEPS.length - 1) {
+    if (step >= stepsWithLast.length - 1) {
       completeWalkthrough();
       setActiveScreen(null);
       setTimeout(() => {
@@ -212,7 +219,7 @@ export function AppWalkthroughOverlay() {
       return;
     }
 
-    const nextConfig = STEPS[step + 1];
+    const nextConfig = stepsWithLast[step + 1];
     // First update the step (instant), then navigate if needed
     setStep(step + 1);
     setContentKey((k) => k + 1);
@@ -236,7 +243,7 @@ export function AppWalkthroughOverlay() {
     if (transitioning || step <= 0) return;
     tapHaptic();
 
-    const prevConfig = STEPS[step - 1];
+    const prevConfig = stepsWithLast[step - 1];
     setStep(step - 1);
     setContentKey((k) => k + 1);
     setActiveScreen(prevConfig.screenSignal);
@@ -268,7 +275,7 @@ export function AppWalkthroughOverlay() {
             {stepConfig.emoji ? <Text style={s.titleEmoji}>{stepConfig.emoji}</Text> : null}
             <Text style={s.titleText} accessibilityRole="header">{stepConfig.title}</Text>
             <View style={s.stepCounter}>
-              <Text style={s.stepCounterText}>{`${step + 1}/${STEPS.length}`}</Text>
+              <Text style={s.stepCounterText}>{`${step + 1}/${stepsWithLast.length}`}</Text>
             </View>
           </Animated.View>
         </SafeAreaView>
@@ -303,8 +310,8 @@ export function AppWalkthroughOverlay() {
             </Animated.Text>
 
             {/* Dots — smaller for 7 steps */}
-            <View style={s.dotsRow} accessibilityLabel={`שלב ${step + 1} מתוך ${STEPS.length}`} accessibilityRole="text">
-              {STEPS.map((_, i) => (
+            <View style={s.dotsRow} accessibilityLabel={`שלב ${step + 1} מתוך ${stepsWithLast.length}`} accessibilityRole="text">
+              {stepsWithLast.map((_, i) => (
                 <View key={i} style={[s.dot, i === step && s.dotActive]} />
               ))}
             </View>
@@ -363,7 +370,7 @@ export function AppWalkthroughOverlay() {
                   opacity: transitioning ? 0.5 : 1,
                 }}
                 accessibilityRole="button"
-                accessibilityLabel={`${stepConfig.ctaLabel}, שלב ${step + 1} מתוך ${STEPS.length}`}
+                accessibilityLabel={`${stepConfig.ctaLabel}, שלב ${step + 1} מתוך ${stepsWithLast.length}`}
                 accessibilityState={{ disabled: transitioning }}
               >
                 <Text style={{ color: "#ffffff", fontSize: 17, fontWeight: "900" }}>{stepConfig.ctaLabel}</Text>

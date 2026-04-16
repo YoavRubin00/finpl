@@ -1,6 +1,6 @@
 import { useEffect } from "react";
 import { Image as ExpoImage } from "expo-image";
-import { View, Text, Modal, StyleSheet , Image } from "react-native";
+import { View, Text, Modal, StyleSheet } from "react-native";
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -12,7 +12,6 @@ import Animated, {
   FadeOut,
   SlideInDown,
 } from "react-native-reanimated";
-import LottieView from "lottie-react-native";
 import { AnimatedPressable } from "../../components/ui/AnimatedPressable";
 import { FINN_STANDARD } from "../retention-loops/finnMascotConfig";
 import { heavyHaptic } from "../../utils/haptics";

@@ -1,6 +1,6 @@
 import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
-import AsyncStorage from "@react-native-async-storage/async-storage";
+import { zustandStorage } from '../../lib/zustandStorage';
 import { useEconomyStore } from "../economy/useEconomyStore";
 import { useDailyChallengesStore } from "../daily-challenges/use-daily-challenges-store";
 import { useChapterStore } from "../chapter-1-content/useChapterStore";
@@ -90,7 +90,7 @@ export const useDailyQuestsStore = create<DailyQuestsState>()(
     }),
     {
       name: "daily-quests-store",
-      storage: createJSONStorage(() => AsyncStorage),
+      storage: createJSONStorage(() => zustandStorage),
       partialize: (state) => ({
         quests: state.quests,
         questDate: state.questDate,

@@ -6,6 +6,9 @@ export const COMIC_FEED_ITEMS: FeedComic[] = [];
 const BENBEN_CDN = 'https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/video/benben';
 
 /** BENBEN creator videos — one is pinned at feed position 7, rotating each session */
+// Deterministic per-video like counts so the feed feels populated (1,100–9,800 range).
+const BENBEN_LIKE_SEEDS = [3840, 5120, 2780, 8230, 1460, 6290, 4710, 9820, 2150, 7340, 3970, 5680];
+const BENBEN_SAVE_SEEDS = [120, 240, 95, 410, 62, 280, 195, 520, 88, 330, 175, 245];
 export const BENBEN_VIDEOS: FeedVideo[] = Array.from({ length: 12 }, (_, i) => ({
   id: `benben-${i + 1}`,
   type: "video" as const,
@@ -16,8 +19,8 @@ export const BENBEN_VIDEOS: FeedVideo[] = Array.from({ length: 12 }, (_, i) => (
   localVideo: { uri: `${BENBEN_CDN}/benben-${i + 1}.mp4` },
   durationMinutes: 1,
   pyramidLayer: 1 as const,
-  likes: 0,
-  saves: 0,
+  likes: BENBEN_LIKE_SEEDS[i] ?? 2500,
+  saves: BENBEN_SAVE_SEEDS[i] ?? 120,
 }));
 
 export const MOCK_FEED_DATA: FeedItem[] = [
@@ -30,7 +33,7 @@ export const MOCK_FEED_DATA: FeedItem[] = [
     videoId: "placeholder-1",
     durationMinutes: 3,
     pyramidLayer: 1,
-    likes: 124,
+    likes: 4320,
     saves: 12,
     moduleId: "mod-1-1",
     moduleIndex: 0,
@@ -60,8 +63,8 @@ export const MOCK_FEED_DATA: FeedItem[] = [
     videoId: "placeholder-2",
     durationMinutes: 4,
     pyramidLayer: 2,
-    likes: 89,
-    saves: 30,
+    likes: 6180,
+    saves: 240,
     moduleId: "mod-1-3",
     moduleIndex: 2,
     chapterId: "chapter-1",
@@ -87,8 +90,8 @@ export const MOCK_FEED_DATA: FeedItem[] = [
     videoId: "placeholder-3",
     durationMinutes: 5,
     pyramidLayer: 3,
-    likes: 201,
-    saves: 67,
+    likes: 3470,
+    saves: 180,
     moduleId: "mod-2-12",
     moduleIndex: 3,
     chapterId: "chapter-2",
@@ -114,8 +117,8 @@ export const MOCK_FEED_DATA: FeedItem[] = [
     videoId: "placeholder-4",
     durationMinutes: 4,
     pyramidLayer: 1,
-    likes: 312,
-    saves: 88,
+    likes: 5240,
+    saves: 310,
     moduleId: "mod-1-5",
     moduleIndex: 4,
     chapterId: "chapter-1",
@@ -144,8 +147,8 @@ export const MOCK_FEED_DATA: FeedItem[] = [
     videoId: "placeholder-5",
     durationMinutes: 6,
     pyramidLayer: 2,
-    likes: 178,
-    saves: 54,
+    likes: 7120,
+    saves: 420,
     moduleId: "mod-1-2",
     moduleIndex: 1,
     chapterId: "chapter-1",
@@ -171,8 +174,8 @@ export const MOCK_FEED_DATA: FeedItem[] = [
     videoId: "placeholder-6",
     durationMinutes: 5,
     pyramidLayer: 2,
-    likes: 143,
-    saves: 41,
+    likes: 2890,
+    saves: 195,
     moduleId: "mod-2-14",
     moduleIndex: 5,
     chapterId: "chapter-2",
@@ -201,8 +204,8 @@ export const MOCK_FEED_DATA: FeedItem[] = [
     videoId: "placeholder-7",
     durationMinutes: 7,
     pyramidLayer: 4,
-    likes: 267,
-    saves: 93,
+    likes: 8140,
+    saves: 470,
   },
   {
     id: "q7",
@@ -228,8 +231,8 @@ export const MOCK_FEED_DATA: FeedItem[] = [
     videoId: "placeholder-8",
     durationMinutes: 6,
     pyramidLayer: 3,
-    likes: 389,
-    saves: 121,
+    likes: 4730,
+    saves: 280,
     moduleId: "mod-2-11",
     moduleIndex: 2,
     chapterId: "chapter-2",

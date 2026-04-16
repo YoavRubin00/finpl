@@ -19,7 +19,7 @@ import Animated, {
 } from "react-native-reanimated";
 import { useEffect, useCallback } from "react";
 import type { BottomTabBarProps } from "@react-navigation/bottom-tabs";
-import { SPRING_BOUNCY, SPRING_SNAPPY } from "../../utils/animations";
+import { SPRING_BOUNCY } from "../../utils/animations";
 import { tapHaptic } from "../../utils/haptics";
 import { CLASH } from "../../constants/theme";
 import { useTheme } from "../../hooks/useTheme";

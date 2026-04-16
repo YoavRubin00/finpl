@@ -1,6 +1,6 @@
 import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
-import AsyncStorage from "@react-native-async-storage/async-storage";
+import { zustandStorage } from '../../lib/zustandStorage';
 import { FailedConcept, QuestionFailure } from "./adaptiveTypes";
 
 /** Threshold: a concept is "consistently failed" when failCount >= this */
@@ -102,7 +102,7 @@ export const useAdaptiveStore = create<AdaptiveState>()(
     }),
     {
       name: "adaptive-store",
-      storage: createJSONStorage(() => AsyncStorage),
+      storage: createJSONStorage(() => zustandStorage),
       partialize: (state) => ({
         failedConcepts: state.failedConcepts,
         questionFailures: state.questionFailures,

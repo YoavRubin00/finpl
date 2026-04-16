@@ -11,7 +11,7 @@
 ## User Stories
 
 ### US-001 — Streak Freeze Celebration Modal
-- [ ] Target: `src/features/streak/` (new component) + `src/features/economy/useEconomyStore.ts`
+- [x] Target: `src/features/streak/` (new component) + `src/features/economy/useEconomyStore.ts`
 - **Problem:** When Streak Freeze auto-consumes (gap=2 day), nothing visible happens. Silent save = no emotional payoff = no gratitude = no retention lift.
 - **Fix:** On next app open after a freeze-save, show modal:
   - Finn/Captain Shark avatar (empathic pose)
@@ -25,7 +25,7 @@
   - [x] Typecheck passes
 
 ### US-002 — "Out of Freezes" Upsell Banner
-- [ ] Target: `src/features/pyramid/DuoLearnScreen.tsx` (banner component) + hearts/streak UI
+- [x] Target: `src/features/pyramid/DuoLearnScreen.tsx` (banner component) + hearts/streak UI
 - **Problem:** Users with streak ≥ 7 and 0 freezes have no visible warning / upsell. Breaking a 30-day streak is the #1 churn event.
 - **Fix:** Persistent banner (dismissible per-day) above lesson list:
   - Show when `streakDays >= 7 && streakFreezes === 0`

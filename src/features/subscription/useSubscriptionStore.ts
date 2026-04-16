@@ -1,6 +1,6 @@
 import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
-import AsyncStorage from "@react-native-async-storage/async-storage";
+import { zustandStorage } from '../../lib/zustandStorage';
 import type { SubscriptionTier, SubscriptionStatus } from "./types";
 import {
   checkProEntitlement,
@@ -25,7 +25,7 @@ export const BASIC_LIMITS: Record<GatedFeature, number> = {
 /* ------------------------------------------------------------------ */
 
 const MAX_HEARTS = 5;
-const HEART_REFILL_MS = 4 * 60 * 60 * 1000; // 4 hours per heart
+const HEART_REFILL_MS = 5 * 60 * 60 * 1000; // 5 hours per heart
 
 /* ------------------------------------------------------------------ */
 /*  Store interface                                                    */
@@ -327,7 +327,7 @@ export const useSubscriptionStore = create<SubscriptionState>()(
         } catch { /* auth store may not be ready */ }
       },
       version: 2,
-      storage: createJSONStorage(() => AsyncStorage),
+      storage: createJSONStorage(() => zustandStorage),
       partialize: (state) => ({
         tier: state.tier,
         status: state.status,

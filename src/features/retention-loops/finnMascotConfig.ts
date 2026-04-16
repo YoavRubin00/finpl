@@ -14,7 +14,7 @@
 import type { AnimationObject } from "lottie-react-native";
 import type { ImageSource } from "expo-image";
 
-export type FinnAnimationState = "idle" | "celebrate" | "empathy" | "thinking";
+export type FinnAnimationState = "idle" | "celebrate" | "empathy" | "thinking" | "detective" | "vs";
 
 // ── Lottie (animated, looping) ──────────────────────────────────────────────
 
@@ -53,6 +53,8 @@ export function getFinnImage(state: FinnAnimationState): ImageSource {
     case "celebrate": return FINN_HAPPY;
     case "empathy": return FINN_EMPATHIC;
     case "thinking": return FINN_STANDARD;
+    case "detective": return FINN_STANDARD;
+    case "vs": return FINN_HAPPY;
     default: return FINN_STANDARD;
   }
 }

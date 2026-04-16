@@ -406,6 +406,7 @@ export function BrokerCompareScreen({ onComplete }: BrokerCompareScreenProps) {
                   <Text style={sliderStyles.value}>{formatShekel(state.profile.investmentAmount)}</Text>
                 </View>
                 <Slider
+                  inverted={true}
                   value={state.profile.investmentAmount}
                   onValueChange={handleInvestmentChange}
                   minimumValue={10_000}
@@ -432,6 +433,7 @@ export function BrokerCompareScreen({ onComplete }: BrokerCompareScreenProps) {
                   <Text style={sliderStyles.value}>{state.profile.tradesPerMonth}</Text>
                 </View>
                 <Slider
+                  inverted={true}
                   value={state.profile.tradesPerMonth}
                   onValueChange={handleTradesChange}
                   minimumValue={1}
@@ -539,7 +541,7 @@ const sliderStyles = StyleSheet.create({
     gap: 4,
   },
   labelRow: {
-    flexDirection: 'row',
+    flexDirection: 'row-reverse',
     justifyContent: 'space-between',
     alignItems: 'center',
   },
@@ -558,7 +560,7 @@ const sliderStyles = StyleSheet.create({
     height: 40,
   },
   rangeRow: {
-    flexDirection: 'row',
+    flexDirection: 'row-reverse',
     justifyContent: 'space-between',
   },
   rangeText: {
@@ -567,7 +569,7 @@ const sliderStyles = StyleSheet.create({
     fontWeight: '600',
   },
   toggleRow: {
-    flexDirection: 'row',
+    flexDirection: 'row-reverse',
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingTop: 4,
