@@ -20,12 +20,12 @@ All work is UI-ONLY — no logic changes, no new components. Add props, fix colo
   - [x] Typecheck passes
 
 ### US-002 — Add accessibilityLabel to all Pressables in ProfilingFlow
-- [ ] Target: `src/features/onboarding/ProfilingFlow.tsx`
+- [x] Target: `src/features/onboarding/ProfilingFlow.tsx`
 - **Problem:** 41 `<Pressable>`, **zero** labels. Onboarding inaccessible — first-touch experience.
 - **Fix:** Same pattern as US-001.
 - **Acceptance:**
-  - [ ] Every `<Pressable>` has `accessibilityLabel` + `accessibilityRole`
-  - [ ] Typecheck passes
+  - [x] Every `<Pressable>` has `accessibilityLabel` + `accessibilityRole`
+  - [x] Typecheck passes
 
 ### US-003 — Add accessibilityLabel to unlabeled Pressables in LessonFlowScreen
 - [ ] Target: `src/features/chapter-1-content/LessonFlowScreen.tsx`
@@ -52,7 +52,7 @@ All work is UI-ONLY — no logic changes, no new components. Add props, fix colo
   - [ ] Typecheck passes
 
 ### US-006 — Fix ProfilingFlow checkbox border
-- [ ] Target: `src/features/onboarding/ProfilingFlow.tsx` line ~1686
+- [x] Target: `src/features/onboarding/ProfilingFlow.tsx` line ~1686
 - **Problem:** Unchecked checkbox border `#cbd5e1` on white — invisible to many users.
 - **Fix:** Replace with `#64748b` (4.54:1 contrast).
 - **Acceptance:**

@@ -7,3 +7,14 @@
   - Decorative wrappers already use accessible={false}
   - Typecheck passes (pre-existing error in HigherLowerCard.tsx:302)
 ---
+
+## Iteration 2 — US-002: Add accessibilityLabel to ProfilingFlow Pressables
+- All 22 Pressables already have accessibilityRole + accessibilityLabel (Hebrew)
+- Checkbox has accessibilityRole="checkbox" with accessibilityState
+- Files affected: none (already compliant)
+- Learnings:
+  - PRD says 41 Pressables but file was refactored — 22 explicit Pressables remain
+  - AnimatedCard and AnimatedGridCard reusable components already pass label through
+  - All labels are Hebrew, login-related buttons have contextual labels
+  - Typecheck passes (only pre-existing errors in skills/ folder)
+---
