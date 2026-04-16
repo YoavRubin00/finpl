@@ -187,6 +187,8 @@ export const useNotificationStore = create<NotificationState & NotificationActio
         const { permissionGranted, scheduled, cancelChannel } = get();
         if (!permissionGranted) return;
 
+        // Cap: don't stack — cancel ALL pending before adding chest notification
+        await Notifications.cancelAllScheduledNotificationsAsync().catch(() => {});
         await cancelChannel("chest");
 
         const identifier = await Notifications.scheduleNotificationAsync({
@@ -349,13 +351,14 @@ export const useNotificationStore = create<NotificationState & NotificationActio
         set({ scheduled: [...scheduled.filter((s) => s.channelId !== "morning"), { channelId: "morning" as const, identifier }] });
       },
 
-      /** Schedule escalating inactivity notifications (24h/48h/72h) */
+      /** Schedule inactivity notification — capped to 1 only */
       scheduleInactivityEscalation: async (notifications): Promise<void> => {
         const { permissionGranted, scheduled, cancelChannel } = get();
         if (!permissionGranted) return;
         await cancelChannel("inactivity");
+        const capped = notifications.slice(0, 1); // Max 1 notification
         const newScheduled = [...scheduled.filter((s) => s.channelId !== "inactivity")];
-        for (const { content, delayHours } of notifications) {
+        for (const { content, delayHours } of capped) {
           const identifier = await Notifications.scheduleNotificationAsync({
             content,
             trigger: {
