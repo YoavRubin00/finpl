@@ -21,12 +21,12 @@ All work is DATA ONLY — no new components, no new screens, no logic changes. E
   - [x] Typecheck passes
 
 ### US-002 — Fix קרן השתלמות early-withdrawal tax rate
-- [ ] Target: `src/features/chapter-2-content/chapter2Data.ts` (question `q-2-13-3` ~line 500)
+- [x] Target: `src/features/chapter-2-content/chapter2Data.ts` (question `q-2-13-3` ~line 500)
 - **Current (wrong):** "47% או 35%" (35% is קופת גמל, not השתלמות)
 - **Fix to:** "47% + ביטוח לאומי" (remove the 35% — it's wrong for השתלמות)
 - **Acceptance:**
-  - [ ] Answer reflects 47% + ביטוח לאומי only
-  - [ ] Typecheck passes
+  - [x] Answer reflects 47% + ביטוח לאומי only
+  - [x] Typecheck passes
 
 ### US-003 — Fix top income tax bracket reference
 - [ ] Target: `src/features/chapter-2-content/chapter2Data.ts` (~line 500, successFeedback)

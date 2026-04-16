@@ -8,3 +8,13 @@
   - Typecheck passes clean (no pre-existing errors outside skills/)
   - Use sed -i for edits when Edit tool encounters permission issues
 ---
+
+## Iteration 2 — US-002 Fix קרן השתלמות early-withdrawal tax rate
+- Fixed line 500: removed wrong "47% או 35%" → replaced with "עד 47% + ביטוח לאומי"
+- The 35% was wrong (applies to קופת גמל, not קרן השתלמות)
+- Files affected: src/features/chapter-2-content/chapter2Data.ts
+- Learnings for next cycles:
+  - q-2-13-3 is in the mod-2-13 quiz section (~line 496)
+  - US-003 target (successFeedback with 47% reference) is nearby — check ~lines 504-510 area
+  - sed -i continues to work well for single-line Hebrew text replacements
+---
