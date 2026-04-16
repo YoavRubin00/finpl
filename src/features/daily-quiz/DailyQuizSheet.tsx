@@ -237,7 +237,7 @@ const styles = StyleSheet.create({
   },
   dataValue: {
     fontSize: 22,
-    fontWeight: '900',
+    fontWeight: '500',
     color: '#fde047',
   },
   question: {
@@ -296,7 +296,7 @@ const styles = StyleSheet.create({
   },
   explanationTitle: {
     fontSize: 15,
-    fontWeight: '800',
+    fontWeight: '500',
     color: '#fde047',
     writingDirection: 'rtl',
     textAlign: 'right',
@@ -319,7 +319,7 @@ const styles = StyleSheet.create({
   },
   closeBtnText: {
     fontSize: 17,
-    fontWeight: '800',
+    fontWeight: '600',
     color: '#fde047',
     writingDirection: 'rtl',
   },
@@ -334,7 +334,7 @@ const styles = StyleSheet.create({
   },
   citationLabel: {
     fontSize: 13,
-    fontWeight: '800',
+    fontWeight: '500',
     color: '#fde047',
     writingDirection: 'rtl',
     textAlign: 'right',

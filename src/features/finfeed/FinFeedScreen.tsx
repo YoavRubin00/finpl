@@ -20,6 +20,7 @@ import Animated, {
   withTiming,
   withDelay,
   cancelAnimation,
+  useReducedMotion,
 } from "react-native-reanimated";
 import { FINN_STANDARD } from "../retention-loops/finnMascotConfig";
 
@@ -56,6 +57,9 @@ import { SwipeGameCard } from "../daily-challenges/SwipeGameCard";
 import { CrashGameCard } from "../daily-challenges/CrashGameCard";
 import { BullshitSwipeCard } from "./minigames/bullshit-swipe/BullshitSwipeCard";
 import { HigherLowerCard } from "./minigames/higher-lower/HigherLowerCard";
+import { BudgetNinjaCard } from "./minigames/budget-ninja/BudgetNinjaCard";
+import { PriceSliderCard } from "./minigames/price-slider/PriceSliderCard";
+import { CashoutRushCard } from "./minigames/cashout-rush/CashoutRushCard";
 import { GrahamPersonalityFeedCard } from "../graham-personality/GrahamPersonalityFeedCard";
 import { DiamondHandsCard } from "../diamond-hands";
 import { useStreakCelebration } from "../../hooks/useStreakCelebration";
@@ -123,8 +127,13 @@ function getGreeting(): string {
 // -- Animated bounce arrow --
 function BouncingArrow() {
   const ty = useSharedValue(0);
+  const reducedMotion = useReducedMotion();
 
   useEffect(() => {
+    if (reducedMotion) {
+      ty.value = 0;
+      return;
+    }
     ty.value = withRepeat(
       withSequence(
         withTiming(4, { duration: 900 }),
@@ -134,7 +143,7 @@ function BouncingArrow() {
       false,
     );
     return () => cancelAnimation(ty);
-  }, [ty]);
+  }, [ty, reducedMotion]);
 
   const animStyle = useAnimatedStyle(() => ({
     transform: [{ translateY: ty.value }],
@@ -206,8 +215,13 @@ function WelcomeCard({ height }: { height: number }) {
   const scale2 = useSharedValue(1);
   const scale3 = useSharedValue(1);
   const scale4 = useSharedValue(1);
+  const reducedMotion = useReducedMotion();
 
   useEffect(() => {
+    if (reducedMotion) {
+      scale1.value = 1; scale2.value = 1; scale3.value = 1; scale4.value = 1;
+      return;
+    }
     const pulse = (sv: ReturnType<typeof useSharedValue<number>>, delay: number) => {
       sv.value = withDelay(
         delay,
@@ -226,7 +240,7 @@ function WelcomeCard({ height }: { height: number }) {
     pulse(scale3, 1066);
     pulse(scale4, 266);
     return () => { cancelAnimation(scale1); cancelAnimation(scale2); cancelAnimation(scale3); cancelAnimation(scale4); };
-  }, []);
+  }, [reducedMotion]);
   const bubble1Style = useAnimatedStyle(() => ({ transform: [{ scale: scale1.value }] }));
   const bubble2Style = useAnimatedStyle(() => ({ transform: [{ scale: scale2.value }] }));
   const bubble3Style = useAnimatedStyle(() => ({ transform: [{ scale: scale3.value }] }));
@@ -702,6 +716,9 @@ export function FinFeedScreen() {
       { id: 'swipe-game', type: 'swipe-game' },
       { id: 'bullshit-swipe', type: 'bullshit-swipe' as const },
       { id: 'higher-lower', type: 'higher-lower' as const },
+      { id: 'budget-ninja', type: 'budget-ninja' as const },
+      { id: 'price-slider', type: 'price-slider' as const },
+      { id: 'cashout-rush', type: 'cashout-rush' as const },
       { id: 'graham-personality', type: 'graham-personality' } as const,
       { id: 'diamond-hands', type: 'diamond-hands' as const },
     ];
@@ -845,6 +862,15 @@ export function FinFeedScreen() {
         )}
         {item.type === "higher-lower" && (
           <HigherLowerCard isActive={isActive} />
+        )}
+        {item.type === "budget-ninja" && (
+          <BudgetNinjaCard isActive={isActive} />
+        )}
+        {item.type === "price-slider" && (
+          <PriceSliderCard isActive={isActive} />
+        )}
+        {item.type === "cashout-rush" && (
+          <CashoutRushCard isActive={isActive} />
         )}
         {item.type === "graham-personality" && (
           <GrahamPersonalityFeedCard isActive={isActive} />

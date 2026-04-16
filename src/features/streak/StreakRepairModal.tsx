@@ -78,6 +78,10 @@ export function StreakRepairModal({ visible, onDismiss }: StreakRepairModalProps
               onPress={handleRepairCoins}
               style={[styles.primaryBtn, !canAfford && styles.disabledBtn]}
               disabled={!canAfford}
+              accessibilityRole="button"
+              accessibilityLabel={`החזר את הרצף ב-${REPAIR_COST} מטבעות`}
+              accessibilityState={{ disabled: !canAfford }}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
             >
               <Text style={styles.primaryBtnText}>
                 החזר ב-{REPAIR_COST} מטבעות 🪙
@@ -85,14 +89,26 @@ export function StreakRepairModal({ visible, onDismiss }: StreakRepairModalProps
             </Pressable>
 
             {/* Option B: Ad */}
-            <Pressable onPress={handleRepairAd} style={styles.adBtn}>
+            <Pressable
+              onPress={handleRepairAd}
+              style={styles.adBtn}
+              accessibilityRole="button"
+              accessibilityLabel="החזר את הרצף דרך צפייה בפרסומת"
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            >
               <Text style={styles.adBtnText}>
                 החזר דרך צפייה בפרסומת 🎬
               </Text>
             </Pressable>
 
             {/* Option C: Decline */}
-            <Pressable onPress={handleDecline} style={styles.secondaryBtn}>
+            <Pressable
+              onPress={handleDecline}
+              style={styles.secondaryBtn}
+              accessibilityRole="button"
+              accessibilityLabel="סגור, התחל רצף מחדש"
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            >
               <Text style={styles.secondaryBtnText}>לא, אתחיל מחדש</Text>
             </Pressable>
           </Animated.View>

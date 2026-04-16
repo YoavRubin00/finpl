@@ -1,10 +1,15 @@
 import { View, Text, Modal, Pressable, StyleSheet } from "react-native";
-import Animated, { FadeIn, FadeInDown } from "react-native-reanimated";
+import { Image as ExpoImage } from "expo-image";
+import Animated, { FadeIn, FadeInDown, FadeInRight } from "react-native-reanimated";
 import type { AnimationObject } from "lottie-react-native";
+import { Gem, Snowflake } from "lucide-react-native";
 import { LottieIcon } from "../../components/ui/LottieIcon";
 import { AnimatedPressable } from "../../components/ui/AnimatedPressable";
 import { STITCH } from "../../constants/theme";
-import { useDailyQuestsStore } from "./useDailyQuestsStore";
+import { useDailyQuestsStore, previewQuestReward } from "./useDailyQuestsStore";
+import { QUEST_GEM_CHANCE } from "./daily-quest-types";
+import { useEconomyStore } from "../economy/useEconomyStore";
+import { FINN_HELLO, FINN_HAPPY, FINN_STANDARD } from "../retention-loops/finnMascotConfig";
 import { successHaptic } from "../../utils/haptics";
 import { GoldCoinIcon } from "../../components/ui/GoldCoinIcon";
 
@@ -25,12 +30,34 @@ export function DailyQuestsSheet({ visible, onClose }: DailyQuestsSheetProps) {
   const completedCount = useDailyQuestsStore((s) => s.completedCount());
   const allDone = useDailyQuestsStore((s) => s.allCompleted());
   const rewardClaimed = useDailyQuestsStore((s) => s.rewardClaimed);
+  const lastRewardSummary = useDailyQuestsStore((s) => s.lastRewardSummary);
   const claimReward = useDailyQuestsStore((s) => s.claimReward);
+  const streak = useEconomyStore((s) => s.streak);
+
+  const preview = previewQuestReward(streak);
+  const summary = rewardClaimed ? lastRewardSummary : null;
 
   const handleClaim = () => {
     successHaptic();
     claimReward();
   };
+
+  // Shark persona + copy — מגיב למצב
+  const sharkState: "hello" | "happy" | "standard" = rewardClaimed
+    ? "happy"
+    : allDone
+      ? "happy"
+      : completedCount === 0
+        ? "hello"
+        : "standard";
+  const sharkImage = sharkState === "happy" ? FINN_HAPPY : sharkState === "hello" ? FINN_HELLO : FINN_STANDARD;
+  const sharkLine = rewardClaimed
+    ? "תחזור מחר, אני אכין תיבה חדשה 🦈"
+    : allDone
+      ? "סיימת הכל! לחץ על התיבה והפרס שלך"
+      : completedCount === 0
+        ? "אהוי! יש לך 3 משימות היום. נצא לציד?"
+        : `כל הכבוד! עוד ${quests.length - completedCount} ואני אפתח לך את התיבה`;
 
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose} accessibilityViewIsModal>
@@ -39,8 +66,17 @@ export function DailyQuestsSheet({ visible, onClose }: DailyQuestsSheetProps) {
           {/* Handle */}
           <View style={styles.handle} />
 
-          {/* Title */}
-          <Text style={[styles.title, RTL]}>משימות יומיות</Text>
+          {/* Shark hero — presence + coaching */}
+          <View style={styles.sharkHero}>
+            <Animated.View entering={FadeIn.duration(300)} style={styles.sharkAvatarWrap}>
+              <ExpoImage source={sharkImage} style={styles.sharkAvatar} contentFit="contain" accessible={false} />
+            </Animated.View>
+            <Animated.View entering={FadeInRight.delay(120).duration(300)} style={styles.sharkBubbleWrap}>
+              <View style={styles.sharkBubbleTail} />
+              <Text style={[styles.title, RTL, { marginBottom: 4 }]}>משימות יומיות</Text>
+              <Text style={[styles.sharkBubbleText, RTL]}>{sharkLine}</Text>
+            </Animated.View>
+          </View>
 
           {/* Progress bar */}
           <View style={styles.progressTrack}>
@@ -75,36 +111,90 @@ export function DailyQuestsSheet({ visible, onClose }: DailyQuestsSheetProps) {
             ))}
           </View>
 
-          {/* Reward section */}
-          {allDone && !rewardClaimed && (
+          {/* Reward preview / claim */}
+          {!rewardClaimed && (
             <Animated.View entering={FadeInDown.delay(400).duration(400)} style={styles.rewardCard}>
               <LottieIcon source={LOTTIE_CHEST as unknown as number} size={56} autoPlay loop />
-              <View style={{ flexDirection: "row-reverse", alignItems: "center", gap: 6 }}>
-                <Text style={[styles.rewardText, RTL]}>100 XP + 50</Text>
-                <GoldCoinIcon size={16} />
+              <Text style={[styles.rewardHeadline, RTL]}>
+                {allDone ? "התיבה מוכנה!" : "מה מחכה בתיבה?"}
+              </Text>
+
+              <View style={styles.rewardPills}>
+                <View style={styles.rewardPill}>
+                  <Text style={styles.rewardPillValue}>{preview.xp}</Text>
+                  <Text style={styles.rewardPillLabel}>XP</Text>
+                </View>
+                <View style={styles.rewardPill}>
+                  <GoldCoinIcon size={16} />
+                  <Text style={styles.rewardPillValue}>{preview.coins}</Text>
+                </View>
+                <View style={[styles.rewardPill, styles.rewardPillChance]}>
+                  <Gem size={14} color={STITCH.primary} />
+                  <Text style={styles.rewardPillValue}>×{preview.gems}</Text>
+                  <Text style={styles.rewardPillChanceText}>
+                    {Math.round(QUEST_GEM_CHANCE * 100)}%
+                  </Text>
+                </View>
+                {preview.freezes > 0 && (
+                  <View style={[styles.rewardPill, styles.rewardPillBonus]}>
+                    <Snowflake size={14} color="#0284c7" />
+                    <Text style={styles.rewardPillValue}>+1</Text>
+                  </View>
+                )}
               </View>
-              <AnimatedPressable
-                onPress={handleClaim}
-                style={styles.claimBtn}
-                accessibilityRole="button"
-                accessibilityLabel="אסוף פרס"
-              >
-                <Text style={styles.claimBtnText}>אסוף פרס</Text>
-              </AnimatedPressable>
+
+              {preview.streakBonusPct > 0 && (
+                <Text style={[styles.streakBonusLabel, RTL]}>
+                  🔥 בונוס רצף: +{preview.streakBonusPct}%
+                </Text>
+              )}
+
+              {allDone ? (
+                <AnimatedPressable
+                  onPress={handleClaim}
+                  style={styles.claimBtn}
+                  accessibilityRole="button"
+                  accessibilityLabel="אסוף פרס"
+                >
+                  <Text style={styles.claimBtnText}>אסוף פרס</Text>
+                </AnimatedPressable>
+              ) : (
+                <Text style={[styles.hintText, RTL]}>
+                  השלם את כל המשימות כדי לפתוח את התיבה
+                </Text>
+              )}
             </Animated.View>
           )}
 
-          {rewardClaimed && (
-            <View style={styles.claimedRow}>
-              <LottieIcon source={LOTTIE_CHECK} size={20} autoPlay loop={false} />
-              <Text style={[styles.claimedText, RTL]}>הפרס נאסף!</Text>
-            </View>
-          )}
-
-          {!allDone && (
-            <Text style={[styles.hintText, RTL]}>
-              השלם את כל המשימות כדי לפתוח את הפרס
-            </Text>
+          {rewardClaimed && summary && (
+            <Animated.View entering={FadeInDown.duration(300)} style={styles.claimedCard}>
+              <View style={styles.claimedRow}>
+                <LottieIcon source={LOTTIE_CHECK} size={20} autoPlay loop={false} />
+                <Text style={[styles.claimedText, RTL]}>הפרס נאסף!</Text>
+              </View>
+              <View style={styles.rewardPills}>
+                <View style={styles.rewardPill}>
+                  <Text style={styles.rewardPillValue}>{summary.xp}</Text>
+                  <Text style={styles.rewardPillLabel}>XP</Text>
+                </View>
+                <View style={styles.rewardPill}>
+                  <GoldCoinIcon size={16} />
+                  <Text style={styles.rewardPillValue}>{summary.coins}</Text>
+                </View>
+                {summary.gems > 0 && (
+                  <View style={styles.rewardPill}>
+                    <Gem size={14} color={STITCH.primary} />
+                    <Text style={styles.rewardPillValue}>×{summary.gems}</Text>
+                  </View>
+                )}
+                {summary.freezes > 0 && (
+                  <View style={[styles.rewardPill, styles.rewardPillBonus]}>
+                    <Snowflake size={14} color="#0284c7" />
+                    <Text style={styles.rewardPillValue}>+{summary.freezes}</Text>
+                  </View>
+                )}
+              </View>
+            </Animated.View>
           )}
 
           {/* Close */}
@@ -143,6 +233,56 @@ const styles = StyleSheet.create({
     fontWeight: "800",
     color: STITCH.onSurface,
     marginBottom: 14,
+  },
+
+  // Shark hero
+  sharkHero: {
+    flexDirection: "row-reverse",
+    alignItems: "center",
+    gap: 10,
+    marginBottom: 16,
+  },
+  sharkAvatarWrap: {
+    width: 68,
+    height: 68,
+    borderRadius: 34,
+    backgroundColor: "rgba(14,165,233,0.08)",
+    borderWidth: 1.5,
+    borderColor: "rgba(14,165,233,0.25)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  sharkAvatar: {
+    width: 60,
+    height: 60,
+  },
+  sharkBubbleWrap: {
+    flex: 1,
+    position: "relative",
+    backgroundColor: "#ffffff",
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: STITCH.outlineVariant,
+    paddingVertical: 10,
+    paddingHorizontal: 14,
+  },
+  sharkBubbleTail: {
+    position: "absolute",
+    right: -7,
+    top: 22,
+    width: 12,
+    height: 12,
+    backgroundColor: "#ffffff",
+    borderRightWidth: 1,
+    borderTopWidth: 1,
+    borderColor: STITCH.outlineVariant,
+    transform: [{ rotate: "45deg" }],
+  },
+  sharkBubbleText: {
+    fontSize: 13,
+    fontWeight: "600",
+    color: STITCH.onSurfaceVariant,
+    lineHeight: 18,
   },
 
   // Progress
@@ -213,7 +353,7 @@ const styles = StyleSheet.create({
   // Reward
   rewardCard: {
     alignItems: "center",
-    gap: 8,
+    gap: 10,
     backgroundColor: "rgba(115,92,0,0.06)",
     borderRadius: 16,
     borderWidth: 1,
@@ -221,10 +361,68 @@ const styles = StyleSheet.create({
     padding: 18,
     marginBottom: 14,
   },
-  rewardText: {
+  rewardHeadline: {
     fontSize: 16,
     fontWeight: "800",
-    color: STITCH.tertiaryGold,
+    color: STITCH.onSurface,
+  },
+  rewardPills: {
+    flexDirection: "row-reverse",
+    flexWrap: "wrap",
+    gap: 8,
+    justifyContent: "center",
+    marginVertical: 4,
+  },
+  rewardPill: {
+    flexDirection: "row-reverse",
+    alignItems: "center",
+    gap: 4,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 999,
+    backgroundColor: "#ffffff",
+    borderWidth: 1,
+    borderColor: STITCH.outlineVariant,
+  },
+  rewardPillChance: {
+    borderColor: "rgba(0,91,177,0.3)",
+    backgroundColor: "rgba(0,91,177,0.05)",
+  },
+  rewardPillChanceText: {
+    fontSize: 10,
+    fontWeight: "700",
+    color: STITCH.primary,
+    marginLeft: 2,
+  },
+  rewardPillBonus: {
+    borderColor: "rgba(2,132,199,0.35)",
+    backgroundColor: "rgba(2,132,199,0.08)",
+  },
+  rewardPillValue: {
+    fontSize: 14,
+    fontWeight: "800",
+    color: STITCH.onSurface,
+  },
+  rewardPillLabel: {
+    fontSize: 11,
+    fontWeight: "700",
+    color: STITCH.onSurfaceVariant,
+  },
+  streakBonusLabel: {
+    fontSize: 12,
+    fontWeight: "700",
+    color: "#f97316",
+  },
+  claimedCard: {
+    alignItems: "center",
+    gap: 10,
+    paddingVertical: 14,
+    paddingHorizontal: 18,
+    borderRadius: 16,
+    backgroundColor: "rgba(0,91,177,0.06)",
+    borderWidth: 1,
+    borderColor: "rgba(0,91,177,0.18)",
+    marginBottom: 14,
   },
   claimBtn: {
     backgroundColor: STITCH.primary,

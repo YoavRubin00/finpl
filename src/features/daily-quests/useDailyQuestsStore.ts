@@ -4,8 +4,38 @@ import { zustandStorage } from '../../lib/zustandStorage';
 import { useEconomyStore } from "../economy/useEconomyStore";
 import { useDailyChallengesStore } from "../daily-challenges/use-daily-challenges-store";
 import { useChapterStore } from "../chapter-1-content/useChapterStore";
-import type { DailyQuest } from "./daily-quest-types";
-import { QUEST_TEMPLATES, QUEST_XP_REWARD, QUEST_COIN_REWARD } from "./daily-quest-types";
+import type { DailyQuest, QuestRewardSummary } from "./daily-quest-types";
+import {
+  QUEST_TEMPLATES,
+  QUEST_XP_REWARD,
+  QUEST_COIN_REWARD,
+  QUEST_GEM_CHANCE,
+  QUEST_GEM_AMOUNT,
+  QUEST_STREAK_BONUS_STEP,
+  QUEST_STREAK_BONUS_PCT,
+  QUEST_FREEZE_BONUS_MODULO,
+} from "./daily-quest-types";
+
+function streakBonusMultiplier(streak: number): number {
+  const steps = Math.floor(streak / QUEST_STREAK_BONUS_STEP);
+  return 1 + steps * QUEST_STREAK_BONUS_PCT;
+}
+
+function streakBonusPct(streak: number): number {
+  return Math.floor(streak / QUEST_STREAK_BONUS_STEP) * Math.round(QUEST_STREAK_BONUS_PCT * 100);
+}
+
+/** Deterministic preview (max-potential shape) so UI can render a consistent "what's inside" before claim */
+export function previewQuestReward(streak: number): QuestRewardSummary {
+  const mult = streakBonusMultiplier(streak);
+  return {
+    xp: Math.round(QUEST_XP_REWARD * mult),
+    coins: Math.round(QUEST_COIN_REWARD * mult),
+    gems: QUEST_GEM_AMOUNT,
+    freezes: 0,
+    streakBonusPct: streakBonusPct(streak),
+  };
+}
 
 function todayStr(): string {
   return new Date().toISOString().slice(0, 10);
@@ -15,10 +45,11 @@ interface DailyQuestsState {
   quests: DailyQuest[];
   questDate: string;
   rewardClaimed: boolean;
+  lastRewardSummary: QuestRewardSummary | null;
 
   refreshQuests: () => void;
   syncCompletions: () => void;
-  claimReward: () => void;
+  claimReward: () => QuestRewardSummary | null;
 
   completedCount: () => number;
   allCompleted: () => boolean;
@@ -30,6 +61,7 @@ export const useDailyQuestsStore = create<DailyQuestsState>()(
       quests: [],
       questDate: "",
       rewardClaimed: false,
+      lastRewardSummary: null,
 
       refreshQuests: () => {
         const today = todayStr();
@@ -44,7 +76,7 @@ export const useDailyQuestsStore = create<DailyQuestsState>()(
           id: `${today}-${i}`,
           isCompleted: false,
         }));
-        set({ quests, questDate: today, rewardClaimed: false });
+        set({ quests, questDate: today, rewardClaimed: false, lastRewardSummary: null });
       },
 
       syncCompletions: () => {
@@ -79,10 +111,47 @@ export const useDailyQuestsStore = create<DailyQuestsState>()(
       },
 
       claimReward: () => {
-        if (get().rewardClaimed || !get().allCompleted()) return;
-        useEconomyStore.getState().addXP(QUEST_XP_REWARD, "daily_task");
-        useEconomyStore.getState().addCoins(QUEST_COIN_REWARD);
-        set({ rewardClaimed: true });
+        // Atomic synchronous guard against double-click race: flip rewardClaimed
+        // inside set() before external calls so any re-entrant claim is ignored.
+        let alreadyClaimed = false;
+        set((state) => {
+          if (state.rewardClaimed) {
+            alreadyClaimed = true;
+            return state;
+          }
+          const allDone = state.quests.length > 0 && state.quests.every((q) => q.isCompleted);
+          if (!allDone) {
+            alreadyClaimed = true;
+            return state;
+          }
+          return { ...state, rewardClaimed: true };
+        });
+        if (alreadyClaimed) return null;
+
+        const economy = useEconomyStore.getState();
+        const streak = economy.streak;
+        const mult = streakBonusMultiplier(streak);
+
+        const xp = Math.round(QUEST_XP_REWARD * mult);
+        const coins = Math.round(QUEST_COIN_REWARD * mult);
+        const gems = Math.random() < QUEST_GEM_CHANCE ? QUEST_GEM_AMOUNT : 0;
+        // NOTE: streak freeze on day-7 is already granted by useEconomyStore milestone
+        // logic — no duplicate grant here, only surfaced in summary for UI celebration.
+        const freezes = 0;
+
+        economy.addXP(xp, "daily_task");
+        economy.addCoins(coins);
+        if (gems > 0) economy.addGems(gems);
+
+        const summary: QuestRewardSummary = {
+          xp,
+          coins,
+          gems,
+          freezes,
+          streakBonusPct: streakBonusPct(streak),
+        };
+        set({ lastRewardSummary: summary });
+        return summary;
       },
 
       completedCount: () => get().quests.filter((q) => q.isCompleted).length,
@@ -95,6 +164,7 @@ export const useDailyQuestsStore = create<DailyQuestsState>()(
         quests: state.quests,
         questDate: state.questDate,
         rewardClaimed: state.rewardClaimed,
+        lastRewardSummary: state.lastRewardSummary,
       }),
     }
   )

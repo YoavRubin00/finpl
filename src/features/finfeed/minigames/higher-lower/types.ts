@@ -1,4 +1,5 @@
 import type { ImageSourcePropType } from 'react-native';
+import type { GlossaryKey } from '../shared/glossary';
 
 export type ScenarioCategory =
   | 'compound-interest'
@@ -28,4 +29,6 @@ export interface HigherLowerScenario {
   punchline: string;
   illustration?: ImageSourcePropType;
   durationYears: number;
+  /** Glossary keys for complex terms that appear in this scenario */
+  glossaryKeys?: GlossaryKey[];
 }

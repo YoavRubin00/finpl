@@ -8,6 +8,7 @@ import Animated, {
   withTiming,
   FadeIn,
   cancelAnimation,
+  useReducedMotion,
 } from "react-native-reanimated";
 import { LottieIcon } from "../../components/ui/LottieIcon";
 import { STITCH } from "../../constants/theme";
@@ -24,11 +25,12 @@ interface DailyQuestWidgetProps {
 
 export function DailyQuestWidget({ completedCount, totalQuests, onPress }: DailyQuestWidgetProps) {
   const allDone = completedCount >= totalQuests;
+  const reducedMotion = useReducedMotion();
 
-  // Pulsing glow when incomplete
-  const pulse = useSharedValue(0);
+  // Pulsing glow when incomplete — skipped under reduced-motion.
+  const pulse = useSharedValue(reducedMotion ? 0.9 : 0);
   useEffect(() => {
-    if (allDone) {
+    if (allDone || reducedMotion) {
       cancelAnimation(pulse);
       pulse.value = 1;
       return;
@@ -41,7 +43,7 @@ export function DailyQuestWidget({ completedCount, totalQuests, onPress }: Daily
       -1, true,
     );
     return () => cancelAnimation(pulse);
-  }, [allDone, pulse]);
+  }, [allDone, pulse, reducedMotion]);
 
   const glowStyle = useAnimatedStyle(() => ({
     shadowOpacity: pulse.value * 0.4,
@@ -56,6 +58,7 @@ export function DailyQuestWidget({ completedCount, totalQuests, onPress }: Daily
         onPress={() => { tapHaptic(); onPress(); }}
         accessibilityRole="button"
         accessibilityLabel={`משימות יומיות, ${completedCount} מתוך ${totalQuests} הושלמו`}
+        hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
       >
         <Animated.View style={[styles.badge, glowStyle]}>
           <LottieIcon source={LOTTIE_TROPHY} size={26} autoPlay={allDone} loop={false} />

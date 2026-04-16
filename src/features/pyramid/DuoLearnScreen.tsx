@@ -13,6 +13,8 @@ import Animated, {
   withSequence,
   withTiming,
   FadeInDown,
+  useReducedMotion,
+  cancelAnimation,
 } from "react-native-reanimated";
 import LottieView from "lottie-react-native";
 import { LottieIcon } from "../../components/ui/LottieIcon";
@@ -53,11 +55,10 @@ import { useTutorialStore } from "../../stores/useTutorialStore";
 import { useFunStore } from "../../stores/useFunStore";
 import { FlyingRewards } from "../../components/ui/FlyingRewards";
 import { MapEasterEggModal } from "../../components/fun/MapEasterEggModal";
-// Daily quests — disabled temporarily for debugging
-// import { useDailyQuestsStore } from "../daily-quests/useDailyQuestsStore";
-// import { DailyQuestWidget } from "../daily-quests/DailyQuestWidget";
-// import { DailyQuestsSheet } from "../daily-quests/DailyQuestsSheet";
-// import { PathDecorations } from "../daily-quests/PathDecorations";
+import { useDailyQuestsStore } from "../daily-quests/useDailyQuestsStore";
+import { DailyQuestWidget } from "../daily-quests/DailyQuestWidget";
+import { DailyQuestsSheet } from "../daily-quests/DailyQuestsSheet";
+import { QuestPathNode } from "../daily-quests/QuestPathNode";
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -426,8 +427,14 @@ function ArenaHeaderBanner({
 function PulsingGlow({ color }: { color: string }) {
   const opacity = useSharedValue(0.35);
   const scale = useSharedValue(1);
+  const reducedMotion = useReducedMotion();
 
-  useState(() => {
+  useEffect(() => {
+    if (reducedMotion) {
+      opacity.value = 0.5;
+      scale.value = 1;
+      return;
+    }
     opacity.value = withRepeat(
       withSequence(withTiming(0.6, { duration: 1200 }), withTiming(0.3, { duration: 1200 })),
       -1,
@@ -438,7 +445,11 @@ function PulsingGlow({ color }: { color: string }) {
       -1,
       true,
     );
-  });
+    return () => {
+      cancelAnimation(opacity);
+      cancelAnimation(scale);
+    };
+  }, [opacity, scale, reducedMotion]);
 
   const style = useAnimatedStyle(() => ({
     opacity: opacity.value,
@@ -735,7 +746,7 @@ const ChapterSection = React.memo(function ChapterSection({
   onMindMap,
   easterEggNodeId,
   onClaimEasterEgg,
-  questWidgetProps,
+  questPathNodeProps,
 }: {
   arena: ArenaConfig;
   chapter: typeof chapter1Data;
@@ -752,7 +763,13 @@ const ChapterSection = React.memo(function ChapterSection({
   onMindMap?: () => void;
   easterEggNodeId?: string | null;
   onClaimEasterEgg?: () => void;
-  questWidgetProps?: { completedCount: number; totalQuests: number; onPress: () => void };
+  questPathNodeProps?: {
+    completedCount: number;
+    totalQuests: number;
+    allCompleted: boolean;
+    rewardClaimed: boolean;
+    onPress: () => void;
+  };
 }) {
   const firstIncompleteIndex = chapter.modules.findIndex(
     (m) => !completedModules.includes(m.id) && !m.comingSoon && (isPro || !PRO_LOCKED_SIMS.has(m.id)),
@@ -826,6 +843,9 @@ const ChapterSection = React.memo(function ChapterSection({
           // Trail is golden only up to the active module
           const trailDone = isUnlocked && i < activeIndex;
 
+          const showQuestBox = !!questPathNodeProps && hasNext && (i + 1) % 3 === 0;
+          const questOffsetX = -getNodeOffset(i);
+
           return (
             <View key={module.id}>
               <ModuleNode
@@ -851,8 +871,31 @@ const ChapterSection = React.memo(function ChapterSection({
                   }
                 }}
               />
-              {/* Daily Quest Widget — disabled temporarily */}
-              {hasNext && (
+              {showQuestBox && questPathNodeProps && (
+                <>
+                  <PathConnector
+                    fromOffsetX={getNodeOffset(i)}
+                    toOffsetX={questOffsetX}
+                    done={trailDone}
+                    color={colors.glow}
+                  />
+                  <QuestPathNode
+                    offsetX={questOffsetX}
+                    completedCount={questPathNodeProps.completedCount}
+                    totalQuests={questPathNodeProps.totalQuests}
+                    allCompleted={questPathNodeProps.allCompleted}
+                    rewardClaimed={questPathNodeProps.rewardClaimed}
+                    onPress={questPathNodeProps.onPress}
+                  />
+                  <PathConnector
+                    fromOffsetX={questOffsetX}
+                    toOffsetX={getNodeOffset(i + 1)}
+                    done={trailDone && questPathNodeProps.rewardClaimed}
+                    color={colors.glow}
+                  />
+                </>
+              )}
+              {hasNext && !showQuestBox && (
                 <PathConnector
                   fromOffsetX={getNodeOffset(i)}
                   toOffsetX={getNodeOffset(i + 1)}
@@ -897,7 +940,22 @@ export function DuoLearnScreen() {
   const { nudge, dismiss: dismissNudge } = useFeedNudge();
   const dilemmaAnswered = useDailyChallengesStore((s) => s.hasDilemmaAnsweredToday());
   const [questSheetVisible, setQuestSheetVisible] = useState(false);
-  const questCompletedCount = 0; // quests disabled temporarily
+  const refreshQuests = useDailyQuestsStore((s) => s.refreshQuests);
+  const syncQuestCompletions = useDailyQuestsStore((s) => s.syncCompletions);
+  const questCompletedCount = useDailyQuestsStore((s) => s.completedCount());
+  const questTotalCount = useDailyQuestsStore((s) => s.quests.length);
+  const questAllCompleted = useDailyQuestsStore((s) => s.allCompleted());
+  const questRewardClaimed = useDailyQuestsStore((s) => s.rewardClaimed);
+
+  useEffect(() => {
+    refreshQuests();
+  }, [refreshQuests]);
+
+  useFocusEffect(
+    useCallback(() => {
+      syncQuestCompletions();
+    }, [syncQuestCompletions]),
+  );
 
   // Build moduleId → friend emojis map for showing friend avatars on nodes
   const referredFriends = useReferralStore((s) => s.referredFriends);
@@ -1088,7 +1146,15 @@ export function DuoLearnScreen() {
               </View>
             </View>
 
-            {/* Left side: Streak Flame + Calendar */}
+            {/* Left side: Quest Widget + Streak Flame + Calendar */}
+            <View style={{ flexDirection: "row-reverse", alignItems: "center", gap: 10 }}>
+              {questTotalCount > 0 && (
+                <DailyQuestWidget
+                  completedCount={questCompletedCount}
+                  totalQuests={questTotalCount}
+                  onPress={handleQuestPress}
+                />
+              )}
             <Pressable
               onPress={() => { tapHaptic(); setShowStreakCalendar(true); }}
               style={{ alignItems: "center", flexDirection: "row-reverse", gap: 4 }}
@@ -1109,6 +1175,7 @@ export function DuoLearnScreen() {
               </Text>
               <CalendarDays size={16} color={streak >= 8 ? "#a855f7" : streak >= 4 ? "#3b82f6" : "#f97316"} style={{ opacity: 0.7 }} />
             </Pressable>
+            </View>
           </View>
 
           {/* Chapter sections */}
@@ -1148,9 +1215,11 @@ export function DuoLearnScreen() {
                 onSkipIntro={idx === 0 ? handleSkipIntro : undefined}
                 onChapterPress={handleRoadmapPress}
                 onMindMap={() => handleMindMap(idx)}
-                questWidgetProps={hasActiveModule ? {
+                questPathNodeProps={hasActiveModule ? {
                   completedCount: questCompletedCount,
-                  totalQuests: 3,
+                  totalQuests: questTotalCount,
+                  allCompleted: questAllCompleted,
+                  rewardClaimed: questRewardClaimed,
                   onPress: handleQuestPress,
                 } : undefined}
               />
@@ -1278,7 +1347,7 @@ export function DuoLearnScreen() {
           </Modal>
         )}
 
-        {/* DailyQuestsSheet disabled temporarily */}
+        <DailyQuestsSheet visible={questSheetVisible} onClose={() => setQuestSheetVisible(false)} />
 
         {/* Learning Roadmap Modal */}
         <Modal visible={roadmapVisible} transparent animationType="fade" onRequestClose={() => setRoadmapVisible(false)} accessibilityViewIsModal>

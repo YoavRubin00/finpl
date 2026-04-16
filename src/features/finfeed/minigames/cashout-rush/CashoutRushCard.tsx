@@ -339,7 +339,9 @@ export const CashoutRushCard = React.memo(function CashoutRushCard({ isActive: _
         {phase === 'cashed' && (
           <Animated.View entering={FadeInUp.duration(280)} style={styles.sharkBubble}>
             <View style={styles.sharkRow}>
-              <ExpoImage source={FINN_HAPPY} style={styles.sharkAvatar} contentFit="contain" accessible={false} />
+              <View style={styles.sharkAvatarWrap}>
+                <ExpoImage source={FINN_HAPPY} style={styles.sharkAvatar} contentFit="cover" accessible={false} />
+              </View>
               <View style={styles.sharkTextCol}>
                 <Text style={[styles.sharkTitle, RTL, { color: '#16a34a' }]}>הפעם שמרת על הרווח</Text>
                 <Text style={[styles.sharkBody, RTL]} numberOfLines={4}>
@@ -353,7 +355,9 @@ export const CashoutRushCard = React.memo(function CashoutRushCard({ isActive: _
         {phase === 'crashed' && (
           <Animated.View entering={FadeInUp.duration(280)} style={styles.sharkBubble}>
             <View style={styles.sharkRow}>
-              <ExpoImage source={FINN_EMPATHIC} style={styles.sharkAvatar} contentFit="contain" accessible={false} />
+              <View style={styles.sharkAvatarWrap}>
+                <ExpoImage source={FINN_EMPATHIC} style={styles.sharkAvatar} contentFit="cover" accessible={false} />
+              </View>
               <View style={styles.sharkTextCol}>
                 <Text style={[styles.sharkTitle, RTL, { color: '#dc2626' }]}>נעצרת מאוחר מדי</Text>
                 <Text style={[styles.sharkBody, RTL]} numberOfLines={4}>
@@ -549,9 +553,20 @@ const styles = StyleSheet.create({
     gap: 10,
     alignItems: 'flex-start',
   },
+  sharkAvatarWrap: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    overflow: 'hidden',
+    backgroundColor: '#e0f2fe',
+    borderWidth: 1.5,
+    borderColor: 'rgba(14,165,233,0.3)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   sharkAvatar: {
-    width: 52,
-    height: 52,
+    width: 40,
+    height: 40,
   },
   sharkTextCol: {
     flex: 1,

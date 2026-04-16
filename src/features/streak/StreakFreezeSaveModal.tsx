@@ -57,12 +57,24 @@ export function StreakFreezeSaveModal({ visible, onDismiss }: StreakFreezeSaveMo
             </Text>
 
             {/* Primary CTA */}
-            <Pressable onPress={handleContinue} style={styles.primaryBtn}>
+            <Pressable
+              onPress={handleContinue}
+              style={styles.primaryBtn}
+              accessibilityRole="button"
+              accessibilityLabel="המשך ללמוד"
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            >
               <Text style={styles.primaryBtnText}>המשך ללמוד</Text>
             </Pressable>
 
             {/* Secondary CTA */}
-            <Pressable onPress={handleBuyMore} style={styles.secondaryBtn}>
+            <Pressable
+              onPress={handleBuyMore}
+              style={styles.secondaryBtn}
+              accessibilityRole="button"
+              accessibilityLabel="קנה עוד מגיני רצף בחנות"
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            >
               <Text style={styles.secondaryBtnText}>קנה עוד מגינים</Text>
             </Pressable>
           </Animated.View>

@@ -37,6 +37,7 @@ export const HIGHER_LOWER_SCENARIOS: HigherLowerScenario[] = [
     correctSide: 'right',
     explanation: 'כשמשקיעים 2,000 ₪ כל חודש במדד S&P 500 עם תשואה ריאלית ממוצעת של 7%, מגיעים אחרי 25 שנה ל־1.62M ₪. מיליון במזרן מאבד ערך לאינפלציה — וגם נומינלית, הריבית הדריבית של ההשקעה מנצחת.',
     punchline: 'הכסף חייב לעבוד, לא לנוח במזרן',
+    glossaryKeys: ['compound-interest', 'inflation', 'real-vs-nominal'],
   },
   {
     id: 'hl-early-vs-late-invest',
@@ -63,6 +64,7 @@ export const HIGHER_LOWER_SCENARIOS: HigherLowerScenario[] = [
     correctSide: 'left',
     explanation: 'יוסי הפקיד בסך הכל 240K ₪ (10 שנים) והגיע ל־3.1M. משה הפקיד 792K ₪ (33 שנים) והגיע ל־2.85M. ההתחלה המוקדמת נתנה לכסף 33 שנה נוספות לצמוח — זה כוח הריבית הדריבית על זמן.',
     punchline: 'זמן מנצח סכום. כל שנה של דחייה עולה ביוקר',
+    glossaryKeys: ['compound-interest', 'exponential'],
   },
   {
     id: 'hl-crypto-vs-etf',
@@ -79,7 +81,7 @@ export const HIGHER_LOWER_SCENARIOS: HigherLowerScenario[] = [
       finalValueLabel: '₪ (תלוי בתרחיש)',
     },
     rightSide: {
-      title: '100K ב-ETF עולמי מפוזר',
+      title: '100K ב-ETF מדד עולמי',
       subtitle: '7% ריאלי, דמי ניהול 0.3%',
       gradient: COMFORT_GRAD,
       textColor: '#ffffff',
@@ -89,6 +91,7 @@ export const HIGHER_LOWER_SCENARIOS: HigherLowerScenario[] = [
     correctSide: 'right',
     explanation: 'ETF מפוזר עם 7% ריאלי הופך 100K ל־761K תוך 30 שנה. תיק של 3 מטבעות קריפטו חשוף לתנודתיות של 70%+: הוא יכול לעלות פי 40 או לאבד 95%. לחיסכון פנסיוני — ודאות סטטיסטית מנצחת הימור.',
     punchline: 'פיזור = חוסן. ריכוז = הימור',
+    glossaryKeys: ['etf', 'inflation'],
   },
   {
     id: 'hl-pay-debt-vs-invest',
@@ -104,7 +107,7 @@ export const HIGHER_LOWER_SCENARIOS: HigherLowerScenario[] = [
       finalValueLabel: '₪ חיסכון בריבית',
     },
     rightSide: {
-      title: 'להשקיע ב-ETF',
+      title: 'להשקיע ב-ETF מחקה מדד',
       subtitle: 'תשואה ריאלית ~7%',
       gradient: NEUTRAL_GRAD,
       textColor: '#ffffff',
@@ -114,6 +117,7 @@ export const HIGHER_LOWER_SCENARIOS: HigherLowerScenario[] = [
     correctSide: 'left',
     explanation: 'חוב אשראי ב-14% זו "תשואה שלילית מובטחת". פירעון חוסך 46K בריבית ב-5 שנים. השקעה ב-7% תרוויח רק 20K. **תמיד תשלם חוב ב-14% לפני שתשקיע ב-7%** — זה חשבון בסיסי.',
     punchline: 'חוב אשראי = תשואה שלילית של 14%',
+    glossaryKeys: ['apr', 'etf', 'real-vs-nominal'],
   },
   {
     id: 'hl-active-vs-passive',
@@ -121,7 +125,7 @@ export const HIGHER_LOWER_SCENARIOS: HigherLowerScenario[] = [
     question: '100K ל-30 שנה. איזה אפיק יניב יותר?',
     durationYears: 30,
     leftSide: {
-      title: 'קרן אקטיבית',
+      title: 'קרן נאמנות אקטיבית',
       subtitle: '10% ברוטו, 2% דמי ניהול',
       gradient: DANGER_GRAD,
       textColor: '#ffffff',
@@ -129,7 +133,7 @@ export const HIGHER_LOWER_SCENARIOS: HigherLowerScenario[] = [
       finalValueLabel: '₪',
     },
     rightSide: {
-      title: 'קרן פסיבית (ETF מחקה)',
+      title: 'קרן סל מחקה S&P 500',
       subtitle: '10% ברוטו, 0.1% דמי ניהול',
       gradient: GROWTH_GRAD,
       textColor: '#ffffff',
@@ -137,8 +141,9 @@ export const HIGHER_LOWER_SCENARIOS: HigherLowerScenario[] = [
       finalValueLabel: '₪',
     },
     correctSide: 'right',
-    explanation: 'דמי ניהול של 2% לעומת 0.1% נראה קטן — אבל אחרי 30 שנה ההבדל הוא 700K ₪. דמי ניהול שוחקים ריבית דריבית באקספוננציאליות. 85% מהקרנות האקטיביות לא מכות את המדד לטווח ארוך.',
+    explanation: 'דמי ניהול של 2% לעומת 0.1% נראה קטן — אבל אחרי 30 שנה ההבדל הוא 700K ₪. דמי ניהול שוחקים ריבית דריבית באקספוננציאליות. מחקרי SPIVA מראים שכ-85% מהקרנות האקטיביות לא מכות את המדד לטווח ארוך.',
     punchline: 'כל אחוז דמי ניהול = עשרות אחוזי הפסד על 30 שנה',
+    glossaryKeys: ['exponential', 'compound-interest', 'etf'],
   },
   {
     id: 'hl-employer-match',
@@ -164,6 +169,7 @@ export const HIGHER_LOWER_SCENARIOS: HigherLowerScenario[] = [
     correctSide: 'right',
     explanation: 'התאמת מעסיק היא "תשואה של 100% מיידית" על כל שקל שהפקדת. אם לא לוקחים את זה — זורקים כסף חינם. אחרי 30 שנה בתשואה של 7% — ההפרש הוא 1.13M ₪.',
     punchline: 'התאמת מעסיק = כסף חינם. תמיד תקח',
+    glossaryKeys: ['compound-interest', 'pension-fund'],
   },
   {
     id: 'hl-rent-vs-buy',
@@ -187,8 +193,9 @@ export const HIGHER_LOWER_SCENARIOS: HigherLowerScenario[] = [
       finalValueLabel: '₪ בתיק',
     },
     correctSide: 'left',
-    explanation: 'בתל אביב עלית ערך ממוצעת של 4-5% שנתי + קיצור חוב = בעל הדירה מחזיק בשווי ~4.5M. השוכר מרוויח 3.4M בתיק ההשקעות. בשוק הישראלי — קנייה מנצחת לטווח ארוך בזכות מינוף הנדל"ן.',
-    punchline: 'נדל"ן בישראל = מינוף + אינפלציה + שליטה',
+    explanation: 'בתל אביב עלית ערך היסטורית של 4-5% שנתי + קיצור חוב = בעל הדירה מחזיק בשווי ~4.5M. השוכר מרוויח 3.4M בתיק. תלוי בעליית ערך השוק — אין ערובה שהעבר יחזור. בהיסטוריה של 25 שנה — קנייה בת"א ניצחה, אבל לא בכל תקופה ולא בכל עיר.',
+    punchline: 'נדל"ן בישראל היסטורית חזק — אך לא ערובה',
+    glossaryKeys: ['compound-interest', 'inflation'],
   },
   {
     id: 'hl-gemel-vs-savings',
@@ -204,7 +211,7 @@ export const HIGHER_LOWER_SCENARIOS: HigherLowerScenario[] = [
       finalValueLabel: '₪ נטו',
     },
     rightSide: {
-      title: 'קופת גמל להשקעה',
+      title: 'קופת גמל להשקעה — מסלול מנייתי',
       subtitle: '7% ריאלי, פטור ממס בגיל 60',
       gradient: GOLD_GRAD,
       textColor: '#0f1e4a',
@@ -212,8 +219,9 @@ export const HIGHER_LOWER_SCENARIOS: HigherLowerScenario[] = [
       finalValueLabel: '₪ נטו',
     },
     correctSide: 'right',
-    explanation: 'גם קופת גמל להשקעה וגם חיסכון בנקאי ממוסים — אבל רק קופת גמל פטורה ממס רווחי הון אם מושכים בגיל 60+. ב-20 שנה עם 76K שנתי, ההפרש הוא 1.26M ₪ — בזכות ההטבה המיסויית וההזדמנות למסלול מנייתי.',
+    explanation: 'גם קופת גמל להשקעה וגם חיסכון בנקאי ממוסים — אבל רק קופת גמל פטורה ממס רווחי הון אם מושכים בגיל 60+. ב-20 שנה עם 76K שנתי, ההפרש הוא 1.26M ₪ — בזכות ההטבה המיסויית והבחירה במסלול מנייתי (כמו "מסלול S&P 500" או "מסלול מניות חו"ל").',
     punchline: 'הטבות מס + ריבית דריבית = סופר-כוח',
+    glossaryKeys: ['gemel-investment', 'equity-track', 'compound-interest'],
   },
 ];
 

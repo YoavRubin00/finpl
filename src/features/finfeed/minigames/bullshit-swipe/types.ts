@@ -1,4 +1,5 @@
 import type { ImageSourcePropType } from 'react-native';
+import type { GlossaryKey } from '../shared/glossary';
 
 export type AdTemplateId =
   | 'scam-neon'
@@ -27,6 +28,7 @@ export interface BullshitAd {
   badge?: string;
   disclaimer: string;
   explanation: string;
+  glossaryKeys?: GlossaryKey[];
 }
 
 export interface BullshitRoundResult {

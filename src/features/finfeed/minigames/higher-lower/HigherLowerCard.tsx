@@ -23,6 +23,7 @@ import { CHALLENGE_COIN_REWARD, CHALLENGE_XP_REWARD, MAX_DAILY_PLAYS } from '../
 
 import { getRandomScenario } from './higherLowerData';
 import type { HigherLowerScenario, ScenarioSide } from './types';
+import { GlossaryTermPill } from '../shared/GlossaryTermPill';
 
 const RTL = { writingDirection: 'rtl' as const, textAlign: 'right' as const };
 const RTL_CENTER = { writingDirection: 'rtl' as const, textAlign: 'center' as const };
@@ -210,7 +211,9 @@ function CaptainSharkReveal({
       accessibilityLabel={a11yLabel}
     >
       <View style={styles.sharkRow}>
-        <ExpoImage source={source} style={styles.sharkAvatar} contentFit="contain" accessible={false} />
+        <View style={styles.sharkAvatarWrap}>
+          <ExpoImage source={source} style={styles.sharkAvatar} contentFit="cover" accessible={false} />
+        </View>
         <View style={styles.sharkTextCol}>
           <Text style={[styles.sharkTitle, RTL, { color: headerColor }]}>{title}</Text>
           <Text style={[styles.sharkBody, RTL]} numberOfLines={6}>
@@ -222,6 +225,13 @@ function CaptainSharkReveal({
               {scenario.punchline}
             </Text>
           </View>
+          {scenario.glossaryKeys && scenario.glossaryKeys.length > 0 && (
+            <View style={styles.glossaryRow}>
+              {scenario.glossaryKeys.map((k) => (
+                <GlossaryTermPill key={k} glossaryKey={k} />
+              ))}
+            </View>
+          )}
         </View>
       </View>
     </Animated.View>
@@ -521,9 +531,20 @@ const styles = StyleSheet.create({
     gap: 10,
     alignItems: 'flex-start',
   },
+  sharkAvatarWrap: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    overflow: 'hidden',
+    backgroundColor: '#e0f2fe',
+    borderWidth: 1.5,
+    borderColor: 'rgba(14,165,233,0.3)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   sharkAvatar: {
-    width: 52,
-    height: 52,
+    width: 40,
+    height: 40,
   },
   sharkTextCol: {
     flex: 1,
@@ -555,6 +576,15 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '800',
     color: '#0369a1',
+  },
+  glossaryRow: {
+    flexDirection: 'row-reverse',
+    flexWrap: 'wrap',
+    gap: 6,
+    marginTop: 8,
+    paddingTop: 8,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(14,165,233,0.15)',
   },
   rewardsRow: {
     flexDirection: 'row-reverse',

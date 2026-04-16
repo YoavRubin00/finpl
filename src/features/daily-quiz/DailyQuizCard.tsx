@@ -479,7 +479,7 @@ const styles = StyleSheet.create({
   },
   citationLabel: {
     fontSize: 11,
-    fontWeight: '800',
+    fontWeight: '500',
     color: '#d97706',
     writingDirection: 'rtl',
     textAlign: 'right',

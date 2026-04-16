@@ -189,7 +189,9 @@ function SharkResult({ score, kindsAllowed }: { score: number; kindsAllowed: boo
       accessibilityLabel={`${title}. ${body}`}
     >
       <View style={styles.sharkRow}>
-        <ExpoImage source={image} style={styles.sharkAvatar} contentFit="contain" accessible={false} />
+        <View style={styles.sharkAvatarWrap}>
+          <ExpoImage source={image} style={styles.sharkAvatar} contentFit="cover" accessible={false} />
+        </View>
         <View style={styles.sharkTextCol}>
           <Text style={[styles.sharkTitle, RTL]}>{title}</Text>
           <Text style={[styles.sharkBody, RTL]} numberOfLines={4}>
@@ -559,9 +561,20 @@ const styles = StyleSheet.create({
     gap: 10,
     alignItems: 'flex-start',
   },
+  sharkAvatarWrap: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    overflow: 'hidden',
+    backgroundColor: '#e0f2fe',
+    borderWidth: 1.5,
+    borderColor: 'rgba(14,165,233,0.3)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   sharkAvatar: {
-    width: 52,
-    height: 52,
+    width: 40,
+    height: 40,
   },
   sharkTextCol: {
     flex: 1,

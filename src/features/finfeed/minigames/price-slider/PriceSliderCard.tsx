@@ -353,7 +353,9 @@ export const PriceSliderCard = React.memo(function PriceSliderCard({ isActive: _
         {phase === 'done' && (
           <Animated.View entering={FadeInUp.duration(320)} style={[styles.sharkBubble, sharkStyle]}>
             <View style={styles.sharkRow}>
-              <ExpoImage source={sharkImage} style={styles.sharkAvatar} contentFit="contain" accessible={false} />
+              <View style={styles.sharkAvatarWrap}>
+                <ExpoImage source={sharkImage} style={styles.sharkAvatar} contentFit="cover" accessible={false} />
+              </View>
               <View style={styles.sharkTextCol}>
                 <Text style={[styles.sharkTitle, RTL, { color: tierColor }]}>{tierLabel}</Text>
                 <Text style={[styles.sharkBody, RTL]} numberOfLines={5}>
@@ -557,9 +559,20 @@ const styles = StyleSheet.create({
     gap: 10,
     alignItems: 'flex-start',
   },
+  sharkAvatarWrap: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    overflow: 'hidden',
+    backgroundColor: '#e0f2fe',
+    borderWidth: 1.5,
+    borderColor: 'rgba(14,165,233,0.3)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   sharkAvatar: {
-    width: 52,
-    height: 52,
+    width: 40,
+    height: 40,
   },
   sharkTextCol: {
     flex: 1,

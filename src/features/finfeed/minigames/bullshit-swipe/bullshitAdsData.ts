@@ -8,8 +8,9 @@ export const BULLSHIT_ADS: BullshitAd[] = [
     headline: 'הלוואה 0% ריבית!',
     subheadline: '50,000 ₪ לכל מטרה — אישור מיידי',
     badge: 'הצעה לזמן מוגבל',
-    disclaimer: '*דמי טיפול 8%, עמלות שנתיות 350₪, ריבית אפקטיבית 14%',
-    explanation: 'גם כשהריבית כתובה 0%, דמי הטיפול והעמלות מייצרים APR אפקטיבי של 14%+. 0% ריבית ≠ 0% עלות.',
+    disclaimer: '*דמי טיפול 8%, עמלות שנתיות 350₪, ריבית אפקטיבית כ-10%',
+    explanation: 'גם כשהריבית כתובה 0%, דמי הטיפול והעמלות מייצרים APR אפקטיבי של כ-8-10%. 0% ריבית ≠ 0% עלות.',
+    glossaryKeys: ['apr'],
   },
   {
     id: 'bs-crypto-2x',
@@ -20,6 +21,7 @@ export const BULLSHIT_ADS: BullshitAd[] = [
     badge: 'מקומות מוגבלים!',
     disclaimer: 'תוצאות אישיות משתנות',
     explanation: 'אין דרך חוקית להבטיח הכפלת כסף ב-30 יום. הבטחות כאלה הן חתימה קלאסית של פונזי או הונאה.',
+    glossaryKeys: ['ponzi'],
   },
   {
     id: 'bs-mlm-passive',
@@ -30,6 +32,7 @@ export const BULLSHIT_ADS: BullshitAd[] = [
     badge: 'הזדמנות ייחודית',
     disclaimer: 'הרווחים תלויים במאמץ האישי',
     explanation: 'מחקרי FTC מראים ש-99% ממשתתפי MLM מפסידים כסף. הרווח האמיתי מגיע מגיוס חברים חדשים — לא ממוצר אמיתי.',
+    glossaryKeys: ['mlm'],
   },
   {
     id: 'bs-excel-algorithm',
@@ -59,7 +62,7 @@ export const BULLSHIT_ADS: BullshitAd[] = [
     subheadline: 'סדרת מאסטרים עם הסוחר הטוב בישראל',
     badge: 'הכשרה פרטנית',
     disclaimer: 'הצלחה אישית אינה מעידה',
-    explanation: '90-95% מסוחרי פורקס יומי מפסידים כסף (FT research). הצלחה של אחד = אנקדוטה, לא אסטרטגיה.',
+    explanation: 'כ-90% מסוחרי פורקס יומי מפסידים כסף (מחקרי רגולטורים אירופאיים). הצלחה של אחד = אנקדוטה, לא אסטרטגיה.',
   },
   {
     id: 'bs-nft-insider',
@@ -70,6 +73,7 @@ export const BULLSHIT_ADS: BullshitAd[] = [
     badge: '24 שעות בלבד',
     disclaimer: 'ערך נכסים דיגיטליים תנודתי',
     explanation: '"פוטנציאל x50" הוא סיסמת pump & dump — יוצרים הייפ, מוכרים את האחזקות שלהם, עוזבים את הקונה עם אסימון חסר ערך.',
+    glossaryKeys: ['pump-and-dump'],
   },
   {
     id: 'bs-daytrading-nocourse',
@@ -86,10 +90,11 @@ export const BULLSHIT_ADS: BullshitAd[] = [
     isBullshit: false,
     templateId: 'legit-corporate',
     headline: 'S&P 500 ETF',
-    subheadline: '10% תשואה נומינלית ממוצעת (100 שנה)',
+    subheadline: '~10% תשואה נומינלית שנתית (ממוצע ~100 שנה)',
     badge: 'מכשיר פיננסי מפוקח',
     disclaimer: '*תשואות עבר אינן ערובה לעתיד',
-    explanation: 'פרסומת לגיטימית. המספר ההיסטורי אמיתי (תשואה ריאלית ~7% בניכוי אינפלציה). גילוי נאות ברור.',
+    explanation: 'פרסומת לגיטימית. המספר ההיסטורי אמיתי — כ-10% נומינלי (≈7% ריאלי בניכוי אינפלציה) מאז 1926. גילוי נאות ברור.',
+    glossaryKeys: ['etf', 'real-vs-nominal', 'inflation'],
   },
   {
     id: 'lg-bank-deposit',
@@ -110,16 +115,18 @@ export const BULLSHIT_ADS: BullshitAd[] = [
     badge: 'לפי חוק מס הכנסה',
     disclaimer: 'תשואות משתנות לפי מסלול השקעה',
     explanation: 'קרן השתלמות = הטבת מס חוקית (סעיף 9(16) לפקודת מס הכנסה). מוסדר במשרד האוצר.',
+    glossaryKeys: ['pension-fund'],
   },
   {
     id: 'lg-index-fund',
     isBullshit: false,
     templateId: 'legit-corporate',
-    headline: 'קרן מחקה S&P 500',
-    subheadline: 'דמי ניהול 0.3% בלבד',
-    badge: 'קרן פסיבית',
+    headline: 'קרן סל מחקה S&P 500',
+    subheadline: 'דמי ניהול ~0.3%',
+    badge: 'קרן סל פסיבית',
     disclaimer: '*אין הבטחת תשואה. תלוי בביצועי המדד',
-    explanation: 'קרן פסיבית עוקבת אחרי מדד. דמי ניהול נמוכים ושקופים, אידיאלי לחסכון לטווח ארוך.',
+    explanation: 'קרן סל (ETF) מחקה עוקבת אחרי מדד. דמי ניהול נמוכים ושקופים, אידיאלי לחסכון לטווח ארוך.',
+    glossaryKeys: ['etf'],
   },
   {
     id: 'lg-gov-bond',
@@ -130,6 +137,7 @@ export const BULLSHIT_ADS: BullshitAd[] = [
     badge: 'ערבות מדינה',
     disclaimer: 'מחוייב לתקופה עד פדיון',
     explanation: 'אג"ח של מדינת ישראל — אפיק סולידי. הריבית צמודה למדד = הגנה מאינפלציה. סיכון נמוך ביותר.',
+    glossaryKeys: ['inflation', 'real-vs-nominal'],
   },
   {
     id: 'lg-parent-pension',
@@ -140,6 +148,7 @@ export const BULLSHIT_ADS: BullshitAd[] = [
     badge: 'הטבת מס חוקית',
     disclaimer: 'תקרה שנתית מותנית בהכנסה',
     explanation: 'הטבת מס חוקית לפי סעיף 45א לפקודת מס הכנסה — הפקדה לקרן פנסיה של הורה מזכה בהחזר מס אמיתי.',
+    glossaryKeys: ['section-45a'],
   },
   {
     id: 'lg-gemel-investment',
@@ -148,8 +157,9 @@ export const BULLSHIT_ADS: BullshitAd[] = [
     headline: 'קופת גמל להשקעה',
     subheadline: 'משיכה בגיל 60 — ללא מס רווחי הון',
     badge: 'אישור משרד האוצר',
-    disclaimer: 'תקרה שנתית ₪76,449 (2025)',
+    disclaimer: 'תקרה שנתית כ-₪77,208 (מתעדכן לפי המדד)',
     explanation: 'מסלול חסכון חוקי עם יתרונות מס ברורים. התקרה השנתית ותנאי המשיכה מוגדרים בחוק ושקופים.',
+    glossaryKeys: ['gemel-investment'],
   },
 ];
 

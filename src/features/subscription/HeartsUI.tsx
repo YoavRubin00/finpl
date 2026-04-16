@@ -12,6 +12,7 @@ import Animated, {
     withSequence,
     withTiming,
     cancelAnimation,
+    useReducedMotion,
     FadeIn,
     FadeOut,
 } from 'react-native-reanimated';
@@ -110,8 +111,9 @@ export function OutOfHeartsModal({ visible, onDismiss, onUpgrade, onHeartsRefill
 
     // Gentle pulse animation for emoji
     const pulse = useSharedValue(1);
+    const reducedMotion = useReducedMotion();
     useEffect(() => {
-        if (visible) {
+        if (visible && !reducedMotion) {
             pulse.value = withRepeat(
                 withSequence(
                     withTiming(1.06, { duration: 800 }),
@@ -125,7 +127,7 @@ export function OutOfHeartsModal({ visible, onDismiss, onUpgrade, onHeartsRefill
             pulse.value = 1;
         }
         return () => cancelAnimation(pulse);
-    }, [visible, pulse]);
+    }, [visible, pulse, reducedMotion]);
 
     const emojiStyle = useAnimatedStyle(() => ({
         transform: [{ scale: pulse.value }],

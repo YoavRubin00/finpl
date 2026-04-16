@@ -347,6 +347,15 @@ export const useEconomyStore = create<EconomyState>()(
       }),
       onRehydrateStorage: () => (state) => {
         if (!state) return;
+        // Defensive defaults: fields added after v1 persist may be undefined for existing users
+        if (!Array.isArray(state.recentActivityHours)) state.recentActivityHours = [];
+        if (!Array.isArray(state.activeDates)) state.activeDates = [];
+        if (!Array.isArray(state.frozenDates)) state.frozenDates = [];
+        if (typeof state.streakFreezes !== "number") state.streakFreezes = 0;
+        if (typeof state.pendingFreezeSaveAck !== "boolean") state.pendingFreezeSaveAck = false;
+        if (typeof state.pendingRepairOffer !== "boolean") state.pendingRepairOffer = false;
+        if (typeof state.previousStreakBeforeBreak !== "number") state.previousStreakBeforeBreak = 0;
+        if (typeof state.lastRepairOfferedAt !== "string" && state.lastRepairOfferedAt !== null) state.lastRepairOfferedAt = null;
         // Migration: backfill activeDates for existing users who have a streak but no history
         if (
           state.streak > 0 &&
