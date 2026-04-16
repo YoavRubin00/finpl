@@ -43,3 +43,14 @@
   - Stock individual returns use total return already (e.g., AAPL 2019 +89%) — now consistent
   - Typecheck: only pre-existing errors in skills/stitch-skills/ — safe to ignore
 ---
+
+## Iteration 5 — US-005 Fix ETH 2015 return (cannot be 0)
+- Fixed line 106: ETH 2015 annualReturns[4] changed from 0 to 0.27 (+27% partial-year Jul-Dec)
+- Updated comment to document "+27% (partial year, Jul-Dec)" for 2015
+- Files affected: src/features/chapter-4-content/simulations/indexRaceData.ts
+- Learnings for next cycles:
+  - ETH array has 4 leading zeros (2011-2014, pre-launch), 5th element is 2015
+  - Pre-existing TS error in PriceSliderCard.tsx (sharkAvatarWrap) — unrelated, safe to ignore
+  - US-006 next: refresh stale 2025 values to 2026 in chapter3Data.ts + myth-or-tachles data files
+  - US-006 has 4 sub-items: קופת גמל cap, תקרת פיצויים, קצבת זקנה, BoI rate
+---

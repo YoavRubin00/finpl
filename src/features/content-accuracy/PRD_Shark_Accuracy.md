@@ -50,13 +50,13 @@ All work is DATA ONLY — no new components, no new screens, no logic changes. E
   - [x] Typecheck passes
 
 ### US-005 — Fix ETH 2015 return (cannot be 0)
-- [ ] Target: `src/features/chapter-4-content/simulations/indexRaceData.ts`
+- [x] Target: `src/features/chapter-4-content/simulations/indexRaceData.ts`
 - **Current (wrong):** ETH 2015 = 0
 - **Fact:** ETH launched July 2015 at ~$0.75, ended 2015 at ~$0.95 → **+27%** for partial-year or set to +5% if the file treats 2015 as full calendar year
 - **Fix:** Replace 0 with **0.27** (or document the partial-year caveat in a comment)
 - **Acceptance:**
-  - [ ] ETH 2015 is non-zero, represents actual post-launch return
-  - [ ] Typecheck passes
+  - [x] ETH 2015 is non-zero, represents actual post-launch return
+  - [x] Typecheck passes
 
 ### US-006 — Refresh stale 2025 values to 2026
 - [ ] Target: `src/features/chapter-3-content/chapter3Data.ts` + `src/features/myth-or-tachles/` data files
