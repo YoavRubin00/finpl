@@ -4,7 +4,7 @@ import { Image as ExpoImage } from "expo-image";
 import { View, Text, SafeAreaView, ScrollView, Image, StyleSheet, Modal, Pressable, Dimensions, ActivityIndicator } from "react-native";
 import { useIsFocused } from "@react-navigation/native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { Gesture, GestureDetector } from "react-native-gesture-handler";
+import { Gesture, GestureDetector, GestureHandlerRootView } from "react-native-gesture-handler";
 import { useVideoPlayer, VideoView } from "expo-video";
 import { useAudioStore } from "../../stores/useAudioStore";
 import { useLocalSearchParams, useRouter } from "expo-router";
@@ -61,6 +61,9 @@ import { InvestmentCard } from "../daily-challenges/InvestmentCard";
 import { CrashGameCard } from "../daily-challenges/CrashGameCard";
 import { MythFeedCard } from "../myth-or-tachles/MythFeedCard";
 import { DilemmaCard } from "../daily-challenges/DilemmaCard";
+import { MacroEventCard } from "../macro-events/MacroEventCard";
+import { macroEventsData } from "../macro-events/macroEventsData";
+import { TA125WarRecoveryChart } from "../chapter-4-content/components/TA125WarRecoveryChart";
 import { FlyingRewards } from "../../components/ui/FlyingRewards";
 import { GoldCoinIcon } from "../../components/ui/GoldCoinIcon";
 import { useAuthStore } from "../auth/useAuthStore";
@@ -111,6 +114,11 @@ const MODULE_INFOGRAPHIC_MAP: Record<string, { uri: string }> = {
 const INFOGRAPHIC_TOP_CARDS = new Set([
   "fc-1-5-1", "fc-1-5-2", "fc-1-5-3", "fc-1-5-4", "fc-1-5-5", "fc-1-5-6",
   "fc-1-6-1", "fc-1-6-2", "fc-1-6-3", "fc-1-6-4", "fc-1-6-5", "fc-1-6-6",
+  // Graham bonus modules — infographic at top with Finn explanation at bottom
+  "fc-4-b1-1", "fc-4-b1-2", "fc-4-b1-2b", "fc-4-b1-3",
+  "fc-4-b2-1", "fc-4-b2-2",
+  "fc-4-b3-1", "fc-4-b3-2",
+  "fc-4-b4-1", "fc-4-b4-2",
 ]);
 
 const RTL_STYLE = { writingDirection: "rtl" as const, textAlign: "right" as const };
@@ -368,7 +376,7 @@ function VideoHookPlayer({ videoUri, hookText, onFinish, unitColors, fitContain,
       {isLoading && (
         <View style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, justifyContent: "center", alignItems: "center" }} pointerEvents="none">
           <ActivityIndicator size="large" color="#38bdf8" />
-          <Text style={{ fontSize: 14, fontWeight: "700", color: "#94a3b8", marginTop: 12 }}>טוען סרטון...</Text>
+          <Text style={{ fontSize: 14, fontWeight: "700", color: "#64748b", marginTop: 12 }}>טוען סרטון...</Text>
         </View>
       )}
       {/* Fast mode indicator */}
@@ -525,7 +533,10 @@ function FlashcardCard({
         </Animated.View>
       )}
 
-      {card.videoUri ? (
+      {card.isInteractiveChart && card.chartId === 'ta125_war_recovery' ? (
+        /* ── Interactive TA-125 chart (Chapter 4, Module 27) ── */
+        <TA125WarRecoveryChart onContinue={handleNextBtn} />
+      ) : card.videoUri ? (
         /* ── Full-screen video flashcard ── */
         <VideoHookPlayer videoUri={card.videoUri} hookText="" onFinish={handleNextBtn} unitColors={unitColors} />
       ) : card.isMeme ? (
@@ -2356,8 +2367,8 @@ export function LessonFlowScreen() {
           doubleHeavyHaptic();
         }, 4500);
         setTimeout(() => setShowChapterComplete(false), 7500);
-        // Show Finn bridge nudge after chapter 0 completion
-        if (chapterId === "chapter-0") {
+        // Show Finn bridge nudge after chapter 0 completion (skip for minors — no bridge access)
+        if (chapterId === "chapter-0" && !isGuest && useAuthStore.getState().profile?.ageGroup !== "minor") {
           setTimeout(() => setShowFinnBridgeNudge(true), 8000);
         }
       }
@@ -3139,7 +3150,7 @@ export function LessonFlowScreen() {
       {/* Inter-module game overlay */}
       {showInterGame && mod?.interModuleGame && (
         <Modal visible transparent animationType="slide" statusBarTranslucent onRequestClose={() => { setShowInterGame(false); goToNextSequentialModule(); }} accessibilityViewIsModal>
-          <View style={{ flex: 1, backgroundColor: "#f8fafc" }} accessibilityViewIsModal>
+          <GestureHandlerRootView style={{ flex: 1, backgroundColor: "#f8fafc" }} accessibilityViewIsModal>
             <View style={{ flexDirection: "row-reverse", paddingHorizontal: 16, paddingTop: 50, paddingBottom: 8 }}>
               <Pressable
                 onPress={() => { setShowInterGame(false); goToNextSequentialModule(); }}
@@ -3154,7 +3165,17 @@ export function LessonFlowScreen() {
             {mod.interModuleGame === 'crash' && <CrashGameCard isActive />}
             {mod.interModuleGame === 'myth' && <MythFeedCard isInterModule onSkip={() => { setShowInterGame(false); goToNextSequentialModule(); }} />}
             {mod.interModuleGame === 'dilemma' && <DilemmaCard isActive />}
-          </View>
+            {mod.interModuleGame === 'macro-event' && mod.interModuleMacroEventId && (() => {
+              const event = macroEventsData.find((e) => e.id === mod.interModuleMacroEventId);
+              if (!event) return null;
+              return (
+                <MacroEventCard
+                  item={{ id: event.id, type: 'macro-event', event }}
+                  isActive
+                />
+              );
+            })()}
+          </GestureHandlerRootView>
         </Modal>
       )}
 
@@ -3197,7 +3218,7 @@ export function LessonFlowScreen() {
                 style={{ marginTop: 16, paddingVertical: 8 }}
                 accessibilityRole="button"
               >
-                <Text style={{ fontSize: 14, fontWeight: "700", color: "#94a3b8" }}>דלג</Text>
+                <Text style={{ fontSize: 14, fontWeight: "700", color: "#64748b" }}>דלג</Text>
               </Pressable>
             </View>
           </View>
@@ -3345,6 +3366,9 @@ export function LessonFlowScreen() {
           setShowOutOfHearts(false);
           router.replace("/(tabs)" as never);
         }}
+        onHeartsRefilled={() => {
+          setShowOutOfHearts(false);
+        }}
         onUpgrade={() => {
           setShowOutOfHearts(false);
           router.push('/pricing' as never);
@@ -3469,7 +3493,7 @@ export function LessonFlowScreen() {
                 style={{ marginTop: 12, paddingVertical: 8 }}
                 accessibilityRole="button"
               >
-                <Text style={{ fontSize: 13, fontWeight: "600", color: "#94a3b8" }}>אחר כך</Text>
+                <Text style={{ fontSize: 13, fontWeight: "600", color: "#64748b" }}>אחר כך</Text>
               </Pressable>
             </Pressable>
           </Pressable>
@@ -3477,13 +3501,29 @@ export function LessonFlowScreen() {
       )}
 
       {/* Exit interception modal — Duolingo-style */}
-      {showExitConfirm && (
+      {showExitConfirm && (() => {
+        // Minutes remaining = 3 (first third) / 2 (middle) / 1 (last third) of module progress.
+        const flashcardsTotal = mod?.flashcards.length ?? 1;
+        const quizzesTotal = mod?.quizzes.length ?? 1;
+        let fractionDone = 0;
+        if (phase === "flashcards") {
+          fractionDone = (flashcardIndex / flashcardsTotal) * 0.5;
+        } else if (phase === "quizzes") {
+          fractionDone = 0.5 + (quizIndex / quizzesTotal) * 0.35;
+        } else if (phase === "sim" || (phase as string) === "sim-intro") {
+          fractionDone = 0.85;
+        } else {
+          fractionDone = 1;
+        }
+        const minutesLeft = fractionDone < 1 / 3 ? 3 : fractionDone < 2 / 3 ? 2 : 1;
+        const minutesWord = minutesLeft === 1 ? "עוד דקה" : `עוד ${minutesLeft} דקות`;
+        return (
         <Modal visible transparent animationType="fade" onRequestClose={() => setShowExitConfirm(false)}>
           <View style={{ flex: 1, backgroundColor: "rgba(8, 20, 40, 0.75)", justifyContent: "center", alignItems: "center", paddingHorizontal: 28 }}>
             <View style={{ backgroundColor: "#0f2942", borderRadius: 28, padding: 28, width: "100%", maxWidth: 340, alignItems: "center", borderWidth: 1, borderColor: "rgba(56,189,248,0.15)" }}>
               <ExpoImage source={FINN_EMPATHIC} accessible={false} style={{ width: 90, height: 90, marginBottom: 16 }} contentFit="contain" />
               <Text style={{ ...RTL_STYLE, fontSize: 20, fontWeight: "900", color: "#ffffff", textAlign: "center", marginBottom: 8 }}>
-                חכו, יש רק עוד דקה{"\n"}לסיום המודולה!
+                חכו, יש רק {minutesWord}{"\n"}לסיום המודולה!
               </Text>
               <Text style={{ ...RTL_STYLE, fontSize: 14, fontWeight: "600", color: "rgba(255,255,255,0.6)", textAlign: "center", marginBottom: 24 }}>
                 כמעט סיימתם, אל תצאו עכשיו
@@ -3507,7 +3547,8 @@ export function LessonFlowScreen() {
             </View>
           </View>
         </Modal>
-      )}
+        );
+      })()}
 
       {/* Registration nudge for guests after mod-0-1 */}
       {showRegisterNudge && (
@@ -3533,7 +3574,7 @@ export function LessonFlowScreen() {
                 style={{ marginTop: 12, paddingVertical: 8 }}
                 accessibilityRole="button"
               >
-                <Text style={{ fontSize: 13, fontWeight: "600", color: "#94a3b8" }}>המשך</Text>
+                <Text style={{ fontSize: 13, fontWeight: "600", color: "#64748b" }}>המשך</Text>
               </Pressable>
             </Pressable>
           </Pressable>
@@ -3591,8 +3632,17 @@ export function LessonFlowScreen() {
             </Pressable>
             {/* Finn avatar */}
             <View style={{ width: 88, height: 88, borderRadius: 44, backgroundColor: "#f0f9ff", alignItems: "center", justifyContent: "center", borderWidth: 2, borderColor: "#0891b2" }}>
-              <ExpoImage source={FINN_STANDARD} accessible={false} style={{ width: 72, height: 72 }}
-                contentFit="contain" />
+              <ExpoImage
+                source={(() => {
+                  const mood = mod?.flashcards[flashcardIndex]?.finnTipMood;
+                  if (mood === 'empathic') return FINN_EMPATHIC;
+                  if (mood === 'happy') return FINN_HAPPY;
+                  return FINN_STANDARD;
+                })()}
+                accessible={false}
+                style={{ width: 72, height: 72 }}
+                contentFit="contain"
+              />
             </View>
             {/* Tip text */}
             <View style={{ flex: 1, paddingRight: 20 }}>

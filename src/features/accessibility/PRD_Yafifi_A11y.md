@@ -36,12 +36,12 @@ All work is UI-ONLY — no logic changes, no new components. Add props, fix colo
   - [ ] Typecheck passes
 
 ### US-004 — Fix contrast in LessonFlowScreen (#94a3b8 on white)
-- [ ] Target: `src/features/chapter-1-content/LessonFlowScreen.tsx` lines 379, 3221, 3496, 3577
+- [x] Target: `src/features/chapter-1-content/LessonFlowScreen.tsx` lines 379, 3221, 3496, 3577
 - **Problem:** `#94a3b8` text on white = 2.85:1 — fails WCAG AA (requires 4.5:1 for text, 3:1 for large text). Affects actionable labels: "טוען סרטון", "דלג", "אחר כך", "המשך".
 - **Fix:** Replace `#94a3b8` with `#64748b` (4.54:1) — adds accessibility without changing visual hierarchy much.
 - **Acceptance:**
-  - [ ] All 4 occurrences use `#64748b` or darker
-  - [ ] Typecheck passes
+  - [x] All 4 occurrences use `#64748b` or darker
+  - [x] Typecheck passes
 
 ### US-005 — Fix locked-chapter contrast in DuoLearnScreen
 - [ ] Target: `src/features/pyramid/DuoLearnScreen.tsx` lines 1358, 1365
