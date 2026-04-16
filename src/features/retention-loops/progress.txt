@@ -12,3 +12,15 @@
   - _layout.tsx mounts global modals after Slot inside StreakCelebrationProvider
   - Use spread ...(condition ? { key: value } : {}) for conditional state updates in Zustand set
 ---
+
+## Iteration 2 — US-002: Out of Freezes Upsell Banner
+- NoFreezeUpsellBanner component already existed at src/features/streak/NoFreezeUpsellBanner.tsx with all required functionality
+- Mounted it in DuoLearnScreen.tsx: added import + rendered after StreakAtRiskBanner with same isWalkthroughActive guard
+- Banner shows when streak >= 7 && streakFreezes === 0, dismisses for 24h via AsyncStorage
+- CTA buys freeze directly (50 coins) with disabled state when can't afford. Secondary "כבר יש לי" dismiss link.
+- Files affected: DuoLearnScreen.tsx (import + render line), PRD_Duo_Retention.md (acceptance checkboxes)
+- Learnings for next cycles:
+  - Check for existing components before creating new ones — NoFreezeUpsellBanner was pre-built
+  - Banner mount pattern in DuoLearnScreen: banners go before SafeAreaView, wrapped in !isWalkthroughActive guard
+  - DuoLearnScreen is ~1760 lines — use offset reads to avoid loading everything
+---

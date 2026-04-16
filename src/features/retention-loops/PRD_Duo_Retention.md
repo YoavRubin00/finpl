@@ -33,8 +33,8 @@
   - CTA: "קנה מגן (50 מטבעות)" → shop direct
 - Dismissible with "כבר יש לי" → hides for 24h
 - **Acceptance:**
-  - [ ] Banner component with conditional render
-  - [ ] 24h dismiss state persisted
+  - [x] Banner component with conditional render
+  - [x] 24h dismiss state persisted
   - [x] Typecheck passes
 
 ### US-003 — Auto-grant Streak Freeze at 7-day milestone

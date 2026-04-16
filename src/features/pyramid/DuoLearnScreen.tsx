@@ -32,6 +32,7 @@ import { useReferralStore } from "../social/useReferralStore";
 import { AnimatedPressable } from "../../components/ui/AnimatedPressable";
 import { SwipeableModal } from "../../components/ui/SwipeableModal";
 import { NotificationPermissionBanner } from "../../components/ui/NotificationPermissionBanner";
+import { NoFreezeUpsellBanner } from "../streak/NoFreezeUpsellBanner";
 import { StreakAtRiskBanner } from "../streak/StreakAtRiskBanner";
 import { StreakCalendarModal } from "../streak/StreakCalendarModal";
 import { CalendarDays } from "lucide-react-native";
@@ -1062,6 +1063,7 @@ export function DuoLearnScreen() {
     <View style={styles.root}>
       {!isWalkthroughActive && <NotificationPermissionBanner />}
       {!isWalkthroughActive && <StreakAtRiskBanner />}
+      {!isWalkthroughActive && <NoFreezeUpsellBanner />}
       <StreakCalendarModal visible={showStreakCalendar} onClose={() => setShowStreakCalendar(false)} />
       <SafeAreaView style={{ flex: 1 }} edges={["left", "right"]}>
         <ScrollView
