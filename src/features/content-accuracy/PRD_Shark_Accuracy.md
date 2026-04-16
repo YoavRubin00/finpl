@@ -71,14 +71,14 @@ All work is DATA ONLY — no new components, no new screens, no logic changes. E
   - [x] Typecheck passes
 
 ### US-007 — Fix overselling of Irish ETFs
-- [ ] Target: `src/features/chapter-4-content/chapter4Data.ts:~308`
+- [x] Target: `src/features/chapter-4-content/chapter4Data.ts:~308`
 - **Current:** "קרן סל אירית... מנכה רק 15% מס... פתרון מנצח... חוסכת ים של כסף"
 - **Issue:** Oversells savings. Real delta vs VOO ≈ **0.3-0.4% per year** in dividend drag — meaningful for long-horizon investors, not "ים של כסף"
 - **Fix:** Tone down to accurate framing: "החיסכון על דיבידנדים ~0.3-0.4% בשנה — משמעותי לטווח ארוך, לא דרמטי לטווח קצר"
 - **Acceptance:**
-  - [ ] No "ים של כסף" hyperbole
-  - [ ] Accurate delta quantified
-  - [ ] Typecheck passes
+  - [x] No "ים של כסף" hyperbole
+  - [x] Accurate delta quantified
+  - [x] Typecheck passes
 
 ### US-008 — Clarify nominal vs real return (10% annual)
 - [ ] Target: `src/features/chapter-4-content/chapter4Data.ts:~182`

@@ -70,3 +70,16 @@
   - US-007 next: fix Irish ETF overselling in chapter4Data.ts:~308
   - US-008 next: clarify nominal vs real return in chapter4Data.ts:~182
 ---
+
+## Iteration 7 — US-007 Fix overselling of Irish ETFs
+- Replaced overselling text at line 308 in chapter4Data.ts
+- Removed "פתרון מנצח" and "ים של כסף" hyperbole
+- Added accurate delta: ~0.3%-0.4% yearly savings on dividends
+- Added nuance: meaningful long-term, not dramatic short-term
+- Added CSPX as concrete example of Irish accumulating ETF
+- Files affected: src/features/chapter-4-content/chapter4Data.ts
+- Learnings for next cycles:
+  - fc-4-21-4 at line 308 is the Irish ETF card in mod-4-21 section
+  - US-008 target (~line 182) is the 10% nominal return — same file
+  - sed line-number targeting works well for single-line replacements in this file
+---
