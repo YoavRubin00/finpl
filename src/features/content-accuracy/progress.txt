@@ -54,3 +54,19 @@
   - US-006 next: refresh stale 2025 values to 2026 in chapter3Data.ts + myth-or-tachles data files
   - US-006 has 4 sub-items: קופת גמל cap, תקרת פיצויים, קצבת זקנה, BoI rate
 ---
+
+## Iteration 6 — US-006 Refresh stale 2025 values to 2026
+- Updated 4 values across 2 files:
+  1. קופת גמל להשקעה annual cap: 83,641 → 84,047 (chapter3Data.ts:303)
+  2. BoI rate finnTip: added 2024-2026 cutting cycle context (chapter3Data.ts:49)
+  3. תקרת הפטור לפיצויים: 13,750 → 14,080 (mythData.ts:111)
+  4. קצבת זקנה בסיסית: 1,800 (2025) → 1,795 (2026) (mythData.ts:106)
+- Files affected: src/features/chapter-3-content/chapter3Data.ts, src/features/myth-or-tachles/mythData.ts
+- Learnings for next cycles:
+  - chapter3Data.ts mod-3-17 flashcard fc-3-17-2 at line 303 has the קופת גמל cap
+  - finnTip at line 49 (mod-3-15 fc-3-15-6) has the BoI rate context
+  - mythData.ts card 97 (line 111) has פיצויים threshold, card 92 (line 106) has קצבת זקנה
+  - sed with line-number targeting (e.g. sed -i '81s/...') needed when pattern appears in multiple lines
+  - US-007 next: fix Irish ETF overselling in chapter4Data.ts:~308
+  - US-008 next: clarify nominal vs real return in chapter4Data.ts:~182
+---

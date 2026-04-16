@@ -59,16 +59,16 @@ All work is DATA ONLY — no new components, no new screens, no logic changes. E
   - [x] Typecheck passes
 
 ### US-006 — Refresh stale 2025 values to 2026
-- [ ] Target: `src/features/chapter-3-content/chapter3Data.ts` + `src/features/myth-or-tachles/` data files
+- [x] Target: `src/features/chapter-3-content/chapter3Data.ts` + `src/features/myth-or-tachles/` data files
 - **Updates needed:**
   - קופת גמל להשקעה annual cap: `83,641` → `84,047` (2026 linked update)
   - תקרת הפטור לפיצויים: `13,750` → `14,080` (2026)
   - קצבת זקנה בסיסית "(2025)" annotation — drop the year label or update to `1,795` (2026 January update)
   - BoI rate anchor in `chapter3Data.ts:49` finnTip — update "2022-2023 עלתה ל-4.75%" to reflect current 2025-2026 cutting cycle
 - **Acceptance:**
-  - [ ] All four numeric values updated
-  - [ ] BoI rate context reflects 2025-2026 reality
-  - [ ] Typecheck passes
+  - [x] All four numeric values updated
+  - [x] BoI rate context reflects 2025-2026 reality
+  - [x] Typecheck passes
 
 ### US-007 — Fix overselling of Irish ETFs
 - [ ] Target: `src/features/chapter-4-content/chapter4Data.ts:~308`
