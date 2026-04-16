@@ -81,10 +81,10 @@ All work is DATA ONLY — no new components, no new screens, no logic changes. E
   - [x] Typecheck passes
 
 ### US-008 — Clarify nominal vs real return (10% annual)
-- [ ] Target: `src/features/chapter-4-content/chapter4Data.ts:~182`
+- [x] Target: `src/features/chapter-4-content/chapter4Data.ts:~182`
 - **Current:** "המדד הניב היסטורית כ-10% שנתי ממוצע"
 - **Issue:** Nominal. Chapter 4 later discusses תשואה ריאלית — users deserve the distinction upfront.
 - **Fix:** "~10% נומינלי (לפני אינפלציה), ~6.5-7% ריאלי (אחרי אינפלציה)"
 - **Acceptance:**
-  - [ ] Both nominal and real returns stated
-  - [ ] Typecheck passes
+  - [x] Both nominal and real returns stated
+  - [x] Typecheck passes

@@ -83,3 +83,13 @@
   - US-008 target (~line 182) is the 10% nominal return — same file
   - sed line-number targeting works well for single-line replacements in this file
 ---
+
+## Iteration 8 — US-008 Clarify nominal vs real return (10% annual)
+- Fixed line 182: changed "כ-10% שנתי ממוצע" → "~10% נומינלי (לפני אינפלציה), ~6.5-7% ריאלי (אחרי אינפלציה) — שנתי ממוצע"
+- Users now see both nominal and real return figures upfront in S&P 500 section
+- Files affected: src/features/chapter-4-content/chapter4Data.ts
+- Learnings for next cycles:
+  - fc-4-20-6 at line 182 is the "אופק השקעה" flashcard in mod-4-20
+  - All US-001 through US-008 are now complete — PRD Shark Accuracy is done
+  - sed line-number targeting continues to work well for Hebrew content edits
+---
