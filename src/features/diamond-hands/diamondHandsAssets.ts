@@ -1,8 +1,7 @@
-const BLOB_CDN =
-  "https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/games/diamond-hands";
-
+// Local assets with transparent backgrounds (re-processed from blob CDN originals via ffmpeg colorkey)
+// Use with expo-image: <ExpoImage source={DH_ASSETS.hodlButton} ... />
 export const DH_ASSETS = {
-  hodlButton: `${BLOB_CDN}/hodl_button_gold.png`,
-  diamondPristine: `${BLOB_CDN}/diamond_pristine.png`,
-  diamondCracking: `${BLOB_CDN}/diamond_cracking.png`,
+  hodlButton: require("../../../assets/IMAGES/diamond-hands/hodl_button_gold.png"),
+  diamondPristine: require("../../../assets/IMAGES/diamond-hands/diamond_pristine.png"),
+  diamondCracking: require("../../../assets/IMAGES/diamond-hands/diamond_cracking.png"),
 } as const;

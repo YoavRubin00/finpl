@@ -11,6 +11,8 @@ import { useChapterStore } from "../chapter-1-content/useChapterStore";
 import { useAudioStore } from "../../stores/useAudioStore";
 import { CLASH } from "../../constants/theme";
 import { FINN_STANDARD } from "../retention-loops/finnMascotConfig";
+import { useSoundEffect } from "../../hooks/useSoundEffect";
+import { tapHaptic } from "../../utils/haptics";
 import type { FeedModuleHook } from "./types";
 import { CHAPTER_CTA_COLORS } from "./types";
 
@@ -54,6 +56,7 @@ export const FeedModuleHookCard = React.memo(function FeedModuleHookCard({ item,
   const setVideoPlaying = useAudioStore((s) => s.setVideoPlaying);
   const webViewRef = useRef<WebView>(null);
   const [isPlaying, setIsPlaying] = useState(true);
+  const { playSound } = useSoundEffect();
 
   const ctaColors = CHAPTER_CTA_COLORS[item.chapterId] ?? CHAPTER_CTA_COLORS["chapter-1"];
   const videoUri = item.videoHookAsset?.uri as string | undefined;
@@ -81,6 +84,8 @@ export const FeedModuleHookCard = React.memo(function FeedModuleHookCard({ item,
   }, [isActive, hasVideo, setVideoPlaying]);
 
   function handleGoToLesson() {
+    tapHaptic();
+    playSound('btn_click_heavy');
     setCurrentChapter(item.storeChapterId);
     setCurrentModule(item.moduleIndex);
     router.push(`/lesson/${item.moduleId}?chapterId=${item.chapterId}`);

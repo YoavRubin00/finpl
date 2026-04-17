@@ -446,6 +446,9 @@ export function TrackSelectorScreen({ onComplete }: TrackSelectorScreenProps) {
             <Text style={[styles.subtitle, RTL]}>
               בחר מסלול השקעה וצפה ב-30 שנות צמיחה
             </Text>
+            <Text style={[styles.subtitle, RTL, { fontSize: 12, opacity: 0.9, marginTop: 2 }]}>
+              {'נתוני אמת 1994-2023 · מניות: S&P 500 · אג"ח: Bloomberg US Aggregate'}
+            </Text>
           </Animated.View>
 
           {config.tracks.map((track, i) => (

@@ -41,6 +41,7 @@ export const useDailyChallengesStore = create<DailyChallengesState>()(
       budgetNinjaPlays: {},
       priceSliderPlays: {},
       cashoutRushPlays: {},
+      fomoKillerPlays: {},
       dilemmaCorrectCount: 0,
       investmentTotalAnswered: 0,
 
@@ -53,6 +54,7 @@ export const useDailyChallengesStore = create<DailyChallengesState>()(
       getBudgetNinjaPlaysToday: () => getPlays(get().budgetNinjaPlays, todayStr()),
       getPriceSliderPlaysToday: () => getPlays(get().priceSliderPlays, todayStr()),
       getCashoutRushPlaysToday: () => getPlays(get().cashoutRushPlays, todayStr()),
+      getFomoKillerPlaysToday: () => getPlays(get().fomoKillerPlays, todayStr()),
 
       hasDilemmaAnsweredToday: () => getPlays(get().dilemmaPlays, todayStr()) >= MAX_DILEMMA_DAILY,
       hasInvestmentAnsweredToday: () => isMaxed(get().investmentPlays, todayStr()),
@@ -63,6 +65,7 @@ export const useDailyChallengesStore = create<DailyChallengesState>()(
       hasBudgetNinjaPlayedToday: () => isMaxed(get().budgetNinjaPlays, todayStr()),
       hasPriceSliderPlayedToday: () => isMaxed(get().priceSliderPlays, todayStr()),
       hasCashoutRushPlayedToday: () => isMaxed(get().cashoutRushPlays, todayStr()),
+      hasFomoKillerPlayedToday: () => isMaxed(get().fomoKillerPlays, todayStr()),
 
       answerDilemma: (date: string, wasCorrect: boolean) => {
         const state = get();
@@ -198,6 +201,21 @@ export const useDailyChallengesStore = create<DailyChallengesState>()(
           cashoutRushPlays: incrementPlays(state.cashoutRushPlays, date),
         });
       },
+
+      playFomoKiller: (date: string, perfect: boolean) => {
+        const state = get();
+        if (isMaxed(state.fomoKillerPlays, date)) return;
+
+        const economy = useEconomyStore.getState();
+        economy.addXP(CHALLENGE_XP_REWARD, 'daily_task');
+        if (perfect) {
+          economy.addCoins(CHALLENGE_COIN_REWARD);
+        }
+
+        set({
+          fomoKillerPlays: incrementPlays(state.fomoKillerPlays, date),
+        });
+      },
     }),
     {
       name: 'daily-challenges-store',
@@ -212,6 +230,7 @@ export const useDailyChallengesStore = create<DailyChallengesState>()(
         budgetNinjaPlays: state.budgetNinjaPlays,
         priceSliderPlays: state.priceSliderPlays,
         cashoutRushPlays: state.cashoutRushPlays,
+        fomoKillerPlays: state.fomoKillerPlays,
         dilemmaCorrectCount: state.dilemmaCorrectCount,
         investmentTotalAnswered: state.investmentTotalAnswered,
       }),

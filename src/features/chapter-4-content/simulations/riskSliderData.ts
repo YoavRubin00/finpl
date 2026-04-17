@@ -1,7 +1,8 @@
 /**
  * SIM 19: סליידר הסיכון (Risk-Return Slider) — Module 4-19
- * 10 years of market data inspired by real returns (2014-2024).
- * Pre-computed blended returns for every 10% allocation step.
+ * 10 years of REAL historical annual returns (2014-2023).
+ * Stocks: S&P 500 Total Return (with dividends reinvested).
+ * Bonds: Bloomberg US Aggregate Bond Index.
  */
 
 import type {
@@ -16,35 +17,37 @@ const INITIAL_INVESTMENT = 100_000;
 
 /** Simulation length */
 const YEARS = 10;
+export const DATA_START_YEAR = 2014;
+export const DATA_END_YEAR = 2023;
 
-// ── Annual Returns (inspired by 2014-2024 real market data) ─────────
+// ── Real Annual Returns (2014-2023) ────────────────────────────────────
 
-/** Stock annual returns: range from -30% to +30% */
+/** S&P 500 Total Return, 2014-2023 (dividends reinvested) */
 const STOCK_RETURNS = [
-  0.12,   // Year 1: solid year
-  0.01,   // Year 2: flat
-  -0.02,  // Year 3: slight dip
-  0.10,   // Year 4: recovery
-  0.20,   // Year 5: boom
-  -0.30,  // Year 6: crash (2008-style)
-  0.28,   // Year 7: sharp recovery
-  0.18,   // Year 8: strong growth
-  -0.05,  // Year 9: mild correction
-  0.25,   // Year 10: great finish
+  0.137,   // 2014: +13.7%
+  0.014,   // 2015: +1.4%
+  0.120,   // 2016: +12.0%
+  0.218,   // 2017: +21.8%
+  -0.044,  // 2018: -4.4%
+  0.315,   // 2019: +31.5%
+  0.184,   // 2020: +18.4%
+  0.287,   // 2021: +28.7%
+  -0.181,  // 2022: -18.1%
+  0.263,   // 2023: +26.3%
 ];
 
-/** Bond annual returns: range from -5% to +8% */
+/** Bloomberg US Aggregate Bond Index, 2014-2023 */
 const BOND_RETURNS = [
-  0.04,   // Year 1
-  0.05,   // Year 2
-  0.06,   // Year 3: bonds rise when stocks dip
-  0.03,   // Year 4
-  0.02,   // Year 5: bonds lag in boom
-  0.08,   // Year 6: flight to safety
-  -0.02,  // Year 7: bonds drop during recovery
-  -0.05,  // Year 8: rate hike pain
-  0.06,   // Year 9: bonds recover
-  0.03,   // Year 10
+  0.060,   // 2014: +6.0%
+  0.005,   // 2015: +0.5%
+  0.026,   // 2016: +2.6%
+  0.035,   // 2017: +3.5%
+  0.001,   // 2018: +0.1%
+  0.087,   // 2019: +8.7%
+  0.075,   // 2020: +7.5%
+  -0.015,  // 2021: -1.5%
+  -0.130,  // 2022: -13.0%
+  0.055,   // 2023: +5.5%
 ];
 
 // ── Pre-compute blended returns for 0%-100% stocks (every 10% step) ──

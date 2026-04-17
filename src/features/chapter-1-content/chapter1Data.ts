@@ -1430,6 +1430,7 @@ export const chapter1Data: Chapter = {
           id: 'fc-1-9-6',
           text: 'ניהול פסיכולוגי: הידיעה שיש לך סכום משמעותי "בצד" מאפשרת לקבל החלטות קריירה והשקעה אמיצות יותר בשאר הכסף שלך.',
           diveMode: true,
+          hideTextOnDive: true,
           zoomRegions: [[0, 0, 1], [0, 0, 1], [0, -140, 2.0], [180, -140, 2.2]],
           finnExplanations: [
             "",

@@ -552,6 +552,9 @@ export function FIRECalcScreen({ onComplete }: FIRECalcScreenProps) {
           <Text style={[styles.subtitle, RTL]}>
             כמה שנים עד שלא תצטרך לעבוד?
           </Text>
+          <Text style={[styles.subtitle, RTL, { fontSize: 12, opacity: 0.9, marginTop: 2 }]}>
+            {'החישוב מניח 7% תשואה שנתית (ממוצע S&P 500 היסטורי) + כלל ה-4% למשיכה'}
+          </Text>
         </Animated.View>
 
         {/* Income & Age steppers — moved to top */}

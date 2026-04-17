@@ -83,7 +83,7 @@ export function CaptainSharkOverlay({ phase }: Props) {
       pointerEvents="none"
       style={{
         position: "absolute",
-        top: 40,
+        top: 160,
         left: 16,
         flexDirection: "row-reverse",
         alignItems: "flex-end",
@@ -93,26 +93,26 @@ export function CaptainSharkOverlay({ phase }: Props) {
     >
       <Image
         source={sourceFor(phase)}
-        style={{ width: 90, height: 90 }}
+        style={{ width: 72, height: 72 }}
         resizeMode="contain"
       />
       <Animated.View
         style={[
           {
-            maxWidth: 180,
+            maxWidth: 220,
             paddingHorizontal: 14,
             paddingVertical: 10,
             borderRadius: 16,
-            backgroundColor: "rgba(10, 54, 34, 0.92)",
+            backgroundColor: "rgba(12, 74, 110, 0.92)",
             borderWidth: 2,
-            borderColor: "#d4a017",
+            borderColor: "#38bdf8",
           },
           bubbleStyle,
         ]}
       >
         <Text
           style={{
-            color: "#fefce8",
+            color: "#f0f9ff",
             fontSize: 13,
             textAlign: "right",
             writingDirection: "rtl",

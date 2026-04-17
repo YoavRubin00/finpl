@@ -11,6 +11,7 @@ import Animated, {
   useReducedMotion,
 } from "react-native-reanimated";
 import { SPRING_SNAPPY } from "../../utils/animations";
+import { STITCH } from "../../constants/theme";
 
 interface GlowCardProps {
   children?: ReactNode;
@@ -34,7 +35,7 @@ export function GlowCard({
   children,
   style,
   className,
-  glowColor = "#a78bfa",
+  glowColor = STITCH.secondaryPurple,
   chapterGlow,
   shimmer = false,
   pressable = true,
@@ -124,7 +125,7 @@ export function GlowCard({
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: "#ffffff",
+    backgroundColor: STITCH.surfaceLowest,
     borderRadius: 24,
     padding: 24, // increased padding slightly to match softer corner
     overflow: "hidden",
@@ -134,6 +135,6 @@ const styles = StyleSheet.create({
     top: -40,
     bottom: -40,
     width: 60,
-    backgroundColor: "#ffffff",
+    backgroundColor: STITCH.surfaceLowest,
   },
 });

@@ -136,7 +136,7 @@ export const GRAHAM_STOCKS: GrahamStock[] = [
   },
   {
     id: 'sp500-index',
-    name: 'קרן מדד S&P 500',
+    name: 'קרן מדד ‎S&P‎ 500',
     emoji: '📊',
     sector: 'מדדים',
     pe: 20,

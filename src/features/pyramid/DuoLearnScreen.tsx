@@ -224,7 +224,7 @@ function getNodeIcon(_type: NodeType, title: string, _state: "completed" | "acti
   if (title.includes("דיבידנד")) return "🌳";
   if (title.includes("ETF") || title.includes("קרן סל") || title.includes("תעודות סל")) return "📦";
   if (title.includes("פקודות מסחר")) return "⚡";
-  if (title.includes("פלטפורמות")) return "🖥️";
+  if (title.includes("פלטפורמות")) return "💹";
   if (title.includes("גרפים") || title.includes("ניתוח")) return "📐";
   if (title.includes("דוחות כספיים")) return "📑";
   if (title.includes("פיזור") || title.includes("סיכונים")) return "🎲";
@@ -1302,8 +1302,8 @@ export function DuoLearnScreen() {
         {replayModule && (
           <Modal visible transparent animationType="fade" onRequestClose={() => setReplayModule(null)} accessibilityViewIsModal>
             <SafeAreaView style={{ flex: 1, backgroundColor: '#f0f9ff' }} edges={["top", "bottom"]}>
-              {/* Header with close button */}
-              <View style={{ flexDirection: 'row-reverse', alignItems: 'center', justifyContent: 'flex-end', paddingHorizontal: 16, paddingVertical: 8 }}>
+              {/* Header with close button — X on the right (RTL convention) */}
+              <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', paddingHorizontal: 16, paddingVertical: 8 }}>
                 <AnimatedPressable
                   onPress={() => setReplayModule(null)}
                   style={{ width: 38, height: 38, borderRadius: 19, backgroundColor: 'rgba(0,0,0,0.08)', alignItems: 'center', justifyContent: 'center' }}

@@ -1,6 +1,6 @@
 /**
  * SIM: ציר הזמן של המשברים — Crisis Timeline
- * Data: 7 real historical crises with actual S&P 500 data.
+ * Data: 7 real historical crises with actual ‎S&P‎ 500 data.
  */
 
 import type { CrisisEvent } from './crisisTimelineTypes';
@@ -89,7 +89,7 @@ export const CRISIS_EVENTS: CrisisEvent[] = [
     crowdAction:
       'מכירות פאניקה בכל העולם. אנשים משכו כסף מקרנות. ממשלות חילצו בנקים עם כסף ציבורי.',
     surprisingFact:
-      'S&P 500 נגע ב-666 (בדיוק!) במרץ 2009. משם הוא עלה כ-400% תוך עשור. הפחד הגדול ביותר = ההזדמנות הגדולה ביותר.',
+      '‎S&P‎ 500 נגע ב-666 (בדיוק!) במרץ 2009. משם הוא עלה כ-400% תוך עשור. הפחד הגדול ביותר = ההזדמנות הגדולה ביותר.',
   },
   {
     id: 'covid',
@@ -123,7 +123,7 @@ export const CRISIS_EVENTS: CrisisEvent[] = [
     crowdAction:
       'משקיעים ברחו מטכנולוגיה לחשבונות חיסכון בריבית גבוהה. קריפטו קרס. פסימיות לגבי העתיד.',
     surprisingFact:
-      'מי שהשקיע ב-S&P 500 בתחתית של 2022 הרוויח 40%+ תוך שנתיים. שוב — הפחד יצר הזדמנות.',
+      'מי שהשקיע ב-‎S&P‎ 500 בתחתית של 2022 הרוויח 40%+ תוך שנתיים. שוב — הפחד יצר הזדמנות.',
   },
 ];
 

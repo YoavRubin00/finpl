@@ -1,7 +1,8 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { View, Text, StyleSheet, Dimensions, Pressable, AccessibilityInfo } from 'react-native';
 import { Image as ExpoImage } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
+import Svg, { Polyline, Line, Defs, LinearGradient as SvgLinearGradient, Stop } from 'react-native-svg';
 import Animated, {
   Easing,
   FadeIn,
@@ -16,6 +17,8 @@ import Animated, {
 } from 'react-native-reanimated';
 
 import { errorHaptic, heavyHaptic, successHaptic, tapHaptic } from '../../../../utils/haptics';
+import { GlossaryInlineToggle } from '../shared/GlossaryInlineToggle';
+import { FeedStartButton } from '../shared/FeedStartButton';
 import { ConfettiExplosion } from '../../../../components/ui/ConfettiExplosion';
 import { FlyingRewards } from '../../../../components/ui/FlyingRewards';
 import { FINN_EMPATHIC, FINN_HAPPY, FINN_STANDARD } from '../../../retention-loops/finnMascotConfig';
@@ -27,12 +30,40 @@ const RTL = { writingDirection: 'rtl' as const, textAlign: 'right' as const };
 const RTL_CENTER = { writingDirection: 'rtl' as const, textAlign: 'center' as const };
 const SCREEN_WIDTH = Dimensions.get('window').width;
 const ARENA_WIDTH = SCREEN_WIDTH - 72;
-const ARENA_HEIGHT = 200;
-
+const ARENA_HEIGHT = 240;
+const GRAPH_PADDING_X = 24;
+const GRAPH_PADDING_Y = 20;
 const TICK_INTERVAL_MS = 80;
-const GROWTH_RATE_PER_TICK = 0.018;
+const FG_START = 50;                // neutral
+const FG_STEP_PER_TICK = 0.4;       // climbs toward 100 (Extreme Greed)
+const FG_MAX = 100;
 const MIN_CRASH_SECONDS = 3;
 const MAX_CRASH_SECONDS = 12;
+
+// Real historical Fear & Greed Index readings (CNN Fear & Greed — stocks, and alt.me Crypto F&G).
+// Values verified against public archives.
+const FG_HISTORY: { date: string; value: number; index: 'CNN' | 'Crypto'; event: string }[] = [
+  // Extreme Fear readings
+  { date: '23 מרץ 2020', value: 2, index: 'CNN', event: 'תחתית הקורונה — S&P 500 ב-2,237. 12 חודש אח"כ: +74%.' },
+  { date: '24 דצמבר 2018', value: 3, index: 'CNN', event: 'סלאוף של סוף 2018 (חשש מהעלאות ריבית). 12 חודש אח"כ: S&P +29%.' },
+  { date: '30 ספטמבר 2022', value: 17, index: 'CNN', event: 'שיא הדוביות של 2022 (ריבית + אינפלציה). תוך שנה S&P עלה 21%.' },
+  { date: '18 יוני 2022', value: 6, index: 'Crypto', event: 'אחרי קריסת Terra/Luna. BTC ב-17,600$. שנתיים אח"כ: מעל 70,000$.' },
+  // Extreme Greed readings
+  { date: '10 נובמבר 2021', value: 84, index: 'Crypto', event: 'שיא BTC ב-69,000$. תוך שנה צנח ל-15,500$ (-77%).' },
+  { date: '14 פברואר 2020', value: 97, index: 'CNN', event: 'שבועיים לפני קריסת הקורונה. S&P בשיא 3,386. תוך 5 שבועות: -34%.' },
+  { date: '16 נובמבר 2021', value: 76, index: 'CNN', event: 'שיא 2021 של S&P ב-4,711. 2022 היה שנת הדוב הגרועה מאז 2008.' },
+  { date: '7 ינואר 2021', value: 75, index: 'Crypto', event: 'BTC שובר שיא ב-42,000$. לקח שנתיים חזרה אחרי קריסת 2022.' },
+];
+
+function pickHistoryAbove(): typeof FG_HISTORY[number] {
+  const pool = FG_HISTORY.filter((h) => h.value >= 70);
+  return pool[Math.floor(Math.random() * pool.length)] ?? FG_HISTORY[4];
+}
+
+function pickHistoryBelow(): typeof FG_HISTORY[number] {
+  const pool = FG_HISTORY.filter((h) => h.value <= 25);
+  return pool[Math.floor(Math.random() * pool.length)] ?? FG_HISTORY[0];
+}
 
 interface Props {
   isActive: boolean;
@@ -45,24 +76,67 @@ function generateCrashTick(): number {
   return Math.floor((seconds * 1000) / TICK_INTERVAL_MS);
 }
 
-function computeMultiplier(tick: number): number {
-  return Math.pow(1 + GROWTH_RATE_PER_TICK, tick);
+function computeFearGreed(tick: number): number {
+  return Math.min(FG_MAX, FG_START + tick * FG_STEP_PER_TICK);
 }
 
-function formatMultiplier(m: number): string {
-  return `×${m.toFixed(2)}`;
+function fgLabel(v: number): string {
+  if (v >= 90) return 'תאווה קיצונית';
+  if (v >= 75) return 'תאווה';
+  if (v >= 55) return 'אופטימיות';
+  if (v >= 45) return 'ניטרלי';
+  if (v >= 25) return 'פחד';
+  return 'פחד קיצוני';
+}
+
+function fgColor(v: number): string {
+  if (v >= 90) return '#dc2626';
+  if (v >= 75) return '#f97316';
+  if (v >= 55) return '#eab308';
+  return '#22c55e';
+}
+
+function formatFG(v: number): string {
+  return `${Math.round(v)}/100`;
 }
 
 function CashoutGraph({
-  multiplier,
+  fearGreed,
   crashed,
+  currentTick,
 }: {
-  multiplier: number;
+  fearGreed: number;
   crashed: boolean;
+  currentTick: number;
 }) {
-  const maxShown = 8;
-  const progress = Math.min(1, Math.log(multiplier) / Math.log(maxShown));
-  const graphColor = crashed ? '#dc2626' : multiplier < 1.5 ? '#22d3ee' : multiplier < 3 ? '#d4a017' : '#7c3aed';
+  const graphColor = crashed ? '#dc2626' : fgColor(fearGreed);
+
+  const plotW = ARENA_WIDTH - GRAPH_PADDING_X * 2;
+  const plotH = ARENA_HEIGHT - GRAPH_PADDING_Y * 2;
+
+  const points = useMemo(() => {
+    if (currentTick <= 0) return '';
+    const samples = Math.min(currentTick + 1, 120);
+    const stepSize = currentTick / Math.max(samples - 1, 1);
+    const pts: string[] = [];
+    for (let i = 0; i < samples; i++) {
+      const t = i * stepSize;
+      const value = Math.min(FG_MAX, FG_START + t * FG_STEP_PER_TICK);
+      const xNorm = t / Math.max(currentTick + 10, 60);
+      const yNorm = value / FG_MAX;
+      const x = GRAPH_PADDING_X + xNorm * plotW;
+      const y = ARENA_HEIGHT - GRAPH_PADDING_Y - yNorm * plotH;
+      pts.push(`${x.toFixed(1)},${y.toFixed(1)}`);
+    }
+    return pts.join(' ');
+  }, [currentTick, plotW, plotH]);
+
+  // Zone thresholds on the Fear/Greed scale
+  const gridLines = [25, 50, 75, 90].map((val) => {
+    const yNorm = val / FG_MAX;
+    const y = ARENA_HEIGHT - GRAPH_PADDING_Y - yNorm * plotH;
+    return { value: val, y };
+  });
 
   return (
     <View style={styles.graphArena}>
@@ -70,21 +144,54 @@ function CashoutGraph({
         colors={crashed ? ['#991b1b', '#450a0a'] : ['#0a0e27', '#1e1b4b']}
         style={StyleSheet.absoluteFill}
       />
-      <View style={[styles.graphLine, { width: progress * ARENA_WIDTH, backgroundColor: graphColor }]} />
-      <View
-        style={[
-          styles.graphDot,
-          {
-            left: progress * ARENA_WIDTH - 8,
-            bottom: progress * (ARENA_HEIGHT - 40) + 8,
-            backgroundColor: graphColor,
-            shadowColor: graphColor,
-          },
-        ]}
-      />
+      <Svg width={ARENA_WIDTH} height={ARENA_HEIGHT} style={StyleSheet.absoluteFill}>
+        <Defs>
+          <SvgLinearGradient id="graphLineGrad" x1="0" y1="0" x2="1" y2="0">
+            <Stop offset="0" stopColor={graphColor} stopOpacity="0.35" />
+            <Stop offset="1" stopColor={graphColor} stopOpacity="1" />
+          </SvgLinearGradient>
+        </Defs>
+
+        {/* Horizontal grid lines */}
+        {gridLines.map((gl) => (
+          <Line
+            key={gl.value}
+            x1={GRAPH_PADDING_X}
+            y1={gl.y}
+            x2={ARENA_WIDTH - GRAPH_PADDING_X}
+            y2={gl.y}
+            stroke="rgba(255,255,255,0.12)"
+            strokeWidth={1}
+            strokeDasharray="4 4"
+          />
+        ))}
+
+        {/* The actual growth curve */}
+        {points && (
+          <Polyline
+            points={points}
+            fill="none"
+            stroke="url(#graphLineGrad)"
+            strokeWidth={3.5}
+            strokeLinejoin="round"
+            strokeLinecap="round"
+          />
+        )}
+      </Svg>
+
+      {/* Grid labels — rendered as RN Text for sharpness */}
+      {gridLines.map((gl) => (
+        <Text
+          key={`label-${gl.value}`}
+          style={[styles.gridLabel, { top: gl.y - 7 }]}
+        >
+          {gl.value}
+        </Text>
+      ))}
+
       {crashed && (
         <View style={styles.crashLabel}>
-          <Text style={styles.crashLabelText}>💥 CRASH</Text>
+          <Text style={styles.crashLabelText}>CRASH</Text>
         </View>
       )}
     </View>
@@ -96,7 +203,7 @@ function GambleWarning() {
     <Animated.View entering={FadeInUp.duration(300)} style={styles.warningBox}>
       <Text style={[styles.warningTitle, RTL_CENTER]}>זה לא השקעה — זו רולטה</Text>
       <Text style={[styles.warningBody, RTL]}>
-        התוצאה נקבעה רנדומלית בתחילת הסבב. אין אסטרטגיה, אין ניתוח, אין "תזמון מנצח".
+        הקריסה יכולה להגיע בכל רגע — לכן צריך להשקיע בצורה מחושבת. אין תזמון מנצח, יש רק תכנון.
         {'\n\n'}
         2,000 ₪ לחודש ב-S&P 500 ל-25 שנה = ~1.6M ₪. בלי דופמין של קריסות, עם דופמין של שקט נפשי.
       </Text>
@@ -112,7 +219,11 @@ export const CashoutRushCard = React.memo(function CashoutRushCard({ isActive: _
   const [phase, setPhase] = useState<Phase>('idle');
   const [currentTick, setCurrentTick] = useState(0);
   const [crashTick] = useState<number>(() => generateCrashTick());
-  const [finalMultiplier, setFinalMultiplier] = useState(1);
+  const [finalFG, setFinalFG] = useState(FG_START);
+  const [historicalRef] = useState(() => ({
+    win: pickHistoryAbove(),
+    loss: pickHistoryBelow(),
+  }));
   const [showConfetti, setShowConfetti] = useState(false);
   const [showFlyingRewards, setShowFlyingRewards] = useState(false);
   const [showEducation, setShowEducation] = useState(false);
@@ -132,8 +243,8 @@ export const CashoutRushCard = React.memo(function CashoutRushCard({ isActive: _
     if (phase === 'running' && !reduceMotion) {
       buttonPulse.value = withRepeat(
         withSequence(
-          withTiming(1.05, { duration: 500, easing: Easing.inOut(Easing.ease) }),
-          withTiming(1, { duration: 500, easing: Easing.inOut(Easing.ease) }),
+          withTiming(1.03, { duration: 700, easing: Easing.inOut(Easing.ease) }),
+          withTiming(1, { duration: 700, easing: Easing.inOut(Easing.ease) }),
         ),
         -1,
         true,
@@ -158,7 +269,7 @@ export const CashoutRushCard = React.memo(function CashoutRushCard({ isActive: _
       const log = useDailyLogStore.getState();
       log.logEvent({
         type: 'cashout-rush',
-        title: 'עצור בשיא',
+        title: 'Fear or Greed',
         timestamp: Date.now(),
         xpEarned: CHALLENGE_XP_REWARD,
       });
@@ -193,7 +304,7 @@ export const CashoutRushCard = React.memo(function CashoutRushCard({ isActive: _
         const next = t + 1;
         if (next >= crashTick) {
           if (tickRef.current) clearInterval(tickRef.current);
-          setFinalMultiplier(computeMultiplier(next));
+          setFinalFG(computeFearGreed(next));
           setPhase('crashed');
           errorHaptic();
           finalize(false);
@@ -207,11 +318,11 @@ export const CashoutRushCard = React.memo(function CashoutRushCard({ isActive: _
   const cashOut = useCallback(() => {
     if (phase !== 'running') return;
     if (tickRef.current) clearInterval(tickRef.current);
-    const m = computeMultiplier(currentTick);
-    setFinalMultiplier(m);
+    const v = computeFearGreed(currentTick);
+    setFinalFG(v);
     setPhase('cashed');
     heavyHaptic();
-    AccessibilityInfo.announceForAccessibility(`משכת בזמן. מכפיל ${m.toFixed(2)}.`);
+    AccessibilityInfo.announceForAccessibility(`יצאת במדד ${Math.round(v)} מתוך 100 — ${fgLabel(v)}.`);
     finalize(true);
   }, [currentTick, finalize, phase]);
 
@@ -225,15 +336,15 @@ export const CashoutRushCard = React.memo(function CashoutRushCard({ isActive: _
       <View style={styles.container}>
         <View style={styles.cardShell}>
           <ExpoImage source={FINN_STANDARD} style={styles.finLarge} contentFit="contain" accessible={false} />
-          <Text style={[styles.doneTitle, RTL_CENTER]}>עצור בשיא — הושלם להיום</Text>
+          <Text style={[styles.doneTitle, RTL_CENTER]}>Fear or Greed — הושלם להיום</Text>
           <Text style={[styles.doneSub, RTL_CENTER]}>חזור מחר לסיבוב חדש</Text>
         </View>
       </View>
     );
   }
 
-  const liveMultiplier = computeMultiplier(currentTick);
-  const displayMultiplier = phase === 'running' ? liveMultiplier : finalMultiplier;
+  const liveFG = computeFearGreed(currentTick);
+  const displayFG = phase === 'running' ? liveFG : finalFG;
   const isWinning = phase === 'cashed';
   const isLoss = phase === 'crashed';
 
@@ -252,14 +363,14 @@ export const CashoutRushCard = React.memo(function CashoutRushCard({ isActive: _
         <Animated.View entering={FadeInDown.duration(300)} style={styles.headerRow}>
           <ExpoImage source={FINN_STANDARD} style={styles.headerAvatar} contentFit="contain" accessible={false} />
           <View style={styles.headerTextCol}>
-            <Text style={[styles.headerTitle, RTL]}>עצור בשיא</Text>
+            <Text style={[styles.headerTitle, RTL]}>Fear or Greed</Text>
             <Text style={[styles.headerSub, RTL]}>
               {phase === 'running'
-                ? 'המכפיל עולה. הסיכון עולה.'
+                ? 'המדד מטפס. התאווה עולה.'
                 : phase === 'cashed'
-                  ? 'חסכת בזמן'
+                  ? 'יצאת בזמן'
                   : phase === 'crashed'
-                    ? 'המכפיל קרס'
+                    ? 'השוק קרס בתאווה קיצונית'
                     : `${remainingPlays}/${MAX_DAILY_PLAYS} סבבים נותרו`}
             </Text>
           </View>
@@ -267,7 +378,7 @@ export const CashoutRushCard = React.memo(function CashoutRushCard({ isActive: _
 
         {(phase === 'running' || phase === 'cashed' || phase === 'crashed') && (
           <>
-            <CashoutGraph multiplier={displayMultiplier} crashed={isLoss} />
+            <CashoutGraph fearGreed={displayFG} crashed={isLoss} currentTick={currentTick} />
 
             <View
               style={[
@@ -280,17 +391,19 @@ export const CashoutRushCard = React.memo(function CashoutRushCard({ isActive: _
               <Text
                 style={[
                   styles.multiplierValue,
-                  { color: isLoss ? '#dc2626' : isWinning ? '#16a34a' : '#ffffff' },
+                  { color: isLoss ? '#dc2626' : isWinning ? '#16a34a' : fgColor(displayFG) },
                 ]}
               >
-                {formatMultiplier(displayMultiplier)}
+                {formatFG(displayFG)}
               </Text>
-              {isWinning && (
-                <Text style={[styles.multiplierSub, { color: '#16a34a' }]}>משכת בזמן</Text>
-              )}
-              {isLoss && (
-                <Text style={[styles.multiplierSub, { color: '#dc2626' }]}>קרס. כל הצבירה אבדה</Text>
-              )}
+              <Text
+                style={[
+                  styles.multiplierSub,
+                  { color: isLoss ? '#dc2626' : isWinning ? '#16a34a' : fgColor(displayFG) },
+                ]}
+              >
+                {isWinning ? `יצאת ב-${fgLabel(displayFG)}` : isLoss ? 'תאווה קיצונית — קריסה' : fgLabel(displayFG)}
+              </Text>
             </View>
           </>
         )}
@@ -298,41 +411,24 @@ export const CashoutRushCard = React.memo(function CashoutRushCard({ isActive: _
         {phase === 'idle' && (
           <Animated.View entering={FadeIn.duration(300)} style={styles.idleBlock}>
             <Text style={[styles.idleDesc, RTL_CENTER]}>
-              המכפיל עולה מ-×1.00 כלפי מעלה. לחץ "משוך" לפני הקריסה. אחרי הקריסה — הכל אבוד.
+              המדד מטפס מ-50 לעבר 100. צאו לפני הקריסה.
             </Text>
-            <Pressable
+            <GlossaryInlineToggle glossaryKey="fear-or-greed" />
+            <FeedStartButton
+              label="בואו נתחיל"
               onPress={startGame}
-              accessibilityRole="button"
-              accessibilityLabel="התחל סבב"
-              style={({ pressed }) => [styles.startButton, pressed && { opacity: 0.85 }]}
-            >
-              <LinearGradient
-                colors={['#7c3aed', '#5b21b6']}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
-                style={StyleSheet.absoluteFill}
-              />
-              <Text style={styles.startButtonText}>התחל</Text>
-            </Pressable>
+              accessibilityLabel="התחל סבב Fear or Greed"
+            />
           </Animated.View>
         )}
 
         {phase === 'running' && (
           <Animated.View style={buttonStyle}>
-            <Pressable
+            <FeedStartButton
+              label={`מכור עכשיו · ${Math.round(liveFG)}/100`}
               onPress={cashOut}
-              accessibilityRole="button"
-              accessibilityLabel={`משוך עכשיו. מכפיל נוכחי ${liveMultiplier.toFixed(2)}`}
-              style={({ pressed }) => [styles.cashoutButton, pressed && { opacity: 0.9 }]}
-            >
-              <LinearGradient
-                colors={['#d4a017', '#92400e']}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
-                style={StyleSheet.absoluteFill}
-              />
-              <Text style={styles.cashoutButtonText}>משוך עכשיו</Text>
-            </Pressable>
+              accessibilityLabel={`מכור עכשיו. מדד נוכחי ${Math.round(liveFG)} מתוך 100`}
+            />
           </Animated.View>
         )}
 
@@ -343,9 +439,9 @@ export const CashoutRushCard = React.memo(function CashoutRushCard({ isActive: _
                 <ExpoImage source={FINN_HAPPY} style={styles.sharkAvatar} contentFit="cover" accessible={false} />
               </View>
               <View style={styles.sharkTextCol}>
-                <Text style={[styles.sharkTitle, RTL, { color: '#16a34a' }]}>הפעם שמרת על הרווח</Text>
-                <Text style={[styles.sharkBody, RTL]} numberOfLines={4}>
-                  הצלחת לעצור בזמן — אבל הקריסה היתה נקבעת אקראית בין שנייה 3 ל-12. זה לא ניתוח, זה מזל. עוד על זה בהמשך.
+                <Text style={[styles.sharkTitle, RTL, { color: '#16a34a' }]}>יצאת לפני הבועה</Text>
+                <Text style={[styles.sharkBody, RTL]} numberOfLines={6}>
+                  יצאת ב-{Math.round(finalFG)}/100 — {fgLabel(finalFG)}. במציאות: {historicalRef.win.date} — המדד היה {historicalRef.win.value}. {historicalRef.win.event}
                 </Text>
               </View>
             </View>
@@ -359,9 +455,9 @@ export const CashoutRushCard = React.memo(function CashoutRushCard({ isActive: _
                 <ExpoImage source={FINN_EMPATHIC} style={styles.sharkAvatar} contentFit="cover" accessible={false} />
               </View>
               <View style={styles.sharkTextCol}>
-                <Text style={[styles.sharkTitle, RTL, { color: '#dc2626' }]}>נעצרת מאוחר מדי</Text>
-                <Text style={[styles.sharkBody, RTL]} numberOfLines={4}>
-                  הקריסה נקבעה מראש — לא יכולת לזהות אותה. זו בדיוק המציאות של הימורי משחקי קריסה אמיתיים.
+                <Text style={[styles.sharkTitle, RTL, { color: '#dc2626' }]}>נתפסת בתאווה</Text>
+                <Text style={[styles.sharkBody, RTL]} numberOfLines={6}>
+                  הקריסה מגיעה בדיוק כשכולם הכי בטוחים. ההיפך נכון גם הוא — {historicalRef.loss.date} המדד היה {historicalRef.loss.value} (פחד קיצוני). {historicalRef.loss.event}
                 </Text>
               </View>
             </View>
@@ -436,7 +532,7 @@ const styles = StyleSheet.create({
   },
   idleBlock: {
     gap: 14,
-    alignItems: 'center',
+    alignItems: 'stretch',
     paddingVertical: 12,
   },
   idleDesc: {
@@ -444,20 +540,31 @@ const styles = StyleSheet.create({
     color: '#334155',
     lineHeight: 22,
     paddingHorizontal: 8,
+    textAlign: 'center',
   },
   startButton: {
-    paddingHorizontal: 32,
-    paddingVertical: 14,
-    borderRadius: 14,
-    overflow: 'hidden',
+    alignSelf: 'center',
+    paddingHorizontal: 56,
+    paddingVertical: 18,
+    borderRadius: 20,
+    backgroundColor: '#0ea5e9',
+    borderBottomWidth: 4,
+    borderBottomColor: '#0369a1',
+    shadowColor: '#0369a1',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.38,
+    shadowRadius: 12,
+    elevation: 8,
     alignItems: 'center',
-    minWidth: 160,
+    justifyContent: 'center',
+    minWidth: 280,
+    marginTop: 8,
   },
   startButtonText: {
-    fontSize: 16,
-    fontWeight: '900',
+    fontSize: 20,
+    fontWeight: '800',
     color: '#ffffff',
-    letterSpacing: 0.5,
+    letterSpacing: 0.3,
   },
   graphArena: {
     width: ARENA_WIDTH,
@@ -467,21 +574,13 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     position: 'relative',
   },
-  graphLine: {
+  gridLabel: {
     position: 'absolute',
-    left: 0,
-    bottom: 0,
-    height: 4,
-  },
-  graphDot: {
-    position: 'absolute',
-    width: 16,
-    height: 16,
-    borderRadius: 8,
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.9,
-    shadowRadius: 12,
-    elevation: 8,
+    left: 4,
+    fontSize: 10,
+    fontWeight: '700',
+    color: 'rgba(255,255,255,0.55)',
+    fontVariant: ['tabular-nums'],
   },
   crashLabel: {
     position: 'absolute',

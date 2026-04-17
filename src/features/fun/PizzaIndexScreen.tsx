@@ -4,15 +4,16 @@
  * US-007 of PRD_FunFeatures.
  */
 import React from "react";
-import { View, Text, StyleSheet, ScrollView, Share, type ImageSourcePropType } from "react-native";
+import { View, Text, StyleSheet, ScrollView, Share, Pressable, type ImageSourcePropType } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Image as ExpoImage } from "expo-image";
 import Animated, { FadeInUp } from "react-native-reanimated";
+import { X } from "lucide-react-native";
 
 import { LinearGradient } from "expo-linear-gradient";
 import { AnimatedPressable } from "../../components/ui/AnimatedPressable";
 import { BackButton } from "../../components/ui/BackButton";
-import { tapHaptic, successHaptic } from "../../utils/haptics";
+import { tapHaptic, successHaptic, heavyHaptic } from "../../utils/haptics";
 import { RTL, SHADOW_STRONG } from "../shared-sim/simThemeBase";
 
 // ── Theme ──
@@ -97,12 +98,14 @@ function StatCardView({ card, index }: { card: StatCard; index: number }) {
   return (
     <Animated.View entering={FadeInUp.delay(200 + index * 120).duration(400)}>
       <View style={styles.statCard}>
-        {/* Image — full width at top, rounded */}
-        <ExpoImage
-          source={card.image}
-          style={styles.statImage}
-          contentFit="cover"
-        />
+        {/* Image — full width at top, rounded, on light blue backdrop */}
+        <View style={styles.statImageWrap}>
+          <ExpoImage
+            source={card.image}
+            style={styles.statImage}
+            contentFit="contain"
+          />
+        </View>
         {/* Text content below image */}
         <View style={styles.statContent}>
           <Text style={[styles.statTitle, RTL]}>{card.title}</Text>
@@ -115,8 +118,14 @@ function StatCardView({ card, index }: { card: StatCard; index: number }) {
 }
 
 // ── Main Screen ──
-export function PizzaIndexScreen() {
+interface PizzaIndexScreenProps {
+  /** When provided, renders as modal content: X close button + sticky "המשך" CTA. */
+  onClose?: () => void;
+}
+
+export function PizzaIndexScreen({ onClose }: PizzaIndexScreenProps = {}) {
   const stats = buildStats();
+  const isModal = typeof onClose === "function";
 
   const handleShare = async () => {
     tapHaptic();
@@ -136,19 +145,36 @@ export function PizzaIndexScreen() {
     }
   };
 
+  const handleContinue = () => {
+    heavyHaptic();
+    onClose?.();
+  };
+
   return (
     <LinearGradient colors={["#f0f9ff", "#e0f2fe"]} style={{ flex: 1 }}>
       <SafeAreaView style={styles.safe} edges={["top", "bottom"]}>
         {/* Header */}
         <View style={{ flexDirection: 'row-reverse', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingVertical: 10 }}>
-          <BackButton color={STITCH_BLUE.textPrimary} />
+          {isModal ? (
+            <Pressable
+              onPress={onClose}
+              accessibilityRole="button"
+              accessibilityLabel="סגור"
+              hitSlop={10}
+              style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: "rgba(14,165,233,0.12)", alignItems: "center", justifyContent: "center" }}
+            >
+              <X size={18} color={STITCH_BLUE.textPrimary} />
+            </Pressable>
+          ) : (
+            <BackButton color={STITCH_BLUE.textPrimary} />
+          )}
           <Text style={[styles.headerTitle, RTL]}>מדד הפיצות</Text>
-          <View style={{ width: 32 }} />
+          <View style={{ width: 36 }} />
         </View>
 
         <ScrollView
           style={styles.scroll}
-          contentContainerStyle={styles.scrollContent}
+          contentContainerStyle={[styles.scrollContent, isModal && { paddingBottom: 140 }]}
           showsVerticalScrollIndicator={false}
         >
           {/* Stat Cards */}
@@ -170,6 +196,24 @@ export function PizzaIndexScreen() {
 
           <View style={styles.bottomSpacer} />
         </ScrollView>
+
+        {/* Sticky "המשך" CTA — modal mode only */}
+        {isModal && (
+          <View style={styles.stickyContinueBar}>
+            <View style={styles.continueDepth} pointerEvents="none" />
+            <Pressable
+              onPress={handleContinue}
+              accessibilityRole="button"
+              accessibilityLabel="המשך"
+              style={({ pressed }) => [
+                styles.continueBtn,
+                pressed && { transform: [{ translateY: 2 }] },
+              ]}
+            >
+              <Text style={styles.continueBtnText}>המשך</Text>
+            </Pressable>
+          </View>
+        )}
       </SafeAreaView>
     </LinearGradient>
   );
@@ -224,12 +268,19 @@ const styles = StyleSheet.create({
     shadowRadius: 16,
     elevation: 6,
   },
-  statImage: {
+  statImageWrap: {
     width: "100%",
     height: 160,
     borderTopLeftRadius: 22,
     borderTopRightRadius: 22,
     backgroundColor: "#e0f2fe",
+    overflow: "hidden",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  statImage: {
+    width: "100%",
+    height: "100%",
   },
   statContent: {
     padding: 16,
@@ -271,5 +322,49 @@ const styles = StyleSheet.create({
   },
   bottomSpacer: {
     height: 16,
+  },
+
+  /* Sticky "המשך" CTA (modal mode) */
+  stickyContinueBar: {
+    position: "absolute",
+    left: 0,
+    right: 0,
+    bottom: 0,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    paddingBottom: 20,
+    backgroundColor: "rgba(255,255,255,0.94)",
+    borderTopWidth: 1,
+    borderTopColor: "rgba(14,165,233,0.25)",
+  },
+  continueDepth: {
+    position: "absolute",
+    top: 18,
+    left: 16,
+    right: 16,
+    bottom: 10,
+    borderRadius: 16,
+    backgroundColor: "#0369a1",
+  },
+  continueBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    borderRadius: 16,
+    backgroundColor: "#0ea5e9",
+    paddingVertical: 16,
+    shadowColor: "#0284c7",
+    shadowOpacity: 0.5,
+    shadowRadius: 14,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 10,
+  },
+  continueBtnText: {
+    fontSize: 18,
+    fontWeight: "900",
+    color: "#ffffff",
+    writingDirection: "rtl",
+    textAlign: "center",
+    letterSpacing: 0.3,
   },
 });

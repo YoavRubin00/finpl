@@ -55,6 +55,7 @@ export interface DailyChallengesState {
   budgetNinjaPlays: PlayCountMap;
   priceSliderPlays: PlayCountMap;
   cashoutRushPlays: PlayCountMap;
+  fomoKillerPlays: PlayCountMap;
   dilemmaCorrectCount: number;
   investmentTotalAnswered: number;
 
@@ -68,6 +69,7 @@ export interface DailyChallengesState {
   getBudgetNinjaPlaysToday: () => number;
   getPriceSliderPlaysToday: () => number;
   getCashoutRushPlaysToday: () => number;
+  getFomoKillerPlaysToday: () => number;
 
   /** Returns true if max plays reached (respects pro status). */
   hasDilemmaAnsweredToday: () => boolean;
@@ -79,6 +81,7 @@ export interface DailyChallengesState {
   hasBudgetNinjaPlayedToday: () => boolean;
   hasPriceSliderPlayedToday: () => boolean;
   hasCashoutRushPlayedToday: () => boolean;
+  hasFomoKillerPlayedToday: () => boolean;
 
   answerDilemma: (date: string, wasCorrect: boolean) => void;
   answerInvestment: (date: string) => void;
@@ -89,4 +92,5 @@ export interface DailyChallengesState {
   playBudgetNinja: (date: string, score: number) => void;
   playPriceSlider: (date: string, accuracyPercent: number) => void;
   playCashoutRush: (date: string, cashedOut: boolean) => void;
+  playFomoKiller: (date: string, perfect: boolean) => void;
 }

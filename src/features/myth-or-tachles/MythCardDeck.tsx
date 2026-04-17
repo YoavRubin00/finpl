@@ -212,14 +212,14 @@ const styles = StyleSheet.create({
     deckContainer: {
         width: CARD_W,
         alignSelf: 'center',
-        height: CARD_W * 1.55,
+        height: CARD_W * 1.42,
         alignItems: 'center',
         justifyContent: 'center',
     },
     card: {
         position: 'absolute',
         width: CARD_W,
-        height: CARD_W * 1.5,
+        height: CARD_W * 1.37,
         backgroundColor: '#12112a',
         borderRadius: 24,
         padding: 28,
@@ -321,7 +321,7 @@ const styles = StyleSheet.create({
     emptyContainer: {
         alignItems: 'center',
         justifyContent: 'center',
-        height: CARD_W * 1.5,
+        height: CARD_W * 1.37,
         gap: 12,
     },
     emptyText: {

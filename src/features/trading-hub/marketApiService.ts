@@ -111,24 +111,61 @@ let lastFetchWasLive = false;
 
 export const isDataLive = (): boolean => lastFetchWasLive;
 
+// ── Direct Yahoo fallback (native only — avoids CORS on web) ──
+const YAHOO_TICKER_MAP: Record<string, string> = {
+  BTC: 'BTC-USD',
+  ETH: 'ETH-USD',
+  XAU: 'GC=F',
+  XAG: 'SI=F',
+};
+
+const fetchYahooPriceDirect = async (assetId: string): Promise<number | null> => {
+  if (Platform.OS === 'web') return null;
+  const yTicker = YAHOO_TICKER_MAP[assetId] ?? assetId;
+  try {
+    const res = await fetch(
+      `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(yTicker)}?interval=1d&range=5d`,
+      { headers: { 'User-Agent': 'Mozilla/5.0', Accept: 'application/json' } },
+    );
+    if (!res.ok) return null;
+    const json = await res.json();
+    const price = json?.chart?.result?.[0]?.meta?.regularMarketPrice;
+    return typeof price === 'number' && isFinite(price) ? price : null;
+  } catch {
+    return null;
+  }
+};
+
 export const fetchLatestPrice = async (assetId: string): Promise<number> => {
   const cached = priceCache.get(assetId);
   if (isPriceFresh(cached)) return cached.data;
 
+  // Primary: backend proxy
   try {
     const response = await fetch(`${API_BASE}?ticker=${encodeURIComponent(assetId)}&timeframe=1D`);
-    if (!response.ok) throw new Error(`HTTP ${response.status}`);
-
-    const json = (await response.json()) as QuoteApiResponse;
-    if (!json.ok) throw new Error('API error');
-
-    lastFetchWasLive = true;
-    priceCache.set(assetId, { data: json.price, date: todayKey() });
-    return json.price;
+    if (response.ok) {
+      const json = (await response.json()) as QuoteApiResponse;
+      if (json.ok) {
+        lastFetchWasLive = true;
+        priceCache.set(assetId, { data: json.price, date: todayKey() });
+        return json.price;
+      }
+    }
   } catch {
-    lastFetchWasLive = false;
-    return generateMockPrice(assetId);
+    // fall through
   }
+
+  // Secondary: direct Yahoo (native only)
+  const direct = await fetchYahooPriceDirect(assetId);
+  if (direct !== null) {
+    lastFetchWasLive = true;
+    priceCache.set(assetId, { data: direct, date: todayKey() });
+    return direct;
+  }
+
+  // Tertiary: mock (daily-deterministic, not cached so we keep retrying)
+  lastFetchWasLive = false;
+  return generateMockPrice(assetId);
 };
 
 export const fetchChartData = async (

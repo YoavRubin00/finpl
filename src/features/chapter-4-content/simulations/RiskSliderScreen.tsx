@@ -556,6 +556,9 @@ export function RiskSliderScreen({ onComplete }: RiskSliderScreenProps) {
       <Animated.View entering={FadeInUp.delay(300)}>
         <GlowCard glowColor="rgba(34,197,94,0.15)" style={{ ...styles.statsCard, backgroundColor: SIM4.cardBg }}>
           <Text style={[styles.statsTitle, RTL]}>צמיחת תיק — 10 שנים</Text>
+          <Text style={[styles.statsSubtitle, RTL]}>
+            {'נתוני אמת 2014-2023 · מניות: S&P 500 · אג"ח: Bloomberg US Aggregate'}
+          </Text>
           <LineChart
             history={state.yearHistory}
             initialInvestment={config.initialInvestment}
@@ -639,6 +642,12 @@ const styles = StyleSheet.create({
     color: SIM4.textPrimary,
     fontSize: 16,
     fontWeight: '700',
+    marginBottom: 4,
+  },
+  statsSubtitle: {
+    color: SIM4.textSecondary,
+    fontSize: 12,
+    fontWeight: '600',
     marginBottom: 8,
   },
   balanceHero: {

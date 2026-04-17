@@ -34,7 +34,8 @@ const EVENT_TYPE_LABELS: Record<LearningEvent['type'], { emoji: string; label: s
   'higher-lower': { emoji: '⚖️', label: 'מי מנצח?' },
   'budget-ninja': { emoji: '🥷', label: 'נינג׳ת התקציב' },
   'price-slider': { emoji: '🎯', label: 'תמחור המציאות' },
-  'cashout-rush': { emoji: '🎰', label: 'עצור בשיא' },
+  'cashout-rush': { emoji: '🎰', label: 'Fear or Greed' },
+  'fomo-killer': { emoji: '🎯', label: 'FOMO Killer' },
 };
 
 export function DailyLearningSummary() {

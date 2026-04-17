@@ -1,8 +1,9 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { View, Text, StyleSheet, Dimensions, AccessibilityInfo } from 'react-native';
+import { View, Text, StyleSheet, Dimensions, AccessibilityInfo, Pressable } from 'react-native';
 import { Image as ExpoImage } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import Animated, {
+  cancelAnimation,
   Extrapolation,
   FadeIn,
   FadeInDown,
@@ -20,7 +21,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 
-import { errorHaptic, heavyHaptic, successHaptic } from '../../../../utils/haptics';
+import { errorHaptic, heavyHaptic, successHaptic, tapHaptic } from '../../../../utils/haptics';
 import { ConfettiExplosion } from '../../../../components/ui/ConfettiExplosion';
 import { FlyingRewards } from '../../../../components/ui/FlyingRewards';
 import { LottieIcon } from '../../../../components/ui/LottieIcon';
@@ -29,10 +30,10 @@ import { useDailyChallengesStore } from '../../../daily-challenges/use-daily-cha
 import { useDailyLogStore } from '../../../daily-summary/useDailyLogStore';
 import { CHALLENGE_COIN_REWARD, CHALLENGE_XP_REWARD, MAX_DAILY_PLAYS } from '../../../daily-challenges/daily-challenge-types';
 
-import { AD_TEMPLATES, STAMP_FRAME_GREEN, STAMP_FRAME_RED } from './adTemplates';
+import { AD_TEMPLATES } from './adTemplates';
 import { getTodayBullshitAds } from './bullshitAdsData';
 import type { BullshitAd, BullshitRoundResult } from './types';
-import { GlossaryTermPill } from '../shared/GlossaryTermPill';
+import { GlossaryInlineToggle } from '../shared/GlossaryInlineToggle';
 
 const LOTTIE_MAGNIFIER = require('../../../../../assets/lottie/wired-flat-1173-shark-hover-pinch.json');
 const LOTTIE_APPROVED = require('../../../../../assets/lottie/wired-flat-24-approved-checked-hover-pinch.json');
@@ -42,10 +43,14 @@ const RTL = { writingDirection: 'rtl' as const, textAlign: 'right' as const };
 const RTL_CENTER = { writingDirection: 'rtl' as const, textAlign: 'center' as const };
 const SCREEN_WIDTH = Dimensions.get('window').width;
 const SWIPE_THRESHOLD = SCREEN_WIDTH * 0.25;
-const FEEDBACK_DURATION = 2400;
+const FEEDBACK_DURATION = 6000;
 
 interface Props {
   isActive: boolean;
+  /** When true, bypass the daily-gate lockout (e.g. when used as a lesson interstitial). */
+  bypassDailyGate?: boolean;
+  /** Fired when the game transitions to the 'done' state. */
+  onFinish?: () => void;
 }
 
 function AdCardFront({ ad }: { ad: BullshitAd }) {
@@ -63,6 +68,7 @@ function AdCardFront({ ad }: { ad: BullshitAd }) {
       -1,
       true,
     );
+    return () => cancelAnimation(headlineScale);
   }, [headlineScale, reduceMotion]);
 
   const headlineStyle = useAnimatedStyle(() => ({
@@ -100,50 +106,54 @@ function AdCardFront({ ad }: { ad: BullshitAd }) {
       )}
 
       <View style={styles.headlineWrap}>
-        <Animated.Text
-          style={[
-            styles.headline,
-            RTL_CENTER,
-            {
-              color: template.textColor,
-              textShadowColor: isScam ? template.accentColor : 'rgba(0,0,0,0.4)',
-              textShadowOffset: { width: 0, height: 2 },
-              textShadowRadius: isScam ? 10 : 4,
-            },
-            headlineStyle,
-          ]}
-          numberOfLines={3}
-        >
-          {ad.headline}
-        </Animated.Text>
-
-        {ad.subheadline && (
-          <Text
+        <View style={styles.textOverlay}>
+          <Animated.Text
             style={[
-              styles.subheadline,
+              styles.headline,
               RTL_CENTER,
-              { color: template.textColor, opacity: 0.92 },
+              {
+                color: '#ffffff',
+                textShadowColor: isScam ? template.accentColor : 'rgba(0,0,0,0.7)',
+                textShadowOffset: { width: 0, height: 2 },
+                textShadowRadius: isScam ? 10 : 6,
+              },
+              headlineStyle,
             ]}
-            numberOfLines={2}
+            numberOfLines={3}
           >
-            {ad.subheadline}
-          </Text>
-        )}
+            {ad.headline}
+          </Animated.Text>
+
+          {ad.subheadline && (
+            <Text
+              style={[
+                styles.subheadline,
+                RTL_CENTER,
+                { color: '#ffffff', opacity: 0.95 },
+              ]}
+              numberOfLines={2}
+            >
+              {ad.subheadline}
+            </Text>
+          )}
+        </View>
       </View>
 
-      <Text
-        style={[
-          styles.disclaimer,
-          RTL,
-          {
-            color: template.textColor,
-            opacity: isScam ? 0.35 : 0.85,
-            fontSize: isScam ? 9 : 11,
-          },
-        ]}
-      >
-        {ad.disclaimer}
-      </Text>
+      <View style={styles.disclaimerPill}>
+        <Text
+          style={[
+            styles.disclaimer,
+            RTL,
+            {
+              color: '#ffffff',
+              opacity: isScam ? 0.55 : 0.95,
+              fontSize: isScam ? 9 : 11,
+            },
+          ]}
+        >
+          {ad.disclaimer}
+        </Text>
+      </View>
     </View>
   );
 }
@@ -169,10 +179,10 @@ function DropStamp({ kind }: { kind: 'bullshit' | 'legit' }) {
       return;
     }
     opacity.value = withTiming(1, { duration: 140 });
-    scale.value = withSpring(1, { damping: 8, stiffness: 120 }, (finished) => {
+    scale.value = withSpring(1, { damping: 14, stiffness: 90 }, (finished) => {
       if (finished) runOnJS(triggerSlapHaptic)();
     });
-    rotate.value = withSpring(finalRotation, { damping: 10 });
+    rotate.value = withSpring(finalRotation, { damping: 16 });
     flashOpacity.value = withDelay(
       180,
       withSequence(
@@ -195,23 +205,19 @@ function DropStamp({ kind }: { kind: 'bullshit' | 'legit' }) {
   }));
 
   const isBS = kind === 'bullshit';
-  const frameSource = isBS ? STAMP_FRAME_RED : STAMP_FRAME_GREEN;
   const stampColor = isBS ? '#dc2626' : '#16a34a';
 
   return (
     <>
       <Animated.View style={[StyleSheet.absoluteFill, styles.flashOverlay, flashStyle]} pointerEvents="none" />
       <Animated.View style={[styles.stampWrap, stampStyle]} pointerEvents="none">
-        <View style={styles.stampFrameBox}>
-          <ExpoImage source={frameSource} style={StyleSheet.absoluteFill} contentFit="contain" accessible={false} />
-          <View style={styles.stampTextCenter}>
-            <Text style={[styles.stampEn, { color: stampColor }]}>
-              {isBS ? 'BULLSHIT' : 'LEGIT'}
-            </Text>
-            <Text style={[styles.stampHe, { color: stampColor }]}>
-              {isBS ? 'בולשיט' : 'לגיטימי'}
-            </Text>
-          </View>
+        <View style={[styles.stampCircle, { borderColor: stampColor }]}>
+          <Text style={[styles.stampEn, { color: stampColor }]}>
+            {isBS ? 'BULLSHIT' : 'LEGIT'}
+          </Text>
+          <Text style={[styles.stampHe, { color: stampColor }]}>
+            {isBS ? 'בולשיט' : 'לגיטימי'}
+          </Text>
         </View>
       </Animated.View>
     </>
@@ -306,10 +312,17 @@ const SHARK_LOSE_TITLES = [
   'מוכנים לסיבוב הבא',
 ];
 
+
 function CaptainSharkSpeech({
   result,
+  onNext,
+  onInteract,
+  isLast,
 }: {
   result: BullshitRoundResult;
+  onNext: () => void;
+  onInteract: () => void;
+  isLast: boolean;
 }) {
   const imageSource = result.correct ? FINN_HAPPY : FINN_EMPATHIC;
   const titlePool = result.correct ? SHARK_WIN_TITLES : SHARK_LOSE_TITLES;
@@ -334,19 +347,32 @@ function CaptainSharkSpeech({
             {result.ad.explanation}
           </Text>
           {result.ad.glossaryKeys && result.ad.glossaryKeys.length > 0 && (
-            <View style={styles.glossaryRow}>
+            <View style={styles.glossaryColumn}>
               {result.ad.glossaryKeys.map((k) => (
-                <GlossaryTermPill key={k} glossaryKey={k} />
+                <GlossaryInlineToggle key={k} glossaryKey={k} onInteract={onInteract} />
               ))}
             </View>
           )}
         </View>
       </View>
+
+      <Pressable
+        onPress={onNext}
+        accessibilityRole="button"
+        accessibilityLabel={isLast ? 'סיימנו' : 'הבא'}
+        style={({ pressed }) => [styles.manualNextBtn, pressed && { transform: [{ translateY: 2 }] }]}
+      >
+        <Text style={styles.manualNextBtnText}>{isLast ? 'סיימנו' : 'הבא ←'}</Text>
+      </Pressable>
     </Animated.View>
   );
 }
 
-export const BullshitSwipeCard = React.memo(function BullshitSwipeCard({ isActive: _isActive }: Props) {
+export const BullshitSwipeCard = React.memo(function BullshitSwipeCard({
+  isActive: _isActive,
+  bypassDailyGate = false,
+  onFinish,
+}: Props) {
   const playBullshitSwipe = useDailyChallengesStore((s) => s.playBullshitSwipe);
   const hasPlayedToday = useDailyChallengesStore((s) => s.hasBullshitSwipePlayedToday());
   const playsToday = useDailyChallengesStore((s) => s.getBullshitSwipePlaysToday());
@@ -401,6 +427,33 @@ export const BullshitSwipeCard = React.memo(function BullshitSwipeCard({ isActiv
     [playBullshitSwipe],
   );
 
+  const advanceAfterFeedback = useCallback(
+    (updatedResults: BullshitRoundResult[]) => {
+      setFeedback(null);
+      if (currentIndex + 1 >= adsThisRound.length) {
+        setGameState('done');
+        finalize(updatedResults);
+        onFinish?.();
+      } else {
+        setCurrentIndex((i) => i + 1);
+      }
+    },
+    [adsThisRound.length, currentIndex, finalize, onFinish],
+  );
+
+  const cancelFeedbackTimer = useCallback(() => {
+    if (feedbackTimer.current) {
+      clearTimeout(feedbackTimer.current);
+      feedbackTimer.current = null;
+    }
+  }, []);
+
+  const handleManualNext = useCallback(() => {
+    cancelFeedbackTimer();
+    tapHaptic();
+    advanceAfterFeedback(results);
+  }, [advanceAfterFeedback, cancelFeedbackTimer, results]);
+
   const handleSwipe = useCallback(
     (userSaidBullshit: boolean) => {
       if (gameState === 'done') return;
@@ -417,19 +470,13 @@ export const BullshitSwipeCard = React.memo(function BullshitSwipeCard({ isActiv
       setResults(updatedResults);
 
       feedbackTimer.current = setTimeout(() => {
-        setFeedback(null);
-        if (currentIndex + 1 >= adsThisRound.length) {
-          setGameState('done');
-          finalize(updatedResults);
-        } else {
-          setCurrentIndex((i) => i + 1);
-        }
+        advanceAfterFeedback(updatedResults);
       }, FEEDBACK_DURATION);
     },
-    [adsThisRound, currentIndex, finalize, gameState, results],
+    [adsThisRound, currentIndex, gameState, results, advanceAfterFeedback],
   );
 
-  if (hasPlayedToday && gameState !== 'done') {
+  if (hasPlayedToday && gameState !== 'done' && !bypassDailyGate) {
     return (
       <View style={styles.container}>
         <View style={styles.cardShell}>
@@ -492,7 +539,12 @@ export const BullshitSwipeCard = React.memo(function BullshitSwipeCard({ isActiv
               <AdCardFront ad={feedback.ad} />
               <DropStamp kind={feedback.ad.isBullshit ? 'bullshit' : 'legit'} />
             </View>
-            <CaptainSharkSpeech result={feedback} />
+            <CaptainSharkSpeech
+              result={feedback}
+              onNext={handleManualNext}
+              onInteract={cancelFeedbackTimer}
+              isLast={currentIndex + 1 >= adsThisRound.length}
+            />
           </View>
         )}
 
@@ -626,6 +678,13 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: 8,
   },
+  textOverlay: {
+    backgroundColor: 'rgba(0,0,0,0.45)',
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    borderRadius: 14,
+    gap: 6,
+  },
   headline: {
     fontSize: 28,
     fontWeight: '900',
@@ -638,6 +697,13 @@ const styles = StyleSheet.create({
   },
   disclaimer: {
     lineHeight: 14,
+  },
+  disclaimerPill: {
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 8,
+    alignSelf: 'flex-start',
   },
   flashOverlay: {
     backgroundColor: '#ffffff',
@@ -682,20 +748,19 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  stampFrameBox: {
+  stampCircle: {
     width: 220,
     height: 220,
-    alignItems: 'center',
-    justifyContent: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.35,
-    shadowRadius: 12,
-  },
-  stampTextCenter: {
+    borderRadius: 110,
+    borderWidth: 9,
     alignItems: 'center',
     justifyContent: 'center',
     gap: 4,
+    backgroundColor: 'transparent',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.4,
+    shadowRadius: 12,
   },
   stampEn: {
     fontSize: 28,
@@ -753,12 +818,11 @@ const styles = StyleSheet.create({
     color: '#334155',
     lineHeight: 19,
   },
-  glossaryRow: {
-    flexDirection: 'row-reverse',
-    flexWrap: 'wrap',
-    gap: 6,
-    marginTop: 8,
-    paddingTop: 8,
+  glossaryColumn: {
+    flexDirection: 'column',
+    gap: 8,
+    marginTop: 10,
+    paddingTop: 10,
     borderTopWidth: 1,
     borderTopColor: 'rgba(14,165,233,0.15)',
   },
@@ -828,6 +892,28 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '900',
     color: '#7c3aed',
+  },
+  manualNextBtn: {
+    alignSelf: 'stretch',
+    marginTop: 12,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 12,
+    backgroundColor: '#0ea5e9',
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#0284c7',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 5,
+  },
+  manualNextBtnText: {
+    fontSize: 15,
+    fontWeight: '900',
+    color: '#ffffff',
+    letterSpacing: 0.3,
+    writingDirection: 'rtl',
   },
 });
 

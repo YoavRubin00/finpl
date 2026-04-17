@@ -1,15 +1,17 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { TOWER_DEFENSE_CONFIG } from "./towerDefenseData";
-import { distanceNorm, pointAtProgress } from "./pathGeometry";
+import { distanceNorm, pointAtProgress, TOWER_PADS } from "./pathGeometry";
 import type {
   EnemyInstance,
   GameState,
+  ProjectileInstance,
   TowerInstance,
   TowerKind,
   VictorySummary,
 } from "./types";
 
 const TICK_MS = 50;
+const PROJECTILE_TTL_MS = 260;
 
 const buildInitialState = (): GameState => ({
   phase: "intro",
@@ -20,6 +22,7 @@ const buildInitialState = (): GameState => ({
   coinsInvested: 0,
   towers: [],
   enemies: [],
+  projectiles: [],
   enemiesKilled: 0,
   enemiesEscaped: 0,
   placementSecondsLeft: TOWER_DEFENSE_CONFIG.waves[0].placementSeconds,
@@ -62,15 +65,25 @@ export function useTowerDefense({ onVictory }: UseTowerDefenseArgs) {
     setState((prev) => ({ ...prev, phase: "wave", enemies: [] }));
   }, []);
 
-  const placeTower = useCallback((kind: TowerKind, x: number, y: number) => {
+  const placeTower = useCallback((kind: TowerKind, padIndex: number) => {
     const def = TOWER_DEFENSE_CONFIG.towers.find((t) => t.kind === kind);
     if (!def) return false;
+    const pad = TOWER_PADS[padIndex];
+    if (!pad) return false;
     let didPlace = false;
     setState((prev) => {
       if (prev.phase !== "placement") return prev;
       if (prev.coinsAvailable < def.cost) return prev;
+      if (prev.towers.some((t) => t.padIndex === padIndex)) return prev;
       const id = `tower-${++towerCounterRef.current}`;
-      const newTower: TowerInstance = { id, kind, x, y, lastAttackAt: 0 };
+      const newTower: TowerInstance = {
+        id,
+        kind,
+        padIndex,
+        x: pad.x,
+        y: pad.y,
+        lastAttackAt: 0,
+      };
       didPlace = true;
       return {
         ...prev,
@@ -103,14 +116,7 @@ export function useTowerDefense({ onVictory }: UseTowerDefenseArgs) {
         if (prev.phase !== "placement") return prev;
         const next = prev.placementSecondsLeft - 1;
         if (next <= 0) {
-          waveStartAtRef.current = Date.now();
-          spawnCursorRef.current = 0;
-          return {
-            ...prev,
-            placementSecondsLeft: 0,
-            phase: "wave",
-            enemies: [],
-          };
+          return { ...prev, placementSecondsLeft: 0 };
         }
         return { ...prev, placementSecondsLeft: next };
       });
@@ -131,6 +137,8 @@ export function useTowerDefense({ onVictory }: UseTowerDefenseArgs) {
     return () => clearInterval(id);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [state.phase]);
+
+  const projectileCounterRef = useRef<number>(0);
 
   const tick = useCallback(() => {
     const now = Date.now();
@@ -164,6 +172,7 @@ export function useTowerDefense({ onVictory }: UseTowerDefenseArgs) {
       let enemiesKilled = prev.enemiesKilled;
       let enemiesEscaped = prev.enemiesEscaped;
       const alive: EnemyInstance[] = [];
+      const newProjectiles: ProjectileInstance[] = [];
 
       const moved = [...prev.enemies, ...toSpawn].map((e) => {
         if (e.isDead || e.escaped) return e;
@@ -199,6 +208,17 @@ export function useTowerDefense({ onVictory }: UseTowerDefenseArgs) {
         }
         if (victimIdx !== -1) {
           const victim = moved[victimIdx];
+          const victimPt = pointAtProgress(victim.progress);
+          newProjectiles.push({
+            id: `proj-${++projectileCounterRef.current}`,
+            kind: tower.kind,
+            fromX: tower.x,
+            fromY: tower.y,
+            toX: victimPt.x,
+            toY: victimPt.y,
+            spawnAt: now,
+            ttlMs: PROJECTILE_TTL_MS,
+          });
           const multiplier = tDef.strongAgainst.includes(victim.kind)
             ? 2
             : 1;
@@ -217,6 +237,10 @@ export function useTowerDefense({ onVictory }: UseTowerDefenseArgs) {
         if (!e.isDead && !e.escaped) alive.push(e);
       }
 
+      const liveProjectiles = [...prev.projectiles, ...newProjectiles].filter(
+        (p) => now - p.spawnAt < p.ttlMs,
+      );
+
       const allSpawned = spawnCursorRef.current >= wave.spawnPlan.length;
       const waveClear = allSpawned && alive.length === 0;
 
@@ -226,6 +250,7 @@ export function useTowerDefense({ onVictory }: UseTowerDefenseArgs) {
           phase: "defeat",
           vaultHealth: 0,
           enemies: alive,
+          projectiles: liveProjectiles,
           enemiesKilled,
           enemiesEscaped,
         };
@@ -247,6 +272,7 @@ export function useTowerDefense({ onVictory }: UseTowerDefenseArgs) {
             phase: "victory",
             vaultHealth,
             enemies: [],
+            projectiles: [],
             enemiesKilled,
             enemiesEscaped,
           };
@@ -259,6 +285,7 @@ export function useTowerDefense({ onVictory }: UseTowerDefenseArgs) {
           vaultHealth,
           coinsAvailable: prev.coinsAvailable + wave.reward.coins,
           enemies: [],
+          projectiles: [],
           enemiesKilled,
           enemiesEscaped,
           placementSecondsLeft:
@@ -270,6 +297,7 @@ export function useTowerDefense({ onVictory }: UseTowerDefenseArgs) {
         ...prev,
         vaultHealth,
         enemies: alive,
+        projectiles: liveProjectiles,
         enemiesKilled,
         enemiesEscaped,
       };

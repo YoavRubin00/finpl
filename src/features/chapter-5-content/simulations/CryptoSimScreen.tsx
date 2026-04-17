@@ -5,6 +5,8 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, Dimensions } from 'react-native';
+import { Image as ExpoImage } from 'expo-image';
+import { FINN_STANDARD } from '../../retention-loops/finnMascotConfig';
 import Animated, {
   FadeIn,
   FadeInDown,
@@ -173,14 +175,14 @@ function DualLineChart({
           );
         })}
 
-        {/* X-axis labels */}
+        {/* X-axis labels — real years 2019 (start) → 2025 */}
         <View style={chartStyles.xLabelsRow}>
           {Array.from({ length: maxPoints }, (_, i) => (
             <Text
               key={`x-${i}`}
-              style={[chartStyles.xLabel, { left: i * stepX - 12, width: 24 }]}
+              style={[chartStyles.xLabel, { left: i * stepX - 14, width: 28 }]}
             >
-              {i === 0 ? 'התחלה' : `שנה ${i}`}
+              {`${2019 + i}`}
             </Text>
           ))}
         </View>
@@ -218,7 +220,7 @@ function AllocationSlider({
         <Text style={[sliderStyles.percent, { color }]}>{percent}%</Text>
       </View>
       <Slider
-        style={sliderStyles.slider}
+        style={[sliderStyles.slider, { transform: [{ scaleX: -1 }] }]}
         minimumValue={0}
         maximumValue={100}
         step={5}
@@ -352,20 +354,56 @@ function ScoreScreen({
         </View>
       </Animated.View>
 
-      {/* Finn ETF tip */}
-      <Animated.View entering={FadeInUp.delay(350)} style={{ marginTop: 12 }}>
-        <View style={scoreStyles.finnTip}>
-          <View style={{ flexDirection: 'row-reverse', alignItems: 'flex-start', gap: 10 }}>
-            <LottieIcon source={LOTTIE_SHIELD} size={36} />
-            <Text style={[RTL, scoreStyles.finnTipText]}>
-              ידעתם? אפשר להיחשף לקריפטו גם דרך תעודות סל שנסחרות בבורסה האמריקאית — בלי ארנק דיגיטלי ובלי סיכוני פריצה. למשל IBIT לביטקוין ו-ETHA לאת׳ריום.
-            </Text>
+      {/* Shark notification — long-term crypto take */}
+      <Animated.View entering={FadeInUp.delay(340)} style={{ marginTop: 12 }}>
+        <View style={scoreStyles.sharkBubble}>
+          <View style={scoreStyles.sharkHeader}>
+            <ExpoImage source={FINN_STANDARD} style={scoreStyles.sharkAvatar} contentFit="contain" accessible={false} />
+            <Text style={[RTL, scoreStyles.sharkName]}>קפטן שארק</Text>
+          </View>
+          <Text style={[RTL, scoreStyles.sharkQuote]}>
+            קריפטו מייצג קידמה ועתיד. אם הוא ישתלט על העולם — אתם רוצים להיות בפנים. לכן שווה להחזיק, אבל להבין את הסיכונים.
+          </Text>
+        </View>
+      </Animated.View>
+
+      {/* How to invest — direct vs ETF */}
+      <Animated.View entering={FadeInUp.delay(400)} style={{ marginTop: 12 }}>
+        <View style={scoreStyles.howToCard}>
+          <View style={scoreStyles.howToHeaderRow}>
+            <LottieIcon source={LOTTIE_SHIELD} size={28} />
+            <Text style={[RTL, scoreStyles.howToTitle]}>איך להיחשף בפועל?</Text>
+          </View>
+          <Text style={[RTL, scoreStyles.howToBody]}>
+            ניתן להשקיע באמצעות החזקה ישירה של מטבע, או באמצעות קרנות מחקות כמו ETHA או IBIT.
+          </Text>
+
+          <View style={scoreStyles.prosRow}>
+            <View style={[scoreStyles.prosCol, { borderColor: ASSET_COLORS.btc }]}>
+              <Text style={[RTL, scoreStyles.prosColTitle, { color: ASSET_COLORS.btc }]}>
+                החזקה ישירה
+              </Text>
+              <Text style={[RTL, scoreStyles.prosItem]}>• בעלות מלאה במטבע</Text>
+              <Text style={[RTL, scoreStyles.prosItem]}>• ללא דמי ניהול</Text>
+              <Text style={[RTL, scoreStyles.prosItem]}>• סחיר 24/7 גלובלית</Text>
+              <Text style={[RTL, scoreStyles.prosItem]}>• דורש ארנק + אבטחה</Text>
+            </View>
+
+            <View style={[scoreStyles.prosCol, { borderColor: ASSET_COLORS.eth }]}>
+              <Text style={[RTL, scoreStyles.prosColTitle, { color: ASSET_COLORS.eth }]}>
+                ETF (ETHA / IBIT)
+              </Text>
+              <Text style={[RTL, scoreStyles.prosItem]}>• ללא ארנק דיגיטלי</Text>
+              <Text style={[RTL, scoreStyles.prosItem]}>• בברוקר רגיל כמו מניה</Text>
+              <Text style={[RTL, scoreStyles.prosItem]}>• אחסון מובנה בבנק</Text>
+              <Text style={[RTL, scoreStyles.prosItem]}>• דמי ניהול שנתיים</Text>
+            </View>
           </View>
         </View>
       </Animated.View>
 
       {/* Actions */}
-      <Animated.View entering={FadeInUp.delay(450)} style={sim5Styles.actionsRow}>
+      <Animated.View entering={FadeInUp.delay(500)} style={sim5Styles.actionsRow}>
         <AnimatedPressable onPress={onReplay} style={sim5Styles.replayBtn} accessibilityRole="button" accessibilityLabel="שחק שוב">
           <View accessible={false}><LottieIcon source={LOTTIE_REPLAY} size={18} /></View>
           <Text style={sim5Styles.replayText}>שחק שוב</Text>
@@ -541,50 +579,85 @@ export function CryptoSimScreen({ onComplete }: CryptoSimScreenProps) {
   return (
     <SimLottieBackground lottieSources={CH5_LOTTIE} chapterColors={SIM5.gradient}>
       <Animated.View style={[{ flex: 1 }, containerAnimStyle]}>
-        <View style={{ flex: 1, padding: 12 }}>
-          <Text style={[styles.subtitle, RTL, { textAlign: 'center', marginBottom: 4 }]}>
-              הקצה ₪{INITIAL_AMOUNT.toLocaleString('he-IL')} בין BTC, ETH ומזומן
+        <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 12, paddingBottom: 32 }} showsVerticalScrollIndicator={false}>
+          {!isSimRunning && (
+            <Text style={[styles.subtitle, RTL, { textAlign: 'center', marginBottom: 4 }]}>
+              הקצו ₪{INITIAL_AMOUNT.toLocaleString('he-IL')} בין BTC, ETH ומזומן · נתונים אמיתיים 2020–2025
             </Text>
+          )}
 
           {/* Year counter */}
           {isSimRunning && (
             <Animated.View entering={FadeInDown.delay(50)}>
               <Text style={styles.yearCounter}>
-                שנה {state.currentYear} / {TOTAL_YEARS}
+                שנה {state.currentYear} / {TOTAL_YEARS} · {2019 + state.currentYear}
               </Text>
             </Animated.View>
           )}
 
-          {/* Allocation sliders */}
-          <Animated.View entering={FadeInDown.delay(100)}>
-            <GlowCard
-              glowColor="rgba(167,139,250,0.2)"
-              style={{ backgroundColor: SIM5.cardBg }}
-            >
-              <View style={sliderStyles.container}>
-                <Text style={[sliderStyles.heading, RTL]}>הקצאת תיק</Text>
-                {config.assets.map((asset) => {
-                  let percent = 0;
-                  if (asset.id === 'btc') percent = state.allocation.btcPercent;
-                  else if (asset.id === 'eth') percent = state.allocation.ethPercent;
-                  else percent = state.allocation.cashPercent;
-
-                  return (
-                    <AllocationSlider
-                      key={asset.id}
-                      assetId={asset.id}
-                      emoji={asset.emoji}
-                      name={asset.name}
-                      percent={percent}
-                      color={ASSET_COLORS[asset.id]}
-                      disabled={slidersDisabled}
-                      onValueChange={handleSliderChange}
-                    />
-                  );
-                })}
+          {/* Progress bar — moved above the fold during sim */}
+          {isSimRunning && (
+            <Animated.View entering={FadeInUp.delay(80)} style={{ marginTop: 6, marginBottom: 6 }}>
+              <View style={[sim5Styles.progressTrack, { transform: [{ scaleX: -1 }] }]}>
+                <View
+                  style={[
+                    sim5Styles.progressFill,
+                    {
+                      width: `${(state.currentYear / TOTAL_YEARS) * 100}%`,
+                      backgroundColor: LINE_COLORS.crypto,
+                    },
+                  ]}
+                />
               </View>
-            </GlowCard>
-          </Animated.View>
+            </Animated.View>
+          )}
+
+          {/* Allocation — full sliders when idle, compact summary when running */}
+          {!isSimRunning ? (
+            <Animated.View entering={FadeInDown.delay(100)}>
+              <GlowCard
+                glowColor="rgba(167,139,250,0.2)"
+                style={{ backgroundColor: SIM5.cardBg }}
+              >
+                <View style={sliderStyles.container}>
+                  <Text style={[sliderStyles.heading, RTL]}>הקצאת תיק</Text>
+                  {config.assets.map((asset) => {
+                    let percent = 0;
+                    if (asset.id === 'btc') percent = state.allocation.btcPercent;
+                    else if (asset.id === 'eth') percent = state.allocation.ethPercent;
+                    else percent = state.allocation.cashPercent;
+
+                    return (
+                      <AllocationSlider
+                        key={asset.id}
+                        assetId={asset.id}
+                        emoji={asset.emoji}
+                        name={asset.name}
+                        percent={percent}
+                        color={ASSET_COLORS[asset.id]}
+                        disabled={slidersDisabled}
+                        onValueChange={handleSliderChange}
+                      />
+                    );
+                  })}
+                </View>
+              </GlowCard>
+            </Animated.View>
+          ) : (
+            <View style={styles.allocationCompactRow}>
+              <Text style={[styles.allocationCompactText, { color: ASSET_COLORS.btc }]}>
+                ₿ {state.allocation.btcPercent}%
+              </Text>
+              <Text style={styles.allocationCompactDivider}>·</Text>
+              <Text style={[styles.allocationCompactText, { color: ASSET_COLORS.eth }]}>
+                Ξ {state.allocation.ethPercent}%
+              </Text>
+              <Text style={styles.allocationCompactDivider}>·</Text>
+              <Text style={[styles.allocationCompactText, { color: ASSET_COLORS.cash }]}>
+                💵 {state.allocation.cashPercent}%
+              </Text>
+            </View>
+          )}
 
           {/* Dual balance display (shown during/after sim) */}
           {isSimRunning && (
@@ -702,35 +775,18 @@ export function CryptoSimScreen({ onComplete }: CryptoSimScreenProps) {
             )}
           </Animated.View>
 
-          {/* Progress bar */}
-          {isSimRunning && (
-            <Animated.View entering={FadeInUp.delay(350)} style={{ marginTop: 14 }}>
-              <View style={[sim5Styles.progressTrack, { transform: [{ scaleX: -1 }] }]}>
-                <View
-                  style={[
-                    sim5Styles.progressFill,
-                    {
-                      width: `${(state.currentYear / TOTAL_YEARS) * 100}%`,
-                      backgroundColor: LINE_COLORS.crypto,
-                    },
-                  ]}
-                />
-              </View>
-            </Animated.View>
-          )}
-
           {/* Hint */}
           {!isSimRunning && (
             <Animated.View entering={FadeInUp.delay(400)}>
               <View style={styles.hintRow}>
                 <LottieIcon source={LOTTIE_BULB} size={20} />
                 <Text style={[styles.hintText, RTL]}>
-                  נסה הקצאות שונות — כמה קריפטו אתה מוכן לסבול? שים לב לתנודתיות!
+                  נסו הקצאות שונות — כמה קריפטו אתם מוכנים לסבול? שימו לב לתנודתיות!
                 </Text>
               </View>
             </Animated.View>
           )}
-        </View>
+        </ScrollView>
       </Animated.View>
     </SimLottieBackground>
   );
@@ -773,6 +829,30 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginTop: 4,
     ...SHADOW_LIGHT,
+  },
+
+  /* Compact allocation summary (during sim) */
+  allocationCompactRow: {
+    flexDirection: 'row-reverse',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    marginTop: 6,
+    borderRadius: 12,
+    backgroundColor: 'rgba(15,23,42,0.35)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.08)',
+  },
+  allocationCompactText: {
+    fontSize: 14,
+    fontWeight: '900',
+  },
+  allocationCompactDivider: {
+    color: 'rgba(255,255,255,0.5)',
+    fontSize: 14,
+    fontWeight: '800',
   },
 
   /* Balance dual display */
@@ -1047,5 +1127,92 @@ const scoreStyles = StyleSheet.create({
     color: '#92400e',
     fontWeight: '600',
     lineHeight: 22,
+  },
+
+  /* Captain Shark long-term take */
+  sharkBubble: {
+    backgroundColor: '#ecfeff',
+    borderRadius: 16,
+    padding: 14,
+    borderWidth: 1.5,
+    borderColor: 'rgba(14,165,233,0.4)',
+    gap: 8,
+    shadowColor: '#0ea5e9',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.18,
+    shadowRadius: 8,
+    elevation: 3,
+  },
+  sharkHeader: {
+    flexDirection: 'row-reverse',
+    alignItems: 'center',
+    gap: 8,
+  },
+  sharkAvatar: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+  },
+  sharkName: {
+    fontSize: 14,
+    fontWeight: '900',
+    color: '#0369a1',
+    letterSpacing: 0.2,
+  },
+  sharkQuote: {
+    fontSize: 14,
+    color: '#0c4a6e',
+    fontWeight: '600',
+    lineHeight: 22,
+  },
+
+  /* How-to-invest card with pros columns */
+  howToCard: {
+    backgroundColor: '#ffffff',
+    borderRadius: 16,
+    padding: 14,
+    borderWidth: 1.5,
+    borderColor: 'rgba(14,165,233,0.25)',
+    gap: 10,
+  },
+  howToHeaderRow: {
+    flexDirection: 'row-reverse',
+    alignItems: 'center',
+    gap: 8,
+  },
+  howToTitle: {
+    fontSize: 15,
+    fontWeight: '900',
+    color: '#0369a1',
+    flex: 1,
+  },
+  howToBody: {
+    fontSize: 13.5,
+    color: '#334155',
+    fontWeight: '600',
+    lineHeight: 20,
+  },
+  prosRow: {
+    flexDirection: 'row-reverse',
+    gap: 8,
+  },
+  prosCol: {
+    flex: 1,
+    backgroundColor: '#f8fafc',
+    borderRadius: 12,
+    padding: 10,
+    borderWidth: 1.5,
+    gap: 4,
+  },
+  prosColTitle: {
+    fontSize: 13,
+    fontWeight: '900',
+    marginBottom: 2,
+  },
+  prosItem: {
+    fontSize: 12,
+    color: '#475569',
+    fontWeight: '600',
+    lineHeight: 18,
   },
 });

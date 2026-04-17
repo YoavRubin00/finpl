@@ -224,7 +224,8 @@ function ScoreScreen({
     const runnerLotties = [LOTTIE_CLOCK, LOTTIE_ROCKET];
 
     return (
-        <ScrollView style={{ flex: 1 }} contentContainerStyle={{ gap: 16, paddingBottom: 20 }}>
+      <View style={{ flex: 1 }}>
+        <ScrollView style={{ flex: 1 }} contentContainerStyle={{ gap: 16, paddingBottom: 120 }}>
             {/* Title */}
             <Animated.View entering={FadeInDown.delay(100)} style={{ alignItems: 'center', gap: 4 }}>
                 <View accessible={false}><LottieIcon source={LOTTIE_TROPHY} size={56} /></View>
@@ -285,20 +286,22 @@ function ScoreScreen({
                 </View>
             </Animated.View>
 
-            {/* Actions */}
-            <View style={sim2Styles.actionsRow}>
-                <AnimatedPressable onPress={onReplay} style={sim2Styles.replayBtn} accessibilityRole="button" accessibilityLabel="שחק שוב" accessibilityHint="מתחיל את הסימולציה מחדש">
-                    <View accessible={false}><LottieIcon source={LOTTIE_REPLAY} size={18} /></View>
-                    <Text style={sim2Styles.replayText}>שחק שוב</Text>
-                </AnimatedPressable>
-                <AnimatedPressable onPress={onFinish} style={[sim2Styles.continueBtn, { justifyContent: 'center' }]} accessibilityRole="button" accessibilityLabel="המשך" accessibilityHint="ממשיך לשלב הבא">
-                    <Text style={sim2Styles.continueText}>המשך</Text>
-                    <View style={{ position: 'absolute', left: 16 }}>
-                        <LottieIcon source={LOTTIE_ARROW} size={22} />
-                    </View>
-                </AnimatedPressable>
-            </View>
         </ScrollView>
+
+        {/* Sticky actions bar — always visible */}
+        <View style={styles.stickyActionsBar}>
+          <AnimatedPressable onPress={onReplay} style={sim2Styles.replayBtn} accessibilityRole="button" accessibilityLabel="שחק שוב" accessibilityHint="מתחיל את הסימולציה מחדש">
+            <View accessible={false}><LottieIcon source={LOTTIE_REPLAY} size={18} /></View>
+            <Text style={sim2Styles.replayText}>שחק שוב</Text>
+          </AnimatedPressable>
+          <AnimatedPressable onPress={onFinish} style={[sim2Styles.continueBtn, { justifyContent: 'center' }]} accessibilityRole="button" accessibilityLabel="המשך" accessibilityHint="ממשיך לשלב הבא">
+            <Text style={sim2Styles.continueText}>המשך</Text>
+            <View style={{ position: 'absolute', left: 16 }}>
+              <LottieIcon source={LOTTIE_ARROW} size={22} />
+            </View>
+          </AnimatedPressable>
+        </View>
+      </View>
     );
 }
 
@@ -514,6 +517,27 @@ export function RetirementRaceScreen({ onComplete }: { onComplete: () => void })
 
 const styles = StyleSheet.create({
     container: { flex: 1 },
+
+    /* ── Sticky actions bar (score screen footer) ── */
+    stickyActionsBar: {
+        position: 'absolute',
+        left: 0,
+        right: 0,
+        bottom: 0,
+        flexDirection: 'row-reverse',
+        gap: 8,
+        paddingHorizontal: 16,
+        paddingVertical: 12,
+        paddingBottom: 16,
+        backgroundColor: 'rgba(255,255,255,0.96)',
+        borderTopWidth: 1,
+        borderTopColor: SIM2.cardBorder,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: -2 },
+        shadowOpacity: 0.08,
+        shadowRadius: 6,
+        elevation: 10,
+    },
 
     /* ── Year counter ── */
     yearCounter: {

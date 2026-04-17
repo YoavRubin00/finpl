@@ -881,8 +881,8 @@ export function IRABuilderScreen({ onComplete }: IRABuilderScreenProps) {
 
 const styles = StyleSheet.create({
   scrollContent: {
-    padding: 16,
-    paddingBottom: 80,
+    padding: 12,
+    paddingBottom: 24,
   },
   titleRow: {
     flexDirection: 'row-reverse',
@@ -1087,42 +1087,43 @@ const styles = StyleSheet.create({
 /* ── Param slider styles ── */
 const paramStyles = StyleSheet.create({
   container: {
-    padding: 16,
-    gap: 10,
+    padding: 12,
+    gap: 6,
   },
   heading: {
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: '800',
     color: SIM5.textPrimary,
-    marginBottom: 4,
+    marginBottom: 2,
   },
   row: {
-    gap: 4,
+    gap: 2,
   },
   labelRow: {
     flexDirection: 'row-reverse',
     alignItems: 'center',
-    gap: 8,
+    gap: 6,
     justifyContent: 'space-between',
   },
   emoji: {
-    fontSize: 20,
+    fontSize: 18,
   },
   name: {
-    fontSize: 15,
+    fontSize: 14,
     fontWeight: '700',
     flex: 1,
     color: SIM5.textPrimary,
   },
   value: {
-    fontSize: 17,
+    fontSize: 15,
     fontWeight: '900',
     minWidth: 60,
     textAlign: 'left',
   },
   slider: {
     width: '100%',
-    height: 36,
+    height: 30,
+    transform: [{ scaleX: -1 }], // RTL: thumb starts at right, extends left
   },
 });
 

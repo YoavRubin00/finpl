@@ -12,7 +12,9 @@ export type GlossaryKey =
   | 'gemel-investment'
   | 'section-45a'
   | 'real-vs-nominal'
-  | 'pump-and-dump';
+  | 'pump-and-dump'
+  | 'multiplier'
+  | 'fear-or-greed';
 
 export interface GlossaryEntry {
   key: GlossaryKey;
@@ -101,6 +103,18 @@ export const GLOSSARY: Record<GlossaryKey, GlossaryEntry> = {
     key: 'pump-and-dump',
     term: 'Pump & Dump',
     shortDefinition: 'תרמית שבה קבוצה קונה נכס זול (לרוב קריפטו/NFT/מניה קטנה), יוצרת הייפ מזויף כדי לנפח את המחיר, מוכרת ברווח, ומשאירה את שאר הקונים עם נכס חסר ערך.',
+  },
+  multiplier: {
+    key: 'multiplier',
+    term: 'המלכודת של המכפיל',
+    shortDefinition: 'המכפיל הוא פיתיון פסיכולוגי — ככל שהוא מטפס, המוח שלך צועק "עוד קצת". זה בדיוק התכנון. כל קזינו אונליין בנוי על ההנחה שלא תוכל לעצור בזמן, כי ההפסד של ×2 מרגיש גרוע יותר מהרווח של ×2 (מחקר קהנמן — Loss Aversion, פי 2.5).',
+    example: 'דוגמה אמיתית: במשחקי Crash בקריפטו, ממוצע המכפיל שבו שחקנים מושכים הוא ×1.6. ממוצע הקריסה האמיתי? ×1.8. כלומר — הבית תמיד מרוויח, אבל הרגש גורם לאנשים לחשוב שהם "כמעט הצליחו".',
+  },
+  'fear-or-greed': {
+    key: 'fear-or-greed',
+    term: 'Fear & Greed',
+    shortDefinition: 'מדד סנטימנט 0-100. 0 = פאניקה, 100 = תאווה. בועות נולדות ב-75+, הזדמנויות ב-25-.',
+    example: 'מרץ 2020: 2. נובמבר 2021: 84. ההיסטוריה חוזרת.',
   },
 };
 

@@ -32,17 +32,17 @@ export interface QuestRewardSummary {
 export const QUEST_TEMPLATES: Omit<DailyQuest, "id" | "isCompleted">[] = [
   {
     type: "dilemma",
-    titleHe: "ענה על אתגר יומי",
+    titleHe: "ענו על אתגר יומי",
     lottieSource: require("../../../assets/lottie/wired-flat-458-goal-target-hover-hit.json") as number,
   },
   {
     type: "module",
-    titleHe: "סיים מודול אחד",
+    titleHe: "סיימו מודול אחד",
     lottieSource: require("../../../assets/lottie/wired-flat-112-book-hover-closed.json") as number,
   },
   {
     type: "swipe",
-    titleHe: "שחק במשחק סוויפ",
+    titleHe: "שחקו במשחק סוויפ",
     lottieSource: require("../../../assets/lottie/wired-flat-146-trolley-hover-jump.json") as number,
   },
 ];

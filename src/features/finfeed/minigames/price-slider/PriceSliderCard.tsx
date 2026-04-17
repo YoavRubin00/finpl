@@ -58,7 +58,9 @@ function PriceSlider({
   onChange: (v: number) => void;
   disabled: boolean;
 }) {
-  const percent = (guessValue - item.minGuess) / (item.maxGuess - item.minGuess);
+  // RTL slider: thumb at LEFT edge = MAX value, thumb at RIGHT edge = MIN value
+  // Fill grows from the right (start of Hebrew reading direction) toward the thumb
+  const percent = 1 - (guessValue - item.minGuess) / (item.maxGuess - item.minGuess);
   const translateX = useSharedValue(percent * SLIDER_WIDTH);
   const start = useSharedValue(0);
 
@@ -70,7 +72,7 @@ function PriceSlider({
   const update = useCallback(
     (tx: number) => {
       const clamped = Math.max(0, Math.min(SLIDER_WIDTH, tx));
-      const ratio = clamped / SLIDER_WIDTH;
+      const ratio = 1 - clamped / SLIDER_WIDTH; // invert: left=max, right=min
       const v = item.minGuess + ratio * (item.maxGuess - item.minGuess);
       onChange(v);
     },
@@ -92,8 +94,9 @@ function PriceSlider({
     transform: [{ translateX: translateX.value - THUMB_SIZE / 2 }],
   }));
 
+  // Fill from the RIGHT edge (RTL) toward the thumb position
   const fillStyle = useAnimatedStyle(() => ({
-    width: translateX.value,
+    width: SLIDER_WIDTH - translateX.value,
   }));
 
   return (
@@ -103,19 +106,22 @@ function PriceSlider({
       accessibilityLabel={`מחוון ניחוש. ערך נוכחי: ${formatILS(guessValue)}`}
       accessibilityValue={{ min: item.minGuess, max: item.maxGuess, now: guessValue }}
     >
-      <View style={styles.track}>
-        <Animated.View style={[styles.trackFill, fillStyle]} />
+      {/* Track + thumb share the same coordinate system — identical width + no centering ancestor */}
+      <View style={styles.sliderInner}>
+        <View style={styles.track}>
+          <Animated.View style={[styles.trackFill, fillStyle]} />
+        </View>
+        <GestureDetector gesture={pan}>
+          <Animated.View style={[styles.thumb, thumbStyle]}>
+            <LinearGradient
+              colors={['#d4a017', '#92400e']}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={StyleSheet.absoluteFill}
+            />
+          </Animated.View>
+        </GestureDetector>
       </View>
-      <GestureDetector gesture={pan}>
-        <Animated.View style={[styles.thumb, thumbStyle]}>
-          <LinearGradient
-            colors={['#d4a017', '#92400e']}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-            style={StyleSheet.absoluteFill}
-          />
-        </Animated.View>
-      </GestureDetector>
       <View style={styles.sliderBoundsRow}>
         <Text style={styles.sliderBoundText}>{formatILS(item.maxGuess)}</Text>
         <Text style={styles.sliderBoundText}>{formatILS(item.minGuess)}</Text>
@@ -260,7 +266,7 @@ export const PriceSliderCard = React.memo(function PriceSliderCard({ isActive: _
   }
 
   const tierColor = accuracy >= 80 ? '#16a34a' : accuracy >= 60 ? '#d4a017' : accuracy >= 40 ? '#ea580c' : '#dc2626';
-  const tierLabel = accuracy >= 80 ? 'בול בול' : accuracy >= 60 ? 'קרוב מאוד' : accuracy >= 40 ? 'בערך' : 'רחוק מהמטרה';
+  const tierLabel = accuracy >= 80 ? 'בדיוק!' : accuracy >= 60 ? 'קרוב מאוד' : accuracy >= 40 ? 'בערך' : 'רחוק מהמטרה';
   const sharkImage = accuracy >= 60 ? FINN_HAPPY : FINN_EMPATHIC;
   const diffRatio = item.currentPriceILS > 0 ? item.currentPriceILS / item.actualPriceILS : 0;
 
@@ -290,9 +296,9 @@ export const PriceSliderCard = React.memo(function PriceSliderCard({ isActive: _
 
         <View style={styles.questionBox}>
           <Text style={[styles.questionTitle, RTL_CENTER]}>
-            כמה עלה {item.productName} בשנת {item.year}?
+            כמה {item.questionVerb ?? 'עלה'} {item.productName} בשנת {item.year}?
           </Text>
-          <Text style={[styles.hint, RTL_CENTER]}>{item.hint}</Text>
+          {item.hint ? <Text style={[styles.hint, RTL_CENTER]}>{item.hint}</Text> : null}
         </View>
 
         {item.image && (
@@ -314,20 +320,18 @@ export const PriceSliderCard = React.memo(function PriceSliderCard({ isActive: _
         />
 
         {phase === 'guessing' && (
-          <Pressable
-            onPress={handleReveal}
-            accessibilityRole="button"
-            accessibilityLabel="חשוף את המחיר האמיתי"
-            style={({ pressed }) => [styles.revealButton, pressed && { opacity: 0.85 }]}
-          >
-            <LinearGradient
-              colors={['#d4a017', '#92400e']}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 1 }}
-              style={StyleSheet.absoluteFill}
-            />
-            <Text style={styles.revealButtonText}>חשוף את המחיר</Text>
-          </Pressable>
+          <View style={styles.revealButtonWrap}>
+            <View style={styles.revealButtonDepth} pointerEvents="none" />
+            <Pressable
+              onPress={handleReveal}
+              accessibilityRole="button"
+              accessibilityLabel="חשוף את המחיר האמיתי"
+              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+              style={({ pressed }) => [styles.revealButton, pressed && { transform: [{ translateY: 2 }] }]}
+            >
+              <Text style={styles.revealButtonText}>חשוף את המחיר</Text>
+            </Pressable>
+          </View>
         )}
 
         {phase !== 'guessing' && (
@@ -337,7 +341,7 @@ export const PriceSliderCard = React.memo(function PriceSliderCard({ isActive: _
               <ValueTicker target={item.actualPriceILS} color="#16a34a" delayMs={0} />
             </View>
             <View style={[styles.revealRow, { borderColor: '#0369a1' }]}>
-              <Text style={[styles.revealRowLabel, RTL]}>מחיר היום (2025)</Text>
+              <Text style={[styles.revealRowLabel, RTL]}>מחיר היום (2026)</Text>
               <ValueTicker target={item.currentPriceILS} color="#0369a1" delayMs={900} />
             </View>
             {diffRatio > 0 && (
@@ -358,7 +362,7 @@ export const PriceSliderCard = React.memo(function PriceSliderCard({ isActive: _
               </View>
               <View style={styles.sharkTextCol}>
                 <Text style={[styles.sharkTitle, RTL, { color: tierColor }]}>{tierLabel}</Text>
-                <Text style={[styles.sharkBody, RTL]} numberOfLines={5}>
+                <Text style={[styles.sharkBody, RTL]} numberOfLines={3}>
                   {item.sharkExplanation}
                 </Text>
               </View>
@@ -459,6 +463,11 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     gap: 6,
   },
+  sliderInner: {
+    width: SLIDER_WIDTH,
+    height: THUMB_SIZE,
+    justifyContent: 'center',
+  },
   track: {
     width: SLIDER_WIDTH,
     height: TRACK_HEIGHT,
@@ -468,11 +477,13 @@ const styles = StyleSheet.create({
   },
   trackFill: {
     height: '100%',
-    backgroundColor: '#d4a017',
+    backgroundColor: '#0ea5e9',
+    marginLeft: 'auto', // RTL: fill anchored to the right edge of the track
   },
   thumb: {
     position: 'absolute',
-    top: 4,
+    top: 0,
+    left: 0,
     width: THUMB_SIZE,
     height: THUMB_SIZE,
     borderRadius: THUMB_SIZE / 2,
@@ -493,18 +504,42 @@ const styles = StyleSheet.create({
     color: '#64748b',
     fontWeight: '600',
   },
+  revealButtonWrap: {
+    alignSelf: 'stretch',
+    marginTop: 16,
+    marginHorizontal: 4,
+    position: 'relative',
+  },
+  revealButtonDepth: {
+    position: 'absolute',
+    top: 5,
+    left: 0,
+    right: 0,
+    bottom: -5,
+    borderRadius: 16,
+    backgroundColor: '#0369a1',
+  },
   revealButton: {
-    marginTop: 8,
-    paddingVertical: 14,
-    borderRadius: 14,
-    overflow: 'hidden',
+    flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 16,
+    backgroundColor: '#0ea5e9',
+    paddingHorizontal: 40,
+    paddingVertical: 16,
+    shadowColor: '#0284c7',
+    shadowOpacity: 0.5,
+    shadowRadius: 14,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 10,
   },
   revealButtonText: {
-    fontSize: 16,
+    fontSize: 18,
     fontWeight: '900',
     color: '#ffffff',
-    letterSpacing: 0.5,
+    letterSpacing: 0.3,
+    writingDirection: 'rtl',
+    textAlign: 'center',
   },
   revealBox: {
     gap: 8,
@@ -560,32 +595,32 @@ const styles = StyleSheet.create({
     alignItems: 'flex-start',
   },
   sharkAvatarWrap: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
+    width: 54,
+    height: 54,
+    borderRadius: 27,
     overflow: 'hidden',
     backgroundColor: '#e0f2fe',
-    borderWidth: 1.5,
-    borderColor: 'rgba(14,165,233,0.3)',
+    borderWidth: 2,
+    borderColor: 'rgba(14,165,233,0.35)',
     alignItems: 'center',
     justifyContent: 'center',
   },
   sharkAvatar: {
-    width: 40,
-    height: 40,
+    width: 50,
+    height: 50,
   },
   sharkTextCol: {
     flex: 1,
-    gap: 6,
+    gap: 4,
   },
   sharkTitle: {
-    fontSize: 15,
+    fontSize: 14,
     fontWeight: '900',
   },
   sharkBody: {
     fontSize: 13,
     color: '#334155',
-    lineHeight: 20,
+    lineHeight: 18,
   },
   rewardsRow: {
     flexDirection: 'row-reverse',

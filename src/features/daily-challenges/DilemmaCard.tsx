@@ -24,6 +24,7 @@ import { useDailyLogStore } from '../daily-summary/useDailyLogStore';
 import { getTodayDilemma } from './dilemma-data';
 import { MAX_DILEMMA_DAILY, CHALLENGE_XP_REWARD, CHALLENGE_COIN_REWARD } from './daily-challenge-types';
 import type { DilemmaChoice } from './daily-challenge-types';
+import { FeedGameShell } from '../finfeed/minigames/shared/FeedGameShell';
 
 const RTL = { writingDirection: 'rtl' as const, textAlign: 'right' as const };
 
@@ -69,12 +70,18 @@ export const DilemmaCard = React.memo(function DilemmaCard({ isActive }: Props) 
 
   if (!dilemma || !dilemma.choices) {
     return (
-      <View style={styles.container}>
-        <View style={styles.cardDone}>
+      <FeedGameShell
+        gameTitle="האתגר היומי"
+        xpReward={CHALLENGE_XP_REWARD}
+        coinReward={CHALLENGE_COIN_REWARD}
+        accent="rose"
+        variant="light"
+      >
+        <View style={styles.stateBox}>
           <Text style={[styles.answeredTitle, RTL]}>האתגר היומי לא זמין כרגע</Text>
-          <Text style={[styles.answeredSub, RTL]}>נסה שוב מאוחר יותר</Text>
+          <Text style={[styles.answeredSub, RTL]}>נסו שוב מאוחר יותר</Text>
         </View>
-      </View>
+      </FeedGameShell>
     );
   }
   const scenarioText = dilemma.scenarioText;
@@ -115,13 +122,18 @@ export const DilemmaCard = React.memo(function DilemmaCard({ isActive }: Props) 
   // Already answered — compact completed state
   if (answered && !showResult) {
     return (
-      <View style={styles.container}>
-        <View style={styles.cardDone}>
-          <Text style={styles.answeredIcon}>✅</Text>
+      <FeedGameShell
+        gameTitle="האתגר היומי"
+        xpReward={CHALLENGE_XP_REWARD}
+        coinReward={CHALLENGE_COIN_REWARD}
+        accent="rose"
+        variant="light"
+      >
+        <View style={styles.stateBox}>
           <Text style={[styles.answeredTitle, RTL]}>האתגר היומי הושלם!</Text>
-          <Text style={[styles.answeredSub, RTL]}>חזור מחר לאתגר חדש</Text>
+          <Text style={[styles.answeredSub, RTL]}>חזרו מחר לאתגר חדש</Text>
         </View>
-      </View>
+      </FeedGameShell>
     );
   }
 
@@ -134,7 +146,14 @@ export const DilemmaCard = React.memo(function DilemmaCard({ isActive }: Props) 
   };
 
   return (
-    <View style={styles.container}>
+    <FeedGameShell
+      gameTitle="האתגר היומי"
+      gameSubtitle={dilemma.category}
+      xpReward={CHALLENGE_XP_REWARD}
+      coinReward={CHALLENGE_COIN_REWARD}
+      accent="rose"
+      variant="light"
+    >
       {showConfetti && <ConfettiExplosion />}
       {showFlyingCoins && (
         <FlyingRewards
@@ -143,106 +162,65 @@ export const DilemmaCard = React.memo(function DilemmaCard({ isActive }: Props) 
           onComplete={() => setShowFlyingCoins(false)}
         />
       )}
-      <Animated.View
-        style={[
-          !showResult && {
-            shadowColor: '#0ea5e9',
-            shadowRadius: 16,
-            elevation: 4,
-          },
-          !showResult && glowStyle,
-        ]}
-      >
-        <View style={[
-          styles.card,
-          showResult && selectedChoice?.isCorrect && styles.cardCorrect,
-          showResult && selectedChoice && !selectedChoice.isCorrect && styles.cardWrong,
-        ]}>
-          {/* Header */}
-          {!showResult && (
-            <View style={styles.headerRow}>
-              <Text style={styles.emoji}>{dilemma.emoji}</Text>
-              <View style={styles.headerTextCol}>
-                <Text style={[styles.headerTitle, RTL]}>
-                  🤔 האתגר שלך
-                </Text>
-                <Text style={[styles.headerSub, RTL]}>{dilemma.category}</Text>
-              </View>
-            </View>
-          )}
+      <Animated.View style={!showResult && glowStyle} />
+      <View style={[
+        styles.innerContent,
+        showResult && selectedChoice?.isCorrect && styles.tintCorrect,
+        showResult && selectedChoice && !selectedChoice.isCorrect && styles.tintWrong,
+      ]}>
+        <Text style={[styles.scenarioText, RTL]}>{scenarioText}</Text>
 
-          {/* Scenario text */}
-          <Text style={[styles.scenarioText, RTL]}>{scenarioText}</Text>
+        <View style={styles.choicesContainer}>
+          {dilemma.choices.map((choice, i) => {
+            const isSelected = selectedChoice === choice;
+            const isCorrect = choice.isCorrect;
 
-          {/* Choices */}
-          <View style={styles.choicesContainer}>
-            {dilemma.choices.map((choice, i) => {
-              const isSelected = selectedChoice === choice;
-              const isCorrect = choice.isCorrect;
+            let choiceStyle = styles.choiceDefault;
+            if (showResult) {
+              if (isCorrect) choiceStyle = styles.choiceCorrect;
+              else if (isSelected) choiceStyle = styles.choiceWrong;
+            }
 
-              let choiceStyle = styles.choiceDefault;
-              if (showResult) {
-                if (isCorrect) choiceStyle = styles.choiceCorrect;
-                else if (isSelected) choiceStyle = styles.choiceWrong;
-              }
-
-              return (
-                <Pressable
-                  key={i}
-                  onPress={() => handleAnswer(choice, i)}
-                  disabled={showResult}
-                  accessibilityRole="button"
-                  accessibilityLabel={`תשובה: ${choice.text}`}
-                >
-                  <Animated.View style={[styles.choice, choiceStyle]}>
-                    <Text
-                      style={[
-                        styles.choiceText,
-                        RTL,
-                        showResult && isCorrect && { color: '#0369a1' },
-                        showResult && isSelected && !isCorrect && { color: '#dc2626' },
-                      ]}
-                    >
-                      {showResult && isCorrect && '✅ '}
-                      {showResult && isSelected && !isCorrect && '❌ '}
-                      {choice.text}
-                    </Text>
-                  </Animated.View>
-                </Pressable>
-              );
-            })}
-          </View>
-
-          {/* Feedback after answer */}
-          {showResult && selectedChoice && (
-            <Animated.View entering={FadeIn.duration(300)} style={styles.feedbackBox}>
-              <Text style={[styles.feedbackTitle, RTL]}>💡 תכל׳ס</Text>
-              <Text style={[styles.feedbackText, RTL]}>{selectedChoice.feedback}</Text>
-            </Animated.View>
-          )}
-
-          {/* Reward badge (before answer) */}
-          {!showResult && (
-            <View style={styles.rewardRow}>
-              <View style={styles.rewardBadge}>
-                <Text style={styles.rewardText}>🎯 {CHALLENGE_XP_REWARD} XP</Text>
-              </View>
-              <Text style={styles.timerText}>אתגר יומי</Text>
-            </View>
-          )}
-
-          {/* Result reward */}
-          {showResult && selectedChoice?.isCorrect && (
-            <Animated.View entering={FadeIn.duration(300)} style={styles.rewardResult}>
-              <Text style={styles.rewardResultText}>
-                +{CHALLENGE_XP_REWARD} XP  +{CHALLENGE_COIN_REWARD} 
-              </Text>
-            </Animated.View>
-          )}
-
-          {/* No replay — dilemma is once per day */}
+            return (
+              <Pressable
+                key={i}
+                onPress={() => handleAnswer(choice, i)}
+                disabled={showResult}
+                accessibilityRole="button"
+                accessibilityLabel={`תשובה: ${choice.text}`}
+              >
+                <Animated.View style={[styles.choice, choiceStyle]}>
+                  <Text
+                    style={[
+                      styles.choiceText,
+                      RTL,
+                      showResult && isCorrect && { color: '#0369a1' },
+                      showResult && isSelected && !isCorrect && { color: '#dc2626' },
+                    ]}
+                  >
+                    {choice.text}
+                  </Text>
+                </Animated.View>
+              </Pressable>
+            );
+          })}
         </View>
-      </Animated.View>
+
+        {showResult && selectedChoice && (
+          <Animated.View entering={FadeIn.duration(300)} style={styles.feedbackBox}>
+            <Text style={[styles.feedbackTitle, RTL]}>תכל׳ס</Text>
+            <Text style={[styles.feedbackText, RTL]}>{selectedChoice.feedback}</Text>
+          </Animated.View>
+        )}
+
+        {showResult && selectedChoice?.isCorrect && (
+          <Animated.View entering={FadeIn.duration(300)} style={styles.rewardResult}>
+            <Text style={styles.rewardResultText}>
+              +{CHALLENGE_XP_REWARD} XP  +{CHALLENGE_COIN_REWARD}
+            </Text>
+          </Animated.View>
+        )}
+      </View>
 
       {/* Celebration modal after completing */}
       <Modal visible={showCelebration} transparent animationType="fade" onRequestClose={() => { setShowCelebration(false); router.replace("/(tabs)/learn" as never); }} accessibilityViewIsModal={true}>
@@ -257,7 +235,7 @@ export const DilemmaCard = React.memo(function DilemmaCard({ isActive }: Props) 
               <ExpoImage source={FINN_STANDARD} accessible={false} style={{ width: 200, height: 200 }} contentFit="contain" />
             </Animated.View>
             <Text style={[styles.celebrationTitle, RTL]}>
-              {selectedChoice?.isCorrect ? 'כל הכבוד! 🎉' : 'סיימת את האתגר!'}
+              {selectedChoice?.isCorrect ? 'כל הכבוד!' : 'סיימת את האתגר!'}
             </Text>
             <Text style={[styles.celebrationSub, RTL]}>
               {selectedChoice?.isCorrect
@@ -286,38 +264,25 @@ export const DilemmaCard = React.memo(function DilemmaCard({ isActive }: Props) 
           </Animated.View>
         </Pressable>
       </Modal>
-    </View>
+    </FeedGameShell>
   );
 });
 
 const styles = StyleSheet.create({
-  container: {
-    paddingVertical: 20,
-    paddingHorizontal: 20,
+  innerContent: {
+    padding: 14,
+    gap: 14,
   },
-  card: {
-    borderRadius: 24,
-    padding: 24,
-    borderWidth: 1.5,
-    borderColor: 'rgba(14,165,233,0.25)',
-    backgroundColor: '#f0f9ff',
-    gap: 16,
+  tintCorrect: {
+    backgroundColor: 'rgba(34,197,94,0.08)',
   },
-  cardCorrect: {
-    backgroundColor: '#f0fdf4',
-    borderColor: 'rgba(34,197,94,0.25)',
+  tintWrong: {
+    backgroundColor: 'rgba(239,68,68,0.06)',
   },
-  cardWrong: {
-    backgroundColor: '#fef2f2',
-    borderColor: 'rgba(239,68,68,0.25)',
-  },
-  cardDone: {
-    borderRadius: 24,
-    padding: 24,
-    borderWidth: 1.5,
-    borderColor: 'rgba(14,165,233,0.2)',
-    backgroundColor: '#e0f2fe',
+  stateBox: {
+    padding: 20,
     alignItems: 'center',
+    justifyContent: 'center',
     gap: 8,
   },
   headerRow: {

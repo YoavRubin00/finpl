@@ -561,6 +561,9 @@ export function InvestmentPathScreen({
             <Text style={[styles.subtitle, RTL]}>
               15 שנים של חיסכון בקופת גמל. האם תחזיק מעמד?
             </Text>
+            <Text style={[styles.subtitle, RTL, { fontSize: 12, opacity: 0.9, marginTop: 2 }]}>
+              {'תשואה ממוצעת של 7% שנתי — מבוססת על תשואת S&P 500 הריאלית ההיסטורית (1926-2023)'}
+            </Text>
           </Animated.View>
 
           <Animated.View entering={FadeInUp.delay(200)}>

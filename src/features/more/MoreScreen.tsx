@@ -214,29 +214,6 @@ export function MoreScreen() {
           </Animated.View>
 
 
-          {/* ── Section 2: פינת הכיף ── */}
-          <SectionHeader title="פינת הכיף" />
-          <Animated.View entering={FadeInUp.delay(150).duration(400)}>
-            <GlowCard chapterGlow={STITCH_BLUE.glow} style={styles.cardGlow} pressable={false}>
-              <View style={styles.cardInner}>
-                <MoreRow
-                  isFirst
-                  icon={<SafeLottie source={require('../../../assets/lottie/wired-flat-411-news-newspaper-hover-pinch.json')} style={styles.lottieIcon} autoPlay loop  />}
-                  label="דואר מקפטן שארק"
-                  onPress={() => setShowMailModal(true)}
-                  badge={hasUnreadMail ? "חדש" : undefined}
-                  badgeColor={hasUnreadMail ? STITCH_BLUE.primary : undefined}
-                />
-                <MoreRow
-                  isLast
-                  icon={<SafeLottie source={require('../../../assets/lottie/wired-flat-298-coins-hover-jump.json')} style={styles.lottieIcon} autoPlay loop  />}
-                  label="מדד הפיצות"
-                  onPress={() => router.push("/pizza-index")}
-                />
-              </View>
-            </GlowCard>
-          </Animated.View>
-
           {/* ── Section 3: Account ── */}
           <SectionHeader title="חשבון" />
           <Animated.View entering={FadeInUp.delay(200).duration(400)}>

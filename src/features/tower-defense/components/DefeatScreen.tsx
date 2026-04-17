@@ -1,5 +1,7 @@
 import React from "react";
 import { Pressable, Text, View } from "react-native";
+import { Image as ExpoImage } from "expo-image";
+import { FINN_EMPATHIC } from "../../retention-loops/finnMascotConfig";
 
 interface Props {
   onRetry: () => void;
@@ -18,20 +20,15 @@ export function DefeatScreen({ onRetry, onBack }: Props) {
       }}
     >
       <View style={{ alignItems: "center", gap: 18 }}>
-        <Text style={{ fontSize: 84 }}>🥹</Text>
+        <ExpoImage
+          source={FINN_EMPATHIC}
+          accessible={false}
+          style={{ width: 140, height: 140 }}
+          contentFit="contain"
+        />
         <Text
           style={{
-            color: "#f97316",
-            fontSize: 14,
-            letterSpacing: 3,
-            fontFamily: "Heebo_700Bold",
-          }}
-        >
-          אוברדרפט
-        </Text>
-        <Text
-          style={{
-            color: "#fefce8",
+            color: "#f0f9ff",
             fontSize: 34,
             fontWeight: "900",
             fontFamily: "Heebo_900Black",
@@ -45,16 +42,16 @@ export function DefeatScreen({ onRetry, onBack }: Props) {
 
       <View
         style={{
-          backgroundColor: "rgba(0, 40, 20, 0.6)",
+          backgroundColor: "rgba(12, 74, 110, 0.6)",
           borderRadius: 20,
           borderWidth: 2.5,
-          borderColor: "rgba(249, 115, 22, 0.5)",
+          borderColor: "rgba(56, 189, 248, 0.5)",
           padding: 20,
         }}
       >
         <Text
           style={{
-            color: "#a7f3d0",
+            color: "#bae6fd",
             fontSize: 15,
             lineHeight: 24,
             textAlign: "right",
@@ -62,7 +59,7 @@ export function DefeatScreen({ onRetry, onBack }: Props) {
             fontFamily: "Heebo_500Medium",
           }}
         >
-          💡 טיפ: שילוב של קרן חירום (נגד הוצאות גדולות) + תקציב אוטומטי (נגד
+          טיפ: שילוב של קרן חירום (נגד הוצאות גדולות) + ניהול תקציב (נגד
           שופינג) בד״כ מספיק להחזיק 3 חודשים. נסה שוב בהרכב חכם יותר.
         </Text>
       </View>
@@ -73,24 +70,24 @@ export function DefeatScreen({ onRetry, onBack }: Props) {
           accessibilityRole="button"
           accessibilityLabel="נסה שוב את הקרב"
           style={{
-            backgroundColor: "#d4a017",
+            backgroundColor: "#0ea5e9",
             paddingVertical: 18,
             borderRadius: 20,
             alignItems: "center",
             borderBottomWidth: 4,
-            borderBottomColor: "#92580a",
+            borderBottomColor: "#0369a1",
           }}
         >
           <Text
             style={{
-              color: "#1b4332",
+              color: "#ffffff",
               fontSize: 18,
               fontWeight: "900",
               fontFamily: "Heebo_900Black",
               writingDirection: "rtl",
             }}
           >
-            🔄 נסה שוב
+            נסה שוב
           </Text>
         </Pressable>
         <Pressable
@@ -101,7 +98,7 @@ export function DefeatScreen({ onRetry, onBack }: Props) {
         >
           <Text
             style={{
-              color: "#a7f3d0",
+              color: "#bae6fd",
               fontSize: 14,
               fontFamily: "Heebo_500Medium",
               writingDirection: "rtl",

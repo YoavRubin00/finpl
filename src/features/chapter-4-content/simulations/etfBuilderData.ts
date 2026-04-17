@@ -9,7 +9,7 @@ import type { ETFProduct, ETFBuilderConfig } from './etfBuilderTypes';
 export const ETF_CATALOG: ETFProduct[] = [
   {
     id: 'sp500',
-    name: 'S&P 500 — מדד 500 הגדולות',
+    name: '‎S&P‎ 500 — מדד 500 הגדולות',
     emoji: '🇺🇸',
     type: 'stocks',
     expenseRatio: 0.03,

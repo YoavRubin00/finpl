@@ -53,9 +53,21 @@ export interface EnemyInstance {
 export interface TowerInstance {
   id: string;
   kind: TowerKind;
+  padIndex: number;
   x: number;
   y: number;
   lastAttackAt: number;
+}
+
+export interface ProjectileInstance {
+  id: string;
+  kind: TowerKind;
+  fromX: number;
+  fromY: number;
+  toX: number;
+  toY: number;
+  spawnAt: number;
+  ttlMs: number;
 }
 
 export interface GameState {
@@ -67,6 +79,7 @@ export interface GameState {
   coinsInvested: number;
   towers: ReadonlyArray<TowerInstance>;
   enemies: ReadonlyArray<EnemyInstance>;
+  projectiles: ReadonlyArray<ProjectileInstance>;
   enemiesKilled: number;
   enemiesEscaped: number;
   placementSecondsLeft: number;

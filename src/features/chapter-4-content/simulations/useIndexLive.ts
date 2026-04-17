@@ -1,5 +1,5 @@
 /**
- * SIM 20: מדד לייב (Index Live — S&P 500 Time Machine) — Module 4-20
+ * SIM 20: מדד לייב (Index Live — ‎S&P‎ 500 Time Machine) — Module 4-20
  * Hook: slider selects start year → compute value from start year to 2025.
  * Finds best/worst possible start years for context.
  */

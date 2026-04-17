@@ -1,21 +1,25 @@
 import type { ImageSourcePropType } from 'react-native';
 import type { AdTemplate, AdTemplateId } from './types';
 
+const BLOB_BASE = 'https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/minigames';
+
 const TEMPLATE_IMAGES: Record<AdTemplateId, ImageSourcePropType> = {
-  'scam-neon': require('../../../../../assets/webp/minigames/bullshit-swipe/templates/ad-bg-scam-neon.webp'),
-  'scam-crypto': require('../../../../../assets/webp/minigames/bullshit-swipe/templates/ad-bg-scam-crypto.webp'),
-  'scam-aspirational': require('../../../../../assets/webp/minigames/bullshit-swipe/templates/ad-bg-scam-aspirational.webp'),
-  'scam-tech': require('../../../../../assets/webp/minigames/bullshit-swipe/templates/ad-bg-scam-tech.webp'),
-  'scam-realestate': require('../../../../../assets/webp/minigames/bullshit-swipe/templates/ad-bg-scam-realestate.webp'),
-  'legit-corporate': require('../../../../../assets/webp/minigames/bullshit-swipe/templates/ad-bg-legit-corporate.webp'),
-  'legit-warm': require('../../../../../assets/webp/minigames/bullshit-swipe/templates/ad-bg-legit-warm.webp'),
+  'scam-neon': { uri: `${BLOB_BASE}/bullshit-swipe/templates/ad-bg-scam-neon.webp` },
+  'scam-crypto': { uri: `${BLOB_BASE}/bullshit-swipe/templates/ad-bg-scam-crypto.webp` },
+  'scam-aspirational': { uri: `${BLOB_BASE}/bullshit-swipe/templates/ad-bg-scam-aspirational.webp` },
+  'scam-tech': { uri: `${BLOB_BASE}/bullshit-swipe/templates/ad-bg-scam-tech.webp` },
+  'scam-realestate': { uri: `${BLOB_BASE}/bullshit-swipe/templates/ad-bg-scam-realestate.webp` },
+  'legit-corporate': { uri: `${BLOB_BASE}/bullshit-swipe/templates/ad-bg-legit-corporate.webp` },
+  'legit-warm': { uri: `${BLOB_BASE}/bullshit-swipe/templates/ad-bg-legit-warm.webp` },
 };
 
-export const STAMP_FRAME_RED: ImageSourcePropType =
-  require('../../../../../assets/webp/minigames/bullshit-swipe/stamp-frame-red.webp');
+export const STAMP_FRAME_RED: ImageSourcePropType = {
+  uri: `${BLOB_BASE}/bullshit-swipe/stamp-frame-red.webp`,
+};
 
-export const STAMP_FRAME_GREEN: ImageSourcePropType =
-  require('../../../../../assets/webp/minigames/bullshit-swipe/stamp-frame-green.webp');
+export const STAMP_FRAME_GREEN: ImageSourcePropType = {
+  uri: `${BLOB_BASE}/bullshit-swipe/stamp-frame-green.webp`,
+};
 
 export const AD_TEMPLATES: Record<AdTemplateId, AdTemplate> = {
   'scam-neon': {

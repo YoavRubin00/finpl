@@ -10,7 +10,7 @@ import type { PersonalityQuestion, InvestorProfile, InvestorProfileId } from './
 export const PERSONALITY_QUESTIONS: PersonalityQuestion[] = [
   {
     id: 'q1',
-    question: 'השוק נפל 20% בשבוע. מה הריאקציה הראשונה שלכם?',
+    question: 'השוק נפל 20% בשבוע. מה התגובה הראשונה שלכם?',
     options: [
       { text: 'מוכרים הכל — לא מסתכנים', scores: [0, 0, 3, 0] },
       { text: 'לא עושים כלום — הכל יסתדר', scores: [3, 0, 0, 1] },

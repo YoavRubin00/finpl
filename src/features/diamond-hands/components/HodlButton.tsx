@@ -1,5 +1,6 @@
 import React, { useEffect } from "react";
-import { Image, View } from "react-native";
+import { View } from "react-native";
+import LottieView from "lottie-react-native";
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import Animated, {
   useAnimatedStyle,
@@ -10,7 +11,8 @@ import Animated, {
   withSpring,
   withTiming,
 } from "react-native-reanimated";
-import { DH_ASSETS } from "../diamondHandsAssets";
+
+const DIAMOND_LOTTIE = require("../../../../assets/lottie/Diamond.json");
 
 const BUTTON_SIZE = 260;
 
@@ -98,8 +100,8 @@ export function HodlButton({
             width: BUTTON_SIZE + 60,
             height: BUTTON_SIZE + 60,
             borderRadius: (BUTTON_SIZE + 60) / 2,
-            backgroundColor: "#22d3ee",
-            opacity: 0.3,
+            backgroundColor: "#e0f2fe",
+            opacity: 0.6,
           },
           glowStyle,
         ]}
@@ -116,9 +118,11 @@ export function HodlButton({
             animStyle,
           ]}
         >
-          <Image
-            source={{ uri: DH_ASSETS.hodlButton }}
+          <LottieView
+            source={DIAMOND_LOTTIE}
             style={{ width: BUTTON_SIZE, height: BUTTON_SIZE }}
+            autoPlay
+            loop
             resizeMode="contain"
           />
         </Animated.View>

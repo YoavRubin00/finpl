@@ -20,6 +20,7 @@ import { ConfettiExplosion } from '../../components/ui/ConfettiExplosion';
 import { FlyingRewards } from '../../components/ui/FlyingRewards';
 import { LottieIcon } from '../../components/ui/LottieIcon';
 import { FINN_STANDARD } from '../retention-loops/finnMascotConfig';
+import { GoldCoinIcon } from '../../components/ui/GoldCoinIcon';
 
 const LOTTIE_BULL = require('../../../assets/lottie/wired-flat-1199-bull-hover-pinch.json');
 const LOTTIE_BEAR = require('../../../assets/lottie/wired-flat-1203-bear-hover-pinch.json');
@@ -115,7 +116,7 @@ function SwipeableCard({
     <GestureDetector gesture={panGesture}>
       <Animated.View
         style={[styles.swipeCard, cardStyle]}
-       
+
         accessibilityRole="button"
         accessibilityLabel={`כרטיס: ${card.headline}`}
         accessibilityHint="החלק ימינה ללונג, שמאלה לשורט"
@@ -133,31 +134,15 @@ function SwipeableCard({
           </View>
         )}
 
-        {/* Hints at bottom */}
-        <View style={styles.swipeHintRowWrapper}>
-          <View style={styles.swipeHintRow}>
-            <View style={styles.hintLeft}>
-              <Text style={styles.hintArrow}>←</Text>
-              <Text style={[styles.hintLabel, { color: '#ef4444' }]}>שורט</Text>
-              <View accessible={false}><LottieIcon source={LOTTIE_BEAR} size={22} /></View>
-            </View>
-            <View style={styles.hintRight}>
-              <View accessible={false}><LottieIcon source={LOTTIE_BULL} size={22} /></View>
-              <Text style={[styles.hintLabel, { color: '#16a34a' }]}>לונג</Text>
-              <Text style={styles.hintArrow}>→</Text>
-            </View>
-          </View>
-        </View>
-
         {/* Short overlay (left) — Red + Bear */}
         <Animated.View style={[styles.swipeOverlay, styles.shortOverlay, leftOverlayStyle]}>
-          <View accessible={false}><LottieIcon source={LOTTIE_BEAR} size={48} /></View>
+          <View accessible={false}><LottieIcon source={LOTTIE_BEAR} size={72} /></View>
           <Text style={styles.overlayLabelShort}>שורט 📉</Text>
         </Animated.View>
 
         {/* Long overlay (right) — Green + Bull */}
         <Animated.View style={[styles.swipeOverlay, styles.longOverlay, rightOverlayStyle]}>
-          <View accessible={false}><LottieIcon source={LOTTIE_BULL} size={48} /></View>
+          <View accessible={false}><LottieIcon source={LOTTIE_BULL} size={72} /></View>
           <Text style={styles.overlayLabelLong}>לונג 📈</Text>
         </Animated.View>
 
@@ -180,7 +165,7 @@ export const SwipeGameCard = React.memo(function SwipeGameCard({ isActive }: Pro
   const [gameState, setGameState] = useState<'playing' | 'done'>('playing');
   const [showConfetti, setShowConfetti] = useState(false);
   const [showFlyingCoins, setShowFlyingCoins] = useState(false);
-  const [timeLeft, setTimeLeft] = useState(30);
+  const [timeLeft, setTimeLeft] = useState(40);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const [lastFeedback, setLastFeedback] = useState<{ correct: boolean; explanation: string } | null>(null);
 
@@ -205,12 +190,6 @@ export const SwipeGameCard = React.memo(function SwipeGameCard({ isActive }: Pro
   // Finalize when done
   useEffect(() => {
     if (gameState === 'done' && !hasPlayed) {
-      if (score >= 3) {
-        setShowConfetti(true);
-        setShowFlyingCoins(true);
-        successHaptic();
-        setTimeout(() => setShowConfetti(false), 2500);
-      }
       const today = new Date().toISOString().slice(0, 10);
       playSwipeGame(today, score);
 
@@ -219,6 +198,13 @@ export const SwipeGameCard = React.memo(function SwipeGameCard({ isActive }: Pro
       if (score > 0) {
         log.addTodayXP(CHALLENGE_XP_REWARD);
         log.addTodayCoins(CHALLENGE_COIN_REWARD);
+        // Reward animations: fly coins up + confetti whenever user earns anything
+        setShowFlyingCoins(true);
+        successHaptic();
+        if (score >= 3) {
+          setShowConfetti(true);
+          setTimeout(() => setShowConfetti(false), 2500);
+        }
       }
       log.addCorrectAnswer();
     }
@@ -248,7 +234,7 @@ export const SwipeGameCard = React.memo(function SwipeGameCard({ isActive }: Pro
         } else {
           setCurrentIndex((i) => i + 1);
         }
-      }, 1200);
+      }, 3200);
     },
     [currentIndex, cards, gameState],
   );
@@ -260,7 +246,7 @@ export const SwipeGameCard = React.memo(function SwipeGameCard({ isActive }: Pro
     setCurrentIndex(0);
     setScore(0);
     setResults([]);
-    setTimeLeft(30);
+    setTimeLeft(40);
     setShowConfetti(false);
     setShowFlyingCoins(false);
     setLastFeedback(null);
@@ -320,14 +306,43 @@ export const SwipeGameCard = React.memo(function SwipeGameCard({ isActive }: Pro
           </View>
         )}
 
-        {/* Swipeable card */}
+        {/* Swipeable card — flanked by Bear (שורט) left and Bull (לונג) right */}
         {gameState === 'playing' && currentIndex < cards.length && !lastFeedback && (
           <View style={styles.swipeArea}>
-            <SwipeableCard
-              key={cards[currentIndex].id}
-              card={cards[currentIndex]}
-              onSwipe={handleSwipe}
-            />
+            {/* LEFT — Bear / SHORT */}
+            <View style={styles.sideColumn}>
+              <View style={[styles.sidePill, styles.sidePillShort]}>
+                <View accessible={false}>
+                  <LottieIcon source={LOTTIE_BEAR} size={68} />
+                </View>
+                <View style={styles.sideDirectionRow}>
+                  <Text style={[styles.sideArrow, { color: '#ef4444' }]}>←</Text>
+                  <Text style={[styles.sideLabel, { color: '#b91c1c' }]}>שורט</Text>
+                </View>
+              </View>
+            </View>
+
+            {/* MIDDLE — Swipeable card */}
+            <View style={styles.cardMiddleCol}>
+              <SwipeableCard
+                key={cards[currentIndex].id}
+                card={cards[currentIndex]}
+                onSwipe={handleSwipe}
+              />
+            </View>
+
+            {/* RIGHT — Bull / LONG */}
+            <View style={styles.sideColumn}>
+              <View style={[styles.sidePill, styles.sidePillLong]}>
+                <View accessible={false}>
+                  <LottieIcon source={LOTTIE_BULL} size={68} />
+                </View>
+                <View style={styles.sideDirectionRow}>
+                  <Text style={[styles.sideLabel, { color: '#15803d' }]}>לונג</Text>
+                  <Text style={[styles.sideArrow, { color: '#16a34a' }]}>→</Text>
+                </View>
+              </View>
+            </View>
           </View>
         )}
 
@@ -366,9 +381,15 @@ export const SwipeGameCard = React.memo(function SwipeGameCard({ isActive }: Pro
             <Text style={[styles.resultScore, RTL]}>
               {score}/{cards.length} תשובות נכונות
             </Text>
-            <Text style={[styles.rewardLine, RTL]}>
-              +{CHALLENGE_COIN_REWARD}   +{CHALLENGE_XP_REWARD} XP
-            </Text>
+            <View style={styles.rewardRow}>
+              <View style={styles.rewardPillCoin}>
+                <GoldCoinIcon size={18} />
+                <Text style={styles.rewardCoinText}>+{CHALLENGE_COIN_REWARD}</Text>
+              </View>
+              <View style={styles.rewardPillXP}>
+                <Text style={styles.rewardXPText}>+{CHALLENGE_XP_REWARD} XP</Text>
+              </View>
+            </View>
 
             {/* Play again if plays remain */}
             {!hasPlayed && remaining > 1 && (
@@ -486,26 +507,79 @@ const styles = StyleSheet.create({
     color: '#16a34a',
   },
   swipeArea: {
+    flexDirection: 'row',
     alignItems: 'center',
-    minHeight: 200,
+    justifyContent: 'space-between',
+    gap: 6,
+    marginHorizontal: -8,
+    minHeight: 280,
+  },
+  sideColumn: {
+    width: 80,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  sidePill: {
+    width: '100%',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    paddingVertical: 14,
+    paddingHorizontal: 6,
+    borderRadius: 20,
+    borderWidth: 2,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.18,
+    shadowRadius: 8,
+    elevation: 5,
+  },
+  sidePillShort: {
+    backgroundColor: '#fff1f2',
+    borderColor: 'rgba(239,68,68,0.5)',
+    shadowColor: '#ef4444',
+  },
+  sidePillLong: {
+    backgroundColor: '#f0fdf4',
+    borderColor: 'rgba(22,163,74,0.5)',
+    shadowColor: '#16a34a',
+  },
+  sideDirectionRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  sideArrow: {
+    fontSize: 20,
+    fontWeight: '900',
+    lineHeight: 22,
+  },
+  sideLabel: {
+    fontSize: 13,
+    fontWeight: '900',
+    letterSpacing: 0.5,
+  },
+  cardMiddleCol: {
+    flex: 1,
+    alignItems: 'stretch',
     justifyContent: 'center',
   },
   swipeCard: {
-    width: SCREEN_WIDTH - 72,
-    height: (SCREEN_WIDTH - 72) * 1.2,
+    width: '100%',
+    aspectRatio: 0.78,
     backgroundColor: '#ffffff',
     borderRadius: 20,
     borderWidth: 1.5,
     borderColor: 'rgba(14,165,233,0.2)',
     overflow: 'hidden',
     alignItems: 'center',
-    padding: 20,
     justifyContent: 'space-between',
-    shadowColor: '#0ea5e9',
+    padding: 16,
+    zIndex: 100,
+    elevation: 12,
+    shadowColor: '#0369a1',
     shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.15,
-    shadowRadius: 16,
-    elevation: 6,
+    shadowOpacity: 0.2,
+    shadowRadius: 14,
   },
   cardContentTop: {
     flex: 0,
@@ -570,27 +644,36 @@ const styles = StyleSheet.create({
   },
   swipeHintRow: {
     flexDirection: 'row',
+    alignItems: 'center',
     justifyContent: 'space-between',
     width: '100%',
-    paddingHorizontal: 10,
+    paddingHorizontal: 6,
+    gap: 6,
   },
-  hintLeft: {
+  hintPill: {
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
+    justifyContent: 'center',
+    gap: 6,
+    paddingHorizontal: 8,
+    paddingVertical: 8,
+    borderRadius: 10,
+    borderWidth: 1.5,
   },
-  hintRight: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
+  hintOrText: {
+    fontSize: 12,
+    fontWeight: '900',
+    color: '#94a3b8',
+    paddingHorizontal: 4,
   },
   hintArrow: {
     fontSize: 18,
-    color: '#64748b',
+    fontWeight: '900',
   },
   hintLabel: {
     fontSize: 12,
-    fontWeight: '700',
+    fontWeight: '800',
   },
   feedbackFlash: {
     borderRadius: 14,
@@ -634,6 +717,38 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     color: '#16a34a',
     marginTop: 4,
+  },
+  rewardRow: {
+    flexDirection: 'row-reverse',
+    gap: 8,
+    marginTop: 6,
+    alignItems: 'center',
+  },
+  rewardPillCoin: {
+    flexDirection: 'row-reverse',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 12,
+    backgroundColor: 'rgba(250,204,21,0.18)',
+  },
+  rewardCoinText: {
+    fontSize: 15,
+    fontWeight: '900',
+    color: '#d4a017',
+    fontVariant: ['tabular-nums'],
+  },
+  rewardPillXP: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 12,
+    backgroundColor: 'rgba(167,139,250,0.18)',
+  },
+  rewardXPText: {
+    fontSize: 15,
+    fontWeight: '900',
+    color: '#7c3aed',
   },
   replayBtn: {
     marginTop: 8,
@@ -698,12 +813,12 @@ const styles = StyleSheet.create({
     borderWidth: 1.5,
     borderColor: 'rgba(14,165,233,0.3)',
     gap: 8,
-    zIndex: 50,
+    zIndex: 200,
     shadowColor: '#0ea5e9',
     shadowOffset: { width: 0, height: -4 },
     shadowOpacity: 0.15,
     shadowRadius: 12,
-    elevation: 10,
+    elevation: 20,
   },
   eduCloseBtn: {
     alignSelf: 'center',

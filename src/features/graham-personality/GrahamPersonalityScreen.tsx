@@ -35,6 +35,7 @@ import {
 } from '../retention-loops/finnMascotConfig';
 import { SIM4, RTL } from '../chapter-4-content/simulations/simTheme';
 import { tapHaptic, successHaptic } from '../../utils/haptics';
+import { useSoundEffect } from '../../hooks/useSoundEffect';
 
 import { useGrahamPersonality } from './useGrahamPersonality';
 import { PERSONALITY_QUESTIONS, TOTAL_QUESTIONS } from './personalityData';
@@ -198,11 +199,13 @@ export function GrahamPersonalityScreen({ onComplete }: GrahamPersonalityScreenP
   } = useGrahamPersonality();
 
   const [selectedOpt, setSelectedOpt] = useState<number | null>(null);
+  const { playSound } = useSoundEffect();
 
   const handleSelect = useCallback(
     (optIdx: number) => {
       if (selectedOpt !== null) return;
       tapHaptic();
+      playSound('btn_click_soft_2');
       setSelectedOpt(optIdx);
 
       setTimeout(() => {
@@ -210,26 +213,28 @@ export function GrahamPersonalityScreen({ onComplete }: GrahamPersonalityScreenP
         setSelectedOpt(null);
       }, 300);
     },
-    [selectAnswer, selectedOpt],
+    [selectAnswer, selectedOpt, playSound],
   );
 
   const handleBack = useCallback(() => {
     tapHaptic();
+    playSound('btn_click_soft_1');
     goBack();
     setSelectedOpt(null);
-  }, [goBack]);
+  }, [goBack, playSound]);
 
-  const router = useRouter(); // <-- need router for default navigation
-  
+  const router = useRouter();
+
   const handleContinue = useCallback(() => {
     tapHaptic();
+    playSound('btn_click_heavy');
     const result = getResult();
     if (onComplete) {
       onComplete(result.id);
     } else {
       router.back();
     }
-  }, [getResult, onComplete, router]);
+  }, [getResult, onComplete, router, playSound]);
 
   // Show result after all answers
   if (isComplete && answers.length >= TOTAL_QUESTIONS) {

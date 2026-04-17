@@ -16,7 +16,7 @@ export function WaveHeader({
   vaultHealth,
   vaultMax,
   coinsAvailable,
-  placementSecondsLeft,
+  placementSecondsLeft: _placementSecondsLeft,
   phase,
 }: Props) {
   const wave = TOWER_DEFENSE_CONFIG.waves[waveIndex];
@@ -27,9 +27,9 @@ export function WaveHeader({
       style={{
         paddingHorizontal: 16,
         paddingVertical: 12,
-        backgroundColor: "rgba(10, 54, 34, 0.9)",
+        backgroundColor: "rgba(8, 47, 73, 0.9)",
         borderBottomWidth: 2,
-        borderBottomColor: "#d4a017",
+        borderBottomColor: "#38bdf8",
         gap: 8,
       }}
     >
@@ -42,7 +42,7 @@ export function WaveHeader({
       >
         <Text
           style={{
-            color: "#fefce8",
+            color: "#f0f9ff",
             fontSize: 20,
             fontWeight: "900",
             fontFamily: "Heebo_900Black",
@@ -53,7 +53,7 @@ export function WaveHeader({
         </Text>
         <View
           style={{
-            backgroundColor: "#d4a017",
+            backgroundColor: "#fde68a",
             paddingHorizontal: 12,
             paddingVertical: 4,
             borderRadius: 16,
@@ -61,12 +61,12 @@ export function WaveHeader({
         >
           <Text
             style={{
-              color: "#1b4332",
+              color: "#78350f",
               fontWeight: "900",
               fontFamily: "Heebo_900Black",
             }}
           >
-            🪙 {coinsAvailable}
+            {coinsAvailable}
           </Text>
         </View>
       </View>
@@ -109,41 +109,23 @@ export function WaveHeader({
       </View>
 
       {phase === "placement" && (
-        <View
+        <Text
           style={{
-            flexDirection: "row",
-            alignItems: "center",
-            justifyContent: "center",
-            gap: 6,
+            color: "#bae6fd",
+            fontSize: 13,
+            textAlign: "center",
+            fontFamily: "Heebo_700Bold",
+            writingDirection: "rtl",
             paddingTop: 4,
           }}
         >
-          <Text
-            style={{
-              color: "#fefce8",
-              fontSize: 14,
-              fontFamily: "Heebo_700Bold",
-              writingDirection: "rtl",
-            }}
-          >
-            🛡️ זמן להתכונן
-          </Text>
-          <Text
-            style={{
-              color: "#d4a017",
-              fontSize: 18,
-              fontWeight: "900",
-              fontFamily: "Heebo_900Black",
-            }}
-          >
-            {placementSecondsLeft}s
-          </Text>
-        </View>
+          בחרו הגנה, מקמו אותה במקומות הרלוונטיים, ולחצו "התמודדו עם החודש"
+        </Text>
       )}
       {phase === "wave" && (
         <Text
           style={{
-            color: "#f97316",
+            color: "#fda4af",
             fontSize: 14,
             textAlign: "center",
             fontFamily: "Heebo_700Bold",
@@ -151,7 +133,7 @@ export function WaveHeader({
             paddingTop: 4,
           }}
         >
-          ⚠️ גל בעיצומו — אויבים תוקפים!
+          גל בעיצומו — אויבים תוקפים!
         </Text>
       )}
     </View>

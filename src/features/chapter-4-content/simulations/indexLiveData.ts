@@ -1,6 +1,6 @@
 /**
- * SIM 20: מדד לייב (Index Live — S&P 500 Time Machine) — Module 4-20
- * Simplified S&P 500 annual returns 1980-2024 (approximate real data).
+ * SIM 20: מדד לייב (Index Live — ‎S&P‎ 500 Time Machine) — Module 4-20
+ * Simplified ‎S&P‎ 500 annual returns 1980-2024 (approximate real data).
  * Includes all major crashes and booms.
  */
 
@@ -14,7 +14,7 @@ const INITIAL_INVESTMENT = 10_000;
 /** Slider range: start years player can choose */
 const START_YEAR_RANGE: [number, number] = [1980, 2025];
 
-// ── Approximate S&P 500 Annual Returns 1980-2025 ─────────────────────
+// ── Approximate ‎S&P‎ 500 Annual Returns 1980-2025 ─────────────────────
 // Based on real historical data (price appreciation, excluding dividends).
 
 const ANNUAL_RETURNS: Record<number, number> = {

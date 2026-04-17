@@ -8,7 +8,7 @@ import { persist, createJSONStorage } from 'zustand/middleware';
 import { zustandStorage } from '../../lib/zustandStorage';
 
 export interface LearningEvent {
-  type: 'module' | 'quiz' | 'dilemma' | 'investment' | 'crash-game' | 'swipe-game' | 'macro-event' | 'bullshit-swipe' | 'higher-lower' | 'budget-ninja' | 'price-slider' | 'cashout-rush';
+  type: 'module' | 'quiz' | 'dilemma' | 'investment' | 'crash-game' | 'swipe-game' | 'macro-event' | 'bullshit-swipe' | 'higher-lower' | 'budget-ninja' | 'price-slider' | 'cashout-rush' | 'fomo-killer';
   title: string;
   timestamp: number;
   xpEarned?: number;

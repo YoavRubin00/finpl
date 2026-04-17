@@ -28,8 +28,8 @@ export function DailyChallengePrompt() {
 
   const handlePress = useCallback(() => {
     tapHaptic();
-    router.push(currentArena.chapterRoute as never);
-  }, [router, currentArena.chapterRoute]);
+    router.push("/(tabs)/learn" as never);
+  }, [router]);
 
   return (
     <Animated.View style={entranceStyle} className="mb-5 px-2">

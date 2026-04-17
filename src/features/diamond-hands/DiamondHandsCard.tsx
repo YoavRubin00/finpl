@@ -80,7 +80,7 @@ export function DiamondHandsCard({ isActive }: Props) {
             borderRadius: 28,
             overflow: "hidden",
             borderWidth: 2.5,
-            borderColor: "#d4a017",
+            borderColor: "#0ea5e9",
           },
           cardStyle,
         ]}
@@ -129,7 +129,7 @@ export function DiamondHandsCard({ isActive }: Props) {
 
             <Text
               style={{
-                color: "#fefce8",
+                color: "#f0f9ff",
                 fontSize: 28,
                 fontWeight: "900",
                 fontFamily: "Heebo_900Black",
@@ -141,14 +141,14 @@ export function DiamondHandsCard({ isActive }: Props) {
             </Text>
 
             <Image
-              source={{ uri: DH_ASSETS.hodlButton }}
+              source={DH_ASSETS.hodlButton}
               style={{ width: 140, height: 140 }}
               resizeMode="contain"
             />
 
             <Text
               style={{
-                color: "#a7f3d0",
+                color: "#bae6fd",
                 fontSize: 14,
                 lineHeight: 22,
                 textAlign: "center",
@@ -157,7 +157,7 @@ export function DiamondHandsCard({ isActive }: Props) {
                 maxWidth: 280,
               }}
             >
-              השוק קורס. 15 שניות של החזקה.{"\n"}תצליח/י לא למכור?
+              השוק קורס. 10 שניות של החזקה.{"\n"}תצליח/י לא למכור?
             </Text>
 
             <Pressable
@@ -166,17 +166,17 @@ export function DiamondHandsCard({ isActive }: Props) {
               accessibilityLabel="פתח את מבחן ידיים של יהלום"
               style={{
                 marginTop: 8,
-                backgroundColor: "#d4a017",
+                backgroundColor: "#0ea5e9",
                 paddingVertical: 14,
                 paddingHorizontal: 36,
                 borderRadius: 18,
                 borderBottomWidth: 4,
-                borderBottomColor: "#92580a",
+                borderBottomColor: "#0369a1",
               }}
             >
               <Text
                 style={{
-                  color: "#1b4332",
+                  color: "#082f49",
                   fontSize: 16,
                   fontWeight: "900",
                   fontFamily: "Heebo_900Black",
@@ -190,7 +190,7 @@ export function DiamondHandsCard({ isActive }: Props) {
             {totalVictories > 0 && (
               <Text
                 style={{
-                  color: "#d4a017",
+                  color: "#0ea5e9",
                   fontSize: 12,
                   fontFamily: "Heebo_700Bold",
                   writingDirection: "rtl",

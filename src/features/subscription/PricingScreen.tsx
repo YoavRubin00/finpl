@@ -65,8 +65,8 @@ interface FeatureRow {
 const FEATURES: FeatureRow[] = [
   { label: "לבבות ללא הגבלה", free: false, pro: true },
   { label: "ללא פרסומות", free: false, pro: true },
-  { label: "אתגרי ארנה", free: "3 ביום", pro: "ללא הגבלה" },
-  { label: "צ'אט AI", free: "1 ביום", pro: "ללא הגבלה" },
+  { label: "משחקי פיד", free: "3 ברצף", pro: "ללא הגבלה" },
+  { label: "צ'אט AI", free: "2 הודעות", pro: "ללא הגבלה" },
   { label: "תובנות AI מתקדמות", free: false, pro: true },
 ];
 

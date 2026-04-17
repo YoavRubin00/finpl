@@ -13,6 +13,18 @@ export const PATH_WAYPOINTS: ReadonlyArray<PathPoint> = [
   { x: 0.5, y: 0.92 },
 ];
 
+// Predefined pads where fighters mount. Kept well clear of the path so they
+// don't visually collide with it and enemies move along unobstructed.
+export const TOWER_PADS: ReadonlyArray<PathPoint> = [
+  { x: 0.9, y: 0.08 },
+  { x: 0.06, y: 0.22 },
+  { x: 0.94, y: 0.42 },
+  { x: 0.06, y: 0.5 },
+  { x: 0.92, y: 0.74 },
+  { x: 0.06, y: 0.78 },
+  { x: 0.9, y: 0.92 },
+];
+
 const SEGMENT_LENGTHS: ReadonlyArray<number> = (() => {
   const lens: number[] = [];
   for (let i = 1; i < PATH_WAYPOINTS.length; i++) {

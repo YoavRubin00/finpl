@@ -15,7 +15,7 @@ export interface IndexRaceConfig {
   stockOptions: StockOption[];
   pickCount: number; // 5
   years: number; // 10
-  indexReturns: number[]; // 10 entries (S&P 500 benchmark)
+  indexReturns: number[]; // 10 entries (‎S&P‎ 500 benchmark)
   initialInvestment: number; // 100000
 }
 

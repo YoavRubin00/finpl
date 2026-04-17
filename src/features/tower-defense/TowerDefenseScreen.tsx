@@ -1,5 +1,6 @@
 import React, { useCallback, useState } from "react";
 import { LayoutChangeEvent, Text, View } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
 import { useEconomyStore } from "../economy/useEconomyStore";
 import {
@@ -52,7 +53,7 @@ export function TowerDefenseScreen({ onExit, onVictory }: Props) {
   }, []);
 
   const handlePlaceAt = useCallback(
-    (nx: number, ny: number) => {
+    (padIndex: number) => {
       if (!selectedTower) return;
       const def = TOWER_DEFENSE_CONFIG.towers.find(
         (t) => t.kind === selectedTower
@@ -62,10 +63,11 @@ export function TowerDefenseScreen({ onExit, onVictory }: Props) {
         errorHaptic();
         return;
       }
-      const placed = placeTower(selectedTower, nx, ny);
+      const placed = placeTower(selectedTower, padIndex);
       if (placed) {
         successHaptic();
-        if (state.coinsAvailable - def.cost < def.cost) {
+        const cheapestCost = Math.min(...TOWER_DEFENSE_CONFIG.towers.map((t) => t.cost));
+        if (state.coinsAvailable - def.cost < cheapestCost) {
           setSelectedTower(null);
         }
       } else {
@@ -152,6 +154,7 @@ export function TowerDefenseScreen({ onExit, onVictory }: Props) {
               phase={state.phase}
               towers={state.towers}
               enemies={state.enemies}
+              projectiles={state.projectiles}
               pendingTower={selectedTower}
               vaultHealth={state.vaultHealth}
               vaultMax={state.vaultMax}
@@ -175,14 +178,14 @@ export function TowerDefenseScreen({ onExit, onVictory }: Props) {
         <View
           style={{
             padding: 14,
-            backgroundColor: "rgba(10, 54, 34, 0.9)",
+            backgroundColor: "rgba(12, 74, 110, 0.9)",
             borderTopWidth: 2,
-            borderTopColor: "#d4a017",
+            borderTopColor: "#0ea5e9",
           }}
         >
           <Text
             style={{
-              color: "#fefce8",
+              color: "#f0f9ff",
               textAlign: "center",
               fontFamily: "Heebo_700Bold",
               writingDirection: "rtl",
@@ -200,12 +203,14 @@ export function TowerDefenseScreen({ onExit, onVictory }: Props) {
 function BossShell({ children }: { children: React.ReactNode }) {
   return (
     <LinearGradient
-      colors={["#1b4332", "#0a3622"]}
+      colors={["#0c4a6e", "#082f49"]}
       style={{ flex: 1 }}
       start={{ x: 0, y: 0 }}
       end={{ x: 1, y: 1 }}
     >
-      {children}
+      <SafeAreaView style={{ flex: 1 }} edges={["top", "bottom", "left", "right"]}>
+        {children}
+      </SafeAreaView>
     </LinearGradient>
   );
 }

@@ -10,6 +10,8 @@ export interface PriceSliderItem {
   maxGuess: number;
   unit: string;
   hint: string;
+  /** Hebrew verb for the question "{questionVerb} {productName}..." — defaults to "עלה" (masculine). Use "עלתה" for feminine nouns (דירה, etc.) */
+  questionVerb?: 'עלה' | 'עלתה';
   sharkExplanation: string;
   image?: ImageSourcePropType;
   category: 'food' | 'housing' | 'transport' | 'tech' | 'finance' | 'leisure';

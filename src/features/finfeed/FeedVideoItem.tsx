@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { View, Text, StyleSheet, Dimensions, Pressable, ActivityIndicator } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
-import { Play, Heart, Volume2, VolumeX } from "lucide-react-native";
+import { Play, Bookmark, Volume2, VolumeX } from "lucide-react-native";
 import { useRouter } from "expo-router";
 import { useVideoPlayer, VideoView } from "expo-video";
 import type { FeedVideo } from "./types";
@@ -166,7 +166,7 @@ export const FeedVideoItem = React.memo(function FeedVideoItem({ item, isActive 
         accessibilityLabel={isBookmarked ? "הסר מהשמורים" : "שמור"}
         hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
       >
-        <Heart size={22} color={isBookmarked ? "#ef4444" : "#fff"} fill={isBookmarked ? "#ef4444" : "transparent"} />
+        <Bookmark size={22} color={isBookmarked ? "#facc15" : "#fff"} fill={isBookmarked ? "#facc15" : "transparent"} />
       </Pressable>
 
       {/* Mute toggle */}
@@ -282,7 +282,7 @@ const styles = StyleSheet.create({
   },
   muteButton: {
     position: "absolute",
-    bottom: 100,
+    top: 56,
     right: 16,
     zIndex: 10,
     backgroundColor: "rgba(0,0,0,0.4)",

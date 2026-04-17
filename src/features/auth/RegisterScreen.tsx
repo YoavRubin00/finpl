@@ -294,6 +294,7 @@ export function RegisterScreen() {
               onPress={() => {
                 if (isValid) {
                   signIn(name.trim(), email.trim());
+                  router.replace("/(tabs)/" as never);
                 }
               }}
               accessibilityRole="button"

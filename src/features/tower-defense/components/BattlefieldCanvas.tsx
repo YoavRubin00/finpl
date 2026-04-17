@@ -1,5 +1,6 @@
 import React, { useMemo } from "react";
 import { Image, Pressable, View } from "react-native";
+import LottieView from "lottie-react-native";
 import Animated, {
   useAnimatedStyle,
   useReducedMotion,
@@ -7,13 +8,15 @@ import Animated, {
   withRepeat,
   withTiming,
 } from "react-native-reanimated";
+import { LinearGradient } from "expo-linear-gradient";
 import Svg, { Path } from "react-native-svg";
 import { TD_ASSETS } from "../towerDefenseAssets";
 import { TOWER_DEFENSE_CONFIG } from "../towerDefenseData";
-import { PATH_WAYPOINTS, pointAtProgress } from "../pathGeometry";
+import { PATH_WAYPOINTS, TOWER_PADS, pointAtProgress } from "../pathGeometry";
 import type {
   EnemyInstance,
   GamePhase,
+  ProjectileInstance,
   TowerInstance,
   TowerKind,
 } from "../types";
@@ -24,11 +27,18 @@ interface Props {
   phase: GamePhase;
   towers: ReadonlyArray<TowerInstance>;
   enemies: ReadonlyArray<EnemyInstance>;
+  projectiles: ReadonlyArray<ProjectileInstance>;
   pendingTower: TowerKind | null;
   vaultHealth: number;
   vaultMax: number;
-  onPlaceAt: (x: number, y: number) => void;
+  onPlaceAt: (padIndex: number) => void;
 }
+
+const PROJECTILE_COLORS: Record<TowerKind, string> = {
+  emergency_fund: "#38bdf8",
+  insurance: "#fbbf24",
+  auto_budget: "#a78bfa",
+};
 
 const TOWER_SIZE = 56;
 const ENEMY_SIZE = 44;
@@ -49,6 +59,7 @@ export function BattlefieldCanvas({
   phase,
   towers,
   enemies,
+  projectiles,
   pendingTower,
   vaultHealth,
   vaultMax,
@@ -81,26 +92,27 @@ export function BattlefieldCanvas({
   }));
 
   const canPlace = phase === "placement" && pendingTower !== null;
+  const occupiedPads = useMemo(
+    () => new Set(towers.map((t) => t.padIndex)),
+    [towers]
+  );
 
   return (
-    <Pressable
-      onPress={(e) => {
-        if (!canPlace) return;
-        const { locationX, locationY } = e.nativeEvent;
-        onPlaceAt(locationX / width, locationY / height);
-      }}
-      accessibilityRole="button"
+    <View
+      accessibilityRole="summary"
       accessibilityLabel={
         canPlace
-          ? "הקש על שדה הקרב להצבת המגדל הנבחר"
-          : "שדה קרב — בחר מגדל מהתפריט התחתון כדי להציב"
+          ? "שדה קרב — הקש על בסיס ריק כדי להציב את ההגנה הנבחרת"
+          : "שדה קרב — בחרו הגנה מהתפריט התחתון"
       }
       style={{ width, height, overflow: "hidden", borderRadius: 24 }}
     >
-      <Image
-        source={{ uri: TD_ASSETS.battlefield }}
+      {/* Clean gradient battlefield — no baked-in path, so the SVG below is the single source of truth */}
+      <LinearGradient
+        colors={["#075985", "#0c4a6e", "#082f49"]}
+        start={{ x: 0.2, y: 0 }}
+        end={{ x: 0.8, y: 1 }}
         style={{ position: "absolute", width, height }}
-        resizeMode="cover"
       />
 
       <Svg
@@ -109,19 +121,30 @@ export function BattlefieldCanvas({
         style={{ position: "absolute" }}
         pointerEvents="none"
       >
+        {/* Outer glow so the path stands out over the gradient */}
         <Path
           d={pathD}
-          stroke="rgba(255, 235, 180, 0.22)"
-          strokeWidth={26}
+          stroke="rgba(14, 165, 233, 0.35)"
+          strokeWidth={38}
           strokeLinecap="round"
           strokeLinejoin="round"
           fill="none"
         />
+        {/* Solid path road */}
         <Path
           d={pathD}
-          stroke="rgba(212, 160, 23, 0.5)"
-          strokeWidth={3}
-          strokeDasharray="10,8"
+          stroke="#0ea5e9"
+          strokeWidth={20}
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          fill="none"
+        />
+        {/* Dashed center line for the "road" look */}
+        <Path
+          d={pathD}
+          stroke="rgba(255,255,255,0.65)"
+          strokeWidth={2.5}
+          strokeDasharray="12,10"
           fill="none"
         />
       </Svg>
@@ -134,21 +157,66 @@ export function BattlefieldCanvas({
             top: vaultPos.y * height - VAULT_SIZE / 2,
             width: VAULT_SIZE,
             height: VAULT_SIZE,
+            alignItems: "center",
+            justifyContent: "center",
+            opacity: vaultDamaged ? 0.5 : 1,
           },
           vaultAnimStyle,
         ]}
         pointerEvents="none"
       >
-        <Image
-          source={{ uri: TD_ASSETS.fortress }}
-          style={{
-            width: VAULT_SIZE,
-            height: VAULT_SIZE,
-            opacity: vaultDamaged ? 0.5 : 1,
-          }}
+        <LottieView
+          source={TD_ASSETS.vaultLottie}
+          style={{ width: VAULT_SIZE, height: VAULT_SIZE }}
+          autoPlay
+          loop
           resizeMode="contain"
         />
       </Animated.View>
+
+      {TOWER_PADS.map((pad, idx) => {
+        if (occupiedPads.has(idx)) return null;
+        const showPad = phase === "placement" || phase === "wave";
+        if (!showPad) return null;
+        const padSize = 48;
+        const left = pad.x * width - padSize / 2;
+        const top = pad.y * height - padSize / 2;
+        const interactable = canPlace;
+        return (
+          <Pressable
+            key={`pad-${idx}`}
+            onPress={() => interactable && onPlaceAt(idx)}
+            disabled={!interactable}
+            accessibilityRole="button"
+            accessibilityLabel={`בסיס הגנה ${idx + 1}${interactable ? " — זמין" : ""}`}
+            style={{
+              position: "absolute",
+              left,
+              top,
+              width: padSize,
+              height: padSize,
+              borderRadius: padSize / 2,
+              borderWidth: interactable ? 3 : 2,
+              borderColor: interactable ? "#38bdf8" : "rgba(148, 163, 184, 0.6)",
+              borderStyle: "dashed",
+              backgroundColor: interactable
+                ? "rgba(14, 165, 233, 0.22)"
+                : "rgba(12, 74, 110, 0.35)",
+              alignItems: "center",
+              justifyContent: "center",
+            }}
+          >
+            <View
+              style={{
+                width: 10,
+                height: 10,
+                borderRadius: 5,
+                backgroundColor: interactable ? "#bae6fd" : "rgba(203, 213, 225, 0.5)",
+              }}
+            />
+          </Pressable>
+        );
+      })}
 
       {towers.map((tower) => {
         const def = TOWER_DEFENSE_CONFIG.towers.find(
@@ -164,15 +232,62 @@ export function BattlefieldCanvas({
               top: tower.y * height - TOWER_SIZE / 2,
               width: TOWER_SIZE,
               height: TOWER_SIZE,
+              alignItems: "center",
+              justifyContent: "center",
             }}
             pointerEvents="none"
           >
-            <Image
-              source={{ uri: TD_ASSETS.towers[tower.kind] }}
-              style={{ width: TOWER_SIZE, height: TOWER_SIZE }}
+            <View
+              style={{
+                position: "absolute",
+                width: TOWER_SIZE,
+                height: TOWER_SIZE,
+                borderRadius: TOWER_SIZE / 2,
+                backgroundColor: "rgba(12, 74, 110, 0.72)",
+                borderWidth: 2,
+                borderColor: "#38bdf8",
+              }}
+            />
+            <LottieView
+              source={TD_ASSETS.towerLottie[tower.kind]}
+              style={{ width: TOWER_SIZE - 8, height: TOWER_SIZE - 8 }}
+              autoPlay
+              loop
               resizeMode="contain"
             />
           </View>
+        );
+      })}
+
+      {projectiles.map((p) => {
+        const age = Date.now() - p.spawnAt;
+        const t = Math.min(1, Math.max(0, age / p.ttlMs));
+        const cx = p.fromX + (p.toX - p.fromX) * t;
+        const cy = p.fromY + (p.toY - p.fromY) * t;
+        const size = 14;
+        const color = PROJECTILE_COLORS[p.kind];
+        return (
+          <View
+            key={p.id}
+            pointerEvents="none"
+            style={{
+              position: "absolute",
+              left: cx * width - size / 2,
+              top: cy * height - size / 2,
+              width: size,
+              height: size,
+              borderRadius: size / 2,
+              backgroundColor: color,
+              shadowColor: color,
+              shadowOpacity: 0.9,
+              shadowRadius: 6,
+              shadowOffset: { width: 0, height: 0 },
+              elevation: 4,
+              borderWidth: 1.5,
+              borderColor: "#ffffff",
+              opacity: 1 - t * 0.15,
+            }}
+          />
         );
       })}
 
@@ -194,7 +309,7 @@ export function BattlefieldCanvas({
             pointerEvents="none"
           >
             <Image
-              source={{ uri: TD_ASSETS.enemies[enemy.kind] }}
+              source={TD_ASSETS.enemies[enemy.kind]}
               style={{ width: ENEMY_SIZE, height: ENEMY_SIZE }}
               resizeMode="contain"
             />
@@ -225,6 +340,6 @@ export function BattlefieldCanvas({
           </View>
         );
       })}
-    </Pressable>
+    </View>
   );
 }

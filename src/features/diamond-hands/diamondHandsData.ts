@@ -1,33 +1,35 @@
 import type { CrashPoint, PhaseDef } from "./types";
 
-export const HOLD_TARGET_MS = 15_000;
+export const HOLD_TARGET_MS = 10_000;
 
+// Condensed 10s with MORE intensity — panic phase is longer and more aggressive
 export const PHASES: ReadonlyArray<PhaseDef> = [
   {
     phase: "fear",
     startMs: 0,
-    endMs: 5_000,
+    endMs: 2_500,
     label: "פחד",
-    vignetteOpacity: 0.25,
+    vignetteOpacity: 0.35,
     vignetteColor: "#b91c1c",
     shakeEnabled: false,
   },
   {
     phase: "panic",
-    startMs: 5_000,
-    endMs: 10_000,
+    startMs: 2_500,
+    endMs: 7_500,
     label: "פאניקה",
-    vignetteOpacity: 0.55,
+    vignetteOpacity: 0.7,
     vignetteColor: "#991b1b",
     shakeEnabled: true,
   },
   {
     phase: "hope",
-    startMs: 10_000,
-    endMs: 15_000,
+    startMs: 7_500,
+    endMs: 10_000,
     label: "תקווה",
-    vignetteOpacity: 0.2,
-    vignetteColor: "#166534",
+    vignetteOpacity: 0.25,
+    // Switched from green to deep blue to match app palette
+    vignetteColor: "#0c4a6e",
     shakeEnabled: false,
   },
 ];

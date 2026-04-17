@@ -23,15 +23,16 @@ import { useDailyChallengesStore } from '../../../daily-challenges/use-daily-cha
 import { useDailyLogStore } from '../../../daily-summary/useDailyLogStore';
 import { CHALLENGE_COIN_REWARD, CHALLENGE_XP_REWARD, MAX_DAILY_PLAYS } from '../../../daily-challenges/daily-challenge-types';
 
-import { NINJA_TARGETS, GAME_DURATION_MS, SPAWN_INTERVAL_MS, FALL_DURATION_MIN_MS, FALL_DURATION_MAX_MS, SCORE_TIER_EXCELLENT, SCORE_TIER_GOOD, SCORE_TIER_OK, pickRandomKind } from './ninjaData';
+import { NINJA_TARGETS, GAME_DURATION_MS, SPAWN_INTERVAL_MS_BASE, FALL_DURATION_MIN_MS_BASE, FALL_DURATION_MAX_MS_BASE, LEVEL_1_SPEED, LEVEL_2_SPEED, SCORE_TIER_EXCELLENT, SCORE_TIER_GOOD, SCORE_TIER_OK, pickRandomKind } from './ninjaData';
 import type { FallingTarget, NinjaTargetKind } from './types';
+import { FeedStartButton } from '../shared/FeedStartButton';
 
 const RTL = { writingDirection: 'rtl' as const, textAlign: 'right' as const };
 const RTL_CENTER = { writingDirection: 'rtl' as const, textAlign: 'center' as const };
-const SCREEN_WIDTH = Dimensions.get('window').width;
-const ARENA_WIDTH = SCREEN_WIDTH - 72;
-const ARENA_HEIGHT = Math.min(ARENA_WIDTH * 1.1, 440);
-const TARGET_SIZE = 72;
+const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
+const ARENA_WIDTH = SCREEN_WIDTH - 40;
+const ARENA_HEIGHT = Math.max(420, Math.min(SCREEN_HEIGHT * 0.55, 600));
+const TARGET_SIZE = 84;
 
 interface Props {
   isActive: boolean;
@@ -214,6 +215,7 @@ export const BudgetNinjaCard = React.memo(function BudgetNinjaCard({ isActive: _
   const [secondsLeft, setSecondsLeft] = useState(Math.round(GAME_DURATION_MS / 1000));
   const [showConfetti, setShowConfetti] = useState(false);
   const [showFlyingRewards, setShowFlyingRewards] = useState(false);
+  const [currentLevel, setCurrentLevel] = useState<1 | 2>(1);
 
   const tickersRef = useRef<{ spawn: ReturnType<typeof setInterval> | null; count: ReturnType<typeof setInterval> | null; end: ReturnType<typeof setTimeout> | null; confetti: ReturnType<typeof setTimeout> | null }>({
     spawn: null,
@@ -265,14 +267,20 @@ export const BudgetNinjaCard = React.memo(function BudgetNinjaCard({ isActive: _
     [playBudgetNinja],
   );
 
-  const startGame = useCallback(() => {
-    if (phase !== 'idle' || hasPlayedToday) return;
+  const startGame = useCallback((level: 1 | 2 = 1) => {
+    if (phase === 'playing' || hasPlayedToday) return;
     tapHaptic();
+    setCurrentLevel(level);
     setPhase('playing');
     setScore(0);
     setTargets([]);
     setSecondsLeft(Math.round(GAME_DURATION_MS / 1000));
     finalizedRef.current = false;
+
+    const speed = level === 2 ? LEVEL_2_SPEED : LEVEL_1_SPEED;
+    const spawnInterval = SPAWN_INTERVAL_MS_BASE / speed;
+    const fallMin = FALL_DURATION_MIN_MS_BASE / speed;
+    const fallMax = FALL_DURATION_MAX_MS_BASE / speed;
 
     tickersRef.current.spawn = setInterval(() => {
       const kind: NinjaTargetKind = pickRandomKind();
@@ -281,12 +289,12 @@ export const BudgetNinjaCard = React.memo(function BudgetNinjaCard({ isActive: _
         kind,
         spawnedAt: Date.now(),
         xPercent: Math.random(),
-        fallDurationMs: randRange(FALL_DURATION_MIN_MS, FALL_DURATION_MAX_MS),
-        rotationStart: randRange(-20, 20),
-        rotationEnd: randRange(-180, 180),
+        fallDurationMs: randRange(fallMin, fallMax),
+        rotationStart: randRange(-8, 8),
+        rotationEnd: randRange(-30, 30),
       };
       setTargets((prev) => [...prev, spawn]);
-    }, SPAWN_INTERVAL_MS);
+    }, spawnInterval);
 
     tickersRef.current.count = setInterval(() => {
       setSecondsLeft((s) => Math.max(0, s - 1));
@@ -371,20 +379,14 @@ export const BudgetNinjaCard = React.memo(function BudgetNinjaCard({ isActive: _
             <Text style={[styles.idleDesc, RTL_CENTER]}>
               12 שניות. לחץ על מטבעות וגרפים ירוקים, דלג על אינפלציה, מסים ועמלות.
             </Text>
-            <Pressable
-              onPress={startGame}
-              accessibilityRole="button"
+            <FeedStartButton
+              label="בואו נתחיל!"
+              onPress={() => startGame(1)}
               accessibilityLabel="התחל נינג׳ת תקציב"
-              style={({ pressed }) => [styles.startButton, pressed && { opacity: 0.85 }]}
-            >
-              <LinearGradient
-                colors={['#7c3aed', '#5b21b6']}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
-                style={StyleSheet.absoluteFill}
-              />
-              <Text style={styles.startButtonText}>התחלה</Text>
-            </Pressable>
+            />
+            <Text style={[styles.startMeta, RTL_CENTER]}>
+              12 שניות • {remainingPlays}/{MAX_DAILY_PLAYS} סבבים
+            </Text>
           </Animated.View>
         )}
 
@@ -408,6 +410,26 @@ export const BudgetNinjaCard = React.memo(function BudgetNinjaCard({ isActive: _
         )}
 
         {phase === 'done' && <SharkResult score={score} kindsAllowed />}
+
+        {phase === 'done' && score >= SCORE_TIER_GOOD && currentLevel === 1 && remainingPlays > 0 && (
+          <Animated.View entering={FadeInUp.duration(300).delay(400)} style={styles.level2Block}>
+            <Text style={[styles.level2Label, RTL_CENTER]}>מוכן לאתגר?</Text>
+            <Pressable
+              onPress={() => startGame(2)}
+              accessibilityRole="button"
+              accessibilityLabel="התחל רמה 2 — מהירות כפולה"
+              style={({ pressed }) => [styles.level2Button, pressed && { transform: [{ scale: 0.97 }] }]}
+            >
+              <LinearGradient
+                colors={['#dc2626', '#991b1b']}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={StyleSheet.absoluteFill}
+              />
+              <Text style={styles.level2ButtonText}>רמה 2 — מהירות גבוהה</Text>
+            </Pressable>
+          </Animated.View>
+        )}
       </View>
     </View>
   );
@@ -415,25 +437,29 @@ export const BudgetNinjaCard = React.memo(function BudgetNinjaCard({ isActive: _
 
 const styles = StyleSheet.create({
   container: {
-    paddingVertical: 10,
-    paddingHorizontal: 16,
+    flex: 1,
+    paddingVertical: 6,
+    paddingHorizontal: 8,
+    justifyContent: 'center',
   },
   cardShell: {
     borderRadius: 24,
-    padding: 20,
+    padding: 18,
     borderWidth: 1.5,
     borderColor: 'rgba(14,165,233,0.25)',
     backgroundColor: '#f0f9ff',
     gap: 14,
+    minHeight: SCREEN_HEIGHT * 0.72,
+    justifyContent: 'center',
   },
   headerRow: {
     flexDirection: 'row-reverse',
     alignItems: 'center',
-    gap: 10,
+    gap: 12,
   },
   headerAvatar: {
-    width: 44,
-    height: 44,
+    width: 72,
+    height: 72,
   },
   headerTextCol: {
     flex: 1,
@@ -449,9 +475,10 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   idleBlock: {
-    gap: 14,
+    gap: 20,
     alignItems: 'center',
-    paddingVertical: 12,
+    paddingVertical: 24,
+    paddingTop: 40,
   },
   idleDesc: {
     fontSize: 14,
@@ -459,20 +486,41 @@ const styles = StyleSheet.create({
     lineHeight: 22,
     paddingHorizontal: 8,
   },
-  startButton: {
+  startMeta: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#64748b',
+    marginTop: 4,
+  },
+  level2Block: {
+    alignItems: 'center',
+    gap: 8,
+    paddingTop: 4,
+  },
+  level2Label: {
+    fontSize: 13,
+    fontWeight: '800',
+    color: '#64748b',
+  },
+  level2Button: {
     paddingHorizontal: 28,
-    paddingVertical: 12,
+    paddingVertical: 14,
     borderRadius: 14,
     overflow: 'hidden',
     alignItems: 'center',
     justifyContent: 'center',
-    minWidth: 160,
+    minWidth: 200,
+    shadowColor: '#991b1b',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.35,
+    shadowRadius: 10,
+    elevation: 6,
   },
-  startButtonText: {
-    fontSize: 16,
+  level2ButtonText: {
+    fontSize: 15,
     fontWeight: '900',
     color: '#ffffff',
-    letterSpacing: 0.5,
+    letterSpacing: 0.3,
   },
   hudRow: {
     flexDirection: 'row-reverse',
@@ -562,9 +610,9 @@ const styles = StyleSheet.create({
     alignItems: 'flex-start',
   },
   sharkAvatarWrap: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
+    width: 80,
+    height: 80,
+    borderRadius: 40,
     overflow: 'hidden',
     backgroundColor: '#e0f2fe',
     borderWidth: 1.5,
@@ -573,8 +621,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   sharkAvatar: {
-    width: 40,
-    height: 40,
+    width: 74,
+    height: 74,
   },
   sharkTextCol: {
     flex: 1,

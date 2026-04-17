@@ -142,6 +142,14 @@ export default function RootLayout() {
   useEffect(() => {
     useEconomyStore.getState().awardLoginBonus();
   }, []);
+
+  // Reset Shark CTA session tokens on cold start (so BridgeCTA / ReferralCTA can fire once per session)
+  useEffect(() => {
+    // Dynamic import to avoid pulling the store into the critical boot path
+    import("../src/stores/useNudgeQueueStore")
+      .then(({ useNudgeQueueStore }) => useNudgeQueueStore.getState().resetSession())
+      .catch(() => { /* non-fatal */ });
+  }, []);
   const router = useRouter();
   const segments = useSegments();
   const navState = useRootNavigationState();
@@ -170,7 +178,7 @@ export default function RootLayout() {
       "duels", "squads", "referral", "fantasy", "assets", "assets-market", "finfeed",
       "scenario-lab", "suggest-scenario", "graham-personality", "legal", "settings",
       "pizza-index", "accessibility-statement", "fire-calculator",
-      "tower-defense-boss",
+      "tower-defense-boss", "interstitial",
     ].includes(segments[0] as string);
 
     if (!isAuthenticated) {

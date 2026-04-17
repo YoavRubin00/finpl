@@ -5,6 +5,7 @@ import { FlashList, type FlashListRef } from "@shopify/flash-list";
 import { useFocusEffect, useScrollToTop } from "@react-navigation/native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import LottieView from "lottie-react-native";
+import { LinearGradient } from "expo-linear-gradient";
 import { SafeLottie } from "../../components/ui/SafeLottie";
 import { useRouter } from "expo-router";
 import { Lock, FlaskConical } from "lucide-react-native";
@@ -52,6 +53,9 @@ import { useDailyQuizStore } from "../daily-quiz/useDailyQuizStore";
 import { refreshDailyQuiz } from "../daily-quiz/dailyQuizPipeline";
 import { getFallbackQuiz, getCategoryForDate } from "../daily-quiz/fallbackQuizzes";
 import { DilemmaCard } from "../daily-challenges/DilemmaCard";
+import { SharkFeedbackCard } from "./SharkFeedbackCard";
+import { FeedSimulatorCard } from "./FeedSimulatorCard";
+import { FEED_SIMULATORS } from "./feedSimulatorsData";
 import { InvestmentCard } from "../daily-challenges/InvestmentCard";
 import { SwipeGameCard } from "../daily-challenges/SwipeGameCard";
 import { CrashGameCard } from "../daily-challenges/CrashGameCard";
@@ -60,6 +64,7 @@ import { HigherLowerCard } from "./minigames/higher-lower/HigherLowerCard";
 import { BudgetNinjaCard } from "./minigames/budget-ninja/BudgetNinjaCard";
 import { PriceSliderCard } from "./minigames/price-slider/PriceSliderCard";
 import { CashoutRushCard } from "./minigames/cashout-rush/CashoutRushCard";
+import { FomoKillerCard } from "./minigames/fomo-killer/FomoKillerCard";
 import { GrahamPersonalityFeedCard } from "../graham-personality/GrahamPersonalityFeedCard";
 import { DiamondHandsCard } from "../diamond-hands";
 import { useStreakCelebration } from "../../hooks/useStreakCelebration";
@@ -561,16 +566,19 @@ export function FinFeedScreen() {
   useEffect(() => {
     if (walkthroughScreen !== 'feed') return;
     let scrollIdx = 0;
+    let interval: ReturnType<typeof setInterval> | null = null;
     const delay = setTimeout(() => {
-      const interval = setInterval(() => {
+      interval = setInterval(() => {
         scrollIdx += 1;
         try {
           flatListRef.current?.scrollToIndex({ index: scrollIdx, animated: true });
         } catch { /* safe — index may be out of range */ }
       }, 3000);
-      return () => clearInterval(interval);
     }, 1500);
-    return () => clearTimeout(delay);
+    return () => {
+      clearTimeout(delay);
+      if (interval) clearInterval(interval);
+    };
   }, [walkthroughScreen]);
 
   // Wire module-level scroll helper for WelcomeCard
@@ -629,7 +637,7 @@ export function FinFeedScreen() {
       return () => {
         if (streakTimerRef.current) clearTimeout(streakTimerRef.current);
       };
-    }, [streak])
+    }, [streak, showStreakCelebration])
   );
 
   const feedItems = useMemo(() => {
@@ -719,8 +727,17 @@ export function FinFeedScreen() {
       { id: 'budget-ninja', type: 'budget-ninja' as const },
       { id: 'price-slider', type: 'price-slider' as const },
       { id: 'cashout-rush', type: 'cashout-rush' as const },
+      { id: 'fomo-killer', type: 'fomo-killer' as const },
       { id: 'graham-personality', type: 'graham-personality' } as const,
       { id: 'diamond-hands', type: 'diamond-hands' as const },
+      { id: 'shark-feedback', type: 'shark-feedback' as const },
+      ...seededShuffle([...FEED_SIMULATORS], feedSeed + 7)
+        .slice(0, 4)
+        .map((sim) => ({
+          id: sim.id,
+          type: 'simulator-teaser' as const,
+          simulator: sim,
+        })),
     ];
     
     // Add daily quiz
@@ -778,17 +795,27 @@ export function FinFeedScreen() {
     const macroIdx = filteredMerged.findIndex((i) => i.type === 'macro-event');
     const pinnedMacro = macroIdx >= 0 ? filteredMerged.splice(macroIdx, 1)[0] : null;
 
+    // Pin a SECOND macro event early so users never miss them
+    const secondMacroIdx = filteredMerged.findIndex((i) => i.type === 'macro-event');
+    const secondMacro = secondMacroIdx >= 0 ? filteredMerged.splice(secondMacroIdx, 1)[0] : null;
+
     if (quizItem) filteredMerged.unshift(quizItem);
     filteredMerged.unshift({ id: 'daily-dilemma', type: 'daily-dilemma' });
 
-    // Insert pinned BENBEN creator video at position 7 (rotates each session)
+    // Pin primary macro event at position 2 (right after dilemma + quiz) — visible to ALL users on first scroll
+    if (pinnedMacro) {
+      const insertAt = Math.min(2, filteredMerged.length);
+      filteredMerged.splice(insertAt, 0, pinnedMacro);
+    }
+
+    // Insert pinned BENBEN creator video at position 7
     const benbenVideo = BENBEN_VIDEOS[seed % BENBEN_VIDEOS.length];
     filteredMerged.splice(Math.min(7, filteredMerged.length), 0, benbenVideo);
 
-    // Insert pinned macro event at position 8
-    if (pinnedMacro) {
-      const insertAt = Math.min(8, filteredMerged.length);
-      filteredMerged.splice(insertAt, 0, pinnedMacro);
+    // Pin second macro event at position 10 for recurring exposure
+    if (secondMacro) {
+      const insertAt = Math.min(10, filteredMerged.length);
+      filteredMerged.splice(insertAt, 0, secondMacro);
     }
 
     return filteredMerged;
@@ -816,7 +843,16 @@ export function FinFeedScreen() {
     const showDecorations = item.type !== "video";
 
     return (
-      <View style={{ height: listHeight, width: SCREEN_WIDTH, justifyContent: "center", backgroundColor: showDecorations ? "#f0f9ff" : "#000", overflow: "hidden" }}>
+      <View style={{ height: listHeight, width: SCREEN_WIDTH, justifyContent: "center", overflow: "hidden" }}>
+        {showDecorations ? (
+          <LinearGradient
+            colors={["#eef5fb", "#f0f9ff", "#e6f0fa"]}
+            locations={[0, 0.55, 1]}
+            style={StyleSheet.absoluteFillObject}
+          />
+        ) : (
+          <View style={[StyleSheet.absoluteFillObject, { backgroundColor: "#000" }]} />
+        )}
         {/* Subtle sea + money Lottie background for non-video items */}
         {showDecorations && <FeedItemDecorations seed={item.id} isActive={isActive} />}
 
@@ -835,12 +871,7 @@ export function FinFeedScreen() {
           <DailyQuizCard quiz={item.quiz} isActive={isActive} />
         )}
         {item.type === "daily-dilemma" && (
-          <View>
-            <Text style={{ fontSize: 18, fontWeight: "800", color: "#0f172a", textAlign: "right", writingDirection: "rtl", paddingHorizontal: 16, marginBottom: 8 }}>
-              האתגר היומי
-            </Text>
-            <DilemmaCard isActive={isActive} />
-          </View>
+          <DilemmaCard isActive={isActive} />
         )}
         {item.type === "daily-investment" && (
           <InvestmentCard isActive={isActive} />
@@ -872,16 +903,20 @@ export function FinFeedScreen() {
         {item.type === "cashout-rush" && (
           <CashoutRushCard isActive={isActive} />
         )}
+        {item.type === "fomo-killer" && (
+          <FomoKillerCard isActive={isActive} />
+        )}
         {item.type === "graham-personality" && (
           <GrahamPersonalityFeedCard isActive={isActive} />
         )}
         {item.type === "diamond-hands" && (
           <DiamondHandsCard isActive={isActive} />
         )}
-        {/* Action Sidebar — videos only */}
-        {item.type === "video" && (
-          <VideoSidebar itemId={item.id} baseLikes={item.likes} baseSaves={item.saves} />
+        {item.type === "shark-feedback" && <SharkFeedbackCard />}
+        {item.type === "simulator-teaser" && (
+          <FeedSimulatorCard simulator={item.simulator} isActive={isActive} />
         )}
+        {/* Action Sidebar removed for videos — save button lives inside FeedVideoItem */}
       </View>
     );
   };

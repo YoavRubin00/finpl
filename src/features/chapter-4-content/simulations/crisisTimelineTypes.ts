@@ -10,7 +10,7 @@ export interface CrisisEvent {
   emoji: string;
   peakToTrough: number;   // % drop (negative)
   recoveryMonths: number; // Months to recover
-  spLevel: number;        // S&P 500 at trough
+  spLevel: number;        // ‎S&P‎ 500 at trough
   description: string;    // Hebrew — what happened
   grahamLesson: string;   // Hebrew — what Graham would say
   crowdAction: string;    // Hebrew — what the crowd did

@@ -33,10 +33,10 @@ const DAILY_OPTIONS: { value: DailyGoalMinutes; label: string }[] = [
 ];
 
 const COMPANION_OPTIONS: { value: CompanionId; label: string }[] = [
-  { value: "warren-buffett", label: "🦉 וורן באפט" },
-  { value: "moshe-peled",    label: "🦁 מושה פלד" },
-  { value: "rachel",         label: "🌺 רחל" },
-  { value: "robot",          label: "🤖 הרובוט" },
+  { value: "warren-buffett", label: "קפטן שארק — חכם" },
+  { value: "moshe-peled",    label: "קפטן שארק — תכל'סי" },
+  { value: "rachel",         label: "קפטן שארק — חם" },
+  { value: "robot",          label: "קפטן שארק — אנליטי" },
 ];
 
 // ─── helpers ─────────────────────────────────────────────────────────────────
@@ -115,13 +115,13 @@ export function EditProfileModal({ visible, onClose }: EditProfileModalProps) {
           <View style={s.sheet}>
             {/* Header */}
             <View style={s.header}>
-              <Pressable onPress={onClose} hitSlop={12}>
-                <X size={22} color="#71717a" />
+              <Pressable onPress={handleSave} hitSlop={12} style={s.saveBtn}>
+                <Check size={18} color="#ffffff" />
+                <Text style={s.saveBtnText}>שמור</Text>
               </Pressable>
               <Text style={s.title}>עריכת פרופיל</Text>
-              <Pressable onPress={handleSave} hitSlop={12} style={s.saveBtn}>
-                <Check size={18} color="#fde68a" />
-                <Text style={s.saveBtnText}>שמור</Text>
+              <Pressable onPress={onClose} hitSlop={12}>
+                <X size={22} color="#71717a" />
               </Pressable>
             </View>
 
@@ -180,7 +180,7 @@ const s = StyleSheet.create({
     borderTopWidth: 1,
     borderColor: "rgba(167,139,250,0.25)",
     paddingHorizontal: 20,
-    paddingTop: 8,
+    paddingTop: 16,
     paddingBottom: 16,
     maxHeight: "85%",
   },
@@ -202,9 +202,9 @@ const s = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 4,
-    backgroundColor: "rgba(250,204,21,0.12)",
+    backgroundColor: "rgba(34,197,94,0.2)",
     borderWidth: 1,
-    borderColor: "rgba(250,204,21,0.35)",
+    borderColor: "rgba(34,197,94,0.5)",
     borderRadius: 20,
     paddingHorizontal: 12,
     paddingVertical: 6,
@@ -212,7 +212,7 @@ const s = StyleSheet.create({
   saveBtnText: {
     fontSize: 14,
     fontWeight: "700",
-    color: "#fde68a",
+    color: "#4ade80",
   },
   field: {
     gap: 10,

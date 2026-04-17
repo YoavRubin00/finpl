@@ -153,18 +153,40 @@ export const STITCH = {
   // Brand Blues
   primary: '#005bb1',
   primaryContainer: '#2d74ce',
+  primaryCyan: '#9ccee6',       // Gilded Vault primary
+  primaryCyanDim: '#55869d',    // on-primary-container (CTA gradients)
   secondary: '#006688',
   secondaryContainer: '#58cafe',
+  secondaryPurple: '#c3c0ff',   // Gilded Vault secondary
+  secondaryPurpleDark: '#3e3c8f', // secondary-container
+
   // Backgrounds & Surfaces (Tonal Layering)
   background: '#f7f9fb',
   surface: '#f7f9fb',
   surfaceLow: '#f2f4f6',
   surfaceLowest: '#ffffff',
+  surfaceContainer: '#eceef0',
+  surfaceHigh: '#e6e8ea',
+  surfaceHighest: '#e0e3e5',
   surfaceVariant: '#e0e3e5',
+
   // Typography Colors (No Pure Black)
   onSurface: '#191c1e',
   onSurfaceVariant: '#404752',
+
   // Elements
   tertiaryGold: '#735c00', // for coins/achievements
-  outlineVariant: '#c0c7d4', // Ghost Borders
+  tertiaryGoldBright: '#e9c400', // Gilded Vault tertiary (reward accent)
+  tertiaryGoldLight: '#ffe16d',  // tertiary-fixed (subtle gold bg)
+  outlineVariant: '#c0c7d4',
+  outline: '#707783',
+  error: '#ba1a1a',
+
+  // Functional token aliases — semantic, not raw
+  successAccent: '#9ccee6',      // Use cyan, NOT green (per DS rules)
+  rewardGlow: '#e9c400',         // Gold for rewards & achievements
+  progressFill: '#9ccee6',       // Cyan progress bars
+  progressTrack: '#e0e3e5',      // surfaceVariant for tracks
+  ghostBorder: 'rgba(192,199,212,0.15)', // outlineVariant @ 15%
+  cardShadow: 'rgba(62,60,143,0.06)',    // tinted purple shadow
 } as const;

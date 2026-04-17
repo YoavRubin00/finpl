@@ -18,7 +18,7 @@ export default function TowerDefenseBossPage() {
 
   const handleVictory = useCallback(() => {
     markBossComplete("ch-1");
-    router.replace("/chapter/chapter-2" as never);
+    router.replace("/(tabs)" as never);
   }, [router, markBossComplete]);
 
   return (

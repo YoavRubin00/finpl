@@ -1,20 +1,18 @@
 import type { EnemyKind, TowerKind } from "./types";
 
-const BLOB_CDN =
-  "https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/games/tower-defense";
-
+// Local assets with transparent backgrounds.
+// Towers & vault use Lottie animations for crisp, scaling-friendly visuals.
 export const TD_ASSETS = {
-  battlefield: `${BLOB_CDN}/bg_battlefield.png`,
-  fortress: `${BLOB_CDN}/fortress_vault.png`,
+  vaultLottie: require("../../../assets/lottie/3D Treasure Box.json"),
   enemies: {
-    mechanic: `${BLOB_CDN}/enemy_mechanic.png`,
-    tax: `${BLOB_CDN}/enemy_tax.png`,
-    wedding: `${BLOB_CDN}/enemy_wedding.png`,
-    shopping: `${BLOB_CDN}/enemy_shopping.png`,
-  } satisfies Record<EnemyKind, string>,
-  towers: {
-    emergency_fund: `${BLOB_CDN}/tower_emergency_fund.png`,
-    insurance: `${BLOB_CDN}/tower_insurance.png`,
-    auto_budget: `${BLOB_CDN}/tower_auto_budget.png`,
-  } satisfies Record<TowerKind, string>,
+    mechanic: require("../../../assets/IMAGES/tower-defense/enemy_mechanic.png"),
+    tax: require("../../../assets/IMAGES/tower-defense/enemy_tax.png"),
+    wedding: require("../../../assets/IMAGES/tower-defense/enemy_wedding.png"),
+    shopping: require("../../../assets/IMAGES/tower-defense/enemy_shopping.png"),
+  } satisfies Record<EnemyKind, ReturnType<typeof require>>,
+  towerLottie: {
+    emergency_fund: require("../../../assets/lottie/wired-flat-457-shield-security-hover-pinch.json"),
+    insurance: require("../../../assets/lottie/wired-flat-413-money-bag-hover-shake.json"),
+    auto_budget: require("../../../assets/lottie/wired-flat-152-bar-chart-arrow-hover-growth.json"),
+  } satisfies Record<TowerKind, ReturnType<typeof require>>,
 } as const;

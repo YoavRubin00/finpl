@@ -117,7 +117,7 @@ export function ArenaScreen() {
       >
         {/* Header */}
         <Animated.View style={[titleStyle, { alignItems: "center", marginBottom: 20 }]}>
-          <BannerRibbon title="זירה" icon={<Swords size={20} color="#fff" />} />
+          <BannerRibbon title="משחקי פיד" icon={<Swords size={20} color="#fff" />} />
           <Text style={[SUBTITLE_TEXT, { marginTop: 8, color: "#64748b" }]}>
             רמה {layer} · {layerName} · {streak > 0 ? `רצף ${streak} ימים` : "התחילו רצף!"}
           </Text>

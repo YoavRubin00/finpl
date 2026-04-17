@@ -134,6 +134,7 @@ function ScoreScreen({
         <ConfettiExplosion onComplete={() => setShowConfetti(false)} />
       )}
 
+      <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingBottom: 120 }}>
       {/* Grade + label */}
       <Animated.View
         entering={FadeInDown.springify().damping(22)}
@@ -221,11 +222,10 @@ function ScoreScreen({
         </View>
       </Animated.View>
 
-      {/* Spacer to push buttons to bottom */}
-      <View style={{ flex: 1 }} />
+      </ScrollView>
 
-      {/* Action buttons */}
-      <Animated.View entering={FadeInUp.delay(650)} style={sim3Styles.actionsRow}>
+      {/* Sticky actions bar — always visible */}
+      <View style={styles.stickyActionsBar}>
         <AnimatedPressable onPress={onReplay} accessibilityRole="button" accessibilityLabel="שחק שוב" accessibilityHint="מתחיל את הסימולציה מחדש" style={sim3Styles.replayBtn}>
           <View accessible={false}><LottieIcon source={LOTTIE_REPLAY} size={18} /></View>
           <Text style={sim3Styles.replayText}>שחק שוב</Text>
@@ -236,7 +236,7 @@ function ScoreScreen({
             <LottieIcon source={LOTTIE_ARROW} size={22} />
           </View>
         </AnimatedPressable>
-      </Animated.View>
+      </View>
     </View>
   );
 }
@@ -630,6 +630,27 @@ const styles = StyleSheet.create({
     backgroundColor: '#f8fafc',
   },
   flex1: { flex: 1 },
+
+  /* Sticky actions bar — score screen footer */
+  stickyActionsBar: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 0,
+    flexDirection: 'row-reverse',
+    gap: 8,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    paddingBottom: 16,
+    backgroundColor: 'rgba(255,255,255,0.96)',
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(14,165,233,0.25)',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: -2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 6,
+    elevation: 10,
+  },
 
   /* Play screen */
   playContainer: {

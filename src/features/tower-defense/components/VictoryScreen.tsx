@@ -1,6 +1,7 @@
 import React from "react";
-import { Image, Pressable, Text, View } from "react-native";
-import { TD_ASSETS } from "../towerDefenseAssets";
+import { Pressable, Text, View } from "react-native";
+import { Image as ExpoImage } from "expo-image";
+import { FINN_HAPPY } from "../../retention-loops/finnMascotConfig";
 import type { VictorySummary } from "../types";
 
 interface Props {
@@ -20,19 +21,25 @@ export function VictoryScreen({ summary, onContinue }: Props) {
       }}
     >
       <View style={{ alignItems: "center", gap: 16 }}>
+        <ExpoImage
+          source={FINN_HAPPY}
+          accessible={false}
+          style={{ width: 140, height: 140 }}
+          contentFit="contain"
+        />
         <Text
           style={{
-            color: "#4ade80",
+            color: "#7dd3fc",
             fontSize: 14,
             letterSpacing: 3,
             fontFamily: "Heebo_700Bold",
           }}
         >
-          ✨ ניצחון ✨
+          ניצחון
         </Text>
         <Text
           style={{
-            color: "#fefce8",
+            color: "#f0f9ff",
             fontSize: 38,
             fontWeight: "900",
             fontFamily: "Heebo_900Black",
@@ -42,38 +49,33 @@ export function VictoryScreen({ summary, onContinue }: Props) {
         >
           הקופה מוגנת!
         </Text>
-        <Image
-          source={{ uri: TD_ASSETS.fortress }}
-          style={{ width: 200, height: 200 }}
-          resizeMode="contain"
-        />
       </View>
 
       <View
         style={{
-          backgroundColor: "rgba(0, 40, 20, 0.6)",
+          backgroundColor: "rgba(12, 74, 110, 0.6)",
           borderRadius: 20,
           borderWidth: 2.5,
-          borderColor: "#d4a017",
+          borderColor: "#38bdf8",
           padding: 20,
           gap: 14,
         }}
       >
-        <Row label="XP" value={`+${summary.xpEarned}`} accent="#a78bfa" />
+        <Row label="XP" value={`+${summary.xpEarned}`} accent="#bae6fd" />
         <Row
-          label="Coins"
+          label="מטבעות"
           value={`+${summary.coinsEarned}`}
-          accent="#d4a017"
+          accent="#fde68a"
         />
         <Row
           label="עו״ש שנותר"
           value={`₪${summary.vaultHealthRemaining.toLocaleString("he-IL")}`}
-          accent="#4ade80"
+          accent="#7dd3fc"
         />
         <Row
           label="אויבים שנעצרו"
           value={String(summary.enemiesKilled)}
-          accent="#fefce8"
+          accent="#f0f9ff"
         />
       </View>
 
@@ -82,24 +84,24 @@ export function VictoryScreen({ summary, onContinue }: Props) {
         accessibilityRole="button"
         accessibilityLabel="פתח את פרק 2 וקבל את התגמולים"
         style={{
-          backgroundColor: "#4ade80",
+          backgroundColor: "#0ea5e9",
           paddingVertical: 18,
           borderRadius: 20,
           alignItems: "center",
           borderBottomWidth: 4,
-          borderBottomColor: "#166534",
+          borderBottomColor: "#0369a1",
         }}
       >
         <Text
           style={{
-            color: "#0a3622",
+            color: "#ffffff",
             fontSize: 18,
             fontWeight: "900",
             fontFamily: "Heebo_900Black",
             writingDirection: "rtl",
           }}
         >
-          🚀 פתח את פרק 2
+          פתח את פרק 2
         </Text>
       </Pressable>
     </View>
@@ -135,7 +137,7 @@ function Row({
       </Text>
       <Text
         style={{
-          color: "#a7f3d0",
+          color: "#bae6fd",
           fontSize: 15,
           fontFamily: "Heebo_700Bold",
           writingDirection: "rtl",

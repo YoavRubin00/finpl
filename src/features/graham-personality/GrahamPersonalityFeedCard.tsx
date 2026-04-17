@@ -15,6 +15,7 @@ import { AnimatedPressable } from '../../components/ui/AnimatedPressable';
 import { FINN_STANDARD } from '../retention-loops/finnMascotConfig';
 import { SIM_LOTTIE } from '../shared-sim/simLottieMap';
 import { tapHaptic } from '../../utils/haptics';
+import { useSoundEffect } from '../../hooks/useSoundEffect';
 
 const RTL = { writingDirection: 'rtl' as const, textAlign: 'right' as const };
 
@@ -24,11 +25,13 @@ interface Props {
 
 export function GrahamPersonalityFeedCard({ isActive: _isActive }: Props) {
   const router = useRouter();
+  const { playSound } = useSoundEffect();
 
   const handlePress = useCallback(() => {
     tapHaptic();
+    playSound('btn_click_heavy');
     router.push('/graham-personality' as never);
-  }, [router]);
+  }, [router, playSound]);
 
   return (
     <Animated.View entering={FadeInDown.duration(400)} style={{ flex: 1, justifyContent: 'center', paddingHorizontal: 16 }}>

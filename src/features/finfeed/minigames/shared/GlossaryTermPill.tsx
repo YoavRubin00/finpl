@@ -37,25 +37,36 @@ export function GlossaryTermPill({ glossaryKey, label, variant = 'pill' }: Props
 
   return (
     <>
-      <Pressable
-        onPress={handleOpen}
-        accessibilityRole="button"
-        accessibilityLabel={`פתח הסבר ל${entry.term}`}
-        hitSlop={8}
-        style={({ pressed }) => [
-          variant === 'pill' ? styles.pill : styles.iconWrap,
-          pressed && { opacity: 0.75 },
-        ]}
-      >
-        {variant === 'pill' ? (
-          <>
-            <Text style={styles.pillQuestionMark}>?</Text>
+      {variant === 'pill' ? (
+        <View style={styles.pillWrap}>
+          <View style={styles.pillDepth} pointerEvents="none" />
+          <Pressable
+            onPress={handleOpen}
+            accessibilityRole="button"
+            accessibilityLabel={`פתח הסבר ל${entry.term}`}
+            hitSlop={12}
+            style={({ pressed }) => [
+              styles.pill,
+              pressed && { transform: [{ translateY: 2 }] },
+            ]}
+          >
+            <View style={styles.pillQuestionBadge}>
+              <Text style={styles.pillQuestionBadgeText}>?</Text>
+            </View>
             <Text style={[styles.pillLabel, RTL]}>מה זה {displayLabel}</Text>
-          </>
-        ) : (
+          </Pressable>
+        </View>
+      ) : (
+        <Pressable
+          onPress={handleOpen}
+          accessibilityRole="button"
+          accessibilityLabel={`פתח הסבר ל${entry.term}`}
+          hitSlop={12}
+          style={({ pressed }) => [styles.iconWrap, pressed && { opacity: 0.75 }]}
+        >
           <Text style={styles.iconQuestionMark}>?</Text>
-        )}
-      </Pressable>
+        </Pressable>
+      )}
 
       <Modal
         visible={open}
@@ -65,13 +76,13 @@ export function GlossaryTermPill({ glossaryKey, label, variant = 'pill' }: Props
         statusBarTranslucent
       >
         <Animated.View
-          entering={FadeIn.duration(180)}
+          entering={FadeIn.duration(220)}
           exiting={FadeOut.duration(180)}
           style={styles.modalBackdrop}
         >
           <Pressable style={StyleSheet.absoluteFill} onPress={handleClose} accessibilityLabel="סגור הסבר" />
           <Animated.View
-            entering={SlideInDown.duration(280).springify().damping(18)}
+            entering={SlideInDown.duration(260)}
             exiting={SlideOutDown.duration(220)}
             style={styles.modalSheet}
           >
@@ -103,34 +114,44 @@ export function GlossaryTermPill({ glossaryKey, label, variant = 'pill' }: Props
 }
 
 const styles = StyleSheet.create({
+  pillWrap: {
+    alignSelf: 'center',
+  },
+  pillDepth: {
+    display: 'none',
+  },
   pill: {
     flexDirection: 'row-reverse',
     alignItems: 'center',
     gap: 6,
-    alignSelf: 'flex-end',
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+    borderRadius: 999,
     backgroundColor: 'rgba(14,165,233,0.1)',
     borderWidth: 1,
-    borderColor: 'rgba(14,165,233,0.25)',
+    borderColor: 'rgba(14,165,233,0.3)',
   },
-  pillQuestionMark: {
+  pillQuestionBadge: {
+    width: 18,
+    height: 18,
+    borderRadius: 9,
+    backgroundColor: '#0ea5e9',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  pillQuestionBadgeText: {
     fontSize: 12,
     fontWeight: '900',
-    color: '#0369a1',
-    width: 16,
-    height: 16,
+    color: '#ffffff',
+    lineHeight: 18,
     textAlign: 'center',
-    lineHeight: 16,
-    borderRadius: 8,
-    backgroundColor: '#ffffff',
-    overflow: 'hidden',
+    includeFontPadding: false,
   },
   pillLabel: {
-    fontSize: 12,
+    fontSize: 12.5,
     fontWeight: '700',
     color: '#0369a1',
+    letterSpacing: 0.1,
   },
   iconWrap: {
     width: 20,

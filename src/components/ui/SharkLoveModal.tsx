@@ -228,19 +228,19 @@ export function SharkLoveModal({
   useEffect(() => {
     finnBounce.value = withRepeat(
       withSequence(
-        withTiming(-12, { duration: 1200, easing: Easing.inOut(Easing.sin) }),
-        withTiming(0, { duration: 1200, easing: Easing.inOut(Easing.sin) }),
+        withTiming(-8, { duration: 2000, easing: Easing.inOut(Easing.sin) }),
+        withTiming(0, { duration: 2000, easing: Easing.inOut(Easing.sin) }),
       ),
       -1,
-      true,
+      false,
     );
     finnRotate.value = withRepeat(
       withSequence(
-        withTiming(-6, { duration: 2000, easing: Easing.inOut(Easing.sin) }),
-        withTiming(6, { duration: 2000, easing: Easing.inOut(Easing.sin) }),
+        withTiming(-4, { duration: 2000, easing: Easing.inOut(Easing.sin) }),
+        withTiming(4, { duration: 2000, easing: Easing.inOut(Easing.sin) }),
       ),
       -1,
-      true,
+      false,
     );
   }, []);
 

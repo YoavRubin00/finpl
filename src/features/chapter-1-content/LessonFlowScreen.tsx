@@ -57,6 +57,7 @@ import { GlobalWealthHeader } from "../../components/ui/GlobalWealthHeader";
 import { ConfettiExplosion } from "../../components/ui/ConfettiExplosion";
 import { DoubleOrNothingModal } from "../../components/ui/DoubleOrNothingModal";
 import { SharkLoveModal } from "../../components/ui/SharkLoveModal";
+import { SharkBridgeCTA, SharkReferralCTA, moduleHasDividendContent } from "../../components/ui/SharkCTAModals";
 import { InvestmentCard } from "../daily-challenges/InvestmentCard";
 import { CrashGameCard } from "../daily-challenges/CrashGameCard";
 import { MythFeedCard } from "../myth-or-tachles/MythFeedCard";
@@ -77,6 +78,8 @@ import { useSoundEffect } from "../../hooks/useSoundEffect";
 import { useAdaptiveStore } from "../social/useAdaptiveStore";
 import { useSavedItemsStore } from "../saved-items/useSavedItemsStore";
 import { LifelineModal } from "../social/LifelineModal";
+import { useTutorialStore } from "../../stores/useTutorialStore";
+import { PizzaIndexScreen } from "../fun/PizzaIndexScreen";
 import { LifelineChatOverlay } from "../social/LifelineChatOverlay";
 import { ProBadge } from "../../components/ui/ProBadge";
 import LottieView from "lottie-react-native";
@@ -118,7 +121,7 @@ const INFOGRAPHIC_TOP_CARDS = new Set([
   "fc-4-b1-1", "fc-4-b1-2", "fc-4-b1-2b", "fc-4-b1-3",
   "fc-4-b2-1", "fc-4-b2-2",
   "fc-4-b3-1", "fc-4-b3-2",
-  "fc-4-b4-1", "fc-4-b4-2",
+  // fc-4-b4-1, fc-4-b4-2 — use default layout (text + image) so text is visible
 ]);
 
 const RTL_STYLE = { writingDirection: "rtl" as const, textAlign: "right" as const };
@@ -2102,6 +2105,18 @@ export function LessonFlowScreen() {
       }
       return;
     }
+    // After completing the Emergency Fund module, route to the Tower Defense boss.
+    if (id === 'mod-1-9') {
+      router.replace("/tower-defense-boss" as never);
+      return;
+    }
+    // After mod-0-3, drop into the BullshitSwipe interstitial (critical-thinking
+    // warm-up) before continuing to mod-0-4. Shark delivers the "this is why
+    // I'm here" line after the mini-game finishes.
+    if (id === 'mod-0-3') {
+      router.replace("/interstitial/bullshit-ch0" as never);
+      return;
+    }
     for (const ch of ALL_CHAPTERS_ORDERED) {
       const completed = progress[chapterStoreKey(ch.id)]?.completedModules ?? [];
       const nextIdx = ch.modules.findIndex((m) => !m.comingSoon && (isPro || !PRO_LOCKED_SIMS.has(m.id)) && !completed.includes(m.id));
@@ -2149,6 +2164,12 @@ export function LessonFlowScreen() {
   // Shark Love — every 3rd module completion
   const [showSharkLove, setShowSharkLove] = useState(false);
   const moduleStartTimeRef = useRef(Date.now());
+  // Shark CTA notifications — Bridge (every 4) + Referral (every 5 + dividend content)
+  const [showBridgeCTA, setShowBridgeCTA] = useState(false);
+  const [showReferralCTA, setShowReferralCTA] = useState(false);
+  // Triggering metadata for copy variant rotation (Duolingo A/B: +8-12% CTR)
+  const [ctaModuleCount, setCtaModuleCount] = useState(0);
+  const [referralByDividend, setReferralByDividend] = useState(false);
   // Shark Party — every 2 consecutive or 4 total completed modules
   const [showPartyInvite, setShowPartyInvite] = useState(false);
   const [showPartyVideo, setShowPartyVideo] = useState(false);
@@ -2172,6 +2193,12 @@ export function LessonFlowScreen() {
   const [showFinnBridgeNudge, setShowFinnBridgeNudge] = useState(false);
   const [showExitConfirm, setShowExitConfirm] = useState(false);
   const [showRegisterNudge, setShowRegisterNudge] = useState(false);
+  const [showPizzaModal, setShowPizzaModal] = useState(false);
+  const [showCh0BullshitIntro, setShowCh0BullshitIntro] = useState(false);
+  const hasSeenPizza = useTutorialStore((s) => s.hasSeenPizzaIndexModal);
+  const markPizzaSeen = useTutorialStore((s) => s.markPizzaIndexSeen);
+  const hasSeenCh0Bullshit = useTutorialStore((s) => s.hasSeenCh0BullshitInterstitial);
+  const markCh0BullshitSeen = useTutorialStore((s) => s.markCh0BullshitInterstitialSeen);
   const isGuest = useAuthStore((s) => s.isGuest);
   const [chestFullScreen, setChestFullScreen] = useState(false);
   const [chestClaimed, setChestClaimed] = useState(false);
@@ -2225,6 +2252,8 @@ export function LessonFlowScreen() {
     setFlyingCoins(0);
     setFlyingCoinsDown(0);
     setShowSharkLove(false);
+    setShowBridgeCTA(false);
+    setShowReferralCTA(false);
     moduleStartTimeRef.current = Date.now();
     shouldTriggerDoNRef.current = false;
     completedRef.current = false;
@@ -2328,6 +2357,23 @@ export function LessonFlowScreen() {
   const completedInChapter = completedSet.length + (phase === "summary" && !currentAlreadyCounted ? 1 : 0);
   const isLastModule = currentModIdx === chapterModules.length - 1;
   const nextModule = !isLastModule ? chapterModules[currentModIdx + 1] : undefined;
+
+  // Pizza index modal — one-time popup after completing mod-2-12 (ch 2 mid-point)
+  useEffect(() => {
+    if (!mod) return;
+    if (phase === "summary" && mod.id === "mod-2-12" && !hasSeenPizza) {
+      setShowPizzaModal(true);
+    }
+  }, [phase, mod, hasSeenPizza]);
+
+  // Chapter 0 bullshit interstitial — one-time shark notification after mod-0-3,
+  // framing the BullshitSwipe game the user will soon encounter in the feed.
+  useEffect(() => {
+    if (!mod) return;
+    if (phase === "summary" && mod.id === "mod-0-3" && !hasSeenCh0Bullshit) {
+      setShowCh0BullshitIntro(true);
+    }
+  }, [phase, mod, hasSeenCh0Bullshit]);
 
   // Complete module and show rewards when entering summary phase
   useEffect(() => {
@@ -3110,6 +3156,24 @@ export function LessonFlowScreen() {
                                 playSound('modal_open_4');
                               }, 500);
                             }
+                            // Duolingo A/B: ride the chest-dopamine peak (1.5-2s), not after it fades
+                            // Bridge CTA — every 4 completed modules (4, 8, 12...)
+                            // Skip for minors (no bridge access) and guests
+                            const profile = useAuthStore.getState().profile;
+                            const isBridgeEligible = !isGuest && profile?.ageGroup !== "minor";
+                            const hasDividend = mod ? moduleHasDividendContent(mod.id, mod.flashcards.map(fc => fc.text)) : false;
+                            const willShowReferral = totalCompletedNow > 0 && (totalCompletedNow % 5 === 0 || hasDividend);
+                            const willShowBridge = isBridgeEligible && totalCompletedNow > 0 && totalCompletedNow % 4 === 0;
+
+                            // Priority: if both would fire, show only Referral (higher CAC value) to avoid ad fatigue
+                            if (willShowReferral) {
+                              setCtaModuleCount(totalCompletedNow);
+                              setReferralByDividend(hasDividend);
+                              setTimeout(() => setShowReferralCTA(true), 1500);
+                            } else if (willShowBridge) {
+                              setCtaModuleCount(totalCompletedNow);
+                              setTimeout(() => setShowBridgeCTA(true), 1500);
+                            }
                           }, 2000);
                         }
                       }}
@@ -3594,6 +3658,71 @@ export function LessonFlowScreen() {
         </Modal>
       )}
 
+      {/* Pizza Index — one-time modal after mod-2-12 summary */}
+      <Modal
+        visible={showPizzaModal}
+        animationType="slide"
+        statusBarTranslucent
+        onRequestClose={() => {
+          markPizzaSeen();
+          setShowPizzaModal(false);
+        }}
+      >
+        <PizzaIndexScreen
+          onClose={() => {
+            markPizzaSeen();
+            setShowPizzaModal(false);
+          }}
+        />
+      </Modal>
+
+      {/* Chapter 0 bullshit interstitial — shark message before mod-0-4 */}
+      <Modal
+        visible={showCh0BullshitIntro}
+        transparent
+        animationType="fade"
+        statusBarTranslucent
+        onRequestClose={() => {
+          markCh0BullshitSeen();
+          setShowCh0BullshitIntro(false);
+        }}
+      >
+        <View style={{ flex: 1, backgroundColor: "rgba(3,7,18,0.78)", justifyContent: "center", alignItems: "center", paddingHorizontal: 24 }}>
+          <View style={{ width: "100%", maxWidth: 380, backgroundColor: "#f0f9ff", borderRadius: 24, paddingHorizontal: 22, paddingTop: 22, paddingBottom: 16, borderWidth: 1.5, borderColor: "rgba(14,165,233,0.45)", shadowColor: "#0ea5e9", shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.35, shadowRadius: 18, elevation: 14 }}>
+            <View style={{ flexDirection: "row-reverse", alignItems: "center", gap: 10, marginBottom: 12 }}>
+              <ExpoImage source={FINN_STANDARD} accessible={false} style={{ width: 54, height: 54 }} contentFit="contain" />
+              <Text style={{ fontSize: 16, fontWeight: "900", color: "#0369a1", writingDirection: "rtl", textAlign: "right" }}>קפטן שארק</Text>
+            </View>
+            <Text style={{ fontSize: 15, fontWeight: "700", color: "#0c4a6e", lineHeight: 24, writingDirection: "rtl", textAlign: "right", marginBottom: 16 }}>
+              זו הסיבה שאני כאן. ללמד וללמוד ביחד איתך ולא למכור לך סיפורים.
+            </Text>
+            <Text style={{ fontSize: 13, color: "#64748b", writingDirection: "rtl", textAlign: "right", lineHeight: 20, marginBottom: 18 }}>
+              בפיד שלך תמצא את משחק "סוויפ הבולשיט" — תרגול זיהוי של פרסומות מטעות. בוא נלמד ביחד.
+            </Text>
+            <Pressable
+              onPress={() => {
+                tapHaptic();
+                markCh0BullshitSeen();
+                setShowCh0BullshitIntro(false);
+              }}
+              accessibilityRole="button"
+              accessibilityLabel="המשך"
+              style={({ pressed }) => ({
+                backgroundColor: "#0ea5e9",
+                borderRadius: 14,
+                paddingVertical: 14,
+                alignItems: "center",
+                borderBottomWidth: 4,
+                borderBottomColor: "#0369a1",
+                opacity: pressed ? 0.92 : 1,
+              })}
+            >
+              <Text style={{ fontSize: 16, fontWeight: "900", color: "#ffffff", writingDirection: "rtl" }}>המשך</Text>
+            </Pressable>
+          </View>
+        </View>
+      </Modal>
+
       {/* Finn full-screen transition between flashcards */}
       {finnTransitionSource && (
         <Animated.View
@@ -3719,13 +3848,35 @@ export function LessonFlowScreen() {
         />
       )}
 
+      {/* ── Bridge CTA — every 4 modules ── */}
+      <SharkBridgeCTA
+        visible={showBridgeCTA && !showSharkLove && !showDoubleOrNothing && !showPostCelebration && !showPartyInvite}
+        onGoBridge={() => { setShowBridgeCTA(false); router.push("/bridge" as never); }}
+        onDismiss={() => setShowBridgeCTA(false)}
+        moduleCount={ctaModuleCount}
+      />
+
+      {/* ── Referral CTA — every 5 modules + dividend content ── */}
+      <SharkReferralCTA
+        visible={showReferralCTA && !showSharkLove && !showDoubleOrNothing && !showPostCelebration && !showBridgeCTA && !showPartyInvite}
+        onGoReferral={() => { setShowReferralCTA(false); router.push("/referral" as never); }}
+        onDismiss={() => setShowReferralCTA(false)}
+        moduleCount={ctaModuleCount}
+        triggeredByDividend={referralByDividend}
+      />
+
       {/* ── Post-module celebration ── */}
       {showPostCelebration && !showBreakMessage && (
         <Pressable style={[StyleSheet.absoluteFill, { zIndex: 9995, backgroundColor: "rgba(0,0,0,0.6)", justifyContent: "center", alignItems: "center", padding: 24 }]} onPress={() => {}} accessible={false}>
           <Animated.View entering={FadeInUp.duration(500)} style={{ backgroundColor: "#ffffff", borderRadius: 28, padding: 28, width: "100%", maxWidth: 340, alignItems: "center", borderWidth: 2, borderColor: "#22c55e" }}>
-            <ExpoImage source={FINN_HAPPY} accessible={false} style={{ width: 100, height: 100, marginBottom: 16 }} contentFit="contain" />
+            <ExpoImage
+              source={require("../../../assets/webp/animated/finn-netflix-nudge.webp")}
+              accessible={false}
+              style={{ width: 280, aspectRatio: 2.1, marginBottom: 12 }}
+              contentFit="contain"
+            />
             <Text style={{ fontSize: 22, fontWeight: "900", color: "#0f172a", textAlign: "center", marginBottom: 6 }}>{"כל הכבוד! 🎉"}</Text>
-            <Text style={{ fontSize: 15, fontWeight: "600", color: "#64748b", textAlign: "center", marginBottom: 24 }}>{"סיימת את המודול!"}</Text>
+            <Text style={{ fontSize: 15, fontWeight: "600", color: "#64748b", textAlign: "center", marginBottom: 24 }}>{"רוצה להמשיך או ללכת לנטפליקס?"}</Text>
             {/* Continue option */}
             <Pressable onPress={() => { successHaptic(); setShowPostCelebration(false); goToNextSequentialModule(); }} style={{ width: "100%", backgroundColor: "#22c55e", borderRadius: 16, paddingVertical: 16, alignItems: "center", marginBottom: 12, borderBottomWidth: 4, borderBottomColor: "#16a34a" }} accessibilityRole="button" accessibilityLabel="המשך למודול הבא">
               <Text style={{ fontSize: 16, fontWeight: "900", color: "#ffffff" }}>{"ממשיכים לתרגל ולצמוח! 💪"}</Text>

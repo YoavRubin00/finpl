@@ -207,7 +207,7 @@ export function IndexRaceScreen({ onComplete }: IndexRaceScreenProps) {
             </View>
             <Text style={[styles.subtitle, RTL]}>
               בחר 5 נכסים מתוך הרשימה והתחרה מול S&P 500
-              (מבוסס על מסחר ונתוני אמת משנים 2015-2024 בשוק ההון!)
+              (נתוני תשואות שנתיות אמיתיים משנים 2011-2020, כולל דיבידנדים)
             </Text>
           </Animated.View>
 

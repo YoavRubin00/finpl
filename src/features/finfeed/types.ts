@@ -206,9 +206,26 @@ export interface FeedCashoutRush {
   type: "cashout-rush";
 }
 
+export interface FeedFomoKiller {
+  id: string;
+  type: "fomo-killer";
+}
+
 export interface FeedDiamondHands {
   id: string;
   type: "diamond-hands";
 }
 
-export type FeedItem = FeedVideo | FeedQuote | (FeedLesson & { type: "lesson" }) | FeedComic | FeedModuleHook | FeedMacroEvent | FeedScenario | FeedDailyQuiz | FeedMythCard | FeedPremiumLearning | FeedFinnHero | FeedDilemma | FeedInvestment | FeedCrashGame | FeedSwipeGame | FeedGrahamPersonality | FeedBullshitSwipe | FeedHigherLower | FeedBudgetNinja | FeedPriceSlider | FeedCashoutRush | FeedDiamondHands;
+/** Shark opinion poll — "מה הכי אהבתם באפליקציה?" — random sample, non-persistent answer */
+export interface FeedSharkFeedback {
+  id: string;
+  type: "shark-feedback";
+}
+
+export interface FeedSimulatorTeaser {
+  id: string;
+  type: "simulator-teaser";
+  simulator: import("./feedSimulatorsData").FeedSimulator;
+}
+
+export type FeedItem = FeedVideo | FeedQuote | (FeedLesson & { type: "lesson" }) | FeedComic | FeedModuleHook | FeedMacroEvent | FeedScenario | FeedDailyQuiz | FeedMythCard | FeedPremiumLearning | FeedFinnHero | FeedDilemma | FeedInvestment | FeedCrashGame | FeedSwipeGame | FeedGrahamPersonality | FeedBullshitSwipe | FeedHigherLower | FeedBudgetNinja | FeedPriceSlider | FeedCashoutRush | FeedFomoKiller | FeedDiamondHands | FeedSharkFeedback | FeedSimulatorTeaser;

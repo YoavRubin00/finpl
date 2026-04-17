@@ -1,6 +1,8 @@
 import React from "react";
-import { Image, Pressable, Text, View } from "react-native";
-import { DH_ASSETS } from "../diamondHandsAssets";
+import { Pressable, Text, View } from "react-native";
+import LottieView from "lottie-react-native";
+
+const DIAMOND_LOTTIE = require("../../../../assets/lottie/Diamond.json");
 
 interface Props {
   heldForMs: number;
@@ -31,7 +33,7 @@ export function PaperHandsScreen({ heldForMs, onClose }: Props) {
         </Text>
         <Text
           style={{
-            color: "#fefce8",
+            color: "#f0f9ff",
             fontSize: 32,
             fontWeight: "900",
             fontFamily: "Heebo_900Black",
@@ -41,21 +43,23 @@ export function PaperHandsScreen({ heldForMs, onClose }: Props) {
         >
           ידיים רכות.
         </Text>
-        <Image
-          source={{ uri: DH_ASSETS.diamondCracking }}
-          style={{ width: 140, height: 140 }}
+        <LottieView
+          source={DIAMOND_LOTTIE}
+          style={{ width: 160, height: 160, opacity: 0.7 }}
+          autoPlay
+          loop
           resizeMode="contain"
         />
         <Text
           style={{
-            color: "#a7f3d0",
+            color: "#bae6fd",
             fontSize: 15,
             textAlign: "center",
             writingDirection: "rtl",
             fontFamily: "Heebo_500Medium",
           }}
         >
-          החזקת {seconds} שניות מתוך 15
+          החזקת {seconds} שניות מתוך 10
         </Text>
       </View>
 
@@ -71,7 +75,7 @@ export function PaperHandsScreen({ heldForMs, onClose }: Props) {
       >
         <Text
           style={{
-            color: "#fefce8",
+            color: "#f0f9ff",
             fontSize: 14,
             fontFamily: "Heebo_900Black",
             textAlign: "right",
@@ -82,7 +86,7 @@ export function PaperHandsScreen({ heldForMs, onClose }: Props) {
         </Text>
         <Text
           style={{
-            color: "#a7f3d0",
+            color: "#bae6fd",
             fontSize: 14,
             lineHeight: 22,
             textAlign: "right",
@@ -106,12 +110,12 @@ export function PaperHandsScreen({ heldForMs, onClose }: Props) {
           borderRadius: 20,
           alignItems: "center",
           borderWidth: 2,
-          borderColor: "#d4a017",
+          borderColor: "#0ea5e9",
         }}
       >
         <Text
           style={{
-            color: "#d4a017",
+            color: "#0ea5e9",
             fontSize: 16,
             fontWeight: "900",
             fontFamily: "Heebo_900Black",

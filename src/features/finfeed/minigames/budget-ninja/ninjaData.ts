@@ -69,9 +69,15 @@ export const NINJA_TARGETS: Record<NinjaTargetKind, NinjaTargetMeta> = {
 export const NINJA_TARGET_KINDS: NinjaTargetKind[] = Object.keys(NINJA_TARGETS) as NinjaTargetKind[];
 
 export const GAME_DURATION_MS = 12000;
-export const SPAWN_INTERVAL_MS = 700;
-export const FALL_DURATION_MIN_MS = 2600;
-export const FALL_DURATION_MAX_MS = 3600;
+
+/** Speed multiplier for the current session. 1 = normal, 1.3 = 30% faster (level 1), 1.6 = 60% faster (level 2) */
+export const LEVEL_1_SPEED = 1.3;
+export const LEVEL_2_SPEED = 1.6;
+
+// Base timings (will be divided by speed multiplier)
+export const SPAWN_INTERVAL_MS_BASE = 700;
+export const FALL_DURATION_MIN_MS_BASE = 2600;
+export const FALL_DURATION_MAX_MS_BASE = 3600;
 
 export const SCORE_TIER_EXCELLENT = 120;
 export const SCORE_TIER_GOOD = 60;

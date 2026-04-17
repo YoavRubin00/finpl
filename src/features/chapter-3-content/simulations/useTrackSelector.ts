@@ -14,8 +14,8 @@ import { trackSelectorConfig } from './trackSelectorData';
 
 // ── Constants ──────────────────────────────────────────────────────────
 
-/** Auto-advance interval: one year every 750ms */
-const YEAR_INTERVAL_MS = 750;
+/** Auto-advance interval: one year every 375ms (2× speed) */
+const YEAR_INTERVAL_MS = 375;
 
 const TOTAL_YEARS = trackSelectorConfig.marketYears.length;
 

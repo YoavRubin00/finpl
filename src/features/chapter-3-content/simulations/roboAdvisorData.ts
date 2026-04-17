@@ -73,69 +73,72 @@ export const RISK_PROFILE_LABELS: Record<number, string> = {
   5: 'אגרסיבי',
 };
 
-// ── 10-Year Market History (inspired by 2014-2024) ─────────────────────
-// Mix of good years, crashes, and recoveries
+// ── 10-Year Market History — REAL DATA 2014-2023 ──────────────────────
+// Stocks: S&P 500 Total Return (dividends reinvested)
+// Bonds: Bloomberg US Aggregate Bond Index
+export const DATA_START_YEAR = 2014;
+export const DATA_END_YEAR = 2023;
 
 const marketHistory: MarketYear[] = [
   {
-    year: 1,
-    stockReturn: 0.12,
-    bondReturn: 0.04,
-    headline: '📈 שנה טובה — מניות עולות 12%',
+    year: 2014,
+    stockReturn: 0.137,
+    bondReturn: 0.060,
+    headline: '2014 · שנה סולידית — S&P 500 עולה 13.7%',
   },
   {
-    year: 2,
-    stockReturn: 0.08,
-    bondReturn: 0.03,
-    headline: '📊 שנה יציבה — צמיחה מתונה',
+    year: 2015,
+    stockReturn: 0.014,
+    bondReturn: 0.005,
+    headline: '2015 · שנה שטוחה — חששות מהעלאת ריבית הפד',
   },
   {
-    year: 3,
-    stockReturn: -0.15,
-    bondReturn: 0.05,
-    headline: '⚠️ תיקון בשוק — מניות יורדות 15%',
+    year: 2016,
+    stockReturn: 0.120,
+    bondReturn: 0.026,
+    headline: '2016 · ברקזיט ובחירות ארה"ב — השוק עולה 12%',
   },
   {
-    year: 4,
-    stockReturn: 0.20,
-    bondReturn: 0.02,
-    headline: '🚀 התאוששות חזקה — מניות קופצות 20%',
+    year: 2017,
+    stockReturn: 0.218,
+    bondReturn: 0.035,
+    headline: '2017 · שוק שורי שקט — +21.8% ללא ירידה משמעותית',
   },
   {
-    year: 5,
-    stockReturn: 0.15,
-    bondReturn: 0.04,
-    headline: '📈 שוק שוורי — עוד שנת שיא',
+    year: 2018,
+    stockReturn: -0.044,
+    bondReturn: 0.001,
+    headline: '2018 · מכירות ברבעון 4 — S&P 500 יורד 4.4%',
   },
   {
-    year: 6,
-    stockReturn: -0.30,
-    bondReturn: 0.06,
-    headline: '💥 קריסה! מניות צונחות 30%',
+    year: 2019,
+    stockReturn: 0.315,
+    bondReturn: 0.087,
+    headline: '2019 · היפוך הפד — שנה פנטסטית, +31.5%',
   },
   {
-    year: 7,
-    stockReturn: 0.25,
-    bondReturn: 0.03,
-    headline: '🌱 התאוששות — השוק חוזר עם 25%',
+    year: 2020,
+    stockReturn: 0.184,
+    bondReturn: 0.075,
+    headline: '2020 · קריסת הקורונה + התאוששות — +18.4% בשנה',
   },
   {
-    year: 8,
-    stockReturn: 0.18,
-    bondReturn: 0.04,
-    headline: '📊 צמיחה בריאה — +18% למניות',
+    year: 2021,
+    stockReturn: 0.287,
+    bondReturn: -0.015,
+    headline: '2021 · פתיחה מחודשת + תמריצים — +28.7%',
   },
   {
-    year: 9,
-    stockReturn: -0.10,
-    bondReturn: 0.05,
-    headline: '😰 ירידה קלה — תיקון של 10%',
+    year: 2022,
+    stockReturn: -0.181,
+    bondReturn: -0.130,
+    headline: '2022 · אינפלציה + קריסת טק — -18.1% למניות, -13% לאג"ח',
   },
   {
-    year: 10,
-    stockReturn: 0.22,
-    bondReturn: 0.03,
-    headline: '🏆 סיום חזק! מניות עולות 22%',
+    year: 2023,
+    stockReturn: 0.263,
+    bondReturn: 0.055,
+    headline: '2023 · ראלי AI — התאוששות של +26.3%',
   },
 ];
 

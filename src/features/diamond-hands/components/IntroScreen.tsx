@@ -30,7 +30,7 @@ export function IntroScreen({ onStart, onClose }: Props) {
         </Text>
         <Text
           style={{
-            color: "#fefce8",
+            color: "#f0f9ff",
             fontSize: 40,
             fontWeight: "900",
             fontFamily: "Heebo_900Black",
@@ -42,7 +42,7 @@ export function IntroScreen({ onStart, onClose }: Props) {
           💎 ידיים של יהלום
         </Text>
         <Image
-          source={{ uri: DH_ASSETS.diamondPristine }}
+          source={DH_ASSETS.diamondPristine}
           style={{ width: 140, height: 140 }}
           resizeMode="contain"
         />
@@ -51,7 +51,7 @@ export function IntroScreen({ onStart, onClose }: Props) {
       <View style={{ gap: 18 }}>
         <Text
           style={{
-            color: "#fefce8",
+            color: "#f0f9ff",
             fontSize: 17,
             lineHeight: 26,
             textAlign: "right",
@@ -63,7 +63,7 @@ export function IntroScreen({ onStart, onClose }: Props) {
         </Text>
         <Text
           style={{
-            color: "#a7f3d0",
+            color: "#bae6fd",
             fontSize: 15,
             lineHeight: 24,
             textAlign: "right",
@@ -71,40 +71,9 @@ export function IntroScreen({ onStart, onClose }: Props) {
             fontFamily: "Heebo_500Medium",
           }}
         >
-          תחזיק את הכפתור לחוץ 15 שניות רצוף. בלי להרים את האצבע. בלי רחמים.
+          תחזיק את הכפתור לחוץ 10 שניות רצוף. בלי להרים את האצבע. בלי רחמים.
           אם תחזיק — תרוויח. אם תרים — איבדת.
         </Text>
-        <View
-          style={{
-            borderRadius: 16,
-            backgroundColor: "rgba(212, 160, 23, 0.12)",
-            borderWidth: 1.5,
-            borderColor: "rgba(212, 160, 23, 0.4)",
-            padding: 14,
-            flexDirection: "row-reverse",
-            justifyContent: "space-between",
-          }}
-        >
-          <Text
-            style={{
-              color: "#d4a017",
-              fontSize: 14,
-              fontFamily: "Heebo_900Black",
-            }}
-          >
-            +150 XP · +300 Coins
-          </Text>
-          <Text
-            style={{
-              color: "#a7f3d0",
-              fontSize: 13,
-              fontFamily: "Heebo_500Medium",
-              writingDirection: "rtl",
-            }}
-          >
-            תגמול ניצחון:
-          </Text>
-        </View>
       </View>
 
       <View style={{ gap: 10 }}>
@@ -112,25 +81,31 @@ export function IntroScreen({ onStart, onClose }: Props) {
           onPress={onStart}
           accessibilityRole="button"
           accessibilityLabel="התחל מבחן ידיים של יהלום"
+          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
           style={{
-            backgroundColor: "#d4a017",
+            backgroundColor: "#0ea5e9",
             paddingVertical: 18,
             borderRadius: 20,
             alignItems: "center",
             borderBottomWidth: 4,
-            borderBottomColor: "#92580a",
+            borderBottomColor: "#0369a1",
+            shadowColor: "#0369a1",
+            shadowOffset: { width: 0, height: 6 },
+            shadowOpacity: 0.4,
+            shadowRadius: 12,
+            elevation: 8,
           }}
         >
           <Text
             style={{
-              color: "#1b4332",
+              color: "#ffffff",
               fontSize: 18,
               fontWeight: "900",
               fontFamily: "Heebo_900Black",
               writingDirection: "rtl",
             }}
           >
-            💎 אני מוכן/ה
+            קדימה נתחיל 💎
           </Text>
         </Pressable>
         <Pressable
@@ -141,7 +116,7 @@ export function IntroScreen({ onStart, onClose }: Props) {
         >
           <Text
             style={{
-              color: "#a7f3d0",
+              color: "#bae6fd",
               fontSize: 14,
               fontFamily: "Heebo_500Medium",
               writingDirection: "rtl",

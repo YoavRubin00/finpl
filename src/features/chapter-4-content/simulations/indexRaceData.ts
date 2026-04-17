@@ -1,7 +1,7 @@
 /**
  * SIM 4-30: המרוץ נגד המדד (Index Race) — Module 4-30
  * 10 stocks with annual returns based on REAL 2011-2020 historical data.
- * S&P 500 benchmark for comparison.
+ * ‎S&P‎ 500 benchmark for comparison.
  * Symbols match the trading hub (TRADABLE_ASSETS).
  */
 
@@ -15,7 +15,7 @@ export const TOTAL_YEARS = 10;
 export const START_YEAR = 2011;
 export const END_YEAR = 2020;
 
-// ── S&P 500 Benchmark — REAL total-return (dividends reinvested) 2011-2020 ──
+// ── ‎S&P‎ 500 Benchmark — REAL total-return (dividends reinvested) 2011-2020 ──
 // 2011: +2.1% | 2012: +16.0% | 2013: +32.4% | 2014: +13.7% | 2015: +1.4%
 // 2016: +12.0% | 2017: +21.8% | 2018: -4.4% | 2019: +31.5% | 2020: +18.4%
 

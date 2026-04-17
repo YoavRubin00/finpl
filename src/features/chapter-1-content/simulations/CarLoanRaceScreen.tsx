@@ -1,6 +1,6 @@
 import { createAudioPlayer } from 'expo-audio';
 import { useState, useCallback, useEffect } from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { View, Text, StyleSheet, ScrollView } from 'react-native';
 import Animated, {
     useSharedValue,
     useAnimatedStyle,
@@ -170,7 +170,8 @@ function ScoreScreen({
     const gradeColor = GRADE_COLORS[score.grade] ?? '#ffffff';
 
     return (
-        <Animated.View entering={FadeIn.duration(400)} style={{ flex: 1, justifyContent: 'center', gap: 16 }}>
+      <Animated.View entering={FadeIn.duration(400)} style={{ flex: 1 }}>
+        <ScrollView style={{ flex: 1 }} contentContainerStyle={{ gap: 16, paddingVertical: 16, paddingBottom: 120 }}>
             {/* Grade banner */}
             <View style={simStyles.gradeContainer}>
                 <Text style={[simStyles.gradeText, { color: gradeColor }]}>
@@ -233,23 +234,46 @@ function ScoreScreen({
                 </View>
             </View>
 
-            {/* Actions */}
-            <View style={simStyles.actionsRow}>
-                <AnimatedPressable onPress={onReplay} style={simStyles.replayBtn} accessibilityRole="button" accessibilityLabel="שחק שוב" accessibilityHint="מתחיל את הסימולציה מחדש">
-                    <View accessible={false}><LottieIcon source={LOTTIE_REPLAY} size={18} /></View>
-                    <Text style={[RTL, simStyles.replayText]}>שחק שוב</Text>
-                </AnimatedPressable>
+        </ScrollView>
 
-                <AnimatedPressable onPress={onFinish} style={simStyles.continueBtn} accessibilityRole="button" accessibilityLabel="המשך" accessibilityHint="ממשיך לשלב הבא">
-                    <Text style={[RTL, simStyles.continueText]}>המשך</Text>
-                    <View style={{ position: 'absolute', left: 16 }}>
-                        <View accessible={false}><LottieIcon source={LOTTIE_ARROW} size={20} /></View>
-                    </View>
-                </AnimatedPressable>
-            </View>
-        </Animated.View>
+        {/* Sticky actions bar — always visible */}
+        <View style={carLoanRaceStickyStyles.stickyActionsBar}>
+            <AnimatedPressable onPress={onReplay} style={simStyles.replayBtn} accessibilityRole="button" accessibilityLabel="שחק שוב" accessibilityHint="מתחיל את הסימולציה מחדש">
+                <View accessible={false}><LottieIcon source={LOTTIE_REPLAY} size={18} /></View>
+                <Text style={[RTL, simStyles.replayText]}>שחק שוב</Text>
+            </AnimatedPressable>
+            <AnimatedPressable onPress={onFinish} style={simStyles.continueBtn} accessibilityRole="button" accessibilityLabel="המשך" accessibilityHint="ממשיך לשלב הבא">
+                <Text style={[RTL, simStyles.continueText]}>המשך</Text>
+                <View style={{ position: 'absolute', left: 16 }}>
+                    <View accessible={false}><LottieIcon source={LOTTIE_ARROW} size={20} /></View>
+                </View>
+            </AnimatedPressable>
+        </View>
+      </Animated.View>
     );
 }
+
+const carLoanRaceStickyStyles = StyleSheet.create({
+    stickyActionsBar: {
+        position: 'absolute',
+        left: 0,
+        right: 0,
+        bottom: 0,
+        flexDirection: 'row-reverse',
+        gap: 8,
+        paddingHorizontal: 16,
+        paddingVertical: 12,
+        paddingBottom: 16,
+        backgroundColor: 'rgba(255,255,255,0.96)',
+        borderTopWidth: 1,
+        borderTopColor: 'rgba(14,165,233,0.25)',
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: -2 },
+        shadowOpacity: 0.08,
+        shadowRadius: 6,
+        elevation: 10,
+    },
+});
 
 /* ------------------------------------------------------------------ */
 /*  CarLoanRaceScreen — main exported component                         */

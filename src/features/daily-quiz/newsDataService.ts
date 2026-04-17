@@ -38,58 +38,65 @@ function setCache(key: string, data: DataPoint): void {
   cache.set(key, { data, date: todayKey() });
 }
 
-// ── USD/ILS — Bank of Israel API ──
+// ── USD/ILS — free public FX API (fallback chain) ──
+// Primary: open.er-api.com (no auth, CORS-friendly, daily-refreshed).
+// Secondary: exchangerate.host (no auth, daily).
+// Tertiary: hardcoded stale value.
 export async function fetchUsdIls(): Promise<DataPoint> {
   const cached = getCached('usd-ils');
   if (cached) return cached;
 
-  try {
-    const today = todayKey();
-    const weekAgo = new Date(Date.now() - 7 * 86400000).toISOString().slice(0, 10);
-    const url = `https://edge.boi.gov.il/FusionEdgeServer/sdmx/v2/data/dataflow/BOI/EXR/1.0?startperiod=${weekAgo}&endperiod=${today}`;
-    const res = await fetch(url, {
-      headers: { Accept: 'application/json' },
-    });
-    if (!res.ok) throw new Error(`BOI API ${res.status}`);
-    const json = await res.json();
-
-    // Parse SDMX-JSON response — extract USD/ILS rate
-    const series = json?.data?.dataSets?.[0]?.series;
-    if (!series) throw new Error('No series data');
-
-    // Find USD series (key varies) — get last observation
-    const seriesKeys = Object.keys(series);
-    const usdKey = seriesKeys[0]; // First series is typically USD
-    const observations = series[usdKey]?.observations;
-    if (!observations) throw new Error('No observations');
-
-    const obsKeys = Object.keys(observations).sort((a, b) => Number(b) - Number(a));
-    const latestValue = observations[obsKeys[0]]?.[0];
-    const previousValue = obsKeys.length > 1 ? observations[obsKeys[1]]?.[0] : latestValue;
-
-    const rate = Number(latestValue);
-    const prev = Number(previousValue);
-    const direction = rate > prev ? 'up' : rate < prev ? 'down' : 'stable';
-
-    const result: DataPoint = {
+  const buildDataPoint = (rate: number, prev: number): DataPoint => {
+    const direction: 'up' | 'down' | 'stable' = rate > prev * 1.001 ? 'up' : rate < prev * 0.999 ? 'down' : 'stable';
+    return {
       value: `${rate.toFixed(2)}₪`,
       label: 'שער דולר/שקל',
       direction,
       category: 'USD_ILS',
     };
-    setCache('usd-ils', result);
-    return result;
+  };
+
+  // Try primary: open.er-api.com
+  try {
+    const res = await fetch('https://open.er-api.com/v6/latest/USD');
+    if (res.ok) {
+      const json = await res.json();
+      const rate = Number(json?.rates?.ILS);
+      if (isFinite(rate) && rate > 1 && rate < 10) {
+        const result = buildDataPoint(rate, rate);
+        setCache('usd-ils', result);
+        return result;
+      }
+    }
   } catch {
-    // Fallback — last known value
-    const fallback: DataPoint = {
-      value: '3.62₪',
-      label: 'שער דולר/שקל',
-      direction: 'stable',
-      category: 'USD_ILS',
-    };
-    setCache('usd-ils', fallback);
-    return fallback;
+    // fall through
   }
+
+  // Try secondary: exchangerate.host
+  try {
+    const res = await fetch('https://api.exchangerate.host/latest?base=USD&symbols=ILS');
+    if (res.ok) {
+      const json = await res.json();
+      const rate = Number(json?.rates?.ILS);
+      if (isFinite(rate) && rate > 1 && rate < 10) {
+        const result = buildDataPoint(rate, rate);
+        setCache('usd-ils', result);
+        return result;
+      }
+    }
+  } catch {
+    // fall through
+  }
+
+  // Final fallback — approximate current rate
+  const fallback: DataPoint = {
+    value: '3.20₪',
+    label: 'שער דולר/שקל',
+    direction: 'stable',
+    category: 'USD_ILS',
+  };
+  setCache('usd-ils', fallback);
+  return fallback;
 }
 
 // ── Interest Rate — Bank of Israel ──
@@ -137,7 +144,7 @@ export async function fetchInterestRate(): Promise<DataPoint> {
   }
 }
 
-// ── S&P 500 — via server-side proxy (keeps API keys server-side) ──
+// ── ‎S&P‎ 500 — via server-side proxy (keeps API keys server-side) ──
 export async function fetchSP500(): Promise<DataPoint> {
   const cached = getCached('sp500');
   if (cached) return cached;
@@ -155,7 +162,7 @@ export async function fetchSP500(): Promise<DataPoint> {
 
     const result: DataPoint = {
       value: `${changePct >= 0 ? '+' : ''}${changePct.toFixed(1)}%`,
-      label: 'S&P 500',
+      label: '‎S&P‎ 500',
       direction,
       category: 'STOCK_INDEX',
     };
@@ -164,7 +171,7 @@ export async function fetchSP500(): Promise<DataPoint> {
   } catch {
     const fallback: DataPoint = {
       value: '+0.8%',
-      label: 'S&P 500',
+      label: '‎S&P‎ 500',
       direction: 'up',
       category: 'STOCK_INDEX',
     };

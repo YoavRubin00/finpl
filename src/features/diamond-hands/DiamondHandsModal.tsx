@@ -153,7 +153,7 @@ export function DiamondHandsModal({ visible, onClose }: Props) {
       <GestureHandlerRootView style={{ flex: 1 }}>
         <View style={{ flex: 1, backgroundColor: "#0a3622" }}>
           <LinearGradient
-            colors={["#1b4332", "#0a3622", "#0a1a11"]}
+            colors={["#082f49", "#0a3622", "#0a1a11"]}
             style={StyleSheet.absoluteFillObject}
           />
           <PhaseVignette
@@ -263,7 +263,7 @@ function PlayingLayout({
       >
         <Text
           style={{
-            color: "#a7f3d0",
+            color: "#bae6fd",
             fontSize: 12,
             letterSpacing: 2,
             fontFamily: "Heebo_700Bold",

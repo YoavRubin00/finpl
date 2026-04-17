@@ -1,5 +1,6 @@
 import React from "react";
-import { Image, Pressable, Text, View } from "react-native";
+import { Pressable, Text, View } from "react-native";
+import LottieView from "lottie-react-native";
 import { TD_ASSETS } from "../towerDefenseAssets";
 import { TOWER_DEFENSE_CONFIG } from "../towerDefenseData";
 import type { TowerKind } from "../types";
@@ -24,9 +25,9 @@ export function TowerPaletteBar({
       style={{
         paddingHorizontal: 16,
         paddingVertical: 12,
-        backgroundColor: "rgba(10, 54, 34, 0.95)",
+        backgroundColor: "rgba(8, 47, 73, 0.95)",
         borderTopWidth: 2,
-        borderTopColor: "#d4a017",
+        borderTopColor: "#38bdf8",
         gap: 10,
       }}
     >
@@ -45,13 +46,13 @@ export function TowerPaletteBar({
               style={{
                 flex: 1,
                 backgroundColor: selected
-                  ? "rgba(212, 160, 23, 0.3)"
-                  : "rgba(0,0,0,0.4)",
+                  ? "rgba(56, 189, 248, 0.3)"
+                  : "rgba(12, 74, 110, 0.6)",
                 borderWidth: 2.5,
                 borderColor: selected
-                  ? "#d4a017"
+                  ? "#38bdf8"
                   : affordable
-                    ? "rgba(212,160,23,0.4)"
+                    ? "rgba(56, 189, 248, 0.4)"
                     : "rgba(100,100,100,0.3)",
                 borderRadius: 16,
                 padding: 8,
@@ -59,14 +60,16 @@ export function TowerPaletteBar({
                 opacity: affordable ? 1 : 0.5,
               }}
             >
-              <Image
-                source={{ uri: TD_ASSETS.towers[tower.kind] }}
+              <LottieView
+                source={TD_ASSETS.towerLottie[tower.kind]}
                 style={{ width: 48, height: 48 }}
+                autoPlay
+                loop
                 resizeMode="contain"
               />
               <Text
                 style={{
-                  color: "#fefce8",
+                  color: "#f0f9ff",
                   fontSize: 11,
                   marginTop: 4,
                   fontFamily: "Heebo_700Bold",
@@ -79,14 +82,14 @@ export function TowerPaletteBar({
               </Text>
               <Text
                 style={{
-                  color: affordable ? "#d4a017" : "#9ca3af",
+                  color: affordable ? "#fde68a" : "#9ca3af",
                   fontSize: 12,
                   fontWeight: "900",
                   fontFamily: "Heebo_900Black",
                   marginTop: 2,
                 }}
               >
-                🪙 {tower.cost}
+                {tower.cost}
               </Text>
             </Pressable>
           );
@@ -99,24 +102,24 @@ export function TowerPaletteBar({
         accessibilityRole="button"
         accessibilityLabel="שלח את גל האויבים עכשיו"
         style={{
-          backgroundColor: disabled ? "rgba(156,163,175,0.4)" : "#d4a017",
+          backgroundColor: disabled ? "rgba(156,163,175,0.4)" : "#0ea5e9",
           paddingVertical: 14,
           borderRadius: 16,
           alignItems: "center",
           borderBottomWidth: 3,
-          borderBottomColor: disabled ? "#6b7280" : "#92580a",
+          borderBottomColor: disabled ? "#6b7280" : "#0369a1",
         }}
       >
         <Text
           style={{
-            color: "#1b4332",
+            color: "#ffffff",
             fontSize: 16,
             fontWeight: "900",
             fontFamily: "Heebo_900Black",
             writingDirection: "rtl",
           }}
         >
-          ⚔️ שלחו את הגל עכשיו
+          התמודדו עם החודש
         </Text>
       </Pressable>
     </View>

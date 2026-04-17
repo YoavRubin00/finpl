@@ -14,9 +14,10 @@ import Animated, {
 import { X } from "lucide-react-native";
 import { Image as ExpoImage, type ImageSource } from "expo-image";
 import { LottieIcon } from "./LottieIcon";
+import { STITCH } from "../../constants/theme";
 
-const BANNER_BG = "#ffffff";
-const BANNER_SHADOW = "#64748b";
+const BANNER_BG = STITCH.surfaceLowest;
+const BANNER_SHADOW = STITCH.outlineVariant;
 
 export interface NotificationBannerProps {
   message: string;
@@ -94,7 +95,7 @@ export function NotificationBanner({
         </Pressable>
       )}
       <Pressable onPress={dismiss} style={styles.closeBtn} hitSlop={14} accessibilityRole="button" accessibilityLabel="סגור התראה">
-        <X size={16} color="#64748b" strokeWidth={2.5} />
+        <X size={16} color={STITCH.outlineVariant} strokeWidth={2.5} />
       </Pressable>
     </Animated.View>
   );
@@ -114,7 +115,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     gap: 10,
     borderBottomWidth: 1,
-    borderBottomColor: "#e2e8f0",
+    borderBottomColor: STITCH.ghostBorder,
     shadowColor: BANNER_SHADOW,
     shadowOpacity: 0.2,
     shadowRadius: 8,
@@ -125,7 +126,7 @@ const styles = StyleSheet.create({
     width: 3,
     height: 32,
     borderRadius: 2,
-    backgroundColor: "#0891b2",
+    backgroundColor: STITCH.primaryCyan,
     flexShrink: 0,
   },
   lottieWrap: {
@@ -135,20 +136,20 @@ const styles = StyleSheet.create({
   },
   message: {
     flex: 1,
-    color: "#1e293b",
+    color: STITCH.onSurface,
     fontSize: 14,
     fontWeight: "700",
     writingDirection: "rtl",
     textAlign: "right",
   },
   actionBtn: {
-    backgroundColor: "#0891b2",
+    backgroundColor: STITCH.primaryCyan,
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 10,
   },
   actionText: {
-    color: "#ffffff",
+    color: STITCH.surfaceLowest,
     fontSize: 13,
     fontWeight: "800",
   },

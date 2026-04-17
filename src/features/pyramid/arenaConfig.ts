@@ -11,7 +11,6 @@ export interface ArenaConfig {
   gradientTo: string;
   glow: string;
   xpThreshold: number;
-  chapterRoute: string;
   // Populated after running: py scripts/generate_content.py
   audioOverview?: number;   // require('assets/SOUND/chapterN_overview.mp3')
   infographic?: number;     // require('assets/images/chapterN_infographic.png')
@@ -28,7 +27,6 @@ export const ARENAS: readonly ArenaConfig[] = [
     gradientTo: "#3b82f6",
     glow: "#93c5fd",
     xpThreshold: 0,
-    chapterRoute: "/chapter/chapter-0",
   },
   {
     id: 1,
@@ -40,7 +38,6 @@ export const ARENAS: readonly ArenaConfig[] = [
     gradientTo: "#22d3ee",
     glow: "#67e8f9",
     xpThreshold: 0,
-    chapterRoute: "/chapter/chapter-1",
   },
   {
     id: 2,
@@ -52,7 +49,6 @@ export const ARENAS: readonly ArenaConfig[] = [
     gradientTo: "#38bdf8",
     glow: "#7dd3fc",
     xpThreshold: 100,
-    chapterRoute: "/chapter/chapter-2",
   },
   {
     id: 3,
@@ -64,7 +60,6 @@ export const ARENAS: readonly ArenaConfig[] = [
     gradientTo: "#3b82f6",
     glow: "#93c5fd",
     xpThreshold: 250,
-    chapterRoute: "/chapter/chapter-3",
   },
   {
     id: 4,
@@ -76,7 +71,6 @@ export const ARENAS: readonly ArenaConfig[] = [
     gradientTo: "#6366f1",
     glow: "#a5b4fc",
     xpThreshold: 450,
-    chapterRoute: "/chapter/chapter-4",
   },
   {
     id: 5,
@@ -88,7 +82,6 @@ export const ARENAS: readonly ArenaConfig[] = [
     gradientTo: "#8b5cf6",
     glow: "#c4b5fd",
     xpThreshold: 700,
-    chapterRoute: "/chapter/chapter-5",
   },
 ] as const;
 

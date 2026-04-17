@@ -25,6 +25,8 @@ import { LottieIcon } from '../../components/ui/LottieIcon';
 import { useChapterStore } from '../chapter-1-content/useChapterStore';
 import type { FeedPremiumLearning } from './types';
 import { FINN_STANDARD } from '../retention-loops/finnMascotConfig';
+import { useSoundEffect } from '../../hooks/useSoundEffect';
+import { tapHaptic } from '../../utils/haptics';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -108,6 +110,7 @@ interface Props {
 
 export const FeedPremiumLearningCard = React.memo(function FeedPremiumLearningCard({ item, isActive: _isActive }: Props) {
   const router = useRouter();
+  const { playSound } = useSoundEffect();
   const isDiveMode = item.diveMode && item.zoomRegions && item.zoomRegions.length > 0;
   const totalSteps = isDiveMode
     ? (item.finnExplanations?.length ?? item.zoomRegions?.length ?? 1)
@@ -183,6 +186,8 @@ export const FeedPremiumLearningCard = React.memo(function FeedPremiumLearningCa
   ).current;
 
   const handleNext = useCallback(() => {
+    tapHaptic();
+    playSound('btn_click_soft_2');
     const nextStep = step + 1;
     setStep(nextStep);
 
@@ -199,10 +204,12 @@ export const FeedPremiumLearningCard = React.memo(function FeedPremiumLearningCa
       zoomX.value = withTiming(0, { duration: 400 });
       zoomY.value = withTiming(0, { duration: 400 });
     }
-  }, [step, isDiveMode, item.zoomRegions, totalSteps, zoomScale, zoomX, zoomY]);
+  }, [step, isDiveMode, item.zoomRegions, totalSteps, zoomScale, zoomX, zoomY, playSound]);
 
   const handlePrev = useCallback(() => {
     if (step > 0) {
+      tapHaptic();
+      playSound('btn_click_soft_1');
       const prevStep = step - 1;
       setStep(prevStep);
       if (isDiveMode && item.zoomRegions && prevStep < totalSteps) {
@@ -213,17 +220,19 @@ export const FeedPremiumLearningCard = React.memo(function FeedPremiumLearningCa
         zoomY.value = withTiming(y, cfg);
       }
     }
-  }, [step, isDiveMode, item.zoomRegions, totalSteps, zoomScale, zoomX, zoomY]);
+  }, [step, isDiveMode, item.zoomRegions, totalSteps, zoomScale, zoomX, zoomY, playSound]);
 
   // Keep refs current for PanResponder
   handleNextRef.current = handleNext;
   handlePrevRef.current = handlePrev;
 
   const handleStartModule = useCallback(() => {
+    tapHaptic();
+    playSound('btn_click_heavy');
     useChapterStore.getState().setCurrentChapter(item.storeChapterId);
     useChapterStore.getState().setCurrentModule(item.moduleIndex);
     router.push(`/lesson/${item.moduleId}?chapterId=${item.chapterId}` as never);
-  }, [item, router]);
+  }, [item, router, playSound]);
 
   // CTA — last step
   if (isLastStep) {

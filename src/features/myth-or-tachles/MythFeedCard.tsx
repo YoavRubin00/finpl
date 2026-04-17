@@ -187,7 +187,7 @@ export const MythFeedCard = React.memo(function MythFeedCard({ isInterModule, on
 
 const styles = StyleSheet.create({
     container: {
-        minHeight: 620,
+        minHeight: 560,
         backgroundColor: '#f8fafc',
         paddingTop: 8,
     },

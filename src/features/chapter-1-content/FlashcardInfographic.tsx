@@ -416,7 +416,7 @@ const LARGE_CARDS = new Set([
   "fc-4-b1-1", "fc-4-b1-2", "fc-4-b1-2b", "fc-4-b1-3",
   "fc-4-b2-1", "fc-4-b2-2",
   "fc-4-b3-1", "fc-4-b3-2",
-  "fc-4-b4-1", "fc-4-b4-2",
+  // fc-4-b4-1, fc-4-b4-2 removed — they have substantial text that needs to be visible
 ]);
 
 /** Cards whose infographic should fill the container edge-to-edge (cover instead of contain) */

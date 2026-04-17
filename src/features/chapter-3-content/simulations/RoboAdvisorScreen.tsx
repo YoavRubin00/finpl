@@ -705,6 +705,9 @@ export function RoboAdvisorScreen({ onComplete }: RoboAdvisorScreenProps) {
         <Text style={[styles.subtitle, RTL]}>
           שנה {state.currentYear} מתוך {config.marketHistory.length}
         </Text>
+        <Text style={[styles.subtitle, RTL, { fontSize: 12, opacity: 0.9 }]}>
+          {'נתוני אמת 2014-2023 · מניות: S&P 500 · אג"ח: Bloomberg US Aggregate'}
+        </Text>
       </Animated.View>
 
       {/* Market Headline */}

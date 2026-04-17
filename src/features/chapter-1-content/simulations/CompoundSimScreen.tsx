@@ -7,6 +7,8 @@ import {
     Dimensions,
     PanResponder,
     Pressable,
+    ScrollView,
+    StyleSheet,
 } from 'react-native';
 import Animated, {
     useSharedValue,
@@ -727,7 +729,8 @@ export function CompoundSimScreen({ onComplete }: CompoundSimScreenProps) {
                 lottieSources={[LOTTIE_DIVIDENDS, LOTTIE_GRAPH]}
                 chapterColors={_th1.gradient}
             >
-                <View style={{ flex: 1, justifyContent: 'flex-start', padding: 14, paddingTop: 24, gap: 8 }}>
+                <View style={{ flex: 1 }}>
+                  <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 14, paddingTop: 24, paddingBottom: 120, gap: 8 }}>
                     {/* Lesson title */}
                     <Animated.View entering={FadeIn.duration(400)} style={{ alignItems: 'flex-end' }}>
                         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, justifyContent: 'flex-end' }}>
@@ -764,17 +767,19 @@ export function CompoundSimScreen({ onComplete }: CompoundSimScreenProps) {
                         </GlowCard>
                     </Animated.View>
 
-                    {/* Replay / Continue buttons */}
-                    <Animated.View entering={FadeInUp.delay(200).duration(400)} style={{ flexDirection: 'row', gap: 10, marginTop: 4 }}>
-                        <AnimatedPressable onPress={handleReplay} style={simStyles.replayBtn} accessibilityRole="button" accessibilityLabel="שחק שוב" accessibilityHint="מתחיל את הסימולציה מחדש">
-                            <View accessible={false}><LottieIcon source={LOTTIE_REPLAY} size={20} /></View>
-                            <Text style={[simStyles.replayText, RTL]}>שחק שוב</Text>
-                        </AnimatedPressable>
-                        <AnimatedPressable onPress={() => onComplete?.()} style={simStyles.continueBtn} accessibilityRole="button" accessibilityLabel="בואו נמשיך" accessibilityHint="ממשיך לשלב הבא">
-                            <Text style={simStyles.continueText}>בואו נמשיך</Text>
-                            <View accessible={false}><LottieIcon source={LOTTIE_ARROW} size={20} /></View>
-                        </AnimatedPressable>
-                    </Animated.View>
+                  </ScrollView>
+
+                  {/* Sticky actions bar — always visible */}
+                  <View style={compoundSimStickyStyles.stickyActionsBar}>
+                    <AnimatedPressable onPress={handleReplay} style={simStyles.replayBtn} accessibilityRole="button" accessibilityLabel="שחק שוב" accessibilityHint="מתחיל את הסימולציה מחדש">
+                        <View accessible={false}><LottieIcon source={LOTTIE_REPLAY} size={20} /></View>
+                        <Text style={[simStyles.replayText, RTL]}>שחק שוב</Text>
+                    </AnimatedPressable>
+                    <AnimatedPressable onPress={() => onComplete?.()} style={simStyles.continueBtn} accessibilityRole="button" accessibilityLabel="המשך" accessibilityHint="ממשיך לשלב הבא">
+                        <Text style={simStyles.continueText}>המשך</Text>
+                        <View accessible={false}><LottieIcon source={LOTTIE_ARROW} size={20} /></View>
+                    </AnimatedPressable>
+                  </View>
                 </View>
             </SimLottieBackground>
         );
@@ -917,3 +922,25 @@ function StatRow({
         </View>
     );
 }
+
+const compoundSimStickyStyles = StyleSheet.create({
+    stickyActionsBar: {
+        position: 'absolute',
+        left: 0,
+        right: 0,
+        bottom: 0,
+        flexDirection: 'row',
+        gap: 10,
+        paddingHorizontal: 14,
+        paddingVertical: 12,
+        paddingBottom: 16,
+        backgroundColor: 'rgba(255,255,255,0.96)',
+        borderTopWidth: 1,
+        borderTopColor: 'rgba(14,165,233,0.25)',
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: -2 },
+        shadowOpacity: 0.08,
+        shadowRadius: 6,
+        elevation: 10,
+    },
+});

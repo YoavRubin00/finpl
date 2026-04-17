@@ -1,6 +1,6 @@
 /**
  * SIM 4-30: המרוץ נגד המדד (Index Race) — Module 4-30
- * Hook: pick 5 stocks → race 10 years vs S&P 500 → score comparison.
+ * Hook: pick 5 stocks → race 10 years vs ‎S&P‎ 500 → score comparison.
  */
 
 import { useState, useCallback, useMemo, useRef, useEffect } from 'react';
@@ -44,7 +44,7 @@ function computePortfolioValues(
   return values;
 }
 
-/** Compute S&P 500 index values from year 0 through yearCount. */
+/** Compute ‎S&P‎ 500 index values from year 0 through yearCount. */
 function computeIndexValues(yearCount: number): number[] {
   const values: number[] = [INITIAL_INVESTMENT];
   let balance = INITIAL_INVESTMENT;

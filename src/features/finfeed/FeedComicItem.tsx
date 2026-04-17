@@ -4,6 +4,8 @@ import Animated from "react-native-reanimated";
 import { useRouter } from "expo-router";
 import { CLASH } from "../../constants/theme";
 import { useChapterStore } from "../chapter-1-content/useChapterStore";
+import { useSoundEffect } from "../../hooks/useSoundEffect";
+import { tapHaptic } from "../../utils/haptics";
 import LottieView from "lottie-react-native";
 import type { FeedComic } from "./types";
 import { CHAPTER_CTA_COLORS } from "./types";
@@ -19,10 +21,13 @@ export const FeedComicItem = React.memo(function FeedComicItem({ item, isActive 
   const router = useRouter();
   const setCurrentChapter = useChapterStore((s) => s.setCurrentChapter);
   const setCurrentModule = useChapterStore((s) => s.setCurrentModule);
+  const { playSound } = useSoundEffect();
 
   const ctaColors = CHAPTER_CTA_COLORS[item.chapterId] ?? CHAPTER_CTA_COLORS["chapter-1"];
 
   function handleGoToLesson() {
+    tapHaptic();
+    playSound('btn_click_heavy');
     setCurrentChapter(item.storeChapterId);
     setCurrentModule(item.moduleIndex);
     router.push(`/lesson/${item.moduleId}?chapterId=${item.chapterId}`);

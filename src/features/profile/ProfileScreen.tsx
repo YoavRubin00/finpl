@@ -175,7 +175,7 @@ export function ProfileScreen() {
       <SafeAreaView style={{ flex: 1 }} edges={[]}>
         {/* Sticky close button — always visible */}
         <View style={styles.stickyCloseRow}>
-          <Pressable onPress={() => router.canGoBack() ? router.back() : router.replace('/(tabs)' as never)} style={[styles.closeBtn, { backgroundColor: isDark ? "rgba(255,255,255,0.12)" : "rgba(255,255,255,0.85)" }]} accessibilityRole="button" accessibilityLabel="סגור פרופיל" hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+          <Pressable onPress={() => router.replace('/(tabs)/' as never)} style={[styles.closeBtn, { backgroundColor: isDark ? "rgba(255,255,255,0.12)" : "rgba(255,255,255,0.85)" }]} accessibilityRole="button" accessibilityLabel="סגור פרופיל" hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
             <X size={20} color={theme.textMuted} />
           </Pressable>
         </View>

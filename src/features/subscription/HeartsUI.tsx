@@ -281,9 +281,12 @@ export function OutOfHeartsModal({ visible, onDismiss, onUpgrade, onHeartsRefill
                             accessibilityLabel={`תרגלו שיעור ישן וקבלו לב חינם — נותרו ${2 - practiceCountToday} היום`}
                             hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
                         >
-                            <Text style={styles.practiceRefillBtnText}>
-                                תרגלו שיעור ישן — קבלו לב (נותרו {2 - practiceCountToday} היום)
-                            </Text>
+                            <View style={{ flex: 1, alignItems: 'flex-end' }}>
+                                <Text style={styles.practiceRefillBtnText}>תרגלו שיעור ישן — קבלו לב</Text>
+                                <Text style={styles.practiceRefillBtnSubtext}>
+                                    נותרו {2 - practiceCountToday} היום
+                                </Text>
+                            </View>
                             <Text style={styles.btnIcon}>📚</Text>
                         </Pressable>
                     )}
@@ -532,6 +535,14 @@ const styles = StyleSheet.create({
         fontWeight: '800',
         color: '#082f49',
         writingDirection: 'rtl',
+    },
+    practiceRefillBtnSubtext: {
+        fontSize: 11,
+        fontWeight: '600',
+        color: '#082f49',
+        opacity: 0.7,
+        writingDirection: 'rtl',
+        marginTop: 2,
     },
     gemRefillBtn: {
         width: '100%',

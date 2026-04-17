@@ -86,7 +86,7 @@ function QuestPathNodeInner({
   const labelHe = state === "claimed"
     ? "הפרס נאסף"
     : state === "ready"
-      ? "פתח את התיבה!"
+      ? "פתחו את התיבה!"
       : "משימות יומיות";
 
   return (
@@ -143,9 +143,11 @@ function QuestPathNodeInner({
           </Animated.View>
         </Pressable>
 
-        <View style={styles.labelWrap}>
-          <Text style={[styles.labelText, { color: palette.text }]}>{labelHe}</Text>
-        </View>
+        {state !== 'claimed' && state !== 'ready' && (
+          <View style={styles.labelWrap}>
+            <Text style={[styles.labelText, { color: palette.text }]}>{labelHe}</Text>
+          </View>
+        )}
       </Animated.View>
 
       {/* Shark peek + speech — only when ready-to-claim */}
@@ -207,7 +209,7 @@ const styles = StyleSheet.create({
   dotsRow: {
     position: "absolute",
     bottom: 6,
-    flexDirection: "row",
+    flexDirection: "row-reverse",
     gap: 3,
   },
   dot: {

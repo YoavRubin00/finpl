@@ -1,5 +1,5 @@
-import React, { useEffect } from "react";
-import { Modal, StyleSheet, Pressable, Dimensions } from "react-native";
+import React, { useEffect, useRef } from "react";
+import { Modal, StyleSheet, Pressable, Dimensions, View } from "react-native";
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -8,6 +8,7 @@ import Animated, {
   runOnJS,
   interpolate,
   Extrapolation,
+  Easing,
 } from "react-native-reanimated";
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import { useAccessibleAnimation } from "../../hooks/useAccessibleAnimation";
@@ -23,21 +24,38 @@ const { height: SCREEN_HEIGHT } = Dimensions.get("window");
 export function SwipeableModal({ visible, onClose, children }: SwipeableModalProps) {
   const translateY = useSharedValue(SCREEN_HEIGHT);
   const { animDuration, shouldAnimate } = useAccessibleAnimation();
+  const closeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => () => {
+    if (closeTimerRef.current) clearTimeout(closeTimerRef.current);
+  }, []);
 
   useEffect(() => {
     if (visible) {
+      // Soft, gentle rise — no overshoot, no snap.
       translateY.value = shouldAnimate
-        ? withSpring(0, { damping: 20, stiffness: 200 })
+        ? withTiming(0, {
+            duration: animDuration(420),
+            easing: Easing.out(Easing.cubic),
+          })
         : 0;
     } else {
-      translateY.value = withTiming(SCREEN_HEIGHT, { duration: animDuration(300) });
+      translateY.value = withTiming(SCREEN_HEIGHT, {
+        duration: animDuration(280),
+        easing: Easing.in(Easing.cubic),
+      });
     }
   }, [visible]);
 
   const handleClose = () => {
-    const dur = animDuration(250);
-    translateY.value = withTiming(SCREEN_HEIGHT, { duration: dur });
-    setTimeout(() => {
+    const dur = animDuration(260);
+    translateY.value = withTiming(SCREEN_HEIGHT, {
+      duration: dur,
+      easing: Easing.in(Easing.cubic),
+    });
+    if (closeTimerRef.current) clearTimeout(closeTimerRef.current);
+    closeTimerRef.current = setTimeout(() => {
+      closeTimerRef.current = null;
       onClose();
     }, dur);
   };
@@ -52,7 +70,7 @@ export function SwipeableModal({ visible, onClose, children }: SwipeableModalPro
       if (e.translationY > 150 || e.velocityY > 1000) {
         runOnJS(handleClose)();
       } else {
-        translateY.value = withSpring(0, { damping: 20, stiffness: 200 });
+        translateY.value = withSpring(0, { damping: 24, stiffness: 140 });
       }
     });
 
@@ -80,11 +98,13 @@ export function SwipeableModal({ visible, onClose, children }: SwipeableModalPro
           accessibilityLabel="סגור חלון (או החלק מטה)"
         />
       </Animated.View>
-      <GestureDetector gesture={panGesture}>
-        <Animated.View style={[styles.contentContainer, animatedStyle]}>
-          {children}
-        </Animated.View>
-      </GestureDetector>
+      <View style={styles.contentContainer} pointerEvents="box-none">
+        <GestureDetector gesture={panGesture}>
+          <Animated.View style={animatedStyle}>
+            {children}
+          </Animated.View>
+        </GestureDetector>
+      </View>
     </Modal>
   );
 }

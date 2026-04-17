@@ -29,7 +29,8 @@ import Animated, {
 import { useAuthStore } from "../auth/useAuthStore";
 import { useChapterStore } from "../chapter-1-content/useChapterStore";
 import { useAdaptiveStore } from "../social/useAdaptiveStore";
-import { useSubscriptionStore } from "../subscription/useSubscriptionStore";
+import { useSubscriptionStore, BASIC_LIMITS } from "../subscription/useSubscriptionStore";
+import { useUpgradeModalStore } from "../../stores/useUpgradeModalStore";
 import { getConceptLabel } from "../social/LifelineModal";
 import { AnimatedPressable } from "../../components/ui/AnimatedPressable";
 import { COMPANION_PERSONALITIES, getContextualSuggestions, getContextAwareGreeting } from "./chatData";
@@ -460,6 +461,16 @@ export function ChatScreen() {
   const sendMessage = useCallback(async () => {
     const text = input.trim();
     if (!text || loading) return;
+
+    // Free-tier gate: cap user messages per session at BASIC_LIMITS.chat
+    const isProNow = useSubscriptionStore.getState().isPro();
+    if (!isProNow) {
+      const userMessagesSoFar = messages.filter((m) => m.role === "user").length;
+      if (userMessagesSoFar >= BASIC_LIMITS.chat) {
+        useUpgradeModalStore.getState().show("chat");
+        return;
+      }
+    }
 
     const userMessage: ChatMessage = {
       role: "user",
