@@ -4,6 +4,7 @@ import {
   BookOpen,
   MessageCircle,
   TrendingUp,
+  Users,
   type LucideIcon,
 } from "lucide-react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -46,6 +47,7 @@ const TABS: TabConfig[] = [
   { key: "index",       label: "למידה",   Icon: BookOpen },
   { key: "investments", label: "השקעות",  Icon: TrendingUp },
   { key: "learn",       label: "פיד",     Icon: Compass },
+  { key: "friends",     label: "חברים",   Icon: Users },
   { key: "chat",        label: "צ'אט",   Icon: MessageCircle },
 ];
 
@@ -54,6 +56,7 @@ const TAB_COLORS: Record<string, string> = {
   learn:       "#0ea5e9", // sky blue (feed)
   index:       "#0891b2", // cyan (learn)
   investments: "#1d4ed8", // blue
+  friends:     "#6366f1", // indigo — distinct but harmonizes with blues
   chat:        "#3b82f6", // blue
 };
 

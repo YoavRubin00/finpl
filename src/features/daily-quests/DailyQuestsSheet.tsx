@@ -76,11 +76,11 @@ function QuestButton({
     transform: [{ scale: 1 + glow.value * 0.03 }],
   }));
 
-  const haloColor = isDone ? "#22c55e" : "#38bdf8";
-  const depthColor = isDone ? "#166534" : "#0369a1";
-  const btnColor = isDone ? "#86efac" : "#0ea5e9";
-  const borderColor = isDone ? "#16a34a" : "#0284c7";
-  const textColor = isDone ? "#14532d" : "#ffffff";
+  const haloColor = isDone ? "#4ade80" : STITCH.primaryCyan;
+  const depthColor = isDone ? "#16a34a" : STITCH.surfaceVariant;
+  const btnColor = isDone ? "#dcfce7" : STITCH.surfaceLowest;
+  const borderColor = isDone ? "#4ade80" : STITCH.outlineVariant;
+  const textColor = isDone ? "#14532d" : STITCH.onSurface;
 
   return (
     <Animated.View
@@ -145,22 +145,26 @@ function QuestButton({
           })}
         >
           <Text
-            style={{
-              flex: 1,
-              fontSize: 18,
-              fontWeight: "900",
-              color: textColor,
-              writingDirection: "rtl",
-              textAlign: "right",
-              letterSpacing: 0.3,
-              textShadowColor: isDone ? "transparent" : "rgba(0,0,0,0.25)",
-              textShadowOffset: { width: 0, height: 1 },
-              textShadowRadius: 2,
-              lineHeight: 24,
-              includeFontPadding: false,
-              textDecorationLine: isDone ? "line-through" : "none",
-              textDecorationColor: "rgba(20,83,45,0.5)",
-            }}
+            style={Object.assign(
+              {
+                flex: 1,
+                fontSize: 18,
+                fontWeight: "900" as const,
+                color: textColor,
+                writingDirection: "rtl" as const,
+                textAlign: "right" as const,
+                letterSpacing: 0.3,
+                lineHeight: 24,
+                includeFontPadding: false,
+                zIndex: 10,
+                elevation: 10,
+              },
+              !isDone && {
+                textShadowColor: "rgba(0,0,0,0.08)",
+                textShadowOffset: { width: 0, height: 1 },
+                textShadowRadius: 2,
+              }
+            )}
             numberOfLines={2}
             allowFontScaling={false}
             selectable={false}
@@ -173,12 +177,14 @@ function QuestButton({
               width: 52,
               height: 52,
               borderRadius: 26,
-              backgroundColor: "#ffffff",
+              backgroundColor: isDone ? "#dcfce7" : STITCH.surfaceLow,
               borderWidth: 2,
               borderColor: borderColor,
               alignItems: "center",
               justifyContent: "center",
               flexShrink: 0,
+              zIndex: 10,
+              elevation: 10,
             }}
             accessible={false}
           >
@@ -332,7 +338,7 @@ export function DailyQuestsSheet({ visible, onClose }: DailyQuestsSheetProps) {
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose} accessibilityViewIsModal>
       <Pressable style={styles.overlay} onPress={onClose} accessibilityLabel="סגור משימות יומיות">
-        <Pressable style={styles.sheet} onPress={() => {}} accessible={false}>
+        <Pressable style={[styles.sheet, { paddingBottom: 24 + insets.bottom }]} onPress={() => {}} accessible={false}>
           {/* Handle */}
           <View style={styles.handle} accessible={false} />
 

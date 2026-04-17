@@ -1,13 +1,15 @@
 import { useState, useCallback } from 'react';
 import { View, Text, TextInput, Modal, Pressable, StyleSheet, KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
+import { Image as ExpoImage } from 'expo-image';
 import Animated, { FadeInUp } from 'react-native-reanimated';
 import { Info } from 'lucide-react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { CALM } from '../../constants/theme';
 import { useEconomyStore } from '../economy/useEconomyStore';
-import { useModifiersStore } from '../economy/useModifiersStore';
 import { useTradingStore } from './useTradingStore';
 import { ASSET_BY_ID } from './tradingHubData';
 import { StockIcon } from './StockIcon';
+import { FINN_STANDARD } from '../retention-loops/finnMascotConfig';
 import { tapHaptic, successHaptic } from '../../utils/haptics';
 import { LiquidButton } from '../../components/ui/LiquidButton';
 
@@ -31,27 +33,27 @@ interface BuySheetProps {
     visible: boolean;
     assetId: string;
     currentPrice: number;
+    /** Yesterday's closing price from market data — null when unavailable. */
+    previousClose: number | null;
     onClose: () => void;
     onBuyComplete: () => void;
 }
 
-export function BuySheet({ visible, assetId, currentPrice, onClose, onBuyComplete }: BuySheetProps) {
+export function BuySheet({ visible, assetId, currentPrice, previousClose, onClose, onBuyComplete }: BuySheetProps) {
     const coins = useEconomyStore((s) => s.coins);
     const spendCoins = useEconomyStore((s) => s.spendCoins);
     const openPosition = useTradingStore((s) => s.openPosition);
+    const insets = useSafeAreaInsets();
 
     const [amountText, setAmountText] = useState('');
     const [orderType, setOrderType] = useState<OrderType>('market');
     const [limitPriceText, setLimitPriceText] = useState('');
     const [feedback, setFeedback] = useState<string | null>(null);
 
-    const discount = useModifiersStore((s) => s.getActiveModifierValue('stock_boost'));
-    const discountedPrice = currentPrice * (1 - discount);
-
     const asset = ASSET_BY_ID.get(assetId);
     const amount = parseInt(amountText, 10) || 0;
     const limitPrice = parseFloat(limitPriceText) || 0;
-    const canBuy = amount > 0 && amount <= coins && discountedPrice > 0
+    const canBuy = amount > 0 && amount <= coins && currentPrice > 0
         && (orderType === 'market' || limitPrice > 0);
 
     const handleBuy = useCallback(() => {
@@ -65,7 +67,7 @@ export function BuySheet({ visible, assetId, currentPrice, onClose, onBuyComplet
             return;
         }
 
-        const execPrice = orderType === 'market' ? discountedPrice : limitPrice;
+        const execPrice = orderType === 'market' ? currentPrice : limitPrice;
         openPosition(assetId, 'buy', execPrice, amount);
         successHaptic();
 
@@ -79,7 +81,7 @@ export function BuySheet({ visible, assetId, currentPrice, onClose, onBuyComplet
             onBuyComplete();
             onClose();
         }, 1500);
-    }, [canBuy, amount, assetId, discountedPrice, limitPrice, orderType, spendCoins, openPosition, asset, onBuyComplete, onClose]);
+    }, [canBuy, amount, assetId, currentPrice, limitPrice, orderType, spendCoins, openPosition, asset, onBuyComplete, onClose]);
 
     const handleClose = useCallback(() => {
         setAmountText('');
@@ -96,7 +98,13 @@ export function BuySheet({ visible, assetId, currentPrice, onClose, onBuyComplet
                 style={{ flex: 1 }}
             >
                 <Pressable style={styles.backdrop} onPress={handleClose}>
-                    <Pressable style={styles.sheet} onPress={() => {}}>
+                    <Pressable
+                        style={[
+                            styles.sheet,
+                            { paddingBottom: Math.max(insets.bottom + 12, 24) },
+                        ]}
+                        onPress={() => {}}
+                    >
                         <ScrollView showsVerticalScrollIndicator={false} bounces={true} style={{ flexShrink: 1 }} contentContainerStyle={{ paddingBottom: 24, flexGrow: 1 }}>
                         <Animated.View entering={FadeInUp.duration(300)}>
                             {/* Handle bar */}
@@ -106,21 +114,46 @@ export function BuySheet({ visible, assetId, currentPrice, onClose, onBuyComplet
                             <View style={styles.assetRow}>
                                 <StockIcon assetId={assetId} size={40} />
                                 <View style={{ alignItems: 'flex-end', flex: 1 }}>
-                                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                                        {discount > 0 && (
-                                            <Text style={[styles.assetPrice, { textDecorationLine: 'line-through', color: '#ef4444', fontSize: 13 }]}>
-                                                ${currentPrice.toFixed(2)}
-                                            </Text>
-                                        )}
-                                        <Text style={[RTL, styles.assetName]}>
-                                            {asset?.name ?? assetId}
-                                        </Text>
-                                    </View>
+                                    <Text style={[RTL, styles.assetName]}>
+                                        {asset?.name ?? assetId}
+                                    </Text>
                                     <Text style={styles.assetPrice}>
-                                        ${discountedPrice > 0 ? discountedPrice.toFixed(2) : '—'}
+                                        ${currentPrice > 0 ? currentPrice.toFixed(2) : '—'}
                                     </Text>
                                 </View>
                             </View>
+
+                            {/* Captain Shark — yesterday's close */}
+                            {previousClose !== null && previousClose > 0 && currentPrice > 0 && (() => {
+                                const delta = currentPrice - previousClose;
+                                const deltaPct = (delta / previousClose) * 100;
+                                const rising = delta >= 0;
+                                const arrow = rising ? '▲' : '▼';
+                                const deltaColor = rising ? '#16a34a' : '#dc2626';
+                                const directionWord = rising ? 'עלה' : 'ירד';
+                                return (
+                                    <View
+                                        style={styles.sharkBubble}
+                                        accessibilityRole="text"
+                                        accessibilityLabel={`קפטן שארק: מחיר סגירה אחרון ${previousClose.toFixed(2)} דולר. מאז ${directionWord} ב-${Math.abs(deltaPct).toFixed(2)} אחוזים`}
+                                    >
+                                        <ExpoImage
+                                            source={FINN_STANDARD}
+                                            style={styles.sharkAvatar}
+                                            contentFit="contain"
+                                        />
+                                        <View style={{ flex: 1 }}>
+                                            <Text style={styles.sharkLabel}>קפטן שארק</Text>
+                                            <Text style={styles.sharkText}>
+                                                מחיר סגירה אחרון: ${previousClose.toFixed(2)}
+                                            </Text>
+                                            <Text style={[styles.sharkDelta, { color: deltaColor }]}>
+                                                {arrow} {rising ? '+' : ''}{delta.toFixed(2)} ({rising ? '+' : ''}{deltaPct.toFixed(2)}%)
+                                            </Text>
+                                        </View>
+                                    </View>
+                                );
+                            })()}
 
                             {/* Order type selector */}
                             <View style={styles.orderTypeSection}>
@@ -156,7 +189,7 @@ export function BuySheet({ visible, assetId, currentPrice, onClose, onBuyComplet
                                         style={styles.input}
                                         value={limitPriceText}
                                         onChangeText={setLimitPriceText}
-                                        placeholder={`מחיר מקסימלי (נוכחי: $${discountedPrice.toFixed(2)})`}
+                                        placeholder={`מחיר מקסימלי (נוכחי: $${currentPrice.toFixed(2)})`}
                                         placeholderTextColor={CALM.textTertiary}
                                         keyboardType="decimal-pad"
                                         textAlign="center"
@@ -265,13 +298,53 @@ const styles = StyleSheet.create({
         borderTopLeftRadius: 40,
         borderTopRightRadius: 40,
         padding: 28,
-        paddingBottom: Platform.OS === 'ios' ? 44 : 24,
+        // paddingBottom is applied inline using safe-area insets so the buy button
+        // and disclaimer remain above the system gesture/nav bar on every device.
         maxHeight: '90%',
         shadowColor: '#0ea5e9',
         shadowOffset: { width: 0, height: -4 },
         shadowOpacity: 0.15,
         shadowRadius: 16,
         elevation: 20,
+    },
+    sharkBubble: {
+        flexDirection: 'row-reverse',
+        alignItems: 'center',
+        gap: 12,
+        backgroundColor: '#ecfeff',
+        borderRadius: 16,
+        borderWidth: 1.5,
+        borderColor: '#a5f3fc',
+        padding: 12,
+        marginBottom: 18,
+    },
+    sharkAvatar: {
+        width: 44,
+        height: 44,
+        borderRadius: 22,
+    },
+    sharkLabel: {
+        fontSize: 11,
+        fontWeight: '800',
+        color: '#0e7490',
+        textAlign: 'right',
+        writingDirection: 'rtl',
+        marginBottom: 2,
+    },
+    sharkText: {
+        fontSize: 14,
+        fontWeight: '800',
+        color: '#0f172a',
+        textAlign: 'right',
+        writingDirection: 'rtl',
+    },
+    sharkDelta: {
+        fontSize: 12,
+        fontWeight: '800',
+        textAlign: 'right',
+        writingDirection: 'rtl',
+        marginTop: 2,
+        fontVariant: ['tabular-nums'],
     },
     handleBar: {
         width: 48,

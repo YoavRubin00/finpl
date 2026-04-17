@@ -24,7 +24,7 @@ import { tapHaptic } from '../../utils/haptics';
 import { AssetInfoSheet } from './AssetInfoSheet';
 import { LiveChart } from './LiveChart';
 import { BuySheet } from './BuySheet';
-import { fetchChartData, fetchLatestPrice, clearCache, isDataLive } from './marketApiService';
+import { fetchChartData, fetchLatestPrice, fetchPreviousClose, clearCache, isDataLive } from './marketApiService';
 import { Timeframe, ChartDataPoint, VolatilityRating } from './tradingHubTypes';
 import { useTradingStore } from './useTradingStore';
 import { useTutorialStore } from '../../stores/useTutorialStore';
@@ -64,6 +64,7 @@ export default function TradingHubScreen() {
     const [chartData, setChartData] = useState<ChartDataPoint[]>([]);
     const [chartLoading, setChartLoading] = useState(true);
     const [currentPrice, setCurrentPrice] = useState(0);
+    const [previousClose, setPreviousClose] = useState<number | null>(null);
     const [isLive, setIsLive] = useState(true);
     const scrollRef = useRef<ScrollView>(null);
 
@@ -77,12 +78,14 @@ export default function TradingHubScreen() {
 
     const loadChart = useCallback(async (assetId: string, tf: Timeframe) => {
         setChartLoading(true);
-        const [data, price] = await Promise.all([
+        const [data, price, prevClose] = await Promise.all([
             fetchChartData(assetId, tf),
             fetchLatestPrice(assetId),
+            fetchPreviousClose(assetId),
         ]);
         setChartData(data);
         setCurrentPrice(price);
+        setPreviousClose(prevClose);
         setIsLive(isDataLive());
         setChartLoading(false);
     }, []);
@@ -301,6 +304,7 @@ export default function TradingHubScreen() {
                 visible={buySheetVisible}
                 assetId={selectedId}
                 currentPrice={currentPrice}
+                previousClose={previousClose}
                 onClose={() => setBuySheetVisible(false)}
                 onBuyComplete={() => {}}
             />

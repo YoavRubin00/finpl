@@ -32,10 +32,10 @@ export function FeedStartButton({ label, onPress, accessibilityLabel, disabled =
         <View
           style={{
             position: 'absolute',
-            top: 5,
+            top: 6,
             left: 0,
             right: 0,
-            bottom: -5,
+            bottom: -6,
             borderRadius: 16,
             backgroundColor: disabled ? '#64748b' : '#0369a1',
             opacity: disabled ? 0.5 : 1,
@@ -54,24 +54,28 @@ export function FeedStartButton({ label, onPress, accessibilityLabel, disabled =
             alignSelf: 'stretch',
             alignItems: 'center',
             justifyContent: 'center',
-            gap: 8,
+            gap: 12,
             borderRadius: 16,
             backgroundColor: disabled ? '#94a3b8' : '#0ea5e9',
-            paddingHorizontal: 40,
+            paddingHorizontal: 24,
             paddingVertical: 16,
             shadowColor: '#0284c7',
-            shadowOpacity: 0.5,
-            shadowRadius: 14,
+            shadowOpacity: 0.55,
+            shadowRadius: 18,
             shadowOffset: { width: 0, height: 4 },
             elevation: 10,
             transform: pressed && !disabled ? [{ translateY: 2 }] : [],
             opacity: disabled ? 0.75 : 1,
           })}
         >
-          <View style={{ width: 24, height: 24, overflow: 'hidden' }} accessible={false}>
+          <View
+            style={{ width: 28, height: 28, alignItems: 'center', justifyContent: 'center' }}
+            accessible={false}
+          >
             <LottieView
               source={LOTTIE_ROCKET}
-              style={{ width: 24, height: 24 }}
+              style={{ width: 28, height: 28 }}
+              resizeMode="contain"
               autoPlay={!reduceMotion}
               loop={!reduceMotion}
             />
@@ -81,6 +85,8 @@ export function FeedStartButton({ label, onPress, accessibilityLabel, disabled =
               fontSize: 18,
               fontWeight: '900',
               color: '#ffffff',
+              lineHeight: 22,
+              includeFontPadding: false,
             }]}
             numberOfLines={1}
             allowFontScaling={false}

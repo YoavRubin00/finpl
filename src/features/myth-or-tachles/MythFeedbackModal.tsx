@@ -22,7 +22,6 @@ interface Props {
 
 const MODIFIER_LABELS: Record<ModifierType, string> = {
     real_estate_discount: 'הנחה 10% בנדל״ן ל-24 שעות!',
-    stock_boost: 'בונוס 10% במניות ל-24 שעות!',
     salary_boost: 'תוספת משכורת 10% ל-24 שעות!',
 };
 

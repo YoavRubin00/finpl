@@ -89,7 +89,7 @@ export const MythFeedCard = React.memo(function MythFeedCard({ isInterModule, on
 
                 // 20% chance to win a 24-hr modifier!
                 if (Math.random() < 0.20) {
-                    const types: ModifierType[] = ['real_estate_discount', 'stock_boost', 'salary_boost'];
+                    const types: ModifierType[] = ['real_estate_discount', 'salary_boost'];
                     const mod = types[Math.floor(Math.random() * types.length)];
                     addModifier(mod, 0.1, 24); // 10% for 24 hours
                     setModifierWon(mod);

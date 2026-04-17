@@ -122,8 +122,9 @@ function CandlestickChart({ candles, volumeData }: { candles: CandleData[]; volu
           const wickTop = priceToY(c.high);
           const wickBottom = priceToY(c.low);
           const wickHeight = wickBottom - wickTop;
-          const xPos = (totalCandles - 1 - i) * candleWidth + (candleWidth - bodyWidth) / 2;
-          const wickX = (totalCandles - 1 - i) * candleWidth + candleWidth / 2 - wickWidth / 2;
+          // Chronological axis: earliest candle at left, most recent at right.
+          const xPos = i * candleWidth + (candleWidth - bodyWidth) / 2;
+          const wickX = i * candleWidth + candleWidth / 2 - wickWidth / 2;
 
           return (
             <View key={i}>
@@ -165,7 +166,7 @@ function CandlestickChart({ candles, volumeData }: { candles: CandleData[]; volu
               key={i}
               style={{
                 position: 'absolute',
-                left: (totalCandles - 1 - i) * candleWidth + (candleWidth - bodyWidth) / 2,
+                left: i * candleWidth + (candleWidth - bodyWidth) / 2,
                 bottom: 0,
                 width: bodyWidth,
                 height: Math.max(barHeight, 1),
@@ -588,7 +589,7 @@ export function ChartReaderScreen({ onComplete }: ChartReaderScreenProps) {
                 <Text style={[styles.nextBtnText, { writingDirection: 'rtl' }]}>
                   {state.currentRoundIndex < TOTAL_ROUNDS - 1 ? 'לגרף הבא' : 'לתוצאות'}
                 </Text>
-                <View style={{ position: 'absolute', left: 16 }} accessible={false}>
+                <View style={{ position: 'absolute', left: 16, top: 0, bottom: 0, justifyContent: 'center' }} accessible={false}>
                   <LottieIcon source={LOTTIE_ARROW} size={22} />
                 </View>
               </AnimatedPressable>

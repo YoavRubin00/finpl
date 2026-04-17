@@ -9,6 +9,7 @@ export interface Flashcard {
   finnTipMood?: 'standard' | 'empathic' | 'happy'; // Controls which mascot expression is shown in the finnTip popup (default: standard)
   isMeme?: boolean; // If true, renders as a meme break card (no XP/progress)
   memeImage?: ImageSourcePropType; // The meme image (local require or uri)
+  topAudio?: { uri: string }; // Optional Captain Shark audio for the main text
   videoUri?: string; // If set, renders as a full-screen video flashcard
   diveMode?: boolean; // If true, renders as a single image with zoom steps
   hideTextOnDive?: boolean; // If true, the main text disappears when diveMode advances to step > 0

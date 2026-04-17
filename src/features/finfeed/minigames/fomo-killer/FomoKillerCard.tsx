@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { View, Text, ScrollView, StyleSheet, AccessibilityInfo } from 'react-native';
+import { View, Text, ScrollView, StyleSheet, AccessibilityInfo, Pressable } from 'react-native';
 import { Image as ExpoImage } from 'expo-image';
 import Animated, { FadeIn, FadeInUp } from 'react-native-reanimated';
 import { TrendingUp, Users, AlertCircle } from 'lucide-react-native';
@@ -13,7 +13,8 @@ import {
   MAX_DAILY_PLAYS,
 } from '../../../daily-challenges/daily-challenge-types';
 import { FeedStartButton } from '../shared/FeedStartButton';
-import { BookOpen } from 'lucide-react-native';
+import { BookOpen, ChevronDown, ChevronUp } from 'lucide-react-native';
+import { tapHaptic } from '../../../../utils/haptics';
 
 import { FOMO_TOKENS, FOMO_MOTION } from './theme';
 import { ChatBubble } from './ChatBubble';
@@ -268,6 +269,7 @@ function IntroScreen({
   remainingPlays: number;
   onStart: () => void;
 }) {
+  const [pumpOpen, setPumpOpen] = useState(false);
   return (
     <View style={styles.container}>
       <View style={styles.introShell}>
@@ -289,15 +291,37 @@ function IntroScreen({
           </Text>
 
           <View style={styles.pumpCard}>
-            <View style={styles.pumpHeader}>
+            {pumpOpen && (
+              <Animated.View
+                entering={FadeInUp.duration(260)}
+                style={styles.pumpBodyUp}
+              >
+                <Text style={[styles.pumpBodyText, RTL]} allowFontScaling={false}>
+                  תרמית: קבוצה קונה נכס זול, יוצרת הייפ מזויף כדי לנפח את המחיר, מוכרת ברווח, ומשאירה את הקטנים עם נכס חסר ערך.
+                </Text>
+              </Animated.View>
+            )}
+            <Pressable
+              onPress={() => {
+                tapHaptic();
+                setPumpOpen((v) => !v);
+              }}
+              accessibilityRole="button"
+              accessibilityLabel={`${pumpOpen ? 'סגור' : 'פתח'} הסבר: Pump & Dump`}
+              accessibilityState={{ expanded: pumpOpen }}
+              hitSlop={12}
+              style={styles.pumpHeader}
+            >
               <BookOpen size={14} color="#0891b2" strokeWidth={2.5} />
               <Text style={[styles.pumpTitle, RTL]} allowFontScaling={false}>
                 מה זה Pump & Dump?
               </Text>
-            </View>
-            <Text style={[styles.pumpBody, RTL]} allowFontScaling={false}>
-              תרמית: קבוצה קונה נכס זול, יוצרת הייפ מזויף כדי לנפח את המחיר, מוכרת ברווח, ומשאירה את הקטנים עם נכס חסר ערך.
-            </Text>
+              {pumpOpen ? (
+                <ChevronDown size={16} color="#0891b2" strokeWidth={3} />
+              ) : (
+                <ChevronUp size={16} color="#0891b2" strokeWidth={3} />
+              )}
+            </Pressable>
           </View>
 
           <FeedStartButton
@@ -442,28 +466,38 @@ const styles = StyleSheet.create({
     fontWeight: '800',
   },
 
-  // Inline pump-and-dump explainer card — always visible, softer than a toggle button
+  // Pump-and-dump toggle — body slides up (reveal appears above the header).
   pumpCard: {
-    backgroundColor: 'rgba(224,242,254,0.7)',
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: 'rgba(14,165,233,0.25)',
-    paddingVertical: 12,
-    paddingHorizontal: 14,
-    gap: 6,
+    position: 'relative',
   },
   pumpHeader: {
     flexDirection: 'row-reverse',
     alignItems: 'center',
-    gap: 6,
+    gap: 8,
+    backgroundColor: 'rgba(224,242,254,0.85)',
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: 'rgba(14,165,233,0.3)',
+    paddingVertical: 12,
+    paddingHorizontal: 14,
   },
   pumpTitle: {
+    flex: 1,
     fontSize: 13,
     fontWeight: '900',
     color: '#0891b2',
     letterSpacing: 0.3,
   },
-  pumpBody: {
+  pumpBodyUp: {
+    marginBottom: 8,
+    backgroundColor: '#f0f9ff',
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: 'rgba(14,165,233,0.3)',
+    paddingVertical: 12,
+    paddingHorizontal: 14,
+  },
+  pumpBodyText: {
     fontSize: 13,
     lineHeight: 20,
     color: '#1e293b',

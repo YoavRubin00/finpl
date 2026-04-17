@@ -203,19 +203,19 @@ export const HIGHER_LOWER_SCENARIOS: HigherLowerScenario[] = [
   {
     id: 'hl-gemel-vs-savings',
     category: 'tax-shelter',
-    question: '76K ₪ בשנה, 20 שנה. איפה הכי יעיל לשים?',
+    question: '20 שנות חיסכון — איפה יותר משתלם?',
     durationYears: 20,
     leftSide: {
       title: 'חיסכון בבנק',
-      subtitle: '3% נומינלי, 15-25% מס על רווחים',
+      subtitle: '3% נומינלי · ממוסה',
       gradient: SCAM_GRAD,
       textColor: '#ffffff',
       finalValue: 2060000,
       finalValueLabel: '₪ נטו',
     },
     rightSide: {
-      title: 'קופת גמל להשקעה, מסלול מנייתי',
-      subtitle: '7% ריאלי, פטור ממס בגיל 60',
+      title: 'קופת גמל להשקעה מנייתי',
+      subtitle: '7% ריאלי · פטור בגיל 60',
       gradient: GOLD_GRAD,
       textColor: '#0f1e4a',
       finalValue: 3320000,

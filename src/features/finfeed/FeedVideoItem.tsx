@@ -40,21 +40,16 @@ export const FeedVideoItem = React.memo(function FeedVideoItem({ item, isActive 
     ? item.localVideo.uri
     : "";
 
-  // Create player — only when we have a valid URI
-  let player: ReturnType<typeof useVideoPlayer> | null = null;
-  try {
-    // eslint-disable-next-line react-hooks/rules-of-hooks
-    player = useVideoPlayer(videoUri || "https://invalid", (p) => {
-      p.loop = true;
-      if (isActive && videoUri) p.play();
-    });
-  } catch {
-    // Player creation failed — show fallback
-  }
+  // Create player unconditionally to respect Rules of Hooks.
+  // If URI is missing/invalid, errors surface through the statusChange listener → setHasError(true).
+  const player = useVideoPlayer(videoUri || "about:blank", (p) => {
+    p.loop = true;
+    if (isActive && videoUri) p.play();
+  });
 
   // Play/pause based on feed visibility
   useEffect(() => {
-    if (!player || !videoUri) return;
+    if (!videoUri) return;
     if (isActive) {
       player.play();
     } else {
@@ -64,13 +59,13 @@ export const FeedVideoItem = React.memo(function FeedVideoItem({ item, isActive 
 
   // Mute control
   useEffect(() => {
-    if (!player) return;
+    if (!videoUri) return;
     player.muted = isMuted;
   }, [isMuted, player]);
 
   // Listen for status changes
   useEffect(() => {
-    if (!player || !videoUri) return;
+    if (!videoUri) return;
     const subs: { remove: () => void }[] = [];
 
     subs.push(player.addListener("statusChange", (e: { status: string; error?: unknown }) => {
@@ -102,8 +97,20 @@ export const FeedVideoItem = React.memo(function FeedVideoItem({ item, isActive 
     }
   }
 
+  // Short tap → toggle mute. Long press → toggle pause.
   function handleTap() {
-    if (!player || hasError) return;
+    if (hasError) return;
+    // If the video is paused, a tap resumes playback (intuitive fallback).
+    if (isPaused) {
+      player.play();
+      setIsPaused(false);
+      return;
+    }
+    setIsMuted((m) => !m);
+  }
+
+  function handleLongPress() {
+    if (hasError) return;
     if (isPaused) {
       player.play();
       setIsPaused(false);
@@ -131,11 +138,18 @@ export const FeedVideoItem = React.memo(function FeedVideoItem({ item, isActive 
 
   return (
     <View style={styles.container}>
-      {/* Video player — full screen */}
-      <Pressable style={{ flex: 1 }} onPress={handleTap}>
+      {/* Video player — full screen. Tap toggles sound, long-press pauses. */}
+      <Pressable
+        style={{ flex: 1 }}
+        onPress={handleTap}
+        onLongPress={handleLongPress}
+        delayLongPress={350}
+        accessibilityRole="button"
+        accessibilityLabel={isMuted ? "הפעל צליל. לחיצה ארוכה להשהיה" : "השתק. לחיצה ארוכה להשהיה"}
+      >
         <VideoView
           ref={videoRef}
-          player={player!}
+          player={player}
           style={StyleSheet.absoluteFillObject}
           contentFit="cover"
           nativeControls={false}
@@ -169,19 +183,13 @@ export const FeedVideoItem = React.memo(function FeedVideoItem({ item, isActive 
         <Bookmark size={22} color={isBookmarked ? "#facc15" : "#fff"} fill={isBookmarked ? "#facc15" : "transparent"} />
       </Pressable>
 
-      {/* Mute toggle */}
-      <Pressable
-        onPress={() => setIsMuted((m) => !m)}
-        style={styles.muteButton}
-        accessibilityRole="button"
-        accessibilityLabel={isMuted ? "הפעל צליל" : "השתק"}
-        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-      >
+      {/* Mute status indicator — non-interactive hint. Tapping the video itself toggles sound. */}
+      <View style={styles.muteIndicator} pointerEvents="none">
         {isMuted
-          ? <VolumeX size={20} color="#fff" />
-          : <Volume2 size={20} color="#fff" />
+          ? <VolumeX size={18} color="rgba(255,255,255,0.85)" />
+          : <Volume2 size={18} color="rgba(255,255,255,0.85)" />
         }
-      </Pressable>
+      </View>
 
       {/* Bottom title (only if title exists) */}
       {item.title ? (
@@ -277,6 +285,18 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     width: 40,
     height: 40,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  muteIndicator: {
+    position: "absolute",
+    top: 56,
+    right: 16,
+    zIndex: 10,
+    backgroundColor: "rgba(0,0,0,0.35)",
+    borderRadius: 16,
+    width: 32,
+    height: 32,
     alignItems: "center",
     justifyContent: "center",
   },

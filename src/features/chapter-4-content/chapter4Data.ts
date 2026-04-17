@@ -1708,6 +1708,7 @@ flashcards: [{
         },
         {
           id: 'fc-4-b1-2',
+          topAudio: { uri: 'https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/audios/flashcards/fc-4-b1-2-top-PP1Rj72v6C4KX6ciakap5UFujB2JGb.mp3' },
           text: 'הקריטריונים של גראהם (חלק א): (1) גודל מספק — שווי שוק מעל מיליארד, חברות גדולות שלא ייעלמו מחר. (2) מצב פיננסי חזק — יחס שוטף מעל 2, כלומר יש לה מספיק כסף לכסות חובות. (3) יציבות רווחים — רווחית לפחות 10 שנים ברצף. (4) רצף [[דיבידנד|דיבידנדים]] — מחלקת דיבידנד כבר 20+ שנה בלי להפסיק.',
           diveMode: true,
           hideTextOnDive: true,
@@ -1723,6 +1724,7 @@ flashcards: [{
         },
         {
           id: 'fc-4-b1-2b',
+          topAudio: { uri: 'https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/audios/flashcards/fc-4-b1-2b-top-02M3V6Y6Pqa0u0cgHY8FkkQTfbbHLS.mp3' },
           text: 'הקריטריונים של גראהם (חלק ב): (5) צמיחה ברווחים — עלייה של 33% לפחות ברווח תוך 10 שנים. (6) [[מכפיל רווח]] נמוך — מתחת ל-15, כלומר לא משלמים פרמיה גבוהה מדי. (7) מכפלת גראהם — מכפיל רווח כפול מכפיל הון (P/B) מתחת ל-22.5. אם כל 7 הקריטריונים מתקיימים, גראהם היה אומר: "שווה להשקיע".',
           diveMode: true,
           hideTextOnDive: true,

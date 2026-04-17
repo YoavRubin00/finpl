@@ -56,6 +56,9 @@ import { DilemmaCard } from "../daily-challenges/DilemmaCard";
 import { SharkFeedbackCard } from "./SharkFeedbackCard";
 import { FeedSimulatorCard } from "./FeedSimulatorCard";
 import { FEED_SIMULATORS } from "./feedSimulatorsData";
+import { SharkFeedbackChatModal } from "./SharkFeedbackChatModal";
+
+const SHARK_FEEDBACK_KEY = "shark_feedback_last_time";
 import { InvestmentCard } from "../daily-challenges/InvestmentCard";
 import { SwipeGameCard } from "../daily-challenges/SwipeGameCard";
 import { CrashGameCard } from "../daily-challenges/CrashGameCard";
@@ -65,6 +68,7 @@ import { BudgetNinjaCard } from "./minigames/budget-ninja/BudgetNinjaCard";
 import { PriceSliderCard } from "./minigames/price-slider/PriceSliderCard";
 import { CashoutRushCard } from "./minigames/cashout-rush/CashoutRushCard";
 import { FomoKillerCard } from "./minigames/fomo-killer/FomoKillerCard";
+import { DidYouKnowCard } from "./did-you-know/DidYouKnowCard";
 import { GrahamPersonalityFeedCard } from "../graham-personality/GrahamPersonalityFeedCard";
 import { DiamondHandsCard } from "../diamond-hands";
 import { useStreakCelebration } from "../../hooks/useStreakCelebration";
@@ -556,8 +560,11 @@ export function FinFeedScreen() {
   const [listHeight, setListHeight] = useState<number>(0);
   const [activeItemIndex, setActiveItemIndex] = useState(-1);
   const [feedSeed, setFeedSeed] = useState(() => Math.floor(Math.random() * 0x7fffffff));
+  // Re-shuffle simulator teasers each time the feed is focused (fresh 4 sims per entry)
+  const [simSeed, setSimSeed] = useState(() => Math.floor(Math.random() * 0x7fffffff));
   const { showStreakCelebration } = useStreakCelebration();
   const streakTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [showSharkFeedback, setShowSharkFeedback] = useState(false);
   const flatListRef = useRef<FlashListRef<FeedItem>>(null);
   useScrollToTop(flatListRef);
 
@@ -612,6 +619,9 @@ export function FinFeedScreen() {
   // Show streak popup on focus — but DON'T reshuffle feed (preserves scroll position)
   useFocusEffect(
     useCallback(() => {
+      // Fresh simulator picks on every focus — main feed order stays stable (scroll position preserved)
+      setSimSeed(Math.floor(Math.random() * 0x7fffffff));
+
       // Consume pending scroll (e.g. from daily challenge completion)
       if (_pendingFeedScrollIndex !== null && listHeight > 0) {
         const idx = _pendingFeedScrollIndex;
@@ -634,6 +644,24 @@ export function FinFeedScreen() {
           }
         });
       }
+
+      // Shark feedback popup every 48 hours for anyone playing.
+      // Guard against double-open: if the modal is already showing (e.g. from a rapid
+      // re-focus), skip — don't re-stamp the AsyncStorage key or re-schedule.
+      if (useTutorialStore.getState().hasSeenAppWalkthrough && !showSharkFeedback) {
+        AsyncStorage.getItem(SHARK_FEEDBACK_KEY).then((lastTimeStr) => {
+          const lastTime = lastTimeStr ? parseInt(lastTimeStr, 10) : 0;
+          const now = Date.now();
+          const FORTY_EIGHT_HOURS = 48 * 60 * 60 * 1000;
+
+          if (now - lastTime > FORTY_EIGHT_HOURS) {
+            AsyncStorage.setItem(SHARK_FEEDBACK_KEY, now.toString());
+            // Delay slightly more than streak popup (if any) or just delay naturally
+            setTimeout(() => setShowSharkFeedback(true), 3500);
+          }
+        });
+      }
+
       return () => {
         if (streakTimerRef.current) clearTimeout(streakTimerRef.current);
       };
@@ -728,10 +756,11 @@ export function FinFeedScreen() {
       { id: 'price-slider', type: 'price-slider' as const },
       { id: 'cashout-rush', type: 'cashout-rush' as const },
       { id: 'fomo-killer', type: 'fomo-killer' as const },
+      { id: 'did-you-know', type: 'did-you-know' as const },
       { id: 'graham-personality', type: 'graham-personality' } as const,
       { id: 'diamond-hands', type: 'diamond-hands' as const },
       { id: 'shark-feedback', type: 'shark-feedback' as const },
-      ...seededShuffle([...FEED_SIMULATORS], feedSeed + 7)
+      ...seededShuffle([...FEED_SIMULATORS], simSeed)
         .slice(0, 4)
         .map((sim) => ({
           id: sim.id,
@@ -819,7 +848,7 @@ export function FinFeedScreen() {
     }
 
     return filteredMerged;
-  }, [feedSeed, progress, aiProfile, completedScenarios]);
+  }, [feedSeed, simSeed, progress, aiProfile, completedScenarios]);
 
   // Use viewAreaCoveragePercentThreshold so only the item covering the majority
   // of the viewport is "active" — prevents the previous item's video from playing
@@ -906,6 +935,9 @@ export function FinFeedScreen() {
         {item.type === "fomo-killer" && (
           <FomoKillerCard isActive={isActive} />
         )}
+        {item.type === "did-you-know" && (
+          <DidYouKnowCard isActive={isActive} itemId={item.itemId} />
+        )}
         {item.type === "graham-personality" && (
           <GrahamPersonalityFeedCard isActive={isActive} />
         )}
@@ -950,6 +982,7 @@ export function FinFeedScreen() {
 
 
       {useTutorialStore.getState().hasSeenAppWalkthrough && <NotificationPermissionBanner />}
+      <SharkFeedbackChatModal visible={showSharkFeedback} onClose={() => setShowSharkFeedback(false)} />
     </View>
   );
 }

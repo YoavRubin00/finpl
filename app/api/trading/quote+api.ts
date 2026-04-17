@@ -50,6 +50,7 @@ interface QuoteResponse {
   ticker: string;
   timeframe: Timeframe;
   price: number;
+  previousClose: number | null;
   chart: ChartPoint[];
 }
 
@@ -194,6 +195,9 @@ export async function GET(request: Request): Promise<Response> {
     }
 
     const currentPrice: number = result.meta.regularMarketPrice;
+    const rawPrevClose = result.meta.previousClose ?? result.meta.chartPreviousClose ?? null;
+    const previousClose: number | null =
+      typeof rawPrevClose === 'number' && isFinite(rawPrevClose) ? rawPrevClose : null;
     const timestamps: number[] = result.timestamp ?? [];
     const closes: Array<number | null> = result.indicators?.quote?.[0]?.close ?? [];
 
@@ -210,6 +214,7 @@ export async function GET(request: Request): Promise<Response> {
       ticker: rawTicker,
       timeframe: tf,
       price: currentPrice,
+      previousClose,
       chart,
     };
 

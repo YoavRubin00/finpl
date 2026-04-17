@@ -198,7 +198,7 @@ export const MacroEventCard = React.memo(function MacroEventCard({ item, isActiv
 
     if (correct) {
       if (event.isPremium) {
-        addModifier('stock_boost', 0.25, 48);
+        addModifier('salary_boost', 0.25, 48);
       }
       flashOpacity.value = withSequence(
         withTiming(0.18, { duration: 80 }),

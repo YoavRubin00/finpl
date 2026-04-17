@@ -26,6 +26,7 @@ export default function TabsLayout() {
         <Tabs.Screen name="investments" />
         <Tabs.Screen name="index" />
         <Tabs.Screen name="learn" />
+        <Tabs.Screen name="friends" />
         <Tabs.Screen name="chat" />
         <Tabs.Screen name="more" options={{ href: null }} />
         <Tabs.Screen name="simulator" options={{ href: null }} />

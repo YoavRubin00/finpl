@@ -13,6 +13,7 @@ interface DailyCacheEntry<T> {
 
 const priceCache = new Map<string, DailyCacheEntry<number>>();
 const chartCache = new Map<string, DailyCacheEntry<ChartDataPoint[]>>();
+const previousCloseCache = new Map<string, DailyCacheEntry<number>>();
 
 const isPriceFresh = (e: DailyCacheEntry<number> | undefined): e is DailyCacheEntry<number> =>
   e !== undefined && e.date === todayKey();
@@ -103,6 +104,7 @@ interface QuoteApiResponse {
   ticker: string;
   timeframe: Timeframe;
   price: number;
+  previousClose: number | null;
   chart: Array<{ timestamp: number; price: number }>;
 }
 
@@ -110,6 +112,32 @@ interface QuoteApiResponse {
 let lastFetchWasLive = false;
 
 export const isDataLive = (): boolean => lastFetchWasLive;
+
+/**
+ * In-flight quote requests, keyed by assetId. De-dupes concurrent calls so that
+ * `fetchLatestPrice` and `fetchPreviousClose` running in parallel share a single
+ * network request instead of issuing two for the same ticker.
+ */
+const inflightQuotes = new Map<string, Promise<QuoteApiResponse | null>>();
+
+const fetchQuote1D = (assetId: string): Promise<QuoteApiResponse | null> => {
+  const existing = inflightQuotes.get(assetId);
+  if (existing) return existing;
+  const promise = (async (): Promise<QuoteApiResponse | null> => {
+    try {
+      const response = await fetch(`${API_BASE}?ticker=${encodeURIComponent(assetId)}&timeframe=1D`);
+      if (!response.ok) return null;
+      const json = (await response.json()) as QuoteApiResponse;
+      return json.ok ? json : null;
+    } catch {
+      return null;
+    }
+  })().finally(() => {
+    inflightQuotes.delete(assetId);
+  });
+  inflightQuotes.set(assetId, promise);
+  return promise;
+};
 
 // ── Direct Yahoo fallback (native only — avoids CORS on web) ──
 const YAHOO_TICKER_MAP: Record<string, string> = {
@@ -140,19 +168,15 @@ export const fetchLatestPrice = async (assetId: string): Promise<number> => {
   const cached = priceCache.get(assetId);
   if (isPriceFresh(cached)) return cached.data;
 
-  // Primary: backend proxy
-  try {
-    const response = await fetch(`${API_BASE}?ticker=${encodeURIComponent(assetId)}&timeframe=1D`);
-    if (response.ok) {
-      const json = (await response.json()) as QuoteApiResponse;
-      if (json.ok) {
-        lastFetchWasLive = true;
-        priceCache.set(assetId, { data: json.price, date: todayKey() });
-        return json.price;
-      }
+  // Primary: backend proxy (de-duped across concurrent callers)
+  const json = await fetchQuote1D(assetId);
+  if (json) {
+    lastFetchWasLive = true;
+    priceCache.set(assetId, { data: json.price, date: todayKey() });
+    if (typeof json.previousClose === 'number' && isFinite(json.previousClose)) {
+      previousCloseCache.set(assetId, { data: json.previousClose, date: todayKey() });
     }
-  } catch {
-    // fall through
+    return json.price;
   }
 
   // Secondary: direct Yahoo (native only)
@@ -166,6 +190,27 @@ export const fetchLatestPrice = async (assetId: string): Promise<number> => {
   // Tertiary: mock (daily-deterministic, not cached so we keep retrying)
   lastFetchWasLive = false;
   return generateMockPrice(assetId);
+};
+
+/**
+ * Returns yesterday's close from the same API. Returns null when unavailable
+ * (e.g. crypto without a previous close, network failure, mock fallback).
+ * Shares the in-flight quote request with `fetchLatestPrice`, so calling both
+ * in parallel results in a single network request.
+ */
+export const fetchPreviousClose = async (assetId: string): Promise<number | null> => {
+  const cached = previousCloseCache.get(assetId);
+  if (cached !== undefined && cached.date === todayKey()) return cached.data;
+
+  const json = await fetchQuote1D(assetId);
+  if (json && typeof json.previousClose === 'number' && isFinite(json.previousClose)) {
+    previousCloseCache.set(assetId, { data: json.previousClose, date: todayKey() });
+    // Opportunistically warm the price cache too — same payload.
+    priceCache.set(assetId, { data: json.price, date: todayKey() });
+    return json.previousClose;
+  }
+
+  return null;
 };
 
 export const fetchChartData = async (
@@ -213,4 +258,5 @@ export const isMarketOpen = (assetId: string): boolean => {
 export const clearCache = (): void => {
   priceCache.clear();
   chartCache.clear();
+  previousCloseCache.clear();
 };

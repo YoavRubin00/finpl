@@ -6,6 +6,7 @@ import { useIsFocused } from "@react-navigation/native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Gesture, GestureDetector, GestureHandlerRootView } from "react-native-gesture-handler";
 import { useVideoPlayer, VideoView } from "expo-video";
+import { Audio } from "expo-av";
 import { useAudioStore } from "../../stores/useAudioStore";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import Animated, {
@@ -449,6 +450,38 @@ function FlashcardCard({
   const { playSound } = useSoundEffect();
   const [finnTipDismissed, setFinnTipDismissed] = useState(false);
   const showFinnPopup = showFinnTip && index === 2 && !finnTipDismissed;
+
+  // Audio Playback
+  useEffect(() => {
+    let soundObj: Audio.Sound | null = null;
+    let isActive = true;
+
+    async function loadAndPlay() {
+      if (card.topAudio?.uri) {
+        try {
+          const { sound } = await Audio.Sound.createAsync(
+            { uri: card.topAudio.uri },
+            { shouldPlay: true }
+          );
+          if (isActive) {
+            soundObj = sound;
+          } else {
+            sound.unloadAsync();
+          }
+        } catch (e) {
+          console.log('Failed to play flashcard top audio:', e);
+        }
+      }
+    }
+
+    loadAndPlay();
+    return () => {
+      isActive = false;
+      if (soundObj) {
+        soundObj.unloadAsync();
+      }
+    };
+  }, [card.topAudio?.uri]);
 
   // Dive mode state
   const [diveStep, setDiveStep] = useState(0);
@@ -3870,12 +3903,12 @@ export function LessonFlowScreen() {
         <Pressable style={[StyleSheet.absoluteFill, { zIndex: 9995, backgroundColor: "rgba(0,0,0,0.6)", justifyContent: "center", alignItems: "center", padding: 24 }]} onPress={() => {}} accessible={false}>
           <Animated.View entering={FadeInUp.duration(500)} style={{ backgroundColor: "#ffffff", borderRadius: 28, padding: 28, width: "100%", maxWidth: 340, alignItems: "center", borderWidth: 2, borderColor: "#22c55e" }}>
             <ExpoImage
-              source={require("../../../assets/webp/animated/finn-netflix-nudge.webp")}
+              source={FINN_EMPATHIC}
               accessible={false}
-              style={{ width: 280, aspectRatio: 2.1, marginBottom: 12 }}
+              style={{ width: 140, height: 140, marginBottom: 12 }}
               contentFit="contain"
             />
-            <Text style={{ fontSize: 22, fontWeight: "900", color: "#0f172a", textAlign: "center", marginBottom: 6 }}>{"כל הכבוד! 🎉"}</Text>
+            <Text style={{ fontSize: 22, fontWeight: "900", color: "#0f172a", textAlign: "center", marginBottom: 6 }}>{"כל הכבוד!"}</Text>
             <Text style={{ fontSize: 15, fontWeight: "600", color: "#64748b", textAlign: "center", marginBottom: 24 }}>{"רוצה להמשיך או ללכת לנטפליקס?"}</Text>
             {/* Continue option */}
             <Pressable onPress={() => { successHaptic(); setShowPostCelebration(false); goToNextSequentialModule(); }} style={{ width: "100%", backgroundColor: "#22c55e", borderRadius: 16, paddingVertical: 16, alignItems: "center", marginBottom: 12, borderBottomWidth: 4, borderBottomColor: "#16a34a" }} accessibilityRole="button" accessibilityLabel="המשך למודול הבא">

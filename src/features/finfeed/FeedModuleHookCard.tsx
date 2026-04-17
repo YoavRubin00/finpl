@@ -56,6 +56,7 @@ export const FeedModuleHookCard = React.memo(function FeedModuleHookCard({ item,
   const setVideoPlaying = useAudioStore((s) => s.setVideoPlaying);
   const webViewRef = useRef<WebView>(null);
   const [isPlaying, setIsPlaying] = useState(true);
+  const [isMuted, setIsMuted] = useState(false);
   const { playSound } = useSoundEffect();
 
   const ctaColors = CHAPTER_CTA_COLORS[item.chapterId] ?? CHAPTER_CTA_COLORS["chapter-1"];
@@ -91,7 +92,15 @@ export const FeedModuleHookCard = React.memo(function FeedModuleHookCard({ item,
     router.push(`/lesson/${item.moduleId}?chapterId=${item.chapterId}`);
   }
 
-  function toggleVideo() {
+  // Short tap → toggle sound (mute/unmute). Long press → toggle pause.
+  function toggleMute() {
+    if (!webViewRef.current) return;
+    const next = !isMuted;
+    webViewRef.current.postMessage(JSON.stringify({ action: next ? "mute" : "unmute" }));
+    setIsMuted(next);
+  }
+
+  function togglePause() {
     if (!webViewRef.current) return;
     const action = isPlaying ? "pause" : "play";
     webViewRef.current.postMessage(JSON.stringify({ action }));
@@ -131,8 +140,15 @@ export const FeedModuleHookCard = React.memo(function FeedModuleHookCard({ item,
             style={StyleSheet.absoluteFill}
             pointerEvents="none"
           />
-          {/* Tap to pause/play — no big play button */}
-          <Pressable onPress={toggleVideo} style={StyleSheet.absoluteFill} accessibilityRole="button" accessibilityLabel={isPlaying ? "השהה וידאו" : "נגן וידאו"} />
+          {/* Tap → toggle sound. Long press → toggle pause. */}
+          <Pressable
+            onPress={toggleMute}
+            onLongPress={togglePause}
+            delayLongPress={350}
+            style={StyleSheet.absoluteFill}
+            accessibilityRole="button"
+            accessibilityLabel={isMuted ? "הפעל צליל. לחיצה ארוכה להשהיה" : "השתק. לחיצה ארוכה להשהיה"}
+          />
         </View>
       ) : (
         <>

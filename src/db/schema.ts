@@ -17,6 +17,8 @@ export const userProfiles = pgTable("user_profiles", {
 	longestStreak: integer("longest_streak").default(0),
 	lastActiveDate: date("last_active_date"),
 	isPro: boolean("is_pro").default(false),
+	welcomeEmailSent: boolean("welcome_email_sent").default(false),
+	tipEmailSent: boolean("tip_email_sent").default(false),
 	proExpiresAt: timestamp("pro_expires_at", { withTimezone: true, mode: 'string' }),
 	createdAt: timestamp("created_at", { withTimezone: true, mode: 'string' }).defaultNow(),
 	updatedAt: timestamp("updated_at", { withTimezone: true, mode: 'string' }).defaultNow(),
@@ -123,3 +125,10 @@ export const paperTrades = pgTable("paper_trades", {
 		}).onDelete("cascade"),
 	check("paper_trades_trade_type_check", sql`trade_type = ANY (ARRAY['BUY'::text, 'SELL'::text])`),
 ]);
+
+export const userFeedback = pgTable("user_feedback", {
+	id: uuid().default(sql`uuid_generate_v4()`).primaryKey().notNull(),
+	userId: text("user_id"),
+	message: text("message").notNull(),
+	createdAt: timestamp("created_at", { withTimezone: true, mode: 'string' }).defaultNow(),
+});

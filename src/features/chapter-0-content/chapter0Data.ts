@@ -36,6 +36,7 @@ export const chapter0Data: Chapter = {
         },
         {
           id: 'fc-0-1-5',
+          topAudio: { uri: 'https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/audios/flashcards/fc-0-1-5-top-KodMwHabmmfOQtod4pZFKWKPWlQA2i.mp3' },
           text: '[[פיאט]]: ברוב העולם היום, לכסף אין "ערך פנימי" (הוא לא עשוי מזהב אמיתי). הערך שלו נובע אך ורק מזה שהממשלה מגבה אותו ושאנחנו, האזרחים, מאמינים בו.',
         },
         {
@@ -101,10 +102,12 @@ export const chapter0Data: Chapter = {
       flashcards: [
         {
           id: 'fc-0-2-1',
+          topAudio: { uri: 'https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/audios/flashcards/fc-0-2-1-top-cW1FrXA37Xr0uBZ0g4Ug5PXDDMB3TN.mp3' },
           text: 'בנק: חנות שמוכרת וקונה כסף. הבנק שומר לכם על הכסף, ומלווה אותו לאנשים אחרים. כשאתם מפקידים - אתם (אמורים להיות) מקבלים [[ריבית]]. כשאתם לווים - אתם משלמים [[ריבית]] (והרבה יותר).',
         },
         {
           id: 'fc-0-2-2',
+          topAudio: { uri: 'https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/audios/flashcards/fc-0-2-2-top-ogaXl3SHXHAXRA5OBq1EasL4cDLbXE.mp3' },
           text: 'עו"ש (עובר ושב): החשבון הבסיסי שלכם בבנק. כסף זורם אליו (משכורת) ויוצא ממנו (חשמל, הפיצה של אתמול בלילה). לא מקבלים בו [[ריבית]] על הפלוס, אבל משלמים המון על המינוס.',
         },
         {
@@ -119,10 +122,12 @@ export const chapter0Data: Chapter = {
         },
         {
           id: 'fc-0-2-4',
+          topAudio: { uri: 'https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/audios/flashcards/fc-0-2-4-top-0sgkvBb89ClA1qjhdBYOcDunrprUoM.mp3' },
           text: 'הלוואה ו[[אשראי]]: לקבל כסף עכשיו כדי לשלם עליו (יותר) בעתיד. קריטי לדעת: כשאתם פורסים ל"תשלומים בקליק" - אתם בעצם לוקחים הלוואה בריבית גבוהה.',
         },
         {
           id: 'fc-0-2-5',
+          topAudio: { uri: 'https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/audios/flashcards/fc-0-2-5-top-FzUh8FavPjhWQrbvDGrWwwp2K6nYKn.mp3' },
           text: '[[פנסיה]]: קופת חיסכון ענקית ליום שבו תפסיקו (או לא תוכלו) לעבוד. חלק מהמשכורת שלכם ושל המעסיק נכנס לשם אוטומטית בכל חודש ומושקע בעבורכם לשנים ארוכות.',
         },
         {
@@ -196,6 +201,7 @@ export const chapter0Data: Chapter = {
         },
         {
           id: 'fc-0-3-3',
+          topAudio: { uri: 'https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/audios/flashcards/fc-0-3-3-top-tHyk6JgDiESnlKaq5TG0iHdiLon2DQ.mp3' },
           text: 'מי מרוויח ומי מפסיד? מי ששומר את הכסף מזומן מתחת למזרן (או ב[[עו"ש]]) מפסיד ערך כל יום. מי שיש לו הלוואות או נכסים (כמו דירות או [[מניה|מניות]]) לרוב נהנה, כי ערך הנכס עולה עם המחירים בעוד ערך החוב נשחק.',
         },
         {
@@ -205,6 +211,7 @@ export const chapter0Data: Chapter = {
         },
         {
           id: 'fc-0-3-5',
+          topAudio: { uri: 'https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/audios/flashcards/fc-0-3-5-top-ddYIdaVjBb55MJoTNveXeVBGxZbkpL.mp3' },
           text: 'סיכון האי-השקעה: "השקעה" זה לא הימור של עשירים, אלא הדרך היחידה למנוע מ[[אינפלציה|"הגנב השקוף"]] לאכול לכם את הערך של הכסף שעבדתם עליו קשה.',
         },
         {
@@ -265,10 +272,12 @@ export const chapter0Data: Chapter = {
       flashcards: [
         {
           id: 'fc-0-4-1',
+          topAudio: { uri: 'https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/audios/flashcards/fc-0-4-1-top-V5gqxQVUfL0lfQX5X5tFmoqX1OsEZK.mp3' },
           text: 'הכנסות: כל כסף שנכנס אליכם. זה יכול להיות ממשכורת עבודה, מתנות לחג, מלגות, או אפילו החזרים מ[[מס הכנסה]]. המטרה היא תמיד לגוון ולהגדיל.',
         },
         {
           id: 'fc-0-4-2',
+          topAudio: { uri: 'https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/audios/flashcards/fc-0-4-2-top-evFfAfRiu4BrSXtWGcPWGGP6vAipCt.mp3' },
           text: 'הוצאות: כסף שיוצא מכם. מתחלק ל"צרכים" (אוכל, חשמל, שכר דירה שחייבים לשלם) ולי"רצונות" (לטוס, קניות, מסעדות שאפשר לקצץ בהם).',
         },
         {
@@ -335,6 +344,7 @@ export const chapter0Data: Chapter = {
         },
         {
           id: 'fc-0-5-4',
+          topAudio: { uri: 'https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/audios/flashcards/fc-0-5-4-top-Z9hOHeCHpP4VQXMdZhGJbaDDzFAlZ7.mp3' },
           text: 'הסיכון מול הסיכוי: כל השקעה מלווה בסיכון שערכה עשוי לרדת ([[תנודתיות]]) בטווח הקצר (בגלל משברים ואירועים). אבל לטווח ארוך (עשורים), הסיכון האמיתי והוודאי הוא לא להשקיע משום שהכסף נשחק.',
         },
         {

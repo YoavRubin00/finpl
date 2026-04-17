@@ -631,6 +631,7 @@ export const chapter1Data: Chapter = {
       introAudio: { uri: 'https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/audio/intros/mod-1-5-v2.mp3' },
       flashcards: [{
           id: 'fc-1-5-1',
+          topAudio: { uri: 'https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/audios/flashcards/fc-1-5-1-top-jbdjuCvQA2DVukWiSX0rHJUkE3Mqxb.mp3' },
           text: 'הגדרת שכר ברוטו: זהו התגמול הכולל שהמעסיק משלם לעובד לפני כל ניכוי. זהו הבסיס לחישוב זכויות סוציאליות ([[פנסיה]], פיצויים).',
           diveMode: true,
           zoomRegions: [[0, 0, 1], [0, 0, 1], [0, 0, 1], [0, 0, 1]],
@@ -687,6 +688,7 @@ export const chapter1Data: Chapter = {
         },
         {
           id: 'fc-1-5-3',
+          topAudio: { uri: 'https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/audios/flashcards/fc-1-5-3-top-XzUVRP8GQjEQDQeZ6W926oPFu0qHV0.mp3' },
           text: 'נקודת זיכוי: הטבת מס המפחיתה ישירות מהסכום שהעובד חייב למדינה. כל נקודה שווה 242 ש"ח לחודש (מוקפא עד 2027). תושב ישראל מקבל 2.25 נקודות בסיסיות, וניתן לצבור נקודות נוספות (ילדים, תואר, שחרור מצה"ל ועוד).',
           diveMode: true,
           hideTextOnDive: true,
@@ -726,6 +728,7 @@ export const chapter1Data: Chapter = {
         },
         {
           id: 'fc-1-5-6',
+          topAudio: { uri: 'https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/audios/flashcards/fc-1-5-6-top-OQGgvBGnhGpJMnfXiHHHvINtO5Gw6H.mp3' },
           text: 'עלות מעביד: הסכום האמיתי שהמעסיק משלם, הכולל את הברוטו פלוס הפרשות סוציאליות ומיסי מעסיק. לרוב גבוה ב-20%-30% מהברוטו.',
           diveMode: true,
           zoomRegions: [[0, 0, 1], [0, 0, 1], [0, 0, 1], [0, 0, 1]],
@@ -1026,6 +1029,7 @@ export const chapter1Data: Chapter = {
         },
         {
           id: 'fc-1-7-2',
+          topAudio: { uri: 'https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/audios/flashcards/fc-1-7-2-top-ihtitNK0c0VXbEKnVkYGSOzb1fRFqX.mp3' },
           text: 'עמלות עו"ש – פקיד מול ערוץ ישיר: פעולות המבוצעות מול פקיד יקרות משמעותית (פי 3-5) מפעולות המבוצעות באפליקציה או באתר.',
           diveMode: true,
           hideTextOnDive: true,
@@ -1039,6 +1043,7 @@ export const chapter1Data: Chapter = {
         },
         {
           id: 'fc-1-7-3',
+          topAudio: { uri: 'https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/audios/flashcards/fc-1-7-3-top-hFxvFivhVCTSIgMAl7YidIZZaZgTef.mp3' },
           text: 'מסלולי עמלות: רגולציה המחייבת בנקים להציע "חבילות" הכוללות מספר פעולות חודשיות במחיר קבוע. לרוב זה משתלם יותר.',
           diveMode: true,
           hideTextOnDive: true,
@@ -1052,6 +1057,7 @@ export const chapter1Data: Chapter = {
         },
         {
           id: 'fc-1-7-4',
+          topAudio: { uri: 'https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/audios/flashcards/fc-1-7-4-top-ZSp4qUUT4gwiHNmBQblk0qwMH782EI.mp3' },
           text: 'עמלות ניירות ערך: עלויות הקנייה, המכירה ו"[[דמי ניהול|דמי המשמרת]]" בבנק. אלו עמלות שניתן להתמקח עליהן או לעבור לבית השקעות זול יותר.',
           diveMode: true,
           hideTextOnDive: true,
@@ -1065,6 +1071,7 @@ export const chapter1Data: Chapter = {
         },
         {
           id: 'fc-1-7-5',
+          topAudio: { uri: 'https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/audios/flashcards/fc-1-7-5-top-4KFrvFSmkLzdkm8OeWnye86NmiYJKy.mp3' },
           text: 'עמלת פירעון מוקדם: "קנס" המשולם בעת סגירת הלוואה לפני הזמן, המיועד לפצות את הבנק על אובדן רווחי [[ריבית]] עתידיים.',
           diveMode: true,
           hideTextOnDive: true,
@@ -1189,6 +1196,7 @@ export const chapter1Data: Chapter = {
       flashcards: [
         {
           id: 'fc-1-8-1',
+          topAudio: { uri: 'https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/audios/flashcards/fc-1-8-1-top-KwJayT82dwy27ZaMvSbg7n6mrt8EYv.mp3' },
           text: 'הטיית ההווה: הנטייה האנושית להעדיף תגמול קטן ומידי (קניית בגד עכשיו) על פני תגמול גדול בעתיד (עצמאות פיננסית).',
           diveMode: true,
           hideTextOnDive: true,
@@ -1202,6 +1210,7 @@ export const chapter1Data: Chapter = {
         },
         {
           id: 'fc-1-8-2',
+          topAudio: { uri: 'https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/audios/flashcards/fc-1-8-2-top-ZHphAmkz9Fnk5XZF5FRiZktRurl2zq.mp3' },
           text: 'אפקט העיגון: טכניקת שיווק שבה מציגים מחיר גבוה ו"מוחקים" אותו לטובת מחיר מבצע. המחיר המקורי משמש עוגן פסיכולוגי שגורם למבצע להיראות זול.',
           diveMode: true,
           hideTextOnDive: true,
@@ -1215,6 +1224,7 @@ export const chapter1Data: Chapter = {
         },
         {
           id: 'fc-1-8-3',
+          topAudio: { uri: 'https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/audios/flashcards/fc-1-8-3-top-uvGuD0A7Wn4M5qeaIAYUDPiG2IGkxK.mp3' },
           text: '[[שנאת הפסד]]: הכאב הפסיכולוגי מהפסד שקל אחד חזק פי 2 מהנאה מרווח של שקל אחד. משווקים משתמשים בזה כדי ליצור תחושת "פספוס" ([[FOMO]]).',
           diveMode: true,
           zoomRegions: [[0, 0, 1], [100, 0, 1.6], [-120, 0, 1.6], [0, 0, 1]],
@@ -1227,6 +1237,7 @@ export const chapter1Data: Chapter = {
         },
         {
           id: 'fc-1-8-4',
+          topAudio: { uri: 'https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/audios/flashcards/fc-1-8-4-top-FCoyaIbBAH04IzWOb4K3C5f1DK044P.mp3' },
           text: '[[אפקט העדר]]: הנטייה לבצע פעולות רק כי "כולם עושים את זה". זהו המנוע של טרנדים צרכניים ובועות בשוק ההון.',
           diveMode: true,
           hideTextOnDive: true,
@@ -1240,6 +1251,7 @@ export const chapter1Data: Chapter = {
         },
         {
           id: 'fc-1-8-5',
+          topAudio: { uri: 'https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/audios/flashcards/fc-1-8-5-top-dsaVrDnnLMYUr98mjBVQf05IEGd2oA.mp3' },
           text: 'אפקט הנידון: הנטייה להמשיך להשקיע במשהו כושל (מנוי לחדר כושר שלא הולכים אליו) רק בגלל שכבר שילמנו עליו כסף בעבר.',
           diveMode: true,
           hideTextOnDive: true,
@@ -1253,6 +1265,7 @@ export const chapter1Data: Chapter = {
         },
         {
           id: 'fc-1-8-6',
+          topAudio: { uri: 'https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/audios/flashcards/fc-1-8-6-top-tnhXo5oFGdOxSu3BhodmGzKIU18Ni7.mp3' },
           text: 'חשבונאות מנטלית: הנטייה להתייחס לכסף באופן שונה בהתאם למקורו (בונוס מול שכר) או לייעודו, מה שמוביל להחלטות לא רציונליות.',
           diveMode: true,
           zoomRegions: [[0, 0, 1], [-120, -100, 1.8], [150, 180, 2.0], [0, 0, 1]],
@@ -1265,6 +1278,7 @@ export const chapter1Data: Chapter = {
         },
         {
           id: 'fc-1-8-summary',
+          topAudio: { uri: 'https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/audios/flashcards/fc-1-8-summary-top-M6aMk5gxVyY2xi1Fgu7zXuJ4rVjY12.mp3' },
           text: 'סיכום — מלכודות שיווקיות\nעצרו לחשוב לפני שאתם קונים — האם זו החלטה מודעת שלי או טריק שיווקי שפעל עליי?',
           isComic: true,
           zoomRegions: [[0, 0, 1], [0, 0, 1], [0, 0, 1], [0, 0, 1]],
@@ -1366,6 +1380,7 @@ export const chapter1Data: Chapter = {
       flashcards: [
         {
           id: 'fc-1-9-1',
+          topAudio: { uri: 'https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/audios/flashcards/fc-1-9-1-top-oXtSgwfkmfwB0atDY9oSKpkqhghA9o.mp3' },
           text: 'הגדרת [[קרן חירום]]: כרית ביטחון נזילה (מזומן או שווה מזומן) המיועדת אך ורק לאירועים בלתי צפויים וקריטיים (פיטורין, טיפול רפואי דחוף, תיקון קריטי).',
           diveMode: true,
           zoomRegions: [[0, 0, 1], [0, 0, 1], [0, 0, 1], [150, -150, 2.0]],
@@ -1390,6 +1405,7 @@ export const chapter1Data: Chapter = {
         },
         {
           id: 'fc-1-9-3',
+          topAudio: { uri: 'https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/audios/flashcards/fc-1-9-3-top-XhrVCKyuJYstzvtwZeBiEmaal7CHLK.mp3' },
           text: 'נזילות מעל הכל: קרן החירום חייבת להיות זמינה תוך 24-48 שעות. אסור לה להשקיע בנכסים [[תנודתיות|תנודתיים]] ([[מניה|מניות]]), שכן היא צריכה להיות שם בדיוק כשהשוק קורס.',
           diveMode: true,
           zoomRegions: [[0, 0, 1], [-150, 0, 1.8], [150, 0, 1.8], [0, 0, 1]],
