@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { Image as ExpoImage } from "expo-image";
 import { View, Text, Pressable, StyleSheet } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { FINN_STANDARD } from "../retention-loops/finnMascotConfig";
+import { FINN_FIRE } from "../retention-loops/finnMascotConfig";
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -101,7 +101,9 @@ export function StreakAtRiskBanner() {
             </Text>
           </View>
           {/* Finn on left */}
-          <ExpoImage source={FINN_STANDARD} accessible={false} style={{ width: 96, height: 96 }} contentFit="contain" />
+          <View style={{ width: 96, height: 96, borderRadius: 48, overflow: 'hidden', backgroundColor: 'transparent' }}>
+            <ExpoImage source={FINN_FIRE} accessible={false} style={{ width: 96, height: 96, opacity: 0.92 }} contentFit="contain" />
+          </View>
         </Pressable>
 
         {/* Watch ad for free streak freeze — non-PRO only */}

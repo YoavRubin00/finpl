@@ -123,24 +123,11 @@ export function DailyDealsSection() {
               {/* Name */}
               <Text style={[styles.itemName, isFreeGems && styles.freeGemsName]} numberOfLines={1}>{deal.item.name}</Text>
 
-              {/* Prices */}
-              {isFreeGems ? (
-                <View style={styles.priceRow}>
-                  <Text style={styles.freeGemsAmount}>💎 5</Text>
-                </View>
-              ) : (
-                <View style={styles.priceRow}>
-                  <Text style={styles.originalPrice}>{deal.originalCost}</Text>
-                  <View style={styles.discountedRow}>
-                    {deal.currency === 'gems' ? (
-                      <Text style={styles.discountedPrice}>💎 {deal.discountedCost}</Text>
-                    ) : (
-                      <>
-                        <GoldCoinIcon size={14} />
-                        <Text style={styles.discountedPrice}>{deal.discountedCost.toLocaleString()}</Text>
-                      </>
-                    )}
-                  </View>
+              {/* Price display for gem deals only (shown above PRO button) */}
+              {!isFreeGems && !purchased && isGem && (
+                <View style={styles.priceBlock}>
+                  <Text style={styles.originalPrice}>{deal.originalCost.toLocaleString()}</Text>
+                  <Text style={styles.discountedPrice}>💎 {deal.discountedCost}</Text>
                 </View>
               )}
 
@@ -155,30 +142,18 @@ export function DailyDealsSection() {
                     handleClaimFreeGems();
                     setPurchasedIds((prev) => new Set(prev).add(deal.id));
                   }}
-                  style={{
-                    backgroundColor: '#0e7490',
-                    borderRadius: 12,
-                    paddingHorizontal: 20,
-                    paddingVertical: 12,
-                    width: '100%',
-                    alignItems: 'center' as const,
-                    borderWidth: 2,
-                    borderColor: '#06b6d4',
-                    borderBottomWidth: 4,
-                    borderBottomColor: '#164e63',
-                  }}
+                  style={({ pressed }) => [styles.freeClaimBtn, pressed && { opacity: 0.85, transform: [{ scale: 0.97 }] }]}
+                  accessibilityRole="button"
+                  accessibilityLabel="אסוף 5 יהלומים חינם"
                 >
-                  <Text style={{
-                    fontSize: 17,
-                    fontWeight: '900',
-                    color: '#ffffff',
-                    letterSpacing: 1,
-                  }}>אסוף!</Text>
+                  <Text style={styles.freeClaimText}>💎 אסוף 5</Text>
                 </Pressable>
               ) : isGem && !isPro ? (
                 <Pressable
                   onPress={() => router.push('/pricing' as never)}
                   style={({ pressed }) => [styles.proBadgeBtn, pressed && { opacity: 0.8 }]}
+                  accessibilityRole="button"
+                  accessibilityLabel="שדרג ל-PRO"
                 >
                   <Text style={styles.proBadgeText}>PRO ✦</Text>
                 </Pressable>
@@ -189,10 +164,15 @@ export function DailyDealsSection() {
               ) : (
                 <Pressable
                   onPress={() => setPendingDeal(deal)}
-                  style={({ pressed }) => [styles.priceBuyBtn, pressed && { opacity: 0.8 }]}
+                  style={({ pressed }) => [styles.priceBuyBtn, pressed && { opacity: 0.85, transform: [{ scale: 0.97 }] }]}
+                  accessibilityRole="button"
+                  accessibilityLabel={`קנה ${deal.item.name} ב-${deal.discountedCost.toLocaleString()} מטבעות`}
                 >
-                  <GoldCoinIcon size={16} />
-                  <Text style={styles.priceBuyText}>{deal.discountedCost.toLocaleString()}</Text>
+                  <Text style={styles.originalPriceBtn}>{deal.originalCost.toLocaleString()}</Text>
+                  <View style={styles.discountedRow}>
+                    <GoldCoinIcon size={16} />
+                    <Text style={styles.discountedPriceBtn}>{deal.discountedCost.toLocaleString()}</Text>
+                  </View>
                 </Pressable>
               )}
             </View>
@@ -271,15 +251,15 @@ const styles = StyleSheet.create({
     writingDirection: 'rtl' as const,
     marginBottom: 6,
   },
-  priceRow: {
+  priceBlock: {
     alignItems: 'center',
+    marginBottom: 6,
     gap: 2,
-    marginBottom: 10,
   },
   originalPrice: {
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: '700',
-    color: '#6b7280',
+    color: '#9ca3af',
     textDecorationLine: 'line-through',
   },
   discountedRow: {
@@ -288,31 +268,37 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   discountedPrice: {
-    fontSize: 15,
+    fontSize: 17,
     fontWeight: '900',
-    color: '#0c4a6e',
+    color: '#d97706',
   },
   priceBuyBtn: {
-    flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 5,
-    backgroundColor: '#0a2540',
-    borderRadius: 999,
-    paddingHorizontal: 16,
-    paddingVertical: 8,
+    backgroundColor: '#0891b2',
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 9,
     width: '100%',
-    shadowColor: '#0a2540',
+    borderBottomWidth: 3,
+    borderBottomColor: '#0e7490',
+    shadowColor: '#0891b2',
     shadowOpacity: 0.35,
     shadowRadius: 6,
-    shadowOffset: { width: 0, height: 3 },
+    shadowOffset: { width: 0, height: 2 },
     elevation: 4,
+    gap: 2,
   },
-  priceBuyText: {
-    fontSize: 14,
+  originalPriceBtn: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: 'rgba(255,255,255,0.55)',
+    textDecorationLine: 'line-through',
+  },
+  discountedPriceBtn: {
+    fontSize: 17,
     fontWeight: '900',
-    color: '#fff',
-    fontVariant: ['tabular-nums'] as const,
+    color: '#fbbf24',
   },
   purchasedBtn: {
     backgroundColor: '#f3f4f6',
@@ -375,29 +361,26 @@ const styles = StyleSheet.create({
     color: '#0891b2',
   },
   freeClaimBtn: {
-    backgroundColor: '#0891b2',
+    backgroundColor: '#e0f2fe',
     borderRadius: 12,
     paddingHorizontal: 20,
     paddingVertical: 10,
     width: '100%',
     alignItems: 'center',
     borderWidth: 2,
-    borderColor: '#06b6d4',
+    borderColor: '#0891b2',
     borderBottomWidth: 3,
-    borderBottomColor: '#0e7490',
+    borderBottomColor: '#0369a1',
     shadowColor: '#0891b2',
-    shadowOpacity: 0.4,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 3 },
-    elevation: 6,
+    shadowOpacity: 0.25,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 4,
   },
   freeClaimText: {
     fontSize: 16,
     fontWeight: '900',
-    color: '#ffffff',
-    textShadowColor: 'rgba(0,0,0,0.2)',
-    textShadowOffset: { width: 0, height: 1 },
-    textShadowRadius: 2,
+    color: '#0369a1',
     writingDirection: 'rtl' as const,
   },
 });

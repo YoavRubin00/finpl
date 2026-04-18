@@ -46,38 +46,52 @@ export function ConfirmModal({
             אישור רכישה. לא ניתן לבטל לאחר מכן.
           </Text>
 
-          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, borderRadius: 12, backgroundColor: '#f1f5f9', paddingVertical: 12, marginBottom: 24 }}>
-            {isGemPurchase ? (
-              <>
-                <Diamond size={18} color="#0891b2" />
-                <Text style={{ fontSize: 16, fontWeight: '700', color: '#0891b2' }}>
-                  {gemCost} ג׳מים
-                </Text>
-              </>
-            ) : (
-              <>
-                <GoldCoinIcon size={20} />
-                <Text style={{ fontSize: 16, fontWeight: '700', color: '#92400e' }}>
-                  {coinCost} זהב
-                </Text>
-              </>
-            )}
-          </View>
-
           <View style={{ flexDirection: 'row-reverse', gap: 12 }}>
             <AnimatedPressable
               onPress={onConfirm}
-              style={{ flex: 1, borderRadius: 12, backgroundColor: '#0891b2', paddingVertical: 12 }}
+              style={{
+                flex: 1.4,
+                flexDirection: 'row',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: 8,
+                borderRadius: 14,
+                backgroundColor: '#1d4ed8',
+                paddingVertical: 14,
+                borderBottomWidth: 3,
+                borderBottomColor: '#1e3a8a',
+                shadowColor: '#1d4ed8',
+                shadowOpacity: 0.35,
+                shadowRadius: 8,
+                shadowOffset: { width: 0, height: 3 },
+                elevation: 5,
+              }}
+              accessibilityLabel={isGemPurchase ? `אשר רכישה ב-${gemCost} יהלומים` : `אשר רכישה ב-${coinCost} מטבעות`}
             >
-              <Text style={[RTL, { textAlign: 'center', fontSize: 14, fontWeight: '700', color: '#ffffff' }]}>
-                קנה עכשיו
+              <Text style={{ fontSize: 16, fontWeight: '900', color: '#ffffff', writingDirection: 'rtl' }}>
+                קנה
               </Text>
+              {isGemPurchase ? (
+                <>
+                  <Diamond size={18} color="#ffffff" />
+                  <Text style={{ fontSize: 16, fontWeight: '900', color: '#ffffff' }}>
+                    {gemCost}
+                  </Text>
+                </>
+              ) : (
+                <>
+                  <GoldCoinIcon size={18} />
+                  <Text style={{ fontSize: 16, fontWeight: '900', color: '#ffffff' }}>
+                    {coinCost.toLocaleString()}
+                  </Text>
+                </>
+              )}
             </AnimatedPressable>
             <AnimatedPressable
               onPress={onCancel}
-              style={{ flex: 1, borderRadius: 12, borderWidth: 1, borderColor: '#e5e7eb', paddingVertical: 12 }}
+              style={{ flex: 1, borderRadius: 14, borderWidth: 1.5, borderColor: '#e5e7eb', paddingVertical: 14, backgroundColor: '#f9fafb' }}
             >
-              <Text style={[RTL, { textAlign: 'center', fontSize: 14, fontWeight: '600', color: '#6b7280' }]}>
+              <Text style={[RTL, { textAlign: 'center', fontSize: 15, fontWeight: '700', color: '#6b7280' }]}>
                 ביטול
               </Text>
             </AnimatedPressable>

@@ -43,10 +43,12 @@ interface TabConfig {
   badge?: number;
 }
 
+// Visual L→R ordering in RTL: chat | friends | למידה (center) | פיד | השקעות
+// The array reads right-to-left in RTL, so array[0] = rightmost tab visually.
 const TABS: TabConfig[] = [
-  { key: "index",       label: "למידה",   Icon: BookOpen },
   { key: "investments", label: "השקעות",  Icon: TrendingUp },
   { key: "learn",       label: "פיד",     Icon: Compass },
+  { key: "index",       label: "למידה",   Icon: BookOpen },
   { key: "friends",     label: "חברים",   Icon: Users },
   { key: "chat",        label: "צ'אט",   Icon: MessageCircle },
 ];

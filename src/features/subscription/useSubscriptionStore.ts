@@ -371,7 +371,7 @@ export const useSubscriptionStore = create<SubscriptionState>()(
         if (!state) return;
         try {
           const auth = require("../auth/useAuthStore").useAuthStore.getState();
-          const DEV_PRO_EMAILS = ["yrubin00@gmail.com"];
+          const DEV_PRO_EMAILS = ["yrubin00@gmail.com", "itaysc23@gmail.com"];
           if (auth.email && DEV_PRO_EMAILS.includes(auth.email) && state.tier !== "pro") {
             state.tier = "pro";
             state.status = "active";

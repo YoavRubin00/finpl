@@ -1,7 +1,7 @@
 import React, { useState, useRef, useCallback, useEffect, useMemo } from "react";
 import { Image as ExpoImage } from "expo-image";
 import { LottieIcon } from "../../components/ui/LottieIcon";
-import { FINN_STANDARD } from "../retention-loops/finnMascotConfig";
+import { FINN_STANDARD, FINN_TALKING } from "../retention-loops/finnMascotConfig";
 import {
   View,
   Text,
@@ -148,7 +148,7 @@ function TypingIndicator({ emoji }: { emoji: string }) {
   return (
     <Animated.View entering={FadeIn.duration(200)} style={[msgStyles.messageRow, msgStyles.messageRowBot]}>
       <View style={msgStyles.avatarCircle}>
-        <ExpoImage source={FINN_STANDARD} style={{ width: 28, height: 28 }} contentFit="contain" />
+        <ExpoImage source={FINN_TALKING} style={{ width: 28, height: 28 }} contentFit="contain" />
       </View>
       <View style={[msgStyles.bubble, msgStyles.botBubble]}>
         <View style={typingStyles.container}>

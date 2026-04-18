@@ -61,8 +61,8 @@ export const SWIPE_CARDS: SwipeCard[] = [
     headline: 'רעידת אדמה השמידה מפעלי ייצור שבבים באסיה',
     emoji: '🌋',
     imageCategory: 'crisis',
-    correctIsLong: false,
-    explanation: 'שיבוש שרשרת אספקה → מחסור בשבבים → פגיעה בטכנולוגיה.',
+    correctIsLong: true,
+    explanation: 'שיבוש שרשרת אספקה → מחסור בשבבים → כוח תמחור לספקים שנותרו ← מניות שבבים עולות!',
   },
   {
     id: 'sw-7',

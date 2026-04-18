@@ -42,6 +42,7 @@ import { LoadingWisdom } from "../src/components/ui/LoadingWisdom";
 import { GlobalErrorBoundary } from "../src/components/ui/ErrorBoundary";
 import { NetworkStatusBanner } from "../src/components/ui/NetworkStatusBanner";
 import { LevelUpBanner } from "../src/components/ui/LevelUpBanner";
+import { GlobalQuestCompletionModal } from "../src/features/daily-quests/GlobalQuestCompletionModal";
 import { configureRevenueCat, loginRevenueCat } from "../src/services/revenueCat";
 import { useSubscriptionStore } from "../src/features/subscription/useSubscriptionStore";
 import { AppWalkthroughOverlay } from "../src/features/onboarding/AppWalkthroughOverlay";
@@ -204,18 +205,19 @@ export default function RootLayout() {
     <GestureHandlerRootView style={{ flex: 1 }}>
       <GlobalErrorBoundary>
         <RewardAnimationProvider>
-          <StreakCelebrationProvider>
-            <Slot />
-            {isAuthenticated && hasCompletedOnboarding && <AppWalkthroughOverlay />}
-            <ShopModal />
-            <GlobalUpgradeModal />
-            <PostStreakIncomeSplash />
-            <WisdomPopupCard />
-            <NetworkStatusBanner />
-            <LevelUpBanner />
-            <FreezeSaveModalGate />
-            <StreakRepairModalGate />
-          </StreakCelebrationProvider>
+            <StreakCelebrationProvider>
+              <Slot />
+              {isAuthenticated && hasCompletedOnboarding && <AppWalkthroughOverlay />}
+              <ShopModal />
+              <GlobalUpgradeModal />
+              <PostStreakIncomeSplash />
+              <WisdomPopupCard />
+              <GlobalQuestCompletionModal />
+              <NetworkStatusBanner />
+              <LevelUpBanner />
+              <FreezeSaveModalGate />
+              <StreakRepairModalGate />
+            </StreakCelebrationProvider>
         </RewardAnimationProvider>
       </GlobalErrorBoundary>
     </GestureHandlerRootView>

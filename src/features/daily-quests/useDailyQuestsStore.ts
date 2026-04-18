@@ -45,8 +45,10 @@ interface DailyQuestsState {
   quests: DailyQuest[];
   questDate: string;
   rewardClaimed: boolean;
+  newlyCompleted: boolean;
   lastRewardSummary: QuestRewardSummary | null;
 
+  clearNewlyCompleted: () => void;
   refreshQuests: () => void;
   syncCompletions: () => void;
   claimReward: () => QuestRewardSummary | null;
@@ -61,7 +63,10 @@ export const useDailyQuestsStore = create<DailyQuestsState>()(
       quests: [],
       questDate: "",
       rewardClaimed: false,
+      newlyCompleted: false,
       lastRewardSummary: null,
+
+      clearNewlyCompleted: () => set({ newlyCompleted: false }),
 
       refreshQuests: () => {
         const today = todayStr();
@@ -76,7 +81,7 @@ export const useDailyQuestsStore = create<DailyQuestsState>()(
           id: `${today}-${i}`,
           isCompleted: false,
         }));
-        set({ quests, questDate: today, rewardClaimed: false, lastRewardSummary: null });
+        set({ quests, questDate: today, rewardClaimed: false, newlyCompleted: false, lastRewardSummary: null });
       },
 
       syncCompletions: () => {
@@ -87,26 +92,27 @@ export const useDailyQuestsStore = create<DailyQuestsState>()(
         const challengeStore = useDailyChallengesStore.getState();
         const chapterStore = useChapterStore.getState();
 
+        const dilemmaPlays = challengeStore.getDilemmaPlaysToday();
+        const swipePlays = challengeStore.getSwipeGamePlaysToday();
+        const todayCompletedMods = Object.values(chapterStore.progress).flatMap((p) => p.completedModules).length;
+
         const updated = quests.map((q) => {
           if (q.isCompleted) return q;
-          switch (q.type) {
-            case "dilemma":
-              return { ...q, isCompleted: challengeStore.getDilemmaPlaysToday() > 0 };
-            case "module": {
-              // Check if any module was completed today by comparing all chapter progress
-              const allCompleted = Object.values(chapterStore.progress).flatMap((p) => p.completedModules);
-              return { ...q, isCompleted: allCompleted.length > 0 };
-            }
-            case "swipe":
-              return { ...q, isCompleted: challengeStore.getSwipeGamePlaysToday() > 0 };
-            default:
-              return q;
-          }
+          let done = false;
+          if (q.type === "dilemma") done = dilemmaPlays > 0;
+          else if (q.type === "module") done = todayCompletedMods > 0;
+          else if (q.type === "swipe") done = swipePlays > 0;
+          return done ? { ...q, isCompleted: true } : q;
         });
 
         // Only update if something changed
         if (updated.some((q, i) => q.isCompleted !== quests[i].isCompleted)) {
-          set({ quests: updated });
+          const allDoneNow = updated.length > 0 && updated.every((q) => q.isCompleted);
+          const wasAllDone = get().allCompleted();
+          set({
+            quests: updated,
+            ...(allDoneNow && !wasAllDone ? { newlyCompleted: true } : {})
+          });
         }
       },
 

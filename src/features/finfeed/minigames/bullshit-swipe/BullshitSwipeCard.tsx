@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { View, Text, StyleSheet, Dimensions, AccessibilityInfo, Pressable } from 'react-native';
+import { View, Text, StyleSheet, Dimensions, AccessibilityInfo } from 'react-native';
 import { Image as ExpoImage } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import Animated, {
@@ -34,6 +34,7 @@ import { AD_TEMPLATES } from './adTemplates';
 import { getTodayBullshitAds } from './bullshitAdsData';
 import type { BullshitAd, BullshitRoundResult } from './types';
 import { GlossaryInlineToggle } from '../shared/GlossaryInlineToggle';
+import { FeedStartButton } from '../shared/FeedStartButton';
 
 const LOTTIE_MAGNIFIER = require('../../../../../assets/lottie/wired-flat-1173-shark-hover-pinch.json');
 const LOTTIE_APPROVED = require('../../../../../assets/lottie/wired-flat-24-approved-checked-hover-pinch.json');
@@ -43,7 +44,6 @@ const RTL = { writingDirection: 'rtl' as const, textAlign: 'right' as const };
 const RTL_CENTER = { writingDirection: 'rtl' as const, textAlign: 'center' as const };
 const SCREEN_WIDTH = Dimensions.get('window').width;
 const SWIPE_THRESHOLD = SCREEN_WIDTH * 0.25;
-const FEEDBACK_DURATION = 6000;
 
 interface Props {
   isActive: boolean;
@@ -315,14 +315,8 @@ const SHARK_LOSE_TITLES = [
 
 function CaptainSharkSpeech({
   result,
-  onNext,
-  onInteract,
-  isLast,
 }: {
   result: BullshitRoundResult;
-  onNext: () => void;
-  onInteract: () => void;
-  isLast: boolean;
 }) {
   const imageSource = result.correct ? FINN_HAPPY : FINN_EMPATHIC;
   const titlePool = result.correct ? SHARK_WIN_TITLES : SHARK_LOSE_TITLES;
@@ -349,21 +343,12 @@ function CaptainSharkSpeech({
           {result.ad.glossaryKeys && result.ad.glossaryKeys.length > 0 && (
             <View style={styles.glossaryColumn}>
               {result.ad.glossaryKeys.map((k) => (
-                <GlossaryInlineToggle key={k} glossaryKey={k} onInteract={onInteract} />
+                <GlossaryInlineToggle key={k} glossaryKey={k} direction="up" />
               ))}
             </View>
           )}
         </View>
       </View>
-
-      <Pressable
-        onPress={onNext}
-        accessibilityRole="button"
-        accessibilityLabel={isLast ? 'סיימנו' : 'הבא'}
-        style={({ pressed }) => [styles.manualNextBtn, pressed && { transform: [{ translateY: 2 }] }]}
-      >
-        <Text style={styles.manualNextBtnText}>{isLast ? 'סיימנו' : 'הבא ←'}</Text>
-      </Pressable>
     </Animated.View>
   );
 }
@@ -384,12 +369,10 @@ export const BullshitSwipeCard = React.memo(function BullshitSwipeCard({
   const [gameState, setGameState] = useState<'playing' | 'done'>('playing');
   const [showConfetti, setShowConfetti] = useState(false);
   const [showFlyingRewards, setShowFlyingRewards] = useState(false);
-  const feedbackTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const confettiTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const finalizedRef = useRef(false);
 
   useEffect(() => () => {
-    if (feedbackTimer.current) clearTimeout(feedbackTimer.current);
     if (confettiTimer.current) clearTimeout(confettiTimer.current);
   }, []);
 
@@ -441,18 +424,10 @@ export const BullshitSwipeCard = React.memo(function BullshitSwipeCard({
     [adsThisRound.length, currentIndex, finalize, onFinish],
   );
 
-  const cancelFeedbackTimer = useCallback(() => {
-    if (feedbackTimer.current) {
-      clearTimeout(feedbackTimer.current);
-      feedbackTimer.current = null;
-    }
-  }, []);
-
   const handleManualNext = useCallback(() => {
-    cancelFeedbackTimer();
     tapHaptic();
     advanceAfterFeedback(results);
-  }, [advanceAfterFeedback, cancelFeedbackTimer, results]);
+  }, [advanceAfterFeedback, results]);
 
   const handleSwipe = useCallback(
     (userSaidBullshit: boolean) => {
@@ -468,12 +443,8 @@ export const BullshitSwipeCard = React.memo(function BullshitSwipeCard({
       setFeedback(result);
       const updatedResults = [...results, result];
       setResults(updatedResults);
-
-      feedbackTimer.current = setTimeout(() => {
-        advanceAfterFeedback(updatedResults);
-      }, FEEDBACK_DURATION);
     },
-    [adsThisRound, currentIndex, gameState, results, advanceAfterFeedback],
+    [adsThisRound, currentIndex, gameState, results],
   );
 
   if (hasPlayedToday && gameState !== 'done' && !bypassDailyGate) {
@@ -532,19 +503,20 @@ export const BullshitSwipeCard = React.memo(function BullshitSwipeCard({
           </View>
         )}
 
-        {/* Feedback phase — stamp drops + Captain Shark explains */}
+        {/* Feedback phase — Captain Shark explains.
+            Ad image is hidden so the explanation + glossary toggles fit on one
+            screen (was overflowing on cards with 3 glossary terms). The
+            bullshit/legit verdict is conveyed by the Shark title color + emoji. */}
         {feedback && (
           <View style={styles.gameArea}>
-            <View style={styles.adCard}>
-              <AdCardFront ad={feedback.ad} />
-              <DropStamp kind={feedback.ad.isBullshit ? 'bullshit' : 'legit'} />
+            <CaptainSharkSpeech result={feedback} />
+            <View style={styles.nextBtnWrap}>
+              <FeedStartButton
+                label={currentIndex + 1 >= adsThisRound.length ? 'סיימנו' : 'הבא'}
+                onPress={handleManualNext}
+                accessibilityLabel={currentIndex + 1 >= adsThisRound.length ? 'סיימנו' : 'הבא'}
+              />
             </View>
-            <CaptainSharkSpeech
-              result={feedback}
-              onNext={handleManualNext}
-              onInteract={cancelFeedbackTimer}
-              isLast={currentIndex + 1 >= adsThisRound.length}
-            />
           </View>
         )}
 
@@ -893,27 +865,10 @@ const styles = StyleSheet.create({
     fontWeight: '900',
     color: '#7c3aed',
   },
-  manualNextBtn: {
-    alignSelf: 'stretch',
-    marginTop: 12,
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    borderRadius: 12,
-    backgroundColor: '#0ea5e9',
-    alignItems: 'center',
-    justifyContent: 'center',
-    shadowColor: '#0284c7',
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 5,
-  },
-  manualNextBtnText: {
-    fontSize: 15,
-    fontWeight: '900',
-    color: '#ffffff',
-    letterSpacing: 0.3,
-    writingDirection: 'rtl',
+  nextBtnWrap: {
+    width: SCREEN_WIDTH - 72,
+    alignSelf: 'center',
+    marginTop: 4,
   },
 });
 

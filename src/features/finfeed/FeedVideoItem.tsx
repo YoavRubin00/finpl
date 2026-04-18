@@ -12,6 +12,7 @@ import { BannerRibbon } from "../../components/ui/BannerRibbon";
 import { useSubscriptionStore } from "../subscription/useSubscriptionStore";
 import { useSavedItemsStore } from "../saved-items/useSavedItemsStore";
 import { useUpgradeModalStore } from "../../stores/useUpgradeModalStore";
+import { tapHaptic, heavyHaptic } from "../../utils/haptics";
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
 
@@ -104,13 +105,16 @@ export const FeedVideoItem = React.memo(function FeedVideoItem({ item, isActive 
     if (isPaused) {
       player.play();
       setIsPaused(false);
+      tapHaptic();
       return;
     }
     setIsMuted((m) => !m);
+    tapHaptic();
   }
 
   function handleLongPress() {
     if (hasError) return;
+    heavyHaptic();
     if (isPaused) {
       player.play();
       setIsPaused(false);

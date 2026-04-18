@@ -24,17 +24,17 @@ export const FOMO_TOKENS = {
   addedGlow: 'rgba(34,197,94,0.55)',
 
   // Inline actions
-  ignoreBg: 'rgba(203,213,225,0.15)',
-  ignoreBorder: '#64748b',
-  ignoreText: '#e2e8f0',
+  ignoreBg: '#475569',
+  ignoreBorder: '#334155',
+  ignoreText: '#ffffff',
 
-  reportBg: 'rgba(220,38,38,0.12)',
-  reportBorder: 'rgba(220,38,38,0.5)',
-  reportText: '#fca5a5',
+  reportBg: '#dc2626',
+  reportBorder: '#991b1b',
+  reportText: '#ffffff',
 
-  tempBg: 'rgba(34,197,94,0.15)',
-  tempBorder: 'rgba(34,197,94,0.6)',
-  tempText: '#4ade80',
+  tempBg: '#16a34a',
+  tempBorder: '#15803d',
+  tempText: '#ffffff',
 
   // Portfolio HUD
   hudBg: 'rgba(8,23,42,0.9)',

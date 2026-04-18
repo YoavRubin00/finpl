@@ -19,6 +19,7 @@ import { useDailyChallengesStore } from './use-daily-challenges-store';
 import { useDailyLogStore } from '../daily-summary/useDailyLogStore';
 import { getTodayCrashRound } from './crash-game-data';
 import { MAX_DAILY_PLAYS, CHALLENGE_XP_REWARD, CHALLENGE_COIN_REWARD } from './daily-challenge-types';
+import { FeedStartButton } from '../finfeed/minigames/shared/FeedStartButton';
 
 const RTL = { writingDirection: 'rtl' as const, textAlign: 'right' as const };
 const GRAPH_WIDTH = 280;
@@ -257,14 +258,11 @@ export const CrashGameCard = React.memo(function CrashGameCard({ isActive }: Pro
 
           {/* Action buttons */}
           {gameState === 'idle' && (
-            <Pressable onPress={startGame} style={styles.actionBtn} accessibilityRole="button" accessibilityLabel="התחל לשחק במרוץ הריבית">
-              <LinearGradient
-                colors={['#0ea5e9', '#0284c7']}
-                style={styles.actionBtnGradient}
-              >
-                <Text style={styles.actionBtnText}>🚀 התחל לשחק</Text>
-              </LinearGradient>
-            </Pressable>
+            <FeedStartButton
+              label="שחקו עכשיו"
+              onPress={startGame}
+              accessibilityLabel="התחל לשחק במרוץ הריבית"
+            />
           )}
 
           {gameState === 'running' && (

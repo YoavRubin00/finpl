@@ -5,22 +5,20 @@ import {
   Pressable,
   Modal,
   StyleSheet,
-  Dimensions,
 } from "react-native";
 import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { Image as ExpoImage } from "expo-image";
 import { useRouter } from "expo-router";
 import { LinearGradient } from "expo-linear-gradient";
-import { Lock, X, Play } from "lucide-react-native";
+import { Lock, X } from "lucide-react-native";
 import { SimulatorLoader } from "../chapter-1-content/SimulatorLoader";
 import { isModuleAccessible, nextAccessibleModule } from "../subscription/moduleAccess";
 import { useChapterStore } from "../chapter-1-content/useChapterStore";
 import { FINN_STANDARD } from "../retention-loops/finnMascotConfig";
 import { useSoundEffect } from "../../hooks/useSoundEffect";
 import { tapHaptic } from "../../utils/haptics";
+import { FeedStartButton } from "./minigames/shared/FeedStartButton";
 import type { FeedSimulator } from "./feedSimulatorsData";
-
-const { width: SCREEN_WIDTH } = Dimensions.get("window");
 
 const RTL = { writingDirection: "rtl" as const, textAlign: "right" as const };
 
@@ -96,15 +94,11 @@ export function FeedSimulatorCard({ simulator, isActive: _isActive }: Props) {
       </View>
 
       {/* Play button */}
-      <Pressable
+      <FeedStartButton
+        label="שחקו עכשיו"
         onPress={handlePlay}
-        style={[styles.playBtn, { backgroundColor: simulator.accentColor }]}
-        accessibilityRole="button"
         accessibilityLabel={`שחקו עכשיו — ${simulator.teaserTitle}`}
-      >
-        <Text style={styles.playBtnText}>שחקו עכשיו</Text>
-        <Play size={16} color="#ffffff" fill="#ffffff" />
-      </Pressable>
+      />
 
       {/* Module CTA */}
       {accessible ? (
@@ -219,24 +213,6 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     color: "#0c4a6e",
     lineHeight: 20,
-  },
-  playBtn: {
-    flexDirection: "row-reverse",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 8,
-    paddingVertical: 14,
-    borderRadius: 16,
-    borderBottomWidth: 3,
-    borderBottomColor: "rgba(0,0,0,0.2)",
-    width: SCREEN_WIDTH - 32,
-    alignSelf: "center",
-  },
-  playBtnText: {
-    color: "#ffffff",
-    fontSize: 16,
-    fontWeight: "900",
-    writingDirection: "rtl",
   },
   ctaBtn: {
     alignSelf: "center",

@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { View, Text, Pressable, StyleSheet } from "react-native";
+import { View, Pressable, StyleSheet } from "react-native";
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -62,7 +62,7 @@ export function DailyQuestWidget({ completedCount, totalQuests, onPress }: Daily
       >
         <Animated.View style={[styles.badge, glowStyle]}>
           <LottieIcon source={LOTTIE_TROPHY} size={26} autoPlay={allDone} loop={false} />
-          {/* Progress dots */}
+          {/* Progress dots — RTL: fill from right to left */}
           <View style={styles.dotsRow}>
             {Array.from({ length: totalQuests }).map((_, i) => (
               <View
@@ -75,7 +75,6 @@ export function DailyQuestWidget({ completedCount, totalQuests, onPress }: Daily
             ))}
           </View>
         </Animated.View>
-        <Text style={styles.counter}>{completedCount}/{totalQuests}</Text>
       </Pressable>
     </Animated.View>
   );
@@ -97,7 +96,7 @@ const styles = StyleSheet.create({
     elevation: 4,
   },
   dotsRow: {
-    flexDirection: "row",
+    flexDirection: "row-reverse",
     gap: 3,
     position: "absolute",
     bottom: 3,
@@ -110,12 +109,5 @@ const styles = StyleSheet.create({
   },
   dotDone: {
     backgroundColor: STITCH.primary,
-  },
-  counter: {
-    fontSize: 10,
-    fontWeight: "800",
-    color: STITCH.onSurfaceVariant,
-    textAlign: "center",
-    marginTop: 2,
   },
 });

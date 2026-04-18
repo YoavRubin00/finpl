@@ -7,6 +7,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { CALM } from '../../constants/theme';
 import { useEconomyStore } from '../economy/useEconomyStore';
 import { useTradingStore } from './useTradingStore';
+import { useTradingHubUiStore } from './useTradingHubUiStore';
 import { ASSET_BY_ID } from './tradingHubData';
 import { StockIcon } from './StockIcon';
 import { FINN_STANDARD } from '../retention-loops/finnMascotConfig';
@@ -37,12 +38,15 @@ interface BuySheetProps {
     previousClose: number | null;
     onClose: () => void;
     onBuyComplete: () => void;
+    /** Fires after a successful buy when this call actually unlocked a new asset type. */
+    onAssetTypeUnlocked?: (type: 'stock') => void;
 }
 
-export function BuySheet({ visible, assetId, currentPrice, previousClose, onClose, onBuyComplete }: BuySheetProps) {
+export function BuySheet({ visible, assetId, currentPrice, previousClose, onClose, onBuyComplete, onAssetTypeUnlocked }: BuySheetProps) {
     const coins = useEconomyStore((s) => s.coins);
     const spendCoins = useEconomyStore((s) => s.spendCoins);
     const openPosition = useTradingStore((s) => s.openPosition);
+    const unlockAssetType = useTradingHubUiStore((s) => s.unlockAssetType);
     const insets = useSafeAreaInsets();
 
     const [amountText, setAmountText] = useState('');
@@ -71,6 +75,17 @@ export function BuySheet({ visible, assetId, currentPrice, previousClose, onClos
         openPosition(assetId, 'buy', execPrice, amount);
         successHaptic();
 
+        // Progressive unlock: first market-order buy unlocks individual stocks.
+        // We unlock on market orders only — limit orders may not execute immediately,
+        // so keeping the "earned via real purchase" feel matters. Commodity & index
+        // are unlocked by default, so no-op if 'stock' already unlocked.
+        if (orderType === 'market') {
+            const didUnlock = unlockAssetType('stock');
+            if (didUnlock) {
+                onAssetTypeUnlocked?.('stock');
+            }
+        }
+
         const typeLabel = orderType === 'market' ? '' : ` (לימיט $${limitPrice})`;
         setFeedback(`קנית ${asset?.name ?? assetId} ב-${amount} מטבעות!${typeLabel}`);
         setAmountText('');
@@ -81,7 +96,7 @@ export function BuySheet({ visible, assetId, currentPrice, previousClose, onClos
             onBuyComplete();
             onClose();
         }, 1500);
-    }, [canBuy, amount, assetId, currentPrice, limitPrice, orderType, spendCoins, openPosition, asset, onBuyComplete, onClose]);
+    }, [canBuy, amount, assetId, currentPrice, limitPrice, orderType, spendCoins, openPosition, unlockAssetType, onAssetTypeUnlocked, asset, onBuyComplete, onClose]);
 
     const handleClose = useCallback(() => {
         setAmountText('');

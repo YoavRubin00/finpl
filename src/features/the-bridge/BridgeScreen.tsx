@@ -11,6 +11,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { Info } from 'lucide-react-native';
+import { Image as ExpoImage } from 'expo-image';
+import { FINN_DANCING } from '../retention-loops/finnMascotConfig';
 import { GoldCoinIcon } from '../../components/ui/GoldCoinIcon';
 import Animated, {
   useSharedValue,
@@ -112,11 +114,23 @@ function AnimatedTabBar({
   activeCategory: BenefitCategory;
   onSelect: (cat: BenefitCategory) => void;
 }) {
+  const tabsScrollRef = useRef<ScrollView>(null);
+  const didInitialScroll = useRef(false);
+
   return (
     <ScrollView
+      ref={tabsScrollRef}
       horizontal
       showsHorizontalScrollIndicator={false}
       contentContainerStyle={[styles.tabsRow, { flexDirection: 'row-reverse' }]}
+      onContentSizeChange={() => {
+        // RTL row-reverse: first item ('investments') is visually right-most.
+        // Default scroll offset (0) shows the LAST items, so we jump to the end
+        // once on mount to reveal 'investments' as the user expects.
+        if (didInitialScroll.current) return;
+        didInitialScroll.current = true;
+        tabsScrollRef.current?.scrollToEnd({ animated: false });
+      }}
     >
       {categories.map((cat) => {
         const isActive = activeCategory === cat;
@@ -216,15 +230,18 @@ export function BridgeScreen({ walkthroughAutoScroll }: BridgeScreenProps = {}) 
   useEffect(() => {
     if (!walkthroughAutoScroll) return;
     let y = 0;
+    let interval: ReturnType<typeof setInterval> | null = null;
     const delay = setTimeout(() => {
-      const interval = setInterval(() => {
+      interval = setInterval(() => {
         y += 120;
         scrollViewRef.current?.scrollTo({ y, animated: true });
-        if (y >= 600) clearInterval(interval);
+        if (y >= 600 && interval) { clearInterval(interval); interval = null; }
       }, 2000);
-      return () => clearInterval(interval);
     }, 1500);
-    return () => clearTimeout(delay);
+    return () => {
+      clearTimeout(delay);
+      if (interval) clearInterval(interval);
+    };
   }, [walkthroughAutoScroll]);
 
   const visibleBenefits = BRIDGE_BENEFITS.filter(b => b.category === activeCategory);
@@ -275,6 +292,11 @@ export function BridgeScreen({ walkthroughAutoScroll }: BridgeScreenProps = {}) 
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
         >
+          {/* ── Captain Shark celebration — dancing because you reached the bridge ── */}
+          <Animated.View entering={FadeInDown.duration(400)} style={{ alignItems: 'center', marginBottom: 4 }}>
+            <ExpoImage source={FINN_DANCING} style={{ width: 96, height: 96 }} contentFit="contain" accessible={false} />
+          </Animated.View>
+
           {/* ── Hero Card: 3D glow premium card ── */}
           <Animated.View entering={FadeInDown.duration(500).delay(0)}>
             <View style={styles.heroOuter}>

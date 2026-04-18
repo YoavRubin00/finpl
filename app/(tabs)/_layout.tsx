@@ -24,8 +24,8 @@ export default function TabsLayout() {
         tabBar={(props) => <AnimatedTabBar {...props} />}
       >
         <Tabs.Screen name="investments" />
-        <Tabs.Screen name="index" />
         <Tabs.Screen name="learn" />
+        <Tabs.Screen name="index" />
         <Tabs.Screen name="friends" />
         <Tabs.Screen name="chat" />
         <Tabs.Screen name="more" options={{ href: null }} />

@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { View, Text, Modal, Pressable, StyleSheet } from "react-native";
+import { View, Text, Modal, Pressable, StyleSheet, ScrollView } from "react-native";
 import { Image as ExpoImage } from "expo-image";
 import Animated, {
   FadeIn,
@@ -15,7 +15,6 @@ import Animated, {
   Easing,
 } from "react-native-reanimated";
 import type { AnimationObject } from "lottie-react-native";
-import { Snowflake } from "lucide-react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import { LottieIcon } from "../../components/ui/LottieIcon";
@@ -23,17 +22,15 @@ import { ConfettiExplosion } from "../../components/ui/ConfettiExplosion";
 import { FlyingRewards } from "../../components/ui/FlyingRewards";
 import { STITCH } from "../../constants/theme";
 import { useDailyQuestsStore, previewQuestReward } from "./useDailyQuestsStore";
-import { type DailyQuest } from "./daily-quest-types";
+import { type DailyQuest, QUEST_TEMPLATES } from "./daily-quest-types";
 import { useEconomyStore } from "../economy/useEconomyStore";
-import { FINN_HELLO, FINN_HAPPY, FINN_STANDARD } from "../retention-loops/finnMascotConfig";
+import { FINN_HELLO, FINN_STANDARD, FINN_DANCING } from "../retention-loops/finnMascotConfig";
+import { useSpontaneousDancing } from "../retention-loops/useSpontaneousDancing";
 import { heavyHaptic, successHaptic, tapHaptic } from "../../utils/haptics";
 import { useSoundEffect } from "../../hooks/useSoundEffect";
-import { GoldCoinIcon } from "../../components/ui/GoldCoinIcon";
 
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const LOTTIE_CHEST = require("../../../assets/lottie/3D Treasure Box.json") as unknown as AnimationObject;
-// eslint-disable-next-line @typescript-eslint/no-var-requires
-const LOTTIE_DIAMOND = require("../../../assets/lottie/Diamond.json") as unknown as AnimationObject;
 
 const RTL = { writingDirection: "rtl" as const, textAlign: "right" as const };
 
@@ -42,8 +39,16 @@ interface DailyQuestsSheetProps {
   onClose: () => void;
 }
 
-// Quest button — mirrors FeedStartButton pattern with pulsing glow halo.
-// Blue + glow when pending (invites action), bright green when done.
+// Safety fallback for users with old AsyncStorage quests that lack the string fields
+function getQuestCopy(quest: DailyQuest) {
+  if (quest.titleHe) return { titleHe: quest.titleHe, descriptionHe: quest.descriptionHe };
+  const template = QUEST_TEMPLATES.find(t => t.type === quest.type);
+  return {
+    titleHe: template?.titleHe || "משימה יומית",
+    descriptionHe: template?.descriptionHe || "",
+  };
+}
+
 function QuestButton({
   quest,
   index,
@@ -76,18 +81,15 @@ function QuestButton({
     transform: [{ scale: 1 + glow.value * 0.03 }],
   }));
 
-  const haloColor = isDone ? "#4ade80" : STITCH.primaryCyan;
-  const depthColor = isDone ? "#16a34a" : STITCH.surfaceVariant;
-  const btnColor = isDone ? "#dcfce7" : STITCH.surfaceLowest;
-  const borderColor = isDone ? "#4ade80" : STITCH.outlineVariant;
-  const textColor = isDone ? "#14532d" : STITCH.onSurface;
+  const { titleHe, descriptionHe } = getQuestCopy(quest);
 
   return (
     <Animated.View
       entering={FadeIn.delay(100 + index * 80).duration(300)}
-      style={{ alignSelf: "stretch" }}
+      style={{ alignSelf: "stretch", marginBottom: 12 }}
     >
       <View style={{ position: "relative", alignItems: "stretch" }}>
+        {/* Glow Halo - Placed precisely behind */}
         {!isDone && (
           <Animated.View
             pointerEvents="none"
@@ -99,101 +101,68 @@ function QuestButton({
                 right: -6,
                 bottom: -6,
                 borderRadius: 26,
-                backgroundColor: haloColor,
+                backgroundColor: STITCH.primaryCyan,
+                zIndex: -1,
               },
               glowStyle,
             ]}
           />
         )}
 
-        <View
-          pointerEvents="none"
-          style={{
-            position: "absolute",
-            top: 5,
-            left: 0,
-            right: 0,
-            bottom: -5,
-            borderRadius: 20,
-            backgroundColor: depthColor,
-          }}
-        />
-
+        {/* Card uses native Flexbox row-reverse so elements flow natively RTL */}
         <Pressable
           onPress={onPress}
           disabled={isDone}
           accessibilityRole="button"
-          accessibilityLabel={isDone ? `${quest.titleHe} — הושלם` : `${quest.titleHe} — לחץ לביצוע`}
-          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-          style={({ pressed }) => ({
-            flexDirection: "row-reverse",
-            alignItems: "center",
-            gap: 14,
-            paddingHorizontal: 20,
-            paddingVertical: 16,
-            minHeight: 76,
-            borderRadius: 20,
-            backgroundColor: btnColor,
-            borderWidth: 2,
-            borderColor: borderColor,
-            shadowColor: haloColor,
-            shadowOffset: { width: 0, height: 4 },
-            shadowOpacity: 0.4,
-            shadowRadius: 12,
-            elevation: 8,
-            transform: pressed && !isDone ? [{ translateY: 2 }] : [],
-          })}
+          accessibilityLabel={isDone ? `${titleHe} — הושלם` : `${titleHe} — לחץ לביצוע`}
+          style={({ pressed }) => [
+            questStyles.card,
+            isDone ? questStyles.cardDone : questStyles.cardPending,
+            pressed && !isDone && questStyles.cardPressed,
+          ]}
         >
-          <Text
-            style={Object.assign(
-              {
-                flex: 1,
-                fontSize: 18,
-                fontWeight: "900" as const,
-                color: textColor,
-                writingDirection: "rtl" as const,
-                textAlign: "right" as const,
-                letterSpacing: 0.3,
-                lineHeight: 24,
-                includeFontPadding: false,
-                zIndex: 10,
-                elevation: 10,
-              },
-              !isDone && {
-                textShadowColor: "rgba(0,0,0,0.08)",
-                textShadowOffset: { width: 0, height: 1 },
-                textShadowRadius: 2,
-              }
-            )}
-            numberOfLines={2}
-            allowFontScaling={false}
-            selectable={false}
-          >
-            {quest.titleHe}
-          </Text>
+          {/* Rigid side-by-side flex layout to ban Android wrap stacking entirely */}
+          <View style={{ flex: 1, flexDirection: "row-reverse", alignItems: "center", justifyContent: "space-between" }}>
+            
+            {/* Child 1: TEXT CONTENT (Visually RIGHT due to row-reverse) */}
+            <View
+              style={[
+                questStyles.textCol,
+                isDone && questStyles.textColDone,
+                { flex: 1, paddingRight: 4 } // Force standard RTL bounding and flex explicitly
+              ]}
+            >
+              <Text 
+                numberOfLines={2} 
+                adjustsFontSizeToFit 
+                style={[questStyles.titleText, isDone && questStyles.titleTextDone]}
+              >
+                {titleHe}
+              </Text>
+              {!!descriptionHe && (
+                <Text 
+                  numberOfLines={2} 
+                  adjustsFontSizeToFit 
+                  style={[questStyles.descText, isDone && questStyles.descTextDone, { marginTop: 2 }]}
+                >
+                  {descriptionHe}
+                </Text>
+              )}
+            </View>
 
-          <View
-            style={{
-              width: 52,
-              height: 52,
-              borderRadius: 26,
-              backgroundColor: isDone ? "#dcfce7" : STITCH.surfaceLow,
-              borderWidth: 2,
-              borderColor: borderColor,
-              alignItems: "center",
-              justifyContent: "center",
-              flexShrink: 0,
-              zIndex: 10,
-              elevation: 10,
-            }}
-            accessible={false}
-          >
-            {quest.type === "swipe" ? (
-              <Text style={{ fontSize: 30, lineHeight: 34 }} accessible={false}>🎮</Text>
-            ) : (
-              <LottieIcon source={quest.lottieSource} size={40} autoPlay loop={!isDone} />
-            )}
+            {/* Child 2: LOTTIE (Visually LEFT due to row-reverse) */}
+            <View style={[questStyles.iconWrap, isDone && questStyles.iconWrapDone, { marginLeft: 12, marginRight: 0 }]} accessible={false}>
+              <LottieIcon source={quest.lottieSource} size={36} autoPlay loop={!isDone} />
+            </View>
+
           </View>
+
+          {/* Child 3: CHECKMARK (Absolutely positioned left to prevent any flex interference) */}
+          {isDone && (
+            <View style={{ position: "absolute", left: 16 }}>
+              <Text style={questStyles.checkmark}>✓</Text>
+            </View>
+          )}
         </Pressable>
       </View>
     </Animated.View>
@@ -207,7 +176,6 @@ export function DailyQuestsSheet({ visible, onClose }: DailyQuestsSheetProps) {
   const completedCount = useDailyQuestsStore((s) => s.completedCount());
   const allDone = useDailyQuestsStore((s) => s.allCompleted());
   const rewardClaimed = useDailyQuestsStore((s) => s.rewardClaimed);
-  const lastRewardSummary = useDailyQuestsStore((s) => s.lastRewardSummary);
   const claimReward = useDailyQuestsStore((s) => s.claimReward);
   const refreshQuests = useDailyQuestsStore((s) => s.refreshQuests);
   const syncQuestCompletions = useDailyQuestsStore((s) => s.syncCompletions);
@@ -217,7 +185,10 @@ export function DailyQuestsSheet({ visible, onClose }: DailyQuestsSheetProps) {
   // Safe on every open: refreshQuests is date-idempotent (no-op if already fresh),
   // and syncCompletions picks up any completions since the sheet last rendered.
   useEffect(() => {
-    if (!visible) return;
+    if (!visible) {
+      setChestOpen(false);
+      return;
+    }
     if (quests.length === 0) {
       refreshQuests();
     } else {
@@ -226,7 +197,6 @@ export function DailyQuestsSheet({ visible, onClose }: DailyQuestsSheetProps) {
   }, [visible, quests.length, refreshQuests, syncQuestCompletions]);
 
   const preview = previewQuestReward(streak);
-  const summary = rewardClaimed ? lastRewardSummary : null;
 
   /** Navigate to the feed item that fulfills this quest. */
   const handleQuestPress = (quest: DailyQuest) => {
@@ -235,13 +205,17 @@ export function DailyQuestsSheet({ visible, onClose }: DailyQuestsSheetProps) {
     onClose();
     // Both swipe + dilemma live in the FinFeed (learn tab); module → learn map
     if (quest.type === "swipe" || quest.type === "dilemma") {
-      router.push("/(tabs)/learn" as never);
+      import('../finfeed/FinFeedScreen').then(({ setPendingFeedScrollById }) => {
+        setPendingFeedScrollById(quest.type === "swipe" ? "swipe-game" : "daily-dilemma");
+        router.push("/(tabs)/learn" as never);
+      });
     } else if (quest.type === "module") {
       router.push("/(tabs)" as never);
     }
   };
 
   const [showClaimAnim, setShowClaimAnim] = useState(false);
+  const [chestOpen, setChestOpen] = useState(false);
   const { playSound } = useSoundEffect();
   const hapticTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const claimTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -310,6 +284,7 @@ export function DailyQuestsSheet({ visible, onClose }: DailyQuestsSheetProps) {
     if (rewardClaimed || !allDone || showClaimAnim) return;
     heavyHaptic();
     playSound('modal_open_4');
+    setChestOpen(true);
     setShowClaimAnim(true);
     hapticTimerRef.current = setTimeout(() => successHaptic(), 250);
     claimTimerRef.current = setTimeout(() => {
@@ -326,7 +301,15 @@ export function DailyQuestsSheet({ visible, onClose }: DailyQuestsSheetProps) {
       : completedCount === 0
         ? "hello"
         : "standard";
-  const sharkImage = sharkState === "happy" ? FINN_HAPPY : sharkState === "hello" ? FINN_HELLO : FINN_STANDARD;
+  const spiceWithDancing = useSpontaneousDancing(0.15, 'quests-standard');
+  const sharkImage =
+    sharkState === "happy"
+      ? FINN_DANCING
+      : sharkState === "hello"
+        ? FINN_HELLO
+        : spiceWithDancing
+          ? FINN_DANCING
+          : FINN_STANDARD;
   const sharkLine = rewardClaimed
     ? "תחזרו מחר, אני אכין תיבה חדשה"
     : allDone
@@ -338,9 +321,17 @@ export function DailyQuestsSheet({ visible, onClose }: DailyQuestsSheetProps) {
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose} accessibilityViewIsModal>
       <Pressable style={styles.overlay} onPress={onClose} accessibilityLabel="סגור משימות יומיות">
-        <Pressable style={[styles.sheet, { paddingBottom: 24 + insets.bottom }]} onPress={() => {}} accessible={false}>
-          {/* Handle */}
+        <Pressable style={[styles.sheet]} onPress={() => {}} accessible={false}>
+          {/* Handle fixed at top */}
           <View style={styles.handle} accessible={false} />
+
+          {/* Scrollable content */}
+          <ScrollView
+            style={{ flex: 1 }}
+            contentContainerStyle={{ paddingBottom: 8 }}
+            showsVerticalScrollIndicator={false}
+            nestedScrollEnabled
+          >
 
           {/* Shark hero — presence + coaching */}
           <View style={styles.sharkHero}>
@@ -397,47 +388,18 @@ export function DailyQuestsSheet({ visible, onClose }: DailyQuestsSheetProps) {
                       pressed && allDone && { transform: [{ scale: 0.96 }] },
                     ]}
                   >
-                    <LottieIcon source={LOTTIE_CHEST as unknown as number} size={140} autoPlay={allDone} loop={allDone} />
+                    <LottieIcon source={LOTTIE_CHEST as unknown as number} size={140} autoPlay={false} active={chestOpen} loop={false} />
                   </Pressable>
                 </Animated.View>
               </View>
 
-              <Text style={[styles.rewardHeadline, RTL]}>
-                {allDone ? "התיבה מוכנה — לחצו לפתיחה!" : "מה מחכה בתיבה?"}
-              </Text>
-
-              <View style={styles.rewardPills}>
-                <View style={styles.rewardPill}>
-                  <Text style={styles.rewardPillValue}>{preview.xp}</Text>
-                  <Text style={styles.rewardPillLabel}>XP</Text>
-                </View>
-                <View style={styles.rewardPill}>
-                  <GoldCoinIcon size={16} />
-                  <Text style={styles.rewardPillValue}>{preview.coins}</Text>
-                </View>
-                <View style={[styles.rewardPill, styles.rewardPillChance]}>
-                  <LottieIcon source={LOTTIE_DIAMOND as unknown as number} size={18} autoPlay loop />
-                  <Text style={styles.rewardPillChanceText}>?</Text>
-                </View>
-                {preview.freezes > 0 && (
-                  <View style={[styles.rewardPill, styles.rewardPillBonus]}>
-                    <Snowflake size={14} color="#0284c7" />
-                    <Text style={styles.rewardPillValue}>+1</Text>
-                  </View>
-                )}
-              </View>
-
-              {preview.streakBonusPct > 0 && (
-                <View style={styles.streakBonusPill}>
-                  <Text style={[styles.streakBonusLabel, RTL]}>
-                    בונוס רצף: +{preview.streakBonusPct}%
-                  </Text>
-                </View>
-              )}
-
-              {!allDone && (
-                <Text style={[styles.hintText, RTL]}>
+              {!allDone ? (
+                <Text style={[styles.hintText, { marginTop: -10 }]}>
                   השלימו את כל המשימות כדי לפתוח את התיבה
+                </Text>
+              ) : (
+                <Text style={styles.rewardHeadline}>
+                  התיבה מוכנה — לחצו לפתיחה!
                 </Text>
               )}
             </Animated.View>
@@ -449,6 +411,24 @@ export function DailyQuestsSheet({ visible, onClose }: DailyQuestsSheetProps) {
             </Animated.View>
           )}
 
+          </ScrollView>
+
+          {/* Close button pinned at bottom outside scroll */}
+          <View style={{ paddingTop: 10, paddingBottom: Math.max(8, insets.bottom) }}>
+            <Pressable
+              onPress={onClose}
+              style={({ pressed }) => [
+                styles.closeBtn,
+                pressed && { opacity: 0.85, transform: [{ translateY: 1 }] },
+              ]}
+              accessibilityRole="button"
+              accessibilityLabel="סגור"
+              hitSlop={12}
+            >
+              <Text style={styles.closeBtnText}>סגור</Text>
+            </Pressable>
+          </View>
+
           {/* Claim-in-flight celebration overlay — mirrors module-end chest (XP + coins + confetti) */}
           {showClaimAnim && (
             <View pointerEvents="none" style={StyleSheet.absoluteFill}>
@@ -457,25 +437,110 @@ export function DailyQuestsSheet({ visible, onClose }: DailyQuestsSheetProps) {
               <FlyingRewards type="coins" amount={preview.coins} onComplete={() => { /* auto-clear */ }} />
             </View>
           )}
-
-          {/* Close */}
-          <Pressable
-            onPress={onClose}
-            style={({ pressed }) => [
-              styles.closeBtn,
-              pressed && { opacity: 0.85, transform: [{ translateY: 1 }] },
-            ]}
-            accessibilityRole="button"
-            accessibilityLabel="סגור"
-            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-          >
-            <Text style={styles.closeBtnText}>סגור</Text>
-          </Pressable>
         </Pressable>
       </Pressable>
     </Modal>
   );
 }
+
+// ── Quest card styles — separated so QuestButton stays readable ──────────────
+const questStyles = StyleSheet.create({
+  card: {
+    flexDirection: "row-reverse", // RTL logic directly on Pressable
+    alignItems: "stretch", // Stretch children vertically so the Green Pill matches the button height internally
+    justifyContent: "flex-start",
+    width: "100%",
+    minHeight: 84, // Uniform identical base vertical bounds!
+    borderRadius: 20,
+    backgroundColor: STITCH.surfaceLowest,
+    borderWidth: 2,
+    borderColor: STITCH.outlineVariant,
+    paddingHorizontal: 14,
+    paddingVertical: 14,
+  },
+  cardPending: {
+    borderBottomWidth: 6,
+    borderBottomColor: STITCH.surfaceVariant,
+    shadowColor: STITCH.primaryCyan,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.25,
+    shadowRadius: 8,
+    elevation: 5,
+  },
+  cardDone: {
+    borderColor: "#86efac",
+    borderBottomWidth: 6, // Keep physical dimensions identical to pending!
+    borderBottomColor: "#4ade80",
+    shadowColor: "transparent",
+    elevation: 0,
+  },
+  cardPressed: {
+    transform: [{ translateY: 4 }],
+    opacity: 0.9,
+  },
+  iconWrap: {
+    width: 52,
+    height: 52,
+    borderRadius: 26,
+    backgroundColor: STITCH.surfaceLow,
+    borderWidth: 2,
+    borderColor: STITCH.outlineVariant,
+    alignItems: "center",
+    justifyContent: "center",
+    marginRight: 14, // Exact fixed margin
+    alignSelf: "center", // Override stretch context from parent
+    flexShrink: 0,
+  },
+  iconWrapDone: {
+    backgroundColor: "#dcfce7",
+    borderColor: "#86efac",
+  },
+  iconEmoji: {
+    fontSize: 24,
+    includeFontPadding: false,
+  },
+  textCol: {
+    flexShrink: 1, // Shrinks to fit text, allowing Lottie to hug it tightly
+    justifyContent: "center",
+    paddingVertical: 8,
+    paddingHorizontal: 10,
+    borderRadius: 14,
+  },
+  textColDone: {
+    backgroundColor: "#dcfce7",
+    borderWidth: 2,
+    borderColor: "#4ade80",
+    paddingVertical: 6, // slight offset for border
+    paddingHorizontal: 8,
+  },
+  titleText: {
+    fontSize: 14, // reduced from 15
+    fontWeight: "700",
+    color: STITCH.onSurface,
+    textAlign: "right",
+    writingDirection: "rtl",
+  },
+  titleTextDone: {
+    color: "#15803d",
+  },
+  descText: {
+    fontSize: 11, // reduced from 12
+    fontWeight: "500",
+    color: STITCH.onSurfaceVariant,
+    textAlign: "right",
+    writingDirection: "rtl",
+    lineHeight: 16,
+  },
+  descTextDone: {
+    color: "#16a34a",
+  },
+  checkmark: {
+    fontSize: 18,
+    fontWeight: "900",
+    color: "#16a34a",
+    flexShrink: 0,
+  },
+});
 
 const styles = StyleSheet.create({
   overlay: {
@@ -484,12 +549,13 @@ const styles = StyleSheet.create({
     justifyContent: "flex-end",
   },
   sheet: {
+    flex: 1,
     backgroundColor: STITCH.surfaceLowest,
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
     paddingHorizontal: 24,
-    paddingTop: 24,
-    paddingBottom: 40, // More bottom padding to prevent cutoff
+    paddingTop: 16,
+    maxHeight: "92%",
   },
   handle: {
     width: 40,
@@ -564,6 +630,7 @@ const styles = StyleSheet.create({
     backgroundColor: STITCH.surfaceVariant,
     overflow: "hidden",
     marginBottom: 6,
+    alignItems: "flex-end", // Right-to-left fill
   },
   progressFill: {
     height: "100%",
@@ -629,125 +696,17 @@ const styles = StyleSheet.create({
   rewardHeadline: {
     fontSize: 17,
     fontWeight: "900",
-    color: STITCH.onSurface,
+    color: "#16a34a",
     textAlign: "center",
     writingDirection: "rtl",
-  },
-  celebrationTitle: {
-    fontSize: 18,
-    fontWeight: "900",
-    color: STITCH.tertiaryGold,
-    textAlign: "center",
-    writingDirection: "rtl",
-  },
-  rewardPills: {
-    flexDirection: "row-reverse",
-    flexWrap: "wrap",
-    gap: 8,
-    justifyContent: "center",
-    marginVertical: 4,
-  },
-  rewardPill: {
-    flexDirection: "row-reverse",
-    alignItems: "center",
-    gap: 4,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 999,
-    backgroundColor: "#ffffff",
-    borderWidth: 1,
-    borderColor: STITCH.outlineVariant,
-  },
-  rewardPillChance: {
-    borderColor: "rgba(156,206,230,0.3)", // primaryCyan
-    backgroundColor: "rgba(156,206,230,0.05)",
-  },
-  rewardPillChanceText: {
-    fontSize: 10,
-    fontWeight: "700",
-    color: STITCH.primary,
-    marginLeft: 2,
-  },
-  rewardPillBonus: {
-    borderColor: "rgba(195,192,255,0.4)", // secondaryPurple
-    backgroundColor: "rgba(195,192,255,0.1)",
-  },
-  rewardPillValue: {
-    fontSize: 14,
-    fontWeight: "800",
-    color: STITCH.onSurface,
-  },
-  rewardPillLabel: {
-    fontSize: 11,
-    fontWeight: "800",
-    color: STITCH.onSurfaceVariant,
-    letterSpacing: 0.3,
-  },
-  streakBonusPill: {
-    alignSelf: "center",
-    backgroundColor: STITCH.tertiaryGoldLight,
-    borderWidth: 1,
-    borderColor: STITCH.tertiaryGoldBright,
-    paddingHorizontal: 12,
-    paddingVertical: 5,
-    borderRadius: 999,
-    marginTop: 2,
-  },
-  streakBonusLabel: {
-    fontSize: 13,
-    fontWeight: "800",
-    color: STITCH.tertiaryGold,
-    includeFontPadding: false,
-  },
-  claimedCard: {
-    alignItems: "center",
-    gap: 10,
-    paddingVertical: 14,
-    paddingHorizontal: 18,
-    borderRadius: 16,
-    backgroundColor: "rgba(156,206,230,0.06)", // primaryCyan
-    borderWidth: 1,
-    borderColor: "rgba(156,206,230,0.18)",
-    marginBottom: 14,
-  },
-  claimBtn: {
-    backgroundColor: STITCH.primary,
-    borderRadius: 14,
-    paddingVertical: 14,
-    paddingHorizontal: 32,
-    alignItems: "center",
-    shadowColor: STITCH.primary,
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.2,
-    shadowRadius: 8,
-    elevation: 4,
-  },
-  claimBtnText: {
-    fontSize: 16,
-    fontWeight: "800",
-    color: "#ffffff",
-  },
-  claimedRow: {
-    flexDirection: "row-reverse",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 6,
-    marginBottom: 14,
-  },
-  claimedText: {
-    fontSize: 15,
-    fontWeight: "700",
-    color: STITCH.primary,
   },
   hintText: {
     fontSize: 14,
-    fontWeight: "800",
-    color: STITCH.onSurfaceVariant,
+    fontWeight: "700",
+    color: "#64748b",
     textAlign: "center",
     writingDirection: "rtl",
     lineHeight: 20,
-    marginTop: 6,
-    marginBottom: 2,
   },
   closeBtn: {
     alignSelf: "stretch",

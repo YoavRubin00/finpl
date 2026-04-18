@@ -10,7 +10,6 @@ import Animated, {
 import { AnimatedPressable } from "../../../components/ui/AnimatedPressable";
 import { useTimeoutCleanup } from "../../../hooks/useTimeoutCleanup";
 import { successHaptic, errorHaptic, mediumHaptic } from "../../../utils/haptics";
-import LottieView from "lottie-react-native";
 
 const { height: SCREEN_H } = Dimensions.get("window");
 
@@ -125,14 +124,6 @@ export function BudgetBalanceScreen({ onComplete }: { onComplete: (score: number
       {/* Content */}
       {isFinished ? (
         <Animated.View entering={FadeIn.duration(400)} style={s.finishedBox}>
-          <View accessible={false}>
-            <LottieView
-              source={require("../../../../assets/lottie/wired-flat-63-home-hover-3d-roll.json")}
-              style={{ width: 70, height: 70, alignSelf: "center", marginBottom: 8 }}
-              autoPlay
-              loop={false}
-            />
-          </View>
           <Text style={s.finishedTitle} accessibilityLiveRegion="polite">
             {balance >= 0 ? "מעולה! נשארת ביתרת זכות." : "אוי! נכנסת למינוס."}
           </Text>

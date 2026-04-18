@@ -1,7 +1,7 @@
 import React from "react";
 import { Pressable, Text, View } from "react-native";
 import { Image as ExpoImage } from "expo-image";
-import { FINN_HAPPY } from "../../retention-loops/finnMascotConfig";
+import { FINN_DANCING } from "../../retention-loops/finnMascotConfig";
 import type { VictorySummary } from "../types";
 
 interface Props {
@@ -22,7 +22,7 @@ export function VictoryScreen({ summary, onContinue }: Props) {
     >
       <View style={{ alignItems: "center", gap: 16 }}>
         <ExpoImage
-          source={FINN_HAPPY}
+          source={FINN_DANCING}
           accessible={false}
           style={{ width: 140, height: 140 }}
           contentFit="contain"

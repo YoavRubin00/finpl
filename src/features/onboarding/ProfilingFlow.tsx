@@ -1,11 +1,11 @@
-import { useState, useEffect, useCallback, useRef } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import { Image as ExpoImage } from "expo-image";
 import { View, Text, Image, TextInput, Pressable, ScrollView, Dimensions, StyleSheet, ImageBackground, PanResponder, KeyboardAvoidingView, Platform } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
 import { LottieIcon } from "../../components/ui/LottieIcon";
 import LottieView from "lottie-react-native";
-import { FINN_STANDARD, FINN_HELLO, FINN_HAPPY } from "../retention-loops/finnMascotConfig";
+import { FINN_STANDARD, FINN_HELLO, FINN_HAPPY, FINN_TABLET } from "../retention-loops/finnMascotConfig";
 import { useRouter } from "expo-router";
 import { Sparkles, TrendingUp } from "lucide-react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
@@ -18,6 +18,7 @@ import Animated, {
   withTiming,
   withSpring,
   withSequence,
+  withRepeat,
   withDelay,
   Easing,
   runOnJS,
@@ -50,13 +51,21 @@ import type {
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
 const CHAT_BG = { uri: 'https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/images/HOMEPAGE.png' };
 const SLIDE_MS = 300;
-const AUTO_ADVANCE_MS = 320;
+const AUTO_ADVANCE_MS = 1150; // 900ms typing + 250ms extra before transition
 const TOTAL_STEPS = 8;
 
 const CONFETTI_COLORS = [
   "#0891b2", "#4ade80", "#fbbf24", "#22d3ee",
   "#f472b6", "#60a5fa", "#fb923c", "#22d3ee",
 ];
+
+// Module-level callback ref — StepShell notifies ProfilingFlow when user taps
+// so the persistent Finn overlay can mirror the typing animation.
+const finnTriggerRef: { current: (() => void) | null } = { current: null };
+
+const STEPS_WITH_PERSISTENT_FINN = new Set([
+  "dream", "goal", "knowledge", "age", "learning-time", "learning-style", "daily-goal",
+]);
 
 // Pre-computed so particles are deterministic (no Math.random in render)
 const PARTICLE_CONFIGS = Array.from({ length: 24 }, (_, i) => {
@@ -312,46 +321,94 @@ const SCREEN_HEIGHT = Dimensions.get("window").height;
 
 // ─── Shared step shell ────────────────────────────────────────────────────────
 
+function TypingDots() {
+  const t = useSharedValue(0);
+  useEffect(() => {
+    t.value = withRepeat(withTiming(1, { duration: 600, easing: Easing.linear }), -1, false);
+  }, [t]);
+  const dot = (offset: number) =>
+    useAnimatedStyle(() => {
+      const phase = (t.value + offset) % 1;
+      const scale = 0.6 + 0.6 * Math.abs(Math.sin(phase * Math.PI));
+      return { opacity: 0.4 + 0.6 * Math.abs(Math.sin(phase * Math.PI)), transform: [{ scale }] };
+    });
+  return (
+    <View style={styles.typingDotsRow}>
+      <Animated.View style={[styles.typingDot, dot(0)]} />
+      <Animated.View style={[styles.typingDot, dot(0.33)]} />
+      <Animated.View style={[styles.typingDot, dot(0.66)]} />
+    </View>
+  );
+}
+
 function StepShell({
   stepIndex,
   question,
   hint,
   children,
-  finnState = "idle",
-  compact = false,
 }: {
   stepIndex: number;
   question: string;
   hint?: string;
   children: React.ReactNode;
-  finnState?: "idle" | "celebrate" | "empathy" | "thinking";
+  finnState?: "idle" | "celebrate" | "empathy" | "thinking" | "tablet";
   compact?: boolean;
 }) {
   const headerTy = useSharedValue(-20);
   const headerOpacity = useSharedValue(0);
-  const finnRef = useRef<LottieView>(null);
+  const sharkWobble = useSharedValue(0);
+
+  const [isTyping, setIsTyping] = useState(false);
+  const typingResetRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     headerTy.value = withSpring(0, { damping: 14, stiffness: 120 });
     headerOpacity.value = withTiming(1, { duration: 300 });
   }, [stepIndex]);
 
-  // Play Finn frame range when state changes
+  // Stop typing animation when the question changes (we've advanced).
   useEffect(() => {
-    if (!finnRef.current) return;
-    const ranges: Record<string, [number, number]> = {
-      idle: [0, 59],
-      celebrate: [60, 119],
-      empathy: [120, 179],
-      thinking: [180, 239],
-    };
-    const [start, end] = ranges[finnState] ?? ranges.idle;
-    finnRef.current.play(start, end);
-  }, [finnState]);
+    setIsTyping(false);
+    if (typingResetRef.current) clearTimeout(typingResetRef.current);
+  }, [question]);
+
+  // Wobble shark + tablet while "typing"; settle when idle.
+  useEffect(() => {
+    if (isTyping) {
+      sharkWobble.value = withRepeat(
+        withSequence(
+          withTiming(1, { duration: 130, easing: Easing.inOut(Easing.quad) }),
+          withTiming(-1, { duration: 130, easing: Easing.inOut(Easing.quad) }),
+        ),
+        -1,
+        true,
+      );
+    } else {
+      sharkWobble.value = withTiming(0, { duration: 200 });
+    }
+  }, [isTyping, sharkWobble]);
+
+  useEffect(() => () => {
+    if (typingResetRef.current) clearTimeout(typingResetRef.current);
+  }, []);
+
+  const trigger = useCallback(() => {
+    setIsTyping(true);
+    finnTriggerRef.current?.();
+    if (typingResetRef.current) clearTimeout(typingResetRef.current);
+    typingResetRef.current = setTimeout(() => setIsTyping(false), AUTO_ADVANCE_MS + 400);
+  }, []);
 
   const headerStyle = useAnimatedStyle(() => ({
     transform: [{ translateY: headerTy.value }],
     opacity: headerOpacity.value,
+  }));
+
+  const sharkAnimStyle = useAnimatedStyle(() => ({
+    transform: [
+      { rotate: `${sharkWobble.value * 4}deg` },
+      { scale: 1 + Math.abs(sharkWobble.value) * 0.04 },
+    ],
   }));
 
   return (
@@ -363,15 +420,11 @@ function StepShell({
         <GlowBar current={stepIndex} />
       </View>
 
-      {/* Finn + question */}
+      {/* Finn (tablet) + question bubble */}
       <Animated.View style={[styles.questionBlock, headerStyle]}>
         <View style={{ flexDirection: 'row-reverse', alignItems: 'flex-start', gap: 10 }}>
-          <ExpoImage
-            source={FINN_STANDARD}
-            style={{ width: 80, height: 80, flexShrink: 0 }}
-            contentFit="contain"
-            accessible={false}
-          />
+          {/* Invisible placeholder — real Finn rendered by persistent overlay in ProfilingFlow */}
+          <View style={{ width: 110, height: 110 }} />
           <View style={[styles.chatBubble, { flexShrink: 1, minWidth: 0 }]}>
             <Text style={styles.questionBubble}>{question}</Text>
             {hint ? <Text style={styles.hintBubble}>{hint}</Text> : null}
@@ -379,8 +432,13 @@ function StepShell({
         </View>
       </Animated.View>
 
-      {/* Options */}
-      <View style={[styles.optionsArea, { marginTop: 12 }]}>{children}</View>
+      {/* Options — touch anywhere here triggers the shark typing animation */}
+      <View
+        style={[styles.optionsArea, { marginTop: 12 }]}
+        onTouchStart={trigger}
+      >
+        {children}
+      </View>
     </SafeAreaView>
     </ImageBackground>
   );
@@ -424,6 +482,74 @@ function ConfettiParticle({ tx, ty: targetY, color, size, delay: d }: typeof PAR
         style,
       ]}
     />
+  );
+}
+
+// ─── Profile summary screen ───────────────────────────────────────────────────
+
+function ProfileSummaryScreen({ collected, onDone }: { collected: Collected; onDone: () => void }) {
+  const ctaScale = useSharedValue(0);
+  useEffect(() => {
+    ctaScale.value = withDelay(350, withSpring(1, { damping: 14, stiffness: 120 }));
+  }, []);
+  const ctaStyle = useAnimatedStyle(() => ({ transform: [{ scale: ctaScale.value }] }));
+
+  const dreamLabel = collected.financialDream ? DREAMS.find((d) => d.id === collected.financialDream)?.label : null;
+  const goalLabel = collected.financialGoal ? GOALS.find((g) => g.id === collected.financialGoal)?.label : null;
+  const knowledgeLabel = collected.knowledgeLevel ? KNOWLEDGE_LABELS[collected.knowledgeLevel] : null;
+
+  const rows = [
+    dreamLabel ? { icon: '🎯', label: 'החלום שלך', value: dreamLabel } : null,
+    goalLabel ? { icon: '📌', label: 'המטרה שלך', value: goalLabel } : null,
+    knowledgeLabel ? { icon: '🧠', label: 'רמת ידע', value: knowledgeLabel } : null,
+    collected.dailyGoalMinutes ? { icon: '⏰', label: 'יעד יומי', value: `${collected.dailyGoalMinutes} דקות` } : null,
+  ].filter((r): r is { icon: string; label: string; value: string } => r !== null);
+
+  return (
+    <SafeAreaView style={[styles.shell, { justifyContent: 'center', paddingHorizontal: 28 }]} edges={["top", "bottom"]}>
+      <Animated.View entering={FadeIn.duration(300)} style={{ alignItems: 'center', marginBottom: 20 }}>
+        <ExpoImage source={FINN_HAPPY} style={{ width: 96, height: 96 }} contentFit="contain" accessible={false} />
+      </Animated.View>
+      <Animated.View entering={FadeInDown.duration(350).delay(100)} style={{ marginBottom: 20, alignItems: 'center' }}>
+        <Text style={{ fontSize: 22, fontWeight: '900', color: '#0f172a', writingDirection: 'rtl', textAlign: 'center', marginBottom: 6 }}>
+          הנה מה שהכנו עבורך
+        </Text>
+        <Text style={{ fontSize: 14, color: '#6b7280', writingDirection: 'rtl', textAlign: 'center' }}>
+          ניתן לשנות בכל עת בהגדרות
+        </Text>
+      </Animated.View>
+      <Animated.View entering={FadeInUp.duration(350).delay(200)} style={{ width: '100%', gap: 10, marginBottom: 32 }}>
+        {rows.map((row, i) => (
+          <View
+            key={i}
+            accessible
+            accessibilityRole="text"
+            accessibilityLabel={`${row.label}: ${row.value}`}
+            style={{
+              flexDirection: 'row-reverse', alignItems: 'center', justifyContent: 'space-between',
+              backgroundColor: '#f8fafc', borderRadius: 14, padding: 14,
+              borderWidth: 1.5, borderColor: '#e2e8f0',
+            }}
+          >
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+              <Text style={{ fontSize: 20 }} accessible={false}>{row.icon}</Text>
+              <Text style={{ fontSize: 14, fontWeight: '700', color: '#1f2937', writingDirection: 'rtl', textAlign: 'right' }}>{row.label}</Text>
+            </View>
+            <Text style={{ fontSize: 14, fontWeight: '900', color: '#0891b2', writingDirection: 'rtl', textAlign: 'left' }}>{row.value}</Text>
+          </View>
+        ))}
+      </Animated.View>
+      <Animated.View style={[ctaStyle, { width: '100%', alignItems: 'center' }]}>
+        <Pressable
+          onPress={onDone}
+          style={[styles.celebCTA, { width: '100%', alignItems: 'center' }]}
+          accessibilityRole="button"
+          accessibilityLabel="אשר ותמשיך לחגיגה"
+        >
+          <Text style={styles.celebCTAText}>נראה מצוין!</Text>
+        </Pressable>
+      </Animated.View>
+    </SafeAreaView>
   );
 }
 
@@ -532,7 +658,7 @@ function DreamStep({ onNext }: { onNext: (v: FinancialDream) => void }) {
   }, [onNext]);
 
   return (
-    <StepShell stepIndex={0} question="מה החלום הפיננסי שלך?" hint="נתחיל מהמטרה — והדרך תתגלה" finnState={sel ? "celebrate" : "thinking"}>
+    <StepShell stepIndex={0} question="מה החלום הפיננסי שלך?" hint="נתחיל מהמטרה — והדרך תתגלה" finnState={sel ? "tablet" : "thinking"}>
       <View style={styles.grid}>
         {DREAMS.map((d, i) => (
           <AnimatedGridCard
@@ -624,7 +750,7 @@ function GoalStep({ dream, onNext }: { dream: FinancialDream | null; onNext: (v:
   const dynamicHint = dream ? DREAM_REACTIONS[dream] : "זה יעצב את הפיד שלך";
 
   return (
-    <StepShell stepIndex={1} question="למה אתה פה?" hint={dynamicHint} finnState={sel ? "celebrate" : "idle"}>
+    <StepShell stepIndex={1} question="למה אתה פה?" hint={dynamicHint} finnState={sel ? "tablet" : "idle"}>
       <View>
         {GOALS.map((g, i) => (
           <AnimatedCard key={g.id} index={i} label={g.label} sublabel={g.sub}
@@ -664,7 +790,7 @@ function KnowledgeStep({ goal, onNext }: { goal: FinancialGoal | null; onNext: (
   const dynamicHint = goal ? GOAL_REACTIONS[goal] : "תהיה כנה — נתחיל בדיוק מהמקום הנכון";
 
   return (
-    <StepShell stepIndex={3} question="כמה אתה מבין בכסף?" hint={dynamicHint} finnState={sel ? (sel === "none" ? "empathy" : "celebrate") : "thinking"} compact>
+    <StepShell stepIndex={3} question="כמה אתה מבין בכסף?" hint={dynamicHint} finnState={sel ? (sel === "none" ? "empathy" : "tablet") : "thinking"} compact>
       {LEVELS.map((l, i) => (
         <AnimatedCard key={l.id} index={i} label={l.label} sublabel={l.sub}
           selected={sel === l.id} onPress={() => tap(l.id)}
@@ -703,7 +829,7 @@ function AgeStep({ knowledge, onNext }: { knowledge: KnowledgeLevel | null; onNe
   const dynamicHint = knowledge ? KNOWLEDGE_REACTIONS[knowledge] : "רק בשביל להתאים את ההמלצות";
 
   return (
-    <StepShell stepIndex={4} question="בן כמה את/ה?" hint={dynamicHint} finnState={sel !== null ? "celebrate" : "idle"}>
+    <StepShell stepIndex={4} question="בן כמה את/ה?" hint={dynamicHint} finnState={sel !== null ? "tablet" : "idle"}>
       {AGE_GROUPS.map((g, i) => (
         <AnimatedCard key={g.label} index={i} label={g.label} sublabel={g.sub}
           selected={sel === i} onPress={() => tap(i)}
@@ -729,7 +855,7 @@ function LearningTimeStep({ onNext }: { onNext: (v: LearningTime) => void }) {
   }, [onNext]);
 
   return (
-    <StepShell stepIndex={5} question="מתי אתה לומד/ת הכי טוב?" finnState={sel ? "celebrate" : "thinking"}>
+    <StepShell stepIndex={5} question="מתי אתה לומד/ת הכי טוב?" finnState={sel ? "tablet" : "thinking"}>
       {TIMES.map((t, i) => (
         <AnimatedCard key={t.id} index={i} label={t.label} sublabel={t.sub}
           selected={sel === t.id} onPress={() => tap(t.id)}
@@ -770,7 +896,7 @@ function LearningStyleStep({ ageGroup, birthYear, onNext }: { ageGroup: AgeGroup
       : undefined;
 
   return (
-    <StepShell stepIndex={6} question="איך אתה אוהב/ת ללמוד?" hint={dynamicHint} finnState={sel ? "celebrate" : "idle"}>
+    <StepShell stepIndex={6} question="איך אתה אוהב/ת ללמוד?" hint={dynamicHint} finnState={sel ? "tablet" : "idle"}>
       {LEARN_STYLES.map((s, i) => (
         <AnimatedCard key={s.id} index={i} label={s.label} sublabel={s.sub}
           selected={sel === s.id} onPress={() => tap(s.id)}
@@ -808,7 +934,7 @@ function DeadlineStep({ onNext }: { onNext: (v: DeadlineStress) => void }) {
   }
 
   return (
-    <StepShell stepIndex={7} question="דדליינים גורמים לך ללחץ?" hint="משפיע על ה-Streak שלך" finnState={sel ? (sel === "high-stress" ? "empathy" : "celebrate") : "thinking"}>
+    <StepShell stepIndex={7} question="דדליינים גורמים לך ללחץ?" hint="משפיע על ה-Streak שלך" finnState={sel ? (sel === "high-stress" ? "empathy" : "tablet") : "thinking"}>
       <Animated.View style={[styles.pollRow, wrapStyle]}>
         {DEADLINE_OPTS.map((d) => (
           <Pressable
@@ -861,7 +987,7 @@ function DailyGoalStep({ onNext }: { onNext: (v: DailyGoalMinutes) => void }) {
         stepIndex={7}
         question="כמה תרצה/י ללמוד ביום?" 
         hint="יעד שאפשר לעמוד בו יעזור לך להתעשר לאט ובטוח. יצרנו עבורך רצף (Streak) פיננסי. 🔥"
-        finnState={sel ? "celebrate" : "thinking"}>
+        finnState={sel ? "tablet" : "thinking"}>
       <View style={styles.grid}>
         {DAILY_OPTS.map((g, i) => (
           <AnimatedGridCard key={g.id} index={i} emoji={g.emoji} label={g.label}
@@ -951,7 +1077,7 @@ function CompanionStep({ dream, knowledge, onNext }: { dream: FinancialDream | n
     : "הדמות תאמן ומעודד/ת אותך";
 
   return (
-    <StepShell stepIndex={9} question="מי ילווה אותך?" hint={dynamicHint} finnState={sel ? "celebrate" : "idle"}>
+    <StepShell stepIndex={9} question="מי ילווה אותך?" hint={dynamicHint} finnState={sel ? "tablet" : "idle"}>
       <View style={styles.grid}>
         {COMPANIONS.map((c, i) => (
           <AnimatedGridCard
@@ -1721,8 +1847,14 @@ function IntroStep({ onRegister, onGuest, onLoginSuccess }: IntroStepProps) {
             accessibilityRole="button"
             accessibilityLabel="התחל ללא הרשמה"
             accessibilityState={{ disabled: !termsAccepted }}
-            style={[introStyles.ctaOutline, { opacity: termsAccepted ? 1 : 0.5 }]}
+            style={[introStyles.ctaOutline, { opacity: termsAccepted ? 1 : 0.5, flexDirection: 'row-reverse', alignItems: 'center', justifyContent: 'center', gap: 6 }]}
           >
+            <ExpoImage
+              source={FINN_HELLO}
+              style={{ width: 28, height: 28 }}
+              contentFit="contain"
+              accessible={false}
+            />
             <Text style={introStyles.ctaOutlineText}>התחל ללא הרשמה</Text>
           </Pressable>
 
@@ -1938,7 +2070,7 @@ function BuildingProfileScreen({ onDone }: { onDone: () => void }) {
 type FlowStep =
   | "intro" | "dream" | "first-sim" | "goal" | "knowledge" | "age" | "learning-time"
   | "learning-style" | "deadline" | "daily-goal" | "companion" | "finance-experts"
-  | "avatar" | "building-profile" | "celebration";
+  | "avatar" | "building-profile" | "profile-summary" | "celebration";
 
 interface Collected {
   financialDream: FinancialDream | null;
@@ -2001,28 +2133,58 @@ export function ProfilingFlow({ mode = "onboarding", onRedoComplete }: Profiling
     };
   });
 
-  const tx = useSharedValue(0);
-  const slideStyle = useAnimatedStyle(() => ({ transform: [{ translateX: tx.value }] }));
+  const screenOpacity = useSharedValue(1);
+  const screenScale = useSharedValue(1);
+  const screenTy = useSharedValue(0);
+  const slideStyle = useAnimatedStyle(() => ({
+    opacity: screenOpacity.value,
+    transform: [{ scale: screenScale.value }, { translateY: screenTy.value }],
+  }));
   const [showBubbles, setShowBubbles] = useState(false);
   const bubbleTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  // Persistent Finn overlay state — mirrors StepShell's isTyping via finnTriggerRef
+  const [isGlobalTyping, setIsGlobalTyping] = useState(false);
+  const globalTypingResetRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => {
+    finnTriggerRef.current = () => {
+      setIsGlobalTyping(true);
+      if (globalTypingResetRef.current) clearTimeout(globalTypingResetRef.current);
+      globalTypingResetRef.current = setTimeout(() => setIsGlobalTyping(false), AUTO_ADVANCE_MS + 400);
+    };
+    return () => {
+      finnTriggerRef.current = null;
+      if (globalTypingResetRef.current) clearTimeout(globalTypingResetRef.current);
+    };
+  }, []);
+
   function slide(nextStep: FlowStep, patch: Partial<Collected>) {
+    setIsGlobalTyping(false);
+    if (globalTypingResetRef.current) clearTimeout(globalTypingResetRef.current);
     tapHaptic();
     setShowBubbles(true);
     playSound('bubble_transition');
     if (bubbleTimeout.current) clearTimeout(bubbleTimeout.current);
-    bubbleTimeout.current = setTimeout(() => setShowBubbles(false), SLIDE_MS + 400);
+    bubbleTimeout.current = setTimeout(() => setShowBubbles(false), 900);
 
     function doUpdate() {
       setCollected((prev) => ({ ...prev, ...patch }));
       setStep(nextStep);
-      tx.value = SCREEN_WIDTH;
-      tx.value = withTiming(0, { duration: SLIDE_MS, easing: Easing.out(Easing.quad) });
+      // Bloom in — fade + spring scale/Y from slightly below
+      screenOpacity.value = 0;
+      screenScale.value = 0.94;
+      screenTy.value = 18;
+      screenOpacity.value = withTiming(1, { duration: 360, easing: Easing.out(Easing.cubic) });
+      screenScale.value = withSpring(1, { damping: 22, stiffness: 280, mass: 0.8 });
+      screenTy.value = withSpring(0, { damping: 22, stiffness: 280, mass: 0.8 });
     }
-    tx.value = withTiming(-SCREEN_WIDTH, { duration: SLIDE_MS, easing: Easing.out(Easing.quad) }, () => {
+    // Soft fade-out — slides up and fades
+    screenOpacity.value = withTiming(0, { duration: 260, easing: Easing.inOut(Easing.quad) }, () => {
       "worklet";
       runOnJS(doUpdate)();
     });
+    screenScale.value = withTiming(0.95, { duration: 260, easing: Easing.inOut(Easing.quad) });
+    screenTy.value = withTiming(-10, { duration: 260, easing: Easing.in(Easing.cubic) });
   }
 
   function handleDone() {
@@ -2065,7 +2227,8 @@ export function ProfilingFlow({ mode = "onboarding", onRedoComplete }: Profiling
   }
 
   if (step === "celebration") return <CelebrationScreen onDone={handleDone} />;
-  if (step === "building-profile") return <BuildingProfileScreen onDone={isRedo ? handleDone : () => setStep("celebration")} />;
+  if (step === "profile-summary") return <ProfileSummaryScreen collected={collected} onDone={() => setStep("celebration")} />;
+  if (step === "building-profile") return <BuildingProfileScreen onDone={isRedo ? handleDone : () => setStep("profile-summary")} />;
   if (!isRedo && step === "intro") return (
     <IntroStep
       onRegister={() => router.push("/register" as never)}
@@ -2092,25 +2255,71 @@ export function ProfilingFlow({ mode = "onboarding", onRedoComplete }: Profiling
         {step === "daily-goal" && <DailyGoalStep onNext={(v) => slide("building-profile", { dailyGoalMinutes: v })} />}
       </Animated.View>
 
+      {/* Persistent Finn — outside slideStyle so he stays fixed during transitions */}
+      {STEPS_WITH_PERSISTENT_FINN.has(step) && (
+        <View pointerEvents="none" style={StyleSheet.absoluteFillObject}>
+          <SafeAreaView style={{ paddingHorizontal: 20 }} edges={["top"]}>
+            {/* Match StepShell topRow: paddingTop:12 + GlowBar height:14 = 26 */}
+            <View style={{ height: 26 }} />
+            {/* Match StepShell questionBlock paddingTop:12 */}
+            <View style={{ height: 12 }} />
+            {/* Finn on the right — same flexDirection as StepShell's questionBlock row */}
+            <View style={{ flexDirection: 'row-reverse' }}>
+              <View style={{ width: 110, height: 110 }}>
+                <ExpoImage
+                  key={isGlobalTyping ? 'playing' : 'idle'}
+                  source={FINN_TABLET}
+                  style={{ width: 110, height: 110, backgroundColor: '#ffffff' }}
+                  contentFit="contain"
+                  autoplay={isGlobalTyping}
+                  accessible={false}
+                />
+                <View style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 14, backgroundColor: '#ffffff' }} />
+              </View>
+            </View>
+          </SafeAreaView>
+        </View>
+      )}
+
       {/* Bubble transition overlay */}
       {showBubbles && (
         <View pointerEvents="none" style={StyleSheet.absoluteFillObject}>
+          {/* Main central burst */}
           <LottieView
             source={require("../../../assets/lottie/Bubbles.json")}
-            style={{ width: SCREEN_WIDTH, height: SCREEN_WIDTH * 1.6, position: "absolute", top: "10%", alignSelf: "center" }}
-            autoPlay
-            loop={false}
-            speed={1.4}
-            renderMode="SOFTWARE"
-           />
-          <LottieView
-            source={require("../../../assets/lottie/jumping blue bubbles.json")}
-            style={{ width: SCREEN_WIDTH * 0.6, height: SCREEN_WIDTH * 0.6, position: "absolute", bottom: "5%", left: "5%" }}
+            style={{ width: SCREEN_WIDTH, height: SCREEN_WIDTH * 1.6, position: "absolute", top: "5%", alignSelf: "center" }}
             autoPlay
             loop={false}
             speed={1.2}
             renderMode="SOFTWARE"
-           />
+          />
+          {/* Bottom-left cluster */}
+          <LottieView
+            source={require("../../../assets/lottie/jumping blue bubbles.json")}
+            style={{ width: SCREEN_WIDTH * 0.65, height: SCREEN_WIDTH * 0.65, position: "absolute", bottom: "8%", left: "0%" }}
+            autoPlay
+            loop={false}
+            speed={1.1}
+            renderMode="SOFTWARE"
+          />
+          {/* Top-right cluster — delayed via slower speed for stagger feel */}
+          <LottieView
+            source={require("../../../assets/lottie/jumping blue bubbles.json")}
+            style={{ width: SCREEN_WIDTH * 0.5, height: SCREEN_WIDTH * 0.5, position: "absolute", top: "2%", right: "-5%" }}
+            autoPlay
+            loop={false}
+            speed={0.9}
+            renderMode="SOFTWARE"
+          />
+          {/* Mid-screen accent */}
+          <LottieView
+            source={require("../../../assets/lottie/Bubbles.json")}
+            style={{ width: SCREEN_WIDTH * 0.7, height: SCREEN_WIDTH * 0.7, position: "absolute", top: "35%", left: "-10%" }}
+            autoPlay
+            loop={false}
+            speed={1.5}
+            renderMode="SOFTWARE"
+          />
         </View>
       )}
     </View>
@@ -2201,6 +2410,35 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 2,
   },
+  finnTabletWrap: {
+    width: 124,
+    height: 124,
+    borderRadius: 62,
+    backgroundColor: "#ffffff",
+    borderWidth: 2,
+    borderColor: "rgba(34,211,238,0.45)",
+    alignItems: "center",
+    justifyContent: "center",
+    overflow: "hidden",
+    flexShrink: 0,
+    shadowColor: "#0891b2",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.18,
+    shadowRadius: 6,
+    elevation: 3,
+  },
+  typingDotsRow: {
+    flexDirection: "row",
+    gap: 6,
+    marginTop: 8,
+    alignSelf: "flex-end",
+  },
+  typingDot: {
+    width: 7,
+    height: 7,
+    borderRadius: 4,
+    backgroundColor: "#0891b2",
+  },
   questionBubble: {
     fontSize: 20,
     fontWeight: "900",
@@ -2280,7 +2518,7 @@ const styles = StyleSheet.create({
     height: 20,
     borderRadius: 10,
     backgroundColor: "#0891b2",
-    marginLeft: 10,
+    marginRight: 10,
   },
   // Grid
   grid: {
@@ -2698,18 +2936,18 @@ const introStyles = StyleSheet.create({
   },
   ctaOutline: {
     borderRadius: 999,
-    paddingHorizontal: 60,
-    paddingVertical: 17,
-    borderWidth: 2,
-    borderColor: "#0891b2",
-    backgroundColor: "transparent",
+    paddingHorizontal: 40,
+    paddingVertical: 12,
+    borderWidth: 1.5,
+    borderColor: "#cbd5e1",
+    backgroundColor: "#f8fafc",
     width: "100%",
     alignItems: "center",
   },
   ctaOutlineText: {
-    color: "#0891b2",
-    fontSize: 18,
-    fontWeight: "900",
+    color: "#64748b",
+    fontSize: 15,
+    fontWeight: "700",
   },
   googleBtn: {
     flexDirection: "row",

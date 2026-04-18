@@ -1,4 +1,5 @@
 import { View, Text, StyleSheet, ScrollView, Pressable, Dimensions } from 'react-native';
+import Slider from '@react-native-community/slider';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import Animated, {
@@ -90,7 +91,7 @@ function PortfolioChart({ history, marketBenchmark }: { history: number[]; marke
           </SvgGradient>
         </Defs>
 
-        {/* Grid lines */}
+        {/* Grid lines (visible on the white chart card now) */}
         {ticks.map((tick, i) => {
           const y = CHART_PAD.top + innerH - ((tick - minVal) / range) * innerH;
           return (
@@ -100,7 +101,7 @@ function PortfolioChart({ history, marketBenchmark }: { history: number[]; marke
               y1={y}
               x2={CHART_W - CHART_PAD.right}
               y2={y}
-              stroke="rgba(255,255,255,0.08)"
+              stroke="rgba(148,163,184,0.18)"
               strokeWidth={1}
             />
           );
@@ -112,7 +113,7 @@ function PortfolioChart({ history, marketBenchmark }: { history: number[]; marke
           y1={startY}
           x2={CHART_W - CHART_PAD.right}
           y2={startY}
-          stroke="rgba(255,255,255,0.2)"
+          stroke="rgba(148,163,184,0.45)"
           strokeWidth={1}
           strokeDasharray="4,4"
         />
@@ -179,6 +180,9 @@ import { getPyramidStatus } from '../../utils/progression';
 import { Lock } from 'lucide-react-native';
 
 // ── Slider row ──
+// Drag the bar to set the percentage. Snaps to 5% increments to keep the
+// allocation math clean (and matches the previous +/- step). Live percentage
+// shown above the bar so users see the value as they drag.
 function AllocationSlider({
   emoji,
   name,
@@ -199,20 +203,22 @@ function AllocationSlider({
       <View style={s.sliderInfo}>
         <Text style={{ fontSize: 22 }}>{emoji}</Text>
         <Text style={s.sliderName}>{name}</Text>
+        <View style={{ flex: 1 }} />
+        <Text style={[s.sliderPct, { color }]}>{value}%</Text>
       </View>
       <Text style={s.sliderDescription}>{description}</Text>
-      <View style={s.sliderTrack}>
-        <View style={[s.sliderFill, { width: `${value}%`, backgroundColor: color }]} />
-      </View>
-      <View style={s.sliderControls}>
-        <Pressable onPress={() => onChange(Math.max(0, value - 5))} style={s.sliderBtn}>
-          <Text style={s.sliderBtnText}>−</Text>
-        </Pressable>
-        <Text style={s.sliderPct}>{value}%</Text>
-        <Pressable onPress={() => onChange(Math.min(100, value + 5))} style={s.sliderBtn}>
-          <Text style={s.sliderBtnText}>+</Text>
-        </Pressable>
-      </View>
+      <Slider
+        style={s.sliderControl}
+        minimumValue={0}
+        maximumValue={100}
+        step={5}
+        value={value}
+        minimumTrackTintColor={color}
+        maximumTrackTintColor="#e2e8f0"
+        thumbTintColor={color}
+        onValueChange={(v) => onChange(Math.round(v))}
+        accessibilityLabel={`גרור כדי להקצות אחוזים ל${name}`}
+      />
     </View>
   );
 }
@@ -259,7 +265,6 @@ export function ScenarioLabScreen() {
     state,
     setAllocation,
     goToAllocation,
-    goToBriefing,
     startSimulation,
     isValid,
     allocationTotal,
@@ -344,13 +349,7 @@ export function ScenarioLabScreen() {
           {state.phase === 'allocation' && (
             <Animated.View entering={FadeIn.duration(300)} style={s.allocationContainer}>
               <Text style={s.allocationTitle}>חלק את ה-100,000 ₪ שלך</Text>
-              <View style={{ flexDirection: 'row-reverse', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
-                <Text style={s.allocationSub}>הזז את האחוזים בין הסקטורים</Text>
-                <Pressable onPress={goToBriefing} style={{ flexDirection: 'row-reverse', alignItems: 'center', gap: 4, backgroundColor: '#e0f2fe', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 10 }}>
-                  <ArrowRight size={14} color="#0891b2" />
-                  <Text style={{ fontSize: 11, fontWeight: '700', color: '#0891b2' }}>חזרה לתרחיש</Text>
-                </Pressable>
-              </View>
+              <Text style={s.allocationSub}>גרור את הברים בין הסקטורים</Text>
 
               {scenario.sectors.map((sector) => (
                 <AllocationSlider
@@ -542,7 +541,7 @@ export function ScenarioLabScreen() {
                   onPress={() => { tapHaptic(); reset(); }}
                   style={s.replayBtn}
                 >
-                  <RotateCcw size={16} color="#e0e7ff" />
+                  <RotateCcw size={16} color="#0891b2" />
                   <Text style={s.replayText}>שחק שוב</Text>
                 </AnimatedPressable>
 
@@ -572,7 +571,7 @@ const s = StyleSheet.create({
   headerTitle: {
     fontSize: 18,
     fontWeight: '900',
-    color: '#e0e7ff',
+    color: '#0c4a6e',
     writingDirection: 'rtl',
   },
   // ── Briefing ──
@@ -584,15 +583,15 @@ const s = StyleSheet.create({
     width: 120,
     height: 120,
     borderRadius: 60,
-    backgroundColor: 'rgba(255,255,255,0.06)',
+    backgroundColor: '#e0f2fe',
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 16,
   },
   yearBadge: {
-    backgroundColor: 'rgba(250,204,21,0.15)',
+    backgroundColor: '#fef3c7',
     borderWidth: 1,
-    borderColor: 'rgba(250,204,21,0.3)',
+    borderColor: '#fde68a',
     paddingHorizontal: 14,
     paddingVertical: 4,
     borderRadius: 12,
@@ -601,12 +600,12 @@ const s = StyleSheet.create({
   yearText: {
     fontSize: 13,
     fontWeight: '800',
-    color: '#0891b2',
+    color: '#92400e',
   },
   briefingTitle: {
     fontSize: 26,
     fontWeight: '900',
-    color: '#1e293b',
+    color: '#0c4a6e',
     textAlign: 'center',
     writingDirection: 'rtl',
     marginBottom: 8,
@@ -624,26 +623,30 @@ const s = StyleSheet.create({
     writingDirection: 'rtl',
     marginBottom: 24,
   },
+  // Module-style "בואו נתחיל" pattern: cyan with bottom-shadow border, full-width.
   startBtn: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
     gap: 8,
     backgroundColor: '#0891b2',
     paddingHorizontal: 32,
     paddingVertical: 16,
-    borderRadius: 24,
+    borderRadius: 999,
     marginTop: 16,
-    // Ambient glow instead of hard bottom border
+    alignSelf: 'stretch',
+    borderBottomWidth: 4,
+    borderBottomColor: '#0e7490',
     shadowColor: '#0891b2',
-    shadowOpacity: 0.2,
+    shadowOpacity: 0.4,
     shadowRadius: 20,
-    shadowOffset: { width: 0, height: 8 },
-    elevation: 8,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 10,
   },
   startBtnText: {
     fontSize: 18,
     fontWeight: '900',
-    color: '#1a1035',
+    color: '#ffffff',
   },
   // ── Allocation ──
   allocationContainer: {
@@ -652,7 +655,7 @@ const s = StyleSheet.create({
   allocationTitle: {
     fontSize: 22,
     fontWeight: '900',
-    color: '#1e293b',
+    color: '#0c4a6e',
     textAlign: 'center',
     writingDirection: 'rtl',
     marginBottom: 4,
@@ -665,65 +668,42 @@ const s = StyleSheet.create({
     marginBottom: 24,
   },
   sliderRow: {
-    marginBottom: 16,
+    backgroundColor: '#ffffff',
+    borderRadius: 16,
+    padding: 14,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: '#e0f2fe',
   },
   sliderInfo: {
     flexDirection: 'row-reverse',
     alignItems: 'center',
     gap: 8,
-    marginBottom: 6,
+    marginBottom: 4,
   },
   sliderName: {
-    fontSize: 15,
+    fontSize: 16,
     fontWeight: '800',
-    color: '#e0e7ff',
+    color: '#0c4a6e',
     writingDirection: 'rtl' as const,
     textAlign: 'right' as const,
   },
   sliderDescription: {
-    fontSize: 11,
+    fontSize: 12,
     color: '#64748b',
     writingDirection: 'rtl' as const,
     textAlign: 'right' as const,
     marginBottom: 6,
-    marginTop: -2,
   },
-  sliderTrack: {
-    height: 10,
-    backgroundColor: 'rgba(255,255,255,0.1)',
-    borderRadius: 5,
-    marginBottom: 6,
-    overflow: 'hidden',
-  },
-  sliderFill: {
-    height: '100%',
-    borderRadius: 5,
-  },
-  sliderControls: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 16,
-  },
-  sliderBtn: {
-    width: 36,
+  sliderControl: {
+    width: '100%',
     height: 36,
-    borderRadius: 18,
-    backgroundColor: 'rgba(255,255,255,0.1)',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  sliderBtnText: {
-    fontSize: 20,
-    fontWeight: '800',
-    color: '#e0e7ff',
   },
   sliderPct: {
-    fontSize: 18,
+    fontSize: 17,
     fontWeight: '900',
-    color: '#0891b2',
-    width: 50,
-    textAlign: 'center',
+    minWidth: 56,
+    textAlign: 'left',
     fontVariant: ['tabular-nums'],
   },
   totalIndicator: {
@@ -749,6 +729,7 @@ const s = StyleSheet.create({
   totalTextInvalid: {
     color: '#f87171',
   },
+  // Module-style "בואו נתחיל" pattern.
   runBtn: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -756,18 +737,19 @@ const s = StyleSheet.create({
     gap: 8,
     backgroundColor: '#0891b2',
     paddingVertical: 16,
-    borderRadius: 24,
-    // Ambient glow instead of hard bounds
+    borderRadius: 999,
+    borderBottomWidth: 4,
+    borderBottomColor: '#0e7490',
     shadowColor: '#0891b2',
-    shadowOpacity: 0.2,
+    shadowOpacity: 0.4,
     shadowRadius: 20,
-    shadowOffset: { width: 0, height: 8 },
-    elevation: 8,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 10,
   },
   runBtnText: {
-    fontSize: 17,
+    fontSize: 18,
     fontWeight: '900',
-    color: '#1a1035',
+    color: '#ffffff',
   },
   // ── Simulating ──
   simContainer: {
@@ -776,18 +758,20 @@ const s = StyleSheet.create({
   },
   simLabel: {
     fontSize: 18,
-    fontWeight: '800',
-    color: '#64748b',
+    fontWeight: '900',
+    color: '#0c4a6e',
     marginBottom: 16,
     writingDirection: 'rtl',
   },
   monthBar: {
     width: '100%',
     height: 8,
-    backgroundColor: 'rgba(255,255,255,0.1)',
+    backgroundColor: '#e2e8f0',
     borderRadius: 4,
     overflow: 'hidden',
     marginBottom: 6,
+    // RTL: progress fills right-to-left (matches Hebrew reading direction).
+    transform: [{ scaleX: -1 }],
   },
   monthFill: {
     height: '100%',
@@ -830,9 +814,10 @@ const s = StyleSheet.create({
     fontVariant: ['tabular-nums'],
   },
   headlineCard: {
-    backgroundColor: 'rgba(250,204,21,0.08)',
-    borderWidth: 0, // No Line Rule
-    borderRadius: 24,
+    backgroundColor: '#fef3c7',
+    borderWidth: 1,
+    borderColor: '#fde68a',
+    borderRadius: 16,
     paddingVertical: 14,
     paddingHorizontal: 18,
     width: '100%',
@@ -840,16 +825,17 @@ const s = StyleSheet.create({
   },
   headlineText: {
     fontSize: 14,
-    fontWeight: '700',
-    color: '#fef3c7',
+    fontWeight: '800',
+    color: '#92400e',
     textAlign: 'center',
     writingDirection: 'rtl',
     lineHeight: 22,
   },
   chartContainer: {
-    backgroundColor: 'rgba(255,255,255,0.04)',
-    borderRadius: 24,
-    borderWidth: 0, // No Line Rule
+    backgroundColor: '#ffffff',
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
     padding: 8,
     marginBottom: 16,
     width: '100%',
@@ -918,17 +904,23 @@ const s = StyleSheet.create({
     fontWeight: '800',
   },
   resultCard: {
-    backgroundColor: 'rgba(255,255,255,0.05)',
-    borderRadius: 32,
-    borderWidth: 0, // No Line Rule
+    backgroundColor: '#ffffff',
+    borderRadius: 24,
+    borderWidth: 1,
+    borderColor: '#e0f2fe',
     padding: 24,
     alignItems: 'center',
     marginBottom: 16,
+    shadowColor: '#0c4a6e',
+    shadowOpacity: 0.06,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 2,
   },
   resultTitle: {
     fontSize: 18,
-    fontWeight: '800',
-    color: '#e0e7ff',
+    fontWeight: '900',
+    color: '#0c4a6e',
     marginBottom: 4,
     writingDirection: 'rtl' as const,
   },
@@ -966,7 +958,7 @@ const s = StyleSheet.create({
   benchmarkDivider: {
     width: 1,
     height: 32,
-    backgroundColor: 'rgba(255,255,255,0.15)',
+    backgroundColor: '#cbd5e1',
   },
   // Sector results
   sectorResults: {
@@ -974,24 +966,26 @@ const s = StyleSheet.create({
   },
   sectorResultsTitle: {
     fontSize: 14,
-    fontWeight: '800',
-    color: '#64748b',
+    fontWeight: '900',
+    color: '#0c4a6e',
     writingDirection: 'rtl',
     marginBottom: 10,
   },
   sectorResultRow: {
     flexDirection: 'row-reverse',
     alignItems: 'center',
-    backgroundColor: 'rgba(255,255,255,0.04)',
+    backgroundColor: '#ffffff',
     borderRadius: 14,
     padding: 12,
     marginBottom: 8,
     gap: 8,
+    borderWidth: 1,
+    borderColor: '#e0f2fe',
   },
   sectorResultName: {
     fontSize: 14,
     fontWeight: '800',
-    color: '#e0e7ff',
+    color: '#0c4a6e',
     writingDirection: 'rtl' as const,
   },
   sectorResultAlloc: {
@@ -1012,9 +1006,10 @@ const s = StyleSheet.create({
   },
   // Lesson
   lessonCard: {
-    backgroundColor: 'rgba(14,165,233,0.08)',
-    borderWidth: 0, // No Line Rule
-    borderRadius: 32,
+    backgroundColor: '#ecfeff',
+    borderWidth: 1,
+    borderColor: '#a5f3fc',
+    borderRadius: 24,
     padding: 24,
     alignItems: 'center',
     marginBottom: 24,
@@ -1026,7 +1021,7 @@ const s = StyleSheet.create({
   lessonTitle: {
     fontSize: 20,
     fontWeight: '900',
-    color: '#7dd3fc',
+    color: '#0c4a6e',
     textAlign: 'center',
     writingDirection: 'rtl',
     marginBottom: 12,
@@ -1034,22 +1029,22 @@ const s = StyleSheet.create({
   lessonText: {
     fontSize: 16,
     lineHeight: 26,
-    color: '#64748b',
+    color: '#475569',
     textAlign: 'center',
     writingDirection: 'rtl',
   },
   historicalNoteBox: {
     marginTop: 12,
-    backgroundColor: 'rgba(250,204,21,0.06)',
+    backgroundColor: '#fef3c7',
     borderRadius: 10,
     padding: 12,
     borderWidth: 1,
-    borderColor: 'rgba(250,204,21,0.15)',
+    borderColor: '#fde68a',
   },
   historicalNoteLabel: {
     fontSize: 13,
-    fontWeight: '800',
-    color: '#0891b2',
+    fontWeight: '900',
+    color: '#92400e',
     textAlign: 'right',
     writingDirection: 'rtl' as const,
     marginBottom: 4,
@@ -1057,23 +1052,24 @@ const s = StyleSheet.create({
   historicalNoteText: {
     fontSize: 15,
     lineHeight: 24,
-    color: 'rgba(255,255,255,0.75)',
+    color: '#78350f',
     textAlign: 'center',
     writingDirection: 'rtl' as const,
   },
   // Reward
   rewardCard: {
-    backgroundColor: 'rgba(250,204,21,0.08)',
-    borderWidth: 0, // No Line Rule
-    borderRadius: 24,
+    backgroundColor: '#fef3c7',
+    borderWidth: 1,
+    borderColor: '#fde68a',
+    borderRadius: 20,
     padding: 16,
     alignItems: 'center',
     marginBottom: 20,
   },
   rewardTitle: {
     fontSize: 14,
-    fontWeight: '800',
-    color: '#0891b2',
+    fontWeight: '900',
+    color: '#0c4a6e',
     marginBottom: 6,
   },
   rewardRow: {
@@ -1081,9 +1077,9 @@ const s = StyleSheet.create({
     gap: 20,
   },
   rewardItem: {
-    fontSize: 16,
+    fontSize: 17,
     fontWeight: '900',
-    color: '#fef3c7',
+    color: '#92400e',
   },
   // Actions
   actionRow: {
@@ -1096,27 +1092,34 @@ const s = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 8,
-    backgroundColor: 'rgba(255,255,255,0.08)',
-    borderRadius: 14,
+    backgroundColor: '#ffffff',
+    borderRadius: 999,
     paddingVertical: 14,
-    borderWidth: 1,
-    borderColor: '#e2e8f0',
+    borderWidth: 2,
+    borderColor: '#0891b2',
   },
   replayText: {
-    fontSize: 14,
-    fontWeight: '800',
-    color: '#e0e7ff',
+    fontSize: 15,
+    fontWeight: '900',
+    color: '#0891b2',
   },
+  // Module-style "בואו נתחיל" pattern.
   homeBtn: {
     flex: 1,
-    backgroundColor: '#0ea5e9',
-    borderRadius: 24, // softer radius
+    backgroundColor: '#0891b2',
+    borderRadius: 999,
     paddingVertical: 14,
     alignItems: 'center',
-    borderBottomWidth: 0, // No Line Rule
+    borderBottomWidth: 4,
+    borderBottomColor: '#0e7490',
+    shadowColor: '#0891b2',
+    shadowOpacity: 0.3,
+    shadowRadius: 16,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 8,
   },
   homeBtnText: {
-    fontSize: 14,
+    fontSize: 15,
     fontWeight: '900',
     color: '#ffffff',
   },

@@ -12,7 +12,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import { EyeOff, Flag, Plus } from 'lucide-react-native';
 import { tapHaptic, heavyHaptic } from '../../../../utils/haptics';
-import { FOMO_MOTION } from './theme';
+import { FOMO_MOTION, FOMO_TOKENS } from './theme';
 import type { UserAction } from './types';
 
 interface Props {
@@ -21,10 +21,6 @@ interface Props {
   onAction: (action: UserAction) => void;
 }
 
-/**
- * Three big Stitch-style action buttons fixed at the bottom of the chat.
- * "Add ₪500" has a breathing glow — visual temptation, part of the lesson.
- */
 export function ActionChips({ personaName, visible, onAction }: Props) {
   const reduceMotion = useReducedMotion();
   const tempGlow = useSharedValue(0);
@@ -66,27 +62,33 @@ export function ActionChips({ personaName, visible, onAction }: Props) {
       <View style={styles.row}>
         <ActionButton
           label="התעלם"
-          icon={<EyeOff size={22} color="#ffffff" strokeWidth={2.6} />}
-          bg="rgba(71,85,105,0.85)"
-          borderBottom="#1e293b"
+          icon={<EyeOff size={26} color={FOMO_TOKENS.ignoreText} strokeWidth={2.4} />}
+          bg={FOMO_TOKENS.ignoreBg}
+          border={FOMO_TOKENS.ignoreBorder}
+          borderBottom="#334155"
+          textColor={FOMO_TOKENS.ignoreText}
           accessibilityLabel={`התעלם מהודעה של ${personaName}`}
           accessibilityHint="ממשיך להודעה הבאה"
           onPress={() => handlePress('ignore')}
         />
         <ActionButton
           label="ספאם"
-          icon={<Flag size={22} color="#ffffff" strokeWidth={2.6} />}
-          bg="rgba(220,38,38,0.82)"
-          borderBottom="#7f1d1d"
+          icon={<Flag size={26} color={FOMO_TOKENS.reportText} strokeWidth={2.6} />}
+          bg={FOMO_TOKENS.reportBg}
+          border={FOMO_TOKENS.reportBorder}
+          borderBottom="#991b1b"
+          textColor={FOMO_TOKENS.reportText}
           accessibilityLabel={`דווח על הודעה של ${personaName} כספאם`}
           accessibilityHint="מסמן כהונאה ומעניק XP"
           onPress={() => handlePress('report')}
         />
         <ActionButton
           label="הוסף ₪500"
-          icon={<Plus size={22} color="#ffffff" strokeWidth={2.6} />}
-          bg="rgba(22,163,74,0.82)"
-          borderBottom="#14532d"
+          icon={<Plus size={26} color={FOMO_TOKENS.tempText} strokeWidth={2.6} />}
+          bg={FOMO_TOKENS.tempBg}
+          border={FOMO_TOKENS.tempBorder}
+          borderBottom="#15803d"
+          textColor={FOMO_TOKENS.tempText}
           pulseStyle={tempGlowStyle}
           accessibilityLabel="הוסף חמש מאות שקלים למניה"
           accessibilityHint="שים לב — יכולה להיות מלכודת פומו"
@@ -101,7 +103,9 @@ interface ActionButtonProps {
   label: string;
   icon: React.ReactNode;
   bg: string;
+  border: string;
   borderBottom: string;
+  textColor: string;
   pulseStyle?: ReturnType<typeof useAnimatedStyle>;
   accessibilityLabel: string;
   accessibilityHint: string;
@@ -112,7 +116,9 @@ function ActionButton({
   label,
   icon,
   bg,
+  border,
   borderBottom,
+  textColor,
   pulseStyle,
   accessibilityLabel,
   accessibilityHint,
@@ -131,11 +137,12 @@ function ActionButton({
         accessibilityRole="button"
         accessibilityLabel={accessibilityLabel}
         accessibilityHint={accessibilityHint}
-        hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
+        hitSlop={{ top: 14, bottom: 14, left: 8, right: 8 }}
         style={({ pressed }) => [
           styles.button,
           {
             backgroundColor: bg,
+            borderColor: border,
             borderBottomColor: borderBottom,
           },
           pressed && {
@@ -147,7 +154,7 @@ function ActionButton({
       >
         <View style={styles.iconSlot}>{icon}</View>
         <Text
-          style={styles.label}
+          style={[styles.label, { color: textColor }]}
           allowFontScaling={false}
           numberOfLines={1}
           adjustsFontSizeToFit
@@ -162,20 +169,22 @@ function ActionButton({
 
 const styles = StyleSheet.create({
   container: {
-    paddingHorizontal: 12,
-    paddingTop: 12,
-    paddingBottom: 14,
+    paddingHorizontal: 10,
+    paddingTop: 10,
+    paddingBottom: 12,
+    zIndex: 2,
   },
   row: {
     flexDirection: 'row-reverse',
-    alignItems: 'center',
+    alignItems: 'stretch',
     justifyContent: 'center',
-    gap: 8,
+    gap: 6,
   },
   buttonWrap: {
     flex: 1,
     position: 'relative',
     overflow: 'visible',
+    zIndex: 2,
   },
   pulseInner: {
     position: 'absolute',
@@ -184,36 +193,35 @@ const styles = StyleSheet.create({
     right: 3,
     bottom: 6,
     borderRadius: 14,
-    backgroundColor: 'rgba(74,222,128,0.55)',
+    backgroundColor: 'rgba(74,222,128,0.2)',
     shadowColor: '#22c55e',
-    shadowOpacity: 0.9,
-    shadowRadius: 10,
+    shadowOpacity: 0.7,
+    shadowRadius: 8,
     shadowOffset: { width: 0, height: 0 },
-    elevation: 2,
   },
   button: {
     flexDirection: 'column',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 4,
-    paddingVertical: 10,
+    gap: 8,
+    paddingVertical: 14,
     paddingHorizontal: 8,
-    minHeight: 64,
-    borderRadius: 16,
+    minHeight: 84,
+    borderRadius: 18,
+    borderWidth: 1.5,
     borderBottomWidth: 4,
   },
   iconSlot: {
-    width: 22,
-    height: 22,
+    width: 26,
+    height: 26,
     alignItems: 'center',
     justifyContent: 'center',
     flexShrink: 0,
   },
   label: {
-    fontSize: 13,
+    fontSize: 14,
     fontWeight: '900',
-    color: '#ffffff',
-    letterSpacing: 0.2,
+    letterSpacing: 0.3,
     textAlign: 'center',
     writingDirection: 'rtl',
     includeFontPadding: false,

@@ -202,7 +202,11 @@ export function GlobalWealthHeader({ compact = false }: GlobalWealthHeaderProps)
   // Trigger refill check once on mount
   useEffect(() => {
     useSubscriptionStore.getState().refillHearts();
+    // Order matters: refreshMail reads `lastActiveDate` to decide between the daily
+    // joke variant and the comeback variant. We mark "active today" *after* it runs
+    // so that today's open doesn't poison the comeback detection.
     useFunStore.getState().refreshMail(FINN_DAD_JOKES, FINN_FUN_FACTS);
+    useFunStore.getState().markActiveToday();
   }, []);
 
   const { level, layer, layerName, progressToNextLevel, xpToNextLevel } = getPyramidStatus(xp);

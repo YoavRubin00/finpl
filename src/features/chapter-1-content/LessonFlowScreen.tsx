@@ -1878,7 +1878,7 @@ const quizStreakPopupStyles = StyleSheet.create({
 });
 
 /* ------------------------------------------------------------------ */
-/*  SimIntroOverlay — 6-second intro before simulation starts           */
+/*  SimIntroOverlay — intro card before simulation starts               */
 /* ------------------------------------------------------------------ */
 
 function SimIntroOverlay({
@@ -1892,22 +1892,6 @@ function SimIntroOverlay({
   onStart: () => void;
   unitColors: { bg: string; dim: string; glow: string; bottom: string };
 }) {
-  const [countdown, setCountdown] = useState(6);
-
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setCountdown((prev) => {
-        if (prev <= 1) {
-          clearInterval(interval);
-          onStart();
-          return 0;
-        }
-        return prev - 1;
-      });
-    }, 1000);
-    return () => clearInterval(interval);
-  }, [onStart]);
-
   return (
     <Animated.View
       entering={FadeIn.duration(300)}
@@ -1971,10 +1955,6 @@ function SimIntroOverlay({
           בואו נתחיל!
         </Text>
       </AnimatedPressable>
-
-      <Text style={{ marginTop: 6, fontSize: 10, color: "#64748b" }}>
-        {countdown}s
-      </Text>
     </Animated.View>
   );
 }

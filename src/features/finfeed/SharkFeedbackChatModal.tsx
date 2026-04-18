@@ -24,9 +24,11 @@ import Animated, {
   withTiming,
 } from "react-native-reanimated";
 import { X, Send } from "lucide-react-native";
+import { Image as ExpoImage } from "expo-image";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { getApiBase } from "../../db/apiBase";
 import { useAuthStore } from "../auth/useAuthStore";
+import { FINN_STANDARD, FINN_TALKING } from "../retention-loops/finnMascotConfig";
 import { tapHaptic, successHaptic } from "../../utils/haptics";
 
 interface ChatMsg {
@@ -149,13 +151,14 @@ export function SharkFeedbackChatModal({ visible, onClose }: Props) {
           style={st.root}
           behavior={Platform.OS === "ios" ? "padding" : undefined}
         >
-          {/* Header */}
-          <Animated.View entering={FadeIn.duration(200)} style={[st.header, { paddingTop: safeInsets.top + 10 }]}>
+          {/* Header — top padding has a floor so the status bar never overlaps
+               content even when safe-area insets aren't reported inside the Modal. */}
+          <Animated.View entering={FadeIn.duration(200)} style={[st.header, { paddingTop: Math.max(safeInsets.top + 10, 44) }]}>
             <Pressable onPress={onClose} style={st.closeBtn} hitSlop={12} accessibilityRole="button">
               <X size={22} color="#0e7490" />
             </Pressable>
             <View style={st.avatarHeader}>
-              <Text style={st.headerEmoji}>🦈</Text>
+              <ExpoImage source={FINN_STANDARD} style={st.avatarHeaderImage} contentFit="contain" />
             </View>
             <View style={st.headerTextWrap}>
               <Text style={st.headerTitle}>קפטן שארק</Text>
@@ -178,7 +181,7 @@ export function SharkFeedbackChatModal({ visible, onClose }: Props) {
               >
                 {msg.role === "assistant" && (
                   <View style={st.avatarCircle}>
-                    <Text style={st.avatarEmoji}>🦈</Text>
+                    <ExpoImage source={FINN_STANDARD} style={st.avatarCircleImage} contentFit="contain" />
                   </View>
                 )}
                 <View
@@ -199,7 +202,7 @@ export function SharkFeedbackChatModal({ visible, onClose }: Props) {
             {loading && (
               <View style={[st.msgRow, st.msgRowBot]}>
                 <View style={st.avatarCircle}>
-                  <Text style={st.avatarEmoji}>🦈</Text>
+                  <ExpoImage source={FINN_TALKING} style={st.avatarCircleImage} contentFit="contain" />
                 </View>
                 <View style={[st.bubble, st.botBubble]}>
                   <TypingDots />
@@ -208,8 +211,8 @@ export function SharkFeedbackChatModal({ visible, onClose }: Props) {
             )}
           </ScrollView>
 
-          {/* Input bar */}
-          <View style={st.inputBar}>
+          {/* Input bar — respects bottom safe area (gesture bar / home indicator) */}
+          <View style={[st.inputBar, { paddingBottom: Math.max(safeInsets.bottom + 10, 16) }]}>
             <TextInput
               style={st.textInput}
               value={input}
@@ -271,6 +274,11 @@ const st = StyleSheet.create({
     justifyContent: "center",
     borderWidth: 2,
     borderColor: "#0891b2",
+    overflow: "visible",
+  },
+  avatarHeaderImage: {
+    width: 56,
+    height: 56,
   },
   headerEmoji: {
     fontSize: 22,
@@ -315,9 +323,14 @@ const st = StyleSheet.create({
     width: 28,
     height: 28,
     borderRadius: 14,
-    backgroundColor: "#ede9fe",
+    backgroundColor: "#e0f2fe",
     alignItems: "center",
     justifyContent: "center",
+    overflow: "visible",
+  },
+  avatarCircleImage: {
+    width: 38,
+    height: 38,
   },
   avatarEmoji: {
     fontSize: 13,
@@ -369,7 +382,7 @@ const st = StyleSheet.create({
     alignItems: "flex-end",
     paddingHorizontal: 16,
     paddingTop: 10,
-    paddingBottom: Platform.OS === "ios" ? 16 : 16, // added tiny padding buffer
+    // paddingBottom applied inline via safeInsets so gesture bar never clips the input.
     backgroundColor: "transparent",
     borderTopWidth: 1,
     borderTopColor: "rgba(255,255,255,0.15)",

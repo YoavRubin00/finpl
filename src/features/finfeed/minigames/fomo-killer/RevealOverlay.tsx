@@ -266,7 +266,7 @@ function SharkCoach({ session, perfect }: { session: FomoSession; perfect: boole
       return {
         image: FINN_HAPPY,
         title: '💎 חוסן יהלום',
-        body: 'זיהית את הדפוס. רגולטורים (SEC/ISA) מעריכים שרוב קבוצות "הסיגנלים" בטלגרם מבוססות על מניפולציית מחיר (pump & dump). אתה כבר יודע.',
+        body: 'זיהית את הדפוס. רגולטורים בישראל ובעולם מעריכים שרוב קבוצות "הסיגנלים" בטלגרם מבוססות על שאיבה ושפיכה. אתה כבר יודע.',
       };
     }
     if (session.added === 0) {
@@ -285,7 +285,7 @@ function SharkCoach({ session, perfect }: { session: FomoSession; perfect: boole
     }
     return {
       image: FINN_EMPATHIC,
-      title: 'נתפסת בתאווה',
+      title: 'שיחקת עם הכסף שלך',
       body: 'זה התסריט: לווייתן קונה ראשון, מפרסם בקבוצה, ומוכר כשהקטנים נכנסים. אתה היית האחרון.',
     };
   }, [session.added, perfect]);
@@ -305,7 +305,11 @@ function SharkCoach({ session, perfect }: { session: FomoSession; perfect: boole
 
 const styles = StyleSheet.create({
   overlay: {
-    ...StyleSheet.absoluteFillObject,
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
     backgroundColor: FOMO_TOKENS.revealBg,
     alignItems: 'center',
     justifyContent: 'center',

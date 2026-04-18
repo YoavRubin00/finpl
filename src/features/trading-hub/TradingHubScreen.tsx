@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useCallback } from 'react';
+import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import {
     View,
     Text,
@@ -9,7 +9,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams } from 'expo-router';
-import { Briefcase, RefreshCw } from 'lucide-react-native';
+import { Briefcase, RefreshCw, Star } from 'lucide-react-native';
 import LottieView from 'lottie-react-native';
 import type { AnimationObject } from 'lottie-react-native';
 // LinearGradient removed — learn cards now use flat ocean-teal style
@@ -20,13 +20,25 @@ import { GlobalWealthHeader } from '../../components/ui/GlobalWealthHeader';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StockIcon } from './StockIcon';
 import { TRADABLE_ASSETS, ASSET_BY_ID } from './tradingHubData';
-import { tapHaptic } from '../../utils/haptics';
+import { tapHaptic, mediumHaptic } from '../../utils/haptics';
 import { AssetInfoSheet } from './AssetInfoSheet';
-import { LiveChart } from './LiveChart';
+import { TradingChart } from './TradingChart';
+import { ChartModeOnboarding } from './ChartModeOnboarding';
+import { IndicatorInfoSheet } from './IndicatorInfoSheet';
+import { WatchlistHint } from './WatchlistHint';
+import { AssetUnlockIntro } from './AssetUnlockIntro';
 import { BuySheet } from './BuySheet';
+import { SharkBridgeCTA } from '../../components/ui/SharkCTAModals';
+import { MarketStatusBar } from './MarketStatusBar';
+import { SharkInlineTip } from './SharkInlineTip';
+import { MarketMissionCard } from './MarketMissionCard';
+import { AssetUnlockSheet } from './AssetUnlockSheet';
 import { fetchChartData, fetchLatestPrice, fetchPreviousClose, clearCache, isDataLive } from './marketApiService';
-import { Timeframe, ChartDataPoint, VolatilityRating } from './tradingHubTypes';
+import { Timeframe, ChartDataPoint, VolatilityRating, AssetType, TradableAsset, IndicatorId } from './tradingHubTypes';
 import { useTradingStore } from './useTradingStore';
+import { useTradingHubUiStore } from './useTradingHubUiStore';
+import { useMarketMissionStore } from './useMarketMissionStore';
+import { useChapterStore } from '../chapter-1-content/useChapterStore';
 import { useTutorialStore } from '../../stores/useTutorialStore';
 import { TradingHubTutorial } from './TradingHubTutorial';
 
@@ -75,6 +87,107 @@ export default function TradingHubScreen() {
     const updatePrices = useTradingStore((s) => s.updatePrices);
     const positions = useTradingStore((s) => s.positions);
     const positionCount = positions.length;
+
+    // ── UI state: watchlist + progressive unlock + missions + chart mode ──────
+    const watchlist = useTradingHubUiStore((s) => s.watchlist);
+    const unlockedTypes = useTradingHubUiStore((s) => s.unlockedAssetTypes);
+    const toggleWatchlist = useTradingHubUiStore((s) => s.toggleWatchlist);
+    const unlockAssetType = useTradingHubUiStore((s) => s.unlockAssetType);
+    const chartMode = useTradingHubUiStore((s) => s.chartMode);
+    const setChartMode = useTradingHubUiStore((s) => s.setChartMode);
+    const chartMAPeriod = useTradingHubUiStore((s) => s.chartMAPeriod);
+    const setChartMAPeriod = useTradingHubUiStore((s) => s.setChartMAPeriod);
+    const refreshMissionDaily = useMarketMissionStore((s) => s.refreshDaily);
+    const markMissionCompleted = useMarketMissionStore((s) => s.markCompletedIfMatches);
+
+    // Celebration state for unlock sheet
+    const [unlockCelebrationType, setUnlockCelebrationType] = useState<AssetType | null>(null);
+    // Indicator info sheet
+    const [indicatorInfo, setIndicatorInfo] = useState<IndicatorId | null>(null);
+    const handleIndicatorInfo = useCallback((id: IndicatorId) => setIndicatorInfo(id), []);
+
+    // Captain Shark bridge nudge — appears a few seconds after the screen loads,
+    // inviting the user to convert their practice into real-world benefits.
+    const [bridgeCtaVisible, setBridgeCtaVisible] = useState(false);
+    useEffect(() => {
+        const timer = setTimeout(() => setBridgeCtaVisible(true), 5000);
+        return () => clearTimeout(timer);
+    }, []);
+
+    // Refresh today's mission on mount
+    useEffect(() => {
+        refreshMissionDaily();
+    }, [refreshMissionDaily]);
+
+    // Crypto unlock: subscribe to chapter-5 progress so a mid-session completion
+    // triggers the unlock immediately, not just on the next mount.
+    const ch5CompletedModules = useChapterStore(
+        (s) => s.progress['ch-5']?.completedModules.length ?? 0,
+    );
+    useEffect(() => {
+        if (ch5CompletedModules > 0) {
+            const didUnlock = unlockAssetType('crypto');
+            if (didUnlock) setUnlockCelebrationType('crypto');
+        }
+    }, [ch5CompletedModules, unlockAssetType]);
+
+    // Filter + sort the carousel: unlocked types only, watched first.
+    const visibleAssets = useMemo<TradableAsset[]>(() => {
+        const allowed = TRADABLE_ASSETS.filter((a) => unlockedTypes.includes(a.type));
+        const watched = allowed.filter((a) => watchlist.includes(a.id));
+        const others = allowed.filter((a) => !watchlist.includes(a.id));
+        return [...watched, ...others];
+    }, [unlockedTypes, watchlist]);
+
+    // If the currently selected asset became locked (edge case on first mount),
+    // fall back to the first visible asset.
+    useEffect(() => {
+        if (!visibleAssets.some((a) => a.id === selectedId) && visibleAssets.length > 0) {
+            setSelectedId(visibleAssets[0].id);
+        }
+    }, [visibleAssets, selectedId]);
+
+    // ── Mission triggers ──────────────────────────────────────────────────────
+    // view-chart: after 3 seconds on the screen
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            markMissionCompleted('view-chart');
+        }, 3000);
+        return () => clearTimeout(timer);
+    }, [markMissionCompleted]);
+
+    // compare-prices: two asset switches within 10 seconds
+    const lastAssetSwitchAt = useRef<number>(0);
+    const handleAssetSwitch = useCallback((nextId: string) => {
+        const now = Date.now();
+        markMissionCompleted('switch-asset');
+        if (lastAssetSwitchAt.current > 0 && now - lastAssetSwitchAt.current <= 10_000) {
+            markMissionCompleted('compare-prices');
+        }
+        lastAssetSwitchAt.current = now;
+        setSelectedId(nextId);
+    }, [markMissionCompleted]);
+
+    const handleTimeframeChange = useCallback((tf: Timeframe) => {
+        tapHaptic();
+        setTimeframe(tf);
+        if (tf === '1W') markMissionCompleted('view-weekly');
+    }, [markMissionCompleted]);
+
+    const handleToggleWatchlist = useCallback((assetId: string) => {
+        mediumHaptic();
+        toggleWatchlist(assetId);
+        markMissionCompleted('star-asset');
+    }, [toggleWatchlist, markMissionCompleted]);
+
+    const handleVolatilityTap = useCallback(() => {
+        tapHaptic();
+        markMissionCompleted('check-volatility');
+    }, [markMissionCompleted]);
+
+    const handleBuyUnlocked = useCallback((type: 'stock') => {
+        setUnlockCelebrationType(type);
+    }, []);
 
     const loadChart = useCallback(async (assetId: string, tf: Timeframe) => {
         setChartLoading(true);
@@ -135,6 +248,18 @@ export default function TradingHubScreen() {
                     showsVerticalScrollIndicator={false}
                     contentContainerStyle={styles.scrollContent}
                 >
+                    {/* Market status (shows SPY state regardless of selected asset) */}
+                    <MarketStatusBar selectedAssetId={selectedId} />
+
+                    {/* Captain Shark — daily contextual tip */}
+                    <SharkInlineTip />
+
+                    {/* Daily market mission */}
+                    <MarketMissionCard />
+
+                    {/* One-time hint: long-press = watchlist */}
+                    <WatchlistHint />
+
                     {/* Asset Carousel */}
                     <ScrollView
                         ref={scrollRef}
@@ -143,8 +268,9 @@ export default function TradingHubScreen() {
                         contentContainerStyle={styles.carouselContent}
                         style={styles.carouselSection}
                     >
-                        {TRADABLE_ASSETS.map((asset) => {
+                        {visibleAssets.map((asset) => {
                             const isActive = asset.id === selectedId;
+                            const isWatched = watchlist.includes(asset.id);
                             return (
                                 <Pressable
                                     key={asset.id}
@@ -153,24 +279,42 @@ export default function TradingHubScreen() {
                                         if (asset.id === selectedId) {
                                             setSheetVisible(true);
                                         } else {
-                                            setSelectedId(asset.id);
+                                            handleAssetSwitch(asset.id);
                                         }
                                     }}
+                                    onLongPress={() => handleToggleWatchlist(asset.id)}
+                                    delayLongPress={350}
+                                    accessibilityHint="לחיצה ארוכה להוספה לרשימת המעקב"
                                     style={[styles.assetItem, isActive && styles.assetItemActive]}
                                 >
                                     <View style={[styles.assetCircle, isActive && styles.assetCircleActive]}>
                                         <StockIcon assetId={asset.id} size={36} />
+                                        {isWatched && (
+                                            <View style={styles.starBadge}>
+                                                <Star size={10} color="#fbbf24" fill="#fbbf24" strokeWidth={2} />
+                                            </View>
+                                        )}
                                     </View>
                                     <Text style={[styles.assetLabel, isActive && styles.assetLabelActive]} numberOfLines={1}>
                                         {asset.id}
                                     </Text>
-                                    <Text style={styles.volatilityDot}>
-                                        {VOLATILITY_CONFIG[asset.volatilityRating].dot}
-                                    </Text>
+                                    <Pressable
+                                        onPress={handleVolatilityTap}
+                                        hitSlop={6}
+                                        accessibilityRole="button"
+                                        accessibilityLabel={`תנודתיות: ${VOLATILITY_CONFIG[asset.volatilityRating].label}`}
+                                    >
+                                        <Text style={styles.volatilityDot}>
+                                            {VOLATILITY_CONFIG[asset.volatilityRating].dot}
+                                        </Text>
+                                    </Pressable>
                                 </Pressable>
                             );
                         })}
                     </ScrollView>
+
+                    {/* One-time strip: which categories are still locked + how to open them */}
+                    <AssetUnlockIntro />
 
                     {/* Chart Card */}
                     <View style={styles.chartCard}>
@@ -205,13 +349,24 @@ export default function TradingHubScreen() {
                             </View>
                         )}
 
-                        {chartLoading ? (
+                        {chartMode === null ? (
+                            // Defer mounting the WebView until the user has chosen a mode.
+                            // Otherwise the chart would load in 'simple' and immediately reload
+                            // after the onboarding choice, causing a visible flicker.
                             <View style={styles.chartLoading}>
                                 <ActivityIndicator color={CALM.accent} size="small" />
                                 <Text style={styles.chartLoadingText}>טוען גרף...</Text>
                             </View>
                         ) : (
-                            <LiveChart data={chartData} isLoading={chartLoading} />
+                            <TradingChart
+                                ohlcv={chartData}
+                                mode={chartMode}
+                                timeframe={timeframe}
+                                isLoading={chartLoading}
+                                maPeriod={chartMAPeriod}
+                                onMAPeriodChange={setChartMAPeriod}
+                                onIndicatorInfoPress={handleIndicatorInfo}
+                            />
                         )}
 
                         {/* Timeframe Tabs + Refresh */}
@@ -221,10 +376,7 @@ export default function TradingHubScreen() {
                                 return (
                                     <Pressable
                                         key={value}
-                                        onPress={() => {
-                                            tapHaptic();
-                                            setTimeframe(value);
-                                        }}
+                                        onPress={() => handleTimeframeChange(value)}
                                         style={[styles.timeframeTab, isActive && styles.timeframeTabActive]}
                                     >
                                         <Text style={[styles.timeframeText, isActive && styles.timeframeTextActive]}>
@@ -244,6 +396,33 @@ export default function TradingHubScreen() {
                                 <RefreshCw size={16} color="#6b7280" />
                             </Pressable>
                         </View>
+
+                        {/* Chart mode toggle — hidden until the user has made their onboarding choice */}
+                        {chartMode !== null && (
+                            <View style={styles.modeToggleRow}>
+                                {(['simple', 'advanced'] as const).map((m) => {
+                                    const active = chartMode === m;
+                                    return (
+                                        <Pressable
+                                            key={m}
+                                            onPress={() => {
+                                                if (active) return;
+                                                tapHaptic();
+                                                setChartMode(m);
+                                            }}
+                                            accessibilityRole="button"
+                                            accessibilityLabel={m === 'simple' ? 'גרף פשוט' : 'גרף למתקדמים'}
+                                            accessibilityState={{ selected: active }}
+                                            style={[styles.modePill, active && styles.modePillActive]}
+                                        >
+                                            <Text style={[styles.modePillText, active && styles.modePillTextActive]}>
+                                                {m === 'simple' ? 'פשוט' : 'מתקדם'}
+                                            </Text>
+                                        </Pressable>
+                                    );
+                                })}
+                            </View>
+                        )}
                     </View>
 
                     {/* Learning module links */}
@@ -307,6 +486,7 @@ export default function TradingHubScreen() {
                 previousClose={previousClose}
                 onClose={() => setBuySheetVisible(false)}
                 onBuyComplete={() => {}}
+                onAssetTypeUnlocked={handleBuyUnlocked}
             />
 
             {/* Asset Info Sheet */}
@@ -316,10 +496,44 @@ export default function TradingHubScreen() {
                 onClose={() => setSheetVisible(false)}
             />
 
+            {/* Asset unlock celebration (stocks or crypto) */}
+            {unlockCelebrationType !== null && (
+                <AssetUnlockSheet
+                    visible
+                    unlockedType={unlockCelebrationType}
+                    onClose={() => setUnlockCelebrationType(null)}
+                />
+            )}
+
             {/* First-time tutorial overlay */}
             {showTutorial && (
                 <TradingHubTutorial onComplete={() => setShowTutorial(false)} />
             )}
+
+            {/* Chart mode onboarding — shown once on first visit after chart data loads */}
+            <ChartModeOnboarding
+                visible={chartMode === null && !chartLoading && chartData.length > 1}
+                onChoose={(m) => setChartMode(m)}
+            />
+
+            {/* Indicator explanation sheet */}
+            <IndicatorInfoSheet
+                visible={indicatorInfo !== null}
+                indicatorId={indicatorInfo}
+                maPeriod={chartMAPeriod}
+                onClose={() => setIndicatorInfo(null)}
+            />
+
+            {/* Captain Shark — turn knowledge into real-world benefits */}
+            <SharkBridgeCTA
+                visible={bridgeCtaVisible}
+                onGoBridge={() => {
+                    setBridgeCtaVisible(false);
+                    router.push('/bridge' as never);
+                }}
+                onDismiss={() => setBridgeCtaVisible(false)}
+                moduleCount={positionCount}
+            />
         </View>
     );
 }
@@ -405,6 +619,20 @@ const styles = StyleSheet.create({
         shadowOpacity: 0.3,
         shadowRadius: 8,
         elevation: 4,
+    },
+    starBadge: {
+        position: 'absolute',
+        top: -4,
+        // Use `end` so the star hugs the trailing edge of the asset circle on both LTR and RTL.
+        end: -4,
+        width: 16,
+        height: 16,
+        borderRadius: 8,
+        backgroundColor: '#fef3c7',
+        borderWidth: 1.5,
+        borderColor: '#d97706',
+        justifyContent: 'center',
+        alignItems: 'center',
     },
     assetLabel: {
         marginTop: 4,
@@ -503,7 +731,8 @@ const styles = StyleSheet.create({
 
     // ── Timeframe Tabs ──
     timeframeTabs: {
-        flexDirection: 'row',
+        // RTL: "יום" should read first (right-most), then "שבוע".
+        flexDirection: 'row-reverse',
         justifyContent: 'center',
         alignItems: 'center',
         gap: 4,
@@ -533,6 +762,36 @@ const styles = StyleSheet.create({
         color: CALM.textSecondary,
     },
     timeframeTextActive: {
+        color: CALM.accent,
+    },
+
+    // ── Chart mode toggle (simple / advanced) ──
+    modeToggleRow: {
+        flexDirection: 'row-reverse',
+        justifyContent: 'center',
+        alignItems: 'center',
+        gap: 6,
+        marginTop: 10,
+        paddingHorizontal: 16,
+    },
+    modePill: {
+        paddingHorizontal: 14,
+        paddingVertical: 5,
+        borderRadius: 999,
+        borderWidth: 1.5,
+        borderColor: CALM.border,
+        backgroundColor: CALM.surface,
+    },
+    modePillActive: {
+        borderColor: CALM.accent,
+        backgroundColor: CALM.accentLight,
+    },
+    modePillText: {
+        fontSize: 11,
+        fontWeight: '800',
+        color: CALM.textSecondary,
+    },
+    modePillTextActive: {
         color: CALM.accent,
     },
 

@@ -5,7 +5,8 @@ import { userProfiles } from '../../../src/db/schema';
 import { GEM_BUNDLES } from '../../../src/features/shop/gemBundles';
 
 function getDb() {
-  const url = process.env.DATABASE_URL ?? '';
+  const url = process.env.DATABASE_URL;
+  if (!url) throw new Error('DATABASE_URL is not configured');
   const sqlConnection = neon(url);
   return drizzle(sqlConnection);
 }
@@ -28,9 +29,12 @@ interface WebhookBody {
 
 export async function POST(request: Request): Promise<Response> {
   try {
-    // 1. Secure the endpoint using an Authorization token
+    // 1. Secure the endpoint — reject immediately if secret not configured
+    if (!RC_WEBHOOK_SECRET) {
+      return Response.json({ error: 'Webhook not configured' }, { status: 401 });
+    }
     const authHeader = request.headers.get('Authorization');
-    if (RC_WEBHOOK_SECRET && authHeader !== `Bearer ${RC_WEBHOOK_SECRET}`) {
+    if (authHeader !== `Bearer ${RC_WEBHOOK_SECRET}`) {
       return Response.json({ error: 'Unauthorized' }, { status: 401 });
     }
 

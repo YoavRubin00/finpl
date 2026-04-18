@@ -23,7 +23,8 @@ import Animated, {
   cancelAnimation,
   useReducedMotion,
 } from "react-native-reanimated";
-import { FINN_STANDARD } from "../retention-loops/finnMascotConfig";
+import { FINN_STANDARD, FINN_DANCING } from "../retention-loops/finnMascotConfig";
+import { useSpontaneousDancing } from "../retention-loops/useSpontaneousDancing";
 
 // Feed Data & Types
 import { MOCK_FEED_DATA, COMIC_FEED_ITEMS, BENBEN_VIDEOS } from "./feedData";
@@ -48,6 +49,8 @@ import { MythFeedCard } from "../myth-or-tachles/MythFeedCard";
 import { FeedPremiumLearningCard } from "./FeedPremiumLearningCard";
 import { PREMIUM_LEARNING_ITEMS } from "./premiumLearningData";
 import { useScenarioLabStore } from "../scenario-lab/useScenarioLabStore";
+import { SCENARIOS } from "../scenario-lab/scenarioLabData";
+import { FeedScenarioCard } from "./FeedScenarioCard";
 import { DailyQuizCard } from "../daily-quiz/DailyQuizCard";
 import { useDailyQuizStore } from "../daily-quiz/useDailyQuizStore";
 import { refreshDailyQuiz } from "../daily-quiz/dailyQuizPipeline";
@@ -57,8 +60,12 @@ import { SharkFeedbackCard } from "./SharkFeedbackCard";
 import { FeedSimulatorCard } from "./FeedSimulatorCard";
 import { FEED_SIMULATORS } from "./feedSimulatorsData";
 import { SharkFeedbackChatModal } from "./SharkFeedbackChatModal";
+import { BenbenStudyNudgeModal } from "./BenbenStudyNudgeModal";
 
 const SHARK_FEEDBACK_KEY = "shark_feedback_last_time";
+const BENBEN_NUDGE_KEY = "benben_study_nudge_last";
+const BENBEN_WATCH_MS = 30000; // half of a 60s BENBEN video
+const BENBEN_NUDGE_COOLDOWN_MS = 24 * 60 * 60 * 1000; // 24h
 import { InvestmentCard } from "../daily-challenges/InvestmentCard";
 import { SwipeGameCard } from "../daily-challenges/SwipeGameCard";
 import { CrashGameCard } from "../daily-challenges/CrashGameCard";
@@ -202,20 +209,35 @@ let _feedListScrollToIndex: ((index: number) => void) | null = null;
 
 /** Pending scroll-to index — set externally, consumed on next focus */
 export let _pendingFeedScrollIndex: number | null = null;
+export let _pendingFeedScrollTargetId: string | null = null;
+
 export function setPendingFeedScroll(index: number) {
   _pendingFeedScrollIndex = index;
 }
 
+export function setPendingFeedScrollById(id: string) {
+  _pendingFeedScrollTargetId = id;
+}
+
 // -- Welcome Screen (full-screen first card with Finn + daily quote) --
 function WelcomeCard({ height }: { height: number }) {
+  // ~1 in 7 days (deterministic per day) the big greeting Shark dances —
+  // adds variety without being noisy.
+  const dancing = useSpontaneousDancing(0.15, 'welcome');
+  const greetingShark = dancing ? FINN_DANCING : FINN_STANDARD;
   const router = useRouter();
   const displayName = useAuthStore((s) => s.displayName);
   const hasUnreadMail = useFunStore((s) => s.hasUnreadMail);
   const refreshMail = useFunStore((s) => s.refreshMail);
+  const markActiveToday = useFunStore((s) => s.markActiveToday);
   const [showMailModal, setShowMailModal] = useState(false);
 
-  // Refresh mail on mount
-  useEffect(() => { refreshMail(FINN_DAD_JOKES, FINN_FUN_FACTS); }, []);
+  // Refresh mail on mount, then mark today as active so the comeback check
+  // in refreshMail uses yesterday's lastActiveDate, not today's.
+  useEffect(() => {
+    refreshMail(FINN_DAD_JOKES, FINN_FUN_FACTS);
+    markActiveToday();
+  }, []);
   const dailyQuote = useMemo(() => getDailyQuote(), []);
   const dailyConcept = useMemo(() => getDailyConcept(), []);
 
@@ -261,8 +283,7 @@ function WelcomeCard({ height }: { height: number }) {
       <View style={welcomeStyles.centralContent}>
         {/* The Daily Concept First */}
         <Animated.View style={[welcomeStyles.conceptCard, bubble2Style]}>
-           <View style={{ flexDirection: "row-reverse", alignItems: "center", gap: 8, justifyContent: "center", marginBottom: 6 }}>
-             <ExpoImage source={FINN_STANDARD} style={{ width: 28, height: 28 }} contentFit="contain" accessible={false} />
+           <View style={{ alignItems: "center", marginBottom: 6 }}>
              <Text style={welcomeStyles.quoteDailyLabel}>המושג היומי</Text>
            </View>
            <Text style={welcomeStyles.conceptTitle}>{dailyConcept.titleHe}</Text>
@@ -288,7 +309,7 @@ function WelcomeCard({ height }: { height: number }) {
       <View style={{ alignSelf: 'center', marginTop: -50, alignItems: 'center' }}>
         <Animated.View style={[{ alignItems: 'center' }, bubble4Style]}>
           <View style={{ width: 220, height: 220, overflow: 'hidden' }}>
-            <ExpoImage source={FINN_STANDARD}
+            <ExpoImage source={greetingShark}
               style={{ width: 220, height: 220 }}
               contentFit="contain"
               accessible={false}
@@ -565,6 +586,8 @@ export function FinFeedScreen() {
   const { showStreakCelebration } = useStreakCelebration();
   const streakTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [showSharkFeedback, setShowSharkFeedback] = useState(false);
+  const [showBenbenNudge, setShowBenbenNudge] = useState(false);
+  const benbenWatchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const flatListRef = useRef<FlashListRef<FeedItem>>(null);
   useScrollToTop(flatListRef);
 
@@ -731,6 +754,20 @@ export function FinFeedScreen() {
       event,
     }));
 
+    // Scenario teaser cards — historical "what would you do?" simulations
+    // (dotcom, lehman, covid, etc.). Prefer uncompleted scenarios, cap at 5.
+    const uncompletedScenarios = SCENARIOS.filter(
+      (s) => !completedScenarios[s.id],
+    );
+    const scenarioPool = uncompletedScenarios.length > 0 ? uncompletedScenarios : SCENARIOS;
+    const scenarioItems: FeedItem[] = seededShuffle([...scenarioPool], seed + 3)
+      .slice(0, 5)
+      .map((scenario) => ({
+        id: `scenario-${scenario.id}`,
+        type: "scenario" as const,
+        scenario,
+      }));
+
     // Pool: base feed + comics + hooks + wisdom + macro-events + scenarios
     const pool: FeedItem[] = [
       ...MOCK_FEED_DATA,
@@ -744,6 +781,7 @@ export function FinFeedScreen() {
     // Categorize items for the cyclical pattern: Game -> Quote -> Video
     const games: FeedItem[] = [
       ...macroItems,
+      ...scenarioItems,
       ...PREMIUM_LEARNING_ITEMS,
       ...MOCK_FEED_DATA.filter(i => i.type !== "video" && i.type !== "quote"),
       { id: 'myth-or-tachles', type: 'myth-or-tachles' },
@@ -756,7 +794,11 @@ export function FinFeedScreen() {
       { id: 'price-slider', type: 'price-slider' as const },
       { id: 'cashout-rush', type: 'cashout-rush' as const },
       { id: 'fomo-killer', type: 'fomo-killer' as const },
-      { id: 'did-you-know', type: 'did-you-know' as const },
+      // Three DYK entries with distinct seeds — shuffles spread them across the feed
+      // so users encounter "הידעתם?" several times per session rather than once.
+      { id: 'did-you-know-1', type: 'did-you-know' as const },
+      { id: 'did-you-know-2', type: 'did-you-know' as const },
+      { id: 'did-you-know-3', type: 'did-you-know' as const },
       { id: 'graham-personality', type: 'graham-personality' } as const,
       { id: 'diamond-hands', type: 'diamond-hands' as const },
       { id: 'shark-feedback', type: 'shark-feedback' as const },
@@ -828,6 +870,15 @@ export function FinFeedScreen() {
     const secondMacroIdx = filteredMerged.findIndex((i) => i.type === 'macro-event');
     const secondMacro = secondMacroIdx >= 0 ? filteredMerged.splice(secondMacroIdx, 1)[0] : null;
 
+    // Pin a "הידעתם?" card near the top so users see the trivia feature within
+    // the first handful of swipes. Pull the first DYK out of the shuffled pool.
+    const dykIdx = filteredMerged.findIndex((i) => i.type === 'did-you-know');
+    const pinnedDyk = dykIdx >= 0 ? filteredMerged.splice(dykIdx, 1)[0] : null;
+
+    // Pin a historical scenario (Covid / Dot-com / Lehman / ...) near the top.
+    const scenarioIdx = filteredMerged.findIndex((i) => i.type === 'scenario');
+    const pinnedScenario = scenarioIdx >= 0 ? filteredMerged.splice(scenarioIdx, 1)[0] : null;
+
     if (quizItem) filteredMerged.unshift(quizItem);
     filteredMerged.unshift({ id: 'daily-dilemma', type: 'daily-dilemma' });
 
@@ -835,6 +886,18 @@ export function FinFeedScreen() {
     if (pinnedMacro) {
       const insertAt = Math.min(2, filteredMerged.length);
       filteredMerged.splice(insertAt, 0, pinnedMacro);
+    }
+
+    // Pin a "הידעתם?" card at position 4 — user sees trivia early in the session
+    if (pinnedDyk) {
+      const insertAt = Math.min(4, filteredMerged.length);
+      filteredMerged.splice(insertAt, 0, pinnedDyk);
+    }
+
+    // Pin a historical scenario at position 5 — introduces scenario-lab within the first screen-scrolls
+    if (pinnedScenario) {
+      const insertAt = Math.min(5, filteredMerged.length);
+      filteredMerged.splice(insertAt, 0, pinnedScenario);
     }
 
     // Insert pinned BENBEN creator video at position 7
@@ -848,7 +911,48 @@ export function FinFeedScreen() {
     }
 
     return filteredMerged;
-  }, [feedSeed, simSeed, progress, aiProfile, completedScenarios]);
+  }, [feedSeed, simSeed, progress, aiProfile, getUnansweredMacroEvents, completedScenarios]);
+
+  // Execute pending scroll by ID once feedItems are populated
+  useEffect(() => {
+    if (_pendingFeedScrollTargetId !== null && feedItems.length > 0 && listHeight > 0) {
+      const targetId = _pendingFeedScrollTargetId;
+      const idx = feedItems.findIndex((i) => i.id === targetId);
+      if (idx !== -1) {
+        _pendingFeedScrollTargetId = null;
+        setTimeout(() => {
+          flatListRef.current?.scrollToIndex({ index: idx, animated: true });
+        }, 400); // Wait for the transition into the screen
+      }
+    }
+  }, [feedItems, listHeight]);
+
+  // BENBEN half-watch shark nudge — if user stays on a BENBEN video for 30s
+  // (half of its 60s length), pop a study nudge. Cooldown: once per 24h.
+  useEffect(() => {
+    if (benbenWatchTimerRef.current) {
+      clearTimeout(benbenWatchTimerRef.current);
+      benbenWatchTimerRef.current = null;
+    }
+    if (showBenbenNudge) return;
+    const activeItem = feedItems[activeItemIndex];
+    if (!activeItem || typeof activeItem.id !== 'string' || !activeItem.id.startsWith('benben-')) return;
+    benbenWatchTimerRef.current = setTimeout(async () => {
+      try {
+        const lastStr = await AsyncStorage.getItem(BENBEN_NUDGE_KEY);
+        const last = lastStr ? parseInt(lastStr, 10) : 0;
+        if (Date.now() - last < BENBEN_NUDGE_COOLDOWN_MS) return;
+        await AsyncStorage.setItem(BENBEN_NUDGE_KEY, Date.now().toString());
+        setShowBenbenNudge(true);
+      } catch { /* non-fatal */ }
+    }, BENBEN_WATCH_MS);
+    return () => {
+      if (benbenWatchTimerRef.current) {
+        clearTimeout(benbenWatchTimerRef.current);
+        benbenWatchTimerRef.current = null;
+      }
+    };
+  }, [activeItemIndex, feedItems, showBenbenNudge]);
 
   // Use viewAreaCoveragePercentThreshold so only the item covering the majority
   // of the viewport is "active" — prevents the previous item's video from playing
@@ -896,6 +1000,9 @@ export function FinFeedScreen() {
             onAnswer={() => {}}
           />
         )}
+        {item.type === "scenario" && (
+          <FeedScenarioCard item={item} isActive={isActive} />
+        )}
         {item.type === "daily-quiz" && (
           <DailyQuizCard quiz={item.quiz} isActive={isActive} />
         )}
@@ -936,7 +1043,7 @@ export function FinFeedScreen() {
           <FomoKillerCard isActive={isActive} />
         )}
         {item.type === "did-you-know" && (
-          <DidYouKnowCard isActive={isActive} itemId={item.itemId} />
+          <DidYouKnowCard isActive={isActive} itemId={item.itemId ?? item.id} />
         )}
         {item.type === "graham-personality" && (
           <GrahamPersonalityFeedCard isActive={isActive} />
@@ -983,6 +1090,7 @@ export function FinFeedScreen() {
 
       {useTutorialStore.getState().hasSeenAppWalkthrough && <NotificationPermissionBanner />}
       <SharkFeedbackChatModal visible={showSharkFeedback} onClose={() => setShowSharkFeedback(false)} />
+      <BenbenStudyNudgeModal visible={showBenbenNudge} onClose={() => setShowBenbenNudge(false)} />
     </View>
   );
 }

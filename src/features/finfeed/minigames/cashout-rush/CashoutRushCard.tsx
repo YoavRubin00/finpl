@@ -51,7 +51,7 @@ const FG_HISTORY: { date: string; value: number; index: 'CNN' | 'Crypto'; event:
   // Extreme Greed readings
   { date: '10 נובמבר 2021', value: 84, index: 'Crypto', event: 'שיא BTC ב-69,000$. תוך שנה צנח ל-15,500$ (-77%).' },
   { date: '14 פברואר 2020', value: 97, index: 'CNN', event: 'שבועיים לפני קריסת הקורונה. S&P בשיא 3,386. תוך 5 שבועות: -34%.' },
-  { date: '16 נובמבר 2021', value: 76, index: 'CNN', event: 'שיא 2021 של S&P ב-4,711. 2022 היה שנת הדוב הגרועה מאז 2008.' },
+  { date: '16 נובמבר 2021', value: 76, index: 'CNN', event: 'שיא 2021 של S&P ב-4,711. 2022 היה שנה דובית — הגרועה מאז 2008.' },
   { date: '7 ינואר 2021', value: 75, index: 'Crypto', event: 'BTC שובר שיא ב-42,000$. לקח שנתיים חזרה אחרי קריסת 2022.' },
 ];
 
@@ -413,7 +413,7 @@ export const CashoutRushCard = React.memo(function CashoutRushCard({ isActive: _
             <Text style={[styles.idleDesc, RTL_CENTER]}>
               המדד מטפס מ-50 לעבר 100. צאו לפני הקריסה.
             </Text>
-            <GlossaryInlineToggle glossaryKey="fear-or-greed" />
+            <GlossaryInlineToggle glossaryKey="fear-or-greed" direction="up" />
             <FeedStartButton
               label="בואו נתחיל"
               onPress={startGame}
@@ -440,10 +440,15 @@ export const CashoutRushCard = React.memo(function CashoutRushCard({ isActive: _
               </View>
               <View style={styles.sharkTextCol}>
                 <Text style={[styles.sharkTitle, RTL, { color: '#16a34a' }]}>יצאת לפני הבועה</Text>
-                <Text style={[styles.sharkBody, RTL]} numberOfLines={6}>
+                <Text style={[styles.sharkBody, RTL]}>
                   יצאת ב-{Math.round(finalFG)}/100 — {fgLabel(finalFG)}. במציאות: {historicalRef.win.date} — המדד היה {historicalRef.win.value}. {historicalRef.win.event}
                 </Text>
               </View>
+            </View>
+            {/* Inline explainer for "שנה דובית" — relevant whenever the historical
+                event references a bear market (most extreme-greed peaks did precede one). */}
+            <View style={{ marginTop: 12 }}>
+              <GlossaryInlineToggle glossaryKey="bear-market" />
             </View>
           </Animated.View>
         )}
@@ -456,7 +461,7 @@ export const CashoutRushCard = React.memo(function CashoutRushCard({ isActive: _
               </View>
               <View style={styles.sharkTextCol}>
                 <Text style={[styles.sharkTitle, RTL, { color: '#dc2626' }]}>נתפסת בתאווה</Text>
-                <Text style={[styles.sharkBody, RTL]} numberOfLines={6}>
+                <Text style={[styles.sharkBody, RTL]}>
                   הקריסה מגיעה בדיוק כשכולם הכי בטוחים. ההיפך נכון גם הוא — {historicalRef.loss.date} המדד היה {historicalRef.loss.value} (פחד קיצוני). {historicalRef.loss.event}
                 </Text>
               </View>

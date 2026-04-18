@@ -8,12 +8,11 @@ import {
   Alert,
   Dimensions,
   ActivityIndicator,
-  Image,
   Linking,
   Platform,
 } from "react-native";
 import LottieView from "lottie-react-native";
-import { FINN_STANDARD } from "../retention-loops/finnMascotConfig";
+import { FINN_DANCING } from "../retention-loops/finnMascotConfig";
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -286,7 +285,7 @@ export function PricingScreen() {
 
             {/* Fin mascot */}
             <View style={styles.mascotContainer}>
-              <ExpoImage source={FINN_STANDARD}
+              <ExpoImage source={FINN_DANCING}
                 style={styles.mascot}
                 contentFit="contain"
                 accessible={false}

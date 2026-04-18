@@ -4,6 +4,8 @@ import { Image as ExpoImage } from "expo-image";
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
+  useAnimatedReaction,
+  runOnJS,
   withSpring,
   withTiming,
   withDelay,
@@ -62,17 +64,19 @@ function CountingText({
     transform: [{ scale: counterScale.value }],
   }));
 
-  // Read animated value on JS thread via rAF
-  useEffect(() => {
-    let running = true;
-    function tick() {
-      if (!running) return;
-      setDisplay(Math.round(animVal.value));
-      requestAnimationFrame(tick);
-    }
-    tick();
-    return () => { running = false; };
-  }, [animVal]);
+  // Read animated value via reanimated reaction — fires only when the rounded
+  // value actually changes (~once per frame during the 1.2s ramp, then stops).
+  // Earlier this used a permanent `requestAnimationFrame` loop that called
+  // `setDisplay` 60 times/sec forever — three of these in a row (XP/coins/time)
+  // pinned the JS thread and made the modal feel stuck.
+  useAnimatedReaction(
+    () => Math.round(animVal.value),
+    (current, previous) => {
+      if (current !== previous) {
+        runOnJS(setDisplay)(current);
+      }
+    },
+  );
 
   const formatted = useMemo(() => {
     if (suffix === "time") {

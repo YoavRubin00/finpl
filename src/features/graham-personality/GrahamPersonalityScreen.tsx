@@ -275,7 +275,17 @@ export function GrahamPersonalityScreen({ onComplete }: GrahamPersonalityScreenP
           {/* Header: Top Nav + Progress */}
           <View style={styles.header}>
             <View style={styles.topNav}>
-               <AnimatedPressable onPress={() => { tapHaptic(); router.back(); }} style={styles.closeBtn}>
+               <AnimatedPressable
+                 onPress={() => {
+                   tapHaptic();
+                   if (router.canGoBack()) {
+                     router.back();
+                   } else {
+                     router.replace('/(tabs)/learn');
+                   }
+                 }}
+                 style={styles.closeBtn}
+               >
                  <X size={24} color={SIM4.textSecondary} />
                </AnimatedPressable>
             </View>

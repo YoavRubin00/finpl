@@ -27,6 +27,7 @@ import type { FeedPremiumLearning } from './types';
 import { FINN_STANDARD } from '../retention-loops/finnMascotConfig';
 import { useSoundEffect } from '../../hooks/useSoundEffect';
 import { tapHaptic } from '../../utils/haptics';
+import { FeedStartButton } from './minigames/shared/FeedStartButton';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -93,12 +94,7 @@ function TapZonesCard({ item, onStartModule }: { item: FeedPremiumLearning; onSt
       )}
 
       {/* CTA */}
-      <AnimatedPressable onPress={onStartModule} style={styles.nextBtn} accessibilityRole="button" accessibilityLabel="התחל ללמוד">
-        <View style={{ flexDirection: 'row-reverse', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
-          <Text style={styles.nextBtnText}>להתחיל ללמוד!</Text>
-          <View accessible={false}><LottieIcon source={LOTTIE_ARROW} size={18} /></View>
-        </View>
-      </AnimatedPressable>
+      <FeedStartButton label="להתחיל ללמוד!" onPress={onStartModule} accessibilityLabel="התחל ללמוד" />
     </View>
   );
 }
@@ -244,12 +240,9 @@ export const FeedPremiumLearningCard = React.memo(function FeedPremiumLearningCa
           <Text style={[styles.ctaSub, RTL]}>
             התחל את המודולה המלאה של {item.moduleTitle}
           </Text>
-          <AnimatedPressable onPress={handleStartModule} style={styles.ctaBtn} accessibilityRole="button" accessibilityLabel="התחל ללמוד">
-            <View style={{ flexDirection: 'row-reverse', alignItems: 'center', gap: 6 }}>
-              <Text style={styles.ctaBtnText}>להתחיל ללמוד!</Text>
-              <View accessible={false}><LottieIcon source={LOTTIE_ARROW} size={20} /></View>
-            </View>
-          </AnimatedPressable>
+          <View style={{ alignSelf: 'stretch', width: '100%', marginTop: 8 }}>
+            <FeedStartButton label="להתחיל ללמוד!" onPress={handleStartModule} accessibilityLabel="התחל ללמוד" />
+          </View>
         </Animated.View>
       </View>
     );
@@ -280,12 +273,7 @@ export const FeedPremiumLearningCard = React.memo(function FeedPremiumLearningCa
           </View>
         )}
 
-        <AnimatedPressable onPress={handleStartModule} style={[styles.nextBtn, { marginTop: 12 }]} accessibilityRole="button" accessibilityLabel="התחל ללמוד">
-          <View style={{ flexDirection: 'row-reverse', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
-            <Text style={styles.nextBtnText}>להתחיל ללמוד!</Text>
-            <View accessible={false}><LottieIcon source={LOTTIE_ARROW} size={18} /></View>
-          </View>
-        </AnimatedPressable>
+        <FeedStartButton label="להתחיל ללמוד!" onPress={handleStartModule} accessibilityLabel="התחל ללמוד" />
       </View>
     );
   }
@@ -454,19 +442,5 @@ const styles = StyleSheet.create({
     color: '#475569',
     textAlign: 'center',
     lineHeight: 22,
-  },
-  ctaBtn: {
-    backgroundColor: '#0891b2',
-    borderRadius: 16,
-    paddingVertical: 14,
-    paddingHorizontal: 32,
-    borderBottomWidth: 3,
-    borderBottomColor: '#0e7490',
-    marginTop: 8,
-  },
-  ctaBtnText: {
-    fontSize: 16,
-    fontWeight: '900',
-    color: '#ffffff',
   },
 });

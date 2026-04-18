@@ -24,6 +24,8 @@ import LottieView from "lottie-react-native";
 import { ChevronLeft, ChevronRight } from "lucide-react-native";
 import { tapHaptic } from "../../utils/haptics";
 import { useStreakCalendar, type DayCellStatus } from "./useStreakCalendar";
+import { Image as ExpoImage } from "expo-image";
+import { FINN_FIRE } from "../retention-loops/finnMascotConfig";
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
 const CELL_SIZE = Math.floor((SCREEN_WIDTH - 56) / 7);
@@ -123,6 +125,13 @@ export function StreakCalendarModal({ visible, onClose }: StreakCalendarModalPro
         <Pressable style={[styles.sheet, { paddingBottom: Math.max(24, insets.bottom + 12) }]} onPress={() => {}}>
           {/* Handle */}
           <View style={styles.handle} />
+
+          {/* Captain Shark holding the streak fire — sits at the top of the calendar */}
+          <View style={{ alignItems: 'center', marginTop: -4, marginBottom: 4 }}>
+            <View style={{ width: 96, height: 96, borderRadius: 48, overflow: 'hidden', backgroundColor: 'transparent' }}>
+              <ExpoImage source={FINN_FIRE} accessible={false} style={{ width: 96, height: 96, opacity: 0.92 }} contentFit="contain" />
+            </View>
+          </View>
 
           {/* ── Header: streak summary ── */}
           <Animated.View entering={FadeIn.duration(300)} style={styles.headerRow}>

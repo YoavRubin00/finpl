@@ -531,7 +531,7 @@ const styles = StyleSheet.create({
   },
   streakBannerText: { color: '#0e7490', fontWeight: '800', fontSize: 14 },
   scrollContent: { paddingHorizontal: 16, paddingTop: 10, paddingBottom: 60 },
-  topRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 6 },
+  topRow: { flexDirection: 'row-reverse', alignItems: 'center', gap: 8, marginBottom: 6 },
   categoryBadge: {
     backgroundColor: '#ecfeff', borderWidth: 1, borderColor: '#a5f3fc',
     borderRadius: 999, paddingHorizontal: 10, paddingVertical: 4,
@@ -552,10 +552,10 @@ const styles = StyleSheet.create({
     textAlign: 'right', writingDirection: 'rtl', lineHeight: 20, marginBottom: 10,
   },
   questionRow: {
-    flexDirection: 'row', alignItems: 'center', gap: 6,
-    alignSelf: 'flex-end', marginBottom: 8,
+    flexDirection: 'row-reverse', alignItems: 'center', gap: 6,
+    alignSelf: 'stretch', marginBottom: 8,
   },
-  questionText: { fontSize: 14, fontWeight: '800', color: '#1f2937', writingDirection: 'rtl' },
+  questionText: { flex: 1, fontSize: 14, fontWeight: '800', color: '#1f2937', writingDirection: 'rtl', textAlign: 'right' },
   buttonsRow: { flexDirection: 'row', gap: 10, marginBottom: 8 },
   btn: {
     borderRadius: 16, overflow: 'hidden',
@@ -629,11 +629,12 @@ const styles = StyleSheet.create({
   streakPillText: { color: '#0891b2', fontWeight: '700', fontSize: 13, writingDirection: 'rtl' },
   nextBtn: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
-    gap: 8, backgroundColor: '#0c4a6e', borderRadius: 16, paddingVertical: 14,
-    shadowColor: '#0369a1', shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3, shadowRadius: 10, elevation: 6,
+    gap: 8, backgroundColor: '#3b82f6', borderRadius: 18, paddingVertical: 16,
+    borderBottomWidth: 4, borderBottomColor: '#1d4ed8',
+    shadowColor: '#3b82f6', shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.4, shadowRadius: 12, elevation: 8,
   },
-  nextBtnText: { fontSize: 16, fontWeight: '900', color: '#fff', writingDirection: 'rtl' },
+  nextBtnText: { fontSize: 18, fontWeight: '900', color: '#fff', writingDirection: 'rtl' },
 
   // Premium Lock
   premiumLockContainer: {

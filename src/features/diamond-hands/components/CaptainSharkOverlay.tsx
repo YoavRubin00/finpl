@@ -9,6 +9,7 @@ import Animated, {
   withTiming,
 } from "react-native-reanimated";
 import {
+  FINN_DANCING,
   FINN_EMPATHIC,
   FINN_HAPPY,
   FINN_STANDARD,
@@ -39,7 +40,7 @@ function lineFor(phase: HodlPhase): string | null {
 function sourceFor(phase: HodlPhase) {
   switch (phase) {
     case "victory":
-      return FINN_HAPPY;
+      return FINN_DANCING;
     case "fear":
     case "panic":
     case "paperHands":

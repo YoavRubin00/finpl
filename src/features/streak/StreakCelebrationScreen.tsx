@@ -27,7 +27,7 @@ import { SPRING_BOUNCY, SPRING_SMOOTH } from "../../utils/animations";
 import { heavyHaptic, doubleHeavyHaptic, successHaptic } from "../../utils/haptics";
 import { ConfettiExplosion } from "../../components/ui/ConfettiExplosion";
 import { SparkleOverlay } from "../../components/ui/SparkleOverlay";
-import { FINN_HAPPY } from "../retention-loops/finnMascotConfig";
+import { FINN_HAPPY, FINN_FIRE } from "../retention-loops/finnMascotConfig";
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
 
@@ -281,7 +281,7 @@ export function StreakCelebrationScreen({
         {/* Finn mascot — success celebration */}
         <Animated.View style={[styles.bearContainer, bearStyle]}>
           <ExpoImage
-            source={FINN_HAPPY} accessible={false}
+            source={FINN_FIRE} accessible={false}
             style={{ width: 120, height: 120 }}
             contentFit="contain"
           />

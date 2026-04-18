@@ -3,7 +3,7 @@ import { View, Text, StyleSheet, Pressable, Dimensions } from "react-native";
 import { Image as ExpoImage } from "expo-image";
 import { useRouter } from "expo-router";
 import { LinearGradient } from "expo-linear-gradient";
-import { Zap } from "lucide-react-native";
+import { Zap, Play, Volume2, VolumeX } from "lucide-react-native";
 import Animated from "react-native-reanimated";
 import LottieView from "lottie-react-native";
 import { WebView } from "react-native-webview";
@@ -12,7 +12,7 @@ import { useAudioStore } from "../../stores/useAudioStore";
 import { CLASH } from "../../constants/theme";
 import { FINN_STANDARD } from "../retention-loops/finnMascotConfig";
 import { useSoundEffect } from "../../hooks/useSoundEffect";
-import { tapHaptic } from "../../utils/haptics";
+import { tapHaptic, heavyHaptic } from "../../utils/haptics";
 import type { FeedModuleHook } from "./types";
 import { CHAPTER_CTA_COLORS } from "./types";
 
@@ -25,6 +25,8 @@ interface Props {
 
 function buildVideoHtml(videoUri: string): string {
   try { new URL(videoUri); } catch { return ""; }
+  // Decoupled play/pause and mute/unmute: long-press pause must not silently
+  // override the user's mute preference, and vice-versa.
   return `<!DOCTYPE html>
 <html><head><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
 <style>
@@ -38,9 +40,8 @@ video{width:100%;height:100%;object-fit:cover;object-position:center bottom}
 var v=document.getElementById('v');
 window.addEventListener('message',function(e){
   try{var d=JSON.parse(e.data);
-    if(d.action==='play'){v.muted=false;v.play();}
-    if(d.action==='pause'){v.pause();v.muted=true;}
-    if(d.action==='toggle'){if(v.paused){v.muted=false;v.play();}else{v.pause();v.muted=true;}}
+    if(d.action==='play')v.play();
+    if(d.action==='pause')v.pause();
     if(d.action==='mute')v.muted=true;
     if(d.action==='unmute')v.muted=false;
   }catch(x){}
@@ -95,6 +96,7 @@ export const FeedModuleHookCard = React.memo(function FeedModuleHookCard({ item,
   // Short tap → toggle sound (mute/unmute). Long press → toggle pause.
   function toggleMute() {
     if (!webViewRef.current) return;
+    tapHaptic();
     const next = !isMuted;
     webViewRef.current.postMessage(JSON.stringify({ action: next ? "mute" : "unmute" }));
     setIsMuted(next);
@@ -102,6 +104,7 @@ export const FeedModuleHookCard = React.memo(function FeedModuleHookCard({ item,
 
   function togglePause() {
     if (!webViewRef.current) return;
+    heavyHaptic();
     const action = isPlaying ? "pause" : "play";
     webViewRef.current.postMessage(JSON.stringify({ action }));
     const next = !isPlaying;
@@ -149,6 +152,23 @@ export const FeedModuleHookCard = React.memo(function FeedModuleHookCard({ item,
             accessibilityRole="button"
             accessibilityLabel={isMuted ? "הפעל צליל. לחיצה ארוכה להשהיה" : "השתק. לחיצה ארוכה להשהיה"}
           />
+
+          {/* Mute indicator — small badge (top-right) reflecting current mute state */}
+          <View style={styles.muteIndicator} pointerEvents="none">
+            {isMuted
+              ? <VolumeX size={18} color="rgba(255,255,255,0.9)" />
+              : <Volume2 size={18} color="rgba(255,255,255,0.9)" />
+            }
+          </View>
+
+          {/* Paused overlay — large play badge in the center when video is paused */}
+          {!isPlaying && (
+            <View style={styles.pausedOverlay} pointerEvents="none">
+              <View style={styles.pausedBadge}>
+                <Play size={36} color="#facc15" fill="#facc15" />
+              </View>
+            </View>
+          )}
         </View>
       ) : (
         <>
@@ -328,5 +348,35 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: "800",
     writingDirection: "rtl",
+  },
+  // Small mute-state indicator pinned to the top-right corner of the video.
+  muteIndicator: {
+    position: "absolute",
+    top: 56,
+    right: 16,
+    zIndex: 10,
+    backgroundColor: "rgba(0,0,0,0.4)",
+    borderRadius: 16,
+    width: 32,
+    height: 32,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  // Centered overlay shown while the video is paused (after long-press).
+  pausedOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "rgba(0,0,0,0.25)",
+  },
+  pausedBadge: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: "rgba(15,23,42,0.7)",
+    borderWidth: 2,
+    borderColor: "rgba(250,204,21,0.5)",
+    alignItems: "center",
+    justifyContent: "center",
   },
 });

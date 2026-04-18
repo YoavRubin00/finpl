@@ -2,8 +2,10 @@ import { Modal, View, Pressable, Text, StyleSheet } from "react-native";
 import Animated, { FadeIn, FadeInDown } from "react-native-reanimated";
 import { Image as ExpoImage } from "expo-image";
 import { X } from "lucide-react-native";
+import { useRouter } from "expo-router";
 import { FINN_HAPPY } from "../retention-loops/finnMascotConfig";
 import { useFunStore } from "../../stores/useFunStore";
+import { tapHaptic } from "../../utils/haptics";
 
 interface FinnMailModalProps {
   visible: boolean;
@@ -11,11 +13,21 @@ interface FinnMailModalProps {
 }
 
 export function FinnMailModal({ visible, onClose }: FinnMailModalProps) {
+  const router = useRouter();
   const mailContent = useFunStore((s) => s.mailContent);
   const openMail = useFunStore((s) => s.openMail);
 
   const handleClose = () => {
     onClose();
+  };
+
+  const isComeback = mailContent?.kind === 'comeback';
+
+  const handlePlayNow = () => {
+    if (mailContent?.kind !== 'comeback') return;
+    tapHaptic();
+    onClose();
+    router.push(mailContent.ctaTarget as never);
   };
 
   // Mark mail as read when modal becomes visible
@@ -48,11 +60,23 @@ export function FinnMailModal({ visible, onClose }: FinnMailModalProps) {
             <X size={18} color="#64748b" />
           </Pressable>
 
-          {/* Mail header image */}
+          {/* Mail header image — comeback variant uses the dedicated re-engagement art.
+              The comeback PNG is 4:5 portrait; we give it more vertical room than the
+              square daily art so the cover crop doesn't lose the main subject. */}
           <ExpoImage
-            source={require("../../../assets/IMAGES/fun/finn_mail.png")}
-            style={{ width: "100%", height: 120, borderRadius: 16, marginBottom: 8 }}
+            source={
+              isComeback
+                ? require("../../../assets/IMAGES/MAIL ASSETS/mail-comeback-streak.png")
+                : require("../../../assets/IMAGES/fun/finn_mail.png")
+            }
+            style={{
+              width: "100%",
+              height: isComeback ? 180 : 120,
+              borderRadius: 16,
+              marginBottom: 8,
+            }}
             contentFit="cover"
+            accessible={false}
           />
 
           {/* Finn avatar */}
@@ -64,39 +88,69 @@ export function FinnMailModal({ visible, onClose }: FinnMailModalProps) {
             />
           </Animated.View>
 
-          {/* Title */}
+          {/* Title — varies by mail kind */}
           <Animated.View entering={FadeInDown.delay(150).duration(300)}>
-            <Text style={styles.title}>דואר מקפטן שארק</Text>
+            <Text style={styles.title}>
+              {isComeback ? "הממ, מעניין 👀" : "דואר מקפטן שארק"}
+            </Text>
           </Animated.View>
 
-          {/* Joke — speech bubble style */}
-          {mailContent?.joke ? (
-            <Animated.View entering={FadeInDown.delay(200).duration(300)} style={styles.speechBubble}>
-              <Text style={styles.speechText}>{mailContent.joke}</Text>
-              <View style={styles.speechTail} />
-            </Animated.View>
-          ) : null}
+          {mailContent?.kind === 'daily' ? (
+            <>
+              {/* Joke — speech bubble */}
+              {mailContent.joke ? (
+                <Animated.View entering={FadeInDown.delay(200).duration(300)} style={styles.speechBubble}>
+                  <Text style={styles.speechText}>{mailContent.joke}</Text>
+                  <View style={styles.speechTail} />
+                </Animated.View>
+              ) : null}
 
-          {/* Fun fact — info card style */}
-          {mailContent?.fact ? (
-            <Animated.View entering={FadeInDown.delay(300).duration(300)} style={styles.factCard}>
-              <Text style={styles.factLabel}>ידעת?</Text>
-              <Text style={styles.factText}>{mailContent.fact}</Text>
-            </Animated.View>
-          ) : null}
+              {/* Fun fact — info card */}
+              {mailContent.fact ? (
+                <Animated.View entering={FadeInDown.delay(300).duration(300)} style={styles.factCard}>
+                  <Text style={styles.factLabel}>ידעת?</Text>
+                  <Text style={styles.factText}>{mailContent.fact}</Text>
+                </Animated.View>
+              ) : null}
 
-          {/* Close CTA */}
-          <Animated.View entering={FadeInDown.delay(400).duration(300)}>
-            <Pressable
-              onPress={handleClose}
-              style={({ pressed }) => [
-                styles.ctaBtn,
-                pressed && { opacity: 0.9, transform: [{ scale: 0.98 }] },
-              ]}
-            >
-              <Text style={styles.ctaBtnText}>סגור</Text>
-            </Pressable>
-          </Animated.View>
+              {/* Close CTA */}
+              <Animated.View entering={FadeInDown.delay(400).duration(300)}>
+                <Pressable
+                  onPress={handleClose}
+                  style={({ pressed }) => [
+                    styles.ctaBtn,
+                    pressed && { opacity: 0.9, transform: [{ scale: 0.98 }] },
+                  ]}
+                  accessibilityRole="button"
+                  accessibilityLabel="סגור"
+                >
+                  <Text style={styles.ctaBtnText}>סגור</Text>
+                </Pressable>
+              </Animated.View>
+            </>
+          ) : isComeback ? (
+            <>
+              <Animated.View entering={FadeInDown.delay(200).duration(300)} style={styles.speechBubble}>
+                <Text style={styles.speechText}>חיכיתי לך! בוא נראה מה קורה השבוע בשוק.</Text>
+                <View style={styles.speechTail} />
+              </Animated.View>
+
+              <Animated.View entering={FadeInDown.delay(360).duration(300)}>
+                <Pressable
+                  onPress={handlePlayNow}
+                  style={({ pressed }) => [
+                    styles.ctaBtn,
+                    styles.ctaBtnPrimary,
+                    pressed && { opacity: 0.9, transform: [{ scale: 0.98 }] },
+                  ]}
+                  accessibilityRole="button"
+                  accessibilityLabel="שחק עכשיו"
+                >
+                  <Text style={styles.ctaBtnText}>שחק עכשיו</Text>
+                </Pressable>
+              </Animated.View>
+            </>
+          ) : null}
         </Animated.View>
       </View>
     </Modal>
@@ -227,6 +281,16 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.2,
     shadowRadius: 8,
     elevation: 4,
+  },
+  ctaBtnPrimary: {
+    backgroundColor: "#0284c7",
+    paddingHorizontal: 56,
+    paddingVertical: 14,
+    borderBottomWidth: 4,
+    borderBottomColor: "#0369a1",
+    shadowColor: "#0284c7",
+    shadowOpacity: 0.35,
+    shadowRadius: 12,
   },
   ctaBtnText: {
     fontSize: 15,

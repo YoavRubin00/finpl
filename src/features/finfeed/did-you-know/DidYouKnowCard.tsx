@@ -1,11 +1,10 @@
 import React, { useMemo, useState } from 'react';
-import { View, Text, StyleSheet, Pressable, Dimensions } from 'react-native';
+import { View, Text, StyleSheet, Dimensions } from 'react-native';
 import { Image as ExpoImage } from 'expo-image';
 import Animated, {
   FadeIn,
   FadeInDown,
   FadeInUp,
-  ZoomIn,
   useSharedValue,
   useAnimatedStyle,
   useReducedMotion,
@@ -14,16 +13,15 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated';
 import { Sparkles } from 'lucide-react-native';
-import { FINN_STANDARD, FINN_HAPPY } from '../../retention-loops/finnMascotConfig';
 import { tapHaptic, successHaptic } from '../../../utils/haptics';
 import { useSoundEffect } from '../../../hooks/useSoundEffect';
+import { FeedStartButton } from '../minigames/shared/FeedStartButton';
 import { DID_YOU_KNOW_ITEMS } from './didYouKnowData';
 import { CATEGORY_THEMES } from './types';
 import type { DidYouKnowItem } from './types';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const RTL = { writingDirection: 'rtl' as const, textAlign: 'right' as const };
-const RTL_CENTER = { writingDirection: 'rtl' as const, textAlign: 'center' as const };
 
 interface Props {
   isActive: boolean;
@@ -33,8 +31,15 @@ interface Props {
 
 function pickItem(id?: string): DidYouKnowItem {
   if (id) {
-    const match = DID_YOU_KNOW_ITEMS.find((i) => i.id === id);
-    if (match) return match;
+    const direct = DID_YOU_KNOW_ITEMS.find((i) => i.id === id);
+    if (direct) return direct;
+    // Not a direct item id — hash the feed id so each feed slot picks a different
+    // item (while staying stable for the session). Combined with the day so the
+    // pool rotates over time.
+    let hash = 0;
+    for (let i = 0; i < id.length; i++) hash = (hash * 31 + id.charCodeAt(i)) & 0x7fffffff;
+    const day = Math.floor(Date.now() / 86400000);
+    return DID_YOU_KNOW_ITEMS[(hash + day) % DID_YOU_KNOW_ITEMS.length];
   }
   const day = Math.floor(Date.now() / 86400000);
   return DID_YOU_KNOW_ITEMS[day % DID_YOU_KNOW_ITEMS.length];
@@ -47,7 +52,10 @@ export const DidYouKnowCard = React.memo(function DidYouKnowCard({ isActive: _is
   const { playSound } = useSoundEffect();
   const reduceMotion = useReducedMotion();
 
-  const highlightScale = useSharedValue(0.7);
+  // Start at 0 so the manual spring owns the entire entrance — mixing this with
+  // an `entering={ZoomIn}` prop caused a transform/scale fight that made the
+  // highlight number stutter visibly.
+  const highlightScale = useSharedValue(0);
   const highlightStyle = useAnimatedStyle(() => ({
     transform: [{ scale: highlightScale.value }],
   }));
@@ -62,8 +70,8 @@ export const DidYouKnowCard = React.memo(function DidYouKnowCard({ isActive: _is
       highlightScale.value = withTiming(1, { duration: 220 });
     } else {
       highlightScale.value = withSequence(
-        withSpring(1.12, { damping: 8, stiffness: 140 }),
-        withSpring(1, { damping: 10, stiffness: 160 }),
+        withSpring(1.12, { damping: 10, stiffness: 130, mass: 0.8 }),
+        withSpring(1, { damping: 12, stiffness: 150, mass: 0.8 }),
       );
     }
   };
@@ -91,12 +99,6 @@ export const DidYouKnowCard = React.memo(function DidYouKnowCard({ isActive: _is
           entering={FadeIn.duration(280).delay(80)}
           style={styles.heroRow}
         >
-          <ExpoImage
-            source={revealed ? FINN_HAPPY : FINN_STANDARD}
-            style={styles.finn}
-            contentFit="contain"
-            accessible={false}
-          />
           {item.image ? (
             <ExpoImage
               source={item.image}
@@ -120,25 +122,14 @@ export const DidYouKnowCard = React.memo(function DidYouKnowCard({ isActive: _is
 
         {/* Reveal section */}
         {!revealed ? (
-          <Pressable
+          <FeedStartButton
+            label="לחצו לגלות"
             onPress={handleReveal}
-            accessibilityRole="button"
             accessibilityLabel={`גלה את התשובה: ${item.teaser}`}
-            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-            style={({ pressed }) => [
-              styles.revealBtn,
-              { backgroundColor: theme.accent, shadowColor: theme.accent },
-              pressed && { transform: [{ translateY: 2 }] },
-            ]}
-          >
-            <Text style={styles.revealBtnText} allowFontScaling={false}>
-              לחצו לגלות
-            </Text>
-          </Pressable>
+          />
         ) : (
           <Animated.View entering={FadeInUp.duration(360)} style={styles.revealBody}>
             <Animated.View
-              entering={ZoomIn.duration(380).springify().damping(8)}
               style={[styles.highlightWrap, { backgroundColor: theme.accent }, highlightStyle]}
             >
               <Text style={styles.highlightText} allowFontScaling={false} numberOfLines={1}>
@@ -152,14 +143,6 @@ export const DidYouKnowCard = React.memo(function DidYouKnowCard({ isActive: _is
               allowFontScaling={false}
             >
               {item.punch}
-            </Animated.Text>
-
-            <Animated.Text
-              entering={FadeIn.duration(320).delay(360)}
-              style={[styles.source, RTL_CENTER]}
-              allowFontScaling={false}
-            >
-              מקור · {item.source}
             </Animated.Text>
           </Animated.View>
         )}
@@ -242,24 +225,6 @@ const styles = StyleSheet.create({
     lineHeight: 22,
     color: '#1e293b',
     fontWeight: '700',
-  },
-  revealBtn: {
-    alignSelf: 'stretch',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 14,
-    borderRadius: 16,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.35,
-    shadowRadius: 10,
-    elevation: 6,
-  },
-  revealBtnText: {
-    color: '#ffffff',
-    fontSize: 16,
-    fontWeight: '900',
-    letterSpacing: 0.5,
-    writingDirection: 'rtl',
   },
   revealBody: {
     alignItems: 'center',

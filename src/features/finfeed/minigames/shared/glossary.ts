@@ -14,7 +14,8 @@ export type GlossaryKey =
   | 'real-vs-nominal'
   | 'pump-and-dump'
   | 'multiplier'
-  | 'fear-or-greed';
+  | 'fear-or-greed'
+  | 'bear-market';
 
 export interface GlossaryEntry {
   key: GlossaryKey;
@@ -115,6 +116,12 @@ export const GLOSSARY: Record<GlossaryKey, GlossaryEntry> = {
     term: 'Fear & Greed',
     shortDefinition: 'מדד סנטימנט 0-100. 0 = פאניקה, 100 = תאווה. בועות נולדות ב-75+, הזדמנויות ב-25-.',
     example: 'מרץ 2020: 2. נובמבר 2021: 84. ההיסטוריה חוזרת.',
+  },
+  'bear-market': {
+    key: 'bear-market',
+    term: 'שנה דובית',
+    shortDefinition: 'תקופה שבה השוק יורד בלפחות 20% מהשיא האחרון. נמשך לרוב מספר חודשים עד שנה. הכינוי "דובי" כי דוב מכה כלפי מטה (להבדיל משור שמכה כלפי מעלה = שוק עולה).',
+    example: '2008: ירידה של 38% ב-S&P 500 בעקבות משבר הנדל״ן. 2022: ירידה של 19% בעקבות עליית הריבית. בכל פעם השוק חזר לשיא חדש תוך 1-3 שנים.',
   },
 };
 

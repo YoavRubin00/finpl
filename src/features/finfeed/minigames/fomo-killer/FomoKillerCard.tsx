@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { View, Text, ScrollView, StyleSheet, AccessibilityInfo, Pressable } from 'react-native';
 import { Image as ExpoImage } from 'expo-image';
 import Animated, { FadeIn, FadeInUp } from 'react-native-reanimated';
-import { TrendingUp, Users, AlertCircle } from 'lucide-react-native';
+import { TrendingUp, Users, AlertCircle, BookOpen, ChevronDown, ChevronUp } from 'lucide-react-native';
 
 import { FINN_STANDARD } from '../../../retention-loops/finnMascotConfig';
 import { useDailyChallengesStore } from '../../../daily-challenges/use-daily-challenges-store';
@@ -13,7 +13,6 @@ import {
   MAX_DAILY_PLAYS,
 } from '../../../daily-challenges/daily-challenge-types';
 import { FeedStartButton } from '../shared/FeedStartButton';
-import { BookOpen, ChevronDown, ChevronUp } from 'lucide-react-native';
 import { tapHaptic } from '../../../../utils/haptics';
 
 import { FOMO_TOKENS, FOMO_MOTION } from './theme';
@@ -35,7 +34,7 @@ import {
 const RTL = { writingDirection: 'rtl' as const, textAlign: 'right' as const };
 const CENTER_RTL = { writingDirection: 'rtl' as const, textAlign: 'center' as const };
 
-const SESSION_LENGTH = 8;
+const SESSION_LENGTH = 4;
 const STARTING_INVESTMENT = 1000;
 const ADD_AMOUNT = 500;
 
@@ -173,7 +172,7 @@ export const FomoKillerCard = React.memo(function FomoKillerCard({ isActive: _is
   );
 
   // Reveal → finalize rewards once
-  const perfect = session.added === 0 && session.reportedCount >= 4;
+  const perfect = session.added === 0 && session.reportedCount >= SESSION_LENGTH;
   useEffect(() => {
     if (phase !== 'reveal' || finalizedRef.current) return;
     finalizedRef.current = true;
@@ -270,6 +269,8 @@ function IntroScreen({
   onStart: () => void;
 }) {
   const [pumpOpen, setPumpOpen] = useState(false);
+  const [shownSecond, setShownSecond] = useState(false);
+
   return (
     <View style={styles.container}>
       <View style={styles.introShell}>
@@ -286,49 +287,54 @@ function IntroScreen({
             השקעת ₪{STARTING_INVESTMENT.toLocaleString('he-IL')} במניית $MOON. הוסיפו אותך לקבוצת "רוקט מניות VIP".
             עכשיו — כולם צועקים שתוסיף עוד. תחזיק.
           </Text>
-          <Text style={[styles.introGoal, RTL]} allowFontScaling={false}>
-            המטרה: לדווח על ספאם, להתעלם מלחץ חברתי, ולא להוסיף כסף.
-          </Text>
 
-          <View style={styles.pumpCard}>
-            {pumpOpen && (
-              <Animated.View
-                entering={FadeInUp.duration(260)}
-                style={styles.pumpBodyUp}
-              >
-                <Text style={[styles.pumpBodyText, RTL]} allowFontScaling={false}>
-                  תרמית: קבוצה קונה נכס זול, יוצרת הייפ מזויף כדי לנפח את המחיר, מוכרת ברווח, ומשאירה את הקטנים עם נכס חסר ערך.
-                </Text>
-              </Animated.View>
-            )}
-            <Pressable
-              onPress={() => {
-                tapHaptic();
-                setPumpOpen((v) => !v);
-              }}
-              accessibilityRole="button"
-              accessibilityLabel={`${pumpOpen ? 'סגור' : 'פתח'} הסבר: Pump & Dump`}
-              accessibilityState={{ expanded: pumpOpen }}
-              hitSlop={12}
-              style={styles.pumpHeader}
-            >
-              <BookOpen size={14} color="#0891b2" strokeWidth={2.5} />
-              <Text style={[styles.pumpTitle, RTL]} allowFontScaling={false}>
-                מה זה Pump & Dump?
+          {!shownSecond ? (
+            <FeedStartButton
+              label="המשך ›"
+              onPress={() => { tapHaptic(); setShownSecond(true); }}
+              accessibilityLabel="הצג את מטרת המשחק"
+            />
+          ) : (
+            <Animated.View entering={FadeInUp.duration(300)} style={{ gap: 14 }}>
+              <Text style={[styles.introGoal, RTL]} allowFontScaling={false}>
+                המטרה: לדווח על ספאם, להתעלם מלחץ חברתי, ולא להוסיף כסף.
               </Text>
-              {pumpOpen ? (
-                <ChevronDown size={16} color="#0891b2" strokeWidth={3} />
-              ) : (
-                <ChevronUp size={16} color="#0891b2" strokeWidth={3} />
-              )}
-            </Pressable>
-          </View>
 
-          <FeedStartButton
-            label="בואו נתחיל"
-            onPress={onStart}
-            accessibilityLabel="התחל סבב מחסל הפומו"
-          />
+              <View style={styles.pumpCard}>
+                {pumpOpen && (
+                  <Animated.View entering={FadeInUp.duration(260)} style={styles.pumpBodyUp}>
+                    <Text style={[styles.pumpBodyText, RTL]} allowFontScaling={false}>
+                      תרמית: קבוצה קונה נכס זול, יוצרת הייפ מזויף כדי לנפח את המחיר, מוכרת ברווח, ומשאירה את הקטנים עם נכס חסר ערך.
+                    </Text>
+                  </Animated.View>
+                )}
+                <Pressable
+                  onPress={() => { tapHaptic(); setPumpOpen((v) => !v); }}
+                  accessibilityRole="button"
+                  accessibilityLabel={`${pumpOpen ? 'סגור' : 'פתח'} הסבר: שאיבה ושפיכה`}
+                  accessibilityState={{ expanded: pumpOpen }}
+                  hitSlop={12}
+                  style={styles.pumpHeader}
+                >
+                  <BookOpen size={14} color="#0891b2" strokeWidth={2.5} />
+                  <Text style={[styles.pumpTitle, RTL]} allowFontScaling={false}>
+                    מה זה שאיבה ושפיכה?
+                  </Text>
+                  {pumpOpen ? (
+                    <ChevronDown size={16} color="#0891b2" strokeWidth={3} />
+                  ) : (
+                    <ChevronUp size={16} color="#0891b2" strokeWidth={3} />
+                  )}
+                </Pressable>
+              </View>
+
+              <FeedStartButton
+                label="בואו נתחיל"
+                onPress={onStart}
+                accessibilityLabel="התחל סבב מחסל הפומו"
+              />
+            </Animated.View>
+          )}
         </Animated.View>
       </View>
     </View>
@@ -387,17 +393,24 @@ function PortfolioHUD({ session }: { session: FomoSession }) {
 }
 
 const styles = StyleSheet.create({
+  // `flex: 1` so the card fills the feed tile exactly; the parent renderItem
+  // clips at `height: listHeight` with `overflow: hidden`, which means any
+  // content that grows past the viewport not only vanishes but also stops
+  // receiving touches on Android — that's why the bottom action chips felt
+  // dead. Letting the chat ScrollView shrink via flex keeps ActionChips
+  // anchored at the visible bottom and tappable.
   container: {
+    flex: 1,
     paddingVertical: 10,
     paddingHorizontal: 12,
   },
   darkShell: {
+    flex: 1,
     backgroundColor: FOMO_TOKENS.canvas,
     borderRadius: 20,
     borderWidth: 1,
     borderColor: FOMO_TOKENS.chromeBorder,
     overflow: 'hidden',
-    minHeight: 520,
   },
   introShell: {
     backgroundColor: '#f0f9ff',
@@ -546,9 +559,10 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
 
-  // Chat
+  // Chat — `flex: 1` so the scroll area shrinks as needed to keep the
+  // portfolio HUD + ActionChips inside the tile (and therefore tappable).
   chatArea: {
-    maxHeight: 340,
+    flex: 1,
     paddingHorizontal: 10,
   },
   chatContent: {

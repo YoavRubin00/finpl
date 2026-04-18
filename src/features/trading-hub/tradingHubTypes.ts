@@ -27,8 +27,17 @@ export interface TradableAsset {
 
 export interface ChartDataPoint {
   timestamp: number;
+  /** Close price — legacy field kept in sync with `close` for older consumers (LiveChart, Holdings, etc). */
   price: number;
+  open?: number;
+  high?: number;
+  low?: number;
+  close?: number;
+  volume?: number;
 }
+
+export type ChartMode = 'simple' | 'advanced';
+export type IndicatorId = 'ma20' | 'rsi';
 
 export interface ActivePosition {
   id: string;

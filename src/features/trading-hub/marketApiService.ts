@@ -63,28 +63,58 @@ const generateMockChartData = (
   ticker: string,
   timeframe: Timeframe,
 ): ChartDataPoint[] => {
+  // After the live-data range bump in quote+api.ts, 1D = 6mo daily and 1W = 5y weekly.
   const pointCounts: Record<Timeframe, number> = {
     '1MIN': 390,
     '5MIN': 78,
     '1H': 40,
-    '1D': 22,
-    '1W': 26,
+    '1D': 130,
+    '1W': 260,
+  };
+  const intervalMs: Record<Timeframe, number> = {
+    '1MIN': 60_000,
+    '5MIN': 5 * 60_000,
+    '1H': 60 * 60_000,
+    '1D': 24 * 60 * 60_000,
+    '1W': 7 * 24 * 60 * 60_000,
   };
   const count = pointCounts[timeframe];
+  const step = intervalMs[timeframe];
   const basePrice = generateMockPrice(ticker);
   const now = Date.now();
   const points: ChartDataPoint[] = [];
 
+  // Random walk: each close is the previous close ± a small step. This gives
+  // organic-looking trends instead of a zig-zag around `basePrice`.
+  let close = basePrice;
+  // Daily-deterministic seed offset so the same day yields the same shape.
+  const dayNum = Math.floor(now / 86_400_000);
+  const tickerSeed = ticker.charCodeAt(0) * 7 + (ticker.length || 1) * 13 + dayNum;
+
   for (let i = 0; i < count; i++) {
-    const seed = ticker.charCodeAt(0) * 1000 + i;
-    const drift = seededRandom(seed) * 0.06 - 0.03; // ±3%
+    const stepSeed = tickerSeed * 100 + i;
+    // Small random step ±1.2% per bar; keeps prices near the base over time.
+    const drift = seededRandom(stepSeed) * 0.024 - 0.012;
+    const meanReversion = (basePrice - close) / basePrice * 0.05;
+    close = close * (1 + drift + meanReversion);
+    const open = close * (1 + (seededRandom(stepSeed + 1) * 0.01 - 0.005));
+    const wickHigh = Math.max(close, open) * (1 + seededRandom(stepSeed + 2) * 0.012);
+    const wickLow = Math.min(close, open) * (1 - seededRandom(stepSeed + 3) * 0.012);
+    const volume = Math.round((0.5 + seededRandom(stepSeed + 4) * 1.5) * 1_000_000);
     points.push({
-      timestamp: now - (count - i) * 60000,
-      price: Math.round(basePrice * (1 + drift) * 100) / 100,
+      timestamp: now - (count - i) * step,
+      price: round2(close),
+      open: round2(open),
+      high: round2(wickHigh),
+      low: round2(wickLow),
+      close: round2(close),
+      volume,
     });
   }
   return points;
 };
+
+const round2 = (n: number): number => Math.round(n * 100) / 100;
 
 // ── Core API functions ──
 
@@ -105,7 +135,15 @@ interface QuoteApiResponse {
   timeframe: Timeframe;
   price: number;
   previousClose: number | null;
-  chart: Array<{ timestamp: number; price: number }>;
+  chart: Array<{
+    timestamp: number;
+    price: number;
+    open: number;
+    high: number;
+    low: number;
+    close: number;
+    volume: number;
+  }>;
 }
 
 /** Whether the last fetch returned real or mock data */
@@ -189,6 +227,10 @@ export const fetchLatestPrice = async (assetId: string): Promise<number> => {
 
   // Tertiary: mock (daily-deterministic, not cached so we keep retrying)
   lastFetchWasLive = false;
+  if (__DEV__) {
+    // eslint-disable-next-line no-console
+    console.warn(`[marketApiService] fetchLatestPrice(${assetId}) — falling back to mock data. Backend ${API_BASE} unreachable and direct Yahoo failed.`);
+  }
   return generateMockPrice(assetId);
 };
 

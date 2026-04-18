@@ -1,6 +1,6 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import { Image as ExpoImage } from "expo-image";
-import { View, Text, StyleSheet, Dimensions } from "react-native";
+import { View, Text, Dimensions } from "react-native";
 
 const { width: SW } = Dimensions.get("window");
 import LottieView from "lottie-react-native";
@@ -16,7 +16,8 @@ import { AnimatedPressable } from "../../components/ui/AnimatedPressable";
 import { useEntranceAnimation, fadeInScale, fadeInUp, SPRING_BOUNCY } from "../../utils/animations";
 import { useSoundEffect } from "../../hooks/useSoundEffect";
 import { heavyHaptic } from "../../utils/haptics";
-import { FINN_STANDARD } from "../retention-loops/finnMascotConfig";
+// FINN_STANDARD imported via FinnSpeakingAvatar internally
+import { FinnSpeakingAvatar } from "../retention-loops/FinnSpeakingAvatar";
 
 const RTL_STYLE = { writingDirection: "rtl" as const, textAlign: "right" as const };
 
@@ -64,11 +65,23 @@ interface InteractiveIntroCardProps {
 }
 
 export const InteractiveIntroCard = React.memo(function InteractiveIntroCard({ introText, onStart, unitColors, audioUri, introImageUri }: InteractiveIntroCardProps) {
+  const [audioPlaying, setAudioPlaying] = useState(!!audioUri);
+
   useEffect(() => {
     if (!audioUri) return;
     const player = createAudioPlayer({ uri: audioUri });
     player.play();
+    let hasStartedPlaying = false;
+    const sub = player.addListener('playbackStatusUpdate', (status) => {
+      if (status.playing) {
+        hasStartedPlaying = true;
+      }
+      if (status.didJustFinish || (hasStartedPlaying && !status.playing && status.currentTime > 0)) {
+        setAudioPlaying(false);
+      }
+    });
     return () => {
+      sub.remove();
       player.pause();
       player.release();
     };
@@ -102,11 +115,25 @@ export const InteractiveIntroCard = React.memo(function InteractiveIntroCard({ i
     <View style={{ flex: 1, justifyContent: 'space-between', alignItems: 'stretch', paddingHorizontal: 8 }}>
       {/* Scrollable content area */}
       <View style={{ flex: 1, justifyContent: 'center' }}>
-        {/* Finn character — above the text card when intro image is present */}
+        {/* Finn character — circular white bubble masks the WebP square background */}
         {introImageUri && (
           <Animated.View style={[bearStyle, floatStyle, { alignSelf: 'center', marginBottom: 10 }]}>
-            <ExpoImage source={FINN_STANDARD} accessible={false}
-              style={{ width: 120, height: 120 }} contentFit="contain" />
+            <View style={{
+              width: 132,
+              height: 132,
+              borderRadius: 66,
+              backgroundColor: 'rgba(255,255,255,0.88)',
+              alignItems: 'center',
+              justifyContent: 'center',
+              overflow: 'hidden',
+              shadowColor: unitColors.glow,
+              shadowOpacity: 0.22,
+              shadowRadius: 14,
+              shadowOffset: { width: 0, height: 4 },
+              elevation: 6,
+            }}>
+              <FinnSpeakingAvatar text={displayText} size={120} isPlayingAudio={audioUri ? audioPlaying : undefined} />
+            </View>
           </Animated.View>
         )}
 
@@ -150,8 +177,7 @@ export const InteractiveIntroCard = React.memo(function InteractiveIntroCard({ i
         ) : (
           /* Finn character — below text card (default) */
           <Animated.View style={[bearStyle, floatStyle, { alignSelf: 'center', marginTop: 14, marginBottom: 10 }]}>
-            <ExpoImage source={FINN_STANDARD} accessible={false}
-              style={{ width: 140, height: 140 }} contentFit="contain" />
+            <FinnSpeakingAvatar text={displayText} size={140} isPlayingAudio={audioUri ? audioPlaying : undefined} />
           </Animated.View>
         )}
       </View>
@@ -216,4 +242,3 @@ export const InteractiveIntroCard = React.memo(function InteractiveIntroCard({ i
   );
 });
 
-const styles = StyleSheet.create({});

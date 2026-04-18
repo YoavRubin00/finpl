@@ -2,6 +2,8 @@ export interface DailyQuest {
   id: string;
   type: "dilemma" | "module" | "swipe";
   titleHe: string;
+  /** One-line explanation that tells the user what to actually do. */
+  descriptionHe: string;
   lottieSource: number;
   isCompleted: boolean;
 }
@@ -33,16 +35,19 @@ export const QUEST_TEMPLATES: Omit<DailyQuest, "id" | "isCompleted">[] = [
   {
     type: "dilemma",
     titleHe: "ענו על אתגר יומי",
+    descriptionHe: "שאלה פיננסית אחת קצרה בפיד הלמידה",
     lottieSource: require("../../../assets/lottie/wired-flat-458-goal-target-hover-hit.json") as number,
   },
   {
     type: "module",
     titleHe: "סיימו מודול אחד",
+    descriptionHe: "התקדמו שיעור אחד במסלול הפרקים",
     lottieSource: require("../../../assets/lottie/wired-flat-112-book-hover-closed.json") as number,
   },
   {
     type: "swipe",
     titleHe: "שחקו במשחק סוויפ",
-    lottieSource: require("../../../assets/lottie/wired-flat-146-trolley-hover-jump.json") as number,
+    descriptionHe: "מחקו מיתוסים פיננסיים בסוויפ ימינה/שמאלה",
+    lottieSource: require("../../../assets/lottie/wired-flat-56-document-hover-swipe.json") as number,
   },
 ];

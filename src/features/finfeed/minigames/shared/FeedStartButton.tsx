@@ -1,12 +1,7 @@
 import React from 'react';
-import { View, Text, Pressable } from 'react-native';
-import Animated, { FadeInUp, useReducedMotion } from 'react-native-reanimated';
-import LottieView from 'lottie-react-native';
-import { heavyHaptic } from '../../../../utils/haptics';
-
-const RTL_CENTER = { writingDirection: 'rtl' as const, textAlign: 'center' as const };
-
-const LOTTIE_ROCKET = require('../../../../../assets/lottie/wired-flat-489-rocket-space-hover-flying.json');
+import { View, Text, StyleSheet } from 'react-native';
+import { Play } from 'lucide-react-native';
+import { LiquidButton } from '../../../../components/ui/LiquidButton';
 
 interface Props {
   label: string;
@@ -15,86 +10,60 @@ interface Props {
   disabled?: boolean;
 }
 
+/**
+ * Feed-screen primary CTA. Wraps the same <LiquidButton> used by the
+ * learning-screen "המשך" button so the feed CTAs feel identical to lessons:
+ * solid blue-500 body, 3px blue-700 bottom border for 3D depth, white liquid
+ * ripple on press, and — critically — label/icon vertically centered on
+ * Android via LiquidButton's `alignItems: 'center'` content wrapper.
+ */
 export function FeedStartButton({ label, onPress, accessibilityLabel, disabled = false }: Props) {
-  const reduceMotion = useReducedMotion();
-  const handlePress = () => {
-    heavyHaptic();
-    onPress();
-  };
-
   return (
-    <Animated.View
-      entering={FadeInUp.duration(360).delay(60)}
-      style={{ alignSelf: 'stretch', marginTop: 12, marginBottom: 10 }}
-    >
-      <View style={{ position: 'relative', alignItems: 'stretch' }}>
-        {/* 3D depth shadow layer */}
-        <View
-          style={{
-            position: 'absolute',
-            top: 6,
-            left: 0,
-            right: 0,
-            bottom: -6,
-            borderRadius: 16,
-            backgroundColor: disabled ? '#64748b' : '#0369a1',
-            opacity: disabled ? 0.5 : 1,
-          }}
-          pointerEvents="none"
-        />
-
-        <Pressable
-          onPress={handlePress}
-          disabled={disabled}
-          accessibilityRole="button"
+    <View style={styles.wrap}>
+      <LiquidButton
+        onPress={onPress}
+        color="#3b82f6"
+        disabled={disabled}
+        style={styles.btn}
+      >
+        <Text
+          style={styles.label}
+          numberOfLines={1}
+          allowFontScaling={false}
           accessibilityLabel={accessibilityLabel ?? label}
-          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-          style={({ pressed }) => ({
-            flexDirection: 'row-reverse',
-            alignSelf: 'stretch',
-            alignItems: 'center',
-            justifyContent: 'center',
-            gap: 12,
-            borderRadius: 16,
-            backgroundColor: disabled ? '#94a3b8' : '#0ea5e9',
-            paddingHorizontal: 24,
-            paddingVertical: 16,
-            shadowColor: '#0284c7',
-            shadowOpacity: 0.55,
-            shadowRadius: 18,
-            shadowOffset: { width: 0, height: 4 },
-            elevation: 10,
-            transform: pressed && !disabled ? [{ translateY: 2 }] : [],
-            opacity: disabled ? 0.75 : 1,
-          })}
         >
-          <View
-            style={{ width: 28, height: 28, alignItems: 'center', justifyContent: 'center' }}
-            accessible={false}
-          >
-            <LottieView
-              source={LOTTIE_ROCKET}
-              style={{ width: 28, height: 28 }}
-              resizeMode="contain"
-              autoPlay={!reduceMotion}
-              loop={!reduceMotion}
-            />
-          </View>
-          <Text
-            style={[RTL_CENTER, {
-              fontSize: 18,
-              fontWeight: '900',
-              color: '#ffffff',
-              lineHeight: 22,
-              includeFontPadding: false,
-            }]}
-            numberOfLines={1}
-            allowFontScaling={false}
-          >
-            {label}
-          </Text>
-        </Pressable>
-      </View>
-    </Animated.View>
+          {label}
+        </Text>
+        <Play size={20} color="#ffffff" fill="#ffffff" />
+      </LiquidButton>
+    </View>
   );
 }
+
+const styles = StyleSheet.create({
+  wrap: {
+    alignSelf: 'stretch',
+    width: '100%',
+    marginTop: 14,
+    marginBottom: 10,
+  },
+  btn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    borderRadius: 16,
+    paddingVertical: 16,
+    borderBottomWidth: 3,
+    borderBottomColor: '#1d4ed8',
+  },
+  label: {
+    color: '#ffffff',
+    fontSize: 17,
+    fontWeight: '800',
+    letterSpacing: 0.3,
+    writingDirection: 'rtl',
+    textAlign: 'center',
+    includeFontPadding: false,
+  },
+});

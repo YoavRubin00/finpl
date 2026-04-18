@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { Image as ExpoImage } from "expo-image";
 import { View, Text, Pressable, StyleSheet } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { FINN_STANDARD } from "../retention-loops/finnMascotConfig";
+import { FINN_FIRE } from "../retention-loops/finnMascotConfig";
 import Animated, {
   FadeInDown,
   FadeOut,
@@ -90,12 +90,14 @@ export function NoFreezeUpsellBanner() {
             </Text>
           </View>
           {/* Finn */}
-          <ExpoImage
-            source={FINN_STANDARD}
+          <View style={{ width: 96, height: 96, borderRadius: 48, overflow: 'hidden', backgroundColor: 'transparent', alignItems: 'center', justifyContent: 'center' }}>
+            <ExpoImage
+            source={FINN_FIRE}
             accessible={false}
-            style={{ width: 64, height: 64 }}
+            style={[{ width: 64, height: 64 }, { opacity: 0.92 }]}
             contentFit="contain"
           />
+          </View>
         </View>
 
         {/* Buy CTA */}

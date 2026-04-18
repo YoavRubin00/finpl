@@ -1,12 +1,11 @@
 import { View, Text, Pressable, Modal, StyleSheet } from 'react-native';
-import Animated, { FadeIn, FadeInDown, FadeInUp } from 'react-native-reanimated';
+import Animated, { FadeIn, FadeInUp } from 'react-native-reanimated';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { X } from 'lucide-react-native';
 import { GoldCoinIcon } from '../../components/ui/GoldCoinIcon';
 import { LottieIcon } from '../../components/ui/LottieIcon';
 
 import type { Benefit } from './types';
-
-const RTL = { writingDirection: 'rtl' as const, textAlign: 'right' as const };
 
 interface RedemptionModalProps {
   visible: boolean;
@@ -16,6 +15,7 @@ interface RedemptionModalProps {
 }
 
 export function RedemptionModal({ visible, benefit, onConfirm, onCancel }: RedemptionModalProps) {
+  const insets = useSafeAreaInsets();
   if (!benefit) return null;
 
   return (
@@ -28,13 +28,16 @@ export function RedemptionModal({ visible, benefit, onConfirm, onCancel }: Redem
       <View style={styles.overlay}>
         {/* Full-screen soft backdrop */}
         <Pressable style={StyleSheet.absoluteFill} onPress={onCancel}>
-          <Animated.View entering={FadeIn.duration(250)} style={styles.backdrop} />
+          <Animated.View entering={FadeIn.duration(220)} style={styles.backdrop} />
         </Pressable>
 
-        {/* Bottom sheet */}
+        {/* Bottom sheet — single smooth entrance, no springy bounce */}
         <Animated.View
-          entering={FadeInUp.duration(400).springify().damping(16)}
-          style={styles.sheet}
+          entering={FadeInUp.duration(280)}
+          style={[
+            styles.sheet,
+            { paddingBottom: Math.max(insets.bottom + 16, 28) },
+          ]}
         >
           {/* Handle bar */}
           <View style={styles.handleBar} />
@@ -45,7 +48,7 @@ export function RedemptionModal({ visible, benefit, onConfirm, onCancel }: Redem
           </Pressable>
 
           {/* Partner logo + name */}
-          <Animated.View entering={FadeInDown.delay(100).duration(300)} style={styles.partnerRow}>
+          <View style={styles.partnerRow}>
             <View style={styles.partnerLogoCircle}>
               {benefit.lottieSource
                 ? <LottieIcon source={benefit.lottieSource} size={28} autoPlay loop />
@@ -53,16 +56,14 @@ export function RedemptionModal({ visible, benefit, onConfirm, onCancel }: Redem
               }
             </View>
             <Text style={styles.partnerName}>{benefit.partnerName}</Text>
-          </Animated.View>
+          </View>
 
           {/* Title + description */}
-          <Animated.View entering={FadeInDown.delay(150).duration(300)}>
-            <Text style={styles.title}>{benefit.title}</Text>
-            <Text style={styles.description}>{benefit.description}</Text>
-          </Animated.View>
+          <Text style={styles.title}>{benefit.title}</Text>
+          <Text style={styles.description}>{benefit.description}</Text>
 
           {/* Combined info row */}
-          <Animated.View entering={FadeInDown.delay(200).duration(300)} style={styles.infoRow}>
+          <View style={styles.infoRow}>
             <View style={styles.infoCell}>
               <Text style={styles.infoLabel}>מה מקבלים</Text>
               <Text style={styles.infoValue}>{benefit.reward}</Text>
@@ -75,20 +76,18 @@ export function RedemptionModal({ visible, benefit, onConfirm, onCancel }: Redem
                 <Text style={styles.costValue}>{benefit.costCoins.toLocaleString()}</Text>
               </View>
             </View>
-          </Animated.View>
+          </View>
 
           {/* CTA button */}
-          <Animated.View entering={FadeInDown.delay(250).duration(300)}>
-            <Pressable
-              onPress={onConfirm}
-              style={({ pressed }) => [styles.confirmBtn, pressed && { opacity: 0.9, transform: [{ scale: 0.98 }] }]}
-            >
-              <Text style={styles.confirmBtnText}>המרה כעת</Text>
-            </Pressable>
-          </Animated.View>
+          <Pressable
+            onPress={onConfirm}
+            style={({ pressed }) => [styles.confirmBtn, pressed && { opacity: 0.9, transform: [{ scale: 0.98 }] }]}
+          >
+            <Text style={styles.confirmBtnText}>המרה כעת</Text>
+          </Pressable>
 
           {/* Cancel */}
-          <Pressable onPress={onCancel} style={styles.cancelBtn}>
+          <Pressable onPress={onCancel} style={styles.cancelBtn} hitSlop={8}>
             <Text style={styles.cancelBtnText}>חזרה</Text>
           </Pressable>
         </Animated.View>
@@ -112,7 +111,6 @@ const styles = StyleSheet.create({
     borderTopRightRadius: 28,
     paddingHorizontal: 24,
     paddingTop: 12,
-    paddingBottom: 36,
     shadowColor: '#0c4a6e',
     shadowOffset: { width: 0, height: -4 },
     shadowOpacity: 0.08,
@@ -175,7 +173,7 @@ const styles = StyleSheet.create({
     fontSize: 13,
     lineHeight: 20,
     color: '#64748b',
-    textAlign: 'center',
+    textAlign: 'right',
     writingDirection: 'rtl',
     marginBottom: 16,
   },
