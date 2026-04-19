@@ -276,7 +276,7 @@ export function StreakCelebrationScreen({
             source={FINN_FIRE} accessible={false}
             style={{ width: 120, height: 120 }}
             contentFit="contain"
-            autoplay={false}
+            autoplay
           />
           {/* Sparkle dots around Finn */}
           <View style={[styles.sparkle, styles.sparkle1]} />

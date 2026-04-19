@@ -1635,8 +1635,6 @@ const styles = StyleSheet.create({
     width: 44,
     height: 44,
     zIndex: 20,
-    borderWidth: 1.5,
-    borderColor: "#eab308",
   },
   proBadgeText: {
     fontSize: 8,

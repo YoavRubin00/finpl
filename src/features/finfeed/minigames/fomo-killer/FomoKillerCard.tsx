@@ -311,14 +311,14 @@ function IntroScreen({
                 <Pressable
                   onPress={() => { tapHaptic(); setPumpOpen((v) => !v); }}
                   accessibilityRole="button"
-                  accessibilityLabel={`${pumpOpen ? 'סגור' : 'פתח'} הסבר: שאיבה ושפיכה`}
+                  accessibilityLabel={`${pumpOpen ? 'סגור' : 'פתח'} הסבר: pump and dump`}
                   accessibilityState={{ expanded: pumpOpen }}
                   hitSlop={12}
                   style={styles.pumpHeader}
                 >
                   <BookOpen size={14} color="#0891b2" strokeWidth={2.5} />
                   <Text style={[styles.pumpTitle, RTL]} allowFontScaling={false}>
-                    מה זה שאיבה ושפיכה?
+                    מה זה pump and dump?
                   </Text>
                   {pumpOpen ? (
                     <ChevronDown size={16} color="#0891b2" strokeWidth={3} />

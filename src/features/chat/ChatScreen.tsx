@@ -190,22 +190,20 @@ const CHAT_STYLES: { id: CompanionId; title: string; desc: string }[] = [
 
 function ChatStylePicker({ onSelect }: { onSelect: (id: CompanionId) => void }) {
   return (
-    <Modal visible transparent animationType="fade" statusBarTranslucent>
-      <View style={pickerStyles.overlay}>
-        <Animated.View entering={FadeIn.duration(400)} style={pickerStyles.card}>
-          <Text style={pickerStyles.title}>איך תרצה שאדבר איתך?</Text>
-          <Text style={pickerStyles.subtitle}>בחר את הסגנון שהכי מתאים לך</Text>
-          <View style={pickerStyles.options}>
-            {CHAT_STYLES.map((s) => (
-              <Pressable key={s.id} onPress={() => onSelect(s.id)} style={pickerStyles.option} accessibilityRole="button" accessibilityLabel={`סגנון שיחה: ${s.title}`}>
-                <Text style={pickerStyles.optionTitle}>{s.title}</Text>
-                <Text style={pickerStyles.optionDesc}>{s.desc}</Text>
-              </Pressable>
-            ))}
-          </View>
-        </Animated.View>
-      </View>
-    </Modal>
+    <Animated.View entering={FadeIn.duration(200)} style={pickerStyles.overlay} pointerEvents="auto">
+      <Animated.View entering={FadeIn.duration(400).delay(100)} style={pickerStyles.card}>
+        <Text style={pickerStyles.title}>איך תרצה שאדבר איתך?</Text>
+        <Text style={pickerStyles.subtitle}>בחר את הסגנון שהכי מתאים לך</Text>
+        <View style={pickerStyles.options}>
+          {CHAT_STYLES.map((s) => (
+            <Pressable key={s.id} onPress={() => onSelect(s.id)} style={pickerStyles.option} accessibilityRole="button" accessibilityLabel={`סגנון שיחה: ${s.title}`}>
+              <Text style={pickerStyles.optionTitle}>{s.title}</Text>
+              <Text style={pickerStyles.optionDesc}>{s.desc}</Text>
+            </Pressable>
+          ))}
+        </View>
+      </Animated.View>
+    </Animated.View>
   );
 }
 

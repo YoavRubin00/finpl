@@ -129,7 +129,7 @@ export function StreakCalendarModal({ visible, onClose }: StreakCalendarModalPro
           {/* Captain Shark holding the streak fire, sits at the top of the calendar */}
           <View style={{ alignItems: 'center', marginTop: -4, marginBottom: 4 }}>
             <View style={{ width: 96, height: 96, borderRadius: 48, overflow: 'hidden', backgroundColor: 'transparent' }}>
-              <ExpoImage source={FINN_FIRE} accessible={false} style={{ width: 96, height: 96, opacity: 0.92 }} contentFit="contain" autoplay={false} />
+              <ExpoImage source={FINN_FIRE} accessible={false} style={{ width: 96, height: 96, opacity: 0.92 }} contentFit="contain" autoplay />
             </View>
           </View>
 
@@ -329,16 +329,7 @@ function ActiveDayContent({ day }: { day: number }) {
 
   return (
     <Animated.View style={[styles.activeDayInner, glowStyle]}>
-      {Platform.OS === "web" ? (
-        <Text style={{ fontSize: 16 }}>🔥</Text>
-      ) : (
-        <LottieView
-          source={FIRE_LOTTIE}
-          style={{ width: 20, height: 20 }}
-          autoPlay
-          loop
-        />
-      )}
+      <Text style={{ fontSize: 16 }}>🔥</Text>
       <Text style={[styles.dayNumber, styles.dayNumberActive]}>{day}</Text>
     </Animated.View>
   );

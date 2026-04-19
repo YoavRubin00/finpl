@@ -351,7 +351,7 @@ export const MacroEventCard = React.memo(function MacroEventCard({ item, isActiv
                 style={[styles.premiumUnlockGradient, gems < 2 && { borderWidth: 1, borderColor: '#e2e8f0' }]}
               >
                 <Text style={[styles.premiumUnlockBtnText, { color: gems >= 2 ? '#fff' : '#64748b' }]}>
-                  {gems >= 2 ? '2 יהלומים וגלה' : 'אין מספיק יהלומים'} 💎
+                  {gems >= 2 ? '2 יהלומים וגלו' : 'אין מספיק יהלומים'} 💎
                 </Text>
               </LinearGradient>
             </Pressable>

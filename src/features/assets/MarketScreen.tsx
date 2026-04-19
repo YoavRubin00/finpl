@@ -654,9 +654,8 @@ export function MarketScreen() {
                                                             >
                                                                 {canAffordDown ? (
                                                                     <>
-                                                                        <Text style={styles.mortgageBtnText}>{`קנה (${dp.toLocaleString()}`}</Text>
+                                                                        <Text style={styles.mortgageBtnText}>קנה {dp.toLocaleString()}</Text>
                                                                         <GoldCoinIcon size={16} />
-                                                                        <Text style={styles.mortgageBtnText}>)</Text>
                                                                     </>
                                                                 ) : (
                                                                     <>

@@ -119,6 +119,7 @@ const round2 = (n: number): number => Math.round(n * 100) / 100;
 // ── Core API functions ──
 
 // ── API route proxy (avoids CORS issues with Yahoo Finance) ──
+const PRODUCTION_API = 'https://finpl.vercel.app/api/trading/quote';
 let API_BASE = '/api/trading/quote';
 
 if (Platform.OS !== 'web') {
@@ -126,6 +127,9 @@ if (Platform.OS !== 'web') {
     API_BASE = `http://${Constants.expoConfig.hostUri}/api/trading/quote`;
   } else if (process.env.EXPO_PUBLIC_API_URL) {
     API_BASE = `${process.env.EXPO_PUBLIC_API_URL}/api/trading/quote`;
+  } else {
+    // Fallback for native EAS builds where EXPO_PUBLIC_API_URL is not injected
+    API_BASE = PRODUCTION_API;
   }
 }
 

@@ -266,7 +266,7 @@ function SharkCoach({ session, perfect }: { session: FomoSession; perfect: boole
       return {
         image: FINN_HAPPY,
         title: '💎 חוסן יהלום',
-        body: 'זיהית את הדפוס. רגולטורים בישראל ובעולם מעריכים שרוב קבוצות "הסיגנלים" בטלגרם מבוססות על שאיבה ושפיכה. אתה כבר יודע.',
+        body: 'זיהית את הדפוס. רגולטורים בישראל ובעולם מעריכים שרוב קבוצות "הסיגנלים" בטלגרם מבוססות על pump and dump. אתה כבר יודע.',
       };
     }
     if (session.added === 0) {

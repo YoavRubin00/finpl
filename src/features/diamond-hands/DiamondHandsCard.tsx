@@ -157,7 +157,7 @@ export function DiamondHandsCard({ isActive }: Props) {
                 maxWidth: 280,
               }}
             >
-              השוק קורס. 10 שניות של החזקה.{"\n"}תצליח/י לא למכור?
+              השוק קורס. 10 שניות של החזקה.{"\n"}תצליחו לא למכור?
             </Text>
 
             <Pressable
