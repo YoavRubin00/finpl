@@ -45,7 +45,7 @@ const STEPS: WalkthroughStep[] = [
     navigateTo: null,
     ctaLabel: "יאללה, קדימה!",
     screenSignal: null,
-    audioUrl: "https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/audios/walkthrough/step-0-kkvsfaFyJIC6B7mCksL2Zg3crAF6A6.mp3",
+    audioUrl: "https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/audios/walkthrough/step-0-kOK18ZhYnb8UPxoe5Ebxp4rvNdNmqW.mp3",
   },
   {
     title: "מסלול הלמידה",
@@ -54,7 +54,7 @@ const STEPS: WalkthroughStep[] = [
     navigateTo: "/(tabs)/index",
     ctaLabel: "מה נלמד באפליקציה?",
     screenSignal: "learn",
-    audioUrl: "https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/audios/walkthrough/step-1-czMxoTIjAIVTYVOwJp1lRKXpcn68S1.mp3",
+    audioUrl: "https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/audios/walkthrough/step-1-NaswjWGVR7sUYk9zEIq52y2EGFxnue.mp3",
   },
   {
     title: "מה נלמד באפליקציה?",
@@ -63,7 +63,7 @@ const STEPS: WalkthroughStep[] = [
     navigateTo: "/(tabs)/index",
     ctaLabel: "עכשיו לפיד",
     screenSignal: "lesson-preview",
-    audioUrl: "https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/audios/walkthrough/step-2-inSxLJB1XHwbNmMkVoQpCJyy2bPAVZ.mp3",
+    audioUrl: "https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/audios/walkthrough/step-2-pdqXZwiv2qVntQy0hzWaQnkaj6cPbV.mp3",
   },
   {
     title: "הפיד היומי",
@@ -72,7 +72,7 @@ const STEPS: WalkthroughStep[] = [
     navigateTo: "/(tabs)/learn",
     ctaLabel: "המשך",
     screenSignal: "feed",
-    audioUrl: "https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/audios/walkthrough/step-3-EEUmLfg2c3zYKW4VvUtB5Kj7CmfXd1.mp3",
+    audioUrl: "https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/audios/walkthrough/step-3-zwq7Ob4c2qz5wXEFANX40AzefZ9hu9.mp3",
   },
   {
     title: "תבחרו סגנון לשארק",
@@ -81,7 +81,7 @@ const STEPS: WalkthroughStep[] = [
     navigateTo: "/(tabs)/chat",
     ctaLabel: "יאללה לבחור!",
     screenSignal: "chat",
-    audioUrl: "https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/audios/walkthrough/step-4-nQGJ7OV6di5rrFlCQC30KvzmVAwMU4.mp3",
+    audioUrl: "https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/audios/walkthrough/step-4-w8O4mJUove3xxf8REvE8tXRchgcyuD.mp3",
   },
   {
     title: "הצ'אט של שארק",
@@ -90,7 +90,7 @@ const STEPS: WalkthroughStep[] = [
     navigateTo: null,
     ctaLabel: "לחנות",
     screenSignal: "chat",
-    audioUrl: "https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/audios/walkthrough/step-5-a0iP1KMTeyNQrZUCaFTJC7MLhXrDd7.mp3",
+    audioUrl: "https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/audios/walkthrough/step-5-izvyJZVophx4OdIJ5P7pInn0trmiD5.mp3",
   },
   {
     title: "החנות",
@@ -99,7 +99,7 @@ const STEPS: WalkthroughStep[] = [
     navigateTo: "/(tabs)/shop",
     ctaLabel: "ומה עם הגשר?",
     screenSignal: "shop",
-    audioUrl: "https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/audios/walkthrough/step-6-glOogkcLCyMh1VJLfy0BtRvXXUq8yr.mp3",
+    audioUrl: "https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/audios/walkthrough/step-6-AChQLzDxn8DEVzZQ5rx2cRnfQCpibW.mp3",
   },
   {
     title: "הגשר",
@@ -109,7 +109,7 @@ const STEPS: WalkthroughStep[] = [
     ctaLabel: "בוא נתחיל ללמוד!",
     screenSignal: "bridge",
     isLast: true,
-    audioUrl: "https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/audios/walkthrough/step-7-KEH4RVYdLoHh0wG0BA6MKTREkoeg6Q.mp3",
+    audioUrl: "https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/audios/walkthrough/step-7-7rr5fmPQ7ZVwKa6BczIDjwsShoKQL0.mp3",
   },
 ];
 
