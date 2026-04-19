@@ -322,7 +322,14 @@ export const useSubscriptionStore = create<SubscriptionState>()(
       /* ---- RevenueCat sync ---- */
 
       syncWithRevenueCat: async () => {
+        const DEV_PRO_EMAILS = ["yrubin00@gmail.com", "itaysc23@gmail.com", "benbenshmuel@gmail.com"];
         try {
+          // eslint-disable-next-line @typescript-eslint/no-var-requires
+          const auth = require("../auth/useAuthStore").useAuthStore.getState();
+          if (auth.email && DEV_PRO_EMAILS.includes(auth.email)) {
+            set({ tier: "pro", status: "active", hearts: MAX_HEARTS, lastHeartLostAt: null });
+            return;
+          }
           const isPro = await checkProEntitlement();
           const currentState = get();
           if (isPro && currentState.tier !== "pro") {
@@ -371,7 +378,7 @@ export const useSubscriptionStore = create<SubscriptionState>()(
         if (!state) return;
         try {
           const auth = require("../auth/useAuthStore").useAuthStore.getState();
-          const DEV_PRO_EMAILS = ["yrubin00@gmail.com", "itaysc23@gmail.com"];
+          const DEV_PRO_EMAILS = ["yrubin00@gmail.com", "itaysc23@gmail.com", "benbenshmuel@gmail.com"];
           if (auth.email && DEV_PRO_EMAILS.includes(auth.email) && state.tier !== "pro") {
             state.tier = "pro";
             state.status = "active";

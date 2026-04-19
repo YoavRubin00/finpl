@@ -136,9 +136,7 @@ export const FeedPremiumLearningCard = React.memo(function FeedPremiumLearningCa
             } else {
               sound.unloadAsync();
             }
-          } catch (e) {
-            console.log('Failed to play feed audio:', e);
-          }
+          } catch { /* audio playback failed — silent */ }
         }
       }
     }

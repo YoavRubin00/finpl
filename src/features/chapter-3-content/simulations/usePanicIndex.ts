@@ -45,7 +45,7 @@ function computeGrade(hasSold: boolean, soldEventIndex: number, panicMoments: nu
 } {
   if (!hasSold) {
     // Held through everything
-    if (panicMoments === 0) return { grade: 'S', gradeLabel: 'אלוף הקור רוח!' };
+    if (panicMoments === 0) return { grade: 'S', gradeLabel: 'אלופי הקור רוח!' };
     if (panicMoments <= 2) return { grade: 'A', gradeLabel: 'מצוין!' };
     return { grade: 'B', gradeLabel: 'טוב מאוד' };
   }

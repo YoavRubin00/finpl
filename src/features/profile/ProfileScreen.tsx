@@ -45,6 +45,7 @@ import { useTheme } from "../../hooks/useTheme";
 import { ProBadge } from "../../components/ui/ProBadge";
 import { useStreakCelebration } from "../../hooks/useStreakCelebration";
 import { useWalkthroughGlowTarget } from "../onboarding/AppWalkthroughOverlay";
+import { PersonalStatsSection } from "../user-stats/PersonalStatsSection";
 
 const GOAL_LABELS: Record<string, string> = {
   "cash-flow": "💸 תזרים מזומנים",
@@ -506,6 +507,8 @@ export function ProfileScreen() {
               </AnimatedPressable>
             )}
           </Animated.View>
+
+          <PersonalStatsSection />
         </ScrollView>
       </SafeAreaView>
 

@@ -188,6 +188,12 @@ export function MoreScreen() {
                   onPress={() => router.push("/fire-calculator")}
                 />
                 <MoreRow
+                  icon={<SafeLottie source={require('../../../assets/lottie/wired-flat-426-brain-hover-pinch.json')} style={styles.lottieIcon} autoPlay loop  />}
+                  label="תובנות AI"
+                  onPress={() => router.push("/ai-insights" as never)}
+                  badgeLottie
+                />
+                <MoreRow
                   icon={<SafeLottie source={require('../../../assets/lottie/wired-flat-458-goal-target-hover-hit.json')} style={styles.lottieIcon} autoPlay loop  />}
                   label="דו-קרב 1v1"
                   onPress={() => router.push("/duels")}

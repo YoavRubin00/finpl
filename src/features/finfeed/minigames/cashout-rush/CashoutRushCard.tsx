@@ -81,19 +81,19 @@ function computeFearGreed(tick: number): number {
 }
 
 function fgLabel(v: number): string {
-  if (v >= 90) return 'תאווה קיצונית';
-  if (v >= 75) return 'תאווה';
-  if (v >= 55) return 'אופטימיות';
-  if (v >= 45) return 'ניטרלי';
-  if (v >= 25) return 'פחד';
-  return 'פחד קיצוני';
+  if (v >= 75) return 'תאווה קיצונית';  // CNN: 75-100 Extreme Greed
+  if (v >= 56) return 'תאווה';           // CNN: 56-74 Greed
+  if (v >= 45) return 'ניטרלי';          // CNN: 45-55 Neutral
+  if (v >= 25) return 'פחד';             // CNN: 25-44 Fear
+  return 'פחד קיצוני';                   // CNN: 0-24 Extreme Fear
 }
 
 function fgColor(v: number): string {
-  if (v >= 90) return '#dc2626';
-  if (v >= 75) return '#f97316';
-  if (v >= 55) return '#eab308';
-  return '#22c55e';
+  if (v >= 75) return '#dc2626';  // תאווה קיצונית — אדום
+  if (v >= 56) return '#f97316';  // תאווה — כתום
+  if (v >= 45) return '#eab308';  // ניטרלי — צהוב
+  if (v >= 25) return '#22c55e';  // פחד — ירוק
+  return '#16a34a';               // פחד קיצוני — ירוק כהה
 }
 
 function formatFG(v: number): string {

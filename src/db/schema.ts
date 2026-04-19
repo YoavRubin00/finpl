@@ -20,6 +20,8 @@ export const userProfiles = pgTable("user_profiles", {
 	welcomeEmailSent: boolean("welcome_email_sent").default(false),
 	tipEmailSent: boolean("tip_email_sent").default(false),
 	proExpiresAt: timestamp("pro_expires_at", { withTimezone: true, mode: 'string' }),
+	dailyEmailSentAt: timestamp("daily_email_sent_at", { withTimezone: true, mode: 'string' }),
+	dailyEmailEnabled: boolean("daily_email_enabled").default(true),
 	createdAt: timestamp("created_at", { withTimezone: true, mode: 'string' }).defaultNow(),
 	updatedAt: timestamp("updated_at", { withTimezone: true, mode: 'string' }).defaultNow(),
 }, (table) => [

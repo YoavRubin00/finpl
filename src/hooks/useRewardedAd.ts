@@ -9,9 +9,11 @@ let AD_UNIT_ID = "";
 if (Platform.OS !== "web") {
   try {
     AdsModule = require("react-native-google-mobile-ads");
+    const realIosId = process.env.EXPO_PUBLIC_ADMOB_REWARDED_IOS;
+    const realAndroidId = process.env.EXPO_PUBLIC_ADMOB_REWARDED_ANDROID;
     AD_UNIT_ID = Platform.select({
-      ios: AdsModule.TestIds.REWARDED,
-      android: AdsModule.TestIds.REWARDED,
+      ios: realIosId || AdsModule.TestIds.REWARDED,
+      android: realAndroidId || AdsModule.TestIds.REWARDED,
     }) ?? AdsModule.TestIds.REWARDED;
   } catch {
     // Ads SDK not available

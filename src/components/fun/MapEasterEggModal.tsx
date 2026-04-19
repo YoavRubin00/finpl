@@ -1,4 +1,4 @@
-import React, { useRef, useState, useCallback } from "react";
+import React, { useRef, useState, useCallback, useEffect } from "react";
 import { View, Text, Modal, Pressable, StyleSheet, PanResponder, Dimensions } from "react-native";
 import { Image as ExpoImage } from "expo-image";
 import Animated, { FadeIn, ZoomIn, FadeInDown } from "react-native-reanimated";
@@ -29,6 +29,11 @@ export function MapEasterEggModal({ visible, onClose, onClaim }: MapEasterEggMod
   const [revealed, setRevealed] = useState(false);
   const [claimed, setClaimed] = useState(false);
   const layoutRef = useRef({ x: 0, y: 0 });
+  const closeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => () => {
+    if (closeTimerRef.current) clearTimeout(closeTimerRef.current);
+  }, []);
 
   const handleScratch = useCallback((pageX: number, pageY: number) => {
     const localX = pageX - layoutRef.current.x;
@@ -72,7 +77,7 @@ export function MapEasterEggModal({ visible, onClose, onClaim }: MapEasterEggMod
     tapHaptic();
     setClaimed(true);
     onClaim();
-    setTimeout(onClose, 800);
+    closeTimerRef.current = setTimeout(onClose, 800);
   }, [onClaim, onClose]);
 
   if (!visible) return null;

@@ -2,7 +2,7 @@ import React, { useCallback } from "react";
 import { StatusBar } from "expo-status-bar";
 import { useRouter } from "expo-router";
 import { useChapterStore } from "../src/features/chapter-1-content/useChapterStore";
-import { TowerDefenseScreen } from "../src/features/tower-defense";
+import { TowerDefenseScreen } from "../src/features/tower-defense/TowerDefenseScreen";
 
 export default function TowerDefenseBossPage() {
   const router = useRouter();

@@ -1,7 +1,7 @@
 // PRD 38 — US-003: DailyIncomeCard for PyramidScreen
 // Shows pending real-asset income; allows one-tap collection.
 
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { View, Text, Pressable, StyleSheet } from "react-native";
 import Animated, {
   useSharedValue,
@@ -37,6 +37,9 @@ export function DailyIncomeCard() {
   const [collected, setCollected] = useState(false);
   const [lastAmount, setLastAmount] = useState(0);
 
+  const collectedTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => () => { if (collectedTimerRef.current) clearTimeout(collectedTimerRef.current); }, []);
+
   const scale = useSharedValue(1);
   const animStyle = useAnimatedStyle(() => ({ transform: [{ scale: scale.value }] }));
 
@@ -56,7 +59,7 @@ export function DailyIncomeCard() {
       withSpring(1.08, SPRING_BOUNCY),
       withTiming(1, { duration: 300 }),
     );
-    setTimeout(() => setCollected(false), 2500);
+    collectedTimerRef.current = setTimeout(() => setCollected(false), 2500);
   };
 
   return (

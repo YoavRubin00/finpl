@@ -19,7 +19,12 @@
     "orientation": "portrait",
     "userInterfaceStyle": "dark",
     "assetBundlePatterns": [
-      "**/*"
+      "assets/lottie/**",
+      "assets/webp/**",
+      "assets/fonts/**",
+      "assets/IMAGES/**",
+      "assets/images/**",
+      "assets/sounds/**"
     ],
     "web": {
       "bundler": "metro",
@@ -57,8 +62,8 @@
       [
         "react-native-google-mobile-ads",
         {
-          "androidAppId": "ca-app-pub-3940256099942544~3347511713",
-          "iosAppId": "ca-app-pub-3940256099942544~1458002511"
+          "androidAppId": "ca-app-pub-3137283655458001~5785657257",
+          "iosAppId": "ca-app-pub-3137283655458001~9543879379"
         }
       ]
     ],
@@ -87,6 +92,11 @@
       "supportsTablet": true,
       "usesAppleSignIn": true,
       "infoPlist": {
+        "CFBundleURLTypes": [
+          {
+            "CFBundleURLSchemes": ["com.googleusercontent.apps.847177819309-mbb8nusv6r17oot0e49e1npbgmaecps0"]
+          }
+        ],
         "NSPrivacyPolicyURL": "https://yoavrubin00.github.io/finpl/privacy-policy.html",
         "ITSAppUsesNonExemptEncryption": false,
         "NSUserTrackingUsageDescription": "FinPlay אינו עוקב אחריך בין אפליקציות. הרשאה זו מתבקשת רק כדי לכבד את העדפותיך.",

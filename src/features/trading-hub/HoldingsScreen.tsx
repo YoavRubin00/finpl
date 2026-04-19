@@ -33,7 +33,7 @@ interface CloseResult {
     pnlPercent: number;
 }
 
-export default function HoldingsScreen() {
+export function HoldingsScreen() {
     const router = useRouter();
     const positions = useTradingStore((s) => s.positions);
     const pendingOrders = useTradingStore((s) => s.pendingOrders);

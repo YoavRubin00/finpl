@@ -64,7 +64,7 @@ const VOLATILITY_CONFIG: Record<VolatilityRating, { dot: string; label: string }
     extreme: { dot: '🚀', label: 'קיצוני' },
 };
 
-export default function TradingHubScreen() {
+export function TradingHubScreen() {
     const router = useRouter();
     const { asset: assetParam } = useLocalSearchParams<{ asset?: string }>();
 

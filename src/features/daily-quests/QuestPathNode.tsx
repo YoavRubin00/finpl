@@ -143,11 +143,6 @@ function QuestPathNodeInner({
           </Animated.View>
         </Pressable>
 
-        {state !== 'claimed' && state !== 'ready' && (
-          <View style={styles.labelWrap}>
-            <Text style={[styles.labelText, { color: palette.text }]}>{labelHe}</Text>
-          </View>
-        )}
       </Animated.View>
 
       {/* Shark peek + speech — only when ready-to-claim */}

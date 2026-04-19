@@ -14,6 +14,9 @@ import {
   QUEST_STREAK_BONUS_STEP,
   QUEST_STREAK_BONUS_PCT,
   QUEST_FREEZE_BONUS_MODULO,
+  QUEST_PRO_XP_MULTIPLIER,
+  QUEST_PRO_COIN_MULTIPLIER,
+  QUEST_PRO_GEMS_GUARANTEED,
 } from "./daily-quest-types";
 
 function streakBonusMultiplier(streak: number): number {
@@ -37,6 +40,18 @@ export function previewQuestReward(streak: number): QuestRewardSummary {
   };
 }
 
+/** PRO track preview — 2× XP/coins + guaranteed gem */
+export function previewProQuestReward(streak: number): QuestRewardSummary {
+  const mult = streakBonusMultiplier(streak);
+  return {
+    xp: Math.round(QUEST_XP_REWARD * QUEST_PRO_XP_MULTIPLIER * mult),
+    coins: Math.round(QUEST_COIN_REWARD * QUEST_PRO_COIN_MULTIPLIER * mult),
+    gems: QUEST_PRO_GEMS_GUARANTEED,
+    freezes: 0,
+    streakBonusPct: streakBonusPct(streak),
+  };
+}
+
 function todayStr(): string {
   return new Date().toISOString().slice(0, 10);
 }
@@ -45,6 +60,7 @@ interface DailyQuestsState {
   quests: DailyQuest[];
   questDate: string;
   rewardClaimed: boolean;
+  proRewardClaimed: boolean;
   newlyCompleted: boolean;
   lastRewardSummary: QuestRewardSummary | null;
 
@@ -52,6 +68,7 @@ interface DailyQuestsState {
   refreshQuests: () => void;
   syncCompletions: () => void;
   claimReward: () => QuestRewardSummary | null;
+  claimProReward: () => QuestRewardSummary | null;
 
   completedCount: () => number;
   allCompleted: () => boolean;
@@ -63,6 +80,7 @@ export const useDailyQuestsStore = create<DailyQuestsState>()(
       quests: [],
       questDate: "",
       rewardClaimed: false,
+      proRewardClaimed: false,
       newlyCompleted: false,
       lastRewardSummary: null,
 
@@ -81,7 +99,7 @@ export const useDailyQuestsStore = create<DailyQuestsState>()(
           id: `${today}-${i}`,
           isCompleted: false,
         }));
-        set({ quests, questDate: today, rewardClaimed: false, newlyCompleted: false, lastRewardSummary: null });
+        set({ quests, questDate: today, rewardClaimed: false, proRewardClaimed: false, newlyCompleted: false, lastRewardSummary: null });
       },
 
       syncCompletions: () => {
@@ -160,6 +178,32 @@ export const useDailyQuestsStore = create<DailyQuestsState>()(
         return summary;
       },
 
+      claimProReward: () => {
+        let alreadyClaimed = false;
+        set((state) => {
+          if (state.proRewardClaimed) { alreadyClaimed = true; return state; }
+          const allDone = state.quests.length > 0 && state.quests.every((q) => q.isCompleted);
+          if (!allDone) { alreadyClaimed = true; return state; }
+          return { ...state, proRewardClaimed: true };
+        });
+        if (alreadyClaimed) return null;
+
+        const economy = useEconomyStore.getState();
+        const streak = economy.streak;
+        const mult = streakBonusMultiplier(streak);
+
+        const xp = Math.round(QUEST_XP_REWARD * QUEST_PRO_XP_MULTIPLIER * mult);
+        const coins = Math.round(QUEST_COIN_REWARD * QUEST_PRO_COIN_MULTIPLIER * mult);
+        const gems = QUEST_PRO_GEMS_GUARANTEED;
+
+        economy.addXP(xp, "daily_task");
+        economy.addCoins(coins);
+        economy.addGems(gems);
+
+        const summary: QuestRewardSummary = { xp, coins, gems, freezes: 0, streakBonusPct: streakBonusPct(streak) };
+        return summary;
+      },
+
       completedCount: () => get().quests.filter((q) => q.isCompleted).length,
       allCompleted: () => get().quests.length > 0 && get().quests.every((q) => q.isCompleted),
     }),
@@ -170,6 +214,7 @@ export const useDailyQuestsStore = create<DailyQuestsState>()(
         quests: state.quests,
         questDate: state.questDate,
         rewardClaimed: state.rewardClaimed,
+        proRewardClaimed: state.proRewardClaimed,
         lastRewardSummary: state.lastRewardSummary,
       }),
     }

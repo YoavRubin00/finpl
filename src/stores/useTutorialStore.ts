@@ -10,6 +10,7 @@ interface TutorialState {
   hasChosenChatStyle: boolean;
   hasSeenPizzaIndexModal: boolean;
   hasSeenCh0BullshitInterstitial: boolean;
+  hasSeenMod01BarterNotif: boolean;
   hasSeenWatchlistHint: boolean;
   hasSeenAssetUnlockIntro: boolean;
   appWalkthroughStep: number;
@@ -21,6 +22,7 @@ interface TutorialState {
   completeChatStyleChoice: () => void;
   markPizzaIndexSeen: () => void;
   markCh0BullshitInterstitialSeen: () => void;
+  markMod01BarterNotifSeen: () => void;
   markWatchlistHintSeen: () => void;
   markAssetUnlockIntroSeen: () => void;
   setAppWalkthroughStep: (step: number) => void;
@@ -37,6 +39,7 @@ export const useTutorialStore = create<TutorialState>()(
       hasChosenChatStyle: false,
       hasSeenPizzaIndexModal: false,
       hasSeenCh0BullshitInterstitial: false,
+      hasSeenMod01BarterNotif: false,
       hasSeenWatchlistHint: false,
       hasSeenAssetUnlockIntro: false,
       appWalkthroughStep: 0,
@@ -48,6 +51,7 @@ export const useTutorialStore = create<TutorialState>()(
       completeChatStyleChoice: () => set({ hasChosenChatStyle: true }),
       markPizzaIndexSeen: () => set({ hasSeenPizzaIndexModal: true }),
       markCh0BullshitInterstitialSeen: () => set({ hasSeenCh0BullshitInterstitial: true }),
+      markMod01BarterNotifSeen: () => set({ hasSeenMod01BarterNotif: true }),
       markWatchlistHintSeen: () => set({ hasSeenWatchlistHint: true }),
       markAssetUnlockIntroSeen: () => set({ hasSeenAssetUnlockIntro: true }),
       setAppWalkthroughStep: (step: number) => set({ appWalkthroughStep: step }),
@@ -56,7 +60,7 @@ export const useTutorialStore = create<TutorialState>()(
       resetWalkthrough: () => set({ hasSeenAppWalkthrough: false, appWalkthroughStep: 0, walkthroughGlowTab: null, walkthroughActiveScreen: null }),
     }),
     {
-      name: "tutorial-store-v11",
+      name: "tutorial-store-v12",
       storage: createJSONStorage(() => zustandStorage),
       onRehydrateStorage: () => () => {
         useTutorialStore.setState({ _hydrated: true });

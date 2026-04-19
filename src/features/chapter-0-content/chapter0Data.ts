@@ -19,7 +19,7 @@ export const chapter0Data: Chapter = {
       flashcards: [
         {
           id: 'fc-0-1-1',
-          text: '[[סחר חליפין]]: בעבר, כדי לקנות משהו היית צריך לתת משהו פיזי בתמורה (למשל, שק תפוחי אדמה תמורת נעליים). הבעיה? זה מסורבל, כבד, ולא תמיד הצד השני רוצה את מה שיש לך.',
+          text: '[[סחר חליפין]]: בעבר, כדי לקנות משהו הייתם צריכים לתת משהו פיזי בתמורה (למשל, שק תפוחי אדמה תמורת נעליים). הבעיה? זה מסורבל, כבד, ולא תמיד הצד השני רוצה את מה שיש לכם.',
         },
         {
           id: 'fc-0-1-2',
@@ -28,7 +28,7 @@ export const chapter0Data: Chapter = {
         {
           id: 'fc-0-1-3',
           finnTip: 'ידעתם? בשנות ה-80 הישראלים רצו לקנות הכל מיד כי האינפלציה הגיעה ל-450% בשנה. שטר של 100 שקל איבד חצי מערכו תוך חודשיים!',
-          text: 'שמירת ערך: כסף מאפשר לך לשמור את מאמץ העבודה שלך להיום, ולהשתמש בו מחר. בניגוד לעגבניות שירקבו, כסף שומר על [[כוח קנייה|הערך]] שייצרת לאורך זמן.',
+          text: 'שמירת ערך: כסף מאפשר לכם לשמור את מאמץ העבודה שלכם להיום, ולהשתמש בו מחר. בניגוד לעגבניות שירקבו, כסף שומר על [[כוח קנייה|הערך]] שייצרתם לאורך זמן.',
         },
         {
           id: 'fc-0-1-4',
@@ -38,11 +38,6 @@ export const chapter0Data: Chapter = {
           id: 'fc-0-1-5',
           topAudio: { uri: 'https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/audios/flashcards/fc-0-1-5-top-KodMwHabmmfOQtod4pZFKWKPWlQA2i.mp3' },
           text: '[[פיאט]]: ברוב העולם היום, לכסף אין "ערך פנימי" (הוא לא עשוי מזהב אמיתי). הערך שלו נובע אך ורק מזה שהממשלה מגבה אותו ושאנחנו, האזרחים, מאמינים בו.',
-        },
-        {
-          id: 'fc-0-1-video',
-          text: '',
-          videoUri: 'https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/0-1.mp4',
         },
         {
           id: 'fc-0-1-summary',
@@ -59,7 +54,7 @@ export const chapter0Data: Chapter = {
           question: 'מהי הסיבה המרכזית שבגללה בני האדם הפסיקו להשתמש בסחר חליפין ועברו לכסף?',
           options: [
             'כי הממשלה הכריחה אותם',
-            'כי היה קשה למצוא אדם שגם רוצה בדיוק את מה שיש לך וגם מציע מה שאתה צריך',
+            'כי היה קשה למצוא אדם שגם רוצה בדיוק את מה שיש לכם וגם מציע מה שאתם צריכים',
             'כי זהב היה נפוץ יותר מתפוחי אדמה',
             'כי לא היו מספיק סחורות בעולם',
           ],
@@ -93,12 +88,13 @@ export const chapter0Data: Chapter = {
     },
     {
       id: 'mod-0-2',
+      introVariant: 'short' as const,
       title: 'מושגי יסוד פיננסיים',
       videoHook:
         'הגיע הזמן לדבר תכלס: בנק, עו"ש, ריבית. מה כל אלה אומרים?',
       interactiveIntro:
         'עושים סדר במושגים שכולם זורקים באוויר: בנק, פנסיה, עו"ש וריבית. מה הם אומרים תכלס ולמה הם כל כך חשובים מוקדם ככל האפשר?',
-      introAudio: { uri: 'https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/audio/intros/mod-0-2-v2.mp3' },
+      introAudio: { uri: 'https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/audio/shorts/mod-0-2-short-H4gu5Wa32VkKfcIiXNulOPZ1ux4QjP.mp3' },
       flashcards: [
         {
           id: 'fc-0-2-1',
@@ -113,7 +109,7 @@ export const chapter0Data: Chapter = {
         {
           id: 'fc-0-2-3',
           finnTip: 'ריבית על עו"ש בישראל? הבנקים נותנים 0%. ריבית על מינוס? עד 15%. זה המשחק שלהם.',
-          text: '[[ריבית]]: המחיר של הכסף. לקחת הלוואה? אתה משלם "דמי שכירות" על השימוש בכסף של מישהו אחר. חסכת בתוכנית מניבה? אתה מקבל בונוס על זה שהפנית את הכסף שלך אליהם.',
+          text: '[[ריבית]]: המחיר של הכסף. לקחתם הלוואה? אתם משלמים "דמי שכירות" על השימוש בכסף של מישהו אחר. חסכתם בתוכנית מניבה? אתם מקבלים בונוס על זה שהפניתם את הכסף שלכם אליהם.',
         },
         {
           id: 'fc-0-2-video',
@@ -263,12 +259,13 @@ export const chapter0Data: Chapter = {
     },
     {
       id: 'mod-0-4',
+      introVariant: 'short' as const,
       title: 'כמה נכנס וכמה יוצא',
       videoHook:
         'אז עשיתם כסף. לאן הוא הולך אחר כך? החוק הכי מיושן אך הכי נכון בעולם: תוציאו פחות ממה שנכנס.',
       interactiveIntro:
         'כאן נלמד את חוק הברזל הפשוט והחשוב ביותר בניהול תזרים: איך לוודא שההכנסות עולות על ההוצאות, ולבנות בסיס כלכלי חזק בזמן שממשיכים ליהנות מהדרך.',
-      introAudio: { uri: 'https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/audio/intros/mod-0-4-v2.mp3' },
+      introAudio: { uri: 'https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/audio/shorts/mod-0-4-short-ZPgBLIq13yqwzvuYinxYQOGp8fJohf.mp3' },
       flashcards: [
         {
           id: 'fc-0-4-1',

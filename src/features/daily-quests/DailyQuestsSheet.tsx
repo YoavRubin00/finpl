@@ -4,7 +4,6 @@ import { Image as ExpoImage } from "expo-image";
 import Animated, {
   FadeIn,
   FadeInRight,
-  FadeInUp,
   useAnimatedStyle,
   useReducedMotion,
   useSharedValue,
@@ -21,7 +20,8 @@ import { LottieIcon } from "../../components/ui/LottieIcon";
 import { ConfettiExplosion } from "../../components/ui/ConfettiExplosion";
 import { FlyingRewards } from "../../components/ui/FlyingRewards";
 import { STITCH } from "../../constants/theme";
-import { useDailyQuestsStore, previewQuestReward } from "./useDailyQuestsStore";
+import { useDailyQuestsStore, previewQuestReward, previewProQuestReward } from "./useDailyQuestsStore";
+import { useSubscriptionStore } from "../subscription/useSubscriptionStore";
 import { type DailyQuest, QUEST_TEMPLATES } from "./daily-quest-types";
 import { useEconomyStore } from "../economy/useEconomyStore";
 import { FINN_HELLO, FINN_STANDARD, FINN_DANCING } from "../retention-loops/finnMascotConfig";
@@ -31,6 +31,8 @@ import { useSoundEffect } from "../../hooks/useSoundEffect";
 
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const LOTTIE_CHEST = require("../../../assets/lottie/3D Treasure Box.json") as unknown as AnimationObject;
+// eslint-disable-next-line @typescript-eslint/no-var-requires
+const LOTTIE_CROWN = require("../../../assets/lottie/Crown.json") as unknown as AnimationObject;
 
 const RTL = { writingDirection: "rtl" as const, textAlign: "right" as const };
 
@@ -176,10 +178,13 @@ export function DailyQuestsSheet({ visible, onClose }: DailyQuestsSheetProps) {
   const completedCount = useDailyQuestsStore((s) => s.completedCount());
   const allDone = useDailyQuestsStore((s) => s.allCompleted());
   const rewardClaimed = useDailyQuestsStore((s) => s.rewardClaimed);
+  const proRewardClaimed = useDailyQuestsStore((s) => s.proRewardClaimed);
   const claimReward = useDailyQuestsStore((s) => s.claimReward);
+  const claimProReward = useDailyQuestsStore((s) => s.claimProReward);
   const refreshQuests = useDailyQuestsStore((s) => s.refreshQuests);
   const syncQuestCompletions = useDailyQuestsStore((s) => s.syncCompletions);
   const streak = useEconomyStore((s) => s.streak);
+  const isPro = useSubscriptionStore((s) => s.isPro());
 
   // Ensure quests are populated whenever the sheet becomes visible.
   // Safe on every open: refreshQuests is date-idempotent (no-op if already fresh),
@@ -187,6 +192,7 @@ export function DailyQuestsSheet({ visible, onClose }: DailyQuestsSheetProps) {
   useEffect(() => {
     if (!visible) {
       setChestOpen(false);
+      setProChestOpen(false);
       return;
     }
     if (quests.length === 0) {
@@ -197,6 +203,7 @@ export function DailyQuestsSheet({ visible, onClose }: DailyQuestsSheetProps) {
   }, [visible, quests.length, refreshQuests, syncQuestCompletions]);
 
   const preview = previewQuestReward(streak);
+  const previewPro = previewProQuestReward(streak);
 
   /** Navigate to the feed item that fulfills this quest. */
   const handleQuestPress = (quest: DailyQuest) => {
@@ -216,13 +223,19 @@ export function DailyQuestsSheet({ visible, onClose }: DailyQuestsSheetProps) {
 
   const [showClaimAnim, setShowClaimAnim] = useState(false);
   const [chestOpen, setChestOpen] = useState(false);
+  const [showProClaimAnim, setShowProClaimAnim] = useState(false);
+  const [proChestOpen, setProChestOpen] = useState(false);
   const { playSound } = useSoundEffect();
   const hapticTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const claimTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const proHapticTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const proClaimTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => () => {
     if (hapticTimerRef.current) clearTimeout(hapticTimerRef.current);
     if (claimTimerRef.current) clearTimeout(claimTimerRef.current);
+    if (proHapticTimerRef.current) clearTimeout(proHapticTimerRef.current);
+    if (proClaimTimerRef.current) clearTimeout(proClaimTimerRef.current);
   }, []);
 
   // Gentle pulse on the chest when ready — feels inviting, not shaky.
@@ -232,7 +245,7 @@ export function DailyQuestsSheet({ visible, onClose }: DailyQuestsSheetProps) {
   const chestGlowScale = useSharedValue(1);
   const chestGlowOpacity = useSharedValue(0.4);
   useEffect(() => {
-    if (!visible || !allDone || rewardClaimed || reduceMotion) {
+    if (!visible || !allDone || (rewardClaimed && proRewardClaimed) || reduceMotion) {
       cancelAnimation(chestPulse);
       cancelAnimation(chestGlowScale);
       cancelAnimation(chestGlowOpacity);
@@ -290,6 +303,25 @@ export function DailyQuestsSheet({ visible, onClose }: DailyQuestsSheetProps) {
     claimTimerRef.current = setTimeout(() => {
       claimReward();
       setShowClaimAnim(false);
+    }, 1600);
+  };
+
+  const handleClaimPro = () => {
+    if (!isPro) {
+      tapHaptic();
+      onClose();
+      router.push('/subscription' as never);
+      return;
+    }
+    if (proRewardClaimed || !allDone || showProClaimAnim) return;
+    heavyHaptic();
+    playSound('modal_open_4');
+    setProChestOpen(true);
+    setShowProClaimAnim(true);
+    proHapticTimerRef.current = setTimeout(() => successHaptic(), 250);
+    proClaimTimerRef.current = setTimeout(() => {
+      claimProReward();
+      setShowProClaimAnim(false);
     }, 1600);
   };
 
@@ -366,50 +398,76 @@ export function DailyQuestsSheet({ visible, onClose }: DailyQuestsSheetProps) {
             ))}
           </View>
 
-          {/* Reward card — tappable chest when ready */}
-          {!rewardClaimed && (
-            <Animated.View entering={FadeIn.delay(400).duration(400)} style={styles.rewardCard}>
-              <View style={styles.chestContainer}>
-                {allDone && (
-                  <Animated.View
-                    pointerEvents="none"
-                    style={[styles.chestGlowHalo, chestGlowStyle]}
-                  />
-                )}
-                <Animated.View style={chestPulseStyle}>
-                  <Pressable
-                    onPress={handleClaim}
-                    disabled={!allDone || showClaimAnim}
-                    accessibilityRole="button"
-                    accessibilityLabel={allDone ? "לחצו לפתיחת התיבה ואיסוף הפרס" : "התיבה עדיין נעולה — השלימו את המשימות"}
-                    style={({ pressed }) => [
-                      styles.chestWrap,
-                      allDone && styles.chestWrapReady,
-                      pressed && allDone && { transform: [{ scale: 0.96 }] },
-                    ]}
-                  >
-                    <LottieIcon source={LOTTIE_CHEST as unknown as number} size={140} autoPlay={false} active={chestOpen} loop={false} />
-                  </Pressable>
-                </Animated.View>
+          {/* ── Pass Royale dual-chest row ── */}
+          <Animated.View entering={FadeIn.delay(400).duration(400)} style={{ paddingHorizontal: 12, paddingBottom: 8 }}>
+            <View style={{ flexDirection: "row", gap: 10, alignItems: "flex-end" }}>
+
+              {/* ── PRO chest (left, larger) ── */}
+              <View style={{ flex: 13, alignItems: "center" }}>
+                <LottieIcon source={LOTTIE_CROWN as unknown as number} size={36} autoPlay={!reduceMotion} loop active={!reduceMotion} />
+                <View style={{ backgroundColor: "#b45309", borderRadius: 8, paddingHorizontal: 10, paddingVertical: 2, marginTop: 2, marginBottom: 4 }}>
+                  <Text style={{ color: "#fff", fontSize: 11, fontWeight: "900", letterSpacing: 1.2 }}>PRO</Text>
+                </View>
+                <View style={{ position: "relative" }}>
+                  {allDone && isPro && !proRewardClaimed && (
+                    <Animated.View pointerEvents="none" style={[styles.chestGlowHalo, { backgroundColor: "#d97706" }, chestGlowStyle]} />
+                  )}
+                  <Animated.View style={isPro && allDone && !proRewardClaimed ? chestPulseStyle : undefined}>
+                    <Pressable
+                      onPress={handleClaimPro}
+                      disabled={proRewardClaimed || showProClaimAnim}
+                      accessibilityRole="button"
+                      accessibilityLabel={!isPro ? "שדרגו לפרו לפתיחת התיבה" : proRewardClaimed ? "תיבת פרו נפתחה" : allDone ? "לחצו לפתיחת תיבת הפרו" : "תיבת הפרו נעולה"}
+                      style={({ pressed }) => [
+                        styles.chestWrap,
+                        allDone && isPro && !proRewardClaimed && styles.chestWrapReady,
+                        { borderColor: "#d97706", opacity: proRewardClaimed ? 0.65 : 1 },
+                        pressed && allDone && isPro && !proRewardClaimed && { transform: [{ scale: 0.96 }] },
+                      ]}
+                    >
+                      <LottieIcon source={LOTTIE_CHEST as unknown as number} size={130} autoPlay={false} active={proChestOpen} loop={false} />
+                      {!isPro && (
+                        <View style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, justifyContent: "center", alignItems: "center", backgroundColor: "rgba(0,0,0,0.5)", borderRadius: 16 }} accessible={false}>
+                          <Text style={{ fontSize: 28 }}>🔒</Text>
+                          {allDone && <Text style={{ color: "#fbbf24", fontSize: 10, fontWeight: "800", marginTop: 4 }}>שדרגו לפרו</Text>}
+                        </View>
+                      )}
+                    </Pressable>
+                  </Animated.View>
+                </View>
               </View>
 
-              {!allDone ? (
-                <Text style={[styles.hintText, { marginTop: -10 }]}>
-                  השלימו את כל המשימות כדי לפתוח את התיבה
-                </Text>
-              ) : (
-                <Text style={styles.rewardHeadline}>
-                  התיבה מוכנה — לחצו לפתיחה!
-                </Text>
-              )}
-            </Animated.View>
-          )}
+              {/* ── Regular chest (right, smaller) ── */}
+              <View style={{ flex: 10, alignItems: "center" }}>
+                <View style={{ height: 36 }} accessible={false} />
+                <View style={{ backgroundColor: "#475569", borderRadius: 8, paddingHorizontal: 10, paddingVertical: 2, marginTop: 2, marginBottom: 4 }}>
+                  <Text style={{ color: "#fff", fontSize: 11, fontWeight: "900", letterSpacing: 1.2 }}>רגיל</Text>
+                </View>
+                <View style={{ position: "relative" }}>
+                  {allDone && !rewardClaimed && (
+                    <Animated.View pointerEvents="none" style={[styles.chestGlowHalo, chestGlowStyle]} />
+                  )}
+                  <Animated.View style={allDone && !rewardClaimed ? chestPulseStyle : undefined}>
+                    <Pressable
+                      onPress={handleClaim}
+                      disabled={rewardClaimed || showClaimAnim}
+                      accessibilityRole="button"
+                      accessibilityLabel={rewardClaimed ? "תיבה נפתחה" : allDone ? "לחצו לפתיחת התיבה" : "התיבה נעולה — השלימו את המשימות"}
+                      style={({ pressed }) => [
+                        styles.chestWrap,
+                        allDone && !rewardClaimed && styles.chestWrapReady,
+                        { opacity: rewardClaimed ? 0.65 : 1 },
+                        pressed && allDone && !rewardClaimed && { transform: [{ scale: 0.96 }] },
+                      ]}
+                    >
+                      <LottieIcon source={LOTTIE_CHEST as unknown as number} size={110} autoPlay={false} active={chestOpen} loop={false} />
+                    </Pressable>
+                  </Animated.View>
+                </View>
+              </View>
 
-          {rewardClaimed && (
-            <Animated.View entering={FadeInUp.duration(420).easing(Easing.out(Easing.cubic))} style={{ alignItems: "center", marginBottom: 20 }}>
-              <LottieIcon source={LOTTIE_CHEST as unknown as number} size={180} autoPlay loop={false} />
-            </Animated.View>
-          )}
+            </View>
+          </Animated.View>
 
           </ScrollView>
 
@@ -435,6 +493,14 @@ export function DailyQuestsSheet({ visible, onClose }: DailyQuestsSheetProps) {
               <ConfettiExplosion />
               <FlyingRewards type="xp" amount={preview.xp} onComplete={() => { /* auto-clear */ }} />
               <FlyingRewards type="coins" amount={preview.coins} onComplete={() => { /* auto-clear */ }} />
+            </View>
+          )}
+          {/* PRO claim overlay */}
+          {showProClaimAnim && (
+            <View pointerEvents="none" style={StyleSheet.absoluteFill}>
+              <ConfettiExplosion />
+              <FlyingRewards type="xp" amount={previewPro.xp} onComplete={() => { /* auto-clear */ }} />
+              <FlyingRewards type="coins" amount={previewPro.coins} onComplete={() => { /* auto-clear */ }} />
             </View>
           )}
         </Pressable>

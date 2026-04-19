@@ -50,7 +50,7 @@ const STEPS: WalkthroughStep[] = [
   {
     title: "מסלול הלמידה",
     emoji: "📚",
-    message: "כאן מסלול הלמידה שלך. שיעורים, חידונים וסימולציות שיהפכו אותך למומחה פיננסי.",
+    message: "כאן מסלול הלמידה שלכם. שיעורים, חידונים וסימולציות שיהפכו אתכם למומחים פיננסיים.",
     navigateTo: "/(tabs)/index",
     ctaLabel: "מה נלמד באפליקציה?",
     screenSignal: "learn",
@@ -59,7 +59,7 @@ const STEPS: WalkthroughStep[] = [
   {
     title: "מה נלמד באפליקציה?",
     emoji: "🎓",
-    message: "6 פרקים, מאפס ועד מומחה. כל מה שצריך כדי להבין את עולם הכסף. גלול למטה ותראה!",
+    message: "6 פרקים, מאפס ועד מומחה. כל מה שצריך כדי להבין את עולם הכסף. גללו למטה ותראו!",
     navigateTo: "/(tabs)/index",
     ctaLabel: "עכשיו לפיד",
     screenSignal: "lesson-preview",
@@ -68,7 +68,7 @@ const STEPS: WalkthroughStep[] = [
   {
     title: "הפיד היומי",
     emoji: "🎯",
-    message: "כאן תמצא משחקים יומיים, דילמות כלכליות, מיתוסים ותוכן שמתעדכן כל יום.",
+    message: "כאן תמצאו משחקים יומיים, דילמות כלכליות, מיתוסים ותוכן שמתעדכן כל יום.",
     navigateTo: "/(tabs)/learn",
     ctaLabel: "המשך",
     screenSignal: "feed",
@@ -95,7 +95,7 @@ const STEPS: WalkthroughStep[] = [
   {
     title: "החנות",
     emoji: "🏪",
-    message: "כאן תוכל להשתמש במטבעות הזהב שצברת. אייטמים, בוסטרים ועוד. מרוויחים זהב דרך למידה!",
+    message: "כאן תוכלו להשתמש במטבעות הזהב שצברתם. אייטמים, בוסטרים ועוד. מרוויחים זהב דרך למידה!",
     navigateTo: "/(tabs)/shop",
     ctaLabel: "ומה עם הגשר?",
     screenSignal: "shop",
@@ -208,9 +208,7 @@ export function AppWalkthroughOverlay() {
           } else {
             sound.unloadAsync();
           }
-        } catch (e) {
-          console.log('Failed to play walkthrough audio:', e);
-        }
+        } catch { /* audio playback failed — silent */ }
       }
     }
 

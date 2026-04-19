@@ -1,1 +1,3 @@
-export { default } from "../src/features/saved-items/SavedItemsScreen";
+import { SavedItemsScreen } from "../src/features/saved-items/SavedItemsScreen";
+
+export default SavedItemsScreen;

@@ -1,7 +1,7 @@
 import * as Google from "expo-auth-session/providers/google";
 import * as WebBrowser from "expo-web-browser";
+import { makeRedirectUri } from "expo-auth-session";
 import { useEffect } from "react";
-import { Platform } from "react-native";
 import { useAuthStore } from "./useAuthStore";
 
 WebBrowser.maybeCompleteAuthSession();
@@ -9,6 +9,9 @@ WebBrowser.maybeCompleteAuthSession();
 const GOOGLE_WEB_CLIENT_ID = process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID ?? "";
 const GOOGLE_IOS_CLIENT_ID = process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID ?? "";
 const GOOGLE_ANDROID_CLIENT_ID = process.env.EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID ?? "";
+
+// Reversed iOS client ID — must also appear in app.json ios.infoPlist.CFBundleURLTypes
+const IOS_REVERSED_CLIENT_ID = "com.googleusercontent.apps.847177819309-mbb8nusv6r17oot0e49e1npbgmaecps0";
 
 interface GoogleUserInfo {
   name: string;
@@ -19,12 +22,10 @@ interface GoogleUserInfo {
 export function useGoogleAuth() {
   const signIn = useAuthStore((s) => s.signIn);
 
-  // On web, use the Expo auth proxy so the redirect URI matches
-  // what's configured in Google Cloud Console: https://auth.expo.io/@yrubin00/finpl
-  const redirectUri =
-    Platform.OS === "web"
-      ? "https://auth.expo.io/@yrubin00/finpl"
-      : undefined;
+  const redirectUri = makeRedirectUri({
+    native: `${IOS_REVERSED_CLIENT_ID}:/`,
+    scheme: "finpl",
+  });
 
   const [request, response, promptAsync] = Google.useAuthRequest({
     webClientId: GOOGLE_WEB_CLIENT_ID,

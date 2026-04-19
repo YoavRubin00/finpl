@@ -10,7 +10,8 @@ import { useState, useCallback, useEffect } from "react";
 import { View, Image, StyleSheet, Pressable, Modal, Platform } from "react-native";
 import Animated, { useSharedValue, useAnimatedStyle, withTiming } from "react-native-reanimated";
 import { Image as ExpoImage } from "expo-image";
-import type { ImageSourcePropType, NativeSyntheticEvent, ImageLoadEventData } from "react-native";
+import type { ImageSource, ImageLoadEventData } from "expo-image";
+import type { ImageSourcePropType } from "react-native";
 import LottieView from "lottie-react-native";
 import type { AnimationObject } from "lottie-react-native";
 
@@ -38,7 +39,7 @@ const LOTTIE_MAP: Record<string, number> = {
   "fc-0-2-5": require("../../../assets/lottie/wired-flat-3051-pot-gold-hover-pinch.json"), // פנסיה
 };
 
-const INFOGRAPHIC_MAP: Record<string, ImageSourcePropType | null> = {
+const INFOGRAPHIC_MAP: Record<string, ImageSource | null> = {
   // ═══════════════════════════════════════════════════════════════
   // CHAPTER 0: המבוא
   // ═══════════════════════════════════════════════════════════════
@@ -271,9 +272,9 @@ const INFOGRAPHIC_MAP: Record<string, ImageSourcePropType | null> = {
   "fc-4-24-6": { uri: 'https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/infographics/mod-4-24/fc-4-24-6.png' },
 
   // Module 4-25
-  "fc-4-25-0a": require("../../../assets/IMAGES/צילום מסך 2026-04-01 114349.png"),
-  "fc-4-25-0b": require("../../../assets/IMAGES/צילום מסך 2026-04-01 114349.png"),
-  "fc-4-25-0c": require("../../../assets/IMAGES/צילום מסך 2026-04-01 114349.png"),
+  "fc-4-25-0a": require("../../../assets/IMAGES/flashcard-etf-screenshot.png"),
+  "fc-4-25-0b": require("../../../assets/IMAGES/flashcard-etf-screenshot.png"),
+  "fc-4-25-0c": require("../../../assets/IMAGES/flashcard-etf-screenshot.png"),
   "fc-4-25-1": { uri: 'https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/infographics/mod-4-25/fc-4-25-1.png' },
   "fc-4-25-2": { uri: 'https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/infographics/mod-4-25/fc-4-25-2.png' },
   "fc-4-25-3": { uri: 'https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/infographics/mod-4-25/fc-4-25-3.png' },
@@ -436,9 +437,8 @@ export function FlashcardInfographic({ cardId, diveStep = 0, zoomRegions }: Prop
   const [ratio, setRatio] = useState<number | undefined>(undefined);
   const [finnFullscreen, setFinnFullscreen] = useState(false);
 
-  const handleLoad = useCallback((e: NativeSyntheticEvent<ImageLoadEventData>) => {
-    const src = e.nativeEvent.source ?? (e.nativeEvent as unknown as { width: number; height: number });
-    const { width, height } = src;
+  const handleLoad = useCallback((e: ImageLoadEventData) => {
+    const { width, height } = e.source;
     if (width && height) {
       setRatio(width / height);
     }
@@ -500,7 +500,7 @@ export function FlashcardInfographic({ cardId, diveStep = 0, zoomRegions }: Prop
       )}
       {source && (
         <View style={[s.container, isLightBg && s.containerLight, { aspectRatio: ratio ?? 1.2, maxHeight: COMPACT_CARDS.has(cardId) ? 220 : LARGE_CARDS.has(cardId) ? undefined : 270 }]}>
-          <AnimatedExpoImage source={source as any} style={[s.image, zoomStyle]} contentFit={COVER_CARDS.has(cardId) ? "cover" : "contain"} onLoad={Platform.OS === 'web' ? undefined : handleLoad as any} />
+          <AnimatedExpoImage source={source} style={[s.image, zoomStyle]} contentFit={COVER_CARDS.has(cardId) ? "cover" : "contain"} onLoad={Platform.OS === 'web' ? undefined : handleLoad} />
           {lottieSource && (
             <View style={s.lottieFloatingBadge}>
               <LottieView

@@ -486,7 +486,7 @@ export const MacroEventCard = React.memo(function MacroEventCard({ item, isActiv
               style={({ pressed }) => [styles.nextBtn, pressed && { opacity: 0.85 }]}
               onPress={handleNext}
             >
-              <Text style={styles.nextBtnText}>לאירוע הבא ›</Text>
+              <Text style={styles.nextBtnText}>‹ לאירוע הבא</Text>
             </Pressable>
           </Animated.View>
         )}

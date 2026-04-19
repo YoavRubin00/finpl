@@ -10,7 +10,7 @@ import {
   ScrollView,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { useRouter } from "expo-router";
+import { useRouter, useLocalSearchParams } from "expo-router";
 import { FINN_HELLO } from "../retention-loops/finnMascotConfig";
 import { getPasswordStrength } from "./password-utils";
 import type { PasswordStrength } from "./types";
@@ -67,6 +67,7 @@ const inputStyle = {
 
 export function RegisterScreen() {
   const router = useRouter();
+  const { returnTo } = useLocalSearchParams<{ returnTo?: string }>();
   const signIn = useAuthStore((s) => s.signIn);
   const enterGuestMode = useAuthStore((s) => s.enterGuestMode);
   const avatarId = useAuthStore((s) => s.profile?.avatarId ?? null);
@@ -294,7 +295,8 @@ export function RegisterScreen() {
               onPress={() => {
                 if (isValid) {
                   signIn(name.trim(), email.trim());
-                  router.replace("/(tabs)/" as never);
+                  const dest = returnTo ? decodeURIComponent(returnTo) : "/(tabs)/";
+                  router.replace(dest as never);
                 }
               }}
               accessibilityRole="button"

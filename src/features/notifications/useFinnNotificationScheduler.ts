@@ -11,7 +11,6 @@ import { getLevelFromXP } from '../../utils/progression';
 import {
     buildStreakContext,
     selectStreakCopyTier,
-    getStreakCopy,
     getStreakCopyForGoal,
     getToneFromGoal,
     getMorningCopy,
@@ -33,6 +32,14 @@ function todayISO(): string {
     return new Date().toISOString().slice(0, 10);
 }
 
+/** Hard cap: cancel any OS-scheduled notifications beyond `maxAllowed`. */
+async function enforceNotificationCap(maxAllowed: number): Promise<void> {
+    const all = await Notifications.getAllScheduledNotificationsAsync();
+    if (all.length <= maxAllowed) return;
+    const excess = all.slice(maxAllowed);
+    await Promise.all(excess.map((n) => Notifications.cancelScheduledNotificationAsync(n.identifier)));
+}
+
 export function useFinnNotificationScheduler() {
     const permissionGranted = useNotificationStore((s) => s.permissionGranted);
     const preferences = useNotificationStore((s) => s.preferences);
@@ -41,70 +48,73 @@ export function useFinnNotificationScheduler() {
 
     useEffect(() => {
         if (!permissionGranted) return;
-        try {
 
         const today = todayISO();
         if (lastScheduledDate === today) return; // already scheduled today
 
-        const economy = useEconomyStore.getState();
-        const level = getLevelFromXP(economy.xp);
-        const ctx = buildStreakContext(economy, level);
+        // Mark scheduled immediately to prevent re-entry if deps change mid-run
+        useNotificationStore.getState().setLastScheduledDate(today);
 
-        const store = useNotificationStore.getState();
+        (async () => {
+            try {
+                const economy = useEconomyStore.getState();
+                const level = getLevelFromXP(economy.xp);
+                const ctx = buildStreakContext(economy, level);
+                const store = useNotificationStore.getState();
 
-        // US-007: personalized send hour from recent activity pattern
-        const primaryHour = computePersonalizedHour(economy.recentActivityHours ?? []);
+                // US-007: personalized send hour from recent activity pattern
+                const primaryHour = computePersonalizedHour(economy.recentActivityHours ?? []);
 
-        // US-008: tone adapted to user's onboarding daily-goal answer
-        const goalMinutes = useAuthStore.getState().profile?.dailyGoalMinutes;
-        const tone = getToneFromGoal(typeof goalMinutes === 'number' ? goalMinutes : null);
+                // US-008: tone adapted to user's onboarding daily-goal answer
+                const goalMinutes = useAuthStore.getState().profile?.dailyGoalMinutes;
+                const tone = getToneFromGoal(typeof goalMinutes === 'number' ? goalMinutes : null);
 
-        // ── Cancel ALL previously scheduled notifications to enforce 1/day cap ──
-        // This prevents stacking from legacy repeating schedules, chest timers, etc.
-        Notifications.cancelAllScheduledNotificationsAsync().catch(() => { /* fire-and-forget */ });
+                // ── Await cancel before scheduling anything — prevents race condition ──
+                await Notifications.cancelAllScheduledNotificationsAsync();
 
-        // ── Max 1 notification per day. Pick the most relevant one by priority. ──
-        // Priority: inactivity (urgent) > streak at-risk > morning motivation
-        if (preferences.inactivity && ctx.daysSinceActive >= 1) {
-            // User missed at least a day → urgent re-engagement (single fire only — 1/day cap)
-            const escalation = buildInactivityEscalation(lastFinnCopyTitle).slice(0, 1);
-            store.scheduleInactivityEscalation(escalation).catch(() => {});
-            store.setLastFinnCopyTitle(escalation[0]?.content.title ?? null);
-        } else if (preferences.streak) {
-            // Default: evening streak reminder (the most useful daily nudge)
-            const tier = selectStreakCopyTier(ctx);
-            // US-008: pick tone-adjusted pool for 'safe' tier; urgent tiers keep default urgency
-            const pool = getStreakCopyForGoal(tier, tone);
-            const copy = pickFinnCopy(pool, lastFinnCopyTitle);
-            store.scheduleStreakReminderWithCopy(
-                { title: copy.title, body: copy.body, data: { screen: "/(tabs)/learn" } },
-                primaryHour,
-            ).catch(() => {});
-            store.setLastFinnCopyTitle(copy.title);
+                // ── At most 2 notifications per day, scheduled sequentially ──
+                // Priority: inactivity (urgent) > streak at-risk > morning motivation
+                if (preferences.inactivity && ctx.daysSinceActive >= 1) {
+                    const escalation = buildInactivityEscalation(lastFinnCopyTitle).slice(0, 1);
+                    await store.scheduleInactivityEscalation(escalation);
+                    store.setLastFinnCopyTitle(escalation[0]?.content.title ?? null);
 
-            // US-009: schedule a 23:00 fallback save-your-streak notification if user hasn't completed today.
-            // Will get cancelled automatically when user completes daily task (see useEconomyStore.completeDailyTask).
-            if (economy.lastDailyTaskDate !== today && primaryHour < 23) {
-                const streakDays = economy.streak;
-                const fallbackCopy = streakDays > 0
-                    ? { title: `🕚 רצף של ${streakDays} ימים בסכנה`, body: 'שעה אחרונה לשמור עליו — 2 דקות וזהו' }
-                    : { title: '🕚 שעה אחרונה ליום', body: 'לא מאוחר מדי להתחיל רצף חדש היום' };
-                store.scheduleStreakReminderWithCopy(
-                    { title: fallbackCopy.title, body: fallbackCopy.body, data: { screen: '/(tabs)/learn' } },
-                    23,
-                ).catch(() => {});
-            }
-        } else if (preferences.morning) {
-            // Fallback: morning motivation if streak reminders are off
-            const copy = pickFinnCopy(getMorningCopy(), lastFinnCopyTitle);
-            store.scheduleMorningMotivation(
-                { title: copy.title, body: copy.body, data: { screen: "/(tabs)/learn" } },
-            ).catch(() => {});
-            store.setLastFinnCopyTitle(copy.title);
-        }
+                } else if (preferences.streak) {
+                    const tier = selectStreakCopyTier(ctx);
+                    const pool = getStreakCopyForGoal(tier, tone);
+                    const copy = pickFinnCopy(pool, lastFinnCopyTitle);
 
-        // Mark as scheduled for today
-        store.setLastScheduledDate(today);
-        } catch { /* safe — scheduler must never crash the app */ }
+                    // Primary reminder at personalised hour
+                    await store.scheduleStreakReminderWithCopy(
+                        { title: copy.title, body: copy.body, data: { screen: '/(tabs)/learn' } },
+                        primaryHour,
+                    );
+                    store.setLastFinnCopyTitle(copy.title);
+
+                    // US-009: 23:00 fallback only if task not done and primary isn't at 23
+                    if (economy.lastDailyTaskDate !== today && primaryHour < 23) {
+                        const streakDays = economy.streak;
+                        const fallbackCopy = streakDays > 0
+                            ? { title: `🕚 רצף של ${streakDays} ימים בסכנה`, body: 'שעה אחרונה לשמור עליו — 2 דקות וזהו' }
+                            : { title: '🕚 שעה אחרונה ליום', body: 'לא מאוחר מדי להתחיל רצף חדש היום' };
+                        await store.scheduleStreakReminderWithCopy(
+                            { title: fallbackCopy.title, body: fallbackCopy.body, data: { screen: '/(tabs)/learn' } },
+                            23,
+                        );
+                    }
+
+                } else if (preferences.morning) {
+                    const copy = pickFinnCopy(getMorningCopy(), lastFinnCopyTitle);
+                    await store.scheduleMorningMotivation(
+                        { title: copy.title, body: copy.body, data: { screen: '/(tabs)/learn' } },
+                    );
+                    store.setLastFinnCopyTitle(copy.title);
+                }
+
+                // Safety net: never leave more than 2 notifications scheduled
+                await enforceNotificationCap(2);
+
+            } catch { /* scheduler must never crash the app */ }
+        })();
     }, [permissionGranted, preferences, lastScheduledDate, lastFinnCopyTitle]);
 }

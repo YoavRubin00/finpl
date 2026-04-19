@@ -9,6 +9,7 @@ export interface Flashcard {
   finnTipMood?: 'standard' | 'empathic' | 'happy'; // Controls which mascot expression is shown in the finnTip popup (default: standard)
   isMeme?: boolean; // If true, renders as a meme break card (no XP/progress)
   memeImage?: ImageSourcePropType; // The meme image (local require or uri)
+  hideTextOverlay?: boolean; // If true, hides the Finn text bubble on meme cards and top-aligns the image
   topAudio?: { uri: string }; // Optional Captain Shark audio for the main text
   videoUri?: string; // If set, renders as a full-screen video flashcard
   diveMode?: boolean; // If true, renders as a single image with zoom steps
@@ -57,6 +58,8 @@ export interface Module {
   interModuleGame?: 'investment' | 'crash' | 'myth' | 'dilemma' | 'macro-event';
   /** When interModuleGame === 'macro-event', the specific macro event id to show */
   interModuleMacroEventId?: string;
+  /** When set to 'short', renders a FinPlay Short cinematic intro instead of InteractiveIntroCard */
+  introVariant?: 'short';
 }
 
 export interface Chapter {

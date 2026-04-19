@@ -38,7 +38,7 @@ const LOTTIE_ARROW = require('../../../../assets/lottie/wired-flat-3381-arrows-l
 const SENTIMENT_COLORS: Record<MarketSentiment, string> = {
   fear: '#ef4444',
   greed: '#22c55e',
-  neutral: '#60a5fa',
+  neutral: '#1d4ed8',
 };
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
@@ -182,7 +182,7 @@ function HeadlineTicker({
               ? 'rgba(239,68,68,0.08)'
               : sentiment === 'greed'
                 ? 'rgba(34,197,94,0.08)'
-                : 'rgba(96,165,250,0.08)',
+                : 'rgba(29,78,216,0.08)',
         },
       ]}
     >
@@ -974,6 +974,7 @@ const styles = StyleSheet.create({
     backgroundColor: SIM3.trackBg,
     borderRadius: 3,
     overflow: 'hidden',
+    transform: [{ scaleX: -1 }],
   },
   progressFill: {
     height: '100%',

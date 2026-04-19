@@ -38,7 +38,7 @@ function formatDate(iso: string): string {
   return d.toLocaleDateString("he-IL", { day: "numeric", month: "short" });
 }
 
-export default function SavedItemsScreen() {
+export function SavedItemsScreen() {
   const theme = useTheme();
   const router = useRouter();
   const isPro = useSubscriptionStore(

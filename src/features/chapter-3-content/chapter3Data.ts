@@ -143,13 +143,14 @@ export const chapter3Data: Chapter = {
     },
     {
       id: 'mod-3-16',
+      introVariant: 'short' as const,
       title: 'הפסיכולוגיה של הכסף',
       videoHook:
         'למה הקשבתי להם?! מכרתי הכל כי הבורסה "מתרסקת" — ויומיים אחרי היא זינקה בלעדיי.',
       videoHookAsset: { uri: 'https://pub-34f62012f7364bb5bc3b560ea61b72ce.r2.dev/video/hook/module-16.mp4' },
       interactiveIntro:
         'בעולם ההשקעות, ההחלטות הטובות ביותר מתקבלות מתוך הבנה שיטתית ולא מתוך רגש. נלמד באילו דרכים הפסיכולוגיה משפיעה על הבחירות שלנו, וכיצד נוכל לאמץ משמעת שמובילה לצמיחה בטוחה.',
-      introAudio: { uri: 'https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/audio/intros/mod-3-16-v2.mp3' },
+      introAudio: { uri: 'https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/audio/shorts/mod-3-16-short-tzrffE7AfJNd35D60myi1Sx2DDDA7W.mp3' },
       flashcards: [{
           id: 'fc-3-16-1',
           text: 'שנאת הפסד: מחקרים של כהנמן וטברסקי הוכיחו שהכאב הפסיכולוגי מהפסד של 1,000 ש"ח חזק פי 2 מההנאה שברווח של 1,000 ש"ח. לכן משקיעים נוטים למכור בלחץ כשהשוק יורד, בדיוק כשכדאי לקנות.',
@@ -170,6 +171,7 @@ export const chapter3Data: Chapter = {
           text: 'הפסיכולוגיה של הכסף',
           isMeme: true,
           memeImage: { uri: 'https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/memes/mod_3_16.png' },
+          hideTextOverlay: true,
         },
         {
           id: 'fc-3-16-3',
@@ -422,12 +424,13 @@ export const chapter3Data: Chapter = {
     },
     {
       id: 'mod-3-18',
+      introVariant: 'short' as const,
       title: 'מסלולי השקעה',
       videoHook:
         'שמתי 100,000 ש"ח במסלול "שמרני" ואז גיליתי שהחבר שלי עשה פי 3 ב"מנייתי". מה פספסתי?',
       interactiveIntro:
         'כל קופת גמל, קרן פנסיה או קרן השתלמות מציעה מסלולי השקעה שונים – מ"שמרני" ועד "מנייתי". ההבדל ביניהם יכול לשנות לכם מאות אלפי שקלים לאורך החיים. בואו נבין איך לבחור את המסלול שמתאים בדיוק לגיל, לסיכון ולמטרות שלכם.',
-      introAudio: { uri: 'https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/audio/intros/mod-3-18-v2.mp3' },
+      introAudio: { uri: 'https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/audio/shorts/mod-3-18-short-vjVvtmtpZFUI8mS6xabZ6ZwPKsoJ6h.mp3' },
       flashcards: [{
           id: 'fc-3-18-1',
           text: 'מסלול [[מניה|מנייתי]] (אגרסיבי): מושקע ברובו ב[[מניה|מניות]] (לרוב 50%-100%). מתאים לצעירים עם אופק השקעה ארוך (15+ שנה). [[תנודתיות|התנודתיות]] גבוהה – אפשר לראות ירידות של 30% בשנה אחת, אבל היסטורית התשואה הממוצעת הגבוהה ביותר.',

@@ -26,7 +26,7 @@ import LottieView from "lottie-react-native";
 import { AnimatedPressable } from "../../../components/ui/AnimatedPressable";
 import { ConfettiExplosion } from "../../../components/ui/ConfettiExplosion";
 import { FINN_HAPPY } from "../../retention-loops/finnMascotConfig";
-import { SPRING_BOUNCY } from "../../../utils/animations";
+import { SPRING_BOUNCY, SPRING_SMOOTH } from "../../../utils/animations";
 import {
   tapHaptic,
   successHaptic,
@@ -410,8 +410,7 @@ function DraggableItem({
       onStartShouldSetPanResponder: () => true,
       onMoveShouldSetPanResponder: () => true,
       onPanResponderGrant: () => {
-        tapHaptic();
-        scale.value = withSpring(1.15, SPRING_BOUNCY);
+        scale.value = withSpring(1.1, SPRING_SMOOTH);
       },
       onPanResponderMove: (_, gesture) => {
         translateX.value = gesture.dx;
@@ -422,14 +421,13 @@ function DraggableItem({
         const dropY = gesture.moveY;
         const accepted = onDropRef.current(dropX, dropY);
         if (!accepted) {
-          // Spring back
-          translateX.value = withSpring(0, SPRING_BOUNCY);
-          translateY.value = withSpring(0, SPRING_BOUNCY);
+          translateX.value = withSpring(0, SPRING_SMOOTH);
+          translateY.value = withSpring(0, SPRING_SMOOTH);
         } else {
-          translateX.value = withSpring(0, SPRING_BOUNCY);
-          translateY.value = withSpring(0, SPRING_BOUNCY);
+          translateX.value = withSpring(0, SPRING_SMOOTH);
+          translateY.value = withSpring(0, SPRING_SMOOTH);
         }
-        scale.value = withSpring(1, SPRING_BOUNCY);
+        scale.value = withSpring(1, SPRING_SMOOTH);
       },
     }),
   ).current;

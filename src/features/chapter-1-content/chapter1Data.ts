@@ -15,7 +15,9 @@ export const chapter1Data: Chapter = {
       videoHookAsset: { uri: 'https://pub-34f62012f7364bb5bc3b560ea61b72ce.r2.dev/video/hook/module-4.mp4' },
       interactiveIntro:
         'תדמיינו כסף שעובד בשבילכם גם כשאתם ישנים. נגלה יחד איך המנגנון המתמטי הפשוט של ריבית דריבית יכול להפוך סכומים קטנים לחיסכון משמעותי לאורך זמן, ולהיות המנוע שידחוף את העתיד הכלכלי שלכם קדימה.',
+      introVariant: 'short' as const,
       introAudio: { uri: 'https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/audio/intros/mod-1-1-v2.mp3' },
+      introImage: { uri: 'https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/compound-chart.png' },
       flashcards: [{
           id: 'fc-1-4-1',
           text: 'הגדרה מתמטית: [[ריבית דריבית]] היא צבירת [[תשואה]] לא רק על קרן ההשקעה המקורית, אלא גם על הרווחים שנצברו בתקופות קודמות.',
@@ -144,13 +146,15 @@ export const chapter1Data: Chapter = {
     },
     {
       id: 'mod-1-2',
+      introVariant: 'short' as const,
       title: 'מלכודת המינוס',
       videoHook:
         'אבל יש לי מסגרת בחשבון!',
       videoHookAsset: { uri: 'https://pub-34f62012f7364bb5bc3b560ea61b72ce.r2.dev/video/hook/module-1-2.mp4' },
       interactiveIntro:
         'המינוס אינו כסף פנוי, אלא הלוואה יקרה שנמצאת אצל רבים באופן קבוע בחשבון. נלמד לזהות נכון את העלויות של משיכת היתר, ואיך אפשר לנהל את הבלאגן ולחזור בבטחה אל הפלוס.',
-      introAudio: { uri: 'https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/audio/intros/mod-1-2-v2.mp3' },
+      introAudio: { uri: 'https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/audio/shorts/mod-1-2-short-UovFEjTBkAHhYRbO1AlLbrmsut5ERX.mp3' },
+      introImage: { uri: 'https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/overdraft-trap.png' },
       flashcards: [{
           id: 'fc-1-2-1',
           text: 'הגדרת משיכת יתר: המינוס אינו "יתרה פנויה" אלא הלוואה לזמן קצר, לרוב לא מובטחת, שהבנק מעמיד לרשותכם ב[[ריבית]] הגבוהה ביותר בשוק.',
@@ -461,13 +465,14 @@ export const chapter1Data: Chapter = {
     },
     {
       id: 'mod-1-4',
+      introVariant: 'short' as const,
       title: 'תזרים ותקציב',
       videoHook:
         'הזמנתי סושי ב-200 שקל... ואז פתחתי את האפליקציה של הבנק.',
       videoHookAsset: { uri: 'https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/video/hook/module-1-1.mp4' },
       interactiveIntro:
         'תזרים יציב הוא הבסיס לצמיחה. תלמדו איך לחלק את העוגה בין הוצאות שוטפות וחיסכון, תוך כדי שמירה על המרחב ליהנות מהחיים ולבנות בסיס חזק לעתיד. הפורמולה המנצחת מתחילה כאן.',
-      introAudio: { uri: 'https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/audio/intros/mod-1-4-v2.mp3' },
+      introAudio: { uri: 'https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/audio/shorts/mod-1-4-short-3F7UdU3SPLGwmLcPIHaEekru2g1XDb.mp3' },
       flashcards: [{
           id: 'fc-1-1-1',
           text: 'למה בכלל צריך [[תקציב]]? בבסיס הכלכלה עומדת הדילמה של משאבים מוגבלים מול רצונות אינסופיים. ניהול תקציב אינו "הגבלה" אלא כלי שעוזר לך להפיק את המקסימום מכל שקל פנוי.',
@@ -827,13 +832,14 @@ export const chapter1Data: Chapter = {
     },
     {
       id: 'mod-1-6',
+      introVariant: 'short' as const,
       title: 'הלוואות צרכניות',
       videoHook:
         'הרכב שייך לבנק ואני משלם 12% ריבית כמו פראייר.',
       videoHookAsset: { uri: 'https://pub-34f62012f7364bb5bc3b560ea61b72ce.r2.dev/video/hook/module-6-1.mp4' },
       interactiveIntro:
         'הלוואות יכולות להיות כלי פיננסי או נטל כבד. במודול הזה נכיר את ההבדל החשוב בין הלוואה עסקית (או מינוף יצרני להגדלת הון), אל מול לקחת הלוואה לצורך צרכני, נבין מתי השימוש באשראי נכון וכדאי.',
-      introAudio: { uri: 'https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/audio/intros/mod-1-6-v2.mp3' },
+      introAudio: { uri: 'https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/audio/shorts/mod-1-6-short-ZmGT6OZBiKmd9H1dcNsPcIWniRHbG2.mp3' },
       flashcards: [{
           id: 'fc-1-6-1',
           text: 'חוב יצרני מול חוב צרכני: חוב יצרני (מינוף) משמש לרכישת נכס שמניב [[תשואה]] גבוהה מעלות [[ריבית|הריבית]]. חוב צרכני משמש לרכישת מוצרים מתכלים ושוחק את העושר.',
@@ -1186,13 +1192,14 @@ export const chapter1Data: Chapter = {
     },
     {
       id: 'mod-1-8',
+      introVariant: 'short' as const,
       title: 'מלכודות שיווקיות',
       videoHook:
         'נכנסתי לקנות רק חלב... יצאתי עם מכשיר פונדו.',
       videoHookAsset: { uri: 'https://pub-34f62012f7364bb5bc3b560ea61b72ce.r2.dev/video/hook/module-8.mp4' },
       interactiveIntro:
         'כל משווק רוצה שנקנה אצלו כמה שיותר. הגידו שלום לטריקים השיווקיים הנפוצים ואיך לקבל החלטות מודעות, להימנע מרכישות שאינן נחוצות ולזהות אילו מבצעים הם אכן משתלמים לך כלקוח.',
-      introAudio: { uri: 'https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/audio/intros/mod-1-8-v2.mp3' },
+      introAudio: { uri: 'https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/audio/shorts/mod-1-8-short-dJ5fPvI4N1LbVHteYukDSz1fld8j4Z.mp3' },
       flashcards: [
         {
           id: 'fc-1-8-1',

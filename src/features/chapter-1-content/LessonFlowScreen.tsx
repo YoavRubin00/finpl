@@ -28,6 +28,10 @@ import { LinearGradient } from "expo-linear-gradient";
 import { ChevronRight, ChevronLeft, Bookmark } from "lucide-react-native";
 import { useLessonMusic } from "../../hooks/useLessonMusic";
 import { chapter0Data } from "../chapter-0-content/chapter0Data";
+import { WhatIsMoneyIntro } from "../chapter-0-content/WhatIsMoneyIntro";
+import { CompoundInterestIntro } from "./CompoundInterestIntro";
+import { ModuleIntroShort } from "./ModuleIntroShort";
+import { MODULE_INTRO_CONFIGS } from "./moduleIntroConfigs";
 import { chapter1Data } from "./chapter1Data";
 import { chapter2Data } from "../chapter-2-content/chapter2Data";
 import { chapter3Data } from "../chapter-3-content/chapter3Data";
@@ -49,6 +53,7 @@ import { QuizStartPopup } from "./QuizStartPopup";
 import { SimulatorLoader } from "./SimulatorLoader";
 import { useAITelemetryStore } from "../ai-personalization/useAITelemetryStore";
 import { useEconomyStore } from "../economy/useEconomyStore";
+import { useUserStatsStore } from "../user-stats/useUserStatsStore";
 import { useWisdomStore } from "../wisdom-flashes/useWisdomStore";
 import { useSubscriptionStore } from "../subscription/useSubscriptionStore";
 import { useUpgradeModalStore } from "../../stores/useUpgradeModalStore";
@@ -84,7 +89,7 @@ import { PizzaIndexScreen } from "../fun/PizzaIndexScreen";
 import { LifelineChatOverlay } from "../social/LifelineChatOverlay";
 import { ProBadge } from "../../components/ui/ProBadge";
 import LottieView from "lottie-react-native";
-import { FINN_LOTTIE_SOURCE, FINN_HELLO, FINN_STANDARD, FINN_HAPPY, FINN_EMPATHIC, getFinnSource, getFinnImage } from "../retention-loops/finnMascotConfig";
+import { FINN_LOTTIE_SOURCE, FINN_HELLO, FINN_STANDARD, FINN_HAPPY, FINN_EMPATHIC, FINN_DANCING, getFinnSource, getFinnImage } from "../retention-loops/finnMascotConfig";
 import { FINN_MEME_REACTIONS } from "../fun/finnJokesData";
 import type { FinnAnimationState } from "../retention-loops/finnMascotConfig";
 import { FlashcardInfographic, FINN_MAP } from "./FlashcardInfographic";
@@ -468,9 +473,7 @@ function FlashcardCard({
           } else {
             sound.unloadAsync();
           }
-        } catch (e) {
-          console.log('Failed to play flashcard top audio:', e);
-        }
+        } catch { /* audio playback failed — silent */ }
       }
     }
 
@@ -582,19 +585,25 @@ function FlashcardCard({
         <View style={{ flex: 1 }}>
           <View style={{ flex: 1, backgroundColor: "#1e293b", borderRadius: 20, overflow: "hidden", position: "relative" }}>
             {card.memeImage ? (
-              <Animated.Image source={card.memeImage} style={{ width: "100%", height: "100%", position: "absolute" }} resizeMode="cover" />
+              <Animated.Image
+                source={card.memeImage}
+                style={{ width: "100%", height: "100%", position: "absolute", top: 0 }}
+                resizeMode={card.hideTextOverlay ? "contain" : "cover"}
+              />
             ) : null}
-            
-            <View style={{ position: "absolute", bottom: 0, left: 0, right: 0, padding: 20, backgroundColor: card.memeImage ? "rgba(15, 23, 42, 0.85)" : "transparent" }}>
-              <View style={{ flexDirection: "row-reverse", alignItems: "center", gap: 10 }}>
-                <ExpoImage source={FINN_HAPPY} accessible={false} style={{ width: 64, height: 64 }} contentFit="contain" />
-                <View style={{ flex: 1, backgroundColor: "#334155", borderRadius: 14, padding: 14, borderWidth: 1, borderColor: "#475569" }}>
-                  <Text style={{ writingDirection: "rtl", textAlign: "right", fontSize: 16, color: "#f8fafc", fontWeight: "700", lineHeight: 24 }}>
-                    {card.text || FINN_MEME_REACTIONS[Math.floor(Math.random() * FINN_MEME_REACTIONS.length)]}
-                  </Text>
+
+            {!card.hideTextOverlay && (
+              <View style={{ position: "absolute", bottom: 0, left: 0, right: 0, padding: 20, backgroundColor: card.memeImage ? "rgba(15, 23, 42, 0.85)" : "transparent" }}>
+                <View style={{ flexDirection: "row-reverse", alignItems: "center", gap: 10 }}>
+                  <ExpoImage source={FINN_HAPPY} accessible={false} style={{ width: 64, height: 64 }} contentFit="contain" />
+                  <View style={{ flex: 1, backgroundColor: "#334155", borderRadius: 14, padding: 14, borderWidth: 1, borderColor: "#475569" }}>
+                    <Text style={{ writingDirection: "rtl", textAlign: "right", fontSize: 16, color: "#f8fafc", fontWeight: "700", lineHeight: 24 }}>
+                      {card.text || FINN_MEME_REACTIONS[Math.floor(Math.random() * FINN_MEME_REACTIONS.length)]}
+                    </Text>
+                  </View>
                 </View>
               </View>
-            </View>
+            )}
           </View>
           <View style={{ paddingHorizontal: 16, paddingVertical: 8 }}>
             <AnimatedPressable
@@ -712,9 +721,10 @@ function FlashcardCard({
               {(() => {
                 // Strip intro phrase (before ':') — it's now shown in the title row
                 const colonIdx = card.text.indexOf(":");
-                const bodyText = (colonIdx > 0 && colonIdx < 80)
+                const rawBody = (colonIdx > 0 && colonIdx < 80)
                   ? card.text.substring(colonIdx + 1).trim()
                   : card.text;
+                const bodyText = /^[A-Za-z]/.test(rawBody) ? '\u200F' + rawBody : rawBody;
                 if (!bodyText || (isDiveMode && diveStep > 0 && card.hideTextOnDive)) return null;
                 return (
                   <Text style={{ ...RTL_STYLE, fontSize: bodyText.length > 100 ? 17 : 21, lineHeight: bodyText.length > 100 ? 28 : 34, color: "#1c1917", fontWeight: "600", marginBottom: 16 }}>
@@ -1273,19 +1283,25 @@ function SummaryScreen({
               </Text>
             )}
 
-            {/* 5 medal Lotties */}
-            <View style={{ flexDirection: "row", justifyContent: "center", gap: 4, marginTop: 14 }}>
-              {[0, 1, 2, 3, 4].map((i) => (
-                <Animated.View key={i} entering={FadeIn.delay(300 + i * 120).duration(350)} accessible={false}>
-                  <LottieView
-                    source={require("../../../assets/lottie/wired-flat-3263-trophy-circle-hover-roll.json")}
-                    style={{ width: 44, height: 44, opacity: i < completedInChapter ? 1 : 0.25 }}
-                    autoPlay={i < completedInChapter}
-                    loop={false}
-                  />
-                </Animated.View>
-              ))}
-            </View>
+            {/* Dancing shark for ETF module, trophy circles for all others */}
+            {chapterModules[currentModIdx]?.id === 'mod-4-21' ? (
+              <Animated.View entering={FadeIn.delay(300).duration(500)} style={{ marginTop: 14 }} accessible={false}>
+                <ExpoImage source={FINN_DANCING} style={{ width: 120, height: 120 }} contentFit="contain" />
+              </Animated.View>
+            ) : (
+              <View style={{ flexDirection: "row-reverse", justifyContent: "center", gap: 4, marginTop: 14 }}>
+                {[0, 1, 2, 3, 4].map((i) => (
+                  <Animated.View key={i} entering={FadeIn.delay(300 + i * 120).duration(350)} accessible={false}>
+                    <LottieView
+                      source={require("../../../assets/lottie/wired-flat-3263-trophy-circle-hover-roll.json")}
+                      style={{ width: 44, height: 44, opacity: i < completedInChapter ? 1 : 0.25 }}
+                      autoPlay={i < completedInChapter}
+                      loop={false}
+                    />
+                  </Animated.View>
+                ))}
+              </View>
+            )}
           </View>
         )}
 
@@ -2106,15 +2122,31 @@ export function LessonFlowScreen() {
     }
   }, [isModuleAccessible]);
 
+  /** Navigate past mod-0-1 to the next incomplete module (called from register nudge buttons) */
+  function navigateToNextModuleNormally() {
+    for (const ch of ALL_CHAPTERS_ORDERED) {
+      const completed = progress[chapterStoreKey(ch.id)]?.completedModules ?? [];
+      const nextIdx = ch.modules.findIndex((m) => !m.comingSoon && (isPro || !PRO_LOCKED_SIMS.has(m.id)) && !completed.includes(m.id));
+      if (nextIdx >= 0) {
+        const nextMod = ch.modules[nextIdx];
+        setCurrentChapter(chapterStoreKey(ch.id));
+        setCurrentModule(nextIdx);
+        router.replace(`/lesson/${nextMod.id}?chapterId=${ch.id}` as never);
+        return;
+      }
+    }
+    router.replace("/(tabs)" as never);
+  }
+
   /** Navigate to user's next sequential module */
   function goToNextSequentialModule() {
-    // After completing the first module (mod-0-1), go to the general
-    // learning page so the user sees the unlocked next module on the map.
+    // After completing the first module (mod-0-1), show register nudge for guests;
+    // navigation advances when the user acts on the nudge (any button).
     if (id === 'mod-0-1') {
       if (isGuest) {
-        setShowRegisterNudge(true); // Guest → register nudge first
+        setShowRegisterNudge(true);
       } else {
-        router.replace("/pricing" as never); // Registered → Pro upsell
+        navigateToNextModuleNormally();
       }
       return;
     }
@@ -2208,10 +2240,13 @@ export function LessonFlowScreen() {
   const [showRegisterNudge, setShowRegisterNudge] = useState(false);
   const [showPizzaModal, setShowPizzaModal] = useState(false);
   const [showCh0BullshitIntro, setShowCh0BullshitIntro] = useState(false);
+  const [showMod01BarterNotif, setShowMod01BarterNotif] = useState(false);
   const hasSeenPizza = useTutorialStore((s) => s.hasSeenPizzaIndexModal);
   const markPizzaSeen = useTutorialStore((s) => s.markPizzaIndexSeen);
   const hasSeenCh0Bullshit = useTutorialStore((s) => s.hasSeenCh0BullshitInterstitial);
   const markCh0BullshitSeen = useTutorialStore((s) => s.markCh0BullshitInterstitialSeen);
+  const hasSeenMod01BarterNotif = useTutorialStore((s) => s.hasSeenMod01BarterNotif);
+  const markMod01BarterNotifSeen = useTutorialStore((s) => s.markMod01BarterNotifSeen);
   const isGuest = useAuthStore((s) => s.isGuest);
   const [chestFullScreen, setChestFullScreen] = useState(false);
   const [chestClaimed, setChestClaimed] = useState(false);
@@ -2387,6 +2422,14 @@ export function LessonFlowScreen() {
       setShowCh0BullshitIntro(true);
     }
   }, [phase, mod, hasSeenCh0Bullshit]);
+
+  // mod-0-1 barter notif — dancing shark joke after completing "מה זה בכלל כסף"
+  useEffect(() => {
+    if (!mod) return;
+    if (phase === "summary" && mod.id === "mod-0-1" && !hasSeenMod01BarterNotif) {
+      setShowMod01BarterNotif(true);
+    }
+  }, [phase, mod, hasSeenMod01BarterNotif]);
 
   // Complete module and show rewards when entering summary phase
   useEffect(() => {
@@ -2835,10 +2878,11 @@ export function LessonFlowScreen() {
               const cardText = mod.flashcards[flashcardIndex]?.text ?? "";
               const colonIdx = cardText.indexOf(":");
               if (colonIdx > 0 && colonIdx < 80) {
-                titleText = cardText.substring(0, colonIdx)
+                const extracted = cardText.substring(0, colonIdx)
                   .replace(/\[\[([^|\]]+)\|?[^\]]*\]\]/g, "$1")
                   .replace(/\s*\([A-Za-z][A-Za-z\s&/.,'%\-–—:;$#0-9]*\)\s*/g, " ")
                   .trim();
+                titleText = /^[A-Za-z]/.test(extracted) ? '\u200F' + extracted : extracted;
               }
             }
             return (
@@ -2927,19 +2971,58 @@ export function LessonFlowScreen() {
         {/* ── Intro phase ── */}
         {phase === "intro" && (
           <Animated.View style={[contentStyle, { flex: 1 }]}>
-            <InteractiveIntroCard
-              introText={mod.interactiveIntro}
-              audioUri={mod.introAudio?.uri}
-              introImageUri={mod.introImage?.uri}
-              onStart={() => {
-                if (SIM_FIRST_MODULES.has(mod.id) && MODULES_WITH_SIM.has(mod.id)) {
-                  setPhase("sim"); // Skip sim-intro for sim-first modules — go straight to sim
-                } else {
-                  setPhase("flashcards");
-                }
-              }}
-              unitColors={unitColors}
-            />
+            {mod.introVariant === 'short' && mod.id === 'mod-1-1' ? (
+              <CompoundInterestIntro
+                onStart={() => {
+                  if (SIM_FIRST_MODULES.has(mod.id) && MODULES_WITH_SIM.has(mod.id)) {
+                    setPhase("sim");
+                  } else {
+                    setPhase("flashcards");
+                  }
+                }}
+                unitColors={unitColors}
+                chartImageUri={mod.introImage?.uri}
+                audioUri={mod.introAudio?.uri}
+              />
+            ) : mod.introVariant === 'short' && MODULE_INTRO_CONFIGS[mod.id] ? (
+              <ModuleIntroShort
+                onStart={() => {
+                  if (SIM_FIRST_MODULES.has(mod.id) && MODULES_WITH_SIM.has(mod.id)) {
+                    setPhase("sim");
+                  } else {
+                    setPhase("flashcards");
+                  }
+                }}
+                unitColors={unitColors}
+                config={MODULE_INTRO_CONFIGS[mod.id]}
+                audioUri={mod.introAudio?.uri}
+              />
+            ) : mod.introVariant === 'short' ? (
+              <WhatIsMoneyIntro
+                onStart={() => {
+                  if (SIM_FIRST_MODULES.has(mod.id) && MODULES_WITH_SIM.has(mod.id)) {
+                    setPhase("sim");
+                  } else {
+                    setPhase("flashcards");
+                  }
+                }}
+                unitColors={unitColors}
+              />
+            ) : (
+              <InteractiveIntroCard
+                introText={mod.interactiveIntro}
+                audioUri={mod.introAudio?.uri}
+                introImageUri={mod.introImage?.uri}
+                onStart={() => {
+                  if (SIM_FIRST_MODULES.has(mod.id) && MODULES_WITH_SIM.has(mod.id)) {
+                    setPhase("sim");
+                  } else {
+                    setPhase("flashcards");
+                  }
+                }}
+                unitColors={unitColors}
+              />
+            )}
           </Animated.View>
         )}
 
@@ -3139,6 +3222,8 @@ export function LessonFlowScreen() {
                               if (!isReplay) {
                                 completeModule(mod.id);
                                 useEconomyStore.getState().completeDailyTask();
+                                const durationSec = Math.round((Date.now() - moduleStartTimeRef.current) / 1000);
+                                useUserStatsStore.getState().recordModuleDuration(durationSec);
                               }
                               const eco = useEconomyStore.getState();
                               eco.addCoins(drop.rewards.coins);
@@ -3640,8 +3725,8 @@ export function LessonFlowScreen() {
 
       {/* Registration nudge for guests after mod-0-1 */}
       {showRegisterNudge && (
-        <Modal visible transparent animationType="fade" onRequestClose={() => { setShowRegisterNudge(false); router.replace("/pricing" as never); }}>
-          <Pressable style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.6)", justifyContent: "center", alignItems: "center", paddingHorizontal: 24 }} onPress={() => { setShowRegisterNudge(false); router.replace("/pricing" as never); }} accessibilityRole="button" accessibilityLabel="סגור">
+        <Modal visible transparent animationType="fade" onRequestClose={() => { setShowRegisterNudge(false); navigateToNextModuleNormally(); }}>
+          <Pressable style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.6)", justifyContent: "center", alignItems: "center", paddingHorizontal: 24 }} onPress={() => { setShowRegisterNudge(false); navigateToNextModuleNormally(); }} accessibilityRole="button" accessibilityLabel="סגור">
             <Pressable style={{ backgroundColor: "#e0f2fe", borderRadius: 24, padding: 24, width: "100%", maxWidth: 340, alignItems: "center" }} onPress={() => {}} accessible={false}>
               <ExpoImage source={FINN_HAPPY} accessible={false} style={{ width: 80, height: 80, marginBottom: 12 }} contentFit="contain" />
               <Text style={{ ...RTL_STYLE, fontSize: 18, fontWeight: "900", color: "#0c4a6e", marginBottom: 10, textAlign: "center" }}>
@@ -3651,7 +3736,12 @@ export function LessonFlowScreen() {
                 הירשם בחינם כדי שהנתונים שלך לא יאבדו ותוכל להמשיך מאיפה שהפסקת
               </Text>
               <Pressable
-                onPress={() => { tapHaptic(); setShowRegisterNudge(false); router.push("/(auth)/register" as never); }}
+                onPress={() => {
+                  tapHaptic();
+                  const returnTo = encodeURIComponent(`/lesson/${id}?chapterId=${chapterId}`);
+                  router.push(`/(auth)/register?returnTo=${returnTo}` as never);
+                  setShowRegisterNudge(false);
+                }}
                 style={{ backgroundColor: "#0ea5e9", borderRadius: 14, paddingVertical: 14, paddingHorizontal: 32, width: "100%", alignItems: "center", borderBottomWidth: 4, borderBottomColor: "#0369a1" }}
                 accessibilityRole="button"
                 accessibilityLabel="הרשם"
@@ -3659,7 +3749,7 @@ export function LessonFlowScreen() {
                 <Text style={{ fontSize: 16, fontWeight: "800", color: "#fff" }}>הרשם</Text>
               </Pressable>
               <Pressable
-                onPress={() => { tapHaptic(); setShowRegisterNudge(false); router.replace("/pricing" as never); }}
+                onPress={() => { tapHaptic(); setShowRegisterNudge(false); navigateToNextModuleNormally(); }}
                 style={{ marginTop: 12, paddingVertical: 8 }}
                 accessibilityRole="button"
                 accessibilityLabel="המשך"
@@ -3733,6 +3823,57 @@ export function LessonFlowScreen() {
               <Text style={{ fontSize: 16, fontWeight: "900", color: "#ffffff", writingDirection: "rtl" }}>המשך</Text>
             </Pressable>
           </View>
+        </View>
+      </Modal>
+
+      {/* mod-0-1 barter notif — dancing shark after "מה זה בכלל כסף" */}
+      <Modal
+        visible={showMod01BarterNotif}
+        transparent
+        animationType="fade"
+        statusBarTranslucent
+        onRequestClose={() => {
+          markMod01BarterNotifSeen();
+          setShowMod01BarterNotif(false);
+        }}
+      >
+        <View style={{ flex: 1, backgroundColor: "rgba(3,7,18,0.78)", justifyContent: "center", alignItems: "center", paddingHorizontal: 24 }}>
+          <Animated.View entering={FadeInDown.duration(400).springify().damping(14)} style={{ width: "100%", maxWidth: 380, backgroundColor: "#f0fdf4", borderRadius: 24, paddingHorizontal: 22, paddingTop: 28, paddingBottom: 18, borderWidth: 1.5, borderColor: "rgba(34,197,94,0.4)", shadowColor: "#22c55e", shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.3, shadowRadius: 18, elevation: 14, alignItems: "center" }}>
+            <ExpoImage source={FINN_DANCING} accessible={false} style={{ width: 100, height: 100, marginBottom: 12 }} contentFit="contain" />
+            <Text style={{ fontSize: 17, fontWeight: "900", color: "#15803d", writingDirection: "rtl", textAlign: "center", marginBottom: 8, lineHeight: 26 }}>
+              גם אני מבצע מסחר עם אחי התאום
+            </Text>
+            <Text style={{ fontSize: 13, color: "#4b5563", writingDirection: "rtl", textAlign: "center", lineHeight: 20, marginBottom: 22 }}>
+              אבל אני לפחות לוקח ממנו שקל על הדג 🐟
+            </Text>
+            <Pressable
+              onPress={() => {
+                tapHaptic();
+                markMod01BarterNotifSeen();
+                setShowMod01BarterNotif(false);
+              }}
+              accessibilityRole="button"
+              accessibilityLabel="המשך"
+              style={({ pressed }) => ({
+                backgroundColor: "#0ea5e9",
+                borderRadius: 14,
+                paddingVertical: 14,
+                paddingHorizontal: 40,
+                width: "100%",
+                alignItems: "center",
+                borderBottomWidth: 4,
+                borderBottomColor: "#0369a1",
+                shadowColor: "#0ea5e9",
+                shadowOpacity: 0.35,
+                shadowRadius: 12,
+                shadowOffset: { width: 0, height: 4 },
+                elevation: 6,
+                opacity: pressed ? 0.88 : 1,
+              })}
+            >
+              <Text style={{ fontSize: 16, fontWeight: "900", color: "#ffffff", writingDirection: "rtl", letterSpacing: 0.3 }}>המשך ›</Text>
+            </Pressable>
+          </Animated.View>
         </View>
       </Modal>
 

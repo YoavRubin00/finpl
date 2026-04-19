@@ -231,20 +231,15 @@ export function SharkLoveModal({
 
   useEffect(() => {
     finnBounce.value = withRepeat(
-      withSequence(
-        withTiming(-8, { duration: 2000, easing: Easing.inOut(Easing.sin) }),
-        withTiming(0, { duration: 2000, easing: Easing.inOut(Easing.sin) }),
-      ),
+      withTiming(-8, { duration: 2000, easing: Easing.inOut(Easing.sin) }),
       -1,
-      false,
+      true, // reverse: 0→-8→0→-8... smooth, no jump
     );
+    finnRotate.value = -4;
     finnRotate.value = withRepeat(
-      withSequence(
-        withTiming(-4, { duration: 2000, easing: Easing.inOut(Easing.sin) }),
-        withTiming(4, { duration: 2000, easing: Easing.inOut(Easing.sin) }),
-      ),
+      withTiming(4, { duration: 2000, easing: Easing.inOut(Easing.sin) }),
       -1,
-      false,
+      true, // reverse: -4→4→-4... symmetric, no discontinuity
     );
   }, []);
 
@@ -253,6 +248,7 @@ export function SharkLoveModal({
       { translateY: finnBounce.value },
       { rotate: `${finnRotate.value}deg` },
     ],
+    // worklet-only — never triggers JS bridge
   }));
 
   // Button pulse
@@ -304,17 +300,16 @@ export function SharkLoveModal({
       </View>
 
       <View style={styles.content}>
-        {/* Finn character — bouncing + tilting */}
-        <Animated.View
-          entering={FadeInDown.duration(600).springify().damping(14)}
-          style={[finnStyle, styles.finnContainer]}
-        >
-          <ExpoImage
-            source={FINN_HAPPY}
-            style={styles.finnImage}
-            contentFit="contain"
-            accessible={false}
-          />
+        {/* Finn character — entry wrapper separate from looping transform */}
+        <Animated.View entering={FadeInDown.duration(600).springify().damping(14)}>
+          <Animated.View style={[finnStyle, styles.finnContainer]}>
+            <ExpoImage
+              source={FINN_HAPPY}
+              style={styles.finnImage}
+              contentFit="contain"
+              accessible={false}
+            />
+          </Animated.View>
         </Animated.View>
 
         {/* Blue teardrops around Finn */}

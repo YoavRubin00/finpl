@@ -23,7 +23,7 @@ const LAYER_UNLOCKS: Record<number, LayerUnlock> = {
   2: {
     text: "תרחישים ותוכן מתקדם נפתחו!",
     ctaLabel: "בוא נמשיך ללמוד",
-    route: "/(tabs)/learn",
+    route: "/(tabs)/",
   },
   3: {
     text: "סימולציות מתקדמות נפתחו!",

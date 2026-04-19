@@ -77,7 +77,7 @@ import { CashoutRushCard } from "./minigames/cashout-rush/CashoutRushCard";
 import { FomoKillerCard } from "./minigames/fomo-killer/FomoKillerCard";
 import { DidYouKnowCard } from "./did-you-know/DidYouKnowCard";
 import { GrahamPersonalityFeedCard } from "../graham-personality/GrahamPersonalityFeedCard";
-import { DiamondHandsCard } from "../diamond-hands";
+import { DiamondHandsCard } from "../diamond-hands/DiamondHandsCard";
 import { useStreakCelebration } from "../../hooks/useStreakCelebration";
 import { getPyramidStatus } from "../../utils/progression";
 // Chapter data — all 5 chapters
@@ -857,7 +857,7 @@ export function FinFeedScreen() {
       lastWasVideo = isVideo;
     }
 
-    // Always put daily-dilemma FIRST, then daily-quiz (מבזק) SECOND
+    // daily-dilemma FIRST, daily-quiz (מבזק) pinned at position 5
     // Remove daily-quiz from shuffled position if it ended up there
     const quizIdx = filteredMerged.findIndex((i) => i.type === 'daily-quiz');
     const quizItem = quizIdx >= 0 ? filteredMerged.splice(quizIdx, 1)[0] : null;
@@ -879,7 +879,6 @@ export function FinFeedScreen() {
     const scenarioIdx = filteredMerged.findIndex((i) => i.type === 'scenario');
     const pinnedScenario = scenarioIdx >= 0 ? filteredMerged.splice(scenarioIdx, 1)[0] : null;
 
-    if (quizItem) filteredMerged.unshift(quizItem);
     filteredMerged.unshift({ id: 'daily-dilemma', type: 'daily-dilemma' });
 
     // Pin primary macro event at position 2 (right after dilemma + quiz) — visible to ALL users on first scroll
@@ -898,6 +897,11 @@ export function FinFeedScreen() {
     if (pinnedScenario) {
       const insertAt = Math.min(5, filteredMerged.length);
       filteredMerged.splice(insertAt, 0, pinnedScenario);
+    }
+
+    // Pin daily-quiz (מבזק) at position 5 — visible after a few swipes but not first
+    if (quizItem) {
+      filteredMerged.splice(Math.min(5, filteredMerged.length), 0, quizItem);
     }
 
     // Insert pinned BENBEN creator video at position 7

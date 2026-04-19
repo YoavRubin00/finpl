@@ -1,1 +1,3 @@
-export { default } from '../../src/features/trading-hub/HoldingsScreen';
+import { HoldingsScreen } from '../../src/features/trading-hub/HoldingsScreen';
+
+export default HoldingsScreen;

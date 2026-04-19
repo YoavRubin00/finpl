@@ -15,8 +15,9 @@ if (I18nManager.isRTL) {
 initSentry();
 
 import { Slot, useRouter, useSegments, useRootNavigationState } from "expo-router";
-import { useEffect, useState } from "react";
-import { Text, TextInput } from "react-native";
+import { useEffect, useRef, useState } from "react";
+import { AppState, Text, TextInput } from "react-native";
+import { useUserStatsStore } from "../src/features/user-stats/useUserStatsStore";
 import { setAudioModeAsync } from "expo-audio";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { useFonts } from "@expo-google-fonts/heebo";
@@ -115,6 +116,23 @@ export default function RootLayout() {
 
   useNotificationSetup();
 
+  // ── Session time tracking: foreground/background events ──
+  const foregroundEnteredAt = useRef<number | null>(Date.now());
+  useEffect(() => {
+    const sub = AppState.addEventListener("change", (state) => {
+      if (state === "active") {
+        foregroundEnteredAt.current = Date.now();
+      } else if (state === "background" || state === "inactive") {
+        if (foregroundEnteredAt.current !== null) {
+          const secs = Math.round((Date.now() - foregroundEnteredAt.current) / 1000);
+          foregroundEnteredAt.current = null;
+          useUserStatsStore.getState().addSessionSeconds(secs);
+        }
+      }
+    });
+    return () => sub.remove();
+  }, []);
+
   // ── iOS audio session: allow sounds even when device is on Silent ──
   useEffect(() => {
     setAudioModeAsync({
@@ -185,7 +203,7 @@ export default function RootLayout() {
     if (!isAuthenticated) {
       // Go to onboarding intro (welcome screen with register/guest options)
       const currentPath = segments.join("/");
-      if (currentPath !== "(auth)/onboarding" && currentPath !== "register" && currentPath !== "(auth)/register" && currentPath !== "(auth)/terms") {
+      if (currentPath !== "(auth)/onboarding" && currentPath !== "register" && currentPath !== "(auth)/register" && currentPath !== "(auth)/terms" && currentPath !== "(auth)/sign-in") {
         router.replace("/(auth)/onboarding");
       }
     } else if (!hasCompletedOnboarding) {
