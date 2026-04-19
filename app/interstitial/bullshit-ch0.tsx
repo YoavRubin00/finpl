@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { Text, Pressable, StyleSheet, ScrollView } from "react-native";
 import { Image as ExpoImage } from "expo-image";
-import Animated, { FadeIn, SlideInDown, ZoomIn } from "react-native-reanimated";
+import Animated, { FadeIn, FadeInUp, Easing } from "react-native-reanimated";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import { BullshitSwipeCard } from "../../src/features/finfeed/minigames/bullshit-swipe/BullshitSwipeCard";
@@ -46,30 +46,39 @@ export default function BullshitCh0InterstitialPage() {
       </ScrollView>
 
       {showSpeech && (
-        <Animated.View
-          entering={FadeIn.duration(260)}
-          style={styles.overlay}
-          pointerEvents="auto"
+        <Pressable
+          style={StyleSheet.absoluteFill}
+          onPress={handleContinue}
+          accessibilityRole="button"
+          accessibilityLabel="המשיכו למודולה 4"
         >
-          <Animated.View entering={SlideInDown.springify().damping(16)} style={styles.sheet}>
-            <Animated.View entering={ZoomIn.delay(120).springify().damping(10)}>
-              <ExpoImage source={FINN_HAPPY} style={styles.finn} contentFit="contain" accessible={false} />
+          <Animated.View
+            entering={FadeIn.duration(260)}
+            style={styles.overlay}
+            pointerEvents="box-none"
+          >
+            <Animated.View entering={FadeInUp.duration(480).easing(Easing.out(Easing.cubic))} style={styles.sheet} pointerEvents="box-none">
+              <Animated.View entering={FadeIn.delay(140).duration(380).easing(Easing.out(Easing.cubic))}>
+                <ExpoImage source={FINN_HAPPY} style={styles.finn} contentFit="contain" accessible={false} />
+              </Animated.View>
+
+              <Text style={[styles.speech, RTL]}>
+                זו הסיבה שאני כאן, ללמוד איתכם אפקטיבית, יחד.
+              </Text>
+
+              <Pressable
+                onPress={handleContinue}
+                accessibilityRole="button"
+                accessibilityLabel="המשיכו למודולה 4"
+                style={({ pressed }) => [styles.cta, pressed && { transform: [{ translateY: 2 }] }]}
+              >
+                <Text style={styles.ctaText}>המשך למודולה 4</Text>
+              </Pressable>
+
+              <Text style={[styles.tapHint, RTL]}>או הקישו בכל מקום להמשך</Text>
             </Animated.View>
-
-            <Text style={[styles.speech, RTL]}>
-              זו הסיבה שאני כאן — ללמוד איתכם אפקטיבית, יחד.
-            </Text>
-
-            <Pressable
-              onPress={handleContinue}
-              accessibilityRole="button"
-              accessibilityLabel="המשיכו למודולה 4"
-              style={({ pressed }) => [styles.cta, pressed && { transform: [{ translateY: 2 }] }]}
-            >
-              <Text style={styles.ctaText}>המשך למודולה 4</Text>
-            </Pressable>
           </Animated.View>
-        </Animated.View>
+        </Pressable>
       )}
     </SafeAreaView>
   );
@@ -123,22 +132,33 @@ const styles = StyleSheet.create({
   },
   cta: {
     alignSelf: "stretch",
-    paddingVertical: 16,
+    paddingVertical: 18,
     paddingHorizontal: 28,
     borderRadius: 18,
-    backgroundColor: "#0ea5e9",
+    backgroundColor: "#1e40af",
     alignItems: "center",
-    shadowColor: "#0284c7",
-    shadowOpacity: 0.35,
-    shadowRadius: 12,
+    justifyContent: "center",
+    borderBottomWidth: 4,
+    borderBottomColor: "#1e3a8a",
+    shadowColor: "#1e40af",
+    shadowOpacity: 0.4,
+    shadowRadius: 14,
     shadowOffset: { width: 0, height: 4 },
-    elevation: 8,
+    elevation: 10,
   },
   ctaText: {
-    fontSize: 17,
+    fontSize: 18,
     fontWeight: "900",
     color: "#ffffff",
     letterSpacing: 0.3,
     writingDirection: "rtl",
+    textAlign: "center",
+  },
+  tapHint: {
+    fontSize: 12,
+    color: "#64748b",
+    fontWeight: "600",
+    marginTop: 4,
+    textAlign: "center",
   },
 });

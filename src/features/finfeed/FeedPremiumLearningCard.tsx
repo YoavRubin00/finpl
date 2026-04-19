@@ -139,7 +139,7 @@ export const FeedPremiumLearningCard = React.memo(function FeedPremiumLearningCa
     return () => {
       isActive = false;
       if (playerObj) {
-        try { playerObj.remove(); } catch { /* ignore */ }
+        try { playerObj.pause(); playerObj.remove(); } catch { /* ignore */ }
       }
     };
   }, [step, _isActive, item.finnAudioUrl, item.finnAudioIndex, item.singlePageView, item.tapZones]);

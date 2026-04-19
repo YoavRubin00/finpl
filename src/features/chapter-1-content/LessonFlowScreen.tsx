@@ -484,7 +484,7 @@ function FlashcardCard({
     return () => {
       isActive = false;
       if (playerObj) {
-        try { playerObj.remove(); } catch { /* ignore */ }
+        try { playerObj.pause(); playerObj.remove(); } catch { /* ignore */ }
       }
     };
   }, [card.topAudio?.uri]);
@@ -3820,7 +3820,7 @@ export function LessonFlowScreen() {
               זו הסיבה שאני כאן. ללמד וללמוד ביחד איתך ולא למכור לך סיפורים.
             </Text>
             <Text style={{ fontSize: 13, color: "#64748b", writingDirection: "rtl", textAlign: "right", lineHeight: 20, marginBottom: 18 }}>
-              בפיד שלך תמצא את משחק "סוויפ הבולשיט" — תרגול זיהוי של פרסומות מטעות. בוא נלמד ביחד.
+              מיד נתרגל ביחד — משחק "סוויפ הבולשיט" לזיהוי פרסומות מטעות. בואו נתחיל.
             </Text>
             <Pressable
               onPress={() => {
