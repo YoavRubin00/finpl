@@ -22,7 +22,8 @@ public/
 assets/video/
 assets/videos/
 assets/comics/
-assets/infographics/
+# Only exclude subfolders; root PNGs are required by didYouKnowData.ts
+assets/infographics/*/
 assets/SOUND/
 assets/AUDIO/
 assets/STOCK/
