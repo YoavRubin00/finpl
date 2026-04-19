@@ -1,5 +1,5 @@
 /**
- * SIM 21: בנה את הסל (Build the ETF Basket) — Module 4-21
+ * SIM 21: בנה את הסל (Build the ETF Basket), Module 4-21
  * ETF catalog data for the basket builder simulation.
  */
 
@@ -9,7 +9,7 @@ import type { ETFProduct, ETFBuilderConfig } from './etfBuilderTypes';
 export const ETF_CATALOG: ETFProduct[] = [
   {
     id: 'sp500',
-    name: '‎S&P‎ 500 — מדד 500 הגדולות',
+    name: '‎S&P‎ 500, מדד 500 הגדולות',
     emoji: '🇺🇸',
     type: 'stocks',
     expenseRatio: 0.03,
@@ -19,7 +19,7 @@ export const ETF_CATALOG: ETFProduct[] = [
   },
   {
     id: 'nasdaq100',
-    name: 'NASDAQ 100 — טכנולוגיה',
+    name: 'NASDAQ 100, טכנולוגיה',
     emoji: '💻',
     type: 'stocks',
     expenseRatio: 0.20,
@@ -29,7 +29,7 @@ export const ETF_CATALOG: ETFProduct[] = [
   },
   {
     id: 'gov-bonds',
-    name: 'אג"ח ממשלתי — Government Bonds',
+    name: 'אג"ח ממשלתי, Government Bonds',
     emoji: '🏛️',
     type: 'bonds',
     expenseRatio: 0.10,
@@ -39,7 +39,7 @@ export const ETF_CATALOG: ETFProduct[] = [
   },
   {
     id: 'ta125',
-    name: 'TA-125 — מדד תל אביב 125',
+    name: 'TA-125, מדד תל אביב 125',
     emoji: '🇮🇱',
     type: 'stocks',
     expenseRatio: 0.25,
@@ -49,7 +49,7 @@ export const ETF_CATALOG: ETFProduct[] = [
   },
   {
     id: 'reit-global',
-    name: 'REIT Global — נדל"ן עולמי',
+    name: 'REIT Global, נדל"ן עולמי',
     emoji: '🏠',
     type: 'real-estate',
     expenseRatio: 0.30,
@@ -59,7 +59,7 @@ export const ETF_CATALOG: ETFProduct[] = [
   },
   {
     id: 'emerging',
-    name: 'Emerging Markets — שווקים מתפתחים',
+    name: 'Emerging Markets, שווקים מתפתחים',
     emoji: '🌍',
     type: 'emerging',
     expenseRatio: 0.40,
@@ -69,7 +69,7 @@ export const ETF_CATALOG: ETFProduct[] = [
   },
   {
     id: 'europe-stoxx',
-    name: 'STOXX 600 — אירופה',
+    name: 'STOXX 600, אירופה',
     emoji: '🇪🇺',
     type: 'stocks',
     expenseRatio: 0.15,
@@ -79,7 +79,7 @@ export const ETF_CATALOG: ETFProduct[] = [
   },
   {
     id: 'gold',
-    name: 'Gold ETF — זהב',
+    name: 'Gold ETF, זהב',
     emoji: '🥇',
     type: 'bonds', // treated as defensive asset alongside bonds
     expenseRatio: 0.25,

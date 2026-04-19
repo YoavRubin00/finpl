@@ -1,5 +1,5 @@
 /**
- * SIM 24: מנהל התיקים (Portfolio Manager) — Module 4-24
+ * SIM 24: מנהל התיקים (Portfolio Manager), Module 4-24
  * Hook: allocate budget across 5 assets, run world events, compute grade.
  */
 
@@ -214,7 +214,7 @@ export function usePortfolioManager() {
     return Math.round(val);
   }, [state.eventHistory.length]);
 
-  /** Score — computed only when complete. */
+  /** Score, computed only when complete. */
   const score: PortfolioManagerScore | null = useMemo(() => {
     if (!state.isComplete) return null;
 

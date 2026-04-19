@@ -256,7 +256,7 @@ function YearSlider({
         right: 0,
     }));
 
-    // Pulsing hint arrow — disappears after user interaction
+    // Pulsing hint arrow, disappears after user interaction
     const arrowPulse = useSharedValue(0);
 
     useEffect(() => {
@@ -303,7 +303,7 @@ function YearSlider({
         }),
     ).current;
 
-    // Finger hint follows the thumb position — clamped to stay within slider bounds
+    // Finger hint follows the thumb position, clamped to stay within slider bounds
     const fingerStyle = useAnimatedStyle(() => {
         const clampedX = Math.min(thumbX.value - 11, sliderWidth.current - 36);
         return {
@@ -317,7 +317,7 @@ function YearSlider({
 
     return (
         <View style={{ paddingHorizontal: 24, marginTop: 10 }}>
-            {/* Year display — centered */}
+            {/* Year display, centered */}
             <Text
                 style={{
                     ...TYPE.gradientValue,
@@ -330,7 +330,7 @@ function YearSlider({
 
             {/* Slider with finger hint */}
             <View style={{ position: 'relative', marginTop: 30 }}>
-                {/* Finger hint above thumb — points down */}
+                {/* Finger hint above thumb, points down */}
                 {!hasInteracted && (
                     <Animated.View pointerEvents="none" style={[fingerStyle, { position: 'absolute', top: -75, marginLeft: -80, zIndex: 10, width: 190, alignItems: 'center' }]}>
                         <View style={{ flexDirection: 'row-reverse', alignItems: 'center', backgroundColor: '#ffffff', padding: 6, borderRadius: 12, marginBottom: 4, borderWidth: 1, borderColor: '#0891b2', shadowColor: '#000', shadowOffset: {width: 0, height: 4}, shadowOpacity: 0.1, shadowRadius: 6, elevation: 4 }}>
@@ -489,7 +489,7 @@ function StepperInput({
                     <Text style={{ color: SIM.dark, fontSize: 20, fontWeight: '700' }}>-</Text>
                 </Pressable>
 
-                {/* Value display (read-only — no keyboard) */}
+                {/* Value display (read-only, no keyboard) */}
                 <View
                     style={{ flex: 1, paddingVertical: 10 }}
                     accessibilityLabel={`${label}: ${formatCurrency(value)}`}
@@ -669,7 +669,7 @@ export function CompoundSimScreen({ onComplete }: CompoundSimScreenProps) {
     const investedPercent = state.totalInvested / maxValue;
     const compoundPercent = state.totalCompoundValue / maxValue;
 
-    // Milestone: ₪1M trigger — confetti only
+    // Milestone: ₪1M trigger, confetti only
     useEffect(() => {
         if (state.totalCompoundValue >= MILLION && !milestoneTriggered.current) {
             milestoneTriggered.current = true;
@@ -682,7 +682,7 @@ export function CompoundSimScreen({ onComplete }: CompoundSimScreenProps) {
         }
     }, [state.totalCompoundValue]);
 
-    // Confetti loop — keep spawning while above ₪1M
+    // Confetti loop, keep spawning while above ₪1M
     const handleConfettiComplete = useCallback(() => {
         if (milestoneTriggered.current) {
             setShowConfetti(false);
@@ -769,7 +769,7 @@ export function CompoundSimScreen({ onComplete }: CompoundSimScreenProps) {
 
                   </ScrollView>
 
-                  {/* Sticky actions bar — always visible */}
+                  {/* Sticky actions bar, always visible */}
                   <View style={compoundSimStickyStyles.stickyActionsBar}>
                     <AnimatedPressable onPress={handleReplay} style={simStyles.replayBtn} accessibilityRole="button" accessibilityLabel="שחק שוב" accessibilityHint="מתחיל את הסימולציה מחדש">
                         <View accessible={false}><LottieIcon source={LOTTIE_REPLAY} size={20} /></View>
@@ -821,7 +821,7 @@ export function CompoundSimScreen({ onComplete }: CompoundSimScreenProps) {
                     <Animated.View entering={FadeInUp.delay(500).duration(400)} style={{ flexDirection: 'row-reverse', alignItems: 'center', marginTop: 12, backgroundColor: 'rgba(255,255,255,0.7)', padding: 10, borderRadius: 12, borderWidth: 1, borderColor: '#bae6fd' }}>
                         <ExpoImage source={FINN_STANDARD} accessible={false} style={{ width: 44, height: 44 }} contentFit="contain" />
                         <Text style={[RTL, { flex: 1, fontSize: 13, color: '#0369a1', fontWeight: '700', marginRight: 8, lineHeight: 18 }]}>
-                            אם אינך מבין מה זה אומר — בואו נלמד יחד.
+                            אם אינך מבין מה זה אומר, בואו נלמד יחד.
                         </Text>
                     </Animated.View>
                 </Animated.View>

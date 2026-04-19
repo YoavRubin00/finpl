@@ -29,7 +29,7 @@ interface WebhookBody {
 
 export async function POST(request: Request): Promise<Response> {
   try {
-    // 1. Secure the endpoint — reject immediately if secret not configured
+    // 1. Secure the endpoint, reject immediately if secret not configured
     if (!RC_WEBHOOK_SECRET) {
       return Response.json({ error: 'Webhook not configured' }, { status: 401 });
     }

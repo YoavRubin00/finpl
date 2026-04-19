@@ -40,18 +40,18 @@ const FG_MAX = 100;
 const MIN_CRASH_SECONDS = 3;
 const MAX_CRASH_SECONDS = 12;
 
-// Real historical Fear & Greed Index readings (CNN Fear & Greed — stocks, and alt.me Crypto F&G).
+// Real historical Fear & Greed Index readings (CNN Fear & Greed, stocks, and alt.me Crypto F&G).
 // Values verified against public archives.
 const FG_HISTORY: { date: string; value: number; index: 'CNN' | 'Crypto'; event: string }[] = [
   // Extreme Fear readings
-  { date: '23 מרץ 2020', value: 2, index: 'CNN', event: 'תחתית הקורונה — S&P 500 ב-2,237. 12 חודש אח"כ: +74%.' },
+  { date: '23 מרץ 2020', value: 2, index: 'CNN', event: 'תחתית הקורונה, S&P 500 ב-2,237. 12 חודש אח"כ: +74%.' },
   { date: '24 דצמבר 2018', value: 3, index: 'CNN', event: 'סלאוף של סוף 2018 (חשש מהעלאות ריבית). 12 חודש אח"כ: S&P +29%.' },
   { date: '30 ספטמבר 2022', value: 17, index: 'CNN', event: 'שיא הדוביות של 2022 (ריבית + אינפלציה). תוך שנה S&P עלה 21%.' },
   { date: '18 יוני 2022', value: 6, index: 'Crypto', event: 'אחרי קריסת Terra/Luna. BTC ב-17,600$. שנתיים אח"כ: מעל 70,000$.' },
   // Extreme Greed readings
   { date: '10 נובמבר 2021', value: 84, index: 'Crypto', event: 'שיא BTC ב-69,000$. תוך שנה צנח ל-15,500$ (-77%).' },
   { date: '14 פברואר 2020', value: 97, index: 'CNN', event: 'שבועיים לפני קריסת הקורונה. S&P בשיא 3,386. תוך 5 שבועות: -34%.' },
-  { date: '16 נובמבר 2021', value: 76, index: 'CNN', event: 'שיא 2021 של S&P ב-4,711. 2022 היה שנה דובית — הגרועה מאז 2008.' },
+  { date: '16 נובמבר 2021', value: 76, index: 'CNN', event: 'שיא 2021 של S&P ב-4,711. 2022 היה שנה דובית, הגרועה מאז 2008.' },
   { date: '7 ינואר 2021', value: 75, index: 'Crypto', event: 'BTC שובר שיא ב-42,000$. לקח שנתיים חזרה אחרי קריסת 2022.' },
 ];
 
@@ -89,11 +89,11 @@ function fgLabel(v: number): string {
 }
 
 function fgColor(v: number): string {
-  if (v >= 75) return '#dc2626';  // תאווה קיצונית — אדום
-  if (v >= 56) return '#f97316';  // תאווה — כתום
-  if (v >= 45) return '#eab308';  // ניטרלי — צהוב
-  if (v >= 25) return '#22c55e';  // פחד — ירוק
-  return '#16a34a';               // פחד קיצוני — ירוק כהה
+  if (v >= 75) return '#dc2626';  // תאווה קיצונית, אדום
+  if (v >= 56) return '#f97316';  // תאווה, כתום
+  if (v >= 45) return '#eab308';  // ניטרלי, צהוב
+  if (v >= 25) return '#22c55e';  // פחד, ירוק
+  return '#16a34a';               // פחד קיצוני, ירוק כהה
 }
 
 function formatFG(v: number): string {
@@ -179,7 +179,7 @@ function CashoutGraph({
         )}
       </Svg>
 
-      {/* Grid labels — rendered as RN Text for sharpness */}
+      {/* Grid labels, rendered as RN Text for sharpness */}
       {gridLines.map((gl) => (
         <Text
           key={`label-${gl.value}`}
@@ -201,9 +201,9 @@ function CashoutGraph({
 function GambleWarning() {
   return (
     <Animated.View entering={FadeInUp.duration(300)} style={styles.warningBox}>
-      <Text style={[styles.warningTitle, RTL_CENTER]}>זה לא השקעה — זו רולטה</Text>
+      <Text style={[styles.warningTitle, RTL_CENTER]}>זה לא השקעה, זו רולטה</Text>
       <Text style={[styles.warningBody, RTL]}>
-        הקריסה יכולה להגיע בכל רגע — לכן צריך להשקיע בצורה מחושבת. אין תזמון מנצח, יש רק תכנון.
+        הקריסה יכולה להגיע בכל רגע, לכן צריך להשקיע בצורה מחושבת. אין תזמון מנצח, יש רק תכנון.
         {'\n\n'}
         2,000 ₪ לחודש ב-S&P 500 ל-25 שנה = ~1.6M ₪. בלי דופמין של קריסות, עם דופמין של שקט נפשי.
       </Text>
@@ -322,7 +322,7 @@ export const CashoutRushCard = React.memo(function CashoutRushCard({ isActive: _
     setFinalFG(v);
     setPhase('cashed');
     heavyHaptic();
-    AccessibilityInfo.announceForAccessibility(`יצאת במדד ${Math.round(v)} מתוך 100 — ${fgLabel(v)}.`);
+    AccessibilityInfo.announceForAccessibility(`יצאת במדד ${Math.round(v)} מתוך 100, ${fgLabel(v)}.`);
     finalize(true);
   }, [currentTick, finalize, phase]);
 
@@ -336,7 +336,7 @@ export const CashoutRushCard = React.memo(function CashoutRushCard({ isActive: _
       <View style={styles.container}>
         <View style={styles.cardShell}>
           <ExpoImage source={FINN_STANDARD} style={styles.finLarge} contentFit="contain" accessible={false} />
-          <Text style={[styles.doneTitle, RTL_CENTER]}>Fear or Greed — הושלם להיום</Text>
+          <Text style={[styles.doneTitle, RTL_CENTER]}>Fear or Greed, הושלם להיום</Text>
           <Text style={[styles.doneSub, RTL_CENTER]}>חזור מחר לסיבוב חדש</Text>
         </View>
       </View>
@@ -402,7 +402,7 @@ export const CashoutRushCard = React.memo(function CashoutRushCard({ isActive: _
                   { color: isLoss ? '#dc2626' : isWinning ? '#16a34a' : fgColor(displayFG) },
                 ]}
               >
-                {isWinning ? `יצאת ב-${fgLabel(displayFG)}` : isLoss ? 'תאווה קיצונית — קריסה' : fgLabel(displayFG)}
+                {isWinning ? `יצאת ב-${fgLabel(displayFG)}` : isLoss ? 'תאווה קיצונית, קריסה' : fgLabel(displayFG)}
               </Text>
             </View>
           </>
@@ -441,11 +441,11 @@ export const CashoutRushCard = React.memo(function CashoutRushCard({ isActive: _
               <View style={styles.sharkTextCol}>
                 <Text style={[styles.sharkTitle, RTL, { color: '#16a34a' }]}>יצאת לפני הבועה</Text>
                 <Text style={[styles.sharkBody, RTL]}>
-                  יצאת ב-{Math.round(finalFG)}/100 — {fgLabel(finalFG)}. במציאות: {historicalRef.win.date} — המדד היה {historicalRef.win.value}. {historicalRef.win.event}
+                  יצאת ב-{Math.round(finalFG)}/100, {fgLabel(finalFG)}. במציאות: {historicalRef.win.date}, המדד היה {historicalRef.win.value}. {historicalRef.win.event}
                 </Text>
               </View>
             </View>
-            {/* Inline explainer for "שנה דובית" — relevant whenever the historical
+            {/* Inline explainer for "שנה דובית", relevant whenever the historical
                 event references a bear market (most extreme-greed peaks did precede one). */}
             <View style={{ marginTop: 12 }}>
               <GlossaryInlineToggle glossaryKey="bear-market" />
@@ -462,7 +462,7 @@ export const CashoutRushCard = React.memo(function CashoutRushCard({ isActive: _
               <View style={styles.sharkTextCol}>
                 <Text style={[styles.sharkTitle, RTL, { color: '#dc2626' }]}>נתפסת בתאווה</Text>
                 <Text style={[styles.sharkBody, RTL]}>
-                  הקריסה מגיעה בדיוק כשכולם הכי בטוחים. ההיפך נכון גם הוא — {historicalRef.loss.date} המדד היה {historicalRef.loss.value} (פחד קיצוני). {historicalRef.loss.event}
+                  הקריסה מגיעה בדיוק כשכולם הכי בטוחים. ההיפך נכון גם הוא, {historicalRef.loss.date} המדד היה {historicalRef.loss.value} (פחד קיצוני). {historicalRef.loss.event}
                 </Text>
               </View>
             </View>

@@ -1,5 +1,5 @@
 // ---------------------------------------------------------------------------
-// PRD 32 — US-005: Wealth Network — Constants & Mock Data
+// PRD 32, US-005: Wealth Network, Constants & Mock Data
 // ---------------------------------------------------------------------------
 
 import type { ReferredFriend, ReferralTierInfo, ReferralTier } from "./referralTypes";

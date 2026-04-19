@@ -156,7 +156,7 @@ export function AppWalkthroughOverlay() {
   const segments = useSegments();
   const [transitioning, setTransitioning] = useState(false);
   const reducedMotion = useReducedMotion();
-  // Delay walkthrough by 2 seconds — only for the initial step
+  // Delay walkthrough by 2 seconds, only for the initial step
   const [ready, setReady] = useState(step > 0);
   useEffect(() => {
     if (hasSeenWalkthrough || ready) return;
@@ -169,7 +169,7 @@ export function AppWalkthroughOverlay() {
   const [contentKey, setContentKey] = useState(0);
   const isMinor = useAuthStore((s) => s.profile?.ageGroup === "minor");
 
-  // Filter out Bridge step for minors (legal protection — no real-money features)
+  // Filter out Bridge step for minors (legal protection, no real-money features)
   const activeSteps = isMinor ? STEPS.filter((s) => s.screenSignal !== "bridge") : STEPS;
   // Mark the new last step
   const stepsWithLast = activeSteps.map((s, i) => i === activeSteps.length - 1 ? { ...s, isLast: true } : { ...s, isLast: false });
@@ -189,7 +189,7 @@ export function AppWalkthroughOverlay() {
     }
   }, [step, waitingForChatChoice, hasChosenChatStyle, setStep, setActiveScreen]);
 
-  // Audio Playback — narrow deps to audioUrl only so stepConfig reference
+  // Audio Playback, narrow deps to audioUrl only so stepConfig reference
   // changes (from .map() each render) don't re-create the player every render.
   const stepAudioUrl = stepConfig?.audioUrl;
   useEffect(() => {
@@ -200,7 +200,7 @@ export function AppWalkthroughOverlay() {
         const player = createAudioPlayer({ uri: stepAudioUrl });
         player.play();
         playerObj = player;
-      } catch { /* audio playback failed — silent */ }
+      } catch { /* audio playback failed, silent */ }
     }
 
     return () => {
@@ -257,7 +257,7 @@ export function AppWalkthroughOverlay() {
     setActiveScreen(nextConfig.screenSignal);
 
     if (nextConfig.navigateTo) {
-      // Always navigate — even if already on the route — to ensure the screen is visible
+      // Always navigate, even if already on the route, to ensure the screen is visible
       setTransitioning(true);
       setTimeout(() => {
         try {
@@ -278,7 +278,7 @@ export function AppWalkthroughOverlay() {
     setStep(step - 1);
     setContentKey((k) => k + 1);
     setActiveScreen(prevConfig.screenSignal);
-    // No navigation on back — the overlay covers the screen anyway
+    // No navigation on back, the overlay covers the screen anyway
   }, [step, setStep, setActiveScreen, transitioning]);
 
   const handleSkip = useCallback(() => {
@@ -289,7 +289,7 @@ export function AppWalkthroughOverlay() {
   if (hasSeenWalkthrough || step < 0 || !stepConfig || !ready) return null;
 
   // Hide overlay while user is choosing chat style.
-  // NOTE: Use Modal's `visible` prop (not `return null`) — on iOS the
+  // NOTE: Use Modal's `visible` prop (not `return null`), on iOS the
   // Modal native view can linger and swallow touches if unmounted mid-render.
   const isPickingChatStyle = waitingForChatChoice && !hasChosenChatStyle;
 
@@ -313,7 +313,7 @@ export function AppWalkthroughOverlay() {
           </Animated.View>
         </SafeAreaView>
 
-        {/* ── Middle: transparent — real screen shows through ── */}
+        {/* ── Middle: transparent, real screen shows through ── */}
         <View style={{ flex: 1 }} />
 
         {/* ── Bottom: Finn card + CTA ── */}
@@ -322,7 +322,7 @@ export function AppWalkthroughOverlay() {
             {/* Glow border */}
             <View style={s.glowBorder} />
 
-            {/* Finn avatar — floats above card with pulsing glow */}
+            {/* Finn avatar, floats above card with pulsing glow */}
             <View style={s.finnWrap}>
               <FinnPulse />
               <ExpoImage
@@ -333,7 +333,7 @@ export function AppWalkthroughOverlay() {
               />
             </View>
 
-            {/* Message — re-animates on step change */}
+            {/* Message, re-animates on step change */}
             <Animated.Text
               key={`msg-${contentKey}`}
               entering={enterAnim}
@@ -342,14 +342,14 @@ export function AppWalkthroughOverlay() {
               {stepConfig.message}
             </Animated.Text>
 
-            {/* Dots — smaller for 7 steps */}
+            {/* Dots, smaller for 7 steps */}
             <View style={s.dotsRow} accessibilityLabel={`שלב ${step + 1} מתוך ${stepsWithLast.length}`} accessibilityRole="text">
               {stepsWithLast.map((_, i) => (
                 <View key={i} style={[s.dot, i === step && s.dotActive]} />
               ))}
             </View>
 
-            {/* Navigation row — back (right) + next (left) */}
+            {/* Navigation row, back (right) + next (left) */}
             <View style={{ flexDirection: "row", alignItems: "center", gap: 10, width: "100%" }}>
               {step > 0 ? (
                 <Pressable
@@ -429,7 +429,7 @@ export function AppWalkthroughOverlay() {
 }
 
 // ---------------------------------------------------------------------------
-// Styles — Stitch premium UX with glow
+// Styles, Stitch premium UX with glow
 // ---------------------------------------------------------------------------
 
 const CARD_RADIUS = 28;
@@ -477,7 +477,7 @@ const s = StyleSheet.create({
     color: "#0284c7",
   },
 
-  /* ── Bottom card — light blue theme ── */
+  /* ── Bottom card, light blue theme ── */
   card: {
     backgroundColor: "#e0f2fe",
     borderRadius: CARD_RADIUS,

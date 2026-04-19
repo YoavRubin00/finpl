@@ -1,5 +1,5 @@
 /**
- * SIM 4-28: קורא הגרפים (Chart Reader) — Module 4-28
+ * SIM 4-28: קורא הגרפים (Chart Reader), Module 4-28
  * 4 chart scenarios with generated candlestick data (40 candles each).
  */
 
@@ -55,7 +55,7 @@ function buildCandles(
   return { candles, volumeData: volumes };
 }
 
-// ── Round 1: Nvidia 2023 — Uptrend with rising volume ──────────────────────
+// ── Round 1: Nvidia 2023, Uptrend with rising volume ──────────────────────
 
 const NVIDIA_CLOSES = [
   150, 155, 152, 158, 165, 160, 168, 175, 172, 180,
@@ -73,7 +73,7 @@ const NVIDIA_VOLUMES = [
 
 const nvidiaRound = buildCandles(NVIDIA_CLOSES, NVIDIA_VOLUMES, 2023, 5);
 
-// ── Round 2: Meta 2022 — Broken support with high volume sell-off ──────────
+// ── Round 2: Meta 2022, Broken support with high volume sell-off ──────────
 
 const META_CLOSES = [
   330, 325, 328, 320, 315, 318, 310, 305, 308, 300,
@@ -91,7 +91,7 @@ const META_VOLUMES = [
 
 const metaRound = buildCandles(META_CLOSES, META_VOLUMES, 2022, 2);
 
-// ── Round 3: Coca-Cola 2019 — Sideways range, low volume ───────────────────
+// ── Round 3: Coca-Cola 2019, Sideways range, low volume ───────────────────
 
 const COKE_CLOSES = [
   47.0, 47.8, 46.5, 48.2, 47.5, 48.0, 49.5, 48.3, 46.8, 47.2,
@@ -109,7 +109,7 @@ const COKE_VOLUMES = [
 
 const cokeRound = buildCandles(COKE_CLOSES, COKE_VOLUMES, 2019, 4);
 
-// ── Round 4: Apple 2020 — Golden cross (50MA crosses 200MA) ────────────────
+// ── Round 4: Apple 2020, Golden cross (50MA crosses 200MA) ────────────────
 
 const APPLE_CLOSES = [
   260, 255, 250, 248, 245, 242, 240, 238, 235, 232,
@@ -146,7 +146,7 @@ const CHART_ROUNDS: ChartRound[] = [
     correctAction: 'sell',
     companyName: 'Meta (META)',
     whatHappened:
-      'מניית Meta צנחה 65% ב-2022 — המטאוורס בלע מיליארדים והמשקיעים ברחו',
+      'מניית Meta צנחה 65% ב-2022, המטאוורס בלע מיליארדים והמשקיעים ברחו',
     pattern: 'שבירת תמיכה עם נפח מכירות גבוה',
   },
   {
@@ -156,7 +156,7 @@ const CHART_ROUNDS: ChartRound[] = [
     correctAction: 'hold',
     companyName: 'Coca-Cola (KO)',
     whatHappened:
-      'קוקה-קולה נסחרה בטווח צר ב-2019 — מניה יציבה שמשלמת דיבידנד',
+      'קוקה-קולה נסחרה בטווח צר ב-2019, מניה יציבה שמשלמת דיבידנד',
     pattern: 'טווח מסחר צדדי עם נפח נמוך',
   },
   {
@@ -166,8 +166,8 @@ const CHART_ROUNDS: ChartRound[] = [
     correctAction: 'buy',
     companyName: 'Apple (AAPL)',
     whatHappened:
-      'Apple זינקה 80% ב-2020 — הקורונה האיצה מכירות iPhone ו-Mac',
-    pattern: 'צלב זהב — ממוצע 50 חצה את ממוצע 200 כלפי מעלה',
+      'Apple זינקה 80% ב-2020, הקורונה האיצה מכירות iPhone ו-Mac',
+    pattern: 'צלב זהב, ממוצע 50 חצה את ממוצע 200 כלפי מעלה',
   },
 ];
 

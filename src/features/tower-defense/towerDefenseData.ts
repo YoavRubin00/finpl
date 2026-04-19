@@ -7,7 +7,7 @@ import type {
 } from "./types";
 
 // Enemy descriptions grounded in Israeli financial data (Warren/דר כריש content).
-// Numbers are based on CBS household survey + BoI + common insurance quotes — 2024-2026 values.
+// Numbers are based on CBS household survey + BoI + common insurance quotes, 2024-2026 values.
 export const ENEMIES: Record<EnemyKind, EnemyDef> = {
   mechanic: {
     kind: "mechanic",
@@ -17,7 +17,7 @@ export const ENEMIES: Record<EnemyKind, EnemyDef> = {
     speed: 0.14,
     damage: 800,
     weakAgainst: "insurance",
-    description: "תקלת רכב ממוצעת — 800-2,500₪. משפחה ישראלית חווה 1.5 תקלות בשנה.",
+    description: "תקלת רכב ממוצעת, 800-2,500₪. משפחה ישראלית חווה 1.5 תקלות בשנה.",
   },
   tax: {
     kind: "tax",
@@ -27,7 +27,7 @@ export const ENEMIES: Record<EnemyKind, EnemyDef> = {
     speed: 0.08,
     damage: 1500,
     weakAgainst: "emergency_fund",
-    description: "חוב מס שהצטבר. ריבית פיגורים = פריים + 5.5%. כבד ואיטי — אבל מוחץ.",
+    description: "חוב מס שהצטבר. ריבית פיגורים = פריים + 5.5%. כבד ואיטי, אבל מוחץ.",
   },
   wedding: {
     kind: "wedding",
@@ -47,7 +47,7 @@ export const ENEMIES: Record<EnemyKind, EnemyDef> = {
     speed: 0.24,
     damage: 300,
     weakAgainst: "auto_budget",
-    description: "הוצאה לא מתוכננת ממוצעת — 300₪. ישראלים מוציאים ~14% מהמשכורת על זה.",
+    description: "הוצאה לא מתוכננת ממוצעת, 300₪. ישראלים מוציאים ~14% מהמשכורת על זה.",
   },
 };
 

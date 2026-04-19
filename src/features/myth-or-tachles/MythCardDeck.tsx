@@ -121,7 +121,7 @@ function SwipeCard({ card, onSwipe, isTop, lightTheme }: SwipeCardProps) {
                     <Text style={[styles.statement, isRTL, { color: statementColor }]}>{card.statement}</Text>
                 </View>
 
-                {/* Infographic — flexible space */}
+                {/* Infographic, flexible space */}
                 {MYTH_BGS[card.category?.trim?.() || card.category] && (
                     <View style={styles.infographicWrap}>
                         <Animated.Image
@@ -172,7 +172,7 @@ function BackCard({ offset }: { offset: number }) {
 }
 
 /* ------------------------------------------------------------------ */
-/*  MythCardDeck — exported component                                  */
+/*  MythCardDeck, exported component                                  */
 /* ------------------------------------------------------------------ */
 
 export const MythCardDeck = React.memo(function MythCardDeck({ cards, onSwipe, lightTheme }: Props) {

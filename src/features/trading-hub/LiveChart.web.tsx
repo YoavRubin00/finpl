@@ -1,6 +1,6 @@
 /**
- * LiveChart — Web stub (Skia/CanvasKit not available on web).
- * Calm dark-gray line with subtle glow — no alarming colors.
+ * LiveChart, Web stub (Skia/CanvasKit not available on web).
+ * Calm dark-gray line with subtle glow, no alarming colors.
  */
 import { View, Text } from 'react-native';
 import { ChartDataPoint } from './tradingHubTypes';
@@ -12,7 +12,7 @@ interface LiveChartProps {
   isLoading?: boolean;
 }
 
-// Calm dark-gray palette — matches native LiveChart.tsx
+// Calm dark-gray palette, matches native LiveChart.tsx
 const UP_COLOR = '#374151';
 const DOWN_COLOR = '#6b7280';
 

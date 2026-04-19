@@ -1,4 +1,4 @@
-// PRD 38 — US-003: DailyIncomeCard for PyramidScreen
+// PRD 38, US-003: DailyIncomeCard for PyramidScreen
 // Shows pending real-asset income; allows one-tap collection.
 
 import { useState, useRef, useEffect } from "react";

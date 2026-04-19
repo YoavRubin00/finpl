@@ -24,7 +24,7 @@ import type { EmergencyFundScore, EmergencyFundGrade, EmergencyEvent } from './e
 import { SIM, GRADE_COLORS, GRADE_HEBREW, SHADOW_STRONG, RTL, TYPE, simStyles } from './simTheme';
 
 
-/* ── Chapter theme (ocean-blue) — kept only for gradient ── */
+/* ── Chapter theme (ocean-blue), kept only for gradient ── */
 const _th1 = getChapterTheme('chapter-1');
 
 /* ── Lottie assets ── */
@@ -47,7 +47,7 @@ const SEVERITY_COLORS: Record<string, string> = {
 };
 
 /* ------------------------------------------------------------------ */
-/*  ShieldMeter — emergency fund "shield" bar at top                    */
+/*  ShieldMeter, emergency fund "shield" bar at top                    */
 /* ------------------------------------------------------------------ */
 
 function ShieldMeter({
@@ -92,7 +92,7 @@ function ShieldMeter({
     );
 }
 
-/* ── HappinessMeter — lifestyle satisfaction bar ── */
+/* ── HappinessMeter, lifestyle satisfaction bar ── */
 function HappinessMeter({ happiness }: { happiness: number }) {
     const emoji = happiness >= 7 ? '😊' : happiness >= 4 ? '😐' : '😔';
     const color = happiness >= 7 ? '#4ade80' : happiness >= 4 ? '#facc15' : '#f97316';
@@ -115,7 +115,7 @@ function HappinessMeter({ happiness }: { happiness: number }) {
 }
 
 /* ------------------------------------------------------------------ */
-/*  EmergencyEventCard — dramatic emergency event display               */
+/*  EmergencyEventCard, dramatic emergency event display               */
 /* ------------------------------------------------------------------ */
 
 function EmergencyEventCard({ event }: { event: EmergencyEvent }) {
@@ -152,7 +152,7 @@ function EmergencyEventCard({ event }: { event: EmergencyEvent }) {
 }
 
 /* ------------------------------------------------------------------ */
-/*  ShieldEffect — shield absorb or break animation                     */
+/*  ShieldEffect, shield absorb or break animation                     */
 /* ------------------------------------------------------------------ */
 
 function ShieldEffect({ absorbed }: { absorbed: boolean }) {
@@ -179,14 +179,14 @@ function ShieldEffect({ absorbed }: { absorbed: boolean }) {
                     { color: absorbed ? '#4ade80' : '#fbbf24' },
                 ]}
             >
-                {absorbed ? 'הקרן ספגה את החירום!' : 'הקרן לא מספיקה — נדרשת הלוואה!'}
+                {absorbed ? 'הקרן ספגה את החירום!' : 'הקרן לא מספיקה, נדרשת הלוואה!'}
             </Text>
         </Animated.View>
     );
 }
 
 /* ------------------------------------------------------------------ */
-/*  LoanPopup — warning about forced loan                               */
+/*  LoanPopup, warning about forced loan                               */
 /* ------------------------------------------------------------------ */
 
 function LoanPopup({ loanAmount }: { loanAmount: number }) {
@@ -198,7 +198,7 @@ function LoanPopup({ loanAmount }: { loanAmount: number }) {
             <View style={{ flexDirection: 'row-reverse', alignItems: 'center', gap: 4 }}>
                 <LottieIcon source={LOTTIE_DECREASE} size={18} />
                 <Text style={[RTL, styles.loanWarning]}>
-                    ריבית 12% שנתית — כל חודש ההלוואה גדלה!
+                    ריבית 12% שנתית, כל חודש ההלוואה גדלה!
                 </Text>
             </View>
         </Animated.View>
@@ -206,7 +206,7 @@ function LoanPopup({ loanAmount }: { loanAmount: number }) {
 }
 
 /* ------------------------------------------------------------------ */
-/*  SavingsChoiceButtons — 3 savings rate options                       */
+/*  SavingsChoiceButtons, 3 savings rate options                       */
 /* ------------------------------------------------------------------ */
 
 function SavingsChoiceButtons({
@@ -306,7 +306,7 @@ function SavingsChoiceButtons({
 }
 
 /* ------------------------------------------------------------------ */
-/*  MonthResultFeedback — feedback after processing a month             */
+/*  MonthResultFeedback, feedback after processing a month             */
 /* ------------------------------------------------------------------ */
 
 function MonthResultFeedback({
@@ -329,9 +329,9 @@ function MonthResultFeedback({
     if (hasEvent && result.event) {
         lines.push(result.absorbed
             ? `הקרן ספגה את ה${result.event.name} בהצלחה!`
-            : `הקרן לא הספיקה — הלוואה של \u20AA${result.loanTaken.toLocaleString()}`);
+            : `הקרן לא הספיקה, הלוואה של \u20AA${result.loanTaken.toLocaleString()}`);
     }
-    if (result.expenseShortfall > 0 && !hasEvent) lines.push(`חסר \u20AA${result.expenseShortfall.toLocaleString()} — נלקחה הלוואה`);
+    if (result.expenseShortfall > 0 && !hasEvent) lines.push(`חסר \u20AA${result.expenseShortfall.toLocaleString()}, נלקחה הלוואה`);
     if (result.happinessEvent) lines.push(`${result.happinessEvent.emoji} ${result.happinessEvent.text}`);
     const summaryText = lines.join('\n');
     const isGood = result.absorbed || (!hasEvent && result.loanTaken === 0);
@@ -370,7 +370,7 @@ function MonthResultFeedback({
 }
 
 /* ------------------------------------------------------------------ */
-/*  StatsBar — bottom stats display                                     */
+/*  StatsBar, bottom stats display                                     */
 /* ------------------------------------------------------------------ */
 
 function StatsBar({
@@ -410,7 +410,7 @@ function StatsBar({
 }
 
 /* ------------------------------------------------------------------ */
-/*  ScoreScreen — end-game summary                                      */
+/*  ScoreScreen, end-game summary                                      */
 /* ------------------------------------------------------------------ */
 
 function ScoreScreen({
@@ -528,10 +528,10 @@ function ScoreScreen({
 }
 
 /* ------------------------------------------------------------------ */
-/*  EmergencyFundScreen — main exported component                       */
+/*  EmergencyFundScreen, main exported component                       */
 /* ------------------------------------------------------------------ */
 
-/** Mid-game grade indicator — shows current trajectory */
+/** Mid-game grade indicator, shows current trajectory */
 function getMidGameGrade(missed: number, interest: number, happiness: number): { label: string; color: string } {
     if (missed === 0 && interest === 0 && happiness >= 4) return { label: 'מסלול S', color: '#ffffff' };
     if (missed === 0 && interest === 0) return { label: 'מסלול A', color: '#22c55e' };
@@ -625,7 +625,7 @@ const [showBriefing, setShowBriefing] = useState(true);
             chapterColors={_th1.gradient}
         >
         <View style={{ flex: 1, paddingBottom: 12 }}>
-            {/* Title — compact */}
+            {/* Title, compact */}
             <View style={{ flexDirection: 'row-reverse', alignItems: 'center', justifyContent: 'center', gap: 6, marginBottom: 4 }}>
                 <LottieIcon source={LOTTIE_SHIELD} size={20} />
                 <Text style={[RTL, { fontSize: 16, fontWeight: '900', color: '#e0f2fe' }]} accessibilityRole="header">טרמפולינה</Text>
@@ -639,7 +639,7 @@ const [showBriefing, setShowBriefing] = useState(true);
                             12 חודשים לבנות קרן חירום.{'\n'}יעד: {'\u20AA'}{FUND_TARGET.toLocaleString()}
                         </Text>
                         <Text style={[RTL, { fontSize: 13, fontWeight: '600', color: 'rgba(224,242,254,0.7)', lineHeight: 20 }]}>
-                            כל חודש תבחר כמה לחסוך. הפתעות יקרות עלולות לפגוע — ואם הקרן לא מספיקה, תיקח הלוואה בריבית 12%.
+                            כל חודש תבחר כמה לחסוך. הפתעות יקרות עלולות לפגוע, ואם הקרן לא מספיקה, תיקח הלוואה בריבית 12%.
                         </Text>
                     </View>
                     <Pressable

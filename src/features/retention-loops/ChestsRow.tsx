@@ -135,7 +135,7 @@ export function ChestRewardModal({ visible, rarity, reward, rewards, streakBonus
     <Modal transparent visible={visible} animationType="fade" onRequestClose={onDismiss} accessibilityViewIsModal>
       <Pressable style={modalStyles.backdrop} onPress={onDismiss}>
 
-        {/* Confetti — only after opened */}
+        {/* Confetti, only after opened */}
         {stage === 'opened' && (
           <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }} pointerEvents="none">
             <LottieView
@@ -169,7 +169,7 @@ export function ChestRewardModal({ visible, rarity, reward, rewards, streakBonus
               onAnimationFinish={handleAnimationFinish}
             />
 
-            {/* Stage: opened — rewards */}
+            {/* Stage: opened, rewards */}
             {stage === 'opened' && (
               <>
 
@@ -515,8 +515,8 @@ function GemInstantOpenModal({
               <Ionicons name="diamond" size={20} color="#a78bfa" />
               <Text style={gemModalStyles.gemButtonText}>
                 {canAfford
-                  ? `${INSTANT_OPEN_GEM_COST} ג׳מים — פתח!`
-                  : `💎 קנה ג׳מס — חסרים ${INSTANT_OPEN_GEM_COST - gems}`}
+                  ? `${INSTANT_OPEN_GEM_COST} ג׳מים, פתח!`
+                  : `💎 קנה ג׳מס, חסרים ${INSTANT_OPEN_GEM_COST - gems}`}
               </Text>
             </Pressable>
 

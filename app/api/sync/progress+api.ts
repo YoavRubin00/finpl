@@ -66,7 +66,7 @@ export async function GET(request: Request): Promise<Response> {
   }
 }
 
-/** POST /api/sync/progress — upsert module progress */
+/** POST /api/sync/progress, upsert module progress */
 export async function POST(request: Request): Promise<Response> {
   const blocked = enforceRateLimit(request, 'sync-progress-post', { limit: 20, windowSec: 60 });
   if (blocked) return blocked;

@@ -25,14 +25,14 @@ ${dataPoint.newsSummary ? `תקציר: ${dataPoint.newsSummary}` : ''}
 מגמה: ${dataPoint.direction === 'up' ? 'עלייה' : dataPoint.direction === 'down' ? 'ירידה' : 'יציבות'}.
 ${newsSection}
 
-צור מבזק פיננסי יומי — שאלה מעמיקה בעברית שבודקת חשיבה כלכלית ברמה גבוהה.
+צור מבזק פיננסי יומי, שאלה מעמיקה בעברית שבודקת חשיבה כלכלית ברמה גבוהה.
 השאלה חייבת להיות מבוססת על אירוע אקטואלי או מגמה עכשיווית בשוק.
 
 פורמט JSON בלבד (ללא טקסט נוסף):
 {
   "userFacingTitle": "כותרת מושכת בעברית שמרמזת על הידיעה",
   "citation": "משפט אחד שמתאר את המצב הכלכלי הנוכחי בהתבסס על הכותרת",
-  "historicalExample": "דוגמה היסטורית קצרה — מקרה דומה שקרה בעבר עם נתונים אמיתיים",
+  "historicalExample": "דוגמה היסטורית קצרה, מקרה דומה שקרה בעבר עם נתונים אמיתיים",
   "question": "שאלה שבודקת הבנה עמוקה של מנגנון כלכלי הקשור לידיעה",
   "options": ["תשובה 1", "תשובה 2", "תשובה 3"],
   "correctAnswerIndex": 0,
@@ -43,7 +43,7 @@ ${newsSection}
 - השאלה חייבת להתחבר לידיעה האקטואלית ולא להיות גנרית
 - התשובות קצרות (עד 15 מילים) אבל מדויקות
 - ההסבר חושף מנגנון כלכלי אמיתי עם דוגמה מספרית או היסטורית
-- השאלה בודקת חשיבה כלכלית — קורלציות, סיבתיות, או trade-offs
+- השאלה בודקת חשיבה כלכלית, קורלציות, סיבתיות, או trade-offs
 - החזר JSON תקין בלבד, ללא markdown או backticks`;
 }
 
@@ -66,7 +66,7 @@ let lastCallDate = '';
 export async function generateDailyQuiz(dataPoint: DataPoint): Promise<DailyQuiz> {
   const today = new Date().toISOString().slice(0, 10);
 
-  // Rate limit — 1 call per day
+  // Rate limit, 1 call per day
   if (lastCallDate === today) {
     return getFallbackQuiz(today, dataPoint.category);
   }

@@ -1,5 +1,5 @@
 /**
- * SIM 28: מחשבון הפרישה (Retirement Calculator) — Module 5-28
+ * SIM 28: מחשבון הפרישה (Retirement Calculator), Module 5-28
  * Screen: choose withdrawal strategy, watch 25-year simulation (age 67→92),
  * track balance depletion, tax, bankruptcy risk, and inheritance potential.
  */
@@ -228,7 +228,7 @@ const strategyStyles = StyleSheet.create({
   },
 });
 
-/** Balance bar — depleting or steady */
+/** Balance bar, depleting or steady */
 function BalanceBar({
   balance,
   maxBalance,
@@ -240,7 +240,7 @@ function BalanceBar({
   isBankrupt: boolean;
   strategyType: string;
 }) {
-  // Annuity has no investable balance — show "guaranteed" badge
+  // Annuity has no investable balance, show "guaranteed" badge
   if (strategyType === 'monthly-annuity') {
     return (
       <View style={balanceBarStyles.container}>
@@ -428,7 +428,7 @@ function ScoreScreen({
                 <Text style={sim5Styles.scoreRowLabel}>סיכון מיצוי</Text>
               </View>
               <Text style={[sim5Styles.scoreRowValue, { color: score.depletionRisk ? SIM5.danger : SIM5.success }]}>
-                {score.depletionRisk ? `כן — גיל ${score.bankruptAge}` : 'לא'}
+                {score.depletionRisk ? `כן, גיל ${score.bankruptAge}` : 'לא'}
               </Text>
             </View>
             <View style={[sim5Styles.scoreRow, { borderBottomWidth: 0 }]}>
@@ -771,7 +771,7 @@ export function RetirementCalcScreen({ onComplete }: RetirementCalcScreenProps) 
           </Animated.View>
           <Text style={styles.heroLabel}>מתוך 92</Text>
 
-          {/* Progress bar — RTL */}
+          {/* Progress bar, RTL */}
           <View style={[simStyles.progressTrack, { transform: [{ scaleX: -1 }] }]}>
             <LinearGradient
               colors={isBankrupt ? ['#ef4444', '#dc2626'] : ['#a78bfa', '#a78bfa']}

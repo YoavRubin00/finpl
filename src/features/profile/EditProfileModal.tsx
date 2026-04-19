@@ -33,10 +33,10 @@ const DAILY_OPTIONS: { value: DailyGoalMinutes; label: string }[] = [
 ];
 
 const COMPANION_OPTIONS: { value: CompanionId; label: string }[] = [
-  { value: "warren-buffett", label: "קפטן שארק — חכם" },
-  { value: "moshe-peled",    label: "קפטן שארק — תכל'סי" },
-  { value: "rachel",         label: "קפטן שארק — חם" },
-  { value: "robot",          label: "קפטן שארק — אנליטי" },
+  { value: "warren-buffett", label: "קפטן שארק, חכם" },
+  { value: "moshe-peled",    label: "קפטן שארק, תכל'סי" },
+  { value: "rachel",         label: "קפטן שארק, חם" },
+  { value: "robot",          label: "קפטן שארק, אנליטי" },
 ];
 
 // ─── helpers ─────────────────────────────────────────────────────────────────

@@ -28,7 +28,7 @@ import { SIM, GRADE_COLORS, GRADE_HEBREW, RTL, TYPE, simStyles } from './simThem
 import { useTimeoutCleanup } from '../../../hooks/useTimeoutCleanup';
 
 
-/* ── Chapter 1 theme — only used for gradient ── */
+/* ── Chapter 1 theme, only used for gradient ── */
 const _th1 = getChapterTheme('chapter-1');
 
 /* ── Lottie assets ── */
@@ -55,7 +55,7 @@ const BIN_CONFIG: {
 ];
 
 /* ------------------------------------------------------------------ */
-/*  TimerBar — counts down per item                                    */
+/*  TimerBar, counts down per item                                    */
 /* ------------------------------------------------------------------ */
 
 function TimerBar({ duration, round, paused }: { duration: number; round: number; paused: boolean }) {
@@ -100,7 +100,7 @@ function TimerBar({ duration, round, paused }: { duration: number; round: number
 }
 
 /* ------------------------------------------------------------------ */
-/*  ItemCard — the payslip item to classify                            */
+/*  ItemCard, the payslip item to classify                            */
 /* ------------------------------------------------------------------ */
 
 function ItemCard({
@@ -133,7 +133,7 @@ function ItemCard({
 }
 
 /* ------------------------------------------------------------------ */
-/*  FeedbackFlash — brief green/red overlay after classification       */
+/*  FeedbackFlash, brief green/red overlay after classification       */
 /* ------------------------------------------------------------------ */
 
 function FeedbackFlash({ isCorrect }: { isCorrect: boolean }) {
@@ -150,7 +150,7 @@ function FeedbackFlash({ isCorrect }: { isCorrect: boolean }) {
 }
 
 /* ------------------------------------------------------------------ */
-/*  ClassificationBin — a tappable bin at the bottom                   */
+/*  ClassificationBin, a tappable bin at the bottom                   */
 /* ------------------------------------------------------------------ */
 
 function ClassificationBin({
@@ -213,7 +213,7 @@ function ClassificationBin({
                 onPress={onPress}
                 disabled={disabled}
                 accessibilityRole="button"
-                accessibilityLabel={`${label} — סווג לקטגוריה ${label}`}
+                accessibilityLabel={`${label}, סווג לקטגוריה ${label}`}
                 accessibilityHint="לחץ כדי לסווג את הפריט הנוכחי לקטגוריה זו"
                 accessibilityState={{ disabled }}
                 style={[
@@ -232,7 +232,7 @@ function ClassificationBin({
 }
 
 /* ------------------------------------------------------------------ */
-/*  ScoreScreen — end-game summary with grades                         */
+/*  ScoreScreen, end-game summary with grades                         */
 /* ------------------------------------------------------------------ */
 
 function ScoreScreen({
@@ -333,7 +333,7 @@ function ScoreScreen({
 }
 
 /* ------------------------------------------------------------------ */
-/*  PayslipNinjaScreen — main exported component                       */
+/*  PayslipNinjaScreen, main exported component                       */
 /* ------------------------------------------------------------------ */
 
 export function PayslipNinjaScreen({ onComplete }: { onComplete: () => void }) {
@@ -376,7 +376,7 @@ const [feedback, setFeedback] = useState<{ isCorrect: boolean; message: string }
         }
     }, [state.isComplete, rewardsGranted]);
 
-    // Timer per item — with pause support (WCAG 2.2.1)
+    // Timer per item, with pause support (WCAG 2.2.1)
     useEffect(() => {
         if (state.isComplete || isProcessing || isPaused) return;
 
@@ -423,7 +423,7 @@ const [feedback, setFeedback] = useState<{ isCorrect: boolean; message: string }
                 isCorrect,
                 message: isCorrect
                     ? `נכון! ${currentItem.label} שייך ל${correctBin?.label ?? ''}`
-                    : `לא נכון — ${currentItem.label} שייך ל${correctBin?.label ?? ''}`,
+                    : `לא נכון, ${currentItem.label} שייך ל${correctBin?.label ?? ''}`,
             });
             setHighlightedBin({ category: chosenCategory, type: isCorrect ? 'correct' : 'wrong' });
 
@@ -503,7 +503,7 @@ const [feedback, setFeedback] = useState<{ isCorrect: boolean; message: string }
                             </View>
                         </Animated.View>
 
-                        {/* Timer bar + pause button (WCAG 2.2.1 — Level A) */}
+                        {/* Timer bar + pause button (WCAG 2.2.1, Level A) */}
                         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
                             <View style={{ flex: 1 }}>
                                 <TimerBar duration={payslipNinjaConfig.timePerRound} round={state.currentRound} paused={isPaused} />
@@ -520,7 +520,7 @@ const [feedback, setFeedback] = useState<{ isCorrect: boolean; message: string }
                         </View>
                         {isPaused && (
                             <Text style={[RTL, { fontSize: 13, fontWeight: '700', color: '#3b82f6', textAlign: 'center', marginTop: 4 }]}>
-                                ⏸ המשחק מושהה — לחץ ▶ כדי להמשיך
+                                ⏸ המשחק מושהה, לחץ ▶ כדי להמשיך
                             </Text>
                         )}
 

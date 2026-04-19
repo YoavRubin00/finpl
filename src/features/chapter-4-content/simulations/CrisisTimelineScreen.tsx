@@ -1,5 +1,5 @@
 /**
- * SIM: ציר הזמן של המשברים — Crisis Timeline
+ * SIM: ציר הזמן של המשברים, Crisis Timeline
  * Screen: predict recovery times for 7 historical crises.
  */
 

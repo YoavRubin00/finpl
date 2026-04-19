@@ -1,5 +1,5 @@
 /**
- * SIM 22: סימולטור מסחר (Trading Simulator) — Module 4-22
+ * SIM 22: סימולטור מסחר (Trading Simulator), Module 4-22
  * Trading round data with 3 rounds: Market Order, Limit Order, Stop-Loss.
  */
 
@@ -51,11 +51,11 @@ export const TRADING_ROUNDS: TradingRound[] = [
     instruction: 'חכה שהמחיר ירד ל-₪230 לפני שתקנה. הגדר פקודת Limit!',
     orderType: 'limit',
     stockData: buildTicks(ROUND_2_PRICES),
-    targetLesson: 'פקודת Limit = סבלנות משתלמת. קנית ב-₪230 במקום ב-₪250. אבל אם המחיר לא היה יורד — היית מפסיד את ההזדמנות.',
+    targetLesson: 'פקודת Limit = סבלנות משתלמת. קנית ב-₪230 במקום ב-₪250. אבל אם המחיר לא היה יורד, היית מפסיד את ההזדמנות.',
   },
   {
     id: 'round-3-stop-loss',
-    instruction: 'הגן על עצמך — אם המניה יורדת ל-₪200, מכור אוטומטית!',
+    instruction: 'הגן על עצמך, אם המניה יורדת ל-₪200, מכור אוטומטית!',
     orderType: 'stop-loss',
     stockData: buildTicks(ROUND_3_PRICES),
     targetLesson: 'Stop-Loss = ביטוח אוטומטי. המניה המשיכה לרדת ל-₪160, אבל אתה מכרת ב-₪200. חסכת 30% הפסד נוסף!',

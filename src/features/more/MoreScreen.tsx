@@ -240,7 +240,7 @@ export function MoreScreen() {
                 <MoreRow
                   isLast
                   icon={<SafeLottie source={require('../../../assets/lottie/wired-flat-412-gift-hover-squeeze.json')} style={styles.lottieIcon} autoPlay loop  />}
-                  label="רשת העושר — הזמן חברים"
+                  label="רשת העושר, הזמן חברים"
                   onPress={() => router.push("/referral")}
                 />
               </View>

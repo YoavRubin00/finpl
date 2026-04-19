@@ -2,14 +2,14 @@ import "../global.css";
 import { initSentry } from "../src/lib/sentry";
 import { I18nManager } from "react-native";
 
-// Undo forceRTL that was set by build 30 — it caused layout crashes
+// Undo forceRTL that was set by build 30, it caused layout crashes
 // because the app uses manual row-reverse throughout. This explicitly
 // resets the persistent iOS setting. Takes effect after next launch.
 if (I18nManager.isRTL) {
   try {
     I18nManager.allowRTL(false);
     I18nManager.forceRTL(false);
-  } catch { /* ignore — older iOS may throw */ }
+  } catch { /* ignore, older iOS may throw */ }
 }
 
 initSentry();
@@ -145,7 +145,7 @@ export default function RootLayout() {
       playsInSilentMode: true,
       interruptionMode: "doNotMix",
       shouldPlayInBackground: false,
-    }).catch(() => { /* fail silently — not supported on web / older OS */ });
+    }).catch(() => { /* fail silently, not supported on web / older OS */ });
   }, []);
 
   // ── RevenueCat init ──

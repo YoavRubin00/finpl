@@ -1,5 +1,5 @@
 /**
- * SIM: ציר הזמן של המשברים — Crisis Timeline
+ * SIM: ציר הזמן של המשברים, Crisis Timeline
  * Hook: manage crisis navigation, predictions, and scoring.
  */
 

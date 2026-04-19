@@ -8,7 +8,7 @@ import type {
 } from './shoppingCartTypes';
 
 /* ------------------------------------------------------------------ */
-/*  useShoppingCart — core logic hook for the Shopping Cart Race sim    */
+/*  useShoppingCart, core logic hook for the Shopping Cart Race sim    */
 /* ------------------------------------------------------------------ */
 
 export function useShoppingCart(config: ShoppingCartConfig) {
@@ -107,7 +107,7 @@ export function useShoppingCart(config: ShoppingCartConfig) {
 
         if (composite >= 95 && essentialsMissed === 0 && state.trapsFallen === 0) {
             grade = 'S';
-            gradeLabel = '🏆 קונה חכם/ה! כל המוצרים החיוניים, אף מלכודת — מאסטר!';
+            gradeLabel = '🏆 קונה חכם/ה! כל המוצרים החיוניים, אף מלכודת, מאסטר!';
         } else if (composite >= 80) {
             grade = 'A';
             gradeLabel = '🌟 מצוין! קניות חכמות ויעילות';
@@ -116,10 +116,10 @@ export function useShoppingCart(config: ShoppingCartConfig) {
             gradeLabel = '👍 לא רע! אבל כמה מלכודות תפסו אותך';
         } else if (composite >= 50) {
             grade = 'C';
-            gradeLabel = '⚠️ הסופר ניצח אותך הפעם — שווה לשים לב למלכודות';
+            gradeLabel = '⚠️ הסופר ניצח אותך הפעם, שווה לשים לב למלכודות';
         } else {
             grade = 'F';
-            gradeLabel = '🚨 העגלה מלאה ב"מבצעים" — הארנק בוכה!';
+            gradeLabel = '🚨 העגלה מלאה ב"מבצעים", הארנק בוכה!';
         }
 
         return {

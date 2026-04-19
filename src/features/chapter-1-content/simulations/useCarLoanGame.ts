@@ -9,7 +9,7 @@ import type {
 } from './carLoanTypes';
 
 /* ------------------------------------------------------------------ */
-/*  useCarLoanGame — core logic hook for the Car Loan Race sim         */
+/*  useCarLoanGame, core logic hook for the Car Loan Race sim         */
 /* ------------------------------------------------------------------ */
 
 /** Monthly depreciation rate (1.5% per month) */
@@ -111,7 +111,7 @@ export function useCarLoanGame(config: CarLoanConfig) {
             gradeLabel = '🚨 הבנק תפס את הרכב! ההלוואה חרגה מערך הרכב';
         } else if (interestRatio <= 0.05) {
             grade = 'S';
-            gradeLabel = '🏆 נהג/ת מצטיין/ת! כמעט ללא ריבית — כלכלן/ית אמיתי/ת';
+            gradeLabel = '🏆 נהג/ת מצטיין/ת! כמעט ללא ריבית, כלכלן/ית אמיתי/ת';
         } else if (interestRatio <= 0.10) {
             grade = 'A';
             gradeLabel = '🌟 מעולה! שילמת מינימום ריבית על הרכב';
@@ -120,7 +120,7 @@ export function useCarLoanGame(config: CarLoanConfig) {
             gradeLabel = '👍 לא רע! אבל אפשר היה לחסוך עוד בריבית';
         } else if (interestRatio <= 0.28) {
             grade = 'C';
-            gradeLabel = '⚠️ שילמת הרבה ריבית — שווה ללמוד על מימון רכב';
+            gradeLabel = '⚠️ שילמת הרבה ריבית, שווה ללמוד על מימון רכב';
         } else {
             grade = 'F';
             gradeLabel = '🚨 הריבית אכלה אותך! הרכב עלה הרבה יותר ממה שחשבת';

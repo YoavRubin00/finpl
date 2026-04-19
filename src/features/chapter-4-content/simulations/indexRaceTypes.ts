@@ -1,5 +1,5 @@
 /**
- * SIM 4-30: המרוץ נגד המדד (Index Race) — Module 4-30
+ * SIM 4-30: המרוץ נגד המדד (Index Race), Module 4-30
  * Types for the stock-picking vs index benchmark simulation.
  */
 

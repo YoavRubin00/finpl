@@ -17,7 +17,7 @@ export interface CompanionPersonality {
   greeting: string;
   placeholder: string;
   animation: CompanionAnimationConfig;
-  /** Header avatar — Lottie source or WebP ImageSource */
+  /** Header avatar, Lottie source or WebP ImageSource */
   headerLottie?: number;
   /** WebP image source for header avatar (used instead of headerLottie) */
   headerImage?: import("expo-image").ImageSource;

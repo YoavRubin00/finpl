@@ -172,12 +172,12 @@ function SharkResult({ score, kindsAllowed }: { score: number; kindsAllowed: boo
           : 'הרעים תפסו אותך';
   const body =
     tier === 'excellent'
-      ? 'אספת דיבידנדים וחתכת עמלות — ככה בונים תזרים שעובד בשבילך.'
+      ? 'אספת דיבידנדים וחתכת עמלות, ככה בונים תזרים שעובד בשבילך.'
       : tier === 'good'
-        ? 'זיהית את רוב ההזדמנויות. התרגול הבא — להתרחק מהאדומים בלי לפספס אדום אחד.'
+        ? 'זיהית את רוב ההזדמנויות. התרגול הבא, להתרחק מהאדומים בלי לפספס אדום אחד.'
         : tier === 'ok'
           ? 'רעש פיננסי הסיח את הדעת. לפעמים לא ללחוץ זה ההחלטה הכי חכמה.'
-          : 'הפיתויים האדומים עלו יותר מהריווחים. בתקציב אמיתי — הם שוחקים הרבה יותר מהר.';
+          : 'הפיתויים האדומים עלו יותר מהריווחים. בתקציב אמיתי, הם שוחקים הרבה יותר מהר.';
   const image = tier === 'weak' ? FINN_EMPATHIC : FINN_HAPPY;
 
   if (!kindsAllowed) return null;
@@ -341,7 +341,7 @@ export const BudgetNinjaCard = React.memo(function BudgetNinjaCard({ isActive: _
       <View style={styles.container}>
         <View style={styles.cardShell}>
           <ExpoImage source={FINN_STANDARD} style={styles.finLarge} contentFit="contain" accessible={false} />
-          <Text style={[styles.doneTitle, RTL_CENTER]}>נינג׳ת התקציב — הושלם להיום</Text>
+          <Text style={[styles.doneTitle, RTL_CENTER]}>נינג׳ת התקציב, הושלם להיום</Text>
           <Text style={[styles.doneSub, RTL_CENTER]}>חזור מחר לזירה חדשה</Text>
         </View>
       </View>
@@ -417,7 +417,7 @@ export const BudgetNinjaCard = React.memo(function BudgetNinjaCard({ isActive: _
             <Pressable
               onPress={() => startGame(2)}
               accessibilityRole="button"
-              accessibilityLabel="התחל רמה 2 — מהירות כפולה"
+              accessibilityLabel="התחל רמה 2, מהירות כפולה"
               style={({ pressed }) => [styles.level2Button, pressed && { transform: [{ scale: 0.97 }] }]}
             >
               <LinearGradient
@@ -426,7 +426,7 @@ export const BudgetNinjaCard = React.memo(function BudgetNinjaCard({ isActive: _
                 end={{ x: 1, y: 1 }}
                 style={StyleSheet.absoluteFill}
               />
-              <Text style={styles.level2ButtonText}>רמה 2 — מהירות גבוהה</Text>
+              <Text style={styles.level2ButtonText}>רמה 2, מהירות גבוהה</Text>
             </Pressable>
           </Animated.View>
         )}

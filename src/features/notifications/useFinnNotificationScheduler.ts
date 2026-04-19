@@ -1,5 +1,5 @@
 /**
- * Finn Notification Scheduler — orchestrates context-aware push notifications.
+ * Finn Notification Scheduler, orchestrates context-aware push notifications.
  * Called from useNotificationSetup. Runs once per day on app open.
  */
 import { useEffect } from 'react';
@@ -23,7 +23,7 @@ import {
 function computePersonalizedHour(recentHours: number[]): number {
     if (recentHours.length < 7) return 20;
     const avg = recentHours.reduce((a, b) => a + b, 0) / recentHours.length;
-    // Schedule 2h before the habit window — clamp to a sane evening range (8-22)
+    // Schedule 2h before the habit window, clamp to a sane evening range (8-22)
     const target = Math.round(avg) - 2;
     return Math.max(8, Math.min(22, target));
 }
@@ -69,7 +69,7 @@ export function useFinnNotificationScheduler() {
                 const goalMinutes = useAuthStore.getState().profile?.dailyGoalMinutes;
                 const tone = getToneFromGoal(typeof goalMinutes === 'number' ? goalMinutes : null);
 
-                // ── Await cancel before scheduling anything — prevents race condition ──
+                // ── Await cancel before scheduling anything, prevents race condition ──
                 await Notifications.cancelAllScheduledNotificationsAsync();
 
                 // ── At most 2 notifications per day, scheduled sequentially ──
@@ -95,7 +95,7 @@ export function useFinnNotificationScheduler() {
                     if (economy.lastDailyTaskDate !== today && primaryHour < 23) {
                         const streakDays = economy.streak;
                         const fallbackCopy = streakDays > 0
-                            ? { title: `🕚 רצף של ${streakDays} ימים בסכנה`, body: 'שעה אחרונה לשמור עליו — 2 דקות וזהו' }
+                            ? { title: `🕚 רצף של ${streakDays} ימים בסכנה`, body: 'שעה אחרונה לשמור עליו, 2 דקות וזהו' }
                             : { title: '🕚 שעה אחרונה ליום', body: 'לא מאוחר מדי להתחיל רצף חדש היום' };
                         await store.scheduleStreakReminderWithCopy(
                             { title: fallbackCopy.title, body: fallbackCopy.body, data: { screen: '/(tabs)/learn' } },

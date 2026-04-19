@@ -1,6 +1,6 @@
 /**
- * SIM 5-31: בונה ה-IRA (IRA Builder) — Module 5-31
- * Traditional vs Roth IRA — pick winner prediction, adjust params, simulate 30 years.
+ * SIM 5-31: בונה ה-IRA (IRA Builder), Module 5-31
+ * Traditional vs Roth IRA, pick winner prediction, adjust params, simulate 30 years.
  */
 
 import { useCallback, useEffect, useRef, useState } from 'react';
@@ -78,7 +78,7 @@ function formatPercent(n: number): string {
 }
 
 /* ================================================================== */
-/*  DualBarChart — Traditional (blue) vs Roth (purple) after-tax        */
+/*  DualBarChart, Traditional (blue) vs Roth (purple) after-tax        */
 /* ================================================================== */
 
 function DualBarChart({
@@ -145,7 +145,7 @@ function DualBarChart({
 }
 
 /* ================================================================== */
-/*  ParamSlider — labeled slider for a single parameter                 */
+/*  ParamSlider, labeled slider for a single parameter                 */
 /* ================================================================== */
 
 function ParamSlider({
@@ -198,7 +198,7 @@ function ParamSlider({
 }
 
 /* ================================================================== */
-/*  ScoreScreen — results after 30 years                                */
+/*  ScoreScreen, results after 30 years                                */
 /* ================================================================== */
 
 function ScoreScreen({
@@ -294,12 +294,12 @@ function ScoreScreen({
         </View>
       </Animated.View>
 
-      {/* Tax savings insight — 30-year projection */}
+      {/* Tax savings insight, 30-year projection */}
       <Animated.View entering={FadeInUp.delay(200)} style={{ marginTop: 12 }}>
         <View style={sim5Styles.scoreCard}>
           <View style={sim5Styles.scoreCardInner}>
             <Text style={[scoreStyles.breakdownTitle, RTL]}>
-              ניתוח מס — 30 שנה
+              ניתוח מס, 30 שנה
             </Text>
 
             <View style={sim5Styles.scoreRow}>
@@ -349,7 +349,7 @@ function ScoreScreen({
               <LottieIcon source={LOTTIE_BULB} size={22} />
               <Text style={[sim5Styles.insightText, RTL, { flex: 1 }]}>
                 הבחירה בין Traditional ל-Roth תלויה בשיעור המס שלך היום לעומת
-                בפרישה. אם המס שלך נמוך עכשיו — Roth עדיף. אם גבוה עכשיו —
+                בפרישה. אם המס שלך נמוך עכשיו, Roth עדיף. אם גבוה עכשיו —
                 Traditional עדיף.
               </Text>
             </View>
@@ -566,9 +566,9 @@ export function IRABuilderScreen({ onComplete }: IRABuilderScreenProps) {
     >
       <View style={{ flex: 1, padding: 12 }}>
 
-        {/* IRA type toggle — prediction */}
+        {/* IRA type toggle, prediction */}
         <Animated.View entering={FadeInDown.delay(50)}>
-          <Text style={[styles.sectionLabel, RTL]}>מה הניחוש שלך — מי ינצח?</Text>
+          <Text style={[styles.sectionLabel, RTL]}>מה הניחוש שלך, מי ינצח?</Text>
           <View style={styles.typeToggleRow}>
             {(['traditional', 'roth'] as const).map((type) => {
               const helper = IRA_HELPER_TEXTS[type];
@@ -689,7 +689,7 @@ export function IRABuilderScreen({ onComplete }: IRABuilderScreenProps) {
           </Animated.View>
         )}
 
-        {/* Dual bar chart — after-tax comparison */}
+        {/* Dual bar chart, after-tax comparison */}
         {isSimRunning && (
           <Animated.View entering={FadeInDown.delay(100)}>
             <GlowCard
@@ -698,7 +698,7 @@ export function IRABuilderScreen({ onComplete }: IRABuilderScreenProps) {
             >
               <View style={{ padding: 16 }}>
                 <Text style={[styles.chartTitle, RTL]}>
-                  השוואה — ערך נטו (אחרי מס)
+                  השוואה, ערך נטו (אחרי מס)
                 </Text>
 
                 <Animated.View style={balanceAnimStyle}>
@@ -865,7 +865,7 @@ export function IRABuilderScreen({ onComplete }: IRABuilderScreenProps) {
             <View style={styles.hintRow}>
               <LottieIcon source={LOTTIE_BULB} size={20} />
               <Text style={[styles.hintText, RTL]}>
-                שנה את שיעורי המס — מתי Roth עדיף? מתי Traditional?
+                שנה את שיעורי המס, מתי Roth עדיף? מתי Traditional?
               </Text>
             </View>
           </Animated.View>

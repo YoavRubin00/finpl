@@ -45,7 +45,7 @@ export const useBridgeStore = create<BridgeState>()(
 
       getTotalSavedValue: (): string => {
         const count = get().redeemedBenefitIds.length;
-        // Mock estimate — real value would come from partners
+        // Mock estimate, real value would come from partners
         return `₪${(count * 75).toLocaleString()}`;
       },
     }),

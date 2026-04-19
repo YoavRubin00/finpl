@@ -56,7 +56,7 @@ export interface PanicIndexScore {
   finalValue: number;
   /** Number of events the player held through */
   holdDuration: number;
-  /** Panic resistance score (0-100) — higher is better */
+  /** Panic resistance score (0-100), higher is better */
   panicResistance: number;
   /** Value player would have had if they held through everything (₪) */
   potentialValue: number;

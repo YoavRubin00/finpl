@@ -4,7 +4,7 @@ import { persist, createJSONStorage } from "zustand/middleware";
 import { zustandStorage } from '../../lib/zustandStorage';
 import type { NotificationChannelId, NotificationState } from "./notificationTypes";
 
-// ─── Default handler — show banners in foreground ───────────────────────────
+// ─── Default handler, show banners in foreground ───────────────────────────
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
     shouldShowAlert: true,
@@ -24,12 +24,12 @@ const CONTENT: Record<NotificationChannelId, Notifications.NotificationContentIn
   },
   chest: {
     title: "📦 ארגז מוכן לפתיחה!",
-    body: "הארגז שלך חיכה מספיק — פתח אותו עכשיו ואסוף את הפרס!",
+    body: "הארגז שלך חיכה מספיק, פתח אותו עכשיו ואסוף את הפרס!",
     data: { screen: "/(tabs)/learn" },
   },
   challenge: {
     title: "⚔️ אתגר ממתין לך!",
-    body: "חבר שלח לך אתגר — אל תתן לו לנצח!",
+    body: "חבר שלח לך אתגר, אל תתן לו לנצח!",
     data: { screen: "/duels" },
   },
   squadInvite: {
@@ -44,7 +44,7 @@ const CONTENT: Record<NotificationChannelId, Notifications.NotificationContentIn
   },
   morning: {
     title: "בוקר טוב מקפטן שארק!",
-    body: "טיפ פיננסי ליום חדש — בוא לגלות!",
+    body: "טיפ פיננסי ליום חדש, בוא לגלות!",
     data: { screen: "/(tabs)/learn" },
   },
   inactivity: {
@@ -54,7 +54,7 @@ const CONTENT: Record<NotificationChannelId, Notifications.NotificationContentIn
   },
   dailyChallenge: {
     title: "🎯 האתגר היומי מחכה לך!",
-    body: "דילמה פיננסית חדשה — בוא לפתור ולצבור XP!",
+    body: "דילמה פיננסית חדשה, בוא לפתור ולצבור XP!",
     data: { screen: "/(tabs)/learn", feedScrollIndex: 0 },
   },
   marketHook: {
@@ -64,7 +64,7 @@ const CONTENT: Record<NotificationChannelId, Notifications.NotificationContentIn
   },
   aiInsight: {
     title: "💡 תובנה חדשה מקפטן שארק",
-    body: "יש לך תובנה פיננסית מותאמת אישית — בוא לראות!",
+    body: "יש לך תובנה פיננסית מותאמת אישית, בוא לראות!",
     data: { screen: "/(tabs)/" },
   },
   upgradeNudge: {
@@ -202,7 +202,7 @@ export const useNotificationStore = create<NotificationState & NotificationActio
         const { permissionGranted, scheduled, cancelChannel } = get();
         if (!permissionGranted) return;
 
-        // Cap: don't stack — cancel ALL pending before adding chest notification
+        // Cap: don't stack, cancel ALL pending before adding chest notification
         await Notifications.cancelAllScheduledNotificationsAsync().catch(() => {});
         await cancelChannel("chest");
 
@@ -366,7 +366,7 @@ export const useNotificationStore = create<NotificationState & NotificationActio
         set({ scheduled: [...scheduled.filter((s) => s.channelId !== "morning"), { channelId: "morning" as const, identifier }] });
       },
 
-      /** Schedule inactivity notification — capped to 1 only */
+      /** Schedule inactivity notification, capped to 1 only */
       scheduleInactivityEscalation: async (notifications): Promise<void> => {
         const { permissionGranted, scheduled, cancelChannel } = get();
         if (!permissionGranted) return;

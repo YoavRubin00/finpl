@@ -28,7 +28,7 @@ import { useChapterStore } from '../chapter-1-content/useChapterStore';
 const MAX_HEARTS = 5;
 
 /* ------------------------------------------------------------------ */
-/*  HeartsDisplay — shows in lesson header                             */
+/*  HeartsDisplay, shows in lesson header                             */
 /* ------------------------------------------------------------------ */
 
 export function HeartsDisplay() {
@@ -65,7 +65,7 @@ export function HeartsDisplay() {
 }
 
 /* ------------------------------------------------------------------ */
-/*  OutOfHeartsModal — dramatic overlay when hearts = 0                */
+/*  OutOfHeartsModal, dramatic overlay when hearts = 0                */
 /* ------------------------------------------------------------------ */
 
 const HEART_REFILL_COIN_COST = 1500;
@@ -196,7 +196,7 @@ export function OutOfHeartsModal({ visible, onDismiss, onUpgrade, onHeartsRefill
             });
         });
         if (options.length === 0) {
-            // No completed modules — nothing to practice, just dismiss
+            // No completed modules, nothing to practice, just dismiss
             onDismiss();
             return;
         }
@@ -264,25 +264,25 @@ export function OutOfHeartsModal({ visible, onDismiss, onUpgrade, onHeartsRefill
                         ))}
                     </View>
 
-                    {/* Watch ad for 1 heart — non-PRO only */}
+                    {/* Watch ad for 1 heart, non-PRO only */}
                     {!isPro && adReady && (
                         <Pressable onPress={handleAdRefill} style={styles.adRefillBtn} accessibilityRole="button" accessibilityLabel="צפו בפרסומת וקבלו לב חינם">
-                            <Text style={styles.adRefillBtnText}>צפו בפרסומת — קבלו לב חינם</Text>
+                            <Text style={styles.adRefillBtnText}>צפו בפרסומת, קבלו לב חינם</Text>
                             <Text style={styles.btnIcon}>🎬</Text>
                         </Pressable>
                     )}
 
-                    {/* Practice-to-Refill (US-006) — free, pedagogical, 2/day cap */}
+                    {/* Practice-to-Refill (US-006), free, pedagogical, 2/day cap */}
                     {canPractice && (
                         <Pressable
                             onPress={handlePracticeRefill}
                             style={styles.practiceRefillBtn}
                             accessibilityRole="button"
-                            accessibilityLabel={`תרגלו שיעור ישן וקבלו לב חינם — נותרו ${2 - practiceCountToday} היום`}
+                            accessibilityLabel={`תרגלו שיעור ישן וקבלו לב חינם, נותרו ${2 - practiceCountToday} היום`}
                             hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
                         >
                             <View style={{ flex: 1, alignItems: 'flex-end' }}>
-                                <Text style={styles.practiceRefillBtnText}>תרגלו שיעור ישן — קבלו לב</Text>
+                                <Text style={styles.practiceRefillBtnText}>תרגלו שיעור ישן, קבלו לב</Text>
                                 <Text style={styles.practiceRefillBtnSubtext}>
                                     נותרו {2 - practiceCountToday} היום
                                 </Text>
@@ -295,8 +295,8 @@ export function OutOfHeartsModal({ visible, onDismiss, onUpgrade, onHeartsRefill
                     <Pressable onPress={handleGemRefill} style={styles.gemRefillBtn} accessibilityRole="button" accessibilityLabel="מלא לבבות עם ג׳מס">
                         <Text style={styles.gemRefillBtnText}>
                             {gems >= HEART_REFILL_GEM_COST
-                                ? `מלא מיד — ${HEART_REFILL_GEM_COST} ג'מס`
-                                : `קנה ג'מס — מלא מיד`}
+                                ? `מלא מיד, ${HEART_REFILL_GEM_COST} ג'מס`
+                                : `קנה ג'מס, מלא מיד`}
                         </Text>
                         <Text style={styles.btnIcon}>💎</Text>
                     </Pressable>
@@ -315,7 +315,7 @@ export function OutOfHeartsModal({ visible, onDismiss, onUpgrade, onHeartsRefill
                     >
                         <View style={{ flex: 1, alignItems: 'flex-end' }}>
                             <View style={{ flexDirection: 'row-reverse', alignItems: 'center', gap: 4 }}>
-                                <Text style={styles.coinRefillBtnText}>מילוי לבבות — {HEART_REFILL_COIN_COST}</Text>
+                                <Text style={styles.coinRefillBtnText}>מילוי לבבות, {HEART_REFILL_COIN_COST}</Text>
                                 <GoldCoinIcon size={18} />
                             </View>
                             {!canAffordRefill && (
@@ -331,9 +331,9 @@ export function OutOfHeartsModal({ visible, onDismiss, onUpgrade, onHeartsRefill
                     </Pressable>
 
                     {/* Upgrade CTA */}
-                    <Pressable onPress={handleUpgrade} style={styles.upgradeBtn} accessibilityRole="button" accessibilityLabel="שדרגו ל-Pro — לבבות אינסופיים">
+                    <Pressable onPress={handleUpgrade} style={styles.upgradeBtn} accessibilityRole="button" accessibilityLabel="שדרגו ל-Pro, לבבות אינסופיים">
                         <Text style={styles.upgradeBtnText}>
-                            שדרגו ל-Pro — לבבות אינסופיים
+                            שדרגו ל-Pro, לבבות אינסופיים
                         </Text>
                         <Text style={styles.btnIcon}>❤️</Text>
                     </Pressable>

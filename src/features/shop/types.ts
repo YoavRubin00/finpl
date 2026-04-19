@@ -11,7 +11,7 @@ export interface ShopItem {
   lottieSource?: number;
 }
 
-/** IAP gem bundle — real-money purchase (mock flow) */
+/** IAP gem bundle, real-money purchase (mock flow) */
 export interface GemBundle {
   id: string;
   name: string;
@@ -25,7 +25,7 @@ export interface GemBundle {
   isPromo?: boolean;
 }
 
-/** Daily deal — rotating discounted shop item */
+/** Daily deal, rotating discounted shop item */
 export interface DailyDeal {
   id: string;
   item: ShopItem;
@@ -35,7 +35,7 @@ export interface DailyDeal {
   currency: 'coins' | 'gems';
 }
 
-/** Gold bundle — buy coins with gems (Clash Royale style) */
+/** Gold bundle, buy coins with gems (Clash Royale style) */
 export interface CoinBundle {
   id: string;
   name: string;

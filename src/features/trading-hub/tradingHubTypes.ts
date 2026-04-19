@@ -22,12 +22,12 @@ export interface TradableAsset {
   type: AssetType;
   descriptionHebrew: string;
   volatilityRating: VolatilityRating;
-  educationalTag: string; // e.g. "פרק 4 — מניות"
+  educationalTag: string; // e.g. "פרק 4, מניות"
 }
 
 export interface ChartDataPoint {
   timestamp: number;
-  /** Close price — legacy field kept in sync with `close` for older consumers (LiveChart, Holdings, etc). */
+  /** Close price, legacy field kept in sync with `close` for older consumers (LiveChart, Holdings, etc). */
   price: number;
   open?: number;
   high?: number;

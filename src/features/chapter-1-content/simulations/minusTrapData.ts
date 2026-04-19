@@ -1,7 +1,7 @@
 import type { SwipeCard, MinusTrapSwipeConfig } from './minusTrapTypes';
 
 /* ------------------------------------------------------------------ */
-/*  10 Swipe Cards — מלכודת המינוס (טינדר הוצאות)                      */
+/*  10 Swipe Cards, מלכודת המינוס (טינדר הוצאות)                      */
 /*  Order: salary first → mixed wants/needs/traps → income at end      */
 /* ------------------------------------------------------------------ */
 
@@ -56,20 +56,20 @@ const cards: SwipeCard[] = [
         skipPenalty: 99999,
         penaltyDelay: 0,
     },
-    // ── 6. הלוואה חוץ-בנקאית — "ריבית אפסית" ──
+    // ── 6. הלוואה חוץ-בנקאית, "ריבית אפסית" ──
     {
         id: 'mt-14',
-        title: 'הלוואה חוץ-בנקאית — "ריבית אפסית"',
+        title: 'הלוואה חוץ-בנקאית, "ריבית אפסית"',
         emoji: '💸',
         amount: 2000,
         cardType: 'trap',
         isMandatory: false,
         recurringCost: 200,
     },
-    // ── 7. החתול בלע לגו — חדר מיון ──
+    // ── 7. החתול בלע לגו, חדר מיון ──
     {
         id: 'mt-12',
-        title: 'החתול בלע לגו — חדר מיון',
+        title: 'החתול בלע לגו, חדר מיון',
         emoji: '🐱',
         amount: -600,
         cardType: 'need',

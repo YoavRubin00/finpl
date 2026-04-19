@@ -101,7 +101,7 @@ export const savingsOptions: SavingsOption[] = [
     savingsRate: 0.7,
     label: 'חיסכון מקסימלי',
     emoji: '🏦',
-    description: 'מוותר על בילויים ומותרות. קשה — אבל הקרן גדלה מהר.',
+    description: 'מוותר על בילויים ומותרות. קשה, אבל הקרן גדלה מהר.',
     savingsAmount: 2100,
     happinessImpact: -2,
   },
@@ -125,7 +125,7 @@ export const savingsOptions: SavingsOption[] = [
   },
 ];
 
-/** Happiness-triggered events — appear when happiness is high/low */
+/** Happiness-triggered events, appear when happiness is high/low */
 export interface HappinessEvent {
   minHappiness: number;
   maxHappiness: number;
@@ -137,7 +137,7 @@ export interface HappinessEvent {
 }
 
 export const happinessEvents: HappinessEvent[] = [
-  // Month 2 — low happiness penalty
+  // Month 2, low happiness penalty
   {
     minHappiness: 0,
     maxHappiness: 3,
@@ -146,52 +146,52 @@ export const happinessEvents: HappinessEvent[] = [
     emoji: '🎂',
     financialImpact: 0,
   },
-  // Month 4 — high happiness bonus
+  // Month 4, high happiness bonus
   {
     minHappiness: 7,
     maxHappiness: 10,
     month: 4,
-    text: 'חבר הזמין אותך לאירוע — האופטימיות שלך משתלמת!',
+    text: 'חבר הזמין אותך לאירוע, האופטימיות שלך משתלמת!',
     emoji: '🎉',
     financialImpact: 500,
   },
-  // Month 5 — low happiness cost
+  // Month 5, low happiness cost
   {
     minHappiness: 0,
     maxHappiness: 2,
     month: 5,
-    text: 'הלחץ מצטבר — קנית אוכל מוכן יקר כל השבוע.',
+    text: 'הלחץ מצטבר, קנית אוכל מוכן יקר כל השבוע.',
     emoji: '🍕',
     financialImpact: -400,
   },
-  // Month 6 — mid happiness reward
+  // Month 6, mid happiness reward
   {
     minHappiness: 5,
     maxHappiness: 8,
     month: 6,
-    text: 'השכנה שמעה שאתה אחראי — הציעה לך עבודה קטנה!',
+    text: 'השכנה שמעה שאתה אחראי, הציעה לך עבודה קטנה!',
     emoji: '🤝',
     financialImpact: 700,
   },
-  // Month 7 — very low happiness penalty
+  // Month 7, very low happiness penalty
   {
     minHappiness: 0,
     maxHappiness: 3,
     month: 7,
-    text: 'ההסתגרות גובה מחיר — צריך טיפול רגשי.',
+    text: 'ההסתגרות גובה מחיר, צריך טיפול רגשי.',
     emoji: '😔',
     financialImpact: -800,
   },
-  // Month 9 — high happiness bonus (post-layoff recovery)
+  // Month 9, high happiness bonus (post-layoff recovery)
   {
     minHappiness: 6,
     maxHappiness: 10,
     month: 9,
-    text: 'למרות הפיטורים שמרת על גישה חיובית — חבר המליץ עליך למשרה!',
+    text: 'למרות הפיטורים שמרת על גישה חיובית, חבר המליץ עליך למשרה!',
     emoji: '💪',
     financialImpact: 1000,
   },
-  // Month 10 — low happiness cost
+  // Month 10, low happiness cost
   {
     minHappiness: 0,
     maxHappiness: 3,
@@ -200,7 +200,7 @@ export const happinessEvents: HappinessEvent[] = [
     emoji: '😤',
     financialImpact: -300,
   },
-  // Month 11 — high happiness bonus
+  // Month 11, high happiness bonus
   {
     minHappiness: 6,
     maxHappiness: 10,

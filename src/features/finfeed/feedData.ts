@@ -1,11 +1,11 @@
 import type { FeedItem, FeedComic, FeedVideo } from "./types";
 
-// Comics removed — will be replaced by NotebookLM summary infographics per module
+// Comics removed, will be replaced by NotebookLM summary infographics per module
 export const COMIC_FEED_ITEMS: FeedComic[] = [];
 
 const BENBEN_CDN = 'https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/video/benben';
 
-/** BENBEN creator videos — one is pinned at feed position 7, rotating each session */
+/** BENBEN creator videos, one is pinned at feed position 7, rotating each session */
 // Deterministic per-video like counts so the feed feels populated (1,100–9,800 range).
 const BENBEN_LIKE_SEEDS = [3840, 5120, 2780, 8230, 1460, 6290, 4710, 9820, 2150, 7340, 3970, 5680];
 const BENBEN_SAVE_SEEDS = [120, 240, 95, 410, 62, 280, 195, 520, 88, 330, 175, 245];
@@ -84,7 +84,7 @@ export const MOCK_FEED_DATA: FeedItem[] = [
   {
     id: "v3",
     type: "video",
-    title: "קרן פנסיה — מה זה בכלל?",
+    title: "קרן פנסיה, מה זה בכלל?",
     description: "כל מה שצריך לדעת על קרן הפנסיה שלך: מה נכנס, מה יוצא, ואיך לוודא שאתה לא מפסיד כסף.",
     category: "Investing",
     videoId: "placeholder-3",
@@ -111,8 +111,8 @@ export const MOCK_FEED_DATA: FeedItem[] = [
   {
     id: "v4",
     type: "video",
-    title: "תלוש שכר — מפענחים יחד",
-    description: "ברוטו, נטו, ניכויים, ביטוח לאומי — מה כל השורות האלה אומרות ולאן הכסף שלך הולך.",
+    title: "תלוש שכר, מפענחים יחד",
+    description: "ברוטו, נטו, ניכויים, ביטוח לאומי, מה כל השורות האלה אומרות ולאן הכסף שלך הולך.",
     category: "Budgeting",
     videoId: "placeholder-4",
     durationMinutes: 4,
@@ -128,7 +128,7 @@ export const MOCK_FEED_DATA: FeedItem[] = [
     id: "q4",
     type: "quote",
     title: "כלל 72",
-    quote: "חלק 72 בריבית השנתית שלך — וזה בדיוק כמה שנים לוקח לכסף שלך להכפיל את עצמו.",
+    quote: "חלק 72 בריבית השנתית שלך, וזה בדיוק כמה שנים לוקח לכסף שלך להכפיל את עצמו.",
     category: "Investing",
     pyramidLayer: 4,
     likes: 445,
@@ -141,7 +141,7 @@ export const MOCK_FEED_DATA: FeedItem[] = [
   {
     id: "v5",
     type: "video",
-    title: "מינוס בעובר ושב — איך יוצאים?",
+    title: "מינוס בעובר ושב, איך יוצאים?",
     description: "3 שלבים פשוטים לצאת מהמינוס ולא לחזור אליו. כולל טיפים שהבנק לא יגיד לך.",
     category: "Debt",
     videoId: "placeholder-5",
@@ -168,8 +168,8 @@ export const MOCK_FEED_DATA: FeedItem[] = [
   {
     id: "v6",
     type: "video",
-    title: "ביטוח — מה חייבים ומה מיותר?",
-    description: "ביטוח חיים, בריאות, רכב — מה באמת שווה את הכסף ואיפה אפשר לחסוך בלי לקחת סיכון.",
+    title: "ביטוח, מה חייבים ומה מיותר?",
+    description: "ביטוח חיים, בריאות, רכב, מה באמת שווה את הכסף ואיפה אפשר לחסוך בלי לקחת סיכון.",
     category: "Insurance",
     videoId: "placeholder-6",
     durationMinutes: 5,
@@ -185,7 +185,7 @@ export const MOCK_FEED_DATA: FeedItem[] = [
     id: "q6",
     type: "quote",
     title: "על קרן חירום",
-    quote: "קרן חירום היא לא הוצאה — היא הביטוח הכי זול שיש. 3 חודשי הוצאות בצד משנים הכל.",
+    quote: "קרן חירום היא לא הוצאה, היא הביטוח הכי זול שיש. 3 חודשי הוצאות בצד משנים הכל.",
     category: "Saving",
     pyramidLayer: 1,
     likes: 523,
@@ -198,7 +198,7 @@ export const MOCK_FEED_DATA: FeedItem[] = [
   {
     id: "v7",
     type: "video",
-    title: "מדד ת\"א 35 — להשקיע בישראל",
+    title: "מדד ת\"א 35, להשקיע בישראל",
     description: "מה זה מדד מניות, למה כולם מדברים על מדד ת\"א 35, ואיך אפשר להיכנס בפחות מ-500 ₪.",
     category: "Investing",
     videoId: "placeholder-7",
@@ -210,8 +210,8 @@ export const MOCK_FEED_DATA: FeedItem[] = [
   {
     id: "q7",
     type: "quote",
-    title: "ריבית דריבית — האינשטיין",
-    quote: "ריבית דריבית היא הפלא השמיני של העולם. מי שמבין אותה — מרוויח. מי שלא — משלם.",
+    title: "ריבית דריבית, האינשטיין",
+    quote: "ריבית דריבית היא הפלא השמיני של העולם. מי שמבין אותה, מרוויח. מי שלא, משלם.",
     author: "אלברט איינשטיין (מיוחס לו)",
     category: "Investing",
     pyramidLayer: 3,
@@ -225,8 +225,8 @@ export const MOCK_FEED_DATA: FeedItem[] = [
   {
     id: "v8",
     type: "video",
-    title: "מס הכנסה — זיכויים שמפספסים",
-    description: "נקודות זיכוי, ניכויים, החזר מס — רוב האנשים משלמים יותר ממה שצריך. בוא נתקן את זה.",
+    title: "מס הכנסה, זיכויים שמפספסים",
+    description: "נקודות זיכוי, ניכויים, החזר מס, רוב האנשים משלמים יותר ממה שצריך. בוא נתקן את זה.",
     category: "Taxes",
     videoId: "placeholder-8",
     durationMinutes: 6,

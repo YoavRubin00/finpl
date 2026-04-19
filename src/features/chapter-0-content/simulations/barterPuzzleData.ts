@@ -71,4 +71,4 @@ export const COIN_ITEM: BarterItem = { emoji: '🪙', label: 'מטבע' };
 export const FINN_COMMENT = 'וואו, 2 החלפות בשביל דבר אחד פשוט? 😮‍💨';
 
 export const INSIGHT_TEXT =
-  'כסף = הסכמה אוניברסלית.\nבמקום 2 החלפות — פעולה אחת.\nזו ההמצאה שפתרה הכל.';
+  'כסף = הסכמה אוניברסלית.\nבמקום 2 החלפות, פעולה אחת.\nזו ההמצאה שפתרה הכל.';

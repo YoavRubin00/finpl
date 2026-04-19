@@ -20,9 +20,9 @@ const TIMEFRAME_PARAMS: Record<Timeframe, YahooParams> = {
   '1MIN': { interval: '1m', range: '1d' },
   '5MIN': { interval: '5m', range: '1d' },
   '1H': { interval: '1h', range: '5d' },
-  // 1D = daily candles over 6 months — enough room for MA20/MA50/MA100 line history.
+  // 1D = daily candles over 6 months, enough room for MA20/MA50/MA100 line history.
   '1D': { interval: '1d', range: '6mo' },
-  // 1W = weekly candles over 5 years — gives ~260 bars, enough for MA200 in advanced mode.
+  // 1W = weekly candles over 5 years, gives ~260 bars, enough for MA200 in advanced mode.
   '1W': { interval: '1wk', range: '5y' },
 };
 
@@ -44,7 +44,7 @@ const TICKER_PATTERN = /^[A-Z0-9.=^-]{1,12}$/;
 
 interface ChartPoint {
   timestamp: number;
-  /** Close price — kept as `price` for backward compatibility with earlier clients. */
+  /** Close price, kept as `price` for backward compatibility with earlier clients. */
   price: number;
   open: number;
   high: number;
@@ -62,7 +62,7 @@ interface QuoteResponse {
   chart: ChartPoint[];
 }
 
-/** Yahoo Finance endpoints — try query2 first (more reliable), fall back to query1 */
+/** Yahoo Finance endpoints, try query2 first (more reliable), fall back to query1 */
 const YAHOO_HOSTS = [
   'https://query2.finance.yahoo.com',
   'https://query1.finance.yahoo.com',

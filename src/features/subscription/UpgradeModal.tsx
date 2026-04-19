@@ -19,28 +19,28 @@ import { BASIC_LIMITS, type GatedFeature } from "./useSubscriptionStore";
 
 const FEATURE_INFO: Record<GatedFeature, { title: string; body: string }> = {
   simulator: {
-    title: "הסימולטור — PRO בלבד",
+    title: "הסימולטור, PRO בלבד",
     body: `משתמשי FREE מקבלים ${BASIC_LIMITS.simulator} הרצות יומיות.\nשדרג ל-PRO לגישה בלתי מוגבלת לכל הסימולציות.`,
   },
   arena: {
-    title: "משחקי פיד — PRO בלבד",
+    title: "משחקי פיד, PRO בלבד",
     body: `משתמשי FREE מקבלים ${BASIC_LIMITS.arena} משחקים ברצף.\nשדרג ל-PRO למשחקי פיד בלתי מוגבלים + פרסים מוגדלים.`,
   },
   chat: {
-    title: "צ'אט AI — הגעת למכסה",
+    title: "צ'אט AI, הגעת למכסה",
     body: `משתמשי FREE מקבלים ${BASIC_LIMITS.chat} הודעות בצ'אט.\nשדרג ל-PRO לשיחות AI ללא הגבלה עם פינן.`,
   },
   aiInsights: {
-    title: "AI Insights — PRO בלבד",
+    title: "AI Insights, PRO בלבד",
     body: "ניתוח השקעות מבוסס AI זמין לחברי PRO בלבד.\nשדרג כדי לפתוח תובנות מותאמות אישית.",
   },
   saved_items: {
-    title: "פריטים שמורים — PRO בלבד",
+    title: "פריטים שמורים, PRO בלבד",
     body: "שמירת שיעורים ותכנים לגישה מהירה זמינה לחברי PRO בלבד.\nשדרג כדי לשמור תכנים ללא הגבלה.",
   },
 };
 
-/** Standalone usage — must be placed once in app/_layout.tsx */
+/** Standalone usage, must be placed once in app/_layout.tsx */
 export function GlobalUpgradeModal() {
   const visible = useUpgradeModalStore((s) => s.visible);
   const feature = useUpgradeModalStore((s) => s.feature);

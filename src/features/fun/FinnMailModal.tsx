@@ -60,7 +60,7 @@ export function FinnMailModal({ visible, onClose }: FinnMailModalProps) {
             <X size={18} color="#64748b" />
           </Pressable>
 
-          {/* Mail header image — comeback variant uses the dedicated re-engagement art.
+          {/* Mail header image, comeback variant uses the dedicated re-engagement art.
               The comeback PNG is 4:5 portrait; we give it more vertical room than the
               square daily art so the cover crop doesn't lose the main subject. */}
           <ExpoImage
@@ -88,7 +88,7 @@ export function FinnMailModal({ visible, onClose }: FinnMailModalProps) {
             />
           </Animated.View>
 
-          {/* Title — varies by mail kind */}
+          {/* Title, varies by mail kind */}
           <Animated.View entering={FadeInDown.delay(150).duration(300)}>
             <Text style={styles.title}>
               {isComeback ? "הממ, מעניין 👀" : "דואר מקפטן שארק"}
@@ -97,7 +97,7 @@ export function FinnMailModal({ visible, onClose }: FinnMailModalProps) {
 
           {mailContent?.kind === 'daily' ? (
             <>
-              {/* Joke — speech bubble */}
+              {/* Joke, speech bubble */}
               {mailContent.joke ? (
                 <Animated.View entering={FadeInDown.delay(200).duration(300)} style={styles.speechBubble}>
                   <Text style={styles.speechText}>{mailContent.joke}</Text>
@@ -105,7 +105,7 @@ export function FinnMailModal({ visible, onClose }: FinnMailModalProps) {
                 </Animated.View>
               ) : null}
 
-              {/* Fun fact — info card */}
+              {/* Fun fact, info card */}
               {mailContent.fact ? (
                 <Animated.View entering={FadeInDown.delay(300).duration(300)} style={styles.factCard}>
                   <Text style={styles.factLabel}>ידעת?</Text>

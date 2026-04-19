@@ -22,7 +22,7 @@ import { usePanicIndex } from './usePanicIndex';
 import { SIM3, GRADE_COLORS3, GRADE_HEBREW, SHADOW_STRONG, SHADOW_LIGHT, RTL, TYPE3, sim3Styles } from './simTheme';
 import type { PanicIndexGrade, MarketSentiment } from './panicIndexTypes';
 
-/* ── Chapter-3 theme (ocean blue) — kept for gradient only ── */
+/* ── Chapter-3 theme (ocean blue), kept for gradient only ── */
 const _th3 = getChapterTheme('chapter-3');
 
 /* ── Lottie assets ── */
@@ -46,7 +46,7 @@ const CHART_WIDTH = SCREEN_WIDTH - 64; // padding
 const CHART_HEIGHT = 160;
 
 /* ================================================================== */
-/*  MiniChart — simplified stock chart visualization                    */
+/*  MiniChart, simplified stock chart visualization                    */
 /* ================================================================== */
 
 function MiniChart({
@@ -158,7 +158,7 @@ function MiniChart({
 }
 
 /* ================================================================== */
-/*  HeadlineTicker — breaking news headline                             */
+/*  HeadlineTicker, breaking news headline                             */
 /* ================================================================== */
 
 function HeadlineTicker({
@@ -198,7 +198,7 @@ function HeadlineTicker({
 }
 
 /* ================================================================== */
-/*  SellButton — pulsing red temptation                                 */
+/*  SellButton, pulsing red temptation                                 */
 /* ================================================================== */
 
 function SellButton({
@@ -256,7 +256,7 @@ function SellButton({
 }
 
 /* ================================================================== */
-/*  HoldButton — steady green                                           */
+/*  HoldButton, steady green                                           */
 /* ================================================================== */
 
 function HoldButton({
@@ -287,7 +287,7 @@ function HoldButton({
 }
 
 /* ================================================================== */
-/*  ScoreScreen — results display                                       */
+/*  ScoreScreen, results display                                       */
 /* ================================================================== */
 
 function ScoreScreen({
@@ -457,7 +457,7 @@ function ScoreScreen({
 }
 
 /* ================================================================== */
-/*  PanicIndexScreen — main component                                   */
+/*  PanicIndexScreen, main component                                   */
 /* ================================================================== */
 
 export function PanicIndexScreen({
@@ -505,7 +505,7 @@ export function PanicIndexScreen({
     if (state.currentEventIndex < 0) return;
     const change = currentEvent?.marketChange ?? 0;
     if (change < -0.1) {
-      // Crash — screen shake effect
+      // Crash, screen shake effect
       portfolioScale.value = withSequence(
         withTiming(1.05, { duration: 100 }),
         withSpring(0.98, { damping: 20, stiffness: 300 }),
@@ -513,7 +513,7 @@ export function PanicIndexScreen({
       );
       heavyHaptic();
     } else if (change > 0.1) {
-      // Recovery — golden glow pulse
+      // Recovery, golden glow pulse
       portfolioScale.value = withSequence(
         withSpring(1.03, { damping: 22, stiffness: 200 }),
         withSpring(1, { damping: 22, stiffness: 150 }),

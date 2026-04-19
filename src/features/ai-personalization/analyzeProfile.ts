@@ -1,5 +1,5 @@
 /**
- * PRD 34 — US-002: Mock AI Profile Analysis
+ * PRD 34, US-002: Mock AI Profile Analysis
  *
  * Takes batched telemetry events and returns a structured AIProfile.
  * Currently uses deterministic heuristics instead of a real LLM call.
@@ -109,7 +109,7 @@ function deriveMonetizationContext(
         trigger: 'after_win',
         bundleKey: 'flash_gem_pack',
         headline: 'מבצע בזק! 💎',
-        subtext: 'חבילת 500 ג׳מס ב-50% הנחה — רק עכשיו',
+        subtext: 'חבילת 500 ג׳מס ב-50% הנחה, רק עכשיו',
         urgency: 'high',
       });
       offers.push({
@@ -125,7 +125,7 @@ function deriveMonetizationContext(
         trigger: 'after_win',
         bundleKey: 'platinum_avatar',
         headline: 'אווטאר פלטינום 👑',
-        subtext: 'בלעדי למנצחים — תבלוט מכולם',
+        subtext: 'בלעדי למנצחים, תבלוט מכולם',
         urgency: 'medium',
       });
       offers.push({
@@ -157,7 +157,7 @@ function deriveMonetizationContext(
         trigger: 'chapter_complete',
         bundleKey: 'value_mega_pack',
         headline: 'חבילת ערך מקסימלי',
-        subtext: 'הכי הרבה תמורה — חסכוני ומשתלם',
+        subtext: 'הכי הרבה תמורה, חסכוני ומשתלם',
         urgency: 'low',
       });
       break;
@@ -208,7 +208,7 @@ function deriveActions(
 /**
  * Analyze batched telemetry events and return a structured AIProfile.
  *
- * Currently a **mock** — uses simple heuristics.
+ * Currently a **mock**, uses simple heuristics.
  * Replace the body with a real edge-function call in a future iteration.
  */
 export async function analyzeProfile(events: TelemetryEvent[]): Promise<AIProfile> {

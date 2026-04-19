@@ -91,7 +91,7 @@ function SwipeableCard({
     ],
   }));
 
-  // Overlay colors — red (Short) on left, green (Long) on right
+  // Overlay colors, red (Short) on left, green (Long) on right
   const leftOverlayStyle = useAnimatedStyle(() => ({
     opacity: interpolate(
       translateX.value,
@@ -127,20 +127,20 @@ function SwipeableCard({
           <Text style={[styles.cardHeadline, RTL, { textAlign: 'center' }]}>{card.headline}</Text>
         </View>
 
-        {/* Hero image — fitting elegantly in remaining space */}
+        {/* Hero image, fitting elegantly in remaining space */}
         {bgSource && (
           <View style={styles.heroImageContainer}>
             <Animated.Image entering={FadeIn.duration(800)} source={bgSource} style={styles.heroImage} resizeMode="contain" />
           </View>
         )}
 
-        {/* Short overlay (left) — Red + Bear */}
+        {/* Short overlay (left), Red + Bear */}
         <Animated.View style={[styles.swipeOverlay, styles.shortOverlay, leftOverlayStyle]}>
           <View accessible={false}><LottieIcon source={LOTTIE_BEAR} size={72} /></View>
           <Text style={styles.overlayLabelShort}>שורט 📉</Text>
         </Animated.View>
 
-        {/* Long overlay (right) — Green + Bull */}
+        {/* Long overlay (right), Green + Bull */}
         <Animated.View style={[styles.swipeOverlay, styles.longOverlay, rightOverlayStyle]}>
           <View accessible={false}><LottieIcon source={LOTTIE_BULL} size={72} /></View>
           <Text style={styles.overlayLabelLong}>לונג 📈</Text>
@@ -306,10 +306,10 @@ export const SwipeGameCard = React.memo(function SwipeGameCard({ isActive }: Pro
           </View>
         )}
 
-        {/* Swipeable card — flanked by Bear (שורט) left and Bull (לונג) right */}
+        {/* Swipeable card, flanked by Bear (שורט) left and Bull (לונג) right */}
         {gameState === 'playing' && currentIndex < cards.length && !lastFeedback && (
           <View style={styles.swipeArea}>
-            {/* LEFT — Bear / SHORT */}
+            {/* LEFT, Bear / SHORT */}
             <View style={styles.sideColumn}>
               <View style={[styles.sidePill, styles.sidePillShort]}>
                 <View accessible={false}>
@@ -322,7 +322,7 @@ export const SwipeGameCard = React.memo(function SwipeGameCard({ isActive }: Pro
               </View>
             </View>
 
-            {/* MIDDLE — Swipeable card */}
+            {/* MIDDLE, Swipeable card */}
             <View style={styles.cardMiddleCol}>
               <SwipeableCard
                 key={cards[currentIndex].id}
@@ -331,7 +331,7 @@ export const SwipeGameCard = React.memo(function SwipeGameCard({ isActive }: Pro
               />
             </View>
 
-            {/* RIGHT — Bull / LONG */}
+            {/* RIGHT, Bull / LONG */}
             <View style={styles.sideColumn}>
               <View style={[styles.sidePill, styles.sidePillLong]}>
                 <View accessible={false}>
@@ -401,7 +401,7 @@ export const SwipeGameCard = React.memo(function SwipeGameCard({ isActive }: Pro
         )}
       </View>
 
-      {/* Educational tooltip — Long & Short explained */}
+      {/* Educational tooltip, Long & Short explained */}
       <Pressable onPress={() => setShowEdu((v) => !v)} style={styles.eduToggle} accessibilityRole="button" accessibilityLabel="מה זה לונג ושורט">
         <Text style={styles.eduToggleText}>📚 מה זה לונג ושורט?</Text>
         {showEdu ? (
@@ -411,16 +411,16 @@ export const SwipeGameCard = React.memo(function SwipeGameCard({ isActive }: Pro
         )}
       </Pressable>
 
-      {/* Edu card — opens UPWARD, overlays the swipe card */}
+      {/* Edu card, opens UPWARD, overlays the swipe card */}
       {showEdu && (
         <Animated.View entering={FadeIn.duration(300)} style={styles.eduCardOverlay}>
-          <Text style={[styles.eduTitle, RTL]}>לונג (Long) — הימור על עלייה 📈</Text>
+          <Text style={[styles.eduTitle, RTL]}>לונג (Long), הימור על עלייה 📈</Text>
           <Text style={[styles.eduBody, RTL]}>
-            קונים נכס כי מאמינים שהמחיר יעלה. אם עולה — מרוויחים.
+            קונים נכס כי מאמינים שהמחיר יעלה. אם עולה, מרוויחים.
           </Text>
-          <Text style={[styles.eduTitle, RTL]}>שורט (Short) — הימור על ירידה 📉</Text>
+          <Text style={[styles.eduTitle, RTL]}>שורט (Short), הימור על ירידה 📉</Text>
           <Text style={[styles.eduBody, RTL]}>
-            "שואלים" נכס ומוכרים אותו. אם המחיר יורד — קונים בזול ומרוויחים את ההפרש.
+            "שואלים" נכס ומוכרים אותו. אם המחיר יורד, קונים בזול ומרוויחים את ההפרש.
           </Text>
           <Pressable onPress={() => setShowEdu(false)} style={styles.eduCloseBtn} accessibilityRole="button" accessibilityLabel="סגור הסבר">
             <Text style={styles.eduCloseBtnText}>הבנתי ✓</Text>

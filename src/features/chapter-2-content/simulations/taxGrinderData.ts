@@ -61,7 +61,7 @@ const regularTrack: InvestmentTrack = {
   color: '#EF4444',
 };
 
-/** Hishtalmut fund: same ₪500/mo, 0% tax — apples-to-apples comparison */
+/** Hishtalmut fund: same ₪500/mo, 0% tax, apples-to-apples comparison */
 const hishtalmutData = computeTrackData(MONTHLY_DEPOSIT, ANNUAL_RETURN, 0, MAX_YEARS);
 
 const hishtalmutTrack: InvestmentTrack = {

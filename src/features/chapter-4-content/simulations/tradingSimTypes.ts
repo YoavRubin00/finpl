@@ -1,5 +1,5 @@
 /**
- * SIM 22: סימולטור מסחר (Trading Simulator) — Module 4-22
+ * SIM 22: סימולטור מסחר (Trading Simulator), Module 4-22
  * Types for the mock brokerage trading simulation.
  */
 

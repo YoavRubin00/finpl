@@ -55,7 +55,7 @@ export const SharkFeedbackCard = React.memo(function SharkFeedbackCard() {
 
         <Text style={[styles.title, RTL_CENTER]}>מה הכי אהבתם באפליקציה?</Text>
         <Text style={[styles.subtitle, RTL_CENTER]}>
-          קפטן שארק רוצה לדעת — התשובה שלכם עוזרת לנו להשתפר
+          קפטן שארק רוצה לדעת, התשובה שלכם עוזרת לנו להשתפר
         </Text>
 
         <View style={styles.optionsCol}>

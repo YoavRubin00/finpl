@@ -292,7 +292,7 @@ export function BridgeScreen({ walkthroughAutoScroll }: BridgeScreenProps = {}) 
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
         >
-          {/* ── Captain Shark celebration — dancing because you reached the bridge ── */}
+          {/* ── Captain Shark celebration, dancing because you reached the bridge ── */}
           <Animated.View entering={FadeInDown.duration(400)} style={{ alignItems: 'center', marginBottom: 4 }}>
             <ExpoImage source={FINN_DANCING} style={{ width: 96, height: 96 }} contentFit="contain" accessible={false} />
           </Animated.View>
@@ -350,7 +350,7 @@ export function BridgeScreen({ walkthroughAutoScroll }: BridgeScreenProps = {}) 
                       onPress={() => {
                         Alert.alert(
                           'פירוט חיסכון',
-                          `המרת ${redeemedCount} הטבות\nערך חיסכון משוער: ${savedValue}\n\n(הערכה בלבד — הערך בפועל תלוי בשימוש)`,
+                          `המרת ${redeemedCount} הטבות\nערך חיסכון משוער: ${savedValue}\n\n(הערכה בלבד, הערך בפועל תלוי בשימוש)`,
                         );
                       }}
                       style={styles.statRow}
@@ -506,7 +506,7 @@ const styles = StyleSheet.create({
     paddingBottom: 48,
   },
 
-  // Hero card — 3D glow effect
+  // Hero card, 3D glow effect
   heroOuter: {
     marginBottom: 8,
     position: 'relative',

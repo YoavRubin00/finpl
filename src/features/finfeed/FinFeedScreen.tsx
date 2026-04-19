@@ -80,7 +80,7 @@ import { GrahamPersonalityFeedCard } from "../graham-personality/GrahamPersonali
 import { DiamondHandsCard } from "../diamond-hands/DiamondHandsCard";
 import { useStreakCelebration } from "../../hooks/useStreakCelebration";
 import { getPyramidStatus } from "../../utils/progression";
-// Chapter data — all 5 chapters
+// Chapter data, all 5 chapters
 import { chapter1Data } from "../chapter-1-content/chapter1Data";
 import { chapter2Data } from "../chapter-2-content/chapter2Data";
 import { chapter3Data } from "../chapter-3-content/chapter3Data";
@@ -101,16 +101,16 @@ import { FINN_DAD_JOKES, FINN_FUN_FACTS } from "../fun/finnJokesData";
 
 const { height: SCREEN_HEIGHT, width: SCREEN_WIDTH } = Dimensions.get("window");
 
-// Module-level flag — prevents re-check within the same session
+// Module-level flag, prevents re-check within the same session
 let streakCheckedThisSession = false;
 
 const STREAK_POPUP_KEY = "streak_popup_last_date";
 
-// Stable list helpers — avoids new references per render
+// Stable list helpers, avoids new references per render
 function FeedSeparator() { return <View style={{ height: 10 }} />; }
 function keyExtractor(item: FeedItem) { return item.id; }
 
-// Seeded Fisher-Yates shuffle — stable for the same seed
+// Seeded Fisher-Yates shuffle, stable for the same seed
 function seededShuffle<T>(arr: T[], seed: number): T[] {
   const result = [...arr];
   let s = seed;
@@ -207,7 +207,7 @@ function getDailyQuote(): { text: string; author: string; icon: string } {
 /** Module-level ref so WelcomeCard can scroll the feed list */
 let _feedListScrollToIndex: ((index: number) => void) | null = null;
 
-/** Pending scroll-to index — set externally, consumed on next focus */
+/** Pending scroll-to index, set externally, consumed on next focus */
 export let _pendingFeedScrollIndex: number | null = null;
 export let _pendingFeedScrollTargetId: string | null = null;
 
@@ -300,7 +300,7 @@ function WelcomeCard({ height }: { height: number }) {
             ״{dailyQuote.text}״
           </Text>
           <Text style={welcomeStyles.quoteAuthor}>
-            — {dailyQuote.author}
+           , {dailyQuote.author}
           </Text>
         </Animated.View>
       </View>
@@ -317,7 +317,7 @@ function WelcomeCard({ height }: { height: number }) {
           </View>
         </Animated.View>
 
-        {/* Mail from Captain Shark — next to Finn */}
+        {/* Mail from Captain Shark, next to Finn */}
         {hasUnreadMail && (
           <Pressable
             onPress={() => { setShowMailModal(true); }}
@@ -591,7 +591,7 @@ export function FinFeedScreen() {
   const flatListRef = useRef<FlashListRef<FeedItem>>(null);
   useScrollToTop(flatListRef);
 
-  // Continuous auto-scroll during walkthrough feed step — feels infinite
+  // Continuous auto-scroll during walkthrough feed step, feels infinite
   const walkthroughScreen = useTutorialStore((s) => s.walkthroughActiveScreen);
   useEffect(() => {
     if (walkthroughScreen !== 'feed') return;
@@ -602,7 +602,7 @@ export function FinFeedScreen() {
         scrollIdx += 1;
         try {
           flatListRef.current?.scrollToIndex({ index: scrollIdx, animated: true });
-        } catch { /* safe — index may be out of range */ }
+        } catch { /* safe, index may be out of range */ }
       }, 3000);
     }, 1500);
     return () => {
@@ -628,7 +628,7 @@ export function FinFeedScreen() {
   const knowledgeLevel = useAuthStore((s) => s.profile?.knowledgeLevel);
   const isQuizUnlocked = currentLayer >= 2 || knowledgeLevel === 'experienced' || knowledgeLevel === 'expert';
 
-  // Ensure daily quiz is always available — set fallback immediately, then try API
+  // Ensure daily quiz is always available, set fallback immediately, then try API
   useEffect(() => {
     const store = useDailyQuizStore.getState();
     const today = new Date().toISOString().slice(0, 10);
@@ -639,10 +639,10 @@ export function FinFeedScreen() {
     refreshDailyQuiz().catch(() => {});
   }, []);
 
-  // Show streak popup on focus — but DON'T reshuffle feed (preserves scroll position)
+  // Show streak popup on focus, but DON'T reshuffle feed (preserves scroll position)
   useFocusEffect(
     useCallback(() => {
-      // Fresh simulator picks on every focus — main feed order stays stable (scroll position preserved)
+      // Fresh simulator picks on every focus, main feed order stays stable (scroll position preserved)
       setSimSeed(Math.floor(Math.random() * 0x7fffffff));
 
       // Consume pending scroll (e.g. from daily challenge completion)
@@ -670,7 +670,7 @@ export function FinFeedScreen() {
 
       // Shark feedback popup every 48 hours for anyone playing.
       // Guard against double-open: if the modal is already showing (e.g. from a rapid
-      // re-focus), skip — don't re-stamp the AsyncStorage key or re-schedule.
+      // re-focus), skip, don't re-stamp the AsyncStorage key or re-schedule.
       if (useTutorialStore.getState().hasSeenAppWalkthrough && !showSharkFeedback) {
         AsyncStorage.getItem(SHARK_FEEDBACK_KEY).then((lastTimeStr) => {
           const lastTime = lastTimeStr ? parseInt(lastTimeStr, 10) : 0;
@@ -694,7 +694,7 @@ export function FinFeedScreen() {
   const feedItems = useMemo(() => {
     const seed = feedSeed;
 
-    // Hook cards — top 4 uncompleted per chapter across all 5 chapters
+    // Hook cards, top 4 uncompleted per chapter across all 5 chapters
     const hooks: FeedModuleHook[] = CHAPTER_META.flatMap(({ data, storeId, chapterId, name, layer }) => {
       const completedSet = new Set(progress[storeId]?.completedModules ?? []);
       const result: FeedModuleHook[] = [];
@@ -743,7 +743,7 @@ export function FinFeedScreen() {
       })),
     ];
 
-    // Macro-event cards — up to 3 unanswered events; cycle from beginning if all answered
+    // Macro-event cards, up to 3 unanswered events; cycle from beginning if all answered
     const unansweredEvents = getUnansweredMacroEvents(macroEventsData, 8);
     const macroEventsToShow = unansweredEvents.length > 0
       ? unansweredEvents
@@ -754,7 +754,7 @@ export function FinFeedScreen() {
       event,
     }));
 
-    // Scenario teaser cards — historical "what would you do?" simulations
+    // Scenario teaser cards, historical "what would you do?" simulations
     // (dotcom, lehman, covid, etc.). Prefer uncompleted scenarios, cap at 5.
     const uncompletedScenarios = SCENARIOS.filter(
       (s) => !completedScenarios[s.id],
@@ -794,7 +794,7 @@ export function FinFeedScreen() {
       { id: 'price-slider', type: 'price-slider' as const },
       { id: 'cashout-rush', type: 'cashout-rush' as const },
       { id: 'fomo-killer', type: 'fomo-killer' as const },
-      // Three DYK entries with distinct seeds — shuffles spread them across the feed
+      // Three DYK entries with distinct seeds, shuffles spread them across the feed
       // so users encounter "הידעתם?" several times per session rather than once.
       { id: 'did-you-know-1', type: 'did-you-know' as const },
       { id: 'did-you-know-2', type: 'did-you-know' as const },
@@ -828,7 +828,7 @@ export function FinFeedScreen() {
       ...MOCK_FEED_DATA.filter(i => i.type === "quote"),
     ];
 
-    // Hook videos — interspersed between games and quotes
+    // Hook videos, interspersed between games and quotes
     const videos: FeedItem[] = [...hooks];
 
     // Shuffle each category using the random seed (changes on tab focus)
@@ -881,25 +881,25 @@ export function FinFeedScreen() {
 
     filteredMerged.unshift({ id: 'daily-dilemma', type: 'daily-dilemma' });
 
-    // Pin primary macro event at position 2 (right after dilemma + quiz) — visible to ALL users on first scroll
+    // Pin primary macro event at position 2 (right after dilemma + quiz), visible to ALL users on first scroll
     if (pinnedMacro) {
       const insertAt = Math.min(2, filteredMerged.length);
       filteredMerged.splice(insertAt, 0, pinnedMacro);
     }
 
-    // Pin a "הידעתם?" card at position 4 — user sees trivia early in the session
+    // Pin a "הידעתם?" card at position 4, user sees trivia early in the session
     if (pinnedDyk) {
       const insertAt = Math.min(4, filteredMerged.length);
       filteredMerged.splice(insertAt, 0, pinnedDyk);
     }
 
-    // Pin a historical scenario at position 5 — introduces scenario-lab within the first screen-scrolls
+    // Pin a historical scenario at position 5, introduces scenario-lab within the first screen-scrolls
     if (pinnedScenario) {
       const insertAt = Math.min(5, filteredMerged.length);
       filteredMerged.splice(insertAt, 0, pinnedScenario);
     }
 
-    // Pin daily-quiz (מבזק) at position 5 — visible after a few swipes but not first
+    // Pin daily-quiz (מבזק) at position 5, visible after a few swipes but not first
     if (quizItem) {
       filteredMerged.splice(Math.min(5, filteredMerged.length), 0, quizItem);
     }
@@ -931,7 +931,7 @@ export function FinFeedScreen() {
     }
   }, [feedItems, listHeight]);
 
-  // BENBEN half-watch shark nudge — if user stays on a BENBEN video for 30s
+  // BENBEN half-watch shark nudge, if user stays on a BENBEN video for 30s
   // (half of its 60s length), pop a study nudge. Cooldown: once per 24h.
   useEffect(() => {
     if (benbenWatchTimerRef.current) {
@@ -959,7 +959,7 @@ export function FinFeedScreen() {
   }, [activeItemIndex, feedItems, showBenbenNudge]);
 
   // Use viewAreaCoveragePercentThreshold so only the item covering the majority
-  // of the viewport is "active" — prevents the previous item's video from playing
+  // of the viewport is "active", prevents the previous item's video from playing
   // while the user is already on the next one (full-screen pager behavior).
   const viewabilityConfig = useRef({ viewAreaCoveragePercentThreshold: 70, minimumViewTime: 100 });
 
@@ -1059,7 +1059,7 @@ export function FinFeedScreen() {
         {item.type === "simulator-teaser" && (
           <FeedSimulatorCard simulator={item.simulator} isActive={isActive} />
         )}
-        {/* Action Sidebar removed for videos — save button lives inside FeedVideoItem */}
+        {/* Action Sidebar removed for videos, save button lives inside FeedVideoItem */}
       </View>
     );
   };

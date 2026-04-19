@@ -109,7 +109,7 @@ export function MapEasterEggModal({ visible, onClose, onClaim }: MapEasterEggMod
               contentFit="cover"
             />
 
-            {/* Scratch overlay — cells that haven't been scratched */}
+            {/* Scratch overlay, cells that haven't been scratched */}
             {!revealed && (
               <View style={styles.scratchGrid}>
                 {Array.from({ length: TOTAL_CELLS }).map((_, i) => {
@@ -133,7 +133,7 @@ export function MapEasterEggModal({ visible, onClose, onClaim }: MapEasterEggMod
             )}
           </View>
 
-          {/* Claim button — appears after reveal */}
+          {/* Claim button, appears after reveal */}
           {revealed && !claimed && (
             <Animated.View entering={FadeInDown.delay(200).duration(300)}>
               <Pressable

@@ -1,7 +1,7 @@
 import type { BudgetDilemma, BudgetGameConfig } from './budgetTypes';
 
 /* ------------------------------------------------------------------ */
-/*  Dilemma Scenarios — real-world Gen-Z Israeli financial decisions    */
+/*  Dilemma Scenarios, real-world Gen-Z Israeli financial decisions    */
 /* ------------------------------------------------------------------ */
 
 const dilemmas: BudgetDilemma[] = [
@@ -12,7 +12,7 @@ const dilemmas: BudgetDilemma[] = [
         options: [
             {
                 id: 'd1-a',
-                label: 'משלם את כל 3,200 ש"ח — שכירות זה קודש',
+                label: 'משלם את כל 3,200 ש"ח, שכירות זה קודש',
                 category: 'needs',
                 amount: 3200,
                 feedback: '🏠 נכון. שכירות זה הוצאת חובה מספר 1. תמיד קודם גג מעל הראש.',
@@ -33,21 +33,21 @@ const dilemmas: BudgetDilemma[] = [
         options: [
             {
                 id: 'd2-a',
-                label: 'לצאת למסעדה — 150 ש"ח',
+                label: 'לצאת למסעדה, 150 ש"ח',
                 category: 'wants',
                 amount: 150,
                 feedback: '🍣 הנאה לגיטימית. אבל תשים לב שזה אוכל מהתקציב של 30% לפאן.',
             },
             {
                 id: 'd2-b',
-                label: 'להזמין את החברה הביתה ולבשל — 40 ש"ח',
+                label: 'להזמין את החברה הביתה ולבשל, 40 ש"ח',
                 category: 'needs',
                 amount: 40,
                 feedback: '🍝 מהלך חכם. חסכת 110 ש"ח ויש לך ערב עם חברים בכל זאת.',
             },
             {
                 id: 'd2-c',
-                label: 'מזמין אוכל — 95 ש"ח',
+                label: 'מזמין אוכל, 95 ש"ח',
                 category: 'wants',
                 amount: 95,
                 feedback: '🛵 בינוני. חסכת קצת לעומת מסעדה, אבל עדיין הוצאת כמעט 100 ש"ח על ארוחה אחת.',
@@ -61,21 +61,21 @@ const dilemmas: BudgetDilemma[] = [
         options: [
             {
                 id: 'd3-a',
-                label: 'משאיר את הכל — 140 ש"ח',
+                label: 'משאיר את הכל, 140 ש"ח',
                 category: 'wants',
                 amount: 140,
                 feedback: '📺 זה סבבה אם יש לך מרווח ב-30%. אבל עשית את החשבון?',
             },
             {
                 id: 'd3-b',
-                label: 'מבטל כושר — 80 ש"ח',
+                label: 'מבטל כושר, 80 ש"ח',
                 category: 'wants',
                 amount: 80,
                 feedback: '✂️ חכם. לשלם על משהו שלא משתמשים בו זה לזרוק כסף לפח.',
             },
             {
                 id: 'd3-c',
-                label: 'מבטל הכל ומשתמש בגרסאות חינם — 0 ש"ח',
+                label: 'מבטל הכל ומשתמש בגרסאות חינם, 0 ש"ח',
                 category: 'savings',
                 amount: 0,
                 feedback: '🧘 חיסכון מקסימלי! רק תוודא שזה באמת שווה לך את הוויתור על הנוחות.',
@@ -89,21 +89,21 @@ const dilemmas: BudgetDilemma[] = [
         options: [
             {
                 id: 'd4-a',
-                label: 'סוגר מיד ומכניס לקרדיט — 1,200 ש"ח',
+                label: 'סוגר מיד ומכניס לקרדיט, 1,200 ש"ח',
                 category: 'wants',
                 amount: 1200,
                 feedback: '🔥 זהירות! 1,200 ש"ח ביום אחד יכולים להרוס את כל התקציב החודשי. קרדיט = ריבית.',
             },
             {
                 id: 'd4-b',
-                label: 'בודק אם זה נכנס בתקציב ה-30% לפאן. אם לא — מוותר',
+                label: 'בודק אם זה נכנס בתקציב ה-30% לפאן. אם לא, מוותר',
                 category: 'savings',
                 amount: 0,
                 feedback: '🧠 חשיבה מעולה. FOMO הוא לא סיבה להוציא כסף שאין לך.',
             },
             {
                 id: 'd4-c',
-                label: 'לוקח מקרן החירום — בטח יהיה בסדר',
+                label: 'לוקח מקרן החירום, בטח יהיה בסדר',
                 category: 'wants',
                 amount: 1200,
                 feedback: '🚨 טעות חמורה! קרן חירום לא נועדה לטיולים. מה יקרה אם מחר הרכב יתקלקל?',
@@ -124,14 +124,14 @@ const dilemmas: BudgetDilemma[] = [
             },
             {
                 id: 'd5-b',
-                label: 'שם 500 ש"ח — "מה שנשאר"',
+                label: 'שם 500 ש"ח, "מה שנשאר"',
                 category: 'savings',
                 amount: 500,
                 feedback: '📉 לא מספיק. אם אתה חוסך את "מה שנשאר" - תמיד לא יישאר כלום.',
             },
             {
                 id: 'd5-c',
-                label: 'לא חוסך החודש, קשה — 0 ש"ח',
+                label: 'לא חוסך החודש, קשה, 0 ש"ח',
                 category: 'savings',
                 amount: 0,
                 feedback: '🛑 חודש בלי חיסכון = חודש שלם שעבדת בלי לבנות את העתיד שלך.',
@@ -141,18 +141,18 @@ const dilemmas: BudgetDilemma[] = [
     {
         id: 'd6',
         emoji: '🚗',
-        question: 'הרכב צריך טיפול שנתי — 800 ש"ח. בנוסף ביטוח חובה מתחדש — 1,200 ש"ח.',
+        question: 'הרכב צריך טיפול שנתי, 800 ש"ח. בנוסף ביטוח חובה מתחדש, 1,200 ש"ח.',
         options: [
             {
                 id: 'd6-a',
-                label: 'משלם את שניהם — 2,000 ש"ח (חובה!)',
+                label: 'משלם את שניהם, 2,000 ש"ח (חובה!)',
                 category: 'needs',
                 amount: 2000,
                 feedback: '🔧 נכון. תחזוקת רכב וביטוח חובה הם הוצאות הכרחיות, לא מותרות.',
             },
             {
                 id: 'd6-b',
-                label: 'דוחה את הטיפול — רק ביטוח 1,200 ש"ח',
+                label: 'דוחה את הטיפול, רק ביטוח 1,200 ש"ח',
                 category: 'needs',
                 amount: 1200,
                 feedback: '⚠️ הביטוח הכרחי, אבל דחיית טיפול יכולה לעלות הרבה יותר אח"כ.',
@@ -166,14 +166,14 @@ const dilemmas: BudgetDilemma[] = [
         options: [
             {
                 id: 'd7-a',
-                label: 'קונה, זה מבצע — 200 ש"ח',
+                label: 'קונה, זה מבצע, 200 ש"ח',
                 category: 'wants',
                 amount: 200,
                 feedback: '🤔 "מבצע" על משהו שלא צריך = עדיין בזבוז. חסכת 150 על משהו שלא היית קונה.',
             },
             {
                 id: 'd7-b',
-                label: 'מתאפק. יש לי מספיק — 0 ש"ח',
+                label: 'מתאפק. יש לי מספיק, 0 ש"ח',
                 category: 'savings',
                 amount: 0,
                 feedback: '💎 גזר עצמי! חסכת 200 ש"ח ברגע. אפקט הפיתיון לא עבד עליך.',
@@ -183,18 +183,18 @@ const dilemmas: BudgetDilemma[] = [
     {
         id: 'd8',
         emoji: '⚡',
-        question: 'חשבון חשמל + מים + גז הגיע — 450 ש"ח, קצת יותר מהרגיל (חורף).',
+        question: 'חשבון חשמל + מים + גז הגיע, 450 ש"ח, קצת יותר מהרגיל (חורף).',
         options: [
             {
                 id: 'd8-a',
-                label: 'משלם מיד — 450 ש"ח',
+                label: 'משלם מיד, 450 ש"ח',
                 category: 'needs',
                 amount: 450,
                 feedback: '⚡ חשבונות שוטפים = חובה. לדחות אותם זה לצבור חובות ועמלות.',
             },
             {
                 id: 'd8-b',
-                label: 'משלם רק חצי ודוחה את השאר — 225 ש"ח',
+                label: 'משלם רק חצי ודוחה את השאר, 225 ש"ח',
                 category: 'needs',
                 amount: 225,
                 feedback: '❌ דחיית חשבונות תכניס אותך למעגל של חובות וקנסות. שווה לספוג עכשיו.',

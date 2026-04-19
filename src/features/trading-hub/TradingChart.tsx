@@ -102,7 +102,7 @@ export function TradingChart({
 
   return (
     <View style={styles.root}>
-      {/* MA period selector — only in advanced mode */}
+      {/* MA period selector, only in advanced mode */}
       {showMAPeriodBar && (
         <View style={styles.periodBar}>
           <Text style={styles.periodLabel}>MA</Text>
@@ -160,7 +160,7 @@ export function TradingChart({
           </Animated.View>
         )}
 
-        {/* Indicator info badges — only where indicators actually render */}
+        {/* Indicator info badges, only where indicators actually render */}
         {showIndicatorBadges && (
           <View style={styles.badgeRow} pointerEvents="box-none">
             <Pressable

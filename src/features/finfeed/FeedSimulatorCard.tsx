@@ -97,7 +97,7 @@ export function FeedSimulatorCard({ simulator, isActive: _isActive }: Props) {
       <FeedStartButton
         label="שחקו עכשיו"
         onPress={handlePlay}
-        accessibilityLabel={`שחקו עכשיו — ${simulator.teaserTitle}`}
+        accessibilityLabel={`שחקו עכשיו, ${simulator.teaserTitle}`}
       />
 
       {/* Module CTA */}

@@ -1,5 +1,5 @@
 /**
- * PizzaIndexScreen — "מדד הפיצות"
+ * PizzaIndexScreen, "מדד הפיצות"
  * Humorous financial statistics about the user's progress in pizza/coffee units.
  * US-007 of PRD_FunFeatures.
  */
@@ -44,14 +44,14 @@ interface StatCard {
 const PIZZA_PRICE_2015 = 42;
 const PIZZA_PRICE_2026 = 58;
 function buildStats(): StatCard[] {
-  // Card 1: Pizza inflation — how prices changed
+  // Card 1: Pizza inflation, how prices changed
   const inflationPct = Math.round(((PIZZA_PRICE_2026 - PIZZA_PRICE_2015) / PIZZA_PRICE_2015) * 100);
 
-  // Card 2: Purchasing power — how many pizzas ₪1,000 buys today vs 10 years ago
+  // Card 2: Purchasing power, how many pizzas ₪1,000 buys today vs 10 years ago
   const pizzas2015 = Math.floor(1000 / PIZZA_PRICE_2015);
   const pizzas2026 = Math.floor(1000 / PIZZA_PRICE_2026);
 
-  // Card 3: Compound interest — if you saved ₪50/month (a pizza a week) for 10 years at 5%
+  // Card 3: Compound interest, if you saved ₪50/month (a pizza a week) for 10 years at 5%
   const monthlyPizza = 50;
   const years = 10;
   const rate = 0.05;
@@ -61,7 +61,7 @@ function buildStats(): StatCard[] {
   );
   const totalDeposited = monthlyPizza * months;
 
-  // Card 4: Minimum wage — how many minutes of work to buy a pizza
+  // Card 4: Minimum wage, how many minutes of work to buy a pizza
   const minWagePerHour = 32.3; // ₪ Israel 2026
   const minutesPerPizza = Math.round((PIZZA_PRICE_2026 / minWagePerHour) * 60);
 
@@ -69,13 +69,13 @@ function buildStats(): StatCard[] {
     {
       title: "אינפלציה של פיצה",
       value: "₪" + PIZZA_PRICE_2026,
-      subtitle: "ב-2015 פיצה עלתה ₪" + PIZZA_PRICE_2015 + ". היום ₪" + PIZZA_PRICE_2026 + " — עלייה של " + inflationPct + "% בעשור",
+      subtitle: "ב-2015 פיצה עלתה ₪" + PIZZA_PRICE_2015 + ". היום ₪" + PIZZA_PRICE_2026 + ", עלייה של " + inflationPct + "% בעשור",
       image: IMAGE_PIZZA,
     },
     {
       title: "כוח הקנייה שלך נשחק",
       value: pizzas2026 + " פיצות",
-      subtitle: "ב-₪1,000 היום תקנה " + pizzas2026 + " פיצות. לפני עשור היית קונה " + pizzas2015 + " — הפסדת " + (pizzas2015 - pizzas2026) + " פיצות",
+      subtitle: "ב-₪1,000 היום תקנה " + pizzas2026 + " פיצות. לפני עשור היית קונה " + pizzas2015 + ", הפסדת " + (pizzas2015 - pizzas2026) + " פיצות",
       image: IMAGE_COFFEE,
     },
     {
@@ -98,7 +98,7 @@ function StatCardView({ card, index }: { card: StatCard; index: number }) {
   return (
     <Animated.View entering={FadeInUp.delay(200 + index * 120).duration(400)}>
       <View style={styles.statCard}>
-        {/* Image — full width at top, rounded, on light blue backdrop */}
+        {/* Image, full width at top, rounded, on light blue backdrop */}
         <View style={styles.statImageWrap}>
           <ExpoImage
             source={card.image}
@@ -132,16 +132,16 @@ export function PizzaIndexScreen({ onClose }: PizzaIndexScreenProps = {}) {
     const message = [
       "מדד הפיצות של FinPlay:",
       "פיצה ב-2015: ₪" + PIZZA_PRICE_2015 + " → היום: ₪" + PIZZA_PRICE_2026,
-      "אם מוותרים על פיצה בשבוע ומשקיעים — אחרי 10 שנים יש ₪7,764!",
+      "אם מוותרים על פיצה בשבוע ומשקיעים, אחרי 10 שנים יש ₪7,764!",
       "",
-      "בואו ללמוד פיננסים! FinPlay — לימוד פיננסי שזה כיף",
+      "בואו ללמוד פיננסים! FinPlay, לימוד פיננסי שזה כיף",
     ].join("\n");
 
     try {
       await Share.share({ message });
       successHaptic();
     } catch {
-      // User cancelled — no action needed
+      // User cancelled, no action needed
     }
   };
 
@@ -197,7 +197,7 @@ export function PizzaIndexScreen({ onClose }: PizzaIndexScreenProps = {}) {
           <View style={styles.bottomSpacer} />
         </ScrollView>
 
-        {/* Sticky "המשך" CTA — modal mode only */}
+        {/* Sticky "המשך" CTA, modal mode only */}
         {isModal && (
           <View style={styles.stickyContinueBar}>
             <View style={styles.continueDepth} pointerEvents="none" />

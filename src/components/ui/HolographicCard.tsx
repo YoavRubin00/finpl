@@ -1,5 +1,5 @@
 /**
- * HolographicCard — 3D perspective card that tilts with device gyroscope.
+ * HolographicCard, 3D perspective card that tilts with device gyroscope.
  * Adds a shifting gradient overlay that simulates a holographic "shine" effect.
  */
 import { StyleSheet } from 'react-native';

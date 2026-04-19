@@ -213,7 +213,7 @@ export function useRoboAdvisor() {
 
       const marketYear = roboAdvisorConfig.marketHistory[nextYearIndex];
 
-      // — Robo portfolio: apply returns then rebalance —
+      //, Robo portfolio: apply returns then rebalance —
       const roboAfterReturns = applyReturns(
         roboAmountsRef.current,
         marketYear.stockReturn,
@@ -226,7 +226,7 @@ export function useRoboAdvisor() {
       );
       roboAmountsRef.current = roboFinal;
 
-      // — Manual portfolio: apply returns with panic behavior —
+      //, Manual portfolio: apply returns with panic behavior —
       const { amounts: manualFinal, isPanicSold } = advanceManual(
         manualAmountsRef.current,
         marketYear.stockReturn,

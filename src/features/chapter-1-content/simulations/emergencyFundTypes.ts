@@ -51,7 +51,7 @@ export interface EmergencyFundState {
   eventsHandled: number;
   /** Number of emergencies that required taking a loan */
   eventsMissed: number;
-  /** Lifestyle happiness score (0-10) — affected by savings choices */
+  /** Lifestyle happiness score (0-10), affected by savings choices */
   happiness: number;
   /** Whether the game is complete */
   isComplete: boolean;

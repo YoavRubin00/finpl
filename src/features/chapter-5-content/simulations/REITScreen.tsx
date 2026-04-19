@@ -1,5 +1,5 @@
 /**
- * SIM 27: בעל הבית הווירטואלי (Virtual Landlord — REITs) — Module 5-27
+ * SIM 27: בעל הבית הווירטואלי (Virtual Landlord, REITs), Module 5-27
  * Screen: allocate budget across REIT sectors, simulate 10 years, collect dividends.
  */
 
@@ -190,7 +190,7 @@ const sectorStyles = StyleSheet.create({
   amountText: { fontSize: 14, fontWeight: '700', color: SIM5.textMuted, width: 64, textAlign: 'center' },
 });
 
-/** Building block for cityscape — height proportional to sector value */
+/** Building block for cityscape, height proportional to sector value */
 function BuildingBlock({
   sector,
   value,
@@ -243,7 +243,7 @@ const buildingStyles = StyleSheet.create({
   change: { fontSize: 13, fontWeight: '800' },
 });
 
-/** REIT event card — news banner style */
+/** REIT event card, news banner style */
 function REITEventCard({ snapshot }: { snapshot: YearSnapshot }) {
   if (!snapshot.event) return null;
 
@@ -676,7 +676,7 @@ export function REITScreen({ onComplete }: REITScreenProps) {
               <Text accessibilityRole="header" style={[styles.title, RTL]}>בעל הבית הווירטואלי</Text>
             </View>
             <Text style={[styles.subtitle, RTL]}>
-              חלק {formatShekel(REIT_BUDGET)} בין סקטורי נדל&quot;ן — ותראה מה קורה ב-10 שנים
+              חלק {formatShekel(REIT_BUDGET)} בין סקטורי נדל&quot;ן, ותראה מה קורה ב-10 שנים
             </Text>
           </Animated.View>
 
@@ -835,7 +835,7 @@ export function REITScreen({ onComplete }: REITScreenProps) {
           </GlowCard>
         </Animated.View>
 
-        {/* Cityscape — buildings for each sector */}
+        {/* Cityscape, buildings for each sector */}
         {latestSnapshot && (
           <Animated.View entering={FadeIn.duration(400)}>
             <Text style={[styles.sectionTitle, RTL]}>🏙️ העיר שלך</Text>

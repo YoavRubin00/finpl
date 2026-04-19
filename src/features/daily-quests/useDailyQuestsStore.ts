@@ -40,7 +40,7 @@ export function previewQuestReward(streak: number): QuestRewardSummary {
   };
 }
 
-/** PRO track preview — 2× XP/coins + guaranteed gem */
+/** PRO track preview, 2× XP/coins + guaranteed gem */
 export function previewProQuestReward(streak: number): QuestRewardSummary {
   const mult = streakBonusMultiplier(streak);
   return {
@@ -89,11 +89,11 @@ export const useDailyQuestsStore = create<DailyQuestsState>()(
       refreshQuests: () => {
         const today = todayStr();
         if (get().questDate === today && get().quests.length > 0) {
-          // Same day — just sync completions
+          // Same day, just sync completions
           get().syncCompletions();
           return;
         }
-        // New day — generate fresh quests
+        // New day, generate fresh quests
         const quests: DailyQuest[] = QUEST_TEMPLATES.map((t, i) => ({
           ...t,
           id: `${today}-${i}`,
@@ -160,7 +160,7 @@ export const useDailyQuestsStore = create<DailyQuestsState>()(
         const coins = Math.round(QUEST_COIN_REWARD * mult);
         const gems = Math.random() < QUEST_GEM_CHANCE ? QUEST_GEM_AMOUNT : 0;
         // NOTE: streak freeze on day-7 is already granted by useEconomyStore milestone
-        // logic — no duplicate grant here, only surfaced in summary for UI celebration.
+        // logic, no duplicate grant here, only surfaced in summary for UI celebration.
         const freezes = 0;
 
         economy.addXP(xp, "daily_task");

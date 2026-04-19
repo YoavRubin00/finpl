@@ -278,7 +278,7 @@ export function StreakCelebrationScreen({
           )}
         </Animated.View>
 
-        {/* Finn mascot — success celebration */}
+        {/* Finn mascot, success celebration */}
         <Animated.View style={[styles.bearContainer, bearStyle]}>
           <ExpoImage
             source={FINN_FIRE} accessible={false}
@@ -291,7 +291,7 @@ export function StreakCelebrationScreen({
           <View style={[styles.sparkle, styles.sparkle3]} />
         </Animated.View>
 
-        {/* Weekly calendar — Duolingo style with fire */}
+        {/* Weekly calendar, Duolingo style with fire */}
         <Animated.View style={[styles.calendarContainer, calendarStyle]}>
           <View style={styles.calendarRow}>
             {WEEKDAY_LABELS.map((label, i) => {

@@ -50,7 +50,7 @@ export const ShopItemCard = React.memo(function ShopItemCard({ item, canAfford, 
       {/* Description */}
       <Text style={styles.description} numberOfLines={2}>{item.description}</Text>
 
-      {/* Buy button — green with gold coin (like Asset Arena) */}
+      {/* Buy button, green with gold coin (like Asset Arena) */}
       {isEquipped ? (
         <View style={styles.equippedBtn}>
           <Text style={styles.equippedText}>✓ מצויד</Text>

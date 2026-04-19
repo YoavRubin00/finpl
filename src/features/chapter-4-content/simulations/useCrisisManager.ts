@@ -1,6 +1,6 @@
 /**
- * SIM 4-27: מנהל המשבר (Crisis Manager) — Module 4-27
- * Hook: navigate 5 historical crises — sell / hold / buy → compare to hold strategy.
+ * SIM 4-27: מנהל המשבר (Crisis Manager), Module 4-27
+ * Hook: navigate 5 historical crises, sell / hold / buy → compare to hold strategy.
  */
 
 import { useState, useCallback, useMemo } from 'react';
@@ -42,13 +42,13 @@ function applyAction(
 
   switch (action) {
     case 'sell':
-      // Sold at the bottom — locked in loss, missed recovery
+      // Sold at the bottom, locked in loss, missed recovery
       return afterDrop;
     case 'hold':
       // Took the hit, recovered normally
       return afterDrop * (1 + recoveryGainPercent / 100);
     case 'buy':
-      // Bought more at the bottom — 2× recovery gain
+      // Bought more at the bottom, 2× recovery gain
       return afterDrop * (1 + (2 * recoveryGainPercent) / 100);
   }
 }

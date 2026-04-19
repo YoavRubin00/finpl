@@ -42,7 +42,7 @@ import { useTutorialStore } from "../../stores/useTutorialStore";
 import { getApiBase } from "../../db/apiBase";
 
 /* ------------------------------------------------------------------ */
-/*  Gemini — routed through backend proxy (keeps API key server-side) */
+/*  Gemini, routed through backend proxy (keeps API key server-side) */
 /* ------------------------------------------------------------------ */
 
 async function callGeminiDirect(
@@ -114,7 +114,7 @@ function ReadReceipt({ status }: { status: MessageStatus }) {
 }
 
 /* ------------------------------------------------------------------ */
-/*  Typing indicator — three bouncing dots inside a bubble             */
+/*  Typing indicator, three bouncing dots inside a bubble             */
 /* ------------------------------------------------------------------ */
 
 function TypingIndicator({ emoji }: { emoji: string }) {
@@ -178,12 +178,12 @@ const typingStyles = StyleSheet.create({
 });
 
 /* ------------------------------------------------------------------ */
-/*  Chat Style Picker — shown on first chat entry                      */
+/*  Chat Style Picker, shown on first chat entry                      */
 /* ------------------------------------------------------------------ */
 
 const CHAT_STYLES: { id: CompanionId; title: string; desc: string }[] = [
   { id: "warren-buffett", title: "חכם וסבלני", desc: "מסביר עם אנלוגיות, כמו חבר שיודע הכל על כסף" },
-  { id: "moshe-peled", title: "ישיר ותכל׳סי", desc: "ישראלי, לא מסתובב — אומר את זה כמו שזה" },
+  { id: "moshe-peled", title: "ישיר ותכל׳סי", desc: "ישראלי, לא מסתובב, אומר את זה כמו שזה" },
   { id: "rachel", title: "חם ומעודד", desc: "רגוע, סבלני, תמיד מוצא מילה טובה ומסביר בנועם" },
   { id: "robot", title: "אנליטי ומדויק", desc: "מבוסס מספרים, תמציתי, עונה בנקודות קצרות" },
 ];
@@ -268,7 +268,7 @@ const pickerStyles = StyleSheet.create({
 });
 
 /* ------------------------------------------------------------------ */
-/*  ChatScreen — WhatsApp-style                                        */
+/*  ChatScreen, WhatsApp-style                                        */
 /* ------------------------------------------------------------------ */
 
 export function ChatScreen() {
@@ -584,10 +584,10 @@ export function ChatScreen() {
                 {loading ? "מקליד..." : "מחובר"}
               </Text>
             </View>
-            {/* Settings gear removed — chat tone now in app Settings screen */}
+            {/* Settings gear removed, chat tone now in app Settings screen */}
           </View>
 
-          {/* Recent conversations strip — Pro only */}
+          {/* Recent conversations strip, Pro only */}
           {isPro && messages.length > 2 && (
             <View style={headerStyles.recentStrip}>
               <MessageCircle size={12} color="#64748b" />
@@ -598,7 +598,7 @@ export function ChatScreen() {
           )}
         </View>
 
-        {/* Chat messages — fills from bottom */}
+        {/* Chat messages, fills from bottom */}
         <ScrollView
           ref={scrollViewRef}
           style={{ flex: 1, paddingHorizontal: 12 }}
@@ -653,7 +653,7 @@ export function ChatScreen() {
           <View className="h-4" />
         </ScrollView>
 
-        {/* Suggestion chips — 2 + extra questions toggle */}
+        {/* Suggestion chips, 2 + extra questions toggle */}
         <View style={chipStyles.container}>
           <AnimatedPressable
             onPress={() => setShowExtraQuestions(!showExtraQuestions)}
@@ -736,7 +736,7 @@ export function ChatScreen() {
       </KeyboardAvoidingView>
     </SafeAreaView>
     {/* Picker rendered LAST so it naturally paints on top of sibling views.
-        iOS does not always honor zIndex reliably — render order is safer. */}
+        iOS does not always honor zIndex reliably, render order is safer. */}
     {(!hasChosenStyle || showStylePicker) && <ChatStylePicker onSelect={handleStyleSelect} />}
     </View>
   );

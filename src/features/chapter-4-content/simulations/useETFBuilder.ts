@@ -1,5 +1,5 @@
 /**
- * SIM 21: בנה את הסל (Build the ETF Basket) — Module 4-21
+ * SIM 21: בנה את הסל (Build the ETF Basket), Module 4-21
  * Hook: select/deselect ETFs, manage allocations, compute diversification score.
  */
 

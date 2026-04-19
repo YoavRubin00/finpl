@@ -24,7 +24,7 @@ interface GlossaryTextOptions {
  * Glossary terms are rendered with a dashed underline and are tappable.
  * Non-glossary text is returned as-is.
  *
- * This is a "leaf" parser — it does NOT handle bold/English parsing.
+ * This is a "leaf" parser, it does NOT handle bold/English parsing.
  * Use this AFTER or INSIDE the existing renderBoldText flow.
  */
 export function renderGlossaryText(
@@ -78,7 +78,7 @@ export function renderGlossaryText(
         </Text>,
       );
     } else {
-      // Term not found in glossary or plain mode — render as regular bold text
+      // Term not found in glossary or plain mode, render as regular bold text
       result.push(
         <Text key={`gt-${key++}`} style={{ fontWeight: '700' }}>
           {display}

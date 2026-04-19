@@ -24,7 +24,7 @@ import { getChapterTheme } from '../../../constants/theme';
 import { SIM, GRADE_COLORS, GRADE_HEBREW, RTL, TYPE, simStyles } from './simTheme';
 
 
-/* ── Chapter theme — only .gradient used for SimLottieBackground ── */
+/* ── Chapter theme, only .gradient used for SimLottieBackground ── */
 const _th1 = getChapterTheme('chapter-1');
 
 /* ── Lottie assets ── */
@@ -46,7 +46,7 @@ const LOTTIE_MAP: Record<string, ReturnType<typeof require>> = {
 };
 
 /* ------------------------------------------------------------------ */
-/*  HealthBar — displays player savings or bank fee meter               */
+/*  HealthBar, displays player savings or bank fee meter               */
 /* ------------------------------------------------------------------ */
 
 function HealthBar({
@@ -92,7 +92,7 @@ function HealthBar({
 }
 
 /* ------------------------------------------------------------------ */
-/*  CombatArena — two health bars facing each other                     */
+/*  CombatArena, two health bars facing each other                     */
 /* ------------------------------------------------------------------ */
 
 function CombatArena({
@@ -130,7 +130,7 @@ function CombatArena({
 }
 
 /* ------------------------------------------------------------------ */
-/*  HitEffect — shield or damage flash overlay                          */
+/*  HitEffect, shield or damage flash overlay                          */
 /* ------------------------------------------------------------------ */
 
 function HitEffect({ type }: { type: 'shield' | 'damage' }) {
@@ -170,7 +170,7 @@ function HitEffect({ type }: { type: 'shield' | 'damage' }) {
 }
 
 /* ------------------------------------------------------------------ */
-/*  FeeAttackCard — center card showing the current fee attack          */
+/*  FeeAttackCard, center card showing the current fee attack          */
 /* ------------------------------------------------------------------ */
 
 function FeeAttackCard({
@@ -213,7 +213,7 @@ function FeeAttackCard({
 }
 
 /* ------------------------------------------------------------------ */
-/*  DefenseButton — styled as combat move                               */
+/*  DefenseButton, styled as combat move                               */
 /* ------------------------------------------------------------------ */
 
 function DefenseButton({
@@ -265,7 +265,7 @@ function DefenseButton({
 }
 
 /* ------------------------------------------------------------------ */
-/*  ScoreScreen — end-game summary                                      */
+/*  ScoreScreen, end-game summary                                      */
 /* ------------------------------------------------------------------ */
 
 function ScoreScreen({
@@ -343,7 +343,7 @@ function ScoreScreen({
 }
 
 /* ------------------------------------------------------------------ */
-/*  BankCombatScreen — main exported component                          */
+/*  BankCombatScreen, main exported component                          */
 /* ------------------------------------------------------------------ */
 
 export function BankCombatScreen({ onComplete }: { onComplete: () => void }) {

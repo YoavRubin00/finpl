@@ -1,5 +1,5 @@
 // ---------------------------------------------------------------------------
-// PRD 32 — US-005 AC2: Diamond Chest Celebration Overlay
+// PRD 32, US-005 AC2: Diamond Chest Celebration Overlay
 // Lottie-animated chest opening + confetti when claiming referral reward
 // ---------------------------------------------------------------------------
 

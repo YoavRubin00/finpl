@@ -92,7 +92,7 @@ export function DividendScoreScreen({ score, onReplay, onContinue }: DividendSco
             אכלת {formatShekel(score.eatTotal)} סה״כ דיבידנדים + שווי.
           </Text>
           <Text style={scoreStyles.differenceText}>
-            אם היית שותל — היה לך {formatShekel(score.plantTotal)} (פי {multiplier.toFixed(1)} יותר!)
+            אם היית שותל, היה לך {formatShekel(score.plantTotal)} (פי {multiplier.toFixed(1)} יותר!)
           </Text>
           <Text style={scoreStyles.differenceHighlight}>
             הפרש: +{formatShekel(score.difference)} ({diffPercent}% יותר)

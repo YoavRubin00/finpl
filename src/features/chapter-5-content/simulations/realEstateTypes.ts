@@ -1,5 +1,5 @@
 /**
- * SIM 26: משחקי הנדל"ן (Real Estate Game) — Module 5-26
+ * SIM 26: משחקי הנדל"ן (Real Estate Game), Module 5-26
  * Types for the mortgage & real estate simulation.
  */
 

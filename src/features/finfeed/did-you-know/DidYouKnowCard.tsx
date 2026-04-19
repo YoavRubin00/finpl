@@ -33,7 +33,7 @@ function pickItem(id?: string): DidYouKnowItem {
   if (id) {
     const direct = DID_YOU_KNOW_ITEMS.find((i) => i.id === id);
     if (direct) return direct;
-    // Not a direct item id — hash the feed id so each feed slot picks a different
+    // Not a direct item id, hash the feed id so each feed slot picks a different
     // item (while staying stable for the session). Combined with the day so the
     // pool rotates over time.
     let hash = 0;
@@ -52,7 +52,7 @@ export const DidYouKnowCard = React.memo(function DidYouKnowCard({ isActive: _is
   const { playSound } = useSoundEffect();
   const reduceMotion = useReducedMotion();
 
-  // Start at 0 so the manual spring owns the entire entrance — mixing this with
+  // Start at 0 so the manual spring owns the entire entrance, mixing this with
   // an `entering={ZoomIn}` prop caused a transform/scale fight that made the
   // highlight number stutter visibly.
   const highlightScale = useSharedValue(0);
@@ -115,7 +115,7 @@ export const DidYouKnowCard = React.memo(function DidYouKnowCard({ isActive: _is
           )}
         </Animated.View>
 
-        {/* Teaser — always visible */}
+        {/* Teaser, always visible */}
         <Text style={[styles.teaser, RTL]} allowFontScaling={false}>
           {item.teaser}
         </Text>

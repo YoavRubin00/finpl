@@ -1,5 +1,5 @@
 /**
- * SIM 4-28: קורא הגרפים (Chart Reader) — Module 4-28
+ * SIM 4-28: קורא הגרפים (Chart Reader), Module 4-28
  * Candlestick charts with hidden company name → user picks buy/sell/hold → reveal.
  */
 
@@ -77,7 +77,7 @@ function getActionFeedback(
 }
 
 /* ================================================================== */
-/*  CandlestickChart — renders 40 candles with volume bars             */
+/*  CandlestickChart, renders 40 candles with volume bars             */
 /* ================================================================== */
 
 const CANDLE_CHART_HEIGHT = 160;
@@ -182,7 +182,7 @@ function CandlestickChart({ candles, volumeData }: { candles: CandleData[]; volu
 }
 
 /* ================================================================== */
-/*  ProgressDots — 4 round indicators                                  */
+/*  ProgressDots, 4 round indicators                                  */
 /* ================================================================== */
 
 function ProgressDots({
@@ -224,7 +224,7 @@ function ProgressDots({
 }
 
 /* ================================================================== */
-/*  ScoreScreen — results after all 4 rounds                           */
+/*  ScoreScreen, results after all 4 rounds                           */
 /* ================================================================== */
 
 function ScoreScreen({
@@ -310,7 +310,7 @@ function ScoreScreen({
             <View style={sim4Styles.insightRow}>
               <LottieIcon source={LOTTIE_BULB} size={22} />
               <Text style={[sim4Styles.insightText, RTL, { flex: 1 }]}>
-                קריאת גרפים היא מיומנות. מגמה + נפח מסחר = הסיפור האמיתי. אל תתעלם מנפח — הוא מאשר או מפריך את התנועה.
+                קריאת גרפים היא מיומנות. מגמה + נפח מסחר = הסיפור האמיתי. אל תתעלם מנפח, הוא מאשר או מפריך את התנועה.
               </Text>
             </View>
           </View>
@@ -561,7 +561,7 @@ export function ChartReaderScreen({ onComplete }: ChartReaderScreenProps) {
                 >
                   {currentActionCorrect
                     ? 'נכון!'
-                    : `טעות — הפעולה הנכונה: ${getActionLabel(currentRound.correctAction)}`}
+                    : `טעות, הפעולה הנכונה: ${getActionLabel(currentRound.correctAction)}`}
                 </Text>
               </View>
 

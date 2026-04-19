@@ -59,7 +59,7 @@ const insurances: InsuranceType[] = [
     monthlyCost: 90,
     annualCost: 1_080,
     covers: ['surgery'],
-    description: 'בחירת מנתח ובי״ח פרטי — כפל על בריאות משלים!',
+    description: 'בחירת מנתח ובי״ח פרטי, כפל על בריאות משלים!',
   },
   {
     id: 'nesiot',
@@ -89,7 +89,7 @@ const DUPLICATE_PAIRS: [string, string][] = [
 const lifeEvents: LifeEvent[] = [
   {
     id: 'flat-tire-fender',
-    description: 'שריטה ברכב בחנייה של הקניון — נזק ₪5,000',
+    description: 'שריטה ברכב בחנייה של הקניון, נזק ₪5,000',
     lottie: require('../../../../assets/lottie/wired-flat-504-school-bus-hover-pinch.json'),
     damage: 5_000,
     requiredInsurance: ['makif'],
@@ -97,7 +97,7 @@ const lifeEvents: LifeEvent[] = [
   },
   {
     id: 'home-break-in',
-    description: 'פריצה לדירה! מחשב נייד, טלוויזיה ותכשיטים נגנבו — נזק ₪25,000',
+    description: 'פריצה לדירה! מחשב נייד, טלוויזיה ותכשיטים נגנבו, נזק ₪25,000',
     lottie: require('../../../../assets/lottie/wired-flat-63-home-hover-3d-roll.json'),
     damage: 25_000,
     requiredInsurance: ['dira'],
@@ -105,7 +105,7 @@ const lifeEvents: LifeEvent[] = [
   },
   {
     id: 'knee-surgery',
-    description: 'קרע ברצועה צולבת בברך — ניתוח פרטי דחוף — נזק ₪60,000',
+    description: 'קרע ברצועה צולבת בברך, ניתוח פרטי דחוף, נזק ₪60,000',
     lottie: require('../../../../assets/lottie/wired-flat-426-brain-hover-pinch.json'),
     damage: 60_000,
     requiredInsurance: ['briut-mashlim'],
@@ -113,7 +113,7 @@ const lifeEvents: LifeEvent[] = [
   },
   {
     id: 'travel-hospital',
-    description: 'דלקת ריאות קשה בטיול בדרום אמריקה — אשפוז ₪180,000',
+    description: 'דלקת ריאות קשה בטיול בדרום אמריקה, אשפוז ₪180,000',
     lottie: require('../../../../assets/lottie/wired-flat-782-compass-hover-pinch.json'),
     damage: 180_000,
     requiredInsurance: ['nesiot'],
@@ -121,7 +121,7 @@ const lifeEvents: LifeEvent[] = [
   },
   {
     id: 'severe-car-accident',
-    description: 'פגיעה ברכב חונה יקר ונזקי גוף לנהג השני — נזק ₪350,000',
+    description: 'פגיעה ברכב חונה יקר ונזקי גוף לנהג השני, נזק ₪350,000',
     lottie: require('../../../../assets/lottie/wired-flat-483-building-hover-blinking.json'),
     damage: 350_000,
     requiredInsurance: ['tsad-gimel', 'hova'],
@@ -129,7 +129,7 @@ const lifeEvents: LifeEvent[] = [
   },
   {
     id: 'life-insurance-event',
-    description: 'אובדן כושר עבודה עקב תאונה — המשפחה צריכה רשת ביטחון — ₪1,000,000',
+    description: 'אובדן כושר עבודה עקב תאונה, המשפחה צריכה רשת ביטחון, ₪1,000,000',
     lottie: require('../../../../assets/lottie/wired-flat-20-love-heart-hover-heartbeat.json'),
     damage: 1_000_000,
     requiredInsurance: ['haim'],

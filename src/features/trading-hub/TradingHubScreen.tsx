@@ -12,7 +12,7 @@ import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Briefcase, RefreshCw, Star } from 'lucide-react-native';
 import LottieView from 'lottie-react-native';
 import type { AnimationObject } from 'lottie-react-native';
-// LinearGradient removed — learn cards now use flat ocean-teal style
+// LinearGradient removed, learn cards now use flat ocean-teal style
 import { CALM } from '../../constants/theme';
 import { BackButton } from '../../components/ui/BackButton';
 import { AnimatedPressable } from '../../components/ui/AnimatedPressable';
@@ -50,7 +50,7 @@ const ITEM_GAP = 12;
 const LEARN_LINKS: { moduleId: string; chapterId: string; title: string; subtitle: string; lottieSource: AnimationObject }[] = [
     { moduleId: 'mod-4-19', chapterId: 'chapter-4', title: 'שוק ההון', subtitle: 'מניות, אג"ח ויחס סיכון-תשואה', lottieSource: require('../../../assets/lottie/wired-flat-947-investment-hover-pinch.json') as AnimationObject },
     { moduleId: 'mod-4-22', chapterId: 'chapter-4', title: 'פקודות מסחר', subtitle: 'לימיט, מארקט, סטופ לוס', lottieSource: require('../../../assets/lottie/wired-flat-163-graph-line-chart-hover-slide.json') as AnimationObject },
-    { moduleId: 'mod-4-21', chapterId: 'chapter-4', title: 'תעודות סל — ETF', subtitle: 'פיזור בקלות עם מוצר אחד', lottieSource: require('../../../assets/lottie/wired-flat-152-bar-chart-arrow-hover-growth.json') as AnimationObject },
+    { moduleId: 'mod-4-21', chapterId: 'chapter-4', title: 'תעודות סל, ETF', subtitle: 'פיזור בקלות עם מוצר אחד', lottieSource: require('../../../assets/lottie/wired-flat-152-bar-chart-arrow-hover-growth.json') as AnimationObject },
     { moduleId: 'mod-4-24', chapterId: 'chapter-4', title: 'פיזור וניהול סיכונים', subtitle: 'בניית תיק חכם ומאוזן', lottieSource: require('../../../assets/lottie/wired-flat-166-bar-chart-diversified-double-hover-growth.json') as AnimationObject },
 ];
 
@@ -116,7 +116,7 @@ export function TradingHubScreen() {
     const [indicatorInfo, setIndicatorInfo] = useState<IndicatorId | null>(null);
     const handleIndicatorInfo = useCallback((id: IndicatorId) => setIndicatorInfo(id), []);
 
-    // Captain Shark bridge nudge — appears a few seconds after the screen loads,
+    // Captain Shark bridge nudge, appears a few seconds after the screen loads,
     // inviting the user to convert their practice into real-world benefits.
     const [bridgeCtaVisible, setBridgeCtaVisible] = useState(false);
     useEffect(() => {
@@ -278,7 +278,7 @@ export function TradingHubScreen() {
                     {/* Market status (shows SPY state regardless of selected asset) */}
                     <MarketStatusBar selectedAssetId={selectedId} />
 
-                    {/* Captain Shark — daily contextual tip */}
+                    {/* Captain Shark, daily contextual tip */}
                     <SharkInlineTip />
 
                     {/* Daily market mission */}
@@ -372,7 +372,7 @@ export function TradingHubScreen() {
 
                         {!isLive && !chartLoading && (
                             <View style={styles.staleBadge}>
-                                <Text style={styles.staleBadgeText}>⚠️ נתוני הדגמה — מחירים משוערים</Text>
+                                <Text style={styles.staleBadgeText}>⚠️ נתוני הדגמה, מחירים משוערים</Text>
                             </View>
                         )}
 
@@ -424,7 +424,7 @@ export function TradingHubScreen() {
                             </Pressable>
                         </View>
 
-                        {/* Chart mode toggle — hidden until the user has made their onboarding choice */}
+                        {/* Chart mode toggle, hidden until the user has made their onboarding choice */}
                         {chartMode !== null && (
                             <View style={styles.modeToggleRow}>
                                 {(['simple', 'advanced'] as const).map((m) => {
@@ -537,7 +537,7 @@ export function TradingHubScreen() {
                 <TradingHubTutorial onComplete={() => setShowTutorial(false)} />
             )}
 
-            {/* Chart mode onboarding — shown once on first visit after chart data loads */}
+            {/* Chart mode onboarding, shown once on first visit after chart data loads */}
             <ChartModeOnboarding
                 visible={chartMode === null && !chartLoading && chartData.length > 1}
                 onChoose={(m) => setChartMode(m)}
@@ -551,7 +551,7 @@ export function TradingHubScreen() {
                 onClose={() => setIndicatorInfo(null)}
             />
 
-            {/* Captain Shark — turn knowledge into real-world benefits */}
+            {/* Captain Shark, turn knowledge into real-world benefits */}
             <SharkBridgeCTA
                 visible={bridgeCtaVisible}
                 onGoBridge={() => {
@@ -562,7 +562,7 @@ export function TradingHubScreen() {
                 moduleCount={positionCount}
             />
 
-            {/* Finn nudge — indices-only starters (knowledge level < 3) */}
+            {/* Finn nudge, indices-only starters (knowledge level < 3) */}
             <NotificationBanner
                 visible={showIndicesNudge}
                 message="עדיין לא נתחיל עם המניות. ראשית עם מדדים..."

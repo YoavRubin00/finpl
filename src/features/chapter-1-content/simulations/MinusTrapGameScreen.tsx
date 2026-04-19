@@ -26,7 +26,7 @@ import { getChapterTheme } from '../../../constants/theme';
 import { ConfettiExplosion } from '../../../components/ui/ConfettiExplosion';
 import { SIM, GRADE_COLORS, GRADE_HEBREW, SHADOW_LIGHT, RTL, TYPE, simStyles } from './simTheme';
 
-// PRD50 — New swipe game logic & data
+// PRD50, New swipe game logic & data
 import { useMinusTrapSwipe } from './useMinusTrapGame';
 import { minusTrapSwipeConfig } from './minusTrapData';
 import type { SwipeCard, SwipeCardType, MinusTrapSwipeScore, ActiveRecurring, SwipeHistoryEntry } from './minusTrapTypes';
@@ -54,7 +54,7 @@ const CARD_TYPE_CONFIG: Record<SwipeCardType, { label: string; color: string; bg
 };
 
 /* ------------------------------------------------------------------ */
-/*  BalanceHeader — animated bar + interest monster                     */
+/*  BalanceHeader, animated bar + interest monster                     */
 /* ------------------------------------------------------------------ */
 function BalanceHeader({
     balance,
@@ -199,7 +199,7 @@ function BalanceHeader({
 }
 
 /* ------------------------------------------------------------------ */
-/*  RedFlashOverlay — full-screen red flash when entering overdraft    */
+/*  RedFlashOverlay, full-screen red flash when entering overdraft    */
 /* ------------------------------------------------------------------ */
 function RedFlashOverlay({ trigger }: { trigger: number }) {
     const opacity = useSharedValue(0);
@@ -226,7 +226,7 @@ function RedFlashOverlay({ trigger }: { trigger: number }) {
 }
 
 /* ------------------------------------------------------------------ */
-/*  GameOverOverlay — screen shatter + "כרטיס נחסם" stamp              */
+/*  GameOverOverlay, screen shatter + "כרטיס נחסם" stamp              */
 /* ------------------------------------------------------------------ */
 function GameOverOverlay({ onDismiss }: { onDismiss: () => void }) {
     const shakeX = useSharedValue(0);
@@ -285,7 +285,7 @@ function GameOverOverlay({ onDismiss }: { onDismiss: () => void }) {
 }
 
 /* ------------------------------------------------------------------ */
-/*  MandatoryToast — warning when skipping a mandatory card            */
+/*  MandatoryToast, warning when skipping a mandatory card            */
 /* ------------------------------------------------------------------ */
 function MandatoryToast({ cardTitle, onDismiss }: { cardTitle: string; onDismiss: () => void }) {
     const translateY = useSharedValue(-80);
@@ -322,7 +322,7 @@ function MandatoryToast({ cardTitle, onDismiss }: { cardTitle: string; onDismiss
 }
 
 /* ------------------------------------------------------------------ */
-/*  PenaltyPopup — dramatic popup when a bank penalty triggers         */
+/*  PenaltyPopup, dramatic popup when a bank penalty triggers         */
 /* ------------------------------------------------------------------ */
 function PenaltyPopup({ amount, cardTitle, onDismiss }: { amount: number; cardTitle: string; onDismiss: () => void }) {
     const scale = useSharedValue(0.5);
@@ -366,7 +366,7 @@ function PenaltyPopup({ amount, cardTitle, onDismiss }: { amount: number; cardTi
                     <Text style={[RTL, styles.penaltyPopupTitle]}>התראה מהבנק!</Text>
                     <Text style={styles.penaltyPopupAmount}>קנס ₪{amount.toLocaleString()}</Text>
                     <Text style={[RTL, styles.penaltyPopupDesc]}>
-                        דילגת על {cardTitle} — הגיע החשבון
+                        דילגת על {cardTitle}, הגיע החשבון
                     </Text>
                 </Animated.View>
             </View>
@@ -375,7 +375,7 @@ function PenaltyPopup({ amount, cardTitle, onDismiss }: { amount: number; cardTi
 }
 
 /* ------------------------------------------------------------------ */
-/*  RecurringCostChips — recurring cost badges below balance bar       */
+/*  RecurringCostChips, recurring cost badges below balance bar       */
 /* ------------------------------------------------------------------ */
 function RecurringCostChips({ recurring, cards }: { recurring: ActiveRecurring[]; cards: SwipeCard[] }) {
     if (recurring.length === 0) return null;
@@ -401,7 +401,7 @@ function RecurringCostChips({ recurring, cards }: { recurring: ActiveRecurring[]
 }
 
 /* ------------------------------------------------------------------ */
-/*  SwipeableCard — Tinder-style card with MythCardDeck physics        */
+/*  SwipeableCard, Tinder-style card with MythCardDeck physics        */
 /* ------------------------------------------------------------------ */
 function SwipeableCard({
     card,
@@ -509,7 +509,7 @@ function SwipeableCard({
 }
 
 /* ------------------------------------------------------------------ */
-/*  BackCard — non-interactive depth cards behind active card           */
+/*  BackCard, non-interactive depth cards behind active card           */
 /* ------------------------------------------------------------------ */
 function BackCard({ offset }: { offset: number }) {
     return (
@@ -531,7 +531,7 @@ function BackCard({ offset }: { offset: number }) {
 }
 
 /* ------------------------------------------------------------------ */
-/*  ScoreScreen — Receipt-style end screen (קבלה מודפסת)               */
+/*  ScoreScreen, Receipt-style end screen (קבלה מודפסת)               */
 /* ------------------------------------------------------------------ */
 function ScoreScreen({
     score,
@@ -607,12 +607,12 @@ function ScoreScreen({
                         {/* Educational Takeaway */}
                         <View style={simStyles.insightRow}>
                             <Text style={simStyles.insightText}>
-                                ריבית על מינוס בעו"ש מגיעה עד 15% בשנה — על כל שקל שאתה במינוס, הבנק גובה ריבית יומית.
+                                ריבית על מינוס בעו"ש מגיעה עד 15% בשנה, על כל שקל שאתה במינוס, הבנק גובה ריבית יומית.
                             </Text>
                         </View>
                         <View style={[simStyles.insightRow, { marginTop: 6 }]}>
                             <Text style={simStyles.insightText}>
-                                הכלל: אשראי רק לנכסים שצומחים (השכלה, עסק). לצריכה שוטפת — רק מכסף שיש לך עכשיו.
+                                הכלל: אשראי רק לנכסים שצומחים (השכלה, עסק). לצריכה שוטפת, רק מכסף שיש לך עכשיו.
                             </Text>
                         </View>
                     </View>
@@ -829,7 +829,7 @@ const [rewardsGranted, setRewardsGranted] = useState(false);
                             )}
                         </View>
 
-                        {/* Swipe Hint Bar — accessible button alternatives */}
+                        {/* Swipe Hint Bar, accessible button alternatives */}
                         <View style={styles.swipeHintBar}>
                             <Pressable
                                 style={styles.hintSide}
@@ -964,7 +964,7 @@ const styles = StyleSheet.create({
         textShadowOffset: { width: 0, height: 2 },
         textShadowRadius: 4,
     },
-    /* Receipt/button styles removed — now using simStyles from simTheme */
+    /* Receipt/button styles removed, now using simStyles from simTheme */
     swipeHintBar: {
         flexDirection: 'row',
         justifyContent: 'space-between',

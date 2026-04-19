@@ -1,5 +1,5 @@
 /**
- * SafeLottieView — Native passthrough
+ * SafeLottieView, Native passthrough
  *
  * On native platforms, simply re-export the real LottieView.
  * The metro resolver only redirects web imports to this module's

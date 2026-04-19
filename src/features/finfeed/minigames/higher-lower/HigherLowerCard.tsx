@@ -192,7 +192,7 @@ function FeedbackCard({
 }) {
   const source = userCorrect ? FINN_HAPPY : FINN_EMPATHIC;
   const headerColor = userCorrect ? '#16a34a' : '#dc2626';
-  const title = userCorrect ? 'ניחוש חכם' : 'הפעם פספסת — ככה לומדים';
+  const title = userCorrect ? 'ניחוש חכם' : 'הפעם פספסת, ככה לומדים';
 
   return (
     <Animated.View entering={FadeInUp.duration(300)} style={styles.feedbackCard}>
@@ -216,7 +216,7 @@ function FeedbackCard({
       <View style={styles.riskCallout}>
         <Text style={[styles.riskCalloutLabel, RTL]}>למה זה חשוב?</Text>
         <Text style={[styles.riskCalloutBody, RTL]}>
-          שוק ההון מסוכן למי שלא מבין אותו. הדרך היחידה לנטרל את הסיכון היא ללמוד להכיר את הכלים — ואת זה בדיוק אתם עושים עכשיו.
+          שוק ההון מסוכן למי שלא מבין אותו. הדרך היחידה לנטרל את הסיכון היא ללמוד להכיר את הכלים, ואת זה בדיוק אתם עושים עכשיו.
         </Text>
       </View>
 
@@ -349,7 +349,7 @@ export const HigherLowerCard = React.memo(function HigherLowerCard({ isActive: _
       <View style={styles.container}>
         <View style={styles.cardShell}>
           <ExpoImage source={FINN_STANDARD} style={styles.finLarge} contentFit="contain" accessible={false} />
-          <Text style={[styles.doneTitle, RTL_CENTER]}>מי מנצח — הושלם להיום</Text>
+          <Text style={[styles.doneTitle, RTL_CENTER]}>מי מנצח, הושלם להיום</Text>
           <Text style={[styles.doneSub, RTL_CENTER]}>חזרו מחר לתרחישים חדשים</Text>
         </View>
       </View>
@@ -376,7 +376,7 @@ export const HigherLowerCard = React.memo(function HigherLowerCard({ isActive: _
             <Text style={[styles.headerSub, RTL]}>
               {done
                 ? `סיימתם! ${sessionCorrect}/${deck.length} נכונות`
-                : `שוק ההון מסוכן — אבל אפשר ללמוד. ${remainingPlays}/${MAX_DAILY_PLAYS} סבבים`}
+                : `שוק ההון מסוכן, אבל אפשר ללמוד. ${remainingPlays}/${MAX_DAILY_PLAYS} סבבים`}
             </Text>
           </View>
         </Animated.View>
@@ -436,7 +436,7 @@ export const HigherLowerCard = React.memo(function HigherLowerCard({ isActive: _
               {sessionCorrect}/{deck.length} נכונות
             </Text>
             <Text style={[styles.doneMessage, RTL_CENTER]}>
-              שוק ההון לא נולדת איתו — לומדים אותו. כל תרחיש שזיהיתם נכון הוא סיכון שחסכתם לעצמכם.
+              שוק ההון לא נולדת איתו, לומדים אותו. כל תרחיש שזיהיתם נכון הוא סיכון שחסכתם לעצמכם.
             </Text>
             {sessionCorrect > 0 && (
               <View style={styles.rewardsRow}>

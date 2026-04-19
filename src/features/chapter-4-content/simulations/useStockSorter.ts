@@ -1,5 +1,5 @@
 /**
- * SIM 4-29: מיון המניות (Stock Sorter) — Module 4-29
+ * SIM 4-29: מיון המניות (Stock Sorter), Module 4-29
  * Hook: present stock cards → user picks category → grade.
  */
 

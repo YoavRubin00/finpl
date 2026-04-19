@@ -1,5 +1,5 @@
 /**
- * SIM 26: משחקי הנדל"ן (Real Estate Game) — Module 5-26
+ * SIM 26: משחקי הנדל"ן (Real Estate Game), Module 5-26
  * Screen: choose mortgage, live through 20 years of events, see total cost.
  */
 
@@ -210,7 +210,7 @@ const mortgageStyles = StyleSheet.create({
   },
 });
 
-/** Event card — newspaper headline style */
+/** Event card, newspaper headline style */
 function EventCard({ snapshot }: { snapshot: YearSnapshot }) {
   if (!snapshot.event) return null;
 
@@ -337,7 +337,7 @@ function ScoreScreen({
           <View style={sim5Styles.scoreCardInner}>
             <Text style={[TYPE5.cardTitle, RTL]}>סיכום 20 שנות משכנתא</Text>
             <Text style={[TYPE5.cardBody, RTL]}>
-              המשכנתא של {formatShekel(LOAN_AMOUNT)} עלתה לך {formatShekel(score.totalPaid)} בסה&quot;כ — מתוכם {formatShekel(score.totalInterest)} ריבית בלבד ({interestPct}%)!
+              המשכנתא של {formatShekel(LOAN_AMOUNT)} עלתה לך {formatShekel(score.totalPaid)} בסה&quot;כ, מתוכם {formatShekel(score.totalInterest)} ריבית בלבד ({interestPct}%)!
             </Text>
           </View>
         </View>
@@ -675,7 +675,7 @@ export function RealEstateScreen({ onComplete }: RealEstateScreenProps) {
           </Animated.View>
           <Text style={styles.heroLabel}>מתוך 20</Text>
 
-          {/* Progress bar — RTL */}
+          {/* Progress bar, RTL */}
           <View style={[simStyles.progressTrack, { transform: [{ scaleX: -1 }] }]}>
             <LinearGradient
               colors={['#a78bfa', SIM5.btnPrimary]}
@@ -1011,7 +1011,7 @@ const styles = StyleSheet.create({
     color: '#fff',
   },
 
-  // Score screen — pie chart section (kept local, not in sim5Styles)
+  // Score screen, pie chart section (kept local, not in sim5Styles)
   pieRow: {
     flexDirection: 'row-reverse',
     justifyContent: 'space-around',

@@ -106,7 +106,7 @@ function PriceSlider({
       accessibilityLabel={`מחוון ניחוש. ערך נוכחי: ${formatILS(guessValue)}`}
       accessibilityValue={{ min: item.minGuess, max: item.maxGuess, now: guessValue }}
     >
-      {/* Track + thumb share the same coordinate system — identical width + no centering ancestor */}
+      {/* Track + thumb share the same coordinate system, identical width + no centering ancestor */}
       <View style={styles.sliderInner}>
         <View style={styles.track}>
           <Animated.View style={[styles.trackFill, fillStyle]} />
@@ -258,7 +258,7 @@ export const PriceSliderCard = React.memo(function PriceSliderCard({ isActive: _
       <View style={styles.container}>
         <View style={styles.cardShell}>
           <ExpoImage source={FINN_STANDARD} style={styles.finLarge} contentFit="contain" accessible={false} />
-          <Text style={[styles.doneTitle, RTL_CENTER]}>תמחור המציאות — הושלם להיום</Text>
+          <Text style={[styles.doneTitle, RTL_CENTER]}>תמחור המציאות, הושלם להיום</Text>
           <Text style={[styles.doneSub, RTL_CENTER]}>חזור מחר למוצר חדש</Text>
         </View>
       </View>

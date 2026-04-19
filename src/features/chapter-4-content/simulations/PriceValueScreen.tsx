@@ -1,5 +1,5 @@
 /**
- * SIM: מחיר vs. ערך — Price vs Value Chart
+ * SIM: מחיר vs. ערך, Price vs Value Chart
  * Screen: navigate a 10-year timeline, buy/sell based on margin of safety.
  */
 
@@ -247,7 +247,7 @@ function ScoreScreen({ result, onReplay, onContinue }: ScoreScreenProps) {
     <ScrollView style={styles.container} contentContainerStyle={[styles.scrollContent, { paddingBottom: 40 }]}>
       <ConfettiExplosion />
 
-      {/* Grade card — white, premium */}
+      {/* Grade card, white, premium */}
       <Animated.View entering={FadeInDown.duration(500)}>
         <View style={{ backgroundColor: '#ffffff', borderRadius: 24, padding: 24, alignItems: 'center', shadowColor: '#000', shadowOpacity: 0.08, shadowRadius: 16, shadowOffset: { width: 0, height: 4 }, elevation: 6, marginBottom: 14 }}>
           <ExpoImage
@@ -271,7 +271,7 @@ function ScoreScreen({ result, onReplay, onContinue }: ScoreScreenProps) {
         <View style={{ flexDirection: 'row-reverse', alignItems: 'center', gap: 10, backgroundColor: 'rgba(14,165,233,0.1)', borderRadius: 18, borderWidth: 1.5, borderColor: 'rgba(14,165,233,0.3)', padding: 12, marginBottom: 14 }}>
           <ExpoImage source={FINN_STANDARD} style={{ width: 56, height: 56, flexShrink: 0 }} contentFit="contain" accessible={false} />
           <Text style={{ flex: 1, fontSize: 14, fontWeight: '800', color: '#0369a1', lineHeight: 21, writingDirection: 'rtl', textAlign: 'right' }}>
-            🦈 קפטן שארק: "מחיר זה מה שאתה משלם. ערך זה מה שאתה מקבל." — קנה רק כשהערך גבוה מהמחיר.
+            🦈 קפטן שארק: "מחיר זה מה שאתה משלם. ערך זה מה שאתה מקבל.", קנה רק כשהערך גבוה מהמחיר.
           </Text>
         </View>
       </Animated.View>
@@ -427,17 +427,17 @@ export function PriceValueScreen({ onComplete }: PriceValueScreenProps) {
     <SimLottieBackground lottieSources={CH4_LOTTIE} chapterColors={_th4.gradient}>
       <View style={{ flex: 1, padding: 12 }}>
 
-        {/* Finn hint — only first 2 months */}
+        {/* Finn hint, only first 2 months */}
         {state.currentIndex < 2 && (
           <View style={{ flexDirection: 'row-reverse', alignItems: 'center', gap: 8, backgroundColor: '#ffffff', borderRadius: 14, padding: 10, marginBottom: 6, borderWidth: 1, borderColor: '#bae6fd' }}>
             <ExpoImage source={FINN_STANDARD} accessible={false} style={{ width: 36, height: 36 }} contentFit="contain" />
             <Text style={{ flex: 1, fontSize: 13, fontWeight: '700', color: '#0c4a6e', lineHeight: 20, writingDirection: 'rtl', textAlign: 'right' }}>
-              כשהמחיר (כחול) מתחת לערך (ירוק) — קנה! כשמעל — מכור.
+              כשהמחיר (כחול) מתחת לערך (ירוק), קנה! כשמעל, מכור.
             </Text>
           </View>
         )}
 
-        {/* Progress bar + month counter — RTL */}
+        {/* Progress bar + month counter, RTL */}
         <View style={{ marginBottom: 6 }}>
           <View style={{ flexDirection: 'row-reverse', justifyContent: 'space-between', marginBottom: 4 }}>
             <Text style={{ fontSize: 12, fontWeight: '800', color: SIM4.textSecondary, writingDirection: 'rtl' }}>
@@ -467,7 +467,7 @@ export function PriceValueScreen({ onComplete }: PriceValueScreenProps) {
           </GlowCard>
         </Animated.View>
 
-        {/* Combined info + portfolio — compact */}
+        {/* Combined info + portfolio, compact */}
         <Animated.View entering={FadeInDown.duration(400).delay(150)} style={valueAnimStyle}>
           <GlowCard glowColor={isUndervalued ? 'rgba(74,222,128,0.15)' : 'rgba(239,68,68,0.15)'} style={sim4Styles.gameCard}>
             <View style={{ padding: 12, gap: 6 }}>
@@ -494,7 +494,7 @@ export function PriceValueScreen({ onComplete }: PriceValueScreenProps) {
         </Animated.View>
 
         {/* Action buttons */}
-        {/* Smart action buttons — color-coded by context */}
+        {/* Smart action buttons, color-coded by context */}
         <Animated.View entering={FadeInUp.duration(500).delay(300)} style={styles.actionRow}>
           <AnimatedPressable
             onPress={handleBuy}

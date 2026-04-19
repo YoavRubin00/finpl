@@ -1,5 +1,5 @@
 /**
- * SIM 4-25: בלש הדוחות (Statement Detective) — Module 4-25
+ * SIM 4-25: בלש הדוחות (Statement Detective), Module 4-25
  * Types for the financial statement analysis simulation.
  */
 

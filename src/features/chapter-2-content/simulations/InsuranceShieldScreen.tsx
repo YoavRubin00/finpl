@@ -79,7 +79,7 @@ const SEVERITY_CFG: Record<
 };
 
 /* ------------------------------------------------------------------ */
-/*  SwipeInsuranceCard — Tinder style card for shopping phase           */
+/*  SwipeInsuranceCard, Tinder style card for shopping phase           */
 /* ------------------------------------------------------------------ */
 
 function SwipeInsuranceCard({
@@ -159,7 +159,7 @@ function SwipeInsuranceCard({
 }
 
 /* ------------------------------------------------------------------ */
-/*  BudgetBar — shows remaining budget                                  */
+/*  BudgetBar, shows remaining budget                                  */
 /* ------------------------------------------------------------------ */
 
 function BudgetBar({
@@ -194,7 +194,7 @@ function BudgetBar({
 }
 
 /* ------------------------------------------------------------------ */
-/*  InsuranceCard — toggleable insurance in shopping phase               */
+/*  InsuranceCard, toggleable insurance in shopping phase               */
 /* ------------------------------------------------------------------ */
 
 function InsuranceCard({
@@ -272,7 +272,7 @@ function InsuranceCard({
 }
 
 /* ------------------------------------------------------------------ */
-/*  SavingsBar — health bar showing remaining savings                   */
+/*  SavingsBar, health bar showing remaining savings                   */
 /* ------------------------------------------------------------------ */
 
 function SavingsBar({
@@ -307,7 +307,7 @@ function SavingsBar({
 }
 
 /* ------------------------------------------------------------------ */
-/*  EventCard — life event during events phase                          */
+/*  EventCard, life event during events phase                          */
 /* ------------------------------------------------------------------ */
 
 function EventCard({
@@ -350,7 +350,7 @@ function EventCard({
 }
 
 /* ------------------------------------------------------------------ */
-/*  ScoreScreen — results after all events                              */
+/*  ScoreScreen, results after all events                              */
 /* ------------------------------------------------------------------ */
 
 function ScoreScreen({
@@ -371,7 +371,7 @@ function ScoreScreen({
         <ConfettiExplosion onComplete={() => setShowConfetti(false)} />
       )}
 
-      {/* Grade banner — compact */}
+      {/* Grade banner, compact */}
       <Animated.View
         entering={FadeInDown.springify().damping(22)}
         style={{ alignItems: 'center', marginBottom: 4 }}
@@ -382,7 +382,7 @@ function ScoreScreen({
         <Text style={[sim2Styles.gradeLabel, RTL, { fontSize: 14 }]}>{score.gradeLabel}</Text>
       </Animated.View>
 
-      {/* Main stats — compact card */}
+      {/* Main stats, compact card */}
       <Animated.View entering={FadeInUp.delay(150)}>
         <View style={[sim2Styles.scoreCard, { borderColor: SIM2.cardBorder }]}>
           <View style={{ padding: 14, gap: 8 }}>
@@ -454,7 +454,7 @@ function ScoreScreen({
         </View>
       </Animated.View>
 
-      {/* Key lesson — compact */}
+      {/* Key lesson, compact */}
       <Animated.View entering={FadeInUp.delay(400)}>
         <View style={[sim2Styles.scoreCard, { borderColor: SIM2.cardBorder, marginTop: 8 }]}>
           <View style={{ padding: 12, flexDirection: 'row-reverse', alignItems: 'center', gap: 8 }}>
@@ -491,7 +491,7 @@ const scoreCompact = StyleSheet.create({
 });
 
 /* ================================================================== */
-/*  InsuranceShieldScreen — main component                              */
+/*  InsuranceShieldScreen, main component                              */
 /* ================================================================== */
 
 export function InsuranceShieldScreen({
@@ -829,13 +829,13 @@ export function InsuranceShieldScreen({
           ]}
           disabled={state.activeInsurances.length === 0}
           accessibilityRole="button"
-          accessibilityLabel="סיימתי — התחל אירועים"
+          accessibilityLabel="סיימתי, התחל אירועים"
           accessibilityHint="עובר לשלב אירועי החיים"
           accessibilityState={{ disabled: state.activeInsurances.length === 0 }}
         >
           <View style={{ flexDirection: 'row-reverse', alignItems: 'center', gap: 8 }}>
             <LottieIcon source={LOTTIE_SHIELD} size={22} />
-            <Text style={styles.startBtnText}>סיימתי — התחל אירועים!</Text>
+            <Text style={styles.startBtnText}>סיימתי, התחל אירועים!</Text>
           </View>
         </AnimatedPressable>
       </View>

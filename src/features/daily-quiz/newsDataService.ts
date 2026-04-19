@@ -38,7 +38,7 @@ function setCache(key: string, data: DataPoint): void {
   cache.set(key, { data, date: todayKey() });
 }
 
-// ── USD/ILS — free public FX API (fallback chain) ──
+// ── USD/ILS, free public FX API (fallback chain) ──
 // Primary: open.er-api.com (no auth, CORS-friendly, daily-refreshed).
 // Secondary: exchangerate.host (no auth, daily).
 // Tertiary: hardcoded stale value.
@@ -88,7 +88,7 @@ export async function fetchUsdIls(): Promise<DataPoint> {
     // fall through
   }
 
-  // Final fallback — approximate current rate
+  // Final fallback, approximate current rate
   const fallback: DataPoint = {
     value: '3.20₪',
     label: 'שער דולר/שקל',
@@ -99,7 +99,7 @@ export async function fetchUsdIls(): Promise<DataPoint> {
   return fallback;
 }
 
-// ── Interest Rate — Bank of Israel ──
+// ── Interest Rate, Bank of Israel ──
 export async function fetchInterestRate(): Promise<DataPoint> {
   const cached = getCached('interest-rate');
   if (cached) return cached;
@@ -144,7 +144,7 @@ export async function fetchInterestRate(): Promise<DataPoint> {
   }
 }
 
-// ── ‎S&P‎ 500 — via server-side proxy (keeps API keys server-side) ──
+// ── ‎S&P‎ 500, via server-side proxy (keeps API keys server-side) ──
 export async function fetchSP500(): Promise<DataPoint> {
   const cached = getCached('sp500');
   if (cached) return cached;
@@ -180,7 +180,7 @@ export async function fetchSP500(): Promise<DataPoint> {
   }
 }
 
-// ── TA-125 — Yahoo Finance (same pattern as marketApiService.ts) ──
+// ── TA-125, Yahoo Finance (same pattern as marketApiService.ts) ──
 export async function fetchTA125(): Promise<DataPoint> {
   const cached = getCached('ta125');
   if (cached) return cached;

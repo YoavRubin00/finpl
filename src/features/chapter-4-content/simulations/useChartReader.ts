@@ -1,5 +1,5 @@
 /**
- * SIM 4-28: קורא הגרפים (Chart Reader) — Module 4-28
+ * SIM 4-28: קורא הגרפים (Chart Reader), Module 4-28
  * Hook: present candlestick charts → user picks buy/sell/hold → grade.
  */
 

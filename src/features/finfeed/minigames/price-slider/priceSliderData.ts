@@ -11,7 +11,7 @@ export const PRICE_SLIDER_ITEMS: PriceSliderItem[] = [
     maxGuess: 25,
     unit: '₪',
     hint: 'זוכרים את הדוכן בקולנוע?',
-    sharkExplanation: 'פי 3 ב-27 שנה. זו לא המזון שהתייקר — זה הכסף שאיבד 2/3 מכוחו.',
+    sharkExplanation: 'פי 3 ב-27 שנה. זו לא המזון שהתייקר, זה הכסף שאיבד 2/3 מכוחו.',
     category: 'food',
   },
   {
@@ -24,7 +24,7 @@ export const PRICE_SLIDER_ITEMS: PriceSliderItem[] = [
     maxGuess: 10,
     unit: '₪',
     hint: 'לפני מטרופולינים, לפני רב־קו',
-    sharkExplanation: 'פי 17 ב-40 שנה = 7% אינפלציה שנתית. חיסכון שלא מניב 7%+ — פשוט נשחק.',
+    sharkExplanation: 'פי 17 ב-40 שנה = 7% אינפלציה שנתית. חיסכון שלא מניב 7%+, פשוט נשחק.',
     category: 'transport',
   },
   {
@@ -51,7 +51,7 @@ export const PRICE_SLIDER_ITEMS: PriceSliderItem[] = [
     maxGuess: 6000,
     unit: '₪',
     hint: 'המכשיר שהפך את "סמארטפון" למילה יומיומית',
-    sharkExplanation: '3,500₪ ב-2010 = 5,400₪ במונחי היום. אייפון 16 עולה 4,900₪ — טכנולוגיה מנצחת אינפלציה.',
+    sharkExplanation: '3,500₪ ב-2010 = 5,400₪ במונחי היום. אייפון 16 עולה 4,900₪, טכנולוגיה מנצחת אינפלציה.',
     category: 'tech',
   },
   {
@@ -64,7 +64,7 @@ export const PRICE_SLIDER_ITEMS: PriceSliderItem[] = [
     maxGuess: 4000,
     unit: '₪',
     hint: 'הקונסולה שחיכו לה שנה וחצי בגלל מחסור שבבים',
-    sharkExplanation: 'יצאה ב-2,200₪, בשוק השחור ב-2022 — 4,000₪+. מחסור היצע יכול להפוך מחיר לגמרי.',
+    sharkExplanation: 'יצאה ב-2,200₪, בשוק השחור ב-2022, 4,000₪+. מחסור היצע יכול להפוך מחיר לגמרי.',
     category: 'tech',
   },
   {
@@ -77,7 +77,7 @@ export const PRICE_SLIDER_ITEMS: PriceSliderItem[] = [
     maxGuess: 15,
     unit: '₪',
     hint: 'סופר רגיל, 1995 (מחיר מפוקח)',
-    sharkExplanation: 'פי 2.5 ב-30 שנה — וזה מחיר מפוקח. חיסכון שלא צומח באינפלציה = פחות חלב בכל שנה.',
+    sharkExplanation: 'פי 2.5 ב-30 שנה, וזה מחיר מפוקח. חיסכון שלא צומח באינפלציה = פחות חלב בכל שנה.',
     category: 'food',
   },
   {
@@ -90,7 +90,7 @@ export const PRICE_SLIDER_ITEMS: PriceSliderItem[] = [
     maxGuess: 50,
     unit: '₪',
     hint: 'פלאפל רחוב רגיל, סוף שנות ה-80',
-    sharkExplanation: 'פי 9 ב-37 שנה. גם אוכל רחוב מושפע מאינפלציה — ולפעמים הופך ל"מותרות קטן".',
+    sharkExplanation: 'פי 9 ב-37 שנה. גם אוכל רחוב מושפע מאינפלציה, ולפעמים הופך ל"מותרות קטן".',
     category: 'food',
   },
   {
@@ -102,8 +102,8 @@ export const PRICE_SLIDER_ITEMS: PriceSliderItem[] = [
     minGuess: 50,
     maxGuess: 5000,
     unit: '₪',
-    hint: 'תחילת 2013 — לפני הבום',
-    sharkExplanation: 'פי 600 ב-12 שנה — אבל רוב מי שקנה בראש הגל ספג -70% לפני התאוששות. קיצוניות בשני הכיוונים.',
+    hint: 'תחילת 2013, לפני הבום',
+    sharkExplanation: 'פי 600 ב-12 שנה, אבל רוב מי שקנה בראש הגל ספג -70% לפני התאוששות. קיצוניות בשני הכיוונים.',
     category: 'finance',
   },
   {

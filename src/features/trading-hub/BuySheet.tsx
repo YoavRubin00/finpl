@@ -22,11 +22,11 @@ type OrderType = 'market' | 'limit';
 const ORDER_INFO: Record<OrderType, { label: string; description: string }> = {
     market: {
         label: 'מרקט',
-        description: 'קניה מיידית במחיר הנוכחי — הפקודה מתבצעת מיד.',
+        description: 'קניה מיידית במחיר הנוכחי, הפקודה מתבצעת מיד.',
     },
     limit: {
         label: 'לימיט',
-        description: 'הגדר מחיר מקסימלי — הפקודה תתבצע רק כשהמחיר יגיע אליו.',
+        description: 'הגדר מחיר מקסימלי, הפקודה תתבצע רק כשהמחיר יגיע אליו.',
     },
 };
 
@@ -34,7 +34,7 @@ interface BuySheetProps {
     visible: boolean;
     assetId: string;
     currentPrice: number;
-    /** Yesterday's closing price from market data — null when unavailable. */
+    /** Yesterday's closing price from market data, null when unavailable. */
     previousClose: number | null;
     onClose: () => void;
     onBuyComplete: () => void;
@@ -76,7 +76,7 @@ export function BuySheet({ visible, assetId, currentPrice, previousClose, onClos
         successHaptic();
 
         // Progressive unlock: first market-order buy unlocks individual stocks.
-        // We unlock on market orders only — limit orders may not execute immediately,
+        // We unlock on market orders only, limit orders may not execute immediately,
         // so keeping the "earned via real purchase" feel matters. Commodity & index
         // are unlocked by default, so no-op if 'stock' already unlocked.
         if (orderType === 'market') {
@@ -138,7 +138,7 @@ export function BuySheet({ visible, assetId, currentPrice, previousClose, onClos
                                 </View>
                             </View>
 
-                            {/* Captain Shark — yesterday's close */}
+                            {/* Captain Shark, yesterday's close */}
                             {previousClose !== null && previousClose > 0 && currentPrice > 0 && (() => {
                                 const delta = currentPrice - previousClose;
                                 const deltaPct = (delta / previousClose) * 100;
@@ -265,7 +265,7 @@ export function BuySheet({ visible, assetId, currentPrice, previousClose, onClos
                         </Animated.View>
                         </ScrollView>
 
-                        {/* Buy button — ALWAYS visible, pinned nicely */}
+                        {/* Buy button, ALWAYS visible, pinned nicely */}
                         <View style={{ paddingTop: 16 }}>
                             <LiquidButton
                                 onPress={handleBuy}

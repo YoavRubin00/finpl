@@ -27,7 +27,7 @@ const UNLOCK_HINTS: Record<AssetType, string> = {
 
 /**
  * One-time inline strip below the asset carousel that explains progressive
- * unlock — which categories are open now and what unlocks the rest.
+ * unlock, which categories are open now and what unlocks the rest.
  * Auto-marked-seen the moment ALL types are unlocked, otherwise dismissable.
  */
 export function AssetUnlockIntro() {
@@ -55,7 +55,7 @@ export function AssetUnlockIntro() {
       exiting={FadeOut.duration(150)}
       style={styles.container}
       accessibilityRole="text"
-      accessibilityLabel={`רמזים על פתיחת קטגוריות נכסים: ${lockedTypes.map((t) => `${TYPE_LABELS[t]} — ${UNLOCK_HINTS[t]}`).join(', ')}`}
+      accessibilityLabel={`רמזים על פתיחת קטגוריות נכסים: ${lockedTypes.map((t) => `${TYPE_LABELS[t]}, ${UNLOCK_HINTS[t]}`).join(', ')}`}
     >
       <View style={styles.headerRow}>
         <Lock size={12} color="#0e7490" strokeWidth={2.4} />
@@ -73,7 +73,7 @@ export function AssetUnlockIntro() {
       <View style={styles.lockedList}>
         {lockedTypes.map((t, idx) => (
           <Text key={t} style={[RTL, styles.lockedItem]}>
-            🔒 {TYPE_LABELS[t]} — {UNLOCK_HINTS[t]}
+            🔒 {TYPE_LABELS[t]}, {UNLOCK_HINTS[t]}
             {idx < lockedTypes.length - 1 ? '' : ''}
           </Text>
         ))}

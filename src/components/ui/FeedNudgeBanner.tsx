@@ -61,7 +61,7 @@ export function FeedNudgeBanner({
       style={[styles.container, animatedStyle]}
       pointerEvents={visible ? "auto" : "none"}
     >
-      {/* X close button — top right */}
+      {/* X close button, top right */}
       <Pressable onPress={dismiss} style={styles.closeBtn} hitSlop={10} accessibilityRole="button" accessibilityLabel="סגור">
         <X size={14} color="#64748b" strokeWidth={2.5} />
       </Pressable>

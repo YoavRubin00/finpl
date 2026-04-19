@@ -10,7 +10,7 @@ import type {
 import { generateSchedule, savingsOptions, happinessEvents } from './emergencyFundData';
 
 /* ------------------------------------------------------------------ */
-/*  useEmergencyFund — core logic hook for Emergency Fund Trampoline   */
+/*  useEmergencyFund, core logic hook for Emergency Fund Trampoline   */
 /* ------------------------------------------------------------------ */
 
 /** Annual loan interest rate (12%) → monthly rate */
@@ -220,22 +220,22 @@ export function useEmergencyFund(config: EmergencyFundConfig) {
         // S = great fund + decent happiness (balanced play rewarded)
         if (missed === 0 && interest === 0 && h >= 4) {
             grade = 'S';
-            gradeLabel = '🏆 מושלם! קרן חזקה + חיים מאוזנים — זה הסוד';
+            gradeLabel = '🏆 מושלם! קרן חזקה + חיים מאוזנים, זה הסוד';
         } else if (missed === 0 && interest === 0 && h < 4) {
             grade = 'A';
-            gradeLabel = '🌟 קרן מושלמת, אבל ויתרת על הרבה — שווה לאזן יותר';
+            gradeLabel = '🌟 קרן מושלמת, אבל ויתרת על הרבה, שווה לאזן יותר';
         } else if (missed <= 1 && interest < 500) {
             grade = 'A';
-            gradeLabel = '🌟 מצוין! כמעט כל החירומים נספגו — חיסכון חכם';
+            gradeLabel = '🌟 מצוין! כמעט כל החירומים נספגו, חיסכון חכם';
         } else if (missed <= 2) {
             grade = 'B';
-            gradeLabel = '👍 לא רע! חלק מהחירומים דרשו הלוואה — שווה לחסוך יותר';
+            gradeLabel = '👍 לא רע! חלק מהחירומים דרשו הלוואה, שווה לחסוך יותר';
         } else if (missed <= 3) {
             grade = 'C';
-            gradeLabel = '⚠️ סביר. הלוואות רבות — קרן חירום חזקה יותר תמנע את זה';
+            gradeLabel = '⚠️ סביר. הלוואות רבות, קרן חירום חזקה יותר תמנע את זה';
         } else {
             grade = 'F';
-            gradeLabel = '🚨 בעיה! רוב החירומים הפכו להלוואות יקרות — חובה לבנות קרן חירום';
+            gradeLabel = '🚨 בעיה! רוב החירומים הפכו להלוואות יקרות, חובה לבנות קרן חירום';
         }
 
         return {

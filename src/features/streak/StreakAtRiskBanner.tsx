@@ -25,7 +25,7 @@ function todayISO(): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 }
 
-/** Friendly inline nudge banner when streak is at risk — shows once per day max */
+/** Friendly inline nudge banner when streak is at risk, shows once per day max */
 export function StreakAtRiskBanner() {
   const router = useRouter();
   const streak = useEconomyStore((s) => s.streak);
@@ -97,7 +97,7 @@ export function StreakAtRiskBanner() {
           <View style={styles.textWrap}>
             <Text style={styles.title}>עוד לא השלמת פרק לימוד היום</Text>
             <Text style={styles.sub}>
-              {streak} ימים ברצף — בוא נשמור על הקצב!
+              {streak} ימים ברצף, בוא נשמור על הקצב!
             </Text>
           </View>
           {/* Finn on left */}
@@ -106,7 +106,7 @@ export function StreakAtRiskBanner() {
           </View>
         </Pressable>
 
-        {/* Watch ad for free streak freeze — non-PRO only */}
+        {/* Watch ad for free streak freeze, non-PRO only */}
         {!isPro && adReady && (
           <Pressable
             onPress={() => {
@@ -121,7 +121,7 @@ export function StreakAtRiskBanner() {
             accessibilityRole="button"
             accessibilityLabel="צפה בפרסומת לקבל הקפאת סטריק"
           >
-            <Text style={styles.adFreezeBtnText}>🎬 צפה בפרסומת — הקפאה חינם</Text>
+            <Text style={styles.adFreezeBtnText}>🎬 צפה בפרסומת, הקפאה חינם</Text>
           </Pressable>
         )}
       </Animated.View>

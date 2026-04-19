@@ -1,5 +1,5 @@
 /**
- * SIM 4-26: השוואת ברוקרים (Broker Compare) — Module 4-26
+ * SIM 4-26: השוואת ברוקרים (Broker Compare), Module 4-26
  * 3 Israeli-market brokers with realistic fee structures.
  */
 
@@ -36,7 +36,7 @@ const brokerGlobal: Broker = {
   tradeFeePercent: 0,           // flat fee model (uses tradeFeeMin)
   tradeFeeMin: 4,               // ~$1 ≈ ₪4 flat per trade
   custodyFeePercent: 0,         // no custody fee
-  fxFeePercent: 0.0002,         // 0.02% FX — best in class
+  fxFeePercent: 0.0002,         // 0.02% FX, best in class
   inactivityFee: 0,             // removed inactivity fee in 2021
 };
 

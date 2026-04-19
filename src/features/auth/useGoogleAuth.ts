@@ -10,7 +10,7 @@ const GOOGLE_WEB_CLIENT_ID = process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID ?? "";
 const GOOGLE_IOS_CLIENT_ID = process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID ?? "";
 const GOOGLE_ANDROID_CLIENT_ID = process.env.EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID ?? "";
 
-// Reversed iOS client ID — must also appear in app.json ios.infoPlist.CFBundleURLTypes
+// Reversed iOS client ID, must also appear in app.json ios.infoPlist.CFBundleURLTypes
 const IOS_REVERSED_CLIENT_ID = "com.googleusercontent.apps.847177819309-mbb8nusv6r17oot0e49e1npbgmaecps0";
 
 interface GoogleUserInfo {
@@ -49,7 +49,7 @@ export function useGoogleAuth() {
       const user: GoogleUserInfo = await res.json();
       signIn(user.name ?? "", user.email ?? "");
     } catch {
-      // Silently fail — user stays on login screen
+      // Silently fail, user stays on login screen
     }
   };
 

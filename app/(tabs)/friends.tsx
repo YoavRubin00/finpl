@@ -23,7 +23,7 @@ export default function FriendsScreen() {
       </View>
 
       <Text style={[styles.subtitle, RTL_CENTER]} allowFontScaling={false}>
-        אזור החברים שלכם — אתגרים, התראות ודירוגים.
+        אזור החברים שלכם, אתגרים, התראות ודירוגים.
       </Text>
     </View>
   );

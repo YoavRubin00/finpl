@@ -41,7 +41,7 @@ const mockInvites: ClashInvite[] = [
   },
 ];
 
-/** Simulate opponent answer — gets ~60% right */
+/** Simulate opponent answer, gets ~60% right */
 function simulateOpponentAnswer(): boolean {
   return Math.random() < 0.6;
 }

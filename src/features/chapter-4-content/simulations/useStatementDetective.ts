@@ -1,5 +1,5 @@
 /**
- * SIM 4-25: בלש הדוחות (Statement Detective) — Module 4-25
+ * SIM 4-25: בלש הדוחות (Statement Detective), Module 4-25
  * Hook: present financial snippets → user votes invest/avoid → grade.
  */
 

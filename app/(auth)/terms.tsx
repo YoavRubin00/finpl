@@ -6,7 +6,7 @@ import { ChevronLeft, ChevronRight } from "lucide-react-native";
 import Animated, { FadeInUp } from "react-native-reanimated";
 
 /* ------------------------------------------------------------------ */
-/*  Content — Hebrew + English                                         */
+/*  Content, Hebrew + English                                         */
 /* ------------------------------------------------------------------ */
 
 const CONTENT = {

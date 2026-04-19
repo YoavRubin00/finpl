@@ -452,8 +452,8 @@ export const BullshitSwipeCard = React.memo(function BullshitSwipeCard({
       <View style={styles.container}>
         <View style={styles.cardShell}>
           <ExpoImage source={FINN_STANDARD} style={styles.finLarge} contentFit="contain" accessible={false} />
-          <Text style={[styles.doneTitle, RTL]}>סוויפ הבולשיט — הושלם היום!</Text>
-          <Text style={[styles.doneSub, RTL]}>חזור מחר — פרסומות חדשות מחכות</Text>
+          <Text style={[styles.doneTitle, RTL]}>סוויפ הבולשיט, הושלם היום!</Text>
+          <Text style={[styles.doneSub, RTL]}>חזור מחר, פרסומות חדשות מחכות</Text>
         </View>
       </View>
     );
@@ -471,7 +471,7 @@ export const BullshitSwipeCard = React.memo(function BullshitSwipeCard({
       )}
 
       <View style={styles.cardShell}>
-        {/* Header — Captain Shark intro */}
+        {/* Header, Captain Shark intro */}
         <Animated.View entering={FadeInDown.duration(300)} style={styles.headerRow}>
           <ExpoImage
             source={FINN_STANDARD}
@@ -503,7 +503,7 @@ export const BullshitSwipeCard = React.memo(function BullshitSwipeCard({
           </View>
         )}
 
-        {/* Feedback phase — Captain Shark explains.
+        {/* Feedback phase, Captain Shark explains.
             Ad image is hidden so the explanation + glossary toggles fit on one
             screen (was overflowing on cards with 3 glossary terms). The
             bullshit/legit verdict is conveyed by the Shark title color + emoji. */}

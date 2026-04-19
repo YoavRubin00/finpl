@@ -49,7 +49,7 @@ function computeGrade(hasSold: boolean, soldEventIndex: number, panicMoments: nu
     if (panicMoments <= 2) return { grade: 'A', gradeLabel: 'מצוין!' };
     return { grade: 'B', gradeLabel: 'טוב מאוד' };
   }
-  // Sold — grade based on when
+  // Sold, grade based on when
   const totalEvents = panicIndexConfig.events.length;
   const ratio = soldEventIndex / totalEvents;
   if (ratio >= 0.75) return { grade: 'C', gradeLabel: 'כמעט...' };
@@ -96,7 +96,7 @@ export function usePanicIndex() {
     });
   }, []);
 
-  /** Player chooses to SELL — lock in current portfolio value */
+  /** Player chooses to SELL, lock in current portfolio value */
   const sell = useCallback(() => {
     setState((prev) => {
       if (prev.hasSold || prev.isComplete || prev.currentEventIndex < 0) return prev;
@@ -108,7 +108,7 @@ export function usePanicIndex() {
     });
   }, []);
 
-  /** Record a "panic moment" — player tapped sell button but didn't confirm */
+  /** Record a "panic moment", player tapped sell button but didn't confirm */
   const recordPanicMoment = useCallback(() => {
     setState((prev) => {
       if (prev.hasSold || prev.isComplete) return prev;

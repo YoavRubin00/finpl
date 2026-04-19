@@ -1,5 +1,5 @@
 /**
- * SIM 29: עץ המשפחה (Family Tree — Estate Planning) — Module 5-29
+ * SIM 29: עץ המשפחה (Family Tree, Estate Planning), Module 5-29
  * Screen: set up family, view no-will scenario, create will, compare outcomes.
  * 4-phase decision-driven simulation (not auto-play).
  */
@@ -79,7 +79,7 @@ function FamilyNode({
   showToggle: boolean;
 }) {
   return (
-    <AnimatedPressable onPress={showToggle ? onToggle : undefined} accessibilityRole="button" accessibilityLabel={`${member.name} — ${isActive ? 'הסר' : 'הוסף'}`} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+    <AnimatedPressable onPress={showToggle ? onToggle : undefined} accessibilityRole="button" accessibilityLabel={`${member.name}, ${isActive ? 'הסר' : 'הוסף'}`} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
       <View style={[familyNodeStyles.node, !isActive && familyNodeStyles.nodeInactive]}>
         <Text style={familyNodeStyles.emoji}>{member.emoji}</Text>
         <Text style={[familyNodeStyles.name, RTL]}>{member.name}</Text>
@@ -257,7 +257,7 @@ const assetCardStyles = StyleSheet.create({
   },
 });
 
-/** Will allocation row — per asset per member */
+/** Will allocation row, per asset per member */
 function WillAssetSection({
   asset,
   members,
@@ -581,13 +581,13 @@ function ScoreScreen({
             <View style={{ flexDirection: 'row-reverse', alignItems: 'center', gap: 8, marginBottom: 8 }}>
               <LottieIcon source={LOTTIE_BULB} size={22} />
               <Text style={[styles.lessonText, RTL, { flex: 1 }]}>
-                צוואה = מתנה אחרונה למשפחה. בלעדיה — המדינה מחליטה בשבילך.
+                צוואה = מתנה אחרונה למשפחה. בלעדיה, המדינה מחליטה בשבילך.
               </Text>
             </View>
             <View style={{ flexDirection: 'row-reverse', alignItems: 'center', gap: 8 }}>
               <LottieIcon source={LOTTIE_BULB} size={22} />
               <Text style={[styles.lessonSubtext, RTL, { flex: 1 }]}>
-                טיפ: שקלו גם ייפוי כוח מתמשך — להגן על עצמכם בחיים, לא רק אחרי.
+                טיפ: שקלו גם ייפוי כוח מתמשך, להגן על עצמכם בחיים, לא רק אחרי.
               </Text>
             </View>
           </View>
@@ -1016,7 +1016,7 @@ export function EstatePlanningScreen({ onComplete }: EstatePlanningScreenProps) 
                   : null}
                 <Text style={styles.validationText}>
                   {willValidation.isFullyAllocated
-                    ? 'כל הנכסים מחולקים — מוכנים להשוואה!'
+                    ? 'כל הנכסים מחולקים, מוכנים להשוואה!'
                     : '⚠️ חלקו 100% מכל נכס כדי להמשיך'}
                 </Text>
               </View>
@@ -1046,7 +1046,7 @@ export function EstatePlanningScreen({ onComplete }: EstatePlanningScreenProps) 
     );
   }
 
-  // Fallback — shouldn't reach here (comparison phase triggers isComplete → score screen)
+  // Fallback, shouldn't reach here (comparison phase triggers isComplete → score screen)
   return null;
 }
 

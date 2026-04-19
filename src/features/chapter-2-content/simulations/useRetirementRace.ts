@@ -25,16 +25,16 @@ const RUNNER_OFFSET =
 function getBalanceAtYear(runnerIndex: number, globalYear: number): number {
   const runner = retirementRaceConfig.runners[runnerIndex];
   if (runnerIndex === 0) {
-    // First runner (Neta) — direct mapping
+    // First runner (Neta), direct mapping
     return globalYear > 0 ? (runner.yearData[globalYear - 1] ?? 0) : 0;
   }
-  // Second runner (Ori) — offset by RUNNER_OFFSET years
+  // Second runner (Ori), offset by RUNNER_OFFSET years
   const localYear = globalYear - RUNNER_OFFSET;
   return localYear > 0 ? (runner.yearData[localYear - 1] ?? 0) : 0;
 }
 
 /**
- * Find the overtake year — when runner 0 (Neta) first exceeds runner 1 (Ori).
+ * Find the overtake year, when runner 0 (Neta) first exceeds runner 1 (Ori).
  * Only check from after runner 1 has started (since before that Neta trivially leads).
  */
 function findOvertakeYear(): number | null {

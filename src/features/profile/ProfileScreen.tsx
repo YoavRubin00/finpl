@@ -64,10 +64,10 @@ const KNOWLEDGE_LABELS: Record<string, string> = {
 };
 
 const COMPANION_LABELS: Record<string, string> = {
-  "warren-buffett": "קפטן שארק — חכם",
-  "moshe-peled": "קפטן שארק — תכל'סי",
-  "rachel": "קפטן שארק — חם",
-  "robot": "קפטן שארק — אנליטי",
+  "warren-buffett": "קפטן שארק, חכם",
+  "moshe-peled": "קפטן שארק, תכל'סי",
+  "rachel": "קפטן שארק, חם",
+  "robot": "קפטן שארק, אנליטי",
 };
 
 const DAILY_LABELS: Record<number, string> = {
@@ -174,7 +174,7 @@ export function ProfileScreen() {
   return (
     <View style={{ flex: 1, backgroundColor: theme.bg }}>
       <SafeAreaView style={{ flex: 1 }} edges={[]}>
-        {/* Sticky close button — always visible */}
+        {/* Sticky close button, always visible */}
         <View style={styles.stickyCloseRow}>
           <Pressable onPress={() => router.replace('/(tabs)/' as never)} style={[styles.closeBtn, { backgroundColor: isDark ? "rgba(255,255,255,0.12)" : "rgba(255,255,255,0.85)" }]} accessibilityRole="button" accessibilityLabel="סגור פרופיל" hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
             <X size={20} color={theme.textMuted} />
@@ -248,7 +248,7 @@ export function ProfileScreen() {
             </View>
           </Animated.View>
 
-          {/* Streak strip — compact, tap to show celebration */}
+          {/* Streak strip, compact, tap to show celebration */}
           <Pressable onPress={showStreakCelebration} accessibilityRole="button" accessibilityLabel="הצג חגיגת רצף">
             <Animated.View style={[streakStyle, {
               flexDirection: "row",
@@ -267,9 +267,9 @@ export function ProfileScreen() {
               shadowOffset: { width: 0, height: 2 },
               elevation: 3,
             }]}>
-              {/* Left — fire icon */}
+              {/* Left, fire icon */}
               <LottieIcon source={require("../../../assets/lottie/wired-flat-2804-fire-flame-hover-pinch.json")} size={30} autoPlay loop active={isFocused} />
-              {/* Right — text */}
+              {/* Right, text */}
               <View style={{ flexDirection: "row-reverse", alignItems: "center", gap: 6 }}>
                 <Text style={{ fontSize: 13, fontWeight: "700", color: "#ea580c", writingDirection: "rtl" }}>רצף יומי</Text>
                 <Text style={{ fontSize: 20, fontWeight: "900", color: theme.text }}>{streak}</Text>
@@ -295,7 +295,7 @@ export function ProfileScreen() {
                 <Text style={[styles.cardBigValue, { color: theme.text }]}>{xp.toLocaleString('he-IL')}</Text>
                 <Text style={[styles.cardUnit, { color: theme.textMuted }]}>XP</Text>
               </View>
-              {/* Progress bar removed — stage popup shows progress instead */}
+              {/* Progress bar removed, stage popup shows progress instead */}
             </View>
           </Animated.View>
 
@@ -364,12 +364,12 @@ export function ProfileScreen() {
 
           {/* ── Actions ── */}
           <Animated.View style={[actionsStyle, { gap: 12 }]}>
-            {/* Bridge CTA — hidden for minors (legal protection) */}
+            {/* Bridge CTA, hidden for minors (legal protection) */}
             {!isMinor && <AnimatedPressable
               onPress={() => router.push("/bridge")}
               style={[styles.actionCard, { backgroundColor: theme.surface, borderColor: theme.border }]}
               accessibilityRole="button"
-              accessibilityLabel="הגשר — המירו מטבעות להטבות אמיתיות"
+              accessibilityLabel="הגשר, המירו מטבעות להטבות אמיתיות"
             >
               <Animated.View style={[styles.actionCardInner, bridgeIsGlowTarget && bridgeGlowStyle, bridgeIsGlowTarget && { borderRadius: 16 }]}>
                 <ChevronRight size={20} color={theme.textMuted} style={{ transform: [{ scaleX: -1 }] }} />
@@ -388,7 +388,7 @@ export function ProfileScreen() {
               onPress={() => router.push("/assets" as never)}
               style={[styles.actionCard, { backgroundColor: theme.surface, borderColor: theme.border }]}
               accessibilityRole="button"
-              accessibilityLabel="תיק נכסים — הנכסים שלי"
+              accessibilityLabel="תיק נכסים, הנכסים שלי"
             >
               <View style={styles.actionCardInner}>
                 <ChevronRight size={20} color={theme.textMuted} style={{ transform: [{ scaleX: -1 }] }} />
@@ -407,7 +407,7 @@ export function ProfileScreen() {
               onPress={() => setTransitionTarget('referral')}
               style={[styles.actionCard, { backgroundColor: theme.surface, borderColor: theme.border }]}
               accessibilityRole="button"
-              accessibilityLabel="רשת העושר — הזמן חברים וקבל פרסים"
+              accessibilityLabel="רשת העושר, הזמן חברים וקבל פרסים"
             >
               <View style={styles.actionCardInner}>
                 <ChevronRight size={20} color={theme.textMuted} style={{ transform: [{ scaleX: -1 }] }} />
@@ -421,7 +421,7 @@ export function ProfileScreen() {
               </View>
             </AnimatedPressable>
 
-            {/* Profile info — moved below Invite Friends */}
+            {/* Profile info, moved below Invite Friends */}
             {profile && (
               <Animated.View style={[profileInfoStyle, styles.card, { backgroundColor: theme.surface, borderColor: theme.border }]}>
                 <View style={[styles.cardTopBorder, { backgroundColor: "#f97316" }]} />
@@ -455,7 +455,7 @@ export function ProfileScreen() {
               </Animated.View>
             )}
 
-            {/* Pro Upgrade CTA — only for free users */}
+            {/* Pro Upgrade CTA, only for free users */}
             {!isPro && (
               <AnimatedPressable
                 onPress={() => router.push("/pricing" as never)}
@@ -1009,7 +1009,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  // Pro card (stays dark — it's the premium upsell)
+  // Pro card (stays dark, it's the premium upsell)
   proCard: {
     borderRadius: 16,
     borderWidth: 1.5,

@@ -168,7 +168,7 @@ function DraftSummary() {
   return (
     <ScrollView contentContainerStyle={styles.summaryContent} showsVerticalScrollIndicator={false}>
       <Text style={styles.summaryTitle}>הדראפט שלך 🏆</Text>
-      <Text style={styles.summarySubtitle}>5 בחירות — ביצועים מתעדכנים שבועית</Text>
+      <Text style={styles.summarySubtitle}>5 בחירות, ביצועים מתעדכנים שבועית</Text>
 
       {picks.map((pick) => {
         const cat = DRAFT_CATEGORY_BY_ID.get(pick.categoryId);
@@ -246,7 +246,7 @@ export function DraftScreen() {
         </View>
       </View>
 
-      {/* Category card — re-mounts on round change via key */}
+      {/* Category card, re-mounts on round change via key */}
       <RoundCard
         key={currentRound}
         category={currentCategory}

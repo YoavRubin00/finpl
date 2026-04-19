@@ -14,7 +14,7 @@ export function useNotificationSetup() {
   const router = useRouter();
   const permissionGranted = useNotificationStore((s) => s.permissionGranted);
 
-  // Captain Shark's smart notification scheduler — runs once per day on app open
+  // Captain Shark's smart notification scheduler, runs once per day on app open
   useFinnNotificationScheduler();
 
   // Handle tap on notification while app is backgrounded/killed

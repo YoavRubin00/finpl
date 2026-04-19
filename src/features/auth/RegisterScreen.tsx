@@ -263,7 +263,7 @@ export function RegisterScreen() {
               </Pressable>
             </View>
 
-            {/* Terms — link + checkbox (separated so link doesn't toggle checkbox) */}
+            {/* Terms, link + checkbox (separated so link doesn't toggle checkbox) */}
             <View style={{ marginBottom: 16 }}>
               <Pressable
                 onPress={() => router.push("/(auth)/terms")}
@@ -342,7 +342,7 @@ export function RegisterScreen() {
               <View style={{ flex: 1, height: 1, backgroundColor: "#e2e8f0" }} />
             </View>
 
-            {/* Apple Sign-In — required by App Store Guideline 4.8 (iOS only) */}
+            {/* Apple Sign-In, required by App Store Guideline 4.8 (iOS only) */}
             {appleAvailable && (
               <Pressable
                 onPress={() => promptAppleSignIn()}
@@ -422,7 +422,7 @@ export function RegisterScreen() {
               </Text>
             </Pressable>
 
-            {/* Skip registration — guest mode → onboarding */}
+            {/* Skip registration, guest mode → onboarding */}
             <Pressable
               onPress={() => enterGuestMode()}
               accessibilityRole="button"

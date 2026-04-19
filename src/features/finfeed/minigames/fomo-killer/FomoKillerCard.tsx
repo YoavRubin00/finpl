@@ -202,7 +202,7 @@ export const FomoKillerCard = React.memo(function FomoKillerCard({ isActive: _is
       <View style={styles.container}>
         <View style={styles.doneShell}>
           <ExpoImage source={FINN_STANDARD} style={styles.finLarge} contentFit="contain" accessible={false} />
-          <Text style={[styles.doneTitle, CENTER_RTL]}>מחסל הפומו — הושלם להיום</Text>
+          <Text style={[styles.doneTitle, CENTER_RTL]}>מחסל הפומו, הושלם להיום</Text>
           <Text style={[styles.doneSub, CENTER_RTL]}>חזור מחר לסיבוב חדש</Text>
         </View>
       </View>
@@ -285,7 +285,7 @@ function IntroScreen({
         <Animated.View entering={FadeInUp.duration(320)} style={styles.introBody}>
           <Text style={[styles.introStory, RTL]} allowFontScaling={false}>
             השקעת ₪{STARTING_INVESTMENT.toLocaleString('he-IL')} במניית $MOON. הוסיפו אותך לקבוצת "רוקט מניות VIP".
-            עכשיו — כולם צועקים שתוסיף עוד. תחזיק.
+            עכשיו, כולם צועקים שתוסיף עוד. תחזיק.
           </Text>
 
           {!shownSecond ? (
@@ -396,7 +396,7 @@ const styles = StyleSheet.create({
   // `flex: 1` so the card fills the feed tile exactly; the parent renderItem
   // clips at `height: listHeight` with `overflow: hidden`, which means any
   // content that grows past the viewport not only vanishes but also stops
-  // receiving touches on Android — that's why the bottom action chips felt
+  // receiving touches on Android, that's why the bottom action chips felt
   // dead. Letting the chat ScrollView shrink via flex keeps ActionChips
   // anchored at the visible bottom and tappable.
   container: {
@@ -479,7 +479,7 @@ const styles = StyleSheet.create({
     fontWeight: '800',
   },
 
-  // Pump-and-dump toggle — body slides up (reveal appears above the header).
+  // Pump-and-dump toggle, body slides up (reveal appears above the header).
   pumpCard: {
     position: 'relative',
   },
@@ -559,7 +559,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
 
-  // Chat — `flex: 1` so the scroll area shrinks as needed to keep the
+  // Chat, `flex: 1` so the scroll area shrinks as needed to keep the
   // portfolio HUD + ActionChips inside the tile (and therefore tappable).
   chatArea: {
     flex: 1,

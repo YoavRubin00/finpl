@@ -1,7 +1,7 @@
 import type { ShoppingItem, ShoppingCartConfig } from './shoppingCartTypes';
 
 /* ------------------------------------------------------------------ */
-/*  Shopping Items — Israeli supermarket items for the cart race game   */
+/*  Shopping Items, Israeli supermarket items for the cart race game   */
 /* ------------------------------------------------------------------ */
 
 const shoppingItems: ShoppingItem[] = [
@@ -80,7 +80,7 @@ const shoppingItems: ShoppingItem[] = [
         price: 49,
         category: 'trap',
         trapType: 'endcap',
-        trapExplanation: 'מוצרים בקצה המדף (אנדקאפ) ממוקמים שם כי הספק שילם עליהם. הם לא באמת במבצע — הם שם כדי לתפוס את העין.',
+        trapExplanation: 'מוצרים בקצה המדף (אנדקאפ) ממוקמים שם כי הספק שילם עליהם. הם לא באמת במבצע, הם שם כדי לתפוס את העין.',
     },
     {
         id: 'trap-3',
@@ -89,7 +89,7 @@ const shoppingItems: ShoppingItem[] = [
         price: 12,
         category: 'trap',
         trapType: 'endcap',
-        trapExplanation: 'חטיפים ליד הקופה מנצלים את "עייפות ההחלטות" — אחרי שעשית עשרות בחירות בסופר, קשה יותר לעמוד בפיתוי.',
+        trapExplanation: 'חטיפים ליד הקופה מנצלים את "עייפות ההחלטות", אחרי שעשית עשרות בחירות בסופר, קשה יותר לעמוד בפיתוי.',
     },
     {
         id: 'trap-4',
@@ -134,7 +134,7 @@ const shoppingItems: ShoppingItem[] = [
         price: 28,
         category: 'trap',
         trapType: 'endcap',
-        trapExplanation: 'מוצרים שלא ברשימה שלך ומוצגים באזורי "מבצעים" — הם שם כי החנות מרוויחה מהם הכי הרבה, לא כי הם זולים.',
+        trapExplanation: 'מוצרים שלא ברשימה שלך ומוצגים באזורי "מבצעים", הם שם כי החנות מרוויחה מהם הכי הרבה, לא כי הם זולים.',
     },
 
     // --- Budget alternative items (חלופות חסכוניות) ---

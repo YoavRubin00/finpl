@@ -1,5 +1,5 @@
 /**
- * SIM 29: עץ המשפחה (Family Tree — Estate Planning) — Module 5-29
+ * SIM 29: עץ המשפחה (Family Tree, Estate Planning), Module 5-29
  * Types for the estate planning / will simulation.
  */
 

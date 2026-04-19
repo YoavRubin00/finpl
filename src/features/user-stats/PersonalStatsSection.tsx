@@ -304,7 +304,7 @@ export function PersonalStatsSection() {
         />
       </View>
 
-      {/* 2-column grid — row-reverse so first item is top-right (RTL) */}
+      {/* 2-column grid, row-reverse so first item is top-right (RTL) */}
       <View
         style={{
           flexDirection: "row-reverse",

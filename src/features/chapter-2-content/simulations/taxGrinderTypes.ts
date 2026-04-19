@@ -11,7 +11,7 @@ export interface InvestmentTrack {
   emoji: string;
   /** Monthly employee deposit (₪) */
   monthlyDeposit: number;
-  /** Monthly employer bonus (₪) — 0 for regular track */
+  /** Monthly employer bonus (₪), 0 for regular track */
   employerBonus: number;
   /** Year-by-year deposit totals (cumulative) */
   deposits: number[];

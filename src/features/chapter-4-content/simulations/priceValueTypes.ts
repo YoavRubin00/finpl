@@ -1,5 +1,5 @@
 /**
- * SIM: מחיר vs. ערך — Price vs Value Chart
+ * SIM: מחיר vs. ערך, Price vs Value Chart
  * Types for the value-investing simulation.
  */
 

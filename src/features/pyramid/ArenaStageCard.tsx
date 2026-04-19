@@ -106,7 +106,7 @@ export function ArenaStageCard({
       player.addListener('playbackStatusUpdate', (status) => {
         if (status.didJustFinish) player.remove();
       });
-    } catch { /* silent — file not yet generated */ }
+    } catch { /* silent, file not yet generated */ }
   }, [arena.audioOverview]);
 
   const gradientColors: [string, string] = isActive

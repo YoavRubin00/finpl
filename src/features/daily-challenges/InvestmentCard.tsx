@@ -90,7 +90,7 @@ export const InvestmentCard = React.memo(function InvestmentCard({ isActive }: P
   const profit = resultValue - budget;
   const isProfit = profit >= 0;
 
-  // Already answered — compact state
+  // Already answered, compact state
   if (answered && !showResult) {
     return (
       <View style={styles.container}>
@@ -160,7 +160,7 @@ export const InvestmentCard = React.memo(function InvestmentCard({ isActive }: P
           {/* Macro description */}
           <Text style={[styles.macroText, RTL]}>{scenario.macroDescription}</Text>
 
-          {/* Instruction — only before answer */}
+          {/* Instruction, only before answer */}
           {!showResult && (
             <Text style={[styles.instructionText, RTL]}>
               איפה היית משקיע את הכסף? בחר אפשרות:

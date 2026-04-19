@@ -1,5 +1,5 @@
 /**
- * SIM 5-30: סימולטור הקריפטו (Crypto Sim) — Module 5-30
+ * SIM 5-30: סימולטור הקריפטו (Crypto Sim), Module 5-30
  * Types for the crypto allocation vs S&P 500 comparison simulation.
  */
 

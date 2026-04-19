@@ -21,7 +21,7 @@ import { useInvestmentPath } from './useInvestmentPath';
 import { SIM3, GRADE_COLORS3, GRADE_HEBREW, SHADOW_STRONG, SHADOW_LIGHT, RTL, TYPE3, sim3Styles } from './simTheme';
 import type { InvestmentPathGrade, PathEventType } from './investmentPathTypes';
 
-/* ── Chapter-3 theme (ocean blue) — kept for gradient ── */
+/* ── Chapter-3 theme (ocean blue), kept for gradient ── */
 const _th3 = getChapterTheme('chapter-3');
 
 /* ── Lottie assets ── */
@@ -50,7 +50,7 @@ const EVENT_TYPE_BG: Record<PathEventType, string> = {
 };
 
 /* ================================================================== */
-/*  PathVisualization — winding road with waypoints                      */
+/*  PathVisualization, winding road with waypoints                      */
 /* ================================================================== */
 
 function PathVisualization({
@@ -137,7 +137,7 @@ function PathVisualization({
 }
 
 /* ================================================================== */
-/*  EventCard — event description with choice options                    */
+/*  EventCard, event description with choice options                    */
 /* ================================================================== */
 
 function EventCard({
@@ -169,7 +169,7 @@ function EventCard({
 }
 
 /* ================================================================== */
-/*  ChoiceButton — path fork option                                      */
+/*  ChoiceButton, path fork option                                      */
 /* ================================================================== */
 
 function ChoiceButton({
@@ -221,7 +221,7 @@ function ChoiceButton({
 }
 
 /* ================================================================== */
-/*  ScoreScreen — results display                                        */
+/*  ScoreScreen, results display                                        */
 /* ================================================================== */
 
 function ScoreScreen({
@@ -367,9 +367,9 @@ function ScoreScreen({
         <View style={[sim3Styles.scoreCard, { marginTop: 14 }]}>
           <View style={{ padding: 16 }}>
             <Text style={[styles.prosConsTitle, RTL]}>היתרונות ברורים:</Text>
-            <Text style={[styles.prosItem, RTL]}>✅ נזילות מלאה — אפשר למשוך בכל עת</Text>
+            <Text style={[styles.prosItem, RTL]}>✅ נזילות מלאה, אפשר למשוך בכל עת</Text>
             <Text style={[styles.prosItem, RTL]}>✅ משיכה כקצבה בגיל 60+ = פטור ממס רווחי הון</Text>
-            <Text style={[styles.prosItem, RTL]}>✅ דחיית מס — מעבר בין מסלולים בלי אירוע מס</Text>
+            <Text style={[styles.prosItem, RTL]}>✅ דחיית מס, מעבר בין מסלולים בלי אירוע מס</Text>
             <Text style={[styles.prosItem, RTL]}>✅ הלוואה כנגד הקופה בריבית נמוכה</Text>
           </View>
         </View>
@@ -382,7 +382,7 @@ function ScoreScreen({
             <Text style={[styles.consItem, RTL]}>⚠️ דמי ניהול: 0.6%-0.8% מצבירה (ניתן להתמקח!)</Text>
             <Text style={[styles.consItem, RTL]}>⚠️ תקרת הפקדה שנתית (~83,640 ש"ח ב-2026)</Text>
             <Text style={[styles.consItem, RTL]}>⚠️ משיכה הונית לפני 60 = 25% מס נומינלי על הרווחים</Text>
-            <Text style={[styles.consItem, RTL]}>⚠️ אין רכיב ביטוחי (נכות/שאירים) — זהו מכשיר השקעה בלבד</Text>
+            <Text style={[styles.consItem, RTL]}>⚠️ אין רכיב ביטוחי (נכות/שאירים), זהו מכשיר השקעה בלבד</Text>
           </View>
         </View>
       </Animated.View>
@@ -405,7 +405,7 @@ function ScoreScreen({
 }
 
 /* ================================================================== */
-/*  InvestmentPathScreen — main component                                */
+/*  InvestmentPathScreen, main component                                */
 /* ================================================================== */
 
 export function InvestmentPathScreen({
@@ -445,7 +445,7 @@ export function InvestmentPathScreen({
     if (state.balance !== prevBalance.current) {
       const diff = state.balance - prevBalance.current;
       if (diff < -1000) {
-        // Dip — shake
+        // Dip, shake
         balanceScale.value = withSequence(
           withTiming(1.05, { duration: 100 }),
           withSpring(0.98, { damping: 20, stiffness: 300 }),
@@ -453,7 +453,7 @@ export function InvestmentPathScreen({
         );
         heavyHaptic();
       } else if (diff > 1000) {
-        // Growth — pulse
+        // Growth, pulse
         balanceScale.value = withSequence(
           withSpring(1.03, { damping: 22, stiffness: 200 }),
           withSpring(1, { damping: 22, stiffness: 150 }),
@@ -562,7 +562,7 @@ export function InvestmentPathScreen({
               15 שנים של חיסכון בקופת גמל. האם תחזיק מעמד?
             </Text>
             <Text style={[styles.subtitle, RTL, { fontSize: 12, opacity: 0.9, marginTop: 2 }]}>
-              {'תשואה ממוצעת של 7% שנתי — מבוססת על תשואת S&P 500 הריאלית ההיסטורית (1926-2023)'}
+              {'תשואה ממוצעת של 7% שנתי, מבוססת על תשואת S&P 500 הריאלית ההיסטורית (1926-2023)'}
             </Text>
           </Animated.View>
 
@@ -680,7 +680,7 @@ export function InvestmentPathScreen({
           />
         )}
 
-        {/* Feedback from selected option — rendered at bottom via SimFeedbackBar */}
+        {/* Feedback from selected option, rendered at bottom via SimFeedbackBar */}
 
         {/* Choice buttons (only if no option selected yet and not withdrawn) */}
         {currentEvent && state.selectedOptionId === null && !state.hasWithdrawn && (
@@ -714,7 +714,7 @@ export function InvestmentPathScreen({
           </Animated.View>
         )}
 
-        {/* Next event button removed as per user request — advancement is automatic on tap */}
+        {/* Next event button removed as per user request, advancement is automatic on tap */}
 
         {/* Auto-play toggle */}
         {!state.hasWithdrawn && !state.isComplete && (
@@ -739,7 +739,7 @@ export function InvestmentPathScreen({
         )}
       </ScrollView>
 
-      {/* Feedback bar — tap to dismiss or auto-dismiss after 3s */}
+      {/* Feedback bar, tap to dismiss or auto-dismiss after 3s */}
       {selectedOption && !feedbackDismissed && (
         <AnimatedPressable
           onPress={() => {

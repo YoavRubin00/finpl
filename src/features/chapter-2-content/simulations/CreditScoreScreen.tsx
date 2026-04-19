@@ -63,7 +63,7 @@ function scoreToAngle(score: number): number {
 }
 
 /* ------------------------------------------------------------------ */
-/*  CreditGauge — semicircle with animated needle and score readout     */
+/*  CreditGauge, semicircle with animated needle and score readout     */
 /* ------------------------------------------------------------------ */
 
 function CreditGauge({ score }: { score: number }) {
@@ -85,7 +85,7 @@ function CreditGauge({ score }: { score: number }) {
                 {/* Background ring */}
                 <View style={styles.gaugeRing} />
 
-                {/* Needle — center of this view sits at bottom-center of clip (pivot point) */}
+                {/* Needle, center of this view sits at bottom-center of clip (pivot point) */}
                 <Animated.View style={[styles.needlePivot, needleAnim]}>
                     <View style={[styles.needleBar, { backgroundColor: color }]} />
                 </Animated.View>
@@ -116,7 +116,7 @@ function CreditGauge({ score }: { score: number }) {
 }
 
 /* ------------------------------------------------------------------ */
-/*  HistoryRail — dots representing past choices                        */
+/*  HistoryRail, dots representing past choices                        */
 /* ------------------------------------------------------------------ */
 
 function HistoryRail({ history }: { history: { impact: number }[] }) {
@@ -190,7 +190,7 @@ function NotificationCard({
 }
 
 /* ------------------------------------------------------------------ */
-/*  OptionButton — clean white card for each choice                     */
+/*  OptionButton, clean white card for each choice                     */
 /* ------------------------------------------------------------------ */
 
 function OptionButton({
@@ -236,7 +236,7 @@ function OptionButton({
 }
 
 /* ------------------------------------------------------------------ */
-/*  FloatingNumber — animated score impact that flies upward            */
+/*  FloatingNumber, animated score impact that flies upward            */
 /* ------------------------------------------------------------------ */
 
 function FloatingNumber({ impact }: { impact: number }) {
@@ -265,7 +265,7 @@ function FloatingNumber({ impact }: { impact: number }) {
 }
 
 /* ------------------------------------------------------------------ */
-/*  FlashOverlay — full-screen color flash on score change               */
+/*  FlashOverlay, full-screen color flash on score change               */
 /* ------------------------------------------------------------------ */
 
 function FlashOverlay({ isCorrect }: { isCorrect: boolean }) {
@@ -287,7 +287,7 @@ function FlashOverlay({ isCorrect }: { isCorrect: boolean }) {
 }
 
 /* ------------------------------------------------------------------ */
-/*  ScoreScreen — cinematic results after game completion               */
+/*  ScoreScreen, cinematic results after game completion               */
 /* ------------------------------------------------------------------ */
 
 function ScoreScreen({
@@ -318,7 +318,7 @@ function ScoreScreen({
                 {/* Score Card */}
                 <View style={[sim2Styles.scoreCard, { borderColor: gradeColor, shadowColor: gradeColor }]}>
                     <View style={[sim2Styles.scoreCardInner, { padding: 14, gap: 8 }]}>
-                        <Text style={[RTL, TYPE2.cardTitle, { fontSize: 14 }]}>דוח ריכוז נתונים — בנק ישראל</Text>
+                        <Text style={[RTL, TYPE2.cardTitle, { fontSize: 14 }]}>דוח ריכוז נתונים, בנק ישראל</Text>
                         <Text style={[receiptStyles.receiptDate, { fontSize: 11 }]}>{new Date().toLocaleDateString('he-IL')}</Text>
 
                         {/* Gauge on dark strip */}
@@ -388,7 +388,7 @@ function ScoreScreen({
                 </View>
             </ScrollView>
 
-            {/* Actions — pinned at bottom */}
+            {/* Actions, pinned at bottom */}
             <View style={[sim2Styles.actionsRow, { marginTop: 4 }]}>
                 <AnimatedPressable onPress={onReplay} style={[sim2Styles.replayBtn, { paddingVertical: 12 }]} accessibilityRole="button" accessibilityLabel="שחק שוב" accessibilityHint="מתחיל את הסימולציה מחדש">
                     <View accessible={false}><LottieIcon source={LOTTIE_REPLAY} size={16} /></View>
@@ -474,7 +474,7 @@ const receiptStyles = StyleSheet.create({
 });
 
 /* ------------------------------------------------------------------ */
-/*  CreditScoreScreen — main exported component                         */
+/*  CreditScoreScreen, main exported component                         */
 /* ------------------------------------------------------------------ */
 
 export function CreditScoreScreen({ onComplete }: { onComplete: () => void }) {
@@ -559,7 +559,7 @@ export function CreditScoreScreen({ onComplete }: { onComplete: () => void }) {
         require('../../../../assets/lottie/wired-flat-152-bar-chart-arrow-hover-growth.json'),
     ];
 
-    // Game complete — show score screen
+    // Game complete, show score screen
     if (state.isComplete && !showFeedback && score) {
         return (
             <SimLottieBackground lottieSources={CH2_LOTTIE} chapterColors={_th2.gradient}>
@@ -611,7 +611,7 @@ export function CreditScoreScreen({ onComplete }: { onComplete: () => void }) {
                     <View style={{ position: 'absolute', bottom: 0, left: 0, right: 0 }} pointerEvents="none">
                         <SimFeedbackBar
                             isCorrect={lastChoice.isCorrect}
-                            message={`${lastChoice.feedback} — ${lastChoice.explanation}`}
+                            message={`${lastChoice.feedback}, ${lastChoice.explanation}`}
                             accentColor={_th2.primary}
                         />
                     </View>

@@ -1,5 +1,5 @@
 /**
- * SIM 20: מדד לייב (Index Live — ‎S&P‎ 500 Time Machine) — Module 4-20
+ * SIM 20: מדד לייב (Index Live, ‎S&P‎ 500 Time Machine), Module 4-20
  * Types for the ‎S&P‎ 500 historical investment time machine simulation.
  */
 

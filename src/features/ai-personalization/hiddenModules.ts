@@ -1,4 +1,4 @@
-/** PRD 34 US-003 — Hidden module definitions unlocked by AI recommendations */
+/** PRD 34 US-003, Hidden module definitions unlocked by AI recommendations */
 
 import type { RecommendedAction } from './types';
 import type { Module } from '../chapter-1-content/types';
@@ -8,7 +8,7 @@ export interface HiddenModuleDef {
   trigger: RecommendedAction;
   /** Which chapter map should display this node */
   chapterId: string;
-  /** The module data (stub — content can be expanded later) */
+  /** The module data (stub, content can be expanded later) */
   module: Module;
 }
 
@@ -50,7 +50,7 @@ export const HIDDEN_MODULES: HiddenModuleDef[] = [
       id: 'hidden-tax-planning',
       title: 'תכנון מס חכם',
       videoHook: 'למד איך לחסוך במיסים בצורה חוקית',
-      interactiveIntro: 'מודול סודי — תכנון מס מתקדם!',
+      interactiveIntro: 'מודול סודי, תכנון מס מתקדם!',
       flashcards: [
         { id: 'ht-1', text: 'מודול זה ייפתח בקרוב עם תוכן מלא.' },
       ],
@@ -80,7 +80,7 @@ export const HIDDEN_MODULES: HiddenModuleDef[] = [
       id: 'hidden-advanced-investing',
       title: 'השקעות מתקדמות',
       videoHook: 'אסטרטגיות השקעה ברמה הגבוהה ביותר',
-      interactiveIntro: 'מודול סודי — מסחר אופציות ונגזרים!',
+      interactiveIntro: 'מודול סודי, מסחר אופציות ונגזרים!',
       flashcards: [
         { id: 'hi-1', text: 'מודול זה ייפתח בקרוב עם תוכן מלא.' },
       ],

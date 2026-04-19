@@ -44,7 +44,7 @@ export function DuelsScreen() {
   const router = useRouter();
   const record = useDuelsStore((s) => s.record);
 
-  // Finn arena splash on enter — static 1.5s or tap to dismiss
+  // Finn arena splash on enter, static 1.5s or tap to dismiss
   const [showSplash, setShowSplash] = useState(true);
 
   useEffect(() => {

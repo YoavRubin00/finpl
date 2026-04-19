@@ -32,7 +32,7 @@ export function SwipeableModal({ visible, onClose, children }: SwipeableModalPro
 
   useEffect(() => {
     if (visible) {
-      // Soft, gentle rise — no overshoot, no snap.
+      // Soft, gentle rise, no overshoot, no snap.
       translateY.value = shouldAnimate
         ? withTiming(0, {
             duration: animDuration(420),

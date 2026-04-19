@@ -1,6 +1,6 @@
 /**
  * SIM: בנה תיק לפי גראהם (Graham Portfolio Builder)
- * 10 fictional stocks — mix of Graham-approved value picks and speculative traps.
+ * 10 fictional stocks, mix of Graham-approved value picks and speculative traps.
  */
 
 import type { GrahamStock } from './grahamPortfolioTypes';

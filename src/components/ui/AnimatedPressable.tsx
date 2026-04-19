@@ -22,7 +22,7 @@ interface AnimatedPressableProps {
   noScale?: boolean;
   /** Disable haptic feedback. */
   noHaptic?: boolean;
-  /** Accessibility — תקן נגישות ישראלי SI 5568 */
+  /** Accessibility, תקן נגישות ישראלי SI 5568 */
   accessibilityLabel?: string;
   accessibilityHint?: string;
   accessibilityRole?: AccessibilityRole;

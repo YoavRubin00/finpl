@@ -27,25 +27,25 @@ const COPY_BY_TYPE: Record<AssetType, UnlockCopy> = {
   stock: {
     title: 'פתחת מניות בודדות!',
     subtitle: 'AAPL, MSFT, NVDA ועוד',
-    body: 'מעכשיו אפשר לסחור גם במניות בודדות. זכור — תנודתיות גבוהה יותר ממדד, אבל גם פוטנציאל רווח גבוה יותר.',
+    body: 'מעכשיו אפשר לסחור גם במניות בודדות. זכור, תנודתיות גבוהה יותר ממדד, אבל גם פוטנציאל רווח גבוה יותר.',
     cta: 'יאללה נסחור',
   },
   crypto: {
     title: 'פתחת קריפטו!',
     subtitle: 'Bitcoin, Ethereum',
-    body: 'סיימת את פרק 5 — כל הכבוד. קריפטו נע 24/7 ותנודתיות "קיצונית". התחל בסכומים קטנים, וסחר רק בפלטפורמות מפוקחות.',
+    body: 'סיימת את פרק 5, כל הכבוד. קריפטו נע 24/7 ותנודתיות "קיצונית". התחל בסכומים קטנים, וסחר רק בפלטפורמות מפוקחות.',
     cta: 'בוא נלמד',
   },
   index: {
     title: 'פתחת מדדים',
     subtitle: 'SPY, QQQ, TA-125',
-    body: 'מדדים הם הדרך הבטוחה ביותר להתחיל — פיזור מובנה בנכס אחד.',
+    body: 'מדדים הם הדרך הבטוחה ביותר להתחיל, פיזור מובנה בנכס אחד.',
     cta: 'בוא נתחיל',
   },
   commodity: {
     title: 'פתחת סחורות',
     subtitle: 'זהב וכסף',
-    body: 'סחורות הן מגן מפני משברים — לרוב נעות הפוך מהשוק.',
+    body: 'סחורות הן מגן מפני משברים, לרוב נעות הפוך מהשוק.',
     cta: 'מעניין',
   },
 };
@@ -95,7 +95,7 @@ export function AssetUnlockSheet({ visible, unlockedType, onClose }: AssetUnlock
             bounces={false}
             contentContainerStyle={{ paddingBottom: 8 }}
           >
-            {/* Mascot — chat-style: image peeks out of a soft circular background,
+            {/* Mascot, chat-style: image peeks out of a soft circular background,
                 no emoji decoration, no hard circular clip. */}
             <View style={styles.avatarWrap}>
               <View style={styles.avatarBackdrop} />

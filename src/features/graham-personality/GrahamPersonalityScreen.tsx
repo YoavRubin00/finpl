@@ -1,5 +1,5 @@
 /**
- * Graham Investor Personality Test — standalone screen.
+ * Graham Investor Personality Test, standalone screen.
  * 8-question wizard → investor profile result card.
  * Uses chapter-4 design system (SIM4/TYPE4/sim4Styles).
  */

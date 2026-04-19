@@ -1,5 +1,5 @@
 /**
- * SIM 26: משחקי הנדל"ן (Real Estate Game) — Module 5-26
+ * SIM 26: משחקי הנדל"ן (Real Estate Game), Module 5-26
  * Hook: choose mortgage, auto-play 20+ years, apply life events, track totals.
  */
 
@@ -178,7 +178,7 @@ export function useRealEstate() {
             newPropertyValue = newPropertyValue * (1 + event.impact);
             break;
           case 'income-change':
-            // Could be used for rental income changes — no-op for now
+            // Could be used for rental income changes, no-op for now
             break;
         }
       }
@@ -204,7 +204,7 @@ export function useRealEstate() {
       const newCumulativePaid = cumulativePaidRef.current + yearPayments + yearExtraExpense;
       const newExtraExpenses = extraExpensesRef.current + yearExtraExpense;
 
-      // Remaining loan (approximate — reduce by principal paid this year)
+      // Remaining loan (approximate, reduce by principal paid this year)
       // Simplified: remaining = previous remaining - (yearPayments - interest portion)
       const avgRate = option.fixedPercent * rates.fixedRate + option.variablePercent * newVariableRate;
       const yearInterest = prev.remainingLoan * avgRate;
@@ -232,7 +232,7 @@ export function useRealEstate() {
         extraExpenses: yearExtraExpense,
       };
 
-      // We need to update snapshots outside setState — use a trick with setTimeout
+      // We need to update snapshots outside setState, use a trick with setTimeout
       setTimeout(() => {
         setYearSnapshots((snaps) => [...snaps, snapshot]);
         setCurrentVariableRate(newVariableRate);

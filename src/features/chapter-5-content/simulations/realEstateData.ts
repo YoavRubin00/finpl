@@ -1,5 +1,5 @@
 /**
- * SIM 26: משחקי הנדל"ן (Real Estate Game) — Module 5-26
+ * SIM 26: משחקי הנדל"ן (Real Estate Game), Module 5-26
  * Mortgage options, life events, and configuration data.
  */
 
@@ -22,7 +22,7 @@ export const MORTGAGE_OPTIONS: MortgageOption[] = [
   {
     id: 'fixed-safe',
     label: '100% ריבית קבועה',
-    description: 'בטוח ויציב — תשלום זהה כל חודש, בלי הפתעות. עולה יותר בסה"כ.',
+    description: 'בטוח ויציב, תשלום זהה כל חודש, בלי הפתעות. עולה יותר בסה"כ.',
     fixedPercent: 1.0,
     variablePercent: 0,
     years: 25,
@@ -31,7 +31,7 @@ export const MORTGAGE_OPTIONS: MortgageOption[] = [
   {
     id: 'balanced-mix',
     label: '50/50 מיקס',
-    description: 'חצי קבועה 4%, חצי משתנה 3.5%. מאוזן — חוסך קצת אבל עם סיכון קטן.',
+    description: 'חצי קבועה 4%, חצי משתנה 3.5%. מאוזן, חוסך קצת אבל עם סיכון קטן.',
     fixedPercent: 0.5,
     variablePercent: 0.5,
     years: 25,
@@ -40,7 +40,7 @@ export const MORTGAGE_OPTIONS: MortgageOption[] = [
   {
     id: 'variable-risky',
     label: '100% ריבית משתנה',
-    description: 'הכי זול בהתחלה — אבל ריבית יכולה לזנק. הימור על העתיד.',
+    description: 'הכי זול בהתחלה, אבל ריבית יכולה לזנק. הימור על העתיד.',
     fixedPercent: 0,
     variablePercent: 1.0,
     years: 30,
@@ -68,7 +68,7 @@ export const REAL_ESTATE_EVENTS: RealEstateEvent[] = [
   {
     id: 'renovation-y5',
     year: 5,
-    description: 'צריך שיפוץ דחוף — צנרת ישנה ורטיבות. עלות: ₪80,000',
+    description: 'צריך שיפוץ דחוף, צנרת ישנה ורטיבות. עלות: ₪80,000',
     emoji: '🔧',
     effect: 'expense',
     impact: 80_000,
@@ -76,7 +76,7 @@ export const REAL_ESTATE_EVENTS: RealEstateEvent[] = [
   {
     id: 'value-up-y8',
     year: 8,
-    description: 'שכונה התפתחה — רכבת קלה חדשה! ערך הנכס עלה 20%',
+    description: 'שכונה התפתחה, רכבת קלה חדשה! ערך הנכס עלה 20%',
     emoji: '🏗️',
     effect: 'property-value',
     impact: 0.20, // +20%
@@ -84,7 +84,7 @@ export const REAL_ESTATE_EVENTS: RealEstateEvent[] = [
   {
     id: 'rate-drop-y12',
     year: 12,
-    description: 'הריבית יורדת! בנק ישראל מוריד 1% — ההחזר החודשי קטן',
+    description: 'הריבית יורדת! בנק ישראל מוריד 1%, ההחזר החודשי קטן',
     emoji: '📉',
     effect: 'rate-hike', // reuse rate-hike effect type; negative impact = drop
     impact: -0.01, // -1% to variable rate
@@ -92,7 +92,7 @@ export const REAL_ESTATE_EVENTS: RealEstateEvent[] = [
   {
     id: 'tax-y15',
     year: 15,
-    description: 'היטל השבחה מיוחד מהעירייה — ₪30,000 תשלום חד-פעמי',
+    description: 'היטל השבחה מיוחד מהעירייה, ₪30,000 תשלום חד-פעמי',
     emoji: '🏛️',
     effect: 'expense',
     impact: 30_000,

@@ -40,7 +40,7 @@ export interface InflatedProduct extends Product {
 export interface InflationRaceState {
   /** Currently selected year on the slider (1-20) */
   currentYear: number;
-  /** Money in checking account — stays the same (₪) */
+  /** Money in checking account, stays the same (₪) */
   moneyValue: number;
   /** Purchasing power as percentage of original (declines) */
   purchasingPower: number;

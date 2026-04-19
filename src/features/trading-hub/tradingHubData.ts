@@ -8,7 +8,7 @@ export const TRADABLE_ASSETS: TradableAsset[] = [
     symbol: '🍎',
     type: 'stock',
     volatilityRating: 'medium',
-    educationalTag: 'פרק 4 — מניות',
+    educationalTag: 'פרק 4, מניות',
     descriptionHebrew:
       'החברה שהמציאה את האייפון ושינתה את העולם. אחת החברות הכי שוות בהיסטוריה עם מערכת אקולוגית שאי אפשר לברוח ממנה.',
   },
@@ -18,7 +18,7 @@ export const TRADABLE_ASSETS: TradableAsset[] = [
     symbol: '🪟',
     type: 'stock',
     volatilityRating: 'medium',
-    educationalTag: 'פרק 4 — מניות',
+    educationalTag: 'פרק 4, מניות',
     descriptionHebrew:
       'מאחורי Windows, Xbox ו-Azure. הימרו בענק על AI עם ההשקעה ב-OpenAI ועכשיו הם בכל מקום.',
   },
@@ -28,7 +28,7 @@ export const TRADABLE_ASSETS: TradableAsset[] = [
     symbol: '🟢',
     type: 'stock',
     volatilityRating: 'extreme',
-    educationalTag: 'פרק 4 — מניות',
+    educationalTag: 'פרק 4, מניות',
     descriptionHebrew:
       'החברה שמתדלקת את מהפכת ה-AI עם השבבים שלה. נכון ל-2024, אחת החברות החזקות בעולם.',
   },
@@ -38,7 +38,7 @@ export const TRADABLE_ASSETS: TradableAsset[] = [
     symbol: '🔍',
     type: 'stock',
     volatilityRating: 'medium',
-    educationalTag: 'פרק 4 — מניות',
+    educationalTag: 'פרק 4, מניות',
     descriptionHebrew:
       'החברה מאחורי Google, YouTube ו-Android. שולטת בחיפוש, בפרסום דיגיטלי ועכשיו גם רצה על AI.',
   },
@@ -48,7 +48,7 @@ export const TRADABLE_ASSETS: TradableAsset[] = [
     symbol: '📦',
     type: 'stock',
     volatilityRating: 'medium',
-    educationalTag: 'פרק 4 — מניות',
+    educationalTag: 'פרק 4, מניות',
     descriptionHebrew:
       'התחילו כחנות ספרים אונליין, היום שולטים באיקומרס ובענן (AWS). ג׳ף בזוס בנה אימפריה.',
   },
@@ -58,7 +58,7 @@ export const TRADABLE_ASSETS: TradableAsset[] = [
     symbol: '👤',
     type: 'stock',
     volatilityRating: 'high',
-    educationalTag: 'פרק 4 — מניות',
+    educationalTag: 'פרק 4, מניות',
     descriptionHebrew:
       'Facebook, Instagram, WhatsApp - הכל שלהם. מרק צוקרברג הימר על המטאוורס ועכשיו על AI.',
   },
@@ -68,7 +68,7 @@ export const TRADABLE_ASSETS: TradableAsset[] = [
     symbol: '⚡',
     type: 'stock',
     volatilityRating: 'extreme',
-    educationalTag: 'פרק 4 — מניות',
+    educationalTag: 'פרק 4, מניות',
     descriptionHebrew:
       'המניה הכי דרמטית בשוק. רכבים חשמליים, רובוטים, ואילון מאסק שלא מפסיק לצייץ.',
   },
@@ -80,7 +80,7 @@ export const TRADABLE_ASSETS: TradableAsset[] = [
     symbol: '🇺🇸',
     type: 'index',
     volatilityRating: 'low',
-    educationalTag: 'פרק 3 — השקעות מדדים',
+    educationalTag: 'פרק 3, השקעות מדדים',
     descriptionHebrew:
       'מדד 500 החברות הגדולות בארה״ב. הדרך הקלאסית לעקוב אחרי הכלכלה האמריקאית כולה.',
   },
@@ -90,7 +90,7 @@ export const TRADABLE_ASSETS: TradableAsset[] = [
     symbol: '💻',
     type: 'index',
     volatilityRating: 'medium',
-    educationalTag: 'פרק 4 — תעודות סל',
+    educationalTag: 'פרק 4, תעודות סל',
     descriptionHebrew:
       'מדד 100 חברות הטכנולוגיה הגדולות. אם את/ה מאמינ/ה בטק, זה המדד שלך.',
   },
@@ -100,7 +100,7 @@ export const TRADABLE_ASSETS: TradableAsset[] = [
     symbol: '🇮🇱',
     type: 'index',
     volatilityRating: 'medium',
-    educationalTag: 'פרק 3 — יציבות פיננסית',
+    educationalTag: 'פרק 3, יציבות פיננסית',
     descriptionHebrew:
       'מדד הדגל של הבורסה בתל אביב. כולל את 125 החברות הגדולות בישראל - מהבנקים ועד חברות הייטק.',
   },
@@ -112,7 +112,7 @@ export const TRADABLE_ASSETS: TradableAsset[] = [
     symbol: '🥇',
     type: 'commodity',
     volatilityRating: 'low',
-    educationalTag: 'פרק 3 — גידור סיכונים',
+    educationalTag: 'פרק 3, גידור סיכונים',
     descriptionHebrew:
       'זהב - הנכס הבטוח של האנושות כבר אלפי שנים. כשהשוק קורס, כולם רצים לזהב.',
   },
@@ -122,7 +122,7 @@ export const TRADABLE_ASSETS: TradableAsset[] = [
     symbol: '🥈',
     type: 'commodity',
     volatilityRating: 'high',
-    educationalTag: 'פרק 3 — גידור סיכונים',
+    educationalTag: 'פרק 3, גידור סיכונים',
     descriptionHebrew:
       'כסף - האח הקטן של הזהב, אבל גם משמש בתעשייה. יותר תנודתי ויותר מפתיע.',
   },
@@ -134,7 +134,7 @@ export const TRADABLE_ASSETS: TradableAsset[] = [
     symbol: '₿',
     type: 'crypto',
     volatilityRating: 'extreme',
-    educationalTag: 'פרק 4 — קריפטו',
+    educationalTag: 'פרק 4, קריפטו',
     descriptionHebrew:
       'המטבע הדיגיטלי שהתחיל את המהפכה. מוגבל ל-21 מיליון יחידות. הזהב הדיגיטלי של דור ה-Z.',
   },
@@ -144,7 +144,7 @@ export const TRADABLE_ASSETS: TradableAsset[] = [
     symbol: 'Ξ',
     type: 'crypto',
     volatilityRating: 'extreme',
-    educationalTag: 'פרק 4 — קריפטו',
+    educationalTag: 'פרק 4, קריפטו',
     descriptionHebrew:
       'לא רק מטבע - פלטפורמה שלמה לחוזים חכמים ו-DeFi. המחשב העולמי של הקריפטו.',
   },

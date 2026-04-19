@@ -2,7 +2,7 @@ import type { CrashPoint, PhaseDef } from "./types";
 
 export const HOLD_TARGET_MS = 10_000;
 
-// Condensed 10s with MORE intensity — panic phase is longer and more aggressive
+// Condensed 10s with MORE intensity, panic phase is longer and more aggressive
 export const PHASES: ReadonlyArray<PhaseDef> = [
   {
     phase: "fear",

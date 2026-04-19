@@ -33,7 +33,7 @@ export interface MortgageTerms {
   repaymentRate: number;
 }
 
-/** Portfolio combo — bonus for owning specific asset pairs */
+/** Portfolio combo, bonus for owning specific asset pairs */
 export interface PortfolioCombo {
   id: string;
   name: string;
@@ -43,7 +43,7 @@ export interface PortfolioCombo {
   description: string;
 }
 
-/** Asset milestone — tracked achievements */
+/** Asset milestone, tracked achievements */
 export type MilestoneId =
   | 'first_asset'
   | 'three_assets'

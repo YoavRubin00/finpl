@@ -1,5 +1,5 @@
 /**
- * SIM 5-31: בונה ה-IRA (IRA Builder) — Module 5-31
+ * SIM 5-31: בונה ה-IRA (IRA Builder), Module 5-31
  * Types for the Traditional vs Roth IRA comparison simulation.
  */
 

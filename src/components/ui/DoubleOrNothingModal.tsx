@@ -159,7 +159,7 @@ export function DoubleOrNothingModal({ visible, rewards, onResolve }: Props) {
             </Animated.View>
             <Text style={[styles.headline, { color: '#f97316' }]}>הכל או כלום!</Text>
             <Text style={[styles.subtitle, RTL]}>
-              החלק ימינה או שמאלה על שאלת בונוס ותכפיל הכל פי 2!{'\n'}תשובה שגויה — לא תקבל מטבעות.
+              החלק ימינה או שמאלה על שאלת בונוס ותכפיל הכל פי 2!{'\n'}תשובה שגויה, לא תקבל מטבעות.
             </Text>
 
             {/* Current rewards */}
@@ -184,7 +184,7 @@ export function DoubleOrNothingModal({ visible, rewards, onResolve }: Props) {
               )}
             </View>
 
-            {/* Buttons — using View+TouchableOpacity for reliable rendering */}
+            {/* Buttons, using View+TouchableOpacity for reliable rendering */}
             <View style={styles.riskBtn}>
               <Pressable onPress={handleRisk} style={{ width: '100%', alignItems: 'center' }} accessibilityRole="button" accessibilityLabel="הכל או כלום!">
                 <View style={{ flexDirection: 'row-reverse', alignItems: 'center', gap: 8 }}>

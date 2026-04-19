@@ -78,7 +78,7 @@ export function QuizStartPopup({ visible, quizCount, onStart, unitColors }: Quiz
             בדוק את עצמך על מה שלמדת
           </Text>
 
-          {/* CTA — 3D button */}
+          {/* CTA, 3D button */}
           <View style={{ alignSelf: "stretch" }}>
             <View style={{
               position: "absolute",

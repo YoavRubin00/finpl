@@ -1,5 +1,5 @@
 /**
- * SIM 4-27: מנהל המשבר (Crisis Manager) — Module 4-27
+ * SIM 4-27: מנהל המשבר (Crisis Manager), Module 4-27
  * 5 historical market crises with Hebrew headlines and recovery data.
  */
 
@@ -12,7 +12,7 @@ const dotcomBubble: CrisisEvent = {
   title: 'בועת הדוט-קום',
   emoji: '💻',
   year: 2000,
-  headline: 'בועת הטכנולוגיה התפוצצה — הנאסד"ק צנח 78% משיאו',
+  headline: 'בועת הטכנולוגיה התפוצצה, הנאסד"ק צנח 78% משיאו',
   marketDropPercent: 45,
   recoveryMonths: 84,
   postRecoveryGainPercent: 85,
@@ -23,7 +23,7 @@ const gfc2008: CrisisEvent = {
   title: 'המשבר הפיננסי העולמי',
   emoji: '🏚️',
   year: 2008,
-  headline: 'ליהמן בראדרס קרס — בנקים ברחבי העולם על סף פשיטת רגל',
+  headline: 'ליהמן בראדרס קרס, בנקים ברחבי העולם על סף פשיטת רגל',
   marketDropPercent: 38,
   recoveryMonths: 48,
   postRecoveryGainPercent: 65,
@@ -35,7 +35,7 @@ const covidCrash: CrisisEvent = {
   emoji: '🦠',
   year: 2020,
   headline:
-    'מגפת COVID-19 סגרה את הכלכלה העולמית — השווקים צנחו ב-5 שבועות',
+    'מגפת COVID-19 סגרה את הכלכלה העולמית, השווקים צנחו ב-5 שבועות',
   marketDropPercent: 34,
   recoveryMonths: 5,
   postRecoveryGainPercent: 70,
@@ -46,7 +46,7 @@ const inflationBear: CrisisEvent = {
   title: 'שוק הדובים של 2022',
   emoji: '📈',
   year: 2022,
-  headline: 'אינפלציה של 9.1% — הפד העלה ריבית בקצב חסר תקדים',
+  headline: 'אינפלציה של 9.1%, הפד העלה ריבית בקצב חסר תקדים',
   marketDropPercent: 20,
   recoveryMonths: 18,
   postRecoveryGainPercent: 30,
@@ -57,7 +57,7 @@ const oct7Crisis: CrisisEvent = {
   title: 'מלחמת חרבות ברזל',
   emoji: '🇮🇱',
   year: 2023,
-  headline: 'מתקפת 7 באוקטובר — מדד ת"א 35 צנח ושער השקל נחלש',
+  headline: 'מתקפת 7 באוקטובר, מדד ת"א 35 צנח ושער השקל נחלש',
   marketDropPercent: 8,
   recoveryMonths: 12,
   postRecoveryGainPercent: 15,

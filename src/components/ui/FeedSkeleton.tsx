@@ -1,5 +1,5 @@
 /**
- * FeedSkeleton — Finn welcome placeholder for FinFeed.
+ * FeedSkeleton, Finn welcome placeholder for FinFeed.
  * Shown during initial feed computation/render.
  */
 import React from 'react';
@@ -20,7 +20,7 @@ export function FeedSkeleton() {
   );
 }
 
-/** Horizontal row of N skeleton feed cards — used when pre-loading. */
+/** Horizontal row of N skeleton feed cards, used when pre-loading. */
 export function FeedSkeletonList({ count = 1 }: { count?: number }) {
   return (
     <>

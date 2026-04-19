@@ -126,7 +126,7 @@ export function StreakCalendarModal({ visible, onClose }: StreakCalendarModalPro
           {/* Handle */}
           <View style={styles.handle} />
 
-          {/* Captain Shark holding the streak fire — sits at the top of the calendar */}
+          {/* Captain Shark holding the streak fire, sits at the top of the calendar */}
           <View style={{ alignItems: 'center', marginTop: -4, marginBottom: 4 }}>
             <View style={{ width: 96, height: 96, borderRadius: 48, overflow: 'hidden', backgroundColor: 'transparent' }}>
               <ExpoImage source={FINN_FIRE} accessible={false} style={{ width: 96, height: 96, opacity: 0.92 }} contentFit="contain" />
@@ -276,7 +276,7 @@ function DayCell({ day, status, date, onPress }: DayCellProps) {
       onPress={isInteractive ? () => onPress(status, date) : undefined}
       disabled={!isInteractive}
       accessibilityRole={isInteractive ? "button" : "text"}
-      accessibilityLabel={`יום ${day}${status === "active" ? " — פעיל" : status === "frozen" ? " — הקפאה" : status === "today" ? " — היום" : status === "missed" ? " — החמצה" : ""}`}
+      accessibilityLabel={`יום ${day}${status === "active" ? ", פעיל" : status === "frozen" ? ", הקפאה" : status === "today" ? ", היום" : status === "missed" ? ", החמצה" : ""}`}
     >
       {status === "active" ? (
         <ActiveDayContent day={day} />
@@ -305,7 +305,7 @@ function DayCell({ day, status, date, onPress }: DayCellProps) {
 }
 
 // ---------------------------------------------------------------------------
-// ActiveDayContent — fire with breathing glow
+// ActiveDayContent, fire with breathing glow
 // ---------------------------------------------------------------------------
 
 function ActiveDayContent({ day }: { day: number }) {
@@ -345,7 +345,7 @@ function ActiveDayContent({ day }: { day: number }) {
 }
 
 // ---------------------------------------------------------------------------
-// FrozenDayContent — ice crystal Lottie with cold glow
+// FrozenDayContent, ice crystal Lottie with cold glow
 // ---------------------------------------------------------------------------
 
 function FrozenDayContent({ day }: { day: number }) {
@@ -376,7 +376,7 @@ function FrozenDayContent({ day }: { day: number }) {
 }
 
 // ---------------------------------------------------------------------------
-// TodayCell — pulsing orange ring
+// TodayCell, pulsing orange ring
 // ---------------------------------------------------------------------------
 
 function TodayCell({ day }: { day: number }) {

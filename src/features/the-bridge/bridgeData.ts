@@ -5,7 +5,7 @@ export const BRIDGE_BENEFITS: Benefit[] = [
   // ★ REAL PARTNER: Altshuler Shaham Trade ★
   {
     id: 'bridge-invest-altshuler',
-    title: 'חשבון מסחר — אלטשולר שחם טרייד',
+    title: 'חשבון מסחר, אלטשולר שחם טרייד',
     description: 'פלטפורמת מסחר עצמאי מובילה בישראל.\nפטור מדמי ניהול · עמלות אטרקטיביות · כלי AI מתקדמים',
     partnerName: 'אלטשולר שחם טרייד',
     partnerLogo: '📈',
@@ -18,7 +18,7 @@ export const BRIDGE_BENEFITS: Benefit[] = [
     isPartnerAd: true,
   },
 
-  // ── 🏦 חשבונות בנק — placeholder ──
+  // ── 🏦 חשבונות בנק, placeholder ──
   {
     id: 'bridge-bank-partner-slot',
     title: '🏦 מקום שמור לשותף בנקאי',
@@ -33,7 +33,7 @@ export const BRIDGE_BENEFITS: Benefit[] = [
     partnerAdSlot: true,
   },
 
-  // ── 🛡️ ביטוח — placeholder ──
+  // ── 🛡️ ביטוח, placeholder ──
   {
     id: 'bridge-insurance-partner-slot',
     title: '🛡️ מקום שמור לשותף ביטוחי',
@@ -48,11 +48,11 @@ export const BRIDGE_BENEFITS: Benefit[] = [
     partnerAdSlot: true,
   },
 
-  // ── 💳 כרטיסי אשראי — placeholder ──
+  // ── 💳 כרטיסי אשראי, placeholder ──
   {
     id: 'bridge-cc-partner-slot',
     title: '💳 מקום שמור לחברת כרטיסי אשראי',
-    description: 'בקרוב נוסיף כאן הצעה בלעדית מחברת כרטיסי אשראי מובילה בישראל — הטבות, קאשבק, ועוד.',
+    description: 'בקרוב נוסיף כאן הצעה בלעדית מחברת כרטיסי אשראי מובילה בישראל, הטבות, קאשבק, ועוד.',
     partnerName: 'שותף כרטיסי אשראי',
     partnerLogo: '💳',
     lottieSource: require('../../../assets/lottie/wired-flat-291-coin-dollar-hover-pinch.json') as number,
@@ -63,7 +63,7 @@ export const BRIDGE_BENEFITS: Benefit[] = [
     partnerAdSlot: true,
   },
 
-  // ── 📚 השכלה — placeholder ──
+  // ── 📚 השכלה, placeholder ──
   {
     id: 'bridge-edu-partner-slot',
     title: '📚 מקום שמור לשותף חינוכי',

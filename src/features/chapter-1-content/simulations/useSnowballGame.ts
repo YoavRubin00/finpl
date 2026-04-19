@@ -8,7 +8,7 @@ import type {
 } from './snowballTypes';
 
 /* ------------------------------------------------------------------ */
-/*  useSnowballGame — core logic for the Snowball Debt simulation      */
+/*  useSnowballGame, core logic for the Snowball Debt simulation      */
 /* ------------------------------------------------------------------ */
 
 export function useSnowballGame(config: SnowballGameConfig) {
@@ -70,7 +70,7 @@ export function useSnowballGame(config: SnowballGameConfig) {
                 } else if (option.method === 'credit') {
                     newDebt += scenario.price;
                 }
-                // 'full' — no debt, no ongoing obligation
+                // 'full', no debt, no ongoing obligation
 
                 const updated: SnowballGameState = {
                     ...prev,
@@ -91,7 +91,7 @@ export function useSnowballGame(config: SnowballGameConfig) {
                     return updated;
                 }
 
-                // No debt — skip bill choice, advance month
+                // No debt, skip bill choice, advance month
                 return advanceMonth(updated, scenario.id, option.id, null);
             });
         },

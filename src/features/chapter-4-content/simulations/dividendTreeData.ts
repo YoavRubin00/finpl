@@ -1,5 +1,5 @@
 /**
- * SIM 23: עץ הדיבידנדים (Dividend Tree) — Module 4-23
+ * SIM 23: עץ הדיבידנדים (Dividend Tree), Module 4-23
  * Pre-computed 20-year paths for "Eat" (cash out dividends) vs "Plant" (DRIP reinvest).
  * Initial: ₪10,000, 3% dividend yield, 7% annual stock growth.
  */
@@ -48,7 +48,7 @@ function buildEatPath(): DividendYear[] {
 }
 
 /**
- * "Plant" path (DRIP): dividends reinvested — buy more shares each year.
+ * "Plant" path (DRIP): dividends reinvested, buy more shares each year.
  * shares grow → dividend compounds → exponential growth.
  * Each year: dividend = shares × currentPrice × yield
  * New shares bought = dividend / currentPrice = shares × yield
@@ -83,10 +83,10 @@ function buildPlantPath(): DividendYear[] {
 
 // ── Pre-computed Paths ─────────────────────────────────────────────────
 
-/** 20-year "eat" path — dividends cashed out each year */
+/** 20-year "eat" path, dividends cashed out each year */
 export const EAT_PATH: DividendYear[] = buildEatPath();
 
-/** 20-year "plant" path — dividends reinvested (DRIP) */
+/** 20-year "plant" path, dividends reinvested (DRIP) */
 export const PLANT_PATH: DividendYear[] = buildPlantPath();
 
 // ── Config Export ──────────────────────────────────────────────────────

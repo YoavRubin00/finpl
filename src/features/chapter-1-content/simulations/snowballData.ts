@@ -1,7 +1,7 @@
 import type { PurchaseScenario, SnowballGameConfig } from './snowballTypes';
 
 /* ------------------------------------------------------------------ */
-/*  5 Purchase Scenarios — Israeli Gen-Z credit decisions               */
+/*  5 Purchase Scenarios, Israeli Gen-Z credit decisions               */
 /* ------------------------------------------------------------------ */
 
 const scenarios: PurchaseScenario[] = [
@@ -14,11 +14,11 @@ const scenarios: PurchaseScenario[] = [
         options: [
             {
                 id: 'sb-1-a',
-                label: 'תשלום מלא — ₪4,000',
+                label: 'תשלום מלא, ₪4,000',
                 method: 'full',
                 monthlyAmount: 4000,
                 totalCost: 4000,
-                feedback: '💪 כואב עכשיו, אבל אפס ריבית. הכסף יצא — אבל לא תשלם אגורה יותר.',
+                feedback: '💪 כואב עכשיו, אבל אפס ריבית. הכסף יצא, אבל לא תשלם אגורה יותר.',
             },
             {
                 id: 'sb-1-b',
@@ -30,7 +30,7 @@ const scenarios: PurchaseScenario[] = [
             },
             {
                 id: 'sb-1-c',
-                label: 'קרדיט — ₪200/חודש "נוח"',
+                label: 'קרדיט, ₪200/חודש "נוח"',
                 method: 'credit',
                 monthlyAmount: 200,
                 totalCost: 5280,
@@ -43,15 +43,15 @@ const scenarios: PurchaseScenario[] = [
         item: 'סופ"ש בצפון עם החבר\'ה',
         emoji: '🏕️',
         price: 1200,
-        description: 'כולם נוסעים. "יאללה, תסגור!" — FOMO קורא.',
+        description: 'כולם נוסעים. "יאללה, תסגור!", FOMO קורא.',
         options: [
             {
                 id: 'sb-2-a',
-                label: 'תשלום מלא — ₪1,200',
+                label: 'תשלום מלא, ₪1,200',
                 method: 'full',
                 monthlyAmount: 1200,
                 totalCost: 1200,
-                feedback: '✅ שילמת ונגמר. אין חובות, אין ריבית. ההנאה שלך — בלי מחיר נוסף.',
+                feedback: '✅ שילמת ונגמר. אין חובות, אין ריבית. ההנאה שלך, בלי מחיר נוסף.',
             },
             {
                 id: 'sb-2-b',
@@ -63,11 +63,11 @@ const scenarios: PurchaseScenario[] = [
             },
             {
                 id: 'sb-2-c',
-                label: 'קרדיט — ₪100/חודש',
+                label: 'קרדיט, ₪100/חודש',
                 method: 'credit',
                 monthlyAmount: 100,
                 totalCost: 1530,
-                feedback: '🔴 סופ"ש ב-₪1,200 הפך ל-₪1,530. הריבית לא הולכת לחופש — היא הולכת לבנק.',
+                feedback: '🔴 סופ"ש ב-₪1,200 הפך ל-₪1,530. הריבית לא הולכת לחופש, היא הולכת לבנק.',
             },
         ],
     },
@@ -80,11 +80,11 @@ const scenarios: PurchaseScenario[] = [
         options: [
             {
                 id: 'sb-3-a',
-                label: 'תשלום מלא — ₪2,500',
+                label: 'תשלום מלא, ₪2,500',
                 method: 'full',
                 monthlyAmount: 2500,
                 totalCost: 2500,
-                feedback: '💪 הוצאה הכרחית ששילמת במלואה. אפס ריבית — הכאב רק בשן.',
+                feedback: '💪 הוצאה הכרחית ששילמת במלואה. אפס ריבית, הכאב רק בשן.',
             },
             {
                 id: 'sb-3-b',
@@ -96,11 +96,11 @@ const scenarios: PurchaseScenario[] = [
             },
             {
                 id: 'sb-3-c',
-                label: 'קרדיט — ₪150/חודש',
+                label: 'קרדיט, ₪150/חודש',
                 method: 'credit',
                 monthlyAmount: 150,
                 totalCost: 3400,
-                feedback: '🔴 טיפול של ₪2,500 יעלה לך ₪3,400. הריבית לא מרדימה — היא כואבת.',
+                feedback: '🔴 טיפול של ₪2,500 יעלה לך ₪3,400. הריבית לא מרדימה, היא כואבת.',
             },
         ],
     },
@@ -113,11 +113,11 @@ const scenarios: PurchaseScenario[] = [
         options: [
             {
                 id: 'sb-4-a',
-                label: 'תשלום מלא — ₪3,200',
+                label: 'תשלום מלא, ₪3,200',
                 method: 'full',
                 monthlyAmount: 3200,
                 totalCost: 3200,
-                feedback: '✅ אם באמת צריך — שילמת ונגמר. אבל האם באמת צריך?',
+                feedback: '✅ אם באמת צריך, שילמת ונגמר. אבל האם באמת צריך?',
             },
             {
                 id: 'sb-4-b',
@@ -129,7 +129,7 @@ const scenarios: PurchaseScenario[] = [
             },
             {
                 id: 'sb-4-c',
-                label: 'קרדיט — ₪180/חודש "קל"',
+                label: 'קרדיט, ₪180/חודש "קל"',
                 method: 'credit',
                 monthlyAmount: 180,
                 totalCost: 4250,
@@ -146,7 +146,7 @@ const scenarios: PurchaseScenario[] = [
         options: [
             {
                 id: 'sb-5-a',
-                label: 'תשלום מלא — ₪3,600',
+                label: 'תשלום מלא, ₪3,600',
                 method: 'full',
                 monthlyAmount: 3600,
                 totalCost: 3600,
@@ -162,7 +162,7 @@ const scenarios: PurchaseScenario[] = [
             },
             {
                 id: 'sb-5-c',
-                label: 'קרדיט — ₪200/חודש',
+                label: 'קרדיט, ₪200/חודש',
                 method: 'credit',
                 monthlyAmount: 200,
                 totalCost: 4750,

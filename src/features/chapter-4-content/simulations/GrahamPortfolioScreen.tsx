@@ -73,7 +73,7 @@ const GRADE_LABELS_TEXT: Record<string, string> = {
 const GRAHAM_QUOTES: Record<string, string> = {
   S: '"המשקיע החכם הוא ריאליסט שמוכר לאופטימיסטים וקונה מפסימיסטים."',
   A: '"מרווח הביטחון הוא ההבדל בין השקעה לספקולציה."',
-  B: '"בטווח הקצר השוק הוא מכונת הצבעה, בטווח הארוך — מכונת שקילה."',
+  B: '"בטווח הקצר השוק הוא מכונת הצבעה, בטווח הארוך, מכונת שקילה."',
   C: '"הסיכון הגדול ביותר הוא לא תנודתיות, אלא אובדן הון קבוע."',
   F: '"הסכנה האמיתית היא לשלם מחיר גבוה מדי עבור מניה באיכות נמוכה."',
 };
@@ -119,7 +119,7 @@ const StockSliderCard = memo(function StockSliderCard({ stock, percent, onChange
   return (
     <Animated.View entering={FadeInDown.duration(400)} style={cardStyles.container}>
       {/* Header row */}
-      <AnimatedPressable onPress={handleToggle} style={cardStyles.header} accessibilityRole="button" accessibilityLabel={`${stock.name} — ${expanded ? 'סגור פרטים' : 'הצג פרטים'}`}>
+      <AnimatedPressable onPress={handleToggle} style={cardStyles.header} accessibilityRole="button" accessibilityLabel={`${stock.name}, ${expanded ? 'סגור פרטים' : 'הצג פרטים'}`}>
         <Text style={cardStyles.emoji}>{stock.emoji}</Text>
         <View style={cardStyles.nameCol}>
           <Text style={[cardStyles.name, RTL]}>{stock.name}</Text>

@@ -1,5 +1,5 @@
 /**
- * SIM 5-30: סימולטור הקריפטו (Crypto Sim) — Module 5-30
+ * SIM 5-30: סימולטור הקריפטו (Crypto Sim), Module 5-30
  * Allocate between BTC, ETH, Cash → 3-year sim vs S&P 500 → score.
  */
 
@@ -77,7 +77,7 @@ const CH5_LOTTIE: [ReturnType<typeof require>, ReturnType<typeof require>] = [
 /* ================================================================== */
 
 /* ================================================================== */
-/*  DualLineChart — crypto (gold) vs S&P 500 (blue)                     */
+/*  DualLineChart, crypto (gold) vs S&P 500 (blue)                     */
 /* ================================================================== */
 
 function DualLineChart({
@@ -175,7 +175,7 @@ function DualLineChart({
           );
         })}
 
-        {/* X-axis labels — real years 2019 (start) → 2025 */}
+        {/* X-axis labels, real years 2019 (start) → 2025 */}
         <View style={chartStyles.xLabelsRow}>
           {Array.from({ length: maxPoints }, (_, i) => (
             <Text
@@ -192,7 +192,7 @@ function DualLineChart({
 }
 
 /* ================================================================== */
-/*  AllocationSlider — single asset slider with label                   */
+/*  AllocationSlider, single asset slider with label                   */
 /* ================================================================== */
 
 function AllocationSlider({
@@ -239,7 +239,7 @@ function AllocationSlider({
 }
 
 /* ================================================================== */
-/*  ScoreScreen — results after 3 years                                 */
+/*  ScoreScreen, results after 3 years                                 */
 /* ================================================================== */
 
 function ScoreScreen({
@@ -347,14 +347,14 @@ function ScoreScreen({
             <View style={sim5Styles.insightRow}>
               <LottieIcon source={LOTTIE_BULB} size={22} />
               <Text style={[sim5Styles.insightText, RTL, { flex: 1 }]}>
-                קריפטו מעניין כלווין קטן (עד 5%) — לא כליבה של תיק. תנודתיות גבוהה עלולה לגרום לירידות חדות שקשה לספוג.
+                קריפטו מעניין כלווין קטן (עד 5%), לא כליבה של תיק. תנודתיות גבוהה עלולה לגרום לירידות חדות שקשה לספוג.
               </Text>
             </View>
           </View>
         </View>
       </Animated.View>
 
-      {/* Shark notification — long-term crypto take */}
+      {/* Shark notification, long-term crypto take */}
       <Animated.View entering={FadeInUp.delay(340)} style={{ marginTop: 12 }}>
         <View style={scoreStyles.sharkBubble}>
           <View style={scoreStyles.sharkHeader}>
@@ -362,12 +362,12 @@ function ScoreScreen({
             <Text style={[RTL, scoreStyles.sharkName]}>קפטן שארק</Text>
           </View>
           <Text style={[RTL, scoreStyles.sharkQuote]}>
-            קריפטו מייצג קידמה ועתיד. אם הוא ישתלט על העולם — אתם רוצים להיות בפנים. לכן שווה להחזיק, אבל להבין את הסיכונים.
+            קריפטו מייצג קידמה ועתיד. אם הוא ישתלט על העולם, אתם רוצים להיות בפנים. לכן שווה להחזיק, אבל להבין את הסיכונים.
           </Text>
         </View>
       </Animated.View>
 
-      {/* How to invest — direct vs ETF */}
+      {/* How to invest, direct vs ETF */}
       <Animated.View entering={FadeInUp.delay(400)} style={{ marginTop: 12 }}>
         <View style={scoreStyles.howToCard}>
           <View style={scoreStyles.howToHeaderRow}>
@@ -595,7 +595,7 @@ export function CryptoSimScreen({ onComplete }: CryptoSimScreenProps) {
             </Animated.View>
           )}
 
-          {/* Progress bar — moved above the fold during sim */}
+          {/* Progress bar, moved above the fold during sim */}
           {isSimRunning && (
             <Animated.View entering={FadeInUp.delay(80)} style={{ marginTop: 6, marginBottom: 6 }}>
               <View style={[sim5Styles.progressTrack, { transform: [{ scaleX: -1 }] }]}>
@@ -612,7 +612,7 @@ export function CryptoSimScreen({ onComplete }: CryptoSimScreenProps) {
             </Animated.View>
           )}
 
-          {/* Allocation — full sliders when idle, compact summary when running */}
+          {/* Allocation, full sliders when idle, compact summary when running */}
           {!isSimRunning ? (
             <Animated.View entering={FadeInDown.delay(100)}>
               <GlowCard
@@ -708,7 +708,7 @@ export function CryptoSimScreen({ onComplete }: CryptoSimScreenProps) {
               >
                 <View style={{ padding: 16 }}>
                   <Text style={[styles.chartTitle, RTL]}>
-                    סימולציה — {TOTAL_YEARS} שנים
+                    סימולציה, {TOTAL_YEARS} שנים
                   </Text>
 
                   {/* Legend */}
@@ -781,7 +781,7 @@ export function CryptoSimScreen({ onComplete }: CryptoSimScreenProps) {
               <View style={styles.hintRow}>
                 <LottieIcon source={LOTTIE_BULB} size={20} />
                 <Text style={[styles.hintText, RTL]}>
-                  נסו הקצאות שונות — כמה קריפטו אתם מוכנים לסבול? שימו לב לתנודתיות!
+                  נסו הקצאות שונות, כמה קריפטו אתם מוכנים לסבול? שימו לב לתנודתיות!
                 </Text>
               </View>
             </Animated.View>

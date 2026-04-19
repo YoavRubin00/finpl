@@ -1,5 +1,5 @@
 /**
- * SIM 3-18: בוחר המסלולים (Track Selector) — Module 3-18
+ * SIM 3-18: בוחר המסלולים (Track Selector), Module 3-18
  * Types for the investment track comparison simulation.
  */
 

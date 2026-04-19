@@ -9,7 +9,7 @@ import type {
 } from './payslipNinjaTypes';
 
 /* ------------------------------------------------------------------ */
-/*  usePayslipNinja — core logic hook for the Payslip Ninja sim        */
+/*  usePayslipNinja, core logic hook for the Payslip Ninja sim        */
 /* ------------------------------------------------------------------ */
 
 /** Points awarded for a correct classification */
@@ -71,7 +71,7 @@ export function usePayslipNinja(config: PayslipNinjaConfig) {
         [config.items, config.totalRounds],
     );
 
-    /** Handle timer expiry — counts as a wrong answer */
+    /** Handle timer expiry, counts as a wrong answer */
     const handleTimeout = useCallback(() => {
         setState((prev) => {
             if (prev.isComplete) return prev;
@@ -110,10 +110,10 @@ export function usePayslipNinja(config: PayslipNinjaConfig) {
             gradeLabel = '👍 לא רע! רוב הפריטים סווגו נכון';
         } else if (accuracy >= 50) {
             grade = 'C';
-            gradeLabel = '⚠️ יש מקום לשיפור — שווה ללמוד את התלוש';
+            gradeLabel = '⚠️ יש מקום לשיפור, שווה ללמוד את התלוש';
         } else {
             grade = 'F';
-            gradeLabel = '🚨 התלוש עדיין מסתורי — בוא נתרגל שוב!';
+            gradeLabel = '🚨 התלוש עדיין מסתורי, בוא נתרגל שוב!';
         }
 
         return { accuracy, grade, gradeLabel };

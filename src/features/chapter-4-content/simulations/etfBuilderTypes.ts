@@ -1,5 +1,5 @@
 /**
- * SIM 21: בנה את הסל (Build the ETF Basket) — Module 4-21
+ * SIM 21: בנה את הסל (Build the ETF Basket), Module 4-21
  * Types for the ETF basket builder simulation.
  */
 

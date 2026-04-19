@@ -1,5 +1,5 @@
 /**
- * SIM 29: עץ המשפחה (Family Tree — Estate Planning) — Module 5-29
+ * SIM 29: עץ המשפחה (Family Tree, Estate Planning), Module 5-29
  * Hook: set up family, view no-will scenario (Israeli law), create will,
  * compare outcomes side by side.
  */
@@ -76,7 +76,7 @@ function computeNoWillDistribution(
         distribution[c.id] += perChild;
       });
     } else if (spouse && children.length === 0) {
-      // No children — spouse gets 50%, parents get 50% (or all to spouse if no parents)
+      // No children, spouse gets 50%, parents get 50% (or all to spouse if no parents)
       if (parents.length > 0) {
         distribution[spouse.id] += asset.value * 0.5;
         const perParent = (asset.value * 0.5) / parents.length;
@@ -87,13 +87,13 @@ function computeNoWillDistribution(
         distribution[spouse.id] += asset.value;
       }
     } else if (children.length > 0) {
-      // No spouse — children split equally
+      // No spouse, children split equally
       const perChild = asset.value / children.length;
       children.forEach((c) => {
         distribution[c.id] += perChild;
       });
     } else if (parents.length > 0) {
-      // No spouse, no children — parents split equally
+      // No spouse, no children, parents split equally
       const perParent = asset.value / parents.length;
       parents.forEach((p) => {
         distribution[p.id] += perParent;
@@ -252,7 +252,7 @@ export function useEstatePlanning() {
         // Build adjusted others
         const adjustedOthers: WillDecision[] = [];
         if (otherTotal === 0 && othersForAsset.length > 0) {
-          // All others are 0 — split remaining equally
+          // All others are 0, split remaining equally
           const each = Math.floor(remaining / othersForAsset.length);
           let leftover = remaining;
           othersForAsset.forEach((d, i) => {
@@ -350,7 +350,7 @@ export function useEstatePlanning() {
     } else if (willValidation.isFullyAllocated) {
       grade = 'A'; // complete will
     } else {
-      // Partial will — still better than nothing
+      // Partial will, still better than nothing
       const allocatedCount = state.assets.filter(
         (a) => (willValidation.assetAllocations[a.id] ?? 0) >= 99,
       ).length;

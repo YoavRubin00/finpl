@@ -91,7 +91,7 @@ export function ActionChips({ personaName, visible, onAction }: Props) {
           textColor={FOMO_TOKENS.tempText}
           pulseStyle={tempGlowStyle}
           accessibilityLabel="הוסף חמש מאות שקלים למניה"
-          accessibilityHint="שים לב — יכולה להיות מלכודת פומו"
+          accessibilityHint="שים לב, יכולה להיות מלכודת פומו"
           onPress={() => handlePress('add')}
         />
       </View>

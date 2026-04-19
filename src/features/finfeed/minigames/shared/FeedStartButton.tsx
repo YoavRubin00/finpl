@@ -14,7 +14,7 @@ interface Props {
  * Feed-screen primary CTA. Wraps the same <LiquidButton> used by the
  * learning-screen "המשך" button so the feed CTAs feel identical to lessons:
  * solid blue-500 body, 3px blue-700 bottom border for 3D depth, white liquid
- * ripple on press, and — critically — label/icon vertically centered on
+ * ripple on press, and, critically, label/icon vertically centered on
  * Android via LiquidButton's `alignItems: 'center'` content wrapper.
  */
 export function FeedStartButton({ label, onPress, accessibilityLabel, disabled = false }: Props) {

@@ -6,12 +6,12 @@ export interface DailyQuiz {
   category: QuizCategory;
   rawNewsTitle: string;        // כותרת המקור
   userFacingTitle: string;     // כותרת מהודרת עם אימוג'י
-  question: string;            // שאלה — איך זה משפיע עליך?
+  question: string;            // שאלה, איך זה משפיע עליך?
   options: [string, string, string]; // 3 תשובות
   correctAnswerIndex: 0 | 1 | 2;
   explanation: string;         // הסבר "תכל'ס" בעברית
-  citation: string;            // ידיעה אקטואלית — כותרת אמיתית
-  historicalExample: string;   // דוגמה היסטורית — מקרה דומה מהעבר
+  citation: string;            // ידיעה אקטואלית, כותרת אמיתית
+  historicalExample: string;   // דוגמה היסטורית, מקרה דומה מהעבר
   xpReward: number;
   coinReward: number;
   sourceValue: string;         // "4.75%" / "3.62₪" / "+1.2%"

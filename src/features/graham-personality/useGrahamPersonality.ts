@@ -1,6 +1,6 @@
 /**
- * Graham Investor Personality Test — session-only React hook.
- * NOT a Zustand store — state lives only for the duration of the test.
+ * Graham Investor Personality Test, session-only React hook.
+ * NOT a Zustand store, state lives only for the duration of the test.
  */
 import { useState, useCallback, useMemo } from 'react';
 import type { InvestorProfile } from './personalityTypes';

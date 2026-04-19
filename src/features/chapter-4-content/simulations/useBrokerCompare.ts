@@ -1,5 +1,5 @@
 /**
- * SIM 4-26: השוואת ברוקרים (Broker Compare) — Module 4-26
+ * SIM 4-26: השוואת ברוקרים (Broker Compare), Module 4-26
  * Hook: reactive broker fee calculation, ranking, and grade.
  */
 

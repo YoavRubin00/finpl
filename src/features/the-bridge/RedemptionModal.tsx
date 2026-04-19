@@ -31,7 +31,7 @@ export function RedemptionModal({ visible, benefit, onConfirm, onCancel }: Redem
           <Animated.View entering={FadeIn.duration(220)} style={styles.backdrop} />
         </Pressable>
 
-        {/* Bottom sheet — single smooth entrance, no springy bounce */}
+        {/* Bottom sheet, single smooth entrance, no springy bounce */}
         <Animated.View
           entering={FadeInUp.duration(280)}
           style={[

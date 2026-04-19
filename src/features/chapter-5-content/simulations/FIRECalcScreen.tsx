@@ -1,5 +1,5 @@
 /**
- * SIM 25: מחשבון החופש (Freedom Calculator — FIRE) — Module 5-25
+ * SIM 25: מחשבון החופש (Freedom Calculator, FIRE), Module 5-25
  * Screen: slide savings rate, watch years-to-FIRE dramatically change.
  */
 
@@ -393,7 +393,7 @@ function ScoreScreen({
         </View>
       </Animated.View>
 
-      {/* Key lesson — insight row */}
+      {/* Key lesson, insight row */}
       <Animated.View entering={FadeInDown.duration(600).delay(400)} style={{ marginTop: 16 }}>
         <View style={sim5Styles.scoreCard}>
           <View style={sim5Styles.scoreCardInner}>
@@ -557,7 +557,7 @@ export function FIRECalcScreen({ onComplete }: FIRECalcScreenProps) {
           </Text>
         </Animated.View>
 
-        {/* Income & Age steppers — moved to top */}
+        {/* Income & Age steppers, moved to top */}
         <Animated.View entering={FadeInDown.duration(500).delay(50)} style={styles.steppersRow}>
           <StepperInput
             label="הכנסה חודשית"
@@ -713,7 +713,7 @@ export function FIRECalcScreen({ onComplete }: FIRECalcScreenProps) {
           </Animated.View>
         )}
 
-        {/* "Free at age" — moved to bottom, smaller */}
+        {/* "Free at age", moved to bottom, smaller */}
         <Animated.View entering={FadeInDown.duration(500).delay(450)} style={{ alignItems: 'center', marginBottom: 16 }}>
           <Text style={{ fontSize: 15, fontWeight: '700', color: SIM5.textSecondary }}>
             חופשי בגיל {state.fireAge}
@@ -722,10 +722,10 @@ export function FIRECalcScreen({ onComplete }: FIRECalcScreenProps) {
 
         {/* Complete button */}
         <Animated.View entering={FadeInUp.duration(500).delay(500)} style={styles.completeArea}>
-          <AnimatedPressable onPress={handleComplete} style={styles.completeBtn} accessibilityRole="button" accessibilityLabel="סיימתי לחקור — הראה תוצאות">
+          <AnimatedPressable onPress={handleComplete} style={styles.completeBtn} accessibilityRole="button" accessibilityLabel="סיימתי לחקור, הראה תוצאות">
             <View style={{ flexDirection: 'row-reverse', alignItems: 'center', gap: 6 }}>
               <View accessible={false}><LottieIcon source={LOTTIE_CHECK} size={22} /></View>
-              <Text style={styles.completeBtnText}>סיימתי לחקור — הראה תוצאות</Text>
+              <Text style={styles.completeBtnText}>סיימתי לחקור, הראה תוצאות</Text>
             </View>
           </AnimatedPressable>
         </Animated.View>

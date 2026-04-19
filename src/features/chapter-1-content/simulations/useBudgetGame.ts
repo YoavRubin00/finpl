@@ -7,7 +7,7 @@ import type {
 } from './budgetTypes';
 
 /* ------------------------------------------------------------------ */
-/*  useBudgetGame — core logic hook for the Budget Minister sim        */
+/*  useBudgetGame, core logic hook for the Budget Minister sim        */
 /* ------------------------------------------------------------------ */
 
 export function useBudgetGame(config: BudgetGameConfig) {

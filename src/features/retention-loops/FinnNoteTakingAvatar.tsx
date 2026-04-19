@@ -9,12 +9,12 @@ interface Props {
    *  user picks an answer; the component fires `onDone` after `durationMs`. */
   visible: boolean;
   /** Avatar pixel size (square). Default 88 (slightly larger than the regular
-   *  speaking avatar — the tablet detail benefits from extra real estate). */
+   *  speaking avatar, the tablet detail benefits from extra real estate). */
   size?: number;
   /** Fired after the tablet has been on screen for `durationMs`. Wire this
    *  to whatever advances the onboarding flow (`onNext(answer)`). */
   onDone: () => void;
-  /** How long to show the tablet variant. Default 900ms — long enough to
+  /** How long to show the tablet variant. Default 900ms, long enough to
    *  register "Shark wrote it down", short enough that the next step still
    *  feels snappy. */
   durationMs?: number;

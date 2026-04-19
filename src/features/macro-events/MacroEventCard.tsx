@@ -240,7 +240,7 @@ export const MacroEventCard = React.memo(function MacroEventCard({ item, isActiv
       setTimeout(() => setStreakBonusVisible(false), 2500);
     }
 
-    // Auto-scroll to reveal explanation and next button — multiple attempts for reliability
+    // Auto-scroll to reveal explanation and next button, multiple attempts for reliability
     setTimeout(() => {
       scrollRef.current?.scrollToEnd({ animated: true });
     }, 400);
@@ -255,7 +255,7 @@ export const MacroEventCard = React.memo(function MacroEventCard({ item, isActiv
   const handleNext = useCallback(() => {
     tapHaptic();
     // After advancing, session count was already incremented by recordAnswer.
-    // canAnswerMacro is checked on next render — if blocked, the blocked UI shows.
+    // canAnswerMacro is checked on next render, if blocked, the blocked UI shows.
     const unseen = macroEventsData.filter((e) => !seenIdsRef.current.has(e.id));
     const pool = unseen.length > 0 ? unseen : macroEventsData.filter((e) => e.id !== currentEvent.id);
     if (pool.length > 0) {
@@ -473,7 +473,7 @@ export const MacroEventCard = React.memo(function MacroEventCard({ item, isActiv
           </View>
         )}
 
-        {/* "לאירוע הבא" button — shown after answering */}
+        {/* "לאירוע הבא" button, shown after answering */}
         {isAnswered && (
           <Animated.View>
             {currentStreak >= 3 && (
@@ -505,7 +505,7 @@ export const MacroEventCard = React.memo(function MacroEventCard({ item, isActiv
                 style={styles.proBtnGradient}
               >
                 <Crown size={14} color="#facc15" />
-                <Text style={styles.proBtnText}>שדרג לPRO — ללא הגבלה</Text>
+                <Text style={styles.proBtnText}>שדרג לPRO, ללא הגבלה</Text>
               </LinearGradient>
             </Pressable>
           </Animated.View>

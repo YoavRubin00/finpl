@@ -175,7 +175,7 @@ export function PricingScreen() {
           offering.monthly ?? offering.annual ?? offering.availablePackages[0];
         if (pkg) setActivePackage(pkg);
       } catch {
-        // silent — user can still tap CTA which will fetch again
+        // silent, user can still tap CTA which will fetch again
       }
     })();
     return () => { mounted = false; };
@@ -350,7 +350,7 @@ export function PricingScreen() {
             </Animated.View>
           </ScrollView>
 
-          {/* ── CTA section — pinned to bottom ── */}
+          {/* ── CTA section, pinned to bottom ── */}
           <View style={[styles.ctaSection, { paddingBottom: Math.max(insets.bottom, 16) }]}>
             {isCurrentlyPro ? (
               <View style={styles.currentPlanBadge}>
@@ -402,7 +402,7 @@ export function PricingScreen() {
                   </Text>
                 ) : null}
 
-                {/* Auto-renew disclosure — platform-specific */}
+                {/* Auto-renew disclosure, platform-specific */}
                 <Text style={[styles.disclosure, { color: theme.textMuted }]}>
                   {Platform.OS === "ios"
                     ? "המנוי מתחדש אוטומטית בסוף כל תקופה אלא אם בוטל לפחות 24 שעות לפני סוף התקופה. התשלום יחויב דרך חשבון Apple ID. ניתן לנהל ולבטל את המנוי בהגדרות החשבון ב-App Store."

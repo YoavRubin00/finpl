@@ -1,5 +1,5 @@
 /**
- * SIM 24: מנהל התיקים (Portfolio Manager) — Module 4-24
+ * SIM 24: מנהל התיקים (Portfolio Manager), Module 4-24
  * Asset classes and world events data for the portfolio simulation.
  */
 

@@ -1,5 +1,5 @@
 /**
- * SIM 19: סליידר הסיכון (Risk-Return Slider) — Module 4-19
+ * SIM 19: סליידר הסיכון (Risk-Return Slider), Module 4-19
  * Hook: slider value (0-100 stocks %) → compute blended returns,
  * final balance, max drawdown, best/worst year, average annual return.
  * Supports auto-sweep mode.

@@ -1,7 +1,7 @@
 /**
- * Captain Shark (קפטן שארק) — Notification Copy Bank
+ * Captain Shark (קפטן שארק), Notification Copy Bank
  * Passive-aggressive, escalating Hebrew messages with financial humor.
- * Pure data + pure functions — no React, no store imports.
+ * Pure data + pure functions, no React, no store imports.
  */
 
 // ── Types ────────────────────────────────────────────────────────────────────
@@ -95,16 +95,16 @@ export function getToneFromGoal(goalMinutes: number | null | undefined): GoalTon
     return 'regular';
 }
 
-/** Casual tone — warm, low-pressure, for 5-10 min/day learners */
+/** Casual tone, warm, low-pressure, for 5-10 min/day learners */
 const CASUAL_SAFE_COPY: CopyPool = [
-    { title: "💙 נתחיל עם 5 דקות? 🐟", body: "קפטן שארק כאן. בלי לחץ — סתם 5 דקות קצרות" },
+    { title: "💙 נתחיל עם 5 דקות? 🐟", body: "קפטן שארק כאן. בלי לחץ, סתם 5 דקות קצרות" },
     { title: "🌊 תזכורת עדינה מקפטן שארק", body: "רק טיפ אחד היום? 2 דקות, לא יותר" },
     { title: "✨ 5 דקות של למידה שקטה", body: "בואו נלמד משהו קטן ביחד. אין לחץ" },
 ];
 
-/** Serious tone — performance-focused, for 20+ min/day learners */
+/** Serious tone, performance-focused, for 20+ min/day learners */
 const SERIOUS_SAFE_COPY: CopyPool = [
-    { title: "📈 יום חסר — נחזור למסלול", body: "הרצף שלך הוא משמעת. בוא נסגור היום" },
+    { title: "📈 יום חסר, נחזור למסלול", body: "הרצף שלך הוא משמעת. בוא נסגור היום" },
     { title: "⚡ קפטן שארק: זמן ליעד היומי", body: "20 דקות של מיקוד = שבוע של ידע מצטבר" },
     { title: "🎯 המסלול שלך ממתין", body: "אלופים לא מדלגים על ימים. קדימה" },
 ];

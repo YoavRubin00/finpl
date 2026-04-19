@@ -239,7 +239,7 @@ export function ScenarioLabScreen() {
           מעבדת תרחישים
         </Text>
         <Text style={{ fontSize: 15, color: '#64748b', marginTop: 10, textAlign: 'center', writingDirection: 'rtl', lineHeight: 24 }}>
-          כדי לפתוח את מעבדת התרחישים, צריך להגיע לשלב 3 (יציבות).{'\n'}המשך ללמוד — אתה בדרך! 💪
+          כדי לפתוח את מעבדת התרחישים, צריך להגיע לשלב 3 (יציבות).{'\n'}המשך ללמוד, אתה בדרך! 💪
         </Text>
         <View style={{ marginTop: 12, backgroundColor: '#e0f2fe', borderRadius: 12, paddingHorizontal: 16, paddingVertical: 8, borderWidth: 1, borderColor: '#bae6fd' }}>
           <Text style={{ fontSize: 13, fontWeight: '700', color: '#0891b2', writingDirection: 'rtl' }}>

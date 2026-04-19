@@ -1,5 +1,5 @@
 /**
- * SIM 4-26: השוואת ברוקרים (Broker Compare) — Module 4-26
+ * SIM 4-26: השוואת ברוקרים (Broker Compare), Module 4-26
  * Interactive broker comparison: adjust profile sliders, compare 3 platforms, choose the cheapest.
  */
 
@@ -60,7 +60,7 @@ function computeFeeBreakdown(broker: Broker, profile: UserProfile): FeeBreakdown
 }
 
 /* ================================================================== */
-/*  CostBarChart — horizontal bars comparing yearly costs               */
+/*  CostBarChart, horizontal bars comparing yearly costs               */
 /* ================================================================== */
 
 function CostBarChart({
@@ -115,7 +115,7 @@ function CostBarChart({
 }
 
 /* ================================================================== */
-/*  BrokerCard — single broker with fee breakdown + select button       */
+/*  BrokerCard, single broker with fee breakdown + select button       */
 /* ================================================================== */
 
 function BrokerCard({
@@ -193,7 +193,7 @@ function BrokerCard({
 }
 
 /* ================================================================== */
-/*  ScoreScreen — results after choosing                                */
+/*  ScoreScreen, results after choosing                                */
 /* ================================================================== */
 
 function ScoreScreen({

@@ -96,7 +96,7 @@ export const useAuthStore = create<AuthState>()(
         const email = useAuthStore.getState().email;
         // Best-effort: delete remote row first
         if (email) {
-          try { await deleteUserProfile(email); } catch { /* ignore — proceed with local wipe */ }
+          try { await deleteUserProfile(email); } catch { /* ignore, proceed with local wipe */ }
         }
         try { await logoutRevenueCat(); } catch { /* ignore */ }
         // Wipe ALL local persisted state (every Zustand store + caches)
@@ -116,7 +116,7 @@ export const useAuthStore = create<AuthState>()(
       },
 
       devResetProgress: () => {
-        // Clear all stores except auth — user stays logged in but all progress resets
+        // Clear all stores except auth, user stays logged in but all progress resets
         const authKey = "auth-store-v2";
         AsyncStorage.getAllKeys().then((keys) => {
           const toRemove = keys.filter((k) => k !== authKey);

@@ -51,22 +51,22 @@ function ScaleVisual({ balance }: { balance: number }) {
 
   return (
     <View style={s.scaleWrap}>
-      {/* Beam — rotates around center pivot */}
+      {/* Beam, rotates around center pivot */}
       <Animated.View style={[s.beam, beamStyle]}>
-        {/* Left bowl — income */}
+        {/* Left bowl, income */}
         <View style={s.bowlLeft}>
           <Text style={s.bowlIcon}>💰</Text>
           <Text style={s.bowlLabel}>הכנסות</Text>
         </View>
         {/* Beam bar */}
         <View style={s.beamBar} />
-        {/* Right bowl — expenses */}
+        {/* Right bowl, expenses */}
         <View style={s.bowlRight}>
           <Text style={s.bowlIcon}>🛍️</Text>
           <Text style={s.bowlLabel}>הוצאות</Text>
         </View>
       </Animated.View>
-      {/* Pivot triangle — fixed, always at bottom center */}
+      {/* Pivot triangle, fixed, always at bottom center */}
       <View style={s.pivot} />
     </View>
   );

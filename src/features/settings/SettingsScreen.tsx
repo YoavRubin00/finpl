@@ -236,7 +236,7 @@ export function SettingsScreen() {
   function handleDeleteAccount() {
     Alert.alert(
       "מחיקת חשבון",
-      "פעולה זו תמחק לצמיתות את כל הנתונים שלך — התקדמות, מטבעות, פרופיל והישגים. לא ניתן לשחזר. להמשיך?",
+      "פעולה זו תמחק לצמיתות את כל הנתונים שלך, התקדמות, מטבעות, פרופיל והישגים. לא ניתן לשחזר. להמשיך?",
       [
         { text: "ביטול", style: "cancel" },
         {
@@ -275,7 +275,7 @@ export function SettingsScreen() {
   return (
     <View style={{ flex: 1, backgroundColor: '#f0f9ff' }}>
       <SafeAreaView style={styles.safe} edges={['top']}>
-        {/* Header — matches MoreScreen */}
+        {/* Header, matches MoreScreen */}
         <View style={{ flexDirection: 'row-reverse', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingVertical: 10 }}>
           <BackButton color="#0369a1" />
           <Text style={[RTL, { fontSize: 18, fontWeight: '900', color: '#0369a1' }]}>הגדרות</Text>
@@ -667,7 +667,7 @@ export function SettingsScreen() {
           <View style={styles.bottomSpacer} />
         </ScrollView>
 
-        {/* Chat tone picker modal — Stitched Aesthetic */}
+        {/* Chat tone picker modal, Stitched Aesthetic */}
         {showChatPicker && (
           <Animated.View entering={FadeInDown} style={styles.modalOverlay}>
             <Pressable style={StyleSheet.absoluteFillObject} onPress={() => setShowChatPicker(false)} accessibilityRole="button" accessibilityLabel="סגור בחירת סגנון צ׳אט" />

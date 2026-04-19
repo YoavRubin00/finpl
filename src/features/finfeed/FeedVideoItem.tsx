@@ -142,7 +142,7 @@ export const FeedVideoItem = React.memo(function FeedVideoItem({ item, isActive 
 
   return (
     <View style={styles.container}>
-      {/* Video player — full screen. Tap toggles sound, long-press pauses. */}
+      {/* Video player, full screen. Tap toggles sound, long-press pauses. */}
       <Pressable
         style={{ flex: 1 }}
         onPress={handleTap}
@@ -187,7 +187,7 @@ export const FeedVideoItem = React.memo(function FeedVideoItem({ item, isActive 
         <Bookmark size={22} color={isBookmarked ? "#facc15" : "#fff"} fill={isBookmarked ? "#facc15" : "transparent"} />
       </Pressable>
 
-      {/* Mute status indicator — non-interactive hint. Tapping the video itself toggles sound. */}
+      {/* Mute status indicator, non-interactive hint. Tapping the video itself toggles sound. */}
       <View style={styles.muteIndicator} pointerEvents="none">
         {isMuted
           ? <VolumeX size={18} color="rgba(255,255,255,0.85)" />

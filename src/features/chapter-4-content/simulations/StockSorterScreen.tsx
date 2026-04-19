@@ -1,5 +1,5 @@
 /**
- * SIM 4-29: מיון המניות (Stock Sorter) — Module 4-29
+ * SIM 4-29: מיון המניות (Stock Sorter), Module 4-29
  * Stock cards with real metrics → user classifies by category → feedback.
  */
 
@@ -65,7 +65,7 @@ function formatMarketCap(capB: number): string {
 }
 
 /* ================================================================== */
-/*  ProgressDots — 8 round indicators                                   */
+/*  ProgressDots, 8 round indicators                                   */
 /* ================================================================== */
 
 function ProgressDots({
@@ -107,7 +107,7 @@ function ProgressDots({
 }
 
 /* ================================================================== */
-/*  StockCardDisplay — stock info with metrics                          */
+/*  StockCardDisplay, stock info with metrics                          */
 /* ================================================================== */
 
 function StockCardDisplay({
@@ -167,7 +167,7 @@ function StockCardDisplay({
 }
 
 /* ================================================================== */
-/*  ScoreScreen — results after all 8 questions                         */
+/*  ScoreScreen, results after all 8 questions                         */
 /* ================================================================== */
 
 function ScoreScreen({
@@ -265,7 +265,7 @@ function ScoreScreen({
             <View style={sim4Styles.insightRow}>
               <LottieIcon source={LOTTIE_BULB} size={22} />
               <Text style={[sim4Styles.insightText, RTL, { flex: 1 }]}>
-                סיווג מניות עוזר לבנות תיק מגוון. מניות צמיחה נותנות פוטנציאל, מניות ערך נותנות יציבות — השילוב הנכון הוא המפתח.
+                סיווג מניות עוזר לבנות תיק מגוון. מניות צמיחה נותנות פוטנציאל, מניות ערך נותנות יציבות, השילוב הנכון הוא המפתח.
               </Text>
             </View>
           </View>
@@ -405,7 +405,7 @@ export function StockSorterScreen({ onComplete }: StockSorterScreenProps) {
           isCorrect: currentAnswerCorrect === true,
           message: currentAnswerCorrect
             ? `נכון! ${currentQuestion.card.name} היא אכן ${currentQuestion.correctAnswer}`
-            : `לא נכון — ${currentQuestion.card.name} היא ${currentQuestion.correctAnswer}`,
+            : `לא נכון, ${currentQuestion.card.name} היא ${currentQuestion.correctAnswer}`,
         }
       : null;
 
@@ -486,7 +486,7 @@ export function StockSorterScreen({ onComplete }: StockSorterScreenProps) {
           )}
         </View>
 
-        {/* Feedback overlay — centered on screen like quizzes */}
+        {/* Feedback overlay, centered on screen like quizzes */}
         {showingFeedback && currentQuestion && (
         <Animated.View
           entering={FadeIn.duration(250)}

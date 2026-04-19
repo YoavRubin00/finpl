@@ -44,7 +44,7 @@ function TypingDots() {
 
   useEffect(() => {
     if (reducedMotion) {
-      // Static dots — readable, no distracting animation
+      // Static dots, readable, no distracting animation
       d1.value = withTiming(0.6, { duration: 0 });
       d2.value = withTiming(0.6, { duration: 0 });
       d3.value = withTiming(0.6, { duration: 0 });
@@ -93,7 +93,7 @@ export function SharkFeedbackChatModal({ visible, onClose }: Props) {
 
   useEffect(() => {
     if (visible) {
-      // Greeting fires exactly once on open — the state reset below handles re-opens.
+      // Greeting fires exactly once on open, the state reset below handles re-opens.
       const t = setTimeout(() => {
         setMessages([{ role: "assistant", content: INITIAL_MSG }]);
       }, 300);
@@ -151,7 +151,7 @@ export function SharkFeedbackChatModal({ visible, onClose }: Props) {
           style={st.root}
           behavior={Platform.OS === "ios" ? "padding" : undefined}
         >
-          {/* Header — top padding has a floor so the status bar never overlaps
+          {/* Header, top padding has a floor so the status bar never overlaps
                content even when safe-area insets aren't reported inside the Modal. */}
           <Animated.View entering={FadeIn.duration(200)} style={[st.header, { paddingTop: Math.max(safeInsets.top + 10, 44) }]}>
             <Pressable onPress={onClose} style={st.closeBtn} hitSlop={12} accessibilityRole="button">
@@ -211,7 +211,7 @@ export function SharkFeedbackChatModal({ visible, onClose }: Props) {
             )}
           </ScrollView>
 
-          {/* Input bar — respects bottom safe area (gesture bar / home indicator) */}
+          {/* Input bar, respects bottom safe area (gesture bar / home indicator) */}
           <View style={[st.inputBar, { paddingBottom: Math.max(safeInsets.bottom + 10, 16) }]}>
             <TextInput
               style={st.textInput}

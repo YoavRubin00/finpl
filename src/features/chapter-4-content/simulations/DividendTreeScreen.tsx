@@ -1,5 +1,5 @@
 /**
- * SIM 23: עץ הדיבידנדים (Dividend Tree) — Module 4-23
+ * SIM 23: עץ הדיבידנדים (Dividend Tree), Module 4-23
  * Visual metaphor: two trees side by side. "Eat" (cash out dividends) stays small.
  * "Plant" (DRIP reinvest) grows dramatically. 20-year auto-play cinematic mode.
  */
@@ -42,7 +42,7 @@ const LOTTIE_TROPHY = require('../../../../assets/lottie/wired-flat-3263-trophy-
 
 // ── Helpers ───────────────────────────────────────────────────────────
 /* ================================================================== */
-/*  AnimatedTree — visual tree that grows with scale                    */
+/*  AnimatedTree, visual tree that grows with scale                    */
 /* ================================================================== */
 
 function AnimatedTree({
@@ -126,7 +126,7 @@ function AnimatedTree({
 }
 
 /* ================================================================== */
-/*  DualTreeView — side by side trees with labels                      */
+/*  DualTreeView, side by side trees with labels                      */
 /* ================================================================== */
 
 function DualTreeView({
@@ -233,7 +233,7 @@ function DualTreeView({
 }
 
 /* ================================================================== */
-/*  FruitCounter — per-year dividend display                           */
+/*  FruitCounter, per-year dividend display                           */
 /* ================================================================== */
 
 function FruitCounter({

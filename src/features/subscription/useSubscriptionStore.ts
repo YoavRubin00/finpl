@@ -46,7 +46,7 @@ interface SubscriptionState {
   hearts: number;
   lastHeartLostAt: string | null;
 
-  // Practice-to-Refill (US-006) — complete old lesson → +1 heart, max 2/day
+  // Practice-to-Refill (US-006), complete old lesson → +1 heart, max 2/day
   practiceRefillsToday: number;
   practiceRefillDate: string | null;
   pendingPracticeForHeart: boolean;
@@ -339,7 +339,7 @@ export const useSubscriptionStore = create<SubscriptionState>()(
             set({ tier: "basic", status: "expired", endDate: null });
           }
         } catch {
-          // Silently fail — keep local state as-is when offline
+          // Silently fail, keep local state as-is when offline
         }
       },
 
@@ -404,7 +404,7 @@ export const useSubscriptionStore = create<SubscriptionState>()(
         hasSeenProWelcome: state.hasSeenProWelcome,
         practiceRefillsToday: state.practiceRefillsToday,
         practiceRefillDate: state.practiceRefillDate,
-        // pendingPracticeForHeart intentionally NOT persisted — transient flag
+        // pendingPracticeForHeart intentionally NOT persisted, transient flag
       }),
     }
   )

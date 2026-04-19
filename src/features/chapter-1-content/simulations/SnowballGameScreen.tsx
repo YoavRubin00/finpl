@@ -47,7 +47,7 @@ const MIN_SNOWBALL_SIZE = 36;
 const MAX_SNOWBALL_SIZE = SCREEN_WIDTH * 0.28;
 
 /* ------------------------------------------------------------------ */
-/*  SnowballVisual — circle that grows proportionally to debt          */
+/*  SnowballVisual, circle that grows proportionally to debt          */
 /* ------------------------------------------------------------------ */
 
 function SnowballVisual({ snowballSize, salary, totalDebt }: { snowballSize: number; salary: number; totalDebt: number }) {
@@ -69,7 +69,7 @@ function SnowballVisual({ snowballSize, salary, totalDebt }: { snowballSize: num
     }, [snowballSize, animatedSize]);
 
     useEffect(() => {
-        // Minimal — no pulsing, just static scale
+        // Minimal, no pulsing, just static scale
         pulseScale.value = 1;
     }, [totalDebt, salary, pulseScale]);
 
@@ -81,7 +81,7 @@ function SnowballVisual({ snowballSize, salary, totalDebt }: { snowballSize: num
     }));
 
     const statusText = totalDebt === 0
-        ? 'חוב: ₪0 — אין כדור שלג!'
+        ? 'חוב: ₪0, אין כדור שלג!'
         : totalDebt > salary * 2
             ? 'כדור השלג ענק!'
             : totalDebt > salary
@@ -124,7 +124,7 @@ function SnowballVisual({ snowballSize, salary, totalDebt }: { snowballSize: num
 }
 
 /* ------------------------------------------------------------------ */
-/*  SalaryBar — free income vs obligations                             */
+/*  SalaryBar, free income vs obligations                             */
 /* ------------------------------------------------------------------ */
 
 function SalaryBar({ salary, obligations, freePercent }: { salary: number; obligations: number; freePercent: number }) {
@@ -188,7 +188,7 @@ function SalaryBar({ salary, obligations, freePercent }: { salary: number; oblig
 }
 
 /* ------------------------------------------------------------------ */
-/*  PurchaseCard — scenario + payment option buttons                    */
+/*  PurchaseCard, scenario + payment option buttons                    */
 /* ------------------------------------------------------------------ */
 
 const METHOD_COLORS: Record<string, { border: string; bg: string; text: string }> = {
@@ -322,7 +322,7 @@ function PurchaseCard({
 }
 
 /* ------------------------------------------------------------------ */
-/*  BillChoiceModal — full payment vs minimum (5%)                     */
+/*  BillChoiceModal, full payment vs minimum (5%)                     */
 /* ------------------------------------------------------------------ */
 
 function BillChoiceModal({
@@ -373,7 +373,7 @@ function BillChoiceModal({
                         }}
                     >
                         <Text style={[RTL, { fontSize: 14, fontWeight: '700', color: SIM.success }]}>
-                            לשלם חיוב מלא — ₪{Math.round(totalDebt).toLocaleString()}
+                            לשלם חיוב מלא, ₪{Math.round(totalDebt).toLocaleString()}
                         </Text>
                         <Text style={[RTL, { fontSize: 13, color: SIM.success, marginTop: 2 }]}>
                             מאפס את החוב לגמרי
@@ -395,7 +395,7 @@ function BillChoiceModal({
                         }}
                     >
                         <Text style={[RTL, { fontSize: 14, fontWeight: '700', color: SIM.warning }]}>
-                            תשלום מינימום (5%) — ₪{minAmount.toLocaleString()}
+                            תשלום מינימום (5%), ₪{minAmount.toLocaleString()}
                         </Text>
                         <Text style={[RTL, { fontSize: 13, color: '#ea580c', marginTop: 2 }]}>
                             השאר צובר ריבית...
@@ -408,7 +408,7 @@ function BillChoiceModal({
 }
 
 /* ------------------------------------------------------------------ */
-/*  ScoreScreen — end-game summary with grades                         */
+/*  ScoreScreen, end-game summary with grades                         */
 /* ------------------------------------------------------------------ */
 
 function ScoreScreen({
@@ -510,7 +510,7 @@ function ScoreScreen({
 }
 
 /* ------------------------------------------------------------------ */
-/*  InsightModal — blue summary message shown once sim ends             */
+/*  InsightModal, blue summary message shown once sim ends             */
 /* ------------------------------------------------------------------ */
 
 function InsightModal({ onDismiss }: { onDismiss: () => void }) {
@@ -579,7 +579,7 @@ function InsightModal({ onDismiss }: { onDismiss: () => void }) {
 }
 
 /* ------------------------------------------------------------------ */
-/*  SnowballGameScreen — main exported component                       */
+/*  SnowballGameScreen, main exported component                       */
 /* ------------------------------------------------------------------ */
 
 export function SnowballGameScreen({ onComplete }: { onComplete: () => void }) {

@@ -1,5 +1,5 @@
 /**
- * SafeLottieView — Web replacement for lottie-react-native
+ * SafeLottieView, Web replacement for lottie-react-native
  *
  * Uses @lottiefiles/dotlottie-react directly (avoiding the circular
  * dependency that occurs when importing lottie-react-native through Metro).
@@ -24,7 +24,7 @@ function resolveSource(source: unknown): { data?: string; src?: string } {
   if (!source) return {};
   if (typeof source === "string") return { src: source };
   if (typeof source === "number") {
-    // require() asset — resolve via RN Image
+    // require() asset, resolve via RN Image
     return { src: Image.resolveAssetSource(source).uri };
   }
   if (typeof source === "object") {

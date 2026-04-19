@@ -26,7 +26,7 @@ interface ProfileUpsertBody {
   isPro?: boolean;
 }
 
-/** GET /api/sync/profile?authId=xxx — fetch profile by authId */
+/** GET /api/sync/profile?authId=xxx, fetch profile by authId */
 export async function GET(request: Request): Promise<Response> {
   const blocked = enforceRateLimit(request, 'sync-profile-get', { limit: 30, windowSec: 60 });
   if (blocked) return blocked;
@@ -54,7 +54,7 @@ export async function GET(request: Request): Promise<Response> {
   }
 }
 
-/** POST /api/sync/profile — upsert profile by authId */
+/** POST /api/sync/profile, upsert profile by authId */
 export async function POST(request: Request): Promise<Response> {
   const blocked = enforceRateLimit(request, 'sync-profile-post', { limit: 20, windowSec: 60 });
   if (blocked) return blocked;
@@ -127,7 +127,7 @@ export async function POST(request: Request): Promise<Response> {
   }
 }
 
-/** DELETE /api/sync/profile?authId=xxx — delete profile (Apple 5.1.1(v) account deletion) */
+/** DELETE /api/sync/profile?authId=xxx, delete profile (Apple 5.1.1(v) account deletion) */
 export async function DELETE(request: Request): Promise<Response> {
   const blocked = enforceRateLimit(request, 'sync-profile-delete', { limit: 5, windowSec: 60 });
   if (blocked) return blocked;

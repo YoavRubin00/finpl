@@ -15,7 +15,7 @@ import { FOMO_TOKENS } from './theme';
 
 /**
  * Three-dot "someone is typing" indicator. Cross-fades in/out and
- * staggers each dot with sine easing — mirrors Telegram's motion.
+ * staggers each dot with sine easing, mirrors Telegram's motion.
  */
 export function TypingIndicator() {
   return (

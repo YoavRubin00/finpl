@@ -1,5 +1,5 @@
 /**
- * SIM 23: עץ הדיבידנדים (Dividend Tree) — Module 4-23
+ * SIM 23: עץ הדיבידנדים (Dividend Tree), Module 4-23
  * Types for the dividend reinvestment (DRIP) vs cash-out simulation.
  */
 

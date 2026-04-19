@@ -67,7 +67,7 @@ export async function GET(request: Request): Promise<Response> {
   }
 }
 
-/** POST /api/sync/inventory — upsert inventory item */
+/** POST /api/sync/inventory, upsert inventory item */
 export async function POST(request: Request): Promise<Response> {
   const blocked = enforceRateLimit(request, 'sync-inventory-post', { limit: 20, windowSec: 60 });
   if (blocked) return blocked;

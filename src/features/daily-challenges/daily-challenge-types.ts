@@ -35,7 +35,7 @@ export interface InvestmentScenario {
 /** Max plays per day for free users. Pro users get unlimited. */
 export const MAX_DAILY_PLAYS = 3;
 
-/** Dilemma is always 1 per day — even for pro users. */
+/** Dilemma is always 1 per day, even for pro users. */
 export const MAX_DILEMMA_DAILY = 1;
 
 /** Uniform rewards for all challenges. */

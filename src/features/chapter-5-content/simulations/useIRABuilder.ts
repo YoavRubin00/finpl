@@ -1,5 +1,5 @@
 /**
- * SIM 5-31: בונה ה-IRA (IRA Builder) — Module 5-31
+ * SIM 5-31: בונה ה-IRA (IRA Builder), Module 5-31
  * Hook: sliders for contribution, return, tax rates → auto-play 30 years
  * → compare Traditional vs Roth IRA after-tax values → grade by winner prediction.
  */
@@ -67,7 +67,7 @@ function computeGrade(
     return { grade: 'S', gradeLabel: 'מצוין!' };
   }
 
-  // Wrong pick — mitigate if the options were very close
+  // Wrong pick, mitigate if the options were very close
   const maxNet = Math.max(traditionalNet, rothNet);
   const differencePercent =
     maxNet > 0 ? (Math.abs(traditionalNet - rothNet) / maxNet) * 100 : 0;
@@ -173,7 +173,7 @@ export function useIRABuilder() {
         const nextYear = yearRef.current + 1;
 
         if (nextYear > TOTAL_YEARS) {
-          // Stop immediately — don't wait for state propagation
+          // Stop immediately, don't wait for state propagation
           if (intervalRef.current) {
             clearInterval(intervalRef.current);
             intervalRef.current = null;

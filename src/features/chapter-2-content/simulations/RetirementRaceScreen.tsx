@@ -24,7 +24,7 @@ import { SIM2, SHADOW_STRONG, RTL, TYPE2, sim2Styles } from './simTheme';
 const BAR_MAX_HEIGHT = 220;
 const BAR_WIDTH = 80;
 
-/* ── Chapter-2 theme — only _th2.gradient still needed ── */
+/* ── Chapter-2 theme, only _th2.gradient still needed ── */
 const _th2 = getChapterTheme('chapter-2');
 
 /* ── Lottie assets ── */
@@ -41,7 +41,7 @@ const LOTTIE_TARGET = require('../../../../assets/lottie/wired-flat-458-goal-tar
 const LOTTIE_ARROW = require('../../../../assets/lottie/wired-flat-3381-arrows-left-hover-pointing.json');
 
 /* ------------------------------------------------------------------ */
-/*  RaceBar — animated vertical bar for a runner                        */
+/*  RaceBar, animated vertical bar for a runner                        */
 /* ------------------------------------------------------------------ */
 
 function RaceBar({
@@ -98,7 +98,7 @@ function RaceBar({
 }
 
 /* ------------------------------------------------------------------ */
-/*  OvertakeOverlay — dramatic freeze-frame at the crossover             */
+/*  OvertakeOverlay, dramatic freeze-frame at the crossover             */
 /* ------------------------------------------------------------------ */
 
 function OvertakeOverlay({ onDismiss }: { onDismiss: () => void }) {
@@ -107,7 +107,7 @@ function OvertakeOverlay({ onDismiss }: { onDismiss: () => void }) {
             <View accessible={false}><LottieIcon source={LOTTIE_CROWN} size={64} /></View>
             <Text style={[RTL, styles.overtakeTitle]}>הזמן ניצח!</Text>
             <Text style={[RTL, styles.overtakeSubtitle]}>
-                נטע עקפה את אורי — למרות שהפקידה פחות כסף כל חודש
+                נטע עקפה את אורי, למרות שהפקידה פחות כסף כל חודש
             </Text>
             <AnimatedPressable onPress={onDismiss} style={[styles.overtakeContinueBtn, { justifyContent: 'center' }]} accessibilityRole="button" accessibilityLabel="המשך" accessibilityHint="סוגר את המסך וממשיך את המרוץ">
                 <Text style={[RTL, styles.overtakeContinueBtnText]}>המשך</Text>
@@ -120,7 +120,7 @@ function OvertakeOverlay({ onDismiss }: { onDismiss: () => void }) {
 }
 
 /* ------------------------------------------------------------------ */
-/*  SpeedButton — playback speed selector                                */
+/*  SpeedButton, playback speed selector                                */
 /* ------------------------------------------------------------------ */
 
 function SpeedButton({
@@ -156,7 +156,7 @@ function SpeedButton({
 }
 
 /* ------------------------------------------------------------------ */
-/*  YearSlider — scrub through years after race completes                */
+/*  YearSlider, scrub through years after race completes                */
 /* ------------------------------------------------------------------ */
 
 function YearSlider({
@@ -207,7 +207,7 @@ function YearSlider({
 }
 
 /* ------------------------------------------------------------------ */
-/*  ScoreScreen — results after race completion                          */
+/*  ScoreScreen, results after race completion                          */
 /* ------------------------------------------------------------------ */
 
 function ScoreScreen({
@@ -276,7 +276,7 @@ function ScoreScreen({
                 </View>
             </Animated.View>
 
-            {/* Key lesson — Finn speech bubble */}
+            {/* Key lesson, Finn speech bubble */}
             <Animated.View entering={FadeInUp.delay(500)}>
                 <View style={{ flexDirection: 'row-reverse', alignItems: 'center', gap: 10, backgroundColor: '#ffffff', borderRadius: 16, padding: 14, borderWidth: 1.5, borderColor: '#bae6fd', marginTop: 8 }}>
                     <ExpoImage source={FINN_STANDARD} accessible={false} style={{ width: 50, height: 50, flexShrink: 0 }} contentFit="contain" />
@@ -288,7 +288,7 @@ function ScoreScreen({
 
         </ScrollView>
 
-        {/* Sticky actions bar — always visible */}
+        {/* Sticky actions bar, always visible */}
         <View style={styles.stickyActionsBar}>
           <AnimatedPressable onPress={onReplay} style={sim2Styles.replayBtn} accessibilityRole="button" accessibilityLabel="שחק שוב" accessibilityHint="מתחיל את הסימולציה מחדש">
             <View accessible={false}><LottieIcon source={LOTTIE_REPLAY} size={18} /></View>
@@ -306,7 +306,7 @@ function ScoreScreen({
 }
 
 /* ------------------------------------------------------------------ */
-/*  RetirementRaceScreen — main exported component                       */
+/*  RetirementRaceScreen, main exported component                       */
 /* ------------------------------------------------------------------ */
 
 export function RetirementRaceScreen({ onComplete }: { onComplete: () => void }) {

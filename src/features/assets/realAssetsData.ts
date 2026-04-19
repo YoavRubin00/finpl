@@ -1,8 +1,8 @@
 import type { RealAsset, PortfolioCombo, MortgageTerms } from './realAssetsTypes';
 
 /**
- * Mortgage (משכנתא) — real financial education
- * - 30% downpayment (מקדמה) — you pay 30% upfront, borrow 70%
+ * Mortgage (משכנתא), real financial education
+ * - 30% downpayment (מקדמה), you pay 30% upfront, borrow 70%
  * - 0.05% daily interest on remaining debt (~18% annual, like real consumer credit)
  * - 60% of daily yield auto-deducted for repayment (שירות חוב)
  * - Net income while paying = 40% of yield
@@ -65,7 +65,7 @@ const BASE_ASSETS: Omit<RealAsset, 'purchasedAt' | 'lastCollectedAt'>[] = [
     upgradeCost: 1_500,
     dailyYield: 36,
     descriptionHebrew:
-      'קרן שמשקיעה בנדל"ן ומחלקת רווחים. מאפשרת להשקיע בנדל"ן בלי לקנות נכס שלם — פיזור סיכון עם נזילות.',
+      'קרן שמשקיעה בנדל"ן ומחלקת רווחים. מאפשרת להשקיע בנדל"ן בלי לקנות נכס שלם, פיזור סיכון עם נזילות.',
     conceptTag: 'REIT, פיזור בנדל"ן',
   },
   {
@@ -78,7 +78,7 @@ const BASE_ASSETS: Omit<RealAsset, 'purchasedAt' | 'lastCollectedAt'>[] = [
     upgradeCost: 900,
     dailyYield: 18,
     descriptionHebrew:
-      'תיק מניות שמחלקות דיבידנד קבוע. הכנסה פסיבית ממניות — ללא צורך למכור.',
+      'תיק מניות שמחלקות דיבידנד קבוע. הכנסה פסיבית ממניות, ללא צורך למכור.',
     conceptTag: 'מניות דיבידנד, הכנסה פסיבית',
   },
   {
@@ -91,7 +91,7 @@ const BASE_ASSETS: Omit<RealAsset, 'purchasedAt' | 'lastCollectedAt'>[] = [
     upgradeCost: 480,
     dailyYield: 9,
     descriptionHebrew:
-      'הלוואה למדינה עם ריבית קבועה. הנכס הכי בטוח — סיכון נמוך, תשואה נמוכה. בסיס לכל תיק השקעות.',
+      'הלוואה למדינה עם ריבית קבועה. הנכס הכי בטוח, סיכון נמוך, תשואה נמוכה. בסיס לכל תיק השקעות.',
     conceptTag: 'אג"ח, נכס בטוח-סיכון נמוך',
   },
 ] as const;
@@ -118,14 +118,14 @@ export function getBaseAsset(assetId: string): RealAsset | undefined {
 /** All base asset IDs */
 export const ASSET_IDS = BASE_ASSETS.map((a) => a.id);
 
-/** Catalog for display — all 6 base assets (tier 1) */
+/** Catalog for display, all 6 base assets (tier 1) */
 export const ASSET_CATALOG: readonly Omit<RealAsset, 'purchasedAt' | 'lastCollectedAt'>[] =
   BASE_ASSETS;
 
 /** Starter capital granted after onboarding */
 export const STARTER_CAPITAL = 500;
 
-/** Portfolio combos — bonuses for owning specific asset combinations */
+/** Portfolio combos, bonuses for owning specific asset combinations */
 export const PORTFOLIO_COMBOS: PortfolioCombo[] = [
   {
     id: 'real_estate_combo',

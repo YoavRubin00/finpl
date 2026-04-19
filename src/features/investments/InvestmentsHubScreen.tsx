@@ -1,5 +1,5 @@
 // ---------------------------------------------------------------------------
-// Investments Hub — central tab for Trading Hub + Real Assets (PRD 38/39)
+// Investments Hub, central tab for Trading Hub + Real Assets (PRD 38/39)
 // ---------------------------------------------------------------------------
 
 import { useEffect, useState, useCallback } from "react";
@@ -282,7 +282,7 @@ export function InvestmentsHubScreen() {
                 📈 שדרגו נכסים להגדלת הרווחים
               </Text>
 
-              {/* CTA — הבנתי */}
+              {/* CTA, הבנתי */}
               <Pressable
                 onPress={handleAssetsIntroContinue}
                 style={({ pressed }) => [s.introBtn, pressed && { opacity: 0.85, transform: [{ scale: 0.97 }] }]}

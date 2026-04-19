@@ -40,11 +40,11 @@ export function IAPModal({ visible, bundle, onDismiss, onPurchaseSuccess }: IAPM
     tapHaptic();
 
     if (isCoinBundle(bundle)) {
-      // Coin bundles cost gems — local transaction
+      // Coin bundles cost gems, local transaction
       if (!spendGems(bundle.gemCost)) return;
       addCoins(bundle.coins);
     } else {
-      // Gem bundles — real-money purchase via RevenueCat
+      // Gem bundles, real-money purchase via RevenueCat
       try {
         await purchaseGemBundle(bundle.id);
         addGems(bundle.gems);

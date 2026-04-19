@@ -31,25 +31,25 @@ const STEPS: TutorialStep[] = [
   {
     id: "chart",
     title: "עקוב אחרי המחיר",
-    body: "הגרף מציג את תנועת המחיר. החלף בין טווחי זמן — יום או שבוע — כדי לזהות מגמות.",
+    body: "הגרף מציג את תנועת המחיר. החלף בין טווחי זמן, יום או שבוע, כדי לזהות מגמות.",
     emoji: "📈",
   },
   {
     id: "buy",
     title: "קנה מניות",
-    body: 'לחץ על "קנה" כדי לפתוח פקודת רכישה. השתמש במטבעות המשחק — ללא סיכון אמיתי!',
+    body: 'לחץ על "קנה" כדי לפתוח פקודת רכישה. השתמש במטבעות המשחק, ללא סיכון אמיתי!',
     emoji: "💰",
   },
   {
     id: "holdings",
     title: "ניהול אחזקות",
-    body: "כאן תמצא את כל ההשקעות שלך — רווח, הפסד ואפשרות למכור.",
+    body: "כאן תמצא את כל ההשקעות שלך, רווח, הפסד ואפשרות למכור.",
     emoji: "💼",
   },
   {
     id: "learn",
     title: "למד לפני שאתה סוחר",
-    body: "היחידות הזהב שלמטה ילמדו אותך את הבסיס — שוק ההון, ETF, פקודות מסחר ופיזור.",
+    body: "היחידות הזהב שלמטה ילמדו אותך את הבסיס, שוק ההון, ETF, פקודות מסחר ופיזור.",
     emoji: "📖",
   },
 ];
@@ -86,7 +86,7 @@ export function TradingHubTutorial({ onComplete }: TradingHubTutorialProps) {
 
   return (
     <Animated.View entering={FadeIn.duration(250)} exiting={FadeOut.duration(200)} style={styles.overlay}>
-      {/* Dark backdrop — tap to advance */}
+      {/* Dark backdrop, tap to advance */}
       <Pressable style={StyleSheet.absoluteFill} onPress={handleNext} />
 
       {/* Explanation card */}
@@ -102,7 +102,7 @@ export function TradingHubTutorial({ onComplete }: TradingHubTutorialProps) {
           ))}
         </View>
 
-        {/* Buttons — RTL: next on right, skip on left */}
+        {/* Buttons, RTL: next on right, skip on left */}
         <View style={styles.buttonsRow}>
           <AnimatedPressable onPress={handleNext} style={styles.nextBtn}>
             <Text style={styles.nextBtnText}>

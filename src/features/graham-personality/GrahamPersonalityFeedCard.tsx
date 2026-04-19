@@ -78,7 +78,7 @@ export function GrahamPersonalityFeedCard({ isActive: _isActive }: Props) {
           marginBottom: 16,
           lineHeight: 22,
         }, RTL]}>
-          8 שאלות קצרות — גלו אם אתם הגנתיים, יזומים, רציונליים או ספקולנטים
+          8 שאלות קצרות, גלו אם אתם הגנתיים, יזומים, רציונליים או ספקולנטים
         </Text>
 
         {/* Finn avatar */}

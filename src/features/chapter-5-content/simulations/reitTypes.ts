@@ -1,5 +1,5 @@
 /**
- * SIM 27: בעל הבית הווירטואלי (Virtual Landlord — REITs) — Module 5-27
+ * SIM 27: בעל הבית הווירטואלי (Virtual Landlord, REITs), Module 5-27
  * Types for the REIT portfolio simulation.
  */
 

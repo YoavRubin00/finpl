@@ -1,5 +1,5 @@
 /**
- * SIM 23: עץ הדיבידנדים (Dividend Tree) — Module 4-23
+ * SIM 23: עץ הדיבידנדים (Dividend Tree), Module 4-23
  * Hook: simulate both "Eat" (cash out dividends) and "Plant" (DRIP reinvest)
  * paths in parallel over 20 years with auto-play support.
  */
@@ -140,7 +140,7 @@ export function useDividendTree() {
 
   // ── Complete (manual) ────────────────────────────────────────────────
 
-  /** Skip to end — set final year state immediately. */
+  /** Skip to end, set final year state immediately. */
   const complete = useCallback(() => {
     stopPlay();
     yearRef.current = dividendTreeConfig.years;

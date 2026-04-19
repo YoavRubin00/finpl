@@ -160,7 +160,7 @@ export function ModuleIntroShort({ onStart, unitColors, config, audioUri }: Prop
 
       <View style={{ flex: 1, justifyContent: 'space-evenly', alignItems: 'center', paddingHorizontal: 16 }}>
 
-        {/* Finn — static */}
+        {/* Finn, static */}
         <ExpoImage
           source={FINN_STANDARD}
           style={{ width: 110, height: 110 }}
@@ -171,7 +171,7 @@ export function ModuleIntroShort({ onStart, unitColors, config, audioUri }: Prop
         {/* CenterStage */}
         <View style={{ width: STAGE_W, height: 220, alignItems: 'center', justifyContent: 'center' }}>
 
-          {/* Phase 0 — fact rows */}
+          {/* Phase 0, fact rows */}
           {phase === 0 && (
             <View style={{
               backgroundColor: '#1e293b',
@@ -206,7 +206,7 @@ export function ModuleIntroShort({ onStart, unitColors, config, audioUri }: Prop
             </View>
           )}
 
-          {/* Phase 1 — big stat or Lottie */}
+          {/* Phase 1, big stat or Lottie */}
           {phase === 1 && (
             <View style={{
               backgroundColor: '#1e293b',
@@ -249,7 +249,7 @@ export function ModuleIntroShort({ onStart, unitColors, config, audioUri }: Prop
             </View>
           )}
 
-          {/* Phase 2 — drag coin */}
+          {/* Phase 2, drag coin */}
           {phase === 2 && (
             <View style={{ width: '100%', height: 220, alignItems: 'center' }}>
               {/* Target zone */}
@@ -270,7 +270,7 @@ export function ModuleIntroShort({ onStart, unitColors, config, audioUri }: Prop
               <GestureDetector gesture={panGesture}>
                 <Animated.View
                   style={[coinStyle, { position: 'absolute', bottom: 10 }]}
-                  accessibilityLabel="מטבע — גרור למעלה כדי להתחיל"
+                  accessibilityLabel="מטבע, גרור למעלה כדי להתחיל"
                   accessibilityRole="button"
                   accessibilityHint="גרור כלפי מעלה"
                 >

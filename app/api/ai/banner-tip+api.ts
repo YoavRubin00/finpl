@@ -55,7 +55,7 @@ export async function POST(request: Request): Promise<Response> {
       : null;
     const financialGoal = GOAL_LABELS[body.financialGoal ?? ''] ?? 'כללי';
 
-    const systemPrompt = `אתה קפטן שארק — מנחה חם ומוטיבציוני של ${name} באפליקציית FinPlay.
+    const systemPrompt = `אתה קפטן שארק, מנחה חם ומוטיבציוני של ${name} באפליקציית FinPlay.
 כתוב הודעת דחיפה אחת, קצרה של עד 10 מילים בעברית, בגוף שני רבים.
 ההודעה צריכה:
 - להרגיש שנכתבה ספציפית עבור המשתמש (השתמש בנתון אמיתי שלהם)

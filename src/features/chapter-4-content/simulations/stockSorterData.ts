@@ -1,5 +1,5 @@
 /**
- * SIM 4-29: מיון המניות (Stock Sorter) — Module 4-29
+ * SIM 4-29: מיון המניות (Stock Sorter), Module 4-29
  * 8 real stocks with classification questions (growth/value, cyclical/defensive, cap size).
  */
 
@@ -34,7 +34,7 @@ const STOCKS: StockCard[] = [
     isGrowth: false,
     isCyclical: true,
     capSize: 'large',
-    explanationHe: 'מניית ערך קלאסית — מכפיל 7 ודיבידנד 5%. כבנק, הרווחיות תלויה בריבית ובמצב הכלכלה, ולכן הוא מחזורי.',
+    explanationHe: 'מניית ערך קלאסית, מכפיל 7 ודיבידנד 5%. כבנק, הרווחיות תלויה בריבית ובמצב הכלכלה, ולכן הוא מחזורי.',
   },
   {
     id: 'tesla',
@@ -48,7 +48,7 @@ const STOCKS: StockCard[] = [
     isGrowth: true,
     isCyclical: true,
     capSize: 'large',
-    explanationHe: 'מכפיל 180 — המשקיעים מהמרים על נהיגה אוטונומית ורובוטיקה. אין דיבידנד, הכל מושקע בצמיחה. מחזורית כי מכירות רכב תלויות בכלכלה.',
+    explanationHe: 'מכפיל 180, המשקיעים מהמרים על נהיגה אוטונומית ורובוטיקה. אין דיבידנד, הכל מושקע בצמיחה. מחזורית כי מכירות רכב תלויות בכלכלה.',
   },
   {
     id: 'cocacola',
@@ -62,7 +62,7 @@ const STOCKS: StockCard[] = [
     isGrowth: false,
     isCyclical: false,
     capSize: 'large',
-    explanationHe: 'אנשים קונים משקאות בכל מצב כלכלי — לכן דפנסיבית. דיבידנד שעולה כבר 60+ שנה ברציפות. מניית ערך קלאסית.',
+    explanationHe: 'אנשים קונים משקאות בכל מצב כלכלי, לכן דפנסיבית. דיבידנד שעולה כבר 60+ שנה ברציפות. מניית ערך קלאסית.',
   },
   {
     id: 'teva',
@@ -76,7 +76,7 @@ const STOCKS: StockCard[] = [
     isGrowth: false,
     isCyclical: false,
     capSize: 'large',
-    explanationHe: 'חברת גנריקה דפנסיבית — ביקוש לתרופות קיים בכל מצב כלכלי. מכפיל נמוך (14) משקף שנים של חוב כבד, אבל החברה בהתאוששות.',
+    explanationHe: 'חברת גנריקה דפנסיבית, ביקוש לתרופות קיים בכל מצב כלכלי. מכפיל נמוך (14) משקף שנים של חוב כבד, אבל החברה בהתאוששות.',
   },
   {
     id: 'nvidia',
@@ -90,7 +90,7 @@ const STOCKS: StockCard[] = [
     isGrowth: true,
     isCyclical: true,
     capSize: 'large',
-    explanationHe: 'מנועת ה-AI — שולטת בשוק שבבי GPU. מכפיל 55 כי ההכנסות צומחות במאות אחוזים. ביקוש לשבבים מחזורי ותלוי בהשקעות הון.',
+    explanationHe: 'מנועת ה-AI, שולטת בשוק שבבי GPU. מכפיל 55 כי ההכנסות צומחות במאות אחוזים. ביקוש לשבבים מחזורי ותלוי בהשקעות הון.',
   },
   {
     id: 'pg',
@@ -104,7 +104,7 @@ const STOCKS: StockCard[] = [
     isGrowth: false,
     isCyclical: false,
     capSize: 'large',
-    explanationHe: 'מוכרת סבון, חיתולים ומשחת שיניים — דברים שקונים גם במיתון. דיבידנד יציב 67 שנה ברציפות. דפנסיבית קלאסית.',
+    explanationHe: 'מוכרת סבון, חיתולים ומשחת שיניים, דברים שקונים גם במיתון. דיבידנד יציב 67 שנה ברציפות. דפנסיבית קלאסית.',
   },
   {
     id: 'elbit',
@@ -118,7 +118,7 @@ const STOCKS: StockCard[] = [
     isGrowth: true,
     isCyclical: false,
     capSize: 'mid',
-    explanationHe: 'חברת ביטחון ישראלית שצומחת בזכות עלייה בתקציבי ביטחון עולמיים. דפנסיבית — ביקוש לציוד צבאי לא תלוי בכלכלה.',
+    explanationHe: 'חברת ביטחון ישראלית שצומחת בזכות עלייה בתקציבי ביטחון עולמיים. דפנסיבית, ביקוש לציוד צבאי לא תלוי בכלכלה.',
   },
 ];
 

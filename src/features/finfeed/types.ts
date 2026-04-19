@@ -29,7 +29,7 @@ export interface FeedVideo {
   pyramidLayer: 1 | 2 | 3 | 4 | 5;
   likes: number;
   saves: number;
-  /** Optional module link — when set, a CTA navigates to this module */
+  /** Optional module link, when set, a CTA navigates to this module */
   moduleId?: string;
   moduleIndex?: number;
   chapterId?: string;
@@ -46,7 +46,7 @@ export interface FeedQuote {
   pyramidLayer: 1 | 2 | 3 | 4 | 5;
   likes: number;
   saves: number;
-  /** Optional module link — when set, a CTA navigates to this module */
+  /** Optional module link, when set, a CTA navigates to this module */
   moduleId?: string;
   moduleIndex?: number;
   chapterId?: string;
@@ -64,7 +64,7 @@ export interface FeedLesson {
   /** Difficulty rating shown as filled/empty stars (1-5). */
   difficulty: 1 | 2 | 3 | 4 | 5;
   contentType: LessonContentType;
-  /** Required when contentType is "video" — require() asset or URI */
+  /** Required when contentType is "video", require() asset or URI */
   videoSource?: number;
 }
 
@@ -223,7 +223,7 @@ export interface FeedDiamondHands {
   type: "diamond-hands";
 }
 
-/** Shark opinion poll — "מה הכי אהבתם באפליקציה?" — random sample, non-persistent answer */
+/** Shark opinion poll, "מה הכי אהבתם באפליקציה?", random sample, non-persistent answer */
 export interface FeedSharkFeedback {
   id: string;
   type: "shark-feedback";

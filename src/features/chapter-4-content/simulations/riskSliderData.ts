@@ -1,5 +1,5 @@
 /**
- * SIM 19: סליידר הסיכון (Risk-Return Slider) — Module 4-19
+ * SIM 19: סליידר הסיכון (Risk-Return Slider), Module 4-19
  * 10 years of REAL historical annual returns (2014-2023).
  * Stocks: S&P 500 Total Return (with dividends reinvested).
  * Bonds: Bloomberg US Aggregate Bond Index.

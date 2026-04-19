@@ -1,5 +1,5 @@
 /**
- * LiveChart — Bezier-curved line chart with right-side moving price tag.
+ * LiveChart, Bezier-curved line chart with right-side moving price tag.
  * Uses @shopify/react-native-skia for 60fps rendering.
  * Calm dark-gray line with subtle glow.
  */
@@ -38,7 +38,7 @@ function formatPriceShort(price: number): string {
   return price.toFixed(4);
 }
 
-// Calm dark-gray line with subtle glow — no alarming colors
+// Calm dark-gray line with subtle glow, no alarming colors
 const UP_COLOR = '#374151';
 const DOWN_COLOR = '#6b7280';
 
@@ -174,7 +174,7 @@ export function LiveChart({
         </SkiaPath>
       </Canvas>
 
-      {/* Grid price labels — left side */}
+      {/* Grid price labels, left side */}
       {gridLines.map((g, i) => (
         <Text
           key={`lbl-${i}`}

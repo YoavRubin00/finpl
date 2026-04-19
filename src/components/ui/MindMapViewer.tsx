@@ -1,5 +1,5 @@
 /**
- * MindMapViewer — Interactive mind map tree visualization.
+ * MindMapViewer, Interactive mind map tree visualization.
  * Renders a hierarchical JSON mind map with animated expandable nodes.
  * Designed for RTL (Hebrew) with chapter-themed colors.
  */
@@ -27,10 +27,10 @@ interface MindMapViewerProps {
 
 /* ── Node colors by depth ── */
 const DEPTH_COLORS = [
-  '#0369a1', // root — deep blue
-  '#0ea5e9', // level 1 — sky blue
-  '#38bdf8', // level 2 — lighter blue
-  '#7dd3fc', // level 3 — pale blue
+  '#0369a1', // root, deep blue
+  '#0ea5e9', // level 1, sky blue
+  '#38bdf8', // level 2, lighter blue
+  '#7dd3fc', // level 3, pale blue
   '#bae6fd', // level 4+
 ];
 
@@ -42,7 +42,7 @@ const DEPTH_BG = [
   'rgba(224,242,254,0.05)',
 ];
 
-/* ── TreeNode — recursive expandable node ── */
+/* ── TreeNode, recursive expandable node ── */
 
 function TreeNode({ node, depth = 0, index = 0 }: { node: MindMapNode; depth?: number; index?: number }) {
   const [expanded, setExpanded] = useState(depth < 2);
@@ -99,7 +99,7 @@ export function MindMapViewer({ visible, onClose, data, chapterTitle, accentColo
   return (
     <Modal visible={visible} animationType="slide" transparent={false} accessibilityViewIsModal>
       <View style={styles.container}>
-        {/* Header — close button on RIGHT (RTL), title center */}
+        {/* Header, close button on RIGHT (RTL), title center */}
         <Animated.View entering={FadeIn.duration(300)} style={styles.header}>
           <View style={{ width: 38 }} />
           <View style={styles.headerCenter}>

@@ -1,5 +1,5 @@
 /**
- * SIM 24: מנהל התיקים (Portfolio Manager) — Module 4-24
+ * SIM 24: מנהל התיקים (Portfolio Manager), Module 4-24
  * Screen: allocate budget across 5 assets, watch world events unfold.
  */
 
@@ -767,7 +767,7 @@ export function PortfolioManagerScreen({ onComplete }: PortfolioManagerScreenPro
             <View style={{ flexDirection: 'row-reverse', alignItems: 'center', gap: 6 }}>
               <LottieIcon source={isDiversified ? LOTTIE_CHECK : LOTTIE_CROSS} size={18} />
               <Text style={[styles.divText, RTL, { color: isDiversified ? '#4ade80' : '#f97316' }]}>
-                {isDiversified ? 'תיק מפוזר (אין נכס מעל 40%)' : 'ריכוז גבוה — נכס אחד מעל 40%'}
+                {isDiversified ? 'תיק מפוזר (אין נכס מעל 40%)' : 'ריכוז גבוה, נכס אחד מעל 40%'}
               </Text>
             </View>
           </View>

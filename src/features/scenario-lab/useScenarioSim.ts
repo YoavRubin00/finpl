@@ -79,7 +79,7 @@ export function useScenarioSim(scenario: Scenario) {
           const sectorFinal = STARTING_CAPITAL * pct * sector.scenarioMultiplier;
           const baseProgress = month / 12;
 
-          // Deterministic wobble using sine waves — different per sector
+          // Deterministic wobble using sine waves, different per sector
           const seed = sector.scenarioMultiplier * 1000;
           const noise1 = Math.sin(month * 2.3 + seed) * 0.04;
           const noise2 = Math.cos(month * 1.7 + seed * 0.5) * 0.025;

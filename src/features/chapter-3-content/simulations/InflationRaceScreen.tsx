@@ -29,7 +29,7 @@ import type {
   InflationRaceScore,
 } from './inflationRaceTypes';
 
-/* ── Chapter-3 theme (ocean blue) — kept for gradient only ── */
+/* ── Chapter-3 theme (ocean blue), kept for gradient only ── */
 const _th3 = getChapterTheme('chapter-3');
 
 /* ── Lottie assets ── */
@@ -47,7 +47,7 @@ const LOTTIE_ARROW = require('../../../../assets/lottie/wired-flat-3381-arrows-l
 
 
 /* ================================================================== */
-/*  ProductCard — single product in the grid                            */
+/*  ProductCard, single product in the grid                            */
 /* ================================================================== */
 
 function ProductCard({
@@ -106,7 +106,7 @@ function ProductCard({
 }
 
 /* ================================================================== */
-/*  ScoreScreen — results display                                       */
+/*  ScoreScreen, results display                                       */
 /* ================================================================== */
 
 function ScoreScreen({
@@ -224,7 +224,7 @@ function ScoreScreen({
 
       </ScrollView>
 
-      {/* Sticky actions bar — always visible */}
+      {/* Sticky actions bar, always visible */}
       <View style={styles.stickyActionsBar}>
         <AnimatedPressable onPress={onReplay} accessibilityRole="button" accessibilityLabel="שחק שוב" accessibilityHint="מתחיל את הסימולציה מחדש" style={sim3Styles.replayBtn}>
           <View accessible={false}><LottieIcon source={LOTTIE_REPLAY} size={18} /></View>
@@ -242,7 +242,7 @@ function ScoreScreen({
 }
 
 /* ================================================================== */
-/*  InflationRaceScreen — main component                                */
+/*  InflationRaceScreen, main component                                */
 /* ================================================================== */
 
 export function InflationRaceScreen({
@@ -391,7 +391,7 @@ export function InflationRaceScreen({
 
         {/* Two money displays */}
         <Animated.View entering={FadeInUp.delay(100)} style={styles.moneyRow}>
-          {/* Checking account — stays flat */}
+          {/* Checking account, stays flat */}
           <GlowCard
             glowColor={
               state.showInvestedPath
@@ -415,7 +415,7 @@ export function InflationRaceScreen({
             <Text style={styles.moneyNote}>לא צומח</Text>
           </GlowCard>
 
-          {/* Invested money — grows */}
+          {/* Invested money, grows */}
           <GlowCard
             glowColor="rgba(34,197,94,0.3)"
             style={[styles.moneyCard, { backgroundColor: SIM3.cardBg }]}
@@ -631,7 +631,7 @@ const styles = StyleSheet.create({
   },
   flex1: { flex: 1 },
 
-  /* Sticky actions bar — score screen footer */
+  /* Sticky actions bar, score screen footer */
   stickyActionsBar: {
     position: 'absolute',
     left: 0,

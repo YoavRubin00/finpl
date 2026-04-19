@@ -38,7 +38,7 @@ const LOTTIE_REPLAY = require('../../../../assets/lottie/wired-flat-142-share-ar
 const LOTTIE_ARROW = require('../../../../assets/lottie/wired-flat-3381-arrows-left-hover-pointing.json');
 
 /* ------------------------------------------------------------------ */
-/*  BudgetBar — shows remaining budget (green → yellow → red)          */
+/*  BudgetBar, shows remaining budget (green → yellow → red)          */
 /* ------------------------------------------------------------------ */
 
 function BudgetBar({
@@ -87,7 +87,7 @@ function BudgetBar({
 }
 
 /* ------------------------------------------------------------------ */
-/*  ItemCard — center card showing current item                        */
+/*  ItemCard, center card showing current item                        */
 /* ------------------------------------------------------------------ */
 
 function ItemCard({ item }: { item: ShoppingItem }) {
@@ -113,7 +113,7 @@ function ItemCard({ item }: { item: ShoppingItem }) {
 }
 
 /* ------------------------------------------------------------------ */
-/*  SwipeableItemCard — swipe right to add, left to skip               */
+/*  SwipeableItemCard, swipe right to add, left to skip               */
 /* ------------------------------------------------------------------ */
 
 const SWIPE_THRESHOLD = 80;
@@ -230,7 +230,7 @@ function SwipeableItemCard({
 }
 
 /* ------------------------------------------------------------------ */
-/*  TrapRevealPopup — explains the marketing trick after adding a trap */
+/*  TrapRevealPopup, explains the marketing trick after adding a trap */
 /* ------------------------------------------------------------------ */
 
 function TrapRevealPopup({
@@ -263,7 +263,7 @@ function TrapRevealPopup({
 }
 
 /* ------------------------------------------------------------------ */
-/*  MiniCart — bottom bar showing collected items                       */
+/*  MiniCart, bottom bar showing collected items                       */
 /* ------------------------------------------------------------------ */
 
 function MiniCart({ cart }: { cart: ShoppingItem[] }) {
@@ -298,7 +298,7 @@ function MiniCart({ cart }: { cart: ShoppingItem[] }) {
 }
 
 /* ------------------------------------------------------------------ */
-/*  ScoreScreen — end-game summary                                     */
+/*  ScoreScreen, end-game summary                                     */
 /* ------------------------------------------------------------------ */
 
 function ScoreScreen({
@@ -385,7 +385,7 @@ function ScoreScreen({
 
         </ScrollView>
 
-        {/* Sticky actions bar — always visible */}
+        {/* Sticky actions bar, always visible */}
         <View style={shoppingCartStickyStyles.stickyActionsBar}>
             <AnimatedPressable onPress={onReplay} style={simStyles.replayBtn} accessibilityRole="button" accessibilityLabel="שחק שוב" accessibilityHint="מתחיל את הסימולציה מחדש">
                 <View accessible={false}><LottieIcon source={LOTTIE_REPLAY} size={20} /></View>
@@ -403,7 +403,7 @@ function ScoreScreen({
 }
 
 /* ------------------------------------------------------------------ */
-/*  ShoppingCartScreen — main exported component                       */
+/*  ShoppingCartScreen, main exported component                       */
 /* ------------------------------------------------------------------ */
 
 export function ShoppingCartScreen({ onComplete }: { onComplete: () => void }) {

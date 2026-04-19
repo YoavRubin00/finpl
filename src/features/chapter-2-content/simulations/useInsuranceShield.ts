@@ -80,7 +80,7 @@ export function useInsuranceShield() {
       // Check budget before adding
       const newPremiums = prev.totalPremiums + insurance.monthlyCost;
       if (newPremiums > insuranceShieldConfig.monthlyBudget) {
-        return prev; // Over budget — don't add
+        return prev; // Over budget, don't add
       }
 
       return {
@@ -135,7 +135,7 @@ export function useInsuranceShield() {
     return insuranceShieldConfig.events[state.round] ?? null;
   }, [state.phase, state.round]);
 
-  /** Process the current life event — check if player's insurances cover it */
+  /** Process the current life event, check if player's insurances cover it */
   const processEvent = useCallback(() => {
     setState((prev) => {
       if (prev.phase !== 'events') return prev;
@@ -161,7 +161,7 @@ export function useInsuranceShield() {
         };
       }
 
-      // Not covered — damage hits savings
+      // Not covered, damage hits savings
       const newSavings = Math.max(0, prev.savingsHealth - event.damage);
       return {
         ...prev,

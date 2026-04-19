@@ -1,5 +1,5 @@
 /**
- * SIM 5-30: סימולטור הקריפטו (Crypto Sim) — Module 5-30
+ * SIM 5-30: סימולטור הקריפטו (Crypto Sim), Module 5-30
  * Hook: allocate between BTC, ETH, cash → play 3 years → compare to S&P 500.
  * Linked sliders keep allocation summing to 100%.
  */
@@ -143,7 +143,7 @@ function redistributeAllocation(
   };
 }
 
-/** Grade based on max drawdown — lower drawdown = better risk management. */
+/** Grade based on max drawdown, lower drawdown = better risk management. */
 function computeGrade(
   maxDrawdown: number,
 ): { grade: 'S' | 'A' | 'B' | 'C' | 'F'; gradeLabel: string } {

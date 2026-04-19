@@ -1,12 +1,12 @@
 /**
- * SIM: מחיר vs. ערך — Price vs Value Chart
+ * SIM: מחיר vs. ערך, Price vs Value Chart
  * Data: 120 monthly data points for a fictional stock.
  * Intrinsic value grows ~8%/year. Price oscillates with crashes, bubbles, and noise.
  */
 
 import type { TimePoint, TradeAction } from './priceValueTypes';
 
-// ── Generate 36 months of data (condensed — one clear crash + bubble cycle) ──
+// ── Generate 36 months of data (condensed, one clear crash + bubble cycle) ──
 
 function generateData(): TimePoint[] {
   const points: TimePoint[] = [];
@@ -21,7 +21,7 @@ function generateData(): TimePoint[] {
   }
 
   // Events (compressed timeline, 36 months total):
-  // Crash: months 6-10 (-35%) — fast panic
+  // Crash: months 6-10 (-35%), fast panic
   // Recovery: months 11-16 (climb back)
   // Bubble: months 20-24 (+50% above intrinsic)
   // Correction: months 25-30 (bubble pops)
@@ -108,8 +108,8 @@ export const GRAHAM_TRADES: TradeAction[] = computeGrahamTrades(PRICE_VALUE_DATA
 export const FINN_MESSAGES: Record<string, string> = {
   buyBelowValue: 'בנג\'מין גראהם היה גאה! קנית עם מרווח ביטחון 💪',
   buyAboveValue: 'מר שוק שכנע אותך... שיקול דעת! 🤔',
-  sellProfit: 'מימשת רווח — חכם! 📈',
-  sellLoss: 'מכירת בהפסד — אולי מוקדם מדי? 😬',
+  sellProfit: 'מימשת רווח, חכם! 📈',
+  sellLoss: 'מכירת בהפסד, אולי מוקדם מדי? 😬',
   skipCrash: 'דילגת על הזדמנות? המחיר נמוך מהערך...',
   skipBubble: 'נכון לא לקנות כשיקר! סבלנות משתלמת.',
 };

@@ -46,7 +46,7 @@ export interface MinusTrapScore {
     monthsInMinus: number;
 }
 
-/* ── New Swipe Card types (PRD50 — Tinder-style rewrite) ── */
+/* ── New Swipe Card types (PRD50, Tinder-style rewrite) ── */
 
 export type SwipeCardType = 'want' | 'need' | 'trap' | 'income';
 

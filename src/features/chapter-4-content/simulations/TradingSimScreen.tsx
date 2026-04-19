@@ -1,5 +1,5 @@
 /**
- * SIM 22: סימולטור מסחר (Trading Simulator) — Module 4-22
+ * SIM 22: סימולטור מסחר (Trading Simulator), Module 4-22
  * Mock brokerage screen with live price ticks. 3 rounds teaching:
  * Market Order, Limit Order, Stop-Loss.
  */
@@ -74,7 +74,7 @@ function formatPrice(n: number): string {
 }
 
 /* ================================================================== */
-/*  LiveChart — real-time price line chart                              */
+/*  LiveChart, real-time price line chart                              */
 /* ================================================================== */
 
 function LiveChart({
@@ -263,7 +263,7 @@ function LiveChart({
 }
 
 /* ================================================================== */
-/*  InstructionBubble — animated hint for each round                   */
+/*  InstructionBubble, animated hint for each round                   */
 /* ================================================================== */
 
 function InstructionBubble({
@@ -289,7 +289,7 @@ function InstructionBubble({
 }
 
 /* ================================================================== */
-/*  PortfolioBar — cash, holdings, P&L display                         */
+/*  PortfolioBar, cash, holdings, P&L display                         */
 /* ================================================================== */
 
 function PortfolioBar({
@@ -339,7 +339,7 @@ function PortfolioBar({
 }
 
 /* ================================================================== */
-/*  OrderPanel — order controls per round type                         */
+/*  OrderPanel, order controls per round type                         */
 /* ================================================================== */
 
 function OrderPanel({
@@ -372,11 +372,11 @@ function OrderPanel({
           onPress={onMarketOrder}
           style={[orderStyles.mainBtn, { backgroundColor: color }]}
           accessibilityRole="button"
-          accessibilityLabel={`קנה עכשיו — ${formatPrice(currentPrice)}`}
+          accessibilityLabel={`קנה עכשיו, ${formatPrice(currentPrice)}`}
         >
           <View style={{ flexDirection: 'row-reverse', alignItems: 'center', gap: 6 }}>
             <View accessible={false}><LottieIcon source={LOTTIE_ROCKET} size={22} /></View>
-            <Text style={orderStyles.mainBtnText}>קנה עכשיו — {formatPrice(currentPrice)}</Text>
+            <Text style={orderStyles.mainBtnText}>קנה עכשיו, {formatPrice(currentPrice)}</Text>
           </View>
         </AnimatedPressable>
         <Text style={[orderStyles.hint, RTL]} numberOfLines={1}>
@@ -446,7 +446,7 @@ function OrderPanel({
 }
 
 /* ================================================================== */
-/*  SharkLessonCard — unified lesson and next button                   */
+/*  SharkLessonCard, unified lesson and next button                   */
 /* ================================================================== */
 
 function SharkLessonCard({
@@ -507,7 +507,7 @@ function SharkLessonCard({
 }
 
 /* ================================================================== */
-/*  ScoreScreen — final results after all 3 rounds                     */
+/*  ScoreScreen, final results after all 3 rounds                     */
 /* ================================================================== */
 
 function ScoreScreen({
@@ -826,7 +826,7 @@ export function TradingSimScreen({ onComplete }: TradingSimScreenProps) {
           <Text accessibilityRole="header" style={styles.title}>סימולטור מסחר</Text>
         </View>
         <Text style={[styles.subtitle, RTL]}>
-          סבב {roundNum}/3 — {ORDER_TYPE_LABELS[sim.currentRoundData.orderType]}
+          סבב {roundNum}/3, {ORDER_TYPE_LABELS[sim.currentRoundData.orderType]}
         </Text>
       </Animated.View>
 

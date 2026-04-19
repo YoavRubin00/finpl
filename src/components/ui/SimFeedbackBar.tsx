@@ -1,4 +1,4 @@
-// Shared feedback bar for simulations — bright, friendly game-style
+// Shared feedback bar for simulations, bright, friendly game-style
 import { View, Text, StyleSheet } from "react-native";
 import { Image as ExpoImage } from "expo-image";
 import Animated, { FadeInUp } from "react-native-reanimated";
@@ -28,7 +28,7 @@ export function SimFeedbackBar({ isCorrect, message, accentColor, lottieSource }
           : styles.barWrong,
       ]}
     >
-      {/* Finn mascot — excited on correct, standard on wrong */}
+      {/* Finn mascot, excited on correct, standard on wrong */}
       <ExpoImage
         source={isCorrect ? FINN_HAPPY : FINN_STANDARD}
         style={styles.finn}

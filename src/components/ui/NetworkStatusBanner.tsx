@@ -1,5 +1,5 @@
 /**
- * NetworkStatusBanner — shows a persistent banner when the device is offline.
+ * NetworkStatusBanner, shows a persistent banner when the device is offline.
  * Uses the existing NotificationBanner animation pattern but with a red/warning theme.
  */
 import { useEffect } from "react";

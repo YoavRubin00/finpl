@@ -1,7 +1,7 @@
 import type { ShopCategory, ShopItem } from './types';
 
 export const SHOP_ITEMS: readonly ShopItem[] = [
-  // ── לבבות (urgent — expensive in coins, cheap in gems → gem incentive) ──
+  // ── לבבות (urgent, expensive in coins, cheap in gems → gem incentive) ──
   {
     id: 'heart-refill-1',
     category: 'hearts',
@@ -61,7 +61,7 @@ export const SHOP_ITEMS: readonly ShopItem[] = [
     lottieSource: require('../../../assets/lottie/wired-flat-457-shield-security-hover-pinch.json'),
   },
 
-  // ── קוסמטיקה (aspirational — weeks of saving) ──
+  // ── קוסמטיקה (aspirational, weeks of saving) ──
   {
     id: 'badge-neon',
     category: 'cosmetics',
@@ -98,7 +98,7 @@ export const SHOP_ITEMS: readonly ShopItem[] = [
     id: 'avatar-koala',
     category: 'avatars',
     name: 'הישנוני',
-    description: 'קואלה רגועה — כי השקעות לטווח ארוך דורשות סבלנות.',
+    description: 'קואלה רגועה, כי השקעות לטווח ארוך דורשות סבלנות.',
     coinCost: 0,
     gemCost: 50,
     emoji: '🐨',
@@ -128,7 +128,7 @@ export const SHOP_ITEMS: readonly ShopItem[] = [
     id: 'avatar-unicorn',
     category: 'avatars',
     name: 'הנדיר',
-    description: 'חד-קרן — כי להיות נדיר זו אסטרטגיה פיננסית.',
+    description: 'חד-קרן, כי להיות נדיר זו אסטרטגיה פיננסית.',
     coinCost: 0,
     gemCost: 250,
     emoji: '🦄',
@@ -148,7 +148,7 @@ export const SHOP_ITEMS: readonly ShopItem[] = [
     id: 'avatar-phoenix',
     category: 'avatars',
     name: 'הפניקס',
-    description: 'הפניקס שקם מהאפר — מושלם למי שהתחיל מחדש.',
+    description: 'הפניקס שקם מהאפר, מושלם למי שהתחיל מחדש.',
     coinCost: 0,
     gemCost: 600,
     emoji: '🔥',
@@ -158,7 +158,7 @@ export const SHOP_ITEMS: readonly ShopItem[] = [
     id: 'avatar-diamond',
     category: 'avatars',
     name: 'הפרימיום',
-    description: 'יהלום — עבור מי שמוכן לשלם פרימיום על הכל.',
+    description: 'יהלום, עבור מי שמוכן לשלם פרימיום על הכל.',
     coinCost: 0,
     gemCost: 800,
     emoji: '💎',

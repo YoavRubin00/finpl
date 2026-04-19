@@ -1,5 +1,5 @@
 /**
- * SIM 28: מחשבון הפרישה (Retirement Calculator) — Module 5-28
+ * SIM 28: מחשבון הפרישה (Retirement Calculator), Module 5-28
  * Hook: choose withdrawal strategy, auto-play 25 years (age 67→92),
  * track balance depletion, tax, and inheritance potential.
  */
@@ -82,7 +82,7 @@ function simulateYear(
     withdrawal = annualAnnuity;
     taxPaid = annualAnnuity * ANNUITY_TAX_RATE;
     monthlyIncome = (annualAnnuity - taxPaid) / 12;
-    // No balance to manage — annuity is guaranteed for life
+    // No balance to manage, annuity is guaranteed for life
     balance = 0; // annuity has no investable balance
     updatedCostBasis = 0;
   } else {

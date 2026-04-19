@@ -1037,7 +1037,7 @@ export function FantasyLeagueScreen() {
   const addGems = useEconomyStore((s) => s.addGems);
   const [showEntryGate, setShowEntryGate] = useState(false);
 
-  // Finn arena splash on enter — static 1.5s or tap to dismiss
+  // Finn arena splash on enter, static 1.5s or tap to dismiss
   const [showSplash, setShowSplash] = useState(true);
 
   useEffect(() => {

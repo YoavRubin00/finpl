@@ -480,8 +480,8 @@ export function MarketScreen() {
                         animationType="slide"
                         onRequestClose={() => setConfirmAsset(null)}
                     >
-                        <SafeAreaView style={{ flex: 1, backgroundColor: "#f8fafc" }}>
-                            <View style={{ flex: 1, paddingHorizontal: 20 }}>
+                        <SafeAreaView style={{ flex: 1, backgroundColor: "#f8fafc" }} edges={["top", "bottom"]}>
+                            <View style={{ flex: 1, paddingHorizontal: 20, paddingTop: 8 }}>
                                 {confirmAsset && (() => {
                                     const isBuy = confirmAsset.action === "buy";
                                     const ownedRef = ownedAssets[confirmAsset.id];
@@ -498,7 +498,7 @@ export function MarketScreen() {
 
                                     return (
                                         <>
-                                            {/* Header with back button — X on right */}
+                                            {/* Header with back button, X on right */}
                                             <View style={{ flexDirection: "row-reverse", alignItems: "center", justifyContent: "space-between", paddingVertical: 12 }}>
                                                 <Pressable
                                                     onPress={() => { tapHaptic(); setConfirmAsset(null); setUseVoucherOnPurchase(false); }}
@@ -563,7 +563,7 @@ export function MarketScreen() {
                                                     style={[styles.voucherToggle, useVoucherOnPurchase && styles.voucherToggleActive, { marginBottom: 10 }]}
                                                 >
                                                     <Text style={styles.voucherToggleText}>
-                                                        🎟️ {useVoucherOnPurchase ? "שובר מופעל — 50% הנחה!" : "השתמש בשובר נכס (-50%)"}
+                                                        🎟️ {useVoucherOnPurchase ? "שובר מופעל, 50% הנחה!" : "השתמש בשובר נכס (-50%)"}
                                                     </Text>
                                                 </Pressable>
                                             )}
@@ -610,7 +610,7 @@ export function MarketScreen() {
                                                     <View style={{ backgroundColor: "#ffffff", borderRadius: 16, padding: 16, marginBottom: 12, shadowColor: "#000", shadowOpacity: 0.05, shadowRadius: 10, elevation: 3 }}>
                                                         <Text style={{ fontSize: 15, fontWeight: "800", color: "#0f172a", textAlign: "right", writingDirection: "rtl", marginBottom: 6 }}>🏦 קנייה במשכנתא</Text>
                                                         <Text style={{ fontSize: 12, fontWeight: "600", color: "#64748b", textAlign: "right", writingDirection: "rtl", lineHeight: 18, marginBottom: 10 }}>
-                                                            משכנתא = הלוואה לרכישת נכס. אתה שם הון עצמי קטן (30%) והשאר מגיע כהלוואה שמוחזרת מהתשואה היומית של הנכס. אם התשואה גבוהה מההחזר — אתה מרוויח גם תוך כדי!
+                                                            משכנתא = הלוואה לרכישת נכס. אתה שם הון עצמי קטן (30%) והשאר מגיע כהלוואה שמוחזרת מהתשואה היומית של הנכס. אם התשואה גבוהה מההחזר, אתה מרוויח גם תוך כדי!
                                                         </Text>
 
                                                         {/* Mortgage stats */}
@@ -658,7 +658,7 @@ export function MarketScreen() {
                                                                 onPress={() => {
                                                                     tapHaptic();
                                                                     const advice = netDaily > 0
-                                                                        ? `הנכס מניב ${netDaily} ליום גם אחרי החזר המשכנתא — עסקה טובה! ההון העצמי ${dp.toLocaleString()} נותן לך מינוף חכם.`
+                                                                        ? `הנכס מניב ${netDaily} ליום גם אחרי החזר המשכנתא, עסקה טובה! ההון העצמי ${dp.toLocaleString()} נותן לך מינוף חכם.`
                                                                         : `ההחזר היומי (${dailyRepayment}) גבוה מהתשואה. תפסיד ${Math.abs(netDaily)} ביום. שווה לצבור עוד הון עצמי.`;
                                                                     setFinnAdvice(advice);
                                                                 }}
@@ -679,12 +679,12 @@ export function MarketScreen() {
                     </Modal>
                 </ScrollView>
 
-                {/* Finn advice modal — soft, app-styled */}
+                {/* Finn advice modal, soft, app-styled */}
                 {finnAdvice && (
                     <Modal visible transparent animationType="fade" onRequestClose={() => setFinnAdvice(null)} accessibilityViewIsModal>
                         <Pressable style={{ flex: 1, backgroundColor: "rgba(15,23,42,0.5)", justifyContent: "center", alignItems: "center", padding: 24 }} onPress={() => setFinnAdvice(null)}>
                             <Pressable onPress={() => {}} style={{ width: "100%", maxWidth: 340, backgroundColor: "#ffffff", borderRadius: 24, padding: 24, shadowColor: "#000", shadowOpacity: 0.15, shadowRadius: 20, elevation: 10 }}>
-                                {/* X button — top right */}
+                                {/* X button, top right */}
                                 <Pressable
                                     onPress={() => setFinnAdvice(null)}
                                     style={{ position: "absolute", top: 12, right: 12, width: 32, height: 32, borderRadius: 16, backgroundColor: "#f1f5f9", alignItems: "center", justifyContent: "center", zIndex: 10 }}

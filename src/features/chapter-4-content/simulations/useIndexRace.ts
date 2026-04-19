@@ -1,5 +1,5 @@
 /**
- * SIM 4-30: המרוץ נגד המדד (Index Race) — Module 4-30
+ * SIM 4-30: המרוץ נגד המדד (Index Race), Module 4-30
  * Hook: pick 5 stocks → race 10 years vs ‎S&P‎ 500 → score comparison.
  */
 

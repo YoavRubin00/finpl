@@ -1,5 +1,5 @@
 /**
- * SIM 19: סליידר הסיכון (Risk-Return Slider) — Module 4-19
+ * SIM 19: סליידר הסיכון (Risk-Return Slider), Module 4-19
  * Types for the risk-return allocation slider simulation.
  */
 

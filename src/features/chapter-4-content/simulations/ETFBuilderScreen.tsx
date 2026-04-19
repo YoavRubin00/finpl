@@ -538,7 +538,7 @@ export function ETFBuilderScreen({ onComplete }: ETFBuilderScreenProps) {
         <AnimatedPressable
           onPress={handleComplete}
           accessibilityRole="button"
-          accessibilityLabel={`נעל את הסל — ${state.selectedETFs.length} קרנות`}
+          accessibilityLabel={`נעל את הסל, ${state.selectedETFs.length} קרנות`}
           accessibilityHint="נועל את הסל ומציג תוצאות"
           accessibilityState={{ disabled: state.selectedETFs.length === 0 }}
           style={[

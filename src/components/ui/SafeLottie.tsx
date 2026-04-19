@@ -5,7 +5,7 @@ import { useReducedMotion } from "react-native-reanimated";
 type LottieProps = ComponentProps<typeof LottieView>;
 
 /**
- * Wraps LottieView — freezes looping animations when the user
+ * Wraps LottieView, freezes looping animations when the user
  * prefers reduced motion (iOS/Android accessibility setting).
  *
  * Drop-in replacement: `<SafeLottie ...same props as LottieView />`

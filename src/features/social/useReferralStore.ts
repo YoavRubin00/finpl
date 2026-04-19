@@ -1,5 +1,5 @@
 // ---------------------------------------------------------------------------
-// PRD 32 — US-005: Wealth Network — Referral Store
+// PRD 32, US-005: Wealth Network, Referral Store
 // ---------------------------------------------------------------------------
 
 import { create } from "zustand";

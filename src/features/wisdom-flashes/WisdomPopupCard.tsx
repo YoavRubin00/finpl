@@ -57,7 +57,7 @@ function AuthorAvatar({ author, size }: { author: string; size: number }) {
 const AUTO_DISMISS_MS = 8000;
 
 /* ------------------------------------------------------------------ */
-/*  Heart Button — animated favorite toggle                            */
+/*  Heart Button, animated favorite toggle                            */
 /* ------------------------------------------------------------------ */
 
 function HeartButton({ itemId }: { itemId: string }) {
@@ -88,7 +88,7 @@ function HeartButton({ itemId }: { itemId: string }) {
 }
 
 /* ------------------------------------------------------------------ */
-/*  WisdomPopupCard — the main overlay component                       */
+/*  WisdomPopupCard, the main overlay component                       */
 /* ------------------------------------------------------------------ */
 
 export function WisdomPopupCard() {
@@ -189,7 +189,7 @@ export function WisdomPopupCard() {
                         </View>
                     )}
 
-                    {/* Dismiss button — gold accent */}
+                    {/* Dismiss button, gold accent */}
                     <Pressable onPress={dismiss} style={styles.dismissBtn} accessibilityRole="button" accessibilityLabel="סגור ציטוט">
                         <Text style={[RTL_STYLE, styles.dismissText]}>הבנתי ✨</Text>
                     </Pressable>

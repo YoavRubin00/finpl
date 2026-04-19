@@ -13,12 +13,12 @@ interface LottieIconProps {
   style?: ViewStyle;
   /** When false, animation is paused (saves CPU when off-screen). Default true. */
   active?: boolean;
-  /** Accessibility label for screen readers — תקן נגישות ישראלי */
+  /** Accessibility label for screen readers, תקן נגישות ישראלי */
   accessibilityLabel?: string;
 }
 
 export function LottieIcon({ source, size = 28, autoPlay = true, loop = true, speed, style, active = true, accessibilityLabel }: LottieIconProps) {
-  // require() returns number in RN — cast for LottieView compatibility
+  // require() returns number in RN, cast for LottieView compatibility
   const resolvedSource = source as AnimationObject | { uri: string } | string;
   const effectiveAutoPlay = autoPlay && active;
   const lottieRef = useRef<LottieView>(null);

@@ -43,7 +43,7 @@ export const MARKET_MISSIONS: MarketMission[] = [
     id: 'mm-explore-asset',
     titleHe: 'גלה נכס חדש',
     descriptionHe: 'בחר נכס שלא בחנת היום וראה את המחיר שלו.',
-    sharkPraiseHe: '🎯 כל מסך חדש שאתה לומד — מבטל הפתעה עתידית.',
+    sharkPraiseHe: '🎯 כל מסך חדש שאתה לומד, מבטל הפתעה עתידית.',
     kind: 'switch-asset',
   },
   {
@@ -72,7 +72,7 @@ export const MARKET_MISSIONS: MarketMission[] = [
   {
     id: 'mm-star-favorite',
     titleHe: 'סמן נכס בכוכב',
-    descriptionHe: 'הוסף נכס אחד לרשימת המעקב שלך — לחיצה ארוכה על הקרוסלה.',
+    descriptionHe: 'הוסף נכס אחד לרשימת המעקב שלך, לחיצה ארוכה על הקרוסלה.',
     sharkPraiseHe: '⭐ מעולה. רשימת מעקב = פחות רעש בעין, יותר מיקוד.',
     kind: 'star-asset',
   },
@@ -89,7 +89,7 @@ export const MARKET_MISSIONS: MarketMission[] = [
     id: 'mm-watch-chart',
     titleHe: 'התבונן בגרף 3 שניות',
     descriptionHe: 'פשוט תסתכל. סבלנות זו השריר שמרוויח לך כסף לאורך שנים.',
-    sharkPraiseHe: '🧘 כל הכבוד. מי שצופה — לומד בלי שיודע.',
+    sharkPraiseHe: '🧘 כל הכבוד. מי שצופה, לומד בלי שיודע.',
     kind: 'view-chart',
   },
   {
@@ -102,8 +102,8 @@ export const MARKET_MISSIONS: MarketMission[] = [
   {
     id: 'mm-watch-calm',
     titleHe: 'נשום ותסתכל',
-    descriptionHe: '3 שניות של התבוננות שקטה. בלי לחשוב על קנייה — רק להבחין.',
-    sharkPraiseHe: '🌊 כן. שוק לא דורש פעולה — דורש תשומת לב.',
+    descriptionHe: '3 שניות של התבוננות שקטה. בלי לחשוב על קנייה, רק להבחין.',
+    sharkPraiseHe: '🌊 כן. שוק לא דורש פעולה, דורש תשומת לב.',
     kind: 'view-chart',
   },
 
@@ -155,7 +155,7 @@ export const MARKET_MISSIONS: MarketMission[] = [
 ];
 
 /**
- * Picks today's mission deterministically — same calendar day → same mission.
+ * Picks today's mission deterministically, same calendar day → same mission.
  * Hash of ISO date string mod pool length.
  */
 export function pickMissionForDate(isoDate: string): MarketMission {

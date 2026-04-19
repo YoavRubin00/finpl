@@ -1,5 +1,5 @@
 /**
- * SIM 20: מדד לייב (Index Live — ‎S&P‎ 500 Time Machine) — Module 4-20
+ * SIM 20: מדד לייב (Index Live, ‎S&P‎ 500 Time Machine), Module 4-20
  * Simplified ‎S&P‎ 500 annual returns 1980-2024 (approximate real data).
  * Includes all major crashes and booms.
  */
@@ -42,7 +42,7 @@ const ANNUAL_RETURNS: Record<number, number> = {
   1998: 0.27,   // Despite LTCM crisis
   1999: 0.20,   // Dot-com peak
 
-  // 2000s: lost decade — dot-com bust + financial crisis
+  // 2000s: lost decade, dot-com bust + financial crisis
   2000: -0.10,  // Dot-com burst begins
   2001: -0.13,  // 9/11 + continued bust
   2002: -0.23,  // Bottom of dot-com crash

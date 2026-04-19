@@ -1,5 +1,5 @@
 /**
- * SIM 19: סליידר הסיכון (Risk-Return Slider) — Module 4-19
+ * SIM 19: סליידר הסיכון (Risk-Return Slider), Module 4-19
  * Premium interactive slider: drag between 0% stocks / 100% bonds → 100% stocks / 0% bonds.
  * Dynamic chart shows 10-year portfolio growth. Stats panel, risk meter, auto-sweep.
  */
@@ -63,7 +63,7 @@ const RISK_LOTTIES: Record<RiskLevel, ReturnType<typeof require>> = {
 };
 
 /* ================================================================== */
-/*  LineChart — animated 10-year portfolio growth                      */
+/*  LineChart, animated 10-year portfolio growth                      */
 /* ================================================================== */
 
 function LineChart({
@@ -179,7 +179,7 @@ function LineChart({
 }
 
 /* ================================================================== */
-/*  AllocationBar — horizontal bar showing stock/bond split            */
+/*  AllocationBar, horizontal bar showing stock/bond split            */
 /* ================================================================== */
 
 function AllocationBar({ stockPercent }: { stockPercent: number }) {
@@ -215,7 +215,7 @@ function AllocationBar({ stockPercent }: { stockPercent: number }) {
 }
 
 /* ================================================================== */
-/*  RiskMeter — visual gauge from conservative to aggressive           */
+/*  RiskMeter, visual gauge from conservative to aggressive           */
 /* ================================================================== */
 
 function RiskMeter({ stockPercent }: { stockPercent: number }) {
@@ -251,7 +251,7 @@ function RiskMeter({ stockPercent }: { stockPercent: number }) {
 }
 
 /* ================================================================== */
-/*  ScoreScreen — results after completing                              */
+/*  ScoreScreen, results after completing                              */
 /* ================================================================== */
 
 function ScoreScreen({
@@ -555,7 +555,7 @@ export function RiskSliderScreen({ onComplete }: RiskSliderScreenProps) {
       {/* Hero Chart */}
       <Animated.View entering={FadeInUp.delay(300)}>
         <GlowCard glowColor="rgba(34,197,94,0.15)" style={{ ...styles.statsCard, backgroundColor: SIM4.cardBg }}>
-          <Text style={[styles.statsTitle, RTL]}>צמיחת תיק — 10 שנים</Text>
+          <Text style={[styles.statsTitle, RTL]}>צמיחת תיק, 10 שנים</Text>
           <Text style={[styles.statsSubtitle, RTL]}>
             {'נתוני אמת 2014-2023 · מניות: S&P 500 · אג"ח: Bloomberg US Aggregate'}
           </Text>

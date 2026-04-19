@@ -11,7 +11,7 @@ interface Props {
   glossaryKey: GlossaryKey;
   onInteract?: () => void;
   /**
-   * Compact variant — shorter height, smaller icons, term-only label (no "מה זה"
+   * Compact variant, shorter height, smaller icons, term-only label (no "מה זה"
    * prefix). Use when multiple toggles stack and would otherwise overflow the
    * screen (e.g., Bullshit Swipe explanations with 3+ glossary references).
    */
@@ -25,7 +25,7 @@ interface Props {
 }
 
 /**
- * Inline glossary toggle — button expands to show definition + example
+ * Inline glossary toggle, button expands to show definition + example
  * in-place, without navigating or opening a modal. Matches the dividend
  * explainer pattern used in BullshitSwipe feedback state.
  */
@@ -129,7 +129,7 @@ const styles = StyleSheet.create({
     shadowRadius: 12,
     elevation: 8,
   },
-  // ── Compact variant — used when several toggles stack in one card ──
+  // ── Compact variant, used when several toggles stack in one card ──
   toggleBtnCompact: {
     paddingHorizontal: 12,
     paddingVertical: 10,
@@ -171,7 +171,7 @@ const styles = StyleSheet.create({
     color: '#ffffff',
     textAlign: 'right',
   },
-  // Body now sits below the button in normal flow — earlier absolute-positioning
+  // Body now sits below the button in normal flow, earlier absolute-positioning
   // above caused the feed scroll to feel jumpy when the definition popped in.
   body: {
     marginTop: 8,
@@ -187,7 +187,7 @@ const styles = StyleSheet.create({
     shadowRadius: 10,
     elevation: 4,
   },
-  // direction="up" — body overlays the area above the button so a CTA directly
+  // direction="up", body overlays the area above the button so a CTA directly
   // beneath the toggle (e.g. "בואו נתחיל" in Cashout-Rush idle) stays anchored.
   bodyUp: {
     position: 'absolute',

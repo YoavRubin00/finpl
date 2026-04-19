@@ -155,7 +155,7 @@ export const MythFeedCard = React.memo(function MythFeedCard({ isInterModule, on
                             style={styles.proBtn}
                         >
                             <LottieIcon source={require('../../../assets/lottie/Pro Animation 3rd.json')} size={32} autoPlay loop />
-                            <Text style={styles.proBtnText}>שדרג ל-PRO — ללא הגבלה</Text>
+                            <Text style={styles.proBtnText}>שדרג ל-PRO, ללא הגבלה</Text>
                         </LinearGradient>
                     </Pressable>
                 </Animated.View>

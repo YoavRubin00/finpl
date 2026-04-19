@@ -203,10 +203,10 @@ export function ShopModal() {
           contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 32 }}
           showsVerticalScrollIndicator={false}
         >
-          {/* ── Category Items — TOP ── */}
+          {/* ── Category Items, TOP ── */}
           {isAvatarCategory && (
             <View style={ms.devBanner}>
-              <Text style={ms.devBannerText}>🚧 אווטארים בפיתוח — בקרוב!</Text>
+              <Text style={ms.devBannerText}>🚧 אווטארים בפיתוח, בקרוב!</Text>
             </View>
           )}
 
@@ -350,13 +350,13 @@ export function ShopModal() {
             );
           })}
 
-          {/* ── PRO Banner — Bottom ── */}
+          {/* ── PRO Banner, Bottom ── */}
           {!isPro && (
             <Pressable
               onPress={() => { close(); router.push("/pricing" as never); }}
               style={({ pressed }) => [ms.proBottomBanner, pressed && { opacity: 0.85 }]}
               accessibilityRole="button"
-              accessibilityLabel="שדרג ל-PRO — גישה מלאה"
+              accessibilityLabel="שדרג ל-PRO, גישה מלאה"
             >
               <View accessible={false}>
                 <LottieView
@@ -366,7 +366,7 @@ export function ShopModal() {
                   loop
                 />
               </View>
-              <Text style={ms.proBottomText}>שדרג ל-PRO — גישה מלאה</Text>
+              <Text style={ms.proBottomText}>שדרג ל-PRO, גישה מלאה</Text>
               <ChevronRight size={14} color="#0891b2" style={{ transform: [{ scaleX: -1 }] }} />
             </Pressable>
           )}

@@ -1,5 +1,5 @@
 /**
- * SkiaInteractiveChart — Tactile graph with draggable scrubber, glow, and haptics.
+ * SkiaInteractiveChart, Tactile graph with draggable scrubber, glow, and haptics.
  * Uses @shopify/react-native-skia for smooth 60fps rendering.
  */
 import { useMemo, useCallback } from 'react';
@@ -202,7 +202,7 @@ export function SkiaInteractiveChart({
                     </SkiaPath>
                 </Canvas>
 
-                {/* Scrub indicators — Reanimated for 60fps */}
+                {/* Scrub indicators, Reanimated for 60fps */}
                 <Animated.View style={scrubLineStyle} pointerEvents="none" />
                 <Animated.View style={scrubberStyle} pointerEvents="none" />
             </View>

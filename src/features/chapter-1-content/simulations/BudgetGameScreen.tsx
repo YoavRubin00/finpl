@@ -40,7 +40,7 @@ const LOTTIE_CART = require('../../../../assets/lottie/wired-flat-146-trolley-ho
 const LOTTIE_ARROW = require('../../../../assets/lottie/wired-flat-3381-arrows-left-hover-pointing.json');
 
 /* ------------------------------------------------------------------ */
-/*  BucketBar — animated progress bar for a budget bucket              */
+/*  BucketBar, animated progress bar for a budget bucket              */
 /* ------------------------------------------------------------------ */
 
 function BucketBar({
@@ -116,7 +116,7 @@ function BucketBar({
 }
 
 /* ------------------------------------------------------------------ */
-/*  BalanceHeader — shows remaining balance like a banking app          */
+/*  BalanceHeader, shows remaining balance like a banking app          */
 /* ------------------------------------------------------------------ */
 
 function BalanceHeader({ balance, salary }: { balance: number; salary: number }) {
@@ -153,7 +153,7 @@ function BalanceHeader({ balance, salary }: { balance: number; salary: number })
 }
 
 /* ------------------------------------------------------------------ */
-/*  DilemmaCard — the scenario + choice buttons                        */
+/*  DilemmaCard, the scenario + choice buttons                        */
 /* ------------------------------------------------------------------ */
 
 const SCREEN_W = Dimensions.get('window').width;
@@ -251,7 +251,7 @@ function BudgetSwipeCard({
 
     return (
         <View style={{ flex: 1, justifyContent: 'center' }}>
-            {/* Up option — outside the card, above it */}
+            {/* Up option, outside the card, above it */}
             {hasThree && options[2] && (
                 <Pressable
                     onPress={() => handleSwipe(2)}
@@ -275,9 +275,9 @@ function BudgetSwipeCard({
                 <Text style={{ fontSize: 28, textAlign: 'center', marginBottom: 6 }}>{emoji}</Text>
                 <Text style={[RTL, swipeStyles.question]}>{question}</Text>
 
-                {/* Left/Right hints — large tap targets with clear icons */}
+                {/* Left/Right hints, large tap targets with clear icons */}
                 <View style={swipeStyles.hintsRow}>
-                    {/* Skip — left side */}
+                    {/* Skip, left side */}
                     <Pressable
                         style={[swipeStyles.hintPill, { borderColor: '#fecaca', backgroundColor: '#fef2f2' }]}
                         onPress={() => handleSwipe(1)}
@@ -287,7 +287,7 @@ function BudgetSwipeCard({
                         <Text style={{ fontSize: 28, fontWeight: '900', color: '#ef4444' }}>✗</Text>
                         <Text style={[swipeStyles.hintText, { color: '#ef4444' }]} numberOfLines={1}>{options[1]?.label}</Text>
                     </Pressable>
-                    {/* Add — right side */}
+                    {/* Add, right side */}
                     <Pressable
                         style={[swipeStyles.hintPill, { borderColor: '#bbf7d0', backgroundColor: '#f0fdf4' }]}
                         onPress={() => handleSwipe(0)}
@@ -300,7 +300,7 @@ function BudgetSwipeCard({
                 </View>
             </Animated.View>
 
-            {/* Feedback — tap to advance */}
+            {/* Feedback, tap to advance */}
             {feedback && (
                 <Pressable
                     style={StyleSheet.absoluteFill}
@@ -381,7 +381,7 @@ const swipeStyles = StyleSheet.create({
 });
 
 /* ------------------------------------------------------------------ */
-/*  ScoreScreen — end-game summary with grades                         */
+/*  ScoreScreen, end-game summary with grades                         */
 /* ------------------------------------------------------------------ */
 
 function ScoreScreen({
@@ -475,7 +475,7 @@ function ScoreScreen({
 }
 
 /* ------------------------------------------------------------------ */
-/*  ScoreRow — single row in the score breakdown                       */
+/*  ScoreRow, single row in the score breakdown                       */
 /* ------------------------------------------------------------------ */
 
 function ScoreRow({
@@ -514,7 +514,7 @@ function ScoreRow({
 }
 
 /* ------------------------------------------------------------------ */
-/*  BudgetGameScreen — main exported component                         */
+/*  BudgetGameScreen, main exported component                         */
 /* ------------------------------------------------------------------ */
 
 export function BudgetGameScreen({ onComplete }: { onComplete: () => void }) {

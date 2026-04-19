@@ -4,10 +4,10 @@ export interface DidYouKnowItem {
   id: string;
   category: DidYouKnowCategory;
   teaser: string;      // open-ended question / hook shown before tap
-  punch: string;       // the payoff — full story revealed
+  punch: string;       // the payoff, full story revealed
   highlight: string;   // the hero number / phrase to counter-animate
   source: string;      // verifiable source attribution
-  emoji: string;       // single-char hero emoji — always present
+  emoji: string;       // single-char hero emoji, always present
   image?: number;      // optional: require()'d image from IMAGES/; overrides emoji on reveal
 }
 

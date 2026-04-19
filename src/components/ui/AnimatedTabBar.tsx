@@ -53,12 +53,12 @@ const TABS: TabConfig[] = [
   { key: "chat",        label: "צ'אט",   Icon: MessageCircle },
 ];
 
-// Per-tab accent colors — unified blue palette
+// Per-tab accent colors, unified blue palette
 const TAB_COLORS: Record<string, string> = {
   learn:       "#0ea5e9", // sky blue (feed)
   index:       "#0891b2", // cyan (learn)
   investments: "#1d4ed8", // blue
-  friends:     "#6366f1", // indigo — distinct but harmonizes with blues
+  friends:     "#6366f1", // indigo, distinct but harmonizes with blues
   chat:        "#3b82f6", // blue
 };
 
@@ -67,7 +67,7 @@ const ICON_SIZE_DEFAULT = 30;
 const ICON_SIZE_FOCUSED = 34;
 
 // ---------------------------------------------------------------------------
-// Single tab item — Clash Royale inspired
+// Single tab item, Clash Royale inspired
 // ---------------------------------------------------------------------------
 
 interface TabItemProps {
@@ -77,7 +77,7 @@ interface TabItemProps {
   onLongPress: () => void;
   /** True when this tab is the walkthrough glow target */
   walkthroughGlow?: boolean;
-  /** True when walkthrough is active but this tab is NOT the target — lock it */
+  /** True when walkthrough is active but this tab is NOT the target, lock it */
   walkthroughLocked?: boolean;
 }
 
@@ -88,7 +88,7 @@ function TabItem({ config, focused, onPress, onLongPress, walkthroughGlow, walkt
   const translateY = useSharedValue(0);
   const activeGlow = useSharedValue(0);
 
-  // Walkthrough glow animation — fast dramatic pulse
+  // Walkthrough glow animation, fast dramatic pulse
   const walkthroughPulse = useSharedValue(0);
   useEffect(() => {
     if (walkthroughGlow) {
@@ -208,7 +208,7 @@ function TabItem({ config, focused, onPress, onLongPress, walkthroughGlow, walkt
         </View>
       </Animated.View>
 
-      {/* Label — always visible, bolder when focused */}
+      {/* Label, always visible, bolder when focused */}
       <Text
         style={[
           styles.tabLabel,
@@ -245,7 +245,7 @@ export function AnimatedTabBar({
   const insets = useSafeAreaInsets();
   const bottomPadding = Math.max(insets.bottom, Platform.OS === "web" ? 8 : 12);
 
-  // Walkthrough glow — visual only, tabs always usable
+  // Walkthrough glow, visual only, tabs always usable
   const glowTabKey = useWalkthroughGlowTab();
   const walkthroughActive = glowTabKey !== null;
 
@@ -259,7 +259,7 @@ export function AnimatedTabBar({
 
         const focused = state.index === index;
         const isGlowTarget = glowTabKey === route.name;
-        const isLocked = false; // Tabs always usable — glow is visual only
+        const isLocked = false; // Tabs always usable, glow is visual only
 
         const onPress = () => {
           const event = navigation.emit({

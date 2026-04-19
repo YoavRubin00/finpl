@@ -29,7 +29,7 @@ export function StreakRepairModal({ visible, onDismiss }: StreakRepairModalProps
   };
 
   const handleRepairAd = () => {
-    // TODO: integrate rewarded ad SDK — for now treat as free repair
+    // TODO: integrate rewarded ad SDK, for now treat as free repair
     const ok = repairStreak("ad");
     if (ok) {
       successHaptic();

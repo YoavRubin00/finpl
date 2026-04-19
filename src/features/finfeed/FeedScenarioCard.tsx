@@ -27,7 +27,7 @@ export const FeedScenarioCard = React.memo(function FeedScenarioCard({ item }: P
   const router = useRouter();
   const scenario = item.scenario;
 
-  // Pull a teaser from briefing — first sentence or first 120 chars
+  // Pull a teaser from briefing, first sentence or first 120 chars
   const teaser = (() => {
     const firstSentence = scenario.briefing.split(/[.?!]/)[0];
     return firstSentence.length > 120 ? firstSentence.slice(0, 117) + "..." : firstSentence;
@@ -211,7 +211,7 @@ const styles = StyleSheet.create({
     fontWeight: "900",
     color: "#f0f9ff",
   },
-  // CTA was an inline Pressable — now we delegate to the shared <FeedStartButton>
+  // CTA was an inline Pressable, now we delegate to the shared <FeedStartButton>
   // so the scenario card matches the "בואו נתחיל" minigame buttons exactly
   // (sky-500 with 3D depth shadow + animated rocket Lottie).
 });

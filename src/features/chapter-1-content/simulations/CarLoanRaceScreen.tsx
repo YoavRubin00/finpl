@@ -38,7 +38,7 @@ const LOTTIE_CLOCK = require('../../../../assets/lottie/wired-flat-45-clock-time
 const LOTTIE_DECREASE = require('../../../../assets/lottie/wired-flat-162-decrease-hover-pinch.json');
 
 /* ------------------------------------------------------------------ */
-/*  SpeedBar — shows car speed (inversely proportional to interest)     */
+/*  SpeedBar, shows car speed (inversely proportional to interest)     */
 /* ------------------------------------------------------------------ */
 
 function SpeedBar({ speed }: { speed: number }) {
@@ -62,7 +62,7 @@ function SpeedBar({ speed }: { speed: number }) {
 }
 
 /* ------------------------------------------------------------------ */
-/*  CarVisual — emoji car that shifts based on speed/debt               */
+/*  CarVisual, emoji car that shifts based on speed/debt               */
 /* ------------------------------------------------------------------ */
 
 function CarVisual({ speed, isRepossessed }: { speed: number; isRepossessed: boolean }) {
@@ -112,7 +112,7 @@ function CarVisual({ speed, isRepossessed }: { speed: number; isRepossessed: boo
 }
 
 /* ------------------------------------------------------------------ */
-/*  StatsBar — bottom stats showing loan/interest/value/month           */
+/*  StatsBar, bottom stats showing loan/interest/value/month           */
 /* ------------------------------------------------------------------ */
 
 function StatsBar({
@@ -155,7 +155,7 @@ function StatsBar({
 }
 
 /* ------------------------------------------------------------------ */
-/*  ScoreScreen — end-game summary                                      */
+/*  ScoreScreen, end-game summary                                      */
 /* ------------------------------------------------------------------ */
 
 function ScoreScreen({
@@ -236,7 +236,7 @@ function ScoreScreen({
 
         </ScrollView>
 
-        {/* Sticky actions bar — always visible */}
+        {/* Sticky actions bar, always visible */}
         <View style={carLoanRaceStickyStyles.stickyActionsBar}>
             <AnimatedPressable onPress={onReplay} style={simStyles.replayBtn} accessibilityRole="button" accessibilityLabel="שחק שוב" accessibilityHint="מתחיל את הסימולציה מחדש">
                 <View accessible={false}><LottieIcon source={LOTTIE_REPLAY} size={18} /></View>
@@ -276,7 +276,7 @@ const carLoanRaceStickyStyles = StyleSheet.create({
 });
 
 /* ------------------------------------------------------------------ */
-/*  CarLoanRaceScreen — main exported component                         */
+/*  CarLoanRaceScreen, main exported component                         */
 /* ------------------------------------------------------------------ */
 
 export function CarLoanRaceScreen({ onComplete }: { onComplete: () => void }) {
@@ -358,7 +358,7 @@ const [showFeedback, setShowFeedback] = useState(false);
                         <Text style={[RTL, TYPE.title]} accessibilityRole="header">מירוץ מכוניות</Text>
                     </View>
                     <Text style={[RTL, TYPE.subtitle, { marginBottom: 12 }]}>
-                        קבל החלטות חכמות — ככל שהריבית גדלה, הרכב מאט
+                        קבל החלטות חכמות, ככל שהריבית גדלה, הרכב מאט
                     </Text>
                 </Animated.View>
 

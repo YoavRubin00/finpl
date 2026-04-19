@@ -1,5 +1,5 @@
 /**
- * SkiaInteractiveChart — Web stub (Skia/CanvasKit not available on web).
+ * SkiaInteractiveChart, Web stub (Skia/CanvasKit not available on web).
  * Renders a simple SVG polyline fallback.
  */
 import { View, Text } from 'react-native';
@@ -45,7 +45,7 @@ export function SkiaInteractiveChart({
 
   return (
     <View style={{ width, height, borderRadius: 12, overflow: 'hidden', backgroundColor: 'rgba(0,0,0,0.2)' }}>
-      {/* @ts-ignore — svg works in web Expo */}
+      {/* @ts-ignore, svg works in web Expo */}
       <svg width={width} height={height} style={{ position: 'absolute' }}>
         {/* @ts-ignore */}
         <polyline points={points} fill="none" stroke={lineColor} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />

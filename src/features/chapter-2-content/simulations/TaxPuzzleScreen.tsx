@@ -24,7 +24,7 @@ import { SIM2, GRADE_COLORS2, GRADE_HEBREW, SHADOW_LIGHT, RTL, TYPE2, sim2Styles
 
 const GOLD = '#f59e0b';
 
-/* ── Chapter-2 theme — only used for gradient ── */
+/* ── Chapter-2 theme, only used for gradient ── */
 const _th2 = getChapterTheme('chapter-2');
 
 /* ── Lottie assets ── */
@@ -39,7 +39,7 @@ const LOTTIE_CHART = require('../../../../assets/lottie/wired-flat-153-bar-chart
 const LOTTIE_ARROW = require('../../../../assets/lottie/wired-flat-3381-arrows-left-hover-pointing.json');
 
 /* ------------------------------------------------------------------ */
-/*  CharacterCard — profile at top with attribute badges                */
+/*  CharacterCard, profile at top with attribute badges                */
 /* ------------------------------------------------------------------ */
 
 function CharacterCard({
@@ -88,7 +88,7 @@ function CharacterCard({
 }
 
 /* ------------------------------------------------------------------ */
-/*  PayslipDisplay — animated numbers                                    */
+/*  PayslipDisplay, animated numbers                                    */
 /* ------------------------------------------------------------------ */
 
 function PayslipDisplay({
@@ -108,7 +108,7 @@ function PayslipDisplay({
 
     return (
         <View style={styles.payslip} accessibilityLiveRegion="polite">
-            {/* Gross — static */}
+            {/* Gross, static */}
             <View style={styles.payslipRow}>
                 <View style={{ flexDirection: 'row-reverse', alignItems: 'center', gap: 6 }}>
                     <View accessible={false}><LottieIcon source={LOTTIE_MONEY_BAG} size={22} /></View>
@@ -119,7 +119,7 @@ function PayslipDisplay({
                 </Text>
             </View>
 
-            {/* Tax — shrinks */}
+            {/* Tax, shrinks */}
             <View style={styles.payslipRow}>
                 <View style={{ flexDirection: 'row-reverse', alignItems: 'center', gap: 6 }}>
                     <View accessible={false}><LottieIcon source={LOTTIE_CHART} size={22} /></View>
@@ -137,7 +137,7 @@ function PayslipDisplay({
                 </View>
             </View>
 
-            {/* Net — grows */}
+            {/* Net, grows */}
             <View style={styles.payslipRow}>
                 <View style={{ flexDirection: 'row-reverse', alignItems: 'center', gap: 6 }}>
                     <View accessible={false}><LottieIcon source={LOTTIE_STAR} size={22} /></View>
@@ -162,7 +162,7 @@ function PayslipDisplay({
 }
 
 /* ------------------------------------------------------------------ */
-/*  CreditCoin — golden coin-styled card in the tray                    */
+/*  CreditCoin, golden coin-styled card in the tray                    */
 /* ------------------------------------------------------------------ */
 
 function CreditCoin({
@@ -226,7 +226,7 @@ function CreditCoin({
 }
 
 /* ------------------------------------------------------------------ */
-/*  TaxPuzzleScreen — main exported component                           */
+/*  TaxPuzzleScreen, main exported component                           */
 /* ------------------------------------------------------------------ */
 
 export function TaxPuzzleScreen({ onComplete }: { onComplete: () => void }) {
@@ -326,7 +326,7 @@ export function TaxPuzzleScreen({ onComplete }: { onComplete: () => void }) {
                     <Text accessibilityRole="header" style={[RTL, TYPE2.title]}>פאזל התלוש</Text>
                 </View>
                 <Text style={[RTL, TYPE2.subtitle]}>
-                    התאם נקודות זיכוי לדמות — הקטן את המס, הגדל את הנטו!
+                    התאם נקודות זיכוי לדמות, הקטן את המס, הגדל את הנטו!
                 </Text>
             </Animated.View>
 
@@ -361,7 +361,7 @@ export function TaxPuzzleScreen({ onComplete }: { onComplete: () => void }) {
                 netAfter={state.netAfter}
             />
 
-            {/* Credit tray — horizontal scroll */}
+            {/* Credit tray, horizontal scroll */}
             <View style={styles.trayWrapper}>
                 <Text style={[RTL, styles.trayLabel]}>נקודות זיכוי זמינות:</Text>
                 <ScrollView
@@ -383,11 +383,11 @@ export function TaxPuzzleScreen({ onComplete }: { onComplete: () => void }) {
             </View>
 
             {/* Confirm / Next character button */}
-            <AnimatedPressable onPress={handleConfirm} style={styles.confirmBtn} accessibilityRole="button" accessibilityLabel={state.currentCharacterIndex < config.characters.length - 1 ? 'סיימתי — עבור לדמות הבאה' : 'סיימתי — ראה תוצאות'} accessibilityHint={state.currentCharacterIndex < config.characters.length - 1 ? 'עובר לדמות הבאה' : 'מציג את התוצאות'}>
+            <AnimatedPressable onPress={handleConfirm} style={styles.confirmBtn} accessibilityRole="button" accessibilityLabel={state.currentCharacterIndex < config.characters.length - 1 ? 'סיימתי, עבור לדמות הבאה' : 'סיימתי, ראה תוצאות'} accessibilityHint={state.currentCharacterIndex < config.characters.length - 1 ? 'עובר לדמות הבאה' : 'מציג את התוצאות'}>
                 <Text style={[RTL, styles.confirmBtnText]}>
                     {state.currentCharacterIndex < config.characters.length - 1
-                        ? 'סיימתי — עבור לדמות הבאה'
-                        : 'סיימתי — ראה תוצאות'}
+                        ? 'סיימתי, עבור לדמות הבאה'
+                        : 'סיימתי, ראה תוצאות'}
                 </Text>
             </AnimatedPressable>
 
@@ -404,7 +404,7 @@ export function TaxPuzzleScreen({ onComplete }: { onComplete: () => void }) {
 }
 
 /* ------------------------------------------------------------------ */
-/*  ScoreReveal — results after all 3 characters                        */
+/*  ScoreReveal, results after all 3 characters                        */
 /* ------------------------------------------------------------------ */
 
 function ScoreReveal({
@@ -429,7 +429,7 @@ function ScoreReveal({
             showsVerticalScrollIndicator={false}
         >
             <Animated.View entering={FadeIn.duration(400)} style={{ gap: 8 }}>
-            {/* Grade + savings header — compact */}
+            {/* Grade + savings header, compact */}
             <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 14 }}>
                 <View style={sim2Styles.gradeContainer}>
                     <Text style={[sim2Styles.gradeText, { color: gradeColor }]}>
@@ -457,7 +457,7 @@ function ScoreReveal({
                 </View>
             )}
 
-            {/* Compact stats — single row */}
+            {/* Compact stats, single row */}
             <View style={{ flexDirection: 'row-reverse', justifyContent: 'center', gap: 16, backgroundColor: 'rgba(15, 23, 42, 0.6)', borderRadius: 12, borderWidth: 1, borderColor: 'rgba(56, 189, 248, 0.2)', paddingVertical: 10, paddingHorizontal: 14 }}>
                 <View style={{ alignItems: 'center', gap: 2 }}>
                     <LottieIcon source={LOTTIE_CHECK} size={16} />
@@ -478,7 +478,7 @@ function ScoreReveal({
                 </View>
             </View>
 
-            {/* Per-character — single compact row each */}
+            {/* Per-character, single compact row each */}
             {characterResults.map((result, i) => {
                 const character = characters[i];
                 if (!character) return null;
@@ -494,11 +494,11 @@ function ScoreReveal({
                 );
             })}
 
-            {/* Key lesson — compact */}
+            {/* Key lesson, compact */}
             <View style={[sim2Styles.insightRow, { backgroundColor: 'rgba(15, 23, 42, 0.75)', borderRadius: 12, borderWidth: 1, borderColor: 'rgba(56, 189, 248, 0.3)', paddingVertical: 8, paddingHorizontal: 12, borderTopWidth: 1 }]}>
                 <LottieIcon source={LOTTIE_BULB} size={18} />
                 <Text style={[RTL, sim2Styles.insightText, { color: '#ffffff' }]}>
-                    בדקו נקודות זיכוי כל שנה — אלפי שקלים מחכים לכם
+                    בדקו נקודות זיכוי כל שנה, אלפי שקלים מחכים לכם
                 </Text>
             </View>
 

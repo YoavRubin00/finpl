@@ -1,5 +1,5 @@
 /**
- * SIM 4-25: בלש הדוחות (Statement Detective) — Module 4-25
+ * SIM 4-25: בלש הדוחות (Statement Detective), Module 4-25
  * Company financial cards → user votes invest/avoid → feedback with red flags.
  */
 
@@ -76,7 +76,7 @@ function isRedMetric(key: string, value: number): boolean {
 }
 
 /* ================================================================== */
-/*  ProgressDots — 5 round indicators                                  */
+/*  ProgressDots, 5 round indicators                                  */
 /* ================================================================== */
 
 function ProgressDots({
@@ -121,7 +121,7 @@ function ProgressDots({
 }
 
 /* ================================================================== */
-/*  MetricRow — single financial metric with color coding               */
+/*  MetricRow, single financial metric with color coding               */
 /* ================================================================== */
 
 function MetricRow({
@@ -148,7 +148,7 @@ function MetricRow({
 }
 
 /* ================================================================== */
-/*  CompanyCard — financial data display                                */
+/*  CompanyCard, financial data display                                */
 /* ================================================================== */
 
 function CompanyCard({ snippet }: { snippet: FinancialSnippet }) {
@@ -174,7 +174,7 @@ function CompanyCard({ snippet }: { snippet: FinancialSnippet }) {
 }
 
 /* ================================================================== */
-/*  RedFlagsList — revealed after incorrect vote                        */
+/*  RedFlagsList, revealed after incorrect vote                        */
 /* ================================================================== */
 
 function RedFlagsList({ flags }: { flags: string[] }) {
@@ -196,7 +196,7 @@ function RedFlagsList({ flags }: { flags: string[] }) {
 }
 
 /* ================================================================== */
-/*  ScoreScreen — results after all 5 rounds                            */
+/*  ScoreScreen, results after all 5 rounds                            */
 /* ================================================================== */
 
 function ScoreScreen({
@@ -272,7 +272,7 @@ function ScoreScreen({
             <View style={{ flexDirection: 'row-reverse', alignItems: 'center', gap: 8 }}>
               <LottieIcon source={LOTTIE_BULB} size={22} />
               <Text style={[scoreStyles.lessonText, RTL, { flex: 1 }]}>
-                לפני שמשקיעים — קוראים את הדוחות. תזרים מזומנים שלילי, חוב גבוה והון עצמי שלילי הם סימני אזהרה קריטיים.
+                לפני שמשקיעים, קוראים את הדוחות. תזרים מזומנים שלילי, חוב גבוה והון עצמי שלילי הם סימני אזהרה קריטיים.
               </Text>
             </View>
           </View>
@@ -506,7 +506,7 @@ export function StatementDetectiveScreen({ onComplete }: StatementDetectiveScree
                 >
                   {currentVerdictCorrect
                     ? 'צדקת!'
-                    : `טעות — התשובה הנכונה: ${currentRound.correctVerdict === 'invest' ? 'להשקיע' : 'לברוח'}`}
+                    : `טעות, התשובה הנכונה: ${currentRound.correctVerdict === 'invest' ? 'להשקיע' : 'לברוח'}`}
                 </Text>
               </View>
 
@@ -528,11 +528,11 @@ export function StatementDetectiveScreen({ onComplete }: StatementDetectiveScree
           )}
         </ScrollView>
 
-        {/* Finn explanation — auto-dismisses after 5s, with X button */}
+        {/* Finn explanation, auto-dismisses after 5s, with X button */}
         {state.showingFeedback && currentRound && currentVerdictCorrect !== null && finnFeedbackVisible && (
           <Animated.View entering={FadeInUp.duration(400)} style={{ position: 'absolute', bottom: 16, left: 12, right: 12, zIndex: 50 }}>
             <View style={{ backgroundColor: '#ffffff', borderRadius: 16, padding: 14, borderWidth: 1.5, borderColor: '#e2e8f0', shadowColor: '#000', shadowOpacity: 0.12, shadowRadius: 12, elevation: 8 }}>
-              {/* X button — top right */}
+              {/* X button, top right */}
               <Pressable onPress={() => setFinnFeedbackVisible(false)} style={{ position: 'absolute', top: 8, right: 8, width: 28, height: 28, borderRadius: 14, backgroundColor: '#f1f5f9', alignItems: 'center', justifyContent: 'center', zIndex: 10 }} accessibilityRole="button" accessibilityLabel="סגור" hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
                 <Text style={{ fontSize: 14, color: '#64748b', fontWeight: '700' }}>✕</Text>
               </Pressable>

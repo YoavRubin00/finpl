@@ -1,5 +1,5 @@
 /**
- * SIM 22: סימולטור מסחר (Trading Simulator) — Module 4-22
+ * SIM 22: סימולטור מסחר (Trading Simulator), Module 4-22
  * Hook: simulates price ticks at 200ms intervals, handles market/limit/stop-loss orders,
  * tracks cash, holdings value, and P&L across 3 rounds.
  */
@@ -149,7 +149,7 @@ export function useTradingSim() {
     setIsPlaying(true);
   }, []);
 
-  /** Execute a market order — buy immediately at current price. */
+  /** Execute a market order, buy immediately at current price. */
   const placeMarketOrder = useCallback(() => {
     if (orderRef.current) return; // already placed an order this round
 
@@ -169,7 +169,7 @@ export function useTradingSim() {
     }));
   }, [currentPrice]);
 
-  /** Place a limit order — buy when price drops to triggerPrice or below. */
+  /** Place a limit order, buy when price drops to triggerPrice or below. */
   const placeLimitOrder = useCallback((triggerPrice: number) => {
     if (orderRef.current) return;
 
@@ -186,7 +186,7 @@ export function useTradingSim() {
     }));
   }, []);
 
-  /** Place a stop-loss order — sell all holdings when price drops to triggerPrice. */
+  /** Place a stop-loss order, sell all holdings when price drops to triggerPrice. */
   const placeStopLoss = useCallback((triggerPrice: number) => {
     if (orderRef.current) return;
     if (state.holdings <= 0) return; // need holdings to stop-loss

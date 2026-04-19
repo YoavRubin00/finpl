@@ -1,5 +1,5 @@
 /**
- * SIM 3-18: בוחר המסלולים (Track Selector) — Module 3-18
+ * SIM 3-18: בוחר המסלולים (Track Selector), Module 3-18
  * Hook: select track → play 30-year simulation → score comparison.
  * All 3 tracks computed simultaneously for visual comparison.
  */

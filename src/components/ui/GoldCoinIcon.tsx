@@ -3,7 +3,7 @@ import { View } from 'react-native';
 const ZERO_SHADOW_OFFSET = { width: 0, height: 0 } as const;
 
 /**
- * Static gold coin icon — consistent currency visual across the app.
+ * Static gold coin icon, consistent currency visual across the app.
  * Pure gold circle with shine highlights, no text symbol.
  */
 export function GoldCoinIcon({ size = 22 }: { size?: number }) {

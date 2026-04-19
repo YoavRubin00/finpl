@@ -133,7 +133,7 @@ export function WaveHeader({
             paddingTop: 4,
           }}
         >
-          גל בעיצומו — אויבים תוקפים!
+          גל בעיצומו, אויבים תוקפים!
         </Text>
       )}
     </View>

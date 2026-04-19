@@ -27,7 +27,7 @@ import { ConfirmModal } from './ConfirmModal';
 import { IAPModal } from './IAPModal';
 import { SHOP_ITEMS, SHOP_CATEGORIES } from './shopItems';
 import { GEM_BUNDLES } from './gemBundles';
-// coinBundles removed — gold is bought via gem exchange only
+// coinBundles removed, gold is bought via gem exchange only
 import { DailyDealsSection } from './DailyDealsSection';
 import { AnimatedPressable } from '../../components/ui/AnimatedPressable';
 import { LottieIcon } from '../../components/ui/LottieIcon';
@@ -204,7 +204,7 @@ const GOLD_TIER_IMAGES: ImageSourcePropType[] = [
   { uri: 'https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/images/gold/gold-100000.png' },
 ];
 
-// ── Gem Bundle Card (GEMS.jpg style — 3 per row, icy blue) ──────────────────
+// ── Gem Bundle Card (GEMS.jpg style, 3 per row, icy blue) ──────────────────
 function GemBundleCard({ bundle, onPress, index }: { bundle: GemBundle; onPress: () => void; index: number }) {
   return (
     <Animated.View entering={FadeInDown.duration(150)} style={styles2.gemGridItem}>
@@ -215,7 +215,7 @@ function GemBundleCard({ bundle, onPress, index }: { bundle: GemBundle; onPress:
           bundle.isBestValue && { borderColor: '#22d3ee', borderWidth: 3 },
         ]}
         accessibilityRole="button"
-        accessibilityLabel={`${bundle.name} — ${bundle.priceLabel}`}
+        accessibilityLabel={`${bundle.name}, ${bundle.priceLabel}`}
       >
         {/* Best value badge */}
         {bundle.isBestValue && (
@@ -281,7 +281,7 @@ export function ShopScreen() {
   const shopScrollRef = useRef<ScrollView>(null);
   const walkthroughScreen = useTutorialStore((s) => s.walkthroughActiveScreen);
 
-  // Finn splash on enter — static 1.5s or tap to dismiss
+  // Finn splash on enter, static 1.5s or tap to dismiss
   const [showSplash, setShowSplash] = useState(true);
 
   useEffect(() => {
@@ -389,7 +389,7 @@ export function ShopScreen() {
                 style={styles.vipBannerGradient}
               >
                 <ProBadge size="md" />
-                <Text style={styles.vipBannerText}>חבר PRO — הנחה 20% על כל הפריטים</Text>
+                <Text style={styles.vipBannerText}>חבר PRO, הנחה 20% על כל הפריטים</Text>
               </LinearGradient>
             </Animated.View>
           )}
@@ -685,7 +685,7 @@ const styles = StyleSheet.create({
     paddingTop: 8,
   },
 
-  // Section header — wooden plank
+  // Section header, wooden plank
   sectionHeader: {
     marginBottom: 14,
     alignItems: 'center',

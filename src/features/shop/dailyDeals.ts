@@ -6,7 +6,7 @@ const FREE_GEMS_ITEM: ShopItem = {
   id: 'free-daily-gems',
   category: 'premium',
   name: '5 יהלומים חינם!',
-  description: 'מתנה יומית — היכנס כל יום לאסוף!',
+  description: 'מתנה יומית, היכנס כל יום לאסוף!',
   coinCost: 0,
   gemCost: 0,
   emoji: '💎',

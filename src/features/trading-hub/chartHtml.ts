@@ -14,7 +14,7 @@ export interface ChartHtmlTheme {
   volumeDown: string;
 }
 
-// Soft, calm palette — pastel greens / corals / cyan to keep the trading screen
+// Soft, calm palette, pastel greens / corals / cyan to keep the trading screen
 // feeling unhurried rather than aggressive. Saturation lowered vs. typical broker UIs.
 export const DEFAULT_CHART_THEME: ChartHtmlTheme = {
   background: '#fbfdfe',
@@ -41,7 +41,7 @@ interface BuildChartHtmlArgs {
 
 /**
  * Builds the HTML document that runs inside the WebView (TradingView Lightweight Charts v4).
- * Data is serialized to JSON and injected — no postMessage bridge for the MVP.
+ * Data is serialized to JSON and injected, no postMessage bridge for the MVP.
  *
  * Modes:
  *  - simple   → area / line on close prices. Volume histogram at bottom. No overlay indicators.
@@ -92,7 +92,7 @@ export function buildChartHtml({ mode, data, timeframe, maPeriod, theme }: Build
     }
   }
 
-  // RSI (14-period) — Wilder's smoothing.
+  // RSI (14-period), Wilder's smoothing.
   let rsi: Array<{ time: number; value: number }> = [];
   if (showIndicators) {
     const closes = candles.map((c) => c.close as number);
@@ -166,7 +166,7 @@ export function buildChartHtml({ mode, data, timeframe, maPeriod, theme }: Build
     grid: { vertLines: { color: t.grid }, horzLines: { color: t.grid } },
     rightPriceScale: { borderColor: t.grid },
     // 1D timeframe = daily candles (over a month), 1W timeframe = weekly candles (over 6 months).
-    // Both deal in date-level granularity — showing time-of-day on the axis is misleading
+    // Both deal in date-level granularity, showing time-of-day on the axis is misleading
     // (every candle's timestamp is just midnight UTC of its day).
     timeScale: { borderColor: t.grid, timeVisible: false, secondsVisible: false },
     crosshair: { mode: 1 },

@@ -116,7 +116,7 @@ function QuestButton({
           onPress={onPress}
           disabled={isDone}
           accessibilityRole="button"
-          accessibilityLabel={isDone ? `${titleHe} — הושלם` : `${titleHe} — לחץ לביצוע`}
+          accessibilityLabel={isDone ? `${titleHe}, הושלם` : `${titleHe}, לחץ לביצוע`}
           style={({ pressed }) => [
             questStyles.card,
             isDone ? questStyles.cardDone : questStyles.cardPending,
@@ -238,7 +238,7 @@ export function DailyQuestsSheet({ visible, onClose }: DailyQuestsSheetProps) {
     if (proClaimTimerRef.current) clearTimeout(proClaimTimerRef.current);
   }, []);
 
-  // Gentle pulse on the chest when ready — feels inviting, not shaky.
+  // Gentle pulse on the chest when ready, feels inviting, not shaky.
   // Mirrors the LessonFlowScreen chest-ready pattern: body pulse + glow halo.
   const reduceMotion = useReducedMotion();
   const chestPulse = useSharedValue(1);
@@ -325,7 +325,7 @@ export function DailyQuestsSheet({ visible, onClose }: DailyQuestsSheetProps) {
     }, 1600);
   };
 
-  // Shark persona + copy — מגיב למצב
+  // Shark persona + copy, מגיב למצב
   const sharkState: "hello" | "happy" | "standard" = rewardClaimed
     ? "happy"
     : allDone
@@ -365,7 +365,7 @@ export function DailyQuestsSheet({ visible, onClose }: DailyQuestsSheetProps) {
             nestedScrollEnabled
           >
 
-          {/* Shark hero — presence + coaching */}
+          {/* Shark hero, presence + coaching */}
           <View style={styles.sharkHero}>
             <Animated.View entering={FadeIn.duration(300)} style={styles.sharkAvatarWrap}>
               <ExpoImage source={sharkImage} style={styles.sharkAvatar} contentFit="contain" accessible={false} />
@@ -386,7 +386,7 @@ export function DailyQuestsSheet({ visible, onClose }: DailyQuestsSheetProps) {
           </View>
           <Text style={[styles.progressLabel, RTL]}>{completedCount} מתוך {quests.length} הושלמו</Text>
 
-          {/* Quest rows — each quest is a big glowing button */}
+          {/* Quest rows, each quest is a big glowing button */}
           <View style={styles.questList}>
             {quests.map((quest, i) => (
               <QuestButton
@@ -452,7 +452,7 @@ export function DailyQuestsSheet({ visible, onClose }: DailyQuestsSheetProps) {
                       onPress={handleClaim}
                       disabled={rewardClaimed || showClaimAnim}
                       accessibilityRole="button"
-                      accessibilityLabel={rewardClaimed ? "תיבה נפתחה" : allDone ? "לחצו לפתיחת התיבה" : "התיבה נעולה — השלימו את המשימות"}
+                      accessibilityLabel={rewardClaimed ? "תיבה נפתחה" : allDone ? "לחצו לפתיחת התיבה" : "התיבה נעולה, השלימו את המשימות"}
                       style={({ pressed }) => [
                         styles.chestWrap,
                         allDone && !rewardClaimed && styles.chestWrapReady,
@@ -487,7 +487,7 @@ export function DailyQuestsSheet({ visible, onClose }: DailyQuestsSheetProps) {
             </Pressable>
           </View>
 
-          {/* Claim-in-flight celebration overlay — mirrors module-end chest (XP + coins + confetti) */}
+          {/* Claim-in-flight celebration overlay, mirrors module-end chest (XP + coins + confetti) */}
           {showClaimAnim && (
             <View pointerEvents="none" style={StyleSheet.absoluteFill}>
               <ConfettiExplosion />
@@ -509,7 +509,7 @@ export function DailyQuestsSheet({ visible, onClose }: DailyQuestsSheetProps) {
   );
 }
 
-// ── Quest card styles — separated so QuestButton stays readable ──────────────
+// ── Quest card styles, separated so QuestButton stays readable ──────────────
 const questStyles = StyleSheet.create({
   card: {
     flexDirection: "row-reverse", // RTL logic directly on Pressable
@@ -710,7 +710,7 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
 
-  // Quests — list container only; individual quest styles live inline in QuestButton
+  // Quests, list container only; individual quest styles live inline in QuestButton
   questList: {
     gap: 12,
     marginBottom: 18,

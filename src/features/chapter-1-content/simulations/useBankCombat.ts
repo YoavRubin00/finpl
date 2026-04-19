@@ -9,7 +9,7 @@ import type {
 } from './bankCombatTypes';
 
 /* ------------------------------------------------------------------ */
-/*  useBankCombat — core logic hook for the Bank Fee Combat sim        */
+/*  useBankCombat, core logic hook for the Bank Fee Combat sim        */
 /* ------------------------------------------------------------------ */
 
 /** Bank health damage per blocked fee (100 / total rounds) */
@@ -85,10 +85,10 @@ export function useBankCombat(config: BankCombatConfig) {
 
         if (state.feesBlocked === config.rounds.length) {
             grade = 'S';
-            gradeLabel = '🏆 לוחם/ת עמלות! חסמת את כל העמלות — הבנק מפחד ממך';
+            gradeLabel = '🏆 לוחם/ת עמלות! חסמת את כל העמלות, הבנק מפחד ממך';
         } else if (savingsPercentage >= 80) {
             grade = 'A';
-            gradeLabel = '🌟 מצוין! חסכת את רוב העמלות — ממשיך/ה כך';
+            gradeLabel = '🌟 מצוין! חסכת את רוב העמלות, ממשיך/ה כך';
         } else if (savingsPercentage >= 60) {
             grade = 'B';
             gradeLabel = '👍 לא רע! יש עוד מקום לחסוך בעמלות';
@@ -97,7 +97,7 @@ export function useBankCombat(config: BankCombatConfig) {
             gradeLabel = '⚠️ הבנק עדיין מרוויח ממך יותר מדי';
         } else {
             grade = 'F';
-            gradeLabel = '🚨 הבנק שמח! אתה משלם עמלות מיותרות — שווה ללמוד להתמקח';
+            gradeLabel = '🚨 הבנק שמח! אתה משלם עמלות מיותרות, שווה ללמוד להתמקח';
         }
 
         return {

@@ -33,7 +33,7 @@ export const FOMO_MESSAGES: FomoMessage[] = [
     id: 'hype-4',
     personaId: 'vip-admin',
     category: 'hype',
-    content: '⚡ כל מי שלא קונה עכשיו — יבכה מחר. זה המהלך של 2026 🔥🔥🔥',
+    content: '⚡ כל מי שלא קונה עכשיו, יבכה מחר. זה המהלך של 2026 🔥🔥🔥',
   },
 
   // ─── Fake authority (report as spam) ─────────────────────
@@ -68,7 +68,7 @@ export const FOMO_MESSAGES: FomoMessage[] = [
     id: 'urg-2',
     personaId: 'bitcoin-millionaire',
     category: 'urgency',
-    content: '🚨 התשתית של $MOON עומדת להשתחרר עוד שעה. מי שלא בפנים עד אז — לא יספיק.',
+    content: '🚨 התשתית של $MOON עומדת להשתחרר עוד שעה. מי שלא בפנים עד אז, לא יספיק.',
   },
   {
     id: 'urg-3',
@@ -77,7 +77,7 @@ export const FOMO_MESSAGES: FomoMessage[] = [
     content: 'חלון ההזדמנות נסגר מחר ב-9:30. אני נכנס עם 50K עכשיו. לא אחכה.',
   },
 
-  // ─── Social proof (ignore — not spam, just peer pressure) ─
+  // ─── Social proof (ignore, not spam, just peer pressure) ─
   {
     id: 'soc-1',
     personaId: 'achi',
@@ -104,7 +104,7 @@ export const FOMO_MESSAGES: FomoMessage[] = [
     content: 'אמא שלי (!!) הרוויחה 8,000 ₪ ב-$MOON החודש. אם היא הצליחה, כל אחד יכול.',
   },
 
-  // ─── Noise (ignore — harmless chat) ──────────────────────
+  // ─── Noise (ignore, harmless chat) ──────────────────────
   {
     id: 'noise-1',
     personaId: 'chavera',
@@ -124,7 +124,7 @@ export const FOMO_MESSAGES: FomoMessage[] = [
     content: 'אגב מי מצליח לפתוח את האפליקציה של הבנק? אצלי קורסת מהבוקר.',
   },
 
-  // ─── Bait-truth (ignore — seems like good advice, but engaging = noise) ─
+  // ─── Bait-truth (ignore, seems like good advice, but engaging = noise) ─
   {
     id: 'bait-1',
     personaId: 'chavera',
@@ -141,7 +141,7 @@ export const FOMO_MESSAGES: FomoMessage[] = [
     id: 'bait-3',
     personaId: 'shira',
     category: 'bait-truth',
-    content: 'רק שאלה — למה אף אחד לא מדבר על הסיכון? זה מוזר קצת.',
+    content: 'רק שאלה, למה אף אחד לא מדבר על הסיכון? זה מוזר קצת.',
   },
 ];
 

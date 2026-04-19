@@ -1,19 +1,19 @@
 /**
- * Finn Mascot — Configuration
+ * Finn Mascot, Configuration
  *
  * Dual system:
- *   Lottie animations — for animated/looping contexts (feed, chat, typing)
- *   WebP images — for static/contextual displays (tips, quiz reactions, greeting)
+ *   Lottie animations, for animated/looping contexts (feed, chat, typing)
+ *   WebP images, for static/contextual displays (tips, quiz reactions, greeting)
  *
  * WebP variants:
- *   fin-hello hand.webp — greeting / onboarding
- *   fin-happy.webp — celebrating / correct answer
- *   fin-empathic.webp — empathy / wrong answer
- *   fin-standard.webp — idle / standard
- *   fin-fire-1.webp — streak fire / urgency (at-risk banner, calendar, header)
- *   fin-talking-1.webp — speaking to user (intro cards, chat typing)
- *   fin-tablet-1.webp — taking notes (onboarding Q&A acknowledgement)
- *   fin-dancing-1.webp — celebration / victory moments (milestones, summaries)
+ *   fin-hello hand.webp, greeting / onboarding
+ *   fin-happy.webp, celebrating / correct answer
+ *   fin-empathic.webp, empathy / wrong answer
+ *   fin-standard.webp, idle / standard
+ *   fin-fire-1.webp, streak fire / urgency (at-risk banner, calendar, header)
+ *   fin-talking-1.webp, speaking to user (intro cards, chat typing)
+ *   fin-tablet-1.webp, taking notes (onboarding Q&A acknowledgement)
+ *   fin-dancing-1.webp, celebration / victory moments (milestones, summaries)
  */
 import type { AnimationObject } from "lottie-react-native";
 import type { ImageSource } from "expo-image";
@@ -36,7 +36,7 @@ export type FinnAnimationState =
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 export const FINN_SOURCE_STANDARD = require("../../../assets/lottie/fin-standard.json") as unknown as AnimationObject;
 
-/** Celebration / success animation — lazy-loaded */
+/** Celebration / success animation, lazy-loaded */
 let _excitedCache: AnimationObject | null = null;
 export function FINN_SOURCE_EXCITED(): AnimationObject {
   if (!_excitedCache) {
@@ -46,7 +46,7 @@ export function FINN_SOURCE_EXCITED(): AnimationObject {
   return _excitedCache;
 }
 
-/** Backward-compatible alias — Lottie standard */
+/** Backward-compatible alias, Lottie standard */
 export const FINN_LOTTIE_SOURCE = FINN_SOURCE_STANDARD;
 
 /** Maps state to Lottie source (for animated contexts) */
@@ -61,7 +61,7 @@ export const FINN_HAPPY: ImageSource = require("../../../assets/webp/fin-happy.w
 export const FINN_EMPATHIC: ImageSource = require("../../../assets/webp/fin-empathic.webp");
 export const FINN_STANDARD: ImageSource = require("../../../assets/webp/fin-standard.webp");
 
-// New variants — see header comment for usage guidance.
+// New variants, see header comment for usage guidance.
 export const FINN_FIRE: ImageSource = require("../../../assets/webp/fin-fire-1.webp");
 export const FINN_TALKING: ImageSource = require("../../../assets/webp/fin-talking-1.webp");
 export const FINN_TABLET: ImageSource = require("../../../assets/webp/fin-tablet-1.webp");

@@ -1,9 +1,9 @@
 /**
- * SharkCTAModals — Professional Captain Shark nudge notifications
+ * SharkCTAModals, Professional Captain Shark nudge notifications
  *
  * Two variants:
- *   1. BridgeCTA  — every 4 modules: nudge to visit the bridge page
- *   2. ReferralCTA — every 5 modules + dividend content: invite-friends nudge
+ *   1. BridgeCTA , every 4 modules: nudge to visit the bridge page
+ *   2. ReferralCTA, every 5 modules + dividend content: invite-friends nudge
  *
  * Duolingo A/B learnings applied:
  *   • Copy rotation (3 variants per CTA)
@@ -12,7 +12,7 @@
  *   • Action-verb CTAs with concrete numbers
  *   • Loss-aversion variant for Bridge (cycles in)
  *   • 48h cooldown after 2 dismisses
- *   • Session lock — no duplicate in same session
+ *   • Session lock, no duplicate in same session
  *   • Record engagement (dismiss vs. act) for intelligent suppression
  *
  * Design: Clean toast-style bottom cards, professional tone, no emojis in titles.
@@ -31,7 +31,7 @@ import { useNudgeQueueStore } from "../../stores/useNudgeQueueStore";
 import { STITCH } from "../../constants/theme";
 
 /* ────────────────────────────────────────────────────────────────────────────
-   BridgeCTA — "למדנו יפה. עכשיו הזמן לעבור לעולם האמיתי."
+   BridgeCTA, "למדנו יפה. עכשיו הזמן לעבור לעולם האמיתי."
    ──────────────────────────────────────────────────────────────────────────── */
 
 interface BridgeCTAProps {
@@ -43,7 +43,7 @@ interface BridgeCTAProps {
 }
 
 /**
- * Bridge CTA copy variants — rotate by moduleCount milestone.
+ * Bridge CTA copy variants, rotate by moduleCount milestone.
  * Duolingo A/B notes:
  *   • 3-5 variants sustain CTR by +8-12% over single copy
  *   • Action-verb labels ("בואו נממש") beat neutral ("לעמוד הגשר") by +22%
@@ -52,7 +52,7 @@ interface BridgeCTAProps {
 const BRIDGE_VARIANTS: { title: string; body: string; cta: string }[] = [
   { title: "למדנו יפה", body: "עכשיו הזמן לעבור לעולם האמיתי", cta: "בואו נממש" },
   { title: "אל תניחו לידע להישאר תאורטי", body: "ההטבות האמיתיות מחכות בגשר", cta: "להטבות שלי" },
-  { title: "בניתם הרגל — תהנו ממנו", body: "תהפכו את הידע עכשיו לתוצאות", cta: "לעמוד הגשר" },
+  { title: "בניתם הרגל, תהנו ממנו", body: "תהפכו את הידע עכשיו לתוצאות", cta: "לעמוד הגשר" },
 ];
 
 export function SharkBridgeCTA({ visible, onGoBridge, onDismiss, moduleCount = 0 }: BridgeCTAProps) {
@@ -99,7 +99,7 @@ export function SharkBridgeCTA({ visible, onGoBridge, onDismiss, moduleCount = 0
           </View>
 
           <View style={s.textBlock}>
-            {/* Streak pill — Duolingo effect: explicit progress drives +6-10% CTR */}
+            {/* Streak pill, Duolingo effect: explicit progress drives +6-10% CTR */}
             {moduleCount > 0 && (
               <View style={s.streakPill}>
                 <Flame size={11} color={STITCH.tertiaryGold} fill={STITCH.tertiaryGoldBright} />
@@ -131,7 +131,7 @@ export function SharkBridgeCTA({ visible, onGoBridge, onDismiss, moduleCount = 0
 }
 
 /* ────────────────────────────────────────────────────────────────────────────
-   ReferralCTA — "הזמינו עוד חברים"
+   ReferralCTA, "הזמינו עוד חברים"
    ──────────────────────────────────────────────────────────────────────────── */
 
 interface ReferralCTAProps {
@@ -145,7 +145,7 @@ interface ReferralCTAProps {
 }
 
 /**
- * Referral CTA copy variants — action-verb + reciprocity framing.
+ * Referral CTA copy variants, action-verb + reciprocity framing.
  * Duolingo A/B: explicit reciprocity ("+50 coins per friend") beats generic invites by ~28%.
  * Concrete numbers in CTAs ("הזמן 3 חברים = 150 מטבעות") outperform abstract CTAs by ~18%.
  */
@@ -168,7 +168,7 @@ const REFERRAL_VARIANTS: { title: string; body: string; cta: string }[] = [
 ];
 
 const DIVIDEND_VARIANT = {
-  title: "רגע — דיבר על דיבידנד?",
+  title: "רגע, דיבר על דיבידנד?",
   body: "יש אחד כזה גם פה: כל חבר שמצטרף שולח לכם מטבעות",
   cta: "קבלו דיבידנד עכשיו",
 };
@@ -233,7 +233,7 @@ export function SharkReferralCTA({
             <Text style={s.nudgeTitle}>{v.title}</Text>
             <Text style={s.nudgeBody}>{v.body}</Text>
 
-            {/* Reciprocity chip — explicit "what you get" boosts A/B CTR ~28% */}
+            {/* Reciprocity chip, explicit "what you get" boosts A/B CTR ~28% */}
             <View style={s.reciprocityChip}>
               <Text style={s.reciprocityIcon}>🪙</Text>
               <Text style={s.reciprocityText}>+{COINS_PER_FRIEND} מטבעות לכל חבר שמפעיל</Text>

@@ -1,7 +1,7 @@
 import type { PayslipItem, PayslipNinjaConfig } from './payslipNinjaTypes';
 
 /* ------------------------------------------------------------------ */
-/*  Payslip Items — Israeli payslip line items for classification      */
+/*  Payslip Items, Israeli payslip line items for classification      */
 /* ------------------------------------------------------------------ */
 
 const payslipItems: PayslipItem[] = [

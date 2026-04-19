@@ -1,5 +1,5 @@
 /**
- * SIM 27: בעל הבית הווירטואלי (Virtual Landlord — REITs) — Module 5-27
+ * SIM 27: בעל הבית הווירטואלי (Virtual Landlord, REITs), Module 5-27
  * Hook: allocate budget across REIT sectors, simulate 10 years, apply world events,
  * track quarterly dividends, and compare with buying a physical apartment.
  */
@@ -94,7 +94,7 @@ export function useREIT() {
       const next: Record<string, number> = { ...prev, [sectorId]: clamped };
 
       if (otherTotal === 0) {
-        // All others are 0 — split remaining equally (rounded to 5)
+        // All others are 0, split remaining equally (rounded to 5)
         const each = Math.floor(remaining / otherIds.length / 5) * 5;
         let leftover = remaining;
         for (let i = 0; i < otherIds.length; i++) {

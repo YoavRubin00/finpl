@@ -46,7 +46,7 @@ const LOTTIE_REPLAY = require('../../../../assets/lottie/wired-flat-142-share-ar
 const LOTTIE_ARROW = require('../../../../assets/lottie/wired-flat-3381-arrows-left-hover-pointing.json');
 
 /* ------------------------------------------------------------------ */
-/*  CoinStack — animated vertical bar for a track                       */
+/*  CoinStack, animated vertical bar for a track                       */
 /* ------------------------------------------------------------------ */
 
 function CoinStack({
@@ -104,7 +104,7 @@ function CoinStack({
 }
 
 /* ------------------------------------------------------------------ */
-/*  YearLengthSlider — select simulation length (6-20 years)            */
+/*  YearLengthSlider, select simulation length (6-20 years)            */
 /* ------------------------------------------------------------------ */
 
 function YearLengthSlider({
@@ -158,7 +158,7 @@ function YearLengthSlider({
 }
 
 /* ------------------------------------------------------------------ */
-/*  SpeedButton — playback speed selector                               */
+/*  SpeedButton, playback speed selector                               */
 /* ------------------------------------------------------------------ */
 
 function SpeedButton({
@@ -194,7 +194,7 @@ function SpeedButton({
 }
 
 /* ------------------------------------------------------------------ */
-/*  ComparisonPanel — animated numbers for both tracks                  */
+/*  ComparisonPanel, animated numbers for both tracks                  */
 /* ------------------------------------------------------------------ */
 
 function ComparisonPanel({
@@ -250,7 +250,7 @@ function ComparisonPanel({
 }
 
 /* ------------------------------------------------------------------ */
-/*  ScoreScreen — results after simulation completion                   */
+/*  ScoreScreen, results after simulation completion                   */
 /* ------------------------------------------------------------------ */
 
 function ScoreScreen({
@@ -274,7 +274,7 @@ function ScoreScreen({
             </Animated.View>
 
 
-            {/* Total tax saved — score card */}
+            {/* Total tax saved, score card */}
             <Animated.View entering={FadeInUp.delay(200)}>
                 <View style={[sim2Styles.scoreCard, { borderColor: gradeColor }]}>
                     <View style={sim2Styles.scoreCardInner}>
@@ -364,7 +364,7 @@ function ScoreScreen({
                                 </Text>
                             </View>
                             <Text style={[RTL, { fontSize: 12, color: SIM2.textSecondary, lineHeight: 18, marginTop: 4 }]}>
-                                אפשר לקחת הלוואה כנגד הקופה — הכסף ממשיך לצמוח.
+                                אפשר לקחת הלוואה כנגד הקופה, הכסף ממשיך לצמוח.
                             </Text>
                         </View>
                     </View>
@@ -389,7 +389,7 @@ function ScoreScreen({
 }
 
 /* ------------------------------------------------------------------ */
-/*  TaxGrinderScreen — main exported component                          */
+/*  TaxGrinderScreen, main exported component                          */
 /* ------------------------------------------------------------------ */
 
 export function TaxGrinderScreen({ onComplete }: { onComplete: () => void }) {
@@ -520,7 +520,7 @@ export function TaxGrinderScreen({ onComplete }: { onComplete: () => void }) {
                 onChange={changeYears}
             />
 
-            {/* Year counter — right below slider */}
+            {/* Year counter, right below slider */}
             <View accessibilityLiveRegion="polite" style={[styles.yearCounter, { marginTop: 2, marginBottom: 4 }]}>
                 <Text style={[TYPE2.progress]}>שנה</Text>
                 <Text style={styles.yearNumber}>{state.currentYear}</Text>
@@ -552,7 +552,7 @@ export function TaxGrinderScreen({ onComplete }: { onComplete: () => void }) {
                 taxSaved={state.taxSaved}
             />
 
-            {/* Controls — Play button with glow */}
+            {/* Controls, Play button with glow */}
             <View style={styles.controlsRow}>
                 <View style={{ alignItems: 'center', justifyContent: 'center' }}>
                     <Animated.View style={[styles.playGlowRing, glowRingStyle]} />

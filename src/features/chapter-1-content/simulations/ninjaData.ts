@@ -29,7 +29,7 @@ export const ninjaPhysics: NinjaPhysicsConfig = {
 };
 
 /* ------------------------------------------------------------------ */
-/*  Deduction item templates (without velocity — engine adds that)     */
+/*  Deduction item templates (without velocity, engine adds that)     */
 /* ------------------------------------------------------------------ */
 
 export interface NinjaItemTemplate {
@@ -40,7 +40,7 @@ export interface NinjaItemTemplate {
 }
 
 /* ------------------------------------------------------------------ */
-/*  Payslip Scenarios — realistic Israeli salary breakdowns            */
+/*  Payslip Scenarios, realistic Israeli salary breakdowns            */
 /* ------------------------------------------------------------------ */
 
 export interface NinjaScenario {
@@ -81,7 +81,7 @@ const SCENARIO_20K: NinjaScenario = {
 export const ninjaScenarios: NinjaScenario[] = [SCENARIO_12K, SCENARIO_20K];
 
 /* ------------------------------------------------------------------ */
-/*  Bin classification — which types go to which bin                    */
+/*  Bin classification, which types go to which bin                    */
 /* ------------------------------------------------------------------ */
 
 /** Items the state takes (red bin) */

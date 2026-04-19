@@ -1,5 +1,5 @@
 /**
- * Crash Game ("מרוץ הריבית") — configuration
+ * Crash Game ("מרוץ הריבית"), configuration
  * The multiplier ticks up from 1.00x. At a random point it "crashes".
  * The user must cash-out before the crash to keep the coins.
  */
@@ -7,18 +7,18 @@
 export interface CrashRound {
   /** The multiplier at which the graph crashes (e.g. 2.4 means crash at 2.4x) */
   crashAt: number;
-  /** Speed factor — higher = faster climb */
+  /** Speed factor, higher = faster climb */
   speed: number;
   /** Educational tip shown after the round */
   tip: string;
 }
 
-/** Pre-seeded crash rounds — one per day, rotates */
+/** Pre-seeded crash rounds, one per day, rotates */
 export const CRASH_ROUNDS: CrashRound[] = [
   {
     crashAt: 1.6,
     speed: 1.0,
-    tip: 'וורן באפט אמר: "היה פחדן כשאחרים חמדנים". מי שחמדן מדי — מתפוצץ.',
+    tip: 'וורן באפט אמר: "היה פחדן כשאחרים חמדנים". מי שחמדן מדי, מתפוצץ.',
   },
   {
     crashAt: 3.2,
@@ -28,7 +28,7 @@ export const CRASH_ROUNDS: CrashRound[] = [
   {
     crashAt: 1.3,
     speed: 1.4,
-    tip: 'לפעמים השוק קורס מהר מאוד. מי שלא שם Stop Loss — משלם את המחיר.',
+    tip: 'לפעמים השוק קורס מהר מאוד. מי שלא שם Stop Loss, משלם את המחיר.',
   },
   {
     crashAt: 5.0,
@@ -48,7 +48,7 @@ export const CRASH_ROUNDS: CrashRound[] = [
   {
     crashAt: 4.1,
     speed: 0.7,
-    tip: 'כשכולם מרגישים שזה "הולך רק למעלה" — זה בדיוק הזמן הכי מסוכן.',
+    tip: 'כשכולם מרגישים שזה "הולך רק למעלה", זה בדיוק הזמן הכי מסוכן.',
   },
   {
     crashAt: 1.5,
@@ -58,17 +58,17 @@ export const CRASH_ROUNDS: CrashRound[] = [
   {
     crashAt: 2.8,
     speed: 0.9,
-    tip: 'פיזור השקעות מקטין סיכון. אל תשים את כל הביצים בסל אחד — גם לא בסל שנראה מבטיח.',
+    tip: 'פיזור השקעות מקטין סיכון. אל תשים את כל הביצים בסל אחד, גם לא בסל שנראה מבטיח.',
   },
   {
     crashAt: 6.5,
     speed: 0.5,
-    tip: 'ביטקוין הגיע לשיא של $20,000 בדצמבר 2017 וצנח 80% במהלך 2018. מי שיצא בזמן חגג — מי שחיכה נשרף.',
+    tip: 'ביטקוין הגיע לשיא של $20,000 בדצמבר 2017 וצנח 80% במהלך 2018. מי שיצא בזמן חגג, מי שחיכה נשרף.',
   },
   {
     crashAt: 1.4,
     speed: 1.6,
-    tip: 'יום שני השחור (1987): הדאו ג\'ונס צנח 22.6% ביום אחד — הירידה הגדולה ביותר בהיסטוריה. אף אחד לא ציפה לזה.',
+    tip: 'יום שני השחור (1987): הדאו ג\'ונס צנח 22.6% ביום אחד, הירידה הגדולה ביותר בהיסטוריה. אף אחד לא ציפה לזה.',
   },
   {
     crashAt: 7.8,
@@ -83,12 +83,12 @@ export const CRASH_ROUNDS: CrashRound[] = [
   {
     crashAt: 1.2,
     speed: 1.8,
-    tip: 'אנרון (2001): מניה שנסחרה ב-$90 ירדה לאפס תוך חודשים. כשההנהלה משקרת — התרסקות מובטחת.',
+    tip: 'אנרון (2001): מניה שנסחרה ב-$90 ירדה לאפס תוך חודשים. כשההנהלה משקרת, התרסקות מובטחת.',
   },
   {
     crashAt: 3.8,
     speed: 0.75,
-    tip: 'Bear Stearns (2008): בנק השקעות בן 85 שנה קרס תוך שבוע. נמכר ב-$2 למניה — אחרי שנסחר ב-$170.',
+    tip: 'Bear Stearns (2008): בנק השקעות בן 85 שנה קרס תוך שבוע. נמכר ב-$2 למניה, אחרי שנסחר ב-$170.',
   },
   {
     crashAt: 1.9,

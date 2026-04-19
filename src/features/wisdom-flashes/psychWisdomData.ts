@@ -1,18 +1,18 @@
 import type { PsychWisdomFlash } from './types';
 
-/** Psychological wisdom flashes — behavioral finance insights (PRD13) */
+/** Psychological wisdom flashes, behavioral finance insights (PRD13) */
 export const psychWisdomFlashes: PsychWisdomFlash[] = [
     // ── Cognitive Bias (הטיות קוגניטיביות) 🧩 ──
     {
         id: 'pw-1',
-        text: 'רוב האנשים מקבלים החלטה תוך דקות ספורות — ואז מבלים שעות בלחפש סיבות שיתמכו בה. בהשקעות, זה מתכון להפסד.',
+        text: 'רוב האנשים מקבלים החלטה תוך דקות ספורות, ואז מבלים שעות בלחפש סיבות שיתמכו בה. בהשקעות, זה מתכון להפסד.',
         category: 'cognitive-bias',
         icon: '🧩',
         type: 'psych',
     },
     {
         id: 'pw-2',
-        text: 'כשאתה בוחר מניה — שאל את עצמך: האם בחרתי אותה כי חקרתי לעומק, או כי רציתי שהיא תהיה הבחירה הנכונה?',
+        text: 'כשאתה בוחר מניה, שאל את עצמך: האם בחרתי אותה כי חקרתי לעומק, או כי רציתי שהיא תהיה הבחירה הנכונה?',
         category: 'cognitive-bias',
         icon: '🧩',
         type: 'psych',
@@ -33,7 +33,7 @@ export const psychWisdomFlashes: PsychWisdomFlash[] = [
     },
     {
         id: 'pw-5',
-        text: 'אנחנו לא רואים את השוק כפי שהוא — אנחנו רואים אותו דרך מצב הרוח שלנו, הפחדים שלנו, והתקוות שלנו.',
+        text: 'אנחנו לא רואים את השוק כפי שהוא, אנחנו רואים אותו דרך מצב הרוח שלנו, הפחדים שלנו, והתקוות שלנו.',
         category: 'cognitive-bias',
         icon: '🧩',
         type: 'psych',
@@ -42,7 +42,7 @@ export const psychWisdomFlashes: PsychWisdomFlash[] = [
     // ── Emotional Control (שליטה רגשית) 🎭 ──
     {
         id: 'pw-6',
-        text: 'כשהשוק נפתח אחרי אירוע דרמטי, הרגשות שוטפים את כולם. מי שמחכה שהרעש ישקט — רואה את התמונה המלאה.',
+        text: 'כשהשוק נפתח אחרי אירוע דרמטי, הרגשות שוטפים את כולם. מי שמחכה שהרעש ישקט, רואה את התמונה המלאה.',
         category: 'emotional-control',
         icon: '🎭',
         type: 'psych',
@@ -56,21 +56,21 @@ export const psychWisdomFlashes: PsychWisdomFlash[] = [
     },
     {
         id: 'pw-8',
-        text: 'כשמניה יורדת 30% — אתה מרגיש אחרת מאשר כשהיא עולה 30%. למה? כי ההפסד כואב פי שניים מהרווח.',
+        text: 'כשמניה יורדת 30%, אתה מרגיש אחרת מאשר כשהיא עולה 30%. למה? כי ההפסד כואב פי שניים מהרווח.',
         category: 'emotional-control',
         icon: '🎭',
         type: 'psych',
     },
     {
         id: 'pw-9',
-        text: 'אל תקבל החלטות השקעה בשעות של לחץ רגשי. מה שנראה דחוף היום — לרוב יכול לחכות ליום המחרת.',
+        text: 'אל תקבל החלטות השקעה בשעות של לחץ רגשי. מה שנראה דחוף היום, לרוב יכול לחכות ליום המחרת.',
         category: 'emotional-control',
         icon: '🎭',
         type: 'psych',
     },
     {
         id: 'pw-10',
-        text: 'בימים סוערים בשוק, היכולת לשבת בשקט ולא לעשות כלום — היא לפעמים ההחלטה הכי חכמה.',
+        text: 'בימים סוערים בשוק, היכולת לשבת בשקט ולא לעשות כלום, היא לפעמים ההחלטה הכי חכמה.',
         category: 'emotional-control',
         icon: '🎭',
         type: 'psych',
@@ -79,7 +79,7 @@ export const psychWisdomFlashes: PsychWisdomFlash[] = [
     // ── Discipline (משמעת השקעתית) 📏 ──
     {
         id: 'pw-11',
-        text: 'מי שלא לומד את המקצוע לעומק — משלם את שכר הלימוד ישירות לשוק.',
+        text: 'מי שלא לומד את המקצוע לעומק, משלם את שכר הלימוד ישירות לשוק.',
         category: 'discipline',
         icon: '📏',
         type: 'psych',
@@ -93,7 +93,7 @@ export const psychWisdomFlashes: PsychWisdomFlash[] = [
     },
     {
         id: 'pw-13',
-        text: 'אין קיצורי דרך בהשקעות. מי שמחפש טריק מהיר — בדרך כלל מוצא הפסד מהיר.',
+        text: 'אין קיצורי דרך בהשקעות. מי שמחפש טריק מהיר, בדרך כלל מוצא הפסד מהיר.',
         category: 'discipline',
         icon: '📏',
         type: 'psych',
@@ -102,7 +102,7 @@ export const psychWisdomFlashes: PsychWisdomFlash[] = [
     // ── Contrarian (חשיבה נגד הזרם) 🔄 ──
     {
         id: 'pw-14',
-        text: 'הימים הכי טובים בשוק מגיעים הרבה פעמים דווקא אחרי הימים הכי גרועים. מי שברח — פספס.',
+        text: 'הימים הכי טובים בשוק מגיעים הרבה פעמים דווקא אחרי הימים הכי גרועים. מי שברח, פספס.',
         category: 'contrarian',
         icon: '🔄',
         type: 'psych',
@@ -118,7 +118,7 @@ export const psychWisdomFlashes: PsychWisdomFlash[] = [
     // ── Money Psychology (פסיכולוגיה של כסף) 💭 ──
     {
         id: 'pw-16',
-        text: 'היחס שלך לכסף נבנה שנים לפני שפתחת חשבון מסחר. תבין את היחס הזה — ותבין את ההחלטות שלך.',
+        text: 'היחס שלך לכסף נבנה שנים לפני שפתחת חשבון מסחר. תבין את היחס הזה, ותבין את ההחלטות שלך.',
         category: 'money-psychology',
         icon: '💭',
         type: 'psych',
@@ -139,14 +139,14 @@ export const psychWisdomFlashes: PsychWisdomFlash[] = [
     },
     {
         id: 'pw-19',
-        text: 'אנשים נוטים להעריך יותר דברים שכבר בבעלותם. זה נכון גם למניות — וזו הסיבה שקשה למכור גם כשצריך.',
+        text: 'אנשים נוטים להעריך יותר דברים שכבר בבעלותם. זה נכון גם למניות, וזו הסיבה שקשה למכור גם כשצריך.',
         category: 'money-psychology',
         icon: '💭',
         type: 'psych',
     },
     {
         id: 'pw-20',
-        text: 'האם אתה מחזיק מניה כי יש לה עתיד — או כי קשה לך להודות שטעית?',
+        text: 'האם אתה מחזיק מניה כי יש לה עתיד, או כי קשה לך להודות שטעית?',
         category: 'money-psychology',
         icon: '💭',
         type: 'psych',
@@ -162,28 +162,28 @@ export const psychWisdomFlashes: PsychWisdomFlash[] = [
     },
     {
         id: 'pw-22',
-        text: 'אסטרטגיית השקעה בלי כללים ברורים היא כמו סירה בלב ים בלי הגה — כל גל יכול לסחוף אותה לכיוון אחר.',
+        text: 'אסטרטגיית השקעה בלי כללים ברורים היא כמו סירה בלב ים בלי הגה, כל גל יכול לסחוף אותה לכיוון אחר.',
         category: 'right-approach',
         icon: '🧭',
         type: 'psych',
     },
     {
         id: 'pw-23',
-        text: 'לפני כל עסקה, שאל: מה יגרום לי למכור? אם אין לך תשובה — אל תקנה.',
+        text: 'לפני כל עסקה, שאל: מה יגרום לי למכור? אם אין לך תשובה, אל תקנה.',
         category: 'right-approach',
         icon: '🧭',
         type: 'psych',
     },
     {
         id: 'pw-24',
-        text: 'ההיסטוריה של השוק חוזרת על עצמה לא כי העולם זהה — אלא כי הפסיכולוגיה האנושית לא משתנה.',
+        text: 'ההיסטוריה של השוק חוזרת על עצמה לא כי העולם זהה, אלא כי הפסיכולוגיה האנושית לא משתנה.',
         category: 'right-approach',
         icon: '🧭',
         type: 'psych',
     },
     {
         id: 'pw-25',
-        text: 'המשקיע הכי מסוכן הוא לא זה שלא יודע — אלא זה שבטוח שהוא יודע, בלי שבדק מספיק.',
+        text: 'המשקיע הכי מסוכן הוא לא זה שלא יודע, אלא זה שבטוח שהוא יודע, בלי שבדק מספיק.',
         category: 'right-approach',
         icon: '🧭',
         type: 'psych',

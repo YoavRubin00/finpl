@@ -34,7 +34,7 @@ export const DAILY_CONCEPTS: DailyConcept[] = [
   {
     id: "concept-1",
     titleHe: "ריבית דריבית",
-    descriptionHe: "כשהריבית שנצברה מתווספת לקרן ומייצרת ריבית נוספת — כסף שמרוויח כסף. ככל שמתחילים מוקדם יותר, האפקט חזק יותר.",
+    descriptionHe: "כשהריבית שנצברה מתווספת לקרן ומייצרת ריבית נוספת, כסף שמרוויח כסף. ככל שמתחילים מוקדם יותר, האפקט חזק יותר.",
     lottieSource: LOTTIE.growth,
     chapterId: 1,
   },
@@ -76,7 +76,7 @@ export const DAILY_CONCEPTS: DailyConcept[] = [
   {
     id: "concept-27",
     titleHe: "חיסכון אוטומטי",
-    descriptionHe: "הוראת קבע לחיסכון ביום שמקבלים משכורת. \"תשלם לעצמך קודם\" — לפני שמספיקים לבזבז.",
+    descriptionHe: "הוראת קבע לחיסכון ביום שמקבלים משכורת. \"תשלם לעצמך קודם\", לפני שמספיקים לבזבז.",
     lottieSource: LOTTIE.clock,
     chapterId: 1,
   },
@@ -150,14 +150,14 @@ export const DAILY_CONCEPTS: DailyConcept[] = [
   {
     id: "concept-22",
     titleHe: "ריבית צמודה למדד",
-    descriptionHe: "ריבית שמתעדכנת לפי מדד המחירים לצרכן — שומרת על ערך הכסף גם בתקופות אינפלציה.",
+    descriptionHe: "ריבית שמתעדכנת לפי מדד המחירים לצרכן, שומרת על ערך הכסף גם בתקופות אינפלציה.",
     lottieSource: LOTTIE.lineChart,
     chapterId: 3,
   },
   {
     id: "concept-29",
     titleHe: "עמלות נסתרות",
-    descriptionHe: "דמי ניהול, עמלות קנייה/מכירה, דמי משמרת — הכל מכרסם בתשואה. חשוב להשוות לפני שבוחרים.",
+    descriptionHe: "דמי ניהול, עמלות קנייה/מכירה, דמי משמרת, הכל מכרסם בתשואה. חשוב להשוות לפני שבוחרים.",
     lottieSource: LOTTIE.bulb,
     chapterId: 3,
   },
@@ -172,7 +172,7 @@ export const DAILY_CONCEPTS: DailyConcept[] = [
   },
   {
     id: "concept-7",
-    titleHe: "ETF — קרן סל",
+    titleHe: "ETF, קרן סל",
     descriptionHe: "קרן שנסחרת בבורסה ועוקבת אחרי מדד. דרך זולה ופשוטה להשקיע בשוק ההון עם פיזור מובנה.",
     lottieSource: LOTTIE.portfolio,
     chapterId: 4,
@@ -187,7 +187,7 @@ export const DAILY_CONCEPTS: DailyConcept[] = [
   {
     id: "concept-11",
     titleHe: "פיזור סיכונים",
-    descriptionHe: "אל תשים את כל הביצים בסל אחד — פיזור בין סוגי נכסים שונים מקטין את הסיכון הכולל.",
+    descriptionHe: "אל תשים את כל הביצים בסל אחד, פיזור בין סוגי נכסים שונים מקטין את הסיכון הכולל.",
     lottieSource: LOTTIE.compass,
     chapterId: 4,
   },
@@ -201,7 +201,7 @@ export const DAILY_CONCEPTS: DailyConcept[] = [
   {
     id: "concept-17",
     titleHe: "אגרת חוב",
-    descriptionHe: "הלוואה שאתה נותן לממשלה או לחברה. בתמורה מקבלים ריבית קבועה — פחות סיכון מהשקעה במניות.",
+    descriptionHe: "הלוואה שאתה נותן לממשלה או לחברה. בתמורה מקבלים ריבית קבועה, פחות סיכון מהשקעה במניות.",
     lottieSource: LOTTIE.lock,
     chapterId: 4,
   },
@@ -224,7 +224,7 @@ export const DAILY_CONCEPTS: DailyConcept[] = [
   {
     id: "concept-24",
     titleHe: "מינוף פיננסי",
-    descriptionHe: "שימוש בכסף שאול כדי להגדיל השקעה. מגביר רווחים — אבל גם הפסדים. סיכון גבוה.",
+    descriptionHe: "שימוש בכסף שאול כדי להגדיל השקעה. מגביר רווחים, אבל גם הפסדים. סיכון גבוה.",
     lottieSource: LOTTIE.rocket,
     chapterId: 5,
   },
@@ -244,7 +244,7 @@ export const DAILY_CONCEPTS: DailyConcept[] = [
   },
   {
     id: "concept-30",
-    titleHe: "FIRE — עצמאות כלכלית",
+    titleHe: "FIRE, עצמאות כלכלית",
     descriptionHe: "Financial Independence, Retire Early. חסוך 50%+ מההכנסה, השקע, ופרוש מוקדם מהעבודה.",
     lottieSource: LOTTIE.fire,
     chapterId: 5,

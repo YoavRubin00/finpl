@@ -11,7 +11,7 @@ export interface DailyQuest {
 export const QUEST_XP_REWARD = 100;
 export const QUEST_COIN_REWARD = 300;
 
-/** PRO track — 2× rewards + guaranteed gem */
+/** PRO track, 2× rewards + guaranteed gem */
 export const QUEST_PRO_XP_MULTIPLIER = 2;
 export const QUEST_PRO_COIN_MULTIPLIER = 2;
 export const QUEST_PRO_GEMS_GUARANTEED = 1;

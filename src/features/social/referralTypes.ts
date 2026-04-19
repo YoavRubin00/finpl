@@ -1,5 +1,5 @@
 // ---------------------------------------------------------------------------
-// PRD 32 — US-005: Wealth Network (Refer a Friend) Types
+// PRD 32, US-005: Wealth Network (Refer a Friend) Types
 // ---------------------------------------------------------------------------
 
 export interface ReferredFriend {

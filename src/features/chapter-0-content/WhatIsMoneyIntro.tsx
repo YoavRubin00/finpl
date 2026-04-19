@@ -25,7 +25,7 @@ const STAGE_W = SW - 48;
 const PHASE_DURATIONS: [number, number, number] = [5000, 6000, Infinity];
 const PHASE_CAPTIONS: [string, string, string] = [
   'פעם היינו מחליפים תרנגולות בלחם. קצת קשה לקנות ככה אוזניות, נכון? 🎧',
-  'אז בני האדם המציאו את הכסף — נייר, מטבע, מספרים במסך. הכל מבוסס על אמון. 🤝',
+  'אז בני האדם המציאו את הכסף, נייר, מטבע, מספרים במסך. הכל מבוסס על אמון. 🤝',
   'גרור את המטבע לקופה כדי להתחיל! 💰',
 ];
 
@@ -71,7 +71,7 @@ export function WhatIsMoneyIntro({ onStart, unitColors }: Props) {
     transform: [{ translateX: coinX.value }, { translateY: coinY.value }],
   }));
 
-  // Pulse animation — skip if user prefers reduced motion
+  // Pulse animation, skip if user prefers reduced motion
   useEffect(() => {
     if (reducedMotion) return;
     emojiScale.value = withRepeat(
@@ -83,11 +83,11 @@ export function WhatIsMoneyIntro({ onStart, unitColors }: Props) {
       true,
     );
     return () => { cancelAnimation(emojiScale); };
-  // emojiScale is a stable ref — reducedMotion and emojiScale omitted intentionally
+  // emojiScale is a stable ref, reducedMotion and emojiScale omitted intentionally
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [reducedMotion]);
 
-  // Phase advance timer — auto-runs phases 0→1→2
+  // Phase advance timer, auto-runs phases 0→1→2
   useEffect(() => {
     if (phase >= 2) return;
     const next: 0 | 1 | 2 = phase === 0 ? 1 : 2;
@@ -100,7 +100,7 @@ export function WhatIsMoneyIntro({ onStart, unitColors }: Props) {
     happyOp.value = withTiming(phase === 0 ? 1 : 0, { duration: 300 });
     talkingOp.value = withTiming(phase === 1 ? 1 : 0, { duration: 300 });
     dancingOp.value = withTiming(phase === 2 ? 1 : 0, { duration: 300 });
-  // Shared value refs are stable — phase is the only reactive dep
+  // Shared value refs are stable, phase is the only reactive dep
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [phase]);
 
@@ -181,7 +181,7 @@ export function WhatIsMoneyIntro({ onStart, unitColors }: Props) {
         {/* ── CenterStage ───────────────────────────────────────────────── */}
         <View style={{ width: STAGE_W, height: 220, alignItems: 'center', justifyContent: 'center' }}>
 
-          {/* Phase 0 — Barter era emoji card */}
+          {/* Phase 0, Barter era emoji card */}
           {phase === 0 && (
             <Animated.View style={[emojiCardStyle, {
               backgroundColor: '#1e293b',
@@ -199,12 +199,12 @@ export function WhatIsMoneyIntro({ onStart, unitColors }: Props) {
             }]}>
               <Text style={{ fontSize: 44, letterSpacing: 6 }}>🐔  ↔️  🥖</Text>
               <Text style={[RTL, { marginTop: 10, color: '#94a3b8', fontSize: 14, fontWeight: '600' }]}>
-                סחר חליפין — לפני שהמציאו כסף
+                סחר חליפין, לפני שהמציאו כסף
               </Text>
             </Animated.View>
           )}
 
-          {/* Phase 1 — Money bag Lottie */}
+          {/* Phase 1, Money bag Lottie */}
           {phase === 1 && (
             <LottieView
               source={require('../../../assets/lottie/wired-flat-413-money-bag-hover-shake.json')}
@@ -214,7 +214,7 @@ export function WhatIsMoneyIntro({ onStart, unitColors }: Props) {
             />
           )}
 
-          {/* Phase 2 — Drag coin into money bag */}
+          {/* Phase 2, Drag coin into money bag */}
           {phase === 2 && (
             <View style={{ width: '100%', height: 220, alignItems: 'center' }}>
               {/* Drop target */}
@@ -232,7 +232,7 @@ export function WhatIsMoneyIntro({ onStart, unitColors }: Props) {
               <GestureDetector gesture={panGesture}>
                 <Animated.View
                   style={[coinStyle, { position: 'absolute', bottom: 10 }]}
-                  accessibilityLabel="מטבע — גרור למעלה לקופה"
+                  accessibilityLabel="מטבע, גרור למעלה לקופה"
                   accessibilityRole="button"
                   accessibilityHint="גרור כלפי מעלה"
                 >

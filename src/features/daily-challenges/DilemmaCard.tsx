@@ -49,7 +49,7 @@ export const DilemmaCard = React.memo(function DilemmaCard({ isActive }: Props) 
 
   const dilemma = getTodayDilemma();
 
-  // Pulsing blue glow for unanswered state — must be before any early return
+  // Pulsing blue glow for unanswered state, must be before any early return
   const glow = useSharedValue(0.3);
   useEffect(() => {
     if (!answered && !showResult) {
@@ -115,11 +115,11 @@ export const DilemmaCard = React.memo(function DilemmaCard({ isActive }: Props) 
         log.addCorrectAnswer();
       }
     } catch (_e) {
-      // Gracefully handle store errors — don't crash the game
+      // Gracefully handle store errors, don't crash the game
     }
   };
 
-  // Already answered — compact completed state
+  // Already answered, compact completed state
   if (answered && !showResult) {
     return (
       <FeedGameShell

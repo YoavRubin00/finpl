@@ -54,7 +54,7 @@ const SIM_LOADERS: Record<string, () => SimScreen> = {
   "mod-4-28": () => require("../chapter-4-content/simulations").ChartReaderScreen,
   "mod-4-29": () => require("../chapter-4-content/simulations").StockSorterScreen,
   "mod-4-30": () => require("../chapter-4-content/simulations").IndexRaceScreen,
-  // Chapter 4 — Graham bonus modules
+  // Chapter 4, Graham bonus modules
   "mod-4-b1": () => require("../chapter-4-content/simulations/GrahamPortfolioScreen").GrahamPortfolioScreen,
   "mod-4-b2": () => require("../chapter-4-content/simulations/MarginSafetyScreen").MarginSafetyScreen,
   "mod-4-b3": () => require("../chapter-4-content/simulations/PriceValueScreen").PriceValueScreen,

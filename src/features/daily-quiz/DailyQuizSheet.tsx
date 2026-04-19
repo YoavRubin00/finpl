@@ -91,7 +91,7 @@ export function DailyQuizSheet({ visible, quiz, onClose }: Props) {
                 <Text style={styles.dataValue}>{quiz.sourceValue}</Text>
               </View>
 
-              {/* Citation — real news quote */}
+              {/* Citation, real news quote */}
               {quiz.citation ? (
                 <View style={styles.citationBox}>
                   <Text style={styles.citationLabel}>📰 אקטואלי</Text>

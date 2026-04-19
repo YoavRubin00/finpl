@@ -13,11 +13,11 @@ const BG        = '#f0f9ff';
 
 // ─── Rotating finance tips (Tuesday) ────────────────────────────────────────
 const FINANCE_TIPS = [
-  'כסף שלא עובד בשבילך — עובד נגדך. האינפלציה שוחקת כל שקל שנשאר בעו"ש.',
+  'כסף שלא עובד בשבילך, עובד נגדך. האינפלציה שוחקת כל שקל שנשאר בעו"ש.',
   'כלל 50/30/20: 50% לצרכים, 30% לרצונות, 20% לחיסכון. שלושה מספרים שיכולים לשנות הכל.',
   'ETF אחת על S&P 500 ניצחה את רוב מנהלי הקרנות המקצועיים ב-20 שנה האחרונות.',
   'ריבית דריבית: ₪1,000 ב-8% שנתי הופכים ל-₪10,000 תוך 30 שנה. הזמן הוא הנשק הכי חזק.',
-  'קרן חירום של 3–6 חודשי הוצאות — זה ההבדל בין משבר לאסון.',
+  'קרן חירום של 3–6 חודשי הוצאות, זה ההבדל בין משבר לאסון.',
   'דמי ניהול: הפרש של 0.9% בשנה שווה עשרות אלפי שקלים לאורך 30 שנה.',
   'כרטיס אשראי בריבית הוא ריבית דריבית שעובדת נגדך.',
   'פיזור הוא ארוחת החינם היחידה בהשקעות. אל תשימו הכל בסל אחד.',
@@ -45,7 +45,7 @@ function getDayContent(
   weekNumber: number,
 ): DayContent {
   const days: DayContent[] = [
-    // ── 0 · Sunday — Weekly review ──────────────────────────────────────────
+    // ── 0 · Sunday, Weekly review ──────────────────────────────────────────
     {
       subject: `שארק עשה לך סיכום שבועי 🦈`,
       headline: `${name}, הנה השבוע שלך`,
@@ -68,14 +68,14 @@ function getDayContent(
             <div style="font-size:12px;color:#6b7280;">XP</div>
           </div>
         </div>
-        <p style="font-size:15px;color:#374151;margin:0;">שבוע הבא — בואו נשבור את השיא 💪</p>
+        <p style="font-size:15px;color:#374151;margin:0;">שבוע הבא, בואו נשבור את השיא 💪</p>
       `,
     },
 
-    // ── 1 · Monday — New week ────────────────────────────────────────────────
+    // ── 1 · Monday, New week ────────────────────────────────────────────────
     {
       subject: `שבוע חדש. שארק מחכה. 🦈`,
-      headline: `${name}, שני — פתחו דף חדש`,
+      headline: `${name}, שני, פתחו דף חדש`,
       sharkImg: SHARK_FIRE,
       sharkAlt: 'שארק עם אש',
       body: `
@@ -88,7 +88,7 @@ function getDayContent(
       `,
     },
 
-    // ── 2 · Tuesday — Finance tip ────────────────────────────────────────────
+    // ── 2 · Tuesday, Finance tip ────────────────────────────────────────────
     {
       subject: `${name}, שארק מצא לך סוד פיננסי 👀`,
       headline: `הטיפ הפיננסי של השבוע`,
@@ -103,9 +103,9 @@ function getDayContent(
       `,
     },
 
-    // ── 3 · Wednesday — Mid-week urgency ─────────────────────────────────────
+    // ── 3 · Wednesday, Mid-week urgency ─────────────────────────────────────
     {
-      subject: `⚠️ ${streak} ימים ברצף — אל תפרו עכשיו`,
+      subject: `⚠️ ${streak} ימים ברצף, אל תפרו עכשיו`,
       headline: `אמצע השבוע. הרצף בסכנה?`,
       sharkImg: SHARK_FIRE,
       sharkAlt: 'שארק עם אש',
@@ -123,7 +123,7 @@ function getDayContent(
       `,
     },
 
-    // ── 4 · Thursday — Mascot emotion ────────────────────────────────────────
+    // ── 4 · Thursday, Mascot emotion ────────────────────────────────────────
     {
       subject: `שארק בודק מה קרה לך, ${name} 😢`,
       headline: `שארק מתגעגע...`,
@@ -141,10 +141,10 @@ function getDayContent(
       `,
     },
 
-    // ── 5 · Friday — FOMO / urgency ──────────────────────────────────────────
+    // ── 5 · Friday, FOMO / urgency ──────────────────────────────────────────
     {
       subject: `הסוף שבוע מגיע. הרצף לא מנוח. 🦈`,
-      headline: `שישי — עוד שעות ספורות`,
+      headline: `שישי, עוד שעות ספורות`,
       sharkImg: SHARK_FIRE,
       sharkAlt: 'שארק עם אש',
       body: `
@@ -160,7 +160,7 @@ function getDayContent(
       `,
     },
 
-    // ── 6 · Saturday — Warm & light ──────────────────────────────────────────
+    // ── 6 · Saturday, Warm & light ──────────────────────────────────────────
     {
       subject: `🦈 שבת שלום, ${name}!`,
       headline: `שבת שלום מהשארק 💙`,
@@ -172,7 +172,7 @@ function getDayContent(
           שיעור קצר אחד ישמור על הרצף שלכם ויוסיף ידע שיעזור לכם בחיים האמיתיים.
         </p>
         <p style="font-size:15px;color:#374151;margin:0;">
-          הרצף שלכם: <strong style="color:${ORANGE};">${streak} ימים 🔥</strong> — שמרו עליו ♥️
+          הרצף שלכם: <strong style="color:${ORANGE};">${streak} ימים 🔥</strong>, שמרו עליו ♥️
         </p>
       `,
     },
@@ -206,7 +206,7 @@ export function buildDailyEmailHtml(params: {
   <!-- Header -->
   <div style="background:linear-gradient(135deg,${BLUE},${DARK_BLUE});padding:28px 24px 0;text-align:center;">
     <h1 style="color:white;margin:0 0 20px;font-size:26px;font-weight:900;letter-spacing:-0.5px;">🦈 FinPlay</h1>
-    <!-- Shark mascot — bottom half emerges from header -->
+    <!-- Shark mascot, bottom half emerges from header -->
     <img src="${c.sharkImg}" alt="${c.sharkAlt}"
          width="140" height="140"
          style="display:block;margin:0 auto -20px;border-radius:50%;background:rgba(255,255,255,0.15);object-fit:contain;"
@@ -246,7 +246,7 @@ export function buildDailyEmailHtml(params: {
     <!-- Footer -->
     <hr style="border:none;border-top:1px solid #e5e7eb;margin:0 0 16px;">
     <div style="text-align:center;font-size:12px;color:#9ca3af;">
-      <p style="margin:0 0 6px;">© 2025 FinPlay — כל הזכויות שמורות</p>
+      <p style="margin:0 0 6px;">© 2025 FinPlay, כל הזכויות שמורות</p>
       <a href="${unsubscribeUrl}" style="color:#9ca3af;text-decoration:underline;">הסרה מרשימת תפוצה</a>
     </div>
   </div>

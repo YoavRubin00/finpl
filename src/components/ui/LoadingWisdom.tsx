@@ -1,6 +1,6 @@
 import { View, StyleSheet, Image } from "react-native";
 
-/** Splash screen — shows Finn profile image fullscreen */
+/** Splash screen, shows Finn profile image fullscreen */
 export function LoadingWisdom() {
   return (
     <View style={styles.root} accessible accessibilityLabel="FinPlay טוען, אנא המתן">

@@ -1,5 +1,5 @@
 /**
- * Chapter 2 simulator design system — thin wrapper around shared base.
+ * Chapter 2 simulator design system, thin wrapper around shared base.
  */
 import { getChapterTheme } from '../../../constants/theme';
 import {

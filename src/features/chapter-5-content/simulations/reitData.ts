@@ -1,5 +1,5 @@
 /**
- * SIM 27: בעל הבית הווירטואלי (Virtual Landlord — REITs) — Module 5-27
+ * SIM 27: בעל הבית הווירטואלי (Virtual Landlord, REITs), Module 5-27
  * REIT sector definitions, world events, and configuration data.
  */
 
@@ -13,7 +13,7 @@ export const REIT_BUDGET = 100_000; // ₪100,000
 export const REIT_SECTORS: REITSector[] = [
   {
     id: 'offices',
-    name: 'משרדים — Offices',
+    name: 'משרדים, Offices',
     emoji: '🏢',
     annualReturn: 0.07,
     dividendYield: 0.05,
@@ -22,16 +22,16 @@ export const REIT_SECTORS: REITSector[] = [
   },
   {
     id: 'residential',
-    name: 'מגורים — Residential',
+    name: 'מגורים, Residential',
     emoji: '🏠',
     annualReturn: 0.05,
     dividendYield: 0.035,
     volatility: 0.2, // low
-    description: 'דירות להשכרה. ביקוש קבוע — כולם צריכים גג. תשואה נמוכה אבל יציבה מאוד.',
+    description: 'דירות להשכרה. ביקוש קבוע, כולם צריכים גג. תשואה נמוכה אבל יציבה מאוד.',
   },
   {
     id: 'commercial',
-    name: 'מסחרי — קניונים — Commercial',
+    name: 'מסחרי, קניונים, Commercial',
     emoji: '🏬',
     annualReturn: 0.09,
     dividendYield: 0.06,
@@ -40,21 +40,21 @@ export const REIT_SECTORS: REITSector[] = [
   },
   {
     id: 'healthcare',
-    name: 'בריאות — Healthcare',
+    name: 'בריאות, Healthcare',
     emoji: '🏥',
     annualReturn: 0.06,
     dividendYield: 0.04,
     volatility: 0.2, // low
-    description: 'בתי חולים, בתי אבות, מרפאות. ביקוש מובטח — אנשים תמיד צריכים טיפול רפואי.',
+    description: 'בתי חולים, בתי אבות, מרפאות. ביקוש מובטח, אנשים תמיד צריכים טיפול רפואי.',
   },
   {
     id: 'logistics',
-    name: 'לוגיסטיקה — מחסנים — Logistics',
+    name: 'לוגיסטיקה, מחסנים, Logistics',
     emoji: '📦',
     annualReturn: 0.08,
     dividendYield: 0.045,
     volatility: 0.5, // moderate
-    description: 'מחסנים ומרכזי הפצה. המנוע השקט של המסחר — כל חבילה צריכה מקום.',
+    description: 'מחסנים ומרכזי הפצה. המנוע השקט של המסחר, כל חבילה צריכה מקום.',
   },
 ];
 

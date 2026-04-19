@@ -77,7 +77,7 @@ export function NoFreezeUpsellBanner() {
         </Pressable>
 
         <View style={styles.inner}>
-          {/* Text (RTL — right side) */}
+          {/* Text (RTL, right side) */}
           <View style={styles.textWrap}>
             <View style={styles.titleRow}>
               <ShieldAlert size={16} color="#ea580c" />
@@ -118,7 +118,7 @@ export function NoFreezeUpsellBanner() {
           onPress={dismiss}
           style={styles.dismissLink}
           accessibilityRole="button"
-          accessibilityLabel="כבר יש לי — הסתר באנר"
+          accessibilityLabel="כבר יש לי, הסתר באנר"
         >
           <Text style={styles.dismissLinkText}>כבר יש לי</Text>
         </Pressable>

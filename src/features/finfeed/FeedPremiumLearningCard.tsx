@@ -132,7 +132,7 @@ export const FeedPremiumLearningCard = React.memo(function FeedPremiumLearningCa
           } else {
             player.remove();
           }
-        } catch { /* audio playback failed — silent */ }
+        } catch { /* audio playback failed, silent */ }
       }
     }
 
@@ -221,7 +221,7 @@ export const FeedPremiumLearningCard = React.memo(function FeedPremiumLearningCa
     router.push(`/lesson/${item.moduleId}?chapterId=${item.chapterId}` as never);
   }, [item, router, playSound]);
 
-  // CTA — last step
+  // CTA, last step
   if (isLastStep) {
     return (
       <View style={styles.container}>
@@ -287,7 +287,7 @@ export const FeedPremiumLearningCard = React.memo(function FeedPremiumLearningCa
         ))}
       </View>
 
-      {/* Infographic image — dive mode or normal */}
+      {/* Infographic image, dive mode or normal */}
       <View style={styles.imageContainer}>
         {isDiveMode ? (
           <View style={styles.diveViewport}>
@@ -401,7 +401,7 @@ const styles = StyleSheet.create({
     color: '#0c4a6e',
     lineHeight: 20,
   },
-  /* stepCounter removed — no longer shown */
+  /* stepCounter removed, no longer shown */
   nextBtn: {
     width: '100%',
     backgroundColor: '#0891b2',

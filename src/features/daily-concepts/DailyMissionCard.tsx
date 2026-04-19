@@ -265,7 +265,7 @@ const s = StyleSheet.create({
 
   // Pill Styles (Inside Modal)
   pill: {
-    backgroundColor: STITCH.surfaceLow, // Tonal layering — contrast against white modal
+    backgroundColor: STITCH.surfaceLow, // Tonal layering, contrast against white modal
     borderRadius: 24, // 'md' corner radius
     padding: 16,
     marginBottom: 12,

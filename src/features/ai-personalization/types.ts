@@ -1,4 +1,4 @@
-/** PRD 34 — AI Personalization Engine types */
+/** PRD 34, AI Personalization Engine types */
 
 export type TelemetryEventType =
   | 'quiz_answer'

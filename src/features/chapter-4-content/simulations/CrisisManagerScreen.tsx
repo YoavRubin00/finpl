@@ -1,6 +1,6 @@
 /**
- * SIM 4-27: מנהל המשבר (Crisis Manager) — Module 4-27
- * Navigate 5 historical crises — sell / hold / buy → compare to hold strategy.
+ * SIM 4-27: מנהל המשבר (Crisis Manager), Module 4-27
+ * Navigate 5 historical crises, sell / hold / buy → compare to hold strategy.
  */
 
 import { useState, useCallback, useRef } from 'react';
@@ -62,23 +62,23 @@ function getActionFeedback(
     case 'sell':
       return {
         isCorrect: false,
-        message: `מכרת בפאניקה — פספסת התאוששות של ${event.postRecoveryGainPercent}% שהגיעה אחרי ${event.recoveryMonths} חודשים`,
+        message: `מכרת בפאניקה, פספסת התאוששות של ${event.postRecoveryGainPercent}% שהגיעה אחרי ${event.recoveryMonths} חודשים`,
       };
     case 'hold':
       return {
         isCorrect: true,
-        message: `החזקת מעמד דרך ${event.title} — הפסדת ${event.marketDropPercent}% אבל התאוששת ${event.postRecoveryGainPercent}%`,
+        message: `החזקת מעמד דרך ${event.title}, הפסדת ${event.marketDropPercent}% אבל התאוששת ${event.postRecoveryGainPercent}%`,
       };
     case 'buy':
       return {
         isCorrect: true,
-        message: `קנית בהנחה בזמן ${event.title} — מינפת את ההתאוששות פי 2!`,
+        message: `קנית בהנחה בזמן ${event.title}, מינפת את ההתאוששות פי 2!`,
       };
   }
 }
 
 /* ================================================================== */
-/*  ProgressDots — 5 event indicators                                   */
+/*  ProgressDots, 5 event indicators                                   */
 /* ================================================================== */
 
 function ProgressDots({
@@ -118,7 +118,7 @@ function ProgressDots({
 }
 
 /* ================================================================== */
-/*  CrashChart — simple mini-chart showing crash shape                  */
+/*  CrashChart, simple mini-chart showing crash shape                  */
 /* ================================================================== */
 
 function CrashChart({
@@ -154,7 +154,7 @@ function CrashChart({
 }
 
 /* ================================================================== */
-/*  ScoreScreen — final results                                         */
+/*  ScoreScreen, final results                                         */
 /* ================================================================== */
 
 function ScoreScreen({
@@ -406,7 +406,7 @@ export function CrisisManagerScreen({ onComplete }: CrisisManagerScreenProps) {
             <Text accessibilityLiveRegion="polite" style={[styles.balanceValue, { fontSize: 18 }]}>{formatShekel(state.playerBalance)}</Text>
           </View>
 
-          {/* Progress dots — RTL, compact */}
+          {/* Progress dots, RTL, compact */}
           <View style={{ transform: [{ scaleX: -1 }], marginBottom: 4 }}>
             <ProgressDots
               total={TOTAL_EVENTS}
@@ -431,7 +431,7 @@ export function CrisisManagerScreen({ onComplete }: CrisisManagerScreenProps) {
                 {/* Headline */}
                 <Text style={[crisisStyles.headline, RTL]}>{currentEvent.headline}</Text>
 
-                {/* Drop + Recovery — compact row */}
+                {/* Drop + Recovery, compact row */}
                 <View style={{ flexDirection: 'row-reverse', justifyContent: 'space-around', marginTop: 8 }}>
                   <View style={[crisisStyles.dropBadge, { marginTop: 0 }]}>
                     <Text style={crisisStyles.dropText}>📉 -{currentEvent.marketDropPercent}%</Text>

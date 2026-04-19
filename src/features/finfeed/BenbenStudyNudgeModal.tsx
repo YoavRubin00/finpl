@@ -27,7 +27,7 @@ interface TopicLink {
   /** index-based: pension is 4th module in chapter 2 (mod-2-9, mod-2-10, mod-2-11, mod-2-12, mod-2-13, mod-2-14) */
 }
 
-// Module indices derived from chapter2Data — mod-2-11 is index 6, mod-2-12 is 7, mod-2-13 is 8.
+// Module indices derived from chapter2Data, mod-2-11 is index 6, mod-2-12 is 7, mod-2-13 is 8.
 // If the ordering shifts, these should be looked up dynamically. For now hard-coded per current data.
 const TOPICS: TopicLink[] = [
   {
@@ -112,7 +112,7 @@ export function BenbenStudyNudgeModal({ visible, onClose }: Props) {
               style={[styles.subtitle, RTL_CENTER]}
               allowFontScaling={false}
             >
-              הפרשות לפנסיה, ביטוח לאומי, קרן השתלמות ומס הכנסה — כל הבסיס בתוך 3 מודולות קצרות.
+              הפרשות לפנסיה, ביטוח לאומי, קרן השתלמות ומס הכנסה, כל הבסיס בתוך 3 מודולות קצרות.
             </Animated.Text>
 
             <View style={styles.topicList}>

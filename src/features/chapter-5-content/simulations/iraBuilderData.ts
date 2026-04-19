@@ -1,5 +1,5 @@
 /**
- * SIM 5-31: בונה ה-IRA (IRA Builder) — Module 5-31
+ * SIM 5-31: בונה ה-IRA (IRA Builder), Module 5-31
  * Default config, pre-computed comparison, and Hebrew helper texts
  * for Traditional vs Roth IRA simulation.
  */
@@ -82,14 +82,14 @@ export const IRA_HELPER_TEXTS: Record<IRAType, IRAHelperText> = {
   traditional: {
     title: 'Traditional IRA',
     emoji: '📜',
-    description: 'הפקדות לפני מס — הכסף גדל ללא מס, אבל משלמים מס בפרישה',
+    description: 'הפקדות לפני מס, הכסף גדל ללא מס, אבל משלמים מס בפרישה',
     taxTiming: 'מס עכשיו: ❌ | מס בפרישה: ✅',
     bestWhen: 'כשמס הכנסה שלך היום גבוה יותר ממה שתהיה בפרישה',
   },
   roth: {
     title: 'Roth IRA',
     emoji: '🔮',
-    description: 'הפקדות אחרי מס — משלמים מס היום, אבל הכל פטור בפרישה',
+    description: 'הפקדות אחרי מס, משלמים מס היום, אבל הכל פטור בפרישה',
     taxTiming: 'מס עכשיו: ✅ | מס בפרישה: ❌',
     bestWhen: 'כשמס הכנסה שלך היום נמוך יותר ממה שתהיה בפרישה',
   },

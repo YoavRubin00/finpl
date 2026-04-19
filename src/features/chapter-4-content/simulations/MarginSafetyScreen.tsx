@@ -236,7 +236,7 @@ function ScoreScreen({
     <ScrollView style={styles.container} contentContainerStyle={[styles.scrollContent, { paddingBottom: 40 }]}>
       <ConfettiExplosion />
 
-      {/* Grade card — white, clean */}
+      {/* Grade card, white, clean */}
       <Animated.View entering={FadeInDown.duration(500)}>
         <View style={{
           backgroundColor: '#ffffff',
@@ -263,7 +263,7 @@ function ScoreScreen({
         </View>
       </Animated.View>
 
-      {/* Per-stock summary — white card */}
+      {/* Per-stock summary, white card */}
       <Animated.View entering={FadeInDown.duration(500).delay(200)}>
         <View style={{
           backgroundColor: '#ffffff',
@@ -390,7 +390,7 @@ export function MarginSafetyScreen({ onComplete }: MarginSafetyScreenProps) {
           </Text>
         </Animated.View>
 
-        {/* Progress bar — RTL */}
+        {/* Progress bar, RTL */}
         <Animated.View entering={FadeInDown.duration(500).delay(50)} style={{ transform: [{ scaleX: -1 }] }}>
           <View style={sim4Styles.progressTrack}>
             <LinearGradient

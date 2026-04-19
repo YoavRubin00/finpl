@@ -20,7 +20,7 @@ import { GlossaryTooltip } from '../glossary/GlossaryTooltip';
 import type { GlossaryEntry } from '../glossary/glossaryData';
 import type { DailyQuiz } from './dailyQuizTypes';
 
-/** Fix bidi issues in mixed Hebrew/English text — wraps English runs with RTL marks */
+/** Fix bidi issues in mixed Hebrew/English text, wraps English runs with RTL marks */
 function fixBidi(text: string): string {
   // Insert RLM (\u200F) before and after English/number runs so they don't break RTL flow
   return text.replace(/([A-Za-z0-9$%€£¥₪,.+\-]+(?:\s+[A-Za-z0-9$%€£¥₪,.+\-]+)*)/g, '\u200F$1\u200F');
@@ -108,7 +108,7 @@ export const DailyQuizCard = React.memo(function DailyQuizCard({ quiz, locked = 
     answerQuiz(quiz.date, wasCorrect);
   };
 
-  // Locked — show teaser state (unlocked from stage 1)
+  // Locked, show teaser state (unlocked from stage 1)
   if (locked) {
     return (
       <View style={styles.container}>
@@ -123,7 +123,7 @@ export const DailyQuizCard = React.memo(function DailyQuizCard({ quiz, locked = 
     );
   }
 
-  // Already answered — show result state
+  // Already answered, show result state
   if (answered && !showResult) {
     return (
       <View style={styles.container}>
@@ -189,7 +189,7 @@ export const DailyQuizCard = React.memo(function DailyQuizCard({ quiz, locked = 
             <Text style={styles.dataBadgeValue}>{quiz.sourceValue}</Text>
           </View>
 
-          {/* Citation — real news quote with glossary links */}
+          {/* Citation, real news quote with glossary links */}
           {quiz.citation && (
             <View style={styles.citationBox}>
               <Text style={styles.citationLabel}>📰 אקטואלי</Text>
@@ -265,7 +265,7 @@ export const DailyQuizCard = React.memo(function DailyQuizCard({ quiz, locked = 
         </View>
       </Animated.View>
 
-      {/* Glossary tooltip — slides up from bottom */}
+      {/* Glossary tooltip, slides up from bottom */}
       <GlossaryTooltip
         entry={glossaryEntry}
         visible={glossaryEntry !== null}

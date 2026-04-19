@@ -1,5 +1,5 @@
 /**
- * SIM 25: מחשבון החופש (Freedom Calculator — FIRE) — Module 5-25
+ * SIM 25: מחשבון החופש (Freedom Calculator, FIRE), Module 5-25
  * Hook: slide savings rate, compute years-to-FIRE, year-by-year projection.
  */
 
@@ -203,7 +203,7 @@ export function useFireCalc() {
     [state.monthlyInvestment, state.yearsToFIRE, state.currentAge],
   );
 
-  /** Score — only meaningful when complete. */
+  /** Score, only meaningful when complete. */
   const score = useMemo<FIRECalcScore>(
     () => ({
       yearsToFIRE: state.yearsToFIRE,

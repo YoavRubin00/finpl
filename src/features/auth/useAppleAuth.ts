@@ -3,7 +3,7 @@ import * as AppleAuthentication from "expo-apple-authentication";
 import { useAuthStore } from "./useAuthStore";
 
 /**
- * Apple Sign-In hook — required by App Store Guideline 4.8 when other
+ * Apple Sign-In hook, required by App Store Guideline 4.8 when other
  * third-party logins (Google) are offered. iOS only.
  */
 export function useAppleAuth() {
@@ -29,7 +29,7 @@ export function useAppleAuth() {
       const email = credential.email ?? credential.user;
       signIn(displayName, email);
     } catch (err: unknown) {
-      // User canceled or auth failed — silently no-op so login screen stays.
+      // User canceled or auth failed, silently no-op so login screen stays.
       if ((err as { code?: string }).code !== "ERR_REQUEST_CANCELED") {
         // eslint-disable-next-line no-console
         // swallow other errors; UI will simply not advance.

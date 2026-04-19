@@ -29,8 +29,8 @@ const BAR_COLORS = ['#3b82f6', '#60a5fa', '#818cf8', '#a78bfa', '#f59e0b', '#fbb
 
 const PHASE_DURATIONS: [number, number, number] = [4000, 4800, Infinity];
 const PHASE_CAPTIONS: [string, string, string] = [
-  'הבנק נותן לכם ריבית? נחמד. אבל ריבית דריבית — זה להרוויח ריבית גם על הרווחים! 💡',
-  'שמתם ₪100, הרווחתם ₪10 — בשנה הבאה ריבית מתוך ₪110. פתאום הגרף הופך אקספוננציאלי. 📈',
+  'הבנק נותן לכם ריבית? נחמד. אבל ריבית דריבית, זה להרוויח ריבית גם על הרווחים! 💡',
+  'שמתם ₪100, הרווחתם ₪10, בשנה הבאה ריבית מתוך ₪110. פתאום הגרף הופך אקספוננציאלי. 📈',
   'הנשק הסודי? הזמן. גררו את המטבע התחתון למעלה ותבינו איך כסף הופך להרבה כסף.',
 ];
 
@@ -41,7 +41,7 @@ interface Props {
   audioUri?: string;
 }
 
-// ── Mini bar chart — fixed hooks, no loops ─────────────────────────────────
+// ── Mini bar chart, fixed hooks, no loops ─────────────────────────────────
 function CompoundChart({ animate }: { animate: boolean }) {
   const h0 = useSharedValue(0); const h1 = useSharedValue(0); const h2 = useSharedValue(0);
   const h3 = useSharedValue(0); const h4 = useSharedValue(0); const h5 = useSharedValue(0);
@@ -200,7 +200,7 @@ export function CompoundInterestIntro({ onStart, unitColors, chartImageUri, audi
         {/* ── CenterStage ──────────────────────────────────────────────── */}
         <View style={{ width: STAGE_W, height: 220, alignItems: 'center', justifyContent: 'center' }}>
 
-          {/* Phase 0 — Year cascade card */}
+          {/* Phase 0, Year cascade card */}
           {phase === 0 && (
             <View style={{
               backgroundColor: '#1e293b',
@@ -235,7 +235,7 @@ export function CompoundInterestIntro({ onStart, unitColors, chartImageUri, audi
             </View>
           )}
 
-          {/* Phase 1 — Chart (image or animated bars) */}
+          {/* Phase 1, Chart (image or animated bars) */}
           {phase === 1 && (
             <View style={{
               backgroundColor: '#1e293b',
@@ -275,7 +275,7 @@ export function CompoundInterestIntro({ onStart, unitColors, chartImageUri, audi
             </View>
           )}
 
-          {/* Phase 2 — Drag coin up */}
+          {/* Phase 2, Drag coin up */}
           {phase === 2 && (
             <View style={{ width: '100%', height: 220, alignItems: 'center' }}>
               {/* Up-arrow target */}
@@ -296,7 +296,7 @@ export function CompoundInterestIntro({ onStart, unitColors, chartImageUri, audi
               <GestureDetector gesture={panGesture}>
                 <Animated.View
                   style={[coinStyle, { position: 'absolute', bottom: 10 }]}
-                  accessibilityLabel="מטבע — גרור למעלה כדי להתחיל"
+                  accessibilityLabel="מטבע, גרור למעלה כדי להתחיל"
                   accessibilityRole="button"
                   accessibilityHint="גרור כלפי מעלה"
                 >

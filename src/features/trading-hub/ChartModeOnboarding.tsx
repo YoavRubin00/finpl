@@ -64,7 +64,7 @@ export function ChartModeOnboarding({ visible, onChoose }: ChartModeOnboardingPr
               <View style={styles.cardContent}>
                 <View style={styles.cardTextCol}>
                   <Text style={[RTL, styles.cardTitle]}>גרף פשוט</Text>
-                  <Text style={[RTL, styles.cardDesc]}>רק מחיר ונפח מסחר — קריא, בלי רעש</Text>
+                  <Text style={[RTL, styles.cardDesc]}>רק מחיר ונפח מסחר, קריא, בלי רעש</Text>
                 </View>
                 <View style={styles.cardIconWrap}>
                   <SimpleChartIcon />
@@ -84,7 +84,7 @@ export function ChartModeOnboarding({ visible, onChoose }: ChartModeOnboardingPr
               <View style={styles.cardContent}>
                 <View style={styles.cardTextCol}>
                   <Text style={[RTL, styles.cardTitle]}>גרף למתקדמים</Text>
-                  <Text style={[RTL, styles.cardDesc]}>מחיר, נפח, MA20 ו-RSI — עם הסברים</Text>
+                  <Text style={[RTL, styles.cardDesc]}>מחיר, נפח, MA20 ו-RSI, עם הסברים</Text>
                 </View>
                 <View style={styles.cardIconWrap}>
                   <AdvancedChartIcon />

@@ -128,7 +128,7 @@ export const useDailyLogStore = create<DailyLogState>()(
           '',
         ];
 
-        // Content bullets — what they actually learned
+        // Content bullets, what they actually learned
         for (const topic of topics.slice(0, 5)) {
           lines.push(`• ${topic}`);
         }

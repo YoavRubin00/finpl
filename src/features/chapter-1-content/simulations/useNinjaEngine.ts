@@ -188,7 +188,7 @@ export function useNinjaEngine(scenario: NinjaScenario, screenHeight: number) {
 
             const { hitRadius } = ninjaPhysics;
             const hit = flyingRef.current.find((fi) => {
-                const itemPixelX = fi.x * screenHeight; // approximate — screen width ≈ height for hit check
+                const itemPixelX = fi.x * screenHeight; // approximate, screen width ≈ height for hit check
                 const itemPixelY = fi.y * screenHeight;
                 const dx = fingerX - itemPixelX;
                 const dy = fingerY - itemPixelY;
@@ -218,7 +218,7 @@ export function useNinjaEngine(scenario: NinjaScenario, screenHeight: number) {
     const sliceGesture = Gesture.Pan()
         .minDistance(5)
         .onUpdate((e) => {
-            // Update blade trail (on UI thread via worklet — but we stay on JS for simplicity)
+            // Update blade trail (on UI thread via worklet, but we stay on JS for simplicity)
             const now = Date.now();
             const trail = bladeTrail.value.filter(
                 (p) => now - p.t < BLADE_TRAIL_LIFETIME_MS,

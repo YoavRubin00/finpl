@@ -59,7 +59,7 @@ export const useDailyChallengesStore = create<DailyChallengesState>()(
       hasDilemmaAnsweredToday: () => getPlays(get().dilemmaPlays, todayStr()) >= MAX_DILEMMA_DAILY,
       hasInvestmentAnsweredToday: () => isMaxed(get().investmentPlays, todayStr()),
       hasCrashGamePlayedToday: () => isMaxed(get().crashGamePlays, todayStr()),
-      hasSwipeGamePlayedToday: () => false, // no limit — let user play freely
+      hasSwipeGamePlayedToday: () => false, // no limit, let user play freely
       hasBullshitSwipePlayedToday: () => isMaxed(get().bullshitSwipePlays, todayStr()),
       hasHigherLowerPlayedToday: () => isMaxed(get().higherLowerPlays, todayStr()),
       hasBudgetNinjaPlayedToday: () => isMaxed(get().budgetNinjaPlays, todayStr()),

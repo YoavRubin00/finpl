@@ -113,7 +113,7 @@ function QuizQuestionCard({
 }
 
 /* ================================================================== */
-/*  AllocationPieBar — horizontal bar showing allocation %s             */
+/*  AllocationPieBar, horizontal bar showing allocation %s             */
 /* ================================================================== */
 
 function AllocationPieBar({
@@ -169,7 +169,7 @@ function AllocationPieBar({
 }
 
 /* ================================================================== */
-/*  DualBarChart — side-by-side robo vs manual history                 */
+/*  DualBarChart, side-by-side robo vs manual history                 */
 /* ================================================================== */
 
 function DualBarChart({
@@ -269,7 +269,7 @@ function SpeedSelector({
 }
 
 /* ================================================================== */
-/*  ScoreScreen — results phase                                         */
+/*  ScoreScreen, results phase                                         */
 /* ================================================================== */
 
 function ScoreScreen({

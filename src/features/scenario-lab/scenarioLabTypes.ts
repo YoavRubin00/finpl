@@ -35,7 +35,7 @@ export interface Scenario {
   marketBenchmark: number;
   lessonTitle: string;
   lessonText: string;
-  /** "מה באמת קרה" — real historical outcome summary */
+  /** "מה באמת קרה", real historical outcome summary */
   historicalNote: string;
 }
 

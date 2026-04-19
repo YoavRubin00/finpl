@@ -71,7 +71,7 @@ export const FeedQuoteItem = React.memo(function FeedQuoteItem({ item, isActive 
                 style={StyleSheet.absoluteFillObject}
             />
 
-            {/* Ambient bubbles background — skip on web (Lottie overflow) */}
+            {/* Ambient bubbles background, skip on web (Lottie overflow) */}
             {Platform.OS !== 'web' && isActive && (
               <View style={StyleSheet.absoluteFill} pointerEvents="none">
                   <View style={{ position: 'absolute', top: '12%', left: '5%', opacity: 0.09 }} accessible={false}>
@@ -155,7 +155,7 @@ export const FeedQuoteItem = React.memo(function FeedQuoteItem({ item, isActive 
                     )}
                 </View>
             ) : (
-                /* ── Tip (no real author) — clean card, no Finn ── */
+                /* ── Tip (no real author), clean card, no Finn ── */
                 <View style={styles.contentWrapper}>
                     <View>
                         <View style={styles.card}>

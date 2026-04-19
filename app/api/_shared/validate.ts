@@ -25,7 +25,7 @@ export function sanitizeString(
 
 /** Validate email format. */
 export function isValidEmail(email: string): boolean {
-  // RFC 5322 simplified — stricter than the old regex
+  // RFC 5322 simplified, stricter than the old regex
   return /^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$/.test(
     email,
   ) && email.length <= 254;

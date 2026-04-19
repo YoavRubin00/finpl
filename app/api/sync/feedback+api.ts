@@ -28,7 +28,7 @@ async function resolveUserId(db: ReturnType<typeof getDb>, authId: string): Prom
   return rows[0]?.id ?? null;
 }
 
-/** POST /api/sync/feedback — submit user feedback */
+/** POST /api/sync/feedback, submit user feedback */
 export async function POST(request: Request): Promise<Response> {
   const blocked = enforceRateLimit(request, 'sync-feedback-post', { limit: 10, windowSec: 60 });
   if (blocked) return blocked;

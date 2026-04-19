@@ -136,7 +136,7 @@ function computeOutcome(session: FomoSession, _perfect: boolean): Outcome {
   const peakPct = 120;
   const crashPct = -87;
   // Simplified model: capital rides up to peak (×2.2) and crashes to 13% of peak.
-  // Capital added late ("add ₪500") suffers the same crash ratio here — the lesson is
+  // Capital added late ("add ₪500") suffers the same crash ratio here, the lesson is
   // that adding at the top meant riding down from a higher basis.
   const finalValue = Math.max(0, Math.round(session.invested * 2.2 * 0.13));
   return { peakPct, crashPct, finalValue };
@@ -231,7 +231,7 @@ function CrashChart({
         />
       </Svg>
 
-      {/* Animated crash bar overlay — scales in on the right portion of the chart */}
+      {/* Animated crash bar overlay, scales in on the right portion of the chart */}
       <Animated.View
         pointerEvents="none"
         style={[
@@ -280,7 +280,7 @@ function SharkCoach({ session, perfect }: { session: FomoSession; perfect: boole
       return {
         image: FINN_STANDARD,
         title: 'התפתית פעם אחת',
-        body: 'זה מספיק כדי לאבד חלק משמעותי. בפעם הבאה: חשוד קודם — אז שאל.',
+        body: 'זה מספיק כדי לאבד חלק משמעותי. בפעם הבאה: חשוד קודם, אז שאל.',
       };
     }
     return {

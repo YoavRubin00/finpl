@@ -1,5 +1,5 @@
 /**
- * MyPositions — Shows all open positions with live P&L.
+ * MyPositions, Shows all open positions with live P&L.
  * Includes "Close Position" button that liquidates trades and shows result overlay.
  */
 import React, { useState, useCallback } from 'react';

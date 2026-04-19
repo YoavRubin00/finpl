@@ -1,5 +1,5 @@
 /**
- * SIM: מחיר vs. ערך — Price vs Value Chart
+ * SIM: מחיר vs. ערך, Price vs Value Chart
  * Hook: manage timeline navigation, trades, and scoring.
  */
 
@@ -195,11 +195,11 @@ export function usePriceValue() {
     } else if (score >= 70) {
       feedback = 'ביצועים מצוינים! רוב הקניות שלך היו מתחת לערך הפנימי.';
     } else if (score >= 50) {
-      feedback = 'לא רע! אבל אפשר לשפר — נסה לקנות רק כשיש מרווח ביטחון משמעותי.';
+      feedback = 'לא רע! אבל אפשר לשפר, נסה לקנות רק כשיש מרווח ביטחון משמעותי.';
     } else if (score >= 30) {
       feedback = 'קנית יותר מדי כשהמחיר היה מעל הערך. מר שוק ניצח אותך הפעם.';
     } else {
-      feedback = 'מר שוק שלט ברגשות שלך. בפעם הבאה — קנה בפחד, מכור בחמדנות!';
+      feedback = 'מר שוק שלט ברגשות שלך. בפעם הבאה, קנה בפחד, מכור בחמדנות!';
     }
 
     return {

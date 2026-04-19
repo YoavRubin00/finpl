@@ -46,7 +46,7 @@ const RING_RADIUS = (RING_SIZE - RING_STROKE) / 2;
 const RING_CIRCUMFERENCE = 2 * Math.PI * RING_RADIUS;
 
 // ---------------------------------------------------------------------------
-// Animated counter hook — animates number from old → new over ~600ms
+// Animated counter hook, animates number from old → new over ~600ms
 // ---------------------------------------------------------------------------
 
 function useAnimatedCounter(value: number) {
@@ -70,7 +70,7 @@ function useAnimatedCounter(value: number) {
 }
 
 // ---------------------------------------------------------------------------
-// AnimatedNumber — renders a number that springs between values
+// AnimatedNumber, renders a number that springs between values
 // ---------------------------------------------------------------------------
 
 interface AnimatedNumberProps {
@@ -102,7 +102,7 @@ function AnimatedNumber({ value, color }: AnimatedNumberProps) {
 // GoldCoinIcon extracted to shared GoldCoinIcon component
 
 // ---------------------------------------------------------------------------
-// ResourcePill — Clash Royale style: icon + number + optional green "+" button
+// ResourcePill, Clash Royale style: icon + number + optional green "+" button
 // ---------------------------------------------------------------------------
 
 interface ResourcePillProps {
@@ -181,7 +181,7 @@ function ResourcePill({ icon, children, glowColor, showPlus, onPress, trackedVal
 // ---------------------------------------------------------------------------
 
 interface GlobalWealthHeaderProps {
-  /** When true, hides profile row + settings — shows only resources + progress bar */
+  /** When true, hides profile row + settings, shows only resources + progress bar */
   compact?: boolean;
 }
 
@@ -365,7 +365,7 @@ export function GlobalWealthHeader({ compact = false }: GlobalWealthHeaderProps)
       {/* Subtle ambient sparkle to draw attention */}
       <SparkleOverlay color="#67e8f9" density="low" />
 
-      {/* Token row — Single compact header */}
+      {/* Token row, Single compact header */}
       <View style={[s.tokenRow, compact && { justifyContent: "center" }]}>
 
         {!compact && (

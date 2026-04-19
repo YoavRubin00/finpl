@@ -1,4 +1,4 @@
-/** Types for the "Set & Forget — Robo-Advisor" simulation game (Module 3-18) */
+/** Types for the "Set & Forget, Robo-Advisor" simulation game (Module 3-18) */
 
 export interface RiskOption {
   /** Unique identifier */

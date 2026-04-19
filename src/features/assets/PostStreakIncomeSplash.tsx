@@ -1,4 +1,4 @@
-// PRD 38 — US-005: PostStreakIncomeSplash
+// PRD 38, US-005: PostStreakIncomeSplash
 // Shows once per day on first app open, displays daily income from real assets.
 
 import { useEffect, useState } from "react";
@@ -111,7 +111,7 @@ export function PostStreakIncomeSplash() {
                 <Text style={styles.amount}>+{collectedAmount}</Text>
               </View>
               <Text style={styles.subtitle}>
-                ההון שלך גדל בזמן שישנת — המטבעות כבר בחשבון!
+                ההון שלך גדל בזמן שישנת, המטבעות כבר בחשבון!
               </Text>
             </>
           ) : hasAssetsAtShow ? (

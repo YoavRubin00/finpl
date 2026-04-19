@@ -59,7 +59,7 @@ const CONFETTI_COLORS = [
   "#f472b6", "#60a5fa", "#fb923c", "#22d3ee",
 ];
 
-// Module-level callback ref — StepShell notifies ProfilingFlow when user taps
+// Module-level callback ref, StepShell notifies ProfilingFlow when user taps
 // so the persistent Finn overlay can mirror the typing animation.
 const finnTriggerRef: { current: (() => void) | null } = { current: null };
 
@@ -246,7 +246,7 @@ const BUBBLE_CONFIGS = Array.from({ length: 7 }, (_, i) => ({
 }));
 
 function BubbleOverlay() {
-  // Lightweight static bubbles — no recursive animations to prevent crashes
+  // Lightweight static bubbles, no recursive animations to prevent crashes
   return (
     <View style={StyleSheet.absoluteFill} pointerEvents="none">
       {BUBBLE_CONFIGS.map((cfg, i) => (
@@ -423,7 +423,7 @@ function StepShell({
       {/* Finn (tablet) + question bubble */}
       <Animated.View style={[styles.questionBlock, headerStyle]}>
         <View style={{ flexDirection: 'row-reverse', alignItems: 'flex-start', gap: 10 }}>
-          {/* Invisible placeholder — real Finn rendered by persistent overlay in ProfilingFlow */}
+          {/* Invisible placeholder, real Finn rendered by persistent overlay in ProfilingFlow */}
           <View style={{ width: 110, height: 110 }} />
           <View style={[styles.chatBubble, { flexShrink: 1, minWidth: 0 }]}>
             <Text style={styles.questionBubble}>{question}</Text>
@@ -432,7 +432,7 @@ function StepShell({
         </View>
       </Animated.View>
 
-      {/* Options — touch anywhere here triggers the shark typing animation */}
+      {/* Options, touch anywhere here triggers the shark typing animation */}
       <View
         style={[styles.optionsArea, { marginTop: 12 }]}
         onTouchStart={trigger}
@@ -668,7 +668,7 @@ function DreamStep({ onNext }: { onNext: (v: FinancialDream) => void }) {
   }, [onNext]);
 
   return (
-    <StepShell stepIndex={0} question="מה החלום הפיננסי שלך?" hint="נתחיל מהמטרה — והדרך תתגלה" finnState={sel ? "tablet" : "thinking"}>
+    <StepShell stepIndex={0} question="מה החלום הפיננסי שלך?" hint="נתחיל מהמטרה, והדרך תתגלה" finnState={sel ? "tablet" : "thinking"}>
       <View style={styles.grid}>
         {DREAMS.map((d, i) => (
           <AnimatedGridCard
@@ -787,7 +787,7 @@ const GOAL_REACTIONS: Record<FinancialGoal, string> = {
   "investing": "השקעות דורשות ידע. כמה אתה מבין בזה היום?",
   "army-release": "שחרור מהצבא זה שלב גדול! כמה אתה מכיר את עולם הכסף?",
   "expand-horizons": "להרחיב אופקים זה תמיד רעיון טוב. מאיפה מתחילים?",
-  "unsure": "תהיה כנה — נתחיל בדיוק מהמקום הנכון לך.",
+  "unsure": "תהיה כנה, נתחיל בדיוק מהמקום הנכון לך.",
 };
 
 function KnowledgeStep({ goal, onNext }: { goal: FinancialGoal | null; onNext: (v: KnowledgeLevel) => void }) {
@@ -797,7 +797,7 @@ function KnowledgeStep({ goal, onNext }: { goal: FinancialGoal | null; onNext: (
     setTimeout(() => onNext(id), AUTO_ADVANCE_MS);
   }, [onNext]);
 
-  const dynamicHint = goal ? GOAL_REACTIONS[goal] : "תהיה כנה — נתחיל בדיוק מהמקום הנכון";
+  const dynamicHint = goal ? GOAL_REACTIONS[goal] : "תהיה כנה, נתחיל בדיוק מהמקום הנכון";
 
   return (
     <StepShell stepIndex={3} question="כמה אתה מבין בכסף?" hint={dynamicHint} finnState={sel ? (sel === "none" ? "empathy" : "tablet") : "thinking"} compact>
@@ -1237,7 +1237,7 @@ function OnboardingSlider({
       onPanResponderTerminationRequest: () => false,
       onPanResponderGrant: (evt) => {
         if (!interactedRef.current) { interactedRef.current = true; propsRef.current.onInteract?.(); }
-        // Re-measure on touch start — iOS measureInWindow from onLayout can be stale in nested ScrollViews
+        // Re-measure on touch start, iOS measureInWindow from onLayout can be stale in nested ScrollViews
         const pageX = evt.nativeEvent.pageX;
         trackRef.current?.measureInWindow((x: number, _y: number, width: number) => {
           layoutRef.current = { x, width };
@@ -1286,7 +1286,7 @@ function OnboardingSlider({
         }}
         {...panResponder.panHandlers}
       >
-        {/* RTL fill — anchored to right */}
+        {/* RTL fill, anchored to right */}
         <View style={{ position: "absolute", right: 0, height: "100%", borderRadius: 999, width: `${pct * 100}%`, backgroundColor: accentColor + "60" }} />
         <View style={{
           position: "absolute", right: `${pct * 100}%`, transform: [{ translateX: 16 }],
@@ -1296,7 +1296,7 @@ function OnboardingSlider({
           overflow: "visible", zIndex: 999,
         }}>
           <View style={{ width: 7, height: 7, borderRadius: 4, backgroundColor: "#ffffff" }} />
-          {/* Finger hint — moves with thumb, always on top */}
+          {/* Finger hint, moves with thumb, always on top */}
           {showFingerHint && (
             <Animated.Text
               pointerEvents="none"
@@ -1320,7 +1320,7 @@ function SimOnboardingStep({ onNext }: { onNext: () => void }) {
   const autoSlideRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const startTimeRef = useRef(Date.now());
 
-  // Auto-slide monthly from ₪500 to ₪5,000 over 3s — runs once on mount
+  // Auto-slide monthly from ₪500 to ₪5,000 over 3s, runs once on mount
   useEffect(() => {
     startTimeRef.current = Date.now();
     autoSlideRef.current = setInterval(() => {
@@ -1335,7 +1335,7 @@ function SimOnboardingStep({ onNext }: { onNext: () => void }) {
     }, 80);
     return () => { if (autoSlideRef.current) clearInterval(autoSlideRef.current); };
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []); // Empty deps — run exactly once
+  }, []); // Empty deps, run exactly once
 
   // Stop auto-slide when user interacts manually
   useEffect(() => {
@@ -1430,7 +1430,7 @@ function SimOnboardingStep({ onNext }: { onNext: () => void }) {
             </Text>
           </View>
 
-          {/* Hero card — future value + chart (compact) */}
+          {/* Hero card, future value + chart (compact) */}
           <Animated.View entering={FadeInUp.delay(200).springify()} style={simStyles.heroCard}>
             <Text style={simStyles.heroLabel}>הכסף שלך בעוד {years} שנים</Text>
             <Text style={simStyles.heroValue}>₪{finalAmount.toLocaleString()}</Text>
@@ -1475,7 +1475,7 @@ function SimOnboardingStep({ onNext }: { onNext: () => void }) {
 }
 
 const simStyles = StyleSheet.create({
-  // STITCH Premium — 3D glow hero card
+  // STITCH Premium, 3D glow hero card
   heroCard: {
     borderRadius: 24, borderWidth: 1, borderColor: "rgba(14,165,233,0.15)",
     padding: 20, paddingBottom: 10, marginBottom: 14, overflow: "hidden",
@@ -1494,13 +1494,13 @@ const simStyles = StyleSheet.create({
     paddingHorizontal: 14, paddingVertical: 5, marginTop: 6, borderWidth: 1, borderColor: "#bae6fd",
   },
   scrubText: { fontSize: 12, fontWeight: "700", color: "#0284c7" },
-  // STITCH Premium — sliders card with soft depth
+  // STITCH Premium, sliders card with soft depth
   slidersCard: {
     backgroundColor: "#ffffff", borderRadius: 22, borderWidth: 1,
     borderColor: "rgba(186,230,253,0.5)", padding: 20, marginBottom: 14,
     shadowColor: "#0c4a6e", shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.06, shadowRadius: 16, elevation: 4,
   },
-  // Stats cards — clean with subtle glow
+  // Stats cards, clean with subtle glow
   statCard: {
     flex: 1, backgroundColor: "#f8fafc", borderRadius: 18, padding: 16,
     borderWidth: 1, borderColor: "rgba(186,230,253,0.4)", alignItems: "center",
@@ -1508,7 +1508,7 @@ const simStyles = StyleSheet.create({
   },
   statLabel: { fontSize: 11, fontWeight: "700", color: "#64748b", textAlign: "center", writingDirection: "rtl", marginBottom: 4 },
   statValue: { fontSize: 18, fontWeight: "900", color: "#0f172a" },
-  // Growth badge — green glow
+  // Growth badge, green glow
   growthBadge: {
     flexDirection: "row-reverse", alignItems: "center", justifyContent: "center", gap: 8,
     backgroundColor: "#f0fdf4", borderRadius: 16, paddingVertical: 14, paddingHorizontal: 16,
@@ -1516,7 +1516,7 @@ const simStyles = StyleSheet.create({
     shadowColor: "#22c55e", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.08, shadowRadius: 8, elevation: 2,
   },
   growthText: { fontSize: 14, fontWeight: "800", color: "#16a34a", textAlign: "center", writingDirection: "rtl" },
-  // STITCH Premium — big 3D CTA button
+  // STITCH Premium, big 3D CTA button
   continueBtn: {
     width: "100%", backgroundColor: "#0891b2", borderRadius: 18, paddingVertical: 20,
     alignItems: "center", borderBottomWidth: 4, borderBottomColor: "#0e7490",
@@ -1807,7 +1807,7 @@ function IntroStep({ onRegister, onGuest, onLoginSuccess }: IntroStepProps) {
         </Animated.View>
 
         <Animated.View style={[ctaAnimStyle, { alignItems: "center", gap: 10, width: "100%" }]}>
-          {/* Terms checkbox — must accept before guest path */}
+          {/* Terms checkbox, must accept before guest path */}
           <Pressable
             onPress={() => setTermsAccepted((v) => !v)}
             accessibilityRole="checkbox"
@@ -2154,7 +2154,7 @@ export function ProfilingFlow({ mode = "onboarding", onRedoComplete }: Profiling
   const [showBubbles, setShowBubbles] = useState(false);
   const bubbleTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Persistent Finn overlay state — mirrors StepShell's isTyping via finnTriggerRef
+  // Persistent Finn overlay state, mirrors StepShell's isTyping via finnTriggerRef
   const [isGlobalTyping, setIsGlobalTyping] = useState(false);
   const globalTypingResetRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   useEffect(() => {
@@ -2181,7 +2181,7 @@ export function ProfilingFlow({ mode = "onboarding", onRedoComplete }: Profiling
     function doUpdate() {
       setCollected((prev) => ({ ...prev, ...patch }));
       setStep(nextStep);
-      // Bloom in — fade + spring scale/Y from slightly below
+      // Bloom in, fade + spring scale/Y from slightly below
       screenOpacity.value = 0;
       screenScale.value = 0.94;
       screenTy.value = 18;
@@ -2189,7 +2189,7 @@ export function ProfilingFlow({ mode = "onboarding", onRedoComplete }: Profiling
       screenScale.value = withSpring(1, { damping: 22, stiffness: 280, mass: 0.8 });
       screenTy.value = withSpring(0, { damping: 22, stiffness: 280, mass: 0.8 });
     }
-    // Soft fade-out — slides up and fades
+    // Soft fade-out, slides up and fades
     screenOpacity.value = withTiming(0, { duration: 260, easing: Easing.inOut(Easing.quad) }, () => {
       "worklet";
       runOnJS(doUpdate)();
@@ -2200,7 +2200,7 @@ export function ProfilingFlow({ mode = "onboarding", onRedoComplete }: Profiling
 
   function handleDone() {
     if (isRedo) {
-      // Reset all progress (XP, coins, chapters, etc.) — user starts fresh
+      // Reset all progress (XP, coins, chapters, etc.), user starts fresh
       devResetProgress();
       updateProfile({
         financialDream: collected.financialDream ?? undefined,
@@ -2283,7 +2283,7 @@ export function ProfilingFlow({ mode = "onboarding", onRedoComplete }: Profiling
         }} />}
       </Animated.View>
 
-      {/* Persistent Finn — outside slideStyle so he stays fixed during transitions */}
+      {/* Persistent Finn, outside slideStyle so he stays fixed during transitions */}
       {STEPS_WITH_PERSISTENT_FINN.has(step) && (
         <View pointerEvents="none" style={StyleSheet.absoluteFillObject}>
           <SafeAreaView style={{ paddingHorizontal: 20 }} edges={["top"]}>
@@ -2291,7 +2291,7 @@ export function ProfilingFlow({ mode = "onboarding", onRedoComplete }: Profiling
             <View style={{ height: 26 }} />
             {/* Match StepShell questionBlock paddingTop:12 */}
             <View style={{ height: 12 }} />
-            {/* Finn on the right — same flexDirection as StepShell's questionBlock row */}
+            {/* Finn on the right, same flexDirection as StepShell's questionBlock row */}
             <View style={{ flexDirection: 'row-reverse' }}>
               <View style={{ width: 110, height: 110 }}>
                 <ExpoImage
@@ -2330,7 +2330,7 @@ export function ProfilingFlow({ mode = "onboarding", onRedoComplete }: Profiling
             speed={1.1}
             renderMode="SOFTWARE"
           />
-          {/* Top-right cluster — delayed via slower speed for stagger feel */}
+          {/* Top-right cluster, delayed via slower speed for stagger feel */}
           <LottieView
             source={require("../../../assets/lottie/jumping blue bubbles.json")}
             style={{ width: SCREEN_WIDTH * 0.5, height: SCREEN_WIDTH * 0.5, position: "absolute", top: "2%", right: "-5%" }}

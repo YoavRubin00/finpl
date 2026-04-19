@@ -16,7 +16,7 @@ export default function BridgePage() {
     setShowWelcome(false);
   }, []);
 
-  // During walkthrough — skip welcome, go straight to BridgeScreen with auto-scroll
+  // During walkthrough, skip welcome, go straight to BridgeScreen with auto-scroll
   if (isWalkthrough || !showWelcome) {
     return <BridgeScreen walkthroughAutoScroll={isWalkthrough} />;
   }

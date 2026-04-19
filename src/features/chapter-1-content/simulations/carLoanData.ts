@@ -1,7 +1,7 @@
 import type { CarLoanScenario, CarLoanConfig } from './carLoanTypes';
 
 /* ------------------------------------------------------------------ */
-/*  Car Loan Scenarios — 8 rounds of financial decisions                */
+/*  Car Loan Scenarios, 8 rounds of financial decisions                */
 /* ------------------------------------------------------------------ */
 
 const carLoanScenarios: CarLoanScenario[] = [

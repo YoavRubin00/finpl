@@ -1,5 +1,5 @@
 /**
- * NotificationBanner — Duolingo-style sliding notification banner.
+ * NotificationBanner, Duolingo-style sliding notification banner.
  * Slides in from the top in Duo-Blue. Auto-dismisses after `duration` ms.
  */
 import { useEffect } from "react";
@@ -30,7 +30,7 @@ export interface NotificationBannerProps {
   visible: boolean;
   /** Optional Lottie source to show on left side */
   lottieSource?: number;
-  /** Optional static image source (e.g. Finn WebP) — used instead of lottieSource */
+  /** Optional static image source (e.g. Finn WebP), used instead of lottieSource */
   imageSource?: ImageSource;
 }
 

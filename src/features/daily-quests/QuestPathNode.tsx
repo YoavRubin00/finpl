@@ -49,7 +49,7 @@ function QuestPathNodeInner({
   const state: QuestState = rewardClaimed ? "claimed" : allCompleted ? "ready" : "pending";
   const reducedMotion = useReducedMotion();
 
-  // Pulse glow — stronger when ready-to-claim (golden), softer when pending (blue).
+  // Pulse glow, stronger when ready-to-claim (golden), softer when pending (blue).
   // Skipped entirely when reduced motion is on.
   const pulse = useSharedValue(reducedMotion ? 0.9 : 0);
   useEffect(() => {
@@ -145,7 +145,7 @@ function QuestPathNodeInner({
 
       </Animated.View>
 
-      {/* Shark peek + speech — only when ready-to-claim */}
+      {/* Shark peek + speech, only when ready-to-claim */}
       {state === "ready" && (
         <Animated.View
           entering={FadeInRight.delay(300).duration(400)}

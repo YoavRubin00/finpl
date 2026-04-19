@@ -1,6 +1,6 @@
 /**
  * In-memory rate limiter for Vercel Serverless functions.
- * Each function instance has its own window — this is best-effort,
+ * Each function instance has its own window, this is best-effort,
  * not global. For strict limiting, swap to Vercel KV or Upstash Redis.
  */
 
@@ -67,7 +67,7 @@ export function getClientId(request: Request): string {
 
 /**
  * Returns a 429 Response if rate limit is exceeded.
- * Returns null if allowed — caller should continue normally.
+ * Returns null if allowed, caller should continue normally.
  */
 export function enforceRateLimit(
   request: Request,

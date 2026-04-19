@@ -152,7 +152,7 @@ export function SuggestScenarioScreen() {
           <Animated.View entering={FadeInDown.duration(400).delay(400)} style={styles.tipsCard}>
             <Text style={styles.tipsTitle}>💡 טיפים לתרחיש מנצח</Text>
             <Text style={styles.tipItem}>• תרחיש מבוסס על אירוע כלכלי אמיתי או אפשרי</Text>
-            <Text style={styles.tipItem}>• דילמה ברורה — המשתמש צריך לבחור כיוון</Text>
+            <Text style={styles.tipItem}>• דילמה ברורה, המשתמש צריך לבחור כיוון</Text>
             <Text style={styles.tipItem}>• לקח פיננסי שאפשר ללמוד ממנו</Text>
           </Animated.View>
         </ScrollView>

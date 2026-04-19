@@ -136,7 +136,7 @@ export function useMarginSafety() {
 
   const allComplete = state.completedIds.size >= EXAMPLE_STOCKS.length;
 
-  /** Skip to summary — mark all remaining as completed */
+  /** Skip to summary, mark all remaining as completed */
   const skipToSummary = useCallback(() => {
     setState((prev) => {
       const next = new Set(prev.completedIds);

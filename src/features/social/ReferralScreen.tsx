@@ -1,6 +1,6 @@
 // ---------------------------------------------------------------------------
-// PRD 32 — US-005 AC1: "Wealth Network" — Invite Friends Hub
-// Ocean-blue redesign — clean, friendly, diamond-accented
+// PRD 32, US-005 AC1: "Wealth Network", Invite Friends Hub
+// Ocean-blue redesign, clean, friendly, diamond-accented
 // ---------------------------------------------------------------------------
 
 import React, { useState, useEffect, useCallback } from "react";
@@ -227,7 +227,7 @@ export function ReferralScreen() {
                   </AnimatedPressable>
                   <View style={styles.chestInfo}>
                     <Text style={styles.chestName}>{friend.displayName}</Text>
-                    <Text style={styles.chestDesc}>סיים אונבורדינג — Gems 5</Text>
+                    <Text style={styles.chestDesc}>סיים אונבורדינג, Gems 5</Text>
                   </View>
                 </View>
               ))}
@@ -306,9 +306,9 @@ export function ReferralScreen() {
             </Pressable>
             {showEduTooltip && (
               <View style={styles.eduCard}>
-                <Text style={styles.eduTitle}>דיבידנד — הכנסה פסיבית</Text>
+                <Text style={styles.eduTitle}>דיבידנד, הכנסה פסיבית</Text>
                 <Text style={styles.eduBody}>
-                  בעולם האמיתי, כשאתה מחזיק מניות של חברה — היא משלמת לך
+                  בעולם האמיתי, כשאתה מחזיק מניות של חברה, היא משלמת לך
                   חלק מהרווחים שלה כ"דיבידנד". זה כסף שנכנס לחשבון שלך בלי
                   שתצטרך לעשות כלום.
                 </Text>
@@ -356,7 +356,7 @@ export function ReferralScreen() {
 }
 
 // ---------------------------------------------------------------------------
-// Network Tree View — Visual tree with user as root and friends as branches
+// Network Tree View, Visual tree with user as root and friends as branches
 // ---------------------------------------------------------------------------
 
 function NetworkTreeView({
@@ -769,7 +769,7 @@ const styles = StyleSheet.create({
     color: "#0891b2",
   },
 
-  // Network tree (empty state only — tree view in treeStyles)
+  // Network tree (empty state only, tree view in treeStyles)
   emptyState: {
     backgroundColor: "#ffffff",
     borderRadius: 12,

@@ -128,7 +128,7 @@ const FALLBACK_FREE_INSIGHT: Insight = {
   category: 'strength',
   emoji: '⭐',
   title: 'נקודת החוזק שלכם',
-  body: 'זיהיתי דפוס עקבי בלמידה שלכם — יש לכם בסיס יציב שמאפשר לכם להתקדם לנושאים מורכבים יותר. המשיכו ברצף כדי לחזק את הנקודה הזו.',
+  body: 'זיהיתי דפוס עקבי בלמידה שלכם, יש לכם בסיס יציב שמאפשר לכם להתקדם לנושאים מורכבים יותר. המשיכו ברצף כדי לחזק את הנקודה הזו.',
 };
 
 const BLURRED_TEASERS: Array<{
@@ -140,7 +140,7 @@ const BLURRED_TEASERS: Array<{
   { category: 'tip',      emoji: '💰' },
 ];
 
-/* ── Locked bubble — text replaced with grey bars (skeleton style). Completely unreadable. ── */
+/* ── Locked bubble, text replaced with grey bars (skeleton style). Completely unreadable. ── */
 function BlurredLockedBubble({ index }: { index: number }) {
   const t = BLURRED_TEASERS[index % BLURRED_TEASERS.length];
   const bg = BUBBLE_COLOR[t.category];
@@ -150,7 +150,7 @@ function BlurredLockedBubble({ index }: { index: number }) {
       entering={FadeInUp.delay(index * 80).duration(350)}
       style={styles.bubbleRow}
       accessible
-      accessibilityLabel={`תובנה נעולה ${index + 1} — זמינה למשתמשי PRO`}
+      accessibilityLabel={`תובנה נעולה ${index + 1}, זמינה למשתמשי PRO`}
     >
       <View style={[styles.avatar, { borderColor: border, backgroundColor: bg }]} />
       <View
@@ -252,7 +252,7 @@ export function AIInsightsScreen() {
       const teaser = insights.find((i) => i.category === 'strength') ?? insights[0];
       store.saveInsight({ emoji: teaser.emoji, title: teaser.title, body: teaser.body });
     } catch {
-      // silently fail — user still sees locked placeholders
+      // silently fail, user still sees locked placeholders
     } finally {
       setFreeLoading(false);
     }
@@ -280,7 +280,7 @@ export function AIInsightsScreen() {
         </Text>
         <Text style={styles.introSub}>
           {personaLabel
-            ? `זיהיתי שאתם ${personaLabel} — הנה התובנות שלי:`
+            ? `זיהיתי שאתם ${personaLabel}, הנה התובנות שלי:`
             : 'הנה התובנות האישיות שלי עבורכם:'}
         </Text>
       </View>
@@ -333,7 +333,7 @@ export function AIInsightsScreen() {
           }
         </ScrollView>
 
-      /* ── FREE FLOW — 1 real insight + 3 locked ── */
+      /* ── FREE FLOW, 1 real insight + 3 locked ── */
       ) : (
         <ScrollView
           style={styles.scroll}
@@ -342,7 +342,7 @@ export function AIInsightsScreen() {
         >
           {IntroBanner}
 
-          {/* 1 real insight — fallback to static tip if API hasn't loaded yet */}
+          {/* 1 real insight, fallback to static tip if API hasn't loaded yet */}
           {freeLoading ? (
             <SkeletonBubble index={0} />
           ) : (
@@ -361,7 +361,7 @@ export function AIInsightsScreen() {
           <BlurredLockedBubble index={2} />
 
           <Text style={styles.weeklyNote}>
-            🔒 הניתוח המלא — קצב, חולשה, צעד הבא — זמין ב-PRO
+            🔒 הניתוח המלא, קצב, חולשה, צעד הבא, זמין ב-PRO
           </Text>
         </ScrollView>
       )}
@@ -431,7 +431,7 @@ const styles = StyleSheet.create({
   bubbleTitle: { fontSize: 14, fontWeight: '800', color: '#0f172a', textAlign: 'right', flex: 1 },
   bubbleBody: { fontSize: 14, color: '#334155', textAlign: 'right', lineHeight: 21 },
 
-  /* Locked-state grey bars — replace title/body text. Fully unreadable. */
+  /* Locked-state grey bars, replace title/body text. Fully unreadable. */
   blurBarTitle: {
     flex: 1,
     height: 12,
@@ -484,7 +484,7 @@ const styles = StyleSheet.create({
     textAlign: 'center', fontSize: 12, color: '#94a3b8', marginTop: 8,
   },
 
-  /* Frosted overlay (replaces BlurView — cross-platform safe) */
+  /* Frosted overlay (replaces BlurView, cross-platform safe) */
   frostedOverlay: {
     top: 130,
     backgroundColor: 'rgba(240, 249, 255, 0.82)',

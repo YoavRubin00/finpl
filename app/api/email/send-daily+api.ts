@@ -17,7 +17,7 @@ function getWeekNumber(date: Date): number {
 
 /** POST /api/email/send-daily
  *  Called by cron once per day (e.g. 09:00 Israel time).
- *  Targets users who were NOT active yesterday — re-engagement only.
+ *  Targets users who were NOT active yesterday, re-engagement only.
  *  Header: x-cron-secret: <CRON_SECRET>
  */
 export async function POST(request: Request): Promise<Response> {
@@ -40,7 +40,7 @@ export async function POST(request: Request): Promise<Response> {
   yesterday.setDate(yesterday.getDate() - 1);
   const yesterdayDate = yesterday.toISOString().slice(0, 10); // YYYY-MM-DD
 
-  // Start of today in UTC — used to prevent duplicate sends
+  // Start of today in UTC, used to prevent duplicate sends
   const todayStart = new Date(now);
   todayStart.setUTCHours(0, 0, 0, 0);
 

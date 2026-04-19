@@ -1,5 +1,5 @@
 /**
- * Graham Investor Personality Test — type definitions.
+ * Graham Investor Personality Test, type definitions.
  * Based on Benjamin Graham's "The Intelligent Investor" archetypes.
  */
 

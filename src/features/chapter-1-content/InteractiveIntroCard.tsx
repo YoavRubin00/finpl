@@ -115,7 +115,7 @@ export const InteractiveIntroCard = React.memo(function InteractiveIntroCard({ i
     <View style={{ flex: 1, justifyContent: 'space-between', alignItems: 'stretch', paddingHorizontal: 8 }}>
       {/* Scrollable content area */}
       <View style={{ flex: 1, justifyContent: 'center' }}>
-        {/* Finn character — circular white bubble masks the WebP square background */}
+        {/* Finn character, circular white bubble masks the WebP square background */}
         {introImageUri && (
           <Animated.View style={[bearStyle, floatStyle, { alignSelf: 'center', marginBottom: 10 }]}>
             <View style={{
@@ -137,7 +137,7 @@ export const InteractiveIntroCard = React.memo(function InteractiveIntroCard({ i
           </Animated.View>
         )}
 
-        {/* Description card — bright, chapter-colored with glow */}
+        {/* Description card, bright, chapter-colored with glow */}
         <Animated.View style={[textStyle, { marginBottom: 0 }]}>
           <View style={{
             backgroundColor: unitColors.dim,
@@ -164,7 +164,7 @@ export const InteractiveIntroCard = React.memo(function InteractiveIntroCard({ i
           </View>
         </Animated.View>
 
-        {/* Intro image — between text card and button */}
+        {/* Intro image, between text card and button */}
         {introImageUri ? (
           <Animated.View style={[bearStyle, { alignSelf: 'center', marginTop: 16, marginBottom: 10 }]}>
             <ExpoImage
@@ -175,14 +175,14 @@ export const InteractiveIntroCard = React.memo(function InteractiveIntroCard({ i
             />
           </Animated.View>
         ) : (
-          /* Finn character — below text card (default) */
+          /* Finn character, below text card (default) */
           <Animated.View style={[bearStyle, floatStyle, { alignSelf: 'center', marginTop: 14, marginBottom: 10 }]}>
             <FinnSpeakingAvatar text={displayText} size={140} isPlayingAudio={audioUri ? audioPlaying : undefined} />
           </Animated.View>
         )}
       </View>
 
-      {/* 3D Button with Lottie rocket — pinned to bottom */}
+      {/* 3D Button with Lottie rocket, pinned to bottom */}
       <Animated.View style={[buttonStyle, { alignSelf: 'stretch', marginBottom: 8 }]}>
         <View>
           {/* 3D depth shadow */}

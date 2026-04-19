@@ -75,7 +75,7 @@ export interface InvestmentPathScore {
   grade: InvestmentPathGrade;
   /** Hebrew label for the grade */
   gradeLabel: string;
-  /** Final balance (₪) — actual received amount */
+  /** Final balance (₪), actual received amount */
   finalBalance: number;
   /** Total deposited over the journey (₪) */
   totalDeposited: number;

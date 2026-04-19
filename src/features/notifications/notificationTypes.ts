@@ -13,7 +13,7 @@ export type NotificationChannelId =
 
 export interface ScheduledNotification {
   channelId: NotificationChannelId;
-  /** Expo notification identifier — needed to cancel */
+  /** Expo notification identifier, needed to cancel */
   identifier: string;
 }
 

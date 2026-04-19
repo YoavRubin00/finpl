@@ -3,12 +3,12 @@ export type FomoPhase = 'intro' | 'chatting' | 'reveal' | 'result';
 export type UserAction = 'ignore' | 'report' | 'add';
 
 export type MessageCategory =
-  | 'hype'           // "🚀🚀 +500% השבוע" — should be reported as spam
-  | 'social-proof'   // "אחי שמתי 5K..." — should be ignored
-  | 'fake-authority' // "אנליסט של גולדמן..." — should be reported
-  | 'urgency'        // "רק 10 דקות לפני הספייק" — should be reported
-  | 'noise'          // innocuous chat — should be ignored
-  | 'bait-truth';    // "אולי כדאי לצאת" — should be ignored (don't report neutral voices)
+  | 'hype'           // "🚀🚀 +500% השבוע", should be reported as spam
+  | 'social-proof'   // "אחי שמתי 5K...", should be ignored
+  | 'fake-authority' // "אנליסט של גולדמן...", should be reported
+  | 'urgency'        // "רק 10 דקות לפני הספייק", should be reported
+  | 'noise'          // innocuous chat, should be ignored
+  | 'bait-truth';    // "אולי כדאי לצאת", should be ignored (don't report neutral voices)
 
 /** Which action is "correct" for each message category */
 export const CORRECT_ACTION: Record<MessageCategory, UserAction> = {

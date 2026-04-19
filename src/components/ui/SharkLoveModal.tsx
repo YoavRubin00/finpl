@@ -64,10 +64,10 @@ function CountingText({
     transform: [{ scale: counterScale.value }],
   }));
 
-  // Read animated value via reanimated reaction — fires only when the rounded
+  // Read animated value via reanimated reaction, fires only when the rounded
   // value actually changes (~once per frame during the 1.2s ramp, then stops).
   // Earlier this used a permanent `requestAnimationFrame` loop that called
-  // `setDisplay` 60 times/sec forever — three of these in a row (XP/coins/time)
+  // `setDisplay` 60 times/sec forever, three of these in a row (XP/coins/time)
   // pinned the JS thread and made the modal feel stuck.
   useAnimatedReaction(
     () => Math.round(animVal.value),
@@ -248,7 +248,7 @@ export function SharkLoveModal({
       { translateY: finnBounce.value },
       { rotate: `${finnRotate.value}deg` },
     ],
-    // worklet-only — never triggers JS bridge
+    // worklet-only, never triggers JS bridge
   }));
 
   // Button pulse
@@ -300,7 +300,7 @@ export function SharkLoveModal({
       </View>
 
       <View style={styles.content}>
-        {/* Finn character — entry wrapper separate from looping transform */}
+        {/* Finn character, entry wrapper separate from looping transform */}
         <Animated.View entering={FadeInDown.duration(600).springify().damping(14)}>
           <Animated.View style={[finnStyle, styles.finnContainer]}>
             <ExpoImage
@@ -342,7 +342,7 @@ export function SharkLoveModal({
           entering={FadeInDown.delay(700).duration(500)}
           style={styles.statsRow}
         >
-          {/* XP card — Blue */}
+          {/* XP card, Blue */}
           <StatCard
             label="נק׳ ניסיון"
             icon={<Star size={22} color="#0284c7" fill="#38bdf8" />}
@@ -353,7 +353,7 @@ export function SharkLoveModal({
             delay={800}
           />
 
-          {/* Coins card — Gold */}
+          {/* Coins card, Gold */}
           <StatCard
             label="מטבעות"
             icon={<GoldCoinIcon size={26} />}
@@ -364,7 +364,7 @@ export function SharkLoveModal({
             delay={1000}
           />
 
-          {/* Time card — Yellow */}
+          {/* Time card, Yellow */}
           <StatCard
             label="זמן"
             icon={<Clock size={22} color="#ca8a04" />}

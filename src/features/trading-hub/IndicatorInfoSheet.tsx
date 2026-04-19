@@ -10,7 +10,7 @@ const RTL = { writingDirection: 'rtl' as const, textAlign: 'right' as const };
 interface IndicatorInfoSheetProps {
   visible: boolean;
   indicatorId: IndicatorId | null;
-  /** MA period currently selected — used so the MA explanation matches what's on-screen. */
+  /** MA period currently selected, used so the MA explanation matches what's on-screen. */
   maPeriod: number;
   onClose: () => void;
 }

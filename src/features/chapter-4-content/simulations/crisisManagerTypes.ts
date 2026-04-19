@@ -1,5 +1,5 @@
 /**
- * SIM 4-27: מנהל המשבר (Crisis Manager) — Module 4-27
+ * SIM 4-27: מנהל המשבר (Crisis Manager), Module 4-27
  * Types for the historical crisis portfolio management simulation.
  */
 

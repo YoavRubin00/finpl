@@ -1,5 +1,5 @@
 /**
- * SIM 25: מחשבון החופש (Freedom Calculator — FIRE) — Module 5-25
+ * SIM 25: מחשבון החופש (Freedom Calculator, FIRE), Module 5-25
  * Lifestyle presets and configuration data for the FIRE calculator.
  */
 

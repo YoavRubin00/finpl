@@ -3,7 +3,7 @@ import { ASSET_BY_ID } from './tradingHubData';
 import Constants from 'expo-constants';
 import { Platform } from 'react-native';
 
-// ── Daily cache — prices cached once per calendar day ──
+// ── Daily cache, prices cached once per calendar day ──
 const todayKey = (): string => new Date().toISOString().slice(0, 10);
 
 interface DailyCacheEntry<T> {
@@ -21,7 +21,7 @@ const isPriceFresh = (e: DailyCacheEntry<number> | undefined): e is DailyCacheEn
 const isChartFresh = (e: DailyCacheEntry<ChartDataPoint[]> | undefined): e is DailyCacheEntry<ChartDataPoint[]> =>
   e !== undefined && e.date === todayKey();
 
-/** Returns true if there is no cached price for today — a fresh fetch is needed. */
+/** Returns true if there is no cached price for today, a fresh fetch is needed. */
 export const isCacheStale = (assetId: string): boolean => {
   const entry = priceCache.get(assetId);
   return entry === undefined || entry.date !== todayKey();
@@ -177,7 +177,7 @@ const fetchQuote1D = (assetId: string): Promise<QuoteApiResponse | null> => {
   return promise;
 };
 
-// ── Direct Yahoo fallback (native only — avoids CORS on web) ──
+// ── Direct Yahoo fallback (native only, avoids CORS on web) ──
 const YAHOO_TICKER_MAP: Record<string, string> = {
   BTC: 'BTC-USD',
   ETH: 'ETH-USD',
@@ -229,7 +229,7 @@ export const fetchLatestPrice = async (assetId: string): Promise<number> => {
   lastFetchWasLive = false;
   if (__DEV__) {
     // eslint-disable-next-line no-console
-    console.warn(`[marketApiService] fetchLatestPrice(${assetId}) — falling back to mock data. Backend ${API_BASE} unreachable and direct Yahoo failed.`);
+    console.warn(`[marketApiService] fetchLatestPrice(${assetId}), falling back to mock data. Backend ${API_BASE} unreachable and direct Yahoo failed.`);
   }
   return generateMockPrice(assetId);
 };
@@ -247,7 +247,7 @@ export const fetchPreviousClose = async (assetId: string): Promise<number | null
   const json = await fetchQuote1D(assetId);
   if (json && typeof json.previousClose === 'number' && isFinite(json.previousClose)) {
     previousCloseCache.set(assetId, { data: json.previousClose, date: todayKey() });
-    // Opportunistically warm the price cache too — same payload.
+    // Opportunistically warm the price cache too, same payload.
     priceCache.set(assetId, { data: json.price, date: todayKey() });
     return json.previousClose;
   }

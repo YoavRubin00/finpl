@@ -1,5 +1,5 @@
 // ---------------------------------------------------------------------------
-// StockIcon — renders branded SVG logos for tradable assets
+// StockIcon, renders branded SVG logos for tradable assets
 // ---------------------------------------------------------------------------
 
 import React from "react";

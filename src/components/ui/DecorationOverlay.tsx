@@ -10,7 +10,7 @@ const DECORATION_SOURCES: number[] = [
   require('../../../assets/lottie/sea/wired-flat-1168-star-fish-hover-pinch.json') as number,
 ];
 
-// Stable positions seeded by screenName — no randomness at render time
+// Stable positions seeded by screenName, no randomness at render time
 const POSITIONS = [
   { top: '6%',  start: '4%'  },
   { top: '22%', end: '6%' },

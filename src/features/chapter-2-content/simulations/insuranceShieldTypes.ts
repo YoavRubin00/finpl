@@ -60,7 +60,7 @@ export interface InsuranceShieldState {
   duplicatesWasted: number;
   /** Current event round (0-based) */
   round: number;
-  /** Remaining savings health (₪) — starts at 200,000 */
+  /** Remaining savings health (₪), starts at 200,000 */
   savingsHealth: number;
   /** Whether the game is complete */
   isComplete: boolean;

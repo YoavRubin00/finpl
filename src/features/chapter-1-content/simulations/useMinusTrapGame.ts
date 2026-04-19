@@ -9,7 +9,7 @@ import type {
 } from './minusTrapTypes';
 
 /* ------------------------------------------------------------------ */
-/*  useMinusTrapSwipe — Tinder-style expense swipe game logic          */
+/*  useMinusTrapSwipe, Tinder-style expense swipe game logic          */
 /* ------------------------------------------------------------------ */
 
 const INITIAL_STATE = (startingBalance: number): MinusTrapSwipeState => ({

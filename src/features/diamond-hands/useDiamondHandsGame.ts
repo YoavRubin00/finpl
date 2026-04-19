@@ -40,7 +40,7 @@ async function loadGyroModule(): Promise<GyroModule | null> {
       return mod;
     }
   } catch {
-    // Module not available or errored — fall back silently.
+    // Module not available or errored, fall back silently.
   }
   gyroModuleCache = null;
   return null;
@@ -76,7 +76,7 @@ export function useDiamondHandsGame({
       try {
         gyroSubRef.current.remove();
       } catch {
-        // ignore — already removed
+        // ignore, already removed
       }
       gyroSubRef.current = null;
     }

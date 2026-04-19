@@ -102,12 +102,12 @@ export function BattlefieldCanvas({
       accessibilityRole="summary"
       accessibilityLabel={
         canPlace
-          ? "שדה קרב — הקש על בסיס ריק כדי להציב את ההגנה הנבחרת"
-          : "שדה קרב — בחרו הגנה מהתפריט התחתון"
+          ? "שדה קרב, הקש על בסיס ריק כדי להציב את ההגנה הנבחרת"
+          : "שדה קרב, בחרו הגנה מהתפריט התחתון"
       }
       style={{ width, height, overflow: "hidden", borderRadius: 24 }}
     >
-      {/* Clean gradient battlefield — no baked-in path, so the SVG below is the single source of truth */}
+      {/* Clean gradient battlefield, no baked-in path, so the SVG below is the single source of truth */}
       <LinearGradient
         colors={["#075985", "#0c4a6e", "#082f49"]}
         start={{ x: 0.2, y: 0 }}
@@ -188,7 +188,7 @@ export function BattlefieldCanvas({
             onPress={() => interactable && onPlaceAt(idx)}
             disabled={!interactable}
             accessibilityRole="button"
-            accessibilityLabel={`בסיס הגנה ${idx + 1}${interactable ? " — זמין" : ""}`}
+            accessibilityLabel={`בסיס הגנה ${idx + 1}${interactable ? ", זמין" : ""}`}
             style={{
               position: "absolute",
               left,

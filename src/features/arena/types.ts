@@ -7,7 +7,7 @@ export interface Challenge {
 }
 
 export interface ChallengeProgress {
-  completedDate: string | null; // "YYYY-MM-DD" — null means not done today
+  completedDate: string | null; // "YYYY-MM-DD", null means not done today
 }
 
 export interface LeaderboardEntry {

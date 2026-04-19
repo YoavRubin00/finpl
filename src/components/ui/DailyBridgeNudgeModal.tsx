@@ -27,7 +27,7 @@ const DAILY_COPY: Record<number, string> = {
   1: 'עשינו דרך יפה ביחד. בוא נעבור לעולם האמיתי',
   2: 'הידע שלך שווה כסף אמיתי. בוא נאמת את זה',
   3: 'חיסכון ראשון? השקעה ראשונה? הגשר פתוח בשבילך',
-  4: 'ידע לבד לא מספיק — צריך לפעול. בוא לגשר',
+  4: 'ידע לבד לא מספיק, צריך לפעול. בוא לגשר',
   5: 'שישי מעולה לפתוח חיסכון אמיתי. 5 דקות זה הכל',
   6: 'שבת שלום. הזמן הנכון לסקור את האפשרויות שלך',
 };
@@ -44,7 +44,7 @@ export function DailyBridgeNudgeModal() {
   const isGuest = useAuthStore((s) => s.isGuest);
   const profile = useAuthStore((s) => s.profile);
 
-  // Activity gate — need ≥3 active days before nudging
+  // Activity gate, need ≥3 active days before nudging
   const activeDates = useEconomyStore((s) => s.activeDates);
 
   // Nudge queue
@@ -150,7 +150,7 @@ export function DailyBridgeNudgeModal() {
 
           {/* Subtitle */}
           <Text style={styles.subtitle}>
-            הגשר שלנו — הטבות אמיתיות מחברות ישראליות מובילות
+            הגשר שלנו, הטבות אמיתיות מחברות ישראליות מובילות
           </Text>
 
           {/* CTA button */}

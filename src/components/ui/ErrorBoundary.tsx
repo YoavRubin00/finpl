@@ -1,6 +1,6 @@
 import React from "react";
 import { View, Text, Pressable, Image } from "react-native";
-// Ionicons removed — using Finn error illustration instead
+// Ionicons removed, using Finn error illustration instead
 import { captureException } from "../../lib/sentry";
 
 interface ErrorBoundaryState {

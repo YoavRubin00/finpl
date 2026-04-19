@@ -5,7 +5,7 @@ import { useReducedMotion } from 'react-native-reanimated';
 import { FINN_TALKING, FINN_STANDARD } from './finnMascotConfig';
 
 interface Props {
-  /** Text the user is reading — used to build punctuation-pause schedule and
+  /** Text the user is reading, used to build punctuation-pause schedule and
    *  estimate fallback duration when no audio is wired. */
   text?: string;
   /** Avatar pixel size (square). Default 72. */
@@ -19,7 +19,7 @@ interface Props {
   /** Container style. */
   style?: StyleProp<ViewStyle>;
   /**
-   * When provided, switches to controlled mode — external audio state drives
+   * When provided, switches to controlled mode, external audio state drives
    * talking/standard instead of the internal timer.
    * Flip to false when audio ends → shark goes static + onDone fires.
    */
@@ -52,12 +52,12 @@ export function FinnSpeakingAvatar({
     }
   }
 
-  // Fallback timer — only used when isPlayingAudio is not provided
+  // Fallback timer, only used when isPlayingAudio is not provided
   useEffect(() => {
-    if (isPlayingAudio !== undefined) return; // controlled mode — skip
+    if (isPlayingAudio !== undefined) return; // controlled mode, skip
     if (reduceMotion || !active) return;
     const wordCount = text ? text.trim().split(/\s+/).length : 12;
-    // No upper cap — let the word count drive the full duration
+    // No upper cap, let the word count drive the full duration
     const computed = durationMs ?? Math.max(2000, wordCount * 220);
     fallbackTimerRef.current = setTimeout(() => {
       clearAllTimers();

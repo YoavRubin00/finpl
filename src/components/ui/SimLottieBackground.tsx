@@ -39,7 +39,7 @@ export function SimLottieBackground({
         }}
       />
 
-      {/* Light overlay — ensures dark text is readable on chapter gradients */}
+      {/* Light overlay, ensures dark text is readable on chapter gradients */}
       <View
         pointerEvents="none"
         style={[StyleSheet.absoluteFillObject, { backgroundColor: 'rgba(255,255,255,0.40)' }]}

@@ -1,5 +1,5 @@
 /**
- * PRD 34 — US-004 AC#3: Dynamic IAP Service
+ * PRD 34, US-004 AC#3: Dynamic IAP Service
  *
  * Reads the user's AI profile (monetizationContext) and selects the
  * best-fit IAP offer for the current emotional trigger moment.
@@ -20,13 +20,13 @@ interface IAPDecision {
   shouldShow: boolean;
   /** The selected offer (null when shouldShow is false) */
   offer: MonetizationOffer | null;
-  /** Display duration in ms — higher urgency stays longer */
+  /** Display duration in ms, higher urgency stays longer */
   displayDurationMs: number;
   /** Delay before showing the popup (lets the moment breathe) */
   entryDelayMs: number;
 }
 
-/** Internal session state — not persisted, resets on app restart */
+/** Internal session state, not persisted, resets on app restart */
 let lastShownTimestamp = 0;
 let offersShownThisSession = 0;
 
@@ -44,10 +44,10 @@ export function evaluateIAPOffer(trigger: MonetizationTrigger): IAPDecision {
     entryDelayMs: 0,
   };
 
-  /** Session cap reached — stop showing offers */
+  /** Session cap reached, stop showing offers */
   if (offersShownThisSession >= MAX_OFFERS_PER_SESSION) return noShow;
 
-  /** Cooldown — avoid spamming the user */
+  /** Cooldown, avoid spamming the user */
   if (Date.now() - lastShownTimestamp < COOLDOWN_MS) return noShow;
 
   const profile: AIProfile | null = useAITelemetryStore.getState().profile;
@@ -73,7 +73,7 @@ export function evaluateIAPOffer(trigger: MonetizationTrigger): IAPDecision {
 }
 
 /**
- * Mark that an offer was shown — updates cooldown and session counters.
+ * Mark that an offer was shown, updates cooldown and session counters.
  * Call this when the popup actually appears on screen.
  */
 export function recordOfferShown(): void {
@@ -82,14 +82,14 @@ export function recordOfferShown(): void {
 }
 
 /**
- * Record that the user accepted the IAP offer — logs to telemetry.
+ * Record that the user accepted the IAP offer, logs to telemetry.
  */
 export function recordOfferAccepted(bundleKey: string): void {
   useAITelemetryStore.getState().trackMonetizationSignal('iap_accepted', { bundleKey });
 }
 
 /**
- * Record that the user dismissed the IAP offer — logs to telemetry.
+ * Record that the user dismissed the IAP offer, logs to telemetry.
  */
 export function recordOfferDismissed(bundleKey: string): void {
   useAITelemetryStore.getState().trackMonetizationSignal('iap_dismissed', { bundleKey });

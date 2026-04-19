@@ -1,5 +1,5 @@
 /**
- * SIM 3-18: בוחר המסלולים (Track Selector) — Module 3-18
+ * SIM 3-18: בוחר המסלולים (Track Selector), Module 3-18
  * 30 years of REAL historical annual returns (1994-2023).
  * Stocks: S&P 500 Total Return (dividends reinvested).
  * Bonds: Bloomberg US Aggregate Bond Index.
@@ -51,7 +51,7 @@ const TRACKS: InvestmentTrack[] = [
 export const DATA_START_YEAR = 1994;
 export const DATA_END_YEAR = 2023;
 
-/** S&P 500 Total Return 1994-2023 — dividends reinvested */
+/** S&P 500 Total Return 1994-2023, dividends reinvested */
 const STOCK_RETURNS = [
    0.013,  // 1994
    0.376,  // 1995
@@ -59,7 +59,7 @@ const STOCK_RETURNS = [
    0.334,  // 1997
    0.286,  // 1998
    0.210,  // 1999
-  -0.091,  // 2000 — dot-com crash
+  -0.091,  // 2000, dot-com crash
   -0.119,  // 2001
   -0.221,  // 2002
    0.287,  // 2003
@@ -67,7 +67,7 @@ const STOCK_RETURNS = [
    0.049,  // 2005
    0.158,  // 2006
    0.055,  // 2007
-  -0.370,  // 2008 — Global Financial Crisis
+  -0.370,  // 2008, Global Financial Crisis
    0.265,  // 2009
    0.151,  // 2010
    0.021,  // 2011
@@ -79,7 +79,7 @@ const STOCK_RETURNS = [
    0.218,  // 2017
   -0.044,  // 2018
    0.315,  // 2019
-   0.184,  // 2020 — COVID crash + recovery
+   0.184,  // 2020, COVID crash + recovery
    0.287,  // 2021
   -0.181,  // 2022
    0.263,  // 2023

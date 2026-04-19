@@ -1,5 +1,5 @@
 /**
- * DailyLearningSummary — "היום ב-Finpl"
+ * DailyLearningSummary, "היום ב-Finpl"
  * Shows today's learning activities in a premium card with Share functionality.
  * Designed for the Profile screen.
  */
@@ -76,7 +76,7 @@ export function DailyLearningSummary() {
     }
   };
 
-  // No events today — don't show card
+  // No events today, don't show card
   if (events.length === 0) {
     return null;
   }

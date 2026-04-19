@@ -1,5 +1,5 @@
 /**
- * NotificationPermissionBanner — Duolingo-style permission request banner.
+ * NotificationPermissionBanner, Duolingo-style permission request banner.
  * Shows when permission is not granted and user hasn't dismissed it this session.
  */
 import { useNotificationStore } from "../../features/notifications/useNotificationStore";
@@ -16,7 +16,7 @@ export function NotificationPermissionBanner() {
 
   const handleAllow = async () => {
     await requestPermission();
-    // Finn scheduler (useFinnNotificationScheduler) handles all scheduling — 1/day max
+    // Finn scheduler (useFinnNotificationScheduler) handles all scheduling, 1/day max
   };
 
   return (

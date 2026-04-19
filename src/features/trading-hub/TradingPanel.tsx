@@ -1,5 +1,5 @@
 /**
- * TradingPanel — order entry with 3 order types:
+ * TradingPanel, order entry with 3 order types:
  *   מרקט (Market): immediate execution at current price
  *   לימיט (Limit): pending order executed when price reaches target
  *   מכירה (Sell): close an open position
@@ -33,13 +33,13 @@ const ORDER_TABS: OrderTabConfig[] = [
   {
     id: 'market',
     label: 'מרקט',
-    description: 'קנה מיד במחיר השוק הנוכחי — ביצוע מיידי וודאי',
+    description: 'קנה מיד במחיר השוק הנוכחי, ביצוע מיידי וודאי',
     color: '#22c55e',
   },
   {
     id: 'limit',
     label: 'לימיט',
-    description: 'הגדר מחיר יעד — הפקודה תתבצע רק כשהשוק יגיע לרמה שהגדרת',
+    description: 'הגדר מחיר יעד, הפקודה תתבצע רק כשהשוק יגיע לרמה שהגדרת',
     color: '#facc15',
   },
   {
@@ -127,7 +127,7 @@ export function TradingPanel({ assetId, currentPrice, onTrade }: TradingPanelPro
     tapHaptic();
     const refunded = cancelLimitOrder(orderId);
     if (refunded > 0) addCoins(refunded);
-    showFeedback(`↩️ פקודה בוטלה — הוחזרו ${refunded.toLocaleString()} `);
+    showFeedback(`↩️ פקודה בוטלה, הוחזרו ${refunded.toLocaleString()} `);
   };
 
   return (

@@ -3,7 +3,7 @@
 import { Runner, RetirementRaceConfig } from './retirementRaceTypes';
 
 /**
- * נטע — starts early at 22, lower deposit
+ * נטע, starts early at 22, lower deposit
  * Employee: ₪500/mo, Employer: ₪600/mo (6% + 6.5% on ₪10K salary)
  */
 const netaRunner: Runner = {
@@ -18,7 +18,7 @@ const netaRunner: Runner = {
 };
 
 /**
- * אורי — starts late at 35, higher deposit
+ * אורי, starts late at 35, higher deposit
  * Employee: ₪1,000/mo, Employer: ₪1,200/mo (6% + 6.5% on ₪20K salary)
  */
 const oriRunner: Runner = {

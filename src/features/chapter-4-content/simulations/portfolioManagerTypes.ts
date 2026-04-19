@@ -1,5 +1,5 @@
 /**
- * SIM 24: מנהל התיקים (Portfolio Manager) — Module 4-24
+ * SIM 24: מנהל התיקים (Portfolio Manager), Module 4-24
  * Types for the portfolio allocation + world events simulation.
  */
 

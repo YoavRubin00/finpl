@@ -1,5 +1,5 @@
 /**
- * SIM 28: מחשבון הפרישה (Retirement Calculator) — Module 5-28
+ * SIM 28: מחשבון הפרישה (Retirement Calculator), Module 5-28
  * Types for the retirement withdrawal strategy simulation.
  */
 

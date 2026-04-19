@@ -276,7 +276,7 @@ export const CrashGameCard = React.memo(function CrashGameCard({ isActive }: Pro
             </Pressable>
           )}
 
-          {/* Result — tip */}
+          {/* Result, tip */}
           {(gameState === 'cashed' || gameState === 'crashed') && (
             <Animated.View entering={FadeIn.duration(400)} style={styles.tipBox}>
               {gameState === 'cashed' && (

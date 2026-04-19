@@ -3,7 +3,7 @@
  * All colors validated for WCAG AA contrast against their intended backgrounds.
  */
 export const FOMO_TOKENS = {
-  // Canvas — navy dark that harmonizes with FinPlay's sky-900 family
+  // Canvas, navy dark that harmonizes with FinPlay's sky-900 family
   canvas: '#0c1e3a',
   canvasBand: '#0f2947',
   chrome: '#0a1729',

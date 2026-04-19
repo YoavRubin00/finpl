@@ -228,7 +228,7 @@ export function BarterPuzzleScreen({
   }
 
   // Active game phases: reject, swap1, swap2, payDebt, moneyPhase
-  // Clear stale positions — only visible merchants should have registered positions
+  // Clear stale positions, only visible merchants should have registered positions
   const visibleMerchantIds = new Set<string>();
   const visibleMerchants: Merchant[] = [];
   if (phase === "reject" || phase === "payDebt" || phase === "moneyPhase") {

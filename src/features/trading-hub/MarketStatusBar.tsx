@@ -6,7 +6,7 @@ import { ASSET_BY_ID } from './tradingHubData';
 const RTL = { writingDirection: 'rtl' as const, textAlign: 'right' as const };
 
 interface MarketStatusBarProps {
-  /** Currently selected asset ID — used to override message when crypto is selected. */
+  /** Currently selected asset ID, used to override message when crypto is selected. */
   selectedAssetId?: string;
 }
 

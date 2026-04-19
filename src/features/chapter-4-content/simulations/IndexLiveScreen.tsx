@@ -1,5 +1,5 @@
 /**
- * SIM 20: מדד לייב (Index Live — S&P 500 Time Machine) — Module 4-20
+ * SIM 20: מדד לייב (Index Live, S&P 500 Time Machine), Module 4-20
  * Time machine slider from 1980 to 2025. Shows ₪10,000 invested in S&P 500
  * at any starting year and its value today. Key insight: time in the market
  * beats timing the market.
@@ -58,7 +58,7 @@ const CHART_EVENTS: Array<{ year: number; label: string; emoji: string }> = [
 ];
 
 /* ================================================================== */
-/*  AreaChart — animated growth chart with event markers               */
+/*  AreaChart, animated growth chart with event markers               */
 /* ================================================================== */
 
 function AreaChart({
@@ -228,7 +228,7 @@ function AreaChart({
 }
 
 /* ================================================================== */
-/*  TimeDial — styled year slider                                      */
+/*  TimeDial, styled year slider                                      */
 /* ================================================================== */
 
 function TimeDial({
@@ -275,7 +275,7 @@ function TimeDial({
 }
 
 /* ================================================================== */
-/*  ScoreScreen — results after completing                             */
+/*  ScoreScreen, results after completing                             */
 /* ================================================================== */
 
 function ScoreScreen({
@@ -377,7 +377,7 @@ function ScoreScreen({
             <View style={{ flexDirection: 'row-reverse', alignItems: 'center', gap: 8 }}>
               <LottieIcon source={LOTTIE_BULB} size={22} />
               <Text style={[TYPE4.cardBody, RTL, { flex: 1 }]}>
-                גם אם היית משקיע ב-2007 (ממש לפני המשבר) — עד 2025 עדיין היית ברווח משמעותי!
+                גם אם היית משקיע ב-2007 (ממש לפני המשבר), עד 2025 עדיין היית ברווח משמעותי!
               </Text>
             </View>
           </View>
@@ -529,14 +529,14 @@ export function IndexLiveScreen({ onComplete }: IndexLiveScreenProps) {
       <Animated.View entering={FadeIn.duration(400)}>
         <View style={{ flexDirection: 'row-reverse', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
           <View accessible={false}><LottieIcon source={LOTTIE_CLOCK} size={28} /></View>
-          <Text accessibilityRole="header" style={[TYPE4.title, { fontSize: 28 }]}>מדד לייב — מכונת הזמן</Text>
+          <Text accessibilityRole="header" style={[TYPE4.title, { fontSize: 28 }]}>מדד לייב, מכונת הזמן</Text>
         </View>
         <Text style={[TYPE4.subtitle, RTL, { marginTop: 4, textAlign: 'center' }]}>
           בחר שנת השקעה וגלה כמה שווה ₪{config.initialInvestment.toLocaleString('he-IL')} היום
         </Text>
       </Animated.View>
 
-      {/* Time Dial — Year Slider */}
+      {/* Time Dial, Year Slider */}
       <Animated.View entering={FadeInUp.delay(100)}>
         <TimeDial
           year={state.selectedStartYear}
@@ -546,7 +546,7 @@ export function IndexLiveScreen({ onComplete }: IndexLiveScreenProps) {
         />
       </Animated.View>
 
-      {/* Value Counter — Hero Display */}
+      {/* Value Counter, Hero Display */}
       <Animated.View entering={FadeInUp.delay(200)}>
         <GlowCard glowColor={`${SIM4.glow}4d`} style={styles.statsCard}>
           <Text style={[TYPE4.cardTitle, { textAlign: 'center' }]}>
@@ -575,7 +575,7 @@ export function IndexLiveScreen({ onComplete }: IndexLiveScreenProps) {
       <Animated.View entering={FadeInUp.delay(300)}>
         <GlowCard glowColor={`${SIM4.glow}1f`} style={styles.statsCard}>
           <Text style={[TYPE4.cardTitle, RTL]}>
-            צמיחת ההשקעה — {state.selectedStartYear} עד 2025
+            צמיחת ההשקעה, {state.selectedStartYear} עד 2025
           </Text>
           <AreaChart
             yearPath={yearPath}
@@ -618,7 +618,7 @@ export function IndexLiveScreen({ onComplete }: IndexLiveScreenProps) {
         <GlowCard glowColor="rgba(34,197,94,0.12)" style={styles.statsCard}>
           <View style={{ flexDirection: 'row-reverse', alignItems: 'center', gap: 8 }}>
             <LottieIcon source={LOTTIE_TARGET} size={22} />
-            <Text style={[TYPE4.cardTitle, RTL, { marginBottom: 0 }]}>השוואה — מתי היה הכי טוב / גרוע להתחיל?</Text>
+            <Text style={[TYPE4.cardTitle, RTL, { marginBottom: 0 }]}>השוואה, מתי היה הכי טוב / גרוע להתחיל?</Text>
           </View>
           <View style={[styles.statRow, { marginTop: 8 }]}>
             <View style={{ flexDirection: 'row-reverse', alignItems: 'center', gap: 4, flex: 1 }}>
@@ -656,7 +656,7 @@ export function IndexLiveScreen({ onComplete }: IndexLiveScreenProps) {
           <View style={{ flexDirection: 'row-reverse', alignItems: 'center', gap: 8 }}>
             <LottieIcon source={LOTTIE_BULB} size={22} />
             <Text style={[TYPE4.cardBody, RTL, { flex: 1 }]}>
-              בכל נקודת התחלה — אם החזקת 15+ שנה — לא הפסדת. S&P 500 = +10% בממוצע.
+              בכל נקודת התחלה, אם החזקת 15+ שנה, לא הפסדת. S&P 500 = +10% בממוצע.
             </Text>
           </View>
         </GlowCard>

@@ -1,5 +1,5 @@
 /**
- * SIM 3-18: בוחר המסלולים (Track Selector) — Module 3-18
+ * SIM 3-18: בוחר המסלולים (Track Selector), Module 3-18
  * Selection phase: pick an investment track.
  * Simulation phase: 30-year animated multi-line chart for all 3 tracks.
  */
@@ -56,7 +56,7 @@ const CH3_LOTTIE: [ReturnType<typeof require>, ReturnType<typeof require>] = [
 /* ================================================================== */
 
 /* ================================================================== */
-/*  MultiLineChart — 3 tracks simultaneous growth                       */
+/*  MultiLineChart, 3 tracks simultaneous growth                       */
 /* ================================================================== */
 
 function MultiLineChart({
@@ -182,7 +182,7 @@ function MultiLineChart({
 }
 
 /* ================================================================== */
-/*  ScoreScreen — results after completing 30 years                     */
+/*  ScoreScreen, results after completing 30 years                     */
 /* ================================================================== */
 
 function ScoreScreen({
@@ -262,7 +262,7 @@ function ScoreScreen({
         </View>
       </Animated.View>
 
-      {/* Fee insight — compact */}
+      {/* Fee insight, compact */}
       <Animated.View entering={FadeInUp.delay(200)} style={{ marginTop: 8 }}>
         <View style={sim3Styles.scoreCard}>
           <View style={[sim3Styles.scoreCardInner, { paddingVertical: 10 }]}>
@@ -544,7 +544,7 @@ export function TrackSelectorScreen({ onComplete }: TrackSelectorScreenProps) {
             style={{ ...styles.balanceCard, backgroundColor: SIM3.cardBg }}
           >
             <Text style={[styles.balanceLabel, RTL]}>
-              {selectedTrack?.emoji} {selectedTrack?.name} — יתרה נוכחית
+              {selectedTrack?.emoji} {selectedTrack?.name}, יתרה נוכחית
             </Text>
             <Animated.View style={balanceAnimStyle}>
               <Text
@@ -571,7 +571,7 @@ export function TrackSelectorScreen({ onComplete }: TrackSelectorScreenProps) {
             style={{ ...styles.chartCard, backgroundColor: SIM3.cardBg }}
           >
             <Text style={[styles.chartTitle, RTL]}>
-              צמיחת 3 מסלולים — 30 שנה
+              צמיחת 3 מסלולים, 30 שנה
             </Text>
 
             {/* Legend */}

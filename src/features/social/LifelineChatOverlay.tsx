@@ -1,5 +1,5 @@
 /**
- * LifelineChatOverlay — inline mentor chat that opens ON TOP of the quiz.
+ * LifelineChatOverlay, inline mentor chat that opens ON TOP of the quiz.
  * The user can ask the AI mentor for help with a concept, then close
  * the overlay with X and continue the quiz exactly where they left off.
  *
@@ -252,7 +252,7 @@ export function LifelineChatOverlay({ visible, conceptTag, onClose }: Props) {
             </View>
           </Animated.View>
 
-          {/* Locked state — daily limit reached */}
+          {/* Locked state, daily limit reached */}
           {locked ? (
             <View style={st.lockedContainer}>
               <Lock size={48} color="#0891b2" />

@@ -103,7 +103,7 @@ export function useTaxPuzzle() {
         return 'rejected';
       }
 
-      // Apply the credit — reduce tax, increase net
+      // Apply the credit, reduce tax, increase net
       const creditValue =
         credit.pointsValue * taxPuzzleConfig.pointValue;
 

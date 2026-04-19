@@ -153,7 +153,7 @@ export const FeedModuleHookCard = React.memo(function FeedModuleHookCard({ item,
             accessibilityLabel={isMuted ? "הפעל צליל. לחיצה ארוכה להשהיה" : "השתק. לחיצה ארוכה להשהיה"}
           />
 
-          {/* Mute indicator — small badge (top-right) reflecting current mute state */}
+          {/* Mute indicator, small badge (top-right) reflecting current mute state */}
           <View style={styles.muteIndicator} pointerEvents="none">
             {isMuted
               ? <VolumeX size={18} color="rgba(255,255,255,0.9)" />
@@ -161,7 +161,7 @@ export const FeedModuleHookCard = React.memo(function FeedModuleHookCard({ item,
             }
           </View>
 
-          {/* Paused overlay — large play badge in the center when video is paused */}
+          {/* Paused overlay, large play badge in the center when video is paused */}
           {!isPlaying && (
             <View style={styles.pausedOverlay} pointerEvents="none">
               <View style={styles.pausedBadge}>
@@ -178,7 +178,7 @@ export const FeedModuleHookCard = React.memo(function FeedModuleHookCard({ item,
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 1 }}
           />
-          {/* Finn in glow orb — placeholder until video is added */}
+          {/* Finn in glow orb, placeholder until video is added */}
           <View style={styles.finnOrbWrap} pointerEvents="none" accessible={false}>
             <View style={styles.glowOrb} />
             <ExpoImage

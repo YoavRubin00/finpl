@@ -7,7 +7,7 @@ export type FinancialGoal =
   | "expand-horizons"
   | "unsure";
 
-/** Dream selection — Duolingo-style "pick your dream" onboarding step */
+/** Dream selection, Duolingo-style "pick your dream" onboarding step */
 export type FinancialDream = "trip" | "car" | "apartment" | "freedom";
 
 export interface DreamOption {
@@ -46,24 +46,24 @@ export type CompanionId =
 
 export interface UserProfile {
   displayName: string;
-  // Q0 — Dream (Duolingo-style)
+  // Q0, Dream (Duolingo-style)
   financialDream: FinancialDream | null;
-  // Q1 — Goal
+  // Q1, Goal
   financialGoal: FinancialGoal;
-  // Q2 — Knowledge
+  // Q2, Knowledge
   knowledgeLevel: KnowledgeLevel;
-  // Q3 — Age gate
+  // Q3, Age gate
   ageGroup: AgeGroup;
   birthYear: number;
-  // Q4 — When to learn
+  // Q4, When to learn
   learningTime: LearningTime;
-  // Q5 — How to learn
+  // Q5, How to learn
   learningStyle: LearningStyle;
-  // Q6 — Deadline stress
+  // Q6, Deadline stress
   deadlineStress: DeadlineStress;
-  // Q7 — Daily commitment
+  // Q7, Daily commitment
   dailyGoalMinutes: DailyGoalMinutes;
-  // Q8 — Companion
+  // Q8, Companion
   companionId: CompanionId;
   // Avatar
   avatarId: string | null;

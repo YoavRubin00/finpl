@@ -28,10 +28,10 @@ interface EconomyState {
   frozenDates: string[]; // ISO dates when a streak freeze was auto-consumed
   streakFreezes: number; // owned freeze items count
   pendingFreezeSaveAck: boolean; // true when freeze was consumed, cleared on modal dismiss
-  // Streak Repair (US-004) — offered ONCE per break if prev streak >= 3
+  // Streak Repair (US-004), offered ONCE per break if prev streak >= 3
   pendingRepairOffer: boolean;
   previousStreakBeforeBreak: number; // snapshot of streak immediately before it reset to 1
-  lastRepairOfferedAt: string | null; // ISO date — prevents repeat offers for the same break
+  lastRepairOfferedAt: string | null; // ISO date, prevents repeat offers for the same break
   // US-007: track last 14 days' hour-of-day of activity (for personalized notification time)
   recentActivityHours: number[];
 
@@ -116,7 +116,7 @@ export const useEconomyStore = create<EconomyState>()(
             Notifications.scheduleNotificationAsync({
               content: {
                 title: "📈 מרכז ההשקעות נפתח!",
-                body: "הגעת לשלב 2 — בואו נגלה מה מחכה לכם בעולם ההשקעות!",
+                body: "הגעת לשלב 2, בואו נגלה מה מחכה לכם בעולם ההשקעות!",
                 data: { screen: "/(tabs)/investments" },
               },
               trigger: null, // immediate
@@ -218,7 +218,7 @@ export const useEconomyStore = create<EconomyState>()(
           recentActivityHours: [...state.recentActivityHours.slice(-13), new Date().getHours()],
         }));
 
-        // Cancel today's streak reminder — user already completed the daily task
+        // Cancel today's streak reminder, user already completed the daily task
         try {
           const notifMod = require("../notifications/useNotificationStore");
           const notifStore = notifMod.useNotificationStore.getState();

@@ -82,7 +82,7 @@ export function LifelineModal({ visible, conceptTag, onAccept, onDismiss }: Life
             הנושא{" "}
             <Text style={styles.conceptHighlight}>{label}</Text>
             {" "}יכול להיות מבלבל בהתחלה.{"\n"}
-            בוא נפתח צ׳אט קצר עם המנטור — הוא יסביר בקלות!
+            בוא נפתח צ׳אט קצר עם המנטור, הוא יסביר בקלות!
           </Animated.Text>
 
           {/* CTA */}

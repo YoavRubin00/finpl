@@ -480,7 +480,7 @@ function SquadHubView() {
                   {hasRankBonus && (
                     <View style={hubStyles.rankBonusRow}>
                       <Text style={hubStyles.rankBonusText}>
-                        בונוס מיקום #{squad.rank} — x{rankMultiplier}
+                        בונוס מיקום #{squad.rank}, x{rankMultiplier}
                       </Text>
                       <Trophy size={14} color="#facc15" />
                     </View>

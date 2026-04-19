@@ -131,16 +131,16 @@ const MODULE_POST_VIDEO_MAP: Record<string, string> = {
 const INFOGRAPHIC_TOP_CARDS = new Set([
   "fc-1-5-1", "fc-1-5-2", "fc-1-5-3", "fc-1-5-4", "fc-1-5-5", "fc-1-5-6",
   "fc-1-6-1", "fc-1-6-2", "fc-1-6-3", "fc-1-6-4", "fc-1-6-5", "fc-1-6-6",
-  // Graham bonus modules — infographic at top with Finn explanation at bottom
+  // Graham bonus modules, infographic at top with Finn explanation at bottom
   "fc-4-b1-1", "fc-4-b1-2", "fc-4-b1-2b", "fc-4-b1-3",
   "fc-4-b2-1", "fc-4-b2-2",
   "fc-4-b3-1", "fc-4-b3-2",
-  // fc-4-b4-1, fc-4-b4-2 — use default layout (text + image) so text is visible
+  // fc-4-b4-1, fc-4-b4-2, use default layout (text + image) so text is visible
 ]);
 
 const RTL_STYLE = { writingDirection: "rtl" as const, textAlign: "right" as const };
 
-/** Summary infographic map — maps summary card IDs to portrait PNGs */
+/** Summary infographic map, maps summary card IDs to portrait PNGs */
 const SUMMARY_MAP: Record<string, { uri: string } | number | null> = {
   // Chapter 0
   "fc-0-1-summary": { uri: 'https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/infographics/mod-0-1/summary-0-1.png' },
@@ -197,7 +197,7 @@ const SUMMARY_MAP: Record<string, { uri: string } | number | null> = {
   "fc-5-30-summary": { uri: 'https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/infographics/mod-5-30/summary-5-30.png' },
   "fc-5-31-summary": { uri: 'https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/infographics/mod-5-31/summary-5-31.png' },
 
-  // Graham bonus modules — feed infographics
+  // Graham bonus modules, feed infographics
   "fc-4-b1-summary": { uri: 'https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/infographics/graham-7-rules/gr-1.png' },
   "fc-4-b2-summary": { uri: 'https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/infographics/graham-margin-safety/gs-1.png' },
   "fc-4-b3-summary": { uri: 'https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/infographics/graham-price-value/gv-1.png' },
@@ -256,7 +256,7 @@ const quizFeedbackStyles = StyleSheet.create({
 });
 
 /* ------------------------------------------------------------------ */
-/*  renderBoldText — bolds English terms and parenthetical content     */
+/*  renderBoldText, bolds English terms and parenthetical content     */
 /* ------------------------------------------------------------------ */
 
 function renderBoldText(text: string, onTermPress?: (term: string) => void): React.ReactNode[] {
@@ -303,7 +303,7 @@ function renderBoldText(text: string, onTermPress?: (term: string) => void): Rea
 }
 
 /* ------------------------------------------------------------------ */
-/*  VideoHookPlayer — full-screen video hook with title overlay         */
+/*  VideoHookPlayer, full-screen video hook with title overlay         */
 /* ------------------------------------------------------------------ */
 
 function VideoHookPlayer({ videoUri, hookText, onFinish, unitColors, fitContain, trimEnd = 0.5 }: {
@@ -352,7 +352,7 @@ function VideoHookPlayer({ videoUri, hookText, onFinish, unitColors, fitContain,
       }
     }));
 
-    // Track errors — skip video on failure
+    // Track errors, skip video on failure
     subs.push(player.addListener('statusChange', (e: { status: string; error?: unknown }) => {
       if (e.status === 'error') {
         safeFinish();
@@ -362,7 +362,7 @@ function VideoHookPlayer({ videoUri, hookText, onFinish, unitColors, fitContain,
       }
     }));
 
-    // Safety timeout — if video doesn't play within 10s, skip
+    // Safety timeout, if video doesn't play within 10s, skip
     const timeout = setTimeout(() => {
       if (isLoading) safeFinish();
     }, 10000);
@@ -378,7 +378,7 @@ function VideoHookPlayer({ videoUri, hookText, onFinish, unitColors, fitContain,
       <Pressable
         style={{ flex: 1 }}
         accessibilityRole="button"
-        accessibilityLabel="סרטון — לחיצה ארוכה להאצה"
+        accessibilityLabel="סרטון, לחיצה ארוכה להאצה"
         onLongPress={() => { player.playbackRate = 1.8; setIsFastMode(true); }}
         onPressOut={() => { player.playbackRate = 1.0; setIsFastMode(false); }}
         delayLongPress={300}
@@ -404,11 +404,11 @@ function VideoHookPlayer({ videoUri, hookText, onFinish, unitColors, fitContain,
           <Text style={{ fontSize: 16, fontWeight: "900", color: "#ffffff" }}>⚡ x1.8</Text>
         </View>
       )}
-      {/* Safe area top overlay — only for full-screen video hooks (not flashcard videos) */}
+      {/* Safe area top overlay, only for full-screen video hooks (not flashcard videos) */}
       {hookText ? (
         <View style={{ position: "absolute", top: 0, left: 0, right: 0, height: insets.top, backgroundColor: "rgba(0,0,0,0.6)" }} pointerEvents="none" />
       ) : null}
-      {/* Hook text overlay — bottom */}
+      {/* Hook text overlay, bottom */}
       {hookText ? (
         <View style={{ position: "absolute", bottom: 0, left: 0, right: 0, paddingHorizontal: 20, paddingBottom: Math.max(40, insets.bottom + 16), paddingTop: 60 }} pointerEvents="none">
           <LinearGradient colors={["transparent", "rgba(0,0,0,0.85)"]} style={StyleSheet.absoluteFill} />
@@ -417,7 +417,7 @@ function VideoHookPlayer({ videoUri, hookText, onFinish, unitColors, fitContain,
           </Text>
         </View>
       ) : null}
-      {/* Skip button — right side for RTL */}
+      {/* Skip button, right side for RTL */}
       <Pressable
         onPress={safeFinish}
         style={{ position: "absolute", top: insets.top + 12, right: 16, backgroundColor: "rgba(0,0,0,0.5)", borderRadius: 20, paddingHorizontal: 16, paddingVertical: 8 }}
@@ -431,7 +431,7 @@ function VideoHookPlayer({ videoUri, hookText, onFinish, unitColors, fitContain,
 }
 
 /* ------------------------------------------------------------------ */
-/*  FlashcardCard — mounts with a slide-in animation per card          */
+/*  FlashcardCard, mounts with a slide-in animation per card          */
 /* ------------------------------------------------------------------ */
 
 function FlashcardCard({
@@ -478,7 +478,7 @@ function FlashcardCard({
         } else {
           player.remove();
         }
-      } catch { /* audio playback failed — silent */ }
+      } catch { /* audio playback failed, silent */ }
     }
 
     return () => {
@@ -543,7 +543,7 @@ function FlashcardCard({
   return (
     <GestureDetector gesture={swipeGesture}>
     <Animated.View style={[cardStyle, { flex: 1 }]}>
-      {/* Finn help popup notification — bottom of card, after 3s */}
+      {/* Finn help popup notification, bottom of card, after 3s */}
       {showFinnPopup && (
         <Animated.View entering={FadeInUp.delay(3000).duration(400)} style={{
           position: "absolute", bottom: 80, left: 12, right: 12, zIndex: 100,
@@ -584,7 +584,7 @@ function FlashcardCard({
         /* ── Full-screen video flashcard ── */
         <VideoHookPlayer videoUri={card.videoUri} hookText="" onFinish={handleNextBtn} unitColors={unitColors} />
       ) : card.isMeme ? (
-        /* ── Meme break card — humor pause, no XP ── */
+        /* ── Meme break card, humor pause, no XP ── */
         <View style={{ flex: 1 }}>
           <View style={{ flex: 1, backgroundColor: "#1e293b", borderRadius: 20, overflow: "hidden", position: "relative" }}>
             {card.memeImage ? (
@@ -722,7 +722,7 @@ function FlashcardCard({
           <View style={{ flex: 1, backgroundColor: "#ffffff", borderRadius: 20, overflow: "hidden", shadowColor: "#000", shadowOpacity: 0.12, shadowRadius: 16, shadowOffset: { width: 0, height: 4 }, elevation: 6 }}>
             <ScrollView contentContainerStyle={{ padding: 24, flexGrow: 1, justifyContent: (!card.text || (isDiveMode && diveStep > 0 && card.hideTextOnDive)) ? "flex-start" : "center" }} showsVerticalScrollIndicator={false}>
               {(() => {
-                // Strip intro phrase (before ':') — it's now shown in the title row
+                // Strip intro phrase (before ':'), it's now shown in the title row
                 const colonIdx = card.text.indexOf(":");
                 const rawBody = (colonIdx > 0 && colonIdx < 80)
                   ? card.text.substring(colonIdx + 1).trim()
@@ -745,18 +745,18 @@ function FlashcardCard({
                 </Animated.View>
               )}
 
-              {/* Paradigm footnote — only on fc-1-1-1 */}
+              {/* Paradigm footnote, only on fc-1-1-1 */}
               {card.id === "fc-1-1-1" && (!isDiveMode || diveStep === 0) && (
                 <Text style={{ ...RTL_STYLE, fontSize: 13, color: "#64748b", fontWeight: "600", marginTop: 10, lineHeight: 20 }}>
                   💡 פרדיגמה = דרך חשיבה, מסגרת מנטלית שדרכה אנחנו מפרשים את המציאות.
                 </Text>
               )}
 
-              {/* Finn tip removed — shown as popup notification instead */}
+              {/* Finn tip removed, shown as popup notification instead */}
             </ScrollView>
           </View>
 
-          {/* Bottom navigation bar — back + continue */}
+          {/* Bottom navigation bar, back + continue */}
           <View style={{ paddingHorizontal: 8, paddingVertical: 8, paddingBottom: 16 }}>
             <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
               <AnimatedPressable
@@ -801,7 +801,7 @@ function FlashcardCard({
 }
 
 /* ------------------------------------------------------------------ */
-/*  QuizCard — shows question + option buttons with feedback           */
+/*  QuizCard, shows question + option buttons with feedback           */
 /* ------------------------------------------------------------------ */
 
 interface AnswerState {
@@ -810,7 +810,7 @@ interface AnswerState {
   revealed: boolean;
 }
 
-/** Seeded shuffle — deterministic per quiz ID so answer order stays stable across re-renders */
+/** Seeded shuffle, deterministic per quiz ID so answer order stays stable across re-renders */
 function seededShuffle<T>(arr: T[], seed: string): { shuffled: T[]; indexMap: number[] } {
   let h = 0;
   for (let i = 0; i < seed.length; i++) { h = ((h << 5) - h + seed.charCodeAt(i)) | 0; }
@@ -842,7 +842,7 @@ function QuizCard({
   unitColors: { bg: string; dim: string; glow: string; bottom: string };
   onTermPress?: (term: string) => void;
 }) {
-  // Shuffle options deterministically per quiz — correct answer changes position each quiz
+  // Shuffle options deterministically per quiz, correct answer changes position each quiz
   const { shuffledOptions, shuffledCorrectIndex } = useMemo(() => {
     const { shuffled, indexMap } = seededShuffle(quiz.options, quiz.id);
     const newCorrect = indexMap.indexOf(quiz.correctAnswer);
@@ -928,7 +928,7 @@ function QuizCard({
         setTimeout(() => { playSound('modal_open_2'); }, 100);
         autoTimerRef.current = setTimeout(() => onCorrectAnswer(), 3400);
       } else {
-        // Wrong answer — give up to 3 chances
+        // Wrong answer, give up to 3 chances
         shakeX.value = 0;
         errorHaptic();
         onWrongImmediate(); // Heart drops immediately
@@ -939,11 +939,11 @@ function QuizCard({
         setWrongAttempts(newWrong);
 
         if (newWrong.size >= 3) {
-          // 3rd wrong — auto-select correct answer, show feedback
+          // 3rd wrong, auto-select correct answer, show feedback
           setAnswerState({ selectedIndex: quiz.correctAnswer, isCorrect: false, revealed: true });
           autoTimerRef.current = setTimeout(() => onWrongRevealed(), 3600);
         }
-        // 1st/2nd wrong — option greyed out, user can try remaining options
+        // 1st/2nd wrong, option greyed out, user can try remaining options
       }
     },
     [answerState, quiz.correctAnswer, wrongAttempts, onCorrectAnswer, onWrongRevealed, onWrongImmediate, shakeX, celebrationScale, playSound, setFinnState],
@@ -1119,7 +1119,7 @@ function QuizCard({
             )}
         </View>
 
-        {/* ── Feedback — inline below question card ── */}
+        {/* ── Feedback, inline below question card ── */}
         {isRevealed && (
           <>
             <Animated.View
@@ -1167,7 +1167,7 @@ function QuizCard({
 }
 
 /* ------------------------------------------------------------------ */
-/*  SummaryScreen — module/quiz completion screen                      */
+/*  SummaryScreen, module/quiz completion screen                      */
 /* ------------------------------------------------------------------ */
 
 function SummaryScreen({
@@ -1207,7 +1207,7 @@ function SummaryScreen({
   // Haptic feedback based on quiz performance
   useEffect(() => {
     if (correctCount === totalCount && totalCount > 0) {
-      doubleHeavyHaptic(); // Perfect score — major win
+      doubleHeavyHaptic(); // Perfect score, major win
     } else if (correctCount >= totalCount / 2) {
       successHaptic(); // Good score
     }
@@ -1252,7 +1252,7 @@ function SummaryScreen({
     <View style={{ flex: 1 }}>
       <View style={{ alignItems: "center", paddingTop: 20, gap: 16, paddingHorizontal: 16 }}>
 
-        {/* Finn mascot — free-floating with soft glow */}
+        {/* Finn mascot, free-floating with soft glow */}
         <Animated.View entering={FadeIn.duration(500)} style={{ alignItems: "center" }}>
           <View style={{
             shadowColor: "#0ea5e9",
@@ -1315,7 +1315,7 @@ function SummaryScreen({
           </View>
         )}
 
-        {/* UP NEXT — Wisdom Flash (deep ocean blue) */}
+        {/* UP NEXT, Wisdom Flash (deep ocean blue) */}
         {chestClaimed && wisdomItem && showWisdom && (
           <View style={{ width: "100%", paddingHorizontal: 4 }}>
             <View style={{ flexDirection: "row", alignItems: "center", gap: 6, marginBottom: 10 }}>
@@ -1354,7 +1354,7 @@ function SummaryScreen({
         {/* Spacer to push button to bottom */}
         <View style={{ flex: 1 }} />
 
-        {/* CONTINUE button — hidden until chest is claimed */}
+        {/* CONTINUE button, hidden until chest is claimed */}
         {chestClaimed !== false && (
           <Animated.View entering={FadeIn.duration(300)} style={{ width: "100%", marginBottom: 16 }}>
             <AnimatedPressable
@@ -1396,7 +1396,7 @@ function SummaryScreen({
 }
 
 /* ------------------------------------------------------------------ */
-/*  HeartBreakOverlay — dramatic heart-loss animation                  */
+/*  HeartBreakOverlay, dramatic heart-loss animation                  */
 /* ------------------------------------------------------------------ */
 
 function HeartBreakOverlay({
@@ -1593,7 +1593,7 @@ const heartBreakStyles = StyleSheet.create({
 });
 
 /* ------------------------------------------------------------------ */
-/*  ChestFlyToSlot — chest icon flies from center to inventory         */
+/*  ChestFlyToSlot, chest icon flies from center to inventory         */
 /* ------------------------------------------------------------------ */
 
 const UNLOCK_MINUTES: Record<ChestRarity, number> = {
@@ -1713,7 +1713,7 @@ const chestFlyStyles = StyleSheet.create({
 });
 
 /* ------------------------------------------------------------------ */
-/*  SlotsFullModal — prompt when all 4 chest slots are occupied         */
+/*  SlotsFullModal, prompt when all 4 chest slots are occupied         */
 /* ------------------------------------------------------------------ */
 
 const INSTANT_OPEN_GEM_COST = 10;
@@ -1759,11 +1759,11 @@ function SlotsFullModal({
             }}
             disabled={!canAfford}
             accessibilityRole="button"
-            accessibilityLabel={`פתח תיבה — ${INSTANT_OPEN_GEM_COST} ג׳מים`}
+            accessibilityLabel={`פתח תיבה, ${INSTANT_OPEN_GEM_COST} ג׳מים`}
             accessibilityState={{ disabled: !canAfford }}
           >
             <Text style={slotsFullStyles.gemButtonText}>
-              💎 פתח תיבה — {INSTANT_OPEN_GEM_COST} ג׳מים
+              💎 פתח תיבה, {INSTANT_OPEN_GEM_COST} ג׳מים
             </Text>
             {!canAfford && (
               <Text style={slotsFullStyles.insufficientText}>
@@ -1897,7 +1897,7 @@ const quizStreakPopupStyles = StyleSheet.create({
 });
 
 /* ------------------------------------------------------------------ */
-/*  SimIntroOverlay — intro card before simulation starts               */
+/*  SimIntroOverlay, intro card before simulation starts               */
 /* ------------------------------------------------------------------ */
 
 function SimIntroOverlay({
@@ -2190,7 +2190,7 @@ export function LessonFlowScreen() {
     setVideoPlaying(phase === "video" || phase === "post-infographic-video");
   }, [phase]);
 
-  // Show Pro gate for locked modules — but only after video finishes
+  // Show Pro gate for locked modules, but only after video finishes
   useEffect(() => {
     if (mod && !isModuleAccessible && phase !== "video") {
       setShowProGate(true);
@@ -2209,16 +2209,16 @@ export function LessonFlowScreen() {
   // Post-module celebration
   const [showPostCelebration, setShowPostCelebration] = useState(false);
   const [showBreakMessage, setShowBreakMessage] = useState(false);
-  // Shark Love — every 3rd module completion
+  // Shark Love, every 3rd module completion
   const [showSharkLove, setShowSharkLove] = useState(false);
   const moduleStartTimeRef = useRef(Date.now());
-  // Shark CTA notifications — Bridge (every 4) + Referral (every 5 + dividend content)
+  // Shark CTA notifications, Bridge (every 4) + Referral (every 5 + dividend content)
   const [showBridgeCTA, setShowBridgeCTA] = useState(false);
   const [showReferralCTA, setShowReferralCTA] = useState(false);
   // Triggering metadata for copy variant rotation (Duolingo A/B: +8-12% CTR)
   const [ctaModuleCount, setCtaModuleCount] = useState(0);
   const [referralByDividend, setReferralByDividend] = useState(false);
-  // Shark Party — every 2 consecutive or 4 total completed modules
+  // Shark Party, every 2 consecutive or 4 total completed modules
   const [showPartyInvite, setShowPartyInvite] = useState(false);
   const [showPartyVideo, setShowPartyVideo] = useState(false);
   const [quizIndex, setQuizIndex] = useState(0);
@@ -2331,7 +2331,7 @@ export function LessonFlowScreen() {
       gems: Math.round(rewards.gems * multiplier),
     };
     setChestRewards(finalRewards);
-    // Economy + visuals are triggered from the chest onPress setTimeout — NOT here
+    // Economy + visuals are triggered from the chest onPress setTimeout, NOT here
   }, []);
 
   const handleDoubleOrNothingResolve = useCallback((multiplier: number) => {
@@ -2373,7 +2373,7 @@ export function LessonFlowScreen() {
     }
   }, [pendingMultiplierRewards, chapterId, id, isPro]);
 
-  // Shark Love dismiss — chain into DoN or wisdom
+  // Shark Love dismiss, chain into DoN or wisdom
   const handleSharkLoveDismiss = useCallback(() => {
     setShowSharkLove(false);
     successHaptic();
@@ -2409,7 +2409,7 @@ export function LessonFlowScreen() {
   const isLastModule = currentModIdx === chapterModules.length - 1;
   const nextModule = !isLastModule ? chapterModules[currentModIdx + 1] : undefined;
 
-  // Pizza index modal — one-time popup after completing mod-2-12 (ch 2 mid-point)
+  // Pizza index modal, one-time popup after completing mod-2-12 (ch 2 mid-point)
   useEffect(() => {
     if (!mod) return;
     if (phase === "summary" && mod.id === "mod-2-12" && !hasSeenPizza) {
@@ -2417,7 +2417,7 @@ export function LessonFlowScreen() {
     }
   }, [phase, mod, hasSeenPizza]);
 
-  // Chapter 0 bullshit interstitial — one-time shark notification after mod-0-3,
+  // Chapter 0 bullshit interstitial, one-time shark notification after mod-0-3,
   // framing the BullshitSwipe game the user will soon encounter in the feed.
   useEffect(() => {
     if (!mod) return;
@@ -2426,7 +2426,7 @@ export function LessonFlowScreen() {
     }
   }, [phase, mod, hasSeenCh0Bullshit]);
 
-  // mod-0-1 barter notif — dancing shark joke after completing "מה זה בכלל כסף"
+  // mod-0-1 barter notif, dancing shark joke after completing "מה זה בכלל כסף"
   useEffect(() => {
     if (!mod) return;
     if (phase === "summary" && mod.id === "mod-0-1" && !hasSeenMod01BarterNotif) {
@@ -2439,7 +2439,7 @@ export function LessonFlowScreen() {
     if (!mod) return;
     if (phase === "summary" && !completedRef.current) {
       completedRef.current = true;
-      // Module completion rewards delayed — granted when chest is opened (or claimed)
+      // Module completion rewards delayed, granted when chest is opened (or claimed)
       successHaptic();
       playSound('modal_open_1');
 
@@ -2479,7 +2479,7 @@ export function LessonFlowScreen() {
           doubleHeavyHaptic();
         }, 4500);
         setTimeout(() => setShowChapterComplete(false), 7500);
-        // Show Finn bridge nudge after chapter 0 completion (skip for minors — no bridge access)
+        // Show Finn bridge nudge after chapter 0 completion (skip for minors, no bridge access)
         if (chapterId === "chapter-0" && !isGuest && useAuthStore.getState().profile?.ageGroup !== "minor") {
           setTimeout(() => setShowFinnBridgeNudge(true), 8000);
         }
@@ -2492,7 +2492,7 @@ export function LessonFlowScreen() {
     };
   }, [phase, mod?.id, completeModule, mod, isLastModule, playSound]);
 
-  // Post-module celebration — only after wisdom + DoN + SharkLove are done, every other module
+  // Post-module celebration, only after wisdom + DoN + SharkLove are done, every other module
   useEffect(() => {
     if (!chestClaimed || showDoubleOrNothing || showSharkLove || showPostCelebration || showBreakMessage) return;
     // Show every other module (0, 2, 4... = yes, 1, 3, 5... = no)
@@ -2502,7 +2502,7 @@ export function LessonFlowScreen() {
     return () => clearTimeout(timer);
   }, [chestClaimed, showDoubleOrNothing, showSharkLove, currentModIdx, showPostCelebration, showBreakMessage]);
 
-  // Shark Party — trigger after every 4 total completed modules
+  // Shark Party, trigger after every 4 total completed modules
   useEffect(() => {
     if (!chestClaimed || showDoubleOrNothing || showSharkLove || showPostCelebration || showPartyInvite || showPartyVideo) return;
     // Count total completed modules across all chapters
@@ -2542,7 +2542,7 @@ export function LessonFlowScreen() {
       setQuizIndex((prev) => prev + 1);
       tapHaptic();
     } else if (MODULES_WITH_SIM.has(mod.id) && !SIM_FIRST_MODULES.has(mod.id)) {
-      // Normal flow: quizzes → sim (skip for sim-first modules — sim already done)
+      // Normal flow: quizzes → sim (skip for sim-first modules, sim already done)
       if (PRO_LOCKED_SIMS.has(mod.id) && !useSubscriptionStore.getState().canUse("simulator")) {
         useUpgradeModalStore.getState().show("simulator");
         return;
@@ -2570,7 +2570,7 @@ export function LessonFlowScreen() {
     advanceQuiz();
   }, [mod, quizIndex, recordQuizAnswer, advanceQuiz, consecutiveCorrect, playSound]);
 
-  // Immediate heart drop — called right when wrong answer is selected
+  // Immediate heart drop, called right when wrong answer is selected
   const handleWrongImmediate = useCallback(() => {
     if (!mod) return;
     setConsecutiveCorrect(0); // Reset streak on ANY wrong answer
@@ -2590,13 +2590,13 @@ export function LessonFlowScreen() {
     }
   }, [mod, quizIndex]);
 
-  // Deferred — advances quiz after feedback shown (stops if no hearts left)
+  // Deferred, advances quiz after feedback shown (stops if no hearts left)
   const handleWrongRevealed = useCallback(() => {
     if (!mod) return;
     const quiz = mod.quizzes[quizIndex];
     recordQuizAnswer(mod.id, quiz.id, false, quiz.conceptTag);
     setConsecutiveCorrect(0);
-    // If hearts ran out — stop playing, show out-of-hearts
+    // If hearts ran out, stop playing, show out-of-hearts
     const currentHearts = useSubscriptionStore.getState().getHearts();
     if (!isPro && currentHearts <= 0) {
       setShowOutOfHearts(true);
@@ -2635,7 +2635,7 @@ export function LessonFlowScreen() {
       return;
     }
 
-    // Mid-lesson Finn checkpoint — show once at random position (card 3 or 4)
+    // Mid-lesson Finn checkpoint, show once at random position (card 3 or 4)
     if (flashcardIndex === checkpointIndex && !showMidCheckpoint && checkpointReturnIndex === null) {
       mediumHaptic();
       setShowMidCheckpoint(true);
@@ -2744,7 +2744,7 @@ export function LessonFlowScreen() {
     );
   }
 
-  // Video hook phase — full-screen video with hook text overlay
+  // Video hook phase, full-screen video with hook text overlay
   if (phase === "video" && mod?.videoHookAsset) {
     return (
       <VideoHookPlayer
@@ -2760,7 +2760,7 @@ export function LessonFlowScreen() {
     return <View style={{ flex: 1, backgroundColor: "#f8fafc" }} />;
   }
 
-  // Post-infographic video — full-screen, plays after the infographic before the chest
+  // Post-infographic video, full-screen, plays after the infographic before the chest
   if (phase === "post-infographic-video" && mod && MODULE_POST_VIDEO_MAP[mod.id]) {
     return (
       <VideoHookPlayer
@@ -2868,7 +2868,7 @@ export function LessonFlowScreen() {
           </View>
         </View>
 
-        {/* Streak text — fire lottie + label, absolute so it doesn't push content down */}
+        {/* Streak text, fire lottie + label, absolute so it doesn't push content down */}
         {showStreakPopup && consecutiveCorrect >= 3 && (
           <Animated.View
             entering={FadeIn.duration(200)}
@@ -2890,7 +2890,7 @@ export function LessonFlowScreen() {
         )}
 
         <Animated.View style={titleStyle}>
-          {/* Title row — hidden during intro, quizzes, sim, sim-intro, and comic flashcards */}
+          {/* Title row, hidden during intro, quizzes, sim, sim-intro, and comic flashcards */}
           {!(phase === "flashcards" && (mod.flashcards[flashcardIndex]?.isComic || mod.flashcards[flashcardIndex]?.isMeme || mod.flashcards[flashcardIndex]?.videoUri)) && phase !== "intro" && phase !== "quizzes" && phase !== "sim" && (phase as string) !== "sim-intro" && (() => {
             let titleText = mod.title;
             if (phase === "flashcards") {
@@ -2917,7 +2917,7 @@ export function LessonFlowScreen() {
             );
           })()}
 
-          {/* Progress bar — hidden during sim-intro */}
+          {/* Progress bar, hidden during sim-intro */}
           {(phase as string) !== "sim-intro" && (() => {
             const hasSim = MODULES_WITH_SIM.has(mod.id);
             const isSimFirst = SIM_FIRST_MODULES.has(mod.id);
@@ -2953,7 +2953,7 @@ export function LessonFlowScreen() {
                     end={{ x: 1, y: 0 }}
                     style={{ height: '100%', borderRadius: 999, width: `${pct}%` }}
                   >
-                    {/* Shine effect — brighter on fire */}
+                    {/* Shine effect, brighter on fire */}
                     <View style={{ position: 'absolute', top: 2, left: 6, right: 6, height: isOnFire ? 4 : 3, backgroundColor: isOnFire ? 'rgba(255,255,255,0.5)' : 'rgba(255,255,255,0.35)', borderRadius: 999 }} />
                   </LinearGradient>
                 </View>
@@ -2962,7 +2962,7 @@ export function LessonFlowScreen() {
           })()}
         </Animated.View>
 
-        {/* ── Hero phase — full-screen character art ── */}
+        {/* ── Hero phase, full-screen character art ── */}
         {phase === "hero" && MODULE_HERO_MAP[mod.id] && (
           <Animated.View entering={FadeIn.duration(600)} style={{ flex: 1, justifyContent: "center", alignItems: "center", backgroundColor: "#f0f7ff" }}>
             <Pressable
@@ -3132,7 +3132,7 @@ export function LessonFlowScreen() {
         {phase === "sim" && (
           <Animated.View style={[contentStyle, { flex: 1, marginHorizontal: -16 }]}>
             <SimulatorLoader moduleId={mod.id} onComplete={handleSimComplete} />
-            {/* Skip button removed — users complete sims naturally */}
+            {/* Skip button removed, users complete sims naturally */}
           </Animated.View>
         )}
 
@@ -3160,7 +3160,7 @@ export function LessonFlowScreen() {
         {/* ── Summary phase ── */}
         {phase === "summary" && (
           <Animated.View style={[contentStyle, { flex: 1, marginHorizontal: -16 }]}>
-            {/* Full-screen confetti overlay — only rendered while active */}
+            {/* Full-screen confetti overlay, only rendered while active */}
             {confettiActive && (
               <View
                 style={[StyleSheet.absoluteFill, { zIndex: 99 }]}
@@ -3257,7 +3257,7 @@ export function LessonFlowScreen() {
                           // 2s: auto-advance to "מודול הושלם"
                           setTimeout(() => {
                             setChestClaimed(true);
-                            // Shark Love — every 3rd completed module (3, 6, 9...)
+                            // Shark Love, every 3rd completed module (3, 6, 9...)
                             const totalCompletedNow = Object.values(progress).reduce(
                               (sum, ch) => sum + (ch?.completedModules?.length ?? 0), 0
                             );
@@ -3274,7 +3274,7 @@ export function LessonFlowScreen() {
                               }, 500);
                             }
                             // Duolingo A/B: ride the chest-dopamine peak (1.5-2s), not after it fades
-                            // Bridge CTA — every 4 completed modules (4, 8, 12...)
+                            // Bridge CTA, every 4 completed modules (4, 8, 12...)
                             // Skip for minors (no bridge access) and guests
                             const profile = useAuthStore.getState().profile;
                             const isBridgeEligible = !isGuest && profile?.ageGroup !== "minor";
@@ -3374,7 +3374,7 @@ export function LessonFlowScreen() {
         onResolve={handleDoubleOrNothingResolve}
       />
 
-      {/* Ad bonus — double coins by watching ad (non-PRO only) */}
+      {/* Ad bonus, double coins by watching ad (non-PRO only) */}
       {showAdBonus && !isProForAds && adLoaded && (
         <Modal visible transparent animationType="fade" onRequestClose={() => setShowAdBonus(false)}>
           <View style={{ flex: 1, backgroundColor: "rgba(8, 20, 40, 0.75)", justifyContent: "center", alignItems: "center", paddingHorizontal: 28 }}>
@@ -3416,7 +3416,7 @@ export function LessonFlowScreen() {
       )}
 
       {/* Full-screen chest reward takeover */}
-      {/* Blue chest modal removed — chest opens in-place */}
+      {/* Blue chest modal removed, chest opens in-place */}
       <Modal visible={false} transparent={false} animationType="fade" statusBarTranslucent accessibilityViewIsModal>
         <Pressable
           style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}
@@ -3526,7 +3526,7 @@ export function LessonFlowScreen() {
         originX={heartsRowX.current}
       />
 
-      {/* AI Lifeline intervention — triggered when concept is consistently failed */}
+      {/* AI Lifeline intervention, triggered when concept is consistently failed */}
       <LifelineModal
         visible={lifelineConcept !== null}
         conceptTag={lifelineConcept ?? ""}
@@ -3542,7 +3542,7 @@ export function LessonFlowScreen() {
         onDismiss={() => setLifelineConcept(null)}
       />
 
-      {/* Inline chat overlay — opens ON TOP of quiz, X to close and continue */}
+      {/* Inline chat overlay, opens ON TOP of quiz, X to close and continue */}
       <LifelineChatOverlay
         visible={lifelineChatConcept !== null}
         conceptTag={lifelineChatConcept ?? ""}
@@ -3638,7 +3638,7 @@ export function LessonFlowScreen() {
             </View>
           </Animated.View>
 
-          {/* Continue button — pinned to bottom */}
+          {/* Continue button, pinned to bottom */}
           <Animated.View entering={FadeIn.delay(800).duration(400)} style={{ width: "80%", alignItems: "center" }}>
             <View style={{
               width: "100%",
@@ -3659,7 +3659,7 @@ export function LessonFlowScreen() {
           </Animated.View>
         </AnimatedPressable>
       )}
-      {/* Finn bridge nudge — after chapter 0 completion */}
+      {/* Finn bridge nudge, after chapter 0 completion */}
       {showFinnBridgeNudge && (
         <Modal visible transparent animationType="fade" onRequestClose={() => setShowFinnBridgeNudge(false)}>
           <Pressable style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.6)", justifyContent: "center", alignItems: "center", paddingHorizontal: 24 }} onPress={() => setShowFinnBridgeNudge(false)} accessibilityRole="button" accessibilityLabel="סגור">
@@ -3693,7 +3693,7 @@ export function LessonFlowScreen() {
         </Modal>
       )}
 
-      {/* Exit interception modal — Duolingo-style */}
+      {/* Exit interception modal, Duolingo-style */}
       {showExitConfirm && (() => {
         // Minutes remaining = 3 (first third) / 2 (middle) / 1 (last third) of module progress.
         const flashcardsTotal = mod?.flashcards.length ?? 1;
@@ -3781,7 +3781,7 @@ export function LessonFlowScreen() {
         </Modal>
       )}
 
-      {/* Pizza Index — one-time modal after mod-2-12 summary */}
+      {/* Pizza Index, one-time modal after mod-2-12 summary */}
       <Modal
         visible={showPizzaModal}
         animationType="slide"
@@ -3799,7 +3799,7 @@ export function LessonFlowScreen() {
         />
       </Modal>
 
-      {/* Chapter 0 bullshit interstitial — shark message before mod-0-4 */}
+      {/* Chapter 0 bullshit interstitial, shark message before mod-0-4 */}
       <Modal
         visible={showCh0BullshitIntro}
         transparent
@@ -3820,7 +3820,7 @@ export function LessonFlowScreen() {
               זו הסיבה שאני כאן. ללמד וללמוד ביחד איתך ולא למכור לך סיפורים.
             </Text>
             <Text style={{ fontSize: 13, color: "#64748b", writingDirection: "rtl", textAlign: "right", lineHeight: 20, marginBottom: 18 }}>
-              מיד נתרגל ביחד — משחק "סוויפ הבולשיט" לזיהוי פרסומות מטעות. בואו נתחיל.
+              מיד נתרגל ביחד, משחק "סוויפ הבולשיט" לזיהוי פרסומות מטעות. בואו נתחיל.
             </Text>
             <Pressable
               onPress={() => {
@@ -3854,7 +3854,7 @@ export function LessonFlowScreen() {
         </View>
       </Modal>
 
-      {/* mod-0-1 barter notif — dancing shark after "מה זה בכלל כסף" */}
+      {/* mod-0-1 barter notif, dancing shark after "מה זה בכלל כסף" */}
       <Modal
         visible={showMod01BarterNotif}
         transparent
@@ -4020,7 +4020,7 @@ export function LessonFlowScreen() {
         </Pressable>
       )}
 
-      {/* ── Shark Love — "עדיין תאהבו אותי?" every 3rd module ── */}
+      {/* ── Shark Love, "עדיין תאהבו אותי?" every 3rd module ── */}
       {showSharkLove && (
         <SharkLoveModal
           xpEarned={chestRewards?.xp ?? 30}
@@ -4030,7 +4030,7 @@ export function LessonFlowScreen() {
         />
       )}
 
-      {/* ── Bridge CTA — every 4 modules ── */}
+      {/* ── Bridge CTA, every 4 modules ── */}
       <SharkBridgeCTA
         visible={showBridgeCTA && !showSharkLove && !showDoubleOrNothing && !showPostCelebration && !showPartyInvite}
         onGoBridge={() => { setShowBridgeCTA(false); router.push("/bridge" as never); }}
@@ -4038,7 +4038,7 @@ export function LessonFlowScreen() {
         moduleCount={ctaModuleCount}
       />
 
-      {/* ── Referral CTA — every 5 modules + dividend content ── */}
+      {/* ── Referral CTA, every 5 modules + dividend content ── */}
       <SharkReferralCTA
         visible={showReferralCTA && !showSharkLove && !showDoubleOrNothing && !showPostCelebration && !showBridgeCTA && !showPartyInvite}
         onGoReferral={() => { setShowReferralCTA(false); router.push("/referral" as never); }}
@@ -4108,7 +4108,7 @@ export function LessonFlowScreen() {
         </Pressable>
       )}
 
-      {/* ── Shark Party video — full screen ── */}
+      {/* ── Shark Party video, full screen ── */}
       {showPartyVideo && (
         <View style={[StyleSheet.absoluteFill, { zIndex: 9994, backgroundColor: "#000000" }]}>
           <VideoHookPlayer
@@ -4122,7 +4122,7 @@ export function LessonFlowScreen() {
         </View>
       )}
 
-      {/* Flying rewards — rendered at top level so particles can reach the header */}
+      {/* Flying rewards, rendered at top level so particles can reach the header */}
       {flyingXp > 0 && (
         <View style={[StyleSheet.absoluteFill, { zIndex: 9999 }]} pointerEvents="none">
           <FlyingRewards type="xp" amount={flyingXp} onComplete={() => setFlyingXp(0)} />
@@ -4138,7 +4138,7 @@ export function LessonFlowScreen() {
           <FlyingRewards type="coins" amount={flyingCoinsDown} direction="down" onComplete={() => setFlyingCoinsDown(0)} />
         </View>
       )}
-      {/* Captain Shark chat overlay — opens on top of lesson */}
+      {/* Captain Shark chat overlay, opens on top of lesson */}
       <Modal
         visible={showChatOverlay}
         animationType="slide"

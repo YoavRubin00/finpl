@@ -1,5 +1,5 @@
 /**
- * SIM 28: מחשבון הפרישה (Retirement Calculator) — Module 5-28
+ * SIM 28: מחשבון הפרישה (Retirement Calculator), Module 5-28
  * Withdrawal strategies, tax rules, and configuration data.
  */
 
@@ -26,9 +26,9 @@ export const WITHDRAWAL_STRATEGIES: WithdrawalStrategy[] = [
   {
     id: 'lump-sum',
     type: 'lump-sum',
-    label: 'קצבה הונית — הכל מראש',
+    label: 'קצבה הונית, הכל מראש',
     description:
-      'מקבלים את כל ה-₪2,000,000 ומשקיעים ב-5%. מושכים לפי צורך. גמישות מלאה — אבל הכסף יכול להיגמר.',
+      'מקבלים את כל ה-₪2,000,000 ומשקיעים ב-5%. מושכים לפי צורך. גמישות מלאה, אבל הכסף יכול להיגמר.',
     lumpSum: PENSION_BALANCE,
     riskLevel: 'high',
     hasInheritance: true,
@@ -36,9 +36,9 @@ export const WITHDRAWAL_STRATEGIES: WithdrawalStrategy[] = [
   {
     id: 'monthly-annuity',
     type: 'monthly-annuity',
-    label: 'קצבה חודשית — מובטח לכל החיים',
+    label: 'קצבה חודשית, מובטח לכל החיים',
     description:
-      '₪8,500 בחודש מובטח עד 120. בלי דאגות, בלי סיכון — אבל אין מה להוריש.',
+      '₪8,500 בחודש מובטח עד 120. בלי דאגות, בלי סיכון, אבל אין מה להוריש.',
     monthlyAmount: 8_500,
     riskLevel: 'low',
     hasInheritance: false,
@@ -46,7 +46,7 @@ export const WITHDRAWAL_STRATEGIES: WithdrawalStrategy[] = [
   {
     id: 'hybrid',
     type: 'hybrid',
-    label: 'משולב — הטוב משני העולמות',
+    label: 'משולב, הטוב משני העולמות',
     description:
       '30% הון (₪600,000 להשקעה) + קצבה מופחתת ₪6,000/חודש. גמישות + ביטחון.',
     lumpSum: 600_000,

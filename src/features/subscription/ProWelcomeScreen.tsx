@@ -50,7 +50,7 @@ export function ProWelcomeScreen() {
       {/* Dark overlay for readability */}
       <View style={styles.overlay} />
 
-      {/* Ambient sea creatures — ocean theme */}
+      {/* Ambient sea creatures, ocean theme */}
       <View style={StyleSheet.absoluteFill} pointerEvents="none">
         <View style={{ position: "absolute", top: "6%", left: "3%", opacity: 0.35 }}>
           <LottieView
@@ -90,7 +90,7 @@ export function ProWelcomeScreen() {
         </View>
       </View>
 
-      {/* Confetti layers — play once on mount */}
+      {/* Confetti layers, play once on mount */}
       <View style={StyleSheet.absoluteFill} pointerEvents="none">
         <LottieView
           source={require("../../../assets/lottie/Confetti Effects Lottie Animation.json")}

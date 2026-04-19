@@ -6,7 +6,7 @@ import type { DailyQuiz } from './dailyQuizTypes';
 
 /**
  * Main daily quiz pipeline:
- * 1. Check cache — if today's quiz exists, return it
+ * 1. Check cache, if today's quiz exists, return it
  * 2. Pick rotating category for today
  * 3. Fetch real market data
  * 4. Generate quiz via AI (Gemini)
@@ -35,7 +35,7 @@ export async function refreshDailyQuiz(): Promise<DailyQuiz> {
     store.setTodayQuiz(quiz);
     return quiz;
   } catch {
-    // Full fallback — pre-written quiz
+    // Full fallback, pre-written quiz
     const fallback = getFallbackQuiz(today, category);
     store.setTodayQuiz(fallback);
     return fallback;

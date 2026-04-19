@@ -1,5 +1,5 @@
 /**
- * SIM 29: עץ המשפחה (Family Tree — Estate Planning) — Module 5-29
+ * SIM 29: עץ המשפחה (Family Tree, Estate Planning), Module 5-29
  * Default family, assets, legal costs, and Israeli inheritance law data.
  */
 

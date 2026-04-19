@@ -27,7 +27,7 @@ export function DailyQuestWidget({ completedCount, totalQuests, onPress }: Daily
   const allDone = completedCount >= totalQuests;
   const reducedMotion = useReducedMotion();
 
-  // Pulsing glow when incomplete — skipped under reduced-motion.
+  // Pulsing glow when incomplete, skipped under reduced-motion.
   const pulse = useSharedValue(reducedMotion ? 0.9 : 0);
   useEffect(() => {
     if (allDone || reducedMotion) {
@@ -62,7 +62,7 @@ export function DailyQuestWidget({ completedCount, totalQuests, onPress }: Daily
       >
         <Animated.View style={[styles.badge, glowStyle]}>
           <LottieIcon source={LOTTIE_TROPHY} size={26} autoPlay={allDone} loop={false} />
-          {/* Progress dots — RTL: fill from right to left */}
+          {/* Progress dots, RTL: fill from right to left */}
           <View style={styles.dotsRow}>
             {Array.from({ length: totalQuests }).map((_, i) => (
               <View

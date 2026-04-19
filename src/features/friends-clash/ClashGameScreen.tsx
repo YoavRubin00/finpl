@@ -56,7 +56,7 @@ export function ClashGameScreen() {
         timerRef.current = setInterval(() => {
             setTimer((prev) => {
                 if (prev <= 1) {
-                    // Time's up — auto-wrong
+                    // Time's up, auto-wrong
                     clearInterval(timerRef.current!);
                     handleTimeout();
                     return 0;
@@ -130,7 +130,7 @@ export function ClashGameScreen() {
             setFeedback(null);
             setSelectedIdx(null);
             if (session.currentQuestionIndex >= session.questions.length - 1) {
-                // Last question — go to results
+                // Last question, go to results
                 router.replace('/clash/result');
             } else {
                 nextQuestion();
