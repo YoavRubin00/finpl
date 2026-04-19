@@ -217,7 +217,7 @@ export default function RootLayout() {
         router.replace("/(auth)/onboarding");
       }
     } else {
-      if (!inTabsGroup && !inContentRoute) router.replace("/(tabs)");
+      if (!inTabsGroup && !inContentRoute && !inAuthGroup) router.replace("/(tabs)");
     }
   }, [isAuthenticated, hasCompletedOnboarding, segments, navState?.key, hydrated]);
 

@@ -2023,6 +2023,8 @@ export function LessonFlowScreen() {
   }
 
   function forceExit() {
+    // Mark mod-0-1 complete on any exit so the user never gets stuck on it
+    if (id === 'mod-0-1') completeModule('mod-0-1');
     setShowExitConfirm(false);
     if (router.canGoBack()) router.back();
     else router.replace("/(tabs)" as never);
@@ -2125,8 +2127,12 @@ export function LessonFlowScreen() {
 
   /** Navigate past mod-0-1 to the next incomplete module (called from register nudge buttons) */
   function navigateToNextModuleNormally() {
+    // Force-complete mod-0-1 before navigating so we never loop back to it.
+    // Also read fresh Zustand state (not the React closure) to avoid stale progress.
+    if (id === 'mod-0-1') completeModule('mod-0-1');
+    const freshProgress = useChapterStore.getState().progress;
     for (const ch of ALL_CHAPTERS_ORDERED) {
-      const completed = progress[chapterStoreKey(ch.id)]?.completedModules ?? [];
+      const completed = freshProgress[chapterStoreKey(ch.id)]?.completedModules ?? [];
       const nextIdx = ch.modules.findIndex((m) => !m.comingSoon && (isPro || !PRO_LOCKED_SIMS.has(m.id)) && !completed.includes(m.id));
       if (nextIdx >= 0) {
         const nextMod = ch.modules[nextIdx];

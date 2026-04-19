@@ -288,18 +288,17 @@ export function AppWalkthroughOverlay() {
 
   if (hasSeenWalkthrough || step < 0 || !stepConfig || !ready) return null;
 
-  // Hide overlay while user is choosing chat style.
-  // NOTE: Use Modal's `visible` prop (not `return null`), on iOS the
-  // Modal native view can linger and swallow touches if unmounted mid-render.
-  const isPickingChatStyle = waitingForChatChoice && !hasChosenChatStyle;
+  // Fully unmount while user picks chat style — visible={false} on iOS
+  // can still intercept touches and block the ChatStylePicker below.
+  if (waitingForChatChoice && !hasChosenChatStyle) return null;
 
   const enterAnim = reducedMotion ? undefined : FadeIn.duration(280);
 
   return (
-    <Modal visible={!isPickingChatStyle} transparent animationType="fade" statusBarTranslucent accessibilityViewIsModal onRequestClose={handleSkip}>
+    <Modal visible transparent animationType="fade" statusBarTranslucent accessibilityViewIsModal onRequestClose={handleSkip}>
       <View style={s.overlay}>
         {/* ── Top: Step title pill with counter ── */}
-        <SafeAreaView edges={["top"]} style={{ alignItems: "center", paddingTop: 20 }}>
+        <SafeAreaView edges={["top"]} style={{ alignItems: "center", paddingTop: 36 }}>
           <Animated.View
             key={`pill-${contentKey}`}
             entering={reducedMotion ? undefined : FadeInDown.duration(350)}
