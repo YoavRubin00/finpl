@@ -26,7 +26,10 @@ import Animated, {
 } from "react-native-reanimated";
 import { LinearGradient } from "expo-linear-gradient";
 import { ChevronRight, ChevronLeft, Bookmark } from "lucide-react-native";
+import { LottieIcon } from "../../components/ui/LottieIcon";
 import { useLessonMusic } from "../../hooks/useLessonMusic";
+
+const LOTTIE_BRIDGE = require("../../../assets/lottie/wired-flat-1925-bridge-hover-pinch.json") as number;
 import { chapter0Data } from "../chapter-0-content/chapter0Data";
 import { WhatIsMoneyIntro } from "../chapter-0-content/WhatIsMoneyIntro";
 import { CompoundInterestIntro } from "./CompoundInterestIntro";
@@ -3670,11 +3673,12 @@ export function LessonFlowScreen() {
               </Text>
               <Pressable
                 onPress={() => { tapHaptic(); setShowFinnBridgeNudge(false); router.push("/bridge" as never); }}
-                style={{ backgroundColor: "#0ea5e9", borderRadius: 14, paddingVertical: 14, paddingHorizontal: 32, width: "100%", alignItems: "center", borderBottomWidth: 4, borderBottomColor: "#0369a1" }}
+                style={{ backgroundColor: "#0ea5e9", borderRadius: 14, paddingVertical: 14, paddingHorizontal: 24, width: "100%", flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 10, borderBottomWidth: 4, borderBottomColor: "#0369a1" }}
                 accessibilityRole="button"
                 accessibilityLabel="קח אותי לגשר"
               >
-                <Text style={{ fontSize: 16, fontWeight: "800", color: "#fff" }}>קח אותי לגשר 🌉</Text>
+                <LottieIcon source={LOTTIE_BRIDGE} size={28} autoPlay loop />
+                <Text style={{ fontSize: 16, fontWeight: "800", color: "#fff" }}>קח אותי לגשר</Text>
               </Pressable>
               <Pressable
                 onPress={() => { tapHaptic(); setShowFinnBridgeNudge(false); }}

@@ -562,7 +562,6 @@ export function ChatScreen() {
 
   return (
     <View style={{ flex: 1, backgroundColor: '#ffffff' }}>
-    {(!hasChosenStyle || showStylePicker) && <ChatStylePicker onSelect={handleStyleSelect} />}
     <SafeAreaView className="flex-1" edges={['bottom']}>
       <KeyboardAvoidingView
         className="flex-1"
@@ -736,6 +735,9 @@ export function ChatScreen() {
         </View>
       </KeyboardAvoidingView>
     </SafeAreaView>
+    {/* Picker rendered LAST so it naturally paints on top of sibling views.
+        iOS does not always honor zIndex reliably — render order is safer. */}
+    {(!hasChosenStyle || showStylePicker) && <ChatStylePicker onSelect={handleStyleSelect} />}
     </View>
   );
 }
