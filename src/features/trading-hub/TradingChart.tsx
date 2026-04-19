@@ -1,5 +1,5 @@
 import { useMemo, useState, useCallback, useRef, useEffect } from 'react';
-import { View, Text, Pressable, StyleSheet, ActivityIndicator, Platform } from 'react-native';
+import { View, Text, Pressable, StyleSheet, ActivityIndicator } from 'react-native';
 import { WebView, type WebViewMessageEvent } from 'react-native-webview';
 import { Info } from 'lucide-react-native';
 import Animated, { FadeIn } from 'react-native-reanimated';
@@ -61,7 +61,7 @@ export function TradingChart({
     if (ready || errored) return;
     const timer = setTimeout(() => {
       if (!ready) setErrored(true);
-    }, 12000);
+    }, 5000);
     return () => clearTimeout(timer);
   }, [ready, errored, html]);
 
@@ -137,11 +137,18 @@ export function TradingChart({
           javaScriptEnabled
           domStorageEnabled
           cacheEnabled
+          mixedContentMode="always"
+          allowsInlineMediaPlayback
+          setSupportMultipleWindows={false}
           onMessage={handleMessage}
           onError={() => setErrored(true)}
           onHttpError={() => setErrored(true)}
           onShouldStartLoadWithRequest={(req) =>
-            req.url === 'about:blank' || req.url.startsWith('data:') || req.url.startsWith('about:')
+            req.url === 'about:blank' ||
+            req.url.startsWith('data:') ||
+            req.url.startsWith('about:') ||
+            req.url.startsWith('https://unpkg.com/') ||
+            req.url.startsWith('https://cdn.jsdelivr.net/')
           }
         />
 
@@ -199,7 +206,7 @@ const styles = StyleSheet.create({
   },
   webview: {
     flex: 1,
-    backgroundColor: Platform.OS === 'android' ? '#ffffff' : 'transparent',
+    backgroundColor: '#ffffff',
   },
   skeleton: {
     backgroundColor: '#ffffff',
