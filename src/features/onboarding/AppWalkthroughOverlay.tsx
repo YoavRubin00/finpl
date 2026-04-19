@@ -2,7 +2,7 @@ import { useState, useCallback, useEffect } from "react";
 import { Image as ExpoImage } from "expo-image";
 import { View, Text, Pressable, Modal, StyleSheet } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { Audio } from "expo-av";
+import { createAudioPlayer, type AudioPlayer } from "expo-audio";
 import { useRouter, useSegments } from "expo-router";
 import Animated, {
   FadeInDown,
@@ -191,33 +191,25 @@ export function AppWalkthroughOverlay() {
 
   // Audio Playback
   useEffect(() => {
-    let soundObj: Audio.Sound | null = null;
+    let playerObj: AudioPlayer | null = null;
     let isActive = true;
 
-    async function loadAndPlay() {
-      if (stepConfig && stepConfig.audioUrl && ready && !waitingForChatChoice) {
-        try {
-          // Ensure we stop previous playbacks if fast-forwarding
-          await Audio.setAudioModeAsync({ playsInSilentModeIOS: true });
-          const { sound } = await Audio.Sound.createAsync(
-            { uri: stepConfig.audioUrl },
-            { shouldPlay: true }
-          );
-          if (isActive) {
-            soundObj = sound;
-          } else {
-            sound.unloadAsync();
-          }
-        } catch { /* audio playback failed — silent */ }
-      }
+    if (stepConfig && stepConfig.audioUrl && ready && !waitingForChatChoice) {
+      try {
+        const player = createAudioPlayer({ uri: stepConfig.audioUrl });
+        player.play();
+        if (isActive) {
+          playerObj = player;
+        } else {
+          player.remove();
+        }
+      } catch { /* audio playback failed — silent */ }
     }
-
-    loadAndPlay();
 
     return () => {
       isActive = false;
-      if (soundObj) {
-        soundObj.unloadAsync().catch(() => {});
+      if (playerObj) {
+        try { playerObj.remove(); } catch { /* ignore */ }
       }
     };
   }, [stepConfig, ready, waitingForChatChoice]);

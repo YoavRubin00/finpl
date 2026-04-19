@@ -1,6 +1,6 @@
 import React, { useCallback, useState, useRef, useEffect } from 'react';
 import { Image as ExpoImage } from "expo-image";
-import { Audio } from 'expo-av';
+import { createAudioPlayer, type AudioPlayer } from 'expo-audio';
 import {
   View,
   Text,
@@ -116,37 +116,30 @@ export const FeedPremiumLearningCard = React.memo(function FeedPremiumLearningCa
 
   // Audio Playback
   useEffect(() => {
-    let soundObj: Audio.Sound | null = null;
+    let playerObj: AudioPlayer | null = null;
     let isActive = true;
 
-    async function loadAndPlay() {
-      if (_isActive && item.finnAudioUrl) {
-        // Condition: if we have step logic, check if it matches finnAudioIndex (default 0 for single/tap zones)
-        const targetStep = item.finnAudioIndex ?? 0;
-        const matchesStep = item.singlePageView || item.tapZones ? true : step === targetStep;
+    if (_isActive && item.finnAudioUrl) {
+      const targetStep = item.finnAudioIndex ?? 0;
+      const matchesStep = item.singlePageView || item.tapZones ? true : step === targetStep;
 
-        if (matchesStep) {
-          try {
-            const { sound } = await Audio.Sound.createAsync(
-              { uri: item.finnAudioUrl },
-              { shouldPlay: true }
-            );
-            if (isActive) {
-              soundObj = sound;
-            } else {
-              sound.unloadAsync();
-            }
-          } catch { /* audio playback failed — silent */ }
-        }
+      if (matchesStep) {
+        try {
+          const player = createAudioPlayer({ uri: item.finnAudioUrl });
+          player.play();
+          if (isActive) {
+            playerObj = player;
+          } else {
+            player.remove();
+          }
+        } catch { /* audio playback failed — silent */ }
       }
     }
 
-    loadAndPlay();
-
     return () => {
       isActive = false;
-      if (soundObj) {
-        soundObj.unloadAsync();
+      if (playerObj) {
+        try { playerObj.remove(); } catch { /* ignore */ }
       }
     };
   }, [step, _isActive, item.finnAudioUrl, item.finnAudioIndex, item.singlePageView, item.tapZones]);

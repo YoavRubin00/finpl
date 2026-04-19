@@ -6,7 +6,7 @@ import { useIsFocused } from "@react-navigation/native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Gesture, GestureDetector, GestureHandlerRootView } from "react-native-gesture-handler";
 import { useVideoPlayer, VideoView } from "expo-video";
-import { Audio } from "expo-av";
+import { createAudioPlayer, type AudioPlayer } from "expo-audio";
 import { useAudioStore } from "../../stores/useAudioStore";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import Animated, {
@@ -463,30 +463,25 @@ function FlashcardCard({
 
   // Audio Playback
   useEffect(() => {
-    let soundObj: Audio.Sound | null = null;
+    let playerObj: AudioPlayer | null = null;
     let isActive = true;
 
-    async function loadAndPlay() {
-      if (card.topAudio?.uri) {
-        try {
-          const { sound } = await Audio.Sound.createAsync(
-            { uri: card.topAudio.uri },
-            { shouldPlay: true }
-          );
-          if (isActive) {
-            soundObj = sound;
-          } else {
-            sound.unloadAsync();
-          }
-        } catch { /* audio playback failed — silent */ }
-      }
+    if (card.topAudio?.uri) {
+      try {
+        const player = createAudioPlayer({ uri: card.topAudio.uri });
+        player.play();
+        if (isActive) {
+          playerObj = player;
+        } else {
+          player.remove();
+        }
+      } catch { /* audio playback failed — silent */ }
     }
 
-    loadAndPlay();
     return () => {
       isActive = false;
-      if (soundObj) {
-        soundObj.unloadAsync();
+      if (playerObj) {
+        try { playerObj.remove(); } catch { /* ignore */ }
       }
     };
   }, [card.topAudio?.uri]);
