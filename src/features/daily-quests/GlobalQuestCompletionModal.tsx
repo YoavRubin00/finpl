@@ -12,7 +12,7 @@ import { useDailyQuestsStore } from "./useDailyQuestsStore";
 import { useEconomyStore } from "../economy/useEconomyStore";
 import { previewQuestReward } from "./useDailyQuestsStore";
 
-const LOTTIE_CHEST = require("../../../assets/lottie/wired-flat-412-gift-hover-squeeze.json");
+const LOTTIE_CHEST = require("../../../assets/lottie/3D Treasure Box.json");
 const { width } = Dimensions.get("window");
 
 export function GlobalQuestCompletionModal() {

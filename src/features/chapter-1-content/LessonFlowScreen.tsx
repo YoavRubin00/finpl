@@ -401,7 +401,7 @@ function VideoHookPlayer({ videoUri, hookText, onFinish, unitColors, fitContain,
       {/* Fast mode indicator */}
       {isFastMode && (
         <View style={{ position: "absolute", top: "45%", alignSelf: "center", backgroundColor: "rgba(0,0,0,0.6)", borderRadius: 16, paddingHorizontal: 16, paddingVertical: 8 }} pointerEvents="none">
-          <Text style={{ fontSize: 16, fontWeight: "900", color: "#ffffff" }}>⚡ x1.8</Text>
+          <Text style={{ fontSize: 16, fontWeight: "900", color: "#ffffff" }}>⚡ מהיר</Text>
         </View>
       )}
       {/* Safe area top overlay, only for full-screen video hooks (not flashcard videos) */}
@@ -3883,23 +3883,24 @@ export function LessonFlowScreen() {
               accessibilityRole="button"
               accessibilityLabel="המשך"
               style={({ pressed }) => ({
-                backgroundColor: "#0ea5e9",
+                backgroundColor: "#1e40af",
                 borderRadius: 14,
-                paddingVertical: 14,
-                paddingHorizontal: 40,
+                paddingVertical: 16,
+                paddingHorizontal: 24,
                 width: "100%",
                 alignItems: "center",
+                justifyContent: "center",
                 borderBottomWidth: 4,
-                borderBottomColor: "#0369a1",
-                shadowColor: "#0ea5e9",
-                shadowOpacity: 0.35,
+                borderBottomColor: "#1e3a8a",
+                shadowColor: "#1e40af",
+                shadowOpacity: 0.4,
                 shadowRadius: 12,
                 shadowOffset: { width: 0, height: 4 },
-                elevation: 6,
+                elevation: 8,
                 opacity: pressed ? 0.88 : 1,
               })}
             >
-              <Text style={{ fontSize: 16, fontWeight: "900", color: "#ffffff", writingDirection: "rtl", letterSpacing: 0.3 }}>המשך ›</Text>
+              <Text style={{ fontSize: 17, fontWeight: "900", color: "#ffffff", writingDirection: "rtl", textAlign: "center", letterSpacing: 0.3 }}>המשך</Text>
             </Pressable>
           </Animated.View>
         </View>
