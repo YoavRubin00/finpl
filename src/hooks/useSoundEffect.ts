@@ -42,7 +42,7 @@ export function useSoundEffect() {
             // Release after playback
             player.addListener('playbackStatusUpdate', (status) => {
                 if (status.didJustFinish) {
-                    player.release();
+                    player.remove();
                 }
             });
         } catch {

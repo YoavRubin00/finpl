@@ -104,7 +104,7 @@ export function ArenaStageCard({
       const player = createAudioPlayer(arena.audioOverview);
       player.play();
       player.addListener('playbackStatusUpdate', (status) => {
-        if (status.didJustFinish) player.release();
+        if (status.didJustFinish) player.remove();
       });
     } catch { /* silent — file not yet generated */ }
   }, [arena.audioOverview]);

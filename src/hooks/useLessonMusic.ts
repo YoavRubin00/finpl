@@ -17,7 +17,7 @@ export function useLessonMusic() {
     playerRef.current = player;
 
     return () => {
-      player.release();
+      try { player.pause(); player.remove(); } catch { /* ignore */ }
       playerRef.current = null;
     };
   }, []);

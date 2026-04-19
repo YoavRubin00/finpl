@@ -189,30 +189,26 @@ export function AppWalkthroughOverlay() {
     }
   }, [step, waitingForChatChoice, hasChosenChatStyle, setStep, setActiveScreen]);
 
-  // Audio Playback
+  // Audio Playback — narrow deps to audioUrl only so stepConfig reference
+  // changes (from .map() each render) don't re-create the player every render.
+  const stepAudioUrl = stepConfig?.audioUrl;
   useEffect(() => {
     let playerObj: AudioPlayer | null = null;
-    let isActive = true;
 
-    if (stepConfig && stepConfig.audioUrl && ready && !waitingForChatChoice) {
+    if (stepAudioUrl && ready && !waitingForChatChoice) {
       try {
-        const player = createAudioPlayer({ uri: stepConfig.audioUrl });
+        const player = createAudioPlayer({ uri: stepAudioUrl });
         player.play();
-        if (isActive) {
-          playerObj = player;
-        } else {
-          player.remove();
-        }
+        playerObj = player;
       } catch { /* audio playback failed — silent */ }
     }
 
     return () => {
-      isActive = false;
       if (playerObj) {
-        try { playerObj.remove(); } catch { /* ignore */ }
+        try { playerObj.pause(); playerObj.remove(); } catch { /* ignore */ }
       }
     };
-  }, [stepConfig, ready, waitingForChatChoice]);
+  }, [stepAudioUrl, ready, waitingForChatChoice]);
 
   /** Check if we're already on the target route to avoid redundant navigation */
   const isAlreadyOnRoute = useCallback((target: string | null) => {

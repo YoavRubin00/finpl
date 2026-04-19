@@ -557,7 +557,7 @@ export function EmergencyFundScreen({ onComplete }: { onComplete: () => void }) 
         player.play();
         return () => {
             player.pause();
-            player.release();
+            player.remove();
         };
     }, []);
 const [showBriefing, setShowBriefing] = useState(true);

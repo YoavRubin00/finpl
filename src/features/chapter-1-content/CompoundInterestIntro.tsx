@@ -95,7 +95,7 @@ export function CompoundInterestIntro({ onStart, unitColors, chartImageUri, audi
     player.play();
     return () => {
       player.pause();
-      player.release();
+      player.remove();
     };
   }, [audioUri]);
 

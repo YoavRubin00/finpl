@@ -353,7 +353,7 @@ export function PayslipNinjaScreen({ onComplete }: { onComplete: () => void }) {
         player.play();
         return () => {
             player.pause();
-            player.release();
+            player.remove();
         };
     }, []);
 const [feedback, setFeedback] = useState<{ isCorrect: boolean; message: string } | null>(null);

@@ -326,7 +326,8 @@ export const useSubscriptionStore = create<SubscriptionState>()(
         try {
           // eslint-disable-next-line @typescript-eslint/no-var-requires
           const auth = require("../auth/useAuthStore").useAuthStore.getState();
-          if (auth.email && DEV_PRO_EMAILS.includes(auth.email)) {
+          const normalizedEmail = auth.email?.trim().toLowerCase() ?? null;
+          if (normalizedEmail && DEV_PRO_EMAILS.includes(normalizedEmail)) {
             set({ tier: "pro", status: "active", hearts: MAX_HEARTS, lastHeartLostAt: null });
             return;
           }
@@ -379,7 +380,8 @@ export const useSubscriptionStore = create<SubscriptionState>()(
         try {
           const auth = require("../auth/useAuthStore").useAuthStore.getState();
           const DEV_PRO_EMAILS = ["yrubin00@gmail.com", "itaysc23@gmail.com", "benbenshmuel@gmail.com"];
-          if (auth.email && DEV_PRO_EMAILS.includes(auth.email) && state.tier !== "pro") {
+          const normalizedEmail = auth.email?.trim().toLowerCase() ?? null;
+          if (normalizedEmail && DEV_PRO_EMAILS.includes(normalizedEmail) && state.tier !== "pro") {
             state.tier = "pro";
             state.status = "active";
             state.hearts = 5;

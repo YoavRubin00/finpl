@@ -83,7 +83,7 @@ export const InteractiveIntroCard = React.memo(function InteractiveIntroCard({ i
     return () => {
       sub.remove();
       player.pause();
-      player.release();
+      player.remove();
     };
   }, [audioUri]);
   const displayText = cleanGlossaryMarkup(introText);

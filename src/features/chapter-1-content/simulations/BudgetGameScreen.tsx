@@ -538,7 +538,7 @@ export function BudgetGameScreen({ onComplete }: { onComplete: () => void }) {
         player.play();
         return () => {
             player.pause();
-            player.release();
+            player.remove();
         };
     }, []);
 const [rewardsGranted, setRewardsGranted] = useState(false);

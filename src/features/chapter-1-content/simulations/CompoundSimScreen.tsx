@@ -595,7 +595,7 @@ export function CompoundSimScreen({ onComplete }: CompoundSimScreenProps) {
         player.play();
         return () => {
             player.pause();
-            player.release();
+            player.remove();
         };
     }, [isFinished]);
     const [rewardsGranted, setRewardsGranted] = useState(false);

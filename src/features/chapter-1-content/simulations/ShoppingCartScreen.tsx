@@ -422,7 +422,7 @@ export function ShoppingCartScreen({ onComplete }: { onComplete: () => void }) {
         player.play();
         return () => {
             player.pause();
-            player.release();
+            player.remove();
         };
     }, []);
 const [showTrapReveal, setShowTrapReveal] = useState(false);

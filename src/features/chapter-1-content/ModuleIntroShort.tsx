@@ -61,7 +61,7 @@ export function ModuleIntroShort({ onStart, unitColors, config, audioUri }: Prop
     player.play();
     return () => {
       player.pause();
-      player.release();
+      player.remove();
     };
   }, [audioUri]);
 

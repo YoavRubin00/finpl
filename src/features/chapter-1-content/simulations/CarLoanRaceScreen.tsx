@@ -295,7 +295,7 @@ export function CarLoanRaceScreen({ onComplete }: { onComplete: () => void }) {
         player.play();
         return () => {
             player.pause();
-            player.release();
+            player.remove();
         };
     }, []);
 const [showFeedback, setShowFeedback] = useState(false);
