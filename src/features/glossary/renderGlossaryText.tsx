@@ -69,7 +69,9 @@ export function renderGlossaryText(
             color: highlightColor,
             fontWeight: '700',
             textDecorationLine: 'underline',
-            textDecorationStyle: 'dashed',
+            // iOS does not render dashed/dotted text decorations reliably —
+            // solid keeps the underline continuous across all platforms.
+            textDecorationStyle: 'solid',
           }}
         >
           {display}
