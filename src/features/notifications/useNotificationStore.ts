@@ -62,6 +62,16 @@ const CONTENT: Record<NotificationChannelId, Notifications.NotificationContentIn
     body: "בוא לראות מה קורה בעולם הפיננסי",
     data: { screen: "/(tabs)/investments" },
   },
+  aiInsight: {
+    title: "💡 תובנה חדשה מקפטן שארק",
+    body: "יש לך תובנה פיננסית מותאמת אישית — בוא לראות!",
+    data: { screen: "/(tabs)/" },
+  },
+  upgradeNudge: {
+    title: "🦈 קפטן שארק שם לב אליך",
+    body: "ניסית להשתמש בפיצ'רים PRO. בוא נסגור את זה?",
+    data: { screen: "/pricing" },
+  },
 };
 
 // ─── Android channel setup ───────────────────────────────────────────────────
@@ -108,6 +118,10 @@ async function ensureAndroidChannels() {
     name: "עדכוני שוק",
     importance: Notifications.AndroidImportance.DEFAULT,
   });
+  await Notifications.setNotificationChannelAsync("upgradeNudge", {
+    name: "הצעות PRO",
+    importance: Notifications.AndroidImportance.DEFAULT,
+  });
 }
 
 // ─── Store ────────────────────────────────────────────────────────────────────
@@ -137,9 +151,10 @@ export const useNotificationStore = create<NotificationState & NotificationActio
       permissionGranted: false,
       scheduled: [],
       bannerDismissed: false,
-      preferences: { streak: true, chest: false, challenge: false, dailyChallenge: true, squadInvite: true, squadChest: true, morning: true, inactivity: true, marketHook: true },
+      preferences: { streak: true, chest: false, challenge: false, dailyChallenge: true, squadInvite: true, squadChest: true, morning: true, inactivity: true, marketHook: true, aiInsight: true, upgradeNudge: true },
       lastScheduledDate: null as string | null,
       lastFinnCopyTitle: null as string | null,
+      lastAIInsightNotifDate: null as string | null,
 
       dismissBanner: () => set({ bannerDismissed: true }),
 
@@ -307,7 +322,7 @@ export const useNotificationStore = create<NotificationState & NotificationActio
 
       cancelAll: async (): Promise<void> => {
         await Notifications.cancelAllScheduledNotificationsAsync();
-        set({ scheduled: [], preferences: { streak: true, chest: false, challenge: false, dailyChallenge: true, squadInvite: true, squadChest: true, morning: true, inactivity: true, marketHook: true } });
+        set({ scheduled: [], preferences: { streak: true, chest: false, challenge: false, dailyChallenge: true, squadInvite: true, squadChest: true, morning: true, inactivity: true, marketHook: true, aiInsight: true, upgradeNudge: true } });
       },
 
       setPreference: (channelId, enabled) => {

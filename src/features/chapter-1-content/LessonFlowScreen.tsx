@@ -96,7 +96,7 @@ import { FlashcardInfographic, FINN_MAP } from "./FlashcardInfographic";
 import { GlossaryTooltip } from "../../components/ui/GlossaryTooltip";
 import { ChatScreen } from "../chat/ChatScreen";
 
-type FlowPhase = "hero" | "intro" | "flashcards" | "quizzes" | "sim-intro" | "sim" | "module-infographic" | "summary" | "video";
+type FlowPhase = "hero" | "intro" | "flashcards" | "quizzes" | "sim-intro" | "sim" | "module-infographic" | "post-infographic-video" | "summary" | "video";
 
 /** Full-screen character art shown when first opening a module */
 const MODULE_HERO_MAP: Record<string, { uri: string } | number> = {
@@ -117,6 +117,11 @@ const MODULE_INFOGRAPHIC_MAP: Record<string, { uri: string }> = {
   "mod-0-3": { uri: 'https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/infographics/ch0-upgrade/mod-0-3-upgrade.png' },
   "mod-0-4": { uri: 'https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/infographics/ch0-upgrade/mod-0-4-upgrade.png' },
   "mod-0-5": { uri: 'https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/infographics/ch0-upgrade/mod-0-5-upgrade.png' },
+};
+
+/** Modules with a video shown AFTER the infographic (before the chest) */
+const MODULE_POST_VIDEO_MAP: Record<string, string> = {
+  "mod-0-1": "https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/0-1.mp4",
 };
 
 /** Cards that use infographic-top layout: big image at top, text hidden, Finn at bottom */
@@ -2184,7 +2189,7 @@ export function LessonFlowScreen() {
   const setVideoPlaying = useAudioStore((s) => s.setVideoPlaying);
 
   useEffect(() => {
-    setVideoPlaying(phase === "video");
+    setVideoPlaying(phase === "video" || phase === "post-infographic-video");
   }, [phase]);
 
   // Show Pro gate for locked modules — but only after video finishes
@@ -2757,6 +2762,22 @@ export function LessonFlowScreen() {
     return <View style={{ flex: 1, backgroundColor: "#f8fafc" }} />;
   }
 
+  // Post-infographic video — full-screen, plays after the infographic before the chest
+  if (phase === "post-infographic-video" && mod && MODULE_POST_VIDEO_MAP[mod.id]) {
+    return (
+      <VideoHookPlayer
+        videoUri={MODULE_POST_VIDEO_MAP[mod.id]}
+        hookText={mod.videoHook ?? ""}
+        onFinish={() => setPhase("summary")}
+        unitColors={unitColors}
+      />
+    );
+  }
+  if (phase === "post-infographic-video") {
+    setPhase("summary");
+    return <View style={{ flex: 1, backgroundColor: "#f8fafc" }} />;
+  }
+
   return (
     <View style={{ flex: 1, backgroundColor: "#f8fafc" }}>
       {proGateModal}
@@ -3128,7 +3149,7 @@ export function LessonFlowScreen() {
               />
             </View>
             <Pressable
-              onPress={() => { tapHaptic(); setPhase("summary"); }}
+              onPress={() => { tapHaptic(); setPhase(mod.id && MODULE_POST_VIDEO_MAP[mod.id] ? "post-infographic-video" : "summary"); }}
               style={{ marginTop: 14, backgroundColor: "#0ea5e9", borderRadius: 14, paddingVertical: 14, paddingHorizontal: 40, borderBottomWidth: 4, borderBottomColor: "#0369a1" }}
               accessibilityRole="button"
               accessibilityLabel="המשך"

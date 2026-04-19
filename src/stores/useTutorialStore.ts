@@ -13,6 +13,7 @@ interface TutorialState {
   hasSeenMod01BarterNotif: boolean;
   hasSeenWatchlistHint: boolean;
   hasSeenAssetUnlockIntro: boolean;
+  hasSeenIndicesOnlyNudge: boolean;
   appWalkthroughStep: number;
   walkthroughGlowTab: string | null;
   walkthroughActiveScreen: WalkthroughScreen;
@@ -25,6 +26,7 @@ interface TutorialState {
   markMod01BarterNotifSeen: () => void;
   markWatchlistHintSeen: () => void;
   markAssetUnlockIntroSeen: () => void;
+  markIndicesOnlyNudgeSeen: () => void;
   setAppWalkthroughStep: (step: number) => void;
   setWalkthroughGlowTab: (tab: string | null) => void;
   setWalkthroughActiveScreen: (screen: WalkthroughScreen) => void;
@@ -42,6 +44,7 @@ export const useTutorialStore = create<TutorialState>()(
       hasSeenMod01BarterNotif: false,
       hasSeenWatchlistHint: false,
       hasSeenAssetUnlockIntro: false,
+      hasSeenIndicesOnlyNudge: false,
       appWalkthroughStep: 0,
       walkthroughGlowTab: null,
       walkthroughActiveScreen: null,
@@ -54,6 +57,7 @@ export const useTutorialStore = create<TutorialState>()(
       markMod01BarterNotifSeen: () => set({ hasSeenMod01BarterNotif: true }),
       markWatchlistHintSeen: () => set({ hasSeenWatchlistHint: true }),
       markAssetUnlockIntroSeen: () => set({ hasSeenAssetUnlockIntro: true }),
+      markIndicesOnlyNudgeSeen: () => set({ hasSeenIndicesOnlyNudge: true }),
       setAppWalkthroughStep: (step: number) => set({ appWalkthroughStep: step }),
       setWalkthroughGlowTab: (tab: string | null) => set({ walkthroughGlowTab: tab }),
       setWalkthroughActiveScreen: (screen: WalkthroughScreen) => set({ walkthroughActiveScreen: screen }),

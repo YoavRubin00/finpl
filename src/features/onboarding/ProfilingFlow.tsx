@@ -7,7 +7,7 @@ import { LottieIcon } from "../../components/ui/LottieIcon";
 import LottieView from "lottie-react-native";
 import { FINN_STANDARD, FINN_HELLO, FINN_HAPPY, FINN_TABLET } from "../retention-loops/finnMascotConfig";
 import { useRouter } from "expo-router";
-import { Sparkles, TrendingUp } from "lucide-react-native";
+import { Sparkles, TrendingUp, Pencil } from "lucide-react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { SkiaInteractiveChart } from "../../components/ui/SkiaInteractiveChart";
 import type { ChartDataPoint } from "../../components/ui/SkiaInteractiveChart";
@@ -487,7 +487,9 @@ function ConfettiParticle({ tx, ty: targetY, color, size, delay: d }: typeof PAR
 
 // ─── Profile summary screen ───────────────────────────────────────────────────
 
-function ProfileSummaryScreen({ collected, onDone }: { collected: Collected; onDone: () => void }) {
+type EditableStep = 'dream' | 'goal' | 'knowledge' | 'daily-goal';
+
+function ProfileSummaryScreen({ collected, onDone, onEditStep }: { collected: Collected; onDone: () => void; onEditStep?: (step: EditableStep) => void }) {
   const ctaScale = useSharedValue(0);
   useEffect(() => {
     ctaScale.value = withDelay(350, withSpring(1, { damping: 14, stiffness: 120 }));
@@ -499,11 +501,11 @@ function ProfileSummaryScreen({ collected, onDone }: { collected: Collected; onD
   const knowledgeLabel = collected.knowledgeLevel ? KNOWLEDGE_LABELS[collected.knowledgeLevel] : null;
 
   const rows = [
-    dreamLabel ? { icon: '🎯', label: 'החלום שלך', value: dreamLabel } : null,
-    goalLabel ? { icon: '📌', label: 'המטרה שלך', value: goalLabel } : null,
-    knowledgeLabel ? { icon: '🧠', label: 'רמת ידע', value: knowledgeLabel } : null,
-    collected.dailyGoalMinutes ? { icon: '⏰', label: 'יעד יומי', value: `${collected.dailyGoalMinutes} דקות` } : null,
-  ].filter((r): r is { icon: string; label: string; value: string } => r !== null);
+    dreamLabel ? { icon: '🎯', label: 'החלום שלך', value: dreamLabel, step: 'dream' as EditableStep } : null,
+    goalLabel ? { icon: '📌', label: 'המטרה שלך', value: goalLabel, step: 'goal' as EditableStep } : null,
+    knowledgeLabel ? { icon: '🧠', label: 'רמת ידע', value: knowledgeLabel, step: 'knowledge' as EditableStep } : null,
+    collected.dailyGoalMinutes ? { icon: '⏰', label: 'יעד יומי', value: `${collected.dailyGoalMinutes} דקות`, step: 'daily-goal' as EditableStep } : null,
+  ].filter((r): r is { icon: string; label: string; value: string; step: EditableStep } => r !== null);
 
   return (
     <SafeAreaView style={[styles.shell, { justifyContent: 'center', paddingHorizontal: 28 }]} edges={["top", "bottom"]}>
@@ -512,31 +514,39 @@ function ProfileSummaryScreen({ collected, onDone }: { collected: Collected; onD
       </Animated.View>
       <Animated.View entering={FadeInDown.duration(350).delay(100)} style={{ marginBottom: 20, alignItems: 'center' }}>
         <Text style={{ fontSize: 22, fontWeight: '900', color: '#0f172a', writingDirection: 'rtl', textAlign: 'center', marginBottom: 6 }}>
-          הנה מה שהכנו עבורך
+          הנה מה שאני אכין עבורך
         </Text>
         <Text style={{ fontSize: 14, color: '#6b7280', writingDirection: 'rtl', textAlign: 'center' }}>
-          ניתן לשנות בכל עת בהגדרות
+          לחצו על כל שורה לעריכה
         </Text>
       </Animated.View>
       <Animated.View entering={FadeInUp.duration(350).delay(200)} style={{ width: '100%', gap: 10, marginBottom: 32 }}>
         {rows.map((row, i) => (
-          <View
+          <Pressable
             key={i}
+            onPress={() => onEditStep?.(row.step)}
             accessible
-            accessibilityRole="text"
-            accessibilityLabel={`${row.label}: ${row.value}`}
-            style={{
-              flexDirection: 'row-reverse', alignItems: 'center', justifyContent: 'space-between',
-              backgroundColor: '#f8fafc', borderRadius: 14, padding: 14,
-              borderWidth: 1.5, borderColor: '#e2e8f0',
-            }}
+            accessibilityRole="button"
+            accessibilityLabel={`ערוך ${row.label}: ${row.value}`}
+            style={({ pressed }) => ({
+              flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+              width: '100%',
+              backgroundColor: pressed ? '#f0f9ff' : '#ffffff', borderRadius: 14,
+              paddingVertical: 14, paddingHorizontal: 16,
+              borderWidth: 1.5, borderColor: pressed ? '#7dd3fc' : '#e2e8f0',
+              shadowColor: '#0891b2', shadowOffset: { width: 0, height: 1 },
+              shadowOpacity: 0.06, shadowRadius: 4, elevation: 1,
+            })}
           >
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-              <Text style={{ fontSize: 20 }} accessible={false}>{row.icon}</Text>
-              <Text style={{ fontSize: 14, fontWeight: '700', color: '#1f2937', writingDirection: 'rtl', textAlign: 'right' }}>{row.label}</Text>
+              <Pencil size={14} color="#64748b" strokeWidth={2.2} />
+              <Text style={{ fontSize: 24, lineHeight: 28 }} accessible={false}>{row.icon}</Text>
             </View>
-            <Text style={{ fontSize: 14, fontWeight: '900', color: '#0891b2', writingDirection: 'rtl', textAlign: 'left' }}>{row.value}</Text>
-          </View>
+            <View style={{ alignItems: 'flex-end', flexShrink: 1, paddingLeft: 12, justifyContent: 'center' }}>
+              <Text style={{ fontSize: 13, fontWeight: '600', color: '#0f172a', textAlign: 'right', writingDirection: 'rtl' }}>{row.label}</Text>
+              <Text numberOfLines={1} style={{ fontSize: 15, fontWeight: '900', color: '#0369a1', textAlign: 'right', marginTop: 1, writingDirection: 'rtl' }}>{row.value}</Text>
+            </View>
+          </Pressable>
         ))}
       </Animated.View>
       <Animated.View style={[ctaStyle, { width: '100%', alignItems: 'center' }]}>
@@ -2109,6 +2119,7 @@ export function ProfilingFlow({ mode = "onboarding", onRedoComplete }: Profiling
   const isRedo = mode === "redo";
   // Skip intro if user already registered/signed-in or is guest (came back from register screen)
   const [step, setStep] = useState<FlowStep>(isRedo || isAuthenticated || isGuest ? "dream" : "intro");
+  const [returnToSummary, setReturnToSummary] = useState(false);
   const [collected, setCollected] = useState<Collected>(() => {
     if (isRedo && existingProfile) {
       return {
@@ -2226,9 +2237,14 @@ export function ProfilingFlow({ mode = "onboarding", onRedoComplete }: Profiling
     });
   }
 
+  function editSummaryStep(target: EditableStep) {
+    setReturnToSummary(true);
+    slide(target as FlowStep, {});
+  }
+
   if (step === "celebration") return <CelebrationScreen onDone={handleDone} />;
-  if (step === "profile-summary") return <ProfileSummaryScreen collected={collected} onDone={() => setStep("celebration")} />;
-  if (step === "building-profile") return <BuildingProfileScreen onDone={isRedo ? handleDone : () => setStep("profile-summary")} />;
+  if (step === "profile-summary") return <ProfileSummaryScreen collected={collected} onDone={() => setStep("building-profile")} onEditStep={editSummaryStep} />;
+  if (step === "building-profile") return <BuildingProfileScreen onDone={isRedo ? handleDone : () => setStep("celebration")} />;
   if (!isRedo && step === "intro") return (
     <IntroStep
       onRegister={() => router.push("/register" as never)}
@@ -2243,16 +2259,28 @@ export function ProfilingFlow({ mode = "onboarding", onRedoComplete }: Profiling
   return (
     <View style={{ flex: 1, backgroundColor: "#ffffff", overflow: "hidden" }}>
       <Animated.View style={[{ flex: 1 }, slideStyle]}>
-        {step === "dream" && <DreamStep onNext={(v) => slide("goal", { financialDream: v })} />}
-        {step === "goal" && <GoalStep dream={collected.financialDream} onNext={(v) => slide("first-sim", { financialGoal: v })} />}
+        {step === "dream" && <DreamStep onNext={(v) => {
+          if (returnToSummary) { setReturnToSummary(false); slide("profile-summary", { financialDream: v }); }
+          else { slide("goal", { financialDream: v }); }
+        }} />}
+        {step === "goal" && <GoalStep dream={collected.financialDream} onNext={(v) => {
+          if (returnToSummary) { setReturnToSummary(false); slide("profile-summary", { financialGoal: v }); }
+          else { slide("first-sim", { financialGoal: v }); }
+        }} />}
         {step === "first-sim" && (
           <SimOnboardingStep onNext={() => slide("knowledge", {})} />
         )}
-        {step === "knowledge" && <KnowledgeStep goal={collected.financialGoal} onNext={(v) => slide("age", { knowledgeLevel: v })} />}
+        {step === "knowledge" && <KnowledgeStep goal={collected.financialGoal} onNext={(v) => {
+          if (returnToSummary) { setReturnToSummary(false); slide("profile-summary", { knowledgeLevel: v }); }
+          else { slide("age", { knowledgeLevel: v }); }
+        }} />}
         {step === "age" && <AgeStep knowledge={collected.knowledgeLevel} onNext={(ag, by) => slide("learning-time", { ageGroup: ag, birthYear: by })} />}
         {step === "learning-time" && <LearningTimeStep onNext={(v) => slide("learning-style", { learningTime: v })} />}
         {step === "learning-style" && <LearningStyleStep ageGroup={collected.ageGroup} birthYear={collected.birthYear} onNext={(v) => slide("daily-goal", { learningStyle: v })} />}
-        {step === "daily-goal" && <DailyGoalStep onNext={(v) => slide("building-profile", { dailyGoalMinutes: v })} />}
+        {step === "daily-goal" && <DailyGoalStep onNext={(v) => {
+          if (returnToSummary) { setReturnToSummary(false); slide("profile-summary", { dailyGoalMinutes: v }); }
+          else { slide("profile-summary", { dailyGoalMinutes: v }); }
+        }} />}
       </Animated.View>
 
       {/* Persistent Finn — outside slideStyle so he stays fixed during transitions */}

@@ -69,6 +69,8 @@ export function RegisterScreen() {
   const router = useRouter();
   const { returnTo } = useLocalSearchParams<{ returnTo?: string }>();
   const signIn = useAuthStore((s) => s.signIn);
+  const convertGuestToUser = useAuthStore((s) => s.convertGuestToUser);
+  const isGuest = useAuthStore((s) => s.isGuest);
   const enterGuestMode = useAuthStore((s) => s.enterGuestMode);
   const avatarId = useAuthStore((s) => s.profile?.avatarId ?? null);
   const { promptGoogleSignIn, isReady: googleReady } = useGoogleAuth();
@@ -294,7 +296,11 @@ export function RegisterScreen() {
               disabled={!isValid}
               onPress={() => {
                 if (isValid) {
-                  signIn(name.trim(), email.trim());
+                  if (isGuest) {
+                    convertGuestToUser(name.trim(), email.trim());
+                  } else {
+                    signIn(name.trim(), email.trim());
+                  }
                   const dest = returnTo ? decodeURIComponent(returnTo) : "/(tabs)/";
                   router.replace(dest as never);
                 }

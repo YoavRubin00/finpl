@@ -1263,6 +1263,10 @@ export function DuoLearnScreen() {
             return <View key={arena.id} style={{ zIndex: 2 }}>{chapterView}</View>;
           })}
 
+          {/* Ocean depth tagline */}
+          <Text style={{ textAlign: 'center', color: '#0ea5e9', fontSize: 13, fontWeight: '700', paddingVertical: 20, paddingBottom: 36, writingDirection: 'rtl' }}>
+            אתם עמוק באוקיינוס הפיננסי
+          </Text>
 
         </ScrollView>
 

@@ -5,30 +5,36 @@ import {
   ScrollView,
   TouchableOpacity,
   StyleSheet,
-  Image,
 } from "react-native";
 import { useRouter } from "expo-router";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Animated, { FadeInUp } from "react-native-reanimated";
-import LottieView from "lottie-react-native";
+import { Image as ExpoImage } from "expo-image";
 import { Lock, RefreshCw } from "lucide-react-native";
+import { useWeeklyInsightStore } from "./useWeeklyInsightStore";
 
 import { BackButton } from "../../components/ui/BackButton";
-import { SafeLottie } from "../../components/ui/SafeLottie";
 import { useSubscriptionStore } from "../subscription/useSubscriptionStore";
 import { useEconomyStore } from "../economy/useEconomyStore";
 import { useAuthStore } from "../auth/useAuthStore";
 import { useChapterStore } from "../chapter-1-content/useChapterStore";
 import { useAITelemetryStore } from "../ai-personalization/useAITelemetryStore";
 import { useAdaptiveStore } from "../social/useAdaptiveStore";
-import { useWeeklyInsightStore } from "./useWeeklyInsightStore";
 import { MODULE_NAMES } from "../chat/chatData";
 import { getLevelFromXP } from "../../utils/progression";
 import { getApiBase } from "../../db/apiBase";
 import { tapHaptic } from "../../utils/haptics";
-import { SHADOW_STRONG } from "../chapter-4-content/simulations/simTheme";
+
+const CARD_SHADOW = {
+  shadowColor: '#0ea5e9',
+  shadowOffset: { width: 0, height: 2 },
+  shadowOpacity: 0.12,
+  shadowRadius: 8,
+  elevation: 3,
+} as const;
 
 const FINN_PROFILE = require('../../../assets/IMAGES/finn/finn-profile.png');
-const FINN_EXCITED = require('../../../assets/lottie/fin-excited.json');
+const FINN_HAPPY = require('../../../assets/webp/fin-happy.webp');
 
 interface Insight {
   category: 'progress' | 'next' | 'strength' | 'tip';
@@ -51,11 +57,6 @@ const BUBBLE_BORDER: Record<Insight['category'], string> = {
   tip:      '#bbf7d0',
 };
 
-const LOCKED_PREVIEWS = [
-  { emoji: '📊', label: 'קצב ההתקדמות שלכם' },
-  { emoji: '💡', label: 'הצעד הבא המומלץ' },
-  { emoji: '⭐', label: 'נקודת החוזק שלכם' },
-];
 
 /* ── Shared context builder ── */
 function useInsightContext() {
@@ -65,14 +66,12 @@ function useInsightContext() {
   const profile = useAuthStore((s) => s.profile);
   const chapterProgress = useChapterStore((s) => s.progress);
   const aiProfile = useAITelemetryStore((s) => s.profile);
-  const weakConcepts = useAdaptiveStore((s) =>
-    s.getConsistentlyFailedConcepts().map((c) => c.conceptTag),
-  );
-  return { xp, streak, displayName, profile, chapterProgress, aiProfile, weakConcepts };
+  return { xp, streak, displayName, profile, chapterProgress, aiProfile };
 }
 
 async function fetchFromAPI(ctx: ReturnType<typeof useInsightContext>): Promise<Insight[]> {
-  const { xp, streak, displayName, profile, chapterProgress, aiProfile, weakConcepts } = ctx;
+  const { xp, streak, displayName, profile, chapterProgress, aiProfile } = ctx;
+  const weakConcepts = useAdaptiveStore.getState().getConsistentlyFailedConcepts().map((c) => c.conceptTag);
   const allModuleIds = Object.values(chapterProgress).flatMap((cp) => cp.completedModules);
   const completedModuleNames = allModuleIds.map((id) => MODULE_NAMES[id] ?? id).filter(Boolean);
   const lastModuleName = allModuleIds.length > 0
@@ -111,7 +110,7 @@ function InsightBubble({ insight, index }: { insight: Insight; index: number }) 
       style={styles.bubbleRow}
       accessibilityLabel={`${insight.title}: ${insight.body}`}
     >
-      <Image source={FINN_PROFILE} style={styles.avatar} accessibilityLabel="Finn" />
+      <ExpoImage source={FINN_PROFILE} style={styles.avatar} contentFit="cover" accessibilityLabel="Finn" />
       <View style={[styles.bubble, { backgroundColor: bg, borderColor: border }]}>
         <View style={[styles.bubbleTailBorder, { borderLeftColor: border }]} />
         <View style={[styles.bubbleTail, { borderLeftColor: bg }]} />
@@ -125,26 +124,50 @@ function InsightBubble({ insight, index }: { insight: Insight; index: number }) 
   );
 }
 
-/* ── Locked placeholder bubble ── */
-function LockedBubble({ emoji, label, index }: { emoji: string; label: string; index: number }) {
+const FALLBACK_FREE_INSIGHT: Insight = {
+  category: 'strength',
+  emoji: '⭐',
+  title: 'נקודת החוזק שלכם',
+  body: 'זיהיתי דפוס עקבי בלמידה שלכם — יש לכם בסיס יציב שמאפשר לכם להתקדם לנושאים מורכבים יותר. המשיכו ברצף כדי לחזק את הנקודה הזו.',
+};
+
+const BLURRED_TEASERS: Array<{
+  category: Insight['category'];
+  emoji: string;
+}> = [
+  { category: 'progress', emoji: '📊' },
+  { category: 'next',     emoji: '💡' },
+  { category: 'tip',      emoji: '💰' },
+];
+
+/* ── Locked bubble — text replaced with grey bars (skeleton style). Completely unreadable. ── */
+function BlurredLockedBubble({ index }: { index: number }) {
+  const t = BLURRED_TEASERS[index % BLURRED_TEASERS.length];
+  const bg = BUBBLE_COLOR[t.category];
+  const border = BUBBLE_BORDER[t.category];
   return (
     <Animated.View
       entering={FadeInUp.delay(index * 80).duration(350)}
-      style={[styles.bubbleRow, { opacity: 0.45 }]}
+      style={styles.bubbleRow}
+      accessible
+      accessibilityLabel={`תובנה נעולה ${index + 1} — זמינה למשתמשי PRO`}
     >
-      <View style={[styles.avatar, styles.avatarLocked]} />
-      <View style={[styles.bubble, styles.bubbleLocked]}>
-        <View style={[styles.bubbleTailBorder, { borderLeftColor: '#e2e8f0' }]} />
-        <View style={[styles.bubbleTail, { borderLeftColor: '#f1f5f9' }]} />
+      <View style={[styles.avatar, { borderColor: border, backgroundColor: bg }]} />
+      <View
+        style={[styles.bubble, { backgroundColor: bg, borderColor: border }]}
+        importantForAccessibility="no-hide-descendants"
+        accessibilityElementsHidden
+      >
+        <View style={[styles.bubbleTailBorder, { borderLeftColor: border }]} />
+        <View style={[styles.bubbleTail, { borderLeftColor: bg }]} />
         <View style={styles.bubbleHeader}>
-          <Text style={styles.bubbleEmoji}>{emoji}</Text>
-          <Text style={[styles.bubbleTitle, { color: '#94a3b8' }]}>{label}</Text>
-          <Lock size={14} color="#94a3b8" />
+          <Text style={styles.bubbleEmoji}>{t.emoji}</Text>
+          <View style={styles.blurBarTitle} />
+          <Lock size={14} color="#64748b" />
         </View>
-        <View style={styles.lockedLines}>
-          <View style={[styles.lockedLine, { width: '88%' }]} />
-          <View style={[styles.lockedLine, { width: '64%', marginTop: 6 }]} />
-        </View>
+        <View style={[styles.blurBarBody, { width: '95%' }]} />
+        <View style={[styles.blurBarBody, { width: '82%' }]} />
+        <View style={[styles.blurBarBody, { width: '68%' }]} />
       </View>
     </Animated.View>
   );
@@ -168,14 +191,10 @@ function SkeletonBubble({ index }: { index: number }) {
 function UpgradeCTA({ onPress }: { onPress: () => void }) {
   return (
     <Animated.View entering={FadeInUp.delay(200).duration(400)} style={styles.ctaCard}>
-      <LottieView
-        source={require('../../../assets/lottie/Pro Animation 3rd.json')}
-        autoPlay loop
-        style={styles.ctaLottie}
-      />
+      <ExpoImage source={FINN_HAPPY} style={styles.ctaLottie} contentFit="contain" />
       <View style={styles.ctaText}>
-        <Text style={styles.ctaTitle}>עוד 3 תובנות ממתינות לכם 👀</Text>
-        <Text style={styles.ctaSub}>שדרגו לPRO וקבלו ניתוח מלא בכל שבוע</Text>
+        <Text style={styles.ctaTitle}>פתחו את הניתוח המלא 🔓</Text>
+        <Text style={styles.ctaSub}>קצב ההתקדמות, נקודות חולשה והצעד הבא שלכם</Text>
       </View>
       <TouchableOpacity
         style={styles.ctaBtn}
@@ -194,20 +213,15 @@ function UpgradeCTA({ onPress }: { onPress: () => void }) {
 
 export function AIInsightsScreen() {
   const router = useRouter();
+  const { top: topInset, bottom: bottomInset } = useSafeAreaInsets();
   const isPro = useSubscriptionStore((s) => s.tier === 'pro' && s.status === 'active');
   const ctx = useInsightContext();
   const { aiProfile, displayName } = ctx;
-
-  const weeklyStore = useWeeklyInsightStore();
 
   // Pro state
   const [proInsights, setProInsights] = useState<Insight[]>([]);
   const [proLoading, setProLoading] = useState(false);
   const [proError, setProError] = useState<string | null>(null);
-
-  // Free state
-  const [freeLoading, setFreeLoading] = useState(false);
-  const [freeError, setFreeError] = useState<string | null>(null);
 
   /* ── Pro: fetch all 4 insights ── */
   const fetchPro = useCallback(async () => {
@@ -224,29 +238,29 @@ export function AIInsightsScreen() {
     }
   }, [ctx]);
 
-  /* ── Free: fetch weekly teaser (1 insight — tip category) ── */
+  // Free state
+  const [freeLoading, setFreeLoading] = useState(false);
+  const cachedInsight = useWeeklyInsightStore((s) => s.cachedInsight);
+
+  /* ── Free: 1 real insight per week, cached ── */
   const fetchFree = useCallback(async () => {
-    if (!weeklyStore.shouldRefetch()) return;
+    const store = useWeeklyInsightStore.getState();
+    if (!store.shouldRefetch()) return;
     setFreeLoading(true);
-    setFreeError(null);
     try {
       const insights = await fetchFromAPI(ctx);
-      // Prefer the 'tip' category as the teaser; fallback to first
-      const teaser = insights.find((i) => i.category === 'tip') ?? insights[0];
-      weeklyStore.saveInsight({ emoji: teaser.emoji, title: teaser.title, body: teaser.body });
+      const teaser = insights.find((i) => i.category === 'strength') ?? insights[0];
+      store.saveInsight({ emoji: teaser.emoji, title: teaser.title, body: teaser.body });
     } catch {
-      setFreeError('שגיאת רשת. נסו שוב מאוחר יותר.');
+      // silently fail — user still sees locked placeholders
     } finally {
       setFreeLoading(false);
     }
-  }, [ctx, weeklyStore]);
+  }, [ctx]);
 
   useEffect(() => {
-    if (isPro) {
-      fetchPro();
-    } else {
-      fetchFree();
-    }
+    if (isPro) fetchPro();
+    else fetchFree();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -259,7 +273,7 @@ export function AIInsightsScreen() {
   /* ── Intro banner (shared) ── */
   const IntroBanner = (
     <Animated.View entering={FadeInUp.duration(400)} style={styles.introRow}>
-      <SafeLottie source={FINN_EXCITED} style={styles.finnLarge} autoPlay loop />
+      <ExpoImage source={FINN_HAPPY} style={styles.finnLarge} contentFit="contain" />
       <View style={styles.introTextWrap}>
         <Text style={styles.introGreeting}>
           {displayName ? `היי ${displayName}! 👋` : 'היי! 👋'}
@@ -276,7 +290,7 @@ export function AIInsightsScreen() {
   return (
     <View style={styles.container}>
       {/* Header */}
-      <View style={styles.header}>
+      <View style={[styles.header, { paddingTop: 12 + topInset }]}>
         <BackButton color="#0f172a" />
         <Text style={styles.headerTitle}>תובנות AI</Text>
         {isPro ? (
@@ -296,7 +310,11 @@ export function AIInsightsScreen() {
 
       {/* ── PRO FLOW ── */}
       {isPro ? (
-        <ScrollView style={styles.scroll} contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+        <ScrollView
+          style={styles.scroll}
+          contentContainerStyle={[styles.scrollContent, { paddingBottom: 40 + bottomInset }]}
+          showsVerticalScrollIndicator={false}
+        >
           {IntroBanner}
           {proLoading
             ? [0, 1, 2, 3].map((i) => <SkeletonBubble key={i} index={i} />)
@@ -313,47 +331,38 @@ export function AIInsightsScreen() {
                 <InsightBubble key={insight.category} insight={insight} index={i} />
               ))
           }
-          <View style={{ height: 40 }} />
         </ScrollView>
 
-      /* ── FREE FLOW ── */
+      /* ── FREE FLOW — 1 real insight + 3 locked ── */
       ) : (
-        <ScrollView style={styles.scroll} contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+        <ScrollView
+          style={styles.scroll}
+          contentContainerStyle={[styles.scrollContent, { paddingBottom: 40 + bottomInset }]}
+          showsVerticalScrollIndicator={false}
+        >
           {IntroBanner}
 
+          {/* 1 real insight — fallback to static tip if API hasn't loaded yet */}
           {freeLoading ? (
             <SkeletonBubble index={0} />
-          ) : freeError ? (
-            <Animated.View entering={FadeInUp.duration(400)} style={styles.errorBox}>
-              <Text style={styles.errorText}>{freeError}</Text>
-            </Animated.View>
-          ) : weeklyStore.cachedInsight ? (
-            <>
-              {/* 1 real insight */}
-              <InsightBubble
-                insight={{ ...weeklyStore.cachedInsight, category: 'tip' }}
-                index={0}
-              />
-
-              {/* Upgrade CTA */}
-              <UpgradeCTA onPress={() => router.push('/pricing' as never)} />
-
-              {/* 3 locked previews */}
-              {LOCKED_PREVIEWS.map((p, i) => (
-                <LockedBubble key={p.label} emoji={p.emoji} label={p.label} index={i + 1} />
-              ))}
-
-              <Text style={styles.weeklyNote}>
-                💡 תובנה חדשה תופיע כל שבוע — PRO מקבל את כולן ∞
-              </Text>
-            </>
           ) : (
-            /* Edge case: no cached insight yet and not loading */
-            <Animated.View entering={FadeInUp.duration(400)} style={styles.errorBox}>
-              <Text style={styles.errorText}>טוענים את התובנה השבועית שלכם…</Text>
-            </Animated.View>
+            <InsightBubble
+              insight={cachedInsight ? { ...cachedInsight, category: 'strength' } : FALLBACK_FREE_INSIGHT}
+              index={0}
+            />
           )}
-          <View style={{ height: 40 }} />
+
+          {/* Upgrade CTA */}
+          <UpgradeCTA onPress={() => router.push('/pricing' as never)} />
+
+          {/* 3 blurred locked bubbles */}
+          <BlurredLockedBubble index={0} />
+          <BlurredLockedBubble index={1} />
+          <BlurredLockedBubble index={2} />
+
+          <Text style={styles.weeklyNote}>
+            🔒 הניתוח המלא — קצב, חולשה, צעד הבא — זמין ב-PRO
+          </Text>
         </ScrollView>
       )}
     </View>
@@ -369,7 +378,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 16,
-    paddingTop: 12,
     paddingBottom: 12,
     backgroundColor: '#ffffff',
     borderBottomWidth: 1,
@@ -402,7 +410,7 @@ const styles = StyleSheet.create({
   bubble: {
     flex: 1, borderRadius: 16, borderTopRightRadius: 4,
     padding: 14, borderWidth: 1.5, position: 'relative',
-    ...SHADOW_STRONG,
+    ...CARD_SHADOW,
   },
   bubbleTailBorder: {
     position: 'absolute', right: -11, top: 13,
@@ -423,6 +431,22 @@ const styles = StyleSheet.create({
   bubbleTitle: { fontSize: 14, fontWeight: '800', color: '#0f172a', textAlign: 'right', flex: 1 },
   bubbleBody: { fontSize: 14, color: '#334155', textAlign: 'right', lineHeight: 21 },
 
+  /* Locked-state grey bars — replace title/body text. Fully unreadable. */
+  blurBarTitle: {
+    flex: 1,
+    height: 12,
+    borderRadius: 6,
+    backgroundColor: '#94a3b8',
+    opacity: 0.55,
+  },
+  blurBarBody: {
+    height: 11,
+    borderRadius: 5,
+    backgroundColor: '#94a3b8',
+    opacity: 0.45,
+    marginTop: 8,
+  },
+
   /* Locked */
   bubbleLocked: { backgroundColor: '#f8fafc', borderColor: '#e2e8f0' },
   lockedLines: {},
@@ -441,7 +465,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row-reverse',
     alignItems: 'center',
     gap: 10,
-    ...SHADOW_STRONG,
+    ...CARD_SHADOW,
   },
   ctaLottie: { width: 52, height: 52 },
   ctaText: { flex: 1, alignItems: 'flex-end' },
@@ -458,6 +482,22 @@ const styles = StyleSheet.create({
   /* Weekly note */
   weeklyNote: {
     textAlign: 'center', fontSize: 12, color: '#94a3b8', marginTop: 8,
+  },
+
+  /* Frosted overlay (replaces BlurView — cross-platform safe) */
+  frostedOverlay: {
+    top: 130,
+    backgroundColor: 'rgba(240, 249, 255, 0.82)',
+  },
+
+  /* Free upgrade overlay */
+  freeUpgradeOverlay: {
+    position: 'absolute',
+    bottom: 0,
+    left: 16,
+    right: 16,
+    paddingBottom: 40,
+    alignItems: 'center',
   },
 
   /* Error */

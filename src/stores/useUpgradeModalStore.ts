@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import type { GatedFeature } from "../features/subscription/useSubscriptionStore";
+import { useMonetizationIntentStore } from "../features/monetization/useMonetizationIntentStore";
 
 interface UpgradeModalState {
   visible: boolean;
@@ -11,6 +12,9 @@ interface UpgradeModalState {
 export const useUpgradeModalStore = create<UpgradeModalState>((set) => ({
   visible: false,
   feature: null,
-  show: (feature) => set({ visible: true, feature }),
+  show: (feature) => {
+    useMonetizationIntentStore.getState().trackProTap(feature);
+    set({ visible: true, feature });
+  },
   hide: () => set({ visible: false }),
 }));

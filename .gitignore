@@ -19,7 +19,6 @@ web-build/
 # Large media — hosted on CDN (Vercel Blob / R2), not bundled in repo
 assets/video/
 assets/AUDIO/
-assets/infographics/
 assets/vercel_stage/
 assets/STOCK/
 assets/IMAGES/modules/

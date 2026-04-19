@@ -39,7 +39,7 @@ export const useAuthStore = create<AuthState>()(
       createdAt: null,
 
       signIn: (displayName: string, email: string) => {
-        set((state) => ({ isAuthenticated: true, isGuest: false, displayName, email, createdAt: state.createdAt ?? new Date().toISOString() }));
+        set((state) => ({ isAuthenticated: true, isGuest: false, hasCompletedOnboarding: true, displayName, email, createdAt: state.createdAt ?? new Date().toISOString() }));
         // Fire-and-forget DB sync
         upsertUserProfile(email, { displayName, email }).catch(() => { /* fire-and-forget */ });
       },
@@ -49,7 +49,7 @@ export const useAuthStore = create<AuthState>()(
       },
 
       convertGuestToUser: (displayName: string, email: string) => {
-        set({ isGuest: false, displayName, email });
+        set({ isGuest: false, hasCompletedOnboarding: true, displayName, email });
         upsertUserProfile(email, { displayName, email }).catch(() => { /* fire-and-forget */ });
       },
 

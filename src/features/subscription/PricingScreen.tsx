@@ -35,6 +35,7 @@ import { getOffering, purchasePackage, RC_ENTITLEMENT_PRO } from "../../services
 import type { PurchasesPackage } from "../../services/revenueCat";
 import { BackButton } from "../../components/ui/BackButton";
 import { useTheme } from "../../hooks/useTheme";
+import { useMonetizationIntentStore } from "../monetization/useMonetizationIntentStore";
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
 
@@ -158,6 +159,10 @@ export function PricingScreen() {
   const [activePackage, setActivePackage] = useState<PurchasesPackage | null>(null);
   const upgradeToPro = useSubscriptionStore((s) => s.upgradeToPro);
   const restoreSubscription = useSubscriptionStore((s) => s.restoreSubscription);
+
+  useEffect(() => {
+    useMonetizationIntentStore.getState().trackPricingVisit();
+  }, []);
 
   // Load offering once so we can show the localized price + period before purchase.
   useEffect(() => {

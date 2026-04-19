@@ -7,7 +7,9 @@ export type NotificationChannelId =
   | "squadChest"
   | "morning"
   | "inactivity"
-  | "marketHook";
+  | "marketHook"
+  | "aiInsight"
+  | "upgradeNudge";
 
 export interface ScheduledNotification {
   channelId: NotificationChannelId;
@@ -25,6 +27,8 @@ export interface NotificationPreferences {
   morning: boolean;
   inactivity: boolean;
   marketHook: boolean;
+  aiInsight: boolean;
+  upgradeNudge: boolean;
 }
 
 export interface NotificationState {
@@ -34,4 +38,5 @@ export interface NotificationState {
   preferences: NotificationPreferences;
   lastScheduledDate: string | null;
   lastFinnCopyTitle: string | null;
+  lastAIInsightNotifDate: string | null;
 }

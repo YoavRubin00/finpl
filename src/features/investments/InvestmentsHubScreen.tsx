@@ -33,7 +33,7 @@ export function InvestmentsHubScreen() {
   const { layer } = getPyramidStatus(xp);
   const walkthroughBypass = !useTutorialStore((s) => s.hasSeenAppWalkthrough);
   const isInvestmentsUnlocked = layer >= 2 || walkthroughBypass;
-  const isTradingUnlocked = layer >= 4 || walkthroughBypass;
+  const isTradingUnlocked = layer >= 2 || walkthroughBypass;
 
   const positions = useTradingStore((s) => s.positions);
   const ownedAssets = useRealAssetsStore((s) => s.ownedAssets);
@@ -208,7 +208,7 @@ export function InvestmentsHubScreen() {
               <View style={s.navTextCol}>
                 <Text style={s.navTitle}>מסחר בשוק ההון</Text>
                 <View style={s.lockRow}>
-                  <Text style={s.navDesc}>נפתח בהגעה לרמה 4</Text>
+                  <Text style={s.navDesc}>נפתח בהגעה לרמה 2</Text>
                   <Lock size={12} color="#64748b" />
                 </View>
               </View>

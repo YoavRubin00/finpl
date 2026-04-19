@@ -23,7 +23,7 @@ const { width: SW } = Dimensions.get('window');
 const RTL = { writingDirection: 'rtl' as const, textAlign: 'right' as const };
 const STAGE_W = SW - 48;
 
-const PHASE_DURATIONS: [number, number, number] = [5000, 5000, Infinity];
+const PHASE_DURATIONS: [number, number, number] = [4000, 4800, Infinity];
 
 const LOTTIE_MAP = {
   moneybag: require('../../../assets/lottie/wired-flat-413-money-bag-hover-shake.json'),

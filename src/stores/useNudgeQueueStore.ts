@@ -34,6 +34,9 @@ interface NudgeState {
   canShow: (type: NudgeType) => boolean;
   /** Called on app cold-start to clear session tokens */
   resetSession: () => void;
+  /** ISO date (YYYY-MM-DD) when the daily bridge nudge was last shown — prevents repeat same day */
+  lastBridgeNudgeDateISO: string | null;
+  setLastBridgeNudgeDateISO: (d: string) => void;
 }
 
 const COOLDOWN_MS = 48 * 60 * 60 * 1000; // 48h per Duolingo A/B
@@ -93,6 +96,9 @@ export const useNudgeQueueStore = create<NudgeState>()(
       resetSession: () => {
         set({ sessionShown: emptyMap<boolean>(false) });
       },
+
+      lastBridgeNudgeDateISO: null,
+      setLastBridgeNudgeDateISO: (d) => set({ lastBridgeNudgeDateISO: d }),
     }),
     {
       name: 'nudge-queue-store',
@@ -101,6 +107,7 @@ export const useNudgeQueueStore = create<NudgeState>()(
         dismissHistory: state.dismissHistory,
         lastShownTs: state.lastShownTs,
         lastActedTs: state.lastActedTs,
+        lastBridgeNudgeDateISO: state.lastBridgeNudgeDateISO,
         // sessionShown deliberately NOT persisted — resets each cold start
       }),
     },

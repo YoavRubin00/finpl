@@ -40,7 +40,9 @@ import { useTradingHubUiStore } from './useTradingHubUiStore';
 import { useMarketMissionStore } from './useMarketMissionStore';
 import { useChapterStore } from '../chapter-1-content/useChapterStore';
 import { useTutorialStore } from '../../stores/useTutorialStore';
+import { useAuthStore } from '../auth/useAuthStore';
 import { TradingHubTutorial } from './TradingHubTutorial';
+import { NotificationBanner } from '../../components/ui/NotificationBanner';
 
 const ITEM_SIZE = 72;
 const ITEM_GAP = 12;
@@ -84,6 +86,14 @@ export function TradingHubScreen() {
     const [showTutorial, setShowTutorial] = useState(!hasSeenIntro);
     const insets = useSafeAreaInsets();
 
+    // Knowledge-level personalisation
+    const knowledgeLevel = useAuthStore((s) => s.profile?.knowledgeLevel);
+    const isAdvancedKnowledge =
+        knowledgeLevel === 'some' || knowledgeLevel === 'experienced' || knowledgeLevel === 'expert';
+    const hasSeenIndicesNudge = useTutorialStore((s) => s.hasSeenIndicesOnlyNudge);
+    const markIndicesNudgeSeen = useTutorialStore((s) => s.markIndicesOnlyNudgeSeen);
+    const [showIndicesNudge, setShowIndicesNudge] = useState(false);
+
     const updatePrices = useTradingStore((s) => s.updatePrices);
     const positions = useTradingStore((s) => s.positions);
     const positionCount = positions.length;
@@ -118,6 +128,23 @@ export function TradingHubScreen() {
     useEffect(() => {
         refreshMissionDaily();
     }, [refreshMissionDaily]);
+
+    // Auto-unlock stocks for users with knowledge level >= "some" (3+)
+    useEffect(() => {
+        if (isAdvancedKnowledge) {
+            unlockAssetType('stock');
+        }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
+
+    // One-time Finn nudge: indices-only starters (knowledge < "some")
+    useEffect(() => {
+        if (!isAdvancedKnowledge && !hasSeenIndicesNudge) {
+            const timer = setTimeout(() => setShowIndicesNudge(true), 3500);
+            return () => clearTimeout(timer);
+        }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
 
     // Crypto unlock: subscribe to chapter-5 progress so a mid-session completion
     // triggers the unlock immediately, not just on the next mount.
@@ -533,6 +560,18 @@ export function TradingHubScreen() {
                 }}
                 onDismiss={() => setBridgeCtaVisible(false)}
                 moduleCount={positionCount}
+            />
+
+            {/* Finn nudge — indices-only starters (knowledge level < 3) */}
+            <NotificationBanner
+                visible={showIndicesNudge}
+                message="עדיין לא נתחיל עם המניות. ראשית עם מדדים..."
+                imageSource={require('../../../assets/webp/fin-happy.webp')}
+                duration={0}
+                onDismiss={() => {
+                    setShowIndicesNudge(false);
+                    markIndicesNudgeSeen();
+                }}
             />
         </View>
     );

@@ -27,7 +27,7 @@ const STAGE_W = SW - 48;
 const BAR_HEIGHTS = [28, 36, 48, 66, 90, 124];
 const BAR_COLORS = ['#3b82f6', '#60a5fa', '#818cf8', '#a78bfa', '#f59e0b', '#fbbf24'];
 
-const PHASE_DURATIONS: [number, number, number] = [5000, 6000, Infinity];
+const PHASE_DURATIONS: [number, number, number] = [4000, 4800, Infinity];
 const PHASE_CAPTIONS: [string, string, string] = [
   'הבנק נותן לכם ריבית? נחמד. אבל ריבית דריבית — זה להרוויח ריבית גם על הרווחים! 💡',
   'שמתם ₪100, הרווחתם ₪10 — בשנה הבאה ריבית מתוך ₪110. פתאום הגרף הופך אקספוננציאלי. 📈',
@@ -89,11 +89,6 @@ function CompoundChart({ animate }: { animate: boolean }) {
 
 // ── Main component ─────────────────────────────────────────────────────────
 export function CompoundInterestIntro({ onStart, unitColors, chartImageUri, audioUri }: Props) {
-  const [phase, setPhase] = useState<0 | 1 | 2>(0);
-  const { playSound } = useSoundEffect();
-  const reducedMotion = useReducedMotion();
-  const dropTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
   useEffect(() => {
     if (!audioUri) return;
     const player = createAudioPlayer({ uri: audioUri });
@@ -103,6 +98,11 @@ export function CompoundInterestIntro({ onStart, unitColors, chartImageUri, audi
       player.release();
     };
   }, [audioUri]);
+
+  const [phase, setPhase] = useState<0 | 1 | 2>(0);
+  const { playSound } = useSoundEffect();
+  const reducedMotion = useReducedMotion();
+  const dropTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => () => {
     if (dropTimerRef.current) clearTimeout(dropTimerRef.current);

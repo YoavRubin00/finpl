@@ -43,7 +43,11 @@ import { LoadingWisdom } from "../src/components/ui/LoadingWisdom";
 import { GlobalErrorBoundary } from "../src/components/ui/ErrorBoundary";
 import { NetworkStatusBanner } from "../src/components/ui/NetworkStatusBanner";
 import { LevelUpBanner } from "../src/components/ui/LevelUpBanner";
+import { NotificationBanner } from "../src/components/ui/NotificationBanner";
+import { useAIInsightBanner } from "../src/features/ai-insights/useAIInsightBanner";
+import { useUpgradeNudgeBanner } from "../src/features/monetization/useUpgradeNudgeBanner";
 import { GlobalQuestCompletionModal } from "../src/features/daily-quests/GlobalQuestCompletionModal";
+import { DailyBridgeNudgeModal } from "../src/components/ui/DailyBridgeNudgeModal";
 import { configureRevenueCat, loginRevenueCat } from "../src/services/revenueCat";
 import { useSubscriptionStore } from "../src/features/subscription/useSubscriptionStore";
 import { AppWalkthroughOverlay } from "../src/features/onboarding/AppWalkthroughOverlay";
@@ -115,6 +119,8 @@ export default function RootLayout() {
 
 
   useNotificationSetup();
+  const { visible: aiVisible, dismiss: aiDismiss, navigate: aiNavigate, message: aiMessage } = useAIInsightBanner();
+  const upgradeNudge = useUpgradeNudgeBanner();
 
   // ── Session time tracking: foreground/background events ──
   const foregroundEnteredAt = useRef<number | null>(Date.now());
@@ -197,7 +203,7 @@ export default function RootLayout() {
       "duels", "squads", "referral", "fantasy", "assets", "assets-market", "finfeed",
       "scenario-lab", "suggest-scenario", "graham-personality", "legal", "settings",
       "pizza-index", "accessibility-statement", "fire-calculator",
-      "tower-defense-boss", "interstitial",
+      "tower-defense-boss", "interstitial", "ai-insights", "saved-items",
     ].includes(segments[0] as string);
 
     if (!isAuthenticated) {
@@ -231,8 +237,27 @@ export default function RootLayout() {
               <PostStreakIncomeSplash />
               <WisdomPopupCard />
               <GlobalQuestCompletionModal />
+              <DailyBridgeNudgeModal />
               <NetworkStatusBanner />
               <LevelUpBanner />
+              <NotificationBanner
+                visible={aiVisible}
+                message={aiMessage}
+                actionLabel="לראות"
+                onAction={aiNavigate}
+                onDismiss={aiDismiss}
+                imageSource={require('../assets/webp/fin-happy.webp')}
+                duration={6000}
+              />
+              <NotificationBanner
+                visible={upgradeNudge.visible}
+                message={upgradeNudge.copy?.body ?? ''}
+                actionLabel="שדרג"
+                onAction={upgradeNudge.navigate}
+                onDismiss={upgradeNudge.dismiss}
+                imageSource={require('../assets/webp/fin-happy.webp')}
+                duration={7000}
+              />
               <FreezeSaveModalGate />
               <StreakRepairModalGate />
             </StreakCelebrationProvider>
