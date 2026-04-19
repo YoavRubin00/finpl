@@ -15,7 +15,9 @@ import Animated, {
   withSequence,
   withDelay,
   interpolateColor,
+  FadeInUp,
 } from 'react-native-reanimated';
+import { AnimatedPressable } from '../../components/ui/AnimatedPressable';
 import {
   TrendingUp, TrendingDown, Zap, Lightbulb, Crown,
 } from 'lucide-react-native';
@@ -348,7 +350,7 @@ export const MacroEventCard = React.memo(function MacroEventCard({ item, isActiv
                 end={{ x: 1, y: 1 }}
                 style={[styles.premiumUnlockGradient, gems < 2 && { borderWidth: 1, borderColor: '#e2e8f0' }]}
               >
-                <Text style={[styles.premiumUnlockBtnText, gems < 2 && { color: '#64748b' }]}>
+                <Text style={[styles.premiumUnlockBtnText, { color: gems >= 2 ? '#fff' : '#64748b' }]}>
                   {gems >= 2 ? '2 יהלומים וגלה' : 'אין מספיק יהלומים'} 💎
                 </Text>
               </LinearGradient>
@@ -475,19 +477,21 @@ export const MacroEventCard = React.memo(function MacroEventCard({ item, isActiv
 
         {/* "לאירוע הבא" button, shown after answering */}
         {isAnswered && (
-          <Animated.View>
+          <Animated.View entering={FadeInUp.duration(350).delay(300)} style={{ width: '100%', gap: 8, marginTop: 4 }}>
             {currentStreak >= 3 && (
               <View style={styles.streakPill}>
                 <LottieView source={require("../../../assets/lottie/wired-flat-2804-fire-flame-hover-pinch.json")} style={{ width: 16, height: 16 }} autoPlay loop />
                 <Text style={styles.streakPillText}>{currentStreak} נכון ברציפות!</Text>
               </View>
             )}
-            <Pressable
-              style={({ pressed }) => [styles.nextBtn, pressed && { opacity: 0.85 }]}
+            <AnimatedPressable
+              style={styles.nextBtn}
               onPress={handleNext}
+              accessibilityRole="button"
+              accessibilityLabel="עבור לאירוע הבא"
             >
-              <Text style={styles.nextBtnText}>‹ לאירוע הבא</Text>
-            </Pressable>
+              <Text style={styles.nextBtnText}>לאירוע הבא ›</Text>
+            </AnimatedPressable>
           </Animated.View>
         )}
 
@@ -664,7 +668,7 @@ const styles = StyleSheet.create({
     shadowRadius: 10,
   },
   premiumUnlockGradient: { paddingVertical: 14, alignItems: 'center', borderRadius: 999 },
-  premiumUnlockBtnText: { fontSize: 16, fontWeight: '900', color: '#fff', writingDirection: 'rtl' },
+  premiumUnlockBtnText: { fontSize: 16, fontWeight: '900', writingDirection: 'rtl' },
   premiumWonBanner: {
     backgroundColor: '#e0f2fe', borderWidth: 1, borderColor: '#7dd3fc', borderRadius: 12, padding: 12, marginTop: 8,
   },

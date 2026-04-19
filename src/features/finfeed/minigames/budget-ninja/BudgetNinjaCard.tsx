@@ -26,6 +26,7 @@ import { CHALLENGE_COIN_REWARD, CHALLENGE_XP_REWARD, MAX_DAILY_PLAYS } from '../
 import { NINJA_TARGETS, GAME_DURATION_MS, SPAWN_INTERVAL_MS_BASE, FALL_DURATION_MIN_MS_BASE, FALL_DURATION_MAX_MS_BASE, LEVEL_1_SPEED, LEVEL_2_SPEED, SCORE_TIER_EXCELLENT, SCORE_TIER_GOOD, SCORE_TIER_OK, pickRandomKind } from './ninjaData';
 import type { FallingTarget, NinjaTargetKind } from './types';
 import { FeedStartButton } from '../shared/FeedStartButton';
+import { AnimatedPressable } from '../../../../components/ui/AnimatedPressable';
 
 const RTL = { writingDirection: 'rtl' as const, textAlign: 'right' as const };
 const RTL_CENTER = { writingDirection: 'rtl' as const, textAlign: 'center' as const };
@@ -414,20 +415,22 @@ export const BudgetNinjaCard = React.memo(function BudgetNinjaCard({ isActive: _
         {phase === 'done' && score >= SCORE_TIER_GOOD && currentLevel === 1 && remainingPlays > 0 && (
           <Animated.View entering={FadeInUp.duration(300).delay(400)} style={styles.level2Block}>
             <Text style={[styles.level2Label, RTL_CENTER]}>מוכן לאתגר?</Text>
-            <Pressable
+            <AnimatedPressable
               onPress={() => startGame(2)}
               accessibilityRole="button"
               accessibilityLabel="התחל רמה 2, מהירות כפולה"
-              style={({ pressed }) => [styles.level2Button, pressed && { transform: [{ scale: 0.97 }] }]}
+              style={styles.level2Button}
             >
-              <LinearGradient
-                colors={['#dc2626', '#991b1b']}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
-                style={StyleSheet.absoluteFill}
-              />
-              <Text style={styles.level2ButtonText}>רמה 2, מהירות גבוהה</Text>
-            </Pressable>
+              <View style={[StyleSheet.absoluteFill, { borderRadius: 20, overflow: 'hidden' }]}>
+                <LinearGradient
+                  colors={['#dc2626', '#991b1b']}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
+                  style={StyleSheet.absoluteFill}
+                />
+              </View>
+              <Text style={styles.level2ButtonText}>רמה 2 ⚡ מהירות גבוהה</Text>
+            </AnimatedPressable>
           </Animated.View>
         )}
       </View>
@@ -503,24 +506,23 @@ const styles = StyleSheet.create({
     color: '#64748b',
   },
   level2Button: {
-    paddingHorizontal: 28,
-    paddingVertical: 14,
-    borderRadius: 14,
-    overflow: 'hidden',
+    paddingHorizontal: 40,
+    paddingVertical: 20,
+    borderRadius: 20,
     alignItems: 'center',
     justifyContent: 'center',
-    minWidth: 200,
+    minWidth: 260,
     shadowColor: '#991b1b',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.35,
-    shadowRadius: 10,
-    elevation: 6,
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.4,
+    shadowRadius: 16,
+    elevation: 10,
   },
   level2ButtonText: {
-    fontSize: 15,
+    fontSize: 18,
     fontWeight: '900',
     color: '#ffffff',
-    letterSpacing: 0.3,
+    letterSpacing: 0.4,
   },
   hudRow: {
     flexDirection: 'row-reverse',

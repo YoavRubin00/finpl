@@ -1353,8 +1353,10 @@ export function DuoLearnScreen() {
 
         <DailyQuestsSheet visible={questSheetVisible} onClose={() => setQuestSheetVisible(false)} />
 
-        {/* Learning Roadmap Modal */}
-        <Modal visible={roadmapVisible} transparent animationType="fade" onRequestClose={() => setRoadmapVisible(false)} accessibilityViewIsModal>
+        {/* Learning Roadmap Overlay (Replaced Native Modal to support iOS Walkthrough overlap) */}
+        {roadmapVisible && (
+          <View style={[StyleSheet.absoluteFill, { zIndex: 9999, elevation: 9999 }]} accessibilityViewIsModal>
+            <Animated.View entering={FadeInDown.duration(200)} style={{ flex: 1 }}>
           <Pressable style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.4)", justifyContent: "center", alignItems: "center", padding: 20 }} onPress={() => setRoadmapVisible(false)} accessibilityRole="button" accessibilityLabel="סגור מסלול הלמידה">
             <Pressable onPress={() => {}} style={{ width: "100%", maxWidth: 380, backgroundColor: "#ffffff", borderRadius: 24, padding: 24, shadowColor: "#000", shadowOpacity: 0.15, shadowRadius: 20, shadowOffset: { width: 0, height: 8 }, elevation: 10 }} accessibilityLabel="תוכן מסלול הלמידה">
               {/* Title */}
@@ -1467,7 +1469,9 @@ export function DuoLearnScreen() {
               </Pressable>
             </Pressable>
           </Pressable>
-        </Modal>
+        </Animated.View>
+      </View>
+    )}
 
         {/* Easter egg claim flying rewards */}
         {showEasterEggReward === "coins" && (

@@ -4,8 +4,6 @@ import {
   Text,
   Pressable,
   StyleSheet,
-  Dimensions,
-  Platform,
 } from "react-native";
 import { Image as ExpoImage } from "expo-image";
 import Animated, {
@@ -27,9 +25,8 @@ import { SPRING_BOUNCY, SPRING_SMOOTH } from "../../utils/animations";
 import { heavyHaptic, doubleHeavyHaptic, successHaptic } from "../../utils/haptics";
 import { ConfettiExplosion } from "../../components/ui/ConfettiExplosion";
 import { SparkleOverlay } from "../../components/ui/SparkleOverlay";
-import { FINN_HAPPY, FINN_FIRE } from "../retention-loops/finnMascotConfig";
-
-const { width: SCREEN_WIDTH } = Dimensions.get("window");
+import { FINN_FIRE } from "../retention-loops/finnMascotConfig";
+import { useTimeoutCleanup } from "../../hooks/useTimeoutCleanup";
 
 const WEEKDAY_LABELS = ["א", "ב", "ג", "ד", "ה", "ו", "ש"];
 
@@ -45,6 +42,7 @@ export function StreakCelebrationScreen({
   const isMilestone = streak === 7 || streak === 30 || streak === 100 || streak === 365;
   const grantedFreezeAt7 = streak === 7;
   const [showConfetti, setShowConfetti] = useState(false);
+  const safeTimeout = useTimeoutCleanup();
 
   // --- Animated values ---
   const overlayOpacity = useSharedValue(0);
@@ -93,9 +91,8 @@ export function StreakCelebrationScreen({
     // Number bounces in
     numberOpacity.value = withDelay(250, withTiming(1, { duration: 200 }));
     numberScale.value = withDelay(250, withSpring(1, SPRING_BOUNCY));
-    setTimeout(() => successHaptic(), 300); // Success burst when number lands
-    // Confetti burst after number lands
-    setTimeout(() => setShowConfetti(true), 400);
+    safeTimeout(() => successHaptic(), 300);
+    safeTimeout(() => setShowConfetti(true), 400);
 
     // Subtitle fades in
     subtitleOpacity.value = withDelay(500, withTiming(1, { duration: 400 }));
@@ -261,12 +258,7 @@ export function StreakCelebrationScreen({
           {isMilestone && (
             <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 4 }}>
               {streak >= 7 && streak < 30 && (
-                <LottieView
-                  source={require("../../../assets/lottie/wired-flat-2804-fire-flame-hover-pinch.json")}
-                  style={{ width: 24, height: 24 }}
-                  autoPlay
-                  loop
-                 />
+                <Text style={{ fontSize: 20 }}>🔥</Text>
               )}
               <Text style={styles.milestoneLabel}>{milestoneText}</Text>
             </View>
@@ -284,6 +276,7 @@ export function StreakCelebrationScreen({
             source={FINN_FIRE} accessible={false}
             style={{ width: 120, height: 120 }}
             contentFit="contain"
+            autoplay={false}
           />
           {/* Sparkle dots around Finn */}
           <View style={[styles.sparkle, styles.sparkle1]} />
@@ -307,16 +300,7 @@ export function StreakCelebrationScreen({
                     ]}
                   >
                     {isCompleted ? (
-                      Platform.OS === 'web' ? (
-                        <Text style={{ fontSize: 18 }}>🔥</Text>
-                      ) : (
-                        <LottieView
-                          source={require("../../../assets/lottie/wired-flat-2804-fire-flame-hover-pinch.json")}
-                          style={{ width: 26, height: 26 }}
-                          autoPlay
-                          loop
-                         />
-                      )
+                      <Text style={{ fontSize: 18 }}>🔥</Text>
                     ) : (
                       <Text style={styles.calendarDayEmpty}>—</Text>
                     )}

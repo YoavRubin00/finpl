@@ -555,15 +555,15 @@ function FlashcardCard({
             <Text style={{ ...RTL_STYLE, fontSize: 12.5, lineHeight: 19, color: "#334155", fontWeight: "600" }}>
               משהו לא מובן? לחצו על המילים המודגשות לקבלת הסבר
             </Text>
-            <Pressable
+            <AnimatedPressable
               onPress={() => onOpenChat?.()}
-              style={{ flexDirection: "row-reverse", alignItems: "center", gap: 4, marginTop: 6, alignSelf: "flex-end", backgroundColor: "#0ea5e9", borderRadius: 10, paddingHorizontal: 10, paddingVertical: 5 }}
+              style={{ flexDirection: "row-reverse", alignItems: "center", gap: 4, marginTop: 6, alignSelf: "flex-end", backgroundColor: "#0ea5e9", borderRadius: 10, paddingHorizontal: 12, paddingVertical: 7, borderBottomWidth: 2, borderBottomColor: "#0284c7" }}
               accessibilityRole="button"
               accessibilityLabel="שאלו את הקפטן"
               hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
             >
-              <Text style={{ color: "#ffffff", fontSize: 11, fontWeight: "800" }}>שאלו את הקפטן</Text>
-            </Pressable>
+              <Text style={{ color: "#ffffff", fontSize: 12, fontWeight: "800" }}>שאלו את הקפטן</Text>
+            </AnimatedPressable>
           </View>
           <Pressable onPress={() => setFinnTipDismissed(true)} hitSlop={10} style={{ position: "absolute", top: 8, right: 8 }}
             accessibilityRole="button"
@@ -2382,18 +2382,17 @@ export function LessonFlowScreen() {
     // If DoN was pending, show it now
     if (shouldTriggerDoNRef.current) {
       shouldTriggerDoNRef.current = false;
-      setTimeout(() => {
+      safeTimeout(() => {
         setShowDoubleOrNothing(true);
         playSound('modal_open_4');
       }, 500);
     } else if (!isLast) {
-      // Otherwise show wisdom flash
-      setTimeout(() => {
+      safeTimeout(() => {
         useWisdomStore.getState().showRandomWisdom();
         setShowWisdom(true);
       }, 800);
     }
-  }, [chapterId, id, playSound]);
+  }, [chapterId, id, playSound, safeTimeout]);
 
   // Chapter context for progress display
   const chapterData = chapterId ? CHAPTER_DATA_MAP[chapterId] : undefined;
@@ -2564,7 +2563,7 @@ export function LessonFlowScreen() {
       else if (newStreak >= 5) { successHaptic(); playSound('btn_click_heavy'); }
       else { playSound('modal_open_4'); }
       setShowStreakPopup(true);
-      setTimeout(() => setShowStreakPopup(false), 2000);
+      safeTimeout(() => setShowStreakPopup(false), 2000);
     }
     advanceQuiz();
   }, [mod, quizIndex, recordQuizAnswer, advanceQuiz, consecutiveCorrect, playSound]);
@@ -2581,7 +2580,7 @@ export function LessonFlowScreen() {
       if (quiz.conceptTag) {
         const isStruggling = useAdaptiveStore.getState().isConceptStruggledWith(quiz.conceptTag);
         if (isStruggling) {
-          setTimeout(() => setLifelineConcept(quiz.conceptTag), 1600);
+          safeTimeout(() => setLifelineConcept(quiz.conceptTag), 1600);
         }
       }
     } else {
@@ -2646,7 +2645,7 @@ export function LessonFlowScreen() {
       const finnSource = nextCardId ? FINN_MAP[nextCardId] : undefined;
       if (finnSource) {
         setFinnTransitionSource(finnSource as { uri: string });
-        setTimeout(() => {
+        safeTimeout(() => {
           setFinnTransitionSource(null);
           setFlashcardIndex((prev) => prev + 1);
         }, 1500);
@@ -2656,7 +2655,7 @@ export function LessonFlowScreen() {
     } else {
       mediumHaptic();
       setPhase("quizzes");
-      setTimeout(() => setShowQuizIntro(true), 50);
+      safeTimeout(() => setShowQuizIntro(true), 50);
     }
   }, [mod, flashcardIndex, finnTipText, checkpointIndex, showMidCheckpoint, checkpointReturnIndex]);
 
@@ -2669,7 +2668,7 @@ export function LessonFlowScreen() {
       const finnSource = nextCardId ? FINN_MAP[nextCardId] : undefined;
       if (finnSource) {
         setFinnTransitionSource(finnSource as { uri: string });
-        setTimeout(() => {
+        safeTimeout(() => {
           setFinnTransitionSource(null);
           setFlashcardIndex((prev) => prev + 1);
         }, 1500);
@@ -2679,7 +2678,7 @@ export function LessonFlowScreen() {
     } else {
       mediumHaptic();
       setPhase("quizzes");
-      setTimeout(() => setShowQuizIntro(true), 50);
+      safeTimeout(() => setShowQuizIntro(true), 50);
     }
   }, [mod, flashcardIndex]);
 
@@ -3427,7 +3426,7 @@ export function LessonFlowScreen() {
             // Trigger flying rewards AFTER modal closes so they're visible
             const rewards = chestRewards;
             if (rewards) {
-              setTimeout(() => {
+              safeTimeout(() => {
                 if (rewards.xp > 0) setFlyingXp(rewards.xp);
                 if (rewards.coins > 0) setFlyingCoins(rewards.coins);
               }, 300);
@@ -3435,12 +3434,12 @@ export function LessonFlowScreen() {
             // After coins land: show DoN (if triggered) or wisdom
             if (shouldTriggerDoNRef.current) {
               shouldTriggerDoNRef.current = false;
-              setTimeout(() => {
+              safeTimeout(() => {
                 setShowDoubleOrNothing(true);
                 playSound('modal_open_4');
               }, 1500);
             } else if (!isLastModule) {
-              setTimeout(() => {
+              safeTimeout(() => {
                 useWisdomStore.getState().showRandomWisdom();
                 setShowWisdom(true);
               }, 1800);
@@ -4009,13 +4008,13 @@ export function LessonFlowScreen() {
               })}
             </View>
             {/* Chat button */}
-            <Pressable onPress={() => { setShowMidCheckpoint(false); setShowChatOverlay(true); }} style={{ flexDirection: "row-reverse", alignItems: "center", justifyContent: "center", gap: 8, backgroundColor: "#dbeafe", borderRadius: 14, paddingVertical: 12, marginBottom: 10, borderWidth: 1, borderColor: "#93c5fd" }} accessibilityRole="button" accessibilityLabel="שאלו את שארק">
+            <AnimatedPressable onPress={() => { setShowMidCheckpoint(false); setShowChatOverlay(true); }} style={{ flexDirection: "row-reverse", alignItems: "center", justifyContent: "center", gap: 8, backgroundColor: "#dbeafe", borderRadius: 14, paddingVertical: 12, marginBottom: 10, borderWidth: 1, borderColor: "#93c5fd", borderBottomWidth: 3, borderBottomColor: "#93c5fd" }} accessibilityRole="button" accessibilityLabel="שאלו את שארק">
               <Text style={{ fontSize: 15, fontWeight: "800", color: "#1e40af" }}>{"שאלו את שארק"}</Text>
-            </Pressable>
+            </AnimatedPressable>
             {/* Continue button */}
-            <Pressable onPress={() => { setShowMidCheckpoint(false); setFlashcardIndex((prev) => prev + 1); }} style={{ flexDirection: "row-reverse", alignItems: "center", justifyContent: "center", gap: 6, backgroundColor: "#38bdf8", borderRadius: 14, paddingVertical: 12, borderBottomWidth: 3, borderBottomColor: "#0284c7" }} accessibilityRole="button" accessibilityLabel="הכל ברור, קדימה">
+            <AnimatedPressable onPress={() => { setShowMidCheckpoint(false); setFlashcardIndex((prev) => prev + 1); }} style={{ flexDirection: "row-reverse", alignItems: "center", justifyContent: "center", gap: 6, backgroundColor: "#38bdf8", borderRadius: 14, paddingVertical: 12, borderBottomWidth: 3, borderBottomColor: "#0284c7" }} accessibilityRole="button" accessibilityLabel="הכל ברור, קדימה">
               <Text style={{ fontSize: 15, fontWeight: "800", color: "#ffffff" }}>{"הכל ברור, קדימה! ✓"}</Text>
-            </Pressable>
+            </AnimatedPressable>
           </Animated.View>
         </Pressable>
       )}
@@ -4060,15 +4059,15 @@ export function LessonFlowScreen() {
             <Text style={{ fontSize: 22, fontWeight: "900", color: "#0f172a", textAlign: "center", marginBottom: 6 }}>{"כל הכבוד!"}</Text>
             <Text style={{ fontSize: 15, fontWeight: "600", color: "#64748b", textAlign: "center", marginBottom: 24 }}>{"רוצה להמשיך או ללכת לנטפליקס?"}</Text>
             {/* Continue option */}
-            <Pressable onPress={() => { successHaptic(); setShowPostCelebration(false); goToNextSequentialModule(); }} style={{ width: "100%", backgroundColor: "#22c55e", borderRadius: 16, paddingVertical: 16, alignItems: "center", marginBottom: 12, borderBottomWidth: 4, borderBottomColor: "#16a34a" }} accessibilityRole="button" accessibilityLabel="המשך למודול הבא">
+            <AnimatedPressable onPress={() => { successHaptic(); setShowPostCelebration(false); goToNextSequentialModule(); }} style={{ width: "100%", backgroundColor: "#22c55e", borderRadius: 16, paddingVertical: 16, alignItems: "center", marginBottom: 12, borderBottomWidth: 4, borderBottomColor: "#16a34a" }} accessibilityRole="button" accessibilityLabel="המשך למודול הבא">
               <Text style={{ fontSize: 16, fontWeight: "900", color: "#ffffff" }}>{"ממשיכים לתרגל ולצמוח! 💪"}</Text>
-            </Pressable>
+            </AnimatedPressable>
             {/* Quit option */}
-            <Pressable onPress={() => { tapHaptic(); setShowBreakMessage(true); }} style={{ width: "100%", backgroundColor: "#f8fafc", borderRadius: 16, paddingVertical: 14, alignItems: "center", borderWidth: 1.5, borderColor: "#e2e8f0" }} accessibilityRole="button" accessibilityLabel="יציאה">
+            <AnimatedPressable onPress={() => { tapHaptic(); setShowBreakMessage(true); }} style={{ width: "100%", backgroundColor: "#f8fafc", borderRadius: 16, paddingVertical: 14, alignItems: "center", borderWidth: 1.5, borderColor: "#e2e8f0" }} accessibilityRole="button" accessibilityLabel="יציאה">
               <Text style={{ fontSize: 14, fontWeight: "700", color: "#64748b" }}>
                 {["עפתי לנטפליקס 📺", "עפתי לאינסטגרם 📱", "עפתי לטיקטוק 🎵", "אני הולך לישון 😴", "יש לי שווארמה שמחכה 🌯", "יש לי פיצה שמתקררת 🍕"][Math.floor(Math.random() * 6)]}
               </Text>
-            </Pressable>
+            </AnimatedPressable>
           </Animated.View>
         </Pressable>
       )}

@@ -413,33 +413,33 @@ function StepShell({
 
   return (
     <ImageBackground source={CHAT_BG} style={{ flex: 1 }} resizeMode="cover">
-    <BubbleOverlay />
-    <SafeAreaView style={styles.shell} edges={["top", "bottom"]}>
-      {/* Progress bar */}
-      <View style={styles.topRow}>
-        <GlowBar current={stepIndex} />
-      </View>
-
-      {/* Finn (tablet) + question bubble */}
-      <Animated.View style={[styles.questionBlock, headerStyle]}>
-        <View style={{ flexDirection: 'row-reverse', alignItems: 'flex-start', gap: 10 }}>
-          {/* Invisible placeholder, real Finn rendered by persistent overlay in ProfilingFlow */}
-          <View style={{ width: 110, height: 110 }} />
-          <View style={[styles.chatBubble, { flexShrink: 1, minWidth: 0 }]}>
-            <Text style={styles.questionBubble}>{question}</Text>
-            {hint ? <Text style={styles.hintBubble}>{hint}</Text> : null}
-          </View>
+      <BubbleOverlay />
+      <SafeAreaView style={styles.shell} edges={["top", "bottom"]}>
+        {/* Progress bar */}
+        <View style={styles.topRow}>
+          <GlowBar current={stepIndex} />
         </View>
-      </Animated.View>
 
-      {/* Options, touch anywhere here triggers the shark typing animation */}
-      <View
-        style={[styles.optionsArea, { marginTop: 12 }]}
-        onTouchStart={trigger}
-      >
-        {children}
-      </View>
-    </SafeAreaView>
+        {/* Finn (tablet) + question bubble */}
+        <Animated.View style={[styles.questionBlock, headerStyle]}>
+          <View style={{ flexDirection: 'row-reverse', alignItems: 'flex-start', gap: 10 }}>
+            {/* Invisible placeholder, real Finn rendered by persistent overlay in ProfilingFlow */}
+            <View style={{ width: 110, height: 110 }} />
+            <View style={[styles.chatBubble, { flexShrink: 1, minWidth: 0 }]}>
+              <Text style={styles.questionBubble}>{question}</Text>
+              {hint ? <Text style={styles.hintBubble}>{hint}</Text> : null}
+            </View>
+          </View>
+        </Animated.View>
+
+        {/* Options, touch anywhere here triggers the shark typing animation */}
+        <View
+          style={[styles.optionsArea, { marginTop: 12 }]}
+          onTouchStart={trigger}
+        >
+          {children}
+        </View>
+      </SafeAreaView>
     </ImageBackground>
   );
 }
@@ -540,8 +540,8 @@ function ProfileSummaryScreen({ collected, onDone, onEditStep }: { collected: Co
             {/* Row 1: pencil + emoji + label — all same height */}
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
               <Pencil size={14} color="#64748b" strokeWidth={2.2} />
-              <Text style={{ fontSize: 22, lineHeight: 26 }} accessible={false}>{row.icon}</Text>
-              <Text style={{ flex: 1, fontSize: 14, fontWeight: '700', color: '#0f172a', textAlign: 'right', writingDirection: 'rtl' }}>{row.label}</Text>
+              <Text style={{ fontSize: 20, includeFontPadding: false, marginBottom: Platform.OS === 'ios' ? 2 : 0 }} accessible={false}>{row.icon}</Text>
+              <Text style={{ flex: 1, fontSize: 15, fontWeight: '700', color: '#0f172a', textAlign: 'right', writingDirection: 'rtl', includeFontPadding: false }}>{row.label}</Text>
             </View>
             {/* Row 2: value below, right-aligned */}
             <Text numberOfLines={1} style={{ fontSize: 15, fontWeight: '900', color: '#0369a1', textAlign: 'right', writingDirection: 'rtl', marginTop: 4 }}>{row.value}</Text>
@@ -588,57 +588,57 @@ function CelebrationScreen({ onDone }: { onDone: () => void }) {
 
   return (
     <ImageBackground source={CHAT_BG} style={{ flex: 1 }} resizeMode="cover">
-    <BubbleOverlay />
-    <SafeAreaView style={styles.celebShell} edges={["top", "bottom"]}>
-      {/* Confetti burst */}
-      <View style={styles.confettiOrigin} pointerEvents="none">
-        {PARTICLE_CONFIGS.map((p, i) => (
-          <ConfettiParticle key={i} {...p} />
-        ))}
-      </View>
-
-      {/* Finn celebrating */}
-      <Animated.View style={[styles.celebBadge, badgeStyle]}>
-        <ExpoImage
-          source={FINN_HAPPY}
-          style={{ width: 120, height: 120 }}
-          contentFit="contain"
-          accessible={false}
-        />
-      </Animated.View>
-
-      {/* Confetti */}
-      <View style={{ position: 'absolute', top: '30%', alignSelf: 'center' }} pointerEvents="none">
-        <LottieIcon
-          source={require("../../../assets/lottie/Confetti.json") as number}
-          size={200}
-          autoPlay
-          loop={false}
-        />
-      </View>
-
-      {/* XP + Coins */}
-      <Animated.View style={[styles.celebRewards, xpStyle]}>
-        <View style={styles.rewardPill}>
-          <Text style={styles.rewardXP}>+{ONBOARDING_XP} XP</Text>
+      <BubbleOverlay />
+      <SafeAreaView style={styles.celebShell} edges={["top", "bottom"]}>
+        {/* Confetti burst */}
+        <View style={styles.confettiOrigin} pointerEvents="none">
+          {PARTICLE_CONFIGS.map((p, i) => (
+            <ConfettiParticle key={i} {...p} />
+          ))}
         </View>
-        <View style={[styles.rewardPill, styles.rewardPillGold]}>
-          <Text style={styles.rewardCoins}>+50 מטבעות</Text>
+
+        {/* Finn celebrating */}
+        <Animated.View style={[styles.celebBadge, badgeStyle]}>
+          <ExpoImage
+            source={FINN_HAPPY}
+            style={{ width: 120, height: 120 }}
+            contentFit="contain"
+            accessible={false}
+          />
+        </Animated.View>
+
+        {/* Confetti */}
+        <View style={{ position: 'absolute', top: '30%', alignSelf: 'center' }} pointerEvents="none">
+          <LottieIcon
+            source={require("../../../assets/lottie/Confetti.json") as number}
+            size={200}
+            autoPlay
+            loop={false}
+          />
         </View>
-      </Animated.View>
 
-      <Text style={styles.celebTitle}>הפרופיל שלך מוכן!</Text>
-      <Text style={styles.celebSub}>
-        הכנו את הפיד שלך.{"\n"}הגיע הזמן להפוך ידע לכסף. 💰
-      </Text>
+        {/* XP + Coins */}
+        <Animated.View style={[styles.celebRewards, xpStyle]}>
+          <View style={styles.rewardPill}>
+            <Text style={styles.rewardXP}>+{ONBOARDING_XP} XP</Text>
+          </View>
+          <View style={[styles.rewardPill, styles.rewardPillGold]}>
+            <Text style={styles.rewardCoins}>+50 מטבעות</Text>
+          </View>
+        </Animated.View>
 
-      {/* CTA */}
-      <Animated.View style={ctaStyle}>
-        <Pressable onPress={onDone} style={styles.celebCTA} accessibilityRole="button" accessibilityLabel="בואו נתחיל">
-          <Text style={styles.celebCTAText}>בואו נתחיל</Text>
-        </Pressable>
-      </Animated.View>
-    </SafeAreaView>
+        <Text style={styles.celebTitle}>הפרופיל שלך מוכן!</Text>
+        <Text style={styles.celebSub}>
+          הכנו את הפיד שלך.{"\n"}הגיע הזמן להפוך ידע לכסף. 💰
+        </Text>
+
+        {/* CTA */}
+        <Animated.View style={ctaStyle}>
+          <Pressable onPress={onDone} style={styles.celebCTA} accessibilityRole="button" accessibilityLabel="בואו נתחיל">
+            <Text style={styles.celebCTAText}>בואו נתחיל</Text>
+          </Pressable>
+        </Animated.View>
+      </SafeAreaView>
     </ImageBackground>
   );
 }
@@ -993,10 +993,10 @@ function DailyGoalStep({ onNext }: { onNext: (v: DailyGoalMinutes) => void }) {
 
   return (
     <StepShell
-        stepIndex={7}
-        question="כמה תרצה/י ללמוד ביום?" 
-        hint="יעד שאפשר לעמוד בו יעזור לך להתעשר לאט ובטוח. יצרנו עבורך רצף (Streak) פיננסי. 🔥"
-        finnState={sel ? "tablet" : "thinking"}>
+      stepIndex={7}
+      question="כמה תרצה/י ללמוד ביום?"
+      hint="יעד שאפשר לעמוד בו יעזור לך להתעשר לאט ובטוח. יצרנו עבורך רצף (Streak) פיננסי. 🔥"
+      finnState={sel ? "tablet" : "thinking"}>
       <View style={styles.grid}>
         {DAILY_OPTS.map((g, i) => (
           <AnimatedGridCard key={g.id} index={i} emoji={g.emoji} label={g.label}
@@ -1004,7 +1004,7 @@ function DailyGoalStep({ onNext }: { onNext: (v: DailyGoalMinutes) => void }) {
             lottieSource={DAILY_LOTTIES[g.id]} />
         ))}
       </View>
-      
+
       {/* Full-screen commitment notification */}
       {(sel === 15 || sel === 30) && (
         <Animated.View
@@ -1333,7 +1333,7 @@ function SimOnboardingStep({ onNext }: { onNext: () => void }) {
       }
     }, 80);
     return () => { if (autoSlideRef.current) clearInterval(autoSlideRef.current); };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []); // Empty deps, run exactly once
 
   // Stop auto-slide when user interacts manually
@@ -1441,7 +1441,7 @@ function SimOnboardingStep({ onNext }: { onNext: () => void }) {
                 lineColor="#0891b2"
                 glowColor="#22d3ee"
                 gradientColors={["rgba(34,211,238,0.18)", "rgba(34,211,238,0)"]}
-                onScrub={() => {}}
+                onScrub={() => { }}
                 hapticMilestone={5}
               />
             </GestureHandlerRootView>
@@ -1523,160 +1523,6 @@ const simStyles = StyleSheet.create({
   },
   continueBtnText: { fontSize: 18, fontWeight: "900", color: "#ffffff" },
 });
-
-// ─── Finance Experts Data ─────────────────────────────────────────────────────
-
-// Spritesheet: assets/IMAGES/FINSTARS.png
-// Grid 5×2 (cols × rows). Dimensions: 2816×1536. Cell: 563.2×768.
-// Row 0: Buffett | Dalio | Graham | Munger | (unused)
-// Row 1: Bogle   | Lynch | Taleb  | Orman  | Kiyosaki
-// eslint-disable-next-line @typescript-eslint/no-var-requires
-const EXPERTS_SHEET = { uri: 'https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/images/FINSTARS.png' };
-const SHEET_W = 2816;
-const SHEET_H = 1536;
-const SHEET_COLS = 5;
-const SHEET_ROWS = 2;
-const CELL_W = SHEET_W / SHEET_COLS; // 120
-const CELL_H = SHEET_H / SHEET_ROWS; // 135
-
-type ExpertDef = { id: string; name: string; role: string; emoji: string; bg: readonly [string, string]; imgPos?: [col: number, row: number] };
-
-const EXPERT_DATA: ExpertDef[] = [
-  { id: "buffett",   name: "וורן באפט",      role: "משקיע אגדי",        emoji: "🏦", bg: ["#1a365d", "#2a4a7f"], imgPos: [0, 0] },
-  { id: "dalio",     name: "ריי דאליו",       role: "מייסד Bridgewater", emoji: "🔮", bg: ["#4c1d95", "#6d28d9"], imgPos: [1, 0] },
-  { id: "munger",    name: "צ'רלי מאנגר",    role: "שותפו של באפט",     emoji: "📚", bg: ["#1f2937", "#374151"], imgPos: [3, 0] },
-  { id: "lynch",     name: "פיטר לינץ'",     role: "קרן מאגלן",         emoji: "📊", bg: ["#064e3b", "#065f46"], imgPos: [1, 1] },
-  { id: "bogle",     name: "ג'ון בוגל",       role: "מייסד ונגארד",      emoji: "🌾", bg: ["#78350f", "#92400e"], imgPos: [0, 1] },
-  { id: "kiyosaki",  name: "רוברט קיוסאקי",  role: "אבא עשיר",          emoji: "💰", bg: ["#7c2d12", "#9a3412"], imgPos: [4, 1] },
-];
-
-// ─── Expert Card ──────────────────────────────────────────────────────────────
-
-function ExpertCard({
-  expert, selected, onPress, index,
-}: {
-  expert: typeof EXPERT_DATA[0];
-  selected: boolean;
-  onPress: () => void;
-  index: number;
-}) {
-  const scale = useSharedValue(1);
-  const opacity = useSharedValue(0);
-  const ty = useSharedValue(30);
-
-  useEffect(() => {
-    const d = index * 55;
-    ty.value = withDelay(d, withTiming(0, { duration: 250, easing: Easing.out(Easing.quad) }));
-    opacity.value = withDelay(d, withTiming(1, { duration: 200 }));
-  }, []);
-
-  function handlePress() {
-    scale.value = withSequence(
-      withTiming(0.98, { duration: 60 }),
-      withTiming(1, { duration: 120 })
-    );
-    onPress();
-  }
-
-  const wrapStyle = useAnimatedStyle(() => ({
-    transform: [{ translateY: ty.value }, { scale: scale.value }],
-    opacity: opacity.value,
-  }));
-
-  return (
-    <Animated.View style={[expertStyles.cardWrap, wrapStyle]}>
-      <Pressable
-        onPress={handlePress}
-        accessibilityRole="button"
-        accessibilityLabel={expert.name}
-        accessibilityState={{ selected }}
-        style={[expertStyles.card, selected && expertStyles.cardSelected]}
-      >
-        {expert.imgPos ? (
-          <View style={expertStyles.avatarClip}>
-            <Image
-              source={EXPERTS_SHEET}
-              style={{
-                width: SHEET_W * (expertStyles.avatarClip.width / CELL_W),
-                height: SHEET_H * (expertStyles.avatarClip.width / CELL_W),
-                marginLeft: -expert.imgPos[0] * expertStyles.avatarClip.width,
-                marginTop: -expert.imgPos[1] * (CELL_H * (expertStyles.avatarClip.width / CELL_W)),
-              }}
-            />
-          </View>
-        ) : (
-          <LinearGradient colors={expert.bg} style={expertStyles.gradientBox} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}>
-            <Text style={expertStyles.cardEmoji}>{expert.emoji}</Text>
-          </LinearGradient>
-        )}
-        <Text style={[expertStyles.cardName, selected && expertStyles.cardNameSelected]} numberOfLines={1}>
-          {expert.name}
-        </Text>
-        {selected && (
-          <View style={expertStyles.checkBadge}>
-            <Text style={{ color: "#fff", fontSize: 10, fontWeight: "900" }}>✓</Text>
-          </View>
-        )}
-      </Pressable>
-    </Animated.View>
-  );
-}
-
-// ─── Step: Finance Experts ────────────────────────────────────────────────────
-
-function FinanceExpertsStep({ onNext }: { onNext: (ids: string[]) => void }) {
-  const [selected, setSelected] = useState<Set<string>>(new Set());
-  const ctaOpacity = useSharedValue(0);
-  const ctaScale = useSharedValue(0.85);
-
-  function toggle(id: string) {
-    setSelected((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
-    });
-  }
-
-  useEffect(() => {
-    if (selected.size > 0) {
-      ctaOpacity.value = withTiming(1, { duration: 200 });
-      ctaScale.value = withTiming(1, { duration: 200, easing: Easing.out(Easing.quad) });
-    }
-  }, [selected.size]);
-
-  const ctaStyle = useAnimatedStyle(() => ({
-    opacity: ctaOpacity.value,
-    transform: [{ scale: ctaScale.value }],
-  }));
-
-  return (
-    <StepShell stepIndex={9} question="אילו מומחים פיננסיים מסקרנים אותך?" hint="נתאים תכנים לפי הבחירה שלך" finnState={selected.size > 0 ? "celebrate" : "idle"}>
-      <View>
-        <View style={expertStyles.grid}>
-          {EXPERT_DATA.map((e, i) => (
-            <ExpertCard
-              key={e.id}
-              expert={e}
-              selected={selected.has(e.id)}
-              onPress={() => toggle(e.id)}
-              index={i}
-            />
-          ))}
-        </View>
-        <Animated.View style={[expertStyles.ctaWrap, ctaStyle, { marginTop: 4 }]}>
-          <Pressable onPress={() => onNext(Array.from(selected))} style={expertStyles.cta} accessibilityRole="button" accessibilityLabel="המשך">
-            <Text style={expertStyles.ctaText}>המשך</Text>
-          </Pressable>
-        </Animated.View>
-        <Pressable onPress={() => onNext([])} style={[expertStyles.skipBtn, { marginTop: 4 }]} accessibilityRole="button" accessibilityLabel="לא יודע/ת מי אילו" hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-          <Text style={expertStyles.skipText}>לא יודע/ת מי אילו</Text>
-        </Pressable>
-      </View>
-    </StepShell>
-  );
-}
-
 // ─── Intro (personalisation splash) ──────────────────────────────────────────
 
 interface IntroStepProps {
@@ -1919,7 +1765,7 @@ function IntroStep({ onRegister, onGuest, onLoginSuccess }: IntroStepProps) {
             keyboardType="email-address"
             autoCapitalize="none"
             autoCorrect={false}
-          accessibilityLabel="אימייל" />
+            accessibilityLabel="אימייל" />
 
           {/* Password */}
           <View>
@@ -1932,7 +1778,7 @@ function IntroStep({ onRegister, onGuest, onLoginSuccess }: IntroStepProps) {
               secureTextEntry={!showPassword}
               autoCapitalize="none"
               autoCorrect={false}
-            accessibilityLabel="סיסמה" />
+              accessibilityLabel="סיסמה" />
             <Pressable
               onPress={() => setShowPassword((v) => !v)}
               accessibilityRole="button"
@@ -1975,11 +1821,11 @@ function IntroStep({ onRegister, onGuest, onLoginSuccess }: IntroStepProps) {
 // ─── BuildItem ────────────────────────────────────────────────────────────────
 
 const BUILD_ITEMS = [
-  { text: "מנתח את הפרופיל שלך...",          icon: "🧠" },
-  { text: "מתאים תכנים לרמת הידע שלך...",    icon: "📚" },
-  { text: "בונה מסלול למידה מותאם...",        icon: "🗺️" },
-  { text: "מגדיר יעדים כלכליים...",           icon: "🎯" },
-  { text: "הכל מוכן! 🎉",                     icon: "✅" },
+  { text: "מנתח את הפרופיל שלך...", icon: "🧠" },
+  { text: "מתאים תכנים לרמת הידע שלך...", icon: "📚" },
+  { text: "בונה מסלול למידה מותאם...", icon: "🗺️" },
+  { text: "מגדיר יעדים כלכליים...", icon: "🎯" },
+  { text: "הכל מוכן! 🎉", icon: "✅" },
 ];
 
 function BuildItem({ text, icon, visible, isLast }: { text: string; icon: string; visible: boolean; isLast: boolean }) {
@@ -2039,37 +1885,37 @@ function BuildingProfileScreen({ onDone }: { onDone: () => void }) {
 
   return (
     <ImageBackground source={CHAT_BG} style={{ flex: 1 }} resizeMode="cover">
-    <BubbleOverlay />
-    <SafeAreaView style={buildStyles.shell} edges={["top", "bottom"]}>
-      <Animated.View style={[buildStyles.finnWrap, finnStyle]}>
-        <ExpoImage source={FINN_STANDARD} style={{ width: 110, height: 110 }} contentFit="contain" />
-      </Animated.View>
-
-      <Text style={buildStyles.title}>בונים את הפרופיל שלך...</Text>
-
-      <View style={buildStyles.progressBg}>
-        <Animated.View style={[buildStyles.progressFill, progressStyle]}>
-          <LinearGradient
-            colors={["#22d3ee", "#0891b2"]}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 0 }}
-            style={StyleSheet.absoluteFillObject}
-          />
+      <BubbleOverlay />
+      <SafeAreaView style={buildStyles.shell} edges={["top", "bottom"]}>
+        <Animated.View style={[buildStyles.finnWrap, finnStyle]}>
+          <ExpoImage source={FINN_STANDARD} style={{ width: 110, height: 110 }} contentFit="contain" />
         </Animated.View>
-      </View>
 
-      <View style={buildStyles.itemsWrap}>
-        {BUILD_ITEMS.map((item, i) => (
-          <BuildItem
-            key={i}
-            text={item.text}
-            icon={item.icon}
-            visible={i < visibleCount}
-            isLast={i === BUILD_ITEMS.length - 1}
-          />
-        ))}
-      </View>
-    </SafeAreaView>
+        <Text style={buildStyles.title}>בונים את הפרופיל שלך...</Text>
+
+        <View style={buildStyles.progressBg}>
+          <Animated.View style={[buildStyles.progressFill, progressStyle]}>
+            <LinearGradient
+              colors={["#22d3ee", "#0891b2"]}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 0 }}
+              style={StyleSheet.absoluteFillObject}
+            />
+          </Animated.View>
+        </View>
+
+        <View style={buildStyles.itemsWrap}>
+          {BUILD_ITEMS.map((item, i) => (
+            <BuildItem
+              key={i}
+              text={item.text}
+              icon={item.icon}
+              visible={i < visibleCount}
+              isLast={i === BUILD_ITEMS.length - 1}
+            />
+          ))}
+        </View>
+      </SafeAreaView>
     </ImageBackground>
   );
 }
@@ -2796,100 +2642,7 @@ const styles = StyleSheet.create({
   },
 });
 
-// ─── Expert grid styles ────────────────────────────────────────────────────────
 
-const expertStyles = StyleSheet.create({
-  grid: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 10,
-  },
-  cardWrap: {
-    width: "31%",
-  },
-  card: {
-    borderRadius: 16,
-    overflow: "hidden",
-    borderWidth: 2.5,
-    borderColor: "transparent",
-  },
-  cardSelected: {
-    borderColor: "#0891b2",
-    shadowColor: "#0891b2",
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.5,
-    shadowRadius: 12,
-    elevation: 8,
-  },
-  gradientBox: {
-    height: 88,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  avatarClip: {
-    width: 88,
-    height: 88,
-    overflow: "hidden",
-    alignSelf: "center",
-  },
-  cardEmoji: {
-    fontSize: 34,
-  },
-  cardName: {
-    fontSize: 11,
-    fontWeight: "700",
-    color: "#374151",
-    textAlign: "center",
-    paddingHorizontal: 4,
-    paddingVertical: 7,
-    writingDirection: "rtl",
-  },
-  cardNameSelected: {
-    color: "#0891b2",
-  },
-  checkBadge: {
-    position: "absolute",
-    top: 6,
-    right: 6,
-    width: 18,
-    height: 18,
-    borderRadius: 9,
-    backgroundColor: "#0891b2",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  ctaWrap: {
-    marginTop: 22,
-  },
-  cta: {
-    backgroundColor: "#0891b2",
-    borderRadius: 999,
-    paddingVertical: 16,
-    alignItems: "center",
-    borderBottomWidth: 4,
-    borderBottomColor: "#0e7490",
-    shadowColor: "#0891b2",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.4,
-    shadowRadius: 20,
-    elevation: 10,
-  },
-  ctaText: {
-    color: "#fff",
-    fontSize: 18,
-    fontWeight: "900",
-  },
-  skipBtn: {
-    marginTop: 12,
-    alignItems: "center",
-    paddingVertical: 8,
-  },
-  skipText: {
-    fontSize: 13,
-    color: "#64748b",
-    fontWeight: "600",
-  },
-});
 
 // ─── Intro splash styles ───────────────────────────────────────────────────────
 

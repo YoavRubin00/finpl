@@ -1,4 +1,4 @@
-import { View, Text, Pressable, Modal, StyleSheet } from 'react-native';
+import { View, Text, Pressable, Modal, StyleSheet, ScrollView, Dimensions } from 'react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { X } from 'lucide-react-native';
 
@@ -41,12 +41,13 @@ export function AssetInfoSheet({ visible, asset, onClose }: AssetInfoSheetProps)
       onRequestClose={onClose}
     >
       <Pressable style={styles.overlay} onPress={onClose}>
-        <Pressable style={styles.sheet} onPress={() => {}}>
-          {/* Close button */}
-          <Pressable onPress={onClose} style={styles.closeBtn}>
+        <Pressable style={[styles.sheet, { maxHeight: Dimensions.get('window').height * 0.85 }]} onPress={() => {}}>
+          {/* Close button — right side for RTL */}
+          <Pressable onPress={onClose} style={styles.closeBtn} accessibilityRole="button" accessibilityLabel="סגור">
             <X size={18} color={CALM.textTertiary} />
           </Pressable>
 
+          <ScrollView showsVerticalScrollIndicator={false} bounces={false} contentContainerStyle={{ paddingBottom: 8 }}>
           <Animated.View entering={FadeInDown.duration(350)}>
             {/* Asset icon */}
             <View style={styles.iconRow}>
@@ -82,6 +83,7 @@ export function AssetInfoSheet({ visible, asset, onClose }: AssetInfoSheetProps)
               <Text style={styles.closeCtaText}>הבנתי, בואו נסחר!</Text>
             </Pressable>
           </Animated.View>
+          </ScrollView>
         </Pressable>
       </Pressable>
     </Modal>
@@ -109,7 +111,7 @@ const styles = StyleSheet.create({
   closeBtn: {
     position: 'absolute',
     top: 16,
-    left: 16,
+    right: 16,
     width: 32,
     height: 32,
     borderRadius: 16,

@@ -10,15 +10,11 @@ const IMG_FINN_PASSIVE = require('../../../../assets/infographics/finn-passive.p
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const IMG_FINN_FREEDOM = require('../../../../assets/infographics/finn-freedom.png');
 // eslint-disable-next-line @typescript-eslint/no-var-requires
-const IMG_FINN_INFLATION = require('../../../../assets/infographics/finn-inflation.png');
-// eslint-disable-next-line @typescript-eslint/no-var-requires
 const IMG_GOLD = require('../../../../assets/IMAGES/GOLD.jpg');
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const IMG_GEMS = require('../../../../assets/IMAGES/GEMS.jpg');
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const IMG_INVESTMENT = require('../../../../assets/IMAGES/INVESTMENT.jpg');
-// eslint-disable-next-line @typescript-eslint/no-var-requires
-const IMG_PRIZES = require('../../../../assets/IMAGES/PRIZES1.jpg');
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const IMG_FINSTARS = require('../../../../assets/IMAGES/FINSTARS.png');
 
@@ -84,7 +80,6 @@ export const DID_YOU_KNOW_ITEMS: DidYouKnowItem[] = [
     highlight: '1.7 מיליארד $',
     source: 'Bloomberg · WSJ 2019',
     emoji: '🏢',
-    image: IMG_PRIZES,
   },
   {
     id: 'dyk-il-gadot-bird',
