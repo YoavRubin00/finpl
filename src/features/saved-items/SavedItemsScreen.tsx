@@ -84,6 +84,7 @@ export function SavedItemsScreen() {
         <View style={styles.headerRow}>
           <BackButton color="#0e7490" />
           <Text style={[styles.headerTitle, { color: theme.text }]}>פריטים שמורים</Text>
+          <View style={styles.headerSpacer} />
         </View>
       </View>
 
@@ -205,16 +206,19 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
   },
   headerRow: {
-    flexDirection: "row",
+    flexDirection: "row-reverse",
     alignItems: "center",
-    justifyContent: "space-between",
   },
   headerTitle: {
+    flex: 1,
     fontSize: 22,
     fontWeight: "700",
     color: "#1f2937",
     writingDirection: "rtl",
-    textAlign: "right",
+    textAlign: "center",
+  },
+  headerSpacer: {
+    width: 36,
   },
   scroll: {
     flex: 1,
