@@ -28,6 +28,7 @@ import { LinearGradient } from "expo-linear-gradient";
 import { ChevronRight, ChevronLeft, Bookmark } from "lucide-react-native";
 import { LottieIcon } from "../../components/ui/LottieIcon";
 import { useLessonMusic } from "../../hooks/useLessonMusic";
+import { useTimeoutCleanup } from "../../hooks/useTimeoutCleanup";
 
 const LOTTIE_BRIDGE = require("../../../assets/lottie/wired-flat-1925-bridge-hover-pinch.json") as number;
 import { chapter0Data } from "../chapter-0-content/chapter0Data";
@@ -398,12 +399,8 @@ function VideoHookPlayer({ videoUri, hookText, onFinish, unitColors, fitContain,
           <Text style={{ fontSize: 14, fontWeight: "700", color: "#64748b", marginTop: 12 }}>טוען סרטון...</Text>
         </View>
       )}
-      {/* Fast mode indicator */}
-      {isFastMode && (
-        <View style={{ position: "absolute", top: "45%", alignSelf: "center", backgroundColor: "rgba(0,0,0,0.6)", borderRadius: 16, paddingHorizontal: 16, paddingVertical: 8 }} pointerEvents="none">
-          <Text style={{ fontSize: 16, fontWeight: "900", color: "#ffffff" }}>⚡ מהיר</Text>
-        </View>
-      )}
+      {/* Fast-mode indicator removed — speed change alone is enough feedback.
+          User asked for a silent speed-up on long-press. */}
       {/* Safe area top overlay, only for full-screen video hooks (not flashcard videos) */}
       {hookText ? (
         <View style={{ position: "absolute", top: 0, left: 0, right: 0, height: insets.top, backgroundColor: "rgba(0,0,0,0.6)" }} pointerEvents="none" />
@@ -2060,6 +2057,7 @@ export function LessonFlowScreen() {
   );
 
   const { isMuted, toggleMute } = useLessonMusic();
+  const safeTimeout = useTimeoutCleanup();
 
   // Bookmark state
   const isSaved = useSavedItemsStore((s) => s.isSaved);
@@ -2343,14 +2341,14 @@ export function LessonFlowScreen() {
         // Correct! Double coins only (XP is not at risk)
         eco.addCoins(rewards.coins);
         // Fly bonus coins UP
-        setTimeout(() => {
+        safeTimeout(() => {
           setFlyingCoins(rewards.coins);
         }, 400);
       } else if (multiplier === 0) {
         // Wrong! Lose the original 1x that was already granted
         eco.spendCoins(rewards.coins);
         // Fly coins back DOWN
-        setTimeout(() => {
+        safeTimeout(() => {
           setFlyingCoinsDown(rewards.coins);
         }, 400);
       }
@@ -2362,16 +2360,16 @@ export function LessonFlowScreen() {
     const modIdx = chapters.findIndex((m) => m.id === id);
     const isLast = modIdx === chapters.length - 1;
     if (!isLast) {
-      setTimeout(() => {
+      safeTimeout(() => {
         useWisdomStore.getState().showRandomWisdom();
         setShowWisdom(true);
       }, 1400);
     }
     // Offer ad bonus to non-PRO users after DoN resolves
     if (!isPro) {
-      setTimeout(() => setShowAdBonus(true), 1800);
+      safeTimeout(() => setShowAdBonus(true), 1800);
     }
-  }, [pendingMultiplierRewards, chapterId, id, isPro]);
+  }, [pendingMultiplierRewards, chapterId, id, isPro, safeTimeout]);
 
   // Shark Love dismiss, chain into DoN or wisdom
   const handleSharkLoveDismiss = useCallback(() => {
@@ -2409,30 +2407,31 @@ export function LessonFlowScreen() {
   const isLastModule = currentModIdx === chapterModules.length - 1;
   const nextModule = !isLastModule ? chapterModules[currentModIdx + 1] : undefined;
 
-  // Pizza index modal, one-time popup after completing mod-2-12 (ch 2 mid-point)
+  // Pizza index modal, one-time popup after completing mod-2-12 (ch 2 mid-point).
+  // Delayed 600ms so the chest animation plays first — one-at-a-time feel.
   useEffect(() => {
     if (!mod) return;
     if (phase === "summary" && mod.id === "mod-2-12" && !hasSeenPizza) {
-      setShowPizzaModal(true);
+      safeTimeout(() => setShowPizzaModal(true), 600);
     }
-  }, [phase, mod, hasSeenPizza]);
+  }, [phase, mod, hasSeenPizza, safeTimeout]);
 
   // Chapter 0 bullshit interstitial, one-time shark notification after mod-0-3,
   // framing the BullshitSwipe game the user will soon encounter in the feed.
   useEffect(() => {
     if (!mod) return;
     if (phase === "summary" && mod.id === "mod-0-3" && !hasSeenCh0Bullshit) {
-      setShowCh0BullshitIntro(true);
+      safeTimeout(() => setShowCh0BullshitIntro(true), 600);
     }
-  }, [phase, mod, hasSeenCh0Bullshit]);
+  }, [phase, mod, hasSeenCh0Bullshit, safeTimeout]);
 
   // mod-0-1 barter notif, dancing shark joke after completing "מה זה בכלל כסף"
   useEffect(() => {
     if (!mod) return;
     if (phase === "summary" && mod.id === "mod-0-1" && !hasSeenMod01BarterNotif) {
-      setShowMod01BarterNotif(true);
+      safeTimeout(() => setShowMod01BarterNotif(true), 600);
     }
-  }, [phase, mod, hasSeenMod01BarterNotif]);
+  }, [phase, mod, hasSeenMod01BarterNotif, safeTimeout]);
 
   // Complete module and show rewards when entering summary phase
   useEffect(() => {
@@ -2473,15 +2472,15 @@ export function LessonFlowScreen() {
 
       // Check if this was the last module in the chapter
       if (isLastModule) {
-        setTimeout(() => {
+        safeTimeout(() => {
           setShowChapterComplete(true);
           playSound('btn_click_heavy');
           doubleHeavyHaptic();
         }, 4500);
-        setTimeout(() => setShowChapterComplete(false), 7500);
+        safeTimeout(() => setShowChapterComplete(false), 7500);
         // Show Finn bridge nudge after chapter 0 completion (skip for minors, no bridge access)
         if (chapterId === "chapter-0" && !isGuest && useAuthStore.getState().profile?.ageGroup !== "minor") {
-          setTimeout(() => setShowFinnBridgeNudge(true), 8000);
+          safeTimeout(() => setShowFinnBridgeNudge(true), 8000);
         }
       }
     }
@@ -2490,7 +2489,7 @@ export function LessonFlowScreen() {
       cancelAnimation(chestGlowOpacity);
       cancelAnimation(chestBodyScale);
     };
-  }, [phase, mod?.id, completeModule, mod, isLastModule, playSound]);
+  }, [phase, mod?.id, completeModule, mod, isLastModule, playSound, safeTimeout]);
 
   // Post-module celebration, only after wisdom + DoN + SharkLove are done, every other module
   useEffect(() => {
@@ -3237,7 +3236,7 @@ export function LessonFlowScreen() {
                               setPendingMultiplierRewards(drop.rewards);
                             }
                             // 700ms: chest rewards + flying animation (after chest Lottie opens)
-                            setTimeout(() => {
+                            safeTimeout(() => {
                               if (!isReplay) {
                                 completeModule(mod.id);
                                 useEconomyStore.getState().completeDailyTask();
@@ -3255,20 +3254,20 @@ export function LessonFlowScreen() {
                             }, 700);
                           }
                           // 2s: auto-advance to "מודול הושלם"
-                          setTimeout(() => {
+                          safeTimeout(() => {
                             setChestClaimed(true);
                             // Shark Love, every 3rd completed module (3, 6, 9...)
                             const totalCompletedNow = Object.values(progress).reduce(
                               (sum, ch) => sum + (ch?.completedModules?.length ?? 0), 0
                             );
                             if (totalCompletedNow > 0 && totalCompletedNow % 3 === 0) {
-                              setTimeout(() => {
+                              safeTimeout(() => {
                                 setShowSharkLove(true);
                                 playSound('modal_open_4');
                               }, 500);
                             } else if (shouldTriggerDoNRef.current) {
                               shouldTriggerDoNRef.current = false;
-                              setTimeout(() => {
+                              safeTimeout(() => {
                                 setShowDoubleOrNothing(true);
                                 playSound('modal_open_4');
                               }, 500);
@@ -3286,10 +3285,10 @@ export function LessonFlowScreen() {
                             if (willShowReferral) {
                               setCtaModuleCount(totalCompletedNow);
                               setReferralByDividend(hasDividend);
-                              setTimeout(() => setShowReferralCTA(true), 1500);
+                              safeTimeout(() => setShowReferralCTA(true), 1500);
                             } else if (willShowBridge) {
                               setCtaModuleCount(totalCompletedNow);
-                              setTimeout(() => setShowBridgeCTA(true), 1500);
+                              safeTimeout(() => setShowBridgeCTA(true), 1500);
                             }
                           }, 2000);
                         }

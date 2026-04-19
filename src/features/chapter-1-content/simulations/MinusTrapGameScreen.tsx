@@ -658,8 +658,9 @@ export function MinusTrapGameScreen({ onComplete }: { onComplete: () => void }) 
         const player = createAudioPlayer({ uri: 'https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/audio/sims/sim-minus-trap.mp3' });
         player.play();
         return () => {
-            player.pause();
-            player.remove();
+            // iOS: wrap in try/catch — if the player is mid-buffer during a fast
+            // navigation/remount, pause()/remove() can throw and crash the app.
+            try { player.pause(); player.remove(); } catch { /* ignore */ }
         };
     }, []);
 const [rewardsGranted, setRewardsGranted] = useState(false);
