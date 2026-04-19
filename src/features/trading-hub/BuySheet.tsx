@@ -215,9 +215,12 @@ export function BuySheet({ visible, assetId, currentPrice, previousClose, onClos
                             {/* Coin balance */}
                             <View style={styles.balanceRow}>
                                 <Text style={[RTL, styles.balanceLabel]}>מטבעות זמינים</Text>
-                                <Text style={styles.balanceValue}>
-                                    {coins.toLocaleString('he-IL')}
-                                </Text>
+                                <View style={{ flexDirection: 'row-reverse', alignItems: 'center', gap: 6 }}>
+                                    <Text style={{ fontSize: 18 }} accessible={false}>🪙</Text>
+                                    <Text style={styles.balanceValue}>
+                                        {coins.toLocaleString('he-IL')}
+                                    </Text>
+                                </View>
                             </View>
 
                             {/* Amount input */}

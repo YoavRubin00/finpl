@@ -529,23 +529,22 @@ function ProfileSummaryScreen({ collected, onDone, onEditStep }: { collected: Co
             accessibilityRole="button"
             accessibilityLabel={`ערוך ${row.label}: ${row.value}`}
             style={({ pressed }) => ({
-              flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
               width: '100%',
               backgroundColor: pressed ? '#f0f9ff' : '#ffffff', borderRadius: 14,
-              paddingVertical: 14, paddingHorizontal: 16,
+              paddingVertical: 12, paddingHorizontal: 16,
               borderWidth: 1.5, borderColor: pressed ? '#7dd3fc' : '#e2e8f0',
               shadowColor: '#0891b2', shadowOffset: { width: 0, height: 1 },
               shadowOpacity: 0.06, shadowRadius: 4, elevation: 1,
             })}
           >
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+            {/* Row 1: pencil + emoji + label — all same height */}
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
               <Pencil size={14} color="#64748b" strokeWidth={2.2} />
-              <Text style={{ fontSize: 24, lineHeight: 28 }} accessible={false}>{row.icon}</Text>
+              <Text style={{ fontSize: 22, lineHeight: 26 }} accessible={false}>{row.icon}</Text>
+              <Text style={{ flex: 1, fontSize: 14, fontWeight: '700', color: '#0f172a', textAlign: 'right', writingDirection: 'rtl' }}>{row.label}</Text>
             </View>
-            <View style={{ alignItems: 'flex-end', flexShrink: 1, paddingLeft: 12, justifyContent: 'center' }}>
-              <Text style={{ fontSize: 13, fontWeight: '600', color: '#0f172a', textAlign: 'right', writingDirection: 'rtl' }}>{row.label}</Text>
-              <Text numberOfLines={1} style={{ fontSize: 15, fontWeight: '900', color: '#0369a1', textAlign: 'right', marginTop: 1, writingDirection: 'rtl' }}>{row.value}</Text>
-            </View>
+            {/* Row 2: value below, right-aligned */}
+            <Text numberOfLines={1} style={{ fontSize: 15, fontWeight: '900', color: '#0369a1', textAlign: 'right', writingDirection: 'rtl', marginTop: 4 }}>{row.value}</Text>
           </Pressable>
         ))}
       </Animated.View>

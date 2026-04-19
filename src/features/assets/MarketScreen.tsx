@@ -480,7 +480,9 @@ export function MarketScreen() {
                         animationType="slide"
                         onRequestClose={() => setConfirmAsset(null)}
                     >
-                        <SafeAreaView style={{ flex: 1, backgroundColor: "#f8fafc" }} edges={["top", "bottom"]}>
+                        {/* Explicit insets padding — SafeAreaView inside native Modal doesn't
+                            always apply the iOS top inset, leaving the close button under the notch. */}
+                        <View style={{ flex: 1, backgroundColor: "#f8fafc", paddingTop: insets.top, paddingBottom: insets.bottom }}>
                             <View style={{ flex: 1, paddingHorizontal: 20, paddingTop: 8 }}>
                                 {confirmAsset && (() => {
                                     const isBuy = confirmAsset.action === "buy";
@@ -648,11 +650,20 @@ export function MarketScreen() {
                                                                     setConfirmAsset(null);
                                                                     setUseVoucherOnPurchase(false);
                                                                 }}
-                                                                style={[styles.mortgageBtn, { flex: 1 }, !canAffordDown && { backgroundColor: "#64748b", borderBottomColor: "#6b7280" }]}
+                                                                style={[styles.mortgageBtn, { flex: 1, flexDirection: "row-reverse", alignItems: "center", justifyContent: "center", gap: 6 }, !canAffordDown && { backgroundColor: "#64748b", borderBottomColor: "#6b7280" }]}
                                                             >
-                                                                <Text style={styles.mortgageBtnText}>
-                                                                    {canAffordDown ? `קנה (${dp.toLocaleString()})` : `חסרים ${(dp - coins).toLocaleString()}`}
-                                                                </Text>
+                                                                {canAffordDown ? (
+                                                                    <>
+                                                                        <Text style={styles.mortgageBtnText}>{`קנה (${dp.toLocaleString()}`}</Text>
+                                                                        <GoldCoinIcon size={16} />
+                                                                        <Text style={styles.mortgageBtnText}>)</Text>
+                                                                    </>
+                                                                ) : (
+                                                                    <>
+                                                                        <Text style={styles.mortgageBtnText}>{`חסרים ${(dp - coins).toLocaleString()}`}</Text>
+                                                                        <GoldCoinIcon size={16} />
+                                                                    </>
+                                                                )}
                                                             </AnimatedPressable>
                                                             <Pressable
                                                                 onPress={() => {
@@ -675,7 +686,7 @@ export function MarketScreen() {
                                     );
                                 })()}
                             </View>
-                        </SafeAreaView>
+                        </View>
                     </Modal>
                 </ScrollView>
 

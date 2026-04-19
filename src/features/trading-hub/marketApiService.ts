@@ -269,11 +269,15 @@ export const fetchChartData = async (
 
     const json = (await response.json()) as QuoteApiResponse;
     if (!json.ok) throw new Error('API error');
+    // API returned ok but empty/thin chart — fall back to mock so UI never shows a blank chart
+    if (!Array.isArray(json.chart) || json.chart.length < 2) throw new Error('empty chart');
 
     chartCache.set(cacheKey, { data: json.chart, date: todayKey() });
     return json.chart;
   } catch {
-    return generateMockChartData(assetId, timeframe);
+    const mock = generateMockChartData(assetId, timeframe);
+    chartCache.set(cacheKey, { data: mock, date: todayKey() });
+    return mock;
   }
 };
 
