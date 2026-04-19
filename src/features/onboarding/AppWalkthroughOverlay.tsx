@@ -41,7 +41,7 @@ const STEPS: WalkthroughStep[] = [
   {
     title: "היי! אני קפטן שארק",
     emoji: "",
-    message: "אני אלווה אותך לאורך כל הדרך.\nבוא נעשה סיור קצר באפליקציה!",
+    message: "אני אלווה אתכם לאורך כל הדרך.\nבואו נעשה סיור קצר באפליקציה!",
     navigateTo: null,
     ctaLabel: "יאללה, קדימה!",
     screenSignal: null,
@@ -104,7 +104,7 @@ const STEPS: WalkthroughStep[] = [
   {
     title: "הגשר",
     emoji: "🌉",
-    message: "הידע שלך שווה כסף אמיתי! בגשר תמיר את המטבעות שצברת להטבות ומוצרים פיננסיים בעולם האמיתי.",
+    message: "הידע שלכם שווה כסף אמיתי! בגשר תמירו את המטבעות שצברתם להטבות ומוצרים פיננסיים בעולם האמיתי.",
     navigateTo: "/bridge",
     ctaLabel: "בוא נתחיל ללמוד!",
     screenSignal: "bridge",
@@ -288,13 +288,15 @@ export function AppWalkthroughOverlay() {
 
   if (hasSeenWalkthrough || step < 0 || !stepConfig || !ready) return null;
 
-  // Hide overlay while user is choosing chat style
-  if (waitingForChatChoice && !hasChosenChatStyle) return null;
+  // Hide overlay while user is choosing chat style.
+  // NOTE: Use Modal's `visible` prop (not `return null`) — on iOS the
+  // Modal native view can linger and swallow touches if unmounted mid-render.
+  const isPickingChatStyle = waitingForChatChoice && !hasChosenChatStyle;
 
   const enterAnim = reducedMotion ? undefined : FadeIn.duration(280);
 
   return (
-    <Modal visible transparent animationType="fade" statusBarTranslucent accessibilityViewIsModal onRequestClose={handleSkip}>
+    <Modal visible={!isPickingChatStyle} transparent animationType="fade" statusBarTranslucent accessibilityViewIsModal onRequestClose={handleSkip}>
       <View style={s.overlay}>
         {/* ── Top: Step title pill with counter ── */}
         <SafeAreaView edges={["top"]} style={{ alignItems: "center", paddingTop: 20 }}>
