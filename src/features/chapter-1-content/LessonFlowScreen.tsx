@@ -2058,6 +2058,14 @@ export function LessonFlowScreen() {
     (s) => s.progress[s.currentChapterId]?.quizResults ?? {},
   );
 
+  // Point the chapter store at whichever chapter this lesson belongs to,
+  // so completeModule(id) writes into the correct chapter's progress array.
+  // Without this, mod-0-1 completion was being written to ch-1 (the default),
+  // leaving ch-0's completedModules empty and looping the user back to mod-0-1.
+  useEffect(() => {
+    if (chapterId) setCurrentChapter(chapterStoreKey(chapterId));
+  }, [chapterId, setCurrentChapter]);
+
   const { isMuted, toggleMute } = useLessonMusic();
   const safeTimeout = useTimeoutCleanup();
 
@@ -2128,8 +2136,15 @@ export function LessonFlowScreen() {
   /** Navigate past mod-0-1 to the next incomplete module (called from register nudge buttons) */
   function navigateToNextModuleNormally() {
     // Force-complete mod-0-1 before navigating so we never loop back to it.
-    // Also read fresh Zustand state (not the React closure) to avoid stale progress.
     if (id === 'mod-0-1') completeModule('mod-0-1');
+    // After mod-0-1 specifically, return to the main learn map with the
+    // cursor parked on mod-0-2, instead of auto-playing the next lesson.
+    if (id === 'mod-0-1') {
+      setCurrentChapter('ch-0');
+      setCurrentModule(1);
+      router.replace("/(tabs)" as never);
+      return;
+    }
     const freshProgress = useChapterStore.getState().progress;
     for (const ch of ALL_CHAPTERS_ORDERED) {
       const completed = freshProgress[chapterStoreKey(ch.id)]?.completedModules ?? [];
@@ -2153,6 +2168,7 @@ export function LessonFlowScreen() {
       if (isGuest) {
         setShowRegisterNudge(true);
       } else {
+        // Signed-in user: drop back to the learn map on mod-0-2, not the next lesson.
         navigateToNextModuleNormally();
       }
       return;

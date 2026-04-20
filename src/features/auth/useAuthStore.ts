@@ -42,12 +42,14 @@ export const useAuthStore = create<AuthState>()(
         set((state) => ({
           isAuthenticated: true,
           isGuest: false,
-          hasCompletedOnboarding: true,
+          // First-time OAuth sign-in (no profile yet) → route through onboarding.
+          // Returning user (profile already persisted) → skip straight to tabs.
+          hasCompletedOnboarding: state.profile !== null,
           displayName,
           email,
           createdAt: state.createdAt ?? new Date().toISOString(),
-          // Ensure profile is never null for authenticated users — OAuth sign-in
-          // skips the onboarding flow so completeOnboarding() is never called.
+          // Safety default so downstream screens never crash on a null profile
+          // if the user somehow lands outside the onboarding flow.
           profile: state.profile ?? {
             displayName,
             financialDream: null,
@@ -64,7 +66,6 @@ export const useAuthStore = create<AuthState>()(
             ownedAvatars: [],
           },
         }));
-        // Fire-and-forget DB sync
         upsertUserProfile(email, { displayName, email }).catch(() => { /* fire-and-forget */ });
       },
 
