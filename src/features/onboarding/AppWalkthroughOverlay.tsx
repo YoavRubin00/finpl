@@ -295,7 +295,7 @@ export function AppWalkthroughOverlay() {
   const enterAnim = reducedMotion ? undefined : FadeIn.duration(280);
 
   return (
-    <Modal visible transparent animationType="fade" statusBarTranslucent accessibilityViewIsModal onRequestClose={handleSkip}>
+    <Modal visible transparent animationType="none" statusBarTranslucent accessibilityViewIsModal onRequestClose={handleSkip}>
       <View style={s.overlay}>
         {/* ── Top: Step title pill with counter ── */}
         <SafeAreaView edges={["top"]} style={{ alignItems: "center", paddingTop: 36 }}>

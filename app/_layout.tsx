@@ -217,7 +217,13 @@ export default function RootLayout() {
         router.replace("/(auth)/onboarding");
       }
     } else {
-      if (!inTabsGroup && !inContentRoute && !inAuthGroup) router.replace("/(tabs)");
+      // Still redirect out of (auth)/onboarding after completion, but allow
+      // other auth routes (register, sign-in, terms) for already-authenticated
+      // guests who want to upgrade to a real account.
+      const onAuthOnboarding = inAuthGroup && (segments as string[])[1] === "onboarding";
+      if (onAuthOnboarding || (!inTabsGroup && !inContentRoute && !inAuthGroup)) {
+        router.replace("/(tabs)");
+      }
     }
   }, [isAuthenticated, hasCompletedOnboarding, segments, navState?.key, hydrated]);
 

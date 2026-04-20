@@ -9,7 +9,6 @@ import {
   Modal,
   Pressable,
   StyleSheet,
-  ImageBackground,
 } from "react-native";
 import Animated, {
   FadeIn,
@@ -142,11 +141,7 @@ export function SharkFeedbackChatModal({ visible, onClose }: Props) {
       statusBarTranslucent
       onRequestClose={onClose}
     >
-      <ImageBackground
-        source={{ uri: 'https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/images/CHAT%20BACK.jpg' }}
-        style={{ flex: 1 }}
-        resizeMode="cover"
-      >
+      <View style={{ flex: 1, backgroundColor: "#f0f9ff" }}>
         <KeyboardAvoidingView
           style={st.root}
           behavior={Platform.OS === "ios" ? "padding" : undefined}
@@ -237,7 +232,7 @@ export function SharkFeedbackChatModal({ visible, onClose }: Props) {
             </Pressable>
           </View>
         </KeyboardAvoidingView>
-      </ImageBackground>
+      </View>
     </Modal>
   );
 }

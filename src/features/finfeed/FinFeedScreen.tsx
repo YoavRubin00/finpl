@@ -669,9 +669,16 @@ export function FinFeedScreen() {
       }
 
       // Shark feedback popup every 48 hours for anyone playing.
+      // Gate: only after the user has been on the app for at least 24h (day 2+),
+      // so we don't hit brand-new users with feedback on their very first day.
       // Guard against double-open: if the modal is already showing (e.g. from a rapid
       // re-focus), skip, don't re-stamp the AsyncStorage key or re-schedule.
-      if (useTutorialStore.getState().hasSeenAppWalkthrough && !showSharkFeedback) {
+      const createdAtStr = useAuthStore.getState().createdAt;
+      const createdAtMs = createdAtStr ? new Date(createdAtStr).getTime() : 0;
+      const ONE_DAY = 24 * 60 * 60 * 1000;
+      const pastFirstDay = createdAtMs > 0 && (Date.now() - createdAtMs) >= ONE_DAY;
+
+      if (useTutorialStore.getState().hasSeenAppWalkthrough && !showSharkFeedback && pastFirstDay) {
         AsyncStorage.getItem(SHARK_FEEDBACK_KEY).then((lastTimeStr) => {
           const lastTime = lastTimeStr ? parseInt(lastTimeStr, 10) : 0;
           const now = Date.now();

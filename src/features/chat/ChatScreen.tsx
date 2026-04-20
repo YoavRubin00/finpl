@@ -192,8 +192,8 @@ function ChatStylePicker({ onSelect }: { onSelect: (id: CompanionId) => void }) 
   return (
     <Animated.View entering={FadeIn.duration(200)} style={pickerStyles.overlay} pointerEvents="auto">
       <Animated.View entering={FadeIn.duration(400).delay(100)} style={pickerStyles.card}>
-        <Text style={pickerStyles.title}>איך תרצה שאדבר איתך?</Text>
-        <Text style={pickerStyles.subtitle}>בחר את הסגנון שהכי מתאים לך</Text>
+        <Text style={pickerStyles.title}>איך תרצו שאדבר איתכם?</Text>
+        <Text style={pickerStyles.subtitle}>בחרו את הסגנון שהכי מתאים לכם</Text>
         <View style={pickerStyles.options}>
           {CHAT_STYLES.map((s) => (
             <Pressable key={s.id} onPress={() => onSelect(s.id)} style={pickerStyles.option} accessibilityRole="button" accessibilityLabel={`סגנון שיחה: ${s.title}`}>

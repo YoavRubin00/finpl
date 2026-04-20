@@ -9,7 +9,7 @@ import {
   Platform,
   ScrollView,
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { useRouter, useLocalSearchParams } from "expo-router";
 import { FINN_HELLO } from "../retention-loops/finnMascotConfig";
 import { getPasswordStrength } from "./password-utils";
@@ -67,6 +67,7 @@ const inputStyle = {
 
 export function RegisterScreen() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const { returnTo } = useLocalSearchParams<{ returnTo?: string }>();
   const signIn = useAuthStore((s) => s.signIn);
   const convertGuestToUser = useAuthStore((s) => s.convertGuestToUser);
@@ -96,6 +97,32 @@ export function RegisterScreen() {
 
   return (
     <View style={{ flex: 1, backgroundColor: "#ffffff" }}>
+      {/* Back/cancel button, positioned at root so safe-area insets are explicit */}
+      <Pressable
+        onPress={() => {
+          if (router.canGoBack()) router.back();
+          else router.replace("/(tabs)" as never);
+        }}
+        accessibilityRole="button"
+        accessibilityLabel="חזור"
+        hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+        style={{
+          position: "absolute",
+          top: insets.top + 8,
+          left: 16,
+          zIndex: 20,
+          width: 36,
+          height: 36,
+          borderRadius: 18,
+          backgroundColor: "#f0f9ff",
+          borderWidth: 1,
+          borderColor: "#bae6fd",
+          alignItems: "center",
+          justifyContent: "center",
+        }}
+      >
+        <Text style={{ fontSize: 16, fontWeight: "800", color: "#0891b2" }}></Text>
+      </Pressable>
       <KeyboardAvoidingView
         style={{ flex: 1 }}
         behavior={Platform.OS === "ios" ? "padding" : "height"}
