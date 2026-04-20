@@ -10,7 +10,9 @@
       "distribution": "internal",
       "channel": "development",
       "env": {
-        "EXPO_PUBLIC_API_URL": "https://finpl.vercel.app"
+        "EXPO_PUBLIC_API_URL": "https://finpl.vercel.app",
+        "EXPO_PUBLIC_ADMOB_REWARDED_IOS": "ca-app-pub-3137283655458001/8631312444",
+        "EXPO_PUBLIC_ADMOB_REWARDED_ANDROID": "ca-app-pub-3137283655458001/4112436754"
       }
     },
     "preview": {
@@ -21,7 +23,9 @@
         "buildType": "apk"
       },
       "env": {
-        "EXPO_PUBLIC_API_URL": "https://finpl.vercel.app"
+        "EXPO_PUBLIC_API_URL": "https://finpl.vercel.app",
+        "EXPO_PUBLIC_ADMOB_REWARDED_IOS": "ca-app-pub-3137283655458001/8631312444",
+        "EXPO_PUBLIC_ADMOB_REWARDED_ANDROID": "ca-app-pub-3137283655458001/4112436754"
       }
     },
     "production": {
@@ -29,7 +33,9 @@
       "channel": "production",
       "resourceClass": "large",
       "env": {
-        "EXPO_PUBLIC_API_URL": "https://finpl.vercel.app"
+        "EXPO_PUBLIC_API_URL": "https://finpl.vercel.app",
+        "EXPO_PUBLIC_ADMOB_REWARDED_IOS": "ca-app-pub-3137283655458001/8631312444",
+        "EXPO_PUBLIC_ADMOB_REWARDED_ANDROID": "ca-app-pub-3137283655458001/4112436754"
       }
     }
   },
