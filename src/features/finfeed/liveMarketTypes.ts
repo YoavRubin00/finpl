@@ -17,7 +17,6 @@ export interface NewsItem {
 
 export interface LiveMarketData {
   rates: RateItem[];
-  news: NewsItem[];
   fetchedAt: string;
 }
 

@@ -135,97 +135,6 @@ async function fetchInterestRate(): Promise<RateItem> {
   return { value: '4.50%', numericValue: 4.5, changePct: 0, direction: 'stable', label: 'ריבית בנק ישראל', symbol: '🏦' };
 }
 
-// ── Globes RSS — parse up to 5 raw items ───────────────────────────────────
-interface RawNewsItem {
-  originalHeadline: string;
-  source: string;
-  pubDate: string;
-  link: string;
-}
-
-async function fetchRawNews(): Promise<RawNewsItem[]> {
-  const GLOBES_RSS = 'https://www.globes.co.il/webservice/rss/rssfeeder.asmx/FeederNode?iID=585';
-  try {
-    const res = await fetch(GLOBES_RSS, { headers: { Accept: 'application/xml' }, signal: sig() });
-    if (!res.ok) return [];
-    const xml = await res.text();
-
-    const items: RawNewsItem[] = [];
-    const itemRe = /<item>([\s\S]*?)<\/item>/g;
-    let m: RegExpExecArray | null;
-
-    while ((m = itemRe.exec(xml)) !== null && items.length < 5) {
-      const block = m[1];
-      const clean = (s: string) =>
-        s.replace(/<!\[CDATA\[|\]\]>/g, '').replace(/&amp;/g, '&').replace(/<[^>]*>/g, '').trim();
-
-      const title = block.match(/<title>([\s\S]*?)<\/title>/)?.[1];
-      const link = block.match(/<link>([\s\S]*?)<\/link>/)?.[1];
-      const pub = block.match(/<pubDate>([\s\S]*?)<\/pubDate>/)?.[1];
-
-      if (!title) continue;
-      items.push({
-        originalHeadline: clean(title),
-        source: 'גלובס',
-        pubDate: pub?.trim() ?? '',
-        link: link?.trim() ?? '',
-      });
-    }
-    return items;
-  } catch {
-    return [];
-  }
-}
-
-// ── Rephrase headlines with Gemini to avoid copyright issues ───────────────
-async function rephraseHeadlines(raw: RawNewsItem[]): Promise<NewsItem[]> {
-  if (raw.length === 0) return [];
-
-  const GEMINI_API_KEY = process.env.GOOGLE_AI_API_KEY ?? '';
-  if (!GEMINI_API_KEY) {
-    // No key — return headlines as-is (degraded mode)
-    return raw.map((r) => ({ headline: r.originalHeadline, summary: '', source: r.source, pubDate: r.pubDate, link: r.link }));
-  }
-
-  const originals = raw.map((r, i) => `${i + 1}. ${r.originalHeadline}`).join('\n');
-  const prompt = `אתה עורך פיננסי. נסח מחדש את כותרות החדשות הבאות בעברית בניסוח שלך — שמור על המשמעות המדויקת אבל אל תעתיק את הניסוח המקורי כלל. החזר JSON בלבד: מערך של מחרוזות, ללא הסברים נוספים.\n\nכותרות:\n${originals}`;
-
-  try {
-    const ctrl = new AbortController();
-    setTimeout(() => ctrl.abort(), 10_000);
-    const res = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`,
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] }),
-        signal: ctrl.signal,
-      },
-    );
-    if (!res.ok) throw new Error(`Gemini ${res.status}`);
-    const json = await res.json() as { candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }> };
-    const text = json.candidates?.[0]?.content?.parts?.[0]?.text ?? '';
-    // Strip markdown code fences if present
-    const cleaned = text.replace(/^```[a-z]*\n?/i, '').replace(/\n?```$/i, '').trim();
-    const rephrased = JSON.parse(cleaned) as string[];
-    return raw.map((r, i) => ({
-      headline: rephrased[i] ?? r.originalHeadline,
-      summary: '',
-      source: r.source,
-      pubDate: r.pubDate,
-      link: r.link,
-    }));
-  } catch {
-    // Fallback to originals if AI fails
-    return raw.map((r) => ({ headline: r.originalHeadline, summary: '', source: r.source, pubDate: r.pubDate, link: r.link }));
-  }
-}
-
-async function fetchNews(): Promise<NewsItem[]> {
-  const raw = await fetchRawNews();
-  return rephraseHeadlines(raw);
-}
-
 // ── Handler ────────────────────────────────────────────────────────────────
 export async function GET(request: Request): Promise<Response> {
   const limited = enforceRateLimit(request, 'market/live', { limit: 30, windowSec: 60 });
@@ -238,17 +147,15 @@ export async function GET(request: Request): Promise<Response> {
   }
 
   try {
-    const [usdIls, btc, ta125, interest, news] = await Promise.all([
+    const [usdIls, btc, ta125, interest] = await Promise.all([
       fetchUsdIls(),
       fetchBtc(),
       fetchTA125(),
       fetchInterestRate(),
-      fetchNews(),
     ]);
 
     const data: LiveMarketData = {
       rates: [usdIls, btc, ta125, interest],
-      news,
       fetchedAt: new Date().toISOString(),
     };
 
