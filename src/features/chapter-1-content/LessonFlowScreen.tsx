@@ -2262,12 +2262,9 @@ export function LessonFlowScreen() {
   const [showExitConfirm, setShowExitConfirm] = useState(false);
   const [showRegisterNudge, setShowRegisterNudge] = useState(false);
   const [showPizzaModal, setShowPizzaModal] = useState(false);
-  const [showCh0BullshitIntro, setShowCh0BullshitIntro] = useState(false);
   const [showMod01BarterNotif, setShowMod01BarterNotif] = useState(false);
   const hasSeenPizza = useTutorialStore((s) => s.hasSeenPizzaIndexModal);
   const markPizzaSeen = useTutorialStore((s) => s.markPizzaIndexSeen);
-  const hasSeenCh0Bullshit = useTutorialStore((s) => s.hasSeenCh0BullshitInterstitial);
-  const markCh0BullshitSeen = useTutorialStore((s) => s.markCh0BullshitInterstitialSeen);
   const hasSeenMod01BarterNotif = useTutorialStore((s) => s.hasSeenMod01BarterNotif);
   const markMod01BarterNotifSeen = useTutorialStore((s) => s.markMod01BarterNotifSeen);
   const isGuest = useAuthStore((s) => s.isGuest);
@@ -2437,14 +2434,10 @@ export function LessonFlowScreen() {
     }
   }, [phase, mod, hasSeenPizza, safeTimeout]);
 
-  // Chapter 0 bullshit interstitial, one-time shark notification after mod-0-3,
-  // framing the BullshitSwipe game the user will soon encounter in the feed.
-  useEffect(() => {
-    if (!mod) return;
-    if (phase === "summary" && mod.id === "mod-0-3" && !hasSeenCh0Bullshit) {
-      safeTimeout(() => setShowCh0BullshitIntro(true), 600);
-    }
-  }, [phase, mod, hasSeenCh0Bullshit, safeTimeout]);
+  // (The chapter-0 BullshitSwipe shark intro now lives on the
+  // /interstitial/bullshit-ch0 page itself so the explanation appears
+  // immediately before the game, not during the mod-0-3 summary phase
+  // where the chest + celebration sat in between.)
 
   // mod-0-1 barter notif, dancing shark joke after completing "מה זה בכלל כסף"
   useEffect(() => {
@@ -3823,57 +3816,8 @@ export function LessonFlowScreen() {
         />
       </Modal>
 
-      {/* Chapter 0 bullshit interstitial, shark message before mod-0-4 */}
-      <Modal
-        visible={showCh0BullshitIntro}
-        transparent
-        animationType="fade"
-        onRequestClose={() => {
-          markCh0BullshitSeen();
-          setShowCh0BullshitIntro(false);
-        }}
-      >
-        <View style={{ flex: 1, backgroundColor: "rgba(3,7,18,0.78)", justifyContent: "center", alignItems: "center", paddingHorizontal: 24, paddingTop: safeInsets.top, paddingBottom: safeInsets.bottom }}>
-          <Animated.View entering={FadeInUp.duration(350)} style={{ width: "100%", maxWidth: 380, backgroundColor: "#f0f9ff", borderRadius: 24, paddingHorizontal: 22, paddingTop: 22, paddingBottom: 20, borderWidth: 1.5, borderColor: "rgba(14,165,233,0.45)", shadowColor: "#0ea5e9", shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.35, shadowRadius: 18, elevation: 14 }}>
-            <View style={{ flexDirection: "row-reverse", alignItems: "center", gap: 10, marginBottom: 12 }}>
-              <ExpoImage source={FINN_STANDARD} accessible={false} style={{ width: 54, height: 54 }} contentFit="contain" />
-              <Text style={{ fontSize: 16, fontWeight: "900", color: "#0369a1", writingDirection: "rtl", textAlign: "right" }}>קפטן שארק</Text>
-            </View>
-            <Text style={{ fontSize: 15, fontWeight: "700", color: "#0c4a6e", lineHeight: 24, writingDirection: "rtl", textAlign: "right", marginBottom: 16 }}>
-              זו הסיבה שאני כאן. ללמד וללמוד ביחד איתך ולא למכור לך סיפורים.
-            </Text>
-            <Text style={{ fontSize: 13, color: "#64748b", writingDirection: "rtl", textAlign: "right", lineHeight: 20, marginBottom: 18 }}>
-              מיד נתרגל ביחד, משחק "סוויפ הבולשיט" לזיהוי פרסומות מטעות. בואו נתחיל.
-            </Text>
-            <AnimatedPressable
-              onPress={() => {
-                tapHaptic();
-                markCh0BullshitSeen();
-                setShowCh0BullshitIntro(false);
-              }}
-              accessibilityRole="button"
-              accessibilityLabel="המשך"
-              style={{
-                backgroundColor: "#0ea5e9",
-                borderRadius: 16,
-                paddingVertical: 16,
-                width: "100%",
-                alignItems: "center",
-                justifyContent: "center",
-                borderBottomWidth: 4,
-                borderBottomColor: "#0284c7",
-                shadowColor: "#0ea5e9",
-                shadowOffset: { width: 0, height: 4 },
-                shadowOpacity: 0.3,
-                shadowRadius: 8,
-                elevation: 6,
-              }}
-            >
-              <Text style={{ fontSize: 17, fontWeight: "900", color: "#ffffff", writingDirection: "rtl", textAlign: "center" }}>המשך</Text>
-            </AnimatedPressable>
-          </Animated.View>
-        </View>
-      </Modal>
+      {/* (BullshitSwipe intro modal moved to /interstitial/bullshit-ch0 page —
+          shark explanation now appears immediately before the game.) */}
 
       {/* mod-0-1 barter notif, dancing shark after "מה זה בכלל כסף" */}
       <Modal

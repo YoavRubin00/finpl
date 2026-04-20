@@ -11,6 +11,8 @@ interface TradingHubUiState {
   watchlist: string[];
   unlockedAssetTypes: AssetType[];
   dismissedTipDate: string | null;
+  /** ISO date key of the last day the SharkBridgeCTA was shown. Null = never. */
+  lastBridgeCtaDate: string | null;
   /** null = user hasn't chosen yet → show onboarding. 'simple' / 'advanced' after choice. */
   chartMode: ChartMode | null;
   /** MA period used when advanced mode is active. Common values: 20, 50, 100, 200. */
@@ -23,6 +25,8 @@ interface TradingHubUiState {
   isAssetTypeUnlocked: (type: AssetType) => boolean;
   dismissTipForToday: (todayKey: string) => void;
   hasDismissedTipForDate: (todayKey: string) => boolean;
+  markBridgeCtaShownToday: (todayKey: string) => void;
+  hasShownBridgeCtaToday: (todayKey: string) => boolean;
   setChartMode: (mode: ChartMode) => void;
   setChartMAPeriod: (period: number) => void;
 }
@@ -33,6 +37,7 @@ export const useTradingHubUiStore = create<TradingHubUiState>()(
       watchlist: [],
       unlockedAssetTypes: DEFAULT_UNLOCKED,
       dismissedTipDate: null,
+      lastBridgeCtaDate: null,
       chartMode: null,
       chartMAPeriod: 20,
       _hydrated: false,
@@ -64,6 +69,12 @@ export const useTradingHubUiStore = create<TradingHubUiState>()(
 
       hasDismissedTipForDate: (todayKey) => get().dismissedTipDate === todayKey,
 
+      markBridgeCtaShownToday: (todayKey) => {
+        set({ lastBridgeCtaDate: todayKey });
+      },
+
+      hasShownBridgeCtaToday: (todayKey) => get().lastBridgeCtaDate === todayKey,
+
       setChartMode: (mode) => {
         set({ chartMode: mode });
       },
@@ -79,6 +90,7 @@ export const useTradingHubUiStore = create<TradingHubUiState>()(
         watchlist: state.watchlist,
         unlockedAssetTypes: state.unlockedAssetTypes,
         dismissedTipDate: state.dismissedTipDate,
+        lastBridgeCtaDate: state.lastBridgeCtaDate,
         chartMode: state.chartMode,
         chartMAPeriod: state.chartMAPeriod,
       }),

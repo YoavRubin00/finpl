@@ -43,6 +43,7 @@ import { useTutorialStore } from '../../stores/useTutorialStore';
 import { useAuthStore } from '../auth/useAuthStore';
 import { TradingHubTutorial } from './TradingHubTutorial';
 import { NotificationBanner } from '../../components/ui/NotificationBanner';
+import { todayISO, getDaysSinceSignup } from '../../utils/dateUtils';
 
 const ITEM_SIZE = 72;
 const ITEM_GAP = 12;
@@ -116,13 +117,30 @@ export function TradingHubScreen() {
     const [indicatorInfo, setIndicatorInfo] = useState<IndicatorId | null>(null);
     const handleIndicatorInfo = useCallback((id: IndicatorId) => setIndicatorInfo(id), []);
 
-    // Captain Shark bridge nudge, appears a few seconds after the screen loads,
-    // inviting the user to convert their practice into real-world benefits.
+    // Captain Shark bridge nudge — gated so it appears once per day starting
+    // from day 2, and only after the other intro popups have cleared. Prevents
+    // the "4 popups at once" visual overload that users hit on first visits.
     const [bridgeCtaVisible, setBridgeCtaVisible] = useState(false);
+    const createdAt = useAuthStore((s) => s.createdAt);
+    const lastBridgeCtaDate = useTradingHubUiStore((s) => s.lastBridgeCtaDate);
+    const markBridgeCtaShownToday = useTradingHubUiStore((s) => s.markBridgeCtaShownToday);
     useEffect(() => {
-        const timer = setTimeout(() => setBridgeCtaVisible(true), 5000);
+        // Day 2+ gate: don't nag fresh accounts on day one.
+        if (getDaysSinceSignup(createdAt) < 1) return;
+        // Once-per-calendar-day gate.
+        const today = todayISO();
+        if (lastBridgeCtaDate === today) return;
+        // Sequence: wait for other intro popups to be dismissed first.
+        if (showTutorial) return;
+        if (chartMode === null) return;
+        if (showIndicesNudge) return;
+
+        const timer = setTimeout(() => {
+            setBridgeCtaVisible(true);
+            markBridgeCtaShownToday(today);
+        }, 3500);
         return () => clearTimeout(timer);
-    }, []);
+    }, [createdAt, lastBridgeCtaDate, markBridgeCtaShownToday, showTutorial, chartMode, showIndicesNudge]);
 
     // Refresh today's mission on mount
     useEffect(() => {
@@ -137,14 +155,15 @@ export function TradingHubScreen() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
-    // One-time Finn nudge: indices-only starters (knowledge < "some")
+    // One-time Finn nudge: indices-only starters (knowledge < "some").
+    // Deferred until the user has picked a chart mode so the ChartModeOnboarding
+    // sheet isn't visually stacked with this banner.
     useEffect(() => {
-        if (!isAdvancedKnowledge && !hasSeenIndicesNudge) {
-            const timer = setTimeout(() => setShowIndicesNudge(true), 3500);
-            return () => clearTimeout(timer);
-        }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, []);
+        if (isAdvancedKnowledge || hasSeenIndicesNudge) return;
+        if (chartMode === null) return;
+        const timer = setTimeout(() => setShowIndicesNudge(true), 1500);
+        return () => clearTimeout(timer);
+    }, [isAdvancedKnowledge, hasSeenIndicesNudge, chartMode]);
 
     // Crypto unlock: subscribe to chapter-5 progress so a mid-session completion
     // triggers the unlock immediately, not just on the next mount.

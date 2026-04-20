@@ -1,23 +1,37 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
-import { Text, Pressable, StyleSheet, ScrollView } from "react-native";
+import { Text, View, Pressable, StyleSheet, ScrollView } from "react-native";
 import { Image as ExpoImage } from "expo-image";
 import Animated, { FadeIn, FadeInUp, Easing } from "react-native-reanimated";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import { BullshitSwipeCard } from "../../src/features/finfeed/minigames/bullshit-swipe/BullshitSwipeCard";
-import { FINN_HAPPY } from "../../src/features/retention-loops/finnMascotConfig";
+import { FINN_HAPPY, FINN_STANDARD } from "../../src/features/retention-loops/finnMascotConfig";
 import { tapHaptic, successHaptic } from "../../src/utils/haptics";
+import { useTutorialStore } from "../../src/stores/useTutorialStore";
 
 const RTL = { writingDirection: "rtl" as const, textAlign: "right" as const };
 
 export default function BullshitCh0InterstitialPage() {
   const router = useRouter();
+  const hasSeenCh0Bullshit = useTutorialStore((s) => s.hasSeenCh0BullshitInterstitial);
+  const markCh0BullshitSeen = useTutorialStore((s) => s.markCh0BullshitInterstitialSeen);
+  // Intro overlay shown on first visit, immediately before the game starts.
+  // Previously this lived in LessonFlowScreen and fired during the mod-0-3
+  // summary phase, which left the chest/celebration screen between the
+  // explanation and the game it was framing.
+  const [showIntro, setShowIntro] = useState(!hasSeenCh0Bullshit);
   const [showSpeech, setShowSpeech] = useState(false);
   const speechTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => () => {
     if (speechTimerRef.current) clearTimeout(speechTimerRef.current);
   }, []);
+
+  const handleIntroDismiss = useCallback(() => {
+    tapHaptic();
+    markCh0BullshitSeen();
+    setShowIntro(false);
+  }, [markCh0BullshitSeen]);
 
   const handleGameFinish = useCallback(() => {
     successHaptic();
@@ -39,11 +53,36 @@ export default function BullshitCh0InterstitialPage() {
         showsVerticalScrollIndicator={false}
       >
         <BullshitSwipeCard
-          isActive
+          isActive={!showIntro}
           bypassDailyGate
           onFinish={handleGameFinish}
         />
       </ScrollView>
+
+      {showIntro && (
+        <View style={styles.introBackdrop}>
+          <Animated.View entering={FadeInUp.duration(350)} style={styles.introSheet}>
+            <View style={styles.introHeader}>
+              <ExpoImage source={FINN_STANDARD} style={styles.introFinn} contentFit="contain" accessible={false} />
+              <Text style={styles.introTitle}>קפטן שארק</Text>
+            </View>
+            <Text style={[styles.introBody, RTL]}>
+              זו הסיבה שאני כאן. ללמד וללמוד ביחד איתך ולא למכור לך סיפורים.
+            </Text>
+            <Text style={[styles.introHint, RTL]}>
+              מיד נתרגל ביחד, משחק "סוויפ הבולשיט" לזיהוי פרסומות מטעות. בואו נתחיל.
+            </Text>
+            <Pressable
+              onPress={handleIntroDismiss}
+              accessibilityRole="button"
+              accessibilityLabel="המשך למשחק"
+              style={({ pressed }) => [styles.introCta, pressed && { transform: [{ translateY: 2 }] }]}
+            >
+              <Text style={styles.introCtaText}>בואו נתחיל</Text>
+            </Pressable>
+          </Animated.View>
+        </View>
+      )}
 
       {showSpeech && (
         <Pressable
@@ -89,9 +128,91 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: "#f0f9ff",
   },
+  // Center the card vertically when content is shorter than the screen so the
+  // header doesn't sit pinned to the top with elements clipping off above.
   scrollContent: {
     flexGrow: 1,
-    paddingVertical: 8,
+    justifyContent: "center",
+    paddingVertical: 12,
+  },
+  introBackdrop: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: "rgba(3,7,18,0.78)",
+    justifyContent: "center",
+    alignItems: "center",
+    paddingHorizontal: 24,
+  },
+  introSheet: {
+    width: "100%",
+    maxWidth: 380,
+    backgroundColor: "#f0f9ff",
+    borderRadius: 24,
+    paddingHorizontal: 22,
+    paddingTop: 22,
+    paddingBottom: 20,
+    borderWidth: 1.5,
+    borderColor: "rgba(14,165,233,0.45)",
+    shadowColor: "#0ea5e9",
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.35,
+    shadowRadius: 18,
+    elevation: 14,
+  },
+  introHeader: {
+    flexDirection: "row-reverse",
+    alignItems: "center",
+    gap: 10,
+    marginBottom: 12,
+  },
+  introFinn: {
+    width: 54,
+    height: 54,
+  },
+  introTitle: {
+    fontSize: 16,
+    fontWeight: "900",
+    color: "#0369a1",
+    writingDirection: "rtl",
+    textAlign: "right",
+  },
+  introBody: {
+    fontSize: 15,
+    fontWeight: "700",
+    color: "#0c4a6e",
+    lineHeight: 24,
+    marginBottom: 16,
+  },
+  introHint: {
+    fontSize: 13,
+    color: "#64748b",
+    lineHeight: 20,
+    marginBottom: 18,
+  },
+  introCta: {
+    backgroundColor: "#0ea5e9",
+    borderRadius: 16,
+    paddingVertical: 16,
+    width: "100%",
+    alignItems: "center",
+    justifyContent: "center",
+    borderBottomWidth: 4,
+    borderBottomColor: "#0284c7",
+    shadowColor: "#0ea5e9",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 6,
+  },
+  introCtaText: {
+    fontSize: 17,
+    fontWeight: "900",
+    color: "#ffffff",
+    writingDirection: "rtl",
+    textAlign: "center",
   },
   overlay: {
     position: "absolute",

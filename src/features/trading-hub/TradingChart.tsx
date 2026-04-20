@@ -98,6 +98,17 @@ export function TradingChart({
     );
   }
 
+  // Simple mode: render the Skia chart directly (bundled, no CDN). The WebView
+  // path is only used for 'advanced' mode where lightweight-charts is required
+  // for MA/RSI overlays. This guarantees instant rendering on poor networks.
+  if (mode === 'simple') {
+    return (
+      <View style={styles.root}>
+        <LegacyLineChart data={ohlcv} height={CHART_HEIGHT} isLoading={false} />
+      </View>
+    );
+  }
+
   const showIndicatorBadges = mode === 'advanced' && timeframe === '1W' && ohlcv.length >= Math.max(maPeriod, 15);
   const showTimeframeNote = mode === 'advanced' && timeframe === '1D';
   const showMAPeriodBar = mode === 'advanced';
