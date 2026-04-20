@@ -7,6 +7,7 @@ import Animated, {
   useSharedValue,
   useAnimatedStyle,
   withRepeat,
+  withSequence,
   withTiming,
   cancelAnimation,
   useReducedMotion,
@@ -89,6 +90,22 @@ export function DailyBridgeNudgeModal() {
     return () => cancelAnimation(bobY);
   }, [visible, reducedMotion, bobY]);
 
+  // Pulsing glow on CTA button
+  const glowAnim = useSharedValue(0.5);
+  useEffect(() => {
+    if (!visible || reducedMotion) return;
+    glowAnim.value = withRepeat(
+      withSequence(
+        withTiming(1, { duration: 950 }),
+        withTiming(0.5, { duration: 950 }),
+      ),
+      -1,
+      true,
+    );
+    return () => cancelAnimation(glowAnim);
+  }, [visible, reducedMotion, glowAnim]);
+  const glowStyle = useAnimatedStyle(() => ({ shadowOpacity: glowAnim.value }));
+
   const today = new Date().toISOString().slice(0, 10);
   const dayOfWeek = new Date().getDay();
 
@@ -153,21 +170,21 @@ export function DailyBridgeNudgeModal() {
             הגשר שלנו, הטבות אמיתיות מחברות ישראליות מובילות
           </Text>
 
-          {/* CTA button */}
-          <Pressable
-            onPress={handleAct}
-            style={({ pressed }) => [styles.ctaBtn, pressed && { opacity: 0.88 }]}
-            accessibilityRole="button"
-            accessibilityLabel="קח אותי לגשר"
-          >
-            <LottieIcon
-              source={LOTTIE_BRIDGE}
-              size={32}
-              autoPlay
-              loop
-            />
-            <Text style={styles.ctaText}>קח אותי לגשר</Text>
-          </Pressable>
+          {/* CTA button — light-blue glow, lottie left of text */}
+          <Animated.View style={[styles.ctaGlowWrap, glowStyle]}>
+            <Pressable
+              onPress={handleAct}
+              style={({ pressed }) => [
+                styles.ctaBtn,
+                pressed && { opacity: 0.88, transform: [{ scale: 0.98 }] },
+              ]}
+              accessibilityRole="button"
+              accessibilityLabel="קח אותי לגשר"
+            >
+              <LottieIcon source={LOTTIE_BRIDGE} size={38} autoPlay loop />
+              <Text style={styles.ctaText}>קח אותי לגשר</Text>
+            </Pressable>
+          </Animated.View>
 
           {/* Dismiss */}
           <Pressable
@@ -247,24 +264,32 @@ const styles = StyleSheet.create({
     lineHeight: 22,
     marginBottom: 28,
   },
+  ctaGlowWrap: {
+    width: '100%',
+    borderRadius: 18,
+    shadowColor: '#38bdf8',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.5,
+    shadowRadius: 28,
+    elevation: 0,
+    marginBottom: 14,
+  },
   ctaBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
-    backgroundColor: '#0ea5e9',
-    borderRadius: 16,
+    gap: 12,
+    backgroundColor: '#38bdf8',
+    borderRadius: 18,
     paddingVertical: 16,
-    paddingHorizontal: 28,
+    paddingHorizontal: 24,
     width: '100%',
     justifyContent: 'center',
     borderBottomWidth: 4,
-    borderBottomColor: '#0369a1',
-    shadowColor: '#0ea5e9',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.4,
-    shadowRadius: 12,
-    elevation: 8,
-    marginBottom: 14,
+    borderBottomColor: '#0284c7',
+    borderTopWidth: 1.5,
+    borderTopColor: 'rgba(255,255,255,0.5)',
+    overflow: 'hidden',
+    elevation: 12,
   },
   ctaText: {
     fontSize: 17,

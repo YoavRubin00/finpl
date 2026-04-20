@@ -6,15 +6,22 @@ export const BRIDGE_BENEFITS: Benefit[] = [
   {
     id: 'bridge-invest-altshuler',
     title: 'חשבון מסחר, אלטשולר שחם טרייד',
-    description: 'פלטפורמת מסחר עצמאי מובילה בישראל.\nפטור מדמי ניהול · עמלות אטרקטיביות · כלי AI מתקדמים',
+    description:
+      'אלטשולר שחם טרייד — הברוקר הישראלי המתקדם.\n' +
+      '• אפס דמי ניהול, פטור מלא ללא הגבלת זמן.\n' +
+      '• מינימום נמוך, מתחילים מ-₪5,000 בלבד.\n' +
+      '• עמלות אטרקטיביות למסחר בארץ ובחו"ל.\n' +
+      '• מערכת מסחר מתקדמת, אפליקציה ומחשב, שברי מניות, פרה ואפטר-מרקט, והמרת מט"ח בזמן אמת.\n' +
+      '• גב מקצועי, 30+ שנות ניסיון וצוות תמיכה בחדרי המסחר בישראל ובארה"ב.\n' +
+      '• פתיחת חשבון דיגיטלית בפחות מ-10 דקות.',
     partnerName: 'אלטשולר שחם טרייד',
     partnerLogo: '📈',
-    lottieSource: require('../../../assets/lottie/wired-flat-161-growth-hover-pinch.json') as number,
+    partnerLogoImage: require('../../../assets/IMAGES/ALTSHULER.png') as number,
     costCoins: 3000,
     category: 'investments',
     isAvailable: true,
-    reward: 'קורס שוק ההון בשווי ₪1,400 במתנה',
-    partnerUrl: 'https://www.as-invest.co.il/trade',
+    reward: 'מתנת הצטרפות ₪200 + קורס שוק ההון בשווי ₪1,400 במתנה',
+    partnerUrl: 'https://digitalsolutions.as-invest.co.il/trade_OnBoarding/?utm_source=Finplay&utm_medium=link',
     isPartnerAd: true,
   },
 

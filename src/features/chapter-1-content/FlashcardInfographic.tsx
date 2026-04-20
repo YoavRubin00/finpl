@@ -390,13 +390,7 @@ const INFOGRAPHIC_MAP: Record<string, ImageSource | null> = {
   "fc-5-30-5": { uri: 'https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/infographics/mod-5-30/fc-5-30-5.png' },
   "fc-5-30-6": { uri: 'https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/infographics/mod-5-30/fc-5-30-6.png' },
 
-  // Module 5-31
-  "fc-5-31-1": { uri: 'https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/infographics/mod-5-31/fc-5-31-1.png' },
-  "fc-5-31-2": { uri: 'https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/infographics/mod-5-31/fc-5-31-2.png' },
-  "fc-5-31-3": { uri: 'https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/infographics/mod-5-31/fc-5-31-3.png' },
-  "fc-5-31-4": { uri: 'https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/infographics/mod-5-31/fc-5-31-4.png' },
-  "fc-5-31-5": { uri: 'https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/infographics/mod-5-31/fc-5-31-5.png' },
-  "fc-5-31-6": { uri: 'https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/infographics/mod-5-31/fc-5-31-6.png' },
+  // Module 5-31 (IRA) removed — module deleted due to content accuracy concerns.
 };
 
 /** Old summary infographics, used as decoration between flashcards (1.5s splash) */

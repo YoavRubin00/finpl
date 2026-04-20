@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { View, Text, Pressable, Linking, StyleSheet } from 'react-native';
+import { View, Text, Image, Pressable, Linking, StyleSheet } from 'react-native';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -15,6 +15,7 @@ import { LottieIcon } from '../../components/ui/LottieIcon';
 import { GoldCoinIcon } from '../../components/ui/GoldCoinIcon';
 
 import type { Benefit } from './types';
+import { trackBridgeClick } from '../../utils/trackBridgeClick';
 
 const RTL = { writingDirection: 'rtl' as const, textAlign: 'right' as const };
 
@@ -90,7 +91,10 @@ export function BenefitCard({ benefit, coins, isRedeemed, isPro, onPress }: Bene
   }
 
   const handleOpenPartnerUrl = () => {
-    if (benefit.partnerUrl) Linking.openURL(benefit.partnerUrl);
+    if (benefit.partnerUrl) {
+      trackBridgeClick(benefit.id, 'link_open');
+      Linking.openURL(benefit.partnerUrl);
+    }
   };
 
   return (
@@ -115,9 +119,11 @@ export function BenefitCard({ benefit, coins, isRedeemed, isPro, onPress }: Bene
         {/* Header: logo + title */}
         <View style={styles.headerRow}>
           <View style={[styles.logoCircle, isPartnerAd && styles.logoCircleBlue]}>
-            {benefit.lottieSource
-              ? <LottieIcon source={benefit.lottieSource} size={28} autoPlay loop />
-              : <Text style={{ fontSize: 20 }}>{benefit.partnerLogo}</Text>}
+            {benefit.partnerLogoImage
+              ? <Image source={benefit.partnerLogoImage} style={{ width: 32, height: 32, borderRadius: 6 }} resizeMode="contain" />
+              : benefit.lottieSource
+                ? <LottieIcon source={benefit.lottieSource} size={28} autoPlay loop />
+                : <Text style={{ fontSize: 20 }}>{benefit.partnerLogo}</Text>}
           </View>
           <View style={styles.titleBlock}>
             <Text style={[styles.title, isDisabled && !isRedeemed && styles.titleDisabled]}>
@@ -127,8 +133,8 @@ export function BenefitCard({ benefit, coins, isRedeemed, isPro, onPress }: Bene
           </View>
         </View>
 
-        {/* Description */}
-        <Text style={styles.description}>{benefit.description}</Text>
+        {/* Description — truncated on the grid card; RedemptionModal shows full copy. */}
+        <Text style={styles.description} numberOfLines={3} ellipsizeMode="tail">{benefit.description}</Text>
 
         {/* Reward badge */}
         <View style={styles.rewardBadge}>

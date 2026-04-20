@@ -313,20 +313,22 @@ export function AppWalkthroughOverlay() {
       onRequestClose={() => { /* intentionally empty */ }}
     >
       <View style={s.overlay}>
-        {/* ── Top: Step title pill with counter ── */}
-        <SafeAreaView edges={["top"]} style={{ alignItems: "center", paddingTop: 36 }}>
-          <Animated.View
-            key={`pill-${contentKey}`}
-            entering={reducedMotion ? undefined : FadeInDown.duration(350)}
-            style={s.titlePill}
-          >
-            {stepConfig.emoji ? <Text style={s.titleEmoji}>{stepConfig.emoji}</Text> : null}
-            <Text style={s.titleText} accessibilityRole="header">{stepConfig.title}</Text>
-            <View style={s.stepCounter}>
-              <Text style={s.stepCounterText}>{`${step + 1}/${stepsWithLast.length}`}</Text>
-            </View>
-          </Animated.View>
-        </SafeAreaView>
+        {/* ── Top: Step title pill with counter (hidden on step 0 — welcome card has no pill) ── */}
+        {step > 0 && (
+          <SafeAreaView edges={["top"]} style={{ alignItems: "center", paddingTop: 36 }}>
+            <Animated.View
+              key={`pill-${contentKey}`}
+              entering={reducedMotion ? undefined : FadeInDown.duration(350)}
+              style={s.titlePill}
+            >
+              {stepConfig.emoji ? <Text style={s.titleEmoji}>{stepConfig.emoji}</Text> : null}
+              <Text style={s.titleText} accessibilityRole="header">{stepConfig.title}</Text>
+              <View style={s.stepCounter}>
+                <Text style={s.stepCounterText}>{`${step + 1}/${stepsWithLast.length}`}</Text>
+              </View>
+            </Animated.View>
+          </SafeAreaView>
+        )}
 
         {/* ── Middle: transparent, real screen shows through ── */}
         <View style={{ flex: 1 }} />

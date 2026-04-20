@@ -66,17 +66,21 @@ function TimerBar({ duration, round, paused }: { duration: number; round: number
         progress.value = 100;
         remainingRef.current = duration;
         progress.value = withTiming(0, { duration });
+        // Cancel on unmount or before next round starts — prevents iOS crash
+        // when TimerBar unmounts mid-animation as score screen appears
+        return () => cancelAnimation(progress);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [round, duration]);
 
     useEffect(() => {
         if (paused) {
-            // Snapshot remaining ratio and freeze
             remainingRef.current = (progress.value / 100) * duration;
             cancelAnimation(progress);
         } else {
-            // Resume from current position
             progress.value = withTiming(0, { duration: remainingRef.current });
         }
+        return () => cancelAnimation(progress);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [paused]);
 
     const barStyle = useAnimatedStyle(() => ({
@@ -364,8 +368,8 @@ const [feedback, setFeedback] = useState<{ isCorrect: boolean; message: string }
     const [isProcessing, setIsProcessing] = useState(false);
     const [isPaused, setIsPaused] = useState(false);
     const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-    const pauseStartRef = useRef<number>(0);
     const remainingMsRef = useRef<number>(payslipNinjaConfig.timePerRound);
+    const prevRoundRef = useRef<number>(0);
     const [rewardsGranted, setRewardsGranted] = useState(false);
 
     // Grant XP + coins when game completes
@@ -377,7 +381,13 @@ const [feedback, setFeedback] = useState<{ isCorrect: boolean; message: string }
     }, [state.isComplete, rewardsGranted]);
 
     // Timer per item, with pause support (WCAG 2.2.1)
+    // Reset remaining time only when the round actually advances (not on pause/process toggles)
     useEffect(() => {
+        if (prevRoundRef.current !== state.currentRound) {
+            prevRoundRef.current = state.currentRound;
+            remainingMsRef.current = payslipNinjaConfig.timePerRound;
+        }
+
         if (state.isComplete || isProcessing || isPaused) return;
 
         const startTime = Date.now();
@@ -392,15 +402,9 @@ const [feedback, setFeedback] = useState<{ isCorrect: boolean; message: string }
 
         return () => {
             if (timerRef.current) clearTimeout(timerRef.current);
-            // Track how much time was actually used
             remainingMsRef.current = Math.max(0, ms - (Date.now() - startTime));
         };
-    }, [state.currentRound, state.isComplete, isProcessing, isPaused, handleTimeout]);
-
-    // Reset remaining time on new round
-    useEffect(() => {
-        remainingMsRef.current = payslipNinjaConfig.timePerRound;
-    }, [state.currentRound]);
+    }, [state.currentRound, state.isComplete, isProcessing, isPaused, handleTimeout, safeTimeout]);
 
     const handleBinPress = useCallback(
         (chosenCategory: PayslipCategory) => {
@@ -430,7 +434,7 @@ const [feedback, setFeedback] = useState<{ isCorrect: boolean; message: string }
             classifyItem(chosenCategory);
 
             // Clear feedback and advance
-            setTimeout(() => {
+            safeTimeout(() => {
                 setFeedback(null);
                 setHighlightedBin(null);
                 setIsProcessing(false);

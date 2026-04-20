@@ -75,7 +75,7 @@ export const SHOP_ITEMS: readonly ShopItem[] = [
     id: 'theme-cyber',
     category: 'cosmetics',
     name: 'ערכת נושא סייבר',
-    description: 'שנה את עיצוב הפירמידה לסגנון סייברפנק.',
+    description: 'שנה את עיצוב שביל הלמידה לסגנון סייברפנק.',
     coinCost: 15000,
     emoji: '🌐',
     lottieSource: require('../../../assets/lottie/wired-flat-1307-hub-network-hover-pinch.json'),

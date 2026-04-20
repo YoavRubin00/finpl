@@ -14,7 +14,7 @@ import Animated, {
   useReducedMotion,
 } from 'react-native-reanimated';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
-import { FINN_STANDARD } from '../retention-loops/finnMascotConfig';
+import { FINN_STANDARD, getFinnImage } from '../retention-loops/finnMascotConfig';
 import { heavyHaptic } from '../../utils/haptics';
 import { useSoundEffect } from '../../hooks/useSoundEffect';
 import { createAudioPlayer } from 'expo-audio';
@@ -160,13 +160,51 @@ export function ModuleIntroShort({ onStart, unitColors, config, audioUri }: Prop
 
       <View style={{ flex: 1, justifyContent: 'space-evenly', alignItems: 'center', paddingHorizontal: 16 }}>
 
-        {/* Finn, static */}
-        <ExpoImage
-          source={FINN_STANDARD}
-          style={{ width: 110, height: 110 }}
-          contentFit="contain"
-          accessible={false}
-        />
+        {/* Finn + speech bubble */}
+        <View style={{ flexDirection: 'row-reverse', alignItems: 'flex-end', width: '100%', paddingHorizontal: 4 }}>
+          {/* Portrait — talking during phases 0-1, idle at drag phase */}
+          <ExpoImage
+            source={phase < 2 ? getFinnImage('talking') : FINN_STANDARD}
+            style={{ width: 96, height: 96 }}
+            contentFit="contain"
+            accessible={false}
+          />
+          {/* Speech bubble */}
+          <Animated.View style={[captionStyle, {
+            flex: 1,
+            backgroundColor: '#ffffff',
+            borderRadius: 18,
+            borderWidth: 2,
+            borderColor: unitColors.bg,
+            paddingHorizontal: 14,
+            paddingVertical: 12,
+            marginEnd: 8,
+            marginBottom: 6,
+            shadowColor: unitColors.glow,
+            shadowOpacity: 0.3,
+            shadowRadius: 10,
+            shadowOffset: { width: 0, height: 2 },
+            elevation: 4,
+          }]}>
+            <Text style={[RTL, { fontSize: 14, fontWeight: '700', color: '#1f2937', lineHeight: 22 }]}>
+              {config.captions[phase]}
+            </Text>
+            {/* Tail pointing right toward Finn */}
+            <View style={{
+              position: 'absolute',
+              bottom: 12,
+              right: -9,
+              width: 0,
+              height: 0,
+              borderTopWidth: 7,
+              borderBottomWidth: 7,
+              borderLeftWidth: 9,
+              borderTopColor: 'transparent',
+              borderBottomColor: 'transparent',
+              borderLeftColor: unitColors.bg,
+            }} />
+          </Animated.View>
+        </View>
 
         {/* CenterStage */}
         <View style={{ width: STAGE_W, height: 220, alignItems: 'center', justifyContent: 'center' }}>
@@ -286,25 +324,6 @@ export function ModuleIntroShort({ onStart, unitColors, config, audioUri }: Prop
           )}
         </View>
 
-        {/* Caption card */}
-        <Animated.View style={[captionStyle, {
-          backgroundColor: unitColors.dim,
-          borderRadius: 18,
-          borderWidth: 1.5,
-          borderColor: unitColors.bg,
-          paddingHorizontal: 20,
-          paddingVertical: 14,
-          width: STAGE_W,
-          shadowColor: unitColors.glow,
-          shadowOpacity: 0.25,
-          shadowRadius: 10,
-          shadowOffset: { width: 0, height: 3 },
-          elevation: 5,
-        }]}>
-          <Text style={[RTL, { fontSize: 15, fontWeight: '700', color: '#1f2937', lineHeight: 24 }]}>
-            {config.captions[phase]}
-          </Text>
-        </Animated.View>
       </View>
     </View>
   );

@@ -66,7 +66,6 @@ const SIM_LOADERS: Record<string, () => SimScreen> = {
   "mod-5-28": () => require("../chapter-5-content/simulations").RetirementCalcScreen,
   "mod-5-29": () => require("../chapter-5-content/simulations").EstatePlanningScreen,
   "mod-5-30": () => require("../chapter-5-content/simulations").CryptoSimScreen,
-  "mod-5-31": () => require("../chapter-5-content/simulations").IRABuilderScreen,
 };
 
 export const SimulatorLoader = memo(function SimulatorLoader({

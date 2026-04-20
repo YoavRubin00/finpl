@@ -14,7 +14,7 @@ import Animated, {
   useReducedMotion,
 } from 'react-native-reanimated';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
-import { FINN_STANDARD } from '../retention-loops/finnMascotConfig';
+import { FINN_STANDARD, FINN_TALKING } from '../retention-loops/finnMascotConfig';
 import { heavyHaptic } from '../../utils/haptics';
 import { useSoundEffect } from '../../hooks/useSoundEffect';
 import { createAudioPlayer } from 'expo-audio';
@@ -195,7 +195,7 @@ export function CompoundInterestIntro({ onStart, unitColors, chartImageUri, audi
       <View style={{ flex: 1, justifyContent: 'space-evenly', alignItems: 'center', paddingHorizontal: 16 }}>
 
         {/* ── Finn static ─────────────────────────────────────────────── */}
-        <ExpoImage source={FINN_STANDARD} style={{ width: 120, height: 120 }} contentFit="contain" accessible={false} />
+        <ExpoImage source={phase < 2 ? FINN_TALKING : FINN_STANDARD} style={{ width: 120, height: 120 }} contentFit="contain" accessible={false} />
 
         {/* ── CenterStage ──────────────────────────────────────────────── */}
         <View style={{ width: STAGE_W, height: 220, alignItems: 'center', justifyContent: 'center' }}>

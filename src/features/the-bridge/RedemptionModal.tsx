@@ -1,4 +1,4 @@
-import { View, Text, Pressable, Modal, StyleSheet } from 'react-native';
+import { View, Text, Image, Pressable, Modal, StyleSheet } from 'react-native';
 import Animated, { FadeIn, FadeInUp } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { X } from 'lucide-react-native';
@@ -50,9 +50,11 @@ export function RedemptionModal({ visible, benefit, onConfirm, onCancel }: Redem
           {/* Partner logo + name */}
           <View style={styles.partnerRow}>
             <View style={styles.partnerLogoCircle}>
-              {benefit.lottieSource
-                ? <LottieIcon source={benefit.lottieSource} size={28} autoPlay loop />
-                : <Text style={{ fontSize: 22 }}>{benefit.partnerLogo}</Text>
+              {benefit.partnerLogoImage
+                ? <Image source={benefit.partnerLogoImage} style={{ width: 36, height: 36, borderRadius: 6 }} resizeMode="contain" />
+                : benefit.lottieSource
+                  ? <LottieIcon source={benefit.lottieSource} size={28} autoPlay loop />
+                  : <Text style={{ fontSize: 22 }}>{benefit.partnerLogo}</Text>
               }
             </View>
             <Text style={styles.partnerName}>{benefit.partnerName}</Text>

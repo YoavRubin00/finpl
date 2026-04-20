@@ -91,17 +91,5 @@ export const FEED_SIMULATORS: ReadonlyArray<FeedSimulator> = [
     teaserSub: "מצא דפוסים בגרף שוק ההון ותנצחו את האתגר",
     accentColor: "#818cf8",
   },
-  {
-    id: "feed-sim-ira-builder",
-    simulatorKey: "mod-5-31",
-    moduleId: "mod-5-31",
-    storeChapterId: "ch-5",
-    chapterId: "chapter-5",
-    moduleIndex: 6,
-    moduleTitle: "תיק IRA",
-    chapterName: "פרק 5, הדרך לחופש כלכלי",
-    teaserTitle: "בונה ה-IRA",
-    teaserSub: "סמלצו את הדרך לפנסיה, כמה תצטרכו ומתי תגיעו לשם",
-    accentColor: "#22d3ee",
-  },
+  // feed-sim-ira-builder removed — module + simulator deleted due to content accuracy concerns.
 ];

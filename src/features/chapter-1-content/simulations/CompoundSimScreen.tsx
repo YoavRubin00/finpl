@@ -303,13 +303,14 @@ function YearSlider({
         }),
     ).current;
 
-    // Finger hint follows the thumb position, clamped to stay within slider bounds
+    // Finger hint follows the thumb position, centered on the thumb
     const fingerStyle = useAnimatedStyle(() => {
-        const clampedX = Math.min(thumbX.value - 11, sliderWidth.current - 36);
+        const thumbCenter = Math.max(0, Math.min(thumbX.value, sliderWidth.current));
+        const containerLeft = Math.max(-95, Math.min(thumbCenter - 95, sliderWidth.current - 95));
         return {
             opacity: 0.5 + arrowPulse.value * 0.5,
             transform: [
-                { translateX: clampedX },
+                { translateX: containerLeft },
                 { translateY: arrowPulse.value * 5 },
             ],
         };
@@ -332,7 +333,7 @@ function YearSlider({
             <View style={{ position: 'relative', marginTop: 30 }}>
                 {/* Finger hint above thumb, points down */}
                 {!hasInteracted && (
-                    <Animated.View pointerEvents="none" style={[fingerStyle, { position: 'absolute', top: -75, marginLeft: -80, zIndex: 10, width: 190, alignItems: 'center' }]}>
+                    <Animated.View pointerEvents="none" style={[fingerStyle, { position: 'absolute', top: -75, zIndex: 10, width: 190, alignItems: 'center' }]}>
                         <View style={{ flexDirection: 'row-reverse', alignItems: 'center', backgroundColor: '#ffffff', padding: 6, borderRadius: 12, marginBottom: 4, borderWidth: 1, borderColor: '#0891b2', shadowColor: '#000', shadowOffset: {width: 0, height: 4}, shadowOpacity: 0.1, shadowRadius: 6, elevation: 4 }}>
                             <ExpoImage source={FINN_STANDARD} accessible={false} style={{ width: 32, height: 32 }} contentFit="contain" />
                             <Text style={[RTL, { flex: 1, fontSize: 13, color: '#0369a1', fontWeight: '800', textAlign: 'center', marginRight: 4 }]}>

@@ -7,7 +7,7 @@ import { LottieIcon } from "../../components/ui/LottieIcon";
 import LottieView from "lottie-react-native";
 import { FINN_STANDARD, FINN_HELLO, FINN_HAPPY, FINN_TABLET } from "../retention-loops/finnMascotConfig";
 import { useRouter } from "expo-router";
-import { Sparkles, TrendingUp, Pencil } from "lucide-react-native";
+import { Sparkles, TrendingUp, Pencil, ChevronDown, ChevronUp } from "lucide-react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { SkiaInteractiveChart } from "../../components/ui/SkiaInteractiveChart";
 import type { ChartDataPoint } from "../../components/ui/SkiaInteractiveChart";
@@ -1317,6 +1317,7 @@ function SimOnboardingStep({ onNext }: { onNext: () => void }) {
   const [years, setYears] = useState(10);
   const [subStep, setSubStep] = useState<"play" | "summary">("play");
   const [hasInteracted, setHasInteracted] = useState(false);
+  const [showCalcExplanation, setShowCalcExplanation] = useState(false);
   const autoSlideRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const startTimeRef = useRef(Date.now());
 
@@ -1366,7 +1367,11 @@ function SimOnboardingStep({ onNext }: { onNext: () => void }) {
     return (
       <View style={{ flex: 1, backgroundColor: "#ffffff" }}>
         <SafeAreaView style={{ flex: 1, paddingHorizontal: 24 }} edges={["top", "bottom"]}>
-          <View style={{ flex: 1, justifyContent: "center", alignItems: "center", gap: 16 }}>
+          <ScrollView
+            style={{ flex: 1 }}
+            contentContainerStyle={{ flexGrow: 1, justifyContent: "center", alignItems: "center", gap: 16, paddingVertical: 16 }}
+            showsVerticalScrollIndicator={false}
+          >
             <ExpoImage source={FINN_HAPPY} style={{ width: 100, height: 100 }} contentFit="contain" />
             <Text style={{ fontSize: 14, fontWeight: "700", color: "#64748b", textAlign: "center", writingDirection: "rtl" }}>
               הכסף שלך בעוד {years} שנים
@@ -1400,7 +1405,47 @@ function SimOnboardingStep({ onNext }: { onNext: () => void }) {
                 גם אם עכשיו לא מבינים, אנחנו נלמד הכל יחד!
               </Text>
             </View>
-          </View>
+
+            {/* "איך חישבנו?" collapsible explanation — same pattern as the
+                dividend explainer on ReferralScreen. Expands in-place so the
+                numbers above stay visible while the user reads. */}
+            <View style={{ width: "100%" }}>
+              <Pressable
+                onPress={() => setShowCalcExplanation((v) => !v)}
+                style={simStyles.calcToggle}
+                accessibilityRole="button"
+                accessibilityLabel={showCalcExplanation ? "סגור הסבר חישוב" : "פתח הסבר חישוב"}
+                accessibilityState={{ expanded: showCalcExplanation }}
+                hitSlop={6}
+              >
+                <Text style={simStyles.calcToggleText}>איך חישבנו?</Text>
+                {showCalcExplanation ? (
+                  <ChevronUp size={16} color="#0891b2" />
+                ) : (
+                  <ChevronDown size={16} color="#0891b2" />
+                )}
+              </Pressable>
+              {showCalcExplanation && (
+                <Animated.View entering={FadeInDown.duration(220)} style={simStyles.calcCard}>
+                  <Text style={simStyles.calcTitle}>הנחת העבודה: 10% תשואה שנתית</Text>
+                  <Text style={simStyles.calcBody}>
+                    החישוב מבוסס על תשואה היסטורית ממוצעת של השוק האמריקאי
+                    (מדד S&P 500) לאורך עשרות שנים, ~10% בשנה במונחים נומינליים
+                    (לפני אינפלציה).
+                  </Text>
+                  <Text style={simStyles.calcBody}>
+                    אנחנו מניחים הפקדה חודשית קבועה, צבירה בריבית דריבית מדי
+                    חודש, ומתעלמים ממס רווחי הון (25% בישראל) ומדמי ניהול. אלו
+                    שוחקים את התשואה בפועל משמעותית.
+                  </Text>
+                  <Text style={[simStyles.calcBody, { color: "#64748b", fontSize: 12 }]}>
+                    זוהי דוגמה חינוכית בלבד ולא המלצה להשקעה. ביצועי עבר אינם
+                    מבטיחים ביצועים עתידיים.
+                  </Text>
+                </Animated.View>
+              )}
+            </View>
+          </ScrollView>
 
           {/* Continue button */}
           <Pressable onPress={onNext} style={simStyles.continueBtn} accessibilityRole="button" accessibilityLabel="המשך">
@@ -1523,6 +1568,44 @@ const simStyles = StyleSheet.create({
     shadowColor: "#0891b2", shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.3, shadowRadius: 14, elevation: 8,
   },
   continueBtnText: { fontSize: 18, fontWeight: "900", color: "#ffffff" },
+  // "איך חישבנו?" collapsible — mirrors the dividend explainer on ReferralScreen.
+  calcToggle: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "flex-end",
+    gap: 6,
+    paddingHorizontal: 4,
+    paddingVertical: 8,
+  },
+  calcToggleText: {
+    fontSize: 13,
+    fontWeight: "700",
+    color: "#0891b2",
+    writingDirection: "rtl",
+    textAlign: "right",
+  },
+  calcCard: {
+    backgroundColor: "#f0f9ff",
+    borderWidth: 1,
+    borderColor: "rgba(14,165,233,0.15)",
+    borderRadius: 14,
+    padding: 16,
+    gap: 8,
+  },
+  calcTitle: {
+    fontSize: 15,
+    fontWeight: "800",
+    color: "#0f172a",
+    writingDirection: "rtl",
+    textAlign: "right",
+  },
+  calcBody: {
+    fontSize: 13,
+    color: "#475569",
+    lineHeight: 20,
+    writingDirection: "rtl",
+    textAlign: "right",
+  },
 });
 // ─── Intro (personalisation splash) ──────────────────────────────────────────
 

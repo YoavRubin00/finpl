@@ -322,7 +322,7 @@ export const useSubscriptionStore = create<SubscriptionState>()(
       /* ---- RevenueCat sync ---- */
 
       syncWithRevenueCat: async () => {
-        const DEV_PRO_EMAILS = ["yrubin00@gmail.com", "itaysc23@gmail.com", "benbenshmuel@gmail.com"];
+        const DEV_PRO_EMAILS = ["itaysc23@gmail.com", "benbenshmuel@gmail.com"];
         try {
           // eslint-disable-next-line @typescript-eslint/no-var-requires
           const auth = require("../auth/useAuthStore").useAuthStore.getState();
@@ -379,7 +379,7 @@ export const useSubscriptionStore = create<SubscriptionState>()(
         if (!state) return;
         try {
           const auth = require("../auth/useAuthStore").useAuthStore.getState();
-          const DEV_PRO_EMAILS = ["yrubin00@gmail.com", "itaysc23@gmail.com", "benbenshmuel@gmail.com"];
+          const DEV_PRO_EMAILS = ["itaysc23@gmail.com", "benbenshmuel@gmail.com"];
           const normalizedEmail = auth.email?.trim().toLowerCase() ?? null;
           if (normalizedEmail && DEV_PRO_EMAILS.includes(normalizedEmail) && state.tier !== "pro") {
             state.tier = "pro";

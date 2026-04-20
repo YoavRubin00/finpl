@@ -18,7 +18,9 @@ export interface Benefit {
   title: string;
   description: string;
   partnerName: string;
-  partnerLogo: string; // emoji for now
+  partnerLogo: string; // emoji fallback
+  /** Real partner brand PNG/JPG, takes priority over lottieSource + emoji. */
+  partnerLogoImage?: number;
   lottieSource?: number;
   costCoins: number;
   category: BenefitCategory;

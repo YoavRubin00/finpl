@@ -16,7 +16,7 @@ initSentry();
 
 import { Slot, useRouter, useSegments, useRootNavigationState } from "expo-router";
 import { useEffect, useRef, useState } from "react";
-import { AppState, Text, TextInput } from "react-native";
+import { AppState, Platform, Text, TextInput } from "react-native";
 import { useUserStatsStore } from "../src/features/user-stats/useUserStatsStore";
 import { setAudioModeAsync } from "expo-audio";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
@@ -146,6 +146,17 @@ export default function RootLayout() {
       interruptionMode: "doNotMix",
       shouldPlayInBackground: false,
     }).catch(() => { /* fail silently, not supported on web / older OS */ });
+  }, []);
+
+  // ── Google Mobile Ads init (iOS requires explicit initialize before ads load) ──
+  useEffect(() => {
+    if (Platform.OS === "web") return;
+    try {
+      const { default: mobileAds } = require("react-native-google-mobile-ads") as {
+        default: () => { initialize(): Promise<unknown> };
+      };
+      mobileAds().initialize().catch(() => {});
+    } catch { /* SDK not available in dev without native build */ }
   }, []);
 
   // ── RevenueCat init ──

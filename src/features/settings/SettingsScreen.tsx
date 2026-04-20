@@ -650,7 +650,7 @@ export function SettingsScreen() {
                   isLast
                   icon={
                     <LottieView
-                      source={require("../../../assets/lottie/wired-flat-2804-fire-flame-hover-pinch.json")}
+                      source={require("../../../assets/lottie/wired-flat-25-error-cross-hover-pinch.json")}
                       style={styles.lottieIcon}
                       autoPlay
                       loop

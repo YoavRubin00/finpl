@@ -29,7 +29,9 @@ import Animated, {
 } from 'react-native-reanimated';
 import { useEconomyStore } from '../economy/useEconomyStore';
 import { useSubscriptionStore } from '../subscription/useSubscriptionStore';
+import { useAuthStore } from '../auth/useAuthStore';
 import { useBridgeStore } from './useBridgeStore';
+import { trackBridgeClick } from '../../utils/trackBridgeClick';
 import { BRIDGE_BENEFITS } from './bridgeData';
 import { BenefitCard } from './BenefitCard';
 import { RedemptionModal } from './RedemptionModal';
@@ -183,6 +185,7 @@ export function BridgeScreen({ walkthroughAutoScroll }: BridgeScreenProps = {}) 
   const router = useRouter();
   const coins = useEconomyStore((s) => s.coins);
   const isPro = useSubscriptionStore((s) => s.tier === "pro" && s.status === "active");
+  const email = useAuthStore((s) => s.email);
   const isBenefitRedeemed = useBridgeStore((s) => s.isBenefitRedeemed);
   const redeemBenefit = useBridgeStore((s) => s.redeemBenefit);
   const redeemedCount = useBridgeStore((s) => s.getRedeemedCount());
@@ -263,9 +266,10 @@ export function BridgeScreen({ walkthroughAutoScroll }: BridgeScreenProps = {}) 
     if (success) {
       setSuccessTitle(selectedBenefit.title);
       setShowConfetti(true);
+      trackBridgeClick(selectedBenefit.id, 'redeem', email);
     }
     setSelectedBenefit(null);
-  }, [selectedBenefit, redeemBenefit]);
+  }, [selectedBenefit, redeemBenefit, email]);
 
   return (
     <View style={styles.root}>

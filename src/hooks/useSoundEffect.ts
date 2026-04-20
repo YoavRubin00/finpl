@@ -1,5 +1,5 @@
 import { useCallback } from 'react';
-import { createAudioPlayer, AudioSource } from 'expo-audio';
+import { createAudioPlayer, AudioSource, AudioPlayer } from 'expo-audio';
 import { useAudioStore } from '../stores/useAudioStore';
 
 export type SoundEffectName =
@@ -27,24 +27,31 @@ const SOUND_FILES: Record<SoundEffectName, AudioSource> = {
     'bubble_transition': { uri: 'https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/sound/bubble_transition.mp3' },
 };
 
-/* ------------------------------------------------------------------ */
-/*  On-demand sound player — creates, plays, then releases each sound  */
-/* ------------------------------------------------------------------ */
+// Module-level cache: one player per sound, loaded once from the remote URL
+// and reused on every subsequent tap. Prevents two issues:
+//   1. Rapid taps of the SAME sound no longer spawn overlapping players —
+//      we seek the existing player back to 0 and replay.
+//   2. The remote mp3 isn't re-downloaded per tap (previously: silent failures
+//      when a tap happened before HTTP load finished).
+// Different sound names are still independent — tap + success can still overlap,
+// which is the intended audio design.
+const playerCache: Partial<Record<SoundEffectName, AudioPlayer>> = {};
 
 export function useSoundEffect() {
-    const playSound = useCallback(async (name: SoundEffectName) => {
+    const playSound = useCallback((name: SoundEffectName) => {
         try {
             if (!useAudioStore.getState().sfxEnabled) return;
             const source = SOUND_FILES[name];
             if (!source) return;
-            const player = createAudioPlayer(source);
+
+            let player = playerCache[name];
+            if (!player) {
+                player = createAudioPlayer(source);
+                playerCache[name] = player;
+            } else {
+                player.seekTo(0);
+            }
             player.play();
-            // Release after playback
-            player.addListener('playbackStatusUpdate', (status) => {
-                if (status.didJustFinish) {
-                    player.remove();
-                }
-            });
         } catch {
             // Silently ignore — player init may fail on some devices
         }

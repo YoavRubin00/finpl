@@ -29,6 +29,8 @@ export function useLessonMusic() {
       player.volume = 0;
     } else {
       player.volume = isMuted ? 0 : 0.12;
+      // Resume after possible audio-session interruption caused by the video player
+      try { player.play(); } catch { /* ignore */ }
     }
   }, [isMuted, isVideoPlaying]);
 

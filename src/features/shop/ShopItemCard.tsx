@@ -38,17 +38,17 @@ export const ShopItemCard = React.memo(function ShopItemCard({ item, canAfford, 
       {/* Icon */}
       <View style={[styles.iconBox, { backgroundColor: iconBg }]}>
         {item.lottieSource ? (
-          <LottieIcon source={item.lottieSource} size={36} />
+          <LottieIcon source={item.lottieSource} size={48} />
         ) : (
-          <Text style={{ fontSize: 28 }}>{item.emoji}</Text>
+          <Text style={{ fontSize: 36 }}>{item.emoji}</Text>
         )}
       </View>
 
       {/* Name */}
-      <Text style={styles.name} numberOfLines={1}>{item.name}</Text>
+      <Text style={styles.name}>{item.name}</Text>
 
       {/* Description */}
-      <Text style={styles.description} numberOfLines={2}>{item.description}</Text>
+      <Text style={styles.description}>{item.description}</Text>
 
       {/* Buy button, green with gold coin (like Asset Arena) */}
       {isEquipped ? (
@@ -90,10 +90,10 @@ export const ShopItemCard = React.memo(function ShopItemCard({ item, canAfford, 
 const styles = StyleSheet.create({
   card: {
     backgroundColor: '#ffffff',
-    borderRadius: 16,
+    borderRadius: 18,
     borderWidth: 1.5,
     borderColor: '#e5e7eb',
-    padding: 14,
+    padding: 16,
     alignItems: 'center' as const,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
@@ -102,29 +102,29 @@ const styles = StyleSheet.create({
     elevation: 3,
   },
   iconBox: {
-    width: 64,
-    height: 64,
-    borderRadius: 18,
+    width: 76,
+    height: 76,
+    borderRadius: 20,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 8,
+    marginBottom: 10,
   },
   name: {
-    fontSize: 13,
-    fontWeight: '700',
+    fontSize: 15,
+    fontWeight: '800',
     color: '#1f2937',
     textAlign: 'center',
     writingDirection: 'rtl' as const,
-    marginBottom: 4,
+    marginBottom: 5,
+    lineHeight: 20,
   },
   description: {
-    fontSize: 11,
-    lineHeight: 16,
+    fontSize: 12,
+    lineHeight: 18,
     color: '#6b7280',
     textAlign: 'center',
     writingDirection: 'rtl' as const,
-    marginBottom: 8,
-    minHeight: 32,
+    marginBottom: 10,
   },
   equippedBtn: {
     width: '100%',

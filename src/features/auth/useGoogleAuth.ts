@@ -3,6 +3,7 @@ import * as WebBrowser from "expo-web-browser";
 import { makeRedirectUri } from "expo-auth-session";
 import { useEffect } from "react";
 import { useAuthStore } from "./useAuthStore";
+import { getApiBase } from "../../db/apiBase";
 
 WebBrowser.maybeCompleteAuthSession();
 
@@ -41,13 +42,32 @@ export function useGoogleAuth() {
     }
   }, [response]);
 
+  const checkServerProfile = async (email: string): Promise<boolean> => {
+    try {
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 3000);
+      const res = await fetch(
+        `${getApiBase()}/api/sync/profile?authId=${encodeURIComponent(email)}`,
+        { signal: controller.signal },
+      );
+      clearTimeout(timeout);
+      if (!res.ok) return false;
+      const data = await res.json() as { profile: unknown };
+      return !!data.profile;
+    } catch {
+      return false;
+    }
+  };
+
   const fetchUserInfo = async (accessToken: string) => {
     try {
       const res = await fetch("https://www.googleapis.com/userinfo/v2/me", {
         headers: { Authorization: `Bearer ${accessToken}` },
       });
       const user: GoogleUserInfo = await res.json();
-      signIn(user.name ?? "", user.email ?? "");
+      const email = user.email ?? "";
+      const serverHasProfile = email ? await checkServerProfile(email) : false;
+      signIn(user.name ?? "", email, serverHasProfile);
     } catch {
       // Silently fail, user stays on login screen
     }

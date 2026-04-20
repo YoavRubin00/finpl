@@ -1,4 +1,4 @@
-import { pgTable, unique, uuid, text, integer, date, boolean, timestamp, index, foreignKey, check, jsonb, numeric } from "drizzle-orm/pg-core"
+import { pgTable, unique, uuid, text, integer, date, boolean, timestamp, index, foreignKey, check, jsonb, numeric, serial } from "drizzle-orm/pg-core"
 import { sql } from "drizzle-orm"
 
 
@@ -134,3 +134,16 @@ export const userFeedback = pgTable("user_feedback", {
 	message: text("message").notNull(),
 	createdAt: timestamp("created_at", { withTimezone: true, mode: 'string' }).defaultNow(),
 });
+
+export const bridgeClicks = pgTable("bridge_clicks", {
+	id: serial().primaryKey(),
+	benefitId: text("benefit_id").notNull(),
+	userEmail: text("user_email"),
+	action: text("action").notNull(),
+	platform: text("platform"),
+	createdAt: timestamp("created_at", { withTimezone: true, mode: 'string' }).defaultNow(),
+}, (table) => [
+	index("idx_bridge_clicks_benefit").using("btree", table.benefitId.asc()),
+	index("idx_bridge_clicks_time").using("btree", table.createdAt.desc()),
+	check("bridge_clicks_action_check", sql`action = ANY (ARRAY['redeem'::text, 'link_open'::text])`),
+]);

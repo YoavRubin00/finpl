@@ -12,7 +12,8 @@
       "env": {
         "EXPO_PUBLIC_API_URL": "https://finpl.vercel.app",
         "EXPO_PUBLIC_ADMOB_REWARDED_IOS": "ca-app-pub-3137283655458001/8631312444",
-        "EXPO_PUBLIC_ADMOB_REWARDED_ANDROID": "ca-app-pub-3137283655458001/4112436754"
+        "EXPO_PUBLIC_ADMOB_REWARDED_ANDROID": "ca-app-pub-3137283655458001/4112436754",
+        "EXPO_PUBLIC_GOOGLE_CLIENT_ID": "847177819309-j90v0224p3lp8hio693cikmktd77mqp1.apps.googleusercontent.com"
       }
     },
     "preview": {
@@ -25,7 +26,8 @@
       "env": {
         "EXPO_PUBLIC_API_URL": "https://finpl.vercel.app",
         "EXPO_PUBLIC_ADMOB_REWARDED_IOS": "ca-app-pub-3137283655458001/8631312444",
-        "EXPO_PUBLIC_ADMOB_REWARDED_ANDROID": "ca-app-pub-3137283655458001/4112436754"
+        "EXPO_PUBLIC_ADMOB_REWARDED_ANDROID": "ca-app-pub-3137283655458001/4112436754",
+        "EXPO_PUBLIC_GOOGLE_CLIENT_ID": "847177819309-j90v0224p3lp8hio693cikmktd77mqp1.apps.googleusercontent.com"
       }
     },
     "production": {
@@ -35,7 +37,8 @@
       "env": {
         "EXPO_PUBLIC_API_URL": "https://finpl.vercel.app",
         "EXPO_PUBLIC_ADMOB_REWARDED_IOS": "ca-app-pub-3137283655458001/8631312444",
-        "EXPO_PUBLIC_ADMOB_REWARDED_ANDROID": "ca-app-pub-3137283655458001/4112436754"
+        "EXPO_PUBLIC_ADMOB_REWARDED_ANDROID": "ca-app-pub-3137283655458001/4112436754",
+        "EXPO_PUBLIC_GOOGLE_CLIENT_ID": "847177819309-j90v0224p3lp8hio693cikmktd77mqp1.apps.googleusercontent.com"
       }
     }
   },

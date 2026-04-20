@@ -801,7 +801,7 @@ const styles = StyleSheet.create({
     paddingBottom: 4,
   },
   gridItem: {
-    width: '31%' as unknown as number,
+    width: '47%' as unknown as number,
   },
 
   // Bundle cards

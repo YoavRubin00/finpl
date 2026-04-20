@@ -235,4 +235,14 @@ export interface FeedSimulatorTeaser {
   simulator: import("./feedSimulatorsData").FeedSimulator;
 }
 
-export type FeedItem = FeedVideo | FeedQuote | (FeedLesson & { type: "lesson" }) | FeedComic | FeedModuleHook | FeedMacroEvent | FeedScenario | FeedDailyQuiz | FeedMythCard | FeedPremiumLearning | FeedFinnHero | FeedDilemma | FeedInvestment | FeedCrashGame | FeedSwipeGame | FeedGrahamPersonality | FeedBullshitSwipe | FeedHigherLower | FeedBudgetNinja | FeedPriceSlider | FeedCashoutRush | FeedFomoKiller | FeedDidYouKnow | FeedDiamondHands | FeedSharkFeedback | FeedSimulatorTeaser;
+export interface FeedLiveMarket {
+  id: 'live-market';
+  type: 'live-market';
+}
+
+export interface FeedLiveNews {
+  id: 'live-news';
+  type: 'live-news';
+}
+
+export type FeedItem = FeedVideo | FeedQuote | (FeedLesson & { type: "lesson" }) | FeedComic | FeedModuleHook | FeedMacroEvent | FeedScenario | FeedDailyQuiz | FeedMythCard | FeedPremiumLearning | FeedFinnHero | FeedDilemma | FeedInvestment | FeedCrashGame | FeedSwipeGame | FeedGrahamPersonality | FeedBullshitSwipe | FeedHigherLower | FeedBudgetNinja | FeedPriceSlider | FeedCashoutRush | FeedFomoKiller | FeedDidYouKnow | FeedDiamondHands | FeedSharkFeedback | FeedSimulatorTeaser | FeedLiveMarket | FeedLiveNews;

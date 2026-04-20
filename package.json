@@ -8,7 +8,8 @@
     "ios": "expo start --ios",
     "web": "expo start --web",
     "typecheck": "tsc --noEmit",
-    "share": "eas update --branch preview --message 'update'"
+    "share": "eas update --branch preview --message 'update'",
+    "export:content": "tsx scripts/export-content.ts"
   },
   "dependencies": {
     "@expo-google-fonts/heebo": "^0.4.2",

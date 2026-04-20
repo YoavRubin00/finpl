@@ -1,4 +1,4 @@
-import { Modal, Pressable, StyleSheet, Text, View } from "react-native";
+import { Modal, Pressable, StyleSheet, Text } from "react-native";
 import { Image as ExpoImage } from "expo-image";
 import Animated, { FadeIn, FadeInDown } from "react-native-reanimated";
 import { useEconomyStore } from "../economy/useEconomyStore";
@@ -29,7 +29,6 @@ export function StreakRepairModal({ visible, onDismiss }: StreakRepairModalProps
   };
 
   const handleRepairAd = () => {
-    // TODO: integrate rewarded ad SDK, for now treat as free repair
     const ok = repairStreak("ad");
     if (ok) {
       successHaptic();

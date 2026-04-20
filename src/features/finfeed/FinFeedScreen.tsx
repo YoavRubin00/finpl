@@ -79,6 +79,7 @@ import { DidYouKnowCard } from "./did-you-know/DidYouKnowCard";
 import { GrahamPersonalityFeedCard } from "../graham-personality/GrahamPersonalityFeedCard";
 import { DiamondHandsCard } from "../diamond-hands/DiamondHandsCard";
 import { useStreakCelebration } from "../../hooks/useStreakCelebration";
+import { LiveNewsQuizCard } from "./live-news/LiveNewsQuizCard";
 import { getPyramidStatus } from "../../utils/progression";
 // Chapter data, all 5 chapters
 import { chapter1Data } from "../chapter-1-content/chapter1Data";
@@ -639,6 +640,21 @@ export function FinFeedScreen() {
     refreshDailyQuiz().catch(() => {});
   }, []);
 
+  // Prefetch the BENBEN video for this session so it's partially buffered by the time
+  // the user scrolls to position 7. feedSeed is stable per session so this runs once.
+  useEffect(() => {
+    const current = BENBEN_VIDEOS[feedSeed % BENBEN_VIDEOS.length];
+    const next = BENBEN_VIDEOS[(feedSeed + 1) % BENBEN_VIDEOS.length];
+    [current, next].forEach((video) => {
+      const uri = typeof video.localVideo === "object" && "uri" in video.localVideo
+        ? (video.localVideo as { uri: string }).uri
+        : null;
+      if (uri) {
+        fetch(uri, { headers: { Range: "bytes=0-131071" } }).catch(() => {});
+      }
+    });
+  }, [feedSeed]);
+
   // Show streak popup on focus, but DON'T reshuffle feed (preserves scroll position)
   useFocusEffect(
     useCallback(() => {
@@ -915,6 +931,9 @@ export function FinFeedScreen() {
     const benbenVideo = BENBEN_VIDEOS[seed % BENBEN_VIDEOS.length];
     filteredMerged.splice(Math.min(7, filteredMerged.length), 0, benbenVideo);
 
+    // Pin live news headlines at position 9 — right after BENBEN video
+    filteredMerged.splice(Math.min(9, filteredMerged.length), 0, { id: 'live-news', type: 'live-news' } as const);
+
     // Pin second macro event at position 10 for recurring exposure
     if (secondMacro) {
       const insertAt = Math.min(10, filteredMerged.length);
@@ -1062,6 +1081,7 @@ export function FinFeedScreen() {
         {item.type === "diamond-hands" && (
           <DiamondHandsCard isActive={isActive} />
         )}
+        {item.type === "live-news" && <LiveNewsQuizCard />}
         {item.type === "shark-feedback" && <SharkFeedbackCard />}
         {item.type === "simulator-teaser" && (
           <FeedSimulatorCard simulator={item.simulator} isActive={isActive} />

@@ -15,7 +15,7 @@ interface AuthState {
   profile: UserProfile | null;
   createdAt: string | null;
 
-  signIn: (displayName: string, email: string) => void;
+  signIn: (displayName: string, email: string, serverHasProfile?: boolean) => void;
   enterGuestMode: () => void;
   convertGuestToUser: (displayName: string, email: string) => void;
   completeOnboarding: (profile: UserProfile) => void;
@@ -38,13 +38,12 @@ export const useAuthStore = create<AuthState>()(
       profile: null,
       createdAt: null,
 
-      signIn: (displayName: string, email: string) => {
+      signIn: (displayName: string, email: string, serverHasProfile = false) => {
         set((state) => ({
           isAuthenticated: true,
           isGuest: false,
-          // First-time OAuth sign-in (no profile yet) → route through onboarding.
-          // Returning user (profile already persisted) → skip straight to tabs.
-          hasCompletedOnboarding: state.profile !== null,
+          // Skip onboarding if: local profile exists OR server confirmed a prior account.
+          hasCompletedOnboarding: state.profile !== null || serverHasProfile,
           displayName,
           email,
           createdAt: state.createdAt ?? new Date().toISOString(),

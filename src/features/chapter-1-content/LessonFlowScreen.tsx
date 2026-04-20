@@ -94,13 +94,14 @@ import { LifelineChatOverlay } from "../social/LifelineChatOverlay";
 import { ProBadge } from "../../components/ui/ProBadge";
 import LottieView from "lottie-react-native";
 import { FINN_LOTTIE_SOURCE, FINN_HELLO, FINN_STANDARD, FINN_HAPPY, FINN_EMPATHIC, FINN_DANCING, getFinnSource, getFinnImage } from "../retention-loops/finnMascotConfig";
+import { InteractiveRecallScreen } from "../sentence-exercise/InteractiveRecallScreen";
 import { FINN_MEME_REACTIONS } from "../fun/finnJokesData";
 import type { FinnAnimationState } from "../retention-loops/finnMascotConfig";
 import { FlashcardInfographic, FINN_MAP } from "./FlashcardInfographic";
 import { GlossaryTooltip } from "../../components/ui/GlossaryTooltip";
 import { ChatScreen } from "../chat/ChatScreen";
 
-type FlowPhase = "hero" | "intro" | "flashcards" | "quizzes" | "sim-intro" | "sim" | "module-infographic" | "post-infographic-video" | "summary" | "video";
+type FlowPhase = "hero" | "intro" | "flashcards" | "interactive-recall" | "quizzes" | "sim-intro" | "sim" | "module-infographic" | "post-infographic-video" | "summary" | "video";
 
 /** Full-screen character art shown when first opening a module */
 const MODULE_HERO_MAP: Record<string, { uri: string } | number> = {
@@ -109,10 +110,18 @@ const MODULE_HERO_MAP: Record<string, { uri: string } | number> = {
 };
 
 /** Modules that have a playable simulation game */
-const MODULES_WITH_SIM = new Set(["mod-0-1", "mod-0-3", "mod-0-4", "mod-1-1", "mod-1-2", "mod-1-3", "mod-1-4", "mod-1-5", "mod-1-7", "mod-1-8", "mod-1-9", "mod-2-10", "mod-2-11", "mod-2-12", "mod-2-13", "mod-2-14", "mod-3-15", "mod-3-16", "mod-3-17", "mod-3-18", "mod-4-19", "mod-4-20", "mod-4-21", "mod-4-22", "mod-4-23", "mod-4-24", "mod-5-25", "mod-5-26", "mod-5-27", "mod-5-28", "mod-5-29", "mod-4-25", "mod-4-26", "mod-4-27", "mod-4-28", "mod-4-29", "mod-4-30", "mod-5-30", "mod-5-31", "mod-4-b1", "mod-4-b2", "mod-4-b3", "mod-4-b4"]);
+const MODULES_WITH_SIM = new Set(["mod-0-1", "mod-0-3", "mod-0-4", "mod-1-1", "mod-1-2", "mod-1-3", "mod-1-4", "mod-1-5", "mod-1-7", "mod-1-8", "mod-1-9", "mod-2-10", "mod-2-11", "mod-2-12", "mod-2-13", "mod-2-14", "mod-3-15", "mod-3-16", "mod-3-17", "mod-3-18", "mod-4-19", "mod-4-20", "mod-4-21", "mod-4-22", "mod-4-23", "mod-4-24", "mod-5-25", "mod-5-26", "mod-5-27", "mod-5-28", "mod-5-29", "mod-4-25", "mod-4-26", "mod-4-27", "mod-4-28", "mod-4-29", "mod-4-30", "mod-5-30", "mod-4-b1", "mod-4-b2", "mod-4-b3", "mod-4-b4"]);
 
 /** Modules where sim comes BEFORE flashcards (intro → sim → flashcards → quizzes → summary) */
 const SIM_FIRST_MODULES = new Set(["mod-0-1", "mod-1-1", "mod-2-12", "mod-2-13", "mod-3-18", "mod-4-20", "mod-4-22", "mod-4-23", "mod-4-27", "mod-4-b4"]);
+
+/**
+ * Modules that insert an Interactive Recall phase between flashcards and quizzes.
+ * Each moduleId listed here must also have a matching entry in
+ * `recallExerciseSets` (see src/features/sentence-exercise/sentenceData.ts);
+ * missing entries fall back to an "אין תרגילים זמינים" screen.
+ */
+const MODULES_WITH_INTERACTIVE_RECALL = new Set(["mod-1-1"]);
 
 /** Modules with a NotebookLM-generated infographic shown before the summary/chest */
 const MODULE_INFOGRAPHIC_MAP: Record<string, { uri: string }> = {
@@ -196,7 +205,6 @@ const SUMMARY_MAP: Record<string, { uri: string } | number | null> = {
   "fc-5-28-summary": { uri: 'https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/infographics/mod-5-28/summary-5-28.png' },
   "fc-5-29-summary": { uri: 'https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/infographics/mod-5-29/summary-5-29.png' },
   "fc-5-30-summary": { uri: 'https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/infographics/mod-5-30/summary-5-30.png' },
-  "fc-5-31-summary": { uri: 'https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/infographics/mod-5-31/summary-5-31.png' },
 
   // Graham bonus modules, feed infographics
   "fc-4-b1-summary": { uri: 'https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/infographics/graham-7-rules/gr-1.png' },
@@ -327,18 +335,10 @@ function VideoHookPlayer({ videoUri, hookText, onFinish, unitColors, fitContain,
     onFinish();
   }, [onFinish]);
 
-  let player: ReturnType<typeof useVideoPlayer>;
-  try {
-    // eslint-disable-next-line react-hooks/rules-of-hooks
-    player = useVideoPlayer(videoUri, (p) => {
-      p.loop = false;
-      p.play();
-    });
-  } catch {
-    // If player creation fails, skip video entirely
-    useEffect(() => { safeFinish(); }, [safeFinish]);
-    return <View style={{ flex: 1, backgroundColor: "#0a1628" }} />;
-  }
+  const player = useVideoPlayer(videoUri, (p) => {
+    p.loop = false;
+    p.play();
+  });
 
   useEffect(() => {
     const subs: { remove: () => void }[] = [];
@@ -363,7 +363,7 @@ function VideoHookPlayer({ videoUri, hookText, onFinish, unitColors, fitContain,
       }
     }));
 
-    // Safety timeout, if video doesn't play within 10s, skip
+    // Safety timeout — if video doesn't start within 10s, skip it
     const timeout = setTimeout(() => {
       if (isLoading) safeFinish();
     }, 10000);
@@ -2011,7 +2011,7 @@ export function LessonFlowScreen() {
   /** Safe back: go back if possible, otherwise fall back to tabs home */
   function safeGoBack() {
     // Intercept exit during active lesson phases
-    if (phase === "flashcards" || phase === "quizzes" || phase === "sim") {
+    if (phase === "flashcards" || phase === "interactive-recall" || phase === "quizzes" || phase === "sim") {
       setShowExitConfirm(true);
       return;
     }
@@ -2405,13 +2405,18 @@ export function LessonFlowScreen() {
         setShowDoubleOrNothing(true);
         playSound('modal_open_4');
       }, 500);
-    } else if (!isLast) {
-      safeTimeout(() => {
-        useWisdomStore.getState().showRandomWisdom();
-        setShowWisdom(true);
-      }, 800);
+    } else {
+      if (!isLast) {
+        safeTimeout(() => {
+          useWisdomStore.getState().showRandomWisdom();
+          setShowWisdom(true);
+        }, 800);
+      }
+      if (!isPro) {
+        safeTimeout(() => setShowAdBonus(true), 1800);
+      }
     }
-  }, [chapterId, id, playSound, safeTimeout]);
+  }, [chapterId, id, isPro, playSound, safeTimeout]);
 
   // Chapter context for progress display
   const chapterData = chapterId ? CHAPTER_DATA_MAP[chapterId] : undefined;
@@ -2635,6 +2640,12 @@ export function LessonFlowScreen() {
     }
   }, [mod]);
 
+  const handleInteractiveRecallComplete = useCallback(() => {
+    mediumHaptic();
+    setPhase("quizzes");
+    safeTimeout(() => setShowQuizIntro(true), 50);
+  }, []);
+
   const handleFlashcardNext = useCallback(() => {
     if (!mod) return;
     playSound('btn_click_soft_1');
@@ -2674,8 +2685,12 @@ export function LessonFlowScreen() {
       }
     } else {
       mediumHaptic();
-      setPhase("quizzes");
-      safeTimeout(() => setShowQuizIntro(true), 50);
+      if (MODULES_WITH_INTERACTIVE_RECALL.has(mod.id)) {
+        setPhase("interactive-recall");
+      } else {
+        setPhase("quizzes");
+        safeTimeout(() => setShowQuizIntro(true), 50);
+      }
     }
   }, [mod, flashcardIndex, finnTipText, checkpointIndex, showMidCheckpoint, checkpointReturnIndex]);
 
@@ -2697,8 +2712,12 @@ export function LessonFlowScreen() {
       }
     } else {
       mediumHaptic();
-      setPhase("quizzes");
-      safeTimeout(() => setShowQuizIntro(true), 50);
+      if (MODULES_WITH_INTERACTIVE_RECALL.has(mod.id)) {
+        setPhase("interactive-recall");
+      } else {
+        setPhase("quizzes");
+        safeTimeout(() => setShowQuizIntro(true), 50);
+      }
     }
   }, [mod, flashcardIndex]);
 
@@ -2910,7 +2929,7 @@ export function LessonFlowScreen() {
         <Animated.View style={titleStyle}>
           {/* Title row, hidden during intro, quizzes, sim, sim-intro, and comic flashcards */}
           {!(phase === "flashcards" && (mod.flashcards[flashcardIndex]?.isComic || mod.flashcards[flashcardIndex]?.isMeme || mod.flashcards[flashcardIndex]?.videoUri)) && phase !== "intro" && phase !== "quizzes" && phase !== "sim" && (phase as string) !== "sim-intro" && (() => {
-            let titleText = mod.title;
+            let titleText = phase === "interactive-recall" ? "בואו נתרגל" : mod.title;
             if (phase === "flashcards") {
               const cardText = mod.flashcards[flashcardIndex]?.text ?? "";
               const colonIdx = cardText.indexOf(":");
@@ -2923,14 +2942,16 @@ export function LessonFlowScreen() {
               }
             }
             return (
-              <View style={{ flexDirection: 'row-reverse', alignItems: 'center', justifyContent: 'flex-start', marginBottom: 6 }}>
-                <Text
-                  style={[RTL_STYLE, { color: '#1f2937', fontSize: 18, fontWeight: '900' }]}
-                  numberOfLines={2}
-                  accessibilityRole="header"
-                >
-                  {titleText}
-                </Text>
+              <View style={{ marginBottom: 6 }}>
+                <View style={{ flexDirection: 'row-reverse', alignItems: 'center', justifyContent: 'flex-start' }}>
+                  <Text
+                    style={[RTL_STYLE, { color: '#1f2937', fontSize: 18, fontWeight: '900' }]}
+                    numberOfLines={2}
+                    accessibilityRole="header"
+                  >
+                    {titleText}
+                  </Text>
+                </View>
               </View>
             );
           })()}
@@ -2944,10 +2965,12 @@ export function LessonFlowScreen() {
               ? (phase === "hero" || phase === "intro" ? 0
                 : phase === "sim-intro" || phase === "sim" ? 1
                 : phase === "flashcards" ? 2 + flashcardIndex
+                : phase === "interactive-recall" ? 2 + mod.flashcards.length
                 : phase === "quizzes" ? 2 + mod.flashcards.length + quizIndex
                 : totalSteps)
               : (phase === "hero" || phase === "intro" ? 0
                 : phase === "flashcards" ? 1 + flashcardIndex
+                : phase === "interactive-recall" ? 1 + mod.flashcards.length
                 : phase === "quizzes" ? 1 + mod.flashcards.length + quizIndex
                 : phase === "sim-intro" || phase === "sim" ? 1 + mod.flashcards.length + mod.quizzes.length
                 : totalSteps);
@@ -3079,6 +3102,17 @@ export function LessonFlowScreen() {
               onTermPress={setActiveGlossaryTerm}
               onOpenChat={() => setShowChatOverlay(true)}
               showFinnTip={mod.id === "mod-0-1"}
+            />
+          </Animated.View>
+        )}
+
+        {/* ── Interactive Recall phase (Duolingo-style consolidation) ── */}
+        {phase === "interactive-recall" && (
+          <Animated.View style={[contentStyle, { flex: 1 }]}>
+            <InteractiveRecallScreen
+              moduleId={mod.id}
+              unitColors={unitColors}
+              onComplete={handleInteractiveRecallComplete}
             />
           </Animated.View>
         )}
@@ -3290,6 +3324,8 @@ export function LessonFlowScreen() {
                                 setShowDoubleOrNothing(true);
                                 playSound('modal_open_4');
                               }, 500);
+                            } else if (!isPro) {
+                              safeTimeout(() => setShowAdBonus(true), 1800);
                             }
                             // Duolingo A/B: ride the chest-dopamine peak (1.5-2s), not after it fades
                             // Bridge CTA, every 4 completed modules (4, 8, 12...)
@@ -3689,15 +3725,17 @@ export function LessonFlowScreen() {
               <Text style={{ ...RTL_STYLE, fontSize: 15, fontWeight: "600", color: "#334155", lineHeight: 24, textAlign: "center", marginBottom: 20 }}>
                 תכף נתחיל להשקיע ביחד באפליקציה, ואז משם נמשיך לעולם האמיתי! תכנס לעמוד הגשר לראות מה מצפה לנו
               </Text>
-              <Pressable
-                onPress={() => { tapHaptic(); setShowFinnBridgeNudge(false); router.push("/bridge" as never); }}
-                style={{ backgroundColor: "#0ea5e9", borderRadius: 14, paddingVertical: 14, paddingHorizontal: 24, width: "100%", flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 10, borderBottomWidth: 4, borderBottomColor: "#0369a1" }}
-                accessibilityRole="button"
-                accessibilityLabel="קח אותי לגשר"
-              >
-                <LottieIcon source={LOTTIE_BRIDGE} size={28} autoPlay loop />
-                <Text style={{ fontSize: 16, fontWeight: "800", color: "#fff" }}>קח אותי לגשר</Text>
-              </Pressable>
+              <View style={{ width: "100%", borderRadius: 18, shadowColor: "#38bdf8", shadowOffset: { width: 0, height: 0 }, shadowOpacity: 0.65, shadowRadius: 24, elevation: 0, marginBottom: 0 }}>
+                <Pressable
+                  onPress={() => { tapHaptic(); setShowFinnBridgeNudge(false); router.push("/bridge" as never); }}
+                  style={({ pressed }) => ({ backgroundColor: "#38bdf8", borderRadius: 18, paddingVertical: 15, paddingHorizontal: 24, width: "100%", flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 12, borderBottomWidth: 4, borderBottomColor: "#0284c7", borderTopWidth: 1.5, borderTopColor: "rgba(255,255,255,0.5)", overflow: "hidden", elevation: 12, opacity: pressed ? 0.88 : 1 })}
+                  accessibilityRole="button"
+                  accessibilityLabel="קח אותי לגשר"
+                >
+                  <LottieIcon source={LOTTIE_BRIDGE} size={36} autoPlay loop />
+                  <Text style={{ fontSize: 16, fontWeight: "800", color: "#fff" }}>קח אותי לגשר</Text>
+                </Pressable>
+              </View>
               <Pressable
                 onPress={() => { tapHaptic(); setShowFinnBridgeNudge(false); }}
                 style={{ marginTop: 12, paddingVertical: 8 }}
