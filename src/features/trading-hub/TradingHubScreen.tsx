@@ -562,17 +562,24 @@ export function TradingHubScreen() {
                 moduleCount={positionCount}
             />
 
-            {/* Finn nudge, indices-only starters (knowledge level < 3) */}
-            <NotificationBanner
-                visible={showIndicesNudge}
-                message="עדיין לא נתחיל עם המניות. ראשית עם מדדים..."
-                imageSource={require('../../../assets/webp/fin-happy.webp')}
-                duration={0}
-                onDismiss={() => {
-                    setShowIndicesNudge(false);
-                    markIndicesNudgeSeen();
-                }}
-            />
+            {/* Finn nudge, indices-only starters (knowledge level < 3). Pinned below
+                the GlobalWealthHeader + sticky page header so it stays readable
+                instead of slipping behind the top bar. */}
+            <View
+                pointerEvents="box-none"
+                style={{ position: 'absolute', top: insets.top + 56, left: 0, right: 0, zIndex: 999 }}
+            >
+                <NotificationBanner
+                    visible={showIndicesNudge}
+                    message="עדיין לא נתחיל עם המניות. ראשית עם מדדים..."
+                    imageSource={require('../../../assets/webp/fin-happy.webp')}
+                    duration={0}
+                    onDismiss={() => {
+                        setShowIndicesNudge(false);
+                        markIndicesNudgeSeen();
+                    }}
+                />
+            </View>
         </View>
     );
 }

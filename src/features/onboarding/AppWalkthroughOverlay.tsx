@@ -257,7 +257,13 @@ export function AppWalkthroughOverlay() {
     setActiveScreen(nextConfig.screenSignal);
 
     if (nextConfig.navigateTo) {
-      // Always navigate, even if already on the route, to ensure the screen is visible
+      // Skip the router.replace when the user is already on that route.
+      // A no-op replace on iOS has been observed to dismiss the transparent
+      // Modal hosting this overlay, making the walkthrough appear to "exit"
+      // exactly when advancing from the welcome step onto the learn map.
+      if (isAlreadyOnRoute(nextConfig.navigateTo)) {
+        return;
+      }
       setTransitioning(true);
       setTimeout(() => {
         try {
@@ -268,7 +274,7 @@ export function AppWalkthroughOverlay() {
         setTimeout(() => setTransitioning(false), 300);
       }, 50);
     }
-  }, [step, setStep, completeWalkthrough, setActiveScreen, router, transitioning, isAlreadyOnRoute, hasChosenChatStyle]);
+  }, [step, setStep, completeWalkthrough, setActiveScreen, router, transitioning, isAlreadyOnRoute, hasChosenChatStyle, stepsWithLast]);
 
   const handleBack = useCallback(() => {
     if (transitioning || step <= 0) return;
@@ -295,7 +301,17 @@ export function AppWalkthroughOverlay() {
   const enterAnim = reducedMotion ? undefined : FadeIn.duration(280);
 
   return (
-    <Modal visible transparent animationType="none" statusBarTranslucent accessibilityViewIsModal onRequestClose={handleSkip}>
+    <Modal
+      visible
+      transparent
+      animationType="none"
+      statusBarTranslucent
+      accessibilityViewIsModal
+      // No-op on accidental dismiss signals (Android back / iOS system events).
+      // The walkthrough should only end via the explicit "דלג" button or the
+      // last-step CTA, not because the route transitioned under the Modal.
+      onRequestClose={() => { /* intentionally empty */ }}
+    >
       <View style={s.overlay}>
         {/* ── Top: Step title pill with counter ── */}
         <SafeAreaView edges={["top"]} style={{ alignItems: "center", paddingTop: 36 }}>

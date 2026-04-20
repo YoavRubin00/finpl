@@ -56,12 +56,14 @@ export function TradingChart({
     }
   }, []);
 
-  // Safety: if the CDN/JS never reports ready within 12s, fall back to the legacy chart.
+  // Safety: if the CDN/JS never reports ready within 4s, fall back to the legacy
+  // Skia chart. Users with slow networks or blocked unpkg.com would otherwise sit
+  // on a blank WebView indefinitely.
   useEffect(() => {
     if (ready || errored) return;
     const timer = setTimeout(() => {
       if (!ready) setErrored(true);
-    }, 12000);
+    }, 4000);
     return () => clearTimeout(timer);
   }, [ready, errored, html]);
 
