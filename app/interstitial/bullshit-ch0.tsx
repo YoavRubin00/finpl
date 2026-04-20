@@ -51,6 +51,11 @@ export default function BullshitCh0InterstitialPage() {
       <ScrollView
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
+        // Hide the paused game from screen readers + touches while the intro
+        // overlay is up, so VoiceOver doesn't navigate into it underneath.
+        accessibilityElementsHidden={showIntro}
+        importantForAccessibility={showIntro ? "no-hide-descendants" : "auto"}
+        pointerEvents={showIntro ? "none" : "auto"}
       >
         <BullshitSwipeCard
           isActive={!showIntro}
@@ -60,8 +65,19 @@ export default function BullshitCh0InterstitialPage() {
       </ScrollView>
 
       {showIntro && (
-        <View style={styles.introBackdrop}>
-          <Animated.View entering={FadeInUp.duration(350)} style={styles.introSheet}>
+        <Pressable
+          style={styles.introBackdrop}
+          onPress={handleIntroDismiss}
+          accessibilityViewIsModal
+          accessibilityRole="button"
+          accessibilityLabel="התחל את המשחק"
+        >
+          <Animated.View
+            entering={FadeInUp.duration(350)}
+            style={styles.introSheet}
+            // Block backdrop-dismiss when the user taps inside the sheet itself.
+            onStartShouldSetResponder={() => true}
+          >
             <View style={styles.introHeader}>
               <ExpoImage source={FINN_STANDARD} style={styles.introFinn} contentFit="contain" accessible={false} />
               <Text style={styles.introTitle}>קפטן שארק</Text>
@@ -81,7 +97,7 @@ export default function BullshitCh0InterstitialPage() {
               <Text style={styles.introCtaText}>בואו נתחיל</Text>
             </Pressable>
           </Animated.View>
-        </View>
+        </Pressable>
       )}
 
       {showSpeech && (
