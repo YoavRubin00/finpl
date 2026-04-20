@@ -8,7 +8,7 @@
 
 import { enforceRateLimit } from '../_shared/rateLimit';
 import { safeErrorResponse } from '../_shared/safeError';
-import type { RateItem, NewsItem, LiveMarketData } from '../../../src/features/finfeed/liveMarketTypes';
+import type { RateItem, LiveMarketData } from '../../../src/features/finfeed/liveMarketTypes';
 
 const CACHE_MS = 10 * 60 * 1000;
 let _cache: { data: LiveMarketData; expiresAt: number } | null = null;
