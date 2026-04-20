@@ -61,7 +61,7 @@ export function TradingChart({
     if (ready || errored) return;
     const timer = setTimeout(() => {
       if (!ready) setErrored(true);
-    }, 5000);
+    }, 12000);
     return () => clearTimeout(timer);
   }, [ready, errored, html]);
 

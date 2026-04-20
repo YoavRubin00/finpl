@@ -3,6 +3,7 @@ import { View, Text, ScrollView, Pressable, Modal, StyleSheet } from 'react-nati
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import Animated, { FadeInDown, FadeIn } from 'react-native-reanimated';
+import { RefreshCw } from 'lucide-react-native';
 import { CALM } from '../../constants/theme';
 import { BackButton } from '../../components/ui/BackButton';
 import { LottieIcon } from '../../components/ui/LottieIcon';
@@ -14,7 +15,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ASSET_BY_ID } from './tradingHubData';
 import { useTradingStore } from './useTradingStore';
 import { useEconomyStore } from '../economy/useEconomyStore';
-import { fetchLatestPrice } from './marketApiService';
+import { clearPriceCache, fetchLatestPrice } from './marketApiService';
 import { tapHaptic, successHaptic } from '../../utils/haptics';
 import type { ActivePosition } from './tradingHubTypes';
 
@@ -46,20 +47,29 @@ export function HoldingsScreen() {
 
     const [closeResult, setCloseResult] = useState<CloseResult | null>(null);
 
-    // Refresh prices on mount
+    // Refresh prices on mount (and on demand via refresh button)
     const mountedRef = useRef(true);
-    useEffect(() => {
-        mountedRef.current = true;
-        const assetIds = [...new Set(positions.map((p) => p.assetId))];
+    const refreshPrices = useCallback(() => {
+        const assetIds = [...new Set(useTradingStore.getState().positions.map((p) => p.assetId))];
         assetIds.forEach(async (id) => {
             try {
                 const price = await fetchLatestPrice(id);
                 if (price > 0 && mountedRef.current) updatePrices(id, price);
             } catch { /* skip */ }
         });
+    }, [updatePrices]);
+
+    useEffect(() => {
+        mountedRef.current = true;
+        refreshPrices();
         return () => { mountedRef.current = false; };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, []);
+    }, [refreshPrices]);
+
+    const handleRefreshPrices = useCallback(() => {
+        tapHaptic();
+        clearPriceCache();
+        refreshPrices();
+    }, [refreshPrices]);
 
     // Compute totals
     const totalInvested = positions.reduce((s, p) => s + p.amountInvested, 0);
@@ -112,10 +122,19 @@ export function HoldingsScreen() {
                 {/* Header */}
                 <View style={styles.header}>
                     <BackButton />
-                    <View style={{ flex: 1, alignItems: 'center', marginRight: 40 }}>
+                    <View style={{ flex: 1, alignItems: 'center' }}>
                         <Text style={[RTL, styles.title]}>האחזקות שלי</Text>
                         <Text style={[RTL, styles.subtitle, { marginTop: 2, marginBottom: 8 }]}>ניהול תיק ההשקעות הווירטואלי שלך</Text>
                     </View>
+                    <Pressable
+                        onPress={handleRefreshPrices}
+                        style={({ pressed }) => [styles.refreshBtn, pressed && styles.refreshBtnPressed]}
+                        accessibilityRole="button"
+                        accessibilityLabel="רענן מחירים"
+                        hitSlop={8}
+                    >
+                        <RefreshCw size={18} color={CALM.textSecondary} />
+                    </Pressable>
                 </View>
 
                 <ScrollView style={{ flex: 1 }} contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
@@ -367,6 +386,14 @@ const styles = StyleSheet.create({
     scrollContent: {
         paddingBottom: 40,
         gap: 20,
+    },
+    refreshBtn: {
+        padding: 8,
+        borderRadius: 8,
+        backgroundColor: 'rgba(107,114,128,0.1)',
+    },
+    refreshBtnPressed: {
+        opacity: 0.5,
     },
 
     /* ── Sections ── */

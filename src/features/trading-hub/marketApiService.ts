@@ -279,9 +279,9 @@ export const fetchChartData = async (
     chartCache.set(cacheKey, { data: json.chart, date: todayKey() });
     return json.chart;
   } catch {
-    const mock = generateMockChartData(assetId, timeframe);
-    chartCache.set(cacheKey, { data: mock, date: todayKey() });
-    return mock;
+    // Don't cache mock data: if the backend recovers later today, the next call
+    // should reach it instead of serving stale mock for the remainder of the day.
+    return generateMockChartData(assetId, timeframe);
   }
 };
 
@@ -308,5 +308,11 @@ export const isMarketOpen = (assetId: string): boolean => {
 export const clearCache = (): void => {
   priceCache.clear();
   chartCache.clear();
+  previousCloseCache.clear();
+};
+
+/** Clears only price/previousClose caches, preserving cached chart data. */
+export const clearPriceCache = (): void => {
+  priceCache.clear();
   previousCloseCache.clear();
 };

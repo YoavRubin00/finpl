@@ -28,6 +28,15 @@ assets/SOUND/
 assets/AUDIO/
 assets/STOCK/
 assets/vercel_stage/
+# Unreferenced image subdirectories (verified via code scan)
+assets/IMAGES/gems/
+assets/IMAGES/gold/
+assets/IMAGES/swipe/
+assets/IMAGES/myths/
+assets/IMAGES/fun/coffee_streak_stat.png
+assets/IMAGES/fun/compound_coins_stat.png
+assets/IMAGES/fun/podium_rank_stat.png
+assets/IMAGES/fun/scratch_card.png
 assets/IMAGES/modules/
 assets/images/games/
 # assets/IMAGES/{fun,graham,swipe,myths} + assets/webp/ kept — required by code

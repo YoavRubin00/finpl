@@ -31,6 +31,7 @@ import { tapHaptic } from "../../utils/haptics";
 import { useEconomyStore } from "../economy/useEconomyStore";
 import { useAuthStore } from "../auth/useAuthStore";
 import { useGoogleAuth } from "../auth/useGoogleAuth";
+import { useAppleAuth } from "../auth/useAppleAuth";
 import { consumeTermsAcceptedFlag } from "../auth/termsAcceptedFlag";
 import { ONBOARDING_XP } from "../../constants/economy";
 import { calculateCompoundInterest } from "../simulator/SimulatorScreen";
@@ -1535,6 +1536,7 @@ function IntroStep({ onRegister, onGuest, onLoginSuccess }: IntroStepProps) {
   const [subStep, setSubStep] = useState<"welcome" | "choice" | "login">("welcome");
   const signIn = useAuthStore((s) => s.signIn);
   const { promptGoogleSignIn, isReady: googleReady } = useGoogleAuth();
+  const { promptAppleSignIn, isAvailable: appleAvailable } = useAppleAuth();
   const [termsAccepted, setTermsAccepted] = useState(false);
   const introRouter = useRouter();
 
@@ -1736,6 +1738,29 @@ function IntroStep({ onRegister, onGuest, onLoginSuccess }: IntroStepProps) {
         </Animated.View>
 
         <Animated.View style={[ctaAnimStyle, { width: "100%", gap: 10 }]}>
+          {/* Apple Sign-In, required by App Store Guideline 4.8 (iOS only) */}
+          {appleAvailable && (
+            <Pressable
+              onPress={() => { promptAppleSignIn().then(onLoginSuccess); }}
+              accessibilityRole="button"
+              accessibilityLabel="התחבר עם Apple"
+              style={{
+                width: "100%",
+                flexDirection: "row",
+                alignItems: "center",
+                justifyContent: "center",
+                borderRadius: 14,
+                backgroundColor: "#000000",
+                paddingVertical: 14,
+                borderBottomWidth: 3,
+                borderBottomColor: "#1f2937",
+              }}
+            >
+              <Text style={{ fontSize: 18, marginRight: 8, color: "#ffffff" }}></Text>
+              <Text style={{ fontSize: 15, fontWeight: "600", color: "#ffffff" }}>התחבר עם Apple</Text>
+            </Pressable>
+          )}
+
           {/* Google Sign-In */}
           <Pressable
             disabled={!googleReady}

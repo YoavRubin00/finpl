@@ -39,7 +39,31 @@ export const useAuthStore = create<AuthState>()(
       createdAt: null,
 
       signIn: (displayName: string, email: string) => {
-        set((state) => ({ isAuthenticated: true, isGuest: false, hasCompletedOnboarding: true, displayName, email, createdAt: state.createdAt ?? new Date().toISOString() }));
+        set((state) => ({
+          isAuthenticated: true,
+          isGuest: false,
+          hasCompletedOnboarding: true,
+          displayName,
+          email,
+          createdAt: state.createdAt ?? new Date().toISOString(),
+          // Ensure profile is never null for authenticated users — OAuth sign-in
+          // skips the onboarding flow so completeOnboarding() is never called.
+          profile: state.profile ?? {
+            displayName,
+            financialDream: null,
+            financialGoal: "unsure",
+            knowledgeLevel: "beginner",
+            ageGroup: "adult",
+            birthYear: 2002,
+            learningTime: "during-day",
+            learningStyle: "no-preference",
+            deadlineStress: "maybe",
+            dailyGoalMinutes: 10,
+            companionId: "warren-buffett",
+            avatarId: null,
+            ownedAvatars: [],
+          },
+        }));
         // Fire-and-forget DB sync
         upsertUserProfile(email, { displayName, email }).catch(() => { /* fire-and-forget */ });
       },
@@ -49,7 +73,27 @@ export const useAuthStore = create<AuthState>()(
       },
 
       convertGuestToUser: (displayName: string, email: string) => {
-        set({ isGuest: false, hasCompletedOnboarding: true, displayName, email });
+        set((state) => ({
+          isGuest: false,
+          hasCompletedOnboarding: true,
+          displayName,
+          email,
+          profile: state.profile ?? {
+            displayName,
+            financialDream: null,
+            financialGoal: "unsure",
+            knowledgeLevel: "beginner",
+            ageGroup: "adult",
+            birthYear: 2002,
+            learningTime: "during-day",
+            learningStyle: "no-preference",
+            deadlineStress: "maybe",
+            dailyGoalMinutes: 10,
+            companionId: "warren-buffett",
+            avatarId: null,
+            ownedAvatars: [],
+          },
+        }));
         upsertUserProfile(email, { displayName, email }).catch(() => { /* fire-and-forget */ });
       },
 
@@ -127,6 +171,34 @@ export const useAuthStore = create<AuthState>()(
     {
       name: "auth-store-v2",
       storage: createJSONStorage(() => zustandStorage),
+      onRehydrateStorage: () => (state) => {
+        // Backfill: authenticated non-guest users who signed in via OAuth
+        // before the default-profile fix was shipped have profile=null.
+        // Initialize a safe default so downstream code never crashes.
+        if (
+          state &&
+          state.isAuthenticated &&
+          !state.isGuest &&
+          state.hasCompletedOnboarding &&
+          !state.profile
+        ) {
+          state.profile = {
+            displayName: state.displayName ?? "משתמש",
+            financialDream: null,
+            financialGoal: "unsure",
+            knowledgeLevel: "beginner",
+            ageGroup: "adult",
+            birthYear: 2002,
+            learningTime: "during-day",
+            learningStyle: "no-preference",
+            deadlineStress: "maybe",
+            dailyGoalMinutes: 10,
+            companionId: "warren-buffett",
+            avatarId: null,
+            ownedAvatars: [],
+          };
+        }
+      },
       partialize: (state) => ({
         isAuthenticated: state.isAuthenticated,
         isGuest: state.isGuest,
