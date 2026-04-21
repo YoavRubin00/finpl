@@ -42,32 +42,43 @@ export function useGoogleAuth() {
     }
   }, [response]);
 
-  const checkServerProfile = async (email: string): Promise<boolean> => {
+  const verifyWithServer = async (accessToken: string): Promise<{ email: string; name: string; syncToken: string | null; hasProfile: boolean } | null> => {
     try {
       const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), 3000);
-      const res = await fetch(
-        `${getApiBase()}/api/sync/profile?authId=${encodeURIComponent(email)}`,
-        { signal: controller.signal },
-      );
+      const timeout = setTimeout(() => controller.abort(), 5000);
+      const res = await fetch(`${getApiBase()}/api/auth/verify`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ provider: 'google', token: accessToken }),
+        signal: controller.signal,
+      });
       clearTimeout(timeout);
-      if (!res.ok) return false;
-      const data = await res.json() as { profile: unknown };
-      return !!data.profile;
+      if (!res.ok) return null;
+      const data = await res.json() as { profile: { email?: string; displayName?: string; hasCompletedOnboarding?: boolean } | null; syncToken: string | null };
+      return {
+        email: data.profile?.email ?? '',
+        name: data.profile?.displayName ?? '',
+        syncToken: data.syncToken,
+        hasProfile: !!data.profile,
+      };
     } catch {
-      return false;
+      return null;
     }
   };
 
   const fetchUserInfo = async (accessToken: string) => {
     try {
+      // Still fetch basic info from Google for fallback display name
       const res = await fetch("https://www.googleapis.com/userinfo/v2/me", {
         headers: { Authorization: `Bearer ${accessToken}` },
       });
-      const user: GoogleUserInfo = await res.json();
-      const email = user.email ?? "";
-      const serverHasProfile = email ? await checkServerProfile(email) : false;
-      signIn(user.name ?? "", email, serverHasProfile);
+      const googleUser: GoogleUserInfo = await res.json();
+      // Verify server-side to get syncToken
+      const verified = await verifyWithServer(accessToken);
+      if (!verified) return;
+      const email = verified.email || googleUser.email || '';
+      const name = verified.name || googleUser.name || '';
+      signIn(name, email, verified.hasProfile, verified.syncToken);
     } catch {
       // Silently fail, user stays on login screen
     }

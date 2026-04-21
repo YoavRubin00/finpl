@@ -138,6 +138,9 @@ export const chapter2Data: Chapter = {
         description:
           'גרף של ציון האשראי שלך (300-1000). נזרקים עליך אירועים (תשלום בזמן, חריגה, הלוואה חדשה) ואתה צריך להגיב כדי להשאיר את המדד בירוק.',
       },
+      interModuleGame: 'video' as const,
+      interModuleVideoAsset: require('../../../assets/video/soldier.mp4'),
+      interModuleFinnMessage: 'שאני השתחררתי, לא היה לי את פינפליי. שקעתי',
     },
     {
       id: 'mod-2-11',

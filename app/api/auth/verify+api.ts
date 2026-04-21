@@ -1,6 +1,7 @@
 import { eq } from 'drizzle-orm';
 import { neon } from '@neondatabase/serverless';
 import { drizzle } from 'drizzle-orm/neon-http';
+import { randomBytes } from 'crypto';
 import { userProfiles } from '../../../src/db/schema';
 import { enforceRateLimit } from '../_shared/rateLimit';
 import { safeErrorResponse } from '../_shared/safeError';
@@ -18,9 +19,10 @@ interface GoogleUserInfo {
 }
 
 interface VerifyRequestBody {
-  provider: 'google' | 'email';
+  provider: 'google' | 'email' | 'apple';
   token?: string;
   email?: string;
+  appleUserId?: string;
   displayName?: string;
 }
 
@@ -56,6 +58,15 @@ export async function POST(request: Request): Promise<Response> {
       }
       verifiedEmail = email;
       verifiedName = sanitizeString(body.displayName, 100) ?? null;
+    } else if (provider === 'apple') {
+      // Apple hidden-email users get a stable identifier (not an email format).
+      // We trust Apple's identifier as the authId — no server-side JWT verification.
+      const appleId = sanitizeString(body.appleUserId ?? body.email, 254);
+      if (!appleId) {
+        return Response.json({ error: 'Missing Apple identifier' }, { status: 400 });
+      }
+      verifiedEmail = appleId;
+      verifiedName = sanitizeString(body.displayName, 100) ?? null;
     } else {
       return Response.json({ error: 'Unsupported provider' }, { status: 400 });
     }
@@ -69,12 +80,15 @@ export async function POST(request: Request): Promise<Response> {
 
     const db = getDb();
 
+    // Only save as email if it looks like one (Apple hidden-email users have stable IDs, not emails)
+    const emailForDb = isValidEmail(verifiedEmail) ? verifiedEmail : null;
+
     await db
       .insert(userProfiles)
       .values({
         authId: verifiedEmail,
         displayName: verifiedName,
-        email: verifiedEmail,
+        email: emailForDb,
       })
       .onConflictDoUpdate({
         target: userProfiles.authId,
@@ -90,12 +104,19 @@ export async function POST(request: Request): Promise<Response> {
       .where(eq(userProfiles.authId, verifiedEmail))
       .limit(1);
 
-    const profile = rows[0] ?? null;
+    let profile = rows[0] ?? null;
+
+    // Generate syncToken if not yet set — returned to client for all future sync calls
+    let syncToken = profile?.syncToken ?? null;
+    if (!syncToken) {
+      syncToken = randomBytes(32).toString('hex');
+      await db.update(userProfiles).set({ syncToken }).where(eq(userProfiles.authId, verifiedEmail));
+    }
 
     // Security log
     console.info(`[auth] verify ok: provider=${provider} email=${verifiedEmail}`);
 
-    return Response.json({ ok: true, profile });
+    return Response.json({ ok: true, profile, syncToken });
   } catch (err: unknown) {
     return safeErrorResponse(err, 'auth/verify');
   }

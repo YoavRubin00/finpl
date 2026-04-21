@@ -4,7 +4,7 @@ import { drizzle } from 'drizzle-orm/neon-http';
 import { userProfiles } from '../../../src/db/schema';
 import { enforceRateLimit } from '../_shared/rateLimit';
 import { safeErrorResponse } from '../_shared/safeError';
-import { sanitizeString, clampNumber } from '../_shared/validate';
+import { sanitizeString, clampNumber, validateSyncAuth } from '../_shared/validate';
 
 function getDb() {
   const url = process.env.DATABASE_URL ?? '';
@@ -48,6 +48,10 @@ export async function GET(request: Request): Promise<Response> {
 
     const profile = rows[0] ?? null;
 
+    if (!validateSyncAuth(request, profile?.syncToken ?? null)) {
+      return Response.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
     return Response.json({ ok: true, profile });
   } catch (err: unknown) {
     return safeErrorResponse(err, 'sync/profile GET');
@@ -67,19 +71,28 @@ export async function POST(request: Request): Promise<Response> {
       return Response.json({ error: 'Missing authId' }, { status: 400 });
     }
 
+    // Validate syncToken before any write (check existing row)
+    const db = getDb();
+    const existing = await db
+      .select({ syncToken: userProfiles.syncToken })
+      .from(userProfiles)
+      .where(eq(userProfiles.authId, authId))
+      .limit(1);
+    if (!validateSyncAuth(request, existing[0]?.syncToken ?? null)) {
+      return Response.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
     // Sanitize & clamp all fields
     const displayName = sanitizeString(body.displayName, 100) ?? undefined;
     const email = sanitizeString(body.email, 254) ?? undefined;
     const avatarUrl = sanitizeString(body.avatarUrl, 500) ?? undefined;
     const level = clampNumber(body.level, 1, 999);
-    const xp = clampNumber(body.xp, 0, 10_000_000);
-    const coins = clampNumber(body.coins, 0, 10_000_000);
-    const gems = clampNumber(body.gems, 0, 10_000_000);
+    const xp = clampNumber(body.xp, 0, 500_000);
+    const coins = clampNumber(body.coins, 0, 2_000_000);
+    const gems = clampNumber(body.gems, 0, 50_000);
     const currentStreak = clampNumber(body.currentStreak, 0, 3650);
     const longestStreak = clampNumber(body.longestStreak, 0, 3650);
     const isPro = typeof body.isPro === 'boolean' ? body.isPro : undefined;
-
-    const db = getDb();
 
     await db
       .insert(userProfiles)
@@ -141,6 +154,14 @@ export async function DELETE(request: Request): Promise<Response> {
     }
 
     const db = getDb();
+    const delRows = await db
+      .select({ syncToken: userProfiles.syncToken })
+      .from(userProfiles)
+      .where(eq(userProfiles.authId, authId))
+      .limit(1);
+    if (!validateSyncAuth(request, delRows[0]?.syncToken ?? null)) {
+      return Response.json({ error: 'Unauthorized' }, { status: 401 });
+    }
     await db.delete(userProfiles).where(eq(userProfiles.authId, authId));
 
     return Response.json({ ok: true });

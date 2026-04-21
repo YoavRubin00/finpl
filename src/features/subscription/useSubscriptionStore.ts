@@ -118,7 +118,7 @@ function getUsageCount(
 /** Calculate how many hearts should be refilled since last loss */
 function calcHeartRefills(lastLostAt: string | null, currentHearts: number): number {
   if (!lastLostAt || currentHearts >= MAX_HEARTS) return 0;
-  const elapsed = Date.now() - new Date(lastLostAt).getTime();
+  const elapsed = Math.max(0, Date.now() - new Date(lastLostAt).getTime());
   const refills = Math.floor(elapsed / HEART_REFILL_MS);
   return Math.min(refills, MAX_HEARTS - currentHearts);
 }
@@ -126,7 +126,7 @@ function calcHeartRefills(lastLostAt: string | null, currentHearts: number): num
 /** Time until next heart refill in ms */
 export function getTimeUntilNextHeart(lastLostAt: string | null, currentHearts: number): number {
   if (!lastLostAt || currentHearts >= MAX_HEARTS) return 0;
-  const elapsed = Date.now() - new Date(lastLostAt).getTime();
+  const elapsed = Math.max(0, Date.now() - new Date(lastLostAt).getTime());
   const remaining = HEART_REFILL_MS - (elapsed % HEART_REFILL_MS);
   return remaining;
 }

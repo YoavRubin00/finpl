@@ -316,7 +316,7 @@ function renderBoldText(text: string, onTermPress?: (term: string) => void): Rea
 /* ------------------------------------------------------------------ */
 
 function VideoHookPlayer({ videoUri, hookText, onFinish, unitColors, fitContain, trimEnd = 0.5 }: {
-  videoUri: string;
+  videoUri: string | number;
   hookText: string;
   onFinish: () => void;
   unitColors: { bg: string; dim: string; glow: string; bottom: string };
@@ -2247,6 +2247,7 @@ export function LessonFlowScreen() {
   const [showQuizIntro, setShowQuizIntro] = useState(false);
   const [showWisdom, setShowWisdom] = useState(false);
   const [showInterGame, setShowInterGame] = useState(false);
+  const [interGamePhase, setInterGamePhase] = useState<'video' | 'finn'>('video');
   const [confettiActive, setConfettiActive] = useState(false);
   const [showXpReward, setShowXpReward] = useState(false);
   const [showCoinsReward, setShowCoinsReward] = useState(false);
@@ -3374,6 +3375,7 @@ export function LessonFlowScreen() {
               }
               onContinue={() => {
                 if (mod?.interModuleGame && !showInterGame) {
+                  setInterGamePhase('video');
                   setShowInterGame(true);
                 } else {
                   goToNextSequentialModule();
@@ -3417,6 +3419,37 @@ export function LessonFlowScreen() {
                 />
               );
             })()}
+            {mod.interModuleGame === 'video' && mod.interModuleVideoAsset !== undefined && (
+              <>
+                {interGamePhase === 'video' && (
+                  <VideoHookPlayer
+                    videoUri={typeof mod.interModuleVideoAsset === 'number' ? mod.interModuleVideoAsset : mod.interModuleVideoAsset.uri}
+                    hookText=""
+                    onFinish={() => setInterGamePhase('finn')}
+                    unitColors={unitColors}
+                    fitContain
+                  />
+                )}
+                {interGamePhase === 'finn' && (
+                  <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', padding: 32, gap: 24 }}>
+                    <ExpoImage source={FINN_DANCING} style={{ width: 140, height: 140 }} contentFit="contain" accessible={false} />
+                    <View style={{ backgroundColor: '#f0f9ff', borderRadius: 20, padding: 20, borderWidth: 1.5, borderColor: '#bae6fd', maxWidth: 320 }}>
+                      <Text style={{ fontSize: 18, fontWeight: '800', color: '#1e293b', textAlign: 'right', writingDirection: 'rtl', lineHeight: 28 }}>
+                        {mod.interModuleFinnMessage}
+                      </Text>
+                    </View>
+                    <Pressable
+                      onPress={() => { setShowInterGame(false); goToNextSequentialModule(); }}
+                      style={{ backgroundColor: '#0891b2', borderRadius: 16, paddingHorizontal: 32, paddingVertical: 14, minHeight: 44, justifyContent: 'center', borderBottomWidth: 3, borderBottomColor: '#0e7490' }}
+                      accessibilityRole="button"
+                      accessibilityLabel="המשך"
+                    >
+                      <Text style={{ color: '#fff', fontSize: 16, fontWeight: '900', textAlign: 'center' }}>המשך ←</Text>
+                    </Pressable>
+                  </View>
+                )}
+              </>
+            )}
           </GestureHandlerRootView>
         </Modal>
       )}

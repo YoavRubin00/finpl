@@ -31,6 +31,15 @@ export function isValidEmail(email: string): boolean {
   ) && email.length <= 254;
 }
 
+/**
+ * Validate that the X-Sync-Token header matches the token stored in the DB.
+ * Returns true when the user has no token yet (backwards compat for existing users).
+ */
+export function validateSyncAuth(request: Request, dbSyncToken: string | null | undefined): boolean {
+  if (!dbSyncToken) return true;
+  return request.headers.get('X-Sync-Token') === dbSyncToken;
+}
+
 /** Validate that metadata is a plain object with limited size. */
 export function sanitizeMetadata(
   value: unknown,

@@ -12,10 +12,11 @@ interface AuthState {
   hasCompletedOnboarding: boolean;
   displayName: string | null;
   email: string | null;
+  syncToken: string | null;
   profile: UserProfile | null;
   createdAt: string | null;
 
-  signIn: (displayName: string, email: string, serverHasProfile?: boolean) => void;
+  signIn: (displayName: string, email: string, serverHasProfile?: boolean, syncToken?: string | null) => void;
   enterGuestMode: () => void;
   convertGuestToUser: (displayName: string, email: string) => void;
   completeOnboarding: (profile: UserProfile) => void;
@@ -35,10 +36,11 @@ export const useAuthStore = create<AuthState>()(
       hasCompletedOnboarding: false,
       displayName: null,
       email: null,
+      syncToken: null,
       profile: null,
       createdAt: null,
 
-      signIn: (displayName: string, email: string, serverHasProfile = false) => {
+      signIn: (displayName: string, email: string, serverHasProfile = false, syncToken?: string | null) => {
         set((state) => ({
           isAuthenticated: true,
           isGuest: false,
@@ -46,6 +48,7 @@ export const useAuthStore = create<AuthState>()(
           hasCompletedOnboarding: state.profile !== null || serverHasProfile,
           displayName,
           email,
+          syncToken: syncToken ?? state.syncToken,
           createdAt: state.createdAt ?? new Date().toISOString(),
           // Safety default so downstream screens never crash on a null profile
           // if the user somehow lands outside the onboarding flow.
@@ -131,6 +134,7 @@ export const useAuthStore = create<AuthState>()(
           hasCompletedOnboarding: false,
           displayName: null,
           email: null,
+          syncToken: null,
           profile: null,
           createdAt: null,
         });
@@ -154,6 +158,7 @@ export const useAuthStore = create<AuthState>()(
           hasCompletedOnboarding: false,
           displayName: null,
           email: null,
+          syncToken: null,
           profile: null,
           createdAt: null,
         });
@@ -205,6 +210,7 @@ export const useAuthStore = create<AuthState>()(
         hasCompletedOnboarding: state.hasCompletedOnboarding,
         displayName: state.displayName,
         email: state.email,
+        syncToken: state.syncToken,
         profile: state.profile,
         createdAt: state.createdAt,
       }),

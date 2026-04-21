@@ -7,7 +7,7 @@ import { sanitizeString } from '../_shared/validate';
 const VALID_ACTIONS = new Set(['redeem', 'link_open']);
 
 /** Owner inbox — gets an email on every real redemption. */
-const OWNER_EMAIL = 'yrubin00@gmail.com';
+const OWNER_EMAIL = process.env.OWNER_NOTIFICATION_EMAIL ?? '';
 
 const BENEFIT_LABELS: Record<string, string> = {
   'bridge-invest-altshuler': 'אלטשולר שחם טרייד',

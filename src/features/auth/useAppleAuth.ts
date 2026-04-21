@@ -12,20 +12,22 @@ export function useAppleAuth() {
 
   const isAvailable = Platform.OS === "ios";
 
-  const checkServerProfile = async (authId: string): Promise<boolean> => {
+  const verifyWithServer = async (authId: string, displayName: string): Promise<{ syncToken: string | null; hasProfile: boolean }> => {
     try {
       const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), 3000);
-      const res = await fetch(
-        `${getApiBase()}/api/sync/profile?authId=${encodeURIComponent(authId)}`,
-        { signal: controller.signal },
-      );
+      const timeout = setTimeout(() => controller.abort(), 5000);
+      const res = await fetch(`${getApiBase()}/api/auth/verify`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ provider: 'apple', appleUserId: authId, displayName }),
+        signal: controller.signal,
+      });
       clearTimeout(timeout);
-      if (!res.ok) return false;
-      const data = await res.json() as { profile: unknown };
-      return !!data.profile;
+      if (!res.ok) return { syncToken: null, hasProfile: false };
+      const data = await res.json() as { profile: unknown; syncToken: string | null };
+      return { syncToken: data.syncToken, hasProfile: !!data.profile };
     } catch {
-      return false;
+      return { syncToken: null, hasProfile: false };
     }
   };
 
@@ -45,8 +47,8 @@ export function useAppleAuth() {
         "משתמש Apple";
       // user identifier is stable; use it as fallback when email is hidden
       const authId = credential.email ?? credential.user;
-      const serverHasProfile = await checkServerProfile(authId);
-      signIn(displayName, authId, serverHasProfile);
+      const { syncToken, hasProfile } = await verifyWithServer(authId, displayName);
+      signIn(displayName, authId, hasProfile, syncToken);
     } catch (err: unknown) {
       // User canceled or auth failed, silently no-op so login screen stays.
       if ((err as { code?: string }).code !== "ERR_REQUEST_CANCELED") {

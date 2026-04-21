@@ -4,7 +4,7 @@ import { drizzle } from 'drizzle-orm/neon-http';
 import { moduleProgress, userProfiles } from '../../../src/db/schema';
 import { enforceRateLimit } from '../_shared/rateLimit';
 import { safeErrorResponse } from '../_shared/safeError';
-import { sanitizeString, clampNumber } from '../_shared/validate';
+import { sanitizeString, clampNumber, validateSyncAuth } from '../_shared/validate';
 
 function getDb() {
   const url = process.env.DATABASE_URL ?? '';
@@ -23,14 +23,14 @@ interface ProgressUpsertBody {
   xpEarned?: number;
 }
 
-async function resolveUserId(db: ReturnType<typeof getDb>, authId: string): Promise<string | null> {
+async function resolveUser(db: ReturnType<typeof getDb>, authId: string): Promise<{ id: string; syncToken: string | null } | null> {
   const rows = await db
-    .select({ id: userProfiles.id })
+    .select({ id: userProfiles.id, syncToken: userProfiles.syncToken })
     .from(userProfiles)
     .where(eq(userProfiles.authId, authId))
     .limit(1);
 
-  return rows[0]?.id ?? null;
+  return rows[0] ?? null;
 }
 
 const VALID_STATUSES = new Set(['in_progress', 'completed', 'skipped']);
@@ -49,16 +49,19 @@ export async function GET(request: Request): Promise<Response> {
     }
 
     const db = getDb();
-    const userId = await resolveUserId(db, authId);
+    const user = await resolveUser(db, authId);
 
-    if (!userId) {
+    if (!user) {
       return Response.json({ ok: true, progress: [] });
+    }
+    if (!validateSyncAuth(request, user.syncToken)) {
+      return Response.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     const rows = await db
       .select()
       .from(moduleProgress)
-      .where(eq(moduleProgress.userId, userId));
+      .where(eq(moduleProgress.userId, user.id));
 
     return Response.json({ ok: true, progress: rows });
   } catch (err: unknown) {
@@ -84,10 +87,13 @@ export async function POST(request: Request): Promise<Response> {
     }
 
     const db = getDb();
-    const userId = await resolveUserId(db, authId);
+    const user = await resolveUser(db, authId);
 
-    if (!userId) {
+    if (!user) {
       return Response.json({ error: 'User not found' }, { status: 404 });
+    }
+    if (!validateSyncAuth(request, user.syncToken)) {
+      return Response.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     const rawStatus = sanitizeString(body.status, 20) ?? 'completed';
@@ -102,7 +108,7 @@ export async function POST(request: Request): Promise<Response> {
     await db
       .insert(moduleProgress)
       .values({
-        userId,
+        userId: user.id,
         moduleId,
         moduleName,
         status,
@@ -129,7 +135,7 @@ export async function POST(request: Request): Promise<Response> {
     const rows = await db
       .select()
       .from(moduleProgress)
-      .where(eq(moduleProgress.userId, userId));
+      .where(eq(moduleProgress.userId, user.id));
 
     return Response.json({ ok: true, progress: rows });
   } catch (err: unknown) {

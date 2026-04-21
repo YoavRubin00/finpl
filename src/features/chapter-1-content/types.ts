@@ -55,9 +55,13 @@ export interface Module {
   /** Label shown on bonus badge, e.g. "בונוס: המשקיע הנבון" */
   bonusLabel?: string;
   /** Optional mini-game to show between this module and the next */
-  interModuleGame?: 'investment' | 'crash' | 'myth' | 'dilemma' | 'macro-event';
+  interModuleGame?: 'investment' | 'crash' | 'myth' | 'dilemma' | 'macro-event' | 'video';
   /** When interModuleGame === 'macro-event', the specific macro event id to show */
   interModuleMacroEventId?: string;
+  /** When interModuleGame === 'video', the video asset to play */
+  interModuleVideoAsset?: { uri: string } | number;
+  /** When interModuleGame === 'video', message shown by Finn after video ends */
+  interModuleFinnMessage?: string;
   /** When set to 'short', renders a FinPlay Short cinematic intro instead of InteractiveIntroCard */
   introVariant?: 'short';
 }

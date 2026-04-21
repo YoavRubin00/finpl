@@ -147,18 +147,24 @@ export const useEconomyStore = create<EconomyState>()(
 
       spendCoins: (amount: number): boolean => {
         if (amount <= 0) return false;
-        const { coins } = get();
-        if (coins < amount) return false;
-        set((state) => ({ coins: state.coins - amount }));
-        return true;
+        let success = false;
+        set((state) => {
+          if (state.coins < amount) return state;
+          success = true;
+          return { coins: state.coins - amount };
+        });
+        return success;
       },
 
       spendGems: (amount: number): boolean => {
         if (amount <= 0) return false;
-        const { gems } = get();
-        if (gems < amount) return false;
-        set((state) => ({ gems: state.gems - amount }));
-        return true;
+        let success = false;
+        set((state) => {
+          if (state.gems < amount) return state;
+          success = true;
+          return { gems: state.gems - amount };
+        });
+        return success;
       },
 
       completeDailyTask: () => {
