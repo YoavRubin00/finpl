@@ -37,13 +37,15 @@ interface Props {
   isActive: boolean;
 }
 
-const SWIPE_BGS: Record<string, number | undefined> = {
-  tech: require('../../../assets/IMAGES/swipe/swipe_tech.png'),
-  crisis: require('../../../assets/IMAGES/swipe/swipe_crisis.png'),
-  bank: require('../../../assets/IMAGES/swipe/swipe_bank.png'),
-  scandal: require('../../../assets/IMAGES/swipe/swipe_scandal.png'),
-  trade: require('../../../assets/IMAGES/swipe/swipe_trade.png'),
-  graham: require('../../../assets/IMAGES/graham/swipe_graham.png'),
+const CDN = 'https://8mnwcjygpqev3keg.public.blob.vercel-storage.com';
+
+const SWIPE_BGS: Record<string, { uri: string } | undefined> = {
+  tech: { uri: `${CDN}/images/games/swipe/swipe_tech.png` },
+  crisis: { uri: `${CDN}/images/games/swipe/swipe_crisis.png` },
+  bank: { uri: `${CDN}/images/games/swipe/swipe_bank.png` },
+  scandal: { uri: `${CDN}/images/games/swipe/swipe_scandal.png` },
+  trade: { uri: `${CDN}/images/games/swipe/swipe_trade.png` },
+  graham: { uri: `${CDN}/images/games/swipe/swipe_graham.png` },
 };
 
 function SwipeableCard({

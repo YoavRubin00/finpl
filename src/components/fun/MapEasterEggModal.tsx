@@ -15,8 +15,8 @@ const ROWS = Math.ceil(CARD_H / CELL_SIZE);
 const TOTAL_CELLS = COLS * ROWS;
 const REVEAL_THRESHOLD = 0.4; // 40% scratched → auto-reveal
 
-// Hidden treasure image
-const TREASURE_IMAGE = require("../../../assets/IMAGES/scratch_card_reward.png");
+// Hidden treasure image (CDN-served, rare-use modal)
+const TREASURE_IMAGE = { uri: "https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/images/games/scratch_card_reward.png" };
 
 interface MapEasterEggModalProps {
   visible: boolean;
