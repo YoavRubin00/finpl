@@ -873,7 +873,7 @@ function LearningTimeStep({ onNext }: { onNext: (v: LearningTime) => void }) {
       ))}
       <View style={{ alignItems: "center", marginTop: 12 }}>
         <LottieIcon
-          source={require("../../../assets/lottie/Appointment booking with smartphone.json") as number}
+          source={{ uri: "https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/lottie/appointment-booking.json" }}
           size={120}
           autoPlay
           loop

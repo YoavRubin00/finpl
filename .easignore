@@ -35,7 +35,15 @@ assets/IMAGES/fun/scratch_card.png
 assets/IMAGES/modules/
 assets/IMAGES/printscreens/
 assets/images/games/
-# assets/IMAGES/{fun,graham,swipe,myths} + assets/webp/ kept — required by code
+# Game assets moved to CDN (~14MB savings) — loaded on-demand via URI
+assets/IMAGES/tower-defense/
+assets/IMAGES/diamond-hands/
+assets/IMAGES/swipe/
+assets/IMAGES/graham/
+assets/IMAGES/scratch_card_reward.png
+assets/IMAGES/SACHAR.jpg
+assets/lottie/Appointment booking with smartphone.json
+# assets/IMAGES/{fun,myths} + assets/webp/ kept — required by code
 
 # Unused Lottie animations (~3.8MB savings)
 # 85 files not referenced by any source code — excluded from build
