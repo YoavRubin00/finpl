@@ -1313,6 +1313,7 @@ function OnboardingSlider({
 // ─── Step: "לשחק עם מספרים" Simulator during onboarding ────────────────────
 
 function SimOnboardingStep({ onNext }: { onNext: () => void }) {
+  const [initial, setInitial] = useState(0);
   const [monthly, setMonthly] = useState(500);
   const [years, setYears] = useState(10);
   const [subStep, setSubStep] = useState<"play" | "summary">("play");
@@ -1346,8 +1347,8 @@ function SimOnboardingStep({ onNext }: { onNext: () => void }) {
     }
   }, [hasInteracted]);
 
-  const finalAmount = calculateCompoundInterest(monthly, years, 0.10);
-  const totalInvested = monthly * 12 * years;
+  const finalAmount = calculateCompoundInterest(initial, monthly, years, 0.10);
+  const totalInvested = initial + monthly * 12 * years;
   const totalGrowth = finalAmount - totalInvested;
   const growthPct = totalInvested > 0 ? ((totalGrowth / totalInvested) * 100).toFixed(0) : "0";
 
@@ -1356,7 +1357,7 @@ function SimOnboardingStep({ onNext }: { onNext: () => void }) {
   for (let s = 0; s <= CHART_STEPS; s++) {
     const t = s / CHART_STEPS;
     const yr = t * years;
-    const val = calculateCompoundInterest(monthly, yr, 0.10);
+    const val = calculateCompoundInterest(initial, monthly, yr, 0.10);
     chartData.push({ x: t, y: finalAmount > 0 ? val / finalAmount : 0, label: `שנה ${Math.round(yr)}` });
   }
 
@@ -1495,6 +1496,11 @@ function SimOnboardingStep({ onNext }: { onNext: () => void }) {
 
           {/* Sliders */}
           <Animated.View entering={FadeInDown.delay(300).springify()} style={[simStyles.slidersCard, { position: "relative" }]}>
+            <OnboardingSlider
+              label="סכום התחלתי" value={initial} min={0} max={1000000} step={5000}
+              prefix="₪" emoji="💵" accentColor="#10b981" trackBg="#d1fae5" onChange={setInitial}
+              onInteract={() => setHasInteracted(true)}
+            />
             <OnboardingSlider
               label="השקעה חודשית" value={monthly} min={50} max={20000} step={50}
               prefix="₪" emoji="💰" accentColor="#0891b2" trackBg="#cffafe" onChange={setMonthly}

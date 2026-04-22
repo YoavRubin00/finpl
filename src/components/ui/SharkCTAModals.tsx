@@ -112,12 +112,12 @@ export function SharkBridgeCTA({ visible, onGoBridge, onDismiss, moduleCount = 0
 
             <Pressable
               onPress={handleAct}
-              style={[s.pillBtn, { backgroundColor: STITCH.primaryCyan }]}
+              style={s.ctaBtn}
               accessibilityRole="button"
               accessibilityLabel={v.cta}
             >
-              <Text style={[s.pillBtnText, { color: STITCH.surfaceLowest }]}>{v.cta}</Text>
-              <ArrowLeft size={14} color={STITCH.surfaceLowest} />
+              <ArrowLeft size={18} color="#ffffff" />
+              <Text style={s.ctaBtnText}>{v.cta}</Text>
             </Pressable>
           </View>
 
@@ -413,6 +413,32 @@ const s = StyleSheet.create({
   pillBtnText: {
     fontSize: 13.5,
     fontWeight: "800",
+  },
+  ctaBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    width: "100%",
+    backgroundColor: "#1cb0f6",
+    borderRadius: 14,
+    paddingVertical: 14,
+    paddingHorizontal: 20,
+    borderBottomWidth: 4,
+    borderBottomColor: "#0a8fc4",
+    marginTop: 4,
+    shadowColor: "#1cb0f6",
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.35,
+    shadowRadius: 8,
+    elevation: 6,
+  },
+  ctaBtnText: {
+    fontSize: 15,
+    fontWeight: "900",
+    color: "#ffffff",
+    writingDirection: "rtl",
+    textAlign: "center",
   },
   dismissX: {
     position: "absolute",

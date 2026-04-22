@@ -3,6 +3,7 @@ import { View, type StyleProp, type ViewStyle } from 'react-native';
 import { Image as ExpoImage } from 'expo-image';
 import { useReducedMotion } from 'react-native-reanimated';
 import { FINN_TALKING, FINN_STANDARD } from './finnMascotConfig';
+import type { IntroAudioState } from '../../hooks/useIntroAudio';
 
 interface Props {
   /** Text the user is reading, used to build punctuation-pause schedule and
@@ -19,11 +20,19 @@ interface Props {
   /** Container style. */
   style?: StyleProp<ViewStyle>;
   /**
-   * When provided, switches to controlled mode, external audio state drives
-   * talking/standard instead of the internal timer.
-   * Flip to false when audio ends → shark goes static + onDone fires.
+   * Legacy 2-state controller (playing=true/false). Kept for backwards compat.
+   * Prefer `audioState` which also distinguishes paused (freeze webp) from
+   * finished (swap to standard).
    */
   isPlayingAudio?: boolean;
+  /**
+   * 4-state controller from useIntroAudio().
+   *   - 'loading'  → talking visible, animating (pre-start)
+   *   - 'playing'  → talking visible, animating
+   *   - 'paused'   → talking visible, FROZEN (stopAnimating)
+   *   - 'finished' → standard visible (swap)
+   */
+  audioState?: IntroAudioState;
 }
 
 
@@ -35,11 +44,13 @@ export function FinnSpeakingAvatar({
   active = true,
   style,
   isPlayingAudio,
+  audioState,
 }: Props) {
   const reduceMotion = useReducedMotion();
   const initialPhase = reduceMotion || !active ? 'standard' : 'talking';
   const [phase, setPhase] = useState<'talking' | 'standard'>(initialPhase);
 
+  const talkingImgRef = useRef<ExpoImage>(null);
   const pauseTimersRef = useRef<ReturnType<typeof setTimeout>[]>([]);
   const fallbackTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -52,12 +63,11 @@ export function FinnSpeakingAvatar({
     }
   }
 
-  // Fallback timer, only used when isPlayingAudio is not provided
+  // Fallback timer, only used when no external controller is provided
   useEffect(() => {
-    if (isPlayingAudio !== undefined) return; // controlled mode, skip
+    if (isPlayingAudio !== undefined || audioState !== undefined) return;
     if (reduceMotion || !active) return;
     const wordCount = text ? text.trim().split(/\s+/).length : 12;
-    // No upper cap, let the word count drive the full duration
     const computed = durationMs ?? Math.max(2000, wordCount * 220);
     fallbackTimerRef.current = setTimeout(() => {
       clearAllTimers();
@@ -70,7 +80,7 @@ export function FinnSpeakingAvatar({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Controlled mode: audio end → permanently go static
+  // Legacy controlled mode: audio end → permanently go static
   useEffect(() => {
     if (isPlayingAudio === undefined) return;
     if (!isPlayingAudio) {
@@ -80,6 +90,26 @@ export function FinnSpeakingAvatar({
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isPlayingAudio]);
+
+  // New 4-state controlled mode
+  useEffect(() => {
+    if (audioState === undefined) return;
+    if (audioState === 'finished') {
+      clearAllTimers();
+      setPhase('standard');
+      onDone?.();
+      return;
+    }
+    // loading / playing / paused / idle → keep talking layer visible
+    setPhase('talking');
+    // Freeze the webp on pause, resume on play
+    if (audioState === 'paused') {
+      talkingImgRef.current?.stopAnimating?.();
+    } else if (audioState === 'playing' || audioState === 'loading') {
+      talkingImgRef.current?.startAnimating?.();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [audioState]);
 
   // Cleanup on unmount
   useEffect(() => () => clearAllTimers(), []);
@@ -96,6 +126,7 @@ export function FinnSpeakingAvatar({
         autoplay
       />
       <ExpoImage
+        ref={talkingImgRef}
         source={FINN_TALKING}
         style={{ width: size, height: size, position: 'absolute', opacity: talking ? 1 : 0 }}
         contentFit="contain"

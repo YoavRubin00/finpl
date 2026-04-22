@@ -22,10 +22,10 @@ const SCREEN_WIDTH = Dimensions.get("window").width;
 
 // ── Compound interest logic ─────────────────────────────────────────────────
 
-export function calculateCompoundInterest(monthly: number, years: number, rate = 0.08) {
+export function calculateCompoundInterest(initial: number, monthly: number, years: number, rate = 0.08) {
   const months = years * 12;
   const monthlyRate = rate / 12;
-  let total = 0;
+  let total = initial;
   for (let i = 0; i < months; i++) {
     total = (total + monthly) * (1 + monthlyRate);
   }
@@ -72,7 +72,7 @@ function SimSlider({
   const pct = (value - min) / (max - min);
 
   return (
-    <View style={{ marginBottom: 18, overflow: "visible", zIndex: showFingerHint ? 100 : 1 }}
+    <View style={{ marginBottom: 14, overflow: "visible", zIndex: showFingerHint ? 100 : 1 }}
       accessibilityRole="adjustable"
       accessibilityLabel={label}
       accessibilityValue={{ min, max, now: value, text: `${prefix}${value.toLocaleString()}${suffix}` }}
@@ -118,6 +118,7 @@ function SimSlider({
 
 export function SimulatorScreen() {
   const router = useRouter();
+  const [initial, setInitial] = useState(0);
   const [monthly, setMonthly] = useState(500);
   const [years, setYears] = useState(10);
   const [subStep, setSubStep] = useState<"play" | "summary">("play");
@@ -148,8 +149,8 @@ export function SimulatorScreen() {
     }
   }, [hasInteracted]);
 
-  const finalAmount = calculateCompoundInterest(monthly, years);
-  const totalInvested = monthly * 12 * years;
+  const finalAmount = calculateCompoundInterest(initial, monthly, years);
+  const totalInvested = initial + monthly * 12 * years;
   const totalGrowth = finalAmount - totalInvested;
   const growthPct = totalInvested > 0 ? ((totalGrowth / totalInvested) * 100).toFixed(0) : "0";
 
@@ -158,7 +159,7 @@ export function SimulatorScreen() {
   for (let s = 0; s <= CHART_STEPS; s++) {
     const t = s / CHART_STEPS;
     const yr = t * years;
-    const val = calculateCompoundInterest(monthly, yr);
+    const val = calculateCompoundInterest(initial, monthly, yr);
     chartData.push({ x: t, y: finalAmount > 0 ? val / finalAmount : 0, label: `שנה ${Math.round(yr)}` });
   }
 
@@ -259,6 +260,11 @@ export function SimulatorScreen() {
 
           {/* Sliders */}
           <Animated.View entering={FadeInDown.delay(300).springify()} style={s.slidersCard}>
+            <SimSlider
+              label="סכום התחלתי" value={initial} min={0} max={1000000} step={5000}
+              prefix="₪" accentColor="#10b981" trackBg="#d1fae5"
+              onChange={(v) => { setHasInteracted(true); setInitial(v); }}
+            />
             <SimSlider
               label="השקעה חודשית" value={monthly} min={50} max={5000} step={50}
               prefix="₪" accentColor="#0891b2" trackBg="#cffafe"

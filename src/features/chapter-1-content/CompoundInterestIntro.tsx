@@ -17,7 +17,7 @@ import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import { FINN_STANDARD, FINN_TALKING } from '../retention-loops/finnMascotConfig';
 import { heavyHaptic } from '../../utils/haptics';
 import { useSoundEffect } from '../../hooks/useSoundEffect';
-import { createAudioPlayer } from 'expo-audio';
+import { useIntroAudio } from '../../hooks/useIntroAudio';
 
 const { width: SW } = Dimensions.get('window');
 const RTL = { writingDirection: 'rtl' as const, textAlign: 'right' as const };
@@ -89,25 +89,16 @@ function CompoundChart({ animate }: { animate: boolean }) {
 
 // ── Main component ─────────────────────────────────────────────────────────
 export function CompoundInterestIntro({ onStart, unitColors, chartImageUri, audioUri }: Props) {
-  const [audioPlaying, setAudioPlaying] = useState(!!audioUri);
+  const audioState = useIntroAudio(audioUri);
+  const talkingImgRef = useRef<ExpoImage>(null);
 
   useEffect(() => {
-    if (!audioUri) return;
-    const player = createAudioPlayer({ uri: audioUri });
-    player.play();
-    let hasStartedPlaying = false;
-    const sub = player.addListener('playbackStatusUpdate', (status) => {
-      if (status.playing) hasStartedPlaying = true;
-      if (status.didJustFinish || (hasStartedPlaying && !status.playing && status.currentTime > 0)) {
-        setAudioPlaying(false);
-      }
-    });
-    return () => {
-      sub.remove();
-      player.pause();
-      player.remove();
-    };
-  }, [audioUri]);
+    if (audioState === 'paused') {
+      talkingImgRef.current?.stopAnimating?.();
+    } else if (audioState === 'playing' || audioState === 'loading') {
+      talkingImgRef.current?.startAnimating?.();
+    }
+  }, [audioState]);
 
   const [phase, setPhase] = useState<0 | 1 | 2>(0);
   const { playSound } = useSoundEffect();
@@ -205,7 +196,15 @@ export function CompoundInterestIntro({ onStart, unitColors, chartImageUri, audi
       <View style={{ flex: 1, justifyContent: 'space-evenly', alignItems: 'center', paddingHorizontal: 16 }}>
 
         {/* ── Finn static ─────────────────────────────────────────────── */}
-        <ExpoImage source={audioUri ? (audioPlaying ? FINN_TALKING : FINN_STANDARD) : (phase < 2 ? FINN_TALKING : FINN_STANDARD)} style={{ width: 120, height: 120 }} contentFit="contain" accessible={false} />
+        <ExpoImage
+          ref={talkingImgRef}
+          source={audioUri
+            ? (audioState === 'finished' ? FINN_STANDARD : FINN_TALKING)
+            : (phase < 2 ? FINN_TALKING : FINN_STANDARD)}
+          style={{ width: 120, height: 120 }}
+          contentFit="contain"
+          accessible={false}
+        />
 
         {/* ── CenterStage ──────────────────────────────────────────────── */}
         <View style={{ width: STAGE_W, height: 220, alignItems: 'center', justifyContent: 'center' }}>

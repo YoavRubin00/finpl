@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect } from "react";
 import { Image as ExpoImage } from "expo-image";
 import { View, Text, Dimensions } from "react-native";
 
@@ -18,6 +18,7 @@ import { useSoundEffect } from "../../hooks/useSoundEffect";
 import { heavyHaptic } from "../../utils/haptics";
 // FINN_STANDARD imported via FinnSpeakingAvatar internally
 import { FinnSpeakingAvatar } from "../retention-loops/FinnSpeakingAvatar";
+import { useIntroAudio } from "../../hooks/useIntroAudio";
 
 const RTL_STYLE = { writingDirection: "rtl" as const, textAlign: "right" as const };
 
@@ -65,27 +66,7 @@ interface InteractiveIntroCardProps {
 }
 
 export const InteractiveIntroCard = React.memo(function InteractiveIntroCard({ introText, onStart, unitColors, audioUri, introImageUri }: InteractiveIntroCardProps) {
-  const [audioPlaying, setAudioPlaying] = useState(!!audioUri);
-
-  useEffect(() => {
-    if (!audioUri) return;
-    const player = createAudioPlayer({ uri: audioUri });
-    player.play();
-    let hasStartedPlaying = false;
-    const sub = player.addListener('playbackStatusUpdate', (status) => {
-      if (status.playing) {
-        hasStartedPlaying = true;
-      }
-      if (status.didJustFinish || (hasStartedPlaying && !status.playing && status.currentTime > 0)) {
-        setAudioPlaying(false);
-      }
-    });
-    return () => {
-      sub.remove();
-      player.pause();
-      player.remove();
-    };
-  }, [audioUri]);
+  const audioState = useIntroAudio(audioUri);
   const displayText = cleanGlossaryMarkup(introText);
   const { playSound } = useSoundEffect();
   const textStyle = useEntranceAnimation(fadeInUp, { delay: 0 });
@@ -132,7 +113,7 @@ export const InteractiveIntroCard = React.memo(function InteractiveIntroCard({ i
               shadowOffset: { width: 0, height: 4 },
               elevation: 6,
             }}>
-              <FinnSpeakingAvatar text={displayText} size={120} isPlayingAudio={audioUri ? audioPlaying : undefined} />
+              <FinnSpeakingAvatar text={displayText} size={120} audioState={audioUri ? audioState : undefined} />
             </View>
           </Animated.View>
         )}
@@ -177,7 +158,7 @@ export const InteractiveIntroCard = React.memo(function InteractiveIntroCard({ i
         ) : (
           /* Finn character, below text card (default) */
           <Animated.View style={[bearStyle, floatStyle, { alignSelf: 'center', marginTop: 14, marginBottom: 10 }]}>
-            <FinnSpeakingAvatar text={displayText} size={140} isPlayingAudio={audioUri ? audioPlaying : undefined} />
+            <FinnSpeakingAvatar text={displayText} size={140} audioState={audioUri ? audioState : undefined} />
           </Animated.View>
         )}
       </View>

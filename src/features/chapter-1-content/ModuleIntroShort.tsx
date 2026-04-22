@@ -17,7 +17,7 @@ import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import { FINN_STANDARD, getFinnImage } from '../retention-loops/finnMascotConfig';
 import { heavyHaptic } from '../../utils/haptics';
 import { useSoundEffect } from '../../hooks/useSoundEffect';
-import { createAudioPlayer } from 'expo-audio';
+import { useIntroAudio } from '../../hooks/useIntroAudio';
 
 const { width: SW } = Dimensions.get('window');
 const RTL = { writingDirection: 'rtl' as const, textAlign: 'right' as const };
@@ -55,25 +55,17 @@ interface Props {
 }
 
 export function ModuleIntroShort({ onStart, unitColors, config, audioUri }: Props) {
-  const [audioPlaying, setAudioPlaying] = useState(!!audioUri);
+  const audioState = useIntroAudio(audioUri);
+  const talkingImgRef = useRef<ExpoImage>(null);
 
+  // Freeze webp on pause, resume on play, swap happens via `source` swap below.
   useEffect(() => {
-    if (!audioUri) return;
-    const player = createAudioPlayer({ uri: audioUri });
-    player.play();
-    let hasStartedPlaying = false;
-    const sub = player.addListener('playbackStatusUpdate', (status) => {
-      if (status.playing) hasStartedPlaying = true;
-      if (status.didJustFinish || (hasStartedPlaying && !status.playing && status.currentTime > 0)) {
-        setAudioPlaying(false);
-      }
-    });
-    return () => {
-      sub.remove();
-      player.pause();
-      player.remove();
-    };
-  }, [audioUri]);
+    if (audioState === 'paused') {
+      talkingImgRef.current?.stopAnimating?.();
+    } else if (audioState === 'playing' || audioState === 'loading') {
+      talkingImgRef.current?.startAnimating?.();
+    }
+  }, [audioState]);
 
   const [phase, setPhase] = useState<0 | 1 | 2>(0);
   const { playSound } = useSoundEffect();
@@ -174,7 +166,10 @@ export function ModuleIntroShort({ onStart, unitColors, config, audioUri }: Prop
         <View style={{ flexDirection: 'row-reverse', alignItems: 'flex-end', width: '100%', paddingHorizontal: 4 }}>
           {/* Portrait — talking during phases 0-1, idle at drag phase */}
           <ExpoImage
-            source={audioUri ? (audioPlaying ? getFinnImage('talking') : FINN_STANDARD) : (phase < 2 ? getFinnImage('talking') : FINN_STANDARD)}
+            ref={talkingImgRef}
+            source={audioUri
+              ? (audioState === 'finished' ? FINN_STANDARD : getFinnImage('talking'))
+              : (phase < 2 ? getFinnImage('talking') : FINN_STANDARD)}
             style={{ width: 96, height: 96 }}
             contentFit="contain"
             accessible={false}
