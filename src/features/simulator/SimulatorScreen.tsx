@@ -36,11 +36,11 @@ export function calculateCompoundInterest(initial: number, monthly: number, year
 
 function SimSlider({
   label, value, min, max, step, onChange, prefix = "", suffix = "",
-  accentColor = "#0891b2", trackBg = "#cffafe", showFingerHint = false,
+  accentColor = "#0891b2", trackBg = "#cffafe", showFingerHint = false, emoji,
 }: {
   label: string; value: number; min: number; max: number; step: number;
   onChange: (v: number) => void; prefix?: string; suffix?: string;
-  accentColor?: string; trackBg?: string; showFingerHint?: boolean;
+  accentColor?: string; trackBg?: string; showFingerHint?: boolean; emoji?: string;
 }) {
   const trackRef = useRef<View>(null);
   const layoutRef = useRef({ x: 0, width: 0 });
@@ -78,7 +78,10 @@ function SimSlider({
       accessibilityValue={{ min, max, now: value, text: `${prefix}${value.toLocaleString()}${suffix}` }}
     >
       <View style={{ flexDirection: "row-reverse", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
-        <Text style={{ fontSize: 13, fontWeight: "700", color: "#64748b", writingDirection: "rtl" }}>{label}</Text>
+        <View style={{ flexDirection: "row-reverse", alignItems: "center", gap: 6 }}>
+          {emoji && <Text style={{ fontSize: 16 }}>{emoji}</Text>}
+          <Text style={{ fontSize: 13, fontWeight: "700", color: "#64748b", writingDirection: "rtl" }}>{label}</Text>
+        </View>
         <View style={{ borderRadius: 10, paddingHorizontal: 12, paddingVertical: 5, backgroundColor: trackBg }}>
           <Text style={{ fontSize: 16, fontWeight: "900", color: accentColor }}>{prefix}{value.toLocaleString()}{suffix}</Text>
         </View>
@@ -126,14 +129,16 @@ export function SimulatorScreen() {
   const autoSlideRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const startTimeRef = useRef(Date.now());
 
-  // Auto-slide monthly from ₪500 to ₪2,000 over 3s
+  // Auto-slide initial ₪0→₪50k + monthly ₪500→₪2,000 over 3s
   useEffect(() => {
     startTimeRef.current = Date.now();
     autoSlideRef.current = setInterval(() => {
       const t = Math.min((Date.now() - startTimeRef.current) / 3000, 1);
       const eased = t * t;
-      const val = Math.round((500 + eased * 1500) / 50) * 50;
-      setMonthly(val);
+      const monthlyVal = Math.round((500 + eased * 1500) / 50) * 50;
+      const initialVal = Math.round((eased * 50000) / 5000) * 5000;
+      setMonthly(monthlyVal);
+      setInitial(initialVal);
       if (t >= 1) {
         if (autoSlideRef.current) clearInterval(autoSlideRef.current);
         setHasInteracted(true);
@@ -261,18 +266,18 @@ export function SimulatorScreen() {
           {/* Sliders */}
           <Animated.View entering={FadeInDown.delay(300).springify()} style={s.slidersCard}>
             <SimSlider
-              label="סכום התחלתי" value={initial} min={0} max={1000000} step={5000}
+              label="סכום התחלתי" emoji="💵" value={initial} min={0} max={1000000} step={5000}
               prefix="₪" accentColor="#10b981" trackBg="#d1fae5"
               onChange={(v) => { setHasInteracted(true); setInitial(v); }}
             />
             <SimSlider
-              label="השקעה חודשית" value={monthly} min={50} max={5000} step={50}
+              label="השקעה חודשית" emoji="💰" value={monthly} min={50} max={5000} step={50}
               prefix="₪" accentColor="#0891b2" trackBg="#cffafe"
               onChange={(v) => { setHasInteracted(true); setMonthly(v); }}
               showFingerHint={!hasInteracted}
             />
             <SimSlider
-              label="טווח זמן" value={years} min={1} max={40} step={1}
+              label="טווח זמן" emoji="📅" value={years} min={1} max={40} step={1}
               suffix=" שנים" accentColor="#60a5fa" trackBg="#dbeafe"
               onChange={(v) => { setHasInteracted(true); setYears(v); }}
             />
