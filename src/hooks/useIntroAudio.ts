@@ -40,6 +40,10 @@ export function useIntroAudio(audioUri: string | undefined): IntroAudioState {
         return;
       }
       if (status.playing) {
+        // Wait for actual speech onset — some clips have a brief silent
+        // lead-in; advancing to 'playing' too early makes the webp animate
+        // before the voice is audible.
+        if ((status.currentTime ?? 0) < 0.05) return;
         hasStartedPlaying = true;
         setState('playing');
         return;

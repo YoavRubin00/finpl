@@ -338,6 +338,12 @@ function VideoHookPlayer({ videoUri, hookText, onFinish, unitColors, fitContain,
 
   const player = useVideoPlayer(videoUri, (p) => {
     p.loop = false;
+    // Aggressive buffer settings for fast start on remote mp4s.
+    p.bufferOptions = {
+      preferredForwardBufferDuration: 10,
+      waitsToMinimizeStalling: false,
+      minBufferForPlayback: 0.5,
+    };
     p.play();
   });
 

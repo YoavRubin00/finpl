@@ -103,9 +103,9 @@ export function FinnSpeakingAvatar({
     // loading / playing / paused / idle → keep talking layer visible
     setPhase('talking');
     // Freeze the webp on pause, resume on play
-    if (audioState === 'paused') {
+    if (audioState === 'paused' || audioState === 'loading') {
       talkingImgRef.current?.stopAnimating?.();
-    } else if (audioState === 'playing' || audioState === 'loading') {
+    } else if (audioState === 'playing') {
       talkingImgRef.current?.startAnimating?.();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps

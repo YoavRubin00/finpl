@@ -58,20 +58,25 @@ export const FeedVideoItem = React.memo(function FeedVideoItem({ item, isActive 
     }
   });
 
-  // Play/pause based on feed visibility
+  // Play/pause based on feed visibility.
+  // Re-applies mute/volume on every activation — works around an Android
+  // expo-video quirk where .muted set before play() doesn't always propagate.
   useEffect(() => {
     if (!videoUri) return;
     if (isActive) {
+      player.muted = isMuted;
+      player.volume = isMuted ? 0 : 1.0;
       player.play();
     } else {
       player.pause();
     }
-  }, [isActive, player, videoUri]);
+  }, [isActive, player, videoUri, isMuted]);
 
-  // Mute control
+  // Mute control — set both .muted and .volume for Android reliability
   useEffect(() => {
     if (!videoUri) return;
     player.muted = isMuted;
+    player.volume = isMuted ? 0 : 1.0;
   }, [isMuted, player]);
 
   // Listen for status changes
@@ -118,7 +123,12 @@ export const FeedVideoItem = React.memo(function FeedVideoItem({ item, isActive 
       tapHaptic();
       return;
     }
-    setIsMuted((m) => !m);
+    setIsMuted((m) => {
+      const next = !m;
+      player.muted = next;
+      player.volume = next ? 0 : 1.0;
+      return next;
+    });
     tapHaptic();
   }
 

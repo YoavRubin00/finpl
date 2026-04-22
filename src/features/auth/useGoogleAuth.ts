@@ -3,6 +3,7 @@ import * as WebBrowser from "expo-web-browser";
 import { makeRedirectUri } from "expo-auth-session";
 import { router } from "expo-router";
 import { useEffect } from "react";
+import { Platform } from "react-native";
 import { useAuthStore } from "./useAuthStore";
 import { getApiBase } from "../../db/apiBase";
 
@@ -24,10 +25,15 @@ interface GoogleUserInfo {
 export function useGoogleAuth() {
   const signIn = useAuthStore((s) => s.signIn);
 
-  const redirectUri = makeRedirectUri({
-    native: `${IOS_REVERSED_CLIENT_ID}:/`,
-    scheme: "finpl",
-  });
+  // iOS uses the reversed-client-id scheme (registered in app.json
+  // ios.infoPlist.CFBundleURLTypes). Android must NOT use that format — it
+  // needs the app scheme "finpl" (or Google's generated android redirect).
+  // Passing the iOS URI on Android caused silent auth failures.
+  const redirectUri = makeRedirectUri(
+    Platform.OS === "ios"
+      ? { native: `${IOS_REVERSED_CLIENT_ID}:/`, scheme: "finpl" }
+      : { scheme: "finpl" }
+  );
 
   const [request, response, promptAsync] = Google.useAuthRequest({
     webClientId: GOOGLE_WEB_CLIENT_ID,

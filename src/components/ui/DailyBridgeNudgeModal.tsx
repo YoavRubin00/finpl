@@ -181,7 +181,9 @@ export function DailyBridgeNudgeModal() {
               accessibilityRole="button"
               accessibilityLabel="קח אותי לגשר"
             >
-              <LottieIcon source={LOTTIE_BRIDGE} size={38} autoPlay loop />
+              <View style={{ width: 38, height: 38 }}>
+                <LottieIcon source={LOTTIE_BRIDGE} size={38} autoPlay loop />
+              </View>
               <Text style={styles.ctaText}>קח אותי לגשר</Text>
             </Pressable>
           </Animated.View>
@@ -275,7 +277,7 @@ const styles = StyleSheet.create({
     marginBottom: 14,
   },
   ctaBtn: {
-    flexDirection: 'row',
+    flexDirection: 'row-reverse',
     alignItems: 'center',
     gap: 12,
     backgroundColor: '#38bdf8',
