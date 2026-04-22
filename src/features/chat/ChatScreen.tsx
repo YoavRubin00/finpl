@@ -483,11 +483,6 @@ export function ChatScreen() {
     setLoading(true);
     setAnimationState("thinking");
 
-    // Count against daily quota (skipped for Pro via incrementUsage + canUse semantics)
-    if (!storeState.isPro()) {
-      storeState.incrementUsage("chat");
-    }
-
     // Mark as delivered after short delay
     setTimeout(() => {
       setMessages((prev) =>
@@ -518,6 +513,11 @@ export function ChatScreen() {
 
       const data = await callGeminiDirect(systemPrompt, chatMessages);
       const reply = data.reply ?? "סליחה, לא הצלחתי ליצור תשובה.";
+
+      // Count against daily quota only after a successful reply (free tier)
+      if (!storeState.isPro()) {
+        storeState.incrementUsage("chat");
+      }
 
       // Mark all user messages as read, then add assistant reply
       markAllRead();
