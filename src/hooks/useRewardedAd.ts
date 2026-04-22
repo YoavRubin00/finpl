@@ -36,7 +36,11 @@ export function useRewardedAd() {
   const loadAd = useCallback(() => {
     if (isPro || !AdsModule) return;
     try {
-      const ad = AdsModule.RewardedAd.createForAdRequest(AD_UNIT_ID);
+      // Non-personalized ads only — avoids ATT requirement + IDFA usage.
+      // Safer for App Store review; slightly lower CPM.
+      const ad = AdsModule.RewardedAd.createForAdRequest(AD_UNIT_ID, {
+        requestNonPersonalizedAdsOnly: true,
+      });
 
       ad.addAdEventListener(AdsModule.RewardedAdEventType.LOADED, () => {
         setIsLoaded(true);
