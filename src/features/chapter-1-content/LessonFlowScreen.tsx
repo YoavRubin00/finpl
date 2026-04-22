@@ -1,7 +1,7 @@
 import { useState, useMemo, useCallback, useEffect, useRef } from "react";
 import { useShallow } from "zustand/react/shallow";
 import { Image as ExpoImage } from "expo-image";
-import { View, Text, SafeAreaView, ScrollView, Image, StyleSheet, Modal, Pressable, Dimensions, ActivityIndicator } from "react-native";
+import { View, Text, SafeAreaView, ScrollView, Image, StyleSheet, Modal, Pressable, Dimensions, ActivityIndicator, Keyboard } from "react-native";
 import { useIsFocused } from "@react-navigation/native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Gesture, GestureDetector, GestureHandlerRootView } from "react-native-gesture-handler";
@@ -4179,13 +4179,19 @@ export function LessonFlowScreen() {
       <Modal
         visible={showChatOverlay}
         animationType="slide"
-        presentationStyle="pageSheet"
-        onRequestClose={() => setShowChatOverlay(false)}
+        presentationStyle="fullScreen"
+        onRequestClose={() => {
+          Keyboard.dismiss();
+          setShowChatOverlay(false);
+        }}
       >
         <SafeAreaView style={{ flex: 1, backgroundColor: "#0f172a" }} accessibilityViewIsModal>
           <View style={{ flexDirection: "row-reverse", paddingHorizontal: 16, paddingTop: 12, paddingBottom: 8 }}>
             <Pressable
-              onPress={() => setShowChatOverlay(false)}
+              onPress={() => {
+                Keyboard.dismiss();
+                setShowChatOverlay(false);
+              }}
               style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: "rgba(255,255,255,0.15)", alignItems: "center", justifyContent: "center" }}
               accessibilityRole="button"
               accessibilityLabel="סגור"
