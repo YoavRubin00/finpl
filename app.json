@@ -89,7 +89,7 @@
     "ios": {
       "bundleIdentifier": "com.finplay.app",
       "buildNumber": "1",
-      "supportsTablet": true,
+      "supportsTablet": false,
       "usesAppleSignIn": true,
       "infoPlist": {
         "CFBundleURLTypes": [
