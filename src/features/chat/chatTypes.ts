@@ -37,4 +37,6 @@ export interface ChatMessage {
   content: string;
   timestamp: number;
   status: MessageStatus;
+  /** Special bubble type, renders inline CTA (e.g. upgrade to Pro) */
+  kind?: "upgrade_prompt";
 }

@@ -29,8 +29,8 @@ import Animated, {
 import { useAuthStore } from "../auth/useAuthStore";
 import { useChapterStore } from "../chapter-1-content/useChapterStore";
 import { useAdaptiveStore } from "../social/useAdaptiveStore";
-import { useSubscriptionStore, BASIC_LIMITS } from "../subscription/useSubscriptionStore";
-import { useUpgradeModalStore } from "../../stores/useUpgradeModalStore";
+import { useSubscriptionStore } from "../subscription/useSubscriptionStore";
+import { useRouter } from "expo-router";
 import { getConceptLabel } from "../social/LifelineModal";
 import { AnimatedPressable } from "../../components/ui/AnimatedPressable";
 import { COMPANION_PERSONALITIES, getContextualSuggestions, getContextAwareGreeting } from "./chatData";
@@ -272,6 +272,7 @@ const pickerStyles = StyleSheet.create({
 /* ------------------------------------------------------------------ */
 
 export function ChatScreen() {
+  const router = useRouter();
   const displayName = useAuthStore((s) => s.displayName);
   const updateProfile = useAuthStore((s) => s.updateProfile);
   const profile = useAuthStore((s) => s.profile);
@@ -462,14 +463,11 @@ export function ChatScreen() {
     const text = input.trim();
     if (!text || loading) return;
 
-    // Free-tier gate: cap user messages per session at BASIC_LIMITS.chat
-    const isProNow = useSubscriptionStore.getState().isPro();
-    if (!isProNow) {
-      const userMessagesSoFar = messages.filter((m) => m.role === "user").length;
-      if (userMessagesSoFar >= BASIC_LIMITS.chat) {
-        useUpgradeModalStore.getState().show("chat");
-        return;
-      }
+    // Free-tier daily quota gate — input should already be disabled, this is a safety net
+    const storeState = useSubscriptionStore.getState();
+    if (!storeState.canUse("chat")) {
+      setInput("");
+      return;
     }
 
     const userMessage: ChatMessage = {
@@ -484,6 +482,11 @@ export function ChatScreen() {
     setInput("");
     setLoading(true);
     setAnimationState("thinking");
+
+    // Count against daily quota (skipped for Pro via incrementUsage + canUse semantics)
+    if (!storeState.isPro()) {
+      storeState.incrementUsage("chat");
+    }
 
     // Mark as delivered after short delay
     setTimeout(() => {
@@ -518,6 +521,7 @@ export function ChatScreen() {
 
       // Mark all user messages as read, then add assistant reply
       markAllRead();
+      const atLimitAfterSend = !useSubscriptionStore.getState().canUse("chat");
       setMessages((prev) => [
         ...prev.map((m) =>
           m.role === "user" && m.status !== "read" ? { ...m, status: "read" as const } : m,
@@ -528,6 +532,15 @@ export function ChatScreen() {
           timestamp: Date.now(),
           status: "read",
         },
+        ...(atLimitAfterSend && !prev.some((m) => m.kind === "upgrade_prompt")
+          ? [{
+              role: "assistant" as const,
+              content: "זה הסוף לחינם להיום 💙 הגעת ל-3 ההודעות היומיות. רוצה להמשיך לשוחח איתי ללא הגבלה?",
+              timestamp: Date.now() + 1,
+              status: "read" as const,
+              kind: "upgrade_prompt" as const,
+            }]
+          : []),
       ]);
 
       setAnimationState("talking");
@@ -553,6 +566,10 @@ export function ChatScreen() {
   }, [input, loading, messages, displayName, profile, companionId, companion, allCompletedModules, currentChapterId, lifelineConcept, markAllRead]);
 
   const isPro = useSubscriptionStore((s) => s.isPro());
+  // Subscribe to chatMessagesToday so canSendChat re-evaluates after each send
+  const chatMessagesToday = useSubscriptionStore((s) => s.chatMessagesToday);
+  const canSendChat = useSubscriptionStore((s) => s.canUse("chat"));
+  void chatMessagesToday;
 
   const handleStyleSelect = useCallback((id: CompanionId) => {
     updateProfile({ companionId: id });
@@ -637,6 +654,16 @@ export function ChatScreen() {
                   >
                     {msg.content}
                   </Text>
+                  {msg.kind === "upgrade_prompt" && (
+                    <Pressable
+                      onPress={() => router.push("/pricing" as never)}
+                      accessibilityRole="button"
+                      accessibilityLabel="שדרג לפרו"
+                      style={msgStyles.upgradeCta}
+                    >
+                      <Text style={msgStyles.upgradeCtaText}>שדרג לפרו 💎</Text>
+                    </Pressable>
+                  )}
                   {/* Timestamp + Read Receipt row */}
                   <View style={msgStyles.metaRow}>
                     {!isBot && isPro && <ProBadge size="sm" />}
@@ -704,9 +731,10 @@ export function ChatScreen() {
             <TextInput
               value={input}
               onChangeText={setInput}
-              placeholder={companion.placeholder}
+              editable={canSendChat}
+              placeholder={canSendChat ? companion.placeholder : "הגעת למגבלה היומית. חזור מחר או שדרג לפרו 💙"}
               placeholderTextColor="#64748b"
-              accessibilityLabel="כתבו הודעה"
+              accessibilityLabel={canSendChat ? "כתבו הודעה" : "הגעת למגבלה היומית, שדרוג לפרו יאפשר שיחה ללא הגבלה"}
               multiline
               maxLength={500}
               style={inputStyles.textInput}
@@ -720,16 +748,16 @@ export function ChatScreen() {
           <Animated.View style={sendPulseStyle}>
             <AnimatedPressable
               onPress={sendMessage}
-              disabled={!input.trim() || loading}
+              disabled={!input.trim() || loading || !canSendChat}
               accessibilityLabel="שלח"
               accessibilityRole="button"
               hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
               style={[
                 inputStyles.sendButton,
-                (!input.trim() || loading) && inputStyles.sendButtonDisabled,
+                (!input.trim() || loading || !canSendChat) && inputStyles.sendButtonDisabled,
               ]}
             >
-              <Send size={18} color={input.trim() && !loading ? "#ffffff" : "#52525b"} />
+              <Send size={18} color={input.trim() && !loading && canSendChat ? "#ffffff" : "#52525b"} />
             </AnimatedPressable>
           </Animated.View>
         </View>
@@ -867,6 +895,30 @@ const msgStyles = StyleSheet.create({
     color: "#1f2937",
     fontSize: 14,
     lineHeight: 22,
+  },
+  upgradeCta: {
+    marginTop: 10,
+    backgroundColor: "#0a2540",
+    borderRadius: 12,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    alignItems: "center",
+    justifyContent: "center",
+    borderBottomWidth: 3,
+    borderBottomColor: "#05162a",
+    shadowColor: "#0a2540",
+    shadowOpacity: 0.25,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 3 },
+    elevation: 4,
+  },
+  upgradeCtaText: {
+    color: "#ffffff",
+    fontSize: 15,
+    fontWeight: "900",
+    textAlign: "center",
+    writingDirection: "rtl",
+    letterSpacing: 0.3,
   },
   metaRow: {
     flexDirection: "row",

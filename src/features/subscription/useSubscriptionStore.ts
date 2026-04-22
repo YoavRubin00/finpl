@@ -15,7 +15,7 @@ export type GatedFeature = "simulator" | "arena" | "chat" | "aiInsights" | "save
 export const BASIC_LIMITS: Record<GatedFeature, number> = {
   simulator: 3,
   arena: 3,
-  chat: 2,
+  chat: 3,
   aiInsights: 0,
   saved_items: 0,
 };
