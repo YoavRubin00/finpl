@@ -22,7 +22,7 @@ export function NotificationPermissionBanner() {
   return (
     <NotificationBanner
       visible={visible}
-      message="אתה מפספס התראות מאיתנו"
+      message="אתם מפספסים התראות ממני"
       actionLabel="אשר"
       onAction={handleAllow}
       onDismiss={dismissBanner}

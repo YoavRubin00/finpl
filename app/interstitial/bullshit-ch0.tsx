@@ -83,10 +83,7 @@ export default function BullshitCh0InterstitialPage() {
               <Text style={styles.introTitle}>קפטן שארק</Text>
             </View>
             <Text style={[styles.introBody, RTL]}>
-              זו הסיבה שאני כאן. ללמד וללמוד ביחד איתך ולא למכור לך סיפורים.
-            </Text>
-            <Text style={[styles.introHint, RTL]}>
-              מיד נתרגל ביחד, משחק "סוויפ הבולשיט" לזיהוי פרסומות מטעות. בואו נתחיל.
+              בואו נתרגל יחד, משחק "סוויפ הבולשיט" לזיהוי פרסומות מטעות.
             </Text>
             <Pressable
               onPress={handleIntroDismiss}
@@ -165,11 +162,12 @@ const styles = StyleSheet.create({
   introSheet: {
     width: "100%",
     maxWidth: 380,
+    maxHeight: "88%",
     backgroundColor: "#f0f9ff",
     borderRadius: 24,
     paddingHorizontal: 22,
-    paddingTop: 22,
-    paddingBottom: 20,
+    paddingTop: 18,
+    paddingBottom: 18,
     borderWidth: 1.5,
     borderColor: "rgba(14,165,233,0.45)",
     shadowColor: "#0ea5e9",
@@ -185,8 +183,8 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   introFinn: {
-    width: 54,
-    height: 54,
+    width: 44,
+    height: 44,
   },
   introTitle: {
     fontSize: 16,
