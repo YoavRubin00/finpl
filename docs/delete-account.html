@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl" id="root">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>מחיקת חשבון ונתונים — FinPlay</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: #0a1628;
+      color: #e2e8f0;
+      line-height: 1.7;
+      padding: 24px 16px 64px;
+      max-width: 720px;
+      margin: 0 auto;
+    }
+    h1 { font-size: 28px; color: #38bdf8; margin-bottom: 8px; }
+    h2 { font-size: 20px; color: #0ea5e9; margin: 32px 0 12px; border-bottom: 2px solid #1e293b; padding-bottom: 8px; }
+    p, li { font-size: 15px; margin-bottom: 10px; }
+    ol, ul { padding-right: 24px; }
+    [lang="en"] ol, [lang="en"] ul { padding-right: 0; padding-left: 24px; }
+    a { color: #38bdf8; }
+    .updated { font-size: 13px; color: #64748b; margin-bottom: 24px; }
+    .logo { font-size: 36px; margin-bottom: 8px; }
+    .lang-toggle {
+      position: sticky;
+      top: 12px;
+      float: left;
+      background: #1e293b;
+      border: 1px solid #38bdf8;
+      color: #38bdf8;
+      padding: 6px 14px;
+      border-radius: 999px;
+      cursor: pointer;
+      font-weight: 700;
+      font-size: 13px;
+      margin-bottom: 12px;
+    }
+    [lang="en"] body { direction: ltr; text-align: left; }
+    [lang="en"] .lang-toggle { float: right; }
+    .callout {
+      background: #0c2340;
+      border-right: 4px solid #38bdf8;
+      padding: 16px 20px;
+      border-radius: 8px;
+      margin: 16px 0;
+    }
+    [lang="en"] .callout { border-right: none; border-left: 4px solid #38bdf8; }
+    .email-box {
+      display: inline-block;
+      background: #1e293b;
+      border: 1px solid #38bdf8;
+      border-radius: 8px;
+      padding: 8px 16px;
+      font-family: monospace;
+      font-size: 16px;
+      color: #38bdf8;
+      margin: 8px 0;
+    }
+  </style>
+</head>
+<body>
+  <button class="lang-toggle" onclick="toggleLang()" id="langBtn">English</button>
+  <div class="logo">&#x1F420;</div>
+
+  <!-- Hebrew -->
+  <div id="he-content">
+    <h1>מחיקת חשבון ונתונים — FinPlay</h1>
+    <p class="updated">עדכון אחרון: אפריל 2026</p>
+
+    <p>אנו מכבדים את זכותך למחוק את החשבון שלך ואת המידע האישי שלך. דף זה מסביר את האפשרויות העומדות לרשותך למחיקת נתוניך.</p>
+
+    <h2>אפשרות 1 — מחיקה ישירה מתוך האפליקציה (מומלץ)</h2>
+    <ol>
+      <li>פתח/י את אפליקציית FinPlay.</li>
+      <li>עבור/י ללשונית <strong>"עוד"</strong> (בתחתית המסך).</li>
+      <li>בחר/י <strong>"הגדרות"</strong>.</li>
+      <li>גלול/י לחלק <strong>"חשבון"</strong> ובחר/י <strong>"מחק חשבון"</strong>.</li>
+      <li>אשר/י את המחיקה.</li>
+    </ol>
+    <p>המחיקה תתבצע מיידית וכלל המידע המזוהה שלך יוסר לצמיתות.</p>
+
+    <h2>אפשרות 2 — בקשת מחיקה באימייל</h2>
+    <p>אם הסרת את האפליקציה מהמכשיר או שאינך מצליח/ה לגשת אליה, שלח/י בקשת מחיקה לכתובת:</p>
+    <p><span class="email-box">yoav.finplay@gmail.com</span></p>
+    <p><strong>בנושא המייל כתוב/י:</strong> "בקשת מחיקת חשבון"</p>
+    <p><strong>בגוף המייל ציין/י:</strong> את כתובת הדוא"ל שבה נרשמת לאפליקציה (כדי שנוכל לאמת את זהותך).</p>
+    <div class="callout">
+      <p><strong>זמן טיפול:</strong> אנו מתחייבים לטפל בבקשתך תוך <strong>30 ימים</strong> מרגע קבלתה, בהתאם לחוק הגנת הפרטיות, התשמ"א-1981.</p>
+    </div>
+
+    <h2>אילו נתונים יימחקו?</h2>
+    <ul>
+      <li>פרטי חשבון: שם, דוא"ל, מספר טלפון, תאריך לידה, אווטאר.</li>
+      <li>נתוני למידה: התקדמות במודולים, תוצאות חידונים, מטבעות, XP, רצפי פעילות (Streaks).</li>
+      <li>נתוני סימולטור ההשקעות: פעולות, החזקות, היסטוריית מסחר וירטואלי.</li>
+      <li>הגדרות והעדפות: בחירות אווטאר, תזכורות למידה, הגדרות התראות.</li>
+      <li>מזהי מכשיר ומנוי: tokens של התראות פוש, סטטוס מנוי.</li>
+    </ul>
+
+    <h2>אילו נתונים לא ניתנים למחיקה מיידית?</h2>
+    <ul>
+      <li><strong>נתוני רכישות ומנויים:</strong> מידע על עסקאות נשמר למשך <strong>7 שנים</strong> לצורך עמידה בדרישות חוקיות (חוק מע"מ, חוק מס הכנסה).</li>
+      <li><strong>רישומי אבטחה (Logs):</strong> נתונים אנונימיים על שימוש במערכת, שאינם מזוהים אישית, נשמרים לצרכי אבטחת מידע ומניעת הונאות.</li>
+      <li><strong>גיבויים:</strong> ייתכן שתידרש תקופה של עד 90 ימים להסרה מוחלטת מגיבויים מוצפנים.</li>
+    </ul>
+
+    <h2>צריכים עזרה?</h2>
+    <p>לשאלות נוספות בנוגע למחיקת נתונים, ניתן לפנות אלינו: <a href="mailto:yoav.finplay@gmail.com">yoav.finplay@gmail.com</a></p>
+  </div>
+
+  <!-- English -->
+  <div id="en-content" style="display:none">
+    <h1>Account & Data Deletion — FinPlay</h1>
+    <p class="updated">Last updated: April 2026</p>
+
+    <p>We respect your right to delete your account and personal information. This page explains your options for deleting your data.</p>
+
+    <h2>Option 1 — Delete directly from the app (recommended)</h2>
+    <ol>
+      <li>Open the FinPlay app.</li>
+      <li>Go to the <strong>"More"</strong> tab (bottom of the screen).</li>
+      <li>Select <strong>"Settings"</strong>.</li>
+      <li>Scroll to the <strong>"Account"</strong> section and tap <strong>"Delete Account"</strong>.</li>
+      <li>Confirm the deletion.</li>
+    </ol>
+    <p>Deletion is immediate and all your personally identifiable data will be permanently removed.</p>
+
+    <h2>Option 2 — Request deletion by email</h2>
+    <p>If you've uninstalled the app or can't access it, send a deletion request to:</p>
+    <p><span class="email-box">yoav.finplay@gmail.com</span></p>
+    <p><strong>Email subject:</strong> "Account Deletion Request"</p>
+    <p><strong>In the email body:</strong> include the email address you used to register (so we can verify your identity).</p>
+    <div class="callout">
+      <p><strong>Processing time:</strong> We commit to handling your request within <strong>30 days</strong> of receipt, in accordance with the Israeli Privacy Protection Law, 5741-1981.</p>
+    </div>
+
+    <h2>What data will be deleted?</h2>
+    <ul>
+      <li>Account details: name, email, phone number, date of birth, avatar.</li>
+      <li>Learning data: module progress, quiz results, coins, XP, activity streaks.</li>
+      <li>Investment simulator data: actions, holdings, virtual trading history.</li>
+      <li>Settings and preferences: avatar choices, learning reminders, notification settings.</li>
+      <li>Device and subscription identifiers: push notification tokens, subscription status.</li>
+    </ul>
+
+    <h2>What data cannot be immediately deleted?</h2>
+    <ul>
+      <li><strong>Purchase and subscription records:</strong> Transaction information is retained for <strong>7 years</strong> to comply with legal requirements (VAT Law, Income Tax Ordinance).</li>
+      <li><strong>Security logs:</strong> Anonymous usage data, not personally identifiable, is retained for data security and fraud prevention purposes.</li>
+      <li><strong>Backups:</strong> Complete removal from encrypted backups may take up to 90 days.</li>
+    </ul>
+
+    <h2>Need help?</h2>
+    <p>For any additional questions regarding data deletion, contact us at: <a href="mailto:yoav.finplay@gmail.com">yoav.finplay@gmail.com</a></p>
+  </div>
+
+  <script>
+    function toggleLang() {
+      var root = document.getElementById('root');
+      var he = document.getElementById('he-content');
+      var en = document.getElementById('en-content');
+      var btn = document.getElementById('langBtn');
+      if (root.getAttribute('lang') === 'he') {
+        root.setAttribute('lang', 'en');
+        root.setAttribute('dir', 'ltr');
+        he.style.display = 'none';
+        en.style.display = 'block';
+        btn.textContent = 'עברית';
+        document.title = 'Account & Data Deletion — FinPlay';
+      } else {
+        root.setAttribute('lang', 'he');
+        root.setAttribute('dir', 'rtl');
+        he.style.display = 'block';
+        en.style.display = 'none';
+        btn.textContent = 'English';
+        document.title = 'מחיקת חשבון ונתונים — FinPlay';
+      }
+    }
+    if (window.location.search.indexOf('lang=en') !== -1) { toggleLang(); }
+  </script>
+</body>
+</html>
