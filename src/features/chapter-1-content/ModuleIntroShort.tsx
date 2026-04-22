@@ -55,11 +55,21 @@ interface Props {
 }
 
 export function ModuleIntroShort({ onStart, unitColors, config, audioUri }: Props) {
+  const [audioPlaying, setAudioPlaying] = useState(!!audioUri);
+
   useEffect(() => {
     if (!audioUri) return;
     const player = createAudioPlayer({ uri: audioUri });
     player.play();
+    let hasStartedPlaying = false;
+    const sub = player.addListener('playbackStatusUpdate', (status) => {
+      if (status.playing) hasStartedPlaying = true;
+      if (status.didJustFinish || (hasStartedPlaying && !status.playing && status.currentTime > 0)) {
+        setAudioPlaying(false);
+      }
+    });
     return () => {
+      sub.remove();
       player.pause();
       player.remove();
     };
@@ -164,7 +174,7 @@ export function ModuleIntroShort({ onStart, unitColors, config, audioUri }: Prop
         <View style={{ flexDirection: 'row-reverse', alignItems: 'flex-end', width: '100%', paddingHorizontal: 4 }}>
           {/* Portrait — talking during phases 0-1, idle at drag phase */}
           <ExpoImage
-            source={phase < 2 ? getFinnImage('talking') : FINN_STANDARD}
+            source={audioUri ? (audioPlaying ? getFinnImage('talking') : FINN_STANDARD) : (phase < 2 ? getFinnImage('talking') : FINN_STANDARD)}
             style={{ width: 96, height: 96 }}
             contentFit="contain"
             accessible={false}

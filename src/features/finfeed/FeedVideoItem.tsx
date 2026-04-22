@@ -45,7 +45,17 @@ export const FeedVideoItem = React.memo(function FeedVideoItem({ item, isActive 
   // If URI is missing/invalid, errors surface through the statusChange listener → setHasError(true).
   const player = useVideoPlayer(videoUri || "about:blank", (p) => {
     p.loop = true;
-    if (isActive && videoUri) p.play();
+    // Aggressive buffer settings for fast feed playback
+    p.bufferOptions = {
+      preferredForwardBufferDuration: 5,
+      waitsToMinimizeStalling: false,
+      minBufferForPlayback: 1,
+    };
+    // Kick off buffering on mount (muted) so adjacent items preload before user reaches them
+    if (videoUri) {
+      p.muted = true;
+      p.play();
+    }
   });
 
   // Play/pause based on feed visibility

@@ -11,13 +11,15 @@ import {
 } from "react-native";
 import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { useRouter, useLocalSearchParams } from "expo-router";
-import { FINN_HELLO } from "../retention-loops/finnMascotConfig";
+import Animated, { FadeIn, FadeInDown } from "react-native-reanimated";
+import { FINN_HELLO, FINN_DANCING } from "../retention-loops/finnMascotConfig";
 import { getPasswordStrength } from "./password-utils";
 import type { PasswordStrength } from "./types";
 import { useAuthStore } from "./useAuthStore";
 import { useGoogleAuth } from "./useGoogleAuth";
 import { useAppleAuth } from "./useAppleAuth";
 import { getAvatarById, DEFAULT_AVATAR_EMOJI } from "../avatars/avatarData";
+import { ConfettiExplosion } from "../../components/ui/ConfettiExplosion";
 
 const strengthLabels: Record<PasswordStrength, string> = {
   weak: "סיסמה חלשה",
@@ -84,6 +86,7 @@ export function RegisterScreen() {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [termsAccepted, setTermsAccepted] = useState(false);
+  const [showSuccess, setShowSuccess] = useState(false);
 
   const passwordStrength = getPasswordStrength(password);
 
@@ -104,24 +107,28 @@ export function RegisterScreen() {
           else router.replace("/(tabs)" as never);
         }}
         accessibilityRole="button"
-        accessibilityLabel="חזור"
+        accessibilityLabel="חזרה למשחק"
         hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
         style={{
           position: "absolute",
           top: insets.top + 8,
-          left: 16,
+          right: 16,
           zIndex: 20,
-          width: 36,
+          flexDirection: "row-reverse",
+          alignItems: "center",
+          gap: 4,
           height: 36,
+          paddingHorizontal: 12,
           borderRadius: 18,
           backgroundColor: "#f0f9ff",
           borderWidth: 1,
           borderColor: "#bae6fd",
-          alignItems: "center",
           justifyContent: "center",
         }}
       >
-        <Text style={{ fontSize: 16, fontWeight: "800", color: "#0891b2" }}></Text>
+        <Text style={{ fontSize: 14, fontWeight: "800", color: "#0891b2", writingDirection: "rtl" }}>
+          ← חזרה למשחק
+        </Text>
       </Pressable>
       <KeyboardAvoidingView
         style={{ flex: 1 }}
@@ -320,16 +327,17 @@ export function RegisterScreen() {
 
             {/* Register Button */}
             <Pressable
-              disabled={!isValid}
+              disabled={!isValid || showSuccess}
               onPress={() => {
-                if (isValid) {
+                if (isValid && !showSuccess) {
                   if (isGuest) {
                     convertGuestToUser(name.trim(), email.trim());
                   } else {
                     signIn(name.trim(), email.trim());
                   }
                   const dest = returnTo ? decodeURIComponent(returnTo) : "/(tabs)/";
-                  router.replace(dest as never);
+                  setShowSuccess(true);
+                  setTimeout(() => router.replace(dest as never), 1800);
                 }
               }}
               accessibilityRole="button"
@@ -473,9 +481,87 @@ export function RegisterScreen() {
                 תמיד אפשר להירשם אחר כך
               </Text>
             </Pressable>
+
+            {/* Bottom "back to game" link — for guest users who decided not to register now */}
+            {isGuest && (
+              <Pressable
+                onPress={() => {
+                  if (router.canGoBack()) router.back();
+                  else router.replace("/(tabs)" as never);
+                }}
+                accessibilityRole="button"
+                accessibilityLabel="חזרה למשחק בלי להירשם"
+                style={{ marginTop: 14, paddingVertical: 10, alignItems: "center" }}
+              >
+                <Text style={{ fontSize: 13, fontWeight: "700", color: "#0891b2", writingDirection: "rtl" }}>
+                  ← חזרה למשחק
+                </Text>
+              </Pressable>
+            )}
           </ScrollView>
         </View>
       </KeyboardAvoidingView>
+
+      {/* Success celebration overlay */}
+      {showSuccess && (
+        <Animated.View
+          entering={FadeIn.duration(200)}
+          accessible
+          accessibilityRole="alert"
+          accessibilityLiveRegion="assertive"
+          accessibilityLabel="נרשמת בהצלחה! חוזרים למשחק"
+          style={{
+            position: "absolute",
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: "rgba(8,145,178,0.92)",
+            alignItems: "center",
+            justifyContent: "center",
+            zIndex: 100,
+          }}
+          pointerEvents="auto"
+        >
+          <ConfettiExplosion />
+          <Animated.View entering={FadeInDown.duration(400)} style={{ alignItems: "center" }}>
+            <ExpoImage
+              source={FINN_DANCING}
+              style={{ width: 160, height: 160 }}
+              contentFit="contain"
+              accessible={false}
+            />
+            <Text
+              style={{
+                fontSize: 28,
+                fontWeight: "900",
+                color: "#ffffff",
+                marginTop: 16,
+                textAlign: "center",
+                writingDirection: "rtl",
+                textShadowColor: "rgba(0,0,0,0.25)",
+                textShadowOffset: { width: 0, height: 2 },
+                textShadowRadius: 4,
+              }}
+              accessibilityRole="header"
+            >
+              נרשמת בהצלחה! 🎉
+            </Text>
+            <Text
+              style={{
+                fontSize: 15,
+                fontWeight: "700",
+                color: "#e0f2fe",
+                marginTop: 8,
+                textAlign: "center",
+                writingDirection: "rtl",
+              }}
+            >
+              יאללה, חוזרים למשחק
+            </Text>
+          </Animated.View>
+        </Animated.View>
+      )}
     </View>
   );
 }

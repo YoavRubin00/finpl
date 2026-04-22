@@ -13,6 +13,7 @@ import Animated, {
 } from "react-native-reanimated";
 import { X } from "lucide-react-native";
 import { Image as ExpoImage, type ImageSource } from "expo-image";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { LottieIcon } from "./LottieIcon";
 import { STITCH } from "../../constants/theme";
 
@@ -44,6 +45,7 @@ export function NotificationBanner({
   lottieSource,
   imageSource,
 }: NotificationBannerProps) {
+  const insets = useSafeAreaInsets();
   const translateY = useSharedValue(-80);
   const opacity = useSharedValue(0);
 
@@ -71,6 +73,7 @@ export function NotificationBanner({
   const containerStyle = useAnimatedStyle(() => ({
     transform: [{ translateY: translateY.value }],
     opacity: opacity.value,
+    paddingTop: insets.top + 4,
   }));
 
   return (

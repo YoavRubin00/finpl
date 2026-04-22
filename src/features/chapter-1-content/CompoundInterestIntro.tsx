@@ -89,11 +89,21 @@ function CompoundChart({ animate }: { animate: boolean }) {
 
 // ── Main component ─────────────────────────────────────────────────────────
 export function CompoundInterestIntro({ onStart, unitColors, chartImageUri, audioUri }: Props) {
+  const [audioPlaying, setAudioPlaying] = useState(!!audioUri);
+
   useEffect(() => {
     if (!audioUri) return;
     const player = createAudioPlayer({ uri: audioUri });
     player.play();
+    let hasStartedPlaying = false;
+    const sub = player.addListener('playbackStatusUpdate', (status) => {
+      if (status.playing) hasStartedPlaying = true;
+      if (status.didJustFinish || (hasStartedPlaying && !status.playing && status.currentTime > 0)) {
+        setAudioPlaying(false);
+      }
+    });
     return () => {
+      sub.remove();
       player.pause();
       player.remove();
     };
@@ -195,7 +205,7 @@ export function CompoundInterestIntro({ onStart, unitColors, chartImageUri, audi
       <View style={{ flex: 1, justifyContent: 'space-evenly', alignItems: 'center', paddingHorizontal: 16 }}>
 
         {/* ── Finn static ─────────────────────────────────────────────── */}
-        <ExpoImage source={phase < 2 ? FINN_TALKING : FINN_STANDARD} style={{ width: 120, height: 120 }} contentFit="contain" accessible={false} />
+        <ExpoImage source={audioUri ? (audioPlaying ? FINN_TALKING : FINN_STANDARD) : (phase < 2 ? FINN_TALKING : FINN_STANDARD)} style={{ width: 120, height: 120 }} contentFit="contain" accessible={false} />
 
         {/* ── CenterStage ──────────────────────────────────────────────── */}
         <View style={{ width: STAGE_W, height: 220, alignItems: 'center', justifyContent: 'center' }}>

@@ -327,6 +327,7 @@ function VideoHookPlayer({ videoUri, hookText, onFinish, unitColors, fitContain,
   const [isFastMode, setIsFastMode] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const finishedRef = useRef(false);
+  const hasPlayedRef = useRef(false);
   const insets = useSafeAreaInsets();
 
   const safeFinish = useCallback(() => {
@@ -343,12 +344,13 @@ function VideoHookPlayer({ videoUri, hookText, onFinish, unitColors, fitContain,
   useEffect(() => {
     const subs: { remove: () => void }[] = [];
 
-    // Track playback end
+    // Track playback end — only after video has actually started playing at least once
     subs.push(player.addListener('playingChange', (e: { isPlaying: boolean }) => {
       if (e.isPlaying) {
+        hasPlayedRef.current = true;
         setIsLoading(false);
       }
-      if (!e.isPlaying && player.duration > 0 && player.currentTime >= player.duration - trimEnd) {
+      if (hasPlayedRef.current && !e.isPlaying && player.duration > 0 && player.currentTime >= player.duration - trimEnd) {
         setTimeout(safeFinish, 500);
       }
     }));
@@ -363,16 +365,16 @@ function VideoHookPlayer({ videoUri, hookText, onFinish, unitColors, fitContain,
       }
     }));
 
-    // Safety timeout — if video doesn't start within 10s, skip it
+    // Safety timeout — if video doesn't start within 20s, skip it (generous for slow networks)
     const timeout = setTimeout(() => {
-      if (isLoading) safeFinish();
-    }, 10000);
+      if (!hasPlayedRef.current) safeFinish();
+    }, 20000);
 
     return () => {
       subs.forEach((s) => s.remove());
       clearTimeout(timeout);
     };
-  }, [player, safeFinish, isLoading]);
+  }, [player, safeFinish]);
 
   return (
     <View style={{ flex: 1, backgroundColor: "#0a1628" }}>

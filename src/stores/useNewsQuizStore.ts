@@ -11,17 +11,35 @@ function todayKey(): string {
 interface NewsQuizState {
   data: NewsQuizData | null;
   loading: boolean;
+  error: boolean;
   answeredDates: string[];
   fetch: () => Promise<void>;
   hasAnsweredToday: () => boolean;
   markAnswered: () => void;
 }
 
+const FALLBACK_QUIZ: NewsQuizData = {
+  quizId: 'fallback',
+  headline: 'הריבית בישראל נותרת על 4.5%',
+  question: 'מה קורה להחזר המשכנתא שלך כשהריבית לא יורדת?',
+  choices: [
+    { id: 'a', text: 'ההחזר החודשי נשאר אותו דבר ולא משתנה' },
+    { id: 'b', text: 'ההחזר החודשי עולה יחד עם הריבית' },
+    { id: 'c', text: 'ההחזר יורד כי הבנק מפחית את הקרן' },
+  ],
+  correctChoiceId: 'a',
+  explanation: 'כשהריבית נשארת קבועה, גם ההחזר החודשי נשאר קבוע. הבעיה היא שמשכנתאות חדשות ממשיכות להיות יקרות, מה שקשה לרוכשי דירות ראשונה.',
+  xpReward: 10,
+  coinReward: 5,
+  generatedAt: new Date().toISOString(),
+};
+
 export const useNewsQuizStore = create<NewsQuizState>()(
   persist(
     (set, get) => ({
       data: null,
       loading: false,
+      error: false,
       answeredDates: [],
 
       fetch: async () => {
@@ -29,14 +47,18 @@ export const useNewsQuizStore = create<NewsQuizState>()(
         if (loading) return;
         if (data && data.quizId === todayKey()) return;
 
-        set({ loading: true });
+        set({ loading: true, error: false });
         try {
-          const res = await fetch(`${getApiBase()}/api/market/news-quiz`);
+          const controller = new AbortController();
+          const timeout = setTimeout(() => controller.abort(), 8000);
+          const res = await fetch(`${getApiBase()}/api/market/news-quiz`, { signal: controller.signal });
+          clearTimeout(timeout);
           if (!res.ok) throw new Error(`HTTP ${res.status}`);
           const json = await res.json() as NewsQuizData;
-          set({ data: json, loading: false });
+          set({ data: json, loading: false, error: false });
         } catch {
-          set({ loading: false });
+          // Fallback to local quiz so user never sees white screen
+          set({ data: { ...FALLBACK_QUIZ, quizId: todayKey() }, loading: false, error: true });
         }
       },
 

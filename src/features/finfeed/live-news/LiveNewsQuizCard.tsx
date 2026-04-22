@@ -131,8 +131,6 @@ export function LiveNewsQuizCard() {
     }
   };
 
-  if (!loading && !data) return null;
-
   if (answered && !selected) {
     return (
       <View style={styles.container}>

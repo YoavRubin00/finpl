@@ -184,7 +184,7 @@ export const InteractiveIntroCard = React.memo(function InteractiveIntroCard({ i
 
       {/* 3D Button with Lottie rocket, pinned to bottom */}
       <Animated.View style={[buttonStyle, { alignSelf: 'stretch', marginBottom: 8 }]}>
-        <View>
+        <View style={{ width: '100%' }}>
           {/* 3D depth shadow */}
           <View style={{
             position: 'absolute',
@@ -202,16 +202,19 @@ export const InteractiveIntroCard = React.memo(function InteractiveIntroCard({ i
               onStart();
             }}
             style={{
+              width: '100%',
               flexDirection: 'row',
               alignItems: 'center',
               justifyContent: 'center',
-              gap: 8,
+              gap: 10,
               borderRadius: 16,
               backgroundColor: unitColors.bg,
-              paddingHorizontal: 40,
-              paddingVertical: 16,
+              paddingHorizontal: 20,
+              paddingVertical: 18,
+              borderBottomWidth: 4,
+              borderBottomColor: unitColors.bottom,
               shadowColor: unitColors.glow,
-              shadowOpacity: 0.5,
+              shadowOpacity: 0.55,
               shadowRadius: 14,
               shadowOffset: { width: 0, height: 4 },
               elevation: 10,
@@ -227,7 +230,7 @@ export const InteractiveIntroCard = React.memo(function InteractiveIntroCard({ i
             </View>
             <Text
               style={[RTL_STYLE, {
-                fontSize: 18,
+                fontSize: 20,
                 fontWeight: '900',
                 color: '#ffffff',
                 textAlign: 'center',
