@@ -1,5 +1,6 @@
 import { Platform } from "react-native";
 import * as AppleAuthentication from "expo-apple-authentication";
+import { router } from "expo-router";
 import { useAuthStore } from "./useAuthStore";
 import { getApiBase } from "../../db/apiBase";
 
@@ -49,10 +50,19 @@ export function useAppleAuth() {
       const authId = credential.email ?? credential.user;
       const { syncToken, hasProfile } = await verifyWithServer(authId, displayName);
       signIn(displayName, authId, hasProfile, syncToken);
+
+      // Explicit routing — iOS-safe pattern matching the email/Google flows.
+      // Auto-routing via _layout effect fails on iOS because the async prompt
+      // timing loses the state-change window.
+      if (hasProfile) {
+        router.replace("/(tabs)/" as never);
+      } else {
+        router.replace("/(auth)/onboarding" as never);
+      }
     } catch (err: unknown) {
       // User canceled or auth failed, silently no-op so login screen stays.
       if ((err as { code?: string }).code !== "ERR_REQUEST_CANCELED") {
-        // swallow other errors; UI will simply not advance.
+        console.warn("[AppleAuth] signIn failed:", err);
       }
     }
   };

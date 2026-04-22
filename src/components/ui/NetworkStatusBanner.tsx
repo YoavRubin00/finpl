@@ -11,6 +11,7 @@ import Animated, {
   withTiming,
 } from "react-native-reanimated";
 import { WifiOff } from "lucide-react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useNetworkStatus } from "../../hooks/useNetworkStatus";
 
 const OFFLINE_RED = "#ef4444";
@@ -18,6 +19,7 @@ const OFFLINE_RED = "#ef4444";
 export function NetworkStatusBanner() {
   const { isConnected, isInternetReachable } = useNetworkStatus();
   const isOffline = !isConnected || !isInternetReachable;
+  const insets = useSafeAreaInsets();
 
   const translateY = useSharedValue(-70);
   const opacity = useSharedValue(0);
@@ -35,6 +37,7 @@ export function NetworkStatusBanner() {
   const animatedStyle = useAnimatedStyle(() => ({
     transform: [{ translateY: translateY.value }],
     opacity: opacity.value,
+    paddingTop: insets.top + 4,
   }));
 
   return (

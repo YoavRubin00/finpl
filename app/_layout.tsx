@@ -255,26 +255,31 @@ export default function RootLayout() {
               <WisdomPopupCard />
               <GlobalQuestCompletionModal />
               <DailyBridgeNudgeModal />
-              <NetworkStatusBanner />
-              <LevelUpBanner />
-              <NotificationBanner
-                visible={aiVisible}
-                message={aiMessage}
-                actionLabel="לראות"
-                onAction={aiNavigate}
-                onDismiss={aiDismiss}
-                imageSource={require('../assets/webp/fin-happy.webp')}
-                duration={6000}
-              />
-              <NotificationBanner
-                visible={upgradeNudge.visible}
-                message={upgradeNudge.copy?.body ?? ''}
-                actionLabel="שדרג"
-                onAction={upgradeNudge.navigate}
-                onDismiss={upgradeNudge.dismiss}
-                imageSource={require('../assets/webp/fin-happy.webp')}
-                duration={7000}
-              />
+              {/* Global top banners — suppressed during onboarding/tutorial to avoid distracting the first-run experience */}
+              {hasCompletedOnboarding && hasSeenWalkthrough && (
+                <>
+                  <NetworkStatusBanner />
+                  <LevelUpBanner />
+                  <NotificationBanner
+                    visible={aiVisible}
+                    message={aiMessage}
+                    actionLabel="לראות"
+                    onAction={aiNavigate}
+                    onDismiss={aiDismiss}
+                    imageSource={require('../assets/webp/fin-happy.webp')}
+                    duration={6000}
+                  />
+                  <NotificationBanner
+                    visible={upgradeNudge.visible}
+                    message={upgradeNudge.copy?.body ?? ''}
+                    actionLabel="שדרג"
+                    onAction={upgradeNudge.navigate}
+                    onDismiss={upgradeNudge.dismiss}
+                    imageSource={require('../assets/webp/fin-happy.webp')}
+                    duration={7000}
+                  />
+                </>
+              )}
               <FreezeSaveModalGate />
               <StreakRepairModalGate />
             </StreakCelebrationProvider>

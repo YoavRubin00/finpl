@@ -90,7 +90,7 @@ export function StreakAtRiskBanner() {
         </Pressable>
 
         <Pressable
-          onPress={() => router.push("/(tabs)/learn" as never)}
+          onPress={() => router.push("/(tabs)/" as never)}
           style={styles.inner}
         >
           {/* Text on right (RTL) */}

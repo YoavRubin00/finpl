@@ -1,6 +1,7 @@
 import * as Google from "expo-auth-session/providers/google";
 import * as WebBrowser from "expo-web-browser";
 import { makeRedirectUri } from "expo-auth-session";
+import { router } from "expo-router";
 import { useEffect } from "react";
 import { useAuthStore } from "./useAuthStore";
 import { getApiBase } from "../../db/apiBase";
@@ -75,12 +76,24 @@ export function useGoogleAuth() {
       const googleUser: GoogleUserInfo = await res.json();
       // Verify server-side to get syncToken
       const verified = await verifyWithServer(accessToken);
-      if (!verified) return;
+      if (!verified) {
+        console.warn("[GoogleAuth] Server verification failed");
+        return;
+      }
       const email = verified.email || googleUser.email || '';
       const name = verified.name || googleUser.name || '';
       signIn(name, email, verified.hasProfile, verified.syncToken);
-    } catch {
-      // Silently fail, user stays on login screen
+
+      // Explicit routing — iOS-safe pattern matching the email flow.
+      // Auto-routing via _layout effect fails on iOS because promptAsync()
+      // timing loses the state-change window.
+      if (verified.hasProfile) {
+        router.replace("/(tabs)/" as never);
+      } else {
+        router.replace("/(auth)/onboarding" as never);
+      }
+    } catch (error) {
+      console.warn("[GoogleAuth] fetchUserInfo failed:", error);
     }
   };
 
