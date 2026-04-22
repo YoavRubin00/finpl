@@ -32,7 +32,10 @@ export function BenefitCard({ benefit, coins, isRedeemed, isPro, onPress }: Bene
   const lockedByPro = benefit.proOnly && !isPro;
   const isAdSlot    = benefit.partnerAdSlot === true;
   const isPartnerAd = benefit.isPartnerAd === true;
-  const isDisabled  = !benefit.isAvailable || isRedeemed || !canAfford || lockedByPro || isAdSlot;
+  // Redeemed cards remain tappable so the user can re-open the partner URL
+  // via the redemption modal (which detects the redeemed state and skips
+  // re-spending coins).
+  const isDisabled  = !benefit.isAvailable || !canAfford || lockedByPro || isAdSlot;
   const coinsNeeded = benefit.costCoins - coins;
   const progress    = Math.min(coins / benefit.costCoins, 1);
 

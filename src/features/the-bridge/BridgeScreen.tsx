@@ -6,6 +6,7 @@ import {
   StyleSheet,
   Pressable,
   Alert,
+  Linking,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -261,15 +262,33 @@ export function BridgeScreen({ walkthroughAutoScroll }: BridgeScreenProps = {}) 
 
   const handleConfirm = useCallback(() => {
     if (!selectedBenefit) return;
+    const alreadyRedeemed = isBenefitRedeemed(selectedBenefit.id);
+    // Re-opening a previously redeemed benefit: just open the URL again,
+    // don't re-spend coins.
+    if (alreadyRedeemed) {
+      if (selectedBenefit.partnerUrl) {
+        trackBridgeClick(selectedBenefit.id, 'link_open', email);
+        Linking.openURL(selectedBenefit.partnerUrl).catch(() => { /* ignore */ });
+      }
+      setModalVisible(false);
+      setSelectedBenefit(null);
+      return;
+    }
     const success = redeemBenefit(selectedBenefit.id);
     setModalVisible(false);
     if (success) {
       setSuccessTitle(selectedBenefit.title);
       setShowConfetti(true);
       trackBridgeClick(selectedBenefit.id, 'redeem', email);
+      // Open the partner URL right after successful redemption so the user
+      // reaches the partner site immediately — this was previously missing
+      // and left users stuck after spending coins.
+      if (selectedBenefit.partnerUrl) {
+        Linking.openURL(selectedBenefit.partnerUrl).catch(() => { /* ignore */ });
+      }
     }
     setSelectedBenefit(null);
-  }, [selectedBenefit, redeemBenefit, email]);
+  }, [selectedBenefit, redeemBenefit, email, isBenefitRedeemed]);
 
   return (
     <View style={styles.root}>
