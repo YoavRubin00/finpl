@@ -24,7 +24,7 @@ export const BASIC_LIMITS: Record<GatedFeature, number> = {
 /*  Hearts constants                                                   */
 /* ------------------------------------------------------------------ */
 
-const MAX_HEARTS = 5;
+const MAX_HEARTS = 3;
 const HEART_REFILL_MS = 5 * 60 * 60 * 1000; // 5 hours per heart
 
 /* ------------------------------------------------------------------ */

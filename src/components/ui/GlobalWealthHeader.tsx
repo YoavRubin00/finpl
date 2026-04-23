@@ -35,7 +35,7 @@ import { useWalkthroughGlowTarget } from "../../features/onboarding/AppWalkthrou
 
 const AnimatedCircle = Animated.createAnimatedComponent(Circle);
 
-const MAX_HEARTS = 5;
+const MAX_HEARTS = 3;
 
 // ---------------------------------------------------------------------------
 // Level ring constants

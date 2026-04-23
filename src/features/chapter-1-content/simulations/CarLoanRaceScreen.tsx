@@ -15,6 +15,7 @@ import { SimFeedbackBar } from '../../../components/ui/SimFeedbackBar';
 import { SimLottieBackground } from '../../../components/ui/SimLottieBackground';
 import { LottieIcon } from '../../../components/ui/LottieIcon';
 import { successHaptic, errorHaptic } from '../../../utils/haptics';
+import { useSubscriptionStore } from '../../subscription/useSubscriptionStore';
 import { useCarLoanGame } from './useCarLoanGame';
 import { carLoanConfig } from './carLoanData';
 import type { CarLoanScore, CarLoanGrade, CarLoanOption } from './carLoanTypes';
@@ -308,6 +309,8 @@ const [showFeedback, setShowFeedback] = useState(false);
             setRewardsGranted(true);
             if (state.isRepossessed) {
                 errorHaptic();
+                // Fail outcome → deduct a heart.
+                useSubscriptionStore.getState().useHeart();
             } else {
                 successHaptic();
             }

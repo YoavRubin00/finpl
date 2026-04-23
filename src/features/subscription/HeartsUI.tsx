@@ -25,7 +25,7 @@ import { tapHaptic, successHaptic } from '../../utils/haptics';
 import { useRewardedAd } from '../../hooks/useRewardedAd';
 import { useChapterStore } from '../chapter-1-content/useChapterStore';
 
-const MAX_HEARTS = 5;
+const MAX_HEARTS = 3;
 
 /* ------------------------------------------------------------------ */
 /*  HeartsDisplay, shows in lesson header                             */
@@ -139,9 +139,12 @@ export function OutOfHeartsModal({ visible, onDismiss, onUpgrade, onHeartsRefill
     }, [onUpgrade]);
 
     const handleCoinRefill = useCallback(() => {
+        const store = useSubscriptionStore.getState();
+        const current = store.hearts ?? 0;
+        if (current >= MAX_HEARTS) { onDismiss(); return; }
         const success = useEconomyStore.getState().spendCoins(HEART_REFILL_COIN_COST);
         if (success) {
-            useSubscriptionStore.getState().restoreAllHearts();
+            useSubscriptionStore.setState({ hearts: current + 1, lastHeartLostAt: current + 1 >= MAX_HEARTS ? null : store.lastHeartLostAt });
             successHaptic();
             if (onHeartsRefilled) {
                 onHeartsRefilled();
@@ -217,9 +220,12 @@ export function OutOfHeartsModal({ visible, onDismiss, onUpgrade, onHeartsRefill
     const handleGemRefill = useCallback(() => {
         tapHaptic();
         if (gems >= HEART_REFILL_GEM_COST) {
+            const store = useSubscriptionStore.getState();
+            const current = store.hearts ?? 0;
+            if (current >= MAX_HEARTS) { onDismiss(); return; }
             const success = useEconomyStore.getState().spendGems(HEART_REFILL_GEM_COST);
             if (success) {
-                useSubscriptionStore.getState().restoreAllHearts();
+                useSubscriptionStore.setState({ hearts: current + 1, lastHeartLostAt: current + 1 >= MAX_HEARTS ? null : store.lastHeartLostAt });
                 successHaptic();
                 if (onHeartsRefilled) {
                     onHeartsRefilled();
@@ -292,11 +298,11 @@ export function OutOfHeartsModal({ visible, onDismiss, onUpgrade, onHeartsRefill
                     )}
 
                     {/* Gem instant refill CTA */}
-                    <Pressable onPress={handleGemRefill} style={styles.gemRefillBtn} accessibilityRole="button" accessibilityLabel="מלא לבבות עם ג׳מס">
+                    <Pressable onPress={handleGemRefill} style={styles.gemRefillBtn} accessibilityRole="button" accessibilityLabel="הוסף לב אחד עם ג׳מס">
                         <Text style={styles.gemRefillBtnText}>
                             {gems >= HEART_REFILL_GEM_COST
-                                ? `מלא מיד, ${HEART_REFILL_GEM_COST} ג'מס`
-                                : `קנה ג'מס, מלא מיד`}
+                                ? `+1 לב, ${HEART_REFILL_GEM_COST} ג'מס`
+                                : `קנה ג'מס, +1 לב`}
                         </Text>
                         <Text style={styles.btnIcon}>💎</Text>
                     </Pressable>
@@ -315,7 +321,7 @@ export function OutOfHeartsModal({ visible, onDismiss, onUpgrade, onHeartsRefill
                     >
                         <View style={{ flex: 1, alignItems: 'flex-end' }}>
                             <View style={{ flexDirection: 'row-reverse', alignItems: 'center', gap: 4 }}>
-                                <Text style={styles.coinRefillBtnText}>מילוי לבבות, {HEART_REFILL_COIN_COST}</Text>
+                                <Text style={styles.coinRefillBtnText}>+1 לב, {HEART_REFILL_COIN_COST}</Text>
                                 <GoldCoinIcon size={18} />
                             </View>
                             {!canAffordRefill && (

@@ -121,7 +121,15 @@ const SIM_FIRST_MODULES = new Set(["mod-0-1", "mod-1-1", "mod-2-12", "mod-2-13",
  * `recallExerciseSets` (see src/features/sentence-exercise/sentenceData.ts);
  * missing entries fall back to an "אין תרגילים זמינים" screen.
  */
-const MODULES_WITH_INTERACTIVE_RECALL = new Set(["mod-1-1"]);
+const MODULES_WITH_INTERACTIVE_RECALL = new Set([
+  "mod-1-1",
+  "mod-0-2", "mod-0-3",
+  "mod-1-2",
+  "mod-2-10", "mod-2-11",
+  "mod-3-15",
+  "mod-4-19", "mod-4-20",
+  "mod-5-25", "mod-5-26",
+]);
 
 /** Modules with a NotebookLM-generated infographic shown before the summary/chest */
 const MODULE_INFOGRAPHIC_MAP: Record<string, { uri: string }> = {

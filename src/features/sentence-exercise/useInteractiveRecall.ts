@@ -7,6 +7,7 @@ import type {
   RecallPrompt,
   TimelineOrderPrompt,
 } from "./sentenceTypes";
+import { useSubscriptionStore } from "../subscription/useSubscriptionStore";
 
 const FIRST_TRY_XP = 8;
 const FIRST_TRY_COINS = 4;
@@ -143,6 +144,8 @@ export function useInteractiveRecall(
 
   const applyWrong = useCallback(
     (prompt: RecallPrompt): RecallAttemptResult => {
+      // Deduct a heart on each wrong answer (practice is real, mistakes cost).
+      useSubscriptionStore.getState().useHeart();
       setState((prev) => {
         const prevWrongs = prev.wrongCount[prompt.id] ?? 0;
         const nextWrongs = prevWrongs + 1;

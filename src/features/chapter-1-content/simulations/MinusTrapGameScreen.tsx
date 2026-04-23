@@ -20,6 +20,7 @@ import { AnimatedPressable } from '../../../components/ui/AnimatedPressable';
 import { LottieIcon } from '../../../components/ui/LottieIcon';
 import { FINN_STANDARD } from '../../retention-loops/finnMascotConfig';
 import { tapHaptic, successHaptic, errorHaptic, heavyHaptic } from '../../../utils/haptics';
+import { useSubscriptionStore } from '../../subscription/useSubscriptionStore';
 import { useSoundEffect } from '../../../hooks/useSoundEffect';
 import { SimLottieBackground } from '../../../components/ui/SimLottieBackground';
 import { getChapterTheme } from '../../../constants/theme';
@@ -684,12 +685,17 @@ const [rewardsGranted, setRewardsGranted] = useState(false);
         prevBalanceRef.current = state.balance;
     }, [state.balance, state.isGameOver]);
 
-    // Game over: triple heavy haptic burst
+    // Game over: triple heavy haptic burst + deduct heart (only first time)
+    const heartDeductedRef = useRef(false);
     useEffect(() => {
         if (state.isGameOver && !gameOverAnimDone) {
             heavyHaptic();
             setTimeout(() => heavyHaptic(), 150);
             setTimeout(() => heavyHaptic(), 300);
+            if (!heartDeductedRef.current) {
+                heartDeductedRef.current = true;
+                useSubscriptionStore.getState().useHeart();
+            }
         }
     }, [state.isGameOver, gameOverAnimDone]);
 
