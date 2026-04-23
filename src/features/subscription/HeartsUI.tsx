@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback } from 'react';
 import { Image as ExpoImage } from "expo-image";
-import { View, Text, Pressable, StyleSheet, Modal, Image,
+import { View, Text, Pressable, StyleSheet, Modal, Image, ScrollView,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { GoldCoinIcon } from '../../components/ui/GoldCoinIcon';
@@ -247,6 +247,7 @@ export function OutOfHeartsModal({ visible, onDismiss, onUpgrade, onHeartsRefill
                     exiting={FadeOut.duration(200)}
                     style={styles.modalCard}
                 >
+                    <ScrollView contentContainerStyle={styles.modalScrollContent} showsVerticalScrollIndicator={false} bounces={false}>
                     {/* Finn + Title row */}
                     <View style={styles.finnRow}>
                         <View style={styles.finnTextCol}>
@@ -333,7 +334,6 @@ export function OutOfHeartsModal({ visible, onDismiss, onUpgrade, onHeartsRefill
                                 </View>
                             )}
                         </View>
-                        <Text style={styles.btnIcon}></Text>
                     </Pressable>
 
                     {/* Upgrade CTA */}
@@ -348,6 +348,7 @@ export function OutOfHeartsModal({ visible, onDismiss, onUpgrade, onHeartsRefill
                     <Pressable onPress={onDismiss} style={styles.waitBtn} accessibilityRole="button" accessibilityLabel="אחכה לחידוש לבבות">
                         <Text style={styles.waitBtnText}>אחכה ⏳</Text>
                     </Pressable>
+                    </ScrollView>
                 </Animated.View>
             </View>
         </Modal>
@@ -377,17 +378,20 @@ const styles = StyleSheet.create({
     modalCard: {
         width: '100%',
         maxWidth: 360,
+        maxHeight: '92%',
         backgroundColor: '#f0f9ff',
         borderRadius: 24,
         borderWidth: 1.5,
         borderColor: 'rgba(14,165,233,0.2)',
-        padding: 28,
-        alignItems: 'center',
         shadowColor: '#0ea5e9',
         shadowOffset: { width: 0, height: 8 },
         shadowOpacity: 0.15,
         shadowRadius: 20,
         elevation: 8,
+    },
+    modalScrollContent: {
+        padding: 28,
+        alignItems: 'center',
     },
     finnRow: {
         flexDirection: 'row-reverse',

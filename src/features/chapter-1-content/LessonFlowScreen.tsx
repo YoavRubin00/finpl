@@ -95,13 +95,21 @@ import { ProBadge } from "../../components/ui/ProBadge";
 import LottieView from "lottie-react-native";
 import { FINN_LOTTIE_SOURCE, FINN_HELLO, FINN_STANDARD, FINN_HAPPY, FINN_EMPATHIC, FINN_DANCING, getFinnSource, getFinnImage } from "../retention-loops/finnMascotConfig";
 import { InteractiveRecallScreen } from "../sentence-exercise/InteractiveRecallScreen";
+import { SharkDilemmaCard } from "../shark-dilemma/SharkDilemmaCard";
+import { getDilemma } from "../shark-dilemma/dilemmasData";
+
+// Small helper that advances phase → summary via useEffect (never during render).
+function FallbackToSummary({ setPhase }: { setPhase: (p: "summary") => void }) {
+  useEffect(() => { setPhase("summary"); }, [setPhase]);
+  return <View style={{ flex: 1, backgroundColor: "#f8fafc" }} />;
+}
 import { FINN_MEME_REACTIONS } from "../fun/finnJokesData";
 import type { FinnAnimationState } from "../retention-loops/finnMascotConfig";
 import { FlashcardInfographic, FINN_MAP } from "./FlashcardInfographic";
 import { GlossaryTooltip } from "../../components/ui/GlossaryTooltip";
 import { ChatScreen } from "../chat/ChatScreen";
 
-type FlowPhase = "hero" | "intro" | "flashcards" | "interactive-recall" | "quizzes" | "sim-intro" | "sim" | "module-infographic" | "post-infographic-video" | "summary" | "video";
+type FlowPhase = "hero" | "intro" | "flashcards" | "interactive-recall" | "quizzes" | "sim-intro" | "sim" | "module-infographic" | "post-infographic-video" | "shark-dilemma" | "summary" | "video";
 
 /** Full-screen character art shown when first opening a module */
 const MODULE_HERO_MAP: Record<string, { uri: string } | number> = {
@@ -2590,7 +2598,7 @@ export function LessonFlowScreen() {
       setPhase("sim-intro");
       mediumHaptic();
     } else {
-      setPhase(mod.id && MODULE_INFOGRAPHIC_MAP[mod.id] ? "module-infographic" : "summary");
+      setPhase(mod.id && MODULE_INFOGRAPHIC_MAP[mod.id] ? "module-infographic" : (mod.id && getDilemma(mod.id) ? "shark-dilemma" : "summary"));
     }
   }, [mod, quizIndex]);
 
@@ -2653,7 +2661,7 @@ export function LessonFlowScreen() {
     if (mod && SIM_FIRST_MODULES.has(mod.id)) {
       setPhase("flashcards");
     } else {
-      setPhase(mod && MODULE_INFOGRAPHIC_MAP[mod.id] ? "module-infographic" : "summary");
+      setPhase(mod && MODULE_INFOGRAPHIC_MAP[mod.id] ? "module-infographic" : (mod && getDilemma(mod.id) ? "shark-dilemma" : "summary"));
     }
   }, [mod]);
 
@@ -2820,14 +2828,40 @@ export function LessonFlowScreen() {
       <VideoHookPlayer
         videoUri={MODULE_POST_VIDEO_MAP[mod.id]}
         hookText={mod.videoHook ?? ""}
-        onFinish={() => setPhase("summary")}
+        onFinish={() => setPhase(mod && getDilemma(mod.id) ? "shark-dilemma" : "summary")}
         unitColors={unitColors}
       />
     );
   }
   if (phase === "post-infographic-video") {
-    setPhase("summary");
+    setPhase(mod && getDilemma(mod.id) ? "shark-dilemma" : "summary");
     return <View style={{ flex: 1, backgroundColor: "#f8fafc" }} />;
+  }
+
+  // Shark Dilemma ("לייעץ לשארק") — advisory scenario right before the chest.
+  if (phase === "shark-dilemma" && mod) {
+    const dilemma = getDilemma(mod.id);
+    if (!dilemma) {
+      // Missing content for this module — fall through to summary without
+      // a render-time setState (that triggers a React warning). Next render
+      // tick will re-evaluate phase.
+      return <FallbackToSummary setPhase={setPhase} />;
+    }
+    return (
+      <SharkDilemmaCard
+        dilemma={dilemma}
+        onChoice={(option) => {
+          useEconomyStore.getState().addCoins(5);
+          if (!option.isWise) {
+            // Soft penalty: unwise choice costs a heart. If user has 0 hearts,
+            // useHeart() returns false silently — that's intentional for this
+            // advisory flow (the in-card "💭 נקודה למחשבה" card IS the feedback).
+            useSubscriptionStore.getState().useHeart();
+          }
+        }}
+        onContinue={() => setPhase("summary")}
+      />
+    );
   }
 
   return (
@@ -3216,7 +3250,7 @@ export function LessonFlowScreen() {
               />
             </View>
             <Pressable
-              onPress={() => { tapHaptic(); setPhase(mod.id && MODULE_POST_VIDEO_MAP[mod.id] ? "post-infographic-video" : "summary"); }}
+              onPress={() => { tapHaptic(); setPhase(mod.id && MODULE_POST_VIDEO_MAP[mod.id] ? "post-infographic-video" : (mod.id && getDilemma(mod.id) ? "shark-dilemma" : "summary")); }}
               style={{ marginTop: 14, backgroundColor: "#0ea5e9", borderRadius: 14, paddingVertical: 14, paddingHorizontal: 40, borderBottomWidth: 4, borderBottomColor: "#0369a1" }}
               accessibilityRole="button"
               accessibilityLabel="המשך"
