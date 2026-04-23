@@ -10,7 +10,8 @@ import {
   KeyboardAvoidingView,
   Platform,
   Pressable,
-  StyleSheet, Image, Modal
+  StyleSheet, Image, Modal,
+  AccessibilityInfo,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Send, Check, CheckCheck, MessageCircle, ChevronLeft } from "lucide-react-native";
@@ -39,40 +40,7 @@ import type { CompanionAnimationState, ChatMessage, MessageStatus } from "./chat
 import type { CompanionId } from "../auth/types";
 import { ProBadge } from "../../components/ui/ProBadge";
 import { useTutorialStore } from "../../stores/useTutorialStore";
-import { getApiBase } from "../../db/apiBase";
-
-/* ------------------------------------------------------------------ */
-/*  Gemini, routed through backend proxy (keeps API key server-side) */
-/* ------------------------------------------------------------------ */
-
-async function callGeminiDirect(
-  systemPrompt: string,
-  messages: { role: "user" | "model"; content: string }[],
-): Promise<{ ok: boolean; reply: string }> {
-  try {
-    const response = await fetch(
-      `${getApiBase()}/api/ai/chat`,
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          systemPrompt,
-          messages,
-          maxOutputTokens: 2500,
-        }),
-      },
-    );
-
-    if (!response.ok) {
-      return { ok: false, reply: "שגיאה בשירות. נסה שוב." };
-    }
-
-    const data = await response.json();
-    return { ok: true, reply: data.reply ?? "סליחה, לא הצלחתי ליצור תשובה." };
-  } catch (_e) {
-    return { ok: false, reply: "שגיאת רשת. בדוק את החיבור לאינטרנט." };
-  }
-}
+import { streamChatRequest } from "../../utils/streamChat";
 
 /* ------------------------------------------------------------------ */
 /*  Money-themed decoration Lotties (subtle, not green)                */
@@ -288,6 +256,7 @@ export function ChatScreen() {
   const [_animationState, setAnimationState] = useState<CompanionAnimationState>("idle");
   const scrollViewRef = useRef<ScrollView>(null);
   const talkingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const abortControllerRef = useRef<AbortController | null>(null);
 
   const companionId: CompanionId = profile?.companionId ?? "warren-buffett";
   const companion = COMPANION_PERSONALITIES[companionId];
@@ -401,61 +370,84 @@ export function ChatScreen() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // Abort any in-flight stream on unmount
+  useEffect(() => () => { abortControllerRef.current?.abort(); }, []);
+
   // Auto-trigger AI response for lifeline intervention
   useEffect(() => {
-    if (autoSendLifeline && messages.length === 1 && !loading) {
-      setAutoSendLifeline(false);
-      // Simulate the user message being delivered, then fire the AI call
-      setLoading(true);
-      setAnimationState("thinking");
+    if (!autoSendLifeline || messages.length !== 1 || loading) return;
+    setAutoSendLifeline(false);
+    setLoading(true);
+    setAnimationState("thinking");
 
-      setTimeout(() => {
+    setTimeout(() => {
+      setMessages((prev) =>
+        prev.map((m) =>
+          m.role === "user" && m.status === "sent"
+            ? { ...m, status: "delivered" as const }
+            : m,
+        ),
+      );
+    }, 400);
+
+    const conceptLabel = lifelineConcept ? getConceptLabel(lifelineConcept) : "";
+    const systemPrompt =
+      displayName && profile
+        ? buildSystemPrompt(displayName, profile, companionId, allCompletedModules, currentChapterId, conceptLabel)
+        : `אתה ${companion.name} ${companion.emoji}, מחנך פיננסי באפליקציית FinPlay. ${companion.tone}\nענה תמיד בעברית. תשובות קצרות.`;
+
+    const chatMessages = messages.map((m) => ({
+      role: m.role === "assistant" ? ("model" as const) : ("user" as const),
+      content: m.content,
+    }));
+
+    const draftTs = Date.now();
+    setMessages((prev) => [
+      ...prev,
+      { role: "assistant", content: "", timestamp: draftTs, status: "read" as const },
+    ]);
+
+    abortControllerRef.current?.abort();
+    abortControllerRef.current = new AbortController();
+    let firstChunk = true;
+    let accumulated = "";
+
+    streamChatRequest(
+      { systemPrompt, messages: chatMessages, maxOutputTokens: 2500 },
+      (chunk) => {
+        if (firstChunk) {
+          setLoading(false);
+          setAnimationState("talking");
+          firstChunk = false;
+        }
+        accumulated += chunk;
         setMessages((prev) =>
           prev.map((m) =>
-            m.role === "user" && m.status === "sent"
-              ? { ...m, status: "delivered" as const }
+            m.role === "assistant" && m.timestamp === draftTs
+              ? { ...m, content: m.content + chunk }
               : m,
           ),
         );
-      }, 400);
-
-      const conceptLabel = lifelineConcept ? getConceptLabel(lifelineConcept) : "";
-      const systemPrompt =
-        displayName && profile
-          ? buildSystemPrompt(displayName, profile, companionId, allCompletedModules, currentChapterId, conceptLabel)
-          : `אתה ${companion.name} ${companion.emoji}, מחנך פיננסי באפליקציית FinPlay. ${companion.tone}\nענה תמיד בעברית. תשובות קצרות.`;
-
-      const chatMessages = messages.map((m) => ({
-        role: m.role === "assistant" ? ("model" as const) : ("user" as const),
-        content: m.content,
-      }));
-
-      callGeminiDirect(systemPrompt, chatMessages)
-        .then(async (data) => {
-          const reply = data.reply ?? "סליחה, לא הצלחתי ליצור תשובה.";
-          markAllRead();
-          setMessages((prev) => [
-            ...prev.map((m) =>
-              m.role === "user" && m.status !== "read" ? { ...m, status: "read" as const } : m,
-            ),
-            { role: "assistant", content: reply, timestamp: Date.now(), status: "read" },
-          ]);
-          setAnimationState("talking");
-          talkingTimeoutRef.current = setTimeout(() => setAnimationState("idle"), 3000);
-        })
-        .catch(() => {
-          markAllRead();
-          setMessages((prev) => [
-            ...prev,
-            { role: "assistant", content: "שגיאה בחיבור. נסה שוב.", timestamp: Date.now(), status: "read" },
-          ]);
-          setAnimationState("idle");
-        })
-        .finally(() => {
-          setLoading(false);
-          setTimeout(() => scrollViewRef.current?.scrollToEnd({ animated: true }), 100);
-        });
-    }
+      },
+      abortControllerRef.current.signal,
+    ).then(({ ok }) => {
+      if (!ok) {
+        setMessages((prev) =>
+          prev.map((m) =>
+            m.role === "assistant" && m.timestamp === draftTs
+              ? { ...m, content: "שגיאה בחיבור. נסה שוב." }
+              : m,
+          ),
+        );
+        setAnimationState("idle");
+      } else {
+        if (accumulated) AccessibilityInfo.announceForAccessibility(accumulated);
+        markAllRead();
+        talkingTimeoutRef.current = setTimeout(() => setAnimationState("idle"), 3000);
+      }
+      setLoading(false);
+      setTimeout(() => scrollViewRef.current?.scrollToEnd({ animated: true }), 100);
+    });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [autoSendLifeline]);
 
@@ -499,70 +491,87 @@ export function ChatScreen() {
       talkingTimeoutRef.current = null;
     }
 
-    try {
-      const conceptLabel = lifelineConcept ? getConceptLabel(lifelineConcept) : undefined;
-      const systemPrompt =
-        displayName && profile
-          ? buildSystemPrompt(displayName, profile, companionId, allCompletedModules, currentChapterId, conceptLabel)
-          : `אתה ${companion.name} ${companion.emoji}, מחנך פיננסי באפליקציית FinPlay. ${companion.tone}\nענה תמיד בעברית. תשובות קצרות.`;
+    const conceptLabel = lifelineConcept ? getConceptLabel(lifelineConcept) : undefined;
+    const systemPrompt =
+      displayName && profile
+        ? buildSystemPrompt(displayName, profile, companionId, allCompletedModules, currentChapterId, conceptLabel)
+        : `אתה ${companion.name} ${companion.emoji}, מחנך פיננסי באפליקציית FinPlay. ${companion.tone}\nענה תמיד בעברית. תשובות קצרות.`;
 
-      const chatMessages = updatedMessages.map((m) => ({
-        role: m.role === "assistant" ? ("model" as const) : ("user" as const),
-        content: m.content,
-      }));
+    const chatMessages = updatedMessages.map((m) => ({
+      role: m.role === "assistant" ? ("model" as const) : ("user" as const),
+      content: m.content,
+    }));
 
-      const data = await callGeminiDirect(systemPrompt, chatMessages);
-      const reply = data.reply ?? "סליחה, לא הצלחתי ליצור תשובה.";
+    // Add empty draft bubble; chunks stream into it
+    const draftTs = Date.now();
+    setMessages((prev) => [
+      ...prev,
+      { role: "assistant", content: "", timestamp: draftTs, status: "read" as const },
+    ]);
 
-      // Count against daily quota only after a successful reply (free tier)
+    abortControllerRef.current?.abort();
+    abortControllerRef.current = new AbortController();
+    let firstChunk = true;
+    let accumulated = "";
+
+    const { ok } = await streamChatRequest(
+      { systemPrompt, messages: chatMessages, maxOutputTokens: 2500 },
+      (chunk) => {
+        if (firstChunk) {
+          setLoading(false);
+          setAnimationState("talking");
+          firstChunk = false;
+        }
+        accumulated += chunk;
+        setMessages((prev) =>
+          prev.map((m) =>
+            m.role === "assistant" && m.timestamp === draftTs
+              ? { ...m, content: m.content + chunk }
+              : m,
+          ),
+        );
+        setTimeout(() => scrollViewRef.current?.scrollToEnd({ animated: false }), 50);
+      },
+      abortControllerRef.current.signal,
+    );
+
+    if (!ok) {
+      setMessages((prev) =>
+        prev.map((m) =>
+          m.role === "assistant" && m.timestamp === draftTs
+            ? { ...m, content: "שגיאה בחיבור. נסה שוב." }
+            : m,
+        ),
+      );
+      markAllRead();
+      setAnimationState("idle");
+    } else {
+      if (accumulated) AccessibilityInfo.announceForAccessibility(accumulated);
       if (!storeState.isPro()) {
         storeState.incrementUsage("chat");
       }
-
-      // Mark all user messages as read, then add assistant reply
       markAllRead();
       const atLimitAfterSend = !useSubscriptionStore.getState().canUse("chat");
-      setMessages((prev) => [
-        ...prev.map((m) =>
-          m.role === "user" && m.status !== "read" ? { ...m, status: "read" as const } : m,
-        ),
-        {
-          role: "assistant",
-          content: reply,
-          timestamp: Date.now(),
-          status: "read",
-        },
-        ...(atLimitAfterSend && !prev.some((m) => m.kind === "upgrade_prompt")
-          ? [{
+      if (atLimitAfterSend) {
+        setMessages((prev) => {
+          if (prev.some((m) => m.kind === "upgrade_prompt")) return prev;
+          return [
+            ...prev,
+            {
               role: "assistant" as const,
               content: "זה הסוף לחינם להיום 💙 הגעת ל-3 ההודעות היומיות. רוצה להמשיך לשוחח איתי ללא הגבלה?",
               timestamp: Date.now() + 1,
               status: "read" as const,
               kind: "upgrade_prompt" as const,
-            }]
-          : []),
-      ]);
-
-      setAnimationState("talking");
-      talkingTimeoutRef.current = setTimeout(() => {
-        setAnimationState("idle");
-      }, 3000);
-    } catch {
-      markAllRead();
-      setMessages((prev) => [
-        ...prev,
-        {
-          role: "assistant",
-          content: "שגיאה בחיבור. נסה שוב.",
-          timestamp: Date.now(),
-          status: "read",
-        },
-      ]);
-      setAnimationState("idle");
-    } finally {
-      setLoading(false);
-      setTimeout(() => scrollViewRef.current?.scrollToEnd({ animated: true }), 100);
+            },
+          ];
+        });
+      }
+      talkingTimeoutRef.current = setTimeout(() => setAnimationState("idle"), 3000);
     }
+
+    setLoading(false);
+    setTimeout(() => scrollViewRef.current?.scrollToEnd({ animated: true }), 100);
   }, [input, loading, messages, displayName, profile, companionId, companion, allCompletedModules, currentChapterId, lifelineConcept, markAllRead]);
 
   const isPro = useSubscriptionStore((s) => s.isPro());
@@ -635,7 +644,7 @@ export function ChatScreen() {
                   <View style={msgStyles.avatarCircle}>
                     <ExpoImage
                       source={FINN_STANDARD}
-                      style={{ width: 56, height: 56 }}
+                      style={{ width: 22, height: 22 }}
                       contentFit="contain"
                       accessible={false}
                     />
@@ -865,6 +874,7 @@ const msgStyles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     marginLeft: 6,
+    overflow: "hidden",
   },
   avatarEmoji: {
     fontSize: 13,

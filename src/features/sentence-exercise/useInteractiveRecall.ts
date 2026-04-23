@@ -144,13 +144,11 @@ export function useInteractiveRecall(
 
   const applyWrong = useCallback(
     (prompt: RecallPrompt): RecallAttemptResult => {
-      let shouldDeductHeart = false;
+      // Deduct a heart on every wrong answer — no softening.
+      useSubscriptionStore.getState().useHeart();
       setState((prev) => {
         const prevWrongs = prev.wrongCount[prompt.id] ?? 0;
         const nextWrongs = prevWrongs + 1;
-        // Practice is forgiving: only deduct a heart on the 2nd+ mistake per
-        // prompt, not the first try. First mistake → just empathic nudge.
-        if (nextWrongs >= 2) shouldDeductHeart = true;
         const message =
           nextWrongs >= 2 ? prompt.finn.hintAfterTwoWrongs : prompt.finn.empathicFirst;
         return {
@@ -161,7 +159,6 @@ export function useInteractiveRecall(
           finnMessage: message,
         };
       });
-      if (shouldDeductHeart) useSubscriptionStore.getState().useHeart();
       return { correct: false, completesPrompt: false, finishesSet: false };
     },
     [],

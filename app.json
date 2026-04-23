@@ -151,7 +151,6 @@
         "NSPhotoLibraryUsageDescription": "FinPlay מבקש גישה לתמונות רק אם תבחר/י לשתף תמונת פרופיל.",
         "NSCameraUsageDescription": "FinPlay מבקש גישה למצלמה רק אם תבחר/י לצלם תמונת פרופיל.",
         "NSAppTransportSecurity": {
-          "NSAllowsArbitraryLoads": true,
           "NSExceptionDomains": {
             "r2.dev": {
               "NSIncludesSubdomains": true,

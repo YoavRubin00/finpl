@@ -431,7 +431,7 @@ const styles = StyleSheet.create({
         color: '#64748b',
     },
     orderTypeBtnTextActive: {
-        color: '#0284c7',
+        color: '#0369a1',
     },
     orderInfoRow: {
         flexDirection: 'row-reverse',

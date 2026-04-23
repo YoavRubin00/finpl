@@ -16,6 +16,14 @@ interface QuizResult {
   total: number;
 }
 
+interface ResumeState {
+  phase: string;
+  flashcardIndex: number;
+  quizIndex: number;
+  consecutiveCorrect: number;
+  peakStreak?: number;
+}
+
 interface ChapterProgress {
   completedModules: string[];
   quizResults: Record<string, QuizResult>;
@@ -26,6 +34,7 @@ interface ChapterState {
   currentChapterId: string;
   progress: Record<string, ChapterProgress>;
   bossCompleted: Record<string, boolean>;
+  moduleResume: Record<string, ResumeState>;
 
   setCurrentChapter: (chapterId: string) => void;
   completeModule: (moduleId: string) => void;
@@ -33,6 +42,8 @@ interface ChapterState {
   setCurrentModule: (index: number) => void;
   skipIntroChapter: (moduleIds: string[]) => void;
   markBossComplete: (chapterId: string) => void;
+  saveResume: (moduleId: string, state: ResumeState) => void;
+  clearResume: (moduleId: string) => void;
 }
 
 const emptyProgress: ChapterProgress = {
@@ -56,6 +67,19 @@ export const useChapterStore = create<ChapterState>()(
         [DEFAULT_CHAPTER_ID]: { ...emptyProgress },
       },
       bossCompleted: {},
+      moduleResume: {},
+
+      saveResume: (moduleId, state) => {
+        set((s) => ({ moduleResume: { ...s.moduleResume, [moduleId]: state } }));
+      },
+
+      clearResume: (moduleId) => {
+        set((s) => {
+          const next = { ...s.moduleResume };
+          delete next[moduleId];
+          return { moduleResume: next };
+        });
+      },
 
       markBossComplete: (chapterId: string) => {
         set((state) => ({
@@ -183,11 +207,12 @@ export const useChapterStore = create<ChapterState>()(
     }),
     {
       name: "chapter-store",
-      version: 1,
+      version: 2,
       storage: createJSONStorage(() => zustandStorage),
       partialize: (state) => ({
         currentChapterId: state.currentChapterId,
         progress: state.progress,
+        moduleResume: state.moduleResume,
       }),
       migrate: (persisted, version) => {
         if (version === 0) {
@@ -201,7 +226,11 @@ export const useChapterStore = create<ChapterState>()(
                 currentModuleIndex: old.currentModuleIndex ?? 0,
               },
             },
+            moduleResume: {},
           };
+        }
+        if (version === 1) {
+          return { ...(persisted as ChapterState), moduleResume: {} };
         }
         return persisted as ChapterState;
       },

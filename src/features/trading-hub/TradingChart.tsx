@@ -269,7 +269,7 @@ const styles = StyleSheet.create({
     fontVariant: ['tabular-nums'],
   },
   periodPillTextActive: {
-    color: '#3b82f6',
+    color: '#1d4ed8',
   },
 
   // ── Indicator badges (tap for explanation) ──

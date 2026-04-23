@@ -429,7 +429,7 @@ export function PricingScreen() {
                   </Pressable>
                 </View>
 
-                <Pressable onPress={() => router.back()} style={styles.noThanksBtn} accessibilityRole="button" accessibilityLabel="ליציאה" hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+                <Pressable onPress={() => { if (router.canGoBack()) router.back(); else router.replace('/(tabs)' as never); }} style={styles.noThanksBtn} accessibilityRole="button" accessibilityLabel="ליציאה" hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
                   <Text style={[styles.noThanksText, { color: theme.textMuted }]}>ליציאה</Text>
                 </Pressable>
 
@@ -597,7 +597,7 @@ const styles = StyleSheet.create({
   featureLimitText: {
     fontSize: 11,
     fontWeight: "600",
-    color: DUO.textMuted,
+    color: '#6b7280',
     textAlign: "center",
   },
   featureLimitTextPro: {

@@ -1,15 +1,6 @@
-import { useEffect } from "react";
 import { Text, Modal, StyleSheet, View, Pressable } from "react-native";
 import { X } from "lucide-react-native";
-import Animated, {
-  useSharedValue,
-  useAnimatedStyle,
-  withSpring,
-  withTiming,
-  FadeIn,
-  FadeOut,
-} from "react-native-reanimated";
-import { LottieIcon } from "../../components/ui/LottieIcon";
+import Animated, { FadeIn, FadeOut } from "react-native-reanimated";
 import { useRouter } from "expo-router";
 import { LinearGradient } from "expo-linear-gradient";
 import { AnimatedPressable } from "../../components/ui/AnimatedPressable";
@@ -62,96 +53,73 @@ interface UpgradeModalProps {
 
 export function UpgradeModal({ visible, feature, onDismiss }: UpgradeModalProps) {
   const router = useRouter();
-  const scale = useSharedValue(0.75);
-  const opacity = useSharedValue(0);
-
-  useEffect(() => {
-    if (visible) {
-      scale.value = withSpring(1, { damping: 14, stiffness: 200 });
-      opacity.value = withTiming(1, { duration: 200 });
-    } else {
-      scale.value = withTiming(0.85, { duration: 150 });
-      opacity.value = withTiming(0, { duration: 150 });
-    }
-  }, [visible]);
-
-  const cardStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: scale.value }],
-    opacity: opacity.value,
-  }));
 
   const { title, body } = FEATURE_INFO[feature];
-
-  if (!visible) return null;
 
   return (
     <Modal transparent animationType="none" visible={visible} statusBarTranslucent onRequestClose={onDismiss} accessibilityViewIsModal>
       <Animated.View
-        entering={FadeIn.duration(200)}
-        exiting={FadeOut.duration(150)}
+        entering={FadeIn.duration(120)}
+        exiting={FadeOut.duration(80)}
         style={styles.overlay}
       >
-        <Animated.View style={[cardStyle, { width: "100%" }]}>
-          <LinearGradient
-            colors={["#0a2540", "#0e3a5c", "#0a2540"]}
-            style={styles.card}
+        <LinearGradient
+          colors={["#0a2540", "#0e3a5c", "#0a2540"]}
+          style={styles.card}
+        >
+          {/* Close button */}
+          <Pressable onPress={onDismiss} style={styles.closeBtn} hitSlop={12} accessibilityLabel="סגור" accessibilityRole="button">
+            <X size={20} color="#64748b" />
+          </Pressable>
+
+          {/* Crown */}
+          <Text
+            style={styles.crownEmoji}
+            accessibilityElementsHidden
+            importantForAccessibility="no"
+            allowFontScaling={false}
+          >👑</Text>
+
+          {/* Title */}
+          <Text style={styles.title} accessibilityRole="header">{title}</Text>
+
+          {/* Body */}
+          <Text style={styles.body}>{body}</Text>
+
+          {/* PRO benefits row */}
+          <View style={styles.benefitsRow}>
+            {["👑 לבבות אינסופיים", "⚡ גישה מלאה", "🚫 ללא פרסומות"].map((b) => (
+              <View key={b} style={styles.benefitChipWrap}>
+                <Text style={styles.benefitChip}>{b}</Text>
+              </View>
+            ))}
+          </View>
+
+          {/* CTA */}
+          <AnimatedPressable
+            onPress={() => {
+              heavyHaptic();
+              onDismiss();
+              router.push("/pricing" as never);
+            }}
+            style={styles.cta}
+            accessibilityRole="button"
+            accessibilityLabel="שדרג ל-PRO"
           >
-            {/* Close button */}
-            <Pressable onPress={onDismiss} style={styles.closeBtn} hitSlop={12} accessibilityLabel="סגור" accessibilityRole="button">
-              <X size={20} color="#64748b" />
-            </Pressable>
-
-            {/* Crown Lottie */}
-            <View accessible={false}>
-              <LottieIcon
-                source={require("../../../assets/lottie/Crown.json") as number}
-                size={100}
-                autoPlay
-                loop
-              />
-            </View>
-
-            {/* Title */}
-            <Text style={styles.title} accessibilityRole="header">{title}</Text>
-
-            {/* Body */}
-            <Text style={styles.body}>{body}</Text>
-
-            {/* PRO benefits row */}
-            <View style={styles.benefitsRow}>
-              {["👑 לבבות אינסופיים", "⚡ גישה מלאה", "🚫 ללא פרסומות"].map((b) => (
-                <View key={b} style={styles.benefitChipWrap}>
-                  <Text style={styles.benefitChip}>{b}</Text>
-                </View>
-              ))}
-            </View>
-
-            {/* CTA */}
-            <AnimatedPressable
-              onPress={() => {
-                heavyHaptic();
-                onDismiss();
-                router.push("/pricing" as never);
-              }}
-              style={styles.cta}
-              accessibilityRole="button"
-              accessibilityLabel="שדרג ל-PRO"
+            <LinearGradient
+              colors={["#0a2540", "#164e63", "#0a2540"]}
+              start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
+              style={styles.ctaGradient}
             >
-              <LinearGradient
-                colors={["#0a2540", "#164e63", "#0a2540"]}
-                start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
-                style={styles.ctaGradient}
-              >
-                <Text style={styles.ctaText}>שדרג ל-PRO</Text>
-              </LinearGradient>
-            </AnimatedPressable>
+              <Text style={styles.ctaText}>שדרג ל-PRO</Text>
+            </LinearGradient>
+          </AnimatedPressable>
 
-            {/* Dismiss */}
-            <AnimatedPressable onPress={onDismiss} style={styles.dismiss} accessibilityRole="button" accessibilityLabel="המשך מאיפה שהפסקתי">
-              <Text style={styles.dismissText}>המשך מאיפה שהפסקתי</Text>
-            </AnimatedPressable>
-          </LinearGradient>
-        </Animated.View>
+          {/* Dismiss */}
+          <AnimatedPressable onPress={onDismiss} style={styles.dismiss} accessibilityRole="button" accessibilityLabel="המשך מאיפה שהפסקתי">
+            <Text style={styles.dismissText}>המשך מאיפה שהפסקתי</Text>
+          </AnimatedPressable>
+        </LinearGradient>
       </Animated.View>
     </Modal>
   );
@@ -179,6 +147,12 @@ const styles = StyleSheet.create({
     shadowRadius: 24,
     shadowOffset: { width: 0, height: 4 },
     elevation: 12,
+  },
+  crownEmoji: {
+    fontSize: 88,
+    marginTop: 8,
+    marginBottom: 8,
+    textAlign: "center",
   },
   title: {
     fontSize: 22,
@@ -244,7 +218,7 @@ const styles = StyleSheet.create({
   closeBtn: {
     position: "absolute",
     top: 12,
-    left: 12,
+    right: 12,
     width: 32,
     height: 32,
     borderRadius: 16,

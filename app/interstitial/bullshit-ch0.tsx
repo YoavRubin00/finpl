@@ -46,8 +46,26 @@ export default function BullshitCh0InterstitialPage() {
     } as never);
   }, [router]);
 
+  const handleHomePress = useCallback(() => {
+    tapHaptic();
+    if (router.canGoBack()) router.back();
+    else router.replace('/(tabs)' as never);
+  }, [router]);
+
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
+      {/* Home button, top-right. Fixed width/height prevents screen overflow. */}
+      {!showIntro && (
+        <Pressable
+          onPress={handleHomePress}
+          style={styles.homeBtn}
+          hitSlop={12}
+          accessibilityRole="button"
+          accessibilityLabel="חזרה למסך הבית"
+        >
+          <Text style={styles.homeBtnIcon}>✕</Text>
+        </Pressable>
+      )}
       <ScrollView
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
@@ -147,6 +165,26 @@ const styles = StyleSheet.create({
     flexGrow: 1,
     justifyContent: "center",
     paddingVertical: 12,
+  },
+  homeBtn: {
+    position: "absolute",
+    top: 12,
+    right: 16,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: "rgba(15,23,42,0.08)",
+    alignItems: "center",
+    justifyContent: "center",
+    zIndex: 50,
+    borderWidth: 1,
+    borderColor: "rgba(15,23,42,0.1)",
+  },
+  homeBtnIcon: {
+    fontSize: 18,
+    fontWeight: "700",
+    color: "#475569",
+    lineHeight: 18,
   },
   introBackdrop: {
     position: "absolute",

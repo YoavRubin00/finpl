@@ -259,8 +259,8 @@ function WelcomeCard({ height }: { height: number }) {
         delay,
         withRepeat(
           withSequence(
-            withTiming(1.03, { duration: 2200 }),
-            withTiming(1, { duration: 2200 }),
+            withTiming(1.012, { duration: 3200 }),
+            withTiming(1, { duration: 3200 }),
           ),
           -1,
           false,
@@ -268,9 +268,9 @@ function WelcomeCard({ height }: { height: number }) {
       );
     };
     pulse(scale1, 0);
-    pulse(scale2, 533);
-    pulse(scale3, 1066);
-    pulse(scale4, 266);
+    pulse(scale2, 800);
+    pulse(scale3, 1600);
+    pulse(scale4, 400);
     return () => { cancelAnimation(scale1); cancelAnimation(scale2); cancelAnimation(scale3); cancelAnimation(scale4); };
   }, [reducedMotion]);
   const bubble1Style = useAnimatedStyle(() => ({ transform: [{ scale: scale1.value }] }));

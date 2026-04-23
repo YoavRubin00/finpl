@@ -1,13 +1,14 @@
-import React from "react";
+import React, { useEffect } from "react";
 import { View, Text, Modal, Pressable, StyleSheet } from "react-native";
 import { Image as ExpoImage } from "expo-image";
-import Animated, { FadeIn, SlideInDown, ZoomIn } from "react-native-reanimated";
+import Animated, { FadeIn, FadeInDown, ZoomIn, Easing } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import { X, ChevronLeft } from "lucide-react-native";
 import { FINN_HAPPY } from "../retention-loops/finnMascotConfig";
 import { useChapterStore } from "../chapter-1-content/useChapterStore";
 import { tapHaptic } from "../../utils/haptics";
+import { useSoundEffect } from "../../hooks/useSoundEffect";
 
 const RTL_CENTER = { writingDirection: "rtl" as const, textAlign: "center" as const };
 const RTL = { writingDirection: "rtl" as const, textAlign: "right" as const };
@@ -61,6 +62,11 @@ export function BenbenStudyNudgeModal({ visible, onClose }: Props) {
   const router = useRouter();
   const setCurrentChapter = useChapterStore((s) => s.setCurrentChapter);
   const setCurrentModule = useChapterStore((s) => s.setCurrentModule);
+  const { playSound } = useSoundEffect();
+
+  useEffect(() => {
+    if (visible) playSound('btn_click_soft_1');
+  }, [visible, playSound]);
 
   const handleTopicPress = (topic: TopicLink) => {
     tapHaptic();
@@ -79,12 +85,11 @@ export function BenbenStudyNudgeModal({ visible, onClose }: Props) {
       onRequestClose={onClose}
     >
       <Pressable style={styles.overlay} onPress={onClose} accessibilityLabel="סגור">
-        <Pressable
+        <Animated.View
+          entering={FadeInDown.duration(320).easing(Easing.out(Easing.cubic))}
           style={[styles.sheet, { paddingBottom: Math.max(24, insets.bottom + 16) }]}
-          onPress={() => {}}
-          accessible={false}
         >
-          <Animated.View entering={SlideInDown.springify().damping(16)}>
+          <Pressable onPress={() => {}} accessible={false}>
             <Pressable
               onPress={onClose}
               style={styles.closeBtn}
@@ -95,31 +100,30 @@ export function BenbenStudyNudgeModal({ visible, onClose }: Props) {
               <X size={22} color="#64748b" />
             </Pressable>
 
-            <Animated.View entering={ZoomIn.delay(120).duration(300)} style={styles.sharkWrap}>
+            <Animated.View
+              entering={ZoomIn.delay(280).springify().damping(9)}
+              style={styles.sharkWrap}
+            >
               <ExpoImage source={FINN_HAPPY} style={styles.shark} contentFit="contain" accessible={false} />
             </Animated.View>
 
-            <Animated.Text
-              entering={FadeIn.delay(180).duration(280)}
+            <Text
               style={[styles.title, RTL_CENTER]}
               allowFontScaling={false}
+              accessibilityRole="header"
             >
               רוצה להבין איך משכורת הופכת לכסף אמיתי?
-            </Animated.Text>
+            </Text>
 
-            <Animated.Text
-              entering={FadeIn.delay(260).duration(280)}
-              style={[styles.subtitle, RTL_CENTER]}
-              allowFontScaling={false}
-            >
+            <Text style={[styles.subtitle, RTL_CENTER]} allowFontScaling={false}>
               הפרשות לפנסיה, ביטוח לאומי, קרן השתלמות ומס הכנסה, כל הבסיס בתוך 3 מודולות קצרות.
-            </Animated.Text>
+            </Text>
 
             <View style={styles.topicList}>
               {TOPICS.map((topic, i) => (
                 <Animated.View
                   key={topic.moduleId}
-                  entering={FadeIn.delay(320 + i * 80).duration(240)}
+                  entering={FadeIn.delay(360 + i * 35).duration(200)}
                 >
                   <Pressable
                     onPress={() => handleTopicPress(topic)}
@@ -128,16 +132,14 @@ export function BenbenStudyNudgeModal({ visible, onClose }: Props) {
                     hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
                     style={({ pressed }) => [
                       styles.topicBtn,
-                      pressed && { transform: [{ translateY: 1 }], opacity: 0.92 },
+                      pressed && { transform: [{ translateY: 1 }], opacity: 0.88 },
                     ]}
                   >
-                    <View style={styles.topicEmojiWrap}>
-                      <Text style={styles.topicEmoji} allowFontScaling={false}>{topic.emoji}</Text>
-                    </View>
+                    <Text style={styles.topicEmoji} allowFontScaling={false}>{topic.emoji}</Text>
                     <Text style={[styles.topicLabel, RTL]} allowFontScaling={false} numberOfLines={1}>
                       {topic.label}
                     </Text>
-                    <ChevronLeft size={18} color="#0369a1" strokeWidth={2.5} />
+                    <ChevronLeft size={18} color="#ffffff" strokeWidth={2.5} />
                   </Pressable>
                 </Animated.View>
               ))}
@@ -152,8 +154,8 @@ export function BenbenStudyNudgeModal({ visible, onClose }: Props) {
             >
               <Text style={styles.laterText} allowFontScaling={false}>אולי אחר כך</Text>
             </Pressable>
-          </Animated.View>
-        </Pressable>
+          </Pressable>
+        </Animated.View>
       </Pressable>
     </Modal>
   );
@@ -174,7 +176,7 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   closeBtn: {
-    alignSelf: "flex-start",
+    alignSelf: "flex-end",
     width: 36,
     height: 36,
     borderRadius: 18,
@@ -208,28 +210,16 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   topicBtn: {
-    flexDirection: "row-reverse",
+    flexDirection: "row",
     alignItems: "center",
     gap: 12,
-    backgroundColor: "#f0f9ff",
+    backgroundColor: "#0891b2",
     borderRadius: 16,
-    borderWidth: 1.5,
-    borderColor: "#7dd3fc",
-    borderBottomColor: "#0284c7",
     borderBottomWidth: 3,
+    borderBottomColor: "#0e7490",
     paddingVertical: 14,
     paddingHorizontal: 16,
-    minHeight: 60,
-  },
-  topicEmojiWrap: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: "#ffffff",
-    alignItems: "center",
-    justifyContent: "center",
-    borderWidth: 1.5,
-    borderColor: "#bae6fd",
+    minHeight: 56,
   },
   topicEmoji: {
     fontSize: 22,
@@ -237,7 +227,7 @@ const styles = StyleSheet.create({
   },
   topicLabel: {
     flex: 1,
-    color: "#0c4a6e",
+    color: "#ffffff",
     fontSize: 15,
     fontWeight: "900",
   },

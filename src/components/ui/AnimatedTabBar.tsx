@@ -17,10 +17,11 @@ import Animated, {
   withTiming,
   cancelAnimation,
   Easing,
+  useReducedMotion,
 } from "react-native-reanimated";
 import { useEffect, useCallback } from "react";
 import type { BottomTabBarProps } from "@react-navigation/bottom-tabs";
-import { SPRING_BOUNCY } from "../../utils/animations";
+
 import { tapHaptic } from "../../utils/haptics";
 import { CLASH } from "../../constants/theme";
 import { useTheme } from "../../hooks/useTheme";
@@ -65,6 +66,7 @@ const TAB_COLORS: Record<string, string> = {
 const TAB_BAR_BG = "#fafafa";
 const ICON_SIZE_DEFAULT = 30;
 const ICON_SIZE_FOCUSED = 34;
+const SPRING_FAST = { damping: 20, stiffness: 400 };
 
 // ---------------------------------------------------------------------------
 // Single tab item, Clash Royale inspired
@@ -84,6 +86,7 @@ interface TabItemProps {
 function TabItem({ config, focused, onPress, onLongPress, walkthroughGlow, walkthroughLocked }: TabItemProps) {
   const theme = useTheme();
   const activeColor = TAB_COLORS[config.key] ?? "#7c3aed";
+  const reducedMotion = useReducedMotion();
   const scale = useSharedValue(1);
   const translateY = useSharedValue(0);
   const activeGlow = useSharedValue(0);
@@ -118,17 +121,16 @@ function TabItem({ config, focused, onPress, onLongPress, walkthroughGlow, walkt
   }));
 
   useEffect(() => {
-    // Active tab pops up and scales bigger (Clash Royale style)
-    scale.value = withSpring(focused ? 1.15 : 1, SPRING_BOUNCY);
-    translateY.value = withSpring(focused ? -2 : 0, SPRING_BOUNCY);
-
-    // Stitch professional breathable glow for active state
-    if (focused) {
-      activeGlow.value = withTiming(1, { duration: 400 });
-    } else {
-      activeGlow.value = withTiming(0, { duration: 300 });
+    if (reducedMotion) {
+      scale.value = focused ? 1.15 : 1;
+      translateY.value = focused ? -2 : 0;
+      activeGlow.value = focused ? 1 : 0;
+      return;
     }
-  }, [focused, scale, translateY, activeGlow]);
+    scale.value = withSpring(focused ? 1.15 : 1, SPRING_FAST);
+    translateY.value = withSpring(focused ? -2 : 0, SPRING_FAST);
+    activeGlow.value = withTiming(focused ? 1 : 0, { duration: focused ? 180 : 150 });
+  }, [focused, scale, translateY, activeGlow, reducedMotion]);
 
   const containerStyle = useAnimatedStyle(() => ({
     transform: [{ scale: scale.value }, { translateY: translateY.value }],

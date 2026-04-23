@@ -44,7 +44,7 @@ export function AssetInfoSheet({ visible, asset, onClose }: AssetInfoSheetProps)
         <Pressable style={[styles.sheet, { maxHeight: Dimensions.get('window').height * 0.85 }]} onPress={() => {}}>
           {/* Close button — right side for RTL */}
           <Pressable onPress={onClose} style={styles.closeBtn} accessibilityRole="button" accessibilityLabel="סגור">
-            <X size={18} color={CALM.textTertiary} />
+            <X size={18} color={CALM.textSecondary} />
           </Pressable>
 
           <ScrollView showsVerticalScrollIndicator={false} bounces={false} contentContainerStyle={{ paddingBottom: 8 }}>

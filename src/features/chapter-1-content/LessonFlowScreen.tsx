@@ -105,7 +105,8 @@ function FallbackToSummary({ setPhase }: { setPhase: (p: "summary") => void }) {
 }
 import { FINN_MEME_REACTIONS } from "../fun/finnJokesData";
 import type { FinnAnimationState } from "../retention-loops/finnMascotConfig";
-import { FlashcardInfographic, FINN_MAP } from "./FlashcardInfographic";
+import { FlashcardInfographic, FINN_MAP, INFOGRAPHIC_MAP } from "./FlashcardInfographic";
+import { useModulePrefetch, getCachedVideoPath } from "../../hooks/useModulePrefetch";
 import { GlossaryTooltip } from "../../components/ui/GlossaryTooltip";
 import { ChatScreen } from "../chat/ChatScreen";
 
@@ -165,6 +166,9 @@ const INFOGRAPHIC_TOP_CARDS = new Set([
 ]);
 
 const RTL_STYLE = { writingDirection: "rtl" as const, textAlign: "right" as const };
+
+/** Phases where progress is worth saving so the user can resume mid-module */
+const RESTORABLE_PHASES = new Set<FlowPhase>(["flashcards", "interactive-recall", "quizzes"]);
 
 /** Summary infographic map, maps summary card IDs to portrait PNGs */
 const SUMMARY_MAP: Record<string, { uri: string } | number | null> = {
@@ -311,11 +315,9 @@ function renderBoldText(text: string, onTermPress?: (term: string) => void): Rea
         </Text>
       );
     } else {
-      result.push(
-        <Text key={key++} style={{ fontWeight: "900", color: "#d97706" }}>
-          {token}
-        </Text>
-      );
+      // English words inside Hebrew text: render inline with matching style
+      // (no color, no emphasized weight) so they don't tip off quiz answers.
+      result.push(<Text key={key++}>{token}</Text>);
     }
     // Inject strong Right-To-Left Mark to prevent punctuation breaking
     result.push('\u200F');
@@ -2071,10 +2073,70 @@ export function LessonFlowScreen() {
 
   const unitColors = LESSON_COLORS[chapterId ?? ""] ?? DEFAULT_UNIT_COLORS;
 
+  // Collect all remote image URIs for the current module so we can prefetch
+  // them in the background as soon as the lesson screen mounts.
+  const prefetchUris = useMemo<readonly string[]>(() => {
+    if (!mod) return [];
+    const modNum = mod.id.replace("mod-", ""); // e.g. "1-5" from "mod-1-5"
+    const cardPrefix = `fc-${modNum}-`;
+    const uris: string[] = [];
+
+    function addUri(src: unknown): void {
+      if (!src) return;
+      if (typeof src === "string") { uris.push(src); return; }
+      if (typeof src === "object") {
+        const u = (src as Record<string, unknown>).uri;
+        if (typeof u === "string") uris.push(u);
+      }
+    }
+
+    addUri(MODULE_HERO_MAP[mod.id]);
+    addUri(MODULE_INFOGRAPHIC_MAP[mod.id]);
+
+    // All summary/payslip cards belonging to this module
+    for (const [k, v] of Object.entries(SUMMARY_MAP)) {
+      if (k.startsWith(cardPrefix)) addUri(v);
+    }
+
+    // Per-flashcard imageUrl fields (URI-based only; require() numbers are local)
+    for (const fc of mod.flashcards) addUri(fc.imageUrl);
+
+    // Per-card infographic PNGs from FlashcardInfographic
+    for (const [k, v] of Object.entries(INFOGRAPHIC_MAP)) {
+      if (k.startsWith(cardPrefix)) addUri(v);
+    }
+
+    // Finn character art for this module's cards
+    for (const [k, v] of Object.entries(FINN_MAP)) {
+      if (k.startsWith(cardPrefix)) addUri(v);
+    }
+
+    return [...new Set(uris)];
+  }, [mod]);
+
+  // Remote mp4 URIs to predownload into the file cache for instant playback.
+  const prefetchVideoUris = useMemo<readonly string[]>(() => {
+    if (!mod) return [];
+    const videos: string[] = [];
+    const hook = mod.videoHookAsset as { uri?: string } | number | undefined;
+    if (hook && typeof hook === "object" && typeof hook.uri === "string") videos.push(hook.uri);
+    const post = MODULE_POST_VIDEO_MAP[mod.id];
+    if (typeof post === "string") videos.push(post);
+    const inter = mod.interModuleVideoAsset as { uri?: string } | number | undefined;
+    if (inter && typeof inter === "object" && typeof inter.uri === "string") videos.push(inter.uri);
+    for (const fc of mod.flashcards) {
+      if (typeof fc.videoUri === "string") videos.push(fc.videoUri);
+    }
+    return [...new Set(videos)];
+  }, [mod]);
+  useModulePrefetch(prefetchUris, prefetchVideoUris);
+
   const isPro = useSubscriptionStore((s) => s.tier === "pro" && s.status === "active");
   const heartsCount = useSubscriptionStore((s) => s.getHearts());
   const recordQuizAnswer = useChapterStore((s) => s.recordQuizAnswer);
   const completeModule = useChapterStore((s) => s.completeModule);
+  const saveResume = useChapterStore((s) => s.saveResume);
+  const clearResume = useChapterStore((s) => s.clearResume);
   const progress = useChapterStore(useShallow((s) => s.progress));
   const setCurrentChapter = useChapterStore((s) => s.setCurrentChapter);
   const setCurrentModule = useChapterStore((s) => s.setCurrentModule);
@@ -2224,6 +2286,8 @@ export function LessonFlowScreen() {
   }
 
   const [phase, setPhase] = useState<FlowPhase>(() => {
+    const r = mod?.id ? useChapterStore.getState().moduleResume[mod.id] : undefined;
+    if (r && RESTORABLE_PHASES.has(r.phase as FlowPhase)) return r.phase as FlowPhase;
     if (mod?.videoHookAsset) return "video";
     if (mod?.id && MODULE_HERO_MAP[mod.id]) return "hero";
     return "intro";
@@ -2240,7 +2304,10 @@ export function LessonFlowScreen() {
       setShowProGate(true);
     }
   }, [mod, isModuleAccessible, phase]);
-  const [flashcardIndex, setFlashcardIndex] = useState(0);
+  const [flashcardIndex, setFlashcardIndex] = useState(() => {
+    const r = mod?.id ? useChapterStore.getState().moduleResume[mod.id] : undefined;
+    return (r && RESTORABLE_PHASES.has(r.phase as FlowPhase)) ? r.flashcardIndex : 0;
+  });
   const [finnTransitionSource, setFinnTransitionSource] = useState<{ uri: string } | null>(null);
   const [finnTipText, setFinnTipText] = useState<string | null>(null);
   // Mid-lesson Finn checkpoint
@@ -2265,8 +2332,18 @@ export function LessonFlowScreen() {
   // Shark Party, every 2 consecutive or 4 total completed modules
   const [showPartyInvite, setShowPartyInvite] = useState(false);
   const [showPartyVideo, setShowPartyVideo] = useState(false);
-  const [quizIndex, setQuizIndex] = useState(0);
-  const [consecutiveCorrect, setConsecutiveCorrect] = useState(0);
+  const [quizIndex, setQuizIndex] = useState(() => {
+    const r = mod?.id ? useChapterStore.getState().moduleResume[mod.id] : undefined;
+    return (r && RESTORABLE_PHASES.has(r.phase as FlowPhase)) ? r.quizIndex : 0;
+  });
+  const [consecutiveCorrect, setConsecutiveCorrect] = useState(() => {
+    const r = mod?.id ? useChapterStore.getState().moduleResume[mod.id] : undefined;
+    return (r && RESTORABLE_PHASES.has(r.phase as FlowPhase)) ? r.consecutiveCorrect : 0;
+  });
+  const [peakStreak, setPeakStreak] = useState(() => {
+    const r = mod?.id ? useChapterStore.getState().moduleResume[mod.id] : undefined;
+    return (r && RESTORABLE_PHASES.has(r.phase as FlowPhase)) ? (r.peakStreak ?? 0) : 0;
+  });
   const [showStreakPopup, setShowStreakPopup] = useState(false);
   const [showQuizIntro, setShowQuizIntro] = useState(false);
   const [showWisdom, setShowWisdom] = useState(false);
@@ -2316,15 +2393,26 @@ export function LessonFlowScreen() {
   const shouldTriggerDoNRef = useRef(false);
 
 
+  // Persist mid-module progress (debounced) so the user can resume on re-entry
+  useEffect(() => {
+    if (!mod?.id || !RESTORABLE_PHASES.has(phase)) return;
+    const timer = setTimeout(() => {
+      saveResume(mod.id, { phase, flashcardIndex, quizIndex, consecutiveCorrect, peakStreak });
+    }, 500);
+    return () => clearTimeout(timer);
+  }, [phase, flashcardIndex, quizIndex, consecutiveCorrect, peakStreak, mod?.id, saveResume]);
+
   // Reset all state when navigating to a different module (same route, different id)
   const prevIdRef = useRef(id);
   useEffect(() => {
     if (prevIdRef.current === id) return;
     prevIdRef.current = id;
-    setPhase(mod?.videoHookAsset ? "video" : (mod?.id && MODULE_HERO_MAP[mod.id]) ? "hero" : "intro");
-    setFlashcardIndex(0);
-    setQuizIndex(0);
-    setConsecutiveCorrect(0);
+    const r = mod?.id ? useChapterStore.getState().moduleResume[mod.id] : undefined;
+    const resumable = r !== undefined && RESTORABLE_PHASES.has(r.phase as FlowPhase);
+    setPhase(resumable ? r!.phase as FlowPhase : (mod?.videoHookAsset ? "video" : (mod?.id && MODULE_HERO_MAP[mod.id]) ? "hero" : "intro"));
+    setFlashcardIndex(resumable ? r!.flashcardIndex : 0);
+    setQuizIndex(resumable ? r!.quizIndex : 0);
+    setConsecutiveCorrect(resumable ? r!.consecutiveCorrect : 0);
     setShowStreakPopup(false);
     setShowQuizIntro(false);
     setShowWisdom(false);
@@ -2608,6 +2696,7 @@ export function LessonFlowScreen() {
     recordQuizAnswer(mod.id, quiz.id, true, quiz.conceptTag);
     const newStreak = consecutiveCorrect + 1;
     setConsecutiveCorrect(newStreak);
+    if (newStreak > peakStreak) setPeakStreak(newStreak);
     if (newStreak === 3 || newStreak === 5 || newStreak === 7) {
       if (newStreak >= 7) { doubleHeavyHaptic(); playSound('btn_click_heavy'); }
       else if (newStreak >= 5) { successHaptic(); playSound('btn_click_heavy'); }
@@ -2616,7 +2705,7 @@ export function LessonFlowScreen() {
       safeTimeout(() => setShowStreakPopup(false), 2000);
     }
     advanceQuiz();
-  }, [mod, quizIndex, recordQuizAnswer, advanceQuiz, consecutiveCorrect, playSound]);
+  }, [mod, quizIndex, recordQuizAnswer, advanceQuiz, consecutiveCorrect, peakStreak, playSound]);
 
   // Immediate heart drop, called right when wrong answer is selected
   const handleWrongImmediate = useCallback(() => {
@@ -2810,7 +2899,7 @@ export function LessonFlowScreen() {
   if (phase === "video" && mod?.videoHookAsset) {
     return (
       <VideoHookPlayer
-        videoUri={(mod.videoHookAsset as { uri: string }).uri}
+        videoUri={getCachedVideoPath((mod.videoHookAsset as { uri: string }).uri)}
         hookText={mod.videoHook ?? ""}
         onFinish={advanceFromVideo}
         unitColors={unitColors}
@@ -2826,7 +2915,7 @@ export function LessonFlowScreen() {
   if (phase === "post-infographic-video" && mod && MODULE_POST_VIDEO_MAP[mod.id]) {
     return (
       <VideoHookPlayer
-        videoUri={MODULE_POST_VIDEO_MAP[mod.id]}
+        videoUri={getCachedVideoPath(MODULE_POST_VIDEO_MAP[mod.id])}
         hookText={mod.videoHook ?? ""}
         onFinish={() => setPhase(mod && getDilemma(mod.id) ? "shark-dilemma" : "summary")}
         unitColors={unitColors}
@@ -2972,8 +3061,17 @@ export function LessonFlowScreen() {
               />
             </View>
             <Text style={{ fontSize: 13, fontWeight: '900', color: '#f97316' }}>
-              {consecutiveCorrect >= 7 ? "גאון פיננסי!" : consecutiveCorrect >= 5 ? "מושלם!" : "רצף!"}
+              {consecutiveCorrect >= 7 ? "גאונים פיננסיים!" : consecutiveCorrect >= 5 ? "מושלם!" : "רצף!"}
             </Text>
+            <View
+              accessible
+              accessibilityLabel={consecutiveCorrect >= 7 ? "בונוס כפול XP" : consecutiveCorrect >= 5 ? "בונוס פי 1.75 XP" : "בונוס פי 1.5 XP"}
+              style={{ backgroundColor: 'rgba(249,115,22,0.25)', borderRadius: 8, paddingHorizontal: 6, paddingVertical: 2, borderWidth: 1, borderColor: 'rgba(249,115,22,0.5)' }}
+            >
+              <Text style={{ fontSize: 11, fontWeight: '900', color: '#f97316' }}>
+                {consecutiveCorrect >= 7 ? "x2 XP" : consecutiveCorrect >= 5 ? "x1.75 XP" : "x1.5 XP"}
+              </Text>
+            </View>
           </Animated.View>
         )}
 
@@ -3342,7 +3440,13 @@ export function LessonFlowScreen() {
                             // 700ms: chest rewards + flying animation (after chest Lottie opens)
                             safeTimeout(() => {
                               if (!isReplay) {
+                                if (peakStreak >= 3) {
+                                  const bonusMultiplier = peakStreak >= 7 ? 1.0 : peakStreak >= 5 ? 0.75 : 0.5;
+                                  const bonusXp = Math.round(30 * bonusMultiplier);
+                                  useEconomyStore.getState().addXP(bonusXp, "streak_bonus");
+                                }
                                 completeModule(mod.id);
+                                clearResume(mod.id);
                                 useEconomyStore.getState().completeDailyTask();
                                 const durationSec = Math.round((Date.now() - moduleStartTimeRef.current) / 1000);
                                 useUserStatsStore.getState().recordModuleDuration(durationSec);

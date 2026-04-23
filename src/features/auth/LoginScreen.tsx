@@ -175,10 +175,14 @@ export function LoginScreen() {
 
             {/* Link to register */}
             <Pressable
-              onPress={() => router.back()}
+              onPress={() => {
+                if (router.canGoBack()) router.back();
+                else router.replace('/(auth)/register' as never);
+              }}
               accessibilityRole="link"
               accessibilityLabel="אין לך חשבון? הירשם"
-              style={{ marginTop: 12, paddingVertical: 4 }}
+              hitSlop={12}
+              style={{ marginTop: 12, paddingVertical: 8 }}
             >
               <Text style={{ textAlign: "center", fontSize: 12, color: "#64748b", writingDirection: "rtl" }}>
                 אין לך חשבון?{" "}

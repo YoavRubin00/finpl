@@ -30,7 +30,7 @@ export function useFeedNudge() {
     if (!dilemmaAnswered) {
       setNudge({
         message: "לא ביצעת את האתגר היומי! 🎯",
-        route: "/finfeed",
+        route: "/(tabs)/learn",
       });
       lastShownAt.current = Date.now();
       setDismissed(false);

@@ -17,6 +17,8 @@ import {
   Pressable,
   StyleSheet,
   ImageBackground,
+  StatusBar,
+  AccessibilityInfo,
 } from "react-native";
 import Animated, {
   FadeIn,
@@ -32,7 +34,7 @@ import { X, Send, Lock } from "lucide-react-native";
 import { useAuthStore } from "../auth/useAuthStore";
 import { useChapterStore } from "../chapter-1-content/useChapterStore";
 import { useSubscriptionStore } from "../subscription/useSubscriptionStore";
-import { getApiBase } from "../../db/apiBase";
+import { streamChatRequest } from "../../utils/streamChat";
 import { useUpgradeModalStore } from "../../stores/useUpgradeModalStore";
 import { COMPANION_PERSONALITIES } from "../chat/chatData";
 import { buildSystemPrompt } from "../chat/buildChatPrompt";
@@ -122,6 +124,11 @@ export function LifelineChatOverlay({ visible, conceptTag, onClose }: Props) {
   const currentChapter = useChapterStore((s) => s.currentChapterId);
   const conceptLabel = getConceptLabel(conceptTag);
   const safeInsets = useSafeAreaInsets();
+  // On Android, useSafeAreaInsets may return 0 inside a statusBarTranslucent Modal.
+  // Fall back to StatusBar.currentHeight to ensure the X button is never hidden.
+  const headerTopPad = Platform.OS === "android"
+    ? Math.max(safeInsets.top, StatusBar.currentHeight ?? 24) + 10
+    : safeInsets.top + 10;
   const isPro = useSubscriptionStore((s) => s.isPro());
 
   // Check daily limit on open
@@ -161,8 +168,11 @@ export function LifelineChatOverlay({ visible, conceptTag, onClose }: Props) {
     }
   }, [visible]);
 
+  const abortControllerRef = useRef<AbortController | null>(null);
+  useEffect(() => () => { abortControllerRef.current?.abort(); }, []);
+
   const callGemini = useCallback(
-    async (msgs: ChatMsg[]) => {
+    (msgs: ChatMsg[]) => {
       setLoading(true);
 
       const systemPrompt =
@@ -182,32 +192,46 @@ export function LifelineChatOverlay({ visible, conceptTag, onClose }: Props) {
         content: m.content,
       }));
 
-      try {
-        const response = await fetch(
-          `${getApiBase()}/api/ai/chat`,
-          {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              systemPrompt,
-              messages: chatMessages,
-              maxOutputTokens: 2048,
-            }),
-          },
-        );
-        if (!response.ok) throw new Error("AI service error");
-        const data = await response.json();
-        const reply = data.reply ?? "סליחה, לא הצלחתי ליצור תשובה.";
-        setMessages((prev) => [...prev, { role: "assistant", content: reply }]);
-      } catch {
-        setMessages((prev) => [
-          ...prev,
-          { role: "assistant", content: "שגיאה בחיבור. נסה שוב." },
-        ]);
-      } finally {
+      setMessages((prev) => [...prev, { role: "assistant", content: "" }]);
+
+      abortControllerRef.current?.abort();
+      abortControllerRef.current = new AbortController();
+      let firstChunk = true;
+      let accumulated = "";
+
+      streamChatRequest(
+        { systemPrompt, messages: chatMessages, maxOutputTokens: 2048 },
+        (chunk) => {
+          if (firstChunk) {
+            setLoading(false);
+            firstChunk = false;
+          }
+          accumulated += chunk;
+          setMessages((prev) =>
+            prev.map((m, i) =>
+              i === prev.length - 1 && m.role === "assistant"
+                ? { ...m, content: m.content + chunk }
+                : m,
+            ),
+          );
+          setTimeout(() => scrollRef.current?.scrollToEnd({ animated: false }), 50);
+        },
+        abortControllerRef.current.signal,
+      ).then(({ ok }) => {
+        if (!ok) {
+          setMessages((prev) =>
+            prev.map((m, i) =>
+              i === prev.length - 1 && m.role === "assistant"
+                ? { ...m, content: "שגיאה בחיבור. נסה שוב." }
+                : m,
+            ),
+          );
+        } else if (accumulated) {
+          AccessibilityInfo.announceForAccessibility(accumulated);
+        }
         setLoading(false);
         setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 100);
-      }
+      });
     },
     [displayName, profile, companionId, companion, allCompleted, currentChapter, conceptLabel],
   );
@@ -239,7 +263,7 @@ export function LifelineChatOverlay({ visible, conceptTag, onClose }: Props) {
           behavior={Platform.OS === "ios" ? "padding" : undefined}
         >
           {/* Header */}
-          <Animated.View entering={FadeIn.duration(200)} style={[st.header, { paddingTop: safeInsets.top + 10 }]}>
+          <Animated.View entering={FadeIn.duration(200)} style={[st.header, { paddingTop: headerTopPad }]}>
             <Pressable onPress={onClose} style={st.closeBtn} hitSlop={12} accessibilityRole="button" accessibilityLabel="סגור צ׳אט">
               <X size={22} color="#0e7490" />
             </Pressable>

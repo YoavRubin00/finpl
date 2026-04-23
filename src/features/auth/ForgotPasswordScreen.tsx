@@ -13,6 +13,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import { LottieIcon } from "../../components/ui/LottieIcon";
 import { DecorationOverlay } from "../../components/ui/DecorationOverlay";
+import { tapHaptic } from "../../utils/haptics";
 
 function isValidEmail(email: string): boolean {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
@@ -131,10 +132,14 @@ export function ForgotPasswordScreen() {
 
           {/* Back to Login */}
           <Pressable
-            onPress={() => router.back()}
+            onPress={() => {
+              tapHaptic();
+              if (router.canGoBack()) router.back();
+              else router.replace('/(auth)/sign-in' as never);
+            }}
             accessibilityRole="button"
             accessibilityLabel="חזרה להתחברות"
-            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            hitSlop={12}
             className="mt-6 py-2"
           >
             <Text
