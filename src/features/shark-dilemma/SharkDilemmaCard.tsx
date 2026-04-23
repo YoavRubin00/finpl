@@ -216,12 +216,12 @@ const styles = StyleSheet.create({
     writingDirection: "rtl",
   },
   continueBtn: {
-    backgroundColor: "#0ea5e9",
+    backgroundColor: "#3b82f6",
     borderRadius: 16,
     paddingVertical: 16,
     alignItems: "center",
     borderBottomWidth: 4,
-    borderBottomColor: "#0369a1",
+    borderBottomColor: "#1d4ed8",
     marginTop: 4,
   },
   continueText: {

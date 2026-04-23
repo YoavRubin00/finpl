@@ -13,7 +13,7 @@ export const recallExerciseSets: Record<string, InteractiveRecallSet> = {
       {
         type: "fill-blank",
         id: "recall-mod-0-2-fb-1",
-        template: "ריבית היא המחיר שהבנק גובה (או משלם) על {{w}} של כסף לאורך זמן.",
+        template: "ריבית היא המחיר של {{w}} — הסכום שהבנק גובה או משלם על כסף לאורך זמן.",
         difficulty: "easy",
         slots: [
           { slotId: "w", correctChoiceId: "loan", explanation: "בדיוק, ריבית היא העלות של שימוש בכסף של מישהו אחר, או התמורה על הלוואת הכסף שלך לבנק." },
