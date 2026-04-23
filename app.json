@@ -95,6 +95,7 @@
       "supportsTablet": false,
       "usesAppleSignIn": true,
       "infoPlist": {
+        "UIBackgroundModes": [],
         "CFBundleURLTypes": [
           {
             "CFBundleURLSchemes": ["com.googleusercontent.apps.847177819309-mbb8nusv6r17oot0e49e1npbgmaecps0"]

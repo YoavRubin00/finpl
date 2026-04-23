@@ -412,11 +412,7 @@ export function PricingScreen() {
                 {/* Required: Terms of Use (EULA) + Privacy Policy links */}
                 <View style={styles.legalRow}>
                   <Pressable
-                    onPress={() => Linking.openURL(
-                      Platform.OS === "ios"
-                        ? "https://www.apple.com/legal/internet-services/itunes/dev/stdeula/"
-                        : "https://play.google.com/intl/en/about/play-terms/"
-                    )}
+                    onPress={() => router.push("/legal" as never)}
                     accessibilityRole="link"
                     accessibilityLabel="תנאי שימוש"
                     hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
@@ -425,7 +421,7 @@ export function PricingScreen() {
                   </Pressable>
                   <Text style={[styles.legalSeparator, { color: theme.textMuted }]}> · </Text>
                   <Pressable
-                    onPress={() => Linking.openURL("https://yoavrubin00.github.io/finpl/privacy-policy.html")}
+                    onPress={() => router.push("/legal" as never)}
                     accessibilityRole="link"
                     accessibilityLabel="מדיניות פרטיות"
                     hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
