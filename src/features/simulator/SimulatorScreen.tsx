@@ -69,7 +69,8 @@ function SimSlider({
     cb(Math.max(mn, Math.min(mx, v)));
   }
 
-  const pct = (value - min) / (max - min);
+  const span = max - min;
+  const pct = span > 0 ? Math.max(0, Math.min(1, (value - min) / span)) : 0;
 
   return (
     <View style={{ marginBottom: 14, overflow: "visible", zIndex: showFingerHint ? 100 : 1 }}

@@ -187,6 +187,27 @@ export default function RootLayout() {
       .then(({ useNudgeQueueStore }) => useNudgeQueueStore.getState().resetSession())
       .catch(() => { /* non-fatal */ });
   }, []);
+
+  // Global JS error handler, prevents uncaught exceptions in gesture/callback
+  // code from terminating the app. This was Apple rejection 2.1(a) cause on
+  // iPad Air M3 review — a callback threw, Hermes re-threw as C++ exception,
+  // process aborted. Swallowing non-fatal errors keeps the app alive.
+  useEffect(() => {
+    const anyGlobal = globalThis as unknown as {
+      ErrorUtils?: {
+        getGlobalHandler?: () => ((e: unknown, fatal?: boolean) => void) | undefined;
+        setGlobalHandler?: (h: (e: unknown, fatal?: boolean) => void) => void;
+      };
+    };
+    const utils = anyGlobal.ErrorUtils;
+    if (!utils?.setGlobalHandler) return;
+    const originalHandler = utils.getGlobalHandler?.();
+    utils.setGlobalHandler((error, isFatal) => {
+      const msg = (error as { message?: string } | null)?.message ?? String(error);
+      console.warn("[GlobalErrorHandler] uncaught:", msg, "fatal:", isFatal);
+      if (__DEV__ && originalHandler) originalHandler(error, isFatal);
+    });
+  }, []);
   const router = useRouter();
   const segments = useSegments();
   const navState = useRootNavigationState();
