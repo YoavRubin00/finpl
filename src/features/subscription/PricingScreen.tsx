@@ -8,7 +8,6 @@ import {
   Alert,
   Dimensions,
   ActivityIndicator,
-  Linking,
   Platform,
 } from "react-native";
 import LottieView from "lottie-react-native";
