@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useRef, useState } from "react";
 import { Text, View, Pressable, StyleSheet, ScrollView } from "react-native";
 import { Image as ExpoImage } from "expo-image";
 import Animated, { FadeIn, FadeInUp, Easing } from "react-native-reanimated";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import { BullshitSwipeCard } from "../../src/features/finfeed/minigames/bullshit-swipe/BullshitSwipeCard";
 import { FINN_HAPPY, FINN_STANDARD } from "../../src/features/retention-loops/finnMascotConfig";
@@ -13,6 +13,7 @@ const RTL = { writingDirection: "rtl" as const, textAlign: "right" as const };
 
 export default function BullshitCh0InterstitialPage() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const hasSeenCh0Bullshit = useTutorialStore((s) => s.hasSeenCh0BullshitInterstitial);
   const markCh0BullshitSeen = useTutorialStore((s) => s.markCh0BullshitInterstitialSeen);
   // Intro overlay shown on first visit, immediately before the game starts.
@@ -58,7 +59,7 @@ export default function BullshitCh0InterstitialPage() {
       {!showIntro && (
         <Pressable
           onPress={handleHomePress}
-          style={styles.homeBtn}
+          style={[styles.homeBtn, { top: insets.top + 8 }]}
           hitSlop={12}
           accessibilityRole="button"
           accessibilityLabel="חזרה למסך הבית"
@@ -168,7 +169,6 @@ const styles = StyleSheet.create({
   },
   homeBtn: {
     position: "absolute",
-    top: 12,
     right: 16,
     width: 36,
     height: 36,
@@ -252,13 +252,15 @@ const styles = StyleSheet.create({
     width: "100%",
     alignItems: "center",
     justifyContent: "center",
-    borderBottomWidth: 4,
+    borderWidth: 2,
+    borderColor: "#2563eb",
+    borderBottomWidth: 5,
     borderBottomColor: "#1d4ed8",
     shadowColor: "#3b82f6",
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.35,
-    shadowRadius: 10,
-    elevation: 8,
+    shadowOpacity: 0.45,
+    shadowRadius: 12,
+    elevation: 10,
   },
   introCtaText: {
     fontSize: 18,
@@ -266,6 +268,9 @@ const styles = StyleSheet.create({
     color: "#ffffff",
     writingDirection: "rtl",
     textAlign: "center",
+    textShadowColor: "rgba(0,0,0,0.25)",
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 2,
   },
   overlay: {
     position: "absolute",

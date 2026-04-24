@@ -100,7 +100,12 @@ function AnimatedChip({
           used && styles.chipUsed,
         ]}
       >
-        <Text style={[styles.chipText, isWrong && styles.chipTextWrong, used && styles.chipTextUsed]}>
+        <Text
+          numberOfLines={1}
+          adjustsFontSizeToFit
+          minimumFontScale={0.6}
+          style={[styles.chipText, isWrong && styles.chipTextWrong, used && styles.chipTextUsed]}
+        >
           {choice.text}
         </Text>
       </Pressable>
@@ -344,13 +349,13 @@ const styles = StyleSheet.create({
   },
   choicesRow: {
     flexDirection: "row-reverse",
-    gap: 8,
-    paddingHorizontal: 2,
+    gap: 6,
+    paddingHorizontal: 0,
   },
   chip: {
     width: "100%",
     paddingVertical: 15,
-    paddingHorizontal: 8,
+    paddingHorizontal: 4,
     borderWidth: 2,
     borderBottomWidth: 5,
     borderRadius: 18,
