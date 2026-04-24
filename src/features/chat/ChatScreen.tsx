@@ -257,6 +257,9 @@ export function ChatScreen() {
   const scrollViewRef = useRef<ScrollView>(null);
   const talkingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
+  const pendingRef = useRef<string>("");
+  const drainTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const draftTsRef = useRef<number>(0);
 
   const companionId: CompanionId = profile?.companionId ?? "warren-buffett";
   const companion = COMPANION_PERSONALITIES[companionId];
@@ -325,6 +328,55 @@ export function ChatScreen() {
     );
   }, []);
 
+  // Typewriter pacing: push incoming chunks into pendingRef and drain at a steady
+  // cadence so the UI paints incrementally even when the transport delivers the
+  // whole body in one chunk (RN fetch fallback).
+  const stopDrain = useCallback(() => {
+    if (drainTimerRef.current) {
+      clearInterval(drainTimerRef.current);
+      drainTimerRef.current = null;
+    }
+  }, []);
+
+  const startDrain = useCallback((ts: number) => {
+    if (drainTimerRef.current && draftTsRef.current !== ts) {
+      clearInterval(drainTimerRef.current);
+      drainTimerRef.current = null;
+    }
+    draftTsRef.current = ts;
+    if (drainTimerRef.current) return;
+    const CHARS_PER_TICK = 3;
+    const TICK_MS = 20;
+    drainTimerRef.current = setInterval(() => {
+      if (pendingRef.current.length === 0) return;
+      const take = pendingRef.current.slice(0, CHARS_PER_TICK);
+      pendingRef.current = pendingRef.current.slice(CHARS_PER_TICK);
+      setMessages((prev) =>
+        prev.map((m) =>
+          m.role === "assistant" && m.timestamp === draftTsRef.current
+            ? { ...m, content: m.content + take }
+            : m,
+        ),
+      );
+    }, TICK_MS);
+  }, []);
+
+  const flushAndStop = useCallback(
+    () =>
+      new Promise<void>((resolve) => {
+        const check = () => {
+          if (pendingRef.current.length === 0) {
+            stopDrain();
+            resolve();
+          } else {
+            setTimeout(check, 20);
+          }
+        };
+        check();
+      }),
+    [stopDrain],
+  );
+
   // Context-aware greeting referencing user's last completed module
   const contextGreeting = useMemo(
     () => getContextAwareGreeting(companionId, allCompletedModules),
@@ -371,7 +423,14 @@ export function ChatScreen() {
   }, []);
 
   // Abort any in-flight stream on unmount
-  useEffect(() => () => { abortControllerRef.current?.abort(); }, []);
+  useEffect(() => () => {
+    abortControllerRef.current?.abort();
+    if (drainTimerRef.current) {
+      clearInterval(drainTimerRef.current);
+      drainTimerRef.current = null;
+    }
+    pendingRef.current = "";
+  }, []);
 
   // Auto-trigger AI response for lifeline intervention
   useEffect(() => {
@@ -402,10 +461,7 @@ export function ChatScreen() {
     }));
 
     const draftTs = Date.now();
-    setMessages((prev) => [
-      ...prev,
-      { role: "assistant", content: "", timestamp: draftTs, status: "read" as const },
-    ]);
+    pendingRef.current = "";
 
     abortControllerRef.current?.abort();
     abortControllerRef.current = new AbortController();
@@ -418,27 +474,34 @@ export function ChatScreen() {
         if (firstChunk) {
           setLoading(false);
           setAnimationState("talking");
+          setMessages((prev) => [
+            ...prev,
+            { role: "assistant", content: "", timestamp: draftTs, status: "read" as const },
+          ]);
           firstChunk = false;
+          startDrain(draftTs);
         }
+        pendingRef.current += chunk;
         accumulated += chunk;
-        setMessages((prev) =>
-          prev.map((m) =>
-            m.role === "assistant" && m.timestamp === draftTs
-              ? { ...m, content: m.content + chunk }
-              : m,
-          ),
-        );
       },
       abortControllerRef.current.signal,
-    ).then(({ ok }) => {
+    ).then(async ({ ok }) => {
+      await flushAndStop();
       if (!ok) {
-        setMessages((prev) =>
-          prev.map((m) =>
-            m.role === "assistant" && m.timestamp === draftTs
-              ? { ...m, content: "שגיאה בחיבור. נסה שוב." }
-              : m,
-          ),
-        );
+        setMessages((prev) => {
+          const hasDraft = prev.some((m) => m.role === "assistant" && m.timestamp === draftTs);
+          if (hasDraft) {
+            return prev.map((m) =>
+              m.role === "assistant" && m.timestamp === draftTs
+                ? { ...m, content: "שגיאה בחיבור. נסה שוב." }
+                : m,
+            );
+          }
+          return [
+            ...prev,
+            { role: "assistant" as const, content: "שגיאה בחיבור. נסה שוב.", timestamp: draftTs, status: "read" as const },
+          ];
+        });
         setAnimationState("idle");
       } else {
         if (accumulated) AccessibilityInfo.announceForAccessibility(accumulated);
@@ -502,12 +565,10 @@ export function ChatScreen() {
       content: m.content,
     }));
 
-    // Add empty draft bubble; chunks stream into it
+    // Draft bubble is added on first chunk (see onChunk below) — this avoids a
+    // double-shark render while the typing indicator is still visible.
     const draftTs = Date.now();
-    setMessages((prev) => [
-      ...prev,
-      { role: "assistant", content: "", timestamp: draftTs, status: "read" as const },
-    ]);
+    pendingRef.current = "";
 
     abortControllerRef.current?.abort();
     abortControllerRef.current = new AbortController();
@@ -520,29 +581,36 @@ export function ChatScreen() {
         if (firstChunk) {
           setLoading(false);
           setAnimationState("talking");
+          setMessages((prev) => [
+            ...prev,
+            { role: "assistant", content: "", timestamp: draftTs, status: "read" as const },
+          ]);
           firstChunk = false;
+          startDrain(draftTs);
         }
+        pendingRef.current += chunk;
         accumulated += chunk;
-        setMessages((prev) =>
-          prev.map((m) =>
-            m.role === "assistant" && m.timestamp === draftTs
-              ? { ...m, content: m.content + chunk }
-              : m,
-          ),
-        );
-        setTimeout(() => scrollViewRef.current?.scrollToEnd({ animated: false }), 50);
       },
       abortControllerRef.current.signal,
     );
 
+    await flushAndStop();
+
     if (!ok) {
-      setMessages((prev) =>
-        prev.map((m) =>
-          m.role === "assistant" && m.timestamp === draftTs
-            ? { ...m, content: "שגיאה בחיבור. נסה שוב." }
-            : m,
-        ),
-      );
+      setMessages((prev) => {
+        const hasDraft = prev.some((m) => m.role === "assistant" && m.timestamp === draftTs);
+        if (hasDraft) {
+          return prev.map((m) =>
+            m.role === "assistant" && m.timestamp === draftTs
+              ? { ...m, content: "שגיאה בחיבור. נסה שוב." }
+              : m,
+          );
+        }
+        return [
+          ...prev,
+          { role: "assistant" as const, content: "שגיאה בחיבור. נסה שוב.", timestamp: draftTs, status: "read" as const },
+        ];
+      });
       markAllRead();
       setAnimationState("idle");
     } else {
