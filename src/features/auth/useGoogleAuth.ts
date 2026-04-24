@@ -25,6 +25,15 @@ interface GoogleUserInfo {
 export function useGoogleAuth() {
   const signIn = useAuthStore((s) => s.signIn);
 
+  if (__DEV__) {
+    if (Platform.OS === "android" && !GOOGLE_ANDROID_CLIENT_ID) {
+      console.warn("[GoogleAuth] EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID missing — Android sign-in will fail silently in this build");
+    }
+    if (Platform.OS === "ios" && !GOOGLE_IOS_CLIENT_ID) {
+      console.warn("[GoogleAuth] EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID missing — iOS sign-in falls back to web client");
+    }
+  }
+
   // iOS uses the reversed-client-id scheme (registered in app.json
   // ios.infoPlist.CFBundleURLTypes). Android must NOT use that format — it
   // needs the app scheme "finpl" (or Google's generated android redirect).
@@ -44,8 +53,11 @@ export function useGoogleAuth() {
   });
 
   useEffect(() => {
-    if (response?.type === "success" && response.authentication?.accessToken) {
+    if (!response) return;
+    if (response.type === "success" && response.authentication?.accessToken) {
       fetchUserInfo(response.authentication.accessToken);
+    } else if (response.type === "error") {
+      console.warn("[GoogleAuth] auth error:", response.error);
     }
   }, [response]);
 

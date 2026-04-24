@@ -13,7 +13,9 @@
         "EXPO_PUBLIC_API_URL": "https://finpl.vercel.app",
         "EXPO_PUBLIC_ADMOB_REWARDED_IOS": "ca-app-pub-3137283655458001/8631312444",
         "EXPO_PUBLIC_ADMOB_REWARDED_ANDROID": "ca-app-pub-3137283655458001/4112436754",
-        "EXPO_PUBLIC_GOOGLE_CLIENT_ID": "847177819309-j90v0224p3lp8hio693cikmktd77mqp1.apps.googleusercontent.com"
+        "EXPO_PUBLIC_GOOGLE_CLIENT_ID": "847177819309-j90v0224p3lp8hio693cikmktd77mqp1.apps.googleusercontent.com",
+        "EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID": "847177819309-mbb8nusv6r17oot0e49e1npbgmaecps0.apps.googleusercontent.com",
+        "EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID": "847177819309-jhvs6bn67e0h587g2rhn07j6pdo0ddct.apps.googleusercontent.com"
       }
     },
     "preview": {
@@ -27,7 +29,9 @@
         "EXPO_PUBLIC_API_URL": "https://finpl.vercel.app",
         "EXPO_PUBLIC_ADMOB_REWARDED_IOS": "ca-app-pub-3137283655458001/8631312444",
         "EXPO_PUBLIC_ADMOB_REWARDED_ANDROID": "ca-app-pub-3137283655458001/4112436754",
-        "EXPO_PUBLIC_GOOGLE_CLIENT_ID": "847177819309-j90v0224p3lp8hio693cikmktd77mqp1.apps.googleusercontent.com"
+        "EXPO_PUBLIC_GOOGLE_CLIENT_ID": "847177819309-j90v0224p3lp8hio693cikmktd77mqp1.apps.googleusercontent.com",
+        "EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID": "847177819309-mbb8nusv6r17oot0e49e1npbgmaecps0.apps.googleusercontent.com",
+        "EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID": "847177819309-jhvs6bn67e0h587g2rhn07j6pdo0ddct.apps.googleusercontent.com"
       }
     },
     "production": {
@@ -38,7 +42,9 @@
         "EXPO_PUBLIC_API_URL": "https://finpl.vercel.app",
         "EXPO_PUBLIC_ADMOB_REWARDED_IOS": "ca-app-pub-3137283655458001/8631312444",
         "EXPO_PUBLIC_ADMOB_REWARDED_ANDROID": "ca-app-pub-3137283655458001/4112436754",
-        "EXPO_PUBLIC_GOOGLE_CLIENT_ID": "847177819309-j90v0224p3lp8hio693cikmktd77mqp1.apps.googleusercontent.com"
+        "EXPO_PUBLIC_GOOGLE_CLIENT_ID": "847177819309-j90v0224p3lp8hio693cikmktd77mqp1.apps.googleusercontent.com",
+        "EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID": "847177819309-mbb8nusv6r17oot0e49e1npbgmaecps0.apps.googleusercontent.com",
+        "EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID": "847177819309-j2gkdub5929g1lcd1te2i9dfs5uvk7ba.apps.googleusercontent.com"
       }
     }
   },
