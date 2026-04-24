@@ -352,11 +352,18 @@ export function ChatScreen() {
       const take = pendingRef.current.slice(0, CHARS_PER_TICK);
       pendingRef.current = pendingRef.current.slice(CHARS_PER_TICK);
       setMessages((prev) =>
-        prev.map((m) =>
-          m.role === "assistant" && m.timestamp === draftTsRef.current
-            ? { ...m, content: m.content + take }
-            : m,
-        ),
+        prev.map((m) => {
+          if (m.role !== "assistant" || m.timestamp !== draftTsRef.current) return m;
+          // Client-side safety-net: strip stray debug markers the model
+          // occasionally emits at the start of the reply (e.g. "OK TRUE REPLY.").
+          // Only runs while the running content is short enough that a leading
+          // marker could still be present.
+          const next = m.content + take;
+          const cleaned = m.content.length < 40
+            ? next.replace(/^\s*(OK[\s.]*TRUE[\s.]*REPLY[.\s]*)+/i, "")
+            : next;
+          return { ...m, content: cleaned };
+        }),
       );
     }, TICK_MS);
   }, []);

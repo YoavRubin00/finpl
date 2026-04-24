@@ -17,7 +17,7 @@ export const BRIDGE_BENEFITS: Benefit[] = [
     partnerName: 'אלטשולר שחם טרייד',
     partnerLogo: '📈',
     partnerLogoImage: require('../../../assets/IMAGES/ALTSHULER.png') as number,
-    costCoins: 3000,
+    costCoins: 4000,
     category: 'investments',
     isAvailable: true,
     reward: 'מתנת הצטרפות ₪200 + קורס שוק ההון בשווי ₪1,400 במתנה',

@@ -85,7 +85,7 @@ export function MapEasterEggModal({ visible, onClose, onClaim }: MapEasterEggMod
   return (
     <Modal visible transparent animationType="fade" onRequestClose={onClose}>
       <Animated.View entering={FadeIn.duration(300)} style={styles.overlay}>
-        <Animated.View entering={ZoomIn.springify().damping(14)} style={styles.card}>
+        <Animated.View entering={ZoomIn.duration(260)} style={styles.card}>
           {/* Finn */}
           <ExpoImage source={FINN_HAPPY} accessible={false} style={{ width: 80, height: 80, alignSelf: "center" }} contentFit="contain" />
 
