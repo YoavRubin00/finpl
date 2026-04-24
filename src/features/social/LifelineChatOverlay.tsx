@@ -334,7 +334,10 @@ export function LifelineChatOverlay({ visible, conceptTag, onClose }: Props) {
                           msg.role === "user" ? st.userText : st.botText,
                         ]}
                       >
-                        {msg.content}
+                        {/* RLM (U+200F) forces RTL base direction so Hebrew
+                            streams correctly even when a chunk starts with
+                            digits/English/punctuation. */}
+                        {"\u200F" + msg.content}
                       </Text>
                     </View>
                   </Animated.View>

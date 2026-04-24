@@ -8,6 +8,7 @@ import React, {
 } from "react";
 import { useEconomyStore } from "../features/economy/useEconomyStore";
 import { StreakCelebrationScreen } from "../features/streak/StreakCelebrationScreen";
+import { useNudgeQueueStore } from "../stores/useNudgeQueueStore";
 
 interface StreakCelebrationContextValue {
   /** Manually show streak celebration (e.g., for testing). */
@@ -30,7 +31,12 @@ export function StreakCelebrationProvider({
   const showStreakCelebration = useCallback(() => {
     const streak = useEconomyStore.getState().streak;
     setCelebrationStreak(streak);
-    setVisible(true);
+    // 2 s delay so the popup lands softly after the app finishes mounting,
+    // rather than slamming on top of the splash/home render.
+    setTimeout(() => {
+      setVisible(true);
+      useNudgeQueueStore.getState().markStreakShown();
+    }, 2000);
   }, []);
 
   // Detect streak increases via store subscription
@@ -41,10 +47,13 @@ export function StreakCelebrationProvider({
         return;
       }
 
-      // Streak increased — show celebration
+      // Streak increased — show celebration after a short delay
       if (state.streak > prevStreak.current && state.streak > 0) {
         setCelebrationStreak(state.streak);
-        setVisible(true);
+        setTimeout(() => {
+          setVisible(true);
+          useNudgeQueueStore.getState().markStreakShown();
+        }, 2000);
       }
 
       prevStreak.current = state.streak;

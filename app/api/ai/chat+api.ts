@@ -5,7 +5,7 @@
  * Keeps GOOGLE_AI_API_KEY server-side (no EXPO_PUBLIC_ prefix).
  */
 
-import { streamText, createTextStreamResponse } from 'ai';
+import { streamText } from 'ai';
 import { createGoogleGenerativeAI } from '@ai-sdk/google';
 import { enforceRateLimit } from '../_shared/rateLimit';
 import { safeErrorResponse } from '../_shared/safeError';
@@ -63,7 +63,27 @@ export async function POST(request: Request): Promise<Response> {
       },
     });
 
-    return createTextStreamResponse({ textStream: result.textStream });
+    // Pipe raw UTF-8 text chunks (no SSE framing) so React Native's fetch
+    // with `reactNative: { textStreaming: true }` can read them off response.body.
+    const encoder = new TextEncoder();
+    const stream = new ReadableStream<Uint8Array>({
+      async start(controller) {
+        try {
+          for await (const chunk of result.textStream) {
+            controller.enqueue(encoder.encode(chunk));
+          }
+          controller.close();
+        } catch (streamErr) {
+          controller.error(streamErr);
+        }
+      },
+    });
+    return new Response(stream as unknown as BodyInit_, {
+      headers: {
+        'Content-Type': 'text/plain; charset=utf-8',
+        'Cache-Control': 'no-cache',
+      },
+    });
   } catch (err: unknown) {
     return safeErrorResponse(err, 'ai/chat');
   }

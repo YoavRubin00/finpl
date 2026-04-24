@@ -8,6 +8,7 @@ import { Gesture, GestureDetector, GestureHandlerRootView } from "react-native-g
 import { useVideoPlayer, VideoView } from "expo-video";
 import { createAudioPlayer, type AudioPlayer } from "expo-audio";
 import { useAudioStore } from "../../stores/useAudioStore";
+import { useNudgeQueueStore } from "../../stores/useNudgeQueueStore";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import Animated, {
   useSharedValue,
@@ -2130,6 +2131,15 @@ export function LessonFlowScreen() {
     return [...new Set(videos)];
   }, [mod]);
   useModulePrefetch(prefetchUris, prefetchVideoUris);
+
+  // Mark "in-lesson" so the Daily Bridge nudge (and any other session-level
+  // CTA) knows not to interrupt the user mid-module.
+  useEffect(() => {
+    useNudgeQueueStore.getState().setInLesson(true);
+    return () => {
+      useNudgeQueueStore.getState().setInLesson(false);
+    };
+  }, []);
 
   const isPro = useSubscriptionStore((s) => s.tier === "pro" && s.status === "active");
   const heartsCount = useSubscriptionStore((s) => s.getHearts());

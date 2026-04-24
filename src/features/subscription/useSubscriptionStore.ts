@@ -24,7 +24,7 @@ export const BASIC_LIMITS: Record<GatedFeature, number> = {
 /*  Hearts constants                                                   */
 /* ------------------------------------------------------------------ */
 
-const MAX_HEARTS = 3;
+const MAX_HEARTS = 4;
 const HEART_REFILL_MS = 5 * 60 * 60 * 1000; // 5 hours per heart
 
 /* ------------------------------------------------------------------ */
@@ -384,7 +384,7 @@ export const useSubscriptionStore = create<SubscriptionState>()(
           if (normalizedEmail && DEV_PRO_EMAILS.includes(normalizedEmail) && state.tier !== "pro") {
             state.tier = "pro";
             state.status = "active";
-            state.hearts = 5;
+            state.hearts = MAX_HEARTS;
             state.lastHeartLostAt = null;
           }
         } catch { /* auth store may not be ready */ }

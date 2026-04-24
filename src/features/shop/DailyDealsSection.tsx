@@ -86,7 +86,7 @@ export function DailyDealsSection() {
       useSubscriptionStore.getState().restoreAllHearts();
     } else if (itemId === 'heart-refill-1') {
       const s = useSubscriptionStore.getState();
-      if (s.hearts < 5) useSubscriptionStore.setState({ hearts: s.hearts + 1 });
+      if (s.hearts < 4) useSubscriptionStore.setState({ hearts: s.hearts + 1 });
     }
 
     successHaptic();

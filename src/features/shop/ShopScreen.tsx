@@ -334,7 +334,7 @@ export function ShopScreen() {
       if (pendingItem.id === 'heart-refill-full') restoreAllHearts();
       else if (pendingItem.id === 'heart-refill-1') {
         const s = useSubscriptionStore.getState();
-        if (s.hearts < 5) useSubscriptionStore.setState({ hearts: s.hearts + 1 });
+        if (s.hearts < 4) useSubscriptionStore.setState({ hearts: s.hearts + 1 });
       } else if (pendingItem.id === 'streak-freeze') {
         useEconomyStore.getState().addStreakFreezes(1);
         successHaptic();

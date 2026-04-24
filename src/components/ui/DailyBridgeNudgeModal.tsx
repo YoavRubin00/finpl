@@ -48,8 +48,7 @@ export function DailyBridgeNudgeModal() {
   // Activity gate, need ≥3 active days before nudging
   const activeDates = useEconomyStore((s) => s.activeDates);
 
-  // Nudge queue
-  const canShow = useNudgeQueueStore((s) => s.canShow);
+  // Nudge queue (canShow / session flags read via getState() inside the poll loop)
   const recordAct = useNudgeQueueStore((s) => s.recordAct);
   const recordDismiss = useNudgeQueueStore((s) => s.recordDismiss);
   const recordShown = useNudgeQueueStore((s) => s.recordShown);
@@ -58,6 +57,8 @@ export function DailyBridgeNudgeModal() {
 
   const shownRef = useRef(false);
 
+  // Bridge nudge visibility gate. Poll every 30 s instead of one-shot timer so
+  // we wait out the minimum-session-age, lesson, and streak-first conditions.
   useEffect(() => {
     if (shownRef.current) return;
     if (!isAuthenticated || !hasCompletedOnboarding) return;
@@ -67,12 +68,33 @@ export function DailyBridgeNudgeModal() {
 
     const today = new Date().toISOString().slice(0, 10);
     if (lastBridgeNudgeDateISO === today) return;
-    if (!canShow('bridge')) return;
 
-    shownRef.current = true;
-    const t = setTimeout(() => setVisible(true), 2500);
-    return () => clearTimeout(t);
-  }, [isAuthenticated, hasCompletedOnboarding, isGuest, profile, activeDates, lastBridgeNudgeDateISO, canShow]);
+    const MIN_SESSION_MS = 4 * 60 * 1000; // 4 min — midpoint of the 3-5 min window
+    const STREAK_WAIT_GRACE_MS = 15 * 1000; // give the streak popup 15 s to fire first
+
+    const tryShow = () => {
+      if (shownRef.current) return;
+      const s = useNudgeQueueStore.getState();
+      if (s.inLesson) return; // never during a module
+      if (!s.canShow('bridge')) return;
+      const sessionAge = Date.now() - s.sessionStartedAt;
+      if (sessionAge < MIN_SESSION_MS) return;
+      // If the streak popup hasn't fired yet AND the session is still young,
+      // defer so the streak gets to be the first daily alert. Past the grace
+      // window we stop waiting (user may not be eligible for streak today).
+      if (!s.streakShownThisSession && sessionAge < MIN_SESSION_MS + STREAK_WAIT_GRACE_MS) return;
+      shownRef.current = true;
+      setVisible(true);
+    };
+
+    // First attempt after a short delay, then poll every 30 s.
+    const initial = setTimeout(tryShow, 3000);
+    const interval = setInterval(tryShow, 30_000);
+    return () => {
+      clearTimeout(initial);
+      clearInterval(interval);
+    };
+  }, [isAuthenticated, hasCompletedOnboarding, isGuest, profile, activeDates, lastBridgeNudgeDateISO]);
 
   // Shark bob animation
   const bobY = useSharedValue(0);

@@ -39,9 +39,12 @@ export async function streamChatRequest(
       return { ok: false, error: 'שגיאה בשירות. נסה שוב.' };
     }
 
-    // Fallback for environments where ReadableStream is not supported
+    // Fallback for environments where ReadableStream is not exposed on response.body
+    // (e.g. some RN fetch builds). Read the full text body once and deliver as a
+    // single chunk so the chat still works, just without a typewriter effect.
     if (!response.body) {
-      onChunk('סליחה, לא הצלחתי ליצור תשובה.');
+      const text = await response.text();
+      if (text) onChunk(text);
       return { ok: true };
     }
 

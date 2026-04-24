@@ -260,35 +260,58 @@ export function BridgeScreen({ walkthroughAutoScroll }: BridgeScreenProps = {}) 
     setSelectedBenefit(null);
   }, []);
 
+  const openPartnerUrl = useCallback(async (url: string) => {
+    try {
+      const canOpen = await Linking.canOpenURL(url);
+      if (!canOpen) {
+        Alert.alert('לא ניתן לפתוח את הקישור', 'נסו שוב מאוחר יותר או פנו לתמיכה.');
+        return;
+      }
+      await Linking.openURL(url);
+    } catch {
+      Alert.alert('שגיאה בפתיחת הקישור', 'בדקו את החיבור לאינטרנט ונסו שוב.');
+    }
+  }, []);
+
   const handleConfirm = useCallback(() => {
     if (!selectedBenefit) return;
     const alreadyRedeemed = isBenefitRedeemed(selectedBenefit.id);
     // Re-opening a previously redeemed benefit: just open the URL again,
     // don't re-spend coins.
     if (alreadyRedeemed) {
-      if (selectedBenefit.partnerUrl) {
-        trackBridgeClick(selectedBenefit.id, 'link_open', email);
-        Linking.openURL(selectedBenefit.partnerUrl).catch(() => { /* ignore */ });
-      }
       setModalVisible(false);
       setSelectedBenefit(null);
+      if (selectedBenefit.partnerUrl) {
+        trackBridgeClick(selectedBenefit.id, 'link_open', email);
+        openPartnerUrl(selectedBenefit.partnerUrl);
+      }
       return;
     }
     const success = redeemBenefit(selectedBenefit.id);
     setModalVisible(false);
+    setSelectedBenefit(null);
     if (success) {
       setSuccessTitle(selectedBenefit.title);
       setShowConfetti(true);
       trackBridgeClick(selectedBenefit.id, 'redeem', email);
-      // Open the partner URL right after successful redemption so the user
-      // reaches the partner site immediately — this was previously missing
-      // and left users stuck after spending coins.
       if (selectedBenefit.partnerUrl) {
-        Linking.openURL(selectedBenefit.partnerUrl).catch(() => { /* ignore */ });
+        openPartnerUrl(selectedBenefit.partnerUrl);
+      }
+    } else {
+      // Surface the failure to the user so they understand why nothing happened.
+      const coins = useEconomyStore.getState().coins;
+      if (!selectedBenefit.isAvailable) {
+        Alert.alert('ההטבה אינה זמינה כרגע', 'חזרו בקרוב!');
+      } else if (coins < selectedBenefit.costCoins) {
+        Alert.alert(
+          'אין מספיק מטבעות',
+          `צריך ${selectedBenefit.costCoins.toLocaleString()} מטבעות להטבה הזו. יש לכם ${coins.toLocaleString()}.`,
+        );
+      } else {
+        Alert.alert('ההמרה נכשלה', 'נסו שוב בעוד רגע.');
       }
     }
-    setSelectedBenefit(null);
-  }, [selectedBenefit, redeemBenefit, email, isBenefitRedeemed]);
+  }, [selectedBenefit, redeemBenefit, email, isBenefitRedeemed, openPartnerUrl]);
 
   return (
     <View style={styles.root}>

@@ -661,7 +661,9 @@ export function ChatScreen() {
                       { writingDirection: "rtl", textAlign: "right" },
                     ]}
                   >
-                    {msg.content}
+                    {/* RLM (U+200F) forces RTL base direction even when the first
+                        streamed token is a digit, English, or punctuation. */}
+                    {"\u200F" + msg.content}
                   </Text>
                   {msg.kind === "upgrade_prompt" && (
                     <Pressable

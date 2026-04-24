@@ -23,6 +23,12 @@ interface NudgeState {
   lastActedTs: Record<NudgeType, number>;
   /** Session tokens — cleared on app cold start */
   sessionShown: Record<NudgeType, boolean>;
+  /** Wall-clock ms the current session started (reset each cold start) */
+  sessionStartedAt: number;
+  /** True while the user is inside a LessonFlowScreen — nudges must not fire */
+  inLesson: boolean;
+  /** True once the daily streak popup has fired this session */
+  streakShownThisSession: boolean;
 
   /** Record dismissal and return whether this user is now "cooled-down" */
   recordDismiss: (type: NudgeType) => void;
@@ -34,6 +40,10 @@ interface NudgeState {
   canShow: (type: NudgeType) => boolean;
   /** Called on app cold-start to clear session tokens */
   resetSession: () => void;
+  /** Toggle when entering/leaving a lesson to suppress nudges mid-lesson */
+  setInLesson: (v: boolean) => void;
+  /** Flip when the streak popup renders, so Bridge nudge can respect "streak-first" ordering */
+  markStreakShown: () => void;
   /** ISO date (YYYY-MM-DD) when the daily bridge nudge was last shown — prevents repeat same day */
   lastBridgeNudgeDateISO: string | null;
   setLastBridgeNudgeDateISO: (d: string) => void;
@@ -53,6 +63,12 @@ export const useNudgeQueueStore = create<NudgeState>()(
       lastShownTs: emptyMap<number>(0),
       lastActedTs: emptyMap<number>(0),
       sessionShown: emptyMap<boolean>(false),
+      sessionStartedAt: Date.now(),
+      inLesson: false,
+      streakShownThisSession: false,
+
+      setInLesson: (v) => set({ inLesson: v }),
+      markStreakShown: () => set({ streakShownThisSession: true }),
 
       recordDismiss: (type) => {
         set((state) => {
@@ -94,7 +110,12 @@ export const useNudgeQueueStore = create<NudgeState>()(
       },
 
       resetSession: () => {
-        set({ sessionShown: emptyMap<boolean>(false) });
+        set({
+          sessionShown: emptyMap<boolean>(false),
+          sessionStartedAt: Date.now(),
+          inLesson: false,
+          streakShownThisSession: false,
+        });
       },
 
       lastBridgeNudgeDateISO: null,
