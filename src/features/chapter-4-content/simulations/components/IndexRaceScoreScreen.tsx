@@ -124,7 +124,7 @@ export function IndexRaceScoreScreen({
           contentFit="contain"
         />
         <View style={sharkStyles.bubble}>
-          <Text style={[sharkStyles.title, RTL]}>קפטן שארק בסיכום 🦈</Text>
+          <Text style={[sharkStyles.title, RTL]}>קפטן שארק בסיכום</Text>
           <Text style={[sharkStyles.body, RTL]}>
             {score.beatIndex
               ? `כל הכבוד! נכנסת לעשור 2011–2020 והצלחת לעקוף את ה-S&P 500 (שעלה 251% בעשור). רוב המשקיעים לא מצליחים. אבל שים לב: התוצאה גם תלויה בנכסים שבחרת, ביטקוין ועליות טכנולוגיה של העשור ההוא היו אנומליה היסטורית.`

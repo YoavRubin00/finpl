@@ -5,7 +5,7 @@
  */
 
 import { useState, useCallback, useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, ScrollView, Dimensions, Alert } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, Dimensions } from 'react-native';
 import Animated, {
   FadeIn,
   FadeInDown,
@@ -24,6 +24,7 @@ import { LottieIcon } from '../../../components/ui/LottieIcon';
 import { AnimatedPressable } from '../../../components/ui/AnimatedPressable';
 import { GlowCard } from '../../../components/ui/GlowCard';
 import { ConfettiExplosion } from '../../../components/ui/ConfettiExplosion';
+import { SharkTipModal } from '../../../components/ui/SharkTipModal';
 import { tapHaptic, successHaptic, heavyHaptic } from '../../../utils/haptics';
 import { useRiskSlider } from './useRiskSlider';
 import { SIM4, SHADOW_STRONG, SHADOW_LIGHT, RTL, sim4Styles } from './simTheme';
@@ -406,7 +407,7 @@ export function RiskSliderScreen({ onComplete }: RiskSliderScreenProps) {
     reset,
   } = useRiskSlider();
 
-
+  const [showSharkTip, setShowSharkTip] = useState(false);
   const rewardsGranted = useRef(false);
 
   // Balance animation
@@ -491,11 +492,12 @@ export function RiskSliderScreen({ onComplete }: RiskSliderScreenProps) {
 
   const handleContinue = useCallback(() => {
     tapHaptic();
-    Alert.alert(
-      'שארק 🦈',
-      'אז למה לא להשקיע תמיד במניות? כי לטווח קצר מניות תנודתיות. יתכן שתהיה שנה דובית (ירידה של 20% בשוק) בדיוק כשנכנסתם.',
-      [{ text: 'הבנתי', onPress: () => onComplete?.() }]
-    );
+    setShowSharkTip(true);
+  }, []);
+
+  const handleSharkTipClose = useCallback(() => {
+    setShowSharkTip(false);
+    onComplete?.();
   }, [onComplete]);
 
   const CH4_LOTTIE: [ReturnType<typeof require>, ReturnType<typeof require>] = [
@@ -592,6 +594,11 @@ export function RiskSliderScreen({ onComplete }: RiskSliderScreenProps) {
         </Animated.View>
       </Animated.View>
     </View>
+    <SharkTipModal
+      visible={showSharkTip}
+      message="אז למה לא להשקיע תמיד במניות? כי לטווח קצר מניות תנודתיות. יתכן שתהיה שנה דובית (ירידה של 20% בשוק) בדיוק כשנכנסתם."
+      onClose={handleSharkTipClose}
+    />
     </SimLottieBackground>
   );
 }

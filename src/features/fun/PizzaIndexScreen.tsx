@@ -102,7 +102,7 @@ function StatCardView({ card, index }: { card: StatCard; index: number }) {
         <View style={styles.statImageWrap}>
           <ExpoImage
             source={card.image}
-            style={styles.statImage}
+            style={[styles.statImage, { backgroundColor: "#e0f2fe" }]}
             contentFit="contain"
           />
         </View>

@@ -3,12 +3,38 @@ import { ASSET_BY_ID } from './tradingHubData';
 import Constants from 'expo-constants';
 import { Platform } from 'react-native';
 
-// ── Daily cache, prices cached once per calendar day ──
-const todayKey = (): string => new Date().toISOString().slice(0, 10);
+// ── Trading-day cache ──
+// Prices/charts refresh once per trading day at 23:30 Israel time. The cache
+// key rolls over at that cutoff, so before 23:30 on any given date we still
+// show yesterday's close (today's market hasn't "closed" yet), and at 23:30
+// the next day's fresh data will be pulled on the first cache hit.
+const tradingDayKey = (): string => {
+  const now = new Date();
+  const parts = new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Asia/Jerusalem',
+    year: 'numeric', month: '2-digit', day: '2-digit',
+    hour: '2-digit', minute: '2-digit', hour12: false,
+  }).formatToParts(now);
+  const get = (t: string) => parts.find(p => p.type === t)?.value ?? '';
+  const y = get('year'), m = get('month'), d = get('day');
+  const h = parseInt(get('hour'), 10) || 0;
+  const min = parseInt(get('minute'), 10) || 0;
+  const israelDate = `${y}-${m}-${d}`;
+  // Before 23:30 Israel → trading day hasn't closed yet; snap to yesterday.
+  if (h < 23 || (h === 23 && min < 30)) {
+    const dt = new Date(`${israelDate}T12:00:00Z`);
+    dt.setUTCDate(dt.getUTCDate() - 1);
+    return dt.toISOString().slice(0, 10);
+  }
+  return israelDate;
+};
+
+// Preserved for legacy compatibility with anything that still imports it.
+const todayKey = tradingDayKey;
 
 interface DailyCacheEntry<T> {
   data: T;
-  date: string; // ISO date "YYYY-MM-DD"
+  date: string; // ISO trading-day key "YYYY-MM-DD"
 }
 
 const priceCache = new Map<string, DailyCacheEntry<number>>();
@@ -16,16 +42,19 @@ const chartCache = new Map<string, DailyCacheEntry<ChartDataPoint[]>>();
 const previousCloseCache = new Map<string, DailyCacheEntry<number>>();
 
 const isPriceFresh = (e: DailyCacheEntry<number> | undefined): e is DailyCacheEntry<number> =>
-  e !== undefined && e.date === todayKey();
+  e !== undefined && e.date === tradingDayKey();
 
 const isChartFresh = (e: DailyCacheEntry<ChartDataPoint[]> | undefined): e is DailyCacheEntry<ChartDataPoint[]> =>
-  e !== undefined && e.date === todayKey();
+  e !== undefined && e.date === tradingDayKey();
 
-/** Returns true if there is no cached price for today, a fresh fetch is needed. */
+/** Returns true if there is no cached price for the current trading day. */
 export const isCacheStale = (assetId: string): boolean => {
   const entry = priceCache.get(assetId);
-  return entry === undefined || entry.date !== todayKey();
+  return entry === undefined || entry.date !== tradingDayKey();
 };
+
+/** ISO trading-day date (rolls at 23:30 Israel). Exposed for the UI "last updated" label. */
+export const getTradingDayKey = (): string => tradingDayKey();
 
 // ── Mock data fallback ──
 // Deterministic seed based on ticker so mock data is consistent per asset

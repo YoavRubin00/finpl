@@ -8,7 +8,7 @@ import { useChapterStore } from '../chapter-1-content/useChapterStore';
 import { MODULE_NAMES } from '../chat/chatData';
 import { getApiBase } from '../../db/apiBase';
 
-const DEFAULT_BANNER_MSG = 'יש לי תובנה חדשה עבורכם 🦈';
+const DEFAULT_BANNER_MSG = 'יש לי תובנה חדשה עבורכם';
 
 async function fetchBannerTip(): Promise<string | null> {
   try {

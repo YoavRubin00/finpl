@@ -6,7 +6,9 @@
 
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { View, Text, StyleSheet, ScrollView, Dimensions } from 'react-native';
+import { Image as ExpoImage } from 'expo-image';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { FINN_STANDARD } from '../../retention-loops/finnMascotConfig';
 import Animated, {
   FadeIn,
   FadeInDown,
@@ -476,7 +478,7 @@ function SharkLessonCard({
         style={styles.statsCard}
       >
         <View style={{ flexDirection: 'row-reverse', alignItems: 'flex-start', gap: 12 }}>
-          <Text style={{ fontSize: 32 }}>🦈</Text>
+          <ExpoImage source={FINN_STANDARD} style={{ width: 40, height: 40 }} contentFit="contain" accessible={false} />
           <Text style={[styles.lessonText, RTL, { flex: 1, lineHeight: 22, fontWeight: '700' }]}>
             {lesson}
           </Text>
