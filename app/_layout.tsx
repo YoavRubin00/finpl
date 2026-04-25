@@ -48,6 +48,7 @@ import { useAIInsightBanner } from "../src/features/ai-insights/useAIInsightBann
 import { useUpgradeNudgeBanner } from "../src/features/monetization/useUpgradeNudgeBanner";
 import { GlobalQuestCompletionModal } from "../src/features/daily-quests/GlobalQuestCompletionModal";
 import { DailyBridgeNudgeModal } from "../src/components/ui/DailyBridgeNudgeModal";
+import { InviteFriendsNudgeModal } from "../src/components/ui/InviteFriendsNudgeModal";
 import { GuestRegisterDailyNudge } from "../src/features/auth/GuestRegisterDailyNudge";
 import { configureRevenueCat, loginRevenueCat } from "../src/services/revenueCat";
 import { useSubscriptionStore } from "../src/features/subscription/useSubscriptionStore";
@@ -279,6 +280,7 @@ export default function RootLayout() {
               <WisdomPopupCard />
               <GlobalQuestCompletionModal />
               <DailyBridgeNudgeModal />
+              <InviteFriendsNudgeModal />
               {hasCompletedOnboarding && hasSeenWalkthrough && <GuestRegisterDailyNudge />}
               {/* Global top banners — suppressed during onboarding/tutorial to avoid distracting the first-run experience */}
               {hasCompletedOnboarding && hasSeenWalkthrough && (

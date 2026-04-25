@@ -26,11 +26,14 @@ export function useFeedNudge() {
     // Cooldown check
     if (Date.now() - lastShownAt.current < COOLDOWN_MS) return;
 
-    // Priority 1: Daily challenge — navigate to the feed where daily dilemma appears
+    // Priority 1: Daily challenge — route directly to today's challenge surface
+    // (currently the Bullshit Swipe interstitial). Previously this pushed the
+    // user to /(tabs)/learn (the generic feed), which forced them to scroll
+    // looking for the dilemma card themselves.
     if (!dilemmaAnswered) {
       setNudge({
         message: "לא ביצעת את האתגר היומי! 🎯",
-        route: "/(tabs)/learn",
+        route: "/interstitial/bullshit-ch0",
       });
       lastShownAt.current = Date.now();
       setDismissed(false);

@@ -15,8 +15,11 @@ const ROWS = Math.ceil(CARD_H / CELL_SIZE);
 const TOTAL_CELLS = COLS * ROWS;
 const REVEAL_THRESHOLD = 0.4; // 40% scratched → auto-reveal
 
-// Hidden treasure image (CDN-served, rare-use modal)
+// Hidden treasure image (CDN-served, rare-use modal). Eagerly prefetched at
+// module load so the image is in cache by the time the modal opens — earlier
+// builds showed a perceptible blank-while-loading flash.
 const TREASURE_IMAGE = { uri: "https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/images/games/scratch_card_reward.png" };
+ExpoImage.prefetch(TREASURE_IMAGE.uri).catch(() => { /* offline / first-launch race — harmless */ });
 
 interface MapEasterEggModalProps {
   visible: boolean;

@@ -375,8 +375,14 @@ export const useSubscriptionStore = create<SubscriptionState>()(
     {
       name: "subscription-storage",
       onRehydrateStorage: () => (state) => {
-        // Dev override: grant PRO to specific emails
         if (!state) return;
+        // Clamp legacy hearts values: previous builds had MAX_HEARTS = 5/3.
+        // Without this, returning users keep their persisted value and the UI
+        // either renders too few or too many slots vs MAX_HEARTS = 4.
+        if (typeof state.hearts === "number" && state.hearts > MAX_HEARTS) {
+          state.hearts = MAX_HEARTS;
+        }
+        // Dev override: grant PRO to specific emails
         try {
           const auth = require("../auth/useAuthStore").useAuthStore.getState();
           const DEV_PRO_EMAILS = ["itaysc23@gmail.com", "benbenshmuel@gmail.com"];

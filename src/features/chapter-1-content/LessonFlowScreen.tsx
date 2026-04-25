@@ -3299,7 +3299,7 @@ export function LessonFlowScreen() {
               {isPro ? (
                 <Text style={{ fontSize: 14, color: "#ef4444", fontWeight: "700" }}>♥ ∞</Text>
               ) : (
-                Array.from({ length: 5 }).map((_, i) => (
+                Array.from({ length: 4 }).map((_, i) => (
                   <Text key={i} style={{ fontSize: 16, opacity: i < heartsCount ? 1 : 0.2 }}>
                     {i < heartsCount ? "❤️" : "🤍"}
                   </Text>

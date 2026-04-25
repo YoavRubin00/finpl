@@ -47,6 +47,9 @@ interface NudgeState {
   /** ISO date (YYYY-MM-DD) when the daily bridge nudge was last shown — prevents repeat same day */
   lastBridgeNudgeDateISO: string | null;
   setLastBridgeNudgeDateISO: (d: string) => void;
+  /** ISO date when the invite-friends nudge was last shown — gates 3-day cadence */
+  lastInviteNudgeDateISO: string | null;
+  setLastInviteNudgeDateISO: (d: string) => void;
 }
 
 const COOLDOWN_MS = 48 * 60 * 60 * 1000; // 48h per Duolingo A/B
@@ -120,6 +123,9 @@ export const useNudgeQueueStore = create<NudgeState>()(
 
       lastBridgeNudgeDateISO: null,
       setLastBridgeNudgeDateISO: (d) => set({ lastBridgeNudgeDateISO: d }),
+
+      lastInviteNudgeDateISO: null,
+      setLastInviteNudgeDateISO: (d) => set({ lastInviteNudgeDateISO: d }),
     }),
     {
       name: 'nudge-queue-store',
@@ -129,6 +135,7 @@ export const useNudgeQueueStore = create<NudgeState>()(
         lastShownTs: state.lastShownTs,
         lastActedTs: state.lastActedTs,
         lastBridgeNudgeDateISO: state.lastBridgeNudgeDateISO,
+        lastInviteNudgeDateISO: state.lastInviteNudgeDateISO,
         // sessionShown deliberately NOT persisted — resets each cold start
       }),
     },

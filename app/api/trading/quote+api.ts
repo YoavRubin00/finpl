@@ -20,10 +20,14 @@ const TIMEFRAME_PARAMS: Record<Timeframe, YahooParams> = {
   '1MIN': { interval: '1m', range: '1d' },
   '5MIN': { interval: '5m', range: '1d' },
   '1H': { interval: '1h', range: '5d' },
-  // 1D = daily candles over 6 months, enough room for MA20/MA50/MA100 line history.
-  '1D': { interval: '1d', range: '6mo' },
-  // 1W = weekly candles over 5 years, gives ~260 bars, enough for MA200 in advanced mode.
-  '1W': { interval: '1wk', range: '5y' },
+  // 1D = intraday 5-minute bars over the most recent trading day. The user sees
+  // "today's session so far" during market hours, "yesterday's full session"
+  // outside market hours (Yahoo returns the last completed session).
+  '1D': { interval: '5m', range: '1d' },
+  // 1W = daily candles over the last 8 calendar days, giving ~5-7 trading days.
+  // This matches what users see as "last week" on TradingView, instead of the
+  // previous 5-year weekly view that returned ~260 bars.
+  '1W': { interval: '1d', range: '8d' },
 };
 
 const VALID_TIMEFRAMES = new Set<string>(Object.keys(TIMEFRAME_PARAMS));

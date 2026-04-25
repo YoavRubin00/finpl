@@ -345,8 +345,8 @@ export function ChatScreen() {
     }
     draftTsRef.current = ts;
     if (drainTimerRef.current) return;
-    const CHARS_PER_TICK = 3;
-    const TICK_MS = 20;
+    const CHARS_PER_TICK = 2;
+    const TICK_MS = 28;
     drainTimerRef.current = setInterval(() => {
       if (pendingRef.current.length === 0) return;
       const take = pendingRef.current.slice(0, CHARS_PER_TICK);
@@ -356,11 +356,12 @@ export function ChatScreen() {
           if (m.role !== "assistant" || m.timestamp !== draftTsRef.current) return m;
           // Client-side safety-net: strip stray debug markers the model
           // occasionally emits at the start of the reply (e.g. "OK TRUE REPLY.").
-          // Only runs while the running content is short enough that a leading
-          // marker could still be present.
           const next = m.content + take;
-          const cleaned = m.content.length < 40
-            ? next.replace(/^\s*(OK[\s.]*TRUE[\s.]*REPLY[.\s]*)+/i, "")
+          const cleaned = m.content.length < 80
+            ? next
+                .replace(/^[\s.,!:]*OK[\s._,-]*TRUE[\s._,-]*REPLY[.\s,!:]*/i, "")
+                .replace(/^[\s.,!:]*(OK|TRUE|REPLY)[.\s,!:]+/i, "")
+                .replace(/^[\s\u200F]+/, "")
             : next;
           return { ...m, content: cleaned };
         }),

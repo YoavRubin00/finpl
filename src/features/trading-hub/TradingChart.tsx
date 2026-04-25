@@ -56,15 +56,17 @@ export function TradingChart({
     }
   }, []);
 
-  // Safety: if the CDN/JS never reports ready within 2 s, fall back to the
-  // native Skia chart. Previous 4 s window left users staring at a skeleton.
-  // Two seconds is long enough for a healthy CDN but short enough to avoid a
-  // perceptible "blank chart" on slow networks / blocked unpkg.com.
+  // Safety: if the CDN/JS never reports ready within 4.5 s, fall back to the
+  // native Skia chart. Previous 2 s window was too aggressive — it hid the
+  // advanced chart on perfectly normal networks where unpkg.com just took a
+  // moment to deliver lightweight-charts. 4.5 s feels brief enough that the
+  // skeleton doesn't linger uncomfortably while still giving the CDN a fair
+  // chance to land before we give up.
   useEffect(() => {
     if (ready || errored) return;
     const timer = setTimeout(() => {
       if (!ready) setErrored(true);
-    }, 2000);
+    }, 4500);
     return () => clearTimeout(timer);
   }, [ready, errored, html]);
 
