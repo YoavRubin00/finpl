@@ -66,6 +66,15 @@ function formatTime(timestamp: number): string {
   return `${hours}:${minutes}`;
 }
 
+// Some Gemini outputs leak a debug-marker preamble like "OK TRUE REPLY" before
+// the actual response. Strip any combination/case/separator at the start.
+function stripDebugPreamble(text: string): string {
+  return text
+    .replace(/^[\s\W]*OK[\s\W]*TRUE[\s\W]*REPLY[\s\W]*/i, "")
+    .replace(/^[\s\W]*(OK|TRUE|REPLY)[\s\W]+/i, "")
+    .replace(/^[\s\u200F]+/, "");
+}
+
 /* ------------------------------------------------------------------ */
 /*  Read Receipt Icon                                                  */
 /* ------------------------------------------------------------------ */
@@ -346,7 +355,7 @@ export function ChatScreen() {
     draftTsRef.current = ts;
     if (drainTimerRef.current) return;
     const CHARS_PER_TICK = 2;
-    const TICK_MS = 28;
+    const TICK_MS = 40;
     drainTimerRef.current = setInterval(() => {
       if (pendingRef.current.length === 0) return;
       const take = pendingRef.current.slice(0, CHARS_PER_TICK);
@@ -357,10 +366,10 @@ export function ChatScreen() {
           // Client-side safety-net: strip stray debug markers the model
           // occasionally emits at the start of the reply (e.g. "OK TRUE REPLY.").
           const next = m.content + take;
-          const cleaned = m.content.length < 80
+          const cleaned = m.content.length < 200
             ? next
-                .replace(/^[\s.,!:]*OK[\s._,-]*TRUE[\s._,-]*REPLY[.\s,!:]*/i, "")
-                .replace(/^[\s.,!:]*(OK|TRUE|REPLY)[.\s,!:]+/i, "")
+                .replace(/^[\s\W]*OK[\s\W]*TRUE[\s\W]*REPLY[\s\W]*/i, "")
+                .replace(/^[\s\W]*(OK|TRUE|REPLY)[\s\W]+/i, "")
                 .replace(/^[\s\u200F]+/, "")
             : next;
           return { ...m, content: cleaned };
@@ -375,6 +384,16 @@ export function ChatScreen() {
         const check = () => {
           if (pendingRef.current.length === 0) {
             stopDrain();
+            // Final-pass sanitizer: strip any debug preamble that survived
+            // per-tick cleaning (rare, but happens when chunks arrive faster
+            // than drain ticks).
+            setMessages((prev) =>
+              prev.map((m) =>
+                m.role === "assistant" && m.timestamp === draftTsRef.current
+                  ? { ...m, content: stripDebugPreamble(m.content) }
+                  : m,
+              ),
+            );
             resolve();
           } else {
             setTimeout(check, 20);

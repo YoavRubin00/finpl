@@ -1001,7 +1001,12 @@ function QuizCard({
         </View>
       </View>
 
-      <View style={{ flex: 1 }}>
+      <ScrollView
+        style={{ flex: 1 }}
+        contentContainerStyle={{ flexGrow: 1, paddingBottom: 16 }}
+        showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
+      >
         <View style={{
           backgroundColor: "#ffffff",
           borderRadius: 16,
@@ -1185,7 +1190,7 @@ function QuizCard({
             </Animated.View>
           </>
         )}
-      </View>
+      </ScrollView>
     </Animated.View>
   );
 }

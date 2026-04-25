@@ -127,7 +127,7 @@ export function LifelineChatOverlay({ visible, conceptTag, onClose }: Props) {
   // On Android, useSafeAreaInsets may return 0 inside a statusBarTranslucent Modal.
   // Fall back to StatusBar.currentHeight to ensure the X button is never hidden.
   const headerTopPad = Platform.OS === "android"
-    ? Math.max(safeInsets.top, StatusBar.currentHeight ?? 24) + 10
+    ? Math.max(safeInsets.top, StatusBar.currentHeight ?? 0, 28) + 16
     : safeInsets.top + 10;
   const isPro = useSubscriptionStore((s) => s.isPro());
 
