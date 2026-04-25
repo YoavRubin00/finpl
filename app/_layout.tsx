@@ -206,9 +206,10 @@ export default function RootLayout() {
     utils.setGlobalHandler((error, isFatal) => {
       const msg = (error as { message?: string } | null)?.message ?? String(error);
       console.warn("[GlobalErrorHandler] uncaught:", msg, "fatal:", isFatal);
-      // Always report fatal errors to the original handler (Sentry pipeline in prod).
-      // Non-fatal errors stay swallowed to prevent callback-induced crashes (2.1(a) fix).
-      if (isFatal && originalHandler) originalHandler(error, isFatal);
+      // In dev only: forward fatal errors so the dev overlay appears.
+      // In production: swallow entirely — Sentry captures via its own beforeSend hook;
+      // forwarding causes re-throw → abort() in Hermes gesture callbacks (2.1(a)).
+      if (__DEV__ && isFatal && originalHandler) originalHandler(error, isFatal);
     });
   }, []);
   const router = useRouter();

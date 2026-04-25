@@ -101,9 +101,9 @@
             "CFBundleURLSchemes": ["com.googleusercontent.apps.847177819309-mbb8nusv6r17oot0e49e1npbgmaecps0"]
           }
         ],
+        "UIDeviceFamily": [1],
         "NSPrivacyPolicyURL": "https://yoavrubin00.github.io/finpl/privacy-policy.html",
         "ITSAppUsesNonExemptEncryption": false,
-        "NSUserTrackingUsageDescription": "FinPlay אינו עוקב אחריך בין אפליקציות. הרשאה זו מתבקשת רק כדי לכבד את העדפותיך.",
         "SKAdNetworkItems": [
           { "SKAdNetworkIdentifier": "cstr6suwn9.skadnetwork" },
           { "SKAdNetworkIdentifier": "4fzdc2evr5.skadnetwork" },
