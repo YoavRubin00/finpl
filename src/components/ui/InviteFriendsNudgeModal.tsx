@@ -12,25 +12,22 @@ import Animated, {
   cancelAnimation,
   useReducedMotion,
 } from 'react-native-reanimated';
-import { useRouter } from 'expo-router';
+import { useRouter, useSegments } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { FINN_DANCING } from '../../features/retention-loops/finnMascotConfig';
-import { LottieIcon } from './LottieIcon';
 import { useNudgeQueueStore } from '../../stores/useNudgeQueueStore';
 import { useAuthStore } from '../../features/auth/useAuthStore';
 import { useEconomyStore } from '../../features/economy/useEconomyStore';
 import { tapHaptic, successHaptic } from '../../utils/haptics';
 
-const LOTTIE_FRIENDS = require('../../../assets/lottie/wired-flat-1925-bridge-hover-pinch.json') as number;
-
 const DAILY_COPY: Record<number, string> = {
-  0: 'התחלה של שבוע = רגע מצוין להזמין חברים',
-  1: 'כיף לבד, יותר כיף ביחד. בואו נביא חברים',
-  2: 'כל הזמנה = מטבעות בכיס וסטארט לחבר',
-  3: 'אמצע שבוע — הזמנה אחת ונהנים ביחד',
-  4: 'סוף השבוע מתקרב, שווה להזמין חברים שילמדו איתנו',
-  5: 'שישי שמח, בואו להזמין חברים לפני שבת',
-  6: 'שבת שלום, הזמינו חברים שיתחילו את השבוע יחד',
+  0: 'החברים שלכם מכניסים לכם כסף',
+  1: 'כל חבר שמצטרף = מטבעות בכיס שלכם',
+  2: 'החברים שלכם מכניסים לכם כסף',
+  3: 'הזמנה אחת = מטבעות לכם וסטארט לחבר',
+  4: 'כל חבר שמצטרף = מטבעות בכיס שלכם',
+  5: 'שישי שמח — החברים שלכם מכניסים לכם כסף',
+  6: 'שבת שלום — הזמנה אחת = מטבעות לכם ולחבר',
 };
 
 const MIN_DAYS_BETWEEN = 3;
@@ -67,6 +64,12 @@ export function InviteFriendsNudgeModal() {
   const setLastInviteNudgeDateISO = useNudgeQueueStore((s) => s.setLastInviteNudgeDateISO);
   const lastBridgeNudgeDateISO = useNudgeQueueStore((s) => s.lastBridgeNudgeDateISO);
 
+  // Track current route so we can gate the nudge to fire only on the feed.
+  // Read via ref inside the interval callback so we always see the latest path.
+  const segments = useSegments();
+  const segmentsRef = useRef(segments);
+  segmentsRef.current = segments;
+
   const shownRef = useRef(false);
 
   useEffect(() => {
@@ -80,13 +83,16 @@ export function InviteFriendsNudgeModal() {
     if (lastInviteNudgeDateISO && daysBetweenISO(lastInviteNudgeDateISO, today) < MIN_DAYS_BETWEEN) return;
     if (lastBridgeNudgeDateISO === today) return; // defer if Bridge already fired today
 
-    const MIN_SESSION_MS = 4 * 60 * 1000;
+    const MIN_SESSION_MS = 60 * 1000; // 1 min after app open
     const STREAK_WAIT_GRACE_MS = 15 * 1000;
 
     const tryShow = () => {
       if (shownRef.current) return;
       const s = useNudgeQueueStore.getState();
       if (s.inLesson) return;
+      // Only fire while the user is on the feed tab — never on other screens.
+      const seg = segmentsRef.current;
+      if (seg[0] !== '(tabs)' || seg[1] !== 'learn') return;
       if (!s.canShow('referral')) return;
       const sessionAge = Date.now() - s.sessionStartedAt;
       if (sessionAge < MIN_SESSION_MS) return;
@@ -97,8 +103,8 @@ export function InviteFriendsNudgeModal() {
       setVisible(true);
     };
 
-    const initial = setTimeout(tryShow, 4000);
-    const interval = setInterval(tryShow, 30_000);
+    const initial = setTimeout(tryShow, 5_000);
+    const interval = setInterval(tryShow, 15_000);
     return () => {
       clearTimeout(initial);
       clearInterval(interval);
@@ -192,7 +198,7 @@ export function InviteFriendsNudgeModal() {
           <Text style={styles.title}>{DAILY_COPY[dayOfWeek]}</Text>
 
           <Text style={styles.subtitle}>
-            הזמנת חבר = מטבעות בכיס וסטארט סופר לחבר. הכי כיף ביחד.
+            כל הזמנה מכניסה לכם מטבעות, ולחבר/ה סטארט סופר. הכי כיף ביחד.
           </Text>
 
           <Animated.View style={[styles.ctaGlowWrap, glowStyle]}>
@@ -205,9 +211,7 @@ export function InviteFriendsNudgeModal() {
               accessibilityRole="button"
               accessibilityLabel="הזמן חברים"
             >
-              <View style={{ width: 38, height: 38 }}>
-                <LottieIcon source={LOTTIE_FRIENDS} size={38} autoPlay loop />
-              </View>
+              <Text style={styles.ctaEmoji}>💰</Text>
               <Text style={styles.ctaText}>הזמן חברים</Text>
             </Pressable>
           </Animated.View>
@@ -302,25 +306,32 @@ const styles = StyleSheet.create({
   ctaBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
-    backgroundColor: '#38bdf8',
+    gap: 10,
+    backgroundColor: '#3b82f6',
     borderRadius: 18,
     paddingVertical: 16,
     paddingHorizontal: 24,
     width: '100%',
     justifyContent: 'center',
-    borderBottomWidth: 4,
-    borderBottomColor: '#0284c7',
-    borderTopWidth: 1.5,
-    borderTopColor: 'rgba(255,255,255,0.5)',
+    borderWidth: 2,
+    borderColor: '#2563eb',
+    borderBottomWidth: 5,
+    borderBottomColor: '#1d4ed8',
     overflow: 'hidden',
     elevation: 12,
+  },
+  ctaEmoji: {
+    fontSize: 26,
+    lineHeight: 30,
   },
   ctaText: {
     fontSize: 17,
     fontWeight: '900',
     color: '#ffffff',
     writingDirection: 'rtl',
+    textShadowColor: 'rgba(0,0,0,0.25)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 2,
   },
   dismissBtn: {
     paddingVertical: 8,

@@ -15,13 +15,10 @@ import Animated, {
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { FINN_DANCING } from '../../features/retention-loops/finnMascotConfig';
-import { LottieIcon } from './LottieIcon';
 import { useNudgeQueueStore } from '../../stores/useNudgeQueueStore';
 import { useAuthStore } from '../../features/auth/useAuthStore';
 import { useEconomyStore } from '../../features/economy/useEconomyStore';
 import { tapHaptic, successHaptic } from '../../utils/haptics';
-
-const LOTTIE_BRIDGE = require('../../../assets/lottie/wired-flat-1925-bridge-hover-pinch.json') as number;
 
 const DAILY_COPY: Record<number, string> = {
   0: 'בנית בסיס חזק. הגיע הזמן להשתמש בו',
@@ -203,9 +200,7 @@ export function DailyBridgeNudgeModal() {
               accessibilityRole="button"
               accessibilityLabel="קח אותי לגשר"
             >
-              <View style={{ width: 38, height: 38 }}>
-                <LottieIcon source={LOTTIE_BRIDGE} size={38} autoPlay loop />
-              </View>
+              <Text style={styles.ctaEmoji}>🌉</Text>
               <Text style={styles.ctaText}>קח אותי לגשר</Text>
             </Pressable>
           </Animated.View>
@@ -314,6 +309,10 @@ const styles = StyleSheet.create({
     borderBottomColor: '#1d4ed8',
     overflow: 'hidden',
     elevation: 12,
+  },
+  ctaEmoji: {
+    fontSize: 26,
+    lineHeight: 30,
   },
   ctaText: {
     fontSize: 17,
