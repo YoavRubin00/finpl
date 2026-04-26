@@ -55,7 +55,19 @@ export interface Module {
   /** Label shown on bonus badge, e.g. "בונוס: המשקיע הנבון" */
   bonusLabel?: string;
   /** Optional mini-game to show between this module and the next */
-  interModuleGame?: 'investment' | 'crash' | 'myth' | 'dilemma' | 'macro-event' | 'video';
+  interModuleGame?:
+    | 'investment'
+    | 'crash'
+    | 'myth'
+    | 'dilemma'
+    | 'macro-event'
+    | 'video'
+    | 'fomo-killer'
+    | 'bullshit-swipe'
+    | 'higher-lower'
+    | 'price-slider'
+    | 'budget-ninja'
+    | 'cashout-rush';
   /** When interModuleGame === 'macro-event', the specific macro event id to show */
   interModuleMacroEventId?: string;
   /** When interModuleGame === 'video', the video asset to play */

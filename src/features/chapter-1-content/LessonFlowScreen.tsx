@@ -73,6 +73,12 @@ import { InvestmentCard } from "../daily-challenges/InvestmentCard";
 import { CrashGameCard } from "../daily-challenges/CrashGameCard";
 import { MythFeedCard } from "../myth-or-tachles/MythFeedCard";
 import { DilemmaCard } from "../daily-challenges/DilemmaCard";
+import { FomoKillerCard } from "../finfeed/minigames/fomo-killer/FomoKillerCard";
+import { BullshitSwipeCard } from "../finfeed/minigames/bullshit-swipe/BullshitSwipeCard";
+import { HigherLowerCard } from "../finfeed/minigames/higher-lower/HigherLowerCard";
+import { PriceSliderCard } from "../finfeed/minigames/price-slider/PriceSliderCard";
+import { BudgetNinjaCard } from "../finfeed/minigames/budget-ninja/BudgetNinjaCard";
+import { CashoutRushCard } from "../finfeed/minigames/cashout-rush/CashoutRushCard";
 import { MacroEventCard } from "../macro-events/MacroEventCard";
 import { macroEventsData } from "../macro-events/macroEventsData";
 import { TA125WarRecoveryChart } from "../chapter-4-content/components/TA125WarRecoveryChart";
@@ -3564,20 +3570,27 @@ export function LessonFlowScreen() {
       {showInterGame && mod?.interModuleGame && (
         <Modal visible transparent animationType="slide" statusBarTranslucent onRequestClose={() => { setShowInterGame(false); goToNextSequentialModule(); }} accessibilityViewIsModal>
           <GestureHandlerRootView style={{ flex: 1, backgroundColor: "#f8fafc" }} accessibilityViewIsModal>
-            <View style={{ flexDirection: "row-reverse", paddingHorizontal: 16, paddingTop: 50, paddingBottom: 8 }}>
+            <View style={{ flexDirection: "row-reverse", paddingHorizontal: 16, paddingTop: Math.max(safeInsets.top + 12, 50), paddingBottom: 8 }}>
               <Pressable
                 onPress={() => { setShowInterGame(false); goToNextSequentialModule(); }}
-                style={{ paddingHorizontal: 14, paddingVertical: 6, backgroundColor: "rgba(0,0,0,0.06)", borderRadius: 16 }}
+                style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: "rgba(0,0,0,0.06)", alignItems: "center", justifyContent: "center" }}
                 accessibilityRole="button"
-                accessibilityLabel="דלג"
+                accessibilityLabel="סגור והמשך"
+                hitSlop={8}
               >
-                <Text style={{ color: "#64748b", fontSize: 13, fontWeight: "700" }}>דלג ←</Text>
+                <Text style={{ color: "#475569", fontSize: 18, fontWeight: "800", lineHeight: 20 }}>✕</Text>
               </Pressable>
             </View>
             {mod.interModuleGame === 'investment' && <InvestmentCard isActive />}
             {mod.interModuleGame === 'crash' && <CrashGameCard isActive />}
             {mod.interModuleGame === 'myth' && <MythFeedCard isInterModule onSkip={() => { setShowInterGame(false); goToNextSequentialModule(); }} />}
             {mod.interModuleGame === 'dilemma' && <DilemmaCard isActive />}
+            {mod.interModuleGame === 'fomo-killer' && <FomoKillerCard isActive />}
+            {mod.interModuleGame === 'bullshit-swipe' && <BullshitSwipeCard isActive bypassDailyGate onFinish={() => { /* allow X to advance; game's own results screen handles its CTA */ }} />}
+            {mod.interModuleGame === 'higher-lower' && <HigherLowerCard isActive />}
+            {mod.interModuleGame === 'price-slider' && <PriceSliderCard isActive />}
+            {mod.interModuleGame === 'budget-ninja' && <BudgetNinjaCard isActive />}
+            {mod.interModuleGame === 'cashout-rush' && <CashoutRushCard isActive />}
             {mod.interModuleGame === 'macro-event' && mod.interModuleMacroEventId && (() => {
               const event = macroEventsData.find((e) => e.id === mod.interModuleMacroEventId);
               if (!event) return null;
