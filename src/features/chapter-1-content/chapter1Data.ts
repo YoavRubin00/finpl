@@ -143,6 +143,7 @@ export const chapter1Data: Chapter = {
         description:
           'אתה מכוון השקעה של 10K ומזיז את הסליידר של השנים. עד שנה 10 בקושי זז, בשנה 20 העמודה פורצת את המסך.',
       },
+      interModuleGame: 'higher-lower',
     },
     {
       id: 'mod-1-2',
@@ -462,6 +463,7 @@ export const chapter1Data: Chapter = {
         description:
           'אתה פורס תשלומים על מסך, ורואה בזמן אמת איך כדור השלג של הריבית גדל ומוחץ את המשכורת העתידית שלך.',
       },
+      interModuleGame: 'bullshit-swipe',
     },
     {
       id: 'mod-1-4',
@@ -1189,6 +1191,7 @@ export const chapter1Data: Chapter = {
         description:
           'הבנק גובה עמלות מיותרות, בחרו את ההגנה הנכונה כדי לחסום אותן ולחסוך כסף.',
       },
+      interModuleGame: 'price-slider',
     },
     {
       id: 'mod-1-8',
@@ -1544,6 +1547,7 @@ export const chapter1Data: Chapter = {
         description:
           'נופלות "הוצאות אסון" (פנצ\'ר, חשבון שיניים) ואתה מותח מתחתן רשת ביטחון (הקרן) שמקפיצה אותן החוצה ושומרת על מד העו"ש שלך.',
       },
+      interModuleGame: 'fomo-killer',
     },
   ],
 };

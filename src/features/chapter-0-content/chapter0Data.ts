@@ -256,6 +256,7 @@ export const chapter0Data: Chapter = {
         title: 'סימולטור השחיקה (מדד הלחם)',
         description: 'מדד לחם וירטואלי מציג כיצד שטר אדום מתכווץ ויש לו פחות מקדמי-קנייה ככל שסליידר הזמן מתקדם ל-2026.',
       },
+      interModuleGame: 'higher-lower',
     },
     {
       id: 'mod-0-4',
@@ -316,6 +317,7 @@ export const chapter0Data: Chapter = {
         title: 'מאזני התקציב',
         description: 'המשתמש סוחב ומאזן משקולות שמייצגות "הכנסות" אל מול משקולות "הוצאות". הפער מהווה את פוטנציאל ההשקעה.',
       },
+      interModuleGame: 'budget-ninja',
     },
     {
       id: 'mod-0-5',
@@ -375,6 +377,7 @@ export const chapter0Data: Chapter = {
         title: 'מיני-משחק המזרן והעץ',
         description: 'משחק הניגודים שמראה תפוקה לעומת ניוון. מהווה את כל ההקדמה של הגיבור אל תוך פרק 1 - ריבית דריבית של ממש.',
       },
+      interModuleGame: 'cashout-rush',
     },
   ],
 };

@@ -141,6 +141,7 @@ export const chapter5Data: Chapter = {
         description:
           'המשתמש מזין הכנסה, הוצאה וגיל. הוא מזיז סליידר של "אחוז חיסכון" ורואה איך קו ה-FIRE מתקרב אליו (מגיל 67 לגיל 45, 40 ואפילו 35).',
       },
+      interModuleGame: 'higher-lower',
     },
     {
       id: 'mod-5-26',
@@ -275,6 +276,7 @@ export const chapter5Data: Chapter = {
         description:
           'המשתמש מנסה לקנות דירה ובוחר תמהיל משכנתא. המערכת מריצה "אירועים" (עליית ריבית, פיצוץ בצינור, שוכר שלא משלם) ורואה אם הוא מצליח לעמוד בהחזרים.',
       },
+      interModuleGame: 'price-slider',
     },
     {
       id: 'mod-5-27',
@@ -809,6 +811,7 @@ export const chapter5Data: Chapter = {
         description:
           'המשתמש מקבל 10,000 ש"ח וירטואליים ומחליט כמה להקצות לביטקוין, לאית\'ריום ולמזומן. המערכת מריצה 3 שנים עם תנודות אמיתיות ומראה את התוצאה מול תיק מניות מסורתי.',
       },
+      interModuleGame: 'fomo-killer',
     },
     // mod-5-31 (תיק IRA module + "בונה ה-IRA" simulator) removed — content
     // was not accurate enough for the Israeli audience.
