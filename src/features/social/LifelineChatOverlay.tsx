@@ -222,7 +222,7 @@ export function LifelineChatOverlay({ visible, conceptTag, onClose }: Props) {
           setMessages((prev) =>
             prev.map((m, i) =>
               i === prev.length - 1 && m.role === "assistant"
-                ? { ...m, content: "שגיאה בחיבור. נסה שוב." }
+                ? { ...m, content: "שגיאה בחיבור. נסו שוב." }
                 : m,
             ),
           );

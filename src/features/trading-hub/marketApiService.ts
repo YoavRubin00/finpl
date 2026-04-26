@@ -235,6 +235,65 @@ const fetchYahooPriceDirect = async (assetId: string): Promise<number | null> =>
   }
 };
 
+const fetchYahooChartDirect = async (
+  assetId: string,
+  timeframe: Timeframe
+): Promise<ChartDataPoint[] | null> => {
+  if (Platform.OS === 'web') return null;
+  const yTicker = YAHOO_TICKER_MAP[assetId] ?? assetId;
+
+  // Same timeframe mapping as the backend
+  const TIMEFRAME_PARAMS: Record<Timeframe, { interval: string; range: string }> = {
+    '1MIN': { interval: '1m', range: '1d' },
+    '5MIN': { interval: '5m', range: '1d' },
+    '1H': { interval: '1h', range: '5d' },
+    '1D': { interval: '5m', range: '1d' },
+    '1W': { interval: '1d', range: '8d' },
+  };
+  const params = TIMEFRAME_PARAMS[timeframe];
+
+  try {
+    const res = await fetch(
+      `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(yTicker)}?interval=${params.interval}&range=${params.range}`,
+      { headers: { 'User-Agent': 'Mozilla/5.0', Accept: 'application/json' } },
+    );
+    if (!res.ok) return null;
+    const json = await res.json();
+    const result = json?.chart?.result?.[0];
+    if (!result) return null;
+
+    const timestamps: number[] = result.timestamp ?? [];
+    const q = result.indicators?.quote?.[0] ?? {};
+    const opens: Array<number | null> = q.open ?? [];
+    const highs: Array<number | null> = q.high ?? [];
+    const lows: Array<number | null> = q.low ?? [];
+    const closes: Array<number | null> = q.close ?? [];
+    const volumes: Array<number | null> = q.volume ?? [];
+
+    const chart: ChartDataPoint[] = [];
+    for (let i = 0; i < timestamps.length; i++) {
+      const close = closes[i];
+      if (close === null || close === undefined) continue;
+      const open = typeof opens[i] === 'number' ? opens[i]! : close;
+      const high = typeof highs[i] === 'number' ? highs[i]! : close;
+      const low = typeof lows[i] === 'number' ? lows[i]! : close;
+      const volume = typeof volumes[i] === 'number' ? volumes[i]! : 0;
+      chart.push({
+        timestamp: timestamps[i] * 1000,
+        price: close,
+        open: round2(open),
+        high: round2(high),
+        low: round2(low),
+        close: round2(close),
+        volume,
+      });
+    }
+    return chart;
+  } catch {
+    return null;
+  }
+};
+
 export const fetchLatestPrice = async (assetId: string): Promise<number> => {
   const cached = priceCache.get(assetId);
   if (isPriceFresh(cached)) return cached.data;
@@ -305,11 +364,21 @@ export const fetchChartData = async (
     // API returned ok but empty/thin chart — fall back to mock so UI never shows a blank chart
     if (!Array.isArray(json.chart) || json.chart.length < 2) throw new Error('empty chart');
 
+    lastFetchWasLive = true;
     chartCache.set(cacheKey, { data: json.chart, date: todayKey() });
     return json.chart;
   } catch {
-    // Don't cache mock data: if the backend recovers later today, the next call
-    // should reach it instead of serving stale mock for the remainder of the day.
+    // Secondary: direct Yahoo (native only, avoids CORS and Vercel IP blocks)
+    const direct = await fetchYahooChartDirect(assetId, timeframe);
+    if (direct !== null && direct.length >= 2) {
+      lastFetchWasLive = true;
+      chartCache.set(cacheKey, { data: direct, date: todayKey() });
+      return direct;
+    }
+
+    lastFetchWasLive = false;
+    // Don't cache mock data: if the backend/network recovers later, the next call
+    // should reach it instead of serving stale mock for the remainder of the session.
     return generateMockChartData(assetId, timeframe);
   }
 };

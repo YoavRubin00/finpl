@@ -1,13 +1,10 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import { zustandStorage } from '../../lib/zustandStorage';
+import { getIsraelDateISO } from '../../utils/israelTime';
 import { CROWD_QUESTIONS } from './crowdQuestionsData';
 import { buildSelectionContext, selectTodayQuestion } from './selectQuestion';
 import type { CrowdOption, CrowdQuestion, MarketSnapshot } from './types';
-
-function todayStr(): string {
-  return new Date().toISOString().slice(0, 10);
-}
 
 interface CachedSelection {
   date: string;
@@ -22,7 +19,7 @@ interface CrowdQuestionState {
   getTodayQuestion: (market?: MarketSnapshot) => CrowdQuestion;
   hasVotedToday: () => boolean;
   getUserVoteFor: (questionId: string) => CrowdOption['id'] | null;
-  vote: (questionId: string, optionId: CrowdOption['id']) => void;
+  recordLocalVote: (questionId: string, optionId: CrowdOption['id']) => void;
 }
 
 function findById(id: string): CrowdQuestion {
@@ -37,27 +34,28 @@ export const useCrowdQuestionStore = create<CrowdQuestionState>()(
       cachedSelection: null,
 
       getTodayQuestion: (market?: MarketSnapshot) => {
-        const today = todayStr();
+        const today = getIsraelDateISO();
         const cached = get().cachedSelection;
         if (cached && cached.date === today) {
           return findById(cached.questionId);
         }
         const ctx = buildSelectionContext(new Date(), market);
+        ctx.todayISO = today;
         const id = selectTodayQuestion(CROWD_QUESTIONS, ctx);
         set({ cachedSelection: { date: today, questionId: id } });
         return findById(id);
       },
 
       hasVotedToday: () => {
-        return get().votedDates.includes(todayStr());
+        return get().votedDates.includes(getIsraelDateISO());
       },
 
       getUserVoteFor: (questionId: string) => {
         return get().userVotes[questionId] ?? null;
       },
 
-      vote: (questionId: string, optionId: CrowdOption['id']) => {
-        const today = todayStr();
+      recordLocalVote: (questionId: string, optionId: CrowdOption['id']) => {
+        const today = getIsraelDateISO();
         const state = get();
         if (state.votedDates.includes(today)) return;
         set({

@@ -148,3 +148,16 @@ export const bridgeClicks = pgTable("bridge_clicks", {
 	index("idx_bridge_clicks_time").using("btree", table.createdAt.desc()),
 	check("bridge_clicks_action_check", sql`action = ANY (ARRAY['redeem'::text, 'link_open'::text])`),
 ]);
+
+export const crowdQuestionVotes = pgTable("crowd_question_votes", {
+	id: uuid().default(sql`uuid_generate_v4()`).primaryKey().notNull(),
+	userId: text("user_id").notNull(),
+	questionId: text("question_id").notNull(),
+	choice: text().notNull(),
+	voteDateIl: date("vote_date_il").notNull(),
+	createdAt: timestamp("created_at", { withTimezone: true, mode: 'string' }).defaultNow(),
+}, (table) => [
+	index("idx_cq_votes_question_date").using("btree", table.questionId.asc(), table.voteDateIl.asc()),
+	unique("crowd_question_votes_user_date_key").on(table.userId, table.voteDateIl),
+	check("crowd_question_votes_choice_check", sql`choice = ANY (ARRAY['a'::text, 'b'::text])`),
+]);

@@ -9,8 +9,16 @@ import { enforceRateLimit } from '../_shared/rateLimit';
 import { safeErrorResponse } from '../_shared/safeError';
 import type { NewsQuizData, NewsQuizChoice } from '../../../src/features/finfeed/liveMarketTypes';
 
-const CACHE_MS = 24 * 60 * 60 * 1000;
+const CACHE_MS = 15 * 60 * 1000; // 15 minutes
 let _cache: { data: NewsQuizData; expiresAt: number } | null = null;
+
+function simpleHash(str: string): string {
+  let hash = 0;
+  for (let i = 0; i < str.length; i++) {
+    hash = (Math.imul(31, hash) + str.charCodeAt(i)) | 0;
+  }
+  return hash.toString(16);
+}
 
 const TIMEOUT_MS = 8_000;
 const sig = () => {
@@ -102,7 +110,7 @@ export async function GET(request: Request): Promise<Response> {
 
   if (_cache && _cache.expiresAt > Date.now()) {
     return Response.json(_cache.data, {
-      headers: { 'Cache-Control': 'public, max-age=86400', 'X-Cache': 'HIT' },
+      headers: { 'Cache-Control': 'public, max-age=900', 'X-Cache': 'HIT' },
     });
   }
 
@@ -150,7 +158,7 @@ export async function GET(request: Request): Promise<Response> {
     }
 
     const data: NewsQuizData = {
-      quizId: todayKey(),
+      quizId: `${todayKey()}-${simpleHash(headline)}`,
       headline,
       question: quiz.question,
       choices: quiz.choices,
@@ -164,7 +172,7 @@ export async function GET(request: Request): Promise<Response> {
     _cache = { data, expiresAt: Date.now() + CACHE_MS };
 
     return Response.json(data, {
-      headers: { 'Cache-Control': 'public, max-age=86400', 'X-Cache': 'MISS' },
+      headers: { 'Cache-Control': 'public, max-age=900', 'X-Cache': 'MISS' },
     });
   } catch (err) {
     return safeErrorResponse(err, 'market/news-quiz');

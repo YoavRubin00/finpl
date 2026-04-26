@@ -28,8 +28,9 @@ export function RedemptionModal({ visible, benefit, isRedeemed = false, canAffor
       onRequestClose={onCancel}
     >
       <View style={styles.overlay}>
-        {/* Full-screen soft backdrop */}
-        <Pressable style={StyleSheet.absoluteFill} onPress={onCancel}>
+        {/* Soft backdrop above the sheet — taking only the remaining space so it
+            never steals taps from the sheet below it. */}
+        <Pressable style={styles.backdropTouchable} onPress={onCancel}>
           <Animated.View entering={FadeIn.duration(220)} style={styles.backdrop} />
         </Pressable>
 
@@ -116,6 +117,9 @@ const styles = StyleSheet.create({
   overlay: {
     flex: 1,
     justifyContent: 'flex-end',
+  },
+  backdropTouchable: {
+    flex: 1,
   },
   backdrop: {
     flex: 1,
@@ -237,19 +241,23 @@ const styles = StyleSheet.create({
   costValue: {
     fontSize: 18,
     fontWeight: '900',
-    color: '#b45309',
+    color: '#0ea5e9',
   },
 
   confirmBtn: {
     backgroundColor: '#0ea5e9',
-    paddingVertical: 15,
+    paddingVertical: 16,
     borderRadius: 16,
     alignItems: 'center',
+    alignSelf: 'stretch',
+    width: '100%',
+    borderBottomWidth: 4,
+    borderBottomColor: '#0284c7',
     shadowColor: '#0ea5e9',
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.2,
-    shadowRadius: 8,
-    elevation: 4,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.35,
+    shadowRadius: 10,
+    elevation: 8,
     marginBottom: 8,
   },
   confirmBtnText: {

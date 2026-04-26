@@ -68,11 +68,66 @@ function formatTime(timestamp: number): string {
 
 // Some Gemini outputs leak a debug-marker preamble like "OK TRUE REPLY" before
 // the actual response. Strip any combination/case/separator at the start.
+// The lone-marker regex is uppercase-only on purpose: case-insensitive matched
+// the lowercase JSON key `reply` and broke envelopes like `{"reply":"..."}`
+// mid-stream, leaving `:"..."}` visible to the user.
 function stripDebugPreamble(text: string): string {
   return text
     .replace(/^[\s\W]*OK[\s\W]*TRUE[\s\W]*REPLY[\s\W]*/i, "")
-    .replace(/^[\s\W]*(OK|TRUE|REPLY)[\s\W]+/i, "")
+    .replace(/^[\s\W]*(OK|TRUE|REPLY)[\s\W]+/, "")
     .replace(/^[\s\u200F]+/, "");
+}
+
+// Gemini occasionally wraps the reply in a JSON envelope (e.g.
+// `{"reply":"...\n..."}`) despite the prompt forbidding it. Detect that
+// shape, extract the string, and unescape JSON string escapes so newlines
+// render correctly instead of showing literal `\n`.
+const PREFERRED_REPLY_KEYS = ["reply", "response", "text", "answer", "content", "message"] as const;
+
+function unescapeJsonString(s: string): string {
+  return s
+    .replace(/\\n/g, "\n")
+    .replace(/\\r/g, "\r")
+    .replace(/\\t/g, "\t")
+    .replace(/\\"/g, '"')
+    .replace(/\\\\/g, "\\");
+}
+
+function unwrapJsonEnvelope(text: string): string {
+  const trimmed = text.trim();
+  if (!trimmed) return text;
+  const looksLikeJson =
+    trimmed.startsWith("{") || trimmed.startsWith("[") || trimmed.startsWith('"');
+  if (looksLikeJson) {
+    try {
+      const parsed: unknown = JSON.parse(trimmed);
+      if (typeof parsed === "string") return parsed;
+      if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
+        const obj = parsed as Record<string, unknown>;
+        for (const key of PREFERRED_REPLY_KEYS) {
+          const v = obj[key];
+          if (typeof v === "string") return v;
+        }
+        for (const v of Object.values(obj)) {
+          if (typeof v === "string") return v;
+        }
+      }
+    } catch {
+      // Malformed JSON — fall through to regex repair below.
+    }
+  }
+  // Regex repair: handles the case where stripDebugPreamble ate the leading
+  // `{"reply"` and left `:"..."}`. ASCII-keyed only so Hebrew text starting
+  // with punctuation is not over-matched.
+  const leading =
+    trimmed.match(/^\s*\{?\s*"?[A-Za-z_][\w-]*"?\s*:\s*"/) ??
+    trimmed.match(/^\s*:\s*"/);
+  const trailing = trimmed.match(/"\s*\}\s*$/);
+  if (!leading && !trailing) return text;
+  let cleaned = trimmed;
+  if (leading) cleaned = cleaned.slice(leading[0].length);
+  if (trailing) cleaned = cleaned.slice(0, cleaned.length - trailing[0].length);
+  return unescapeJsonString(cleaned);
 }
 
 /* ------------------------------------------------------------------ */
@@ -369,7 +424,7 @@ export function ChatScreen() {
           const cleaned = m.content.length < 200
             ? next
                 .replace(/^[\s\W]*OK[\s\W]*TRUE[\s\W]*REPLY[\s\W]*/i, "")
-                .replace(/^[\s\W]*(OK|TRUE|REPLY)[\s\W]+/i, "")
+                .replace(/^[\s\W]*(OK|TRUE|REPLY)[\s\W]+/, "")
                 .replace(/^[\s\u200F]+/, "")
             : next;
           return { ...m, content: cleaned };
@@ -390,7 +445,7 @@ export function ChatScreen() {
             setMessages((prev) =>
               prev.map((m) =>
                 m.role === "assistant" && m.timestamp === draftTsRef.current
-                  ? { ...m, content: stripDebugPreamble(m.content) }
+                  ? { ...m, content: unwrapJsonEnvelope(stripDebugPreamble(m.content)) }
                   : m,
               ),
             );
@@ -520,13 +575,13 @@ export function ChatScreen() {
           if (hasDraft) {
             return prev.map((m) =>
               m.role === "assistant" && m.timestamp === draftTs
-                ? { ...m, content: "שגיאה בחיבור. נסה שוב." }
+                ? { ...m, content: "שגיאה בחיבור. נסו שוב." }
                 : m,
             );
           }
           return [
             ...prev,
-            { role: "assistant" as const, content: "שגיאה בחיבור. נסה שוב.", timestamp: draftTs, status: "read" as const },
+            { role: "assistant" as const, content: "שגיאה בחיבור. נסו שוב.", timestamp: draftTs, status: "read" as const },
           ];
         });
         setAnimationState("idle");
@@ -629,13 +684,13 @@ export function ChatScreen() {
         if (hasDraft) {
           return prev.map((m) =>
             m.role === "assistant" && m.timestamp === draftTs
-              ? { ...m, content: "שגיאה בחיבור. נסה שוב." }
+              ? { ...m, content: "שגיאה בחיבור. נסו שוב." }
               : m,
           );
         }
         return [
           ...prev,
-          { role: "assistant" as const, content: "שגיאה בחיבור. נסה שוב.", timestamp: draftTs, status: "read" as const },
+          { role: "assistant" as const, content: "שגיאה בחיבור. נסו שוב.", timestamp: draftTs, status: "read" as const },
         ];
       });
       markAllRead();

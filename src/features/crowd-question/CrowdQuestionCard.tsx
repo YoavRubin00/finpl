@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { View, Text, Pressable, StyleSheet, Dimensions } from 'react-native';
+import { View, Text, Pressable, StyleSheet, Dimensions, ScrollView } from 'react-native';
 import { Image as ExpoImage } from 'expo-image';
 import Animated, {
   Easing,
@@ -15,9 +15,12 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated';
 
-import { tapHaptic, successHaptic } from '../../utils/haptics';
+import { tapHaptic, successHaptic, errorHaptic } from '../../utils/haptics';
 import { FINN_DANCING, FINN_STANDARD } from '../retention-loops/finnMascotConfig';
-import { useLiveStats } from './computeLiveStats';
+import { useAuthStore } from '../auth/useAuthStore';
+import { submitCrowdVote, type CrowdQuestionStats } from '../../db/sync/syncCrowdQuestion';
+import { getIsraelDateISO } from '../../utils/israelTime';
+import { useLivePercents } from './computeLiveStats';
 import { useCrowdQuestionStore } from './useCrowdQuestionStore';
 import type { CrowdOption, CrowdQuestion, MarketSnapshot, Sentiment } from './types';
 
@@ -31,23 +34,10 @@ function fixBidi(text: string): string {
   );
 }
 
-interface ButtonPalette {
-  bg: string;
-  border: string;
-  borderBottom: string;
-}
-
 interface BarPalette {
   selected: string;
   pastel: string;
 }
-
-const BUTTON_PALETTE: Record<Sentiment, ButtonPalette> = {
-  green: { bg: '#22c55e', border: '#16a34a', borderBottom: '#15803d' },
-  red: { bg: '#ef4444', border: '#dc2626', borderBottom: '#b91c1c' },
-  yes: { bg: '#3b82f6', border: '#2563eb', borderBottom: '#1d4ed8' },
-  no: { bg: '#3b82f6', border: '#2563eb', borderBottom: '#1d4ed8' },
-};
 
 const BAR_PALETTE: Record<Sentiment, BarPalette> = {
   green: { selected: '#22c55e', pastel: '#bbf7d0' },
@@ -67,75 +57,137 @@ export const CrowdQuestionCard = React.memo(function CrowdQuestionCard({ market 
   const getTodayQuestion = useCrowdQuestionStore((s) => s.getTodayQuestion);
   const hasVotedToday = useCrowdQuestionStore((s) => s.hasVotedToday);
   const getUserVoteFor = useCrowdQuestionStore((s) => s.getUserVoteFor);
-  const vote = useCrowdQuestionStore((s) => s.vote);
+  const recordLocalVote = useCrowdQuestionStore((s) => s.recordLocalVote);
+  const authId = useAuthStore((s) => s.email ?? 'guest');
+  const syncToken = useAuthStore((s) => s.syncToken);
 
   const question = useMemo<CrowdQuestion>(() => getTodayQuestion(market), [getTodayQuestion, market]);
   const alreadyVoted = hasVotedToday();
   const persistedVote = getUserVoteFor(question.id);
 
   const [chosen, setChosen] = useState<CrowdOption['id'] | null>(persistedVote);
+  const [optimisticStats, setOptimisticStats] = useState<CrowdQuestionStats | null>(null);
+  const [voteError, setVoteError] = useState<string | null>(null);
 
   useEffect(() => {
     setChosen(persistedVote);
+    setOptimisticStats(null);
+    setVoteError(null);
   }, [persistedVote, question.id]);
 
   const showResults = chosen !== null || alreadyVoted;
 
   const handleChoose = useCallback(
-    (option: CrowdOption) => {
+    async (option: CrowdOption) => {
       if (alreadyVoted || chosen) return;
       tapHaptic();
       setChosen(option.id);
-      vote(question.id, option.id);
-      setTimeout(() => successHaptic(), 120);
+      setVoteError(null);
+      try {
+        const dateIL = getIsraelDateISO();
+        const result = await submitCrowdVote({
+          authId,
+          syncToken,
+          questionId: question.id,
+          choice: option.id,
+          voteDateIL: dateIL,
+        });
+        recordLocalVote(question.id, option.id);
+        setOptimisticStats({ countA: result.countA, countB: result.countB, total: result.total });
+        successHaptic();
+      } catch (err: unknown) {
+        setChosen(null);
+        setVoteError(err instanceof Error ? err.message : 'fetch failed');
+        errorHaptic();
+      }
     },
-    [alreadyVoted, chosen, question.id, vote],
+    [alreadyVoted, chosen, question.id, authId, syncToken, recordLocalVote],
   );
 
   return (
     <View style={styles.container}>
       <View style={styles.card}>
-        <CardHeader showResults={showResults} />
+        <ScrollView
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
+          bounces={true}
+        >
+          <CardHeader />
 
-        <Animated.View entering={FadeIn.duration(280).delay(80)} style={styles.finnRow}>
-          <View style={styles.bubble}>
-            <View style={styles.bubbleTail} />
-            <Text style={[styles.bubbleText, RTL]} allowFontScaling={false}>
-              {fixBidi(question.text)}
-            </Text>
-          </View>
-          <ExpoImage
-            source={chosen ? FINN_DANCING : FINN_STANDARD}
-            style={styles.finn}
-            contentFit="contain"
-            accessible={false}
-          />
-        </Animated.View>
-
-        {!showResults ? (
-          <Animated.View
-            entering={FadeIn.duration(260).delay(160)}
-            exiting={FadeOut.duration(180)}
-            style={styles.optionsWrap}
-          >
-            {question.options.map((option, idx) => (
-              <OptionButton
-                key={option.id}
-                option={option}
-                onPress={() => handleChoose(option)}
-                delay={160 + idx * 60}
-              />
-            ))}
+          <Animated.View entering={FadeIn.duration(280).delay(80)} style={styles.finnRow}>
+            <View style={styles.bubble}>
+              <View style={styles.bubbleTail} accessible={false} importantForAccessibility="no" />
+              <Text style={[styles.bubbleText, RTL]} allowFontScaling={false}>
+                {fixBidi(question.text)}
+              </Text>
+            </View>
+            <ExpoImage
+              source={chosen ? FINN_DANCING : FINN_STANDARD}
+              style={styles.finn}
+              contentFit="contain"
+              accessible={false}
+            />
           </Animated.View>
-        ) : (
-          <ResultsBars question={question} userVote={chosen} alreadyVoted={alreadyVoted} />
-        )}
+
+          {!showResults ? (
+            <Animated.View
+              entering={FadeIn.duration(260).delay(160)}
+              exiting={FadeOut.duration(180)}
+              style={styles.optionsWrap}
+            >
+              {question.options.map((option, idx) => (
+                <OptionButton
+                  key={option.id}
+                  option={option}
+                  onPress={() => handleChoose(option)}
+                  delay={160 + idx * 60}
+                />
+              ))}
+              {voteError && (
+                <Text
+                  style={[styles.errorText, RTL]}
+                  accessibilityLiveRegion="assertive"
+                  accessibilityRole="alert"
+                  allowFontScaling={false}
+                >
+                  לא הצלחנו לשמור את ההצבעה. נסו שוב.
+                </Text>
+              )}
+            </Animated.View>
+          ) : (
+            <ResultsBars
+              question={question}
+              userVote={chosen}
+              alreadyVoted={alreadyVoted}
+              optimisticStats={optimisticStats}
+            />
+          )}
+
+          <Animated.View
+            entering={FadeInUp.duration(420).delay(showResults ? 280 : 320)}
+            style={styles.explainCard}
+            accessible
+            accessibilityLabel={`מה זה חכמת ההמונים. ${WISDOM_EXPLANATION}`}
+          >
+            <View style={styles.explainHeader}>
+              <Text style={styles.explainEmoji} allowFontScaling={false} accessible={false}>
+                💡
+              </Text>
+              <Text style={[styles.explainTitle, RTL]} allowFontScaling={false}>
+                מה זה חכמת ההמונים?
+              </Text>
+            </View>
+            <Text style={[styles.explainBody, RTL]} allowFontScaling={false}>
+              {WISDOM_EXPLANATION}
+            </Text>
+          </Animated.View>
+        </ScrollView>
       </View>
     </View>
   );
 });
 
-function CardHeader({ showResults: _showResults }: { showResults: boolean }) {
+function CardHeader() {
   const reduceMotion = useReducedMotion();
   const dotOpacity = useSharedValue(1);
 
@@ -183,16 +235,11 @@ function OptionButton({
   onPress: () => void;
   delay: number;
 }) {
-  const palette = BUTTON_PALETTE[option.sentiment];
   return (
     <Animated.View entering={FadeInUp.duration(260).delay(delay)}>
       <Pressable
         onPress={onPress}
-        style={({ pressed }) => [
-          styles.optionBtn,
-          { backgroundColor: palette.bg, borderColor: palette.border, borderBottomColor: palette.borderBottom },
-          pressed && styles.optionBtnPressed,
-        ]}
+        style={({ pressed }) => [styles.optionBtn, pressed && styles.optionBtnPressed]}
         accessibilityRole="button"
         accessibilityLabel={`${option.label} — הצבעה`}
         accessibilityHint="הקש להצבעה"
@@ -209,57 +256,43 @@ function ResultsBars({
   question,
   userVote,
   alreadyVoted,
+  optimisticStats,
 }: {
   question: CrowdQuestion;
   userVote: CrowdOption['id'] | null;
   alreadyVoted: boolean;
+  optimisticStats: CrowdQuestionStats | null;
 }) {
-  const stats = useLiveStats(question, userVote, alreadyVoted || userVote !== null);
-  const totalVotedToday = stats.totalVotes - question.baselineN;
+  const live = useLivePercents({
+    questionId: question.id,
+    userVote,
+    optimisticStats,
+  });
 
   return (
     <Animated.View entering={FadeInUp.duration(320)} style={styles.resultsWrap}>
       <ResultBar
         option={question.options[0]}
-        pct={stats.pctA}
+        pct={live.pctA}
         isMine={userVote === 'a'}
         delay={0}
       />
       <ResultBar
         option={question.options[1]}
-        pct={stats.pctB}
+        pct={live.pctB}
         isMine={userVote === 'b'}
         delay={80}
       />
-      <Text style={[styles.footer, RTL]} accessibilityLiveRegion="polite" allowFontScaling={false}>
-        {totalVotedToday <= 0
-          ? 'היו הראשונים להצביע!'
-          : `${fixBidi(String(stats.totalVotes))} הצביעו עד כה`}
-      </Text>
+      {!live.hasData && !live.isLoading && (
+        <Text style={[styles.placeholderText, RTL]} allowFontScaling={false}>
+          תהיו הראשונים להצביע היום!
+        </Text>
+      )}
       {(alreadyVoted || userVote) && (
-        <Text style={[styles.votedToday, RTL]} allowFontScaling={false}>
+        <Text style={[styles.votedToday, RTL]} accessibilityLiveRegion="polite" allowFontScaling={false}>
           ✓ הצבעת היום
         </Text>
       )}
-
-      <Animated.View
-        entering={FadeInUp.duration(420).delay(280)}
-        style={styles.explainCard}
-        accessible
-        accessibilityLabel={`מה זה חכמת ההמונים. ${WISDOM_EXPLANATION}`}
-      >
-        <View style={styles.explainHeader}>
-          <Text style={styles.explainEmoji} allowFontScaling={false} accessible={false}>
-            💡
-          </Text>
-          <Text style={[styles.explainTitle, RTL]} allowFontScaling={false}>
-            מה זה חכמת ההמונים?
-          </Text>
-        </View>
-        <Text style={[styles.explainBody, RTL]} allowFontScaling={false}>
-          {WISDOM_EXPLANATION}
-        </Text>
-      </Animated.View>
     </Animated.View>
   );
 }
@@ -299,6 +332,7 @@ function ResultBar({
         style={styles.resultRow}
         accessible
         accessibilityRole="text"
+        accessibilityLiveRegion="polite"
         accessibilityLabel={`${option.label}: ${pct} אחוז${isMine ? ', הבחירה שלך' : ''}`}
       >
         <Animated.View
@@ -341,17 +375,22 @@ const styles = StyleSheet.create({
   card: {
     width: '100%',
     maxWidth: 400,
+    flex: 1,
     backgroundColor: '#ffffff',
     borderRadius: 24,
     borderWidth: 1.5,
     borderColor: 'rgba(14,165,233,0.35)',
-    padding: 20,
-    gap: 16,
     shadowColor: '#0ea5e9',
     shadowOffset: { width: 0, height: 3 },
     shadowOpacity: 0.12,
     shadowRadius: 10,
     elevation: 4,
+    overflow: 'hidden',
+  },
+  scrollContent: {
+    padding: 20,
+    gap: 16,
+    flexGrow: 1,
   },
   header: {
     gap: 8,
@@ -438,18 +477,23 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   optionBtn: {
+    backgroundColor: '#3b82f6',
     borderRadius: 16,
     paddingVertical: 16,
     paddingHorizontal: 18,
+    minHeight: 52,
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 2,
+    borderColor: '#2563eb',
     borderBottomWidth: 5,
+    borderBottomColor: '#1d4ed8',
     overflow: 'hidden',
+    shadowColor: '#3b82f6',
     shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.25,
-    shadowRadius: 6,
-    elevation: 4,
+    shadowOpacity: 0.4,
+    shadowRadius: 8,
+    elevation: 5,
   },
   optionBtnPressed: {
     opacity: 0.95,
@@ -462,9 +506,15 @@ const styles = StyleSheet.create({
     color: '#ffffff',
     textAlign: 'center',
     writingDirection: 'rtl',
-    textShadowColor: 'rgba(0,0,0,0.18)',
+    textShadowColor: 'rgba(0,0,0,0.2)',
     textShadowOffset: { width: 0, height: 1 },
     textShadowRadius: 2,
+  },
+  errorText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#dc2626',
+    marginTop: 4,
   },
   resultsWrap: {
     gap: 10,
@@ -528,21 +578,21 @@ const styles = StyleSheet.create({
     fontWeight: '900',
     color: '#0f172a',
   },
-  footer: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: '#64748b',
-    marginTop: 6,
+  placeholderText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#0369a1',
     textAlign: 'center',
+    marginTop: 6,
   },
   votedToday: {
     fontSize: 12,
     fontWeight: '900',
     color: '#0369a1',
     textAlign: 'center',
+    marginTop: 6,
   },
   explainCard: {
-    marginTop: 6,
     backgroundColor: '#f0f9ff',
     borderRadius: 16,
     borderWidth: 1.5,

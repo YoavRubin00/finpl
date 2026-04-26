@@ -629,6 +629,7 @@ export function FinFeedScreen() {
   const hasAnsweredQuizToday = useDailyQuizStore((s) => s.hasAnsweredToday);
   const knowledgeLevel = useAuthStore((s) => s.profile?.knowledgeLevel);
   const isQuizUnlocked = currentLayer >= 2 || knowledgeLevel === 'experienced' || knowledgeLevel === 'expert';
+  const isAuthedNonGuest = useAuthStore((s) => s.isAuthenticated && !s.isGuest);
 
   // Ensure daily quiz is always available, set fallback immediately, then try API
   useEffect(() => {
@@ -928,11 +929,14 @@ export function FinFeedScreen() {
       filteredMerged.splice(Math.min(5, filteredMerged.length), 0, quizItem);
     }
 
-    // Pin "חכמת ההמונים" crowd-question at position 5 — pushes quiz to 6, scenario to 7
-    filteredMerged.splice(Math.min(5, filteredMerged.length), 0, {
-      id: 'crowd-question',
-      type: 'crowd-question',
-    } as const);
+    // Pin "חכמת ההמונים" crowd-question at position 5 — pushes quiz to 6, scenario to 7.
+    // Logged-in users only: voting requires authId+syncToken; guests would 401.
+    if (isAuthedNonGuest) {
+      filteredMerged.splice(Math.min(5, filteredMerged.length), 0, {
+        id: 'crowd-question',
+        type: 'crowd-question',
+      } as const);
+    }
 
     // Insert pinned BENBEN creator video at position 7
     const benbenVideo = BENBEN_VIDEOS[seed % BENBEN_VIDEOS.length];
@@ -948,7 +952,7 @@ export function FinFeedScreen() {
     }
 
     return filteredMerged;
-  }, [feedSeed, simSeed, progress, aiProfile, getUnansweredMacroEvents, completedScenarios]);
+  }, [feedSeed, simSeed, progress, aiProfile, getUnansweredMacroEvents, completedScenarios, isAuthedNonGuest]);
 
   // Execute pending scroll by ID once feedItems are populated
   useEffect(() => {

@@ -58,15 +58,19 @@ export function SharkDilemmaCard({ dilemma, onContinue, onChoice }: Props) {
         {!chosen && (
           <Animated.View entering={FadeIn.duration(260)} exiting={FadeOut.duration(180)} style={styles.optionsWrap}>
             {dilemma.options.map((option) => (
-              <Pressable
-                key={option.id}
-                onPress={() => handleChoice(option)}
-                style={({ pressed }) => [styles.optionBtn, pressed && styles.optionBtnPressed]}
-                accessibilityRole="button"
-                accessibilityLabel={option.label}
-              >
-                <Text style={styles.optionText}>{option.label}</Text>
-              </Pressable>
+              <View key={option.id} style={styles.optionGlowWrap}>
+                <Pressable
+                  onPress={() => handleChoice(option)}
+                  accessibilityRole="button"
+                  accessibilityLabel={option.label}
+                >
+                  {({ pressed }) => (
+                    <View style={[styles.optionBtn, pressed && styles.optionBtnPressed]}>
+                      <Text style={styles.optionText}>{option.label}</Text>
+                    </View>
+                  )}
+                </Pressable>
+              </View>
             ))}
           </Animated.View>
         )}
@@ -154,8 +158,16 @@ const styles = StyleSheet.create({
     writingDirection: "rtl",
   },
   optionsWrap: {
-    gap: 12,
+    gap: 16,
     marginTop: 8,
+  },
+  optionGlowWrap: {
+    borderRadius: 16,
+    shadowColor: "#3b82f6",
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.7,
+    shadowRadius: 24,
+    elevation: 0,
   },
   optionBtn: {
     backgroundColor: "#0ea5e9",
@@ -169,7 +181,6 @@ const styles = StyleSheet.create({
     borderBottomWidth: 5,
     borderBottomColor: "#0369a1",
     opacity: 1,
-    overflow: "hidden",
     shadowColor: "#0ea5e9",
     shadowOffset: { width: 0, height: 3 },
     shadowOpacity: 0.4,
@@ -238,7 +249,6 @@ const styles = StyleSheet.create({
     borderBottomColor: "#0369a1",
     marginTop: 4,
     opacity: 1,
-    overflow: "hidden",
     shadowColor: "#0ea5e9",
     shadowOffset: { width: 0, height: 3 },
     shadowOpacity: 0.4,

@@ -1,61 +1,100 @@
-import { useEffect, useState } from 'react';
-import type { CrowdOption, CrowdQuestion } from './types';
+import { useEffect, useRef, useState } from 'react';
+import { fetchCrowdStats, type CrowdQuestionStats } from '../../db/sync/syncCrowdQuestion';
+import { getIsraelDateISO, msUntilNextIsraelMidnight } from '../../utils/israelTime';
+import type { CrowdOption } from './types';
 
-export interface LiveStats {
+const POLL_INTERVAL_MS = 8_000;
+
+export interface LivePercents {
   pctA: number;
   pctB: number;
-  totalVotes: number;
+  total: number;
+  hasData: boolean;
+  isLoading: boolean;
+  error: string | null;
 }
 
-function hashStringMinute(s: string): number {
-  let hash = 0;
-  for (let i = 0; i < s.length; i++) {
-    hash = (Math.imul(31, hash) + s.charCodeAt(i)) | 0;
-  }
-  return hash;
+export function percentsFromCounts(stats: CrowdQuestionStats): { pctA: number; pctB: number } {
+  if (stats.total <= 0) return { pctA: 50, pctB: 50 };
+  const rawA = (stats.countA / stats.total) * 100;
+  const pctA = Math.round(rawA);
+  return { pctA, pctB: 100 - pctA };
 }
 
-function clamp(v: number, lo: number, hi: number): number {
-  return Math.min(hi, Math.max(lo, v));
+interface Args {
+  questionId: string;
+  userVote: CrowdOption['id'] | null;
+  optimisticStats: CrowdQuestionStats | null;
 }
 
-export function getLiveStats(
-  question: CrowdQuestion,
-  userVote: CrowdOption['id'] | null,
-  hasVotedToday: boolean,
-  now: number,
-): LiveStats {
-  const minute = Math.floor(now / 60000);
-  const seed = hashStringMinute(`${question.id}|${minute}`);
-  const drift = Math.sin(seed) * 1.5;
-
-  const userTilt = userVote === 'a' ? 0.3 : userVote === 'b' ? -0.3 : 0;
-
-  const rawA = question.baselinePct[0] + drift + userTilt;
-  const pctA = Math.round(clamp(rawA, 5, 95));
-  const pctB = 100 - pctA;
-
-  const totalVotes = question.baselineN + (hasVotedToday ? 1 : 0);
-
-  return { pctA, pctB, totalVotes };
-}
-
-export function useLiveStats(
-  question: CrowdQuestion,
-  userVote: CrowdOption['id'] | null,
-  hasVotedToday: boolean,
-): LiveStats {
-  const [stats, setStats] = useState<LiveStats>(() =>
-    getLiveStats(question, userVote, hasVotedToday, Date.now()),
-  );
+export function useLivePercents({ questionId, userVote, optimisticStats }: Args): LivePercents {
+  const [stats, setStats] = useState<CrowdQuestionStats | null>(optimisticStats);
+  const [isLoading, setIsLoading] = useState<boolean>(optimisticStats === null);
+  const [error, setError] = useState<string | null>(null);
+  const cancelledRef = useRef(false);
 
   useEffect(() => {
-    setStats(getLiveStats(question, userVote, hasVotedToday, Date.now()));
-    const id = setInterval(() => {
-      setStats(getLiveStats(question, userVote, hasVotedToday, Date.now()));
-    }, 5000);
-    return () => clearInterval(id);
-  }, [question, userVote, hasVotedToday]);
+    cancelledRef.current = false;
+    let pollTimer: ReturnType<typeof setInterval> | null = null;
+    let dayBoundaryTimer: ReturnType<typeof setTimeout> | null = null;
 
-  return stats;
+    async function load() {
+      try {
+        const dateIL = getIsraelDateISO();
+        const next = await fetchCrowdStats({ questionId, voteDateIL: dateIL });
+        if (cancelledRef.current) return;
+        setStats(next);
+        setError(null);
+      } catch (err: unknown) {
+        if (cancelledRef.current) return;
+        setError(err instanceof Error ? err.message : 'fetch failed');
+      } finally {
+        if (!cancelledRef.current) setIsLoading(false);
+      }
+    }
+
+    load();
+    pollTimer = setInterval(load, POLL_INTERVAL_MS);
+
+    dayBoundaryTimer = setTimeout(() => {
+      setStats(null);
+      setIsLoading(true);
+      load();
+    }, msUntilNextIsraelMidnight() + 2_000);
+
+    return () => {
+      cancelledRef.current = true;
+      if (pollTimer) clearInterval(pollTimer);
+      if (dayBoundaryTimer) clearTimeout(dayBoundaryTimer);
+    };
+  }, [questionId]);
+
+  useEffect(() => {
+    if (optimisticStats) {
+      setStats(optimisticStats);
+      setIsLoading(false);
+    }
+  }, [optimisticStats]);
+
+  if (!stats) {
+    return {
+      pctA: 50,
+      pctB: 50,
+      total: 0,
+      hasData: false,
+      isLoading,
+      error,
+    };
+  }
+
+  const tiltedTotal = userVote && stats.total === 0 ? 1 : stats.total;
+  const { pctA, pctB } = percentsFromCounts(stats);
+  return {
+    pctA,
+    pctB,
+    total: tiltedTotal,
+    hasData: stats.total > 0,
+    isLoading: false,
+    error,
+  };
 }

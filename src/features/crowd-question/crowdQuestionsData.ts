@@ -47,18 +47,18 @@ export const CROWD_QUESTIONS: readonly CrowdQuestion[] = [
     },
   },
   {
-    id: 'cq-btc-above-100k',
-    text: 'ביטקוין יחזיק מעל $100K בסוף השבוע?',
+    id: 'cq-btc-above-130k',
+    text: 'ביטקוין יחזיק מעל $130K בסוף השבוע?',
     options: [
       { id: 'a', label: 'כן', emoji: '✅', sentiment: 'yes' },
       { id: 'b', label: 'לא', emoji: '❌', sentiment: 'no' },
     ],
-    baselinePct: [54, 46],
+    baselinePct: [48, 52],
     baselineN: 2310,
     tags: {
       timing: 'weekly',
       topic: 'btc',
-      triggers: { btcNear: 100000 },
+      triggers: { btcNear: 130000 },
     },
   },
   {
@@ -121,13 +121,13 @@ export const CROWD_QUESTIONS: readonly CrowdQuestion[] = [
     },
   },
   {
-    id: 'cq-usd-ils-3-70',
-    text: 'הדולר יחצה 3.70 שקל בסוף החודש?',
+    id: 'cq-usd-ils-3-10',
+    text: 'הדולר יחצה 3.10 שקל בסוף החודש?',
     options: [
       { id: 'a', label: 'כן', emoji: '✅', sentiment: 'yes' },
       { id: 'b', label: 'לא', emoji: '❌', sentiment: 'no' },
     ],
-    baselinePct: [37, 63],
+    baselinePct: [31, 69],
     baselineN: 1720,
     tags: {
       timing: 'monthly',

@@ -13,6 +13,7 @@ interface NewsQuizState {
   loading: boolean;
   error: boolean;
   answeredDates: string[];
+  lastFetched: number;
   fetch: () => Promise<void>;
   hasAnsweredToday: () => boolean;
   markAnswered: () => void;
@@ -41,11 +42,14 @@ export const useNewsQuizStore = create<NewsQuizState>()(
       loading: false,
       error: false,
       answeredDates: [],
+      lastFetched: 0,
 
       fetch: async () => {
-        const { loading, data } = get();
+        const { loading, lastFetched } = get();
         if (loading) return;
-        if (data && data.quizId === todayKey()) return;
+        
+        // Don't fetch if we fetched successfully in the last 15 minutes
+        if (Date.now() - lastFetched < 15 * 60 * 1000) return;
 
         set({ loading: true, error: false });
         try {
@@ -55,7 +59,7 @@ export const useNewsQuizStore = create<NewsQuizState>()(
           clearTimeout(timeout);
           if (!res.ok) throw new Error(`HTTP ${res.status}`);
           const json = await res.json() as NewsQuizData;
-          set({ data: json, loading: false, error: false });
+          set({ data: json, loading: false, error: false, lastFetched: Date.now() });
         } catch {
           // Fallback to local quiz so user never sees white screen
           set({ data: { ...FALLBACK_QUIZ, quizId: todayKey() }, loading: false, error: true });

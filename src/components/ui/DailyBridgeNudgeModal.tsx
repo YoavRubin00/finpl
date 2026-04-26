@@ -193,15 +193,18 @@ export function DailyBridgeNudgeModal() {
           <Animated.View style={[styles.ctaGlowWrap, glowStyle]}>
             <Pressable
               onPress={handleAct}
-              style={({ pressed }) => [
-                styles.ctaBtn,
-                pressed && { opacity: 0.88, transform: [{ scale: 0.98 }] },
-              ]}
               accessibilityRole="button"
               accessibilityLabel="קח אותי לגשר"
             >
-              <Text style={styles.ctaEmoji}>🌉</Text>
-              <Text style={styles.ctaText}>קח אותי לגשר</Text>
+              {({ pressed }) => (
+                <View style={[
+                  styles.ctaBtn,
+                  pressed && { opacity: 0.88, transform: [{ scale: 0.98 }] }
+                ]}>
+                  <Text style={styles.ctaText}>קח אותי לגשר</Text>
+                  <Text style={styles.ctaEmoji}>🌉</Text>
+                </View>
+              )}
             </Pressable>
           </Animated.View>
 

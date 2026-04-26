@@ -15,6 +15,13 @@
       "when": 1776449437093,
       "tag": "0001_add_user_feedback",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1777234653396,
+      "tag": "0002_previous_black_knight",
+      "breakpoints": true
     }
   ]
 }
