@@ -91,7 +91,7 @@ export function InviteFriendsNudgeModal() {
       const s = useNudgeQueueStore.getState();
       if (s.inLesson) return;
       // Only fire while the user is on the feed tab — never on other screens.
-      const seg = segmentsRef.current;
+      const seg = segmentsRef.current as string[];
       if (seg[0] !== '(tabs)' || seg[1] !== 'learn') return;
       if (!s.canShow('referral')) return;
       const sessionAge = Date.now() - s.sessionStartedAt;
