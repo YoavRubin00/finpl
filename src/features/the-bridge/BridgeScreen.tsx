@@ -517,6 +517,8 @@ export function BridgeScreen({ walkthroughAutoScroll }: BridgeScreenProps = {}) 
       <RedemptionModal
         visible={modalVisible}
         benefit={selectedBenefit}
+        isRedeemed={selectedBenefit ? isBenefitRedeemed(selectedBenefit.id) : false}
+        canAfford={selectedBenefit ? coins >= selectedBenefit.costCoins : true}
         onConfirm={handleConfirm}
         onCancel={handleCancel}
       />

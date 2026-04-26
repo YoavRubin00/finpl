@@ -35,7 +35,7 @@ export function BenefitCard({ benefit, coins, isRedeemed, isPro, onPress }: Bene
   // Redeemed cards remain tappable so the user can re-open the partner URL
   // via the redemption modal (which detects the redeemed state and skips
   // re-spending coins).
-  const isDisabled  = !benefit.isAvailable || !canAfford || lockedByPro || isAdSlot;
+  const isDisabled  = !benefit.isAvailable || lockedByPro || isAdSlot;
   const coinsNeeded = benefit.costCoins - coins;
   const progress    = Math.min(coins / benefit.costCoins, 1);
 

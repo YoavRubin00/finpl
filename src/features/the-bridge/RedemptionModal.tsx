@@ -10,11 +10,13 @@ import type { Benefit } from './types';
 interface RedemptionModalProps {
   visible: boolean;
   benefit: Benefit | null;
+  isRedeemed?: boolean;
+  canAfford?: boolean;
   onConfirm: () => void;
   onCancel: () => void;
 }
 
-export function RedemptionModal({ visible, benefit, onConfirm, onCancel }: RedemptionModalProps) {
+export function RedemptionModal({ visible, benefit, isRedeemed = false, canAfford = true, onConfirm, onCancel }: RedemptionModalProps) {
   const insets = useSafeAreaInsets();
   if (!benefit) return null;
 
@@ -74,8 +76,14 @@ export function RedemptionModal({ visible, benefit, onConfirm, onCancel }: Redem
             <View style={styles.infoCell}>
               <Text style={styles.infoLabel}>עלות</Text>
               <View style={styles.costValueRow}>
-                <GoldCoinIcon size={16} />
-                <Text style={styles.costValue}>{benefit.costCoins.toLocaleString()}</Text>
+                {isRedeemed ? (
+                  <Text style={[styles.costValue, { color: '#0369a1', fontSize: 15 }]}>הומר בהצלחה ✓</Text>
+                ) : (
+                  <>
+                    <GoldCoinIcon size={16} />
+                    <Text style={styles.costValue}>{benefit.costCoins.toLocaleString()}</Text>
+                  </>
+                )}
               </View>
             </View>
           </View>
@@ -83,9 +91,15 @@ export function RedemptionModal({ visible, benefit, onConfirm, onCancel }: Redem
           {/* CTA button */}
           <Pressable
             onPress={onConfirm}
-            style={({ pressed }) => [styles.confirmBtn, pressed && { opacity: 0.9, transform: [{ scale: 0.98 }] }]}
+            style={({ pressed }) => [
+              styles.confirmBtn,
+              !canAfford && !isRedeemed && { backgroundColor: '#94a3b8', shadowColor: '#94a3b8' },
+              pressed && { opacity: 0.9, transform: [{ scale: 0.98 }] }
+            ]}
           >
-            <Text style={styles.confirmBtnText}>המרה כעת</Text>
+            <Text style={styles.confirmBtnText}>
+              {isRedeemed ? 'למעבר לאתר השותף' : canAfford ? 'המרה כעת' : 'אין מספיק מטבעות'}
+            </Text>
           </Pressable>
 
           {/* Cancel */}

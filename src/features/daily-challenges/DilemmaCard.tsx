@@ -231,7 +231,7 @@ export const DilemmaCard = React.memo(function DilemmaCard({ isActive }: Props) 
           accessibilityLabel="סגור חלון חגיגה"
         >
           <Animated.View entering={FadeInDown.duration(400)} style={styles.celebrationCard}>
-            <Animated.View entering={ZoomIn.springify().damping(10)}>
+            <Animated.View entering={FadeIn.duration(320)}>
               <ExpoImage source={FINN_STANDARD} accessible={false} style={{ width: 200, height: 200 }} contentFit="contain" />
             </Animated.View>
             <Text style={[styles.celebrationTitle, RTL]}>

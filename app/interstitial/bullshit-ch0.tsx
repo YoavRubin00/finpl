@@ -128,7 +128,7 @@ export default function BullshitCh0InterstitialPage() {
             style={styles.overlay}
             pointerEvents="box-none"
           >
-            <Animated.View entering={FadeInUp.duration(480).easing(Easing.out(Easing.cubic))} style={styles.sheet} pointerEvents="box-none">
+            <Animated.View entering={FadeInUp.duration(480).easing(Easing.out(Easing.cubic))} style={[styles.sheet, { paddingBottom: Math.max(32, insets.bottom + 24) }]} pointerEvents="box-none">
               <Animated.View entering={FadeIn.delay(140).duration(380).easing(Easing.out(Easing.cubic))}>
                 <ExpoImage source={FINN_HAPPY} style={styles.finn} contentFit="contain" accessible={false} />
               </Animated.View>
