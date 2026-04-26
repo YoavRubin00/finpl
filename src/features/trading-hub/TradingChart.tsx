@@ -1,5 +1,5 @@
 import { useMemo, useState, useCallback, useRef, useEffect } from 'react';
-import { View, Text, Pressable, StyleSheet, ActivityIndicator } from 'react-native';
+import { View, Text, Pressable, StyleSheet, ActivityIndicator, Platform } from 'react-native';
 import { WebView, type WebViewMessageEvent } from 'react-native-webview';
 import { Info } from 'lucide-react-native';
 import Animated, { FadeIn } from 'react-native-reanimated';
@@ -159,13 +159,16 @@ export function TradingChart({
           onMessage={handleMessage}
           onError={() => setErrored(true)}
           onHttpError={() => setErrored(true)}
-          onShouldStartLoadWithRequest={(req) =>
-            req.url === 'about:blank' ||
-            req.url.startsWith('data:') ||
-            req.url.startsWith('about:') ||
-            req.url.startsWith('https://unpkg.com/') ||
-            req.url.startsWith('https://cdn.jsdelivr.net/')
-          }
+          onShouldStartLoadWithRequest={(req) => {
+            if (Platform.OS === 'android') return true;
+            return (
+              req.url === 'about:blank' ||
+              req.url.startsWith('data:') ||
+              req.url.startsWith('about:') ||
+              req.url.startsWith('https://unpkg.com/') ||
+              req.url.startsWith('https://cdn.jsdelivr.net/')
+            );
+          }}
         />
 
         {/* Skeleton until the chart library signals ready */}

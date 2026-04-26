@@ -216,6 +216,7 @@ const YAHOO_TICKER_MAP: Record<string, string> = {
   ETH: 'ETH-USD',
   XAU: 'GC=F',
   XAG: 'SI=F',
+  'TA125.TA': '^TA125.TA',
 };
 
 const fetchYahooPriceDirect = async (assetId: string): Promise<number | null> => {

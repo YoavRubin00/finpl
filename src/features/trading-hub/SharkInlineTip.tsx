@@ -45,7 +45,6 @@ export function SharkInlineTip() {
     >
       <ExpoImage source={FINN_STANDARD} style={styles.avatar} contentFit="contain" />
       <View style={{ flex: 1 }}>
-        <Text style={[RTL, styles.label]}>קפטן שארק</Text>
         <Text style={[RTL, styles.text]}>{tip.textHe}</Text>
       </View>
       <Pressable

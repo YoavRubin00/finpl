@@ -811,9 +811,11 @@ export function ChatScreen() {
                       { writingDirection: "rtl", textAlign: "right" },
                     ]}
                   >
-                    {/* RLM (U+200F) forces RTL base direction even when the first
-                        streamed token is a digit, English, or punctuation. */}
-                    {"\u200F" + msg.content}
+                    {/* RLI (U+2067) ... PDI (U+2069) creates a strong RTL bidi isolate.
+                        Stronger than a leading RLM: prevents neutral chars (/, ", ,, .)
+                        from drifting around during streaming as new chunks arrive
+                        and the bidi context keeps re-resolving on each render. */}
+                    {"\u2067" + msg.content + "\u2069"}
                   </Text>
                   {msg.kind === "upgrade_prompt" && (
                     <Pressable

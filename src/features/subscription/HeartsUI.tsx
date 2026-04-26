@@ -299,12 +299,14 @@ export function OutOfHeartsModal({ visible, onDismiss, onUpgrade, onHeartsRefill
                     )}
 
                     {/* Gem instant refill CTA */}
-                    <Pressable onPress={handleGemRefill} style={styles.gemRefillBtn} accessibilityRole="button" accessibilityLabel="הוסף לב אחד עם ג׳מס">
-                        <Text style={styles.gemRefillBtnText}>
-                            {gems >= HEART_REFILL_GEM_COST
-                                ? `+1 ❤️, ${HEART_REFILL_GEM_COST} ג'מס`
-                                : `קנה ג'מס, +1 ❤️`}
-                        </Text>
+                    <Pressable onPress={handleGemRefill} style={styles.gemRefillBtn} accessibilityRole="button" accessibilityLabel="הוסף לב אחד עם יהלום">
+                        <View style={{ flex: 1, flexDirection: 'row-reverse', alignItems: 'center', gap: 4 }}>
+                            <Text style={styles.gemRefillBtnText}>
+                                {gems >= HEART_REFILL_GEM_COST
+                                    ? `❤️ +1 • ${HEART_REFILL_GEM_COST}`
+                                    : 'קנה 💎 • +1 ❤️'}
+                            </Text>
+                        </View>
                         <Text style={styles.btnIcon}>💎</Text>
                     </Pressable>
 
@@ -321,8 +323,10 @@ export function OutOfHeartsModal({ visible, onDismiss, onUpgrade, onHeartsRefill
                         accessibilityState={{ disabled: !canAffordRefill }}
                     >
                         <View style={{ flex: 1, alignItems: 'flex-end' }}>
-                            <View style={{ flexDirection: 'row-reverse', alignItems: 'center', gap: 4 }}>
-                                <Text style={styles.coinRefillBtnText}>+1 ❤️, {HEART_REFILL_COIN_COST}</Text>
+                            <View style={{ flexDirection: 'row-reverse', alignItems: 'center', gap: 6 }}>
+                                <Text style={styles.coinRefillBtnText}>{`❤️ +1`}</Text>
+                                <Text style={[styles.coinRefillBtnText, { fontWeight: '700', opacity: 0.85 }]}>•</Text>
+                                <Text style={styles.coinRefillBtnText}>{HEART_REFILL_COIN_COST}</Text>
                                 <GoldCoinIcon size={18} />
                             </View>
                             {!canAffordRefill && (

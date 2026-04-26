@@ -23,7 +23,7 @@ const RTL = { writingDirection: "rtl" as const, textAlign: "right" as const };
 const SCREEN_WIDTH = Dimensions.get("window").width;
 const CHART_PADDING_H = 16;
 const CHART_W = SCREEN_WIDTH - CHART_PADDING_H * 2 - 32;
-const CHART_H = 220;
+const CHART_H = 175;
 const X_AXIS_H = 28;
 const Y_AXIS_W = 44;
 const PLOT_W = CHART_W - Y_AXIS_W;
@@ -36,18 +36,27 @@ interface DataPoint {
   t: number;
 }
 
+// Approximate TA-125 trajectory Oct 2023 → Jan 2026.
+// Includes real geopolitical pullbacks (Iran 04/24 + 10/24, mid-2025) so the
+// recovery is not falsely depicted as monotonic.
 const RAW: Array<{ date: string; label: string; value: number }> = [
-  { date: "2023-10-06", label: "6.10.23", value: 1844 },
-  { date: "2023-10-08", label: "8.10", value: 1730 },
-  { date: "2023-10-15", label: "15.10", value: 1668 },
-  { date: "2023-10-26", label: "26.10", value: 1625 },
-  { date: "2023-11-30", label: "11/23", value: 1750 },
-  { date: "2023-12-31", label: "12/23", value: 1831 },
-  { date: "2024-06-30", label: "6/24", value: 2080 },
-  { date: "2024-12-31", label: "12/24", value: 2380 },
-  { date: "2025-06-30", label: "6/25", value: 2950 },
-  { date: "2025-12-31", label: "12/25", value: 3594 },
-  { date: "2026-01-26", label: "1/26", value: 4017 },
+  { date: "2023-10-06", label: "6.10.23", value: 1844 },  // 0
+  { date: "2023-10-08", label: "8.10", value: 1730 },     // 1 — PANIC
+  { date: "2023-10-15", label: "15.10", value: 1668 },    // 2
+  { date: "2023-10-26", label: "26.10", value: 1625 },    // 3 — BOTTOM
+  { date: "2023-11-30", label: "11/23", value: 1750 },    // 4
+  { date: "2023-12-31", label: "12/23", value: 1831 },    // 5 — RECOVERY
+  { date: "2024-02-29", label: "2/24", value: 1900 },     // 6
+  { date: "2024-04-14", label: "4/24", value: 1810 },     // 7 — Iran 1st strike dip
+  { date: "2024-06-30", label: "6/24", value: 1920 },     // 8
+  { date: "2024-08-31", label: "8/24", value: 2010 },     // 9
+  { date: "2024-10-01", label: "10/24", value: 1920 },    // 10 — Iran 2nd strike dip
+  { date: "2024-12-31", label: "12/24", value: 2210 },    // 11
+  { date: "2025-04-30", label: "4/25", value: 2380 },     // 12
+  { date: "2025-06-30", label: "6/25", value: 2280 },     // 13 — mid-2025 pullback
+  { date: "2025-09-30", label: "9/25", value: 2750 },     // 14
+  { date: "2025-12-31", label: "12/25", value: 3594 },    // 15
+  { date: "2026-01-26", label: "1/26", value: 4017 },     // 16 — ATH
 ];
 
 const DATA: DataPoint[] = RAW.map((p) => ({ ...p, t: new Date(p.date).getTime() }));
@@ -72,28 +81,28 @@ const MILESTONES: Milestone[] = [
     idx: 1,
     title: "7 באוקטובר 2023",
     headline: "הפאניקה",
-    finnText: "קפטן שארק: ביום הראשון השוק צלל 6.2%. מי שמכר כאן, נעל את ההפסד. הרגש שולט על ההיגיון.",
+    finnText: "ביום הראשון השוק צלל 6.2%. מי שמכר כאן, נעל את ההפסד. הרגש שולט על ההיגיון.",
     color: "#ef4444",
   },
   {
     idx: 3,
     title: "סוף אוקטובר 2023",
     headline: "התחתית",
-    finnText: "קפטן שארק 📉: הגענו ל-1625. מינוס 12% מהשיא. הכותרות צועקות 'הכלכלה קורסת'. אבל הנה הסוד, כאן דווקא נולדות ההזדמנויות.",
+    finnText: "הגענו ל-1625. מינוס 12% מהשיא. הכותרות צועקות 'הכלכלה קורסת'. אבל הנה הסוד, כאן דווקא נולדות ההזדמנויות.",
     color: "#f59e0b",
   },
   {
     idx: 5,
     title: "דצמבר 2023",
     headline: "חזרה מלאה",
-    finnText: "קפטן שארק ✅: תוך חודשיים השוק חזר לרמה לפני המלחמה. מי שלא נגע, לא איבד אגורה. מי שקנה בתחתית? פייק ניצחון.",
+    finnText: "תוך חודשיים השוק חזר לרמה לפני המלחמה. מי שלא נגע, לא איבד אגורה. מי שקנה בתחתית? פייק ניצחון.",
     color: "#22c55e",
   },
   {
-    idx: 10,
+    idx: 16,
     title: "ינואר 2026",
     headline: "שיא כל הזמנים",
-    finnText: "קפטן שארק 🚀: 4,017 נקודות! +118% מהתחתית. +117% מיום המלחמה. ההיסטוריה תמיד חוזרת על עצמה, מי שהחזיק, ניצח.",
+    finnText: "4,017 נקודות! +147% מהתחתית. +118% מיום המלחמה. הדרך לא הייתה ישרה, היו דיפים בדרך, אבל מי שהחזיק, ניצח.",
     color: "#10b981",
   },
 ];
@@ -194,7 +203,7 @@ export function TA125WarRecoveryChart({ onContinue }: { onContinue: () => void }
   const gesture = Gesture.Race(pan, tap);
 
   const xTicks = useMemo(() => {
-    return [DATA[0], DATA[3], DATA[5], DATA[7], DATA[10]];
+    return [DATA[0], DATA[3], DATA[5], DATA[11], DATA[16]];
   }, []);
 
   const milestoneReady = visitedMilestones.size >= MILESTONES.length;
@@ -381,15 +390,21 @@ export function TA125WarRecoveryChart({ onContinue }: { onContinue: () => void }
               <ExpoImage source={FINN_HAPPY} style={styles.popupFinn} contentFit="contain" />
               <View style={styles.popupBody}>
                 <View style={styles.popupHeaderRow}>
-                  <Text style={[styles.popupTitle, RTL]}>{m.title}</Text>
+                  <Text style={[styles.popupTitle, RTL]} numberOfLines={1}>{m.title}</Text>
                   <View style={[styles.popupValueBadge, { backgroundColor: `${m.color}18`, borderColor: m.color }]}>
                     <Text style={[styles.popupValueText, { color: m.color }]}>{p.value.toLocaleString()}</Text>
                   </View>
+                  <Pressable
+                    onPress={() => setActiveMilestone(null)}
+                    style={styles.popupClose}
+                    hitSlop={10}
+                    accessibilityRole="button"
+                    accessibilityLabel="סגור"
+                  >
+                    <Text style={{ color: "#94a3b8", fontSize: 18, fontWeight: "700" }}>✕</Text>
+                  </Pressable>
                 </View>
                 <Text style={[styles.popupText, RTL]}>{m.finnText}</Text>
-                <Pressable onPress={() => setActiveMilestone(null)} style={styles.popupClose} hitSlop={10}>
-                  <Text style={{ color: "#64748b", fontSize: 18, fontWeight: "700" }}>✕</Text>
-                </Pressable>
               </View>
             </Animated.View>
           );
@@ -426,11 +441,11 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     padding: 16,
   },
-  header: { alignItems: "flex-end", marginBottom: 10 },
+  header: { alignItems: "flex-end", marginBottom: 6 },
   title: { fontSize: 18, fontWeight: "900", color: "#f8fafc" },
   subtitle: { fontSize: 12, fontWeight: "600", color: "#94a3b8", marginTop: 2 },
 
-  statsRow: { flexDirection: "row-reverse", gap: 8, marginBottom: 12 },
+  statsRow: { flexDirection: "row-reverse", gap: 8, marginBottom: 8 },
   statBox: {
     flex: 1,
     backgroundColor: "rgba(56,189,248,0.08)",
@@ -505,14 +520,20 @@ const styles = StyleSheet.create({
   },
   popupValueText: { fontSize: 12, fontWeight: "900" },
   popupText: { fontSize: 12.5, color: "#cbd5e1", lineHeight: 19, fontWeight: "600" },
-  popupClose: { position: "absolute", top: -4, left: 0 },
+  popupClose: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    alignItems: "center",
+    justifyContent: "center",
+  },
 
-  footer: { marginTop: "auto", paddingTop: 14, alignItems: "stretch" },
-  hintText: { fontSize: 12, color: "#94a3b8", fontWeight: "700", marginBottom: 8, textAlign: "center" },
+  footer: { marginTop: "auto", paddingTop: 8, alignItems: "stretch" },
+  hintText: { fontSize: 12, color: "#94a3b8", fontWeight: "700", marginBottom: 6, textAlign: "center" },
   continueBtn: {
     backgroundColor: "#0ea5e9",
     borderRadius: 16,
-    paddingVertical: 14,
+    paddingVertical: 12,
     alignItems: "center",
     borderBottomWidth: 3,
     borderBottomColor: "#0284c7",

@@ -35,21 +35,21 @@ export function useGoogleAuth() {
   }
 
   // iOS uses the reversed-client-id scheme (registered in app.json
-  // ios.infoPlist.CFBundleURLTypes). Android must NOT use that format — it
-  // needs the app scheme "finpl" (or Google's generated android redirect).
-  // Passing the iOS URI on Android caused silent auth failures.
-  const redirectUri = makeRedirectUri(
+  // ios.infoPlist.CFBundleURLTypes). Android OAuth clients are bound to
+  // package + SHA-1; the redirect must be `com.finplay.app:/oauthredirect`,
+  // which expo-auth-session derives automatically when redirectUri is
+  // omitted. Passing `finpl://` produced Google `400 invalid_request`.
+  const redirectUri =
     Platform.OS === "ios"
-      ? { native: `${IOS_REVERSED_CLIENT_ID}:/`, scheme: "finpl" }
-      : { scheme: "finpl" }
-  );
+      ? makeRedirectUri({ native: `${IOS_REVERSED_CLIENT_ID}:/`, scheme: "finpl" })
+      : undefined;
 
   const [request, response, promptAsync] = Google.useAuthRequest({
     webClientId: GOOGLE_WEB_CLIENT_ID,
     iosClientId: GOOGLE_IOS_CLIENT_ID || undefined,
     androidClientId: GOOGLE_ANDROID_CLIENT_ID || undefined,
     scopes: ["profile", "email"],
-    redirectUri,
+    ...(redirectUri ? { redirectUri } : {}),
   });
 
   useEffect(() => {

@@ -285,7 +285,7 @@ function IntroScreen({
         <Animated.View entering={FadeInUp.duration(320)} style={styles.introBody}>
           <Text style={[styles.introStory, RTL]} allowFontScaling={false}>
             השקעת ₪{STARTING_INVESTMENT.toLocaleString('he-IL')} במניית $MOON. הוסיפו אותך לקבוצת "רוקט מניות VIP".
-            עכשיו, כולם צועקים שתוסיף עוד. תחזיק.
+            עכשיו, כולם צועקים שתוסיף עוד. תחזיקו.
           </Text>
 
           {!shownSecond ? (
