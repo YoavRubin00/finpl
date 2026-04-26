@@ -80,6 +80,7 @@ import { GrahamPersonalityFeedCard } from "../graham-personality/GrahamPersonali
 import { DiamondHandsCard } from "../diamond-hands/DiamondHandsCard";
 import { useStreakCelebration } from "../../hooks/useStreakCelebration";
 import { LiveNewsQuizCard } from "./live-news/LiveNewsQuizCard";
+import { CrowdQuestionCard } from "../crowd-question";
 import { getPyramidStatus } from "../../utils/progression";
 // Chapter data, all 5 chapters
 import { chapter1Data } from "../chapter-1-content/chapter1Data";
@@ -927,6 +928,12 @@ export function FinFeedScreen() {
       filteredMerged.splice(Math.min(5, filteredMerged.length), 0, quizItem);
     }
 
+    // Pin "חכמת ההמונים" crowd-question at position 5 — pushes quiz to 6, scenario to 7
+    filteredMerged.splice(Math.min(5, filteredMerged.length), 0, {
+      id: 'crowd-question',
+      type: 'crowd-question',
+    } as const);
+
     // Insert pinned BENBEN creator video at position 7
     const benbenVideo = BENBEN_VIDEOS[seed % BENBEN_VIDEOS.length];
     filteredMerged.splice(Math.min(7, filteredMerged.length), 0, benbenVideo);
@@ -1082,6 +1089,7 @@ export function FinFeedScreen() {
           <DiamondHandsCard isActive={isActive} />
         )}
         {item.type === "live-news" && <LiveNewsQuizCard />}
+        {item.type === "crowd-question" && <CrowdQuestionCard />}
         {item.type === "shark-feedback" && <SharkFeedbackCard />}
         {item.type === "simulator-teaser" && (
           <FeedSimulatorCard simulator={item.simulator} isActive={isActive} />

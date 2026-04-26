@@ -87,7 +87,7 @@ function ReadReceipt({ status }: { status: MessageStatus }) {
     return <CheckCheck size={14} color="#71717a" />;
   }
   // read
-  return <CheckCheck size={14} color="#60a5fa" />;
+  return <CheckCheck size={14} color="#0ea5e9" />;
 }
 
 /* ------------------------------------------------------------------ */
@@ -281,7 +281,7 @@ export function ChatScreen() {
   // Input bar focus glow animation
   const focusProgress = useSharedValue(0);
   const inputBorderStyle = useAnimatedStyle(() => ({
-    borderColor: interpolateColor(focusProgress.value, [0, 1], ["#3f3f46", "#7c3aed"]),
+    borderColor: interpolateColor(focusProgress.value, [0, 1], ["#cbd5e1", "#0ea5e9"]),
   }));
   const handleInputFocus = useCallback(() => {
     focusProgress.value = withTiming(1, { duration: 250 });
@@ -918,7 +918,7 @@ const headerStyles = StyleSheet.create({
   },
   status: {
     fontSize: 12,
-    color: "#6ee7b7",
+    color: "#059669",
     writingDirection: "rtl",
   },
   recentStrip: {
@@ -1141,12 +1141,12 @@ const inputStyles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: "#0891b2",
+    backgroundColor: "#0ea5e9",
     alignItems: "center",
     justifyContent: "center",
-    shadowColor: "#22d3ee",
+    shadowColor: "#0ea5e9",
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.5,
+    shadowOpacity: 0.4,
     shadowRadius: 8,
     elevation: 4,
   },

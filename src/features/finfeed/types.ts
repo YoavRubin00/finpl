@@ -245,4 +245,9 @@ export interface FeedLiveNews {
   type: 'live-news';
 }
 
-export type FeedItem = FeedVideo | FeedQuote | (FeedLesson & { type: "lesson" }) | FeedComic | FeedModuleHook | FeedMacroEvent | FeedScenario | FeedDailyQuiz | FeedMythCard | FeedPremiumLearning | FeedFinnHero | FeedDilemma | FeedInvestment | FeedCrashGame | FeedSwipeGame | FeedGrahamPersonality | FeedBullshitSwipe | FeedHigherLower | FeedBudgetNinja | FeedPriceSlider | FeedCashoutRush | FeedFomoKiller | FeedDidYouKnow | FeedDiamondHands | FeedSharkFeedback | FeedSimulatorTeaser | FeedLiveMarket | FeedLiveNews;
+export interface FeedCrowdQuestion {
+  id: 'crowd-question';
+  type: 'crowd-question';
+}
+
+export type FeedItem = FeedVideo | FeedQuote | (FeedLesson & { type: "lesson" }) | FeedComic | FeedModuleHook | FeedMacroEvent | FeedScenario | FeedDailyQuiz | FeedMythCard | FeedPremiumLearning | FeedFinnHero | FeedDilemma | FeedInvestment | FeedCrashGame | FeedSwipeGame | FeedGrahamPersonality | FeedBullshitSwipe | FeedHigherLower | FeedBudgetNinja | FeedPriceSlider | FeedCashoutRush | FeedFomoKiller | FeedDidYouKnow | FeedDiamondHands | FeedSharkFeedback | FeedSimulatorTeaser | FeedLiveMarket | FeedLiveNews | FeedCrowdQuestion;
