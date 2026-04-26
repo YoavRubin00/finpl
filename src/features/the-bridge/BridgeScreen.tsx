@@ -7,6 +7,8 @@ import {
   Pressable,
   Alert,
   Linking,
+  AppState,
+  Modal,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -197,6 +199,21 @@ export function BridgeScreen({ walkthroughAutoScroll }: BridgeScreenProps = {}) 
   const [modalVisible, setModalVisible] = useState(false);
   const [showConfetti, setShowConfetti] = useState(false);
   const [successTitle, setSuccessTitle] = useState('');
+  const [showPostRedemptionModal, setShowPostRedemptionModal] = useState(false);
+  const awaitingReturnFromPartner = useRef(false);
+
+  // Listen for return from partner website
+  useEffect(() => {
+    const subscription = AppState.addEventListener('change', (nextAppState) => {
+      if (nextAppState === 'active' && awaitingReturnFromPartner.current) {
+        awaitingReturnFromPartner.current = false;
+        setTimeout(() => {
+          setShowPostRedemptionModal(true);
+        }, 600);
+      }
+    });
+    return () => subscription.remove();
+  }, []);
 
   // Progress bar
   const progressBarPct = useSharedValue(0);
@@ -267,8 +284,10 @@ export function BridgeScreen({ walkthroughAutoScroll }: BridgeScreenProps = {}) 
         Alert.alert('לא ניתן לפתוח את הקישור', 'נסו שוב מאוחר יותר או פנו לתמיכה.');
         return;
       }
+      awaitingReturnFromPartner.current = true;
       await Linking.openURL(url);
     } catch {
+      awaitingReturnFromPartner.current = false;
       Alert.alert('שגיאה בפתיחת הקישור', 'בדקו את החיבור לאינטרנט ונסו שוב.');
     }
   }, []);
@@ -522,6 +541,48 @@ export function BridgeScreen({ walkthroughAutoScroll }: BridgeScreenProps = {}) 
         onConfirm={handleConfirm}
         onCancel={handleCancel}
       />
+
+      {/* Post Redemption Return Modal */}
+      <Modal
+        visible={showPostRedemptionModal}
+        transparent
+        animationType="fade"
+        statusBarTranslucent
+        onRequestClose={() => setShowPostRedemptionModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <Animated.View entering={FadeInDown.duration(220)} style={styles.modalBackdrop} />
+
+          <Animated.View
+            entering={FadeInDown.duration(320)}
+            style={styles.postRedemptionCard}
+          >
+            <ExpoImage
+              source={FINN_DANCING}
+              style={{ width: 140, height: 140, marginBottom: 16 }}
+              contentFit="contain"
+              accessible={false}
+            />
+
+            <Text style={styles.postRedemptionTitle}>עשינו צעד משמעותי היום.</Text>
+            <Text style={styles.postRedemptionBody}>
+              בואו נמשיך ללמוד כדי להתפתח
+            </Text>
+
+            <Pressable
+              onPress={() => setShowPostRedemptionModal(false)}
+              accessibilityRole="button"
+              accessibilityLabel="המשך"
+              style={({ pressed }) => [
+                styles.postRedemptionBtn,
+                pressed && { opacity: 0.9, transform: [{ scale: 0.98 }] }
+              ]}
+            >
+              <Text style={styles.postRedemptionBtnText}>המשך</Text>
+            </Pressable>
+          </Animated.View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -795,5 +856,63 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '900',
     color: '#38bdf8',
+  },
+
+  // Post Redemption Modal
+  modalOverlay: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalBackdrop: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(15, 23, 42, 0.45)',
+  },
+  postRedemptionCard: {
+    width: '85%',
+    maxWidth: 340,
+    backgroundColor: '#ffffff',
+    borderRadius: 24,
+    padding: 24,
+    alignItems: 'center',
+    shadowColor: '#0c4a6e',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.15,
+    shadowRadius: 20,
+    elevation: 10,
+  },
+  postRedemptionTitle: {
+    fontSize: 20,
+    fontWeight: '900',
+    color: '#0f172a',
+    textAlign: 'center',
+    writingDirection: 'rtl',
+    marginBottom: 8,
+  },
+  postRedemptionBody: {
+    fontSize: 15,
+    fontWeight: '500',
+    color: '#64748b',
+    textAlign: 'center',
+    writingDirection: 'rtl',
+    marginBottom: 24,
+    lineHeight: 22,
+  },
+  postRedemptionBtn: {
+    backgroundColor: '#0ea5e9',
+    width: '100%',
+    paddingVertical: 14,
+    borderRadius: 16,
+    alignItems: 'center',
+    shadowColor: '#0ea5e9',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.25,
+    shadowRadius: 8,
+    elevation: 6,
+  },
+  postRedemptionBtnText: {
+    fontSize: 16,
+    fontWeight: '800',
+    color: '#ffffff',
   },
 });
