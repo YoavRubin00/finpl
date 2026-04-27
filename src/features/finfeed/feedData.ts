@@ -23,6 +23,29 @@ export const BENBEN_VIDEOS: FeedVideo[] = Array.from({ length: 12 }, (_, i) => (
   saves: BENBEN_SAVE_SEEDS[i] ?? 120,
 }));
 
+/**
+ * Micro-learn videos, pinned at feed position 8, rotating each session.
+ * All videos served from Vercel Blob CDN — never bundled into the app, never
+ * cached on disk client-side; ExpoVideo streams them on-demand.
+ */
+export const MICRO_LEARN_VIDEOS: FeedVideo[] = [
+  {
+    id: "ml-reach-people",
+    type: "video" as const,
+    title: "",
+    description: "",
+    category: "Investing" as const,
+    videoId: "ml-reach-people",
+    localVideo: {
+      uri: 'https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/video/microlearn/reach-people-nrGwo70N9aS61srMhizpuDmoT55Htu.mp4',
+    },
+    durationMinutes: 1,
+    pyramidLayer: 1 as const,
+    likes: 4180,
+    saves: 215,
+  },
+];
+
 export const MOCK_FEED_DATA: FeedItem[] = [
   {
     id: "v1",

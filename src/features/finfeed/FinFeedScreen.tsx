@@ -27,7 +27,7 @@ import { FINN_STANDARD, FINN_DANCING } from "../retention-loops/finnMascotConfig
 import { useSpontaneousDancing } from "../retention-loops/useSpontaneousDancing";
 
 // Feed Data & Types
-import { MOCK_FEED_DATA, COMIC_FEED_ITEMS, BENBEN_VIDEOS } from "./feedData";
+import { MOCK_FEED_DATA, COMIC_FEED_ITEMS, BENBEN_VIDEOS, MICRO_LEARN_VIDEOS } from "./feedData";
 import { type FeedItem, type FeedModuleHook, type FeedQuote } from "./types";
 import { FeedVideoItem } from "./FeedVideoItem";
 import { FeedQuoteItem } from "./FeedQuoteItem";
@@ -941,6 +941,10 @@ export function FinFeedScreen() {
     // Insert pinned BENBEN creator video at position 7
     const benbenVideo = BENBEN_VIDEOS[seed % BENBEN_VIDEOS.length];
     filteredMerged.splice(Math.min(7, filteredMerged.length), 0, benbenVideo);
+
+    // Pin a Micro-Learn video at position 8 — rotates per session, streams from CDN
+    const microLearnVideo = MICRO_LEARN_VIDEOS[seed % MICRO_LEARN_VIDEOS.length];
+    filteredMerged.splice(Math.min(8, filteredMerged.length), 0, microLearnVideo);
 
     // Pin live news headlines at position 9 — right after BENBEN video
     filteredMerged.splice(Math.min(9, filteredMerged.length), 0, { id: 'live-news', type: 'live-news' } as const);
