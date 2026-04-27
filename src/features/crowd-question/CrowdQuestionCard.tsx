@@ -235,18 +235,24 @@ function OptionButton({
   onPress: () => void;
   delay: number;
 }) {
+  const [pressed, setPressed] = useState(false);
   return (
-    <Animated.View entering={FadeInUp.duration(260).delay(delay)}>
+    <Animated.View entering={FadeInUp.duration(260).delay(delay)} style={styles.optionGlowWrap}>
       <Pressable
         onPress={onPress}
-        style={({ pressed }) => [styles.optionBtn, pressed && styles.optionBtnPressed]}
+        onPressIn={() => setPressed(true)}
+        onPressOut={() => setPressed(false)}
         accessibilityRole="button"
         accessibilityLabel={`${option.label} — הצבעה`}
         accessibilityHint="הקש להצבעה"
       >
-        <Text style={styles.optionText} allowFontScaling={false}>
-          {option.emoji ? `${option.label}  ${option.emoji}` : option.label}
-        </Text>
+        {/* bg/border live on inner View so Reanimated 4 + Pressable function-style
+            quirks on Android can't drop the styles and leave white-on-white text */}
+        <View style={[styles.optionBtn, pressed && styles.optionBtnPressed]}>
+          <Text style={styles.optionText} allowFontScaling={false}>
+            {option.emoji ? `${option.label}  ${option.emoji}` : option.label}
+          </Text>
+        </View>
       </Pressable>
     </Animated.View>
   );
@@ -476,8 +482,16 @@ const styles = StyleSheet.create({
     gap: 12,
     marginTop: 4,
   },
+  optionGlowWrap: {
+    borderRadius: 16,
+    shadowColor: '#3b82f6',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.7,
+    shadowRadius: 24,
+    elevation: 0,
+  },
   optionBtn: {
-    backgroundColor: '#3b82f6',
+    backgroundColor: '#0ea5e9',
     borderRadius: 16,
     paddingVertical: 16,
     paddingHorizontal: 18,
@@ -485,11 +499,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 2,
-    borderColor: '#2563eb',
+    borderColor: '#0284c7',
     borderBottomWidth: 5,
-    borderBottomColor: '#1d4ed8',
+    borderBottomColor: '#0369a1',
     overflow: 'hidden',
-    shadowColor: '#3b82f6',
+    shadowColor: '#0ea5e9',
     shadowOffset: { width: 0, height: 3 },
     shadowOpacity: 0.4,
     shadowRadius: 8,
