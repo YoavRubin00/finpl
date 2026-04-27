@@ -126,8 +126,12 @@ export function LifelineChatOverlay({ visible, conceptTag, onClose }: Props) {
   const safeInsets = useSafeAreaInsets();
   // On Android, useSafeAreaInsets may return 0 inside a statusBarTranslucent Modal.
   // Fall back to StatusBar.currentHeight to ensure the X button is never hidden.
+  // Push the header (and the X close button) clear of the Android status bar.
+  // statusBarTranslucent makes the modal sit under the bar, and on some Samsung
+  // devices safeInsets.top returns 0 — so we take the max of all signals + a
+  // generous buffer so the X is never glued to the system clock/icons row.
   const headerTopPad = Platform.OS === "android"
-    ? Math.max(safeInsets.top, StatusBar.currentHeight ?? 0, 28) + 16
+    ? Math.max(safeInsets.top, StatusBar.currentHeight ?? 0, 28) + 28
     : safeInsets.top + 10;
   const isPro = useSubscriptionStore((s) => s.isPro());
 

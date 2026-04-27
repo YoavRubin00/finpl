@@ -22,10 +22,10 @@ import { tapHaptic, successHaptic } from '../../utils/haptics';
 
 const DAILY_COPY: Record<number, string> = {
   0: 'החברים שלכם מכניסים לכם כסף',
-  1: 'כל חבר שמצטרף = מטבעות בכיס שלכם',
+  1: 'כל החברים שמצטרפים = מטבעות לכיס שלכם = הטבות בעולם האמיתי',
   2: 'החברים שלכם מכניסים לכם כסף',
   3: 'הזמנה אחת = מטבעות לכם וסטארט לחבר',
-  4: 'כל חבר שמצטרף = מטבעות בכיס שלכם',
+  4: 'כל החברים שמצטרפים = מטבעות לכיס שלכם = הטבות בעולם האמיתי',
   5: 'שישי שמח — החברים שלכם מכניסים לכם כסף',
   6: 'שבת שלום — הזמנה אחת = מטבעות לכם ולחבר',
 };
@@ -198,7 +198,7 @@ export function InviteFriendsNudgeModal() {
           <Text style={styles.title}>{DAILY_COPY[dayOfWeek]}</Text>
 
           <Text style={styles.subtitle}>
-            כל הזמנה מכניסה לכם מטבעות, ולחבר/ה סטארט סופר. הכי כיף ביחד.
+            כל הזמנה מכניסה לכם יותר מטבעות. הכי כיף ביחד.
           </Text>
 
           <Animated.View style={[styles.ctaGlowWrap, glowStyle]}>

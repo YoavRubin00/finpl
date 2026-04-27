@@ -10,6 +10,7 @@ export interface RealAsset {
   id: string;
   name: string;
   emoji: string;
+  image?: any;
   type: AssetType;
   tier: 1 | 2 | 3;
   baseCost: number;

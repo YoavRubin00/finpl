@@ -11,6 +11,7 @@ import Animated, {
     cancelAnimation,
 } from "react-native-reanimated";
 import { Image as ExpoImage } from "expo-image";
+import { AssetIcon } from "./AssetIcon";
 import { X } from "lucide-react-native";
 import { GoldCoinIcon } from "../../components/ui/GoldCoinIcon";
 import { useEconomyStore } from "../economy/useEconomyStore";
@@ -196,7 +197,7 @@ export function MarketScreen() {
                                         }}
                                         style={styles.dealContent}
                                     >
-                                        <Text style={{ fontSize: 40 }}>{dealAsset.emoji}</Text>
+                                        <AssetIcon asset={dealAsset} size={64} radius={16} emojiSize={40} />
                                         <View style={{ flex: 1, alignItems: "flex-end", marginEnd: 12 }}>
                                             <Text style={styles.dealName}>{dealAsset.name}</Text>
                                             <View style={{ flexDirection: "row-reverse", alignItems: "center", gap: 6, marginTop: 2 }}>
@@ -229,7 +230,7 @@ export function MarketScreen() {
                                 }}
                                 style={styles.recCard}
                             >
-                                <Text style={{ fontSize: 32 }}>{recommended.emoji}</Text>
+                                <AssetIcon asset={recommended} size={40} radius={10} emojiSize={32} />
                                 <View style={{ flex: 1, alignItems: "flex-end", marginEnd: 10 }}>
                                     <Text style={styles.recName}>{recommended.name}</Text>
                                     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 3 }}>
@@ -300,7 +301,7 @@ export function MarketScreen() {
                                         )}
 
                                         <View style={styles.emojiContainer}>
-                                            <Text style={{ fontSize: 36 }}>{base.emoji}</Text>
+                                            <AssetIcon asset={base} size={60} radius={30} emojiSize={36} />
                                         </View>
                                         <Text style={styles.realAssetName}>{base.name}</Text>
 
@@ -515,7 +516,7 @@ export function MarketScreen() {
                                         <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 30 }}>
                                             {/* Asset hero */}
                                             <View style={{ alignItems: "center", backgroundColor: "#f0f9ff", borderRadius: 20, padding: 20, marginBottom: 16 }}>
-                                                <Text style={{ fontSize: 56 }}>{confirmAsset.emoji}</Text>
+                                                <AssetIcon asset={confirmAsset} size={100} radius={24} emojiSize={56} />
                                                 <Text style={{ fontSize: 22, fontWeight: "900", color: "#0f172a", marginTop: 8 }}>{confirmAsset.name}</Text>
                                                 <Text style={{ fontSize: 14, color: "#64748b", writingDirection: "rtl", textAlign: "center", marginTop: 4, lineHeight: 20 }}>{confirmAsset.descriptionHebrew}</Text>
                                                 <View style={{ backgroundColor: "#e0f2fe", borderRadius: 10, paddingHorizontal: 14, paddingVertical: 4, marginTop: 8, borderWidth: 1, borderColor: "#bae6fd" }}>

@@ -321,6 +321,10 @@ const cardStyles = StyleSheet.create({
     width: '100%',
     height: 30,
     marginTop: -4,
+    // Mirror the slider so the thumb starts on the visual RIGHT (low value)
+    // and dragging LEFT increases — matches Hebrew RTL reading direction
+    // and the row-reverse fill bar above. Internal value remains 0→40.
+    transform: [{ scaleX: -1 }],
   },
 });
 
