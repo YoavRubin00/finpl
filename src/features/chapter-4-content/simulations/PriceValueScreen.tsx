@@ -268,10 +268,10 @@ function ScoreScreen({ result, onReplay, onContinue }: ScoreScreenProps) {
 
       {/* Captain Shark core principle */}
       <Animated.View entering={FadeInDown.duration(500).delay(80)}>
-        <View style={{ flexDirection: 'row-reverse', alignItems: 'center', gap: 10, backgroundColor: 'rgba(14,165,233,0.1)', borderRadius: 18, borderWidth: 1.5, borderColor: 'rgba(14,165,233,0.3)', padding: 12, marginBottom: 14 }}>
+        <View style={{ flexDirection: 'row-reverse', alignItems: 'center', gap: 10, backgroundColor: '#f0f9ff', borderRadius: 18, borderWidth: 1.5, borderColor: '#bae6fd', padding: 12, marginBottom: 14 }}>
           <ExpoImage source={FINN_STANDARD} style={{ width: 56, height: 56, flexShrink: 0 }} contentFit="contain" accessible={false} />
-          <Text style={{ flex: 1, fontSize: 14, fontWeight: '800', color: '#0369a1', lineHeight: 21, writingDirection: 'rtl', textAlign: 'right' }}>
-            קפטן שארק: "מחיר זה מה שאתה משלם. ערך זה מה שאתה מקבל.", קנה רק כשהערך גבוה מהמחיר.
+          <Text style={{ flex: 1, fontSize: 14, fontWeight: '800', color: '#0c4a6e', lineHeight: 21, writingDirection: 'rtl', textAlign: 'right' }}>
+            "מחיר זה מה שאתה משלם, ערך זה מה שאתה מקבל" — קנו רק כשהערך גבוה מהמחיר.
           </Text>
         </View>
       </Animated.View>

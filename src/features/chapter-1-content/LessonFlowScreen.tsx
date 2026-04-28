@@ -2412,6 +2412,10 @@ export function LessonFlowScreen() {
   const [pendingMultiplierRewards, setPendingMultiplierRewards] = useState<ChestReward | null>(null);
   const [flyingCoinsDown, setFlyingCoinsDown] = useState(0);
   const shouldTriggerDoNRef = useRef(false);
+  // FIFO chokepoint for post-chest nudges: only fire Bridge/Referral after any
+  // higher-priority modal (SharkLove/DoubleOrNothing/AdBonus/PostCelebration/etc)
+  // has been dismissed, so the user sees them one at a time, not stacked.
+  const [pendingPostChestNudge, setPendingPostChestNudge] = useState<'referral' | 'bridge' | null>(null);
 
 
   // Persist mid-module progress (debounced) so the user can resume on re-entry
@@ -2456,6 +2460,7 @@ export function LessonFlowScreen() {
     setShowSharkLove(false);
     setShowBridgeCTA(false);
     setShowReferralCTA(false);
+    setPendingPostChestNudge(null);
     moduleStartTimeRef.current = Date.now();
     shouldTriggerDoNRef.current = false;
     completedRef.current = false;
@@ -2552,6 +2557,28 @@ export function LessonFlowScreen() {
     }
   }, [chapterId, id, isPro, playSound, safeTimeout]);
 
+  // Drain the post-chest nudge queue: only show Referral/Bridge once every
+  // higher-priority modal has been dismissed, so the user never sees two
+  // popups stacked. Re-runs whenever a blocker toggles.
+  useEffect(() => {
+    if (!pendingPostChestNudge) return;
+    const blockerActive =
+      showSharkLove ||
+      showDoubleOrNothing ||
+      showAdBonus ||
+      showWisdom ||
+      showPartyInvite ||
+      showPartyVideo ||
+      showBreakMessage;
+    if (blockerActive) return;
+    const t = setTimeout(() => {
+      if (pendingPostChestNudge === 'referral') setShowReferralCTA(true);
+      else if (pendingPostChestNudge === 'bridge') setShowBridgeCTA(true);
+      setPendingPostChestNudge(null);
+    }, 600);
+    return () => clearTimeout(t);
+  }, [pendingPostChestNudge, showSharkLove, showDoubleOrNothing, showAdBonus, showWisdom, showPartyInvite, showPartyVideo, showBreakMessage]);
+
   // Chapter context for progress display
   const chapterData = chapterId ? CHAPTER_DATA_MAP[chapterId] : undefined;
   const chapterModules = chapterData?.modules ?? [];
@@ -2644,9 +2671,23 @@ export function LessonFlowScreen() {
     };
   }, [phase, mod?.id, completeModule, mod, isLastModule, playSound, safeTimeout]);
 
-  // Post-module celebration, only after wisdom + DoN + SharkLove are done, every other module
+  // Post-module celebration ("Continue or Netflix?") is intentionally LAST in the
+  // end-of-module nudge sequence. Wait for every other modal AND for the pending
+  // Referral/Bridge nudge to fire AND dismiss before showing the continue/quit choice.
   useEffect(() => {
-    if (!chestClaimed || showDoubleOrNothing || showSharkLove || showPostCelebration || showBreakMessage) return;
+    if (
+      !chestClaimed ||
+      showDoubleOrNothing ||
+      showSharkLove ||
+      showAdBonus ||
+      showReferralCTA ||
+      showBridgeCTA ||
+      showWisdom ||
+      showPartyInvite ||
+      showPostCelebration ||
+      showBreakMessage ||
+      pendingPostChestNudge !== null
+    ) return;
     // Guest finishing mod-0-1: skip "Netflix?" modal, show register nudge right after chest
     if (id === 'mod-0-1' && isGuest) {
       const timer = setTimeout(() => setShowRegisterNudge(true), 1500);
@@ -2654,10 +2695,10 @@ export function LessonFlowScreen() {
     }
     // Show every other module (0, 2, 4... = yes, 1, 3, 5... = no)
     if (currentModIdx % 2 !== 0) return;
-    // Wait 2s after chest claim + wisdom/DoN resolution
+    // Wait 2s after all higher-priority nudges have cleared
     const timer = setTimeout(() => setShowPostCelebration(true), 2000);
     return () => clearTimeout(timer);
-  }, [chestClaimed, showDoubleOrNothing, showSharkLove, currentModIdx, showPostCelebration, showBreakMessage, id, isGuest]);
+  }, [chestClaimed, showDoubleOrNothing, showSharkLove, showAdBonus, showReferralCTA, showBridgeCTA, showWisdom, showPartyInvite, currentModIdx, showPostCelebration, showBreakMessage, pendingPostChestNudge, id, isGuest]);
 
   // Shark Party, trigger only on chapter transitions (last module of chapter) every 4 total completed modules
   useEffect(() => {
@@ -3512,14 +3553,20 @@ export function LessonFlowScreen() {
                             const willShowReferral = totalCompletedNow > 0 && (totalCompletedNow % 5 === 0 || hasDividend);
                             const willShowBridge = isBridgeEligible && totalCompletedNow > 0 && totalCompletedNow % 4 === 0;
 
-                            // Priority: if both would fire, show only Referral (higher CAC value) to avoid ad fatigue
+                            // Priority: if both would fire, show only Referral (higher CAC value) to avoid ad fatigue.
+                            // Queue rather than fire directly so SharkLove/DoubleOrNothing/AdBonus dismiss first
+                            // — see useEffect below that drains pendingPostChestNudge once no modal is blocking.
+                            // Defer enqueue by 2000ms so any higher-priority modal
+                            // (SharkLove +500ms, AdBonus +1800ms) has fired and updated
+                            // the blocker state before the drain useEffect schedules its
+                            // 600ms timer — eliminates the chest-claim race.
                             if (willShowReferral) {
                               setCtaModuleCount(totalCompletedNow);
                               setReferralByDividend(hasDividend);
-                              safeTimeout(() => setShowReferralCTA(true), 1500);
+                              safeTimeout(() => setPendingPostChestNudge('referral'), 2000);
                             } else if (willShowBridge) {
                               setCtaModuleCount(totalCompletedNow);
-                              safeTimeout(() => setShowBridgeCTA(true), 1500);
+                              safeTimeout(() => setPendingPostChestNudge('bridge'), 2000);
                             }
                           }, 2000);
                         }
