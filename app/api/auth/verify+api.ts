@@ -42,10 +42,16 @@ export async function POST(request: Request): Promise<Response> {
       if (!token) {
         return Response.json({ error: 'Missing Google token' }, { status: 400 });
       }
+      // Diagnostic log to determine token format (access_token vs id_token)
+      const dotCount = (token.match(/\./g) ?? []).length;
+      const tokenKind = dotCount === 2 ? 'JWT (likely id_token)' : 'opaque (likely access_token)';
+      console.info(`[auth/verify] google token: kind=${tokenKind} dots=${dotCount} length=${token.length} prefix=${token.slice(0, 12)}...`);
       const googleRes = await fetch('https://www.googleapis.com/userinfo/v2/me', {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (!googleRes.ok) {
+        const errBody = await googleRes.text().catch(() => '<unreadable>');
+        console.warn(`[auth/verify] google userinfo rejected: status=${googleRes.status} body=${errBody.slice(0, 200)}`);
         return Response.json({ error: 'Invalid Google token' }, { status: 401 });
       }
       const googleUser = (await googleRes.json()) as GoogleUserInfo;
