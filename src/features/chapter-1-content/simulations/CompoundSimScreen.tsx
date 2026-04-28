@@ -822,7 +822,7 @@ export function CompoundSimScreen({ onComplete }: CompoundSimScreenProps) {
                     <Animated.View entering={FadeInUp.delay(500).duration(400)} style={{ flexDirection: 'row-reverse', alignItems: 'center', marginTop: 12, backgroundColor: 'rgba(255,255,255,0.7)', padding: 10, borderRadius: 12, borderWidth: 1, borderColor: '#bae6fd' }}>
                         <ExpoImage source={FINN_STANDARD} accessible={false} style={{ width: 44, height: 44 }} contentFit="contain" />
                         <Text style={[RTL, { flex: 1, fontSize: 13, color: '#0369a1', fontWeight: '700', marginRight: 8, lineHeight: 18 }]}>
-                            אם אינך מבין מה זה אומר, בואו נלמד יחד.
+                            אם אינכם מבינים מה זה אומר, בואו נלמד יחד.
                         </Text>
                     </Animated.View>
                 </Animated.View>

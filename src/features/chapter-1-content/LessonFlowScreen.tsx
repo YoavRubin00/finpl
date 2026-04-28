@@ -3227,10 +3227,12 @@ export function LessonFlowScreen() {
               accessibilityRole="button"
               accessibilityLabel="לחץ להתחיל"
             >
-              <Image
+              <ExpoImage
                 source={MODULE_HERO_MAP[mod.id]}
                 style={{ width: "90%", height: "75%", borderRadius: 24 }}
-                resizeMode="contain"
+                contentFit="contain"
+                cachePolicy="memory-disk"
+                transition={150}
                 accessible={false}
               />
               <Animated.Text
@@ -3407,10 +3409,12 @@ export function LessonFlowScreen() {
         {phase === "module-infographic" && mod && MODULE_INFOGRAPHIC_MAP[mod.id] && (
           <Animated.View entering={FadeIn.duration(400)} style={{ flex: 1, alignItems: "center", justifyContent: "center", paddingHorizontal: 16 }}>
             <View style={{ borderRadius: 18, overflow: "hidden", shadowColor: "#0ea5e9", shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.15, shadowRadius: 16, elevation: 6, backgroundColor: "#fff" }}>
-              <Image
+              <ExpoImage
                 source={MODULE_INFOGRAPHIC_MAP[mod.id]}
                 style={{ width: Dimensions.get("window").width - 56, height: (Dimensions.get("window").width - 56) * 1.5, borderRadius: 18 }}
-                resizeMode="contain"
+                contentFit="contain"
+                cachePolicy="memory-disk"
+                transition={150}
               />
             </View>
             <Pressable
@@ -4179,10 +4183,11 @@ export function LessonFlowScreen() {
           entering={FadeIn.duration(300)}
           style={[StyleSheet.absoluteFill, { zIndex: 9998, backgroundColor: "#f0f9ff", justifyContent: "center", alignItems: "center" }]}
         >
-          <Image
+          <ExpoImage
             source={finnTransitionSource}
             style={{ width: "100%", height: "100%", transform: [{ scale: 0.88 }] }}
-            resizeMode="cover"
+            contentFit="cover"
+            cachePolicy="memory-disk"
           />
         </Animated.View>
       )}

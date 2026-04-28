@@ -473,11 +473,11 @@ export function FlashcardInfographic({ cardId, diveStep = 0, zoomRegions }: Prop
       {finnTapSource && (
         <>
           <Pressable onPress={() => setFinnFullscreen(true)} style={s.finnTapThumb}>
-            <Image source={finnTapSource} accessible={false} style={s.finnTapImage} resizeMode="cover" />
+            <ExpoImage source={finnTapSource} accessible={false} style={s.finnTapImage} contentFit="cover" cachePolicy="memory-disk" transition={150} />
           </Pressable>
           <Modal visible={finnFullscreen} transparent animationType="fade" statusBarTranslucent>
             <Pressable onPress={() => setFinnFullscreen(false)} style={s.finnModal}>
-              <Image source={finnTapSource} accessible={false} style={s.finnModalImage} resizeMode="cover" />
+              <ExpoImage source={finnTapSource} accessible={false} style={s.finnModalImage} contentFit="cover" cachePolicy="memory-disk" transition={150} />
             </Pressable>
           </Modal>
         </>
