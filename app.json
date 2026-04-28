@@ -92,7 +92,7 @@
         {
           "action": "VIEW",
           "category": ["DEFAULT", "BROWSABLE"],
-          "data": [{ "scheme": "com.finplay.app", "path": "/oauthredirect" }],
+          "data": [{ "scheme": "com.finplay.app" }],
           "autoVerify": false
         }
       ]
