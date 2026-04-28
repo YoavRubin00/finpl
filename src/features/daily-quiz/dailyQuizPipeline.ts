@@ -17,8 +17,8 @@ export async function refreshDailyQuiz(): Promise<DailyQuiz> {
   const store = useDailyQuizStore.getState();
   const today = new Date().toISOString().slice(0, 10);
 
-  // Already have today's quiz cached
-  if (store.todayQuiz && store.todayQuiz.date === today) {
+  // Already have today's quiz cached (and it's a real AI quiz, not a fallback)
+  if (store.todayQuiz && store.todayQuiz.date === today && store.todayQuiz.quizId.startsWith('ai-')) {
     return store.todayQuiz;
   }
 

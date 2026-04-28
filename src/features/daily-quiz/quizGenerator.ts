@@ -1,7 +1,7 @@
 import type { DailyQuiz } from './dailyQuizTypes';
 import type { DataPoint } from './newsDataService';
 import { getFallbackQuiz } from './fallbackQuizzes';
-
+import { getApiBase } from '../../db/apiBase';
 interface GeminiQuizResponse {
   userFacingTitle: string;
   citation: string;
@@ -72,7 +72,7 @@ export async function generateDailyQuiz(dataPoint: DataPoint): Promise<DailyQuiz
   }
 
   try {
-    const res = await fetch('/api/ai/quiz', {
+    const res = await fetch(`${getApiBase()}/api/ai/quiz`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ prompt: buildPrompt(dataPoint) }),

@@ -181,6 +181,27 @@ export const CrowdQuestionCard = React.memo(function CrowdQuestionCard({ market 
               {WISDOM_EXPLANATION}
             </Text>
           </Animated.View>
+
+          {question.termExplanation && (
+            <Animated.View
+              entering={FadeInUp.duration(420).delay(showResults ? 360 : 400)}
+              style={styles.explainCard}
+              accessible
+              accessibilityLabel={`${question.termExplanation.title}. ${question.termExplanation.body}`}
+            >
+              <View style={styles.explainHeader}>
+                <Text style={styles.explainEmoji} allowFontScaling={false} accessible={false}>
+                  📘
+                </Text>
+                <Text style={[styles.explainTitle, RTL]} allowFontScaling={false}>
+                  {question.termExplanation.title}
+                </Text>
+              </View>
+              <Text style={[styles.explainBody, RTL]} allowFontScaling={false}>
+                {question.termExplanation.body}
+              </Text>
+            </Animated.View>
+          )}
         </ScrollView>
       </View>
     </View>

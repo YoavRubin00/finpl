@@ -29,9 +29,16 @@ export interface CrowdQuestionTriggers {
   vixGt?: number;
 }
 
+export interface CrowdQuestionTermExplanation {
+  title: string;
+  body: string;
+}
+
 export interface CrowdQuestion {
   id: string;
   text: string;
+  /** Optional jargon/term explanation that slides up below the wisdom-of-crowds card. */
+  termExplanation?: CrowdQuestionTermExplanation;
   options: [CrowdOption, CrowdOption];
   baselinePct: [number, number];
   baselineN: number;

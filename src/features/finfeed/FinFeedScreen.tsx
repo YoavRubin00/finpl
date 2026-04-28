@@ -631,14 +631,20 @@ export function FinFeedScreen() {
   const isQuizUnlocked = currentLayer >= 2 || knowledgeLevel === 'experienced' || knowledgeLevel === 'expert';
   const isAuthedNonGuest = useAuthStore((s) => s.isAuthenticated && !s.isGuest);
 
-  // Ensure daily quiz is always available, set fallback immediately, then try API
+  // Ensure daily quiz is always available, then try API.
+  // Only set fallback if there's no quiz for today yet — otherwise we'd
+  // overwrite a fresh AI-generated quiz from a previous mount with a static
+  // fallback, then refreshDailyQuiz would short-circuit on its cache check.
   useEffect(() => {
     const store = useDailyQuizStore.getState();
     const today = new Date().toISOString().slice(0, 10);
-    const category = getCategoryForDate(today);
-    const fallback = getFallbackQuiz(today, category);
-    store.setTodayQuiz(fallback);
-    // Then try to upgrade to AI-generated quiz in background
+    if (!store.todayQuiz || store.todayQuiz.date !== today) {
+      const category = getCategoryForDate(today);
+      const fallback = getFallbackQuiz(today, category);
+      store.setTodayQuiz(fallback);
+    }
+    // Always try to upgrade to AI-generated quiz in background; the pipeline
+    // bypasses its own cache when it sees a fallback (quizId prefix `fb-`).
     refreshDailyQuiz().catch(() => {});
   }, []);
 

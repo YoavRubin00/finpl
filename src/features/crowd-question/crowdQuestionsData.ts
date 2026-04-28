@@ -33,7 +33,7 @@ export const CROWD_QUESTIONS: readonly CrowdQuestion[] = [
   },
   {
     id: 'cq-spy-month-positive',
-    text: 'ה-SPY יסיים את החודש בירוק?',
+    text: 'ה-SNP 500 יסיים את החודש בירוק?',
     options: [
       { id: 'a', label: 'כן', emoji: '✅', sentiment: 'yes' },
       { id: 'b', label: 'לא', emoji: '❌', sentiment: 'no' },
@@ -47,18 +47,17 @@ export const CROWD_QUESTIONS: readonly CrowdQuestion[] = [
     },
   },
   {
-    id: 'cq-btc-above-130k',
-    text: 'ביטקוין יחזיק מעל $130K בסוף השבוע?',
+    id: 'cq-btc-week-green',
+    text: 'ביטקוין יסגור את השבוע ירוק?',
     options: [
       { id: 'a', label: 'כן', emoji: '✅', sentiment: 'yes' },
       { id: 'b', label: 'לא', emoji: '❌', sentiment: 'no' },
     ],
-    baselinePct: [48, 52],
+    baselinePct: [52, 48],
     baselineN: 2310,
     tags: {
       timing: 'weekly',
       topic: 'btc',
-      triggers: { btcNear: 130000 },
     },
   },
   {
@@ -108,6 +107,10 @@ export const CROWD_QUESTIONS: readonly CrowdQuestion[] = [
   {
     id: 'cq-nfp-beat',
     text: 'דוח התעסוקה ינצח את התחזיות?',
+    termExplanation: {
+      title: 'מה זה דוח התעסוקה?',
+      body: 'דוח התעסוקה האמריקאי (NFP — Non-Farm Payrolls) מתפרסם בכל יום שישי הראשון בחודש ומודד כמה משרות חדשות נוספו במגזר הלא-חקלאי. הוא נחשב לאחד הנתונים החשובים בעולם — מזיז שווקים בשנייה. דוח חזק = כלכלה רותחת, טוב למניות אבל מקטין את הסיכוי להורדת ריבית. דוח חלש = להפך.',
+    },
     options: [
       { id: 'a', label: 'כן', emoji: '✅', sentiment: 'yes' },
       { id: 'b', label: 'לא', emoji: '❌', sentiment: 'no' },
@@ -121,13 +124,13 @@ export const CROWD_QUESTIONS: readonly CrowdQuestion[] = [
     },
   },
   {
-    id: 'cq-usd-ils-3-10',
-    text: 'הדולר יחצה 3.10 שקל בסוף החודש?',
+    id: 'cq-usd-ils-month-direction',
+    text: 'הדולר יתחזק על חשבון השקל החודש?',
     options: [
       { id: 'a', label: 'כן', emoji: '✅', sentiment: 'yes' },
       { id: 'b', label: 'לא', emoji: '❌', sentiment: 'no' },
     ],
-    baselinePct: [31, 69],
+    baselinePct: [46, 54],
     baselineN: 1720,
     tags: {
       timing: 'monthly',
@@ -136,8 +139,8 @@ export const CROWD_QUESTIONS: readonly CrowdQuestion[] = [
     },
   },
   {
-    id: 'cq-brent-above-80',
-    text: 'ברנט יסגור את השבוע מעל $80?',
+    id: 'cq-brent-week-green',
+    text: 'הנפט יסגור את השבוע גבוה מהפתיחה?',
     options: [
       { id: 'a', label: 'כן', emoji: '✅', sentiment: 'yes' },
       { id: 'b', label: 'לא', emoji: '❌', sentiment: 'no' },
@@ -180,18 +183,18 @@ export const CROWD_QUESTIONS: readonly CrowdQuestion[] = [
     },
   },
   {
-    id: 'cq-vix-above-20',
-    text: 'מדד הפחד ייסגר מעל 20 בסוף השבוע?',
+    id: 'cq-vix-week-up',
+    text: 'מדד הפחד יעלה בסוף השבוע?',
     options: [
       { id: 'a', label: 'כן', emoji: '✅', sentiment: 'yes' },
       { id: 'b', label: 'לא', emoji: '❌', sentiment: 'no' },
     ],
-    baselinePct: [33, 67],
+    baselinePct: [38, 62],
     baselineN: 1410,
     tags: {
       timing: 'weekly',
       topic: 'macro',
-      triggers: { dayOfWeek: [4, 5], vixGt: 18 },
+      triggers: { dayOfWeek: [4, 5] },
     },
   },
   {
