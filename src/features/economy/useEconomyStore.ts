@@ -116,7 +116,7 @@ export const useEconomyStore = create<EconomyState>()(
             Notifications.scheduleNotificationAsync({
               content: {
                 title: "📈 מרכז ההשקעות נפתח!",
-                body: "הגעת לשלב 2, בואו נגלה מה מחכה לכם בעולם ההשקעות!",
+                body: "הגעתם לשלב 2, בואו נגלה מה מחכה לכם בעולם ההשקעות!",
                 data: { screen: "/(tabs)/investments" },
               },
               trigger: null, // immediate

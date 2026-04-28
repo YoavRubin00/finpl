@@ -18,58 +18,58 @@ Notifications.setNotificationHandler({
 // ─── Notification content definitions ───────────────────────────────────────
 const CONTENT: Record<NotificationChannelId, Notifications.NotificationContentInput> = {
   streak: {
-    title: "🔥 אל תשבור את הרצף!",
-    body: "לא למדת היום עדיין. שמור על הסטריק שלך!",
+    title: "🔥 אל תשברו את הרצף!",
+    body: "לא למדתם היום עדיין. שמרו על הסטריק שלכם!",
     data: { screen: "/(tabs)/learn" },
   },
   chest: {
-    title: "📦 ארגז מוכן לפתיחה!",
-    body: "הארגז שלך חיכה מספיק, פתח אותו עכשיו ואסוף את הפרס!",
+    title: "📦 ארגז מחכה לפתיחה!",
+    body: "הארגז שלכם חיכה מספיק, פתחו אותו עכשיו ואספו את הפרס!",
     data: { screen: "/(tabs)/learn" },
   },
   challenge: {
-    title: "⚔️ אתגר ממתין לך!",
-    body: "חבר שלח לך אתגר, אל תתן לו לנצח!",
+    title: "⚔️ אתגר ממתין לכם!",
+    body: "חבר שלח לכם אתגר, אל תתנו לו לנצח!",
     data: { screen: "/duels" },
   },
   squadInvite: {
     title: "🤝 הזמנה לסקוואד!",
-    body: "מישהו הזמין אותך להצטרף לסקוואד שלו. בוא נרוויח יחד!",
+    body: "מישהו הזמין אתכם להצטרף לסקוואד שלו. בואו נרוויח יחד!",
     data: { screen: "/squads" },
   },
   squadChest: {
     title: "💎 תיבת הסקוואד נפתחה!",
-    body: "הסקוואד שלך הגיע ליעד! בוא לאסוף את הפרס השלל המשותף.",
+    body: "הסקוואד שלכם הגיע ליעד! בואו לאסוף את הפרס השלל המשותף.",
     data: { screen: "/squads" },
   },
   morning: {
     title: "בוקר טוב מקפטן שארק!",
-    body: "טיפ פיננסי ליום חדש, בוא לגלות!",
+    body: "טיפ פיננסי ליום חדש, בואו לגלות!",
     data: { screen: "/(tabs)/learn" },
   },
   inactivity: {
     title: "קפטן שארק מתגעגע!",
-    body: "כבר לא ראינו אותך... בוא נלמד משהו חדש!",
+    body: "כבר לא ראינו אתכם... בואו נלמד משהו חדש!",
     data: { screen: "/(tabs)/learn" },
   },
   dailyChallenge: {
-    title: "🎯 האתגר היומי מחכה לך!",
-    body: "דילמה פיננסית חדשה, בוא לפתור ולצבור XP!",
+    title: "🎯 האתגר היומי מחכה לכם!",
+    body: "דילמה פיננסית חדשה, בואו לפתור ולצבור XP!",
     data: { screen: "/(tabs)/learn", feedScrollIndex: 0 },
   },
   marketHook: {
     title: "📊 השוקים זזים!",
-    body: "בוא לראות מה קורה בעולם הפיננסי",
+    body: "בואו לראות מה קורה בעולם הפיננסי",
     data: { screen: "/(tabs)/investments" },
   },
   aiInsight: {
     title: "💡 תובנה חדשה מקפטן שארק",
-    body: "יש לך תובנה פיננסית מותאמת אישית, בוא לראות!",
+    body: "יש לכם תובנה פיננסית מותאמת אישית, בואו לראות!",
     data: { screen: "/(tabs)/" },
   },
   upgradeNudge: {
-    title: "🦈 קפטן שארק שם לב אליך",
-    body: "ניסית להשתמש בפיצ'רים PRO. בוא נסגור את זה?",
+    title: "🦈 קפטן שארק שם לב אליכם",
+    body: "ניסיתם להשתמש בפיצ'רים PRO. בואו נסגור את זה?",
     data: { screen: "/pricing" },
   },
 };
@@ -82,7 +82,7 @@ async function ensureAndroidChannels() {
     vibrationPattern: [0, 250, 250, 250],
   });
   await Notifications.setNotificationChannelAsync("chest", {
-    name: "ארגז מוכן",
+    name: "ארגזים מוכנים",
     importance: Notifications.AndroidImportance.DEFAULT,
   });
   await Notifications.setNotificationChannelAsync("challenge", {

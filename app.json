@@ -87,6 +87,14 @@
       },
       "blockedPermissions": [
         "android.permission.ACTIVITY_RECOGNITION"
+      ],
+      "intentFilters": [
+        {
+          "action": "VIEW",
+          "category": ["DEFAULT", "BROWSABLE"],
+          "data": [{ "scheme": "com.finplay.app", "path": "/oauthredirect" }],
+          "autoVerify": false
+        }
       ]
     },
     "ios": {
