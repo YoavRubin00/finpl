@@ -30,7 +30,7 @@ import { useSoundEffect } from "../../hooks/useSoundEffect";
 import { tapHaptic } from "../../utils/haptics";
 import { useEconomyStore } from "../economy/useEconomyStore";
 import { useAuthStore } from "../auth/useAuthStore";
-import { useGoogleAuth } from "../auth/useGoogleAuth";
+import { useGoogleAuthStore } from "../auth/useGoogleAuthStore";
 import { useAppleAuth } from "../auth/useAppleAuth";
 import { consumeTermsAcceptedFlag } from "../auth/termsAcceptedFlag";
 import { ONBOARDING_XP } from "../../constants/economy";
@@ -1625,7 +1625,8 @@ interface IntroStepProps {
 function IntroStep({ onRegister, onGuest, onLoginSuccess }: IntroStepProps) {
   const [subStep, setSubStep] = useState<"welcome" | "choice" | "login">("welcome");
   const signIn = useAuthStore((s) => s.signIn);
-  const { promptGoogleSignIn, isReady: googleReady } = useGoogleAuth();
+  const promptGoogleSignIn = useGoogleAuthStore((s) => s.promptGoogleSignIn);
+  const googleReady = useGoogleAuthStore((s) => s.isReady);
   const { promptAppleSignIn, isAvailable: appleAvailable } = useAppleAuth();
   const [termsAccepted, setTermsAccepted] = useState(false);
   const introRouter = useRouter();

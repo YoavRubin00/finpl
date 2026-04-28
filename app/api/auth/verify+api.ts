@@ -42,21 +42,37 @@ export async function POST(request: Request): Promise<Response> {
       if (!token) {
         return Response.json({ error: 'Missing Google token' }, { status: 400 });
       }
-      // Diagnostic log to determine token format (access_token vs id_token)
       const dotCount = (token.match(/\./g) ?? []).length;
-      const tokenKind = dotCount === 2 ? 'JWT (likely id_token)' : 'opaque (likely access_token)';
-      console.info(`[auth/verify] google token: kind=${tokenKind} dots=${dotCount} length=${token.length} prefix=${token.slice(0, 12)}...`);
-      const googleRes = await fetch('https://www.googleapis.com/userinfo/v2/me', {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      if (!googleRes.ok) {
-        const errBody = await googleRes.text().catch(() => '<unreadable>');
-        console.warn(`[auth/verify] google userinfo rejected: status=${googleRes.status} body=${errBody.slice(0, 200)}`);
-        return Response.json({ error: 'Invalid Google token' }, { status: 401 });
+      const isJwt = dotCount === 2;
+      console.info(`[auth/verify] google token: kind=${isJwt ? 'JWT/id_token' : 'opaque/access_token'} dots=${dotCount} length=${token.length} prefix=${token.slice(0, 12)}...`);
+
+      if (isJwt) {
+        // id_token — validate via tokeninfo endpoint
+        const tokenInfoRes = await fetch(`https://oauth2.googleapis.com/tokeninfo?id_token=${encodeURIComponent(token)}`);
+        if (!tokenInfoRes.ok) {
+          const errBody = await tokenInfoRes.text().catch(() => '<unreadable>');
+          console.warn(`[auth/verify] google tokeninfo rejected: status=${tokenInfoRes.status} body=${errBody.slice(0, 200)}`);
+          return Response.json({ error: 'Invalid Google token' }, { status: 401 });
+        }
+        const tokenInfo = (await tokenInfoRes.json()) as { email?: string; name?: string; given_name?: string; family_name?: string };
+        verifiedEmail = tokenInfo.email ?? null;
+        verifiedName = tokenInfo.name ?? (tokenInfo.given_name ? `${tokenInfo.given_name} ${tokenInfo.family_name ?? ''}`.trim() : null);
+        console.info(`[auth/verify] google tokeninfo ok: email=${verifiedEmail}`);
+      } else {
+        // access_token — validate via userinfo endpoint
+        const googleRes = await fetch('https://www.googleapis.com/userinfo/v2/me', {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (!googleRes.ok) {
+          const errBody = await googleRes.text().catch(() => '<unreadable>');
+          console.warn(`[auth/verify] google userinfo rejected: status=${googleRes.status} body=${errBody.slice(0, 200)}`);
+          return Response.json({ error: 'Invalid Google token' }, { status: 401 });
+        }
+        const googleUser = (await googleRes.json()) as GoogleUserInfo;
+        verifiedEmail = googleUser.email ?? null;
+        verifiedName = googleUser.name ?? null;
+        console.info(`[auth/verify] google userinfo ok: email=${verifiedEmail}`);
       }
-      const googleUser = (await googleRes.json()) as GoogleUserInfo;
-      verifiedEmail = googleUser.email ?? null;
-      verifiedName = googleUser.name ?? null;
     } else if (provider === 'email') {
       const email = sanitizeString(body.email, 254);
       if (!email || !isValidEmail(email)) {

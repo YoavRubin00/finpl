@@ -14,7 +14,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import { FINN_HELLO } from "../retention-loops/finnMascotConfig";
 import { useAuthStore } from "./useAuthStore";
-import { useGoogleAuth } from "./useGoogleAuth";
+import { useGoogleAuthStore } from "./useGoogleAuthStore";
 import { useAppleAuth } from "./useAppleAuth";
 import { fetchUserProfile } from "../../db/sync/syncUserProfile";
 
@@ -43,7 +43,8 @@ const inputStyle = {
 export function LoginScreen() {
   const router = useRouter();
   const signIn = useAuthStore((s) => s.signIn);
-  const { promptGoogleSignIn, isReady: googleReady } = useGoogleAuth();
+  const promptGoogleSignIn = useGoogleAuthStore((s) => s.promptGoogleSignIn);
+  const googleReady = useGoogleAuthStore((s) => s.isReady);
   const { promptAppleSignIn, isAvailable: appleAvailable } = useAppleAuth();
 
   const [email, setEmail] = useState("");

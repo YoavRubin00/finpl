@@ -56,6 +56,7 @@ import { AppWalkthroughOverlay } from "../src/features/onboarding/AppWalkthrough
 import { StreakFreezeSaveModal } from "../src/features/streak/StreakFreezeSaveModal";
 import { StreakRepairModal } from "../src/features/streak/StreakRepairModal";
 import { useTutorialStore } from "../src/stores/useTutorialStore";
+import { useGoogleAuth } from "../src/features/auth/useGoogleAuth";
 
 // ── Global font override: all <Text> and <TextInput> use Heebo ──
 const FONT_FAMILY = "Heebo_400Regular";
@@ -110,6 +111,8 @@ function StreakRepairModalGate() {
 }
 
 export default function RootLayout() {
+  useGoogleAuth();
+  
   const [fontsLoaded] = useFonts({
     Heebo_400Regular,
     Heebo_500Medium,
@@ -246,7 +249,7 @@ export default function RootLayout() {
     if (!isAuthenticated) {
       // Go to onboarding intro (welcome screen with register/guest options)
       const currentPath = segments.join("/");
-      if (currentPath !== "(auth)/onboarding" && currentPath !== "register" && currentPath !== "(auth)/register" && currentPath !== "(auth)/terms" && currentPath !== "(auth)/sign-in") {
+      if (currentPath !== "(auth)/onboarding" && currentPath !== "register" && currentPath !== "(auth)/register" && currentPath !== "(auth)/terms" && currentPath !== "(auth)/sign-in" && currentPath !== "oauthredirect") {
         router.replace("/(auth)/onboarding");
       }
     } else if (!hasCompletedOnboarding) {

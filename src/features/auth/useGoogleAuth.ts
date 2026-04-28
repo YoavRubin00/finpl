@@ -5,6 +5,7 @@ import { router } from "expo-router";
 import { useEffect } from "react";
 import { Alert, Platform } from "react-native";
 import { useAuthStore } from "./useAuthStore";
+import { useGoogleAuthStore } from "./useGoogleAuthStore";
 import { getApiBase } from "../../db/apiBase";
 
 WebBrowser.maybeCompleteAuthSession();
@@ -34,22 +35,19 @@ export function useGoogleAuth() {
     }
   }
 
-  // iOS uses the reversed-client-id scheme (registered in app.json
-  // ios.infoPlist.CFBundleURLTypes). Android OAuth clients are bound to
-  // package + SHA-1; the redirect must be `com.finplay.app:/oauthredirect`,
-  // which expo-auth-session derives automatically when redirectUri is
-  // omitted. Passing `finpl://` produced Google `400 invalid_request`.
-  const redirectUri =
-    Platform.OS === "ios"
-      ? makeRedirectUri({ native: `${IOS_REVERSED_CLIENT_ID}:/`, scheme: "finpl" })
-      : undefined;
+  // iOS uses the reversed-client-id scheme.
+  // Android OAuth clients require the strict package:/oauthredirect format.
+  const redirectUri = makeRedirectUri({
+    native: Platform.OS === "ios" ? `${IOS_REVERSED_CLIENT_ID}:/` : "com.finplay.app:/oauthredirect",
+    scheme: "finpl"
+  });
 
   const [request, response, promptAsync] = Google.useAuthRequest({
     webClientId: GOOGLE_WEB_CLIENT_ID,
     iosClientId: GOOGLE_IOS_CLIENT_ID || undefined,
     androidClientId: GOOGLE_ANDROID_CLIENT_ID || undefined,
     scopes: ["profile", "email"],
-    ...(redirectUri ? { redirectUri } : {}),
+    redirectUri,
   });
 
   useEffect(() => {
@@ -109,8 +107,6 @@ export function useGoogleAuth() {
       signIn(name, email, verified.hasProfile, verified.syncToken);
 
       // Explicit routing — iOS-safe pattern matching the email flow.
-      // Auto-routing via _layout effect fails on iOS because promptAsync()
-      // timing loses the state-change window.
       if (verified.hasProfile) {
         router.replace("/(tabs)/" as never);
       } else {
@@ -121,26 +117,29 @@ export function useGoogleAuth() {
     }
   };
 
-  return {
-    promptGoogleSignIn: async () => {
-      if (!request) {
-        Alert.alert(
-          "OAuth Debug — request not ready",
-          JSON.stringify({
-            androidClientIdLen: GOOGLE_ANDROID_CLIENT_ID.length,
-            iosClientIdLen: GOOGLE_IOS_CLIENT_ID.length,
-            webClientIdLen: GOOGLE_WEB_CLIENT_ID.length,
-            platform: Platform.OS,
-          }, null, 2),
-        );
-        return;
+  // Sync to store instead of returning
+  useEffect(() => {
+    useGoogleAuthStore.setState({
+      isReady: !!request,
+      promptGoogleSignIn: async () => {
+        if (!request) {
+          Alert.alert(
+            "OAuth Debug — request not ready",
+            JSON.stringify({
+              androidClientIdLen: GOOGLE_ANDROID_CLIENT_ID.length,
+              iosClientIdLen: GOOGLE_IOS_CLIENT_ID.length,
+              webClientIdLen: GOOGLE_WEB_CLIENT_ID.length,
+              platform: Platform.OS,
+            }, null, 2),
+          );
+          return;
+        }
+        try {
+          await promptAsync();
+        } catch (error) {
+          Alert.alert("OAuth Debug — promptAsync threw", String(error));
+        }
       }
-      try {
-        await promptAsync();
-      } catch (error) {
-        Alert.alert("OAuth Debug — promptAsync threw", String(error));
-      }
-    },
-    isReady: !!request,
-  };
+    });
+  }, [request, promptAsync]);
 }

@@ -16,7 +16,7 @@ import { FINN_HELLO, FINN_DANCING } from "../retention-loops/finnMascotConfig";
 import { getPasswordStrength } from "./password-utils";
 import type { PasswordStrength } from "./types";
 import { useAuthStore } from "./useAuthStore";
-import { useGoogleAuth } from "./useGoogleAuth";
+import { useGoogleAuthStore } from "./useGoogleAuthStore";
 import { useAppleAuth } from "./useAppleAuth";
 import { getAvatarById, DEFAULT_AVATAR_EMOJI } from "../avatars/avatarData";
 import { ConfettiExplosion } from "../../components/ui/ConfettiExplosion";
@@ -76,7 +76,8 @@ export function RegisterScreen() {
   const isGuest = useAuthStore((s) => s.isGuest);
   const enterGuestMode = useAuthStore((s) => s.enterGuestMode);
   const avatarId = useAuthStore((s) => s.profile?.avatarId ?? null);
-  const { promptGoogleSignIn, isReady: googleReady } = useGoogleAuth();
+  const promptGoogleSignIn = useGoogleAuthStore((s) => s.promptGoogleSignIn);
+  const googleReady = useGoogleAuthStore((s) => s.isReady);
   const { promptAppleSignIn, isAvailable: appleAvailable } = useAppleAuth();
 
   const [name, setName] = useState("");
