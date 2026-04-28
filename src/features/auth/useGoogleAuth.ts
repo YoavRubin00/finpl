@@ -3,7 +3,7 @@ import * as WebBrowser from "expo-web-browser";
 import { makeRedirectUri } from "expo-auth-session";
 import { router } from "expo-router";
 import { useEffect } from "react";
-import { Platform } from "react-native";
+import { Alert, Platform } from "react-native";
 import { useAuthStore } from "./useAuthStore";
 import { getApiBase } from "../../db/apiBase";
 
