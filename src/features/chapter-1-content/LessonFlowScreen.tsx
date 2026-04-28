@@ -2523,8 +2523,10 @@ export function LessonFlowScreen() {
         setShowWisdom(true);
       }, 1400);
     }
-    // Offer ad bonus to non-PRO users after DoN resolves
-    if (!isPro) {
+    // Offer ad bonus to non-PRO users after DoN resolves.
+    // Skip for the very first module (mod-0-1) so the first-time experience
+    // stays clean — no ads on the user's introduction to the app.
+    if (!isPro && id !== "mod-0-1") {
       safeTimeout(() => setShowAdBonus(true), 1800);
     }
   }, [pendingMultiplierRewards, chapterId, id, isPro, safeTimeout]);
@@ -2551,7 +2553,7 @@ export function LessonFlowScreen() {
           setShowWisdom(true);
         }, 800);
       }
-      if (!isPro) {
+      if (!isPro && id !== "mod-0-1") {
         safeTimeout(() => setShowAdBonus(true), 1800);
       }
     }
@@ -2605,11 +2607,13 @@ export function LessonFlowScreen() {
   // immediately before the game, not during the mod-0-3 summary phase
   // where the chest + celebration sat in between.)
 
-  // mod-0-1 barter notif, dancing shark joke after completing "מה זה בכלל כסף"
+  // mod-0-1 barter notif, dancing shark joke right after the post-infographic video.
+  // Fires when entering shark-dilemma phase (which immediately follows the video),
+  // so the joke lands while the barter context is fresh.
   useEffect(() => {
     if (!mod) return;
-    if (phase === "summary" && mod.id === "mod-0-1" && !hasSeenMod01BarterNotif) {
-      safeTimeout(() => setShowMod01BarterNotif(true), 600);
+    if (phase === "shark-dilemma" && mod.id === "mod-0-1" && !hasSeenMod01BarterNotif) {
+      safeTimeout(() => setShowMod01BarterNotif(true), 200);
     }
   }, [phase, mod, hasSeenMod01BarterNotif, safeTimeout]);
 
@@ -3541,7 +3545,7 @@ export function LessonFlowScreen() {
                                 setShowDoubleOrNothing(true);
                                 playSound('modal_open_4');
                               }, 500);
-                            } else if (!isPro) {
+                            } else if (!isPro && id !== "mod-0-1") {
                               safeTimeout(() => setShowAdBonus(true), 1800);
                             }
                             // Duolingo A/B: ride the chest-dopamine peak (1.5-2s), not after it fades

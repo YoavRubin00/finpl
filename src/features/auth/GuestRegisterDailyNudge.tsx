@@ -3,7 +3,7 @@ import { Modal, View, Text, Pressable, StyleSheet } from "react-native";
 import { Image as ExpoImage } from "expo-image";
 import Animated, { FadeIn, FadeInUp } from "react-native-reanimated";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { useRouter } from "expo-router";
+import { useRouter, useSegments } from "expo-router";
 import { useAuthStore } from "./useAuthStore";
 import { FINN_HAPPY } from "../retention-loops/finnMascotConfig";
 import { tapHaptic } from "../../utils/haptics";
@@ -19,14 +19,22 @@ function todayISO(): string {
  * Shown once per day to guest users, prompting registration so their progress
  * is saved across devices. Mirrors the DailyBridgeNudgeModal pattern.
  */
+// Routes where the nudge must NOT appear — active learning surfaces and the
+// content feed should never be interrupted by a registration prompt.
+const SUPPRESS_ROUTES = new Set<string>(["lesson", "finfeed", "simulator", "interstitial"]);
+
 export function GuestRegisterDailyNudge() {
   const router = useRouter();
+  const segments = useSegments();
   const isGuest = useAuthStore((s) => s.isGuest);
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
   const [visible, setVisible] = useState(false);
 
+  const inSuppressedRoute = segments.some((seg) => SUPPRESS_ROUTES.has(seg));
+
   useEffect(() => {
     if (!isAuthenticated || !isGuest) return;
+    if (inSuppressedRoute) return;
     let cancelled = false;
     AsyncStorage.getItem(NUDGE_DATE_KEY).then((val) => {
       if (cancelled) return;
@@ -40,7 +48,7 @@ export function GuestRegisterDailyNudge() {
     return () => {
       cancelled = true;
     };
-  }, [isAuthenticated, isGuest]);
+  }, [isAuthenticated, isGuest, inSuppressedRoute]);
 
   const markSeen = () => {
     AsyncStorage.setItem(NUDGE_DATE_KEY, todayISO()).catch(() => { /* fire-and-forget */ });
