@@ -56,9 +56,15 @@ export function useGoogleAuth() {
     if (!response) return;
     if (response.type === "success" && response.authentication?.accessToken) {
       fetchUserInfo(response.authentication.accessToken);
-    } else if (response.type === "error") {
-      console.warn("[GoogleAuth] auth error:", response.error);
+      return;
     }
+    const details: Record<string, unknown> = { type: response.type };
+    if ("error" in response && response.error) details.error = String(response.error);
+    if ("errorCode" in response && response.errorCode) details.errorCode = response.errorCode;
+    if ("params" in response && response.params) details.params = response.params;
+    if ("url" in response && response.url) details.url = response.url;
+    if (response.type === "success") details.hasAccessToken = !!response.authentication?.accessToken;
+    Alert.alert("OAuth Debug — response", JSON.stringify(details, null, 2));
   }, [response]);
 
   const verifyWithServer = async (accessToken: string): Promise<{ email: string; name: string; syncToken: string | null; hasProfile: boolean } | null> => {
@@ -95,7 +101,7 @@ export function useGoogleAuth() {
       // Verify server-side to get syncToken
       const verified = await verifyWithServer(accessToken);
       if (!verified) {
-        console.warn("[GoogleAuth] Server verification failed");
+        Alert.alert("OAuth Debug — verify failed", "verifyWithServer returned null. Check API /api/auth/verify status & response.");
         return;
       }
       const email = verified.email || googleUser.email || '';
@@ -111,12 +117,30 @@ export function useGoogleAuth() {
         router.replace("/(auth)/onboarding" as never);
       }
     } catch (error) {
-      console.warn("[GoogleAuth] fetchUserInfo failed:", error);
+      Alert.alert("OAuth Debug — fetchUserInfo threw", String(error));
     }
   };
 
   return {
-    promptGoogleSignIn: () => promptAsync(),
+    promptGoogleSignIn: async () => {
+      if (!request) {
+        Alert.alert(
+          "OAuth Debug — request not ready",
+          JSON.stringify({
+            androidClientIdLen: GOOGLE_ANDROID_CLIENT_ID.length,
+            iosClientIdLen: GOOGLE_IOS_CLIENT_ID.length,
+            webClientIdLen: GOOGLE_WEB_CLIENT_ID.length,
+            platform: Platform.OS,
+          }, null, 2),
+        );
+        return;
+      }
+      try {
+        await promptAsync();
+      } catch (error) {
+        Alert.alert("OAuth Debug — promptAsync threw", String(error));
+      }
+    },
     isReady: !!request,
   };
 }
