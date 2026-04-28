@@ -52,31 +52,45 @@ export function useGoogleAuth() {
 
   useEffect(() => {
     if (!response) return;
-    if (response.type === "success" && response.authentication?.accessToken) {
-      fetchUserInfo(response.authentication.accessToken);
-      return;
+    if (response.type === "success") {
+      // Prefer accessToken; fall back to idToken if Google only returned a JWT.
+      // The server (/api/auth/verify) handles both via tokeninfo/userinfo.
+      const token = response.authentication?.accessToken ?? response.authentication?.idToken;
+      if (token) {
+        const isJwt = (token.match(/\./g) ?? []).length === 2;
+        fetchUserInfo(token, isJwt);
+        return;
+      }
     }
     const details: Record<string, unknown> = { type: response.type };
     if ("error" in response && response.error) details.error = String(response.error);
     if ("errorCode" in response && response.errorCode) details.errorCode = response.errorCode;
     if ("params" in response && response.params) details.params = response.params;
     if ("url" in response && response.url) details.url = response.url;
-    if (response.type === "success") details.hasAccessToken = !!response.authentication?.accessToken;
+    if (response.type === "success") {
+      details.hasAccessToken = !!response.authentication?.accessToken;
+      details.hasIdToken = !!response.authentication?.idToken;
+    }
+    console.error("[GoogleAuth] OAuth response failed", details);
     Alert.alert("OAuth Debug — response", JSON.stringify(details, null, 2));
   }, [response]);
 
-  const verifyWithServer = async (accessToken: string): Promise<{ email: string; name: string; syncToken: string | null; hasProfile: boolean } | null> => {
+  const verifyWithServer = async (token: string): Promise<{ email: string; name: string; syncToken: string | null; hasProfile: boolean } | null> => {
     try {
       const controller = new AbortController();
       const timeout = setTimeout(() => controller.abort(), 5000);
       const res = await fetch(`${getApiBase()}/api/auth/verify`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ provider: 'google', token: accessToken }),
+        body: JSON.stringify({ provider: 'google', token }),
         signal: controller.signal,
       });
       clearTimeout(timeout);
-      if (!res.ok) return null;
+      if (!res.ok) {
+        const body = await res.text().catch(() => '<unreadable>');
+        console.error("[GoogleAuth] /api/auth/verify failed", { status: res.status, body: body.slice(0, 300) });
+        return null;
+      }
       const data = await res.json() as { profile: { email?: string; displayName?: string; hasCompletedOnboarding?: boolean } | null; syncToken: string | null };
       return {
         email: data.profile?.email ?? '',
@@ -84,26 +98,36 @@ export function useGoogleAuth() {
         syncToken: data.syncToken,
         hasProfile: !!data.profile,
       };
-    } catch {
+    } catch (err) {
+      console.error("[GoogleAuth] /api/auth/verify threw", err);
       return null;
     }
   };
 
-  const fetchUserInfo = async (accessToken: string) => {
+  const fetchUserInfo = async (token: string, isJwt: boolean) => {
     try {
-      // Still fetch basic info from Google for fallback display name
-      const res = await fetch("https://www.googleapis.com/userinfo/v2/me", {
-        headers: { Authorization: `Bearer ${accessToken}` },
-      });
-      const googleUser: GoogleUserInfo = await res.json();
-      // Verify server-side to get syncToken
-      const verified = await verifyWithServer(accessToken);
+      // Optional fallback: only access_tokens can call userinfo.
+      // For id_tokens (JWT), skip — server resolves identity via tokeninfo.
+      let googleUser: GoogleUserInfo | null = null;
+      if (!isJwt) {
+        try {
+          const res = await fetch("https://www.googleapis.com/userinfo/v2/me", {
+            headers: { Authorization: `Bearer ${token}` },
+          });
+          if (res.ok) googleUser = await res.json();
+        } catch {
+          // Non-fatal — server-side verification is the source of truth.
+        }
+      }
+      // Verify server-side to get syncToken (server handles both token kinds)
+      const verified = await verifyWithServer(token);
       if (!verified) {
+        console.error("[GoogleAuth] verifyWithServer returned null", { isJwt, tokenLength: token.length });
         Alert.alert("OAuth Debug — verify failed", "verifyWithServer returned null. Check API /api/auth/verify status & response.");
         return;
       }
-      const email = verified.email || googleUser.email || '';
-      const name = verified.name || googleUser.name || '';
+      const email = verified.email || googleUser?.email || '';
+      const name = verified.name || googleUser?.name || '';
       signIn(name, email, verified.hasProfile, verified.syncToken);
 
       // Explicit routing — iOS-safe pattern matching the email flow.
@@ -113,6 +137,7 @@ export function useGoogleAuth() {
         router.replace("/(auth)/onboarding" as never);
       }
     } catch (error) {
+      console.error("[GoogleAuth] fetchUserInfo threw", error);
       Alert.alert("OAuth Debug — fetchUserInfo threw", String(error));
     }
   };

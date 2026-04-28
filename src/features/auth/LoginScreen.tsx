@@ -165,7 +165,7 @@ export function LoginScreen() {
             {/* Google */}
             <Pressable
               disabled={!googleReady}
-              onPress={() => promptGoogleSignIn()}
+              onPress={() => promptGoogleSignIn?.()}
               accessibilityRole="button"
               accessibilityLabel="כניסה עם Google"
               style={{ width: "100%", flexDirection: "row", alignItems: "center", justifyContent: "center", borderRadius: 14, borderWidth: 1.5, borderColor: "#e2e8f0", backgroundColor: "#ffffff", paddingVertical: 14, borderBottomWidth: 3, borderBottomColor: "#e2e8f0" }}

@@ -410,7 +410,7 @@ export function RegisterScreen() {
             {/* Google Sign-In */}
             <Pressable
               disabled={!googleReady}
-              onPress={() => promptGoogleSignIn()}
+              onPress={() => promptGoogleSignIn?.()}
               accessibilityRole="button"
               accessibilityLabel="הירשם עם Google"
               style={{

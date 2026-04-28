@@ -13,7 +13,7 @@ interface QuizRequestBody {
 }
 
 const GEMINI_API_KEY = process.env.GOOGLE_AI_API_KEY ?? '';
-const GEMINI_MODEL = 'gemini-2.0-flash';
+const GEMINI_MODEL = 'gemini-2.5-flash';
 
 export async function POST(request: Request): Promise<Response> {
   // Rate limit: 5 quiz generations per minute per client

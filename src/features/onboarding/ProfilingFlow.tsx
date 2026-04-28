@@ -1855,7 +1855,7 @@ function IntroStep({ onRegister, onGuest, onLoginSuccess }: IntroStepProps) {
           {/* Google Sign-In */}
           <Pressable
             disabled={!googleReady}
-            onPress={() => promptGoogleSignIn()}
+            onPress={() => promptGoogleSignIn?.()}
             accessibilityRole="button"
             accessibilityLabel="התחבר עם Google"
             style={introStyles.googleBtn}

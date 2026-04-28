@@ -125,9 +125,18 @@ export async function purchaseGemBundle(
     throw new Error(`Unknown gem bundle: ${bundleId}`);
   }
 
-  const products = await Purchases.getProducts([productId]);
+  // Wrap getProducts with a 10s timeout — on Android, when products aren't
+  // configured in Play Console, getProducts can hang indefinitely instead of
+  // returning an empty array. Without the timeout, the buy button silently
+  // does nothing.
+  const products = await Promise.race([
+    Purchases.getProducts([productId]),
+    new Promise<never>((_, reject) =>
+      setTimeout(() => reject(new Error(`Store timeout (10s) — product "${productId}" not configured in Play Console / App Store Connect, or store unreachable`)), 10000)
+    ),
+  ]);
   if (products.length === 0) {
-    throw new Error(`Product not found in store: ${productId}`);
+    throw new Error(`Product not found in store: ${productId}. Configure it in Play Console / App Store Connect with this exact ID.`);
   }
 
   const { customerInfo } = await Purchases.purchaseStoreProduct(products[0]);
