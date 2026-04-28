@@ -1,6 +1,6 @@
 import React, { useCallback, useMemo, useRef, useState, useEffect } from "react";
 import { Image as ExpoImage } from "expo-image";
-import { View, Text, Dimensions, StyleSheet, ViewToken, Pressable } from "react-native";
+import { View, Text, Dimensions, StyleSheet, ViewToken, Pressable, InteractionManager } from "react-native";
 import { FlashList, type FlashListRef } from "@shopify/flash-list";
 import { useFocusEffect, useScrollToTop } from "@react-navigation/native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
@@ -662,6 +662,46 @@ export function FinFeedScreen() {
       }
     });
   }, [feedSeed]);
+
+  // Prefetch premium-learning infographic covers + full sets so cards render
+  // instantly when user taps in. Covers go first (visible thumbnails), full
+  // sets follow after first interactions settle. Chunked to 6-at-a-time to
+  // avoid memory/network bursts on low-end Android.
+  useEffect(() => {
+    const seen = new Set<string>();
+    const covers: string[] = [];
+    const rest: string[] = [];
+    for (const item of PREMIUM_LEARNING_ITEMS) {
+      const cards = item.infographics;
+      if (!Array.isArray(cards)) continue;
+      cards.forEach((card, idx) => {
+        const u = typeof card === "object" && card && "uri" in card
+          ? (card as { uri?: string }).uri
+          : null;
+        if (typeof u !== "string" || seen.has(u)) return;
+        seen.add(u);
+        if (idx === 0) covers.push(u);
+        else rest.push(u);
+      });
+    }
+
+    let cancelled = false;
+    async function chunked(uris: string[], size: number): Promise<void> {
+      for (let i = 0; i < uris.length; i += size) {
+        if (cancelled) return;
+        await Promise.allSettled(uris.slice(i, i + size).map((u) => ExpoImage.prefetch(u)));
+      }
+    }
+
+    chunked(covers, 6).catch(() => {});
+    const handle = InteractionManager.runAfterInteractions(() => {
+      if (!cancelled) chunked(rest, 6).catch(() => {});
+    });
+    return () => {
+      cancelled = true;
+      handle.cancel();
+    };
+  }, []);
 
   // Show streak popup on focus, but DON'T reshuffle feed (preserves scroll position)
   useFocusEffect(

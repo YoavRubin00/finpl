@@ -15,8 +15,7 @@ const IMG_GOLD = require('../../../../assets/IMAGES/GOLD.jpg');
 const IMG_GEMS = require('../../../../assets/IMAGES/GEMS.jpg');
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const IMG_INVESTMENT = require('../../../../assets/IMAGES/INVESTMENT.jpg');
-// eslint-disable-next-line @typescript-eslint/no-var-requires
-const IMG_FINSTARS = require('../../../../assets/IMAGES/FINSTARS.png');
+const IMG_FINSTARS = { uri: 'https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/images/FINSTARS.png' };
 
 /**
  * Curated "Did You Know?" facts presented by Finn in the feed.

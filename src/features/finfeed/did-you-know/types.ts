@@ -8,7 +8,7 @@ export interface DidYouKnowItem {
   highlight: string;   // the hero number / phrase to counter-animate
   source: string;      // verifiable source attribution
   emoji: string;       // single-char hero emoji, always present
-  image?: number;      // optional: require()'d image from IMAGES/; overrides emoji on reveal
+  image?: number | { uri: string };  // optional: local require() or remote URI; overrides emoji on reveal
 }
 
 export interface CategoryTheme {
