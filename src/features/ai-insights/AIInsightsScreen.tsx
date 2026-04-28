@@ -95,8 +95,17 @@ async function fetchFromAPI(ctx: ReturnType<typeof useInsightContext>): Promise<
       weakConcepts,
     }),
   });
-  const data = (await res.json()) as { ok: boolean; insights: Insight[]; error?: string };
-  if (!res.ok || !data.ok) throw new Error(data.error ?? 'שגיאה');
+  // Defensive parsing: a non-2xx response on Vercel can be a plaintext 404
+  // page ("The page could not be found"), and `res.json()` throws
+  // "Unexpected character: T" — that exception used to leak to the UI.
+  if (!res.ok) throw new Error(`http_${res.status}`);
+  let data: { ok: boolean; insights: Insight[]; error?: string };
+  try {
+    data = (await res.json()) as { ok: boolean; insights: Insight[]; error?: string };
+  } catch {
+    throw new Error('parse_failed');
+  }
+  if (!data.ok || !Array.isArray(data.insights)) throw new Error('unexpected_shape');
   return data.insights;
 }
 
@@ -231,8 +240,11 @@ export function AIInsightsScreen() {
     try {
       const insights = await fetchFromAPI(ctx);
       setProInsights(insights);
-    } catch (e: unknown) {
-      setProError(e instanceof Error ? e.message : 'שגיאה בטעינת התובנות. נסו שוב.');
+    } catch {
+      // Always show a friendly Hebrew message — never leak raw exception text
+      // (e.g. "JSON Parse error: Unexpected character: T") which Apple
+      // flagged under guideline 2.1(a).
+      setProError('לא הצלחנו ליצור תובנות עכשיו. נסו שוב בעוד רגע.');
     } finally {
       setProLoading(false);
     }

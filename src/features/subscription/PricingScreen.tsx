@@ -9,6 +9,7 @@ import {
   Dimensions,
   ActivityIndicator,
   Platform,
+  Linking,
 } from "react-native";
 import LottieView from "lottie-react-native";
 import { FINN_DANCING } from "../retention-loops/finnMascotConfig";
@@ -37,6 +38,10 @@ import { useTheme } from "../../hooks/useTheme";
 import { useMonetizationIntentStore } from "../monetization/useMonetizationIntentStore";
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
+
+// Apple's standard EULA URL — required for App Store auto-renewable subscriptions
+// (guideline 3.1.2(c)). Must also be set in App Store Connect → App Description.
+const APPLE_STD_EULA = "https://www.apple.com/legal/internet-services/itunes/dev/stdeula/";
 
 // ── Duolingo-inspired palette ────────────────────────────────────────────
 const DUO = {
@@ -426,6 +431,15 @@ export function PricingScreen() {
                     hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
                   >
                     <Text style={[styles.legalLink, { color: theme.textMuted }]}>מדיניות פרטיות</Text>
+                  </Pressable>
+                  <Text style={[styles.legalSeparator, { color: theme.textMuted }]}> · </Text>
+                  <Pressable
+                    onPress={() => Linking.openURL(APPLE_STD_EULA)}
+                    accessibilityRole="link"
+                    accessibilityLabel="EULA, תנאי שימוש סטנדרטיים של Apple, נפתח בדפדפן"
+                    hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                  >
+                    <Text style={[styles.legalLink, { color: theme.textMuted }]}>EULA</Text>
                   </Pressable>
                 </View>
 
