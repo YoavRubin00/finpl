@@ -1,7 +1,7 @@
 import { useState, useMemo, useCallback, useEffect, useRef } from "react";
 import { useShallow } from "zustand/react/shallow";
 import { Image as ExpoImage } from "expo-image";
-import { View, Text, SafeAreaView, ScrollView, Image, StyleSheet, Modal, Pressable, Dimensions, ActivityIndicator, Keyboard } from "react-native";
+import { View, Text, SafeAreaView, ScrollView, StyleSheet, Modal, Pressable, Dimensions, ActivityIndicator, Keyboard } from "react-native";
 import { useIsFocused } from "@react-navigation/native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Gesture, GestureDetector, GestureHandlerRootView } from "react-native-gesture-handler";
@@ -116,6 +116,8 @@ import { FlashcardInfographic, FINN_MAP, INFOGRAPHIC_MAP } from "./FlashcardInfo
 import { useModulePrefetch, getCachedVideoPath } from "../../hooks/useModulePrefetch";
 import { GlossaryTooltip } from "../../components/ui/GlossaryTooltip";
 import { ChatScreen } from "../chat/ChatScreen";
+
+const AnimatedExpoImage = Animated.createAnimatedComponent(ExpoImage);
 
 type FlowPhase = "hero" | "intro" | "flashcards" | "interactive-recall" | "quizzes" | "sim-intro" | "sim" | "module-infographic" | "post-infographic-video" | "shark-dilemma" | "summary" | "video";
 
@@ -618,10 +620,12 @@ function FlashcardCard({
         <View style={{ flex: 1 }}>
           <View style={{ flex: 1, backgroundColor: "#1e293b", borderRadius: 20, overflow: "hidden", position: "relative" }}>
             {card.memeImage ? (
-              <Animated.Image
+              <ExpoImage
                 source={card.memeImage}
                 style={{ width: "100%", height: "100%", position: "absolute", top: 0 }}
-                resizeMode={card.hideTextOverlay ? "contain" : "cover"}
+                contentFit={card.hideTextOverlay ? "contain" : "cover"}
+                cachePolicy="memory-disk"
+                transition={150}
               />
             ) : null}
 
@@ -655,10 +659,12 @@ function FlashcardCard({
           <View style={{ flex: 1, justifyContent: "center", alignItems: "center", paddingHorizontal: 6, paddingVertical: 10 }}>
             {SUMMARY_MAP[card.id] ? (
               <View style={{ width: "100%", height: "100%", backgroundColor: "#f8fafc", borderRadius: 16, overflow: "hidden", position: "relative" }}>
-                <Animated.Image
+                <AnimatedExpoImage
                   source={SUMMARY_MAP[card.id]!}
                   style={[{ width: "100%", height: "100%", position: "absolute" }, comicZoomStyle]}
-                  resizeMode="contain"
+                  contentFit="contain"
+                  cachePolicy="memory-disk"
+                  transition={150}
                   accessible={false}
                 />
                 {["fc-1-5-summary", "fc-1-6-summary", "fc-1-7-summary", "fc-4-19-summary", "fc-4-20-summary", "fc-4-21-summary", "fc-4-22-summary", "fc-4-23-summary", "fc-4-24-summary", "fc-5-25-summary", "fc-5-26-summary", "fc-5-27-summary", "fc-5-28-summary", "fc-5-29-summary"].includes(card.id) && card.text && (
