@@ -41,7 +41,7 @@ export function AssetsScreen() {
   const insets = useSafeAreaInsets();
   const xp = useEconomyStore((s) => s.xp);
   const { layer: currentLayer } = getPyramidStatus(xp);
-  const tradingUnlocked = currentLayer >= 4;
+  const tradingUnlocked = currentLayer >= 2;
   const referralCode = useReferralStore((s) => s.referralCode);
   const referredFriends = useReferralStore((s) => s.referredFriends);
   const canCollectDividend = useReferralStore((s) => s.canCollectDividend);
@@ -186,7 +186,7 @@ export function AssetsScreen() {
             <View style={styles.sectionHeader} accessibilityRole="header">
               <Text style={styles.sectionTitle}>📈 תיק השקעות</Text>
               {!tradingUnlocked && (
-                <Text style={{ fontSize: 11, color: '#64748b', fontWeight: '700' }}>🔒 נפתח ברמה 4</Text>
+                <Text style={{ fontSize: 11, color: '#64748b', fontWeight: '700' }}>🔒 נפתח ברמה 2</Text>
               )}
             </View>
 
