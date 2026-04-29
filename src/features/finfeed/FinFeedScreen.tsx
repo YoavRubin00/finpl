@@ -5,6 +5,7 @@ import { FlashList, type FlashListRef } from "@shopify/flash-list";
 import { useFocusEffect, useScrollToTop } from "@react-navigation/native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import LottieView from "lottie-react-native";
+import { useVideoPlayer, VideoView } from "expo-video";
 import { LinearGradient } from "expo-linear-gradient";
 import { SafeLottie } from "../../components/ui/SafeLottie";
 import { useRouter } from "expo-router";
@@ -58,6 +59,7 @@ import { getFallbackQuiz, getCategoryForDate } from "../daily-quiz/fallbackQuizz
 import { DilemmaCard } from "../daily-challenges/DilemmaCard";
 import { SharkFeedbackCard } from "./SharkFeedbackCard";
 import { FeedTradingNudgeCard } from "./FeedTradingNudgeCard";
+import { FeedReferralNudgeCard } from "./FeedReferralNudgeCard";
 import { FeedSimulatorCard } from "./FeedSimulatorCard";
 import { FEED_SIMULATORS } from "./feedSimulatorsData";
 import { SharkFeedbackChatModal } from "./SharkFeedbackChatModal";
@@ -222,6 +224,10 @@ export function setPendingFeedScrollById(id: string) {
   _pendingFeedScrollTargetId = id;
 }
 
+/** Daily return greeting video — Finn waving warmly when user opens the app */
+const DAILY_RETURN_VIDEO_URL =
+  "https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/finn-videos/finn-daily-return.mp4";
+
 // -- Welcome Screen (full-screen first card with Finn + daily quote) --
 function WelcomeCard({ height }: { height: number }) {
   // ~1 in 7 days (deterministic per day) the big greeting Shark dances —
@@ -229,6 +235,21 @@ function WelcomeCard({ height }: { height: number }) {
   const dancing = useSpontaneousDancing(0.15, 'welcome');
   const greetingShark = dancing ? FINN_DANCING : FINN_STANDARD;
   const router = useRouter();
+  const greetingPlayer = useVideoPlayer(DAILY_RETURN_VIDEO_URL, (p) => {
+    p.loop = true;
+    p.muted = true;
+    p.bufferOptions = {
+      preferredForwardBufferDuration: 5,
+      waitsToMinimizeStalling: false,
+      minBufferForPlayback: 0.5,
+    };
+  });
+  useEffect(() => {
+    try { greetingPlayer.play(); } catch { /* ignore */ }
+    return () => {
+      try { greetingPlayer.pause(); } catch { /* ignore */ }
+    };
+  }, [greetingPlayer]);
   const displayName = useAuthStore((s) => s.displayName);
   const hasUnreadMail = useFunStore((s) => s.hasUnreadMail);
   const refreshMail = useFunStore((s) => s.refreshMail);
@@ -312,11 +333,12 @@ function WelcomeCard({ height }: { height: number }) {
       <View style={{ alignSelf: 'center', marginTop: -50, alignItems: 'center' }}>
         <Animated.View style={[{ alignItems: 'center' }, bubble4Style]}>
           <View style={{ width: 220, height: 220, overflow: 'hidden' }}>
-            <ExpoImage source={greetingShark}
+            <VideoView
+              player={greetingPlayer}
               style={{ width: 220, height: 220 }}
+              nativeControls={false}
               contentFit="contain"
-              accessible={false}
-              />
+            />
           </View>
         </Animated.View>
 
@@ -875,6 +897,7 @@ export function FinFeedScreen() {
       { id: 'diamond-hands', type: 'diamond-hands' as const },
       { id: 'shark-feedback', type: 'shark-feedback' as const },
       { id: 'trading-nudge', type: 'trading-nudge' as const },
+      { id: 'referral-nudge', type: 'referral-nudge' as const },
       ...seededShuffle([...FEED_SIMULATORS], simSeed)
         .slice(0, 4)
         .map((sim) => ({
@@ -1148,6 +1171,7 @@ export function FinFeedScreen() {
         {item.type === "crowd-question" && <CrowdQuestionCard />}
         {item.type === "shark-feedback" && <SharkFeedbackCard />}
         {item.type === "trading-nudge" && <FeedTradingNudgeCard isActive={isActive} />}
+        {item.type === "referral-nudge" && <FeedReferralNudgeCard isActive={isActive} />}
         {item.type === "simulator-teaser" && (
           <FeedSimulatorCard simulator={item.simulator} isActive={isActive} />
         )}

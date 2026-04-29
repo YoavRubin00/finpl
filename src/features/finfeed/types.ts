@@ -235,6 +235,12 @@ export interface FeedTradingNudge {
   type: "trading-nudge";
 }
 
+/** Referral-nudge card, encourages inviting friends to FinPlay */
+export interface FeedReferralNudge {
+  id: string;
+  type: "referral-nudge";
+}
+
 export interface FeedSimulatorTeaser {
   id: string;
   type: "simulator-teaser";
@@ -256,4 +262,4 @@ export interface FeedCrowdQuestion {
   type: 'crowd-question';
 }
 
-export type FeedItem = FeedVideo | FeedQuote | (FeedLesson & { type: "lesson" }) | FeedComic | FeedModuleHook | FeedMacroEvent | FeedScenario | FeedDailyQuiz | FeedMythCard | FeedPremiumLearning | FeedFinnHero | FeedDilemma | FeedInvestment | FeedCrashGame | FeedSwipeGame | FeedGrahamPersonality | FeedBullshitSwipe | FeedHigherLower | FeedBudgetNinja | FeedPriceSlider | FeedCashoutRush | FeedFomoKiller | FeedDidYouKnow | FeedDiamondHands | FeedSharkFeedback | FeedTradingNudge | FeedSimulatorTeaser | FeedLiveMarket | FeedLiveNews | FeedCrowdQuestion;
+export type FeedItem = FeedVideo | FeedQuote | (FeedLesson & { type: "lesson" }) | FeedComic | FeedModuleHook | FeedMacroEvent | FeedScenario | FeedDailyQuiz | FeedMythCard | FeedPremiumLearning | FeedFinnHero | FeedDilemma | FeedInvestment | FeedCrashGame | FeedSwipeGame | FeedGrahamPersonality | FeedBullshitSwipe | FeedHigherLower | FeedBudgetNinja | FeedPriceSlider | FeedCashoutRush | FeedFomoKiller | FeedDidYouKnow | FeedDiamondHands | FeedSharkFeedback | FeedTradingNudge | FeedReferralNudge | FeedSimulatorTeaser | FeedLiveMarket | FeedLiveNews | FeedCrowdQuestion;
