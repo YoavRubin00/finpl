@@ -173,8 +173,7 @@ export function MoreScreen() {
                   icon={<SafeLottie source={require('../../../assets/lottie/wired-flat-433-cup-prize-hover-roll.json')} style={styles.lottieIcon} autoPlay loop  />}
                   label="פנטזי ליג"
                   onPress={() => router.push("/fantasy")}
-                  badge="בקרוב"
-                  disabled
+                  badge="חדש"
                 />
                 <MoreRow
                   icon={<SafeLottie source={require('../../../assets/lottie/wired-flat-161-growth-hover-pinch.json')} style={styles.lottieIcon} autoPlay loop  />}
@@ -204,8 +203,7 @@ export function MoreScreen() {
                   icon={<SafeLottie source={require('../../../assets/lottie/wired-flat-957-team-work-hover-pinch.json')} style={styles.lottieIcon} autoPlay loop  />}
                   label="סקוואדים"
                   onPress={() => router.push("/squads")}
-                  badge="בקרוב"
-                  disabled
+                  badge="חדש"
                 />
                 <MoreRow
                   isLast
