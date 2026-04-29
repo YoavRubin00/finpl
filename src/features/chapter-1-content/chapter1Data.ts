@@ -30,7 +30,11 @@ export const chapter1Data: Chapter = {
           zoomRegions: [[0, 0, 1], [0, 0, 1], [0, 0, 1], [0, 0, 1]],
           finnExplanations: ['', 'זמן הוא הנכס היחיד שאתם לא יכולים לקנות בשום כסף.', 'כשאתם צעירים יש לכם אותו בשפע, וזה המנוע הכי חזק פה.', 'כל עשר שנות חיסכון בגיל מוקדם שוות כפול מאותן עשר שנים בגיל הבוגר.']
         },
-        
+        {
+          id: 'fc-1-1-video',
+          text: '',
+          videoUri: 'https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/video/microlearn/ribit-darbit.mp4',
+        },
         {
           id: 'mod-1-1-img',
           text: 'כוח הקסם של הריבית דריבית',

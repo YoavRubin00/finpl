@@ -44,6 +44,25 @@ export const MICRO_LEARN_VIDEOS: FeedVideo[] = [
     likes: 4180,
     saves: 215,
   },
+  {
+    id: "ml-ribit-darbit",
+    type: "video" as const,
+    title: "",
+    description: "",
+    category: "Investing" as const,
+    videoId: "ml-ribit-darbit",
+    localVideo: {
+      uri: 'https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/video/microlearn/ribit-darbit.mp4',
+    },
+    durationMinutes: 1,
+    pyramidLayer: 1 as const,
+    likes: 5240,
+    saves: 287,
+    moduleId: "mod-1-1",
+    moduleIndex: 0,
+    chapterId: "chapter-1",
+    storeChapterId: "ch-1",
+  },
 ];
 
 export const MOCK_FEED_DATA: FeedItem[] = [
