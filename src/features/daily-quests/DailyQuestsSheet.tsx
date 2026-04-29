@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { View, Text, Modal, Pressable, StyleSheet, ScrollView } from "react-native";
 import { Image as ExpoImage } from "expo-image";
+import { useVideoPlayer, VideoView } from "expo-video";
 import Animated, {
   FadeIn,
   FadeInRight,
@@ -33,6 +34,12 @@ import { useSoundEffect } from "../../hooks/useSoundEffect";
 const LOTTIE_CHEST = require("../../../assets/lottie/3D Treasure Box.json") as unknown as AnimationObject;
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const LOTTIE_CROWN = require("../../../assets/lottie/Crown.json") as unknown as AnimationObject;
+
+/** Finn-opens-the-chest celebration video, plays after flying rewards complete */
+const CHEST_VIDEO_URL =
+  "https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/finn-videos/finn-chest-open.mp4";
+/** Video is ~5s; leave a small tail for "settle" before auto-closing the modal */
+const CHEST_VIDEO_DURATION_MS = 5500;
 
 const RTL = { writingDirection: "rtl" as const, textAlign: "right" as const };
 
@@ -225,17 +232,31 @@ export function DailyQuestsSheet({ visible, onClose }: DailyQuestsSheetProps) {
   const [chestOpen, setChestOpen] = useState(false);
   const [showProClaimAnim, setShowProClaimAnim] = useState(false);
   const [proChestOpen, setProChestOpen] = useState(false);
+  /** Finn-opens-the-chest celebration video — plays after flying rewards complete */
+  const [showVideoOverlay, setShowVideoOverlay] = useState(false);
   const { playSound } = useSoundEffect();
   const hapticTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const claimTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const proHapticTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const proClaimTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const videoCloseTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const chestVideoPlayer = useVideoPlayer(CHEST_VIDEO_URL, (p) => {
+    p.loop = false;
+    p.muted = true;
+    p.bufferOptions = {
+      preferredForwardBufferDuration: 5,
+      waitsToMinimizeStalling: false,
+      minBufferForPlayback: 0.5,
+    };
+  });
 
   useEffect(() => () => {
     if (hapticTimerRef.current) clearTimeout(hapticTimerRef.current);
     if (claimTimerRef.current) clearTimeout(claimTimerRef.current);
     if (proHapticTimerRef.current) clearTimeout(proHapticTimerRef.current);
     if (proClaimTimerRef.current) clearTimeout(proClaimTimerRef.current);
+    if (videoCloseTimerRef.current) clearTimeout(videoCloseTimerRef.current);
   }, []);
 
   // Gentle pulse on the chest when ready, feels inviting, not shaky.
@@ -303,6 +324,14 @@ export function DailyQuestsSheet({ visible, onClose }: DailyQuestsSheetProps) {
     claimTimerRef.current = setTimeout(() => {
       claimReward();
       setShowClaimAnim(false);
+      // Chain Finn-opens-chest celebration video, then auto-close back to feed
+      setShowVideoOverlay(true);
+      try { chestVideoPlayer.play(); } catch { /* ignore */ }
+      videoCloseTimerRef.current = setTimeout(() => {
+        setShowVideoOverlay(false);
+        try { chestVideoPlayer.pause(); } catch { /* ignore */ }
+        onClose();
+      }, CHEST_VIDEO_DURATION_MS);
     }, 1600);
   };
 
@@ -501,6 +530,18 @@ export function DailyQuestsSheet({ visible, onClose }: DailyQuestsSheetProps) {
               <ConfettiExplosion />
               <FlyingRewards type="xp" amount={previewPro.xp} onComplete={() => { /* auto-clear */ }} />
               <FlyingRewards type="coins" amount={previewPro.coins} onComplete={() => { /* auto-clear */ }} />
+            </View>
+          )}
+
+          {/* Finn-opens-the-chest celebration video — plays after flying rewards complete */}
+          {showVideoOverlay && (
+            <View pointerEvents="none" style={[StyleSheet.absoluteFill, styles.videoOverlay]}>
+              <VideoView
+                player={chestVideoPlayer}
+                style={StyleSheet.absoluteFill}
+                nativeControls={false}
+                contentFit="cover"
+              />
             </View>
           )}
         </Pressable>
@@ -751,6 +792,9 @@ const styles = StyleSheet.create({
     borderRadius: 80,
     alignItems: "center",
     justifyContent: "center",
+  },
+  videoOverlay: {
+    backgroundColor: "#0c1426",
   },
   chestWrapReady: {
     shadowColor: STITCH.tertiaryGoldBright,
