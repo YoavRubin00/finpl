@@ -24,6 +24,7 @@ import { useEconomyStore } from '../../features/economy/useEconomyStore';
 import { tapHaptic, successHaptic } from '../../utils/haptics';
 import { useRewardedAd } from '../../hooks/useRewardedAd';
 import { useChapterStore } from '../chapter-1-content/useChapterStore';
+import { useBandit } from '../bandit/useBandit';
 
 const MAX_HEARTS = 5;
 
@@ -97,6 +98,12 @@ export function OutOfHeartsModal({ visible, onDismiss, onUpgrade, onHeartsRefill
     const [timeLeft, setTimeLeft] = useState('');
     const canAffordRefill = coins >= HEART_REFILL_COIN_COST;
 
+    const { payload: banditPayload, trackImpression, trackConversion, trackDismiss } = useBandit('hearts_depleted_nudge');
+
+    useEffect(() => {
+        if (visible) trackImpression();
+    }, [visible, trackImpression]);
+
     // Countdown timer
     useEffect(() => {
         if (!visible) return;
@@ -146,13 +153,14 @@ export function OutOfHeartsModal({ visible, onDismiss, onUpgrade, onHeartsRefill
         if (success) {
             useSubscriptionStore.setState({ hearts: current + 1, lastHeartLostAt: current + 1 >= MAX_HEARTS ? null : store.lastHeartLostAt });
             successHaptic();
+            trackConversion();
             if (onHeartsRefilled) {
                 onHeartsRefilled();
             } else {
                 onDismiss();
             }
         }
-    }, [onDismiss, onHeartsRefilled]);
+    }, [onDismiss, onHeartsRefilled, trackConversion]);
 
     const { showAd, isLoaded: adReady, isPro } = useRewardedAd();
 
@@ -166,13 +174,14 @@ export function OutOfHeartsModal({ visible, onDismiss, onUpgrade, onHeartsRefill
                 useSubscriptionStore.setState({ hearts: current + 1, lastHeartLostAt: null });
             }
             successHaptic();
+            trackConversion();
             if (onHeartsRefilled) {
                 onHeartsRefilled();
             } else {
                 onDismiss();
             }
         });
-    }, [showAd, onDismiss, onHeartsRefilled]);
+    }, [showAd, onDismiss, onHeartsRefilled, trackConversion]);
 
     const startPracticeForHeart = useSubscriptionStore((s) => s.startPracticeForHeart);
     const practiceRefillsToday = useSubscriptionStore((s) => s.practiceRefillsToday);
@@ -227,6 +236,7 @@ export function OutOfHeartsModal({ visible, onDismiss, onUpgrade, onHeartsRefill
             if (success) {
                 useSubscriptionStore.setState({ hearts: current + 1, lastHeartLostAt: current + 1 >= MAX_HEARTS ? null : store.lastHeartLostAt });
                 successHaptic();
+                trackConversion();
                 if (onHeartsRefilled) {
                     onHeartsRefilled();
                 } else {
@@ -237,7 +247,7 @@ export function OutOfHeartsModal({ visible, onDismiss, onUpgrade, onHeartsRefill
             onDismiss();
             router.push('/shop' as never);
         }
-    }, [gems, onDismiss, onHeartsRefilled, router]);
+    }, [gems, onDismiss, onHeartsRefilled, router, trackConversion]);
 
     return (
         <Modal visible={visible} transparent animationType="fade" onRequestClose={onDismiss} accessibilityViewIsModal>
@@ -251,12 +261,12 @@ export function OutOfHeartsModal({ visible, onDismiss, onUpgrade, onHeartsRefill
                     {/* Finn + Title row */}
                     <View style={styles.finnRow}>
                         <View style={styles.finnTextCol}>
-                            <Text style={styles.modalTitle}>נגמרו הלבבות!</Text>
+                            <Text style={styles.modalTitle}>{banditPayload.title}</Text>
                             <View style={{ flexDirection: 'row-reverse', alignItems: 'baseline', gap: 6, marginTop: 6 }}>
                                 <Text style={styles.modalSubtitle}>
-                                    לב חדש בעוד
+                                    {banditPayload.framingType === 'opportunity' ? banditPayload.subtitle : 'לב חדש בעוד'}
                                 </Text>
-                                <Text style={styles.timer}>{timeLeft}</Text>
+                                {banditPayload.framingType !== 'opportunity' && <Text style={styles.timer}>{timeLeft}</Text>}
                             </View>
                         </View>
                         <Animated.View style={[styles.finnWrap, emojiStyle]}>
@@ -349,7 +359,7 @@ export function OutOfHeartsModal({ visible, onDismiss, onUpgrade, onHeartsRefill
                     </Pressable>
 
                     {/* Wait button */}
-                    <Pressable onPress={onDismiss} style={styles.waitBtn} accessibilityRole="button" accessibilityLabel="אחכה לחידוש לבבות">
+                    <Pressable onPress={() => { trackDismiss(); onDismiss(); }} style={styles.waitBtn} accessibilityRole="button" accessibilityLabel="אחכה לחידוש לבבות">
                         <Text style={styles.waitBtnText}>אחכה ⏳</Text>
                     </Pressable>
                     </ScrollView>

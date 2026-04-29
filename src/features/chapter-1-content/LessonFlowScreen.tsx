@@ -162,6 +162,45 @@ const MODULE_INFOGRAPHIC_MAP: Record<string, { uri: string }> = {
 /** Modules with a video shown AFTER the infographic (before the chest) */
 const MODULE_POST_VIDEO_MAP: Record<string, string> = {
   "mod-0-1": "https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/0-1.mp4",
+  // Chapter 0 — money/banking/interest/credit/pension
+  "mod-0-2": "https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/finn-videos/finn-ch0-money.mp4",
+  "mod-0-3": "https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/finn-videos/finn-studying.mp4",
+  "mod-0-4": "https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/finn-videos/finn-mod-0-4.mp4",
+  "mod-0-5": "https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/finn-videos/finn-mod-0-5.mp4",
+  // Chapter 1 — first module is the chapter intro; others recycle thematically
+  "mod-1-1": "https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/finn-videos/finn-ch1-debt.mp4",
+  "mod-1-3": "https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/finn-videos/finn-mod-0-4.mp4", // אשראי — recycle credit-card scene
+  "mod-1-4": "https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/finn-videos/finn-ch2-budget.mp4", // תקציב — recycle budget scene
+  "mod-1-6": "https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/finn-videos/finn-ch1-debt.mp4", // הלוואות — recycle debt scene
+  // Chapter 2 — recycle pension/study/insurance fits
+  "mod-2-10": "https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/finn-videos/finn-ch2-budget.mp4",
+  "mod-2-12": "https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/finn-videos/finn-mod-0-5.mp4", // פנסיה
+  "mod-2-13": "https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/finn-videos/finn-studying.mp4", // קרן השתלמות
+  // Chapter 3 — recycle inflation/invest/study
+  "mod-3-15": "https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/finn-videos/finn-ch3-inflation.mp4",
+  "mod-3-17": "https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/finn-videos/finn-ch4-invest.mp4", // קופת גמל
+  "mod-3-18": "https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/finn-videos/finn-trading-start.mp4", // מסלולי השקעה
+  // Chapter 4 — many fits with finn-trading-start / finn-ch4-invest / finn-studying
+  "mod-4-19": "https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/finn-videos/finn-ch4-invest.mp4",
+  "mod-4-20": "https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/finn-videos/finn-trading-start.mp4", // מדדים
+  "mod-4-21": "https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/finn-videos/finn-ch4-invest.mp4", // ETF
+  "mod-4-22": "https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/finn-videos/finn-trading-start.mp4", // פקודות מסחר
+  "mod-4-25": "https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/finn-videos/finn-studying.mp4", // דוחות כספיים
+  "mod-4-26": "https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/finn-videos/finn-trading-start.mp4", // פלטפורמות
+  "mod-4-27": "https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/finn-videos/finn-ch4-invest.mp4",
+  "mod-4-28": "https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/finn-videos/finn-ch4-invest.mp4", // ניתוח גרפים
+  "mod-4-29": "https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/finn-videos/finn-ch4-invest.mp4", // סוגי מניות
+  "mod-4-b1": "https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/finn-videos/finn-studying.mp4", // Graham 7 rules
+  "mod-4-b2": "https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/finn-videos/finn-studying.mp4", // margin safety
+  "mod-4-b3": "https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/finn-videos/finn-ch4-invest.mp4", // price/value
+  "mod-4-b4": "https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/finn-videos/finn-studying.mp4", // AP story
+  // Chapter 5 — all recycled (FIRE / pension / champion themes)
+  "mod-5-25": "https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/finn-videos/finn-ch5-fire.mp4",
+  "mod-5-26": "https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/finn-videos/finn-mod-0-5.mp4",
+  "mod-5-27": "https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/finn-videos/finn-ch5-fire.mp4",
+  "mod-5-28": "https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/finn-videos/finn-streak-365.mp4",
+  "mod-5-29": "https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/finn-videos/finn-mod-0-5.mp4",
+  "mod-5-30": "https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/finn-videos/finn-streak-100.mp4",
 };
 
 /** Cards that use infographic-top layout: big image at top, text hidden, Finn at bottom */

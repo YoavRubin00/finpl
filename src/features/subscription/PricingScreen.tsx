@@ -36,6 +36,7 @@ import type { PurchasesPackage } from "../../services/revenueCat";
 import { BackButton } from "../../components/ui/BackButton";
 import { useTheme } from "../../hooks/useTheme";
 import { useMonetizationIntentStore } from "../monetization/useMonetizationIntentStore";
+import { useBandit } from "../bandit/useBandit";
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
 
@@ -164,9 +165,12 @@ export function PricingScreen() {
   const upgradeToPro = useSubscriptionStore((s) => s.upgradeToPro);
   const restoreSubscription = useSubscriptionStore((s) => s.restoreSubscription);
 
+  const { payload: paywallPayload, trackImpression, trackConversion } = useBandit('upgrade_paywall_headline');
+
   useEffect(() => {
     useMonetizationIntentStore.getState().trackPricingVisit();
-  }, []);
+    trackImpression();
+  }, [trackImpression]);
 
   // Load offering once so we can show the localized price + period before purchase.
   useEffect(() => {
@@ -225,6 +229,7 @@ export function PricingScreen() {
 
       if (isPro) {
         upgradeToPro();
+        trackConversion();
         if (!hasSeenProWelcome) {
           router.replace("/pro-welcome" as never);
           return;
@@ -303,11 +308,7 @@ export function PricingScreen() {
 
             {/* Social proof */}
             <Animated.View entering={FadeInDown.delay(200).duration(500)} style={styles.proofContainer}>
-              <Text style={styles.proofText}>
-                משתמשי פרו בעלי פי{" "}
-                <Text style={styles.proofHighlight}>3.1X</Text>
-                {"\n"}סיכויים לסיים את הלמידה!
-              </Text>
+              <Text style={styles.proofText}>{paywallPayload.proofText}</Text>
             </Animated.View>
             
             {/* Added spacer to let body overlap smoothly without clipping text */}
@@ -392,7 +393,7 @@ export function PricingScreen() {
                               loop
                             />
                           </View>
-                          <Text style={styles.ctaText}>שדרג עכשיו</Text>
+                          <Text style={styles.ctaText}>{paywallPayload.ctaText}</Text>
                         </View>
                       )}
                     </LinearGradient>

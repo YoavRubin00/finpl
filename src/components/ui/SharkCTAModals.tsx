@@ -29,6 +29,7 @@ import { FINN_HAPPY } from "../../features/retention-loops/finnMascotConfig";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useNudgeQueueStore } from "../../stores/useNudgeQueueStore";
 import { STITCH } from "../../constants/theme";
+import { useBandit } from "../../features/bandit/useBandit";
 
 /* ────────────────────────────────────────────────────────────────────────────
    BridgeCTA, "למדנו יפה. עכשיו הזמן לעבור לעולם האמיתי."
@@ -42,19 +43,6 @@ interface BridgeCTAProps {
   moduleCount?: number;
 }
 
-/**
- * Bridge CTA copy variants, rotate by moduleCount milestone.
- * Duolingo A/B notes:
- *   • 3-5 variants sustain CTR by +8-12% over single copy
- *   • Action-verb labels ("בואו נממש") beat neutral ("לעמוד הגשר") by +22%
- *   • Variant #2 uses loss-aversion framing (+6-10% per Duolingo's streak data)
- */
-const BRIDGE_VARIANTS: { title: string; body: string; cta: string }[] = [
-  { title: "למדנו יפה", body: "עכשיו הזמן לעבור לעולם האמיתי", cta: "בואו נממש" },
-  { title: "אל תניחו לידע להישאר תאורטי", body: "ההטבות האמיתיות מחכות בגשר", cta: "להטבות שלי" },
-  { title: "בניתם הרגל, תהנו ממנו", body: "תהפכו את הידע עכשיו לתוצאות", cta: "לעמוד הגשר" },
-];
-
 export function SharkBridgeCTA({ visible, onGoBridge, onDismiss, moduleCount = 0 }: BridgeCTAProps) {
   const insets = useSafeAreaInsets();
   const canShow = useNudgeQueueStore((s) => s.canShow);
@@ -62,25 +50,29 @@ export function SharkBridgeCTA({ visible, onGoBridge, onDismiss, moduleCount = 0
   const recordAct = useNudgeQueueStore((s) => s.recordAct);
   const recordShown = useNudgeQueueStore((s) => s.recordShown);
 
+  const { payload: v, trackImpression, trackConversion, trackDismiss: banditDismiss } = useBandit('bridge_momentum_cta');
+  const { payload: socialProof } = useBandit('bridge_social_proof');
+
   // Register the impression when first shown
   useEffect(() => {
-    if (visible) recordShown('bridge');
-  }, [visible, recordShown]);
+    if (visible) {
+      recordShown('bridge');
+      trackImpression();
+    }
+  }, [visible, recordShown, trackImpression]);
 
   // Respect session lock + 48h cooldown
   if (!visible || !canShow('bridge')) return null;
 
-  // Rotate variant by completion milestone (4, 8, 12 → 0, 1, 2)
-  const variantIdx = Math.max(0, Math.floor(moduleCount / 4) - 1) % BRIDGE_VARIANTS.length;
-  const v = BRIDGE_VARIANTS[variantIdx];
-
   const handleAct = () => {
     recordAct('bridge');
+    trackConversion();
     onGoBridge();
   };
 
   const handleDismiss = () => {
     recordDismiss('bridge');
+    banditDismiss();
     onDismiss();
   };
 
@@ -99,11 +91,15 @@ export function SharkBridgeCTA({ visible, onGoBridge, onDismiss, moduleCount = 0
           </View>
 
           <View style={s.textBlock}>
-            {/* Streak pill, Duolingo effect: explicit progress drives +6-10% CTR */}
+            {/* Social proof pill — variant controlled by bandit */}
             {moduleCount > 0 && (
               <View style={s.streakPill}>
                 <Flame size={11} color={STITCH.tertiaryGold} fill={STITCH.tertiaryGoldBright} />
-                <Text style={s.streakText}>{moduleCount} מודולים ברצף</Text>
+                <Text style={s.streakText}>
+                  {socialProof.framingType === 'achievement'
+                    ? socialProof.badgeText.replace('{count}', String(moduleCount))
+                    : socialProof.badgeText}
+                </Text>
               </View>
             )}
 
@@ -144,35 +140,6 @@ interface ReferralCTAProps {
   triggeredByDividend?: boolean;
 }
 
-/**
- * Referral CTA copy variants, action-verb + reciprocity framing.
- * Duolingo A/B: explicit reciprocity ("+50 coins per friend") beats generic invites by ~28%.
- * Concrete numbers in CTAs ("הזמן 3 חברים = 150 מטבעות") outperform abstract CTAs by ~18%.
- */
-const REFERRAL_VARIANTS: { title: string; body: string; cta: string }[] = [
-  {
-    title: "הזמינו חברים",
-    body: "גם להם ידע פיננסי, וגם אתם תהנו מהמטבעות שלהם",
-    cta: "3 חברים = 150 מטבעות",
-  },
-  {
-    title: "דיבידנד אמיתי מחברים",
-    body: "כל חבר שמצטרף = זרם הכנסה פסיבית של מטבעות אליכם",
-    cta: "התחל להרוויח",
-  },
-  {
-    title: "המשחק כיפי יותר בצוות",
-    body: "חברים שלומדים יחד מגיעים רחוק יותר",
-    cta: "הזמן 3 = 150 מטבעות",
-  },
-];
-
-const DIVIDEND_VARIANT = {
-  title: "רגע, דיבר על דיבידנד?",
-  body: "יש אחד כזה גם פה: כל חבר שמצטרף שולח לכם מטבעות",
-  cta: "קבלו דיבידנד עכשיו",
-};
-
 const COINS_PER_FRIEND = 50;
 const DEFAULT_INVITE_TARGET = 3;
 
@@ -180,7 +147,7 @@ export function SharkReferralCTA({
   visible,
   onGoReferral,
   onDismiss,
-  moduleCount = 0,
+  moduleCount: _moduleCount = 0,
   triggeredByDividend = false,
 }: ReferralCTAProps) {
   const insets = useSafeAreaInsets();
@@ -189,26 +156,30 @@ export function SharkReferralCTA({
   const recordAct = useNudgeQueueStore((s) => s.recordAct);
   const recordShown = useNudgeQueueStore((s) => s.recordShown);
 
+  const { payload: v, trackImpression, trackConversion, trackDismiss: banditDismiss } = useBandit('referral_cta');
+
   useEffect(() => {
-    if (visible) recordShown('referral');
-  }, [visible, recordShown]);
+    if (visible) {
+      recordShown('referral');
+      trackImpression();
+    }
+  }, [visible, recordShown, trackImpression]);
 
   if (!visible || !canShow('referral')) return null;
 
-  // Dividend triggers get a contextual variant; otherwise rotate by 5-module milestone
-  const v = triggeredByDividend
-    ? DIVIDEND_VARIANT
-    : REFERRAL_VARIANTS[
-        Math.max(0, Math.floor(moduleCount / 5) - 1) % REFERRAL_VARIANTS.length
-      ];
+  // triggeredByDividend still influences caller logic but bandit selects the copy
+  // (v1 'dividend' framing will naturally win if dividend-triggered users convert better)
+  void triggeredByDividend;
 
   const handleAct = () => {
     recordAct('referral');
+    trackConversion();
     onGoReferral();
   };
 
   const handleDismiss = () => {
     recordDismiss('referral');
+    banditDismiss();
     onDismiss();
   };
 

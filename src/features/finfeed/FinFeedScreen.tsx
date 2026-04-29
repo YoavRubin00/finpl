@@ -57,6 +57,7 @@ import { refreshDailyQuiz } from "../daily-quiz/dailyQuizPipeline";
 import { getFallbackQuiz, getCategoryForDate } from "../daily-quiz/fallbackQuizzes";
 import { DilemmaCard } from "../daily-challenges/DilemmaCard";
 import { SharkFeedbackCard } from "./SharkFeedbackCard";
+import { FeedTradingNudgeCard } from "./FeedTradingNudgeCard";
 import { FeedSimulatorCard } from "./FeedSimulatorCard";
 import { FEED_SIMULATORS } from "./feedSimulatorsData";
 import { SharkFeedbackChatModal } from "./SharkFeedbackChatModal";
@@ -873,6 +874,7 @@ export function FinFeedScreen() {
       { id: 'graham-personality', type: 'graham-personality' } as const,
       { id: 'diamond-hands', type: 'diamond-hands' as const },
       { id: 'shark-feedback', type: 'shark-feedback' as const },
+      { id: 'trading-nudge', type: 'trading-nudge' as const },
       ...seededShuffle([...FEED_SIMULATORS], simSeed)
         .slice(0, 4)
         .map((sim) => ({
@@ -1145,6 +1147,7 @@ export function FinFeedScreen() {
         {item.type === "live-news" && <LiveNewsQuizCard />}
         {item.type === "crowd-question" && <CrowdQuestionCard />}
         {item.type === "shark-feedback" && <SharkFeedbackCard />}
+        {item.type === "trading-nudge" && <FeedTradingNudgeCard isActive={isActive} />}
         {item.type === "simulator-teaser" && (
           <FeedSimulatorCard simulator={item.simulator} isActive={isActive} />
         )}

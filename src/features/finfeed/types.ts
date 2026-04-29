@@ -229,6 +229,12 @@ export interface FeedSharkFeedback {
   type: "shark-feedback";
 }
 
+/** Trading-nudge card, encourages opening a real trading account via the Bridge */
+export interface FeedTradingNudge {
+  id: string;
+  type: "trading-nudge";
+}
+
 export interface FeedSimulatorTeaser {
   id: string;
   type: "simulator-teaser";
@@ -250,4 +256,4 @@ export interface FeedCrowdQuestion {
   type: 'crowd-question';
 }
 
-export type FeedItem = FeedVideo | FeedQuote | (FeedLesson & { type: "lesson" }) | FeedComic | FeedModuleHook | FeedMacroEvent | FeedScenario | FeedDailyQuiz | FeedMythCard | FeedPremiumLearning | FeedFinnHero | FeedDilemma | FeedInvestment | FeedCrashGame | FeedSwipeGame | FeedGrahamPersonality | FeedBullshitSwipe | FeedHigherLower | FeedBudgetNinja | FeedPriceSlider | FeedCashoutRush | FeedFomoKiller | FeedDidYouKnow | FeedDiamondHands | FeedSharkFeedback | FeedSimulatorTeaser | FeedLiveMarket | FeedLiveNews | FeedCrowdQuestion;
+export type FeedItem = FeedVideo | FeedQuote | (FeedLesson & { type: "lesson" }) | FeedComic | FeedModuleHook | FeedMacroEvent | FeedScenario | FeedDailyQuiz | FeedMythCard | FeedPremiumLearning | FeedFinnHero | FeedDilemma | FeedInvestment | FeedCrashGame | FeedSwipeGame | FeedGrahamPersonality | FeedBullshitSwipe | FeedHigherLower | FeedBudgetNinja | FeedPriceSlider | FeedCashoutRush | FeedFomoKiller | FeedDidYouKnow | FeedDiamondHands | FeedSharkFeedback | FeedTradingNudge | FeedSimulatorTeaser | FeedLiveMarket | FeedLiveNews | FeedCrowdQuestion;
