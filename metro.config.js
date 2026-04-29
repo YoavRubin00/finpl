@@ -21,6 +21,10 @@ const SAFE_LOTTIE_WEB = path.resolve(
   __dirname,
   "src/components/ui/SafeLottieView.web.tsx"
 );
+const ADS_WEB_STUB = path.resolve(
+  __dirname,
+  "src/lib/googleMobileAds.web.ts"
+);
 const originalResolveRequest = config.resolver.resolveRequest;
 config.resolver.resolveRequest = (context, moduleName, platform) => {
   if (
@@ -30,6 +34,9 @@ config.resolver.resolveRequest = (context, moduleName, platform) => {
     !context.originModulePath?.includes("SafeLottieView")
   ) {
     return { filePath: SAFE_LOTTIE_WEB, type: "sourceFile" };
+  }
+  if (moduleName === "react-native-google-mobile-ads" && platform === "web") {
+    return { filePath: ADS_WEB_STUB, type: "sourceFile" };
   }
   // Fall through to default resolver
   if (originalResolveRequest) {

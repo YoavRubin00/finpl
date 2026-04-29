@@ -190,3 +190,21 @@ export const STITCH = {
   ghostBorder: 'rgba(192,199,212,0.15)', // outlineVariant @ 15%
   cardShadow: 'rgba(62,60,143,0.06)',    // tinted purple shadow
 } as const;
+
+/** Clan Hub — Clash Royale dark theme for the social clan zone */
+export const CLAN = {
+  bg: '#0d2847',
+  cardBg: 'rgba(10, 22, 40, 0.85)',
+  tierBronze: '#a16207',
+  tierBronzeLight: '#facc15',
+  tierSilver: '#94a3b8',
+  tierSilverLight: '#e2e8f0',
+  tierGold: '#d4a017',
+  tierGoldLight: '#f5c842',
+  tierDiamond: '#7dd3fc',
+  tierDiamondLight: '#bae6fd',
+  ownBubble: ['#f5c842', '#d4a017'] as const,
+  otherBubble: 'rgba(255,255,255,0.08)',
+  donationGreen: '#16a34a',
+  projectFunded: '#a78bfa',
+} as const;

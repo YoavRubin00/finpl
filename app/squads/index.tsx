@@ -1,5 +1,5 @@
-import { SquadsScreen } from "../../src/features/social/SquadsScreen";
+import { Redirect } from 'expo-router';
 
-export default function SquadsPage() {
-  return <SquadsScreen />;
+export default function SquadsRedirect() {
+  return <Redirect href="/clan" />;
 }

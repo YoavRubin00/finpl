@@ -21,7 +21,6 @@ import { RTL, SHADOW_STRONG } from "../chapter-4-content/simulations/simTheme";
 import { AnimatedPressable } from "../../components/ui/AnimatedPressable";
 import { GlowCard } from "../../components/ui/GlowCard";
 import { BackButton } from "../../components/ui/BackButton";
-import { useFunStore } from "../../stores/useFunStore";
 import { FinnMailModal } from "../fun/FinnMailModal";
 
 const WHATSAPP_URL = "https://chat.whatsapp.com/Clx7d0eFQmyHuQPppH6f7m?mode=gi_t";
@@ -121,7 +120,6 @@ export function MoreScreen() {
   const router = useRouter();
   const signOut = useAuthStore((s) => s.signOut);
   const devResetProgress = useAuthStore((s) => s.devResetProgress);
-  const hasUnreadMail = useFunStore((s) => s.hasUnreadMail);
   const [showMailModal, setShowMailModal] = useState(false);
 
   function handleSignOut() {
@@ -170,12 +168,6 @@ export function MoreScreen() {
                   onPress={() => router.push("/(tabs)/shop" as never)}
                 />
                 <MoreRow
-                  icon={<SafeLottie source={require('../../../assets/lottie/wired-flat-433-cup-prize-hover-roll.json')} style={styles.lottieIcon} autoPlay loop  />}
-                  label="פנטזי ליג"
-                  onPress={() => router.push("/fantasy")}
-                  badge="חדש"
-                />
-                <MoreRow
                   icon={<SafeLottie source={require('../../../assets/lottie/wired-flat-161-growth-hover-pinch.json')} style={styles.lottieIcon} autoPlay loop  />}
                   label="לשחק עם המספרים"
                   onPress={() => router.push("/simulator")}
@@ -198,12 +190,6 @@ export function MoreScreen() {
                   onPress={() => router.push("/duels")}
                   badge="בקרוב"
                   disabled
-                />
-                <MoreRow
-                  icon={<SafeLottie source={require('../../../assets/lottie/wired-flat-957-team-work-hover-pinch.json')} style={styles.lottieIcon} autoPlay loop  />}
-                  label="סקוואדים"
-                  onPress={() => router.push("/squads")}
-                  badge="חדש"
                 />
                 <MoreRow
                   isLast
