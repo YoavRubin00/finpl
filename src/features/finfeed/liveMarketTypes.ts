@@ -35,4 +35,6 @@ export interface NewsQuizData {
   xpReward: number;
   coinReward: number;
   generatedAt: string;
+  /** True when the server returned a static fallback (RSS or AI failed). Client should retry. */
+  isFallback?: boolean;
 }

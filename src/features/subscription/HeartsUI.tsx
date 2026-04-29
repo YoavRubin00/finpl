@@ -25,7 +25,7 @@ import { tapHaptic, successHaptic } from '../../utils/haptics';
 import { useRewardedAd } from '../../hooks/useRewardedAd';
 import { useChapterStore } from '../chapter-1-content/useChapterStore';
 
-const MAX_HEARTS = 4;
+const MAX_HEARTS = 5;
 
 /* ------------------------------------------------------------------ */
 /*  HeartsDisplay, shows in lesson header                             */

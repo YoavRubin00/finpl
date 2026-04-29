@@ -268,7 +268,7 @@ const styles = StyleSheet.create({
     writingDirection: 'rtl',
   },
   header: {
-    flexDirection: 'row',
+    flexDirection: 'row-reverse',
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 16,

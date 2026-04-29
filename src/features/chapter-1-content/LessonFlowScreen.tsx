@@ -116,23 +116,11 @@ import { FlashcardInfographic, FINN_MAP, INFOGRAPHIC_MAP } from "./FlashcardInfo
 import { useModulePrefetch, getCachedVideoPath } from "../../hooks/useModulePrefetch";
 import { GlossaryTooltip } from "../../components/ui/GlossaryTooltip";
 import { ChatScreen } from "../chat/ChatScreen";
-import { CaptainSharkFAB } from "../chat/CaptainSharkFAB";
 import type { LessonContext } from "../chat/buildChatPrompt";
 
 const AnimatedExpoImage = Animated.createAnimatedComponent(ExpoImage);
 
 type FlowPhase = "hero" | "intro" | "flashcards" | "interactive-recall" | "quizzes" | "sim-intro" | "sim" | "module-infographic" | "post-infographic-video" | "shark-dilemma" | "summary" | "video";
-
-/** Phases where the Captain Shark FAB should be visible. Hidden during videos,
- *  hero splash, sim gameplay (own UI), and reward summary. */
-const FAB_VISIBLE_PHASES: ReadonlySet<FlowPhase> = new Set([
-  "intro",
-  "flashcards",
-  "interactive-recall",
-  "quizzes",
-  "module-infographic",
-  "shark-dilemma",
-]);
 
 /** Full-screen character art shown when first opening a module */
 const MODULE_HERO_MAP: Record<string, { uri: string } | number> = {
@@ -603,15 +591,6 @@ function FlashcardCard({
             <Text style={{ ...RTL_STYLE, fontSize: 12.5, lineHeight: 19, color: "#334155", fontWeight: "600" }}>
               משהו לא מובן? לחצו על המילים המודגשות לקבלת הסבר
             </Text>
-            <AnimatedPressable
-              onPress={() => onOpenChat?.()}
-              style={{ flexDirection: "row-reverse", alignItems: "center", gap: 4, marginTop: 6, alignSelf: "flex-end", backgroundColor: "#0ea5e9", borderRadius: 10, paddingHorizontal: 12, paddingVertical: 7, borderBottomWidth: 2, borderBottomColor: "#0284c7" }}
-              accessibilityRole="button"
-              accessibilityLabel="שאלו את הקפטן"
-              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-            >
-              <Text style={{ color: "#ffffff", fontSize: 12, fontWeight: "800" }}>שאלו את הקפטן</Text>
-            </AnimatedPressable>
           </View>
           <Pressable onPress={() => setFinnTipDismissed(true)} hitSlop={10} style={{ position: "absolute", top: 8, right: 8 }}
             accessibilityRole="button"
@@ -2995,8 +2974,8 @@ export function LessonFlowScreen() {
             <Text style={{ fontSize: 16, fontWeight: "900", color: "#6b7280", writingDirection: "rtl" }}>המשך מאיפה שהפסקתי</Text>
             <ChevronLeft size={18} color="#6b7280" />
           </Pressable>
-          <Pressable onPress={() => { setShowProGate(false); safeGoBack(); }} accessibilityRole="button" accessibilityLabel="חזור">
-            <Text style={{ fontSize: 14, fontWeight: "600", color: "#64748b", writingDirection: "rtl" }}>חזור</Text>
+          <Pressable onPress={() => { setShowProGate(false); safeGoBack(); }} accessibilityRole="button" accessibilityLabel="חזרו">
+            <Text style={{ fontSize: 14, fontWeight: "600", color: "#64748b", writingDirection: "rtl" }}>חזרו</Text>
           </Pressable>
         </View>
       </View>
@@ -4469,11 +4448,6 @@ export function LessonFlowScreen() {
           <FlyingRewards type="coins" amount={flyingCoinsDown} direction="down" onComplete={() => setFlyingCoinsDown(0)} />
         </View>
       )}
-      {/* Captain Shark FAB — global, lesson-context-aware */}
-      {mod && FAB_VISIBLE_PHASES.has(phase) && !showChatOverlay && (
-        <CaptainSharkFAB onPress={() => setShowChatOverlay(true)} />
-      )}
-
       {/* Captain Shark chat overlay, opens on top of lesson */}
       <Modal
         visible={showChatOverlay}

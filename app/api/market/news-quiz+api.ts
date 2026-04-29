@@ -1,16 +1,15 @@
 /**
  * GET /api/market/news-quiz
  *
- * Fetches one Globes headline, sends to Gemini, returns a quiz
- * question + 3 choices + explanation. Cached 24 hours.
+ * Pulls a real Globes headline, asks Gemini to paraphrase it (copyright-safe)
+ * AND generate a teaching question + 3 choices + explanation.
+ * Cached per Israel calendar day on success. Failures aren't cached as
+ * "today's quiz" — they retry on every request after a short backoff.
  */
 
 import { enforceRateLimit } from '../_shared/rateLimit';
 import { safeErrorResponse } from '../_shared/safeError';
 import type { NewsQuizData, NewsQuizChoice } from '../../../src/features/finfeed/liveMarketTypes';
-
-const CACHE_MS = 15 * 60 * 1000; // 15 minutes
-let _cache: { data: NewsQuizData; expiresAt: number } | null = null;
 
 function simpleHash(str: string): string {
   let hash = 0;
@@ -44,28 +43,35 @@ async function fetchGlobesHeadline(): Promise<string | null> {
 }
 
 interface GeminiQuizResult {
+  rewrittenHeadline: string;
   question: string;
   choices: [NewsQuizChoice, NewsQuizChoice, NewsQuizChoice];
   correctChoiceId: 'a' | 'b' | 'c';
   explanation: string;
 }
 
-async function generateQuiz(headline: string): Promise<GeminiQuizResult | null> {
+async function generateQuiz(originalHeadline: string): Promise<GeminiQuizResult | null> {
   const GEMINI_API_KEY = process.env.GOOGLE_AI_API_KEY ?? process.env.EXPO_PUBLIC_GOOGLE_AI_API_KEY ?? '';
   if (!GEMINI_API_KEY) return null;
 
-  const prompt = `אתה מורה לחינוך פיננסי לדור Z בישראל. קראת כותרת פיננסית:
-"${headline}"
+  const prompt = `אתה מורה לחינוך פיננסי לדור Z בישראל. קראת את הכותרת המקורית מגלובס:
+"${originalHeadline}"
 
-צור שאלה אינטראקטיבית בעברית שתעזור לאדם צעיר (20-30) להבין מה הכותרת הזו אומרת על חייו הפיננסיים.
+המשימה שלך — להחזיר JSON שיוצג למשתמש צעיר (20-30) באפליקציית FinPlay:
 
-דרישות:
-- השאלה: קצרה וסקרנית, עד 20 מילה, ישירה
-- 3 תשובות אמינות, כל אחת 8-15 מילה, אחת נכונה
-- הסבר: 2-3 משפטים, ישיר ומועיל לחיי היומיום
+1. **rewrittenHeadline** — שכתב את הכותרת בעברית **בנוסח שונה לחלוטין** משיקולי זכויות יוצרים. שמור על הנושא והעובדה המרכזית, החלף ניסוח, מבנה משפט, ומילים. עד 14 מילים. אינפורמטיבי, ניטרלי, מעניין. **חובה לשנות לפחות 70% מהמילים מהמקור.**
 
-החזר JSON בלבד (ללא markdown, ללא הסברים):
+2. **question** — שאלה חינוכית אמיתית שמלמדת **קונספט פיננסי** הקשור לכותרת. לא 'מה אמרו בחדשות', אלא 'איך הקונספט הזה משפיע על החיים שלי'. בודקת הבנה של עקרון, לא שינון נתון. עד 22 מילים.
+
+3. **choices** — 3 תשובות, כל אחת 8-15 מילים. אחת נכונה. הלא-נכונות יכולות להיות טעויות מחשבה אמיתיות שצעירים עושים (לא 'תשובות שטות'). חובה: נכונה אחת, שתי הסחות.
+
+4. **correctChoiceId** — 'a' / 'b' / 'c'.
+
+5. **explanation** — 2-3 משפטים. מה הקונספט הפיננסי, ולמה זה רלוונטי לחיי היומיום של מישהו בן 25 בישראל. ישיר, ללא קלישאות.
+
+החזר JSON תקין בלבד, ללא markdown, ללא טקסט נוסף:
 {
+  "rewrittenHeadline": "...",
   "question": "...",
   "choices": [
     {"id": "a", "text": "..."},
@@ -93,73 +99,115 @@ async function generateQuiz(headline: string): Promise<GeminiQuizResult | null> 
     const text = json.candidates?.[0]?.content?.parts?.[0]?.text ?? '';
     const cleaned = text.replace(/^```[a-z]*\n?/i, '').replace(/\n?```$/i, '').trim();
     const parsed = JSON.parse(cleaned) as GeminiQuizResult;
-    if (!parsed.question || !parsed.choices || !parsed.correctChoiceId || !parsed.explanation) return null;
+    if (
+      !parsed.rewrittenHeadline ||
+      !parsed.question ||
+      !parsed.choices ||
+      parsed.choices.length !== 3 ||
+      !parsed.correctChoiceId ||
+      !parsed.explanation
+    ) return null;
     return parsed;
   } catch {
     return null;
   }
 }
 
+/** YYYY-MM-DD in Asia/Jerusalem so the daily refresh aligns with users' actual day boundary. */
 function todayKey(): string {
-  return new Date().toISOString().slice(0, 10);
+  return new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Asia/Jerusalem',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).format(new Date());
+}
+
+// Cache: a real (non-fallback) response is cached for the rest of the Israel day.
+let _cache: { data: NewsQuizData; date: string } | null = null;
+// Backoff: after a fallback, retry only after this timestamp passes.
+let _fallbackBackoffUntil = 0;
+const FALLBACK_BACKOFF_MS = 5 * 60 * 1000; // 5 min
+
+function buildFallback(headline?: string): NewsQuizData {
+  if (headline) {
+    return {
+      quizId: `fallback-${todayKey()}`,
+      headline,
+      question: `המומחים בחדשות דנו ב: "${headline.slice(0, 40)}...". איך זה משפיע על חיי היומיום שלך?`,
+      choices: [
+        { id: 'a', text: 'דרך מחירים, ריביות או שוק העבודה — תמיד יש השלכה' },
+        { id: 'b', text: 'רק חברות גדולות מושפעות, צרכנים פרטיים לא' },
+        { id: 'c', text: 'חדשות פיננסיות הן רעש, לא משנות בפועל' },
+      ],
+      correctChoiceId: 'a',
+      explanation: 'חדשות מאקרו (ריבית, אינפלציה, שוק) מחלחלות לכל אחד דרך מחירים, ריבית על משכנתא וכוח קנייה. הקשר לא תמיד מיידי, אבל קיים.',
+      xpReward: 10,
+      coinReward: 5,
+      generatedAt: new Date().toISOString(),
+      isFallback: true,
+    };
+  }
+  return {
+    quizId: `fallback-${todayKey()}`,
+    headline: 'הריבית בישראל נותרת על 4.5%',
+    question: 'מה קורה להחזר משכנתא קיימת כשבנק ישראל לא משנה את הריבית?',
+    choices: [
+      { id: 'a', text: 'בריבית פריים — ההחזר נשאר אותו דבר עד השינוי הבא' },
+      { id: 'b', text: 'ההחזר עולה אוטומטית כל חודש שהריבית קבועה' },
+      { id: 'c', text: 'הקרן יורדת מהר יותר כדי לפצות על הריבית' },
+    ],
+    correctChoiceId: 'a',
+    explanation: 'ריבית פריים = בנק ישראל + 1.5%. כשבנק ישראל לא זז, מסלול פריים במשכנתא לא זז. למשכנתאות חדשות זה אומר שתנאי הכניסה לא משתפרים.',
+    xpReward: 10,
+    coinReward: 5,
+    generatedAt: new Date().toISOString(),
+    isFallback: true,
+  };
 }
 
 export async function GET(request: Request): Promise<Response> {
   const limited = enforceRateLimit(request, 'market/news-quiz', { limit: 20, windowSec: 60 });
   if (limited) return limited;
 
-  if (_cache && _cache.expiresAt > Date.now()) {
+  const today = todayKey();
+
+  // Successful response from earlier today — serve from cache.
+  if (_cache && _cache.date === today) {
     return Response.json(_cache.data, {
       headers: { 'Cache-Control': 'public, max-age=900', 'X-Cache': 'HIT' },
     });
   }
 
-  try {
-    const headline = await fetchGlobesHeadline();
+  // Recent fallback — back off briefly to avoid hammering Globes/Gemini during outages.
+  if (Date.now() < _fallbackBackoffUntil && _cache?.data) {
+    return Response.json(_cache.data, {
+      headers: { 'Cache-Control': 'public, max-age=60', 'X-Cache': 'BACKOFF' },
+    });
+  }
 
-    if (!headline) {
-      const fallback: NewsQuizData = {
-        quizId: todayKey(),
-        headline: 'הריבית בישראל נותרת על 4.5%',
-        question: 'מה קורה להחזר המשכנתא שלך כשהריבית לא יורדת?',
-        choices: [
-          { id: 'a', text: 'ההחזר החודשי נשאר אותו דבר ולא משתנה' },
-          { id: 'b', text: 'ההחזר החודשי עולה יחד עם הריבית' },
-          { id: 'c', text: 'ההחזר יורד כי הבנק מפחית את הקרן' },
-        ],
-        correctChoiceId: 'a',
-        explanation: 'כשהריבית נשארת קבועה, גם ההחזר החודשי נשאר קבוע. הבעיה היא שמשכנתאות חדשות ממשיכות להיות יקרות, מה שקשה לרוכשי דירות ראשונה.',
-        xpReward: 10,
-        coinReward: 5,
-        generatedAt: new Date().toISOString(),
-      };
-      return Response.json(fallback, { headers: { 'Cache-Control': 'public, max-age=3600' } });
+  try {
+    const originalHeadline = await fetchGlobesHeadline();
+    if (!originalHeadline) {
+      const fallback = buildFallback();
+      _cache = { data: fallback, date: '' };
+      _fallbackBackoffUntil = Date.now() + FALLBACK_BACKOFF_MS;
+      return Response.json(fallback, { headers: { 'Cache-Control': 'public, max-age=60' } });
     }
 
-    const quiz = await generateQuiz(headline);
-
+    const quiz = await generateQuiz(originalHeadline);
     if (!quiz) {
-      const fallback: NewsQuizData = {
-        quizId: todayKey(),
-        headline,
-        question: `מה הכוונה ב: "${headline.slice(0, 40)}..."?`,
-        choices: [
-          { id: 'a', text: 'זה משפיע ישירות על הוצאות היומיום שלי' },
-          { id: 'b', text: 'זה רלוונטי רק לחברות גדולות' },
-          { id: 'c', text: 'זה לא קשור כלל למצב הכלכלי שלי' },
-        ],
-        correctChoiceId: 'a',
-        explanation: 'חדשות פיננסיות תמיד משפיעות על חיי היומיום — דרך מחירים, ריביות, או שוק העבודה.',
-        xpReward: 10,
-        coinReward: 5,
-        generatedAt: new Date().toISOString(),
-      };
-      return Response.json(fallback, { headers: { 'Cache-Control': 'public, max-age=3600' } });
+      // Got a real headline but Gemini failed — keep the original for the badge,
+      // serve a minimal teaching question. Still treat as fallback so we retry.
+      const fallback = buildFallback(originalHeadline);
+      _cache = { data: fallback, date: '' };
+      _fallbackBackoffUntil = Date.now() + FALLBACK_BACKOFF_MS;
+      return Response.json(fallback, { headers: { 'Cache-Control': 'public, max-age=60' } });
     }
 
     const data: NewsQuizData = {
-      quizId: `${todayKey()}-${simpleHash(headline)}`,
-      headline,
+      quizId: `${today}-${simpleHash(quiz.rewrittenHeadline)}`,
+      headline: quiz.rewrittenHeadline,
       question: quiz.question,
       choices: quiz.choices,
       correctChoiceId: quiz.correctChoiceId,
@@ -169,7 +217,8 @@ export async function GET(request: Request): Promise<Response> {
       generatedAt: new Date().toISOString(),
     };
 
-    _cache = { data, expiresAt: Date.now() + CACHE_MS };
+    _cache = { data, date: today };
+    _fallbackBackoffUntil = 0;
 
     return Response.json(data, {
       headers: { 'Cache-Control': 'public, max-age=900', 'X-Cache': 'MISS' },

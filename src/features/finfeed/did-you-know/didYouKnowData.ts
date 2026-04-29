@@ -8,10 +8,6 @@ const IMG_FINN_PASSIVE = require('../../../../assets/infographics/finn-passive.p
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const IMG_FINN_FREEDOM = require('../../../../assets/infographics/finn-freedom.png');
 // eslint-disable-next-line @typescript-eslint/no-var-requires
-const IMG_GOLD = require('../../../../assets/IMAGES/GOLD.jpg');
-// eslint-disable-next-line @typescript-eslint/no-var-requires
-const IMG_GEMS = require('../../../../assets/IMAGES/GEMS.jpg');
-// eslint-disable-next-line @typescript-eslint/no-var-requires
 const IMG_INVESTMENT = require('../../../../assets/IMAGES/INVESTMENT.jpg');
 const IMG_FINSTARS = { uri: 'https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/images/FINSTARS.png' };
 
@@ -183,7 +179,6 @@ export const DID_YOU_KNOW_ITEMS: DidYouKnowItem[] = [
     highlight: 'פי 90',
     source: 'Forbes 2017 · NYT',
     emoji: '👬',
-    image: IMG_GOLD,
   },
   {
     id: 'dyk-crypto-vitalik',
@@ -193,7 +188,6 @@ export const DID_YOU_KNOW_ITEMS: DidYouKnowItem[] = [
     highlight: '1.4 מיליארד $',
     source: 'Bloomberg Billionaires Index',
     emoji: '👨‍💻',
-    image: IMG_GEMS,
   },
   {
     id: 'dyk-crypto-doge',
