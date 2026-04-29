@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo } from "react";
+import { useState, useCallback, useMemo, useRef, useEffect } from "react";
 import { View, Text, Pressable, StyleSheet, ScrollView } from "react-native";
 import { Image as ExpoImage } from "expo-image";
 import Animated, { FadeIn, FadeInDown, FadeOut } from "react-native-reanimated";
@@ -86,8 +86,15 @@ export function SharkDilemmaCard({ dilemma, onComplete }: Props) {
   const [currentSlideId, setCurrentSlideId] = useState(normalized.startSlideId);
   const [chosen, setChosen] = useState<DilemmaOption | null>(null);
   const [path, setPath] = useState<PathStep[]>([]);
+  const scrollRef = useRef<ScrollView>(null);
 
   const currentSlide = normalized.slides.get(currentSlideId);
+
+  // Reset scroll to top whenever the user advances to a new slide so they always
+  // see the new scenario from the start, regardless of how far they scrolled before.
+  useEffect(() => {
+    scrollRef.current?.scrollTo({ y: 0, animated: false });
+  }, [currentSlideId]);
 
   const handleChoice = useCallback(
     (option: DilemmaOption) => {
@@ -127,7 +134,7 @@ export function SharkDilemmaCard({ dilemma, onComplete }: Props) {
 
   return (
     <SafeAreaView style={styles.root} edges={["top", "bottom"]}>
-      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+      <ScrollView ref={scrollRef} contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         <Animated.View entering={FadeInDown.duration(320)} style={styles.titleWrap}>
           <Text style={styles.title} accessibilityRole="header">לייעץ לשארק</Text>
         </Animated.View>
@@ -140,7 +147,12 @@ export function SharkDilemmaCard({ dilemma, onComplete }: Props) {
         >
           {/* Finn + speech bubble row */}
           <View style={styles.finnRow}>
-            <View style={styles.bubble}>
+            <View
+              style={styles.bubble}
+              accessible
+              accessibilityLiveRegion="polite"
+              accessibilityLabel={currentSlide.scenario}
+            >
               <Text style={styles.bubbleText}>{currentSlide.scenario}</Text>
             </View>
             <ExpoImage

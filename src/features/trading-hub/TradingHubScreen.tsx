@@ -366,9 +366,19 @@ export function TradingHubScreen() {
                     <View style={styles.chartCard}>
                         {(() => {
                             const asset = ASSET_BY_ID.get(selectedId);
-                            const pctChange = chartData.length >= 2
-                                ? ((chartData[chartData.length - 1].price - chartData[0].price) / chartData[0].price) * 100
+                            // Daily: change vs. yesterday's close (real day-over-day move).
+                            // Weekly: change across the loaded weekly chart (first → last point ≈ 7 days).
+                            // Falls back to first-vs-last chart points only if previousClose is unavailable.
+                            const baseline = timeframe === '1D' && previousClose && previousClose > 0
+                                ? previousClose
+                                : (chartData.length >= 2 ? chartData[0].price : 0);
+                            const latest = currentPrice > 0
+                                ? currentPrice
+                                : (chartData.length >= 1 ? chartData[chartData.length - 1].price : 0);
+                            const pctChange = baseline > 0 && latest > 0
+                                ? ((latest - baseline) / baseline) * 100
                                 : 0;
+                            const hasPctChange = baseline > 0 && latest > 0;
                             const rising = pctChange >= 0;
                             return (
                                 <View style={styles.chartHeader}>
@@ -377,7 +387,7 @@ export function TradingHubScreen() {
                                         <Text style={styles.chartCurrentPrice}>
                                             {currentPrice > 0 ? currentPrice.toLocaleString('en-US', { maximumFractionDigits: 2 }) : '—'}
                                         </Text>
-                                        {!chartLoading && chartData.length >= 2 && (
+                                        {!chartLoading && hasPctChange && (
                                             <View style={[styles.chartChangePill, { backgroundColor: rising ? 'rgba(55,65,81,0.1)' : 'rgba(107,114,128,0.1)' }]}>
                                                 <Text style={[styles.chartChangePct, { color: rising ? '#374151' : '#6b7280' }]}>
                                                     {rising ? '+' : ''}{pctChange.toFixed(2)}%

@@ -627,7 +627,7 @@ function FlashcardCard({
         <TA125WarRecoveryChart onContinue={handleNextBtn} />
       ) : card.videoUri ? (
         /* ── Full-screen video flashcard ── */
-        <VideoHookPlayer videoUri={card.videoUri} hookText="" onFinish={handleNextBtn} unitColors={unitColors} />
+        <VideoHookPlayer videoUri={getCachedVideoPath(card.videoUri)} hookText="" onFinish={handleNextBtn} unitColors={unitColors} />
       ) : card.isMeme ? (
         /* ── Meme break card, humor pause, no XP ── */
         <View style={{ flex: 1 }}>
@@ -3057,8 +3057,11 @@ export function LessonFlowScreen() {
         dilemma={dilemma}
         onComplete={(result) => {
           const eco = useEconomyStore.getState();
-          // Base 5 coins + 3 per net-positive score point. Negative score = no bonus.
-          const bonusCoins = Math.max(0, result.totalScore) * 3;
+          // Branching dilemmas only: base 5 coins + 3 per net-positive score point.
+          // Legacy single-slide dilemmas keep the original flat 5-coin reward to avoid
+          // retroactive inflation across the 49 unchanged dilemmas.
+          const isBranching = result.path.length > 1;
+          const bonusCoins = isBranching ? Math.max(0, result.totalScore) * 3 : 0;
           eco.addCoins(5 + bonusCoins);
           // Soft penalty: each unwise choice in the path costs a heart.
           // useHeart() returns false silently at 0 — the in-card feedback IS the feedback.
