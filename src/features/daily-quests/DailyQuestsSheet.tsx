@@ -259,6 +259,19 @@ export function DailyQuestsSheet({ visible, onClose }: DailyQuestsSheetProps) {
     if (videoCloseTimerRef.current) clearTimeout(videoCloseTimerRef.current);
   }, []);
 
+  // Reset video overlay if user closes the modal manually (e.g. tap outside)
+  // before the auto-close timer fires.
+  useEffect(() => {
+    if (!visible && showVideoOverlay) {
+      setShowVideoOverlay(false);
+      if (videoCloseTimerRef.current) {
+        clearTimeout(videoCloseTimerRef.current);
+        videoCloseTimerRef.current = null;
+      }
+      try { chestVideoPlayer.pause(); } catch { /* ignore */ }
+    }
+  }, [visible, showVideoOverlay, chestVideoPlayer]);
+
   // Gentle pulse on the chest when ready, feels inviting, not shaky.
   // Mirrors the LessonFlowScreen chest-ready pattern: body pulse + glow halo.
   const reduceMotion = useReducedMotion();

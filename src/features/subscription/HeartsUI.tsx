@@ -18,7 +18,14 @@ import Animated, {
 } from 'react-native-reanimated';
 import { Heart } from 'lucide-react-native';
 import LottieView from '../../components/ui/SafeLottieView';
+import { useVideoPlayer, VideoView } from 'expo-video';
 import { FINN_STANDARD } from '../retention-loops/finnMascotConfig';
+
+/** Plays after the existing pulse animation has had a beat to land */
+const HEARTS_VIDEO_URL =
+  "https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/finn-videos/finn-hearts-empty.mp4";
+/** Delay before swapping FINN_STANDARD → finn-hearts-empty video */
+const HEARTS_VIDEO_DELAY_MS = 1500;
 import { useSubscriptionStore, getTimeUntilNextHeart } from './useSubscriptionStore';
 import { useEconomyStore } from '../../features/economy/useEconomyStore';
 import { tapHaptic, successHaptic } from '../../utils/haptics';
@@ -139,6 +146,34 @@ export function OutOfHeartsModal({ visible, onDismiss, onUpgrade, onHeartsRefill
     const emojiStyle = useAnimatedStyle(() => ({
         transform: [{ scale: pulse.value }],
     }));
+
+    // Hearts-empty video plays AFTER the existing pulse animation has had a beat
+    // to land. The pulse continues underneath the video for warmth.
+    const heartsVideoPlayer = useVideoPlayer(HEARTS_VIDEO_URL, (p) => {
+        p.loop = true;
+        p.muted = true;
+        p.bufferOptions = {
+            preferredForwardBufferDuration: 5,
+            waitsToMinimizeStalling: false,
+            minBufferForPlayback: 0.5,
+        };
+    });
+    const [showHeartsVideo, setShowHeartsVideo] = useState(false);
+    useEffect(() => {
+        if (!visible) {
+            setShowHeartsVideo(false);
+            try { heartsVideoPlayer.pause(); } catch { /* ignore */ }
+            return;
+        }
+        const timer = setTimeout(() => {
+            setShowHeartsVideo(true);
+            try { heartsVideoPlayer.play(); } catch { /* ignore */ }
+        }, HEARTS_VIDEO_DELAY_MS);
+        return () => {
+            clearTimeout(timer);
+            try { heartsVideoPlayer.pause(); } catch { /* ignore */ }
+        };
+    }, [visible, heartsVideoPlayer]);
 
     const handleUpgrade = useCallback(() => {
         tapHaptic();
@@ -270,7 +305,16 @@ export function OutOfHeartsModal({ visible, onDismiss, onUpgrade, onHeartsRefill
                             </View>
                         </View>
                         <Animated.View style={[styles.finnWrap, emojiStyle]}>
-                            <ExpoImage source={FINN_STANDARD} accessible={false} style={{ width: 110, height: 110 }} contentFit="contain" />
+                            {showHeartsVideo ? (
+                                <VideoView
+                                    player={heartsVideoPlayer}
+                                    style={{ width: 110, height: 110 }}
+                                    nativeControls={false}
+                                    contentFit="contain"
+                                />
+                            ) : (
+                                <ExpoImage source={FINN_STANDARD} accessible={false} style={{ width: 110, height: 110 }} contentFit="contain" />
+                            )}
                         </Animated.View>
                     </View>
 

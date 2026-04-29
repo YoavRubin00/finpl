@@ -167,24 +167,34 @@ const MODULE_POST_VIDEO_MAP: Record<string, string> = {
   "mod-0-3": "https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/finn-videos/finn-studying.mp4",
   "mod-0-4": "https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/finn-videos/finn-mod-0-4.mp4",
   "mod-0-5": "https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/finn-videos/finn-mod-0-5.mp4",
-  // Chapter 1 — first module is the chapter intro; others recycle thematically
-  "mod-1-1": "https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/finn-videos/finn-ch1-debt.mp4",
+  // Chapter 1 — Tier 2 specifics (generated for each topic)
+  "mod-1-1": "https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/finn-videos/finn-mod-1-1.mp4", // ריבית דריבית
+  "mod-1-2": "https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/finn-videos/finn-mod-1-2.mp4", // מלכודת המינוס
   "mod-1-3": "https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/finn-videos/finn-mod-0-4.mp4", // אשראי — recycle credit-card scene
   "mod-1-4": "https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/finn-videos/finn-ch2-budget.mp4", // תקציב — recycle budget scene
+  "mod-1-5": "https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/finn-videos/finn-mod-1-5.mp4", // תלוש שכר
   "mod-1-6": "https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/finn-videos/finn-ch1-debt.mp4", // הלוואות — recycle debt scene
-  // Chapter 2 — recycle pension/study/insurance fits
-  "mod-2-10": "https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/finn-videos/finn-ch2-budget.mp4",
-  "mod-2-12": "https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/finn-videos/finn-mod-0-5.mp4", // פנסיה
-  "mod-2-13": "https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/finn-videos/finn-studying.mp4", // קרן השתלמות
-  // Chapter 3 — recycle inflation/invest/study
+  "mod-1-7": "https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/finn-videos/finn-mod-1-7.mp4", // עמלות
+  "mod-1-8": "https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/finn-videos/finn-mod-1-8.mp4", // מלכודות שיווקיות
+  "mod-1-9": "https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/finn-videos/finn-mod-1-9.mp4", // קרן חירום
+  // Chapter 2 — Tier 2 specifics + recycles
+  "mod-2-10": "https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/finn-videos/finn-mod-2-10.mp4", // דירוג אשראי
+  "mod-2-11": "https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/finn-videos/finn-mod-2-11.mp4", // נקודות זיכוי
+  "mod-2-12": "https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/finn-videos/finn-mod-0-5.mp4", // פנסיה — recycle
+  "mod-2-13": "https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/finn-videos/finn-studying.mp4", // קרן השתלמות — recycle
+  "mod-2-14": "https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/finn-videos/finn-mod-2-14.mp4", // ביטוחים
+  // Chapter 3 — Tier 2 specific (psychology) + recycles
   "mod-3-15": "https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/finn-videos/finn-ch3-inflation.mp4",
+  "mod-3-16": "https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/finn-videos/finn-mod-3-16.mp4", // פסיכולוגיה של הכסף
   "mod-3-17": "https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/finn-videos/finn-ch4-invest.mp4", // קופת גמל
   "mod-3-18": "https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/finn-videos/finn-trading-start.mp4", // מסלולי השקעה
-  // Chapter 4 — many fits with finn-trading-start / finn-ch4-invest / finn-studying
+  // Chapter 4 — Tier 2 specifics (dividend, diversification) + recycles
   "mod-4-19": "https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/finn-videos/finn-ch4-invest.mp4",
   "mod-4-20": "https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/finn-videos/finn-trading-start.mp4", // מדדים
   "mod-4-21": "https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/finn-videos/finn-ch4-invest.mp4", // ETF
   "mod-4-22": "https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/finn-videos/finn-trading-start.mp4", // פקודות מסחר
+  "mod-4-23": "https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/finn-videos/finn-mod-4-23.mp4", // דיבידנד
+  "mod-4-24": "https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/finn-videos/finn-mod-4-24.mp4", // פיזור סיכונים
   "mod-4-25": "https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/finn-videos/finn-studying.mp4", // דוחות כספיים
   "mod-4-26": "https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/finn-videos/finn-trading-start.mp4", // פלטפורמות
   "mod-4-27": "https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/finn-videos/finn-ch4-invest.mp4",
