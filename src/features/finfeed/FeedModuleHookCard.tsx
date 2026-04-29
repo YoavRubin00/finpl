@@ -3,7 +3,7 @@ import { View, Text, StyleSheet, Pressable, Dimensions } from "react-native";
 import { Image as ExpoImage } from "expo-image";
 import { useRouter } from "expo-router";
 import { LinearGradient } from "expo-linear-gradient";
-import { Zap, Play, Volume2, VolumeX } from "lucide-react-native";
+import { Zap, Play, Volume2, VolumeX, Map } from "lucide-react-native";
 import Animated from "react-native-reanimated";
 import LottieView from "lottie-react-native";
 import { WebView } from "react-native-webview";
@@ -91,6 +91,11 @@ export const FeedModuleHookCard = React.memo(function FeedModuleHookCard({ item,
     setCurrentChapter(item.storeChapterId);
     setCurrentModule(item.moduleIndex);
     router.push(`/lesson/${item.moduleId}?chapterId=${item.chapterId}`);
+  }
+
+  function handleOpenChapterMap() {
+    tapHaptic();
+    router.push(`/chapter/${item.chapterId}`);
   }
 
   // Short tap → toggle sound (mute/unmute). Long press → toggle pause.
@@ -189,6 +194,18 @@ export const FeedModuleHookCard = React.memo(function FeedModuleHookCard({ item,
           </View>
         </>
       )}
+
+      {/* Map button — opens chapter intro screen */}
+      <Pressable
+        onPress={handleOpenChapterMap}
+        style={styles.mapButton}
+        accessibilityRole="button"
+        accessibilityLabel="פתח את מפת הפרק"
+        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+      >
+        <Map size={14} color="rgba(255,255,255,0.95)" />
+        <Text style={styles.mapButtonText}>מפת הפרק</Text>
+      </Pressable>
 
       {/* Content overlay at bottom */}
       <Animated.View style={styles.content}>
@@ -347,6 +364,28 @@ const styles = StyleSheet.create({
   ctaText: {
     fontSize: 13,
     fontWeight: "800",
+    writingDirection: "rtl",
+  },
+  // Map button — top-left corner, opposite the mute indicator.
+  mapButton: {
+    position: "absolute",
+    top: 56,
+    left: 16,
+    zIndex: 20,
+    flexDirection: "row-reverse",
+    alignItems: "center",
+    gap: 6,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    backgroundColor: "rgba(0,0,0,0.45)",
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.2)",
+  },
+  mapButtonText: {
+    fontSize: 11,
+    fontWeight: "700",
+    color: "rgba(255,255,255,0.95)",
     writingDirection: "rtl",
   },
   // Small mute-state indicator pinned to the top-right corner of the video.

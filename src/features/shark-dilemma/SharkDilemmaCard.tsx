@@ -1,38 +1,129 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useMemo } from "react";
 import { View, Text, Pressable, StyleSheet, ScrollView } from "react-native";
 import { Image as ExpoImage } from "expo-image";
 import Animated, { FadeIn, FadeInDown, FadeOut } from "react-native-reanimated";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { FINN_DANCING, FINN_EMPATHIC, FINN_STANDARD } from "../retention-loops/finnMascotConfig";
 import { tapHaptic, successHaptic } from "../../utils/haptics";
-import type { SharkDilemma, DilemmaOption } from "./types";
+import type { SharkDilemma, DilemmaOption, DilemmaSlide, DilemmaResult } from "./types";
 
 interface Props {
   dilemma: SharkDilemma;
-  onContinue: () => void;
-  /** Fired once when the user picks an option. Parent grants any rewards. */
-  onChoice?: (option: DilemmaOption) => void;
+  /** Fired once when the user finishes the (possibly branching) dilemma. */
+  onComplete: (result: DilemmaResult) => void;
+}
+
+interface PathStep {
+  slideId: string;
+  choiceId: "a" | "b";
+  isWise: boolean;
+  scoreImpact: number;
+}
+
+interface NormalizedDilemma {
+  slides: Map<string, DilemmaSlide>;
+  startSlideId: string;
+}
+
+function normalizeDilemma(d: SharkDilemma): NormalizedDilemma {
+  if (d.slides && d.slides.length > 0) {
+    const map = new Map<string, DilemmaSlide>();
+    for (const s of d.slides) map.set(s.id, s);
+    const startSlideId = d.startSlideId ?? d.slides[0].id;
+    if (__DEV__) {
+      if (!map.has(startSlideId)) {
+        console.warn(`[SharkDilemma] startSlideId "${startSlideId}" not found for module ${d.moduleId}`);
+      }
+      for (const s of d.slides) {
+        for (const choiceId of ["a", "b"] as const) {
+          const next = s.branches?.[choiceId];
+          if (next && !map.has(next)) {
+            console.warn(`[SharkDilemma] slide "${s.id}" branch "${choiceId}" → "${next}" not found (${d.moduleId})`);
+          }
+        }
+      }
+    }
+    return { slides: map, startSlideId };
+  }
+  if (d.scenario && d.options) {
+    const legacy: DilemmaSlide = { id: "main", scenario: d.scenario, options: d.options };
+    return { slides: new Map([["main", legacy]]), startSlideId: "main" };
+  }
+  throw new Error(`[SharkDilemma] dilemma for ${d.moduleId} has neither slides nor scenario+options`);
+}
+
+function effectiveScore(option: DilemmaOption): number {
+  if (typeof option.scoreImpact === "number") return option.scoreImpact;
+  return option.isWise ? 1 : -1;
+}
+
+function buildResult(path: PathStep[]): DilemmaResult {
+  let totalScore = 0;
+  let wiseCount = 0;
+  let unwiseCount = 0;
+  for (const step of path) {
+    totalScore += step.scoreImpact;
+    if (step.isWise) wiseCount += 1;
+    else unwiseCount += 1;
+  }
+  return {
+    path: path.map(({ slideId, choiceId, isWise }) => ({ slideId, choiceId, isWise })),
+    totalScore,
+    wiseCount,
+    unwiseCount,
+  };
 }
 
 /**
  * "לייעץ לשארק" — end-of-module advisory dilemma. Finn shows a real-life
- * scenario; user picks one of two options. Wise choice → dancing shark +
- * small coin reward. Unwise choice → empathic shark + heart deduction
- * (parent handles rewards/penalties).
+ * scenario; user picks one of two options. Wise choice → dancing shark.
+ * Unwise → empathic shark. Supports branching: a slide's `branches[choiceId]`
+ * routes to the next slide; missing branch = terminal for that choice.
+ * Parent receives the full path + score via `onComplete`.
  */
-export function SharkDilemmaCard({ dilemma, onContinue, onChoice }: Props) {
+export function SharkDilemmaCard({ dilemma, onComplete }: Props) {
+  const normalized = useMemo(() => normalizeDilemma(dilemma), [dilemma]);
+  const [currentSlideId, setCurrentSlideId] = useState(normalized.startSlideId);
   const [chosen, setChosen] = useState<DilemmaOption | null>(null);
+  const [path, setPath] = useState<PathStep[]>([]);
+
+  const currentSlide = normalized.slides.get(currentSlideId);
 
   const handleChoice = useCallback(
     (option: DilemmaOption) => {
-      if (chosen) return;
+      if (chosen || !currentSlide) return;
       tapHaptic();
       setChosen(option);
-      onChoice?.(option);
       if (option.isWise) successHaptic();
+      setPath((prev) => [
+        ...prev,
+        {
+          slideId: currentSlide.id,
+          choiceId: option.id,
+          isWise: option.isWise,
+          scoreImpact: effectiveScore(option),
+        },
+      ]);
     },
-    [chosen, onChoice],
+    [chosen, currentSlide],
   );
+
+  const handleContinue = useCallback(() => {
+    if (!chosen || !currentSlide) return;
+    const nextId = currentSlide.branches?.[chosen.id];
+    const nextSlide = nextId ? normalized.slides.get(nextId) : undefined;
+    if (nextSlide) {
+      setCurrentSlideId(nextSlide.id);
+      setChosen(null);
+      return;
+    }
+    onComplete(buildResult(path));
+  }, [chosen, currentSlide, normalized, path, onComplete]);
+
+  if (!currentSlide) {
+    if (__DEV__) console.warn(`[SharkDilemma] no slide for id "${currentSlideId}" (${dilemma.moduleId})`);
+    return null;
+  }
 
   return (
     <SafeAreaView style={styles.root} edges={["top", "bottom"]}>
@@ -41,60 +132,67 @@ export function SharkDilemmaCard({ dilemma, onContinue, onChoice }: Props) {
           <Text style={styles.title} accessibilityRole="header">לייעץ לשארק</Text>
         </Animated.View>
 
-        {/* Finn + speech bubble row */}
-        <View style={styles.finnRow}>
-          <View style={styles.bubble}>
-            <Text style={styles.bubbleText}>{dilemma.scenario}</Text>
-          </View>
-          <ExpoImage
-            source={chosen ? (chosen.isWise ? FINN_DANCING : FINN_EMPATHIC) : FINN_STANDARD}
-            style={styles.finn}
-            contentFit="contain"
-            accessible={false}
-          />
-        </View>
-
-        {/* Options — 2 blue buttons stacked. Hide after choice. */}
-        {!chosen && (
-          <Animated.View entering={FadeIn.duration(260)} exiting={FadeOut.duration(180)} style={styles.optionsWrap}>
-            {dilemma.options.map((option) => (
-              <View key={option.id} style={styles.optionGlowWrap}>
-                <Pressable
-                  onPress={() => handleChoice(option)}
-                  accessibilityRole="button"
-                  accessibilityLabel={option.label}
-                >
-                  {({ pressed }) => (
-                    <View style={[styles.optionBtn, pressed && styles.optionBtnPressed]}>
-                      <Text style={styles.optionText}>{option.label}</Text>
-                    </View>
-                  )}
-                </Pressable>
-              </View>
-            ))}
-          </Animated.View>
-        )}
-
-        {/* Feedback + continue */}
-        {chosen && (
-          <Animated.View entering={FadeIn.duration(320)} style={styles.feedbackWrap}>
-            <View
-              style={[styles.feedbackCard, chosen.isWise ? styles.feedbackWise : styles.feedbackNotWise]}
-              accessible
-              accessibilityLiveRegion="polite"
-              accessibilityLabel={`${chosen.isWise ? "בחירה חכמה" : "נקודה למחשבה"}. ${chosen.feedback}`}
-            >
-              <Text style={[styles.feedbackLabel, chosen.isWise ? styles.feedbackLabelWise : styles.feedbackLabelNotWise]}>
-                {chosen.isWise ? "✓ בחירה חכמה" : "💭 נקודה למחשבה"}
-              </Text>
-              <Text style={styles.feedbackText}>{chosen.feedback}</Text>
+        {/* Slide-keyed wrapper so a transition fades between slides on branching dilemmas */}
+        <Animated.View
+          key={currentSlide.id}
+          entering={FadeIn.duration(280)}
+          exiting={FadeOut.duration(160)}
+        >
+          {/* Finn + speech bubble row */}
+          <View style={styles.finnRow}>
+            <View style={styles.bubble}>
+              <Text style={styles.bubbleText}>{currentSlide.scenario}</Text>
             </View>
+            <ExpoImage
+              source={chosen ? (chosen.isWise ? FINN_DANCING : FINN_EMPATHIC) : FINN_STANDARD}
+              style={styles.finn}
+              contentFit="contain"
+              accessible={false}
+            />
+          </View>
 
-            <Pressable onPress={onContinue} style={styles.continueBtn} accessibilityRole="button" accessibilityLabel="המשך">
-              <Text style={styles.continueText}>המשך</Text>
-            </Pressable>
-          </Animated.View>
-        )}
+          {/* Options — 2 blue buttons stacked. Hide after choice. */}
+          {!chosen && (
+            <Animated.View entering={FadeIn.duration(260)} exiting={FadeOut.duration(180)} style={styles.optionsWrap}>
+              {currentSlide.options.map((option) => (
+                <View key={option.id} style={styles.optionGlowWrap}>
+                  <Pressable
+                    onPress={() => handleChoice(option)}
+                    accessibilityRole="button"
+                    accessibilityLabel={option.label}
+                  >
+                    {({ pressed }) => (
+                      <View style={[styles.optionBtn, pressed && styles.optionBtnPressed]}>
+                        <Text style={styles.optionText}>{option.label}</Text>
+                      </View>
+                    )}
+                  </Pressable>
+                </View>
+              ))}
+            </Animated.View>
+          )}
+
+          {/* Feedback + continue */}
+          {chosen && (
+            <Animated.View entering={FadeIn.duration(320)} style={styles.feedbackWrap}>
+              <View
+                style={[styles.feedbackCard, chosen.isWise ? styles.feedbackWise : styles.feedbackNotWise]}
+                accessible
+                accessibilityLiveRegion="polite"
+                accessibilityLabel={`${chosen.isWise ? "בחירה חכמה" : "נקודה למחשבה"}. ${chosen.feedback}`}
+              >
+                <Text style={[styles.feedbackLabel, chosen.isWise ? styles.feedbackLabelWise : styles.feedbackLabelNotWise]}>
+                  {chosen.isWise ? "✓ בחירה חכמה" : "💭 נקודה למחשבה"}
+                </Text>
+                <Text style={styles.feedbackText}>{chosen.feedback}</Text>
+              </View>
+
+              <Pressable onPress={handleContinue} style={styles.continueBtn} accessibilityRole="button" accessibilityLabel="המשך">
+                <Text style={styles.continueText}>המשך</Text>
+              </Pressable>
+            </Animated.View>
+          )}
+        </Animated.View>
       </ScrollView>
     </SafeAreaView>
   );

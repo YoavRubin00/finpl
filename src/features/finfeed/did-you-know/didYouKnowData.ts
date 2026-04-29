@@ -2,8 +2,6 @@ import type { DidYouKnowItem } from './types';
 
 // Reused asset pool, pulls from existing IMAGES/ catalog, no new downloads.
 // eslint-disable-next-line @typescript-eslint/no-var-requires
-const IMG_PIZZA = require('../../../../assets/IMAGES/fun/pizza_index.png');
-// eslint-disable-next-line @typescript-eslint/no-var-requires
 const IMG_NVDA = require('../../../../assets/IMAGES/NVDA IR.png');
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const IMG_FINN_PASSIVE = require('../../../../assets/infographics/finn-passive.png');
@@ -176,7 +174,6 @@ export const DID_YOU_KNOW_ITEMS: DidYouKnowItem[] = [
     highlight: 'מעל מיליארד $',
     source: 'BitcoinTalk archive',
     emoji: '🍕',
-    image: IMG_PIZZA,
   },
   {
     id: 'dyk-crypto-winklevoss',

@@ -1,12 +1,25 @@
 import type { CompanionId, UserProfile } from "../auth/types";
 import { COMPANION_PERSONALITIES, CURRICULUM_KNOWLEDGE } from "./chatData";
 
+export interface LessonContext {
+  moduleId: string;
+  moduleTitle: string;
+  phase: "flashcards" | "interactive-recall" | "quizzes" | "sim" | "intro" | "summary" | "other";
+  flashcardId?: string;
+  flashcardText?: string;
+  conceptTags?: string[];
+}
+
 /** Strip characters that could be used for prompt injection. */
 function sanitizeForPrompt(value: string, maxLen = 50): string {
   return value
     .replace(/[#\n\r{}<>[\]`]/g, "")
     .trim()
     .slice(0, maxLen);
+}
+
+function sanitizeLongText(value: string, maxLen: number): string {
+  return value.replace(/[`<>{}\[\]]/g, "").trim().slice(0, maxLen);
 }
 
 /**
@@ -24,6 +37,7 @@ export function buildSystemPrompt(
   completedModules: string[],
   currentChapterId: string,
   lifelineConcept?: string,
+  lessonContext?: LessonContext,
 ): string {
   const companion = COMPANION_PERSONALITIES[companionId] ?? COMPANION_PERSONALITIES["warren-buffett"];
 
@@ -99,7 +113,22 @@ ${companion.tone}
 - **חשוב:** לעולם אל תשתמש במספרי מודולות (כמו "מודול 1-1", "mod-0-3"). דבר תמיד בשמות הנושאים ("ריבית דריבית", "אשראי", "תלוש שכר" וכו\'). המשתמש לא מכיר את מספרי הקידוד הפנימיים.
 
 ## הידע שלך (כל התוכנית הלימודית)
-${CURRICULUM_KNOWLEDGE}${lifelineConcept ? `
+${CURRICULUM_KNOWLEDGE}${lessonContext ? `
+
+## 📖 הקשר שיעור נוכחי
+המשתמש פתח אותך **מתוך השיעור** "${sanitizeForPrompt(lessonContext.moduleTitle, 80)}" (שלב: ${lessonContext.phase}).${lessonContext.flashcardText ? `
+
+### תוכן השקופית הנוכחית:
+"${sanitizeLongText(lessonContext.flashcardText, 600)}"` : ""}${lessonContext.conceptTags && lessonContext.conceptTags.length > 0 ? `
+
+מושגים שמופיעים בשקופית: ${lessonContext.conceptTags.slice(0, 6).map((t) => sanitizeForPrompt(t, 30)).join(", ")}` : ""}
+
+### איך להתייחס להקשר הזה:
+- אם השאלה קשורה ישירות לתוכן השקופית — כדאי לציין את הקשר הספציפי ("בשקופית הזאת מדברים על...").
+- אם נראה בלבול מנקודה ספציפית בטקסט — אפשר לצטט את המילה או הביטוי הקטן (לא את כל הטקסט) ולהסביר אותו.
+- אם השאלה כללית יותר — אפשר לקשר את התשובה לנושא של השיעור הנוכחי כשרלוונטי.
+- חשוב להשתמש בשם הנושא בעברית בלבד, בלי מספרי מודולה פנימיים.
+- אפילו אם השקופית מזכירה מוצר או קרן ספציפיים, התפקיד הוא להסביר עקרונות בלבד — בלי להמליץ על המוצר.` : ""}${lifelineConcept ? `
 
 ## 🛟 התערבות חירום, הצלה (Lifeline)
 המשתמש מתקשה עם הנושא: **${lifelineConcept}**

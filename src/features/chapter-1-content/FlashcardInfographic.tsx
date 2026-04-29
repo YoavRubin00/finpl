@@ -8,7 +8,7 @@
  */
 import { useState, useCallback, useEffect } from "react";
 import { View, Image, StyleSheet, Pressable, Modal, Platform } from "react-native";
-import Animated, { useSharedValue, useAnimatedStyle, withTiming } from "react-native-reanimated";
+import Animated, { useSharedValue, useAnimatedStyle, withTiming, withRepeat, Easing } from "react-native-reanimated";
 import { Image as ExpoImage } from "expo-image";
 import type { ImageSource, ImageLoadEventData } from "expo-image";
 import type { ImageSourcePropType } from "react-native";
@@ -442,6 +442,11 @@ export function FlashcardInfographic({ cardId, diveStep = 0, zoomRegions }: Prop
   const zoomX = useSharedValue(0);
   const zoomY = useSharedValue(0);
 
+  // Idle "breathing" — subtle pulse + drift that runs continuously.
+  // Composes multiplicatively/additively with zoom so dive transitions stay clean.
+  const breathScale = useSharedValue(1);
+  const breathDriftY = useSharedValue(0);
+
   useEffect(() => {
     let targetX = 0, targetY = 0, targetScale = 1;
     if (zoomRegions) {
@@ -457,11 +462,24 @@ export function FlashcardInfographic({ cardId, diveStep = 0, zoomRegions }: Prop
     zoomY.value = withTiming(targetY, cfg);
   }, [diveStep, zoomRegions, zoomScale, zoomX, zoomY]);
 
+  useEffect(() => {
+    breathScale.value = withRepeat(
+      withTiming(1.012, { duration: 3200, easing: Easing.inOut(Easing.sin) }),
+      -1,
+      true,
+    );
+    breathDriftY.value = withRepeat(
+      withTiming(2, { duration: 4800, easing: Easing.inOut(Easing.sin) }),
+      -1,
+      true,
+    );
+  }, [breathScale, breathDriftY]);
+
   const zoomStyle = useAnimatedStyle(() => ({
     transform: [
       { translateX: zoomX.value },
-      { translateY: zoomY.value },
-      { scale: zoomScale.value },
+      { translateY: zoomY.value + breathDriftY.value },
+      { scale: zoomScale.value * breathScale.value },
     ],
   }));
 

@@ -35,7 +35,7 @@ import { useRouter } from "expo-router";
 import { getConceptLabel } from "../social/LifelineModal";
 import { AnimatedPressable } from "../../components/ui/AnimatedPressable";
 import { COMPANION_PERSONALITIES, getContextualSuggestions, getContextAwareGreeting } from "./chatData";
-import { buildSystemPrompt } from "./buildChatPrompt";
+import { buildSystemPrompt, type LessonContext } from "./buildChatPrompt";
 import type { CompanionAnimationState, ChatMessage, MessageStatus } from "./chatTypes";
 import type { CompanionId } from "../auth/types";
 import { ProBadge } from "../../components/ui/ProBadge";
@@ -303,7 +303,7 @@ const pickerStyles = StyleSheet.create({
 /*  ChatScreen, WhatsApp-style                                        */
 /* ------------------------------------------------------------------ */
 
-export function ChatScreen() {
+export function ChatScreen({ lessonContext }: { lessonContext?: LessonContext } = {}) {
   const router = useRouter();
   const displayName = useAuthStore((s) => s.displayName);
   const updateProfile = useAuthStore((s) => s.updateProfile);
@@ -534,7 +534,7 @@ export function ChatScreen() {
     const conceptLabel = lifelineConcept ? getConceptLabel(lifelineConcept) : "";
     const systemPrompt =
       displayName && profile
-        ? buildSystemPrompt(displayName, profile, companionId, allCompletedModules, currentChapterId, conceptLabel)
+        ? buildSystemPrompt(displayName, profile, companionId, allCompletedModules, currentChapterId, conceptLabel, lessonContext)
         : `אתה ${companion.name} ${companion.emoji}, מחנך פיננסי באפליקציית FinPlay. ${companion.tone}\nענה תמיד בעברית. תשובות קצרות.`;
 
     const chatMessages = messages.map((m) => ({
@@ -639,7 +639,7 @@ export function ChatScreen() {
     const conceptLabel = lifelineConcept ? getConceptLabel(lifelineConcept) : undefined;
     const systemPrompt =
       displayName && profile
-        ? buildSystemPrompt(displayName, profile, companionId, allCompletedModules, currentChapterId, conceptLabel)
+        ? buildSystemPrompt(displayName, profile, companionId, allCompletedModules, currentChapterId, conceptLabel, lessonContext)
         : `אתה ${companion.name} ${companion.emoji}, מחנך פיננסי באפליקציית FinPlay. ${companion.tone}\nענה תמיד בעברית. תשובות קצרות.`;
 
     const chatMessages = updatedMessages.map((m) => ({

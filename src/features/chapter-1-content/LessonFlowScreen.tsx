@@ -116,10 +116,23 @@ import { FlashcardInfographic, FINN_MAP, INFOGRAPHIC_MAP } from "./FlashcardInfo
 import { useModulePrefetch, getCachedVideoPath } from "../../hooks/useModulePrefetch";
 import { GlossaryTooltip } from "../../components/ui/GlossaryTooltip";
 import { ChatScreen } from "../chat/ChatScreen";
+import { CaptainSharkFAB } from "../chat/CaptainSharkFAB";
+import type { LessonContext } from "../chat/buildChatPrompt";
 
 const AnimatedExpoImage = Animated.createAnimatedComponent(ExpoImage);
 
 type FlowPhase = "hero" | "intro" | "flashcards" | "interactive-recall" | "quizzes" | "sim-intro" | "sim" | "module-infographic" | "post-infographic-video" | "shark-dilemma" | "summary" | "video";
+
+/** Phases where the Captain Shark FAB should be visible. Hidden during videos,
+ *  hero splash, sim gameplay (own UI), and reward summary. */
+const FAB_VISIBLE_PHASES: ReadonlySet<FlowPhase> = new Set([
+  "intro",
+  "flashcards",
+  "interactive-recall",
+  "quizzes",
+  "module-infographic",
+  "shark-dilemma",
+]);
 
 /** Full-screen character art shown when first opening a module */
 const MODULE_HERO_MAP: Record<string, { uri: string } | number> = {
@@ -2335,6 +2348,37 @@ export function LessonFlowScreen() {
     const r = mod?.id ? useChapterStore.getState().moduleResume[mod.id] : undefined;
     return (r && RESTORABLE_PHASES.has(r.phase as FlowPhase)) ? r.flashcardIndex : 0;
   });
+
+  const chatLessonContext = useMemo<LessonContext | undefined>(() => {
+    if (!mod) return undefined;
+    const phaseMap: Record<FlowPhase, LessonContext["phase"]> = {
+      hero: "intro",
+      intro: "intro",
+      flashcards: "flashcards",
+      "interactive-recall": "interactive-recall",
+      quizzes: "quizzes",
+      "sim-intro": "sim",
+      sim: "sim",
+      "module-infographic": "other",
+      "post-infographic-video": "other",
+      "shark-dilemma": "other",
+      summary: "summary",
+      video: "other",
+    };
+    const mappedPhase: LessonContext["phase"] = phaseMap[phase] ?? "other";
+    const currentCard = mappedPhase === "flashcards" ? mod.flashcards[flashcardIndex] : undefined;
+    const cleanedText = currentCard?.text
+      ? currentCard.text.replace(/\[\[([^\]|]+)(?:\|[^\]]+)?\]\]/g, "$1")
+      : undefined;
+    return {
+      moduleId: mod.id,
+      moduleTitle: mod.title,
+      phase: mappedPhase,
+      flashcardId: currentCard?.id,
+      flashcardText: cleanedText,
+    };
+  }, [mod, phase, flashcardIndex]);
+
   const [finnTransitionSource, setFinnTransitionSource] = useState<{ uri: string } | null>(null);
   const [finnTipText, setFinnTipText] = useState<string | null>(null);
   // Mid-lesson Finn checkpoint
@@ -3011,16 +3055,21 @@ export function LessonFlowScreen() {
     return (
       <SharkDilemmaCard
         dilemma={dilemma}
-        onChoice={(option) => {
-          useEconomyStore.getState().addCoins(5);
-          if (!option.isWise) {
-            // Soft penalty: unwise choice costs a heart. If user has 0 hearts,
-            // useHeart() returns false silently — that's intentional for this
-            // advisory flow (the in-card "💭 נקודה למחשבה" card IS the feedback).
-            useSubscriptionStore.getState().useHeart();
+        onComplete={(result) => {
+          const eco = useEconomyStore.getState();
+          // Base 5 coins + 3 per net-positive score point. Negative score = no bonus.
+          const bonusCoins = Math.max(0, result.totalScore) * 3;
+          eco.addCoins(5 + bonusCoins);
+          // Soft penalty: each unwise choice in the path costs a heart.
+          // useHeart() returns false silently at 0 — the in-card feedback IS the feedback.
+          const sub = useSubscriptionStore.getState();
+          for (let i = 0; i < result.unwiseCount; i++) sub.useHeart();
+          // XP bonus only for branching dilemmas with a perfect path.
+          if (result.unwiseCount === 0 && result.path.length > 1) {
+            eco.addXP(20, "challenge_complete");
           }
+          setPhase("summary");
         }}
-        onContinue={() => setPhase("summary")}
       />
     );
   }
@@ -4417,6 +4466,11 @@ export function LessonFlowScreen() {
           <FlyingRewards type="coins" amount={flyingCoinsDown} direction="down" onComplete={() => setFlyingCoinsDown(0)} />
         </View>
       )}
+      {/* Captain Shark FAB — global, lesson-context-aware */}
+      {mod && FAB_VISIBLE_PHASES.has(phase) && !showChatOverlay && (
+        <CaptainSharkFAB onPress={() => setShowChatOverlay(true)} />
+      )}
+
       {/* Captain Shark chat overlay, opens on top of lesson */}
       <Modal
         visible={showChatOverlay}
@@ -4441,7 +4495,7 @@ export function LessonFlowScreen() {
               <Text style={{ color: "#fff", fontSize: 18, fontWeight: "700" }}>✕</Text>
             </Pressable>
           </View>
-          <ChatScreen />
+          <ChatScreen lessonContext={chatLessonContext} />
         </SafeAreaView>
       </Modal>
 
