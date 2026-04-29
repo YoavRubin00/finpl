@@ -85,6 +85,9 @@
         "foregroundImage": "./assets/IMAGES/icon-1024.png",
         "backgroundColor": "#0a1628"
       },
+      "permissions": [
+        "com.android.vending.BILLING"
+      ],
       "blockedPermissions": [
         "android.permission.ACTIVITY_RECOGNITION"
       ],

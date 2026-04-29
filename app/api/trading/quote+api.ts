@@ -208,8 +208,33 @@ export async function GET(request: Request): Promise<Response> {
 
     const currentPrice: number = result.meta.regularMarketPrice;
     const rawPrevClose = result.meta.previousClose ?? result.meta.chartPreviousClose ?? null;
-    const previousClose: number | null =
+    let previousClose: number | null =
       typeof rawPrevClose === 'number' && isFinite(rawPrevClose) ? rawPrevClose : null;
+
+    // For 1D charts, Yahoo's intraday response sometimes omits previousClose.
+    // Without it the client falls back to chartData[0] (today's open) which gets
+    // mislabeled as "daily change". Fetch a small daily-bar series to recover
+    // the true previous-session close.
+    if (tf === '1D' && previousClose === null) {
+      const dailyRes = await fetchYahooChart(yahooTicker, { interval: '1d', range: '5d' });
+      if (dailyRes) {
+        try {
+          const dailyJson = await dailyRes.json();
+          const dailyResult = dailyJson?.chart?.result?.[0];
+          const dailyCloses: Array<number | null> = dailyResult?.indicators?.quote?.[0]?.close ?? [];
+          // Walk back from the end to find the last non-null close before today.
+          for (let i = dailyCloses.length - 2; i >= 0; i--) {
+            const c = dailyCloses[i];
+            if (typeof c === 'number' && isFinite(c)) {
+              previousClose = c;
+              break;
+            }
+          }
+        } catch {
+          // Leave previousClose as null — client will display "—".
+        }
+      }
+    }
     const timestamps: number[] = result.timestamp ?? [];
 
     // Yahoo returns parallel arrays: open/high/low/close/volume per timestamp.

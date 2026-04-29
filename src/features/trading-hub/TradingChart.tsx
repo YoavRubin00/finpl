@@ -149,7 +149,7 @@ export function TradingChart({
           scrollEnabled={false}
           overScrollMode="never"
           bounces={false}
-          androidLayerType="hardware"
+          androidLayerType="software"
           javaScriptEnabled
           domStorageEnabled
           cacheEnabled

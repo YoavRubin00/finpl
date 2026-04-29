@@ -1482,7 +1482,15 @@ export function DuoLearnScreen() {
           message={nudge?.message ?? ""}
           visible={!!nudge && !isWalkthroughActive}
           onPress={() => {
-            if (nudge) router.push(nudge.route as never);
+            if (nudge) {
+              // The daily-challenge nudge routes to the feed (which is /(tabs)/learn).
+              // Tell the feed to auto-scroll to the dilemma card so the user lands on
+              // the challenge itself, not at the top of the feed.
+              import('../finfeed/FinFeedScreen').then(({ setPendingFeedScrollById }) => {
+                setPendingFeedScrollById('daily-dilemma');
+              });
+              router.push(nudge.route as never);
+            }
             dismissNudge();
           }}
           onDismiss={dismissNudge}

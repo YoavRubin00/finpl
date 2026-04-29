@@ -368,10 +368,13 @@ export function TradingHubScreen() {
                             const asset = ASSET_BY_ID.get(selectedId);
                             // Daily: change vs. yesterday's close (real day-over-day move).
                             // Weekly: change across the loaded weekly chart (first → last point ≈ 7 days).
-                            // Falls back to first-vs-last chart points only if previousClose is unavailable.
-                            const baseline = timeframe === '1D' && previousClose && previousClose > 0
-                                ? previousClose
-                                : (chartData.length >= 2 ? chartData[0].price : 0);
+                            // For 1D: never fall back to chartData[0] — that's the day's open or
+                            // an even older point if the API range exceeds 1d, which produces
+                            // misleading multi-week % values shown as "daily change".
+                            const baseline =
+                                timeframe === '1D'
+                                    ? (previousClose && previousClose > 0 ? previousClose : 0)
+                                    : (chartData.length >= 2 ? chartData[0].price : 0);
                             const latest = currentPrice > 0
                                 ? currentPrice
                                 : (chartData.length >= 1 ? chartData[chartData.length - 1].price : 0);
