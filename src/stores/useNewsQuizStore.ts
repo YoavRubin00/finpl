@@ -4,8 +4,14 @@ import { zustandStorage } from '../lib/zustandStorage';
 import { getApiBase } from '../db/apiBase';
 import type { NewsQuizData } from '../features/finfeed/liveMarketTypes';
 
+/** YYYY-MM-DD in Asia/Jerusalem so the daily refresh aligns with users' local day. */
 function todayKey(): string {
-  return new Date().toISOString().slice(0, 10);
+  return new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Asia/Jerusalem',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).format(new Date());
 }
 
 interface NewsQuizState {
@@ -45,11 +51,13 @@ export const useNewsQuizStore = create<NewsQuizState>()(
       lastFetched: 0,
 
       fetch: async () => {
-        const { loading, lastFetched } = get();
+        const { loading, data } = get();
         if (loading) return;
-        
-        // Don't fetch if we fetched successfully in the last 15 minutes
-        if (Date.now() - lastFetched < 15 * 60 * 1000) return;
+
+        const today = todayKey();
+        // Skip if we already have today's real (non-fallback) quiz cached.
+        // Fallback responses (isFallback) trigger a re-fetch so users get real content as soon as the upstream recovers.
+        if (data && data.quizId.startsWith(today) && !data.isFallback) return;
 
         set({ loading: true, error: false });
         try {
@@ -61,8 +69,12 @@ export const useNewsQuizStore = create<NewsQuizState>()(
           const json = await res.json() as NewsQuizData;
           set({ data: json, loading: false, error: false, lastFetched: Date.now() });
         } catch {
-          // Fallback to local quiz so user never sees white screen
-          set({ data: { ...FALLBACK_QUIZ, quizId: todayKey() }, loading: false, error: true });
+          // Network error — keep showing whatever we had, or use a local fallback so the card never blanks.
+          set((state) => ({
+            data: state.data ?? { ...FALLBACK_QUIZ, quizId: `fallback-${todayKey()}`, isFallback: true },
+            loading: false,
+            error: true,
+          }));
         }
       },
 
