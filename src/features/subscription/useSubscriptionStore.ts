@@ -45,6 +45,8 @@ interface SubscriptionState {
   // Hearts system (PRD14)
   hearts: number;
   lastHeartLostAt: string | null;
+  // Non-persisted: resets on cold-start, used by upgrade_trigger_timing bandit experiment
+  sessionHeartsLost: number;
 
   // Practice-to-Refill (US-006), complete old lesson → +1 heart, max 2/day
   practiceRefillsToday: number;
@@ -146,6 +148,7 @@ export const useSubscriptionStore = create<SubscriptionState>()(
       // Hearts
       hearts: MAX_HEARTS,
       lastHeartLostAt: null,
+      sessionHeartsLost: 0,
       practiceRefillsToday: 0,
       practiceRefillDate: null,
       pendingPracticeForHeart: false,
@@ -243,7 +246,7 @@ export const useSubscriptionStore = create<SubscriptionState>()(
         state.refillHearts();
         const current = get().hearts;
         if (current <= 0) return false;
-        set({ hearts: current - 1, lastHeartLostAt: new Date().toISOString() });
+        set((s) => ({ hearts: current - 1, lastHeartLostAt: new Date().toISOString(), sessionHeartsLost: s.sessionHeartsLost + 1 }));
         return true;
       },
 

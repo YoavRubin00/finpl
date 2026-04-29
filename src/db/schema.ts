@@ -161,3 +161,16 @@ export const crowdQuestionVotes = pgTable("crowd_question_votes", {
 	unique("crowd_question_votes_user_date_key").on(table.userId, table.voteDateIl),
 	check("crowd_question_votes_choice_check", sql`choice = ANY (ARRAY['a'::text, 'b'::text])`),
 ]);
+
+export const banditVariants = pgTable("bandit_variants", {
+	experimentId: text("experiment_id").notNull(),
+	variantId: text("variant_id").notNull(),
+	alpha: integer().notNull().default(1),
+	beta: integer().notNull().default(1),
+	impressions: integer().notNull().default(0),
+	conversions: integer().notNull().default(0),
+	updatedAt: timestamp("updated_at", { withTimezone: true, mode: 'string' }).defaultNow(),
+}, (table) => [
+	unique("bandit_variants_pk").on(table.experimentId, table.variantId),
+	index("idx_bandit_experiment").using("btree", table.experimentId.asc()),
+]);

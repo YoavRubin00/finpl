@@ -192,6 +192,26 @@ export default function RootLayout() {
       .catch(() => { /* non-fatal */ });
   }, []);
 
+  // Bandit A/B testing: hydrate global alpha/beta from Neon on cold start, then
+  // refresh every 5 minutes while in foreground so each user sees near-current
+  // population-level data. Falls back silently to local Zustand cache on failure.
+  useEffect(() => {
+    let cancelled = false;
+    const hydrate = () => {
+      import("../src/features/bandit/useBanditStore")
+        .then(({ useBanditStore }) => {
+          if (!cancelled) useBanditStore.getState().hydrateFromServer();
+        })
+        .catch(() => { /* non-fatal */ });
+    };
+    hydrate();
+    const interval = setInterval(hydrate, 5 * 60 * 1000);
+    return () => {
+      cancelled = true;
+      clearInterval(interval);
+    };
+  }, []);
+
   // Global JS error handler, prevents uncaught exceptions in gesture/callback
   // code from terminating the app. This was Apple rejection 2.1(a) cause on
   // iPad Air M3 review — a callback threw, Hermes re-threw as C++ exception,

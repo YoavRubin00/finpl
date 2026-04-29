@@ -19,6 +19,7 @@ import Animated, {
   runOnJS,
 } from "react-native-reanimated";
 import LottieView from "lottie-react-native";
+import { useVideoPlayer, VideoView } from "expo-video";
 import { X } from "lucide-react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { SPRING_BOUNCY, SPRING_SMOOTH } from "../../utils/animations";
@@ -29,6 +30,17 @@ import { FINN_FIRE } from "../retention-loops/finnMascotConfig";
 import { useTimeoutCleanup } from "../../hooks/useTimeoutCleanup";
 
 const WEEKDAY_LABELS = ["א", "ב", "ג", "ד", "ה", "ו", "ש"];
+
+/**
+ * Milestone streak videos — only loaded for the 4 big milestone numbers.
+ * Other streak counts keep the existing FINN_FIRE static image.
+ */
+const STREAK_VIDEO_MAP: Record<number, string> = {
+  7: "https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/finn-videos/finn-streak-7.mp4",
+  30: "https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/finn-videos/finn-streak-30.mp4",
+  100: "https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/finn-videos/finn-streak-100.mp4",
+  365: "https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/finn-videos/finn-streak-365.mp4",
+};
 
 interface StreakCelebrationScreenProps {
   streak: number;
@@ -43,6 +55,31 @@ export function StreakCelebrationScreen({
   const grantedFreezeAt7 = streak === 7;
   const [showConfetti, setShowConfetti] = useState(false);
   const safeTimeout = useTimeoutCleanup();
+
+  // Milestone streaks (7/30/100/365) get a celebration video instead of the
+  // static FINN_FIRE image. Non-milestone counts keep the existing image.
+  const milestoneVideoUrl = STREAK_VIDEO_MAP[streak];
+  const milestoneVideoPlayer = useVideoPlayer(
+    milestoneVideoUrl ?? STREAK_VIDEO_MAP[7], // fallback URL satisfies hook signature; only played when isMilestone matches
+    (p) => {
+      p.loop = true;
+      p.muted = true;
+      p.bufferOptions = {
+        preferredForwardBufferDuration: 5,
+        waitsToMinimizeStalling: false,
+        minBufferForPlayback: 0.5,
+      };
+    },
+  );
+
+  useEffect(() => {
+    if (isMilestone && milestoneVideoUrl) {
+      try { milestoneVideoPlayer.play(); } catch { /* ignore */ }
+    }
+    return () => {
+      try { milestoneVideoPlayer.pause(); } catch { /* ignore */ }
+    };
+  }, [isMilestone, milestoneVideoUrl, milestoneVideoPlayer]);
 
   // --- Animated values ---
   const overlayOpacity = useSharedValue(0);
@@ -270,14 +307,24 @@ export function StreakCelebrationScreen({
           )}
         </Animated.View>
 
-        {/* Finn mascot, success celebration */}
+        {/* Finn mascot, success celebration. Milestones (7/30/100/365)
+            get a custom celebration video; other counts keep FINN_FIRE. */}
         <Animated.View style={[styles.bearContainer, bearStyle]}>
-          <ExpoImage
-            source={FINN_FIRE} accessible={false}
-            style={{ width: 120, height: 120 }}
-            contentFit="contain"
-            autoplay
-          />
+          {isMilestone && milestoneVideoUrl ? (
+            <VideoView
+              player={milestoneVideoPlayer}
+              style={styles.milestoneVideo}
+              nativeControls={false}
+              contentFit="contain"
+            />
+          ) : (
+            <ExpoImage
+              source={FINN_FIRE} accessible={false}
+              style={{ width: 120, height: 120 }}
+              contentFit="contain"
+              autoplay
+            />
+          )}
           {/* Sparkle dots around Finn */}
           <View style={[styles.sparkle, styles.sparkle1]} />
           <View style={[styles.sparkle, styles.sparkle2]} />
@@ -403,6 +450,10 @@ const styles = StyleSheet.create({
     height: 100,
     alignItems: "center",
     justifyContent: "center",
+  },
+  milestoneVideo: {
+    width: 160,
+    height: 160,
   },
   bearImage: {
     width: 110,

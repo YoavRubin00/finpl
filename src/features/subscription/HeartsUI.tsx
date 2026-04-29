@@ -18,12 +18,20 @@ import Animated, {
 } from 'react-native-reanimated';
 import { Heart } from 'lucide-react-native';
 import LottieView from '../../components/ui/SafeLottieView';
+import { useVideoPlayer, VideoView } from 'expo-video';
 import { FINN_STANDARD } from '../retention-loops/finnMascotConfig';
+
+/** Plays after the existing pulse animation has had a beat to land */
+const HEARTS_VIDEO_URL =
+  "https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/finn-videos/finn-hearts-empty.mp4";
+/** Delay before swapping FINN_STANDARD → finn-hearts-empty video */
+const HEARTS_VIDEO_DELAY_MS = 1500;
 import { useSubscriptionStore, getTimeUntilNextHeart } from './useSubscriptionStore';
 import { useEconomyStore } from '../../features/economy/useEconomyStore';
 import { tapHaptic, successHaptic } from '../../utils/haptics';
 import { useRewardedAd } from '../../hooks/useRewardedAd';
 import { useChapterStore } from '../chapter-1-content/useChapterStore';
+import { useBandit } from '../bandit/useBandit';
 
 const MAX_HEARTS = 5;
 
@@ -97,6 +105,12 @@ export function OutOfHeartsModal({ visible, onDismiss, onUpgrade, onHeartsRefill
     const [timeLeft, setTimeLeft] = useState('');
     const canAffordRefill = coins >= HEART_REFILL_COIN_COST;
 
+    const { payload: banditPayload, trackImpression, trackConversion, trackDismiss } = useBandit('hearts_depleted_nudge');
+
+    useEffect(() => {
+        if (visible) trackImpression();
+    }, [visible, trackImpression]);
+
     // Countdown timer
     useEffect(() => {
         if (!visible) return;
@@ -133,6 +147,34 @@ export function OutOfHeartsModal({ visible, onDismiss, onUpgrade, onHeartsRefill
         transform: [{ scale: pulse.value }],
     }));
 
+    // Hearts-empty video plays AFTER the existing pulse animation has had a beat
+    // to land. The pulse continues underneath the video for warmth.
+    const heartsVideoPlayer = useVideoPlayer(HEARTS_VIDEO_URL, (p) => {
+        p.loop = true;
+        p.muted = true;
+        p.bufferOptions = {
+            preferredForwardBufferDuration: 5,
+            waitsToMinimizeStalling: false,
+            minBufferForPlayback: 0.5,
+        };
+    });
+    const [showHeartsVideo, setShowHeartsVideo] = useState(false);
+    useEffect(() => {
+        if (!visible) {
+            setShowHeartsVideo(false);
+            try { heartsVideoPlayer.pause(); } catch { /* ignore */ }
+            return;
+        }
+        const timer = setTimeout(() => {
+            setShowHeartsVideo(true);
+            try { heartsVideoPlayer.play(); } catch { /* ignore */ }
+        }, HEARTS_VIDEO_DELAY_MS);
+        return () => {
+            clearTimeout(timer);
+            try { heartsVideoPlayer.pause(); } catch { /* ignore */ }
+        };
+    }, [visible, heartsVideoPlayer]);
+
     const handleUpgrade = useCallback(() => {
         tapHaptic();
         onUpgrade();
@@ -146,13 +188,14 @@ export function OutOfHeartsModal({ visible, onDismiss, onUpgrade, onHeartsRefill
         if (success) {
             useSubscriptionStore.setState({ hearts: current + 1, lastHeartLostAt: current + 1 >= MAX_HEARTS ? null : store.lastHeartLostAt });
             successHaptic();
+            trackConversion();
             if (onHeartsRefilled) {
                 onHeartsRefilled();
             } else {
                 onDismiss();
             }
         }
-    }, [onDismiss, onHeartsRefilled]);
+    }, [onDismiss, onHeartsRefilled, trackConversion]);
 
     const { showAd, isLoaded: adReady, isPro } = useRewardedAd();
 
@@ -166,13 +209,14 @@ export function OutOfHeartsModal({ visible, onDismiss, onUpgrade, onHeartsRefill
                 useSubscriptionStore.setState({ hearts: current + 1, lastHeartLostAt: null });
             }
             successHaptic();
+            trackConversion();
             if (onHeartsRefilled) {
                 onHeartsRefilled();
             } else {
                 onDismiss();
             }
         });
-    }, [showAd, onDismiss, onHeartsRefilled]);
+    }, [showAd, onDismiss, onHeartsRefilled, trackConversion]);
 
     const startPracticeForHeart = useSubscriptionStore((s) => s.startPracticeForHeart);
     const practiceRefillsToday = useSubscriptionStore((s) => s.practiceRefillsToday);
@@ -227,6 +271,7 @@ export function OutOfHeartsModal({ visible, onDismiss, onUpgrade, onHeartsRefill
             if (success) {
                 useSubscriptionStore.setState({ hearts: current + 1, lastHeartLostAt: current + 1 >= MAX_HEARTS ? null : store.lastHeartLostAt });
                 successHaptic();
+                trackConversion();
                 if (onHeartsRefilled) {
                     onHeartsRefilled();
                 } else {
@@ -237,7 +282,7 @@ export function OutOfHeartsModal({ visible, onDismiss, onUpgrade, onHeartsRefill
             onDismiss();
             router.push('/shop' as never);
         }
-    }, [gems, onDismiss, onHeartsRefilled, router]);
+    }, [gems, onDismiss, onHeartsRefilled, router, trackConversion]);
 
     return (
         <Modal visible={visible} transparent animationType="fade" onRequestClose={onDismiss} accessibilityViewIsModal>
@@ -251,16 +296,25 @@ export function OutOfHeartsModal({ visible, onDismiss, onUpgrade, onHeartsRefill
                     {/* Finn + Title row */}
                     <View style={styles.finnRow}>
                         <View style={styles.finnTextCol}>
-                            <Text style={styles.modalTitle}>נגמרו הלבבות!</Text>
+                            <Text style={styles.modalTitle}>{banditPayload.title}</Text>
                             <View style={{ flexDirection: 'row-reverse', alignItems: 'baseline', gap: 6, marginTop: 6 }}>
                                 <Text style={styles.modalSubtitle}>
-                                    לב חדש בעוד
+                                    {banditPayload.framingType === 'opportunity' ? banditPayload.subtitle : 'לב חדש בעוד'}
                                 </Text>
-                                <Text style={styles.timer}>{timeLeft}</Text>
+                                {banditPayload.framingType !== 'opportunity' && <Text style={styles.timer}>{timeLeft}</Text>}
                             </View>
                         </View>
                         <Animated.View style={[styles.finnWrap, emojiStyle]}>
-                            <ExpoImage source={FINN_STANDARD} accessible={false} style={{ width: 110, height: 110 }} contentFit="contain" />
+                            {showHeartsVideo ? (
+                                <VideoView
+                                    player={heartsVideoPlayer}
+                                    style={{ width: 110, height: 110 }}
+                                    nativeControls={false}
+                                    contentFit="contain"
+                                />
+                            ) : (
+                                <ExpoImage source={FINN_STANDARD} accessible={false} style={{ width: 110, height: 110 }} contentFit="contain" />
+                            )}
                         </Animated.View>
                     </View>
 
@@ -349,7 +403,7 @@ export function OutOfHeartsModal({ visible, onDismiss, onUpgrade, onHeartsRefill
                     </Pressable>
 
                     {/* Wait button */}
-                    <Pressable onPress={onDismiss} style={styles.waitBtn} accessibilityRole="button" accessibilityLabel="אחכה לחידוש לבבות">
+                    <Pressable onPress={() => { trackDismiss(); onDismiss(); }} style={styles.waitBtn} accessibilityRole="button" accessibilityLabel="אחכה לחידוש לבבות">
                         <Text style={styles.waitBtnText}>אחכה ⏳</Text>
                     </Pressable>
                     </ScrollView>
