@@ -244,6 +244,7 @@ export default function RootLayout() {
       "scenario-lab", "suggest-scenario", "graham-personality", "legal", "settings",
       "pizza-index", "accessibility-statement", "fire-calculator",
       "tower-defense-boss", "interstitial", "ai-insights", "saved-items",
+      "clan", "anon-advice",
     ].includes(segments[0] as string);
 
     if (!isAuthenticated) {

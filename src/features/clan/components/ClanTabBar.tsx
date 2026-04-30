@@ -1,17 +1,17 @@
 import React from 'react';
 import { ScrollView, Pressable, Text, View } from 'react-native';
-import Animated, { FadeInDown, useAnimatedStyle, withSpring } from 'react-native-reanimated';
+import Animated, { FadeInDown } from 'react-native-reanimated';
 import { CLAN } from '../../../constants/theme';
 import { S } from '../strings';
 
 export type ClanTab = 'overview' | 'chat' | 'donations' | 'groupbuy' | 'members';
 
 const TABS: { id: ClanTab; label: string; emoji: string }[] = [
-  { id: 'overview',   label: S.tabOverview,   emoji: '🏠' },
-  { id: 'chat',       label: S.tabChat,        emoji: '💬' },
-  { id: 'donations',  label: S.tabDonations,   emoji: '🎁' },
-  { id: 'groupbuy',   label: S.tabGroupBuy,    emoji: '🏬' },
-  { id: 'members',    label: S.tabMembers,     emoji: '👥' },
+  { id: 'overview',   label: S.tabOverview,   emoji: '⚔️' },
+  { id: 'groupbuy',   label: S.tabGroupBuy,   emoji: '🏗️' },
+  { id: 'donations',  label: S.tabDonations,  emoji: '🤝' },
+  { id: 'chat',       label: S.tabChat,       emoji: '💬' },
+  { id: 'members',    label: S.tabMembers,    emoji: '👥' },
 ];
 
 interface ClanTabBarProps {

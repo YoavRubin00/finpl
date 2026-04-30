@@ -1,5 +1,5 @@
-import { FantasyLeagueScreen } from '../../src/features/fantasy-league/FantasyLeagueScreen';
+import { FantasyLobbyScreen } from '../../src/features/fantasy-league/screens/FantasyLobbyScreen';
 
 export default function FantasyLeaguePage() {
-  return <FantasyLeagueScreen />;
+  return <FantasyLobbyScreen />;
 }

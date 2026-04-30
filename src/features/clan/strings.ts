@@ -2,21 +2,21 @@
 
 export const S = {
   // ===== GENERAL =====
-  clan: 'קלאן',
-  clans: 'קלאנים',
-  myClan: 'הקלאן שלי',
-  clanHub: 'מרכז הקלאן',
-  createClan: 'צור קלאן',
-  joinClan: 'הצטרף לקלאן',
-  leaveClan: 'עזוב קלאן',
-  disbandClan: 'פרק קלאן',
+  clan: 'הקבוצה',
+  clans: 'קבוצות',
+  myClan: 'הקבוצה שלי',
+  clanHub: 'מרכז הקבוצה',
+  createClan: 'צור קבוצה',
+  joinClan: 'הצטרף לקבוצה',
+  leaveClan: 'עזוב קבוצה',
+  disbandClan: 'פרק קבוצה',
   renameClan: 'שנה שם',
   inviteCode: 'קוד הזמנה',
   copyCode: 'העתק קוד',
-  clanSettings: 'הגדרות קלאן',
-  noClansYet: 'אין קלאן עדיין',
-  joinOrCreate: 'הצטרף לקלאן קיים או צור חדש',
-  enterCode: 'הכנס קוד קלאן',
+  clanSettings: 'הגדרות הקבוצה',
+  noClansYet: 'אין קבוצה עדיין',
+  joinOrCreate: 'הצטרף לקבוצה קיימת או צור חדשה',
+  enterCode: 'הכנס קוד הזמנה',
 
   // ===== ROLES =====
   roleLeader: 'מנהיג',
@@ -24,28 +24,40 @@ export const S = {
   roleMember: 'חבר',
 
   // ===== TABS =====
-  tabOverview: 'סקירה',
+  tabOverview: 'ראשי',
   tabChat: 'צ\'אט',
-  tabDonations: 'תרומות',
-  tabGroupBuy: 'רכישה',
+  tabDonations: 'תמיכה',
+  tabGroupBuy: 'השקעות',
   tabMembers: 'חברים',
 
   // ===== OVERVIEW TAB =====
   weeklyGoals: 'יעדי השבוע',
-  weeklyGoalsSubtitle: 'השיגו יחד לפתוח את האסם',
+  weeklyGoalsSubtitle: 'השיגו יחד לפתוח את התיבה',
   topContributors: 'תורמים מובילים',
-  membersPreview: 'חברי הקלאן',
+  membersPreview: 'חברי הקבוצה',
   seeAll: 'ראה הכל',
 
+  // ===== WEEKLY WAR =====
+  weeklyWar: 'מאבק שבועי',
+  warRank: (rank: number, total: number) => `מקום #${rank} מתוך ${total}`,
+  warDaysLeft: (d: number) => `${d} ימים נותרו`,
+  warProgress: 'התקדמות הקבוצה',
+
+  // ===== QUICK STATS =====
+  quickStats_members: (n: number) => `${n} חברים`,
+  quickStats_donations: (n: number) => `${n} תרומות`,
+  quickStats_investments: (n: number) => `${n} השקעות פעילות`,
+
   // ===== CHEST =====
-  clanChest: 'אסם הקלאן',
-  chestLocked: 'האסם נעול',
-  chestReady: 'האסם מוכן!',
+  clanChest: 'תיבת הקבוצה',
+  chestLocked: 'התיבה נעולה',
+  chestReady: 'התיבה מוכנה!',
   chestProgress: (current: number, total: number) => `${current} / ${total} נקודות`,
-  claimChest: 'פתח אסם',
-  chestClaimed: 'האסם נפתח! 🎉',
-  nextChest: 'האסם הבא',
-  claimedThisWeek: 'נפתח השבוע ✓',
+  claimChest: 'פתח תיבה',
+  chestClaimed: 'התיבה נפתחה! 🎉',
+  nextChest: 'התיבה הבאה',
+  claimedThisWeek: 'נפתחה השבוע ✓',
+  hoursLeft: (h: number) => `${h} שעות נותרו`,
 
   // ===== CHAT TAB =====
   chatPlaceholder: 'כתוב הודעה...',
@@ -54,9 +66,9 @@ export const S = {
   typing: 'מקליד...',
 
   // ===== DONATIONS TAB =====
-  donations: 'תרומות',
+  donations: 'תמיכה',
   donateNow: 'תרום עכשיו',
-  requestDonation: 'בקש תרומה',
+  requestDonation: 'בקש תמיכה',
   myRequest: 'הבקשה שלך',
   donorsCount: (n: number) => `${n} תורמים`,
   dailyCap: (used: number, max: number) => `${used}/${max} נשארו`,
@@ -78,11 +90,11 @@ export const S = {
   donationCap_coins: `תקרה יומית: ${50} 🪙`,
   donationCap_gems: `תקרה יומית: ${5} 💎`,
   progress: (received: number, requested: number) => `${received} / ${requested}`,
-  donateCoins: (n: number) => `תרום ${n} 🪙`,
-  donateGems: (n: number) => `תרום ${n} 💎`,
+  donateCoins: (n: number) => `+${n} 🪙`,
+  donateGems: (n: number) => `+${n} 💎`,
 
   // ===== GROUP BUY TAB =====
-  groupBuy: 'רכישה משותפת',
+  groupBuy: 'קבוצות רכישה',
   groupBuySubtitle: 'קנו נכסים יחד וחלקו הכנסה פסיבית',
   startProject: 'התחל פרויקט חדש',
   contribute: 'הצטרף לרכישה',
@@ -90,10 +102,10 @@ export const S = {
   fundingProgress: (pct: number) => `${pct}% מומן`,
   funded: 'מומן! 🎉',
   activeProjects: 'פרויקטים פעילים',
-  fundedAssets: 'נכסים שנרכשו',
+  fundedAssets: 'הנכסים שלנו',
   noProjects: 'אין פרויקטים פעילים',
   startFirst: 'התחל פרויקט ראשון',
-  dailyYield: 'הכנסה יומית',
+  dailyYield: 'תשואה יומית',
   yourShare: 'החלק שלך',
   totalRaised: (n: number) => `${n.toLocaleString('he-IL')} ₪ נאסף`,
   goalAmount: (n: number) => `יעד: ${n.toLocaleString('he-IL')}`,
@@ -103,6 +115,10 @@ export const S = {
   yourContribution: 'תרומתך',
   chooseCurrencyAndAmount: 'בחר מטבע וסכום',
   fantasyCash: 'כסף פנטזי',
+  investMore: 'השקע עוד',
+  investorCount: (n: number) => `${n} משקיעים`,
+  portfolioTotalInvested: 'סה"כ מושקע',
+  portfolioDailyYield: 'תשואה יומית',
 
   // ===== PROJECT TEMPLATES =====
   chooseTemplate: 'בחר סוג נכס',
@@ -110,7 +126,7 @@ export const S = {
   templateApartment: 'דירה',
   templateRestaurant: 'מסעדה',
   templateGoldcoin: 'מטבע זהב',
-  projectFunded: (name: string) => `הקלאן רכש את ${name}! 🏆`,
+  projectFunded: (name: string) => `הקבוצה רכשה את ${name}! 🏆`,
 
   // ===== MEMBERS TAB =====
   members: 'חברים',
@@ -118,7 +134,7 @@ export const S = {
   sortByXP: 'לפי XP',
   sortByDonations: 'לפי תרומות',
   sortByShare: 'לפי נכסים',
-  kick: 'הוצא מהקלאן',
+  kick: 'הוצא מהקבוצה',
   promote: 'קדם לסגן',
   demote: 'הורד לחבר',
   challengeToDuel: 'אתגר לדו-קרב ⚔️',
@@ -127,24 +143,25 @@ export const S = {
   stats_coins: (n: number) => `${n.toLocaleString('he-IL')} 🪙`,
   stats_rep: (n: number) => `${n} מוניטין`,
   joinedRecently: 'הצטרף לאחרונה',
+  weekContributor: 'תורם השבוע 🏆',
 
   // ===== SYSTEM CHAT EVENTS =====
-  sys_member_joined: (name: string) => `${name} הצטרף לקלאן! 🎉`,
-  sys_member_left: (name: string) => `${name} עזב את הקלאן`,
+  sys_member_joined: (name: string) => `${name} הצטרף לקבוצה! 🎉`,
+  sys_member_left: (name: string) => `${name} עזב את הקבוצה`,
   sys_donation_sent: (from: string, amount: number, currency: string) =>
     `${from} תרם ${amount} ${currency === 'coins' ? '🪙' : '💎'}`,
-  sys_donation_request: (name: string) => `${name} מבקש תרומה`,
+  sys_donation_request: (name: string) => `${name} מבקש תמיכה`,
   sys_group_buy_started: (name: string) => `נפתחה קבוצת רכישה: ${name} 🏬`,
-  sys_group_buy_funded: (name: string) => `הקלאן רכש את ${name}! 🏆`,
+  sys_group_buy_funded: (name: string) => `הקבוצה רכשה את ${name}! 🏆`,
   sys_group_buy_payout: (name: string) => `הכנסה מ-${name} חולקה 💰`,
-  sys_chest_unlocked: 'האסם נפתח! 🎁',
+  sys_chest_unlocked: 'התיבה נפתחה! 🎁',
   sys_weekly_reset: 'שבוע חדש — יעדים חדשים! 🔄',
-  sys_tier_promoted: (tier: string) => `הקלאן עלה לדרגת ${tier}! 🥇`,
+  sys_tier_promoted: (tier: string) => `הקבוצה עלתה לדרגת ${tier}! 🥇`,
 
   // ===== MONETIZATION CHIPS =====
-  chip_chest_multiplier: 'Pro: צ\'סט x2 ✦',
-  chip_premium_emblem: 'סמל קלאן פרימיום ✦ 50 💎',
-  chip_double_chest: 'אסם כפול עם FinPlay Pro',
+  chip_chest_multiplier: 'Pro: תיבה x2 ✦',
+  chip_premium_emblem: 'סמל קבוצה פרימיום ✦ 50 💎',
+  chip_double_chest: 'תיבה כפולה עם FinPlay Pro',
   chip_accelerate: 'האץ x2 רכישה ✦ 10 💎',
   chip_donation_cap: 'הגדל תקרה יומית ל-100 ✦ 5 💎',
   chip_pro_stats: 'Pro: סטטיסטיקות מלאות',
@@ -153,13 +170,13 @@ export const S = {
   dismiss: 'סגור',
 
   // ===== ONBOARDING =====
-  onboarding_title: 'הקלאן שלך מחכה',
+  onboarding_title: 'הקבוצה שלך מחכה',
   onboarding_subtitle: 'בנה קהילה, רכשו נכסים יחד, ונצחו יחד',
-  onboarding_create: 'צור קלאן חדש',
+  onboarding_create: 'צור קבוצה חדשה',
   onboarding_join: 'הצטרף עם קוד',
   onboarding_feature1: 'צ\'אט קבוצתי עם חברים',
   onboarding_feature2: 'רכישה משותפת של נכסים',
-  onboarding_feature3: 'אסם שבועי עם פרסים',
+  onboarding_feature3: 'תיבה שבועית עם פרסים',
 
   // ===== FRIENDS HUB =====
   friendsHub: 'חברים',

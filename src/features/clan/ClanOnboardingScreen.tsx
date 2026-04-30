@@ -114,7 +114,7 @@ export function ClanOnboardingScreen(): React.ReactElement {
           <TextInput
             value={clanName}
             onChangeText={setClanName}
-            placeholder="שם הקלאן"
+            placeholder="שם הקבוצה"
             placeholderTextColor="rgba(255,255,255,0.3)"
             maxLength={24}
             style={{
@@ -141,7 +141,7 @@ export function ClanOnboardingScreen(): React.ReactElement {
             })}
           >
             <Text style={{ fontSize: 16, fontWeight: '900', color: '#0a1628' }}>
-              צור קלאן 🛡️
+              צור קבוצה 🛡️
             </Text>
           </Pressable>
           <Pressable onPress={() => setMode('pick')}>
@@ -164,7 +164,7 @@ export function ClanOnboardingScreen(): React.ReactElement {
         <TextInput
           value={inviteCode}
           onChangeText={(t) => { setInviteCode(t); setError(''); }}
-          placeholder="קוד קלאן (6 תווים)"
+          placeholder="קוד הזמנה (6 תווים)"
           placeholderTextColor="rgba(255,255,255,0.3)"
           maxLength={6}
           autoCapitalize="characters"
@@ -195,7 +195,7 @@ export function ClanOnboardingScreen(): React.ReactElement {
           })}
         >
           <Text style={{ fontSize: 16, fontWeight: '900', color: '#0a1628' }}>
-            הצטרף לקלאן
+            הצטרף לקבוצה
           </Text>
         </Pressable>
         <Pressable onPress={() => { setMode('pick'); setError(''); }}>

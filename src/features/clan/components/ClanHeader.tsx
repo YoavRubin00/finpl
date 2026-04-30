@@ -67,7 +67,7 @@ export function ClanHeader({ onSettingsPress }: ClanHeaderProps): React.ReactEle
         }}
         numberOfLines={1}
       >
-        {squad?.name ?? 'קלאן'}
+        {squad?.name ?? 'הקבוצה'}
       </Text>
 
       {/* Settings kebab */}

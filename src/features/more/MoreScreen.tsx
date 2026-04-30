@@ -192,12 +192,17 @@ export function MoreScreen() {
                   disabled
                 />
                 <MoreRow
-                  isLast
                   icon={<SafeLottie source={require('../../../assets/lottie/wired-flat-411-news-newspaper-hover-pinch.json')} style={styles.lottieIcon} autoPlay loop  />}
                   label="חדשות"
                   onPress={() => router.push("/finfeed")}
                   badge="בקרוב"
                   disabled
+                />
+                <MoreRow
+                  isLast
+                  icon={<Text style={{ fontSize: 24 }}>🛡️</Text>}
+                  label="הקבוצה"
+                  onPress={() => router.push("/clan")}
                 />
               </View>
             </GlowCard>

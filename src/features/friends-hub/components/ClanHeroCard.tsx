@@ -12,7 +12,19 @@ export function ClanHeroCard(): React.ReactElement {
   return (
     <Pressable
       onPress={() => router.push('/clan')}
-      style={({ pressed }) => ({ opacity: pressed ? 0.92 : 1, marginHorizontal: 16, marginBottom: 12 })}
+      accessibilityRole="button"
+      accessibilityLabel={hasSquad ? `קלאן ${squad.name} — לחץ לכניסה` : 'הצטרף או צור קלאן'}
+      style={({ pressed }) => ({
+        opacity: pressed ? 0.92 : 1,
+        marginHorizontal: 16,
+        marginBottom: 12,
+        borderRadius: 16,
+        shadowColor: CLAN.tierGold,
+        shadowOpacity: 0.22,
+        shadowRadius: 14,
+        shadowOffset: { width: 0, height: 5 },
+        elevation: 5,
+      })}
     >
       <LinearGradient
         colors={['#1a3a5c', '#0d2847']}
@@ -62,7 +74,7 @@ export function ClanHeroCard(): React.ReactElement {
               {squad.members.length} חברים · טפח על הכרטיס
             </Text>
           ) : (
-            <Text style={{ fontSize: 12, color: 'rgba(255,255,255,0.55)', marginTop: 2, writingDirection: 'rtl' }}>
+            <Text style={{ fontSize: 12, color: 'rgba(255,255,255,0.78)', marginTop: 2, writingDirection: 'rtl' }}>
               צור קלאן או הצטרף לקיים
             </Text>
           )}

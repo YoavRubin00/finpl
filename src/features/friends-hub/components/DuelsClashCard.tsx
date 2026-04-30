@@ -3,7 +3,8 @@ import { View, Text, Pressable } from 'react-native';
 import { router } from 'expo-router';
 import { useDuelsStore } from '../../social/useDuelsStore';
 import { useClashStore } from '../../friends-clash/useClashStore';
-import { DUO } from '../../../constants/theme';
+import { STITCH, DUO } from '../../../constants/theme';
+import { tapHaptic } from '../../../utils/haptics';
 
 export function DuelsClashCard(): React.ReactElement {
   const record = useDuelsStore((s) => s.record);
@@ -17,89 +18,153 @@ export function DuelsClashCard(): React.ReactElement {
     <View
       style={{
         marginHorizontal: 16,
-        marginBottom: 12,
+        marginBottom: 14,
         backgroundColor: '#ffffff',
-        borderRadius: 16,
+        borderRadius: 18,
         borderWidth: 1,
-        borderColor: '#e0e3e5',
-        padding: 16,
+        borderColor: STITCH.surfaceHighest,
+        overflow: 'hidden',
+        shadowColor: '#3e3c8f',
+        shadowOpacity: 0.09,
+        shadowRadius: 14,
+        shadowOffset: { width: 0, height: 4 },
+        elevation: 4,
       }}
     >
-      {/* Header */}
-      <View style={{ flexDirection: 'row-reverse', alignItems: 'center', marginBottom: 12, gap: 8 }}>
-        <Text style={{ fontSize: 20 }}>⚔️</Text>
-        <Text
+      {/* ── Orange accent strip ── */}
+      <View style={{ height: 4, backgroundColor: '#ea580c', opacity: 0.75 }} />
+
+      {/* ── Header ── */}
+      <View
+        style={{
+          flexDirection: 'row-reverse',
+          alignItems: 'center',
+          paddingHorizontal: 16,
+          paddingTop: 14,
+          paddingBottom: 12,
+          gap: 10,
+        }}
+      >
+        <View
           style={{
-            flex: 1,
-            fontSize: 15,
-            fontWeight: '900',
-            color: '#191c1e',
-            writingDirection: 'rtl',
-            textAlign: 'right',
+            width: 46,
+            height: 46,
+            borderRadius: 23,
+            backgroundColor: '#fff7ed',
+            alignItems: 'center',
+            justifyContent: 'center',
           }}
         >
-          דו-קרב ו-CLASH
-        </Text>
+          <Text style={{ fontSize: 24 }}>⚔️</Text>
+        </View>
+        <View style={{ flex: 1 }}>
+          <Text style={{ fontSize: 17, fontWeight: '900', color: STITCH.onSurface, writingDirection: 'rtl', textAlign: 'right' }}>
+            תחרויות
+          </Text>
+          <Text style={{ fontSize: 12, color: STITCH.onSurfaceVariant, writingDirection: 'rtl', textAlign: 'right', marginTop: 1 }}>
+            דו-קרב ו-CLASH
+          </Text>
+        </View>
         {pendingClash.length > 0 && (
           <View
             style={{
               backgroundColor: '#ef4444',
-              borderRadius: 10,
-              paddingHorizontal: 7,
-              paddingVertical: 2,
+              borderRadius: 12,
+              paddingHorizontal: 9,
+              paddingVertical: 4,
+              minWidth: 26,
+              alignItems: 'center',
             }}
           >
-            <Text style={{ fontSize: 11, fontWeight: '800', color: '#ffffff' }}>
+            <Text style={{ fontSize: 12, fontWeight: '900', color: '#ffffff' }}>
               {pendingClash.length}
             </Text>
           </View>
         )}
       </View>
 
-      {/* Record */}
-      <View style={{ flexDirection: 'row-reverse', gap: 12, marginBottom: 12 }}>
+      {/* ── Stats grid ── */}
+      <View
+        style={{
+          flexDirection: 'row-reverse',
+          paddingHorizontal: 12,
+          paddingBottom: 14,
+          gap: 8,
+          borderTopWidth: 1,
+          borderTopColor: STITCH.surfaceHighest,
+          paddingTop: 12,
+        }}
+      >
         {[
-          { label: 'ניצחונות', value: record?.wins ?? 0, color: DUO.green },
-          { label: 'הפסדים', value: record?.losses ?? 0, color: DUO.red },
-          { label: 'תיקו', value: record?.draws ?? 0, color: '#94a3b8' },
-          { label: 'אחוז ניצחון', value: `${winRate}%`, color: DUO.blue },
+          { label: 'ניצחונות', value: record?.wins ?? 0, color: DUO.green, bg: '#dcfce7' },
+          { label: 'הפסדים', value: record?.losses ?? 0, color: '#ef4444', bg: '#fee2e2' },
+          { label: 'תיקו', value: record?.draws ?? 0, color: STITCH.onSurfaceVariant, bg: STITCH.surfaceLow },
+          { label: '% ניצחון', value: `${winRate}%`, color: DUO.blue, bg: DUO.blueSurface },
         ].map((stat) => (
-          <View key={stat.label} style={{ alignItems: 'center', flex: 1 }}>
-            <Text style={{ fontSize: 16, fontWeight: '900', color: stat.color }}>
+          <View
+            key={stat.label}
+            style={{
+              flex: 1,
+              alignItems: 'center',
+              backgroundColor: stat.bg,
+              borderRadius: 12,
+              paddingVertical: 10,
+              paddingHorizontal: 4,
+            }}
+          >
+            <Text style={{ fontSize: 18, fontWeight: '900', color: stat.color }}>
               {stat.value}
             </Text>
-            <Text style={{ fontSize: 10, color: '#64748b', writingDirection: 'rtl', textAlign: 'center' }}>
+            <Text style={{ fontSize: 10, color: STITCH.onSurfaceVariant, writingDirection: 'rtl', textAlign: 'center', marginTop: 2 }}>
               {stat.label}
             </Text>
           </View>
         ))}
       </View>
 
-      {/* Pending CLASH invites */}
+      {/* ── Pending CLASH alert ── */}
       {pendingClash.length > 0 && (
         <View
           style={{
             backgroundColor: '#fff7ed',
-            borderRadius: 10,
-            padding: 10,
+            marginHorizontal: 14,
+            marginBottom: 14,
+            borderRadius: 12,
+            padding: 12,
             flexDirection: 'row-reverse',
             alignItems: 'center',
             justifyContent: 'space-between',
+            borderWidth: 1,
+            borderColor: '#fed7aa',
           }}
         >
-          <Text style={{ fontSize: 13, color: '#c2410c', fontWeight: '700', writingDirection: 'rtl' }}>
+          <Text style={{ fontSize: 13, color: '#c2410c', fontWeight: '700', writingDirection: 'rtl', flex: 1 }}>
             {pendingClash[0].opponentName} מאתגר אותך!
           </Text>
           <Pressable
-            onPress={() => router.push('/(tabs)/friends')}
-            style={{
-              backgroundColor: DUO.orange,
-              borderRadius: 8,
-              paddingHorizontal: 10,
-              paddingVertical: 5,
+            onPress={() => {
+              tapHaptic();
+              router.push('/clash' as never);
             }}
+            accessibilityRole="button"
+            accessibilityLabel="קבל את האתגר"
+            style={({ pressed }) => ({
+              backgroundColor: pressed ? '#c2410c' : '#ea580c',
+              borderRadius: 10,
+              paddingHorizontal: 14,
+              paddingTop: 7,
+              paddingBottom: 7,
+              borderBottomWidth: 4,
+              borderBottomColor: '#9a3412',
+              transform: [{ translateY: pressed ? 2 : 0 }],
+              shadowColor: '#ea580c',
+              shadowOpacity: 0.3,
+              shadowRadius: 6,
+              shadowOffset: { width: 0, height: 2 },
+              elevation: 2,
+            })}
           >
-            <Text style={{ fontSize: 12, fontWeight: '800', color: '#ffffff' }}>קבל אתגר</Text>
+            <Text style={{ fontSize: 12, fontWeight: '900', color: '#ffffff', writingDirection: 'rtl' }}>קבל אתגר</Text>
           </Pressable>
         </View>
       )}

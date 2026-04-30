@@ -60,7 +60,7 @@ export const SEED_CHAT_MESSAGES: ClanChatMessage[] = [
     id: 'sys-001',
     sentAt: hoursAgo(48),
     event: 'member_joined',
-    body: 'עידו הצטרף לקלאן! 🎉',
+    body: 'עידו הצטרף לקבוצה! 🎉',
     payload: { memberId: 'mem-005' },
   },
   {
@@ -149,7 +149,7 @@ export const SEED_CHAT_MESSAGES: ClanChatMessage[] = [
     authorId: SELF_ID,
     authorName: 'את/ה',
     authorAvatar: '🦈',
-    body: '50 מטבעות ו-2 ג\'מים ליום לכלל הקלאן 📈',
+    body: '50 מטבעות ו-2 ג\'מים ליום לכלל הקבוצה 📈',
   },
   {
     kind: 'text',
@@ -167,7 +167,7 @@ export const SEED_CHAT_MESSAGES: ClanChatMessage[] = [
 export const MOCK_CHAT_LINES: string[] = [
   'אחלה! 🔥',
   'בוא נלך! 💪',
-  'כל הכבוד לקלאן שלנו 🏆',
+  'כל הכבוד לקבוצה שלנו 🏆',
   'מתי האסם הבא נפתח?',
   'מישהו יודע כמה XP צריך לדרגה הבאה?',
   'יש למישהו gems פנויים? 💎',
