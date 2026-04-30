@@ -34,6 +34,8 @@ import { useGoogleAuthStore } from "../auth/useGoogleAuthStore";
 import { useAppleAuth } from "../auth/useAppleAuth";
 import { consumeTermsAcceptedFlag } from "../auth/termsAcceptedFlag";
 import { ONBOARDING_XP } from "../../constants/economy";
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { PENDING_REFERRAL_STORAGE_KEY } from '../social/InviteRedemptionScreen';
 import { calculateCompoundInterest } from "../simulator/SimulatorScreen";
 import { FREE_AVATARS } from "../avatars/avatarData";
 import type { AvatarDefinition } from "../avatars/avatarData";
@@ -590,6 +592,31 @@ function CelebrationScreen({ onDone }: { onDone: () => void }) {
     ctaScale.value = withDelay(700, withSpring(1, { damping: 14, stiffness: 110 }));
   }, []);
 
+  const [showCodeField, setShowCodeField] = useState(false);
+  const [inviteCode, setInviteCode] = useState('');
+  const [codeSaved, setCodeSaved] = useState(false);
+  const codeAreaOpacity = useSharedValue(0);
+  const codeAreaHeight = useSharedValue(0);
+
+  const handleSaveCode = async () => {
+    const trimmed = inviteCode.trim().toUpperCase();
+    if (!/^[A-Z0-9]{4,12}$/.test(trimmed)) return;
+    await AsyncStorage.setItem(PENDING_REFERRAL_STORAGE_KEY, trimmed);
+    setCodeSaved(true);
+  };
+
+  const showCode = () => {
+    setShowCodeField(true);
+    codeAreaOpacity.value = withTiming(1, { duration: 220 });
+    codeAreaHeight.value = withSpring(72, { damping: 16, stiffness: 140 });
+  };
+
+  const codeAreaStyle = useAnimatedStyle(() => ({
+    opacity: codeAreaOpacity.value,
+    height: codeAreaHeight.value,
+    overflow: 'hidden',
+  }));
+
   const badgeStyle = useAnimatedStyle(() => ({
     transform: [{ scale: badgeScale.value }, { rotate: `${badgeRotate.value}deg` }],
   }));
@@ -648,6 +675,34 @@ function CelebrationScreen({ onDone }: { onDone: () => void }) {
             <Text style={styles.celebCTAText}>בואו נתחיל</Text>
           </Pressable>
         </Animated.View>
+
+        {/* Optional invite code entry */}
+        {codeSaved ? (
+          <Text style={styles.codeSavedText}>✓ קוד ישמר ויחובר לחשבון שלכם</Text>
+        ) : showCodeField ? (
+          <Animated.View style={[styles.codeRow, codeAreaStyle]}>
+            <TextInput
+              style={styles.codeInput}
+              placeholder="קוד הזמנה"
+              placeholderTextColor="#64748b"
+              value={inviteCode}
+              onChangeText={(t) => setInviteCode(t.toUpperCase())}
+              autoCapitalize="characters"
+              autoCorrect={false}
+              maxLength={12}
+              returnKeyType="done"
+              onSubmitEditing={handleSaveCode}
+              accessibilityLabel="הזינו קוד הזמנה"
+            />
+            <Pressable onPress={handleSaveCode} style={styles.codeSubmitBtn} accessibilityRole="button" accessibilityLabel="אישור קוד">
+              <Text style={styles.codeSubmitText}>אישור</Text>
+            </Pressable>
+          </Animated.View>
+        ) : (
+          <Pressable onPress={showCode} style={styles.codeToggle} accessibilityRole="button">
+            <Text style={styles.codeToggleText}>הוזמנתם דרך חבר? הזינו קוד</Text>
+          </Pressable>
+        )}
       </SafeAreaView>
     </ImageBackground>
   );
@@ -2716,6 +2771,56 @@ const styles = StyleSheet.create({
     color: "#ffffff",
     fontSize: 18,
     fontWeight: "900",
+  },
+  codeToggle: {
+    marginTop: 20,
+    paddingVertical: 6,
+  },
+  codeToggleText: {
+    color: "#94a3b8",
+    fontSize: 13,
+    textAlign: "center",
+    textDecorationLine: "underline",
+  },
+  codeRow: {
+    flexDirection: "row",
+    gap: 8,
+    paddingHorizontal: 24,
+    marginTop: 16,
+    alignItems: "center",
+  },
+  codeInput: {
+    flex: 1,
+    backgroundColor: "rgba(255,255,255,0.1)",
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.2)",
+    borderRadius: 14,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    color: "#ffffff",
+    fontSize: 15,
+    fontWeight: "700",
+    letterSpacing: 2,
+    textAlign: "center",
+  },
+  codeSubmitBtn: {
+    backgroundColor: "#0891b2",
+    borderRadius: 14,
+    paddingHorizontal: 18,
+    paddingVertical: 12,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  codeSubmitText: {
+    color: "#ffffff",
+    fontWeight: "800",
+    fontSize: 15,
+  },
+  codeSavedText: {
+    color: "#4ade80",
+    textAlign: "center",
+    fontSize: 14,
+    marginTop: 16,
   },
   // Avatar picker
   avatarGrid: {

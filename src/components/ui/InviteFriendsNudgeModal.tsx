@@ -20,14 +20,20 @@ import { useAuthStore } from '../../features/auth/useAuthStore';
 import { useEconomyStore } from '../../features/economy/useEconomyStore';
 import { tapHaptic, successHaptic } from '../../utils/haptics';
 
+import { REFERRAL_SIGNUP_BONUS_COINS, REFERRAL_DAILY_DIVIDEND_RATE } from '../../features/social/referralConstants';
+
+// Daily nudge copy. All rewards must use the canonical magnitudes from
+// `referralConstants.ts` — never hardcode coin amounts here.
+const _SIGNUP = REFERRAL_SIGNUP_BONUS_COINS;
+const _DIV_PCT = Math.round(REFERRAL_DAILY_DIVIDEND_RATE * 100);
 const DAILY_COPY: Record<number, string> = {
-  0: 'החברים שלכם מכניסים לכם כסף',
-  1: 'כל החברים שמצטרפים = מטבעות לכיס שלכם = הטבות בעולם האמיתי',
-  2: 'החברים שלכם מכניסים לכם כסף',
-  3: 'הזמנה אחת = מטבעות לכם וסטארט לחבר',
-  4: 'כל החברים שמצטרפים = מטבעות לכיס שלכם = הטבות בעולם האמיתי',
-  5: 'שישי שמח — החברים שלכם מכניסים לכם כסף',
-  6: 'שבת שלום — הזמנה אחת = מטבעות לכם ולחבר',
+  0: `${_SIGNUP} מטבעות לכם וגם לחבר על כל הרשמה דרך הקישור`,
+  1: `הזמנה אחת = ${_SIGNUP} לכם, ${_SIGNUP} לחבר, ועוד ${_DIV_PCT}% מהלמידה שלו כל יום`,
+  2: `החברים שמצטרפים = ${_SIGNUP} מטבעות לכם מיידית`,
+  3: `הזמנה אחת = ${_SIGNUP} לכם, ${_SIGNUP} לחבר, ועוד ${_DIV_PCT}% מהלמידה שלו כל יום`,
+  4: `${_SIGNUP} מטבעות לכם וגם לחבר על כל הרשמה דרך הקישור`,
+  5: `שישי שמח — ${_SIGNUP} לכם, ${_SIGNUP} לחבר, על כל הרשמה דרך הקישור`,
+  6: `שבת שלום — ${_SIGNUP} לכם, ${_SIGNUP} לחבר, על כל הרשמה דרך הקישור`,
 };
 
 const MIN_DAYS_BETWEEN = 3;
@@ -198,7 +204,7 @@ export function InviteFriendsNudgeModal() {
           <Text style={styles.title}>{DAILY_COPY[dayOfWeek]}</Text>
 
           <Text style={styles.subtitle}>
-            כל הזמנה מכניסה לכם יותר מטבעות. הכי כיף ביחד.
+            {_SIGNUP} מטבעות מיד כשהחבר נרשם, ועוד {_DIV_PCT}% מכל מטבע שהוא ירוויח מלמידה — כל יום, ישר אליכם.
           </Text>
 
           <Animated.View style={[styles.ctaGlowWrap, glowStyle]}>

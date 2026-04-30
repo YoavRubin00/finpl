@@ -96,7 +96,7 @@ export const DailyQuizCard = React.memo(function DailyQuizCard({ quiz, locked = 
     if (wasCorrect) {
       successHaptic();
       useEconomyStore.getState().addXP(quiz.xpReward, 'quiz_correct');
-      useEconomyStore.getState().addCoins(quiz.coinReward);
+      useEconomyStore.getState().addCoins(quiz.coinReward, 'quiz');
       setShowConfetti(true);
       setShowFlyingCoins(true);
       setTimeout(() => setShowConfetti(false), 2000);

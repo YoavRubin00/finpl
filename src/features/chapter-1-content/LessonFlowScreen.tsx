@@ -2597,7 +2597,7 @@ export function LessonFlowScreen() {
       const eco = useEconomyStore.getState();
       if (multiplier === 2) {
         // Correct! Double coins only (XP is not at risk)
-        eco.addCoins(rewards.coins);
+        eco.addCoins(rewards.coins, 'lesson');
         // Fly bonus coins UP
         safeTimeout(() => {
           setFlyingCoins(rewards.coins);
@@ -3112,7 +3112,7 @@ export function LessonFlowScreen() {
           // retroactive inflation across the 49 unchanged dilemmas.
           const isBranching = result.path.length > 1;
           const bonusCoins = isBranching ? Math.max(0, result.totalScore) * 3 : 0;
-          eco.addCoins(5 + bonusCoins);
+          eco.addCoins(5 + bonusCoins, 'lesson');
           // Soft penalty: each unwise choice in the path costs a heart.
           // useHeart() returns false silently at 0 — the in-card feedback IS the feedback.
           const sub = useSubscriptionStore.getState();
@@ -3630,7 +3630,7 @@ export function LessonFlowScreen() {
                                 useUserStatsStore.getState().recordModuleDuration(durationSec);
                               }
                               const eco = useEconomyStore.getState();
-                              eco.addCoins(drop.rewards.coins);
+                              eco.addCoins(drop.rewards.coins, 'lesson');
                               eco.addXP(drop.rewards.xp, "chest_reward");
                               if (drop.rewards.gems > 0) eco.addGems(drop.rewards.gems);
                               setFlyingCoins(drop.rewards.coins);

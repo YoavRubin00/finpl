@@ -117,7 +117,7 @@ export const useChapterStore = create<ChapterState>()(
         });
 
         useEconomyStore.getState().addXP(MODULE_COMPLETE_XP, "lesson_complete");
-        useEconomyStore.getState().addCoins(MODULE_COMPLETE_COINS);
+        useEconomyStore.getState().addCoins(MODULE_COMPLETE_COINS, 'lesson');
 
         // Fire-and-forget DB sync
         const email = useAuthStore.getState().email;

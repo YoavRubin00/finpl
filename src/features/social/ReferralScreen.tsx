@@ -1,9 +1,17 @@
 // ---------------------------------------------------------------------------
-// PRD 32, US-005 AC1: "Wealth Network", Invite Friends Hub
-// Ocean-blue redesign, clean, friendly, diamond-accented
+// ReferralScreen — real referral hub.
+//
+// Wire:
+//   - User opens screen → useEffect refreshes from /api/referral/me.
+//   - User taps "Share" → buildInviteShareMessage() (consistent text, exact rewards).
+//   - User taps "Collect" → collectFromServer(email), addCoins is local UX echo.
+//   - QR code points to finplay.me/invite/[CODE] (Universal Link).
+//
+// All reward magnitudes (500 + 500 + 5%) come from `referralConstants.ts`.
+// Never hardcode numbers in this file.
 // ---------------------------------------------------------------------------
 
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useEffect, useCallback } from "react";
 import {
   View,
   Text,
@@ -11,47 +19,37 @@ import {
   StyleSheet,
   Share,
   Pressable,
-  LayoutAnimation,
-  Platform,
-  UIManager,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import Animated, { FadeInDown, FadeInUp, ZoomIn } from "react-native-reanimated";
 import LottieView from "lottie-react-native";
 import type { AnimationObject } from "lottie-react-native";
-import {
-  ChevronDown,
-  ChevronUp,
-  Copy,
-  Share2,
-} from "lucide-react-native";
-// Enable LayoutAnimation on Android
-if (Platform.OS === "android" && UIManager.setLayoutAnimationEnabledExperimental) {
-  UIManager.setLayoutAnimationEnabledExperimental(true);
-}
+import { Copy, Share2, RefreshCw } from "lucide-react-native";
 
 import { useAuthStore } from "../auth/useAuthStore";
 import * as Clipboard from "expo-clipboard";
 import QRCode from "react-native-qrcode-svg";
 import { CALM } from "../../constants/theme";
-import { tapHaptic, heavyHaptic, successHaptic } from "../../utils/haptics";
+import { tapHaptic, successHaptic } from "../../utils/haptics";
 import { BackButton } from "../../components/ui/BackButton";
 import { AnimatedPressable } from "../../components/ui/AnimatedPressable";
 import { useReferralStore } from "./useReferralStore";
 import type { ReferredFriend } from "./referralTypes";
-import { DiamondChestOverlay } from "./DiamondChestOverlay";
 import { GlobalWealthHeader } from "../../components/ui/GlobalWealthHeader";
+import {
+  REFERRAL_SIGNUP_BONUS_COINS,
+  REFERRAL_DAILY_DIVIDEND_RATE,
+  REFERRAL_COPY,
+  buildInviteUrl,
+  buildInviteShareMessage,
+} from "./referralConstants";
 
-// ---------------------------------------------------------------------------
-// Lottie sources
-// ---------------------------------------------------------------------------
+// ── Lottie sources ──
 const LOTTIE_DIVIDEND = require("../../../assets/lottie/wired-flat-945-dividends-hover-pinch.json");
-const LOTTIE_GIFT = require("../../../assets/lottie/wired-flat-412-gift-hover-squeeze.json");
 const LOTTIE_NETWORK = require("../../../assets/lottie/wired-flat-952-business-network-hover-pinch.json");
-const LOTTIE_GROWTH = require("../../../assets/lottie/wired-flat-161-growth-hover-pinch.json");
 const LOTTIE_AVATAR = require("../../../assets/lottie/wired-flat-44-avatar-user-in-circle-hover-looking-around.json");
-const LOTTIE_BOOK = require("../../../assets/lottie/wired-flat-112-book-hover-closed.json");
 const LOTTIE_HANDSHAKE = require("../../../assets/lottie/wired-flat-645-people-handshake-transaction-hover-pinch.json");
+const LOTTIE_GIFT = require("../../../assets/lottie/wired-flat-412-gift-hover-squeeze.json");
 
 const ICON_SIZE = 28;
 
@@ -64,9 +62,6 @@ const BG_DECO = [
   { src: require("../../../assets/lottie/sea/wired-flat-1168-star-fish-hover-pinch.json"), size: 28, pos: { top: "85%" as const, right: 10 } },
 ];
 
-// ---------------------------------------------------------------------------
-// Helper: Lottie section icon
-// ---------------------------------------------------------------------------
 function SectionIcon({ source }: { source: AnimationObject }) {
   return (
     <View style={{ width: ICON_SIZE, height: ICON_SIZE, overflow: "hidden" }} accessible={false}>
@@ -75,71 +70,57 @@ function SectionIcon({ source }: { source: AnimationObject }) {
   );
 }
 
-// ---------------------------------------------------------------------------
-// Main Screen
-// ---------------------------------------------------------------------------
+const DIVIDEND_RATE_PCT = Math.round(REFERRAL_DAILY_DIVIDEND_RATE * 100);
 
 export function ReferralScreen() {
-  const {
-    referralCode,
-    referredFriends,
-    totalDividendXP,
-    totalDividendCoins,
-    hasClaimedDiamondChest,
-    claimDiamondChest,
-    collectDividend,
-    canCollectDividend,
-    refreshDailyActivity,
-  } = useReferralStore();
+  const referralCode = useReferralStore((s) => s.referralCode);
+  const referredFriends = useReferralStore((s) => s.referredFriends);
+  const totalDividendCoins = useReferralStore((s) => s.totalDividendCoins);
+  const dividendAvailable = useReferralStore((s) => s.dividendAvailable);
+  const alreadyCollectedToday = useReferralStore((s) => s.alreadyCollectedToday);
+  const totalYesterdayLearningCoins = useReferralStore((s) => s.totalYesterdayLearningCoins);
+  const isLoading = useReferralStore((s) => s.isLoading);
+  const refresh = useReferralStore((s) => s.refresh);
+  const collectFromServer = useReferralStore((s) => s.collectFromServer);
+  const registerCodeWithServer = useReferralStore((s) => s.registerCodeWithServer);
+  const isRegisteredOnServer = useReferralStore((s) => s.isRegisteredOnServer);
 
-  const [chestCelebration, setChestCelebration] = useState<{
-    friendId: string;
-    friendName: string;
-  } | null>(null);
-  const [dividendJustCollected, setDividendJustCollected] = useState(false);
-  const [showEduTooltip, setShowEduTooltip] = useState(false);
+  const userEmail = useAuthStore((s) => s.email);
 
-  // Refresh mock friends' daily activity on mount
+  const inviteUrl = buildInviteUrl(referralCode);
+
+  // On mount: register code with server (idempotent) + fetch latest state.
   useEffect(() => {
-    refreshDailyActivity();
-  }, [refreshDailyActivity]);
+    if (!userEmail) return;
+    if (!isRegisteredOnServer) {
+      registerCodeWithServer(userEmail).catch(() => { /* non-fatal */ });
+    }
+    refresh(userEmail).catch(() => { /* non-fatal */ });
+  }, [userEmail, isRegisteredOnServer, registerCodeWithServer, refresh]);
 
-  const dividendAvailable = canCollectDividend();
-  const claimableFriends = referredFriends.filter(
-    (f) => f.hasCompletedOnboarding && !hasClaimedDiamondChest[f.id]
-  );
-  const totalYesterdayGold = referredFriends.reduce((s, f) => s + f.yesterdayGold, 0);
-  const dailyGoldDividend = Math.floor(totalYesterdayGold * 0.05);
-
-  async function handleCopy() {
+  const handleCopy = useCallback(async () => {
     tapHaptic();
-    await Clipboard.setStringAsync(referralCode);
-  }
+    // Copy the FULL invite URL — easier for friends to use than just the code.
+    await Clipboard.setStringAsync(inviteUrl);
+  }, [inviteUrl]);
 
-  function handleShare() {
+  const handleShare = useCallback(() => {
     tapHaptic();
-    Share.share({
-      message: `הצטרף ל-FinPlay עם הקוד שלי: ${referralCode} ותקבל בונוס!`,
-    });
-  }
+    Share.share({ message: buildInviteShareMessage(referralCode) });
+  }, [referralCode]);
 
-  function handleClaimChest(friend: ReferredFriend) {
-    heavyHaptic();
-    claimDiamondChest(friend.id);
-    setChestCelebration({ friendId: friend.id, friendName: friend.displayName });
-  }
-
-  function handleCollectDividend() {
-    if (dailyGoldDividend <= 0 || !dividendAvailable) return;
+  const handleCollectDividend = useCallback(async () => {
+    if (!userEmail) return;
+    if (alreadyCollectedToday || dividendAvailable <= 0) return;
     successHaptic();
-    collectDividend();
-    setDividendJustCollected(true);
-  }
+    await collectFromServer(userEmail);
+  }, [userEmail, alreadyCollectedToday, dividendAvailable, collectFromServer]);
 
-  const toggleEduTooltip = useCallback(() => {
-    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
-    setShowEduTooltip((prev) => !prev);
-  }, []);
+  const handleRefresh = useCallback(() => {
+    if (!userEmail) return;
+    tapHaptic();
+    refresh(userEmail).catch(() => {});
+  }, [userEmail, refresh]);
 
   return (
     <View style={styles.container}>
@@ -153,14 +134,24 @@ export function ReferralScreen() {
       </View>
       <SafeAreaView style={{ flex: 1 }} edges={["top"]}>
         <GlobalWealthHeader />
-        {/* ── Sticky Header ── */}
+        {/* Sticky header */}
         <View style={styles.stickyHeader}>
           <View style={styles.headerRow}>
             <BackButton />
             <View style={styles.titleCol}>
-              <Text style={styles.title}>רשת החברים</Text>
-              <Text style={styles.subtitle}>הזמן חברים, צבור פרסים</Text>
+              <Text style={styles.title}>החברים שלי</Text>
+              <Text style={styles.subtitle}>{REFERRAL_COPY.signupBonusHeadline}</Text>
             </View>
+            <Pressable
+              onPress={handleRefresh}
+              style={styles.refreshBtn}
+              accessibilityRole="button"
+              accessibilityLabel="רענן נתונים"
+              hitSlop={10}
+              disabled={isLoading}
+            >
+              <RefreshCw size={18} color={isLoading ? "#94a3b8" : CALM.accent} />
+            </Pressable>
           </View>
         </View>
 
@@ -170,71 +161,67 @@ export function ReferralScreen() {
           showsVerticalScrollIndicator={false}
         >
 
+          {/* ── Reward summary banner (the headline promise) ── */}
+          <Animated.View entering={FadeInDown.delay(150)}>
+            <View style={styles.rewardBanner}>
+              <SectionIcon source={LOTTIE_GIFT} />
+              <View style={{ flex: 1 }}>
+                <Text style={styles.rewardBannerTitle}>
+                  {REFERRAL_SIGNUP_BONUS_COINS} מטבעות לכם + {REFERRAL_SIGNUP_BONUS_COINS} לחבר
+                </Text>
+                <Text style={styles.rewardBannerSubtitle}>
+                  {REFERRAL_COPY.fullRewardExplain}
+                </Text>
+              </View>
+            </View>
+          </Animated.View>
+
           {/* ── Referral Code Card ── */}
-          <Animated.View entering={FadeInDown.delay(200)}>
+          <Animated.View entering={FadeInDown.delay(220)}>
             <View style={styles.card}>
               <View style={styles.codeCard}>
                 <SectionIcon source={LOTTIE_HANDSHAKE} />
-                <Text style={styles.codeTitle}>קוד ההזמנה שלך</Text>
+                <Text style={styles.codeTitle}>הקישור שלך להזמנה</Text>
                 <View style={styles.codeRow}>
-                  <Pressable onPress={handleCopy} style={styles.copyBtn} accessibilityRole="button" accessibilityLabel="העתק קוד הזמנה" hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+                  <Pressable
+                    onPress={handleCopy}
+                    style={styles.copyBtn}
+                    accessibilityRole="button"
+                    accessibilityLabel="העתיקו קישור הזמנה"
+                    hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                  >
                     <Copy size={18} color={CALM.accent} />
                   </Pressable>
                   <Text style={styles.codeText}>{referralCode}</Text>
                 </View>
-                <AnimatedPressable onPress={handleShare} style={styles.shareBtn} accessibilityRole="button" accessibilityLabel="שתף עם חברים">
+                <Text style={styles.urlPreview} numberOfLines={1}>{inviteUrl}</Text>
+                <AnimatedPressable
+                  onPress={handleShare}
+                  style={styles.shareBtn}
+                  accessibilityRole="button"
+                  accessibilityLabel="שתפו את הקישור"
+                >
                   <Share2 size={16} color="#ffffff" />
-                  <Text style={styles.shareBtnText}>שתף עם חברים</Text>
+                  <Text style={styles.shareBtnText}>שתפו עם חברים</Text>
                 </AnimatedPressable>
 
                 {/* QR Code */}
                 <View style={styles.qrWrap}>
-                  <Text style={styles.qrLabel}>או סרוק את הקוד:</Text>
+                  <Text style={styles.qrLabel}>או סרקו את הקוד:</Text>
                   <View style={styles.qrBox}>
                     <QRCode
-                      value={`https://finplay.app/invite/${referralCode}`}
+                      value={inviteUrl}
                       size={140}
                       backgroundColor="#ffffff"
                       color="#0c4a6e"
                     />
                   </View>
                 </View>
-
-                <Text style={styles.assetTagline}>
-                  כל חבר = נכס פיננסי שמניב לך 5% מהרווחים שלו
-                </Text>
               </View>
             </View>
           </Animated.View>
 
-          {/* ── Diamond Chest Claims ── */}
-          {claimableFriends.length > 0 && (
-            <Animated.View entering={FadeInUp.delay(250)}>
-              <View style={styles.sectionHeader}>
-                <Text style={styles.sectionTitle}>ארגזי יהלום לתביעה</Text>
-                <SectionIcon source={LOTTIE_GIFT} />
-              </View>
-              {claimableFriends.map((friend) => (
-                <View key={friend.id} style={styles.chestRow}>
-                  <AnimatedPressable
-                    onPress={() => handleClaimChest(friend)}
-                    style={styles.chestBox}
-                    accessibilityRole="button"
-                    accessibilityLabel={`תבע ארגז יהלום מ-${friend.displayName}`}
-                  >
-                    <Text style={styles.chestBoxEmoji}>📦</Text>
-                    <Text style={styles.chestBoxLabel}>💎 5</Text>
-                  </AnimatedPressable>
-                  <View style={styles.chestInfo}>
-                    <Text style={styles.chestName}>{friend.displayName}</Text>
-                    <Text style={styles.chestDesc}>סיים אונבורדינג, Gems 5</Text>
-                  </View>
-                </View>
-              ))}
-            </Animated.View>
-          )}
-
-          {/* ── Dividend Section ── */}
+          {/* ── Dividend section ── */}
           <Animated.View entering={FadeInDown.delay(300)}>
             <View style={styles.card}>
               <View style={styles.dividendCard}>
@@ -243,86 +230,49 @@ export function ReferralScreen() {
                   <SectionIcon source={LOTTIE_DIVIDEND} />
                 </View>
                 <View style={styles.dividendRateBadge}>
-                  <Text style={styles.dividendRateText}>5% דיבידנד יומי</Text>
+                  <Text style={styles.dividendRateText}>{DIVIDEND_RATE_PCT}% דיבידנד יומי</Text>
                 </View>
                 <Text style={styles.dividendDesc}>
-                  אתה מקבל 5% מהזהב שהחברים שלך הרוויחו אתמול במצטבר!
+                  {DIVIDEND_RATE_PCT}% מהמטבעות שהחברים שלכם הרוויחו אתמול בלמידה — שיעורים, קוויזים ומשימות יומיות.
                 </Text>
                 <View style={styles.dividendStats}>
                   <View style={styles.dividendStat}>
                     <Text style={[styles.dividendValue, { color: CALM.coinGold }]}>
-                      {dailyGoldDividend}
+                      {totalYesterdayLearningCoins.toLocaleString()}
                     </Text>
-                    <Text style={styles.dividendLabel}>זהב מאתמול</Text>
+                    <Text style={styles.dividendLabel}>מטבעות חברים אתמול</Text>
                   </View>
                   <View style={styles.dividendStat}>
                     <Text style={[styles.dividendValue, { color: CALM.coinGold }]}>
-                      {totalDividendCoins}
+                      {totalDividendCoins.toLocaleString()}
                     </Text>
-                    <Text style={styles.dividendLabel}>סה״כ דיבידנד זהב</Text>
+                    <Text style={styles.dividendLabel}>סה״כ דיבידנד שצברתם</Text>
                   </View>
                 </View>
-                {dividendAvailable ? (
+                {!alreadyCollectedToday && dividendAvailable > 0 ? (
                   <AnimatedPressable
                     onPress={handleCollectDividend}
-                    style={[styles.actionBtn, (dailyGoldDividend <= 0) && { opacity: 0.5 }]}
-                    disabled={dailyGoldDividend <= 0}
+                    style={styles.actionBtn}
                     accessibilityRole="button"
-                    accessibilityLabel={`אסוף ${dailyGoldDividend} זהב דיבידנד`}
+                    accessibilityLabel={`אספו ${dividendAvailable} מטבעות דיבידנד`}
                   >
-                    <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
-                      <SectionIcon source={require("../../../assets/lottie/wired-flat-298-coins-hover-jump.json")} />
-                      <Text style={styles.actionBtnText}>
-                        אסוף {dailyGoldDividend} זהב
-                      </Text>
-                    </View>
+                    <Text style={styles.actionBtnText}>
+                      אספו {dividendAvailable.toLocaleString()} מטבעות
+                    </Text>
                   </AnimatedPressable>
                 ) : (
                   <View style={styles.collectedBadge}>
-                    <Text style={styles.collectedText}>נאסף היום ✓</Text>
-                  </View>
-                )}
-                {dividendJustCollected && !dividendAvailable && (
-                  <Animated.View entering={FadeInDown.duration(300)} style={styles.dividendSuccessToast}>
-                    <Text style={styles.dividendSuccessText}>
-                      קיבלת דיבידנד מהנכסים שלך!
+                    <Text style={styles.collectedText}>
+                      {alreadyCollectedToday ? "נאסף היום ✓" : "אין דיבידנד היום — חברים לא למדו אתמול"}
                     </Text>
-                  </Animated.View>
+                  </View>
                 )}
               </View>
             </View>
           </Animated.View>
 
-          {/* ── Educational Tooltip (Collapsible) ── */}
-          <Animated.View entering={FadeInDown.delay(350)}>
-            <Pressable onPress={toggleEduTooltip} style={styles.eduToggle} accessibilityRole="button" accessibilityLabel={showEduTooltip ? "סגור הסבר דיבידנד" : "פתח הסבר דיבידנד"}>
-              <SectionIcon source={LOTTIE_BOOK} />
-              <Text style={styles.eduToggleText}>מה זה דיבידנד? למד עכשיו</Text>
-              {showEduTooltip ? (
-                <ChevronUp size={16} color={CALM.accent} />
-              ) : (
-                <ChevronDown size={16} color={CALM.accent} />
-              )}
-            </Pressable>
-            {showEduTooltip && (
-              <View style={styles.eduCard}>
-                <Text style={styles.eduTitle}>דיבידנד, הכנסה פסיבית</Text>
-                <Text style={styles.eduBody}>
-                  בעולם האמיתי, כשאתה מחזיק מניות של חברה, היא משלמת לך
-                  חלק מהרווחים שלה כ"דיבידנד". זה כסף שנכנס לחשבון שלך בלי
-                  שתצטרך לעשות כלום.
-                </Text>
-                <Text style={styles.eduBody}>
-                  כאן באפליקציה, כל חבר שהזמנת הוא כמו "נכס" בתיק ההשקעות
-                  שלך. כל יום אתה יכול לאסוף 5% מהזהב שהוא הרוויח אתמול.
-                  בדיוק כמו דיבידנד אמיתי!
-                </Text>
-              </View>
-            )}
-          </Animated.View>
-
-          {/* ── Network Tree ── */}
-          <Animated.View entering={FadeInDown.delay(400)}>
+          {/* ── Friends list ── */}
+          <Animated.View entering={FadeInDown.delay(380)}>
             <View style={styles.sectionHeader}>
               <Text style={styles.sectionTitle}>הרשת שלך</Text>
               <SectionIcon source={LOTTIE_NETWORK} />
@@ -330,47 +280,27 @@ export function ReferralScreen() {
             {referredFriends.length === 0 ? (
               <View style={styles.emptyState}>
                 <Text style={styles.emptyText}>
-                  עדיין לא הזמנת חברים. שתף את הקוד שלך!
+                  עדיין לא הזמנתם חברים. שתפו את הקישור — תקבלו {REFERRAL_SIGNUP_BONUS_COINS} מטבעות על כל הרשמה!
                 </Text>
               </View>
             ) : (
-              <NetworkTreeView
-                friends={referredFriends}
-                hasClaimedDiamondChest={hasClaimedDiamondChest}
-              />
+              <NetworkTreeView friends={referredFriends} />
             )}
           </Animated.View>
 
           <View style={styles.bottomSpacer} />
         </ScrollView>
       </SafeAreaView>
-
-      {/* Diamond Chest Celebration Overlay */}
-      <DiamondChestOverlay
-        visible={chestCelebration !== null}
-        friendName={chestCelebration?.friendName ?? ""}
-        onClose={() => setChestCelebration(null)}
-      />
     </View>
   );
 }
 
-// ---------------------------------------------------------------------------
-// Network Tree View, Visual tree with user as root and friends as branches
-// ---------------------------------------------------------------------------
-
-function NetworkTreeView({
-  friends,
-  hasClaimedDiamondChest,
-}: {
-  friends: ReferredFriend[];
-  hasClaimedDiamondChest: Record<string, boolean>;
-}) {
+// ── Network Tree (visual) ──
+function NetworkTreeView({ friends }: { friends: ReferredFriend[] }) {
   const displayName = useAuthStore((s) => s.displayName);
 
   return (
     <View style={treeStyles.container}>
-      {/* ── Root Node (User) ── */}
       <Animated.View entering={ZoomIn.delay(600).springify()} style={treeStyles.rootNode}>
         <View style={[treeStyles.rootAvatar, { borderColor: "#0ea5e9" }]}>
           <View style={{ width: 30, height: 30, overflow: "hidden" }} accessible={false}>
@@ -380,42 +310,28 @@ function NetworkTreeView({
         <Text style={treeStyles.rootName}>{displayName ?? "אני"}</Text>
       </Animated.View>
 
-      {/* ── Trunk Line ── */}
       <View style={treeStyles.trunkLine} />
-
-      {/* ── Horizontal Branch ── */}
       <View style={treeStyles.branchRow}>
         <View style={treeStyles.horizontalBranch} />
       </View>
 
-      {/* ── Friend Nodes ── */}
       <View style={treeStyles.friendsRow}>
-        {friends.map((friend, idx) => {
-          const isClaimed = !!hasClaimedDiamondChest[friend.id];
-          return (
-            <Animated.View
-              key={friend.id}
-              entering={ZoomIn.delay(700 + idx * 100).springify()}
-              style={treeStyles.friendCol}
-            >
-              {/* Vertical connector from branch */}
-              <View style={treeStyles.verticalConnector} />
-              <View
-                style={[
-                  treeStyles.friendAvatar,
-                  friend.hasCompletedOnboarding && treeStyles.friendAvatarCompleted,
-                ]}
-              >
-                <Text style={treeStyles.friendEmojiText}>{friend.avatarEmoji}</Text>
-              </View>
-              <Text style={treeStyles.friendName} numberOfLines={1}>
-                {friend.displayName}
-              </Text>
-              <Text style={treeStyles.friendXP}>{friend.yesterdayXP} XP</Text>
-              {isClaimed && <Text style={treeStyles.claimedDot}>💎</Text>}
-            </Animated.View>
-          );
-        })}
+        {friends.map((friend, idx) => (
+          <Animated.View
+            key={friend.id}
+            entering={ZoomIn.delay(700 + idx * 100).springify()}
+            style={treeStyles.friendCol}
+          >
+            <View style={treeStyles.verticalConnector} />
+            <View style={[treeStyles.friendAvatar, treeStyles.friendAvatarCompleted]}>
+              <Text style={treeStyles.friendEmojiText}>{friend.avatarEmoji}</Text>
+            </View>
+            <Text style={treeStyles.friendName} numberOfLines={1}>
+              {friend.displayName}
+            </Text>
+            <Text style={treeStyles.friendCoins}>{friend.yesterdayGold.toLocaleString()} 🪙</Text>
+          </Animated.View>
+        ))}
       </View>
     </View>
   );
@@ -436,8 +352,6 @@ const treeStyles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 2,
   },
-
-  // Root node
   rootNode: { alignItems: "center", gap: 4 },
   rootAvatar: {
     width: 56,
@@ -449,27 +363,9 @@ const treeStyles = StyleSheet.create({
     borderWidth: 3,
   },
   rootName: { fontSize: 14, fontWeight: "800", color: CALM.textPrimary },
-  rootLabel: { fontSize: 11, color: CALM.textSecondary },
-
-  // Trunk
-  trunkLine: {
-    width: 2,
-    height: 20,
-    backgroundColor: "rgba(14,165,233,0.2)",
-  },
-
-  // Horizontal branch
-  branchRow: {
-    width: "80%",
-    alignItems: "center",
-  },
-  horizontalBranch: {
-    width: "100%",
-    height: 2,
-    backgroundColor: "rgba(14,165,233,0.2)",
-  },
-
-  // Friends row
+  trunkLine: { width: 2, height: 20, backgroundColor: "rgba(14,165,233,0.2)" },
+  branchRow: { width: "80%", alignItems: "center" },
+  horizontalBranch: { width: "100%", height: 2, backgroundColor: "rgba(14,165,233,0.2)" },
   friendsRow: {
     flexDirection: "row",
     justifyContent: "space-evenly",
@@ -478,18 +374,8 @@ const treeStyles = StyleSheet.create({
     gap: 8,
     paddingTop: 0,
   },
-
-  // Individual friend
-  friendCol: {
-    alignItems: "center",
-    width: 64,
-    gap: 3,
-  },
-  verticalConnector: {
-    width: 2,
-    height: 14,
-    backgroundColor: "rgba(14,165,233,0.2)",
-  },
+  friendCol: { alignItems: "center", width: 64, gap: 3 },
+  verticalConnector: { width: 2, height: 14, backgroundColor: "rgba(14,165,233,0.2)" },
   friendAvatar: {
     width: 42,
     height: 42,
@@ -500,25 +386,17 @@ const treeStyles = StyleSheet.create({
     borderWidth: 2,
     borderColor: CALM.border,
   },
-  friendAvatarCompleted: {
-    borderColor: "#0ea5e9",
-  },
+  friendAvatarCompleted: { borderColor: "#0ea5e9" },
   friendEmojiText: { fontSize: 20 },
   friendName: { fontSize: 11, fontWeight: "700", color: CALM.textPrimary, textAlign: "center" },
-  friendXP: { fontSize: 10, color: CALM.textSecondary },
-  claimedDot: { fontSize: 10 },
+  friendCoins: { fontSize: 10, color: CALM.textSecondary },
 });
-
-// ---------------------------------------------------------------------------
-// Styles
-// ---------------------------------------------------------------------------
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: CALM.bg },
   scroll: { flex: 1 },
   scrollContent: { paddingHorizontal: 16, paddingBottom: 32 },
 
-  // Sticky header
   stickyHeader: {
     backgroundColor: CALM.bg,
     borderBottomWidth: 1,
@@ -532,10 +410,48 @@ const styles = StyleSheet.create({
     flexDirection: "row-reverse",
     alignItems: "center",
     justifyContent: "space-between",
+    gap: 8,
   },
   titleCol: { flex: 1, alignItems: "flex-end", paddingRight: 16 },
   title: { fontSize: 22, fontWeight: "900", color: CALM.textPrimary },
   subtitle: { fontSize: 13, color: CALM.textSecondary, marginTop: 2 },
+  refreshBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: "rgba(14,165,233,0.08)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+
+  // Reward banner
+  rewardBanner: {
+    flexDirection: "row-reverse",
+    alignItems: "center",
+    gap: 12,
+    backgroundColor: "#ecfeff",
+    borderWidth: 1.5,
+    borderColor: "#a5f3fc",
+    borderRadius: 16,
+    padding: 14,
+    marginTop: 12,
+  },
+  rewardBannerTitle: {
+    fontSize: 16,
+    fontWeight: "900",
+    color: "#0c4a6e",
+    textAlign: "right",
+    writingDirection: "rtl",
+    marginBottom: 4,
+  },
+  rewardBannerSubtitle: {
+    fontSize: 12,
+    fontWeight: "600",
+    color: "#0e7490",
+    textAlign: "right",
+    writingDirection: "rtl",
+    lineHeight: 18,
+  },
 
   // Shared card style
   card: {
@@ -551,22 +467,6 @@ const styles = StyleSheet.create({
     elevation: 4,
   },
 
-  // Tier card
-  tierCard: { alignItems: "center", paddingVertical: 20, gap: 6 },
-  tierBadgeCircle: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
-    backgroundColor: "rgba(14,165,233,0.06)",
-    justifyContent: "center",
-    alignItems: "center",
-    borderWidth: 3,
-  },
-  tierEmoji: { fontSize: 32 },
-  tierLabel: { fontSize: 20, fontWeight: "800" },
-  tierCount: { fontSize: 14, color: CALM.textSecondary },
-  tierNext: { fontSize: 12, color: CALM.textTertiary, marginTop: 2 },
-
   // Code card
   codeCard: { alignItems: "center", paddingVertical: 20, paddingHorizontal: 16, gap: 10 },
   codeTitle: { fontSize: 14, color: CALM.textSecondary, fontWeight: "600" },
@@ -581,59 +481,37 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: CALM.border,
   },
-  codeText: {
-    fontSize: 24,
-    fontWeight: "900",
-    color: "#0ea5e9",
-    letterSpacing: 3,
-  },
-  copyBtn: {
-    padding: 6,
-    borderRadius: 8,
-    backgroundColor: CALM.accentLight,
+  codeText: { fontSize: 24, fontWeight: "900", color: "#0ea5e9", letterSpacing: 3 },
+  copyBtn: { padding: 6, borderRadius: 8, backgroundColor: CALM.accentLight },
+  urlPreview: {
+    fontSize: 11,
+    color: CALM.textTertiary,
+    fontWeight: "500",
+    paddingHorizontal: 4,
   },
   shareBtn: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
     gap: 8,
-    backgroundColor: "#0ea5e9",
-    borderRadius: 12,
-    paddingVertical: 12,
+    backgroundColor: "#2563eb",
+    borderRadius: 14,
+    paddingVertical: 14,
     paddingHorizontal: 24,
     width: "100%",
-    borderBottomWidth: 3,
-    borderBottomColor: "#0369a1",
-    shadowColor: "#0ea5e9",
-    shadowOpacity: 0.4,
-    shadowRadius: 8,
+    borderWidth: 1,
+    borderColor: "#1d4ed8",
+    borderBottomWidth: 4,
+    borderBottomColor: "#1d4ed8",
+    shadowColor: "#1d4ed8",
+    shadowOpacity: 0.45,
+    shadowRadius: 10,
     shadowOffset: { width: 0, height: 4 },
-    elevation: 6,
+    elevation: 10,
   },
-  shareBtnText: {
-    fontSize: 15,
-    fontWeight: "800",
-    color: "#ffffff",
-  },
-  assetTagline: {
-    fontSize: 12,
-    fontWeight: "700",
-    color: CALM.accent,
-    textAlign: "center",
-    marginTop: 4,
-    lineHeight: 18,
-  },
-  qrWrap: {
-    alignItems: "center",
-    marginTop: 14,
-    gap: 8,
-  },
-  qrLabel: {
-    fontSize: 13,
-    fontWeight: "700",
-    color: "#475569",
-    writingDirection: "rtl" as const,
-  },
+  shareBtnText: { fontSize: 16, fontWeight: "900", color: "#ffffff", letterSpacing: 0.3 },
+  qrWrap: { alignItems: "center", marginTop: 14, gap: 8 },
+  qrLabel: { fontSize: 13, fontWeight: "700", color: "#475569", writingDirection: "rtl" as const },
   qrBox: {
     padding: 12,
     borderRadius: 16,
@@ -661,7 +539,7 @@ const styles = StyleSheet.create({
     color: CALM.textPrimary,
     textAlign: "right",
   },
-  dividendDesc: { fontSize: 13, color: CALM.textSecondary, textAlign: "right" },
+  dividendDesc: { fontSize: 13, color: CALM.textSecondary, textAlign: "right", writingDirection: "rtl" as const, lineHeight: 19 },
   dividendRateBadge: {
     alignSelf: "flex-end",
     backgroundColor: "rgba(14,165,233,0.08)",
@@ -671,54 +549,31 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "rgba(14,165,233,0.2)",
   },
-  dividendRateText: {
-    fontSize: 12,
-    fontWeight: "800",
-    color: "#0ea5e9",
-    textAlign: "right",
-  },
-  dividendSuccessToast: {
-    backgroundColor: "rgba(14,165,233,0.08)",
-    borderWidth: 1,
-    borderColor: "rgba(14,165,233,0.2)",
-    borderRadius: 10,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    alignItems: "center",
-    marginTop: 4,
-  },
-  dividendSuccessText: {
-    fontSize: 14,
-    fontWeight: "700",
-    color: "#0ea5e9",
-    textAlign: "center",
-  },
-  dividendStats: {
-    flexDirection: "row",
-    justifyContent: "space-around",
-    marginVertical: 4,
-  },
+  dividendRateText: { fontSize: 12, fontWeight: "800", color: "#0ea5e9", textAlign: "right" },
+  dividendStats: { flexDirection: "row", justifyContent: "space-around", marginVertical: 4 },
   dividendStat: { alignItems: "center", gap: 2 },
   dividendValue: { fontSize: 24, fontWeight: "800", color: "#0ea5e9" },
-  dividendLabel: { fontSize: 11, color: CALM.textSecondary },
+  dividendLabel: { fontSize: 11, color: CALM.textSecondary, textAlign: "center" },
 
-  // Action button (collect dividend)
   actionBtn: {
-    backgroundColor: "#0ea5e9",
-    borderRadius: 12,
-    paddingVertical: 12,
+    backgroundColor: "#2563eb",
+    borderRadius: 14,
+    paddingVertical: 14,
     paddingHorizontal: 20,
     alignItems: "center",
-    borderBottomWidth: 3,
-    borderBottomColor: "#0369a1",
+    borderWidth: 1,
+    borderColor: "#1d4ed8",
+    borderBottomWidth: 4,
+    borderBottomColor: "#1d4ed8",
+    shadowColor: "#1d4ed8",
+    shadowOpacity: 0.4,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 8,
   },
-  actionBtnText: {
-    fontSize: 14,
-    fontWeight: "800",
-    color: "#ffffff",
-  },
+  actionBtnText: { fontSize: 16, fontWeight: "900", color: "#ffffff", letterSpacing: 0.3 },
 
-  // Chest claims
+  // Section header
   sectionHeader: {
     flexDirection: "row",
     alignItems: "center",
@@ -728,48 +583,8 @@ const styles = StyleSheet.create({
     marginBottom: 10,
     paddingHorizontal: 4,
   },
-  sectionTitle: {
-    fontSize: 16,
-    fontWeight: "700",
-    color: CALM.textPrimary,
-    textAlign: "right",
-  },
-  chestRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "#ffffff",
-    borderRadius: 12,
-    padding: 12,
-    marginBottom: 8,
-    gap: 10,
-    borderWidth: 1,
-    borderColor: "rgba(6,182,212,0.2)",
-  },
-  chestInfo: { flex: 1, alignItems: "flex-end" },
-  chestName: { fontSize: 15, fontWeight: "700", color: CALM.textPrimary },
-  chestDesc: { fontSize: 12, color: "#0891b2" },
-  friendEmoji: { fontSize: 28 },
-  chestBox: {
-    width: 64,
-    height: 64,
-    borderRadius: 14,
-    backgroundColor: "rgba(6,182,212,0.1)",
-    borderWidth: 2,
-    borderColor: "rgba(6,182,212,0.3)",
-    justifyContent: "center",
-    alignItems: "center",
-    gap: 2,
-  },
-  chestBoxEmoji: {
-    fontSize: 28,
-  },
-  chestBoxLabel: {
-    fontSize: 11,
-    fontWeight: "800",
-    color: "#0891b2",
-  },
+  sectionTitle: { fontSize: 16, fontWeight: "700", color: CALM.textPrimary, textAlign: "right" },
 
-  // Network tree (empty state only, tree view in treeStyles)
   emptyState: {
     backgroundColor: "#ffffff",
     borderRadius: 12,
@@ -778,35 +593,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: CALM.border,
   },
-  emptyText: { color: CALM.textSecondary, fontSize: 14, textAlign: "center" },
-
-  // Roadmap
-  roadmap: { padding: 14, gap: 10 },
-  roadmapRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "flex-end",
-    gap: 10,
-    paddingVertical: 6,
-  },
-  roadmapInfo: {
-    flex: 1,
-    alignItems: "flex-end",
-  },
-  roadmapLabel: {
-    fontSize: 15,
-    fontWeight: "700",
-    color: CALM.textSecondary,
-    textAlign: "right",
-  },
-  roadmapUnlock: {
-    fontSize: 11,
-    color: CALM.textTertiary,
-    textAlign: "right",
-    marginTop: 2,
-  },
-  roadmapReq: { fontSize: 12, color: CALM.textTertiary },
-  roadmapEmoji: { fontSize: 22 },
+  emptyText: { color: CALM.textSecondary, fontSize: 14, textAlign: "center", writingDirection: "rtl" as const, lineHeight: 20 },
 
   // Collected badge
   collectedBadge: {
@@ -818,49 +605,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "rgba(14,165,233,0.2)",
   },
-  collectedText: {
-    fontSize: 14,
-    fontWeight: "700",
-    color: "#0ea5e9",
-  },
-
-  // Educational tooltip (collapsible)
-  eduToggle: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "flex-end",
-    gap: 6,
-    marginTop: 16,
-    paddingHorizontal: 4,
-    paddingVertical: 8,
-  },
-  eduToggleText: {
-    fontSize: 13,
-    fontWeight: "700",
-    color: CALM.accent,
-    textAlign: "right",
-  },
-  eduCard: {
-    backgroundColor: CALM.accentLight,
-    borderWidth: 1,
-    borderColor: "rgba(14,165,233,0.15)",
-    borderRadius: 14,
-    padding: 16,
-    gap: 8,
-    marginBottom: 8,
-  },
-  eduTitle: {
-    fontSize: 15,
-    fontWeight: "800",
-    color: CALM.textPrimary,
-    textAlign: "right",
-  },
-  eduBody: {
-    fontSize: 13,
-    color: CALM.textSecondary,
-    textAlign: "right",
-    lineHeight: 20,
-  },
+  collectedText: { fontSize: 14, fontWeight: "700", color: "#0ea5e9", textAlign: "center" },
 
   bottomSpacer: { height: 40 },
 });

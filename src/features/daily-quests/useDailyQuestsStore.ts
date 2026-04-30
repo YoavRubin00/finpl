@@ -164,7 +164,7 @@ export const useDailyQuestsStore = create<DailyQuestsState>()(
         const freezes = 0;
 
         economy.addXP(xp, "daily_task");
-        economy.addCoins(coins);
+        economy.addCoins(coins, 'daily-quest');
         if (gems > 0) economy.addGems(gems);
 
         const summary: QuestRewardSummary = {
@@ -197,7 +197,7 @@ export const useDailyQuestsStore = create<DailyQuestsState>()(
         const gems = QUEST_PRO_GEMS_GUARANTEED;
 
         economy.addXP(xp, "daily_task");
-        economy.addCoins(coins);
+        economy.addCoins(coins, 'daily-quest');
         economy.addGems(gems);
 
         const summary: QuestRewardSummary = { xp, coins, gems, freezes: 0, streakBonusPct: streakBonusPct(streak) };

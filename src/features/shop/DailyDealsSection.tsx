@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { View, Text, StyleSheet, Pressable, Alert } from 'react-native';
+import { Image as ExpoImage } from 'expo-image';
 import { GoldCoinIcon } from '../../components/ui/GoldCoinIcon';
 import { useRouter } from 'expo-router';
 import { LottieIcon } from '../../components/ui/LottieIcon';
@@ -114,7 +115,13 @@ export function DailyDealsSection() {
               </View>
 
               {/* Item icon */}
-              {deal.item.lottieSource ? (
+              {deal.item.imageUrl ? (
+                <ExpoImage
+                  source={{ uri: deal.item.imageUrl }}
+                  style={{ width: 48, height: 48, borderRadius: 24 }}
+                  contentFit="cover"
+                />
+              ) : deal.item.lottieSource ? (
                 <LottieIcon source={deal.item.lottieSource} size={40} />
               ) : (
                 <Text style={styles.emoji}>{deal.item.emoji}</Text>

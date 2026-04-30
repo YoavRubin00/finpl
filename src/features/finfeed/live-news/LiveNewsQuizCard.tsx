@@ -121,7 +121,7 @@ export function LiveNewsQuizCard() {
     if (id === data.correctChoiceId) {
       successHaptic();
       addXP(data.xpReward, 'quiz_correct');
-      addCoins(data.coinReward);
+      addCoins(data.coinReward, 'quiz');
       setShowConfetti(true);
       setShowRewards(true);
       setTimeout(() => setShowConfetti(false), 2000);

@@ -1,5 +1,6 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
+import { Image as ExpoImage } from 'expo-image';
 import { AnimatedPressable } from '../../components/ui/AnimatedPressable';
 import { LottieIcon } from '../../components/ui/LottieIcon';
 import { GoldCoinIcon } from '../../components/ui/GoldCoinIcon';
@@ -36,8 +37,15 @@ export const ShopItemCard = React.memo(function ShopItemCard({ item, canAfford, 
   return (
     <View style={styles.card}>
       {/* Icon */}
-      <View style={[styles.iconBox, { backgroundColor: iconBg }]}>
-        {item.lottieSource ? (
+      <View style={[styles.iconBox, { backgroundColor: iconBg, overflow: 'hidden' }]}>
+        {item.imageUrl ? (
+          <ExpoImage
+            source={{ uri: item.imageUrl }}
+            style={{ width: 76, height: 76, borderRadius: 20 }}
+            contentFit="cover"
+            accessibilityLabel={item.name}
+          />
+        ) : item.lottieSource ? (
           <LottieIcon source={item.lottieSource} size={48} />
         ) : (
           <Text style={{ fontSize: 36 }}>{item.emoji}</Text>

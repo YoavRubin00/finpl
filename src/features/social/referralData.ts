@@ -73,9 +73,12 @@ export const STATUS_UNLOCKS: Record<string, StatusUnlock> = {
 };
 
 // ── Reward Constants ──
+// Canonical magnitudes live in `referralConstants.ts`. Re-export here for
+// backward compatibility — old call sites still use these names.
 
-export const DIAMOND_CHEST_GEMS = 5;
-export const DIVIDEND_PERCENT = 0.05; // 5% of referred friends' daily XP/gold
+export const DIAMOND_CHEST_GEMS = 5; // legacy, no longer granted by the new flow
+import { REFERRAL_DAILY_DIVIDEND_RATE } from './referralConstants';
+export const DIVIDEND_PERCENT = REFERRAL_DAILY_DIVIDEND_RATE; // 5% — single source of truth
 
 // ── ISO Date Helper ──
 

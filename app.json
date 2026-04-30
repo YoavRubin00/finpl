@@ -97,6 +97,14 @@
           "category": ["DEFAULT", "BROWSABLE"],
           "data": [{ "scheme": "com.finplay.app" }],
           "autoVerify": false
+        },
+        {
+          "action": "VIEW",
+          "category": ["DEFAULT", "BROWSABLE"],
+          "data": [
+            { "scheme": "https", "host": "finplay.me", "pathPrefix": "/invite" }
+          ],
+          "autoVerify": true
         }
       ]
     },
@@ -105,6 +113,7 @@
       "buildNumber": "1",
       "supportsTablet": false,
       "usesAppleSignIn": true,
+      "associatedDomains": ["applinks:finplay.me"],
       "infoPlist": {
         "UIBackgroundModes": [],
         "CFBundleURLTypes": [

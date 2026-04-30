@@ -18,7 +18,7 @@ import type { PasswordStrength } from "./types";
 import { useAuthStore } from "./useAuthStore";
 import { useGoogleAuthStore } from "./useGoogleAuthStore";
 import { useAppleAuth } from "./useAppleAuth";
-import { getAvatarById, DEFAULT_AVATAR_EMOJI } from "../avatars/avatarData";
+import { AvatarImage } from "../avatars/AvatarImage";
 import { ConfettiExplosion } from "../../components/ui/ConfettiExplosion";
 
 const strengthLabels: Record<PasswordStrength, string> = {
@@ -144,9 +144,10 @@ export function RegisterScreen() {
                 height: 52, width: 52, alignItems: "center", justifyContent: "center",
                 borderRadius: 26, borderWidth: 2, borderColor: "#0891b2",
                 backgroundColor: "#f0f9ff",
+                overflow: "hidden",
               }}
             >
-              <Text style={{ fontSize: 28 }}>{getAvatarById(avatarId)?.emoji ?? DEFAULT_AVATAR_EMOJI}</Text>
+              <AvatarImage avatarId={avatarId} size={48} emojiStyle={{ fontSize: 28 }} />
             </View>
           ) : (
             <ExpoImage source={FINN_HELLO} accessible={false} style={{ width: 72, height: 72 }} contentFit="contain" />

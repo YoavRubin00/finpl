@@ -74,7 +74,7 @@ export const useDailyChallengesStore = create<DailyChallengesState>()(
         if (wasCorrect) {
           const economy = useEconomyStore.getState();
           economy.addXP(CHALLENGE_XP_REWARD, 'daily_task');
-          economy.addCoins(CHALLENGE_COIN_REWARD);
+          economy.addCoins(CHALLENGE_COIN_REWARD, 'daily-quest');
         }
 
         set({
@@ -89,7 +89,7 @@ export const useDailyChallengesStore = create<DailyChallengesState>()(
 
         const economy = useEconomyStore.getState();
         economy.addXP(CHALLENGE_XP_REWARD, 'daily_task');
-        economy.addCoins(CHALLENGE_COIN_REWARD);
+        economy.addCoins(CHALLENGE_COIN_REWARD, 'daily-quest');
 
         set({
           investmentPlays: incrementPlays(state.investmentPlays, date),

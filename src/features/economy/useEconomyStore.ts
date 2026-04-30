@@ -36,7 +36,13 @@ interface EconomyState {
   recentActivityHours: number[];
 
   addXP: (amount: number, source: XPSource) => void;
-  addCoins: (amount: number) => void;
+  /**
+   * Add coins to balance. Optional `source` enables server-side dividend
+   * tracking — pass 'lesson' / 'quiz' / 'daily-quest' to make these coins
+   * count toward the referral dividend pool. Other sources (or omitted)
+   * still credit the local balance but are NOT eligible for the 5% dividend.
+   */
+  addCoins: (amount: number, source?: import('../social/referralConstants').CoinEventSource) => void;
   addGems: (amount: number) => void;
   spendCoins: (amount: number) => boolean;
   spendGems: (amount: number) => boolean;
@@ -129,12 +135,22 @@ export const useEconomyStore = create<EconomyState>()(
 
       dismissLevelUp: () => set({ pendingLevelUp: null }),
 
-      addCoins: (amount: number) => {
+      addCoins: (amount: number, source) => {
         if (amount <= 0) return;
         set((state) => ({ coins: state.coins + amount }));
         const { xp, coins, gems } = get();
         const authId = useAuthStore.getState().email;
-        if (authId) upsertInventory(authId, { xp, coins, gems }).catch(() => {});
+        if (authId) {
+          upsertInventory(authId, { xp, coins, gems }).catch(() => {});
+          // If the caller tagged this grant with a dividend-eligible source,
+          // also log it to the server so the referral dividend pool can sum it.
+          // Fire-and-forget — failures don't affect the local balance.
+          if (source) {
+            import('../../db/sync/syncCoinEvents')
+              .then((m) => m.logCoinGrant(authId, amount, source))
+              .catch(() => { /* non-fatal */ });
+          }
+        }
       },
 
       addGems: (amount: number) => {

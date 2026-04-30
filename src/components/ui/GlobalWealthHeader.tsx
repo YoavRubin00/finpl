@@ -21,7 +21,7 @@ import { useSubscriptionStore } from "../../features/subscription/useSubscriptio
 import { useAuthStore } from "../../features/auth/useAuthStore";
 import { useFunStore } from "../../stores/useFunStore";
 import { FINN_DAD_JOKES, FINN_FUN_FACTS } from "../../features/fun/finnJokesData";
-import { getAvatarById, DEFAULT_AVATAR_EMOJI } from "../../features/avatars/avatarData";
+import { AvatarImage } from "../../features/avatars/AvatarImage";
 import { getPyramidStatus } from "../../utils/progression";
 import { SPRING_SMOOTH } from "../../utils/animations";
 import { heavyHaptic, tapHaptic } from "../../utils/haptics";
@@ -192,8 +192,6 @@ export function GlobalWealthHeader({ compact = false }: GlobalWealthHeaderProps)
   const gems = useEconomyStore((st) => st.gems);
   const isPro = useSubscriptionStore((st) => st.tier === "pro" && st.status === "active");
   const avatarId = useAuthStore((st) => st.profile?.avatarId ?? null);
-  const avatarDef = getAvatarById(avatarId);
-  const avatarEmoji = avatarDef?.emoji ?? DEFAULT_AVATAR_EMOJI;
 
   // ---- Fun store: mail icon ----
   const hasUnreadMail = useFunStore((st) => st.hasUnreadMail);
@@ -465,7 +463,7 @@ export function GlobalWealthHeader({ compact = false }: GlobalWealthHeaderProps)
                 isPro && { elevation: 3 },
               ]}>
               <View style={[s.profileAvatarCompact, isPro && { borderColor: "#facc15" }]}>
-                <Text style={s.profileAvatarEmojiCompact}>{avatarEmoji}</Text>
+                <AvatarImage avatarId={avatarId} size={32} emojiStyle={s.profileAvatarEmojiCompact} />
                 {isPro && (
                   <View style={s.profileCrownCompact}>
                     <Crown size={8} color="#facc15" fill="#f59e0b" />

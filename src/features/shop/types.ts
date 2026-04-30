@@ -9,6 +9,8 @@ export interface ShopItem {
   gemCost?: number;
   emoji: string;
   lottieSource?: number;
+  /** Public image URL — preferred over lottie/emoji when present (used by avatar shark items). */
+  imageUrl?: string;
 }
 
 /** IAP gem bundle, real-money purchase (mock flow) */

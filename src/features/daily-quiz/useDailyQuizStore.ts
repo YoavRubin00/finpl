@@ -33,7 +33,7 @@ export const useDailyQuizStore = create<DailyQuizState>()(
         if (wasCorrect) {
           const economy = useEconomyStore.getState();
           economy.addXP(xpReward, 'daily_task');
-          economy.addCoins(coinReward + streakBonus);
+          economy.addCoins(coinReward + streakBonus, 'quiz');
         }
 
         set({

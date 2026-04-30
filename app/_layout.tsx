@@ -279,6 +279,64 @@ export default function RootLayout() {
   const hasCompletedOnboarding = useAuthStore((s) => s.hasCompletedOnboarding);
   const hasSeenWalkthrough = useTutorialStore((s) => s.hasSeenAppWalkthrough);
 
+  // ── Android Play Install Referrer — runs once on first launch ──
+  // When a user clicks finplay.me/invite/CODE and installs from the Play Store,
+  // Google passes the `referrer` param to the app on first open. We read it here,
+  // extract the code, and write it to the pending key so the post-signup hook below
+  // picks it up after onboarding — no manual code entry needed on Android.
+  useEffect(() => {
+    if (Platform.OS !== 'android') return;
+    const INSTALL_REFERRER_CHECKED = 'install_referrer_checked_v1';
+    (async () => {
+      try {
+        const { default: AsyncStorage } = await import('@react-native-async-storage/async-storage');
+        const alreadyChecked = await AsyncStorage.getItem(INSTALL_REFERRER_CHECKED);
+        if (alreadyChecked) return;
+        await AsyncStorage.setItem(INSTALL_REFERRER_CHECKED, '1');
+        const { PlayInstallReferrer } = await import('react-native-play-install-referrer');
+        PlayInstallReferrer.getInstallReferrerInfo(async (info, error) => {
+          if (error || !info?.installReferrer) return;
+          const match = /invite_code=([A-Z0-9]{4,12})/i.exec(info.installReferrer);
+          const code = match?.[1]?.toUpperCase();
+          if (!code) return;
+          const existing = await AsyncStorage.getItem('pending_referral_code_v1');
+          if (!existing) {
+            await AsyncStorage.setItem('pending_referral_code_v1', code);
+          }
+        });
+      } catch { /* non-fatal */ }
+    })();
+  }, []);
+
+  // ── Post-signup referral redemption ──
+  // If a deep link from finplay.me/invite/[code] saved a code in AsyncStorage
+  // BEFORE the user signed up, redeem it now that they're authenticated +
+  // onboarded. Single attempt — clears the pending key on success or
+  // failure so we don't loop.
+  useEffect(() => {
+    if (!userEmail || !hasCompletedOnboarding) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const [{ default: AsyncStorage }, syncRef, screenMod] = await Promise.all([
+          import('@react-native-async-storage/async-storage'),
+          import('../src/db/sync/syncReferral'),
+          import('../src/features/social/InviteRedemptionScreen'),
+        ]);
+        if (cancelled) return;
+        const pending = await AsyncStorage.getItem(screenMod.PENDING_REFERRAL_STORAGE_KEY);
+        if (!pending) return;
+        const result = await syncRef.redeemReferralCode(pending, userEmail);
+        await AsyncStorage.removeItem(screenMod.PENDING_REFERRAL_STORAGE_KEY);
+        if (cancelled) return;
+        if (result) {
+          try { useEconomyStore.getState().addCoins(result.bonusGranted); } catch { /* non-fatal */ }
+        }
+      } catch { /* non-fatal — deep link redeem will be retried next launch if user re-enters via link */ }
+    })();
+    return () => { cancelled = true; };
+  }, [userEmail, hasCompletedOnboarding]);
+
   const [hydrated, setHydrated] = useState(false);
   const [splashVisible, setSplashVisible] = useState(true);
 
@@ -297,7 +355,7 @@ export default function RootLayout() {
     const inContentRoute = [
       "chapter", "lesson", "simulator", "shop", "pricing",
       "trading-hub", "bridge", "clash",
-      "duels", "squads", "referral", "fantasy", "assets", "assets-market", "finfeed",
+      "duels", "squads", "referral", "invite", "fantasy", "assets", "assets-market", "finfeed",
       "scenario-lab", "suggest-scenario", "graham-personality", "legal", "settings",
       "pizza-index", "accessibility-statement", "fire-calculator",
       "tower-defense-boss", "interstitial", "ai-insights", "saved-items",

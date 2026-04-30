@@ -38,7 +38,8 @@ import { GoldCircleBadge } from "../../components/ui/GoldCircleBadge";
 import { GoldCoinIcon } from "../../components/ui/GoldCoinIcon";
 import { useReferralStore } from "../social/useReferralStore";
 import { computeReferralTier } from "../social/referralData";
-import { getAvatarById, DEFAULT_AVATAR_EMOJI } from "../avatars/avatarData";
+import { getAvatarById } from "../avatars/avatarData";
+import { AvatarImage } from "../avatars/AvatarImage";
 import { EditProfileModal } from "./EditProfileModal";
 import { ProfilingFlow } from "../onboarding/ProfilingFlow";
 import { useTheme } from "../../hooks/useTheme";
@@ -109,7 +110,6 @@ export function ProfileScreen() {
   const { level, layer, xpToNextLevel, progressToNextLevel } = getPyramidStatus(xp);
   const [showStagePopup, setShowStagePopup] = useState(false);
   const avatarDef = getAvatarById(profile?.avatarId ?? null);
-  const avatarEmoji = avatarDef?.emoji ?? DEFAULT_AVATAR_EMOJI;
   const avatarName = avatarDef?.name ?? null;
 
   // Entrance animations
@@ -194,8 +194,8 @@ export function ProfileScreen() {
                 glowing
                 borderColor={isPro || hasGoldFrame ? "#facc15" : "#d4a017"}
               >
-                <View style={[styles.avatarInner, { backgroundColor: theme.surface }]}>
-                  <Text style={styles.avatarEmoji}>{avatarEmoji}</Text>
+                <View style={[styles.avatarInner, { backgroundColor: theme.surface, overflow: "hidden" }]}>
+                  <AvatarImage avatarId={profile?.avatarId ?? null} size={80} emojiStyle={styles.avatarEmoji} />
                 </View>
               </GoldCircleBadge>
               {isPro && (
