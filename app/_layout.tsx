@@ -40,6 +40,7 @@ import { GlobalUpgradeModal } from "../src/features/subscription/UpgradeModal";
 import { PostStreakIncomeSplash } from "../src/features/assets/PostStreakIncomeSplash";
 import { useNotificationSetup } from "../src/features/notifications/useNotifications";
 import { LoadingWisdom } from "../src/components/ui/LoadingWisdom";
+import { AppIntroSplash } from "../src/components/ui/AppIntroSplash";
 import { GlobalErrorBoundary } from "../src/components/ui/ErrorBoundary";
 import { NetworkStatusBanner } from "../src/components/ui/NetworkStatusBanner";
 import { LevelUpBanner } from "../src/components/ui/LevelUpBanner";
@@ -244,6 +245,7 @@ export default function RootLayout() {
   const hasSeenWalkthrough = useTutorialStore((s) => s.hasSeenAppWalkthrough);
 
   const [hydrated, setHydrated] = useState(false);
+  const [splashVisible, setSplashVisible] = useState(true);
 
   useEffect(() => {
     const unsub = useAuthStore.persist.onFinishHydration(() => setHydrated(true));
@@ -336,6 +338,7 @@ export default function RootLayout() {
             </StreakCelebrationProvider>
         </RewardAnimationProvider>
       </GlobalErrorBoundary>
+      {splashVisible && <AppIntroSplash onDismiss={() => setSplashVisible(false)} />}
     </GestureHandlerRootView>
   );
 }

@@ -72,6 +72,7 @@ import { SharkBridgeCTA, SharkReferralCTA, moduleHasDividendContent } from "../.
 import { InvestmentCard } from "../daily-challenges/InvestmentCard";
 import { CrashGameCard } from "../daily-challenges/CrashGameCard";
 import { MythFeedCard } from "../myth-or-tachles/MythFeedCard";
+import { useMythStore } from "../myth-or-tachles/useMythStore";
 import { DilemmaCard } from "../daily-challenges/DilemmaCard";
 import { FomoKillerCard } from "../finfeed/minigames/fomo-killer/FomoKillerCard";
 import { BullshitSwipeCard } from "../finfeed/minigames/bullshit-swipe/BullshitSwipeCard";
@@ -386,6 +387,16 @@ function renderBoldText(text: string, onTermPress?: (term: string) => void): Rea
     result.push(<Text key={key++}>{text.slice(lastIndex)}</Text>);
   }
   return result;
+}
+
+/**
+ * Tiny helper: when shown, fires onSkip once on mount.
+ * Used for inter-module myth when the user has already played
+ * 3 myth sessions within the cooldown window — skip straight to the next module.
+ */
+function MythInterModuleAutoSkip({ onSkip }: { onSkip: () => void }) {
+  useEffect(() => { onSkip(); }, [onSkip]);
+  return null;
 }
 
 /* ------------------------------------------------------------------ */
@@ -3724,7 +3735,11 @@ export function LessonFlowScreen() {
             </View>
             {mod.interModuleGame === 'investment' && <InvestmentCard isActive />}
             {mod.interModuleGame === 'crash' && <CrashGameCard isActive />}
-            {mod.interModuleGame === 'myth' && <MythFeedCard isInterModule onSkip={() => { setShowInterGame(false); goToNextSequentialModule(); }} />}
+            {mod.interModuleGame === 'myth' && (
+              useMythStore.getState().canPlayMyth(isPro)
+                ? <MythFeedCard isInterModule onSkip={() => { setShowInterGame(false); goToNextSequentialModule(); }} />
+                : <MythInterModuleAutoSkip onSkip={() => { setShowInterGame(false); goToNextSequentialModule(); }} />
+            )}
             {mod.interModuleGame === 'dilemma' && <DilemmaCard isActive />}
             {mod.interModuleGame === 'fomo-killer' && <FomoKillerCard isActive />}
             {mod.interModuleGame === 'bullshit-swipe' && <BullshitSwipeCard isActive bypassDailyGate onFinish={() => { /* allow X to advance; game's own results screen handles its CTA */ }} />}

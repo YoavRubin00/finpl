@@ -24,8 +24,7 @@ import Animated, {
   cancelAnimation,
   useReducedMotion,
 } from "react-native-reanimated";
-import { FINN_STANDARD, FINN_DANCING } from "../retention-loops/finnMascotConfig";
-import { useSpontaneousDancing } from "../retention-loops/useSpontaneousDancing";
+import { FINN_HELLO } from "../retention-loops/finnMascotConfig";
 
 // Feed Data & Types
 import { MOCK_FEED_DATA, COMIC_FEED_ITEMS, BENBEN_VIDEOS, MICRO_LEARN_VIDEOS } from "./feedData";
@@ -224,32 +223,9 @@ export function setPendingFeedScrollById(id: string) {
   _pendingFeedScrollTargetId = id;
 }
 
-/** Daily return greeting video — Finn waving warmly when user opens the app */
-const DAILY_RETURN_VIDEO_URL =
-  "https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/finn-videos/finn-daily-return.mp4";
-
 // -- Welcome Screen (full-screen first card with Finn + daily quote) --
 function WelcomeCard({ height }: { height: number }) {
-  // ~1 in 7 days (deterministic per day) the big greeting Shark dances —
-  // adds variety without being noisy.
-  const dancing = useSpontaneousDancing(0.15, 'welcome');
-  const greetingShark = dancing ? FINN_DANCING : FINN_STANDARD;
   const router = useRouter();
-  const greetingPlayer = useVideoPlayer(DAILY_RETURN_VIDEO_URL, (p) => {
-    p.loop = true;
-    p.muted = true;
-    p.bufferOptions = {
-      preferredForwardBufferDuration: 5,
-      waitsToMinimizeStalling: false,
-      minBufferForPlayback: 0.5,
-    };
-  });
-  useEffect(() => {
-    try { greetingPlayer.play(); } catch { /* ignore */ }
-    return () => {
-      try { greetingPlayer.pause(); } catch { /* ignore */ }
-    };
-  }, [greetingPlayer]);
   const displayName = useAuthStore((s) => s.displayName);
   const hasUnreadMail = useFunStore((s) => s.hasUnreadMail);
   const refreshMail = useFunStore((s) => s.refreshMail);
@@ -333,12 +309,11 @@ function WelcomeCard({ height }: { height: number }) {
       <View style={{ alignSelf: 'center', marginTop: -50, alignItems: 'center' }}>
         <Animated.View style={[{ alignItems: 'center' }, bubble4Style]}>
           <View style={{ width: 220, height: 220, overflow: 'hidden' }}>
-            <VideoView
-              player={greetingPlayer}
+            <ExpoImage source={FINN_HELLO}
               style={{ width: 220, height: 220 }}
-              nativeControls={false}
               contentFit="contain"
-            />
+              accessible={false}
+              />
           </View>
         </Animated.View>
 

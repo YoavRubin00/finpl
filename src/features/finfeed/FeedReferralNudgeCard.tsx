@@ -12,10 +12,12 @@ import Animated, {
   useReducedMotion,
 } from "react-native-reanimated";
 import { LinearGradient } from "expo-linear-gradient";
+import { Image as ExpoImage } from "expo-image";
 import { useVideoPlayer, VideoView } from "expo-video";
 import { useRouter } from "expo-router";
 import { tapHaptic, successHaptic } from "../../utils/haptics";
 import { useSoundEffect } from "../../hooks/useSoundEffect";
+import { FINN_DANCING } from "../retention-loops/finnMascotConfig";
 
 const VIDEO_URL =
   "https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/finn-videos/finn-referral.mp4";
@@ -89,6 +91,13 @@ export const FeedReferralNudgeCard = React.memo(function FeedReferralNudgeCard({
             nativeControls={false}
             contentFit="cover"
           />
+          {/* Cover Higgsfield/Gemini watermark in bottom-right with dancing Finn */}
+          <ExpoImage
+            source={FINN_DANCING}
+            style={styles.watermarkCover}
+            contentFit="contain"
+            accessible={false}
+          />
         </View>
 
         <Text style={[styles.title, RTL_CENTER]}>הזמינו חברים</Text>
@@ -142,6 +151,13 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(8, 47, 73, 0.7)",
   },
   video: { width: "100%", height: "100%" },
+  watermarkCover: {
+    position: "absolute",
+    bottom: 4,
+    right: 4,
+    width: 72,
+    height: 72,
+  },
   title: {
     color: "#f0f9ff",
     fontSize: 24,
@@ -155,20 +171,20 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
   },
   ctaGlow: {
-    shadowColor: "#0ea5e9",
-    shadowOpacity: 0.6,
-    shadowRadius: 20,
+    shadowColor: "#2563eb",
+    shadowOpacity: 0.7,
+    shadowRadius: 22,
     shadowOffset: { width: 0, height: 0 },
     elevation: 14,
     marginTop: 4,
   },
   cta: {
-    backgroundColor: "#0ea5e9",
+    backgroundColor: "#2563eb",
     borderRadius: 16,
     paddingHorizontal: 36,
     paddingVertical: 16,
     borderBottomWidth: 4,
-    borderBottomColor: "#0369a1",
+    borderBottomColor: "#1d4ed8",
   },
   ctaPressed: { opacity: 0.85, transform: [{ scale: 0.98 }] },
   ctaText: {
