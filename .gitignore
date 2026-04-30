@@ -29,7 +29,7 @@ assets/images/games/
 # Dev/build scripts — local tooling only
 scripts/
 notebooklm-py/
-db/
+/db/
 *.ps1
 copy_*.js
 copy-images.js
