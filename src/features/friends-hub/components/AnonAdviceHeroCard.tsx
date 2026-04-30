@@ -95,7 +95,7 @@ export function AnonAdviceHeroCard(): React.ReactElement {
               marginTop: 1,
             }}
           >
-            {total} שאלות פתוחות · שתף את הדילמה שלך
+            תכל'ס, כולם לפעמים נתקעים. שתף — מישהו יענה · {total} שאלות פתוחות
           </Text>
         </View>
         <Text style={{ fontSize: 20, color: STITCH.primary }}>‹</Text>

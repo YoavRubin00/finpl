@@ -4,6 +4,7 @@ import * as Clipboard from 'expo-clipboard';
 import { useReferralStore } from '../../social/useReferralStore';
 import { STITCH, DUO } from '../../../constants/theme';
 import { tapHaptic, successHaptic } from '../../../utils/haptics';
+import { FinnCue } from './FinnCue';
 
 export function ReferralCard(): React.ReactElement {
   const referralCode = useReferralStore((s) => s.referralCode);
@@ -39,8 +40,8 @@ export function ReferralCard(): React.ReactElement {
         elevation: 4,
       }}
     >
-      {/* ── Green accent strip ── */}
-      <View style={{ height: 4, backgroundColor: '#16a34a', opacity: 0.7 }} />
+      {/* ── Green accent strip (RTL: right edge) ── */}
+      <View style={{ position: 'absolute', right: 0, top: 0, bottom: 0, width: 4, backgroundColor: '#16a34a', opacity: 0.85, zIndex: 1 }} />
 
       {/* ── Header ── */}
       <View
@@ -166,6 +167,17 @@ export function ReferralCard(): React.ReactElement {
             </Text>
           </Pressable>
         )}
+
+        {/* ── Finn coach line ── */}
+        <FinnCue
+          variant={referredCount > 0 ? 'happy' : 'hello'}
+          text={
+            referredCount > 0
+              ? `${referredCount} חברים מצטרפים — אתה בונה אימפריה`
+              : 'כל חבר חדש = דיבידנד נצחי. כדאי, אה?'
+          }
+          tone="green"
+        />
       </View>
     </View>
   );

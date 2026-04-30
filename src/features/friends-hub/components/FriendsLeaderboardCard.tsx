@@ -1,7 +1,8 @@
 import React from 'react';
 import { View, Text } from 'react-native';
-import { MOCK_MEMBERS } from '../../clan/clanData';
+import { MOCK_MEMBERS, SELF_ID } from '../../clan/clanData';
 import { STITCH, DUO } from '../../../constants/theme';
+import { FinnCue, type FinnCueVariant } from './FinnCue';
 
 const MEDAL = ['🥇', '🥈', '🥉'];
 
@@ -9,7 +10,16 @@ const TOP3_BG = ['#fef9c3', '#f8fafc', '#fff7ed'];
 const TOP3_BORDER = ['#fde68a', '#e2e8f0', '#fed7aa'];
 
 export function FriendsLeaderboardCard(): React.ReactElement {
-  const top5 = [...MOCK_MEMBERS].sort((a, b) => b.xp - a.xp).slice(0, 5);
+  const sorted = [...MOCK_MEMBERS].sort((a, b) => b.xp - a.xp);
+  const top5 = sorted.slice(0, 5);
+  const selfRank = sorted.findIndex((m) => m.id === SELF_ID) + 1;
+
+  const finn: { variant: FinnCueVariant; text: string } =
+    selfRank > 0 && selfRank <= 3
+      ? { variant: 'dancing', text: 'הפודיום שלך! החברים אוכלים אבק' }
+      : selfRank > 0 && selfRank <= 10
+      ? { variant: 'happy',   text: `מקום ${selfRank} — אתה במחזור הניצחון` }
+      : { variant: 'tablet',  text: 'ה-XP הזה לא ייצבר לבד. יאללה תלמד' };
 
   return (
     <View
@@ -28,8 +38,8 @@ export function FriendsLeaderboardCard(): React.ReactElement {
         elevation: 4,
       }}
     >
-      {/* ── Gold accent strip ── */}
-      <View style={{ height: 4, backgroundColor: STITCH.tertiaryGoldBright, opacity: 0.8 }} />
+      {/* ── Gold accent strip (RTL: right edge) ── */}
+      <View style={{ position: 'absolute', right: 0, top: 0, bottom: 0, width: 4, backgroundColor: STITCH.tertiaryGoldBright, opacity: 0.9, zIndex: 1 }} />
 
       {/* ── Header ── */}
       <View
@@ -126,6 +136,11 @@ export function FriendsLeaderboardCard(): React.ReactElement {
           </View>
         </View>
       ))}
+
+      {/* ── Finn coach line ── */}
+      <View style={{ paddingHorizontal: 12, paddingVertical: 12, borderTopWidth: 1, borderTopColor: STITCH.surfaceHighest }}>
+        <FinnCue variant={finn.variant} text={finn.text} tone="gold" />
+      </View>
     </View>
   );
 }

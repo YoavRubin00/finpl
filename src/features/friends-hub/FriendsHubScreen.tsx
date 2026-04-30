@@ -1,10 +1,8 @@
 import React from 'react';
 import { ScrollView, View, Text } from 'react-native';
-import { Image as ExpoImage } from 'expo-image';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { LinearGradient } from 'expo-linear-gradient';
 import Animated, { FadeInDown, useAnimatedStyle, useReducedMotion, useSharedValue, withRepeat, withTiming, Easing } from 'react-native-reanimated';
-import { STITCH, CLAN } from '../../constants/theme';
+import { STITCH, CLAN, DUO } from '../../constants/theme';
 import { ActivityFeedStrip } from './components/ActivityFeedStrip';
 import { ClanHeroCard } from './components/ClanHeroCard';
 import { LeagueHeroCard } from './components/LeagueHeroCard';
@@ -15,7 +13,6 @@ import { ReferralCard } from './components/ReferralCard';
 import { SharkChatCard } from './components/SharkChatCard';
 import { AnonAdviceHeroCard } from './components/AnonAdviceHeroCard';
 import { CrowdWisdomCard } from './components/CrowdWisdomCard';
-import { FRIENDS_HUB_ASSETS } from './cloudAssets';
 
 function SectionLabel({ emoji, label, accentColor }: { emoji: string; label: string; accentColor: string }) {
   return (

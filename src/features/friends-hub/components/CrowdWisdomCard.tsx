@@ -7,6 +7,7 @@ import { useCrowdQuestionStore } from '../../crowd-question/useCrowdQuestionStor
 import type { CrowdQuestion, Sentiment, Topic } from '../../crowd-question/types';
 import { STITCH } from '../../../constants/theme';
 import { tapHaptic } from '../../../utils/haptics';
+import { FinnCue } from './FinnCue';
 
 interface TopicTheme {
   color: string;
@@ -205,8 +206,8 @@ export function CrowdWisdomCard(): React.ReactElement {
         elevation: 4,
       }}
     >
-      {/* ── Purple accent strip ── */}
-      <View style={{ height: 4, backgroundColor: '#7c3aed', opacity: 0.8 }} />
+      {/* ── Purple accent strip (RTL: right edge) ── */}
+      <View style={{ position: 'absolute', right: 0, top: 0, bottom: 0, width: 4, backgroundColor: '#7c3aed', opacity: 0.9, zIndex: 1 }} />
 
       {/* ── Header ── */}
       <Pressable
@@ -398,6 +399,15 @@ export function CrowdWisdomCard(): React.ReactElement {
           </Animated.View>
         );
       })}
+
+      {/* ── Finn coach line ── */}
+      <View style={{ paddingHorizontal: 12, paddingVertical: 10, borderTopWidth: 1, borderTopColor: STITCH.surfaceHighest }}>
+        <FinnCue
+          variant="tablet"
+          text="מה הקהל חושב? לפעמים הציבור צודק. לפעמים..."
+          tone="purple"
+        />
+      </View>
 
       {/* ── Footer CTA ── */}
       <Pressable

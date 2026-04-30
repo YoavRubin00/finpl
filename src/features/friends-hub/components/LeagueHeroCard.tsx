@@ -3,6 +3,7 @@ import { View, Text, Pressable } from 'react-native';
 import { useSquadsStore } from '../../social/useSquadsStore';
 import { STITCH, DUO } from '../../../constants/theme';
 import { tapHaptic } from '../../../utils/haptics';
+import { FinnCue, type FinnCueVariant } from './FinnCue';
 
 const TIER_EMOJI: Record<string, string> = {
   bronze: '🥉',
@@ -44,6 +45,12 @@ export function LeagueHeroCard(): React.ReactElement {
   const tierColor = TIER_COLOR[tier] ?? TIER_COLOR.bronze;
   const tierBg = TIER_BG[tier] ?? TIER_BG.bronze;
 
+  const finn: { variant: FinnCueVariant; text: string } = chestReady
+    ? { variant: 'dancing', text: 'האסם מחכה לך — אל תתן לו להתקרר 🎁' }
+    : weeklyScore > 0
+    ? { variant: 'tablet',  text: 'XP נצבר — עוד קצת והאסם נפתח' }
+    : { variant: 'standard', text: 'השבוע מתחיל בלמידה אחת. יאללה' };
+
   return (
     <View
       style={{
@@ -61,8 +68,8 @@ export function LeagueHeroCard(): React.ReactElement {
         elevation: 4,
       }}
     >
-      {/* ── Tier accent strip ── */}
-      <View style={{ height: 4, backgroundColor: tierColor, opacity: 0.7 }} />
+      {/* ── Tier accent strip (RTL: right edge) ── */}
+      <View style={{ position: 'absolute', right: 0, top: 0, bottom: 0, width: 4, backgroundColor: tierColor, opacity: 0.85, zIndex: 1 }} />
 
       {/* ── Header ── */}
       <View
@@ -174,6 +181,11 @@ export function LeagueHeroCard(): React.ReactElement {
             </Text>
           </View>
         )}
+      </View>
+
+      {/* ── Finn coach line ── */}
+      <View style={{ paddingHorizontal: 12, paddingBottom: 12 }}>
+        <FinnCue variant={finn.variant} text={finn.text} tone="gold" />
       </View>
     </View>
   );

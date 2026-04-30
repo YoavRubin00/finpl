@@ -4,6 +4,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 import { useSquadsStore } from '../../social/useSquadsStore';
 import { CLAN } from '../../../constants/theme';
+import { FinnCue } from './FinnCue';
 
 export function ClanHeroCard(): React.ReactElement {
   const squad = useSquadsStore((s) => s.squad);
@@ -35,53 +36,60 @@ export function ClanHeroCard(): React.ReactElement {
           borderWidth: 1.5,
           borderColor: CLAN.tierGold,
           padding: 16,
-          flexDirection: 'row-reverse',
-          alignItems: 'center',
           gap: 12,
         }}
       >
-        {/* Emblem */}
-        <View
-          style={{
-            width: 52,
-            height: 52,
-            borderRadius: 26,
-            backgroundColor: 'rgba(212,160,23,0.15)',
-            borderWidth: 1.5,
-            borderColor: CLAN.tierGold,
-            alignItems: 'center',
-            justifyContent: 'center',
-          }}
-        >
-          <Text style={{ fontSize: 26 }}>{hasSquad ? '🛡️' : '⚔️'}</Text>
-        </View>
-
-        {/* Text */}
-        <View style={{ flex: 1, alignItems: 'flex-end' }}>
-          <Text
+        <View style={{ flexDirection: 'row-reverse', alignItems: 'center', gap: 12 }}>
+          {/* Emblem */}
+          <View
             style={{
-              fontSize: 17,
-              fontWeight: '900',
-              color: '#ffffff',
-              writingDirection: 'rtl',
-              textAlign: 'right',
+              width: 52,
+              height: 52,
+              borderRadius: 26,
+              backgroundColor: 'rgba(212,160,23,0.15)',
+              borderWidth: 1.5,
+              borderColor: CLAN.tierGold,
+              alignItems: 'center',
+              justifyContent: 'center',
             }}
           >
-            {hasSquad ? squad.name : 'הקלאן שלך מחכה'}
-          </Text>
-          {hasSquad ? (
-            <Text style={{ fontSize: 12, color: CLAN.tierGoldLight, marginTop: 2, writingDirection: 'rtl' }}>
-              {squad.members.length} חברים · טפח על הכרטיס
+            <Text style={{ fontSize: 26 }}>{hasSquad ? '🛡️' : '⚔️'}</Text>
+          </View>
+
+          {/* Text */}
+          <View style={{ flex: 1, alignItems: 'flex-end' }}>
+            <Text
+              style={{
+                fontSize: 17,
+                fontWeight: '900',
+                color: '#ffffff',
+                writingDirection: 'rtl',
+                textAlign: 'right',
+              }}
+            >
+              {hasSquad ? squad.name : 'הקלאן שלך מחכה'}
             </Text>
-          ) : (
-            <Text style={{ fontSize: 12, color: 'rgba(255,255,255,0.78)', marginTop: 2, writingDirection: 'rtl' }}>
-              צור קלאן או הצטרף לקיים
-            </Text>
-          )}
+            {hasSquad ? (
+              <Text style={{ fontSize: 12, color: CLAN.tierGoldLight, marginTop: 2, writingDirection: 'rtl' }}>
+                {squad.members.length} חברים · טפח על הכרטיס
+              </Text>
+            ) : (
+              <Text style={{ fontSize: 12, color: 'rgba(255,255,255,0.78)', marginTop: 2, writingDirection: 'rtl' }}>
+                צור קלאן או הצטרף לקיים
+              </Text>
+            )}
+          </View>
+
+          {/* Arrow */}
+          <Text style={{ fontSize: 18, color: CLAN.tierGold }}>←</Text>
         </View>
 
-        {/* Arrow */}
-        <Text style={{ fontSize: 18, color: CLAN.tierGold }}>←</Text>
+        {/* Finn coach line */}
+        <FinnCue
+          variant={hasSquad ? 'happy' : 'hello'}
+          text={hasSquad ? 'הקלאן שלך בעלייה — תמשיכו ככה' : 'בלי קלאן אתה בודד בשוק. בוא תמצא חבורה'}
+          tone="blue"
+        />
       </LinearGradient>
     </Pressable>
   );

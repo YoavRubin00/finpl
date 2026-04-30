@@ -5,6 +5,7 @@ import { useFantasyStore } from '../../fantasy-league/useFantasyStore';
 import { TIER_CONFIGS, getCompetitionEnd, getCompetitionPhase, getNextDraftOpen } from '../../fantasy-league/fantasyData';
 import { STITCH, DUO } from '../../../constants/theme';
 import { tapHaptic } from '../../../utils/haptics';
+import { FinnCue, type FinnCueVariant } from './FinnCue';
 
 const PHASE_LABEL: Record<string, string> = {
   pre_draft: 'הליגה הבאה נפתחת',
@@ -45,6 +46,14 @@ export function FantasyLeagueCard(): React.ReactElement {
   const selfRank = localEntry?.rank ?? '--';
   const top3 = board.slice(0, 3);
 
+  const finn: { variant: FinnCueVariant; text: string } = !hasEntry
+    ? { variant: 'tablet', text: 'הליגה השבועית מחכה — בחר 5 מניות והתחל' }
+    : phase === 'draft' && picksCount < 5
+    ? { variant: 'fire', text: `נשארו ${5 - picksCount} בחירות. סגור את הדראפט` }
+    : phase === 'competition'
+    ? { variant: returnPositive ? 'happy' : 'empathic', text: returnPositive ? 'התיק שלך בעלייה. תמשיך' : 'תיקון יבוא — הרבה זמן עוד' }
+    : { variant: 'standard', text: 'תוצאות הליגה — בדוק מה קיבלת' };
+
   return (
     <Pressable
       onPress={() => {
@@ -75,8 +84,8 @@ export function FantasyLeagueCard(): React.ReactElement {
           overflow: 'hidden',
         }}
       >
-        {/* ── Teal accent strip ── */}
-        <View style={{ height: 4, backgroundColor: '#0891b2', opacity: 0.75 }} />
+        {/* ── Teal accent strip (RTL: right edge) ── */}
+        <View style={{ position: 'absolute', right: 0, top: 0, bottom: 0, width: 4, backgroundColor: '#0891b2', opacity: 0.9, zIndex: 1 }} />
 
         {/* ── Header ── */}
         <View
@@ -177,6 +186,11 @@ export function FantasyLeagueCard(): React.ReactElement {
             ))}
           </View>
         )}
+
+        {/* ── Finn coach line ── */}
+        <View style={{ paddingHorizontal: 12, paddingBottom: 12 }}>
+          <FinnCue variant={finn.variant} text={finn.text} tone="blue" />
+        </View>
       </View>
     </Pressable>
   );

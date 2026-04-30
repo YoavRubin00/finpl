@@ -5,6 +5,7 @@ import { useDuelsStore } from '../../social/useDuelsStore';
 import { useClashStore } from '../../friends-clash/useClashStore';
 import { STITCH, DUO } from '../../../constants/theme';
 import { tapHaptic } from '../../../utils/haptics';
+import { FinnCue } from './FinnCue';
 
 export function DuelsClashCard(): React.ReactElement {
   const record = useDuelsStore((s) => s.record);
@@ -31,8 +32,8 @@ export function DuelsClashCard(): React.ReactElement {
         elevation: 4,
       }}
     >
-      {/* ── Orange accent strip ── */}
-      <View style={{ height: 4, backgroundColor: '#ea580c', opacity: 0.75 }} />
+      {/* ── Orange accent strip (RTL: right edge) ── */}
+      <View style={{ position: 'absolute', right: 0, top: 0, bottom: 0, width: 4, backgroundColor: '#ea580c', opacity: 0.9, zIndex: 1 }} />
 
       {/* ── Header ── */}
       <View
@@ -120,6 +121,19 @@ export function DuelsClashCard(): React.ReactElement {
             </Text>
           </View>
         ))}
+      </View>
+
+      {/* ── Finn coach line ── */}
+      <View style={{ paddingHorizontal: 12, paddingBottom: pendingClash.length > 0 ? 10 : 14 }}>
+        <FinnCue
+          variant={pendingClash.length > 0 ? 'fire' : 'standard'}
+          text={
+            pendingClash.length > 0
+              ? `${pendingClash[0].opponentName} חושב שהוא טוב ממך. הוכח לו אחרת`
+              : 'בלי דו-קרב אין צמיחה. תזרוק כפפה'
+          }
+          tone="orange"
+        />
       </View>
 
       {/* ── Pending CLASH alert ── */}
