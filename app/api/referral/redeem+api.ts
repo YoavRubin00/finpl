@@ -16,7 +16,7 @@ interface RedeemBody {
   refereeAuthId: string;
 }
 
-const CODE_PATTERN = /^[A-Z0-9]{4,12}$/;
+const CODE_PATTERN = /^[A-Z0-9-]{4,12}$/;
 
 /** Magnitudes mirrored server-side. Must match `referralConstants.ts`. */
 const SIGNUP_BONUS_COINS = 500;

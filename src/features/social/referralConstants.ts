@@ -61,7 +61,7 @@ export function buildInviteShareMessage(code: string): string {
 /** Short copy fragments for nudge modals / referral screen. */
 export const REFERRAL_COPY = {
   /** Short headline for invite CTA — used in feed nudges and share dialogs. */
-  signupBonusHeadline: `${REFERRAL_SIGNUP_BONUS_COINS} מטבעות לחבר + ${REFERRAL_SIGNUP_BONUS_COINS} מטבעות לכם`,
+  signupBonusHeadline: `${REFERRAL_SIGNUP_BONUS_COINS} 🪙 לחבר + ${REFERRAL_SIGNUP_BONUS_COINS} 🪙 לכם`,
   /** Long explanation for the referral screen body. */
   fullRewardExplain:
     `כל חבר שיירשם דרך הקישור שלכם — שניכם מקבלים ${REFERRAL_SIGNUP_BONUS_COINS} מטבעות מיידית. ` +

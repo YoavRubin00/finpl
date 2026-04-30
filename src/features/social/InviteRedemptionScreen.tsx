@@ -29,7 +29,7 @@ import { REFERRAL_SIGNUP_BONUS_COINS, REFERRAL_COPY } from './referralConstants'
 import { successHaptic, heavyHaptic } from '../../utils/haptics';
 
 const PENDING_REFERRAL_KEY = 'pending_referral_code_v1';
-const CODE_PATTERN = /^[A-Z0-9]{4,12}$/;
+const CODE_PATTERN = /^[A-Z0-9-]{4,12}$/;
 
 export function InviteRedemptionScreen() {
   const params = useLocalSearchParams<{ code?: string | string[] }>();

@@ -600,7 +600,7 @@ function CelebrationScreen({ onDone }: { onDone: () => void }) {
 
   const handleSaveCode = async () => {
     const trimmed = inviteCode.trim().toUpperCase();
-    if (!/^[A-Z0-9]{4,12}$/.test(trimmed)) return;
+    if (!/^[A-Z0-9-]{4,12}$/.test(trimmed)) return;
     await AsyncStorage.setItem(PENDING_REFERRAL_STORAGE_KEY, trimmed);
     setCodeSaved(true);
   };

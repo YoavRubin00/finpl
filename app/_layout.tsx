@@ -296,7 +296,7 @@ export default function RootLayout() {
         const { PlayInstallReferrer } = await import('react-native-play-install-referrer');
         PlayInstallReferrer.getInstallReferrerInfo(async (info, error) => {
           if (error || !info?.installReferrer) return;
-          const match = /invite_code=([A-Z0-9]{4,12})/i.exec(info.installReferrer);
+          const match = /invite_code=([A-Z0-9-]{4,12})/i.exec(info.installReferrer);
           const code = match?.[1]?.toUpperCase();
           if (!code) return;
           const existing = await AsyncStorage.getItem('pending_referral_code_v1');

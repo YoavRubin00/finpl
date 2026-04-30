@@ -167,7 +167,7 @@ export function ReferralScreen() {
               <SectionIcon source={LOTTIE_GIFT} />
               <View style={{ flex: 1 }}>
                 <Text style={styles.rewardBannerTitle}>
-                  {REFERRAL_SIGNUP_BONUS_COINS} מטבעות לכם + {REFERRAL_SIGNUP_BONUS_COINS} לחבר
+                  {REFERRAL_SIGNUP_BONUS_COINS} 🪙 לכם + {REFERRAL_SIGNUP_BONUS_COINS} 🪙 לחבר
                 </Text>
                 <Text style={styles.rewardBannerSubtitle}>
                   {REFERRAL_COPY.fullRewardExplain}
@@ -238,13 +238,13 @@ export function ReferralScreen() {
                 <View style={styles.dividendStats}>
                   <View style={styles.dividendStat}>
                     <Text style={[styles.dividendValue, { color: CALM.coinGold }]}>
-                      {totalYesterdayLearningCoins.toLocaleString()}
+                      {totalYesterdayLearningCoins.toLocaleString()} 🪙
                     </Text>
-                    <Text style={styles.dividendLabel}>מטבעות חברים אתמול</Text>
+                    <Text style={styles.dividendLabel}>חברים הרוויחו אתמול</Text>
                   </View>
                   <View style={styles.dividendStat}>
                     <Text style={[styles.dividendValue, { color: CALM.coinGold }]}>
-                      {totalDividendCoins.toLocaleString()}
+                      {totalDividendCoins.toLocaleString()} 🪙
                     </Text>
                     <Text style={styles.dividendLabel}>סה״כ דיבידנד שצברתם</Text>
                   </View>
@@ -257,7 +257,7 @@ export function ReferralScreen() {
                     accessibilityLabel={`אספו ${dividendAvailable} מטבעות דיבידנד`}
                   >
                     <Text style={styles.actionBtnText}>
-                      אספו {dividendAvailable.toLocaleString()} מטבעות
+                      אספו {dividendAvailable.toLocaleString()} 🪙
                     </Text>
                   </AnimatedPressable>
                 ) : (
@@ -280,7 +280,7 @@ export function ReferralScreen() {
             {referredFriends.length === 0 ? (
               <View style={styles.emptyState}>
                 <Text style={styles.emptyText}>
-                  עדיין לא הזמנתם חברים. שתפו את הקישור — תקבלו {REFERRAL_SIGNUP_BONUS_COINS} מטבעות על כל הרשמה!
+                  עדיין לא הזמנתם חברים. שתפו את הקישור — תקבלו {REFERRAL_SIGNUP_BONUS_COINS} 🪙 על כל הרשמה!
                 </Text>
               </View>
             ) : (
