@@ -2171,6 +2171,17 @@ export function LessonFlowScreen() {
     // Per-flashcard imageUrl fields (URI-based only; require() numbers are local)
     for (const fc of mod.flashcards) addUri(fc.imageUrl);
 
+    // Per-flashcard memeImage (the funny shark images that "break routine"
+    // alongside the celebrating webp). Hosted remotely on Vercel Blob and
+    // surprisingly slow on first paint without prefetch — Apple/Android both
+    // need the file in disk cache before the user reaches the meme card.
+    for (const fc of mod.flashcards) {
+      const meme = (fc as { memeImage?: { uri?: string } | number }).memeImage;
+      if (meme && typeof meme === "object" && typeof meme.uri === "string") {
+        addUri(meme.uri);
+      }
+    }
+
     // Per-card infographic PNGs from FlashcardInfographic
     for (const [k, v] of Object.entries(INFOGRAPHIC_MAP)) {
       if (k.startsWith(cardPrefix)) addUri(v);
