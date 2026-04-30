@@ -219,77 +219,95 @@ export function AppWalkthroughOverlay() {
   }, [segments]);
 
 
+  // Outer try/catch on each gesture callback prevents Hermes from
+  // propagating an exception to native code as SIGABRT — Apple 2.1(a)
+  // reject pattern from build 1.0 (90), iPad Air 5th gen.
   const handleNext = useCallback(() => {
-    if (transitioning) return;
-    tapHaptic();
+    try {
+      if (transitioning) return;
+      try { tapHaptic(); } catch { /* haptics can fail on iPad */ }
 
-    // Step 4 (chat style): pressing CTA hides overlay so user can pick a style
-    if (step === 4 && !hasChosenChatStyle) {
-      setWaitingForChatChoice(true);
-      setActiveScreen("chat");
-      if (!isAlreadyOnRoute("/(tabs)/chat")) {
-        try { router.replace("/(tabs)/chat" as never); } catch {}
-      }
-      return;
-    }
-
-    if (step >= stepsWithLast.length - 1) {
-      completeWalkthrough();
-      setActiveScreen(null);
-      setTimeout(() => {
-        try {
-          // All users → drop straight into the first lesson.
-          // After finishing mod-0-1, the lesson's "continue" button
-          // will return them to the main learning map.
-          router.replace({ pathname: "/lesson/[id]", params: { id: "mod-0-1", chapterId: "chapter-0" } } as never);
-        } catch {
-          // Fallback: go to safe home tab
-          try { router.replace("/(tabs)" as never); } catch {}
+      // Step 4 (chat style): pressing CTA hides overlay so user can pick a style
+      if (step === 4 && !hasChosenChatStyle) {
+        setWaitingForChatChoice(true);
+        setActiveScreen("chat");
+        if (!isAlreadyOnRoute("/(tabs)/chat")) {
+          try { router.replace("/(tabs)/chat" as never); } catch {}
         }
-      }, 200);
-      return;
-    }
-
-    const nextConfig = stepsWithLast[step + 1];
-    // First update the step (instant), then navigate if needed
-    setStep(step + 1);
-    setContentKey((k) => k + 1);
-    setActiveScreen(nextConfig.screenSignal);
-
-    if (nextConfig.navigateTo) {
-      // Skip the router.replace when the user is already on that route.
-      // A no-op replace on iOS has been observed to dismiss the transparent
-      // Modal hosting this overlay, making the walkthrough appear to "exit"
-      // exactly when advancing from the welcome step onto the learn map.
-      if (isAlreadyOnRoute(nextConfig.navigateTo)) {
         return;
       }
-      setTransitioning(true);
-      setTimeout(() => {
-        try {
-          router.replace(nextConfig.navigateTo as never);
-        } catch {
-          try { router.replace("/(tabs)" as never); } catch {}
+
+      if (step >= stepsWithLast.length - 1) {
+        completeWalkthrough();
+        setActiveScreen(null);
+        setTimeout(() => {
+          try {
+            // All users → drop straight into the first lesson.
+            // After finishing mod-0-1, the lesson's "continue" button
+            // will return them to the main learning map.
+            router.replace({ pathname: "/lesson/[id]", params: { id: "mod-0-1", chapterId: "chapter-0" } } as never);
+          } catch {
+            // Fallback: go to safe home tab
+            try { router.replace("/(tabs)" as never); } catch {}
+          }
+        }, 200);
+        return;
+      }
+
+      const nextConfig = stepsWithLast[step + 1];
+      // First update the step (instant), then navigate if needed
+      setStep(step + 1);
+      setContentKey((k) => k + 1);
+      setActiveScreen(nextConfig.screenSignal);
+
+      if (nextConfig.navigateTo) {
+        // Skip the router.replace when the user is already on that route.
+        // A no-op replace on iOS has been observed to dismiss the transparent
+        // Modal hosting this overlay, making the walkthrough appear to "exit"
+        // exactly when advancing from the welcome step onto the learn map.
+        if (isAlreadyOnRoute(nextConfig.navigateTo)) {
+          return;
         }
-        setTimeout(() => setTransitioning(false), 300);
-      }, 50);
+        setTransitioning(true);
+        setTimeout(() => {
+          try {
+            router.replace(nextConfig.navigateTo as never);
+          } catch {
+            try { router.replace("/(tabs)" as never); } catch {}
+          }
+          setTimeout(() => {
+            try { setTransitioning(false); } catch { /* unmounted */ }
+          }, 300);
+        }, 50);
+      }
+    } catch (e) {
+      console.warn("[Walkthrough.handleNext]", e instanceof Error ? e.message : String(e));
     }
   }, [step, setStep, completeWalkthrough, setActiveScreen, router, transitioning, isAlreadyOnRoute, hasChosenChatStyle, stepsWithLast]);
 
   const handleBack = useCallback(() => {
-    if (transitioning || step <= 0) return;
-    tapHaptic();
+    try {
+      if (transitioning || step <= 0) return;
+      try { tapHaptic(); } catch { /* ignore */ }
 
-    const prevConfig = stepsWithLast[step - 1];
-    setStep(step - 1);
-    setContentKey((k) => k + 1);
-    setActiveScreen(prevConfig.screenSignal);
-    // No navigation on back, the overlay covers the screen anyway
-  }, [step, setStep, setActiveScreen, transitioning]);
+      const prevConfig = stepsWithLast[step - 1];
+      if (!prevConfig) return; // defensive: stepsWithLast may be stale during unmount
+      setStep(step - 1);
+      setContentKey((k) => k + 1);
+      setActiveScreen(prevConfig.screenSignal);
+      // No navigation on back, the overlay covers the screen anyway
+    } catch (e) {
+      console.warn("[Walkthrough.handleBack]", e instanceof Error ? e.message : String(e));
+    }
+  }, [step, setStep, setActiveScreen, transitioning, stepsWithLast]);
 
   const handleSkip = useCallback(() => {
-    tapHaptic();
-    completeWalkthrough();
+    try {
+      try { tapHaptic(); } catch { /* ignore */ }
+      completeWalkthrough();
+    } catch (e) {
+      console.warn("[Walkthrough.handleSkip]", e instanceof Error ? e.message : String(e));
+    }
   }, [completeWalkthrough]);
 
   if (hasSeenWalkthrough || step < 0 || !stepConfig || !ready) return null;

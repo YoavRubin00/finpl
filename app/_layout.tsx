@@ -12,6 +12,29 @@ if (I18nManager.isRTL) {
   } catch { /* ignore, older iOS may throw */ }
 }
 
+// Catch unhandled Promise rejections at module-load time, BEFORE any onboarding
+// gesture can fire. Without this, a rejected promise inside a gesture callback
+// reaches Hermes's `throwPendingError` → C++ exception → SIGABRT (Apple 2.1(a)
+// reject pattern from build 1.0 (90), iPad Air 5th gen).
+try {
+  // Bundled with React Native via the `promise` polyfill — no extra install.
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  const tracking = require("promise/setimmediate/rejection-tracking") as {
+    enable: (opts: {
+      allRejections: boolean;
+      onUnhandled: (id: number, error: unknown) => void;
+      onHandled?: (id: number) => void;
+    }) => void;
+  };
+  tracking.enable({
+    allRejections: true,
+    onUnhandled: (id, error) => {
+      const msg = error instanceof Error ? error.message : String(error);
+      console.warn(`[UnhandledRejection #${id}]`, msg);
+    },
+  });
+} catch { /* ignore — polyfill not available, fall back to default behavior */ }
+
 initSentry();
 
 import { Slot, useRouter, useSegments, useRootNavigationState } from "expo-router";
@@ -74,29 +97,41 @@ const WEIGHT_TO_FONT: Record<string, string> = {
   "900": "Heebo_900Black",
 };
 
+// Defensive: any throw inside this monkey-patch propagates to Hermes →
+// SIGABRT (Apple 2.1(a) reject pattern). On any failure, fall back to the
+// original render so the screen still draws — just without the Heebo font.
 const origTextRender = (Text as unknown as { render: Function }).render;
 (Text as unknown as { render: Function }).render = function (props: Record<string, unknown>, ref: unknown) {
-  const flatStyle = props.style
-    ? (Array.isArray(props.style)
-        ? Object.assign({}, ...props.style.map((s: unknown) => (s && typeof s === "object" ? s : {})))
-        : props.style)
-    : {};
-  const weight = String((flatStyle as Record<string, unknown>).fontWeight ?? "400");
-  const mappedFont = WEIGHT_TO_FONT[weight] ?? FONT_FAMILY;
-  const newProps = {
-    ...props,
-    style: [{ fontFamily: mappedFont }, props.style],
-  };
-  return origTextRender.call(this, newProps, ref);
+  try {
+    const flatStyle = props.style
+      ? (Array.isArray(props.style)
+          ? Object.assign({}, ...props.style.map((s: unknown) => (s && typeof s === "object" ? s : {})))
+          : props.style)
+      : {};
+    const weight = String((flatStyle as Record<string, unknown>).fontWeight ?? "400");
+    const mappedFont = WEIGHT_TO_FONT[weight] ?? FONT_FAMILY;
+    const newProps = {
+      ...props,
+      style: [{ fontFamily: mappedFont }, props.style],
+    };
+    return origTextRender.call(this, newProps, ref);
+  } catch {
+    // Fallback: render with original props (no font override) instead of crashing.
+    return origTextRender.call(this, props, ref);
+  }
 };
 
 const origInputRender = (TextInput as unknown as { render: Function }).render;
 (TextInput as unknown as { render: Function }).render = function (props: Record<string, unknown>, ref: unknown) {
-  const newProps = {
-    ...props,
-    style: [{ fontFamily: FONT_FAMILY }, props.style],
-  };
-  return origInputRender.call(this, newProps, ref);
+  try {
+    const newProps = {
+      ...props,
+      style: [{ fontFamily: FONT_FAMILY }, props.style],
+    };
+    return origInputRender.call(this, newProps, ref);
+  } catch {
+    return origInputRender.call(this, props, ref);
+  }
 };
 
 function FreezeSaveModalGate() {

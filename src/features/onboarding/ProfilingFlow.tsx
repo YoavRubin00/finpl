@@ -393,11 +393,20 @@ function StepShell({
     if (typingResetRef.current) clearTimeout(typingResetRef.current);
   }, []);
 
+  // Gesture callback — wrapped to prevent any throw from propagating to
+  // Hermes → SIGABRT (Apple 2.1(a) reject pattern on iPad).
   const trigger = useCallback(() => {
-    setIsTyping(true);
-    finnTriggerRef.current?.();
-    if (typingResetRef.current) clearTimeout(typingResetRef.current);
-    typingResetRef.current = setTimeout(() => setIsTyping(false), AUTO_ADVANCE_MS + 400);
+    try {
+      setIsTyping(true);
+      const fn = finnTriggerRef.current;
+      if (typeof fn === "function") fn();
+      if (typingResetRef.current) clearTimeout(typingResetRef.current);
+      typingResetRef.current = setTimeout(() => {
+        try { setIsTyping(false); } catch { /* component may have unmounted */ }
+      }, AUTO_ADVANCE_MS + 400);
+    } catch (e) {
+      console.warn("[StepShell.trigger] swallowed:", e instanceof Error ? e.message : String(e));
+    }
   }, []);
 
   const headerStyle = useAnimatedStyle(() => ({
@@ -1227,6 +1236,9 @@ function OnboardingSlider({
   propsRef.current = { min, max, step, onChange, onInteract };
   const interactedRef = useRef(false);
 
+  // Gesture callbacks all wrapped in try/catch — any throw inside a
+  // PanResponder handler propagates to Hermes → SIGABRT on iPad
+  // (Apple 2.1(a) reject pattern). Swallow + warn instead.
   const panResponder = useRef(
     PanResponder.create({
       onStartShouldSetPanResponder: () => true,
@@ -1236,28 +1248,46 @@ function OnboardingSlider({
         Math.abs(gestureState.dx) > Math.abs(gestureState.dy),
       onPanResponderTerminationRequest: () => false,
       onPanResponderGrant: (evt) => {
-        if (!interactedRef.current) { interactedRef.current = true; propsRef.current.onInteract?.(); }
-        // Re-measure on touch start, iOS measureInWindow from onLayout can be stale in nested ScrollViews
-        const pageX = evt.nativeEvent.pageX;
-        trackRef.current?.measureInWindow((x: number, _y: number, width: number) => {
-          layoutRef.current = { x, width };
-          updateVal(pageX);
-        });
+        try {
+          if (!interactedRef.current) {
+            interactedRef.current = true;
+            try { propsRef.current.onInteract?.(); } catch { /* swallow */ }
+          }
+          const pageX = evt.nativeEvent.pageX;
+          // measureInWindow callback can fire after unmount on iPad — guard it.
+          trackRef.current?.measureInWindow((x: number, _y: number, width: number) => {
+            try {
+              layoutRef.current = { x, width };
+              updateVal(pageX);
+            } catch (e) {
+              console.warn("[OnboardingSlider.measure]", e instanceof Error ? e.message : String(e));
+            }
+          });
+        } catch (e) {
+          console.warn("[OnboardingSlider.grant]", e instanceof Error ? e.message : String(e));
+        }
       },
-      onPanResponderMove: (evt) => updateVal(evt.nativeEvent.pageX),
+      onPanResponderMove: (evt) => {
+        try { updateVal(evt.nativeEvent.pageX); }
+        catch (e) { console.warn("[OnboardingSlider.move]", e instanceof Error ? e.message : String(e)); }
+      },
     })
   ).current;
 
   function updateVal(pageX: number) {
-    const { x, width } = layoutRef.current;
-    if (width <= 0) return;
-    const localX = Math.max(0, Math.min(pageX - x, width));
-    // RTL: right = max, left = min
-    const pct = 1 - (localX / width);
-    const { min: mn, max: mx, step: st, onChange: cb } = propsRef.current;
-    let v = mn + pct * (mx - mn);
-    v = Math.round(v / st) * st;
-    cb(Math.max(mn, Math.min(mx, v)));
+    try {
+      const { x, width } = layoutRef.current;
+      if (width <= 0) return;
+      const localX = Math.max(0, Math.min(pageX - x, width));
+      // RTL: right = max, left = min
+      const pct = 1 - (localX / width);
+      const { min: mn, max: mx, step: st, onChange: cb } = propsRef.current;
+      let v = mn + pct * (mx - mn);
+      v = Math.round(v / st) * st;
+      cb(Math.max(mn, Math.min(mx, v)));
+    } catch (e) {
+      console.warn("[OnboardingSlider.updateVal]", e instanceof Error ? e.message : String(e));
+    }
   }
 
   const span = max - min;
