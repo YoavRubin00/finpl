@@ -2,7 +2,7 @@
  * GET /api/trading/quote?ticker=AAPL&timeframe=1D
  *
  * Server-side proxy for Yahoo Finance chart data.
- * Rate-limited and cached.
+ * Rate-limited and cached. Returns OHLCV for advanced charts.
  */
 
 import { enforceRateLimit } from '../_shared/rateLimit';
