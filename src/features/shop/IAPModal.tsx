@@ -81,7 +81,17 @@ export function IAPModal({ visible, bundle, onDismiss, onPurchaseSuccess }: IAPM
   const btnTextColor = isCoins ? '#000' : '#fff';
 
   return (
-    <Modal visible={visible} transparent animationType="none" onRequestClose={onDismiss} accessibilityViewIsModal>
+    <Modal
+      visible={visible}
+      transparent
+      animationType="none"
+      onRequestClose={onDismiss}
+      accessibilityViewIsModal
+      // Android: when a transparent Modal is opened from inside another Modal
+      // (e.g. ShopModal's pageSheet), without statusBarTranslucent the inner
+      // Modal renders behind the outer one and the user sees nothing happen.
+      statusBarTranslucent
+    >
       {showConfetti && (
         <View style={{ position: 'absolute', top: 0, left: 0, right: 0, zIndex: 999, pointerEvents: 'none' }}>
           <ConfettiExplosion onComplete={() => setShowConfetti(false)} />
