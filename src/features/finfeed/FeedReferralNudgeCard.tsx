@@ -154,7 +154,7 @@ const styles = StyleSheet.create({
   watermarkCover: {
     position: "absolute",
     bottom: 4,
-    right: 4,
+    right: -16,
     width: 72,
     height: 72,
   },
