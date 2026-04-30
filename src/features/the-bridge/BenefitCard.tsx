@@ -25,9 +25,11 @@ interface BenefitCardProps {
   isRedeemed: boolean;
   isPro: boolean;
   onPress: () => void;
+  /** Direct purchase shortcut: tapping the cost CTA spends coins and opens the partner URL in one step. */
+  onPurchase?: () => void;
 }
 
-export function BenefitCard({ benefit, coins, isRedeemed, isPro, onPress }: BenefitCardProps) {
+export function BenefitCard({ benefit, coins, isRedeemed, isPro, onPress, onPurchase }: BenefitCardProps) {
   const canAfford   = coins >= benefit.costCoins;
   const lockedByPro = benefit.proOnly && !isPro;
   const isAdSlot    = benefit.partnerAdSlot === true;
@@ -152,21 +154,49 @@ export function BenefitCard({ benefit, coins, isRedeemed, isPro, onPress }: Bene
           </Pressable>
         )}
 
-        {/* Bottom row: cost + badges */}
+        {/* Bottom row: cost CTA + badges */}
         <View style={styles.bottomRow}>
-          <View style={[styles.costBadge, isRedeemed && styles.costBadgeRedeemed]}>
-            {isRedeemed ? (
-              <>
-                <Check size={12} color="#0369a1" />
-                <Text style={styles.costTextRedeemed}>הומר</Text>
-              </>
-            ) : (
-              <>
-                <GoldCoinIcon size={14} />
-                <Text style={styles.costText}>{benefit.costCoins.toLocaleString()}</Text>
-              </>
-            )}
-          </View>
+          {(() => {
+            // Active purchase button: affordable, available, not redeemed, not pro-locked,
+            // and parent supplied a direct-purchase handler.
+            const canPurchaseDirectly =
+              canAfford && !isRedeemed && benefit.isAvailable && !lockedByPro && !!onPurchase;
+            if (canPurchaseDirectly) {
+              return (
+                <Pressable
+                  onPress={onPurchase}
+                  accessibilityRole="button"
+                  accessibilityLabel={`רכישה תמורת ${benefit.costCoins} מטבעות`}
+                  hitSlop={8}
+                  style={({ pressed }) => [
+                    styles.costButton,
+                    pressed && { opacity: 0.85, transform: [{ scale: 0.97 }] },
+                  ]}
+                >
+                  <GoldCoinIcon size={16} />
+                  <Text style={styles.costButtonText}>
+                    עלות {benefit.costCoins.toLocaleString()}
+                  </Text>
+                </Pressable>
+              );
+            }
+            // Static badge: redeemed / unaffordable / pro-locked / unavailable.
+            return (
+              <View style={[styles.costBadge, isRedeemed && styles.costBadgeRedeemed]}>
+                {isRedeemed ? (
+                  <>
+                    <Check size={12} color="#0369a1" />
+                    <Text style={styles.costTextRedeemed}>הומר</Text>
+                  </>
+                ) : (
+                  <>
+                    <GoldCoinIcon size={14} />
+                    <Text style={styles.costText}>{benefit.costCoins.toLocaleString()}</Text>
+                  </>
+                )}
+              </View>
+            );
+          })()}
 
           {lockedByPro && (
             <View style={styles.proLockBadge}>
@@ -383,6 +413,29 @@ const styles = StyleSheet.create({
   },
   costText: { fontSize: 11, fontWeight: '700', color: '#0369a1' },
   costTextRedeemed: { fontSize: 11, fontWeight: '700', color: '#0369a1' },
+  costButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: '#2563eb',
+    borderRadius: 14,
+    paddingHorizontal: 18,
+    paddingVertical: 10,
+    borderBottomWidth: 3,
+    borderBottomColor: '#1d4ed8',
+    shadowColor: '#2563eb',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.35,
+    shadowRadius: 8,
+    elevation: 6,
+  },
+  costButtonText: {
+    fontSize: 14,
+    fontWeight: '900',
+    color: '#ffffff',
+    letterSpacing: 0.3,
+    writingDirection: 'rtl',
+  },
   proLockBadge: {
     flexDirection: 'row',
     alignItems: 'center',

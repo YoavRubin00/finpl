@@ -278,12 +278,11 @@ export function BridgeScreen({ walkthroughAutoScroll }: BridgeScreenProps = {}) 
   }, []);
 
   const openPartnerUrl = useCallback(async (url: string) => {
+    // Don't gate on Linking.canOpenURL — on Android 11+ it returns false for
+    // https URLs unless the manifest declares <queries> for the BROWSABLE
+    // intent, which Expo's auto-generated manifest does not. Just attempt
+    // openURL and surface any actual failure.
     try {
-      const canOpen = await Linking.canOpenURL(url);
-      if (!canOpen) {
-        Alert.alert('לא ניתן לפתוח את הקישור', 'נסו שוב מאוחר יותר או פנו לתמיכה.');
-        return;
-      }
       awaitingReturnFromPartner.current = true;
       await Linking.openURL(url);
     } catch {
@@ -291,6 +290,42 @@ export function BridgeScreen({ walkthroughAutoScroll }: BridgeScreenProps = {}) 
       Alert.alert('שגיאה בפתיחת הקישור', 'בדקו את החיבור לאינטרנט ונסו שוב.');
     }
   }, []);
+
+  // Direct purchase shortcut: bypasses the confirmation modal. Used by the
+  // big blue cost button on the card itself — needed because the modal
+  // confirm flow had visibility issues on Android.
+  const handleQuickPurchase = useCallback((benefit: Benefit) => {
+    const alreadyRedeemed = isBenefitRedeemed(benefit.id);
+    if (alreadyRedeemed) {
+      // Re-open partner URL only, don't re-spend.
+      if (benefit.partnerUrl) {
+        trackBridgeClick(benefit.id, 'link_open', email);
+        openPartnerUrl(benefit.partnerUrl);
+      }
+      return;
+    }
+    const success = redeemBenefit(benefit.id);
+    if (success) {
+      setSuccessTitle(benefit.title);
+      setShowConfetti(true);
+      trackBridgeClick(benefit.id, 'redeem', email);
+      if (benefit.partnerUrl) {
+        openPartnerUrl(benefit.partnerUrl);
+      }
+    } else {
+      const currentCoins = useEconomyStore.getState().coins;
+      if (!benefit.isAvailable) {
+        Alert.alert('ההטבה אינה זמינה כרגע', 'חזרו בקרוב!');
+      } else if (currentCoins < benefit.costCoins) {
+        Alert.alert(
+          'אין מספיק מטבעות',
+          `צריך ${benefit.costCoins.toLocaleString()} מטבעות להטבה הזו. יש לכם ${currentCoins.toLocaleString()}.`,
+        );
+      } else {
+        Alert.alert('שגיאה ברכישה', 'נסו שוב מאוחר יותר.');
+      }
+    }
+  }, [isBenefitRedeemed, redeemBenefit, openPartnerUrl, email]);
 
   const handleConfirm = useCallback(() => {
     if (!selectedBenefit) return;
@@ -488,6 +523,7 @@ export function BridgeScreen({ walkthroughAutoScroll }: BridgeScreenProps = {}) 
                 isPro={isPro}
                 isRedeemed={isBenefitRedeemed(benefit.id)}
                 onPress={() => handleCardPress(benefit)}
+                onPurchase={() => handleQuickPurchase(benefit)}
               />
             </Animated.View>
           ))}
