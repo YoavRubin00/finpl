@@ -448,7 +448,7 @@ export const CashoutRushCard = React.memo(function CashoutRushCard({ isActive: _
             {/* Inline explainer for "שנה דובית", relevant whenever the historical
                 event references a bear market (most extreme-greed peaks did precede one). */}
             <View style={{ marginTop: 12 }}>
-              <GlossaryInlineToggle glossaryKey="bear-market" />
+              <GlossaryInlineToggle glossaryKey="bear-market" direction="up" />
             </View>
           </Animated.View>
         )}
