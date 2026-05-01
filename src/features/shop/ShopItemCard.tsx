@@ -28,10 +28,12 @@ interface ShopItemCardProps {
   onBuyPress: () => void;
   isEquipped?: boolean;
   isOwned?: boolean;
+  effectiveCoinCost?: number;
 }
 
-export const ShopItemCard = React.memo(function ShopItemCard({ item, canAfford, onBuyPress, isEquipped, isOwned }: ShopItemCardProps) {
+export const ShopItemCard = React.memo(function ShopItemCard({ item, canAfford, onBuyPress, isEquipped, isOwned, effectiveCoinCost }: ShopItemCardProps) {
   const isGemItem = (item.gemCost ?? 0) > 0;
+  const hasProDiscount = !isGemItem && effectiveCoinCost !== undefined && effectiveCoinCost < item.coinCost;
   const iconBg = getCategoryTint(item.category);
 
   return (
@@ -39,12 +41,14 @@ export const ShopItemCard = React.memo(function ShopItemCard({ item, canAfford, 
       {/* Icon */}
       <View style={[styles.iconBox, { backgroundColor: iconBg, overflow: 'hidden' }]}>
         {item.imageUrl ? (
-          <ExpoImage
-            source={{ uri: item.imageUrl }}
-            style={{ width: 76, height: 76, borderRadius: 20 }}
-            contentFit="cover"
-            accessibilityLabel={item.name}
-          />
+          <View style={{ width: 76, height: 76, borderRadius: 38, overflow: 'hidden' }}>
+            <ExpoImage
+              source={{ uri: item.imageUrl }}
+              style={{ width: 76 * 1.1, height: 76 * 1.1, marginLeft: -(76 * 0.05), marginTop: -(76 * 0.05) }}
+              contentFit="cover"
+              accessibilityLabel={item.name}
+            />
+          </View>
         ) : item.lottieSource ? (
           <LottieIcon source={item.lottieSource} size={48} />
         ) : (
@@ -74,15 +78,15 @@ export const ShopItemCard = React.memo(function ShopItemCard({ item, canAfford, 
         <AnimatedPressable
           onPress={canAfford ? onBuyPress : undefined}
           disabled={!canAfford}
-          style={[
-            styles.priceBuyBtn,
-            !canAfford && { opacity: 0.45 },
-          ]}
+          style={[styles.priceBuyBtn, !canAfford && { opacity: 0.45 }]}
         >
+          {hasProDiscount && (
+            <Text style={styles.priceBuyStrike}>{item.coinCost.toLocaleString()}</Text>
+          )}
           <Text style={styles.priceBuyText}>
             {isGemItem
               ? `${item.gemCost}`
-              : `${item.coinCost.toLocaleString()}`}
+              : `${(effectiveCoinCost ?? item.coinCost).toLocaleString()}`}
           </Text>
           {isGemItem ? (
             <LottieIcon source={DIAMOND_LOTTIE} size={20} />
@@ -185,6 +189,13 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: '900',
     color: '#ffffff',
+    fontVariant: ['tabular-nums'] as const,
+  },
+  priceBuyStrike: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: 'rgba(255,255,255,0.55)',
+    textDecorationLine: 'line-through' as const,
     fontVariant: ['tabular-nums'] as const,
   },
 });

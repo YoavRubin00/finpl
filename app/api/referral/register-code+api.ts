@@ -16,7 +16,7 @@ interface RegisterCodeBody {
   referralCode: string;
 }
 
-const CODE_PATTERN = /^[A-Z0-9]{4,12}$/;
+const CODE_PATTERN = /^[A-Z0-9-]{4,12}$/;
 
 /**
  * POST /api/referral/register-code

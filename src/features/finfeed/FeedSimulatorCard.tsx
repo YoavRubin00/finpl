@@ -27,7 +27,7 @@ interface Props {
   isActive: boolean;
 }
 
-export function FeedSimulatorCard({ simulator, isActive: _isActive }: Props) {
+export const FeedSimulatorCard = React.memo(function FeedSimulatorCard({ simulator, isActive: _isActive }: Props) {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const [modalVisible, setModalVisible] = useState(false);
@@ -144,7 +144,7 @@ export function FeedSimulatorCard({ simulator, isActive: _isActive }: Props) {
       </Modal>
     </View>
   );
-}
+});
 
 const styles = StyleSheet.create({
   container: {

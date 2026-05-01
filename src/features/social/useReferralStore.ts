@@ -103,7 +103,6 @@ export const useReferralStore = create<ReferralState>()(
         if (!state.referralCode) {
           set({ referralCode: generateReferralCode() });
         }
-        const code = get().referralCode;
         // Try up to 3 times with regeneration on collision.
         for (let attempt = 0; attempt < 3; attempt++) {
           const ok = await registerReferralCode(authId, get().referralCode);
@@ -126,6 +125,16 @@ export const useReferralStore = create<ReferralState>()(
           if (!snapshot) {
             set({ isLoading: false });
             return;
+          }
+          // Credit any newly-claimed signup bonuses to local balance. The
+          // server has already flipped the flag — if we don't addCoins here,
+          // the user loses these coins. Do this BEFORE updating other state
+          // so a thrown error here doesn't leave the store in a half-updated
+          // state.
+          if (snapshot.pendingSignupBonus > 0) {
+            try {
+              useEconomyStore.getState().addCoins(snapshot.pendingSignupBonus);
+            } catch { /* non-fatal — user will see them on next refresh sync */ }
           }
           const friends = snapshot.friends.map(mapServerFriend);
           set({

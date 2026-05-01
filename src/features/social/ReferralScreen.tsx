@@ -54,18 +54,21 @@ const LOTTIE_GIFT = require("../../../assets/lottie/wired-flat-412-gift-hover-sq
 const ICON_SIZE = 28;
 
 const BG_DECO = [
-  { src: require("../../../assets/lottie/sea/wired-flat-522-fish-hover-pinch.json"), size: 32, pos: { top: "6%" as const, left: 8 } },
-  { src: require("../../../assets/lottie/wired-flat-291-coin-dollar-hover-pinch.json"), size: 28, pos: { top: "22%" as const, right: 6 } },
-  { src: require("../../../assets/lottie/sea/wired-flat-1175-dolphin-hover-pinch.json"), size: 34, pos: { top: "40%" as const, left: 10 } },
-  { src: require("../../../assets/lottie/sea/wired-flat-1166-seahorse-hover-pinch.json"), size: 30, pos: { top: "55%" as const, right: 8 } },
-  { src: require("../../../assets/lottie/wired-flat-298-coins-hover-jump.json"), size: 26, pos: { top: "70%" as const, left: 6 } },
-  { src: require("../../../assets/lottie/sea/wired-flat-1168-star-fish-hover-pinch.json"), size: 28, pos: { top: "85%" as const, right: 10 } },
+  { src: require("../../../assets/lottie/sea/wired-flat-1175-dolphin-hover-pinch.json"), size: 34, pos: { top: "20%" as const, left: 10 } },
+  { src: require("../../../assets/lottie/wired-flat-298-coins-hover-jump.json"), size: 28, pos: { top: "55%" as const, right: 8 } },
+  { src: require("../../../assets/lottie/sea/wired-flat-1168-star-fish-hover-pinch.json"), size: 28, pos: { top: "85%" as const, left: 8 } },
 ];
 
 function SectionIcon({ source }: { source: AnimationObject }) {
   return (
     <View style={{ width: ICON_SIZE, height: ICON_SIZE, overflow: "hidden" }} accessible={false}>
-      <LottieView source={source} style={{ width: ICON_SIZE, height: ICON_SIZE }} autoPlay loop />
+      <LottieView
+        source={source}
+        style={{ width: ICON_SIZE, height: ICON_SIZE }}
+        autoPlay
+        loop
+        renderMode="SOFTWARE"
+      />
     </View>
   );
 }
@@ -128,7 +131,14 @@ export function ReferralScreen() {
       <View style={StyleSheet.absoluteFill} pointerEvents="none">
         {BG_DECO.map((d, i) => (
           <View key={i} style={[{ position: "absolute" as const, opacity: 0.07 }, d.pos]} accessible={false}>
-            <LottieView source={d.src} style={{ width: d.size, height: d.size }} autoPlay loop speed={0.5} />
+            <LottieView
+              source={d.src}
+              style={{ width: d.size, height: d.size }}
+              autoPlay
+              loop
+              speed={0.3}
+              renderMode="SOFTWARE"
+            />
           </View>
         ))}
       </View>
@@ -208,7 +218,12 @@ export function ReferralScreen() {
                 {/* QR Code */}
                 <View style={styles.qrWrap}>
                   <Text style={styles.qrLabel}>או סרקו את הקוד:</Text>
-                  <View style={styles.qrBox}>
+                  <View
+                    style={styles.qrBox}
+                    accessible={true}
+                    accessibilityRole="image"
+                    accessibilityLabel={`קוד QR להזמנה: ${inviteUrl}`}
+                  >
                     <QRCode
                       value={inviteUrl}
                       size={140}
@@ -321,15 +336,17 @@ function NetworkTreeView({ friends }: { friends: ReferredFriend[] }) {
             key={friend.id}
             entering={ZoomIn.delay(700 + idx * 100).springify()}
             style={treeStyles.friendCol}
+            accessible={true}
+            accessibilityLabel={`${friend.displayName}, הרוויח ${friend.yesterdayGold.toLocaleString()} מטבעות אתמול`}
           >
-            <View style={treeStyles.verticalConnector} />
-            <View style={[treeStyles.friendAvatar, treeStyles.friendAvatarCompleted]}>
+            <View style={treeStyles.verticalConnector} accessible={false} />
+            <View style={[treeStyles.friendAvatar, treeStyles.friendAvatarCompleted]} accessible={false}>
               <Text style={treeStyles.friendEmojiText}>{friend.avatarEmoji}</Text>
             </View>
-            <Text style={treeStyles.friendName} numberOfLines={1}>
+            <Text style={treeStyles.friendName} numberOfLines={1} accessible={false}>
               {friend.displayName}
             </Text>
-            <Text style={treeStyles.friendCoins}>{friend.yesterdayGold.toLocaleString()} 🪙</Text>
+            <Text style={treeStyles.friendCoins} accessible={false}>{friend.yesterdayGold.toLocaleString()} 🪙</Text>
           </Animated.View>
         ))}
       </View>

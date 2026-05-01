@@ -20,6 +20,7 @@ import type { ShopCategory, ShopItem, GemBundle } from "./types";
 
 const RTL = { writingDirection: "rtl" as const, textAlign: "right" as const };
 const ITEM_STAGGER = 70;
+const PRO_COIN_DISCOUNT = 0.2;
 
 // Gem → Coin exchange rates (synced with ShopScreen)
 const GEM_EXCHANGE_RATES = [
@@ -59,12 +60,20 @@ export function ShopModal() {
   const visibleItems = SHOP_ITEMS.filter((i) => i.category === activeCategory);
   const isAvatarCategory = activeCategory === "avatars";
 
+  const effectiveCoinCost = useCallback(
+    (item: ShopItem): number =>
+      isPro && item.coinCost > 0
+        ? Math.floor(item.coinCost * (1 - PRO_COIN_DISCOUNT))
+        : item.coinCost,
+    [isPro],
+  );
+
   const canAffordItem = useCallback(
     (item: ShopItem): boolean => {
       if ((item.gemCost ?? 0) > 0) return gems >= (item.gemCost ?? 0);
-      return coins >= item.coinCost;
+      return coins >= effectiveCoinCost(item);
     },
-    [coins, gems],
+    [coins, gems, effectiveCoinCost],
   );
 
   const handleBuyPress = useCallback(
@@ -81,7 +90,7 @@ export function ShopModal() {
     const isGemItem = (pendingItem.gemCost ?? 0) > 0;
     const success = isGemItem
       ? spendGems(pendingItem.gemCost ?? 0)
-      : spendCoins(pendingItem.coinCost);
+      : spendCoins(effectiveCoinCost(pendingItem));
 
     if (success) {
       if (pendingItem.id === "heart-refill-full") {
@@ -225,6 +234,7 @@ export function ShopModal() {
                   item={item}
                   canAfford={canAffordItem(item)}
                   onBuyPress={() => handleBuyPress(item)}
+                  effectiveCoinCost={effectiveCoinCost(item)}
                 />
               )}
             </AnimatedShopItem>
@@ -377,7 +387,8 @@ export function ShopModal() {
           <ConfirmModal
             visible
             itemName={pendingItem.name}
-            coinCost={pendingItem.coinCost}
+            coinCost={effectiveCoinCost(pendingItem)}
+            originalCoinCost={isPro && pendingItem.coinCost > 0 ? pendingItem.coinCost : undefined}
             gemCost={pendingItem.gemCost}
             onConfirm={handleConfirm}
             onCancel={handleCancel}

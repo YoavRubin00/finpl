@@ -51,8 +51,8 @@ export function buildInviteShareMessage(code: string): string {
   return [
     "הצטרפו אליי ל-FinPlay — אפליקציית הלמידה הפיננסית 🦈",
     "",
-    `${REFERRAL_SIGNUP_BONUS_COINS} מטבעות מתנה כשתירשמו דרך הקישור הזה.`,
-    "אני גם אקבל מטבעות בכל יום שתלמדו 💙",
+    `${REFERRAL_SIGNUP_BONUS_COINS} מטבעות מתנה לכם כשתירשמו + ${REFERRAL_SIGNUP_BONUS_COINS} מטבעות גם לי 🎁`,
+    `בנוסף: ${Math.round(REFERRAL_DAILY_DIVIDEND_RATE * 100)}% מהמטבעות שתרוויחו בלמידה ישר לחשבון שלי — כל יום 💙`,
     "",
     url,
   ].join("\n");

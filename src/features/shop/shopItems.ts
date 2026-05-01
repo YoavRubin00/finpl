@@ -81,18 +81,6 @@ export const SHOP_ITEMS: readonly ShopItem[] = [
     lottieSource: require('../../../assets/lottie/wired-flat-1307-hub-network-hover-pinch.json'),
   },
 
-  // ── פרימיום (ג'מים) ──
-  {
-    id: 'chest-skip-timer',
-    category: 'premium',
-    name: 'דילוג על טיימר תיבה',
-    description: 'פתח תיבה שנעולה מיד בלי לחכות. חסוך שעות!',
-    coinCost: 0,
-    gemCost: 5,
-    emoji: '⏩',
-    lottieSource: require('../../../assets/lottie/3D Treasure Box.json'),
-  },
-
   // ── אווטארים פרימיום (קפטן שארק) ──
   {
     id: 'avatar-scholar',
@@ -102,7 +90,7 @@ export const SHOP_ITEMS: readonly ShopItem[] = [
     coinCost: 0,
     gemCost: 50,
     emoji: '🦈',
-    imageUrl: 'https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/images/avatars/scholar.png',
+    imageUrl: 'https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/images/avatars/scholar.png?v=4',
   },
   {
     id: 'avatar-saver',
@@ -112,7 +100,7 @@ export const SHOP_ITEMS: readonly ShopItem[] = [
     coinCost: 0,
     gemCost: 100,
     emoji: '🦈',
-    imageUrl: 'https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/images/avatars/saver.png',
+    imageUrl: 'https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/images/avatars/saver.png?v=4',
   },
   {
     id: 'avatar-analyst',
@@ -122,7 +110,7 @@ export const SHOP_ITEMS: readonly ShopItem[] = [
     coinCost: 0,
     gemCost: 150,
     emoji: '🦈',
-    imageUrl: 'https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/images/avatars/analyst.png',
+    imageUrl: 'https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/images/avatars/analyst.png?v=4',
   },
   {
     id: 'avatar-piggy',
@@ -132,7 +120,7 @@ export const SHOP_ITEMS: readonly ShopItem[] = [
     coinCost: 0,
     gemCost: 250,
     emoji: '🦈',
-    imageUrl: 'https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/images/avatars/piggy.png',
+    imageUrl: 'https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/images/avatars/piggy.png?v=4',
   },
   {
     id: 'avatar-investor',
@@ -142,7 +130,7 @@ export const SHOP_ITEMS: readonly ShopItem[] = [
     coinCost: 0,
     gemCost: 400,
     emoji: '🦈',
-    imageUrl: 'https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/images/avatars/investor.png',
+    imageUrl: 'https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/images/avatars/investor.png?v=4',
   },
   {
     id: 'avatar-earner',
@@ -152,7 +140,7 @@ export const SHOP_ITEMS: readonly ShopItem[] = [
     coinCost: 0,
     gemCost: 600,
     emoji: '🦈',
-    imageUrl: 'https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/images/avatars/earner.png',
+    imageUrl: 'https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/images/avatars/earner.png?v=4',
   },
   {
     id: 'avatar-trader',
@@ -162,7 +150,7 @@ export const SHOP_ITEMS: readonly ShopItem[] = [
     coinCost: 0,
     gemCost: 800,
     emoji: '🦈',
-    imageUrl: 'https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/images/avatars/trader.png',
+    imageUrl: 'https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/images/avatars/trader.png?v=4',
   },
   {
     id: 'avatar-banker',
@@ -172,7 +160,7 @@ export const SHOP_ITEMS: readonly ShopItem[] = [
     coinCost: 0,
     gemCost: 1200,
     emoji: '🦈',
-    imageUrl: 'https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/images/avatars/banker.png',
+    imageUrl: 'https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/images/avatars/banker.png?v=4',
   },
 ];
 

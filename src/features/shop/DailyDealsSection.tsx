@@ -8,6 +8,7 @@ import { generateDailyDeals } from './dailyDeals';
 import { ConfirmModal } from './ConfirmModal';
 import { useEconomyStore } from '../economy/useEconomyStore';
 import { useSubscriptionStore } from '../subscription/useSubscriptionStore';
+import { useAuthStore } from '../auth/useAuthStore';
 import { successHaptic } from '../../utils/haptics';
 import type { DailyDeal } from './types';
 
@@ -58,11 +59,34 @@ export function DailyDealsSection() {
   }, [dateKey]);
 
   const addGems = useEconomyStore((s) => s.addGems);
+  const addStreakFreezes = useEconomyStore((s) => s.addStreakFreezes);
+  const addOwnedAvatar = useAuthStore((s) => s.addOwnedAvatar);
+  const setAvatar = useAuthStore((s) => s.setAvatar);
 
   const handleClaimFreeGems = useCallback(() => {
     addGems(5);
     successHaptic();
   }, [addGems]);
+
+  const handleProClaim = useCallback((deal: DailyDeal) => {
+    const itemId = deal.item.id;
+    if (itemId.startsWith('avatar-')) {
+      const avatarId = itemId.replace('avatar-', '');
+      addOwnedAvatar(avatarId);
+      setAvatar(avatarId);
+    } else if (itemId === 'streak-freeze') {
+      addStreakFreezes(1);
+    } else if (itemId === 'streak-freeze-bundle') {
+      addStreakFreezes(3);
+    } else if (itemId === 'heart-refill-full') {
+      useSubscriptionStore.getState().restoreAllHearts();
+    } else if (itemId === 'heart-refill-1') {
+      const s = useSubscriptionStore.getState();
+      if (s.hearts < 5) useSubscriptionStore.setState({ hearts: s.hearts + 1 });
+    }
+    successHaptic();
+    setPurchasedIds((prev) => new Set(prev).add(deal.id));
+  }, [addOwnedAvatar, setAvatar, addStreakFreezes]);
 
   const handleConfirm = useCallback(() => {
     if (!pendingDeal) return;
@@ -165,9 +189,14 @@ export function DailyDealsSection() {
                   <Text style={styles.proBadgeText}>PRO ✦</Text>
                 </Pressable>
               ) : isGem && isPro ? (
-                <View style={styles.proIncludedBtn}>
+                <Pressable
+                  onPress={() => handleProClaim(deal)}
+                  style={({ pressed }) => [styles.proIncludedBtn, pressed && { opacity: 0.75 }]}
+                  accessibilityRole="button"
+                  accessibilityLabel={`קבל ${deal.item.name} בחינם עם PRO`}
+                >
                   <Text style={styles.proIncludedText}>כלול ב-PRO ✓</Text>
-                </View>
+                </Pressable>
               ) : (
                 <Pressable
                   onPress={() => setPendingDeal(deal)}

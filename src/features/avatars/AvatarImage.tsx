@@ -25,17 +25,25 @@ export function AvatarImage({
   const [loadFailed, setLoadFailed] = useState(false);
 
   if (def?.imageUrl && !loadFailed) {
+    const overflow = size * 0.05;
     return (
-      <ExpoImage
-        source={{ uri: def.imageUrl }}
-        style={{ width: size, height: size, borderRadius: size / 2 }}
-        contentFit="cover"
-        accessible
-        accessibilityRole="image"
-        accessibilityLabel={def.name}
-        onError={() => setLoadFailed(true)}
-        cachePolicy="memory-disk"
-      />
+      <View style={{ width: size, height: size, borderRadius: size / 2, overflow: 'hidden' }}>
+        <ExpoImage
+          source={{ uri: def.imageUrl }}
+          style={{
+            width: size * 1.1,
+            height: size * 1.1,
+            marginLeft: -overflow,
+            marginTop: -overflow,
+          }}
+          contentFit="cover"
+          accessible
+          accessibilityRole="image"
+          accessibilityLabel={def.name}
+          onError={() => setLoadFailed(true)}
+          cachePolicy="memory-disk"
+        />
+      </View>
     );
   }
 

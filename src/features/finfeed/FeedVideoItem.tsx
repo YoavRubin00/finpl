@@ -43,19 +43,16 @@ export const FeedVideoItem = React.memo(function FeedVideoItem({ item, isActive 
 
   // Create player unconditionally to respect Rules of Hooks.
   // If URI is missing/invalid, errors surface through the statusChange listener → setHasError(true).
+  // Don't auto-play on mount — FlashList preloads items off-screen, and starting playback
+  // for every off-screen video swamps the network/decoder. The isActive useEffect below
+  // handles play/pause based on actual viewport visibility.
   const player = useVideoPlayer(videoUri || "about:blank", (p) => {
     p.loop = true;
-    // Aggressive buffer settings for fast feed playback
     p.bufferOptions = {
       preferredForwardBufferDuration: 5,
       waitsToMinimizeStalling: false,
       minBufferForPlayback: 1,
     };
-    // Kick off buffering on mount (muted) so adjacent items preload before user reaches them
-    if (videoUri) {
-      p.muted = true;
-      p.play();
-    }
   });
 
   // Play/pause based on feed visibility.

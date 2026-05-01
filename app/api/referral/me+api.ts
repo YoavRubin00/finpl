@@ -13,6 +13,8 @@ function getDb() {
 
 /** Daily dividend rate, mirrored server-side. Must match `referralConstants.ts`. */
 const DIVIDEND_RATE = 0.05;
+/** Signup bonus per side, mirrored server-side. Must match `referralConstants.ts`. */
+const SIGNUP_BONUS_COINS = 500;
 
 interface ReferredFriendRow {
   authId: string;
@@ -28,6 +30,10 @@ interface MeResponse {
   dividendAvailable: number;
   alreadyCollectedToday: boolean;
   todayDateUTC: string;
+  /** Total signup-bonus coins accrued for the referrer that haven't yet been
+   *  credited to local balance. Server atomically flips the flag in the same
+   *  call — client MUST call addCoins(pendingSignupBonus) immediately. */
+  pendingSignupBonus: number;
 }
 
 /**
@@ -118,6 +124,27 @@ export async function GET(request: Request): Promise<Response> {
 
     const dividendAvailable = alreadyCollectedToday ? 0 : grossDividend;
 
+    // Atomically flip referrer_local_credited from false→true for any redemptions
+    // not yet reflected in this user's local balance. The CTE returns the COUNT
+    // of newly-credited rows; we multiply by SIGNUP_BONUS_COINS to get the total
+    // owed. The caller MUST addCoins() locally before discarding this response.
+    const bonusResult = await db.execute(sql`
+      WITH credited AS (
+        UPDATE referrals
+           SET referrer_local_credited = true
+         WHERE referrer_auth_id = ${authId}
+           AND referrer_local_credited = false
+        RETURNING 1
+      )
+      SELECT COUNT(*)::int AS n FROM credited
+    `);
+    const bonusRows =
+      (bonusResult as unknown as { rows?: { n: number }[] }).rows
+      ?? (bonusResult as unknown as { n: number }[]);
+    const newlyCreditedCount =
+      Array.isArray(bonusRows) && bonusRows.length > 0 ? Number(bonusRows[0]?.n) || 0 : 0;
+    const pendingSignupBonus = newlyCreditedCount * SIGNUP_BONUS_COINS;
+
     const todayDateUTC = new Date().toISOString().slice(0, 10);
 
     const responseBody: MeResponse = {
@@ -127,6 +154,7 @@ export async function GET(request: Request): Promise<Response> {
       dividendAvailable,
       alreadyCollectedToday,
       todayDateUTC,
+      pendingSignupBonus,
     };
     return Response.json(responseBody);
   } catch (err: unknown) {

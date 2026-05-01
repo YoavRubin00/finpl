@@ -699,7 +699,13 @@ function CelebrationScreen({ onDone }: { onDone: () => void }) {
             </Pressable>
           </Animated.View>
         ) : (
-          <Pressable onPress={showCode} style={styles.codeToggle} accessibilityRole="button">
+          <Pressable
+            onPress={showCode}
+            style={styles.codeToggle}
+            accessibilityRole="button"
+            accessibilityLabel="הוזמנתם דרך חבר? לחצו להזנת קוד הזמנה"
+            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+          >
             <Text style={styles.codeToggleText}>הוזמנתם דרך חבר? הזינו קוד</Text>
           </Pressable>
         )}

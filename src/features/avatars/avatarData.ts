@@ -8,7 +8,11 @@ export interface AvatarDefinition {
   gemCost: number;
 }
 
-const BLOB_BASE = "https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/images/avatars";
+// Bump AVATAR_ASSET_VERSION whenever scripts/avatars/process-and-upload.ts is re-run with
+// changes — forces ExpoImage to bypass the cache and fetch the new PNG.
+const AVATAR_ASSET_VERSION = 4;
+const BLOB_BASE = `https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/images/avatars`;
+const v = `?v=${AVATAR_ASSET_VERSION}`;
 
 export const AVATAR_LIST: AvatarDefinition[] = [
   // Free avatars (emoji-only)
@@ -21,14 +25,14 @@ export const AVATAR_LIST: AvatarDefinition[] = [
   { id: 'panda', emoji: '🐼', name: 'הרגוע', gemCost: 0 },
   { id: 'cat', emoji: '🐱', name: 'הסקרן', gemCost: 0 },
   // Premium Captain Shark avatars (image-based, sold in shop)
-  { id: 'scholar', emoji: '🦈', name: 'הלומד', gemCost: 50, imageUrl: `${BLOB_BASE}/scholar.png` },
-  { id: 'saver', emoji: '🦈', name: 'החוסך', gemCost: 100, imageUrl: `${BLOB_BASE}/saver.png` },
-  { id: 'analyst', emoji: '🦈', name: 'המנתח', gemCost: 150, imageUrl: `${BLOB_BASE}/analyst.png` },
-  { id: 'piggy', emoji: '🦈', name: 'החוסך החזק', gemCost: 250, imageUrl: `${BLOB_BASE}/piggy.png` },
-  { id: 'investor', emoji: '🦈', name: 'המשקיע', gemCost: 400, imageUrl: `${BLOB_BASE}/investor.png` },
-  { id: 'earner', emoji: '🦈', name: 'המרוויח', gemCost: 600, imageUrl: `${BLOB_BASE}/earner.png` },
-  { id: 'trader', emoji: '🦈', name: 'הסוחר', gemCost: 800, imageUrl: `${BLOB_BASE}/trader.png` },
-  { id: 'banker', emoji: '🦈', name: 'הבנקאי', gemCost: 1200, imageUrl: `${BLOB_BASE}/banker.png` },
+  { id: 'scholar', emoji: '🦈', name: 'הלומד', gemCost: 50, imageUrl: `${BLOB_BASE}/scholar.png${v}` },
+  { id: 'saver', emoji: '🦈', name: 'החוסך', gemCost: 100, imageUrl: `${BLOB_BASE}/saver.png${v}` },
+  { id: 'analyst', emoji: '🦈', name: 'המנתח', gemCost: 150, imageUrl: `${BLOB_BASE}/analyst.png${v}` },
+  { id: 'piggy', emoji: '🦈', name: 'החוסך החזק', gemCost: 250, imageUrl: `${BLOB_BASE}/piggy.png${v}` },
+  { id: 'investor', emoji: '🦈', name: 'המשקיע', gemCost: 400, imageUrl: `${BLOB_BASE}/investor.png${v}` },
+  { id: 'earner', emoji: '🦈', name: 'המרוויח', gemCost: 600, imageUrl: `${BLOB_BASE}/earner.png${v}` },
+  { id: 'trader', emoji: '🦈', name: 'הסוחר', gemCost: 800, imageUrl: `${BLOB_BASE}/trader.png${v}` },
+  { id: 'banker', emoji: '🦈', name: 'הבנקאי', gemCost: 1200, imageUrl: `${BLOB_BASE}/banker.png${v}` },
 ];
 
 // Backward-compat: existing users may have old premium IDs persisted in their profile.

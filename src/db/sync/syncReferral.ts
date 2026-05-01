@@ -13,6 +13,9 @@ export interface ReferralStateSnapshot {
   dividendAvailable: number;
   alreadyCollectedToday: boolean;
   todayDateUTC: string;
+  /** Coins from new referees that the server just flipped to "credited" —
+   *  caller MUST call addCoins(pendingSignupBonus) on this exact response. */
+  pendingSignupBonus: number;
 }
 
 export interface RedeemResult {
@@ -79,6 +82,7 @@ export async function fetchReferralState(authId: string): Promise<ReferralStateS
     dividendAvailable: json.dividendAvailable,
     alreadyCollectedToday: json.alreadyCollectedToday,
     todayDateUTC: json.todayDateUTC,
+    pendingSignupBonus: json.pendingSignupBonus ?? 0,
   };
 }
 
