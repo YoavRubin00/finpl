@@ -1,4 +1,4 @@
-import { pgTable, unique, uuid, text, integer, date, boolean, timestamp, index, foreignKey, check, jsonb, numeric, serial } from "drizzle-orm/pg-core"
+import { pgTable, unique, uuid, text, integer, date, boolean, timestamp, index, foreignKey, check, jsonb, numeric, serial, bigserial, primaryKey } from "drizzle-orm/pg-core"
 import { sql } from "drizzle-orm"
 
 
@@ -52,28 +52,6 @@ export const moduleProgress = pgTable("module_progress", {
 		}).onDelete("cascade"),
 	unique("module_progress_user_id_module_id_key").on(table.userId, table.moduleId),
 	check("module_progress_status_check", sql`status = ANY (ARRAY['not_started'::text, 'in_progress'::text, 'completed'::text])`),
-]);
-
-export const inventory = pgTable("inventory", {
-	id: uuid().default(sql`uuid_generate_v4()`).primaryKey().notNull(),
-	userId: uuid("user_id").notNull(),
-	itemType: text("item_type").notNull(),
-	itemId: text("item_id").notNull(),
-	itemName: text("item_name"),
-	quantity: integer().default(1),
-	isActive: boolean("is_active").default(false),
-	metadata: jsonb().default({}),
-	acquiredAt: timestamp("acquired_at", { withTimezone: true, mode: 'string' }).defaultNow(),
-	expiresAt: timestamp("expires_at", { withTimezone: true, mode: 'string' }),
-}, (table) => [
-	index("idx_inventory_user").using("btree", table.userId.asc().nullsLast().op("uuid_ops")),
-	foreignKey({
-			columns: [table.userId],
-			foreignColumns: [userProfiles.id],
-			name: "inventory_user_id_fkey"
-		}).onDelete("cascade"),
-	unique("inventory_user_id_item_id_key").on(table.userId, table.itemId),
-	check("inventory_item_type_check", sql`item_type = ANY (ARRAY['chest'::text, 'streak_multiplier'::text, 'booster'::text, 'cosmetic'::text])`),
 ]);
 
 export const aiMentorUsage = pgTable("ai_mentor_usage", {
@@ -173,4 +151,40 @@ export const banditVariants = pgTable("bandit_variants", {
 }, (table) => [
 	unique("bandit_variants_pk").on(table.experimentId, table.variantId),
 	index("idx_bandit_experiment").using("btree", table.experimentId.asc()),
+]);
+
+export const coinEvents = pgTable("coin_events", {
+	id: bigserial({ mode: 'number' }).primaryKey().notNull(),
+	authId: text("auth_id").notNull(),
+	amount: integer().notNull(),
+	source: text().notNull(),
+	grantedAt: timestamp("granted_at", { withTimezone: true, mode: 'string' }).notNull().defaultNow(),
+}, (table) => [
+	index("idx_coin_events_user_date").using("btree", table.authId.asc(), table.grantedAt.asc()),
+	index("idx_coin_events_auth_source_date").using("btree", table.authId.asc(), table.source.asc(), table.grantedAt.desc()),
+	check("coin_events_amount_check", sql`amount > 0`),
+	check("coin_events_source_check", sql`source = ANY (ARRAY['lesson'::text, 'quiz'::text, 'daily-quest'::text, 'signup-bonus'::text, 'referral-signup-bonus'::text, 'referral-dividend'::text])`),
+]);
+
+export const dividendCollections = pgTable("dividend_collections", {
+	authId: text("auth_id").notNull(),
+	dateCollected: date("date_collected").notNull(),
+	amount: integer().notNull(),
+	collectedAt: timestamp("collected_at", { withTimezone: true, mode: 'string' }).notNull().defaultNow(),
+}, (table) => [
+	primaryKey({ columns: [table.authId, table.dateCollected], name: "dividend_collections_pkey" }),
+	check("dividend_collections_amount_check", sql`amount >= 0`),
+]);
+
+export const referrals = pgTable("referrals", {
+	refereeAuthId: text("referee_auth_id").primaryKey().notNull(),
+	referrerAuthId: text("referrer_auth_id").notNull(),
+	inviteCode: text("invite_code").notNull(),
+	signupBonusPaid: boolean("signup_bonus_paid").notNull().default(false),
+	linkedAt: timestamp("linked_at", { withTimezone: true, mode: 'string' }).notNull().defaultNow(),
+	referrerLocalCredited: boolean("referrer_local_credited").notNull().default(false),
+}, (table) => [
+	index("idx_referrals_referrer").using("btree", table.referrerAuthId.asc()),
+	index("idx_referrals_code").using("btree", table.inviteCode.asc()),
+	check("referrals_check", sql`referrer_auth_id <> referee_auth_id`),
 ]);
