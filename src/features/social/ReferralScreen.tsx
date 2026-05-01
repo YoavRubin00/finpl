@@ -33,6 +33,7 @@ import { CALM } from "../../constants/theme";
 import { tapHaptic, successHaptic } from "../../utils/haptics";
 import { BackButton } from "../../components/ui/BackButton";
 import { AnimatedPressable } from "../../components/ui/AnimatedPressable";
+import { GoldCoinIcon } from "../../components/ui/GoldCoinIcon";
 import { useReferralStore } from "./useReferralStore";
 import type { ReferredFriend } from "./referralTypes";
 import { GlobalWealthHeader } from "../../components/ui/GlobalWealthHeader";
@@ -346,7 +347,10 @@ function NetworkTreeView({ friends }: { friends: ReferredFriend[] }) {
             <Text style={treeStyles.friendName} numberOfLines={1} accessible={false}>
               {friend.displayName}
             </Text>
-            <Text style={treeStyles.friendCoins} accessible={false}>{friend.yesterdayGold.toLocaleString()} 🪙</Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }} accessible={false}>
+              <Text style={treeStyles.friendCoins}>{friend.yesterdayGold.toLocaleString()}</Text>
+              <GoldCoinIcon size={12} />
+            </View>
           </Animated.View>
         ))}
       </View>
