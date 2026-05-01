@@ -6,6 +6,8 @@ const IS_WEB = Platform.OS === 'web';
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const Purchases = IS_WEB ? null : require('react-native-purchases').default;
 const LOG_LEVEL_DEBUG = IS_WEB ? 0 : require('react-native-purchases').LOG_LEVEL?.DEBUG;
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const { ProductType } = IS_WEB ? { ProductType: null as any } : require('react-native-purchases');
 
 /** Re-export types for consumers (type-only — no runtime cost) */
 export type { PurchasesOffering, PurchasesPackage, CustomerInfo } from 'react-native-purchases';
@@ -130,7 +132,7 @@ export async function purchaseGemBundle(
   // returning an empty array. Without the timeout, the buy button silently
   // does nothing.
   const products = await Promise.race([
-    Purchases.getProducts([productId]),
+    Purchases.getProducts([productId], ProductType?.INAPP),
     new Promise<never>((_, reject) =>
       setTimeout(() => reject(new Error(`Store timeout (10s) — product "${productId}" not configured in Play Console / App Store Connect, or store unreachable`)), 10000)
     ),
