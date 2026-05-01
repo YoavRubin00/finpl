@@ -2,6 +2,32 @@ import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import { zustandStorage } from '../../lib/zustandStorage';
 import { ActivePosition, PendingLimitOrder } from './tradingHubTypes';
+import { useAuthStore } from '../auth/useAuthStore';
+
+/**
+ * Fire a paper-trading event to the server. Logged in `paper_trades` and
+ * mirrored into `paper_portfolio` (long-only, weighted-avg cost).
+ *
+ * Translation between models:
+ *   - openPosition('buy',  price, amount) → BUY  trade of (amount/price) units
+ *   - openPosition('sell', price, amount) → SELL trade — interpreted as opening a short
+ *   - closePosition() → the OPPOSITE trade type at currentPrice
+ *
+ * Quantity is amountInvested / price so total_value matches the coins moved.
+ */
+function logTradeFireAndForget(
+  assetSymbol: string,
+  tradeType: 'BUY' | 'SELL',
+  priceAtExecution: number,
+  amountInvested: number,
+): void {
+  const authId = useAuthStore.getState().email;
+  if (!authId || priceAtExecution <= 0 || amountInvested <= 0) return;
+  const quantity = amountInvested / priceAtExecution;
+  import('../../db/sync/syncPaperTrading')
+    .then((m) => m.logTrade({ authId, assetSymbol, tradeType, quantity, priceAtExecution }))
+    .catch(() => { /* non-fatal */ });
+}
 
 interface TradingStore {
   positions: ActivePosition[];
@@ -63,6 +89,7 @@ export const useTradingStore = create<TradingStore>()(
         set((state) => ({
           positions: [...state.positions, position],
         }));
+        logTradeFireAndForget(assetId, type === 'buy' ? 'BUY' : 'SELL', entryPrice, amountInvested);
         return id;
       },
 
@@ -73,6 +100,13 @@ export const useTradingStore = create<TradingStore>()(
         set((state) => ({
           positions: state.positions.filter((p) => p.id !== positionId),
         }));
+        // Closing a long is a SELL; closing a short is a BUY.
+        logTradeFireAndForget(
+          position.assetId,
+          position.type === 'buy' ? 'SELL' : 'BUY',
+          position.currentPrice,
+          position.amountInvested,
+        );
         return position;
       },
 
@@ -115,6 +149,11 @@ export const useTradingStore = create<TradingStore>()(
           positions: [...updatedPositions, ...newPositions],
           pendingOrders: remainingOrders,
         });
+
+        // Limit orders execute as BUYs (the store only supports buy-side limits).
+        for (const newPos of newPositions) {
+          logTradeFireAndForget(newPos.assetId, 'BUY', newPos.entryPrice, newPos.amountInvested);
+        }
       },
 
       placeLimitOrder: (assetId, limitPrice, amountInvested) => {

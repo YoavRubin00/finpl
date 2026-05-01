@@ -42,27 +42,56 @@ import { getConceptLabel } from "./LifelineModal";
 import type { CompanionId } from "../auth/types";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { fetchAiMentorUsage, incrementAiMentorUsage } from "../../db/sync/syncAiMentor";
 
-/* ── Daily usage tracking ── */
+/* ── Daily usage tracking ──
+   Server (`ai_mentor_usage`) is the source of truth so quota is enforced
+   cross-device. AsyncStorage mirrors it as an offline cache: if the network
+   call fails (no connectivity, server down) we fall back to the local value
+   so the UX still works. */
 const DAILY_KEY = "lifeline_chat_date";
 const DAILY_COUNT_KEY = "lifeline_chat_count";
 const FREE_DAILY_LIMIT = 1;
 
-async function getDailyUsage(): Promise<{ date: string; count: number }> {
-  const today = new Date().toISOString().slice(0, 10);
-  const storedDate = await AsyncStorage.getItem(DAILY_KEY);
-  if (storedDate !== today) {
-    return { date: today, count: 0 };
-  }
-  const raw = await AsyncStorage.getItem(DAILY_COUNT_KEY);
-  return { date: today, count: raw ? parseInt(raw, 10) : 0 };
+function todayStr(): string {
+  return new Date().toISOString().slice(0, 10);
 }
 
-async function incrementDailyUsage(): Promise<void> {
-  const today = new Date().toISOString().slice(0, 10);
-  await AsyncStorage.setItem(DAILY_KEY, today);
-  const { count } = await getDailyUsage();
-  await AsyncStorage.setItem(DAILY_COUNT_KEY, String(count + 1));
+async function readLocalCount(): Promise<number> {
+  const today = todayStr();
+  const storedDate = await AsyncStorage.getItem(DAILY_KEY);
+  if (storedDate !== today) return 0;
+  const raw = await AsyncStorage.getItem(DAILY_COUNT_KEY);
+  return raw ? parseInt(raw, 10) : 0;
+}
+
+async function writeLocalCount(count: number): Promise<void> {
+  await AsyncStorage.setItem(DAILY_KEY, todayStr());
+  await AsyncStorage.setItem(DAILY_COUNT_KEY, String(count));
+}
+
+async function getDailyUsage(authId: string | null): Promise<number> {
+  if (authId) {
+    const serverCount = await fetchAiMentorUsage(authId);
+    if (serverCount !== null) {
+      await writeLocalCount(serverCount);
+      return serverCount;
+    }
+  }
+  return readLocalCount();
+}
+
+async function incrementDailyUsage(authId: string | null): Promise<void> {
+  if (authId) {
+    const newCount = await incrementAiMentorUsage(authId);
+    if (newCount !== null) {
+      await writeLocalCount(newCount);
+      return;
+    }
+  }
+  // Offline fallback — increment local cache so the limit still bites in this session.
+  const next = (await readLocalCount()) + 1;
+  await writeLocalCount(next);
 }
 
 interface ChatMsg {
@@ -135,10 +164,12 @@ export function LifelineChatOverlay({ visible, conceptTag, onClose }: Props) {
     : safeInsets.top + 10;
   const isPro = useSubscriptionStore((s) => s.isPro());
 
+  const authId = useAuthStore((s) => s.email);
+
   // Check daily limit on open
   useEffect(() => {
     if (visible && !isPro) {
-      getDailyUsage().then(({ count }) => {
+      getDailyUsage(authId).then((count) => {
         if (count >= FREE_DAILY_LIMIT) {
           setLocked(true);
         }
@@ -156,7 +187,7 @@ export function LifelineChatOverlay({ visible, conceptTag, onClose }: Props) {
       setMessages([{ role: "user", content: autoMsg }]);
       callGemini([{ role: "user", content: autoMsg }]);
       if (!isPro) {
-        incrementDailyUsage();
+        incrementDailyUsage(authId);
       }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
