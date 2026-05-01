@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, Pressable } from 'react-native';
 import Animated, { FadeIn, useSharedValue, withRepeat, withTiming, useAnimatedStyle } from 'react-native-reanimated';
 import { useLiveMarketStore } from '../../../stores/useLiveMarketStore';
@@ -44,12 +44,46 @@ const FALLBACK_RATES: RateItem[] = [
   { value: '$65,000', numericValue: 65000, changePct: 0, direction: 'stable', label: 'ביטקוין', symbol: '₿' },
   { value: '2,100', numericValue: 2100, changePct: 0, direction: 'stable', label: 'ת"א 125', symbol: '📈' },
   { value: '4.50%', numericValue: 4.5, changePct: 0, direction: 'stable', label: 'ריבית בנק ישראל', symbol: '🏦' },
+  { value: '₪4.00', numericValue: 4.0, changePct: 0, direction: 'stable', label: 'יורו / שקל', symbol: '€' },
 ];
+
+/**
+ * Returns a monotonically increasing day-index that increments at 21:00 Israel
+ * summer time (IDT = UTC+3). Uses 18:00 UTC as the boundary, which equals
+ * 21:00 IDT (summer) and 20:00 IST (winter — 1 h early, acceptable).
+ * Epoch-based to avoid month-rollover parity flips.
+ */
+function israelRotationIndex(): number {
+  const BOUNDARY_UTC_MS = 18 * 60 * 60 * 1000; // 18:00 UTC = 21:00 IDT
+  const MS_PER_DAY = 24 * 60 * 60 * 1000;
+  return Math.floor((Date.now() - BOUNDARY_UTC_MS) / MS_PER_DAY);
+}
+
+/**
+ * Rotates slot 0 daily at 21:00 Israel time:
+ *   Even index → [USD/ILS, BTC, TA-125, Interest Rate]
+ *   Odd  index → [EUR/ILS, BTC, TA-125, Interest Rate]
+ * ריבית בנק ישראל stays pinned in slot 3 (important stable Israeli metric).
+ * BTC and TA-125 always in slots 1-2.
+ */
+function selectDisplayRates(rates: RateItem[], rotIdx: number): RateItem[] {
+  if (rates.length < 5) return rates.slice(0, 4);
+  const slot0 = rotIdx % 2 === 0 ? rates[0] : rates[4]; // USD/ILS or EUR/ILS
+  return [slot0, rates[1], rates[2], rates[3]];
+}
 
 export function LiveMarketCard() {
   const { data, loading, error, fetch } = useLiveMarketStore();
+  const [rotIdx, setRotIdx] = useState(israelRotationIndex);
 
   useEffect(() => { fetch(); }, [fetch]);
+
+  // Re-evaluate rotation every minute so the swap happens at 21:00 Israel time
+  // even if the app is already open.
+  useEffect(() => {
+    const t = setInterval(() => setRotIdx(israelRotationIndex()), 60_000);
+    return () => clearInterval(t);
+  }, []);
 
   // Pulsing LIVE dot
   const opacity = useSharedValue(1);
@@ -77,8 +111,8 @@ export function LiveMarketCard() {
         </View>
       ) : (
         <View style={styles.grid}>
-          {(data?.rates ?? FALLBACK_RATES).map((item) => (
-            <RateCell key={item.label} item={item} />
+          {selectDisplayRates(data?.rates ?? FALLBACK_RATES, rotIdx).map((item, idx) => (
+            <RateCell key={idx} item={item} />
           ))}
         </View>
       )}

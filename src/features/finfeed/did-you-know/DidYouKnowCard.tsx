@@ -104,6 +104,9 @@ export const DidYouKnowCard = React.memo(function DidYouKnowCard({ isActive: _is
               source={item.image}
               style={styles.heroImage}
               contentFit="cover"
+              cachePolicy="memory-disk"
+              priority="high"
+              transition={150}
               accessible={false}
             />
           ) : (

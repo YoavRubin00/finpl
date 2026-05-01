@@ -4,7 +4,6 @@ import { createAudioPlayer, type AudioPlayer } from 'expo-audio';
 import {
   View,
   Text,
-  Image,
   Pressable,
   Dimensions,
   StyleSheet,
@@ -44,10 +43,14 @@ function TapZonesCard({ item, onStartModule }: { item: FeedPremiumLearning; onSt
     <View style={styles.container}>
       {/* Full image */}
       <View style={{ flex: 1, borderRadius: 16, overflow: 'hidden', position: 'relative' }}>
-        <Image
-          source={item.infographics[0] as number}
+        <ExpoImage
+          source={item.infographics[0]}
           style={{ width: '100%', height: '100%' }}
-          resizeMode="contain"
+          contentFit="contain"
+          cachePolicy="memory-disk"
+          priority="high"
+          transition={200}
+          placeholderContentFit="cover"
         />
         {/* Invisible tap zones */}
         <View style={{ position: 'absolute', top: 0, bottom: 0, left: 0, right: 0, flexDirection: 'row' }}>
@@ -250,10 +253,13 @@ export const FeedPremiumLearningCard = React.memo(function FeedPremiumLearningCa
     return (
       <View style={styles.container}>
         <View style={styles.imageContainer}>
-          <Image
-            source={item.infographics[0] as number}
+          <ExpoImage
+            source={item.infographics[0]}
             style={styles.image}
-            resizeMode="contain"
+            contentFit="contain"
+            cachePolicy="memory-disk"
+            priority="high"
+            transition={150}
           />
         </View>
         
@@ -292,19 +298,25 @@ export const FeedPremiumLearningCard = React.memo(function FeedPremiumLearningCa
         {isDiveMode ? (
           <View style={styles.diveViewport}>
             <Animated.View style={[styles.diveImage, zoomStyle]}>
-              <Image
-                source={item.infographics[0] as number}
+              <ExpoImage
+                source={item.infographics[0]}
                 style={{ width: SCREEN_WIDTH - 24, height: (SCREEN_WIDTH - 24) * 1.6 }}
-                resizeMode="contain"
+                contentFit="contain"
+                cachePolicy="memory-disk"
+                priority="high"
+                transition={150}
               />
             </Animated.View>
           </View>
         ) : (
           <Animated.View key={`step-${step}`} entering={FadeIn.duration(300)}>
-            <Image
-              source={item.infographics[step] as number}
+            <ExpoImage
+              source={item.infographics[step]}
               style={styles.image}
-              resizeMode="contain"
+              contentFit="contain"
+              cachePolicy="memory-disk"
+              priority="high"
+              transition={150}
             />
           </Animated.View>
         )}
@@ -365,6 +377,7 @@ const styles = StyleSheet.create({
     width: SCREEN_WIDTH - 24,
     height: '100%',
     borderRadius: 16,
+    backgroundColor: '#f1f5f9',
   },
   diveViewport: {
     flex: 1,

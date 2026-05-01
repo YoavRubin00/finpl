@@ -111,6 +111,7 @@ export const CrowdQuestionCard = React.memo(function CrowdQuestionCard({ market 
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
           bounces={true}
+          nestedScrollEnabled={true}
         >
           <CardHeader />
 

@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { Image as ExpoImage } from "expo-image";
 import * as FileSystem from "expo-file-system/legacy";
 
@@ -28,18 +28,35 @@ async function prefetchVideo(uri: string): Promise<void> {
   }
 }
 
+export interface ModulePrefetchState {
+  imagesReady: boolean;
+  videosReady: boolean;
+}
+
 export function useModulePrefetch(
   uris: readonly string[],
   videoUris: readonly string[] = [],
-): void {
+): ModulePrefetchState {
+  const [imagesReady, setImagesReady] = useState(uris.length === 0);
+  const [videosReady, setVideosReady] = useState(videoUris.length === 0);
+
   useEffect(() => {
+    let cancelled = false;
+    setImagesReady(uris.length === 0);
+    setVideosReady(videoUris.length === 0);
+
     if (uris.length > 0) {
-      Promise.allSettled(uris.map((uri) => ExpoImage.prefetch(uri))).catch(() => {});
+      Promise.allSettled(uris.map((uri) => ExpoImage.prefetch(uri)))
+        .finally(() => { if (!cancelled) setImagesReady(true); });
     }
     if (videoUris.length > 0) {
-      Promise.allSettled(videoUris.map(prefetchVideo)).catch(() => {});
+      Promise.allSettled(videoUris.map(prefetchVideo))
+        .finally(() => { if (!cancelled) setVideosReady(true); });
     }
+    return () => { cancelled = true; };
   // Both arrays are memoized by caller (keyed on mod.id).
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [uris, videoUris]);
+
+  return { imagesReady, videosReady };
 }

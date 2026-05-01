@@ -414,8 +414,10 @@ function VideoHookPlayer({ videoUri, hookText, onFinish, unitColors, fitContain,
   const videoRef = useRef<VideoView>(null);
   const [isFastMode, setIsFastMode] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [hasError, setHasError] = useState(false);
   const finishedRef = useRef(false);
   const hasPlayedRef = useRef(false);
+  const retryCountRef = useRef(0);
   const insets = useSafeAreaInsets();
 
   const safeFinish = useCallback(() => {
@@ -449,12 +451,27 @@ function VideoHookPlayer({ videoUri, hookText, onFinish, unitColors, fitContain,
       }
     }));
 
-    // Track errors, skip video on failure
+    // Track errors. Retry once silently after 2s before showing the error overlay —
+    // most failures here are transient CDN/network blips that resolve on a second
+    // attempt. Only after the retry also fails do we surface the "דלג" hint.
     subs.push(player.addListener('statusChange', (e: { status: string; error?: unknown }) => {
       if (e.status === 'error') {
-        safeFinish();
+        if (retryCountRef.current < 1) {
+          retryCountRef.current += 1;
+          setIsLoading(true);
+          setHasError(false);
+          setTimeout(() => {
+            try { player.replay(); } catch {
+              try { player.play(); } catch { /* ignore */ }
+            }
+          }, 2000);
+        } else {
+          setHasError(true);
+          setIsLoading(false);
+        }
       }
       if (e.status === 'readyToPlay') {
+        setHasError(false);
         setIsLoading(false);
       }
     }));
@@ -489,10 +506,22 @@ function VideoHookPlayer({ videoUri, hookText, onFinish, unitColors, fitContain,
         />
       </Pressable>
       {/* Loading indicator */}
-      {isLoading && (
+      {isLoading && !hasError && (
         <View style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, justifyContent: "center", alignItems: "center" }} pointerEvents="none">
           <ActivityIndicator size="large" color="#38bdf8" />
           <Text style={{ fontSize: 14, fontWeight: "700", color: "#64748b", marginTop: 12 }}>טוען סרטון...</Text>
+        </View>
+      )}
+      {/* Error overlay — appears if the video fails to load. User can press
+          "דלג" to continue, or wait for the 20s safety timeout. */}
+      {hasError && (
+        <View style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, justifyContent: "center", alignItems: "center", paddingHorizontal: 32 }} pointerEvents="none">
+          <Text style={{ fontSize: 16, fontWeight: "800", color: "#f1f5f9", textAlign: "center", writingDirection: "rtl" }}>
+            לא הצלחנו לטעון את הסרטון
+          </Text>
+          <Text style={{ fontSize: 13, fontWeight: "600", color: "#94a3b8", marginTop: 6, textAlign: "center", writingDirection: "rtl" }}>
+            לחצו על &quot;דלג&quot; כדי להמשיך
+          </Text>
         </View>
       )}
       {/* Fast-mode indicator removed — speed change alone is enough feedback.
@@ -2210,7 +2239,37 @@ export function LessonFlowScreen() {
     }
     return [...new Set(videos)];
   }, [mod]);
-  useModulePrefetch(prefetchUris, prefetchVideoUris);
+  const { imagesReady } = useModulePrefetch(prefetchUris, prefetchVideoUris);
+
+  // When the user finishes the intro, we'd like the first flashcard's image
+  // already cached so they don't stare at a blank box. Block the transition
+  // until imagesReady — but cap the wait at 4s so a slow CDN never strands
+  // the user on the intro forever.
+  const [pendingPostIntroPhase, setPendingPostIntroPhase] = useState<FlowPhase | null>(null);
+  useEffect(() => {
+    if (!pendingPostIntroPhase) return;
+    if (imagesReady) {
+      setPhase(pendingPostIntroPhase);
+      setPendingPostIntroPhase(null);
+      return;
+    }
+    const t = setTimeout(() => {
+      setPhase(pendingPostIntroPhase);
+      setPendingPostIntroPhase(null);
+    }, 4000);
+    return () => clearTimeout(t);
+  }, [pendingPostIntroPhase, imagesReady]);
+
+  const handleIntroStart = useCallback(() => {
+    if (!mod) return;
+    const target: FlowPhase =
+      SIM_FIRST_MODULES.has(mod.id) && MODULES_WITH_SIM.has(mod.id) ? "sim" : "flashcards";
+    if (imagesReady) {
+      setPhase(target);
+    } else {
+      setPendingPostIntroPhase(target);
+    }
+  }, [mod, imagesReady]);
 
   // Mark "in-lesson" so the Daily Bridge nudge (and any other session-level
   // CTA) knows not to interrupt the user mid-module.
@@ -2873,11 +2932,14 @@ export function LessonFlowScreen() {
     advanceQuiz();
   }, [mod, quizIndex, recordQuizAnswer, advanceQuiz, consecutiveCorrect, peakStreak, playSound]);
 
-  // Immediate heart drop, called right when wrong answer is selected
+  // Immediate heart drop, called right when wrong answer is selected.
+  // Skipped entirely on replay so users can re-do completed modules without
+  // being punished for wrong answers — replay should encourage practice.
   const handleWrongImmediate = useCallback(() => {
     if (!mod) return;
     setConsecutiveCorrect(0); // Reset streak on ANY wrong answer
     const quiz = mod.quizzes[quizIndex];
+    if (isReplay) return;
     const heartUsed = useSubscriptionStore.getState().useHeart();
     if (heartUsed) {
       setShowHeartBreak(true);
@@ -2891,7 +2953,7 @@ export function LessonFlowScreen() {
     } else {
       setShowOutOfHearts(true);
     }
-  }, [mod, quizIndex]);
+  }, [mod, quizIndex, isReplay]);
 
   // Deferred, advances quiz after feedback shown (stops if no hearts left)
   const handleWrongRevealed = useCallback(() => {
@@ -3115,8 +3177,11 @@ export function LessonFlowScreen() {
           eco.addCoins(5 + bonusCoins, 'lesson');
           // Soft penalty: each unwise choice in the path costs a heart.
           // useHeart() returns false silently at 0 — the in-card feedback IS the feedback.
-          const sub = useSubscriptionStore.getState();
-          for (let i = 0; i < result.unwiseCount; i++) sub.useHeart();
+          // Skipped on replay to encourage practice without punishment.
+          if (!isReplay) {
+            const sub = useSubscriptionStore.getState();
+            for (let i = 0; i < result.unwiseCount; i++) sub.useHeart();
+          }
           // XP bonus only for branching dilemmas with a perfect path.
           if (result.unwiseCount === 0 && result.path.length > 1) {
             eco.addXP(20, "challenge_complete");
@@ -3358,39 +3423,21 @@ export function LessonFlowScreen() {
           <Animated.View style={[contentStyle, { flex: 1 }]}>
             {mod.introVariant === 'short' && mod.id === 'mod-1-1' ? (
               <CompoundInterestIntro
-                onStart={() => {
-                  if (SIM_FIRST_MODULES.has(mod.id) && MODULES_WITH_SIM.has(mod.id)) {
-                    setPhase("sim");
-                  } else {
-                    setPhase("flashcards");
-                  }
-                }}
+                onStart={handleIntroStart}
                 unitColors={unitColors}
                 chartImageUri={mod.introImage?.uri}
                 audioUri={mod.introAudio?.uri}
               />
             ) : mod.introVariant === 'short' && MODULE_INTRO_CONFIGS[mod.id] ? (
               <ModuleIntroShort
-                onStart={() => {
-                  if (SIM_FIRST_MODULES.has(mod.id) && MODULES_WITH_SIM.has(mod.id)) {
-                    setPhase("sim");
-                  } else {
-                    setPhase("flashcards");
-                  }
-                }}
+                onStart={handleIntroStart}
                 unitColors={unitColors}
                 config={MODULE_INTRO_CONFIGS[mod.id]}
                 audioUri={mod.introAudio?.uri}
               />
             ) : mod.introVariant === 'short' ? (
               <WhatIsMoneyIntro
-                onStart={() => {
-                  if (SIM_FIRST_MODULES.has(mod.id) && MODULES_WITH_SIM.has(mod.id)) {
-                    setPhase("sim");
-                  } else {
-                    setPhase("flashcards");
-                  }
-                }}
+                onStart={handleIntroStart}
                 unitColors={unitColors}
               />
             ) : (
@@ -3398,17 +3445,36 @@ export function LessonFlowScreen() {
                 introText={mod.interactiveIntro}
                 audioUri={mod.introAudio?.uri}
                 introImageUri={mod.introImage?.uri}
-                onStart={() => {
-                  if (SIM_FIRST_MODULES.has(mod.id) && MODULES_WITH_SIM.has(mod.id)) {
-                    setPhase("sim");
-                  } else {
-                    setPhase("flashcards");
-                  }
-                }}
+                onStart={handleIntroStart}
                 unitColors={unitColors}
               />
             )}
           </Animated.View>
+        )}
+
+        {/* Loading overlay shown after the user finishes the intro but before
+            module images have finished prefetching. Capped at 4s by an effect
+            so it never blocks the user indefinitely on a slow network. */}
+        {pendingPostIntroPhase && (
+          <View
+            style={{
+              position: "absolute",
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              justifyContent: "center",
+              alignItems: "center",
+              backgroundColor: "rgba(255,255,255,0.92)",
+              zIndex: 50,
+            }}
+            pointerEvents="auto"
+          >
+            <ActivityIndicator size="large" color="#0891b2" />
+            <Text style={{ marginTop: 12, fontSize: 14, fontWeight: "700", color: "#475569", textAlign: "center", writingDirection: "rtl" }}>
+              טוענים תכנים...
+            </Text>
+          </View>
         )}
 
         {/* ── Flashcards phase ── */}

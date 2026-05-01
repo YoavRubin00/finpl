@@ -511,8 +511,8 @@ export function FlashcardInfographic({ cardId, diveStep = 0, zoomRegions }: Prop
         </View>
       )}
       {source && (
-        <View style={[s.container, isLightBg && s.containerLight, { aspectRatio: ratio ?? 1.2, maxHeight: COMPACT_CARDS.has(cardId) ? 220 : LARGE_CARDS.has(cardId) ? undefined : 270 }]}>
-          <AnimatedExpoImage source={source} style={[s.image, zoomStyle]} contentFit={COVER_CARDS.has(cardId) ? "cover" : "contain"} cachePolicy="memory-disk" priority="high" onLoad={Platform.OS === 'web' ? undefined : handleLoad} />
+        <View style={[s.container, isLightBg && s.containerLight, { aspectRatio: ratio ?? 1.2, maxHeight: COMPACT_CARDS.has(cardId) ? 220 : LARGE_CARDS.has(cardId) ? undefined : 270, backgroundColor: '#f1f5f9' }]}>
+          <AnimatedExpoImage source={source} style={[s.image, zoomStyle]} contentFit={COVER_CARDS.has(cardId) ? "cover" : "contain"} cachePolicy="memory-disk" priority="high" transition={200} onLoad={Platform.OS === 'web' ? undefined : handleLoad} />
           {lottieSource && (
             <View style={s.lottieFloatingBadge}>
               <LottieView

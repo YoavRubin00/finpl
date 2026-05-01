@@ -1,4 +1,4 @@
-import { View, Text, Image, Pressable, Modal, StyleSheet } from 'react-native';
+import { View, Text, Image, Pressable, Modal, StyleSheet, ScrollView } from 'react-native';
 import Animated, { FadeIn, FadeInUp } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { X } from 'lucide-react-native';
@@ -39,7 +39,7 @@ export function RedemptionModal({ visible, benefit, isRedeemed = false, canAffor
           entering={FadeInUp.duration(280)}
           style={[
             styles.sheet,
-            { paddingBottom: Math.max(insets.bottom + 16, 28) },
+            { paddingBottom: Math.max(insets.bottom + 16, 28), maxHeight: '90%' },
           ]}
         >
           {/* Handle bar */}
@@ -50,46 +50,54 @@ export function RedemptionModal({ visible, benefit, isRedeemed = false, canAffor
             <X size={18} color="#64748b" />
           </Pressable>
 
-          {/* Partner logo + name */}
-          <View style={styles.partnerRow}>
-            <View style={styles.partnerLogoCircle}>
-              {benefit.partnerLogoImage
-                ? <Image source={benefit.partnerLogoImage} style={{ width: 36, height: 36, borderRadius: 6 }} resizeMode="contain" />
-                : benefit.lottieSource
-                  ? <LottieIcon source={benefit.lottieSource} size={28} autoPlay loop />
-                  : <Text style={{ fontSize: 22 }}>{benefit.partnerLogo}</Text>
-              }
+          {/* Scrollable content — keeps CTA reachable on small viewports
+              (iPhone SE / 8 / mini) where description + info row could
+              push the button below the fold. */}
+          <ScrollView
+            showsVerticalScrollIndicator={false}
+            contentContainerStyle={{ paddingBottom: 4 }}
+          >
+            {/* Partner logo + name */}
+            <View style={styles.partnerRow}>
+              <View style={styles.partnerLogoCircle}>
+                {benefit.partnerLogoImage
+                  ? <Image source={benefit.partnerLogoImage} style={{ width: 36, height: 36, borderRadius: 6 }} resizeMode="contain" />
+                  : benefit.lottieSource
+                    ? <LottieIcon source={benefit.lottieSource} size={28} autoPlay loop />
+                    : <Text style={{ fontSize: 22 }}>{benefit.partnerLogo}</Text>
+                }
+              </View>
+              <Text style={styles.partnerName}>{benefit.partnerName}</Text>
             </View>
-            <Text style={styles.partnerName}>{benefit.partnerName}</Text>
-          </View>
 
-          {/* Title + description */}
-          <Text style={styles.title}>{benefit.title}</Text>
-          <Text style={styles.description}>{benefit.description}</Text>
+            {/* Title + description */}
+            <Text style={styles.title}>{benefit.title}</Text>
+            <Text style={styles.description}>{benefit.description}</Text>
 
-          {/* Combined info row */}
-          <View style={styles.infoRow}>
-            <View style={styles.infoCell}>
-              <Text style={styles.infoLabel}>מה מקבלים</Text>
-              <Text style={styles.infoValue}>{benefit.reward}</Text>
-            </View>
-            <View style={styles.infoDivider} />
-            <View style={styles.infoCell}>
-              <Text style={styles.infoLabel}>עלות</Text>
-              <View style={styles.costValueRow}>
-                {isRedeemed ? (
-                  <Text style={[styles.costValue, { color: '#0369a1', fontSize: 15 }]}>הומר בהצלחה ✓</Text>
-                ) : (
-                  <>
-                    <GoldCoinIcon size={16} />
-                    <Text style={styles.costValue}>{benefit.costCoins.toLocaleString()}</Text>
-                  </>
-                )}
+            {/* Combined info row */}
+            <View style={styles.infoRow}>
+              <View style={styles.infoCell}>
+                <Text style={styles.infoLabel}>מה מקבלים</Text>
+                <Text style={styles.infoValue}>{benefit.reward}</Text>
+              </View>
+              <View style={styles.infoDivider} />
+              <View style={styles.infoCell}>
+                <Text style={styles.infoLabel}>עלות</Text>
+                <View style={styles.costValueRow}>
+                  {isRedeemed ? (
+                    <Text style={[styles.costValue, { color: '#0369a1', fontSize: 15 }]}>הומר בהצלחה ✓</Text>
+                  ) : (
+                    <>
+                      <GoldCoinIcon size={16} />
+                      <Text style={styles.costValue}>{benefit.costCoins.toLocaleString()}</Text>
+                    </>
+                  )}
+                </View>
               </View>
             </View>
-          </View>
+          </ScrollView>
 
-          {/* CTA button */}
+          {/* CTA button — pinned outside ScrollView so it's always reachable */}
           <Pressable
             onPress={onConfirm}
             style={({ pressed }) => [

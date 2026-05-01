@@ -1,5 +1,6 @@
 import React from "react";
-import { View, Image, Text, Dimensions, StyleSheet, Pressable } from "react-native";
+import { View, Text, Dimensions, StyleSheet, Pressable } from "react-native";
+import { Image as ExpoImage } from "expo-image";
 import Animated from "react-native-reanimated";
 import { useRouter } from "expo-router";
 import { CLASH } from "../../constants/theme";
@@ -47,10 +48,13 @@ export const FeedComicItem = React.memo(function FeedComicItem({ item, isActive 
 
       {/* Comic image */}
       <View style={styles.imageContainer}>
-        <Image
+        <ExpoImage
           source={item.imageUrl}
           style={styles.image}
-          resizeMode="contain"
+          contentFit="contain"
+          cachePolicy="memory-disk"
+          priority="high"
+          transition={150}
         />
       </View>
 
@@ -125,6 +129,7 @@ const styles = StyleSheet.create({
     width: SCREEN_WIDTH - 16,
     aspectRatio: 0.75,
     borderRadius: 16,
+    backgroundColor: '#f1f5f9',
   },
   ctaContainer: {
     alignSelf: "flex-end",
