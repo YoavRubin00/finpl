@@ -1,9 +1,9 @@
 import { getApiBase } from '../apiBase';
+import { useAuthStore } from '../../features/auth/useAuthStore';
 
 export type TradeType = 'BUY' | 'SELL';
 
 interface LogTradeParams {
-  authId: string;
   assetSymbol: string;
   assetName?: string;
   tradeType: TradeType;
@@ -11,6 +11,12 @@ interface LogTradeParams {
   quantity: number;
   /** Per-unit price at execution. */
   priceAtExecution: number;
+  /**
+   * When true, the trade is logged in paper_trades but paper_portfolio is NOT
+   * updated. Set this when closing a short position: the closing BUY must appear
+   * in the audit log but must never create a phantom long row in the portfolio.
+   */
+  skipPortfolio?: boolean;
 }
 
 /**
@@ -21,13 +27,16 @@ interface LogTradeParams {
  * the server copy is for cross-device restore and analytics.
  */
 export async function logTrade(params: LogTradeParams): Promise<void> {
-  if (!params.authId || params.quantity <= 0 || params.priceAtExecution <= 0) return;
+  const { email: authId, syncToken } = useAuthStore.getState();
+  if (!authId || params.quantity <= 0 || params.priceAtExecution <= 0) return;
   try {
     const base = getApiBase();
+    const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+    if (syncToken) headers['X-Sync-Token'] = syncToken;
     await fetch(`${base}/api/trading/trade`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(params),
+      headers,
+      body: JSON.stringify({ ...params, authId }),
     });
   } catch {
     /* fire-and-forget */

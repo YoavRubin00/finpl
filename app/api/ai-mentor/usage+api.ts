@@ -4,23 +4,23 @@ import { drizzle } from 'drizzle-orm/neon-http';
 import { userProfiles } from '../../../src/db/schema';
 import { enforceRateLimit } from '../_shared/rateLimit';
 import { safeErrorResponse } from '../_shared/safeError';
-import { sanitizeString } from '../_shared/validate';
+import { sanitizeString, validateSyncAuth } from '../_shared/validate';
 
 function getDb() {
   const url = process.env.DATABASE_URL ?? '';
   return drizzle(neon(url));
 }
 
-async function resolveUserId(
+async function resolveUser(
   db: ReturnType<typeof getDb>,
   authId: string,
-): Promise<string | null> {
+): Promise<{ id: string; syncToken: string | null } | null> {
   const rows = await db
-    .select({ id: userProfiles.id })
+    .select({ id: userProfiles.id, syncToken: userProfiles.syncToken })
     .from(userProfiles)
     .where(eq(userProfiles.authId, authId))
     .limit(1);
-  return rows[0]?.id ?? null;
+  return rows[0] ?? null;
 }
 
 interface RawCountRow { count?: number | string; request_count?: number | string }
@@ -50,15 +50,18 @@ export async function GET(request: Request): Promise<Response> {
     }
 
     const db = getDb();
-    const userId = await resolveUserId(db, authId);
-    if (!userId) {
+    const user = await resolveUser(db, authId);
+    if (!user) {
       return Response.json({ ok: true, count: 0 });
+    }
+    if (!validateSyncAuth(request, user.syncToken)) {
+      return Response.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     const result = await db.execute(sql`
       SELECT request_count AS count
         FROM ai_mentor_usage
-       WHERE user_id = ${userId}::uuid
+       WHERE user_id = ${user.id}::uuid
          AND usage_date = CURRENT_DATE
        LIMIT 1
     `);
@@ -87,14 +90,17 @@ export async function POST(request: Request): Promise<Response> {
     }
 
     const db = getDb();
-    const userId = await resolveUserId(db, authId);
-    if (!userId) {
+    const user = await resolveUser(db, authId);
+    if (!user) {
       return Response.json({ error: 'User not found' }, { status: 404 });
+    }
+    if (!validateSyncAuth(request, user.syncToken)) {
+      return Response.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     const result = await db.execute(sql`
       INSERT INTO ai_mentor_usage (user_id, usage_date, request_count)
-      VALUES (${userId}::uuid, CURRENT_DATE, 1)
+      VALUES (${user.id}::uuid, CURRENT_DATE, 1)
       ON CONFLICT (user_id, usage_date)
         DO UPDATE SET request_count = ai_mentor_usage.request_count + 1
       RETURNING request_count

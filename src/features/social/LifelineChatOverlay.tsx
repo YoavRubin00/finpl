@@ -18,6 +18,7 @@ import {
   StyleSheet,
   ImageBackground,
   StatusBar,
+  ActivityIndicator,
   AccessibilityInfo,
 } from "react-native";
 import Animated, {
@@ -141,7 +142,7 @@ export function LifelineChatOverlay({ visible, conceptTag, onClose }: Props) {
   const [messages, setMessages] = useState<ChatMsg[]>([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
-  const [locked, setLocked] = useState(false);
+  const [locked, setLocked] = useState<boolean | null>(null);
   const scrollRef = useRef<ScrollView>(null);
 
   const profile = useAuthStore((s) => s.profile);
@@ -180,9 +181,11 @@ export function LifelineChatOverlay({ visible, conceptTag, onClose }: Props) {
     }
   }, [visible, isPro]);
 
-  // Auto-send initial question when overlay opens
+  // Auto-send initial question once quota check resolves (locked === false).
+  // Guarding on locked === false (not !locked) prevents firing before the async
+  // getDailyUsage call in the effect above has settled from null.
   useEffect(() => {
-    if (visible && conceptTag && messages.length === 0 && !locked) {
+    if (visible && conceptTag && messages.length === 0 && locked === false) {
       const autoMsg = `היי, אני לא מבין/ה את הנושא "${conceptLabel}". אפשר הסבר פשוט?`;
       setMessages([{ role: "user", content: autoMsg }]);
       callGemini([{ role: "user", content: autoMsg }]);
@@ -193,13 +196,13 @@ export function LifelineChatOverlay({ visible, conceptTag, onClose }: Props) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [visible, conceptTag, locked]);
 
-  // Reset when closed
+  // Reset when closed — back to null so next open waits for quota check again.
   useEffect(() => {
     if (!visible) {
       setMessages([]);
       setInput("");
       setLoading(false);
-      setLocked(false);
+      setLocked(null);
     }
   }, [visible]);
 
@@ -311,8 +314,12 @@ export function LifelineChatOverlay({ visible, conceptTag, onClose }: Props) {
             </View>
           </Animated.View>
 
-          {/* Locked state, daily limit reached */}
-          {locked ? (
+          {/* Quota check in flight — spinner until getDailyUsage resolves */}
+          {locked === null ? (
+            <View style={st.quotaLoading} accessibilityLabel="טוען..." accessibilityLiveRegion="polite">
+              <ActivityIndicator size="large" color="#0891b2" accessibilityLabel="טוען..." />
+            </View>
+          ) : locked ? (
             <View style={st.lockedContainer}>
               <Lock size={48} color="#0891b2" />
               <Text style={st.lockedTitle}>ניצלת את ההסבר החינמי להיום</Text>
@@ -619,6 +626,12 @@ const st = StyleSheet.create({
   sendBtnDisabled: {
     backgroundColor: "#e5e7eb",
     shadowOpacity: 0,
+  },
+  // ── Quota loading ──
+  quotaLoading: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
   },
   // ── Locked state ──
   lockedContainer: {

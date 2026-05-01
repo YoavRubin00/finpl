@@ -2,7 +2,6 @@ import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import { zustandStorage } from '../../lib/zustandStorage';
 import { ActivePosition, PendingLimitOrder } from './tradingHubTypes';
-import { useAuthStore } from '../auth/useAuthStore';
 
 /**
  * Fire a paper-trading event to the server. Logged in `paper_trades` and
@@ -10,22 +9,26 @@ import { useAuthStore } from '../auth/useAuthStore';
  *
  * Translation between models:
  *   - openPosition('buy',  price, amount) → BUY  trade of (amount/price) units
- *   - openPosition('sell', price, amount) → SELL trade — interpreted as opening a short
+ *   - openPosition('sell', price, amount) → SELL trade — opening a short
  *   - closePosition() → the OPPOSITE trade type at currentPrice
  *
- * Quantity is amountInvested / price so total_value matches the coins moved.
+ * skipPortfolio=true when closing a short: the BUY is audit-logged but must
+ * not create a phantom long row in paper_portfolio.
+ *
+ * Auth (authId + syncToken) is resolved inside syncPaperTrading.logTrade so
+ * this store doesn't need to import from the auth layer.
  */
 function logTradeFireAndForget(
   assetSymbol: string,
   tradeType: 'BUY' | 'SELL',
   priceAtExecution: number,
   amountInvested: number,
+  skipPortfolio = false,
 ): void {
-  const authId = useAuthStore.getState().email;
-  if (!authId || priceAtExecution <= 0 || amountInvested <= 0) return;
+  if (priceAtExecution <= 0 || amountInvested <= 0) return;
   const quantity = amountInvested / priceAtExecution;
   import('../../db/sync/syncPaperTrading')
-    .then((m) => m.logTrade({ authId, assetSymbol, tradeType, quantity, priceAtExecution }))
+    .then((m) => m.logTrade({ assetSymbol, tradeType, quantity, priceAtExecution, skipPortfolio }))
     .catch(() => { /* non-fatal */ });
 }
 
@@ -100,12 +103,14 @@ export const useTradingStore = create<TradingStore>()(
         set((state) => ({
           positions: state.positions.filter((p) => p.id !== positionId),
         }));
-        // Closing a long is a SELL; closing a short is a BUY.
+        // Closing a long → SELL (decrements portfolio).
+        // Closing a short → BUY, but skipPortfolio=true so no phantom long is created.
         logTradeFireAndForget(
           position.assetId,
           position.type === 'buy' ? 'SELL' : 'BUY',
           position.currentPrice,
           position.amountInvested,
+          position.type === 'sell',
         );
         return position;
       },

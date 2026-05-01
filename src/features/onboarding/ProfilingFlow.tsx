@@ -1559,7 +1559,13 @@ function SimOnboardingStep({ onNext }: { onNext: () => void }) {
           <GlowBar current={2} />
         </View>
 
-        <View style={{ flex: 1, paddingHorizontal: 20, justifyContent: "space-between" }}>
+        {/* Scrollable content — keeps button reachable on small viewports
+            (e.g. iPad iPhone-scaled mode where vertical space is limited). */}
+        <ScrollView
+          style={{ flex: 1 }}
+          contentContainerStyle={{ flexGrow: 1, paddingHorizontal: 20, justifyContent: "space-between" }}
+          showsVerticalScrollIndicator={false}
+        >
           {/* Finn + Title */}
           <View style={{ alignItems: "center", marginTop: 4, marginBottom: 6 }}>
             <ExpoImage source={FINN_STANDARD} style={{ width: 70, height: 70 }} contentFit="contain" />
@@ -1605,12 +1611,14 @@ function SimOnboardingStep({ onNext }: { onNext: () => void }) {
               onInteract={() => setHasInteracted(true)}
             />
           </Animated.View>
+        </ScrollView>
 
-          {/* Next button */}
+        {/* Next button — outside the ScrollView so it stays pinned to the bottom
+            and is always reachable, no matter how small the viewport. */}
+        <View style={{ paddingHorizontal: 20, paddingBottom: 8, paddingTop: 8 }}>
           <Pressable onPress={() => setSubStep("summary")} style={simStyles.continueBtn} accessibilityRole="button" accessibilityLabel="הבא">
             <Text style={simStyles.continueBtnText}>הבא</Text>
           </Pressable>
-          <View style={{ height: 8 }} />
         </View>
       </SafeAreaView>
     </View>
