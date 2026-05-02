@@ -253,28 +253,31 @@ const styles = StyleSheet.create({
   },
 
   confirmBtn: {
-    backgroundColor: '#2563eb',
-    paddingVertical: 16,
-    borderRadius: 16,
+    backgroundColor: '#0ea5e9',         // sky-500, more vivid on iOS than the old indigo-blue
+    paddingVertical: 18,
+    borderRadius: 18,
     alignItems: 'center',
     alignSelf: 'stretch',
     width: '100%',
-    borderWidth: 1,
-    borderColor: '#1d4ed8',
-    borderBottomWidth: 4,
-    borderBottomColor: '#1d4ed8',
-    shadowColor: '#1d4ed8',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.45,
-    shadowRadius: 10,
-    elevation: 10,
+    borderWidth: 1.5,
+    borderColor: '#0284c7',             // sky-600
+    borderBottomWidth: 5,               // stronger 3D pressed-button effect
+    borderBottomColor: '#0369a1',       // sky-700
+    shadowColor: '#0ea5e9',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.55,
+    shadowRadius: 14,
+    elevation: 14,
     marginBottom: 8,
   },
   confirmBtnText: {
-    fontSize: 17,
+    fontSize: 18,
     fontWeight: '900',
     color: '#ffffff',
     letterSpacing: 0.3,
+    textShadowColor: 'rgba(0,0,0,0.18)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 2,
   },
 
   cancelBtn: {

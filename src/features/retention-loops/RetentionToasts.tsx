@@ -10,7 +10,7 @@
  * Each nudge auto-dismisses after 6 seconds OR on user tap. Show-once-per-session
  * for hearts-full to avoid spam.
  */
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useEconomyStore } from '../economy/useEconomyStore';
 import { useSubscriptionStore } from '../subscription/useSubscriptionStore';
 import { SharkInsightToast } from '../../components/ui/SharkInsightToast';
@@ -42,24 +42,27 @@ export function RetentionToasts() {
   const isPro = useSubscriptionStore((s) => s.tier === 'pro' && s.status === 'active');
   const lessonMult = useEconomyStore((s) => s.lessonXPMultiplier);
   const setLessonMult = useEconomyStore((s) => s.setLessonXPMultiplier);
-  const [heartsToastShown, setHeartsToastShown] = useState(false);
   const heartsFull = !isPro && hearts === MAX_HEARTS;
+  // Track whether the user already dismissed (or auto-dismissed) the toast in
+  // THIS hearts-full window. Resets only when hearts drop below MAX and refill
+  // again — so the toast shows once per refill, not on every render.
+  const [heartsDismissedThisFill, setHeartsDismissedThisFill] = useState(false);
+  const prevHeartsFullRef = useRef(false);
 
-  // When hearts hit 5/5, ARM the multiplier for the next lesson and trigger toast once
+  // ARM the lesson multiplier the moment hearts hit 5/5. Decoupled from the
+  // toast lifecycle — the boost stays armed even if the user closed the toast.
   useEffect(() => {
-    if (!heartsFull) return;
-    if (lessonMult < 1.25) setLessonMult(1.25);
-    if (!heartsToastShown) {
-      setHeartsToastShown(true);
-    }
-  }, [heartsFull, lessonMult, setLessonMult, heartsToastShown]);
+    if (heartsFull && lessonMult < 1.25) setLessonMult(1.25);
+  }, [heartsFull, lessonMult, setLessonMult]);
 
-  // Reset the once-per-session flag when hearts drop again — so refilling triggers a fresh toast
+  // Reset the dismissal flag on the not-full → full transition (a fresh refill
+  // earns a fresh nudge). Don't reset just because hearts stay full.
   useEffect(() => {
-    if (!heartsFull && heartsToastShown) {
-      setHeartsToastShown(false);
+    if (heartsFull && !prevHeartsFullRef.current) {
+      setHeartsDismissedThisFill(false);
     }
-  }, [heartsFull, heartsToastShown]);
+    prevHeartsFullRef.current = heartsFull;
+  }, [heartsFull]);
 
   // ── Decide which toast to show — priority: session-bonus > seasonal > hearts-full ──
   if (pendingSessionBonus) {
@@ -89,7 +92,7 @@ export function RetentionToasts() {
     );
   }
 
-  if (heartsFull && heartsToastShown) {
+  if (heartsFull && !heartsDismissedThisFill) {
     return (
       <SharkInsightToast
         visible
@@ -97,7 +100,7 @@ export function RetentionToasts() {
         title="כל הלבבות מלאים 🔥"
         body="השיעור הבא ייתן +25% XP. אל תבזבזו את ההזדמנות — צאו ללמוד עכשיו."
         accentColor="#f59e0b"
-        onDismiss={() => setHeartsToastShown(false)}
+        onDismiss={() => setHeartsDismissedThisFill(true)}
       />
     );
   }
