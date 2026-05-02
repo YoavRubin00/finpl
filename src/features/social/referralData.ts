@@ -119,6 +119,7 @@ export function generateMockFriends(count: number): ReferredFriend[] {
       hasCompletedOnboarding: i < count - 1, // last one hasn't completed
       yesterdayXP: Math.floor(Math.random() * 300) + 50,
       yesterdayGold: Math.floor(Math.random() * 400) + 100,
+      currentStreak: Math.floor(Math.random() * 30) + 1, // 1-30 days mock
       currentModuleId: MOCK_MODULES[i],
     });
   }

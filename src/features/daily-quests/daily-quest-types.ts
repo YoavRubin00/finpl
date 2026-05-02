@@ -36,7 +36,11 @@ export interface QuestRewardSummary {
   streakBonusPct: number;
 }
 
+/** Quest templates pool — 12 entries, 4 per type. The store picks one random
+ * template of each type per day, giving the user a consistent 3-quest rhythm
+ * with fresh framing every morning (Brawl Stars daily quest rotation pattern). */
 export const QUEST_TEMPLATES: Omit<DailyQuest, "id" | "isCompleted">[] = [
+  // ── Dilemma variants ─────────────────────────────────────────────
   {
     type: "dilemma",
     titleHe: "ענו על אתגר יומי",
@@ -44,15 +48,82 @@ export const QUEST_TEMPLATES: Omit<DailyQuest, "id" | "isCompleted">[] = [
     lottieSource: require("../../../assets/lottie/wired-flat-458-goal-target-hover-hit.json") as number,
   },
   {
+    type: "dilemma",
+    titleHe: "פתרו דילמה כספית",
+    descriptionHe: "תרחיש מהחיים האמיתיים — מה הייתם עושים?",
+    lottieSource: require("../../../assets/lottie/wired-flat-458-goal-target-hover-hit.json") as number,
+  },
+  {
+    type: "dilemma",
+    titleHe: "בחרו את הצעד הנכון",
+    descriptionHe: "דילמה קלה לבוקר — תחליטו ב-30 שניות",
+    lottieSource: require("../../../assets/lottie/wired-flat-458-goal-target-hover-hit.json") as number,
+  },
+  {
+    type: "dilemma",
+    titleHe: "שאלת היום מקפטן שארק",
+    descriptionHe: "שאלה אחת ישירה — בלי בולשיט, בלי טריקים",
+    lottieSource: require("../../../assets/lottie/wired-flat-458-goal-target-hover-hit.json") as number,
+  },
+
+  // ── Module variants ──────────────────────────────────────────────
+  {
     type: "module",
     titleHe: "סיימו מודול אחד",
     descriptionHe: "התקדמו שיעור אחד במסלול הפרקים",
     lottieSource: require("../../../assets/lottie/wired-flat-112-book-hover-closed.json") as number,
   },
   {
+    type: "module",
+    titleHe: "למדו פרק חדש",
+    descriptionHe: "השלימו מודול שלם — 3-7 דקות",
+    lottieSource: require("../../../assets/lottie/wired-flat-112-book-hover-closed.json") as number,
+  },
+  {
+    type: "module",
+    titleHe: "שיעור הבונוס היומי",
+    descriptionHe: "מודול אחד מהפרק שאתם בעיצומו",
+    lottieSource: require("../../../assets/lottie/wired-flat-112-book-hover-closed.json") as number,
+  },
+  {
+    type: "module",
+    titleHe: "פיתחו את הידע הפיננסי",
+    descriptionHe: "מודול ללמידה — דקות שיתנו לכם יתרון",
+    lottieSource: require("../../../assets/lottie/wired-flat-112-book-hover-closed.json") as number,
+  },
+
+  // ── Swipe variants ───────────────────────────────────────────────
+  {
     type: "swipe",
     titleHe: "שחקו במשחק סוויפ",
     descriptionHe: "מחקו מיתוסים פיננסיים בסוויפ ימינה/שמאלה",
     lottieSource: require("../../../assets/lottie/wired-flat-56-document-hover-swipe.json") as number,
   },
+  {
+    type: "swipe",
+    titleHe: "מחקו 5 בולשיט פיננסי",
+    descriptionHe: "סוויפ שמאלה לכל פייק — צודקים מקבלים XP",
+    lottieSource: require("../../../assets/lottie/wired-flat-56-document-hover-swipe.json") as number,
+  },
+  {
+    type: "swipe",
+    titleHe: "הבחנה בין אמת לשקר",
+    descriptionHe: "תוכן פיננסי שעובר היום ברשתות — מי צודק?",
+    lottieSource: require("../../../assets/lottie/wired-flat-56-document-hover-swipe.json") as number,
+  },
+  {
+    type: "swipe",
+    titleHe: "סוויפ חמסה",
+    descriptionHe: "5 כרטיסים מהר — מי המהיר ומדויק יותר?",
+    lottieSource: require("../../../assets/lottie/wired-flat-56-document-hover-swipe.json") as number,
+  },
 ];
+
+/** Returns the templates grouped by type — used by the store for daily rotation. */
+export function questTemplatesByType(): Record<DailyQuest["type"], typeof QUEST_TEMPLATES> {
+  return {
+    dilemma: QUEST_TEMPLATES.filter((t) => t.type === "dilemma"),
+    module: QUEST_TEMPLATES.filter((t) => t.type === "module"),
+    swipe: QUEST_TEMPLATES.filter((t) => t.type === "swipe"),
+  };
+}

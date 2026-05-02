@@ -51,16 +51,27 @@ export function HeartsDisplay() {
         );
     }
 
+    const isFull = hearts === MAX_HEARTS;
+
     return (
-        <View style={styles.heartsRow}>
-            {Array.from({ length: MAX_HEARTS }).map((_, i) => (
-                <Heart
-                    key={i}
-                    size={18}
-                    color={i < heartsDisplayValue ? '#ef4444' : '#3f3f46'}
-                    fill={i < heartsDisplayValue ? '#ef4444' : 'transparent'}
-                />
-            ))}
+        <View style={[styles.heartsRow, { gap: 6 }]}>
+            <View style={styles.heartsRow}>
+                {Array.from({ length: MAX_HEARTS }).map((_, i) => (
+                    <Heart
+                        key={i}
+                        size={18}
+                        color={i < heartsDisplayValue ? '#ef4444' : '#3f3f46'}
+                        fill={i < heartsDisplayValue ? '#ef4444' : 'transparent'}
+                    />
+                ))}
+            </View>
+            {/* "Hearts full" XP-rampage hint — encourages users to start a lesson
+                while at max. Pure visual incentive (Duolingo "use them while you have them"). */}
+            {isFull && (
+                <View style={styles.fullBoostBadge} accessible accessibilityLabel="כל הלבבות מלאים, בונוס XP על השיעור הבא">
+                    <Text style={styles.fullBoostText} allowFontScaling={false}>+XP</Text>
+                </View>
+            )}
         </View>
     );
 }
@@ -378,6 +389,20 @@ const styles = StyleSheet.create({
         flexDirection: 'row-reverse',
         alignItems: 'center',
         gap: 3,
+    },
+    fullBoostBadge: {
+        backgroundColor: '#fbbf24',
+        paddingHorizontal: 6,
+        paddingVertical: 2,
+        borderRadius: 8,
+        borderWidth: 1,
+        borderColor: '#f59e0b',
+    },
+    fullBoostText: {
+        fontSize: 10,
+        fontWeight: '900',
+        color: '#78350f',
+        letterSpacing: 0.3,
     },
     infinityIcon: {
         fontSize: 20,

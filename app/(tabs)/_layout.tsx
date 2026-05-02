@@ -12,6 +12,7 @@ import Animated, {
 import { useRef } from "react";
 import { GlobalWealthHeader } from "../../src/components/ui/GlobalWealthHeader";
 import { AnimatedTabBar } from "../../src/components/ui/AnimatedTabBar";
+import { RetentionToasts } from "../../src/features/retention-loops/RetentionToasts";
 
 const SLIDE_PX = 70;
 
@@ -71,6 +72,8 @@ export default function TabsLayout() {
         <Tabs.Screen name="arena" options={{ href: null }} />
       </Tabs>
       </Animated.View>
+      {/* Captain Shark retention nudges — session bonus / seasonal events / hearts-full */}
+      <RetentionToasts />
     </View>
   );
 }

@@ -218,6 +218,10 @@ export default function RootLayout() {
   // Award daily login XP on app open
   useEffect(() => {
     useEconomyStore.getState().awardLoginBonus();
+    // Stacking session bonus — coins for repeat returns within the same day.
+    // Tiered: 1h=50, 2h=120, 4h=300, 8h=800, 12h+=2000. Surfaces as banner via
+    // pendingSessionBonus state (consumed wherever the UI wants to show it).
+    useEconomyStore.getState().awardSessionStackingBonus();
   }, []);
 
   // Reset Shark CTA session tokens on cold start (so BridgeCTA / ReferralCTA can fire once per session)

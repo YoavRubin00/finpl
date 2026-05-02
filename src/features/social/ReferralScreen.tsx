@@ -338,7 +338,7 @@ function NetworkTreeView({ friends }: { friends: ReferredFriend[] }) {
             entering={ZoomIn.delay(700 + idx * 100).springify()}
             style={treeStyles.friendCol}
             accessible={true}
-            accessibilityLabel={`${friend.displayName}, הרוויח ${friend.yesterdayGold.toLocaleString()} מטבעות אתמול`}
+            accessibilityLabel={`${friend.displayName}, רצף של ${friend.currentStreak ?? 0} ימים, הרוויח ${friend.yesterdayGold.toLocaleString()} מטבעות אתמול`}
           >
             <View style={treeStyles.verticalConnector} accessible={false} />
             <View style={[treeStyles.friendAvatar, treeStyles.friendAvatarCompleted]} accessible={false}>
@@ -351,6 +351,15 @@ function NetworkTreeView({ friends }: { friends: ReferredFriend[] }) {
               <Text style={treeStyles.friendCoins}>{friend.yesterdayGold.toLocaleString()}</Text>
               <GoldCoinIcon size={12} />
             </View>
+            {/* Streak badge — surfaces friend's daily streak for social pressure (Duolingo
+                friend-streaks pattern). Only shown when streak >= 2 (worth flexing). */}
+            {(friend.currentStreak ?? 0) >= 2 && (
+              <View style={treeStyles.streakBadge} accessible={false}>
+                <Text style={treeStyles.streakText} allowFontScaling={false}>
+                  🔥 {friend.currentStreak}
+                </Text>
+              </View>
+            )}
           </Animated.View>
         ))}
       </View>
@@ -411,6 +420,20 @@ const treeStyles = StyleSheet.create({
   friendEmojiText: { fontSize: 20 },
   friendName: { fontSize: 11, fontWeight: "700", color: CALM.textPrimary, textAlign: "center" },
   friendCoins: { fontSize: 10, color: CALM.textSecondary },
+  streakBadge: {
+    marginTop: 2,
+    backgroundColor: 'rgba(251,146,60,0.12)',
+    borderRadius: 8,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderWidth: 1,
+    borderColor: 'rgba(251,146,60,0.35)',
+  },
+  streakText: {
+    fontSize: 10,
+    fontWeight: '800',
+    color: '#c2410c',
+  },
 });
 
 const styles = StyleSheet.create({

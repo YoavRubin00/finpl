@@ -10,6 +10,7 @@ export interface ReferredFriend {
   hasCompletedOnboarding: boolean;
   yesterdayXP: number;
   yesterdayGold: number;
+  currentStreak?: number; // friend's current daily streak — surfaced for social pressure (Duolingo friend-streaks)
   currentModuleId?: string; // module the friend is currently on
 }
 

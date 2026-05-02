@@ -34,6 +34,13 @@ interface EconomyState {
   lastRepairOfferedAt: string | null; // ISO date, prevents repeat offers for the same break
   // US-007: track last 14 days' hour-of-day of activity (for personalized notification time)
   recentActivityHours: number[];
+  // Session stacking bonus (Playtika/Slotomania pattern) — rewards multiple
+  // returns within the same day with escalating coin bonuses.
+  lastSessionAt: number | null; // timestamp of last bonus award (epoch ms)
+  pendingSessionBonus: { coins: number; hoursAway: number } | null; // surfaces a one-shot UI nudge
+  // Hearts-full XP boost (Duolingo "use them while you have them" pattern).
+  // When 1.25, the next lesson XP award is multiplied by 1.25 and the value resets.
+  lessonXPMultiplier: number;
 
   addXP: (amount: number, source: XPSource) => void;
   /**
@@ -48,6 +55,17 @@ interface EconomyState {
   spendGems: (amount: number) => boolean;
   completeDailyTask: () => void;
   awardLoginBonus: () => void;
+  /**
+   * Awards a stacking coin bonus for repeat sessions within the same day.
+   * Stack tiers (hours since last award): 1h=50, 2h=120, 4h=300, 8h=800, 12h+=2000.
+   * Returns the awarded amount (0 if too soon).
+   * Modeled on Playtika/Slotomania hourly login stacking pattern.
+   */
+  awardSessionStackingBonus: () => number;
+  /** Clear the session bonus banner once the user has seen it. */
+  dismissSessionBonus: () => void;
+  /** Set the next-lesson XP multiplier (1.25 when hearts are full). Idempotent. */
+  setLessonXPMultiplier: (value: number) => void;
   grantStarterCapital: () => boolean;
   dismissLevelUp: () => void;
   addStreakFreezes: (count: number) => void;
@@ -102,13 +120,26 @@ export const useEconomyStore = create<EconomyState>()(
       previousStreakBeforeBreak: 0,
       lastRepairOfferedAt: null,
       recentActivityHours: [],
+      lastSessionAt: null,
+      pendingSessionBonus: null,
+      lessonXPMultiplier: 1.0,
 
       addXP: (amount: number, _source: XPSource) => {
         if (amount <= 0) return;
+        // Hearts-full boost: when multiplier is set (1.25), apply it ONCE for
+        // lesson-related sources, then reset. Other sources (daily task, login)
+        // are unaffected — the boost is meant to incentivize active lessons.
+        const mult = get().lessonXPMultiplier;
+        const isLessonSource = _source === 'lesson_complete' || _source === 'quiz_correct';
+        let finalAmount = amount;
+        if (mult > 1.0 && isLessonSource) {
+          finalAmount = Math.round(amount * mult);
+          set({ lessonXPMultiplier: 1.0 });
+        }
         const prevXP = get().xp;
         const prevLevel = getLevelFromXP(prevXP);
         const prevLayer = getPyramidLayer(prevXP);
-        set((state) => ({ xp: state.xp + amount }));
+        set((state) => ({ xp: state.xp + finalAmount }));
         const { xp, coins, gems } = get();
         const newLevel = getLevelFromXP(xp);
         const newLayer = getPyramidLayer(xp);
@@ -137,7 +168,19 @@ export const useEconomyStore = create<EconomyState>()(
 
       addCoins: (amount: number, source) => {
         if (amount <= 0) return;
-        set((state) => ({ coins: state.coins + amount }));
+        // Apply active seasonal-event multiplier (e.g. יום העצמאות = 1.25x) to
+        // dividend-eligible learning sources only. Other sources (referral
+        // signup bonus, login stacking, etc.) keep their fixed magnitudes so
+        // the economy stays predictable and the dividend pool sums cleanly.
+        let finalAmount = amount;
+        if (source === 'lesson' || source === 'quiz' || source === 'daily-quest') {
+          // Lazy import to avoid pulling the calendar into the persist hot path.
+          // eslint-disable-next-line @typescript-eslint/no-require-imports
+          const { getActiveRewardMultiplier } = require('../seasonal-events/seasonalEvents') as typeof import('../seasonal-events/seasonalEvents');
+          const mult = getActiveRewardMultiplier();
+          if (mult > 1.0) finalAmount = Math.round(amount * mult);
+        }
+        set((state) => ({ coins: state.coins + finalAmount }));
         const { xp, coins, gems } = get();
         const authId = useAuthStore.getState().email;
         if (authId) {
@@ -147,7 +190,7 @@ export const useEconomyStore = create<EconomyState>()(
           // Fire-and-forget — failures don't affect the local balance.
           if (source) {
             import('../../db/sync/syncCoinEvents')
-              .then((m) => m.logCoinGrant(authId, amount, source))
+              .then((m) => m.logCoinGrant(authId, finalAmount, source))
               .catch(() => { /* non-fatal */ });
           }
         }
@@ -346,6 +389,41 @@ export const useEconomyStore = create<EconomyState>()(
         }));
         return true;
       },
+
+      awardSessionStackingBonus: (): number => {
+        const now = Date.now();
+        const last = get().lastSessionAt;
+        // First session ever / day — track but don't award (login bonus handles it).
+        if (last == null) {
+          set({ lastSessionAt: now });
+          return 0;
+        }
+        const hoursAway = (now - last) / (1000 * 60 * 60);
+        let bonus = 0;
+        if (hoursAway >= 12) bonus = 2000;
+        else if (hoursAway >= 8) bonus = 800;
+        else if (hoursAway >= 4) bonus = 300;
+        else if (hoursAway >= 2) bonus = 120;
+        else if (hoursAway >= 1) bonus = 50;
+        else return 0; // too soon — don't update timestamp either, prevents farming
+        set((state) => ({
+          coins: state.coins + bonus,
+          lastSessionAt: now,
+          pendingSessionBonus: { coins: bonus, hoursAway: Math.round(hoursAway) },
+        }));
+        return bonus;
+      },
+
+      dismissSessionBonus: () => {
+        set({ pendingSessionBonus: null });
+      },
+
+      setLessonXPMultiplier: (value: number) => {
+        // Clamp to safe range — only 1.0 (off) or 1.25 (hearts-full bonus) are valid today.
+        const safe = value > 1.0 ? Math.min(value, 1.5) : 1.0;
+        if (get().lessonXPMultiplier === safe) return; // idempotent — avoid render loops
+        set({ lessonXPMultiplier: safe });
+      },
     }),
     {
       name: "economy-store",
@@ -366,6 +444,8 @@ export const useEconomyStore = create<EconomyState>()(
         previousStreakBeforeBreak: state.previousStreakBeforeBreak,
         lastRepairOfferedAt: state.lastRepairOfferedAt,
         recentActivityHours: state.recentActivityHours,
+        lastSessionAt: state.lastSessionAt,
+        lessonXPMultiplier: state.lessonXPMultiplier,
       }),
       onRehydrateStorage: () => (state) => {
         if (!state) return;

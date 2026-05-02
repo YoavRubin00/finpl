@@ -7,6 +7,7 @@ import { useChapterStore } from "../chapter-1-content/useChapterStore";
 import type { DailyQuest, QuestRewardSummary } from "./daily-quest-types";
 import {
   QUEST_TEMPLATES,
+  questTemplatesByType,
   QUEST_XP_REWARD,
   QUEST_COIN_REWARD,
   QUEST_GEM_CHANCE,
@@ -93,12 +94,15 @@ export const useDailyQuestsStore = create<DailyQuestsState>()(
           get().syncCompletions();
           return;
         }
-        // New day, generate fresh quests
-        const quests: DailyQuest[] = QUEST_TEMPLATES.map((t, i) => ({
-          ...t,
-          id: `${today}-${i}`,
-          isCompleted: false,
-        }));
+        // New day — pick one random template per type from the pool of 12.
+        // Keeps the 3-quest rhythm while rotating copy daily (Brawl Stars pattern).
+        const byType = questTemplatesByType();
+        const order: DailyQuest["type"][] = ["dilemma", "module", "swipe"];
+        const quests: DailyQuest[] = order.map((type, i) => {
+          const pool = byType[type];
+          const tpl = pool[Math.floor(Math.random() * pool.length)] ?? QUEST_TEMPLATES[i];
+          return { ...tpl, id: `${today}-${i}`, isCompleted: false };
+        });
         set({ quests, questDate: today, rewardClaimed: false, proRewardClaimed: false, newlyCompleted: false, lastRewardSummary: null });
       },
 

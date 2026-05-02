@@ -1356,17 +1356,20 @@ export function DuoLearnScreen() {
         {roadmapVisible && (
           <View style={[StyleSheet.absoluteFill, { zIndex: 9999, elevation: 9999 }]} accessibilityViewIsModal>
             <Animated.View entering={FadeInDown.duration(200)} style={{ flex: 1 }}>
-          <Pressable style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.4)", justifyContent: "center", alignItems: "center", padding: 20 }} onPress={() => setRoadmapVisible(false)} accessibilityRole="button" accessibilityLabel="סגור מסלול הלמידה">
-            <Pressable onPress={() => {}} style={{ width: "100%", maxWidth: 380, backgroundColor: "#ffffff", borderRadius: 24, padding: 24, shadowColor: "#000", shadowOpacity: 0.15, shadowRadius: 20, shadowOffset: { width: 0, height: 8 }, elevation: 10 }} accessibilityLabel="תוכן מסלול הלמידה">
-              {/* Title */}
-              <Text style={{ fontSize: 20, fontFamily: "Heebo_700Bold", color: "#0f172a", textAlign: "center", marginBottom: 6, writingDirection: "rtl" }}>
-                מסלול הלמידה שלך
-              </Text>
-              <Text style={{ fontSize: 13, fontFamily: "Heebo_400Regular", color: "#64748b", textAlign: "center", marginBottom: 20, writingDirection: "rtl" }}>
-                6 פרקים מהבסיס ועד חופש כלכלי
-              </Text>
+          <Pressable style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.4)", justifyContent: "center", alignItems: "center", padding: 16 }} onPress={() => setRoadmapVisible(false)} accessibilityRole="button" accessibilityLabel="סגור מסלול הלמידה">
+            <Pressable onPress={() => {}} style={{ width: "100%", maxWidth: 380, maxHeight: "95%", backgroundColor: "#ffffff", borderRadius: 24, overflow: "hidden", shadowColor: "#000", shadowOpacity: 0.15, shadowRadius: 20, shadowOffset: { width: 0, height: 8 }, elevation: 10 }} accessibilityLabel="תוכן מסלול הלמידה">
+              {/* Header (fixed) */}
+              <View style={{ paddingTop: 16, paddingHorizontal: 18, paddingBottom: 10 }}>
+                <Text style={{ fontSize: 18, fontFamily: "Heebo_700Bold", color: "#0f172a", textAlign: "center", marginBottom: 2, writingDirection: "rtl" }}>
+                  מסלול הלמידה שלך
+                </Text>
+                <Text style={{ fontSize: 12, fontFamily: "Heebo_400Regular", color: "#64748b", textAlign: "center", writingDirection: "rtl" }}>
+                  6 פרקים מהבסיס ועד חופש כלכלי
+                </Text>
+              </View>
 
-              {/* Chapters list */}
+              {/* Chapters list (scrollable) */}
+              <ScrollView style={{ flexShrink: 1 }} contentContainerStyle={{ paddingHorizontal: 18, paddingBottom: 6 }} showsVerticalScrollIndicator={false}>
               {ARENAS.map((arena, idx) => {
                 const ch = ALL_CHAPTERS[idx];
                 const done = progress[storeKey(ch.id)]?.completedModules ?? [];
@@ -1461,11 +1464,14 @@ export function DuoLearnScreen() {
                   </View>
                 );
               })}
+              </ScrollView>
 
-              {/* Close button */}
-              <Pressable onPress={() => setRoadmapVisible(false)} style={{ marginTop: 18, alignSelf: "center", paddingHorizontal: 32, paddingVertical: 10, backgroundColor: "#f0f9ff", borderRadius: 20, borderWidth: 1, borderColor: "#bae6fd" }} accessibilityRole="button" accessibilityLabel="סגור">
-                <Text style={{ fontSize: 14, fontFamily: "Heebo_500Medium", color: "#0284c7" }}>סגור</Text>
-              </Pressable>
+              {/* Close button (pinned) */}
+              <View style={{ paddingVertical: 12, paddingHorizontal: 18, alignItems: "center", borderTopWidth: 1, borderTopColor: "#f1f5f9" }}>
+                <Pressable onPress={() => setRoadmapVisible(false)} style={{ paddingHorizontal: 32, paddingVertical: 10, backgroundColor: "#f0f9ff", borderRadius: 20, borderWidth: 1, borderColor: "#bae6fd" }} accessibilityRole="button" accessibilityLabel="סגור">
+                  <Text style={{ fontSize: 14, fontFamily: "Heebo_500Medium", color: "#0284c7" }}>סגור</Text>
+                </Pressable>
+              </View>
             </Pressable>
           </Pressable>
         </Animated.View>
