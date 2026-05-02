@@ -60,6 +60,79 @@ export const SHOP_ITEMS: readonly ShopItem[] = [
     emoji: '🛡️',
     lottieSource: require('../../../assets/lottie/wired-flat-457-shield-security-hover-pinch.json'),
   },
+  // ── הגנה Premium (Streak Insurance — whale-tier protection) ──
+  {
+    id: 'streak-shield-week',
+    category: 'protection',
+    name: 'מגן שבוע',
+    description: 'מבטח עד 3 ימים שפספסתם השבוע. בלי שחיקת רצף.',
+    coinCost: 0,
+    gemCost: 200,
+    emoji: '🛡️',
+    lottieSource: require('../../../assets/lottie/wired-flat-457-shield-security-hover-pinch.json'),
+  },
+  {
+    id: 'streak-shield-month',
+    category: 'protection',
+    name: 'מגן חודש',
+    description: 'מבטח עד 7 ימים שפספסתם החודש. ביטוח Pro לסטרייקרים.',
+    coinCost: 0,
+    gemCost: 600,
+    emoji: '⚔️',
+    lottieSource: require('../../../assets/lottie/wired-flat-457-shield-security-hover-pinch.json'),
+  },
+  {
+    id: 'streak-revival-elite',
+    category: 'protection',
+    name: 'תחיית רצף Elite',
+    description: 'מחזיר רצף שנשבר עד 60 ימים אחורה. חד-פעמי.',
+    coinCost: 0,
+    gemCost: 1500,
+    emoji: '💎',
+    lottieSource: require('../../../assets/lottie/Diamond.json'),
+  },
+
+  // ── Boosters (Coin Master "Power Hour" / Brawl Stars "Star Boost" pattern) ──
+  {
+    id: 'boost-xp-2x-1h',
+    category: 'boosts',
+    name: 'XP כפול לשעה',
+    description: 'כל XP מהשיעור הבא ולשעה אחת — כפול. צאו ללמוד.',
+    coinCost: 0,
+    gemCost: 80,
+    emoji: '⚡',
+    lottieSource: require('../../../assets/lottie/wired-flat-489-rocket-space-hover-flying.json'),
+  },
+  {
+    id: 'boost-coins-2x-1h',
+    category: 'boosts',
+    name: 'מטבעות כפול לשעה',
+    description: 'כל מטבע מלמידה לשעה — כפול. אגרסיבי על אגרסיביות.',
+    coinCost: 0,
+    gemCost: 80,
+    emoji: '🪙',
+    lottieSource: require('../../../assets/lottie/wired-flat-2474-sparkles-glitter-hover-pinch.json'),
+  },
+  {
+    id: 'boost-mega-1h',
+    category: 'boosts',
+    name: 'Mega Boost לשעה',
+    description: 'XP כפול + מטבעות כפול + תגמולי משימות כפולים. לשעה.',
+    coinCost: 0,
+    gemCost: 150,
+    emoji: '🚀',
+    lottieSource: require('../../../assets/lottie/wired-flat-489-rocket-space-hover-flying.json'),
+  },
+  {
+    id: 'boost-weekend',
+    category: 'boosts',
+    name: 'Weekend Boost',
+    description: '1.5× לכל הלמידה משישי 18:00 עד שבת 22:00. ה-weekend הכי משתלם.',
+    coinCost: 0,
+    gemCost: 250,
+    emoji: '🌅',
+    lottieSource: require('../../../assets/lottie/wired-flat-1307-hub-network-hover-pinch.json'),
+  },
 
   // ── קוסמטיקה (aspirational, weeks of saving) ──
   {
@@ -166,6 +239,7 @@ export const SHOP_ITEMS: readonly ShopItem[] = [
 
 export const SHOP_CATEGORIES: readonly { key: ShopCategory; label: string; lottieSource?: number }[] = [
   { key: 'hearts', label: 'לבבות', lottieSource: require('../../../assets/lottie/wired-flat-20-love-heart-hover-heartbeat.json') },
+  { key: 'boosts', label: 'בוסטרים', lottieSource: require('../../../assets/lottie/wired-flat-489-rocket-space-hover-flying.json') },
   { key: 'hints', label: 'רמזים', lottieSource: require('../../../assets/lottie/wired-flat-36-bulb-hover-blink.json') },
   { key: 'protection', label: 'הגנה', lottieSource: require('../../../assets/lottie/wired-flat-457-shield-security-hover-pinch.json') },
   { key: 'cosmetics', label: 'קוסמטיקה', lottieSource: require('../../../assets/lottie/wired-flat-2474-sparkles-glitter-hover-pinch.json') },

@@ -13,6 +13,7 @@ import { useRef } from "react";
 import { GlobalWealthHeader } from "../../src/components/ui/GlobalWealthHeader";
 import { AnimatedTabBar } from "../../src/components/ui/AnimatedTabBar";
 import { RetentionToasts } from "../../src/features/retention-loops/RetentionToasts";
+import { BoostBanner } from "../../src/components/ui/BoostBanner";
 
 const SLIDE_PX = 70;
 
@@ -44,6 +45,10 @@ export default function TabsLayout() {
       <View style={{ backgroundColor: "#ffffff" }}>
         <View style={{ paddingTop: insets.top }} />
         <GlobalWealthHeader />
+        {/* Active boost countdown — hidden when no boost is active */}
+        <View style={{ paddingHorizontal: 16, paddingBottom: 6 }}>
+          <BoostBanner />
+        </View>
       </View>
       <Animated.View style={[{ flex: 1, overflow: "hidden" }, slideStyle]}>
       <Tabs

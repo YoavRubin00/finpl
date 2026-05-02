@@ -12,6 +12,7 @@ const CATEGORY_ACCENTS: Record<ShopCategory, string> = {
   hearts: '#ef4444',
   hints: '#f59e0b',
   protection: '#0891b2',
+  boosts: '#a855f7',     // purple — energy/power tier
   cosmetics: '#0891b2',
   premium: '#0891b2',
   avatars: '#ec4899',

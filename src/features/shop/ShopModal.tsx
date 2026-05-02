@@ -93,6 +93,8 @@ export function ShopModal() {
       : spendCoins(effectiveCoinCost(pendingItem));
 
     if (success) {
+      const eco = useEconomyStore.getState();
+      const ONE_HOUR = 60 * 60 * 1000;
       if (pendingItem.id === "heart-refill-full") {
         restoreAllHearts();
       } else if (pendingItem.id === "heart-refill-1") {
@@ -102,9 +104,46 @@ export function ShopModal() {
           useSubscriptionStore.setState({ hearts: current + 1 });
         }
       } else if (pendingItem.id === "streak-freeze") {
-        useEconomyStore.getState().addStreakFreezes(1);
+        eco.addStreakFreezes(1);
       } else if (pendingItem.id === "streak-freeze-bundle") {
-        useEconomyStore.getState().addStreakFreezes(3);
+        eco.addStreakFreezes(3);
+      // ── Boost packs ──
+      } else if (pendingItem.id === "boost-xp-2x-1h") {
+        eco.activateBoost(pendingItem.id, ONE_HOUR, { xpMultiplier: 2 });
+      } else if (pendingItem.id === "boost-coins-2x-1h") {
+        eco.activateBoost(pendingItem.id, ONE_HOUR, { coinMultiplier: 2 });
+      } else if (pendingItem.id === "boost-mega-1h") {
+        eco.activateBoost(pendingItem.id, ONE_HOUR, {
+          xpMultiplier: 2,
+          coinMultiplier: 2,
+          questRewardMultiplier: 2,
+        });
+      } else if (pendingItem.id === "boost-weekend") {
+        // Weekend Boost — ride out until Saturday 22:00 local. Generous fallback
+        // of 28 hours when purchased mid-weekend; reduce-to-zero if past window.
+        const now = new Date();
+        const dayOfWeek = now.getDay(); // 0=Sun, 5=Fri, 6=Sat
+        const target = new Date(now);
+        if (dayOfWeek <= 5) {
+          // Set target to next Saturday 22:00
+          target.setDate(now.getDate() + (6 - dayOfWeek));
+          target.setHours(22, 0, 0, 0);
+        } else {
+          // Saturday — until 22:00 today
+          target.setHours(22, 0, 0, 0);
+        }
+        const ms = Math.max(target.getTime() - now.getTime(), ONE_HOUR);
+        eco.activateBoost(pendingItem.id, ms, {
+          xpMultiplier: 1.5,
+          coinMultiplier: 1.5,
+        });
+      // ── Streak insurance ──
+      } else if (pendingItem.id === "streak-shield-week") {
+        eco.activateStreakShield('week');
+      } else if (pendingItem.id === "streak-shield-month") {
+        eco.activateStreakShield('month');
+      } else if (pendingItem.id === "streak-revival-elite") {
+        eco.grantEliteRevival();
       }
     }
     setPendingItem(null);

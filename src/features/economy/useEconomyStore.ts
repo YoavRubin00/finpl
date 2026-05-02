@@ -41,6 +41,18 @@ interface EconomyState {
   // Hearts-full XP boost (Duolingo "use them while you have them" pattern).
   // When 1.25, the next lesson XP award is multiplied by 1.25 and the value resets.
   lessonXPMultiplier: number;
+  // Active temporary boosts purchased from the shop (Coin Master "Power Hour"
+  // pattern). Each entry has its own expiresAt — `getActiveBoostMultipliers()`
+  // sums them and `cleanupExpiredBoosts()` is called transparently on read.
+  activeBoosts: import('../shop/types').ActiveBoost[];
+  // Streak Insurance — whale-tier protection beyond the regular streak-freeze.
+  // weeklyShieldUntil / monthlyShieldUntil = epoch ms. Allows N missed days
+  // within the active window to NOT break streak. Used in `completeDailyTask`
+  // and `awardLoginBonus` break-detection.
+  weeklyShieldUntil: number | null;
+  monthlyShieldUntil: number | null;
+  /** Number of one-shot Elite revivals owned (each restores a broken streak up to 60 days back). */
+  eliteRevivalCount: number;
 
   addXP: (amount: number, source: XPSource) => void;
   /**
@@ -66,6 +78,21 @@ interface EconomyState {
   dismissSessionBonus: () => void;
   /** Set the next-lesson XP multiplier (1.25 when hearts are full). Idempotent. */
   setLessonXPMultiplier: (value: number) => void;
+  /** Activate a shop-purchased booster. `multipliers` are kept on the boost
+   *  itself so we don't hard-code item ids in the store. */
+  activateBoost: (
+    id: string,
+    durationMs: number,
+    multipliers: { xpMultiplier?: number; coinMultiplier?: number; questRewardMultiplier?: number },
+  ) => void;
+  /** Returns combined multipliers from all active (un-expired) boosts. */
+  getActiveBoostMultipliers: () => { xp: number; coins: number; questReward: number };
+  /** Activate Streak Insurance from a shop purchase. */
+  activateStreakShield: (kind: 'week' | 'month') => void;
+  /** Add an Elite Revival to the inventory (purchased once-per-event). */
+  grantEliteRevival: () => void;
+  /** Consume one Elite Revival to restore a broken streak. Returns true on success. */
+  useEliteRevival: () => boolean;
   grantStarterCapital: () => boolean;
   dismissLevelUp: () => void;
   addStreakFreezes: (count: number) => void;
@@ -123,6 +150,10 @@ export const useEconomyStore = create<EconomyState>()(
       lastSessionAt: null,
       pendingSessionBonus: null,
       lessonXPMultiplier: 1.0,
+      activeBoosts: [],
+      weeklyShieldUntil: null,
+      monthlyShieldUntil: null,
+      eliteRevivalCount: 0,
 
       addXP: (amount: number, _source: XPSource) => {
         if (amount <= 0) return;
@@ -135,6 +166,12 @@ export const useEconomyStore = create<EconomyState>()(
         if (mult > 1.0 && isLessonSource) {
           finalAmount = Math.round(amount * mult);
           set({ lessonXPMultiplier: 1.0 });
+        }
+        // Active shop-purchased boosters (XP×2, Mega Boost, Weekend Boost).
+        // Stack multiplicatively on top of the hearts-full bonus.
+        if (isLessonSource) {
+          const boostXp = get().getActiveBoostMultipliers().xp;
+          if (boostXp > 1.0) finalAmount = Math.round(finalAmount * boostXp);
         }
         const prevXP = get().xp;
         const prevLevel = getLevelFromXP(prevXP);
@@ -177,8 +214,12 @@ export const useEconomyStore = create<EconomyState>()(
           // Lazy import to avoid pulling the calendar into the persist hot path.
           // eslint-disable-next-line @typescript-eslint/no-require-imports
           const { getActiveRewardMultiplier } = require('../seasonal-events/seasonalEvents') as typeof import('../seasonal-events/seasonalEvents');
-          const mult = getActiveRewardMultiplier();
-          if (mult > 1.0) finalAmount = Math.round(amount * mult);
+          const seasonalMult = getActiveRewardMultiplier();
+          if (seasonalMult > 1.0) finalAmount = Math.round(finalAmount * seasonalMult);
+          // Active shop-purchased boosters (Coins×2, Mega Boost). Stack on top
+          // of seasonal events so a Mega Boost on Yom HaAtzmaut hits 2.5×.
+          const boostCoins = get().getActiveBoostMultipliers().coins;
+          if (boostCoins > 1.0) finalAmount = Math.round(finalAmount * boostCoins);
         }
         set((state) => ({ coins: state.coins + finalAmount }));
         const { xp, coins, gems } = get();
@@ -227,7 +268,7 @@ export const useEconomyStore = create<EconomyState>()(
       },
 
       completeDailyTask: () => {
-        const { lastDailyTaskDate, streak, streakFreezes, activeDates, frozenDates } = get();
+        const { lastDailyTaskDate, streak, streakFreezes, activeDates, frozenDates, weeklyShieldUntil, monthlyShieldUntil } = get();
         const today = todayISO();
 
         // Idempotent: already completed today
@@ -236,6 +277,15 @@ export const useEconomyStore = create<EconomyState>()(
         const isConsecutiveDay = lastDailyTaskDate === yesterdayISO();
         const gap = lastDailyTaskDate ? daysBetween(lastDailyTaskDate, today) : 999;
         const canFreeze = gap === 2 && streakFreezes > 0; // missed exactly 1 day
+        // Streak Insurance — shield-saved breaks (Whale-tier protection).
+        // Weekly shield covers up to 3 missed days within the active window;
+        // monthly covers up to 7. Shields are time-based (not consumed per use).
+        const now = Date.now();
+        const weeklyShieldActive = weeklyShieldUntil != null && weeklyShieldUntil > now;
+        const monthlyShieldActive = monthlyShieldUntil != null && monthlyShieldUntil > now;
+        const canWeeklyShield = weeklyShieldActive && gap >= 2 && gap <= 4;     // 1–3 missed days
+        const canMonthlyShield = monthlyShieldActive && gap >= 2 && gap <= 8;   // 1–7 missed days
+        const canShield = !canFreeze && (canWeeklyShield || canMonthlyShield);
 
         let newStreak: number;
         let freezeConsumed = false;
@@ -245,6 +295,8 @@ export const useEconomyStore = create<EconomyState>()(
         } else if (canFreeze) {
           newStreak = streak + 1;
           freezeConsumed = true;
+        } else if (canShield) {
+          newStreak = streak + 1; // shield saves the break — streak continues
         } else {
           newStreak = 1;
           streakBroke = streak >= 3; // repair offer only for meaningful breaks
@@ -296,7 +348,7 @@ export const useEconomyStore = create<EconomyState>()(
       },
 
       awardLoginBonus: () => {
-        const { lastLoginBonusDate, lastDailyTaskDate, streak, streakFreezes, activeDates, frozenDates } = get();
+        const { lastLoginBonusDate, lastDailyTaskDate, streak, streakFreezes, activeDates, frozenDates, weeklyShieldUntil, monthlyShieldUntil } = get();
         const today = todayISO();
         if (lastLoginBonusDate === today) return;
 
@@ -305,6 +357,13 @@ export const useEconomyStore = create<EconomyState>()(
         const isConsecutiveDay = lastActive === yesterdayISO();
         const gap = lastActive ? daysBetween(lastActive, today) : 999;
         const canFreeze = gap === 2 && streakFreezes > 0;
+        // Streak Insurance — same logic as completeDailyTask, mirrored here.
+        const now = Date.now();
+        const weeklyShieldActive = weeklyShieldUntil != null && weeklyShieldUntil > now;
+        const monthlyShieldActive = monthlyShieldUntil != null && monthlyShieldUntil > now;
+        const canWeeklyShield = weeklyShieldActive && gap >= 2 && gap <= 4;
+        const canMonthlyShield = monthlyShieldActive && gap >= 2 && gap <= 8;
+        const canShield = !canFreeze && (canWeeklyShield || canMonthlyShield);
 
         let newStreak: number;
         let freezeConsumed = false;
@@ -316,6 +375,8 @@ export const useEconomyStore = create<EconomyState>()(
         } else if (canFreeze) {
           newStreak = streak + 1;
           freezeConsumed = true;
+        } else if (canShield) {
+          newStreak = streak + 1;
         } else {
           newStreak = 1;
           streakBroke = streak >= 3;
@@ -424,6 +485,81 @@ export const useEconomyStore = create<EconomyState>()(
         if (get().lessonXPMultiplier === safe) return; // idempotent — avoid render loops
         set({ lessonXPMultiplier: safe });
       },
+
+      activateBoost: (id, durationMs, multipliers) => {
+        const now = Date.now();
+        // Drop any expired boost AND any prior copy of this same id (stacking
+        // the same booster just refreshes the timer — Brawl Stars pattern,
+        // not Coin Master's true stacking which can balloon out of control).
+        const fresh = get().activeBoosts.filter(
+          (b) => b.expiresAt > now && b.id !== id,
+        );
+        set({
+          activeBoosts: [
+            ...fresh,
+            {
+              id,
+              expiresAt: now + durationMs,
+              xpMultiplier: multipliers.xpMultiplier,
+              coinMultiplier: multipliers.coinMultiplier,
+              questRewardMultiplier: multipliers.questRewardMultiplier,
+            },
+          ],
+        });
+      },
+
+      getActiveBoostMultipliers: () => {
+        const now = Date.now();
+        const active = get().activeBoosts.filter((b) => b.expiresAt > now);
+        // If anything was filtered out, persist the cleanup back to state lazily
+        if (active.length !== get().activeBoosts.length) {
+          set({ activeBoosts: active });
+        }
+        // Multiplicative stacking — XP×2 + Coins×2 + Mega gives 2×2×2 (rare). Most
+        // of the time only one is active. Pure 1.0 if no active boost.
+        let xp = 1.0, coins = 1.0, questReward = 1.0;
+        for (const b of active) {
+          if (b.xpMultiplier && b.xpMultiplier > 1.0) xp *= b.xpMultiplier;
+          if (b.coinMultiplier && b.coinMultiplier > 1.0) coins *= b.coinMultiplier;
+          if (b.questRewardMultiplier && b.questRewardMultiplier > 1.0) questReward *= b.questRewardMultiplier;
+        }
+        return { xp, coins, questReward };
+      },
+
+      activateStreakShield: (kind) => {
+        const now = Date.now();
+        const ms = kind === 'week' ? 7 * 24 * 60 * 60 * 1000 : 30 * 24 * 60 * 60 * 1000;
+        if (kind === 'week') {
+          // Extend if already active — never shorten
+          const cur = get().weeklyShieldUntil ?? 0;
+          set({ weeklyShieldUntil: Math.max(cur, now + ms) });
+        } else {
+          const cur = get().monthlyShieldUntil ?? 0;
+          set({ monthlyShieldUntil: Math.max(cur, now + ms) });
+        }
+      },
+
+      grantEliteRevival: () => {
+        set((state) => ({ eliteRevivalCount: state.eliteRevivalCount + 1 }));
+      },
+
+      useEliteRevival: (): boolean => {
+        const count = get().eliteRevivalCount;
+        if (count <= 0) return false;
+        // Restore broken streak from snapshot — same path as repairStreak.
+        const prevStreak = get().previousStreakBeforeBreak;
+        if (prevStreak < 1) {
+          // Nothing to restore. Don't burn the revival.
+          return false;
+        }
+        set({
+          eliteRevivalCount: count - 1,
+          streak: prevStreak,
+          pendingRepairOffer: false,
+          previousStreakBeforeBreak: 0,
+        });
+        return true;
+      },
     }),
     {
       name: "economy-store",
@@ -446,6 +582,10 @@ export const useEconomyStore = create<EconomyState>()(
         recentActivityHours: state.recentActivityHours,
         lastSessionAt: state.lastSessionAt,
         lessonXPMultiplier: state.lessonXPMultiplier,
+        activeBoosts: state.activeBoosts,
+        weeklyShieldUntil: state.weeklyShieldUntil,
+        monthlyShieldUntil: state.monthlyShieldUntil,
+        eliteRevivalCount: state.eliteRevivalCount,
       }),
       onRehydrateStorage: () => (state) => {
         if (!state) return;

@@ -182,6 +182,7 @@ const CATEGORY_EMOJI: Record<ShopCategory, string> = {
   hearts: '❤️',
   hints: '💡',
   protection: '🛡️',
+  boosts: '🚀',
   cosmetics: '✨',
   premium: '💎',
   avatars: '👤',

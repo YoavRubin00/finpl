@@ -81,6 +81,7 @@
     },
     "android": {
       "package": "com.finplay.app",
+      "edgeToEdgeEnabled": true,
       "adaptiveIcon": {
         "foregroundImage": "./assets/IMAGES/icon-1024.png",
         "backgroundColor": "#0a1628"
