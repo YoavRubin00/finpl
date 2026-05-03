@@ -334,15 +334,49 @@ export function ShopScreen() {
     const isGem = (pendingItem.gemCost ?? 0) > 0;
     const ok = isGem ? spendGems(pendingItem.gemCost ?? 0) : spendCoins(pendingItem.coinCost);
     if (ok) {
+      const eco = useEconomyStore.getState();
+      const ONE_HOUR = 60 * 60 * 1000;
       if (pendingItem.id === 'heart-refill-full') restoreAllHearts();
       else if (pendingItem.id === 'heart-refill-1') {
         const s = useSubscriptionStore.getState();
         if (s.hearts < 4) useSubscriptionStore.setState({ hearts: s.hearts + 1 });
       } else if (pendingItem.id === 'streak-freeze') {
-        useEconomyStore.getState().addStreakFreezes(1);
+        eco.addStreakFreezes(1);
         successHaptic();
       } else if (pendingItem.id === 'streak-freeze-bundle') {
-        useEconomyStore.getState().addStreakFreezes(3);
+        eco.addStreakFreezes(3);
+        successHaptic();
+      } else if (pendingItem.id === 'boost-xp-2x-1h') {
+        eco.activateBoost(pendingItem.id, ONE_HOUR, { xpMultiplier: 2 });
+        successHaptic();
+      } else if (pendingItem.id === 'boost-coins-2x-1h') {
+        eco.activateBoost(pendingItem.id, ONE_HOUR, { coinMultiplier: 2 });
+        successHaptic();
+      } else if (pendingItem.id === 'boost-mega-1h') {
+        eco.activateBoost(pendingItem.id, ONE_HOUR, { xpMultiplier: 2, coinMultiplier: 2, questRewardMultiplier: 2 });
+        successHaptic();
+      } else if (pendingItem.id === 'boost-weekend') {
+        // Active until next Saturday 22:00 local; min 1h fallback if past window.
+        const now = new Date();
+        const dayOfWeek = now.getDay();
+        const target = new Date(now);
+        if (dayOfWeek <= 5) {
+          target.setDate(now.getDate() + (6 - dayOfWeek));
+          target.setHours(22, 0, 0, 0);
+        } else {
+          target.setHours(22, 0, 0, 0);
+        }
+        const ms = Math.max(target.getTime() - now.getTime(), ONE_HOUR);
+        eco.activateBoost(pendingItem.id, ms, { xpMultiplier: 1.5, coinMultiplier: 1.5 });
+        successHaptic();
+      } else if (pendingItem.id === 'streak-shield-week') {
+        eco.activateStreakShield('week');
+        successHaptic();
+      } else if (pendingItem.id === 'streak-shield-month') {
+        eco.activateStreakShield('month');
+        successHaptic();
+      } else if (pendingItem.id === 'streak-revival-elite') {
+        eco.grantEliteRevival();
         successHaptic();
       } else if (isAvatarItem(pendingItem)) {
         addOwnedAvatar(pendingItem.id); setAvatar(pendingItem.id); successHaptic();
@@ -525,15 +559,14 @@ export function ShopScreen() {
               <View style={styles.bundleGrid}>
                 {visibleItems.map((item, i) => {
                   const isAvatar = isAvatarItem(item);
-                  const rawId = item.id.replace('avatar-', '');
                   return (
                     <Animated.View key={item.id} entering={FadeInDown.duration(150)} style={styles.gridItem}>
                       <ShopItemCard
                         item={item}
                         canAfford={canAffordItem(item)}
                         onBuyPress={() => handleBuyPress(item)}
-                        isEquipped={isAvatar && avatarId === rawId}
-                        isOwned={isAvatar && ownedAvatars.includes(rawId)}
+                        isEquipped={isAvatar && avatarId === item.id}
+                        isOwned={isAvatar && ownedAvatars.includes(item.id)}
                       />
                     </Animated.View>
                   );

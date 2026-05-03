@@ -15,6 +15,7 @@
  */
 import React, { useCallback, useState } from 'react';
 import { Modal, View, Text, StyleSheet, Pressable, Alert } from 'react-native';
+import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import { X } from 'lucide-react-native';
 import LottieView from 'lottie-react-native';
@@ -41,6 +42,7 @@ interface Props {
 const HAS_RC_KEY = !!(process.env.EXPO_PUBLIC_RC_APPLE_KEY || process.env.EXPO_PUBLIC_RC_GOOGLE_KEY);
 
 export function StarterPackModal({ visible, onDismiss, onPurchaseSuccess }: Props) {
+  const router = useRouter();
   const addCoins = useEconomyStore((s) => s.addCoins);
   const addGems = useEconomyStore((s) => s.addGems);
   const addOwnedAvatar = useAuthStore((s) => s.addOwnedAvatar);
@@ -202,6 +204,22 @@ export function StarterPackModal({ visible, onDismiss, onPurchaseSuccess }: Prop
               <Pressable onPress={handleCancel} style={styles.maybeLaterBtn} accessibilityRole="button" accessibilityLabel="סגור">
                 <Text style={styles.maybeLaterText} allowFontScaling={false}>{isMinor ? 'סגור' : 'אולי אחר כך'}</Text>
               </Pressable>
+
+              {/* Terms acknowledgement — required by Apple App Review for any
+                  IAP CTA. The link routes to the unified legal screen which
+                  contains both EULA and the privacy policy. */}
+              {!isMinor && (
+                <Pressable
+                  onPress={() => { onDismiss(); router.push('/legal' as never); }}
+                  accessibilityRole="link"
+                  accessibilityLabel="תנאי שימוש ופרטיות"
+                  hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
+                >
+                  <Text style={styles.termsText} allowFontScaling={false}>
+                    בלחיצה על &quot;קנה&quot; אני מאשר/ת את <Text style={styles.termsLink}>תנאי השימוש</Text>
+                  </Text>
+                </Pressable>
+              )}
             </View>
           </LinearGradient>
         </View>
@@ -410,5 +428,17 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     writingDirection: 'rtl' as const,
     lineHeight: 17,
+  },
+  termsText: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: '#64748b',
+    textAlign: 'center',
+    writingDirection: 'rtl' as const,
+    marginTop: 4,
+  },
+  termsLink: {
+    color: '#22d3ee',
+    textDecorationLine: 'underline' as const,
   },
 });

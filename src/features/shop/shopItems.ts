@@ -21,26 +21,6 @@ export const SHOP_ITEMS: readonly ShopItem[] = [
     lottieSource: require('../../../assets/lottie/wired-flat-20-love-heart-hover-heartbeat.json'),
   },
 
-  // ── רמזים ──
-  {
-    id: 'hint-single',
-    category: 'hints',
-    name: 'רמז לשאלה',
-    description: 'חושף תשובה אחת שגויה בקוויז בלי להפסיד XP.',
-    coinCost: 1200,
-    emoji: '💡',
-    lottieSource: require('../../../assets/lottie/wired-flat-36-bulb-hover-blink.json'),
-  },
-  {
-    id: 'hint-bundle',
-    category: 'hints',
-    name: 'חבילת רמזים (×5)',
-    description: 'חמישה טוקני רמז במחיר מוזל. לעולם לא תיתקע.',
-    coinCost: 5000,
-    emoji: '🎯',
-    lottieSource: require('../../../assets/lottie/wired-flat-458-goal-target-hover-hit.json'),
-  },
-
   // ── הגנה ──
   {
     id: 'streak-freeze',
@@ -131,26 +111,6 @@ export const SHOP_ITEMS: readonly ShopItem[] = [
     coinCost: 0,
     gemCost: 250,
     emoji: '🌅',
-    lottieSource: require('../../../assets/lottie/wired-flat-1307-hub-network-hover-pinch.json'),
-  },
-
-  // ── קוסמטיקה (aspirational, weeks of saving) ──
-  {
-    id: 'badge-neon',
-    category: 'cosmetics',
-    name: 'תג ניאון',
-    description: 'תג זוהר שמופיע ליד השם שלך בלוח התוצאות.',
-    coinCost: 5000,
-    emoji: '✨',
-    lottieSource: require('../../../assets/lottie/wired-flat-2474-sparkles-glitter-hover-pinch.json'),
-  },
-  {
-    id: 'theme-cyber',
-    category: 'cosmetics',
-    name: 'ערכת נושא סייבר',
-    description: 'שנה את עיצוב שביל הלמידה לסגנון סייברפנק.',
-    coinCost: 15000,
-    emoji: '🌐',
     lottieSource: require('../../../assets/lottie/wired-flat-1307-hub-network-hover-pinch.json'),
   },
 
@@ -250,12 +210,13 @@ export const SHOP_ITEMS: readonly ShopItem[] = [
   },
 ];
 
+// Categories — only those with shippable items. `hints` and `cosmetics` are
+// hidden until their inventory systems exist (purchasing today wouldn't grant
+// anything in code). `premium` stays as the future-content placeholder.
 export const SHOP_CATEGORIES: readonly { key: ShopCategory; label: string; lottieSource?: number }[] = [
   { key: 'hearts', label: 'לבבות', lottieSource: require('../../../assets/lottie/wired-flat-20-love-heart-hover-heartbeat.json') },
   { key: 'boosts', label: 'בוסטרים', lottieSource: require('../../../assets/lottie/wired-flat-489-rocket-space-hover-flying.json') },
-  { key: 'hints', label: 'רמזים', lottieSource: require('../../../assets/lottie/wired-flat-36-bulb-hover-blink.json') },
   { key: 'protection', label: 'הגנה', lottieSource: require('../../../assets/lottie/wired-flat-457-shield-security-hover-pinch.json') },
-  { key: 'cosmetics', label: 'קוסמטיקה', lottieSource: require('../../../assets/lottie/wired-flat-2474-sparkles-glitter-hover-pinch.json') },
   { key: 'premium', label: 'פרימיום', lottieSource: require('../../../assets/lottie/Diamond.json') },
   { key: 'avatars', label: 'אווטארים', lottieSource: require('../../../assets/lottie/wired-flat-44-avatar-user-in-circle-hover-looking-around.json') },
 ];
