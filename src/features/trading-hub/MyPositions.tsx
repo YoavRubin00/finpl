@@ -8,7 +8,6 @@ import Animated, { FadeInDown, FadeIn } from 'react-native-reanimated';
 import { LinearGradient } from 'expo-linear-gradient';
 import { CLASH, TEXT_SHADOW } from '../../constants/theme';
 import { useTradingStore } from './useTradingStore';
-import { useEconomyStore } from '../economy/useEconomyStore';
 import { ASSET_BY_ID } from './tradingHubData';
 import { ActivePosition } from './tradingHubTypes';
 import { tapHaptic } from '../../utils/haptics';
@@ -25,32 +24,29 @@ interface CloseResult {
 export function MyPositions() {
   const positions = useTradingStore((s) => s.positions);
   const closePosition = useTradingStore((s) => s.closePosition);
-  const addCoins = useEconomyStore((s) => s.addCoins);
 
   const [closeResult, setCloseResult] = useState<CloseResult | null>(null);
 
   const handleClose = useCallback(
     (pos: ActivePosition) => {
       tapHaptic();
+      // closePosition credits virtual_balance with the PnL-adjusted return
+      // internally — see useTradingStore. Do NOT credit again here.
       const closed = closePosition(pos.id);
       if (!closed) return;
 
       const pnlFactor = 1 + closed.pnlPercent / 100;
-      const returnedCoins = Math.max(0, Math.round(closed.amountInvested * pnlFactor));
-
-      if (returnedCoins > 0) {
-        addCoins(returnedCoins);
-      }
+      const returned = Math.max(0, Math.round(closed.amountInvested * pnlFactor));
 
       setCloseResult({
         assetId: closed.assetId,
         type: closed.type,
         invested: closed.amountInvested,
-        returned: returnedCoins,
+        returned,
         pnlPercent: closed.pnlPercent,
       });
     },
-    [closePosition, addCoins],
+    [closePosition],
   );
 
   if (positions.length === 0 && !closeResult) return null;
@@ -110,7 +106,7 @@ export function MyPositions() {
                     </Text>
                   </View>
                   <Text style={styles.investedText}>
-                    💰 {pos.amountInvested.toLocaleString()} מטבעות
+                    💵 ${pos.amountInvested.toLocaleString()} השקעה
                   </Text>
                 </View>
 

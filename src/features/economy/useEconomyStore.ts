@@ -19,6 +19,13 @@ interface EconomyState {
   xp: number;
   coins: number;
   gems: number;
+  /**
+   * Paper-trading simulator currency. Kept separate from `coins` (game economy)
+   * so stock buys don't drain shop/repair/streak budgets. Server is authoritative
+   * — local mutations are optimistic; reconciled on each `/api/sync/profile` GET
+   * and on every successful `/api/trading/trade` response.
+   */
+  virtualBalance: number;
   streak: number;
   lastDailyTaskDate: string | null; // ISO date string "YYYY-MM-DD"
   lastLoginBonusDate: string | null;
@@ -65,6 +72,12 @@ interface EconomyState {
   addGems: (amount: number) => void;
   spendCoins: (amount: number) => boolean;
   spendGems: (amount: number) => boolean;
+  /** Optimistic debit of paper-trading currency. Returns false if balance is too low. */
+  spendVirtual: (amount: number) => boolean;
+  /** Optimistic credit (sell return). Always succeeds — clamped to non-negative input. */
+  creditVirtual: (amount: number) => void;
+  /** Hard-set the virtual balance (called on profile sync GET and on trade-API responses). */
+  setVirtualBalance: (value: number) => void;
   completeDailyTask: () => void;
   awardLoginBonus: () => void;
   /**
@@ -134,6 +147,7 @@ export const useEconomyStore = create<EconomyState>()(
       xp: 0,
       coins: 0,
       gems: 0,
+      virtualBalance: 100000, // matches server DEFAULT in 0004_virtual_balance.sql
       streak: 0,
       lastDailyTaskDate: null,
       lastLoginBonusDate: null,
@@ -265,6 +279,27 @@ export const useEconomyStore = create<EconomyState>()(
           return { gems: state.gems - amount };
         });
         return success;
+      },
+
+      spendVirtual: (amount: number): boolean => {
+        if (amount <= 0) return false;
+        let success = false;
+        set((state) => {
+          if (state.virtualBalance < amount) return state;
+          success = true;
+          return { virtualBalance: state.virtualBalance - amount };
+        });
+        return success;
+      },
+
+      creditVirtual: (amount: number) => {
+        if (amount <= 0) return;
+        set((state) => ({ virtualBalance: state.virtualBalance + amount }));
+      },
+
+      setVirtualBalance: (value: number) => {
+        if (!Number.isFinite(value) || value < 0) return;
+        set({ virtualBalance: value });
       },
 
       completeDailyTask: () => {
@@ -568,6 +603,7 @@ export const useEconomyStore = create<EconomyState>()(
         xp: state.xp,
         coins: state.coins,
         gems: state.gems,
+        virtualBalance: state.virtualBalance,
         streak: state.streak,
         lastDailyTaskDate: state.lastDailyTaskDate,
         lastLoginBonusDate: state.lastLoginBonusDate,
@@ -590,6 +626,11 @@ export const useEconomyStore = create<EconomyState>()(
       onRehydrateStorage: () => (state) => {
         if (!state) return;
         // Defensive defaults: fields added after v1 persist may be undefined for existing users
+        if (typeof state.virtualBalance !== 'number' || !Number.isFinite(state.virtualBalance)) {
+          // First open after the virtual_balance migration — server will overwrite
+          // on next /api/sync/profile GET. Until then, mirror the server DEFAULT.
+          state.virtualBalance = 100000;
+        }
         if (!Array.isArray(state.recentActivityHours)) state.recentActivityHours = [];
         if (!Array.isArray(state.activeDates)) state.activeDates = [];
         if (!Array.isArray(state.frozenDates)) state.frozenDates = [];

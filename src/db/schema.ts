@@ -23,6 +23,7 @@ export const userProfiles = pgTable("user_profiles", {
 	dailyEmailSentAt: timestamp("daily_email_sent_at", { withTimezone: true, mode: 'string' }),
 	dailyEmailEnabled: boolean("daily_email_enabled").default(true),
 	syncToken: text("sync_token"),
+	virtualBalance: numeric("virtual_balance", { precision: 18, scale: 2 }).default('100000').notNull(),
 	createdAt: timestamp("created_at", { withTimezone: true, mode: 'string' }).defaultNow(),
 	updatedAt: timestamp("updated_at", { withTimezone: true, mode: 'string' }).defaultNow(),
 }, (table) => [
@@ -109,14 +110,22 @@ export const paperTrades = pgTable("paper_trades", {
 
 export const userFeedback = pgTable("user_feedback", {
 	id: uuid().default(sql`uuid_generate_v4()`).primaryKey().notNull(),
-	userId: text("user_id"),
+	userId: uuid("user_id"),
 	message: text("message").notNull(),
 	createdAt: timestamp("created_at", { withTimezone: true, mode: 'string' }).defaultNow(),
-});
+}, (table) => [
+	index("idx_user_feedback_user").using("btree", table.userId.asc().nullsLast().op("uuid_ops")),
+	foreignKey({
+			columns: [table.userId],
+			foreignColumns: [userProfiles.id],
+			name: "user_feedback_user_id_fkey"
+		}).onDelete("cascade"),
+]);
 
 export const bridgeClicks = pgTable("bridge_clicks", {
 	id: serial().primaryKey(),
 	benefitId: text("benefit_id").notNull(),
+	userId: uuid("user_id"),
 	userEmail: text("user_email"),
 	action: text("action").notNull(),
 	platform: text("platform"),
@@ -124,18 +133,29 @@ export const bridgeClicks = pgTable("bridge_clicks", {
 }, (table) => [
 	index("idx_bridge_clicks_benefit").using("btree", table.benefitId.asc()),
 	index("idx_bridge_clicks_time").using("btree", table.createdAt.desc()),
+	index("idx_bridge_clicks_user").using("btree", table.userId.asc().nullsLast().op("uuid_ops")),
+	foreignKey({
+			columns: [table.userId],
+			foreignColumns: [userProfiles.id],
+			name: "bridge_clicks_user_id_fkey"
+		}).onDelete("set null"),
 	check("bridge_clicks_action_check", sql`action = ANY (ARRAY['redeem'::text, 'link_open'::text])`),
 ]);
 
 export const crowdQuestionVotes = pgTable("crowd_question_votes", {
 	id: uuid().default(sql`uuid_generate_v4()`).primaryKey().notNull(),
-	userId: text("user_id").notNull(),
+	userId: uuid("user_id").notNull(),
 	questionId: text("question_id").notNull(),
 	choice: text().notNull(),
 	voteDateIl: date("vote_date_il").notNull(),
 	createdAt: timestamp("created_at", { withTimezone: true, mode: 'string' }).defaultNow(),
 }, (table) => [
 	index("idx_cq_votes_question_date").using("btree", table.questionId.asc(), table.voteDateIl.asc()),
+	foreignKey({
+			columns: [table.userId],
+			foreignColumns: [userProfiles.id],
+			name: "crowd_question_votes_user_id_fkey"
+		}).onDelete("cascade"),
 	unique("crowd_question_votes_user_date_key").on(table.userId, table.voteDateIl),
 	check("crowd_question_votes_choice_check", sql`choice = ANY (ARRAY['a'::text, 'b'::text])`),
 ]);

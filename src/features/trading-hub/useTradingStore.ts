@@ -2,15 +2,17 @@ import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import { zustandStorage } from '../../lib/zustandStorage';
 import { ActivePosition, PendingLimitOrder } from './tradingHubTypes';
+import { useEconomyStore } from '../economy/useEconomyStore';
 
 /**
- * Fire a paper-trading event to the server. Logged in `paper_trades` and
- * mirrored into `paper_portfolio` (long-only, weighted-avg cost).
+ * Fire a paper-trading event to the server. Logged in `paper_trades`,
+ * mirrored into `paper_portfolio` (long-only, weighted-avg cost), and the
+ * signed `cashDelta` is applied atomically to user_profiles.virtual_balance.
  *
  * Translation between models:
- *   - openPosition('buy',  price, amount) → BUY  trade of (amount/price) units
- *   - openPosition('sell', price, amount) → SELL trade — opening a short
- *   - closePosition() → the OPPOSITE trade type at currentPrice
+ *   - openPosition('buy',  price, amount) → BUY  trade of (amount/price) units, cashDelta = -amount
+ *   - openPosition('sell', price, amount) → SELL trade — opening a short,    cashDelta = -amount
+ *   - closePosition()                     → OPPOSITE trade type at currentPrice, cashDelta = +PnL-adjusted return
  *
  * skipPortfolio=true when closing a short: the BUY is audit-logged but must
  * not create a phantom long row in paper_portfolio.
@@ -18,17 +20,40 @@ import { ActivePosition, PendingLimitOrder } from './tradingHubTypes';
  * Auth (authId + syncToken) is resolved inside syncPaperTrading.logTrade so
  * this store doesn't need to import from the auth layer.
  */
+/**
+ * Fire a trade and reconcile local state with the server response.
+ *
+ *   - On HTTP 402 (server says insufficient balance, e.g. cross-device race),
+ *     `onRejected` is invoked so the caller can undo its optimistic mutation
+ *     (credit back the spend, remove the position, etc.). The local store had
+ *     already been mutated optimistically; without rollback it would drift.
+ *   - On 2xx, the server returns the post-update authoritative balance and we
+ *     hard-set the local store. This corrects any pre-existing drift in one
+ *     shot — preferable to letting it pile up until the next profile GET.
+ *   - On network/parse error, we keep the optimistic state. The next profile
+ *     GET on app open will reconcile.
+ */
 function logTradeFireAndForget(
   assetSymbol: string,
   tradeType: 'BUY' | 'SELL',
   priceAtExecution: number,
   amountInvested: number,
+  cashDelta: number,
   skipPortfolio = false,
+  onRejected?: () => void,
 ): void {
   if (priceAtExecution <= 0 || amountInvested <= 0) return;
   const quantity = amountInvested / priceAtExecution;
   import('../../db/sync/syncPaperTrading')
-    .then((m) => m.logTrade({ assetSymbol, tradeType, quantity, priceAtExecution, skipPortfolio }))
+    .then((m) => m.logTrade({ assetSymbol, tradeType, quantity, priceAtExecution, cashDelta, skipPortfolio }))
+    .then((result) => {
+      if (result.ok) {
+        useEconomyStore.getState().setVirtualBalance(result.virtualBalance);
+      } else if (result.status === 402 && onRejected) {
+        onRejected();
+      }
+      // network/parse errors (no status): keep optimistic state, reconcile later.
+    })
     .catch(() => { /* non-fatal */ });
 }
 
@@ -36,13 +61,23 @@ interface TradingStore {
   positions: ActivePosition[];
   pendingOrders: PendingLimitOrder[];
 
+  /**
+   * Open a long (`buy`) or short (`sell`) position. Debits virtual_balance by
+   * amountInvested. Returns the new position id, or null if the user can't
+   * afford it (insufficient virtual balance).
+   */
   openPosition: (
     assetId: string,
     type: 'buy' | 'sell',
     entryPrice: number,
     amountInvested: number,
-  ) => string; // returns position id
+  ) => string | null;
 
+  /**
+   * Close a position. Credits virtual_balance with the PnL-adjusted return
+   * (amountInvested × (1 + pnlPercent/100)). Callers should NOT separately
+   * credit the economy store — the math now lives in one place.
+   */
   closePosition: (positionId: string) => ActivePosition | null;
 
   updatePrices: (assetId: string, currentPrice: number) => void;
@@ -78,6 +113,11 @@ export const useTradingStore = create<TradingStore>()(
       pendingOrders: [],
 
       openPosition: (assetId, type, entryPrice, amountInvested) => {
+        // Affordability gate — same path used everywhere for paper trades.
+        // Server applies the same check atomically; this is the optimistic UX.
+        const debited = useEconomyStore.getState().spendVirtual(amountInvested);
+        if (!debited) return null;
+
         const id = generateId();
         const position: ActivePosition = {
           id,
@@ -92,7 +132,22 @@ export const useTradingStore = create<TradingStore>()(
         set((state) => ({
           positions: [...state.positions, position],
         }));
-        logTradeFireAndForget(assetId, type === 'buy' ? 'BUY' : 'SELL', entryPrice, amountInvested);
+        logTradeFireAndForget(
+          assetId,
+          type === 'buy' ? 'BUY' : 'SELL',
+          entryPrice,
+          amountInvested,
+          -amountInvested, // open: debit
+          false,
+          // Server rejected (e.g. cross-device race exhausted balance):
+          // refund the local debit and remove the ghost position.
+          () => {
+            useEconomyStore.getState().creditVirtual(amountInvested);
+            set((state) => ({
+              positions: state.positions.filter((p) => p.id !== id),
+            }));
+          },
+        );
         return id;
       },
 
@@ -103,6 +158,14 @@ export const useTradingStore = create<TradingStore>()(
         set((state) => ({
           positions: state.positions.filter((p) => p.id !== positionId),
         }));
+        // PnL-adjusted return — clamped to zero, same as the math the callers
+        // used to do inline. closePosition is now the single source of truth
+        // for paper-trading credits.
+        const pnlFactor = 1 + position.pnlPercent / 100;
+        const returned = Math.max(0, Math.round(position.amountInvested * pnlFactor));
+        if (returned > 0) {
+          useEconomyStore.getState().creditVirtual(returned);
+        }
         // Closing a long → SELL (decrements portfolio).
         // Closing a short → BUY, but skipPortfolio=true so no phantom long is created.
         logTradeFireAndForget(
@@ -110,7 +173,19 @@ export const useTradingStore = create<TradingStore>()(
           position.type === 'buy' ? 'SELL' : 'BUY',
           position.currentPrice,
           position.amountInvested,
+          returned, // close: credit (PnL-adjusted)
           position.type === 'sell',
+          // Rare: server rejected the close (would only happen if balance is
+          // already negative, since credits always pass the gate). Undo the
+          // local credit and restore the position so the user can retry.
+          () => {
+            if (returned > 0) {
+              useEconomyStore.getState().spendVirtual(returned);
+            }
+            set((state) => ({
+              positions: [...state.positions, position],
+            }));
+          },
         );
         return position;
       },
@@ -156,8 +231,11 @@ export const useTradingStore = create<TradingStore>()(
         });
 
         // Limit orders execute as BUYs (the store only supports buy-side limits).
+        // cashDelta=0 mirrors the pre-existing balance behavior of the limit-order
+        // path (placeLimitOrder/cancelLimitOrder don't touch virtual_balance);
+        // BuySheet doesn't actually exercise this flow today.
         for (const newPos of newPositions) {
-          logTradeFireAndForget(newPos.assetId, 'BUY', newPos.entryPrice, newPos.amountInvested);
+          logTradeFireAndForget(newPos.assetId, 'BUY', newPos.entryPrice, newPos.amountInvested, 0);
         }
       },
 

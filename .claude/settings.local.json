@@ -62,7 +62,9 @@
       "Bash(cmd //c \"taskkill /PID 10692 /F\")",
       "Bash(npx sharp-cli:*)",
       "Bash(python3 -c \"from PIL import Image; img = Image.open\\(''assets/images/THEME.jpeg''\\); img = img.resize\\(\\(96,96\\)\\); img.save\\(''assets/images/notification-icon.png''\\)\")",
-      "Bash(EAS_SKIP_AUTO_FINGERPRINT=1 npx eas build --platform android --profile development --non-interactive)"
+      "Bash(EAS_SKIP_AUTO_FINGERPRINT=1 npx eas build --platform android --profile development --non-interactive)",
+      "PowerShell(Get-ChildItem \"c:\\\\Projects\\\\finpl\\\\finpl\" -Recurse -Force -ErrorAction SilentlyContinue | Where-Object {$_.Name -match \"\\\\.github|\\\\.vercel|vercel\\\\.json|\\\\.env\" -and $_.FullPath -notmatch \"node_modules\"} | Select-Object FullName)",
+      "Bash(git check-ignore *)"
     ],
     "additionalDirectories": [
       "\\tmp",
@@ -76,7 +78,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "PYTHONIOENCODING=utf-8 python3 \"c:/Users/יואב רובין/.claude/projects/finpl/.claude/hooks/post-code-review-reminder.py\"",
+            "command": "PYTHONIOENCODING=utf-8 python3 \"c:/Projects/finpl/finpl/.claude/hooks/post-code-review-reminder.py\"",
             "timeout": 10
           }
         ]

@@ -17,6 +17,7 @@ import { useAuthStore } from "./useAuthStore";
 import { useGoogleAuthStore } from "./useGoogleAuthStore";
 import { useAppleAuth } from "./useAppleAuth";
 import { fetchUserProfile } from "../../db/sync/syncUserProfile";
+import { useEconomyStore } from "../economy/useEconomyStore";
 
 function isValidEmail(email: string): boolean {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
@@ -62,6 +63,12 @@ export function LoginScreen() {
       if (!profile) {
         setError("לא נמצא חשבון עם כתובת אימייל זו");
         return;
+      }
+      // Hydrate paper-trading currency from server. NUMERIC comes over JSON
+      // as a string, so parse before handing to the store.
+      const serverBalance = parseFloat(String(profile.virtual_balance ?? '0'));
+      if (Number.isFinite(serverBalance)) {
+        useEconomyStore.getState().setVirtualBalance(serverBalance);
       }
       signIn((profile.displayName as string) ?? email, email.trim().toLowerCase());
       router.replace("/(tabs)/" as never);

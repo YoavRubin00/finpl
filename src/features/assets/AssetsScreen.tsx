@@ -220,7 +220,7 @@ export function AssetsScreen() {
                       <StockIcon assetId={pos.assetId} size={32} />
                       <View style={{ flex: 1, alignItems: "flex-end", marginRight: 8 }}>
                         <Text style={styles.holdingName}>{asset?.name ?? pos.assetId}</Text>
-                        <Text style={styles.holdingSub}>{pos.amountInvested.toLocaleString('he-IL')} מטבעות</Text>
+                        <Text style={styles.holdingSub}>${pos.amountInvested.toLocaleString('he-IL')} השקעה</Text>
                       </View>
                       <View style={[styles.pnlBadge, { backgroundColor: isUp ? "#dcfce7" : "#fee2e2" }]}>
                         <Text style={[styles.pnlText, { color: isUp ? "#16a34a" : "#ef4444" }]}>
