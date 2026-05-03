@@ -243,7 +243,7 @@ export function SettingsScreen() {
           text: "מחק לצמיתות",
           style: "destructive",
           onPress: () => {
-            Alert.alert("אישור אחרון", "האם אתה בטוח לחלוטין?", [
+            Alert.alert("אישור אחרון", "האם אתם בטוחים לחלוטין?", [
               { text: "ביטול", style: "cancel" },
               {
                 text: "כן, מחק",

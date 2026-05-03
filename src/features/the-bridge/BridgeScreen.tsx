@@ -419,7 +419,7 @@ export function BridgeScreen({ walkthroughAutoScroll }: BridgeScreenProps = {}) 
                     </View>
                     <View style={styles.coinLabelBlock}>
                       <Text style={styles.coinCount}>{coins.toLocaleString()}</Text>
-                      <Text style={styles.coinLabel}>המטבעות שלך</Text>
+                      <Text style={styles.coinLabel}>המטבעות שלכם</Text>
                     </View>
                   </View>
 

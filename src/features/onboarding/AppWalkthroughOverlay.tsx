@@ -106,7 +106,7 @@ const STEPS: WalkthroughStep[] = [
     emoji: "🌉",
     message: "הידע שלכם שווה כסף אמיתי! בגשר תמירו את המטבעות שצברתם להטבות ומוצרים פיננסיים בעולם האמיתי.",
     navigateTo: "/bridge",
-    ctaLabel: "בוא נתחיל ללמוד!",
+    ctaLabel: "בואו נתחיל ללמוד!",
     screenSignal: "bridge",
     isLast: true,
     audioUrl: "https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/audios/walkthrough/step-7-7rr5fmPQ7ZVwKa6BczIDjwsShoKQL0.mp3",

@@ -22,7 +22,7 @@ interface LayerUnlock {
 const LAYER_UNLOCKS: Record<number, LayerUnlock> = {
   2: {
     text: "תרחישים ותוכן מתקדם נפתחו!",
-    ctaLabel: "בוא נמשיך ללמוד",
+    ctaLabel: "בואו נמשיך ללמוד",
     route: "/(tabs)/",
   },
   3: {

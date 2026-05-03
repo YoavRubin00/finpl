@@ -132,7 +132,7 @@ export function MoreScreen() {
     }
     Alert.alert(
       "יציאה מהחשבון",
-      "בטוח שאתה רוצה לצאת?",
+      "בטוחים שאתם רוצים לצאת?",
       [
         { text: "ביטול", style: "cancel" },
         {

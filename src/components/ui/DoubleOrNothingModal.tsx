@@ -228,7 +228,7 @@ export function DoubleOrNothingModal({ visible, rewards, onResolve }: Props) {
 
             {/* Educational tooltip */}
             <View style={styles.eduTooltip}>
-              <Text style={[styles.eduTitle, RTL]}>💡 החלק ימינה אם אתה חושב שהשוק עלה, שמאלה אם ירד</Text>
+              <Text style={[styles.eduTitle, RTL]}>💡 החליקו ימינה אם אתם חושבים שהשוק עלה, שמאלה אם ירד</Text>
             </View>
           </Animated.View>
         )}

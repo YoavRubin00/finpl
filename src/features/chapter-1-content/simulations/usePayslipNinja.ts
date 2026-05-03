@@ -113,7 +113,7 @@ export function usePayslipNinja(config: PayslipNinjaConfig) {
             gradeLabel = '⚠️ יש מקום לשיפור, שווה ללמוד את התלוש';
         } else {
             grade = 'F';
-            gradeLabel = '🚨 התלוש עדיין מסתורי, בוא נתרגל שוב!';
+            gradeLabel = '🚨 התלוש עדיין מסתורי, בואו נתרגל שוב!';
         }
 
         return { accuracy, grade, gradeLabel };

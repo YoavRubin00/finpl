@@ -814,7 +814,7 @@ const GOALS: { id: FinancialGoal; label: string; sub: string }[] = [
 ];
 
 const DREAM_REACTIONS: Record<FinancialDream, string> = {
-  trip: "טיול גדול זה יעד מדהים! בוא נראה מאיפה מתחילים.",
+  trip: "טיול גדול זה יעד מדהים! בואו נראה מאיפה מתחילים.",
   car: "רכב ראשון? לגמרי אפשרי לפצח את זה.",
   apartment: "דירה זה פרויקט רציני, טוב שאתם פה!",
   freedom: "חופש מוחלט. זו המטרה של כולנו.",

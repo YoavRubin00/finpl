@@ -371,7 +371,7 @@ function SquadHubView() {
   function handleLeave() {
     Alert.alert(
       "עזיבת סקוואד",
-      "בטוח שאתה רוצה לעזוב את הקבוצה?",
+      "בטוחים שאתם רוצים לעזוב את הקבוצה?",
       [
         { text: "ביטול", style: "cancel" },
         { text: "עזיבה", style: "destructive", onPress: () => { tapHaptic(); leaveSquad(); } },
