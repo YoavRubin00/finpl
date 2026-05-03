@@ -126,7 +126,7 @@ function computeStats(
     : "--";
 
   return {
-    activeDays:       { value: activeDaysValue,    sublabel: "מתוך 90 יום" },
+    activeDays:       { value: activeDaysValue,    sublabel: "" },
     avgModulesPerDay: { value: avgModulesPerDay,    sublabel: "ממוצע" },
     avgGamesPerDay:   { value: avgGamesPerDay,      sublabel: "ממוצע" },
     quizAccuracy:     { value: quizAccuracy,        sublabel: "כל הפרקים" },
