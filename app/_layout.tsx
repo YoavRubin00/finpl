@@ -190,14 +190,26 @@ export default function RootLayout() {
   }, []);
 
   // ── Google Mobile Ads init (iOS requires explicit initialize before ads load) ──
+  // On iOS we MUST request App Tracking Transparency permission first — Apple
+  // rejects ad-supported apps that load AdMob without prompting (Guideline 5.1.2).
+  // The user's choice (granted/denied/restricted) flows into AdMob's RequestConfiguration
+  // automatically via the SDK's IDFA reads. We just need to ask before init.
   useEffect(() => {
     if (Platform.OS === "web") return;
-    try {
-      const { default: mobileAds } = require("react-native-google-mobile-ads") as {
-        default: () => { initialize(): Promise<unknown> };
-      };
-      mobileAds().initialize().catch(() => {});
-    } catch { /* SDK not available in dev without native build */ }
+    (async () => {
+      if (Platform.OS === "ios") {
+        try {
+          const { requestTrackingPermissionsAsync } = await import("expo-tracking-transparency");
+          await requestTrackingPermissionsAsync();
+        } catch { /* native module unavailable in Expo Go / pre-prebuild */ }
+      }
+      try {
+        const { default: mobileAds } = require("react-native-google-mobile-ads") as {
+          default: () => { initialize(): Promise<unknown> };
+        };
+        mobileAds().initialize().catch(() => {});
+      } catch { /* SDK not available in dev without native build */ }
+    })();
   }, []);
 
   // ── RevenueCat init ──

@@ -51,7 +51,7 @@ interface GeminiQuizResult {
 }
 
 async function generateQuiz(originalHeadline: string): Promise<GeminiQuizResult | null> {
-  const GEMINI_API_KEY = process.env.GOOGLE_AI_API_KEY ?? process.env.EXPO_PUBLIC_GOOGLE_AI_API_KEY ?? '';
+  const GEMINI_API_KEY = process.env.GOOGLE_AI_API_KEY ?? '';
   if (!GEMINI_API_KEY) return null;
 
   const prompt = `אתה מורה לחינוך פיננסי לדור Z בישראל. קראת את הכותרת המקורית מגלובס:
