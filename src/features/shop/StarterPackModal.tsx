@@ -184,17 +184,22 @@ export function StarterPackModal({ visible, onDismiss, onPurchaseSuccess }: Prop
                 <Pressable
                   onPress={handleConfirm}
                   disabled={purchasing}
-                  style={({ pressed }) => [styles.cta, (pressed || purchasing) && { opacity: 0.85 }]}
+                  style={({ pressed }) => [
+                    styles.cta,
+                    (pressed || purchasing) && { transform: [{ scale: 0.97 }] },
+                  ]}
                   accessibilityRole="button"
                   accessibilityState={{ disabled: purchasing }}
                   accessibilityLabel={`קנה חבילת מתחילים ב-${STARTER_PACK_PRICE_LABEL}`}
                 >
                   <LinearGradient
-                    colors={['#16a34a', '#15803d']}
+                    colors={['#7DD3FC', '#38BDF8', '#0284C7']}
+                    locations={[0, 0.45, 1]}
                     start={{ x: 0, y: 0 }}
                     end={{ x: 0, y: 1 }}
                     style={StyleSheet.absoluteFill}
                   />
+                  <View style={styles.ctaRim} pointerEvents="none" />
                   <Text style={styles.ctaText} allowFontScaling={false}>
                     {purchasing ? 'מעבד…' : `קנה ב-${STARTER_PACK_PRICE_LABEL}`}
                   </Text>
@@ -380,19 +385,37 @@ const styles = StyleSheet.create({
   },
   cta: {
     width: '100%',
-    paddingVertical: 14,
-    borderRadius: 14,
+    height: 56,
+    borderRadius: 16,
     overflow: 'hidden',
     alignItems: 'center',
     justifyContent: 'center',
-    borderBottomWidth: 3,
-    borderBottomColor: '#14532d',
+    borderBottomWidth: 4,
+    borderBottomColor: '#0369A1',     // sky-700 depth
+    shadowColor: '#38BDF8',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.65,
+    shadowRadius: 18,
+    elevation: 12,
+  },
+  ctaRim: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    height: '40%',
+    backgroundColor: 'rgba(255, 255, 255, 0.22)',
+    borderTopLeftRadius: 16,
+    borderTopRightRadius: 16,
   },
   ctaText: {
-    fontSize: 16,
+    fontSize: 17,
     fontWeight: '900',
-    color: '#fff',
-    letterSpacing: 0.3,
+    color: '#ffffff',
+    letterSpacing: 0.4,
+    textShadowColor: 'rgba(3, 105, 161, 0.7)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 3,
   },
   maybeLaterBtn: {
     marginTop: 8,
