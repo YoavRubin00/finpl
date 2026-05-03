@@ -21,7 +21,7 @@ import { useEconomyStore } from '../../features/economy/useEconomyStore';
 import { tapHaptic, successHaptic } from '../../utils/haptics';
 
 const DAILY_COPY: Record<number, string> = {
-  0: 'בנית בסיס חזק. הגיע הזמן להשתמש בו',
+  0: 'בנית בסיס חזק.\nהגיע הזמן להשתמש בו',
   1: 'עשינו דרך יפה ביחד. בוא נעבור לעולם האמיתי',
   2: 'הידע שלך שווה כסף אמיתי. בוא נאמת את זה',
   3: 'חיסכון ראשון? השקעה ראשונה? הגשר פתוח בשבילך',

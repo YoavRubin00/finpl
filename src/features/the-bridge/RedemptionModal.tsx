@@ -1,6 +1,7 @@
 import { View, Text, Image, Pressable, Modal, StyleSheet, ScrollView } from 'react-native';
 import Animated, { FadeIn, FadeInUp } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { LinearGradient } from 'expo-linear-gradient';
 import { X } from 'lucide-react-native';
 import { GoldCoinIcon } from '../../components/ui/GoldCoinIcon';
 import { LottieIcon } from '../../components/ui/LottieIcon';
@@ -97,23 +98,36 @@ export function RedemptionModal({ visible, benefit, isRedeemed = false, canAffor
             </View>
           </ScrollView>
 
-          {/* CTA button — pinned outside ScrollView so it's always reachable.
-              Disabled state uses a ghost-blue treatment: clear, on-brand, NOT
-              shouty grey-on-grey. Communicates "not yet" without alarming. */}
+          {/* CTA — gradient + rim + 3D border. iOS-safe (no uneven borders that
+              cause the white-on-white bg-loss bug). */}
           <Pressable
             onPress={onConfirm}
             disabled={!canAfford && !isRedeemed}
             style={({ pressed }) => [
-              !canAfford && !isRedeemed ? styles.confirmBtnDisabled : styles.confirmBtn,
-              pressed && canAfford && { opacity: 0.9, transform: [{ scale: 0.98 }] }
+              !canAfford && !isRedeemed ? styles.confirmBtnDisabled : styles.confirmBtnWrap,
+              pressed && (canAfford || isRedeemed) && { transform: [{ scale: 0.97 }] },
             ]}
             accessibilityRole="button"
             accessibilityState={{ disabled: !canAfford && !isRedeemed }}
             accessibilityLabel={isRedeemed ? 'למעבר לאתר השותף' : canAfford ? 'המרה כעת' : 'אין מספיק מטבעות'}
           >
-            <Text style={!canAfford && !isRedeemed ? styles.confirmBtnTextDisabled : styles.confirmBtnText}>
-              {isRedeemed ? 'למעבר לאתר השותף' : canAfford ? 'המרה כעת' : 'אין מספיק מטבעות'}
-            </Text>
+            {!canAfford && !isRedeemed ? (
+              <Text style={styles.confirmBtnTextDisabled}>אין מספיק מטבעות</Text>
+            ) : (
+              <>
+                <LinearGradient
+                  colors={['#38BDF8', '#0EA5E9', '#0284C7']}
+                  locations={[0, 0.55, 1]}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 0, y: 1 }}
+                  style={StyleSheet.absoluteFill}
+                />
+                <View style={styles.confirmBtnRim} pointerEvents="none" />
+                <Text style={styles.confirmBtnText}>
+                  {isRedeemed ? 'למעבר לאתר השותף' : 'המרה כעת'}
+                </Text>
+              </>
+            )}
           </Pressable>
 
           {/* Cancel */}
@@ -257,38 +271,52 @@ const styles = StyleSheet.create({
     color: '#0ea5e9',
   },
 
-  confirmBtn: {
-    backgroundColor: '#0ea5e9',         // sky-500, more vivid on iOS than the old indigo-blue
-    paddingVertical: 18,
-    borderRadius: 18,
+  /* Premium Sky CTA — gradient + rim + 3D border + glow. Brawl Stars-style.
+   * Gradient is forced as an absolute View so the bg can never be lost to
+   * iOS's uneven-border + shadow rendering quirk that produced white-on-white
+   * with the previous solid-color + borderBottomWidth:5 approach. */
+  confirmBtnWrap: {
+    height: 58,
+    borderRadius: 20,
+    overflow: 'hidden',
     alignItems: 'center',
+    justifyContent: 'center',
     alignSelf: 'stretch',
     width: '100%',
-    borderWidth: 1.5,
-    borderColor: '#0284c7',             // sky-600
-    borderBottomWidth: 5,               // stronger 3D pressed-button effect
-    borderBottomColor: '#0369a1',       // sky-700
-    shadowColor: '#0ea5e9',
+    borderBottomWidth: 4,
+    borderBottomColor: '#0369A1',     // sky-700 — 3D depth
+    shadowColor: '#0EA5E9',
     shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.55,
-    shadowRadius: 14,
-    elevation: 14,
+    shadowOpacity: 0.45,
+    shadowRadius: 16,
+    elevation: 10,
+    marginTop: 4,
     marginBottom: 8,
+  },
+  confirmBtnRim: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    height: '45%',
+    backgroundColor: 'rgba(255, 255, 255, 0.18)',
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
   },
   confirmBtnText: {
     fontSize: 18,
     fontWeight: '900',
     color: '#ffffff',
-    letterSpacing: 0.3,
+    letterSpacing: 0.4,
     textAlign: 'center',
-    textShadowColor: 'rgba(0,0,0,0.18)',
+    textShadowColor: 'rgba(3, 105, 161, 0.55)',
     textShadowOffset: { width: 0, height: 1 },
-    textShadowRadius: 2,
+    textShadowRadius: 3,
   },
   /* Disabled state — pleasant blue-ghost. Says "not yet, but on the path"
-   * without alarming red or muddy grey. Centered, full-width, on-brand. */
+   * without alarming red or muddy grey. */
   confirmBtnDisabled: {
-    backgroundColor: 'rgba(14, 165, 233, 0.10)',  // sky-500 @ 10%
+    backgroundColor: 'rgba(14, 165, 233, 0.10)',
     paddingVertical: 18,
     borderRadius: 18,
     alignItems: 'center',
@@ -296,13 +324,13 @@ const styles = StyleSheet.create({
     alignSelf: 'stretch',
     width: '100%',
     borderWidth: 1.5,
-    borderColor: 'rgba(14, 165, 233, 0.45)',     // sky-500 @ 45%
+    borderColor: 'rgba(14, 165, 233, 0.45)',
     marginBottom: 8,
   },
   confirmBtnTextDisabled: {
     fontSize: 16,
     fontWeight: '800',
-    color: '#0369a1',                             // sky-700 — pleasantly readable on light
+    color: '#0369A1',
     letterSpacing: 0.3,
     textAlign: 'center',
   },
