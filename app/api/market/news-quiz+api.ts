@@ -129,10 +129,123 @@ let _cache: { data: NewsQuizData; date: string } | null = null;
 let _fallbackBackoffUntil = 0;
 const FALLBACK_BACKOFF_MS = 5 * 60 * 1000; // 5 min
 
+/** 7 evergreen fallback quizzes — rotate by Israeli day-of-week so the user
+ *  sees a different concept each day even when Globes/Gemini are down.
+ *  Order: 0=Sunday … 6=Saturday. Topics are timeless (compounding, inflation,
+ *  emergency fund, etc.) so they don't go stale across years. */
+const EVERGREEN_FALLBACKS: ReadonlyArray<Omit<NewsQuizData, 'quizId' | 'generatedAt' | 'isFallback'>> = [
+  // ── Sunday: ריבית דריבית ──
+  {
+    headline: 'מחקר: 80% מהצעירים מפספסים את כוח ריבית דריבית',
+    question: 'בני 25 שמתחיל לחסוך 500₪/חודש בתשואה 8% — כמה יהיו לו בגיל 65?',
+    choices: [
+      { id: 'a', text: 'בערך 1.7 מיליון ₪ — ריבית דריבית עושה את העבודה' },
+      { id: 'b', text: 'בערך 240,000 ₪ — סכום ההפקדות הכולל' },
+      { id: 'c', text: 'בערך 480,000 ₪ — כפול ההפקדה' },
+    ],
+    correctChoiceId: 'a',
+    explanation: 'ריבית דריבית = הריבית מרוויחה עוד ריבית. אחרי 40 שנה, החיסכון גדל פי 7. איינשטיין קרא לזה "הפלא השמיני".',
+    xpReward: 10,
+    coinReward: 5,
+  },
+  // ── Monday: אינפלציה ──
+  {
+    headline: 'אינפלציה ב-3% לשנה — מה זה אומר על 100,000 ₪ בחיסכון?',
+    question: 'אם משאירים 100,000 ₪ במזומן 10 שנים באינפלציה 3%, כמה הם יקנו בעתיד?',
+    choices: [
+      { id: 'a', text: 'בערך 74,000 ₪ — האינפלציה אכלה את כוח הקנייה' },
+      { id: 'b', text: '100,000 ₪ — ערך הכסף קבוע אם לא מוציאים' },
+      { id: 'c', text: '130,000 ₪ — הסכום עולה עם הזמן' },
+    ],
+    correctChoiceId: 'a',
+    explanation: 'מזומן יושב = ערכו נשחק. במזומן בלי השקעה, אינפלציה של 3% לשנה מכרסמת ~26% מכוח הקנייה ב-10 שנים.',
+    xpReward: 10,
+    coinReward: 5,
+  },
+  // ── Tuesday: קרן השתלמות ──
+  {
+    headline: '"היהלום" של שוק ההון: למה קרן השתלמות מנצחת רוב החסכונות',
+    question: 'מה הפטור הייחודי של קרן השתלמות אחרי 6 שנים?',
+    choices: [
+      { id: 'a', text: 'פטור מלא ממס רווחי הון (25%) על כל הרווחים' },
+      { id: 'b', text: 'הפקדה ללא הגבלה גם בלי קשר למשכורת' },
+      { id: 'c', text: 'משיכה מיידית של החיסכון בלי שום תנאי' },
+    ],
+    correctChoiceId: 'a',
+    explanation: 'קרן השתלמות אחרי 6 שנים = פטורה ממס רווחי הון. בקרן שגדלה מ-50K ל-100K, חוסכים 12,500 ₪ מס. מסיבה זו היא נחשבת לאחד הכלים הכי טובים בשוק הישראלי.',
+    xpReward: 10,
+    coinReward: 5,
+  },
+  // ── Wednesday: דמי ניהול ──
+  {
+    headline: 'דמי ניהול 2% נראים קטנים — אבל אוכלים חצי מהפנסיה',
+    question: 'בפנסיה של 30 שנה ב-7% תשואה, איך 2% דמי ניהול שונים מ-0.5%?',
+    choices: [
+      { id: 'a', text: 'מאבדים בערך 40-50% מהפנסיה הסופית' },
+      { id: 'b', text: 'מאבדים בערך 1.5% — זוטות, לא משנה' },
+      { id: 'c', text: 'מאבדים בערך 15% — מורגש אבל לא קריטי' },
+    ],
+    correctChoiceId: 'a',
+    explanation: 'דמי ניהול נצברים על תיק שגדל. 2% במקום 0.5% למשך 30 שנה = חצי פנסיה פחות. זה ההבדל בין פרישה ב-65 לפרישה ב-72.',
+    xpReward: 10,
+    coinReward: 5,
+  },
+  // ── Thursday: קרן חירום ──
+  {
+    headline: '60% מהישראלים בני 25-35 בלי קרן חירום בכלל',
+    question: 'מה הסכום הסביר לקרן חירום למישהו שמרוויח 12,000 ₪ נטו?',
+    choices: [
+      { id: 'a', text: '36-72K ₪ — בערך 3-6 חודשי הוצאות' },
+      { id: 'b', text: '5,000 ₪ — מספיק לתיקון רכב או רופא שיניים' },
+      { id: 'c', text: '200K ₪ — לפחות שנתיים של ביטחון מלא' },
+    ],
+    correctChoiceId: 'a',
+    explanation: 'קרן חירום = 3-6 חודשי הוצאות (לא משכורת!). למי שהוצאות ~9,000 ₪/חודש, היעד הוא 27-54K ₪. נשמר בחשבון נזיל, לא בהשקעה.',
+    xpReward: 10,
+    coinReward: 5,
+  },
+  // ── Friday: מדדים ──
+  {
+    headline: 'S&P 500 הכה כמעט 90% ממנהלי הקרנות בעשור האחרון',
+    question: 'למה כל-כך קשה למנהל קרן אקטיבי לנצח את מדד S&P 500?',
+    choices: [
+      { id: 'a', text: 'דמי ניהול גבוהים + עלויות מסחר אוכלים את התשואה' },
+      { id: 'b', text: 'המדד עצמו תופס אוטומטית את הזוכים והמפסידים' },
+      { id: 'c', text: 'שני התשובות נכונות — קומבינציה של עלויות + מבנה שוק' },
+    ],
+    correctChoiceId: 'c',
+    explanation: 'מנהל אקטיבי גובה 1-2%/שנה ועושה הרבה מסחר. ה-S&P מחזיק את הטופ-500 אוטומטית בלי עלויות, ומתעדכן אם חברה נופלת או עולה. הקומבינציה הזאת קשה לנצח לאורך זמן.',
+    xpReward: 10,
+    coinReward: 5,
+  },
+  // ── Saturday: פיזור סיכונים ──
+  {
+    headline: 'חוקי הזהב של הפיזור: למה לא לשים הכל במניה אחת',
+    question: 'משקיע ישראלי שם 100% מההון במניית בנק לאומי. מה הסיכון העיקרי?',
+    choices: [
+      { id: 'a', text: 'ירידה אחת בבנק = ירידה של כל ההון, אין עמיד' },
+      { id: 'b', text: 'אין סיכון מיוחד — בנקים גדולים תמיד יציבים' },
+      { id: 'c', text: 'הסיכון רק מטבעי — אם יורד ההון יחזור לתקן' },
+    ],
+    correctChoiceId: 'a',
+    explanation: 'מניה אחת = idiosyncratic risk. אם החברה נופלת (FTX, Lehman, Wirecard), אין מי שייתן עמידות. פיזור על 30+ מניות / מדד = מבטל את הסיכון הספציפי.',
+    xpReward: 10,
+    coinReward: 5,
+  },
+];
+
 function buildFallback(headline?: string): NewsQuizData {
+  // Server-side: rotate evergreen fallback by Israel day-of-week so even when
+  // Globes/Gemini are down for days in a row, users see different content.
+  const israelDate = new Date(
+    new Intl.DateTimeFormat('en-US', { timeZone: 'Asia/Jerusalem' }).format(new Date()),
+  );
+  const dayOfWeek = israelDate.getDay(); // 0=Sun ... 6=Sat
+  const evergreen = EVERGREEN_FALLBACKS[dayOfWeek] ?? EVERGREEN_FALLBACKS[0];
+
   if (headline) {
     return {
-      quizId: `fallback-${todayKey()}`,
+      quizId: `fallback-${todayKey()}-headline`,
       headline,
       question: `המומחים בחדשות דנו ב: "${headline.slice(0, 40)}...". איך זה משפיע על חיי היומיום שלך?`,
       choices: [
@@ -149,18 +262,8 @@ function buildFallback(headline?: string): NewsQuizData {
     };
   }
   return {
-    quizId: `fallback-${todayKey()}`,
-    headline: 'הריבית בישראל נותרת על 4.5%',
-    question: 'מה קורה להחזר משכנתא קיימת כשבנק ישראל לא משנה את הריבית?',
-    choices: [
-      { id: 'a', text: 'בריבית פריים — ההחזר נשאר אותו דבר עד השינוי הבא' },
-      { id: 'b', text: 'ההחזר עולה אוטומטית כל חודש שהריבית קבועה' },
-      { id: 'c', text: 'הקרן יורדת מהר יותר כדי לפצות על הריבית' },
-    ],
-    correctChoiceId: 'a',
-    explanation: 'ריבית פריים = בנק ישראל + 1.5%. כשבנק ישראל לא זז, מסלול פריים במשכנתא לא זז. למשכנתאות חדשות זה אומר שתנאי הכניסה לא משתפרים.',
-    xpReward: 10,
-    coinReward: 5,
+    ...evergreen,
+    quizId: `fallback-${todayKey()}-evergreen-${dayOfWeek}`,
     generatedAt: new Date().toISOString(),
     isFallback: true,
   };

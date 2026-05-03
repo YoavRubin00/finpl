@@ -7,7 +7,11 @@ import LottieView from "lottie-react-native";
 import { useRouter } from "expo-router";
 import { useEconomyStore } from "../economy/useEconomyStore";
 import { useSubscriptionStore } from "../subscription/useSubscriptionStore";
+import { useAuthStore } from "../auth/useAuthStore";
 import { ShopItemCard } from "./ShopItemCard";
+import { EmptyPremium } from "../../components/svg/shop/EmptyStates";
+import { SparkleBurst } from "../../components/ui/SparkleBurst";
+import { MysteryBoxCard } from "../../components/ui/MysteryBoxCard";
 import { ConfirmModal } from "./ConfirmModal";
 import { IAPModal } from "./IAPModal";
 import { SHOP_ITEMS, SHOP_CATEGORIES } from "./shopItems";
@@ -52,10 +56,16 @@ export function ShopModal() {
   const addCoins = useEconomyStore((s) => s.addCoins);
   const restoreAllHearts = useSubscriptionStore((s) => s.restoreAllHearts);
   const isPro = useSubscriptionStore((s) => s.tier === "pro" && s.status === "active");
+  const addOwnedAvatar = useAuthStore((s) => s.addOwnedAvatar);
+  const setAvatar = useAuthStore((s) => s.setAvatar);
 
   const [activeCategory, setActiveCategory] = useState<ShopCategory>("avatars");
   const [pendingItem, setPendingItem] = useState<ShopItem | null>(null);
   const [selectedBundle, setSelectedBundle] = useState<GemBundle | null>(null);
+  /** Bumped (Date.now()) on every successful purchase to fire confetti burst.
+   *  0 = never fired. The SparkleBurst component re-runs its animation each time
+   *  this number changes. */
+  const [sparkleTrigger, setSparkleTrigger] = useState(0);
 
   const visibleItems = SHOP_ITEMS.filter((i) => i.category === activeCategory);
   const isAvatarCategory = activeCategory === "avatars";
@@ -93,6 +103,8 @@ export function ShopModal() {
       : spendCoins(effectiveCoinCost(pendingItem));
 
     if (success) {
+      // Hay Day pattern: confetti burst on successful purchase. Pure visual joy.
+      setSparkleTrigger(Date.now());
       const eco = useEconomyStore.getState();
       const ONE_HOUR = 60 * 60 * 1000;
       if (pendingItem.id === "heart-refill-full") {
@@ -144,10 +156,16 @@ export function ShopModal() {
         eco.activateStreakShield('month');
       } else if (pendingItem.id === "streak-revival-elite") {
         eco.grantEliteRevival();
+      // ── Avatars: register ownership + auto-equip the freshly bought avatar.
+      // The id IS the avatar id (`avatar-saver` etc.) — same string flows through
+      // ownedAvatars, profile.avatarId, and AvatarImage.getAvatarSvgIcon().
+      } else if (pendingItem.id.startsWith("avatar-")) {
+        addOwnedAvatar(pendingItem.id);
+        setAvatar(pendingItem.id);
       }
     }
     setPendingItem(null);
-  }, [pendingItem, spendCoins, spendGems, restoreAllHearts]);
+  }, [pendingItem, spendCoins, spendGems, effectiveCoinCost, restoreAllHearts, addOwnedAvatar, setAvatar]);
 
   const handleCancel = useCallback(() => {
     setPendingItem(null);
@@ -180,6 +198,9 @@ export function ShopModal() {
       accessibilityViewIsModal
     >
       <SafeAreaView style={ms.container} edges={["top", "bottom"]}>
+        {/* Confetti burst on successful purchase (Hay Day pattern). Re-fires
+            on every purchase via the Date.now() trigger key. */}
+        <SparkleBurst trigger={sparkleTrigger} />
         {/* Header */}
         <View style={ms.header}>
           <Pressable onPress={handleClose} style={ms.closeBtn} accessibilityLabel="סגור" accessibilityRole="button" hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
@@ -252,32 +273,47 @@ export function ShopModal() {
           showsVerticalScrollIndicator={false}
         >
           {/* ── Category Items, TOP ── */}
-          {isAvatarCategory && (
-            <View style={ms.devBanner}>
-              <Text style={ms.devBannerText}>🚧 אווטארים בפיתוח, בקרוב!</Text>
+          {visibleItems.length === 0 ? (
+            // Premium tab (or any other empty category) — show "coming soon" placeholder.
+            <View style={{ alignItems: 'center', paddingVertical: 24, gap: 12 }}>
+              <EmptyPremium size={180} />
+              <Text style={{ fontSize: 14, fontWeight: '700', color: '#475569', textAlign: 'center', writingDirection: 'rtl' }}>
+                בקרוב — תוכן פרימיום ייחודי
+              </Text>
+              <Text style={{ fontSize: 12, color: '#64748b', textAlign: 'center', writingDirection: 'rtl', maxWidth: 260 }}>
+                אנחנו מכינים פיצ׳רים מיוחדים שיגיעו רק למשתמשי Pro. עקבו!
+              </Text>
             </View>
-          )}
-
-          {visibleItems.map((item, index) => (
-            <AnimatedShopItem key={item.id} index={index}>
-              {isAvatarCategory ? (
-                <View style={{ opacity: 0.45 }} pointerEvents="none">
-                  <ShopItemCard
-                    item={item}
-                    canAfford={false}
-                    onBuyPress={() => {}}
-                  />
-                </View>
-              ) : (
+          ) : (
+            visibleItems.map((item, index) => (
+              <AnimatedShopItem key={item.id} index={index}>
                 <ShopItemCard
                   item={item}
                   canAfford={canAffordItem(item)}
                   onBuyPress={() => handleBuyPress(item)}
                   effectiveCoinCost={effectiveCoinCost(item)}
                 />
-              )}
-            </AnimatedShopItem>
-          ))}
+              </AnimatedShopItem>
+            ))
+          )}
+
+          <View style={ms.divider} />
+
+          {/* ── Mystery Box (gem-priced loot box) ── */}
+          <View style={{ marginBottom: 16 }}>
+            <MysteryBoxCard
+              cost={50}
+              possibleRewards={['XP', '💎', '🪙', '❤️', '⚡']}
+              totalRewardCount={17}
+              onPress={() => {
+                if (gems < 50) {
+                  Alert.alert("אין מספיק יהלומים", "צריך 50 💎 לפתיחת תיבת הפתעה.");
+                  return;
+                }
+                Alert.alert("בקרוב", "תיבות הפתעה יושקו בעדכון הבא.");
+              }}
+            />
+          </View>
 
           <View style={ms.divider} />
 

@@ -15,7 +15,7 @@ import { LottieIcon } from "../../components/ui/LottieIcon";
 import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
 import {
-  Zap, Star, Target, ChevronRight, Trophy,
+  Zap, Star, Target, ChevronRight,
   Crown, Swords, Pencil, X,
 } from "lucide-react-native";
 import { useEconomyStore } from "../economy/useEconomyStore";
@@ -44,6 +44,8 @@ import { EditProfileModal } from "./EditProfileModal";
 import { ProfilingFlow } from "../onboarding/ProfilingFlow";
 import { useTheme } from "../../hooks/useTheme";
 import { ProBadge } from "../../components/ui/ProBadge";
+import { ChampionCard } from "../../components/ui/ChampionCard";
+import { AchievementPill } from "../../components/ui/AchievementPill";
 import { useStreakCelebration } from "../../hooks/useStreakCelebration";
 import { useWalkthroughGlowTarget } from "../onboarding/AppWalkthroughOverlay";
 import { PersonalStatsSection } from "../user-stats/PersonalStatsSection";
@@ -109,6 +111,7 @@ export function ProfileScreen() {
   const hasWhaleBadge = referredFriends.length >= 5;
   const { level, layer, xpToNextLevel, progressToNextLevel } = getPyramidStatus(xp);
   const [showStagePopup, setShowStagePopup] = useState(false);
+  const [showChampionPopup, setShowChampionPopup] = useState(false);
   const avatarDef = getAvatarById(profile?.avatarId ?? null);
   const avatarName = avatarDef?.name ?? null;
 
@@ -186,9 +189,21 @@ export function ProfileScreen() {
           showsVerticalScrollIndicator={false}
         >
 
+          {/* Achievement pills row — streak (always) + pro (if active) + chapter (current layer). */}
+          <View style={{ flexDirection: 'row-reverse', flexWrap: 'wrap', gap: 6, justifyContent: 'center', marginBottom: 12 }}>
+            {streak > 0 && <AchievementPill kind="streak" count={streak} />}
+            {isPro && <AchievementPill kind="pro" />}
+            {layer > 0 && <AchievementPill kind="chapter" count={layer} />}
+          </View>
+
           {/* Avatar + Name */}
           <Animated.View style={[avatarStyle, styles.avatarSection]}>
-            <View>
+            <Pressable
+              onPress={() => setShowChampionPopup(true)}
+              accessibilityRole="button"
+              accessibilityLabel="הצג כרטיס שחקן מלא"
+              hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
+            >
               <GoldCircleBadge
                 size={96}
                 glowing
@@ -203,7 +218,7 @@ export function ProfileScreen() {
                   <Crown size={18} color="#facc15" fill="#f59e0b" />
                 </View>
               )}
-            </View>
+            </Pressable>
             {avatarName && (
               <Text style={[styles.avatarNameLabel, { color: theme.textMuted }]}>{avatarName}</Text>
             )}
@@ -214,7 +229,11 @@ export function ProfileScreen() {
                 </Text>
               </View>
             )}
-            <View style={styles.nameRow}>
+            {/* Compact identity row directly under the avatar-name label
+                ("החוסך"): edit-pencil + level pill (tap → progress popup) +
+                hearts. PRO chip removed (the gold crown over the avatar
+                already signals PRO status; a second chip was redundant). */}
+            <View style={styles.levelRow}>
               <Pressable
                 onPress={() => setEditModalVisible(true)}
                 style={styles.editBtn}
@@ -224,6 +243,20 @@ export function ProfileScreen() {
               >
                 <Pencil size={14} color="#a78bfa" />
               </Pressable>
+              <Pressable onPress={() => setShowStagePopup(true)} accessibilityRole="button" accessibilityLabel="הצג התקדמות שלב">
+                <View style={[styles.levelPill, isDark && { backgroundColor: "rgba(124,58,237,0.15)", borderColor: "rgba(167,139,250,0.3)" }]}>
+                  <Star size={12} color="#7c3aed" />
+                  {/* `layer` (1..5) is the canonical "stage" number rendered
+                      in the GlobalWealthHeader ring. Use it here too so the
+                      two surfaces never disagree. */}
+                  <Text style={styles.levelPillText}>
+                    שלב {layer} · {LAYER_NAMES_HE[layer] ?? ""}
+                  </Text>
+                </View>
+              </Pressable>
+              <HeartsDisplay />
+            </View>
+            <View style={styles.nameRow}>
               <Text style={[styles.displayName, { color: isPro ? "#d97706" : theme.text }, isPro && { fontWeight: "900" }]}>
                 {displayName ?? "שחקן"}
               </Text>
@@ -233,18 +266,6 @@ export function ProfileScreen() {
                   <Text style={styles.whaleBadgeText}>WHALE</Text>
                 </View>
               )}
-              {isPro && <ProBadge size="sm" />}
-            </View>
-            <View style={styles.levelRow}>
-              <Pressable onPress={() => setShowStagePopup(true)} accessibilityRole="button" accessibilityLabel="הצג התקדמות שלב">
-                <View style={[styles.levelPill, isDark && { backgroundColor: "rgba(124,58,237,0.15)", borderColor: "rgba(167,139,250,0.3)" }]}>
-                  <Star size={12} color="#7c3aed" />
-                  <Text style={styles.levelPillText}>
-                    שלב {level} · {LAYER_NAMES_HE[layer] ?? ""}
-                  </Text>
-                </View>
-              </Pressable>
-              <HeartsDisplay />
             </View>
           </Animated.View>
 
@@ -278,56 +299,32 @@ export function ProfileScreen() {
             </Animated.View>
           </Pressable>
 
-          {/* XP Progress card */}
-          <Animated.View style={[xpCardStyle, styles.card, { marginBottom: 12, backgroundColor: theme.surface, borderColor: theme.border, shadowColor: "#0891b2", shadowOpacity: 0.25, shadowRadius: 12, shadowOffset: { width: 0, height: 4 }, elevation: 5 }]}>
-            <View style={[styles.cardTopBorder, { backgroundColor: "#0891b2", shadowColor: "#0891b2" }]} />
-            <View style={styles.cardBody}>
-              <View style={styles.cardRowBetween}>
-                <Text style={[styles.cardMuted, { color: theme.textMuted }]}>
-                  {xpToNextLevel > 0 ? `${xpToNextLevel} XP לשלב ${level + 1}` : "שלב מקסימלי!"}
-                </Text>
-                <View style={{ flexDirection: "row-reverse", alignItems: "center", gap: 6 }}>
-                  <Zap size={14} color="#0891b2" />
-                  <Text style={[styles.cardLabel, { color: "#0891b2" }]}>ניסיון</Text>
-                </View>
-              </View>
-              <View style={{ flexDirection: "row-reverse", alignItems: "baseline", gap: 4, marginVertical: 8 }}>
-                <Text style={[styles.cardBigValue, { color: theme.text }]}>{xp.toLocaleString('he-IL')}</Text>
-                <Text style={[styles.cardUnit, { color: theme.textMuted }]}>XP</Text>
-              </View>
-              {/* Progress bar removed, stage popup shows progress instead */}
-            </View>
-          </Animated.View>
+          {/* ChampionCard moved into a popup — opened by tapping the avatar
+              above. The XP/coins/level summary is already in the
+              GlobalWealthHeader, so we don't need it inline here. */}
 
-          {/* Stats row */}
-          <View style={{ flexDirection: "row", gap: 12, marginBottom: 12 }}>
-            <Animated.View style={[statsLeftStyle, { flex: 1 }]}>
-              <View style={[styles.card, { marginBottom: 0, backgroundColor: theme.surface, borderColor: theme.border, shadowColor: "#ca8a04", shadowOpacity: 0.25, shadowRadius: 12, shadowOffset: { width: 0, height: 4 }, elevation: 5 }]}>
-                <View style={[styles.cardTopBorder, { backgroundColor: "#ca8a04", shadowColor: "#ca8a04" }]} />
-                <View style={styles.cardBody}>
-                  <Text style={[styles.cardLabel, { color: theme.textMuted }]}>מטבעות</Text>
-                  <View style={{ flexDirection: "row-reverse", alignItems: "center", justifyContent: "center", gap: 6 }}>
-                    <GoldCoinIcon size={22} />
-                    <Text style={[styles.cardBigValue, { color: theme.text, fontSize: 24 }]}>{coins.toLocaleString('he-IL')}</Text>
-                  </View>
-                  <Text style={[styles.cardMuted, { color: theme.textMuted }]}>FinCoins</Text>
+          {/* Bridge CTA — surfaced right under the streak strip per request,
+              so the conversion-to-real-rewards action sits above the fold.
+              Hidden for minors (legal protection). */}
+          {!isMinor && (
+            <AnimatedPressable
+              onPress={() => router.push("/bridge")}
+              style={[styles.actionCard, { backgroundColor: theme.surface, borderColor: theme.border, marginBottom: 12 }]}
+              accessibilityRole="button"
+              accessibilityLabel="הגשר, המירו מטבעות להטבות אמיתיות"
+            >
+              <Animated.View style={[styles.actionCardInner, bridgeIsGlowTarget && bridgeGlowStyle, bridgeIsGlowTarget && { borderRadius: 16 }]}>
+                <ChevronRight size={20} color={theme.textMuted} style={{ transform: [{ scaleX: -1 }] }} />
+                <View style={{ alignItems: "flex-end", flex: 1 }}>
+                  <Text style={[styles.actionCardSubtitle, { color: theme.textMuted }]}>הגשר</Text>
+                  <Text style={[styles.actionCardTitle, { color: theme.text }]}>המירו מטבעות להטבות אמיתיות</Text>
                 </View>
-              </View>
-            </Animated.View>
-            <Animated.View style={[statsRightStyle, { flex: 1 }]}>
-              <View style={[styles.card, { marginBottom: 0, backgroundColor: theme.surface, borderColor: theme.border, shadowColor: "#16a34a", shadowOpacity: 0.25, shadowRadius: 12, shadowOffset: { width: 0, height: 4 }, elevation: 5 }]}>
-                <View style={[styles.cardTopBorder, { backgroundColor: "#16a34a", shadowColor: "#16a34a" }]} />
-                <View style={styles.cardBody}>
-                  <Text style={[styles.cardLabel, { color: theme.textMuted }]}>שלב</Text>
-                  <View style={{ flexDirection: "row-reverse", alignItems: "center", gap: 4 }}>
-                    <Trophy size={18} color="#16a34a" />
-                    <Text style={[styles.cardBigValue, { color: theme.text, fontSize: 24 }]}>{layer}</Text>
-                  </View>
-                  <Text style={[styles.cardMuted, { color: theme.textMuted }]}>מתוך 5</Text>
+                <View style={[styles.actionIcon, { backgroundColor: isDark ? "rgba(124,58,237,0.15)" : "#f5f3ff", borderColor: isDark ? "rgba(167,139,250,0.3)" : "#ddd6fe" }]} accessible={false}>
+                  <LottieIcon source={require("../../../assets/lottie/wired-flat-1925-bridge-hover-pinch.json")} size={28} autoPlay loop active={isFocused} />
                 </View>
-              </View>
-            </Animated.View>
-          </View>
+              </Animated.View>
+            </AnimatedPressable>
+          )}
 
           {/* Duel W/L Record */}
           {(duelRecord.wins > 0 || duelRecord.losses > 0 || duelRecord.draws > 0) && (
@@ -362,27 +359,9 @@ export function ProfileScreen() {
           )}
 
 
-          {/* ── Actions ── */}
+          {/* ── Actions ── (Bridge CTA was lifted to right under the streak
+              strip; the rest of the actions stay here.) */}
           <Animated.View style={[actionsStyle, { gap: 12 }]}>
-            {/* Bridge CTA, hidden for minors (legal protection) */}
-            {!isMinor && <AnimatedPressable
-              onPress={() => router.push("/bridge")}
-              style={[styles.actionCard, { backgroundColor: theme.surface, borderColor: theme.border }]}
-              accessibilityRole="button"
-              accessibilityLabel="הגשר, המירו מטבעות להטבות אמיתיות"
-            >
-              <Animated.View style={[styles.actionCardInner, bridgeIsGlowTarget && bridgeGlowStyle, bridgeIsGlowTarget && { borderRadius: 16 }]}>
-                <ChevronRight size={20} color={theme.textMuted} style={{ transform: [{ scaleX: -1 }] }} />
-                <View style={{ alignItems: "flex-end", flex: 1 }}>
-                  <Text style={[styles.actionCardSubtitle, { color: theme.textMuted }]}>הגשר</Text>
-                  <Text style={[styles.actionCardTitle, { color: theme.text }]}>המירו מטבעות להטבות אמיתיות</Text>
-                </View>
-                <View style={[styles.actionIcon, { backgroundColor: isDark ? "rgba(124,58,237,0.15)" : "#f5f3ff", borderColor: isDark ? "rgba(167,139,250,0.3)" : "#ddd6fe" }]} accessible={false}>
-                  <LottieIcon source={require("../../../assets/lottie/wired-flat-1925-bridge-hover-pinch.json")} size={28} autoPlay loop active={isFocused} />
-                </View>
-              </Animated.View>
-            </AnimatedPressable>}
-
             {/* Assets CTA */}
             <AnimatedPressable
               onPress={() => router.push("/assets" as never)}
@@ -554,6 +533,8 @@ export function ProfileScreen() {
               {layer < 5 ? `עוד ${xpToNextLevel.toLocaleString('he-IL')} XP לשלב הבא` : "הגעת לשלב הגבוה ביותר!"}
             </Text>
             <View style={stagePopupStyles.progressTrack}>
+              {/* RTL fill — anchored to the right edge so the bar grows from
+                  right (start) to left (end), matching Hebrew reading flow. */}
               <View style={[stagePopupStyles.progressFill, { width: `${Math.round(progressToNextLevel * 100)}%` }]} />
             </View>
             <Text style={stagePopupStyles.percent}>{Math.round(progressToNextLevel * 100)}%</Text>
@@ -565,6 +546,37 @@ export function ProfileScreen() {
               ))}
             </View>
           </Pressable>
+        </Pressable>
+      </Modal>
+
+      {/* Champion Card popup — opened by tapping the avatar at the top.
+          Title is a level-tier metal (ברונזה/כסף/זהב/פלטינה), unisex. No
+          rank surfaced ("בלי דירוג כרגע"). Avatar comes from AvatarImage
+          (the user's equipped Pip / legacy avatar). */}
+      <Modal visible={showChampionPopup} transparent animationType="fade" onRequestClose={() => setShowChampionPopup(false)} accessibilityViewIsModal>
+        <Pressable style={stagePopupStyles.backdrop} onPress={() => setShowChampionPopup(false)} accessibilityRole="button" accessibilityLabel="סגור כרטיס שחקן">
+          <View style={{ width: '85%' }}>
+            <Pressable onPress={() => {}} accessibilityRole="none">
+              <ChampionCard
+                name={displayName ?? "שחקן"}
+                level={layer}
+                xp={xp}
+                streak={streak}
+                title={
+                  layer >= 5 ? 'פלטינה' :
+                  layer >= 4 ? 'זהב' :
+                  layer >= 2 ? 'כסף' : 'ברונזה'
+                }
+                avatar={
+                  <AvatarImage
+                    avatarId={profile?.avatarId ?? null}
+                    size={74}
+                    emojiStyle={styles.avatarEmoji}
+                  />
+                }
+              />
+            </Pressable>
+          </View>
         </Pressable>
       </Modal>
     </View>
@@ -599,7 +611,7 @@ const stagePopupStyles = StyleSheet.create({
   closeBtn: {
     position: "absolute",
     top: 12,
-    left: 12,
+    right: 12,
     padding: 4,
   },
   emoji: {
@@ -627,6 +639,7 @@ const stagePopupStyles = StyleSheet.create({
     borderRadius: 5,
     overflow: "hidden",
     marginTop: 4,
+    flexDirection: "row-reverse",
   },
   progressFill: {
     height: "100%",

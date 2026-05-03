@@ -3,6 +3,7 @@ import { useState } from "react";
 import { Text, type StyleProp, type TextStyle, type ViewStyle, View } from "react-native";
 
 import { DEFAULT_AVATAR_EMOJI, getAvatarById, type AvatarDefinition } from "./avatarData";
+import { getAvatarSvgIcon } from "../../components/svg/avatars/AvatarMascots";
 
 interface AvatarImageProps {
   avatarId: string | null | undefined;
@@ -23,6 +24,19 @@ export function AvatarImage({
 }: AvatarImageProps) {
   const def = providedDef ?? getAvatarById(avatarId ?? null);
   const [loadFailed, setLoadFailed] = useState(false);
+
+  // Render priority:
+  //   1. Inline SVG (Pip mascot — current premium avatar set, matched by id)
+  //   2. Remote PNG via imageUrl (legacy/future remote avatars)
+  //   3. Emoji fallback
+  const SvgIcon = def ? getAvatarSvgIcon(def.id) : null;
+  if (SvgIcon) {
+    return (
+      <View style={[{ width: size, height: size, alignItems: 'center', justifyContent: 'center' }, containerStyle]}>
+        <SvgIcon size={size} />
+      </View>
+    );
+  }
 
   if (def?.imageUrl && !loadFailed) {
     const overflow = size * 0.05;

@@ -73,6 +73,7 @@ const FEATURES: FeatureRow[] = [
   { label: "משחקי פיד", free: "3 ברצף", pro: "ללא הגבלה" },
   { label: "צ'אט AI", free: "2 הודעות", pro: "ללא הגבלה" },
   { label: "תובנות AI מתקדמות", free: false, pro: true },
+  { label: "פריטי פרימיום מהחנות", free: false, pro: true },
 ];
 
 // ── Decorative sparkle dots ──────────────────────────────────────────────

@@ -45,6 +45,9 @@ export const GEM_PRODUCT_IDS: Record<string, string> = {
   'gems-barrel': 'finplay_gems_2500',
   'gems-wagon': 'finplay_gems_6500',
   'gems-spire': 'finplay_gems_14000',
+  // Daily-rotating starter pack — same product ID, contents rotate client-side.
+  // Configure in App Store Connect / Play Console as a CONSUMABLE at ₪19.90.
+  'starter-pack': 'finplay_starter_pack_19_90',
 };
 
 /* ── Initialization ────────────────────────────────────────────────── */

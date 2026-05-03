@@ -320,8 +320,10 @@ export function ShopScreen() {
 
   const handleBuyPress = useCallback((item: ShopItem) => {
     if (isAvatarItem(item)) {
-      const rawId = item.id.replace('avatar-', '');
-      if (ownedAvatars.includes(rawId)) { setAvatar(rawId); successHaptic(); return; }
+      // Use the full id (`avatar-saver`, etc.) — that's how the new avatar
+      // system flows through ownedAvatars → profile.avatarId → AvatarImage's
+      // SVG lookup. Stripping the prefix orphans the ownership check.
+      if (ownedAvatars.includes(item.id)) { setAvatar(item.id); successHaptic(); return; }
     }
     if (!canAffordItem(item)) return;
     setPendingItem(item);
@@ -343,8 +345,7 @@ export function ShopScreen() {
         useEconomyStore.getState().addStreakFreezes(3);
         successHaptic();
       } else if (isAvatarItem(pendingItem)) {
-        const rawId = pendingItem.id.replace('avatar-', '');
-        addOwnedAvatar(rawId); setAvatar(rawId); successHaptic();
+        addOwnedAvatar(pendingItem.id); setAvatar(pendingItem.id); successHaptic();
       }
     }
     setPendingItem(null);

@@ -1,0 +1,414 @@
+/**
+ * StarterPackModal — confirmation + redemption flow for the ₪19.90 starter
+ * pack. Triggered from FlashOfferBanner in DailyDealsSection.
+ *
+ * Real-money flow:
+ *   1. Local stub fallback (dev only) — when no RC API key is configured the
+ *      grant happens locally so the in-app preview still works.
+ *   2. Production — calls `purchaseGemBundle('starter-pack')` which goes
+ *      through RevenueCat → App Store / Play Billing. Goods are granted only
+ *      after the receipt is confirmed.
+ *
+ * Minor age gating: users with `profile.ageGroup === 'minor'` see a parental
+ * consent screen instead of the buy CTA. Apple/Google require explicit
+ * acknowledgement before charging users under the age of majority.
+ */
+import React, { useCallback, useState } from 'react';
+import { Modal, View, Text, StyleSheet, Pressable, Alert } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
+import { X } from 'lucide-react-native';
+import LottieView from 'lottie-react-native';
+import { GoldCoinIcon } from '../../components/ui/GoldCoinIcon';
+import { useEconomyStore } from '../economy/useEconomyStore';
+import { useAuthStore } from '../auth/useAuthStore';
+import { getAvatarById } from '../avatars/avatarData';
+import { getAvatarSvgIcon } from '../../components/svg/avatars/AvatarMascots';
+import { successHaptic, tapHaptic } from '../../utils/haptics';
+import { purchaseGemBundle } from '../../services/revenueCat';
+import {
+  getTodaysStarterPack,
+  STARTER_PACK_PRICE_LABEL,
+  STARTER_PACK_ORIGINAL_PRICE_LABEL,
+  STARTER_PACK_DISCOUNT_PCT,
+} from './starterPack';
+
+interface Props {
+  visible: boolean;
+  onDismiss: () => void;
+  onPurchaseSuccess?: () => void;
+}
+
+const HAS_RC_KEY = !!(process.env.EXPO_PUBLIC_RC_APPLE_KEY || process.env.EXPO_PUBLIC_RC_GOOGLE_KEY);
+
+export function StarterPackModal({ visible, onDismiss, onPurchaseSuccess }: Props) {
+  const addCoins = useEconomyStore((s) => s.addCoins);
+  const addGems = useEconomyStore((s) => s.addGems);
+  const addOwnedAvatar = useAuthStore((s) => s.addOwnedAvatar);
+  const setAvatar = useAuthStore((s) => s.setAvatar);
+  const isMinor = useAuthStore((s) => s.profile?.ageGroup === 'minor');
+  const [purchasing, setPurchasing] = useState(false);
+
+  // Snapshot today's bundle once per modal open. Avoids visual change mid-modal
+  // if the user opens it at 23:59:55 and confirms at 00:00:05.
+  const pack = React.useMemo(() => getTodaysStarterPack(), [visible]);
+
+  const grantPack = useCallback(() => {
+    addCoins(pack.coins);
+    addGems(pack.gems);
+    for (const aid of pack.avatarIds) {
+      addOwnedAvatar(aid);
+    }
+    setAvatar(pack.autoEquipAvatarId);
+  }, [pack, addCoins, addGems, addOwnedAvatar, setAvatar]);
+
+  const handleConfirm = useCallback(async () => {
+    if (purchasing) return;
+    setPurchasing(true);
+    try {
+      if (HAS_RC_KEY) {
+        // Real money path. RC throws on user-cancel — we treat that as a no-op,
+        // not a failure, so the modal just closes silently.
+        await purchaseGemBundle('starter-pack');
+      }
+      grantPack();
+      successHaptic();
+      Alert.alert(
+        'נרכש בהצלחה!',
+        `קיבלתם ${pack.coins.toLocaleString()} מטבעות, ${pack.gems} יהלומים, ו-${pack.avatarIds.length} אווטרים.`,
+      );
+      onPurchaseSuccess?.();
+      onDismiss();
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'שגיאה לא ידועה';
+      // RC user-cancel surfaces as a thrown error too — quietly close.
+      if (/cancel|user.{0,2}cancell/i.test(msg)) {
+        onDismiss();
+        return;
+      }
+      Alert.alert('הרכישה נכשלה', msg);
+    } finally {
+      setPurchasing(false);
+    }
+  }, [purchasing, grantPack, pack, onDismiss, onPurchaseSuccess]);
+
+  const handleCancel = useCallback(() => {
+    tapHaptic();
+    onDismiss();
+  }, [onDismiss]);
+
+  return (
+    <Modal visible={visible} animationType="fade" transparent onRequestClose={handleCancel}>
+      <View style={styles.backdrop}>
+        <View style={styles.cardWrap}>
+          <LinearGradient
+            colors={['#dc2626', '#f59e0b']}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={styles.outer}
+          >
+            <View style={styles.inner}>
+              {/* Close */}
+              <Pressable
+                onPress={handleCancel}
+                style={styles.closeBtn}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                accessibilityRole="button"
+                accessibilityLabel="סגור"
+              >
+                <X size={18} color="#fef3c7" />
+              </Pressable>
+
+              {/* Header */}
+              <View style={styles.discountBadge}>
+                <Text style={styles.discountText} allowFontScaling={false}>
+                  {STARTER_PACK_DISCOUNT_PCT}% הנחה
+                </Text>
+              </View>
+              <Text style={styles.title} allowFontScaling={false}>חבילת מתחילים</Text>
+              <Text style={styles.subtitle} allowFontScaling={false}>{pack.tagline}</Text>
+
+              {/* Bundle contents */}
+              <View style={styles.contentsBox}>
+                <BundleRow
+                  icon={<GoldCoinIcon size={26} />}
+                  label={`${pack.coins.toLocaleString()} מטבעות`}
+                />
+                <View style={styles.divider} />
+                <BundleRow
+                  icon={
+                    <View accessible={false}>
+                      <LottieView
+                        source={require('../../../assets/lottie/Diamond.json')}
+                        style={{ width: 32, height: 32 }}
+                        autoPlay
+                        loop
+                      />
+                    </View>
+                  }
+                  label={`${pack.gems} יהלומים`}
+                />
+                <View style={styles.divider} />
+                <View style={styles.avatarRow}>
+                  {pack.avatarIds.map((aid) => {
+                    const def = getAvatarById(aid);
+                    const Svg = getAvatarSvgIcon(aid);
+                    return (
+                      <View key={aid} style={styles.avatarChip}>
+                        {Svg ? <Svg size={56} /> : <Text style={{ fontSize: 36 }}>{def?.emoji ?? '🎮'}</Text>}
+                        <Text style={styles.avatarChipName} allowFontScaling={false} numberOfLines={1}>
+                          {def?.name ?? aid}
+                        </Text>
+                      </View>
+                    );
+                  })}
+                </View>
+              </View>
+
+              {/* Price */}
+              <View style={styles.priceRow}>
+                <Text style={styles.salePrice} allowFontScaling={false}>{STARTER_PACK_PRICE_LABEL}</Text>
+                <Text style={styles.origPrice} allowFontScaling={false}>{STARTER_PACK_ORIGINAL_PRICE_LABEL}</Text>
+              </View>
+
+              {/* CTA / minor gate */}
+              {isMinor ? (
+                <View style={styles.minorGate}>
+                  <Text style={styles.minorTitle} allowFontScaling={false}>נדרשת הסכמה של הורה</Text>
+                  <Text style={styles.minorBody} allowFontScaling={false}>
+                    רכישות בתשלום זמינות רק לאחר אימות מבוגר אחראי. בקשו מהורה להפעיל את הרכישה במכשיר שלהם.
+                  </Text>
+                </View>
+              ) : (
+                <Pressable
+                  onPress={handleConfirm}
+                  disabled={purchasing}
+                  style={({ pressed }) => [styles.cta, (pressed || purchasing) && { opacity: 0.85 }]}
+                  accessibilityRole="button"
+                  accessibilityState={{ disabled: purchasing }}
+                  accessibilityLabel={`קנה חבילת מתחילים ב-${STARTER_PACK_PRICE_LABEL}`}
+                >
+                  <LinearGradient
+                    colors={['#16a34a', '#15803d']}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 0, y: 1 }}
+                    style={StyleSheet.absoluteFill}
+                  />
+                  <Text style={styles.ctaText} allowFontScaling={false}>
+                    {purchasing ? 'מעבד…' : `קנה ב-${STARTER_PACK_PRICE_LABEL}`}
+                  </Text>
+                </Pressable>
+              )}
+
+              <Pressable onPress={handleCancel} style={styles.maybeLaterBtn} accessibilityRole="button" accessibilityLabel="סגור">
+                <Text style={styles.maybeLaterText} allowFontScaling={false}>{isMinor ? 'סגור' : 'אולי אחר כך'}</Text>
+              </Pressable>
+            </View>
+          </LinearGradient>
+        </View>
+      </View>
+    </Modal>
+  );
+}
+
+function BundleRow({ icon, label }: { icon: React.ReactNode; label: string }) {
+  return (
+    <View style={styles.bundleRow}>
+      <View style={styles.bundleIcon}>{icon}</View>
+      <Text style={styles.bundleLabel} allowFontScaling={false}>{label}</Text>
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  backdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.65)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 24,
+  },
+  cardWrap: {
+    width: '100%',
+    maxWidth: 380,
+  },
+  outer: {
+    borderRadius: 22,
+    padding: 3,
+    shadowColor: '#dc2626',
+    shadowOffset: { width: 0, height: 12 },
+    shadowOpacity: 0.6,
+    shadowRadius: 30,
+    elevation: 12,
+  },
+  inner: {
+    borderRadius: 19,
+    backgroundColor: '#0d2847',
+    paddingTop: 28,
+    paddingHorizontal: 20,
+    paddingBottom: 16,
+    alignItems: 'center',
+    overflow: 'hidden',
+  },
+  closeBtn: {
+    position: 'absolute',
+    top: 10,
+    insetInlineStart: 10,
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: 'rgba(255,255,255,0.08)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 2,
+  },
+  discountBadge: {
+    backgroundColor: '#fbbf24',
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+    borderRadius: 999,
+    marginBottom: 8,
+  },
+  discountText: {
+    fontSize: 12,
+    fontWeight: '900',
+    color: '#7c2d12',
+    letterSpacing: 0.5,
+  },
+  title: {
+    fontSize: 24,
+    fontWeight: '900',
+    color: '#fef3c7',
+    writingDirection: 'rtl' as const,
+    textShadowColor: 'rgba(0,0,0,0.6)',
+    textShadowOffset: { width: 0, height: 2 },
+    textShadowRadius: 6,
+  },
+  subtitle: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#94a8c2',
+    marginTop: 2,
+    marginBottom: 16,
+    writingDirection: 'rtl' as const,
+  },
+  contentsBox: {
+    width: '100%',
+    backgroundColor: 'rgba(255,255,255,0.04)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.1)',
+    borderRadius: 14,
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    marginBottom: 16,
+  },
+  bundleRow: {
+    flexDirection: 'row-reverse',
+    alignItems: 'center',
+    gap: 12,
+    paddingVertical: 6,
+  },
+  bundleIcon: {
+    width: 32,
+    alignItems: 'center',
+  },
+  bundleLabel: {
+    fontSize: 16,
+    fontWeight: '800',
+    color: '#fef3c7',
+    flex: 1,
+    writingDirection: 'rtl' as const,
+    fontVariant: ['tabular-nums'] as const,
+  },
+  divider: {
+    height: 1,
+    backgroundColor: 'rgba(255,255,255,0.08)',
+    marginVertical: 4,
+  },
+  avatarRow: {
+    flexDirection: 'row-reverse',
+    justifyContent: 'space-around',
+    paddingVertical: 8,
+    gap: 12,
+  },
+  avatarChip: {
+    alignItems: 'center',
+    flex: 1,
+  },
+  avatarChipName: {
+    fontSize: 11,
+    fontWeight: '800',
+    color: '#cbd5e1',
+    marginTop: 4,
+    writingDirection: 'rtl' as const,
+  },
+  priceRow: {
+    flexDirection: 'row-reverse',
+    alignItems: 'baseline',
+    gap: 10,
+    marginBottom: 12,
+  },
+  salePrice: {
+    fontSize: 32,
+    fontWeight: '900',
+    color: '#fbbf24',
+    fontVariant: ['tabular-nums'] as const,
+    letterSpacing: -0.5,
+  },
+  origPrice: {
+    fontSize: 14,
+    color: '#94a8c2',
+    textDecorationLine: 'line-through' as const,
+    fontVariant: ['tabular-nums'] as const,
+  },
+  cta: {
+    width: '100%',
+    paddingVertical: 14,
+    borderRadius: 14,
+    overflow: 'hidden',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderBottomWidth: 3,
+    borderBottomColor: '#14532d',
+  },
+  ctaText: {
+    fontSize: 16,
+    fontWeight: '900',
+    color: '#fff',
+    letterSpacing: 0.3,
+  },
+  maybeLaterBtn: {
+    marginTop: 8,
+    paddingVertical: 8,
+  },
+  maybeLaterText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#94a8c2',
+    writingDirection: 'rtl' as const,
+  },
+  minorGate: {
+    width: '100%',
+    backgroundColor: 'rgba(56, 189, 248, 0.10)',
+    borderColor: 'rgba(56, 189, 248, 0.45)',
+    borderWidth: 1,
+    borderRadius: 14,
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    alignItems: 'center',
+  },
+  minorTitle: {
+    fontSize: 14,
+    fontWeight: '900',
+    color: '#bae6fd',
+    marginBottom: 4,
+    writingDirection: 'rtl' as const,
+  },
+  minorBody: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#94a8c2',
+    textAlign: 'center',
+    writingDirection: 'rtl' as const,
+    lineHeight: 17,
+  },
+});

@@ -34,6 +34,7 @@ import { tapHaptic, successHaptic } from "../../utils/haptics";
 import { BackButton } from "../../components/ui/BackButton";
 import { AnimatedPressable } from "../../components/ui/AnimatedPressable";
 import { GoldCoinIcon } from "../../components/ui/GoldCoinIcon";
+import { EmptyNoFriends } from "../../components/svg/shop/EmptyStates";
 import { useReferralStore } from "./useReferralStore";
 import type { ReferredFriend } from "./referralTypes";
 import { GlobalWealthHeader } from "../../components/ui/GlobalWealthHeader";
@@ -295,6 +296,7 @@ export function ReferralScreen() {
             </View>
             {referredFriends.length === 0 ? (
               <View style={styles.emptyState}>
+                <EmptyNoFriends size={140} />
                 <Text style={styles.emptyText}>
                   עדיין לא הזמנתם חברים. שתפו את הקישור — תקבלו {REFERRAL_SIGNUP_BONUS_COINS} 🪙 על כל הרשמה!
                 </Text>

@@ -4,6 +4,9 @@ import { Image as ExpoImage } from 'expo-image';
 import { GoldCoinIcon } from '../../components/ui/GoldCoinIcon';
 import { useRouter } from 'expo-router';
 import { LottieIcon } from '../../components/ui/LottieIcon';
+import { FlashOfferBanner } from '../../components/ui/FlashOfferBanner';
+import { StarterPackModal } from './StarterPackModal';
+import { STARTER_PACK_PRICE_LABEL, STARTER_PACK_ORIGINAL_PRICE_LABEL, STARTER_PACK_DISCOUNT_PCT } from './starterPack';
 import { generateDailyDeals } from './dailyDeals';
 import { ConfirmModal } from './ConfirmModal';
 import { useEconomyStore } from '../economy/useEconomyStore';
@@ -41,6 +44,7 @@ export function DailyDealsSection() {
   const [remaining, setRemaining] = useState(msUntilMidnight);
   const [purchasedIds, setPurchasedIds] = useState<Set<string>>(new Set());
   const [pendingDeal, setPendingDeal] = useState<DailyDeal | null>(null);
+  const [starterPackOpen, setStarterPackOpen] = useState(false);
 
   const deals = useMemo(() => generateDailyDeals(dateKey), [dateKey]);
 
@@ -62,6 +66,7 @@ export function DailyDealsSection() {
   const addStreakFreezes = useEconomyStore((s) => s.addStreakFreezes);
   const addOwnedAvatar = useAuthStore((s) => s.addOwnedAvatar);
   const setAvatar = useAuthStore((s) => s.setAvatar);
+  const isMinor = useAuthStore((s) => s.profile?.ageGroup === 'minor');
 
   const handleClaimFreeGems = useCallback(() => {
     addGems(5);
@@ -71,9 +76,11 @@ export function DailyDealsSection() {
   const handleProClaim = useCallback((deal: DailyDeal) => {
     const itemId = deal.item.id;
     if (itemId.startsWith('avatar-')) {
-      const avatarId = itemId.replace('avatar-', '');
-      addOwnedAvatar(avatarId);
-      setAvatar(avatarId);
+      // ID is the avatar id verbatim — same string flows through the auth store
+      // and AvatarImage's SVG lookup. Stripping the prefix would orphan the
+      // grant from getAvatarSvgIcon (regression caught in integration review).
+      addOwnedAvatar(itemId);
+      setAvatar(itemId);
     } else if (itemId === 'streak-freeze') {
       addStreakFreezes(1);
     } else if (itemId === 'streak-freeze-bundle') {
@@ -121,6 +128,27 @@ export function DailyDealsSection() {
 
   return (
     <View>
+      {/* Flash Offer banner — limited-time starter pack at ₪19.90.
+          Sits above the daily-deals grid as the headline daily offer.
+          Tapping opens StarterPackModal (NOT the PRO upgrade flow) — this is
+          a one-shot bundle, not a subscription.
+
+          Hidden for minors per Israeli ההגנה על הצרכן § 14ג + Apple's
+          Designed for Families: don't surface FOMO purchase pressure to
+          users we already block from buying. */}
+      {!isMinor && (
+        <View style={{ marginBottom: 14 }}>
+          <FlashOfferBanner
+            title="חבילת מתחילים"
+            discount={STARTER_PACK_DISCOUNT_PCT}
+            originalPrice={STARTER_PACK_ORIGINAL_PRICE_LABEL}
+            salePrice={STARTER_PACK_PRICE_LABEL}
+            timeLeftSeconds={Math.floor(remaining / 1000)}
+            onPress={() => setStarterPackOpen(true)}
+          />
+        </View>
+      )}
+
       {/* Countdown */}
       <Text style={styles.countdown}>מתחדש בעוד {formatCountdown(remaining)}</Text>
 
@@ -226,6 +254,11 @@ export function DailyDealsSection() {
           onCancel={() => setPendingDeal(null)}
         />
       )}
+
+      <StarterPackModal
+        visible={starterPackOpen}
+        onDismiss={() => setStarterPackOpen(false)}
+      />
     </View>
   );
 }

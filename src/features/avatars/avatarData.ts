@@ -1,18 +1,13 @@
 export interface AvatarDefinition {
   id: string;
   emoji: string;
-  /** Public URL of avatar image (PNG with circular alpha). When set, prefer over emoji. */
+  /** Public URL of avatar image (PNG with circular alpha). When set, prefer over emoji.
+   *  Reserved for future remote-served avatars; the new Pip set renders via inline SVG instead. */
   imageUrl?: string;
   lottieSource?: number;
   name: string;
   gemCost: number;
 }
-
-// Bump AVATAR_ASSET_VERSION whenever scripts/avatars/process-and-upload.ts is re-run with
-// changes — forces ExpoImage to bypass the cache and fetch the new PNG.
-const AVATAR_ASSET_VERSION = 4;
-const BLOB_BASE = `https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/images/avatars`;
-const v = `?v=${AVATAR_ASSET_VERSION}`;
 
 export const AVATAR_LIST: AvatarDefinition[] = [
   // Free avatars (emoji-only)
@@ -24,28 +19,44 @@ export const AVATAR_LIST: AvatarDefinition[] = [
   { id: 'turtle', emoji: '🐢', name: 'הסבלני', gemCost: 0 },
   { id: 'panda', emoji: '🐼', name: 'הרגוע', gemCost: 0 },
   { id: 'cat', emoji: '🐱', name: 'הסקרן', gemCost: 0 },
-  // Premium Captain Shark avatars (image-based, sold in shop)
-  { id: 'scholar', emoji: '🦈', name: 'הלומד', gemCost: 50, imageUrl: `${BLOB_BASE}/scholar.png${v}` },
-  { id: 'saver', emoji: '🦈', name: 'החוסך', gemCost: 100, imageUrl: `${BLOB_BASE}/saver.png${v}` },
-  { id: 'analyst', emoji: '🦈', name: 'המנתח', gemCost: 150, imageUrl: `${BLOB_BASE}/analyst.png${v}` },
-  { id: 'piggy', emoji: '🦈', name: 'החוסך החזק', gemCost: 250, imageUrl: `${BLOB_BASE}/piggy.png${v}` },
-  { id: 'investor', emoji: '🦈', name: 'המשקיע', gemCost: 400, imageUrl: `${BLOB_BASE}/investor.png${v}` },
-  { id: 'earner', emoji: '🦈', name: 'המרוויח', gemCost: 600, imageUrl: `${BLOB_BASE}/earner.png${v}` },
-  { id: 'trader', emoji: '🦈', name: 'הסוחר', gemCost: 800, imageUrl: `${BLOB_BASE}/trader.png${v}` },
-  { id: 'banker', emoji: '🦈', name: 'הבנקאי', gemCost: 1200, imageUrl: `${BLOB_BASE}/banker.png${v}` },
+  // Premium Pip avatars (rendered via SVG in AvatarImage; emoji is fallback only).
+  // IDs are kept identical to shop item IDs (`avatar-*`) so a single ID flows
+  // shop → ownedAvatars → setAvatar → AvatarImage.getAvatarSvgIcon().
+  { id: 'avatar-saver',        emoji: '🪙', name: 'החוסך',         gemCost: 50 },
+  { id: 'avatar-learner',      emoji: '📚', name: 'הלומד',         gemCost: 80 },
+  { id: 'avatar-grower',       emoji: '🌱', name: 'המגדל',         gemCost: 120 },
+  { id: 'avatar-strong-saver', emoji: '🐷', name: 'החוסך החזק',    gemCost: 180 },
+  { id: 'avatar-analyst',      emoji: '📊', name: 'המנתח',         gemCost: 250 },
+  { id: 'avatar-investor',     emoji: '🚀', name: 'המשקיע',        gemCost: 350 },
+  { id: 'avatar-trader',       emoji: '📈', name: 'הסוחר',         gemCost: 500 },
+  { id: 'avatar-defender',     emoji: '🛡️', name: 'המגן',          gemCost: 700 },
+  { id: 'avatar-explorer',     emoji: '🌍', name: 'החוקר',         gemCost: 1000 },
+  { id: 'avatar-strategist',   emoji: '♟️', name: 'האסטרטג',       gemCost: 1500 },
 ];
 
-// Backward-compat: existing users may have old premium IDs persisted in their profile.
-// Map them to the new shark equivalents (matched by gemCost tier).
+// Backward-compat: existing users may have old premium IDs persisted in their profile
+// (legacy shark series + earlier Disney-style names). Map them to the new Pip equivalents
+// chosen by closest archetype, NOT just by gem tier — so an existing user sees a
+// thematically similar avatar after upgrade.
 const LEGACY_AVATAR_ALIASES: Record<string, string> = {
-  koala: 'scholar',   // 50  → 50
-  king: 'saver',      // 100 → 100
-  robot: 'analyst',   // 150 → 150
-  unicorn: 'piggy',   // 250 → 250
-  dragon: 'investor', // 400 → 400
-  phoenix: 'earner',  // 600 → 600
-  diamond: 'trader',  // 800 → 800
-  rocket: 'banker',   // 1200 → 1200
+  // legacy shark series (PNG-backed)
+  scholar:  'avatar-learner',
+  saver:    'avatar-saver',
+  analyst:  'avatar-analyst',
+  piggy:    'avatar-strong-saver',
+  investor: 'avatar-investor',
+  earner:   'avatar-trader',
+  trader:   'avatar-trader',
+  banker:   'avatar-strategist',
+  // even older Disney-style ids
+  koala:    'avatar-learner',
+  king:     'avatar-saver',
+  robot:    'avatar-analyst',
+  unicorn:  'avatar-strong-saver',
+  dragon:   'avatar-investor',
+  phoenix:  'avatar-trader',
+  diamond:  'avatar-defender',
+  rocket:   'avatar-strategist',
 };
 
 export const FREE_AVATARS = AVATAR_LIST.filter((a) => a.gemCost === 0);

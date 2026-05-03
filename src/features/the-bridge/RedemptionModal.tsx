@@ -97,16 +97,21 @@ export function RedemptionModal({ visible, benefit, isRedeemed = false, canAffor
             </View>
           </ScrollView>
 
-          {/* CTA button — pinned outside ScrollView so it's always reachable */}
+          {/* CTA button — pinned outside ScrollView so it's always reachable.
+              Disabled state uses a ghost-blue treatment: clear, on-brand, NOT
+              shouty grey-on-grey. Communicates "not yet" without alarming. */}
           <Pressable
             onPress={onConfirm}
+            disabled={!canAfford && !isRedeemed}
             style={({ pressed }) => [
-              styles.confirmBtn,
-              !canAfford && !isRedeemed && { backgroundColor: '#94a3b8', shadowColor: '#94a3b8' },
-              pressed && { opacity: 0.9, transform: [{ scale: 0.98 }] }
+              !canAfford && !isRedeemed ? styles.confirmBtnDisabled : styles.confirmBtn,
+              pressed && canAfford && { opacity: 0.9, transform: [{ scale: 0.98 }] }
             ]}
+            accessibilityRole="button"
+            accessibilityState={{ disabled: !canAfford && !isRedeemed }}
+            accessibilityLabel={isRedeemed ? 'למעבר לאתר השותף' : canAfford ? 'המרה כעת' : 'אין מספיק מטבעות'}
           >
-            <Text style={styles.confirmBtnText}>
+            <Text style={!canAfford && !isRedeemed ? styles.confirmBtnTextDisabled : styles.confirmBtnText}>
               {isRedeemed ? 'למעבר לאתר השותף' : canAfford ? 'המרה כעת' : 'אין מספיק מטבעות'}
             </Text>
           </Pressable>
@@ -275,9 +280,31 @@ const styles = StyleSheet.create({
     fontWeight: '900',
     color: '#ffffff',
     letterSpacing: 0.3,
+    textAlign: 'center',
     textShadowColor: 'rgba(0,0,0,0.18)',
     textShadowOffset: { width: 0, height: 1 },
     textShadowRadius: 2,
+  },
+  /* Disabled state — pleasant blue-ghost. Says "not yet, but on the path"
+   * without alarming red or muddy grey. Centered, full-width, on-brand. */
+  confirmBtnDisabled: {
+    backgroundColor: 'rgba(14, 165, 233, 0.10)',  // sky-500 @ 10%
+    paddingVertical: 18,
+    borderRadius: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+    alignSelf: 'stretch',
+    width: '100%',
+    borderWidth: 1.5,
+    borderColor: 'rgba(14, 165, 233, 0.45)',     // sky-500 @ 45%
+    marginBottom: 8,
+  },
+  confirmBtnTextDisabled: {
+    fontSize: 16,
+    fontWeight: '800',
+    color: '#0369a1',                             // sky-700 — pleasantly readable on light
+    letterSpacing: 0.3,
+    textAlign: 'center',
   },
 
   cancelBtn: {
