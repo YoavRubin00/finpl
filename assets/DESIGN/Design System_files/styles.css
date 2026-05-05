@@ -1,0 +1,113 @@
+/* FinPlay design tokens — extracted from src/constants/theme.ts */
+:root {
+  /* Stitch (light mode) */
+  --st-bg: #f7f9fb;
+  --st-surface: #ffffff;
+  --st-surface-low: #f2f4f6;
+  --st-surface-container: #eceef0;
+  --st-on-surface: #191c1e;
+  --st-on-surface-variant: #404752;
+  --st-outline: #707783;
+  --st-outline-variant: #c0c7d4;
+  --st-primary: #005bb1;
+  --st-primary-cyan: #9ccee6;
+  --st-secondary-purple: #c3c0ff;
+  --st-secondary-purple-dark: #3e3c8f;
+  --st-gold-bright: #e9c400;
+  --st-gold-light: #ffe16d;
+  --st-gold-dim: #735c00;
+
+  /* Clash (dark gaming) */
+  --clash-bg: #0d2847;
+  --clash-bg-2: #1a3a5c;
+  --clash-grid: #2a5a8c;
+  --clash-gold: #d4a017;
+  --clash-gold-light: #f5c842;
+  --clash-card: rgba(10, 22, 40, 0.85);
+  --clash-green: #16a34a;
+  --clash-green-light: #4ade80;
+  --clash-orange: #ea580c;
+  --clash-blue: #1e40af;
+
+  /* Semantic */
+  --xp: #a78bfa;
+  --coin: #facc15;
+  --gem: #06b6d4;
+  --streak: #f97316;
+  --heart: #ef4444;
+  --boost: #a855f7;
+}
+
+* { box-sizing: border-box; -webkit-font-smoothing: antialiased; }
+html, body { font-family: 'Heebo', system-ui, sans-serif; }
+
+/* shared text shadow (Clash) */
+.txt-shadow { text-shadow: 0 2px 4px rgba(0,0,0,0.8); }
+
+/* diamond grid background (Clash) */
+.diamond-bg {
+  background-color: #0d2847;
+  background-image:
+    linear-gradient(45deg, rgba(42,90,140,0.18) 25%, transparent 25%),
+    linear-gradient(-45deg, rgba(42,90,140,0.18) 25%, transparent 25%),
+    linear-gradient(45deg, transparent 75%, rgba(42,90,140,0.18) 75%),
+    linear-gradient(-45deg, transparent 75%, rgba(42,90,140,0.18) 75%);
+  background-size: 24px 24px;
+  background-position: 0 0, 0 12px, 12px -12px, -12px 0;
+}
+
+/* Duolingo-style 3D button (3px solid bottom border, presses down on click) */
+.duo-btn {
+  border: none;
+  border-bottom: 3px solid var(--press-shadow, #1e3a8a);
+  border-radius: 14px;
+  font-family: inherit;
+  font-weight: 900;
+  cursor: pointer;
+  transition: transform 0.06s, border-bottom-width 0.06s;
+}
+.duo-btn:active {
+  transform: translateY(2px);
+  border-bottom-width: 1px;
+}
+
+/* shimmer animation */
+@keyframes shimmer {
+  0% { transform: translateX(-200%) rotate(25deg); }
+  100% { transform: translateX(400%) rotate(25deg); }
+}
+.shimmer {
+  position: absolute;
+  top: -40px; bottom: -40px; width: 60px;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.5), transparent);
+  animation: shimmer 2.4s linear infinite;
+}
+
+/* gentle glow pulse */
+@keyframes glow-pulse {
+  0%, 100% { box-shadow: 0 0 12px var(--glow, rgba(212,160,23,0.5)); }
+  50%      { box-shadow: 0 0 22px var(--glow, rgba(212,160,23,0.85)); }
+}
+.glow-pulse { animation: glow-pulse 2.4s ease-in-out infinite; }
+
+/* streak fire flicker */
+@keyframes fire-flicker {
+  0%, 100% { transform: scale(1) rotate(-2deg); }
+  50%      { transform: scale(1.08) rotate(2deg); }
+}
+.fire-flicker { animation: fire-flicker 1.6s ease-in-out infinite; }
+
+/* level up ring rotate */
+@keyframes ring-rotate { to { transform: rotate(360deg); } }
+.ring-rotate { animation: ring-rotate 8s linear infinite; transform-origin: center; }
+
+/* number tick (count up) */
+@keyframes pop {
+  0% { transform: scale(1); }
+  40% { transform: scale(1.18); }
+  100% { transform: scale(1); }
+}
+.pop { animation: pop 0.5s ease-out; }
+
+/* Hebrew text */
+[dir="rtl"] { direction: rtl; text-align: right; }

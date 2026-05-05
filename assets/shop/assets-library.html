@@ -1,0 +1,898 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8" />
+<title>FinPlay · SVG Assets</title>
+<style>
+  :root { --violet:#7c3aed; --yellow:#facc15; --green:#22c55e; --ink:#f6f0e2; --muted:#94a8c2; --bg:#0a1628; --panel:#12233d; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; background: var(--bg); color: var(--ink); font-family: 'Heebo', system-ui, Arial, sans-serif; }
+  body { padding: 32px 24px 80px; }
+  h1 { text-align: center; margin: 0 0 4px; font-size: 30px; font-weight: 800; }
+  .sub { text-align: center; color: var(--muted); margin: 0 0 32px; font-size: 14px; }
+  h2 { font-size: 18px; font-weight: 700; margin: 28px 0 12px; padding-bottom: 6px; border-bottom: 1px solid rgba(255,255,255,0.08); max-width: 1100px; margin-left: auto; margin-right: auto; }
+  .grid { max-width: 1100px; margin: 0 auto; display: grid; gap: 12px; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); }
+  .grid-lg { grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); }
+  .grid-xs { grid-template-columns: repeat(auto-fill, minmax(90px, 1fr)); }
+  .tile {
+    background: var(--panel); border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 14px; padding: 14px; display: flex; flex-direction: column;
+    align-items: center; gap: 8px; box-shadow: 0 4px 14px rgba(0,0,0,0.25);
+  }
+  .tile .frame {
+    width: 96px; height: 96px;
+    background: radial-gradient(circle at 50% 35%, #1e3a5f 0%, #0a1628 75%);
+    border-radius: 12px; display: grid; place-items: center;
+  }
+  .tile.lg .frame { width: 200px; height: 200px; }
+  .tile.xs .frame { width: 64px; height: 64px; }
+  .tile .frame svg { width: 100%; height: 100%; display: block; }
+  .name { font-size: 12px; color: var(--ink); font-weight: 600; }
+  .meta { font-size: 10px; color: var(--muted); }
+</style>
+</head>
+<body>
+  <h1>FinPlay · SVG Asset Library</h1>
+  <p class="sub">Boost icons · Shield icons · Empty states · Sparkle particles</p>
+
+  <h2>Boost Icons · 24×24</h2>
+  <div class="grid" id="boosts"></div>
+
+  <h2>Shield Icons · 24×24</h2>
+  <div class="grid" id="shields"></div>
+
+  <h2>Hearts · 24×24</h2>
+  <div class="grid" id="hearts"></div>
+
+  <h2>Hints · 24×24</h2>
+  <div class="grid" id="hints"></div>
+
+  <h2>Streak Freeze · 24×24</h2>
+  <div class="grid" id="freeze"></div>
+
+  <h2>Bundles & Ribbons</h2>
+  <div class="grid" id="bundles"></div>
+
+  <h2>LiveOps (רטנשן) · countdown / streak / event</h2>
+  <div class="grid" id="liveops"></div>
+
+  <h2>Daily Deal Badges</h2>
+  <div class="grid" id="badges"></div>
+
+  <h2>Tier Dividers · full-width strips</h2>
+  <div class="grid grid-lg" id="dividers"></div>
+
+  <h2>Empty States</h2>
+  <div class="grid grid-lg" id="empty"></div>
+
+  <h2>Sparkle / Confetti Particles · 6 curated</h2>
+  <div class="grid grid-xs" id="sparks"></div>
+
+  <script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+
+  <script type="text/babel">
+    // ────────────────────────────────────────────────────────────
+    // BOOST ICONS · 24x24 viewBox
+    // ────────────────────────────────────────────────────────────
+
+    const BoostXP = () => (
+      <svg viewBox="0 0 24 24">
+        <defs>
+          <linearGradient id="xpG" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0" stopColor="#a78bfa" />
+            <stop offset="1" stopColor="#7c3aed" />
+          </linearGradient>
+        </defs>
+        {/* Lightning bolt with star burst */}
+        <path d="M13 2 L4 14 H10 L9 22 L20 9 H14 Z" fill="url(#xpG)" stroke="#3b1d80" strokeWidth="1" strokeLinejoin="round" />
+        <text x="12" y="14" fontSize="6" fontWeight="900" textAnchor="middle" fill="#fbf6e7" fontFamily="Heebo, sans-serif">XP</text>
+      </svg>
+    );
+
+    const BoostCoins = () => (
+      <svg viewBox="0 0 24 24">
+        <defs>
+          <radialGradient id="cnG" cx="40%" cy="35%" r="65%">
+            <stop offset="0" stopColor="#fde68a" />
+            <stop offset="1" stopColor="#facc15" />
+          </radialGradient>
+        </defs>
+        {/* x2 coin stack */}
+        <ellipse cx="9" cy="14" rx="6" ry="6" fill="url(#cnG)" stroke="#854d0e" strokeWidth="1.4" />
+        <ellipse cx="15" cy="10" rx="6" ry="6" fill="url(#cnG)" stroke="#854d0e" strokeWidth="1.4" />
+        {/* ×2 badge — separated from coin face for legibility at 24×24 */}
+        <circle cx="19" cy="18" r="4.2" fill="#dc2626" stroke="#7f1d1d" strokeWidth="1" />
+        <text x="19" y="20.2" fontSize="5.5" fontWeight="900" textAnchor="middle" fill="#fef9c3" fontFamily="Heebo, sans-serif">×2</text>
+      </svg>
+    );
+
+    const BoostMega = () => (
+      <svg viewBox="0 0 24 24">
+        <defs>
+          <linearGradient id="mgG" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0" stopColor="#fde047" />
+            <stop offset="0.45" stopColor="#fb923c" />
+            <stop offset="1" stopColor="#dc2626" />
+          </linearGradient>
+          <radialGradient id="mgGlow" cx="50%" cy="45%" r="55%">
+            <stop offset="0" stopColor="#fde047" stopOpacity="0.55" />
+            <stop offset="0.6" stopColor="#fb923c" stopOpacity="0.18" />
+            <stop offset="1" stopColor="#dc2626" stopOpacity="0" />
+          </radialGradient>
+        </defs>
+        {/* outer glow ring (whale-tier signal) */}
+        <circle cx="12" cy="11" r="11" fill="url(#mgGlow)" />
+        {/* Rocket */}
+        <path d="M12 2 Q16 6 16 14 L14 18 H10 L8 14 Q8 6 12 2 Z" fill="url(#mgG)" stroke="#7f1d1d" strokeWidth="1.2" strokeLinejoin="round" />
+        <circle cx="12" cy="9" r="2" fill="#fef3c7" stroke="#7f1d1d" strokeWidth="1" />
+        <path d="M8 14 L5 17 L7 18 L9 16 Z" fill="#fb923c" stroke="#7f1d1d" strokeWidth="1" strokeLinejoin="round" />
+        <path d="M16 14 L19 17 L17 18 L15 16 Z" fill="#fb923c" stroke="#7f1d1d" strokeWidth="1" strokeLinejoin="round" />
+        {/* flame */}
+        <path d="M10 18 Q12 22 14 18 Q13 20 12 19.5 Q11 20 10 18 Z" fill="#fde047" />
+        {/* nose-cone sparkle (premium accent) */}
+        <path d="M12 2.2 L12.7 3.4 L14 3.5 L13 4.3 L13.3 5.6 L12 5 L10.7 5.6 L11 4.3 L10 3.5 L11.3 3.4 Z" fill="#fef9c3" opacity="0.9" />
+      </svg>
+    );
+
+    const BoostWeekend = () => (
+      <svg viewBox="0 0 24 24">
+        <defs>
+          <linearGradient id="wkG" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0" stopColor="#22d3ee" />
+            <stop offset="1" stopColor="#0891b2" />
+          </linearGradient>
+        </defs>
+        {/* Calendar with star */}
+        <rect x="3" y="5" width="18" height="16" rx="2.5" fill="url(#wkG)" stroke="#155e75" strokeWidth="1.4" />
+        <rect x="3" y="5" width="18" height="5" fill="#0e7490" />
+        <line x1="7" y1="3" x2="7" y2="8" stroke="#155e75" strokeWidth="1.6" strokeLinecap="round" />
+        <line x1="17" y1="3" x2="17" y2="8" stroke="#155e75" strokeWidth="1.6" strokeLinecap="round" />
+        <path d="M12 11 L13.3 14.3 L17 14.5 L14 16.7 L15.2 20 L12 18 L8.8 20 L10 16.7 L7 14.5 L10.7 14.3 Z" fill="#facc15" stroke="#854d0e" strokeWidth="0.8" strokeLinejoin="round" />
+      </svg>
+    );
+
+    // ────────────────────────────────────────────────────────────
+    // SHIELD ICONS · 24x24
+    // ────────────────────────────────────────────────────────────
+
+    const ShieldBase = ({ fill, stroke, children, label, labelFill = "#fbf6e7" }) => (
+      <svg viewBox="0 0 24 24">
+        <path
+          d="M12 2 L20 5 V12 Q20 18 12 22 Q4 18 4 12 V5 Z"
+          fill={fill} stroke={stroke} strokeWidth="1.4" strokeLinejoin="round"
+        />
+        {children}
+        {label && (
+          <text x="12" y="14" fontSize="6" fontWeight="900" textAnchor="middle" fill={labelFill} fontFamily="Heebo, sans-serif">{label}</text>
+        )}
+      </svg>
+    );
+
+    const ShieldWeek = () => (
+      <ShieldBase fill="#a3e635" stroke="#365314" label="7">
+        <path d="M12 2 L20 5 V12 Q20 18 12 22" fill="#84cc16" opacity="0.5" />
+      </ShieldBase>
+    );
+
+    const ShieldMonth = () => (
+      <ShieldBase fill="#60a5fa" stroke="#1e3a8a" label="30">
+        <path d="M12 2 L20 5 V12 Q20 18 12 22" fill="#3b82f6" opacity="0.5" />
+        <circle cx="12" cy="6.5" r="1.4" fill="#fbf6e7" />
+      </ShieldBase>
+    );
+
+    const ShieldElite = () => (
+      <svg viewBox="0 0 24 24">
+        <defs>
+          <linearGradient id="eliteG" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0" stopColor="#fde68a" />
+            <stop offset="0.5" stopColor="#facc15" />
+            <stop offset="1" stopColor="#b45309" />
+          </linearGradient>
+          <radialGradient id="eliteGlow" cx="50%" cy="50%" r="55%">
+            <stop offset="0" stopColor="#fde047" stopOpacity="0.5" />
+            <stop offset="1" stopColor="#facc15" stopOpacity="0" />
+          </radialGradient>
+        </defs>
+        {/* whale-tier glow */}
+        <circle cx="12" cy="12" r="11" fill="url(#eliteGlow)" />
+        <path
+          d="M12 2 L20 5 V12 Q20 18 12 22 Q4 18 4 12 V5 Z"
+          fill="url(#eliteG)" stroke="#7c2d12" strokeWidth="1.4" strokeLinejoin="round"
+        />
+        {/* simplified flame — readable at 24x24 */}
+        <path d="M12 7 Q9 11 9 14 Q9 17 12 18 Q15 17 15 14 Q15 11 12 7 Z"
+              fill="#dc2626" stroke="#7c2d12" strokeWidth="1" strokeLinejoin="round" />
+        <path d="M12 10 Q11 12 11 14 Q11 16 12 16.5 Q13 16 13 14 Q13 12 12 10 Z"
+              fill="#fde047" />
+      </svg>
+    );
+
+    // ────────────────────────────────────────────────────────────
+    // EMPTY STATES
+    // ────────────────────────────────────────────────────────────
+
+    // No friends · 200x200
+    const EmptyNoFriends = () => (
+      <svg viewBox="0 0 200 200">
+        {/* faint background blob */}
+        <ellipse cx="100" cy="115" rx="80" ry="14" fill="#0f172a" opacity="0.35" />
+        {/* dotted ring */}
+        <circle cx="100" cy="100" r="78" fill="none" stroke="#3b5374" strokeWidth="2" strokeDasharray="3 6" opacity="0.7" />
+
+        {/* Two ghost-friend silhouettes facing away from each other */}
+        {[{x:60, op:0.8}, {x:140, op:0.55}].map((p, i) => (
+          <g key={i} opacity={p.op} transform={`translate(${p.x} 100)`}>
+            <circle cx="0" cy="-12" r="14" fill="#5990bf" stroke="#22456e" strokeWidth="2" />
+            <path d="M -22 30 Q -22 5 0 5 Q 22 5 22 30 Z" fill="#5990bf" stroke="#22456e" strokeWidth="2" strokeLinejoin="round" />
+            {/* ?-mark */}
+            <text x="0" y="-8" fontSize="14" textAnchor="middle" fill="#fbf6e7" fontWeight="800" fontFamily="Heebo, sans-serif">?</text>
+          </g>
+        ))}
+
+        {/* heart + question mark floating between */}
+        <g transform="translate(100 60)" opacity="0.85">
+          <path d="M 0 6 Q -8 -4 -4 -10 Q 0 -14 0 -8 Q 0 -14 4 -10 Q 8 -4 0 6 Z" fill="#a78bfa" stroke="#5b21b6" strokeWidth="1.2" strokeLinejoin="round" />
+        </g>
+        <g transform="translate(100 78)" opacity="0.6">
+          <circle r="3" fill="#a78bfa" opacity="0.4" />
+        </g>
+
+        {/* ground bubbles */}
+        <circle cx="40" cy="155" r="3" fill="#5990bf" opacity="0.6" />
+        <circle cx="55" cy="170" r="2" fill="#5990bf" opacity="0.4" />
+        <circle cx="160" cy="160" r="3" fill="#5990bf" opacity="0.6" />
+        <circle cx="148" cy="175" r="2" fill="#5990bf" opacity="0.4" />
+      </svg>
+    );
+
+    // No active boosts · 120x120
+    const EmptyNoBoosts = () => (
+      <svg viewBox="0 0 120 120">
+        <circle cx="60" cy="60" r="50" fill="none" stroke="#3b5374" strokeWidth="2" strokeDasharray="3 5" opacity="0.7" />
+        {/* greyed-out lightning bolt */}
+        <path d="M68 24 L40 70 H56 L52 96 L82 50 H64 Z"
+              fill="#1e3a5f" stroke="#3b5374" strokeWidth="2" strokeLinejoin="round" />
+        {/* zzz */}
+        <text x="84" y="40" fontSize="12" fill="#94a8c2" fontWeight="800" fontFamily="Heebo, sans-serif">z</text>
+        <text x="92" y="34" fontSize="10" fill="#94a8c2" fontWeight="800" fontFamily="Heebo, sans-serif">z</text>
+        <text x="98" y="28" fontSize="8" fill="#94a8c2" fontWeight="800" fontFamily="Heebo, sans-serif">z</text>
+        {/* slash through it */}
+        <line x1="22" y1="22" x2="98" y2="98" stroke="#94a8c2" strokeWidth="2.5" strokeLinecap="round" opacity="0.4" />
+      </svg>
+    );
+
+    // ────────────────────────────────────────────────────────────
+    // SPARKLE / CONFETTI · 10 variants · 24x24
+    // ────────────────────────────────────────────────────────────
+
+    const Sp1 = () => ( // 4-pointed sparkle
+      <svg viewBox="0 0 24 24"><path d="M12 2 L13.5 10.5 L22 12 L13.5 13.5 L12 22 L10.5 13.5 L2 12 L10.5 10.5 Z" fill="#facc15" stroke="#854d0e" strokeWidth="1" strokeLinejoin="round" /></svg>
+    );
+    const Sp2 = () => ( // 5-point star
+      <svg viewBox="0 0 24 24"><path d="M12 2 L14.7 9.3 L22 9.6 L16.2 14.4 L18.4 22 L12 17.7 L5.6 22 L7.8 14.4 L2 9.6 L9.3 9.3 Z" fill="#a78bfa" stroke="#3b1d80" strokeWidth="1" strokeLinejoin="round" /></svg>
+    );
+    const Sp3 = () => ( // burst lines
+      <svg viewBox="0 0 24 24"><g stroke="#22d3ee" strokeWidth="2.5" strokeLinecap="round">
+        <line x1="12" y1="3" x2="12" y2="8" />
+        <line x1="12" y1="16" x2="12" y2="21" />
+        <line x1="3" y1="12" x2="8" y2="12" />
+        <line x1="16" y1="12" x2="21" y2="12" />
+        <line x1="6" y1="6" x2="9" y2="9" />
+        <line x1="15" y1="15" x2="18" y2="18" />
+        <line x1="18" y1="6" x2="15" y2="9" />
+        <line x1="9" y1="15" x2="6" y2="18" />
+      </g></svg>
+    );
+    const Sp4 = () => ( // confetti rectangle ribbon
+      <svg viewBox="0 0 24 24"><rect x="6" y="6" width="12" height="3" rx="0.5" fill="#22c55e" stroke="#14532d" strokeWidth="0.8" transform="rotate(25 12 7.5)" />
+        <rect x="6" y="14" width="12" height="3" rx="0.5" fill="#ef4444" stroke="#7f1d1d" strokeWidth="0.8" transform="rotate(-30 12 15.5)" /></svg>
+    );
+    const Sp5 = () => ( // tiny dots cluster
+      <svg viewBox="0 0 24 24">
+        <circle cx="6" cy="8"  r="2" fill="#facc15" />
+        <circle cx="12" cy="5" r="2.5" fill="#22d3ee" />
+        <circle cx="18" cy="9" r="1.8" fill="#ef4444" />
+        <circle cx="9" cy="16" r="2.2" fill="#a78bfa" />
+        <circle cx="16" cy="17" r="1.8" fill="#22c55e" />
+      </svg>
+    );
+    const Sp6 = () => ( // diamond
+      <svg viewBox="0 0 24 24"><path d="M12 3 L20 12 L12 21 L4 12 Z" fill="#22d3ee" stroke="#0e7490" strokeWidth="1.2" strokeLinejoin="round" />
+        <path d="M12 3 L20 12 L12 12 Z" fill="#67e8f9" /></svg>
+    );
+    const Sp7 = () => ( // 6-point sparkle
+      <svg viewBox="0 0 24 24"><path d="M12 2 L13 10 L21 9 L14 12 L21 15 L13 14 L12 22 L11 14 L3 15 L10 12 L3 9 L11 10 Z" fill="#fde047" stroke="#a16207" strokeWidth="0.8" strokeLinejoin="round" /></svg>
+    );
+    const Sp8 = () => ( // squiggle ribbon
+      <svg viewBox="0 0 24 24"><path d="M3 12 Q7 4 12 12 T 21 12" fill="none" stroke="#ec4899" strokeWidth="3" strokeLinecap="round" />
+        <path d="M3 16 Q7 8 12 16 T 21 16" fill="none" stroke="#a78bfa" strokeWidth="2.5" strokeLinecap="round" opacity="0.7" /></svg>
+    );
+    const Sp9 = () => ( // heart pop
+      <svg viewBox="0 0 24 24"><path d="M12 21 Q3 14 3 8 Q3 3 8 3 Q11 3 12 6 Q13 3 16 3 Q21 3 21 8 Q21 14 12 21 Z" fill="#ef4444" stroke="#7f1d1d" strokeWidth="1.2" strokeLinejoin="round" />
+        <path d="M9 8 Q11 6 12 9" fill="none" stroke="#fbf6e7" strokeWidth="1.5" strokeLinecap="round" opacity="0.85" /></svg>
+    );
+    const Sp10 = () => ( // plus burst
+      <svg viewBox="0 0 24 24">
+        <rect x="10" y="3" width="4" height="18" rx="1.5" fill="#facc15" stroke="#854d0e" strokeWidth="1" />
+        <rect x="3" y="10" width="18" height="4" rx="1.5" fill="#facc15" stroke="#854d0e" strokeWidth="1" />
+        <circle cx="12" cy="12" r="2" fill="#fbf6e7" />
+      </svg>
+    );
+
+    // ────────────────────────────────────────────────────────────
+    // HEARTS · 24x24
+    // ────────────────────────────────────────────────────────────
+
+    const HeartRefill1 = () => (
+      <svg viewBox="0 0 24 24">
+        <defs>
+          <radialGradient id="hG1" cx="40%" cy="35%" r="65%">
+            <stop offset="0" stopColor="#fca5a5" />
+            <stop offset="1" stopColor="#dc2626" />
+          </radialGradient>
+        </defs>
+        <path d="M12 21 Q3 14 3 8 Q3 3 8 3 Q11 3 12 6 Q13 3 16 3 Q21 3 21 8 Q21 14 12 21 Z"
+              fill="url(#hG1)" stroke="#7f1d1d" strokeWidth="1.4" strokeLinejoin="round" />
+        {/* +1 badge */}
+        <circle cx="18" cy="18" r="4" fill="#22c55e" stroke="#14532d" strokeWidth="1" />
+        <text x="18" y="20" fontSize="5.5" fontWeight="900" textAnchor="middle" fill="#fef9c3" fontFamily="Heebo, sans-serif">+1</text>
+      </svg>
+    );
+
+    const HeartRefillFull = () => (
+      <svg viewBox="0 0 24 24">
+        <defs>
+          <radialGradient id="hG2" cx="40%" cy="35%" r="65%">
+            <stop offset="0" stopColor="#fecaca" />
+            <stop offset="0.5" stopColor="#ef4444" />
+            <stop offset="1" stopColor="#7f1d1d" />
+          </radialGradient>
+          <radialGradient id="hGlow" cx="50%" cy="50%" r="55%">
+            <stop offset="0" stopColor="#fb7185" stopOpacity="0.5" />
+            <stop offset="1" stopColor="#dc2626" stopOpacity="0" />
+          </radialGradient>
+        </defs>
+        <circle cx="12" cy="12" r="11" fill="url(#hGlow)" />
+        {/* stack of 3 hearts */}
+        <path d="M6 18 Q1 13 1 9 Q1 6 4 6 Q5 6 6 8 Q7 6 8 6 Q11 6 11 9 Q11 13 6 18 Z"
+              fill="url(#hG2)" stroke="#7f1d1d" strokeWidth="1.1" strokeLinejoin="round" opacity="0.85" />
+        <path d="M18 18 Q13 13 13 9 Q13 6 16 6 Q17 6 18 8 Q19 6 20 6 Q23 6 23 9 Q23 13 18 18 Z"
+              fill="url(#hG2)" stroke="#7f1d1d" strokeWidth="1.1" strokeLinejoin="round" opacity="0.85" />
+        <path d="M12 14 Q5 7 5 4 Q5 1 9 1 Q11 1 12 3 Q13 1 15 1 Q19 1 19 4 Q19 7 12 14 Z"
+              fill="url(#hG2)" stroke="#7f1d1d" strokeWidth="1.3" strokeLinejoin="round" />
+      </svg>
+    );
+
+    // ────────────────────────────────────────────────────────────
+    // HINTS · 24x24
+    // ────────────────────────────────────────────────────────────
+
+    const HintSingle = () => (
+      <svg viewBox="0 0 24 24">
+        <defs>
+          <radialGradient id="bulbG" cx="50%" cy="35%" r="55%">
+            <stop offset="0" stopColor="#fef3c7" />
+            <stop offset="1" stopColor="#facc15" />
+          </radialGradient>
+        </defs>
+        {/* bulb glow */}
+        <circle cx="12" cy="9" r="9" fill="#facc15" opacity="0.18" />
+        {/* bulb */}
+        <path d="M12 2 Q6 2 6 9 Q6 13 9 15 V17 H15 V15 Q18 13 18 9 Q18 2 12 2 Z"
+              fill="url(#bulbG)" stroke="#854d0e" strokeWidth="1.3" strokeLinejoin="round" />
+        {/* base */}
+        <rect x="9" y="17" width="6" height="2.5" rx="0.6" fill="#a16207" stroke="#854d0e" strokeWidth="0.8" />
+        <rect x="10" y="20" width="4" height="2" rx="0.5" fill="#78350f" />
+        {/* highlight */}
+        <path d="M9 6 Q10 4 13 4" fill="none" stroke="#fef9c3" strokeWidth="1.3" strokeLinecap="round" opacity="0.8" />
+      </svg>
+    );
+
+    const HintBundle = () => (
+      <svg viewBox="0 0 24 24">
+        <defs>
+          <radialGradient id="bulbG2" cx="50%" cy="35%" r="55%">
+            <stop offset="0" stopColor="#fef3c7" />
+            <stop offset="1" stopColor="#facc15" />
+          </radialGradient>
+        </defs>
+        {/* 3 bulb cluster */}
+        <g transform="translate(-1 1) scale(0.65)">
+          <path d="M12 2 Q6 2 6 9 Q6 13 9 15 V17 H15 V15 Q18 13 18 9 Q18 2 12 2 Z"
+                fill="url(#bulbG2)" stroke="#854d0e" strokeWidth="1.6" strokeLinejoin="round" />
+          <rect x="9" y="17" width="6" height="2.5" rx="0.6" fill="#a16207" />
+        </g>
+        <g transform="translate(8 1) scale(0.65)">
+          <path d="M12 2 Q6 2 6 9 Q6 13 9 15 V17 H15 V15 Q18 13 18 9 Q18 2 12 2 Z"
+                fill="url(#bulbG2)" stroke="#854d0e" strokeWidth="1.6" strokeLinejoin="round" />
+          <rect x="9" y="17" width="6" height="2.5" rx="0.6" fill="#a16207" />
+        </g>
+        <g transform="translate(3 9) scale(0.65)">
+          <path d="M12 2 Q6 2 6 9 Q6 13 9 15 V17 H15 V15 Q18 13 18 9 Q18 2 12 2 Z"
+                fill="url(#bulbG2)" stroke="#854d0e" strokeWidth="1.6" strokeLinejoin="round" />
+          <rect x="9" y="17" width="6" height="2.5" rx="0.6" fill="#a16207" />
+        </g>
+        {/* ×5 badge */}
+        <circle cx="20" cy="20" r="3.6" fill="#dc2626" stroke="#7f1d1d" strokeWidth="1" />
+        <text x="20" y="21.8" fontSize="4.5" fontWeight="900" textAnchor="middle" fill="#fef9c3" fontFamily="Heebo, sans-serif">×5</text>
+      </svg>
+    );
+
+    // ────────────────────────────────────────────────────────────
+    // STREAK FREEZE · 24x24
+    // ────────────────────────────────────────────────────────────
+
+    const FreezeSingle = () => (
+      <svg viewBox="0 0 24 24">
+        <defs>
+          <linearGradient id="frG" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0" stopColor="#bae6fd" />
+            <stop offset="1" stopColor="#0891b2" />
+          </linearGradient>
+        </defs>
+        {/* snowflake */}
+        <g stroke="url(#frG)" strokeWidth="1.6" strokeLinecap="round" fill="none">
+          <line x1="12" y1="3" x2="12" y2="21" />
+          <line x1="3" y1="12" x2="21" y2="12" />
+          <line x1="6" y1="6" x2="18" y2="18" />
+          <line x1="18" y1="6" x2="6" y2="18" />
+          {/* tips */}
+          <path d="M12 3 L10 5 M12 3 L14 5" />
+          <path d="M12 21 L10 19 M12 21 L14 19" />
+          <path d="M3 12 L5 10 M3 12 L5 14" />
+          <path d="M21 12 L19 10 M21 12 L19 14" />
+        </g>
+        {/* center jewel */}
+        <circle cx="12" cy="12" r="2.5" fill="#0891b2" stroke="#0e7490" strokeWidth="1" />
+        <circle cx="12" cy="12" r="1" fill="#bae6fd" />
+      </svg>
+    );
+
+    const FreezeBundle = () => (
+      <svg viewBox="0 0 24 24">
+        <defs>
+          <linearGradient id="frG2" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0" stopColor="#bae6fd" />
+            <stop offset="1" stopColor="#0891b2" />
+          </linearGradient>
+        </defs>
+        {/* 3 snowflakes layered */}
+        <g transform="translate(0 -1) scale(0.55)" opacity="0.75">
+          <g stroke="url(#frG2)" strokeWidth="2.5" strokeLinecap="round" fill="none">
+            <line x1="12" y1="3" x2="12" y2="21" />
+            <line x1="3" y1="12" x2="21" y2="12" />
+            <line x1="6" y1="6" x2="18" y2="18" />
+            <line x1="18" y1="6" x2="6" y2="18" />
+          </g>
+        </g>
+        <g transform="translate(11 1) scale(0.55)" opacity="0.85">
+          <g stroke="url(#frG2)" strokeWidth="2.5" strokeLinecap="round" fill="none">
+            <line x1="12" y1="3" x2="12" y2="21" />
+            <line x1="3" y1="12" x2="21" y2="12" />
+            <line x1="6" y1="6" x2="18" y2="18" />
+            <line x1="18" y1="6" x2="6" y2="18" />
+          </g>
+        </g>
+        <g transform="translate(5 8) scale(0.55)">
+          <g stroke="url(#frG2)" strokeWidth="2.6" strokeLinecap="round" fill="none">
+            <line x1="12" y1="3" x2="12" y2="21" />
+            <line x1="3" y1="12" x2="21" y2="12" />
+            <line x1="6" y1="6" x2="18" y2="18" />
+            <line x1="18" y1="6" x2="6" y2="18" />
+          </g>
+          <circle cx="12" cy="12" r="3" fill="#0891b2" />
+        </g>
+      </svg>
+    );
+
+    // ────────────────────────────────────────────────────────────
+    // BUNDLES & RIBBONS
+    // ────────────────────────────────────────────────────────────
+
+    const BundleChest = () => (
+      <svg viewBox="0 0 24 24">
+        <defs>
+          <linearGradient id="chG" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0" stopColor="#fcd34d" />
+            <stop offset="1" stopColor="#a16207" />
+          </linearGradient>
+        </defs>
+        {/* chest body */}
+        <rect x="3" y="11" width="18" height="9" rx="1.5" fill="url(#chG)" stroke="#78350f" strokeWidth="1.4" />
+        {/* lid */}
+        <path d="M3 11 Q3 5 12 5 Q21 5 21 11 Z" fill="url(#chG)" stroke="#78350f" strokeWidth="1.4" strokeLinejoin="round" />
+        {/* lock */}
+        <rect x="10" y="9" width="4" height="5" rx="0.5" fill="#78350f" stroke="#451a03" strokeWidth="0.8" />
+        <circle cx="12" cy="11.2" r="0.7" fill="#fcd34d" />
+        {/* sparkles */}
+        <path d="M5 4 L5.5 5.5 L7 6 L5.5 6.5 L5 8 L4.5 6.5 L3 6 L4.5 5.5 Z" fill="#fef3c7" />
+        <path d="M19 3 L19.4 4.2 L20.6 4.6 L19.4 5 L19 6.2 L18.6 5 L17.4 4.6 L18.6 4.2 Z" fill="#fef3c7" />
+      </svg>
+    );
+
+    const RibbonPopular = () => (
+      <svg viewBox="0 0 80 28">
+        <path d="M0 0 L80 0 L72 14 L80 28 L0 28 Z" fill="#dc2626" stroke="#7f1d1d" strokeWidth="1.4" strokeLinejoin="round" />
+        <path d="M0 0 L80 0 L72 14 L80 28 L0 28 Z" fill="url(#popG)" />
+        <defs>
+          <linearGradient id="popG" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0" stopColor="#fca5a5" stopOpacity="0.3" />
+            <stop offset="1" stopColor="#dc2626" stopOpacity="0" />
+          </linearGradient>
+        </defs>
+        <text x="36" y="18" fontSize="11" fontWeight="900" fill="#fef9c3" textAnchor="middle" fontFamily="Heebo, sans-serif">פופולרי</text>
+      </svg>
+    );
+
+    const RibbonBestValue = () => (
+      <svg viewBox="0 0 80 28">
+        <defs>
+          <linearGradient id="bvG" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0" stopColor="#fde047" />
+            <stop offset="1" stopColor="#a16207" />
+          </linearGradient>
+        </defs>
+        <path d="M0 0 L80 0 L72 14 L80 28 L0 28 Z" fill="url(#bvG)" stroke="#78350f" strokeWidth="1.4" strokeLinejoin="round" />
+        <text x="36" y="18" fontSize="10" fontWeight="900" fill="#451a03" textAnchor="middle" fontFamily="Heebo, sans-serif">VALUE ★</text>
+      </svg>
+    );
+
+    const RibbonLimited = () => (
+      <svg viewBox="0 0 80 28">
+        <defs>
+          <linearGradient id="ltG" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0" stopColor="#a78bfa" />
+            <stop offset="1" stopColor="#5b21b6" />
+          </linearGradient>
+        </defs>
+        <path d="M0 0 L80 0 L72 14 L80 28 L0 28 Z" fill="url(#ltG)" stroke="#3b1d80" strokeWidth="1.4" strokeLinejoin="round" />
+        {/* clock glyph */}
+        <circle cx="14" cy="14" r="6" fill="none" stroke="#fef9c3" strokeWidth="1.4" />
+        <line x1="14" y1="14" x2="14" y2="10" stroke="#fef9c3" strokeWidth="1.6" strokeLinecap="round" />
+        <line x1="14" y1="14" x2="17" y2="14" stroke="#fef9c3" strokeWidth="1.6" strokeLinecap="round" />
+        <text x="48" y="18" fontSize="10" fontWeight="900" fill="#fef9c3" textAnchor="middle" fontFamily="Heebo, sans-serif">מוגבל</text>
+      </svg>
+    );
+
+    // ────────────────────────────────────────────────────────────
+    // LIVE-OPS (רטנשן) · countdown / streak / event
+    // ────────────────────────────────────────────────────────────
+
+    const CountdownRing = () => (
+      <svg viewBox="0 0 24 24">
+        <defs>
+          <linearGradient id="cdG" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0" stopColor="#ec4899" />
+            <stop offset="1" stopColor="#7c3aed" />
+          </linearGradient>
+        </defs>
+        <circle cx="12" cy="12" r="9" fill="none" stroke="#1e293b" strokeWidth="2" opacity="0.4" />
+        {/* progress arc — ~70% remaining */}
+        <path d="M12 3 A9 9 0 1 1 4.5 16.5" fill="none" stroke="url(#cdG)" strokeWidth="2.4" strokeLinecap="round" />
+        {/* clock hands */}
+        <circle cx="12" cy="12" r="1.6" fill="#fef9c3" />
+        <line x1="12" y1="12" x2="12" y2="7.5" stroke="#fef9c3" strokeWidth="1.8" strokeLinecap="round" />
+        <line x1="12" y1="12" x2="15" y2="12" stroke="#fef9c3" strokeWidth="1.6" strokeLinecap="round" />
+      </svg>
+    );
+
+    const StreakFire = () => (
+      <svg viewBox="0 0 24 24">
+        <defs>
+          <linearGradient id="frG3" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0" stopColor="#fde047" />
+            <stop offset="0.5" stopColor="#fb923c" />
+            <stop offset="1" stopColor="#dc2626" />
+          </linearGradient>
+        </defs>
+        {/* flame */}
+        <path d="M12 2 Q9 7 8 11 Q5 13 5 16 Q5 21 12 22 Q19 21 19 16 Q19 13 16 11 Q15 7 12 2 Z"
+              fill="url(#frG3)" stroke="#7f1d1d" strokeWidth="1.3" strokeLinejoin="round" />
+        {/* inner flame */}
+        <path d="M12 8 Q10 12 10 15 Q10 19 12 19 Q14 19 14 15 Q14 12 12 8 Z" fill="#fde047" />
+        {/* center hot spot */}
+        <circle cx="12" cy="16" r="1.4" fill="#fef9c3" />
+      </svg>
+    );
+
+    const CalendarEvent = () => (
+      <svg viewBox="0 0 24 24">
+        <rect x="3" y="5" width="18" height="16" rx="2.5" fill="#fbf6e7" stroke="#78350f" strokeWidth="1.4" />
+        <rect x="3" y="5" width="18" height="5" fill="#dc2626" />
+        <line x1="7" y1="3" x2="7" y2="8" stroke="#7f1d1d" strokeWidth="1.6" strokeLinecap="round" />
+        <line x1="17" y1="3" x2="17" y2="8" stroke="#7f1d1d" strokeWidth="1.6" strokeLinecap="round" />
+        {/* Israeli flag accent (independence day theme) */}
+        <rect x="6" y="13" width="3" height="3" fill="#0ea5e9" />
+        <rect x="11" y="13" width="3" height="3" fill="#a3e635" />
+        <rect x="16" y="13" width="3" height="3" fill="#facc15" />
+        <rect x="9" y="17" width="6" height="2" rx="0.4" fill="#7f1d1d" />
+      </svg>
+    );
+
+    const ComebackWave = () => (
+      <svg viewBox="0 0 24 24">
+        <defs>
+          <linearGradient id="cbG" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0" stopColor="#22d3ee" />
+            <stop offset="1" stopColor="#0891b2" />
+          </linearGradient>
+        </defs>
+        {/* wave (welcome back) */}
+        <path d="M2 14 Q6 8 10 14 T 18 14 T 22 14"
+              fill="none" stroke="url(#cbG)" strokeWidth="2.5" strokeLinecap="round" />
+        <path d="M2 18 Q6 12 10 18 T 18 18 T 22 18"
+              fill="none" stroke="url(#cbG)" strokeWidth="2" strokeLinecap="round" opacity="0.6" />
+        {/* heart welcome */}
+        <path d="M12 11 Q8 7 8 4 Q8 2 10 2 Q11 2 12 3.5 Q13 2 14 2 Q16 2 16 4 Q16 7 12 11 Z"
+              fill="#fb7185" stroke="#7f1d1d" strokeWidth="1.2" strokeLinejoin="round" />
+      </svg>
+    );
+
+    const ProgressRing = () => (
+      <svg viewBox="0 0 24 24">
+        <defs>
+          <linearGradient id="prG" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0" stopColor="#22d3ee" />
+            <stop offset="1" stopColor="#22c55e" />
+          </linearGradient>
+        </defs>
+        <circle cx="12" cy="12" r="9" fill="none" stroke="#1e293b" strokeWidth="2.4" opacity="0.35" />
+        {/* ~75% complete */}
+        <path d="M12 3 A9 9 0 1 1 5.5 6.5" fill="none" stroke="url(#prG)" strokeWidth="2.6" strokeLinecap="round" />
+        <text x="12" y="14.5" fontSize="6.5" fontWeight="900" textAnchor="middle" fill="#fbf6e7" fontFamily="Heebo, sans-serif">75%</text>
+      </svg>
+    );
+
+    // ────────────────────────────────────────────────────────────
+    // DAILY DEAL BADGES
+    // ────────────────────────────────────────────────────────────
+
+    const FreeBadge = () => (
+      <svg viewBox="0 0 24 24">
+        <circle cx="12" cy="12" r="10.5" fill="#22c55e" stroke="#14532d" strokeWidth="1.6" />
+        {/* burst edges */}
+        <path d="M12 1 L13 4 L12 5 L11 4 Z" fill="#22c55e" stroke="#14532d" strokeWidth="1" strokeLinejoin="round" />
+        <path d="M23 12 L20 13 L19 12 L20 11 Z" fill="#22c55e" stroke="#14532d" strokeWidth="1" strokeLinejoin="round" />
+        <path d="M12 23 L11 20 L12 19 L13 20 Z" fill="#22c55e" stroke="#14532d" strokeWidth="1" strokeLinejoin="round" />
+        <path d="M1 12 L4 11 L5 12 L4 13 Z" fill="#22c55e" stroke="#14532d" strokeWidth="1" strokeLinejoin="round" />
+        <text x="12" y="14.5" fontSize="6.5" fontWeight="900" textAnchor="middle" fill="#fef9c3" fontFamily="Heebo, sans-serif">FREE</text>
+      </svg>
+    );
+
+    const DiscountBadge = () => (
+      <svg viewBox="0 0 24 24">
+        <defs>
+          <linearGradient id="dscG" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0" stopColor="#fb923c" />
+            <stop offset="1" stopColor="#dc2626" />
+          </linearGradient>
+        </defs>
+        {/* explosion edge */}
+        <path d="M12 1 L14 3 L17 1.5 L17.5 4.5 L20.5 4 L20 7 L23 8 L20.5 10 L23 12 L20 14 L20.5 17 L17.5 16.5 L17 19.5 L14 18 L12 21 L10 18 L7 19.5 L6.5 16.5 L3.5 17 L4 14 L1 12 L4 10 L1 8 L4 7 L3.5 4 L6.5 4.5 L7 1.5 L10 3 Z"
+              fill="url(#dscG)" stroke="#7f1d1d" strokeWidth="1" strokeLinejoin="round" />
+        <text x="12" y="11" fontSize="5.5" fontWeight="900" textAnchor="middle" fill="#fef9c3" fontFamily="Heebo, sans-serif">-50%</text>
+        <text x="12" y="16" fontSize="3.5" fontWeight="700" textAnchor="middle" fill="#fef9c3" fontFamily="Heebo, sans-serif">OFF</text>
+      </svg>
+    );
+
+    // ────────────────────────────────────────────────────────────
+    // TIER DIVIDERS · 220 wide strips
+    // ────────────────────────────────────────────────────────────
+
+    const DividerBronze = () => (
+      <svg viewBox="0 0 220 36">
+        <line x1="10" y1="18" x2="92" y2="18" stroke="#92400e" strokeWidth="2" strokeLinecap="round" />
+        <line x1="128" y1="18" x2="210" y2="18" stroke="#92400e" strokeWidth="2" strokeLinecap="round" />
+        <circle cx="110" cy="18" r="10" fill="#a16207" stroke="#451a03" strokeWidth="1.6" />
+        <text x="110" y="21" fontSize="9" fontWeight="900" textAnchor="middle" fill="#fef9c3" fontFamily="Heebo, sans-serif">B</text>
+      </svg>
+    );
+
+    const DividerSilver = () => (
+      <svg viewBox="0 0 220 36">
+        <line x1="10" y1="18" x2="92" y2="18" stroke="#94a3b8" strokeWidth="2" strokeLinecap="round" />
+        <line x1="128" y1="18" x2="210" y2="18" stroke="#94a3b8" strokeWidth="2" strokeLinecap="round" />
+        <circle cx="110" cy="18" r="11" fill="#cbd5e1" stroke="#475569" strokeWidth="1.6" />
+        <text x="110" y="21" fontSize="9" fontWeight="900" textAnchor="middle" fill="#1e293b" fontFamily="Heebo, sans-serif">S</text>
+      </svg>
+    );
+
+    const DividerGold = () => (
+      <svg viewBox="0 0 220 36">
+        <defs>
+          <linearGradient id="ldG" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0" stopColor="#fde047" />
+            <stop offset="1" stopColor="#a16207" />
+          </linearGradient>
+        </defs>
+        <line x1="10" y1="18" x2="88" y2="18" stroke="#facc15" strokeWidth="2.2" strokeLinecap="round" />
+        <line x1="132" y1="18" x2="210" y2="18" stroke="#facc15" strokeWidth="2.2" strokeLinecap="round" />
+        <circle cx="110" cy="18" r="13" fill="url(#ldG)" stroke="#78350f" strokeWidth="1.6" />
+        <path d="M110 11 L112 16 L117 16 L113 19 L114.5 24 L110 21 L105.5 24 L107 19 L103 16 L108 16 Z" fill="#fef9c3" stroke="#78350f" strokeWidth="0.7" strokeLinejoin="round" />
+      </svg>
+    );
+
+    const DividerDiamond = () => (
+      <svg viewBox="0 0 220 36">
+        <defs>
+          <linearGradient id="ddG" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0" stopColor="#22d3ee" />
+            <stop offset="0.5" stopColor="#a78bfa" />
+            <stop offset="1" stopColor="#ec4899" />
+          </linearGradient>
+        </defs>
+        <line x1="10" y1="18" x2="88" y2="18" stroke="url(#ddG)" strokeWidth="2.4" strokeLinecap="round" />
+        <line x1="132" y1="18" x2="210" y2="18" stroke="url(#ddG)" strokeWidth="2.4" strokeLinecap="round" />
+        <path d="M110 5 L122 18 L110 31 L98 18 Z" fill="url(#ddG)" stroke="#3b1d80" strokeWidth="1.4" strokeLinejoin="round" />
+        <path d="M110 5 L122 18 L110 18 Z" fill="#fbf6e7" opacity="0.55" />
+      </svg>
+    );
+
+    // ────────────────────────────────────────────────────────────
+    // ADDITIONAL EMPTY STATES
+    // ────────────────────────────────────────────────────────────
+
+    const EmptyPremium = () => (
+      <svg viewBox="0 0 200 200">
+        <circle cx="100" cy="100" r="78" fill="none" stroke="#3b5374" strokeWidth="2" strokeDasharray="3 6" opacity="0.7" />
+        {/* gem outline (premium) */}
+        <path d="M100 50 L130 90 L100 150 L70 90 Z" fill="none" stroke="#a78bfa" strokeWidth="2.5" strokeDasharray="4 4" />
+        <path d="M70 90 L130 90" stroke="#a78bfa" strokeWidth="2.5" strokeDasharray="4 4" />
+        <text x="100" y="105" fontSize="14" fontWeight="800" textAnchor="middle" fill="#94a8c2" fontFamily="Heebo, sans-serif">בקרוב</text>
+        {/* small sparkles */}
+        <path d="M40 60 L41 63 L44 64 L41 65 L40 68 L39 65 L36 64 L39 63 Z" fill="#a78bfa" opacity="0.6" />
+        <path d="M160 130 L161 133 L164 134 L161 135 L160 138 L159 135 L156 134 L159 133 Z" fill="#a78bfa" opacity="0.6" />
+      </svg>
+    );
+
+    const EmptyAvatarsLocked = () => (
+      <svg viewBox="0 0 200 200">
+        <circle cx="100" cy="100" r="78" fill="none" stroke="#3b5374" strokeWidth="2" strokeDasharray="3 6" opacity="0.7" />
+        {/* shark silhouette behind */}
+        <ellipse cx="100" cy="115" rx="48" ry="22" fill="#1e3a5f" stroke="#22456e" strokeWidth="2" />
+        <path d="M70 115 L60 102 L62 118 Z" fill="#1e3a5f" stroke="#22456e" strokeWidth="2" strokeLinejoin="round" />
+        <circle cx="118" cy="108" r="2" fill="#fbf6e7" />
+        {/* big lock */}
+        <g transform="translate(100 70)">
+          <rect x="-14" y="0" width="28" height="22" rx="2.5" fill="#fcd34d" stroke="#78350f" strokeWidth="2" />
+          <path d="M -8 0 V -6 Q -8 -14 0 -14 Q 8 -14 8 -6 V 0" fill="none" stroke="#78350f" strokeWidth="2.5" strokeLinejoin="round" />
+          <circle cx="0" cy="11" r="2.5" fill="#78350f" />
+          <rect x="-1" y="11" width="2" height="6" rx="0.6" fill="#78350f" />
+        </g>
+      </svg>
+    );
+
+    // ────────────────────────────────────────────────────────────
+    // RENDER GALLERY
+    // ────────────────────────────────────────────────────────────
+    const Tile = ({ Comp, name, meta, size = "" }) => (
+      <div className={`tile ${size}`}>
+        <div className="frame"><Comp /></div>
+        <div className="name">{name}</div>
+        {meta && <div className="meta">{meta}</div>}
+      </div>
+    );
+
+    const Boosts = () => (
+      <>
+        <Tile Comp={BoostXP}      name="XP Boost"     meta="lightning · violet" />
+        <Tile Comp={BoostCoins}   name="Coins ×2"     meta="coin stack · yellow" />
+        <Tile Comp={BoostMega}    name="Mega Boost"   meta="rocket · orange-red" />
+        <Tile Comp={BoostWeekend} name="Weekend Boost" meta="calendar+star · cyan" />
+      </>
+    );
+
+    const Shields = () => (
+      <>
+        <Tile Comp={ShieldWeek}  name="Week Shield"   meta="7 days · lime" />
+        <Tile Comp={ShieldMonth} name="Month Shield"  meta="30 days · sky" />
+        <Tile Comp={ShieldElite} name="Elite Revival" meta="phoenix · gold" />
+      </>
+    );
+
+    const Empties = () => (
+      <>
+        <Tile Comp={EmptyNoFriends} name="אין חברים"        meta="200×200 · ReferralScreen.tsx" size="lg" />
+        <Tile Comp={EmptyNoBoosts}  name="אין boosts פעילים" meta="120×120 · BoostBanner.tsx"  size="lg" />
+      </>
+    );
+
+    const Sparks = () => (
+      <>
+        {/* Curated 6 — drops Sp4 (confetti, redundant w/ Sp10) / Sp6 (diamond, off-style) /
+            Sp7 (6-point, redundant w/ Sp1+Sp2) / Sp8 (squiggle, decorative noise). */}
+        {[
+          {C: Sp1, name: 'Sparkle 4-pt'},
+          {C: Sp2, name: 'Star 5-pt'},
+          {C: Sp3, name: 'Burst lines'},
+          {C: Sp5, name: 'Dot cluster'},
+          {C: Sp9, name: 'Heart pop'},
+          {C: Sp10, name: 'Plus burst'},
+        ].map((s, i) => (
+          <Tile key={i} Comp={s.C} name={s.name} size="xs" />
+        ))}
+      </>
+    );
+
+    const Hearts = () => (
+      <>
+        <Tile Comp={HeartRefill1}    name="לב +1"        meta="heart-refill-1" />
+        <Tile Comp={HeartRefillFull} name="כל הלבבות"    meta="heart-refill-full · stack" />
+      </>
+    );
+
+    const Hints = () => (
+      <>
+        <Tile Comp={HintSingle} name="רמז"             meta="hint-single · bulb" />
+        <Tile Comp={HintBundle} name="חבילת רמזים ×5"  meta="hint-bundle · cluster" />
+      </>
+    );
+
+    const Freezes = () => (
+      <>
+        <Tile Comp={FreezeSingle} name="הקפאת סטריק"     meta="streak-freeze · snowflake" />
+        <Tile Comp={FreezeBundle} name="הקפאת סטריק ×3" meta="streak-freeze-bundle" />
+      </>
+    );
+
+    const Bundles = () => (
+      <>
+        <Tile Comp={BundleChest}     name="חבילה (Chest)"    meta="bundle wrapper" />
+        <Tile Comp={RibbonPopular}   name="פופולרי"          meta="ribbon · red" />
+        <Tile Comp={RibbonBestValue} name="Best Value"       meta="ribbon · gold" />
+        <Tile Comp={RibbonLimited}   name="זמן מוגבל"        meta="ribbon · purple" />
+      </>
+    );
+
+    const LiveOps = () => (
+      <>
+        <Tile Comp={CountdownRing}  name="Countdown"     meta="LTO timer · pink→violet" />
+        <Tile Comp={StreakFire}     name="Streak Fire"   meta="streak-at-risk · red→yellow" />
+        <Tile Comp={CalendarEvent}  name="Event Day"     meta="independence/holiday" />
+        <Tile Comp={ComebackWave}   name="Welcome Back"  meta="returning user · cyan" />
+        <Tile Comp={ProgressRing}   name="Progress 75%"  meta="quest progress" />
+      </>
+    );
+
+    const DealBadges = () => (
+      <>
+        <Tile Comp={FreeBadge}     name="FREE"      meta="green · daily free" />
+        <Tile Comp={DiscountBadge} name="-50% OFF"  meta="explosion · LTO" />
+      </>
+    );
+
+    const Dividers = () => (
+      <>
+        <Tile Comp={DividerBronze}  name="Bronze tier"  meta="bronze divider" size="lg" />
+        <Tile Comp={DividerSilver}  name="Silver tier"  meta="silver divider" size="lg" />
+        <Tile Comp={DividerGold}    name="Gold tier"    meta="gold divider · sparkle" size="lg" />
+        <Tile Comp={DividerDiamond} name="Diamond tier" meta="prismatic divider" size="lg" />
+      </>
+    );
+
+    const ExtendedEmpties = () => (
+      <>
+        <Tile Comp={EmptyNoFriends}      name="אין חברים"           meta="200×200 · ReferralScreen" size="lg" />
+        <Tile Comp={EmptyNoBoosts}       name="אין boosts"           meta="120×120 · BoostBanner"   size="lg" />
+        <Tile Comp={EmptyPremium}        name="Premium ריק"          meta="200×200 · ShopModal"     size="lg" />
+        <Tile Comp={EmptyAvatarsLocked}  name="Avatars נעולים"      meta="200×200 · ShopModal"     size="lg" />
+      </>
+    );
+
+    ReactDOM.createRoot(document.getElementById('boosts')).render(<Boosts />);
+    ReactDOM.createRoot(document.getElementById('shields')).render(<Shields />);
+    ReactDOM.createRoot(document.getElementById('hearts')).render(<Hearts />);
+    ReactDOM.createRoot(document.getElementById('hints')).render(<Hints />);
+    ReactDOM.createRoot(document.getElementById('freeze')).render(<Freezes />);
+    ReactDOM.createRoot(document.getElementById('bundles')).render(<Bundles />);
+    ReactDOM.createRoot(document.getElementById('liveops')).render(<LiveOps />);
+    ReactDOM.createRoot(document.getElementById('badges')).render(<DealBadges />);
+    ReactDOM.createRoot(document.getElementById('dividers')).render(<Dividers />);
+    ReactDOM.createRoot(document.getElementById('empty')).render(<ExtendedEmpties />);
+    ReactDOM.createRoot(document.getElementById('sparks')).render(<Sparks />);
+  </script>
+</body>
+</html>
