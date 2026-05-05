@@ -1357,7 +1357,11 @@ export function DuoLearnScreen() {
           <View style={[StyleSheet.absoluteFill, { zIndex: 9999, elevation: 9999 }]} accessibilityViewIsModal>
             <Animated.View entering={FadeInDown.duration(200)} style={{ flex: 1 }}>
           <Pressable style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.4)", justifyContent: "center", alignItems: "center", padding: 16 }} onPress={() => setRoadmapVisible(false)} accessibilityRole="button" accessibilityLabel="סגור מסלול הלמידה">
-            <Pressable onPress={() => {}} style={{ width: "100%", maxWidth: 380, maxHeight: "95%", backgroundColor: "#ffffff", borderRadius: 24, overflow: "hidden", shadowColor: "#000", shadowOpacity: 0.15, shadowRadius: 20, shadowOffset: { width: 0, height: 8 }, elevation: 10 }} accessibilityLabel="תוכן מסלול הלמידה">
+            <View
+              onStartShouldSetResponder={() => true}
+              style={{ width: "100%", maxWidth: 380, maxHeight: "95%", backgroundColor: "#ffffff", borderRadius: 24, overflow: "hidden", shadowColor: "#000", shadowOpacity: 0.15, shadowRadius: 20, shadowOffset: { width: 0, height: 8 }, elevation: 10 }}
+              accessibilityLabel="תוכן מסלול הלמידה"
+            >
               {/* Header (fixed) */}
               <View style={{ paddingTop: 16, paddingHorizontal: 18, paddingBottom: 10 }}>
                 <Text style={{ fontSize: 18, fontFamily: "Heebo_700Bold", color: "#0f172a", textAlign: "center", marginBottom: 2, writingDirection: "rtl" }}>
@@ -1369,7 +1373,12 @@ export function DuoLearnScreen() {
               </View>
 
               {/* Chapters list (scrollable) */}
-              <ScrollView style={{ flexShrink: 1 }} contentContainerStyle={{ paddingHorizontal: 18, paddingBottom: 6 }} showsVerticalScrollIndicator={false}>
+              <ScrollView
+                style={{ flex: 1 }}
+                contentContainerStyle={{ paddingHorizontal: 18, paddingBottom: 6 }}
+                showsVerticalScrollIndicator={false}
+                nestedScrollEnabled
+              >
               {ARENAS.map((arena, idx) => {
                 const ch = ALL_CHAPTERS[idx];
                 const done = progress[storeKey(ch.id)]?.completedModules ?? [];
@@ -1472,7 +1481,7 @@ export function DuoLearnScreen() {
                   <Text style={{ fontSize: 14, fontFamily: "Heebo_500Medium", color: "#0284c7" }}>סגור</Text>
                 </Pressable>
               </View>
-            </Pressable>
+            </View>
           </Pressable>
         </Animated.View>
       </View>
