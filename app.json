@@ -282,8 +282,6 @@
             "SKAdNetworkIdentifier": "3qcr597p9d.skadnetwork"
           }
         ],
-        "NSPhotoLibraryUsageDescription": "FinPlay מבקש גישה לתמונות רק אם תבחר/י לשתף תמונת פרופיל.",
-        "NSCameraUsageDescription": "FinPlay מבקש גישה למצלמה רק אם תבחר/י לצלם תמונת פרופיל.",
         "NSAppTransportSecurity": {
           "NSExceptionDomains": {
             "r2.dev": {
