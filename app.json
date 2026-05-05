@@ -71,7 +71,8 @@
         {
           "userTrackingPermission": "FinPlay משתמשת במזהה הפרסום של המכשיר כדי להציג מודעות רלוונטיות ולשפר את חוויית המשחק. תוכל/י לסרב מבלי לאבד שום תוכן."
         }
-      ]
+      ],
+      "./plugins/with-no-background-audio"
     ],
     "extra": {
       "router": {},
