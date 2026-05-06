@@ -9,17 +9,13 @@
  * useVideoPlayer, which buffers but never persists to device storage. None of
  * these go through `getCachedVideoPath` (which would download via FileSystem).
  *
- * URL resolution per id (in priority order):
- *   1. `blobUrl` from FINN_MANIFEST (Vercel Blob — public, fast, recommended)
- *   2. `rawUrl`  from FINN_MANIFEST (Higgsfield CloudFront — works immediately
- *                after generation, before mirroring to Blob)
- *   3. sharkparty.mp4 placeholder (last-resort fallback so the flow never breaks)
- *
- * To upgrade a video to a Blob URL, just run `upload-to-blob.ts` — once it
- * writes a `blobUrl` into the manifest, this resolver picks it up automatically.
+ * Each lifestyle video is mirrored to Vercel Blob at the canonical URL
+ * `${FINN_VIDEO_BLOB_BASE}/${id}.mp4`. Generation tooling under `scripts/`
+ * (gitignored) writes the file; this module just constructs the URL.
  */
 
-import { findById } from "../../../scripts/higgsfield/manifest";
+const FINN_VIDEO_BLOB_BASE =
+  "https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/finn-videos";
 
 export interface LifestyleVideoSpec {
   id: string;
@@ -34,12 +30,8 @@ export interface LifestyleVideoSpec {
   trimEnd?: number;
 }
 
-const PLACEHOLDER_URI =
-  "https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/video/sharkparty.mp4";
-
 function resolveVideoUri(id: string): string {
-  const spec = findById(id);
-  return spec?.blobUrl ?? spec?.rawUrl ?? PLACEHOLDER_URI;
+  return `${FINN_VIDEO_BLOB_BASE}/${id}.mp4`;
 }
 
 interface LifestyleCopy {
