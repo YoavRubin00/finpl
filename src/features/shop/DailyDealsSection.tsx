@@ -4,6 +4,8 @@ import { Image as ExpoImage } from 'expo-image';
 import { GoldCoinIcon } from '../../components/ui/GoldCoinIcon';
 import { useRouter } from 'expo-router';
 import { LottieIcon } from '../../components/ui/LottieIcon';
+import { getShopSvgIcon } from '../../components/svg/shop/ShopIcons';
+import { getAvatarSvgIcon } from '../../components/svg/avatars/AvatarMascots';
 import { FlashOfferBanner } from '../../components/ui/FlashOfferBanner';
 import { StarterPackModal } from './StarterPackModal';
 import { STARTER_PACK_PRICE_LABEL, STARTER_PACK_ORIGINAL_PRICE_LABEL, STARTER_PACK_DISCOUNT_PCT } from './starterPack';
@@ -166,18 +168,20 @@ export function DailyDealsSection() {
                 <Text style={styles.discountText}>{isFreeGems ? 'חינם!' : `-${deal.discountPercent}%`}</Text>
               </View>
 
-              {/* Item icon */}
-              {deal.item.imageUrl ? (
-                <ExpoImage
-                  source={{ uri: deal.item.imageUrl }}
-                  style={{ width: 48, height: 48, borderRadius: 24 }}
-                  contentFit="cover"
-                />
-              ) : deal.item.lottieSource ? (
-                <LottieIcon source={deal.item.lottieSource} size={40} />
-              ) : (
-                <Text style={styles.emoji}>{deal.item.emoji}</Text>
-              )}
+              {/* Item icon — same priority chain as ShopItemCard so a deal
+                  on "הלומד" shows the Pip mascot, not a generic 📚 emoji.
+                  Order: avatar SVG → shop SVG → imageUrl → lottie → emoji. */}
+              {(() => {
+                const AvatarIcon = getAvatarSvgIcon(deal.item.id);
+                if (AvatarIcon) return <View style={styles.iconBox}><AvatarIcon size={48} /></View>;
+                const SvgIcon = getShopSvgIcon(deal.item.id);
+                if (SvgIcon) return <View style={styles.iconBox}><SvgIcon size={42} /></View>;
+                if (deal.item.imageUrl) return (
+                  <ExpoImage source={{ uri: deal.item.imageUrl }} style={{ width: 48, height: 48, borderRadius: 24 }} contentFit="cover" />
+                );
+                if (deal.item.lottieSource) return <LottieIcon source={deal.item.lottieSource} size={40} />;
+                return <Text style={styles.emoji}>{deal.item.emoji}</Text>;
+              })()}
 
               {/* Name */}
               <Text style={[styles.itemName, isFreeGems && styles.freeGemsName]} numberOfLines={1}>{deal.item.name}</Text>
@@ -311,6 +315,14 @@ const styles = StyleSheet.create({
     fontSize: 32,
     marginTop: 8,
     marginBottom: 6,
+  },
+  iconBox: {
+    width: 56,
+    height: 56,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 6,
+    marginBottom: 4,
   },
   itemName: {
     fontSize: 13,

@@ -1,4 +1,5 @@
 import type { FeedItem, FeedComic, FeedVideo } from "./types";
+import { LIFESTYLE_VIDEOS } from "../inter-module-break/lifestyleVideoConfig";
 
 // Comics removed, will be replaced by NotebookLM summary infographics per module
 export const COMIC_FEED_ITEMS: FeedComic[] = [];
@@ -64,6 +65,54 @@ export const MICRO_LEARN_VIDEOS: FeedVideo[] = [
     storeChapterId: "ch-1",
   },
 ];
+
+/**
+ * Captain Shark "Lifestyle" reels — 9:16 viral-style clips of Finn skiing,
+ * yachting, DJing. Surfaced in-feed as natural scroll-stoppers (between
+ * lessons/games/quotes) and ALSO triggered between modules in LessonFlow.
+ *
+ * URIs resolve through `lifestyleVideoConfig.ts` → FINN_MANIFEST with
+ * priority blobUrl > rawUrl > placeholder, so a single Blob upload script
+ * upgrades them everywhere they appear.
+ */
+/**
+ * Bottom-bubble caption shown over each lifestyle reel in the feed.
+ * Half-sentence, viral-reels style: [activity/place] from [financial source].
+ * Single-line — `description` deliberately empty for a clean reels look.
+ */
+const LIFESTYLE_FEED_TITLES: Record<string, { title: string; description: string }> = {
+  "finn-life-ski":          { title: "סקי בחופשה שהדיווידנדים מימנו",     description: "" },
+  "finn-life-yacht":        { title: "יאכטה מההכנסה הפסיבית של החודש",    description: "" },
+  "finn-life-festival":     { title: "פסטיבל מהבונוס השנתי",              description: "" },
+  "finn-life-valt-ski":     { title: "וואל טורנס מהרווח של S&P",          description: "" },
+  "finn-life-valt-apres":   { title: "בירה ונקניקיה מהריבית של החודש",     description: "" },
+  "finn-life-valt-hottub":  { title: "ג'קוזי על חשבון תיק האג\"ח",         description: "" },
+  "finn-life-eilat-party":  { title: "מסיבת חוף מההכנסה הפסיבית",          description: "" },
+  "finn-life-eilat-beach":  { title: "חוף מוש על חשבון הדילים",            description: "" },
+  "finn-life-eilat-mall-shop": { title: "קניות מהכסף שהרווחתי במניות",     description: "" },
+  "finn-life-eilat-mall-ice":  { title: "החלקה על הקרח מהבונוס של ה-ETF", description: "" },
+  "finn-life-eilat-dolphins":  { title: "צלילה עם דולפינים מהיעד שהשגתי", description: "" },
+};
+
+const LIFESTYLE_LIKE_SEEDS = [9320, 7180, 8540, 11200, 8470, 9930, 14380, 12150, 9870, 11440, 16720];
+const LIFESTYLE_SAVE_SEEDS = [612, 480, 553, 720, 538, 645, 890, 762, 615, 730, 1050];
+
+export const LIFESTYLE_FEED_VIDEOS: FeedVideo[] = LIFESTYLE_VIDEOS.map((v, i) => {
+  const copy = LIFESTYLE_FEED_TITLES[v.id] ?? { title: v.inviteTitle, description: v.inviteSubtitle };
+  return {
+    id: `lifestyle-${v.id}`,
+    type: "video" as const,
+    title: copy.title,
+    description: copy.description,
+    category: "Investing" as const,
+    videoId: v.id,
+    localVideo: { uri: v.videoUri },
+    durationMinutes: 1,
+    pyramidLayer: 5 as const,
+    likes: LIFESTYLE_LIKE_SEEDS[i] ?? 5000,
+    saves: LIFESTYLE_SAVE_SEEDS[i] ?? 200,
+  };
+});
 
 export const MOCK_FEED_DATA: FeedItem[] = [
   {

@@ -27,7 +27,7 @@ import Animated, {
 import { FINN_HELLO } from "../retention-loops/finnMascotConfig";
 
 // Feed Data & Types
-import { MOCK_FEED_DATA, COMIC_FEED_ITEMS, BENBEN_VIDEOS, MICRO_LEARN_VIDEOS } from "./feedData";
+import { MOCK_FEED_DATA, COMIC_FEED_ITEMS, BENBEN_VIDEOS, MICRO_LEARN_VIDEOS, LIFESTYLE_FEED_VIDEOS } from "./feedData";
 import { type FeedItem, type FeedModuleHook, type FeedQuote } from "./types";
 import { FeedVideoItem } from "./FeedVideoItem";
 import { FeedQuoteItem } from "./FeedQuoteItem";
@@ -899,8 +899,12 @@ export function FinFeedScreen() {
       ...MOCK_FEED_DATA.filter(i => i.type === "quote"),
     ];
 
-    // Hook videos, interspersed between games and quotes
-    const videos: FeedItem[] = [...hooks];
+    // Hook videos + Lifestyle reels, interspersed between games and quotes.
+    // Adding lifestyle here (rather than splicing fixed positions) lets the
+    // cyclic [Game, Quote, Video] merger drop them naturally between text/quote
+    // items as the user scrolls. Anti-adjacency rule below still prevents
+    // two videos in a row.
+    const videos: FeedItem[] = [...hooks, ...LIFESTYLE_FEED_VIDEOS];
 
     // Shuffle each category using the random seed (changes on tab focus)
     const shuffledGames = seededShuffle(games, seed);
@@ -992,14 +996,14 @@ export function FinFeedScreen() {
     const microLearnVideo = MICRO_LEARN_VIDEOS[seed % MICRO_LEARN_VIDEOS.length];
     filteredMerged.splice(Math.min(8, filteredMerged.length), 0, microLearnVideo);
 
-    // Pin live news headlines at position 9 — right after BENBEN video
-    filteredMerged.splice(Math.min(9, filteredMerged.length), 0, { id: 'live-news', type: 'live-news' } as const);
-
     // Pin second macro event at position 10 for recurring exposure
     if (secondMacro) {
       const insertAt = Math.min(10, filteredMerged.length);
       filteredMerged.splice(insertAt, 0, secondMacro);
     }
+
+    // (Lifestyle Reels are now part of the cyclic [Game,Quote,Video] pool above —
+    // they interleave naturally between text/quote items as the user scrolls.)
 
     return filteredMerged;
   }, [feedSeed, simSeed, progress, aiProfile, getUnansweredMacroEvents, completedScenarios, isAuthedNonGuest]);
