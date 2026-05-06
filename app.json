@@ -324,8 +324,7 @@
             ]
           }
         ],
-        "NSPrivacyTracking": true,
-        "NSPrivacyTrackingDomains": [],
+        "NSPrivacyTracking": false,
         "NSPrivacyCollectedDataTypes": []
       }
     }
