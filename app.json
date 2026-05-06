@@ -56,7 +56,6 @@
       ],
       "expo-video",
       "expo-image",
-      "expo-audio",
       "expo-asset",
       "expo-apple-authentication",
       [
