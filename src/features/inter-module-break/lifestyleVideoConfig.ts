@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Lifestyle break videos — viral-reels-style 9:16 clips of Captain Shark
  * shown between modules as a relaxation moment, expanding the existing
  * Shark Party Invite pattern.
@@ -74,7 +74,7 @@ const LIFESTYLE_COPY: LifestyleCopy[] = [
     inviteTitle: "🏔️ הקפטן בוואל טורנס!",
     inviteSubtitle: "סקי בשלוש העמקים — אדרנלין טהור",
     ctaLabel: "בואו לגלוש איתי!",
-    caption: "וואל טורנס מהרווח של S&P",
+    caption: "וואל טורנס מרווחי המדדים",
     trimEnd: 0.5,
   },
   {
@@ -90,7 +90,7 @@ const LIFESTYLE_COPY: LifestyleCopy[] = [
     inviteTitle: "♨️ ג'קוזי על המרפסת",
     inviteSubtitle: "שקיעה מעל 3 העמקים. שווה כל קר.",
     ctaLabel: "בואו להירגע איתי!",
-    caption: "ג'קוזי על חשבון תיק האג\"ח",
+    caption: "ג'קוזי על חשבון תיק האיגרות",
     trimEnd: 0.5,
   },
   // ── Eilat vacation mini-series ──
@@ -123,7 +123,7 @@ const LIFESTYLE_COPY: LifestyleCopy[] = [
     inviteTitle: "⛸️ החלקה על הקרח",
     inviteSubtitle: "באמצע המדבר. רק באילת.",
     ctaLabel: "בואו להחליק!",
-    caption: "החלקה על הקרח מהבונוס של ה-ETF",
+    caption: "החלקה על הקרח מבונוס המדדים",
     trimEnd: 0.5,
   },
   {

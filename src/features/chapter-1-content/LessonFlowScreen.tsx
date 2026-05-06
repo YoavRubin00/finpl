@@ -2944,7 +2944,11 @@ export function LessonFlowScreen() {
       setPhase("sim-intro");
       mediumHaptic();
     } else {
-      setPhase(mod.id && MODULE_INFOGRAPHIC_MAP[mod.id] ? "module-infographic" : (mod.id && getDilemma(mod.id) ? "shark-dilemma" : "summary"));
+      setPhase(
+        mod.id && MODULE_INFOGRAPHIC_MAP[mod.id] ? "module-infographic" :
+        mod.id && MODULE_POST_VIDEO_MAP[mod.id] ? "post-infographic-video" :
+        mod.id && getDilemma(mod.id) ? "shark-dilemma" : "summary"
+      );
     }
   }, [mod, quizIndex]);
 
@@ -3011,7 +3015,11 @@ export function LessonFlowScreen() {
     if (mod && SIM_FIRST_MODULES.has(mod.id)) {
       setPhase("flashcards");
     } else {
-      setPhase(mod && MODULE_INFOGRAPHIC_MAP[mod.id] ? "module-infographic" : (mod && getDilemma(mod.id) ? "shark-dilemma" : "summary"));
+      setPhase(
+        mod && MODULE_INFOGRAPHIC_MAP[mod.id] ? "module-infographic" :
+        mod && MODULE_POST_VIDEO_MAP[mod.id] ? "post-infographic-video" :
+        mod && getDilemma(mod.id) ? "shark-dilemma" : "summary"
+      );
     }
   }, [mod]);
 

@@ -186,6 +186,8 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.2,
     shadowRadius: 10,
     elevation: 4,
+    maxHeight: 160,
+    overflow: 'hidden',
   },
   // direction="up", body overlays the area above the button so a CTA directly
   // beneath the toggle (e.g. "בואו נתחיל" in Cashout-Rush idle) stays anchored.
