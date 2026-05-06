@@ -30,7 +30,8 @@ const BLOCKED_ANDROID_PERMS = [
 
 function withNoBackgroundAudioAndroid(config) {
   return withAndroidManifest(config, (cfg) => {
-    const manifest = cfg.modResults.manifest;
+    const androidManifest = cfg.modResults;
+    const manifest = androidManifest.manifest;
 
     manifest.$ = manifest.$ || {};
     if (!manifest.$['xmlns:tools']) {
@@ -53,8 +54,8 @@ function withNoBackgroundAudioAndroid(config) {
       });
     }
 
-    const mainApp = AndroidConfig.Manifest.getMainApplicationOrThrow(manifest);
-    if (Array.isArray(mainApp.activity)) {
+    const mainApp = AndroidConfig.Manifest.getMainApplication(androidManifest);
+    if (mainApp && Array.isArray(mainApp.activity)) {
       for (const act of mainApp.activity) {
         const name = act && act.$ && act.$['android:name'];
         if (typeof name === 'string' && name.endsWith('.MainActivity')) {
