@@ -285,7 +285,6 @@ export function ModuleIntroShort({ onStart, unitColors, config, audioUri }: Prop
                   color: '#fbbf24',
                   fontSize: 18,
                   fontWeight: '900',
-                  textAlign: 'center',
                   paddingHorizontal: 16,
                 }]}>{config.phase1Stat}</Text>
               )}

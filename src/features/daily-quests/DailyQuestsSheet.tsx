@@ -447,9 +447,6 @@ export function DailyQuestsSheet({ visible, onClose }: DailyQuestsSheetProps) {
               {/* ── PRO chest (left, larger) ── */}
               <View style={{ flex: 13, alignItems: "center" }}>
                 <LottieIcon source={LOTTIE_CROWN as unknown as number} size={36} autoPlay={!reduceMotion} loop active={!reduceMotion} />
-                <View style={{ backgroundColor: "#b45309", borderRadius: 8, paddingHorizontal: 10, paddingVertical: 2, marginTop: 2, marginBottom: 4 }}>
-                  <Text style={{ color: "#fff", fontSize: 11, fontWeight: "900", letterSpacing: 1.2 }}>PRO</Text>
-                </View>
                 <View style={{ position: "relative" }}>
                   {allDone && isPro && !proRewardClaimed && (
                     <Animated.View pointerEvents="none" style={[styles.chestGlowHalo, { backgroundColor: "#d97706" }, chestGlowStyle]} />
@@ -468,6 +465,9 @@ export function DailyQuestsSheet({ visible, onClose }: DailyQuestsSheetProps) {
                       ]}
                     >
                       <LottieIcon source={LOTTIE_CHEST as unknown as number} size={130} autoPlay={false} active={proChestOpen} loop={false} />
+                      <View style={{ position: "absolute", top: 8, right: 8, backgroundColor: "#b45309", borderRadius: 7, paddingHorizontal: 8, paddingVertical: 2, zIndex: 10 }} pointerEvents="none">
+                        <Text style={{ color: "#fff", fontSize: 10, fontWeight: "900", letterSpacing: 1.2 }}>PRO</Text>
+                      </View>
                       {!isPro && (
                         <View style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, justifyContent: "center", alignItems: "center", backgroundColor: "rgba(0,0,0,0.5)", borderRadius: 16 }} accessible={false}>
                           <Text style={{ fontSize: 28 }}>🔒</Text>
@@ -482,9 +482,6 @@ export function DailyQuestsSheet({ visible, onClose }: DailyQuestsSheetProps) {
               {/* ── Regular chest (right, smaller) ── */}
               <View style={{ flex: 10, alignItems: "center" }}>
                 <View style={{ height: 36 }} accessible={false} />
-                <View style={{ backgroundColor: "#475569", borderRadius: 8, paddingHorizontal: 10, paddingVertical: 2, marginTop: 2, marginBottom: 4 }}>
-                  <Text style={{ color: "#fff", fontSize: 11, fontWeight: "900", letterSpacing: 1.2 }}>רגיל</Text>
-                </View>
                 <View style={{ position: "relative" }}>
                   {allDone && !rewardClaimed && (
                     <Animated.View pointerEvents="none" style={[styles.chestGlowHalo, chestGlowStyle]} />
@@ -503,6 +500,9 @@ export function DailyQuestsSheet({ visible, onClose }: DailyQuestsSheetProps) {
                       ]}
                     >
                       <LottieIcon source={LOTTIE_CHEST as unknown as number} size={110} autoPlay={false} active={chestOpen} loop={false} />
+                      <View style={{ position: "absolute", top: 8, right: 8, backgroundColor: "#475569", borderRadius: 7, paddingHorizontal: 8, paddingVertical: 2, zIndex: 10 }} pointerEvents="none">
+                        <Text style={{ color: "#fff", fontSize: 10, fontWeight: "900", letterSpacing: 1.2 }}>רגיל</Text>
+                      </View>
                     </Pressable>
                   </Animated.View>
                 </View>
