@@ -27,6 +27,10 @@ export interface ShopItem {
   lottieSource?: number;
   /** Public image URL — preferred over lottie/emoji when present (used by avatar shark items). */
   imageUrl?: string;
+  /** Passive ability bestowed when this avatar is equipped. Currently rendered
+   *  as a "highlight" line on the shop card; gameplay-side multipliers are
+   *  applied at reward emit sites (separate followup wiring). */
+  ability?: string;
 }
 
 /** IAP gem bundle, real-money purchase (mock flow) */

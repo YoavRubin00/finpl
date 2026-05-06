@@ -119,9 +119,9 @@ export const MysteryBoxCard = React.memo(function MysteryBoxCard({
               end={{ x: 0, y: 1 }}
               style={StyleSheet.absoluteFill}
             />
-            <Diamond size={14} color="#fff" />
+            <Text style={styles.ctaSep} allowFontScaling={false}>פתח · </Text>
             <Text style={styles.ctaCost} allowFontScaling={false}>{cost}</Text>
-            <Text style={styles.ctaSep} allowFontScaling={false}>· פתח</Text>
+            <Text style={styles.ctaGem} allowFontScaling={false}>💎</Text>
           </View>
         </View>
       </LinearGradient>
@@ -239,6 +239,10 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '700',
     color: '#fff',
-    opacity: 0.8,
+    opacity: 0.85,
+  },
+  ctaGem: {
+    fontSize: 16,
+    marginInlineStart: 2,
   },
 });

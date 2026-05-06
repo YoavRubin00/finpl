@@ -126,6 +126,7 @@ export const SHOP_ITEMS: readonly ShopItem[] = [
     coinCost: 0,
     gemCost: 50,
     emoji: '🪙',
+    ability: '+5% 🪙 בקוויזים',
   },
   {
     id: 'avatar-learner',
@@ -135,6 +136,7 @@ export const SHOP_ITEMS: readonly ShopItem[] = [
     coinCost: 0,
     gemCost: 80,
     emoji: '📚',
+    ability: '+8% XP בשיעורים',
   },
   {
     id: 'avatar-grower',
@@ -144,6 +146,7 @@ export const SHOP_ITEMS: readonly ShopItem[] = [
     coinCost: 0,
     gemCost: 120,
     emoji: '🌱',
+    ability: '+10% XP במשימות',
   },
   {
     id: 'avatar-strong-saver',
@@ -153,6 +156,7 @@ export const SHOP_ITEMS: readonly ShopItem[] = [
     coinCost: 0,
     gemCost: 180,
     emoji: '🐷',
+    ability: '+10% 🪙 בקוויזים',
   },
   {
     id: 'avatar-analyst',
@@ -160,8 +164,9 @@ export const SHOP_ITEMS: readonly ShopItem[] = [
     name: 'המנתח',
     description: 'טאבלט, גרפים, משקפיים. מבוסס נתונים בלבד.',
     coinCost: 0,
-    gemCost: 250,
+    gemCost: 220,
     emoji: '📊',
+    ability: '+12% XP מפרקים',
   },
   {
     id: 'avatar-investor',
@@ -171,6 +176,7 @@ export const SHOP_ITEMS: readonly ShopItem[] = [
     coinCost: 0,
     gemCost: 350,
     emoji: '🚀',
+    ability: '+15% 🪙 בקוויזים',
   },
   {
     id: 'avatar-trader',
@@ -180,6 +186,7 @@ export const SHOP_ITEMS: readonly ShopItem[] = [
     coinCost: 0,
     gemCost: 500,
     emoji: '📈',
+    ability: '+15% 🪙 ו-+5% XP',
   },
   {
     id: 'avatar-defender',
@@ -189,6 +196,7 @@ export const SHOP_ITEMS: readonly ShopItem[] = [
     coinCost: 0,
     gemCost: 700,
     emoji: '🛡️',
+    ability: 'הקפאת רצף + 10% 🪙',
   },
   {
     id: 'avatar-explorer',
@@ -198,6 +206,7 @@ export const SHOP_ITEMS: readonly ShopItem[] = [
     coinCost: 0,
     gemCost: 1000,
     emoji: '🌍',
+    ability: '+20% 🪙 מכל מקור',
   },
   {
     id: 'avatar-strategist',
@@ -207,6 +216,7 @@ export const SHOP_ITEMS: readonly ShopItem[] = [
     coinCost: 0,
     gemCost: 1500,
     emoji: '♟️',
+    ability: '+25% XP ו-+25% 🪙',
   },
 ];
 

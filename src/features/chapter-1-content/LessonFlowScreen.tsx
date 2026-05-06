@@ -43,6 +43,8 @@ import { chapter3Data } from "../chapter-3-content/chapter3Data";
 import { chapter4Data } from "../chapter-4-content/chapter4Data";
 import { chapter5Data } from "../chapter-5-content/chapter5Data";
 import { useChapterStore } from "./useChapterStore";
+import { useLifestyleBreakStore } from "../inter-module-break/useLifestyleBreakStore";
+import { pickNextLifestyleVideo, type LifestyleVideoSpec } from "../inter-module-break/lifestyleVideoConfig";
 import {
   useEntranceAnimation,
   fadeInUp,
@@ -227,6 +229,16 @@ const INFOGRAPHIC_TOP_CARDS = new Set([
 
 const RTL_STYLE = { writingDirection: "rtl" as const, textAlign: "right" as const };
 
+/* Justified body text for lesson cards. Use on long paragraphs only — short
+ * labels/titles look bad with justify. To get Android's balanced line-breaker
+ * (which minimizes "orphan" lines), pair this style with the prop
+ * `textBreakStrategy="balanced"` on the <Text> itself — RN exposes that as a
+ * Text prop, not a style. */
+const JUSTIFY_RTL = {
+  writingDirection: "rtl" as const,
+  textAlign: "justify" as const,
+};
+
 /** Phases where progress is worth saving so the user can resume mid-module */
 const RESTORABLE_PHASES = new Set<FlowPhase>(["flashcards", "interactive-recall", "quizzes"]);
 
@@ -322,7 +334,7 @@ const quizFeedbackStyles = StyleSheet.create({
     fontWeight: "700",
     lineHeight: 22,
     writingDirection: "rtl",
-    textAlign: "right",
+    textAlign: "justify",
   },
   continueBtnRow: {
     flexDirection: "row",
@@ -754,7 +766,7 @@ function FlashcardCard({
                         <Text style={{ ...RTL_STYLE, fontSize: 24, color: "#0c4a6e", fontWeight: "800", marginBottom: 12, backgroundColor: "rgba(255,255,255,0.85)", paddingHorizontal: 12, paddingVertical: 4, borderRadius: 8, alignSelf: "flex-start" }}>
                           {renderBoldText(card.text.split('\n')[0], onTermPress)}
                         </Text>
-                        <Text style={{ ...RTL_STYLE, fontSize: 18, color: "#1e293b", lineHeight: 28, fontWeight: "600", backgroundColor: "rgba(255,255,255,0.85)", padding: 12, borderRadius: 12 }}>
+                        <Text style={{ ...JUSTIFY_RTL, fontSize: 18, color: "#1e293b", lineHeight: 28, fontWeight: "600", backgroundColor: "rgba(255,255,255,0.85)", padding: 12, borderRadius: 12 }}>
                           {renderBoldText(card.text.split('\n').slice(1).join('\n'), onTermPress)}
                         </Text>
                      </ScrollView>
@@ -772,7 +784,7 @@ function FlashcardCard({
           {isDiveMode && card.finnExplanations && card.finnExplanations[diveStep] && (
             <Animated.View entering={FadeInUp.duration(300)} style={{ flexDirection: "row-reverse", alignItems: "center", gap: 8, marginHorizontal: 16, marginBottom: 8, backgroundColor: "#eff6ff", padding: 12, borderRadius: 12, borderWidth: 1, borderColor: "#bfdbfe" }}>
               <ExpoImage source={FINN_STANDARD} accessible={false} style={{ width: 44, height: 44, flexShrink: 0 }} contentFit="contain" />
-              <Text style={{ ...RTL_STYLE, fontSize: 14, color: "#1e3a8a", fontWeight: "600", flex: 1 }}>{card.finnExplanations[diveStep]}</Text>
+              <Text style={{ ...JUSTIFY_RTL, fontSize: 14, color: "#1e3a8a", fontWeight: "600", flex: 1 }}>{card.finnExplanations[diveStep]}</Text>
             </Animated.View>
           )}
 
@@ -801,7 +813,7 @@ function FlashcardCard({
           {isDiveMode && card.finnExplanations && card.finnExplanations[diveStep] ? (
             <Animated.View entering={FadeInUp.duration(300)} style={{ flexDirection: "row-reverse", alignItems: "center", gap: 8, marginHorizontal: 8, marginTop: 10, marginBottom: 4, backgroundColor: "#eff6ff", padding: 12, borderRadius: 12, borderWidth: 1, borderColor: "#bfdbfe" }}>
               <ExpoImage source={FINN_STANDARD} accessible={false} style={{ width: 44, height: 44, flexShrink: 0 }} contentFit="contain" />
-              <Text style={{ ...RTL_STYLE, fontSize: 14, color: "#1e3a8a", fontWeight: "600", flex: 1 }}>{card.finnExplanations[diveStep]}</Text>
+              <Text style={{ ...JUSTIFY_RTL, fontSize: 14, color: "#1e3a8a", fontWeight: "600", flex: 1 }}>{card.finnExplanations[diveStep]}</Text>
             </Animated.View>
           ) : (
             <View style={{ height: 10 }} />
@@ -847,7 +859,7 @@ function FlashcardCard({
                 const bodyText = /^[A-Za-z]/.test(rawBody) ? '\u200F' + rawBody : rawBody;
                 if (!bodyText || (isDiveMode && diveStep > 0 && card.hideTextOnDive)) return null;
                 return (
-                  <Text style={{ ...RTL_STYLE, fontSize: bodyText.length > 100 ? 17 : 21, lineHeight: bodyText.length > 100 ? 28 : 34, color: "#1c1917", fontWeight: "600", marginBottom: 16 }}>
+                  <Text style={{ ...JUSTIFY_RTL, fontSize: bodyText.length > 100 ? 17 : 21, lineHeight: bodyText.length > 100 ? 28 : 34, color: "#1c1917", fontWeight: "600", marginBottom: 16 }}>
                     {renderBoldText(bodyText, onTermPress)}
                   </Text>
                 );
@@ -858,13 +870,13 @@ function FlashcardCard({
               {isDiveMode && card.finnExplanations && card.finnExplanations[diveStep] && (
                 <Animated.View entering={FadeInUp.duration(300)} style={{ flexDirection: "row-reverse", alignItems: "center", gap: 8, marginTop: 12, backgroundColor: "#eff6ff", padding: 12, borderRadius: 12, borderWidth: 1, borderColor: "#bfdbfe" }}>
                   <ExpoImage source={FINN_STANDARD} accessible={false} style={{ width: 44, height: 44, flexShrink: 0 }} contentFit="contain" />
-                  <Text style={{ ...RTL_STYLE, fontSize: 14, color: "#1e3a8a", fontWeight: "600", flex: 1 }}>{card.finnExplanations[diveStep]}</Text>
+                  <Text style={{ ...JUSTIFY_RTL, fontSize: 14, color: "#1e3a8a", fontWeight: "600", flex: 1 }}>{card.finnExplanations[diveStep]}</Text>
                 </Animated.View>
               )}
 
               {/* Paradigm footnote, only on fc-1-1-1 */}
               {card.id === "fc-1-1-1" && (!isDiveMode || diveStep === 0) && (
-                <Text style={{ ...RTL_STYLE, fontSize: 13, color: "#64748b", fontWeight: "600", marginTop: 10, lineHeight: 20 }}>
+                <Text style={{ ...JUSTIFY_RTL, fontSize: 13, color: "#64748b", fontWeight: "600", marginTop: 10, lineHeight: 20 }}>
                   💡 פרדיגמה = דרך חשיבה, מסגרת מנטלית שדרכה אנחנו מפרשים את המציאות.
                 </Text>
               )}
@@ -2065,7 +2077,7 @@ function SimIntroOverlay({
           </Text>
           <Text style={{
             fontSize: 16, fontWeight: "600", color: "#475569",
-            textAlign: "right", writingDirection: "rtl", lineHeight: 24,
+            ...JUSTIFY_RTL, lineHeight: 24,
           }}>
             {description}
           </Text>
@@ -2512,6 +2524,12 @@ export function LessonFlowScreen() {
   // Shark Party, every 2 consecutive or 4 total completed modules
   const [showPartyInvite, setShowPartyInvite] = useState(false);
   const [showPartyVideo, setShowPartyVideo] = useState(false);
+  // Lifestyle break — every 3 completed modules (skipped on % 4 to defer to Party)
+  const [showLifestyleInvite, setShowLifestyleInvite] = useState(false);
+  const [showLifestyleVideo, setShowLifestyleVideo] = useState(false);
+  const [lifestyleVideo, setLifestyleVideo] = useState<LifestyleVideoSpec | null>(null);
+  const lifestyleSeenIds = useLifestyleBreakStore(useShallow((s) => s.seenIds));
+  const markLifestyleSeen = useLifestyleBreakStore((s) => s.markSeen);
   const [quizIndex, setQuizIndex] = useState(() => {
     const r = mod?.id ? useChapterStore.getState().moduleResume[mod.id] : undefined;
     return (r && RESTORABLE_PHASES.has(r.phase as FlowPhase)) ? r.quizIndex : 0;
@@ -2876,6 +2894,21 @@ export function LessonFlowScreen() {
       return () => clearTimeout(timer);
     }
   }, [chestClaimed, isLastModule, showDoubleOrNothing, showPostCelebration, showPartyInvite, showPartyVideo, progress]);
+
+  // Lifestyle break, every 3 total completed modules — fires at any module end.
+  // Skipped on % 4 multiples so Shark Party (chapter end) takes priority on collisions.
+  useEffect(() => {
+    if (!chestClaimed || showDoubleOrNothing || showSharkLove || showPostCelebration || showPartyInvite || showPartyVideo || showLifestyleInvite || showLifestyleVideo) return;
+    const totalCompleted = Object.values(progress).reduce(
+      (sum, ch) => sum + (ch?.completedModules?.length ?? 0), 0
+    );
+    if (totalCompleted > 0 && totalCompleted % 3 === 0 && totalCompleted % 4 !== 0) {
+      const next = pickNextLifestyleVideo(lifestyleSeenIds);
+      setLifestyleVideo(next);
+      const timer = setTimeout(() => setShowLifestyleInvite(true), 2500);
+      return () => clearTimeout(timer);
+    }
+  }, [chestClaimed, showDoubleOrNothing, showSharkLove, showPostCelebration, showPartyInvite, showPartyVideo, showLifestyleInvite, showLifestyleVideo, progress, lifestyleSeenIds]);
 
   const moduleResult = mod ? quizResults[mod.id] : undefined;
   const correctCount = moduleResult?.correct ?? 0;
@@ -4569,6 +4602,44 @@ export function LessonFlowScreen() {
             unitColors={unitColors}
             fitContain
             trimEnd={2.5}
+          />
+        </View>
+      )}
+
+      {/* ── Lifestyle break invite (every 3 modules, viral-reels vibe) ── */}
+      {showLifestyleInvite && lifestyleVideo && !showLifestyleVideo && (
+        <Pressable style={[StyleSheet.absoluteFill, { zIndex: 9993, backgroundColor: "rgba(0,0,0,0.7)", justifyContent: "center", alignItems: "center", padding: 24 }]} onPress={() => { setShowLifestyleInvite(false); safeTimeout(() => goToNextSequentialModule(), 80); }} accessibilityRole="button" accessibilityLabel="סגור">
+          <ConfettiExplosion onComplete={() => {}} />
+          <Animated.View entering={FadeInUp.duration(500)} style={{ backgroundColor: "#0f172a", borderRadius: 28, padding: 28, width: "100%", maxWidth: 340, alignItems: "center", borderWidth: 2, borderColor: "#0ea5e9" }}>
+            <View style={{ width: 120, height: 120, overflow: "hidden", marginBottom: 16 }} accessible={false}>
+              <LottieView
+                source={require("../../../assets/lottie/wired-flat-3263-trophy-circle-hover-roll.json")}
+                style={{ width: 120, height: 120 }}
+                autoPlay loop
+              />
+            </View>
+            <Text style={{ fontSize: 22, fontWeight: "900", color: "#ffffff", textAlign: "center", marginBottom: 8 }}>{lifestyleVideo.inviteTitle}</Text>
+            <Text style={{ fontSize: 15, fontWeight: "600", color: "#94a3b8", textAlign: "center", marginBottom: 24 }}>{lifestyleVideo.inviteSubtitle}</Text>
+            <Pressable onPress={() => { successHaptic(); markLifestyleSeen(lifestyleVideo.id); setShowLifestyleVideo(true); }} style={{ width: "100%", backgroundColor: "#0ea5e9", borderRadius: 16, paddingVertical: 16, alignItems: "center", marginBottom: 12, borderBottomWidth: 4, borderBottomColor: "#0284c7" }} accessibilityRole="button" accessibilityLabel={lifestyleVideo.ctaLabel}>
+              <Text style={{ fontSize: 18, fontWeight: "900", color: "#ffffff" }}>{lifestyleVideo.ctaLabel}</Text>
+            </Pressable>
+            <Pressable onPress={() => { setShowLifestyleInvite(false); safeTimeout(() => goToNextSequentialModule(), 80); }} style={{ paddingVertical: 10 }} accessibilityRole="button" accessibilityLabel="המשך">
+              <Text style={{ fontSize: 14, fontWeight: "700", color: "#64748b" }}>{"ממשיכים ללמוד →"}</Text>
+            </Pressable>
+          </Animated.View>
+        </Pressable>
+      )}
+
+      {/* ── Lifestyle break video, full screen ── */}
+      {showLifestyleVideo && lifestyleVideo && (
+        <View style={[StyleSheet.absoluteFill, { zIndex: 9993, backgroundColor: "#000000" }]}>
+          <VideoHookPlayer
+            videoUri={lifestyleVideo.videoUri}
+            hookText={lifestyleVideo.caption}
+            onFinish={() => { setShowLifestyleVideo(false); setShowLifestyleInvite(false); goToNextSequentialModule(); }}
+            unitColors={unitColors}
+            fitContain
+            trimEnd={lifestyleVideo.trimEnd ?? 0.5}
           />
         </View>
       )}

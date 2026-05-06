@@ -125,6 +125,24 @@ export const ShopItemCard = React.memo(function ShopItemCard({ item, canAfford, 
           {item.description}
         </Text>
 
+        {/* Ability badge — premium gradient pill, sparkle on both ends,
+            wraps to 2 lines so the full bonus reads cleanly. The cyan→purple
+            gradient + glow tells the user "this is a passive perk you keep". */}
+        {item.ability && (
+          <LinearGradient
+            colors={['#22d3ee', '#a855f7']}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 0 }}
+            style={styles.abilityChip}
+          >
+            <Text style={styles.abilitySparkle} allowFontScaling={false}>✨</Text>
+            <Text style={styles.abilityText} allowFontScaling={false} numberOfLines={2}>
+              {item.ability}
+            </Text>
+            <Text style={styles.abilitySparkle} allowFontScaling={false}>✨</Text>
+          </LinearGradient>
+        )}
+
         {/* Bottom row: price pill + duration chip */}
         <View style={styles.bottomRow}>
           {isEquipped ? (
@@ -225,8 +243,46 @@ const styles = StyleSheet.create({
     color: '#94a8c2',
     textAlign: 'center',
     writingDirection: 'rtl' as const,
-    marginBottom: 12,
+    marginBottom: 8,
     minHeight: 32,
+  },
+  abilityChip: {
+    flexDirection: 'row-reverse',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    alignSelf: 'stretch',
+    paddingHorizontal: 10,
+    paddingVertical: 7,
+    borderRadius: 14,
+    borderWidth: 1.5,
+    borderColor: 'rgba(255,255,255,0.4)',
+    marginBottom: 12,
+    minHeight: 40,
+    shadowColor: '#22d3ee',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.55,
+    shadowRadius: 10,
+    elevation: 6,
+  },
+  abilitySparkle: {
+    fontSize: 11,
+    textShadowColor: 'rgba(255,255,255,0.9)',
+    textShadowOffset: { width: 0, height: 0 },
+    textShadowRadius: 6,
+  },
+  abilityText: {
+    flex: 1,
+    fontSize: 11.5,
+    fontWeight: '900',
+    color: '#ffffff',
+    textAlign: 'center',
+    writingDirection: 'rtl' as const,
+    letterSpacing: 0.2,
+    textShadowColor: 'rgba(0,0,0,0.35)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 2,
+    lineHeight: 14,
   },
   bottomRow: {
     width: '100%',
