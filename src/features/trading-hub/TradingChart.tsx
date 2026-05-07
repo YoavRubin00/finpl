@@ -1,4 +1,4 @@
-import { useMemo, useState, useCallback, useRef, useEffect } from 'react';
+import { useMemo, useState, useCallback, useEffect } from 'react';
 import { View, Text, Pressable, StyleSheet, ActivityIndicator, Platform } from 'react-native';
 import { WebView, type WebViewMessageEvent } from 'react-native-webview';
 import { Info } from 'lucide-react-native';
@@ -34,18 +34,27 @@ export function TradingChart({
 }: TradingChartProps) {
   const [ready, setReady] = useState(false);
   const [errored, setErrored] = useState(false);
-  const lastSigRef = useRef<string>('');
 
-  // Rebuild the HTML whenever mode/timeframe/period/data signature changes.
-  const html = useMemo(() => {
-    const sig = `${mode}|${timeframe}|${maPeriod}|${ohlcv.length}|${ohlcv[0]?.timestamp ?? 0}|${ohlcv[ohlcv.length - 1]?.timestamp ?? 0}`;
-    if (sig !== lastSigRef.current) {
-      lastSigRef.current = sig;
-      setReady(false);
-      setErrored(false);
-    }
-    return buildChartHtml({ mode, data: ohlcv, timeframe, maPeriod });
-  }, [mode, timeframe, maPeriod, ohlcv]);
+  // Signature of all inputs that affect the rendered chart. Used both to drive
+  // state reset and to remount the WebView (via `key`) on change — without the
+  // remount, rapid MA changes can leave the WebView in a half-loaded state and
+  // the 4.5s timeout below trips, falling the user back to the simple chart.
+  const sig = `${mode}|${timeframe}|${maPeriod}|${ohlcv.length}|${ohlcv[0]?.timestamp ?? 0}|${ohlcv[ohlcv.length - 1]?.timestamp ?? 0}`;
+
+  // Rebuild the HTML whenever the sig changes. Pure derivation only — the state
+  // reset lives in the effect below, so React's batching is respected.
+  const html = useMemo(
+    () => buildChartHtml({ mode, data: ohlcv, timeframe, maPeriod }),
+    [mode, timeframe, maPeriod, ohlcv]
+  );
+
+  // Reset ready/errored when the sig changes. Doing this in an effect (not
+  // useMemo) is the correct React pattern and prevents the race where a stale
+  // 'ready' message from the previous WebView marks the new render as ready.
+  useEffect(() => {
+    setReady(false);
+    setErrored(false);
+  }, [sig]);
 
   const handleMessage = useCallback((e: WebViewMessageEvent) => {
     try {
@@ -143,6 +152,7 @@ export function TradingChart({
 
       <View style={[styles.webviewWrap, { height: CHART_HEIGHT }]}>
         <WebView
+          key={sig}
           originWhitelist={["*"]}
           source={{ html }}
           style={styles.webview}

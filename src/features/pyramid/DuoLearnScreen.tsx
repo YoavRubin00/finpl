@@ -1366,6 +1366,17 @@ export function DuoLearnScreen() {
               style={{ width: "100%", maxWidth: 380, maxHeight: "95%", backgroundColor: "#ffffff", borderRadius: 24, overflow: "hidden", shadowColor: "#000", shadowOpacity: 0.15, shadowRadius: 20, shadowOffset: { width: 0, height: 8 }, elevation: 10 }}
               accessibilityLabel="תוכן מסלול הלמידה"
             >
+              {/* X close button, top-right (RTL convention) */}
+              <Pressable
+                onPress={() => setRoadmapVisible(false)}
+                accessibilityRole="button"
+                accessibilityLabel="סגור מסלול הלמידה"
+                hitSlop={10}
+                style={{ position: "absolute", top: 10, right: 10, zIndex: 10, width: 32, height: 32, borderRadius: 16, backgroundColor: "rgba(0,0,0,0.06)", alignItems: "center", justifyContent: "center" }}
+              >
+                <X size={18} color="#64748b" />
+              </Pressable>
+
               {/* Header (fixed) */}
               <View style={{ paddingTop: 16, paddingHorizontal: 18, paddingBottom: 10 }}>
                 <Text style={{ fontSize: 18, fontFamily: "Heebo_700Bold", color: "#0f172a", textAlign: "center", marginBottom: 2, writingDirection: "rtl" }}>

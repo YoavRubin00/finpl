@@ -292,10 +292,24 @@ export function OutOfHeartsModal({ visible, onDismiss, onUpgrade, onHeartsRefill
                         ))}
                     </View>
 
-                    {/* Watch ad for 1 heart, non-PRO only */}
-                    {!isPro && adReady && (
-                        <Pressable onPress={handleAdRefill} style={styles.adRefillBtn} accessibilityRole="button" accessibilityLabel="צפו בפרסומת וקבלו לב חינם">
-                            <Text style={styles.adRefillBtnText}>צפו בפרסומת, קבלו ❤️ חינם</Text>
+                    {/* Watch ad for 1 heart, non-PRO only.
+                        Always render the button so users know the option exists; if the ad
+                        hasn't loaded yet (slow network / AdMob inventory dry / freshly approved
+                        app), disable the button and surface a "loading" state rather than
+                        hiding it — silent disappearance was making users think we removed the
+                        feature on iPhone. */}
+                    {!isPro && (
+                        <Pressable
+                            onPress={adReady ? handleAdRefill : undefined}
+                            disabled={!adReady}
+                            style={[styles.adRefillBtn, !adReady && { opacity: 0.55 }]}
+                            accessibilityRole="button"
+                            accessibilityLabel={adReady ? "צפו בפרסומת וקבלו לב חינם" : "המודעה נטענת"}
+                            accessibilityState={{ disabled: !adReady }}
+                        >
+                            <Text style={styles.adRefillBtnText}>
+                                {adReady ? 'צפו בפרסומת, קבלו ❤️ חינם' : 'טוען פרסומת...'}
+                            </Text>
                             <Text style={styles.btnIcon}>🎬</Text>
                         </Pressable>
                     )}

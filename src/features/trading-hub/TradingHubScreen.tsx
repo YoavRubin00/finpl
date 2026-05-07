@@ -366,16 +366,26 @@ export function TradingHubScreen() {
                     <View style={styles.chartCard}>
                         {(() => {
                             const asset = ASSET_BY_ID.get(selectedId);
-                            // Daily: bar[-2] → bar[-1] on daily chart = yesterday's daily change.
-                            // Weekly: bar[-2] → bar[-1] on weekly chart = last week's weekly change.
-                            // Using chart bars (not live price) keeps the % consistent with what
-                            // the user sees drawn on the candles.
-                            const baseline = chartData.length >= 2
-                                ? (chartData[chartData.length - 2].close ?? chartData[chartData.length - 2].price ?? 0)
-                                : 0;
-                            const latest = chartData.length >= 1
-                                ? (chartData[chartData.length - 1].close ?? chartData[chartData.length - 1].price ?? 0)
-                                : 0;
+                            // 1D timeframe data is intraday (5-min bars over today), so bar[-2]→bar[-1]
+                            // would only be a 5-minute change — useless. Use currentPrice vs previousClose
+                            // instead, which reflects "today vs yesterday's close" (or, when market is
+                            // closed: last trading day vs the day before — i.e. the most recent completed
+                            // day's change). For 1W, daily/weekly bars from chart are correct.
+                            let baseline = 0;
+                            let latest = 0;
+                            if (timeframe === '1D') {
+                                baseline = previousClose ?? 0;
+                                latest = currentPrice > 0
+                                    ? currentPrice
+                                    : (chartData.length >= 1 ? (chartData[chartData.length - 1].close ?? chartData[chartData.length - 1].price ?? 0) : 0);
+                            } else {
+                                baseline = chartData.length >= 2
+                                    ? (chartData[chartData.length - 2].close ?? chartData[chartData.length - 2].price ?? 0)
+                                    : 0;
+                                latest = chartData.length >= 1
+                                    ? (chartData[chartData.length - 1].close ?? chartData[chartData.length - 1].price ?? 0)
+                                    : 0;
+                            }
                             const pctChange = baseline > 0 && latest > 0
                                 ? ((latest - baseline) / baseline) * 100
                                 : 0;
@@ -454,7 +464,7 @@ export function TradingHubScreen() {
                             </Pressable>
                         </View>
                         <Text style={styles.timeframeDesc}>
-                            {timeframe === '1D' ? 'כל נר = יום אחד · מציג ~חודש' : 'כל נר = שבוע · מציג ~6 חודשים'}
+                            {timeframe === '1D' ? 'כל נר = 5 דקות · מציג היום (אחוז = שינוי מאתמול)' : 'כל נר = שבוע · מציג ~6 חודשים (אחוז = שינוי משבוע קודם)'}
                         </Text>
 
                         {/* Chart mode toggle, hidden until the user has made their onboarding choice */}
