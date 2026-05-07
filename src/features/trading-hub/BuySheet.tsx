@@ -43,7 +43,7 @@ interface BuySheetProps {
 }
 
 export function BuySheet({ visible, assetId, currentPrice, previousClose, onClose, onBuyComplete, onAssetTypeUnlocked }: BuySheetProps) {
-    const virtualBalance = useEconomyStore((s) => s.virtualBalance);
+    const coins = useEconomyStore((s) => s.coins);
     const openPosition = useTradingStore((s) => s.openPosition);
     const unlockAssetType = useTradingHubUiStore((s) => s.unlockAssetType);
     const insets = useSafeAreaInsets();
@@ -56,7 +56,7 @@ export function BuySheet({ visible, assetId, currentPrice, previousClose, onClos
     const asset = ASSET_BY_ID.get(assetId);
     const amount = parseInt(amountText, 10) || 0;
     const limitPrice = parseFloat(limitPriceText) || 0;
-    const canBuy = amount > 0 && amount <= virtualBalance && currentPrice > 0
+    const canBuy = amount > 0 && amount <= coins && currentPrice > 0
         && (orderType === 'market' || limitPrice > 0);
 
     const handleBuy = useCallback(() => {
@@ -86,7 +86,7 @@ export function BuySheet({ visible, assetId, currentPrice, previousClose, onClos
         }
 
         const typeLabel = orderType === 'market' ? '' : ` (לימיט $${limitPrice})`;
-        setFeedback(`קנית ${asset?.name ?? assetId} ב-$${amount}!${typeLabel}`);
+        setFeedback(`קנית ${asset?.name ?? assetId} ב-${amount} מטבעות!${typeLabel}`);
         setAmountText('');
         setLimitPriceText('');
 
@@ -211,14 +211,12 @@ export function BuySheet({ visible, assetId, currentPrice, previousClose, onClos
                                 </View>
                             )}
 
-                            {/* Simulator balance — separate from game coins so trading
-                                doesn't drain shop/streak budgets. */}
                             <View style={styles.balanceRow}>
-                                <Text style={[RTL, styles.balanceLabel]}>יתרת סימולטור</Text>
+                                <Text style={[RTL, styles.balanceLabel]}>מטבעות זמינים</Text>
                                 <View style={{ flexDirection: 'row-reverse', alignItems: 'center', gap: 6 }}>
-                                    <Text style={{ fontSize: 18 }} accessible={false}>💵</Text>
+                                    <Text style={{ fontSize: 18 }} accessible={false}>🪙</Text>
                                     <Text style={styles.balanceValue}>
-                                        ${virtualBalance.toLocaleString('he-IL', { maximumFractionDigits: 0 })}
+                                        {coins.toLocaleString('he-IL', { maximumFractionDigits: 0 })}
                                     </Text>
                                 </View>
                             </View>
@@ -229,11 +227,11 @@ export function BuySheet({ visible, assetId, currentPrice, previousClose, onClos
                                     style={styles.input}
                                     value={amountText}
                                     onChangeText={setAmountText}
-                                    placeholder="כמה להשקיע? (בדולרים)"
+                                    placeholder="כמה להשקיע? (מטבעות)"
                                     placeholderTextColor={CALM.textTertiary}
                                     keyboardType="number-pad"
                                     textAlign="right"
-                                accessibilityLabel="סכום להשקעה בדולרים" />
+                                accessibilityLabel="סכום להשקעה במטבעות" />
                             </View>
 
                             {/* Quick amount pills */}
@@ -253,7 +251,7 @@ export function BuySheet({ visible, assetId, currentPrice, previousClose, onClos
                                 <Pressable
                                     onPress={() => {
                                         tapHaptic();
-                                        setAmountText(String(Math.floor(virtualBalance)));
+                                        setAmountText(String(Math.floor(coins)));
                                     }}
                                     style={[styles.quickPill, styles.quickPillMax]}
                                 >
@@ -291,7 +289,7 @@ export function BuySheet({ visible, assetId, currentPrice, previousClose, onClos
                                 color="#2563eb"
                             >
                                 <Text style={styles.buyBtnText}>
-                                    {amount > virtualBalance ? 'אין מספיק יתרה' : orderType === 'limit' ? 'הגדר פקודת לימיט' : 'קנה עכשיו'}
+                                    {amount > coins ? 'אין מספיק יתרה' : orderType === 'limit' ? 'הגדר פקודת לימיט' : 'קנה עכשיו'}
                                 </Text>
                             </LiquidButton>
                             <Text style={styles.disclaimer}>

@@ -178,9 +178,13 @@ export function ReferralScreen() {
             <View style={styles.rewardBanner}>
               <SectionIcon source={LOTTIE_GIFT} />
               <View style={{ flex: 1 }}>
-                <Text style={styles.rewardBannerTitle}>
-                  {REFERRAL_SIGNUP_BONUS_COINS} 🪙 לכם + {REFERRAL_SIGNUP_BONUS_COINS} 🪙 לחבר
-                </Text>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 3, marginBottom: 4, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+                  <Text style={[styles.rewardBannerTitle, { marginBottom: 0 }]}>{REFERRAL_SIGNUP_BONUS_COINS}</Text>
+                  <GoldCoinIcon size={14} />
+                  <Text style={[styles.rewardBannerTitle, { marginBottom: 0 }]}> לכם + {REFERRAL_SIGNUP_BONUS_COINS}</Text>
+                  <GoldCoinIcon size={14} />
+                  <Text style={[styles.rewardBannerTitle, { marginBottom: 0 }]}> לחבר</Text>
+                </View>
                 <Text style={styles.rewardBannerSubtitle}>
                   {REFERRAL_COPY.fullRewardExplain}
                 </Text>
@@ -254,15 +258,17 @@ export function ReferralScreen() {
                 </Text>
                 <View style={styles.dividendStats}>
                   <View style={styles.dividendStat}>
-                    <Text style={[styles.dividendValue, { color: CALM.coinGold }]}>
-                      {totalYesterdayLearningCoins.toLocaleString()} 🪙
-                    </Text>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 4 }}>
+                      <Text style={[styles.dividendValue, { color: CALM.coinGold }]}>{totalYesterdayLearningCoins.toLocaleString()}</Text>
+                      <GoldCoinIcon size={22} />
+                    </View>
                     <Text style={styles.dividendLabel}>חברים הרוויחו אתמול</Text>
                   </View>
                   <View style={styles.dividendStat}>
-                    <Text style={[styles.dividendValue, { color: CALM.coinGold }]}>
-                      {totalDividendCoins.toLocaleString()} 🪙
-                    </Text>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 4 }}>
+                      <Text style={[styles.dividendValue, { color: CALM.coinGold }]}>{totalDividendCoins.toLocaleString()}</Text>
+                      <GoldCoinIcon size={22} />
+                    </View>
                     <Text style={styles.dividendLabel}>סה״כ דיבידנד שצברתם</Text>
                   </View>
                 </View>
@@ -273,9 +279,10 @@ export function ReferralScreen() {
                     accessibilityRole="button"
                     accessibilityLabel={`אספו ${dividendAvailable} מטבעות דיבידנד`}
                   >
-                    <Text style={styles.actionBtnText}>
-                      אספו {dividendAvailable.toLocaleString()} 🪙
-                    </Text>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+                      <Text style={styles.actionBtnText}>אספו {dividendAvailable.toLocaleString()}</Text>
+                      <GoldCoinIcon size={18} />
+                    </View>
                   </AnimatedPressable>
                 ) : (
                   <View style={styles.collectedBadge}>
@@ -297,9 +304,14 @@ export function ReferralScreen() {
             {referredFriends.length === 0 ? (
               <View style={styles.emptyState}>
                 <EmptyNoFriends size={140} />
-                <Text style={styles.emptyText}>
-                  עדיין לא הזמנתם חברים. שתפו את הקישור — תקבלו {REFERRAL_SIGNUP_BONUS_COINS} 🪙 על כל הרשמה!
-                </Text>
+                <View style={{ alignItems: 'center', gap: 2 }}>
+                  <Text style={styles.emptyText}>עדיין לא הזמנתם חברים. שתפו את הקישור — תקבלו</Text>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 4 }}>
+                    <Text style={styles.emptyText}>{REFERRAL_SIGNUP_BONUS_COINS}</Text>
+                    <GoldCoinIcon size={14} />
+                    <Text style={styles.emptyText}>על כל הרשמה!</Text>
+                  </View>
+                </View>
               </View>
             ) : (
               <NetworkTreeView friends={referredFriends} />

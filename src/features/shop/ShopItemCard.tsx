@@ -116,7 +116,7 @@ export const ShopItemCard = React.memo(function ShopItemCard({ item, canAfford, 
         </View>
 
         {/* Name */}
-        <Text style={styles.name} numberOfLines={1} allowFontScaling={false}>
+        <Text style={styles.name} numberOfLines={1} allowFontScaling={false} adjustsFontSizeToFit minimumFontScale={0.7}>
           {item.name}
         </Text>
 

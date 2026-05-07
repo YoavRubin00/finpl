@@ -115,7 +115,7 @@ export const useTradingStore = create<TradingStore>()(
       openPosition: (assetId, type, entryPrice, amountInvested) => {
         // Affordability gate — same path used everywhere for paper trades.
         // Server applies the same check atomically; this is the optimistic UX.
-        const debited = useEconomyStore.getState().spendVirtual(amountInvested);
+        const debited = useEconomyStore.getState().spendCoins(amountInvested);
         if (!debited) return null;
 
         const id = generateId();
@@ -142,7 +142,7 @@ export const useTradingStore = create<TradingStore>()(
           // Server rejected (e.g. cross-device race exhausted balance):
           // refund the local debit and remove the ghost position.
           () => {
-            useEconomyStore.getState().creditVirtual(amountInvested);
+            useEconomyStore.getState().addCoins(amountInvested, 'trading');
             set((state) => ({
               positions: state.positions.filter((p) => p.id !== id),
             }));
@@ -164,7 +164,7 @@ export const useTradingStore = create<TradingStore>()(
         const pnlFactor = 1 + position.pnlPercent / 100;
         const returned = Math.max(0, Math.round(position.amountInvested * pnlFactor));
         if (returned > 0) {
-          useEconomyStore.getState().creditVirtual(returned);
+          useEconomyStore.getState().addCoins(returned, 'trading');
         }
         // Closing a long → SELL (decrements portfolio).
         // Closing a short → BUY, but skipPortfolio=true so no phantom long is created.
@@ -180,7 +180,7 @@ export const useTradingStore = create<TradingStore>()(
           // local credit and restore the position so the user can retry.
           () => {
             if (returned > 0) {
-              useEconomyStore.getState().spendVirtual(returned);
+              useEconomyStore.getState().spendCoins(returned);
             }
             set((state) => ({
               positions: [...state.positions, position],

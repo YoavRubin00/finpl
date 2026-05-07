@@ -79,8 +79,9 @@
         "hooks": [
           {
             "type": "command",
-            "command": "PYTHONIOENCODING=utf-8 python3 \"c:/Projects/finpl/finpl/.claude/hooks/post-code-review-reminder.py\"",
-            "timeout": 10
+            "command": "PYTHONIOENCODING=utf-8 python3 \"c:/Users/יואב רובין/.claude/projects/finpl-current/.claude/hooks/post-code-review-reminder.py\"",
+            "timeout": 10,
+            "async": true
           }
         ]
       }

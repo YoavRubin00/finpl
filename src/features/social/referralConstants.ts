@@ -35,6 +35,7 @@ export const COIN_EVENT_SOURCES = [
   "signup-bonus",
   "referral-signup-bonus",
   "referral-dividend",
+  "trading",
 ] as const;
 
 export type CoinEventSource = (typeof COIN_EVENT_SOURCES)[number];

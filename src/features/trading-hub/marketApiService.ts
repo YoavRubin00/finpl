@@ -249,7 +249,7 @@ const fetchYahooChartDirect = async (
     '5MIN': { interval: '5m', range: '1d' },
     '1H': { interval: '1h', range: '5d' },
     '1D': { interval: '5m', range: '1d' },
-    '1W': { interval: '1d', range: '8d' },
+    '1W': { interval: '1w', range: '2y' },
   };
   const params = TIMEFRAME_PARAMS[timeframe];
 

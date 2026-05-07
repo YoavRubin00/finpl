@@ -12,6 +12,8 @@ import { ShopItemCard } from "./ShopItemCard";
 import { EmptyPremium } from "../../components/svg/shop/EmptyStates";
 import { SparkleBurst } from "../../components/ui/SparkleBurst";
 import { MysteryBoxCard } from "../../components/ui/MysteryBoxCard";
+import { SharkInsightToast } from "../../components/ui/SharkInsightToast";
+import { FINN_EMPATHIC, FINN_TALKING } from "../retention-loops/finnMascotConfig";
 import { ConfirmModal } from "./ConfirmModal";
 import { IAPModal } from "./IAPModal";
 import { SHOP_ITEMS, SHOP_CATEGORIES } from "./shopItems";
@@ -62,6 +64,7 @@ export function ShopModal() {
   const [activeCategory, setActiveCategory] = useState<ShopCategory>("avatars");
   const [pendingItem, setPendingItem] = useState<ShopItem | null>(null);
   const [selectedBundle, setSelectedBundle] = useState<GemBundle | null>(null);
+  const [mysteryToast, setMysteryToast] = useState<'noGems' | 'comingSoon' | null>(null);
   /** Bumped (Date.now()) on every successful purchase to fire confetti burst.
    *  0 = never fired. The SparkleBurst component re-runs its animation each time
    *  this number changes. */
@@ -306,11 +309,8 @@ export function ShopModal() {
               possibleRewards={['XP', '💎', '🪙', '❤️', '⚡']}
               totalRewardCount={17}
               onPress={() => {
-                if (gems < 50) {
-                  Alert.alert("אין מספיק יהלומים", "צריך 50 💎 לפתיחת תיבת הפתעה.");
-                  return;
-                }
-                Alert.alert("בקרוב", "תיבות הפתעה יושקו בעדכון הבא.");
+                if (gems < 50) { setMysteryToast('noGems'); return; }
+                setMysteryToast('comingSoon');
               }}
             />
           </View>
@@ -479,6 +479,23 @@ export function ShopModal() {
             onPurchaseSuccess={() => setSelectedBundle(null)}
           />
         )}
+
+        <SharkInsightToast
+          visible={mysteryToast === 'noGems'}
+          shark={FINN_EMPATHIC}
+          title="אין מספיק יהלומים"
+          body="צריך 50 💎 לפתיחת תיבת הפתעה. צבר עוד קצת!"
+          accentColor="#f59e0b"
+          onDismiss={() => setMysteryToast(null)}
+        />
+        <SharkInsightToast
+          visible={mysteryToast === 'comingSoon'}
+          shark={FINN_TALKING}
+          title="בקרוב!"
+          body="תיבות הפתעה יושקו בעדכון הבא. תישארו מחוברים!"
+          accentColor="#a855f7"
+          onDismiss={() => setMysteryToast(null)}
+        />
       </SafeAreaView>
     </Modal>
   );

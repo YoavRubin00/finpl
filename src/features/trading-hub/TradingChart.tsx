@@ -189,7 +189,7 @@ export function TradingChart({
               accessibilityLabel="מה זה ממוצע נע"
               style={({ pressed }) => [styles.badge, styles.badgeMa, pressed && styles.badgePressed]}
             >
-              <Info size={14} color="#60a5fa" strokeWidth={2.6} />
+              <Info size={18} color="#60a5fa" strokeWidth={2.6} />
               <Text style={styles.badgeText}>MA{maPeriod}</Text>
             </Pressable>
             <Pressable
@@ -199,7 +199,7 @@ export function TradingChart({
               accessibilityLabel="מה זה RSI"
               style={({ pressed }) => [styles.badge, styles.badgeRsi, pressed && styles.badgePressed]}
             >
-              <Info size={14} color="#a78bfa" strokeWidth={2.6} />
+              <Info size={18} color="#a78bfa" strokeWidth={2.6} />
               <Text style={styles.badgeText}>RSI</Text>
             </Pressable>
           </View>

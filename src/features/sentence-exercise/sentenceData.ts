@@ -50,23 +50,6 @@ export const recallExerciseSets: Record<string, InteractiveRecallSet> = {
           hintAfterTwoWrongs: "רמז: זה החשבון שבו הכסף נכנס ויוצא מדי יום.",
         },
       },
-      {
-        type: "timeline-order",
-        id: "recall-mod-0-2-to-1",
-        instruction: "סדרו את השלבים בתהליך משיכת מזומן מכספומט",
-        difficulty: "medium",
-        items: [
-          { id: "s1", label: "הכנסת כרטיס לכספומט", correctOrder: 0 },
-          { id: "s2", label: "הקלדת קוד סודי", correctOrder: 1 },
-          { id: "s3", label: "בחירת סכום למשיכה", correctOrder: 2 },
-          { id: "s4", label: "קבלת הכסף והחזר הכרטיס", correctOrder: 3 },
-        ],
-        finn: {
-          correct: ["מדויק!", "סדר מושלם!", "כל הכבוד!"],
-          empathicFirst: "כמעט, חשבו על הצעדים הפיזיים בסדר הגיוני.",
-          hintAfterTwoWrongs: "רמז: קודם מזהים אתכם (כרטיס + קוד), ואז בוחרים סכום.",
-        },
-      },
     ],
   },
   "mod-0-3": {

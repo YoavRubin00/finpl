@@ -90,7 +90,7 @@ const LIFESTYLE_COPY: LifestyleCopy[] = [
     inviteTitle: "♨️ ג'קוזי על המרפסת",
     inviteSubtitle: "שקיעה מעל 3 העמקים. שווה כל קר.",
     ctaLabel: "בואו להירגע איתי!",
-    caption: "ג'קוזי על חשבון תיק האיגרות",
+    caption: "אני מחכה ששאר האנשים בארץ יגלו את המשחק הזה",
     trimEnd: 0.5,
   },
   // ── Eilat vacation mini-series ──

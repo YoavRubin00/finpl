@@ -236,7 +236,7 @@ const RTL_STYLE = { writingDirection: "rtl" as const, textAlign: "right" as cons
  * Text prop, not a style. */
 const JUSTIFY_RTL = {
   writingDirection: "rtl" as const,
-  textAlign: "justify" as const,
+  textAlign: "right" as const,
 };
 
 /** Phases where progress is worth saving so the user can resume mid-module */
@@ -334,7 +334,7 @@ const quizFeedbackStyles = StyleSheet.create({
     fontWeight: "700",
     lineHeight: 22,
     writingDirection: "rtl",
-    textAlign: "justify",
+    textAlign: "right",
   },
   continueBtnRow: {
     flexDirection: "row",
@@ -3358,15 +3358,20 @@ export function LessonFlowScreen() {
         <Animated.View style={titleStyle}>
           {/* Title row, hidden during intro, quizzes, sim, sim-intro, and comic flashcards */}
           {!(phase === "flashcards" && (mod.flashcards[flashcardIndex]?.isComic || mod.flashcards[flashcardIndex]?.isMeme || mod.flashcards[flashcardIndex]?.videoUri)) && phase !== "intro" && phase !== "quizzes" && phase !== "sim" && (phase as string) !== "sim-intro" && (() => {
+            let titleNodes: React.ReactNode[] | null = null;
             let titleText = phase === "interactive-recall" ? "בואו נתרגל" : mod.title;
             if (phase === "flashcards") {
               const cardText = mod.flashcards[flashcardIndex]?.text ?? "";
               const colonIdx = cardText.indexOf(":");
               if (colonIdx > 0 && colonIdx < 80) {
-                const extracted = cardText.substring(0, colonIdx)
+                const rawTitle = cardText.substring(0, colonIdx);
+                const extracted = rawTitle
                   .replace(/\[\[([^|\]]+)\|?[^\]]*\]\]/g, "$1")
                   .replace(/\s*\([A-Za-z][A-Za-z\s&/.,'%\-–—:;$#0-9]*\)\s*/g, " ")
                   .trim();
+                if (rawTitle.includes('[[')) {
+                  titleNodes = renderBoldText(rawTitle, setActiveGlossaryTerm);
+                }
                 titleText = /^[A-Za-z]/.test(extracted) ? '\u200F' + extracted : extracted;
               }
             }
@@ -3378,7 +3383,7 @@ export function LessonFlowScreen() {
                     numberOfLines={2}
                     accessibilityRole="header"
                   >
-                    {titleText}
+                    {titleNodes ?? titleText}
                   </Text>
                 </View>
               </View>

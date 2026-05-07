@@ -25,6 +25,8 @@ import { useTutorialStore } from '../../stores/useTutorialStore';
 import { ShopItemCard } from './ShopItemCard';
 import { ConfirmModal } from './ConfirmModal';
 import { IAPModal } from './IAPModal';
+import { SharkInsightToast } from '../../components/ui/SharkInsightToast';
+import { FINN_EMPATHIC, FINN_TALKING } from '../retention-loops/finnMascotConfig';
 import { SHOP_ITEMS, SHOP_CATEGORIES } from './shopItems';
 import { GEM_BUNDLES } from './gemBundles';
 // coinBundles removed, gold is bought via gem exchange only
@@ -249,7 +251,7 @@ function GemBundleCard({ bundle, onPress, index }: { bundle: GemBundle; onPress:
         {/* Top-center tier pill ("הכי משתלם ★" / "פופולרי") */}
         {tier.topPill && (
           <LinearGradient colors={tier.pillBg} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={styles2.tierPill}>
-            <Text style={[styles2.tierPillText, { color: tier.pillText }]} allowFontScaling={false}>{tier.topPill}</Text>
+            <Text style={[styles2.tierPillText, { color: tier.pillText }]} allowFontScaling={false} numberOfLines={1}>{tier.topPill}</Text>
           </LinearGradient>
         )}
 
@@ -312,6 +314,7 @@ export function ShopScreen() {
   const [activeCategory, setActiveCategory] = useState<ShopCategory>('hearts');
   const [pendingItem, setPendingItem] = useState<ShopItem | null>(null);
   const [selectedBundle, setSelectedBundle] = useState<AnyBundle | null>(null);
+  const [mysteryToast, setMysteryToast] = useState<'noGems' | 'comingSoon' | null>(null);
   const shopScrollRef = useRef<ScrollView>(null);
   const walkthroughScreen = useTutorialStore((s) => s.walkthroughActiveScreen);
 
@@ -596,11 +599,8 @@ export function ShopScreen() {
                     possibleRewards={['XP', '💎', '🪙', '❤️', '⚡']}
                     totalRewardCount={12}
                     onPress={() => {
-                      if (gems < 50) {
-                        Alert.alert('אין מספיק יהלומים', 'צריך 50 💎 לפתיחת תיבת הפתעה.');
-                        return;
-                      }
-                      Alert.alert('בקרוב', 'תיבות הפתעה יושקו בעדכון הבא.');
+                      if (gems < 50) { setMysteryToast('noGems'); return; }
+                      setMysteryToast('comingSoon');
                     }}
                   />
                 </View>
@@ -722,6 +722,23 @@ export function ShopScreen() {
         bundle={selectedBundle}
         onDismiss={() => setSelectedBundle(null)}
         onPurchaseSuccess={() => setSelectedBundle(null)}
+      />
+
+      <SharkInsightToast
+        visible={mysteryToast === 'noGems'}
+        shark={FINN_EMPATHIC}
+        title="אין מספיק יהלומים"
+        body="צריך 50 💎 לפתיחת תיבת הפתעה. צבר עוד קצת!"
+        accentColor="#f59e0b"
+        onDismiss={() => setMysteryToast(null)}
+      />
+      <SharkInsightToast
+        visible={mysteryToast === 'comingSoon'}
+        shark={FINN_TALKING}
+        title="בקרוב!"
+        body="תיבות הפתעה יושקו בעדכון הבא. תישארו מחוברים!"
+        accentColor="#a855f7"
+        onDismiss={() => setMysteryToast(null)}
       />
     </View>
   );
