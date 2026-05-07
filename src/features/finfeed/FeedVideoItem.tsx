@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { View, Text, StyleSheet, Dimensions, Pressable, ActivityIndicator } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
-import { Play, Bookmark, Volume2, VolumeX } from "lucide-react-native";
+import { Play, Volume2, VolumeX } from "lucide-react-native";
 import { useRouter } from "expo-router";
 import { useVideoPlayer, VideoView } from "expo-video";
 import type { FeedVideo } from "./types";
@@ -9,9 +9,6 @@ import type { FeedVideo } from "./types";
 import { GoldCircleBadge } from "../../components/ui/GoldCircleBadge";
 import { BannerRibbon } from "../../components/ui/BannerRibbon";
 
-import { useSubscriptionStore } from "../subscription/useSubscriptionStore";
-import { useSavedItemsStore } from "../saved-items/useSavedItemsStore";
-import { useUpgradeModalStore } from "../../stores/useUpgradeModalStore";
 import { tapHaptic, heavyHaptic } from "../../utils/haptics";
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
@@ -23,14 +20,6 @@ interface FeedVideoItemProps {
 
 export const FeedVideoItem = React.memo(function FeedVideoItem({ item, isActive }: FeedVideoItemProps) {
   const router = useRouter();
-  const isPro = useSubscriptionStore((s) => s.tier === "pro" && s.status === "active");
-  const isSaved = useSavedItemsStore((s) => s.isSaved);
-  const removeItem = useSavedItemsStore((s) => s.removeItem);
-  const addItem = useSavedItemsStore((s) => s.addItem);
-  const showUpgradeModal = useUpgradeModalStore((s) => s.show);
-
-  const feedBookmarkId = `feed-${item.id}`;
-  const isBookmarked = isSaved(feedBookmarkId);
   const [isLoading, setIsLoading] = useState(true);
   const [hasError, setHasError] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
@@ -100,15 +89,6 @@ export const FeedVideoItem = React.memo(function FeedVideoItem({ item, isActive 
       clearTimeout(timeout);
     };
   }, [player, videoUri, isLoading]);
-
-  function handleBookmarkPress() {
-    if (!isPro) { showUpgradeModal("saved_items"); return; }
-    if (isBookmarked) {
-      removeItem(feedBookmarkId);
-    } else {
-      addItem({ id: feedBookmarkId, type: "feed", title: item.title || "סרטון", feedItemId: item.id });
-    }
-  }
 
   // Short tap → toggle mute. Long press → toggle pause.
   function handleTap() {
@@ -193,16 +173,7 @@ export const FeedVideoItem = React.memo(function FeedVideoItem({ item, isActive 
         </View>
       )}
 
-      {/* Bookmark button */}
-      <Pressable
-        onPress={handleBookmarkPress}
-        style={styles.bookmarkButton}
-        accessibilityRole="button"
-        accessibilityLabel={isBookmarked ? "הסר מהשמורים" : "שמור"}
-        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-      >
-        <Bookmark size={22} color={isBookmarked ? "#facc15" : "#fff"} fill={isBookmarked ? "#facc15" : "transparent"} />
-      </Pressable>
+      {/* Bookmark button is rendered at the FinFeedScreen wrapper level, shared across all card types. */}
 
       {/* Mute status indicator, non-interactive hint. Tapping the video itself toggles sound. */}
       <View style={styles.muteIndicator} pointerEvents="none">
@@ -296,18 +267,6 @@ const styles = StyleSheet.create({
     textAlign: "right",
     writingDirection: "rtl",
     marginTop: 4,
-  },
-  bookmarkButton: {
-    position: "absolute",
-    top: 56,
-    left: 16,
-    zIndex: 10,
-    backgroundColor: "rgba(0,0,0,0.4)",
-    borderRadius: 20,
-    width: 40,
-    height: 40,
-    alignItems: "center",
-    justifyContent: "center",
   },
   muteIndicator: {
     position: "absolute",

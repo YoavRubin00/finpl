@@ -1,28 +1,22 @@
 import React from "react";
 import { View, Text, StyleSheet } from "react-native";
-import { Heart, Bookmark, MessageCircle, Share2 } from "lucide-react-native";
+import { Heart, MessageCircle, Share2 } from "lucide-react-native";
 import { AnimatedPressable } from "../../components/ui/AnimatedPressable";
 import { THEME } from "../../constants/theme";
 import Animated, { FadeInRight } from "react-native-reanimated";
 
 interface FeedSidebarProps {
     likes: number;
-    saves: number;
     isLiked?: boolean;
-    isSaved?: boolean;
     onLike: () => void;
-    onSave: () => void;
     onComment?: () => void;
     onShare?: () => void;
 }
 
 export function FeedSidebar({
     likes,
-    saves,
     isLiked,
-    isSaved,
     onLike,
-    onSave,
     onComment,
     onShare,
 }: FeedSidebarProps) {
@@ -41,12 +35,6 @@ export function FeedSidebar({
                 icon={<MessageCircle size={28} color="#fff" />}
                 label="..."
                 onPress={onComment || (() => { })}
-            />
-
-            <SidebarButton
-                icon={<Bookmark size={28} color={isSaved ? THEME.gold : "#fff"} fill={isSaved ? THEME.gold : "transparent"} />}
-                label={saves > 0 ? saves.toString() : ""}
-                onPress={onSave}
             />
 
             <SidebarButton

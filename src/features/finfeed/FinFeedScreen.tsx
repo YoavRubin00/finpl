@@ -8,7 +8,7 @@ import LottieView from "lottie-react-native";
 import { useVideoPlayer, VideoView } from "expo-video";
 import { LinearGradient } from "expo-linear-gradient";
 import { SafeLottie } from "../../components/ui/SafeLottie";
-import { useRouter } from "expo-router";
+import { useRouter, useLocalSearchParams } from "expo-router";
 import { Lock, FlaskConical } from "lucide-react-native";
 
 import { LottieIcon } from "../../components/ui/LottieIcon";
@@ -35,6 +35,8 @@ import { FeedComicItem } from "./FeedComicItem";
 import { FeedModuleHookCard } from "./FeedModuleHookCard";
 import { FeedSidebar } from "./FeedSidebar";
 import { useFeedInteractionsStore } from "./useFeedInteractionsStore";
+import { FeedBookmarkButton } from "../saved-items/FeedBookmarkButton";
+import { getBookmarkVariant } from "../saved-items/getBookmarkVariant";
 import { useChapterStore } from "../chapter-1-content/useChapterStore";
 import { useAITelemetryStore } from "../ai-personalization/useAITelemetryStore";
 import { MacroEventCard } from "../macro-events/MacroEventCard";
@@ -557,20 +559,15 @@ function FeedItemDecorations({ seed, isActive }: { seed: string; isActive: boole
 }
 
 // -- Video sidebar with like/save state --
-function VideoSidebar({ itemId, baseLikes, baseSaves }: { itemId: string; baseLikes: number; baseSaves: number }) {
+function VideoSidebar({ itemId, baseLikes }: { itemId: string; baseLikes: number }) {
   const toggleLike = useFeedInteractionsStore((s) => s.toggleLike);
-  const toggleSave = useFeedInteractionsStore((s) => s.toggleSave);
   const isLiked = useFeedInteractionsStore((s) => s.isLiked);
-  const isSaved = useFeedInteractionsStore((s) => s.isSaved);
   const getLikes = useFeedInteractionsStore((s) => s.getLikes);
   return (
     <FeedSidebar
       likes={getLikes(itemId, baseLikes)}
-      saves={baseSaves}
       isLiked={isLiked(itemId)}
-      isSaved={isSaved(itemId)}
       onLike={() => toggleLike(itemId, baseLikes)}
-      onSave={() => toggleSave(itemId)}
     />
   );
 }
@@ -578,6 +575,17 @@ function VideoSidebar({ itemId, baseLikes, baseSaves }: { itemId: string; baseLi
 // -- Main Home Screen --
 export function FinFeedScreen() {
   const router = useRouter();
+  const routeParams = useLocalSearchParams<{ scrollToFeedId?: string }>();
+
+  // When deep-linked with scrollToFeedId (e.g. from saved-items), arm the
+  // pending-scroll mechanism so the existing effect picks it up once feedItems
+  // is populated.
+  useEffect(() => {
+    if (typeof routeParams.scrollToFeedId === "string" && routeParams.scrollToFeedId.length > 0) {
+      _pendingFeedScrollTargetId = routeParams.scrollToFeedId;
+    }
+  }, [routeParams.scrollToFeedId]);
+
   const [listHeight, setListHeight] = useState<number>(0);
   const [activeItemIndex, setActiveItemIndex] = useState(-1);
   const [feedSeed, setFeedSeed] = useState(() => Math.floor(Math.random() * 0x7fffffff));
@@ -1154,7 +1162,12 @@ export function FinFeedScreen() {
         {item.type === "simulator-teaser" && (
           <FeedSimulatorCard simulator={item.simulator} isActive={isActive} />
         )}
-        {/* Action Sidebar removed for videos, save button lives inside FeedVideoItem */}
+
+        {/* Universal bookmark button — overlays every feed card at safe-area top-left.
+            Wrapper-level so we don't have to thread `item` into every card component. */}
+        {item.type !== "finn-hero" && (
+          <FeedBookmarkButton item={item} variant={getBookmarkVariant(item)} />
+        )}
       </View>
     );
   };

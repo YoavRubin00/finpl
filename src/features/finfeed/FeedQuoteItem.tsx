@@ -3,7 +3,7 @@ import { Image as ExpoImage } from "expo-image";
 import { View, Text, StyleSheet, Dimensions, Pressable, Platform, Image,
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
-import { Quote, Bookmark } from "lucide-react-native";
+import { Quote } from "lucide-react-native";
 import { useRouter } from "expo-router";
 import LottieView from "lottie-react-native";
 import { FINN_STANDARD } from "../retention-loops/finnMascotConfig";
@@ -11,9 +11,6 @@ import type { FeedQuote } from "./types";
 import { CHAPTER_CTA_COLORS } from "./types";
 import Animated from "react-native-reanimated";
 import { useChapterStore } from "../chapter-1-content/useChapterStore";
-import { useSubscriptionStore } from "../subscription/useSubscriptionStore";
-import { useSavedItemsStore } from "../saved-items/useSavedItemsStore";
-import { useUpgradeModalStore } from "../../stores/useUpgradeModalStore";
 
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
@@ -27,31 +24,6 @@ export const FeedQuoteItem = React.memo(function FeedQuoteItem({ item, isActive 
     const router = useRouter();
     const setCurrentChapter = useChapterStore((s) => s.setCurrentChapter);
     const setCurrentModule = useChapterStore((s) => s.setCurrentModule);
-    const isPro = useSubscriptionStore((s) => s.tier === "pro" && s.status === "active");
-    const isSaved = useSavedItemsStore((s) => s.isSaved);
-    const removeItem = useSavedItemsStore((s) => s.removeItem);
-    const addItem = useSavedItemsStore((s) => s.addItem);
-    const showUpgradeModal = useUpgradeModalStore((s) => s.show);
-
-    const feedBookmarkId = `feed-${item.id}`;
-    const isBookmarked = isSaved(feedBookmarkId);
-
-    function handleBookmarkPress() {
-        if (!isPro) {
-            showUpgradeModal("saved_items");
-            return;
-        }
-        if (isBookmarked) {
-            removeItem(feedBookmarkId);
-        } else {
-            addItem({
-                id: feedBookmarkId,
-                type: "feed",
-                title: item.title,
-                feedItemId: item.id,
-            });
-        }
-    }
 
     const hasModule = Boolean(item.moduleId && item.chapterId);
     const ctaColors = CHAPTER_CTA_COLORS[item.chapterId ?? "chapter-1"] ?? CHAPTER_CTA_COLORS["chapter-1"];
@@ -86,21 +58,7 @@ export const FeedQuoteItem = React.memo(function FeedQuoteItem({ item, isActive 
               </View>
             )}
 
-            {/* Bookmark */}
-            <Pressable
-                onPress={handleBookmarkPress}
-                style={styles.bookmarkButton}
-                accessibilityRole="button"
-                accessibilityLabel={isBookmarked ? "הסר מהשמורים" : "שמור"}
-                accessibilityState={{ selected: isBookmarked }}
-                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-            >
-                <Bookmark
-                    size={22}
-                    color={isBookmarked ? "#16a34a" : "#6b7280"}
-                    fill={isBookmarked ? "#16a34a" : "transparent"}
-                />
-            </Pressable>
+            {/* Bookmark button is rendered at the FinFeedScreen wrapper level. */}
 
             {/* Spacer (tag row removed) */}
             <View style={{ height: 8 }} />
@@ -339,17 +297,5 @@ const styles = StyleSheet.create({
         fontSize: 13,
         fontWeight: "800",
         writingDirection: "rtl",
-    },
-    bookmarkButton: {
-        position: "absolute",
-        top: 24,
-        left: 16,
-        zIndex: 10,
-        backgroundColor: "rgba(255,255,255,0.7)",
-        borderRadius: 20,
-        width: 40,
-        height: 40,
-        alignItems: "center",
-        justifyContent: "center",
     },
 });
