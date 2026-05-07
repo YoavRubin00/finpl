@@ -658,6 +658,35 @@ export const useEconomyStore = create<EconomyState>()(
         if (!state.activeDates) state.activeDates = [];
         if (!state.frozenDates) state.frozenDates = [];
         if (state.streakFreezes == null) state.streakFreezes = 0;
+
+        // Reconcile streak from activeDates. The two are maintained separately
+        // by completeDailyTask / awardLoginBonus / repair flows, and a corrupted
+        // run (interrupted update, partial sync) could leave them out of sync —
+        // user reported "calendar shows 7 active days but profile shows streak=3".
+        // Rebuild streak from the source-of-truth (activeDates ∪ frozenDates) on
+        // every rehydrate so the two surfaces always agree.
+        if (state.activeDates && state.activeDates.length > 0) {
+          const dateSet = new Set([...state.activeDates, ...(state.frozenDates ?? [])]);
+          const today = new Date().toISOString().slice(0, 10);
+          const yest = (() => {
+            const d = new Date(); d.setDate(d.getDate() - 1);
+            return d.toISOString().slice(0, 10);
+          })();
+          // Walk back from today (or yesterday if today not yet in set) and count
+          // consecutive days. Stop on the first gap.
+          let cursor = dateSet.has(today) ? new Date() : (dateSet.has(yest) ? (() => { const d = new Date(); d.setDate(d.getDate() - 1); return d; })() : null);
+          let derived = 0;
+          while (cursor) {
+            const iso = cursor.toISOString().slice(0, 10);
+            if (!dateSet.has(iso)) break;
+            derived += 1;
+            cursor.setDate(cursor.getDate() - 1);
+            if (derived > 365) break; // hard cap, defensive
+          }
+          if (derived !== state.streak) {
+            state.streak = derived;
+          }
+        }
       },
     }
   )

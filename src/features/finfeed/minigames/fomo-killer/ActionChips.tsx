@@ -1,5 +1,6 @@
 import React, { useEffect } from 'react';
 import { View, Text, Pressable, StyleSheet } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Animated, {
   Easing,
   FadeInUp,
@@ -24,6 +25,7 @@ interface Props {
 export function ActionChips({ personaName, visible, onAction }: Props) {
   const reduceMotion = useReducedMotion();
   const tempGlow = useSharedValue(0);
+  const insets = useSafeAreaInsets();
 
   useEffect(() => {
     if (!visible || reduceMotion) {
@@ -57,7 +59,7 @@ export function ActionChips({ personaName, visible, onAction }: Props) {
   return (
     <Animated.View
       entering={FadeInUp.duration(260).delay(FOMO_MOTION.chipAppearDelayMs)}
-      style={styles.container}
+      style={[styles.container, { paddingBottom: 12 + insets.bottom }]}
     >
       <View style={styles.row}>
         <ActionButton

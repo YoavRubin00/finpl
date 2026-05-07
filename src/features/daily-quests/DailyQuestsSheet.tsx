@@ -465,8 +465,8 @@ export function DailyQuestsSheet({ visible, onClose }: DailyQuestsSheetProps) {
                       ]}
                     >
                       <LottieIcon source={LOTTIE_CHEST as unknown as number} size={130} autoPlay={false} active={proChestOpen} loop={false} />
-                      <View style={{ position: "absolute", top: 8, right: 8, backgroundColor: "#b45309", borderRadius: 7, paddingHorizontal: 8, paddingVertical: 2, zIndex: 10 }} pointerEvents="none">
-                        <Text style={{ color: "#fff", fontSize: 10, fontWeight: "900", letterSpacing: 1.2 }}>PRO</Text>
+                      <View style={{ position: "absolute", top: -10, right: -6, backgroundColor: "#d97706", borderRadius: 10, paddingHorizontal: 10, paddingVertical: 4, zIndex: 10, borderWidth: 2, borderColor: "#fff", shadowColor: "#000", shadowOpacity: 0.25, shadowRadius: 4, shadowOffset: { width: 0, height: 2 }, elevation: 4, transform: [{ rotate: "8deg" }] }} pointerEvents="none">
+                        <Text style={{ color: "#fff", fontSize: 11, fontWeight: "900", letterSpacing: 1.2 }}>PRO</Text>
                       </View>
                       {!isPro && (
                         <View style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, justifyContent: "center", alignItems: "center", backgroundColor: "rgba(0,0,0,0.5)", borderRadius: 16 }} accessible={false}>
@@ -500,8 +500,8 @@ export function DailyQuestsSheet({ visible, onClose }: DailyQuestsSheetProps) {
                       ]}
                     >
                       <LottieIcon source={LOTTIE_CHEST as unknown as number} size={110} autoPlay={false} active={chestOpen} loop={false} />
-                      <View style={{ position: "absolute", top: 8, right: 8, backgroundColor: "#475569", borderRadius: 7, paddingHorizontal: 8, paddingVertical: 2, zIndex: 10 }} pointerEvents="none">
-                        <Text style={{ color: "#fff", fontSize: 10, fontWeight: "900", letterSpacing: 1.2 }}>רגיל</Text>
+                      <View style={{ position: "absolute", top: -10, right: -6, backgroundColor: "#64748b", borderRadius: 10, paddingHorizontal: 10, paddingVertical: 4, zIndex: 10, borderWidth: 2, borderColor: "#fff", shadowColor: "#000", shadowOpacity: 0.25, shadowRadius: 4, shadowOffset: { width: 0, height: 2 }, elevation: 4, transform: [{ rotate: "8deg" }] }} pointerEvents="none">
+                        <Text style={{ color: "#fff", fontSize: 11, fontWeight: "900", letterSpacing: 1.2 }}>רגיל</Text>
                       </View>
                     </Pressable>
                   </Animated.View>
