@@ -5,7 +5,7 @@
 import React, { useState, useCallback, useRef, useEffect, useMemo } from "react";
 import { Image as ExpoImage } from "expo-image";
 import { ScrollView, View, Text, Pressable, Modal, Image, StyleSheet, Dimensions } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -929,6 +929,7 @@ export function DuoLearnScreen() {
   const [roadmapVisible, setRoadmapVisible] = useState(false);
   const [mindMapChapter, setMindMapChapter] = useState<number | null>(null);
   const [replayModule, setReplayModule] = useState<{ moduleId: string; chapterId: string; moduleIndex: number } | null>(null);
+  const insets = useSafeAreaInsets();
   const scrollRef = useRef<ScrollView>(null);
   const [refreshKey, setRefreshKey] = useState(0);
   const isFirstMount = useRef(true);
@@ -1305,8 +1306,11 @@ export function DuoLearnScreen() {
         {replayModule && (
           <Modal visible transparent animationType="fade" onRequestClose={() => setReplayModule(null)} accessibilityViewIsModal>
             <SafeAreaView style={{ flex: 1, backgroundColor: '#f0f9ff' }} edges={["top", "bottom"]}>
-              {/* Header with close button, X on the right (RTL convention) */}
-              <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', paddingHorizontal: 16, paddingVertical: 8 }}>
+              {/* Header with close button, X on the right (RTL convention).
+                  Explicit insets.top because SafeAreaView's top edge is unreliable
+                  inside a transparent Modal on iOS — without this, the X clipped
+                  into the notch on iPhone. */}
+              <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', paddingHorizontal: 16, paddingTop: Math.max(insets.top, 12), paddingBottom: 8 }}>
                 <AnimatedPressable
                   onPress={() => setReplayModule(null)}
                   style={{ width: 38, height: 38, borderRadius: 19, backgroundColor: 'rgba(0,0,0,0.08)', alignItems: 'center', justifyContent: 'center' }}
