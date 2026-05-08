@@ -134,6 +134,39 @@ const LIFESTYLE_COPY: LifestyleCopy[] = [
     caption: "צלילה עם דולפינים מהיעד שהשגתי",
     trimEnd: 0.5,
   },
+  // ── Viral Instagram series ──
+  {
+    id: "finn-life-nyc-rooftop",
+    inviteTitle: "🗽 גג מנהטן — הקפטן חוגג!",
+    inviteSubtitle: "כשהתיק עולה, עולים לגג",
+    ctaLabel: "בואו לחגוג!",
+    caption: "חגיגת החירות הפיננסית על גגות NYC",
+    trimEnd: 0.5,
+  },
+  {
+    id: "finn-life-gym-flex",
+    inviteTitle: "💪 פלקס של הקפטן!",
+    inviteSubtitle: "הגוף חזק כמו התיק שלך",
+    ctaLabel: "בואו להתאמן!",
+    caption: "חדר כושר מהמנוי שהדיבידנדים שילמו",
+    trimEnd: 0.5,
+  },
+  {
+    id: "finn-life-treasure",
+    inviteTitle: "💰 מצאנו את האוצר!",
+    inviteSubtitle: "הים מלא הפתעות — כמו שוק ההון",
+    ctaLabel: "בואו לחפור!",
+    caption: "ארגז זהב — כמו קרן השתלמות שנפתחה",
+    trimEnd: 0.5,
+  },
+  {
+    id: "finn-life-paris-cafe",
+    inviteTitle: "☕ קפה בפריז עם הקפטן",
+    inviteSubtitle: "גשם בחוץ, רגוע בפנים",
+    ctaLabel: "בואו לשתות קפה!",
+    caption: "קפה בפריז מהריבית של חשבון החיסכון",
+    trimEnd: 0.5,
+  },
 ];
 
 export const LIFESTYLE_VIDEOS: LifestyleVideoSpec[] = LIFESTYLE_COPY.map((c) => ({
