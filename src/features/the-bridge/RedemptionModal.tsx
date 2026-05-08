@@ -103,10 +103,14 @@ export function RedemptionModal({ visible, benefit, isRedeemed = false, canAffor
           <Pressable
             onPress={onConfirm}
             disabled={!canAfford && !isRedeemed}
-            style={({ pressed }) => [
-              !canAfford && !isRedeemed ? styles.confirmBtnDisabled : styles.confirmBtnWrap,
-              pressed && (canAfford || isRedeemed) && { transform: [{ scale: 0.97 }] },
-            ]}
+            style={({ pressed }) =>
+              !canAfford && !isRedeemed
+                ? styles.confirmBtnDisabled
+                : [
+                    styles.confirmBtnShell,
+                    pressed && styles.confirmBtnShellPressed,
+                  ]
+            }
             accessibilityRole="button"
             accessibilityState={{ disabled: !canAfford && !isRedeemed }}
             accessibilityLabel={isRedeemed ? 'למעבר לאתר השותף' : canAfford ? 'המרה כעת' : 'אין מספיק מטבעות'}
@@ -114,10 +118,10 @@ export function RedemptionModal({ visible, benefit, isRedeemed = false, canAffor
             {!canAfford && !isRedeemed ? (
               <Text style={styles.confirmBtnTextDisabled}>אין מספיק מטבעות</Text>
             ) : (
-              <>
+              <View style={styles.confirmBtnInner}>
                 <LinearGradient
-                  colors={['#38BDF8', '#0EA5E9', '#0284C7']}
-                  locations={[0, 0.55, 1]}
+                  colors={['#67E8F9', '#0EA5E9', '#0284C7']}
+                  locations={[0, 0.45, 1]}
                   start={{ x: 0, y: 0 }}
                   end={{ x: 0, y: 1 }}
                   style={StyleSheet.absoluteFill}
@@ -126,7 +130,7 @@ export function RedemptionModal({ visible, benefit, isRedeemed = false, canAffor
                 <Text style={styles.confirmBtnText}>
                   {isRedeemed ? 'למעבר לאתר השותף' : 'המרה כעת'}
                 </Text>
-              </>
+              </View>
             )}
           </Pressable>
 
@@ -271,47 +275,55 @@ const styles = StyleSheet.create({
     color: '#0ea5e9',
   },
 
-  /* Premium Sky CTA — gradient + rim + 3D border + glow. Brawl Stars-style.
-   * Gradient is forced as an absolute View so the bg can never be lost to
-   * iOS's uneven-border + shadow rendering quirk that produced white-on-white
-   * with the previous solid-color + borderBottomWidth:5 approach. */
-  confirmBtnWrap: {
+  /* Outer shell: carries 3D border + drop-shadow (no overflow clip so
+   * borderBottomWidth is visible). Press state sinks the button. */
+  confirmBtnShell: {
+    borderRadius: 999,
+    borderBottomWidth: 5,
+    borderBottomColor: '#0369a1',
+    shadowColor: '#0284c7',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.55,
+    shadowRadius: 18,
+    elevation: 14,
+    marginTop: 4,
+    marginBottom: 8,
+    alignSelf: 'stretch',
+  },
+  confirmBtnShellPressed: {
+    transform: [{ translateY: 3 }],
+    borderBottomWidth: 2,
+    marginTop: 7,
+    shadowOpacity: 0.2,
+    shadowOffset: { width: 0, height: 2 },
+  },
+  /* Inner: clips gradient to pill shape */
+  confirmBtnInner: {
     height: 58,
     borderRadius: 999,
     overflow: 'hidden',
     alignItems: 'center',
     justifyContent: 'center',
-    alignSelf: 'stretch',
-    width: '100%',
-    borderBottomWidth: 4,
-    borderBottomColor: '#0369A1',
-    shadowColor: '#0EA5E9',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.7,
-    shadowRadius: 24,
-    elevation: 14,
-    marginTop: 4,
-    marginBottom: 8,
   },
   confirmBtnRim: {
     position: 'absolute',
     top: 0,
     left: 0,
     right: 0,
-    height: '45%',
-    backgroundColor: 'rgba(255, 255, 255, 0.18)',
+    height: '38%',
+    backgroundColor: 'rgba(255, 255, 255, 0.22)',
     borderTopLeftRadius: 999,
     borderTopRightRadius: 999,
   },
   confirmBtnText: {
-    fontSize: 18,
+    fontSize: 19,
     fontWeight: '900',
     color: '#ffffff',
-    letterSpacing: 0.4,
+    letterSpacing: 0.5,
     textAlign: 'center',
-    textShadowColor: 'rgba(3, 105, 161, 0.55)',
+    textShadowColor: 'rgba(2, 84, 155, 0.6)',
     textShadowOffset: { width: 0, height: 1 },
-    textShadowRadius: 3,
+    textShadowRadius: 4,
   },
   /* Disabled state — pleasant blue-ghost. Says "not yet, but on the path"
    * without alarming red or muddy grey. */

@@ -587,7 +587,7 @@ export function BridgeScreen({ walkthroughAutoScroll }: BridgeScreenProps = {}) 
         onRequestClose={() => setShowPostRedemptionModal(false)}
       >
         <View style={styles.modalOverlay}>
-          <Animated.View entering={FadeInDown.duration(220)} style={styles.modalBackdrop} />
+          <Animated.View entering={FadeInDown.duration(220)} style={styles.modalBackdrop} pointerEvents="none" />
 
           <Animated.View
             entering={FadeInDown.duration(320)}

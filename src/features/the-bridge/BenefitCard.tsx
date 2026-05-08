@@ -149,7 +149,7 @@ export function BenefitCard({ benefit, coins, isRedeemed, isPro, onPress, onPurc
         {/* Partner URL (after redemption) */}
         {isRedeemed && benefit.partnerUrl && (
           <Pressable onPress={handleOpenPartnerUrl} style={styles.partnerUrlBtn}>
-            <ExternalLink size={14} color="#0369a1" />
+            <ExternalLink size={14} color="#ffffff" />
             <Text style={styles.partnerUrlText}>פתח באתר השותף</Text>
           </Pressable>
         )}
@@ -374,19 +374,27 @@ const styles = StyleSheet.create({
   partnerUrlBtn: {
     flexDirection: 'row-reverse',
     alignItems: 'center',
+    justifyContent: 'center',
     gap: 6,
-    backgroundColor: '#e0f2fe',
-    borderRadius: 12,
-    paddingHorizontal: 14,
-    paddingVertical: 8,
+    backgroundColor: '#0ea5e9',
+    borderRadius: 14,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderBottomWidth: 3,
+    borderBottomColor: '#0369a1',
     borderWidth: 1,
-    borderColor: '#bae6fd',
+    borderColor: '#38bdf8',
     marginBottom: 10,
+    shadowColor: '#0ea5e9',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.3,
+    shadowRadius: 6,
+    elevation: 4,
   },
   partnerUrlText: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: '#0369a1',
+    fontSize: 13,
+    fontWeight: '800',
+    color: '#ffffff',
     ...RTL,
   },
   bottomRow: {

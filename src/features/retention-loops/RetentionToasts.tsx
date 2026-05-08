@@ -98,7 +98,7 @@ export function RetentionToasts() {
         visible
         shark={FINN_FIRE}
         title="כל הלבבות מלאים 🔥"
-        body="השיעור הבא ייתן +25% XP. אל תבזבזו את ההזדמנות — צאו ללמוד עכשיו."
+        body="השיעור הבא ייתן +25% XP. אל תבזבזו את ההזדמנות, צאו ללמוד עכשיו."
         accentColor="#f59e0b"
         onDismiss={() => setHeartsDismissedThisFill(true)}
       />

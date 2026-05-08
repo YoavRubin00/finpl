@@ -81,6 +81,7 @@ export function SharkInsightToast({
         entering={reducedMotion ? undefined : SlideInDown.springify().damping(18).stiffness(140)}
         exiting={FadeOutDown.duration(220)}
         style={s.card}
+        pointerEvents="auto"
       >
         <View style={[s.accent, { backgroundColor: accentColor }]} />
         <View style={s.row}>
