@@ -15,6 +15,7 @@ import { useEconomyStore } from '../economy/useEconomyStore';
 import { useSubscriptionStore } from '../subscription/useSubscriptionStore';
 import { useAuthStore } from '../auth/useAuthStore';
 import { successHaptic } from '../../utils/haptics';
+import { useAppActive } from '../../hooks/useAppActive';
 import type { DailyDeal } from './types';
 
 function getTodayISO(): string {
@@ -47,12 +48,13 @@ export function DailyDealsSection() {
   const [purchasedIds, setPurchasedIds] = useState<Set<string>>(new Set());
   const [pendingDeal, setPendingDeal] = useState<DailyDeal | null>(null);
   const [starterPackOpen, setStarterPackOpen] = useState(false);
+  const appActive = useAppActive();
 
   const deals = useMemo(() => generateDailyDeals(dateKey), [dateKey]);
 
   // Countdown timer
   useEffect(() => {
-    const id = setInterval(() => {
+    const tick = () => {
       const ms = msUntilMidnight();
       setRemaining(ms);
       const today = getTodayISO();
@@ -60,9 +62,12 @@ export function DailyDealsSection() {
         setDateKey(today);
         setPurchasedIds(new Set());
       }
-    }, 1000);
+    };
+    tick();
+    if (!appActive) return;
+    const id = setInterval(tick, 1000);
     return () => clearInterval(id);
-  }, [dateKey]);
+  }, [dateKey, appActive]);
 
   const addGems = useEconomyStore((s) => s.addGems);
   const addStreakFreezes = useEconomyStore((s) => s.addStreakFreezes);

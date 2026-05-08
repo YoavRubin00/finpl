@@ -25,6 +25,7 @@ import { tapHaptic, successHaptic } from '../../utils/haptics';
 import { useRewardedAd } from '../../hooks/useRewardedAd';
 import { useChapterStore } from '../chapter-1-content/useChapterStore';
 import { useBandit } from '../bandit/useBandit';
+import { useAppActive } from '../../hooks/useAppActive';
 
 const MAX_HEARTS = 5;
 
@@ -108,6 +109,7 @@ export function OutOfHeartsModal({ visible, onDismiss, onUpgrade, onHeartsRefill
     const gems = useEconomyStore((s) => s.gems);
     const [timeLeft, setTimeLeft] = useState('');
     const canAffordRefill = coins >= HEART_REFILL_COIN_COST;
+    const appActive = useAppActive();
 
     const { payload: banditPayload, trackImpression, trackConversion, trackDismiss } = useBandit('hearts_depleted_nudge');
 
@@ -123,9 +125,10 @@ export function OutOfHeartsModal({ visible, onDismiss, onUpgrade, onHeartsRefill
             setTimeLeft(ms > 0 ? formatTime(ms) : 'עכשיו!');
         };
         tick();
+        if (!appActive) return;
         const interval = setInterval(tick, 1000);
         return () => clearInterval(interval);
-    }, [visible, lastHeartLostAt, hearts]);
+    }, [visible, lastHeartLostAt, hearts, appActive]);
 
     // Gentle pulse animation for emoji
     const pulse = useSharedValue(1);

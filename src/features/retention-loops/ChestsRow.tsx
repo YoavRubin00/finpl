@@ -17,6 +17,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { useRetentionStore } from "./useRetentionStore";
 import { useEconomyStore } from "../economy/useEconomyStore";
 import { tapHaptic, successHaptic, heavyHaptic } from "../../utils/haptics";
+import { useAppActive } from "../../hooks/useAppActive";
 import type { Chest, ChestRarity, ChestReward } from "./types";
 
 const INSTANT_OPEN_GEM_COST = 15;
@@ -63,6 +64,7 @@ function formatTime(ms: number): string {
 
 function useCountdown(chest: Chest | null): string {
   const [timeLeft, setTimeLeft] = useState("");
+  const appActive = useAppActive();
 
   useEffect(() => {
     if (!chest || chest.status !== "unlocking" || !chest.unlockStartedAt) {
@@ -78,9 +80,10 @@ function useCountdown(chest: Chest | null): string {
     };
 
     update();
+    if (!appActive) return;
     const interval = setInterval(update, 1000);
     return () => clearInterval(interval);
-  }, [chest?.status, chest?.unlockStartedAt, chest?.unlockTimeMinutes]);
+  }, [chest?.status, chest?.unlockStartedAt, chest?.unlockTimeMinutes, appActive]);
 
   return timeLeft;
 }

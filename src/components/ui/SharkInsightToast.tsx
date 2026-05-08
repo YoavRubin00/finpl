@@ -47,30 +47,19 @@ export function SharkInsightToast({
 }: Props) {
   const insets = useSafeAreaInsets();
   const reducedMotion = useReducedMotion();
-  const dismissedRef = useRef(false);
+
+  // Keep the latest onDismiss in a ref so the autodismiss timer doesn't
+  // reset every parent render (parents typically pass a fresh inline arrow).
+  const onDismissRef = useRef(onDismiss);
+  useEffect(() => { onDismissRef.current = onDismiss; }, [onDismiss]);
 
   useEffect(() => {
-    if (!visible) {
-      dismissedRef.current = false;
-      return;
-    }
-    if (autoDismissMs <= 0) return;
-    const t = setTimeout(() => {
-      if (!dismissedRef.current) {
-        dismissedRef.current = true;
-        onDismiss();
-      }
-    }, autoDismissMs);
+    if (!visible || autoDismissMs <= 0) return;
+    const t = setTimeout(() => onDismissRef.current(), autoDismissMs);
     return () => clearTimeout(t);
-  }, [visible, autoDismissMs, onDismiss]);
+  }, [visible, autoDismissMs]);
 
   if (!visible) return null;
-
-  const handleDismiss = () => {
-    if (dismissedRef.current) return;
-    dismissedRef.current = true;
-    onDismiss();
-  };
 
   return (
     <View
@@ -93,7 +82,7 @@ export function SharkInsightToast({
             <Text style={s.body} numberOfLines={3}>{body}</Text>
           </View>
           <Pressable
-            onPress={handleDismiss}
+            onPress={onDismiss}
             hitSlop={12}
             style={s.dismiss}
             accessibilityRole="button"
