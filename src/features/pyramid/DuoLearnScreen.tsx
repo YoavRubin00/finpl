@@ -1387,9 +1387,11 @@ export function DuoLearnScreen() {
                 </Text>
               </View>
 
-              {/* Chapters list (scrollable) */}
+              {/* Chapters list (scrollable).
+                  flexShrink (not flex: 1) — parent box is content-sized with
+                  maxHeight: 95%, so flex: 1 collapses ScrollView to 0 height. */}
               <ScrollView
-                style={{ flex: 1 }}
+                style={{ flexShrink: 1 }}
                 contentContainerStyle={{ paddingHorizontal: 18, paddingBottom: 6 }}
                 showsVerticalScrollIndicator={false}
                 nestedScrollEnabled

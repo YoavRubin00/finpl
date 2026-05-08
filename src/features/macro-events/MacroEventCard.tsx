@@ -41,6 +41,7 @@ import {
 import { useSubscriptionStore } from '../subscription/useSubscriptionStore';
 import { macroEventsData } from './macroEventsData';
 import { tapHaptic, successHaptic, errorHaptic } from '../../utils/haptics';
+import { useAppActive } from '../../hooks/useAppActive';
 
 export interface FeedMacroEventItem {
   id: string;
@@ -68,6 +69,7 @@ export const MacroEventCard = React.memo(function MacroEventCard({ item, isActiv
   const resetSessionIfCooldownElapsed = useMacroEventStore((s) => s.resetSessionIfCooldownElapsed);
   const lastMacroSessionTime = useMacroEventStore((s) => s.lastMacroSessionTime);
   const isPro = useSubscriptionStore((s) => s.tier === 'pro' && s.status === 'active');
+  const appActive = useAppActive();
 
   useEffect(() => { resetSessionIfCooldownElapsed(); }, [isActive]);
 
@@ -85,9 +87,10 @@ export const MacroEventCard = React.memo(function MacroEventCard({ item, isActiv
       setCooldownLeft(`${h}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`);
     }
     tick();
+    if (!appActive) return;
     const id = setInterval(tick, 1000);
     return () => clearInterval(id);
-  }, [isBlocked, lastMacroSessionTime]);
+  }, [isBlocked, lastMacroSessionTime, appActive]);
 
   const [answerState, setAnswerState] = useState<AnswerState>('idle');
 

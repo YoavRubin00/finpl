@@ -9,6 +9,7 @@ import { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, Pressable } from 'react-native';
 import { LottieIcon } from './LottieIcon';
 import { useEconomyStore } from '../../features/economy/useEconomyStore';
+import { useAppActive } from '../../hooks/useAppActive';
 
 const ROCKET_LOTTIE = require('../../../assets/lottie/wired-flat-489-rocket-space-hover-flying.json');
 
@@ -39,15 +40,19 @@ interface Props {
 
 export function BoostBanner({ onPress }: Props) {
   const activeBoosts = useEconomyStore((s) => s.activeBoosts);
+  const appActive = useAppActive();
   const [tick, setTick] = useState(0);
 
   // Re-render every 15 seconds to update the countdown. 15 sec is fast enough
   // for the user to feel time passing without burning battery on a 1-sec timer.
+  // Skip while backgrounded — the next render after resume reads Date.now()
+  // and shows the correct remaining time, so no drift.
   useEffect(() => {
     if (activeBoosts.length === 0) return;
+    if (!appActive) return;
     const t = setInterval(() => setTick((n) => n + 1), 15_000);
     return () => clearInterval(t);
-  }, [activeBoosts.length]);
+  }, [activeBoosts.length, appActive]);
 
   // Pick the most-recently-activated booster (highest expiresAt — usually the
   // newest purchase). If multiple stack, this is the "headline" one shown in
@@ -68,7 +73,7 @@ export function BoostBanner({ onPress }: Props) {
       accessibilityRole={onPress ? 'button' : undefined}
       accessibilityLabel={`${boostLabel(headline.id)} פעיל, נשארו ${formatRemaining(remainingMs)}`}
     >
-      <LottieIcon source={ROCKET_LOTTIE} size={22} autoPlay loop active />
+      <LottieIcon source={ROCKET_LOTTIE} size={22} autoPlay loop active={appActive} />
       <Text style={styles.label} allowFontScaling={false}>
         {boostLabel(headline.id)}
       </Text>

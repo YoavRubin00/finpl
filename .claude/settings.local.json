@@ -65,7 +65,9 @@
       "Bash(EAS_SKIP_AUTO_FINGERPRINT=1 npx eas build --platform android --profile development --non-interactive)",
       "PowerShell(Get-ChildItem \"c:\\\\Projects\\\\finpl\\\\finpl\" -Recurse -Force -ErrorAction SilentlyContinue | Where-Object {$_.Name -match \"\\\\.github|\\\\.vercel|vercel\\\\.json|\\\\.env\" -and $_.FullPath -notmatch \"node_modules\"} | Select-Object FullName)",
       "Bash(git check-ignore *)",
-      "Bash(echo \"exit=$?\")"
+      "Bash(echo \"exit=$?\")",
+      "Bash(git -C c:/Projects/finpl/finpl check-ignore -v .env)",
+      "Bash(git -C c:/Projects/finpl/finpl status --short .env)"
     ],
     "additionalDirectories": [
       "\\tmp",

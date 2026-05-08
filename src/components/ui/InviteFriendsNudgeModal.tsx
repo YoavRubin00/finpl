@@ -92,8 +92,20 @@ export function InviteFriendsNudgeModal() {
     const MIN_SESSION_MS = 60 * 1000; // 1 min after app open
     const STREAK_WAIT_GRACE_MS = 15 * 1000;
 
+    let interval: ReturnType<typeof setInterval> | null = null;
+
+    const stopPolling = () => {
+      if (interval !== null) {
+        clearInterval(interval);
+        interval = null;
+      }
+    };
+
     const tryShow = () => {
-      if (shownRef.current) return;
+      if (shownRef.current) {
+        stopPolling();
+        return;
+      }
       const s = useNudgeQueueStore.getState();
       if (s.inLesson) return;
       // Only fire while the user is on the feed tab — never on other screens.
@@ -107,13 +119,14 @@ export function InviteFriendsNudgeModal() {
       if (s.lastBridgeNudgeDateISO === today) return;
       shownRef.current = true;
       setVisible(true);
+      stopPolling();
     };
 
     const initial = setTimeout(tryShow, 5_000);
-    const interval = setInterval(tryShow, 15_000);
+    interval = setInterval(tryShow, 15_000);
     return () => {
       clearTimeout(initial);
-      clearInterval(interval);
+      stopPolling();
     };
   }, [isAuthenticated, hasCompletedOnboarding, isGuest, profile, activeDates, lastInviteNudgeDateISO, lastBridgeNudgeDateISO]);
 

@@ -247,8 +247,12 @@ export default function RootLayout() {
   // Bandit A/B testing: hydrate global alpha/beta from Neon on cold start, then
   // refresh every 5 minutes while in foreground so each user sees near-current
   // population-level data. Falls back silently to local Zustand cache on failure.
+  // Pauses while the app is backgrounded and re-fetches once on resume so we
+  // never burn battery polling Neon while the user can't see the result.
   useEffect(() => {
     let cancelled = false;
+    let interval: ReturnType<typeof setInterval> | null = null;
+
     const hydrate = () => {
       import("../src/features/bandit/useBanditStore")
         .then(({ useBanditStore }) => {
@@ -256,11 +260,30 @@ export default function RootLayout() {
         })
         .catch(() => { /* non-fatal */ });
     };
-    hydrate();
-    const interval = setInterval(hydrate, 5 * 60 * 1000);
+
+    const start = () => {
+      if (interval !== null) return;
+      hydrate();
+      interval = setInterval(hydrate, 5 * 60 * 1000);
+    };
+
+    const stop = () => {
+      if (interval !== null) {
+        clearInterval(interval);
+        interval = null;
+      }
+    };
+
+    if (AppState.currentState === "active") start();
+    const sub = AppState.addEventListener("change", (state) => {
+      if (state === "active") start();
+      else stop();
+    });
+
     return () => {
       cancelled = true;
-      clearInterval(interval);
+      stop();
+      sub.remove();
     };
   }, []);
 

@@ -10,6 +10,7 @@ import Animated, {
   withTiming,
   withSequence,
   withRepeat,
+  cancelAnimation,
   useAnimatedReaction,
   runOnJS,
   Easing,
@@ -26,12 +27,12 @@ import { getPyramidStatus } from "../../utils/progression";
 import { SPRING_SMOOTH } from "../../utils/animations";
 import { heavyHaptic, tapHaptic } from "../../utils/haptics";
 import { CLASH, STITCH } from "../../constants/theme";
-import LottieView from "lottie-react-native";
 import { ConfettiExplosion } from "./ConfettiExplosion";
 import { SparkleOverlay } from "./SparkleOverlay";
 import { LottieIcon } from "./LottieIcon";
 import { GoldCoinIcon } from "./GoldCoinIcon";
 import { useWalkthroughGlowTarget } from "../../features/onboarding/AppWalkthroughOverlay";
+import { useAppActive } from "../../hooks/useAppActive";
 
 const AnimatedCircle = Animated.createAnimatedComponent(Circle);
 
@@ -192,6 +193,7 @@ export function GlobalWealthHeader({ compact = false }: GlobalWealthHeaderProps)
   const gems = useEconomyStore((st) => st.gems);
   const isPro = useSubscriptionStore((st) => st.tier === "pro" && st.status === "active");
   const avatarId = useAuthStore((st) => st.profile?.avatarId ?? null);
+  const appActive = useAppActive();
 
   // ---- Fun store: mail icon ----
   const hasUnreadMail = useFunStore((st) => st.hasUnreadMail);
@@ -263,18 +265,20 @@ export function GlobalWealthHeader({ compact = false }: GlobalWealthHeaderProps)
   const profileGlow = useSharedValue(0.15);
 
   useEffect(() => {
-    profileGlow.value = withSequence(
-      withTiming(0.7, { duration: 1000 }),
-      withTiming(0.15, { duration: 1000 }),
-    );
-    const interval = setInterval(() => {
-      profileGlow.value = withSequence(
+    if (!appActive) {
+      cancelAnimation(profileGlow);
+      return;
+    }
+    profileGlow.value = withRepeat(
+      withSequence(
         withTiming(0.7, { duration: 1000 }),
         withTiming(0.15, { duration: 1000 }),
-      );
-    }, 2000);
-    return () => clearInterval(interval);
-  }, []);
+      ),
+      -1,
+      false,
+    );
+    return () => cancelAnimation(profileGlow);
+  }, [appActive, profileGlow]);
 
   const profileGlowStyle = useAnimatedStyle(() => ({
     shadowOpacity: profileGlow.value,
@@ -291,7 +295,7 @@ export function GlobalWealthHeader({ compact = false }: GlobalWealthHeaderProps)
 
   const walkthroughProfilePulse = useSharedValue(0);
   useEffect(() => {
-    if (profileIsGlowTarget) {
+    if (profileIsGlowTarget && appActive) {
       walkthroughProfilePulse.value = withRepeat(
         withSequence(
           withTiming(1, { duration: 600 }),
@@ -301,9 +305,10 @@ export function GlobalWealthHeader({ compact = false }: GlobalWealthHeaderProps)
         true,
       );
     } else {
+      cancelAnimation(walkthroughProfilePulse);
       walkthroughProfilePulse.value = 0;
     }
-  }, [profileIsGlowTarget]);
+  }, [profileIsGlowTarget, appActive, walkthroughProfilePulse]);
 
   const walkthroughProfileStyle = useAnimatedStyle(() => ({
     borderColor: `rgba(56, 189, 248, ${walkthroughProfilePulse.value})`,
@@ -318,7 +323,7 @@ export function GlobalWealthHeader({ compact = false }: GlobalWealthHeaderProps)
   // ---- Mail icon pulse animation ----
   const mailPulse = useSharedValue(1);
   useEffect(() => {
-    if (hasUnreadMail) {
+    if (hasUnreadMail && appActive) {
       mailPulse.value = withRepeat(
         withSequence(
           withTiming(1.25, { duration: 800 }),
@@ -328,9 +333,10 @@ export function GlobalWealthHeader({ compact = false }: GlobalWealthHeaderProps)
         true,
       );
     } else {
+      cancelAnimation(mailPulse);
       mailPulse.value = 1;
     }
-  }, [hasUnreadMail]);
+  }, [hasUnreadMail, appActive, mailPulse]);
 
   const mailPulseStyle = useAnimatedStyle(() => ({
     transform: [{ scale: mailPulse.value }],
@@ -361,7 +367,7 @@ export function GlobalWealthHeader({ compact = false }: GlobalWealthHeaderProps)
       )}
 
       {/* Subtle ambient sparkle to draw attention */}
-      <SparkleOverlay color="#67e8f9" density="low" />
+      <SparkleOverlay color="#67e8f9" density="low" active={appActive} />
 
       {/* Token row, Single compact header */}
       <View style={[s.tokenRow, compact && { justifyContent: "center" }]}>
@@ -396,7 +402,7 @@ export function GlobalWealthHeader({ compact = false }: GlobalWealthHeaderProps)
         {/* Gems pill */}
         <View style={walkthroughActive ? { opacity: 0.3 } : undefined} pointerEvents={walkthroughActive ? "none" : "auto"}>
         <ResourcePill
-          icon={<LottieIcon source={require("../../../assets/lottie/Diamond.json") as number} size={28} autoPlay loop />}
+          icon={<LottieIcon source={require("../../../assets/lottie/Diamond.json") as number} size={28} autoPlay loop active={appActive} />}
           glowColor="#67e8f9"
           onPress={walkthroughActive ? undefined : navigateToShop}
           trackedValue={gems}
@@ -471,13 +477,14 @@ export function GlobalWealthHeader({ compact = false }: GlobalWealthHeaderProps)
                 )}
                 {/* Floating confetti particles */}
                 <View style={{ position: "absolute", top: -14, left: -14, right: -14, bottom: -14, pointerEvents: "none" }}>
-                  <LottieView
-                    source={require("../../../assets/lottie/Confetti Effects Lottie Animation.json")}
-                    style={{ width: 56, height: 56 }}
+                  <LottieIcon
+                    source={require("../../../assets/lottie/Confetti Effects Lottie Animation.json") as number}
+                    size={56}
                     autoPlay
                     loop
                     speed={0.3}
-                   />
+                    active={appActive}
+                  />
                 </View>
               </View>
               <Text style={[s.profileNameCompact, isPro && { color: "#d97706" }]} numberOfLines={1}>

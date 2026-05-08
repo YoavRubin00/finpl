@@ -69,8 +69,20 @@ export function DailyBridgeNudgeModal() {
     const MIN_SESSION_MS = 4 * 60 * 1000; // 4 min — midpoint of the 3-5 min window
     const STREAK_WAIT_GRACE_MS = 15 * 1000; // give the streak popup 15 s to fire first
 
+    let interval: ReturnType<typeof setInterval> | null = null;
+
+    const stopPolling = () => {
+      if (interval !== null) {
+        clearInterval(interval);
+        interval = null;
+      }
+    };
+
     const tryShow = () => {
-      if (shownRef.current) return;
+      if (shownRef.current) {
+        stopPolling();
+        return;
+      }
       const s = useNudgeQueueStore.getState();
       if (s.inLesson) return; // never during a module
       if (!s.canShow('bridge')) return;
@@ -82,14 +94,15 @@ export function DailyBridgeNudgeModal() {
       if (!s.streakShownThisSession && sessionAge < MIN_SESSION_MS + STREAK_WAIT_GRACE_MS) return;
       shownRef.current = true;
       setVisible(true);
+      stopPolling();
     };
 
     // First attempt after a short delay, then poll every 30 s.
     const initial = setTimeout(tryShow, 3000);
-    const interval = setInterval(tryShow, 30_000);
+    interval = setInterval(tryShow, 30_000);
     return () => {
       clearTimeout(initial);
-      clearInterval(interval);
+      stopPolling();
     };
   }, [isAuthenticated, hasCompletedOnboarding, isGuest, profile, activeDates, lastBridgeNudgeDateISO]);
 
