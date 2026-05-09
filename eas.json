@@ -41,7 +41,7 @@
     "production": {
       "autoIncrement": true,
       "channel": "production",
-      "resourceClass": "large",
+      "resourceClass": "medium",
       "env": {
         "EXPO_PUBLIC_API_URL": "https://finpl.vercel.app",
         "EXPO_PUBLIC_ADMOB_REWARDED_IOS": "ca-app-pub-3137283655458001/8631312444",

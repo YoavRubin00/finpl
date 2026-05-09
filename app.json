@@ -2,7 +2,7 @@
   "expo": {
     "name": "FinPlay",
     "slug": "finpl",
-    "version": "1.1.1",
+    "version": "1.1.2",
     "scheme": "finpl",
     "description": "FinPlay — Learn finance through play. Gamified financial literacy for Gen-Z.",
     "platforms": [
