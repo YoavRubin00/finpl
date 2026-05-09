@@ -60,6 +60,7 @@ function withNoBackgroundAudioAndroid(config) {
         const name = act && act.$ && act.$['android:name'];
         if (typeof name === 'string' && name.endsWith('.MainActivity')) {
           act.$['android:resizeableActivity'] = 'true';
+          delete act.$['android:screenOrientation']; // Google Play large-screen compliance
         }
       }
     }
