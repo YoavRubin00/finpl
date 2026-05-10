@@ -2592,7 +2592,9 @@ export function LessonFlowScreen() {
   // FIFO chokepoint for post-chest nudges: only fire Bridge/Referral after any
   // higher-priority modal (SharkLove/DoubleOrNothing/AdBonus/PostCelebration/etc)
   // has been dismissed, so the user sees them one at a time, not stacked.
-  const [pendingPostChestNudge, setPendingPostChestNudge] = useState<'referral' | 'bridge' | null>(null);
+  const [pendingPostChestNudge, setPendingPostChestNudge] = useState<'referral' | 'bridge' | 'cover' | null>(null);
+  const [showCoverCTA, setShowCoverCTA] = useState(false);
+  const [coverCTAShownCount, setCoverCTAShownCount] = useState(0);
 
 
   // Persist mid-module progress (debounced) so the user can resume on re-entry
@@ -2753,6 +2755,10 @@ export function LessonFlowScreen() {
     const t = setTimeout(() => {
       if (pendingPostChestNudge === 'referral') setShowReferralCTA(true);
       else if (pendingPostChestNudge === 'bridge') setShowBridgeCTA(true);
+      else if (pendingPostChestNudge === 'cover') {
+        setCoverCTAShownCount(c => c + 1);
+        setShowCoverCTA(true);
+      }
       setPendingPostChestNudge(null);
     }, 600);
     return () => clearTimeout(t);
@@ -2863,6 +2869,7 @@ export function LessonFlowScreen() {
       showAdBonus ||
       showReferralCTA ||
       showBridgeCTA ||
+      showCoverCTA ||
       showWisdom ||
       showPartyInvite ||
       showPostCelebration ||
@@ -2879,7 +2886,7 @@ export function LessonFlowScreen() {
     // Wait 2s after all higher-priority nudges have cleared
     const timer = setTimeout(() => setShowPostCelebration(true), 2000);
     return () => clearTimeout(timer);
-  }, [chestClaimed, showDoubleOrNothing, showSharkLove, showAdBonus, showReferralCTA, showBridgeCTA, showWisdom, showPartyInvite, currentModIdx, showPostCelebration, showBreakMessage, pendingPostChestNudge, id, isGuest]);
+  }, [chestClaimed, showDoubleOrNothing, showSharkLove, showAdBonus, showReferralCTA, showBridgeCTA, showCoverCTA, showWisdom, showPartyInvite, currentModIdx, showPostCelebration, showBreakMessage, pendingPostChestNudge, id, isGuest]);
 
   // Shark Party, trigger only on chapter transitions (last module of chapter) every 4 total completed modules
   useEffect(() => {
@@ -3788,7 +3795,16 @@ export function LessonFlowScreen() {
                             // (SharkLove +500ms, AdBonus +1800ms) has fired and updated
                             // the blocker state before the drain useEffect schedules its
                             // 600ms timer — eliminates the chest-claim race.
-                            if (willShowReferral) {
+                            // Chapter 0: Cover CTA after the 2nd module
+                            const ch0Done = progress["chapter-0"]?.completedModules?.length ?? 0;
+                            const willShowCoverCh0 = isBridgeEligible && chapterId === "chapter-0" && ch0Done === 2;
+                            // Chapter 1: Cover CTA for first 2 bridge triggers (replaces normal bridge)
+                            const willShowCoverCh1 = isBridgeEligible && chapterId !== "chapter-0" && willShowBridge && coverCTAShownCount < 2;
+
+                            if (willShowCoverCh0 || willShowCoverCh1) {
+                              setCtaModuleCount(totalCompletedNow);
+                              safeTimeout(() => setPendingPostChestNudge('cover'), 2000);
+                            } else if (willShowReferral) {
                               setCtaModuleCount(totalCompletedNow);
                               setReferralByDividend(hasDividend);
                               safeTimeout(() => setPendingPostChestNudge('referral'), 2000);
@@ -4532,6 +4548,15 @@ export function LessonFlowScreen() {
         visible={showBridgeCTA && !showSharkLove && !showDoubleOrNothing && !showPostCelebration && !showPartyInvite}
         onGoBridge={() => { setShowBridgeCTA(false); router.push("/bridge" as never); }}
         onDismiss={() => setShowBridgeCTA(false)}
+        moduleCount={ctaModuleCount}
+      />
+
+      {/* ── Cover CTA — ch0 module 2 + ch1 first 2 bridge triggers ── */}
+      <SharkBridgeCTA
+        coverMode
+        visible={showCoverCTA && !showSharkLove && !showDoubleOrNothing && !showPostCelebration && !showPartyInvite}
+        onGoBridge={() => { setShowCoverCTA(false); router.push("/bridge?tab=insurance" as never); }}
+        onDismiss={() => setShowCoverCTA(false)}
         moduleCount={ctaModuleCount}
       />
 

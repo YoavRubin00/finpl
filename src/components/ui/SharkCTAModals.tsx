@@ -41,9 +41,11 @@ interface BridgeCTAProps {
   onDismiss: () => void;
   /** Module count that triggered this CTA (4, 8, 12...). Used to select copy variant. */
   moduleCount?: number;
+  /** When true, shows fixed Cover insurance copy instead of bandit-selected copy. */
+  coverMode?: boolean;
 }
 
-export function SharkBridgeCTA({ visible, onGoBridge, onDismiss, moduleCount = 0 }: BridgeCTAProps) {
+export function SharkBridgeCTA({ visible, onGoBridge, onDismiss, moduleCount = 0, coverMode = false }: BridgeCTAProps) {
   const insets = useSafeAreaInsets();
   const canShow = useNudgeQueueStore((s) => s.canShow);
   const recordDismiss = useNudgeQueueStore((s) => s.recordDismiss);
@@ -91,8 +93,8 @@ export function SharkBridgeCTA({ visible, onGoBridge, onDismiss, moduleCount = 0
           </View>
 
           <View style={s.textBlock}>
-            {/* Social proof pill — variant controlled by bandit */}
-            {moduleCount > 0 && (
+            {/* Social proof pill — skipped in coverMode */}
+            {!coverMode && moduleCount > 0 && (
               <View style={s.streakPill}>
                 <Flame size={11} color={STITCH.tertiaryGold} fill={STITCH.tertiaryGoldBright} />
                 <Text style={s.streakText}>
@@ -103,17 +105,19 @@ export function SharkBridgeCTA({ visible, onGoBridge, onDismiss, moduleCount = 0
               </View>
             )}
 
-            <Text style={s.nudgeTitle}>{v.title}</Text>
-            <Text style={s.nudgeBody}>{v.body}</Text>
+            <Text style={s.nudgeTitle}>
+              {coverMode ? 'רוצה לראות את כל החסכונות\nוהביטוחים שלך במקום אחד?' : v.title}
+            </Text>
+            {!coverMode && <Text style={s.nudgeBody}>{v.body}</Text>}
 
             <Pressable
               onPress={handleAct}
               style={s.ctaBtn}
               accessibilityRole="button"
-              accessibilityLabel={v.cta}
+              accessibilityLabel={coverMode ? 'בואו לגשר' : v.cta}
             >
               <ArrowLeft size={18} color="#ffffff" />
-              <Text style={s.ctaBtnText}>{v.cta}</Text>
+              <Text style={s.ctaBtnText}>{coverMode ? 'בואו לגשר 🛡️' : v.cta}</Text>
             </Pressable>
           </View>
 

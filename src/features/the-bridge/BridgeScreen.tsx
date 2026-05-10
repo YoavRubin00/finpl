@@ -12,7 +12,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useRouter } from 'expo-router';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Info } from 'lucide-react-native';
 import { Image as ExpoImage } from 'expo-image';
 import { FINN_DANCING } from '../retention-loops/finnMascotConfig';
@@ -194,7 +194,10 @@ export function BridgeScreen({ walkthroughAutoScroll }: BridgeScreenProps = {}) 
   const redeemedCount = useBridgeStore((s) => s.getRedeemedCount());
   const savedValue = useBridgeStore((s) => s.getTotalSavedValue());
 
-  const [activeCategory, setActiveCategory] = useState<BenefitCategory>('investments');
+  const { tab } = useLocalSearchParams<{ tab?: BenefitCategory }>();
+  const [activeCategory, setActiveCategory] = useState<BenefitCategory>(
+    tab && (ALL_CATEGORIES as string[]).includes(tab) ? tab : 'investments'
+  );
   const [selectedBenefit, setSelectedBenefit] = useState<Benefit | null>(null);
   const [modalVisible, setModalVisible] = useState(false);
   const [showConfetti, setShowConfetti] = useState(false);

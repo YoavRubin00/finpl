@@ -40,19 +40,25 @@ export const BRIDGE_BENEFITS: Benefit[] = [
     partnerAdSlot: true,
   },
 
-  // ── 🛡️ ביטוח, placeholder ──
+  // ── 🛡️ ביטוח ── ★ REAL PARTNER: Cover ★
   {
-    id: 'bridge-insurance-partner-slot',
-    title: '🛡️ מקום שמור לשותף ביטוחי',
-    description: 'בקרוב נוסיף כאן הצעה בלעדית מגוף ביטוחי מוביל. המשיכו לצבור מטבעות!',
-    partnerName: 'שותף ביטוחי',
+    id: 'bridge-insurance-cover',
+    title: 'כל הביטוחים והחסכונות שלך — במקום אחד',
+    description:
+      'קרן הפנסיה שפתחו לכם פעם מזמן, הביטוח הזה שלא יודעים מה הוא נותן ' +
+      'וכמה הוא עולה ודמי הניהול המופרזים בביטוח המנהלים ממקום העבודה הראשון, נשמע מוכר מדי?\n\n' +
+      'ב-Cover תוכלו לראות את כל הביטוחים וכל החסכונות במקום אחד ולקבל ' +
+      'המלצות שוטפות ואוטומטיות לשיפור התנאים והוזלת העלויות שלכם.\n\n' +
+      'ככה שקוף, בלי התחייבות ופתוח לכולם.',
+    partnerName: 'Cover',
     partnerLogo: '🛡️',
-    lottieSource: require('../../../assets/lottie/wired-flat-457-shield-security-hover-pinch.json') as number,
-    costCoins: 0,
+    partnerLogoImage: require('../../../assets/IMAGES/cover.png') as number,
+    costCoins: 2000,
     category: 'insurance',
-    isAvailable: false,
-    reward: 'בקרוב...',
-    partnerAdSlot: true,
+    isAvailable: true,
+    reward: 'מעקב חינמי אחר כל הביטוחים והחסכונות שלך — בלי התחייבות',
+    partnerUrl: 'https://my.coverai.co.il/?li=finplay',
+    isPartnerAd: true,
   },
 
   // ── 💳 כרטיסי אשראי, placeholder ──
