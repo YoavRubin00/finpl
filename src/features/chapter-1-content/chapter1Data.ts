@@ -1210,7 +1210,6 @@ export const chapter1Data: Chapter = {
       flashcards: [
         {
           id: 'fc-1-8-1',
-          topAudio: { uri: 'https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/audios/flashcards/fc-1-8-1-top-KwJayT82dwy27ZaMvSbg7n6mrt8EYv.mp3' },
           text: 'הטיית ההווה: הנטייה האנושית להעדיף תגמול קטן ומידי (קניית בגד עכשיו) על פני תגמול גדול בעתיד (עצמאות פיננסית).',
           diveMode: true,
           hideTextOnDive: true,
@@ -1238,7 +1237,6 @@ export const chapter1Data: Chapter = {
         },
         {
           id: 'fc-1-8-3',
-          topAudio: { uri: 'https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/audios/flashcards/fc-1-8-3-top-uvGuD0A7Wn4M5qeaIAYUDPiG2IGkxK.mp3' },
           text: '[[שנאת הפסד]]: הכאב הפסיכולוגי מהפסד שקל אחד חזק פי 2 מהנאה מרווח של שקל אחד. משווקים משתמשים בזה כדי ליצור תחושת "פספוס" ([[FOMO]]).',
           diveMode: true,
           zoomRegions: [[0, 0, 1], [100, 0, 1.6], [-120, 0, 1.6], [0, 0, 1]],
@@ -1269,7 +1267,7 @@ export const chapter1Data: Chapter = {
           text: 'אפקט הנידון: הנטייה להמשיך להשקיע במשהו כושל (מנוי לחדר כושר שלא הולכים אליו) רק בגלל שכבר שילמנו עליו כסף בעבר.',
           diveMode: true,
           hideTextOnDive: true,
-          zoomRegions: [[0, 0, 1], [0, 0, 1], [130, 180, 2.0], [-220, -150, 1.8]],
+          zoomRegions: [[-50, 0, 1], [-50, 0, 1], [80, 180, 2.0], [-270, -150, 1.8]],
           finnExplanations: [
             "",
             "קניתם מניה והיא צנחה ב-80%? לפעמים מחזיקים אותה רק כדי לא להודות שהפסדנו.",

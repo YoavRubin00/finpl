@@ -15,6 +15,7 @@ import Animated, {
   useSharedValue,
   useAnimatedStyle,
   withTiming,
+  withSequence,
   Easing,
 } from 'react-native-reanimated';
 import { useRouter } from 'expo-router';
@@ -184,10 +185,19 @@ export const FeedPremiumLearningCard = React.memo(function FeedPremiumLearningCa
     // Animate zoom in dive mode
     if (isDiveMode && item.zoomRegions && nextStep < totalSteps) {
       const [x, y, s] = item.zoomRegions[nextStep];
-      const cfg = { duration: 600, easing: Easing.out(Easing.quad) };
-      zoomScale.value = withTiming(s, cfg);
-      zoomX.value = withTiming(x, cfg);
-      zoomY.value = withTiming(y, cfg);
+      const prevRegion = item.zoomRegions[step];
+      if (prevRegion && prevRegion[2] > 1 && s > 1) {
+        const out = { duration: 300, easing: Easing.out(Easing.quad) };
+        const inn = { duration: 500, easing: Easing.out(Easing.quad) };
+        zoomScale.value = withSequence(withTiming(1, out), withTiming(s, inn));
+        zoomX.value = withSequence(withTiming(0, out), withTiming(x, inn));
+        zoomY.value = withSequence(withTiming(0, out), withTiming(y, inn));
+      } else {
+        const cfg = { duration: 600, easing: Easing.out(Easing.quad) };
+        zoomScale.value = withTiming(s, cfg);
+        zoomX.value = withTiming(x, cfg);
+        zoomY.value = withTiming(y, cfg);
+      }
     } else if (isDiveMode && nextStep >= totalSteps) {
       // Reset zoom for CTA
       zoomScale.value = withTiming(1, { duration: 400 });
@@ -204,10 +214,19 @@ export const FeedPremiumLearningCard = React.memo(function FeedPremiumLearningCa
       setStep(prevStep);
       if (isDiveMode && item.zoomRegions && prevStep < totalSteps) {
         const [x, y, s] = item.zoomRegions[prevStep];
-        const cfg = { duration: 600, easing: Easing.out(Easing.quad) };
-        zoomScale.value = withTiming(s, cfg);
-        zoomX.value = withTiming(x, cfg);
-        zoomY.value = withTiming(y, cfg);
+        const fromRegion = item.zoomRegions[step];
+        if (fromRegion && fromRegion[2] > 1 && s > 1) {
+          const out = { duration: 300, easing: Easing.out(Easing.quad) };
+          const inn = { duration: 500, easing: Easing.out(Easing.quad) };
+          zoomScale.value = withSequence(withTiming(1, out), withTiming(s, inn));
+          zoomX.value = withSequence(withTiming(0, out), withTiming(x, inn));
+          zoomY.value = withSequence(withTiming(0, out), withTiming(y, inn));
+        } else {
+          const cfg = { duration: 600, easing: Easing.out(Easing.quad) };
+          zoomScale.value = withTiming(s, cfg);
+          zoomX.value = withTiming(x, cfg);
+          zoomY.value = withTiming(y, cfg);
+        }
       }
     }
   }, [step, isDiveMode, item.zoomRegions, totalSteps, zoomScale, zoomX, zoomY, playSound]);
