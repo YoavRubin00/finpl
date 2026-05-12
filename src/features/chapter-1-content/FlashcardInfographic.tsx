@@ -6,9 +6,9 @@
  * To enable a chapter: uncomment its require() lines after generating PNGs.
  * Generate with: bash scripts/generate_module_infographic.sh <module-id>
  */
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import { View, Image, StyleSheet, Pressable, Modal, Platform } from "react-native";
-import Animated, { useSharedValue, useAnimatedStyle, withTiming, withRepeat, Easing } from "react-native-reanimated";
+import Animated, { useSharedValue, useAnimatedStyle, withTiming, withRepeat, withSequence, Easing } from "react-native-reanimated";
 import { Image as ExpoImage } from "expo-image";
 import type { ImageSource, ImageLoadEventData } from "expo-image";
 import type { ImageSourcePropType } from "react-native";
@@ -441,6 +441,7 @@ export function FlashcardInfographic({ cardId, diveStep = 0, zoomRegions }: Prop
   const zoomScale = useSharedValue(1);
   const zoomX = useSharedValue(0);
   const zoomY = useSharedValue(0);
+  const prevStepRef = useRef<number | undefined>(undefined);
 
   // Idle "breathing" — subtle pulse + drift that runs continuously.
   // Composes multiplicatively/additively with zoom so dive transitions stay clean.
@@ -456,10 +457,27 @@ export function FlashcardInfographic({ cardId, diveStep = 0, zoomRegions }: Prop
         [targetX, targetY, targetScale] = zoomRegions[0];
       }
     }
-    const cfg = { duration: typeof diveStep === 'number' ? 600 : 0 }; // instant if no dive step (initial mount in feed)
-    zoomScale.value = withTiming(targetScale, cfg);
-    zoomX.value = withTiming(targetX, cfg);
-    zoomY.value = withTiming(targetY, cfg);
+    const prevStep = prevStepRef.current;
+    const prevRegion = zoomRegions && typeof prevStep === 'number' ? zoomRegions[prevStep] : undefined;
+    const passThroughNeutral =
+      typeof diveStep === 'number' &&
+      prevStep !== diveStep &&
+      !!prevRegion &&
+      prevRegion[2] > 1 &&
+      targetScale > 1;
+    if (passThroughNeutral) {
+      const out = { duration: 300 };
+      const inn = { duration: 500 };
+      zoomScale.value = withSequence(withTiming(1, out), withTiming(targetScale, inn));
+      zoomX.value = withSequence(withTiming(0, out), withTiming(targetX, inn));
+      zoomY.value = withSequence(withTiming(0, out), withTiming(targetY, inn));
+    } else {
+      const cfg = { duration: typeof diveStep === 'number' ? 600 : 0 }; // instant if no dive step (initial mount in feed)
+      zoomScale.value = withTiming(targetScale, cfg);
+      zoomX.value = withTiming(targetX, cfg);
+      zoomY.value = withTiming(targetY, cfg);
+    }
+    prevStepRef.current = diveStep;
   }, [diveStep, zoomRegions, zoomScale, zoomX, zoomY]);
 
   useEffect(() => {

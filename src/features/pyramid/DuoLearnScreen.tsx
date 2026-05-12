@@ -1359,10 +1359,14 @@ export function DuoLearnScreen() {
         {/* Learning Roadmap Overlay (Replaced Native Modal to support iOS Walkthrough overlap) */}
         {roadmapVisible && (
           <View style={[StyleSheet.absoluteFill, { zIndex: 9999, elevation: 9999 }]} accessibilityViewIsModal>
-            <Animated.View entering={FadeInDown.duration(200)} style={{ flex: 1 }}>
-          <Pressable style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.4)", justifyContent: "center", alignItems: "center", padding: 16 }} onPress={() => setRoadmapVisible(false)} accessibilityRole="button" accessibilityLabel="סגור מסלול הלמידה">
+            <Animated.View entering={FadeInDown.duration(200)} style={{ flex: 1, justifyContent: "center", alignItems: "center", padding: 16 }}>
+          <Pressable
+            style={[StyleSheet.absoluteFill, { backgroundColor: "rgba(0,0,0,0.4)" }]}
+            onPress={() => setRoadmapVisible(false)}
+            accessibilityRole="button"
+            accessibilityLabel="סגור מסלול הלמידה"
+          />
             <View
-              onStartShouldSetResponder={() => true}
               style={{ width: "100%", maxWidth: 380, maxHeight: "95%", backgroundColor: "#ffffff", borderRadius: 24, overflow: "hidden", shadowColor: "#000", shadowOpacity: 0.15, shadowRadius: 20, shadowOffset: { width: 0, height: 8 }, elevation: 10 }}
               accessibilityLabel="תוכן מסלול הלמידה"
             >
@@ -1499,7 +1503,6 @@ export function DuoLearnScreen() {
                 </Pressable>
               </View>
             </View>
-          </Pressable>
         </Animated.View>
       </View>
     )}

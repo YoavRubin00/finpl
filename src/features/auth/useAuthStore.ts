@@ -5,6 +5,7 @@ import { zustandStorage } from '../../lib/zustandStorage';
 import type { UserProfile } from "./types";
 import { upsertUserProfile, deleteUserProfile } from "../../db/sync/syncUserProfile";
 import { logoutRevenueCat } from "../../services/revenueCat";
+import { identifyUser, resetUser, captureEvent } from "../../lib/posthog";
 
 interface AuthState {
   isAuthenticated: boolean;
@@ -69,10 +70,13 @@ export const useAuthStore = create<AuthState>()(
           },
         }));
         upsertUserProfile(email, { displayName, email }).catch(() => { /* fire-and-forget */ });
+        identifyUser(email, { displayName, email, isGuest: false });
+        captureEvent('user_signed_in', { method: 'email' });
       },
 
       enterGuestMode: () => {
         set((state) => ({ isAuthenticated: true, isGuest: true, displayName: "אורח/ת", createdAt: state.createdAt ?? new Date().toISOString() }));
+        captureEvent('guest_mode_entered');
       },
 
       convertGuestToUser: (displayName: string, email: string) => {
@@ -98,6 +102,8 @@ export const useAuthStore = create<AuthState>()(
           },
         }));
         upsertUserProfile(email, { displayName, email }).catch(() => { /* fire-and-forget */ });
+        identifyUser(email, { displayName, email, isGuest: false, convertedFromGuest: true });
+        captureEvent('guest_converted_to_user');
       },
 
       completeOnboarding: (profile: UserProfile) => {
@@ -128,6 +134,8 @@ export const useAuthStore = create<AuthState>()(
 
       signOut: () => {
         logoutRevenueCat().catch(() => { /* fire-and-forget */ });
+        captureEvent('user_signed_out');
+        resetUser();
         set({
           isAuthenticated: false,
           isGuest: false,

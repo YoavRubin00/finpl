@@ -1,5 +1,6 @@
 import "../global.css";
 import { initSentry } from "../src/lib/sentry";
+import { initPostHog } from "../src/lib/posthog";
 import { I18nManager } from "react-native";
 
 // Undo forceRTL that was set by build 30, it caused layout crashes
@@ -36,6 +37,7 @@ try {
 } catch { /* ignore — polyfill not available, fall back to default behavior */ }
 
 initSentry();
+initPostHog();
 
 import { Slot, useRouter, useSegments, useRootNavigationState } from "expo-router";
 import { useEffect, useRef, useState } from "react";
