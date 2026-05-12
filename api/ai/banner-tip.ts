@@ -81,7 +81,6 @@ XP: ${xp.toLocaleString()}
           contents: [{ role: 'user', parts: [{ text: userMessage }] }],
           generationConfig: {
             maxOutputTokens: 60,
-            thinkingConfig: { thinkingBudget: 0 },
           },
         }),
       },

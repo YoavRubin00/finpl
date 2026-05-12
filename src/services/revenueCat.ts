@@ -4,10 +4,17 @@ const IS_WEB = Platform.OS === 'web';
 
 /* ── Conditional import — react-native-purchases crashes on web ───── */
 // eslint-disable-next-line @typescript-eslint/no-require-imports
-const Purchases = IS_WEB ? null : require('react-native-purchases').default;
-const LOG_LEVEL_DEBUG = IS_WEB ? 0 : require('react-native-purchases').LOG_LEVEL?.DEBUG;
+const RNPurchases = IS_WEB ? null : require('react-native-purchases');
+const Purchases = IS_WEB ? null : RNPurchases.default;
+const LOG_LEVEL_DEBUG = IS_WEB ? 0 : RNPurchases?.LOG_LEVEL?.DEBUG;
+// react-native-purchases v9 renamed `ProductType` → `PRODUCT_CATEGORY` and
+// `INAPP` → `NON_SUBSCRIPTION`. Falling back to the old name keeps us safe
+// across minor SDK bumps. Without this filter, getProducts on Android returns
+// an empty array for consumable IAPs (the starter pack + gem bundles), which
+// surfaces to users as a silent failure or a "product not found" error.
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-const { ProductType } = IS_WEB ? { ProductType: null as any } : require('react-native-purchases');
+const PRODUCT_CATEGORY: any = IS_WEB ? null : (RNPurchases?.PRODUCT_CATEGORY ?? RNPurchases?.ProductCategory ?? RNPurchases?.ProductType);
+const NON_SUBSCRIPTION_TYPE = PRODUCT_CATEGORY?.NON_SUBSCRIPTION ?? PRODUCT_CATEGORY?.INAPP;
 
 /** Re-export types for consumers (type-only — no runtime cost) */
 export type { PurchasesOffering, PurchasesPackage, CustomerInfo } from 'react-native-purchases';
@@ -135,7 +142,7 @@ export async function purchaseGemBundle(
   // returning an empty array. Without the timeout, the buy button silently
   // does nothing.
   const products = await Promise.race([
-    Purchases.getProducts([productId], ProductType?.INAPP),
+    Purchases.getProducts([productId], NON_SUBSCRIPTION_TYPE),
     new Promise<never>((_, reject) =>
       setTimeout(() => reject(new Error(`Store timeout (10s) — product "${productId}" not configured in Play Console / App Store Connect, or store unreachable`)), 10000)
     ),

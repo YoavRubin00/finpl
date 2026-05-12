@@ -1,5 +1,5 @@
 import { useCallback, useState } from 'react';
-import { View, Text, Pressable, Modal, StyleSheet, Alert } from 'react-native';
+import { View, Text, Pressable, Modal, StyleSheet, Alert, Platform } from 'react-native';
 import Animated, {
   FadeIn,
   FadeOut,
@@ -20,6 +20,15 @@ type AnyBundle = GemBundle | CoinBundle;
 function isCoinBundle(b: AnyBundle): b is CoinBundle {
   return 'coins' in b;
 }
+
+// Per-platform RC key check — Android with only an Apple key set was falling
+// through to the real-money branch and crashing in RevenueCat init. Without
+// the proper key for the current platform we grant locally (dev preview path).
+const HAS_RC_KEY = Platform.OS === 'android'
+  ? !!process.env.EXPO_PUBLIC_RC_GOOGLE_KEY
+  : Platform.OS === 'ios'
+    ? !!process.env.EXPO_PUBLIC_RC_APPLE_KEY
+    : false;
 
 interface IAPModalProps {
   visible: boolean;
@@ -46,15 +55,22 @@ export function IAPModal({ visible, bundle, onDismiss, onPurchaseSuccess }: IAPM
     } else {
       // Gem bundles, real-money purchase via RevenueCat
       try {
-        await purchaseGemBundle(bundle.id);
+        if (HAS_RC_KEY) {
+          await purchaseGemBundle(bundle.id);
+        }
+        // No RC key on this platform → dev preview path: grant locally so the
+        // flow stays clickable instead of throwing "Purchases not configured".
         addGems(bundle.gems);
       } catch (err: unknown) {
-        const isCancelled =
-          err instanceof Error && err.message.includes('PURCHASE_CANCELLED');
-        if (!isCancelled) {
-          const msg = err instanceof Error ? err.message : 'שגיאה לא צפויה';
-          Alert.alert('שגיאת רכישה', msg);
+        const msg = err instanceof Error ? err.message : 'שגיאה לא צפויה';
+        // RC user-cancel surfaces as a thrown error too — quietly close.
+        if (
+          (err instanceof Error && err.message.includes('PURCHASE_CANCELLED')) ||
+          /cancel|user.{0,2}cancell/i.test(msg)
+        ) {
+          return;
         }
+        Alert.alert('שגיאת רכישה', msg);
         return;
       }
     }
@@ -77,8 +93,6 @@ export function IAPModal({ visible, bundle, onDismiss, onPurchaseSuccess }: IAPM
     ? ` ${bundle.coins.toLocaleString()} מטבעות`
     : `💎 ${(bundle as GemBundle).gems.toLocaleString()} ג'מס`;
   const accentColor = isCoins ? '#d4a017' : '#0891b2';
-  const btnColor = isCoins ? '#d4a017' : '#0891b2';
-  const btnTextColor = isCoins ? '#000' : '#fff';
 
   return (
     <Modal
@@ -141,19 +155,27 @@ export function IAPModal({ visible, bundle, onDismiss, onPurchaseSuccess }: IAPM
           {/* CTA */}
           <Pressable
             onPress={handlePurchase}
-            style={({ pressed }) => [styles.buyBtn, pressed && { opacity: 0.9, transform: [{ scale: 0.97 }] }]}
+            style={({ pressed }) => [
+              styles.buyBtn,
+              isCoins ? styles.buyBtnCoins : styles.buyBtnGems,
+              pressed && { transform: [{ scale: 0.97 }] },
+            ]}
             accessibilityRole="button"
             accessibilityLabel={isCoins ? 'המר לזהב' : 'קנה עכשיו'}
           >
             <LinearGradient
-              colors={isCoins ? ['#d4a017', '#b8860b', '#d4a017'] : ['#0a2540', '#164e63', '#0a2540']}
-              start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
-              style={styles.buyBtnGradient}
-            >
-              <Text style={styles.buyBtnText}>
-                {isCoins ? '💎 המר לזהב' : '🛒 קנה עכשיו'}
-              </Text>
-            </LinearGradient>
+              colors={isCoins
+                ? ['#FCD34D', '#F59E0B', '#B45309']
+                : ['#7DD3FC', '#38BDF8', '#0284C7']}
+              locations={[0, 0.45, 1]}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 0, y: 1 }}
+              style={[StyleSheet.absoluteFill, { borderRadius: 31 }]}
+            />
+            <View style={styles.buyBtnRim} pointerEvents="none" />
+            <Text style={[styles.buyBtnText, isCoins && styles.buyBtnTextCoins]}>
+              {isCoins ? '💎 המר לזהב' : '🛒 קנה עכשיו'}
+            </Text>
           </Pressable>
 
           {/* Fine print */}
@@ -240,28 +262,52 @@ const styles = StyleSheet.create({
     color: '#1f2937',
   },
   buyBtn: {
-    borderRadius: 999,
-    overflow: 'hidden',
-    shadowColor: '#0a2540',
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.5,
-    shadowRadius: 16,
-    elevation: 10,
-    marginBottom: 14,
     width: '100%',
-  },
-  buyBtnGradient: {
-    borderRadius: 999,
-    paddingVertical: 18,
-    paddingHorizontal: 48,
+    height: 62,
+    borderRadius: 31,
+    overflow: 'hidden',
     alignItems: 'center',
     justifyContent: 'center',
+    borderBottomWidth: 4,
+    marginBottom: 14,
+    elevation: 16,
+  },
+  buyBtnGems: {
+    borderBottomColor: '#0369A1',
+    shadowColor: '#38BDF8',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.85,
+    shadowRadius: 28,
+  },
+  buyBtnCoins: {
+    borderBottomColor: '#92400E',
+    shadowColor: '#F59E0B',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.7,
+    shadowRadius: 22,
+  },
+  buyBtnRim: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    height: '40%',
+    backgroundColor: 'rgba(255, 255, 255, 0.22)',
+    borderTopLeftRadius: 31,
+    borderTopRightRadius: 31,
   },
   buyBtnText: {
-    fontSize: 19,
+    fontSize: 18,
     fontWeight: '900',
     color: '#ffffff',
     writingDirection: 'rtl' as const,
+    letterSpacing: 0.4,
+    textShadowColor: 'rgba(3, 105, 161, 0.7)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 3,
+  },
+  buyBtnTextCoins: {
+    textShadowColor: 'rgba(146, 64, 14, 0.6)',
   },
   finePrint: {
     fontSize: 11,

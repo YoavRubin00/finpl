@@ -14,7 +14,7 @@
  * acknowledgement before charging users under the age of majority.
  */
 import React, { useCallback, useState } from 'react';
-import { Modal, View, Text, StyleSheet, Pressable, Alert } from 'react-native';
+import { Modal, View, Text, StyleSheet, Pressable, Alert, Platform } from 'react-native';
 import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import { X } from 'lucide-react-native';
@@ -39,7 +39,13 @@ interface Props {
   onPurchaseSuccess?: () => void;
 }
 
-const HAS_RC_KEY = !!(process.env.EXPO_PUBLIC_RC_APPLE_KEY || process.env.EXPO_PUBLIC_RC_GOOGLE_KEY);
+// Per-platform check — Android with only an Apple key set was falling through
+// to the real-money branch and crashing in RevenueCat init.
+const HAS_RC_KEY = Platform.OS === 'android'
+  ? !!process.env.EXPO_PUBLIC_RC_GOOGLE_KEY
+  : Platform.OS === 'ios'
+    ? !!process.env.EXPO_PUBLIC_RC_APPLE_KEY
+    : false;
 
 export function StarterPackModal({ visible, onDismiss, onPurchaseSuccess }: Props) {
   const router = useRouter();
@@ -197,7 +203,7 @@ export function StarterPackModal({ visible, onDismiss, onPurchaseSuccess }: Prop
                     locations={[0, 0.45, 1]}
                     start={{ x: 0, y: 0 }}
                     end={{ x: 0, y: 1 }}
-                    style={StyleSheet.absoluteFill}
+                    style={[StyleSheet.absoluteFill, { borderRadius: 31 }]}
                   />
                   <View style={styles.ctaRim} pointerEvents="none" />
                   <Text style={styles.ctaText} allowFontScaling={false}>

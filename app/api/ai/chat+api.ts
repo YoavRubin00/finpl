@@ -58,9 +58,6 @@ export async function POST(request: Request): Promise<Response> {
       system: systemPrompt,
       messages,
       maxOutputTokens: maxTokens,
-      providerOptions: {
-        google: { thinkingConfig: { thinkingBudget: 0 } },
-      },
     });
 
     // Pipe raw UTF-8 text chunks (no SSE framing) so React Native's fetch

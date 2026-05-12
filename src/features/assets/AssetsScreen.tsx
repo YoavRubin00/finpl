@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { ScrollView, View, Text, StyleSheet, Share } from "react-native";
 import { Image as ExpoImage } from "expo-image";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -48,6 +49,13 @@ export function AssetsScreen() {
   const referredFriends = useReferralStore((s) => s.referredFriends);
   const canCollectDividend = useReferralStore((s) => s.canCollectDividend);
   const collectDividend = useReferralStore((s) => s.collectDividend);
+  const refreshReferral = useReferralStore((s) => s.refresh);
+  const userEmail = useAuthStore((s) => s.email);
+
+  useEffect(() => {
+    if (!userEmail) return;
+    refreshReferral(userEmail).catch(() => { /* non-fatal */ });
+  }, [userEmail, refreshReferral]);
   const ownedAssets = useRealAssetsStore((s) => s.ownedAssets);
   const collectDailyIncome = useRealAssetsStore((s) => s.collectDailyIncome);
   const pendingIncome = useRealAssetsStore((s) => s.pendingIncome);
