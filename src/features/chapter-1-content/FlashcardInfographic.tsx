@@ -7,7 +7,7 @@
  * Generate with: bash scripts/generate_module_infographic.sh <module-id>
  */
 import { useState, useCallback, useEffect, useRef } from "react";
-import { View, Image, StyleSheet, Pressable, Modal, Platform } from "react-native";
+import { View, Image, Text, StyleSheet, Pressable, Modal, Platform } from "react-native";
 import Animated, { useSharedValue, useAnimatedStyle, withTiming, withRepeat, withSequence, Easing } from "react-native-reanimated";
 import { Image as ExpoImage } from "expo-image";
 import type { ImageSource, ImageLoadEventData } from "expo-image";
@@ -417,6 +417,51 @@ const LARGE_CARDS = new Set([
 /** Cards whose infographic should fill the container edge-to-edge (cover instead of contain) */
 const COVER_CARDS = new Set(["fc-1-3-2"]);
 
+interface TextOverlay {
+  topPct: number;
+  leftPct: number;
+  widthPct: number;
+  heightPct: number;
+  text?: string;
+  fontSize?: number;
+  color?: string;
+  backgroundColor?: string;
+}
+
+/** Patches over typos in cloud-hosted PNG infographics. Position % is relative to the rendered image. */
+const TEXT_OVERLAYS: Record<string, TextOverlay[]> = {
+  "fc-0-2-4": [
+    {
+      topPct: 40,
+      leftPct: 26,
+      widthPct: 24,
+      heightPct: 7,
+      text: "חשבון",
+      fontSize: 22,
+      color: "#0f172a",
+      backgroundColor: "#ffffff",
+    },
+  ],
+  "fc-1-2-4": [
+    {
+      topPct: 65,
+      leftPct: 30,
+      widthPct: 15,
+      heightPct: 5,
+      backgroundColor: "#e0f2fe",
+    },
+  ],
+  "fc-1-2-1": [
+    {
+      topPct: 73,
+      leftPct: 35,
+      widthPct: 13,
+      heightPct: 4,
+      backgroundColor: "#e0f2fe",
+    },
+  ],
+};
+
 interface Props {
   cardId: string;
   diveStep?: number;
@@ -531,6 +576,32 @@ export function FlashcardInfographic({ cardId, diveStep = 0, zoomRegions }: Prop
       {source && (
         <View style={[s.container, isLightBg && s.containerLight, { aspectRatio: ratio ?? 1.2, maxHeight: COMPACT_CARDS.has(cardId) ? 220 : LARGE_CARDS.has(cardId) ? undefined : 270, backgroundColor: '#f1f5f9' }]}>
           <AnimatedExpoImage source={source} style={[s.image, zoomStyle]} contentFit={COVER_CARDS.has(cardId) ? "cover" : "contain"} cachePolicy="memory-disk" priority="high" transition={200} onLoad={Platform.OS === 'web' ? undefined : handleLoad} />
+          {TEXT_OVERLAYS[cardId]?.map((o, i) => (
+            <View
+              key={i}
+              pointerEvents="none"
+              style={{
+                position: "absolute",
+                top: `${o.topPct}%`,
+                left: `${o.leftPct}%`,
+                width: `${o.widthPct}%`,
+                height: `${o.heightPct}%`,
+                backgroundColor: o.backgroundColor ?? "#ffffff",
+                justifyContent: "center",
+                alignItems: "center",
+              }}
+            >
+              {o.text ? (
+                <Text style={{
+                  fontSize: o.fontSize ?? 18,
+                  fontWeight: "800",
+                  color: o.color ?? "#0f172a",
+                  textAlign: "center",
+                  writingDirection: "rtl",
+                }}>{o.text}</Text>
+              ) : null}
+            </View>
+          ))}
           {lottieSource && (
             <View style={s.lottieFloatingBadge}>
               <LottieView
