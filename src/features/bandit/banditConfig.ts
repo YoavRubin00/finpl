@@ -312,6 +312,17 @@ export const EXPERIMENT_CONFIGS: AllExperimentConfigs = {
       },
     ],
   },
+
+  daily_email_variant: {
+    goal: 'retention',
+    variants: [
+      { id: 'shark_meta_v1',    label: 'meta',    payload: { tone: 'meta' } },
+      { id: 'shark_sad_v1',     label: 'sad',     payload: { tone: 'sad' } },
+      { id: 'shark_streak_v1',  label: 'streak',  payload: { tone: 'streak' } },
+      { id: 'shark_minimal_v1', label: 'minimal', payload: { tone: 'minimal' } },
+      { id: 'shark_welcome_v1', label: 'welcome', payload: { tone: 'welcome' } },
+    ],
+  },
 };
 
 export function getVariantPayload<E extends ExperimentId>(
