@@ -5,6 +5,7 @@ import { randomBytes } from 'crypto';
 import { userProfiles } from '../../../src/db/schema';
 import { enforceRateLimit } from '../_shared/rateLimit';
 import { safeErrorResponse } from '../_shared/safeError';
+import { sendWelcomeEmail } from '../_shared/sendWelcomeEmail';
 import { sanitizeString, isValidEmail } from '../_shared/validate';
 
 function getDb() {
@@ -133,6 +134,18 @@ export async function POST(request: Request): Promise<Response> {
     if (!syncToken) {
       syncToken = randomBytes(32).toString('hex');
       await db.update(userProfiles).set({ syncToken }).where(eq(userProfiles.authId, verifiedEmail));
+    }
+
+    // First-time welcome email: only sent if the row was just created (welcomeEmailSent=false)
+    // and we have a real deliverable address (Apple hidden-ID users have emailForDb=null).
+    // sendWelcomeEmail catches all errors and never throws — safe to await.
+    if (profile && !profile.welcomeEmailSent && emailForDb) {
+      await sendWelcomeEmail({
+        db,
+        userId: profile.id,
+        email: emailForDb,
+        displayName: profile.displayName ?? verifiedName,
+      });
     }
 
     // Security log

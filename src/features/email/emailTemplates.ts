@@ -256,3 +256,155 @@ export function buildDailyEmailHtml(params: {
 
   return { subject: c.subject, html };
 }
+
+// ─── Welcome email (one-time, sent on first signup) ──────────────────────────
+
+function escapeHtml(str: string): string {
+  return str
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+export function buildWelcomeEmailHtml(params: {
+  name: string;
+  ctaUrl?: string;
+}): { subject: string; html: string; text: string } {
+  const { name } = params;
+  const ctaUrl = params.ctaUrl ?? 'finpl://learn';
+  const safeName = escapeHtml(name);
+  const subject = 'ברוכים הבאים ל-FinPlay';
+
+  const html = `<!DOCTYPE html>
+<html dir="rtl" lang="he">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1.0">
+  <title>${subject}</title>
+</head>
+<body style="margin:0;padding:0;background:${BG};font-family:Arial,Helvetica,sans-serif;direction:rtl;">
+
+  <!-- Header -->
+  <div style="background:linear-gradient(135deg,${BLUE},${DARK_BLUE});padding:32px 24px 0;text-align:center;">
+    <h1 style="color:white;margin:0 0 20px;font-size:28px;font-weight:900;letter-spacing:-0.5px;">FinPlay</h1>
+    <img src="${SHARK_HAPPY}" alt=""
+         width="140" height="140"
+         style="display:block;margin:0 auto -20px;border-radius:50%;background:rgba(255,255,255,0.15);object-fit:contain;"
+         onerror="this.style.display='none'">
+  </div>
+
+  <!-- Body -->
+  <div style="max-width:520px;margin:0 auto;padding:40px 16px 24px;">
+
+    <h2 style="color:#1e3a5f;font-size:24px;margin:0 0 16px;text-align:right;font-weight:900;">
+      ברוכים הבאים, ${safeName}
+    </h2>
+
+    <div style="background:white;border-radius:16px;padding:24px;margin:0 0 20px;
+                box-shadow:0 2px 12px rgba(0,0,0,0.08);text-align:right;">
+
+      <p style="font-size:17px;color:#374151;margin:0 0 24px;line-height:1.6;">
+        עכשיו, כשהצטרפת לקהילה, אנחנו הופכים כל החלטה פיננסית למשחק.
+      </p>
+
+      <!-- CTA -->
+      <div style="text-align:center;margin:0 0 24px;">
+        <a href="${ctaUrl}"
+           style="display:inline-block;background:${BLUE};color:white;padding:16px 40px;
+                  border-radius:14px;font-size:18px;font-weight:900;text-decoration:none;
+                  box-shadow:0 4px 14px rgba(14,165,233,0.45);">
+          פתח/י את FinPlay
+        </a>
+      </div>
+
+      <hr style="border:none;border-top:1px solid #e5e7eb;margin:0 0 20px;">
+
+      <!-- Features (table layout for cross-client email compatibility) -->
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse;">
+        <tr>
+          <td valign="top" style="padding:0 0 14px 0;">
+            <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse;">
+              <tr>
+                <td valign="top" width="44" style="padding-left:14px;">
+                  <div style="width:40px;height:40px;background:${BLUE};border-radius:10px;
+                              color:white;font-weight:900;font-size:14px;
+                              text-align:center;line-height:40px;">01</div>
+                </td>
+                <td valign="middle" style="font-size:15px;color:#374151;line-height:1.5;">
+                  שיעורים קצרים על השקעות, חיסכון ופסיכולוגיה של כסף
+                </td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+        <tr>
+          <td valign="top" style="padding:0 0 14px 0;">
+            <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse;">
+              <tr>
+                <td valign="top" width="44" style="padding-left:14px;">
+                  <div style="width:40px;height:40px;background:${BLUE};border-radius:10px;
+                              color:white;font-weight:900;font-size:14px;
+                              text-align:center;line-height:40px;">02</div>
+                </td>
+                <td valign="middle" style="font-size:15px;color:#374151;line-height:1.5;">
+                  משימות יומיות, סטריקים ולוחות מצטיינים
+                </td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+        <tr>
+          <td valign="top" style="padding:0;">
+            <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse;">
+              <tr>
+                <td valign="top" width="44" style="padding-left:14px;">
+                  <div style="width:40px;height:40px;background:${BLUE};border-radius:10px;
+                              color:white;font-weight:900;font-size:14px;
+                              text-align:center;line-height:40px;">03</div>
+                </td>
+                <td valign="middle" style="font-size:15px;color:#374151;line-height:1.5;">
+                  מנטור AI שזמין 24/7 לכל שאלה פיננסית
+                </td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+      </table>
+
+    </div>
+
+    <p style="font-size:15px;color:#374151;text-align:right;margin:0 0 8px;line-height:1.6;">
+      יש שאלה, פידבק או רעיון? תענו למייל הזה — אנחנו קוראים הכל.
+    </p>
+    <p style="font-size:15px;color:#1e3a5f;text-align:right;margin:0 0 32px;font-weight:700;">
+      — צוות FinPlay
+    </p>
+
+    <hr style="border:none;border-top:1px solid #e5e7eb;margin:0 0 16px;">
+    <div style="text-align:center;font-size:12px;color:#9ca3af;">
+      <p style="margin:0;">© 2026 FinPlay · finplay.me</p>
+    </div>
+  </div>
+
+</body>
+</html>`;
+
+  const text = `ברוכים הבאים, ${name}
+
+עכשיו, כשהצטרפת לקהילה, אנחנו הופכים כל החלטה פיננסית למשחק.
+
+פתח/י את FinPlay: ${ctaUrl}
+
+מה מחכה לך:
+01 - שיעורים קצרים על השקעות, חיסכון ופסיכולוגיה של כסף
+02 - משימות יומיות, סטריקים ולוחות מצטיינים
+03 - מנטור AI שזמין 24/7 לכל שאלה פיננסית
+
+יש שאלה, פידבק או רעיון? תענו למייל הזה - אנחנו קוראים הכל.
+
+— צוות FinPlay`;
+
+  return { subject, html, text };
+}
