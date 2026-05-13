@@ -49,7 +49,7 @@ const LIFESTYLE_COPY: LifestyleCopy[] = [
     inviteTitle: "🎿 חופשת סקי עם הקפטן!",
     inviteSubtitle: "צריך לדעת גם לנוח",
     ctaLabel: "בואו לקפוץ איתי!",
-    caption: "סקי בחופשה שהדיווידנדים מימנו",
+    caption: "סקי בחופשה",
     trimEnd: 0.5,
   },
   {

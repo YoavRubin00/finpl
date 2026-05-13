@@ -90,21 +90,6 @@ export const CROWD_QUESTIONS: readonly CrowdQuestion[] = [
     },
   },
   {
-    id: 'cq-cpi-below-consensus',
-    text: 'האינפלציה תפתיע כלפי מטה החודש?',
-    options: [
-      { id: 'a', label: 'כן', emoji: '✅', sentiment: 'yes' },
-      { id: 'b', label: 'לא', emoji: '❌', sentiment: 'no' },
-    ],
-    baselinePct: [42, 58],
-    baselineN: 1520,
-    tags: {
-      timing: 'monthly',
-      topic: 'macro',
-      triggers: { monthDay: [9, 10, 11, 12, 13, 14, 15] },
-    },
-  },
-  {
     id: 'cq-nfp-beat',
     text: 'דוח התעסוקה ינצח את התחזיות?',
     termExplanation: {

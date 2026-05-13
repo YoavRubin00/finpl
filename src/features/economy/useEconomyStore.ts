@@ -110,7 +110,7 @@ interface EconomyState {
   dismissLevelUp: () => void;
   addStreakFreezes: (count: number) => void;
   dismissFreezeSaveAck: () => void;
-  repairStreak: (source: "coins" | "ad") => boolean; // true = succeeded
+  repairStreak: (source: "gems" | "ad") => boolean; // true = succeeded
   dismissRepairOffer: () => void;
 }
 
@@ -452,13 +452,13 @@ export const useEconomyStore = create<EconomyState>()(
         set({ pendingFreezeSaveAck: false });
       },
 
-      repairStreak: (source: "coins" | "ad") => {
-        const { pendingRepairOffer, previousStreakBeforeBreak, coins } = get();
+      repairStreak: (source: "gems" | "ad") => {
+        const { pendingRepairOffer, previousStreakBeforeBreak, gems } = get();
         if (!pendingRepairOffer || previousStreakBeforeBreak < 3) return false;
-        if (source === "coins") {
-          const REPAIR_COST = 200;
-          if (coins < REPAIR_COST) return false;
-          set((state) => ({ coins: state.coins - REPAIR_COST }));
+        if (source === "gems") {
+          const REPAIR_COST = 30;
+          if (gems < REPAIR_COST) return false;
+          set((state) => ({ gems: state.gems - REPAIR_COST }));
         }
         // Both paths: restore streak to previous value and mark today active
         const today = todayISO();
