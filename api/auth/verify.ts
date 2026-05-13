@@ -3,6 +3,7 @@ import { eq } from 'drizzle-orm';
 import { neon } from '@neondatabase/serverless';
 import { drizzle } from 'drizzle-orm/neon-http';
 import { userProfiles } from '../../src/db/schema';
+import { sendWelcomeEmail } from '../../app/api/_shared/sendWelcomeEmail';
 
 function getDb() {
   const url = process.env.DATABASE_URL ?? '';
@@ -85,6 +86,17 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       .limit(1);
 
     const profile = rows[0] ?? null;
+
+    // First-time welcome email: only sent if the row was just created (welcomeEmailSent=false)
+    // and we have a deliverable email. sendWelcomeEmail catches all errors and never throws.
+    if (profile && !profile.welcomeEmailSent && profile.email) {
+      await sendWelcomeEmail({
+        db,
+        userId: profile.id,
+        email: profile.email,
+        displayName: profile.displayName ?? verifiedName,
+      });
+    }
 
     return res.status(200).json({ ok: true, profile });
   } catch (err: unknown) {
