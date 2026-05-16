@@ -199,12 +199,28 @@ export default function RootLayout() {
   useEffect(() => {
     if (Platform.OS === "web") return;
     (async () => {
+      let attGranted = false;
       if (Platform.OS === "ios") {
         try {
           const { requestTrackingPermissionsAsync } = await import("expo-tracking-transparency");
-          await requestTrackingPermissionsAsync();
+          const { status } = await requestTrackingPermissionsAsync();
+          attGranted = status === "granted";
         } catch { /* native module unavailable in Expo Go / pre-prebuild */ }
+      } else {
+        // Android has no ATT — FB SDK can collect IDFA-equivalent freely
+        attGranted = true;
       }
+      // Facebook SDK — must initialize AFTER ATT so iOS users who denied
+      // tracking aren't profiled. setAdvertiserTrackingEnabled(false) on deny
+      // gates the AAID/IDFA from the FB native bridge.
+      try {
+        // eslint-disable-next-line @typescript-eslint/no-require-imports
+        const { Settings } = require("react-native-fbsdk-next");
+        if (Platform.OS === "ios") {
+          await Settings.setAdvertiserTrackingEnabled(attGranted);
+        }
+        Settings.initializeSDK();
+      } catch { /* SDK not available in dev without native build */ }
       try {
         const { default: mobileAds } = require("react-native-google-mobile-ads") as {
           default: () => { initialize(): Promise<unknown> };

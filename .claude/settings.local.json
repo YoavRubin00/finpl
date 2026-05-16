@@ -68,7 +68,8 @@
       "Bash(echo \"exit=$?\")",
       "Bash(git -C c:/Projects/finpl/finpl check-ignore -v .env)",
       "Bash(git -C c:/Projects/finpl/finpl status --short .env)",
-      "PowerShell(gh --version)"
+      "PowerShell(gh --version)",
+      "PowerShell(function Convert-Sha1ToKeyHash\\([string]$sha1\\) { $bytes = $sha1 -split ':' | ForEach-Object { [Convert]::ToByte\\($_, 16\\) }; [Convert]::ToBase64String\\($bytes\\) }; \"App signing key:  $\\(Convert-Sha1ToKeyHash '48:0A:4A:E5:36:DD:CE:9D:F9:46:13:D1:85:F2:05:78:75:BD:27:7F'\\)\"; \"Upload key:       $\\(Convert-Sha1ToKeyHash '62:13:F5:56:CE:9D:F0:E0:6F:4C:C8:4D:E0:6B:A9:24:A8:8E:BF:9A'\\)\")"
     ],
     "additionalDirectories": [
       "\\tmp",

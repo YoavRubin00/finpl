@@ -71,6 +71,19 @@
           "userTrackingPermission": "FinPlay משתמשת במזהה הפרסום של המכשיר כדי להציג מודעות רלוונטיות ולשפר את חוויית המשחק. תוכל/י לסרב מבלי לאבד שום תוכן."
         }
       ],
+      [
+        "react-native-fbsdk-next",
+        {
+          "appID": "1156760033282798",
+          "clientToken": "55fcd48d206e7816e4cd52e1b4f3ac37",
+          "displayName": "FinPlay",
+          "scheme": "fb1156760033282798",
+          "advertiserIDCollectionEnabled": true,
+          "autoLogAppEventsEnabled": true,
+          "isAutoInitEnabled": true,
+          "iosUserTrackingPermission": "FinPlay משתמשת במזהה הפרסום כדי להציג מודעות רלוונטיות ולשפר את חוויית המשחק. תוכל/י לסרב מבלי לאבד שום תוכן."
+        }
+      ],
       "./plugins/with-no-background-audio"
     ],
     "extra": {
@@ -324,8 +337,40 @@
             ]
           }
         ],
-        "NSPrivacyTracking": false,
-        "NSPrivacyCollectedDataTypes": []
+        "NSPrivacyTracking": true,
+        "NSPrivacyTrackingDomains": [
+          "graph.facebook.com",
+          "connect.facebook.net",
+          "www.facebook.com"
+        ],
+        "NSPrivacyCollectedDataTypes": [
+          {
+            "NSPrivacyCollectedDataType": "NSPrivacyCollectedDataTypeDeviceID",
+            "NSPrivacyCollectedDataTypeLinked": true,
+            "NSPrivacyCollectedDataTypeTracking": true,
+            "NSPrivacyCollectedDataTypePurposes": [
+              "NSPrivacyCollectedDataTypePurposeAdvertising",
+              "NSPrivacyCollectedDataTypePurposeAnalytics"
+            ]
+          },
+          {
+            "NSPrivacyCollectedDataType": "NSPrivacyCollectedDataTypeProductInteraction",
+            "NSPrivacyCollectedDataTypeLinked": true,
+            "NSPrivacyCollectedDataTypeTracking": true,
+            "NSPrivacyCollectedDataTypePurposes": [
+              "NSPrivacyCollectedDataTypePurposeAdvertising",
+              "NSPrivacyCollectedDataTypePurposeAnalytics"
+            ]
+          },
+          {
+            "NSPrivacyCollectedDataType": "NSPrivacyCollectedDataTypePurchaseHistory",
+            "NSPrivacyCollectedDataTypeLinked": true,
+            "NSPrivacyCollectedDataTypeTracking": false,
+            "NSPrivacyCollectedDataTypePurposes": [
+              "NSPrivacyCollectedDataTypePurposeAnalytics"
+            ]
+          }
+        ]
       }
     }
   }

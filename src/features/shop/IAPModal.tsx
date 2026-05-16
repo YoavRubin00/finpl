@@ -13,6 +13,7 @@ import { LottieIcon } from '../../components/ui/LottieIcon';
 import { useEconomyStore } from '../economy/useEconomyStore';
 import { ConfettiExplosion } from '../../components/ui/ConfettiExplosion';
 import { purchaseGemBundle } from '../../services/revenueCat';
+import { logPurchase } from '../../utils/fbEvents';
 import type { GemBundle, CoinBundle } from './types';
 
 type AnyBundle = GemBundle | CoinBundle;
@@ -61,6 +62,15 @@ export function IAPModal({ visible, bundle, onDismiss, onPurchaseSuccess }: IAPM
         // No RC key on this platform → dev preview path: grant locally so the
         // flow stays clickable instead of throwing "Purchases not configured".
         addGems(bundle.gems);
+        // Facebook attribution — only on real-money branch with RC key. The
+        // dev grant path (no RC) shouldn't pollute Ads Manager ROAS data.
+        if (HAS_RC_KEY) {
+          logPurchase(bundle.priceILS, 'ILS', {
+            fb_content_type: 'gem_bundle',
+            fb_content_id: bundle.id,
+            fb_num_items: bundle.gems,
+          });
+        }
       } catch (err: unknown) {
         const msg = err instanceof Error ? err.message : 'שגיאה לא צפויה';
         // RC user-cancel surfaces as a thrown error too — quietly close.

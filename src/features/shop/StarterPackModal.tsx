@@ -25,6 +25,7 @@ import { useAuthStore } from '../auth/useAuthStore';
 import { getAvatarById } from '../avatars/avatarData';
 import { getAvatarSvgIcon } from '../../components/svg/avatars/AvatarMascots';
 import { successHaptic, tapHaptic } from '../../utils/haptics';
+import { logPurchase } from '../../utils/fbEvents';
 import { purchaseGemBundle } from '../../services/revenueCat';
 import {
   getTodaysStarterPack,
@@ -77,6 +78,13 @@ export function StarterPackModal({ visible, onDismiss, onPurchaseSuccess }: Prop
         // Real money path. RC throws on user-cancel — we treat that as a no-op,
         // not a failure, so the modal just closes silently.
         await purchaseGemBundle('starter-pack');
+        // Facebook attribution — only on real-money branch with RC key. The
+        // dev grant path (no RC) shouldn't pollute Ads Manager ROAS data.
+        logPurchase(19.90, 'ILS', {
+          fb_content_type: 'starter_pack',
+          fb_content_id: pack.id,
+          fb_num_items: pack.gems + pack.coins,
+        });
       }
       grantPack();
       successHaptic();

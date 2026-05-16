@@ -6,6 +6,7 @@ import type { UserProfile } from "./types";
 import { upsertUserProfile, deleteUserProfile } from "../../db/sync/syncUserProfile";
 import { logoutRevenueCat } from "../../services/revenueCat";
 import { identifyUser, resetUser, captureEvent } from "../../lib/posthog";
+import { logCompletedRegistration } from "../../utils/fbEvents";
 
 interface AuthState {
   isAuthenticated: boolean;
@@ -42,6 +43,10 @@ export const useAuthStore = create<AuthState>()(
       createdAt: null,
 
       signIn: (displayName: string, email: string, serverHasProfile = false, syncToken?: string | null) => {
+        // Detect first-time registration BEFORE the set: returning users on
+        // existing devices have a createdAt; returning users on new devices
+        // get serverHasProfile=true. New registrations have neither.
+        const isNewRegistration = !serverHasProfile && !get().createdAt;
         set((state) => ({
           isAuthenticated: true,
           isGuest: false,
@@ -72,6 +77,9 @@ export const useAuthStore = create<AuthState>()(
         upsertUserProfile(email, { displayName, email }).catch(() => { /* fire-and-forget */ });
         identifyUser(email, { displayName, email, isGuest: false });
         captureEvent('user_signed_in', { method: 'email' });
+        if (isNewRegistration) {
+          logCompletedRegistration('email');
+        }
       },
 
       enterGuestMode: () => {
@@ -104,6 +112,8 @@ export const useAuthStore = create<AuthState>()(
         upsertUserProfile(email, { displayName, email }).catch(() => { /* fire-and-forget */ });
         identifyUser(email, { displayName, email, isGuest: false, convertedFromGuest: true });
         captureEvent('guest_converted_to_user');
+        // Guest → real user IS a registration event for Facebook attribution.
+        logCompletedRegistration('email');
       },
 
       completeOnboarding: (profile: UserProfile) => {
