@@ -181,6 +181,7 @@ export function IAPModal({ visible, bundle, onDismiss, onPurchaseSuccess }: IAPM
               start={{ x: 0, y: 0 }}
               end={{ x: 0, y: 1 }}
               style={[StyleSheet.absoluteFill, { borderRadius: 31 }]}
+              pointerEvents="none"
             />
             <View style={styles.buyBtnRim} pointerEvents="none" />
             <Text style={[styles.buyBtnText, isCoins && styles.buyBtnTextCoins]}>

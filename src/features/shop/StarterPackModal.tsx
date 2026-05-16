@@ -212,6 +212,7 @@ export function StarterPackModal({ visible, onDismiss, onPurchaseSuccess }: Prop
                     start={{ x: 0, y: 0 }}
                     end={{ x: 0, y: 1 }}
                     style={[StyleSheet.absoluteFill, { borderRadius: 31 }]}
+                    pointerEvents="none"
                   />
                   <View style={styles.ctaRim} pointerEvents="none" />
                   <Text style={styles.ctaText} allowFontScaling={false}>

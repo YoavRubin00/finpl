@@ -250,14 +250,14 @@ function GemBundleCard({ bundle, onPress, index }: { bundle: GemBundle; onPress:
       >
         {/* Top-center tier pill ("הכי משתלם ★" / "פופולרי") */}
         {tier.topPill && (
-          <LinearGradient colors={tier.pillBg} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={styles2.tierPill}>
+          <LinearGradient colors={tier.pillBg} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={styles2.tierPill} pointerEvents="none">
             <Text style={[styles2.tierPillText, { color: tier.pillText }]} allowFontScaling={false} numberOfLines={1}>{tier.topPill}</Text>
           </LinearGradient>
         )}
 
         {/* Bonus sticker — top-right green tilted pill with "+25%" etc. */}
         {cleanBonus && (
-          <LinearGradient colors={tier.bonusBg} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles2.bonusSticker}>
+          <LinearGradient colors={tier.bonusBg} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles2.bonusSticker} pointerEvents="none">
             <Text style={styles2.bonusStickerText} allowFontScaling={false} numberOfLines={1}>{cleanBonus}</Text>
           </LinearGradient>
         )}
@@ -282,6 +282,7 @@ function GemBundleCard({ bundle, onPress, index }: { bundle: GemBundle; onPress:
           start={{ x: 0, y: 0 }}
           end={{ x: 0, y: 1 }}
           style={styles2.gemPriceBtn}
+          pointerEvents="none"
         >
           <Text style={styles2.gemPriceBtnText} allowFontScaling={false}>{bundle.priceLabel}</Text>
         </LinearGradient>
@@ -1258,7 +1259,7 @@ const styles2 = StyleSheet.create({
     position: 'absolute',
     top: -8,
     alignSelf: 'center',
-    paddingHorizontal: 12,
+    paddingHorizontal: 8,
     paddingVertical: 3,
     borderRadius: 999,
     borderWidth: 1.5,
@@ -1271,9 +1272,9 @@ const styles2 = StyleSheet.create({
     zIndex: 5,
   },
   tierPillText: {
-    fontSize: 9,
+    fontSize: 8,
     fontWeight: '900',
-    letterSpacing: 0.6,
+    letterSpacing: 0.3,
     writingDirection: 'rtl' as const,
   },
   gemBonusPill: {
