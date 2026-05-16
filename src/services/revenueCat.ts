@@ -108,11 +108,22 @@ export async function logoutRevenueCat(): Promise<void> {
 
 /* ── Offerings ─────────────────────────────────────────────────────── */
 
-/** Fetch the current offering (subscription packages + gem products) */
+/** Fetch the current offering (subscription packages + gem products).
+ * Retries up to 3 times — Google Play sometimes returns null on first cold call
+ * before the BillingClient is fully ready. Each retry waits 1s.
+ */
 export async function getOffering(): Promise<PurchasesOffering | null> {
   if (IS_WEB || !Purchases) return null;
-  const offerings = await Purchases.getOfferings();
-  return offerings.current;
+  for (let attempt = 0; attempt < 3; attempt++) {
+    try {
+      const offerings = await Purchases.getOfferings();
+      if (offerings.current) return offerings.current;
+    } catch {
+      // swallow — retry
+    }
+    if (attempt < 2) await new Promise((r) => setTimeout(r, 1000));
+  }
+  return null;
 }
 
 /* ── Purchases ─────────────────────────────────────────────────────── */
@@ -126,7 +137,12 @@ export async function purchasePackage(
   return customerInfo;
 }
 
-/** Purchase a consumable product by its store product ID (for gem bundles) */
+/** Purchase a consumable product by its store product ID (for gem bundles).
+ * Tries 3 strategies in order — same robust path as the working Starter Pack.
+ * Required because Android's BillingClient can return empty arrays in cases
+ * where the type filter is misclassified, the product is reachable only via
+ * an offering, or the cold-start cache is empty.
+ */
 export async function purchaseGemBundle(
   bundleId: string,
 ): Promise<CustomerInfo> {
@@ -137,22 +153,70 @@ export async function purchaseGemBundle(
     throw new Error(`Unknown gem bundle: ${bundleId}`);
   }
 
-  // Wrap getProducts with a 10s timeout — on Android, when products aren't
-  // configured in Play Console, getProducts can hang indefinitely instead of
-  // returning an empty array. Without the timeout, the buy button silently
-  // does nothing.
-  const products = await Promise.race([
-    Purchases.getProducts([productId], NON_SUBSCRIPTION_TYPE),
-    new Promise<never>((_, reject) =>
-      setTimeout(() => reject(new Error(`Store timeout (10s) — product "${productId}" not configured in Play Console / App Store Connect, or store unreachable`)), 10000)
-    ),
-  ]);
-  if (products.length === 0) {
-    throw new Error(`Product not found in store: ${productId}. Configure it in Play Console / App Store Connect with this exact ID.`);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const fetchWithTimeout = async <T,>(p: Promise<T>, ms: number): Promise<T> => {
+    return Promise.race([
+      p,
+      new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new Error(`Store timeout (${ms}ms)`)), ms)
+      ),
+    ]);
+  };
+
+  // ── Strategy 1: typed getProducts (matches the working Starter Pack flow) ──
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let products: any[] = [];
+  try {
+    products = await fetchWithTimeout(
+      Purchases.getProducts([productId], NON_SUBSCRIPTION_TYPE),
+      8000,
+    );
+  } catch {
+    /* swallow — try next strategy */
   }
 
-  const { customerInfo } = await Purchases.purchaseStoreProduct(products[0]);
-  return customerInfo;
+  // ── Strategy 2: untyped getProducts ──
+  // Some Android SDK versions misclassify the product or return [] when the
+  // type filter is set. Retry without the filter.
+  if (!products || products.length === 0) {
+    try {
+      products = await fetchWithTimeout(
+        Purchases.getProducts([productId]),
+        8000,
+      );
+    } catch {
+      /* swallow */
+    }
+  }
+
+  // If we found the product via getProducts, complete the purchase.
+  if (products && products.length > 0) {
+    const { customerInfo } = await Purchases.purchaseStoreProduct(products[0]);
+    return customerInfo;
+  }
+
+  // ── Strategy 3: purchase via offering package ──
+  // If gem products are configured in a RevenueCat offering (recommended),
+  // we can purchase the package directly without needing getProducts to work.
+  try {
+    const offering = await getOffering();
+    if (offering) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const pkg = offering.availablePackages.find(
+        (p) => p.product?.identifier === productId,
+      );
+      if (pkg) {
+        const { customerInfo } = await Purchases.purchasePackage(pkg);
+        return customerInfo;
+      }
+    }
+  } catch {
+    /* swallow — we'll throw the user-facing error below */
+  }
+
+  throw new Error(
+    `Product "${productId}" not available. Verify it's Active + Consumable + has an ILS price in Play Console / App Store Connect.`
+  );
 }
 
 /* ── Entitlement checks ────────────────────────────────────────────── */

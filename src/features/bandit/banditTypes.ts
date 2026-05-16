@@ -8,7 +8,8 @@ export type ExperimentId =
   | 'bridge_momentum_cta'
   | 'bridge_social_proof'
   | 'upgrade_paywall_headline'
-  | 'upgrade_trigger_timing';
+  | 'upgrade_trigger_timing'
+  | 'daily_email_variant';
 
 export interface BanditVariant {
   id: string;
@@ -64,6 +65,11 @@ export type ExperimentPayloads = {
   };
   upgrade_trigger_timing: {
     trigger: 'immediate' | 'after_3_hearts_lost' | 'after_feature_blocked_twice';
+  };
+  daily_email_variant: {
+    // Email body/subject is built in src/features/email/emailTemplates.ts
+    // keyed by variant id. Payload only carries a short tone label for analytics.
+    tone: 'meta' | 'sad' | 'streak' | 'minimal' | 'welcome';
   };
 };
 

@@ -3,6 +3,7 @@ import { persist, createJSONStorage } from 'zustand/middleware';
 import { zustandStorage } from '../../lib/zustandStorage';
 import { EXPERIMENT_CONFIGS } from './banditConfig';
 import { postBanditEvent, fetchBanditState } from '../../db/sync/syncBandit';
+import { sampleBeta } from './sampleBetaBandit';
 import type {
   BanditState,
   BanditExperiment,
@@ -10,43 +11,6 @@ import type {
   BanditReportExperiment,
   ExperimentId,
 } from './banditTypes';
-
-// ── Thompson Sampling engine ─────────────────────────────────────────────────
-
-function randn(): number {
-  // Box-Muller transform: uniform → standard normal
-  const u = Math.random();
-  const v = Math.random();
-  return Math.sqrt(-2 * Math.log(u + 1e-10)) * Math.cos(2 * Math.PI * v);
-}
-
-function sampleGamma(shape: number): number {
-  // Marsaglia-Tsang (2000) — accurate for shape in [1, 100]
-  if (shape < 1) {
-    return sampleGamma(shape + 1) * Math.pow(Math.random() + 1e-10, 1 / shape);
-  }
-  const d = shape - 1 / 3;
-  const c = 1 / Math.sqrt(9 * d);
-  for (;;) {
-    let x: number;
-    let v: number;
-    do {
-      x = randn();
-      v = 1 + c * x;
-    } while (v <= 0);
-    v = v * v * v;
-    const u = Math.random();
-    if (u < 1 - 0.0331 * x * x * x * x) return d * v;
-    if (Math.log(u + 1e-10) < 0.5 * x * x + d * (1 - v + Math.log(v + 1e-10))) return d * v;
-  }
-}
-
-function sampleBeta(alpha: number, beta: number): number {
-  const ga = sampleGamma(alpha);
-  const gb = sampleGamma(beta);
-  const denom = ga + gb;
-  return denom === 0 ? 0.5 : ga / denom;
-}
 
 // ── Initialise experiments from config ──────────────────────────────────────
 

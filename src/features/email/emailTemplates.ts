@@ -1,3 +1,6 @@
+import * as fs from 'fs';
+import * as path from 'path';
+
 // ─── Upload these WebP files to Vercel Blob and update the URLs below ──────
 // Source files: assets/webp/fin-fire-1.webp, fin-happy.webp, fin-empathic.webp
 const BLOB = 'https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/mascot';
@@ -255,4 +258,208 @@ export function buildDailyEmailHtml(params: {
 </html>`;
 
   return { subject: c.subject, html };
+}
+
+// ─── Welcome email (one-time, sent on first signup) ──────────────────────────
+
+function escapeHtml(str: string): string {
+  return str
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+let _welcomeTemplateCache: string | null = null;
+function loadWelcomeTemplate(): string {
+  if (_welcomeTemplateCache !== null) return _welcomeTemplateCache;
+  // The HTML lives next to this source file. On Vercel, vercel.json's
+  // `includeFiles` ensures it's bundled with the deployed function.
+  const candidates = [
+    path.join(__dirname, 'welcomeEmail.html'),
+    path.join(process.cwd(), 'src/features/email/welcomeEmail.html'),
+  ];
+  for (const p of candidates) {
+    if (fs.existsSync(p)) {
+      _welcomeTemplateCache = fs.readFileSync(p, 'utf8');
+      return _welcomeTemplateCache;
+    }
+  }
+  throw new Error(`welcomeEmail.html not found. Looked in: ${candidates.join(', ')}`);
+}
+
+export function buildWelcomeEmailHtml(params: {
+  name: string;
+  /** Deep link that opens the app on the user's phone. Default: 'finpl://learn'. */
+  appDeepLink?: string;
+  /** Fallback URL shown under the CTA for users without the app. Default: landing page. */
+  appStoreFallback?: string;
+  /** WhatsApp community invite link. Default: the official FinPlay group. */
+  whatsappUrl?: string;
+}): { subject: string; html: string; text: string } {
+  const { name } = params;
+  const appDeepLink = params.appDeepLink ?? 'finpl://learn';
+  const appStoreFallback = params.appStoreFallback ?? 'https://finplay.me';
+  const whatsappUrl = params.whatsappUrl ?? 'https://chat.whatsapp.com/JzyPhMvOOcyBbiwzlm4psT';
+  const subject = 'ברוכים הבאים ל-FinPlay';
+
+  const html = loadWelcomeTemplate()
+    .split('{{name}}').join(escapeHtml(name))
+    .split('{{appDeepLink}}').join(escapeHtml(appDeepLink))
+    .split('{{appStoreFallback}}').join(escapeHtml(appStoreFallback))
+    .split('{{whatsappUrl}}').join(escapeHtml(whatsappUrl));
+
+  const text = `ברוכים הבאים, ${name}
+
+אני קפטן שארק. אני אלמד אתכם את הכללים של הכסף — לא כדי שתהיו מומחים, אלא כדי שלא יסדרו אתכם.
+
+להתחיל לשחק: ${appDeepLink}
+(האפליקציה לא נפתחת? ${appStoreFallback})
+
+רוצים להציץ לקהילה? יש לנו קבוצת וואטסאפ קטנה, בלי ספאם — רק שיחות על כסף וחיים.
+הצטרפו: ${whatsappUrl}
+
+יש שאלה? פשוט תענו למייל הזה — אני קורא הכל.
+
+— קפטן שארק`;
+
+  return { subject, html, text };
+}
+
+// ─── Retention emails — A/B tested variants ──────────────────────────────────
+// 5 variants in Captain Shark's voice, designed for users who played
+// exactly yesterday but haven't returned today. Bandit picks one per send.
+// Template: retentionEmail.html (loaded once, cached, params substituted).
+
+export type RetentionVariantId =
+  | 'shark_meta_v1'
+  | 'shark_sad_v1'
+  | 'shark_streak_v1'
+  | 'shark_minimal_v1'
+  | 'shark_welcome_v1';
+
+interface RetentionVariantCopy {
+  subject: string;
+  headline: string;
+  bodyHtml: string;
+  sharkImg: string;
+  sharkAlt: string;
+  ctaText: string;
+}
+
+/** Returns the variant copy. {{name}} and {{streak}} in any string get substituted by the caller. */
+const RETENTION_VARIANTS: Record<RetentionVariantId, RetentionVariantCopy> = {
+  // V1 — META / self-aware passive-aggressive
+  shark_meta_v1: {
+    subject: 'תזכורת מספר שלוש, {{name}} 🦈',
+    headline: 'אולי אני עושה משהו לא בסדר?',
+    bodyHtml: `<p style="margin:0 0 14px;">ניסיתי בעדינות. ניסיתי באימוג'ים. אפילו ניסיתי עם הבטחות של מטבעות.</p>
+      <p style="margin:0 0 14px;">אולי הגיע הזמן שאני פשוט אשאל ישירות:</p>
+      <p style="margin:0;font-weight:700;">שיעור אחד היום, {{name}}? לא חייבים. רק שואל.</p>`,
+    sharkImg: SHARK_STANDARD,
+    sharkAlt: 'קפטן שארק רגוע',
+    ctaText: 'טוב, ניסיון אחד 🤝',
+  },
+
+  // V2 — SAD / missing-you
+  shark_sad_v1: {
+    subject: '(רק רוצה לבדוק שאת/ה בסדר 🥺)',
+    headline: '{{name}}, לא לוחץ. רק שואל מה שלומך.',
+    bodyHtml: `<p style="margin:0 0 14px;">אתמול שמתי לב שלא הצטרפת ללמידה. בלי שיפוט, באמת.</p>
+      <p style="margin:0 0 14px;">החיים תופסים. אני מבין.</p>
+      <p style="margin:0;">אם בא לך — אני כאן. שיעור קצר, 3 דקות, ושנינו מרוצים 💙</p>`,
+    sharkImg: SHARK_EMPATHIC,
+    sharkAlt: 'קפטן שארק אמפתי',
+    ctaText: 'באתי לבדוק ←',
+  },
+
+  // V3 — STREAK URGENCY
+  shark_streak_v1: {
+    subject: '⚠️ {{streak}} ימים בסכנה ({{name}})',
+    headline: 'הרצף שלך תלוי על חוט',
+    bodyHtml: `<p style="margin:0 0 14px;">{{streak}} ימים ברצף זה לא מובן מאליו. השקעת. הופעת.</p>
+      <p style="margin:0 0 14px;">אבל הספירה מתאפסת אם לא תפתח/י את האפליקציה היום.</p>
+      <p style="margin:0;font-weight:700;color:#dc2626;">שיעור אחד קצר עכשיו = הרצף ניצול 🔥</p>`,
+    sharkImg: SHARK_FIRE,
+    sharkAlt: 'קפטן שארק נחוש',
+    ctaText: 'להציל את הרצף 🔥',
+  },
+
+  // V4 — MINIMAL ASK
+  shark_minimal_v1: {
+    subject: '3 דקות. זה הכל.',
+    headline: '3 דקות, {{name}}.',
+    bodyHtml: `<p style="margin:0 0 14px;">פחות זמן ממה שלקח לך לבחור איזה סרט להעלות אתמול בערב.</p>
+      <p style="margin:0;font-weight:700;">שיעור אחד. קצר. פשוט. וחזרנו.</p>`,
+    sharkImg: SHARK_STANDARD,
+    sharkAlt: 'קפטן שארק רגוע',
+    ctaText: 'יאללה 3 דקות ←',
+  },
+
+  // V5 — WELCOME BACK
+  shark_welcome_v1: {
+    subject: '🦈 חזרה רכה, {{name}}?',
+    headline: '{{name}}, נחזור בעדינות?',
+    bodyHtml: `<p style="margin:0 0 14px;">בלי לחץ. בלי תזכורות מציקות. רק הזמנה.</p>
+      <p style="margin:0 0 14px;">השארנו לך שיעור קל שמתאים בדיוק למי שחוזר אחרי הפסקה — מעניין, קצר, ומחזיר לקצב.</p>
+      <p style="margin:0;">בא לך להתחיל ביחד? ☀️</p>`,
+    sharkImg: SHARK_HAPPY,
+    sharkAlt: 'קפטן שארק שמח',
+    ctaText: 'כן, בואו נחזור ☀️',
+  },
+};
+
+export const RETENTION_VARIANT_IDS: readonly RetentionVariantId[] = Object.keys(
+  RETENTION_VARIANTS,
+) as RetentionVariantId[];
+
+let _retentionTemplateCache: string | null = null;
+function loadRetentionTemplate(): string {
+  if (_retentionTemplateCache !== null) return _retentionTemplateCache;
+  const candidates = [
+    path.join(__dirname, 'retentionEmail.html'),
+    path.join(process.cwd(), 'src/features/email/retentionEmail.html'),
+  ];
+  for (const p of candidates) {
+    if (fs.existsSync(p)) {
+      _retentionTemplateCache = fs.readFileSync(p, 'utf8');
+      return _retentionTemplateCache;
+    }
+  }
+  throw new Error(`retentionEmail.html not found. Looked in: ${candidates.join(', ')}`);
+}
+
+/** Substitutes {{name}}, {{streak}}, {{ctaUrl}}, {{unsubscribeUrl}}, and all variant copy. */
+export function buildRetentionEmailHtml(params: {
+  variantId: RetentionVariantId;
+  name: string;
+  streak: number;
+  ctaUrl: string;
+  unsubscribeUrl: string;
+}): { subject: string; html: string } {
+  const v = RETENTION_VARIANTS[params.variantId];
+  if (!v) throw new Error(`Unknown retention variant: ${params.variantId}`);
+
+  const safeName = escapeHtml(params.name);
+  const safeStreak = String(params.streak);
+
+  const interpolate = (s: string): string =>
+    s.split('{{name}}').join(safeName).split('{{streak}}').join(safeStreak);
+
+  const subject = interpolate(v.subject);
+
+  const html = loadRetentionTemplate()
+    .split('{{subject}}').join(escapeHtml(subject))
+    .split('{{name}}').join(safeName)
+    .split('{{streak}}').join(safeStreak)
+    .split('{{headline}}').join(escapeHtml(interpolate(v.headline)))
+    .split('{{bodyHtml}}').join(interpolate(v.bodyHtml))
+    .split('{{sharkImg}}').join(v.sharkImg)
+    .split('{{sharkAlt}}').join(escapeHtml(v.sharkAlt))
+    .split('{{ctaText}}').join(escapeHtml(v.ctaText))
+    .split('{{ctaUrl}}').join(escapeHtml(params.ctaUrl))
+    .split('{{unsubscribeUrl}}').join(escapeHtml(params.unsubscribeUrl));
+
+  return { subject, html };
 }
