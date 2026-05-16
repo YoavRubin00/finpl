@@ -9,7 +9,8 @@
     "web": "expo start --web",
     "typecheck": "tsc --noEmit",
     "share": "eas update --branch preview --message 'update'",
-    "export:content": "tsx scripts/export-content.ts"
+    "export:content": "tsx scripts/export-content.ts",
+    "eas-build-pre-install": "rm -f package-lock.json"
   },
   "dependencies": {
     "@ai-sdk/google": "^3.0.64",
