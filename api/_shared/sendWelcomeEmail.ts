@@ -1,8 +1,8 @@
 import { Resend } from 'resend';
 import { eq } from 'drizzle-orm';
 import type { NeonHttpDatabase } from 'drizzle-orm/neon-http';
-import { userProfiles } from '../../../src/db/schema';
-import { buildWelcomeEmailHtml } from '../../../src/features/email/emailTemplates';
+import { userProfiles } from '../../src/db/schema';
+import { buildWelcomeEmailHtml } from '../../src/features/email/emailTemplates';
 
 interface SendWelcomeEmailParams {
   db: NeonHttpDatabase;

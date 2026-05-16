@@ -5,7 +5,7 @@ import { randomBytes } from 'crypto';
 import { userProfiles } from '../../../src/db/schema';
 import { enforceRateLimit } from '../_shared/rateLimit';
 import { safeErrorResponse } from '../_shared/safeError';
-import { sendWelcomeEmail } from '../_shared/sendWelcomeEmail';
+import { sendWelcomeEmail } from '../../../api/_shared/sendWelcomeEmail';
 import { sanitizeString, isValidEmail } from '../_shared/validate';
 
 function getDb() {

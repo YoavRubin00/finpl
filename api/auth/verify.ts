@@ -3,7 +3,7 @@ import { eq } from 'drizzle-orm';
 import { neon } from '@neondatabase/serverless';
 import { drizzle } from 'drizzle-orm/neon-http';
 import { userProfiles } from '../../src/db/schema';
-import { sendWelcomeEmail } from '../../app/api/_shared/sendWelcomeEmail';
+import { sendWelcomeEmail } from '../_shared/sendWelcomeEmail';
 
 function getDb() {
   const url = process.env.DATABASE_URL ?? '';
