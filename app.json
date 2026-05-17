@@ -93,7 +93,8 @@
             "useFrameworks": "static"
           }
         }
-      ]
+      ],
+      "./plugins/with-modular-podfile"
     ],
     "extra": {
       "router": {},
