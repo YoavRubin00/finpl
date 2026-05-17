@@ -1,6 +1,8 @@
 import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
 import { zustandStorage } from '../lib/zustandStorage';
+import { pingActiveToday } from '../db/sync/syncUserActive';
+import { useAuthStore } from '../features/auth/useAuthStore';
 
 /** Daily fun mail (joke + fact). */
 interface DailyMailContent {
@@ -87,6 +89,12 @@ export const useFunStore = create<FunState>()(
         const today = getTodayDateString();
         if (get().lastActiveDate !== today) {
           set({ lastActiveDate: today });
+        }
+        // Always sync to server (cheap, idempotent) so the daily-email cron
+        // can see who's been active. Fire-and-forget; failures don't matter.
+        const authId = useAuthStore.getState().email;
+        if (authId) {
+          pingActiveToday(authId).catch(() => { /* swallow */ });
         }
       },
 

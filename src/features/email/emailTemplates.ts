@@ -5,7 +5,7 @@ import * as path from 'path';
 // Source files: assets/webp/fin-fire-1.webp, fin-happy.webp, fin-empathic.webp
 const BLOB = 'https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/mascot';
 const SHARK_FIRE    = `${BLOB}/fin-fire-1.webp`;
-const SHARK_HAPPY   = `${BLOB}/fin-happy.webp`;
+const SHARK_HAPPY   = `${BLOB}/fin-happy.gif`;
 const SHARK_EMPATHIC = `${BLOB}/fin-empathic.webp`;
 const SHARK_STANDARD = `${BLOB}/fin-standard.webp`;
 
