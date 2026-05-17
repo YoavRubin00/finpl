@@ -1,5 +1,5 @@
 import React, { useCallback, useMemo, useRef, useState } from 'react';
-import { View, Text, StyleSheet, Dimensions } from 'react-native';
+import { View, Text, StyleSheet, Dimensions, Pressable } from 'react-native';
 import { Image as ExpoImage } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import Animated, {
@@ -42,6 +42,9 @@ const CARDS_PER_SESSION = 4;
 
 interface Props {
   isActive: boolean;
+  /** Optional callback invoked when the user taps "המשך" on the done summary.
+   *  Inter-module flow uses this to skip the obscure top-right ✕ button. */
+  onComplete?: () => void;
 }
 
 /* ------------------------------------------------------------------ */
@@ -122,8 +125,26 @@ function SwipeCard({
         </View>
 
         <View style={styles.hintsRow}>
-          <Text style={styles.hintLeftText}>בחר שמאל ←</Text>
-          <Text style={styles.hintRightText}>→ בחר ימין</Text>
+          {/* Tap also fires the swipe — observed users freezing because they
+              didn't realize they had to drag. The hint becomes the button. */}
+          <Pressable
+            onPress={() => { if (isTop) firePick('left'); }}
+            disabled={!isTop}
+            hitSlop={10}
+            accessibilityRole="button"
+            accessibilityLabel="בחר שמאל"
+          >
+            <Text style={styles.hintLeftText}>החלק שמאלה ←</Text>
+          </Pressable>
+          <Pressable
+            onPress={() => { if (isTop) firePick('right'); }}
+            disabled={!isTop}
+            hitSlop={10}
+            accessibilityRole="button"
+            accessibilityLabel="בחר ימין"
+          >
+            <Text style={styles.hintRightText}>→ החלק ימינה</Text>
+          </Pressable>
         </View>
 
         {/* Swipe overlays */}
@@ -240,7 +261,7 @@ function FeedbackCard({
 /*  Main card                                                         */
 /* ------------------------------------------------------------------ */
 
-export const HigherLowerCard = React.memo(function HigherLowerCard({ isActive: _isActive }: Props) {
+export const HigherLowerCard = React.memo(function HigherLowerCard({ isActive: _isActive, onComplete }: Props) {
   const playHigherLower = useDailyChallengesStore((s) => s.playHigherLower);
   const hasPlayedToday = useDailyChallengesStore((s) => s.hasHigherLowerPlayedToday());
   const playsToday = useDailyChallengesStore((s) => s.getHigherLowerPlaysToday());
@@ -447,6 +468,16 @@ export const HigherLowerCard = React.memo(function HigherLowerCard({ isActive: _
                   <Text style={[styles.rewardPillText, { color: '#d4a017' }]}>+{CHALLENGE_COIN_REWARD}</Text>
                 </View>
               </View>
+            )}
+            {onComplete && (
+              <Pressable
+                onPress={onComplete}
+                accessibilityRole="button"
+                accessibilityLabel="המשך"
+                style={styles.continueBtn}
+              >
+                <Text style={styles.continueBtnText}>המשך</Text>
+              </Pressable>
             )}
           </Animated.View>
         )}
@@ -814,5 +845,26 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '900',
     color: '#7c3aed',
+  },
+  continueBtn: {
+    marginTop: 18,
+    alignSelf: 'stretch',
+    backgroundColor: '#0ea5e9',
+    borderRadius: 18,
+    paddingVertical: 16,
+    alignItems: 'center',
+    borderBottomWidth: 4,
+    borderBottomColor: '#0369a1',
+    shadowColor: '#0ea5e9',
+    shadowOpacity: 0.4,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 8,
+  },
+  continueBtnText: {
+    fontSize: 18,
+    fontWeight: '900',
+    color: '#ffffff',
+    letterSpacing: 0.5,
   },
 });

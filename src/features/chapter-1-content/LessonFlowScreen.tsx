@@ -3851,7 +3851,14 @@ export function LessonFlowScreen() {
                 </View>
               }
               onContinue={() => {
-                if (mod?.interModuleGame && !showInterGame) {
+                // Skip the inter-module game when the next route is itself a
+                // game/interstitial — otherwise the user plays two minigames
+                // back-to-back. Today this only affects mod-0-3, which routes
+                // directly to /interstitial/bullshit-ch0; keep the list explicit
+                // so future routing rules don't silently chain games again.
+                const ROUTES_TO_GAME = new Set(['mod-0-3']);
+                const nextIsGame = mod ? ROUTES_TO_GAME.has(mod.id) : false;
+                if (mod?.interModuleGame && !showInterGame && !nextIsGame) {
                   setInterGamePhase('video');
                   setShowInterGame(true);
                 } else {
@@ -3892,8 +3899,19 @@ export function LessonFlowScreen() {
             )}
             {mod.interModuleGame === 'dilemma' && <DilemmaCard isActive />}
             {mod.interModuleGame === 'fomo-killer' && <FomoKillerCard isActive />}
-            {mod.interModuleGame === 'bullshit-swipe' && <BullshitSwipeCard isActive bypassDailyGate onFinish={() => { /* allow X to advance; game's own results screen handles its CTA */ }} />}
-            {mod.interModuleGame === 'higher-lower' && <HigherLowerCard isActive />}
+            {mod.interModuleGame === 'bullshit-swipe' && (
+              <BullshitSwipeCard
+                isActive
+                bypassDailyGate
+                onContinue={() => { setShowInterGame(false); goToNextSequentialModule(); }}
+              />
+            )}
+            {mod.interModuleGame === 'higher-lower' && (
+              <HigherLowerCard
+                isActive
+                onComplete={() => { setShowInterGame(false); goToNextSequentialModule(); }}
+              />
+            )}
             {mod.interModuleGame === 'price-slider' && <PriceSliderCard isActive />}
             {mod.interModuleGame === 'budget-ninja' && <BudgetNinjaCard isActive />}
             {mod.interModuleGame === 'cashout-rush' && <CashoutRushCard isActive />}
