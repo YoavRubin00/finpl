@@ -1,13 +1,8 @@
 import { useCallback, useState } from 'react';
 import { View, Text, Pressable, Modal, StyleSheet, Alert, Platform } from 'react-native';
-import Animated, {
-  FadeIn,
-  FadeOut,
-  SlideInDown,
-  SlideOutDown,
-} from 'react-native-reanimated';
 import * as Haptics from 'expo-haptics';
 import { LinearGradient } from 'expo-linear-gradient';
+import { X } from 'lucide-react-native';
 import { tapHaptic, successHaptic } from '../../utils/haptics';
 import { LottieIcon } from '../../components/ui/LottieIcon';
 import { useEconomyStore } from '../economy/useEconomyStore';
@@ -108,7 +103,7 @@ export function IAPModal({ visible, bundle, onDismiss, onPurchaseSuccess }: IAPM
     <Modal
       visible={visible}
       transparent
-      animationType="none"
+      animationType="fade"
       onRequestClose={onDismiss}
       accessibilityViewIsModal
       // Android: when a transparent Modal is opened from inside another Modal
@@ -121,18 +116,20 @@ export function IAPModal({ visible, bundle, onDismiss, onPurchaseSuccess }: IAPM
           <ConfettiExplosion onComplete={() => setShowConfetti(false)} />
         </View>
       )}
-      <Animated.View
-        entering={FadeIn.duration(200)}
-        exiting={FadeOut.duration(200)}
-        style={styles.overlay}
-      >
-        <Pressable style={styles.backdrop} onPress={onDismiss} />
+      <View style={styles.backdrop}>
+        <View style={[styles.sheet, { borderColor: `${accentColor}55` }]}>
+          {/* Close X — replaces tap-outside-to-dismiss to avoid the
+              Pressable-backdrop hit-test bug that broke the CTA on Android. */}
+          <Pressable
+            onPress={onDismiss}
+            style={styles.closeBtn}
+            hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+            accessibilityRole="button"
+            accessibilityLabel="סגור"
+          >
+            <X size={20} color="#94a3b8" />
+          </Pressable>
 
-        <Animated.View
-          entering={SlideInDown.springify().damping(40).stiffness(200)}
-          exiting={SlideOutDown.duration(250)}
-          style={[styles.sheet, { borderColor: `${accentColor}55` }]}
-        >
           {/* Handle */}
           <View style={styles.handle} />
 
@@ -197,24 +194,20 @@ export function IAPModal({ visible, bundle, onDismiss, onPurchaseSuccess }: IAPM
 
           {/* Fine print */}
           <Text style={styles.finePrint}>💳 התשלום מאובטח דרך חנות האפליקציות</Text>
-        </Animated.View>
-      </Animated.View>
+        </View>
+      </View>
     </Modal>
   );
 }
 
 const styles = StyleSheet.create({
-  overlay: {
+  // Mirrors StarterPackModal: backdrop is a static parent View (no
+  // sibling Pressable) so it can never intercept the CTA's touches on
+  // Android. justifyContent:flex-end keeps the bottom-sheet feel.
+  backdrop: {
     flex: 1,
     backgroundColor: 'rgba(0,0,0,0.6)',
     justifyContent: 'flex-end',
-  },
-  // Backdrop is a flex-1 child taking only the space ABOVE the sheet
-  // (not absoluteFill) so it never overlaps the sheet's touch area on
-  // Android. The overlay's backgroundColor provides the dark visual tint.
-  backdrop: {
-    flex: 1,
-    width: '100%',
   },
   sheet: {
     backgroundColor: '#ffffff',
@@ -222,10 +215,21 @@ const styles = StyleSheet.create({
     borderTopRightRadius: 28,
     borderTopWidth: 1.5,
     paddingHorizontal: 28,
+    paddingTop: 12,
     paddingBottom: 40,
     alignItems: 'center',
-    elevation: 24,
-    zIndex: 10,
+  },
+  closeBtn: {
+    position: 'absolute',
+    top: 12,
+    left: 16,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: 'rgba(148,163,184,0.12)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 2,
   },
   handle: {
     width: 40,
