@@ -1,6 +1,6 @@
 # FinPlay — תנאי שימוש ומדיניות פרטיות
 
-**עדכון אחרון: אפריל 2026**
+**עדכון אחרון: מאי 2026**
 
 ---
 
@@ -66,7 +66,17 @@ FinPlay מחויבת להגנה על פרטיותך ופועלת בהתאם לח
 
 ### 4. דיוור ישיר והודעות שיווקיות
 
-בעצם הרשמתך, הנך מסכים/ה לקבלת הודעות מערכת, תזכורות למידה, התראות פוש, מסרונים ודברי פרסומת מ-FinPlay ומשותפיה, בהתאם לסעיף 30א לחוק התקשורת. תמיד שמורה לך הזכות לחזור בך מהסכמתך ולהסיר את עצמך מרשימות התפוצה.
+בעצם הרשמתך, הנך מסכים/ה לקבלת הודעות מערכת, תזכורות למידה, התראות פוש, מסרונים ודברי פרסומת מ-FinPlay ומשותפיה, בהתאם לסעיף 30א לחוק התקשורת (בזק ושידורים), התשמ"ב-1982. הודעות פרסומיות יסומנו במילה "פרסומת" בכותרת ההודעה.
+
+ניתן להסיר עצמכם מרשימת התפוצה בכל עת באחת מהדרכים הבאות:
+
+- דרך הגדרות האפליקציה
+- דרך הגדרות המכשיר (להתראות פוש)
+- דרך לינק "הסרה מרשימת תפוצה" שמופיע בכל מייל שיווקי
+- בתגובה לכל מייל עם המילה "הסר"
+- בפנייה לכתובת yoav.finplay@gmail.com
+
+ההסרה תיכנס לתוקף תוך 3 ימי עסקים.
 
 ### 5. זכויותיך (עיון, תיקון ומחיקה)
 
@@ -146,7 +156,17 @@ We will never sell your personally identifiable information. Sharing occurs in t
 
 ### 4. Direct Marketing & Communications
 
-By registering, you agree to receive system messages, learning reminders, push notifications, SMS, and promotional messages from FinPlay and its partners, per Section 30A of the Communications Law. You may unsubscribe at any time via App settings, device settings, or the unsubscribe link in any message.
+By registering, you agree to receive system messages, learning reminders, push notifications, SMS, and promotional messages from FinPlay and its partners, per Section 30A of the Communications Law (Bezeq and Broadcasts), 5742-1982. Promotional messages will be marked with the word "פרסומת" (advertisement) in the subject line.
+
+You may unsubscribe at any time via any of the following:
+
+- App settings
+- Device settings (for push notifications)
+- The "Unsubscribe" link in any marketing email
+- Replying to any email with the word "unsubscribe"
+- Contacting yoav.finplay@gmail.com
+
+Unsubscription will take effect within 3 business days.
 
 ### 5. Your Rights
 

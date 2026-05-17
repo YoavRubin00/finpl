@@ -50,7 +50,7 @@ function getDayContent(
   const days: DayContent[] = [
     // ── 0 · Sunday, Weekly review ──────────────────────────────────────────
     {
-      subject: `שארק עשה לך סיכום שבועי 🦈`,
+      subject: `פרסומת | שארק עשה לך סיכום שבועי 🦈`,
       headline: `${name}, הנה השבוע שלך`,
       sharkImg: SHARK_HAPPY,
       sharkAlt: 'שארק שמח',
@@ -77,7 +77,7 @@ function getDayContent(
 
     // ── 1 · Monday, New week ────────────────────────────────────────────────
     {
-      subject: `שבוע חדש. שארק מחכה. 🦈`,
+      subject: `פרסומת | שבוע חדש. שארק מחכה. 🦈`,
       headline: `${name}, שני, פתחו דף חדש`,
       sharkImg: SHARK_FIRE,
       sharkAlt: 'שארק עם אש',
@@ -93,7 +93,7 @@ function getDayContent(
 
     // ── 2 · Tuesday, Finance tip ────────────────────────────────────────────
     {
-      subject: `${name}, שארק מצא לך סוד פיננסי 👀`,
+      subject: `פרסומת | ${name}, שארק מצא לך סוד פיננסי 👀`,
       headline: `הטיפ הפיננסי של השבוע`,
       sharkImg: SHARK_STANDARD,
       sharkAlt: 'שארק סטנדרטי',
@@ -108,7 +108,7 @@ function getDayContent(
 
     // ── 3 · Wednesday, Mid-week urgency ─────────────────────────────────────
     {
-      subject: `⚠️ ${streak} ימים ברצף, אל תפרו עכשיו`,
+      subject: `פרסומת | ⚠️ ${streak} ימים ברצף, אל תפרו עכשיו`,
       headline: `אמצע השבוע. הרצף בסכנה?`,
       sharkImg: SHARK_FIRE,
       sharkAlt: 'שארק עם אש',
@@ -128,7 +128,7 @@ function getDayContent(
 
     // ── 4 · Thursday, Mascot emotion ────────────────────────────────────────
     {
-      subject: `שארק בודק מה קרה לך, ${name} 😢`,
+      subject: `פרסומת | שארק בודק מה קרה לך, ${name} 😢`,
       headline: `שארק מתגעגע...`,
       sharkImg: SHARK_EMPATHIC,
       sharkAlt: 'שארק אמפתי',
@@ -146,7 +146,7 @@ function getDayContent(
 
     // ── 5 · Friday, FOMO / urgency ──────────────────────────────────────────
     {
-      subject: `הסוף שבוע מגיע. הרצף לא מנוח. 🦈`,
+      subject: `פרסומת | הסוף שבוע מגיע. הרצף לא מנוח. 🦈`,
       headline: `שישי, עוד שעות ספורות`,
       sharkImg: SHARK_FIRE,
       sharkAlt: 'שארק עם אש',
@@ -165,7 +165,7 @@ function getDayContent(
 
     // ── 6 · Saturday, Warm & light ──────────────────────────────────────────
     {
-      subject: `🦈 שבת שלום, ${name}!`,
+      subject: `פרסומת | 🦈 שבת שלום, ${name}!`,
       headline: `שבת שלום מהשארק 💙`,
       sharkImg: SHARK_HAPPY,
       sharkAlt: 'שארק שמח',
@@ -246,11 +246,23 @@ export function buildDailyEmailHtml(params: {
       </a>
     </div>
 
-    <!-- Footer -->
+    <!-- Footer (Section 30A compliance) -->
     <hr style="border:none;border-top:1px solid #e5e7eb;margin:0 0 16px;">
-    <div style="text-align:center;font-size:12px;color:#9ca3af;">
-      <p style="margin:0 0 6px;">© 2025 FinPlay, כל הזכויות שמורות</p>
-      <a href="${unsubscribeUrl}" style="color:#9ca3af;text-decoration:underline;">הסרה מרשימת תפוצה</a>
+    <div style="text-align:center;font-size:12px;color:#9ca3af;line-height:1.7;">
+      <p style="margin:0 0 8px;font-weight:700;color:#64748b;">© 2026 FinPlay · finplay.me</p>
+      <p style="margin:0 0 8px;">
+        ליצירת קשר:
+        <a href="mailto:yoav.finplay@gmail.com" style="color:#0ea5e9;text-decoration:none;">yoav.finplay@gmail.com</a>
+      </p>
+      <p style="margin:0 0 8px;">
+        להסרה מרשימת התפוצה:
+        <a href="${unsubscribeUrl}" style="color:#0ea5e9;text-decoration:underline;">לחצו כאן</a>
+        או השיבו למייל זה עם המילה "הסר".
+      </p>
+      <p style="margin:0;font-size:11px;color:#cbd5e1;">
+        הודעה זו נשלחה אליך כדיוור על פי הסכמתך בעת הרישום ל-FinPlay,<br>
+        בהתאם לסעיף 30א לחוק התקשורת (בזק ושידורים), התשמ"ב-1982.
+      </p>
     </div>
   </div>
 
@@ -352,7 +364,7 @@ interface RetentionVariantCopy {
 const RETENTION_VARIANTS: Record<RetentionVariantId, RetentionVariantCopy> = {
   // V1 — META / self-aware passive-aggressive
   shark_meta_v1: {
-    subject: 'תזכורת מספר שלוש, {{name}} 🦈',
+    subject: 'פרסומת | תזכורת מספר שלוש, {{name}} 🦈',
     headline: 'אולי אני עושה משהו לא בסדר?',
     bodyHtml: `<p style="margin:0 0 14px;">ניסיתי בעדינות. ניסיתי באימוג'ים. אפילו ניסיתי עם הבטחות של מטבעות.</p>
       <p style="margin:0 0 14px;">אולי הגיע הזמן שאני פשוט אשאל ישירות:</p>
@@ -364,7 +376,7 @@ const RETENTION_VARIANTS: Record<RetentionVariantId, RetentionVariantCopy> = {
 
   // V2 — SAD / missing-you
   shark_sad_v1: {
-    subject: '(רק רוצה לבדוק שאת/ה בסדר 🥺)',
+    subject: 'פרסומת | (רק רוצה לבדוק שאת/ה בסדר 🥺)',
     headline: '{{name}}, לא לוחץ. רק שואל מה שלומך.',
     bodyHtml: `<p style="margin:0 0 14px;">אתמול שמתי לב שלא הצטרפת ללמידה. בלי שיפוט, באמת.</p>
       <p style="margin:0 0 14px;">החיים תופסים. אני מבין.</p>
@@ -376,7 +388,7 @@ const RETENTION_VARIANTS: Record<RetentionVariantId, RetentionVariantCopy> = {
 
   // V3 — STREAK URGENCY
   shark_streak_v1: {
-    subject: '⚠️ {{streak}} ימים בסכנה ({{name}})',
+    subject: 'פרסומת | ⚠️ {{streak}} ימים בסכנה ({{name}})',
     headline: 'הרצף שלך תלוי על חוט',
     bodyHtml: `<p style="margin:0 0 14px;">{{streak}} ימים ברצף זה לא מובן מאליו. השקעת. הופעת.</p>
       <p style="margin:0 0 14px;">אבל הספירה מתאפסת אם לא תפתח/י את האפליקציה היום.</p>
@@ -388,7 +400,7 @@ const RETENTION_VARIANTS: Record<RetentionVariantId, RetentionVariantCopy> = {
 
   // V4 — MINIMAL ASK
   shark_minimal_v1: {
-    subject: '3 דקות. זה הכל.',
+    subject: 'פרסומת | 3 דקות. זה הכל.',
     headline: '3 דקות, {{name}}.',
     bodyHtml: `<p style="margin:0 0 14px;">פחות זמן ממה שלקח לך לבחור איזה סרט להעלות אתמול בערב.</p>
       <p style="margin:0;font-weight:700;">שיעור אחד. קצר. פשוט. וחזרנו.</p>`,
@@ -399,7 +411,7 @@ const RETENTION_VARIANTS: Record<RetentionVariantId, RetentionVariantCopy> = {
 
   // V5 — WELCOME BACK
   shark_welcome_v1: {
-    subject: '🦈 חזרה רכה, {{name}}?',
+    subject: 'פרסומת | 🦈 חזרה רכה, {{name}}?',
     headline: '{{name}}, נחזור בעדינות?',
     bodyHtml: `<p style="margin:0 0 14px;">בלי לחץ. בלי תזכורות מציקות. רק הזמנה.</p>
       <p style="margin:0 0 14px;">השארנו לך שיעור קל שמתאים בדיוק למי שחוזר אחרי הפסקה — מעניין, קצר, ומחזיר לקצב.</p>
