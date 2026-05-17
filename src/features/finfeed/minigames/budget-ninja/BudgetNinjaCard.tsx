@@ -37,6 +37,8 @@ const TARGET_SIZE = 84;
 
 interface Props {
   isActive: boolean;
+  /** Inter-module overlay sets this to render a "המשך" button on the result. */
+  onContinue?: () => void;
 }
 
 type Phase = 'idle' | 'playing' | 'done';
@@ -205,7 +207,7 @@ function SharkResult({ score, kindsAllowed }: { score: number; kindsAllowed: boo
   );
 }
 
-export const BudgetNinjaCard = React.memo(function BudgetNinjaCard({ isActive: _isActive }: Props) {
+export const BudgetNinjaCard = React.memo(function BudgetNinjaCard({ isActive: _isActive, onContinue }: Props) {
   const playBudgetNinja = useDailyChallengesStore((s) => s.playBudgetNinja);
   const hasPlayedToday = useDailyChallengesStore((s) => s.hasBudgetNinjaPlayedToday());
   const playsToday = useDailyChallengesStore((s) => s.getBudgetNinjaPlaysToday());
@@ -411,6 +413,12 @@ export const BudgetNinjaCard = React.memo(function BudgetNinjaCard({ isActive: _
         )}
 
         {phase === 'done' && <SharkResult score={score} kindsAllowed />}
+
+        {phase === 'done' && onContinue && (
+          <Pressable onPress={onContinue} style={styles.continueBtn} accessibilityRole="button" accessibilityLabel="המשך">
+            <Text style={styles.continueBtnText}>המשך</Text>
+          </Pressable>
+        )}
 
         {phase === 'done' && score >= SCORE_TIER_GOOD && currentLevel === 1 && remainingPlays > 0 && (
           <Animated.View entering={FadeInUp.duration(300).delay(400)} style={styles.level2Block}>
@@ -653,5 +661,26 @@ const styles = StyleSheet.create({
   doneSub: {
     fontSize: 14,
     color: '#64748b',
+  },
+  continueBtn: {
+    marginTop: 18,
+    alignSelf: 'stretch',
+    backgroundColor: '#0ea5e9',
+    borderRadius: 18,
+    paddingVertical: 16,
+    alignItems: 'center',
+    borderBottomWidth: 4,
+    borderBottomColor: '#0369a1',
+    shadowColor: '#0ea5e9',
+    shadowOpacity: 0.4,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 8,
+  },
+  continueBtnText: {
+    fontSize: 18,
+    fontWeight: '900',
+    color: '#ffffff',
+    letterSpacing: 0.5,
   },
 });

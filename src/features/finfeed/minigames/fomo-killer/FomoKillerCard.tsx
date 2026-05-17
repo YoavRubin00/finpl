@@ -40,11 +40,13 @@ const ADD_AMOUNT = 500;
 
 interface Props {
   isActive: boolean;
+  /** Inter-module overlay sets this to render a "המשך" button on the result. */
+  onContinue?: () => void;
 }
 
 type InternalPhase = FomoPhase;
 
-export const FomoKillerCard = React.memo(function FomoKillerCard({ isActive: _isActive }: Props) {
+export const FomoKillerCard = React.memo(function FomoKillerCard({ isActive: _isActive, onContinue }: Props) {
   const playFomoKiller = useDailyChallengesStore((s) => s.playFomoKiller);
   const hasPlayedToday = useDailyChallengesStore((s) => s.hasFomoKillerPlayedToday());
   const playsToday = useDailyChallengesStore((s) => s.getFomoKillerPlaysToday());
@@ -204,6 +206,11 @@ export const FomoKillerCard = React.memo(function FomoKillerCard({ isActive: _is
           <ExpoImage source={FINN_STANDARD} style={styles.finLarge} contentFit="contain" accessible={false} />
           <Text style={[styles.doneTitle, CENTER_RTL]}>מחסל הפומו, הושלם להיום</Text>
           <Text style={[styles.doneSub, CENTER_RTL]}>חזור מחר לסיבוב חדש</Text>
+          {onContinue && (
+            <Pressable onPress={onContinue} style={styles.continueBtn} accessibilityRole="button" accessibilityLabel="המשך">
+              <Text style={styles.continueBtnText}>המשך</Text>
+            </Pressable>
+          )}
         </View>
       </View>
     );
@@ -441,6 +448,27 @@ const styles = StyleSheet.create({
   doneSub: {
     fontSize: 14,
     color: '#64748b',
+  },
+  continueBtn: {
+    marginTop: 18,
+    alignSelf: 'stretch',
+    backgroundColor: '#0ea5e9',
+    borderRadius: 18,
+    paddingVertical: 16,
+    alignItems: 'center',
+    borderBottomWidth: 4,
+    borderBottomColor: '#0369a1',
+    shadowColor: '#0ea5e9',
+    shadowOpacity: 0.4,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 8,
+  },
+  continueBtnText: {
+    fontSize: 18,
+    fontWeight: '900',
+    color: '#ffffff',
+    letterSpacing: 0.5,
   },
 
   // Intro
