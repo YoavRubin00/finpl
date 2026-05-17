@@ -37,6 +37,7 @@ import { BackButton } from "../../components/ui/BackButton";
 import { useTheme } from "../../hooks/useTheme";
 import { useMonetizationIntentStore } from "../monetization/useMonetizationIntentStore";
 import { useBandit } from "../bandit/useBandit";
+import { captureEvent } from "../../lib/posthog";
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
 
@@ -171,6 +172,7 @@ export function PricingScreen() {
   useEffect(() => {
     useMonetizationIntentStore.getState().trackPricingVisit();
     trackImpression();
+    captureEvent('paywall_viewed', { paywall: 'subscription_pricing' });
   }, [trackImpression]);
 
   // Load offering once so we can show the localized price + period before purchase.
@@ -229,6 +231,7 @@ export function PricingScreen() {
       const isPro = customerInfo.entitlements.active[RC_ENTITLEMENT_PRO] !== undefined;
 
       if (isPro) {
+        captureEvent('subscription_purchased', { plan: pkg.packageType, price: pkg.product.priceString });
         upgradeToPro();
         trackConversion();
         if (!hasSeenProWelcome) {
@@ -240,8 +243,11 @@ export function PricingScreen() {
     } catch (err: unknown) {
       const isCancelled =
         err instanceof Error && err.message.includes('PURCHASE_CANCELLED');
-      if (!isCancelled) {
+      if (isCancelled) {
+        captureEvent('subscription_cancelled_at_checkout');
+      } else {
         const message = err instanceof Error ? err.message : "שגיאה לא צפויה";
+        captureEvent('subscription_purchase_failed', { error_message: message });
         Alert.alert("שגיאת תשלום", message);
       }
     } finally {
@@ -445,7 +451,7 @@ export function PricingScreen() {
                   </Pressable>
                 </View>
 
-                <Pressable onPress={() => { if (router.canGoBack()) router.back(); else router.replace('/(tabs)' as never); }} style={styles.noThanksBtn} accessibilityRole="button" accessibilityLabel="ליציאה" hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+                <Pressable onPress={() => { captureEvent('paywall_dismissed', { paywall: 'subscription_pricing' }); if (router.canGoBack()) router.back(); else router.replace('/(tabs)' as never); }} style={styles.noThanksBtn} accessibilityRole="button" accessibilityLabel="ליציאה" hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
                   <Text style={[styles.noThanksText, { color: theme.textMuted }]}>ליציאה</Text>
                 </Pressable>
 

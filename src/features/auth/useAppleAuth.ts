@@ -3,6 +3,7 @@ import * as AppleAuthentication from "expo-apple-authentication";
 import { router } from "expo-router";
 import { useAuthStore } from "./useAuthStore";
 import { getApiBase } from "../../db/apiBase";
+import { captureEvent } from "../../lib/posthog";
 
 /**
  * Apple Sign-In hook, required by App Store Guideline 4.8 when other
@@ -60,9 +61,13 @@ export function useAppleAuth() {
         router.replace("/(auth)/onboarding" as never);
       }
     } catch (err: unknown) {
+      const code = (err as { code?: string }).code;
       // User canceled or auth failed, silently no-op so login screen stays.
-      if ((err as { code?: string }).code !== "ERR_REQUEST_CANCELED") {
+      if (code !== "ERR_REQUEST_CANCELED") {
+        captureEvent('auth_failed', { method: 'apple', error_code: code ?? 'unknown' });
         console.warn("[AppleAuth] signIn failed:", err);
+      } else {
+        captureEvent('auth_cancelled', { method: 'apple' });
       }
     }
   };

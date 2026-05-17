@@ -7,6 +7,7 @@ import { Alert, Platform } from "react-native";
 import { useAuthStore } from "./useAuthStore";
 import { useGoogleAuthStore } from "./useGoogleAuthStore";
 import { getApiBase } from "../../db/apiBase";
+import { captureEvent } from "../../lib/posthog";
 
 WebBrowser.maybeCompleteAuthSession();
 
@@ -70,6 +71,11 @@ export function useGoogleAuth() {
     if (response.type === "success") {
       details.hasAccessToken = !!response.authentication?.accessToken;
       details.hasIdToken = !!response.authentication?.idToken;
+    }
+    if (response.type === 'cancel' || response.type === 'dismiss') {
+      captureEvent('auth_cancelled', { method: 'google' });
+    } else {
+      captureEvent('auth_failed', { method: 'google', error_code: String(details.errorCode ?? details.type) });
     }
     console.error("[GoogleAuth] OAuth response failed", details);
     Alert.alert("OAuth Debug — response", JSON.stringify(details, null, 2));

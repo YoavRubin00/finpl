@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { View, Text, Pressable, Modal, StyleSheet, Alert, Platform } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as Haptics from 'expo-haptics';
@@ -10,6 +10,7 @@ import { useEconomyStore } from '../economy/useEconomyStore';
 import { ConfettiExplosion } from '../../components/ui/ConfettiExplosion';
 import { purchaseGemBundle } from '../../services/revenueCat';
 import { logPurchase } from '../../utils/fbEvents';
+import { captureEvent } from '../../lib/posthog';
 import type { GemBundle, CoinBundle } from './types';
 
 type AnyBundle = GemBundle | CoinBundle;
@@ -42,14 +43,33 @@ export function IAPModal({ visible, bundle, onDismiss, onPurchaseSuccess }: IAPM
 
   const spendGems = useEconomyStore((s) => s.spendGems);
 
+  useEffect(() => {
+    if (visible && bundle) {
+      captureEvent('paywall_viewed', {
+        paywall: isCoinBundle(bundle) ? 'coin_bundle' : 'gem_bundle',
+        bundle_id: bundle.id,
+      });
+    }
+  }, [visible, bundle]);
+
   const handlePurchase = useCallback(async () => {
     if (!bundle) return;
     tapHaptic();
 
+    captureEvent('purchase_initiated', {
+      bundle_id: bundle.id,
+      bundle_type: isCoinBundle(bundle) ? 'coin_bundle' : 'gem_bundle',
+      price_ils: isCoinBundle(bundle) ? null : (bundle as GemBundle).priceILS,
+    });
+
     if (isCoinBundle(bundle)) {
       // Coin bundles cost gems, local transaction
-      if (!spendGems(bundle.gemCost)) return;
+      if (!spendGems(bundle.gemCost)) {
+        captureEvent('purchase_failed', { bundle_id: bundle.id, reason: 'insufficient_gems' });
+        return;
+      }
       addCoins(bundle.coins);
+      captureEvent('purchase_completed', { bundle_id: bundle.id, bundle_type: 'coin_bundle', coins: bundle.coins });
     } else {
       // Gem bundles, real-money purchase via RevenueCat
       try {
@@ -68,6 +88,13 @@ export function IAPModal({ visible, bundle, onDismiss, onPurchaseSuccess }: IAPM
             fb_num_items: bundle.gems,
           });
         }
+        captureEvent('purchase_completed', {
+          bundle_id: bundle.id,
+          bundle_type: 'gem_bundle',
+          gems: bundle.gems,
+          price_ils: bundle.priceILS,
+          real_money: HAS_RC_KEY,
+        });
       } catch (err: unknown) {
         const msg = err instanceof Error ? err.message : 'שגיאה לא צפויה';
         // RC user-cancel surfaces as a thrown error too — quietly close.
@@ -75,8 +102,10 @@ export function IAPModal({ visible, bundle, onDismiss, onPurchaseSuccess }: IAPM
           (err instanceof Error && err.message.includes('PURCHASE_CANCELLED')) ||
           /cancel|user.{0,2}cancell/i.test(msg)
         ) {
+          captureEvent('purchase_cancelled', { bundle_id: bundle.id, bundle_type: 'gem_bundle' });
           return;
         }
+        captureEvent('purchase_failed', { bundle_id: bundle.id, bundle_type: 'gem_bundle', error_message: msg });
         Alert.alert('שגיאת רכישה', msg);
         return;
       }
@@ -93,6 +122,16 @@ export function IAPModal({ visible, bundle, onDismiss, onPurchaseSuccess }: IAPM
     }, 1800);
   }, [bundle, addGems, addCoins, spendGems, onPurchaseSuccess, onDismiss]);
 
+  const handleDismiss = useCallback(() => {
+    if (bundle) {
+      captureEvent('paywall_dismissed', {
+        paywall: isCoinBundle(bundle) ? 'coin_bundle' : 'gem_bundle',
+        bundle_id: bundle.id,
+      });
+    }
+    onDismiss();
+  }, [bundle, onDismiss]);
+
   if (!bundle) return null;
 
   const isCoins = isCoinBundle(bundle);
@@ -106,7 +145,7 @@ export function IAPModal({ visible, bundle, onDismiss, onPurchaseSuccess }: IAPM
       visible={visible}
       transparent
       animationType="fade"
-      onRequestClose={onDismiss}
+      onRequestClose={handleDismiss}
       accessibilityViewIsModal
       // Android: when a transparent Modal is opened from inside another Modal
       // (e.g. ShopModal's pageSheet), without statusBarTranslucent the inner
@@ -123,7 +162,7 @@ export function IAPModal({ visible, bundle, onDismiss, onPurchaseSuccess }: IAPM
           {/* Close X — replaces tap-outside-to-dismiss to avoid the
               Pressable-backdrop hit-test bug that broke the CTA on Android. */}
           <Pressable
-            onPress={onDismiss}
+            onPress={handleDismiss}
             style={styles.closeBtn}
             hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
             accessibilityRole="button"

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Image as ExpoImage } from "expo-image";
 import {
   View,
@@ -20,6 +20,7 @@ import { useGoogleAuthStore } from "./useGoogleAuthStore";
 import { useAppleAuth } from "./useAppleAuth";
 import { AvatarImage } from "../avatars/AvatarImage";
 import { ConfettiExplosion } from "../../components/ui/ConfettiExplosion";
+import { captureEvent } from "../../lib/posthog";
 
 const strengthLabels: Record<PasswordStrength, string> = {
   weak: "סיסמה חלשה",
@@ -90,6 +91,10 @@ export function RegisterScreen() {
   const [showSuccess, setShowSuccess] = useState(false);
 
   const passwordStrength = getPasswordStrength(password);
+
+  useEffect(() => {
+    captureEvent('signup_form_viewed', { is_guest: isGuest });
+  }, [isGuest]);
 
   const isValid =
     name.trim().length >= 2 &&
@@ -332,6 +337,7 @@ export function RegisterScreen() {
               disabled={!isValid || showSuccess}
               onPress={() => {
                 if (isValid && !showSuccess) {
+                  captureEvent('signup_method_clicked', { method: 'email' });
                   if (isGuest) {
                     convertGuestToUser(name.trim(), email.trim());
                   } else {
@@ -382,7 +388,10 @@ export function RegisterScreen() {
             {/* Apple Sign-In, required by App Store Guideline 4.8 (iOS only) */}
             {appleAvailable && (
               <Pressable
-                onPress={() => promptAppleSignIn()}
+                onPress={() => {
+                  captureEvent('signup_method_clicked', { method: 'apple' });
+                  promptAppleSignIn();
+                }}
                 accessibilityRole="button"
                 accessibilityLabel="הירשם עם Apple"
                 style={{
@@ -411,7 +420,10 @@ export function RegisterScreen() {
             {/* Google Sign-In */}
             <Pressable
               disabled={!googleReady}
-              onPress={() => promptGoogleSignIn?.()}
+              onPress={() => {
+                captureEvent('signup_method_clicked', { method: 'google' });
+                promptGoogleSignIn?.();
+              }}
               accessibilityRole="button"
               accessibilityLabel="הירשם עם Google"
               style={{
@@ -461,7 +473,10 @@ export function RegisterScreen() {
 
             {/* Skip registration, guest mode → onboarding */}
             <Pressable
-              onPress={() => enterGuestMode()}
+              onPress={() => {
+                captureEvent('signup_skipped_for_guest');
+                enterGuestMode();
+              }}
               accessibilityRole="button"
               accessibilityLabel="התחל ללא חשבון"
               style={{

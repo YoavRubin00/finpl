@@ -13,7 +13,7 @@
  * consent screen instead of the buy CTA. Apple/Google require explicit
  * acknowledgement before charging users under the age of majority.
  */
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { Modal, View, Text, StyleSheet, Pressable, Alert, Platform } from 'react-native';
 import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -26,6 +26,7 @@ import { getAvatarById } from '../avatars/avatarData';
 import { getAvatarSvgIcon } from '../../components/svg/avatars/AvatarMascots';
 import { successHaptic, tapHaptic } from '../../utils/haptics';
 import { logPurchase } from '../../utils/fbEvents';
+import { captureEvent } from '../../lib/posthog';
 import { purchaseGemBundle } from '../../services/revenueCat';
 import {
   getTodaysStarterPack,
@@ -61,6 +62,12 @@ export function StarterPackModal({ visible, onDismiss, onPurchaseSuccess }: Prop
   // if the user opens it at 23:59:55 and confirms at 00:00:05.
   const pack = React.useMemo(() => getTodaysStarterPack(), [visible]);
 
+  useEffect(() => {
+    if (visible) {
+      captureEvent('paywall_viewed', { paywall: 'starter_pack', pack_id: pack.id, is_minor: isMinor });
+    }
+  }, [visible, pack.id, isMinor]);
+
   const grantPack = useCallback(() => {
     addCoins(pack.coins);
     addGems(pack.gems);
@@ -73,6 +80,12 @@ export function StarterPackModal({ visible, onDismiss, onPurchaseSuccess }: Prop
   const handleConfirm = useCallback(async () => {
     if (purchasing) return;
     setPurchasing(true);
+    captureEvent('purchase_initiated', {
+      bundle_id: pack.id,
+      bundle_type: 'starter_pack',
+      price_ils: 19.90,
+      real_money: HAS_RC_KEY,
+    });
     try {
       if (HAS_RC_KEY) {
         // Real money path. RC throws on user-cancel — we treat that as a no-op,
@@ -88,6 +101,15 @@ export function StarterPackModal({ visible, onDismiss, onPurchaseSuccess }: Prop
       }
       grantPack();
       successHaptic();
+      captureEvent('purchase_completed', {
+        bundle_id: pack.id,
+        bundle_type: 'starter_pack',
+        coins: pack.coins,
+        gems: pack.gems,
+        avatars: pack.avatarIds.length,
+        price_ils: 19.90,
+        real_money: HAS_RC_KEY,
+      });
       Alert.alert(
         'נרכש בהצלחה!',
         `קיבלתם ${pack.coins.toLocaleString()} מטבעות, ${pack.gems} יהלומים, ו-${pack.avatarIds.length} אווטרים.`,
@@ -98,9 +120,11 @@ export function StarterPackModal({ visible, onDismiss, onPurchaseSuccess }: Prop
       const msg = err instanceof Error ? err.message : 'שגיאה לא ידועה';
       // RC user-cancel surfaces as a thrown error too — quietly close.
       if (/cancel|user.{0,2}cancell/i.test(msg)) {
+        captureEvent('purchase_cancelled', { bundle_id: pack.id, bundle_type: 'starter_pack' });
         onDismiss();
         return;
       }
+      captureEvent('purchase_failed', { bundle_id: pack.id, bundle_type: 'starter_pack', error_message: msg });
       Alert.alert('הרכישה נכשלה', msg);
     } finally {
       setPurchasing(false);
@@ -109,8 +133,9 @@ export function StarterPackModal({ visible, onDismiss, onPurchaseSuccess }: Prop
 
   const handleCancel = useCallback(() => {
     tapHaptic();
+    captureEvent('paywall_dismissed', { paywall: 'starter_pack', pack_id: pack.id });
     onDismiss();
-  }, [onDismiss]);
+  }, [onDismiss, pack.id]);
 
   return (
     <Modal visible={visible} animationType="fade" transparent onRequestClose={handleCancel}>

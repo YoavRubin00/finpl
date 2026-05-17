@@ -99,6 +99,7 @@ import { useAdaptiveStore } from "../social/useAdaptiveStore";
 import { useSavedItemsStore } from "../saved-items/useSavedItemsStore";
 import { LifelineModal } from "../social/LifelineModal";
 import { useTutorialStore } from "../../stores/useTutorialStore";
+import { captureEvent } from "../../lib/posthog";
 import { PizzaIndexScreen } from "../fun/PizzaIndexScreen";
 import { LifelineChatOverlay } from "../social/LifelineChatOverlay";
 import { ProBadge } from "../../components/ui/ProBadge";
@@ -2181,6 +2182,16 @@ export function LessonFlowScreen() {
     }
     return undefined;
   }, [id, chapterId]);
+
+  useEffect(() => {
+    if (mod) {
+      captureEvent('lesson_started', {
+        module_id: mod.id,
+        chapter_id: chapterId ?? null,
+        is_replay: isReplay,
+      });
+    }
+  }, [mod, chapterId, isReplay]);
 
   const unitColors = LESSON_COLORS[chapterId ?? ""] ?? DEFAULT_UNIT_COLORS;
 

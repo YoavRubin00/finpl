@@ -34,6 +34,7 @@ import { useGoogleAuthStore } from "../auth/useGoogleAuthStore";
 import { useAppleAuth } from "../auth/useAppleAuth";
 import { consumeTermsAcceptedFlag } from "../auth/termsAcceptedFlag";
 import { ONBOARDING_XP } from "../../constants/economy";
+import { captureEvent } from "../../lib/posthog";
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { PENDING_REFERRAL_STORAGE_KEY } from '../social/InviteRedemptionScreen';
 import { calculateCompoundInterest } from "../simulator/SimulatorScreen";
@@ -1894,14 +1895,8 @@ function IntroStep({ onRegister, onGuest, onLoginSuccess }: IntroStepProps) {
             accessibilityRole="button"
             accessibilityLabel="התחל ללא הרשמה"
             accessibilityState={{ disabled: !termsAccepted }}
-            style={[introStyles.ctaOutline, { opacity: termsAccepted ? 1 : 0.5, flexDirection: 'row-reverse', alignItems: 'center', justifyContent: 'center', gap: 6 }]}
+            style={[introStyles.ctaOutline, { opacity: termsAccepted ? 1 : 0.5 }]}
           >
-            <ExpoImage
-              source={FINN_HELLO}
-              style={{ width: 28, height: 28 }}
-              contentFit="contain"
-              accessible={false}
-            />
             <Text style={introStyles.ctaOutlineText}>התחל ללא הרשמה</Text>
           </Pressable>
 
@@ -2179,6 +2174,15 @@ export function ProfilingFlow({ mode = "onboarding", onRedoComplete }: Profiling
   const isRedo = mode === "redo";
   // Skip intro if user already registered/signed-in or is guest (came back from register screen)
   const [step, setStep] = useState<FlowStep>(isRedo || isAuthenticated || isGuest ? "dream" : "intro");
+  // Wall-clock anchor for onboarding duration. Used by the completion event so
+  // we can see in PostHog whether users blast through profiling or stall mid-flow.
+  const onboardingStartedAtRef = useRef<number>(Date.now());
+
+  useEffect(() => {
+    if (!isRedo) {
+      captureEvent('onboarding_started');
+    }
+  }, [isRedo]);
   const [returnToSummary, setReturnToSummary] = useState(false);
   const [collected, setCollected] = useState<Collected>(() => {
     if (isRedo && existingProfile) {
@@ -2230,6 +2234,11 @@ export function ProfilingFlow({ mode = "onboarding", onRedoComplete }: Profiling
   }, []);
 
   function slide(nextStep: FlowStep, patch: Partial<Collected>) {
+    captureEvent('onboarding_step_completed', {
+      step_name: step,
+      next_step: nextStep,
+      mode: isRedo ? 'redo' : 'new',
+    });
     setIsGlobalTyping(false);
     if (globalTypingResetRef.current) clearTimeout(globalTypingResetRef.current);
     tapHaptic();
@@ -2278,6 +2287,10 @@ export function ProfilingFlow({ mode = "onboarding", onRedoComplete }: Profiling
       onRedoComplete?.();
       return;
     }
+    captureEvent('onboarding_completed', {
+      duration_sec: Math.round((Date.now() - onboardingStartedAtRef.current) / 1000),
+      total_steps: TOTAL_STEPS,
+    });
     addXP(ONBOARDING_XP, "onboarding");
     addCoins(50);
     completeOnboarding({
