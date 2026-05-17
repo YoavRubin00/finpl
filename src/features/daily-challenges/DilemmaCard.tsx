@@ -30,9 +30,11 @@ const RTL = { writingDirection: 'rtl' as const, textAlign: 'right' as const };
 
 interface Props {
   isActive: boolean;
+  /** Inter-module overlay sets this to render a "המשך" button on the result. */
+  onContinue?: () => void;
 }
 
-export const DilemmaCard = React.memo(function DilemmaCard({ isActive }: Props) {
+export const DilemmaCard = React.memo(function DilemmaCard({ isActive, onContinue }: Props) {
   const router = useRouter();
   const hasDilemmaAnsweredToday = useDailyChallengesStore((s) => s.hasDilemmaAnsweredToday);
   const getDilemmaPlaysToday = useDailyChallengesStore((s) => s.getDilemmaPlaysToday);
@@ -220,6 +222,13 @@ export const DilemmaCard = React.memo(function DilemmaCard({ isActive }: Props) 
             </Text>
           </Animated.View>
         )}
+
+        {/* Continue button — appears only when inter-module overlay sets it. */}
+        {showResult && onContinue && (
+          <Pressable onPress={onContinue} style={styles.continueBtn} accessibilityRole="button" accessibilityLabel="המשך">
+            <Text style={styles.continueBtnText}>המשך</Text>
+          </Pressable>
+        )}
       </View>
 
       {/* Celebration modal after completing */}
@@ -392,6 +401,26 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '800',
     color: '#16a34a',
+  },
+  continueBtn: {
+    marginTop: 12,
+    backgroundColor: '#0ea5e9',
+    borderRadius: 18,
+    paddingVertical: 16,
+    alignItems: 'center',
+    borderBottomWidth: 4,
+    borderBottomColor: '#0369a1',
+    shadowColor: '#0ea5e9',
+    shadowOpacity: 0.4,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 8,
+  },
+  continueBtnText: {
+    fontSize: 18,
+    fontWeight: '900',
+    color: '#ffffff',
+    letterSpacing: 0.5,
   },
   replayBtn: {
     backgroundColor: 'rgba(14,165,233,0.12)',

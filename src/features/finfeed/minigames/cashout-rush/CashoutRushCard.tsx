@@ -67,6 +67,8 @@ function pickHistoryBelow(): typeof FG_HISTORY[number] {
 
 interface Props {
   isActive: boolean;
+  /** Inter-module overlay sets this to render a "המשך" button on the result. */
+  onContinue?: () => void;
 }
 
 type Phase = 'idle' | 'running' | 'cashed' | 'crashed' | 'education';
@@ -211,7 +213,7 @@ function GambleWarning() {
   );
 }
 
-export const CashoutRushCard = React.memo(function CashoutRushCard({ isActive: _isActive }: Props) {
+export const CashoutRushCard = React.memo(function CashoutRushCard({ isActive: _isActive, onContinue }: Props) {
   const playCashoutRush = useDailyChallengesStore((s) => s.playCashoutRush);
   const hasPlayedToday = useDailyChallengesStore((s) => s.hasCashoutRushPlayedToday());
   const playsToday = useDailyChallengesStore((s) => s.getCashoutRushPlaysToday());
@@ -495,6 +497,12 @@ export const CashoutRushCard = React.memo(function CashoutRushCard({ isActive: _
             )}
           </Animated.View>
         )}
+
+        {(phase === 'cashed' || phase === 'crashed') && onContinue && (
+          <Pressable onPress={onContinue} style={styles.continueBtn} accessibilityRole="button" accessibilityLabel="המשך">
+            <Text style={styles.continueBtnText}>המשך</Text>
+          </Pressable>
+        )}
       </View>
     </View>
   );
@@ -748,5 +756,26 @@ const styles = StyleSheet.create({
   doneSub: {
     fontSize: 14,
     color: '#64748b',
+  },
+  continueBtn: {
+    marginTop: 18,
+    alignSelf: 'stretch',
+    backgroundColor: '#0ea5e9',
+    borderRadius: 18,
+    paddingVertical: 16,
+    alignItems: 'center',
+    borderBottomWidth: 4,
+    borderBottomColor: '#0369a1',
+    shadowColor: '#0ea5e9',
+    shadowOpacity: 0.4,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 8,
+  },
+  continueBtnText: {
+    fontSize: 18,
+    fontWeight: '900',
+    color: '#ffffff',
+    letterSpacing: 0.5,
   },
 });

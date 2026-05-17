@@ -37,6 +37,8 @@ const TRACK_HEIGHT = 12;
 
 interface Props {
   isActive: boolean;
+  /** Inter-module overlay sets this to render a "המשך" button on the result. */
+  onContinue?: () => void;
 }
 
 type Phase = 'guessing' | 'revealing' | 'done';
@@ -164,7 +166,7 @@ function ValueTicker({ target, color, delayMs }: { target: number; color: string
   );
 }
 
-export const PriceSliderCard = React.memo(function PriceSliderCard({ isActive: _isActive }: Props) {
+export const PriceSliderCard = React.memo(function PriceSliderCard({ isActive: _isActive, onContinue }: Props) {
   const playPriceSlider = useDailyChallengesStore((s) => s.playPriceSlider);
   const hasPlayedToday = useDailyChallengesStore((s) => s.hasPriceSliderPlayedToday());
   const playsToday = useDailyChallengesStore((s) => s.getPriceSliderPlaysToday());
@@ -379,6 +381,12 @@ export const PriceSliderCard = React.memo(function PriceSliderCard({ isActive: _
               <Text style={[styles.rewardPillText, { color: '#d4a017' }]}>+{CHALLENGE_COIN_REWARD}</Text>
             </View>
           </Animated.View>
+        )}
+
+        {phase === 'done' && onContinue && (
+          <Pressable onPress={onContinue} style={styles.continueBtn} accessibilityRole="button" accessibilityLabel="המשך">
+            <Text style={styles.continueBtnText}>המשך</Text>
+          </Pressable>
         )}
       </View>
     </View>
@@ -638,6 +646,27 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '900',
     color: '#7c3aed',
+  },
+  continueBtn: {
+    marginTop: 18,
+    alignSelf: 'stretch',
+    backgroundColor: '#0ea5e9',
+    borderRadius: 18,
+    paddingVertical: 16,
+    alignItems: 'center',
+    borderBottomWidth: 4,
+    borderBottomColor: '#0369a1',
+    shadowColor: '#0ea5e9',
+    shadowOpacity: 0.4,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 8,
+  },
+  continueBtnText: {
+    fontSize: 18,
+    fontWeight: '900',
+    color: '#ffffff',
+    letterSpacing: 0.5,
   },
   finLarge: {
     width: 96,

@@ -3890,15 +3890,23 @@ export function LessonFlowScreen() {
                 <Text style={{ color: "#475569", fontSize: 18, fontWeight: "800", lineHeight: 20 }}>✕</Text>
               </Pressable>
             </View>
-            {mod.interModuleGame === 'investment' && <InvestmentCard isActive />}
-            {mod.interModuleGame === 'crash' && <CrashGameCard isActive />}
+            {mod.interModuleGame === 'investment' && (
+              <InvestmentCard isActive onContinue={() => { setShowInterGame(false); goToNextSequentialModule(); }} />
+            )}
+            {mod.interModuleGame === 'crash' && (
+              <CrashGameCard isActive onContinue={() => { setShowInterGame(false); goToNextSequentialModule(); }} />
+            )}
             {mod.interModuleGame === 'myth' && (
               useMythStore.getState().canPlayMyth(isPro)
                 ? <MythFeedCard isInterModule onSkip={() => { setShowInterGame(false); goToNextSequentialModule(); }} />
                 : <MythInterModuleAutoSkip onSkip={() => { setShowInterGame(false); goToNextSequentialModule(); }} />
             )}
-            {mod.interModuleGame === 'dilemma' && <DilemmaCard isActive />}
-            {mod.interModuleGame === 'fomo-killer' && <FomoKillerCard isActive />}
+            {mod.interModuleGame === 'dilemma' && (
+              <DilemmaCard isActive onContinue={() => { setShowInterGame(false); goToNextSequentialModule(); }} />
+            )}
+            {mod.interModuleGame === 'fomo-killer' && (
+              <FomoKillerCard isActive onContinue={() => { setShowInterGame(false); goToNextSequentialModule(); }} />
+            )}
             {mod.interModuleGame === 'bullshit-swipe' && (
               <BullshitSwipeCard
                 isActive
@@ -3912,9 +3920,15 @@ export function LessonFlowScreen() {
                 onComplete={() => { setShowInterGame(false); goToNextSequentialModule(); }}
               />
             )}
-            {mod.interModuleGame === 'price-slider' && <PriceSliderCard isActive />}
-            {mod.interModuleGame === 'budget-ninja' && <BudgetNinjaCard isActive />}
-            {mod.interModuleGame === 'cashout-rush' && <CashoutRushCard isActive />}
+            {mod.interModuleGame === 'price-slider' && (
+              <PriceSliderCard isActive onContinue={() => { setShowInterGame(false); goToNextSequentialModule(); }} />
+            )}
+            {mod.interModuleGame === 'budget-ninja' && (
+              <BudgetNinjaCard isActive onContinue={() => { setShowInterGame(false); goToNextSequentialModule(); }} />
+            )}
+            {mod.interModuleGame === 'cashout-rush' && (
+              <CashoutRushCard isActive onContinue={() => { setShowInterGame(false); goToNextSequentialModule(); }} />
+            )}
             {mod.interModuleGame === 'macro-event' && mod.interModuleMacroEventId && (() => {
               const event = macroEventsData.find((e) => e.id === mod.interModuleMacroEventId);
               if (!event) return null;
@@ -3922,6 +3936,7 @@ export function LessonFlowScreen() {
                 <MacroEventCard
                   item={{ id: event.id, type: 'macro-event', event }}
                   isActive
+                  onContinue={() => { setShowInterGame(false); goToNextSequentialModule(); }}
                 />
               );
             })()}
