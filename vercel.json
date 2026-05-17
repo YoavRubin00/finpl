@@ -2,8 +2,6 @@
   "framework": null,
   "buildCommand": "",
   "outputDirectory": "public",
-  "cleanUrls": true,
-  "trailingSlash": false,
   "functions": {
     "api/**/*.ts": {
       "maxDuration": 30,
