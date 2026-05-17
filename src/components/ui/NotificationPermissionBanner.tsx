@@ -1,8 +1,15 @@
 /**
  * NotificationPermissionBanner, Duolingo-style permission request banner.
  * Shows when permission is not granted and user hasn't dismissed it this session.
+ *
+ * Hard-gated to post-onboarding/walkthrough, and throttled via the global
+ * top-banner cooldown so it never overlaps the AI insight or upgrade nudge.
  */
+import { useEffect, useState } from "react";
 import { useNotificationStore } from "../../features/notifications/useNotificationStore";
+import { useBannerCooldownStore } from "../../features/notifications/useBannerCooldownStore";
+import { useAuthStore } from "../../features/auth/useAuthStore";
+import { useTutorialStore } from "../../stores/useTutorialStore";
 import { NotificationBanner } from "./NotificationBanner";
 import { FINN_STANDARD } from "../../features/retention-loops/finnMascotConfig";
 
@@ -11,8 +18,30 @@ export function NotificationPermissionBanner() {
   const bannerDismissed = useNotificationStore((s) => s.bannerDismissed);
   const requestPermission = useNotificationStore((s) => s.requestPermission);
   const dismissBanner = useNotificationStore((s) => s.dismissBanner);
+  const hasCompletedOnboarding = useAuthStore((s) => s.hasCompletedOnboarding);
+  const hasSeenWalkthrough = useTutorialStore((s) => s.hasSeenAppWalkthrough);
 
-  const visible = !permissionGranted && !bannerDismissed;
+  const eligible =
+    !permissionGranted &&
+    !bannerDismissed &&
+    hasCompletedOnboarding &&
+    hasSeenWalkthrough;
+
+  // Defer rendering until the global cooldown is clear, then mark shown so
+  // the next banner waits its 10s slot.
+  const [visible, setVisible] = useState(false);
+  useEffect(() => {
+    if (!eligible) {
+      setVisible(false);
+      return;
+    }
+    const delay = useBannerCooldownStore.getState().msUntilNextSlot();
+    const t = setTimeout(() => {
+      setVisible(true);
+      useBannerCooldownStore.getState().markShown();
+    }, delay);
+    return () => clearTimeout(t);
+  }, [eligible]);
 
   const handleAllow = async () => {
     await requestPermission();
