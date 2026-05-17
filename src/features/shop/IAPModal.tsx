@@ -1,5 +1,6 @@
 import { useCallback, useState } from 'react';
 import { View, Text, Pressable, Modal, StyleSheet, Alert, Platform } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as Haptics from 'expo-haptics';
 import { LinearGradient } from 'expo-linear-gradient';
 import { X } from 'lucide-react-native';
@@ -37,6 +38,7 @@ export function IAPModal({ visible, bundle, onDismiss, onPurchaseSuccess }: IAPM
   const addGems = useEconomyStore((s) => s.addGems);
   const addCoins = useEconomyStore((s) => s.addCoins);
   const [showConfetti, setShowConfetti] = useState(false);
+  const insets = useSafeAreaInsets();
 
   const spendGems = useEconomyStore((s) => s.spendGems);
 
@@ -117,7 +119,7 @@ export function IAPModal({ visible, bundle, onDismiss, onPurchaseSuccess }: IAPM
         </View>
       )}
       <View style={styles.backdrop}>
-        <View style={[styles.sheet, { borderColor: `${accentColor}55` }]}>
+        <View style={[styles.sheet, { borderColor: `${accentColor}55`, paddingBottom: 32 + insets.bottom }]}>
           {/* Close X — replaces tap-outside-to-dismiss to avoid the
               Pressable-backdrop hit-test bug that broke the CTA on Android. */}
           <Pressable
@@ -159,7 +161,8 @@ export function IAPModal({ visible, bundle, onDismiss, onPurchaseSuccess }: IAPM
             </Text>
           </View>
 
-          {/* CTA */}
+          {/* CTA — premium 3D button with outer glow ring + shine rim */}
+          <View style={[styles.buyBtnGlow, isCoins ? styles.buyBtnGlowCoins : styles.buyBtnGlowGems]} pointerEvents="none" />
           <Pressable
             onPress={handlePurchase}
             style={({ pressed }) => [
@@ -172,15 +175,25 @@ export function IAPModal({ visible, bundle, onDismiss, onPurchaseSuccess }: IAPM
           >
             <LinearGradient
               colors={isCoins
-                ? ['#FCD34D', '#F59E0B', '#B45309']
-                : ['#7DD3FC', '#38BDF8', '#0284C7']}
-              locations={[0, 0.45, 1]}
+                ? ['#FDE68A', '#FBBF24', '#D97706', '#92400E']
+                : ['#BAE6FD', '#7DD3FC', '#0284C7', '#075985']}
+              locations={[0, 0.35, 0.75, 1]}
               start={{ x: 0, y: 0 }}
               end={{ x: 0, y: 1 }}
               style={[StyleSheet.absoluteFill, { borderRadius: 38 }]}
               pointerEvents="none"
             />
-            <View style={styles.buyBtnRim} pointerEvents="none" />
+            {/* Glass shine — bright top half giving the "wet glass" look */}
+            <LinearGradient
+              colors={['rgba(255,255,255,0.55)', 'rgba(255,255,255,0.10)', 'rgba(255,255,255,0)']}
+              locations={[0, 0.45, 1]}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 0, y: 1 }}
+              style={styles.buyBtnRim}
+              pointerEvents="none"
+            />
+            {/* Hairline white border at very top for "metallic" edge */}
+            <View style={styles.buyBtnTopEdge} pointerEvents="none" />
             <Text
               style={[styles.buyBtnText, isCoins && styles.buyBtnTextCoins]}
               numberOfLines={1}
@@ -288,6 +301,32 @@ const styles = StyleSheet.create({
     fontWeight: '900',
     color: '#1f2937',
   },
+  // Outer glow ring — a soft halo behind the button. position:absolute
+  // so it sits behind the Pressable without affecting layout.
+  buyBtnGlow: {
+    position: 'absolute',
+    alignSelf: 'center',
+    width: '100%',
+    height: 76,
+    borderRadius: 38,
+    opacity: 0.85,
+  },
+  buyBtnGlowGems: {
+    backgroundColor: 'transparent',
+    shadowColor: '#38BDF8',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 1,
+    shadowRadius: 28,
+    elevation: 0,
+  },
+  buyBtnGlowCoins: {
+    backgroundColor: 'transparent',
+    shadowColor: '#F59E0B',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 1,
+    shadowRadius: 26,
+    elevation: 0,
+  },
   buyBtn: {
     width: '100%',
     height: 76,
@@ -301,28 +340,38 @@ const styles = StyleSheet.create({
     elevation: 22,
   },
   buyBtnGems: {
-    borderBottomColor: '#0369A1',
+    borderBottomColor: '#075985',
     shadowColor: '#38BDF8',
-    shadowOffset: { width: 0, height: 12 },
+    shadowOffset: { width: 0, height: 14 },
     shadowOpacity: 1,
-    shadowRadius: 36,
+    shadowRadius: 40,
   },
   buyBtnCoins: {
-    borderBottomColor: '#92400E',
+    borderBottomColor: '#7C2D12',
     shadowColor: '#F59E0B',
-    shadowOffset: { width: 0, height: 12 },
-    shadowOpacity: 0.9,
-    shadowRadius: 30,
+    shadowOffset: { width: 0, height: 14 },
+    shadowOpacity: 0.95,
+    shadowRadius: 34,
   },
+  // Shiny glass overlay on the top half — gives the wet "premium gel" feel.
   buyBtnRim: {
     position: 'absolute',
     top: 0,
     left: 0,
     right: 0,
-    height: '45%',
-    backgroundColor: 'rgba(255, 255, 255, 0.28)',
+    height: '55%',
     borderTopLeftRadius: 38,
     borderTopRightRadius: 38,
+  },
+  // Hairline metallic border at the very top edge of the button.
+  buyBtnTopEdge: {
+    position: 'absolute',
+    top: 0,
+    left: 6,
+    right: 6,
+    height: 1.5,
+    backgroundColor: 'rgba(255,255,255,0.9)',
+    borderRadius: 1,
   },
   buyBtnText: {
     fontSize: 22,
