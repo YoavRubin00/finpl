@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { View, Text, StyleSheet, Dimensions, AccessibilityInfo } from 'react-native';
+import { View, Text, StyleSheet, Dimensions, AccessibilityInfo, Pressable } from 'react-native';
 import { Image as ExpoImage } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import Animated, {
@@ -51,6 +51,9 @@ interface Props {
   bypassDailyGate?: boolean;
   /** Fired when the game transitions to the 'done' state. */
   onFinish?: () => void;
+  /** When set, the done summary renders a "המשך" button that calls this.
+   *  Inter-module flow uses it so users don't have to hunt for the ✕. */
+  onContinue?: () => void;
 }
 
 function AdCardFront({ ad }: { ad: BullshitAd }) {
@@ -357,6 +360,7 @@ export const BullshitSwipeCard = React.memo(function BullshitSwipeCard({
   isActive: _isActive,
   bypassDailyGate = false,
   onFinish,
+  onContinue,
 }: Props) {
   const playBullshitSwipe = useDailyChallengesStore((s) => s.playBullshitSwipe);
   const hasPlayedToday = useDailyChallengesStore((s) => s.hasBullshitSwipePlayedToday());
@@ -549,6 +553,16 @@ export const BullshitSwipeCard = React.memo(function BullshitSwipeCard({
                 </View>
               )}
             </View>
+            {onContinue && (
+              <Pressable
+                onPress={onContinue}
+                accessibilityRole="button"
+                accessibilityLabel="המשך"
+                style={styles.continueBtn}
+              >
+                <Text style={styles.continueBtnText}>המשך</Text>
+              </Pressable>
+            )}
           </Animated.View>
         )}
 
@@ -864,6 +878,27 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '900',
     color: '#7c3aed',
+  },
+  continueBtn: {
+    marginTop: 18,
+    alignSelf: 'stretch',
+    backgroundColor: '#0ea5e9',
+    borderRadius: 18,
+    paddingVertical: 16,
+    alignItems: 'center',
+    borderBottomWidth: 4,
+    borderBottomColor: '#0369a1',
+    shadowColor: '#0ea5e9',
+    shadowOpacity: 0.4,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 8,
+  },
+  continueBtnText: {
+    fontSize: 18,
+    fontWeight: '900',
+    color: '#ffffff',
+    letterSpacing: 0.5,
   },
   nextBtnWrap: {
     width: SCREEN_WIDTH - 72,

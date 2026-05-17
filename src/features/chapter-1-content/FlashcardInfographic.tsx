@@ -8,7 +8,7 @@
  */
 import { useState, useCallback, useEffect, useRef } from "react";
 import { View, Image, Text, StyleSheet, Pressable, Modal, Platform } from "react-native";
-import Animated, { useSharedValue, useAnimatedStyle, withTiming, withRepeat, withSequence, Easing } from "react-native-reanimated";
+import Animated, { useSharedValue, useAnimatedStyle, withTiming, withRepeat, withSequence, Easing, interpolate, Extrapolation } from "react-native-reanimated";
 import { Image as ExpoImage } from "expo-image";
 import type { ImageSource, ImageLoadEventData } from "expo-image";
 import type { ImageSourcePropType } from "react-native";
@@ -453,7 +453,7 @@ const TEXT_OVERLAYS: Record<string, TextOverlay[]> = {
   ],
   "fc-1-2-1": [
     {
-      topPct: 73,
+      topPct: 80,
       leftPct: 35,
       widthPct: 13,
       heightPct: 4,
@@ -546,6 +546,14 @@ export function FlashcardInfographic({ cardId, diveStep = 0, zoomRegions }: Prop
     ],
   }));
 
+  // Text overlays patch typos in the static PNG. They should fade away the
+  // moment the zoom-in begins, so the patched image doesn't keep its visible
+  // bandage while the camera moves around. interp [1, 1.1] -> [1, 0] means
+  // by the time the zoom hits 10% it's gone — well within the 600ms transition.
+  const overlayFadeStyle = useAnimatedStyle(() => ({
+    opacity: interpolate(zoomScale.value, [1, 1.1], [1, 0], Extrapolation.CLAMP),
+  }));
+
   if (!source && !lottieSource && !finnTapSource) return null;
 
   return (
@@ -577,19 +585,22 @@ export function FlashcardInfographic({ cardId, diveStep = 0, zoomRegions }: Prop
         <View style={[s.container, isLightBg && s.containerLight, { aspectRatio: ratio ?? 1.2, maxHeight: COMPACT_CARDS.has(cardId) ? 220 : LARGE_CARDS.has(cardId) ? undefined : 270, backgroundColor: '#f1f5f9' }]}>
           <AnimatedExpoImage source={source} style={[s.image, zoomStyle]} contentFit={COVER_CARDS.has(cardId) ? "cover" : "contain"} cachePolicy="memory-disk" priority="high" transition={200} onLoad={Platform.OS === 'web' ? undefined : handleLoad} />
           {TEXT_OVERLAYS[cardId]?.map((o, i) => (
-            <View
+            <Animated.View
               key={i}
               pointerEvents="none"
-              style={{
-                position: "absolute",
-                top: `${o.topPct}%`,
-                left: `${o.leftPct}%`,
-                width: `${o.widthPct}%`,
-                height: `${o.heightPct}%`,
-                backgroundColor: o.backgroundColor ?? "#ffffff",
-                justifyContent: "center",
-                alignItems: "center",
-              }}
+              style={[
+                {
+                  position: "absolute",
+                  top: `${o.topPct}%`,
+                  left: `${o.leftPct}%`,
+                  width: `${o.widthPct}%`,
+                  height: `${o.heightPct}%`,
+                  backgroundColor: o.backgroundColor ?? "#ffffff",
+                  justifyContent: "center",
+                  alignItems: "center",
+                },
+                overlayFadeStyle,
+              ]}
             >
               {o.text ? (
                 <Text style={{
@@ -600,7 +611,7 @@ export function FlashcardInfographic({ cardId, diveStep = 0, zoomRegions }: Prop
                   writingDirection: "rtl",
                 }}>{o.text}</Text>
               ) : null}
-            </View>
+            </Animated.View>
           ))}
           {lottieSource && (
             <View style={s.lottieFloatingBadge}>
