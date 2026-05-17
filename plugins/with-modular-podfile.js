@@ -8,7 +8,7 @@ const path = require('path');
  * React-Core's headers without tripping
  * -Wnon-modular-include-in-framework-module under -Werror.
  *
- * Two changes:
+ * Three changes:
  *   1. `use_modular_headers!` at the top of the file — instructs
  *      CocoaPods to install pods with module maps where possible.
  *      Alone this does not cover pods loaded via use_react_native!
@@ -18,6 +18,13 @@ const path = require('path');
  *      post_install hooks). This forces Xcode to emit a module map
  *      for every pod target including React-Core, which is what
  *      RNFBApp's #include <React/RCTConvert.h> needs.
+ *   3. Also set CLANG_ALLOW_NON_MODULAR_INCLUDES_IN_FRAMEWORK_MODULES
+ *      to YES. Xcode 16 Explicit Modules (visible in build logs as
+ *      `ExplicitPrecompiledModules/RNFBApp-*.scan`) enforces modular
+ *      includes stricter than DEFINES_MODULE alone can satisfy when
+ *      React-Core headers stay non-modular. This flag is the direct
+ *      counterpart of -Wnon-modular-include-in-framework-module and
+ *      bypasses the -Werror trip.
  *
  * Idempotent — both edits check for marker text and skip if present.
  */
@@ -35,10 +42,12 @@ module.exports = function withModularPodfile(config) {
         touched = true;
       }
 
-      // 2. Inject DEFINES_MODULE=YES INTO the existing post_install block.
-      const HOOK_MARKER = '# with-modular-podfile: DEFINES_MODULE';
+      // 2+3. Inject DEFINES_MODULE=YES and CLANG_ALLOW_NON_MODULAR_INCLUDES
+      // INTO the existing post_install block. Marker bumped so stale Podfiles
+      // patched by the previous version get re-patched on next prebuild.
+      const HOOK_MARKER = '# with-modular-podfile: DEFINES_MODULE+ALLOW_NON_MODULAR';
       if (!contents.includes(HOOK_MARKER)) {
-        const injection = `\n    ${HOOK_MARKER}\n    installer.pods_project.targets.each do |target|\n      target.build_configurations.each do |config|\n        config.build_settings['DEFINES_MODULE'] = 'YES'\n      end\n    end\n`;
+        const injection = `\n    ${HOOK_MARKER}\n    installer.pods_project.targets.each do |target|\n      target.build_configurations.each do |config|\n        config.build_settings['DEFINES_MODULE'] = 'YES'\n        config.build_settings['CLANG_ALLOW_NON_MODULAR_INCLUDES_IN_FRAMEWORK_MODULES'] = 'YES'\n      end\n    end\n`;
         const match = contents.match(/(post_install\s+do\s+\|installer\|\s*\n)/);
         if (match) {
           contents = contents.replace(match[1], `${match[1]}${injection}`);
@@ -54,7 +63,7 @@ module.exports = function withModularPodfile(config) {
       if (touched) {
         fs.writeFileSync(podfilePath, contents);
         // eslint-disable-next-line no-console
-        console.log('[with-modular-podfile] Patched Podfile (use_modular_headers! + DEFINES_MODULE inside existing post_install).');
+        console.log('[with-modular-podfile] Patched Podfile (use_modular_headers! + DEFINES_MODULE + CLANG_ALLOW_NON_MODULAR inside existing post_install).');
       }
       return cfg;
     },
