@@ -214,6 +214,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 28,
     paddingBottom: 40,
     alignItems: 'center',
+    elevation: 24,
+    zIndex: 10,
   },
   handle: {
     width: 40,
