@@ -180,11 +180,17 @@ export function IAPModal({ visible, bundle, onDismiss, onPurchaseSuccess }: IAPM
               locations={[0, 0.45, 1]}
               start={{ x: 0, y: 0 }}
               end={{ x: 0, y: 1 }}
-              style={[StyleSheet.absoluteFill, { borderRadius: 31 }]}
+              style={[StyleSheet.absoluteFill, { borderRadius: 38 }]}
               pointerEvents="none"
             />
             <View style={styles.buyBtnRim} pointerEvents="none" />
-            <Text style={[styles.buyBtnText, isCoins && styles.buyBtnTextCoins]}>
+            <Text
+              style={[styles.buyBtnText, isCoins && styles.buyBtnTextCoins]}
+              numberOfLines={1}
+              adjustsFontSizeToFit
+              minimumFontScale={0.7}
+              allowFontScaling={false}
+            >
               {isCoins ? '💎 המר לזהב' : '🛒 קנה עכשיו'}
             </Text>
           </Pressable>
@@ -203,8 +209,12 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0,0,0,0.6)',
     justifyContent: 'flex-end',
   },
+  // Backdrop is a flex-1 child taking only the space ABOVE the sheet
+  // (not absoluteFill) so it never overlaps the sheet's touch area on
+  // Android. The overlay's backgroundColor provides the dark visual tint.
   backdrop: {
-    ...StyleSheet.absoluteFillObject,
+    flex: 1,
+    width: '100%',
   },
   sheet: {
     backgroundColor: '#ffffff',
@@ -278,6 +288,7 @@ const styles = StyleSheet.create({
     width: '100%',
     height: 76,
     borderRadius: 38,
+    paddingHorizontal: 16,
     overflow: 'hidden',
     alignItems: 'center',
     justifyContent: 'center',
