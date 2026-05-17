@@ -2,7 +2,7 @@
   "expo": {
     "name": "FinPlay",
     "slug": "finpl",
-    "version": "1.1.5",
+    "version": "1.1.6",
     "scheme": "finpl",
     "description": "FinPlay — Learn finance through play. Gamified financial literacy for Gen-Z.",
     "platforms": [
@@ -84,7 +84,8 @@
           "iosUserTrackingPermission": "FinPlay משתמשת במזהה הפרסום כדי להציג מודעות רלוונטיות ולשפר את חוויית המשחק. תוכל/י לסרב מבלי לאבד שום תוכן."
         }
       ],
-      "./plugins/with-no-background-audio"
+      "./plugins/with-no-background-audio",
+      "@react-native-firebase/app"
     ],
     "extra": {
       "router": {},
@@ -100,6 +101,7 @@
     },
     "android": {
       "package": "com.finplay.app",
+      "googleServicesFile": "./google-services.json",
       "adaptiveIcon": {
         "foregroundImage": "./assets/IMAGES/icon-1024.png",
         "backgroundColor": "#0a1628"
@@ -145,6 +147,7 @@
     },
     "ios": {
       "bundleIdentifier": "com.finplay.app",
+      "googleServicesFile": "./GoogleService-Info.plist",
       "buildNumber": "1",
       "supportsTablet": false,
       "usesAppleSignIn": true,

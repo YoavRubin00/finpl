@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "374866597081",
+    "project_id": "finplay-d0446",
+    "storage_bucket": "finplay-d0446.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:374866597081:android:855bb5d3eb77c9d8cfdac8",
+        "android_client_info": {
+          "package_name": "com.finplay.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAXakgGCkN4y3JrbxwZO76NU2faw-9gTSk"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
