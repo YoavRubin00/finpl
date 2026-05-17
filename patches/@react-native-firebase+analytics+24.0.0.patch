@@ -1,0 +1,16 @@
+diff --git a/node_modules/@react-native-firebase/analytics/ios/RNFBAnalytics/RNFBAnalyticsModule.h b/node_modules/@react-native-firebase/analytics/ios/RNFBAnalytics/RNFBAnalyticsModule.h
+index 8f0268e..7e6d49d 100644
+--- a/node_modules/@react-native-firebase/analytics/ios/RNFBAnalytics/RNFBAnalyticsModule.h
++++ b/node_modules/@react-native-firebase/analytics/ios/RNFBAnalytics/RNFBAnalyticsModule.h
+@@ -17,6 +17,11 @@
+ 
+ #import <Foundation/Foundation.h>
+ 
++// Xcode 16+ Explicit Modules: with DEFINES_MODULE=YES on RNFBApp, the
++// React-Core headers it includes become claimed by RNFBApp's module map.
++// clang then refuses #import <React/RCTBridgeModule.h> here unless we
++// import the owning module first. patched via patch-package.
++@import RNFBApp;
+ #import <React/RCTBridgeModule.h>
+ 
+ @interface RNFBAnalyticsModule : NSObject <RCTBridgeModule>
