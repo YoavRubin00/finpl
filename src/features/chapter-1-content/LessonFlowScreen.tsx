@@ -257,7 +257,7 @@ const SUMMARY_MAP: Record<string, { uri: string } | number | null> = {
   "fc-1-2-summary": { uri: 'https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/infographics/mod-1-2/summary-1-2.png' },
   "fc-1-3-summary": { uri: 'https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/infographics/mod-1-3/summary-1-3.png' },
   "fc-1-4-summary": { uri: 'https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/infographics/mod-1-1/summary-1-1.png' },
-  "fc-1-5-payslip": { uri: 'https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/images/content/SACHAR.jpg' },
+  "fc-1-5-payslip": { uri: 'https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/images/content/SACHAR.jpeg' },
   "fc-1-5-summary": { uri: 'https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/infographics/mod-1-5/summary-1-5-v2.png' },
   "fc-1-6-summary": { uri: 'https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/infographics/mod-1-6/summary-1-6.png' },
   "fc-1-7-summary": { uri: 'https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/infographics/mod-1-7/summary-1-7.png' },
