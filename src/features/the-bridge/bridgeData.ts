@@ -25,6 +25,29 @@ export const BRIDGE_BENEFITS: Benefit[] = [
     isPartnerAd: true,
   },
 
+  // ★ REAL PARTNER: Inter-IL (US brokerage focus) ★
+  {
+    id: 'bridge-invest-inter-il',
+    title: 'חשבון מסחר, Inter-IL',
+    description:
+      'Inter-IL — מסחר בארה"ב ו-170 שווקים נוספים עם עמלות מהזולות בישראל.\n' +
+      '• עמלת מסחר 0.01$ למניה (מינ\' 2.5$), ללא דמי ניהול / שמירה.\n' +
+      '• השקעה חוזרת אוטומטית בהוראת קבע (DCA) למניות ותעודות סל.\n' +
+      '• ניכוי מס רווחי הון אוטומטי — בלי טופס 1325 בסוף השנה.\n' +
+      '• המרת מט"ח בשער רציף — חיסכון של ~4 אגורות מול הבנקים, עמלה 10₪ עד המרה של 500K₪.\n' +
+      '• ביטוח SIPC פדרלי עד $500K, FDIC עד $2.5M, ביטוח מורחב של Lloyds עד $30M.\n' +
+      '• הפקדה מהירה במערכת בנקאות פתוחה — דקה ופותחים חשבון.',
+    partnerName: 'Inter-IL',
+    partnerLogo: '🌎',
+    partnerLogoImage: require('../../../assets/IMAGES/INTERACTIVE.jpg') as number,
+    costCoins: 4000,
+    category: 'investments',
+    isAvailable: true,
+    reward: 'עמלות מהזולות בישראל + ניכוי מס רווחי הון אוטומטי',
+    partnerUrl: 'https://lp3.inter-il.com/ab/790',
+    isPartnerAd: true,
+  },
+
   // ── 🏦 חשבונות בנק, placeholder ──
   {
     id: 'bridge-bank-partner-slot',

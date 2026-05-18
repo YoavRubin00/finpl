@@ -11,6 +11,7 @@ const OWNER_EMAIL = process.env.OWNER_NOTIFICATION_EMAIL ?? '';
 
 const BENEFIT_LABELS: Record<string, string> = {
   'bridge-invest-altshuler': 'אלטשולר שחם טרייד',
+  'bridge-invest-inter-il': 'Inter-IL',
 };
 
 function buildAlertHtml(params: {
