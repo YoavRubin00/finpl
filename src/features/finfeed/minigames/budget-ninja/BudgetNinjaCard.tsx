@@ -207,7 +207,7 @@ function SharkResult({ score, kindsAllowed }: { score: number; kindsAllowed: boo
   );
 }
 
-export const BudgetNinjaCard = React.memo(function BudgetNinjaCard({ isActive: _isActive, onContinue }: Props) {
+export const BudgetNinjaCard = React.memo(function BudgetNinjaCard({ isActive, onContinue }: Props) {
   const playBudgetNinja = useDailyChallengesStore((s) => s.playBudgetNinja);
   const hasPlayedToday = useDailyChallengesStore((s) => s.hasBudgetNinjaPlayedToday());
   const playsToday = useDailyChallengesStore((s) => s.getBudgetNinjaPlaysToday());
@@ -239,6 +239,14 @@ export const BudgetNinjaCard = React.memo(function BudgetNinjaCard({ isActive: _
   }, []);
 
   useEffect(() => () => clearAllTickers(), [clearAllTickers]);
+
+  // Pause spawn + countdown intervals when the user scrolls away from this
+  // card in the feed. The intervals fire setScore/setSecondsLeft every
+  // ~80ms — off-screen state updates trigger re-renders that block the
+  // JS thread and surface as scroll jank on iOS.
+  useEffect(() => {
+    if (!isActive) clearAllTickers();
+  }, [isActive, clearAllTickers]);
 
   const finalize = useCallback(
     (finalScore: number) => {

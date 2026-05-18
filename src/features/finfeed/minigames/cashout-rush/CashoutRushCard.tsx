@@ -213,7 +213,7 @@ function GambleWarning() {
   );
 }
 
-export const CashoutRushCard = React.memo(function CashoutRushCard({ isActive: _isActive, onContinue }: Props) {
+export const CashoutRushCard = React.memo(function CashoutRushCard({ isActive, onContinue }: Props) {
   const playCashoutRush = useDailyChallengesStore((s) => s.playCashoutRush);
   const hasPlayedToday = useDailyChallengesStore((s) => s.hasCashoutRushPlayedToday());
   const playsToday = useDailyChallengesStore((s) => s.getCashoutRushPlaysToday());
@@ -260,6 +260,16 @@ export const CashoutRushCard = React.memo(function CashoutRushCard({ isActive: _
     if (tickRef.current) clearInterval(tickRef.current);
     if (confettiRef.current) clearTimeout(confettiRef.current);
   }, []);
+
+  // Stop the 80ms fear-greed tick when the user scrolls away from this card
+  // in the feed. setInterval state updates on an off-screen card cause
+  // re-renders that block the JS thread and surface as scroll jank.
+  useEffect(() => {
+    if (!isActive && tickRef.current) {
+      clearInterval(tickRef.current);
+      tickRef.current = null;
+    }
+  }, [isActive]);
 
   const finalize = useCallback(
     (cashedOut: boolean) => {

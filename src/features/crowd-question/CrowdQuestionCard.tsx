@@ -51,9 +51,11 @@ const WISDOM_EXPLANATION =
 
 interface Props {
   market?: MarketSnapshot;
+  /** When false, skips entering animations to keep FlashList scroll smooth. */
+  isActive?: boolean;
 }
 
-export const CrowdQuestionCard = React.memo(function CrowdQuestionCard({ market }: Props) {
+export const CrowdQuestionCard = React.memo(function CrowdQuestionCard({ market, isActive = true }: Props) {
   const getTodayQuestion = useCrowdQuestionStore((s) => s.getTodayQuestion);
   const hasVotedToday = useCrowdQuestionStore((s) => s.hasVotedToday);
   const getUserVoteFor = useCrowdQuestionStore((s) => s.getUserVoteFor);
@@ -115,7 +117,7 @@ export const CrowdQuestionCard = React.memo(function CrowdQuestionCard({ market 
         >
           <CardHeader />
 
-          <Animated.View entering={FadeIn.duration(280).delay(80)} style={styles.finnRow}>
+          <Animated.View entering={isActive ? FadeIn.duration(280).delay(80) : undefined} style={styles.finnRow}>
             <View style={styles.bubble}>
               <View style={styles.bubbleTail} accessible={false} importantForAccessibility="no" />
               <Text style={[styles.bubbleText, RTL]} allowFontScaling={false}>
@@ -132,7 +134,7 @@ export const CrowdQuestionCard = React.memo(function CrowdQuestionCard({ market 
 
           {!showResults ? (
             <Animated.View
-              entering={FadeIn.duration(260).delay(160)}
+              entering={isActive ? FadeIn.duration(260).delay(160) : undefined}
               exiting={FadeOut.duration(180)}
               style={styles.optionsWrap}
             >
@@ -165,7 +167,7 @@ export const CrowdQuestionCard = React.memo(function CrowdQuestionCard({ market 
           )}
 
           <Animated.View
-            entering={FadeInUp.duration(420).delay(showResults ? 280 : 320)}
+            entering={isActive ? FadeInUp.duration(420).delay(showResults ? 280 : 320) : undefined}
             style={styles.explainCard}
             accessible
             accessibilityLabel={`מה זה חכמת ההמונים. ${WISDOM_EXPLANATION}`}
@@ -185,7 +187,7 @@ export const CrowdQuestionCard = React.memo(function CrowdQuestionCard({ market 
 
           {question.termExplanation && (
             <Animated.View
-              entering={FadeInUp.duration(420).delay(showResults ? 360 : 400)}
+              entering={isActive ? FadeInUp.duration(420).delay(showResults ? 360 : 400) : undefined}
               style={styles.explainCard}
               accessible
               accessibilityLabel={`${question.termExplanation.title}. ${question.termExplanation.body}`}

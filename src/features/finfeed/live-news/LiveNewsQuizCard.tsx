@@ -80,7 +80,7 @@ function ChoiceButton({
   );
 }
 
-export function LiveNewsQuizCard() {
+export function LiveNewsQuizCard({ isActive = true }: { isActive?: boolean }) {
   const { data, loading, fetch, hasAnsweredToday, markAnswered } = useNewsQuizStore();
   const addXP = useEconomyStore((s) => s.addXP);
   const addCoins = useEconomyStore((s) => s.addCoins);
@@ -152,7 +152,7 @@ export function LiveNewsQuizCard() {
 
       <Animated.View style={!selected ? glowStyle : undefined}>
         <Animated.View
-          entering={FadeIn.duration(300)}
+          entering={isActive ? FadeIn.duration(300) : undefined}
           style={[
             styles.card,
             selected === data?.correctChoiceId

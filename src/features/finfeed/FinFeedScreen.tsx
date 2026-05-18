@@ -1154,9 +1154,9 @@ export function FinFeedScreen() {
         {item.type === "diamond-hands" && (
           <DiamondHandsCard isActive={isActive} />
         )}
-        {item.type === "live-news" && <LiveNewsQuizCard />}
-        {item.type === "crowd-question" && <CrowdQuestionCard />}
-        {item.type === "shark-feedback" && <SharkFeedbackCard />}
+        {item.type === "live-news" && <LiveNewsQuizCard isActive={isActive} />}
+        {item.type === "crowd-question" && <CrowdQuestionCard isActive={isActive} />}
+        {item.type === "shark-feedback" && <SharkFeedbackCard isActive={isActive} />}
         {item.type === "trading-nudge" && <FeedTradingNudgeCard isActive={isActive} />}
         {item.type === "referral-nudge" && <FeedReferralNudgeCard isActive={isActive} />}
         {item.type === "simulator-teaser" && (

@@ -22,7 +22,7 @@ const OPTIONS: { id: string; label: string; emoji: string }[] = [
   { id: "sims", label: "הסימולטור השקעות", emoji: "📈" },
 ];
 
-export const SharkFeedbackCard = React.memo(function SharkFeedbackCard() {
+export const SharkFeedbackCard = React.memo(function SharkFeedbackCard({ isActive = true }: { isActive?: boolean }) {
   const [choice, setChoice] = useState<string | null>(null);
   const [showFlying, setShowFlying] = useState(false);
   const { playSound } = useSoundEffect();
@@ -62,10 +62,13 @@ export const SharkFeedbackCard = React.memo(function SharkFeedbackCard() {
           {OPTIONS.map((opt, idx) => {
             const selected = choice === opt.id;
             const dimmed = choice && !selected;
+            // Skip the staggered FadeInUp when off-screen — reanimated still
+            // runs the entering choreography even on background cards in
+            // FlashList, which contributes to scroll jank on iOS.
             return (
               <Animated.View
                 key={opt.id}
-                entering={FadeInUp.delay(150 + idx * 80).duration(320)}
+                entering={isActive ? FadeInUp.delay(150 + idx * 80).duration(320) : undefined}
               >
                 <Pressable
                   onPress={() => handleSelect(opt.id)}
