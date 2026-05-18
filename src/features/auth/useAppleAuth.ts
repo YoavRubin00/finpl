@@ -62,9 +62,10 @@ export function useAppleAuth() {
       }
     } catch (err: unknown) {
       const code = (err as { code?: string }).code;
-      // User canceled or auth failed, silently no-op so login screen stays.
+      // User canceled or auth failed. Silent for cancel, inline banner for real failures.
       if (code !== "ERR_REQUEST_CANCELED") {
         captureEvent('auth_failed', { method: 'apple', error_code: code ?? 'unknown' });
+        useAuthStore.getState().setAuthError("הכניסה עם Apple נכשלה. נסה שוב או בחר שיטה אחרת.");
         console.warn("[AppleAuth] signIn failed:", err);
       } else {
         captureEvent('auth_cancelled', { method: 'apple' });

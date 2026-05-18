@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
+import { Platform } from "react-native";
 import { Image as ExpoImage } from "expo-image";
 import * as FileSystem from "expo-file-system/legacy";
+import { captureEvent } from "../lib/posthog";
 
 const videoCache = new Map<string, string>();
 const VIDEO_CACHE_DIR = `${FileSystem.cacheDirectory ?? ""}module-videos/`;
@@ -9,6 +11,10 @@ const VIDEO_CACHE_DIR = `${FileSystem.cacheDirectory ?? ""}module-videos/`;
 // otherwise returns the original remote URI unchanged so playback still works.
 export function getCachedVideoPath(remoteUri: string): string {
   return videoCache.get(remoteUri) ?? remoteUri;
+}
+
+function videoKeyFromUri(uri: string): string {
+  return uri.split('/').slice(-2).join('/');
 }
 
 async function prefetchVideo(uri: string): Promise<void> {
@@ -22,9 +28,24 @@ async function prefetchVideo(uri: string): Promise<void> {
     }
     await FileSystem.makeDirectoryAsync(VIDEO_CACHE_DIR, { intermediates: true }).catch(() => {});
     const result = await FileSystem.downloadAsync(uri, localPath);
-    if (result.status === 200) videoCache.set(uri, localPath);
-  } catch {
-    // Silent fail — video will be streamed from the remote URI.
+    if (result.status === 200) {
+      videoCache.set(uri, localPath);
+    } else {
+      // Non-200 status — log but keep streaming fallback.
+      captureEvent('video_prefetch_failed', {
+        video_key: videoKeyFromUri(uri),
+        platform: Platform.OS,
+        reason: `http_${result.status}`,
+      });
+    }
+  } catch (err) {
+    // Network/IO failure — log so we can quantify how often prefetch fails
+    // (silent fall-through to streaming hides this from telemetry).
+    captureEvent('video_prefetch_failed', {
+      video_key: videoKeyFromUri(uri),
+      platform: Platform.OS,
+      reason: err instanceof Error ? err.message : 'unknown',
+    });
   }
 }
 

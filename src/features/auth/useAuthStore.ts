@@ -17,6 +17,9 @@ interface AuthState {
   syncToken: string | null;
   profile: UserProfile | null;
   createdAt: string | null;
+  /** Transient error from the last auth attempt (Apple/Google/email). Surfaced
+   *  inline in Register/Login as a dismissable banner — never resets onboarding. */
+  authError: string | null;
 
   signIn: (displayName: string, email: string, serverHasProfile?: boolean, syncToken?: string | null) => void;
   enterGuestMode: () => void;
@@ -28,11 +31,13 @@ interface AuthState {
   signOut: () => void;
   deleteAccount: () => Promise<void>;
   devResetProgress: () => void;
+  setAuthError: (message: string | null) => void;
+  clearAuthError: () => void;
 }
 
 export const useAuthStore = create<AuthState>()(
   persist(
-    (set) => ({
+    (set, get) => ({
       isAuthenticated: false,
       isGuest: false,
       hasCompletedOnboarding: false,
@@ -41,6 +46,7 @@ export const useAuthStore = create<AuthState>()(
       syncToken: null,
       profile: null,
       createdAt: null,
+      authError: null,
 
       signIn: (displayName: string, email: string, serverHasProfile = false, syncToken?: string | null) => {
         // Detect first-time registration BEFORE the set: returning users on
@@ -77,6 +83,8 @@ export const useAuthStore = create<AuthState>()(
         upsertUserProfile(email, { displayName, email }).catch(() => { /* fire-and-forget */ });
         identifyUser(email, { displayName, email, isGuest: false });
         captureEvent('user_signed_in', { method: 'email' });
+        // Clear any stale auth error so the banner doesn't linger after success.
+        set({ authError: null });
         if (isNewRegistration) {
           logCompletedRegistration('email');
         }
@@ -190,6 +198,9 @@ export const useAuthStore = create<AuthState>()(
           if (toRemove.length > 0) AsyncStorage.multiRemove(toRemove);
         }).catch(() => { /* fire-and-forget */ });
       },
+
+      setAuthError: (message: string | null) => set({ authError: message }),
+      clearAuthError: () => set({ authError: null }),
     }),
     {
       name: "auth-store-v2",
