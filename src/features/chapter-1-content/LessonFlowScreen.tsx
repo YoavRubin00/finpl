@@ -1,7 +1,7 @@
 import { useState, useMemo, useCallback, useEffect, useRef } from "react";
 import { useShallow } from "zustand/react/shallow";
 import { Image as ExpoImage } from "expo-image";
-import { View, Text, SafeAreaView, ScrollView, StyleSheet, Modal, Pressable, Dimensions, ActivityIndicator, Keyboard } from "react-native";
+import { View, Text, SafeAreaView, ScrollView, StyleSheet, Modal, Pressable, Dimensions, ActivityIndicator, Keyboard, Platform } from "react-native";
 import { useIsFocused } from "@react-navigation/native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Gesture, GestureDetector, GestureHandlerRootView } from "react-native-gesture-handler";
@@ -431,7 +431,16 @@ function VideoHookPlayer({ videoUri, hookText, onFinish, unitColors, fitContain,
   const finishedRef = useRef(false);
   const hasPlayedRef = useRef(false);
   const retryCountRef = useRef(0);
+  const startedAtRef = useRef<number | null>(null);
+  const reportedStartRef = useRef(false);
   const insets = useSafeAreaInsets();
+
+  // Extracts a stable identifier for the video so PostHog events can be
+  // grouped — bundle (number) is the static asset id; URI strips the CDN
+  // host so we can pivot by filename even when the host changes (R2 vs Blob).
+  const videoKey = typeof videoUri === 'number'
+    ? `bundle:${videoUri}`
+    : videoUri.split('/').slice(-2).join('/');
 
   const safeFinish = useCallback(() => {
     if (finishedRef.current) return;
@@ -458,8 +467,15 @@ function VideoHookPlayer({ videoUri, hookText, onFinish, unitColors, fitContain,
       if (e.isPlaying) {
         hasPlayedRef.current = true;
         setIsLoading(false);
+        if (!reportedStartRef.current) {
+          reportedStartRef.current = true;
+          startedAtRef.current = Date.now();
+          captureEvent('video_started', { video_key: videoKey, platform: Platform.OS });
+        }
       }
       if (hasPlayedRef.current && !e.isPlaying && player.duration > 0 && player.currentTime >= player.duration - trimEnd) {
+        const duration_ms = startedAtRef.current ? Date.now() - startedAtRef.current : null;
+        captureEvent('video_completed', { video_key: videoKey, platform: Platform.OS, duration_ms });
         setTimeout(safeFinish, 500);
       }
     }));
@@ -469,6 +485,14 @@ function VideoHookPlayer({ videoUri, hookText, onFinish, unitColors, fitContain,
     // attempt. Only after the retry also fails do we surface the "דלג" hint.
     subs.push(player.addListener('statusChange', (e: { status: string; error?: unknown }) => {
       if (e.status === 'error') {
+        const errorCode = (e.error as { code?: string } | undefined)?.code
+          ?? (e.error instanceof Error ? e.error.message : String(e.error ?? 'unknown'));
+        captureEvent('video_load_failed', {
+          video_key: videoKey,
+          platform: Platform.OS,
+          error_code: errorCode,
+          retry: retryCountRef.current,
+        });
         if (retryCountRef.current < 1) {
           retryCountRef.current += 1;
           setIsLoading(true);
@@ -491,7 +515,10 @@ function VideoHookPlayer({ videoUri, hookText, onFinish, unitColors, fitContain,
 
     // Safety timeout — if video doesn't start within 20s, skip it (generous for slow networks)
     const timeout = setTimeout(() => {
-      if (!hasPlayedRef.current) safeFinish();
+      if (!hasPlayedRef.current) {
+        captureEvent('video_timed_out', { video_key: videoKey, platform: Platform.OS });
+        safeFinish();
+      }
     }, 20000);
 
     return () => {
@@ -642,6 +669,11 @@ function FlashcardCard({
   }, [card.zoomRegions, diveStep, isDiveMode]);
 
   const handleNextBtn = useCallback(() => {
+    // Haptic FIRST — before the sound, before any state mutation. Users
+    // rage-clicked the המשך button on dive-mode cards because the zoom
+    // transition is the only visible cue. A guaranteed haptic on every
+    // tap makes the press feel registered even when the visual lag is high.
+    tapHaptic();
     playSound('btn_click_soft_2');
     if (isDiveMode && diveStep < totalDiveSteps - 1) {
       setDiveStep(d => d + 1);
@@ -651,6 +683,7 @@ function FlashcardCard({
   }, [isDiveMode, diveStep, totalDiveSteps, playSound, onNext]);
 
   const handlePrevBtn = useCallback(() => {
+    tapHaptic();
     playSound('btn_click_soft_2');
     if (isDiveMode && diveStep > 0) {
       setDiveStep(d => d - 1);
@@ -1489,7 +1522,10 @@ function SummaryScreen({
         {/* Spacer to push button to bottom */}
         <View style={{ flex: 1 }} />
 
-        {/* CONTINUE button, hidden until chest is claimed */}
+        {/* CONTINUE button, hidden until chest is claimed.
+            Names the next lesson explicitly — sessions showed users closing
+            the app right after summary because the generic "המשך" didn't
+            signal there was anything waiting on the other side. */}
         {chestClaimed !== false && (
           <Animated.View entering={FadeIn.duration(300)} style={{ width: "100%", marginBottom: 16 }}>
             <AnimatedPressable
@@ -1498,7 +1534,8 @@ function SummaryScreen({
                 width: "100%",
                 backgroundColor: unitColors.bg,
                 borderRadius: 18,
-                paddingVertical: 22,
+                paddingVertical: 18,
+                paddingHorizontal: 16,
                 alignItems: "center",
                 borderBottomWidth: 4,
                 borderBottomColor: unitColors.bottom,
@@ -1509,7 +1546,7 @@ function SummaryScreen({
                 elevation: 6,
               }}
               accessibilityRole="button"
-              accessibilityLabel="הבא"
+              accessibilityLabel={nextModule ? `המשך לשיעור הבא: ${nextModule.title}` : "המשך"}
             >
               <View style={{ flexDirection: "row-reverse", alignItems: "center", justifyContent: "center", gap: 10 }}>
                 <View style={{ width: 24, height: 24, overflow: "hidden" }} accessible={false}>
@@ -1520,7 +1557,20 @@ function SummaryScreen({
                     loop
                   />
                 </View>
-                <Text style={{ color: "#ffffff", fontSize: 19, fontWeight: "900", letterSpacing: 1 }}>המשך</Text>
+                <View style={{ flex: 1, alignItems: "center" }}>
+                  {nextModule ? (
+                    <>
+                      <Text style={{ color: "rgba(255,255,255,0.85)", fontSize: 11, fontWeight: "700", letterSpacing: 0.5 }} numberOfLines={1}>
+                        השיעור הבא
+                      </Text>
+                      <Text style={{ color: "#ffffff", fontSize: 17, fontWeight: "900", letterSpacing: 0.3, textAlign: "center" }} numberOfLines={1}>
+                        {nextModule.title}
+                      </Text>
+                    </>
+                  ) : (
+                    <Text style={{ color: "#ffffff", fontSize: 19, fontWeight: "900", letterSpacing: 1 }}>המשך</Text>
+                  )}
+                </View>
               </View>
             </AnimatedPressable>
           </Animated.View>

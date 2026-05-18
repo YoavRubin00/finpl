@@ -45,6 +45,8 @@ const inputStyle = {
 export function LoginScreen() {
   const router = useRouter();
   const signIn = useAuthStore((s) => s.signIn);
+  const authError = useAuthStore((s) => s.authError);
+  const clearAuthError = useAuthStore((s) => s.clearAuthError);
   const promptGoogleSignIn = useGoogleAuthStore((s) => s.promptGoogleSignIn);
   const googleReady = useGoogleAuthStore((s) => s.isReady);
   const { promptAppleSignIn, isAvailable: appleAvailable } = useAppleAuth();
@@ -105,6 +107,22 @@ export function LoginScreen() {
 
         <View style={{ flex: 1, backgroundColor: "#ffffff", paddingTop: 8 }}>
           <ScrollView contentContainerStyle={{ paddingHorizontal: 24, paddingBottom: 16 }} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
+
+            {/* Inline auth error banner — populated by Apple/Google OAuth failures. */}
+            {authError && (
+              <View
+                accessibilityRole="alert"
+                accessibilityLiveRegion="polite"
+                style={{ flexDirection: 'row-reverse', alignItems: 'center', gap: 8, backgroundColor: '#fef2f2', borderColor: '#fecaca', borderWidth: 1, borderRadius: 12, paddingHorizontal: 12, paddingVertical: 10, marginBottom: 12 }}
+              >
+                <Text style={{ flex: 1, color: '#991b1b', fontSize: 13, fontWeight: '700', writingDirection: 'rtl', textAlign: 'right' }}>
+                  {authError}
+                </Text>
+                <Pressable onPress={clearAuthError} accessibilityRole="button" accessibilityLabel="סגור התראה" hitSlop={8}>
+                  <Text style={{ color: '#991b1b', fontWeight: '900', fontSize: 16 }}>✕</Text>
+                </Pressable>
+              </View>
+            )}
 
             {/* Email */}
             <TextInput
