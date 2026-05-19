@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, Pressable } from 'react-native';
+import { View, Text, StyleSheet, Pressable, ScrollView } from 'react-native';
 import Animated, { FadeInUp } from 'react-native-reanimated';
 import { BookOpen, ChevronDown, ChevronUp } from 'lucide-react-native';
 import { tapHaptic } from '../../../../utils/haptics';
@@ -42,13 +42,21 @@ export function GlossaryInlineToggle({ glossaryKey, onInteract, compact = false,
       entering={FadeInUp.duration(220)}
       style={[styles.body, direction === 'up' && styles.bodyUp]}
     >
-      <Text style={[styles.definition, RTL]}>{entry.shortDefinition}</Text>
-      {entry.example && (
-        <View style={styles.example}>
-          <Text style={[styles.exampleLabel, RTL]}>דוגמה</Text>
-          <Text style={[styles.exampleText, RTL]}>{entry.example}</Text>
-        </View>
-      )}
+      {/* Scrollable inner so long definitions (e.g. the bear-market entry
+          in glossary.ts) don't get clipped by the body's maxHeight cap. */}
+      <ScrollView
+        nestedScrollEnabled
+        showsVerticalScrollIndicator
+        contentContainerStyle={styles.bodyContent}
+      >
+        <Text style={[styles.definition, RTL]}>{entry.shortDefinition}</Text>
+        {entry.example && (
+          <View style={styles.example}>
+            <Text style={[styles.exampleLabel, RTL]}>דוגמה</Text>
+            <Text style={[styles.exampleText, RTL]}>{entry.example}</Text>
+          </View>
+        )}
+      </ScrollView>
     </Animated.View>
   );
 
@@ -177,17 +185,20 @@ const styles = StyleSheet.create({
     marginTop: 8,
     backgroundColor: '#f0f9ff',
     borderRadius: 14,
-    padding: 14,
     borderWidth: 1.5,
     borderColor: 'rgba(14,165,233,0.3)',
-    gap: 10,
     shadowColor: '#0c4a6e',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.2,
     shadowRadius: 10,
     elevation: 4,
-    maxHeight: 160,
-    overflow: 'hidden',
+    maxHeight: 200,
+    // overflow handled by inner ScrollView — keeping it 'hidden' on the
+    // outer shell would defeat the scroll indicator on iOS.
+  },
+  bodyContent: {
+    padding: 14,
+    gap: 10,
   },
   // direction="up", body overlays the area above the button so a CTA directly
   // beneath the toggle (e.g. "בואו נתחיל" in Cashout-Rush idle) stays anchored.
