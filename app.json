@@ -12,9 +12,8 @@
     ],
     "icon": "./assets/IMAGES/icon-1024.png",
     "splash": {
-      "image": "./assets/IMAGES/icon-1024.png",
       "resizeMode": "contain",
-      "backgroundColor": "#0a1628"
+      "backgroundColor": "#0c1426"
     },
     "orientation": "portrait",
     "userInterfaceStyle": "dark",
