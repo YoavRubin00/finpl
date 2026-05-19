@@ -59,14 +59,31 @@ export function useRewardedAd() {
         setIsLoaded(true);
       });
 
+      // iOS עלול לפעמים לשלוח CLOSED לפני EARNED_REWARD (race condition של
+      // AdMob). שני ה-listeners חולקים flag כדי שגם אם הסדר הפוך, ה-callback
+      // יקרא בדיוק פעם אחת.
+      let rewardEarned = false;
+
       ad.addAdEventListener(AdsModule.RewardedAdEventType.EARNED_REWARD, () => {
         console.log("[AdMob] Reward earned");
+        rewardEarned = true;
         callbackRef.current?.();
         callbackRef.current = null;
       });
 
       ad.addAdEventListener(AdsModule.AdEventType.CLOSED, () => {
         console.log("[AdMob] Ad closed, reloading");
+        // אם CLOSED מגיע לפני EARNED_REWARD ועדיין יש callback ממתין, נחכה
+        // קצרות (iOS עדיין שולח EARNED אחרי) ואם עדיין לא נקרא — נפעיל ידנית
+        // כדי שהמשתמש לא יישאר תקוע ב-modal.
+        if (!rewardEarned && callbackRef.current) {
+          setTimeout(() => {
+            if (!rewardEarned && callbackRef.current) {
+              callbackRef.current();
+              callbackRef.current = null;
+            }
+          }, 500);
+        }
         setIsLoaded(false);
         setTimeout(loadAd, 1000);
       });

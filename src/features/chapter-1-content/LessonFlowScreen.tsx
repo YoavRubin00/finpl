@@ -678,7 +678,9 @@ function FlashcardCard({
     if (isDiveMode && diveStep < totalDiveSteps - 1) {
       setDiveStep(d => d + 1);
     } else {
-      runOnJS(onNext)();
+      // onPress של React Native אינו worklet — runOnJS היה כפילות שלפעמים
+      // עיכבה את ה-callback אחרי סגירת modal של הצ׳אט (ChatScreen).
+      onNext();
     }
   }, [isDiveMode, diveStep, totalDiveSteps, playSound, onNext]);
 
@@ -688,7 +690,7 @@ function FlashcardCard({
     if (isDiveMode && diveStep > 0) {
       setDiveStep(d => d - 1);
     } else {
-      runOnJS(onPrev)();
+      onPrev();
     }
   }, [isDiveMode, diveStep, playSound, onPrev]);
 
@@ -4216,6 +4218,10 @@ export function LessonFlowScreen() {
         }}
         onHeartsRefilled={() => {
           setShowOutOfHearts(false);
+          // המשתמש קיבל לב חזרה — להמשיך לשאלה הבאה בקוויז.
+          // לא נעשה כשמדובר בתשובה נכונה (כי המודל לא נפתח אז), רק אחרי
+          // handleWrongRevealed שכבר עצר על hearts<=0.
+          safeTimeout(() => advanceQuiz(), 150);
         }}
         onUpgrade={() => {
           setShowOutOfHearts(false);
@@ -4799,7 +4805,10 @@ export function LessonFlowScreen() {
         presentationStyle="fullScreen"
         onRequestClose={() => {
           Keyboard.dismiss();
-          setShowChatOverlay(false);
+          // requestAnimationFrame מבטיח שה-keyboard מסיים dismiss לפני
+          // שה-Modal נסגר ב-iOS — אחרת ה-native focus נשאר על TextInput
+          // ויוצר תקיעה של pointer-events על כפתורי המשך בלסון.
+          requestAnimationFrame(() => setShowChatOverlay(false));
         }}
       >
         <SafeAreaView style={{ flex: 1, backgroundColor: "#0f172a" }} accessibilityViewIsModal>
@@ -4807,7 +4816,7 @@ export function LessonFlowScreen() {
             <Pressable
               onPress={() => {
                 Keyboard.dismiss();
-                setShowChatOverlay(false);
+                requestAnimationFrame(() => setShowChatOverlay(false));
               }}
               style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: "rgba(255,255,255,0.15)", alignItems: "center", justifyContent: "center" }}
               accessibilityRole="button"
