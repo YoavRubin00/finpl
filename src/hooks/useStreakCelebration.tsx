@@ -41,9 +41,16 @@ export function StreakCelebrationProvider({
 
   // Detect streak increases via store subscription
   useEffect(() => {
-    const unsub = useEconomyStore.subscribe((state, prevState) => {
+    // Seed with the current streak on mount so the FIRST state change after
+    // the provider mounts is checked. Earlier impl initialised prevStreak
+    // to null and consumed the first subscribe call just to set it, which
+    // meant the very first streak bump of the session never fired the
+    // celebration — users reported the popup "never showing up".
+    prevStreak.current = useEconomyStore.getState().streak;
+
+    const unsub = useEconomyStore.subscribe((state) => {
       if (prevStreak.current === null) {
-        prevStreak.current = prevState.streak;
+        prevStreak.current = state.streak;
         return;
       }
 
@@ -53,7 +60,7 @@ export function StreakCelebrationProvider({
         setTimeout(() => {
           setVisible(true);
           useNudgeQueueStore.getState().markStreakShown();
-        }, 2000);
+        }, 600);
       }
 
       prevStreak.current = state.streak;
