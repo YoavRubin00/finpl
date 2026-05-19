@@ -390,21 +390,27 @@ const s = StyleSheet.create({
     fontWeight: "800",
   },
   ctaBtn: {
-    flexDirection: "row",
+    // row-reverse כדי שב-RTL ה-Arrow icon יופיע משמאל לטקסט. ב-iOS דווחה
+    // בעיה שה-button נראה לבן-על-לבן — מקור הבעיה: ה-toastCard עצמו לבן
+    // ואם ה-background של הbutton לא מתרנדר, נשאר רק text לבן על הקארד הלבן.
+    // הוספת borderWidth מבטיחה שגם בצורה כושלת ה-button עדיין מצויר ככחול.
+    flexDirection: "row-reverse",
     alignItems: "center",
     justifyContent: "center",
     gap: 8,
     width: "100%",
-    backgroundColor: "#1cb0f6",
+    backgroundColor: "#2563eb",
     borderRadius: 14,
     paddingVertical: 14,
     paddingHorizontal: 20,
-    borderBottomWidth: 4,
-    borderBottomColor: "#0a8fc4",
+    borderWidth: 2,
+    borderColor: "#1d4ed8",
+    borderBottomWidth: 5,
+    borderBottomColor: "#1e40af",
     marginTop: 4,
-    shadowColor: "#1cb0f6",
+    shadowColor: "#2563eb",
     shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.35,
+    shadowOpacity: 0.45,
     shadowRadius: 8,
     elevation: 6,
   },
@@ -414,6 +420,9 @@ const s = StyleSheet.create({
     color: "#ffffff",
     writingDirection: "rtl",
     textAlign: "center",
+    textShadowColor: "rgba(0,0,0,0.25)",
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 2,
   },
   dismissX: {
     position: "absolute",
