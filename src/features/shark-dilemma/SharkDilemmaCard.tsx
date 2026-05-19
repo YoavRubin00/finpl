@@ -217,6 +217,9 @@ const styles = StyleSheet.create({
   },
   content: {
     flexGrow: 1,
+    // justifyContent: 'center' עם flexGrow:1 ממרכז את התוכן אנכית כשהוא
+    // קצר מגובה המסך, ועדיין מאפשר scroll אם הסצנריו/פידבק מאריכים אותו.
+    justifyContent: "center",
     paddingHorizontal: 22,
     paddingTop: 16,
     paddingBottom: 28,
@@ -224,7 +227,6 @@ const styles = StyleSheet.create({
   },
   titleWrap: {
     alignItems: "center",
-    marginTop: 8,
   },
   title: {
     fontSize: 22,
