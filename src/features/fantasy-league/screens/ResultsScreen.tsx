@@ -1,45 +1,49 @@
-import React, { useEffect, useRef, useMemo, useState, useCallback } from 'react';
+import React, { useEffect, useMemo, useRef } from 'react';
 import { View, Text, ScrollView, Pressable, StyleSheet, Animated } from 'react-native';
-import LottieView from 'lottie-react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Image as ExpoImage } from 'expo-image';
 import { router } from 'expo-router';
 import AnimatedReanimated, { FadeInDown, ZoomIn } from 'react-native-reanimated';
-import { CLASH, DUO } from '../../../constants/theme';
-import {
-  FINN_DANCING,
-  FINN_HAPPY,
-  FINN_EMPATHIC,
-} from '../../retention-loops/finnMascotConfig';
+import { DUO, LEAGUE_GOLD } from '../../../constants/theme';
 import { useFantasyStore } from '../useFantasyStore';
-import { getMockLeaderboard, getCurrentWeekId, getNextDraftOpen, TIER_CONFIGS } from '../fantasyData';
+import { useEconomyStore } from '../../economy/useEconomyStore';
+import { getMockLeaderboard, getCurrentWeekId, TIER_CONFIGS } from '../fantasyData';
+import { PodiumCharacter } from '../components/PodiumCharacter';
+import { PromotionBanner } from '../components/PromotionBanner';
+import { PrizesGrid } from '../components/PrizesGrid';
+import { LeaderboardRow, ZoneDivider } from '../components/LeaderboardZone';
+import type { FantasyTier } from '../fantasyTypes';
+import type { LeagueShieldPosition } from '../components/LeagueShield';
 
-// ─── Confetti burst (top-3 only) ─────────────────────────────────────────────
-const CONFETTI_COLORS = ['#d4a017', '#f5c842', '#4ade80', '#38bdf8', '#c084fc', '#fb7185'];
+const RTL = { writingDirection: 'rtl' as const, textAlign: 'right' as const };
+
+// ─── Confetti (top-3 only) ───────────────────────────────────────────────────
+const CONFETTI_COLORS = ['#fbbf24', '#f59e0b', '#16a34a', '#3b82f6', '#a855f7', '#ec4899'];
 
 function ConfettiBurst(): React.ReactElement {
-  const pieces = Array.from({ length: 24 }, (_, i) => i);
-  const animations = useRef(pieces.map(() => ({
-    y: new Animated.Value(0),
-    x: new Animated.Value(0),
-    opacity: new Animated.Value(1),
-    rotate: new Animated.Value(0),
-  }))).current;
+  const pieces = Array.from({ length: 28 }, (_, i) => i);
+  const animations = useRef(
+    pieces.map(() => ({
+      y: new Animated.Value(0),
+      x: new Animated.Value(0),
+      opacity: new Animated.Value(1),
+      rotate: new Animated.Value(0),
+    })),
+  ).current;
 
   useEffect(() => {
     const anims = pieces.map((_, i) => {
       const { y, x, opacity, rotate } = animations[i];
-      const dx = (Math.random() - 0.5) * 280;
-      const dy = Math.random() * 320 + 80;
+      const dx = (Math.random() - 0.5) * 300;
+      const dy = Math.random() * 360 + 80;
       return Animated.parallel([
-        Animated.timing(y, { toValue: dy, duration: 1200, delay: i * 40, useNativeDriver: true }),
-        Animated.timing(x, { toValue: dx, duration: 1200, delay: i * 40, useNativeDriver: true }),
+        Animated.timing(y, { toValue: dy, duration: 1300, delay: i * 35, useNativeDriver: true }),
+        Animated.timing(x, { toValue: dx, duration: 1300, delay: i * 35, useNativeDriver: true }),
         Animated.sequence([
-          Animated.delay(600 + i * 30),
+          Animated.delay(700 + i * 25),
           Animated.timing(opacity, { toValue: 0, duration: 500, useNativeDriver: true }),
         ]),
-        Animated.timing(rotate, { toValue: 6, duration: 1200, delay: i * 40, useNativeDriver: true }),
+        Animated.timing(rotate, { toValue: 6, duration: 1300, delay: i * 35, useNativeDriver: true }),
       ]);
     });
     Animated.stagger(20, anims).start();
@@ -50,13 +54,13 @@ function ConfettiBurst(): React.ReactElement {
       {pieces.map((_, i) => {
         const { y, x, opacity, rotate } = animations[i];
         const color = CONFETTI_COLORS[i % CONFETTI_COLORS.length];
-        const size = Math.random() * 8 + 5;
+        const size = Math.random() * 7 + 5;
         return (
           <Animated.View
             key={i}
             style={{
               position: 'absolute',
-              top: 60,
+              top: 80,
               left: '50%',
               width: size,
               height: size,
@@ -76,80 +80,43 @@ function ConfettiBurst(): React.ReactElement {
   );
 }
 
-// ─── Podium ───────────────────────────────────────────────────────────────────
-function Podium({ top3 }: { top3: Array<{ displayName: string; returnPercent: number; isLocal: boolean }> }): React.ReactElement {
-  const order = [top3[1], top3[0], top3[2]].filter(Boolean); // 2-1-3 visual order
-  const heights = [80, 110, 60];
-  const medals = ['🥈', '🥇', '🥉'];
-  const ranks = [2, 1, 3];
-
-  return (
-    <View style={styles.podiumWrap}>
-      {order.map((entry, i) => (
-        <AnimatedReanimated.View
-          key={entry?.displayName ?? i}
-          entering={FadeInDown.delay(i * 120).duration(400).springify()}
-          style={{ alignItems: 'center', gap: 8 }}
-        >
-          {/* Crown Lottie floats above #1 */}
-          {i === 1 ? (
-            <LottieView
-              source={require("../../../../assets/lottie/Crown.json")}
-              style={{ width: 40, height: 40 }}
-              autoPlay
-              loop={false}
-            />
-          ) : <View style={{ height: 40 }} />}
-          <Text style={{ fontSize: 11, fontWeight: '800', color: entry?.isLocal ? CLASH.goldLight : 'rgba(255,255,255,0.7)', writingDirection: 'rtl', textAlign: 'center' }}
-            numberOfLines={1}
-          >
-            {entry?.displayName ?? '—'}
-          </Text>
-          <Text style={{ fontSize: 11, color: entry && entry.returnPercent >= 0 ? '#4ade80' : '#f87171', fontWeight: '700' }}>
-            {entry ? `${entry.returnPercent >= 0 ? '+' : ''}${entry.returnPercent.toFixed(1)}%` : ''}
-          </Text>
-          <Text style={{ fontSize: 28 }}>{medals[i]}</Text>
-          <View
-            style={{
-              width: 72,
-              height: heights[i],
-              borderRadius: 8,
-              backgroundColor: i === 1
-                ? 'rgba(212,160,23,0.3)'
-                : i === 0
-                ? 'rgba(148,163,184,0.2)'
-                : 'rgba(180,83,9,0.2)',
-              borderTopWidth: 3,
-              borderColor: i === 1 ? CLASH.goldBorder : i === 0 ? '#94a3b8' : '#b45309',
-              alignItems: 'center',
-              justifyContent: 'center',
-            }}
-          >
-            <Text style={{ fontSize: 18, fontWeight: '900', color: 'rgba(255,255,255,0.6)' }}>
-              #{ranks[i]}
-            </Text>
-          </View>
-        </AnimatedReanimated.View>
-      ))}
-    </View>
-  );
+// ─── Helpers ─────────────────────────────────────────────────────────────────
+const EMOJI_AVATARS = ['🦈', '🦋', '🐱', '🦊', '🦁', '🐯', '🐸', '🐻', '🐼', '🐨', '🦄', '🐢'];
+function emojiForName(name: string): string {
+  let hash = 0;
+  for (let i = 0; i < name.length; i++) hash = (hash * 31 + name.charCodeAt(i)) | 0;
+  return EMOJI_AVATARS[Math.abs(hash) % EMOJI_AVATARS.length];
 }
 
-// ─── Main screen ──────────────────────────────────────────────────────────────
+const TIER_TO_SHIELD: Record<FantasyTier, LeagueShieldPosition> = {
+  silver: 'silver',
+  gold: 'gold',
+  diamond: 'gold',
+};
+
+const NEXT_TIER: Record<FantasyTier, FantasyTier> = {
+  silver: 'gold',
+  gold: 'diamond',
+  diamond: 'diamond',
+};
+
+function zoneForRank(rank: number, total: number): 'promote' | 'safe' | 'relegate' {
+  const promote = Math.max(3, Math.ceil(total * 0.2));
+  const relegate = Math.max(3, Math.ceil(total * 0.2));
+  if (rank <= promote) return 'promote';
+  if (rank > total - relegate) return 'relegate';
+  return 'safe';
+}
+
+// ─── Main screen ─────────────────────────────────────────────────────────────
 export function ResultsScreen(): React.ReactElement {
   const currentEntry = useFantasyStore((s) => s.currentEntry);
   const claimResults = useFantasyStore((s) => s.claimResults);
   const simulateFinalPrices = useFantasyStore((s) => s.simulateFinalPrices);
+  const resetForNewWeek = useFantasyStore((s) => s.resetForNewWeek);
   const getAverageReturn = useFantasyStore((s) => s.getAverageReturn);
+  const coins = useEconomyStore((s) => s.coins);
 
-  const [showSparkles, setShowSparkles] = useState(false);
-  const handleClaim = useCallback(() => {
-    claimResults();
-    setShowSparkles(true);
-    setTimeout(() => setShowSparkles(false), 2500);
-  }, [claimResults]);
-
-  // Simulate final prices on mount if not yet done
   useEffect(() => {
     if (currentEntry && currentEntry.picks.some((p) => p.finalPrice === null)) {
       simulateFinalPrices();
@@ -157,27 +124,31 @@ export function ResultsScreen(): React.ReactElement {
   }, []);
 
   const leaderboard = useMemo(
-    () => currentEntry ? getMockLeaderboard(currentEntry.tier, currentEntry.weekId) : getMockLeaderboard('silver', getCurrentWeekId()),
+    () =>
+      currentEntry
+        ? getMockLeaderboard(currentEntry.tier, currentEntry.weekId)
+        : getMockLeaderboard('silver', getCurrentWeekId()),
     [currentEntry],
   );
 
+  const totalPlayers = leaderboard.length || 100;
   const avgReturn = getAverageReturn();
-  const rank = currentEntry?.finalRank ?? (leaderboard.length + 1);
+  const rank = currentEntry?.finalRank ?? leaderboard.length + 1;
   const isTop3 = rank <= 3;
   const hasClaimed = currentEntry?.claimed ?? false;
-  const hasUnclaimed = currentEntry && !hasClaimed;
+  const hasUnclaimed = !!currentEntry && !hasClaimed;
   const returnPositive = avgReturn >= 0;
 
   const tierConfig = currentEntry ? TIER_CONFIGS[currentEntry.tier] : null;
-  const coinsBack = currentEntry
-    ? Math.round(currentEntry.coinsPaid * (1 + avgReturn / 100))
-    : 0;
+  const coinsBack = currentEntry ? Math.round(currentEntry.coinsPaid * (1 + avgReturn / 100)) : 0;
   const xpEarned = currentEntry?.xpEarned ??
     (tierConfig && rank >= 1 && rank <= 5 ? tierConfig.prizeXP[rank - 1] : 25);
 
-  const finnSource = isTop3 ? FINN_DANCING : returnPositive ? FINN_HAPPY : FINN_EMPATHIC;
-  const nextDraft = getNextDraftOpen();
+  const zone = zoneForRank(rank, totalPlayers);
+  const isPromoted = zone === 'promote';
+  const isDemoted = zone === 'relegate';
 
+  // Podium top 3 — substitute local player if they made it
   const top3 = useMemo(() => {
     const list = leaderboard.slice(0, 3).map((e) => ({ ...e, isLocal: false }));
     if (currentEntry && rank <= 3) {
@@ -186,193 +157,288 @@ export function ResultsScreen(): React.ReactElement {
     return list;
   }, [leaderboard, rank, currentEntry]);
 
+  const fromTier = currentEntry?.tier ?? 'silver';
+  const toTier = NEXT_TIER[fromTier];
+
+  const handleClaim = (): void => {
+    claimResults();
+  };
+
+  const handleNextSeason = (): void => {
+    resetForNewWeek();
+    router.replace('/(tabs)/fantasy');
+  };
+
   return (
     <SafeAreaView style={styles.root} edges={['top']}>
       {isTop3 && hasClaimed && <ConfettiBurst />}
-      {showSparkles && !isTop3 && (
-        <View style={StyleSheet.absoluteFill} pointerEvents="none">
-          <LottieView
-            source={require("../../../../assets/lottie/wired-flat-2474-sparkles-glitter-hover-pinch.json")}
-            style={{ flex: 1 }}
-            autoPlay
-            loop={false}
-          />
-        </View>
-      )}
 
       {/* Header */}
-      <LinearGradient
-        colors={[CLASH.bgPrimary, CLASH.bgSecondary]}
-        style={styles.header}
-      >
-        <Pressable onPress={() => router.back()} style={styles.backBtn} accessibilityRole="button" accessibilityLabel="חזור">
-          <Text style={{ fontSize: 18, color: 'rgba(255,255,255,0.7)' }}>→</Text>
+      <View style={styles.header}>
+        <Pressable
+          onPress={() => router.back()}
+          style={styles.backBtn}
+          accessibilityRole="button"
+          accessibilityLabel="חזור"
+          hitSlop={12}
+        >
+          <Text style={{ fontSize: 22, color: '#0f172a', fontWeight: '700' }}>→</Text>
         </Pressable>
-        <View style={styles.headerRow}>
-          <View style={{ flex: 1 }}>
-            <Text style={styles.headerTitle}>תוצאות השבוע 🏆</Text>
-            <Text style={styles.headerSub}>
-              {hasUnclaimed ? 'יש פרסים לאסוף!' : 'תוצאות סופיות'}
-            </Text>
-          </View>
-          <ExpoImage source={finnSource} style={{ width: 72, height: 72 }} contentFit="contain" accessible={false} />
+        <View style={{ flex: 1 }}>
+          <Text style={styles.headerTitle}>סוף עונה · פודיום וקידום</Text>
         </View>
-      </LinearGradient>
+        <View style={styles.statsRow}>
+          <View style={styles.statChip}>
+            <Text style={styles.statText}>❤️ 4/5</Text>
+          </View>
+          <View style={styles.statChip}>
+            <Text style={styles.statText}>💎 24</Text>
+          </View>
+          <View style={styles.statChip}>
+            <Text style={styles.statText}>💰 {coins.toLocaleString('he-IL')}</Text>
+          </View>
+        </View>
+      </View>
 
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 110 }}>
-        {/* ─── Podium ─── */}
-        <AnimatedReanimated.View entering={FadeInDown.delay(60).duration(360)} style={styles.podiumSection}>
-          <Text style={styles.podiumTitle}>הפודיום</Text>
-          <Podium top3={top3} />
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 140 }}>
+        {/* ─── Title ─── */}
+        <AnimatedReanimated.View entering={FadeInDown.duration(360)} style={styles.titleWrap}>
+          <Text style={styles.title}>העונה הסתיימה!</Text>
+          <Text style={styles.subtitle}>סיימת במקום #{rank} מתוך {totalPlayers}</Text>
         </AnimatedReanimated.View>
 
-        {/* ─── Your result card ─── */}
-        {currentEntry && (
-          <AnimatedReanimated.View entering={FadeInDown.delay(200).duration(340)} style={styles.resultCard}>
-            <LinearGradient
-              colors={isTop3 ? ['rgba(212,160,23,0.2)', 'rgba(212,160,23,0.05)'] : ['rgba(255,255,255,0.07)', 'rgba(255,255,255,0.02)']}
-              style={styles.resultCardInner}
-            >
-              <View style={styles.resultRow}>
-                <Text style={styles.resultLabel}>המקום שלך</Text>
-                <Text style={[styles.resultValue, isTop3 && { color: CLASH.goldLight }]}>
-                  #{rank} {isTop3 ? '🏆' : ''}
-                </Text>
-              </View>
-              <View style={styles.resultRow}>
-                <Text style={styles.resultLabel}>תשואה ממוצעת</Text>
-                <Text style={[styles.resultValue, { color: returnPositive ? '#4ade80' : '#f87171' }]}>
-                  {returnPositive ? '+' : ''}{avgReturn.toFixed(2)}%
-                </Text>
-              </View>
-              <View style={styles.resultRow}>
-                <Text style={styles.resultLabel}>מטבעות שיוחזרו</Text>
-                <Text style={[styles.resultValue, { color: returnPositive ? '#4ade80' : '#f87171' }]}>
-                  {coinsBack.toLocaleString('he-IL')} 🪙
-                </Text>
-              </View>
-              <View style={styles.resultRow}>
-                <Text style={styles.resultLabel}>XP שנצבר</Text>
-                <Text style={[styles.resultValue, { color: '#a78bfa' }]}>+{xpEarned} XP</Text>
-              </View>
+        {/* ─── Podium ─── */}
+        <AnimatedReanimated.View entering={FadeInDown.delay(80).duration(400)} style={styles.podiumCard}>
+          <LinearGradient
+            colors={['#0f172a', '#1e293b']}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 0, y: 1 }}
+            style={styles.podiumInner}
+          >
+            {/* Stars decoration */}
+            {[10, 30, 60, 85, 110, 140].map((leftPct, i) => (
+              <View
+                key={i}
+                style={{
+                  position: 'absolute',
+                  top: 10 + (i % 3) * 14,
+                  left: `${leftPct % 100}%`,
+                  width: 3,
+                  height: 3,
+                  borderRadius: 1.5,
+                  backgroundColor: '#fbbf24',
+                  opacity: 0.6,
+                }}
+              />
+            ))}
 
-              {/* Claim button */}
-              {hasUnclaimed && (
-                <Pressable
-                  onPress={handleClaim}
-                  style={({ pressed }) => [styles.claimBtn, { opacity: pressed ? 0.85 : 1 }]}
-                  accessibilityRole="button"
-                  accessibilityLabel="אסוף פרסים"
-                >
-                  <LinearGradient
-                    colors={[CLASH.goldLight, CLASH.goldBorder]}
-                    start={{ x: 0, y: 0 }}
-                    end={{ x: 1, y: 0 }}
-                    style={styles.claimBtnInner}
-                  >
-                    <Text style={styles.claimBtnText}>🎁 אסוף פרסים!</Text>
-                  </LinearGradient>
-                </Pressable>
+            <View style={styles.podiumRow}>
+              {/* Order: 2 - 1 - 3 visually */}
+              {top3[1] && (
+                <AnimatedReanimated.View entering={ZoomIn.delay(280).duration(380).springify()}>
+                  <PodiumCharacter
+                    rank={2}
+                    name={top3[1].displayName}
+                    returnPercent={top3[1].returnPercent}
+                    isLocal={top3[1].isLocal}
+                    avatarEmoji={emojiForName(top3[1].displayName)}
+                  />
+                </AnimatedReanimated.View>
               )}
+              {top3[0] && (
+                <AnimatedReanimated.View entering={ZoomIn.delay(180).duration(400).springify()}>
+                  <PodiumCharacter
+                    rank={1}
+                    name={top3[0].displayName}
+                    returnPercent={top3[0].returnPercent}
+                    isLocal={top3[0].isLocal}
+                    avatarEmoji={emojiForName(top3[0].displayName)}
+                  />
+                </AnimatedReanimated.View>
+              )}
+              {top3[2] && (
+                <AnimatedReanimated.View entering={ZoomIn.delay(380).duration(380).springify()}>
+                  <PodiumCharacter
+                    rank={3}
+                    name={top3[2].displayName}
+                    returnPercent={top3[2].returnPercent}
+                    isLocal={top3[2].isLocal}
+                    avatarEmoji={emojiForName(top3[2].displayName)}
+                  />
+                </AnimatedReanimated.View>
+              )}
+            </View>
+          </LinearGradient>
+        </AnimatedReanimated.View>
 
-              {hasClaimed && (
-                <View style={styles.claimedBadge}>
-                  <Text style={styles.claimedText}>✅ פרסים נאספו!</Text>
-                </View>
-              )}
-            </LinearGradient>
+        {/* ─── Promotion banner ─── */}
+        {isPromoted && currentEntry && toTier !== fromTier && (
+          <AnimatedReanimated.View entering={FadeInDown.delay(440).duration(360)}>
+            <PromotionBanner
+              fromLeague={TIER_TO_SHIELD[fromTier]}
+              toLeague={TIER_TO_SHIELD[toTier]}
+            />
           </AnimatedReanimated.View>
         )}
 
-        {/* ─── Full leaderboard ─── */}
-        <AnimatedReanimated.View entering={FadeInDown.delay(300).duration(320)} style={styles.fullLeader}>
-          <Text style={styles.fullLeaderTitle}>דירוג מלא</Text>
-          {leaderboard.map((entry, i) => {
-            const medals = ['🥇', '🥈', '🥉'];
+        {/* ─── Demotion banner (if relevant) ─── */}
+        {isDemoted && (
+          <AnimatedReanimated.View entering={FadeInDown.delay(440).duration(360)} style={styles.demoteBanner}>
+            <Text style={{ fontSize: 24 }}>📉</Text>
+            <View style={{ flex: 1 }}>
+              <Text style={[{ fontSize: 15, fontWeight: '900', color: '#991b1b' }, RTL]}>ירדת ליגה</Text>
+              <Text style={[{ fontSize: 12, color: '#7f1d1d', marginTop: 2 }, RTL]}>שבוע הבא הזדמנות לחזרה</Text>
+            </View>
+          </AnimatedReanimated.View>
+        )}
+
+        {/* ─── Prizes grid ─── */}
+        {currentEntry && (
+          <AnimatedReanimated.View entering={FadeInDown.delay(520).duration(340)}>
+            <PrizesGrid
+              xpAmount={xpEarned}
+              diamondsAmount={isTop3 ? 50 : isPromoted ? 30 : 10}
+              coinsAmount={coinsBack}
+            />
+          </AnimatedReanimated.View>
+        )}
+
+        {/* ─── Result breakdown card ─── */}
+        {currentEntry && (
+          <AnimatedReanimated.View entering={FadeInDown.delay(600).duration(320)} style={styles.summaryCard}>
+            <Text style={[styles.summaryTitle, RTL]}>הסיכום שלך</Text>
+            <View style={styles.summaryRow}>
+              <Text style={[styles.summaryLabel, RTL]}>תשואה ממוצעת</Text>
+              <Text style={[styles.summaryValue, { color: returnPositive ? '#15803d' : '#b91c1c' }]}>
+                {returnPositive ? '+' : ''}{avgReturn.toFixed(2)}%
+              </Text>
+            </View>
+            <View style={styles.summaryRow}>
+              <Text style={[styles.summaryLabel, RTL]}>מטבעות הוחזרו</Text>
+              <Text style={[styles.summaryValue, { color: '#a16207' }]}>
+                {coinsBack.toLocaleString('he-IL')} 💰
+              </Text>
+            </View>
+            <View style={styles.summaryRow}>
+              <Text style={[styles.summaryLabel, RTL]}>XP נצבר</Text>
+              <Text style={[styles.summaryValue, { color: '#6d28d9' }]}>+{xpEarned} ⚡</Text>
+            </View>
+          </AnimatedReanimated.View>
+        )}
+
+        {/* ─── Full mini-leaderboard ─── */}
+        <AnimatedReanimated.View entering={FadeInDown.delay(680).duration(320)} style={styles.leaderSection}>
+          <Text style={[styles.leaderTitle, RTL]}>דירוג סופי</Text>
+          <ZoneDivider zone="promote" rangeLabel="עולים לליגה הבאה" />
+          {leaderboard.slice(0, 4).map((entry, i) => {
+            const medals: Record<number, string> = { 1: '🥇', 2: '🥈', 3: '🥉' };
+            const isLocal = currentEntry ? entry.rank === rank && rank <= 4 : false;
             return (
-              <View
+              <LeaderboardRow
                 key={entry.playerId}
-                style={[
-                  styles.leaderRow,
-                  i < 5 && styles.leaderRowTop5,
-                  entry.isLocal && styles.leaderRowLocal,
-                ]}
-              >
-                <Text style={styles.rankText}>{i < 3 ? medals[i] : `#${entry.rank}`}</Text>
-                <Text style={[styles.leaderName, entry.isLocal && { color: CLASH.goldLight, fontWeight: '900' }]} numberOfLines={1}>
-                  {entry.displayName}
-                </Text>
-                {entry.leaguePosition === 'promoted' && <Text style={{ fontSize: 10, color: '#4ade80' }}>▲</Text>}
-                {entry.leaguePosition === 'demoted' && <Text style={{ fontSize: 10, color: '#f87171' }}>▼</Text>}
-                <Text style={[styles.leaderReturn, { color: entry.returnPercent >= 0 ? '#4ade80' : '#f87171' }]}>
-                  {entry.returnPercent >= 0 ? '+' : ''}{entry.returnPercent.toFixed(1)}%
-                </Text>
-              </View>
+                rank={entry.rank}
+                name={isLocal ? 'את/ה' : entry.displayName}
+                returnPercent={entry.returnPercent}
+                isLocal={isLocal}
+                zone="promote"
+                medalEmoji={medals[entry.rank]}
+                avatarEmoji={emojiForName(entry.displayName)}
+              />
             );
           })}
+
+          {/* Your position if outside top 4 */}
+          {currentEntry && rank > 4 && (
+            <>
+              <ZoneDivider zone={zone} rangeLabel={`#${rank} — את/ה`} />
+              <LeaderboardRow
+                rank={rank}
+                name="את/ה"
+                returnPercent={avgReturn}
+                isLocal
+                zone={zone}
+                avatarEmoji="🦈"
+              />
+            </>
+          )}
         </AnimatedReanimated.View>
 
-        {/* ─── Next draft countdown ─── */}
-        <AnimatedReanimated.View entering={FadeInDown.delay(380).duration(300)} style={styles.nextDraft}>
-          <Text style={{ fontSize: 20 }}>⏳</Text>
-          <View style={{ flex: 1 }}>
-            <Text style={styles.nextDraftTitle}>הדראפט הבא</Text>
-            <Text style={styles.nextDraftSub}>
-              נפתח ב{nextDraft.toLocaleDateString('he-IL', { weekday: 'long', hour: '2-digit', minute: '2-digit' })}
-            </Text>
-          </View>
+        {/* ─── Claim / Next Season CTA ─── */}
+        <AnimatedReanimated.View entering={FadeInDown.delay(760).duration(320)} style={styles.ctaWrap}>
+          {hasUnclaimed ? (
+            <Pressable
+              onPress={handleClaim}
+              style={({ pressed }) => [styles.claimBtn, { opacity: pressed ? 0.92 : 1, transform: [{ translateY: pressed ? 2 : 0 }] }]}
+              accessibilityRole="button"
+              accessibilityLabel="אסוף את הפרסים שלך"
+            >
+              <LinearGradient
+                colors={[LEAGUE_GOLD.bgFrom, LEAGUE_GOLD.bgTo]}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 0 }}
+                style={styles.claimBtnInner}
+              >
+                <Text style={styles.claimBtnText}>🎁 אסוף פרסים</Text>
+              </LinearGradient>
+            </Pressable>
+          ) : (
+            <Pressable
+              onPress={handleNextSeason}
+              style={({ pressed }) => [styles.nextBtn, { opacity: pressed ? 0.92 : 1, transform: [{ translateY: pressed ? 2 : 0 }] }]}
+              accessibilityRole="button"
+              accessibilityLabel="המשך לעונה הבאה"
+            >
+              <LinearGradient
+                colors={[LEAGUE_GOLD.bgFrom, LEAGUE_GOLD.bgTo]}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 0 }}
+                style={styles.claimBtnInner}
+              >
+                <Text style={styles.claimBtnText}>לעונה הבאה →</Text>
+              </LinearGradient>
+            </Pressable>
+          )}
         </AnimatedReanimated.View>
-
-        {/* DUO streak chip */}
-        {(currentEntry?.draftStreakWeeks ?? 0) >= 2 && (
-          <AnimatedReanimated.View entering={ZoomIn.delay(450).duration(300)} style={styles.streakBadge}>
-            <LottieView
-              source={require("../../../../assets/lottie/wired-flat-2804-fire-flame-hover-pinch.json")}
-              style={{ width: 24, height: 24 }}
-              autoPlay
-              loop
-            />
-            <Text style={styles.streakText}>
-              {currentEntry?.draftStreakWeeks} שבועות ברצף — המשך כך!
-            </Text>
-          </AnimatedReanimated.View>
-        )}
       </ScrollView>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: CLASH.bgPrimary },
-  header: { paddingHorizontal: 16, paddingTop: 8, paddingBottom: 20 },
-  backBtn: { alignSelf: 'flex-end', paddingVertical: 4, paddingHorizontal: 8, marginBottom: 8 },
-  headerRow: { flexDirection: 'row-reverse', alignItems: 'center', gap: 12 },
-  headerTitle: { fontSize: 22, fontWeight: '900', color: '#ffffff', writingDirection: 'rtl', textAlign: 'right' },
-  headerSub: { fontSize: 13, color: 'rgba(255,255,255,0.55)', writingDirection: 'rtl', textAlign: 'right', marginTop: 3 },
-  podiumSection: { margin: 16, backgroundColor: 'rgba(255,255,255,0.04)', borderRadius: 18, padding: 20, borderWidth: 1, borderColor: 'rgba(255,255,255,0.08)', gap: 16 },
-  podiumTitle: { fontSize: 14, fontWeight: '900', color: 'rgba(255,255,255,0.7)', writingDirection: 'rtl', textAlign: 'right', textTransform: 'uppercase', letterSpacing: 0.8 },
-  podiumWrap: { flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'center', gap: 10 },
-  resultCard: { marginHorizontal: 16, marginBottom: 16, borderRadius: 18, overflow: 'hidden', borderWidth: 1, borderColor: 'rgba(212,160,23,0.2)' },
-  resultCardInner: { padding: 18, gap: 12 },
-  resultRow: { flexDirection: 'row-reverse', alignItems: 'center', justifyContent: 'space-between' },
-  resultLabel: { fontSize: 13, color: 'rgba(255,255,255,0.6)', writingDirection: 'rtl' },
-  resultValue: { fontSize: 16, fontWeight: '900', color: '#ffffff' },
-  claimBtn: { borderRadius: 14, overflow: 'hidden', marginTop: 8, shadowColor: CLASH.goldGlow, shadowOpacity: 0.7, shadowRadius: 10, shadowOffset: { width: 0, height: 3 }, elevation: 6 },
-  claimBtnInner: { paddingVertical: 15, alignItems: 'center' },
-  claimBtnText: { fontSize: 17, fontWeight: '900', color: '#000000' },
-  claimedBadge: { backgroundColor: 'rgba(74,222,128,0.1)', borderRadius: 12, paddingVertical: 12, alignItems: 'center', borderWidth: 1, borderColor: 'rgba(74,222,128,0.25)', marginTop: 8 },
-  claimedText: { fontSize: 15, fontWeight: '800', color: '#4ade80' },
-  fullLeader: { marginHorizontal: 16, marginBottom: 16, backgroundColor: 'rgba(255,255,255,0.04)', borderRadius: 16, padding: 14, borderWidth: 1, borderColor: 'rgba(255,255,255,0.07)', gap: 4 },
-  fullLeaderTitle: { fontSize: 14, fontWeight: '900', color: '#ffffff', writingDirection: 'rtl', textAlign: 'right', marginBottom: 8 },
-  leaderRow: { flexDirection: 'row-reverse', alignItems: 'center', gap: 10, paddingVertical: 8, paddingHorizontal: 4, borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.04)' },
-  leaderRowTop5: { borderBottomColor: 'rgba(212,160,23,0.08)' },
-  leaderRowLocal: { backgroundColor: 'rgba(212,160,23,0.1)', borderRadius: 10, paddingHorizontal: 8 },
-  rankText: { fontSize: 14, fontWeight: '800', color: 'rgba(255,255,255,0.55)', width: 32, textAlign: 'right' },
-  leaderName: { flex: 1, fontSize: 13, color: 'rgba(255,255,255,0.85)', writingDirection: 'rtl', textAlign: 'right' },
-  leaderReturn: { fontSize: 13, fontWeight: '800', minWidth: 52, textAlign: 'left' },
-  nextDraft: { marginHorizontal: 16, marginBottom: 12, flexDirection: 'row-reverse', alignItems: 'center', gap: 12, backgroundColor: 'rgba(255,255,255,0.04)', borderRadius: 14, padding: 14, borderWidth: 1, borderColor: 'rgba(255,255,255,0.07)' },
-  nextDraftTitle: { fontSize: 14, fontWeight: '800', color: 'rgba(255,255,255,0.8)', writingDirection: 'rtl', textAlign: 'right' },
-  nextDraftSub: { fontSize: 12, color: 'rgba(255,255,255,0.5)', writingDirection: 'rtl', textAlign: 'right', marginTop: 2 },
-  streakBadge: { marginHorizontal: 16, marginBottom: 16, backgroundColor: DUO.orangeSurface, borderRadius: 12, paddingVertical: 10, paddingHorizontal: 16, flexDirection: 'row-reverse', alignItems: 'center', justifyContent: 'center', gap: 6, borderWidth: 1, borderColor: 'rgba(234,88,12,0.25)' },
-  streakText: { fontSize: 14, fontWeight: '800', color: DUO.orange, writingDirection: 'rtl' },
+  root: { flex: 1, backgroundColor: DUO.bg },
+  header: {
+    paddingHorizontal: 16,
+    paddingTop: 8,
+    paddingBottom: 12,
+    backgroundColor: DUO.surface,
+    borderBottomWidth: 1,
+    borderBottomColor: DUO.border,
+    flexDirection: 'row-reverse',
+    alignItems: 'center',
+    gap: 10,
+  },
+  backBtn: { padding: 4 },
+  headerTitle: { fontSize: 18, fontWeight: '900', color: '#0f172a', ...RTL },
+  statsRow: { flexDirection: 'row-reverse', gap: 6 },
+  statChip: { backgroundColor: DUO.surface, borderWidth: 1, borderColor: DUO.border, borderRadius: 999, paddingHorizontal: 8, paddingVertical: 3 },
+  statText: { fontSize: 11, fontWeight: '800', color: '#0f172a' },
+  titleWrap: { paddingHorizontal: 20, paddingTop: 16, paddingBottom: 12 },
+  title: { fontSize: 26, fontWeight: '900', color: '#0f172a', letterSpacing: -0.6, ...RTL },
+  subtitle: { fontSize: 14, color: '#64748b', marginTop: 4, fontWeight: '700', ...RTL },
+  podiumCard: { marginHorizontal: 16, marginBottom: 14, borderRadius: 18, overflow: 'hidden', shadowColor: '#0f172a', shadowOpacity: 0.15, shadowRadius: 12, shadowOffset: { width: 0, height: 6 }, elevation: 4 },
+  podiumInner: { paddingHorizontal: 8, paddingTop: 14, paddingBottom: 0, position: 'relative' },
+  podiumRow: { flexDirection: 'row', justifyContent: 'center', alignItems: 'flex-end', gap: 6 },
+  demoteBanner: { marginHorizontal: 16, marginBottom: 14, backgroundColor: '#fee2e2', borderRadius: 14, paddingVertical: 14, paddingHorizontal: 16, flexDirection: 'row-reverse', alignItems: 'center', gap: 12, borderWidth: 1, borderColor: '#fecaca' },
+  summaryCard: { marginHorizontal: 16, marginBottom: 14, backgroundColor: '#ffffff', borderRadius: 16, padding: 16, borderWidth: 1, borderColor: DUO.border, gap: 12, shadowColor: '#0f172a', shadowOpacity: 0.04, shadowRadius: 6, shadowOffset: { width: 0, height: 2 }, elevation: 1 },
+  summaryTitle: { fontSize: 14, fontWeight: '900', color: '#0f172a', marginBottom: 4 },
+  summaryRow: { flexDirection: 'row-reverse', alignItems: 'center', justifyContent: 'space-between' },
+  summaryLabel: { fontSize: 13, color: '#64748b', fontWeight: '700' },
+  summaryValue: { fontSize: 15, fontWeight: '900' },
+  leaderSection: { marginHorizontal: 16, marginBottom: 14 },
+  leaderTitle: { fontSize: 15, fontWeight: '900', color: '#0f172a', marginBottom: 4, paddingHorizontal: 4 },
+  ctaWrap: { marginHorizontal: 16, marginTop: 4 },
+  claimBtn: { borderRadius: 14, overflow: 'hidden', shadowColor: LEAGUE_GOLD.glow, shadowOpacity: 0.7, shadowRadius: 10, shadowOffset: { width: 0, height: 4 }, elevation: 5 },
+  nextBtn: { borderRadius: 14, overflow: 'hidden', shadowColor: LEAGUE_GOLD.glow, shadowOpacity: 0.7, shadowRadius: 10, shadowOffset: { width: 0, height: 4 }, elevation: 5 },
+  claimBtnInner: { paddingVertical: 16, alignItems: 'center' },
+  claimBtnText: { fontSize: 17, fontWeight: '900', color: LEAGUE_GOLD.ink, letterSpacing: 0.4 },
 });

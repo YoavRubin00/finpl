@@ -1,8 +1,9 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { ScrollView, View, Text } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import Animated, { FadeInDown, useAnimatedStyle, useReducedMotion, useSharedValue, withRepeat, withTiming, Easing } from 'react-native-reanimated';
+import Animated, { FadeInDown, useReducedMotion } from 'react-native-reanimated';
 import { STITCH, CLAN, DUO } from '../../constants/theme';
+import { useFriendsModeStore } from './useFriendsModeStore';
 import { ActivityFeedStrip } from './components/ActivityFeedStrip';
 import { ClanHeroCard } from './components/ClanHeroCard';
 import { LeagueHeroCard } from './components/LeagueHeroCard';
@@ -13,6 +14,10 @@ import { ReferralCard } from './components/ReferralCard';
 import { SharkChatCard } from './components/SharkChatCard';
 import { AnonAdviceHeroCard } from './components/AnonAdviceHeroCard';
 import { CrowdWisdomCard } from './components/CrowdWisdomCard';
+import { HotThisWeekCard } from './cards/HotThisWeekCard';
+import { Ta35ForecastCard } from './cards/Ta35ForecastCard';
+import { AnonymousPayslipCard } from './cards/AnonymousPayslipCard';
+import { PulseDot } from './shared/PulseDot';
 
 function SectionLabel({ emoji, label, accentColor }: { emoji: string; label: string; accentColor: string }) {
   return (
@@ -42,36 +47,6 @@ function SectionLabel({ emoji, label, accentColor }: { emoji: string; label: str
   );
 }
 
-function PulseDot({ color }: { color: string }): React.ReactElement {
-  const reduced = useReducedMotion();
-  const scale = useSharedValue(1);
-
-  React.useEffect(() => {
-    if (reduced) return;
-    scale.value = withRepeat(
-      withTiming(1.4, { duration: 1100, easing: Easing.inOut(Easing.quad) }),
-      -1,
-      true,
-    );
-  }, [reduced, scale]);
-
-  const animStyle = useAnimatedStyle(() => ({ transform: [{ scale: scale.value }] }));
-
-  return (
-    <Animated.View
-      style={[
-        {
-          width: 7,
-          height: 7,
-          borderRadius: 4,
-          backgroundColor: color,
-        },
-        animStyle,
-      ]}
-    />
-  );
-}
-
 function StaggeredEntry({ index, children }: { index: number; children: React.ReactNode }): React.ReactElement {
   const reduced = useReducedMotion();
   if (reduced) {
@@ -85,6 +60,16 @@ function StaggeredEntry({ index, children }: { index: number; children: React.Re
 }
 
 export function FriendsHubScreen(): React.ReactElement {
+  // Entering the Friends Hub flips the bottom tab bar to its Friends-Mode
+  // variant (Home / Knowledge / Fantasy / Clan). The mode stays enabled
+  // across navigations to /clan, /fantasy, /anon-advice, /crowd-wisdom and
+  // exits only when the user taps "Home" or focuses a different global tab
+  // (handled inside AnimatedTabBar).
+  const enterFriendsMode = useFriendsModeStore((s) => s.enter);
+  useEffect(() => {
+    enterFriendsMode();
+  }, [enterFriendsMode]);
+
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: STITCH.background }} edges={['top']}>
       <ScrollView
@@ -157,7 +142,7 @@ export function FriendsHubScreen(): React.ReactElement {
                 gap: 6,
               }}
             >
-              <PulseDot color={CLAN.donationGreen} />
+              <PulseDot size={7} color={CLAN.donationGreen} />
               <Text
                 style={{
                   fontSize: 11,
@@ -194,15 +179,23 @@ export function FriendsHubScreen(): React.ReactElement {
           <FriendsLeaderboardCard />
         </StaggeredEntry>
 
-        {/* ─── Community knowledge ─── */}
+        {/* ─── Group market intelligence (Robinhood-inspired) ─── */}
         <StaggeredEntry index={4}>
+          <SectionLabel emoji="📊" label="מודיעין קבוצה" accentColor="#10b981" />
+          <HotThisWeekCard />
+          <Ta35ForecastCard />
+          <AnonymousPayslipCard />
+        </StaggeredEntry>
+
+        {/* ─── Community knowledge ─── */}
+        <StaggeredEntry index={5}>
           <SectionLabel emoji="🌐" label="קהילת ידע" accentColor={STITCH.secondary} />
           <AnonAdviceHeroCard />
           <CrowdWisdomCard />
         </StaggeredEntry>
 
         {/* ─── Extras ─── */}
-        <StaggeredEntry index={5}>
+        <StaggeredEntry index={6}>
           <SectionLabel emoji="✨" label="עוד" accentColor={STITCH.secondaryPurple} />
           <SharkChatCard />
           <ReferralCard />

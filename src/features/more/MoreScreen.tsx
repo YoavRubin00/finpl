@@ -173,12 +173,6 @@ export function MoreScreen() {
                   onPress={() => router.push("/simulator")}
                 />
                 <MoreRow
-                  icon={<SafeLottie source={require('../../../assets/lottie/wired-flat-489-rocket-space-hover-flying.json')} style={styles.lottieIcon} autoPlay loop  />}
-                  label="מחשבון חופש כלכלי"
-                  badge="חדש"
-                  onPress={() => router.push("/fire-calculator")}
-                />
-                <MoreRow
                   icon={<SafeLottie source={require('../../../assets/lottie/wired-flat-426-brain-hover-pinch.json')} style={styles.lottieIcon} autoPlay loop  />}
                   label="תובנות AI"
                   onPress={() => router.push("/ai-insights" as never)}

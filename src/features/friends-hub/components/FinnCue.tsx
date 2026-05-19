@@ -61,6 +61,7 @@ export function FinnCue({ variant, text, size = 'sm', tone = 'blue' }: Props): R
     <View
       accessibilityRole="text"
       accessibilityLabel={`קפטן שארק: ${text}`}
+      accessibilityHint="טיפ מהמדריך האישי שלך"
       style={{
         flexDirection: 'row-reverse',
         alignItems: 'center',

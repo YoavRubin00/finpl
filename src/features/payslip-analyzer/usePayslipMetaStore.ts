@@ -1,22 +1,27 @@
 import { create, type StateCreator } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import { zustandStorage } from '../../lib/zustandStorage';
+import type { AnonymizedStats } from './lib/anonymizedStats';
 
 interface PayslipMetaState {
   everUsed: boolean;
   dailyCount: number;
   lastDate: string;
   legalAcceptedAt: number | null;
+  /** Opt-in anonymized snapshot shared with clan. null = not sharing. */
+  lastAnonymizedStats: AnonymizedStats | null;
 
   setEverUsed: () => void;
   incrementDailyCount: (date: string) => void;
   resetDailyCount: (date: string) => void;
   acceptLegal: () => void;
+  setAnonymizedStats: (stats: AnonymizedStats) => void;
+  clearAnonymizedStats: () => void;
 }
 
 type PersistedFields = Pick<
   PayslipMetaState,
-  'everUsed' | 'dailyCount' | 'lastDate' | 'legalAcceptedAt'
+  'everUsed' | 'dailyCount' | 'lastDate' | 'legalAcceptedAt' | 'lastAnonymizedStats'
 >;
 
 const createPayslipMeta: StateCreator<PayslipMetaState> = (set, get) => ({
@@ -24,6 +29,7 @@ const createPayslipMeta: StateCreator<PayslipMetaState> = (set, get) => ({
   dailyCount: 0,
   lastDate: '',
   legalAcceptedAt: null,
+  lastAnonymizedStats: null,
 
   setEverUsed: () => {
     if (!get().everUsed) {
@@ -43,6 +49,9 @@ const createPayslipMeta: StateCreator<PayslipMetaState> = (set, get) => ({
   resetDailyCount: (date: string) => set({ dailyCount: 0, lastDate: date }),
 
   acceptLegal: () => set({ legalAcceptedAt: Date.now() }),
+
+  setAnonymizedStats: (stats) => set({ lastAnonymizedStats: stats }),
+  clearAnonymizedStats: () => set({ lastAnonymizedStats: null }),
 });
 
 export const usePayslipMetaStore = create<PayslipMetaState>()(
@@ -54,6 +63,7 @@ export const usePayslipMetaStore = create<PayslipMetaState>()(
       dailyCount: state.dailyCount,
       lastDate: state.lastDate,
       legalAcceptedAt: state.legalAcceptedAt,
+      lastAnonymizedStats: state.lastAnonymizedStats,
     }),
   }),
 );

@@ -191,6 +191,31 @@ export const STITCH = {
   cardShadow: 'rgba(62,60,143,0.06)',    // tinted purple shadow
 } as const;
 
+/** Stock sector colors — fantasy portfolio chips & sparklines */
+export const SECTOR = {
+  tech:   { chip: '#1e40af', chipText: '#ffffff', surface: '#dbeafe', spark: '#3b82f6' },
+  banks:  { chip: '#16a34a', chipText: '#ffffff', surface: '#dcfce7', spark: '#22c55e' },
+  energy: { chip: '#ea580c', chipText: '#ffffff', surface: '#ffedd5', spark: '#f97316' },
+  health: { chip: '#db2777', chipText: '#ffffff', surface: '#fce7f3', spark: '#ec4899' },
+  crypto: { chip: '#7c3aed', chipText: '#ffffff', surface: '#ede9fe', spark: '#a855f7' },
+} as const;
+
+/** Fantasy League gold theme — promotion banner & podium #1 */
+export const LEAGUE_GOLD = {
+  bgFrom: '#fbbf24',
+  bgTo: '#d97706',
+  border: '#b45309',
+  ink: '#78350f',
+  glow: 'rgba(251,191,36,0.45)',
+} as const;
+
+/** Fantasy zone palette — leaderboard promote/safe/relegate */
+export const ZONE = {
+  promote: { bar: '#16a34a', tint: '#dcfce7', text: '#15803d', label: 'אזור עלייה' },
+  safe:    { bar: '#94a3b8', tint: '#f1f5f9', text: '#475569', label: 'אזור בטוח' },
+  relegate:{ bar: '#dc2626', tint: '#fee2e2', text: '#b91c1c', label: 'אזור ירידה' },
+} as const;
+
 /** Clan Hub — Clash Royale dark theme for the social clan zone */
 export const CLAN = {
   bg: '#0d2847',

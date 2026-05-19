@@ -92,9 +92,9 @@ export function FriendsLeaderboardCard(): React.ReactElement {
           }}
         >
           {/* Rank */}
-          <View style={{ width: 30, alignItems: 'center' }}>
-            <Text style={{ fontSize: i < 3 ? 20 : 13, fontWeight: '900', color: STITCH.onSurfaceVariant }}>
-              {MEDAL[i] ?? `${i + 1}`}
+          <View style={{ width: 32, alignItems: 'center', justifyContent: 'center' }}>
+            <Text style={{ fontSize: 16, fontWeight: '900', color: STITCH.onSurfaceVariant, textAlign: 'center' }}>
+              {MEDAL[i] ?? `#${i + 1}`}
             </Text>
           </View>
 

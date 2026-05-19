@@ -25,6 +25,7 @@ import { usePayslipMetaStore } from "./usePayslipMetaStore";
 import { analyzePayslipFile } from "./lib/uploadFile";
 import { grantPayslipReward } from "./lib/rewardPolicy";
 import { ERROR_COPY } from "./lib/errorCopy";
+import { buildAnonymizedStats } from "./lib/anonymizedStats";
 import { SharkAccountantBanner, type SharkBannerMood } from "./components/SharkAccountantBanner";
 import { UploadDropzone } from "./components/UploadDropzone";
 import { AnalyzingState } from "./components/AnalyzingState";
@@ -216,6 +217,10 @@ export function PayslipAnalyzerScreen() {
       });
       if (response.ok) {
         setResult(response.result);
+        // Auto-share an anonymized fingerprint (gross range, pension %, credit points)
+        // for the clan-comparison Robinhood card. Users can opt out via AnonymousPayslipCard.
+        const anonymized = buildAnonymizedStats(response.result);
+        usePayslipMetaStore.getState().setAnonymizedStats(anonymized);
         const reward = grantPayslipReward();
         if (!rewardGranted) {
           markRewardGranted();

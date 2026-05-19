@@ -58,6 +58,7 @@ export default function TabsLayout() {
           },
         }}
       >
+        <Tabs.Screen name="tools" />
         <Tabs.Screen name="investments" />
         <Tabs.Screen name="learn" />
         <Tabs.Screen name="index" />

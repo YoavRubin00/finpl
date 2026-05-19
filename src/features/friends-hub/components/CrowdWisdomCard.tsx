@@ -1,13 +1,14 @@
 import React, { useMemo } from 'react';
 import { View, Text, Pressable } from 'react-native';
 import { router } from 'expo-router';
-import Animated, { FadeIn, useAnimatedStyle, useReducedMotion, useSharedValue, withRepeat, withTiming, Easing } from 'react-native-reanimated';
+import Animated, { FadeInDown } from 'react-native-reanimated';
 import { CROWD_QUESTIONS } from '../../crowd-question/crowdQuestionsData';
 import { useCrowdQuestionStore } from '../../crowd-question/useCrowdQuestionStore';
 import type { CrowdQuestion, Sentiment, Topic } from '../../crowd-question/types';
 import { STITCH } from '../../../constants/theme';
 import { tapHaptic } from '../../../utils/haptics';
 import { FinnCue } from './FinnCue';
+import { PulseDot } from '../shared/PulseDot';
 
 interface TopicTheme {
   color: string;
@@ -37,36 +38,6 @@ const BAR_PALETTE: Record<Sentiment, BarPalette> = {
   yes: { selected: '#3b82f6', pastel: '#bfdbfe' },
   no: { selected: '#6366f1', pastel: '#c7d2fe' },
 };
-
-function LiveDot(): React.ReactElement {
-  const reduced = useReducedMotion();
-  const scale = useSharedValue(1);
-
-  React.useEffect(() => {
-    if (reduced) return;
-    scale.value = withRepeat(
-      withTiming(1.4, { duration: 900, easing: Easing.inOut(Easing.quad) }),
-      -1,
-      true,
-    );
-  }, [reduced, scale]);
-
-  const animStyle = useAnimatedStyle(() => ({ transform: [{ scale: scale.value }] }));
-
-  return (
-    <Animated.View
-      style={[
-        {
-          width: 7,
-          height: 7,
-          borderRadius: 4,
-          backgroundColor: '#ef4444',
-        },
-        animStyle,
-      ]}
-    />
-  );
-}
 
 interface PollBarProps {
   option: CrowdQuestion['options'][number];
@@ -186,7 +157,7 @@ export function CrowdWisdomCard(): React.ReactElement {
 
   function handlePressQuestion(): void {
     tapHaptic();
-    router.push('/finfeed' as never);
+    router.push('/crowd-wisdom' as never);
   }
 
   return (
@@ -262,7 +233,7 @@ export function CrowdWisdomCard(): React.ReactElement {
                 borderColor: '#fecaca',
               }}
             >
-              <LiveDot />
+              <PulseDot size={7} color="#ef4444" />
               <Text style={{ fontSize: 9, fontWeight: '900', color: '#b91c1c', writingDirection: 'rtl' }}>בזמן אמת</Text>
             </View>
           </View>
@@ -288,7 +259,7 @@ export function CrowdWisdomCard(): React.ReactElement {
         return (
           <Animated.View
             key={q.id}
-            entering={FadeIn.duration(200).delay(idx * 80)}
+            entering={FadeInDown.duration(280).delay(idx * 60)}
           >
             <Pressable
               onPress={handlePressQuestion}
@@ -390,7 +361,7 @@ export function CrowdWisdomCard(): React.ReactElement {
                   </Text>
                   {userVote === null && (
                     <Text style={{ fontSize: 11, color: theme.color, fontWeight: '800' }}>
-                      הצביעו בפיד הראשי ‹
+                      הצביעו במסך חכמת ההמונים ‹
                     </Text>
                   )}
                 </View>
@@ -413,7 +384,7 @@ export function CrowdWisdomCard(): React.ReactElement {
       <Pressable
         onPress={handlePressQuestion}
         accessibilityRole="button"
-        accessibilityLabel="פתח את הפיד הראשי לכל השאלות"
+        accessibilityLabel="פתח חכמת המונים — כל השאלות"
         style={({ pressed }) => ({
           flexDirection: 'row-reverse',
           alignItems: 'center',
@@ -427,7 +398,7 @@ export function CrowdWisdomCard(): React.ReactElement {
         })}
       >
         <Text style={{ fontSize: 13, fontWeight: '900', color: '#7c3aed', writingDirection: 'rtl' }}>
-          לכל השאלות בפיד
+          פתחו את חכמת ההמונים
         </Text>
         <Text style={{ fontSize: 14, color: '#7c3aed' }}>‹</Text>
       </Pressable>

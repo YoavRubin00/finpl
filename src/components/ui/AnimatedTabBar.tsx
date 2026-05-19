@@ -5,6 +5,7 @@ import {
   MessageCircle,
   TrendingUp,
   Users,
+  Wrench,
   type LucideIcon,
 } from "lucide-react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -23,10 +24,12 @@ import { useEffect, useCallback } from "react";
 import type { BottomTabBarProps } from "@react-navigation/bottom-tabs";
 
 import { tapHaptic } from "../../utils/haptics";
-import { CLASH } from "../../constants/theme";
+import { CLASH, DUO, STITCH } from "../../constants/theme";
 import { useTheme } from "../../hooks/useTheme";
 import { useSoundEffect } from "../../hooks/useSoundEffect";
 import { useWalkthroughGlowTab } from "../../features/onboarding/AppWalkthroughOverlay";
+import { useFriendsModeStore } from "../../features/friends-hub/useFriendsModeStore";
+import { FriendsTabRow } from "../../features/friends-hub/FriendsTabRow";
 
 import Svg, { Defs, RadialGradient, Rect, Stop } from "react-native-svg";
 
@@ -42,11 +45,13 @@ interface TabConfig {
   label: string;
   Icon: LucideIcon;
   badge?: number;
+  isNew?: boolean;
 }
 
-// Visual L→R ordering in RTL: chat | friends | למידה (center) | פיד | השקעות
+// Visual L→R ordering in RTL: chat | friends | למידה (center) | פיד | השקעות | כלים
 // The array reads right-to-left in RTL, so array[0] = rightmost tab visually.
 const TABS: TabConfig[] = [
+  { key: "tools",       label: "כלים",    Icon: Wrench,        isNew: true },
   { key: "investments", label: "השקעות",  Icon: TrendingUp },
   { key: "learn",       label: "פיד",     Icon: Compass },
   { key: "index",       label: "למידה",   Icon: BookOpen },
@@ -54,18 +59,16 @@ const TABS: TabConfig[] = [
   { key: "chat",        label: "צ'אט",   Icon: MessageCircle },
 ];
 
-// Per-tab accent colors, unified blue palette
-const TAB_COLORS: Record<string, string> = {
-  learn:       "#0ea5e9", // sky blue (feed)
-  index:       "#0891b2", // cyan (learn)
-  investments: "#1d4ed8", // blue
-  friends:     "#6366f1", // indigo, distinct but harmonizes with blues
-  chat:        "#3b82f6", // blue
-};
+// Single accent for active state — DUO blue (Duolingo-style premium)
+const ACTIVE_COLOR = DUO.blue;
+const ACTIVE_PILL_BG = DUO.blueSurface;
+const INACTIVE_COLOR = STITCH.outline;
+const INACTIVE_LABEL = STITCH.onSurfaceVariant;
+const NEW_BADGE_BG = DUO.green;
 
-const TAB_BAR_BG = "#fafafa";
-const ICON_SIZE_DEFAULT = 30;
-const ICON_SIZE_FOCUSED = 34;
+const TAB_BAR_BG = "#ffffff";
+const ICON_SIZE_DEFAULT = 26;
+const ICON_SIZE_FOCUSED = 28;
 const SPRING_FAST = { damping: 20, stiffness: 400 };
 
 // ---------------------------------------------------------------------------
@@ -85,11 +88,12 @@ interface TabItemProps {
 
 function TabItem({ config, focused, onPress, onLongPress, walkthroughGlow, walkthroughLocked }: TabItemProps) {
   const theme = useTheme();
-  const activeColor = TAB_COLORS[config.key] ?? "#7c3aed";
   const reducedMotion = useReducedMotion();
   const scale = useSharedValue(1);
   const translateY = useSharedValue(0);
   const activeGlow = useSharedValue(0);
+  const pillScale = useSharedValue(0);
+  const indicatorScale = useSharedValue(0);
 
   // Walkthrough glow animation, fast dramatic pulse
   const walkthroughPulse = useSharedValue(0);
@@ -122,15 +126,19 @@ function TabItem({ config, focused, onPress, onLongPress, walkthroughGlow, walkt
 
   useEffect(() => {
     if (reducedMotion) {
-      scale.value = focused ? 1.15 : 1;
-      translateY.value = focused ? -2 : 0;
+      scale.value = focused ? 1.05 : 1;
+      translateY.value = focused ? -1 : 0;
       activeGlow.value = focused ? 1 : 0;
+      pillScale.value = focused ? 1 : 0;
+      indicatorScale.value = focused ? 1 : 0;
       return;
     }
-    scale.value = withSpring(focused ? 1.15 : 1, SPRING_FAST);
-    translateY.value = withSpring(focused ? -2 : 0, SPRING_FAST);
+    scale.value = withSpring(focused ? 1.05 : 1, SPRING_FAST);
+    translateY.value = withSpring(focused ? -1 : 0, SPRING_FAST);
     activeGlow.value = withTiming(focused ? 1 : 0, { duration: focused ? 180 : 150 });
-  }, [focused, scale, translateY, activeGlow, reducedMotion]);
+    pillScale.value = withSpring(focused ? 1 : 0, { damping: 18, stiffness: 320 });
+    indicatorScale.value = withTiming(focused ? 1 : 0, { duration: focused ? 220 : 140 });
+  }, [focused, scale, translateY, activeGlow, pillScale, indicatorScale, reducedMotion]);
 
   const containerStyle = useAnimatedStyle(() => ({
     transform: [{ scale: scale.value }, { translateY: translateY.value }],
@@ -141,6 +149,16 @@ function TabItem({ config, focused, onPress, onLongPress, walkthroughGlow, walkt
     transform: [{ scale: scale.value }, { translateY: translateY.value }],
   }));
 
+  const pillStyle = useAnimatedStyle(() => ({
+    opacity: pillScale.value,
+    transform: [{ scaleX: pillScale.value }, { scaleY: 0.7 + 0.3 * pillScale.value }],
+  }));
+
+  const indicatorStyle = useAnimatedStyle(() => ({
+    opacity: indicatorScale.value,
+    transform: [{ scaleX: indicatorScale.value }],
+  }));
+
   const { playSound } = useSoundEffect();
 
   const handlePress = useCallback(() => {
@@ -149,7 +167,23 @@ function TabItem({ config, focused, onPress, onLongPress, walkthroughGlow, walkt
     onPress();
   }, [onPress, playSound]);
 
-  const { Icon, label, badge } = config;
+  const { Icon, label, badge, isNew } = config;
+
+  const iconColor = walkthroughLocked
+    ? "#cbd5e1"
+    : walkthroughGlow
+      ? "#0ea5e9"
+      : focused
+        ? ACTIVE_COLOR
+        : INACTIVE_COLOR;
+
+  const labelColor = walkthroughLocked
+    ? "#cbd5e1"
+    : walkthroughGlow
+      ? "#0ea5e9"
+      : focused
+        ? ACTIVE_COLOR
+        : INACTIVE_LABEL;
 
   return (
     <Pressable
@@ -159,19 +193,26 @@ function TabItem({ config, focused, onPress, onLongPress, walkthroughGlow, walkt
       accessibilityState={{ selected: focused }}
       accessibilityLabel={label}
       accessibilityHint={`עבור ללשונית ${label}`}
+      hitSlop={6}
       style={styles.tabItem}
     >
-      {/* Ultra-Premium SVG Optical Glow (No hard circles) */}
+      {/* Top indicator — short blue bar above focused tab */}
+      <Animated.View
+        style={[styles.topIndicator, indicatorStyle]}
+        pointerEvents="none"
+      />
+
+      {/* Soft optical glow (kept subtle for premium feel) */}
       <Animated.View
         style={[
           {
             position: "absolute",
-            top: -2,
+            top: 4,
             alignSelf: "center",
-            width: 72,
-            height: 72,
+            width: 64,
+            height: 56,
           },
-          activeGlowStyle
+          activeGlowStyle,
         ]}
         pointerEvents="none"
       >
@@ -186,35 +227,50 @@ function TabItem({ config, focused, onPress, onLongPress, walkthroughGlow, walkt
               fx="50%"
               fy="50%"
             >
-              <Stop offset="0%" stopColor={activeColor} stopOpacity="0.55" />
-              <Stop offset="40%" stopColor={activeColor} stopOpacity="0.25" />
-              <Stop offset="100%" stopColor={activeColor} stopOpacity="0" />
+              <Stop offset="0%" stopColor={ACTIVE_COLOR} stopOpacity="0.18" />
+              <Stop offset="60%" stopColor={ACTIVE_COLOR} stopOpacity="0.06" />
+              <Stop offset="100%" stopColor={ACTIVE_COLOR} stopOpacity="0" />
             </RadialGradient>
           </Defs>
           <Rect x="0" y="0" width="100%" height="100%" fill={`url(#glow-${config.key})`} />
         </Svg>
       </Animated.View>
 
-      {/* Icon + label container */}
-      <Animated.View style={[styles.iconContainer, containerStyle, walkthroughGlow && walkthroughGlowStyle, walkthroughGlow && { borderRadius: 18, overflow: "visible" }]}>
-        <View style={[
-          styles.iconCircle,
-          focused && { backgroundColor: "transparent" },
-          walkthroughLocked && { opacity: 0.2 },
-        ]}>
+      {/* Soft pill behind icon — appears when focused */}
+      <Animated.View
+        style={[styles.pillBg, pillStyle]}
+        pointerEvents="none"
+      />
+
+      {/* Icon container */}
+      <Animated.View
+        style={[
+          styles.iconContainer,
+          containerStyle,
+          walkthroughGlow && walkthroughGlowStyle,
+          walkthroughGlow && { borderRadius: 18, overflow: "visible" },
+        ]}
+      >
+        <View
+          style={[
+            styles.iconCircle,
+            walkthroughLocked && { opacity: 0.2 },
+          ]}
+        >
           <Icon
             size={focused ? ICON_SIZE_FOCUSED : ICON_SIZE_DEFAULT}
-            color={walkthroughLocked ? "#cbd5e1" : walkthroughGlow ? "#0ea5e9" : (focused ? activeColor : activeColor + "90")}
-            strokeWidth={focused ? 2.8 : 1.8}
+            color={iconColor}
+            fill={focused && !walkthroughLocked ? iconColor : "transparent"}
+            strokeWidth={focused ? 2.2 : 1.8}
           />
         </View>
       </Animated.View>
 
-      {/* Label, always visible, bolder when focused */}
+      {/* Label */}
       <Text
         style={[
           styles.tabLabel,
-          { color: walkthroughLocked ? "#cbd5e1" : walkthroughGlow ? "#0ea5e9" : (focused ? activeColor : activeColor + "90") },
+          { color: labelColor },
           focused && styles.tabLabelFocused,
           walkthroughLocked && { opacity: 0.2 },
         ]}
@@ -222,7 +278,14 @@ function TabItem({ config, focused, onPress, onLongPress, walkthroughGlow, walkt
         {label}
       </Text>
 
-      {/* Badge */}
+      {/* "חדש" badge — green corner badge for new tabs */}
+      {isNew && !focused && (
+        <View style={styles.newBadge} pointerEvents="none">
+          <Text style={styles.newBadgeText}>חדש</Text>
+        </View>
+      )}
+
+      {/* Numeric badge (notifications count) */}
       {badge !== undefined && badge > 0 && (
         <View style={[styles.badgeContainer, { borderColor: theme.surface }]}>
           <Text style={styles.badgeText}>
@@ -250,6 +313,22 @@ export function AnimatedTabBar({
   // Walkthrough glow, visual only, tabs always usable
   const glowTabKey = useWalkthroughGlowTab();
   const walkthroughActive = glowTabKey !== null;
+
+  // Friends Mode swap: if the user entered the Friends Hub, the bottom bar
+  // changes to a Friends-specific set (Home / Knowledge / Fantasy / Clan).
+  // Mode auto-exits when the user focuses a non-friends global tab.
+  const friendsModeEnabled = useFriendsModeStore((s) => s.enabled);
+  const exitFriendsMode = useFriendsModeStore((s) => s.exit);
+  const focusedRouteName = state.routes[state.index]?.name;
+  useEffect(() => {
+    if (friendsModeEnabled && focusedRouteName && focusedRouteName !== "friends") {
+      exitFriendsMode();
+    }
+  }, [friendsModeEnabled, focusedRouteName, exitFriendsMode]);
+
+  if (friendsModeEnabled) {
+    return <FriendsTabRow />;
+  }
 
   return (
     <View
@@ -317,7 +396,27 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "flex-end",
     paddingBottom: 2,
+    paddingTop: 8,
     position: "relative",
+  },
+  topIndicator: {
+    position: "absolute",
+    top: 0,
+    alignSelf: "center",
+    width: 28,
+    height: 3,
+    borderBottomLeftRadius: 3,
+    borderBottomRightRadius: 3,
+    backgroundColor: DUO.blue,
+  },
+  pillBg: {
+    position: "absolute",
+    top: 8,
+    alignSelf: "center",
+    width: 52,
+    height: 32,
+    borderRadius: 999,
+    backgroundColor: ACTIVE_PILL_BG,
   },
   iconContainer: {
     alignItems: "center",
@@ -325,8 +424,7 @@ const styles = StyleSheet.create({
   },
   iconCircle: {
     width: 48,
-    height: 48,
-    borderRadius: 15,
+    height: 36,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -340,9 +438,28 @@ const styles = StyleSheet.create({
     fontWeight: "800",
     fontSize: 11,
   },
+  newBadge: {
+    position: "absolute",
+    top: 4,
+    right: "14%",
+    backgroundColor: NEW_BADGE_BG,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 999,
+    borderWidth: 1.5,
+    borderColor: TAB_BAR_BG,
+    zIndex: 10,
+  },
+  newBadgeText: {
+    color: "#ffffff",
+    fontWeight: "900",
+    fontSize: 9,
+    letterSpacing: 0.3,
+    writingDirection: "rtl",
+  },
   badgeContainer: {
     position: "absolute",
-    top: -4,
+    top: 0,
     right: "18%",
     backgroundColor: CLASH.redBadge,
     minWidth: 18,

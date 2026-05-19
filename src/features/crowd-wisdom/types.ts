@@ -1,0 +1,107 @@
+/**
+ * Type definitions for the Crowd Wisdom (חכמת המונים) feature.
+ *
+ * Conceptual model:
+ *   - A QUESTION has multiple CHOICES.
+ *   - A user VOTES once per question; the choice id is recorded.
+ *   - After the question CLOSES (timer expires or admin-resolved), a real-world
+ *     OUTCOME is set, which lets us mark each user's vote as "correct" or
+ *     "incorrect" and update their lifetime accuracy/streak.
+ */
+
+export type CrowdWisdomCategory = "yes_no" | "sentiment" | "choice" | "forecast";
+
+export interface CrowdWisdomChoice {
+  id: string;
+  label: string;
+  /** Optional emoji or short symbol shown next to label. */
+  glyph?: string;
+  /** Seed vote count — UI shows current distribution after the user votes. */
+  seedVotes: number;
+  /** Color hint for bars/dots in the post-vote view. */
+  accentColor: string;
+}
+
+export interface CrowdWisdomQuestion {
+  id: string;
+  category: CrowdWisdomCategory;
+  /** Hebrew question text, ≤80 chars. */
+  prompt: string;
+  /** Optional ticker / context chip (e.g. "NVDA · $875.20 · עלתה 5.1%"). */
+  contextChip?: string;
+  choices: CrowdWisdomChoice[];
+  /** Total seed voters — UI shows "X משקיעים כבר הצביעו". */
+  seedTotalVoters: number;
+  /** Hours from "now" the question closes. */
+  closesInHours: number;
+  /** Optional educational concept shown as a yellow tooltip. */
+  educational?: {
+    title: string;
+    body: string;
+    example?: string;
+  };
+}
+
+/** Persisted vote record — one per question id. */
+export interface UserVote {
+  questionId: string;
+  choiceId: string;
+  /** epoch ms when the vote was placed. */
+  votedAt: number;
+}
+
+/** Filled in by a resolver once the real-world outcome is known. */
+export interface ResolvedOutcome {
+  questionId: string;
+  /** Choice id that matched reality. null when the resolver couldn't determine. */
+  winningChoiceId: string | null;
+  /** Free-text describing what happened (Hebrew). */
+  outcomeText: string;
+  resolvedAt: number;
+}
+
+/** Pre-vote shape returned to the UI; choices include only seeded counts. */
+export type PreVoteSnapshot = CrowdWisdomQuestion;
+
+/** Post-vote shape returned to the UI; choices include up-to-date %s. */
+export interface PostVoteSnapshot {
+  question: CrowdWisdomQuestion;
+  /** %s sum to 100. */
+  distribution: Array<{
+    choiceId: string;
+    percent: number;
+    voteCount: number;
+  }>;
+  /** Total voters including the user. */
+  totalVoters: number;
+  /** Choice id that holds the majority (largest %). */
+  majorityChoiceId: string;
+  /** True if the user voted for the majority choice. */
+  userIsWithCrowd: boolean;
+  /** Choice id the user picked. */
+  userChoiceId: string;
+}
+
+/** History row shown in CrowdWisdomHistoryScreen. */
+export interface HistoryEntry {
+  question: CrowdWisdomQuestion;
+  userVote: UserVote;
+  /** undefined when the question hasn't been resolved yet. */
+  outcome?: ResolvedOutcome;
+  /** Crowd majority at the time the user voted (cached snapshot). */
+  crowdMajority: {
+    choiceId: string;
+    percent: number;
+  };
+}
+
+/** Sentiment summary feeding the Bull/Bear gauge. */
+export interface SentimentSnapshot {
+  question: CrowdWisdomQuestion;
+  bullishPercent: number;
+  neutralPercent: number;
+  bearishPercent: number;
+  /** Position in [0,1] for the gauge needle, where 1 = fully bullish. */
+  needlePosition: number;
+  totalVoters: number;
+}
