@@ -8,7 +8,9 @@ export type XPSource =
   | "sim_complete"
   | "chest_reward"
   | "clash_win"
-  | "clash_draw";
+  | "clash_draw"
+  | "payslip_first"
+  | "payslip_repeat";
 
 export type PyramidLayer = 0 | 1 | 2 | 3 | 4 | 5;
 

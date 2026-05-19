@@ -104,6 +104,7 @@ import { FINN_LOTTIE_SOURCE, FINN_HELLO, FINN_STANDARD, FINN_HAPPY, FINN_EMPATHI
 import { InteractiveRecallScreen } from "../sentence-exercise/InteractiveRecallScreen";
 import { SharkDilemmaCard } from "../shark-dilemma/SharkDilemmaCard";
 import { getDilemma } from "../shark-dilemma/dilemmasData";
+import { PayslipBonusCard } from "../payslip-analyzer/PayslipBonusCard";
 
 // Small helper that advances phase → summary via useEffect (never during render).
 function FallbackToSummary({ setPhase }: { setPhase: (p: "summary") => void }) {
@@ -1217,6 +1218,7 @@ function SummaryScreen({
   unitColors,
   chestClaimed,
   chestElement,
+  bonusElement,
 }: {
   correctCount: number;
   totalCount: number;
@@ -1231,6 +1233,7 @@ function SummaryScreen({
   unitColors: { bg: string; dim: string; glow: string; bottom: string };
   chestClaimed?: boolean;
   chestElement?: React.ReactNode;
+  bonusElement?: React.ReactNode;
 }) {
   const wisdomItem = useWisdomStore((s) => s.activeItem);
   const summaryFinnState: FinnAnimationState =
@@ -1386,6 +1389,16 @@ function SummaryScreen({
 
         {/* Spacer to push button to bottom */}
         <View style={{ flex: 1 }} />
+
+        {/* Optional bonus card (e.g. payslip analyzer after mod-1-5) */}
+        {chestClaimed && bonusElement && (
+          <Animated.View
+            entering={FadeInDown.delay(900).springify().damping(14)}
+            style={{ width: "100%", marginBottom: 12 }}
+          >
+            {bonusElement}
+          </Animated.View>
+        )}
 
         {/* CONTINUE button, hidden until chest is claimed */}
         {chestClaimed !== false && (
@@ -3501,6 +3514,7 @@ export function LessonFlowScreen() {
               showWisdom={showWisdom}
               unitColors={unitColors}
               chestClaimed={chestClaimed}
+              bonusElement={mod?.id === "mod-1-5" ? <PayslipBonusCard /> : undefined}
               chestElement={
                 <View style={{ alignItems: "center", justifyContent: "center", flex: chestOpened ? 0 : 1 }}>
                   {/* Elegant centered glow behind chest */}

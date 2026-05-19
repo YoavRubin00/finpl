@@ -59,6 +59,7 @@ import { useDailyQuestsStore } from "../daily-quests/useDailyQuestsStore";
 import { DailyQuestWidget } from "../daily-quests/DailyQuestWidget";
 import { DailyQuestsSheet } from "../daily-quests/DailyQuestsSheet";
 import { QuestPathNode } from "../daily-quests/QuestPathNode";
+import { PayslipPathNode } from "../payslip-analyzer/PayslipPathNode";
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -845,6 +846,12 @@ const ChapterSection = React.memo(function ChapterSection({
           const showQuestBox = !!questPathNodeProps && hasNext && (i + 1) % 3 === 0;
           const questOffsetX = -getNodeOffset(i);
 
+          // Payslip analyzer side-quest: appears between mod-1-5 and the next module.
+          // Pre-completion → quiet blue "discoverable" state. Post-completion → gold celebratory state with shark peek.
+          const showPayslipNode = module.id === "mod-1-5" && hasNext;
+          const payslipUnlocked = completedModules.includes("mod-1-5");
+          const payslipOffsetX = -getNodeOffset(i);
+
           return (
             <View key={module.id}>
               <ModuleNode
@@ -894,7 +901,27 @@ const ChapterSection = React.memo(function ChapterSection({
                   />
                 </>
               )}
-              {hasNext && !showQuestBox && (
+              {showPayslipNode && !showQuestBox && (
+                <>
+                  <PathConnector
+                    fromOffsetX={getNodeOffset(i)}
+                    toOffsetX={payslipOffsetX}
+                    done={trailDone}
+                    color={colors.glow}
+                  />
+                  <PayslipPathNode
+                    offsetX={payslipOffsetX}
+                    unlocked={payslipUnlocked}
+                  />
+                  <PathConnector
+                    fromOffsetX={payslipOffsetX}
+                    toOffsetX={getNodeOffset(i + 1)}
+                    done={trailDone && payslipUnlocked}
+                    color={colors.glow}
+                  />
+                </>
+              )}
+              {hasNext && !showQuestBox && !showPayslipNode && (
                 <PathConnector
                   fromOffsetX={getNodeOffset(i)}
                   toOffsetX={getNodeOffset(i + 1)}
