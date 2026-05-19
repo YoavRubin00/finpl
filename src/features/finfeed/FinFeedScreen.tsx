@@ -724,18 +724,13 @@ export function FinFeedScreen() {
         }, 300);
       }
 
-      // Show streak popup once per day, only on first app entry (skip during walkthrough)
-      if (streak > 0 && !streakCheckedThisSession && useTutorialStore.getState().hasSeenAppWalkthrough) {
+      // Daily streak nudge moved to StreakCelebrationProvider — it now fires
+      // 5s after app launch from anywhere, gated on "lesson not yet done today",
+      // so we don't need a tab-specific trigger here. Keeping
+      // streakCheckedThisSession around so other guards don't break, but the
+      // popup scheduling is centralised in src/hooks/useStreakCelebration.tsx.
+      if (streak > 0 && !streakCheckedThisSession) {
         streakCheckedThisSession = true;
-        const today = new Date().toISOString().slice(0, 10);
-        AsyncStorage.getItem(STREAK_POPUP_KEY).then((lastDate) => {
-          if (lastDate !== today) {
-            AsyncStorage.setItem(STREAK_POPUP_KEY, today);
-            streakTimerRef.current = setTimeout(() => {
-              showStreakCelebration();
-            }, 2000);
-          }
-        });
       }
 
       // Shark feedback popup every 48 hours for anyone playing.
