@@ -32,6 +32,30 @@ type Token =
   | { type: "slot"; value: string }
   | { type: "newline" };
 
+// Fisher-Yates with a simple LCG so the shuffled order is deterministic per
+// prompt (won't reshuffle on every re-render or after a wrong attempt) but
+// varies between prompts. The seed is derived from the template text so two
+// different prompts get two different orderings — fixes "correct answer is
+// always the rightmost chip" perception in RTL.
+function shuffleWithSeed<T>(arr: readonly T[], seed: number): T[] {
+  const result = [...arr];
+  let s = seed || 1;
+  for (let i = result.length - 1; i > 0; i--) {
+    s = (s * 9301 + 49297) % 233280;
+    const j = Math.floor((s / 233280) * (i + 1));
+    [result[i], result[j]] = [result[j], result[i]];
+  }
+  return result;
+}
+
+function hashString(input: string): number {
+  let h = 0;
+  for (let i = 0; i < input.length; i++) {
+    h = (h * 31 + input.charCodeAt(i)) | 0;
+  }
+  return Math.abs(h);
+}
+
 function tokenize(template: string): Token[] {
   const parts: Token[] = [];
   const regex = /\{\{([^}]+)\}\}|\n/g;
@@ -121,6 +145,12 @@ export function FillBlankCard({
   onCorrectSettled,
 }: FillBlankCardProps) {
   const tokens = useMemo(() => tokenize(prompt.template), [prompt.template]);
+  // Stable shuffle per prompt — same prompt always gets the same order in a
+  // session, but the correct answer isn't pinned to the right side anymore.
+  const shuffledChoices = useMemo(
+    () => shuffleWithSeed(prompt.choices, hashString(prompt.template)),
+    [prompt.choices, prompt.template],
+  );
   const [activeSlot, setActiveSlot] = useState<string>(prompt.slots[0]?.slotId ?? "");
   const [wrongChoice, setWrongChoice] = useState<string | null>(null);
   const [confetti, setConfetti] = useState<number>(0);
@@ -244,9 +274,9 @@ export function FillBlankCard({
         </View>
       </View>
 
-      {/* Chips */}
+      {/* Chips — shuffled so the correct answer isn't always rightmost */}
       <View style={styles.choicesRow}>
-        {prompt.choices.map((choice) => (
+        {shuffledChoices.map((choice) => (
           <AnimatedChip
             key={choice.id}
             choice={choice}
