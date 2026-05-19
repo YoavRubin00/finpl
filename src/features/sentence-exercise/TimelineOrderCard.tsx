@@ -1,18 +1,25 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { View, Text, Pressable, StyleSheet } from "react-native";
 import Animated, {
   FadeInDown,
   FadeInUp,
+  runOnJS,
   useAnimatedStyle,
   useReducedMotion,
   useSharedValue,
   withSequence,
+  withSpring,
   withTiming,
 } from "react-native-reanimated";
-import { ChevronUp, ChevronDown } from "lucide-react-native";
-import { successHaptic, errorHaptic, tapHaptic } from "../../utils/haptics";
+import { Gesture, GestureDetector } from "react-native-gesture-handler";
+import { ChevronUp, ChevronDown, GripVertical } from "lucide-react-native";
+import { successHaptic, errorHaptic, tapHaptic, mediumHaptic } from "../../utils/haptics";
 import { ConfettiExplosion } from "../../components/ui/ConfettiExplosion";
 import type { TimelineOrderPrompt } from "./sentenceTypes";
+
+// משוער — גובה item כולל gap. משמש את ה-pan gesture לחישוב כמה מקומות
+// המשתמש גרר. אם תעדכן את itemRow padding או itemsColumn gap, עדכן גם פה.
+const ITEM_STEP_HEIGHT = 70;
 
 interface TimelineOrderCardProps {
   prompt: TimelineOrderPrompt;
@@ -27,6 +34,165 @@ const HELP_DELAY_MS = 20_000;
 
 const RANK_COLORS = ["#f97316", "#eab308", "#22c55e", "#3b82f6"];
 const RANK_BG = ["#fff7ed", "#fefce8", "#f0fdf4", "#eff6ff"];
+
+/**
+ * Single row of the timeline order list. Owns its own pan-gesture shared
+ * values so each row can drag independently. Drag handle is the grip icon on
+ * the leading edge (RTL: left side). Releasing the drag calls onMoveItem to
+ * shift the row by the resolved number of slots (Math.round(translateY /
+ * ITEM_STEP_HEIGHT)). Arrow buttons remain functional alongside the drag.
+ */
+interface DraggableItemRowProps {
+  idx: number;
+  totalItems: number;
+  locked: boolean;
+  accentColor: string;
+  onMoveItem: (fromIdx: number, toIdx: number) => void;
+  onSwap: (idx: number, dir: -1 | 1) => void;
+  rankColor: string;
+  rankBg: string;
+  children: ReactNode;
+}
+
+function DraggableItemRow({
+  idx,
+  totalItems,
+  locked,
+  accentColor,
+  onMoveItem,
+  onSwap,
+  rankColor,
+  rankBg,
+  children,
+}: DraggableItemRowProps) {
+  const translateY = useSharedValue(0);
+  const isDragging = useSharedValue(0);
+
+  const triggerHaptic = useCallback(() => { mediumHaptic(); }, []);
+  const handleRelease = useCallback(
+    (translation: number) => {
+      const steps = Math.round(translation / ITEM_STEP_HEIGHT);
+      if (steps !== 0) {
+        onMoveItem(idx, idx + steps);
+      }
+    },
+    [idx, onMoveItem],
+  );
+
+  const pan = Gesture.Pan()
+    .enabled(!locked)
+    // activeOffsetY -> ה-gesture נכנס לפעולה רק אחרי 8px אנכיים. בלי זה,
+    // pan עלול להפריע ל-tap על הarrows אם המשתמש מחליק טיפה.
+    .activeOffsetY([-8, 8])
+    .onStart(() => {
+      isDragging.value = 1;
+      runOnJS(triggerHaptic)();
+    })
+    .onUpdate((e) => {
+      translateY.value = e.translationY;
+    })
+    .onEnd((e) => {
+      runOnJS(handleRelease)(e.translationY);
+      translateY.value = withSpring(0, { damping: 18, stiffness: 220 });
+      isDragging.value = 0;
+    })
+    .onFinalize(() => {
+      // הגנה — אם ה-gesture התבטל באמצע (למשל ע"י gesture אחר), נחזיר ל-0.
+      translateY.value = withSpring(0, { damping: 18, stiffness: 220 });
+      isDragging.value = 0;
+    });
+
+  const animatedStyle = useAnimatedStyle(() => ({
+    transform: [
+      { translateY: translateY.value },
+      { scale: isDragging.value ? 1.04 : 1 },
+    ],
+    // מעט הגבהה ויזואלית בזמן drag כדי שיורגש "מורם" מעל השאר.
+    zIndex: isDragging.value ? 50 : 0,
+    elevation: isDragging.value ? 12 : 2,
+    shadowOpacity: isDragging.value ? 0.18 : 0.05,
+  }));
+
+  return (
+    <Animated.View
+      entering={FadeInUp.duration(200).delay(idx * 40)}
+      style={[
+        styles.itemRow,
+        {
+          borderColor: locked ? "#6ee7b7" : "#e2e8f0",
+          backgroundColor: locked ? "#f0fdf4" : "#ffffff",
+          shadowColor: locked ? "#34d399" : "#6366f1",
+        },
+        animatedStyle,
+      ]}
+    >
+      {/* Drag handle — קצה מוביל (ב-RTL: שמאל). pan gesture חי רק עליו, כדי
+          שגרירה לא תיתפס בטעות ע"י לחיצה על arrows או על תוכן ה-row. */}
+      {!locked && (
+        <GestureDetector gesture={pan}>
+          <Animated.View
+            accessible
+            accessibilityRole="adjustable"
+            accessibilityLabel={`גרור כדי לסדר. פריט ${idx + 1}`}
+            accessibilityHint="החלק למעלה או למטה כדי לשנות מיקום"
+            style={styles.dragHandle}
+            hitSlop={8}
+          >
+            <GripVertical size={18} color="#94a3b8" />
+          </Animated.View>
+        </GestureDetector>
+      )}
+
+      {/* Rank badge */}
+      <View style={[styles.rankBadge, { backgroundColor: rankBg, borderColor: rankColor }]}>
+        <Text style={[styles.rankText, { color: rankColor }]}>{idx + 1}</Text>
+      </View>
+
+      {children}
+
+      {/* Arrow buttons */}
+      {!locked && (
+        <View style={styles.arrows}>
+          <Pressable
+            onPress={() => onSwap(idx, -1)}
+            disabled={idx === 0}
+            accessibilityRole="button"
+            accessibilityLabel={`הזז פריט ${idx + 1} למעלה`}
+            hitSlop={6}
+            style={({ pressed }) => [
+              styles.arrowBtn,
+              { borderColor: accentColor, opacity: idx === 0 ? 0.25 : pressed ? 0.6 : 1 },
+            ]}
+          >
+            <ChevronUp size={17} color={accentColor} />
+          </Pressable>
+          <Pressable
+            onPress={() => onSwap(idx, 1)}
+            disabled={idx === totalItems - 1}
+            accessibilityRole="button"
+            accessibilityLabel={`הזז פריט ${idx + 1} למטה`}
+            hitSlop={6}
+            style={({ pressed }) => [
+              styles.arrowBtn,
+              {
+                borderColor: accentColor,
+                opacity: idx === totalItems - 1 ? 0.25 : pressed ? 0.6 : 1,
+              },
+            ]}
+          >
+            <ChevronDown size={17} color={accentColor} />
+          </Pressable>
+        </View>
+      )}
+
+      {locked && (
+        <View style={styles.checkMark}>
+          <Text style={styles.checkMarkText}>✓</Text>
+        </View>
+      )}
+    </Animated.View>
+  );
+}
 
 export function TimelineOrderCard({
   prompt,
@@ -77,13 +243,17 @@ export function TimelineOrderCard({
     return () => { if (helpTimerRef.current) clearTimeout(helpTimerRef.current); };
   }, [locked, resetHelpTimer]);
 
-  const swapAt = useCallback(
-    (idx: number, dir: -1 | 1) => {
+  // מהלך לוגי משותף ל-swap ע"י חצים ול-drag: מעביר item ל-toIdx, מאמת אם
+  // הסדר נכון, ומפעיל את ה-flow של הצלחה. fromIdx==toIdx → אין שינוי.
+  const moveItem = useCallback(
+    (fromIdx: number, toIdx: number) => {
       if (locked) return;
       const current = localOrderRef.current;
-      if (idx + dir < 0 || idx + dir >= current.length) return;
+      const clamped = Math.max(0, Math.min(current.length - 1, toIdx));
+      if (clamped === fromIdx) return;
       const next = [...current];
-      [next[idx], next[idx + dir]] = [next[idx + dir], next[idx]];
+      const [moved] = next.splice(fromIdx, 1);
+      next.splice(clamped, 0, moved);
       setLocalOrder(next);
       tapHaptic();
 
@@ -102,6 +272,13 @@ export function TimelineOrderCard({
       }
     },
     [locked, prompt.items, onSubmit],
+  );
+
+  const swapAt = useCallback(
+    (idx: number, dir: -1 | 1) => {
+      moveItem(idx, idx + dir);
+    },
+    [moveItem],
   );
 
   const handleSubmit = useCallback(() => {
@@ -177,23 +354,17 @@ export function TimelineOrderCard({
           const rankBg = locked ? "#ecfdf5" : (RANK_BG[idx % RANK_BG.length] ?? "#f8fafc");
 
           return (
-            <Animated.View
+            <DraggableItemRow
               key={itemId}
-              entering={FadeInUp.duration(200).delay(idx * 40)}
-              style={[
-                styles.itemRow,
-                {
-                  borderColor: locked ? "#6ee7b7" : "#e2e8f0",
-                  backgroundColor: locked ? "#f0fdf4" : "#ffffff",
-                  shadowColor: locked ? "#34d399" : "#6366f1",
-                },
-              ]}
+              idx={idx}
+              totalItems={displayOrder.length}
+              locked={locked}
+              accentColor={accentColor}
+              onMoveItem={moveItem}
+              onSwap={swapAt}
+              rankColor={rankColor}
+              rankBg={rankBg}
             >
-              {/* Rank badge */}
-              <View style={[styles.rankBadge, { backgroundColor: rankBg, borderColor: rankColor }]}>
-                <Text style={[styles.rankText, { color: rankColor }]}>{idx + 1}</Text>
-              </View>
-
               {/* Content */}
               <View style={styles.itemContent}>
                 {hasYear ? (
@@ -217,48 +388,7 @@ export function TimelineOrderCard({
                   </Text>
                 )}
               </View>
-
-              {/* Arrow buttons */}
-              {!locked && (
-                <View style={styles.arrows}>
-                  <Pressable
-                    onPress={() => swapAt(idx, -1)}
-                    disabled={idx === 0}
-                    accessibilityRole="button"
-                    accessibilityLabel={`הזז פריט ${idx + 1} למעלה`}
-                    hitSlop={6}
-                    style={({ pressed }) => [
-                      styles.arrowBtn,
-                      { borderColor: accentColor, opacity: idx === 0 ? 0.25 : pressed ? 0.6 : 1 },
-                    ]}
-                  >
-                    <ChevronUp size={17} color={accentColor} />
-                  </Pressable>
-                  <Pressable
-                    onPress={() => swapAt(idx, 1)}
-                    disabled={idx === displayOrder.length - 1}
-                    accessibilityRole="button"
-                    accessibilityLabel={`הזז פריט ${idx + 1} למטה`}
-                    hitSlop={6}
-                    style={({ pressed }) => [
-                      styles.arrowBtn,
-                      {
-                        borderColor: accentColor,
-                        opacity: idx === displayOrder.length - 1 ? 0.25 : pressed ? 0.6 : 1,
-                      },
-                    ]}
-                  >
-                    <ChevronDown size={17} color={accentColor} />
-                  </Pressable>
-                </View>
-              )}
-
-              {locked && (
-                <View style={styles.checkMark}>
-                  <Text style={styles.checkMarkText}>✓</Text>
-                </View>
-              )}
-            </Animated.View>
+            </DraggableItemRow>
           );
         })}
       </View>
@@ -404,6 +534,13 @@ const styles = StyleSheet.create({
     color: "#2563eb",
     minWidth: 28,
     textAlign: "center",
+  },
+  dragHandle: {
+    width: 28,
+    height: 36,
+    alignItems: "center",
+    justifyContent: "center",
+    marginLeft: -4,
   },
   arrows: {
     flexDirection: "column",
