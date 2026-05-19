@@ -4,7 +4,16 @@ import type { SharkDilemma } from "./types";
  * Captain Shark's Financial Dilemmas — one per lesson module.
  * Shown at end of module before the chest opens ("לייעץ לשארק").
  * Both options get a +5 coin reward; shark reveals which is wiser.
+ *
+ * VIDEO-FIRST DILEMMAS (mod-0-3 .. mod-1-9):
+ *   When `videoUri` is set, LessonFlowScreen routes to <VideoSharkDilemmaCard>
+ *   which plays a 5s Captain Shark scene, auto-pauses ~halfway to overlay the
+ *   options, and resumes after the user picks. Videos served from Vercel Blob:
+ *     ${DILEMMA_VIDEO_BASE}/dilemma-<moduleId>.mp4
+ *   Source MP4s live in `tmp-finn-dilemma-videos/` (gitignored) until uploaded.
  */
+const DILEMMA_VIDEO_BASE = "https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/finn-dilemmas";
+
 export const SHARK_DILEMMAS: Record<string, SharkDilemma> = {
   "mod-0-1": {
     moduleId: "mod-0-1",
@@ -24,14 +33,16 @@ export const SHARK_DILEMMAS: Record<string, SharkDilemma> = {
   },
   "mod-0-3": {
     moduleId: "mod-0-3",
+    videoUri: `${DILEMMA_VIDEO_BASE}/dilemma-mod-0-3.mp4`,
     scenario: "סבתא שלכם נתנה לכם 500 ₪ ליום הולדת ואמרה 'תשמרו את זה במגירה לעוד כמה שנים'. מה הייתי עושה?",
     options: [
       { id: "a", label: "שמים במגירה כמו שאמרה", feedback: "הבנתי את הכבוד לסבתא, זה מקסים. אבל בגלל אינפלציה, 500 ₪ בעוד 5 שנים יקנו פחות ממה שהם קונים היום — הכסף פשוט 'נמס' במגירה.", isWise: false },
-      { id: "b", label: "שמים בפיקדון או חיסכון", feedback: "יפה. אינפלציה שוחקת כסף ששוכב בלי לעבוד. אפילו פיקדון פשוט בבנק נותן קצת ריבית שמגנה על ערך הכסף.", isWise: true },
+      { id: "b", label: "שמים בפיקדון או חיסכון", feedback: "יפה. אינפלציה שוחקת כסף ששוכב בלי לעבוד. אפילו פיקדון פשוט בבנק נותן ריבית שמצמצמת את הפגיעה — וקרן השתלמות או קופת גמל מנצחות את האינפלציה לאורך זמן.", isWise: true },
     ],
   },
   "mod-0-4": {
     moduleId: "mod-0-4",
+    videoUri: `${DILEMMA_VIDEO_BASE}/dilemma-mod-0-4.mp4`,
     scenario: "קיבלת משכורת של 5,000 ₪ מהעבודה בקפה. עוד לא עברו 3 ימים והחשבון כמעט ריק כי יצאת עם חברים כל ערב. מה הייתי עושה?",
     options: [
       { id: "a", label: "ממשיכים לזרום, זה הכיף", feedback: "הבנתי, לצאת עם חברים זה חלק מהחיים. אבל אם תיגמר המשכורת לפני אמצע החודש, תגיעו למינוס — וזה יותר יקר ממה שחשבתם.", isWise: false },
@@ -40,14 +51,16 @@ export const SHARK_DILEMMAS: Record<string, SharkDilemma> = {
   },
   "mod-0-5": {
     moduleId: "mod-0-5",
+    videoUri: `${DILEMMA_VIDEO_BASE}/dilemma-mod-0-5.mp4`,
     scenario: "אתם בני 19, מרוויחים קצת מעבודה חלקית. חבר אומר 'בשביל מה לחסוך עכשיו, תחיו את הרגע — תחסכו כשתתחילו לעבוד ברצינות'. מה הייתי עושה?",
     options: [
-      { id: "a", label: "חוסכים אפילו 200 ₪ בחודש", feedback: "ענק. התחלה מוקדמת של חיסכון = זמן עובד לטובתכם. גם סכום קטן היום שווה הרבה יותר בעוד 10 שנים בזכות ריבית דריבית.", isWise: true },
+      { id: "a", label: "חוסכים אפילו 200 ₪ בחודש", feedback: "ענק. התחלה מוקדמת של חיסכון = זמן עובד לטובתכם. גם סכום קטן היום הופך לסכום הרבה יותר גדול עד הפרישה (פי 3 ויותר) — בזכות ריבית דריבית.", isWise: true },
       { id: "b", label: "מחכים להתחלה 'רצינית'", feedback: "מחשבה נפוצה — אבל 'רציני' לעולם לא באמת מגיע לבד. כריש חכם מתחיל קטן; ההרגל חשוב יותר מהסכום.", isWise: false },
     ],
   },
   "mod-1-1": {
     moduleId: "mod-1-1",
+    videoUri: `${DILEMMA_VIDEO_BASE}/dilemma-mod-1-1.mp4`,
     scenario: "דוד שלכם אומר לכם: 'תפקידו 10,000 ₪ בגיל 20 ותשכחו מהם עד גיל 60'. אתם חושבים שזה הפסד של 40 שנה של כיף. מה הייתי עושה?",
     options: [
       { id: "a", label: "לוקחים 10,000 ₪ עכשיו ליהנות", feedback: "הבנתי את הפיתוי, 10,000 ₪ זה לא מעט. אבל בריבית שנתית של 7%, אותם 10,000 הופכים ל-150,000 ₪ בגיל 60. הוויתור שווה הרבה יותר.", isWise: false },
@@ -56,13 +69,14 @@ export const SHARK_DILEMMAS: Record<string, SharkDilemma> = {
   },
   "mod-1-2": {
     moduleId: "mod-1-2",
+    videoUri: `${DILEMMA_VIDEO_BASE}/dilemma-mod-1-2.mp4`,
     startSlideId: "s1",
     slides: [
       {
         id: "s1",
         scenario: "אתם במינוס של 2,000 ₪ כבר 4 חודשים. הבנק 'לא לחץ' אז זה לא נראה דחוף. מה הייתי עושה?",
         options: [
-          { id: "a", label: "מתעדפים סגירת המינוס החודש", feedback: "מהלך נכון. ריבית על מינוס בישראל יכולה להגיע ל-15%. 2,000 ₪ במינוס שנה שלמה = כ-300 ₪ ריבית שנעלמת לבנק.", isWise: true, scoreImpact: 2 },
+          { id: "a", label: "מתעדפים סגירת המינוס החודש", feedback: "מהלך נכון. ריבית על מינוס בישראל ממוצעת כ-12% ויכולה להגיע ל-15% ויותר. 2,000 ₪ במינוס שנה שלמה = כ-250 ₪ ריבית שנעלמת לבנק.", isWise: true, scoreImpact: 2 },
           { id: "b", label: "ממשיכים, הבנק לא מציק", feedback: "הבנתי, אין שיחה מהבנק אז לא מרגישים. אבל הריבית רצה בשקט ברקע — חודשיים נוספים של אדישות, ועכשיו תראו לאן זה הוביל.", isWise: false, scoreImpact: -2 },
         ],
         branches: { a: "s2-pos", b: "s2-neg" },
@@ -87,6 +101,7 @@ export const SHARK_DILEMMAS: Record<string, SharkDilemma> = {
   },
   "mod-1-3": {
     moduleId: "mod-1-3",
+    videoUri: `${DILEMMA_VIDEO_BASE}/dilemma-mod-1-3.mp4`,
     startSlideId: "s1",
     slides: [
       {
@@ -173,14 +188,23 @@ export const SHARK_DILEMMAS: Record<string, SharkDilemma> = {
   },
   "mod-1-8": {
     moduleId: "mod-1-8",
-    scenario: "אתם בסופר ורואים פרומו: '2+1 על שוקולד'. אתם לא באמת זקוקים לשוקולד, אבל זה 'עסקה'. מה הייתי עושה?",
+    videoUri: `${DILEMMA_VIDEO_BASE}/dilemma-mod-1-8.mp4`,
+    scenario: "חברה שולחת לכם לינק: '70% הנחה על חולצה שרציתם, רק עד חצות!'. המחיר אחרי הנחה: 90 ₪. מה הייתי עושה?",
     options: [
-      { id: "a", label: "לוקחים, חבל לפספס", feedback: "הבנתי את הרעיון, אבל הנחה על משהו שלא תכננתם לקנות זו לא חיסכון — זו הוצאה נוספת. רשתות מתכננות את זה בדיוק.", isWise: false },
-      { id: "b", label: "מדלגים, לא תכננו לקנות", feedback: "יפה. קנייה חכמה מתחילה ברשימה. הנחה היא חיסכון רק כשהייתם קונים ממילא — אחרת זה סתם פיתוי מעוצב.", isWise: true },
+      { id: "a", label: "קונים מיד, אסור לפספס", feedback: "הבנתי, FOMO זה אמיתי. אבל הרבה אתרים מנפחים את המחיר 'הרגיל' כדי להציג הנחה גדולה. דקה של בדיקה חוסכת כסף וקנייה מיותרת.", isWise: false },
+      { id: "b", label: "בודקים מחיר היסטורי קודם", feedback: "מהלך של כריש. אתרי השוואה (כמו זאפ) מראים מה המחיר באמת היה. ההנחה אמיתית? תקנו. לא? תוותרו בלי חרטה.", isWise: true },
     ],
   },
   "mod-1-9": {
     moduleId: "mod-1-9",
+    // Video flow uses the simpler top-level scenario (car breaks down).
+    // Static flow keeps the original branching Tesla story below.
+    videoUri: `${DILEMMA_VIDEO_BASE}/dilemma-mod-1-9.mp4`,
+    scenario: "המכונית נשברה. תיקון: 5,000 ₪. יש לכם קרן חירום של 10,000 ₪ וגם 3,000 ₪ שתכננתם להשקיע השבוע. מה הייתי עושה?",
+    options: [
+      { id: "a", label: "משלמים מהקרן, ממשיכים עם ההשקעה", feedback: "כריש שיודע למה הוא חסך. קרן חירום היא בדיוק לרגע הזה. ההשקעה תמשיך לעבוד ברקע, ותחדשו את הקרן בחודש-חודשיים.", isWise: true },
+      { id: "b", label: "משלמים מההשקעה, שומרים את הקרן ליום גרוע יותר", feedback: "הבנתי את ההיגיון. אבל זה בדיוק 'יום יותר רע'. מכירה באמצע = הפסד פוטנציאלי + עצירת הצמיחה.", isWise: false },
+    ],
     startSlideId: "s1",
     slides: [
       {

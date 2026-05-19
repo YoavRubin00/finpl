@@ -235,6 +235,16 @@ export default function RootLayout() {
     configureRevenueCat();
   }, []);
 
+  // DEV-only: force premium tier on web so we can test pro-gated features
+  // without going through Google login + RevenueCat. __DEV__ is false in any
+  // EAS / production build (mobile or web export), so this never ships.
+  useEffect(() => {
+    if (__DEV__ && Platform.OS === "web") {
+      const s = useSubscriptionStore.getState();
+      if (s.tier !== "pro") s.upgradeToPro();
+    }
+  }, []);
+
   // Sync RevenueCat when user logs in
   const userEmail = useAuthStore((s) => s.email);
   useEffect(() => {

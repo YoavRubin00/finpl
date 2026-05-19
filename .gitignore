@@ -20,6 +20,16 @@ web-build/
 assets/video/
 assets/AUDIO/
 assets/vercel_stage/
+assets/daisy/
+assets/audio-podcasts/
+assets/audio-samples/
+assets/couple/
+voices-temp.json
+voices-hebrew*.json
+voices-israeli.json
+voices-h*.json
+shared-female.json
+models.json
 # Only track root PNGs referenced by code; ignore draft/archive subfolders
 assets/infographics/*/
 assets/STOCK/
