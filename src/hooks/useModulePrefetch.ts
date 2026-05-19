@@ -68,6 +68,21 @@ export function useModulePrefetch(
 
     if (uris.length > 0) {
       Promise.allSettled(uris.map((uri) => ExpoImage.prefetch(uri)))
+        .then((results) => {
+          // אנליטיקס לכשלים. בלי זה אנחנו עיוורים — משתמשים מדווחים על
+          // placeholders אפורים אבל לא יודעים אילו URLs נכשלו.
+          results.forEach((r, i) => {
+            if (r.status === 'rejected') {
+              const uri = uris[i];
+              captureEvent('image_prefetch_failed', {
+                uri,
+                file_key: uri.split('/').slice(-2).join('/'),
+                platform: Platform.OS,
+                reason: r.reason instanceof Error ? r.reason.message : String(r.reason),
+              });
+            }
+          });
+        })
         .finally(() => { if (!cancelled) setImagesReady(true); });
     }
     if (videoUris.length > 0) {

@@ -14,6 +14,7 @@ import type { ImageSource, ImageLoadEventData } from "expo-image";
 import type { ImageSourcePropType } from "react-native";
 import LottieView from "lottie-react-native";
 import type { AnimationObject } from "lottie-react-native";
+import { captureEvent } from "../../lib/posthog";
 
 const AnimatedExpoImage = Animated.createAnimatedComponent(ExpoImage);
 
@@ -475,6 +476,7 @@ export function FlashcardInfographic({ cardId, diveStep = 0, zoomRegions }: Prop
   const isLightBg = LIGHT_BG_CARDS.has(cardId);
   const [ratio, setRatio] = useState<number | undefined>(undefined);
   const [finnFullscreen, setFinnFullscreen] = useState(false);
+  const [imageError, setImageError] = useState(false);
 
   const handleLoad = useCallback((e: ImageLoadEventData) => {
     const { width, height } = e.source;
@@ -482,6 +484,17 @@ export function FlashcardInfographic({ cardId, diveStep = 0, zoomRegions }: Prop
       setRatio(width / height);
     }
   }, []);
+
+  const handleImageError = useCallback((err: unknown) => {
+    setImageError(true);
+    const rawUri = typeof source === 'object' && source && 'uri' in source ? source.uri : undefined;
+    captureEvent('infographic_load_failed', {
+      card_id: cardId,
+      uri: typeof rawUri === 'string' ? rawUri : 'bundled',
+      error: String((err as { error?: unknown })?.error ?? err),
+      platform: Platform.OS,
+    });
+  }, [cardId, source]);
 
   const zoomScale = useSharedValue(1);
   const zoomX = useSharedValue(0);
@@ -581,9 +594,15 @@ export function FlashcardInfographic({ cardId, diveStep = 0, zoomRegions }: Prop
           />
         </View>
       )}
-      {source && (
+      {source && imageError && (
+        // Fallback graceful — אם התמונה נכשלה לטעון (רשת/CDN חסומים), במקום
+        // placeholder אפור גדול שתופס שטח מסך אנחנו פשוט מסתירים את התמונה.
+        // ה-flashcard text + הסבר עדיין מציגים נכון. analytics נשלח ל-PostHog.
+        null
+      )}
+      {source && !imageError && (
         <View style={[s.container, isLightBg && s.containerLight, { aspectRatio: ratio ?? 1.2, maxHeight: COMPACT_CARDS.has(cardId) ? 220 : LARGE_CARDS.has(cardId) ? undefined : 270, backgroundColor: '#f1f5f9' }]}>
-          <AnimatedExpoImage source={source} style={[s.image, zoomStyle]} contentFit={COVER_CARDS.has(cardId) ? "cover" : "contain"} cachePolicy="memory-disk" priority="high" transition={200} onLoad={Platform.OS === 'web' ? undefined : handleLoad} />
+          <AnimatedExpoImage source={source} style={[s.image, zoomStyle]} contentFit={COVER_CARDS.has(cardId) ? "cover" : "contain"} cachePolicy="memory-disk" priority="high" transition={200} onLoad={Platform.OS === 'web' ? undefined : handleLoad} onError={handleImageError} />
           {TEXT_OVERLAYS[cardId]?.map((o, i) => (
             <Animated.View
               key={i}
