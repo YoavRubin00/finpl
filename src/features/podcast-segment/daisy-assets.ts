@@ -29,3 +29,10 @@ export const PODCAST_STUDIO_BG = {
 export const DAISY_TALKING_WEBP = {
   uri: `${BLOB_BASE}/daisy-talking.webp`,
 } as const;
+
+/** Daisy happy + blinking on a fully transparent background. Used in
+ *  contexts that compose her over their own gradient (e.g. couple-dilemma
+ *  feedback) where the podcast studio scenery would clash. */
+export const DAISY_HAPPY_BLINK_WEBP = {
+  uri: `${BLOB_BASE}/daisy-happy-blink.webp`,
+} as const;
