@@ -74,13 +74,13 @@ FinPlay מחויבת להגנה על פרטיותך ופועלת בהתאם לח
 - דרך הגדרות המכשיר (להתראות פוש)
 - דרך לינק "הסרה מרשימת תפוצה" שמופיע בכל מייל שיווקי
 - בתגובה לכל מייל עם המילה "הסר"
-- בפנייה לכתובת yoav.finplay@gmail.com
+- בפנייה לכתובת support@finplay.me
 
 ההסרה תיכנס לתוקף תוך 3 ימי עסקים.
 
 ### 5. זכויותיך (עיון, תיקון ומחיקה)
 
-על פי חוק הגנת הפרטיות, הינך זכאי/ת לעיין במידע האישי שלך. לעיון, תיקון או מחיקת חשבון, ניתן לפנות אלינו: yoav.finplay@gmail.com
+על פי חוק הגנת הפרטיות, הינך זכאי/ת לעיין במידע האישי שלך. לעיון, תיקון או מחיקת חשבון, ניתן לפנות אלינו: support@finplay.me
 
 ### 6. אבטחת מידע
 
@@ -164,13 +164,13 @@ You may unsubscribe at any time via any of the following:
 - Device settings (for push notifications)
 - The "Unsubscribe" link in any marketing email
 - Replying to any email with the word "unsubscribe"
-- Contacting yoav.finplay@gmail.com
+- Contacting support@finplay.me
 
 Unsubscription will take effect within 3 business days.
 
 ### 5. Your Rights
 
-Under the Privacy Protection Law, you are entitled to review your personal information. For review, correction, or account deletion, contact us at: yoav.finplay@gmail.com
+Under the Privacy Protection Law, you are entitled to review your personal information. For review, correction, or account deletion, contact us at: support@finplay.me
 
 ### 6. Data Security
 

@@ -184,7 +184,7 @@ export async function runDailyEmailBatch(): Promise<DailyEmailResult> {
 
       await resend.emails.send({
         from: fromAddress,
-        replyTo: 'yoav.finplay@gmail.com',
+        replyTo: 'support@finplay.me',
         to: user.email,
         subject,
         html,
