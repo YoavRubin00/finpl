@@ -55,16 +55,17 @@ export function CoupleDilemmaFeedback({ chosen, onContinue }: Props) {
       {/* Daisy WebP, center — wise = full celebration loop (eyes squeeze
           shut, fins up, blue sparkle stars) on a transparent background so
           it composes cleanly over the gradient. empathic still uses the
-          studio still for now (will get the same treatment in a follow-up). */}
+          studio still for now (will get the same treatment in a follow-up).
+          No entering animation — she appears with the screen so the user
+          sees the celebration the moment the feedback lands, not a beat
+          after. */}
       <View style={styles.daisyWrap} pointerEvents="none">
-        <Animated.View entering={FadeIn.duration(420).delay(80)}>
-          <ExpoImage
-            source={wise ? DAISY_HAPPY_CELEBRATE_WEBP : DAISY_ASSETS.empathic}
-            style={styles.daisy}
-            contentFit="contain"
-            accessible={false}
-          />
-        </Animated.View>
+        <ExpoImage
+          source={wise ? DAISY_HAPPY_CELEBRATE_WEBP : DAISY_ASSETS.empathic}
+          style={styles.daisy}
+          contentFit="contain"
+          accessible={false}
+        />
       </View>
 
       {/* CTA bottom */}
@@ -140,8 +141,13 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   daisy: {
-    width: 220,
-    height: 220,
+    // contentFit="contain" keeps her aspect ratio, so width/height are an
+    // upper bound. 92% of the typical phone width (~360 → ~330) lets her
+    // body almost touch the left/right edges of the screen without ever
+    // overflowing on small devices.
+    width: '92%',
+    aspectRatio: 1,
+    maxWidth: 420,
   },
 
   ctaWrap: {
