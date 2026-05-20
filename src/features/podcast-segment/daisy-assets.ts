@@ -49,9 +49,9 @@ export const DAISY_EMPATHIC_WEBP =
   require("../../../assets/webp/daisy/daisy-empathic.webp") as number;
 
 /** Daisy default neutral pose — fins relaxed at sides, soft closed-lip
- *  smile, eyes softly open. Static (single frame, ~16 KB) on a fully
- *  transparent background. Use as her resting state — before an answer
- *  is given, alongside non-reactive UI, or any place that would otherwise
- *  show a static mascot. Mirrors fin-standard.webp for Captain Shark. */
+ *  smile. 2-frame blink loop (3s open / 140ms closed = natural ~1 blink
+ *  every ~3s) on a fully transparent background, ~28 KB. Use as her
+ *  resting state — alongside non-reactive UI or wherever a static mascot
+ *  would feel dead. Mirrors fin-standard for Captain Shark but with life. */
 export const DAISY_STANDARD_WEBP =
   require("../../../assets/webp/daisy/daisy-standard.webp") as number;
