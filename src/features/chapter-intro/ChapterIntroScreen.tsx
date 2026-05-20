@@ -16,7 +16,7 @@ import {
   nextAccessibleModule,
 } from '../subscription/moduleAccess';
 import { tapHaptic, heavyHaptic } from '../../utils/haptics';
-import { CHAPTER_CTA_COLORS } from '../finfeed/types';
+import { CHAPTER_CTA_COLORS } from './colors';
 import { useChapterMindMap } from './useChapterMindMap';
 
 function chapterStoreKey(chapterId: string): string {
