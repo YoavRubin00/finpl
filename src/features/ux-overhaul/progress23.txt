@@ -190,7 +190,7 @@
 - RTL preserved: writingDirection 'rtl' on all Hebrew text, flex-row-reverse for greeting
 - LessonCard left as-is (not part of this US scope, will be handled by US-011 Learn screen)
 - Migrated fully from NativeWind className to StyleSheet.create for Clash Royale styling
-- Files affected: `src/features/finfeed/FinFeedScreen.tsx`, `src/features/finfeed/FeedVideoItem.tsx`, `src/features/finfeed/FeedQuoteItem.tsx`, `PRD23_ClashRoyaleUI.md`, `progress23.txt`
+- Files affected: `src/features/inter-module-content/feedScrollStubs.tsx`, `src/features/finfeed/FeedVideoItem.tsx`, `src/features/finfeed/FeedQuoteItem.tsx`, `PRD23_ClashRoyaleUI.md`, `progress23.txt`
 - Learnings for next cycles:
   - DiamondBackground works well as a wrapper inside a fixed-height container (not just flex:1 screens)
   - GoldCircleBadge as a play button frame creates a premium feel — reuse for any circular icon frames

@@ -9,7 +9,7 @@
 
 import { enforceRateLimit } from '../_shared/rateLimit';
 import { safeErrorResponse } from '../_shared/safeError';
-import type { NewsQuizData, NewsQuizChoice } from '../../../src/features/finfeed/liveMarketTypes';
+import type { NewsQuizData, NewsQuizChoice } from '../../../src/features/live-news/liveMarketTypes';
 
 function simpleHash(str: string): string {
   let hash = 0;

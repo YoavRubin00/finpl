@@ -36,7 +36,7 @@
 - Removed redundant streak text from the greeting section (streak now shown in GlobalWealthHeader)
 - Removed unused `useEconomyStore` import and `streakText` style
 - Also marked "Display currencies" checkbox as complete (was already done in Iteration 1)
-- Files affected: `src/features/finfeed/FinFeedScreen.tsx`, `src/features/retention-loops/PRD21_UnifiedGamification.md`
+- Files affected: `src/features/inter-module-content/feedScrollStubs.tsx`, `src/features/retention-loops/PRD21_UnifiedGamification.md`
 - Learnings for next cycles:
   - FeedHeader is a local component inside FinFeedScreen.tsx (not exported)
   - It serves as `ListHeaderComponent` for the FlatList — scrolls with content, not sticky

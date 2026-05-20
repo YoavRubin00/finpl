@@ -82,7 +82,7 @@
 ## Iteration 6 — US-004b: FinFeedScreen Dark Mode
 - What was done: Imported useTheme() into FinFeedScreen, FeedHeader, and StreakPopup sub-components, applied theme-adaptive colors to structural elements (root bg, header bg, greeting text, streak popup card)
 - Files affected:
-  - src/features/finfeed/FinFeedScreen.tsx — root container bg → theme.bg, FeedHeader container bg → theme.bg, greetingLabel → theme.textMuted, playerName → theme.text, peekText → theme.textMuted, StreakPopup card bg → theme.bg, subtitle → theme.textMuted
+  - src/features/inter-module-content/feedScrollStubs.tsx — root container bg → theme.bg, FeedHeader container bg → theme.bg, greetingLabel → theme.textMuted, playerName → theme.text, peekText → theme.textMuted, StreakPopup card bg → theme.bg, subtitle → theme.textMuted
 - Learnings for next cycles:
   - FinFeedScreen has three independent component functions (FinFeedScreen, FeedHeader, StreakPopup) — each calls useTheme() independently
   - Streak accent colors (#f59e0b amber) stay vibrant — not themed, they create their own visual context

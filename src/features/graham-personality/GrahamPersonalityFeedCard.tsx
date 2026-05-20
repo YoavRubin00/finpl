@@ -10,7 +10,7 @@ import { useRouter } from 'expo-router';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { LinearGradient } from 'expo-linear-gradient';
 import { LottieIcon } from '../../components/ui/LottieIcon';
-import { FeedStartButton } from '../finfeed/minigames/shared/FeedStartButton';
+import { FeedStartButton } from '../inter-module-games/shared/FeedStartButton';
 import { FINN_STANDARD } from '../retention-loops/finnMascotConfig';
 import { SIM_LOTTIE } from '../shared-sim/simLottieMap';
 import { useSoundEffect } from '../../hooks/useSoundEffect';

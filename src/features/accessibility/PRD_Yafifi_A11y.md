@@ -11,7 +11,7 @@ All work is UI-ONLY — no logic changes, no new components. Add props, fix colo
 ## User Stories
 
 ### US-001 — Add accessibilityLabel to all Pressables in FinFeedScreen
-- [x] Target: `src/features/finfeed/FinFeedScreen.tsx`
+- [x] Target: `src/features/inter-module-content/feedScrollStubs.tsx`
 - **Problem:** 43 `<Pressable>` components, **zero** `accessibilityLabel`/`accessibilityRole`. Screen unusable with TalkBack/VoiceOver.
 - **Fix:** Add `accessibilityRole="button"` and Hebrew `accessibilityLabel` to each interactive Pressable. For decorative Pressables (e.g. wrapping animations), set `accessible={false}`.
 - **Acceptance:**
@@ -60,7 +60,7 @@ All work is UI-ONLY — no logic changes, no new components. Add props, fix colo
   - [ ] Typecheck passes
 
 ### US-007 — Gate FinFeed animations on useReducedMotion
-- [ ] Target: `src/features/finfeed/FinFeedScreen.tsx` — `BouncingArrow` (line ~127), pulse bubbles (line ~213)
+- [ ] Target: `src/features/inter-module-content/feedScrollStubs.tsx` — `BouncingArrow` (line ~127), pulse bubbles (line ~213)
 - **Problem:** `withRepeat(..., -1)` runs unconditionally — triggers vestibular issues for reduced-motion users.
 - **Fix:** Wrap with `useReducedMotion()` from `react-native-reanimated`. If true, skip the `withRepeat` and set static value.
 - **Pattern to follow:** `src/components/ui/AnimatedPressable.tsx:48` (already does this correctly)

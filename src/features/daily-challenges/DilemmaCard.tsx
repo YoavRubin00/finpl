@@ -24,7 +24,7 @@ import { useDailyLogStore } from '../daily-summary/useDailyLogStore';
 import { getTodayDilemma } from './dilemma-data';
 import { MAX_DILEMMA_DAILY, CHALLENGE_XP_REWARD, CHALLENGE_COIN_REWARD } from './daily-challenge-types';
 import type { DilemmaChoice } from './daily-challenge-types';
-import { FeedGameShell } from '../finfeed/minigames/shared/FeedGameShell';
+import { FeedGameShell } from '../inter-module-games/shared/FeedGameShell';
 
 const RTL = { writingDirection: 'rtl' as const, textAlign: 'right' as const };
 

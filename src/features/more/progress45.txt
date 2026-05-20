@@ -155,13 +155,13 @@
 - "squads" was already in `_layout.tsx` `inContentRoute` list (line 107) — no change needed there
 - Files affected: `app/squads.tsx` (new), `MoreScreen.tsx` (modified), `PRD45_SettingsActivation.md` (marked [x])
 - Learnings for next cycles:
-  - "חדשות" row: needs route check — look for `app/finfeed.tsx` or similar. FinFeedScreen is at `src/features/finfeed/FinFeedScreen.tsx`
+  - "חדשות" row: needs route check — look for `app/finfeed.tsx` or similar. FinFeedScreen is at `src/features/inter-module-content/feedScrollStubs.tsx`
   - "פריטים שמורים" row: PRO upsell alert, not navigation
   - Route file pattern: `import { XScreen } from "../src/features/.../XScreen"; export default function XPage() { return <XScreen />; }`
 ---
 
 ## Iteration 12 — US-005 News row: navigate to /finfeed + remove badge
-- Created `app/finfeed.tsx` route file (re-exports `FinFeedScreen` from `src/features/finfeed/FinFeedScreen`)
+- Created `app/finfeed.tsx` route file (re-exports `FinFeedScreen` from `src/features/inter-module-content/feedScrollStubs`)
 - Added "finfeed" to `inContentRoute` array in `app/_layout.tsx` (line 107) to prevent auth redirect
 - Changed "חדשות" row: `handleComingSoon` → `router.push("/finfeed")`, removed `badge` and `badgeColor` props
 - Files affected: `app/finfeed.tsx` (new), `app/_layout.tsx` (modified), `MoreScreen.tsx` (modified), `PRD45_SettingsActivation.md` (marked [x])

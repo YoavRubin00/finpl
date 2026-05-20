@@ -40,13 +40,13 @@ Execute ONE task only per cycle.
 - Theme: "Gaming-Neon", NativeWind + StyleSheet hybrid
 
 ### Target files per story:
-- US-001: `src/features/finfeed/FinFeedScreen.tsx` (43 Pressables need labels)
+- US-001: `src/features/inter-module-content/feedScrollStubs.tsx` (43 Pressables need labels)
 - US-002: `src/features/onboarding/ProfilingFlow.tsx` (41 Pressables need labels)
 - US-003: `src/features/chapter-1-content/LessonFlowScreen.tsx` (~35 missing labels)
 - US-004: `src/features/chapter-1-content/LessonFlowScreen.tsx` (color fix, lines 379, 3221, 3496, 3577)
 - US-005: `src/features/pyramid/DuoLearnScreen.tsx` (color fix, lines 1358, 1365)
 - US-006: `src/features/onboarding/ProfilingFlow.tsx` (checkbox border ~line 1686)
-- US-007: `src/features/finfeed/FinFeedScreen.tsx` (useReducedMotion gates)
+- US-007: `src/features/inter-module-content/feedScrollStubs.tsx` (useReducedMotion gates)
 - US-008: `src/features/pyramid/DuoLearnScreen.tsx` (PulsingGlow at :429)
 - US-009: `src/features/pyramid/DuoLearnScreen.tsx` (hitSlop on small targets)
 

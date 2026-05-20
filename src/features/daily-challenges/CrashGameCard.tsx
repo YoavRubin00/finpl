@@ -19,7 +19,7 @@ import { useDailyChallengesStore } from './use-daily-challenges-store';
 import { useDailyLogStore } from '../daily-summary/useDailyLogStore';
 import { getTodayCrashRound } from './crash-game-data';
 import { MAX_DAILY_PLAYS, CHALLENGE_XP_REWARD, CHALLENGE_COIN_REWARD } from './daily-challenge-types';
-import { FeedStartButton } from '../finfeed/minigames/shared/FeedStartButton';
+import { FeedStartButton } from '../inter-module-games/shared/FeedStartButton';
 
 const RTL = { writingDirection: 'rtl' as const, textAlign: 'right' as const };
 const GRAPH_WIDTH = 280;

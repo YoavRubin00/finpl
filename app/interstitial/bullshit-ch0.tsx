@@ -4,7 +4,7 @@ import { Image as ExpoImage } from "expo-image";
 import Animated, { FadeIn, FadeInUp, Easing } from "react-native-reanimated";
 import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
-import { BullshitSwipeCard } from "../../src/features/finfeed/minigames/bullshit-swipe/BullshitSwipeCard";
+import { BullshitSwipeCard } from "../../src/features/inter-module-games/bullshit-swipe/BullshitSwipeCard";
 import { FINN_HAPPY, FINN_STANDARD } from "../../src/features/retention-loops/finnMascotConfig";
 import { tapHaptic, successHaptic } from "../../src/utils/haptics";
 import { useTutorialStore } from "../../src/stores/useTutorialStore";
