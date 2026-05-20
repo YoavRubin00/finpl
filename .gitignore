@@ -22,6 +22,7 @@ assets/AUDIO/
 assets/vercel_stage/
 assets/daisy/
 assets/audio-podcasts/
+assets/audio-couple-dilemmas/
 assets/audio-samples/
 assets/couple/
 voices-temp.json
@@ -39,6 +40,14 @@ assets/images/games/
 # Dev/build scripts — local tooling only
 scripts/
 notebooklm-py/
+
+# Local scratch folders for one-shot asset generation pipelines
+# (Higgsfield video → frames → chroma-key → animated WebP). These create
+# hundreds of intermediate files; nothing in them should ship.
+tmp-*/
+tmp-*.png
+tmp-*.webp
+tmp-*.mp4
 /db/
 *.ps1
 copy_*.js

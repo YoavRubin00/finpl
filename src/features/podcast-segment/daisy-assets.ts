@@ -29,3 +29,21 @@ export const PODCAST_STUDIO_BG = {
 export const DAISY_TALKING_WEBP = {
   uri: `${BLOB_BASE}/daisy-talking.webp`,
 } as const;
+
+/** Daisy in a full celebration loop on a transparent background — closes
+ *  eyes, opens mouth wide, raises both fins, blue sparkle stars pop around
+ *  her. ~5s loop @ 15fps, chroma-keyed from a Higgsfield seedance video.
+ *  Used in contexts that compose her over their own gradient (e.g.
+ *  couple-dilemma feedback wise=true) where the podcast studio scenery
+ *  would clash. Bundled locally (assets/webp/daisy/) so feedback appears
+ *  instantly without waiting on Vercel Blob. */
+export const DAISY_HAPPY_CELEBRATE_WEBP =
+  require("../../../assets/webp/daisy/daisy-happy-celebrate.webp") as number;
+
+/** Daisy in a gentle empathic idle — eyes softly open, small closed-lip
+ *  smile, fin to chin in a thinking gesture. ~5s loop @ 15fps on a fully
+ *  transparent background. Used on couple-dilemma feedback wise=false
+ *  (the "נקודה למחשבה" path) so an unwise pick gets a compassionate
+ *  reaction instead of the celebration. */
+export const DAISY_EMPATHIC_WEBP =
+  require("../../../assets/webp/daisy/daisy-empathic.webp") as number;

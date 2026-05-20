@@ -10,11 +10,13 @@ import Animated, {
   withSequence,
   withTiming,
 } from 'react-native-reanimated';
+import { Image as ExpoImage } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { tapHaptic, successHaptic, errorHaptic } from '../../utils/haptics';
 import { GoldCoinIcon } from '../../components/ui/GoldCoinIcon';
 import { FlyingRewards } from '../../components/ui/FlyingRewards';
 import { ConfettiExplosion } from '../../components/ui/ConfettiExplosion';
+import { DAISY_HAPPY_CELEBRATE_WEBP, DAISY_EMPATHIC_WEBP } from './daisy-assets';
 import type { PodcastQuestion, PodcastQuestionOption } from '../chapter-1-content/types';
 
 const RTL = { writingDirection: 'rtl' as const, textAlign: 'right' as const };
@@ -111,6 +113,15 @@ export const PodcastQuestionCard = React.memo(function PodcastQuestionCard({
             entering={FadeInUp.duration(320).springify()}
             style={styles.feedbackCard}
           >
+            {/* Daisy reacts to the answer — celebrate on correct,
+                empathic on wrong. Small, centered above the title so
+                the gesture feels like part of the feedback, not a takeover. */}
+            <ExpoImage
+              source={isCorrect ? DAISY_HAPPY_CELEBRATE_WEBP : DAISY_EMPATHIC_WEBP}
+              style={styles.feedbackDaisy}
+              contentFit="contain"
+              accessible={false}
+            />
             <Text style={[styles.feedbackTitle, RTL]}>
               {isCorrect ? 'יפה!' : 'לא בדיוק...'}
             </Text>
@@ -332,14 +343,19 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     padding: 14,
     gap: 8,
+    alignItems: 'center',
     shadowColor: '#0ea5e9',
     shadowOpacity: 0.06,
     shadowRadius: 6,
     shadowOffset: { width: 0, height: 2 },
     elevation: 1,
   },
-  feedbackTitle: { fontSize: 15, fontWeight: '900', color: '#0369a1' },
-  feedbackBody: { fontSize: 14, lineHeight: 21, color: '#334155' },
+  feedbackDaisy: {
+    width: 96,
+    height: 96,
+  },
+  feedbackTitle: { fontSize: 15, fontWeight: '900', color: '#0369a1', textAlign: 'right', writingDirection: 'rtl', alignSelf: 'stretch' },
+  feedbackBody: { fontSize: 14, lineHeight: 21, color: '#334155', textAlign: 'right', writingDirection: 'rtl', alignSelf: 'stretch' },
 
   rewardRow: { flexDirection: 'row-reverse', gap: 8, marginTop: 4 },
   rewardPill: {
