@@ -219,6 +219,10 @@ function PodcastListenStage({ podcast, onFinished }: ListenStageProps) {
         style={StyleSheet.absoluteFill}
       />
 
+      {/* Ambient bubbles — always animating, independent of audio state.
+          Keeps the screen alive even when Daisy pauses talking. */}
+      <AmbientBubbles />
+
       {/* Podcast progress — sits at top, right below module's general progress bar */}
       <Animated.View
         entering={FadeInDown.duration(280).springify()}
@@ -339,6 +343,81 @@ function PodcastListenStage({ podcast, onFinished }: ListenStageProps) {
     </View>
   );
 }
+
+// ─────────────────────── Ambient bubbles overlay ───────────────────────
+
+const BUBBLE_COUNT = 9;
+const BUBBLE_CONFIGS = Array.from({ length: BUBBLE_COUNT }, (_, i) => ({
+  // Pseudo-random but stable across renders
+  leftPct: ((i * 173) % 92) + 4,        // 4..96
+  size: 6 + ((i * 7) % 5) * 3,          // 6..18
+  durationMs: 6500 + ((i * 311) % 4000), // 6.5..10.5 sec
+  delayMs: (i * 850) % 5000,             // 0..5s stagger
+}));
+
+function AmbientBubbles() {
+  const { height: SH } = Dimensions.get('window');
+  return (
+    <View pointerEvents="none" style={StyleSheet.absoluteFill}>
+      {BUBBLE_CONFIGS.map((cfg, idx) => (
+        <AmbientBubble key={idx} cfg={cfg} screenH={SH} />
+      ))}
+    </View>
+  );
+}
+
+interface BubbleConfig {
+  leftPct: number;
+  size: number;
+  durationMs: number;
+  delayMs: number;
+}
+
+function AmbientBubble({ cfg, screenH }: { cfg: BubbleConfig; screenH: number }) {
+  const t = useSharedValue(0);
+  useEffect(() => {
+    // Always loops, independent of audio state. -1 = infinite, no reverse.
+    t.value = withRepeat(
+      withSequence(
+        withTiming(0, { duration: cfg.delayMs }),
+        withTiming(1, { duration: cfg.durationMs, easing: Easing.linear }),
+      ),
+      -1,
+      false,
+    );
+    return () => cancelAnimation(t);
+  }, [cfg.delayMs, cfg.durationMs, t]);
+
+  const style = useAnimatedStyle(() => ({
+    transform: [{ translateY: -t.value * screenH * 1.1 }],
+    opacity: 0.45 * (1 - Math.abs(0.5 - t.value) * 2 * 0.4), // fade in/out at edges
+  }));
+
+  return (
+    <Animated.View
+      style={[
+        bubbleStyles.bubble,
+        {
+          left: `${cfg.leftPct}%`,
+          width: cfg.size,
+          height: cfg.size,
+          bottom: -cfg.size,
+        },
+        style,
+      ]}
+    />
+  );
+}
+
+const bubbleStyles = StyleSheet.create({
+  bubble: {
+    position: 'absolute',
+    backgroundColor: 'rgba(255,255,255,0.55)',
+    borderColor: 'rgba(255,255,255,0.85)',
+    borderWidth: 1,
+    borderRadius: 999,
+  },
+});
 
 const styles = StyleSheet.create({
   stage: {
