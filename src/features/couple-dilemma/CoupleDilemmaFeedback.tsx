@@ -9,7 +9,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { tapHaptic } from '../../utils/haptics';
-import { DAISY_ASSETS, DAISY_HAPPY_BLINK_WEBP } from '../podcast-segment/daisy-assets';
+import { DAISY_ASSETS, DAISY_HAPPY_CELEBRATE_WEBP } from '../podcast-segment/daisy-assets';
 import type { CoupleDilemmaOption } from '../chapter-1-content/types';
 
 interface Props {
@@ -52,13 +52,14 @@ export function CoupleDilemmaFeedback({ chosen, onContinue }: Props) {
         </View>
       </Animated.View>
 
-      {/* Daisy WebP, center — wise = animated blinking sticker on transparent
-          bg so it composes cleanly over the gradient. empathic still uses the
+      {/* Daisy WebP, center — wise = full celebration loop (eyes squeeze
+          shut, fins up, blue sparkle stars) on a transparent background so
+          it composes cleanly over the gradient. empathic still uses the
           studio still for now (will get the same treatment in a follow-up). */}
       <View style={styles.daisyWrap} pointerEvents="none">
         <Animated.View entering={FadeIn.duration(420).delay(80)}>
           <ExpoImage
-            source={wise ? DAISY_HAPPY_BLINK_WEBP : DAISY_ASSETS.empathic}
+            source={wise ? DAISY_HAPPY_CELEBRATE_WEBP : DAISY_ASSETS.empathic}
             style={styles.daisy}
             contentFit="contain"
             accessible={false}
