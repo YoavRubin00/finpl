@@ -8,21 +8,19 @@ import {
   Alert,
 } from "react-native";
 import { useRouter } from "expo-router";
-import { Trash2, BookOpen, Gamepad2, Newspaper } from "lucide-react-native";
+import { Trash2, BookOpen, Gamepad2 } from "lucide-react-native";
 import LottieView from "lottie-react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { BackButton } from "../../components/ui/BackButton";
 import { useTheme } from "../../hooks/useTheme";
 import { useSavedItemsStore } from "./useSavedItemsStore";
 import { useSubscriptionStore } from "../subscription/useSubscriptionStore";
-import { CompactFeedCardPreview } from "./CompactFeedCardPreview";
 import type { SavedItem } from "./savedItemTypes";
 import { MAX_SAVED_ITEMS } from "./savedItemTypes";
 
 const SECTION_ORDER: Array<{ type: SavedItem["type"]; label: string; icon: React.ReactNode }> = [
   { type: "lesson", label: "שיעורים", icon: <BookOpen size={18} color="#0e7490" /> },
   { type: "sim", label: "סימולציות", icon: <Gamepad2 size={18} color="#0e7490" /> },
-  { type: "feed", label: "פיד", icon: <Newspaper size={18} color="#0e7490" /> },
 ];
 
 function formatRelativeDate(iso: string): string {
@@ -172,33 +170,21 @@ export function SavedItemsScreen() {
                   </View>
                   {sectionItems.map((item) => (
                     <View key={item.id} style={styles.itemWrap}>
-                      {item.type === "feed" && item.feedItemSnapshot ? (
-                        <CompactFeedCardPreview
-                          item={item.feedItemSnapshot}
-                          onPress={() =>
-                            router.push({
-                              pathname: "/(tabs)/learn",
-                              params: { scrollToFeedId: item.feedItemId ?? "" },
-                            } as never)
-                          }
-                        />
-                      ) : (
-                        <View style={[styles.simpleCard, { backgroundColor: theme.surface, borderColor: theme.border }]}>
-                          <TouchableOpacity
-                            style={styles.simpleRow}
-                            onPress={() => handleStructuredPress(item)}
-                            activeOpacity={0.7}
-                            accessibilityRole="button"
-                            accessibilityLabel={`פתח ${item.title}`}
-                          >
-                            <View style={styles.simpleContent}>
-                              <Text style={[styles.simpleTitle, { color: theme.text }]} numberOfLines={2}>
-                                {item.title}
-                              </Text>
-                            </View>
-                          </TouchableOpacity>
-                        </View>
-                      )}
+                      <View style={[styles.simpleCard, { backgroundColor: theme.surface, borderColor: theme.border }]}>
+                        <TouchableOpacity
+                          style={styles.simpleRow}
+                          onPress={() => handleStructuredPress(item)}
+                          activeOpacity={0.7}
+                          accessibilityRole="button"
+                          accessibilityLabel={`פתח ${item.title}`}
+                        >
+                          <View style={styles.simpleContent}>
+                            <Text style={[styles.simpleTitle, { color: theme.text }]} numberOfLines={2}>
+                              {item.title}
+                            </Text>
+                          </View>
+                        </TouchableOpacity>
+                      </View>
                       <View style={styles.metaRow}>
                         <TouchableOpacity
                           onPress={() => handleDelete(item)}
