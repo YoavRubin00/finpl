@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { getApiBase } from '../db/apiBase';
-import type { LiveMarketData } from '../features/finfeed/liveMarketTypes';
+import type { LiveMarketData } from '../features/live-news/liveMarketTypes';
 
 const TTL_MS = 10 * 60 * 1000; // 10 minutes
 
