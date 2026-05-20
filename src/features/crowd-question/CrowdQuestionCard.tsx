@@ -18,7 +18,10 @@ import Animated, {
 import { tapHaptic, successHaptic, errorHaptic } from '../../utils/haptics';
 import { FINN_DANCING, FINN_STANDARD } from '../retention-loops/finnMascotConfig';
 import { useAuthStore } from '../auth/useAuthStore';
+import { useEconomyStore } from '../economy/useEconomyStore';
 import { submitCrowdVote, type CrowdQuestionStats } from '../../db/sync/syncCrowdQuestion';
+
+const VOTE_COIN_REWARD = 50;
 import { getIsraelDateISO } from '../../utils/israelTime';
 import { useLivePercents } from './computeLiveStats';
 import { useCrowdQuestionStore } from './useCrowdQuestionStore';
@@ -94,6 +97,7 @@ export const CrowdQuestionCard = React.memo(function CrowdQuestionCard({ market 
         });
         recordLocalVote(question.id, option.id);
         setOptimisticStats({ countA: result.countA, countB: result.countB, total: result.total });
+        useEconomyStore.getState().addCoins(VOTE_COIN_REWARD);
         successHaptic();
       } catch (err: unknown) {
         setChosen(null);

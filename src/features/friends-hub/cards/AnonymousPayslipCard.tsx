@@ -9,10 +9,10 @@ import { tapHaptic } from "../../../utils/haptics";
 import { usePayslipMetaStore } from "../../payslip-analyzer/usePayslipMetaStore";
 
 /**
- * Mock clan benchmarks. In a future iteration these come from a real
+ * Mock peer benchmarks. In a future iteration these come from a real
  * aggregated server endpoint. Values reflect realistic Israeli payslips.
  */
-const CLAN_BENCHMARKS = {
+const PEER_BENCHMARKS = {
   bruttoMedian: 14_500,
   pensionPctMedian: 6.5,
   creditPointsMedian: 2.5,
@@ -94,7 +94,7 @@ export function AnonymousPayslipCard(): React.ReactElement {
           <View style={{ flex: 1 }}>
             <Text style={styles.headerTitle}>תלוש שכר אנונימי בקבוצה</Text>
             <Text style={styles.headerSubtitle}>
-              נתחו תלוש פעם אחת — ותראו איך אתם מתפלגים מול חברי הקלאן.
+              נתחו תלוש פעם אחת — ותראו איך אתם מתפלגים מול הקהילה.
             </Text>
           </View>
         </View>
@@ -122,7 +122,7 @@ export function AnonymousPayslipCard(): React.ReactElement {
           <View style={{ flex: 1 }}>
             <Text style={styles.headerTitle}>תרצו לראות איך אתם מתפלגים?</Text>
             <Text style={styles.headerSubtitle}>
-              שתפו את הניתוח האחרון אנונימית עם הקלאן וקבלו מבט השוואתי.
+              שתפו את הניתוח האחרון אנונימית עם הקהילה וקבלו מבט השוואתי.
             </Text>
           </View>
         </View>
@@ -143,17 +143,17 @@ export function AnonymousPayslipCard(): React.ReactElement {
   const bruttoMidPoint = parseBruttoMidpoint(stats.bruttoRangeIls);
   const bruttoPosition =
     bruttoMidPoint !== null
-      ? Math.min(1, bruttoMidPoint / (CLAN_BENCHMARKS.bruttoMedian * 2))
+      ? Math.min(1, bruttoMidPoint / (PEER_BENCHMARKS.bruttoMedian * 2))
       : 0.5;
 
   const pensionPosition =
     stats.pensionEmployeePct !== null
-      ? Math.min(1, stats.pensionEmployeePct / (CLAN_BENCHMARKS.pensionPctMedian * 2))
+      ? Math.min(1, stats.pensionEmployeePct / (PEER_BENCHMARKS.pensionPctMedian * 2))
       : 0.5;
 
   const creditPosition =
     stats.creditPoints !== null
-      ? Math.min(1, stats.creditPoints / (CLAN_BENCHMARKS.creditPointsMedian * 2))
+      ? Math.min(1, stats.creditPoints / (PEER_BENCHMARKS.creditPointsMedian * 2))
       : 0.5;
 
   return (
@@ -165,7 +165,7 @@ export function AnonymousPayslipCard(): React.ReactElement {
         <View style={{ flex: 1 }}>
           <Text style={styles.headerTitle}>תלוש שכר אנונימי בקבוצה</Text>
           <Text style={styles.headerSubtitle}>
-            ההשוואה שלכם מול חברי הקלאן — ערכים בטווחים בלבד
+            ההשוואה שלכם מול הקהילה — ערכים בטווחים בלבד
           </Text>
         </View>
       </View>
@@ -174,7 +174,7 @@ export function AnonymousPayslipCard(): React.ReactElement {
         <PercentileBar
           label="השכר שלכם בקבוצה"
           yourLabel={stats.bruttoRangeIls || "—"}
-          groupLabel={CLAN_BENCHMARKS.bruttoMedian.toLocaleString("he-IL")}
+          groupLabel={PEER_BENCHMARKS.bruttoMedian.toLocaleString("he-IL")}
           yourMarkerPosition={bruttoPosition}
           unit=" ₪"
           accentColor="#0891b2"
@@ -184,7 +184,7 @@ export function AnonymousPayslipCard(): React.ReactElement {
           yourLabel={
             stats.pensionEmployeePct !== null ? `${stats.pensionEmployeePct}` : "—"
           }
-          groupLabel={`${CLAN_BENCHMARKS.pensionPctMedian}`}
+          groupLabel={`${PEER_BENCHMARKS.pensionPctMedian}`}
           yourMarkerPosition={pensionPosition}
           unit="%"
           accentColor="#10b981"
@@ -194,7 +194,7 @@ export function AnonymousPayslipCard(): React.ReactElement {
           yourLabel={
             stats.creditPoints !== null ? `${stats.creditPoints}` : "—"
           }
-          groupLabel={`${CLAN_BENCHMARKS.creditPointsMedian}`}
+          groupLabel={`${PEER_BENCHMARKS.creditPointsMedian}`}
           yourMarkerPosition={creditPosition}
           unit=""
           accentColor="#7c3aed"

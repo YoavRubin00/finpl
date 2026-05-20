@@ -353,6 +353,11 @@ export const useEconomyStore = create<EconomyState>()(
       }),
       onRehydrateStorage: () => (state) => {
         if (!state) return;
+        // ⚠️ DEV OVERRIDE — top up coins for testing. Remove this block to
+        // restore real economy flow.
+        if (state.coins < 10_000) {
+          state.coins = 10_000;
+        }
         // Defensive defaults: fields added after v1 persist may be undefined for existing users
         if (!Array.isArray(state.recentActivityHours)) state.recentActivityHours = [];
         if (!Array.isArray(state.activeDates)) state.activeDates = [];

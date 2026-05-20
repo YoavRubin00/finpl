@@ -14,7 +14,13 @@ import { LivePollCard } from "./components/LivePollCard";
 import { ResultCard } from "./components/ResultCard";
 import { EducationalTooltipCard } from "./components/EducationalTooltipCard";
 import type { CrowdWisdomCategory } from "./types";
-import { tapHaptic } from "../../utils/haptics";
+import { tapHaptic, successHaptic } from "../../utils/haptics";
+import { submitCrowdVote } from "../../db/sync/syncCrowdQuestion";
+import { getIsraelDateISO } from "../../utils/israelTime";
+import { useAuthStore } from "../auth/useAuthStore";
+import { useEconomyStore } from "../economy/useEconomyStore";
+
+const VOTE_COIN_REWARD = 50;
 
 const SENTIMENT_GAUGE_QUESTION_ID = "sentiment_market_monthly";
 
@@ -41,14 +47,43 @@ export function CrowdWisdomScreen(): React.ReactElement {
   }, [activeCategory]);
 
   const handleSubmitVote = useCallback(
-    (questionId: string, choiceId: string) => {
+    async (questionId: string, choiceId: string) => {
       const question = SEED_QUESTIONS.find((q) => q.id === questionId);
       if (!question) return;
+      const alreadyVoted = useCrowdWisdomStore.getState().votes[questionId];
+      if (alreadyVoted) return;
+
       const snapshot = computePostVoteSnapshot(question, choiceId);
+
+      // Record locally first — the UI flips to ResultCard instantly.
       recordVote(
         { questionId, choiceId, votedAt: Date.now() },
         snapshot.userIsWithCrowd,
       );
+
+      // Reward immediately on a successful local vote — the user expects the
+      // payout the moment they answer, regardless of remote-sync outcome.
+      useEconomyStore.getState().addCoins(VOTE_COIN_REWARD);
+      successHaptic();
+
+      // Best-effort Neon sync. The current /api/crowd-question/vote endpoint
+      // only accepts {choice: 'a' | 'b'} — crowd-wisdom choices use richer IDs
+      // ('bull', 'bear', etc.). When the choice is binary-compatible we sync;
+      // otherwise the vote stays local until the API is extended.
+      if (choiceId === 'a' || choiceId === 'b') {
+        try {
+          const auth = useAuthStore.getState();
+          await submitCrowdVote({
+            authId: auth.email ?? 'guest',
+            syncToken: auth.syncToken,
+            questionId,
+            choice: choiceId,
+            voteDateIL: getIsraelDateISO(),
+          });
+        } catch {
+          /* swallow — local vote + coins already granted */
+        }
+      }
     },
     [recordVote],
   );

@@ -18,6 +18,10 @@ import type {
  *   Sat 20:00 → Thu 09:00  results / pre-draft
  */
 export function getCompetitionPhase(now: Date = new Date()): CompetitionPhase {
+  // ⚠️ DEV OVERRIDE — always return 'draft' so the league can be entered any
+  // time during testing. Remove this early-return to restore real phase logic.
+  if (now) return 'draft';
+
   const day = now.getDay(); // 0=Sun … 6=Sat
   const hour = now.getHours();
   const minute = now.getMinutes();

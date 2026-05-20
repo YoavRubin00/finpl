@@ -14,6 +14,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { Image as ExpoImage } from 'expo-image';
 import { router } from 'expo-router';
 import Animated, { FadeInDown } from 'react-native-reanimated';
+import { ChevronLeft } from 'lucide-react-native';
 import { CLASH, DUO } from '../../../constants/theme';
 import { FINN_FIRE, FINN_STANDARD } from '../../retention-loops/finnMascotConfig';
 import { useFantasyStore } from '../useFantasyStore';
@@ -107,14 +108,21 @@ export function DraftLobbyScreen(): React.ReactElement {
         end={{ x: 1, y: 1 }}
         style={styles.header}
       >
-        {/* Back button */}
+        {/* Back button — clear pill, RTL-aware chevron */}
         <Pressable
           onPress={() => router.back()}
-          style={styles.backBtn}
+          style={({ pressed }) => [styles.backBtn, { opacity: pressed ? 0.7 : 1 }]}
           accessibilityRole="button"
           accessibilityLabel="חזור"
+          hitSlop={10}
         >
-          <Text style={{ fontSize: 18, color: 'rgba(255,255,255,0.7)' }}>→</Text>
+          <ChevronLeft
+            size={20}
+            color="#ffffff"
+            strokeWidth={2.6}
+            style={{ transform: [{ scaleX: -1 }] }}
+          />
+          <Text style={styles.backBtnText}>חזור</Text>
         </Pressable>
 
         <View style={styles.headerContent}>
@@ -307,9 +315,22 @@ const styles = StyleSheet.create({
   },
   backBtn: {
     alignSelf: 'flex-end',
-    paddingVertical: 4,
-    paddingHorizontal: 8,
+    flexDirection: 'row-reverse',
+    alignItems: 'center',
+    gap: 4,
+    paddingVertical: 6,
+    paddingHorizontal: 12,
     marginBottom: 8,
+    borderRadius: 999,
+    backgroundColor: 'rgba(255,255,255,0.15)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.25)',
+  },
+  backBtnText: {
+    fontSize: 13,
+    fontWeight: '800',
+    color: '#ffffff',
+    writingDirection: 'rtl',
   },
   headerContent: {
     flexDirection: 'row-reverse',

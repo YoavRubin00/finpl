@@ -382,18 +382,12 @@ export const useSubscriptionStore = create<SubscriptionState>()(
         if (typeof state.hearts === "number" && state.hearts > MAX_HEARTS) {
           state.hearts = MAX_HEARTS;
         }
-        // Dev override: grant PRO to specific emails
-        try {
-          const auth = require("../auth/useAuthStore").useAuthStore.getState();
-          const DEV_PRO_EMAILS = ["itaysc23@gmail.com", "benbenshmuel@gmail.com", "yrubin00@gmail.com"];
-          const normalizedEmail = auth.email?.trim().toLowerCase() ?? null;
-          if (normalizedEmail && DEV_PRO_EMAILS.includes(normalizedEmail) && state.tier !== "pro") {
-            state.tier = "pro";
-            state.status = "active";
-            state.hearts = MAX_HEARTS;
-            state.lastHeartLostAt = null;
-          }
-        } catch { /* auth store may not be ready */ }
+        // ⚠️ DEV OVERRIDE — unconditionally grant PRO for testing (no email check).
+        // Remove this block to restore real entitlement flow.
+        state.tier = "pro";
+        state.status = "active";
+        state.hearts = MAX_HEARTS;
+        state.lastHeartLostAt = null;
       },
       version: 2,
       storage: createJSONStorage(() => zustandStorage),
