@@ -3,7 +3,7 @@ import * as Notifications from "expo-notifications";
 import { useRouter } from "expo-router";
 import { useNotificationStore } from "./useNotificationStore";
 import { useFinnNotificationScheduler } from "./useFinnNotificationScheduler";
-import { setPendingFeedScroll } from "../finfeed/FinFeedScreen";
+import { setPendingFeedScroll } from "../inter-module-content/feedScrollStubs";
 
 /**
  * Call once at the root layout level.
