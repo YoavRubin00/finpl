@@ -252,7 +252,7 @@ export function buildDailyEmailHtml(params: {
       <p style="margin:0 0 8px;font-weight:700;color:#64748b;">© 2026 FinPlay · finplay.me</p>
       <p style="margin:0 0 8px;">
         ליצירת קשר:
-        <a href="mailto:yoav.finplay@gmail.com" style="color:#0ea5e9;text-decoration:none;">yoav.finplay@gmail.com</a>
+        <a href="mailto:support@finplay.me" style="color:#0ea5e9;text-decoration:none;">support@finplay.me</a>
       </p>
       <p style="margin:0 0 8px;">
         להסרה מרשימת התפוצה:

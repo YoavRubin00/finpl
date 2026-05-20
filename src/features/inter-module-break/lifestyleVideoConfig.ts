@@ -28,6 +28,10 @@ export interface LifestyleVideoSpec {
    *  Example: "קניות מהכסף שהרווחתי במניות". */
   caption: string;
   trimEnd?: number;
+  /** When true, the video is shown at most once per user across the entire
+   *  app lifecycle. Used for limited-edition / atmosphere clips that should
+   *  feel special rather than rotate back into the pool. */
+  oneShot?: boolean;
 }
 
 function resolveVideoUri(id: string): string {
@@ -41,6 +45,7 @@ interface LifestyleCopy {
   ctaLabel: string;
   caption: string;
   trimEnd?: number;
+  oneShot?: boolean;
 }
 
 const LIFESTYLE_COPY: LifestyleCopy[] = [
@@ -167,6 +172,16 @@ const LIFESTYLE_COPY: LifestyleCopy[] = [
     caption: "קפה בפריז מהריבית של חשבון החיסכון",
     trimEnd: 0.5,
   },
+  // ── Limited-edition atmosphere clip — shown at most once per user ──
+  {
+    id: "finn-life-vibe-2026-05",
+    inviteTitle: "🌊 רגע איתי באוקיינוס",
+    inviteSubtitle: "כי גם הקפטן צריך לעצור לרגע",
+    ctaLabel: "בואו לראות!",
+    caption: "ויב של היום — מתנה ממני אליכם",
+    trimEnd: 0.5,
+    oneShot: true,
+  },
 ];
 
 export const LIFESTYLE_VIDEOS: LifestyleVideoSpec[] = LIFESTYLE_COPY.map((c) => ({
@@ -177,15 +192,39 @@ export const LIFESTYLE_VIDEOS: LifestyleVideoSpec[] = LIFESTYLE_COPY.map((c) => 
   ctaLabel: c.ctaLabel,
   caption: c.caption,
   trimEnd: c.trimEnd,
+  oneShot: c.oneShot,
 }));
 
 /**
- * Pick the next lifestyle video, avoiding any id seen in the recent history.
- * Falls back to deterministic round-robin if all videos are recent.
+ * Pick the next lifestyle video, avoiding any id seen in the recent history
+ * and skipping any oneShot video the user has already seen (ever).
+ *
+ * If a oneShot video is in the eligible pool, give it a 50% chance to win the
+ * slot — that way limited-edition clips feel like a special drop rather than
+ * a guaranteed next-up, but they still surface within a few break cycles.
+ *
+ * Falls back to deterministic round-robin over the standard (non-oneShot)
+ * pool if everything recent has been seen.
  */
-export function pickNextLifestyleVideo(seenIds: string[]): LifestyleVideoSpec {
-  const unseen = LIFESTYLE_VIDEOS.filter((v) => !seenIds.includes(v.id));
-  const pool = unseen.length > 0 ? unseen : LIFESTYLE_VIDEOS;
+export function pickNextLifestyleVideo(
+  seenIds: string[],
+  oneShotSeenIds: string[] = [],
+): LifestyleVideoSpec {
+  const eligible = LIFESTYLE_VIDEOS.filter(
+    (v) => !(v.oneShot && oneShotSeenIds.includes(v.id)),
+  );
+  const unseen = eligible.filter((v) => !seenIds.includes(v.id));
+  const pool = unseen.length > 0 ? unseen : eligible;
+
+  // Prefer a oneShot when one's eligible — it's a limited drop, surface it
+  // sooner rather than letting it sit at the back of the rotation.
+  const oneShotCandidate = pool.find((v) => v.oneShot);
+  if (oneShotCandidate && Math.random() < 0.5) {
+    return oneShotCandidate;
+  }
+
+  const standardPool = pool.filter((v) => !v.oneShot);
+  const finalPool = standardPool.length > 0 ? standardPool : pool;
   const seed = seenIds.length;
-  return pool[seed % pool.length];
+  return finalPool[seed % finalPool.length];
 }

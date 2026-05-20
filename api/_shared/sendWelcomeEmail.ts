@@ -11,7 +11,7 @@ interface SendWelcomeEmailParams {
   displayName: string | null;
 }
 
-const REPLY_TO = 'hello@finplay.me';
+const REPLY_TO = 'support@finplay.me';
 
 /** Sends the one-time welcome email and flips welcomeEmailSent=true on success.
  *  Never throws — all errors are caught and logged. Safe to await from a request handler. */
