@@ -15,7 +15,7 @@ import Animated, {
 import { Sparkles } from 'lucide-react-native';
 import { tapHaptic, successHaptic } from '../../utils/haptics';
 import { useSoundEffect } from '../../hooks/useSoundEffect';
-import { FeedStartButton } from '../../inter-module-games/shared/FeedStartButton';
+import { FeedStartButton } from '../inter-module-games/shared/FeedStartButton';
 import { DID_YOU_KNOW_ITEMS } from './didYouKnowData';
 import { CATEGORY_THEMES } from './types';
 import type { DidYouKnowItem } from './types';

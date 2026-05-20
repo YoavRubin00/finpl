@@ -10,12 +10,12 @@ import Animated, {
   FadeIn,
 } from 'react-native-reanimated';
 import { useNewsQuizStore } from '../../stores/useNewsQuizStore';
-import { useEconomyStore } from '../../economy/useEconomyStore';
+import { useEconomyStore } from '../economy/useEconomyStore';
 import { ConfettiExplosion } from '../../components/ui/ConfettiExplosion';
 import { FlyingRewards } from '../../components/ui/FlyingRewards';
 import { GoldCoinIcon } from '../../components/ui/GoldCoinIcon';
 import { tapHaptic, successHaptic, errorHaptic } from '../../utils/haptics';
-import type { NewsQuizChoice } from '../liveMarketTypes';
+import type { NewsQuizChoice } from './liveMarketTypes';
 
 const RTL = { writingDirection: 'rtl' as const, textAlign: 'right' as const };
 

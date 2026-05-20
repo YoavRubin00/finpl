@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, Pressable } from 'react-native';
 import Animated, { FadeIn, useSharedValue, withRepeat, withTiming, useAnimatedStyle } from 'react-native-reanimated';
 import { useLiveMarketStore } from '../../stores/useLiveMarketStore';
-import type { RateItem } from '../liveMarketTypes';
+import type { RateItem } from '../live-news/liveMarketTypes';
 
 const RTL = { writingDirection: 'rtl' as const, textAlign: 'right' as const };
 
