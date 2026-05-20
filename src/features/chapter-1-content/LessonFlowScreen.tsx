@@ -111,6 +111,8 @@ import { VideoSharkDilemmaCard } from "../shark-dilemma/VideoSharkDilemmaCard";
 import { getDilemma } from "../shark-dilemma/dilemmasData";
 import { PodcastSegmentScreen } from "../podcast-segment/PodcastSegmentScreen";
 import { getPodcastForModule } from "../podcast-segment/podcasts";
+import { getCoupleDilemmaForModule } from "../couple-dilemma/coupleDilemmas";
+import { CoupleDilemmaScreen } from "../couple-dilemma/CoupleDilemmaScreen";
 
 // Small helper that advances phase → summary via useEffect (never during render).
 function FallbackToSummary({ setPhase }: { setPhase: (p: "summary") => void }) {
@@ -127,7 +129,7 @@ import type { LessonContext } from "../chat/buildChatPrompt";
 
 const AnimatedExpoImage = Animated.createAnimatedComponent(ExpoImage);
 
-type FlowPhase = "hero" | "intro" | "flashcards" | "podcast" | "interactive-recall" | "quizzes" | "sim-intro" | "sim" | "module-infographic" | "post-infographic-video" | "shark-dilemma" | "summary" | "video";
+type FlowPhase = "hero" | "intro" | "flashcards" | "podcast" | "couple-dilemma" | "interactive-recall" | "quizzes" | "sim-intro" | "sim" | "module-infographic" | "post-infographic-video" | "shark-dilemma" | "summary" | "video";
 
 /** Full-screen character art shown when first opening a module */
 const MODULE_HERO_MAP: Record<string, { uri: string } | number> = {
@@ -2513,7 +2515,9 @@ export function LessonFlowScreen() {
   }
 
   const [phase, setPhase] = useState<FlowPhase>(() => {
-    const r = mod?.id ? useChapterStore.getState().moduleResume[mod.id] : undefined;
+    // On replay (user explicitly chose "do it again"), ignore the resume
+    // checkpoint — they want to start from intro, not pick up at quizzes.
+    const r = !isReplay && mod?.id ? useChapterStore.getState().moduleResume[mod.id] : undefined;
     if (r && RESTORABLE_PHASES.has(r.phase as FlowPhase)) return r.phase as FlowPhase;
     if (mod?.videoHookAsset) return "video";
     if (mod?.id && MODULE_HERO_MAP[mod.id]) return "hero";
@@ -2532,7 +2536,7 @@ export function LessonFlowScreen() {
     }
   }, [mod, isModuleAccessible, phase]);
   const [flashcardIndex, setFlashcardIndex] = useState(() => {
-    const r = mod?.id ? useChapterStore.getState().moduleResume[mod.id] : undefined;
+    const r = !isReplay && mod?.id ? useChapterStore.getState().moduleResume[mod.id] : undefined;
     return (r && RESTORABLE_PHASES.has(r.phase as FlowPhase)) ? r.flashcardIndex : 0;
   });
 
@@ -2545,6 +2549,23 @@ export function LessonFlowScreen() {
     return Math.floor((mod.flashcards.length - 1) / 2);
   }, [mod, modPodcast]);
 
+  // Couple-dilemma injection — appears between flashcards (~70% through). If the
+  // module also has a podcast at midpoint, the dilemma slot is bumped one card
+  // later so the two breaks don't fire back-to-back.
+  const modCoupleDilemma = useMemo(
+    () => (mod?.id ? getCoupleDilemmaForModule(mod.id) : undefined),
+    [mod?.id],
+  );
+  /** Last flashcard index AFTER which the couple dilemma appears. -1 if absent or unresolvable. */
+  const coupleDilemmaTriggerAfter = useMemo(() => {
+    if (!mod || !modCoupleDilemma || mod.flashcards.length < 2) return -1;
+    const raw = Math.floor((mod.flashcards.length - 1) * 0.7);
+    if (!modPodcast || raw !== podcastTriggerAfter) return raw;
+    const bumped = raw + 1;
+    if (bumped > mod.flashcards.length - 2 || bumped === podcastTriggerAfter) return -1;
+    return bumped;
+  }, [mod, modCoupleDilemma, modPodcast, podcastTriggerAfter]);
+
   const chatLessonContext = useMemo<LessonContext | undefined>(() => {
     if (!mod) return undefined;
     const phaseMap: Record<FlowPhase, LessonContext["phase"]> = {
@@ -2552,6 +2573,7 @@ export function LessonFlowScreen() {
       intro: "intro",
       flashcards: "flashcards",
       podcast: "other",
+      "couple-dilemma": "other",
       "interactive-recall": "interactive-recall",
       quizzes: "quizzes",
       "sim-intro": "sim",
@@ -2608,15 +2630,15 @@ export function LessonFlowScreen() {
   const lifestyleOneShotSeenIds = useLifestyleBreakStore(useShallow((s) => s.oneShotSeenIds));
   const markLifestyleSeen = useLifestyleBreakStore((s) => s.markSeen);
   const [quizIndex, setQuizIndex] = useState(() => {
-    const r = mod?.id ? useChapterStore.getState().moduleResume[mod.id] : undefined;
+    const r = !isReplay && mod?.id ? useChapterStore.getState().moduleResume[mod.id] : undefined;
     return (r && RESTORABLE_PHASES.has(r.phase as FlowPhase)) ? r.quizIndex : 0;
   });
   const [consecutiveCorrect, setConsecutiveCorrect] = useState(() => {
-    const r = mod?.id ? useChapterStore.getState().moduleResume[mod.id] : undefined;
+    const r = !isReplay && mod?.id ? useChapterStore.getState().moduleResume[mod.id] : undefined;
     return (r && RESTORABLE_PHASES.has(r.phase as FlowPhase)) ? r.consecutiveCorrect : 0;
   });
   const [peakStreak, setPeakStreak] = useState(() => {
-    const r = mod?.id ? useChapterStore.getState().moduleResume[mod.id] : undefined;
+    const r = !isReplay && mod?.id ? useChapterStore.getState().moduleResume[mod.id] : undefined;
     return (r && RESTORABLE_PHASES.has(r.phase as FlowPhase)) ? (r.peakStreak ?? 0) : 0;
   });
   const [showStreakPopup, setShowStreakPopup] = useState(false);
@@ -2688,7 +2710,8 @@ export function LessonFlowScreen() {
   useEffect(() => {
     if (prevIdRef.current === id) return;
     prevIdRef.current = id;
-    const r = mod?.id ? useChapterStore.getState().moduleResume[mod.id] : undefined;
+    // Same guard as the initial useState: replay = ignore resume checkpoint.
+    const r = !isReplay && mod?.id ? useChapterStore.getState().moduleResume[mod.id] : undefined;
     const resumable = r !== undefined && RESTORABLE_PHASES.has(r.phase as FlowPhase);
     setPhase(resumable ? r!.phase as FlowPhase : (mod?.videoHookAsset ? "video" : (mod?.id && MODULE_HERO_MAP[mod.id]) ? "hero" : "intro"));
     setFlashcardIndex(resumable ? r!.flashcardIndex : 0);
@@ -3145,38 +3168,10 @@ export function LessonFlowScreen() {
       return;
     }
 
-    if (flashcardIndex < mod.flashcards.length - 1) {
-      const nextCardId = mod.flashcards[flashcardIndex + 1]?.id;
-      const finnSource = nextCardId ? FINN_MAP[nextCardId] : undefined;
-      if (finnSource) {
-        setFinnTransitionSource(finnSource as { uri: string });
-        safeTimeout(() => {
-          setFinnTransitionSource(null);
-          setFlashcardIndex((prev) => prev + 1);
-        }, 1500);
-      } else {
-        setFlashcardIndex((prev) => prev + 1);
-      }
-    } else {
+    // Inject couple dilemma (~70% through). Decoupled from the podcast slot.
+    if (modCoupleDilemma && flashcardIndex === coupleDilemmaTriggerAfter) {
       mediumHaptic();
-      if (MODULES_WITH_INTERACTIVE_RECALL.has(mod.id)) {
-        setPhase("interactive-recall");
-      } else {
-        setPhase("quizzes");
-        safeTimeout(() => setShowQuizIntro(true), 50);
-      }
-    }
-  }, [mod, flashcardIndex, finnTipText, checkpointIndex, showMidCheckpoint, checkpointReturnIndex, modPodcast, podcastTriggerAfter]);
-
-  const handleDismissFinnTip = useCallback(() => {
-    setFinnTipText(null);
-    // Advance to next card after dismissing
-    if (!mod) return;
-
-    // Inject Daisy podcast at midpoint of flashcards (once per module)
-    if (modPodcast && flashcardIndex === podcastTriggerAfter) {
-      mediumHaptic();
-      setPhase("podcast");
+      setPhase("couple-dilemma");
       return;
     }
 
@@ -3201,7 +3196,49 @@ export function LessonFlowScreen() {
         safeTimeout(() => setShowQuizIntro(true), 50);
       }
     }
-  }, [mod, flashcardIndex, modPodcast, podcastTriggerAfter]);
+  }, [mod, flashcardIndex, finnTipText, checkpointIndex, showMidCheckpoint, checkpointReturnIndex, modPodcast, podcastTriggerAfter, modCoupleDilemma, coupleDilemmaTriggerAfter]);
+
+  const handleDismissFinnTip = useCallback(() => {
+    setFinnTipText(null);
+    // Advance to next card after dismissing
+    if (!mod) return;
+
+    // Inject Daisy podcast at midpoint of flashcards (once per module)
+    if (modPodcast && flashcardIndex === podcastTriggerAfter) {
+      mediumHaptic();
+      setPhase("podcast");
+      return;
+    }
+
+    // Inject couple dilemma (~70% through). Decoupled from the podcast slot.
+    if (modCoupleDilemma && flashcardIndex === coupleDilemmaTriggerAfter) {
+      mediumHaptic();
+      setPhase("couple-dilemma");
+      return;
+    }
+
+    if (flashcardIndex < mod.flashcards.length - 1) {
+      const nextCardId = mod.flashcards[flashcardIndex + 1]?.id;
+      const finnSource = nextCardId ? FINN_MAP[nextCardId] : undefined;
+      if (finnSource) {
+        setFinnTransitionSource(finnSource as { uri: string });
+        safeTimeout(() => {
+          setFinnTransitionSource(null);
+          setFlashcardIndex((prev) => prev + 1);
+        }, 1500);
+      } else {
+        setFlashcardIndex((prev) => prev + 1);
+      }
+    } else {
+      mediumHaptic();
+      if (MODULES_WITH_INTERACTIVE_RECALL.has(mod.id)) {
+        setPhase("interactive-recall");
+      } else {
+        setPhase("quizzes");
+        safeTimeout(() => setShowQuizIntro(true), 50);
+      }
+    }
+  }, [mod, flashcardIndex, modPodcast, podcastTriggerAfter, modCoupleDilemma, coupleDilemmaTriggerAfter]);
 
   const handleFlashcardPrev = useCallback(() => {
     if (flashcardIndex > 0) {
@@ -3465,9 +3502,11 @@ export function LessonFlowScreen() {
             let titleText =
               phase === "podcast" && modPodcast
                 ? `🎙️  ${modPodcast.title}`
-                : phase === "interactive-recall"
-                  ? "בואו נתרגל"
-                  : mod.title;
+                : phase === "couple-dilemma"
+                  ? "💞 הדילמות של הזוג הצעיר"
+                  : phase === "interactive-recall"
+                    ? "בואו נתרגל"
+                    : mod.title;
             if (phase === "flashcards") {
               const cardText = mod.flashcards[flashcardIndex]?.text ?? "";
               const colonIdx = cardText.indexOf(":");
@@ -3502,26 +3541,38 @@ export function LessonFlowScreen() {
           {(phase as string) !== "sim-intro" && (() => {
             const hasSim = MODULES_WITH_SIM.has(mod.id);
             const isSimFirst = SIM_FIRST_MODULES.has(mod.id);
-            // Podcast adds one step to the lesson flow, slotted after `podcastTriggerAfter`
+            // Podcast + couple-dilemma each add one step to the lesson flow.
             const hasPodcastStep = !!modPodcast;
+            const hasCoupleDilemmaStep = !!modCoupleDilemma && coupleDilemmaTriggerAfter >= 0;
             const podcastOffset = hasPodcastStep ? 1 : 0;
-            const totalSteps = 1 + mod.flashcards.length + mod.quizzes.length + (hasSim ? 1 : 0) + 1 + podcastOffset;
-            // For a flashcard at `idx`, account for the podcast step if it sits before this card
-            const fcOffset = (idx: number) => (hasPodcastStep && idx > podcastTriggerAfter ? 1 : 0);
+            const dilemmaOffset = hasCoupleDilemmaStep ? 1 : 0;
+            const breakOffset = podcastOffset + dilemmaOffset;
+            const totalSteps = 1 + mod.flashcards.length + mod.quizzes.length + (hasSim ? 1 : 0) + 1 + breakOffset;
+            // For a flashcard at `idx`, account for break steps that sit before this card
+            const fcOffset = (idx: number) =>
+              (hasPodcastStep && idx > podcastTriggerAfter ? 1 : 0) +
+              (hasCoupleDilemmaStep && idx > coupleDilemmaTriggerAfter ? 1 : 0);
+            // Each break phase's own position in the progress bar
+            const podcastStep = (base: number) => base + podcastTriggerAfter + 1;
+            const dilemmaStep = (base: number) =>
+              base + coupleDilemmaTriggerAfter + 1 +
+              (hasPodcastStep && coupleDilemmaTriggerAfter > podcastTriggerAfter ? 1 : 0);
             const currentStep = isSimFirst
               ? (phase === "hero" || phase === "intro" ? 0
                 : phase === "sim-intro" || phase === "sim" ? 1
                 : phase === "flashcards" ? 2 + flashcardIndex + fcOffset(flashcardIndex)
-                : phase === "podcast" ? 2 + podcastTriggerAfter + 1
-                : phase === "interactive-recall" ? 2 + mod.flashcards.length + podcastOffset
-                : phase === "quizzes" ? 2 + mod.flashcards.length + quizIndex + podcastOffset
+                : phase === "podcast" ? podcastStep(2)
+                : phase === "couple-dilemma" ? dilemmaStep(2)
+                : phase === "interactive-recall" ? 2 + mod.flashcards.length + breakOffset
+                : phase === "quizzes" ? 2 + mod.flashcards.length + quizIndex + breakOffset
                 : totalSteps)
               : (phase === "hero" || phase === "intro" ? 0
                 : phase === "flashcards" ? 1 + flashcardIndex + fcOffset(flashcardIndex)
-                : phase === "podcast" ? 1 + podcastTriggerAfter + 1
-                : phase === "interactive-recall" ? 1 + mod.flashcards.length + podcastOffset
-                : phase === "quizzes" ? 1 + mod.flashcards.length + quizIndex + podcastOffset
-                : phase === "sim-intro" || phase === "sim" ? 1 + mod.flashcards.length + mod.quizzes.length + podcastOffset
+                : phase === "podcast" ? podcastStep(1)
+                : phase === "couple-dilemma" ? dilemmaStep(1)
+                : phase === "interactive-recall" ? 1 + mod.flashcards.length + breakOffset
+                : phase === "quizzes" ? 1 + mod.flashcards.length + quizIndex + breakOffset
+                : phase === "sim-intro" || phase === "sim" ? 1 + mod.flashcards.length + mod.quizzes.length + breakOffset
                 : totalSteps);
             const pct = Math.min((currentStep / totalSteps) * 100, 100);
             const isOnFire = consecutiveCorrect >= 3;
@@ -3663,6 +3714,27 @@ export function LessonFlowScreen() {
           <Animated.View style={{ flex: 1 }}>
             <PodcastSegmentScreen
               podcast={modPodcast}
+              onComplete={() => {
+                const hasMoreFlashcards = flashcardIndex < mod.flashcards.length - 1;
+                if (hasMoreFlashcards) {
+                  setFlashcardIndex((prev) => prev + 1);
+                  setPhase("flashcards");
+                } else if (MODULES_WITH_INTERACTIVE_RECALL.has(mod.id)) {
+                  setPhase("interactive-recall");
+                } else {
+                  setPhase("quizzes");
+                  safeTimeout(() => setShowQuizIntro(true), 50);
+                }
+              }}
+            />
+          </Animated.View>
+        )}
+
+        {/* ── Couple Dilemma phase (between flashcards) ── */}
+        {phase === "couple-dilemma" && modCoupleDilemma && (
+          <Animated.View style={{ flex: 1 }}>
+            <CoupleDilemmaScreen
+              dilemma={modCoupleDilemma}
               onComplete={() => {
                 const hasMoreFlashcards = flashcardIndex < mod.flashcards.length - 1;
                 if (hasMoreFlashcards) {
