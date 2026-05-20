@@ -12,7 +12,7 @@ import Animated, {
   ZoomIn,
 } from 'react-native-reanimated';
 import { useRouter } from 'expo-router';
-import { setPendingFeedScroll } from '../finfeed/FinFeedScreen';
+import { setPendingFeedScroll } from '../inter-module-content/feedScrollStubs';
 import { tapHaptic, successHaptic, errorHaptic } from '../../utils/haptics';
 // glossary rendering available if needed: import { renderGlossaryText } from '../glossary/renderGlossaryText';
 import { ConfettiExplosion } from '../../components/ui/ConfettiExplosion';
