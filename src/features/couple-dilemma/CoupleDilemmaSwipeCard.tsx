@@ -170,8 +170,15 @@ export function CoupleDilemmaSwipeCard({ dilemma, onChoose }: Props) {
                 user's pending choice. Right swipe = optionA (wise) →
                 celebrate loop. Left swipe = optionB (unwise) → empathic
                 loop. The overlay opacity already scales with translation,
-                so Daisy fades in gradually as the user commits. */}
-            <Animated.View style={[styles.directionOverlay, styles.overlayLeft, leftOverlayStyle]}>
+                so Daisy fades in gradually as the user commits.
+                pointerEvents="none" is critical here: these overlays
+                cover the entire card and would otherwise swallow the pan
+                gesture when the user starts dragging from the top half
+                of the card. */}
+            <Animated.View
+              style={[styles.directionOverlay, styles.overlayLeft, leftOverlayStyle]}
+              pointerEvents="none"
+            >
               <ExpoImage
                 source={dilemma.optionB.isWise ? DAISY_HAPPY_CELEBRATE_WEBP : DAISY_EMPATHIC_WEBP}
                 style={styles.overlayDaisy}
@@ -180,7 +187,10 @@ export function CoupleDilemmaSwipeCard({ dilemma, onChoose }: Props) {
               />
               <Text style={styles.directionOverlayText}>{dilemma.optionB.label}</Text>
             </Animated.View>
-            <Animated.View style={[styles.directionOverlay, styles.overlayRight, rightOverlayStyle]}>
+            <Animated.View
+              style={[styles.directionOverlay, styles.overlayRight, rightOverlayStyle]}
+              pointerEvents="none"
+            >
               <ExpoImage
                 source={dilemma.optionA.isWise ? DAISY_HAPPY_CELEBRATE_WEBP : DAISY_EMPATHIC_WEBP}
                 style={styles.overlayDaisy}
