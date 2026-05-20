@@ -1,4 +1,5 @@
 import type { ConversionGoal, ExperimentId, ExperimentPayloads } from './banditTypes';
+import { REFERRAL_SIGNUP_BONUS_COINS } from '../social/referralConstants';
 
 type VariantConfig<E extends ExperimentId> = {
   id: string;
@@ -121,7 +122,7 @@ export const EXPERIMENT_CONFIGS: AllExperimentConfigs = {
         payload: {
           title: 'הזמינו חברים',
           body: 'גם להם ידע פיננסי, וגם אתם תהנו מהמטבעות שלהם',
-          cta: '3 חברים = 150 מטבעות',
+          cta: `חבר = ${REFERRAL_SIGNUP_BONUS_COINS} מטבעות לכם`,
         },
       },
       {
@@ -139,7 +140,7 @@ export const EXPERIMENT_CONFIGS: AllExperimentConfigs = {
         payload: {
           title: 'המשחק כיפי יותר בצוות',
           body: 'חברים שלומדים יחד מגיעים רחוק יותר',
-          cta: 'הזמינו 3 = 150 מטבעות',
+          cta: `הזמינו חבר = ${REFERRAL_SIGNUP_BONUS_COINS} מטבעות`,
         },
       },
       {
@@ -147,7 +148,7 @@ export const EXPERIMENT_CONFIGS: AllExperimentConfigs = {
         label: 'shark_voice',
         payload: {
           title: 'אני צריך עוד אנשים על הסיפון',
-          body: 'הביאו 3 חברים — אכניס לכם 150 מטבעות. עסקה הוגנת.',
+          body: `הביאו חבר — אכניס לכם ${REFERRAL_SIGNUP_BONUS_COINS} מטבעות. עסקה הוגנת.`,
           cta: 'אני בפנים — מזמינים חברים',
         },
       },
