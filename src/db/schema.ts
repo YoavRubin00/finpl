@@ -122,6 +122,29 @@ export const userFeedback = pgTable("user_feedback", {
 		}).onDelete("cascade"),
 ]);
 
+// Inbox for "פנו אלינו לתמיכה" Shark chat. Each row is one user-submitted
+// support message; status defaults to 'new' for the ops dashboard.
+export const supportMessages = pgTable("support_messages", {
+	id: uuid().default(sql`uuid_generate_v4()`).primaryKey().notNull(),
+	userId: uuid("user_id"),
+	userEmail: text("user_email"),
+	message: text("message").notNull(),
+	platform: text("platform"),
+	appVersion: text("app_version"),
+	status: text("status").default('new').notNull(),
+	createdAt: timestamp("created_at", { withTimezone: true, mode: 'string' }).defaultNow(),
+}, (table) => [
+	index("idx_support_messages_user").using("btree", table.userId.asc().nullsLast().op("uuid_ops")),
+	index("idx_support_messages_created").using("btree", table.createdAt.desc().nullsLast()),
+	index("idx_support_messages_status").using("btree", table.status.asc().nullsLast()),
+	foreignKey({
+			columns: [table.userId],
+			foreignColumns: [userProfiles.id],
+			name: "support_messages_user_id_fkey"
+		}).onDelete("set null"),
+	check("support_messages_status_check", sql`status IN ('new', 'in_progress', 'resolved')`),
+]);
+
 export const bridgeClicks = pgTable("bridge_clicks", {
 	id: serial().primaryKey(),
 	benefitId: text("benefit_id").notNull(),
