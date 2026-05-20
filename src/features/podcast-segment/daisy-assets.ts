@@ -30,9 +30,11 @@ export const DAISY_TALKING_WEBP = {
   uri: `${BLOB_BASE}/daisy-talking.webp`,
 } as const;
 
-/** Daisy happy + blinking on a fully transparent background. Used in
- *  contexts that compose her over their own gradient (e.g. couple-dilemma
- *  feedback) where the podcast studio scenery would clash. */
-export const DAISY_HAPPY_BLINK_WEBP = {
-  uri: `${BLOB_BASE}/daisy-happy-blink.webp`,
+/** Daisy in a full celebration loop on a transparent background — closes
+ *  eyes, opens mouth wide, raises both fins, blue sparkle stars pop around
+ *  her. ~5s loop @ 15fps, chroma-keyed from a Higgsfield seedance video.
+ *  Used in contexts that compose her over their own gradient (e.g.
+ *  couple-dilemma feedback) where the podcast studio scenery would clash. */
+export const DAISY_HAPPY_CELEBRATE_WEBP = {
+  uri: `${BLOB_BASE}/daisy-happy-celebrate.webp`,
 } as const;
