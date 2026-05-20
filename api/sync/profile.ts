@@ -58,6 +58,25 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
       const db = getDb();
 
+      // Build the UPDATE set with only the fields that were actually provided.
+      // CRITICAL: passing `undefined` into drizzle's `.set()` can translate to
+      // NULL on some versions, which would wipe accumulated XP/coins/streak
+      // when the client only sends profile metadata (display name / email).
+      // See past incident: Aviv (avivsarusi100@gmail.com) lost progress because
+      // every login posted `{displayName, email}` and the legacy handler
+      // overwrote his real xp/coins with NULL → DEFAULT 0.
+      const setFields: Record<string, unknown> = { updatedAt: new Date().toISOString() };
+      if (data.displayName !== undefined && data.displayName !== null) setFields.displayName = data.displayName;
+      if (data.email !== undefined && data.email !== null) setFields.email = data.email;
+      if (data.avatarUrl !== undefined && data.avatarUrl !== null) setFields.avatarUrl = data.avatarUrl;
+      if (typeof data.level === 'number') setFields.level = data.level;
+      if (typeof data.xp === 'number') setFields.xp = data.xp;
+      if (typeof data.coins === 'number') setFields.coins = data.coins;
+      if (typeof data.gems === 'number') setFields.gems = data.gems;
+      if (typeof data.currentStreak === 'number') setFields.currentStreak = data.currentStreak;
+      if (typeof data.longestStreak === 'number') setFields.longestStreak = data.longestStreak;
+      if (typeof data.isPro === 'boolean') setFields.isPro = data.isPro;
+
       await db
         .insert(userProfiles)
         .values({
@@ -65,29 +84,17 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           displayName: data.displayName ?? undefined,
           email: data.email ?? undefined,
           avatarUrl: data.avatarUrl ?? undefined,
-          level: data.level,
-          xp: data.xp,
-          coins: data.coins,
-          gems: data.gems,
-          currentStreak: data.currentStreak,
-          longestStreak: data.longestStreak,
-          isPro: data.isPro,
+          level: data.level ?? undefined,
+          xp: data.xp ?? undefined,
+          coins: data.coins ?? undefined,
+          gems: data.gems ?? undefined,
+          currentStreak: data.currentStreak ?? undefined,
+          longestStreak: data.longestStreak ?? undefined,
+          isPro: data.isPro ?? undefined,
         })
         .onConflictDoUpdate({
           target: userProfiles.authId,
-          set: {
-            displayName: data.displayName ?? undefined,
-            email: data.email ?? undefined,
-            avatarUrl: data.avatarUrl ?? undefined,
-            level: data.level,
-            xp: data.xp,
-            coins: data.coins,
-            gems: data.gems,
-            currentStreak: data.currentStreak,
-            longestStreak: data.longestStreak,
-            isPro: data.isPro,
-            updatedAt: new Date().toISOString(),
-          },
+          set: setFields,
         });
 
       const rows = await db
