@@ -217,9 +217,9 @@ export function DailyQuestsSheet({ visible, onClose }: DailyQuestsSheetProps) {
     if (quest.isCompleted) return; // completed quests are informational only
     tapHaptic();
     onClose();
-    // Both swipe + dilemma live in the FinFeed (learn tab); module → learn map
+    // Feed removed; swipe + dilemma now just close the sheet (no scroll target).
     if (quest.type === "swipe" || quest.type === "dilemma") {
-      import('../finfeed/FinFeedScreen').then(({ setPendingFeedScrollById }) => {
+      import('../inter-module-content/feedScrollStubs').then(({ setPendingFeedScrollById }) => {
         setPendingFeedScrollById(quest.type === "swipe" ? "swipe-game" : "daily-dilemma");
         router.push("/(tabs)/learn" as never);
       });
