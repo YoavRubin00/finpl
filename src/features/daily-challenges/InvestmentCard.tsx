@@ -25,9 +25,12 @@ const RTL = { writingDirection: 'rtl' as const, textAlign: 'right' as const };
 
 interface Props {
   isActive: boolean;
+  /** Optional callback wired by the inter-module overlay; when set, a
+   *  "המשך" button appears on the result so users don't have to find ✕. */
+  onContinue?: () => void;
 }
 
-export const InvestmentCard = React.memo(function InvestmentCard({ isActive }: Props) {
+export const InvestmentCard = React.memo(function InvestmentCard({ isActive, onContinue }: Props) {
   const hasInvestmentAnsweredToday = useDailyChallengesStore((s) => s.hasInvestmentAnsweredToday);
   const getInvestmentPlaysToday = useDailyChallengesStore((s) => s.getInvestmentPlaysToday);
   const answerInvestment = useDailyChallengesStore((s) => s.answerInvestment);
@@ -279,6 +282,13 @@ export const InvestmentCard = React.memo(function InvestmentCard({ isActive }: P
               <Text style={styles.replayBtnText}>🔄 שחק שוב ({remaining - 1} נותרו)</Text>
             </Pressable>
           )}
+          {/* Continue button — only shown when inter-module overlay provides
+              the callback. Keeps daily-feed surface unchanged. */}
+          {showResult && onContinue && (
+            <Pressable onPress={onContinue} style={styles.continueBtn} accessibilityRole="button" accessibilityLabel="המשך">
+              <Text style={styles.continueBtnText}>המשך</Text>
+            </Pressable>
+          )}
         </View>
       </Animated.View>
     </View>
@@ -494,6 +504,26 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '800',
     color: '#0369a1',
+  },
+  continueBtn: {
+    marginTop: 12,
+    backgroundColor: '#0ea5e9',
+    borderRadius: 18,
+    paddingVertical: 16,
+    alignItems: 'center',
+    borderBottomWidth: 4,
+    borderBottomColor: '#0369a1',
+    shadowColor: '#0ea5e9',
+    shadowOpacity: 0.4,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 8,
+  },
+  continueBtnText: {
+    fontSize: 18,
+    fontWeight: '900',
+    color: '#ffffff',
+    letterSpacing: 0.5,
   },
   answeredIcon: {
     fontSize: 48,

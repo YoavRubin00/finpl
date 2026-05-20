@@ -366,18 +366,26 @@ export function TradingHubScreen() {
                     <View style={styles.chartCard}>
                         {(() => {
                             const asset = ASSET_BY_ID.get(selectedId);
-                            // Daily: change vs. yesterday's close (real day-over-day move).
-                            // Weekly: change across the loaded weekly chart (first → last point ≈ 7 days).
-                            // For 1D: never fall back to chartData[0] — that's the day's open or
-                            // an even older point if the API range exceeds 1d, which produces
-                            // misleading multi-week % values shown as "daily change".
-                            const baseline =
-                                timeframe === '1D'
-                                    ? (previousClose && previousClose > 0 ? previousClose : 0)
-                                    : (chartData.length >= 2 ? chartData[0].price : 0);
-                            const latest = currentPrice > 0
-                                ? currentPrice
-                                : (chartData.length >= 1 ? chartData[chartData.length - 1].price : 0);
+                            // 1D timeframe data is intraday (5-min bars over today), so bar[-2]→bar[-1]
+                            // would only be a 5-minute change — useless. Use currentPrice vs previousClose
+                            // instead, which reflects "today vs yesterday's close" (or, when market is
+                            // closed: last trading day vs the day before — i.e. the most recent completed
+                            // day's change). For 1W, daily/weekly bars from chart are correct.
+                            let baseline = 0;
+                            let latest = 0;
+                            if (timeframe === '1D') {
+                                baseline = previousClose ?? 0;
+                                latest = currentPrice > 0
+                                    ? currentPrice
+                                    : (chartData.length >= 1 ? (chartData[chartData.length - 1].close ?? chartData[chartData.length - 1].price ?? 0) : 0);
+                            } else {
+                                baseline = chartData.length >= 2
+                                    ? (chartData[chartData.length - 2].close ?? chartData[chartData.length - 2].price ?? 0)
+                                    : 0;
+                                latest = chartData.length >= 1
+                                    ? (chartData[chartData.length - 1].close ?? chartData[chartData.length - 1].price ?? 0)
+                                    : 0;
+                            }
                             const pctChange = baseline > 0 && latest > 0
                                 ? ((latest - baseline) / baseline) * 100
                                 : 0;
@@ -455,6 +463,9 @@ export function TradingHubScreen() {
                                 <RefreshCw size={16} color="#6b7280" />
                             </Pressable>
                         </View>
+                        <Text style={styles.timeframeDesc}>
+                            {timeframe === '1D' ? 'כל נר = 5 דקות · מציג היום (אחוז = שינוי מאתמול)' : 'כל נר = שבוע · מציג ~6 חודשים (אחוז = שינוי משבוע קודם)'}
+                        </Text>
 
                         {/* Chart mode toggle, hidden until the user has made their onboarding choice */}
                         {chartMode !== null && (
@@ -842,6 +853,14 @@ const styles = StyleSheet.create({
     timeframeTextActive: {
         color: CALM.accent,
     },
+    timeframeDesc: {
+        fontSize: 10,
+        color: CALM.textTertiary,
+        textAlign: 'center',
+        writingDirection: 'rtl',
+        marginTop: 2,
+        marginBottom: 2,
+    },
 
     // ── Chart mode toggle (simple / advanced) ──
     modeToggleRow: {
@@ -922,6 +941,13 @@ const styles = StyleSheet.create({
         paddingVertical: 14,
         borderRadius: 14,
         backgroundColor: CALM.buttonPrimary,
+        borderBottomWidth: 4,
+        borderBottomColor: '#0e7490',
+        shadowColor: CALM.buttonPrimary,
+        shadowOpacity: 0.4,
+        shadowRadius: 8,
+        shadowOffset: { width: 0, height: 4 },
+        elevation: 6,
     },
     buyBtnText: {
         fontSize: 18,

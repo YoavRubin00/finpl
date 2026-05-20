@@ -1,13 +1,12 @@
 import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
 import { zustandStorage } from '../../lib/zustandStorage';
-import type { SavedItem } from "./savedItemTypes";
-
-const MAX_SAVED_ITEMS = 50;
+import type { SavedItem, AddSavedResult } from "./savedItemTypes";
+import { MAX_SAVED_ITEMS } from "./savedItemTypes";
 
 interface SavedItemsState {
   items: SavedItem[];
-  addItem: (item: Omit<SavedItem, "savedAt">) => void;
+  addItem: (item: Omit<SavedItem, "savedAt">) => AddSavedResult;
   removeItem: (id: string) => void;
   isSaved: (id: string) => boolean;
   getByType: (type: SavedItem["type"]) => SavedItem[];
@@ -19,21 +18,17 @@ export const useSavedItemsStore = create<SavedItemsState>()(
       items: [],
 
       addItem: (item) => {
-        const existing = get().items.find((i) => i.id === item.id);
-        if (existing) return;
+        const items = get().items;
+        if (items.find((i) => i.id === item.id)) return { ok: false, reason: "duplicate" };
+        if (items.length >= MAX_SAVED_ITEMS) return { ok: false, reason: "cap" };
 
         const newItem: SavedItem = {
           ...item,
           savedAt: new Date().toISOString(),
         };
 
-        set((state) => {
-          const updated = [newItem, ...state.items];
-          if (updated.length > MAX_SAVED_ITEMS) {
-            return { items: updated.slice(0, MAX_SAVED_ITEMS) };
-          }
-          return { items: updated };
-        });
+        set({ items: [newItem, ...items] });
+        return { ok: true };
       },
 
       removeItem: (id) =>
@@ -48,6 +43,13 @@ export const useSavedItemsStore = create<SavedItemsState>()(
     {
       name: "finplay-saved-items",
       storage: createJSONStorage(() => zustandStorage),
+      version: 2,
+      migrate: (persisted, version) => {
+        if (version < 2 && persisted && typeof persisted === "object") {
+          return persisted;
+        }
+        return persisted as SavedItemsState;
+      },
     },
   ),
 );

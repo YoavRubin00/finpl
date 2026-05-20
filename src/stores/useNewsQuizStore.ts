@@ -2,7 +2,7 @@ import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import { zustandStorage } from '../lib/zustandStorage';
 import { getApiBase } from '../db/apiBase';
-import type { NewsQuizData } from '../features/finfeed/liveMarketTypes';
+import type { NewsQuizData } from '../features/live-news/liveMarketTypes';
 
 /** YYYY-MM-DD in Asia/Jerusalem so the daily refresh aligns with users' local day. */
 function todayKey(): string {

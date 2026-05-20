@@ -12,10 +12,10 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useRouter } from 'expo-router';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Info } from 'lucide-react-native';
 import { Image as ExpoImage } from 'expo-image';
-import { FINN_DANCING } from '../retention-loops/finnMascotConfig';
+import { FINN_DANCING, FINN_HAPPY, FINN_TABLET } from '../retention-loops/finnMascotConfig';
 import { GoldCoinIcon } from '../../components/ui/GoldCoinIcon';
 import Animated, {
   useSharedValue,
@@ -194,12 +194,16 @@ export function BridgeScreen({ walkthroughAutoScroll }: BridgeScreenProps = {}) 
   const redeemedCount = useBridgeStore((s) => s.getRedeemedCount());
   const savedValue = useBridgeStore((s) => s.getTotalSavedValue());
 
-  const [activeCategory, setActiveCategory] = useState<BenefitCategory>('investments');
+  const { tab } = useLocalSearchParams<{ tab?: BenefitCategory }>();
+  const [activeCategory, setActiveCategory] = useState<BenefitCategory>(
+    tab && (ALL_CATEGORIES as string[]).includes(tab) ? tab : 'investments'
+  );
   const [selectedBenefit, setSelectedBenefit] = useState<Benefit | null>(null);
   const [modalVisible, setModalVisible] = useState(false);
   const [showConfetti, setShowConfetti] = useState(false);
   const [successTitle, setSuccessTitle] = useState('');
   const [showPostRedemptionModal, setShowPostRedemptionModal] = useState(false);
+  const [statModalKind, setStatModalKind] = useState<'redeemed' | 'savings' | null>(null);
   const awaitingReturnFromPartner = useRef(false);
 
   // Listen for return from partner website
@@ -278,12 +282,11 @@ export function BridgeScreen({ walkthroughAutoScroll }: BridgeScreenProps = {}) 
   }, []);
 
   const openPartnerUrl = useCallback(async (url: string) => {
+    // Don't gate on Linking.canOpenURL — on Android 11+ it returns false for
+    // https URLs unless the manifest declares <queries> for the BROWSABLE
+    // intent, which Expo's auto-generated manifest does not. Just attempt
+    // openURL and surface any actual failure.
     try {
-      const canOpen = await Linking.canOpenURL(url);
-      if (!canOpen) {
-        Alert.alert('לא ניתן לפתוח את הקישור', 'נסו שוב מאוחר יותר או פנו לתמיכה.');
-        return;
-      }
       awaitingReturnFromPartner.current = true;
       await Linking.openURL(url);
     } catch {
@@ -291,6 +294,42 @@ export function BridgeScreen({ walkthroughAutoScroll }: BridgeScreenProps = {}) 
       Alert.alert('שגיאה בפתיחת הקישור', 'בדקו את החיבור לאינטרנט ונסו שוב.');
     }
   }, []);
+
+  // Direct purchase shortcut: bypasses the confirmation modal. Used by the
+  // big blue cost button on the card itself — needed because the modal
+  // confirm flow had visibility issues on Android.
+  const handleQuickPurchase = useCallback((benefit: Benefit) => {
+    const alreadyRedeemed = isBenefitRedeemed(benefit.id);
+    if (alreadyRedeemed) {
+      // Re-open partner URL only, don't re-spend.
+      if (benefit.partnerUrl) {
+        trackBridgeClick(benefit.id, 'link_open', email);
+        openPartnerUrl(benefit.partnerUrl);
+      }
+      return;
+    }
+    const success = redeemBenefit(benefit.id);
+    if (success) {
+      setSuccessTitle(benefit.title);
+      setShowConfetti(true);
+      trackBridgeClick(benefit.id, 'redeem', email);
+      if (benefit.partnerUrl) {
+        openPartnerUrl(benefit.partnerUrl);
+      }
+    } else {
+      const currentCoins = useEconomyStore.getState().coins;
+      if (!benefit.isAvailable) {
+        Alert.alert('ההטבה אינה זמינה כרגע', 'חזרו בקרוב!');
+      } else if (currentCoins < benefit.costCoins) {
+        Alert.alert(
+          'אין מספיק מטבעות',
+          `צריך ${benefit.costCoins.toLocaleString()} מטבעות להטבה הזו. יש לכם ${currentCoins.toLocaleString()}.`,
+        );
+      } else {
+        Alert.alert('שגיאה ברכישה', 'נסו שוב מאוחר יותר.');
+      }
+    }
+  }, [isBenefitRedeemed, redeemBenefit, openPartnerUrl, email]);
 
   const handleConfirm = useCallback(() => {
     if (!selectedBenefit) return;
@@ -384,22 +423,14 @@ export function BridgeScreen({ walkthroughAutoScroll }: BridgeScreenProps = {}) 
                     </View>
                     <View style={styles.coinLabelBlock}>
                       <Text style={styles.coinCount}>{coins.toLocaleString()}</Text>
-                      <Text style={styles.coinLabel}>המטבעות שלך</Text>
+                      <Text style={styles.coinLabel}>המטבעות שלכם</Text>
                     </View>
                   </View>
 
                   {/* Stats side */}
                   <View style={styles.statsCol}>
                     <Pressable
-                      onPress={() => {
-                        const redeemed = BRIDGE_BENEFITS.filter(b => isBenefitRedeemed(b.id));
-                        Alert.alert(
-                          'הטבות שהומרו',
-                          redeemed.length > 0
-                            ? redeemed.map(b => `- ${b.title}`).join('\n')
-                            : 'עדיין לא המרת הטבות',
-                        );
-                      }}
+                      onPress={() => setStatModalKind('redeemed')}
                       style={styles.statRow}
                     >
                       <View style={styles.statValueRow}>
@@ -412,12 +443,7 @@ export function BridgeScreen({ walkthroughAutoScroll }: BridgeScreenProps = {}) 
                     <View style={styles.statDivider} />
 
                     <Pressable
-                      onPress={() => {
-                        Alert.alert(
-                          'פירוט חיסכון',
-                          `המרת ${redeemedCount} הטבות\nערך חיסכון משוער: ${savedValue}\n\n(הערכה בלבד, הערך בפועל תלוי בשימוש)`,
-                        );
-                      }}
+                      onPress={() => setStatModalKind('savings')}
                       style={styles.statRow}
                     >
                       <View style={styles.statValueRow}>
@@ -488,6 +514,7 @@ export function BridgeScreen({ walkthroughAutoScroll }: BridgeScreenProps = {}) 
                 isPro={isPro}
                 isRedeemed={isBenefitRedeemed(benefit.id)}
                 onPress={() => handleCardPress(benefit)}
+                onPurchase={() => handleQuickPurchase(benefit)}
               />
             </Animated.View>
           ))}
@@ -551,7 +578,7 @@ export function BridgeScreen({ walkthroughAutoScroll }: BridgeScreenProps = {}) 
         onRequestClose={() => setShowPostRedemptionModal(false)}
       >
         <View style={styles.modalOverlay}>
-          <Animated.View entering={FadeInDown.duration(220)} style={styles.modalBackdrop} />
+          <Animated.View entering={FadeInDown.duration(220)} style={styles.modalBackdrop} pointerEvents="none" />
 
           <Animated.View
             entering={FadeInDown.duration(320)}
@@ -579,6 +606,98 @@ export function BridgeScreen({ walkthroughAutoScroll }: BridgeScreenProps = {}) 
               ]}
             >
               <Text style={styles.postRedemptionBtnText}>המשך</Text>
+            </Pressable>
+          </Animated.View>
+        </View>
+      </Modal>
+
+      {/* ── Stat Modal: redeemed benefits / savings detail ── */}
+      <Modal
+        visible={statModalKind !== null}
+        transparent
+        animationType="fade"
+        statusBarTranslucent
+        onRequestClose={() => setStatModalKind(null)}
+      >
+        <View style={styles.modalOverlay}>
+          <Animated.View entering={FadeInDown.duration(220)} style={styles.modalBackdrop} pointerEvents="none" />
+
+          <Animated.View entering={FadeInDown.duration(320)} style={styles.statModalCard}>
+            {statModalKind === 'redeemed' && (() => {
+              const redeemed = BRIDGE_BENEFITS.filter(b => isBenefitRedeemed(b.id));
+              return (
+                <>
+                  <ExpoImage
+                    source={FINN_HAPPY}
+                    style={styles.statModalImage}
+                    contentFit="contain"
+                    accessible={false}
+                  />
+                  <Text style={styles.statModalTitle}>הטבות שהמרת</Text>
+                  {redeemed.length > 0 ? (
+                    <ScrollView
+                      style={styles.statModalScroll}
+                      contentContainerStyle={styles.statModalScrollContent}
+                      showsVerticalScrollIndicator={false}
+                    >
+                      {redeemed.map((b) => (
+                        <View key={b.id} style={styles.statModalListItem}>
+                          <View style={styles.statModalCheck}>
+                            <Text style={styles.statModalCheckText}>✓</Text>
+                          </View>
+                          <View style={{ flex: 1 }}>
+                            <Text style={styles.statModalListTitle}>{b.title}</Text>
+                            <Text style={styles.statModalListReward}>{b.reward}</Text>
+                          </View>
+                        </View>
+                      ))}
+                      <Text style={styles.statModalFooterText}>
+                        סה"כ {redeemed.length} {redeemed.length === 1 ? 'הטבה' : 'הטבות'} —
+                        בערך מוערך של {savedValue}
+                      </Text>
+                    </ScrollView>
+                  ) : (
+                    <Text style={styles.statModalEmpty}>
+                      עוד לא המרת הטבות.{'\n'}
+                      צבור עוד מטבעות והפוך אותן להטבות אמיתיות מהשותפים שלנו —
+                      כל המרה היא צעד אמיתי קדימה בכיס שלך.
+                    </Text>
+                  )}
+                </>
+              );
+            })()}
+
+            {statModalKind === 'savings' && (
+              <>
+                <ExpoImage
+                  source={FINN_TABLET}
+                  style={styles.statModalImage}
+                  contentFit="contain"
+                  accessible={false}
+                />
+                <Text style={styles.statModalTitle}>החיסכון שלך</Text>
+                <Text style={styles.statModalBigValue}>{savedValue}</Text>
+                <Text style={styles.statModalBody}>
+                  {redeemedCount > 0
+                    ? `המרת ${redeemedCount} ${redeemedCount === 1 ? 'הטבה' : 'הטבות'} — וזה הערך הכספי המוערך שגרפת מההטבות.\n\nכל הטבה כאן היא כסף אמיתי שחסכת או הרווחת מהשותפים שלנו, רק כי בנית הרגלים פיננסיים נכונים.`
+                    : 'עוד לא המרת הטבות, אז החיסכון שלך עומד על ₪0 — אבל אתה במרחק כמה מטבעות מההטבה הראשונה שלך.\n\nכל הטבה תוסיף לחיסכון שלך כאן.'}
+                </Text>
+                <Text style={styles.statModalDisclaimer}>
+                  הערכה בלבד. הערך בפועל תלוי בתנאי השותף ובשימוש שלך.
+                </Text>
+              </>
+            )}
+
+            <Pressable
+              onPress={() => setStatModalKind(null)}
+              accessibilityRole="button"
+              accessibilityLabel="סגור"
+              style={({ pressed }) => [
+                styles.postRedemptionBtn,
+                pressed && { opacity: 0.9, transform: [{ scale: 0.98 }] }
+              ]}
+            >
+              <Text style={styles.postRedemptionBtnText}>סגור</Text>
             </Pressable>
           </Animated.View>
         </View>
@@ -899,20 +1018,147 @@ const styles = StyleSheet.create({
     lineHeight: 22,
   },
   postRedemptionBtn: {
-    backgroundColor: '#0ea5e9',
+    backgroundColor: '#2563eb',
     width: '100%',
     paddingVertical: 14,
     borderRadius: 16,
     alignItems: 'center',
-    shadowColor: '#0ea5e9',
+    borderWidth: 1,
+    borderColor: '#1d4ed8',
+    borderBottomWidth: 4,
+    borderBottomColor: '#1d4ed8',
+    shadowColor: '#1d4ed8',
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.25,
-    shadowRadius: 8,
-    elevation: 6,
+    shadowOpacity: 0.45,
+    shadowRadius: 10,
+    elevation: 10,
   },
   postRedemptionBtnText: {
-    fontSize: 16,
-    fontWeight: '800',
+    fontSize: 17,
+    fontWeight: '900',
     color: '#ffffff',
+    letterSpacing: 0.3,
+  },
+
+  // Stat Modal (redeemed benefits / savings detail)
+  statModalCard: {
+    width: '88%',
+    maxWidth: 360,
+    maxHeight: '85%',
+    backgroundColor: '#ffffff',
+    borderRadius: 24,
+    padding: 24,
+    alignItems: 'center',
+    shadowColor: '#0c4a6e',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.18,
+    shadowRadius: 22,
+    elevation: 12,
+  },
+  statModalImage: {
+    width: 120,
+    height: 120,
+    marginBottom: 12,
+  },
+  statModalTitle: {
+    fontSize: 22,
+    fontWeight: '900',
+    color: '#0f172a',
+    textAlign: 'center',
+    writingDirection: 'rtl',
+    marginBottom: 12,
+  },
+  statModalBigValue: {
+    fontSize: 36,
+    fontWeight: '900',
+    color: '#0369a1',
+    textAlign: 'center',
+    marginBottom: 12,
+    letterSpacing: 0.5,
+  },
+  statModalBody: {
+    fontSize: 15,
+    fontWeight: '500',
+    color: '#475569',
+    textAlign: 'center',
+    writingDirection: 'rtl',
+    lineHeight: 22,
+    marginBottom: 12,
+  },
+  statModalDisclaimer: {
+    fontSize: 12,
+    fontWeight: '500',
+    color: '#94a3b8',
+    textAlign: 'center',
+    writingDirection: 'rtl',
+    fontStyle: 'italic',
+    marginBottom: 20,
+    paddingHorizontal: 8,
+  },
+  statModalEmpty: {
+    fontSize: 15,
+    fontWeight: '500',
+    color: '#475569',
+    textAlign: 'center',
+    writingDirection: 'rtl',
+    lineHeight: 22,
+    marginBottom: 24,
+    paddingHorizontal: 8,
+  },
+  statModalScroll: {
+    width: '100%',
+    maxHeight: 280,
+    marginBottom: 16,
+  },
+  statModalScrollContent: {
+    paddingBottom: 8,
+  },
+  statModalListItem: {
+    flexDirection: 'row-reverse',
+    alignItems: 'flex-start',
+    backgroundColor: '#f8fafc',
+    borderRadius: 14,
+    padding: 12,
+    marginBottom: 8,
+    gap: 10,
+  },
+  statModalCheck: {
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    backgroundColor: '#10b981',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 2,
+  },
+  statModalCheckText: {
+    color: '#ffffff',
+    fontWeight: '900',
+    fontSize: 14,
+  },
+  statModalListTitle: {
+    fontSize: 14,
+    fontWeight: '800',
+    color: '#0f172a',
+    textAlign: 'right',
+    writingDirection: 'rtl',
+    marginBottom: 2,
+  },
+  statModalListReward: {
+    fontSize: 12,
+    fontWeight: '500',
+    color: '#0369a1',
+    textAlign: 'right',
+    writingDirection: 'rtl',
+    lineHeight: 16,
+  },
+  statModalFooterText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#0c4a6e',
+    textAlign: 'center',
+    writingDirection: 'rtl',
+    marginTop: 4,
+    paddingHorizontal: 8,
   },
 });

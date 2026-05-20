@@ -1,18 +1,23 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { View, Text, Pressable, StyleSheet } from "react-native";
 import Animated, {
   FadeInDown,
   FadeInUp,
+  runOnJS,
   useAnimatedStyle,
   useReducedMotion,
   useSharedValue,
-  withSequence,
-  withTiming,
+  withSpring,
 } from "react-native-reanimated";
+import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import { ChevronUp, ChevronDown } from "lucide-react-native";
-import { successHaptic, errorHaptic, tapHaptic } from "../../utils/haptics";
+import { successHaptic, tapHaptic, mediumHaptic } from "../../utils/haptics";
 import { ConfettiExplosion } from "../../components/ui/ConfettiExplosion";
 import type { TimelineOrderPrompt } from "./sentenceTypes";
+
+// משוער — גובה item כולל gap. משמש את ה-pan gesture לחישוב כמה מקומות
+// המשתמש גרר. אם תעדכן את itemRow padding או itemsColumn gap, עדכן גם פה.
+const ITEM_STEP_HEIGHT = 70;
 
 interface TimelineOrderCardProps {
   prompt: TimelineOrderPrompt;
@@ -27,6 +32,176 @@ const HELP_DELAY_MS = 20_000;
 
 const RANK_COLORS = ["#f97316", "#eab308", "#22c55e", "#3b82f6"];
 const RANK_BG = ["#fff7ed", "#fefce8", "#f0fdf4", "#eff6ff"];
+
+/**
+ * Single row of the timeline order list. Pan gesture wraps the WHOLE row so
+ * a user can grab from anywhere — not only a side handle. Reorder happens
+ * in real time as the finger crosses each row's mid-line, so rows never sit
+ * stacked on top of each other while dragging.
+ *
+ * Coordinate model:
+ *  - indexRef holds the row's *current* position (updated by both prop
+ *    sync and in-worklet after a moveItem fires)
+ *  - stepsAcc holds how many slots we've already reordered during the active
+ *    drag, so the visual translateY = e.translationY - stepsAcc * STEP_HEIGHT
+ *    keeps the row anchored under the finger across rearrangements.
+ */
+interface DraggableItemRowProps {
+  idx: number;
+  totalItems: number;
+  locked: boolean;
+  accentColor: string;
+  onMoveItem: (fromIdx: number, toIdx: number) => void;
+  onSwap: (idx: number, dir: -1 | 1) => void;
+  rankColor: string;
+  rankBg: string;
+  children: ReactNode;
+}
+
+function DraggableItemRow({
+  idx,
+  totalItems,
+  locked,
+  accentColor,
+  onMoveItem,
+  onSwap,
+  rankColor,
+  rankBg,
+  children,
+}: DraggableItemRowProps) {
+  const translateY = useSharedValue(0);
+  const isDragging = useSharedValue(0);
+  const indexRef = useSharedValue(idx);
+  const stepsAcc = useSharedValue(0);
+
+  // Keep the worklet's view of the row's index in sync with React props.
+  useEffect(() => { indexRef.value = idx; }, [idx, indexRef]);
+
+  const triggerHaptic = useCallback(() => { mediumHaptic(); }, []);
+
+  const pan = Gesture.Pan()
+    .enabled(!locked)
+    // ה-gesture מתחיל רק אחרי 8px אנכיים. כך לחיצה רגילה על arrows או על
+    // תוכן ה-row לא נחטפת לטעות כ-pan.
+    .activeOffsetY([-8, 8])
+    .onStart(() => {
+      isDragging.value = 1;
+      stepsAcc.value = 0;
+      runOnJS(triggerHaptic)();
+    })
+    .onUpdate((e) => {
+      // כמה שלבים מהמקור צריך להיות עכשיו ה-row.
+      const target = Math.round(e.translationY / ITEM_STEP_HEIGHT);
+      if (target !== stepsAcc.value) {
+        const oldIdx = indexRef.value;
+        const newIdx = oldIdx + (target - stepsAcc.value);
+        const clamped = Math.max(0, Math.min(totalItems - 1, newIdx));
+        if (clamped !== oldIdx) {
+          runOnJS(onMoveItem)(oldIdx, clamped);
+          // עדכון אופטימי ב-worklet כך שה-onUpdate הבא יראה את המיקום החדש
+          // עוד לפני שה-React renders חזרה אלינו ויעדכן את indexRef דרך useEffect.
+          indexRef.value = clamped;
+          stepsAcc.value = target;
+        }
+      }
+      // translateY ויזואלי = הסטה של האצבע פחות מה שכבר התקדמנו ב-reorder.
+      // כך ה-row נשאר תחת האצבע גם אחרי שהוא קפץ במיקום ב-array.
+      translateY.value = e.translationY - stepsAcc.value * ITEM_STEP_HEIGHT;
+    })
+    .onEnd(() => {
+      translateY.value = withSpring(0, { damping: 18, stiffness: 220 });
+      isDragging.value = 0;
+      stepsAcc.value = 0;
+    })
+    .onFinalize(() => {
+      translateY.value = withSpring(0, { damping: 18, stiffness: 220 });
+      isDragging.value = 0;
+      stepsAcc.value = 0;
+    });
+
+  const animatedStyle = useAnimatedStyle(() => ({
+    transform: [
+      { translateY: translateY.value },
+      { scale: isDragging.value ? 1.04 : 1 },
+    ],
+    // הגבהה ויזואלית בזמן drag כך שה-row המתנייד תמיד מעל האחרים בזמן
+    // החלפת מיקום, גם אם React טרם השלים את הרינדור.
+    zIndex: isDragging.value ? 50 : 0,
+    elevation: isDragging.value ? 12 : 2,
+    shadowOpacity: isDragging.value ? 0.18 : 0.05,
+  }));
+
+  // ה-GestureDetector עוטף את כל ה-row כדי שאפשר יהיה לתפוס מכל מקום.
+  // ה-arrow Pressables עדיין מקבלים taps בזכות activeOffsetY של ה-pan.
+  return (
+    <GestureDetector gesture={pan}>
+      <Animated.View
+        entering={FadeInUp.duration(200).delay(idx * 40)}
+        accessible
+        accessibilityRole="adjustable"
+        accessibilityLabel={`פריט ${idx + 1}. גרור כדי לסדר`}
+        accessibilityHint="החלק למעלה או למטה כדי לשנות מיקום"
+        style={[
+          styles.itemRow,
+          {
+            borderColor: locked ? "#6ee7b7" : "#e2e8f0",
+            backgroundColor: locked ? "#f0fdf4" : "#ffffff",
+            shadowColor: locked ? "#34d399" : "#6366f1",
+          },
+          animatedStyle,
+        ]}
+      >
+        {/* Rank badge */}
+        <View style={[styles.rankBadge, { backgroundColor: rankBg, borderColor: rankColor }]}>
+          <Text style={[styles.rankText, { color: rankColor }]}>{idx + 1}</Text>
+        </View>
+
+        {children}
+
+        {/* Arrow buttons */}
+        {!locked && (
+          <View style={styles.arrows}>
+            <Pressable
+              onPress={() => onSwap(idx, -1)}
+              disabled={idx === 0}
+              accessibilityRole="button"
+              accessibilityLabel={`הזז פריט ${idx + 1} למעלה`}
+              hitSlop={6}
+              style={({ pressed }) => [
+                styles.arrowBtn,
+                { borderColor: accentColor, opacity: idx === 0 ? 0.25 : pressed ? 0.6 : 1 },
+              ]}
+            >
+              <ChevronUp size={17} color={accentColor} />
+            </Pressable>
+            <Pressable
+              onPress={() => onSwap(idx, 1)}
+              disabled={idx === totalItems - 1}
+              accessibilityRole="button"
+              accessibilityLabel={`הזז פריט ${idx + 1} למטה`}
+              hitSlop={6}
+              style={({ pressed }) => [
+                styles.arrowBtn,
+                {
+                  borderColor: accentColor,
+                  opacity: idx === totalItems - 1 ? 0.25 : pressed ? 0.6 : 1,
+                },
+              ]}
+            >
+              <ChevronDown size={17} color={accentColor} />
+            </Pressable>
+          </View>
+        )}
+
+        {locked && (
+          <View style={styles.checkMark}>
+            <Text style={styles.checkMarkText}>✓</Text>
+          </View>
+        )}
+      </Animated.View>
+    </GestureDetector>
+  );
+}
 
 export function TimelineOrderCard({
   prompt,
@@ -44,17 +219,14 @@ export function TimelineOrderCard({
   const [showYears, setShowYears] = useState<boolean>(false);
   const [helpVisible, setHelpVisible] = useState<boolean>(false);
   const [resolvedOrder, setResolvedOrder] = useState<string[] | null>(null);
-  const reducedMotion = useReducedMotion();
-  const shake = useSharedValue(0);
+  // reducedMotion שמור לעתיד אם נחזיר shake animation, אבל בלי submit button
+  // אין יותר נקודת fail visible — ההתקדמות אוטומטית כשהסדר נכון.
+  useReducedMotion();
 
   const onCorrectSettledRef = useRef(onCorrectSettled);
   useEffect(() => { onCorrectSettledRef.current = onCorrectSettled; });
 
   const helpTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  const shakeStyle = useAnimatedStyle(() => ({
-    transform: [{ translateX: shake.value }],
-  }));
 
   const itemMap = useMemo(() => {
     const m: Record<string, (typeof prompt.items)[number]> = {};
@@ -77,13 +249,17 @@ export function TimelineOrderCard({
     return () => { if (helpTimerRef.current) clearTimeout(helpTimerRef.current); };
   }, [locked, resetHelpTimer]);
 
-  const swapAt = useCallback(
-    (idx: number, dir: -1 | 1) => {
+  // מהלך לוגי משותף ל-swap ע"י חצים ול-drag: מעביר item ל-toIdx, מאמת אם
+  // הסדר נכון, ומפעיל את ה-flow של הצלחה. fromIdx==toIdx → אין שינוי.
+  const moveItem = useCallback(
+    (fromIdx: number, toIdx: number) => {
       if (locked) return;
       const current = localOrderRef.current;
-      if (idx + dir < 0 || idx + dir >= current.length) return;
+      const clamped = Math.max(0, Math.min(current.length - 1, toIdx));
+      if (clamped === fromIdx) return;
       const next = [...current];
-      [next[idx], next[idx + dir]] = [next[idx + dir], next[idx]];
+      const [moved] = next.splice(fromIdx, 1);
+      next.splice(clamped, 0, moved);
       setLocalOrder(next);
       tapHaptic();
 
@@ -104,30 +280,12 @@ export function TimelineOrderCard({
     [locked, prompt.items, onSubmit],
   );
 
-  const handleSubmit = useCallback(() => {
-    if (locked) {
-      onCorrectSettledRef.current();
-      return;
-    }
-    const result = onSubmit(localOrderRef.current);
-    if (result.correct) {
-      successHaptic();
-      setLocked(true);
-      setConfetti((n) => n + 1);
-      setShowYears(true);
-      setTimeout(() => { onCorrectSettledRef.current(); }, REVEAL_HOLD_MS);
-    } else {
-      errorHaptic();
-      if (!reducedMotion) {
-        shake.value = withSequence(
-          withTiming(-7, { duration: 55 }),
-          withTiming(7, { duration: 55 }),
-          withTiming(-4, { duration: 50 }),
-          withTiming(0, { duration: 60 }),
-        );
-      }
-    }
-  }, [locked, onSubmit, shake, reducedMotion]);
+  const swapAt = useCallback(
+    (idx: number, dir: -1 | 1) => {
+      moveItem(idx, idx + dir);
+    },
+    [moveItem],
+  );
 
   const handleYes = useCallback(() => {
     const correctOrder = [...prompt.items]
@@ -151,7 +309,7 @@ export function TimelineOrderCard({
   return (
     <Animated.View
       entering={FadeInUp.duration(300)}
-      style={[styles.card, shakeStyle]}
+      style={styles.card}
     >
       {confetti > 0 && (
         <View pointerEvents="none" style={StyleSheet.absoluteFill}>
@@ -177,23 +335,17 @@ export function TimelineOrderCard({
           const rankBg = locked ? "#ecfdf5" : (RANK_BG[idx % RANK_BG.length] ?? "#f8fafc");
 
           return (
-            <Animated.View
+            <DraggableItemRow
               key={itemId}
-              entering={FadeInUp.duration(200).delay(idx * 40)}
-              style={[
-                styles.itemRow,
-                {
-                  borderColor: locked ? "#6ee7b7" : "#e2e8f0",
-                  backgroundColor: locked ? "#f0fdf4" : "#ffffff",
-                  shadowColor: locked ? "#34d399" : "#6366f1",
-                },
-              ]}
+              idx={idx}
+              totalItems={displayOrder.length}
+              locked={locked}
+              accentColor={accentColor}
+              onMoveItem={moveItem}
+              onSwap={swapAt}
+              rankColor={rankColor}
+              rankBg={rankBg}
             >
-              {/* Rank badge */}
-              <View style={[styles.rankBadge, { backgroundColor: rankBg, borderColor: rankColor }]}>
-                <Text style={[styles.rankText, { color: rankColor }]}>{idx + 1}</Text>
-              </View>
-
               {/* Content */}
               <View style={styles.itemContent}>
                 {hasYear ? (
@@ -217,48 +369,7 @@ export function TimelineOrderCard({
                   </Text>
                 )}
               </View>
-
-              {/* Arrow buttons */}
-              {!locked && (
-                <View style={styles.arrows}>
-                  <Pressable
-                    onPress={() => swapAt(idx, -1)}
-                    disabled={idx === 0}
-                    accessibilityRole="button"
-                    accessibilityLabel={`הזז פריט ${idx + 1} למעלה`}
-                    hitSlop={6}
-                    style={({ pressed }) => [
-                      styles.arrowBtn,
-                      { borderColor: accentColor, opacity: idx === 0 ? 0.25 : pressed ? 0.6 : 1 },
-                    ]}
-                  >
-                    <ChevronUp size={17} color={accentColor} />
-                  </Pressable>
-                  <Pressable
-                    onPress={() => swapAt(idx, 1)}
-                    disabled={idx === displayOrder.length - 1}
-                    accessibilityRole="button"
-                    accessibilityLabel={`הזז פריט ${idx + 1} למטה`}
-                    hitSlop={6}
-                    style={({ pressed }) => [
-                      styles.arrowBtn,
-                      {
-                        borderColor: accentColor,
-                        opacity: idx === displayOrder.length - 1 ? 0.25 : pressed ? 0.6 : 1,
-                      },
-                    ]}
-                  >
-                    <ChevronDown size={17} color={accentColor} />
-                  </Pressable>
-                </View>
-              )}
-
-              {locked && (
-                <View style={styles.checkMark}>
-                  <Text style={styles.checkMarkText}>✓</Text>
-                </View>
-              )}
-            </Animated.View>
+            </DraggableItemRow>
           );
         })}
       </View>
@@ -291,19 +402,10 @@ export function TimelineOrderCard({
         </Animated.View>
       )}
 
-      {/* ── Submit button ── */}
-      <Pressable
-        onPress={handleSubmit}
-        accessibilityRole="button"
-        accessibilityLabel={locked ? "נכון! לחצו להמשך" : "בדקו את הסדר"}
-        style={({ pressed }) => [
-          styles.submitBtn,
-          locked ? styles.submitBtnCorrect : { backgroundColor: accentColor },
-          pressed && styles.submitBtnPressed,
-        ]}
-      >
-        <Text style={styles.submitText}>{locked ? "✓  המשך" : "בדקו את הסדר"}</Text>
-      </Pressable>
+      {/* No submit button — when the user reaches the correct order the
+          moveItem flow auto-validates, locks, fires confetti, and advances
+          via onCorrectSettled. The help panel (after 20s of struggle) is the
+          escape hatch if a user gives up. */}
     </Animated.View>
   );
 }
@@ -479,28 +581,5 @@ const styles = StyleSheet.create({
     fontWeight: "800",
     color: "#374151",
     writingDirection: "rtl",
-  },
-  submitBtn: {
-    marginTop: 2,
-    paddingVertical: 15,
-    borderRadius: 18,
-    alignItems: "center",
-    borderBottomWidth: 4,
-    borderBottomColor: "rgba(0,0,0,0.2)",
-  },
-  submitBtnCorrect: {
-    backgroundColor: "#10b981",
-    borderBottomColor: "#059669",
-  },
-  submitBtnPressed: {
-    opacity: 0.88,
-    transform: [{ translateY: 1 }],
-  },
-  submitText: {
-    fontSize: 17,
-    fontWeight: "900",
-    color: "#ffffff",
-    writingDirection: "rtl",
-    letterSpacing: 0.3,
   },
 });

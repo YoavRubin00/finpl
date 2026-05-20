@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { ScrollView, View, Text, StyleSheet, Share } from "react-native";
 import { Image as ExpoImage } from "expo-image";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -10,11 +11,13 @@ import { GlobalWealthHeader } from "../../components/ui/GlobalWealthHeader";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useEconomyStore } from "../economy/useEconomyStore";
 import { useReferralStore } from "../social/useReferralStore";
+import { useAuthStore } from "../auth/useAuthStore";
 import { useRealAssetsStore } from "./useRealAssetsStore";
 import { useTradingStore } from "../trading-hub/useTradingStore";
 import { ASSET_BY_ID } from "../trading-hub/tradingHubData";
 import { StockIcon } from "../trading-hub/StockIcon";
 import { DIVIDEND_PERCENT } from "../social/referralData";
+import { buildInviteShareMessage } from "../social/referralConstants";
 import { AnimatedPressable } from "../../components/ui/AnimatedPressable";
 import { SUBTITLE_TEXT } from "../../constants/theme";
 import { tapHaptic, successHaptic } from "../../utils/haptics";
@@ -46,6 +49,13 @@ export function AssetsScreen() {
   const referredFriends = useReferralStore((s) => s.referredFriends);
   const canCollectDividend = useReferralStore((s) => s.canCollectDividend);
   const collectDividend = useReferralStore((s) => s.collectDividend);
+  const refreshReferral = useReferralStore((s) => s.refresh);
+  const userEmail = useAuthStore((s) => s.email);
+
+  useEffect(() => {
+    if (!userEmail) return;
+    refreshReferral(userEmail).catch(() => { /* non-fatal */ });
+  }, [userEmail, refreshReferral]);
   const ownedAssets = useRealAssetsStore((s) => s.ownedAssets);
   const collectDailyIncome = useRealAssetsStore((s) => s.collectDailyIncome);
   const pendingIncome = useRealAssetsStore((s) => s.pendingIncome);
@@ -64,7 +74,7 @@ export function AssetsScreen() {
     tapHaptic();
     try {
       await Share.share({
-        message: `בוא להצטרף אלי ל-FinPlay! השתמש בקוד שלי לקבלת בונוס התחלה: ${referralCode}\nלהורדה: https://finpl.app/join`,
+        message: buildInviteShareMessage(referralCode),
       });
     } catch (_e) {
       // user cancelled
@@ -73,7 +83,10 @@ export function AssetsScreen() {
 
   const collectDiv = () => {
     successHaptic();
-    collectDividend();
+    // Pass the auth email so the new server-backed flow can run.
+    // Legacy callers without an email simply no-op (server can't compute the dividend).
+    const authId = useAuthStore.getState().email ?? undefined;
+    collectDividend(authId);
   };
 
   const collectInc = () => {
@@ -215,7 +228,7 @@ export function AssetsScreen() {
                       <StockIcon assetId={pos.assetId} size={32} />
                       <View style={{ flex: 1, alignItems: "flex-end", marginRight: 8 }}>
                         <Text style={styles.holdingName}>{asset?.name ?? pos.assetId}</Text>
-                        <Text style={styles.holdingSub}>{pos.amountInvested.toLocaleString('he-IL')} מטבעות</Text>
+                        <Text style={styles.holdingSub}>${pos.amountInvested.toLocaleString('he-IL')} השקעה</Text>
                       </View>
                       <View style={[styles.pnlBadge, { backgroundColor: isUp ? "#dcfce7" : "#fee2e2" }]}>
                         <Text style={[styles.pnlText, { color: isUp ? "#16a34a" : "#ef4444" }]}>
@@ -248,8 +261,8 @@ export function AssetsScreen() {
             <View style={styles.socialCard}>
               <View style={styles.socialHeader}>
                 <View style={{ alignItems: 'flex-end' }}>
-                  <Text style={styles.referralTitle}>הזמן חברים וקבל דיבידנד</Text>
-                  <Text style={styles.referralSub}>קבל 5% מהרווחים של כל חבר שתזמין!</Text>
+                  <Text style={styles.referralTitle}>הזמינו חברים</Text>
+                  <Text style={styles.referralSub}>500 מטבעות לכם + 500 לחבר, וגם 5% דיבידנד יומי מהלמידה שלו</Text>
                 </View>
                 <View style={styles.refCodeBadge}>
                   <Text style={styles.refCodeText}>{referralCode}</Text>

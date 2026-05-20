@@ -6,6 +6,7 @@ import { useAuthStore } from "../auth/useAuthStore";
 import { upsertModuleProgress } from "../../db/sync/syncModuleProgress";
 import { useAITelemetryStore } from "../ai-personalization/useAITelemetryStore";
 import { useAdaptiveStore } from "../social/useAdaptiveStore";
+import { captureEvent } from "../../lib/posthog";
 
 const MODULE_COMPLETE_XP = 30;
 const MODULE_COMPLETE_COINS = 150;
@@ -101,6 +102,20 @@ export const useChapterStore = create<ChapterState>()(
         const chapterProg = progress[currentChapterId] ?? { ...emptyProgress };
         if (chapterProg.completedModules.includes(moduleId)) return;
 
+        // Fires only on first completion (the early-return above blocks re-fires
+        // for replays). Total-completed lets us segment "first lesson" funnel
+        // without a separate event.
+        const totalCompletedBefore = Object.values(progress).reduce(
+          (sum, p) => sum + p.completedModules.length,
+          0,
+        );
+        captureEvent('lesson_completed', {
+          module_id: moduleId,
+          chapter_id: currentChapterId,
+          is_first_lesson: totalCompletedBefore === 0,
+          total_completed: totalCompletedBefore + 1,
+        });
+
         set((state) => {
           const prev = state.progress[state.currentChapterId] ?? { ...emptyProgress };
           const updatedCompleted = [...prev.completedModules, moduleId];
@@ -117,7 +132,7 @@ export const useChapterStore = create<ChapterState>()(
         });
 
         useEconomyStore.getState().addXP(MODULE_COMPLETE_XP, "lesson_complete");
-        useEconomyStore.getState().addCoins(MODULE_COMPLETE_COINS);
+        useEconomyStore.getState().addCoins(MODULE_COMPLETE_COINS, 'lesson');
 
         // Fire-and-forget DB sync
         const email = useAuthStore.getState().email;

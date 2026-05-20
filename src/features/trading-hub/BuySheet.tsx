@@ -44,7 +44,6 @@ interface BuySheetProps {
 
 export function BuySheet({ visible, assetId, currentPrice, previousClose, onClose, onBuyComplete, onAssetTypeUnlocked }: BuySheetProps) {
     const coins = useEconomyStore((s) => s.coins);
-    const spendCoins = useEconomyStore((s) => s.spendCoins);
     const openPosition = useTradingStore((s) => s.openPosition);
     const unlockAssetType = useTradingHubUiStore((s) => s.unlockAssetType);
     const insets = useSafeAreaInsets();
@@ -64,15 +63,15 @@ export function BuySheet({ visible, assetId, currentPrice, previousClose, onClos
         if (!canBuy) return;
         tapHaptic();
 
-        const success = spendCoins(amount);
-        if (!success) {
-            setFeedback('אין מספיק מטבעות');
+        const execPrice = orderType === 'market' ? currentPrice : limitPrice;
+        // openPosition handles the virtual_balance debit + server sync atomically.
+        // Returns null if affordability check fails (race against another debit).
+        const id = openPosition(assetId, 'buy', execPrice, amount);
+        if (!id) {
+            setFeedback('אין מספיק יתרה');
             setTimeout(() => setFeedback(null), 2000);
             return;
         }
-
-        const execPrice = orderType === 'market' ? currentPrice : limitPrice;
-        openPosition(assetId, 'buy', execPrice, amount);
         successHaptic();
 
         // Progressive unlock: first market-order buy unlocks individual stocks.
@@ -96,7 +95,7 @@ export function BuySheet({ visible, assetId, currentPrice, previousClose, onClos
             onBuyComplete();
             onClose();
         }, 1500);
-    }, [canBuy, amount, assetId, currentPrice, limitPrice, orderType, spendCoins, openPosition, unlockAssetType, onAssetTypeUnlocked, asset, onBuyComplete, onClose]);
+    }, [canBuy, amount, assetId, currentPrice, limitPrice, orderType, openPosition, unlockAssetType, onAssetTypeUnlocked, asset, onBuyComplete, onClose]);
 
     const handleClose = useCallback(() => {
         setAmountText('');
@@ -212,13 +211,12 @@ export function BuySheet({ visible, assetId, currentPrice, previousClose, onClos
                                 </View>
                             )}
 
-                            {/* Coin balance */}
                             <View style={styles.balanceRow}>
                                 <Text style={[RTL, styles.balanceLabel]}>מטבעות זמינים</Text>
                                 <View style={{ flexDirection: 'row-reverse', alignItems: 'center', gap: 6 }}>
                                     <Text style={{ fontSize: 18 }} accessible={false}>🪙</Text>
                                     <Text style={styles.balanceValue}>
-                                        {coins.toLocaleString('he-IL')}
+                                        {coins.toLocaleString('he-IL', { maximumFractionDigits: 0 })}
                                     </Text>
                                 </View>
                             </View>
@@ -229,11 +227,11 @@ export function BuySheet({ visible, assetId, currentPrice, previousClose, onClos
                                     style={styles.input}
                                     value={amountText}
                                     onChangeText={setAmountText}
-                                    placeholder="כמה מטבעות להשקיע?"
+                                    placeholder="כמה להשקיע? (מטבעות)"
                                     placeholderTextColor={CALM.textTertiary}
                                     keyboardType="number-pad"
                                     textAlign="right"
-                                accessibilityLabel="כמה מטבעות להשקיע?" />
+                                accessibilityLabel="סכום להשקעה במטבעות" />
                             </View>
 
                             {/* Quick amount pills */}
@@ -253,7 +251,7 @@ export function BuySheet({ visible, assetId, currentPrice, previousClose, onClos
                                 <Pressable
                                     onPress={() => {
                                         tapHaptic();
-                                        setAmountText(String(coins));
+                                        setAmountText(String(Math.floor(coins)));
                                     }}
                                     style={[styles.quickPill, styles.quickPillMax]}
                                 >
@@ -291,11 +289,11 @@ export function BuySheet({ visible, assetId, currentPrice, previousClose, onClos
                                 color="#2563eb"
                             >
                                 <Text style={styles.buyBtnText}>
-                                    {amount > coins ? 'אין מספיק מטבעות' : orderType === 'limit' ? 'הגדר פקודת לימיט' : 'קנה עכשיו'}
+                                    {amount > coins ? 'אין מספיק יתרה' : orderType === 'limit' ? 'הגדר פקודת לימיט' : 'קנה עכשיו'}
                                 </Text>
                             </LiquidButton>
                             <Text style={styles.disclaimer}>
-                                סימולטור · מטבעות המשחק · ללא סיכון אמיתי
+                                סימולטור · ללא סיכון אמיתי
                             </Text>
                         </View>
                     </Pressable>
@@ -453,9 +451,9 @@ const styles = StyleSheet.create({
         flexDirection: 'row-reverse',
         justifyContent: 'space-between',
         alignItems: 'center',
-        backgroundColor: '#fffbeb',
+        backgroundColor: '#f0f9ff',
         borderWidth: 1,
-        borderColor: '#fef3c7',
+        borderColor: '#bae6fd',
         borderRadius: 16,
         padding: 16,
         marginBottom: 16,
@@ -463,12 +461,12 @@ const styles = StyleSheet.create({
     balanceLabel: {
         fontSize: 15,
         fontWeight: '800',
-        color: '#d97706',
+        color: '#0284c7',
     },
     balanceValue: {
         fontSize: 18,
         fontWeight: '900',
-        color: '#d97706',
+        color: '#0284c7',
         fontVariant: ['tabular-nums'],
     },
     inputWrap: {

@@ -111,7 +111,7 @@ Inspired by: Duolingo "true/false" stories, Bloomberg headlines, Robinhood snack
   - Add to `pool` before shuffle
 - [ ] In `renderItem`: handle `item.type === 'macro-event'` → `<MacroEventCard>`
 
-**Files:** `src/features/finfeed/types.ts`, `src/features/finfeed/FinFeedScreen.tsx`
+**Files:** `src/features/finfeed/types.ts`, `src/features/inter-module-content/feedScrollStubs.tsx`
 
 ---
 

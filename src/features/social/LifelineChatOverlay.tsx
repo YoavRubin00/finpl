@@ -17,7 +17,7 @@ import {
   Pressable,
   StyleSheet,
   ImageBackground,
-  StatusBar,
+  ActivityIndicator,
   AccessibilityInfo,
 } from "react-native";
 import Animated, {
@@ -42,27 +42,56 @@ import { getConceptLabel } from "./LifelineModal";
 import type { CompanionId } from "../auth/types";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { fetchAiMentorUsage, incrementAiMentorUsage } from "../../db/sync/syncAiMentor";
 
-/* ── Daily usage tracking ── */
+/* ── Daily usage tracking ──
+   Server (`ai_mentor_usage`) is the source of truth so quota is enforced
+   cross-device. AsyncStorage mirrors it as an offline cache: if the network
+   call fails (no connectivity, server down) we fall back to the local value
+   so the UX still works. */
 const DAILY_KEY = "lifeline_chat_date";
 const DAILY_COUNT_KEY = "lifeline_chat_count";
 const FREE_DAILY_LIMIT = 1;
 
-async function getDailyUsage(): Promise<{ date: string; count: number }> {
-  const today = new Date().toISOString().slice(0, 10);
-  const storedDate = await AsyncStorage.getItem(DAILY_KEY);
-  if (storedDate !== today) {
-    return { date: today, count: 0 };
-  }
-  const raw = await AsyncStorage.getItem(DAILY_COUNT_KEY);
-  return { date: today, count: raw ? parseInt(raw, 10) : 0 };
+function todayStr(): string {
+  return new Date().toISOString().slice(0, 10);
 }
 
-async function incrementDailyUsage(): Promise<void> {
-  const today = new Date().toISOString().slice(0, 10);
-  await AsyncStorage.setItem(DAILY_KEY, today);
-  const { count } = await getDailyUsage();
-  await AsyncStorage.setItem(DAILY_COUNT_KEY, String(count + 1));
+async function readLocalCount(): Promise<number> {
+  const today = todayStr();
+  const storedDate = await AsyncStorage.getItem(DAILY_KEY);
+  if (storedDate !== today) return 0;
+  const raw = await AsyncStorage.getItem(DAILY_COUNT_KEY);
+  return raw ? parseInt(raw, 10) : 0;
+}
+
+async function writeLocalCount(count: number): Promise<void> {
+  await AsyncStorage.setItem(DAILY_KEY, todayStr());
+  await AsyncStorage.setItem(DAILY_COUNT_KEY, String(count));
+}
+
+async function getDailyUsage(authId: string | null): Promise<number> {
+  if (authId) {
+    const serverCount = await fetchAiMentorUsage(authId);
+    if (serverCount !== null) {
+      await writeLocalCount(serverCount);
+      return serverCount;
+    }
+  }
+  return readLocalCount();
+}
+
+async function incrementDailyUsage(authId: string | null): Promise<void> {
+  if (authId) {
+    const newCount = await incrementAiMentorUsage(authId);
+    if (newCount !== null) {
+      await writeLocalCount(newCount);
+      return;
+    }
+  }
+  // Offline fallback — increment local cache so the limit still bites in this session.
+  const next = (await readLocalCount()) + 1;
+  await writeLocalCount(next);
 }
 
 interface ChatMsg {
@@ -112,7 +141,7 @@ export function LifelineChatOverlay({ visible, conceptTag, onClose }: Props) {
   const [messages, setMessages] = useState<ChatMsg[]>([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
-  const [locked, setLocked] = useState(false);
+  const [locked, setLocked] = useState<boolean | null>(null);
   const scrollRef = useRef<ScrollView>(null);
 
   const profile = useAuthStore((s) => s.profile);
@@ -124,21 +153,19 @@ export function LifelineChatOverlay({ visible, conceptTag, onClose }: Props) {
   const currentChapter = useChapterStore((s) => s.currentChapterId);
   const conceptLabel = getConceptLabel(conceptTag);
   const safeInsets = useSafeAreaInsets();
-  // On Android, useSafeAreaInsets may return 0 inside a statusBarTranslucent Modal.
-  // Fall back to StatusBar.currentHeight to ensure the X button is never hidden.
   // Push the header (and the X close button) clear of the Android status bar.
-  // statusBarTranslucent makes the modal sit under the bar, and on some Samsung
-  // devices safeInsets.top returns 0 — so we take the max of all signals + a
-  // generous buffer so the X is never glued to the system clock/icons row.
+  // statusBarTranslucent makes the modal sit under the bar; min 28 guards old Samsung devices.
   const headerTopPad = Platform.OS === "android"
-    ? Math.max(safeInsets.top, StatusBar.currentHeight ?? 0, 28) + 28
+    ? Math.max(safeInsets.top, 28) + 28
     : safeInsets.top + 10;
   const isPro = useSubscriptionStore((s) => s.isPro());
+
+  const authId = useAuthStore((s) => s.email);
 
   // Check daily limit on open
   useEffect(() => {
     if (visible && !isPro) {
-      getDailyUsage().then(({ count }) => {
+      getDailyUsage(authId).then((count) => {
         if (count >= FREE_DAILY_LIMIT) {
           setLocked(true);
         }
@@ -149,26 +176,28 @@ export function LifelineChatOverlay({ visible, conceptTag, onClose }: Props) {
     }
   }, [visible, isPro]);
 
-  // Auto-send initial question when overlay opens
+  // Auto-send initial question once quota check resolves (locked === false).
+  // Guarding on locked === false (not !locked) prevents firing before the async
+  // getDailyUsage call in the effect above has settled from null.
   useEffect(() => {
-    if (visible && conceptTag && messages.length === 0 && !locked) {
+    if (visible && conceptTag && messages.length === 0 && locked === false) {
       const autoMsg = `היי, אני לא מבין/ה את הנושא "${conceptLabel}". אפשר הסבר פשוט?`;
       setMessages([{ role: "user", content: autoMsg }]);
       callGemini([{ role: "user", content: autoMsg }]);
       if (!isPro) {
-        incrementDailyUsage();
+        incrementDailyUsage(authId);
       }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [visible, conceptTag, locked]);
 
-  // Reset when closed
+  // Reset when closed — back to null so next open waits for quota check again.
   useEffect(() => {
     if (!visible) {
       setMessages([]);
       setInput("");
       setLoading(false);
-      setLocked(false);
+      setLocked(null);
     }
   }, [visible]);
 
@@ -280,8 +309,12 @@ export function LifelineChatOverlay({ visible, conceptTag, onClose }: Props) {
             </View>
           </Animated.View>
 
-          {/* Locked state, daily limit reached */}
-          {locked ? (
+          {/* Quota check in flight — spinner until getDailyUsage resolves */}
+          {locked === null ? (
+            <View style={st.quotaLoading} accessibilityLabel="טוען..." accessibilityLiveRegion="polite">
+              <ActivityIndicator size="large" color="#0891b2" accessibilityLabel="טוען..." />
+            </View>
+          ) : locked ? (
             <View style={st.lockedContainer}>
               <Lock size={48} color="#0891b2" />
               <Text style={st.lockedTitle}>ניצלת את ההסבר החינמי להיום</Text>
@@ -588,6 +621,12 @@ const st = StyleSheet.create({
   sendBtnDisabled: {
     backgroundColor: "#e5e7eb",
     shadowOpacity: 0,
+  },
+  // ── Quota loading ──
+  quotaLoading: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
   },
   // ── Locked state ──
   lockedContainer: {

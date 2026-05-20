@@ -60,7 +60,7 @@ export const DailyMissionCard = React.memo(function DailyMissionCard({ activeCha
         // Give total reward if all completed now
         const newlyCompletedCount = concepts.filter((c) => isCompleted(c.id) || c.id === id).length;
         if (newlyCompletedCount === totalConcepts && completedCount < totalConcepts) {
-          addCoins(20);
+          addCoins(20, 'daily-quest');
           successHaptic();
         }
       }

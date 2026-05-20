@@ -151,7 +151,10 @@ export const useNotificationStore = create<NotificationState & NotificationActio
       permissionGranted: false,
       scheduled: [],
       bannerDismissed: false,
-      preferences: { streak: true, chest: false, challenge: false, dailyChallenge: true, squadInvite: true, squadChest: true, morning: true, inactivity: true, marketHook: true, aiInsight: true, upgradeNudge: true },
+      // Apple 4.5.4: ALL notification preferences default to OFF on fresh install.
+      // Notifications are only scheduled after the user explicitly toggles a
+      // preference ON in Settings, which triggers the system permission prompt.
+      preferences: { streak: false, chest: false, challenge: false, dailyChallenge: false, squadInvite: false, squadChest: false, morning: false, inactivity: false, marketHook: false, aiInsight: false, upgradeNudge: false },
       lastScheduledDate: null as string | null,
       lastFinnCopyTitle: null as string | null,
       lastAIInsightNotifDate: null as string | null,
@@ -322,7 +325,8 @@ export const useNotificationStore = create<NotificationState & NotificationActio
 
       cancelAll: async (): Promise<void> => {
         await Notifications.cancelAllScheduledNotificationsAsync();
-        set({ scheduled: [], preferences: { streak: true, chest: false, challenge: false, dailyChallenge: true, squadInvite: true, squadChest: true, morning: true, inactivity: true, marketHook: true, aiInsight: true, upgradeNudge: true } });
+        // Apple 4.5.4: reset preferences to all-OFF (mirrors initial state).
+        set({ scheduled: [], preferences: { streak: false, chest: false, challenge: false, dailyChallenge: false, squadInvite: false, squadChest: false, morning: false, inactivity: false, marketHook: false, aiInsight: false, upgradeNudge: false } });
       },
 
       setPreference: (channelId, enabled) => {

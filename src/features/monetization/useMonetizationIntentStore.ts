@@ -2,9 +2,12 @@ import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import { zustandStorage } from '../../lib/zustandStorage';
 import type { GatedFeature } from '../subscription/useSubscriptionStore';
+import { useSubscriptionStore } from '../subscription/useSubscriptionStore';
 import { useUserStatsStore } from '../user-stats/useUserStatsStore';
 import { useEconomyStore } from '../economy/useEconomyStore';
 import { useAITelemetryStore } from '../ai-personalization/useAITelemetryStore';
+import { useBanditStore } from '../bandit/useBanditStore';
+import { getVariantPayload } from '../bandit/banditConfig';
 
 export type IntentTier = 'low' | 'medium' | 'high';
 
@@ -25,6 +28,7 @@ interface MonetizationIntentState {
   getLastTappedFeature: () => GatedFeature | null;
   canSendUpgradeNotif: () => boolean;
   markUpgradeNotifSent: () => void;
+  shouldShowPaywallNow: (feature: GatedFeature) => boolean;
 }
 
 const SEVEN_DAYS_MS = 7 * 24 * 60 * 60 * 1000;
@@ -109,6 +113,21 @@ export const useMonetizationIntentStore = create<MonetizationIntentState>()(
 
       markUpgradeNotifSent: () => {
         set({ lastUpgradeNotifAt: Date.now() });
+      },
+
+      shouldShowPaywallNow: (feature: GatedFeature): boolean => {
+        const variantId = useBanditStore.getState().selectVariant('upgrade_trigger_timing');
+        const variant = getVariantPayload('upgrade_trigger_timing', variantId);
+        switch (variant.trigger) {
+          case 'immediate':
+            return true;
+          case 'after_3_hearts_lost':
+            return useSubscriptionStore.getState().sessionHeartsLost >= 3;
+          case 'after_feature_blocked_twice': {
+            const tapsOnFeature = get().proTaps.filter((t) => t.feature === feature).length;
+            return tapsOnFeature >= 2;
+          }
+        }
       },
     }),
     {

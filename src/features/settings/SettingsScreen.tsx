@@ -221,8 +221,8 @@ export function SettingsScreen() {
   }
 
   function handleContactSupport() {
-    Linking.openURL("mailto:yoav.finplay@gmail.com?subject=FinPlay%20Support").catch(() => {
-      Alert.alert("שגיאה", "לא ניתן לפתוח את אפליקציית האימייל. ניתן לפנות ל-yoav.finplay@gmail.com");
+    Linking.openURL("mailto:support@finplay.me?subject=FinPlay%20Support").catch(() => {
+      Alert.alert("שגיאה", "לא ניתן לפתוח את אפליקציית האימייל. ניתן לפנות ל-support@finplay.me");
     });
   }
 
@@ -243,7 +243,7 @@ export function SettingsScreen() {
           text: "מחק לצמיתות",
           style: "destructive",
           onPress: () => {
-            Alert.alert("אישור אחרון", "האם אתה בטוח לחלוטין?", [
+            Alert.alert("אישור אחרון", "האם אתם בטוחים לחלוטין?", [
               { text: "ביטול", style: "cancel" },
               {
                 text: "כן, מחק",
@@ -629,7 +629,7 @@ export function SettingsScreen() {
                     />
                   }
                   label="צור קשר עם התמיכה"
-                  subtitle="yoav.finplay@gmail.com"
+                  subtitle="support@finplay.me"
                   onPress={handleContactSupport}
                 />
                 <Divider />

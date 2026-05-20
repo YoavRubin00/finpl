@@ -158,7 +158,7 @@ const styles = StyleSheet.create({
   sub: {
     color: "#6b7280",
     fontSize: 14,
-    textAlign: "center",
+    textAlign: "right",
     marginBottom: 22,
     writingDirection: "rtl",
   },

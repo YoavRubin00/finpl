@@ -34,13 +34,13 @@ const COPY_BY_TYPE: Record<AssetType, UnlockCopy> = {
     title: 'פתחת קריפטו!',
     subtitle: 'Bitcoin, Ethereum',
     body: 'סיימת את פרק 5, כל הכבוד. קריפטו נע 24/7 ותנודתיות "קיצונית". התחל בסכומים קטנים, וסחר רק בפלטפורמות מפוקחות.',
-    cta: 'בוא נלמד',
+    cta: 'בואו נלמד',
   },
   index: {
     title: 'פתחת מדדים',
     subtitle: 'SPY, QQQ, TA-125',
     body: 'מדדים הם הדרך הבטוחה ביותר להתחיל, פיזור מובנה בנכס אחד.',
-    cta: 'בוא נתחיל',
+    cta: 'בואו נתחיל',
   },
   commodity: {
     title: 'פתחת סחורות',

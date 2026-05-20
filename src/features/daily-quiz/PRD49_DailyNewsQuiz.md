@@ -153,7 +153,7 @@
     }
     ```
   - הוספה ל-union: `FeedItem = ... | FeedDailyQuiz`
-- [ ] עדכון `src/features/finfeed/FinFeedScreen.tsx`:
+- [ ] עדכון `src/features/inter-module-content/feedScrollStubs.tsx`:
   - Import `DailyQuizCard` + `useDailyQuizStore` + `refreshDailyQuiz`
   - קריאה ל-`refreshDailyQuiz()` ב-useEffect (mount)
   - הזרקת `FeedDailyQuiz` לפיד:

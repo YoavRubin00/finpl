@@ -43,19 +43,15 @@ export async function POST(request: Request): Promise<Response> {
     }
 
     const db = getDb();
-    
-    let userId: string | null = null;
-    if (authId !== 'guest') {
-      userId = await resolveUserId(db, authId);
-    }
-    
-    // Store either user UUID or anonymous auth ID string
-    const finalStoredId = userId ?? authId;
+
+    // user_id is now uuid + nullable. Resolve when possible; orphan/guest
+    // submissions are stored with NULL user_id and message preserved.
+    const userId = authId !== 'guest' ? await resolveUserId(db, authId) : null;
 
     await db
       .insert(userFeedback)
       .values({
-        userId: finalStoredId,
+        userId,
         message,
       });
 

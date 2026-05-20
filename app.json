@@ -2,7 +2,7 @@
   "expo": {
     "name": "FinPlay",
     "slug": "finpl",
-    "version": "1.0.0",
+    "version": "1.1.7",
     "scheme": "finpl",
     "description": "FinPlay — Learn finance through play. Gamified financial literacy for Gen-Z.",
     "platforms": [
@@ -12,9 +12,8 @@
     ],
     "icon": "./assets/IMAGES/icon-1024.png",
     "splash": {
-      "image": "./assets/IMAGES/icon-1024.png",
       "resizeMode": "contain",
-      "backgroundColor": "#0a1628"
+      "backgroundColor": "#0c1426"
     },
     "orientation": "portrait",
     "userInterfaceStyle": "dark",
@@ -56,7 +55,6 @@
       ],
       "expo-video",
       "expo-image",
-      "expo-audio",
       "expo-asset",
       "expo-apple-authentication",
       [
@@ -65,7 +63,37 @@
           "androidAppId": "ca-app-pub-3137283655458001~5785657257",
           "iosAppId": "ca-app-pub-3137283655458001~9543879379"
         }
-      ]
+      ],
+      [
+        "expo-tracking-transparency",
+        {
+          "userTrackingPermission": "FinPlay משתמשת במזהה הפרסום של המכשיר כדי להציג מודעות רלוונטיות ולשפר את חוויית המשחק. תוכל/י לסרב מבלי לאבד שום תוכן."
+        }
+      ],
+      [
+        "react-native-fbsdk-next",
+        {
+          "appID": "1156760033282798",
+          "clientToken": "55fcd48d206e7816e4cd52e1b4f3ac37",
+          "displayName": "FinPlay",
+          "scheme": "fb1156760033282798",
+          "advertiserIDCollectionEnabled": true,
+          "autoLogAppEventsEnabled": true,
+          "isAutoInitEnabled": true,
+          "iosUserTrackingPermission": "FinPlay משתמשת במזהה הפרסום כדי להציג מודעות רלוונטיות ולשפר את חוויית המשחק. תוכל/י לסרב מבלי לאבד שום תוכן."
+        }
+      ],
+      "./plugins/with-no-background-audio",
+      "@react-native-firebase/app",
+      [
+        "expo-build-properties",
+        {
+          "ios": {
+            "useFrameworks": "static"
+          }
+        }
+      ],
+      "./plugins/with-modular-podfile"
     ],
     "extra": {
       "router": {},
@@ -81,6 +109,7 @@
     },
     "android": {
       "package": "com.finplay.app",
+      "googleServicesFile": "./google-services.json",
       "adaptiveIcon": {
         "foregroundImage": "./assets/IMAGES/icon-1024.png",
         "backgroundColor": "#0a1628"
@@ -89,78 +118,192 @@
         "com.android.vending.BILLING"
       ],
       "blockedPermissions": [
-        "android.permission.ACTIVITY_RECOGNITION"
+        "android.permission.ACTIVITY_RECOGNITION",
+        "android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK",
+        "android.permission.FOREGROUND_SERVICE"
       ],
       "intentFilters": [
         {
           "action": "VIEW",
-          "category": ["DEFAULT", "BROWSABLE"],
-          "data": [{ "scheme": "com.finplay.app" }],
+          "category": [
+            "DEFAULT",
+            "BROWSABLE"
+          ],
+          "data": [
+            {
+              "scheme": "com.finplay.app"
+            }
+          ],
           "autoVerify": false
+        },
+        {
+          "action": "VIEW",
+          "category": [
+            "DEFAULT",
+            "BROWSABLE"
+          ],
+          "data": [
+            {
+              "scheme": "https",
+              "host": "finplay.me",
+              "pathPrefix": "/invite"
+            }
+          ],
+          "autoVerify": true
         }
       ]
     },
     "ios": {
       "bundleIdentifier": "com.finplay.app",
+      "googleServicesFile": "./GoogleService-Info.plist",
       "buildNumber": "1",
       "supportsTablet": false,
       "usesAppleSignIn": true,
+      "associatedDomains": [
+        "applinks:finplay.me"
+      ],
       "infoPlist": {
         "UIBackgroundModes": [],
         "CFBundleURLTypes": [
           {
-            "CFBundleURLSchemes": ["com.googleusercontent.apps.847177819309-mbb8nusv6r17oot0e49e1npbgmaecps0"]
+            "CFBundleURLSchemes": [
+              "com.googleusercontent.apps.847177819309-mbb8nusv6r17oot0e49e1npbgmaecps0"
+            ]
           }
         ],
-        "UIDeviceFamily": [1],
+        "UIDeviceFamily": [
+          1
+        ],
         "NSPrivacyPolicyURL": "https://yoavrubin00.github.io/finpl/privacy-policy.html",
         "ITSAppUsesNonExemptEncryption": false,
         "SKAdNetworkItems": [
-          { "SKAdNetworkIdentifier": "cstr6suwn9.skadnetwork" },
-          { "SKAdNetworkIdentifier": "4fzdc2evr5.skadnetwork" },
-          { "SKAdNetworkIdentifier": "2fnua5tdw4.skadnetwork" },
-          { "SKAdNetworkIdentifier": "ydx93a7ass.skadnetwork" },
-          { "SKAdNetworkIdentifier": "p78axxw29g.skadnetwork" },
-          { "SKAdNetworkIdentifier": "v72qych5uu.skadnetwork" },
-          { "SKAdNetworkIdentifier": "ludvb6z3bs.skadnetwork" },
-          { "SKAdNetworkIdentifier": "cp8zw746q7.skadnetwork" },
-          { "SKAdNetworkIdentifier": "3sh42y64q3.skadnetwork" },
-          { "SKAdNetworkIdentifier": "c6k4g5qg8m.skadnetwork" },
-          { "SKAdNetworkIdentifier": "s39g8k73mm.skadnetwork" },
-          { "SKAdNetworkIdentifier": "3qy4746246.skadnetwork" },
-          { "SKAdNetworkIdentifier": "3rd42ekr43.skadnetwork" },
-          { "SKAdNetworkIdentifier": "f38h382jlk.skadnetwork" },
-          { "SKAdNetworkIdentifier": "hs6bdukanm.skadnetwork" },
-          { "SKAdNetworkIdentifier": "prcb7njmu6.skadnetwork" },
-          { "SKAdNetworkIdentifier": "v4nxqhlyqp.skadnetwork" },
-          { "SKAdNetworkIdentifier": "wzmmz9fp6w.skadnetwork" },
-          { "SKAdNetworkIdentifier": "yclnxrl5pm.skadnetwork" },
-          { "SKAdNetworkIdentifier": "t38b2kh725.skadnetwork" },
-          { "SKAdNetworkIdentifier": "7ug5zh24hu.skadnetwork" },
-          { "SKAdNetworkIdentifier": "9rd848q2bz.skadnetwork" },
-          { "SKAdNetworkIdentifier": "n6fk4nfna4.skadnetwork" },
-          { "SKAdNetworkIdentifier": "kbd757ywx3.skadnetwork" },
-          { "SKAdNetworkIdentifier": "9t245vhmpl.skadnetwork" },
-          { "SKAdNetworkIdentifier": "a2p9lx4jpn.skadnetwork" },
-          { "SKAdNetworkIdentifier": "22mmun2rn5.skadnetwork" },
-          { "SKAdNetworkIdentifier": "4468km3ulz.skadnetwork" },
-          { "SKAdNetworkIdentifier": "2u9pt9hc89.skadnetwork" },
-          { "SKAdNetworkIdentifier": "8s468mfl3y.skadnetwork" },
-          { "SKAdNetworkIdentifier": "klf5c3l5u5.skadnetwork" },
-          { "SKAdNetworkIdentifier": "ppxm28t8ap.skadnetwork" },
-          { "SKAdNetworkIdentifier": "ecpz2srf59.skadnetwork" },
-          { "SKAdNetworkIdentifier": "uw77j35x4d.skadnetwork" },
-          { "SKAdNetworkIdentifier": "mlmmfzh3r3.skadnetwork" },
-          { "SKAdNetworkIdentifier": "578prtvx9j.skadnetwork" },
-          { "SKAdNetworkIdentifier": "4dzt52r2t5.skadnetwork" },
-          { "SKAdNetworkIdentifier": "gta9lk7p23.skadnetwork" },
-          { "SKAdNetworkIdentifier": "e5fvkxwrpn.skadnetwork" },
-          { "SKAdNetworkIdentifier": "8c4e2ghe7u.skadnetwork" },
-          { "SKAdNetworkIdentifier": "zq492l623r.skadnetwork" },
-          { "SKAdNetworkIdentifier": "3qcr597p9d.skadnetwork" }
+          {
+            "SKAdNetworkIdentifier": "cstr6suwn9.skadnetwork"
+          },
+          {
+            "SKAdNetworkIdentifier": "4fzdc2evr5.skadnetwork"
+          },
+          {
+            "SKAdNetworkIdentifier": "2fnua5tdw4.skadnetwork"
+          },
+          {
+            "SKAdNetworkIdentifier": "ydx93a7ass.skadnetwork"
+          },
+          {
+            "SKAdNetworkIdentifier": "p78axxw29g.skadnetwork"
+          },
+          {
+            "SKAdNetworkIdentifier": "v72qych5uu.skadnetwork"
+          },
+          {
+            "SKAdNetworkIdentifier": "ludvb6z3bs.skadnetwork"
+          },
+          {
+            "SKAdNetworkIdentifier": "cp8zw746q7.skadnetwork"
+          },
+          {
+            "SKAdNetworkIdentifier": "3sh42y64q3.skadnetwork"
+          },
+          {
+            "SKAdNetworkIdentifier": "c6k4g5qg8m.skadnetwork"
+          },
+          {
+            "SKAdNetworkIdentifier": "s39g8k73mm.skadnetwork"
+          },
+          {
+            "SKAdNetworkIdentifier": "3qy4746246.skadnetwork"
+          },
+          {
+            "SKAdNetworkIdentifier": "3rd42ekr43.skadnetwork"
+          },
+          {
+            "SKAdNetworkIdentifier": "f38h382jlk.skadnetwork"
+          },
+          {
+            "SKAdNetworkIdentifier": "hs6bdukanm.skadnetwork"
+          },
+          {
+            "SKAdNetworkIdentifier": "prcb7njmu6.skadnetwork"
+          },
+          {
+            "SKAdNetworkIdentifier": "v4nxqhlyqp.skadnetwork"
+          },
+          {
+            "SKAdNetworkIdentifier": "wzmmz9fp6w.skadnetwork"
+          },
+          {
+            "SKAdNetworkIdentifier": "yclnxrl5pm.skadnetwork"
+          },
+          {
+            "SKAdNetworkIdentifier": "t38b2kh725.skadnetwork"
+          },
+          {
+            "SKAdNetworkIdentifier": "7ug5zh24hu.skadnetwork"
+          },
+          {
+            "SKAdNetworkIdentifier": "9rd848q2bz.skadnetwork"
+          },
+          {
+            "SKAdNetworkIdentifier": "n6fk4nfna4.skadnetwork"
+          },
+          {
+            "SKAdNetworkIdentifier": "kbd757ywx3.skadnetwork"
+          },
+          {
+            "SKAdNetworkIdentifier": "9t245vhmpl.skadnetwork"
+          },
+          {
+            "SKAdNetworkIdentifier": "a2p9lx4jpn.skadnetwork"
+          },
+          {
+            "SKAdNetworkIdentifier": "22mmun2rn5.skadnetwork"
+          },
+          {
+            "SKAdNetworkIdentifier": "4468km3ulz.skadnetwork"
+          },
+          {
+            "SKAdNetworkIdentifier": "2u9pt9hc89.skadnetwork"
+          },
+          {
+            "SKAdNetworkIdentifier": "8s468mfl3y.skadnetwork"
+          },
+          {
+            "SKAdNetworkIdentifier": "klf5c3l5u5.skadnetwork"
+          },
+          {
+            "SKAdNetworkIdentifier": "ppxm28t8ap.skadnetwork"
+          },
+          {
+            "SKAdNetworkIdentifier": "ecpz2srf59.skadnetwork"
+          },
+          {
+            "SKAdNetworkIdentifier": "uw77j35x4d.skadnetwork"
+          },
+          {
+            "SKAdNetworkIdentifier": "mlmmfzh3r3.skadnetwork"
+          },
+          {
+            "SKAdNetworkIdentifier": "578prtvx9j.skadnetwork"
+          },
+          {
+            "SKAdNetworkIdentifier": "4dzt52r2t5.skadnetwork"
+          },
+          {
+            "SKAdNetworkIdentifier": "gta9lk7p23.skadnetwork"
+          },
+          {
+            "SKAdNetworkIdentifier": "e5fvkxwrpn.skadnetwork"
+          },
+          {
+            "SKAdNetworkIdentifier": "8c4e2ghe7u.skadnetwork"
+          },
+          {
+            "SKAdNetworkIdentifier": "zq492l623r.skadnetwork"
+          },
+          {
+            "SKAdNetworkIdentifier": "3qcr597p9d.skadnetwork"
+          }
         ],
-        "NSPhotoLibraryUsageDescription": "FinPlay מבקש גישה לתמונות רק אם תבחר/י לשתף תמונת פרופיל.",
-        "NSCameraUsageDescription": "FinPlay מבקש גישה למצלמה רק אם תבחר/י לצלם תמונת פרופיל.",
         "NSAppTransportSecurity": {
           "NSExceptionDomains": {
             "r2.dev": {
@@ -205,8 +348,40 @@
             ]
           }
         ],
-        "NSPrivacyTracking": false,
-        "NSPrivacyCollectedDataTypes": []
+        "NSPrivacyTracking": true,
+        "NSPrivacyTrackingDomains": [
+          "graph.facebook.com",
+          "connect.facebook.net",
+          "www.facebook.com"
+        ],
+        "NSPrivacyCollectedDataTypes": [
+          {
+            "NSPrivacyCollectedDataType": "NSPrivacyCollectedDataTypeDeviceID",
+            "NSPrivacyCollectedDataTypeLinked": true,
+            "NSPrivacyCollectedDataTypeTracking": true,
+            "NSPrivacyCollectedDataTypePurposes": [
+              "NSPrivacyCollectedDataTypePurposeAdvertising",
+              "NSPrivacyCollectedDataTypePurposeAnalytics"
+            ]
+          },
+          {
+            "NSPrivacyCollectedDataType": "NSPrivacyCollectedDataTypeProductInteraction",
+            "NSPrivacyCollectedDataTypeLinked": true,
+            "NSPrivacyCollectedDataTypeTracking": true,
+            "NSPrivacyCollectedDataTypePurposes": [
+              "NSPrivacyCollectedDataTypePurposeAdvertising",
+              "NSPrivacyCollectedDataTypePurposeAnalytics"
+            ]
+          },
+          {
+            "NSPrivacyCollectedDataType": "NSPrivacyCollectedDataTypePurchaseHistory",
+            "NSPrivacyCollectedDataTypeLinked": true,
+            "NSPrivacyCollectedDataTypeTracking": false,
+            "NSPrivacyCollectedDataTypePurposes": [
+              "NSPrivacyCollectedDataTypePurposeAnalytics"
+            ]
+          }
+        ]
       }
     }
   }

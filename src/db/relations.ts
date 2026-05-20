@@ -1,5 +1,5 @@
 import { relations } from "drizzle-orm/relations";
-import { userProfiles, moduleProgress, inventory, aiMentorUsage, paperPortfolio, paperTrades } from "./schema";
+import { userProfiles, moduleProgress, aiMentorUsage, paperPortfolio, paperTrades } from "./schema";
 
 export const moduleProgressRelations = relations(moduleProgress, ({one}) => ({
 	userProfile: one(userProfiles, {
@@ -10,17 +10,9 @@ export const moduleProgressRelations = relations(moduleProgress, ({one}) => ({
 
 export const userProfilesRelations = relations(userProfiles, ({many}) => ({
 	moduleProgresses: many(moduleProgress),
-	inventories: many(inventory),
 	aiMentorUsages: many(aiMentorUsage),
 	paperPortfolios: many(paperPortfolio),
 	paperTrades: many(paperTrades),
-}));
-
-export const inventoryRelations = relations(inventory, ({one}) => ({
-	userProfile: one(userProfiles, {
-		fields: [inventory.userId],
-		references: [userProfiles.id]
-	}),
 }));
 
 export const aiMentorUsageRelations = relations(aiMentorUsage, ({one}) => ({

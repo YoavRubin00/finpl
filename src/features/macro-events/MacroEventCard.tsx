@@ -41,6 +41,7 @@ import {
 import { useSubscriptionStore } from '../subscription/useSubscriptionStore';
 import { macroEventsData } from './macroEventsData';
 import { tapHaptic, successHaptic, errorHaptic } from '../../utils/haptics';
+import { useAppActive } from '../../hooks/useAppActive';
 
 export interface FeedMacroEventItem {
   id: string;
@@ -52,11 +53,13 @@ interface Props {
   item: FeedMacroEventItem;
   isActive: boolean;
   onAnswer?: () => void;
+  /** Inter-module overlay sets this to render a "המשך" button on the result. */
+  onContinue?: () => void;
 }
 
 type AnswerState = 'idle' | 'correct' | 'wrong';
 
-export const MacroEventCard = React.memo(function MacroEventCard({ item, isActive, onAnswer }: Props) {
+export const MacroEventCard = React.memo(function MacroEventCard({ item, isActive, onAnswer, onContinue }: Props) {
   const [currentEvent, setCurrentEvent] = useState<MacroEvent>(item.event);
   const event = currentEvent;
   const seenIdsRef = useRef<Set<string>>(new Set([item.event.id]));
@@ -68,6 +71,7 @@ export const MacroEventCard = React.memo(function MacroEventCard({ item, isActiv
   const resetSessionIfCooldownElapsed = useMacroEventStore((s) => s.resetSessionIfCooldownElapsed);
   const lastMacroSessionTime = useMacroEventStore((s) => s.lastMacroSessionTime);
   const isPro = useSubscriptionStore((s) => s.tier === 'pro' && s.status === 'active');
+  const appActive = useAppActive();
 
   useEffect(() => { resetSessionIfCooldownElapsed(); }, [isActive]);
 
@@ -85,9 +89,10 @@ export const MacroEventCard = React.memo(function MacroEventCard({ item, isActiv
       setCooldownLeft(`${h}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`);
     }
     tick();
+    if (!appActive) return;
     const id = setInterval(tick, 1000);
     return () => clearInterval(id);
-  }, [isBlocked, lastMacroSessionTime]);
+  }, [isBlocked, lastMacroSessionTime, appActive]);
 
   const [answerState, setAnswerState] = useState<AnswerState>('idle');
 
@@ -460,6 +465,11 @@ export const MacroEventCard = React.memo(function MacroEventCard({ item, isActiv
                   </Text>
                 </>
               )}
+              {onContinue && (
+                <Pressable onPress={onContinue} style={styles.continueBtn} accessibilityRole="button" accessibilityLabel="המשך">
+                  <Text style={styles.continueBtnText}>המשך</Text>
+                </Pressable>
+              )}
             </Animated.View>
           </View>
         )}
@@ -685,4 +695,25 @@ const styles = StyleSheet.create({
     paddingHorizontal: 18, paddingVertical: 10, borderRadius: 999,
   },
   proBtnText: { fontSize: 13, fontWeight: '800', color: '#facc15', writingDirection: 'rtl' },
+  continueBtn: {
+    marginTop: 14,
+    alignSelf: 'stretch',
+    backgroundColor: '#0ea5e9',
+    borderRadius: 18,
+    paddingVertical: 14,
+    alignItems: 'center',
+    borderBottomWidth: 4,
+    borderBottomColor: '#0369a1',
+    shadowColor: '#0ea5e9',
+    shadowOpacity: 0.4,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 8,
+  },
+  continueBtnText: {
+    fontSize: 17,
+    fontWeight: '900',
+    color: '#ffffff',
+    letterSpacing: 0.5,
+  },
 });

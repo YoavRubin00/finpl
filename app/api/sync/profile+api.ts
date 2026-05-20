@@ -94,6 +94,22 @@ export async function POST(request: Request): Promise<Response> {
     const longestStreak = clampNumber(body.longestStreak, 0, 3650);
     const isPro = typeof body.isPro === 'boolean' ? body.isPro : undefined;
 
+    // Build conditional UPDATE set — never include undefined fields. Drizzle's
+    // behavior with `undefined` in `.set()` is version-dependent and has caused
+    // data-loss incidents (xp/coins overwritten to 0 on login). See history in
+    // legacy api/sync/profile.ts for the original bug.
+    const setFields: Record<string, unknown> = { updatedAt: new Date().toISOString() };
+    if (displayName !== undefined) setFields.displayName = displayName;
+    if (email !== undefined) setFields.email = email;
+    if (avatarUrl !== undefined) setFields.avatarUrl = avatarUrl;
+    if (level !== undefined) setFields.level = level;
+    if (xp !== undefined) setFields.xp = xp;
+    if (coins !== undefined) setFields.coins = coins;
+    if (gems !== undefined) setFields.gems = gems;
+    if (currentStreak !== undefined) setFields.currentStreak = currentStreak;
+    if (longestStreak !== undefined) setFields.longestStreak = longestStreak;
+    if (isPro !== undefined) setFields.isPro = isPro;
+
     await db
       .insert(userProfiles)
       .values({
@@ -111,19 +127,7 @@ export async function POST(request: Request): Promise<Response> {
       })
       .onConflictDoUpdate({
         target: userProfiles.authId,
-        set: {
-          displayName,
-          email,
-          avatarUrl,
-          level,
-          xp,
-          coins,
-          gems,
-          currentStreak,
-          longestStreak,
-          isPro,
-          updatedAt: new Date().toISOString(),
-        },
+        set: setFields,
       });
 
     const rows = await db

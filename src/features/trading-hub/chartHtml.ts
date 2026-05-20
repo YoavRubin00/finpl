@@ -24,7 +24,7 @@ export const DEFAULT_CHART_THEME: ChartHtmlTheme = {
   downColor: '#fb7185',        // coral instead of harsh red
   lineColor: '#22d3ee',        // cyan-400, soft
   lineArea: 'rgba(34,211,238,0.16)',
-  ma: '#60a5fa',               // sky blue, soft
+  ma: '#2563eb',               // blue-600, clearly visible on light background
   rsi: '#c4b5fd',              // lilac, soft
   volumeUp: 'rgba(52,211,153,0.28)',
   volumeDown: 'rgba(251,113,133,0.28)',
@@ -224,7 +224,7 @@ export function buildChartHtml({ mode, data, timeframe, maPeriod, theme }: Build
     if (payload.showIndicators) {
       var maSeries = mainChart.addLineSeries({
         color: t.ma,
-        lineWidth: 2,
+        lineWidth: 3,
         priceLineVisible: false,
         lastValueVisible: false,
       });

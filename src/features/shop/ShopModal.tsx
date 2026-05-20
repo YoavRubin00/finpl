@@ -7,7 +7,13 @@ import LottieView from "lottie-react-native";
 import { useRouter } from "expo-router";
 import { useEconomyStore } from "../economy/useEconomyStore";
 import { useSubscriptionStore } from "../subscription/useSubscriptionStore";
+import { useAuthStore } from "../auth/useAuthStore";
 import { ShopItemCard } from "./ShopItemCard";
+import { EmptyPremium } from "../../components/svg/shop/EmptyStates";
+import { SparkleBurst } from "../../components/ui/SparkleBurst";
+import { MysteryBoxCard } from "../../components/ui/MysteryBoxCard";
+import { SharkInsightToast } from "../../components/ui/SharkInsightToast";
+import { FINN_EMPATHIC, FINN_TALKING } from "../retention-loops/finnMascotConfig";
 import { ConfirmModal } from "./ConfirmModal";
 import { IAPModal } from "./IAPModal";
 import { SHOP_ITEMS, SHOP_CATEGORIES } from "./shopItems";
@@ -20,6 +26,7 @@ import type { ShopCategory, ShopItem, GemBundle } from "./types";
 
 const RTL = { writingDirection: "rtl" as const, textAlign: "right" as const };
 const ITEM_STAGGER = 70;
+const PRO_COIN_DISCOUNT = 0.2;
 
 // Gem → Coin exchange rates (synced with ShopScreen)
 const GEM_EXCHANGE_RATES = [
@@ -51,20 +58,35 @@ export function ShopModal() {
   const addCoins = useEconomyStore((s) => s.addCoins);
   const restoreAllHearts = useSubscriptionStore((s) => s.restoreAllHearts);
   const isPro = useSubscriptionStore((s) => s.tier === "pro" && s.status === "active");
+  const addOwnedAvatar = useAuthStore((s) => s.addOwnedAvatar);
+  const setAvatar = useAuthStore((s) => s.setAvatar);
 
   const [activeCategory, setActiveCategory] = useState<ShopCategory>("avatars");
   const [pendingItem, setPendingItem] = useState<ShopItem | null>(null);
   const [selectedBundle, setSelectedBundle] = useState<GemBundle | null>(null);
+  const [mysteryToast, setMysteryToast] = useState<'noGems' | 'comingSoon' | null>(null);
+  /** Bumped (Date.now()) on every successful purchase to fire confetti burst.
+   *  0 = never fired. The SparkleBurst component re-runs its animation each time
+   *  this number changes. */
+  const [sparkleTrigger, setSparkleTrigger] = useState(0);
 
   const visibleItems = SHOP_ITEMS.filter((i) => i.category === activeCategory);
   const isAvatarCategory = activeCategory === "avatars";
 
+  const effectiveCoinCost = useCallback(
+    (item: ShopItem): number =>
+      isPro && item.coinCost > 0
+        ? Math.floor(item.coinCost * (1 - PRO_COIN_DISCOUNT))
+        : item.coinCost,
+    [isPro],
+  );
+
   const canAffordItem = useCallback(
     (item: ShopItem): boolean => {
       if ((item.gemCost ?? 0) > 0) return gems >= (item.gemCost ?? 0);
-      return coins >= item.coinCost;
+      return coins >= effectiveCoinCost(item);
     },
-    [coins, gems],
+    [coins, gems, effectiveCoinCost],
   );
 
   const handleBuyPress = useCallback(
@@ -81,9 +103,13 @@ export function ShopModal() {
     const isGemItem = (pendingItem.gemCost ?? 0) > 0;
     const success = isGemItem
       ? spendGems(pendingItem.gemCost ?? 0)
-      : spendCoins(pendingItem.coinCost);
+      : spendCoins(effectiveCoinCost(pendingItem));
 
     if (success) {
+      // Hay Day pattern: confetti burst on successful purchase. Pure visual joy.
+      setSparkleTrigger(Date.now());
+      const eco = useEconomyStore.getState();
+      const ONE_HOUR = 60 * 60 * 1000;
       if (pendingItem.id === "heart-refill-full") {
         restoreAllHearts();
       } else if (pendingItem.id === "heart-refill-1") {
@@ -93,13 +119,56 @@ export function ShopModal() {
           useSubscriptionStore.setState({ hearts: current + 1 });
         }
       } else if (pendingItem.id === "streak-freeze") {
-        useEconomyStore.getState().addStreakFreezes(1);
+        eco.addStreakFreezes(1);
       } else if (pendingItem.id === "streak-freeze-bundle") {
-        useEconomyStore.getState().addStreakFreezes(3);
+        eco.addStreakFreezes(3);
+      // ── Boost packs ──
+      } else if (pendingItem.id === "boost-xp-2x-1h") {
+        eco.activateBoost(pendingItem.id, ONE_HOUR, { xpMultiplier: 2 });
+      } else if (pendingItem.id === "boost-coins-2x-1h") {
+        eco.activateBoost(pendingItem.id, ONE_HOUR, { coinMultiplier: 2 });
+      } else if (pendingItem.id === "boost-mega-1h") {
+        eco.activateBoost(pendingItem.id, ONE_HOUR, {
+          xpMultiplier: 2,
+          coinMultiplier: 2,
+          questRewardMultiplier: 2,
+        });
+      } else if (pendingItem.id === "boost-weekend") {
+        // Weekend Boost — ride out until Saturday 22:00 local. Generous fallback
+        // of 28 hours when purchased mid-weekend; reduce-to-zero if past window.
+        const now = new Date();
+        const dayOfWeek = now.getDay(); // 0=Sun, 5=Fri, 6=Sat
+        const target = new Date(now);
+        if (dayOfWeek <= 5) {
+          // Set target to next Saturday 22:00
+          target.setDate(now.getDate() + (6 - dayOfWeek));
+          target.setHours(22, 0, 0, 0);
+        } else {
+          // Saturday — until 22:00 today
+          target.setHours(22, 0, 0, 0);
+        }
+        const ms = Math.max(target.getTime() - now.getTime(), ONE_HOUR);
+        eco.activateBoost(pendingItem.id, ms, {
+          xpMultiplier: 1.5,
+          coinMultiplier: 1.5,
+        });
+      // ── Streak insurance ──
+      } else if (pendingItem.id === "streak-shield-week") {
+        eco.activateStreakShield('week');
+      } else if (pendingItem.id === "streak-shield-month") {
+        eco.activateStreakShield('month');
+      } else if (pendingItem.id === "streak-revival-elite") {
+        eco.grantEliteRevival();
+      // ── Avatars: register ownership + auto-equip the freshly bought avatar.
+      // The id IS the avatar id (`avatar-saver` etc.) — same string flows through
+      // ownedAvatars, profile.avatarId, and AvatarImage.getAvatarSvgIcon().
+      } else if (pendingItem.id.startsWith("avatar-")) {
+        addOwnedAvatar(pendingItem.id);
+        setAvatar(pendingItem.id);
       }
     }
     setPendingItem(null);
-  }, [pendingItem, spendCoins, spendGems, restoreAllHearts]);
+  }, [pendingItem, spendCoins, spendGems, effectiveCoinCost, restoreAllHearts, addOwnedAvatar, setAvatar]);
 
   const handleCancel = useCallback(() => {
     setPendingItem(null);
@@ -132,6 +201,9 @@ export function ShopModal() {
       accessibilityViewIsModal
     >
       <SafeAreaView style={ms.container} edges={["top", "bottom"]}>
+        {/* Confetti burst on successful purchase (Hay Day pattern). Re-fires
+            on every purchase via the Date.now() trigger key. */}
+        <SparkleBurst trigger={sparkleTrigger} />
         {/* Header */}
         <View style={ms.header}>
           <Pressable onPress={handleClose} style={ms.closeBtn} accessibilityLabel="סגור" accessibilityRole="button" hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
@@ -204,31 +276,44 @@ export function ShopModal() {
           showsVerticalScrollIndicator={false}
         >
           {/* ── Category Items, TOP ── */}
-          {isAvatarCategory && (
-            <View style={ms.devBanner}>
-              <Text style={ms.devBannerText}>🚧 אווטארים בפיתוח, בקרוב!</Text>
+          {visibleItems.length === 0 ? (
+            // Premium tab (or any other empty category) — show "coming soon" placeholder.
+            <View style={{ alignItems: 'center', paddingVertical: 24, gap: 12 }}>
+              <EmptyPremium size={180} />
+              <Text style={{ fontSize: 14, fontWeight: '700', color: '#475569', textAlign: 'center', writingDirection: 'rtl' }}>
+                בקרוב — תוכן פרימיום ייחודי
+              </Text>
+              <Text style={{ fontSize: 12, color: '#64748b', textAlign: 'center', writingDirection: 'rtl', maxWidth: 260 }}>
+                אנחנו מכינים פיצ׳רים מיוחדים שיגיעו רק למשתמשי Pro. עקבו!
+              </Text>
             </View>
-          )}
-
-          {visibleItems.map((item, index) => (
-            <AnimatedShopItem key={item.id} index={index}>
-              {isAvatarCategory ? (
-                <View style={{ opacity: 0.45 }} pointerEvents="none">
-                  <ShopItemCard
-                    item={item}
-                    canAfford={false}
-                    onBuyPress={() => {}}
-                  />
-                </View>
-              ) : (
+          ) : (
+            visibleItems.map((item, index) => (
+              <AnimatedShopItem key={item.id} index={index}>
                 <ShopItemCard
                   item={item}
                   canAfford={canAffordItem(item)}
                   onBuyPress={() => handleBuyPress(item)}
+                  effectiveCoinCost={effectiveCoinCost(item)}
                 />
-              )}
-            </AnimatedShopItem>
-          ))}
+              </AnimatedShopItem>
+            ))
+          )}
+
+          <View style={ms.divider} />
+
+          {/* ── Mystery Box (gem-priced loot box) ── */}
+          <View style={{ marginBottom: 16 }}>
+            <MysteryBoxCard
+              cost={50}
+              possibleRewards={['XP', '💎', '🪙', '❤️', '⚡']}
+              totalRewardCount={17}
+              onPress={() => {
+                if (gems < 50) { setMysteryToast('noGems'); return; }
+                setMysteryToast('comingSoon');
+              }}
+            />
+          </View>
 
           <View style={ms.divider} />
 
@@ -377,7 +462,8 @@ export function ShopModal() {
           <ConfirmModal
             visible
             itemName={pendingItem.name}
-            coinCost={pendingItem.coinCost}
+            coinCost={effectiveCoinCost(pendingItem)}
+            originalCoinCost={isPro && pendingItem.coinCost > 0 ? pendingItem.coinCost : undefined}
             gemCost={pendingItem.gemCost}
             onConfirm={handleConfirm}
             onCancel={handleCancel}
@@ -393,6 +479,23 @@ export function ShopModal() {
             onPurchaseSuccess={() => setSelectedBundle(null)}
           />
         )}
+
+        <SharkInsightToast
+          visible={mysteryToast === 'noGems'}
+          shark={FINN_EMPATHIC}
+          title="אין מספיק יהלומים"
+          body="צריך 50 💎 לפתיחת תיבת הפתעה. צבר עוד קצת!"
+          accentColor="#f59e0b"
+          onDismiss={() => setMysteryToast(null)}
+        />
+        <SharkInsightToast
+          visible={mysteryToast === 'comingSoon'}
+          shark={FINN_TALKING}
+          title="בקרוב!"
+          body="תיבות הפתעה יושקו בעדכון הבא. תישארו מחוברים!"
+          accentColor="#a855f7"
+          onDismiss={() => setMysteryToast(null)}
+        />
       </SafeAreaView>
     </Modal>
   );

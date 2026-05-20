@@ -75,7 +75,7 @@
 - Split feed pool into `boosted` (module-hooks/comics whose moduleId is in knowledgeGaps) and `rest`
 - Both groups shuffled independently, then interleaved with boosted items at every 3rd position
 - When no knowledgeGaps exist, feed behaves exactly as before (seeded shuffle)
-- Files affected: `src/features/finfeed/FinFeedScreen.tsx` (updated), `src/features/ai-personalization/PRD34_AIPersonalization.md` (updated)
+- Files affected: `src/features/inter-module-content/feedScrollStubs.tsx` (updated), `src/features/ai-personalization/PRD34_AIPersonalization.md` (updated)
 - Learnings for next cycles:
   - Feed items with `moduleId` field: `module-hook` and `comic` types — both can be matched to knowledgeGaps
   - Videos/quotes use `category` field, not moduleId — future improvement could map gaps to categories

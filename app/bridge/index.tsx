@@ -9,8 +9,9 @@ import { useTutorialStore } from "../../src/stores/useTutorialStore";
 const RTL = { writingDirection: "rtl" as const, textAlign: "right" as const };
 
 export default function BridgePage() {
-  const isWalkthrough = !useTutorialStore((s) => s.hasSeenAppWalkthrough);
-  const [showWelcome, setShowWelcome] = useState(true);
+  const hasSeenWalkthrough = useTutorialStore((s) => s.hasSeenAppWalkthrough);
+  const isWalkthrough = !hasSeenWalkthrough;
+  const [showWelcome, setShowWelcome] = useState(!hasSeenWalkthrough);
 
   const dismiss = useCallback(() => {
     setShowWelcome(false);
@@ -23,8 +24,8 @@ export default function BridgePage() {
 
   return (
     <Pressable style={styles.overlay} onPress={dismiss}>
-      <Animated.View entering={FadeIn.duration(300)} style={styles.backdrop} />
-      <Animated.View entering={FadeInDown.delay(200).duration(400)} style={styles.card}>
+      <Animated.View entering={FadeIn.duration(300)} style={styles.backdrop} pointerEvents="none" />
+      <Animated.View entering={FadeInDown.delay(200).duration(400)} style={styles.card} pointerEvents="none">
         <ExpoImage
           source={FINN_HAPPY}
           style={{ width: 120, height: 120 }}

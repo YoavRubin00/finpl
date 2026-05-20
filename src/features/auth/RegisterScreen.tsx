@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Image as ExpoImage } from "expo-image";
 import {
   View,
@@ -18,8 +18,9 @@ import type { PasswordStrength } from "./types";
 import { useAuthStore } from "./useAuthStore";
 import { useGoogleAuthStore } from "./useGoogleAuthStore";
 import { useAppleAuth } from "./useAppleAuth";
-import { getAvatarById, DEFAULT_AVATAR_EMOJI } from "../avatars/avatarData";
+import { AvatarImage } from "../avatars/AvatarImage";
 import { ConfettiExplosion } from "../../components/ui/ConfettiExplosion";
+import { captureEvent } from "../../lib/posthog";
 
 const strengthLabels: Record<PasswordStrength, string> = {
   weak: "סיסמה חלשה",
@@ -74,8 +75,11 @@ export function RegisterScreen() {
   const signIn = useAuthStore((s) => s.signIn);
   const convertGuestToUser = useAuthStore((s) => s.convertGuestToUser);
   const isGuest = useAuthStore((s) => s.isGuest);
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
   const enterGuestMode = useAuthStore((s) => s.enterGuestMode);
   const avatarId = useAuthStore((s) => s.profile?.avatarId ?? null);
+  const authError = useAuthStore((s) => s.authError);
+  const clearAuthError = useAuthStore((s) => s.clearAuthError);
   const promptGoogleSignIn = useGoogleAuthStore((s) => s.promptGoogleSignIn);
   const googleReady = useGoogleAuthStore((s) => s.isReady);
   const { promptAppleSignIn, isAvailable: appleAvailable } = useAppleAuth();
@@ -90,6 +94,23 @@ export function RegisterScreen() {
   const [showSuccess, setShowSuccess] = useState(false);
 
   const passwordStrength = getPasswordStrength(password);
+
+  useEffect(() => {
+    captureEvent('signup_form_viewed', { is_guest: isGuest });
+  }, [isGuest]);
+
+  // Deferred navigation — only fire router.replace once the auth store has
+  // actually committed isAuthenticated=true (and isGuest=false after a guest
+  // conversion). Without this, the 1.8s celebration timeout would sometimes
+  // race against the global routing observer in _layout.tsx, which bounced
+  // converted-guest users back to the register screen.
+  useEffect(() => {
+    if (!showSuccess) return;
+    if (!isAuthenticated || isGuest) return;
+    const dest = returnTo ? decodeURIComponent(returnTo) : "/(tabs)/";
+    const t = setTimeout(() => router.replace(dest as never), 1800);
+    return () => clearTimeout(t);
+  }, [showSuccess, isAuthenticated, isGuest, returnTo, router]);
 
   const isValid =
     name.trim().length >= 2 &&
@@ -144,9 +165,10 @@ export function RegisterScreen() {
                 height: 52, width: 52, alignItems: "center", justifyContent: "center",
                 borderRadius: 26, borderWidth: 2, borderColor: "#0891b2",
                 backgroundColor: "#f0f9ff",
+                overflow: "hidden",
               }}
             >
-              <Text style={{ fontSize: 28 }}>{getAvatarById(avatarId)?.emoji ?? DEFAULT_AVATAR_EMOJI}</Text>
+              <AvatarImage avatarId={avatarId} size={48} emojiStyle={{ fontSize: 28 }} />
             </View>
           ) : (
             <ExpoImage source={FINN_HELLO} accessible={false} style={{ width: 72, height: 72 }} contentFit="contain" />
@@ -190,6 +212,23 @@ export function RegisterScreen() {
             showsVerticalScrollIndicator={false}
             keyboardShouldPersistTaps="handled"
           >
+            {/* Inline auth error banner — set by Apple/Google/email auth failures.
+                Stays visible until the user taps X or attempts auth again. */}
+            {authError && (
+              <View
+                accessibilityRole="alert"
+                accessibilityLiveRegion="polite"
+                style={{ flexDirection: 'row-reverse', alignItems: 'center', gap: 8, backgroundColor: '#fef2f2', borderColor: '#fecaca', borderWidth: 1, borderRadius: 12, paddingHorizontal: 12, paddingVertical: 10, marginBottom: 12 }}
+              >
+                <Text style={{ flex: 1, color: '#991b1b', fontSize: 13, fontWeight: '700', writingDirection: 'rtl', textAlign: 'right' }}>
+                  {authError}
+                </Text>
+                <Pressable onPress={clearAuthError} accessibilityRole="button" accessibilityLabel="סגור התראה" hitSlop={8}>
+                  <Text style={{ color: '#991b1b', fontWeight: '900', fontSize: 16 }}>✕</Text>
+                </Pressable>
+              </View>
+            )}
+
             {/* Full Name */}
             <TextInput
               style={{ ...inputStyle, marginBottom: 8 }}
@@ -331,14 +370,17 @@ export function RegisterScreen() {
               disabled={!isValid || showSuccess}
               onPress={() => {
                 if (isValid && !showSuccess) {
+                  captureEvent('signup_method_clicked', { method: 'email' });
                   if (isGuest) {
                     convertGuestToUser(name.trim(), email.trim());
                   } else {
                     signIn(name.trim(), email.trim());
                   }
-                  const dest = returnTo ? decodeURIComponent(returnTo) : "/(tabs)/";
+                  // Navigation deferred to the useEffect below — it waits for
+                  // the zustand state to actually reflect isAuthenticated before
+                  // replacing, so the routing layer in _layout.tsx can't bounce
+                  // us back to register during a mid-update render window.
                   setShowSuccess(true);
-                  setTimeout(() => router.replace(dest as never), 1800);
                 }
               }}
               accessibilityRole="button"
@@ -381,7 +423,10 @@ export function RegisterScreen() {
             {/* Apple Sign-In, required by App Store Guideline 4.8 (iOS only) */}
             {appleAvailable && (
               <Pressable
-                onPress={() => promptAppleSignIn()}
+                onPress={() => {
+                  captureEvent('signup_method_clicked', { method: 'apple' });
+                  promptAppleSignIn();
+                }}
                 accessibilityRole="button"
                 accessibilityLabel="הירשם עם Apple"
                 style={{
@@ -410,7 +455,10 @@ export function RegisterScreen() {
             {/* Google Sign-In */}
             <Pressable
               disabled={!googleReady}
-              onPress={() => promptGoogleSignIn?.()}
+              onPress={() => {
+                captureEvent('signup_method_clicked', { method: 'google' });
+                promptGoogleSignIn?.();
+              }}
               accessibilityRole="button"
               accessibilityLabel="הירשם עם Google"
               style={{
@@ -460,7 +508,10 @@ export function RegisterScreen() {
 
             {/* Skip registration, guest mode → onboarding */}
             <Pressable
-              onPress={() => enterGuestMode()}
+              onPress={() => {
+                captureEvent('signup_skipped_for_guest');
+                enterGuestMode();
+              }}
               accessibilityRole="button"
               accessibilityLabel="התחל ללא חשבון"
               style={{

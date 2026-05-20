@@ -1,4 +1,4 @@
-import { useCallback } from "react";
+import { useCallback, useEffect } from "react";
 import { Image as ExpoImage } from "expo-image";
 import { View, Text, StyleSheet, Dimensions, ImageBackground, Pressable } from "react-native";
 import Animated, {
@@ -8,7 +8,12 @@ import Animated, {
 } from "react-native-reanimated";
 import { useRouter } from "expo-router";
 import LottieView from "lottie-react-native";
+import { useVideoPlayer, VideoView } from "expo-video";
 import { FINN_STANDARD } from "../retention-loops/finnMascotConfig";
+
+/** Pro subscription celebration video — Finn in golden cape */
+const PRO_VIDEO_URL =
+  "https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/finn-videos/finn-subscription.mp4";
 import {
   Heart,
   Zap,
@@ -44,6 +49,22 @@ export function ProWelcomeScreen() {
       router.replace("/(tabs)" as never);
     }
   }, [markSeen, router]);
+
+  const proPlayer = useVideoPlayer(PRO_VIDEO_URL, (p) => {
+    p.loop = true;
+    p.muted = true;
+    p.bufferOptions = {
+      preferredForwardBufferDuration: 5,
+      waitsToMinimizeStalling: false,
+      minBufferForPlayback: 0.5,
+    };
+  });
+  useEffect(() => {
+    try { proPlayer.play(); } catch { /* ignore */ }
+    return () => {
+      try { proPlayer.pause(); } catch { /* ignore */ }
+    };
+  }, [proPlayer]);
 
   return (
     <ImageBackground source={OCEAN_BG} style={styles.root} resizeMode="cover">
@@ -118,10 +139,10 @@ export function ProWelcomeScreen() {
           autoPlay
           loop
         />
-        <ExpoImage source={FINN_STANDARD} accessible={false}
+        <VideoView
+          player={proPlayer}
           style={styles.finnLottie}
-         
-         
+          nativeControls={false}
           contentFit="contain"
         />
       </Animated.View>

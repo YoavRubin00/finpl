@@ -29,7 +29,13 @@ const toYahooTicker = (assetId: string): string =>
 
 interface ChartPoint {
   timestamp: number;
+  /** Close price, kept as `price` for backward compatibility. */
   price: number;
+  open: number;
+  high: number;
+  low: number;
+  close: number;
+  volume: number;
 }
 
 interface QuoteResponse {
@@ -37,6 +43,7 @@ interface QuoteResponse {
   ticker: string;
   timeframe: Timeframe;
   price: number;
+  previousClose: number | null;
   chart: ChartPoint[];
 }
 
@@ -89,15 +96,37 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
 
     const currentPrice: number = result.meta.regularMarketPrice;
+    const rawPrevClose = result.meta.previousClose ?? result.meta.chartPreviousClose ?? null;
+    const previousClose: number | null =
+      typeof rawPrevClose === 'number' && isFinite(rawPrevClose) ? rawPrevClose : null;
     const timestamps: number[] = result.timestamp ?? [];
-    const closes: Array<number | null> = result.indicators?.quote?.[0]?.close ?? [];
+
+    // Yahoo returns parallel arrays: open/high/low/close/volume per timestamp.
+    // When a field is missing for a given bar, fall back to `close` (flat candle).
+    const q = result.indicators?.quote?.[0] ?? {};
+    const opens: Array<number | null> = q.open ?? [];
+    const highs: Array<number | null> = q.high ?? [];
+    const lows: Array<number | null> = q.low ?? [];
+    const closes: Array<number | null> = q.close ?? [];
+    const volumes: Array<number | null> = q.volume ?? [];
 
     const chart: ChartPoint[] = [];
     for (let i = 0; i < timestamps.length; i++) {
-      const price = closes[i];
-      if (price !== null && price !== undefined) {
-        chart.push({ timestamp: timestamps[i] * 1000, price });
-      }
+      const close = closes[i];
+      if (close === null || close === undefined) continue;
+      const open = typeof opens[i] === 'number' ? (opens[i] as number) : close;
+      const high = typeof highs[i] === 'number' ? (highs[i] as number) : close;
+      const low = typeof lows[i] === 'number' ? (lows[i] as number) : close;
+      const volume = typeof volumes[i] === 'number' ? (volumes[i] as number) : 0;
+      chart.push({
+        timestamp: timestamps[i] * 1000,
+        price: close,
+        open,
+        high,
+        low,
+        close,
+        volume,
+      });
     }
 
     const body: QuoteResponse = {
@@ -105,6 +134,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       ticker,
       timeframe: tf,
       price: currentPrice,
+      previousClose,
       chart,
     };
 

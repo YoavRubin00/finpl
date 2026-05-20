@@ -7,6 +7,7 @@ import { Alert, Platform } from "react-native";
 import { useAuthStore } from "./useAuthStore";
 import { useGoogleAuthStore } from "./useGoogleAuthStore";
 import { getApiBase } from "../../db/apiBase";
+import { captureEvent } from "../../lib/posthog";
 
 WebBrowser.maybeCompleteAuthSession();
 
@@ -71,8 +72,13 @@ export function useGoogleAuth() {
       details.hasAccessToken = !!response.authentication?.accessToken;
       details.hasIdToken = !!response.authentication?.idToken;
     }
+    if (response.type === 'cancel' || response.type === 'dismiss') {
+      captureEvent('auth_cancelled', { method: 'google' });
+    } else {
+      captureEvent('auth_failed', { method: 'google', error_code: String(details.errorCode ?? details.type) });
+      useAuthStore.getState().setAuthError("הכניסה עם Google נכשלה. נסה שוב או בחר שיטה אחרת.");
+    }
     console.error("[GoogleAuth] OAuth response failed", details);
-    Alert.alert("OAuth Debug — response", JSON.stringify(details, null, 2));
   }, [response]);
 
   const verifyWithServer = async (token: string): Promise<{ email: string; name: string; syncToken: string | null; hasProfile: boolean } | null> => {
@@ -123,7 +129,8 @@ export function useGoogleAuth() {
       const verified = await verifyWithServer(token);
       if (!verified) {
         console.error("[GoogleAuth] verifyWithServer returned null", { isJwt, tokenLength: token.length });
-        Alert.alert("OAuth Debug — verify failed", "verifyWithServer returned null. Check API /api/auth/verify status & response.");
+        captureEvent('auth_failed', { method: 'google', error_code: 'verify_returned_null' });
+        useAuthStore.getState().setAuthError("השרת לא הצליח לאמת את הכניסה. נסה שוב.");
         return;
       }
       const email = verified.email || googleUser?.email || '';
@@ -138,7 +145,8 @@ export function useGoogleAuth() {
       }
     } catch (error) {
       console.error("[GoogleAuth] fetchUserInfo threw", error);
-      Alert.alert("OAuth Debug — fetchUserInfo threw", String(error));
+      captureEvent('auth_failed', { method: 'google', error_code: 'fetchUserInfo_threw' });
+      useAuthStore.getState().setAuthError("שגיאת רשת בכניסה. בדוק את החיבור ונסה שוב.");
     }
   };
 
@@ -148,21 +156,15 @@ export function useGoogleAuth() {
       isReady: !!request,
       promptGoogleSignIn: async () => {
         if (!request) {
-          Alert.alert(
-            "OAuth Debug — request not ready",
-            JSON.stringify({
-              androidClientIdLen: GOOGLE_ANDROID_CLIENT_ID.length,
-              iosClientIdLen: GOOGLE_IOS_CLIENT_ID.length,
-              webClientIdLen: GOOGLE_WEB_CLIENT_ID.length,
-              platform: Platform.OS,
-            }, null, 2),
-          );
+          useAuthStore.getState().setAuthError("הכניסה עם Google לא זמינה כרגע. נסה שוב בעוד רגע.");
           return;
         }
         try {
           await promptAsync();
         } catch (error) {
-          Alert.alert("OAuth Debug — promptAsync threw", String(error));
+          captureEvent('auth_failed', { method: 'google', error_code: 'promptAsync_threw' });
+          useAuthStore.getState().setAuthError("שגיאה בפתיחת חלון הכניסה. נסה שוב.");
+          console.error("[GoogleAuth] promptAsync threw", error);
         }
       }
     });

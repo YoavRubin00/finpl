@@ -101,7 +101,7 @@ export function AccessibilityStatementScreen() {
             title="יצירת קשר בנושא נגישות"
             body={`נתקלת בבעיית נגישות? נשמח לסייע ולשפר.
 
-דוא"ל: yoav.finplay@gmail.com
+דוא"ל: support@finplay.me
 נושא: "פניית נגישות, FinPlay"
 
 אנו מתחייבים לטפל בכל פנייה בנושא נגישות תוך 14 ימי עסקים.`}

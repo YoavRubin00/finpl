@@ -62,8 +62,8 @@ export function TradingPanel({ assetId, currentPrice, onTrade }: TradingPanelPro
   const [limitPriceText, setLimitPriceText] = useState('');
   const [feedback, setFeedback] = useState<string | null>(null);
 
-  const coins = useEconomyStore((s) => s.coins);
-  const spendCoins = useEconomyStore((s) => s.spendCoins);
+  const virtualBalance = useEconomyStore((s) => s.virtualBalance);
+  const spendVirtual = useEconomyStore((s) => s.spendVirtual);
   const addCoins = useEconomyStore((s) => s.addCoins);
   const positions = useTradingStore((s) => s.positions);
   const pendingOrders = useTradingStore((s) => s.pendingOrders);
@@ -72,7 +72,7 @@ export function TradingPanel({ assetId, currentPrice, onTrade }: TradingPanelPro
 
   const amount = Math.floor(Number(amountText) || 0);
   const limitPrice = parseFloat(limitPriceText) || 0;
-  const isAmountValid = amount > 0 && amount <= coins;
+  const isAmountValid = amount > 0 && amount <= virtualBalance;
   const isLimitValid = isAmountValid && limitPrice > 0;
 
   const tabConfig = ORDER_TABS.find((t) => t.id === activeTab)!;
@@ -87,7 +87,7 @@ export function TradingPanel({ assetId, currentPrice, onTrade }: TradingPanelPro
   const handleMarketBuy = () => {
     if (!isAmountValid || currentPrice <= 0) return;
     tapHaptic();
-    const success = spendCoins(amount);
+    const success = spendVirtual(amount);
     if (success) {
       onTrade('buy', amount, currentPrice);
       setAmountText('');
@@ -99,7 +99,7 @@ export function TradingPanel({ assetId, currentPrice, onTrade }: TradingPanelPro
     if (!isLimitValid || currentPrice <= 0) return;
     tapHaptic();
     // Always execute immediately regardless of limit price
-    const success = spendCoins(amount);
+    const success = spendVirtual(amount);
     if (success) {
       onTrade('buy', amount, currentPrice);
       setAmountText('');
@@ -110,16 +110,17 @@ export function TradingPanel({ assetId, currentPrice, onTrade }: TradingPanelPro
 
   const handleClosePosition = (pos: ActivePosition) => {
     tapHaptic();
+    // closePosition credits virtual_balance with the PnL-adjusted return
+    // internally — see useTradingStore. Do NOT credit again here.
     const closed = closePosition(pos.id);
     if (!closed) return;
     const pnlFactor = 1 + closed.pnlPercent / 100;
     const returned = Math.max(0, Math.round(closed.amountInvested * pnlFactor));
-    if (returned > 0) addCoins(returned);
     const pnlSign = closed.pnlPercent >= 0 ? '+' : '';
     showFeedback(
       closed.pnlPercent >= 0
-        ? `🎉 מכרת ברווח! ${pnlSign}${closed.pnlPercent.toFixed(2)}% • קיבלת ${returned.toLocaleString()} `
-        : `📉 מכרת בהפסד ${pnlSign}${closed.pnlPercent.toFixed(2)}% • קיבלת ${returned.toLocaleString()} `,
+        ? `🎉 מכרת ברווח! ${pnlSign}${closed.pnlPercent.toFixed(2)}% • קיבלת $${returned.toLocaleString()}`
+        : `📉 מכרת בהפסד ${pnlSign}${closed.pnlPercent.toFixed(2)}% • קיבלת $${returned.toLocaleString()}`,
     );
   };
 
@@ -172,7 +173,7 @@ export function TradingPanel({ assetId, currentPrice, onTrade }: TradingPanelPro
         <View style={styles.formSection}>
           <View style={styles.balanceRow}>
             <Text style={styles.balanceLabel}>💰 יתרה:</Text>
-            <Text style={styles.balanceValue}>{coins.toLocaleString()} מטבעות</Text>
+            <Text style={styles.balanceValue}>${virtualBalance.toLocaleString('he-IL', { maximumFractionDigits: 0 })}</Text>
           </View>
           <View style={styles.inputRow}>
             <TextInput
@@ -184,12 +185,12 @@ export function TradingPanel({ assetId, currentPrice, onTrade }: TradingPanelPro
               onChangeText={setAmountText}
               maxLength={8}
             accessibilityLabel="כמה מטבעות להשקיע?" />
-            <Pressable style={styles.maxBtn} onPress={() => { tapHaptic(); setAmountText(String(coins)); }}>
+            <Pressable style={styles.maxBtn} onPress={() => { tapHaptic(); setAmountText(String(Math.floor(virtualBalance))); }}>
               <Text style={styles.maxText}>MAX</Text>
             </Pressable>
           </View>
           {amountText.length > 0 && !isAmountValid && (
-            <Text style={styles.errorText}>{amount <= 0 ? 'הזן מספר חיובי' : 'אין מספיק מטבעות'}</Text>
+            <Text style={styles.errorText}>{amount <= 0 ? 'הזן מספר חיובי' : 'אין מספיק יתרה'}</Text>
           )}
           <View style={styles.pricePreview}>
             <Text style={styles.pricePreviewLabel}>מחיר שוק נוכחי</Text>
@@ -213,7 +214,7 @@ export function TradingPanel({ assetId, currentPrice, onTrade }: TradingPanelPro
         <View style={styles.formSection}>
           <View style={styles.balanceRow}>
             <Text style={styles.balanceLabel}>💰 יתרה:</Text>
-            <Text style={styles.balanceValue}>{coins.toLocaleString()} מטבעות</Text>
+            <Text style={styles.balanceValue}>${virtualBalance.toLocaleString('he-IL', { maximumFractionDigits: 0 })}</Text>
           </View>
           {/* Limit price input */}
           <Text style={styles.fieldLabel}>מחיר לימיט יעד ($)</Text>
@@ -239,12 +240,12 @@ export function TradingPanel({ assetId, currentPrice, onTrade }: TradingPanelPro
               onChangeText={setAmountText}
               maxLength={8}
             accessibilityLabel="כמה מטבעות?" />
-            <Pressable style={styles.maxBtn} onPress={() => { tapHaptic(); setAmountText(String(coins)); }}>
+            <Pressable style={styles.maxBtn} onPress={() => { tapHaptic(); setAmountText(String(Math.floor(virtualBalance))); }}>
               <Text style={styles.maxText}>MAX</Text>
             </Pressable>
           </View>
           {amountText.length > 0 && !isAmountValid && (
-            <Text style={styles.errorText}>{amount <= 0 ? 'הזן מספר חיובי' : 'אין מספיק מטבעות'}</Text>
+            <Text style={styles.errorText}>{amount <= 0 ? 'הזן מספר חיובי' : 'אין מספיק יתרה'}</Text>
           )}
           <Pressable style={styles.ctaWrapper} onPress={handleLimitBuy} disabled={!isLimitValid}>
             <LinearGradient

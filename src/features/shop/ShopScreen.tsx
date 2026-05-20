@@ -25,6 +25,8 @@ import { useTutorialStore } from '../../stores/useTutorialStore';
 import { ShopItemCard } from './ShopItemCard';
 import { ConfirmModal } from './ConfirmModal';
 import { IAPModal } from './IAPModal';
+import { SharkInsightToast } from '../../components/ui/SharkInsightToast';
+import { FINN_EMPATHIC, FINN_TALKING } from '../retention-loops/finnMascotConfig';
 import { SHOP_ITEMS, SHOP_CATEGORIES } from './shopItems';
 import { GEM_BUNDLES } from './gemBundles';
 // coinBundles removed, gold is bought via gem exchange only
@@ -34,6 +36,10 @@ import { LottieIcon } from '../../components/ui/LottieIcon';
 import { tapHaptic, successHaptic } from '../../utils/haptics';
 import { useTheme } from '../../hooks/useTheme';
 import { ProBadge } from '../../components/ui/ProBadge';
+import { ChampionCard } from '../../components/ui/ChampionCard';
+import { MysteryBoxCard } from '../../components/ui/MysteryBoxCard';
+import { AvatarImage } from '../avatars/AvatarImage';
+import { getPyramidStatus } from '../../utils/progression';
 import type { ShopCategory, ShopItem, GemBundle, CoinBundle } from './types';
 
 type AnyBundle = GemBundle | CoinBundle;
@@ -182,6 +188,7 @@ const CATEGORY_EMOJI: Record<ShopCategory, string> = {
   hearts: '❤️',
   hints: '💡',
   protection: '🛡️',
+  boosts: '🚀',
   cosmetics: '✨',
   premium: '💎',
   avatars: '👤',
@@ -205,53 +212,79 @@ const GOLD_TIER_IMAGES: ImageSourcePropType[] = [
 ];
 
 // ── Gem Bundle Card (GEMS.jpg style, 3 per row, icy blue) ──────────────────
+/** Tier theme — colored border + top-pill + sale-sticker variant.
+ *  Mapped from bundle properties (isBestValue / isPromo / bonusLabel string). */
+function getBundleTier(bundle: GemBundle): { border: string; glow: string; pillBg: readonly [string, string]; pillText: string; topPill: string | null; bonusBg: readonly [string, string] } {
+  if (bundle.isBestValue) {
+    return { border: '#facc15', glow: '#facc15', pillBg: ['#fbbf24', '#d4a017'] as const, pillText: '#1a1035', topPill: '★ הכי משתלם', bonusBg: ['#16a34a', '#15803d'] as const };
+  }
+  if (bundle.isPromo) {
+    return { border: '#22d3ee', glow: '#22d3ee', pillBg: ['#22d3ee', '#0891b2'] as const, pillText: '#fff', topPill: null, bonusBg: ['#16a34a', '#15803d'] as const };
+  }
+  if (bundle.bonusLabel?.includes('פופולרי')) {
+    return { border: '#a855f7', glow: '#a855f7', pillBg: ['#dc2626', '#b91c1c'] as const, pillText: '#fff', topPill: 'פופולרי', bonusBg: ['#16a34a', '#15803d'] as const };
+  }
+  return { border: '#22d3ee', glow: '#0891b2', pillBg: ['#22d3ee', '#0891b2'] as const, pillText: '#fff', topPill: null, bonusBg: ['#16a34a', '#15803d'] as const };
+}
+
+/** Strip "פופולרי" suffix off the bonus label so the corner sticker shows just "+25%". */
+function getCleanBonusLabel(bundle: GemBundle): string | null {
+  if (!bundle.bonusLabel) return null;
+  const match = bundle.bonusLabel.match(/^[+-]?\d+%/);
+  return match ? match[0] : bundle.bonusLabel;
+}
+
 function GemBundleCard({ bundle, onPress, index }: { bundle: GemBundle; onPress: () => void; index: number }) {
+  const tier = getBundleTier(bundle);
+  const cleanBonus = getCleanBonusLabel(bundle);
   return (
     <Animated.View entering={FadeInDown.duration(150)} style={styles2.gemGridItem}>
       <AnimatedPressable
         onPress={() => { tapHaptic(); onPress(); }}
         style={[
           styles2.gemCard,
-          bundle.isBestValue && { borderColor: '#22d3ee', borderWidth: 3 },
+          { borderColor: tier.border, shadowColor: tier.glow },
         ]}
         accessibilityRole="button"
         accessibilityLabel={`${bundle.name}, ${bundle.priceLabel}`}
       >
-        {/* Best value badge */}
-        {bundle.isBestValue && (
-          <LinearGradient colors={['#0891b2', '#22d3ee']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={styles.bestBadge}>
-            <Text style={styles.bestBadgeText}>הכי משתלם</Text>
+        {/* Top-center tier pill ("הכי משתלם ★" / "פופולרי") */}
+        {tier.topPill && (
+          <LinearGradient colors={tier.pillBg} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={styles2.tierPill} pointerEvents="none">
+            <Text style={[styles2.tierPillText, { color: tier.pillText }]} allowFontScaling={false} numberOfLines={1}>{tier.topPill}</Text>
           </LinearGradient>
         )}
 
-        {/* Title */}
-        <Text style={styles2.gemCardTitle}>{bundle.name}</Text>
+        {/* Bonus sticker — top-right green tilted pill with "+25%" etc. */}
+        {cleanBonus && (
+          <LinearGradient colors={tier.bonusBg} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles2.bonusSticker} pointerEvents="none">
+            <Text style={styles2.bonusStickerText} allowFontScaling={false} numberOfLines={1}>{cleanBonus}</Text>
+          </LinearGradient>
+        )}
 
-        {/* Diamond icon */}
+        {/* Diamond stack visual */}
         <View style={styles2.gemImageArea}>
           <Image
             source={GEM_TIER_IMAGES[bundle.id] as number}
-            style={{ width: 96, height: 96, borderRadius: 10 }}
+            style={{ width: 96, height: 96 }}
             resizeMode="contain"
             accessible={false}
           />
         </View>
 
-        {/* Bonus */}
-        {bundle.bonusLabel && (
-          <View style={styles2.gemBonusPill}>
-            <Text style={styles2.gemBonusText}>{bundle.bonusLabel}</Text>
-          </View>
-        )}
+        {/* Big amount + label */}
+        <Text style={styles2.gemAmountBig} allowFontScaling={false}>{bundle.gems.toLocaleString('he-IL')}</Text>
+        <Text style={styles2.gemAmountLabel} allowFontScaling={false}>יהלומים</Text>
 
-        {/* Price button */}
+        {/* Green price button */}
         <LinearGradient
-          colors={['#22d3ee', '#0891b2']}
+          colors={['#16a34a', '#15803d']}
           start={{ x: 0, y: 0 }}
           end={{ x: 0, y: 1 }}
           style={styles2.gemPriceBtn}
+          pointerEvents="none"
         >
-          <Text style={styles2.gemPriceBtnText}>{bundle.priceLabel} ➤</Text>
+          <Text style={styles2.gemPriceBtnText} allowFontScaling={false}>{bundle.priceLabel}</Text>
         </LinearGradient>
       </AnimatedPressable>
     </Animated.View>
@@ -265,6 +298,8 @@ export function ShopScreen() {
   const theme = useTheme();
   const coins = useEconomyStore((s) => s.coins);
   const gems = useEconomyStore((s) => s.gems);
+  const xp = useEconomyStore((s) => s.xp);
+  const streak = useEconomyStore((s) => s.streak);
   const spendCoins = useEconomyStore((s) => s.spendCoins);
   const spendGems = useEconomyStore((s) => s.spendGems);
   const addCoins = useEconomyStore((s) => s.addCoins);
@@ -274,10 +309,13 @@ export function ShopScreen() {
   const ownedAvatars = useAuthStore((s) => s.profile?.ownedAvatars ?? []);
   const setAvatar = useAuthStore((s) => s.setAvatar);
   const addOwnedAvatar = useAuthStore((s) => s.addOwnedAvatar);
+  const displayName = useAuthStore((s) => s.displayName);
+  const { layer } = getPyramidStatus(xp);
 
   const [activeCategory, setActiveCategory] = useState<ShopCategory>('hearts');
   const [pendingItem, setPendingItem] = useState<ShopItem | null>(null);
   const [selectedBundle, setSelectedBundle] = useState<AnyBundle | null>(null);
+  const [mysteryToast, setMysteryToast] = useState<'noGems' | 'comingSoon' | null>(null);
   const shopScrollRef = useRef<ScrollView>(null);
   const walkthroughScreen = useTutorialStore((s) => s.walkthroughActiveScreen);
 
@@ -319,8 +357,10 @@ export function ShopScreen() {
 
   const handleBuyPress = useCallback((item: ShopItem) => {
     if (isAvatarItem(item)) {
-      const rawId = item.id.replace('avatar-', '');
-      if (ownedAvatars.includes(rawId)) { setAvatar(rawId); successHaptic(); return; }
+      // Use the full id (`avatar-saver`, etc.) — that's how the new avatar
+      // system flows through ownedAvatars → profile.avatarId → AvatarImage's
+      // SVG lookup. Stripping the prefix orphans the ownership check.
+      if (ownedAvatars.includes(item.id)) { setAvatar(item.id); successHaptic(); return; }
     }
     if (!canAffordItem(item)) return;
     setPendingItem(item);
@@ -331,19 +371,52 @@ export function ShopScreen() {
     const isGem = (pendingItem.gemCost ?? 0) > 0;
     const ok = isGem ? spendGems(pendingItem.gemCost ?? 0) : spendCoins(pendingItem.coinCost);
     if (ok) {
+      const eco = useEconomyStore.getState();
+      const ONE_HOUR = 60 * 60 * 1000;
       if (pendingItem.id === 'heart-refill-full') restoreAllHearts();
       else if (pendingItem.id === 'heart-refill-1') {
         const s = useSubscriptionStore.getState();
         if (s.hearts < 4) useSubscriptionStore.setState({ hearts: s.hearts + 1 });
       } else if (pendingItem.id === 'streak-freeze') {
-        useEconomyStore.getState().addStreakFreezes(1);
+        eco.addStreakFreezes(1);
         successHaptic();
       } else if (pendingItem.id === 'streak-freeze-bundle') {
-        useEconomyStore.getState().addStreakFreezes(3);
+        eco.addStreakFreezes(3);
+        successHaptic();
+      } else if (pendingItem.id === 'boost-xp-2x-1h') {
+        eco.activateBoost(pendingItem.id, ONE_HOUR, { xpMultiplier: 2 });
+        successHaptic();
+      } else if (pendingItem.id === 'boost-coins-2x-1h') {
+        eco.activateBoost(pendingItem.id, ONE_HOUR, { coinMultiplier: 2 });
+        successHaptic();
+      } else if (pendingItem.id === 'boost-mega-1h') {
+        eco.activateBoost(pendingItem.id, ONE_HOUR, { xpMultiplier: 2, coinMultiplier: 2, questRewardMultiplier: 2 });
+        successHaptic();
+      } else if (pendingItem.id === 'boost-weekend') {
+        // Active until next Saturday 22:00 local; min 1h fallback if past window.
+        const now = new Date();
+        const dayOfWeek = now.getDay();
+        const target = new Date(now);
+        if (dayOfWeek <= 5) {
+          target.setDate(now.getDate() + (6 - dayOfWeek));
+          target.setHours(22, 0, 0, 0);
+        } else {
+          target.setHours(22, 0, 0, 0);
+        }
+        const ms = Math.max(target.getTime() - now.getTime(), ONE_HOUR);
+        eco.activateBoost(pendingItem.id, ms, { xpMultiplier: 1.5, coinMultiplier: 1.5 });
+        successHaptic();
+      } else if (pendingItem.id === 'streak-shield-week') {
+        eco.activateStreakShield('week');
+        successHaptic();
+      } else if (pendingItem.id === 'streak-shield-month') {
+        eco.activateStreakShield('month');
+        successHaptic();
+      } else if (pendingItem.id === 'streak-revival-elite') {
+        eco.grantEliteRevival();
         successHaptic();
       } else if (isAvatarItem(pendingItem)) {
-        const rawId = pendingItem.id.replace('avatar-', '');
-        addOwnedAvatar(rawId); setAvatar(rawId); successHaptic();
+        addOwnedAvatar(pendingItem.id); setAvatar(pendingItem.id); successHaptic();
       }
     }
     setPendingItem(null);
@@ -394,84 +467,7 @@ export function ShopScreen() {
             </Animated.View>
           )}
 
-          {/* ── GEM → COIN EXCHANGE (GOLD.jpg card style) ── */}
-          <Animated.View style={exchangeStyle}>
-            <LinearGradient colors={[...SECTION_COLORS.exchange.gradient]} style={styles.sectionBlock}>
-              <DiamondPattern />
-              <SectionBgLottie source={require('../../../assets/lottie/wired-flat-413-money-bag-hover-shake.json')} active={isFocused} />
-              <SectionHeader title="המרת ג'מס" subtitle={`יש לך ${gems} 💎`} />
-              <View style={styles2.exchangeCardGrid}>
-                {GEM_EXCHANGE_RATES.map((rate, i) => {
-                  const can = gems >= rate.gems;
-                  return (
-                    <Animated.View key={rate.gems} entering={FadeInDown.duration(150)} style={styles.goldGridItem}>
-                      <AnimatedPressable
-                        onPress={() => handleGemExchange(rate.gems, rate.coins)}
-                        style={[styles.goldCard, !can && { opacity: 0.5 }]}
-                        accessibilityRole="button"
-                        accessibilityLabel={`המר ${rate.gems} ג׳מס ל-${rate.coins.toLocaleString()} מטבעות`}
-                        accessibilityState={{ disabled: !can }}
-                      >
-                        {rate.best && (
-                          <LinearGradient colors={['#0891b2', '#22d3ee']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={styles.bestBadge}>
-                            <Text style={styles.bestBadgeText}>הכי שווה</Text>
-                          </LinearGradient>
-                        )}
-                        <View style={styles.goldImageArea}>
-                          <Image
-                            source={GOLD_TIER_IMAGES[i] as number}
-                            style={{ width: 82, height: 82, borderRadius: 10 }}
-                            resizeMode="cover"
-                            accessible={false}
-                          />
-                        </View>
-                        {/* Blue diamond price */}
-                        <View style={styles.goldPriceRow}>
-                          <Text style={styles.goldPriceNum}>{rate.gems}</Text>
-                          <Text style={{ fontSize: 14 }}>💎</Text>
-                        </View>
-                      </AnimatedPressable>
-                    </Animated.View>
-                  );
-                })}
-              </View>
-            </LinearGradient>
-          </Animated.View>
-
-          <TransitionStrip from={SECTION_COLORS.exchange.bottom} to={SECTION_COLORS.gems.gradient[0]} />
-
-          {/* ── GEM BUNDLES ── */}
-          <Animated.View style={gemsStyle}>
-            <LinearGradient colors={[...SECTION_COLORS.gems.gradient]} style={styles.sectionBlock}>
-              <DiamondPattern />
-              <SectionBgLottie source={require('../../../assets/lottie/Diamond.json')} active={isFocused} />
-              <View style={{ position: 'absolute', left: 16, bottom: 16, opacity: 0.08 }} pointerEvents="none">
-                <LottieIcon source={require('../../../assets/lottie/wired-flat-1103-confetti-hover-pinch.json')} size={80} autoPlay loop active={isFocused} />
-              </View>
-              <SectionHeader title="ג'מס פרימיום" subtitle="רכישה אמיתית · מיידי" />
-              <View style={styles2.gemBundleGrid}>
-                {GEM_BUNDLES.map((b, i) => (
-                  <GemBundleCard key={b.id} bundle={b} index={i} onPress={() => setSelectedBundle(b)} />
-                ))}
-              </View>
-            </LinearGradient>
-          </Animated.View>
-
-          <TransitionStrip from={SECTION_COLORS.gems.bottom} to={SECTION_COLORS.deals.gradient[0]} />
-
-          {/* ── DAILY DEALS ── */}
-          <Animated.View entering={FadeInDown.duration(150)}>
-            <LinearGradient colors={[...SECTION_COLORS.deals.gradient]} style={styles.sectionBlock}>
-              <DiamondPattern />
-              <SectionBgLottie source={require('../../../assets/lottie/wired-flat-100-price-tag-sale-hover-flutter.json')} active={isFocused} />
-              <SectionHeader title="דילים יומיים" />
-              <DailyDealsSection />
-            </LinearGradient>
-          </Animated.View>
-
-          <TransitionStrip from={SECTION_COLORS.deals.bottom} to={SECTION_COLORS.items.gradient[0]} />
-
-          {/* ── SHOP ITEMS ── */}
+          {/* ── SHOP ITEMS (TOP — primary surface) ── */}
           <Animated.View style={itemsStyle}>
             <LinearGradient colors={[...SECTION_COLORS.items.gradient]} style={styles.sectionBlock}>
               <DiamondPattern />
@@ -523,15 +519,14 @@ export function ShopScreen() {
               <View style={styles.bundleGrid}>
                 {visibleItems.map((item, i) => {
                   const isAvatar = isAvatarItem(item);
-                  const rawId = item.id.replace('avatar-', '');
                   return (
                     <Animated.View key={item.id} entering={FadeInDown.duration(150)} style={styles.gridItem}>
                       <ShopItemCard
                         item={item}
                         canAfford={canAffordItem(item)}
                         onBuyPress={() => handleBuyPress(item)}
-                        isEquipped={isAvatar && avatarId === rawId}
-                        isOwned={isAvatar && ownedAvatars.includes(rawId)}
+                        isEquipped={isAvatar && avatarId === item.id}
+                        isOwned={isAvatar && ownedAvatars.includes(item.id)}
                       />
                     </Animated.View>
                   );
@@ -545,10 +540,124 @@ export function ShopScreen() {
             </LinearGradient>
           </Animated.View>
 
+          <TransitionStrip from={SECTION_COLORS.items.bottom} to={SECTION_COLORS.deals.gradient[0]} />
+
+          {/* ── DAILY DEALS ── */}
+          <Animated.View entering={FadeInDown.duration(150)}>
+            <LinearGradient colors={[...SECTION_COLORS.deals.gradient]} style={styles.sectionBlock}>
+              <DiamondPattern />
+              <SectionBgLottie source={require('../../../assets/lottie/wired-flat-100-price-tag-sale-hover-flutter.json')} active={isFocused} />
+              <SectionHeader title="דילים יומיים" />
+              <DailyDealsSection />
+            </LinearGradient>
+          </Animated.View>
+
+          <TransitionStrip from={SECTION_COLORS.deals.bottom} to={SECTION_COLORS.gems.gradient[0]} />
+
+          {/* ── GEM BUNDLES (premium IAP) ── */}
+          <Animated.View style={gemsStyle}>
+            <LinearGradient colors={[...SECTION_COLORS.gems.gradient]} style={styles.sectionBlock}>
+              <DiamondPattern />
+              <SectionBgLottie source={require('../../../assets/lottie/Diamond.json')} active={isFocused} />
+              <View style={{ position: 'absolute', left: 16, bottom: 16, opacity: 0.08 }} pointerEvents="none">
+                <LottieIcon source={require('../../../assets/lottie/wired-flat-1103-confetti-hover-pinch.json')} size={80} autoPlay loop active={isFocused} />
+              </View>
+              <SectionHeader title="ג'מס פרימיום" subtitle="רכישה אמיתית · מיידי" />
+              <View style={styles2.gemBundleGrid}>
+                {GEM_BUNDLES.map((b, i) => (
+                  <GemBundleCard key={b.id} bundle={b} index={i} onPress={() => setSelectedBundle(b)} />
+                ))}
+              </View>
+            </LinearGradient>
+          </Animated.View>
+
+          <TransitionStrip from={SECTION_COLORS.gems.bottom} to={SECTION_COLORS.deals.gradient[0]} />
+
+          {/* ── CHAMPION CARD + MYSTERY BOX (showcase row) ── */}
+          <Animated.View entering={FadeInDown.duration(150)}>
+            <LinearGradient colors={[...SECTION_COLORS.deals.gradient]} style={styles.sectionBlock}>
+              <DiamondPattern />
+              <View style={styles2.championRow}>
+                <View style={styles2.championHalf}>
+                  <ChampionCard
+                    name={displayName ?? 'שחקן'}
+                    level={layer}
+                    xp={xp}
+                    streak={streak}
+                    title={
+                      layer >= 5 ? 'פלטינה' :
+                      layer >= 3 ? 'זהב' :
+                      layer >= 2 ? 'כסף' : 'ברונזה'
+                    }
+                    avatar={
+                      <AvatarImage avatarId={avatarId} size={70} />
+                    }
+                  />
+                </View>
+                <View style={styles2.championHalf}>
+                  <MysteryBoxCard
+                    cost={50}
+                    possibleRewards={['XP', '💎', '🪙', '❤️', '⚡']}
+                    totalRewardCount={12}
+                    onPress={() => {
+                      if (gems < 50) { setMysteryToast('noGems'); return; }
+                      setMysteryToast('comingSoon');
+                    }}
+                  />
+                </View>
+              </View>
+            </LinearGradient>
+          </Animated.View>
+
+          <TransitionStrip from={SECTION_COLORS.deals.bottom} to={SECTION_COLORS.exchange.gradient[0]} />
+
+          {/* ── GEM → COIN EXCHANGE (bottom — discoverable but not the headline) ── */}
+          <Animated.View style={exchangeStyle}>
+            <LinearGradient colors={[...SECTION_COLORS.exchange.gradient]} style={styles.sectionBlock}>
+              <DiamondPattern />
+              <SectionBgLottie source={require('../../../assets/lottie/wired-flat-413-money-bag-hover-shake.json')} active={isFocused} />
+              <SectionHeader title="המרת ג'מס" subtitle={`יש לך ${gems} 💎`} />
+              <View style={styles2.exchangeCardGrid}>
+                {GEM_EXCHANGE_RATES.map((rate, i) => {
+                  const can = gems >= rate.gems;
+                  return (
+                    <Animated.View key={rate.gems} entering={FadeInDown.duration(150)} style={styles.goldGridItem}>
+                      <AnimatedPressable
+                        onPress={() => handleGemExchange(rate.gems, rate.coins)}
+                        style={[styles.goldCard, !can && { opacity: 0.5 }]}
+                        accessibilityRole="button"
+                        accessibilityLabel={`המר ${rate.gems} ג׳מס ל-${rate.coins.toLocaleString()} מטבעות`}
+                        accessibilityState={{ disabled: !can }}
+                      >
+                        {rate.best && (
+                          <LinearGradient colors={['#0891b2', '#22d3ee']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={styles.bestBadge}>
+                            <Text style={styles.bestBadgeText}>הכי שווה</Text>
+                          </LinearGradient>
+                        )}
+                        <View style={styles.goldImageArea}>
+                          <Image
+                            source={GOLD_TIER_IMAGES[i] as number}
+                            style={{ width: 82, height: 82, borderRadius: 10 }}
+                            resizeMode="cover"
+                            accessible={false}
+                          />
+                        </View>
+                        <View style={styles.goldPriceRow}>
+                          <Text style={styles.goldPriceNum}>{rate.gems}</Text>
+                          <Text style={{ fontSize: 14 }}>💎</Text>
+                        </View>
+                      </AnimatedPressable>
+                    </Animated.View>
+                  );
+                })}
+              </View>
+            </LinearGradient>
+          </Animated.View>
+
           {/* ── PRO CTA ── */}
           {!isPro && (
             <>
-              <TransitionStrip from={SECTION_COLORS.items.bottom} to={SECTION_COLORS.pro.gradient[0]} />
+              <TransitionStrip from={SECTION_COLORS.exchange.bottom} to={SECTION_COLORS.pro.gradient[0]} />
               <Animated.View style={proStyle}>
                 <LinearGradient colors={[...SECTION_COLORS.pro.gradient]} style={styles.sectionBlock}>
                   <DiamondPattern />
@@ -614,6 +723,23 @@ export function ShopScreen() {
         bundle={selectedBundle}
         onDismiss={() => setSelectedBundle(null)}
         onPurchaseSuccess={() => setSelectedBundle(null)}
+      />
+
+      <SharkInsightToast
+        visible={mysteryToast === 'noGems'}
+        shark={FINN_EMPATHIC}
+        title="אין מספיק יהלומים"
+        body="צריך 50 💎 לפתיחת תיבת הפתעה. צבר עוד קצת!"
+        accentColor="#f59e0b"
+        onDismiss={() => setMysteryToast(null)}
+      />
+      <SharkInsightToast
+        visible={mysteryToast === 'comingSoon'}
+        shark={FINN_TALKING}
+        title="בקרוב!"
+        body="תיבות הפתעה יושקו בעדכון הבא. תישארו מחוברים!"
+        accentColor="#a855f7"
+        onDismiss={() => setMysteryToast(null)}
       />
     </View>
   );
@@ -1072,24 +1198,24 @@ const styles2 = StyleSheet.create({
   },
   gemCard: {
     width: '100%' as unknown as number,
-    borderRadius: 14,
-    borderWidth: 2,
-    borderColor: 'rgba(8,145,178,0.4)',
-    backgroundColor: '#ecfeff',
-    padding: 8,
+    borderRadius: 18,
+    borderWidth: 2.5,
+    backgroundColor: '#0a1628',
+    paddingTop: 22,
+    paddingHorizontal: 8,
+    paddingBottom: 10,
     alignItems: 'center',
     position: 'relative',
     overflow: 'visible',
-    shadowColor: '#000',
-    shadowOpacity: 0.2,
-    shadowRadius: 6,
-    shadowOffset: { width: 0, height: 4 },
-    elevation: 5,
+    shadowOpacity: 0.55,
+    shadowRadius: 14,
+    shadowOffset: { width: 0, height: 6 },
+    elevation: 8,
   },
   gemCardTitle: {
     fontSize: 10,
     fontWeight: '800',
-    color: '#164e63',
+    color: '#94a8c2',
     textAlign: 'center',
     writingDirection: 'rtl' as const,
     marginBottom: 4,
@@ -1098,20 +1224,58 @@ const styles2 = StyleSheet.create({
   gemImageArea: {
     width: 100,
     height: 100,
-    borderRadius: 12,
-    backgroundColor: 'rgba(8,145,178,0.12)',
-    borderWidth: 1.5,
-    borderColor: 'rgba(34,211,238,0.35)',
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 6,
-    overflow: 'hidden',
+    marginBottom: 4,
+    overflow: 'visible',
   },
   gemAmount: {
     fontSize: 14,
     fontWeight: '900',
-    color: '#0891b2',
+    color: '#fef3c7',
     marginBottom: 4,
+  },
+  gemAmountBig: {
+    fontSize: 22,
+    fontWeight: '900',
+    color: '#fef3c7',
+    fontVariant: ['tabular-nums'] as const,
+    letterSpacing: -0.4,
+    lineHeight: 24,
+    textShadowColor: 'rgba(0,0,0,0.6)',
+    textShadowOffset: { width: 0, height: 2 },
+    textShadowRadius: 4,
+  },
+  gemAmountLabel: {
+    fontSize: 10,
+    fontWeight: '800',
+    color: '#94a8c2',
+    letterSpacing: 0.6,
+    marginBottom: 10,
+    marginTop: 1,
+    writingDirection: 'rtl' as const,
+  },
+  tierPill: {
+    position: 'absolute',
+    top: -8,
+    alignSelf: 'center',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 999,
+    borderWidth: 1.5,
+    borderColor: '#fef3c7',
+    shadowColor: '#000',
+    shadowOpacity: 0.4,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 6,
+    zIndex: 5,
+  },
+  tierPillText: {
+    fontSize: 8,
+    fontWeight: '900',
+    letterSpacing: 0.3,
+    writingDirection: 'rtl' as const,
   },
   gemBonusPill: {
     borderWidth: 1,
@@ -1127,15 +1291,60 @@ const styles2 = StyleSheet.create({
     fontWeight: '800',
     color: '#0891b2',
   },
+  championRow: {
+    flexDirection: 'row-reverse',
+    gap: 10,
+    marginTop: 4,
+  },
+  championHalf: {
+    flex: 1,
+  },
+  bonusSticker: {
+    position: 'absolute',
+    top: -6,
+    insetInlineEnd: -4,
+    paddingHorizontal: 7,
+    paddingVertical: 3,
+    borderRadius: 6,
+    borderWidth: 1.5,
+    borderColor: '#fef2f2',
+    transform: [{ rotate: '12deg' }],
+    shadowColor: '#dc2626',
+    shadowOpacity: 0.5,
+    shadowRadius: 5,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 6,
+    zIndex: 5,
+    maxWidth: 70,
+  },
+  bonusStickerText: {
+    fontSize: 9,
+    fontWeight: '900',
+    color: '#ffffff',
+    letterSpacing: 0.3,
+    writingDirection: 'rtl' as const,
+    textShadowColor: 'rgba(0,0,0,0.3)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 1,
+  },
   gemPriceBtn: {
-    borderRadius: 10,
+    borderRadius: 12,
     paddingHorizontal: 10,
-    paddingVertical: 7,
+    paddingVertical: 9,
     width: '100%',
     alignItems: 'center',
+    borderBottomWidth: 3,
+    borderBottomColor: '#14532d',
+    borderWidth: 1,
+    borderColor: '#22c55e',
+    shadowColor: '#16a34a',
+    shadowOpacity: 0.45,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 3 },
+    elevation: 5,
   },
   gemPriceBtnText: {
-    fontSize: 12,
+    fontSize: 14,
     fontWeight: '900',
     color: '#fff',
   },

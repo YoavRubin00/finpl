@@ -132,7 +132,7 @@
 - Integrated into `FinFeedScreen.tsx` as overlay inside a wrapper `View` around FlatList
 - Wrapped FlatList + ChestsRow in `View style={{ flex: 1 }}` to allow absolute positioning
 - Typecheck passes (`npx tsc --noEmit` — clean)
-- Files affected: `src/features/retention-loops/ChestsRow.tsx` (new), `src/features/finfeed/FinFeedScreen.tsx` (modified)
+- Files affected: `src/features/retention-loops/ChestsRow.tsx` (new), `src/features/inter-module-content/feedScrollStubs.tsx` (modified)
 - Learnings for next cycles:
   - ChestsRow uses `position: absolute, bottom: 0` overlay pattern — FlatList content may be hidden behind it, consider adding `contentContainerStyle={{ paddingBottom }}` later
   - Status badge colors: locked=zinc-700, unlocking=yellow-800, ready=green-800

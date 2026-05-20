@@ -1,3 +1,3 @@
-import { FinFeedScreen } from "../../src/features/finfeed/FinFeedScreen";
+import { DuoLearnScreen } from "../../src/features/pyramid/DuoLearnScreen";
 
-export default FinFeedScreen;
+export default DuoLearnScreen;

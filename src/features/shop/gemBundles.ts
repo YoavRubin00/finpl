@@ -30,7 +30,7 @@ export const GEM_BUNDLES: GemBundle[] = [
     priceLabel: '₪35.90',
     emoji: '💎💎',
     lottieSource: DIAMOND_LOTTIE,
-    bonusLabel: '+33%',
+    bonusLabel: '+33% • הכי פופולרי',
   },
   {
     id: 'gems-barrel',
@@ -40,7 +40,7 @@ export const GEM_BUNDLES: GemBundle[] = [
     priceLabel: '₪69.90',
     emoji: '💎💎💎',
     lottieSource: DIAMOND_LOTTIE,
-    bonusLabel: '+50%',
+    bonusLabel: '+50% • המועדף',
   },
   {
     id: 'gems-wagon',

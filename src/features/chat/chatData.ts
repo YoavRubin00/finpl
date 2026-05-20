@@ -50,8 +50,8 @@ export const COMPANION_PERSONALITIES: Record<CompanionId, CompanionPersonality> 
     emoji: "",
     tone: "חכם, סבלני, משתמש באנלוגיות מעולם ההשקעות. מדבר כמו חבר חכם שיודע הכל על כסף.",
     greeting:
-      "שלום! אני קפטן שארק, ואני כאן כדי ללמד אותך את כללי הכסף. אין שאלה טיפשית, רק שאלה שלא נשאלה. מה תרצה לדעת?",
-    placeholder: "שאל את קפטן שארק על כסף...",
+      "שלום! אני קפטן שארק, ואני כאן כדי ללמד אתכם את כללי הכסף. אין שאלה טיפשית, רק שאלה שלא נשאלה. מה תרצו לדעת?",
+    placeholder: "שאלו את קפטן שארק על כסף...",
     headerImage: FINN_IMAGE,
     animation: {
       lottieSource: "assets/lottie/fin-standard.json",
@@ -66,8 +66,8 @@ export const COMPANION_PERSONALITIES: Record<CompanionId, CompanionPersonality> 
     emoji: "",
     tone: "ישראלי, ישיר, תכל'סי, משתמש בסלנג ישראלי. לא מסתובב, אומר את זה כמו שזה.",
     greeting:
-      "יאללה אחי, אני קפטן שארק! בוא נדבר תכל'ס על כסף, בלי סיפורים. שאל אותי מה שאתה רוצה ואני אגיד לך את האמת.",
-    placeholder: "יאללה, שאל את קפטן שארק...",
+      "יאללה חברים, אני קפטן שארק! בואו נדבר תכל'ס על כסף, בלי סיפורים. שאלו אותי מה שאתם רוצים ואני אגיד לכם את האמת.",
+    placeholder: "יאללה, שאלו את קפטן שארק...",
     headerImage: FINN_IMAGE,
     animation: {
       lottieSource: "assets/lottie/fin-standard.json",
@@ -82,8 +82,8 @@ export const COMPANION_PERSONALITIES: Record<CompanionId, CompanionPersonality> 
     emoji: "",
     tone: "רגוע, חם, מעודד, סבלני. תמיד מוצא מילה טובה ומסביר בנועם.",
     greeting:
-      "היי! אני קפטן שארק, ואני כאן בשבילך. אם יש משהו שלא ברור לגבי כסף או חיסכון, זה בדיוק בשביל זה אני פה. ספר לי מה מעניין אותך 💜",
-    placeholder: "ספר לקפטן שארק מה מטריד אותך...",
+      "היי! אני קפטן שארק, ואני כאן בשבילכם. אם יש משהו שלא ברור לגבי כסף או חיסכון, זה בדיוק בשביל זה אני פה. ספרו לי מה מעניין אתכם 💜",
+    placeholder: "ספרו לקפטן שארק מה מטריד אתכם...",
     headerImage: FINN_IMAGE,
     animation: {
       lottieSource: "assets/lottie/fin-standard.json",
@@ -98,8 +98,8 @@ export const COMPANION_PERSONALITIES: Record<CompanionId, CompanionPersonality> 
     emoji: "",
     tone: "אנליטי, מבוסס מספרים, תמציתי. עונה בנקודות קצרות ומדויקות.",
     greeting:
-      "אהלן! אני קפטן שארק, המומחה הפיננסי שלך. שאל אותי כל שאלה בנושא כלכלי ואתן לך תשובה מדויקת ותמציתית.",
-    placeholder: "שאל את קפטן שארק...",
+      "אהלן! אני קפטן שארק, המומחה הפיננסי שלכם. שאלו אותי כל שאלה בנושא כלכלי ואתן לכם תשובה מדויקת ותמציתית.",
+    placeholder: "שאלו את קפטן שארק...",
     headerImage: FINN_IMAGE,
     animation: {
       lottieSource: "assets/lottie/fin-standard.json",

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Image as ExpoImage } from "expo-image";
 import {
   View,
@@ -17,6 +17,8 @@ import { useAuthStore } from "./useAuthStore";
 import { useGoogleAuthStore } from "./useGoogleAuthStore";
 import { useAppleAuth } from "./useAppleAuth";
 import { fetchUserProfile } from "../../db/sync/syncUserProfile";
+import { useEconomyStore } from "../economy/useEconomyStore";
+import { captureEvent } from "../../lib/posthog";
 
 function isValidEmail(email: string): boolean {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
@@ -43,6 +45,8 @@ const inputStyle = {
 export function LoginScreen() {
   const router = useRouter();
   const signIn = useAuthStore((s) => s.signIn);
+  const authError = useAuthStore((s) => s.authError);
+  const clearAuthError = useAuthStore((s) => s.clearAuthError);
   const promptGoogleSignIn = useGoogleAuthStore((s) => s.promptGoogleSignIn);
   const googleReady = useGoogleAuthStore((s) => s.isReady);
   const { promptAppleSignIn, isAvailable: appleAvailable } = useAppleAuth();
@@ -51,21 +55,34 @@ export function LoginScreen() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  useEffect(() => {
+    captureEvent('login_form_viewed');
+  }, []);
+
   const canSubmit = isValidEmail(email) && !loading;
 
   async function handleLogin() {
     if (!canSubmit) return;
+    captureEvent('login_method_clicked', { method: 'email' });
     setLoading(true);
     setError(null);
     try {
       const profile = await fetchUserProfile(email.trim().toLowerCase());
       if (!profile) {
+        captureEvent('login_failed', { method: 'email', reason: 'not_found' });
         setError("לא נמצא חשבון עם כתובת אימייל זו");
         return;
+      }
+      // Hydrate paper-trading currency from server. NUMERIC comes over JSON
+      // as a string, so parse before handing to the store.
+      const serverBalance = parseFloat(String(profile.virtual_balance ?? '0'));
+      if (Number.isFinite(serverBalance)) {
+        useEconomyStore.getState().setVirtualBalance(serverBalance);
       }
       signIn((profile.displayName as string) ?? email, email.trim().toLowerCase());
       router.replace("/(tabs)/" as never);
     } catch {
+      captureEvent('login_failed', { method: 'email', reason: 'network' });
       setError("שגיאה בחיבור לשרת, נסה שוב");
     } finally {
       setLoading(false);
@@ -90,6 +107,22 @@ export function LoginScreen() {
 
         <View style={{ flex: 1, backgroundColor: "#ffffff", paddingTop: 8 }}>
           <ScrollView contentContainerStyle={{ paddingHorizontal: 24, paddingBottom: 16 }} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
+
+            {/* Inline auth error banner — populated by Apple/Google OAuth failures. */}
+            {authError && (
+              <View
+                accessibilityRole="alert"
+                accessibilityLiveRegion="polite"
+                style={{ flexDirection: 'row-reverse', alignItems: 'center', gap: 8, backgroundColor: '#fef2f2', borderColor: '#fecaca', borderWidth: 1, borderRadius: 12, paddingHorizontal: 12, paddingVertical: 10, marginBottom: 12 }}
+              >
+                <Text style={{ flex: 1, color: '#991b1b', fontSize: 13, fontWeight: '700', writingDirection: 'rtl', textAlign: 'right' }}>
+                  {authError}
+                </Text>
+                <Pressable onPress={clearAuthError} accessibilityRole="button" accessibilityLabel="סגור התראה" hitSlop={8}>
+                  <Text style={{ color: '#991b1b', fontWeight: '900', fontSize: 16 }}>✕</Text>
+                </Pressable>
+              </View>
+            )}
 
             {/* Email */}
             <TextInput
@@ -152,7 +185,10 @@ export function LoginScreen() {
             {/* Apple */}
             {appleAvailable && (
               <Pressable
-                onPress={() => promptAppleSignIn()}
+                onPress={() => {
+                  captureEvent('login_method_clicked', { method: 'apple' });
+                  promptAppleSignIn();
+                }}
                 accessibilityRole="button"
                 accessibilityLabel="כניסה עם Apple"
                 style={{ width: "100%", flexDirection: "row", alignItems: "center", justifyContent: "center", borderRadius: 14, backgroundColor: "#000000", paddingVertical: 14, marginBottom: 10, borderBottomWidth: 3, borderBottomColor: "#1f2937" }}
@@ -165,7 +201,10 @@ export function LoginScreen() {
             {/* Google */}
             <Pressable
               disabled={!googleReady}
-              onPress={() => promptGoogleSignIn?.()}
+              onPress={() => {
+                captureEvent('login_method_clicked', { method: 'google' });
+                promptGoogleSignIn?.();
+              }}
               accessibilityRole="button"
               accessibilityLabel="כניסה עם Google"
               style={{ width: "100%", flexDirection: "row", alignItems: "center", justifyContent: "center", borderRadius: 14, borderWidth: 1.5, borderColor: "#e2e8f0", backgroundColor: "#ffffff", paddingVertical: 14, borderBottomWidth: 3, borderBottomColor: "#e2e8f0" }}

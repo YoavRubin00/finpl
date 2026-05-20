@@ -34,6 +34,9 @@ import { useGoogleAuthStore } from "../auth/useGoogleAuthStore";
 import { useAppleAuth } from "../auth/useAppleAuth";
 import { consumeTermsAcceptedFlag } from "../auth/termsAcceptedFlag";
 import { ONBOARDING_XP } from "../../constants/economy";
+import { captureEvent } from "../../lib/posthog";
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { PENDING_REFERRAL_STORAGE_KEY } from '../social/InviteRedemptionScreen';
 import { calculateCompoundInterest } from "../simulator/SimulatorScreen";
 import { FREE_AVATARS } from "../avatars/avatarData";
 import type { AvatarDefinition } from "../avatars/avatarData";
@@ -393,11 +396,20 @@ function StepShell({
     if (typingResetRef.current) clearTimeout(typingResetRef.current);
   }, []);
 
+  // Gesture callback — wrapped to prevent any throw from propagating to
+  // Hermes → SIGABRT (Apple 2.1(a) reject pattern on iPad).
   const trigger = useCallback(() => {
-    setIsTyping(true);
-    finnTriggerRef.current?.();
-    if (typingResetRef.current) clearTimeout(typingResetRef.current);
-    typingResetRef.current = setTimeout(() => setIsTyping(false), AUTO_ADVANCE_MS + 400);
+    try {
+      setIsTyping(true);
+      const fn = finnTriggerRef.current;
+      if (typeof fn === "function") fn();
+      if (typingResetRef.current) clearTimeout(typingResetRef.current);
+      typingResetRef.current = setTimeout(() => {
+        try { setIsTyping(false); } catch { /* component may have unmounted */ }
+      }, AUTO_ADVANCE_MS + 400);
+    } catch (e) {
+      console.warn("[StepShell.trigger] swallowed:", e instanceof Error ? e.message : String(e));
+    }
   }, []);
 
   const headerStyle = useAnimatedStyle(() => ({
@@ -581,6 +593,31 @@ function CelebrationScreen({ onDone }: { onDone: () => void }) {
     ctaScale.value = withDelay(700, withSpring(1, { damping: 14, stiffness: 110 }));
   }, []);
 
+  const [showCodeField, setShowCodeField] = useState(false);
+  const [inviteCode, setInviteCode] = useState('');
+  const [codeSaved, setCodeSaved] = useState(false);
+  const codeAreaOpacity = useSharedValue(0);
+  const codeAreaHeight = useSharedValue(0);
+
+  const handleSaveCode = async () => {
+    const trimmed = inviteCode.trim().toUpperCase();
+    if (!/^[A-Z0-9-]{4,12}$/.test(trimmed)) return;
+    await AsyncStorage.setItem(PENDING_REFERRAL_STORAGE_KEY, trimmed);
+    setCodeSaved(true);
+  };
+
+  const showCode = () => {
+    setShowCodeField(true);
+    codeAreaOpacity.value = withTiming(1, { duration: 220 });
+    codeAreaHeight.value = withSpring(72, { damping: 16, stiffness: 140 });
+  };
+
+  const codeAreaStyle = useAnimatedStyle(() => ({
+    opacity: codeAreaOpacity.value,
+    height: codeAreaHeight.value,
+    overflow: 'hidden',
+  }));
+
   const badgeStyle = useAnimatedStyle(() => ({
     transform: [{ scale: badgeScale.value }, { rotate: `${badgeRotate.value}deg` }],
   }));
@@ -639,6 +676,40 @@ function CelebrationScreen({ onDone }: { onDone: () => void }) {
             <Text style={styles.celebCTAText}>בואו נתחיל</Text>
           </Pressable>
         </Animated.View>
+
+        {/* Optional invite code entry */}
+        {codeSaved ? (
+          <Text style={styles.codeSavedText}>✓ קוד ישמר ויחובר לחשבון שלכם</Text>
+        ) : showCodeField ? (
+          <Animated.View style={[styles.codeRow, codeAreaStyle]}>
+            <TextInput
+              style={styles.codeInput}
+              placeholder="קוד הזמנה"
+              placeholderTextColor="#64748b"
+              value={inviteCode}
+              onChangeText={(t) => setInviteCode(t.toUpperCase())}
+              autoCapitalize="characters"
+              autoCorrect={false}
+              maxLength={12}
+              returnKeyType="done"
+              onSubmitEditing={handleSaveCode}
+              accessibilityLabel="הזינו קוד הזמנה"
+            />
+            <Pressable onPress={handleSaveCode} style={styles.codeSubmitBtn} accessibilityRole="button" accessibilityLabel="אישור קוד">
+              <Text style={styles.codeSubmitText}>אישור</Text>
+            </Pressable>
+          </Animated.View>
+        ) : (
+          <Pressable
+            onPress={showCode}
+            style={styles.codeToggle}
+            accessibilityRole="button"
+            accessibilityLabel="הוזמנתם דרך חבר? לחצו להזנת קוד הזמנה"
+            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+          >
+            <Text style={styles.codeToggleText}>הוזמנתם דרך חבר? הזינו קוד</Text>
+          </Pressable>
+        )}
       </SafeAreaView>
     </ImageBackground>
   );
@@ -744,7 +815,7 @@ const GOALS: { id: FinancialGoal; label: string; sub: string }[] = [
 ];
 
 const DREAM_REACTIONS: Record<FinancialDream, string> = {
-  trip: "טיול גדול זה יעד מדהים! בוא נראה מאיפה מתחילים.",
+  trip: "טיול גדול זה יעד מדהים! בואו נראה מאיפה מתחילים.",
   car: "רכב ראשון? לגמרי אפשרי לפצח את זה.",
   apartment: "דירה זה פרויקט רציני, טוב שאתם פה!",
   freedom: "חופש מוחלט. זו המטרה של כולנו.",
@@ -1227,6 +1298,9 @@ function OnboardingSlider({
   propsRef.current = { min, max, step, onChange, onInteract };
   const interactedRef = useRef(false);
 
+  // Gesture callbacks all wrapped in try/catch — any throw inside a
+  // PanResponder handler propagates to Hermes → SIGABRT on iPad
+  // (Apple 2.1(a) reject pattern). Swallow + warn instead.
   const panResponder = useRef(
     PanResponder.create({
       onStartShouldSetPanResponder: () => true,
@@ -1236,28 +1310,46 @@ function OnboardingSlider({
         Math.abs(gestureState.dx) > Math.abs(gestureState.dy),
       onPanResponderTerminationRequest: () => false,
       onPanResponderGrant: (evt) => {
-        if (!interactedRef.current) { interactedRef.current = true; propsRef.current.onInteract?.(); }
-        // Re-measure on touch start, iOS measureInWindow from onLayout can be stale in nested ScrollViews
-        const pageX = evt.nativeEvent.pageX;
-        trackRef.current?.measureInWindow((x: number, _y: number, width: number) => {
-          layoutRef.current = { x, width };
-          updateVal(pageX);
-        });
+        try {
+          if (!interactedRef.current) {
+            interactedRef.current = true;
+            try { propsRef.current.onInteract?.(); } catch { /* swallow */ }
+          }
+          const pageX = evt.nativeEvent.pageX;
+          // measureInWindow callback can fire after unmount on iPad — guard it.
+          trackRef.current?.measureInWindow((x: number, _y: number, width: number) => {
+            try {
+              layoutRef.current = { x, width };
+              updateVal(pageX);
+            } catch (e) {
+              console.warn("[OnboardingSlider.measure]", e instanceof Error ? e.message : String(e));
+            }
+          });
+        } catch (e) {
+          console.warn("[OnboardingSlider.grant]", e instanceof Error ? e.message : String(e));
+        }
       },
-      onPanResponderMove: (evt) => updateVal(evt.nativeEvent.pageX),
+      onPanResponderMove: (evt) => {
+        try { updateVal(evt.nativeEvent.pageX); }
+        catch (e) { console.warn("[OnboardingSlider.move]", e instanceof Error ? e.message : String(e)); }
+      },
     })
   ).current;
 
   function updateVal(pageX: number) {
-    const { x, width } = layoutRef.current;
-    if (width <= 0) return;
-    const localX = Math.max(0, Math.min(pageX - x, width));
-    // RTL: right = max, left = min
-    const pct = 1 - (localX / width);
-    const { min: mn, max: mx, step: st, onChange: cb } = propsRef.current;
-    let v = mn + pct * (mx - mn);
-    v = Math.round(v / st) * st;
-    cb(Math.max(mn, Math.min(mx, v)));
+    try {
+      const { x, width } = layoutRef.current;
+      if (width <= 0) return;
+      const localX = Math.max(0, Math.min(pageX - x, width));
+      // RTL: right = max, left = min
+      const pct = 1 - (localX / width);
+      const { min: mn, max: mx, step: st, onChange: cb } = propsRef.current;
+      let v = mn + pct * (mx - mn);
+      v = Math.round(v / st) * st;
+      cb(Math.max(mn, Math.min(mx, v)));
+    } catch (e) {
+      console.warn("[OnboardingSlider.updateVal]", e instanceof Error ? e.message : String(e));
+    }
   }
 
   const span = max - min;
@@ -1468,7 +1560,13 @@ function SimOnboardingStep({ onNext }: { onNext: () => void }) {
           <GlowBar current={2} />
         </View>
 
-        <View style={{ flex: 1, paddingHorizontal: 20, justifyContent: "space-between" }}>
+        {/* Scrollable content — keeps button reachable on small viewports
+            (e.g. iPad iPhone-scaled mode where vertical space is limited). */}
+        <ScrollView
+          style={{ flex: 1 }}
+          contentContainerStyle={{ flexGrow: 1, paddingHorizontal: 20, justifyContent: "space-between" }}
+          showsVerticalScrollIndicator={false}
+        >
           {/* Finn + Title */}
           <View style={{ alignItems: "center", marginTop: 4, marginBottom: 6 }}>
             <ExpoImage source={FINN_STANDARD} style={{ width: 70, height: 70 }} contentFit="contain" />
@@ -1514,12 +1612,14 @@ function SimOnboardingStep({ onNext }: { onNext: () => void }) {
               onInteract={() => setHasInteracted(true)}
             />
           </Animated.View>
+        </ScrollView>
 
-          {/* Next button */}
+        {/* Next button — outside the ScrollView so it stays pinned to the bottom
+            and is always reachable, no matter how small the viewport. */}
+        <View style={{ paddingHorizontal: 20, paddingBottom: 8, paddingTop: 8 }}>
           <Pressable onPress={() => setSubStep("summary")} style={simStyles.continueBtn} accessibilityRole="button" accessibilityLabel="הבא">
             <Text style={simStyles.continueBtnText}>הבא</Text>
           </Pressable>
-          <View style={{ height: 8 }} />
         </View>
       </SafeAreaView>
     </View>
@@ -1795,14 +1895,8 @@ function IntroStep({ onRegister, onGuest, onLoginSuccess }: IntroStepProps) {
             accessibilityRole="button"
             accessibilityLabel="התחל ללא הרשמה"
             accessibilityState={{ disabled: !termsAccepted }}
-            style={[introStyles.ctaOutline, { opacity: termsAccepted ? 1 : 0.5, flexDirection: 'row-reverse', alignItems: 'center', justifyContent: 'center', gap: 6 }]}
+            style={[introStyles.ctaOutline, { opacity: termsAccepted ? 1 : 0.5 }]}
           >
-            <ExpoImage
-              source={FINN_HELLO}
-              style={{ width: 28, height: 28 }}
-              contentFit="contain"
-              accessible={false}
-            />
             <Text style={introStyles.ctaOutlineText}>התחל ללא הרשמה</Text>
           </Pressable>
 
@@ -2080,6 +2174,15 @@ export function ProfilingFlow({ mode = "onboarding", onRedoComplete }: Profiling
   const isRedo = mode === "redo";
   // Skip intro if user already registered/signed-in or is guest (came back from register screen)
   const [step, setStep] = useState<FlowStep>(isRedo || isAuthenticated || isGuest ? "dream" : "intro");
+  // Wall-clock anchor for onboarding duration. Used by the completion event so
+  // we can see in PostHog whether users blast through profiling or stall mid-flow.
+  const onboardingStartedAtRef = useRef<number>(Date.now());
+
+  useEffect(() => {
+    if (!isRedo) {
+      captureEvent('onboarding_started');
+    }
+  }, [isRedo]);
   const [returnToSummary, setReturnToSummary] = useState(false);
   const [collected, setCollected] = useState<Collected>(() => {
     if (isRedo && existingProfile) {
@@ -2131,6 +2234,11 @@ export function ProfilingFlow({ mode = "onboarding", onRedoComplete }: Profiling
   }, []);
 
   function slide(nextStep: FlowStep, patch: Partial<Collected>) {
+    captureEvent('onboarding_step_completed', {
+      step_name: step,
+      next_step: nextStep,
+      mode: isRedo ? 'redo' : 'new',
+    });
     setIsGlobalTyping(false);
     if (globalTypingResetRef.current) clearTimeout(globalTypingResetRef.current);
     tapHaptic();
@@ -2179,6 +2287,10 @@ export function ProfilingFlow({ mode = "onboarding", onRedoComplete }: Profiling
       onRedoComplete?.();
       return;
     }
+    captureEvent('onboarding_completed', {
+      duration_sec: Math.round((Date.now() - onboardingStartedAtRef.current) / 1000),
+      total_steps: TOTAL_STEPS,
+    });
     addXP(ONBOARDING_XP, "onboarding");
     addCoins(50);
     completeOnboarding({
@@ -2686,6 +2798,56 @@ const styles = StyleSheet.create({
     color: "#ffffff",
     fontSize: 18,
     fontWeight: "900",
+  },
+  codeToggle: {
+    marginTop: 20,
+    paddingVertical: 6,
+  },
+  codeToggleText: {
+    color: "#94a3b8",
+    fontSize: 13,
+    textAlign: "center",
+    textDecorationLine: "underline",
+  },
+  codeRow: {
+    flexDirection: "row",
+    gap: 8,
+    paddingHorizontal: 24,
+    marginTop: 16,
+    alignItems: "center",
+  },
+  codeInput: {
+    flex: 1,
+    backgroundColor: "rgba(255,255,255,0.1)",
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.2)",
+    borderRadius: 14,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    color: "#ffffff",
+    fontSize: 15,
+    fontWeight: "700",
+    letterSpacing: 2,
+    textAlign: "center",
+  },
+  codeSubmitBtn: {
+    backgroundColor: "#0891b2",
+    borderRadius: 14,
+    paddingHorizontal: 18,
+    paddingVertical: 12,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  codeSubmitText: {
+    color: "#ffffff",
+    fontWeight: "800",
+    fontSize: 15,
+  },
+  codeSavedText: {
+    color: "#4ade80",
+    textAlign: "center",
+    fontSize: 14,
+    marginTop: 16,
   },
   // Avatar picker
   avatarGrid: {

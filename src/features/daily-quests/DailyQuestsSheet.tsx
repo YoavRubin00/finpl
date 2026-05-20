@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { View, Text, Modal, Pressable, StyleSheet, ScrollView } from "react-native";
 import { Image as ExpoImage } from "expo-image";
+import { useVideoPlayer, VideoView } from "expo-video";
 import Animated, {
   FadeIn,
   FadeInRight,
@@ -33,6 +34,12 @@ import { useSoundEffect } from "../../hooks/useSoundEffect";
 const LOTTIE_CHEST = require("../../../assets/lottie/3D Treasure Box.json") as unknown as AnimationObject;
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const LOTTIE_CROWN = require("../../../assets/lottie/Crown.json") as unknown as AnimationObject;
+
+/** Finn-opens-the-chest celebration video, plays after flying rewards complete */
+const CHEST_VIDEO_URL =
+  "https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/finn-videos/finn-chest-open.mp4";
+/** Video is ~5s; leave a small tail for "settle" before auto-closing the modal */
+const CHEST_VIDEO_DURATION_MS = 5500;
 
 const RTL = { writingDirection: "rtl" as const, textAlign: "right" as const };
 
@@ -210,9 +217,9 @@ export function DailyQuestsSheet({ visible, onClose }: DailyQuestsSheetProps) {
     if (quest.isCompleted) return; // completed quests are informational only
     tapHaptic();
     onClose();
-    // Both swipe + dilemma live in the FinFeed (learn tab); module → learn map
+    // Feed removed; swipe + dilemma now just close the sheet (no scroll target).
     if (quest.type === "swipe" || quest.type === "dilemma") {
-      import('../finfeed/FinFeedScreen').then(({ setPendingFeedScrollById }) => {
+      import('../inter-module-content/feedScrollStubs').then(({ setPendingFeedScrollById }) => {
         setPendingFeedScrollById(quest.type === "swipe" ? "swipe-game" : "daily-dilemma");
         router.push("/(tabs)/learn" as never);
       });
@@ -225,18 +232,45 @@ export function DailyQuestsSheet({ visible, onClose }: DailyQuestsSheetProps) {
   const [chestOpen, setChestOpen] = useState(false);
   const [showProClaimAnim, setShowProClaimAnim] = useState(false);
   const [proChestOpen, setProChestOpen] = useState(false);
+  /** Finn-opens-the-chest celebration video — plays after flying rewards complete */
+  const [showVideoOverlay, setShowVideoOverlay] = useState(false);
   const { playSound } = useSoundEffect();
   const hapticTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const claimTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const proHapticTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const proClaimTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const videoCloseTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const chestVideoPlayer = useVideoPlayer(CHEST_VIDEO_URL, (p) => {
+    p.loop = false;
+    p.muted = true;
+    p.bufferOptions = {
+      preferredForwardBufferDuration: 5,
+      waitsToMinimizeStalling: false,
+      minBufferForPlayback: 0.5,
+    };
+  });
 
   useEffect(() => () => {
     if (hapticTimerRef.current) clearTimeout(hapticTimerRef.current);
     if (claimTimerRef.current) clearTimeout(claimTimerRef.current);
     if (proHapticTimerRef.current) clearTimeout(proHapticTimerRef.current);
     if (proClaimTimerRef.current) clearTimeout(proClaimTimerRef.current);
+    if (videoCloseTimerRef.current) clearTimeout(videoCloseTimerRef.current);
   }, []);
+
+  // Reset video overlay if user closes the modal manually (e.g. tap outside)
+  // before the auto-close timer fires.
+  useEffect(() => {
+    if (!visible && showVideoOverlay) {
+      setShowVideoOverlay(false);
+      if (videoCloseTimerRef.current) {
+        clearTimeout(videoCloseTimerRef.current);
+        videoCloseTimerRef.current = null;
+      }
+      try { chestVideoPlayer.pause(); } catch { /* ignore */ }
+    }
+  }, [visible, showVideoOverlay, chestVideoPlayer]);
 
   // Gentle pulse on the chest when ready, feels inviting, not shaky.
   // Mirrors the LessonFlowScreen chest-ready pattern: body pulse + glow halo.
@@ -303,6 +337,14 @@ export function DailyQuestsSheet({ visible, onClose }: DailyQuestsSheetProps) {
     claimTimerRef.current = setTimeout(() => {
       claimReward();
       setShowClaimAnim(false);
+      // Chain Finn-opens-chest celebration video, then auto-close back to feed
+      setShowVideoOverlay(true);
+      try { chestVideoPlayer.play(); } catch { /* ignore */ }
+      videoCloseTimerRef.current = setTimeout(() => {
+        setShowVideoOverlay(false);
+        try { chestVideoPlayer.pause(); } catch { /* ignore */ }
+        onClose();
+      }, CHEST_VIDEO_DURATION_MS);
     }, 1600);
   };
 
@@ -405,9 +447,6 @@ export function DailyQuestsSheet({ visible, onClose }: DailyQuestsSheetProps) {
               {/* ── PRO chest (left, larger) ── */}
               <View style={{ flex: 13, alignItems: "center" }}>
                 <LottieIcon source={LOTTIE_CROWN as unknown as number} size={36} autoPlay={!reduceMotion} loop active={!reduceMotion} />
-                <View style={{ backgroundColor: "#b45309", borderRadius: 8, paddingHorizontal: 10, paddingVertical: 2, marginTop: 2, marginBottom: 4 }}>
-                  <Text style={{ color: "#fff", fontSize: 11, fontWeight: "900", letterSpacing: 1.2 }}>PRO</Text>
-                </View>
                 <View style={{ position: "relative" }}>
                   {allDone && isPro && !proRewardClaimed && (
                     <Animated.View pointerEvents="none" style={[styles.chestGlowHalo, { backgroundColor: "#d97706" }, chestGlowStyle]} />
@@ -426,6 +465,9 @@ export function DailyQuestsSheet({ visible, onClose }: DailyQuestsSheetProps) {
                       ]}
                     >
                       <LottieIcon source={LOTTIE_CHEST as unknown as number} size={130} autoPlay={false} active={proChestOpen} loop={false} />
+                      <View style={{ position: "absolute", top: -10, right: -6, backgroundColor: "#d97706", borderRadius: 10, paddingHorizontal: 10, paddingVertical: 4, zIndex: 10, borderWidth: 2, borderColor: "#fff", shadowColor: "#000", shadowOpacity: 0.25, shadowRadius: 4, shadowOffset: { width: 0, height: 2 }, elevation: 4, transform: [{ rotate: "8deg" }] }} pointerEvents="none">
+                        <Text style={{ color: "#fff", fontSize: 11, fontWeight: "900", letterSpacing: 1.2 }}>PRO</Text>
+                      </View>
                       {!isPro && (
                         <View style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, justifyContent: "center", alignItems: "center", backgroundColor: "rgba(0,0,0,0.5)", borderRadius: 16 }} accessible={false}>
                           <Text style={{ fontSize: 28 }}>🔒</Text>
@@ -440,9 +482,6 @@ export function DailyQuestsSheet({ visible, onClose }: DailyQuestsSheetProps) {
               {/* ── Regular chest (right, smaller) ── */}
               <View style={{ flex: 10, alignItems: "center" }}>
                 <View style={{ height: 36 }} accessible={false} />
-                <View style={{ backgroundColor: "#475569", borderRadius: 8, paddingHorizontal: 10, paddingVertical: 2, marginTop: 2, marginBottom: 4 }}>
-                  <Text style={{ color: "#fff", fontSize: 11, fontWeight: "900", letterSpacing: 1.2 }}>רגיל</Text>
-                </View>
                 <View style={{ position: "relative" }}>
                   {allDone && !rewardClaimed && (
                     <Animated.View pointerEvents="none" style={[styles.chestGlowHalo, chestGlowStyle]} />
@@ -461,6 +500,9 @@ export function DailyQuestsSheet({ visible, onClose }: DailyQuestsSheetProps) {
                       ]}
                     >
                       <LottieIcon source={LOTTIE_CHEST as unknown as number} size={110} autoPlay={false} active={chestOpen} loop={false} />
+                      <View style={{ position: "absolute", top: -10, right: -6, backgroundColor: "#64748b", borderRadius: 10, paddingHorizontal: 10, paddingVertical: 4, zIndex: 10, borderWidth: 2, borderColor: "#fff", shadowColor: "#000", shadowOpacity: 0.25, shadowRadius: 4, shadowOffset: { width: 0, height: 2 }, elevation: 4, transform: [{ rotate: "8deg" }] }} pointerEvents="none">
+                        <Text style={{ color: "#fff", fontSize: 11, fontWeight: "900", letterSpacing: 1.2 }}>רגיל</Text>
+                      </View>
                     </Pressable>
                   </Animated.View>
                 </View>
@@ -501,6 +543,18 @@ export function DailyQuestsSheet({ visible, onClose }: DailyQuestsSheetProps) {
               <ConfettiExplosion />
               <FlyingRewards type="xp" amount={previewPro.xp} onComplete={() => { /* auto-clear */ }} />
               <FlyingRewards type="coins" amount={previewPro.coins} onComplete={() => { /* auto-clear */ }} />
+            </View>
+          )}
+
+          {/* Finn-opens-the-chest celebration video — plays after flying rewards complete */}
+          {showVideoOverlay && (
+            <View pointerEvents="none" style={[StyleSheet.absoluteFill, styles.videoOverlay]}>
+              <VideoView
+                player={chestVideoPlayer}
+                style={StyleSheet.absoluteFill}
+                nativeControls={false}
+                contentFit="cover"
+              />
             </View>
           )}
         </Pressable>
@@ -751,6 +805,9 @@ const styles = StyleSheet.create({
     borderRadius: 80,
     alignItems: "center",
     justifyContent: "center",
+  },
+  videoOverlay: {
+    backgroundColor: "#0c1426",
   },
   chestWrapReady: {
     shadowColor: STITCH.tertiaryGoldBright,

@@ -1,13 +1,21 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { View, Text, StyleSheet, Pressable, Alert } from 'react-native';
+import { Image as ExpoImage } from 'expo-image';
 import { GoldCoinIcon } from '../../components/ui/GoldCoinIcon';
 import { useRouter } from 'expo-router';
 import { LottieIcon } from '../../components/ui/LottieIcon';
+import { getShopSvgIcon } from '../../components/svg/shop/ShopIcons';
+import { getAvatarSvgIcon } from '../../components/svg/avatars/AvatarMascots';
+import { FlashOfferBanner } from '../../components/ui/FlashOfferBanner';
+import { StarterPackModal } from './StarterPackModal';
+import { STARTER_PACK_PRICE_LABEL, STARTER_PACK_ORIGINAL_PRICE_LABEL, STARTER_PACK_DISCOUNT_PCT } from './starterPack';
 import { generateDailyDeals } from './dailyDeals';
 import { ConfirmModal } from './ConfirmModal';
 import { useEconomyStore } from '../economy/useEconomyStore';
 import { useSubscriptionStore } from '../subscription/useSubscriptionStore';
+import { useAuthStore } from '../auth/useAuthStore';
 import { successHaptic } from '../../utils/haptics';
+import { useAppActive } from '../../hooks/useAppActive';
 import type { DailyDeal } from './types';
 
 function getTodayISO(): string {
@@ -39,12 +47,14 @@ export function DailyDealsSection() {
   const [remaining, setRemaining] = useState(msUntilMidnight);
   const [purchasedIds, setPurchasedIds] = useState<Set<string>>(new Set());
   const [pendingDeal, setPendingDeal] = useState<DailyDeal | null>(null);
+  const [starterPackOpen, setStarterPackOpen] = useState(false);
+  const appActive = useAppActive();
 
   const deals = useMemo(() => generateDailyDeals(dateKey), [dateKey]);
 
   // Countdown timer
   useEffect(() => {
-    const id = setInterval(() => {
+    const tick = () => {
       const ms = msUntilMidnight();
       setRemaining(ms);
       const today = getTodayISO();
@@ -52,16 +62,45 @@ export function DailyDealsSection() {
         setDateKey(today);
         setPurchasedIds(new Set());
       }
-    }, 1000);
+    };
+    tick();
+    if (!appActive) return;
+    const id = setInterval(tick, 1000);
     return () => clearInterval(id);
-  }, [dateKey]);
+  }, [dateKey, appActive]);
 
   const addGems = useEconomyStore((s) => s.addGems);
+  const addStreakFreezes = useEconomyStore((s) => s.addStreakFreezes);
+  const addOwnedAvatar = useAuthStore((s) => s.addOwnedAvatar);
+  const setAvatar = useAuthStore((s) => s.setAvatar);
+  const isMinor = useAuthStore((s) => s.profile?.ageGroup === 'minor');
 
   const handleClaimFreeGems = useCallback(() => {
     addGems(5);
     successHaptic();
   }, [addGems]);
+
+  const handleProClaim = useCallback((deal: DailyDeal) => {
+    const itemId = deal.item.id;
+    if (itemId.startsWith('avatar-')) {
+      // ID is the avatar id verbatim — same string flows through the auth store
+      // and AvatarImage's SVG lookup. Stripping the prefix would orphan the
+      // grant from getAvatarSvgIcon (regression caught in integration review).
+      addOwnedAvatar(itemId);
+      setAvatar(itemId);
+    } else if (itemId === 'streak-freeze') {
+      addStreakFreezes(1);
+    } else if (itemId === 'streak-freeze-bundle') {
+      addStreakFreezes(3);
+    } else if (itemId === 'heart-refill-full') {
+      useSubscriptionStore.getState().restoreAllHearts();
+    } else if (itemId === 'heart-refill-1') {
+      const s = useSubscriptionStore.getState();
+      if (s.hearts < 5) useSubscriptionStore.setState({ hearts: s.hearts + 1 });
+    }
+    successHaptic();
+    setPurchasedIds((prev) => new Set(prev).add(deal.id));
+  }, [addOwnedAvatar, setAvatar, addStreakFreezes]);
 
   const handleConfirm = useCallback(() => {
     if (!pendingDeal) return;
@@ -96,6 +135,27 @@ export function DailyDealsSection() {
 
   return (
     <View>
+      {/* Flash Offer banner — limited-time starter pack at ₪19.90.
+          Sits above the daily-deals grid as the headline daily offer.
+          Tapping opens StarterPackModal (NOT the PRO upgrade flow) — this is
+          a one-shot bundle, not a subscription.
+
+          Hidden for minors per Israeli ההגנה על הצרכן § 14ג + Apple's
+          Designed for Families: don't surface FOMO purchase pressure to
+          users we already block from buying. */}
+      {!isMinor && (
+        <View style={{ marginBottom: 14 }}>
+          <FlashOfferBanner
+            title="חבילת מתחילים"
+            discount={STARTER_PACK_DISCOUNT_PCT}
+            originalPrice={STARTER_PACK_ORIGINAL_PRICE_LABEL}
+            salePrice={STARTER_PACK_PRICE_LABEL}
+            timeLeftSeconds={Math.floor(remaining / 1000)}
+            onPress={() => setStarterPackOpen(true)}
+          />
+        </View>
+      )}
+
       {/* Countdown */}
       <Text style={styles.countdown}>מתחדש בעוד {formatCountdown(remaining)}</Text>
 
@@ -113,12 +173,20 @@ export function DailyDealsSection() {
                 <Text style={styles.discountText}>{isFreeGems ? 'חינם!' : `-${deal.discountPercent}%`}</Text>
               </View>
 
-              {/* Item icon */}
-              {deal.item.lottieSource ? (
-                <LottieIcon source={deal.item.lottieSource} size={40} />
-              ) : (
-                <Text style={styles.emoji}>{deal.item.emoji}</Text>
-              )}
+              {/* Item icon — same priority chain as ShopItemCard so a deal
+                  on "הלומד" shows the Pip mascot, not a generic 📚 emoji.
+                  Order: avatar SVG → shop SVG → imageUrl → lottie → emoji. */}
+              {(() => {
+                const AvatarIcon = getAvatarSvgIcon(deal.item.id);
+                if (AvatarIcon) return <View style={styles.iconBox}><AvatarIcon size={48} /></View>;
+                const SvgIcon = getShopSvgIcon(deal.item.id);
+                if (SvgIcon) return <View style={styles.iconBox}><SvgIcon size={42} /></View>;
+                if (deal.item.imageUrl) return (
+                  <ExpoImage source={{ uri: deal.item.imageUrl }} style={{ width: 48, height: 48, borderRadius: 24 }} contentFit="cover" />
+                );
+                if (deal.item.lottieSource) return <LottieIcon source={deal.item.lottieSource} size={40} />;
+                return <Text style={styles.emoji}>{deal.item.emoji}</Text>;
+              })()}
 
               {/* Name */}
               <Text style={[styles.itemName, isFreeGems && styles.freeGemsName]} numberOfLines={1}>{deal.item.name}</Text>
@@ -158,9 +226,14 @@ export function DailyDealsSection() {
                   <Text style={styles.proBadgeText}>PRO ✦</Text>
                 </Pressable>
               ) : isGem && isPro ? (
-                <View style={styles.proIncludedBtn}>
+                <Pressable
+                  onPress={() => handleProClaim(deal)}
+                  style={({ pressed }) => [styles.proIncludedBtn, pressed && { opacity: 0.75 }]}
+                  accessibilityRole="button"
+                  accessibilityLabel={`קבל ${deal.item.name} בחינם עם PRO`}
+                >
                   <Text style={styles.proIncludedText}>כלול ב-PRO ✓</Text>
-                </View>
+                </Pressable>
               ) : (
                 <Pressable
                   onPress={() => setPendingDeal(deal)}
@@ -190,6 +263,11 @@ export function DailyDealsSection() {
           onCancel={() => setPendingDeal(null)}
         />
       )}
+
+      <StarterPackModal
+        visible={starterPackOpen}
+        onDismiss={() => setStarterPackOpen(false)}
+      />
     </View>
   );
 }
@@ -242,6 +320,14 @@ const styles = StyleSheet.create({
     fontSize: 32,
     marginTop: 8,
     marginBottom: 6,
+  },
+  iconBox: {
+    width: 56,
+    height: 56,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 6,
+    marginBottom: 4,
   },
   itemName: {
     fontSize: 13,

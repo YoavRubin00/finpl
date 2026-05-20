@@ -17,6 +17,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { useRetentionStore } from "./useRetentionStore";
 import { useEconomyStore } from "../economy/useEconomyStore";
 import { tapHaptic, successHaptic, heavyHaptic } from "../../utils/haptics";
+import { useAppActive } from "../../hooks/useAppActive";
 import type { Chest, ChestRarity, ChestReward } from "./types";
 
 const INSTANT_OPEN_GEM_COST = 15;
@@ -63,6 +64,7 @@ function formatTime(ms: number): string {
 
 function useCountdown(chest: Chest | null): string {
   const [timeLeft, setTimeLeft] = useState("");
+  const appActive = useAppActive();
 
   useEffect(() => {
     if (!chest || chest.status !== "unlocking" || !chest.unlockStartedAt) {
@@ -78,9 +80,10 @@ function useCountdown(chest: Chest | null): string {
     };
 
     update();
+    if (!appActive) return;
     const interval = setInterval(update, 1000);
     return () => clearInterval(interval);
-  }, [chest?.status, chest?.unlockStartedAt, chest?.unlockTimeMinutes]);
+  }, [chest?.status, chest?.unlockStartedAt, chest?.unlockTimeMinutes, appActive]);
 
   return timeLeft;
 }
@@ -351,10 +354,15 @@ function ChestSlot({
   const handlePress = useCallback(() => {
     if (!chest) return;
     if (chest.status === "locked") {
-      tapHaptic();
+      // Heavy haptic so the user feels the tap registered — they often
+      // mash this button thinking nothing happened. Then start the timer
+      // AND immediately surface the gem-skip modal so a single tap leaves
+      // them with a visible decision instead of a silent countdown.
+      heavyHaptic();
       startUnlocking(chest.id);
+      onGemOpen(chest.id, chest.rarity);
     } else if (chest.status === "unlocking") {
-      tapHaptic();
+      heavyHaptic();
       onGemOpen(chest.id, chest.rarity);
     } else if (chest.status === "ready") {
       heavyHaptic();
@@ -439,7 +447,7 @@ function ChestSlot({
             {chest.status === "locked" && (
               <View style={[styles.statusBadge, { backgroundColor: "rgba(212,160,23,0.15)", borderWidth: 1, borderColor: "rgba(212,160,23,0.3)" }]}>
                 <Ionicons name="lock-closed" size={10} color="#d4a017" />
-                <Text style={[styles.statusText, { color: "#d4a017" }]}>לחץ לפתוח</Text>
+                <Text style={[styles.statusText, { color: "#d4a017" }]}>התחל פתיחה</Text>
               </View>
             )}
             {chest.status === "unlocking" && countdown !== "" && (
@@ -449,8 +457,8 @@ function ChestSlot({
                   <Text style={[styles.statusText, { color: "#facc15", fontVariant: ["tabular-nums"] }]}>{countdown}</Text>
                 </View>
                 <View style={[styles.statusBadge, { backgroundColor: "rgba(124,58,237,0.25)", borderWidth: 1, borderColor: "rgba(167,139,250,0.4)" }]}>
-                  <Ionicons name="diamond" size={9} color="#a78bfa" />
-                  <Text style={[styles.statusText, { color: "#a78bfa", fontSize: 9 }]}>{INSTANT_OPEN_GEM_COST}💎</Text>
+                  <Ionicons name="diamond" size={11} color="#a78bfa" />
+                  <Text style={[styles.statusText, { color: "#a78bfa", fontSize: 11 }]}>פתח ב-{INSTANT_OPEN_GEM_COST}💎</Text>
                 </View>
               </View>
             )}

@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
+import { Platform } from 'react-native';
 import { createAudioPlayer, type AudioPlayer } from 'expo-audio';
+import { captureEvent } from '../lib/posthog';
 
 export type IntroAudioState = 'idle' | 'loading' | 'playing' | 'paused' | 'finished';
 
@@ -12,9 +14,10 @@ export type IntroAudioState = 'idle' | 'loading' | 'playing' | 'paused' | 'finis
  *   - 'paused'   → audio paused mid-clip (buffering / phone interruption), talking webp freezes
  *   - 'finished' → audio completed, switch to standard (mouth-closed) webp
  *
- * Also includes a reliability retry: if play() doesn't produce a 'playing' state
- * within 1500ms, we re-invoke play() once to work around the rare case where the
- * audio session wasn't ready on first call (observed on iOS cold-launch).
+ * Reliability retries: iOS cold-launch sometimes drops the first play() before
+ * the audio session is ready. We retry quickly at 400ms (most cases) and again
+ * at 1000ms (slow networks) instead of waiting 1.5s — users were watching
+ * Finn's mouth move silently for too long.
  */
 export function useIntroAudio(audioUri: string | undefined): IntroAudioState {
   const [state, setState] = useState<IntroAudioState>(audioUri ? 'loading' : 'idle');
@@ -61,17 +64,31 @@ export function useIntroAudio(audioUri: string | undefined): IntroAudioState {
       }
     });
 
-    // Reliability retry: if play() didn't produce a 'playing' event within 1.5s,
-    // try once more. Fixes iOS cold-launch audio-session race.
-    const retryTimer = setTimeout(() => {
+    // Two-stage retry. 400ms catches the common iOS cold-launch race; 1000ms
+    // is a slower-network safety net before users perceive a silent intro.
+    const retry1 = setTimeout(() => {
       if (!hasStartedPlaying && !retriedRef.current) {
         retriedRef.current = true;
         try { player.play(); } catch { /* ignore */ }
+        captureEvent('intro_audio_delayed', {
+          retry_stage: 1,
+          platform: Platform.OS,
+        });
       }
-    }, 1500);
+    }, 400);
+    const retry2 = setTimeout(() => {
+      if (!hasStartedPlaying) {
+        try { player.play(); } catch { /* ignore */ }
+        captureEvent('intro_audio_delayed', {
+          retry_stage: 2,
+          platform: Platform.OS,
+        });
+      }
+    }, 1000);
 
     return () => {
-      clearTimeout(retryTimer);
+      clearTimeout(retry1);
+      clearTimeout(retry2);
       sub.remove();
       try { player.pause(); } catch { /* ignore */ }
       try { player.remove(); } catch { /* ignore */ }

@@ -1,11 +1,14 @@
+import { useEffect } from "react";
 import { Modal, Pressable, StyleSheet, Text } from "react-native";
 import { Image as ExpoImage } from "expo-image";
 import Animated, { FadeIn, FadeInDown } from "react-native-reanimated";
+import { useRouter } from "expo-router";
 import { useEconomyStore } from "../economy/useEconomyStore";
 import { FINN_EMPATHIC } from "../retention-loops/finnMascotConfig";
-import { successHaptic } from "../../utils/haptics";
+import { successHaptic, tapHaptic } from "../../utils/haptics";
+import { useBandit } from "../bandit/useBandit";
 
-const REPAIR_COST = 200;
+const REPAIR_COST_GEMS = 30;
 
 interface StreakRepairModalProps {
   visible: boolean;
@@ -13,17 +16,34 @@ interface StreakRepairModalProps {
 }
 
 export function StreakRepairModal({ visible, onDismiss }: StreakRepairModalProps) {
-  const coins = useEconomyStore((s) => s.coins);
+  const router = useRouter();
+  const gems = useEconomyStore((s) => s.gems);
   const previousStreak = useEconomyStore((s) => s.previousStreakBeforeBreak);
   const repairStreak = useEconomyStore((s) => s.repairStreak);
   const dismissRepairOffer = useEconomyStore((s) => s.dismissRepairOffer);
 
-  const canAfford = coins >= REPAIR_COST;
+  const { payload, trackImpression, trackConversion, trackDismiss } = useBandit('streak_repair_offer');
 
-  const handleRepairCoins = () => {
-    const ok = repairStreak("coins");
+  useEffect(() => {
+    if (visible) trackImpression();
+  }, [visible, trackImpression]);
+
+  const canAfford = gems >= REPAIR_COST_GEMS;
+
+  const title = payload.title.replace('{streak}', String(previousStreak));
+
+  const handleRepairGems = () => {
+    if (!canAfford) {
+      // Not enough gems → navigate to shop to buy gems
+      tapHaptic();
+      onDismiss();
+      router.push("/(tabs)/shop" as never);
+      return;
+    }
+    const ok = repairStreak("gems");
     if (ok) {
       successHaptic();
+      trackConversion();
       onDismiss();
     }
   };
@@ -32,11 +52,13 @@ export function StreakRepairModal({ visible, onDismiss }: StreakRepairModalProps
     const ok = repairStreak("ad");
     if (ok) {
       successHaptic();
+      trackConversion();
       onDismiss();
     }
   };
 
   const handleDecline = () => {
+    trackDismiss();
     dismissRepairOffer();
     onDismiss();
   };
@@ -64,26 +86,24 @@ export function StreakRepairModal({ visible, onDismiss }: StreakRepairModalProps
               entering={FadeInDown.delay(100).duration(300)}
               style={styles.title}
             >
-              הרצף שלך ({previousStreak} ימים) נשבר 💔
+              {title}
             </Animated.Text>
 
             {/* Subtitle */}
             <Text style={styles.subtitle}>
-              נחזיר אותו? Finn מאמין בך!
+              {payload.subtitle}
             </Text>
 
-            {/* Option A: Coins */}
+            {/* Option A: Gems (or navigate to shop if not enough) */}
             <Pressable
-              onPress={handleRepairCoins}
-              style={[styles.primaryBtn, !canAfford && styles.disabledBtn]}
-              disabled={!canAfford}
+              onPress={handleRepairGems}
+              style={styles.primaryBtn}
               accessibilityRole="button"
-              accessibilityLabel={`החזר את הרצף ב-${REPAIR_COST} מטבעות`}
-              accessibilityState={{ disabled: !canAfford }}
+              accessibilityLabel={canAfford ? `שחזרו את הרצף עם ${REPAIR_COST_GEMS} יהלומים` : "קנו יהלומים בחנות"}
               hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
             >
               <Text style={styles.primaryBtnText}>
-                החזר ב-{REPAIR_COST} מטבעות 🪙
+                {canAfford ? `שחזרו את הרצף · ${REPAIR_COST_GEMS} 💎` : "קנו יהלומים בחנות 💎"}
               </Text>
             </Pressable>
 
@@ -96,7 +116,7 @@ export function StreakRepairModal({ visible, onDismiss }: StreakRepairModalProps
               hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
             >
               <Text style={styles.adBtnText}>
-                החזר דרך צפייה בפרסומת 🎬
+                {payload.adCTA}
               </Text>
             </Pressable>
 
@@ -108,7 +128,7 @@ export function StreakRepairModal({ visible, onDismiss }: StreakRepairModalProps
               accessibilityLabel="סגור, התחל רצף מחדש"
               hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
             >
-              <Text style={styles.secondaryBtnText}>לא, אתחיל מחדש</Text>
+              <Text style={styles.secondaryBtnText}>{payload.declineCTA}</Text>
             </Pressable>
           </Animated.View>
         </Pressable>

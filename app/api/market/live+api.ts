@@ -8,7 +8,7 @@
 
 import { enforceRateLimit } from '../_shared/rateLimit';
 import { safeErrorResponse } from '../_shared/safeError';
-import type { RateItem, LiveMarketData } from '../../../src/features/finfeed/liveMarketTypes';
+import type { RateItem, LiveMarketData } from '../../../src/features/live-news/liveMarketTypes';
 
 const CACHE_MS = 10 * 60 * 1000;
 let _cache: { data: LiveMarketData; expiresAt: number } | null = null;
@@ -47,6 +47,33 @@ async function fetchUsdIls(): Promise<RateItem> {
   } catch { /* fall through */ }
 
   return { value: '₪3.65', numericValue: 3.65, changePct: 0, direction: 'stable', label: 'דולר / שקל', symbol: '$' };
+}
+
+// ── EUR / ILS ──────────────────────────────────────────────────────────────
+async function fetchEurIls(): Promise<RateItem> {
+  try {
+    const res = await fetch('https://open.er-api.com/v6/latest/EUR', { signal: sig() });
+    if (res.ok) {
+      const json = await res.json() as { rates?: Record<string, number> };
+      const rate = Number(json?.rates?.ILS);
+      if (isFinite(rate) && rate > 1 && rate < 15) {
+        return { value: `₪${rate.toFixed(2)}`, numericValue: rate, changePct: 0, direction: 'stable', label: 'יורו / שקל', symbol: '€' };
+      }
+    }
+  } catch { /* fall through */ }
+
+  try {
+    const res = await fetch('https://api.exchangerate.host/latest?base=EUR&symbols=ILS', { signal: sig() });
+    if (res.ok) {
+      const json = await res.json() as { rates?: Record<string, number> };
+      const rate = Number(json?.rates?.ILS);
+      if (isFinite(rate) && rate > 1 && rate < 15) {
+        return { value: `₪${rate.toFixed(2)}`, numericValue: rate, changePct: 0, direction: 'stable', label: 'יורו / שקל', symbol: '€' };
+      }
+    }
+  } catch { /* fall through */ }
+
+  return { value: '₪4.00', numericValue: 4.0, changePct: 0, direction: 'stable', label: 'יורו / שקל', symbol: '€' };
 }
 
 // ── Bitcoin / USD (Yahoo Finance, no key needed) ───────────────────────────
@@ -147,15 +174,17 @@ export async function GET(request: Request): Promise<Response> {
   }
 
   try {
-    const [usdIls, btc, ta125, interest] = await Promise.all([
+    const [usdIls, btc, ta125, interest, eurIls] = await Promise.all([
       fetchUsdIls(),
       fetchBtc(),
       fetchTA125(),
       fetchInterestRate(),
+      fetchEurIls(),
     ]);
 
+    // rates[0..3] are the always-shown slots; rates[4] rotates into slot 3 on even days.
     const data: LiveMarketData = {
-      rates: [usdIls, btc, ta125, interest],
+      rates: [usdIls, btc, ta125, interest, eurIls],
       fetchedAt: new Date().toISOString(),
     };
 

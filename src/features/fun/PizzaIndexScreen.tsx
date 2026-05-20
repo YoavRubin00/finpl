@@ -5,7 +5,7 @@
  */
 import React from "react";
 import { View, Text, StyleSheet, ScrollView, Share, Pressable, type ImageSourcePropType } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { Image as ExpoImage } from "expo-image";
 import Animated, { FadeInUp } from "react-native-reanimated";
 import { X } from "lucide-react-native";
@@ -98,11 +98,11 @@ function StatCardView({ card, index }: { card: StatCard; index: number }) {
   return (
     <Animated.View entering={FadeInUp.delay(200 + index * 120).duration(400)}>
       <View style={styles.statCard}>
-        {/* Image, full width at top, rounded, on light blue backdrop */}
+        {/* Image, full width at top, rounded, on a saturated blue backdrop */}
         <View style={styles.statImageWrap}>
           <ExpoImage
             source={card.image}
-            style={[styles.statImage, { backgroundColor: "#e0f2fe" }]}
+            style={[styles.statImage, { backgroundColor: "#7dd3fc" }]}
             contentFit="contain"
           />
         </View>
@@ -126,6 +126,9 @@ interface PizzaIndexScreenProps {
 export function PizzaIndexScreen({ onClose }: PizzaIndexScreenProps = {}) {
   const stats = buildStats();
   const isModal = typeof onClose === "function";
+  // SafeAreaView's bottom inset doesn't always reach absolute-positioned children
+  // on Android with gesture nav, so we apply the inset explicitly to the sticky bar.
+  const insets = useSafeAreaInsets();
 
   const handleShare = async () => {
     tapHaptic();
@@ -199,7 +202,7 @@ export function PizzaIndexScreen({ onClose }: PizzaIndexScreenProps = {}) {
 
         {/* Sticky "המשך" CTA, modal mode only */}
         {isModal && (
-          <View style={styles.stickyContinueBar}>
+          <View style={[styles.stickyContinueBar, { paddingBottom: 14 + insets.bottom }]}>
             <View style={styles.continueDepth} pointerEvents="none" />
             <Pressable
               onPress={handleContinue}
@@ -273,7 +276,7 @@ const styles = StyleSheet.create({
     height: 160,
     borderTopLeftRadius: 22,
     borderTopRightRadius: 22,
-    backgroundColor: "#e0f2fe",
+    backgroundColor: "#7dd3fc",
     overflow: "hidden",
     alignItems: "center",
     justifyContent: "center",

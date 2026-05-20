@@ -7,6 +7,8 @@ import { useEconomyStore } from '../economy/useEconomyStore';
 import { useChapterStore } from '../chapter-1-content/useChapterStore';
 import { MODULE_NAMES } from '../chat/chatData';
 import { getApiBase } from '../../db/apiBase';
+import { useTutorialStore } from '../../stores/useTutorialStore';
+import { useBannerCooldownStore } from '../notifications/useBannerCooldownStore';
 
 const DEFAULT_BANNER_MSG = 'יש לי תובנה חדשה עבורכם';
 
@@ -49,6 +51,10 @@ export function useAIInsightBanner() {
   const fetchedRef = useRef(false);
 
   useEffect(() => {
+    // Hard gate: no top banners during onboarding or initial walkthrough.
+    if (!useAuthStore.getState().hasCompletedOnboarding) return;
+    if (!useTutorialStore.getState().hasSeenAppWalkthrough) return;
+
     const store = useWeeklyInsightStore.getState();
     if (!store.shouldShowBanner(isPro)) return;
 
@@ -66,7 +72,13 @@ export function useAIInsightBanner() {
       });
     }
 
-    const t = setTimeout(() => setVisible(true), 2500);
+    // Defer to the global cooldown so we never overlap another top banner.
+    const baseDelay = 2500;
+    const cooldownDelay = useBannerCooldownStore.getState().msUntilNextSlot();
+    const t = setTimeout(() => {
+      setVisible(true);
+      useBannerCooldownStore.getState().markShown();
+    }, baseDelay + cooldownDelay);
     return () => clearTimeout(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);

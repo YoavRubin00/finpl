@@ -93,7 +93,7 @@ export function MythOrTachlesScreen({ visible, onClose }: Props) {
             statusBarTranslucent
             onRequestClose={handleClose}
         >
-            <StatusBar barStyle="light-content" backgroundColor="#0d0c1f" />
+            <StatusBar barStyle="light-content" />
             <SafeAreaView style={styles.container}>
                 {/* Header */}
                 <Animated.View entering={FadeInDown.duration(300)} style={styles.header}>

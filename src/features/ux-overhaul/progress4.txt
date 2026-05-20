@@ -214,7 +214,7 @@
   - PulsingCTA component: "Start Lesson" button with breathing glow via `withRepeat(withSequence)` cycling shadowOpacity 0.4↔0.9 and shadowRadius 8↔20
   - Card has semi-transparent dark bg (rgba 0.85) with category-colored border and shadow
 - Added `difficulty` field (1-5) to `FeedLesson` interface and all `feedData.ts` entries
-- Updated `src/features/finfeed/FinFeedScreen.tsx`:
+- Updated `src/features/inter-module-content/feedScrollStubs.tsx`:
   - Card scale/fade transition: active card = 1.0, inactive = 0.92 scale + 0.7 opacity, animated with `withSpring(SPRING_SMOOTH)` + `withTiming`
   - Pull-to-refresh: `RefreshControl` with violet tint on dark bg, simulated 1.2s refresh
   - Haptic on snap: `tapHaptic()` fires when `activeIndex` changes (tracked via prevActiveIndex ref)

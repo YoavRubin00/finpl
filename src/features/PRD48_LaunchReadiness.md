@@ -38,10 +38,10 @@
 ### US-005: Expo API Routes
 הקמת שכבת API בין הלקוח לבין Neon DB:
 - [x] `app/api/auth/verify+api.ts` — אימות Google/Apple token, יצירת/אחזור user ✅
-- [x] `app/api/sync/profile+api.ts` — sync פרופיל משתמש ✅
+- [x] `app/api/sync/profile+api.ts` — sync פרופיל משתמש (כולל XP/coins/gems) ✅
 - [x] `app/api/sync/progress+api.ts` — sync התקדמות מודולים ✅
-- [x] `app/api/sync/inventory+api.ts` — sync פריטים/אוואטרים ✅
 - [x] `app/api/trading/quote+api.ts` — proxy למחירי Yahoo Finance ✅
+- ~~`app/api/sync/inventory+api.ts`~~ — נמחק (2026-05-01): היה dead-code, הקליינט סנכרן XP/coins/gems על `user_profiles` דרך `/api/sync/profile`. הטבלה הופלה.
 
 ### US-006: Client-side migration
 - [x] החלפת קריאות ישירות ל-DB בקריאות fetch ל-API routes ✅
@@ -78,6 +78,12 @@
 - [x] Lazy loading למסכי סימולציה (React.lazy) ✅
 - [x] אופטימיזציה של Lottie — רק לטעון מה שצריך ✅
 - [ ] בדיקת memory usage על מכשיר אמיתי
+
+### US-009b: DB Sync Smoke-Tests (אחרי deploy של schema fix 2026-05-01)
+- [ ] סיים שיעור אחד על מכשיר אמת ובדוק שנכנסה שורה ל-`coin_events` (source='lesson')
+- [ ] סיים daily quest ובדוק שנכנסה שורה ל-`coin_events` (source='daily-quest')
+- [ ] רישום קוד הזמנה (קליינט A) → מימוש (קליינט B) → בדוק שנכנסה שורה ל-`referrals`
+- [ ] גביית דיבידנד → בדוק שורה ב-`dividend_collections`
 
 ### US-010: Text Visibility Pass
 - [x] Chapter 2 sims — white text + shadows ✅
@@ -177,6 +183,8 @@
 | Social (Duels, Squads) | ✅ עובד |
 | Streak + Retention | ✅ עובד |
 | Google OAuth | ✅ In Production. לפני חנויות: SHA-1 של Play App Signing + iOS Team ID |
-| Cloud Sync | ✅ עובד (API routes) |
+| Cloud Sync | ✅ עובד (API routes). schema drift תוקן 2026-05-01 |
+| AI Mentor usage tracking | ⚠️ AsyncStorage בלבד — `ai_mentor_usage` בטבלה ריקה, לא חוצה מכשירים |
+| Paper Trading persistence | ⚠️ Zustand persist בלבד — `paper_portfolio`/`paper_trades` ריקים, לא חוצה מכשירים |
 | תשלומים | ⚠️ קוד מוכן, Service Account מוכן. חסר: העלאת JSON ל-RC, הגדרת webhook, מוצרים בחנויות |
 | App Store/Play | ❌ עדיין לא הוגש |

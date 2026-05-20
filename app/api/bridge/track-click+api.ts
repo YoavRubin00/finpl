@@ -11,6 +11,7 @@ const OWNER_EMAIL = process.env.OWNER_NOTIFICATION_EMAIL ?? '';
 
 const BENEFIT_LABELS: Record<string, string> = {
   'bridge-invest-altshuler': 'אלטשולר שחם טרייד',
+  'bridge-invest-inter-il': 'אינטראקטיב ישראל',
 };
 
 function buildAlertHtml(params: {
@@ -44,6 +45,7 @@ export async function POST(request: Request): Promise<Response> {
     const body = await request.json() as Record<string, unknown>;
 
     const benefitId = sanitizeString(body.benefitId, 100);
+    const authId    = sanitizeString(body.authId, 254);
     const userEmail = sanitizeString(body.userEmail, 254) ?? null;
     const action    = sanitizeString(body.action, 20);
     const platform  = sanitizeString(body.platform, 10) ?? null;
@@ -56,9 +58,18 @@ export async function POST(request: Request): Promise<Response> {
     }
 
     const sql = neon(process.env.DATABASE_URL ?? '');
+
+    // Resolve user_id when an authId is provided. Anonymous clicks remain
+    // supported (user_id NULL, user_email kept for the owner-alert email body).
+    let userId: string | null = null;
+    if (authId) {
+      const rows = await sql`SELECT id FROM user_profiles WHERE auth_id = ${authId} LIMIT 1` as { id: string }[];
+      userId = rows[0]?.id ?? null;
+    }
+
     await sql`
-      INSERT INTO bridge_clicks (benefit_id, user_email, action, platform)
-      VALUES (${benefitId}, ${userEmail}, ${action}, ${platform})
+      INSERT INTO bridge_clicks (benefit_id, user_id, user_email, action, platform)
+      VALUES (${benefitId}, ${userId}, ${userEmail}, ${action}, ${platform})
     `;
 
     // Send owner alert on every redeem (link_open is higher frequency, skip email for those).

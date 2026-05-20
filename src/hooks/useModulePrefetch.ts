@@ -1,6 +1,8 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
+import { Platform } from "react-native";
 import { Image as ExpoImage } from "expo-image";
 import * as FileSystem from "expo-file-system/legacy";
+import { captureEvent } from "../lib/posthog";
 
 const videoCache = new Map<string, string>();
 const VIDEO_CACHE_DIR = `${FileSystem.cacheDirectory ?? ""}module-videos/`;
@@ -9,6 +11,10 @@ const VIDEO_CACHE_DIR = `${FileSystem.cacheDirectory ?? ""}module-videos/`;
 // otherwise returns the original remote URI unchanged so playback still works.
 export function getCachedVideoPath(remoteUri: string): string {
   return videoCache.get(remoteUri) ?? remoteUri;
+}
+
+function videoKeyFromUri(uri: string): string {
+  return uri.split('/').slice(-2).join('/');
 }
 
 async function prefetchVideo(uri: string): Promise<void> {
@@ -22,24 +28,71 @@ async function prefetchVideo(uri: string): Promise<void> {
     }
     await FileSystem.makeDirectoryAsync(VIDEO_CACHE_DIR, { intermediates: true }).catch(() => {});
     const result = await FileSystem.downloadAsync(uri, localPath);
-    if (result.status === 200) videoCache.set(uri, localPath);
-  } catch {
-    // Silent fail — video will be streamed from the remote URI.
+    if (result.status === 200) {
+      videoCache.set(uri, localPath);
+    } else {
+      // Non-200 status — log but keep streaming fallback.
+      captureEvent('video_prefetch_failed', {
+        video_key: videoKeyFromUri(uri),
+        platform: Platform.OS,
+        reason: `http_${result.status}`,
+      });
+    }
+  } catch (err) {
+    // Network/IO failure — log so we can quantify how often prefetch fails
+    // (silent fall-through to streaming hides this from telemetry).
+    captureEvent('video_prefetch_failed', {
+      video_key: videoKeyFromUri(uri),
+      platform: Platform.OS,
+      reason: err instanceof Error ? err.message : 'unknown',
+    });
   }
+}
+
+export interface ModulePrefetchState {
+  imagesReady: boolean;
+  videosReady: boolean;
 }
 
 export function useModulePrefetch(
   uris: readonly string[],
   videoUris: readonly string[] = [],
-): void {
+): ModulePrefetchState {
+  const [imagesReady, setImagesReady] = useState(uris.length === 0);
+  const [videosReady, setVideosReady] = useState(videoUris.length === 0);
+
   useEffect(() => {
+    let cancelled = false;
+    setImagesReady(uris.length === 0);
+    setVideosReady(videoUris.length === 0);
+
     if (uris.length > 0) {
-      Promise.allSettled(uris.map((uri) => ExpoImage.prefetch(uri))).catch(() => {});
+      Promise.allSettled(uris.map((uri) => ExpoImage.prefetch(uri)))
+        .then((results) => {
+          // אנליטיקס לכשלים. בלי זה אנחנו עיוורים — משתמשים מדווחים על
+          // placeholders אפורים אבל לא יודעים אילו URLs נכשלו.
+          results.forEach((r, i) => {
+            if (r.status === 'rejected') {
+              const uri = uris[i];
+              captureEvent('image_prefetch_failed', {
+                uri,
+                file_key: uri.split('/').slice(-2).join('/'),
+                platform: Platform.OS,
+                reason: r.reason instanceof Error ? r.reason.message : String(r.reason),
+              });
+            }
+          });
+        })
+        .finally(() => { if (!cancelled) setImagesReady(true); });
     }
     if (videoUris.length > 0) {
-      Promise.allSettled(videoUris.map(prefetchVideo)).catch(() => {});
+      Promise.allSettled(videoUris.map(prefetchVideo))
+        .finally(() => { if (!cancelled) setVideosReady(true); });
     }
+    return () => { cancelled = true; };
   // Both arrays are memoized by caller (keyed on mod.id).
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [uris, videoUris]);
+
+  return { imagesReady, videosReady };
 }

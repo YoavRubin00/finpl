@@ -82,22 +82,23 @@ export function HoldingsScreen() {
 
     const handleSell = useCallback((pos: ActivePosition) => {
         tapHaptic();
+        // closePosition credits virtual_balance with the PnL-adjusted return
+        // internally — see useTradingStore. Do NOT credit again here.
         const closed = closePosition(pos.id);
         if (!closed) return;
 
         const pnlFactor = 1 + closed.pnlPercent / 100;
-        const returnedCoins = Math.max(0, Math.round(closed.amountInvested * pnlFactor));
-        if (returnedCoins > 0) addCoins(returnedCoins);
+        const returned = Math.max(0, Math.round(closed.amountInvested * pnlFactor));
 
         successHaptic();
         setCloseResult({
             assetId: closed.assetId,
             type: closed.type,
             invested: closed.amountInvested,
-            returned: returnedCoins,
+            returned,
             pnlPercent: closed.pnlPercent,
         });
-    }, [closePosition, addCoins]);
+    }, [closePosition]);
 
     const handleBuyMore = useCallback((assetId: string) => {
         tapHaptic();

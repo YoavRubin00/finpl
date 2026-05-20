@@ -139,7 +139,7 @@ export function BarterPuzzleScreen({
       setCoinAccepted((prev) => {
         const next = new Set(prev);
         next.add(merchantId);
-        if (next.size >= 3) {
+        if (next.size >= 2) {
           setTimeout(() => {
             doubleHeavyHaptic();
             setShowConfetti(true);
@@ -239,7 +239,7 @@ export function BarterPuzzleScreen({
     visibleMerchants.push(SWAP_MERCHANTS[0]);
     visibleMerchantIds.add(SWAP_MERCHANTS[0].id);
   }
-  if (phase === "swap2" || phase === "moneyPhase") {
+  if (phase === "swap2") {
     visibleMerchants.push(SWAP_MERCHANTS[1]);
     visibleMerchantIds.add(SWAP_MERCHANTS[1].id);
   }
@@ -277,6 +277,7 @@ export function BarterPuzzleScreen({
             key={m.id}
             merchant={m}
             accepted={coinAccepted.has(m.id)}
+            inMoneyPhase={phase === "moneyPhase"}
             onLayout={(x, y) => {
               merchantPositions.current[m.id] = { x, y };
             }}
@@ -341,10 +342,12 @@ function IntroCard({ onStart }: { onStart: () => void }) {
 function MerchantSlot({
   merchant,
   accepted,
+  inMoneyPhase,
   onLayout,
 }: {
   merchant: Merchant;
   accepted: boolean;
+  inMoneyPhase: boolean;
   onLayout: (x: number, y: number) => void;
 }) {
   const viewRef = useRef<View>(null);
@@ -374,7 +377,7 @@ function MerchantSlot({
         <Text style={styles.merchantName}>{merchant.name}</Text>
         {!accepted ? (
           <View style={styles.wantsBadge}>
-            <Text style={styles.wantsText}>רוצה {merchant.wants}</Text>
+            <Text style={styles.wantsText}>רוצה {inMoneyPhase ? '🪙' : merchant.wants}</Text>
           </View>
         ) : (
           <Animated.View entering={ZoomIn.duration(300)} style={styles.checkBadge}>

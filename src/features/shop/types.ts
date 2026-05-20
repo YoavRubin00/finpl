@@ -1,4 +1,20 @@
-export type ShopCategory = 'hearts' | 'hints' | 'protection' | 'cosmetics' | 'premium' | 'avatars';
+export type ShopCategory = 'hearts' | 'hints' | 'protection' | 'boosts' | 'cosmetics' | 'premium' | 'avatars';
+
+/** Active temporary booster (Coin Master / Brawl Stars pattern).
+ *  Multiplies XP / coins / quest rewards while active.
+ *  Expires automatically — `cleanupExpiredBoosts()` should run on read. */
+export interface ActiveBoost {
+  /** Matches the shop item id that activated it (e.g. 'boost-xp-2x-1h'). */
+  id: string;
+  /** Epoch ms when the boost expires. */
+  expiresAt: number;
+  /** Multiplier applied to `addXP` while active. 1.0 = no effect. */
+  xpMultiplier?: number;
+  /** Multiplier applied to `addCoins` (lesson/quest/daily-quest sources only). */
+  coinMultiplier?: number;
+  /** Multiplier applied to claimed quest rewards (xp + coins). */
+  questRewardMultiplier?: number;
+}
 
 export interface ShopItem {
   id: string;
@@ -9,6 +25,12 @@ export interface ShopItem {
   gemCost?: number;
   emoji: string;
   lottieSource?: number;
+  /** Public image URL — preferred over lottie/emoji when present (used by avatar shark items). */
+  imageUrl?: string;
+  /** Passive ability bestowed when this avatar is equipped. Currently rendered
+   *  as a "highlight" line on the shop card; gameplay-side multipliers are
+   *  applied at reward emit sites (separate followup wiring). */
+  ability?: string;
 }
 
 /** IAP gem bundle, real-money purchase (mock flow) */

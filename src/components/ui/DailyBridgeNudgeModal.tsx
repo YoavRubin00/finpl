@@ -21,13 +21,13 @@ import { useEconomyStore } from '../../features/economy/useEconomyStore';
 import { tapHaptic, successHaptic } from '../../utils/haptics';
 
 const DAILY_COPY: Record<number, string> = {
-  0: 'בנית בסיס חזק. הגיע הזמן להשתמש בו',
-  1: 'עשינו דרך יפה ביחד. בוא נעבור לעולם האמיתי',
-  2: 'הידע שלך שווה כסף אמיתי. בוא נאמת את זה',
-  3: 'חיסכון ראשון? השקעה ראשונה? הגשר פתוח בשבילך',
-  4: 'ידע לבד לא מספיק, צריך לפעול. בוא לגשר',
+  0: 'בנית בסיס חזק.\nהגיע הזמן להשתמש בו',
+  1: 'עשינו דרך יפה ביחד. בואו נעבור לעולם האמיתי',
+  2: 'הידע שלכם שווה כסף אמיתי. בואו נאמת את זה',
+  3: 'חיסכון ראשון? השקעה ראשונה? הגשר פתוח בשבילכם',
+  4: 'ידע לבד לא מספיק, צריך לפעול. בואו לגשר',
   5: 'שישי מעולה לפתוח חיסכון אמיתי. 5 דקות זה הכל',
-  6: 'שבת שלום. הזמן הנכון לסקור את האפשרויות שלך',
+  6: 'שבת שלום. הזמן הנכון לסקור את האפשרויות שלכם',
 };
 
 export function DailyBridgeNudgeModal() {
@@ -69,8 +69,20 @@ export function DailyBridgeNudgeModal() {
     const MIN_SESSION_MS = 4 * 60 * 1000; // 4 min — midpoint of the 3-5 min window
     const STREAK_WAIT_GRACE_MS = 15 * 1000; // give the streak popup 15 s to fire first
 
+    let interval: ReturnType<typeof setInterval> | null = null;
+
+    const stopPolling = () => {
+      if (interval !== null) {
+        clearInterval(interval);
+        interval = null;
+      }
+    };
+
     const tryShow = () => {
-      if (shownRef.current) return;
+      if (shownRef.current) {
+        stopPolling();
+        return;
+      }
       const s = useNudgeQueueStore.getState();
       if (s.inLesson) return; // never during a module
       if (!s.canShow('bridge')) return;
@@ -82,14 +94,15 @@ export function DailyBridgeNudgeModal() {
       if (!s.streakShownThisSession && sessionAge < MIN_SESSION_MS + STREAK_WAIT_GRACE_MS) return;
       shownRef.current = true;
       setVisible(true);
+      stopPolling();
     };
 
     // First attempt after a short delay, then poll every 30 s.
     const initial = setTimeout(tryShow, 3000);
-    const interval = setInterval(tryShow, 30_000);
+    interval = setInterval(tryShow, 30_000);
     return () => {
       clearTimeout(initial);
-      clearInterval(interval);
+      stopPolling();
     };
   }, [isAuthenticated, hasCompletedOnboarding, isGuest, profile, activeDates, lastBridgeNudgeDateISO]);
 

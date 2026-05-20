@@ -94,10 +94,10 @@ export function useBankCombat(config: BankCombatConfig) {
             gradeLabel = '👍 לא רע! יש עוד מקום לחסוך בעמלות';
         } else if (savingsPercentage >= 40) {
             grade = 'C';
-            gradeLabel = '⚠️ הבנק עדיין מרוויח ממך יותר מדי';
+            gradeLabel = '⚠️ הבנק עדיין מרוויח מכם יותר מדי';
         } else {
             grade = 'F';
-            gradeLabel = '🚨 הבנק שמח! אתה משלם עמלות מיותרות, שווה ללמוד להתמקח';
+            gradeLabel = '🚨 הבנק שמח! אתם משלמים עמלות מיותרות, שווה ללמוד להתמקח';
         }
 
         return {

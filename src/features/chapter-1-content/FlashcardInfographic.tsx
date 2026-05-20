@@ -6,14 +6,15 @@
  * To enable a chapter: uncomment its require() lines after generating PNGs.
  * Generate with: bash scripts/generate_module_infographic.sh <module-id>
  */
-import { useState, useCallback, useEffect } from "react";
-import { View, Image, StyleSheet, Pressable, Modal, Platform } from "react-native";
-import Animated, { useSharedValue, useAnimatedStyle, withTiming, withRepeat, Easing } from "react-native-reanimated";
+import { useState, useCallback, useEffect, useRef } from "react";
+import { View, Image, Text, StyleSheet, Pressable, Modal, Platform } from "react-native";
+import Animated, { useSharedValue, useAnimatedStyle, withTiming, withRepeat, withSequence, Easing, interpolate, Extrapolation } from "react-native-reanimated";
 import { Image as ExpoImage } from "expo-image";
 import type { ImageSource, ImageLoadEventData } from "expo-image";
 import type { ImageSourcePropType } from "react-native";
 import LottieView from "lottie-react-native";
 import type { AnimationObject } from "lottie-react-native";
+import { captureEvent } from "../../lib/posthog";
 
 const AnimatedExpoImage = Animated.createAnimatedComponent(ExpoImage);
 
@@ -417,6 +418,51 @@ const LARGE_CARDS = new Set([
 /** Cards whose infographic should fill the container edge-to-edge (cover instead of contain) */
 const COVER_CARDS = new Set(["fc-1-3-2"]);
 
+interface TextOverlay {
+  topPct: number;
+  leftPct: number;
+  widthPct: number;
+  heightPct: number;
+  text?: string;
+  fontSize?: number;
+  color?: string;
+  backgroundColor?: string;
+}
+
+/** Patches over typos in cloud-hosted PNG infographics. Position % is relative to the rendered image. */
+const TEXT_OVERLAYS: Record<string, TextOverlay[]> = {
+  "fc-0-2-4": [
+    {
+      topPct: 40,
+      leftPct: 26,
+      widthPct: 24,
+      heightPct: 7,
+      text: "חשבון",
+      fontSize: 22,
+      color: "#0f172a",
+      backgroundColor: "#ffffff",
+    },
+  ],
+  "fc-1-2-4": [
+    {
+      topPct: 65,
+      leftPct: 30,
+      widthPct: 15,
+      heightPct: 5,
+      backgroundColor: "#e0f2fe",
+    },
+  ],
+  "fc-1-2-1": [
+    {
+      topPct: 80,
+      leftPct: 35,
+      widthPct: 13,
+      heightPct: 4,
+      backgroundColor: "#e0f2fe",
+    },
+  ],
+};
+
 interface Props {
   cardId: string;
   diveStep?: number;
@@ -430,6 +476,7 @@ export function FlashcardInfographic({ cardId, diveStep = 0, zoomRegions }: Prop
   const isLightBg = LIGHT_BG_CARDS.has(cardId);
   const [ratio, setRatio] = useState<number | undefined>(undefined);
   const [finnFullscreen, setFinnFullscreen] = useState(false);
+  const [imageError, setImageError] = useState(false);
 
   const handleLoad = useCallback((e: ImageLoadEventData) => {
     const { width, height } = e.source;
@@ -438,9 +485,21 @@ export function FlashcardInfographic({ cardId, diveStep = 0, zoomRegions }: Prop
     }
   }, []);
 
+  const handleImageError = useCallback((err: unknown) => {
+    setImageError(true);
+    const rawUri = typeof source === 'object' && source && 'uri' in source ? source.uri : undefined;
+    captureEvent('infographic_load_failed', {
+      card_id: cardId,
+      uri: typeof rawUri === 'string' ? rawUri : 'bundled',
+      error: String((err as { error?: unknown })?.error ?? err),
+      platform: Platform.OS,
+    });
+  }, [cardId, source]);
+
   const zoomScale = useSharedValue(1);
   const zoomX = useSharedValue(0);
   const zoomY = useSharedValue(0);
+  const prevStepRef = useRef<number | undefined>(undefined);
 
   // Idle "breathing" — subtle pulse + drift that runs continuously.
   // Composes multiplicatively/additively with zoom so dive transitions stay clean.
@@ -456,10 +515,27 @@ export function FlashcardInfographic({ cardId, diveStep = 0, zoomRegions }: Prop
         [targetX, targetY, targetScale] = zoomRegions[0];
       }
     }
-    const cfg = { duration: typeof diveStep === 'number' ? 600 : 0 }; // instant if no dive step (initial mount in feed)
-    zoomScale.value = withTiming(targetScale, cfg);
-    zoomX.value = withTiming(targetX, cfg);
-    zoomY.value = withTiming(targetY, cfg);
+    const prevStep = prevStepRef.current;
+    const prevRegion = zoomRegions && typeof prevStep === 'number' ? zoomRegions[prevStep] : undefined;
+    const passThroughNeutral =
+      typeof diveStep === 'number' &&
+      prevStep !== diveStep &&
+      !!prevRegion &&
+      prevRegion[2] > 1 &&
+      targetScale > 1;
+    if (passThroughNeutral) {
+      const out = { duration: 300 };
+      const inn = { duration: 500 };
+      zoomScale.value = withSequence(withTiming(1, out), withTiming(targetScale, inn));
+      zoomX.value = withSequence(withTiming(0, out), withTiming(targetX, inn));
+      zoomY.value = withSequence(withTiming(0, out), withTiming(targetY, inn));
+    } else {
+      const cfg = { duration: typeof diveStep === 'number' ? 600 : 0 }; // instant if no dive step (initial mount in feed)
+      zoomScale.value = withTiming(targetScale, cfg);
+      zoomX.value = withTiming(targetX, cfg);
+      zoomY.value = withTiming(targetY, cfg);
+    }
+    prevStepRef.current = diveStep;
   }, [diveStep, zoomRegions, zoomScale, zoomX, zoomY]);
 
   useEffect(() => {
@@ -481,6 +557,14 @@ export function FlashcardInfographic({ cardId, diveStep = 0, zoomRegions }: Prop
       { translateY: zoomY.value + breathDriftY.value },
       { scale: zoomScale.value * breathScale.value },
     ],
+  }));
+
+  // Text overlays patch typos in the static PNG. They should fade away the
+  // moment the zoom-in begins, so the patched image doesn't keep its visible
+  // bandage while the camera moves around. interp [1, 1.1] -> [1, 0] means
+  // by the time the zoom hits 10% it's gone — well within the 600ms transition.
+  const overlayFadeStyle = useAnimatedStyle(() => ({
+    opacity: interpolate(zoomScale.value, [1, 1.1], [1, 0], Extrapolation.CLAMP),
   }));
 
   if (!source && !lottieSource && !finnTapSource) return null;
@@ -510,9 +594,44 @@ export function FlashcardInfographic({ cardId, diveStep = 0, zoomRegions }: Prop
           />
         </View>
       )}
-      {source && (
-        <View style={[s.container, isLightBg && s.containerLight, { aspectRatio: ratio ?? 1.2, maxHeight: COMPACT_CARDS.has(cardId) ? 220 : LARGE_CARDS.has(cardId) ? undefined : 270 }]}>
-          <AnimatedExpoImage source={source} style={[s.image, zoomStyle]} contentFit={COVER_CARDS.has(cardId) ? "cover" : "contain"} cachePolicy="memory-disk" priority="high" onLoad={Platform.OS === 'web' ? undefined : handleLoad} />
+      {source && imageError && (
+        // Fallback graceful — אם התמונה נכשלה לטעון (רשת/CDN חסומים), במקום
+        // placeholder אפור גדול שתופס שטח מסך אנחנו פשוט מסתירים את התמונה.
+        // ה-flashcard text + הסבר עדיין מציגים נכון. analytics נשלח ל-PostHog.
+        null
+      )}
+      {source && !imageError && (
+        <View style={[s.container, isLightBg && s.containerLight, { aspectRatio: ratio ?? 1.2, maxHeight: COMPACT_CARDS.has(cardId) ? 220 : LARGE_CARDS.has(cardId) ? undefined : 270, backgroundColor: '#f1f5f9' }]}>
+          <AnimatedExpoImage source={source} style={[s.image, zoomStyle]} contentFit={COVER_CARDS.has(cardId) ? "cover" : "contain"} cachePolicy="memory-disk" priority="high" transition={200} onLoad={Platform.OS === 'web' ? undefined : handleLoad} onError={handleImageError} />
+          {TEXT_OVERLAYS[cardId]?.map((o, i) => (
+            <Animated.View
+              key={i}
+              pointerEvents="none"
+              style={[
+                {
+                  position: "absolute",
+                  top: `${o.topPct}%`,
+                  left: `${o.leftPct}%`,
+                  width: `${o.widthPct}%`,
+                  height: `${o.heightPct}%`,
+                  backgroundColor: o.backgroundColor ?? "#ffffff",
+                  justifyContent: "center",
+                  alignItems: "center",
+                },
+                overlayFadeStyle,
+              ]}
+            >
+              {o.text ? (
+                <Text style={{
+                  fontSize: o.fontSize ?? 18,
+                  fontWeight: "800",
+                  color: o.color ?? "#0f172a",
+                  textAlign: "center",
+                  writingDirection: "rtl",
+                }}>{o.text}</Text>
+              ) : null}
+            </Animated.View>
+          ))}
           {lottieSource && (
             <View style={s.lottieFloatingBadge}>
               <LottieView

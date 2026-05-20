@@ -130,7 +130,7 @@ export function MoreScreen() {
     }
     Alert.alert(
       "יציאה מהחשבון",
-      "בטוח שאתה רוצה לצאת?",
+      "בטוחים שאתם רוצים לצאת?",
       [
         { text: "ביטול", style: "cancel" },
         {
@@ -237,6 +237,11 @@ export function MoreScreen() {
               <View style={styles.cardInner}>
                 <MoreRow
                   isFirst
+                  icon={<SafeLottie source={require('../../../assets/lottie/wired-flat-202-chat-hover-oscillate.json')} style={styles.lottieIcon} autoPlay loop  />}
+                  label="פנו אלינו לתמיכה"
+                  onPress={() => router.push("/support" as never)}
+                />
+                <MoreRow
                   icon={<SafeLottie source={require('../../../assets/lottie/wired-flat-202-chat-hover-oscillate.json')} style={styles.lottieIcon} autoPlay loop  />}
                   label="קהילת WhatsApp"
                   onPress={() => Linking.openURL(WHATSAPP_URL).catch(() => Alert.alert("שגיאה"))}

@@ -210,7 +210,6 @@ ${engineContext ? `## נתוני מנוע AI פנימי\n${engineContext}\n` : '
           contents: [{ role: 'user', parts: [{ text: userMessage }] }],
           generationConfig: {
             maxOutputTokens: 1024,
-            thinkingConfig: { thinkingBudget: 0 },
             responseMimeType: 'application/json',
           },
         }),

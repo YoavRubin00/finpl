@@ -21,24 +21,26 @@ const SAFE_LOTTIE_WEB = path.resolve(
   __dirname,
   "src/components/ui/SafeLottieView.web.tsx"
 );
-const ADS_WEB_STUB = path.resolve(
-  __dirname,
-  "src/lib/googleMobileAds.web.ts"
-);
+// Empty stub for native-only modules on web (e.g. react-native-google-mobile-ads,
+// which references native codegen that doesn't bundle on web).
+const EMPTY_WEB_STUB = path.resolve(__dirname, "src/lib/empty-module.web.js");
+
+const NATIVE_ONLY_WEB_STUBS = new Set([
+  "react-native-google-mobile-ads",
+]);
+
 const originalResolveRequest = config.resolver.resolveRequest;
 config.resolver.resolveRequest = (context, moduleName, platform) => {
   if (
     moduleName === "lottie-react-native" &&
     platform === "web" &&
-    // Allow SafeLottieView.tsx (native) to import the real package
     !context.originModulePath?.includes("SafeLottieView")
   ) {
     return { filePath: SAFE_LOTTIE_WEB, type: "sourceFile" };
   }
-  if (moduleName === "react-native-google-mobile-ads" && platform === "web") {
-    return { filePath: ADS_WEB_STUB, type: "sourceFile" };
+  if (platform === "web" && NATIVE_ONLY_WEB_STUBS.has(moduleName)) {
+    return { filePath: EMPTY_WEB_STUB, type: "sourceFile" };
   }
-  // Fall through to default resolver
   if (originalResolveRequest) {
     return originalResolveRequest(context, moduleName, platform);
   }

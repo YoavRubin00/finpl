@@ -38,6 +38,31 @@ export interface SimConcept {
   description: string;
 }
 
+export interface PodcastQuestionOption {
+  text: string;
+  isCorrect: boolean;
+  feedback: string;
+}
+
+export interface PodcastQuestion {
+  id: string;
+  type: 'comprehension' | 'dilemma';
+  question: string;
+  options: PodcastQuestionOption[];
+  xpReward: number;
+  coinReward: number;
+}
+
+export interface PodcastSegment {
+  id: string;
+  title: string;
+  audio: { uri: string };
+  durationSec: number;
+  transcript: string;
+  comprehensionQuiz: PodcastQuestion;
+  dilemmaQuiz: PodcastQuestion;
+}
+
 export interface Module {
   id: string;
   title: string;
@@ -76,6 +101,8 @@ export interface Module {
   interModuleFinnMessage?: string;
   /** When set to 'short', renders a FinPlay Short cinematic intro instead of InteractiveIntroCard */
   introVariant?: 'short';
+  /** Optional 20-second podcast segment with two follow-up questions (comprehension + dilemma) */
+  podcast?: PodcastSegment;
 }
 
 export interface Chapter {

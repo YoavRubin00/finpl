@@ -1,6 +1,7 @@
-import { View, Text, Image, Pressable, Modal, StyleSheet } from 'react-native';
+import { View, Text, Image, Pressable, Modal, StyleSheet, ScrollView } from 'react-native';
 import Animated, { FadeIn, FadeInUp } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { LinearGradient } from 'expo-linear-gradient';
 import { X } from 'lucide-react-native';
 import { GoldCoinIcon } from '../../components/ui/GoldCoinIcon';
 import { LottieIcon } from '../../components/ui/LottieIcon';
@@ -39,7 +40,7 @@ export function RedemptionModal({ visible, benefit, isRedeemed = false, canAffor
           entering={FadeInUp.duration(280)}
           style={[
             styles.sheet,
-            { paddingBottom: Math.max(insets.bottom + 16, 28) },
+            { paddingBottom: Math.max(insets.bottom + 16, 28), maxHeight: '90%' },
           ]}
         >
           {/* Handle bar */}
@@ -50,57 +51,87 @@ export function RedemptionModal({ visible, benefit, isRedeemed = false, canAffor
             <X size={18} color="#64748b" />
           </Pressable>
 
-          {/* Partner logo + name */}
-          <View style={styles.partnerRow}>
-            <View style={styles.partnerLogoCircle}>
-              {benefit.partnerLogoImage
-                ? <Image source={benefit.partnerLogoImage} style={{ width: 36, height: 36, borderRadius: 6 }} resizeMode="contain" />
-                : benefit.lottieSource
-                  ? <LottieIcon source={benefit.lottieSource} size={28} autoPlay loop />
-                  : <Text style={{ fontSize: 22 }}>{benefit.partnerLogo}</Text>
-              }
+          {/* Scrollable content — keeps CTA reachable on small viewports
+              (iPhone SE / 8 / mini) where description + info row could
+              push the button below the fold. */}
+          <ScrollView
+            showsVerticalScrollIndicator={false}
+            contentContainerStyle={{ paddingBottom: 4 }}
+          >
+            {/* Partner logo + name */}
+            <View style={styles.partnerRow}>
+              <View style={styles.partnerLogoCircle}>
+                {benefit.partnerLogoImage
+                  ? <Image source={benefit.partnerLogoImage} style={{ width: 36, height: 36, borderRadius: 6 }} resizeMode="contain" />
+                  : benefit.lottieSource
+                    ? <LottieIcon source={benefit.lottieSource} size={28} autoPlay loop />
+                    : <Text style={{ fontSize: 22 }}>{benefit.partnerLogo}</Text>
+                }
+              </View>
+              <Text style={styles.partnerName}>{benefit.partnerName}</Text>
             </View>
-            <Text style={styles.partnerName}>{benefit.partnerName}</Text>
-          </View>
 
-          {/* Title + description */}
-          <Text style={styles.title}>{benefit.title}</Text>
-          <Text style={styles.description}>{benefit.description}</Text>
+            {/* Title + description */}
+            <Text style={styles.title}>{benefit.title}</Text>
+            <Text style={styles.description}>{benefit.description}</Text>
 
-          {/* Combined info row */}
-          <View style={styles.infoRow}>
-            <View style={styles.infoCell}>
-              <Text style={styles.infoLabel}>מה מקבלים</Text>
-              <Text style={styles.infoValue}>{benefit.reward}</Text>
-            </View>
-            <View style={styles.infoDivider} />
-            <View style={styles.infoCell}>
-              <Text style={styles.infoLabel}>עלות</Text>
-              <View style={styles.costValueRow}>
-                {isRedeemed ? (
-                  <Text style={[styles.costValue, { color: '#0369a1', fontSize: 15 }]}>הומר בהצלחה ✓</Text>
-                ) : (
-                  <>
-                    <GoldCoinIcon size={16} />
-                    <Text style={styles.costValue}>{benefit.costCoins.toLocaleString()}</Text>
-                  </>
-                )}
+            {/* Combined info row */}
+            <View style={styles.infoRow}>
+              <View style={styles.infoCell}>
+                <Text style={styles.infoLabel}>מה מקבלים</Text>
+                <Text style={styles.infoValue}>{benefit.reward}</Text>
+              </View>
+              <View style={styles.infoDivider} />
+              <View style={styles.infoCell}>
+                <Text style={styles.infoLabel}>עלות</Text>
+                <View style={styles.costValueRow}>
+                  {isRedeemed ? (
+                    <Text style={[styles.costValue, { color: '#0369a1', fontSize: 15 }]}>הומר בהצלחה ✓</Text>
+                  ) : (
+                    <>
+                      <GoldCoinIcon size={16} />
+                      <Text style={styles.costValue}>{benefit.costCoins.toLocaleString()}</Text>
+                    </>
+                  )}
+                </View>
               </View>
             </View>
-          </View>
+          </ScrollView>
 
-          {/* CTA button */}
+          {/* CTA — gradient + rim + 3D border. iOS-safe (no uneven borders that
+              cause the white-on-white bg-loss bug). */}
           <Pressable
             onPress={onConfirm}
-            style={({ pressed }) => [
-              styles.confirmBtn,
-              !canAfford && !isRedeemed && { backgroundColor: '#94a3b8', shadowColor: '#94a3b8' },
-              pressed && { opacity: 0.9, transform: [{ scale: 0.98 }] }
-            ]}
+            disabled={!canAfford && !isRedeemed}
+            style={({ pressed }) =>
+              !canAfford && !isRedeemed
+                ? styles.confirmBtnDisabled
+                : [
+                    styles.confirmBtnShell,
+                    pressed && styles.confirmBtnShellPressed,
+                  ]
+            }
+            accessibilityRole="button"
+            accessibilityState={{ disabled: !canAfford && !isRedeemed }}
+            accessibilityLabel={isRedeemed ? 'למעבר לאתר השותף' : canAfford ? 'המרה כעת' : 'אין מספיק מטבעות'}
           >
-            <Text style={styles.confirmBtnText}>
-              {isRedeemed ? 'למעבר לאתר השותף' : canAfford ? 'המרה כעת' : 'אין מספיק מטבעות'}
-            </Text>
+            {!canAfford && !isRedeemed ? (
+              <Text style={styles.confirmBtnTextDisabled}>אין מספיק מטבעות</Text>
+            ) : (
+              <View style={styles.confirmBtnInner}>
+                <LinearGradient
+                  colors={['#67E8F9', '#0EA5E9', '#0284C7']}
+                  locations={[0, 0.45, 1]}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 0, y: 1 }}
+                  style={StyleSheet.absoluteFill}
+                />
+                <View style={styles.confirmBtnRim} pointerEvents="none" />
+                <Text style={styles.confirmBtnText}>
+                  {isRedeemed ? 'למעבר לאתר השותף' : 'המרה כעת'}
+                </Text>
+              </View>
+            )}
           </Pressable>
 
           {/* Cancel */}
@@ -244,26 +275,76 @@ const styles = StyleSheet.create({
     color: '#0ea5e9',
   },
 
-  confirmBtn: {
-    backgroundColor: '#0ea5e9',
-    paddingVertical: 16,
-    borderRadius: 16,
-    alignItems: 'center',
-    alignSelf: 'stretch',
-    width: '100%',
-    borderBottomWidth: 4,
-    borderBottomColor: '#0284c7',
-    shadowColor: '#0ea5e9',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.35,
-    shadowRadius: 10,
-    elevation: 8,
+  /* Outer shell: carries 3D border + drop-shadow (no overflow clip so
+   * borderBottomWidth is visible). Press state sinks the button. */
+  confirmBtnShell: {
+    borderRadius: 999,
+    borderBottomWidth: 5,
+    borderBottomColor: '#0369a1',
+    shadowColor: '#0284c7',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.55,
+    shadowRadius: 18,
+    elevation: 14,
+    marginTop: 4,
     marginBottom: 8,
+    alignSelf: 'stretch',
+  },
+  confirmBtnShellPressed: {
+    transform: [{ translateY: 3 }],
+    borderBottomWidth: 2,
+    marginTop: 7,
+    shadowOpacity: 0.2,
+    shadowOffset: { width: 0, height: 2 },
+  },
+  /* Inner: clips gradient to pill shape */
+  confirmBtnInner: {
+    height: 58,
+    borderRadius: 999,
+    overflow: 'hidden',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  confirmBtnRim: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    height: '38%',
+    backgroundColor: 'rgba(255, 255, 255, 0.22)',
+    borderTopLeftRadius: 999,
+    borderTopRightRadius: 999,
   },
   confirmBtnText: {
+    fontSize: 19,
+    fontWeight: '900',
+    color: '#ffffff',
+    letterSpacing: 0.5,
+    textAlign: 'center',
+    textShadowColor: 'rgba(2, 84, 155, 0.6)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 4,
+  },
+  /* Disabled state — pleasant blue-ghost. Says "not yet, but on the path"
+   * without alarming red or muddy grey. */
+  confirmBtnDisabled: {
+    backgroundColor: 'rgba(14, 165, 233, 0.10)',
+    paddingVertical: 18,
+    borderRadius: 999,
+    alignItems: 'center',
+    justifyContent: 'center',
+    alignSelf: 'stretch',
+    width: '100%',
+    borderWidth: 1.5,
+    borderColor: 'rgba(14, 165, 233, 0.45)',
+    marginBottom: 8,
+  },
+  confirmBtnTextDisabled: {
     fontSize: 16,
     fontWeight: '800',
-    color: '#ffffff',
+    color: '#0369A1',
+    letterSpacing: 0.3,
+    textAlign: 'center',
   },
 
   cancelBtn: {

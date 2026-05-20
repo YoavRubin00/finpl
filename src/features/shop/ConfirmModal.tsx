@@ -9,6 +9,7 @@ interface ConfirmModalProps {
   visible: boolean;
   itemName: string;
   coinCost: number;
+  originalCoinCost?: number;
   gemCost?: number;
   onConfirm: () => void;
   onCancel: () => void;
@@ -18,6 +19,7 @@ export function ConfirmModal({
   visible,
   itemName,
   coinCost,
+  originalCoinCost,
   gemCost,
   onConfirm,
   onCancel,
@@ -42,9 +44,19 @@ export function ConfirmModal({
           <Text style={[RTL, { fontSize: 18, fontWeight: '700', color: '#1f2937', marginBottom: 4 }]}>
             {itemName}
           </Text>
-          <Text style={[RTL, { fontSize: 14, color: '#64748b', marginBottom: 20 }]}>
+          <Text style={[RTL, { fontSize: 14, color: '#64748b', marginBottom: originalCoinCost ? 4 : 20 }]}>
             אישור רכישה. לא ניתן לבטל לאחר מכן.
           </Text>
+          {originalCoinCost && (
+            <View style={{ flexDirection: 'row-reverse', alignItems: 'center', gap: 8, marginBottom: 20 }}>
+              <Text style={{ fontSize: 12, color: '#9ca3af', textDecorationLine: 'line-through' }}>
+                {originalCoinCost.toLocaleString()}
+              </Text>
+              <Text style={{ fontSize: 13, fontWeight: '800', color: '#16a34a' }}>
+                {coinCost.toLocaleString()} ✓ הנחת PRO 20%
+              </Text>
+            </View>
+          )}
 
           <View style={{ flexDirection: 'row-reverse', gap: 12 }}>
             <AnimatedPressable

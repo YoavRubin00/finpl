@@ -25,6 +25,30 @@ export const BRIDGE_BENEFITS: Benefit[] = [
     isPartnerAd: true,
   },
 
+  // ★ REAL PARTNER: Interactive Israel (US brokerage focus) ★
+  {
+    id: 'bridge-invest-inter-il',
+    title: 'חשבון מסחר, אינטראקטיב ישראל',
+    description:
+      '⭐ יתרון: מעולה למי שסוחר בניירות ערך זרים.\n\n' +
+      'אינטראקטיב ישראל — מסחר בארה"ב ו-170 שווקים נוספים עם עמלות מהזולות בישראל.\n' +
+      '• עמלת מסחר 0.01$ למניה (מינ\' 2.5$), ללא דמי ניהול / שמירה.\n' +
+      '• השקעה חוזרת אוטומטית בהוראת קבע (DCA) למניות ותעודות סל.\n' +
+      '• ניכוי מס רווחי הון אוטומטי — בלי טופס 1325 בסוף השנה.\n' +
+      '• המרת מט"ח בשער רציף — חיסכון של ~4 אגורות מול הבנקים, עמלה 10₪ עד המרה של 500K₪.\n' +
+      '• ביטוח SIPC פדרלי עד $500K, FDIC עד $2.5M, ביטוח מורחב של Lloyds עד $30M.\n' +
+      '• הפקדה מהירה במערכת בנקאות פתוחה — דקה ופותחים חשבון.',
+    partnerName: 'אינטראקטיב ישראל',
+    partnerLogo: '🌎',
+    partnerLogoImage: require('../../../assets/IMAGES/INTERACTIVE.jpg') as number,
+    costCoins: 4000,
+    category: 'investments',
+    isAvailable: true,
+    reward: 'עמלות קניה ומכירה הכי זולות בישראל',
+    partnerUrl: 'https://lp3.inter-il.com/ab/790',
+    isPartnerAd: true,
+  },
+
   // ── 🏦 חשבונות בנק, placeholder ──
   {
     id: 'bridge-bank-partner-slot',
@@ -40,19 +64,25 @@ export const BRIDGE_BENEFITS: Benefit[] = [
     partnerAdSlot: true,
   },
 
-  // ── 🛡️ ביטוח, placeholder ──
+  // ── 🛡️ ביטוח ── ★ REAL PARTNER: Cover ★
   {
-    id: 'bridge-insurance-partner-slot',
-    title: '🛡️ מקום שמור לשותף ביטוחי',
-    description: 'בקרוב נוסיף כאן הצעה בלעדית מגוף ביטוחי מוביל. המשיכו לצבור מטבעות!',
-    partnerName: 'שותף ביטוחי',
+    id: 'bridge-insurance-cover',
+    title: 'כל הביטוחים והחסכונות שלך — במקום אחד',
+    description:
+      'קרן הפנסיה שפתחו לכם פעם מזמן, הביטוח הזה שלא יודעים מה הוא נותן ' +
+      'וכמה הוא עולה ודמי הניהול המופרזים בביטוח המנהלים ממקום העבודה הראשון, נשמע מוכר מדי?\n\n' +
+      'ב-Cover תוכלו לראות את כל הביטוחים וכל החסכונות במקום אחד ולקבל ' +
+      'המלצות שוטפות ואוטומטיות לשיפור התנאים והוזלת העלויות שלכם.\n\n' +
+      'ככה שקוף, בלי התחייבות ופתוח לכולם.',
+    partnerName: 'Cover',
     partnerLogo: '🛡️',
-    lottieSource: require('../../../assets/lottie/wired-flat-457-shield-security-hover-pinch.json') as number,
-    costCoins: 0,
+    partnerLogoImage: require('../../../assets/IMAGES/cover.png') as number,
+    costCoins: 2000,
     category: 'insurance',
-    isAvailable: false,
-    reward: 'בקרוב...',
-    partnerAdSlot: true,
+    isAvailable: true,
+    reward: 'מעקב חינמי אחר כל הביטוחים והחסכונות שלך — בלי התחייבות',
+    partnerUrl: 'https://my.coverai.co.il/?li=finplay',
+    isPartnerAd: true,
   },
 
   // ── 💳 כרטיסי אשראי, placeholder ──

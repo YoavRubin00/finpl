@@ -5,7 +5,7 @@
 import React, { useState, useCallback, useRef, useEffect, useMemo } from "react";
 import { Image as ExpoImage } from "expo-image";
 import { ScrollView, View, Text, Pressable, Modal, Image, StyleSheet, Dimensions } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -956,6 +956,7 @@ export function DuoLearnScreen() {
   const [roadmapVisible, setRoadmapVisible] = useState(false);
   const [mindMapChapter, setMindMapChapter] = useState<number | null>(null);
   const [replayModule, setReplayModule] = useState<{ moduleId: string; chapterId: string; moduleIndex: number } | null>(null);
+  const insets = useSafeAreaInsets();
   const scrollRef = useRef<ScrollView>(null);
   const [refreshKey, setRefreshKey] = useState(0);
   const isFirstMount = useRef(true);
@@ -1332,8 +1333,11 @@ export function DuoLearnScreen() {
         {replayModule && (
           <Modal visible transparent animationType="fade" onRequestClose={() => setReplayModule(null)} accessibilityViewIsModal>
             <SafeAreaView style={{ flex: 1, backgroundColor: '#f0f9ff' }} edges={["top", "bottom"]}>
-              {/* Header with close button, X on the right (RTL convention) */}
-              <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', paddingHorizontal: 16, paddingVertical: 8 }}>
+              {/* Header with close button, X on the right (RTL convention).
+                  Explicit insets.top because SafeAreaView's top edge is unreliable
+                  inside a transparent Modal on iOS — without this, the X clipped
+                  into the notch on iPhone. */}
+              <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', paddingHorizontal: 16, paddingTop: Math.max(insets.top, 12), paddingBottom: 8 }}>
                 <AnimatedPressable
                   onPress={() => setReplayModule(null)}
                   style={{ width: 38, height: 38, borderRadius: 19, backgroundColor: 'rgba(0,0,0,0.08)', alignItems: 'center', justifyContent: 'center' }}
@@ -1382,18 +1386,47 @@ export function DuoLearnScreen() {
         {/* Learning Roadmap Overlay (Replaced Native Modal to support iOS Walkthrough overlap) */}
         {roadmapVisible && (
           <View style={[StyleSheet.absoluteFill, { zIndex: 9999, elevation: 9999 }]} accessibilityViewIsModal>
-            <Animated.View entering={FadeInDown.duration(200)} style={{ flex: 1 }}>
-          <Pressable style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.4)", justifyContent: "center", alignItems: "center", padding: 20 }} onPress={() => setRoadmapVisible(false)} accessibilityRole="button" accessibilityLabel="סגור מסלול הלמידה">
-            <Pressable onPress={() => {}} style={{ width: "100%", maxWidth: 380, backgroundColor: "#ffffff", borderRadius: 24, padding: 24, shadowColor: "#000", shadowOpacity: 0.15, shadowRadius: 20, shadowOffset: { width: 0, height: 8 }, elevation: 10 }} accessibilityLabel="תוכן מסלול הלמידה">
-              {/* Title */}
-              <Text style={{ fontSize: 20, fontFamily: "Heebo_700Bold", color: "#0f172a", textAlign: "center", marginBottom: 6, writingDirection: "rtl" }}>
-                מסלול הלמידה שלך
-              </Text>
-              <Text style={{ fontSize: 13, fontFamily: "Heebo_400Regular", color: "#64748b", textAlign: "center", marginBottom: 20, writingDirection: "rtl" }}>
-                6 פרקים מהבסיס ועד חופש כלכלי
-              </Text>
+            <Animated.View entering={FadeInDown.duration(200)} style={{ flex: 1, justifyContent: "center", alignItems: "center", padding: 16 }}>
+          <Pressable
+            style={[StyleSheet.absoluteFill, { backgroundColor: "rgba(0,0,0,0.4)" }]}
+            onPress={() => setRoadmapVisible(false)}
+            accessibilityRole="button"
+            accessibilityLabel="סגור מסלול הלמידה"
+          />
+            <View
+              style={{ width: "100%", maxWidth: 380, maxHeight: "95%", backgroundColor: "#ffffff", borderRadius: 24, overflow: "hidden", shadowColor: "#000", shadowOpacity: 0.15, shadowRadius: 20, shadowOffset: { width: 0, height: 8 }, elevation: 10 }}
+              accessibilityLabel="תוכן מסלול הלמידה"
+            >
+              {/* X close button, top-right (RTL convention) */}
+              <Pressable
+                onPress={() => setRoadmapVisible(false)}
+                accessibilityRole="button"
+                accessibilityLabel="סגור מסלול הלמידה"
+                hitSlop={10}
+                style={{ position: "absolute", top: 10, right: 10, zIndex: 10, width: 32, height: 32, borderRadius: 16, backgroundColor: "rgba(0,0,0,0.06)", alignItems: "center", justifyContent: "center" }}
+              >
+                <X size={18} color="#64748b" />
+              </Pressable>
 
-              {/* Chapters list */}
+              {/* Header (fixed) */}
+              <View style={{ paddingTop: 16, paddingHorizontal: 18, paddingBottom: 10 }}>
+                <Text style={{ fontSize: 18, fontFamily: "Heebo_700Bold", color: "#0f172a", textAlign: "center", marginBottom: 2, writingDirection: "rtl" }}>
+                  מסלול הלמידה שלך
+                </Text>
+                <Text style={{ fontSize: 12, fontFamily: "Heebo_400Regular", color: "#64748b", textAlign: "center", writingDirection: "rtl" }}>
+                  6 פרקים מהבסיס ועד חופש כלכלי
+                </Text>
+              </View>
+
+              {/* Chapters list (scrollable).
+                  flexShrink (not flex: 1) — parent box is content-sized with
+                  maxHeight: 95%, so flex: 1 collapses ScrollView to 0 height. */}
+              <ScrollView
+                style={{ flexShrink: 1 }}
+                contentContainerStyle={{ paddingHorizontal: 18, paddingBottom: 6 }}
+                showsVerticalScrollIndicator={false}
+                nestedScrollEnabled
+              >
               {ARENAS.map((arena, idx) => {
                 const ch = ALL_CHAPTERS[idx];
                 const done = progress[storeKey(ch.id)]?.completedModules ?? [];
@@ -1488,13 +1521,15 @@ export function DuoLearnScreen() {
                   </View>
                 );
               })}
+              </ScrollView>
 
-              {/* Close button */}
-              <Pressable onPress={() => setRoadmapVisible(false)} style={{ marginTop: 18, alignSelf: "center", paddingHorizontal: 32, paddingVertical: 10, backgroundColor: "#f0f9ff", borderRadius: 20, borderWidth: 1, borderColor: "#bae6fd" }} accessibilityRole="button" accessibilityLabel="סגור">
-                <Text style={{ fontSize: 14, fontFamily: "Heebo_500Medium", color: "#0284c7" }}>סגור</Text>
-              </Pressable>
-            </Pressable>
-          </Pressable>
+              {/* Close button (pinned) */}
+              <View style={{ paddingVertical: 12, paddingHorizontal: 18, alignItems: "center", borderTopWidth: 1, borderTopColor: "#f1f5f9" }}>
+                <Pressable onPress={() => setRoadmapVisible(false)} style={{ paddingHorizontal: 32, paddingVertical: 10, backgroundColor: "#f0f9ff", borderRadius: 20, borderWidth: 1, borderColor: "#bae6fd" }} accessibilityRole="button" accessibilityLabel="סגור">
+                  <Text style={{ fontSize: 14, fontFamily: "Heebo_500Medium", color: "#0284c7" }}>סגור</Text>
+                </Pressable>
+              </View>
+            </View>
         </Animated.View>
       </View>
     )}
@@ -1510,10 +1545,8 @@ export function DuoLearnScreen() {
           visible={!!nudge && !isWalkthroughActive}
           onPress={() => {
             if (nudge) {
-              // The daily-challenge nudge routes to the feed (which is /(tabs)/learn).
-              // Tell the feed to auto-scroll to the dilemma card so the user lands on
-              // the challenge itself, not at the top of the feed.
-              import('../finfeed/FinFeedScreen').then(({ setPendingFeedScrollById }) => {
+              // Feed removed; legacy auto-scroll stubbed out.
+              import('../inter-module-content/feedScrollStubs').then(({ setPendingFeedScrollById }) => {
                 setPendingFeedScrollById('daily-dilemma');
               });
               router.push(nudge.route as never);
