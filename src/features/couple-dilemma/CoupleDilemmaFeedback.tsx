@@ -138,13 +138,13 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   daisy: {
-    // contentFit="contain" keeps her aspect ratio, so width/height are an
-    // upper bound. 92% of the typical phone width (~360 → ~330) lets her
-    // body almost touch the left/right edges of the screen without ever
-    // overflowing on small devices.
-    width: '92%',
+    // Half-screen sticker centered in the daisyWrap (the daisyWrap is
+    // already flex:1 + center-aligned). 46% width keeps her compact —
+    // big enough to read the celebration, small enough that the bubble
+    // and CTA breathe around her.
+    width: '46%',
     aspectRatio: 1,
-    maxWidth: 420,
+    maxWidth: 220,
   },
 
   ctaWrap: {
