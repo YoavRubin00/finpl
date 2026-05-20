@@ -33,6 +33,18 @@ export interface SharkDilemma {
   slides?: DilemmaSlide[];
   /** Defaults to slides[0].id when slides is set. */
   startSlideId?: string;
+  // --- Video-first shape (pause-in-place) ---
+  /**
+   * When set, the dilemma plays as a Captain Shark video that pauses
+   * mid-clip to show the dilemma overlay; after the user picks, the
+   * video resumes to a freeze-frame, then a feedback reveal animates in.
+   * Routed by LessonFlowScreen to <VideoSharkDilemmaCard> instead of
+   * the static <SharkDilemmaCard>. Only meaningful for single-slide dilemmas
+   * (the branching shape is handled by the legacy card).
+   */
+  videoUri?: string;
+  /** Seconds at which the video auto-pauses to reveal the dilemma. Default 2.5. */
+  videoPauseAtSec?: number;
 }
 
 /** Aggregate of choices made through one playthrough. */

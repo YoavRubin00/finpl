@@ -107,7 +107,10 @@ import LottieView from "lottie-react-native";
 import { FINN_LOTTIE_SOURCE, FINN_HELLO, FINN_STANDARD, FINN_HAPPY, FINN_EMPATHIC, FINN_DANCING, getFinnSource, getFinnImage } from "../retention-loops/finnMascotConfig";
 import { InteractiveRecallScreen } from "../sentence-exercise/InteractiveRecallScreen";
 import { SharkDilemmaCard } from "../shark-dilemma/SharkDilemmaCard";
+import { VideoSharkDilemmaCard } from "../shark-dilemma/VideoSharkDilemmaCard";
 import { getDilemma } from "../shark-dilemma/dilemmasData";
+import { PodcastSegmentScreen } from "../podcast-segment/PodcastSegmentScreen";
+import { getPodcastForModule } from "../podcast-segment/podcasts";
 
 // Small helper that advances phase → summary via useEffect (never during render).
 function FallbackToSummary({ setPhase }: { setPhase: (p: "summary") => void }) {
@@ -124,7 +127,7 @@ import type { LessonContext } from "../chat/buildChatPrompt";
 
 const AnimatedExpoImage = Animated.createAnimatedComponent(ExpoImage);
 
-type FlowPhase = "hero" | "intro" | "flashcards" | "interactive-recall" | "quizzes" | "sim-intro" | "sim" | "module-infographic" | "post-infographic-video" | "shark-dilemma" | "summary" | "video";
+type FlowPhase = "hero" | "intro" | "flashcards" | "podcast" | "interactive-recall" | "quizzes" | "sim-intro" | "sim" | "module-infographic" | "post-infographic-video" | "shark-dilemma" | "summary" | "video";
 
 /** Full-screen character art shown when first opening a module */
 const MODULE_HERO_MAP: Record<string, { uri: string } | number> = {
@@ -2533,12 +2536,22 @@ export function LessonFlowScreen() {
     return (r && RESTORABLE_PHASES.has(r.phase as FlowPhase)) ? r.flashcardIndex : 0;
   });
 
+  // Podcast injection — appears between flashcards (at midpoint). Replays naturally
+  // if the user navigates back to the trigger card; no one-shot lockout.
+  const modPodcast = useMemo(() => (mod?.id ? getPodcastForModule(mod.id) : undefined), [mod?.id]);
+  /** Last flashcard index AFTER which the podcast appears (midpoint placement). */
+  const podcastTriggerAfter = useMemo(() => {
+    if (!mod || !modPodcast || mod.flashcards.length < 2) return -1;
+    return Math.floor((mod.flashcards.length - 1) / 2);
+  }, [mod, modPodcast]);
+
   const chatLessonContext = useMemo<LessonContext | undefined>(() => {
     if (!mod) return undefined;
     const phaseMap: Record<FlowPhase, LessonContext["phase"]> = {
       hero: "intro",
       intro: "intro",
       flashcards: "flashcards",
+      podcast: "other",
       "interactive-recall": "interactive-recall",
       quizzes: "quizzes",
       "sim-intro": "sim",
@@ -3124,6 +3137,13 @@ export function LessonFlowScreen() {
       return;
     }
 
+    // Inject Daisy podcast at midpoint of flashcards (once per module)
+    if (modPodcast && flashcardIndex === podcastTriggerAfter) {
+      mediumHaptic();
+      setPhase("podcast");
+      return;
+    }
+
     if (flashcardIndex < mod.flashcards.length - 1) {
       const nextCardId = mod.flashcards[flashcardIndex + 1]?.id;
       const finnSource = nextCardId ? FINN_MAP[nextCardId] : undefined;
@@ -3145,12 +3165,20 @@ export function LessonFlowScreen() {
         safeTimeout(() => setShowQuizIntro(true), 50);
       }
     }
-  }, [mod, flashcardIndex, finnTipText, checkpointIndex, showMidCheckpoint, checkpointReturnIndex]);
+  }, [mod, flashcardIndex, finnTipText, checkpointIndex, showMidCheckpoint, checkpointReturnIndex, modPodcast, podcastTriggerAfter]);
 
   const handleDismissFinnTip = useCallback(() => {
     setFinnTipText(null);
     // Advance to next card after dismissing
     if (!mod) return;
+
+    // Inject Daisy podcast at midpoint of flashcards (once per module)
+    if (modPodcast && flashcardIndex === podcastTriggerAfter) {
+      mediumHaptic();
+      setPhase("podcast");
+      return;
+    }
+
     if (flashcardIndex < mod.flashcards.length - 1) {
       const nextCardId = mod.flashcards[flashcardIndex + 1]?.id;
       const finnSource = nextCardId ? FINN_MAP[nextCardId] : undefined;
@@ -3172,7 +3200,7 @@ export function LessonFlowScreen() {
         safeTimeout(() => setShowQuizIntro(true), 50);
       }
     }
-  }, [mod, flashcardIndex]);
+  }, [mod, flashcardIndex, modPodcast, podcastTriggerAfter]);
 
   const handleFlashcardPrev = useCallback(() => {
     if (flashcardIndex > 0) {
@@ -3275,32 +3303,36 @@ export function LessonFlowScreen() {
       // tick will re-evaluate phase.
       return <FallbackToSummary setPhase={setPhase} />;
     }
-    return (
-      <SharkDilemmaCard
-        dilemma={dilemma}
-        onComplete={(result) => {
-          const eco = useEconomyStore.getState();
-          // Branching dilemmas only: base 5 coins + 3 per net-positive score point.
-          // Legacy single-slide dilemmas keep the original flat 5-coin reward to avoid
-          // retroactive inflation across the 49 unchanged dilemmas.
-          const isBranching = result.path.length > 1;
-          const bonusCoins = isBranching ? Math.max(0, result.totalScore) * 3 : 0;
-          eco.addCoins(5 + bonusCoins, 'lesson');
-          // Soft penalty: each unwise choice in the path costs a heart.
-          // useHeart() returns false silently at 0 — the in-card feedback IS the feedback.
-          // Skipped on replay to encourage practice without punishment.
-          if (!isReplay) {
-            const sub = useSubscriptionStore.getState();
-            for (let i = 0; i < result.unwiseCount; i++) sub.useHeart();
-          }
-          // XP bonus only for branching dilemmas with a perfect path.
-          if (result.unwiseCount === 0 && result.path.length > 1) {
-            eco.addXP(20, "challenge_complete");
-          }
-          setPhase("summary");
-        }}
-      />
-    );
+    const handleDilemmaComplete = (result: import("../shark-dilemma/types").DilemmaResult) => {
+      const eco = useEconomyStore.getState();
+      // Branching dilemmas only: base 5 coins + 3 per net-positive score point.
+      // Legacy single-slide dilemmas keep the original flat 5-coin reward to avoid
+      // retroactive inflation across the 49 unchanged dilemmas.
+      const isBranching = result.path.length > 1;
+      const bonusCoins = isBranching ? Math.max(0, result.totalScore) * 3 : 0;
+      eco.addCoins(5 + bonusCoins, 'lesson');
+      // Soft penalty: each unwise choice in the path costs a heart.
+      // useHeart() returns false silently at 0 — the in-card feedback IS the feedback.
+      // Skipped on replay to encourage practice without punishment.
+      if (!isReplay) {
+        const sub = useSubscriptionStore.getState();
+        for (let i = 0; i < result.unwiseCount; i++) sub.useHeart();
+      }
+      // XP bonus only for branching dilemmas with a perfect path.
+      if (result.unwiseCount === 0 && result.path.length > 1) {
+        eco.addXP(20, "challenge_complete");
+      }
+      setPhase("summary");
+    };
+
+    // Video-first dilemma (pause-in-place over the Finn scene) — picked when the
+    // dilemma carries a videoUri AND has the single-slide scenario+options shape.
+    // Branching-only dilemmas keep using the static card.
+    if (dilemma.videoUri && dilemma.scenario && dilemma.options) {
+      return <VideoSharkDilemmaCard dilemma={dilemma} onComplete={handleDilemmaComplete} />;
+    }
+
+    return <SharkDilemmaCard dilemma={dilemma} onComplete={handleDilemmaComplete} />;
   }
 
   return (
@@ -3429,7 +3461,12 @@ export function LessonFlowScreen() {
           {/* Title row, hidden during intro, quizzes, sim, sim-intro, and comic flashcards */}
           {!(phase === "flashcards" && (mod.flashcards[flashcardIndex]?.isComic || mod.flashcards[flashcardIndex]?.isMeme || mod.flashcards[flashcardIndex]?.videoUri)) && phase !== "intro" && phase !== "quizzes" && phase !== "sim" && (phase as string) !== "sim-intro" && (() => {
             let titleNodes: React.ReactNode[] | null = null;
-            let titleText = phase === "interactive-recall" ? "בואו נתרגל" : mod.title;
+            let titleText =
+              phase === "podcast" && modPodcast
+                ? `🎙️  ${modPodcast.title}`
+                : phase === "interactive-recall"
+                  ? "בואו נתרגל"
+                  : mod.title;
             if (phase === "flashcards") {
               const cardText = mod.flashcards[flashcardIndex]?.text ?? "";
               const colonIdx = cardText.indexOf(":");
@@ -3464,19 +3501,26 @@ export function LessonFlowScreen() {
           {(phase as string) !== "sim-intro" && (() => {
             const hasSim = MODULES_WITH_SIM.has(mod.id);
             const isSimFirst = SIM_FIRST_MODULES.has(mod.id);
-            const totalSteps = 1 + mod.flashcards.length + mod.quizzes.length + (hasSim ? 1 : 0) + 1;
+            // Podcast adds one step to the lesson flow, slotted after `podcastTriggerAfter`
+            const hasPodcastStep = !!modPodcast;
+            const podcastOffset = hasPodcastStep ? 1 : 0;
+            const totalSteps = 1 + mod.flashcards.length + mod.quizzes.length + (hasSim ? 1 : 0) + 1 + podcastOffset;
+            // For a flashcard at `idx`, account for the podcast step if it sits before this card
+            const fcOffset = (idx: number) => (hasPodcastStep && idx > podcastTriggerAfter ? 1 : 0);
             const currentStep = isSimFirst
               ? (phase === "hero" || phase === "intro" ? 0
                 : phase === "sim-intro" || phase === "sim" ? 1
-                : phase === "flashcards" ? 2 + flashcardIndex
-                : phase === "interactive-recall" ? 2 + mod.flashcards.length
-                : phase === "quizzes" ? 2 + mod.flashcards.length + quizIndex
+                : phase === "flashcards" ? 2 + flashcardIndex + fcOffset(flashcardIndex)
+                : phase === "podcast" ? 2 + podcastTriggerAfter + 1
+                : phase === "interactive-recall" ? 2 + mod.flashcards.length + podcastOffset
+                : phase === "quizzes" ? 2 + mod.flashcards.length + quizIndex + podcastOffset
                 : totalSteps)
               : (phase === "hero" || phase === "intro" ? 0
-                : phase === "flashcards" ? 1 + flashcardIndex
-                : phase === "interactive-recall" ? 1 + mod.flashcards.length
-                : phase === "quizzes" ? 1 + mod.flashcards.length + quizIndex
-                : phase === "sim-intro" || phase === "sim" ? 1 + mod.flashcards.length + mod.quizzes.length
+                : phase === "flashcards" ? 1 + flashcardIndex + fcOffset(flashcardIndex)
+                : phase === "podcast" ? 1 + podcastTriggerAfter + 1
+                : phase === "interactive-recall" ? 1 + mod.flashcards.length + podcastOffset
+                : phase === "quizzes" ? 1 + mod.flashcards.length + quizIndex + podcastOffset
+                : phase === "sim-intro" || phase === "sim" ? 1 + mod.flashcards.length + mod.quizzes.length + podcastOffset
                 : totalSteps);
             const pct = Math.min((currentStep / totalSteps) * 100, 100);
             const isOnFire = consecutiveCorrect >= 3;
@@ -3609,6 +3653,27 @@ export function LessonFlowScreen() {
               onTermPress={setActiveGlossaryTerm}
               onOpenChat={() => setShowChatOverlay(true)}
               showFinnTip={mod.id === "mod-0-1"}
+            />
+          </Animated.View>
+        )}
+
+        {/* ── Daisy Podcast phase (between flashcards) ── */}
+        {phase === "podcast" && modPodcast && (
+          <Animated.View style={{ flex: 1 }}>
+            <PodcastSegmentScreen
+              podcast={modPodcast}
+              onComplete={() => {
+                const hasMoreFlashcards = flashcardIndex < mod.flashcards.length - 1;
+                if (hasMoreFlashcards) {
+                  setFlashcardIndex((prev) => prev + 1);
+                  setPhase("flashcards");
+                } else if (MODULES_WITH_INTERACTIVE_RECALL.has(mod.id)) {
+                  setPhase("interactive-recall");
+                } else {
+                  setPhase("quizzes");
+                  safeTimeout(() => setShowQuizIntro(true), 50);
+                }
+              }}
             />
           </Animated.View>
         )}

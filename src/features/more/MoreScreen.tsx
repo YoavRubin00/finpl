@@ -255,6 +255,11 @@ export function MoreScreen() {
                 <MoreRow
                   isFirst
                   icon={<SafeLottie source={require('../../../assets/lottie/wired-flat-202-chat-hover-oscillate.json')} style={styles.lottieIcon} autoPlay loop  />}
+                  label="פנו אלינו לתמיכה"
+                  onPress={() => router.push("/support" as never)}
+                />
+                <MoreRow
+                  icon={<SafeLottie source={require('../../../assets/lottie/wired-flat-202-chat-hover-oscillate.json')} style={styles.lottieIcon} autoPlay loop  />}
                   label="קהילת WhatsApp"
                   onPress={() => Linking.openURL(WHATSAPP_URL).catch(() => Alert.alert("שגיאה"))}
                 />
