@@ -18,8 +18,9 @@ import { HotThisWeekCard } from './cards/HotThisWeekCard';
 import { Ta35ForecastCard } from './cards/Ta35ForecastCard';
 import { AnonymousPayslipCard } from './cards/AnonymousPayslipCard';
 import { PulseDot } from './shared/PulseDot';
+import { Users } from 'lucide-react-native';
 
-function SectionLabel({ emoji, label, accentColor }: { emoji: string; label: string; accentColor: string }) {
+function SectionLabel({ label, accentColor }: { label: string; accentColor: string }) {
   return (
     <View
       style={{
@@ -34,14 +35,14 @@ function SectionLabel({ emoji, label, accentColor }: { emoji: string; label: str
       <View style={{ width: 4, height: 16, borderRadius: 2, backgroundColor: accentColor }} />
       <Text
         style={{
-          fontSize: 12,
-          fontWeight: '800',
-          color: STITCH.onSurfaceVariant,
-          letterSpacing: 0.4,
+          fontSize: 13,
+          fontWeight: '900',
+          color: STITCH.onSurface,
+          letterSpacing: 0.2,
           writingDirection: 'rtl',
         }}
       >
-        {emoji} {label}
+        {label}
       </Text>
     </View>
   );
@@ -100,7 +101,7 @@ export function FriendsHubScreen(): React.ReactElement {
               justifyContent: 'center',
             }}
           >
-            <Text style={{ fontSize: 22 }}>👥</Text>
+            <Users size={22} color={DUO.blue} strokeWidth={2.2} />
           </View>
           <View style={{ flex: 1 }}>
             <Text
@@ -161,42 +162,37 @@ export function FriendsHubScreen(): React.ReactElement {
 
         {/* ─── Clan & League ─── */}
         <StaggeredEntry index={1}>
-          <SectionLabel emoji="🛡️" label="קלאן וליגה" accentColor={CLAN.tierGold} />
+          <SectionLabel label="קלאן וליגה" accentColor={CLAN.tierGold} />
           <ClanHeroCard />
           <LeagueHeroCard />
         </StaggeredEntry>
 
         {/* ─── Competitions ─── */}
         <StaggeredEntry index={2}>
-          <SectionLabel emoji="⚔️" label="תחרויות" accentColor="#ea580c" />
+          <SectionLabel label="תחרויות" accentColor="#ea580c" />
           <DuelsClashCard />
           <FantasyLeagueCard />
         </StaggeredEntry>
 
         {/* ─── Leaderboard ─── */}
         <StaggeredEntry index={3}>
-          <SectionLabel emoji="🏆" label="דירוג חברים" accentColor={STITCH.primary} />
+          <SectionLabel label="דירוג חברים" accentColor={STITCH.primary} />
           <FriendsLeaderboardCard />
         </StaggeredEntry>
 
-        {/* ─── Group market intelligence (Robinhood-inspired) ─── */}
+        {/* ─── Crowd Wisdom: market intelligence + knowledge community ─── */}
         <StaggeredEntry index={4}>
-          <SectionLabel emoji="📊" label="מודיעין קבוצה" accentColor="#10b981" />
+          <SectionLabel label="חכמת המונים" accentColor="#8b5cf6" />
           <HotThisWeekCard />
           <Ta35ForecastCard />
           <AnonymousPayslipCard />
-        </StaggeredEntry>
-
-        {/* ─── Community knowledge ─── */}
-        <StaggeredEntry index={5}>
-          <SectionLabel emoji="🌐" label="קהילת ידע" accentColor={STITCH.secondary} />
-          <AnonAdviceHeroCard />
           <CrowdWisdomCard />
+          <AnonAdviceHeroCard />
         </StaggeredEntry>
 
         {/* ─── Extras ─── */}
-        <StaggeredEntry index={6}>
-          <SectionLabel emoji="✨" label="עוד" accentColor={STITCH.secondaryPurple} />
+        <StaggeredEntry index={5}>
+          <SectionLabel label="עוד" accentColor={STITCH.secondaryPurple} />
           <SharkChatCard />
           <ReferralCard />
         </StaggeredEntry>

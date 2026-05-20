@@ -1,6 +1,6 @@
 import React from "react";
 import { View, Pressable, Text, StyleSheet, Platform } from "react-native";
-import { Home, Globe, Trophy, Shield, type LucideIcon } from "lucide-react-native";
+import { Home, Brain, Trophy, Shield, type LucideIcon } from "lucide-react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { usePathname, useRouter } from "expo-router";
 import Animated, {
@@ -28,6 +28,7 @@ interface FriendsTabConfig {
   label: string;
   Icon: LucideIcon;
   color: string;
+  pill: string;
   /** Routes that mark this tab as "active" (one tab can own several routes). */
   matchRoutes: readonly string[];
 }
@@ -35,13 +36,15 @@ interface FriendsTabConfig {
 // Visual L→R ordering in RTL: clan | fantasy | knowledge | home (rightmost in RTL)
 // Array[0] = rightmost visually in RTL.
 const FRIENDS_TABS: readonly FriendsTabConfig[] = [
-  { key: "home",      label: "בית",        Icon: Home,   color: "#0891b2", matchRoutes: [] },
-  { key: "knowledge", label: "קהילת ידע",  Icon: Globe,  color: "#7c3aed", matchRoutes: ["/anon-advice", "/crowd-wisdom"] },
-  { key: "fantasy",   label: "פנטזי ליג",  Icon: Trophy, color: "#ea580c", matchRoutes: ["/fantasy"] },
-  { key: "clan",      label: "קלאן",       Icon: Shield, color: "#10b981", matchRoutes: ["/clan"] },
+  { key: "home",      label: "בית",         Icon: Home,   color: "#3b82f6", pill: "#dbeafe", matchRoutes: [] },
+  { key: "knowledge", label: "חכמת המונים", Icon: Brain,  color: "#8b5cf6", pill: "#ede9fe", matchRoutes: ["/anon-advice", "/crowd-wisdom"] },
+  { key: "fantasy",   label: "פנטזי ליג",   Icon: Trophy, color: "#f59e0b", pill: "#fef3c7", matchRoutes: ["/fantasy"] },
+  { key: "clan",      label: "קלאן",        Icon: Shield, color: "#10b981", pill: "#d1fae5", matchRoutes: ["/clan"] },
 ] as const;
 
-const TAB_BAR_BG = "#fafafa";
+const TAB_BAR_BG = "#ffffff";
+const INACTIVE_COLOR = "#94a3b8";
+const INACTIVE_LABEL = "#64748b";
 const SPRING_FAST = { damping: 18, stiffness: 380 };
 
 function activeKeyFromPath(pathname: string): FriendsTabConfig["key"] | null {
@@ -60,15 +63,31 @@ interface FriendsTabItemProps {
 }
 
 function FriendsTabItem({ config, focused, onPress }: FriendsTabItemProps) {
-  const scale = useSharedValue(focused ? 1.12 : 1);
+  const scale = useSharedValue(focused ? 1.05 : 1);
+  const pillScale = useSharedValue(focused ? 1 : 0);
+  const indicatorScale = useSharedValue(focused ? 1 : 0);
 
   React.useEffect(() => {
     cancelAnimation(scale);
-    scale.value = withSpring(focused ? 1.12 : 1, SPRING_FAST);
-  }, [focused, scale]);
+    cancelAnimation(pillScale);
+    cancelAnimation(indicatorScale);
+    scale.value = withSpring(focused ? 1.05 : 1, SPRING_FAST);
+    pillScale.value = withSpring(focused ? 1 : 0, { damping: 18, stiffness: 320 });
+    indicatorScale.value = withSpring(focused ? 1 : 0, SPRING_FAST);
+  }, [focused, scale, pillScale, indicatorScale]);
 
   const iconStyle = useAnimatedStyle(() => ({
     transform: [{ scale: scale.value }],
+  }));
+
+  const pillStyle = useAnimatedStyle(() => ({
+    opacity: pillScale.value,
+    transform: [{ scaleX: pillScale.value }, { scaleY: 0.7 + 0.3 * pillScale.value }],
+  }));
+
+  const indicatorStyle = useAnimatedStyle(() => ({
+    opacity: indicatorScale.value,
+    transform: [{ scaleX: indicatorScale.value }],
   }));
 
   const { Icon } = config;
@@ -82,26 +101,28 @@ function FriendsTabItem({ config, focused, onPress }: FriendsTabItemProps) {
       accessibilityState={{ selected: focused }}
       hitSlop={{ top: 6, bottom: 6, left: 4, right: 4 }}
     >
+      {/* Top indicator */}
       <Animated.View
-        style={[
-          styles.iconCircle,
-          {
-            backgroundColor: focused ? config.color : "transparent",
-          },
-          iconStyle,
-        ]}
-      >
+        style={[styles.topIndicator, { backgroundColor: config.color }, indicatorStyle]}
+        pointerEvents="none"
+      />
+      {/* Soft tinted pill */}
+      <Animated.View
+        style={[styles.pillBg, { backgroundColor: config.pill }, pillStyle]}
+        pointerEvents="none"
+      />
+      <Animated.View style={[styles.iconWrap, iconStyle]}>
         <Icon
           size={focused ? 26 : 24}
-          color={focused ? "#ffffff" : config.color}
-          strokeWidth={focused ? 2.6 : 2.2}
+          color={focused ? config.color : INACTIVE_COLOR}
+          strokeWidth={focused ? 2.4 : 1.9}
         />
       </Animated.View>
       <Text
         style={[
           styles.tabLabel,
           {
-            color: focused ? config.color : "#475569",
+            color: focused ? config.color : INACTIVE_LABEL,
             fontWeight: focused ? "800" : "600",
           },
         ]}
@@ -186,12 +207,29 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "flex-end",
     paddingBottom: 2,
+    paddingTop: 8,
     position: "relative",
   },
-  iconCircle: {
+  topIndicator: {
+    position: "absolute",
+    top: 0,
+    alignSelf: "center",
+    width: 28,
+    height: 3,
+    borderBottomLeftRadius: 3,
+    borderBottomRightRadius: 3,
+  },
+  pillBg: {
+    position: "absolute",
+    top: 8,
+    alignSelf: "center",
+    width: 52,
+    height: 32,
+    borderRadius: 999,
+  },
+  iconWrap: {
     width: 48,
-    height: 48,
-    borderRadius: 15,
+    height: 36,
     alignItems: "center",
     justifyContent: "center",
   },

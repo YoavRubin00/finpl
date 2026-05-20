@@ -149,7 +149,7 @@ export function Ta35ForecastCard(): React.ReactElement {
           </Pressable>
         ) : (
           <Animated.View entering={FadeIn.duration(280)} style={styles.successBanner}>
-            <Text style={styles.successTitle}>נשמרה התחזית שלכם 🎯</Text>
+            <Text style={styles.successTitle}>נשמרה התחזית שלכם</Text>
             <Text style={styles.successBody}>
               נסגר ביום ה׳ עם פרסום מחיר הסגירה. 10% החוזים הקרובים מקבלים גולדן.
             </Text>

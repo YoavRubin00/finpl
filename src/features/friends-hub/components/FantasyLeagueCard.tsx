@@ -61,7 +61,7 @@ export function FantasyLeagueCard(): React.ReactElement {
         router.push('/fantasy' as never);
       }}
       accessibilityRole="button"
-      accessibilityLabel={`פנטזיליג מניות, ${phaseLabel}, לחץ לכניסה`}
+      accessibilityLabel={`פנטזי ליג, ${phaseLabel}, לחץ לכניסה`}
       style={({ pressed }) => ({
         marginHorizontal: 16,
         marginBottom: 14,
@@ -112,7 +112,7 @@ export function FantasyLeagueCard(): React.ReactElement {
           </View>
           <View style={{ flex: 1 }}>
             <Text style={{ fontSize: 17, fontWeight: '900', color: STITCH.onSurface, writingDirection: 'rtl', textAlign: 'right' }}>
-              פנטזיליג מניות
+              פנטזי ליג
             </Text>
             <Text style={{ fontSize: 12, color: STITCH.onSurfaceVariant, writingDirection: 'rtl', textAlign: 'right', marginTop: 1 }}>
               {phaseLabel} · {days > 0 ? `${days} ימים` : `${hours} שעות`}
