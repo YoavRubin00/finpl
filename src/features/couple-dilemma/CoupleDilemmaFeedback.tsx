@@ -9,7 +9,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { tapHaptic } from '../../utils/haptics';
-import { DAISY_ASSETS, DAISY_HAPPY_CELEBRATE_WEBP } from '../podcast-segment/daisy-assets';
+import { DAISY_HAPPY_CELEBRATE_WEBP, DAISY_EMPATHIC_WEBP } from '../podcast-segment/daisy-assets';
 import type { CoupleDilemmaOption } from '../chapter-1-content/types';
 
 interface Props {
@@ -52,16 +52,13 @@ export function CoupleDilemmaFeedback({ chosen, onContinue }: Props) {
         </View>
       </Animated.View>
 
-      {/* Daisy WebP, center — wise = full celebration loop (eyes squeeze
-          shut, fins up, blue sparkle stars) on a transparent background so
-          it composes cleanly over the gradient. empathic still uses the
-          studio still for now (will get the same treatment in a follow-up).
-          No entering animation — she appears with the screen so the user
-          sees the celebration the moment the feedback lands, not a beat
-          after. */}
+      {/* Daisy WebP, center — wise = celebration loop, !wise = empathic
+          loop. Both are transparent-background animated WebPs bundled
+          locally (assets/daisy/webp/) so the feedback shows instantly,
+          no fade-in delay, no remote fetch. */}
       <View style={styles.daisyWrap} pointerEvents="none">
         <ExpoImage
-          source={wise ? DAISY_HAPPY_CELEBRATE_WEBP : DAISY_ASSETS.empathic}
+          source={wise ? DAISY_HAPPY_CELEBRATE_WEBP : DAISY_EMPATHIC_WEBP}
           style={styles.daisy}
           contentFit="contain"
           accessible={false}
