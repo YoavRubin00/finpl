@@ -2605,6 +2605,7 @@ export function LessonFlowScreen() {
   const [showLifestyleVideo, setShowLifestyleVideo] = useState(false);
   const [lifestyleVideo, setLifestyleVideo] = useState<LifestyleVideoSpec | null>(null);
   const lifestyleSeenIds = useLifestyleBreakStore(useShallow((s) => s.seenIds));
+  const lifestyleOneShotSeenIds = useLifestyleBreakStore(useShallow((s) => s.oneShotSeenIds));
   const markLifestyleSeen = useLifestyleBreakStore((s) => s.markSeen);
   const [quizIndex, setQuizIndex] = useState(() => {
     const r = mod?.id ? useChapterStore.getState().moduleResume[mod.id] : undefined;
@@ -2986,12 +2987,12 @@ export function LessonFlowScreen() {
       (sum, ch) => sum + (ch?.completedModules?.length ?? 0), 0
     );
     if (totalCompleted > 0 && totalCompleted % 3 === 0 && totalCompleted % 4 !== 0) {
-      const next = pickNextLifestyleVideo(lifestyleSeenIds);
+      const next = pickNextLifestyleVideo(lifestyleSeenIds, lifestyleOneShotSeenIds);
       setLifestyleVideo(next);
       const timer = setTimeout(() => setShowLifestyleInvite(true), 2500);
       return () => clearTimeout(timer);
     }
-  }, [chestClaimed, showDoubleOrNothing, showSharkLove, showPostCelebration, showPartyInvite, showPartyVideo, showLifestyleInvite, showLifestyleVideo, progress, lifestyleSeenIds]);
+  }, [chestClaimed, showDoubleOrNothing, showSharkLove, showPostCelebration, showPartyInvite, showPartyVideo, showLifestyleInvite, showLifestyleVideo, progress, lifestyleSeenIds, lifestyleOneShotSeenIds]);
 
   const moduleResult = mod ? quizResults[mod.id] : undefined;
   const correctCount = moduleResult?.correct ?? 0;
@@ -4823,7 +4824,7 @@ export function LessonFlowScreen() {
             </View>
             <Text style={{ fontSize: 22, fontWeight: "900", color: "#ffffff", textAlign: "center", marginBottom: 8 }}>{lifestyleVideo.inviteTitle}</Text>
             <Text style={{ fontSize: 15, fontWeight: "600", color: "#94a3b8", textAlign: "center", marginBottom: 24 }}>{lifestyleVideo.inviteSubtitle}</Text>
-            <Pressable onPress={() => { successHaptic(); markLifestyleSeen(lifestyleVideo.id); setShowLifestyleVideo(true); }} style={{ width: "100%", backgroundColor: "#0ea5e9", borderRadius: 16, paddingVertical: 16, alignItems: "center", marginBottom: 12, borderBottomWidth: 4, borderBottomColor: "#0284c7" }} accessibilityRole="button" accessibilityLabel={lifestyleVideo.ctaLabel}>
+            <Pressable onPress={() => { successHaptic(); markLifestyleSeen(lifestyleVideo.id, lifestyleVideo.oneShot); setShowLifestyleVideo(true); }} style={{ width: "100%", backgroundColor: "#0ea5e9", borderRadius: 16, paddingVertical: 16, alignItems: "center", marginBottom: 12, borderBottomWidth: 4, borderBottomColor: "#0284c7" }} accessibilityRole="button" accessibilityLabel={lifestyleVideo.ctaLabel}>
               <Text style={{ fontSize: 18, fontWeight: "900", color: "#ffffff" }}>{lifestyleVideo.ctaLabel}</Text>
             </Pressable>
             <Pressable onPress={() => { setShowLifestyleInvite(false); safeTimeout(() => goToNextSequentialModule(), 80); }} style={{ paddingVertical: 10 }} accessibilityRole="button" accessibilityLabel="המשך">
