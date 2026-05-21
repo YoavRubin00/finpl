@@ -3,6 +3,7 @@ import { persist, createJSONStorage } from 'zustand/middleware';
 import { zustandStorage } from '../../lib/zustandStorage';
 import type { TelemetryEvent, TelemetryEventType, AIProfile, MonetizationSignalType } from './types';
 import { analyzeProfile } from './analyzeProfile';
+import { registerLocalStore } from '../../lib/stores/registry';
 
 /** Flush after this many events accumulate */
 const BATCH_THRESHOLD = 10;
@@ -101,3 +102,5 @@ export const useAITelemetryStore = create<AITelemetryState>()(
     },
   ),
 );
+
+registerLocalStore('ai-telemetry-store', useAITelemetryStore, 'ai-telemetry-store');

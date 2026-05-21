@@ -71,4 +71,5 @@ export interface RealAssetsState {
   addVoucher: () => void;
   /** Total mortgage debt across all assets */
   totalMortgageDebt: () => number;
+  reset: () => void;
 }

@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import { zustandStorage } from '../../lib/zustandStorage';
+import { registerLocalStore } from '../../lib/stores/registry';
 import type { RealAsset, RealAssetsState, PortfolioCombo, MilestoneId } from './realAssetsTypes';
 import { getBaseAsset, getYieldForTier, PORTFOLIO_COMBOS, ASSET_IDS, MORTGAGE_TERMS } from './realAssetsData';
 import { useEconomyUIStore } from '../economy/useEconomyUIStore';
@@ -328,6 +329,14 @@ export const useRealAssetsStore = create<RealAssetsState>()(
           0,
         );
       },
+
+      reset: () => set({
+        ownedAssets: {},
+        totalDailyIncome: 0,
+        lifetimeEarned: 0,
+        assetMilestones: [],
+        assetVouchers: 0,
+      }),
     }),
     {
       name: 'real-assets-store',
@@ -342,3 +351,5 @@ export const useRealAssetsStore = create<RealAssetsState>()(
     },
   ),
 );
+
+registerLocalStore('real-assets-store', useRealAssetsStore, 'real-assets-store');
