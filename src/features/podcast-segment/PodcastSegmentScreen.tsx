@@ -140,6 +140,41 @@ function PodcastListenStage({ podcast, onContinue }: ListenStageProps) {
     if (phase === 'playing') mediumHaptic();
   }, [phase]);
 
+  /* Ambient floating motion — gentle Y-bob + slow scale "breath" applied to
+   *  the Daisy frame. The WebP itself only animates her mouth + flower; this
+   *  layer gives the whole character a sense of weight in water so even
+   *  during the loop seam she never feels frozen. */
+  const floatY = useSharedValue(0);
+  const breathScale = useSharedValue(1);
+  useEffect(() => {
+    floatY.value = withRepeat(
+      withSequence(
+        withTiming(-4, { duration: 2200, easing: Easing.inOut(Easing.sin) }),
+        withTiming(0, { duration: 2200, easing: Easing.inOut(Easing.sin) }),
+      ),
+      -1,
+      false,
+    );
+    breathScale.value = withRepeat(
+      withSequence(
+        withTiming(1.015, { duration: 3200, easing: Easing.inOut(Easing.sin) }),
+        withTiming(1, { duration: 3200, easing: Easing.inOut(Easing.sin) }),
+      ),
+      -1,
+      false,
+    );
+    return () => {
+      cancelAnimation(floatY);
+      cancelAnimation(breathScale);
+    };
+  }, [floatY, breathScale]);
+  const daisyFloatingStyle = useAnimatedStyle(() => ({
+    transform: [
+      { translateY: floatY.value },
+      { scale: breathScale.value },
+    ],
+  }));
+
   /* sound waves halo */
   const wave0 = useSharedValue(0);
   const wave1 = useSharedValue(0);
@@ -280,15 +315,16 @@ function PodcastListenStage({ podcast, onContinue }: ListenStageProps) {
       <View style={styles.daisyStage}>
         <Animated.View style={[styles.wave, wave0Style]} />
         <Animated.View style={[styles.wave, wave1Style]} />
-        <View style={styles.daisyFrame}>
+        <Animated.View style={[styles.daisyFrame, daisyFloatingStyle]}>
           <ExpoImage
             source={daisySource}
             style={styles.daisyImage}
             contentFit="cover"
             cachePolicy="memory-disk"
+            transition={400}
             autoplay
           />
-        </View>
+        </Animated.View>
       </View>
 
       {/* Transcript (auto-scrolling) */}
@@ -411,8 +447,9 @@ const BUBBLE_CONFIGS = Array.from({ length: BUBBLE_COUNT }, (_, i) => ({
   // Pseudo-random but stable across renders
   leftPct: ((i * 173) % 92) + 4,        // 4..96
   size: 6 + ((i * 7) % 5) * 3,          // 6..18
-  durationMs: 6500 + ((i * 311) % 4000), // 6.5..10.5 sec
+  durationMs: 8000 + ((i * 311) % 4000), // 8..12 sec (slower, more graceful)
   delayMs: (i * 850) % 5000,             // 0..5s stagger
+  wobbleAmp: 4 + ((i * 17) % 6),         // 4..10px horizontal wobble
 }));
 
 function AmbientBubbles() {
@@ -431,16 +468,25 @@ interface BubbleConfig {
   size: number;
   durationMs: number;
   delayMs: number;
+  wobbleAmp: number;
 }
 
 function AmbientBubble({ cfg, screenH }: { cfg: BubbleConfig; screenH: number }) {
   const t = useSharedValue(0);
   useEffect(() => {
     // Always loops, independent of audio state. -1 = infinite, no reverse.
+    // The bubble starts fully below the screen (bottom: -size*3) and ends
+    // fully above (translateY clears screenH + extra), so the snap from
+    // t=1 → t=0 happens entirely off-screen.
     t.value = withRepeat(
       withSequence(
         withTiming(0, { duration: cfg.delayMs }),
-        withTiming(1, { duration: cfg.durationMs, easing: Easing.linear }),
+        withTiming(1, {
+          duration: cfg.durationMs,
+          // Slight ease-out — bubbles decelerate near the surface like real
+          // air rising through water losing buoyancy gradient.
+          easing: Easing.out(Easing.quad),
+        }),
       ),
       -1,
       false,
@@ -448,10 +494,27 @@ function AmbientBubble({ cfg, screenH }: { cfg: BubbleConfig; screenH: number })
     return () => cancelAnimation(t);
   }, [cfg.delayMs, cfg.durationMs, t]);
 
-  const style = useAnimatedStyle(() => ({
-    transform: [{ translateY: -t.value * screenH * 1.1 }],
-    opacity: 0.45 * (1 - Math.abs(0.5 - t.value) * 2 * 0.4), // fade in/out at edges
-  }));
+  const style = useAnimatedStyle(() => {
+    // Horizontal wobble — 3 full cycles over the journey, mimics buoyancy
+    // wobble against water resistance.
+    const wobble = Math.sin(t.value * Math.PI * 3) * cfg.wobbleAmp;
+    // Distance covers the entire screen height + a buffer so the bubble
+    // disappears completely before t=1 → t=0 snaps it back to start.
+    const rise = -t.value * (screenH + cfg.size * 4);
+    // Opacity envelope: fade in over first 12%, fade out over last 18% —
+    // both ends hit opacity 0, so the loop snap is invisible.
+    let opacity = 0;
+    if (t.value < 0.12) opacity = (t.value / 0.12) * 0.55;
+    else if (t.value > 0.82) opacity = ((1 - t.value) / 0.18) * 0.55;
+    else opacity = 0.55;
+    return {
+      opacity,
+      transform: [
+        { translateX: wobble },
+        { translateY: rise },
+      ],
+    };
+  });
 
   return (
     <Animated.View
@@ -461,7 +524,7 @@ function AmbientBubble({ cfg, screenH }: { cfg: BubbleConfig; screenH: number })
           left: `${cfg.leftPct}%`,
           width: cfg.size,
           height: cfg.size,
-          bottom: -cfg.size,
+          bottom: -cfg.size * 3, // fully off-screen at the start
         },
         style,
       ]}
