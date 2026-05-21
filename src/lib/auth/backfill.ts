@@ -21,12 +21,15 @@ export const LEGACY_KEYS_V0: string[] = [
   'daily-quiz-store',
   'daily-quests-store',
   'referral-store',
+  'referral-store-v2',       // renamed from referral-store
   'saved-items-store',
+  'finplay-saved-items',     // renamed from saved-items-store
   'fantasy-store',
   'duels-store',
   'squads-store',
   'crowd-question-store',
   'daily-concept-store',
+  'daily-concepts-store',    // renamed from daily-concept-store
   'daily-log-store',
   'daily-challenges-store',
   'wisdom-store',
@@ -34,15 +37,19 @@ export const LEGACY_KEYS_V0: string[] = [
   'scenario-lab-store',
   'macro-event-store',
   'myth-store',
+  'myth-store-v1',           // renamed from myth-store
   'clash-store',
   'adaptive-store',
   'ai-telemetry-store',
   'weekly-insight-store',
+  'weekly-insight-storage',  // renamed from weekly-insight-store
   'real-assets-store',
   'monetization-intent-store',
   'notifications-store',
+  'notification-store',      // renamed from notifications-store
   'bandit-store',
   'tutorial-store',
+  'tutorial-store-v12',      // renamed from tutorial-store
   'nudge-queue-store',
   'audio-store',
   'news-quiz-store',
@@ -52,6 +59,8 @@ export const LEGACY_KEYS_V0: string[] = [
   'market-mission-store',
   'bridge-store',
   'diamond-hands-cooldown-store',
+  'diamond-hands-cooldown',  // renamed from diamond-hands-cooldown-store
+  'feed-interactions-storage', // was missing entirely
 ];
 
 export async function runBackfillV1(): Promise<void> {
