@@ -2,7 +2,7 @@ import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
 import { zustandStorage } from '../../lib/zustandStorage';
 import type { Chest, ChestRarity, DailySpin } from "./types";
-import { useEconomyStore } from "../economy/useEconomyStore";
+import { useEconomyUIStore } from "../economy/useEconomyUIStore";
 import { useNotificationStore } from "../notifications/useNotificationStore";
 
 const MAX_CHEST_SLOTS = 4;
@@ -92,7 +92,7 @@ export const useRetentionStore = create<RetentionState>()(
         if (!chest) return 0;
 
         const reward = CHEST_COIN_REWARDS[chest.rarity];
-        useEconomyStore.getState().addCoins(reward);
+        useEconomyUIStore.getState().addCoins(reward);
 
         set({
           chestSlots: chestSlots.map((slot) =>
@@ -112,7 +112,7 @@ export const useRetentionStore = create<RetentionState>()(
 
         const chest = chestSlots[chestIndex]!;
         const reward = CHEST_COIN_REWARDS[chest.rarity];
-        useEconomyStore.getState().addCoins(reward);
+        useEconomyUIStore.getState().addCoins(reward);
 
         set({
           chestSlots: chestSlots.map((slot, i) =>
@@ -130,7 +130,7 @@ export const useRetentionStore = create<RetentionState>()(
 
         const chest = chestSlots[oldestIndex]!;
         const reward = CHEST_COIN_REWARDS[chest.rarity];
-        useEconomyStore.getState().addCoins(reward);
+        useEconomyUIStore.getState().addCoins(reward);
 
         set({
           chestSlots: chestSlots.map((slot, i) =>
@@ -150,7 +150,7 @@ export const useRetentionStore = create<RetentionState>()(
           DAILY_SPIN_REWARDS[
             Math.floor(Math.random() * DAILY_SPIN_REWARDS.length)
           ];
-        useEconomyStore.getState().addCoins(reward);
+        useEconomyUIStore.getState().addCoins(reward);
 
         set({ dailySpin: { lastSpinDate: today } });
         return reward;

@@ -3,7 +3,11 @@ import { useRouter } from 'expo-router';
 import { useIsPro } from '../subscription/useSubscription';
 import { useWeeklyInsightStore } from './useWeeklyInsightStore';
 import { useAuthStore } from '../auth/useAuthStore';
-import { useEconomyStore } from '../economy/useEconomyStore';
+import { queryClient } from '../../lib/queryClient';
+import { economyQueryKey } from '../economy/useEconomy';
+import { streakQueryKey } from '../economy/useStreak';
+import type { Economy } from '../../lib/api/economy';
+import type { StreakState } from '../../lib/api/streak';
 import { useChapterStore } from '../chapter-1-content/useChapterStore';
 import { MODULE_NAMES } from '../chat/chatData';
 import { getApiBase } from '../../db/apiBase';
@@ -15,7 +19,8 @@ const DEFAULT_BANNER_MSG = 'יש לי תובנה חדשה עבורכם';
 async function fetchBannerTip(): Promise<string | null> {
   try {
     const auth = useAuthStore.getState();
-    const eco = useEconomyStore.getState();
+    const eco = queryClient.getQueryData<Economy | null>(economyQueryKey);
+    const streakState = queryClient.getQueryData<StreakState | null>(streakQueryKey);
     const allModuleIds = Object.values(useChapterStore.getState().progress)
       .flatMap((cp) => cp.completedModules);
     const lastModuleName = allModuleIds.length > 0
@@ -27,8 +32,8 @@ async function fetchBannerTip(): Promise<string | null> {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         name: auth.displayName ?? 'חבר',
-        xp: eco.xp,
-        streak: eco.streak,
+        xp: eco?.xp ?? 0,
+        streak: streakState?.currentStreak ?? 0,
         completedModuleCount: allModuleIds.length,
         lastModuleName,
         financialGoal: auth.profile?.financialGoal,

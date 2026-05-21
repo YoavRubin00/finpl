@@ -174,7 +174,7 @@ import { ConfettiExplosion } from '../../components/ui/ConfettiExplosion';
 import { BackButton } from '../../components/ui/BackButton';
 import { GoldCoinIcon } from '../../components/ui/GoldCoinIcon';
 import { tapHaptic, successHaptic } from '../../utils/haptics';
-import { useEconomyStore } from '../economy/useEconomyStore';
+import { useEconomy } from '../economy/useEconomy';
 import { getPyramidStatus } from '../../utils/progression';
 import { Lock } from 'lucide-react-native';
 
@@ -225,7 +225,8 @@ function AllocationSlider({
 export function ScenarioLabScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
-  const xp = useEconomyStore((s) => s.xp);
+  const { data: economyData } = useEconomy();
+  const xp = economyData?.xp ?? 0;
   const { layer } = getPyramidStatus(xp);
 
   if (layer < 3) {

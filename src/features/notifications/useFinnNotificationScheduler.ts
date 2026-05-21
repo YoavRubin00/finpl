@@ -5,7 +5,12 @@
 import { useEffect } from 'react';
 import * as Notifications from 'expo-notifications';
 import { useNotificationStore } from './useNotificationStore';
-import { useEconomyStore } from '../economy/useEconomyStore';
+import { useEconomyUIStore } from '../economy/useEconomyUIStore';
+import { queryClient } from '../../lib/queryClient';
+import { economyQueryKey } from '../economy/useEconomy';
+import { streakQueryKey } from '../economy/useStreak';
+import type { Economy } from '../../lib/api/economy';
+import type { StreakState } from '../../lib/api/streak';
 import { useAuthStore } from '../auth/useAuthStore';
 import { getLevelFromXP } from '../../utils/progression';
 import {
@@ -57,13 +62,21 @@ export function useFinnNotificationScheduler() {
 
         (async () => {
             try {
-                const economy = useEconomyStore.getState();
-                const level = getLevelFromXP(economy.xp);
-                const ctx = buildStreakContext(economy, level);
+                const uiState = useEconomyUIStore.getState();
+                const cachedEco = queryClient.getQueryData<Economy | null>(economyQueryKey);
+                const cachedStreak = queryClient.getQueryData<StreakState | null>(streakQueryKey);
+                const economyCompat = {
+                  xp: cachedEco?.xp ?? 0,
+                  streak: cachedStreak?.currentStreak ?? 0,
+                  lastDailyTaskDate: uiState.lastDailyTaskDate,
+                  recentActivityHours: uiState.recentActivityHours,
+                };
+                const level = getLevelFromXP(economyCompat.xp);
+                const ctx = buildStreakContext(economyCompat as Parameters<typeof buildStreakContext>[0], level);
                 const store = useNotificationStore.getState();
 
                 // US-007: personalized send hour from recent activity pattern
-                const primaryHour = computePersonalizedHour(economy.recentActivityHours ?? []);
+                const primaryHour = computePersonalizedHour(uiState.recentActivityHours ?? []);
 
                 // US-008: tone adapted to user's onboarding daily-goal answer
                 const goalMinutes = useAuthStore.getState().profile?.dailyGoalMinutes;
@@ -92,8 +105,8 @@ export function useFinnNotificationScheduler() {
                     store.setLastFinnCopyTitle(copy.title);
 
                     // US-009: 23:00 fallback only if task not done and primary isn't at 23
-                    if (economy.lastDailyTaskDate !== today && primaryHour < 23) {
-                        const streakDays = economy.streak;
+                    if (economyCompat.lastDailyTaskDate !== today && primaryHour < 23) {
+                        const streakDays = economyCompat.streak;
                         const fallbackCopy = streakDays > 0
                             ? { title: `🕚 רצף של ${streakDays} ימים בסכנה`, body: 'שעה אחרונה לשמור עליו, 2 דקות וזהו' }
                             : { title: '🕚 שעה אחרונה ליום', body: 'לא מאוחר מדי להתחיל רצף חדש היום' };

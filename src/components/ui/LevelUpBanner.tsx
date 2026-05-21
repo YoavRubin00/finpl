@@ -3,7 +3,7 @@ import Animated, { FadeInDown } from "react-native-reanimated";
 import { X } from "lucide-react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
-import { useEconomyStore } from "../../features/economy/useEconomyStore";
+import { useEconomyUIStore } from "../../features/economy/useEconomyUIStore";
 import { LottieIcon } from "./LottieIcon";
 import { LEVEL_TO_PYRAMID_LAYER } from "../../constants/economy";
 import { tapHaptic, successHaptic } from "../../utils/haptics";
@@ -44,8 +44,8 @@ const LAYER_UNLOCKS: Record<number, LayerUnlock> = {
 
 export function LevelUpBanner() {
   const router = useRouter();
-  const pendingLevelUp = useEconomyStore((s) => s.pendingLevelUp);
-  const dismissLevelUp = useEconomyStore((s) => s.dismissLevelUp);
+  const pendingLevelUp = useEconomyUIStore((s) => s.pendingLevelUp);
+  const dismissLevelUp = useEconomyUIStore((s) => s.dismissLevelUp);
 
   if (pendingLevelUp === null) return null;
 

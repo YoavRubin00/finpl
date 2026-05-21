@@ -1,7 +1,7 @@
 import { useCallback, useRef } from "react";
 import { View, Text, StyleSheet } from "react-native";
 import Animated, { FadeIn, FadeOut } from "react-native-reanimated";
-import { useEconomyStore } from "../economy/useEconomyStore";
+import { useEconomyUIStore } from "../economy/useEconomyUIStore";
 import { FinnCoach } from "./FinnCoach";
 import { FillBlankCard } from "./FillBlankCard";
 import { TimelineOrderCard } from "./TimelineOrderCard";
@@ -28,8 +28,8 @@ export function InteractiveRecallScreen({
 }: InteractiveRecallScreenProps) {
   const set = getRecallSet(moduleId);
   const recall = useInteractiveRecall(set);
-  const addXP = useEconomyStore((s) => s.addXP);
-  const addCoins = useEconomyStore((s) => s.addCoins);
+  const addXP = useEconomyUIStore((s) => s.addXP);
+  const addCoins = useEconomyUIStore((s) => s.addCoins);
 
   const recallRef = useRef(recall);
   recallRef.current = recall;

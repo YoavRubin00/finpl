@@ -1,5 +1,6 @@
 import { useMemo } from "react";
-import { useEconomyStore } from "../economy/useEconomyStore";
+import { useEconomyUIStore } from "../economy/useEconomyUIStore";
+import { useStreak } from "../economy/useStreak";
 
 export type DayCellStatus =
   | "active"   // user completed a task
@@ -73,10 +74,11 @@ export function getCalendarDays(
 }
 
 export function useStreakCalendar(year: number, month: number) {
-  const activeDates = useEconomyStore((s) => s.activeDates);
-  const frozenDates = useEconomyStore((s) => s.frozenDates);
-  const streak = useEconomyStore((s) => s.streak);
-  const streakFreezes = useEconomyStore((s) => s.streakFreezes);
+  const activeDates = useEconomyUIStore((s) => s.activeDates);
+  const frozenDates = useEconomyUIStore((s) => s.frozenDates);
+  const { data: streakData } = useStreak();
+  const streak = streakData?.currentStreak ?? 0;
+  const streakFreezes = useEconomyUIStore((s) => s.streakFreezes);
 
   const todayISO = useMemo(() => new Date().toISOString().slice(0, 10), []);
 

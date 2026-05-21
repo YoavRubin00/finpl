@@ -4,7 +4,7 @@ import { zustandStorage } from '../../lib/zustandStorage';
 import type { GatedFeature } from '../subscription/subscriptionConstants';
 import { useHeartsStore } from '../subscription/useHeartsStore';
 import { useUserStatsStore } from '../user-stats/useUserStatsStore';
-import { useEconomyStore } from '../economy/useEconomyStore';
+import { useEconomyUIStore } from '../economy/useEconomyUIStore';
 import { useAITelemetryStore } from '../ai-personalization/useAITelemetryStore';
 import { useBanditStore } from '../bandit/useBanditStore';
 import { getVariantPayload } from '../bandit/banditConfig';
@@ -77,7 +77,7 @@ export const useMonetizationIntentStore = create<MonetizationIntentState>()(
           ? last7Keys.reduce((sum, k) => sum + (dailySecs[k] ?? 0), 0) / last7Keys.length
           : 0;
 
-        const activeDays = useEconomyStore.getState().activeDates.length;
+        const activeDays = useEconomyUIStore.getState().activeDates.length;
         const vector = useAITelemetryStore.getState().profile?.monetizationVector ?? null;
 
         let score = 0;

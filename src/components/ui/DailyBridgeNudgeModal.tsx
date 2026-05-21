@@ -17,7 +17,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { FINN_DANCING } from '../../features/retention-loops/finnMascotConfig';
 import { useNudgeQueueStore } from '../../stores/useNudgeQueueStore';
 import { useAuthStore } from '../../features/auth/useAuthStore';
-import { useEconomyStore } from '../../features/economy/useEconomyStore';
+import { useEconomyUIStore } from '../../features/economy/useEconomyUIStore';
 import { tapHaptic, successHaptic } from '../../utils/haptics';
 
 const DAILY_COPY: Record<number, string> = {
@@ -43,7 +43,7 @@ export function DailyBridgeNudgeModal() {
   const profile = useAuthStore((s) => s.profile);
 
   // Activity gate, need ≥3 active days before nudging
-  const activeDates = useEconomyStore((s) => s.activeDates);
+  const activeDates = useEconomyUIStore((s) => s.activeDates);
 
   // Nudge queue (canShow / session flags read via getState() inside the poll loop)
   const recordAct = useNudgeQueueStore((s) => s.recordAct);

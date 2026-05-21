@@ -11,7 +11,8 @@ import { StarterPackModal } from './StarterPackModal';
 import { STARTER_PACK_PRICE_LABEL, STARTER_PACK_ORIGINAL_PRICE_LABEL, STARTER_PACK_DISCOUNT_PCT } from './starterPack';
 import { generateDailyDeals } from './dailyDeals';
 import { ConfirmModal } from './ConfirmModal';
-import { useEconomyStore } from '../economy/useEconomyStore';
+import { useEconomy, useSpendCoins, useSpendGems, useAwardGems } from '../economy/useEconomy';
+import { useEconomyUIStore } from '../economy/useEconomyUIStore';
 import { useHeartsStore, MAX_HEARTS } from '../subscription/useHeartsStore';
 import { useIsPro } from '../subscription/useSubscription';
 import { useAuthStore } from '../auth/useAuthStore';
@@ -41,8 +42,9 @@ function formatCountdown(ms: number): string {
 
 export function DailyDealsSection() {
   const router = useRouter();
-  const spendCoins = useEconomyStore((s) => s.spendCoins);
-  const spendGems = useEconomyStore((s) => s.spendGems);
+  const { data: economyDataDD } = useEconomy();
+  const spendCoinsHookDD = useSpendCoins();
+  const spendGemsHookDD = useSpendGems();
   const isPro = useIsPro();
   const [dateKey, setDateKey] = useState(getTodayISO);
   const [remaining, setRemaining] = useState(msUntilMidnight);
@@ -70,16 +72,16 @@ export function DailyDealsSection() {
     return () => clearInterval(id);
   }, [dateKey, appActive]);
 
-  const addGems = useEconomyStore((s) => s.addGems);
-  const addStreakFreezes = useEconomyStore((s) => s.addStreakFreezes);
+  const addGemsHookDD = useAwardGems();
+  const addStreakFreezes = useEconomyUIStore((s) => s.addStreakFreezes);
   const addOwnedAvatar = useAuthStore((s) => s.addOwnedAvatar);
   const setAvatar = useAuthStore((s) => s.setAvatar);
   const isMinor = useAuthStore((s) => s.profile?.ageGroup === 'minor');
 
   const handleClaimFreeGems = useCallback(() => {
-    addGems(5);
+    addGemsHookDD(5);
     successHaptic();
-  }, [addGems]);
+  }, [addGemsHookDD]);
 
   const handleProClaim = useCallback((deal: DailyDeal) => {
     const itemId = deal.item.id;
@@ -106,11 +108,13 @@ export function DailyDealsSection() {
   const handleConfirm = useCallback(() => {
     if (!pendingDeal) return;
     const isGem = pendingDeal.currency === 'gems';
-    const ok = isGem
-      ? spendGems(pendingDeal.discountedCost)
-      : spendCoins(pendingDeal.discountedCost);
+    const currentGems = economyDataDD?.gems ?? 0;
+    const currentCoins = economyDataDD?.coins ?? 0;
+    const canAfford = isGem
+      ? currentGems >= pendingDeal.discountedCost
+      : currentCoins >= pendingDeal.discountedCost;
 
-    if (!ok) {
+    if (!canAfford) {
       setPendingDeal(null);
       Alert.alert(
         isGem ? 'אין מספיק ג\'מים' : 'אין מספיק מטבעות',
@@ -119,6 +123,12 @@ export function DailyDealsSection() {
           : 'אפשר לרכוש זהב בחנות ₪',
       );
       return;
+    }
+
+    if (isGem) {
+      spendGemsHookDD(pendingDeal.discountedCost);
+    } else {
+      spendCoinsHookDD(pendingDeal.discountedCost);
     }
 
     const itemId = pendingDeal.item.id;
@@ -132,7 +142,7 @@ export function DailyDealsSection() {
     successHaptic();
     setPurchasedIds((prev) => new Set(prev).add(pendingDeal.id));
     setPendingDeal(null);
-  }, [pendingDeal, spendCoins, spendGems]);
+  }, [pendingDeal, economyDataDD, spendCoinsHookDD, spendGemsHookDD]);
 
   return (
     <View>

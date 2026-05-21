@@ -57,7 +57,7 @@ import {
   Heebo_900Black,
 } from "@expo-google-fonts/heebo";
 import { useAuthStore } from "../src/features/auth/useAuthStore";
-import { useEconomyStore } from "../src/features/economy/useEconomyStore";
+import { useEconomyUIStore } from "../src/features/economy/useEconomyUIStore";
 import { setOnUnauthorized } from "../src/lib/api/client";
 import { signOut as lifecycleSignOut, bootFromToken } from "../src/lib/auth/lifecycle";
 
@@ -144,14 +144,14 @@ const origInputRender = (TextInput as unknown as { render: Function }).render;
 };
 
 function FreezeSaveModalGate() {
-  const pending = useEconomyStore((s) => s.pendingFreezeSaveAck);
-  const dismiss = useEconomyStore((s) => s.dismissFreezeSaveAck);
+  const pending = useEconomyUIStore((s) => s.pendingFreezeSaveAck);
+  const dismiss = useEconomyUIStore((s) => s.dismissFreezeSaveAck);
   return <StreakFreezeSaveModal visible={pending} onDismiss={dismiss} />;
 }
 
 function StreakRepairModalGate() {
-  const pending = useEconomyStore((s) => s.pendingRepairOffer);
-  const dismiss = useEconomyStore((s) => s.dismissRepairOffer);
+  const pending = useEconomyUIStore((s) => s.pendingRepairOffer);
+  const dismiss = useEconomyUIStore((s) => s.dismissRepairOffer);
   return <StreakRepairModal visible={pending} onDismiss={dismiss} />;
 }
 
@@ -250,11 +250,11 @@ export default function RootLayout() {
 
   // Award daily login XP on app open
   useEffect(() => {
-    useEconomyStore.getState().awardLoginBonus();
+    useEconomyUIStore.getState().awardLoginBonus();
     // Stacking session bonus — coins for repeat returns within the same day.
     // Tiered: 1h=50, 2h=120, 4h=300, 8h=800, 12h+=2000. Surfaces as banner via
     // pendingSessionBonus state (consumed wherever the UI wants to show it).
-    useEconomyStore.getState().awardSessionStackingBonus();
+    useEconomyUIStore.getState().awardSessionStackingBonus();
   }, []);
 
   // Reset Shark CTA session tokens on cold start (so BridgeCTA / ReferralCTA can fire once per session)
@@ -390,7 +390,7 @@ export default function RootLayout() {
         await AsyncStorage.removeItem(screenMod.PENDING_REFERRAL_STORAGE_KEY);
         if (cancelled) return;
         if (result) {
-          try { useEconomyStore.getState().addCoins(result.bonusGranted); } catch { /* non-fatal */ }
+          try { useEconomyUIStore.getState().addCoins(result.bonusGranted); } catch { /* non-fatal */ }
         }
       } catch { /* non-fatal — deep link redeem will be retried next launch if user re-enters via link */ }
     })();

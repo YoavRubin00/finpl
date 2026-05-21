@@ -1,7 +1,7 @@
 import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
 import { zustandStorage } from '../../lib/zustandStorage';
-import { useEconomyStore } from "../economy/useEconomyStore";
+import { useEconomyUIStore } from "../economy/useEconomyUIStore";
 import { useAuthStore } from "../auth/useAuthStore";
 import { upsertModuleProgress } from "../../db/sync/syncModuleProgress";
 import { useAITelemetryStore } from "../ai-personalization/useAITelemetryStore";
@@ -131,8 +131,8 @@ export const useChapterStore = create<ChapterState>()(
           };
         });
 
-        useEconomyStore.getState().addXP(MODULE_COMPLETE_XP, "lesson_complete");
-        useEconomyStore.getState().addCoins(MODULE_COMPLETE_COINS, 'lesson');
+        useEconomyUIStore.getState().addXP(MODULE_COMPLETE_XP, "lesson_complete");
+        useEconomyUIStore.getState().addCoins(MODULE_COMPLETE_COINS, 'lesson');
 
         // Fire-and-forget DB sync
         const email = useAuthStore.getState().email;

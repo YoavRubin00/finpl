@@ -9,7 +9,7 @@ import { LottieIcon } from "../../components/ui/LottieIcon";
 import { BackButton } from "../../components/ui/BackButton";
 import { GlobalWealthHeader } from "../../components/ui/GlobalWealthHeader";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { useEconomyStore } from "../economy/useEconomyStore";
+import { useEconomy } from "../economy/useEconomy";
 import { useReferralStore } from "../social/useReferralStore";
 import { useAuthStore } from "../auth/useAuthStore";
 import { useRealAssetsStore } from "./useRealAssetsStore";
@@ -42,7 +42,8 @@ const BG_DECO = [
 export function AssetsScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const xp = useEconomyStore((s) => s.xp);
+  const { data: economyData } = useEconomy();
+  const xp = economyData?.xp ?? 0;
   const { layer: currentLayer } = getPyramidStatus(xp);
   const tradingUnlocked = currentLayer >= 2;
   const referralCode = useReferralStore((s) => s.referralCode);

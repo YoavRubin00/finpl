@@ -10,7 +10,7 @@ import Animated, {
   FadeIn,
 } from 'react-native-reanimated';
 import { useNewsQuizStore } from '../../../stores/useNewsQuizStore';
-import { useEconomyStore } from '../../economy/useEconomyStore';
+import { useEconomyUIStore } from '../../economy/useEconomyUIStore';
 import { ConfettiExplosion } from '../../../components/ui/ConfettiExplosion';
 import { FlyingRewards } from '../../../components/ui/FlyingRewards';
 import { GoldCoinIcon } from '../../../components/ui/GoldCoinIcon';
@@ -82,8 +82,8 @@ function ChoiceButton({
 
 export function LiveNewsQuizCard({ isActive = true }: { isActive?: boolean }) {
   const { data, loading, fetch, hasAnsweredToday, markAnswered } = useNewsQuizStore();
-  const addXP = useEconomyStore((s) => s.addXP);
-  const addCoins = useEconomyStore((s) => s.addCoins);
+  const addXP = useEconomyUIStore((s) => s.addXP);
+  const addCoins = useEconomyUIStore((s) => s.addCoins);
 
   const [selected, setSelected] = useState<'a' | 'b' | 'c' | null>(null);
   const [showConfetti, setShowConfetti] = useState(false);

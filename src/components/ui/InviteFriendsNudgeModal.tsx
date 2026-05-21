@@ -17,7 +17,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { FINN_DANCING } from '../../features/retention-loops/finnMascotConfig';
 import { useNudgeQueueStore } from '../../stores/useNudgeQueueStore';
 import { useAuthStore } from '../../features/auth/useAuthStore';
-import { useEconomyStore } from '../../features/economy/useEconomyStore';
+import { useEconomyUIStore } from '../../features/economy/useEconomyUIStore';
 import { tapHaptic, successHaptic } from '../../utils/haptics';
 
 import { REFERRAL_SIGNUP_BONUS_COINS, REFERRAL_DAILY_DIVIDEND_RATE } from '../../features/social/referralConstants';
@@ -61,7 +61,7 @@ export function InviteFriendsNudgeModal() {
   const isGuest = useAuthStore((s) => s.isGuest);
   const profile = useAuthStore((s) => s.profile);
 
-  const activeDates = useEconomyStore((s) => s.activeDates);
+  const activeDates = useEconomyUIStore((s) => s.activeDates);
 
   const recordAct = useNudgeQueueStore((s) => s.recordAct);
   const recordDismiss = useNudgeQueueStore((s) => s.recordDismiss);

@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import { zustandStorage } from '../../lib/zustandStorage';
-import { useEconomyStore } from '../economy/useEconomyStore';
+import { useEconomyUIStore } from '../economy/useEconomyUIStore';
 import { getClashRound } from './clashQuestions';
 import type { ClashInvite, ClashSession } from './types';
 
@@ -144,11 +144,11 @@ export const useClashStore = create<ClashState>()(
 
         // Award XP/coins for win
         if (result === 'win') {
-          useEconomyStore.getState().addXP(50, 'clash_win');
-          useEconomyStore.getState().addCoins(150);
+          useEconomyUIStore.getState().addXP(50, 'clash_win');
+          useEconomyUIStore.getState().addCoins(150);
         } else if (result === 'draw') {
-          useEconomyStore.getState().addXP(20, 'clash_draw');
-          useEconomyStore.getState().addCoins(50);
+          useEconomyUIStore.getState().addXP(20, 'clash_draw');
+          useEconomyUIStore.getState().addCoins(50);
         }
 
         // Mark invite completed

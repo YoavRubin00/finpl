@@ -15,7 +15,7 @@ import { persist, createJSONStorage } from "zustand/middleware";
 import { zustandStorage } from '../../lib/zustandStorage';
 import type { ReferredFriend } from "./referralTypes";
 import { generateReferralCode, getISODateKey } from "./referralData";
-import { useEconomyStore } from "../economy/useEconomyStore";
+import { useEconomyUIStore } from "../economy/useEconomyUIStore";
 import {
   registerReferralCode,
   fetchReferralState,
@@ -133,7 +133,7 @@ export const useReferralStore = create<ReferralState>()(
           // state.
           if (snapshot.pendingSignupBonus > 0) {
             try {
-              useEconomyStore.getState().addCoins(snapshot.pendingSignupBonus);
+              useEconomyUIStore.getState().addCoins(snapshot.pendingSignupBonus);
             } catch { /* non-fatal — user will see them on next refresh sync */ }
           }
           const friends = snapshot.friends.map(mapServerFriend);
@@ -159,7 +159,7 @@ export const useReferralStore = create<ReferralState>()(
           // economy store is updated here so the user sees the coin counter
           // tick up immediately.
           try {
-            useEconomyStore.getState().addCoins(result.amount);
+            useEconomyUIStore.getState().addCoins(result.amount);
           } catch { /* non-fatal */ }
           set((s) => ({
             totalDividendCoins: s.totalDividendCoins + result.amount,

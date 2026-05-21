@@ -24,7 +24,7 @@ import { STITCH } from "../../constants/theme";
 import { useDailyQuestsStore, previewQuestReward, previewProQuestReward } from "./useDailyQuestsStore";
 import { useIsPro } from "../subscription/useSubscription";
 import { type DailyQuest, QUEST_TEMPLATES } from "./daily-quest-types";
-import { useEconomyStore } from "../economy/useEconomyStore";
+import { useStreak } from "../economy/useStreak";
 import { FINN_HELLO, FINN_STANDARD, FINN_DANCING } from "../retention-loops/finnMascotConfig";
 import { useSpontaneousDancing } from "../retention-loops/useSpontaneousDancing";
 import { heavyHaptic, successHaptic, tapHaptic } from "../../utils/haptics";
@@ -190,7 +190,8 @@ export function DailyQuestsSheet({ visible, onClose }: DailyQuestsSheetProps) {
   const claimProReward = useDailyQuestsStore((s) => s.claimProReward);
   const refreshQuests = useDailyQuestsStore((s) => s.refreshQuests);
   const syncQuestCompletions = useDailyQuestsStore((s) => s.syncCompletions);
-  const streak = useEconomyStore((s) => s.streak);
+  const { data: streakData } = useStreak();
+  const streak = streakData?.currentStreak ?? 0;
   const isPro = useIsPro();
 
   // Ensure quests are populated whenever the sheet becomes visible.

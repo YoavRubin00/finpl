@@ -15,7 +15,8 @@ import Animated, {
 } from "react-native-reanimated";
 import { Ionicons } from "@expo/vector-icons";
 import { useRetentionStore } from "./useRetentionStore";
-import { useEconomyStore } from "../economy/useEconomyStore";
+import { useEconomy, useSpendGems } from "../economy/useEconomy";
+import { useEconomyUIStore } from "../economy/useEconomyUIStore";
 import { tapHaptic, successHaptic, heavyHaptic } from "../../utils/haptics";
 import { useAppActive } from "../../hooks/useAppActive";
 import type { Chest, ChestRarity, ChestReward } from "./types";
@@ -495,7 +496,8 @@ function GemInstantOpenModal({
   onCancel: () => void;
 }) {
   const router = useRouter();
-  const gems = useEconomyStore((s) => s.gems);
+  const { data: economyData } = useEconomy();
+  const gems = economyData?.gems ?? 0;
   const canAfford = gems >= INSTANT_OPEN_GEM_COST;
 
   if (!state.visible || !state.rarity) return null;
@@ -622,7 +624,8 @@ export function ChestsRow() {
   const chestSlots = useRetentionStore((s) => s.chestSlots);
   const openReady = useRetentionStore((s) => s.openReadyChest);
   const instantOpenById = useRetentionStore((s) => s.instantOpenChestById);
-  const spendGems = useEconomyStore((s) => s.spendGems);
+  const { data: economyDataRow } = useEconomy();
+  const spendGemsHook = useSpendGems();
 
   const [rewardModal, setRewardModal] = useState<{ visible: boolean; rarity: ChestRarity | null; reward: number }>({
     visible: false,
@@ -656,8 +659,9 @@ export function ChestsRow() {
 
   const handleGemConfirm = useCallback(() => {
     if (!gemConfirm.chestId || !gemConfirm.rarity) return;
-    const paid = spendGems(INSTANT_OPEN_GEM_COST);
-    if (!paid) return;
+    const currentGems = economyDataRow?.gems ?? 0;
+    if (currentGems < INSTANT_OPEN_GEM_COST) return;
+    spendGemsHook(INSTANT_OPEN_GEM_COST);
 
     const reward = instantOpenById(gemConfirm.chestId);
     const rarity = gemConfirm.rarity;
@@ -667,7 +671,7 @@ export function ChestsRow() {
       successHaptic();
       setRewardModal({ visible: true, rarity, reward });
     }
-  }, [gemConfirm, spendGems, instantOpenById]);
+  }, [gemConfirm, spendGemsHook, instantOpenById, economyDataRow?.gems]);
 
   const handleGemCancel = useCallback(() => {
     setGemConfirm({ visible: false, chestId: null, rarity: null });

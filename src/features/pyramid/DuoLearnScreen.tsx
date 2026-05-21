@@ -22,7 +22,9 @@ import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
 import { useFocusEffect } from "@react-navigation/native";
 import { Lock, ChevronDown, Home, Shield, Scale, TrendingUp, Crown, FastForward, X } from "lucide-react-native";
-import { useEconomyStore } from "../economy/useEconomyStore";
+import { useEconomy } from "../economy/useEconomy";
+import { useStreak } from "../economy/useStreak";
+import { useEconomyUIStore } from "../economy/useEconomyUIStore";
 import { useChapterStore } from "../chapter-1-content/useChapterStore";
 import { useIsPro } from "../subscription/useSubscription";
 import { useAuthStore } from "../auth/useAuthStore";
@@ -955,8 +957,10 @@ export function DuoLearnScreen() {
   const router = useRouter();
   const isWalkthroughActive = !useTutorialStore((s) => s.hasSeenAppWalkthrough);
   const walkthroughScreen = useTutorialStore((s) => s.walkthroughActiveScreen);
-  const xp = useEconomyStore((s) => s.xp);
-  const streak = useEconomyStore((s) => s.streak);
+  const { data: economyData } = useEconomy();
+  const { data: streakData } = useStreak();
+  const xp = economyData?.xp ?? 0;
+  const streak = streakData?.currentStreak ?? 0;
   const progress = useChapterStore((s) => s.progress);
   const isPro = useIsPro();
   const displayName = useAuthStore((s) => s.displayName) ?? "";
@@ -1011,7 +1015,7 @@ export function DuoLearnScreen() {
   const easterEggNodeId = useFunStore((s) => s.easterEggNodeId);
   const rollEasterEgg = useFunStore((s) => s.rollEasterEgg);
   const claimEasterEgg = useFunStore((s) => s.claimEasterEgg);
-  const addCoins = useEconomyStore((s) => s.addCoins);
+  const addCoins = useEconomyUIStore((s) => s.addCoins);
   const [showEasterEggReward, setShowEasterEggReward] = useState<"xp" | "coins" | null>(null);
 
   // Roll Easter egg on screen focus (20% chance to place coin on a completed node)

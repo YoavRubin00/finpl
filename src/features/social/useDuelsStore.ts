@@ -16,7 +16,7 @@ import {
   DUEL_DRAW_COINS,
   DUEL_WIN_GEMS,
 } from "./duelData";
-import { useEconomyStore } from "../economy/useEconomyStore";
+import { useEconomyUIStore } from "../economy/useEconomyUIStore";
 
 // ---------------------------------------------------------------------------
 // Question pool
@@ -180,11 +180,11 @@ export const useDuelsStore = create<DuelsState>()(
 
         // Award economy tokens
         const rewardCoins = playerWon ? DUEL_WIN_COINS : isDraw ? DUEL_DRAW_COINS : DUEL_LOSS_COINS;
-        useEconomyStore.getState().addCoins(rewardCoins);
+        useEconomyUIStore.getState().addCoins(rewardCoins);
 
         // Award gems on win only
         if (playerWon) {
-          useEconomyStore.getState().addGems(DUEL_WIN_GEMS);
+          useEconomyUIStore.getState().addGems(DUEL_WIN_GEMS);
         }
       },
 

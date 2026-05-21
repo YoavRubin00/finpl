@@ -2,7 +2,7 @@ import React, { useCallback, useState } from "react";
 import { LayoutChangeEvent, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
-import { useEconomyStore } from "../economy/useEconomyStore";
+import { useEconomyUIStore } from "../economy/useEconomyUIStore";
 import {
   doubleHeavyHaptic,
   errorHaptic,
@@ -31,8 +31,8 @@ export function TowerDefenseScreen({ onExit, onVictory }: Props) {
   const [victorySummary, setVictorySummary] = useState<VictorySummary | null>(
     null
   );
-  const addXP = useEconomyStore((s) => s.addXP);
-  const addCoins = useEconomyStore((s) => s.addCoins);
+  const addXP = useEconomyUIStore((s) => s.addXP);
+  const addCoins = useEconomyUIStore((s) => s.addCoins);
 
   const handleVictory = useCallback(
     (summary: VictorySummary) => {

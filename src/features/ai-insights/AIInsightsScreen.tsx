@@ -15,7 +15,8 @@ import { useWeeklyInsightStore } from "./useWeeklyInsightStore";
 
 import { BackButton } from "../../components/ui/BackButton";
 import { useIsPro } from "../subscription/useSubscription";
-import { useEconomyStore } from "../economy/useEconomyStore";
+import { useEconomy } from "../economy/useEconomy";
+import { useStreak } from "../economy/useStreak";
 import { useAuthStore } from "../auth/useAuthStore";
 import { useChapterStore } from "../chapter-1-content/useChapterStore";
 import { useAITelemetryStore } from "../ai-personalization/useAITelemetryStore";
@@ -60,8 +61,10 @@ const BUBBLE_BORDER: Record<Insight['category'], string> = {
 
 /* ── Shared context builder ── */
 function useInsightContext() {
-  const xp = useEconomyStore((s) => s.xp);
-  const streak = useEconomyStore((s) => s.streak);
+  const { data: economyData } = useEconomy();
+  const { data: streakData } = useStreak();
+  const xp = economyData?.xp ?? 0;
+  const streak = streakData?.currentStreak ?? 0;
   const displayName = useAuthStore((s) => s.displayName);
   const profile = useAuthStore((s) => s.profile);
   const chapterProgress = useChapterStore((s) => s.progress);

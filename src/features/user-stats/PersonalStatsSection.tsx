@@ -2,7 +2,7 @@ import { useMemo } from "react";
 import { View, Text } from "react-native";
 import Animated, { FadeInUp } from "react-native-reanimated";
 import { useShallow } from "zustand/react/shallow";
-import { useEconomyStore } from "../economy/useEconomyStore";
+import { useEconomyUIStore } from "../economy/useEconomyUIStore";
 import { useChapterStore } from "../chapter-1-content/useChapterStore";
 import { useDailyChallengesStore } from "../daily-challenges/use-daily-challenges-store";
 import type { PlayCountMap } from "../daily-challenges/daily-challenge-types";
@@ -220,8 +220,8 @@ function StatCard({
 export function PersonalStatsSection() {
   const theme = useTheme();
 
-  const activeDates = useEconomyStore((s) => s.activeDates);
-  const recentActivityHours = useEconomyStore((s) => s.recentActivityHours);
+  const activeDates = useEconomyUIStore((s) => s.activeDates);
+  const recentActivityHours = useEconomyUIStore((s) => s.recentActivityHours);
 
   const chapterProgress = useChapterStore(useShallow((s) => s.progress));
 

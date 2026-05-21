@@ -17,7 +17,7 @@ import Animated, {
 } from "react-native-reanimated";
 const ZERO_SHADOW_OFFSET = { width: 0, height: 0 } as const;
 import Svg, { Circle } from "react-native-svg";
-import { useEconomyStore } from "../../features/economy/useEconomyStore";
+import { useEconomy } from "../../features/economy/useEconomy";
 import { useHeartsStore } from "../../features/subscription/useHeartsStore";
 import { useIsPro } from "../../features/subscription/useSubscription";
 import { useAuthStore } from "../../features/auth/useAuthStore";
@@ -189,9 +189,10 @@ interface GlobalWealthHeaderProps {
 
 export function GlobalWealthHeader({ compact = false }: GlobalWealthHeaderProps) {
   const router = useRouter();
-  const xp = useEconomyStore((st) => st.xp);
-  const coins = useEconomyStore((st) => st.coins);
-  const gems = useEconomyStore((st) => st.gems);
+  const { data: economyData } = useEconomy();
+  const xp = economyData?.xp ?? 0;
+  const coins = economyData?.coins ?? 0;
+  const gems = economyData?.gems ?? 0;
   const isPro = useIsPro();
   const avatarId = useAuthStore((st) => st.profile?.avatarId ?? null);
   const appActive = useAppActive();

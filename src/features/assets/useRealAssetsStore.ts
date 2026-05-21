@@ -3,7 +3,11 @@ import { persist, createJSONStorage } from 'zustand/middleware';
 import { zustandStorage } from '../../lib/zustandStorage';
 import type { RealAsset, RealAssetsState, PortfolioCombo, MilestoneId } from './realAssetsTypes';
 import { getBaseAsset, getYieldForTier, PORTFOLIO_COMBOS, ASSET_IDS, MORTGAGE_TERMS } from './realAssetsData';
-import { useEconomyStore } from '../economy/useEconomyStore';
+import { useEconomyUIStore } from '../economy/useEconomyUIStore';
+import { applyEconomyDelta } from '../../lib/api/economy';
+import { queryClient } from '../../lib/queryClient';
+import { economyQueryKey } from '../economy/useEconomy';
+import type { Economy } from '../../lib/api/economy';
 
 function todayISO(): string {
   return new Date().toISOString().slice(0, 10);
@@ -77,7 +81,7 @@ const MILESTONE_GEMS: Record<MilestoneId, number> = {
 };
 
 function awardMilestones(milestones: MilestoneId[]): void {
-  const economy = useEconomyStore.getState();
+  const economy = useEconomyUIStore.getState();
   for (const m of milestones) {
     economy.addXP(MILESTONE_XP[m], 'challenge_complete');
     if (MILESTONE_GEMS[m] > 0) {
@@ -102,8 +106,12 @@ export const useRealAssetsStore = create<RealAssetsState>()(
         const base = getBaseAsset(assetId);
         if (!base) return false;
 
-        const spent = useEconomyStore.getState().spendCoins(base.baseCost);
-        if (!spent) return false;
+        const cachedEco = queryClient.getQueryData<Economy | null>(economyQueryKey);
+        if ((cachedEco?.coins ?? 0) < base.baseCost) return false;
+        applyEconomyDelta({ coinsDelta: -base.baseCost })
+          .then(() => queryClient.invalidateQueries({ queryKey: economyQueryKey }))
+          .catch(() => {});
+        const spent = true;
 
         const now = Date.now();
         const asset: RealAsset = {
@@ -141,8 +149,12 @@ export const useRealAssetsStore = create<RealAssetsState>()(
         if (!base) return false;
 
         const downpayment = Math.ceil(base.baseCost * MORTGAGE_TERMS.downpayment);
-        const spent = useEconomyStore.getState().spendCoins(downpayment);
-        if (!spent) return false;
+        const cachedEco2 = queryClient.getQueryData<Economy | null>(economyQueryKey);
+        if ((cachedEco2?.coins ?? 0) < downpayment) return false;
+        applyEconomyDelta({ coinsDelta: -downpayment })
+          .then(() => queryClient.invalidateQueries({ queryKey: economyQueryKey }))
+          .catch(() => {});
+        const spent = true;
 
         const loanAmount = base.baseCost - downpayment;
 
@@ -173,8 +185,12 @@ export const useRealAssetsStore = create<RealAssetsState>()(
         if (!asset) return false;
         if (asset.tier >= 3) return false;
 
-        const spent = useEconomyStore.getState().spendCoins(asset.upgradeCost);
-        if (!spent) return false;
+        const cachedEco3 = queryClient.getQueryData<Economy | null>(economyQueryKey);
+        if ((cachedEco3?.coins ?? 0) < asset.upgradeCost) return false;
+        applyEconomyDelta({ coinsDelta: -asset.upgradeCost })
+          .then(() => queryClient.invalidateQueries({ queryKey: economyQueryKey }))
+          .catch(() => {});
+        const spent = true;
 
         const nextTier = (asset.tier + 1) as 1 | 2 | 3;
         const base = getBaseAsset(assetId);
@@ -250,7 +266,7 @@ export const useRealAssetsStore = create<RealAssetsState>()(
 
         const rounded = Math.floor(netIncome);
         if (rounded > 0) {
-          useEconomyStore.getState().addCoins(rounded);
+          useEconomyUIStore.getState().addCoins(rounded);
         }
 
         set((state) => ({

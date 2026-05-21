@@ -7,7 +7,7 @@ import { FINN_STANDARD, FINN_HAPPY } from "../retention-loops/finnMascotConfig";
 import { tapHaptic, successHaptic } from "../../utils/haptics";
 import { useSoundEffect } from "../../hooks/useSoundEffect";
 import { FlyingRewards } from "../../components/ui/FlyingRewards";
-import { useEconomyStore } from "../economy/useEconomyStore";
+import { useEconomyUIStore } from "../economy/useEconomyUIStore";
 
 const FEEDBACK_COIN_REWARD = 50;
 
@@ -26,7 +26,7 @@ export const SharkFeedbackCard = React.memo(function SharkFeedbackCard({ isActiv
   const [choice, setChoice] = useState<string | null>(null);
   const [showFlying, setShowFlying] = useState(false);
   const { playSound } = useSoundEffect();
-  const addCoins = useEconomyStore((s) => s.addCoins);
+  const addCoins = useEconomyUIStore((s) => s.addCoins);
 
   const handleSelect = (id: string) => {
     if (choice) return;

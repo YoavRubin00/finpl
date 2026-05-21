@@ -4,7 +4,8 @@ import { useIsFocused } from "@react-navigation/native";
 import Animated from "react-native-reanimated";
 import { Trophy, Swords, ChevronRight } from "lucide-react-native";
 import { useArenaStore } from "./useArenaStore";
-import { useEconomyStore } from "../economy/useEconomyStore";
+import { useEconomy } from "../economy/useEconomy";
+import { useStreak } from "../economy/useStreak";
 import { useClashStore } from "../friends-clash/useClashStore";
 import { ClashInvitationModal } from "../friends-clash/ClashInvitationModal";
 import { ChallengeCard } from "./ChallengeCard";
@@ -82,8 +83,10 @@ export function ArenaScreen() {
   const isFocused = useIsFocused();
   const completeChallenge = useArenaStore((s) => s.completeChallenge);
   const isChallengeCompleted = useArenaStore((s) => s.isChallengeCompleted);
-  const xp = useEconomyStore((s) => s.xp);
-  const streak = useEconomyStore((s) => s.streak);
+  const { data: economyData } = useEconomy();
+  const { data: streakData } = useStreak();
+  const xp = economyData?.xp ?? 0;
+  const streak = streakData?.currentStreak ?? 0;
   const pendingInvite = useClashStore((s) =>
     s.invites.find((i) => i.status === "pending")
   );

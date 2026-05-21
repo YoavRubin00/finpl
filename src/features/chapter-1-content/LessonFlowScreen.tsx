@@ -59,7 +59,11 @@ import { InteractiveIntroCard } from "./InteractiveIntroCard";
 import { QuizStartPopup } from "./QuizStartPopup";
 import { SimulatorLoader } from "./SimulatorLoader";
 import { useAITelemetryStore } from "../ai-personalization/useAITelemetryStore";
-import { useEconomyStore } from "../economy/useEconomyStore";
+import { useEconomy, economyQueryKey } from "../economy/useEconomy";
+import { useEconomyUIStore } from "../economy/useEconomyUIStore";
+import { useStreak } from "../economy/useStreak";
+import { applyEconomyDelta } from "../../lib/api/economy";
+import type { Economy } from "../../lib/api/economy";
 import { useUserStatsStore } from "../user-stats/useUserStatsStore";
 import { useWisdomStore } from "../wisdom-flashes/useWisdomStore";
 import { useIsPro, subscriptionQueryKey } from "../subscription/useSubscription";
@@ -1925,7 +1929,8 @@ function SlotsFullModal({
   onGemOpen: () => void;
   onDiscard: () => void;
 }) {
-  const gems = useEconomyStore((s) => s.gems);
+  const { data: economyDataGem } = useEconomy();
+  const gems = economyDataGem?.gems ?? 0;
   const canAfford = gems >= INSTANT_OPEN_GEM_COST;
 
   if (!visible || !rarity) return null;
@@ -2676,7 +2681,8 @@ export function LessonFlowScreen() {
   const [chestRewards, setChestRewards] = useState<ChestReward | null>(null);
   const [flyingXp, setFlyingXp] = useState(0);
   const [flyingCoins, setFlyingCoins] = useState(0);
-  const streak = useEconomyStore((s) => s.streak);
+  const { data: streakDataLesson } = useStreak();
+  const streak = streakDataLesson?.currentStreak ?? 0;
 
   const completedRef = useRef(false);
   const confettiLottieRef = useRef<LottieView>(null);
@@ -2777,7 +2783,7 @@ export function LessonFlowScreen() {
     setShowDoubleOrNothing(false);
     const rewards = pendingMultiplierRewards;
     if (rewards) {
-      const eco = useEconomyStore.getState();
+      const eco = useEconomyUIStore.getState();
       if (multiplier === 2) {
         // Correct! Double coins only (XP is not at risk)
         eco.addCoins(rewards.coins, 'lesson');
@@ -2787,7 +2793,9 @@ export function LessonFlowScreen() {
         }, 400);
       } else if (multiplier === 0) {
         // Wrong! Lose the original 1x that was already granted
-        eco.spendCoins(rewards.coins);
+        applyEconomyDelta({ coinsDelta: -rewards.coins })
+          .then(() => queryClient.invalidateQueries({ queryKey: economyQueryKey }))
+          .catch(() => {});
         // Fly coins back DOWN
         safeTimeout(() => {
           setFlyingCoinsDown(rewards.coins);
@@ -2922,7 +2930,7 @@ export function LessonFlowScreen() {
       // Skip rewards on replay
       if (!isReplay) {
         const dropType = isLastModule ? "premium" : "regular";
-        const currentStreak = useEconomyStore.getState().streak;
+        const currentStreak = streak;
         const drop = generateChestDrop(dropType, currentStreak);
         pendingChestDropRef.current = { rarity: drop.rarity, rewards: drop.rewards, streakBonusPercent: drop.streakBonusPercent };
       }
@@ -3346,7 +3354,7 @@ export function LessonFlowScreen() {
       return <FallbackToSummary setPhase={setPhase} />;
     }
     const handleDilemmaComplete = (result: import("../shark-dilemma/types").DilemmaResult) => {
-      const eco = useEconomyStore.getState();
+      const eco = useEconomyUIStore.getState();
       // Branching dilemmas only: base 5 coins + 3 per net-positive score point.
       // Legacy single-slide dilemmas keep the original flat 5-coin reward to avoid
       // retroactive inflation across the 49 unchanged dilemmas.
@@ -3945,15 +3953,15 @@ export function LessonFlowScreen() {
                                 if (peakStreak >= 3) {
                                   const bonusMultiplier = peakStreak >= 7 ? 1.0 : peakStreak >= 5 ? 0.75 : 0.5;
                                   const bonusXp = Math.round(30 * bonusMultiplier);
-                                  useEconomyStore.getState().addXP(bonusXp, "streak_bonus");
+                                  useEconomyUIStore.getState().addXP(bonusXp, "streak_bonus");
                                 }
                                 completeModule(mod.id);
                                 clearResume(mod.id);
-                                useEconomyStore.getState().completeDailyTask();
+                                useEconomyUIStore.getState().completeDailyTask();
                                 const durationSec = Math.round((Date.now() - moduleStartTimeRef.current) / 1000);
                                 useUserStatsStore.getState().recordModuleDuration(durationSec);
                               }
-                              const eco = useEconomyStore.getState();
+                              const eco = useEconomyUIStore.getState();
                               eco.addCoins(drop.rewards.coins, 'lesson');
                               eco.addXP(drop.rewards.xp, "chest_reward");
                               if (drop.rewards.gems > 0) eco.addGems(drop.rewards.gems);
@@ -4193,7 +4201,7 @@ export function LessonFlowScreen() {
                   tapHaptic();
                   setShowAdBonus(false);
                   showRewardedAd(() => {
-                    useEconomyStore.getState().addCoins(200);
+                    useEconomyUIStore.getState().addCoins(200);
                     successHaptic();
                     setFlyingCoins(200);
                   });

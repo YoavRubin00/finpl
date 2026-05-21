@@ -11,7 +11,7 @@
  *   5. Bounce to (auth)/onboarding (new user) or (tabs) (existing user).
  *
  * Note: the actual coin grant happens server-side. The local economy store
- * doesn't need to be touched here — `useEconomyStore` is the source of truth
+ * doesn't need to be touched here — `useEconomyUIStore` is the source of truth
  * but coins flow through the user_profiles sync on next refresh, OR we
  * locally addCoins after a successful redeem (immediate feedback).
  */
@@ -23,7 +23,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { FINN_HELLO } from '../retention-loops/finnMascotConfig';
 import { useAuthStore } from '../auth/useAuthStore';
-import { useEconomyStore } from '../economy/useEconomyStore';
+import { useEconomyUIStore } from '../economy/useEconomyUIStore';
 import { redeemReferralCode } from '../../db/sync/syncReferral';
 import { REFERRAL_SIGNUP_BONUS_COINS, REFERRAL_COPY } from './referralConstants';
 import { successHaptic, heavyHaptic } from '../../utils/haptics';
@@ -37,7 +37,7 @@ export function InviteRedemptionScreen() {
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
   const hasCompletedOnboarding = useAuthStore((s) => s.hasCompletedOnboarding);
   const email = useAuthStore((s) => s.email);
-  const addCoins = useEconomyStore((s) => s.addCoins);
+  const addCoins = useEconomyUIStore((s) => s.addCoins);
 
   const [status, setStatus] = useState<'loading' | 'invalid' | 'saved' | 'redeemed' | 'already'>('loading');
   const [bonus, setBonus] = useState<number>(0);

@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import { zustandStorage } from '../../lib/zustandStorage';
-import { useEconomyStore } from '../economy/useEconomyStore';
+import { useEconomyUIStore } from '../economy/useEconomyUIStore';
 import { queryClient } from '../../lib/queryClient';
 import type { SubscriptionState } from '../../lib/api/subscription';
 import { subscriptionQueryKey } from '../subscription/useSubscription';
@@ -75,7 +75,7 @@ export const useDailyChallengesStore = create<DailyChallengesState>()(
         if (getPlays(state.dilemmaPlays, date) >= MAX_DILEMMA_DAILY) return;
 
         if (wasCorrect) {
-          const economy = useEconomyStore.getState();
+          const economy = useEconomyUIStore.getState();
           economy.addXP(CHALLENGE_XP_REWARD, 'daily_task');
           economy.addCoins(CHALLENGE_COIN_REWARD, 'daily-quest');
         }
@@ -90,7 +90,7 @@ export const useDailyChallengesStore = create<DailyChallengesState>()(
         const state = get();
         if (isMaxed(state.investmentPlays, date)) return;
 
-        const economy = useEconomyStore.getState();
+        const economy = useEconomyUIStore.getState();
         economy.addXP(CHALLENGE_XP_REWARD, 'daily_task');
         economy.addCoins(CHALLENGE_COIN_REWARD, 'daily-quest');
 
@@ -104,7 +104,7 @@ export const useDailyChallengesStore = create<DailyChallengesState>()(
         const state = get();
         if (isMaxed(state.crashGamePlays, date)) return;
 
-        const economy = useEconomyStore.getState();
+        const economy = useEconomyUIStore.getState();
         economy.addXP(CHALLENGE_XP_REWARD, 'daily_task');
         if (_coinsEarned > 0) {
           economy.addCoins(CHALLENGE_COIN_REWARD);
@@ -119,7 +119,7 @@ export const useDailyChallengesStore = create<DailyChallengesState>()(
         const state = get();
         if (isMaxed(state.swipeGamePlays, date)) return;
 
-        const economy = useEconomyStore.getState();
+        const economy = useEconomyUIStore.getState();
         economy.addXP(CHALLENGE_XP_REWARD, 'daily_task');
         if (score > 0) {
           economy.addCoins(CHALLENGE_COIN_REWARD);
@@ -134,7 +134,7 @@ export const useDailyChallengesStore = create<DailyChallengesState>()(
         const state = get();
         if (isMaxed(state.bullshitSwipePlays, date)) return;
 
-        const economy = useEconomyStore.getState();
+        const economy = useEconomyUIStore.getState();
         economy.addXP(CHALLENGE_XP_REWARD, 'daily_task');
         if (score > 0) {
           economy.addCoins(CHALLENGE_COIN_REWARD);
@@ -150,7 +150,7 @@ export const useDailyChallengesStore = create<DailyChallengesState>()(
         if (isMaxed(state.higherLowerPlays, date)) return;
 
         if (wasCorrect) {
-          const economy = useEconomyStore.getState();
+          const economy = useEconomyUIStore.getState();
           economy.addXP(CHALLENGE_XP_REWARD, 'daily_task');
           economy.addCoins(CHALLENGE_COIN_REWARD);
         }
@@ -164,7 +164,7 @@ export const useDailyChallengesStore = create<DailyChallengesState>()(
         const state = get();
         if (isMaxed(state.budgetNinjaPlays, date)) return;
 
-        const economy = useEconomyStore.getState();
+        const economy = useEconomyUIStore.getState();
         economy.addXP(CHALLENGE_XP_REWARD, 'daily_task');
         if (score > 0) {
           economy.addCoins(CHALLENGE_COIN_REWARD);
@@ -179,7 +179,7 @@ export const useDailyChallengesStore = create<DailyChallengesState>()(
         const state = get();
         if (isMaxed(state.priceSliderPlays, date)) return;
 
-        const economy = useEconomyStore.getState();
+        const economy = useEconomyUIStore.getState();
         economy.addXP(CHALLENGE_XP_REWARD, 'daily_task');
         if (accuracyPercent >= 60) {
           economy.addCoins(CHALLENGE_COIN_REWARD);
@@ -194,7 +194,7 @@ export const useDailyChallengesStore = create<DailyChallengesState>()(
         const state = get();
         if (isMaxed(state.cashoutRushPlays, date)) return;
 
-        const economy = useEconomyStore.getState();
+        const economy = useEconomyUIStore.getState();
         economy.addXP(CHALLENGE_XP_REWARD, 'daily_task');
         if (cashedOut) {
           economy.addCoins(CHALLENGE_COIN_REWARD);
@@ -209,7 +209,7 @@ export const useDailyChallengesStore = create<DailyChallengesState>()(
         const state = get();
         if (isMaxed(state.fomoKillerPlays, date)) return;
 
-        const economy = useEconomyStore.getState();
+        const economy = useEconomyUIStore.getState();
         economy.addXP(CHALLENGE_XP_REWARD, 'daily_task');
         if (perfect) {
           economy.addCoins(CHALLENGE_COIN_REWARD);

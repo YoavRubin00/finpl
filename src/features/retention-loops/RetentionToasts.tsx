@@ -11,7 +11,7 @@
  * for hearts-full to avoid spam.
  */
 import { useEffect, useRef, useState } from 'react';
-import { useEconomyStore } from '../economy/useEconomyStore';
+import { useEconomyUIStore } from '../economy/useEconomyUIStore';
 import { useHeartsStore, MAX_HEARTS } from '../subscription/useHeartsStore';
 import { useIsPro } from '../subscription/useSubscription';
 import { SharkInsightToast } from '../../components/ui/SharkInsightToast';
@@ -24,8 +24,8 @@ import { getActiveSeasonalEvent } from '../seasonal-events/seasonalEvents';
 
 export function RetentionToasts() {
   // ── Source 1: Session-stacking bonus from useEconomyStore ──
-  const pendingSessionBonus = useEconomyStore((s) => s.pendingSessionBonus);
-  const dismissSessionBonus = useEconomyStore((s) => s.dismissSessionBonus);
+  const pendingSessionBonus = useEconomyUIStore((s) => s.pendingSessionBonus);
+  const dismissSessionBonus = useEconomyUIStore((s) => s.dismissSessionBonus);
 
   // ── Source 2: Seasonal events (calendar lookup, runs once on mount) ──
   const [activeEvent, setActiveEvent] = useState(() => getActiveSeasonalEvent());
@@ -39,8 +39,8 @@ export function RetentionToasts() {
   // ── Source 3: Hearts-full boost ──
   const hearts = useHeartsStore((s) => s.hearts);
   const isPro = useIsPro();
-  const lessonMult = useEconomyStore((s) => s.lessonXPMultiplier);
-  const setLessonMult = useEconomyStore((s) => s.setLessonXPMultiplier);
+  const lessonMult = useEconomyUIStore((s) => s.lessonXPMultiplier);
+  const setLessonMult = useEconomyUIStore((s) => s.setLessonXPMultiplier);
   const heartsFull = !isPro && hearts === MAX_HEARTS;
   // Track whether the user already dismissed (or auto-dismissed) the toast in
   // THIS hearts-full window. Resets only when hearts drop below MAX and refill

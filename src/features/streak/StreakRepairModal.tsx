@@ -3,7 +3,8 @@ import { Modal, Pressable, StyleSheet, Text } from "react-native";
 import { Image as ExpoImage } from "expo-image";
 import Animated, { FadeIn, FadeInDown } from "react-native-reanimated";
 import { useRouter } from "expo-router";
-import { useEconomyStore } from "../economy/useEconomyStore";
+import { useEconomy } from "../economy/useEconomy";
+import { useEconomyUIStore } from "../economy/useEconomyUIStore";
 import { FINN_EMPATHIC } from "../retention-loops/finnMascotConfig";
 import { successHaptic, tapHaptic } from "../../utils/haptics";
 import { useBandit } from "../bandit/useBandit";
@@ -17,10 +18,11 @@ interface StreakRepairModalProps {
 
 export function StreakRepairModal({ visible, onDismiss }: StreakRepairModalProps) {
   const router = useRouter();
-  const gems = useEconomyStore((s) => s.gems);
-  const previousStreak = useEconomyStore((s) => s.previousStreakBeforeBreak);
-  const repairStreak = useEconomyStore((s) => s.repairStreak);
-  const dismissRepairOffer = useEconomyStore((s) => s.dismissRepairOffer);
+  const { data: economyData } = useEconomy();
+  const gems = economyData?.gems ?? 0;
+  const previousStreak = useEconomyUIStore((s) => s.previousStreakBeforeBreak);
+  const repairStreak = useEconomyUIStore((s) => s.repairStreak);
+  const dismissRepairOffer = useEconomyUIStore((s) => s.dismissRepairOffer);
 
   const { payload, trackImpression, trackConversion, trackDismiss } = useBandit('streak_repair_offer');
 

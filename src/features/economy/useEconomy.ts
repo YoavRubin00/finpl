@@ -71,3 +71,21 @@ export function useSetVirtualBalance() {
   const { mutate } = useApplyEconomyDelta();
   return (value: number) => mutate({ virtualBalanceSet: value });
 }
+
+export function useSpendVirtual() {
+  const { data } = useEconomy();
+  const { mutate } = useApplyEconomyDelta();
+  return (amount: number) => {
+    const current = data?.virtualBalance ? parseFloat(data.virtualBalance) : 0;
+    mutate({ virtualBalanceSet: Math.max(0, current - amount) });
+  };
+}
+
+export function useCreditVirtual() {
+  const { data } = useEconomy();
+  const { mutate } = useApplyEconomyDelta();
+  return (amount: number) => {
+    const current = data?.virtualBalance ? parseFloat(data.virtualBalance) : 0;
+    mutate({ virtualBalanceSet: current + amount });
+  };
+}

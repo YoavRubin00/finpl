@@ -11,7 +11,10 @@ import {
   getISOWeekKey,
   lookupSquadByCode,
 } from "./squadData";
-import { useEconomyStore } from "../economy/useEconomyStore";
+import { queryClient } from "../../lib/queryClient";
+import { economyQueryKey } from "../economy/useEconomy";
+import { useEconomyUIStore } from "../economy/useEconomyUIStore";
+import type { Economy } from "../../lib/api/economy";
 import { useAuthStore } from "../auth/useAuthStore";
 
 // ---------------------------------------------------------------------------
@@ -46,7 +49,7 @@ function buildSelfMember(): SquadMember {
 }
 
 // Track previous XP to compute deltas for squad contribution
-let _prevXP = useEconomyStore.getState().xp;
+let _prevXP = (queryClient.getQueryData<Economy | null>(economyQueryKey)?.xp ?? 0);
 
 export const useSquadsStore = create<SquadsState>()(
   persist(
@@ -134,8 +137,8 @@ export const useSquadsStore = create<SquadsState>()(
         if (!squad || hasClaimedWeeklyChest) return;
 
         const reward = computeChestReward(squad.tier, squad.rank);
-        useEconomyStore.getState().addCoins(reward.coins);
-        useEconomyStore.getState().addGems(reward.gems);
+        useEconomyUIStore.getState().addCoins(reward.coins);
+        useEconomyUIStore.getState().addGems(reward.gems);
         set({ hasClaimedWeeklyChest: true });
       },
 
@@ -181,10 +184,17 @@ export const useSquadsStore = create<SquadsState>()(
 // ---------------------------------------------------------------------------
 // Auto-contribute: whenever user earns XP, forward the delta to the squad
 // ---------------------------------------------------------------------------
-useEconomyStore.subscribe((state) => {
-  const delta = state.xp - _prevXP;
+queryClient.getQueryCache().subscribe((event) => {
+  if (
+    event.type !== 'updated' ||
+    event.query.queryKey[0] !== economyQueryKey[0]
+  ) return;
+  const state = event.query.state.data as Economy | null | undefined;
+  if (!state) return;
+  const currentXP = state.xp ?? 0;
+  const delta = currentXP - _prevXP;
   if (delta > 0) {
     useSquadsStore.getState().contributeXP(delta);
   }
-  _prevXP = state.xp;
+  _prevXP = currentXP;
 });

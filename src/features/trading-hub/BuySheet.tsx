@@ -5,7 +5,7 @@ import Animated, { FadeInUp } from 'react-native-reanimated';
 import { Info } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { CALM } from '../../constants/theme';
-import { useEconomyStore } from '../economy/useEconomyStore';
+import { useEconomy } from '../economy/useEconomy';
 import { useTradingStore } from './useTradingStore';
 import { useTradingHubUiStore } from './useTradingHubUiStore';
 import { ASSET_BY_ID } from './tradingHubData';
@@ -43,7 +43,8 @@ interface BuySheetProps {
 }
 
 export function BuySheet({ visible, assetId, currentPrice, previousClose, onClose, onBuyComplete, onAssetTypeUnlocked }: BuySheetProps) {
-    const coins = useEconomyStore((s) => s.coins);
+    const { data: economyData } = useEconomy();
+    const coins = economyData?.coins ?? 0;
     const openPosition = useTradingStore((s) => s.openPosition);
     const unlockAssetType = useTradingHubUiStore((s) => s.unlockAssetType);
     const insets = useSafeAreaInsets();

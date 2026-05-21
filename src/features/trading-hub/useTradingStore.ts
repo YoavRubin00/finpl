@@ -2,7 +2,10 @@ import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import { zustandStorage } from '../../lib/zustandStorage';
 import { ActivePosition, PendingLimitOrder } from './tradingHubTypes';
-import { useEconomyStore } from '../economy/useEconomyStore';
+import { applyEconomyDelta } from '../../lib/api/economy';
+import { queryClient } from '../../lib/queryClient';
+import { economyQueryKey } from '../economy/useEconomy';
+import type { Economy } from '../../lib/api/economy';
 
 /**
  * Fire a paper-trading event to the server. Logged in `paper_trades`,
@@ -48,7 +51,9 @@ function logTradeFireAndForget(
     .then((m) => m.logTrade({ assetSymbol, tradeType, quantity, priceAtExecution, cashDelta, skipPortfolio }))
     .then((result) => {
       if (result.ok) {
-        useEconomyStore.getState().setVirtualBalance(result.virtualBalance);
+        applyEconomyDelta({ virtualBalanceSet: result.virtualBalance })
+          .then(() => queryClient.invalidateQueries({ queryKey: economyQueryKey }))
+          .catch(() => {});
       } else if (result.status === 402 && onRejected) {
         onRejected();
       }
@@ -113,10 +118,13 @@ export const useTradingStore = create<TradingStore>()(
       pendingOrders: [],
 
       openPosition: (assetId, type, entryPrice, amountInvested) => {
-        // Affordability gate — same path used everywhere for paper trades.
-        // Server applies the same check atomically; this is the optimistic UX.
-        const debited = useEconomyStore.getState().spendCoins(amountInvested);
-        if (!debited) return null;
+        // Affordability gate — pre-check balance from cache then fire-and-forget debit.
+        const cachedEco = queryClient.getQueryData<Economy | null>(economyQueryKey);
+        const canAfford = (cachedEco?.coins ?? 0) >= amountInvested;
+        if (!canAfford) return null;
+        applyEconomyDelta({ coinsDelta: -amountInvested })
+          .then(() => queryClient.invalidateQueries({ queryKey: economyQueryKey }))
+          .catch(() => {});
 
         const id = generateId();
         const position: ActivePosition = {
@@ -142,7 +150,9 @@ export const useTradingStore = create<TradingStore>()(
           // Server rejected (e.g. cross-device race exhausted balance):
           // refund the local debit and remove the ghost position.
           () => {
-            useEconomyStore.getState().addCoins(amountInvested, 'trading');
+            applyEconomyDelta({ coinsDelta: amountInvested })
+              .then(() => queryClient.invalidateQueries({ queryKey: economyQueryKey }))
+              .catch(() => {});
             set((state) => ({
               positions: state.positions.filter((p) => p.id !== id),
             }));
@@ -164,7 +174,9 @@ export const useTradingStore = create<TradingStore>()(
         const pnlFactor = 1 + position.pnlPercent / 100;
         const returned = Math.max(0, Math.round(position.amountInvested * pnlFactor));
         if (returned > 0) {
-          useEconomyStore.getState().addCoins(returned, 'trading');
+          applyEconomyDelta({ coinsDelta: returned })
+            .then(() => queryClient.invalidateQueries({ queryKey: economyQueryKey }))
+            .catch(() => {});
         }
         // Closing a long → SELL (decrements portfolio).
         // Closing a short → BUY, but skipPortfolio=true so no phantom long is created.
@@ -180,7 +192,9 @@ export const useTradingStore = create<TradingStore>()(
           // local credit and restore the position so the user can retry.
           () => {
             if (returned > 0) {
-              useEconomyStore.getState().spendCoins(returned);
+              applyEconomyDelta({ coinsDelta: -returned })
+                .then(() => queryClient.invalidateQueries({ queryKey: economyQueryKey }))
+                .catch(() => {});
             }
             set((state) => ({
               positions: [...state.positions, position],

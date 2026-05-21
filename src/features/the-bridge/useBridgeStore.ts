@@ -1,7 +1,10 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import { zustandStorage } from '../../lib/zustandStorage';
-import { useEconomyStore } from '../economy/useEconomyStore';
+import { applyEconomyDelta } from '../../lib/api/economy';
+import { queryClient } from '../../lib/queryClient';
+import { economyQueryKey } from '../economy/useEconomy';
+import type { Economy } from '../../lib/api/economy';
 import { BRIDGE_BENEFITS } from './bridgeData';
 
 interface BridgeState {
@@ -24,9 +27,13 @@ export const useBridgeStore = create<BridgeState>()(
         // Already redeemed
         if (get().redeemedBenefitIds.includes(benefitId)) return false;
 
-        // Attempt to spend coins
-        const success = useEconomyStore.getState().spendCoins(benefit.costCoins);
-        if (!success) return false;
+        // Attempt to spend coins — pre-check balance from query cache
+        const cachedEco = queryClient.getQueryData<Economy | null>(economyQueryKey);
+        const canAfford = (cachedEco?.coins ?? 0) >= benefit.costCoins;
+        if (!canAfford) return false;
+        applyEconomyDelta({ coinsDelta: -benefit.costCoins })
+          .then(() => queryClient.invalidateQueries({ queryKey: economyQueryKey }))
+          .catch(() => {});
 
         set((state) => ({
           redeemedBenefitIds: [...state.redeemedBenefitIds, benefitId],

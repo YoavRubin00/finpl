@@ -8,7 +8,9 @@ import Animated, {
   FadeOut,
 } from "react-native-reanimated";
 import { X, ShieldAlert } from "lucide-react-native";
-import { useEconomyStore } from "../economy/useEconomyStore";
+import { useEconomy, useSpendCoins } from "../economy/useEconomy";
+import { useEconomyUIStore } from "../economy/useEconomyUIStore";
+import { useStreak } from "../economy/useStreak";
 import { tapHaptic, successHaptic } from "../../utils/haptics";
 
 const DISMISSED_KEY = "no_freeze_upsell_dismissed_date";
@@ -21,11 +23,13 @@ function todayISO(): string {
 
 /** Upsell banner when user has streak >= 7 but 0 streak freezes */
 export function NoFreezeUpsellBanner() {
-  const streak = useEconomyStore((s) => s.streak);
-  const streakFreezes = useEconomyStore((s) => s.streakFreezes);
-  const coins = useEconomyStore((s) => s.coins);
-  const spendCoins = useEconomyStore((s) => s.spendCoins);
-  const addStreakFreezes = useEconomyStore((s) => s.addStreakFreezes);
+  const { data: streakData } = useStreak();
+  const { data: economyData } = useEconomy();
+  const streak = streakData?.currentStreak ?? 0;
+  const streakFreezes = useEconomyUIStore((s) => s.streakFreezes);
+  const coins = economyData?.coins ?? 0;
+  const spendCoinsHook = useSpendCoins();
+  const addStreakFreezes = useEconomyUIStore((s) => s.addStreakFreezes);
   const [dismissed, setDismissed] = useState(true); // hidden until storage check
 
   useEffect(() => {
@@ -41,13 +45,13 @@ export function NoFreezeUpsellBanner() {
 
   const handleBuyFreeze = useCallback(() => {
     tapHaptic();
-    const success = spendCoins(FREEZE_COST_COINS);
-    if (success) {
+    if (coins >= FREEZE_COST_COINS) {
+      spendCoinsHook(FREEZE_COST_COINS);
       addStreakFreezes(1);
       successHaptic();
       dismiss();
     }
-  }, [spendCoins, addStreakFreezes, dismiss]);
+  }, [coins, spendCoinsHook, addStreakFreezes, dismiss]);
 
   const shouldShow = useMemo(
     () => streak >= 7 && streakFreezes === 0,

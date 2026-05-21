@@ -1,7 +1,7 @@
 import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
 import { zustandStorage } from '../../lib/zustandStorage';
-import { useEconomyStore } from "../economy/useEconomyStore";
+import { useEconomyUIStore } from "../economy/useEconomyUIStore";
 import { DAILY_CHALLENGES } from "./arenaData";
 import type { ChallengeProgress } from "./types";
 
@@ -37,8 +37,8 @@ export const useArenaStore = create<ArenaState>()(
         const challenge = DAILY_CHALLENGES.find((c) => c.id === challengeId);
         if (!challenge) return;
 
-        // Award coins and XP via the economy store directly
-        const economy = useEconomyStore.getState();
+        // Award coins and XP via the economy UI store
+        const economy = useEconomyUIStore.getState();
         economy.addXP(challenge.xpReward, "challenge_complete");
         economy.addCoins(challenge.coinReward);
 
