@@ -11,6 +11,7 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import { zustandStorage } from '../lib/zustandStorage';
+import { registerLocalStore } from '../lib/stores/registry';
 
 export type NudgeType = 'bridge' | 'referral';
 
@@ -50,6 +51,7 @@ interface NudgeState {
   /** ISO date when the invite-friends nudge was last shown — gates 3-day cadence */
   lastInviteNudgeDateISO: string | null;
   setLastInviteNudgeDateISO: (d: string) => void;
+  reset: () => void;
 }
 
 const COOLDOWN_MS = 48 * 60 * 60 * 1000; // 48h per Duolingo A/B
@@ -126,6 +128,18 @@ export const useNudgeQueueStore = create<NudgeState>()(
 
       lastInviteNudgeDateISO: null,
       setLastInviteNudgeDateISO: (d) => set({ lastInviteNudgeDateISO: d }),
+
+      reset: () => set({
+        dismissHistory: emptyMap<number[]>([]),
+        lastShownTs: emptyMap<number>(0),
+        lastActedTs: emptyMap<number>(0),
+        sessionShown: emptyMap<boolean>(false),
+        sessionStartedAt: Date.now(),
+        inLesson: false,
+        streakShownThisSession: false,
+        lastBridgeNudgeDateISO: null,
+        lastInviteNudgeDateISO: null,
+      }),
     }),
     {
       name: 'nudge-queue-store',
@@ -141,3 +155,5 @@ export const useNudgeQueueStore = create<NudgeState>()(
     },
   ),
 );
+
+registerLocalStore('nudge-queue-store', useNudgeQueueStore, 'nudge-queue-store');
