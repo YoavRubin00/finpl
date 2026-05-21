@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import { zustandStorage } from '../../lib/zustandStorage';
+import { registerLocalStore } from '../../lib/stores/registry';
 import { applyEconomyDelta } from '../../lib/api/economy';
 import { queryClient } from '../../lib/queryClient';
 import { economyQueryKey } from '../economy/useEconomy';
@@ -13,6 +14,7 @@ interface BridgeState {
   isBenefitRedeemed: (benefitId: string) => boolean;
   getRedeemedCount: () => number;
   getTotalSavedValue: () => string;
+  reset: () => void;
 }
 
 export const useBridgeStore = create<BridgeState>()(
@@ -55,6 +57,8 @@ export const useBridgeStore = create<BridgeState>()(
         // Mock estimate, real value would come from partners
         return `₪${(count * 75).toLocaleString()}`;
       },
+
+      reset: () => set({ redeemedBenefitIds: [] }),
     }),
     {
       name: 'bridge-store',
@@ -65,3 +69,5 @@ export const useBridgeStore = create<BridgeState>()(
     }
   )
 );
+
+registerLocalStore('bridge-store', useBridgeStore, 'bridge-store');

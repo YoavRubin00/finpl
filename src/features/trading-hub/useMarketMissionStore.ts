@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import { zustandStorage } from '../../lib/zustandStorage';
+import { registerLocalStore } from '../../lib/stores/registry';
 import { pickMissionForDate, type MarketMission, type MarketMissionKind } from './marketMissionsData';
 
 function todayKey(): string {
@@ -20,6 +21,7 @@ interface MarketMissionState {
   refreshDaily: () => void;
   markCompletedIfMatches: (kind: MarketMissionKind) => boolean;
   acknowledgePraise: () => void;
+  reset: () => void;
 }
 
 export const useMarketMissionStore = create<MarketMissionState>()(
@@ -52,6 +54,13 @@ export const useMarketMissionStore = create<MarketMissionState>()(
       },
 
       acknowledgePraise: () => set({ praiseShownToday: true }),
+
+      reset: () => set({
+        todaysMission: null,
+        missionDate: null,
+        completedToday: false,
+        praiseShownToday: false,
+      }),
     }),
     {
       name: 'market-mission-store',
@@ -65,3 +74,5 @@ export const useMarketMissionStore = create<MarketMissionState>()(
     },
   ),
 );
+
+registerLocalStore('market-mission-store', useMarketMissionStore, 'market-mission-store');

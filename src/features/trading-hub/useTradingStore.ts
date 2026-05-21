@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import { zustandStorage } from '../../lib/zustandStorage';
+import { registerLocalStore } from '../../lib/stores/registry';
 import { ActivePosition, PendingLimitOrder } from './tradingHubTypes';
 import { applyEconomyDelta } from '../../lib/api/economy';
 import { queryClient } from '../../lib/queryClient';
@@ -66,6 +67,8 @@ interface TradingStore {
   positions: ActivePosition[];
   pendingOrders: PendingLimitOrder[];
 
+  reset: () => void;
+
   /**
    * Open a long (`buy`) or short (`sell`) position. Debits virtual_balance by
    * amountInvested. Returns the new position id, or null if the user can't
@@ -116,6 +119,8 @@ export const useTradingStore = create<TradingStore>()(
     (set, get) => ({
       positions: [],
       pendingOrders: [],
+
+      reset: () => set({ positions: [], pendingOrders: [] }),
 
       openPosition: (assetId, type, entryPrice, amountInvested) => {
         // Affordability gate — pre-check balance from cache then fire-and-forget debit.
@@ -288,3 +293,5 @@ export const useTradingStore = create<TradingStore>()(
     },
   ),
 );
+
+registerLocalStore('trading-store', useTradingStore, 'trading-store');

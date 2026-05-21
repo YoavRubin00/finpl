@@ -75,4 +75,5 @@ export interface ScenarioLabState {
   recordCompletion: (scenarioId: string, grade: ScenarioGrade, score: number) => void;
   getBestGrade: (scenarioId: string) => ScenarioGrade | null;
   submitSuggestion: (title: string, description: string) => void;
+  reset: () => void;
 }

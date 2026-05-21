@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import { zustandStorage } from '../../lib/zustandStorage';
+import { registerLocalStore } from '../../lib/stores/registry';
 import type { ScenarioGrade, ScenarioLabState } from './scenarioLabTypes';
 import { queryClient } from '../../lib/queryClient';
 import type { SubscriptionState } from '../../lib/api/subscription';
@@ -64,6 +65,13 @@ export const useScenarioLabStore = create<ScenarioLabState>()(
         };
         set({ userSuggestions: [...get().userSuggestions, suggestion] });
       },
+
+      reset: () => set({
+        completedScenarios: {},
+        lastPlayedDate: null,
+        totalScenariosPlayed: 0,
+        userSuggestions: [],
+      }),
     }),
     {
       name: 'scenario-lab-store',
@@ -77,3 +85,5 @@ export const useScenarioLabStore = create<ScenarioLabState>()(
     },
   ),
 );
+
+registerLocalStore('scenario-lab-store', useScenarioLabStore, 'scenario-lab-store');
