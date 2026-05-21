@@ -2286,7 +2286,9 @@ export function ProfilingFlow({ mode = "onboarding", onRedoComplete }: Profiling
   function handleDone() {
     if (isRedo) {
       // Reset all progress (XP, coins, chapters, etc.), user starts fresh
-      devResetProgress?.();
+      if (__DEV__) {
+        devResetProgress?.();
+      }
       updateProfile({
         financialDream: collected.financialDream ?? undefined,
         financialGoal: collected.financialGoal ?? undefined,

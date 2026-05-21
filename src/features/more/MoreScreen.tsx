@@ -299,7 +299,9 @@ export function MoreScreen() {
                         text: "אפס",
                         style: "destructive",
                         onPress: () => {
-                          devResetProgress?.();
+                          if (__DEV__) {
+                            devResetProgress?.();
+                          }
                           Alert.alert("בוצע", "הפעל מחדש את האפליקציה כדי להשלים את האיפוס.");
                         },
                       },
