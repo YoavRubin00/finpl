@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import { zustandStorage } from '../../lib/zustandStorage';
+import { registerLocalStore } from '../../lib/stores/registry';
 import { useEconomyUIStore } from '../economy/useEconomyUIStore';
 import { queryClient } from '../../lib/queryClient';
 import type { SubscriptionState } from '../../lib/api/subscription';
@@ -219,6 +220,21 @@ export const useDailyChallengesStore = create<DailyChallengesState>()(
           fomoKillerPlays: incrementPlays(state.fomoKillerPlays, date),
         });
       },
+
+      reset: () => set({
+        dilemmaPlays: {},
+        investmentPlays: {},
+        crashGamePlays: {},
+        swipeGamePlays: {},
+        bullshitSwipePlays: {},
+        higherLowerPlays: {},
+        budgetNinjaPlays: {},
+        priceSliderPlays: {},
+        cashoutRushPlays: {},
+        fomoKillerPlays: {},
+        dilemmaCorrectCount: 0,
+        investmentTotalAnswered: 0,
+      }),
     }),
     {
       name: 'daily-challenges-store',
@@ -240,3 +256,5 @@ export const useDailyChallengesStore = create<DailyChallengesState>()(
     },
   ),
 );
+
+registerLocalStore('daily-challenges-store', useDailyChallengesStore, 'daily-challenges-store');

@@ -4,6 +4,7 @@
  */
 
 import { create } from 'zustand';
+import { registerLocalStore } from '../../../lib/stores/registry';
 import type {
   PortfolioAllocation,
   GrahamGrade,
@@ -200,3 +201,5 @@ export const useGrahamPortfolio = create<GrahamPortfolioState>((set, get) => ({
     return allocations.reduce((sum, a) => sum + a.percent, 0);
   },
 }));
+
+registerLocalStore('graham-portfolio', useGrahamPortfolio, null);

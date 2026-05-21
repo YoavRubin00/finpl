@@ -93,4 +93,5 @@ export interface DailyChallengesState {
   playPriceSlider: (date: string, accuracyPercent: number) => void;
   playCashoutRush: (date: string, cashedOut: boolean) => void;
   playFomoKiller: (date: string, perfect: boolean) => void;
+  reset: () => void;
 }

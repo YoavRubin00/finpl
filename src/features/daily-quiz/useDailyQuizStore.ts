@@ -3,6 +3,7 @@ import { persist, createJSONStorage } from 'zustand/middleware';
 import { zustandStorage } from '../../lib/zustandStorage';
 import type { DailyQuiz, DailyQuizState } from './dailyQuizTypes';
 import { useEconomyUIStore } from '../economy/useEconomyUIStore';
+import { registerLocalStore } from '../../lib/stores/registry';
 
 function todayStr(): string {
   return new Date().toISOString().slice(0, 10);
@@ -47,6 +48,14 @@ export const useDailyQuizStore = create<DailyQuizState>()(
       setTodayQuiz: (quiz: DailyQuiz) => {
         set({ todayQuiz: quiz });
       },
+
+      reset: () => set({
+        todayQuiz: null,
+        answeredDates: [],
+        correctCount: 0,
+        totalAnswered: 0,
+        streak: 0,
+      }),
     }),
     {
       name: 'daily-quiz-store',
@@ -61,3 +70,5 @@ export const useDailyQuizStore = create<DailyQuizState>()(
     },
   ),
 );
+
+registerLocalStore('daily-quiz-store', useDailyQuizStore, 'daily-quiz-store');
