@@ -58,6 +58,12 @@ import {
 } from "@expo-google-fonts/heebo";
 import { useAuthStore } from "../src/features/auth/useAuthStore";
 import { useEconomyStore } from "../src/features/economy/useEconomyStore";
+import { setOnUnauthorized } from "../src/lib/api/client";
+import { signOut as lifecycleSignOut } from "../src/lib/auth/lifecycle";
+
+setOnUnauthorized(() => {
+  lifecycleSignOut().catch(() => { /* swallow */ });
+});
 import { RewardAnimationProvider } from "../src/hooks/useRewardAnimation";
 import { StreakCelebrationProvider } from "../src/hooks/useStreakCelebration";
 import { WisdomPopupCard } from "../src/features/wisdom-flashes/WisdomPopupCard";
