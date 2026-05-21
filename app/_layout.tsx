@@ -1,4 +1,6 @@
 import "../global.css";
+import { QueryClientProvider } from '@tanstack/react-query';
+import { queryClient } from '../src/lib/queryClient';
 import { initSentry } from "../src/lib/sentry";
 import { initPostHog } from "../src/lib/posthog";
 import { I18nManager } from "react-native";
@@ -76,7 +78,7 @@ import { GlobalQuestCompletionModal } from "../src/features/daily-quests/GlobalQ
 import { DailyBridgeNudgeModal } from "../src/components/ui/DailyBridgeNudgeModal";
 import { InviteFriendsNudgeModal } from "../src/components/ui/InviteFriendsNudgeModal";
 import { GuestRegisterDailyNudge } from "../src/features/auth/GuestRegisterDailyNudge";
-import { configureRevenueCat, loginRevenueCat } from "../src/services/revenueCat";
+import { configureRevenueCat } from "../src/services/revenueCat";
 import { useSubscriptionStore } from "../src/features/subscription/useSubscriptionStore";
 import { AppWalkthroughOverlay } from "../src/features/onboarding/AppWalkthroughOverlay";
 import { StreakFreezeSaveModal } from "../src/features/streak/StreakFreezeSaveModal";
@@ -245,15 +247,7 @@ export default function RootLayout() {
     }
   }, []);
 
-  // Sync RevenueCat when user logs in
   const userEmail = useAuthStore((s) => s.email);
-  useEffect(() => {
-    if (!userEmail) return;
-    loginRevenueCat(userEmail).catch(() => {});
-    useSubscriptionStore.getState().syncWithRevenueCat();
-    const unsub = useSubscriptionStore.getState().startRevenueCatListener();
-    return unsub;
-  }, [userEmail]);
 
   // Award daily login XP on app open
   useEffect(() => {
@@ -454,6 +448,7 @@ export default function RootLayout() {
   }
 
   return (
+    <QueryClientProvider client={queryClient}>
     <GestureHandlerRootView style={{ flex: 1 }}>
       <GlobalErrorBoundary>
         <RewardAnimationProvider>
@@ -500,5 +495,6 @@ export default function RootLayout() {
       </GlobalErrorBoundary>
       {splashVisible && <AppIntroSplash onDismiss={() => setSplashVisible(false)} />}
     </GestureHandlerRootView>
+    </QueryClientProvider>
   );
 }
