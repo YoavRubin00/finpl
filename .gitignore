@@ -38,8 +38,8 @@ assets/IMAGES/modules/
 assets/images/games/
 
 # Dev/build scripts — local tooling only
-scripts/
-# Exception: TDD-style test scripts are versioned
+scripts/*
+# Exception: TDD-style test scripts are versioned (requires `/*` above, not `/`)
 !scripts/test-*.ts
 notebooklm-py/
 
