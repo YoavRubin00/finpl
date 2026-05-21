@@ -73,7 +73,8 @@
       "mcp__claude_ai_higgsfield__models_explore",
       "mcp__claude_ai_higgsfield__balance",
       "mcp__claude_ai_higgsfield__job_status",
-      "mcp__claude_ai_higgsfield__generate_video"
+      "mcp__claude_ai_higgsfield__generate_video",
+      "mcp__claude_ai_higgsfield__job_display"
     ],
     "additionalDirectories": [
       "\\tmp",

@@ -40,6 +40,11 @@ export function usePodcastPlayer(
   const onFinishedRef = useRef(onFinished);
   const currentTimeRef = useRef(0);
   const durationRef = useRef(0);
+  /** Debounce timer for paused-state transition.
+   *  We don't want to flicker to 'paused' for sub-second jitter in `playing` (micro
+   *  pauses between sentences, brief buffering). Only commit if `playing=false`
+   *  stays stable for 400ms. */
+  const pausedDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     onFinishedRef.current = onFinished;
@@ -66,6 +71,10 @@ export function usePodcastPlayer(
       }
 
       if (status.didJustFinish) {
+        if (pausedDebounceRef.current) {
+          clearTimeout(pausedDebounceRef.current);
+          pausedDebounceRef.current = null;
+        }
         setPhase('finished');
         setProgress(1);
         if (!finishedFiredRef.current) {
@@ -75,6 +84,11 @@ export function usePodcastPlayer(
         return;
       }
       if (status.playing) {
+        // Cancel any pending pause — we got a 'playing' update before the debounce fired
+        if (pausedDebounceRef.current) {
+          clearTimeout(pausedDebounceRef.current);
+          pausedDebounceRef.current = null;
+        }
         if (t < 0.05) return;
         hasStartedRef.current = true;
         setPhase('playing');
@@ -82,14 +96,24 @@ export function usePodcastPlayer(
       }
       if (hasStartedRef.current) {
         if (d > 0 && t >= d - 0.25) {
+          if (pausedDebounceRef.current) {
+            clearTimeout(pausedDebounceRef.current);
+            pausedDebounceRef.current = null;
+          }
           setPhase('finished');
           setProgress(1);
           if (!finishedFiredRef.current) {
             finishedFiredRef.current = true;
             onFinishedRef.current?.();
           }
-        } else {
-          setPhase('paused');
+        } else if (!pausedDebounceRef.current) {
+          // Debounce: only set phase='paused' if `playing=false` is stable for 400ms.
+          // Prevents flicker on micro-pauses inside the audio (between sentences) or
+          // transient buffer underruns that resolve quickly.
+          pausedDebounceRef.current = setTimeout(() => {
+            setPhase('paused');
+            pausedDebounceRef.current = null;
+          }, 400);
         }
       }
     });
@@ -117,6 +141,10 @@ export function usePodcastPlayer(
     return () => {
       clearTimeout(retry1);
       clearTimeout(retry2);
+      if (pausedDebounceRef.current) {
+        clearTimeout(pausedDebounceRef.current);
+        pausedDebounceRef.current = null;
+      }
       sub.remove();
       try { player.pause(); } catch { /* ignore */ }
       try { player.remove(); } catch { /* ignore */ }

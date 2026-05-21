@@ -63,6 +63,31 @@ export interface PodcastSegment {
   dilemmaQuiz: PodcastQuestion;
 }
 
+export interface CoupleDilemmaOption {
+  id: 'a' | 'b';
+  /** ≤24 chars, shown as the side hint label on the swipe card */
+  label: string;
+  isWise: boolean;
+  /** Daisy's commentary in the feedback layer, ≤100 chars */
+  feedback: string;
+}
+
+export interface CoupleDilemmaSegment {
+  id: string;
+  /** Vercel Blob mp4, 5s, 9:16, streamed via expo-video */
+  videoUri: string;
+  /** Vercel Blob mp3, ~5s of Daisy narration over the video */
+  narrationAudioUri: string;
+  /** Overlay text on the video, RTL, ≤32 chars */
+  caption: string;
+  /** Scenario question shown on the swipe card */
+  scenario: string;
+  /** Right-swipe option */
+  optionA: CoupleDilemmaOption;
+  /** Left-swipe option */
+  optionB: CoupleDilemmaOption;
+}
+
 export interface Module {
   id: string;
   title: string;
@@ -103,6 +128,8 @@ export interface Module {
   introVariant?: 'short';
   /** Optional 20-second podcast segment with two follow-up questions (comprehension + dilemma) */
   podcast?: PodcastSegment;
+  /** Optional 5-second couple-dilemma video + Daisy narration + Tinder swipe choice */
+  coupleDilemma?: CoupleDilemmaSegment;
 }
 
 export interface Chapter {
