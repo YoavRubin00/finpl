@@ -1,6 +1,7 @@
 import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
 import { zustandStorage } from '../../lib/zustandStorage';
+import { registerLocalStore } from '../../lib/stores/registry';
 import type { Chest, ChestRarity, DailySpin } from "./types";
 import { useEconomyUIStore } from "../economy/useEconomyUIStore";
 import { useNotificationStore } from "../notifications/useNotificationStore";
@@ -24,6 +25,7 @@ interface RetentionState {
   instantOpenOldestChest: () => number;
   spinDailyWheel: () => number;
   grantChest: (chest: Omit<Chest, "status" | "unlockStartedAt">) => boolean;
+  reset: () => void;
 }
 
 const MOCK_CHEST_SLOTS: (Chest | null)[] = [
@@ -170,6 +172,8 @@ export const useRetentionStore = create<RetentionState>()(
         set({ chestSlots: newSlots });
         return true;
       },
+
+      reset: () => set({ chestSlots: MOCK_CHEST_SLOTS, dailySpin: { lastSpinDate: null } }),
     }),
     {
       name: "retention-store",
@@ -181,5 +185,7 @@ export const useRetentionStore = create<RetentionState>()(
     }
   )
 );
+
+registerLocalStore('retention-store', useRetentionStore, 'retention-store');
 
 export { MAX_CHEST_SLOTS, CHEST_COIN_REWARDS, DAILY_SPIN_REWARDS };

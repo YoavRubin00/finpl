@@ -1,6 +1,7 @@
 import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
 import { zustandStorage } from '../../lib/zustandStorage';
+import { registerLocalStore } from '../../lib/stores/registry';
 import type { Squad, SquadMember, SquadTier } from "./squadTypes";
 import {
   MOCK_MEMBERS,
@@ -35,6 +36,7 @@ interface SquadsState {
   resetWeekly: () => void;
   /** Check if a new week has started and auto-reset if needed */
   checkWeeklyReset: () => void;
+  reset: () => void;
 }
 
 function buildSelfMember(): SquadMember {
@@ -168,6 +170,8 @@ export const useSquadsStore = create<SquadsState>()(
           get().resetWeekly();
         }
       },
+
+      reset: () => set({ squad: null, hasClaimedWeeklyChest: false, activeWeekKey: getISOWeekKey(new Date()) }),
     }),
     {
       name: "squads-store",
@@ -180,6 +184,8 @@ export const useSquadsStore = create<SquadsState>()(
     }
   )
 );
+
+registerLocalStore('squads-store', useSquadsStore, 'squads-store');
 
 // ---------------------------------------------------------------------------
 // Auto-contribute: whenever user earns XP, forward the delta to the squad

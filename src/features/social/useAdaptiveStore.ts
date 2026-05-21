@@ -1,6 +1,7 @@
 import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
 import { zustandStorage } from '../../lib/zustandStorage';
+import { registerLocalStore } from '../../lib/stores/registry';
 import { FailedConcept, QuestionFailure } from "./adaptiveTypes";
 
 /** Threshold: a concept is "consistently failed" when failCount >= this */
@@ -26,6 +27,7 @@ interface AdaptiveState {
   setActiveLifelineConcept: (conceptTag: string | null) => void;
   /** Reset all adaptive data */
   resetAdaptive: () => void;
+  reset: () => void;
 }
 
 const MAX_FAILURE_LOG = 200;
@@ -99,6 +101,7 @@ export const useAdaptiveStore = create<AdaptiveState>()(
       resetAdaptive: () => {
         set({ failedConcepts: {}, questionFailures: [], activeLifelineConcept: null });
       },
+      reset: () => set({ failedConcepts: {}, questionFailures: [], activeLifelineConcept: null }),
     }),
     {
       name: "adaptive-store",
@@ -110,3 +113,5 @@ export const useAdaptiveStore = create<AdaptiveState>()(
     }
   )
 );
+
+registerLocalStore('adaptive-store', useAdaptiveStore, 'adaptive-store');

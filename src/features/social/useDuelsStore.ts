@@ -1,6 +1,7 @@
 import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
 import { zustandStorage } from '../../lib/zustandStorage';
+import { registerLocalStore } from '../../lib/stores/registry';
 import type { QuizQuestion } from "../chapter-1-content/types";
 import type { AnswerFeedback, DuelMatch, DuelOpponent, DuelRecord, DuelStatus } from "./types";
 import { chapter1Data } from "../chapter-1-content/chapter1Data";
@@ -64,6 +65,7 @@ interface DuelsState {
   tickTimer: () => void;
   finishMatch: () => void;
   resetMatch: () => void;
+  reset: () => void;
 }
 
 export const useDuelsStore = create<DuelsState>()(
@@ -191,6 +193,7 @@ export const useDuelsStore = create<DuelsState>()(
       resetMatch: () => {
         set({ currentMatch: null, status: "idle" });
       },
+      reset: () => set({ record: { wins: 0, losses: 0, draws: 0 }, currentMatch: null, status: "idle" as DuelStatus }),
     }),
     {
       name: "duels-store",
@@ -201,3 +204,5 @@ export const useDuelsStore = create<DuelsState>()(
     }
   )
 );
+
+registerLocalStore('duels-store', useDuelsStore, 'duels-store');
