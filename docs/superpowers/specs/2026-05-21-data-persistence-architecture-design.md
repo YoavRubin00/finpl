@@ -626,11 +626,42 @@ P0 ships behind a feature flag (`useNewAuthFlow`) so we can revert if backfill g
 
 Each phase is independently shippable.
 
-## Open items for the implementation plan
+## Rollout & operational decisions
 
-- Feature-flag mechanism choice (env-var, hardcoded constant, or proper flag system).
-- Exact splash-screen UX during sign-in prefetch window.
-- Whether to keep `preferences jsonb` or split into typed columns on `user_profiles` (P0 decision).
-- Logging/observability strategy for the rollout: which events get captured (backfill success/fail, sign-out errors, RC anomalies).
+### Rollout strategy (no feature flag)
 
-These are deliberately deferred to the implementation plan so the spec stays at the architectural level.
+P0 ships without a client-side feature flag. A flag would require maintaining both the old (broken) persistence path and the new path in parallel, doubling code volume and risking divergent bugs. Instead:
+
+1. **Staged native rollout via EAS / TestFlight / internal Play track.** Internal testers first, then a percentage rollout (10% → 50% → 100%) over ~5 days, with crash and analytics monitoring at each step.
+2. **Server-side kill switch on `/api/migrate/backfill-v1`.** Env var `BACKFILL_V1_ENABLED` (default `true`). If we observe bad backfills in production, flip to `false` — the client treats the resulting 503 as a transient failure, retries on next launch, and does NOT mark `backfill_v1_done` or wipe legacy keys. Users on the new build remain functional with their server-canonical state; local cache is a no-op safety net.
+3. **Forward-only rollback path.** The "don't wipe local until backfill succeeded" rule (Section 5) guarantees that a user who downgrades to an older binary still has their progress intact in the old local stores. The new build leaves legacy AsyncStorage keys in place until the backfill is confirmed successful.
+
+### Splash UX during prefetch window
+
+- **Cold launch:** existing `expo-splash-screen` covers the token-read and RC-configure steps. Hold the splash until `['profile']` prefetch resolves (or 401 fails over to onboarding).
+- **Post-login prefetch:** new `ProfileBootScreen` component, shown immediately after `/api/auth/verify` succeeds and remains visible until `['profile']`, `['subscription']`, `['economy']`, `['streak']`, `['progress']` all resolve. Renders the Daisy mascot plus a Hebrew loading label ("טוען את הפרופיל שלך…"). Typical window: 500ms–2s. After 8s with any pending query, surface a "תקלת רשת — נסו שוב" retry CTA.
+
+### Schema choice: `user_profiles.preferences` as JSONB
+
+Confirmed JSONB. The 13 profile fields (financialDream, financialGoal, knowledgeLevel, ageGroup, birthYear, learningTime, learningStyle, deadlineStress, dailyGoalMinutes, companionId, avatarId, ownedAvatars, plus future additions) are written as a single blob during onboarding, read together when the profile loads, and almost never queried individually for analytics. JSONB gives us schema flexibility for future additions without migrations. If a specific field ever needs DB-level constraints or analytical queries, it gets promoted to a typed column at that point.
+
+### Observability
+
+P0 uses the existing `captureEvent` (Firebase Analytics, already wired in the codebase). No new observability infrastructure.
+
+Events captured:
+
+| Event | When | Properties |
+|---|---|---|
+| `backfill_started` | Before POST to `/api/migrate/backfill-v1` | `hasLocalXp`, `hasLocalProgress`, `localModuleCount` |
+| `backfill_succeeded` | After 200 from backfill endpoint and SecureStore flag set | `durationMs`, `mergedFieldsCount` |
+| `backfill_failed` | On any error in backfill flow | `reason`, `httpStatus` |
+| `sign_out_completed` | After all sign-out steps succeed | (none) |
+| `sign_out_failed` | On any sign-out step error | `step`, `reason` |
+| `rc_login_succeeded` | After `Purchases.logIn` returns | `wasAnonymous`, `hasEntitlements` |
+| `rc_login_failed` | On RC logIn error | `reason` |
+| `rc_logout_failed` | On RC logOut error during sign-out | `reason` |
+| `auth_token_invalid` | On 401 from any API call | `endpoint` |
+| `hydration_failed` | On prefetch error in app start or sign-in | `queryKey`, `reason` |
+
+Server-side: structured JSON logs to Vercel (existing default). For the first 48h after each phase ships, the on-call (Naveh) manually scans Vercel logs for `level: error` events on `/api/migrate/backfill-v1` and the auth/sync endpoints. Proper alerting (Sentry, etc.) is a separate follow-up, not part of this work.
