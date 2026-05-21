@@ -62,6 +62,7 @@ import { useAuthStore } from "../src/features/auth/useAuthStore";
 import { useEconomyUIStore } from "../src/features/economy/useEconomyUIStore";
 import { setOnUnauthorized } from "../src/lib/api/client";
 import { signOut as lifecycleSignOut, bootFromToken } from "../src/lib/auth/lifecycle";
+import { startAppStateListener } from "../src/lib/auth/appStateListener";
 
 setOnUnauthorized(() => {
   lifecycleSignOut().catch(() => { /* swallow */ });
@@ -192,6 +193,12 @@ export default function RootLayout() {
       }
     });
     return () => sub.remove();
+  }, []);
+
+  // ── Foreground refetch: invalidate queries after 5min background ──
+  useEffect(() => {
+    const stop = startAppStateListener();
+    return stop;
   }, []);
 
   // ── iOS audio session: allow sounds even when device is on Silent ──
