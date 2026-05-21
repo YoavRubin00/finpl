@@ -2,7 +2,9 @@ import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import { zustandStorage } from '../../lib/zustandStorage';
 import type { ScenarioGrade, ScenarioLabState } from './scenarioLabTypes';
-import { useSubscriptionStore } from '../subscription/useSubscriptionStore';
+import { queryClient } from '../../lib/queryClient';
+import type { SubscriptionState } from '../../lib/api/subscription';
+import { subscriptionQueryKey } from '../subscription/useSubscription';
 
 function todayISO(): string {
   return new Date().toISOString().slice(0, 10);
@@ -17,7 +19,8 @@ export const useScenarioLabStore = create<ScenarioLabState>()(
       userSuggestions: [],
 
       canPlayToday: (): boolean => {
-        const isPro = useSubscriptionStore.getState().tier === 'pro';
+        const sub = queryClient.getQueryData<SubscriptionState | null>(subscriptionQueryKey);
+        const isPro = sub?.isPro === true;
         if (isPro) return true;
         const { lastPlayedDate } = get();
         return lastPlayedDate !== todayISO();

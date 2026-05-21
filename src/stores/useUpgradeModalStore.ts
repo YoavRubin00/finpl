@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import type { GatedFeature } from "../features/subscription/useSubscriptionStore";
+import type { GatedFeature } from "../features/subscription/subscriptionConstants";
 import { useMonetizationIntentStore } from "../features/monetization/useMonetizationIntentStore";
 
 interface UpgradeModalState {

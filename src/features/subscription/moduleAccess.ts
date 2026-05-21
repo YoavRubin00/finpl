@@ -1,6 +1,8 @@
 import { PRO_LOCKED_SIMS } from "../../constants/proGates";
 import { useChapterStore } from "../chapter-1-content/useChapterStore";
-import { useSubscriptionStore } from "./useSubscriptionStore";
+import { queryClient } from "../../lib/queryClient";
+import type { SubscriptionState } from "../../lib/api/subscription";
+import { subscriptionQueryKey } from "./useSubscription";
 import { chapter0Data } from "../chapter-0-content/chapter0Data";
 import { chapter1Data } from "../chapter-1-content/chapter1Data";
 import { chapter2Data } from "../chapter-2-content/chapter2Data";
@@ -29,7 +31,8 @@ export interface AccessibleModule {
 }
 
 export function isModuleAccessible(moduleId: string, chapterId: string): boolean {
-  const isPro = useSubscriptionStore.getState().isPro();
+  const sub = queryClient.getQueryData<SubscriptionState | null>(subscriptionQueryKey);
+  const isPro = sub?.isPro === true;
   if (isPro) return true;
   const progress = useChapterStore.getState().progress;
   const chapterIdx = ALL_CHAPTERS_ORDERED.findIndex((c) => c.id === chapterId);

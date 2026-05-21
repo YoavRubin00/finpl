@@ -1,4 +1,4 @@
-import type { GatedFeature } from '../subscription/useSubscriptionStore';
+import type { GatedFeature } from '../subscription/subscriptionConstants';
 
 interface NotifCopy {
   title: string;

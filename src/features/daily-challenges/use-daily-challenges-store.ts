@@ -2,7 +2,9 @@ import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import { zustandStorage } from '../../lib/zustandStorage';
 import { useEconomyStore } from '../economy/useEconomyStore';
-import { useSubscriptionStore } from '../subscription/useSubscriptionStore';
+import { queryClient } from '../../lib/queryClient';
+import type { SubscriptionState } from '../../lib/api/subscription';
+import { subscriptionQueryKey } from '../subscription/useSubscription';
 import {
   MAX_DAILY_PLAYS,
   MAX_DILEMMA_DAILY,
@@ -20,7 +22,8 @@ function getPlays(map: PlayCountMap | undefined, date: string): number {
 }
 
 function isMaxed(map: PlayCountMap | undefined, date: string): boolean {
-  const isPro = useSubscriptionStore.getState().isPro();
+  const sub = queryClient.getQueryData<SubscriptionState | null>(subscriptionQueryKey);
+  const isPro = sub?.isPro === true;
   if (isPro) return false;
   return getPlays(map, date) >= MAX_DAILY_PLAYS;
 }

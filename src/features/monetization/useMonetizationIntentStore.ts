@@ -1,8 +1,8 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import { zustandStorage } from '../../lib/zustandStorage';
-import type { GatedFeature } from '../subscription/useSubscriptionStore';
-import { useSubscriptionStore } from '../subscription/useSubscriptionStore';
+import type { GatedFeature } from '../subscription/subscriptionConstants';
+import { useHeartsStore } from '../subscription/useHeartsStore';
 import { useUserStatsStore } from '../user-stats/useUserStatsStore';
 import { useEconomyStore } from '../economy/useEconomyStore';
 import { useAITelemetryStore } from '../ai-personalization/useAITelemetryStore';
@@ -122,7 +122,7 @@ export const useMonetizationIntentStore = create<MonetizationIntentState>()(
           case 'immediate':
             return true;
           case 'after_3_hearts_lost':
-            return useSubscriptionStore.getState().sessionHeartsLost >= 3;
+            return useHeartsStore.getState().sessionHeartsLost >= 3;
           case 'after_feature_blocked_twice': {
             const tapsOnFeature = get().proTaps.filter((t) => t.feature === feature).length;
             return tapsOnFeature >= 2;
