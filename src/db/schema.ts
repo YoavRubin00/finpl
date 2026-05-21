@@ -23,6 +23,7 @@ export const userProfiles = pgTable("user_profiles", {
 	dailyEmailSentAt: timestamp("daily_email_sent_at", { withTimezone: true, mode: 'string' }),
 	dailyEmailEnabled: boolean("daily_email_enabled").default(true),
 	syncToken: text("sync_token"),
+	preferences: jsonb("preferences"),
 	virtualBalance: numeric("virtual_balance", { precision: 18, scale: 2 }).default('100000').notNull(),
 	createdAt: timestamp("created_at", { withTimezone: true, mode: 'string' }).defaultNow(),
 	updatedAt: timestamp("updated_at", { withTimezone: true, mode: 'string' }).defaultNow(),
