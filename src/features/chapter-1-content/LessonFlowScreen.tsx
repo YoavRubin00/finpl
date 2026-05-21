@@ -62,7 +62,11 @@ import { useAITelemetryStore } from "../ai-personalization/useAITelemetryStore";
 import { useEconomyStore } from "../economy/useEconomyStore";
 import { useUserStatsStore } from "../user-stats/useUserStatsStore";
 import { useWisdomStore } from "../wisdom-flashes/useWisdomStore";
-import { useSubscriptionStore } from "../subscription/useSubscriptionStore";
+import { useIsPro, subscriptionQueryKey } from "../subscription/useSubscription";
+import { useHeartsStore } from "../subscription/useHeartsStore";
+import { useUsageStore } from "../subscription/useUsageStore";
+import { queryClient } from "../../lib/queryClient";
+import type { SubscriptionState } from "../../lib/api/subscription";
 import { useUpgradeModalStore } from "../../stores/useUpgradeModalStore";
 import { PRO_LOCKED_SIMS } from "../../constants/proGates";
 import { OutOfHeartsModal } from "../subscription/HeartsUI";
@@ -2360,8 +2364,8 @@ export function LessonFlowScreen() {
     };
   }, []);
 
-  const isPro = useSubscriptionStore((s) => s.tier === "pro" && s.status === "active");
-  const heartsCount = useSubscriptionStore((s) => s.getHearts());
+  const isPro = useIsPro();
+  const heartsCount = useHeartsStore((s) => s.getHearts());
   const recordQuizAnswer = useChapterStore((s) => s.recordQuizAnswer);
   const completeModule = useChapterStore((s) => s.completeModule);
   const saveResume = useChapterStore((s) => s.saveResume);
@@ -2911,7 +2915,7 @@ export function LessonFlowScreen() {
 
       // Practice-to-Refill (US-006): if this replay was started from OutOfHeartsModal, grant +1 heart
       if (isReplay) {
-        useSubscriptionStore.getState().grantPracticeHeart();
+        useHeartsStore.getState().grantPracticeHeart();
       }
 
       // Generate chest drop: premium for arena/chapter completion, regular for module
@@ -3044,7 +3048,7 @@ export function LessonFlowScreen() {
       tapHaptic();
     } else if (MODULES_WITH_SIM.has(mod.id) && !SIM_FIRST_MODULES.has(mod.id)) {
       // Normal flow: quizzes → sim (skip for sim-first modules, sim already done)
-      if (PRO_LOCKED_SIMS.has(mod.id) && !useSubscriptionStore.getState().canUse("simulator")) {
+      if (PRO_LOCKED_SIMS.has(mod.id) && !useUsageStore.getState().canUse("simulator", queryClient.getQueryData<SubscriptionState | null>(subscriptionQueryKey)?.isPro === true)) {
         useUpgradeModalStore.getState().show("simulator");
         return;
       }
@@ -3084,7 +3088,7 @@ export function LessonFlowScreen() {
     setConsecutiveCorrect(0); // Reset streak on ANY wrong answer
     const quiz = mod.quizzes[quizIndex];
     if (isReplay) return;
-    const heartUsed = useSubscriptionStore.getState().useHeart();
+    const heartUsed = useHeartsStore.getState().useHeart(isPro);
     if (heartUsed) {
       setShowHeartBreak(true);
       heavyHaptic();
@@ -3106,7 +3110,7 @@ export function LessonFlowScreen() {
     recordQuizAnswer(mod.id, quiz.id, false, quiz.conceptTag);
     setConsecutiveCorrect(0);
     // If hearts ran out, stop playing, show out-of-hearts
-    const currentHearts = useSubscriptionStore.getState().getHearts();
+    const currentHearts = useHeartsStore.getState().getHearts();
     if (!isPro && currentHearts <= 0) {
       setShowOutOfHearts(true);
       return;
@@ -3353,8 +3357,8 @@ export function LessonFlowScreen() {
       // useHeart() returns false silently at 0 — the in-card feedback IS the feedback.
       // Skipped on replay to encourage practice without punishment.
       if (!isReplay) {
-        const sub = useSubscriptionStore.getState();
-        for (let i = 0; i < result.unwiseCount; i++) sub.useHeart();
+        const isProNow = queryClient.getQueryData<SubscriptionState | null>(subscriptionQueryKey)?.isPro === true;
+        for (let i = 0; i < result.unwiseCount; i++) useHeartsStore.getState().useHeart(isProNow);
       }
       // XP bonus only for branching dilemmas with a perfect path.
       if (result.unwiseCount === 0 && result.path.length > 1) {

@@ -30,7 +30,10 @@ import Animated, {
 import { useAuthStore } from "../auth/useAuthStore";
 import { useChapterStore } from "../chapter-1-content/useChapterStore";
 import { useAdaptiveStore } from "../social/useAdaptiveStore";
-import { useSubscriptionStore } from "../subscription/useSubscriptionStore";
+import { useIsPro, subscriptionQueryKey } from "../subscription/useSubscription";
+import { useUsageStore } from "../subscription/useUsageStore";
+import { queryClient } from "../../lib/queryClient";
+import type { SubscriptionState } from "../../lib/api/subscription";
 import { useRouter } from "expo-router";
 import { getConceptLabel } from "../social/LifelineModal";
 import { AnimatedPressable } from "../../components/ui/AnimatedPressable";
@@ -601,8 +604,9 @@ export function ChatScreen({ lessonContext }: { lessonContext?: LessonContext } 
     if (!text || loading) return;
 
     // Free-tier daily quota gate — input should already be disabled, this is a safety net
-    const storeState = useSubscriptionStore.getState();
-    if (!storeState.canUse("chat")) {
+    const subData = queryClient.getQueryData<SubscriptionState | null>(subscriptionQueryKey);
+    const isProNow = subData?.isPro === true;
+    if (!useUsageStore.getState().canUse("chat", isProNow)) {
       setInput("");
       return;
     }
@@ -697,11 +701,11 @@ export function ChatScreen({ lessonContext }: { lessonContext?: LessonContext } 
       setAnimationState("idle");
     } else {
       if (accumulated) AccessibilityInfo.announceForAccessibility(accumulated);
-      if (!storeState.isPro()) {
-        storeState.incrementUsage("chat");
+      if (!isProNow) {
+        useUsageStore.getState().incrementUsage("chat");
       }
       markAllRead();
-      const atLimitAfterSend = !useSubscriptionStore.getState().canUse("chat");
+      const atLimitAfterSend = !useUsageStore.getState().canUse("chat", isProNow);
       if (atLimitAfterSend) {
         setMessages((prev) => {
           if (prev.some((m) => m.kind === "upgrade_prompt")) return prev;
@@ -724,10 +728,10 @@ export function ChatScreen({ lessonContext }: { lessonContext?: LessonContext } 
     setTimeout(() => scrollViewRef.current?.scrollToEnd({ animated: true }), 100);
   }, [input, loading, messages, displayName, profile, companionId, companion, allCompletedModules, currentChapterId, lifelineConcept, markAllRead]);
 
-  const isPro = useSubscriptionStore((s) => s.isPro());
+  const isPro = useIsPro();
   // Subscribe to chatMessagesToday so canSendChat re-evaluates after each send
-  const chatMessagesToday = useSubscriptionStore((s) => s.chatMessagesToday);
-  const canSendChat = useSubscriptionStore((s) => s.canUse("chat"));
+  const chatMessagesToday = useUsageStore((s) => s.chatMessagesToday);
+  const canSendChat = useUsageStore((s) => s.canUse("chat", isPro));
   void chatMessagesToday;
 
   const handleStyleSelect = useCallback((id: CompanionId) => {

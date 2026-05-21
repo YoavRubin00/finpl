@@ -85,7 +85,6 @@ import { DailyBridgeNudgeModal } from "../src/components/ui/DailyBridgeNudgeModa
 import { InviteFriendsNudgeModal } from "../src/components/ui/InviteFriendsNudgeModal";
 import { GuestRegisterDailyNudge } from "../src/features/auth/GuestRegisterDailyNudge";
 import { configureRevenueCat } from "../src/services/revenueCat";
-import { useSubscriptionStore } from "../src/features/subscription/useSubscriptionStore";
 import { AppWalkthroughOverlay } from "../src/features/onboarding/AppWalkthroughOverlay";
 import { StreakFreezeSaveModal } from "../src/features/streak/StreakFreezeSaveModal";
 import { StreakRepairModal } from "../src/features/streak/StreakRepairModal";
@@ -243,15 +242,9 @@ export default function RootLayout() {
     configureRevenueCat();
   }, []);
 
-  // DEV-only: force premium tier on web so we can test pro-gated features
-  // without going through Google login + RevenueCat. __DEV__ is false in any
-  // EAS / production build (mobile or web export), so this never ships.
-  useEffect(() => {
-    if (__DEV__ && Platform.OS === "web") {
-      const s = useSubscriptionStore.getState();
-      if (s.tier !== "pro") s.upgradeToPro();
-    }
-  }, []);
+  // DEV-only web pro override removed: subscription tier is now server-driven
+  // via useSubscription() / React Query. Dev accounts that need Pro access
+  // should be whitelisted server-side (see syncRevenueCatToServer in lifecycle.ts).
 
   const userEmail = useAuthStore((s) => s.email);
 
