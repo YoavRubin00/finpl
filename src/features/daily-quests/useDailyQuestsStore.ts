@@ -1,6 +1,7 @@
 import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
 import { zustandStorage } from '../../lib/zustandStorage';
+import { registerLocalStore } from '../../lib/stores/registry';
 import { useEconomyUIStore } from "../economy/useEconomyUIStore";
 import { queryClient } from "../../lib/queryClient";
 import { streakQueryKey } from "../economy/useStreak";
@@ -77,6 +78,7 @@ interface DailyQuestsState {
 
   completedCount: () => number;
   allCompleted: () => boolean;
+  reset: () => void;
 }
 
 export const useDailyQuestsStore = create<DailyQuestsState>()(
@@ -216,6 +218,7 @@ export const useDailyQuestsStore = create<DailyQuestsState>()(
 
       completedCount: () => get().quests.filter((q) => q.isCompleted).length,
       allCompleted: () => get().quests.length > 0 && get().quests.every((q) => q.isCompleted),
+      reset: () => set({ quests: [], questDate: "", rewardClaimed: false, proRewardClaimed: false, newlyCompleted: false, lastRewardSummary: null }),
     }),
     {
       name: "daily-quests-store",
@@ -230,3 +233,5 @@ export const useDailyQuestsStore = create<DailyQuestsState>()(
     }
   )
 );
+
+registerLocalStore('daily-quests-store', useDailyQuestsStore, 'daily-quests-store');
