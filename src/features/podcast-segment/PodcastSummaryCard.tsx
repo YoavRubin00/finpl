@@ -1,5 +1,6 @@
 import React, { useEffect } from 'react';
-import { View, Text, StyleSheet, Pressable } from 'react-native';
+import { View, Text, StyleSheet } from 'react-native';
+import { AnimatedPressable } from '../../components/ui/AnimatedPressable';
 import { Image as ExpoImage } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import Animated, {
@@ -9,7 +10,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import { ChevronLeft } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { tapHaptic, successHaptic } from '../../utils/haptics';
+import { successHaptic } from '../../utils/haptics';
 import { useSoundEffect } from '../../hooks/useSoundEffect';
 import { DAISY_HAPPY_CELEBRATE_WEBP } from './daisy-assets';
 import type { PodcastSegment } from '../chapter-1-content/types';
@@ -76,18 +77,14 @@ export const PodcastSummaryCard = React.memo(function PodcastSummaryCard({
         entering={FadeInUp.duration(400).delay(240)}
         style={[styles.footer, { paddingBottom: insets.bottom + 16 }]}
       >
-        <Pressable
-          onPress={() => { playSound('btn_click_heavy'); tapHaptic(); onContinue(); }}
+        <AnimatedPressable
+          onPress={() => { playSound('btn_click_heavy'); onContinue(); }}
           accessibilityRole="button"
           accessibilityLabel="המשך לשאלות"
-          style={({ pressed }) => [
-            styles.continueBtn,
-            pressed && { opacity: 0.92, transform: [{ translateY: 2 }] },
-          ]}
+          style={{ backgroundColor: "#0ea5e9", borderRadius: 16, paddingVertical: 14, alignItems: "center", justifyContent: "center", borderBottomWidth: 3, borderBottomColor: "#0284c7" }}
         >
-          <Text style={styles.continueBtnText}>המשך לשאלות</Text>
-          <ChevronLeft color="#ffffff" size={20} strokeWidth={2.8} />
-        </Pressable>
+          <Text style={{ color: "#fff", fontSize: 16, fontWeight: "800" }}>המשך לשאלות</Text>
+        </AnimatedPressable>
       </Animated.View>
     </View>
   );
@@ -185,32 +182,21 @@ const styles = StyleSheet.create({
     paddingTop: 12,
     alignItems: 'stretch',
   },
-  // Same heavy CTA variant as PodcastIntroCard — both cards sit on the same
-  // pink/cyan gradient backdrop where the simpler flat-blue button would wash
-  // out. Keeping the side border + cyan glow guarantees the CTA reads as the
-  // primary action even on the lightest part of the gradient.
+  // Copied 1:1 from LessonFlowScreen line 783 pattern.
   continueBtn: {
-    flexDirection: 'row-reverse',
+    width: '100%',
+    alignSelf: 'stretch',
+    backgroundColor: '#0ea5e9',
+    borderRadius: 16,
+    paddingVertical: 14,
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 10,
-    backgroundColor: '#0ea5e9',
-    borderRadius: 18,
-    paddingVertical: 16,
-    borderWidth: 2,
-    borderColor: '#0284c7',
-    borderBottomWidth: 5,
-    borderBottomColor: '#0369a1',
-    shadowColor: '#0ea5e9',
-    shadowOpacity: 0.45,
-    shadowRadius: 14,
-    shadowOffset: { width: 0, height: 6 },
-    elevation: 8,
+    borderBottomWidth: 3,
+    borderBottomColor: '#0284c7',
   },
   continueBtnText: {
     color: '#ffffff',
-    fontSize: 17,
-    fontWeight: '900',
-    letterSpacing: 0.3,
+    fontSize: 16,
+    fontWeight: '800',
   },
 });

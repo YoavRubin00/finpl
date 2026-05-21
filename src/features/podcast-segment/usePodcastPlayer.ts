@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Platform } from 'react-native';
+import { AppState, Platform } from 'react-native';
 import { createAudioPlayer, type AudioPlayer } from 'expo-audio';
 import { captureEvent } from '../../lib/posthog';
 
@@ -152,6 +152,18 @@ export function usePodcastPlayer(
       }
     }, 1000);
 
+    // AppState handler — pause the audio when the user backgrounds the app
+    // (or opens another app on top). Without this, expo-audio keeps the mp3
+    // playing in the background even though the user has clearly left the
+    // podcast UI, which is jarring and drains battery. We don't auto-resume
+    // when the user comes back; they tap play themselves so they don't miss
+    // story content while glancing away.
+    const appStateSub = AppState.addEventListener('change', (next) => {
+      if (next !== 'active') {
+        try { player.pause(); } catch { /* ignore */ }
+      }
+    });
+
     return () => {
       clearTimeout(retry1);
       clearTimeout(retry2);
@@ -159,7 +171,12 @@ export function usePodcastPlayer(
         clearTimeout(pausedDebounceRef.current);
         pausedDebounceRef.current = null;
       }
+      appStateSub.remove();
       sub.remove();
+      // Hard-stop on unmount: pause first to halt audio immediately, then
+      // remove the player so its native resources are freed. Both calls are
+      // wrapped in try/catch because either one can throw if the player is
+      // already in a terminal state.
       try { player.pause(); } catch { /* ignore */ }
       try { player.remove(); } catch { /* ignore */ }
       playerRef.current = null;

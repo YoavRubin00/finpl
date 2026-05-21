@@ -21,15 +21,18 @@ import Animated, {
   withSequence,
   withTiming,
 } from 'react-native-reanimated';
-import { Pause, Play, ChevronRight, ChevronLeft, SkipForward } from 'lucide-react-native';
+import { Pause, Play, ChevronRight, SkipForward, SkipBack } from 'lucide-react-native';
+import { useSoundEffect } from '../../hooks/useSoundEffect';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { AnimatedPressable } from '../../components/ui/AnimatedPressable';
 import {
   tapHaptic,
   heavyHaptic,
   successHaptic,
   mediumHaptic,
 } from '../../utils/haptics';
-import { DAISY_ASSETS, DAISY_TALKING_WEBP } from './daisy-assets';
+import { useVideoPlayer, VideoView } from 'expo-video';
+import { DAISY_ASSETS, DAISY_TALKING_VIDEO_MP4 } from './daisy-assets';
 import { usePodcastPlayer } from './usePodcastPlayer';
 import { PodcastQuestionCard } from './PodcastQuestionCard';
 import { PodcastIntroCard } from './PodcastIntroCard';
@@ -121,16 +124,77 @@ interface ListenStageProps {
 // transcript card grew from 90→152px. Net effect: more transcript context
 // visible (4 lines instead of 2-3), Daisy still hero but doesn't crowd the
 // audio/text balance, and the bottom controls breathe.
-const TRANSCRIPT_HEIGHT = 152;
+// Bumped back up from 48% → 62% width (user feedback: "too small"). Ratio
+// kept at 1.15 instead of the original 1.3 so the new bottom transport block
+// (waveform + 5 controls + speed + time stamps) still has enough vertical
+// room. Transcript trimmed to 104px so the total stack fits comfortably on
+// shorter Android phones without Daisy clipping under the controls.
+const TRANSCRIPT_HEIGHT = 104;
 const DAISY_W = Math.min(SW * 0.62, 260);
-const DAISY_H = Math.round(DAISY_W * 1.3);
+const DAISY_H = Math.round(DAISY_W * 1.15);
 
 // Apple Podcasts–style speed cycle: tap to advance 1x → 1.2x → 1.5x → 1x.
 // Single pill instead of three buttons keeps the chrome minimal on a 22s clip.
 const SPEED_OPTIONS = [1, 1.2, 1.5] as const;
 
+/** Format seconds → mm:ss (e.g. 7.3 → "0:07", 73 → "1:13"). Negative inputs
+ *  are clamped to 0 — we use this for "remaining time" which can briefly
+ *  read fractionally negative during the very last tick of playback. */
+function formatMmSs(totalSec: number): string {
+  const clamped = Math.max(0, totalSec);
+  const m = Math.floor(clamped / 60);
+  const s = Math.floor(clamped % 60);
+  return `${m}:${s.toString().padStart(2, '0')}`;
+}
+
+/** Spotify-style waveform — 28 vertical bars with pseudo-random heights that
+ *  stay stable across renders. The played portion (left of progress) is the
+ *  primary cyan; the unplayed portion is a translucent muted version, so the
+ *  user gets a quick "how far in" read at a glance. Not real audio amplitude
+ *  data — for a 22-second clip, stylized bars are visually equivalent and
+ *  cheaper than running an FFT over the mp3 on device. */
+const WAVEFORM_BAR_COUNT = 28;
+const WAVEFORM_HEIGHTS = Array.from({ length: WAVEFORM_BAR_COUNT }, (_, i) => {
+  // Deterministic shape that loosely echoes a speech envelope (taller in the
+  // middle, lower at the edges) so the wave doesn't look like white noise.
+  const t = i / (WAVEFORM_BAR_COUNT - 1);
+  const envelope = 0.45 + 0.55 * Math.sin(t * Math.PI);
+  const jitter = (((i * 911) % 100) / 100) * 0.35 - 0.175; // ±17.5%
+  return Math.max(0.18, Math.min(1, envelope + jitter));
+});
+
+function Waveform({ progress, active }: { progress: number; active: boolean }) {
+  const playedIdx = Math.floor(progress * WAVEFORM_BAR_COUNT);
+  return (
+    <View style={styles.waveform}>
+      {/* row-reverse so the "played" portion fills FROM THE RIGHT (RTL) and the
+          unplayed bars trail off to the LEFT. */}
+      {WAVEFORM_HEIGHTS.map((h, i) => {
+        const played = i < playedIdx;
+        return (
+          <View
+            key={i}
+            style={[
+              styles.waveformBar,
+              {
+                height: 28 * h,
+                backgroundColor: played
+                  ? '#0ea5e9'
+                  : active
+                    ? 'rgba(14,165,233,0.30)'
+                    : 'rgba(100,116,139,0.25)',
+              },
+            ]}
+          />
+        );
+      })}
+    </View>
+  );
+}
+
 function PodcastListenStage({ podcast, onContinue }: ListenStageProps) {
   const insets = useSafeAreaInsets();
+  const { playSound } = useSoundEffect();
   const { phase, progress, rate, togglePlayPause, seekForward, replay, setRate } = usePodcastPlayer(
     podcast.audio.uri,
     () => {
@@ -203,19 +267,6 @@ function PodcastListenStage({ podcast, onContinue }: ListenStageProps) {
     ],
   }));
 
-  /* Force-restart the talking WebP loop. Many WebP files declare loopCount=1
-   *  (encoder default) and freeze on the last frame after one cycle. By
-   *  bumping a counter into the ExpoImage `key` every 4.5s while audio is
-   *  actively playing, we remount the image and replay the animation from
-   *  frame 0. The 300ms expo-image transition crossfades the remount so it
-   *  reads as a smooth loop, not a hard cut. The interval pauses when audio
-   *  is paused/loading/finished so we don't burn renders. */
-  const [loopTick, setLoopTick] = useState(0);
-  useEffect(() => {
-    if (phase !== 'playing') return;
-    const id = setInterval(() => setLoopTick((t) => t + 1), 4500);
-    return () => clearInterval(id);
-  }, [phase]);
 
   /* Speaking halo — pulse rate matches a natural speech cadence (~480ms per
    * beat) instead of the previous 1800ms studio-pulse. The animation is
@@ -300,15 +351,27 @@ function PodcastListenStage({ podcast, onContinue }: ListenStageProps) {
   const isPaused = phase === 'paused';
   const isFinished = phase === 'finished';
 
-  // Daisy source: talking WebP ONLY while audio is actually playing. During
-  // loading she holds the static mic pose so her mouth doesn't move before
-  // she has anything to say (user was seeing the talking animation start
-  // before the audio did, breaking sync).
-  const daisySource = isPlaying
-    ? DAISY_TALKING_WEBP
-    : isFinished
-      ? DAISY_ASSETS.happy
-      : DAISY_ASSETS.mic;
+  // Daisy source: the local blink WebP during playing (proven clean 2-frame
+  // Daisy idle source — only used when NOT playing. The playing-phase
+  // animation comes from the expo-video player below (DAISY_TALKING_VIDEO_MP4
+  // looping natively). expo-video has reliable native loop support, unlike
+  // expo-image which struggles with WebP loopCount metadata on Android.
+  const daisyIdleSource = isFinished ? DAISY_ASSETS.happy : DAISY_ASSETS.mic;
+
+  // expo-video player for Daisy's talking loop. The video was generated with
+  // start_image === end_image so its last frame matches the first frame
+  // exactly — looping via player.loop=true produces a perfectly seamless
+  // animation. muted because we have the actual podcast audio playing
+  // separately, and `pause/play` is gated by `isPlaying` so the visual
+  // matches the audio state.
+  const talkingPlayer = useVideoPlayer(DAISY_TALKING_VIDEO_MP4, (p) => {
+    p.loop = true;
+    p.muted = true;
+  });
+  useEffect(() => {
+    if (isPlaying) talkingPlayer.play();
+    else talkingPlayer.pause();
+  }, [isPlaying, talkingPlayer]);
 
   return (
     <View style={styles.stage}>
@@ -347,7 +410,9 @@ function PodcastListenStage({ podcast, onContinue }: ListenStageProps) {
       </Animated.View>
 
 
-      {/* Podcast progress — sits at top, right below module's general progress bar */}
+      {/* Podcast progress — kept as a thin track at the very top so the user
+          has a glanceable "how far into the clip" signal even before the
+          richer Waveform card below catches their eye. */}
       <Animated.View
         entering={FadeInDown.duration(280).springify()}
         style={styles.progressTrack}
@@ -367,15 +432,33 @@ function PodcastListenStage({ podcast, onContinue }: ListenStageProps) {
         <Animated.View style={[styles.wave, wave0Style]} />
         <Animated.View style={[styles.wave, wave1Style]} />
         <Animated.View style={[styles.daisyFrame, daisyFloatingStyle]}>
-          <ExpoImage
-            key={`daisy-${isPlaying ? `talk-${loopTick}` : isFinished ? 'happy' : 'mic'}`}
-            source={daisySource}
-            style={styles.daisyImage}
-            contentFit="cover"
-            cachePolicy="memory-disk"
-            transition={300}
-            autoplay
-          />
+          {/* While playing → <VideoView> rendering DAISY_TALKING_VIDEO_MP4 on
+              loop (transparent character, no built-in bubbles). When NOT
+              playing → static PNG (mic during loading/paused, happy when
+              finished). expo-video's native loop is reliable on both iOS and
+              Android, and because the video was generated with start_image
+              === end_image the loop seam is invisible. */}
+          {isPlaying ? (
+            <VideoView
+              player={talkingPlayer}
+              style={styles.daisyImage}
+              contentFit="cover"
+              nativeControls={false}
+            />
+          ) : (
+            <ExpoImage
+              source={daisyIdleSource}
+              style={styles.daisyImage}
+              contentFit="cover"
+              cachePolicy="memory-disk"
+              transition={300}
+            />
+          )}
+          {/* Mouth bubbles overlay — re-enabled now that the talking video
+              has a transparent background. Bubbles flow up from her mouth,
+              clipped by daisyFrame overflow:'hidden'. Only animates while
+              actually playing. */}
+          {isPlaying ? <MouthBubbles /> : null}
         </Animated.View>
       </View>
 
@@ -391,21 +474,43 @@ function PodcastListenStage({ podcast, onContinue }: ListenStageProps) {
           onContentSizeChange={(_w, h) => { contentHeightRef.current = h; }}
           scrollEnabled={false}
         >
-          {/* Plain transcript — the previous per-word highlight depended on
-              uniform speech rate (words.length × progress), but Hebrew has
-              very uneven word lengths so the "current" word visually drifted
-              from what Daisy was actually saying. Auto-scroll still tracks
-              audio progress, so the user moves through the text smoothly. */}
+          {/* Karaoke-style highlight — words before `revealedWords` are read
+              (slate), the word AT `revealedWords` is the "current" word in
+              bold cyan, words after are pending (light gray). The mapping is
+              linear (progress × words.length) which has known drift on long
+              Hebrew sentences, but for a 22-second clip the drift is small
+              enough that the visual still reads as "she's saying this word
+              right now". */}
           <Text style={[styles.transcriptText, RTL]}>
-            {podcast.transcript}
+            {words.map((w, i) => (
+              <Text
+                key={i}
+                style={
+                  i < revealedWords
+                    ? styles.transcriptWordPast
+                    : i === revealedWords
+                      ? styles.transcriptWordCurrent
+                      : styles.transcriptWordFuture
+                }
+              >
+                {w}
+                {i < words.length - 1 ? ' ' : ''}
+              </Text>
+            ))}
           </Text>
         </ScrollView>
       </Animated.View>
 
-      {/* Bottom controls — phase-dependent.
-          During play/pause/loading: Apple-Podcasts-style transport (-5 · ▷ · +5).
-          When finished: Continue + Back (Replay) pair, matching the
-          flashcard module navigation in LessonFlowScreen. */}
+      {/* Spotify-inspired transport area — replaces the prior 3-button row.
+          Layout (top-to-bottom):
+            • Waveform (visual replacement for a plain progress bar)
+            • Time stamps row: elapsed | -remaining
+            • 5 symmetric controls: rewind‐to‐0 · -5 · PLAY · +5 · skip‐to‐end
+            • Speed pill (1x / 1.2x / 1.5x) anchored to the leading edge
+
+          When finished we shrink to a single full-width Continue (with Replay
+          as a small icon-only secondary above) so the finishing beat has one
+          clear next action. */}
       {isFinished ? (
         <Animated.View
           entering={FadeInUp.duration(320).springify()}
@@ -422,87 +527,117 @@ function PodcastListenStage({ podcast, onContinue }: ListenStageProps) {
           >
             <ChevronRight color="#0369a1" size={26} strokeWidth={2.8} />
           </Pressable>
-          <Pressable
-            onPress={() => { tapHaptic(); successHaptic(); onContinue(); }}
+          <AnimatedPressable
+            onPress={() => { playSound('btn_click_heavy'); successHaptic(); onContinue(); }}
             accessibilityRole="button"
             accessibilityLabel="המשך"
-            style={({ pressed }) => [
-              styles.finishedCTA,
-              pressed && { opacity: 0.92, transform: [{ translateY: 2 }] },
-            ]}
+            style={{ flex: 1, alignSelf: "stretch", backgroundColor: "#0ea5e9", borderRadius: 16, paddingVertical: 14, alignItems: "center", justifyContent: "center", borderBottomWidth: 3, borderBottomColor: "#0284c7" }}
           >
-            <Text style={styles.finishedCTAText}>המשך</Text>
-            <ChevronLeft color="#ffffff" size={22} strokeWidth={2.8} />
-          </Pressable>
+            <Text style={{ color: "#fff", fontSize: 16, fontWeight: "800" }}>המשך</Text>
+          </AnimatedPressable>
         </Animated.View>
       ) : (
-        <Animated.View entering={FadeIn.duration(360).delay(120)} style={styles.buttonsRow}>
-          {/* Spotify Podcasts transport layout (RTL-flipped):
-              [skip-back] [play/pause hero] [skip-forward] | [speed pill]
-              In Spotify the speed control sits at the FAR end of the row,
-              opposite the symmetric skip pair. Here the leading edge in RTL is
-              the right, so the speed pill anchors the LEFT edge — visually
-              "outside" the symmetric transport triad. */}
-          <Pressable
-            onPress={() => { tapHaptic(); seekForward(-5); }}
-            accessibilityRole="button"
-            accessibilityLabel="חזרה 5 שניות אחורה"
-            style={({ pressed }) => [
-              styles.btnRound,
-              pressed && { opacity: 0.85, transform: [{ translateY: 2 }] },
-            ]}
-          >
-            <Text style={styles.btnRoundText}>5-</Text>
-          </Pressable>
+        <Animated.View entering={FadeIn.duration(360).delay(120)} style={styles.transportBlock}>
+          <Waveform progress={progress} active={isPlaying} />
+          <View style={styles.timeRow}>
+            <Text style={styles.timeText}>{formatMmSs(progress * podcast.durationSec)}</Text>
+            <Text style={styles.timeText}>-{formatMmSs((1 - progress) * podcast.durationSec)}</Text>
+          </View>
 
-          <Pressable
-            onPress={() => { tapHaptic(); togglePlayPause(); }}
-            disabled={phase === 'loading'}
-            accessibilityRole="button"
-            accessibilityLabel={isPlaying ? 'השהה' : 'המשך'}
-            style={({ pressed }) => [
-              styles.btnRoundHero,
-              pressed && { opacity: 0.92, transform: [{ scale: 0.96 }] },
-              phase === 'loading' && { opacity: 0.5 },
-            ]}
-          >
-            {isPlaying ? (
-              <Pause color="#ffffff" size={32} fill="#ffffff" />
-            ) : (
-              <Play color="#ffffff" size={32} fill="#ffffff" />
-            )}
-          </Pressable>
+          <View style={styles.transportRow}>
+            {/* RTL row-reverse: first child renders at the RIGHT edge of the screen.
+                Visual order (right → left, Hebrew reading direction):
+                  rewind-to-0  |  -5  |  PLAY  |  +5  |  skip-to-questions */}
+            <Pressable
+              onPress={() => { tapHaptic(); replay(); }}
+              accessibilityRole="button"
+              accessibilityLabel="חזרה להתחלה"
+              hitSlop={8}
+              style={({ pressed }) => [
+                styles.btnFlat,
+                pressed && { opacity: 0.6, transform: [{ scale: 0.94 }] },
+              ]}
+            >
+              <SkipBack color="#0369a1" size={22} fill="#0369a1" />
+            </Pressable>
 
-          <Pressable
-            onPress={() => { tapHaptic(); seekForward(5); }}
-            accessibilityRole="button"
-            accessibilityLabel="קפיצה 5 שניות קדימה"
-            style={({ pressed }) => [
-              styles.btnRound,
-              pressed && { opacity: 0.85, transform: [{ translateY: 2 }] },
-            ]}
-          >
-            <Text style={styles.btnRoundText}>5+</Text>
-          </Pressable>
+            <Pressable
+              onPress={() => { tapHaptic(); seekForward(-5); }}
+              accessibilityRole="button"
+              accessibilityLabel="חזרה 5 שניות אחורה"
+              style={({ pressed }) => [
+                styles.btnCircle,
+                pressed && { opacity: 0.85, transform: [{ translateY: 2 }] },
+              ]}
+            >
+              <Text style={styles.btnCircleText}>5-</Text>
+            </Pressable>
 
-          {/* Speed control — pinned to the leading edge in RTL (left). Cycles
-              1x → 1.2x → 1.5x. >1x states tint solid cyan so the active speed
-              is visible from across the screen. */}
-          <Pressable
-            onPress={cycleRate}
-            accessibilityRole="button"
-            accessibilityLabel={`מהירות נגינה ${rate}x. הקש להחלפה`}
-            style={({ pressed }) => [
-              styles.speedPillInner,
-              rate > 1 && styles.speedPillInnerActive,
-              pressed && { opacity: 0.85, transform: [{ scale: 0.96 }] },
-            ]}
-            hitSlop={8}
-          >
-            <Text style={[styles.speedPillText, rate > 1 && styles.speedPillTextActive]}>
-              {rate}x
-            </Text>
-          </Pressable>
+            <Pressable
+              onPress={() => { tapHaptic(); togglePlayPause(); }}
+              disabled={phase === 'loading'}
+              accessibilityRole="button"
+              accessibilityLabel={isPlaying ? 'השהה' : 'המשך'}
+              style={({ pressed }) => [
+                styles.btnHero,
+                pressed && { opacity: 0.92, transform: [{ scale: 0.96 }] },
+                phase === 'loading' && { opacity: 0.5 },
+              ]}
+            >
+              {isPlaying ? (
+                <Pause color="#0369a1" size={32} fill="#0369a1" />
+              ) : (
+                <Play color="#0369a1" size={32} fill="#0369a1" />
+              )}
+            </Pressable>
+
+            <Pressable
+              onPress={() => { tapHaptic(); seekForward(5); }}
+              accessibilityRole="button"
+              accessibilityLabel="קפיצה 5 שניות קדימה"
+              style={({ pressed }) => [
+                styles.btnCircle,
+                pressed && { opacity: 0.85, transform: [{ translateY: 2 }] },
+              ]}
+            >
+              <Text style={styles.btnCircleText}>5+</Text>
+            </Pressable>
+
+            <Pressable
+              onPress={() => { tapHaptic(); onContinue(); }}
+              accessibilityRole="button"
+              accessibilityLabel="קפוץ לשאלות"
+              hitSlop={8}
+              style={({ pressed }) => [
+                styles.btnFlat,
+                pressed && { opacity: 0.6, transform: [{ scale: 0.94 }] },
+              ]}
+            >
+              <SkipForward color="#0369a1" size={22} fill="#0369a1" />
+            </Pressable>
+          </View>
+
+          {/* Speed control — anchored to the leading edge below transport row.
+              In Spotify it lives flush with the transport; we keep it within
+              the same block so the user can flick between speeds without
+              moving their thumb far. >1x = filled cyan to telegraph "fast". */}
+          <View style={styles.speedRow}>
+            <Pressable
+              onPress={cycleRate}
+              accessibilityRole="button"
+              accessibilityLabel={`מהירות נגינה ${rate}x. הקש להחלפה`}
+              style={({ pressed }) => [
+                styles.speedPillInner,
+                rate > 1 && styles.speedPillInnerActive,
+                pressed && { opacity: 0.85, transform: [{ scale: 0.96 }] },
+              ]}
+              hitSlop={8}
+            >
+              <Text style={[styles.speedPillText, rate > 1 && styles.speedPillTextActive]}>
+                {rate}x
+              </Text>
+            </Pressable>
+          </View>
         </Animated.View>
       )}
 
@@ -644,6 +779,105 @@ const bubbleStyles = StyleSheet.create({
   },
 });
 
+// ─────────────────────── Mouth bubbles overlay ───────────────────────
+// 6 small bubbles emanating from Daisy's mouth area (40–63% horizontal,
+// starting at ~60% vertical = where her snout sits in the standard image),
+// rising up and out of frame. Same rise+wobble pattern as AmbientBubble but
+// scaled down and confined to the daisyFrame (clipped by overflow:'hidden').
+// This is the "she's talking" signal — visually rich, totally independent
+// of the broken talking WebP loop. The wave halo behind her + ambient
+// breath/sway/float on the frame keep her body alive; these bubbles keep
+// her *mouth* expressive.
+const MOUTH_BUBBLE_COUNT = 6;
+const MOUTH_BUBBLE_CONFIGS = Array.from({ length: MOUTH_BUBBLE_COUNT }, (_, i) => ({
+  leftPct: 38 + ((i * 7) % 25),             // 38..63% (mouth area)
+  size: 4 + ((i * 3) % 5),                  // 4..8px (small)
+  durationMs: 3000 + ((i * 211) % 1500),    // 3..4.5s rise
+  delayMs: (i * 600) % 3000,                // 0..3s stagger
+  wobbleAmp: 2 + ((i * 11) % 3),            // 2..5px
+  wobblePeriodMs: 1200 + ((i * 137) % 600), // 1.2..1.8s
+}));
+
+function MouthBubbles() {
+  return (
+    <View pointerEvents="none" style={StyleSheet.absoluteFill}>
+      {MOUTH_BUBBLE_CONFIGS.map((cfg, idx) => (
+        <MouthBubble key={idx} cfg={cfg} />
+      ))}
+    </View>
+  );
+}
+
+interface MouthBubbleConfig {
+  leftPct: number;
+  size: number;
+  durationMs: number;
+  delayMs: number;
+  wobbleAmp: number;
+  wobblePeriodMs: number;
+}
+
+function MouthBubble({ cfg }: { cfg: MouthBubbleConfig }) {
+  const t = useSharedValue(0);
+  const wobblePhase = useSharedValue(0);
+  useEffect(() => {
+    // Rise from mouth (~60% down the frame) up to the top edge. Linear so the
+    // bubble moves at a constant "terminal velocity" — same physics as the
+    // ambient bubbles outside the frame.
+    t.value = withRepeat(
+      withSequence(
+        withTiming(0, { duration: cfg.delayMs }),
+        withTiming(1, { duration: cfg.durationMs, easing: Easing.linear }),
+      ),
+      -1,
+      false,
+    );
+    wobblePhase.value = withRepeat(
+      withTiming(2 * Math.PI, { duration: cfg.wobblePeriodMs, easing: Easing.linear }),
+      -1,
+      false,
+    );
+    return () => {
+      cancelAnimation(t);
+      cancelAnimation(wobblePhase);
+    };
+  }, [cfg.delayMs, cfg.durationMs, cfg.wobblePeriodMs, t, wobblePhase]);
+
+  const animStyle = useAnimatedStyle(() => {
+    const wobble = Math.sin(wobblePhase.value) * cfg.wobbleAmp;
+    // Rise distance = mouth-Y (60% of frame) so the bubble climbs from her
+    // mouth up to the top of the frame. The frame's overflow:'hidden' clips
+    // anything that overshoots, so the disappearance feels natural.
+    const rise = -t.value * (DAISY_H * 0.6);
+    // Opacity envelope: fade-in over first 10%, plateau, fade-out over last
+    // 15% — so the bubble is INVISIBLE at the loop seam (t→1 then t→0), the
+    // user never sees a bubble "snap" back to the mouth.
+    let opacity = 0;
+    if (t.value < 0.1) opacity = (t.value / 0.1) * 0.7;
+    else if (t.value > 0.85) opacity = ((1 - t.value) / 0.15) * 0.7;
+    else opacity = 0.7;
+    return {
+      opacity,
+      transform: [{ translateX: wobble }, { translateY: rise }],
+    };
+  });
+
+  return (
+    <Animated.View
+      style={[
+        bubbleStyles.bubble,
+        {
+          left: `${cfg.leftPct}%`,
+          top: DAISY_H * 0.6, // start at mouth height (~60% down the frame)
+          width: cfg.size,
+          height: cfg.size,
+        },
+        animStyle,
+      ]}
+    />
+  );
+}
+
 const styles = StyleSheet.create({
   stage: {
     flex: 1,
@@ -717,13 +951,117 @@ const styles = StyleSheet.create({
     fontSize: 15,
     lineHeight: 24,
   },
-  transcriptWordPast: { color: '#94a3b8', fontWeight: '500' },
-  transcriptWordCurrent: { color: '#0369a1', fontWeight: '800' },
-  transcriptWordFuture: { color: '#e2e8f0', fontWeight: '500' },
+  // Karaoke colors: past = dimmed slate (already read), current = bold cyan
+  // (the spotlight word Daisy is saying right now), future = medium gray
+  // (still readable but visually recedes so the eye finds the current word).
+  transcriptWordPast: { color: '#475569', fontWeight: '600' },
+  transcriptWordCurrent: { color: '#0ea5e9', fontWeight: '900' },
+  transcriptWordFuture: { color: '#94a3b8', fontWeight: '500' },
 
-  // Transport row — all 3 buttons share the same blue 3D CTA pattern used
-  // throughout the app (PodcastIntroCard.startBtn, couple-dilemma.cta,
-  // flashcard nav). Circle shape, hero slightly bigger.
+  // ── Spotify-style transport block ──────────────────────────────────────
+  // The whole audio-controls cluster (waveform + time stamps + 5 controls +
+  // speed pill) sits in a single vertical block at the bottom of the screen.
+  // Padded inside its own air gap so the wave doesn't feel cramped against
+  // the transcript card above it.
+  transportBlock: {
+    paddingTop: 6,
+    gap: 8,
+  },
+  // Bar chart of pseudo-random heights, row-reverse for RTL "play fills from
+  // right". Bars are 4px wide with 2px gutters → ~165px wide on a 28-bar set,
+  // comfortably inside any phone width.
+  waveform: {
+    height: 36,
+    flexDirection: 'row-reverse',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 4,
+  },
+  waveformBar: {
+    width: 3,
+    borderRadius: 2,
+  },
+  timeRow: {
+    flexDirection: 'row-reverse',
+    justifyContent: 'space-between',
+    paddingHorizontal: 6,
+    marginBottom: 2,
+  },
+  timeText: {
+    color: '#64748b',
+    fontSize: 12,
+    fontWeight: '700',
+    fontVariant: ['tabular-nums'],
+  },
+  // 5 controls in a row, row-reverse for RTL:
+  //   [rewind-flat] [-5 circle] [PLAY big] [+5 circle] [skip-flat]
+  // space-between distributes them evenly across the available width without
+  // visual lumping when the cluster has only 5 items.
+  transportRow: {
+    flexDirection: 'row-reverse',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 4,
+    marginTop: 2,
+  },
+  // Outer "skip-track" style buttons — flat icon, no background, like Spotify.
+  // The cyan tint signals interactivity without a heavy bordered circle that
+  // would compete visually with the play hero.
+  btnFlat: {
+    width: 44,
+    height: 44,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  // -5 / +5 circles — semi-translucent so they read as secondary to the big
+  // white play hero in the center. Tight 48px circle keeps them tappable.
+  btnCircle: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(14,165,233,0.18)',
+    borderWidth: 1.5,
+    borderColor: 'rgba(14,165,233,0.45)',
+  },
+  btnCircleText: {
+    color: '#0369a1',
+    fontSize: 15,
+    fontWeight: '900',
+    letterSpacing: 0.3,
+  },
+  // Center PLAY hero — WHITE circle so it visually pops as the primary action
+  // (matches the reference screenshot's bright play button against a darker
+  // body). Bigger lip + soft shadow for the Duolingo 3D feel.
+  btnHero: {
+    width: 68,
+    height: 68,
+    borderRadius: 34,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#ffffff',
+    borderWidth: 2,
+    borderColor: 'rgba(14,165,233,0.35)',
+    borderBottomWidth: 4,
+    borderBottomColor: 'rgba(14,165,233,0.50)',
+    shadowColor: '#0369a1',
+    shadowOpacity: 0.25,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 6,
+  },
+  // Speed pill row — single pill anchored at the trailing edge (left in RTL)
+  // below the transport. Same chrome as the legacy speedPill but in a normal
+  // flow container instead of absolute-positioned.
+  speedRow: {
+    flexDirection: 'row-reverse',
+    paddingHorizontal: 6,
+    marginTop: 4,
+    justifyContent: 'flex-end',
+  },
+
+  // ── Legacy buttonsRow (kept for reference; unused after Spotify rework) ──
   buttonsRow: {
     flexDirection: 'row-reverse',
     alignItems: 'center',
@@ -805,32 +1143,29 @@ const styles = StyleSheet.create({
     fontWeight: '900',
   },
 
-  // Spotify-style speed pill — lives INSIDE the buttonsRow at the leading
-  // (left, in RTL) edge, opposite the symmetric -5/play/+5 triad. White pill
-  // with cyan border by default; flips to solid cyan when >1x so the
-  // accelerated state is obvious without forcing the user to read text.
+  // Speed pill — ALWAYS blue background so the rate badge never goes white
+  // (the previous white-at-1x state was jarring against the cyan transport
+  // siblings). At 1x the cyan is slightly more translucent so the >1x states
+  // still read as "boosted" via a brighter, more saturated fill.
   speedPillInner: {
     minWidth: 48,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'rgba(255,255,255,0.92)',
-    borderColor: 'rgba(14,165,233,0.45)',
+    // Solid blue at every speed (1x / 1.2x / 1.5x) — the user wanted the pill
+    // uniform across all rates instead of dimming on the default 1x state.
+    backgroundColor: '#0ea5e9',
+    borderColor: '#0284c7',
     borderWidth: 1.5,
     paddingHorizontal: 10,
     paddingVertical: 9,
     borderRadius: 999,
-    shadowColor: '#0369a1',
-    shadowOpacity: 0.2,
-    shadowRadius: 6,
-    shadowOffset: { width: 0, height: 2 },
-    elevation: 3,
   },
   speedPillInnerActive: {
     backgroundColor: '#0ea5e9',
     borderColor: '#0284c7',
   },
   speedPillText: {
-    color: '#0369a1',
+    color: '#ffffff',
     fontSize: 13,
     fontWeight: '900',
   },
@@ -857,30 +1192,23 @@ const styles = StyleSheet.create({
     borderWidth: 1.5,
     borderColor: 'rgba(14,165,233,0.45)',
   },
+  // Matches the intro / summary / question CTA pattern verbatim. flex:1 keeps
+  // it filling the row beside the small replay backBtn.
   finishedCTA: {
     flex: 1,
-    flexDirection: 'row-reverse',
+    alignSelf: 'stretch',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 8,
     backgroundColor: '#0ea5e9',
-    borderRadius: 18,
-    paddingVertical: 16,
-    borderWidth: 2,
-    borderColor: '#0284c7',
-    borderBottomWidth: 5,
-    borderBottomColor: '#0369a1',
-    shadowColor: '#0ea5e9',
-    shadowOpacity: 0.45,
-    shadowRadius: 12,
-    shadowOffset: { width: 0, height: 5 },
-    elevation: 7,
+    borderRadius: 16,
+    paddingVertical: 14,
+    borderBottomWidth: 3,
+    borderBottomColor: '#0284c7',
   },
   finishedCTAText: {
     color: '#ffffff',
-    fontSize: 17,
-    fontWeight: '900',
-    letterSpacing: 0.3,
+    fontSize: 16,
+    fontWeight: '800',
   },
 
   pausedBadge: {

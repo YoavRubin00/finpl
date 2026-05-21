@@ -25,10 +25,29 @@ export const PODCAST_STUDIO_BG = {
   uri: `${BLOB_BASE}/podcast-studio-bg.png`,
 } as const;
 
-/** Daisy talking loop — animated WebP. Used during `playing` phase only. */
+/** Daisy talking loop — animated WebP. Used during `playing` phase only.
+ *  @deprecated The metadata-encoded loop in this WebP freezes on the last
+ *  frame in expo-image on Android (loopCount=1 bug), so the visible bubble
+ *  animation inside it "snaps" back to start every cycle. Prefer
+ *  DAISY_TALKING_VIDEO_MP4 below, played via expo-video which has reliable
+ *  native loop support. Kept here as a fallback. */
 export const DAISY_TALKING_WEBP = {
   uri: `${BLOB_BASE}/daisy-talking.webp`,
 } as const;
+
+/** Daisy talking loop — 3-second mp4 video. The video starts AND ends on the
+ *  exact same frame (generated via kling3_0 with start_image=end_image), so
+ *  expo-video can loop it indefinitely with NO visible seam. The character
+ *  is rendered on a transparent background (no studio walls, no bubbles) so
+ *  the surrounding bubble layer in PodcastSegmentScreen can flow freely
+ *  underneath without competing with the video's internal animation.
+ *
+ *  Why not WebP? WebP loop metadata is unreliable in expo-image on Android.
+ *  mp4 + expo-video is more robust and produces smaller file sizes than an
+ *  equivalent-quality animated WebP. Bundled as a remote CloudFront URL —
+ *  warmed in PodcastIntroCard via Asset.fromURI(...).downloadAsync(). */
+export const DAISY_TALKING_VIDEO_MP4 =
+  'https://d8j0ntlcm91z4.cloudfront.net/user_3Ag7CTqAcygcnLQdO6PuD3qQkb9/hf_20260521_183453_9047d06d-f4cd-4619-9f6a-478d4985b4bf.mp4';
 
 /** Daisy in a full celebration loop on a transparent background — closes
  *  eyes, opens mouth wide, raises both fins, blue sparkle stars pop around

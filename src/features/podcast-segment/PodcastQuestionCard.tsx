@@ -1,5 +1,6 @@
 import React, { useState, useCallback, useMemo } from 'react';
 import { View, Text, StyleSheet, Pressable, ScrollView } from 'react-native';
+import { AnimatedPressable } from '../../components/ui/AnimatedPressable';
 import Animated, {
   FadeIn,
   FadeInDown,
@@ -192,22 +193,18 @@ export const PodcastQuestionCard = React.memo(function PodcastQuestionCard({
       {showResult ? (
         <Animated.View
           entering={FadeIn.duration(280)}
-          style={[styles.stickyFooter, { bottom: insets.bottom + 12 }]}
+          style={[styles.stickyFooter, { bottom: insets.bottom + 2 }]}
         >
-          <Pressable
-            onPress={() => { playSound('btn_click_heavy'); tapHaptic(); onContinue(); }}
+          <AnimatedPressable
+            onPress={() => { playSound('btn_click_heavy'); onContinue(); }}
             accessibilityRole="button"
             accessibilityLabel={questionNumber === 1 ? 'לשאלה הבאה' : 'המשך'}
-            style={({ pressed }) => [
-              styles.continueBtn,
-              pressed && { opacity: 0.92, transform: [{ translateY: 2 }] },
-            ]}
+            style={{ backgroundColor: "#0ea5e9", borderRadius: 16, paddingVertical: 14, alignItems: "center", justifyContent: "center", borderBottomWidth: 3, borderBottomColor: "#0284c7" }}
           >
-            <Text style={styles.continueBtnText}>
+            <Text style={{ color: "#fff", fontSize: 16, fontWeight: "800" }}>
               {questionNumber === 1 ? 'לשאלה הבאה' : 'המשך'}
             </Text>
-            <ChevronLeft color="#ffffff" size={20} strokeWidth={2.8} />
-          </Pressable>
+          </AnimatedPressable>
         </Animated.View>
       ) : null}
 
@@ -437,31 +434,21 @@ const styles = StyleSheet.create({
     bottom: 16,
     alignItems: 'stretch',
   },
-  // Same heavy CTA variant used in PodcastIntroCard + PodcastSummaryCard so the
-  // primary action looks identical across the four podcast screens. Side border
-  // + cyan glow keep the button prominent even on the lightest backgrounds.
+  // Copied 1:1 from LessonFlowScreen line 783 pattern.
   continueBtn: {
-    flexDirection: 'row-reverse',
+    width: '100%',
+    alignSelf: 'stretch',
     backgroundColor: '#0ea5e9',
-    borderRadius: 18,
-    paddingVertical: 16,
+    borderRadius: 16,
+    paddingVertical: 14,
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 10,
-    borderWidth: 2,
-    borderColor: '#0284c7',
-    borderBottomWidth: 5,
-    borderBottomColor: '#0369a1',
-    shadowColor: '#0ea5e9',
-    shadowOpacity: 0.45,
-    shadowRadius: 14,
-    shadowOffset: { width: 0, height: 6 },
-    elevation: 8,
+    borderBottomWidth: 3,
+    borderBottomColor: '#0284c7',
   },
   continueBtnText: {
     color: '#ffffff',
-    fontSize: 17,
-    fontWeight: '900',
-    letterSpacing: 0.3,
+    fontSize: 16,
+    fontWeight: '800',
   },
 });

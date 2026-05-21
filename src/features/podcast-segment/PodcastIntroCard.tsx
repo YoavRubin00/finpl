@@ -1,5 +1,6 @@
 import React from 'react';
-import { View, Text, StyleSheet, Pressable, Dimensions } from 'react-native';
+import { View, Text, StyleSheet, Dimensions } from 'react-native';
+import { AnimatedPressable } from '../../components/ui/AnimatedPressable';
 import { Image as ExpoImage } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import Animated, {
@@ -10,7 +11,7 @@ import Animated, {
 import { Play } from 'lucide-react-native';
 import { Asset } from 'expo-asset';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { tapHaptic, mediumHaptic } from '../../utils/haptics';
+import { mediumHaptic } from '../../utils/haptics';
 import { useSoundEffect } from '../../hooks/useSoundEffect';
 import { DAISY_ASSETS } from './daisy-assets';
 import type { PodcastSegment } from '../chapter-1-content/types';
@@ -101,18 +102,14 @@ export const PodcastIntroCard = React.memo(function PodcastIntroCard({
         entering={FadeInUp.duration(400).delay(280)}
         style={[styles.footer, { paddingBottom: insets.bottom + 16 }]}
       >
-        <Pressable
-          onPress={() => { playSound('btn_click_heavy'); tapHaptic(); onStart(); }}
+        <AnimatedPressable
+          onPress={() => { playSound('btn_click_heavy'); onStart(); }}
           accessibilityRole="button"
           accessibilityLabel="התחל את הפודקסט"
-          style={({ pressed }) => [
-            styles.startBtn,
-            pressed && { opacity: 0.92, transform: [{ translateY: 2 }] },
-          ]}
+          style={{ backgroundColor: "#0ea5e9", borderRadius: 16, paddingVertical: 14, alignItems: "center", justifyContent: "center", borderBottomWidth: 3, borderBottomColor: "#0284c7" }}
         >
-          <Play color="#ffffff" size={20} fill="#ffffff" />
-          <Text style={styles.startBtnText}>התחל</Text>
-        </Pressable>
+          <Text style={{ color: "#fff", fontSize: 16, fontWeight: "800" }}>התחל</Text>
+        </AnimatedPressable>
       </Animated.View>
     </View>
   );
@@ -183,34 +180,23 @@ const styles = StyleSheet.create({
     paddingTop: 12,
     alignItems: 'stretch',
   },
-  // Canonical lesson primary CTA — same base as LessonFlowScreen but with the
-  // glow + side border kept so it stays prominent against the pink/cyan
-  // gradient background of the intro card (without the glow the cyan washes
-  // into the gradient and the button reads as "white on light"). All other
-  // podcast cards use the simpler variant because they sit on a flat white
-  // backdrop where the glow is unnecessary.
+  // Copied 1:1 from LessonFlowScreen line 783 — text-only "המשך" pattern
+  // used in flashcard module CTAs. fontSize:16, fontWeight:800 (NOT 17/900
+  // like my earlier custom variant).
   startBtn: {
-    flexDirection: 'row-reverse',
+    width: '100%',
+    alignSelf: 'stretch',
+    backgroundColor: '#0ea5e9',
+    borderRadius: 16,
+    paddingVertical: 14,
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 10,
-    backgroundColor: '#0ea5e9',
-    borderRadius: 18,
-    paddingVertical: 16,
-    borderWidth: 2,
-    borderColor: '#0284c7',
-    borderBottomWidth: 5,
-    borderBottomColor: '#0369a1',
-    shadowColor: '#0ea5e9',
-    shadowOpacity: 0.45,
-    shadowRadius: 14,
-    shadowOffset: { width: 0, height: 6 },
-    elevation: 8,
+    borderBottomWidth: 3,
+    borderBottomColor: '#0284c7',
   },
   startBtnText: {
     color: '#ffffff',
-    fontSize: 17,
-    fontWeight: '900',
-    letterSpacing: 0.3,
+    fontSize: 16,
+    fontWeight: '800',
   },
 });
