@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useMemo } from 'react';
-import { View, Text, StyleSheet, Pressable, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, Pressable, ScrollView, Dimensions } from 'react-native';
 import Animated, {
   FadeIn,
   FadeInDown,
@@ -13,12 +13,17 @@ import Animated, {
 import { Image as ExpoImage } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { ChevronLeft } from 'lucide-react-native';
 import { tapHaptic, successHaptic, errorHaptic } from '../../utils/haptics';
 import { GoldCoinIcon } from '../../components/ui/GoldCoinIcon';
 import { DAISY_HAPPY_CELEBRATE_WEBP, DAISY_EMPATHIC_WEBP } from './daisy-assets';
 import type { PodcastQuestion, PodcastQuestionOption } from '../chapter-1-content/types';
 
 const RTL = { writingDirection: 'rtl' as const, textAlign: 'right' as const };
+
+// Explicit pixel width — alignSelf:'stretch' + width:'100%' were not
+// stretching the Pressable on Android. stickyFooter has left/right 16.
+const CONTINUE_BTN_W = Dimensions.get('window').width - 32;
 
 /** Gen-Z friendly feedback variants — rotated by question hash so the same
  *  user sees variety across podcasts but a single question stays consistent.
@@ -143,34 +148,39 @@ export const PodcastQuestionCard = React.memo(function PodcastQuestionCard({
           ))}
         </View>
 
-        {/* Feedback box */}
+        {/* Feedback box — Daisy on the LEFT (row-reverse first child renders
+            on the right in RTL flow, so the text column comes first and the
+            Daisy WebP renders to her left), vertically centered next to the
+            text block. Bigger WebP (~110) makes the reaction feel like a
+            beat, not a decoration. */}
         {showResult && selectedOption ? (
           <Animated.View
             entering={FadeInUp.duration(320).springify()}
             style={styles.feedbackCard}
           >
-            {/* Daisy reacts to the answer — celebrate on correct,
-                empathic on wrong. Small, centered above the title so
-                the gesture feels like part of the feedback, not a takeover. */}
-            <ExpoImage
-              source={isCorrect ? DAISY_HAPPY_CELEBRATE_WEBP : DAISY_EMPATHIC_WEBP}
-              style={styles.feedbackDaisy}
-              contentFit="contain"
-              accessible={false}
-            />
-            <Text style={[styles.feedbackTitle, RTL]}>{feedbackTitle}</Text>
-            <Text style={[styles.feedbackBody, RTL]}>{selectedOption.feedback}</Text>
-            {isCorrect ? (
-              <View style={styles.rewardRow}>
-                <View style={styles.rewardPill}>
-                  <Text style={styles.rewardXP}>+{question.xpReward} XP</Text>
-                </View>
-                <View style={styles.rewardPillCoin}>
-                  <GoldCoinIcon size={14} />
-                  <Text style={styles.rewardCoin}>+{question.coinReward}</Text>
-                </View>
+            <View style={styles.feedbackRow}>
+              <View style={styles.feedbackTextCol}>
+                <Text style={[styles.feedbackTitle, RTL]}>{feedbackTitle}</Text>
+                <Text style={[styles.feedbackBody, RTL]}>{selectedOption.feedback}</Text>
+                {isCorrect ? (
+                  <View style={styles.rewardRow}>
+                    <View style={styles.rewardPill}>
+                      <Text style={styles.rewardXP}>+{question.xpReward} XP</Text>
+                    </View>
+                    <View style={styles.rewardPillCoin}>
+                      <GoldCoinIcon size={14} />
+                      <Text style={styles.rewardCoin}>+{question.coinReward}</Text>
+                    </View>
+                  </View>
+                ) : null}
               </View>
-            ) : null}
+              <ExpoImage
+                source={isCorrect ? DAISY_HAPPY_CELEBRATE_WEBP : DAISY_EMPATHIC_WEBP}
+                style={styles.feedbackDaisy}
+                contentFit="contain"
+                accessible={false}
+              />
+            </View>
           </Animated.View>
         ) : null}
       </ScrollView>
@@ -186,15 +196,16 @@ export const PodcastQuestionCard = React.memo(function PodcastQuestionCard({
           <Pressable
             onPress={() => { tapHaptic(); onContinue(); }}
             accessibilityRole="button"
-            accessibilityLabel={questionNumber === 1 ? 'לשאלה הבאה' : 'סיים'}
+            accessibilityLabel={questionNumber === 1 ? 'לשאלה הבאה' : 'המשך'}
             style={({ pressed }) => [
               styles.continueBtn,
               pressed && { opacity: 0.92, transform: [{ scale: 0.98 }] },
             ]}
           >
             <Text style={styles.continueBtnText}>
-              {questionNumber === 1 ? 'לשאלה הבאה' : 'סיים'}
+              {questionNumber === 1 ? 'לשאלה הבאה' : 'המשך'}
             </Text>
+            <ChevronLeft color="#ffffff" size={22} strokeWidth={2.6} />
           </Pressable>
         </Animated.View>
       ) : null}
@@ -373,20 +384,27 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderRadius: 14,
     padding: 12,
-    gap: 4,
-    alignItems: 'center',
     shadowColor: '#0ea5e9',
     shadowOpacity: 0.06,
     shadowRadius: 6,
     shadowOffset: { width: 0, height: 2 },
     elevation: 1,
   },
-  feedbackDaisy: {
-    width: 84,
-    height: 84,
+  feedbackRow: {
+    flexDirection: 'row-reverse',
+    alignItems: 'center',
+    gap: 12,
   },
-  feedbackTitle: { fontSize: 18, fontWeight: '900', color: '#0369a1', textAlign: 'right', writingDirection: 'rtl', alignSelf: 'stretch' },
-  feedbackBody: { fontSize: 13, lineHeight: 19, color: '#334155', textAlign: 'right', writingDirection: 'rtl', alignSelf: 'stretch' },
+  feedbackTextCol: {
+    flex: 1,
+    gap: 4,
+  },
+  feedbackDaisy: {
+    width: 96,
+    height: 96,
+  },
+  feedbackTitle: { fontSize: 20, fontWeight: '900', color: '#0369a1', textAlign: 'right', writingDirection: 'rtl' },
+  feedbackBody: { fontSize: 13, lineHeight: 19, color: '#334155', textAlign: 'right', writingDirection: 'rtl' },
 
   rewardRow: { flexDirection: 'row-reverse', gap: 8, marginTop: 4 },
   rewardPill: {
@@ -416,19 +434,29 @@ const styles = StyleSheet.create({
     left: 16,
     right: 16,
     bottom: 16,
+    alignItems: 'stretch',
   },
+  // Standard app primary CTA — matches PodcastIntroCard.startBtn /
+  // PodcastSummaryCard.continueBtn / couple-dilemma.cta. row-reverse so the
+  // chevron icon sits on the LEFT (continue = forward in RTL).
   continueBtn: {
+    width: CONTINUE_BTN_W,
+    flexDirection: 'row-reverse',
     backgroundColor: '#0ea5e9',
-    borderRadius: 16,
-    paddingVertical: 14,
+    borderRadius: 18,
+    paddingVertical: 16,
     alignItems: 'center',
-    borderBottomWidth: 4,
+    justifyContent: 'center',
+    gap: 10,
+    borderWidth: 2,
+    borderColor: '#0284c7',
+    borderBottomWidth: 5,
     borderBottomColor: '#0369a1',
     shadowColor: '#0ea5e9',
-    shadowOpacity: 0.35,
-    shadowRadius: 10,
-    shadowOffset: { width: 0, height: 4 },
-    elevation: 6,
+    shadowOpacity: 0.45,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 5 },
+    elevation: 7,
   },
   continueBtnText: {
     color: '#ffffff',

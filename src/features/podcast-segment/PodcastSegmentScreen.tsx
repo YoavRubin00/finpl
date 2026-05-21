@@ -21,7 +21,7 @@ import Animated, {
   withSequence,
   withTiming,
 } from 'react-native-reanimated';
-import { Pause, Play, RotateCcw } from 'lucide-react-native';
+import { Pause, Play } from 'lucide-react-native';
 import {
   tapHaptic,
   heavyHaptic,
@@ -68,7 +68,7 @@ export const PodcastSegmentScreen = React.memo(function PodcastSegmentScreen({
     return (
       <PodcastListenStage
         podcast={podcast}
-        onFinished={() => setTimeout(() => setPhase('summary'), 600)}
+        onContinue={() => setPhase('summary')}
       />
     );
   }
@@ -113,15 +113,15 @@ interface ListenStageProps {
 }
 
 // Trimmed proportions: Daisy frame went 78%→62% of screen width and the
-// transcript card grew from 90→124px. Net effect: more transcript context
-// visible (3 lines instead of 2), Daisy still hero but doesn't crowd the
+// transcript card grew from 90→152px. Net effect: more transcript context
+// visible (4 lines instead of 2-3), Daisy still hero but doesn't crowd the
 // audio/text balance, and the bottom controls breathe.
-const TRANSCRIPT_HEIGHT = 124;
+const TRANSCRIPT_HEIGHT = 152;
 const DAISY_W = Math.min(SW * 0.62, 260);
 const DAISY_H = Math.round(DAISY_W * 1.3);
 
 function PodcastListenStage({ podcast, onFinished }: ListenStageProps) {
-  const { phase, progress, togglePlayPause, replay } = usePodcastPlayer(
+  const { phase, progress, togglePlayPause, seekForward } = usePodcastPlayer(
     podcast.audio.uri,
     () => {
       heavyHaptic();
@@ -188,13 +188,19 @@ function PodcastListenStage({ podcast, onFinished }: ListenStageProps) {
   const scrollRef = useRef<ScrollView>(null);
   const contentHeightRef = useRef<number>(0);
 
-  /** Auto-scroll proportionally to audio progress. We avoid relying on per-word
-   *  onLayout (Android doesn't fire onLayout for nested Text children), which
-   *  previously left the highlighted word stuck off-screen. */
+  /** Auto-scroll so the currently-spoken word sits in the UPPER third of the
+   *  visible window. Previously the linear `progress * (total - viewport)`
+   *  mapping put the current word near the BOTTOM of the view by the end of
+   *  the podcast — words being spoken were off-screen below. By targeting
+   *  the upper third we always show 2-3 lines of upcoming context. */
   useEffect(() => {
     const total = contentHeightRef.current;
     if (total <= TRANSCRIPT_HEIGHT) return;
-    const targetY = Math.max(0, (total - TRANSCRIPT_HEIGHT) * progress);
+    const currentWordY = total * progress;
+    const desiredOffsetInView = TRANSCRIPT_HEIGHT * 0.3;
+    const ideal = currentWordY - desiredOffsetInView;
+    const maxScroll = total - TRANSCRIPT_HEIGHT;
+    const targetY = Math.max(0, Math.min(maxScroll, ideal));
     scrollRef.current?.scrollTo({ y: targetY, animated: true });
   }, [progress]);
 
@@ -288,22 +294,21 @@ function PodcastListenStage({ podcast, onFinished }: ListenStageProps) {
         </ScrollView>
       </Animated.View>
 
-      {/* 2 buttons: replay (secondary) + play/pause (primary).
-          Dropped the "+5s seek" — for a 22-second podcast the skip
-          felt gimmicky and added a third control that visually crowded
-          the play/pause hero button. */}
+      {/* Podcast-player-style transport row inspired by Apple Podcasts /
+          Spotify: large central play/pause, flanked by smaller circular
+          time-seek controls (±5s). row-reverse for RTL so the -5 button
+          (rewind) sits on the right edge, +5 (fast-forward) on the left. */}
       <Animated.View entering={FadeIn.duration(360).delay(120)} style={styles.buttonsRow}>
         <Pressable
-          onPress={() => { tapHaptic(); replay(); }}
+          onPress={() => { tapHaptic(); seekForward(-5); }}
           accessibilityRole="button"
-          accessibilityLabel="התחל מחדש"
+          accessibilityLabel="חזרה 5 שניות אחורה"
           style={({ pressed }) => [
-            styles.btnGhost,
-            pressed && { opacity: 0.85, transform: [{ scale: 0.97 }] },
+            styles.btnRound,
+            pressed && { opacity: 0.85, transform: [{ translateY: 2 }] },
           ]}
         >
-          <RotateCcw color="#0369a1" size={18} strokeWidth={2.6} />
-          <Text style={styles.btnGhostText}>מחדש</Text>
+          <Text style={styles.btnRoundText}>5-</Text>
         </Pressable>
 
         <Pressable
@@ -312,19 +317,28 @@ function PodcastListenStage({ podcast, onFinished }: ListenStageProps) {
           accessibilityRole="button"
           accessibilityLabel={isPlaying ? 'השהה' : isFinished ? 'נגן שוב' : 'המשך'}
           style={({ pressed }) => [
-            styles.btnPrimary,
-            pressed && { opacity: 0.9, transform: [{ scale: 0.98 }] },
+            styles.btnRoundHero,
+            pressed && { opacity: 0.92, transform: [{ scale: 0.96 }] },
             phase === 'loading' && { opacity: 0.5 },
           ]}
         >
           {isPlaying ? (
-            <Pause color="#ffffff" size={22} fill="#ffffff" />
+            <Pause color="#0369a1" size={32} fill="#0369a1" />
           ) : (
-            <Play color="#ffffff" size={22} fill="#ffffff" />
+            <Play color="#0369a1" size={32} fill="#0369a1" />
           )}
-          <Text style={styles.btnPrimaryText}>
-            {isPlaying ? 'השהה' : isFinished ? 'נגן שוב' : 'המשך'}
-          </Text>
+        </Pressable>
+
+        <Pressable
+          onPress={() => { tapHaptic(); seekForward(5); }}
+          accessibilityRole="button"
+          accessibilityLabel="קפיצה 5 שניות קדימה"
+          style={({ pressed }) => [
+            styles.btnRound,
+            pressed && { opacity: 0.85, transform: [{ translateY: 2 }] },
+          ]}
+        >
+          <Text style={styles.btnRoundText}>5+</Text>
         </Pressable>
       </Animated.View>
 
@@ -491,50 +505,56 @@ const styles = StyleSheet.create({
   transcriptWordCurrent: { color: '#0369a1', fontWeight: '800' },
   transcriptWordFuture: { color: '#e2e8f0', fontWeight: '500' },
 
+  // Transport row inspired by Apple Podcasts: clear visual hierarchy.
+  // Hero white play/pause in the middle is THE focal point; the side circles
+  // are translucent satellites that don't compete for attention.
   buttonsRow: {
     flexDirection: 'row-reverse',
-    gap: 8,
-    alignItems: 'center',
-  },
-  btnPrimary: {
-    flex: 1.6,
-    flexDirection: 'row-reverse',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 8,
-    backgroundColor: '#0ea5e9',
-    borderRadius: 16,
-    paddingVertical: 14,
-    borderBottomWidth: 4,
-    borderBottomColor: '#0369a1',
-    shadowColor: '#0ea5e9',
-    shadowOpacity: 0.35,
-    shadowRadius: 10,
-    shadowOffset: { width: 0, height: 4 },
-    elevation: 6,
+    gap: 28,
+    paddingVertical: 8,
   },
-  btnPrimaryText: {
-    color: '#ffffff',
-    fontSize: 16,
-    fontWeight: '900',
-    letterSpacing: 0.3,
-  },
-  btnGhost: {
-    flex: 1,
-    flexDirection: 'row-reverse',
+  // Hero play/pause: 80x80 WHITE circle (high contrast against the pink/blue
+  // gradient), blue icon inside. No 3D lip — the lift comes from a strong
+  // soft shadow + glow alone, matching the floating feel of the reference.
+  btnRoundHero: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 6,
     backgroundColor: '#ffffff',
-    borderColor: 'rgba(14,165,233,0.35)',
-    borderWidth: 1.5,
-    borderRadius: 14,
-    paddingVertical: 12,
+    shadowColor: '#0369a1',
+    shadowOpacity: 0.35,
+    shadowRadius: 18,
+    shadowOffset: { width: 0, height: 8 },
+    elevation: 10,
   },
-  btnGhostText: {
+  // Side controls: 56x56 translucent-blue circles. Subtle, secondary —
+  // they live "around" the hero, not next to it. Background uses the same
+  // semi-transparent blue as the intro chip so the whole experience reads
+  // as one visual language.
+  btnRound: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(14,165,233,0.18)',
+    borderWidth: 1.5,
+    borderColor: 'rgba(14,165,233,0.45)',
+    shadowColor: '#0369a1',
+    shadowOpacity: 0.18,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 3 },
+    elevation: 3,
+  },
+  btnRoundText: {
     color: '#0369a1',
-    fontSize: 13,
-    fontWeight: '800',
+    fontSize: 17,
+    fontWeight: '900',
+    letterSpacing: 0.5,
   },
 
   pausedBadge: {

@@ -182,9 +182,11 @@ export function usePodcastPlayer(
       // is not reliably exposed on all expo-audio versions and may return 0/undefined.
       const current = currentTimeRef.current;
       const dur = durationRef.current;
-      // Clamp just before the end so we don't accidentally trigger didJustFinish
+      // Clamp just before the end so we don't accidentally trigger didJustFinish.
+      // Negative `seconds` is allowed (seek backward) — Math.max(0, …) keeps us
+      // from rewinding past the start of the file.
       const maxTarget = dur > 0 ? Math.max(0, dur - 0.1) : current + seconds;
-      const target = Math.min(maxTarget, current + seconds);
+      const target = Math.max(0, Math.min(maxTarget, current + seconds));
       p.seekTo(target);
       if (dur > 0) {
         setProgress(Math.min(1, Math.max(0, target / dur)));

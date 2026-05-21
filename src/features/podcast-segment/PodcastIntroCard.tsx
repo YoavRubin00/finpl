@@ -3,9 +3,9 @@ import { View, Text, StyleSheet, Pressable, Dimensions } from 'react-native';
 import { Image as ExpoImage } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import Animated, {
+  FadeIn,
   FadeInDown,
   FadeInUp,
-  ZoomIn,
 } from 'react-native-reanimated';
 import { Play } from 'lucide-react-native';
 import { Asset } from 'expo-asset';
@@ -17,6 +17,11 @@ import type { PodcastSegment } from '../chapter-1-content/types';
 const { width: SW } = Dimensions.get('window');
 const DAISY_W = Math.min(SW * 0.62, 260);
 const DAISY_H = Math.round(DAISY_W * 1.4);
+// Footer's paddingHorizontal is 24 on each side → button takes the remainder.
+// Computed explicitly because width: '100%' + alignSelf: 'stretch' weren't
+// producing a stretched button on Android (Pressable was rendering at
+// intrinsic width — text + icon only).
+const START_BTN_W = SW - 48;
 const RTL = { writingDirection: 'rtl' as const, textAlign: 'center' as const };
 
 interface Props {
@@ -52,17 +57,27 @@ export const PodcastIntroCard = React.memo(function PodcastIntroCard({
         style={StyleSheet.absoluteFill}
       />
 
-      <View style={styles.content}>
-        <Animated.View
-          entering={FadeInDown.duration(380).springify()}
-          style={styles.episodeChip}
-        >
-          <Text style={styles.episodeIcon}>🎙️</Text>
-          <Text style={styles.episodeChipText}>פודקסט</Text>
-        </Animated.View>
+      {/* "פודקסט" chip pinned top-right, clear of the parent lesson progress bar
+          via insets.top + clearance. Used to live inside the centered content
+          column which made it float in the middle of the screen. */}
+      {/* Icon-only badge — the surrounding context (lesson header + Daisy
+          on stage + "On Air" sign in the WebP) already tells the user this
+          is a podcast, so the literal "פודקסט" label was redundant text noise. */}
+      <Animated.View
+        entering={FadeInDown.duration(380)}
+        style={[styles.episodeChipFloat, { top: insets.top + 56 }]}
+        accessible
+        accessibilityLabel="פודקסט"
+        accessibilityRole="image"
+      >
+        <Text style={styles.episodeIcon}>🎙️</Text>
+      </Animated.View>
 
+      <View style={styles.content}>
+        {/* Calm FadeIn instead of ZoomIn.springify (which was bouncing Daisy
+            in like a vibration). The daisy frame should land, not jiggle. */}
         <Animated.View
-          entering={ZoomIn.duration(520).springify().damping(13)}
+          entering={FadeIn.duration(420)}
           style={styles.daisyWrap}
         >
           <View style={styles.daisyFrame}>
@@ -116,19 +131,21 @@ const styles = StyleSheet.create({
     gap: 18,
   },
 
-  episodeChip: {
-    flexDirection: 'row-reverse',
+  // Icon-only badge: tight square pill, the mic emoji is the whole content.
+  episodeChipFloat: {
+    position: 'absolute',
+    right: 16,
+    zIndex: 10,
+    width: 38,
+    height: 38,
     alignItems: 'center',
-    gap: 8,
-    backgroundColor: 'rgba(14,165,233,0.12)',
-    borderColor: 'rgba(14,165,233,0.35)',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(14,165,233,0.18)',
+    borderColor: 'rgba(14,165,233,0.45)',
     borderWidth: 1,
-    paddingHorizontal: 16,
-    paddingVertical: 8,
     borderRadius: 999,
   },
-  episodeIcon: { fontSize: 16 },
-  episodeChipText: { color: '#0369a1', fontSize: 13, fontWeight: '800' },
+  episodeIcon: { fontSize: 18 },
 
   daisyWrap: {
     alignItems: 'center',
@@ -167,27 +184,34 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
     paddingBottom: 28,
     paddingTop: 12,
+    alignItems: 'stretch',
   },
+  // Standard app primary CTA pattern: explicit pixel width (NOT % — alignSelf
+  // wasn't stretching the Pressable on Android), sky blue with 2px top/side
+  // border, 5px Duolingo-style bottom border lip, soft glow.
   startBtn: {
+    width: START_BTN_W,
     flexDirection: 'row-reverse',
     alignItems: 'center',
     justifyContent: 'center',
     gap: 10,
     backgroundColor: '#0ea5e9',
     borderRadius: 18,
-    paddingVertical: 18,
-    borderBottomWidth: 4,
+    paddingVertical: 16,
+    borderWidth: 2,
+    borderColor: '#0284c7',
+    borderBottomWidth: 5,
     borderBottomColor: '#0369a1',
     shadowColor: '#0ea5e9',
-    shadowOpacity: 0.4,
+    shadowOpacity: 0.45,
     shadowRadius: 14,
     shadowOffset: { width: 0, height: 6 },
     elevation: 8,
   },
   startBtnText: {
     color: '#ffffff',
-    fontSize: 18,
+    fontSize: 17,
     fontWeight: '900',
-    letterSpacing: 0.5,
+    letterSpacing: 0.3,
   },
 });

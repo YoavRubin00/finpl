@@ -1,16 +1,16 @@
 import React, { useEffect } from 'react';
-import { View, Text, StyleSheet, Pressable } from 'react-native';
+import { View, Text, StyleSheet, Pressable, Dimensions } from 'react-native';
 import { Image as ExpoImage } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import Animated, {
+  FadeIn,
   FadeInDown,
   FadeInUp,
-  ZoomIn,
 } from 'react-native-reanimated';
 import { ChevronLeft } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { tapHaptic, successHaptic } from '../../utils/haptics';
-import { DAISY_ASSETS } from './daisy-assets';
+import { DAISY_HAPPY_CELEBRATE_WEBP } from './daisy-assets';
 import type { PodcastSegment } from '../chapter-1-content/types';
 
 const RTL = { writingDirection: 'rtl' as const, textAlign: 'center' as const };
@@ -38,13 +38,17 @@ export const PodcastSummaryCard = React.memo(function PodcastSummaryCard({
       />
 
       <View style={styles.content}>
+        {/* Calm FadeIn — the previous ZoomIn.springify made Daisy bounce
+            in like she was vibrating. The celebrating WebP is now the
+            energy: an animated celebration loop replaces the static
+            happy.png so the moment actually feels like an arrival. */}
         <Animated.View
-          entering={ZoomIn.duration(480).springify().damping(12)}
+          entering={FadeIn.duration(420)}
           style={styles.daisyWrap}
         >
           <View style={styles.daisyHalo} />
           <ExpoImage
-            source={DAISY_ASSETS.happy}
+            source={DAISY_HAPPY_CELEBRATE_WEBP}
             style={styles.daisyImage}
             contentFit="contain"
             cachePolicy="memory-disk"
@@ -79,6 +83,9 @@ export const PodcastSummaryCard = React.memo(function PodcastSummaryCard({
 });
 
 const DAISY_SIZE = 180;
+// Explicit pixel width — alignSelf:'stretch' + width:'100%' were not
+// stretching the Pressable on Android, so we compute SW - footer padding.
+const CONTINUE_BTN_W = Dimensions.get('window').width - 48;
 
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: '#fce7e7' },
@@ -96,21 +103,31 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  // Soft pink halo behind the celebrating Daisy WebP. Opacity reduced from
+  // 0.7 → 0.45 because the WebP already contains stars + coins as its own
+  // visual celebration — the halo is now mood, not main course.
   daisyHalo: {
     position: 'absolute',
     width: DAISY_SIZE,
     height: DAISY_SIZE,
     borderRadius: DAISY_SIZE / 2,
     backgroundColor: '#fbcfe8',
-    opacity: 0.7,
+    opacity: 0.45,
     shadowColor: '#f472b6',
     shadowOpacity: 0.4,
     shadowRadius: 24,
     shadowOffset: { width: 0, height: 6 },
   },
+  // Circular clip — the celebrating WebP includes stars + coins that pop out
+  // toward the corners; the user wants them contained within the same pink
+  // circle as the halo, so the celebration feels like an ornament inside a
+  // medallion. overflow:'hidden' is mandatory on Android for borderRadius
+  // to actually clip an animated image.
   daisyImage: {
     width: DAISY_SIZE - 16,
     height: DAISY_SIZE - 16,
+    borderRadius: (DAISY_SIZE - 16) / 2,
+    overflow: 'hidden',
   },
 
   title: {
@@ -130,26 +147,31 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
     paddingBottom: 28,
     paddingTop: 12,
+    alignItems: 'stretch',
   },
+  // Standard app primary CTA — sky blue with full borders + 3D lip + glow.
   continueBtn: {
+    width: CONTINUE_BTN_W,
     flexDirection: 'row-reverse',
     alignItems: 'center',
     justifyContent: 'center',
     gap: 10,
     backgroundColor: '#0ea5e9',
     borderRadius: 18,
-    paddingVertical: 18,
-    borderBottomWidth: 4,
+    paddingVertical: 16,
+    borderWidth: 2,
+    borderColor: '#0284c7',
+    borderBottomWidth: 5,
     borderBottomColor: '#0369a1',
     shadowColor: '#0ea5e9',
-    shadowOpacity: 0.4,
+    shadowOpacity: 0.45,
     shadowRadius: 14,
     shadowOffset: { width: 0, height: 6 },
     elevation: 8,
   },
   continueBtnText: {
     color: '#ffffff',
-    fontSize: 18,
+    fontSize: 17,
     fontWeight: '900',
     letterSpacing: 0.3,
   },

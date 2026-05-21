@@ -11,7 +11,7 @@ import Animated, {
 } from "react-native-reanimated";
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import { ChevronUp, ChevronDown } from "lucide-react-native";
-import { successHaptic, tapHaptic, mediumHaptic } from "../../utils/haptics";
+import { successHaptic, tapHaptic, mediumHaptic, selectionHaptic } from "../../utils/haptics";
 import { ConfettiExplosion } from "../../components/ui/ConfettiExplosion";
 import type { TimelineOrderPrompt } from "./sentenceTypes";
 
@@ -73,21 +73,31 @@ function DraggableItemRow({
   const isDragging = useSharedValue(0);
   const indexRef = useSharedValue(idx);
   const stepsAcc = useSharedValue(0);
+  // Smooth scale/shadow transition — eased between dragging/idle states
+  // instead of snapping. 0 = idle, 1 = fully picked up.
+  const liftProgress = useSharedValue(0);
 
   // Keep the worklet's view of the row's index in sync with React props.
   useEffect(() => { indexRef.value = idx; }, [idx, indexRef]);
 
-  const triggerHaptic = useCallback(() => { mediumHaptic(); }, []);
+  const triggerStartHaptic = useCallback(() => { mediumHaptic(); }, []);
+  const triggerTickHaptic = useCallback(() => { selectionHaptic(); }, []);
+  const triggerDropHaptic = useCallback(() => { tapHaptic(); }, []);
+
+  // Spring profile — soft, slightly bouncy, low stiffness. Mimics iOS reorder
+  // feel rather than a tight engineering snap.
+  const SOFT_SPRING = { damping: 13, stiffness: 130, mass: 0.7 } as const;
 
   const pan = Gesture.Pan()
     .enabled(!locked)
-    // ה-gesture מתחיל רק אחרי 8px אנכיים. כך לחיצה רגילה על arrows או על
-    // תוכן ה-row לא נחטפת לטעות כ-pan.
-    .activeOffsetY([-8, 8])
+    // ה-gesture מתחיל אחרי 6px אנכיים — קצת יותר רגיש מ-8 הקודם, נעים יותר
+    // לתחילת גרירה בלי לחטוף taps על החצים.
+    .activeOffsetY([-6, 6])
     .onStart(() => {
       isDragging.value = 1;
       stepsAcc.value = 0;
-      runOnJS(triggerHaptic)();
+      liftProgress.value = withSpring(1, SOFT_SPRING);
+      runOnJS(triggerStartHaptic)();
     })
     .onUpdate((e) => {
       // כמה שלבים מהמקור צריך להיות עכשיו ה-row.
@@ -98,6 +108,8 @@ function DraggableItemRow({
         const clamped = Math.max(0, Math.min(totalItems - 1, newIdx));
         if (clamped !== oldIdx) {
           runOnJS(onMoveItem)(oldIdx, clamped);
+          // "תיק תיק" subtle בכל חציית שורה — מקנה תחושת picker iOS-י.
+          runOnJS(triggerTickHaptic)();
           // עדכון אופטימי ב-worklet כך שה-onUpdate הבא יראה את המיקום החדש
           // עוד לפני שה-React renders חזרה אלינו ויעדכן את indexRef דרך useEffect.
           indexRef.value = clamped;
@@ -109,27 +121,35 @@ function DraggableItemRow({
       translateY.value = e.translationY - stepsAcc.value * ITEM_STEP_HEIGHT;
     })
     .onEnd(() => {
-      translateY.value = withSpring(0, { damping: 18, stiffness: 220 });
+      translateY.value = withSpring(0, SOFT_SPRING);
+      liftProgress.value = withSpring(0, SOFT_SPRING);
       isDragging.value = 0;
       stepsAcc.value = 0;
+      runOnJS(triggerDropHaptic)();
     })
     .onFinalize(() => {
-      translateY.value = withSpring(0, { damping: 18, stiffness: 220 });
+      translateY.value = withSpring(0, SOFT_SPRING);
+      liftProgress.value = withSpring(0, SOFT_SPRING);
       isDragging.value = 0;
       stepsAcc.value = 0;
     });
 
-  const animatedStyle = useAnimatedStyle(() => ({
-    transform: [
-      { translateY: translateY.value },
-      { scale: isDragging.value ? 1.04 : 1 },
-    ],
-    // הגבהה ויזואלית בזמן drag כך שה-row המתנייד תמיד מעל האחרים בזמן
-    // החלפת מיקום, גם אם React טרם השלים את הרינדור.
-    zIndex: isDragging.value ? 50 : 0,
-    elevation: isDragging.value ? 12 : 2,
-    shadowOpacity: isDragging.value ? 0.18 : 0.05,
-  }));
+  const animatedStyle = useAnimatedStyle(() => {
+    // interp [0..1] for scale (1 → 1.06) and shadow (0.05 → 0.22)
+    const lift = liftProgress.value;
+    return {
+      transform: [
+        { translateY: translateY.value },
+        { scale: 1 + lift * 0.06 },
+      ],
+      // הגבהה ויזואלית בזמן drag כך שה-row המתנייד תמיד מעל האחרים בזמן
+      // החלפת מיקום, גם אם React טרם השלים את הרינדור.
+      zIndex: isDragging.value ? 50 : 0,
+      elevation: 2 + lift * 14,
+      shadowOpacity: 0.05 + lift * 0.17,
+      shadowRadius: 6 + lift * 10,
+    };
+  });
 
   // ה-GestureDetector עוטף את כל ה-row כדי שאפשר יהיה לתפוס מכל מקום.
   // ה-arrow Pressables עדיין מקבלים taps בזכות activeOffsetY של ה-pan.
