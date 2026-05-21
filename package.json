@@ -30,6 +30,7 @@
     "@vercel/analytics": "^2.0.1",
     "@vercel/speed-insights": "^2.0.0",
     "ai": "^6.0.168",
+    "dotenv": "^17.4.2",
     "drizzle-orm": "^0.45.1",
     "expo": "~55.0.11",
     "expo-apple-authentication": "~55.0.12",
