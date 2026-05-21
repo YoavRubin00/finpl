@@ -31,7 +31,7 @@ import Animated, {
   Easing,
 } from 'react-native-reanimated';
 import { useEconomyStore } from '../economy/useEconomyStore';
-import { useSubscriptionStore } from '../subscription/useSubscriptionStore';
+import { useIsPro } from '../subscription/useSubscription';
 import { useAuthStore } from '../auth/useAuthStore';
 import { useBridgeStore } from './useBridgeStore';
 import { trackBridgeClick } from '../../utils/trackBridgeClick';
@@ -187,7 +187,7 @@ interface BridgeScreenProps {
 export function BridgeScreen({ walkthroughAutoScroll }: BridgeScreenProps = {}) {
   const router = useRouter();
   const coins = useEconomyStore((s) => s.coins);
-  const isPro = useSubscriptionStore((s) => s.tier === "pro" && s.status === "active");
+  const isPro = useIsPro();
   const email = useAuthStore((s) => s.email);
   const isBenefitRedeemed = useBridgeStore((s) => s.isBenefitRedeemed);
   const redeemBenefit = useBridgeStore((s) => s.redeemBenefit);

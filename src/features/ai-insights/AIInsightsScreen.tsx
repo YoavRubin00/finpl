@@ -14,7 +14,7 @@ import { Lock, RefreshCw } from "lucide-react-native";
 import { useWeeklyInsightStore } from "./useWeeklyInsightStore";
 
 import { BackButton } from "../../components/ui/BackButton";
-import { useSubscriptionStore } from "../subscription/useSubscriptionStore";
+import { useIsPro } from "../subscription/useSubscription";
 import { useEconomyStore } from "../economy/useEconomyStore";
 import { useAuthStore } from "../auth/useAuthStore";
 import { useChapterStore } from "../chapter-1-content/useChapterStore";
@@ -223,7 +223,7 @@ function UpgradeCTA({ onPress }: { onPress: () => void }) {
 export function AIInsightsScreen() {
   const router = useRouter();
   const { top: topInset, bottom: bottomInset } = useSafeAreaInsets();
-  const isPro = useSubscriptionStore((s) => s.tier === 'pro' && s.status === 'active');
+  const isPro = useIsPro();
   const ctx = useInsightContext();
   const { aiProfile, displayName } = ctx;
 

@@ -6,7 +6,8 @@ import { Coins, Diamond, X, ArrowRight, ChevronRight } from "lucide-react-native
 import LottieView from "lottie-react-native";
 import { useRouter } from "expo-router";
 import { useEconomyStore } from "../economy/useEconomyStore";
-import { useSubscriptionStore } from "../subscription/useSubscriptionStore";
+import { useHeartsStore, MAX_HEARTS } from "../subscription/useHeartsStore";
+import { useIsPro } from "../subscription/useSubscription";
 import { useAuthStore } from "../auth/useAuthStore";
 import { ShopItemCard } from "./ShopItemCard";
 import { EmptyPremium } from "../../components/svg/shop/EmptyStates";
@@ -56,8 +57,8 @@ export function ShopModal() {
   const spendCoins = useEconomyStore((s) => s.spendCoins);
   const spendGems = useEconomyStore((s) => s.spendGems);
   const addCoins = useEconomyStore((s) => s.addCoins);
-  const restoreAllHearts = useSubscriptionStore((s) => s.restoreAllHearts);
-  const isPro = useSubscriptionStore((s) => s.tier === "pro" && s.status === "active");
+  const restoreAllHearts = useHeartsStore((s) => s.restoreAllHearts);
+  const isPro = useIsPro();
   const addOwnedAvatar = useAuthStore((s) => s.addOwnedAvatar);
   const setAvatar = useAuthStore((s) => s.setAvatar);
 
@@ -113,10 +114,10 @@ export function ShopModal() {
       if (pendingItem.id === "heart-refill-full") {
         restoreAllHearts();
       } else if (pendingItem.id === "heart-refill-1") {
-        const store = useSubscriptionStore.getState();
+        const store = useHeartsStore.getState();
         const current = store.hearts;
-        if (current < 5) {
-          useSubscriptionStore.setState({ hearts: current + 1 });
+        if (current < MAX_HEARTS) {
+          useHeartsStore.setState({ hearts: current + 1 });
         }
       } else if (pendingItem.id === "streak-freeze") {
         eco.addStreakFreezes(1);

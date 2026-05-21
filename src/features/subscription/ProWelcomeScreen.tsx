@@ -22,7 +22,7 @@ import {
   Sparkles,
 } from "lucide-react-native";
 import { ProBadge } from "../../components/ui/ProBadge";
-import { useSubscriptionStore } from "./useSubscriptionStore";
+import { useUsageStore } from "./useUsageStore";
 import { heavyHaptic } from "../../utils/haptics";
 
 const { width: SCREEN_W } = Dimensions.get("window");
@@ -38,7 +38,7 @@ const BENEFITS = [
 
 export function ProWelcomeScreen() {
   const router = useRouter();
-  const markSeen = useSubscriptionStore((s) => s.markProWelcomeSeen);
+  const markSeen = useUsageStore((s) => s.markProWelcomeSeen);
 
   const handleContinue = useCallback(() => {
     heavyHaptic();

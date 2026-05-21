@@ -24,7 +24,7 @@ import { useFocusEffect } from "@react-navigation/native";
 import { Lock, ChevronDown, Home, Shield, Scale, TrendingUp, Crown, FastForward, X } from "lucide-react-native";
 import { useEconomyStore } from "../economy/useEconomyStore";
 import { useChapterStore } from "../chapter-1-content/useChapterStore";
-import { useSubscriptionStore } from "../subscription/useSubscriptionStore";
+import { useIsPro } from "../subscription/useSubscription";
 import { useAuthStore } from "../auth/useAuthStore";
 import { getPyramidStatus } from "../../utils/progression";
 import { ARENAS, type ArenaConfig } from "./arenaConfig";
@@ -958,7 +958,7 @@ export function DuoLearnScreen() {
   const xp = useEconomyStore((s) => s.xp);
   const streak = useEconomyStore((s) => s.streak);
   const progress = useChapterStore((s) => s.progress);
-  const isPro = useSubscriptionStore((s) => s.tier === "pro" && s.status === "active");
+  const isPro = useIsPro();
   const displayName = useAuthStore((s) => s.displayName) ?? "";
   const { layer } = getPyramidStatus(xp);
   const [lockedModalVisible, setLockedModalVisible] = useState(false);

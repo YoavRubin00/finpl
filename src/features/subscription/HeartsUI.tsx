@@ -19,7 +19,9 @@ import Animated, {
 import { Heart } from 'lucide-react-native';
 import LottieView from '../../components/ui/SafeLottieView';
 import { FINN_STANDARD } from '../retention-loops/finnMascotConfig';
-import { useSubscriptionStore, getTimeUntilNextHeart } from './useSubscriptionStore';
+import { useHeartsStore, MAX_HEARTS } from './useHeartsStore';
+import { getTimeUntilNextHeart } from './subscriptionConstants';
+import { useIsPro } from './useSubscription';
 import { useEconomyStore } from '../../features/economy/useEconomyStore';
 import { tapHaptic, successHaptic } from '../../utils/haptics';
 import { useRewardedAd } from '../../hooks/useRewardedAd';
@@ -27,19 +29,17 @@ import { useChapterStore } from '../chapter-1-content/useChapterStore';
 import { useBandit } from '../bandit/useBandit';
 import { useAppActive } from '../../hooks/useAppActive';
 
-const MAX_HEARTS = 5;
-
 /* ------------------------------------------------------------------ */
 /*  HeartsDisplay, shows in lesson header                             */
 /* ------------------------------------------------------------------ */
 
 export function HeartsDisplay() {
-    const hearts = useSubscriptionStore((s) => s.hearts);
-    const isPro = useSubscriptionStore((s) => s.tier === "pro" && s.status === "active");
+    const hearts = useHeartsStore((s) => s.hearts);
+    const isPro = useIsPro();
 
     // Trigger refill check once on mount
     useEffect(() => {
-        useSubscriptionStore.getState().refillHearts();
+        useHeartsStore.getState().refillHearts();
     }, []);
 
     const heartsDisplayValue = isPro ? Infinity : hearts;
@@ -102,8 +102,8 @@ function formatTime(ms: number): string {
 
 export function OutOfHeartsModal({ visible, onDismiss, onUpgrade, onHeartsRefilled }: OutOfHeartsModalProps) {
     const router = useRouter();
-    const lastHeartLostAt = useSubscriptionStore((s) => s.lastHeartLostAt);
-    const getHearts = useSubscriptionStore((s) => s.getHearts);
+    const lastHeartLostAt = useHeartsStore((s) => s.lastHeartLostAt);
+    const getHearts = useHeartsStore((s) => s.getHearts);
     const hearts = getHearts();
     const coins = useEconomyStore((s) => s.coins);
     const gems = useEconomyStore((s) => s.gems);
@@ -160,12 +160,12 @@ export function OutOfHeartsModal({ visible, onDismiss, onUpgrade, onHeartsRefill
     }, [onUpgrade]);
 
     const handleCoinRefill = useCallback(() => {
-        const store = useSubscriptionStore.getState();
+        const store = useHeartsStore.getState();
         const current = store.hearts ?? 0;
         if (current >= MAX_HEARTS) { onDismiss(); return; }
         const success = useEconomyStore.getState().spendCoins(HEART_REFILL_COIN_COST);
         if (success) {
-            useSubscriptionStore.setState({ hearts: current + 1, lastHeartLostAt: current + 1 >= MAX_HEARTS ? null : store.lastHeartLostAt });
+            useHeartsStore.setState({ hearts: current + 1, lastHeartLostAt: current + 1 >= MAX_HEARTS ? null : store.lastHeartLostAt });
             successHaptic();
             trackConversion();
             if (onHeartsRefilled) {
@@ -182,10 +182,10 @@ export function OutOfHeartsModal({ visible, onDismiss, onUpgrade, onHeartsRefill
         tapHaptic();
         showAd(() => {
             // Reward: restore 1 heart
-            const store = useSubscriptionStore.getState();
+            const store = useHeartsStore.getState();
             const current = store.hearts ?? 0;
             if (current < MAX_HEARTS) {
-                useSubscriptionStore.setState({ hearts: current + 1, lastHeartLostAt: null });
+                useHeartsStore.setState({ hearts: current + 1, lastHeartLostAt: null });
             }
             successHaptic();
             trackConversion();
@@ -197,9 +197,9 @@ export function OutOfHeartsModal({ visible, onDismiss, onUpgrade, onHeartsRefill
         });
     }, [showAd, onDismiss, onHeartsRefilled, trackConversion]);
 
-    const startPracticeForHeart = useSubscriptionStore((s) => s.startPracticeForHeart);
-    const practiceRefillsToday = useSubscriptionStore((s) => s.practiceRefillsToday);
-    const practiceRefillDate = useSubscriptionStore((s) => s.practiceRefillDate);
+    const startPracticeForHeart = useHeartsStore((s) => s.startPracticeForHeart);
+    const practiceRefillsToday = useHeartsStore((s) => s.practiceRefillsToday);
+    const practiceRefillDate = useHeartsStore((s) => s.practiceRefillDate);
     const chapterProgress = useChapterStore((s) => s.progress);
     const setCurrentChapter = useChapterStore((s) => s.setCurrentChapter);
     const setCurrentModule = useChapterStore((s) => s.setCurrentModule);
@@ -243,12 +243,12 @@ export function OutOfHeartsModal({ visible, onDismiss, onUpgrade, onHeartsRefill
     const handleGemRefill = useCallback(() => {
         tapHaptic();
         if (gems >= HEART_REFILL_GEM_COST) {
-            const store = useSubscriptionStore.getState();
+            const store = useHeartsStore.getState();
             const current = store.hearts ?? 0;
             if (current >= MAX_HEARTS) { onDismiss(); return; }
             const success = useEconomyStore.getState().spendGems(HEART_REFILL_GEM_COST);
             if (success) {
-                useSubscriptionStore.setState({ hearts: current + 1, lastHeartLostAt: current + 1 >= MAX_HEARTS ? null : store.lastHeartLostAt });
+                useHeartsStore.setState({ hearts: current + 1, lastHeartLostAt: current + 1 >= MAX_HEARTS ? null : store.lastHeartLostAt });
                 successHaptic();
                 trackConversion();
                 if (onHeartsRefilled) {

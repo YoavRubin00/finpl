@@ -18,7 +18,8 @@ import Animated, {
 import { LinearGradient } from 'expo-linear-gradient';
 import { X } from 'lucide-react-native';
 import { useEconomyStore } from '../economy/useEconomyStore';
-import { useSubscriptionStore } from '../subscription/useSubscriptionStore';
+import { useHeartsStore, MAX_HEARTS } from '../subscription/useHeartsStore';
+import { useIsPro } from '../subscription/useSubscription';
 import { useAuthStore } from '../auth/useAuthStore';
 import { useRouter } from 'expo-router';
 import { useTutorialStore } from '../../stores/useTutorialStore';
@@ -303,8 +304,8 @@ export function ShopScreen() {
   const spendCoins = useEconomyStore((s) => s.spendCoins);
   const spendGems = useEconomyStore((s) => s.spendGems);
   const addCoins = useEconomyStore((s) => s.addCoins);
-  const restoreAllHearts = useSubscriptionStore((s) => s.restoreAllHearts);
-  const isPro = useSubscriptionStore((s) => s.tier === 'pro' && s.status === 'active');
+  const restoreAllHearts = useHeartsStore((s) => s.restoreAllHearts);
+  const isPro = useIsPro();
   const avatarId = useAuthStore((s) => s.profile?.avatarId ?? null);
   const ownedAvatars = useAuthStore((s) => s.profile?.ownedAvatars ?? []);
   const setAvatar = useAuthStore((s) => s.setAvatar);
@@ -375,8 +376,8 @@ export function ShopScreen() {
       const ONE_HOUR = 60 * 60 * 1000;
       if (pendingItem.id === 'heart-refill-full') restoreAllHearts();
       else if (pendingItem.id === 'heart-refill-1') {
-        const s = useSubscriptionStore.getState();
-        if (s.hearts < 4) useSubscriptionStore.setState({ hearts: s.hearts + 1 });
+        const s = useHeartsStore.getState();
+        if (s.hearts < MAX_HEARTS) useHeartsStore.setState({ hearts: s.hearts + 1 });
       } else if (pendingItem.id === 'streak-freeze') {
         eco.addStreakFreezes(1);
         successHaptic();

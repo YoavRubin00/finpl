@@ -18,7 +18,8 @@ import Animated, {
 const ZERO_SHADOW_OFFSET = { width: 0, height: 0 } as const;
 import Svg, { Circle } from "react-native-svg";
 import { useEconomyStore } from "../../features/economy/useEconomyStore";
-import { useSubscriptionStore } from "../../features/subscription/useSubscriptionStore";
+import { useHeartsStore } from "../../features/subscription/useHeartsStore";
+import { useIsPro } from "../../features/subscription/useSubscription";
 import { useAuthStore } from "../../features/auth/useAuthStore";
 import { useFunStore } from "../../stores/useFunStore";
 import { FINN_DAD_JOKES, FINN_FUN_FACTS } from "../../features/fun/finnJokesData";
@@ -191,7 +192,7 @@ export function GlobalWealthHeader({ compact = false }: GlobalWealthHeaderProps)
   const xp = useEconomyStore((st) => st.xp);
   const coins = useEconomyStore((st) => st.coins);
   const gems = useEconomyStore((st) => st.gems);
-  const isPro = useSubscriptionStore((st) => st.tier === "pro" && st.status === "active");
+  const isPro = useIsPro();
   const avatarId = useAuthStore((st) => st.profile?.avatarId ?? null);
   const appActive = useAppActive();
 
@@ -201,7 +202,7 @@ export function GlobalWealthHeader({ compact = false }: GlobalWealthHeaderProps)
 
   // Trigger refill check once on mount
   useEffect(() => {
-    useSubscriptionStore.getState().refillHearts();
+    useHeartsStore.getState().refillHearts();
     // Order matters: refreshMail reads `lastActiveDate` to decide between the daily
     // joke variant and the comeback variant. We mark "active today" *after* it runs
     // so that today's open doesn't poison the comeback detection.

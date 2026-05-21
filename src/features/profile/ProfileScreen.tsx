@@ -21,7 +21,7 @@ import {
 import { useEconomyStore } from "../economy/useEconomyStore";
 import { useDuelsStore } from "../social/useDuelsStore";
 import { useAuthStore } from "../auth/useAuthStore";
-import { useSubscriptionStore } from "../subscription/useSubscriptionStore";
+import { useIsPro } from "../subscription/useSubscription";
 import { HeartsDisplay } from "../subscription/HeartsUI";
 import { getPyramidStatus } from "../../utils/progression";
 import { TransitionOverlay } from "../../components/ui/TransitionOverlay";
@@ -102,7 +102,7 @@ export function ProfileScreen() {
   const duelRecord = useDuelsStore((s) => s.record);
   const displayName = useAuthStore((s) => s.displayName);
   const profile = useAuthStore((s) => s.profile);
-  const isPro = useSubscriptionStore((s) => s.tier === "pro" && s.status === "active");
+  const isPro = useIsPro();
   const isMinor = profile?.ageGroup === "minor";
   const referredFriends = useReferralStore((s) => s.referredFriends);
   const { showStreakCelebration } = useStreakCelebration();

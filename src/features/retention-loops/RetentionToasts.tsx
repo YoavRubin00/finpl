@@ -12,7 +12,8 @@
  */
 import { useEffect, useRef, useState } from 'react';
 import { useEconomyStore } from '../economy/useEconomyStore';
-import { useSubscriptionStore } from '../subscription/useSubscriptionStore';
+import { useHeartsStore, MAX_HEARTS } from '../subscription/useHeartsStore';
+import { useIsPro } from '../subscription/useSubscription';
 import { SharkInsightToast } from '../../components/ui/SharkInsightToast';
 import {
   FINN_HAPPY,
@@ -20,8 +21,6 @@ import {
   FINN_DANCING,
 } from './finnMascotConfig';
 import { getActiveSeasonalEvent } from '../seasonal-events/seasonalEvents';
-
-const MAX_HEARTS = 5;
 
 export function RetentionToasts() {
   // ── Source 1: Session-stacking bonus from useEconomyStore ──
@@ -38,8 +37,8 @@ export function RetentionToasts() {
   }, []);
 
   // ── Source 3: Hearts-full boost ──
-  const hearts = useSubscriptionStore((s) => s.hearts);
-  const isPro = useSubscriptionStore((s) => s.tier === 'pro' && s.status === 'active');
+  const hearts = useHeartsStore((s) => s.hearts);
+  const isPro = useIsPro();
   const lessonMult = useEconomyStore((s) => s.lessonXPMultiplier);
   const setLessonMult = useEconomyStore((s) => s.setLessonXPMultiplier);
   const heartsFull = !isPro && hearts === MAX_HEARTS;

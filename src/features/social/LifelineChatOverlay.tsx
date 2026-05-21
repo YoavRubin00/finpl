@@ -33,7 +33,7 @@ import Animated, {
 import { X, Send, Lock } from "lucide-react-native";
 import { useAuthStore } from "../auth/useAuthStore";
 import { useChapterStore } from "../chapter-1-content/useChapterStore";
-import { useSubscriptionStore } from "../subscription/useSubscriptionStore";
+import { useIsPro } from "../subscription/useSubscription";
 import { streamChatRequest } from "../../utils/streamChat";
 import { useUpgradeModalStore } from "../../stores/useUpgradeModalStore";
 import { COMPANION_PERSONALITIES } from "../chat/chatData";
@@ -158,7 +158,7 @@ export function LifelineChatOverlay({ visible, conceptTag, onClose }: Props) {
   const headerTopPad = Platform.OS === "android"
     ? Math.max(safeInsets.top, 28) + 28
     : safeInsets.top + 10;
-  const isPro = useSubscriptionStore((s) => s.isPro());
+  const isPro = useIsPro();
 
   const authId = useAuthStore((s) => s.email);
 

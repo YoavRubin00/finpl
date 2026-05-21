@@ -14,7 +14,7 @@ import { LinearGradient } from "expo-linear-gradient";
 import { BackButton } from "../../components/ui/BackButton";
 import { useTheme } from "../../hooks/useTheme";
 import { useSavedItemsStore } from "./useSavedItemsStore";
-import { useSubscriptionStore } from "../subscription/useSubscriptionStore";
+import { useIsPro } from "../subscription/useSubscription";
 import { CompactFeedCardPreview } from "./CompactFeedCardPreview";
 import type { SavedItem } from "./savedItemTypes";
 import { MAX_SAVED_ITEMS } from "./savedItemTypes";
@@ -39,9 +39,7 @@ function formatRelativeDate(iso: string): string {
 export function SavedItemsScreen() {
   const theme = useTheme();
   const router = useRouter();
-  const isPro = useSubscriptionStore(
-    (s) => s.tier === "pro" && s.status === "active",
-  );
+  const isPro = useIsPro();
   const items = useSavedItemsStore((s) => s.items);
   const removeItem = useSavedItemsStore((s) => s.removeItem);
 

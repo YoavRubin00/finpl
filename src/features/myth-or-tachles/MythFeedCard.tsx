@@ -9,7 +9,7 @@ import { useSoundEffect } from '../../hooks/useSoundEffect';
 import { LottieIcon } from '../../components/ui/LottieIcon';
 import { buildPersonalizedDeck } from './mythData';
 import { useMythStore, MYTH_COOLDOWN_MS } from './useMythStore';
-import { useSubscriptionStore } from '../subscription/useSubscriptionStore';
+import { useIsPro } from '../subscription/useSubscription';
 import { useAuthStore } from '../auth/useAuthStore';
 import { MythCardDeck } from './MythCardDeck';
 import { MythFeedbackModal } from './MythFeedbackModal';
@@ -31,7 +31,7 @@ export const MythFeedCard = React.memo(function MythFeedCard({ isInterModule, on
         resetMythSessionIfCooldownElapsed,
         lastMythSessionTime,
     } = useMythStore();
-    const isPro = useSubscriptionStore((s) => s.tier === 'pro' && s.status === 'active');
+    const isPro = useIsPro();
     const { playSound } = useSoundEffect();
 
     useEffect(() => { resetMythSessionIfCooldownElapsed(); }, []);

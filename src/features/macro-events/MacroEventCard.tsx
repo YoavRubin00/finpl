@@ -38,7 +38,7 @@ import {
   getFinnImage,
   type FinnAnimationState,
 } from '../retention-loops/finnMascotConfig';
-import { useSubscriptionStore } from '../subscription/useSubscriptionStore';
+import { useIsPro } from '../subscription/useSubscription';
 import { macroEventsData } from './macroEventsData';
 import { tapHaptic, successHaptic, errorHaptic } from '../../utils/haptics';
 import { useAppActive } from '../../hooks/useAppActive';
@@ -70,7 +70,7 @@ export const MacroEventCard = React.memo(function MacroEventCard({ item, isActiv
   const canAnswerMacro = useMacroEventStore((s) => s.canAnswerMacro);
   const resetSessionIfCooldownElapsed = useMacroEventStore((s) => s.resetSessionIfCooldownElapsed);
   const lastMacroSessionTime = useMacroEventStore((s) => s.lastMacroSessionTime);
-  const isPro = useSubscriptionStore((s) => s.tier === 'pro' && s.status === 'active');
+  const isPro = useIsPro();
   const appActive = useAppActive();
 
   useEffect(() => { resetSessionIfCooldownElapsed(); }, [isActive]);
