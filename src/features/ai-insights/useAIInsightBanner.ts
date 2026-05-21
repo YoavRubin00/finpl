@@ -8,7 +8,8 @@ import { economyQueryKey } from '../economy/useEconomy';
 import { streakQueryKey } from '../economy/useStreak';
 import type { Economy } from '../../lib/api/economy';
 import type { StreakState } from '../../lib/api/streak';
-import { useChapterStore } from '../chapter-1-content/useChapterStore';
+import { progressQueryKey } from '../chapter-1-content/useProgress';
+import type { ModuleProgressRow } from '../../lib/api/progress';
 import { MODULE_NAMES } from '../chat/chatData';
 import { getApiBase } from '../../db/apiBase';
 import { useTutorialStore } from '../../stores/useTutorialStore';
@@ -21,8 +22,8 @@ async function fetchBannerTip(): Promise<string | null> {
     const auth = useAuthStore.getState();
     const eco = queryClient.getQueryData<Economy | null>(economyQueryKey);
     const streakState = queryClient.getQueryData<StreakState | null>(streakQueryKey);
-    const allModuleIds = Object.values(useChapterStore.getState().progress)
-      .flatMap((cp) => cp.completedModules);
+    const progressData = queryClient.getQueryData<ModuleProgressRow[]>(progressQueryKey) ?? [];
+    const allModuleIds = progressData.filter((m) => m.status === 'completed').map((m) => m.moduleId);
     const lastModuleName = allModuleIds.length > 0
       ? (MODULE_NAMES[allModuleIds[allModuleIds.length - 1]] ?? null)
       : null;

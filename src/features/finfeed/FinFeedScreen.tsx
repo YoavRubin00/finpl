@@ -37,7 +37,7 @@ import { FeedSidebar } from "./FeedSidebar";
 import { useFeedInteractionsStore } from "./useFeedInteractionsStore";
 import { FeedBookmarkButton } from "../saved-items/FeedBookmarkButton";
 import { getBookmarkVariant } from "../saved-items/getBookmarkVariant";
-import { useChapterStore } from "../chapter-1-content/useChapterStore";
+import { useProgress } from "../chapter-1-content/useProgress";
 import { useAITelemetryStore } from "../ai-personalization/useAITelemetryStore";
 import { MacroEventCard } from "../macro-events/MacroEventCard";
 import { macroEventsData } from "../macro-events/macroEventsData";
@@ -625,7 +625,7 @@ export function FinFeedScreen() {
     flatListRef.current?.scrollToIndex({ index, animated: true });
   };
 
-  const progress = useChapterStore((s) => s.progress);
+  const { data: progressData } = useProgress();
   const aiProfile = useAITelemetryStore((s) => s.profile);
   const getUnansweredMacroEvents = useMacroEventStore((s) => s.getUnanswered);
   const completedScenarios = useScenarioLabStore((s) => s.completedScenarios);
@@ -771,7 +771,11 @@ export function FinFeedScreen() {
 
     // Hook cards, top 4 uncompleted per chapter across all 5 chapters
     const hooks: FeedModuleHook[] = CHAPTER_META.flatMap(({ data, storeId, chapterId, name, layer }) => {
-      const completedSet = new Set(progress[storeId]?.completedModules ?? []);
+      const chNum = storeId.replace('ch-', '');
+      const prefix = `mod-${chNum}-`;
+      const completedSet = new Set(
+        progressData?.filter((m) => m.moduleId.startsWith(prefix) && m.status === 'completed').map((m) => m.moduleId) ?? [],
+      );
       const result: FeedModuleHook[] = [];
       for (let index = 0; index < data.modules.length && result.length < 4; index++) {
         const m = data.modules[index];
@@ -1012,7 +1016,7 @@ export function FinFeedScreen() {
     // they interleave naturally between text/quote items as the user scrolls.)
 
     return filteredMerged;
-  }, [feedSeed, simSeed, progress, aiProfile, getUnansweredMacroEvents, completedScenarios, isAuthedNonGuest]);
+  }, [feedSeed, simSeed, progressData, aiProfile, getUnansweredMacroEvents, completedScenarios, isAuthedNonGuest]);
 
   // Execute pending scroll by ID once feedItems are populated
   useEffect(() => {

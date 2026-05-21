@@ -10,7 +10,7 @@ import { FINN_STANDARD } from "../retention-loops/finnMascotConfig";
 import type { FeedQuote } from "./types";
 import { CHAPTER_CTA_COLORS } from "./types";
 import Animated from "react-native-reanimated";
-import { useChapterStore } from "../chapter-1-content/useChapterStore";
+import { useChapterUIStore } from "../chapter-1-content/useChapterUIStore";
 
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
@@ -22,8 +22,8 @@ interface FeedQuoteItemProps {
 
 export const FeedQuoteItem = React.memo(function FeedQuoteItem({ item, isActive }: FeedQuoteItemProps) {
     const router = useRouter();
-    const setCurrentChapter = useChapterStore((s) => s.setCurrentChapter);
-    const setCurrentModule = useChapterStore((s) => s.setCurrentModule);
+    const setCurrentChapter = useChapterUIStore((s) => s.setCurrentChapter);
+    const setCurrentModule = useChapterUIStore((s) => s.setCurrentModule);
 
     const hasModule = Boolean(item.moduleId && item.chapterId);
     const ctaColors = CHAPTER_CTA_COLORS[item.chapterId ?? "chapter-1"] ?? CHAPTER_CTA_COLORS["chapter-1"];

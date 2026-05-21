@@ -38,7 +38,7 @@ import { Timeframe, ChartDataPoint, VolatilityRating, AssetType, TradableAsset, 
 import { useTradingStore } from './useTradingStore';
 import { useTradingHubUiStore } from './useTradingHubUiStore';
 import { useMarketMissionStore } from './useMarketMissionStore';
-import { useChapterStore } from '../chapter-1-content/useChapterStore';
+import { useProgress } from '../chapter-1-content/useProgress';
 import { useTutorialStore } from '../../stores/useTutorialStore';
 import { useAuthStore } from '../auth/useAuthStore';
 import { TradingHubTutorial } from './TradingHubTutorial';
@@ -167,8 +167,10 @@ export function TradingHubScreen() {
 
     // Crypto unlock: subscribe to chapter-5 progress so a mid-session completion
     // triggers the unlock immediately, not just on the next mount.
-    const ch5CompletedModules = useChapterStore(
-        (s) => s.progress['ch-5']?.completedModules.length ?? 0,
+    const { data: progressData } = useProgress();
+    const ch5CompletedModules = useMemo(
+        () => progressData?.filter((m) => m.moduleId.startsWith('mod-5-') && m.status === 'completed').length ?? 0,
+        [progressData],
     );
     useEffect(() => {
         if (ch5CompletedModules > 0) {

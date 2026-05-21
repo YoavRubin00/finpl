@@ -6,7 +6,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import { X, ChevronLeft } from "lucide-react-native";
 import { FINN_HAPPY } from "../retention-loops/finnMascotConfig";
-import { useChapterStore } from "../chapter-1-content/useChapterStore";
+import { useChapterUIStore } from "../chapter-1-content/useChapterUIStore";
 import { tapHaptic } from "../../utils/haptics";
 import { useSoundEffect } from "../../hooks/useSoundEffect";
 
@@ -60,8 +60,8 @@ const TOPICS: TopicLink[] = [
 export function BenbenStudyNudgeModal({ visible, onClose }: Props) {
   const insets = useSafeAreaInsets();
   const router = useRouter();
-  const setCurrentChapter = useChapterStore((s) => s.setCurrentChapter);
-  const setCurrentModule = useChapterStore((s) => s.setCurrentModule);
+  const setCurrentChapter = useChapterUIStore((s) => s.setCurrentChapter);
+  const setCurrentModule = useChapterUIStore((s) => s.setCurrentModule);
   const { playSound } = useSoundEffect();
 
   useEffect(() => {

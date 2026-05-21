@@ -28,7 +28,8 @@ import Animated, {
   SlideInUp,
 } from "react-native-reanimated";
 import { useAuthStore } from "../auth/useAuthStore";
-import { useChapterStore } from "../chapter-1-content/useChapterStore";
+import { useChapterUIStore } from "../chapter-1-content/useChapterUIStore";
+import { useProgress } from "../chapter-1-content/useProgress";
 import { useAdaptiveStore } from "../social/useAdaptiveStore";
 import { useIsPro, subscriptionQueryKey } from "../subscription/useSubscription";
 import { useUsageStore } from "../subscription/useUsageStore";
@@ -311,8 +312,8 @@ export function ChatScreen({ lessonContext }: { lessonContext?: LessonContext } 
   const displayName = useAuthStore((s) => s.displayName);
   const updateProfile = useAuthStore((s) => s.updateProfile);
   const profile = useAuthStore((s) => s.profile);
-  const currentChapterId = useChapterStore((s) => s.currentChapterId);
-  const progress = useChapterStore((s) => s.progress);
+  const currentChapterId = useChapterUIStore((s) => s.currentChapterId);
+  const { data: progressData } = useProgress();
   const hasChosenStyle = useTutorialStore((s) => s.hasChosenChatStyle);
   const completeChatStyleChoice = useTutorialStore((s) => s.completeChatStyleChoice);
   const [showStylePicker, setShowStylePicker] = useState(false);
@@ -370,12 +371,16 @@ export function ChatScreen({ lessonContext }: { lessonContext?: LessonContext } 
 
   // Aggregate completed modules across ALL chapters for full context-awareness
   const allCompletedModules = useMemo(
-    () => Object.values(progress).flatMap((cp) => cp.completedModules),
-    [progress],
+    () => progressData?.filter((m) => m.status === 'completed').map((m) => m.moduleId) ?? [],
+    [progressData],
   );
   // Current chapter's modules for backward-compatible suggestion logic
-  const chapterProgress = progress[currentChapterId];
-  const completedModules = chapterProgress?.completedModules ?? [];
+  const chNum = currentChapterId.replace('ch-', '');
+  const chPrefix = `mod-${chNum}-`;
+  const completedModules = useMemo(
+    () => allCompletedModules.filter((id) => id.startsWith(chPrefix)),
+    [allCompletedModules, chPrefix],
+  );
 
   const suggestions = useMemo(
     () => getContextualSuggestions(allCompletedModules, currentChapterId),

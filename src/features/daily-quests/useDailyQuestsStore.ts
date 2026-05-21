@@ -6,7 +6,8 @@ import { queryClient } from "../../lib/queryClient";
 import { streakQueryKey } from "../economy/useStreak";
 import type { StreakState } from "../../lib/api/streak";
 import { useDailyChallengesStore } from "../daily-challenges/use-daily-challenges-store";
-import { useChapterStore } from "../chapter-1-content/useChapterStore";
+import { progressQueryKey } from "../chapter-1-content/useProgress";
+import type { ModuleProgressRow } from "../../lib/api/progress";
 import type { DailyQuest, QuestRewardSummary } from "./daily-quest-types";
 import {
   QUEST_TEMPLATES,
@@ -115,11 +116,11 @@ export const useDailyQuestsStore = create<DailyQuestsState>()(
         if (questDate !== today || quests.length === 0) return;
 
         const challengeStore = useDailyChallengesStore.getState();
-        const chapterStore = useChapterStore.getState();
+        const progressData = queryClient.getQueryData<ModuleProgressRow[]>(progressQueryKey) ?? [];
 
         const dilemmaPlays = challengeStore.getDilemmaPlaysToday();
         const swipePlays = challengeStore.getSwipeGamePlaysToday();
-        const todayCompletedMods = Object.values(chapterStore.progress).flatMap((p) => p.completedModules).length;
+        const todayCompletedMods = progressData.filter((m) => m.status === 'completed').length;
 
         const updated = quests.map((q) => {
           if (q.isCompleted) return q;

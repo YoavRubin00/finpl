@@ -18,7 +18,7 @@ import { useIsPro } from "../subscription/useSubscription";
 import { useEconomy } from "../economy/useEconomy";
 import { useStreak } from "../economy/useStreak";
 import { useAuthStore } from "../auth/useAuthStore";
-import { useChapterStore } from "../chapter-1-content/useChapterStore";
+import { useProgress } from "../chapter-1-content/useProgress";
 import { useAITelemetryStore } from "../ai-personalization/useAITelemetryStore";
 import { useAdaptiveStore } from "../social/useAdaptiveStore";
 import { MODULE_NAMES } from "../chat/chatData";
@@ -67,15 +67,15 @@ function useInsightContext() {
   const streak = streakData?.currentStreak ?? 0;
   const displayName = useAuthStore((s) => s.displayName);
   const profile = useAuthStore((s) => s.profile);
-  const chapterProgress = useChapterStore((s) => s.progress);
+  const { data: progressData } = useProgress();
   const aiProfile = useAITelemetryStore((s) => s.profile);
-  return { xp, streak, displayName, profile, chapterProgress, aiProfile };
+  const allModuleIds = progressData?.filter((m) => m.status === 'completed').map((m) => m.moduleId) ?? [];
+  return { xp, streak, displayName, profile, allModuleIds, aiProfile };
 }
 
 async function fetchFromAPI(ctx: ReturnType<typeof useInsightContext>): Promise<Insight[]> {
-  const { xp, streak, displayName, profile, chapterProgress, aiProfile } = ctx;
+  const { xp, streak, displayName, profile, allModuleIds, aiProfile } = ctx;
   const weakConcepts = useAdaptiveStore.getState().getConsistentlyFailedConcepts().map((c) => c.conceptTag);
-  const allModuleIds = Object.values(chapterProgress).flatMap((cp) => cp.completedModules);
   const completedModuleNames = allModuleIds.map((id) => MODULE_NAMES[id] ?? id).filter(Boolean);
   const lastModuleName = allModuleIds.length > 0
     ? (MODULE_NAMES[allModuleIds[allModuleIds.length - 1]] ?? null)

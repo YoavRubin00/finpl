@@ -1,6 +1,7 @@
 // src/features/chapter-1-content/useProgress.ts
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { getProgress, upsertModuleProgress, type ModuleProgressRow } from '../../lib/api/progress';
+import { queryClient } from '../../lib/queryClient';
 
 export const progressQueryKey = ['progress'] as const;
 
@@ -51,4 +52,47 @@ export function useUpsertModuleProgress() {
     },
     onSettled: () => qc.invalidateQueries({ queryKey: progressQueryKey }),
   });
+}
+
+// ---------------------------------------------------------------------------
+// Derived helpers
+// ---------------------------------------------------------------------------
+
+/**
+ * Returns the moduleIds completed for a given chapterId prefix.
+ * chapterIdPrefix should be the store-key form, e.g. "ch-1".
+ * Modules belonging to this chapter have IDs starting with "mod-<N>-".
+ */
+export function useCompletedModulesForChapter(chapterStoreKey: string): string[] {
+  const { data } = useProgress();
+  if (!data) return [];
+  // chapterStoreKey is "ch-0", "ch-1" … → module prefix is "mod-0-", "mod-1-" …
+  const chNum = chapterStoreKey.replace('ch-', '');
+  const prefix = `mod-${chNum}-`;
+  return data
+    .filter((m) => m.moduleId.startsWith(prefix) && m.status === 'completed')
+    .map((m) => m.moduleId);
+}
+
+/**
+ * Synchronously read completed moduleIds for a chapter from the React Query
+ * cache. Safe to call from non-hook contexts (store actions, callbacks).
+ */
+export function getCompletedModulesSync(chapterStoreKey: string): string[] {
+  const data = queryClient.getQueryData<ModuleProgressRow[]>(progressQueryKey);
+  if (!data) return [];
+  const chNum = chapterStoreKey.replace('ch-', '');
+  const prefix = `mod-${chNum}-`;
+  return data
+    .filter((m) => m.moduleId.startsWith(prefix) && m.status === 'completed')
+    .map((m) => m.moduleId);
+}
+
+/**
+ * Synchronously check whether a module is completed from the query cache.
+ */
+export function isModuleCompletedSync(moduleId: string): boolean {
+  const data = queryClient.getQueryData<ModuleProgressRow[]>(progressQueryKey);
+  if (!data) return false;
+  return data.some((m) => m.moduleId === moduleId && m.status === 'completed');
 }
