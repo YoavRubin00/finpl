@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Platform } from "react-native";
-import { useSubscriptionStore } from "../features/subscription/useSubscriptionStore";
+import { useIsPro } from "../features/subscription/useSubscription";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 let AdsModule: any = null;
@@ -34,9 +34,7 @@ if (Platform.OS !== "web") {
  * Returns { showAd, isLoaded, isPro } — call showAd(onReward) to display.
  */
 export function useRewardedAd() {
-  const isPro = useSubscriptionStore(
-    (s) => s.tier === "pro" && s.status === "active",
-  );
+  const isPro = useIsPro();
   const [isLoaded, setIsLoaded] = useState(false);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const adRef = useRef<any>(null);

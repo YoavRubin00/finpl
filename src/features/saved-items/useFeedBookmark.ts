@@ -2,7 +2,7 @@ import { useCallback } from "react";
 import { Alert } from "react-native";
 import type { FeedItem } from "../finfeed/types";
 import { useSavedItemsStore } from "./useSavedItemsStore";
-import { useSubscriptionStore } from "../subscription/useSubscriptionStore";
+import { useIsPro } from "../subscription/useSubscription";
 import { useUpgradeModalStore } from "../../stores/useUpgradeModalStore";
 import { successHaptic, tapHaptic, errorHaptic } from "../../utils/haptics";
 import { getFeedItemTitle } from "./getFeedItemTitle";
@@ -26,9 +26,7 @@ export function useFeedBookmark(item: FeedItem): UseFeedBookmarkResult {
   const isBookmarked = useSavedItemsStore((s) => s.isSaved(id));
   const addItem = useSavedItemsStore((s) => s.addItem);
   const removeItem = useSavedItemsStore((s) => s.removeItem);
-  const isPro = useSubscriptionStore(
-    (s) => s.tier === "pro" && s.status === "active",
-  );
+  const isPro = useIsPro();
   const showUpgradeModal = useUpgradeModalStore((s) => s.show);
 
   const toggle = useCallback(() => {

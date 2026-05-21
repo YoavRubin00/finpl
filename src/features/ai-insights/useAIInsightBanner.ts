@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useRouter } from 'expo-router';
-import { useSubscriptionStore } from '../subscription/useSubscriptionStore';
+import { useIsPro } from '../subscription/useSubscription';
 import { useWeeklyInsightStore } from './useWeeklyInsightStore';
 import { useAuthStore } from '../auth/useAuthStore';
 import { useEconomyStore } from '../economy/useEconomyStore';
@@ -45,7 +45,7 @@ async function fetchBannerTip(): Promise<string | null> {
 
 export function useAIInsightBanner() {
   const router = useRouter();
-  const isPro = useSubscriptionStore((s) => s.tier === 'pro' && s.status === 'active');
+  const isPro = useIsPro();
   const [visible, setVisible] = useState(false);
   const [message, setMessage] = useState(DEFAULT_BANNER_MSG);
   const fetchedRef = useRef(false);
