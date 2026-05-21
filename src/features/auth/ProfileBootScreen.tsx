@@ -1,4 +1,6 @@
 // src/features/auth/ProfileBootScreen.tsx
+// Shown during the sign-in prefetch window (lifecycle signInWithProfile).
+// After 8s a retry button appears so network errors don't leave users stuck.
 import { useEffect, useState } from 'react';
 import { View, Text, Image, ActivityIndicator, Pressable } from 'react-native';
 
