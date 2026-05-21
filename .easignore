@@ -28,6 +28,24 @@ assets/SOUND/
 assets/AUDIO/
 assets/STOCK/
 assets/vercel_stage/
+
+# Daisy work files — originals from Higgsfield (PNG + MP4 + WebP source).
+# Code uses assets/webp/daisy/* (bundled WebPs) and remote URLs from
+# Vercel Blob. The originals in assets/daisy/ are NOT referenced anywhere.
+assets/daisy/
+
+# Podcast / dilemma audio served from Vercel Blob (couple-urls.generated.json,
+# podcasts.ts use remote URIs). Local copies are dev-only artifacts.
+assets/audio-podcasts/
+assets/audio-couple-dilemmas/
+assets/audio-samples/
+
+# Intermediate work folders — generated during one-shot asset pipelines,
+# never imported by app code.
+tmp-*/
+tmp-*.png
+tmp-*.webp
+tmp-*.mp4
 # Unreferenced image subdirectories (verified via code scan)
 assets/IMAGES/gems/
 assets/IMAGES/gold/
