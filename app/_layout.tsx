@@ -59,7 +59,7 @@ import {
 import { useAuthStore } from "../src/features/auth/useAuthStore";
 import { useEconomyStore } from "../src/features/economy/useEconomyStore";
 import { setOnUnauthorized } from "../src/lib/api/client";
-import { signOut as lifecycleSignOut } from "../src/lib/auth/lifecycle";
+import { signOut as lifecycleSignOut, bootFromToken } from "../src/lib/auth/lifecycle";
 
 setOnUnauthorized(() => {
   lifecycleSignOut().catch(() => { /* swallow */ });
@@ -405,12 +405,18 @@ export default function RootLayout() {
   }, [userEmail, hasCompletedOnboarding]);
 
   const [hydrated, setHydrated] = useState(false);
+  const [bootComplete, setBootComplete] = useState(false);
   const [splashVisible, setSplashVisible] = useState(true);
 
   useEffect(() => {
     const unsub = useAuthStore.persist.onFinishHydration(() => setHydrated(true));
     if (useAuthStore.persist.hasHydrated()) setHydrated(true);
     return unsub;
+  }, []);
+
+  // Cold-launch boot: attempt to restore session from stored JWT before rendering routes
+  useEffect(() => {
+    bootFromToken().finally(() => setBootComplete(true));
   }, []);
 
   useEffect(() => {
@@ -449,7 +455,7 @@ export default function RootLayout() {
     }
   }, [isAuthenticated, hasCompletedOnboarding, segments, navState?.key, hydrated]);
 
-  if (!hydrated || !navState?.key || !fontsLoaded) {
+  if (!hydrated || !bootComplete || !navState?.key || !fontsLoaded) {
     return <LoadingWisdom />;
   }
 
