@@ -9,9 +9,8 @@ import {
   Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useRouter } from 'expo-router';
 import Animated, { FadeInDown } from 'react-native-reanimated';
-import { ChevronLeft, Share2 } from 'lucide-react-native';
+import { Coins, Share2 } from 'lucide-react-native';
 
 import {
   calculateNet,
@@ -20,6 +19,7 @@ import {
 } from '../utils/taxBrackets2026';
 import { STITCH } from '../../../constants/theme';
 import { tapHaptic } from '../../../utils/haptics';
+import { ToolHeader } from '../components/ToolHeader';
 
 interface CalculatorState {
   monthlyGross: string;
@@ -47,7 +47,6 @@ function formatShekel(n: number): string {
 }
 
 export function SalaryNetCalculator(): React.ReactElement {
-  const router = useRouter();
   const [state, setState] = useState<CalculatorState>(INITIAL_STATE);
 
   const result: TaxCalculationResult = useMemo(() => {
@@ -66,15 +65,12 @@ export function SalaryNetCalculator(): React.ReactElement {
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
-      <View style={styles.header}>
-        <Pressable onPress={() => router.back()} style={styles.backBtn} accessibilityRole="button" accessibilityLabel="חזרה">
-          <ChevronLeft size={24} color={STITCH.onSurface} />
-        </Pressable>
-        <View style={{ flex: 1 }}>
-          <Text style={styles.headerTitle}>שכר ברוטו ↔ נטו</Text>
-          <Text style={styles.headerSubtitle}>כמה נכנס לך לכיס באמת</Text>
-        </View>
-      </View>
+      <ToolHeader
+        title="שכר ברוטו ↔ נטו"
+        subtitle="כמה נכנס לך לכיס באמת"
+        accentColor={ACCENT}
+        Icon={Coins}
+      />
 
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
         <Animated.View entering={FadeInDown.duration(360)} style={styles.resultCard}>
@@ -169,20 +165,6 @@ function BreakdownRow({ label, amount, bold }: { label: string; amount: number; 
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: STITCH.background },
-  header: {
-    backgroundColor: '#fff',
-    paddingHorizontal: 12,
-    paddingTop: 12,
-    paddingBottom: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: STITCH.surfaceHighest,
-    flexDirection: 'row-reverse',
-    alignItems: 'center',
-    gap: 8,
-  },
-  backBtn: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center', transform: [{ scaleX: -1 }] },
-  headerTitle: { fontSize: 20, fontWeight: '900', color: STITCH.onSurface, textAlign: 'right', writingDirection: 'rtl' },
-  headerSubtitle: { fontSize: 12, color: STITCH.onSurfaceVariant, textAlign: 'right', writingDirection: 'rtl', marginTop: 2 },
   scroll: { padding: 16, paddingBottom: 80, gap: 14 },
   resultCard: {
     backgroundColor: '#fff',

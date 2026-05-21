@@ -11,10 +11,12 @@ import {
 import Slider from '@react-native-community/slider';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Animated, { FadeInDown } from 'react-native-reanimated';
-import { ChevronLeft, Share2 } from 'lucide-react-native';
+import { ChevronLeft, PiggyBank, Share2 } from 'lucide-react-native';
 
 import { STITCH } from '../../../constants/theme';
 import { formatShekel } from '../../../utils/format';
+import { ToolHeader } from '../components/ToolHeader';
+import { ToolSharkTip } from '../components/ToolSharkTip';
 
 /**
  * Chunks 4.1 (Schema) + 4.2 (Logic) + 4.3 (UI).
@@ -137,19 +139,18 @@ export function PensionFeesComparator(): React.ReactElement {
 
   return (
     <SafeAreaView style={s.safe} edges={['top']}>
+      <ToolHeader
+        title="דמי ניהול פנסיה"
+        subtitle="כמה אבד לך לבית ההשקעות לאורך הצבירה?"
+        accentColor={ACCENT}
+        Icon={PiggyBank}
+      />
+
       <ScrollView
         contentContainerStyle={s.scroll}
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
-        {/* Header */}
-        <View style={s.header}>
-          <Text style={s.headerTitle}>כמה דמי ניהול גוזלים ממך?</Text>
-          <Text style={s.headerSubtitle}>
-            השוואה בין הקרן שלך לקרן זולה יותר — לאורך כל שנות הצבירה
-          </Text>
-        </View>
-
         {/* Primary result card */}
         <Animated.View entering={FadeInDown.duration(360)} style={s.resultCard}>
           <Text style={s.resultLabel}>
@@ -304,12 +305,13 @@ export function PensionFeesComparator(): React.ReactElement {
         </View>
 
         {/* Shark tip — once per tool */}
-        <View style={s.sharkTip}>
-          <Text style={s.sharkEmoji}>🦈</Text>
-          <Text style={s.sharkText}>
-            "0.1% דמי ניהול מצבירה זה לא 'קטן'. על פני 35 שנה — זה אגף שלם בדירה."
-          </Text>
-        </View>
+        <ToolSharkTip
+          text='"0.1% דמי ניהול מצבירה זה לא קטן."'
+          subtext="על פני 35 שנה — זה אגף שלם בדירה."
+          mood="talking"
+          accentColor={ACCENT_DARK}
+          accentSurface={ACCENT_DIM}
+        />
 
         {/* Share */}
         <Pressable
@@ -459,26 +461,6 @@ const s = StyleSheet.create({
     paddingBottom: 48,
     gap: 16,
   },
-  header: {
-    paddingHorizontal: 4,
-    paddingTop: 8,
-    paddingBottom: 4,
-  },
-  headerTitle: {
-    fontSize: 26,
-    fontWeight: '800',
-    color: STITCH.onSurface,
-    textAlign: 'right',
-    writingDirection: 'rtl',
-  },
-  headerSubtitle: {
-    marginTop: 4,
-    fontSize: 14,
-    color: STITCH.onSurfaceVariant,
-    textAlign: 'right',
-    writingDirection: 'rtl',
-  },
-
   // Primary result card
   resultCard: {
     backgroundColor: STITCH.surfaceLowest,
@@ -634,30 +616,6 @@ const s = StyleSheet.create({
   sliderRange: {
     fontSize: 11,
     color: STITCH.onSurfaceVariant,
-  },
-
-  // Shark
-  sharkTip: {
-    flexDirection: 'row-reverse',
-    alignItems: 'flex-start',
-    gap: 10,
-    padding: 14,
-    backgroundColor: ACCENT_DIM,
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: '#fbcfe8',
-  },
-  sharkEmoji: {
-    fontSize: 22,
-  },
-  sharkText: {
-    flex: 1,
-    fontSize: 13,
-    fontStyle: 'italic',
-    color: ACCENT_DARK,
-    textAlign: 'right',
-    writingDirection: 'rtl',
-    lineHeight: 19,
   },
 
   // Share

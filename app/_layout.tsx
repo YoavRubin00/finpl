@@ -424,7 +424,9 @@ export default function RootLayout() {
       "trading-hub", "bridge", "clash",
       "duels", "squads", "referral", "invite", "fantasy", "assets", "assets-market", "finfeed",
       "scenario-lab", "suggest-scenario", "graham-personality", "legal", "settings",
-      "pizza-index", "accessibility-statement", "fire-calculator",
+      "pizza-index", "accessibility-statement",
+      "compound-calculator", "fire-calculator", "salary-net-calculator",
+      "tax-refund-calculator", "mortgage-calculator", "pension-fees-comparator",
       "tower-defense-boss", "interstitial", "ai-insights", "saved-items",
       "clan", "anon-advice", "payslip-analyzer",
     ].includes(segments[0] as string);

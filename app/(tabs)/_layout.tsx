@@ -27,11 +27,13 @@ export default function TabsLayout() {
           }}
           tabBar={(props) => <AnimatedTabBar {...props} />}
         >
+          {/* Order matters: row-reverse puts first entry on the RIGHT visually. */}
+          <Tabs.Screen name="tools" />
           <Tabs.Screen name="investments" />
-          <Tabs.Screen name="learn" />
           <Tabs.Screen name="index" />
           <Tabs.Screen name="friends" />
           <Tabs.Screen name="chat" />
+          <Tabs.Screen name="learn" options={{ href: null }} />
           <Tabs.Screen name="more" options={{ href: null }} />
           <Tabs.Screen name="simulator" options={{ href: null }} />
           <Tabs.Screen name="shop" options={{ href: null }} />

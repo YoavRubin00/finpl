@@ -9,12 +9,12 @@ import {
   Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useRouter } from 'expo-router';
 import Animated, { FadeInDown } from 'react-native-reanimated';
-import { ChevronLeft, Share2 } from 'lucide-react-native';
+import { Home, Share2 } from 'lucide-react-native';
 
 import { STITCH } from '../../../constants/theme';
 import { tapHaptic } from '../../../utils/haptics';
+import { ToolHeader } from '../components/ToolHeader';
 
 interface MortgageInput {
   propertyPrice: string;
@@ -56,7 +56,6 @@ function formatPercent(n: number): string {
 }
 
 export function MortgageCalculator(): React.ReactElement {
-  const router = useRouter();
   const [state, setState] = useState<MortgageInput>(DEFAULT_STATE);
 
   const result: MortgageResult = useMemo(() => {
@@ -101,15 +100,12 @@ export function MortgageCalculator(): React.ReactElement {
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
-      <View style={styles.header}>
-        <Pressable onPress={() => router.back()} style={styles.backBtn} accessibilityRole="button" accessibilityLabel="חזרה">
-          <ChevronLeft size={24} color={STITCH.onSurface} />
-        </Pressable>
-        <View style={{ flex: 1 }}>
-          <Text style={styles.headerTitle}>מחשבון משכנתא</Text>
-          <Text style={styles.headerSubtitle}>האם אני יכול להרשות לעצמי?</Text>
-        </View>
-      </View>
+      <ToolHeader
+        title="מחשבון משכנתא"
+        subtitle="האם אני יכול להרשות לעצמי?"
+        accentColor={ACCENT}
+        Icon={Home}
+      />
 
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
         <Animated.View entering={FadeInDown.duration(360)} style={styles.resultCard}>
@@ -269,20 +265,6 @@ function BreakdownRow({ label, amount, warn }: { label: string; amount: number; 
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: STITCH.background },
-  header: {
-    backgroundColor: '#fff',
-    paddingHorizontal: 12,
-    paddingTop: 12,
-    paddingBottom: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: STITCH.surfaceHighest,
-    flexDirection: 'row-reverse',
-    alignItems: 'center',
-    gap: 8,
-  },
-  backBtn: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center', transform: [{ scaleX: -1 }] },
-  headerTitle: { fontSize: 20, fontWeight: '900', color: STITCH.onSurface, textAlign: 'right', writingDirection: 'rtl' },
-  headerSubtitle: { fontSize: 12, color: STITCH.onSurfaceVariant, textAlign: 'right', writingDirection: 'rtl', marginTop: 2 },
   scroll: { padding: 16, paddingBottom: 80, gap: 14 },
   resultCard: {
     backgroundColor: '#fff',

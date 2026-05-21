@@ -5,11 +5,12 @@ import { BackButton } from "../src/components/ui/BackButton";
 
 export default function CompoundCalculatorRoute() {
   const router = useRouter();
+  const goToTools = () => router.replace("/(tabs)/tools" as never);
   return (
     <View style={{ flex: 1 }}>
-      <CompoundSimScreen onComplete={() => router.back()} />
+      <CompoundSimScreen onComplete={goToTools} />
       <View style={{ position: "absolute", top: 54, right: 16, zIndex: 50 }}>
-        <BackButton color="#fff" />
+        <BackButton color="#fff" onPress={goToTools} />
       </View>
     </View>
   );

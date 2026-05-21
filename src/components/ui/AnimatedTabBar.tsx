@@ -1,6 +1,5 @@
 import { View, Pressable, StyleSheet, Text, Platform } from "react-native";
 import {
-  Compass,
   BookOpen,
   MessageCircle,
   TrendingUp,
@@ -48,12 +47,11 @@ interface TabConfig {
   isNew?: boolean;
 }
 
-// Visual L→R ordering in RTL: chat | friends | למידה (center) | פיד | השקעות | כלים
+// Visual L→R ordering in RTL: chat | friends | למידה (center) | השקעות | כלים
 // The array reads right-to-left in RTL, so array[0] = rightmost tab visually.
 const TABS: TabConfig[] = [
   { key: "tools",       label: "כלים",    Icon: Wrench,        isNew: true },
   { key: "investments", label: "השקעות",  Icon: TrendingUp },
-  { key: "learn",       label: "פיד",     Icon: Compass },
   { key: "index",       label: "למידה",   Icon: BookOpen },
   { key: "friends",     label: "חברים",   Icon: Users },
   { key: "chat",        label: "צ'אט",   Icon: MessageCircle },

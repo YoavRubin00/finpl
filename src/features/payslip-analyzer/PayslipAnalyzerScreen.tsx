@@ -285,7 +285,7 @@ export function PayslipAnalyzerScreen() {
 
   const handleLegalDismiss = useCallback(() => {
     setShowLegal(false);
-    router.back();
+    router.replace('/(tabs)/tools' as never);
   }, [router]);
 
   const handleRewardClaim = useCallback(() => {
@@ -313,7 +313,7 @@ export function PayslipAnalyzerScreen() {
 
       <View style={styles.topBar}>
         <View style={styles.backWrap}>
-          <BackButton color="#0c4a6e" />
+          <BackButton color="#0c4a6e" onPress={() => router.replace('/(tabs)/tools' as never)} />
         </View>
         <Animated.Text
           entering={FadeIn.duration(280)}

@@ -5,12 +5,13 @@ import { BackButton } from '../src/components/ui/BackButton';
 
 export default function FireCalculatorRoute() {
   const router = useRouter();
+  const goToTools = () => router.replace('/(tabs)/tools' as never);
   return (
     <View style={{ flex: 1 }}>
-      <FIRECalcScreen onComplete={() => router.back()} />
-      {/* Floating back button */}
+      <FIRECalcScreen onComplete={goToTools} />
+      {/* Floating back button → tools hub */}
       <View style={{ position: 'absolute', top: 54, right: 16, zIndex: 50 }}>
-        <BackButton color="#fff" />
+        <BackButton color="#fff" onPress={goToTools} />
       </View>
     </View>
   );
