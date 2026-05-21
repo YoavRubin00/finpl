@@ -31,8 +31,7 @@ import {
   successHaptic,
   mediumHaptic,
 } from '../../utils/haptics';
-import { useVideoPlayer, VideoView } from 'expo-video';
-import { DAISY_ASSETS, DAISY_TALKING_VIDEO_MP4 } from './daisy-assets';
+import { DAISY_ASSETS, DAISY_TALKING_WEBP_V2, PODCAST_STUDIO_BG_V2 } from './daisy-assets';
 import { usePodcastPlayer } from './usePodcastPlayer';
 import { PodcastQuestionCard } from './PodcastQuestionCard';
 import { PodcastIntroCard } from './PodcastIntroCard';
@@ -293,10 +292,15 @@ function PodcastListenStage({ podcast, onContinue }: ListenStageProps) {
       startWave(wave0, 0);
       startWave(wave1, 240);
     } else {
+      // Smooth fade-out instead of a hard reset to 0. Snapping the shared
+      // values caused the halo to disappear instantly on every pause, which
+      // the user perceived as a "jolt" at each speech break. withTiming
+      // lets the ring shrink to nothing over 400ms while staying on the
+      // worklet thread.
       cancelAnimation(wave0);
       cancelAnimation(wave1);
-      wave0.value = 0;
-      wave1.value = 0;
+      wave0.value = withTiming(1, { duration: 400 });
+      wave1.value = withTiming(1, { duration: 400 });
     }
     return () => {
       cancelAnimation(wave0);
@@ -352,26 +356,34 @@ function PodcastListenStage({ podcast, onContinue }: ListenStageProps) {
   const isFinished = phase === 'finished';
 
   // Daisy source: the local blink WebP during playing (proven clean 2-frame
-  // Daisy idle source — only used when NOT playing. The playing-phase
-  // animation comes from the expo-video player below (DAISY_TALKING_VIDEO_MP4
-  // looping natively). expo-video has reliable native loop support, unlike
-  // expo-image which struggles with WebP loopCount metadata on Android.
-  const daisyIdleSource = isFinished ? DAISY_ASSETS.happy : DAISY_ASSETS.mic;
-
-  // expo-video player for Daisy's talking loop. The video was generated with
-  // start_image === end_image so its last frame matches the first frame
-  // exactly — looping via player.loop=true produces a perfectly seamless
-  // animation. muted because we have the actual podcast audio playing
-  // separately, and `pause/play` is gated by `isPlaying` so the visual
-  // matches the audio state.
-  const talkingPlayer = useVideoPlayer(DAISY_TALKING_VIDEO_MP4, (p) => {
-    p.loop = true;
-    p.muted = true;
-  });
+  // Ref-controlled WebP animation. autoplay=true on the <ExpoImage> below
+  // so the WebP starts decoding+playing the moment the component mounts —
+  // this primes the GPU/decoder pipeline so the FIRST startAnimating() call
+  // (which fires the instant audio reaches its first playable frame) is
+  // INSTANT instead of triggering a fresh decode. After mount we still want
+  // to gate the animation to the audio state, so we immediately
+  // stopAnimating() on mount and re-startAnimating() when isPlaying flips
+  // true. Once audio has begun, stopAnimating() freezes Daisy in place at
+  // her current frame so paused == still mid-sentence rather than swapping
+  // to a static image.
+  const daisyImageRef = useRef<ExpoImage>(null);
+  // Tracks whether audio has reached the playing state at least once. We
+  // skip the very first stopAnimating() until the WebP has had a chance to
+  // load — otherwise we'd cancel autoplay before the decoder warmed up,
+  // negating the head-start benefit.
+  const webpReadyRef = useRef(false);
   useEffect(() => {
-    if (isPlaying) talkingPlayer.play();
-    else talkingPlayer.pause();
-  }, [isPlaying, talkingPlayer]);
+    const ref = daisyImageRef.current;
+    if (!ref) return;
+    try {
+      if (isPlaying) {
+        ref.startAnimating();
+        webpReadyRef.current = true;
+      } else if (webpReadyRef.current) {
+        ref.stopAnimating();
+      }
+    } catch { /* ref method may not be ready on first mount */ }
+  }, [isPlaying]);
 
   return (
     <View style={styles.stage}>
@@ -431,35 +443,48 @@ function PodcastListenStage({ podcast, onContinue }: ListenStageProps) {
       <View style={styles.daisyStage}>
         <Animated.View style={[styles.wave, wave0Style]} />
         <Animated.View style={[styles.wave, wave1Style]} />
-        <Animated.View style={[styles.daisyFrame, daisyFloatingStyle]}>
-          {/* While playing → <VideoView> rendering DAISY_TALKING_VIDEO_MP4 on
-              loop (transparent character, no built-in bubbles). When NOT
-              playing → static PNG (mic during loading/paused, happy when
-              finished). expo-video's native loop is reliable on both iOS and
-              Android, and because the video was generated with start_image
-              === end_image the loop seam is invisible. */}
-          {isPlaying ? (
-            <VideoView
-              player={talkingPlayer}
-              style={styles.daisyImage}
-              contentFit="cover"
-              nativeControls={false}
-            />
-          ) : (
-            <ExpoImage
-              source={daisyIdleSource}
-              style={styles.daisyImage}
-              contentFit="cover"
-              cachePolicy="memory-disk"
-              transition={300}
-            />
-          )}
-          {/* Mouth bubbles overlay — re-enabled now that the talking video
-              has a transparent background. Bubbles flow up from her mouth,
-              clipped by daisyFrame overflow:'hidden'. Only animates while
-              actually playing. */}
-          {isPlaying ? <MouthBubbles /> : null}
-        </Animated.View>
+        {/* Static frame — float/breath/sway removed because the WebP's own
+            internal animation already conveys "alive". Adding outer-frame
+            motion on top made the whole component visibly "drift" which the
+            user perceived as floaty / not smooth. Now the frame is rock-
+            solid and only Daisy's mouth + bubbles inside the WebP move. */}
+        <View style={styles.daisyFrame}>
+          {/* Layer 1: studio backdrop — local PNG of the empty room
+              (acoustic panels, ON AIR sign). Always visible behind Daisy. */}
+          <ExpoImage
+            source={PODCAST_STUDIO_BG_V2}
+            style={[styles.daisyImage, StyleSheet.absoluteFill]}
+            contentFit="cover"
+            cachePolicy="memory-disk"
+          />
+          {/* Layer 2: Daisy herself — animated WebP V2 with true alpha
+              channel (chroma-keyed from a green-screen kling3_0 video). The
+              studio behind shows through wherever Daisy isn't.
+              autoplay={true} warms the decoder so the FIRST startAnimating
+              call (when audio reaches 'playing') is instant — no more 1s
+              gap between sound and mouth movement. ref-controlled start/
+              stop freezes Daisy in place on pause rather than swapping to
+              a different image. contentPosition='top' keeps the daisy
+              flower on her head fully visible. */}
+          <ExpoImage
+            ref={daisyImageRef}
+            source={isFinished ? DAISY_ASSETS.happy : DAISY_TALKING_WEBP_V2}
+            style={[styles.daisyImage, StyleSheet.absoluteFill]}
+            contentFit="cover"
+            // Offset Daisy 10% down from the very top of the frame —
+            // contentPosition='top' had her hugging the top edge, this nudges
+            // her down so there's a small breathing margin above her head
+            // without burying the daisy flower under the frame.
+            contentPosition={{ top: '10%' }}
+            cachePolicy="memory-disk"
+            transition={300}
+            autoplay
+          />
+          {/* Layer 3: MouthBubbles overlay — Reanimated worklets above
+              Daisy. Active during playing OR paused so the underwater feel
+              persists when the user takes a beat. */}
+          {isPlaying || isPaused ? <MouthBubbles /> : null}
+        </View>
       </View>
 
       {/* Transcript (auto-scrolling) */}
@@ -652,22 +677,37 @@ function PodcastListenStage({ podcast, onContinue }: ListenStageProps) {
 
 // ─────────────────────── Ambient bubbles overlay ───────────────────────
 
-// Trimmed from 9 → 5: studio mood preserved, visual noise reduced so the
-// eye lands on Daisy + transcript faster.
-const BUBBLE_COUNT = 5;
-const BUBBLE_CONFIGS = Array.from({ length: BUBBLE_COUNT }, (_, i) => ({
-  // Pseudo-random but stable across renders
-  leftPct: ((i * 173) % 92) + 4,        // 4..96
-  size: 6 + ((i * 7) % 5) * 3,          // 6..18
-  durationMs: 8000 + ((i * 311) % 4000), // 8..12 sec (slower, more graceful)
-  delayMs: (i * 850) % 5000,             // 0..5s stagger
-  wobbleAmp: 4 + ((i * 17) % 6),         // 4..10px horizontal wobble
-  // Independent wobble period (1.5..2.3s) — decoupled from rise duration so
-  // every bubble shimmies at a real-time cadence rather than a fraction of its
-  // own journey. Faster bubbles don't wobble faster; the motion feels like
-  // buoyancy in water, not a synced loop.
-  wobblePeriodMs: 1500 + ((i * 137) % 800),
-}));
+// Bumped from 5 → 32 bubbles and re-distributed into 3 weighted lanes:
+// 40% LEFT edge (bottom-left + top-left as they rise), 40% RIGHT edge
+// (bottom-right + top-right), 20% scattered through the center. Each
+// bubble rises from below-screen all the way past the top edge, so the
+// concentration of bubbles is highest near the corners + persists into the
+// top area as they ascend. End result: every region of the screen has
+// constant motion.
+const BUBBLE_COUNT = 32;
+const BUBBLE_CONFIGS = Array.from({ length: BUBBLE_COUNT }, (_, i) => {
+  // Lane assignment by index — 40% left edge, 40% right edge, 20% center.
+  const lane = i % 5; // 0,1 → left; 2,3 → right; 4 → center
+  let leftPct: number;
+  if (lane === 0 || lane === 1) {
+    leftPct = 1 + ((i * 73) % 23);   // 1..23% (left edge)
+  } else if (lane === 2 || lane === 3) {
+    leftPct = 76 + ((i * 73) % 23);  // 76..98% (right edge)
+  } else {
+    leftPct = 28 + ((i * 173) % 44); // 28..71% (center scattered)
+  }
+  return {
+    leftPct,
+    size: 4 + ((i * 7) % 7) * 3,           // 4..22 (wide range)
+    durationMs: 6000 + ((i * 311) % 8000), // 6..14 sec
+    delayMs: (i * 421) % 7000,             // 0..7s stagger across the swarm
+    wobbleAmp: 4 + ((i * 17) % 7),         // 4..11px
+    // Independent wobble period (1.3..2.5s) decoupled from rise duration so
+    // every bubble shimmies at a real-time cadence rather than a fraction
+    // of its own journey. Feels like buoyancy in water, not a synced loop.
+    wobblePeriodMs: 1300 + ((i * 137) % 1200),
+  };
+});
 
 function AmbientBubbles() {
   const { height: SH } = Dimensions.get('window');
@@ -780,23 +820,42 @@ const bubbleStyles = StyleSheet.create({
 });
 
 // ─────────────────────── Mouth bubbles overlay ───────────────────────
-// 6 small bubbles emanating from Daisy's mouth area (40–63% horizontal,
-// starting at ~60% vertical = where her snout sits in the standard image),
-// rising up and out of frame. Same rise+wobble pattern as AmbientBubble but
-// scaled down and confined to the daisyFrame (clipped by overflow:'hidden').
-// This is the "she's talking" signal — visually rich, totally independent
-// of the broken talking WebP loop. The wave halo behind her + ambient
-// breath/sway/float on the frame keep her body alive; these bubbles keep
-// her *mouth* expressive.
-const MOUTH_BUBBLE_COUNT = 6;
-const MOUTH_BUBBLE_CONFIGS = Array.from({ length: MOUTH_BUBBLE_COUNT }, (_, i) => ({
-  leftPct: 38 + ((i * 7) % 25),             // 38..63% (mouth area)
-  size: 4 + ((i * 3) % 5),                  // 4..8px (small)
-  durationMs: 3000 + ((i * 211) % 1500),    // 3..4.5s rise
-  delayMs: (i * 600) % 3000,                // 0..3s stagger
-  wobbleAmp: 2 + ((i * 11) % 3),            // 2..5px
-  wobblePeriodMs: 1200 + ((i * 137) % 600), // 1.2..1.8s
-}));
+// 14 small bubbles spread around Daisy — concentrated near her mouth (the
+// "speaking" feel) AND along both sides of her body (the "studio
+// underwater atmosphere" feel). Heavier population than the previous
+// 6-bubble mouth-only set so the frame visibly fizzes with motion. Each
+// bubble has independent rise + wobble periods so the swarm never falls
+// into lockstep. Confined to daisyFrame (clipped by overflow:'hidden').
+const MOUTH_BUBBLE_COUNT = 14;
+const MOUTH_BUBBLE_CONFIGS = Array.from({ length: MOUTH_BUBBLE_COUNT }, (_, i) => {
+  // 3 spawn lanes interleaved by index:
+  //   i % 3 == 0 → left side (5..25%)
+  //   i % 3 == 1 → mouth/center (38..63%)
+  //   i % 3 == 2 → right side (72..92%)
+  // This gives ~5 bubbles per side and ~4 from the mouth.
+  const lane = i % 3;
+  let leftPct: number;
+  let startTopPct: number; // where the bubble spawns vertically (% of frame)
+  if (lane === 0) {
+    leftPct = 5 + ((i * 7) % 20);    // 5..24%
+    startTopPct = 0.65 + ((i * 17) % 20) / 100; // 65..84%
+  } else if (lane === 1) {
+    leftPct = 38 + ((i * 11) % 25);  // 38..62% (mouth)
+    startTopPct = 0.55 + ((i * 13) % 12) / 100; // 55..66%
+  } else {
+    leftPct = 72 + ((i * 9) % 20);   // 72..91%
+    startTopPct = 0.65 + ((i * 19) % 20) / 100;
+  }
+  return {
+    leftPct,
+    startTopPct,
+    size: 3 + ((i * 5) % 6),                    // 3..8px (tiny → small)
+    durationMs: 2800 + ((i * 271) % 1800),      // 2.8..4.6s rise
+    delayMs: (i * 350) % 4000,                  // 0..4s stagger across the swarm
+    wobbleAmp: 2 + ((i * 11) % 4),              // 2..5px
+    wobblePeriodMs: 1100 + ((i * 137) % 900),   // 1.1..2.0s (decoupled from rise)
+  };
+});
 
 function MouthBubbles() {
   return (
@@ -810,6 +869,7 @@ function MouthBubbles() {
 
 interface MouthBubbleConfig {
   leftPct: number;
+  startTopPct: number;
   size: number;
   durationMs: number;
   delayMs: number;
@@ -821,9 +881,8 @@ function MouthBubble({ cfg }: { cfg: MouthBubbleConfig }) {
   const t = useSharedValue(0);
   const wobblePhase = useSharedValue(0);
   useEffect(() => {
-    // Rise from mouth (~60% down the frame) up to the top edge. Linear so the
-    // bubble moves at a constant "terminal velocity" — same physics as the
-    // ambient bubbles outside the frame.
+    // Rise from its spawn-Y up to the top edge. Linear easing = constant
+    // terminal velocity (matches AmbientBubble physics).
     t.value = withRepeat(
       withSequence(
         withTiming(0, { duration: cfg.delayMs }),
@@ -845,13 +904,14 @@ function MouthBubble({ cfg }: { cfg: MouthBubbleConfig }) {
 
   const animStyle = useAnimatedStyle(() => {
     const wobble = Math.sin(wobblePhase.value) * cfg.wobbleAmp;
-    // Rise distance = mouth-Y (60% of frame) so the bubble climbs from her
-    // mouth up to the top of the frame. The frame's overflow:'hidden' clips
-    // anything that overshoots, so the disappearance feels natural.
-    const rise = -t.value * (DAISY_H * 0.6);
+    // Rise distance = the bubble's spawn-Y so it climbs from where it starts
+    // up to the very top of the frame. Frame's overflow:'hidden' clips the
+    // overshoot, making the disappearance look natural.
+    const startY = DAISY_H * cfg.startTopPct;
+    const rise = -t.value * startY;
     // Opacity envelope: fade-in over first 10%, plateau, fade-out over last
     // 15% — so the bubble is INVISIBLE at the loop seam (t→1 then t→0), the
-    // user never sees a bubble "snap" back to the mouth.
+    // user never sees a bubble "snap" back to its spawn point.
     let opacity = 0;
     if (t.value < 0.1) opacity = (t.value / 0.1) * 0.7;
     else if (t.value > 0.85) opacity = ((1 - t.value) / 0.15) * 0.7;
@@ -868,7 +928,7 @@ function MouthBubble({ cfg }: { cfg: MouthBubbleConfig }) {
         bubbleStyles.bubble,
         {
           left: `${cfg.leftPct}%`,
-          top: DAISY_H * 0.6, // start at mouth height (~60% down the frame)
+          top: DAISY_H * cfg.startTopPct, // spawn at lane-specific Y (mouth or side)
           width: cfg.size,
           height: cfg.size,
         },

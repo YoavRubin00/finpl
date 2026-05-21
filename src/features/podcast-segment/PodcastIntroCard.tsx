@@ -13,7 +13,13 @@ import { Asset } from 'expo-asset';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { mediumHaptic } from '../../utils/haptics';
 import { useSoundEffect } from '../../hooks/useSoundEffect';
-import { DAISY_ASSETS } from './daisy-assets';
+import {
+  DAISY_ASSETS,
+  DAISY_TALKING_WEBP_V2,
+  PODCAST_STUDIO_BG_V2,
+  DAISY_HAPPY_CELEBRATE_WEBP,
+  DAISY_EMPATHIC_WEBP,
+} from './daisy-assets';
 import type { PodcastSegment } from '../chapter-1-content/types';
 
 const { width: SW } = Dimensions.get('window');
@@ -46,6 +52,23 @@ export const PodcastIntroCard = React.memo(function PodcastIntroCard({
   React.useEffect(() => {
     void Asset.fromURI(podcast.audio.uri).downloadAsync().catch(() => {});
   }, [podcast.audio.uri]);
+
+  // Prefetch every Daisy + studio asset the listen + question stages will
+  // need, so the user never sees a blank/partially-rendered Daisy when
+  // arriving at the listen screen. ExpoImage.prefetch() pushes the bytes
+  // into the disk cache; subsequent ExpoImage components reading the same
+  // URI render instantly. Without this, the talking WebP and studio
+  // backdrop start downloading only when the listen screen mounts, which
+  // is why the user previously heard audio before seeing mouth movement.
+  React.useEffect(() => {
+    void ExpoImage.prefetch([
+      DAISY_TALKING_WEBP_V2.uri,
+      PODCAST_STUDIO_BG_V2.uri,
+      DAISY_HAPPY_CELEBRATE_WEBP.uri,
+      DAISY_EMPATHIC_WEBP.uri,
+      DAISY_ASSETS.happy.uri,
+    ]).catch(() => { /* prefetch failures are non-fatal */ });
+  }, []);
 
   return (
     <View style={styles.root}>

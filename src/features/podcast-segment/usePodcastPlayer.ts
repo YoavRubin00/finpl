@@ -73,7 +73,14 @@ export function usePodcastPlayer(
     if (rateRef.current !== 1) {
       try { player.setPlaybackRate(rateRef.current); } catch { /* ignore */ }
     }
-    player.play();
+    // Delay audio start by 500ms so the visual Daisy WebP has time to load
+    // and reach a "talking" frame before sound begins. Without this delay
+    // there was a ~1s gap where the user heard speech but Daisy still
+    // looked frozen, breaking sync. The retry timers below still cover any
+    // case where the play() fails silently and needs a second attempt.
+    const playDelay = setTimeout(() => {
+      try { player.play(); } catch { /* ignore */ }
+    }, 500);
 
     const sub = player.addListener('playbackStatusUpdate', (status) => {
       const d = status.duration ?? 0;
@@ -165,6 +172,7 @@ export function usePodcastPlayer(
     });
 
     return () => {
+      clearTimeout(playDelay);
       clearTimeout(retry1);
       clearTimeout(retry2);
       if (pausedDebounceRef.current) {
