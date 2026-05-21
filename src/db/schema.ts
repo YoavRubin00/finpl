@@ -232,3 +232,16 @@ export const referrals = pgTable("referrals", {
 	index("idx_referrals_code").using("btree", table.inviteCode.asc()),
 	check("referrals_check", sql`referrer_auth_id <> referee_auth_id`),
 ]);
+
+export const userStats = pgTable("user_stats", {
+  userId: uuid("user_id").primaryKey().notNull(),
+  totalSessionSeconds: integer("total_session_seconds").default(0).notNull(),
+  moduleDurations: jsonb("module_durations").default(sql`'{}'::jsonb`),
+  updatedAt: timestamp("updated_at", { withTimezone: true, mode: 'string' }).defaultNow(),
+}, (table) => [
+  foreignKey({
+    columns: [table.userId],
+    foreignColumns: [userProfiles.id],
+    name: "user_stats_user_id_fkey"
+  }).onDelete("cascade"),
+]);
