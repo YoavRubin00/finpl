@@ -5,22 +5,25 @@ import { Platform } from 'react-native';
 const TOKEN_KEY = 'finplay_auth_token';
 const BACKFILL_FLAG_KEY = 'finplay_backfill_v1_done';
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const webStorage = (): any => (globalThis as Record<string, unknown>)['localStorage'];
+
 async function setItem(key: string, value: string): Promise<void> {
   if (Platform.OS === 'web') {
-    try { localStorage.setItem(key, value); } catch { /* ignore */ }
+    try { webStorage()?.setItem(key, value); } catch { /* ignore */ }
     return;
   }
   await SecureStore.setItemAsync(key, value);
 }
 async function getItem(key: string): Promise<string | null> {
   if (Platform.OS === 'web') {
-    try { return localStorage.getItem(key); } catch { return null; }
+    try { return (webStorage()?.getItem(key) as string | null) ?? null; } catch { return null; }
   }
   return SecureStore.getItemAsync(key);
 }
 async function deleteItem(key: string): Promise<void> {
   if (Platform.OS === 'web') {
-    try { localStorage.removeItem(key); } catch { /* ignore */ }
+    try { webStorage()?.removeItem(key); } catch { /* ignore */ }
     return;
   }
   await SecureStore.deleteItemAsync(key);
