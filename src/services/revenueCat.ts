@@ -59,18 +59,15 @@ export const GEM_PRODUCT_IDS: Record<string, string> = {
 
 /* ── Initialization ────────────────────────────────────────────────── */
 
-let isConfigured = false;
+let configuredFor: string | null = null;
 
-/**
- * Initialize RevenueCat SDK. Call once at app startup (e.g. in _layout.tsx).
- * Safe to call multiple times — only configures once.
- * No-op on web.
- */
 export function configureRevenueCat(appUserId?: string): void {
-  if (IS_WEB || isConfigured || !Purchases) return;
+  if (IS_WEB || !Purchases) return;
+
+  const targetId = appUserId ?? null;
+  if (configuredFor === targetId) return;
 
   const apiKey = Platform.OS === 'ios' ? RC_API_KEY_APPLE : RC_API_KEY_GOOGLE;
-
   if (!apiKey) {
     if (__DEV__) {
       // eslint-disable-next-line no-console
@@ -79,16 +76,13 @@ export function configureRevenueCat(appUserId?: string): void {
     return;
   }
 
-  Purchases.configure({
-    apiKey,
-    appUserID: appUserId ?? undefined,
-  });
+  Purchases.configure({ apiKey, appUserID: appUserId ?? undefined });
 
   if (__DEV__ && LOG_LEVEL_DEBUG !== undefined) {
     Purchases.setLogLevel(LOG_LEVEL_DEBUG);
   }
 
-  isConfigured = true;
+  configuredFor = targetId;
 }
 
 /* ── User identification ───────────────────────────────────────────── */
