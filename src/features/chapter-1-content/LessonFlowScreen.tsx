@@ -65,7 +65,8 @@ import { useEconomyUIStore } from "../economy/useEconomyUIStore";
 import { useStreak } from "../economy/useStreak";
 import { applyEconomyDelta } from "../../lib/api/economy";
 import type { Economy } from "../../lib/api/economy";
-import { useUserStatsStore } from "../user-stats/useUserStatsStore";
+import { recordModuleDuration as apiRecordModuleDuration } from "../../lib/api/userStats";
+import { userStatsQueryKey } from "../user-stats/useUserStats";
 import { useWisdomStore } from "../wisdom-flashes/useWisdomStore";
 import { useIsPro, subscriptionQueryKey } from "../subscription/useSubscription";
 import { useHeartsStore } from "../subscription/useHeartsStore";
@@ -4000,7 +4001,11 @@ export function LessonFlowScreen() {
                                 clearResume(mod.id);
                                 useEconomyUIStore.getState().completeDailyTask();
                                 const durationSec = Math.round((Date.now() - moduleStartTimeRef.current) / 1000);
-                                useUserStatsStore.getState().recordModuleDuration(durationSec);
+                                if (durationSec >= 5 && durationSec <= 7200) {
+                                  apiRecordModuleDuration(mod.id, durationSec)
+                                    .then(() => queryClient.invalidateQueries({ queryKey: userStatsQueryKey }))
+                                    .catch(() => { /* fire-and-forget */ });
+                                }
                               }
                               const eco = useEconomyUIStore.getState();
                               eco.addCoins(drop.rewards.coins, 'lesson');

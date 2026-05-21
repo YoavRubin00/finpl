@@ -3,7 +3,7 @@ import { persist, createJSONStorage } from 'zustand/middleware';
 import { zustandStorage } from '../../lib/zustandStorage';
 import type { GatedFeature } from '../subscription/subscriptionConstants';
 import { useHeartsStore } from '../subscription/useHeartsStore';
-import { useUserStatsStore } from '../user-stats/useUserStatsStore';
+import { useUserStatsUIStore } from '../user-stats/useUserStatsUIStore';
 import { useEconomyUIStore } from '../economy/useEconomyUIStore';
 import { useAITelemetryStore } from '../ai-personalization/useAITelemetryStore';
 import { useBanditStore } from '../bandit/useBanditStore';
@@ -71,7 +71,7 @@ export const useMonetizationIntentStore = create<MonetizationIntentState>()(
         const recentVisits = pricingVisitTimestamps.filter((t) => now - t < SEVEN_DAYS_MS).length;
 
         // Session depth: average daily seconds over last 7 days
-        const dailySecs = useUserStatsStore.getState().dailySessionSeconds;
+        const dailySecs = useUserStatsUIStore.getState().dailySessionSeconds;
         const last7Keys = Object.keys(dailySecs).sort().slice(-7);
         const avgDailySecs = last7Keys.length > 0
           ? last7Keys.reduce((sum, k) => sum + (dailySecs[k] ?? 0), 0) / last7Keys.length

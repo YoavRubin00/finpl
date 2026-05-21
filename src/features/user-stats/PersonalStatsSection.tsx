@@ -7,7 +7,8 @@ import { useProgress } from "../chapter-1-content/useProgress";
 import type { ModuleProgressRow } from "../../lib/api/progress";
 import { useDailyChallengesStore } from "../daily-challenges/use-daily-challenges-store";
 import type { PlayCountMap } from "../daily-challenges/daily-challenge-types";
-import { useUserStatsStore } from "./useUserStatsStore";
+import { useUserStats } from "./useUserStats";
+import { useUserStatsUIStore } from "./useUserStatsUIStore";
 import { useTheme } from "../../hooks/useTheme";
 import { STITCH } from "../../constants/theme";
 
@@ -240,12 +241,11 @@ export function PersonalStatsSection() {
     }))
   );
 
-  const { moduleDurations, dailySessionSeconds } = useUserStatsStore(
-    useShallow((s) => ({
-      moduleDurations: s.moduleDurations,
-      dailySessionSeconds: s.dailySessionSeconds,
-    }))
-  );
+  const { data: userStatsData } = useUserStats();
+  const moduleDurations = userStatsData?.moduleDurations
+    ? Object.values(userStatsData.moduleDurations)
+    : [];
+  const dailySessionSeconds = useUserStatsUIStore((s) => s.dailySessionSeconds);
 
   const stats = useMemo(
     () =>

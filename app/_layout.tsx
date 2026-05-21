@@ -44,7 +44,9 @@ initPostHog();
 import { Slot, useRouter, useSegments, useRootNavigationState } from "expo-router";
 import { useEffect, useRef, useState } from "react";
 import { AppState, Platform, Text, TextInput } from "react-native";
-import { useUserStatsStore } from "../src/features/user-stats/useUserStatsStore";
+import { useUserStatsUIStore } from "../src/features/user-stats/useUserStatsUIStore";
+import { recordSessionTime as apiRecordSessionTime } from "../src/lib/api/userStats";
+import { userStatsQueryKey } from "../src/features/user-stats/useUserStats";
 import { setAudioModeAsync } from "expo-audio";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { useFonts } from "@expo-google-fonts/heebo";
@@ -182,7 +184,10 @@ export default function RootLayout() {
         if (foregroundEnteredAt.current !== null) {
           const secs = Math.round((Date.now() - foregroundEnteredAt.current) / 1000);
           foregroundEnteredAt.current = null;
-          useUserStatsStore.getState().addSessionSeconds(secs);
+          useUserStatsUIStore.getState().addSessionSeconds(secs);
+          apiRecordSessionTime(secs)
+            .then(() => queryClient.invalidateQueries({ queryKey: userStatsQueryKey }))
+            .catch(() => { /* fire-and-forget */ });
         }
       }
     });
