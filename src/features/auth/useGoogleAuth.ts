@@ -3,11 +3,12 @@ import * as WebBrowser from "expo-web-browser";
 import { makeRedirectUri } from "expo-auth-session";
 import { router } from "expo-router";
 import { useEffect } from "react";
-import { Alert, Platform } from "react-native";
+import { Platform } from "react-native";
 import { useAuthStore } from "./useAuthStore";
 import { useGoogleAuthStore } from "./useGoogleAuthStore";
 import { getApiBase } from "../../db/apiBase";
 import { captureEvent } from "../../lib/posthog";
+import { signInWithProfile } from "../../lib/auth/lifecycle";
 
 WebBrowser.maybeCompleteAuthSession();
 
@@ -24,9 +25,18 @@ interface GoogleUserInfo {
   picture?: string;
 }
 
-export function useGoogleAuth() {
-  const signIn = useAuthStore((s) => s.signIn);
+interface VerifyResult {
+  token: string;
+  profile: {
+    id: string;
+    authId: string;
+    displayName: string | null;
+    email: string | null;
+    hasCompletedOnboarding?: boolean;
+  };
+}
 
+export function useGoogleAuth() {
   if (__DEV__) {
     if (Platform.OS === "android" && !GOOGLE_ANDROID_CLIENT_ID) {
       console.warn("[GoogleAuth] EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID missing — Android sign-in will fail silently in this build");
@@ -81,14 +91,14 @@ export function useGoogleAuth() {
     console.error("[GoogleAuth] OAuth response failed", details);
   }, [response]);
 
-  const verifyWithServer = async (token: string): Promise<{ email: string; name: string; syncToken: string | null; hasProfile: boolean } | null> => {
+  const verifyWithServer = async (googleToken: string): Promise<VerifyResult | null> => {
     try {
       const controller = new AbortController();
       const timeout = setTimeout(() => controller.abort(), 5000);
       const res = await fetch(`${getApiBase()}/api/auth/verify`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ provider: 'google', token }),
+        body: JSON.stringify({ provider: 'google', token: googleToken }),
         signal: controller.signal,
       });
       clearTimeout(timeout);
@@ -97,25 +107,28 @@ export function useGoogleAuth() {
         console.error("[GoogleAuth] /api/auth/verify failed", { status: res.status, body: body.slice(0, 300) });
         return null;
       }
-      const data = await res.json() as { profile: { email?: string; displayName?: string; hasCompletedOnboarding?: boolean } | null; syncToken: string | null };
-      return {
-        email: data.profile?.email ?? '',
-        name: data.profile?.displayName ?? '',
-        syncToken: data.syncToken,
-        hasProfile: !!data.profile,
+      const data = await res.json() as {
+        ok: boolean;
+        token?: string;
+        syncToken?: string;
+        profile: { id: string; authId: string; displayName: string | null; email: string | null; hasCompletedOnboarding?: boolean } | null;
       };
+      const resolvedToken = data.token ?? data.syncToken ?? null;
+      if (!data.ok || !data.profile || !resolvedToken) return null;
+      return { token: resolvedToken, profile: data.profile };
     } catch (err) {
       console.error("[GoogleAuth] /api/auth/verify threw", err);
       return null;
     }
   };
 
-  const fetchUserInfo = async (token: string, isJwt: boolean) => {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const fetchUserInfo = async (token: string, _isJwt: boolean) => {
     try {
       // Optional fallback: only access_tokens can call userinfo.
       // For id_tokens (JWT), skip — server resolves identity via tokeninfo.
       let googleUser: GoogleUserInfo | null = null;
-      if (!isJwt) {
+      if (!_isJwt) {
         try {
           const res = await fetch("https://www.googleapis.com/userinfo/v2/me", {
             headers: { Authorization: `Bearer ${token}` },
@@ -125,20 +138,22 @@ export function useGoogleAuth() {
           // Non-fatal — server-side verification is the source of truth.
         }
       }
-      // Verify server-side to get syncToken (server handles both token kinds)
+      // Verify server-side to get JWT (server handles both token kinds)
       const verified = await verifyWithServer(token);
       if (!verified) {
-        console.error("[GoogleAuth] verifyWithServer returned null", { isJwt, tokenLength: token.length });
+        console.error("[GoogleAuth] verifyWithServer returned null", { _isJwt, tokenLength: token.length });
         captureEvent('auth_failed', { method: 'google', error_code: 'verify_returned_null' });
         useAuthStore.getState().setAuthError("השרת לא הצליח לאמת את הכניסה. נסה שוב.");
         return;
       }
-      const email = verified.email || googleUser?.email || '';
-      const name = verified.name || googleUser?.name || '';
-      signIn(name, email, verified.hasProfile, verified.syncToken);
+      // If Google userinfo gave us a richer name, patch the profile display name
+      if (googleUser?.name && !verified.profile.displayName) {
+        verified.profile.displayName = googleUser.name;
+      }
+      await signInWithProfile(verified.profile, verified.token);
 
       // Explicit routing — iOS-safe pattern matching the email flow.
-      if (verified.hasProfile) {
+      if (verified.profile.hasCompletedOnboarding) {
         router.replace("/(tabs)/" as never);
       } else {
         router.replace("/(auth)/onboarding" as never);

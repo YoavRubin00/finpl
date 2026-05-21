@@ -121,7 +121,7 @@ export function TradingHubScreen() {
     // from day 2, and only after the other intro popups have cleared. Prevents
     // the "4 popups at once" visual overload that users hit on first visits.
     const [bridgeCtaVisible, setBridgeCtaVisible] = useState(false);
-    const createdAt = useAuthStore((s) => s.createdAt);
+    const createdAt = null; // createdAt is now server-authoritative; gate defaults to day 1+ passed
     const lastBridgeCtaDate = useTradingHubUiStore((s) => s.lastBridgeCtaDate);
     const markBridgeCtaShownToday = useTradingHubUiStore((s) => s.markBridgeCtaShownToday);
     useEffect(() => {

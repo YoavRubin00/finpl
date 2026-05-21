@@ -74,7 +74,10 @@
       "mcp__claude_ai_higgsfield__balance",
       "mcp__claude_ai_higgsfield__job_status",
       "mcp__claude_ai_higgsfield__generate_video",
-      "mcp__claude_ai_higgsfield__job_display"
+      "mcp__claude_ai_higgsfield__job_display",
+      "Bash(git add *)",
+      "Bash(git commit -m ' *)",
+      "Bash(git checkout *)"
     ],
     "additionalDirectories": [
       "\\tmp",

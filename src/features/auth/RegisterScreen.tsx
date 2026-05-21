@@ -374,7 +374,8 @@ export function RegisterScreen() {
                   if (isGuest) {
                     convertGuestToUser(name.trim(), email.trim());
                   } else {
-                    signIn(name.trim(), email.trim());
+                    // New registrations: use email as authId placeholder until server profile is created
+                    signIn({ userId: email.trim(), authId: email.trim(), displayName: name.trim(), email: email.trim() });
                   }
                   // Navigation deferred to the useEffect below — it waits for
                   // the zustand state to actually reflect isAuthenticated before

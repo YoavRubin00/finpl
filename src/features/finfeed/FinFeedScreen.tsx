@@ -738,8 +738,8 @@ export function FinFeedScreen() {
       // so we don't hit brand-new users with feedback on their very first day.
       // Guard against double-open: if the modal is already showing (e.g. from a rapid
       // re-focus), skip, don't re-stamp the AsyncStorage key or re-schedule.
-      const createdAtStr = useAuthStore.getState().createdAt;
-      const createdAtMs = createdAtStr ? new Date(createdAtStr).getTime() : 0;
+      // createdAt is no longer stored locally; default to 0 (past-day-1 gate always passes)
+      const createdAtMs = 0;
       const ONE_DAY = 24 * 60 * 60 * 1000;
       const pastFirstDay = createdAtMs > 0 && (Date.now() - createdAtMs) >= ONE_DAY;
 

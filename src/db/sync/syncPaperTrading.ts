@@ -1,5 +1,6 @@
 import { getApiBase } from '../apiBase';
 import { useAuthStore } from '../../features/auth/useAuthStore';
+import { tokenStore } from '../../lib/auth/secureStore';
 
 export type TradeType = 'BUY' | 'SELL';
 
@@ -50,14 +51,15 @@ export type LogTradeResult =
  * balance reconciliation.
  */
 export async function logTrade(params: LogTradeParams): Promise<LogTradeResult> {
-  const { email: authId, syncToken } = useAuthStore.getState();
+  const { email: authId } = useAuthStore.getState();
   if (!authId || params.quantity <= 0 || params.priceAtExecution <= 0) {
     return { ok: false };
   }
   try {
     const base = getApiBase();
+    const token = await tokenStore.get();
     const headers: Record<string, string> = { 'Content-Type': 'application/json' };
-    if (syncToken) headers['X-Sync-Token'] = syncToken;
+    if (token) headers['Authorization'] = `Bearer ${token}`;
     const res = await fetch(`${base}/api/trading/trade`, {
       method: 'POST',
       headers,

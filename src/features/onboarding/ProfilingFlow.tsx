@@ -30,6 +30,8 @@ import { useSoundEffect } from "../../hooks/useSoundEffect";
 import { tapHaptic } from "../../utils/haptics";
 import { useEconomyStore } from "../economy/useEconomyStore";
 import { useAuthStore } from "../auth/useAuthStore";
+import { signInWithProfile } from "../../lib/auth/lifecycle";
+import { getApiBase } from "../../db/apiBase";
 import { useGoogleAuthStore } from "../auth/useGoogleAuthStore";
 import { useAppleAuth } from "../auth/useAppleAuth";
 import { consumeTermsAcceptedFlag } from "../auth/termsAcceptedFlag";
@@ -1724,7 +1726,6 @@ interface IntroStepProps {
 
 function IntroStep({ onRegister, onGuest, onLoginSuccess }: IntroStepProps) {
   const [subStep, setSubStep] = useState<"welcome" | "choice" | "login">("welcome");
-  const signIn = useAuthStore((s) => s.signIn);
   const promptGoogleSignIn = useGoogleAuthStore((s) => s.promptGoogleSignIn);
   const googleReady = useGoogleAuthStore((s) => s.isReady);
   const { promptAppleSignIn, isAvailable: appleAvailable } = useAppleAuth();
@@ -2005,11 +2006,26 @@ function IntroStep({ onRegister, onGuest, onLoginSuccess }: IntroStepProps) {
           {/* Login button */}
           <Pressable
             disabled={!isLoginValid}
-            onPress={() => {
-              if (isLoginValid) {
-                signIn("", email.trim());
-                onLoginSuccess();
-              }
+            onPress={async () => {
+              if (!isLoginValid) return;
+              try {
+                const res = await fetch(`${getApiBase()}/api/auth/verify`, {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ provider: 'email', email: email.trim().toLowerCase() }),
+                });
+                const data = await res.json() as {
+                  ok: boolean;
+                  token?: string;
+                  syncToken?: string;
+                  profile: { id: string; authId: string; displayName: string | null; email: string | null } | null;
+                };
+                const resolvedToken = data.token ?? data.syncToken ?? null;
+                if (res.ok && data?.ok && data.profile && resolvedToken) {
+                  await signInWithProfile(data.profile, resolvedToken);
+                }
+              } catch { /* non-fatal — let onLoginSuccess route */ }
+              onLoginSuccess();
             }}
             accessibilityRole="button"
             accessibilityLabel="התחבר"
@@ -2270,7 +2286,7 @@ export function ProfilingFlow({ mode = "onboarding", onRedoComplete }: Profiling
   function handleDone() {
     if (isRedo) {
       // Reset all progress (XP, coins, chapters, etc.), user starts fresh
-      devResetProgress();
+      devResetProgress?.();
       updateProfile({
         financialDream: collected.financialDream ?? undefined,
         financialGoal: collected.financialGoal ?? undefined,

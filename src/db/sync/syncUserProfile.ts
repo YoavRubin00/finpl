@@ -1,10 +1,10 @@
 import { getApiBase } from '../apiBase';
-import { useAuthStore } from '../../features/auth/useAuthStore';
+import { tokenStore } from '../../lib/auth/secureStore';
 
-function getSyncHeaders(): Record<string, string> {
-  const token = useAuthStore.getState().syncToken;
+async function getSyncHeaders(): Promise<Record<string, string>> {
+  const token = await tokenStore.get();
   return token
-    ? { 'Content-Type': 'application/json', 'X-Sync-Token': token }
+    ? { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }
     : { 'Content-Type': 'application/json' };
 }
 
@@ -32,7 +32,7 @@ export async function upsertUserProfile(
   const base = getApiBase();
   const res = await fetch(`${base}/api/sync/profile`, {
     method: 'POST',
-    headers: getSyncHeaders(),
+    headers: await getSyncHeaders(),
     body: JSON.stringify({ authId, ...data }),
   });
 
@@ -44,10 +44,10 @@ export async function upsertUserProfile(
 /** Delete a user profile and all associated data. Used for in-app account deletion (Apple 5.1.1(v)). */
 export async function deleteUserProfile(authId: string): Promise<void> {
   const base = getApiBase();
-  const token = useAuthStore.getState().syncToken;
+  const token = await tokenStore.get();
   const res = await fetch(
     `${base}/api/sync/profile?authId=${encodeURIComponent(authId)}`,
-    { method: 'DELETE', headers: token ? { 'X-Sync-Token': token } : {} },
+    { method: 'DELETE', headers: token ? { 'Authorization': `Bearer ${token}` } : {} },
   );
   if (!res.ok) {
     throw new Error(`sync/profile DELETE failed: ${res.status}`);
@@ -57,10 +57,10 @@ export async function deleteUserProfile(authId: string): Promise<void> {
 /** Fetch a user profile from API by authId. Returns null if not found. */
 export async function fetchUserProfile(authId: string) {
   const base = getApiBase();
-  const fetchToken = useAuthStore.getState().syncToken;
+  const fetchToken = await tokenStore.get();
   const res = await fetch(
     `${base}/api/sync/profile?authId=${encodeURIComponent(authId)}`,
-    fetchToken ? { headers: { 'X-Sync-Token': fetchToken } } : undefined,
+    fetchToken ? { headers: { 'Authorization': `Bearer ${fetchToken}` } } : undefined,
   );
 
   if (!res.ok) {
