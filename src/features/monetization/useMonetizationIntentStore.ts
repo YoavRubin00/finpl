@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import { zustandStorage } from '../../lib/zustandStorage';
+import { registerLocalStore } from '../../lib/stores/registry';
 import type { GatedFeature } from '../subscription/subscriptionConstants';
 import { useHeartsStore } from '../subscription/useHeartsStore';
 import { useUserStatsUIStore } from '../user-stats/useUserStatsUIStore';
@@ -29,6 +30,7 @@ interface MonetizationIntentState {
   canSendUpgradeNotif: () => boolean;
   markUpgradeNotifSent: () => void;
   shouldShowPaywallNow: (feature: GatedFeature) => boolean;
+  reset: () => void;
 }
 
 const SEVEN_DAYS_MS = 7 * 24 * 60 * 60 * 1000;
@@ -115,6 +117,8 @@ export const useMonetizationIntentStore = create<MonetizationIntentState>()(
         set({ lastUpgradeNotifAt: Date.now() });
       },
 
+      reset: () => set({ proTaps: [], pricingVisitTimestamps: [], lastUpgradeNotifAt: null }),
+
       shouldShowPaywallNow: (feature: GatedFeature): boolean => {
         const variantId = useBanditStore.getState().selectVariant('upgrade_trigger_timing');
         const variant = getVariantPayload('upgrade_trigger_timing', variantId);
@@ -141,3 +145,5 @@ export const useMonetizationIntentStore = create<MonetizationIntentState>()(
     },
   ),
 );
+
+registerLocalStore('monetization-intent-store', useMonetizationIntentStore, 'monetization-intent-store');

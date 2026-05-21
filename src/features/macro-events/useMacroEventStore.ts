@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import { zustandStorage } from '../../lib/zustandStorage';
+import { registerLocalStore } from '../../lib/stores/registry';
 import { useEconomyUIStore } from '../economy/useEconomyUIStore';
 import type { MacroEvent } from './types';
 
@@ -100,3 +101,5 @@ export const useMacroEventStore = create<MacroEventState>()(
     }
   )
 );
+
+registerLocalStore('macro-event-store', useMacroEventStore, 'macro-event-store');
