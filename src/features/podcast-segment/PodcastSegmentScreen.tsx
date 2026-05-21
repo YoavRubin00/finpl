@@ -21,7 +21,8 @@ import Animated, {
   withSequence,
   withTiming,
 } from 'react-native-reanimated';
-import { Pause, Play } from 'lucide-react-native';
+import { Pause, Play, ChevronRight, ChevronLeft, SkipForward } from 'lucide-react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
   tapHaptic,
   heavyHaptic,
@@ -109,7 +110,11 @@ export const PodcastSegmentScreen = React.memo(function PodcastSegmentScreen({
 
 interface ListenStageProps {
   podcast: PodcastSegment;
-  onFinished: () => void;
+  /** User-initiated advance — fired by the top-right "דלג" pill OR the
+   *  "המשך" CTA that appears in the finished state. Audio finishing does
+   *  NOT auto-advance any more; we wait for the user so they have a clear
+   *  control moment at the end. */
+  onContinue: () => void;
 }
 
 // Trimmed proportions: Daisy frame went 78%→62% of screen width and the
@@ -120,12 +125,14 @@ const TRANSCRIPT_HEIGHT = 152;
 const DAISY_W = Math.min(SW * 0.62, 260);
 const DAISY_H = Math.round(DAISY_W * 1.3);
 
-function PodcastListenStage({ podcast, onFinished }: ListenStageProps) {
-  const { phase, progress, togglePlayPause, seekForward } = usePodcastPlayer(
+function PodcastListenStage({ podcast, onContinue }: ListenStageProps) {
+  const insets = useSafeAreaInsets();
+  const { phase, progress, togglePlayPause, seekForward, replay } = usePodcastPlayer(
     podcast.audio.uri,
     () => {
+      // Audio naturally finished — celebrate with haptic but DO NOT
+      // auto-advance. The user taps "המשך" when ready.
       heavyHaptic();
-      onFinished();
     },
   );
 
@@ -232,6 +239,28 @@ function PodcastListenStage({ podcast, onFinished }: ListenStageProps) {
           Keeps the screen alive even when Daisy pauses talking. */}
       <AmbientBubbles />
 
+      {/* Top-right "דלג" pill — always available so the user can skip to the
+          questions without waiting for the 22-second podcast. Positioned
+          clear of the parent lesson progress bar via insets.top + clearance. */}
+      <Animated.View
+        entering={FadeInDown.duration(360).delay(80)}
+        style={[styles.skipPill, { top: insets.top + 56 }]}
+      >
+        <Pressable
+          onPress={() => { tapHaptic(); onContinue(); }}
+          accessibilityRole="button"
+          accessibilityLabel="דלג לשאלות"
+          style={({ pressed }) => [
+            styles.skipPillInner,
+            pressed && { opacity: 0.85, transform: [{ scale: 0.96 }] },
+          ]}
+          hitSlop={8}
+        >
+          <SkipForward color="#0369a1" size={14} strokeWidth={2.8} />
+          <Text style={styles.skipPillText}>דלג</Text>
+        </Pressable>
+      </Animated.View>
+
       {/* Podcast progress — sits at top, right below module's general progress bar */}
       <Animated.View
         entering={FadeInDown.duration(280).springify()}
@@ -274,73 +303,95 @@ function PodcastListenStage({ podcast, onFinished }: ListenStageProps) {
           onContentSizeChange={(_w, h) => { contentHeightRef.current = h; }}
           scrollEnabled={false}
         >
+          {/* Plain transcript — the previous per-word highlight depended on
+              uniform speech rate (words.length × progress), but Hebrew has
+              very uneven word lengths so the "current" word visually drifted
+              from what Daisy was actually saying. Auto-scroll still tracks
+              audio progress, so the user moves through the text smoothly. */}
           <Text style={[styles.transcriptText, RTL]}>
-            {words.map((w, i) => (
-              <Text
-                key={i}
-                style={
-                  i < revealedWords - 1
-                    ? styles.transcriptWordPast
-                    : i === revealedWords - 1
-                      ? styles.transcriptWordCurrent
-                      : styles.transcriptWordFuture
-                }
-              >
-                {w}
-                {i < words.length - 1 ? ' ' : ''}
-              </Text>
-            ))}
+            {podcast.transcript}
           </Text>
         </ScrollView>
       </Animated.View>
 
-      {/* Podcast-player-style transport row inspired by Apple Podcasts /
-          Spotify: large central play/pause, flanked by smaller circular
-          time-seek controls (±5s). row-reverse for RTL so the -5 button
-          (rewind) sits on the right edge, +5 (fast-forward) on the left. */}
-      <Animated.View entering={FadeIn.duration(360).delay(120)} style={styles.buttonsRow}>
-        <Pressable
-          onPress={() => { tapHaptic(); seekForward(-5); }}
-          accessibilityRole="button"
-          accessibilityLabel="חזרה 5 שניות אחורה"
-          style={({ pressed }) => [
-            styles.btnRound,
-            pressed && { opacity: 0.85, transform: [{ translateY: 2 }] },
-          ]}
+      {/* Bottom controls — phase-dependent.
+          During play/pause/loading: Apple-Podcasts-style transport (-5 · ▷ · +5).
+          When finished: Continue + Back (Replay) pair, matching the
+          flashcard module navigation in LessonFlowScreen. */}
+      {isFinished ? (
+        <Animated.View
+          entering={FadeInUp.duration(320).springify()}
+          style={styles.finishedRow}
         >
-          <Text style={styles.btnRoundText}>5-</Text>
-        </Pressable>
+          <Pressable
+            onPress={() => { tapHaptic(); replay(); }}
+            accessibilityRole="button"
+            accessibilityLabel="נגן שוב"
+            style={({ pressed }) => [
+              styles.backBtn,
+              pressed && { opacity: 0.85, transform: [{ scale: 0.96 }] },
+            ]}
+          >
+            <ChevronRight color="#0369a1" size={26} strokeWidth={2.8} />
+          </Pressable>
+          <Pressable
+            onPress={() => { tapHaptic(); successHaptic(); onContinue(); }}
+            accessibilityRole="button"
+            accessibilityLabel="המשך"
+            style={({ pressed }) => [
+              styles.finishedCTA,
+              pressed && { opacity: 0.92, transform: [{ translateY: 2 }] },
+            ]}
+          >
+            <Text style={styles.finishedCTAText}>המשך</Text>
+            <ChevronLeft color="#ffffff" size={22} strokeWidth={2.8} />
+          </Pressable>
+        </Animated.View>
+      ) : (
+        <Animated.View entering={FadeIn.duration(360).delay(120)} style={styles.buttonsRow}>
+          <Pressable
+            onPress={() => { tapHaptic(); seekForward(-5); }}
+            accessibilityRole="button"
+            accessibilityLabel="חזרה 5 שניות אחורה"
+            style={({ pressed }) => [
+              styles.btnRound,
+              pressed && { opacity: 0.85, transform: [{ translateY: 2 }] },
+            ]}
+          >
+            <Text style={styles.btnRoundText}>5-</Text>
+          </Pressable>
 
-        <Pressable
-          onPress={() => { tapHaptic(); togglePlayPause(); }}
-          disabled={phase === 'loading'}
-          accessibilityRole="button"
-          accessibilityLabel={isPlaying ? 'השהה' : isFinished ? 'נגן שוב' : 'המשך'}
-          style={({ pressed }) => [
-            styles.btnRoundHero,
-            pressed && { opacity: 0.92, transform: [{ scale: 0.96 }] },
-            phase === 'loading' && { opacity: 0.5 },
-          ]}
-        >
-          {isPlaying ? (
-            <Pause color="#0369a1" size={32} fill="#0369a1" />
-          ) : (
-            <Play color="#0369a1" size={32} fill="#0369a1" />
-          )}
-        </Pressable>
+          <Pressable
+            onPress={() => { tapHaptic(); togglePlayPause(); }}
+            disabled={phase === 'loading'}
+            accessibilityRole="button"
+            accessibilityLabel={isPlaying ? 'השהה' : 'המשך'}
+            style={({ pressed }) => [
+              styles.btnRoundHero,
+              pressed && { opacity: 0.92, transform: [{ scale: 0.96 }] },
+              phase === 'loading' && { opacity: 0.5 },
+            ]}
+          >
+            {isPlaying ? (
+              <Pause color="#ffffff" size={32} fill="#ffffff" />
+            ) : (
+              <Play color="#ffffff" size={32} fill="#ffffff" />
+            )}
+          </Pressable>
 
-        <Pressable
-          onPress={() => { tapHaptic(); seekForward(5); }}
-          accessibilityRole="button"
-          accessibilityLabel="קפיצה 5 שניות קדימה"
-          style={({ pressed }) => [
-            styles.btnRound,
-            pressed && { opacity: 0.85, transform: [{ translateY: 2 }] },
-          ]}
-        >
-          <Text style={styles.btnRoundText}>5+</Text>
-        </Pressable>
-      </Animated.View>
+          <Pressable
+            onPress={() => { tapHaptic(); seekForward(5); }}
+            accessibilityRole="button"
+            accessibilityLabel="קפיצה 5 שניות קדימה"
+            style={({ pressed }) => [
+              styles.btnRound,
+              pressed && { opacity: 0.85, transform: [{ translateY: 2 }] },
+            ]}
+          >
+            <Text style={styles.btnRoundText}>5+</Text>
+          </Pressable>
+        </Animated.View>
+      )}
 
       {isPaused ? (
         <Animated.View entering={FadeIn.duration(200)} style={styles.pausedBadge}>
@@ -505,56 +556,133 @@ const styles = StyleSheet.create({
   transcriptWordCurrent: { color: '#0369a1', fontWeight: '800' },
   transcriptWordFuture: { color: '#e2e8f0', fontWeight: '500' },
 
-  // Transport row inspired by Apple Podcasts: clear visual hierarchy.
-  // Hero white play/pause in the middle is THE focal point; the side circles
-  // are translucent satellites that don't compete for attention.
+  // Transport row — all 3 buttons share the same blue 3D CTA pattern used
+  // throughout the app (PodcastIntroCard.startBtn, couple-dilemma.cta,
+  // flashcard nav). Circle shape, hero slightly bigger.
   buttonsRow: {
     flexDirection: 'row-reverse',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 28,
+    gap: 24,
     paddingVertical: 8,
   },
-  // Hero play/pause: 80x80 WHITE circle (high contrast against the pink/blue
-  // gradient), blue icon inside. No 3D lip — the lift comes from a strong
-  // soft shadow + glow alone, matching the floating feel of the reference.
+  // Hero play/pause: 80x80 blue 3D circle, matches app primary CTA color
+  // language but in circular form. White icon inside.
   btnRoundHero: {
     width: 80,
     height: 80,
     borderRadius: 40,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#ffffff',
-    shadowColor: '#0369a1',
-    shadowOpacity: 0.35,
-    shadowRadius: 18,
-    shadowOffset: { width: 0, height: 8 },
-    elevation: 10,
+    backgroundColor: '#0ea5e9',
+    borderWidth: 2,
+    borderColor: '#0284c7',
+    borderBottomWidth: 6,
+    borderBottomColor: '#0369a1',
+    shadowColor: '#0ea5e9',
+    shadowOpacity: 0.5,
+    shadowRadius: 16,
+    shadowOffset: { width: 0, height: 6 },
+    elevation: 9,
   },
-  // Side controls: 56x56 translucent-blue circles. Subtle, secondary —
-  // they live "around" the hero, not next to it. Background uses the same
-  // semi-transparent blue as the intro chip so the whole experience reads
-  // as one visual language.
+  // Side controls: 56x56 blue 3D circles, same color palette as the hero
+  // and the rest of the app's CTAs — smaller lip, smaller shadow.
   btnRound: {
     width: 56,
     height: 56,
     borderRadius: 28,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'rgba(14,165,233,0.18)',
-    borderWidth: 1.5,
-    borderColor: 'rgba(14,165,233,0.45)',
-    shadowColor: '#0369a1',
-    shadowOpacity: 0.18,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 3 },
-    elevation: 3,
+    backgroundColor: '#0ea5e9',
+    borderWidth: 2,
+    borderColor: '#0284c7',
+    borderBottomWidth: 4,
+    borderBottomColor: '#0369a1',
+    shadowColor: '#0ea5e9',
+    shadowOpacity: 0.35,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 5,
   },
   btnRoundText: {
-    color: '#0369a1',
+    color: '#ffffff',
     fontSize: 17,
     fontWeight: '900',
     letterSpacing: 0.5,
+  },
+
+  // Top-right "דלג" skip pill — always available during listen so the user
+  // can jump to the questions without waiting for the 22s audio.
+  skipPill: {
+    position: 'absolute',
+    right: 16,
+    zIndex: 20,
+  },
+  skipPillInner: {
+    flexDirection: 'row-reverse',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: 'rgba(255,255,255,0.92)',
+    borderColor: 'rgba(14,165,233,0.45)',
+    borderWidth: 1.5,
+    paddingHorizontal: 14,
+    paddingVertical: 7,
+    borderRadius: 999,
+    shadowColor: '#0369a1',
+    shadowOpacity: 0.2,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 3,
+  },
+  skipPillText: {
+    color: '#0369a1',
+    fontSize: 13,
+    fontWeight: '900',
+  },
+
+  // Finished-state row: Continue (primary blue) + Back (Replay) — mirrors
+  // the flashcard navigation pattern from LessonFlowScreen so the user
+  // experiences the same controls everywhere in the module.
+  finishedRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingVertical: 4,
+  },
+  backBtn: {
+    width: 52,
+    height: 52,
+    borderRadius: 26,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(14,165,233,0.18)',
+    borderWidth: 1.5,
+    borderColor: 'rgba(14,165,233,0.45)',
+  },
+  finishedCTA: {
+    flex: 1,
+    flexDirection: 'row-reverse',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    backgroundColor: '#0ea5e9',
+    borderRadius: 18,
+    paddingVertical: 16,
+    borderWidth: 2,
+    borderColor: '#0284c7',
+    borderBottomWidth: 5,
+    borderBottomColor: '#0369a1',
+    shadowColor: '#0ea5e9',
+    shadowOpacity: 0.45,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 5 },
+    elevation: 7,
+  },
+  finishedCTAText: {
+    color: '#ffffff',
+    fontSize: 17,
+    fontWeight: '900',
+    letterSpacing: 0.3,
   },
 
   pausedBadge: {

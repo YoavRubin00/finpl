@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useMemo } from 'react';
-import { View, Text, StyleSheet, Pressable, ScrollView, Dimensions } from 'react-native';
+import { View, Text, StyleSheet, Pressable, ScrollView, useWindowDimensions } from 'react-native';
 import Animated, {
   FadeIn,
   FadeInDown,
@@ -20,10 +20,6 @@ import { DAISY_HAPPY_CELEBRATE_WEBP, DAISY_EMPATHIC_WEBP } from './daisy-assets'
 import type { PodcastQuestion, PodcastQuestionOption } from '../chapter-1-content/types';
 
 const RTL = { writingDirection: 'rtl' as const, textAlign: 'right' as const };
-
-// Explicit pixel width — alignSelf:'stretch' + width:'100%' were not
-// stretching the Pressable on Android. stickyFooter has left/right 16.
-const CONTINUE_BTN_W = Dimensions.get('window').width - 32;
 
 /** Gen-Z friendly feedback variants — rotated by question hash so the same
  *  user sees variety across podcasts but a single question stays consistent.
@@ -68,6 +64,10 @@ export const PodcastQuestionCard = React.memo(function PodcastQuestionCard({
   onContinue,
 }: Props) {
   const insets = useSafeAreaInsets();
+  // Inline width via useWindowDimensions — module-level Dimensions returns 0
+  // on Android cold start. stickyFooter is left/right 16, so subtract 32.
+  const { width: windowW } = useWindowDimensions();
+  const continueBtnWidth = windowW - 32;
   const [selected, setSelected] = useState<number | null>(null);
   const [showResult, setShowResult] = useState(false);
 
@@ -199,6 +199,7 @@ export const PodcastQuestionCard = React.memo(function PodcastQuestionCard({
             accessibilityLabel={questionNumber === 1 ? 'לשאלה הבאה' : 'המשך'}
             style={({ pressed }) => [
               styles.continueBtn,
+              { width: continueBtnWidth },
               pressed && { opacity: 0.92, transform: [{ scale: 0.98 }] },
             ]}
           >
@@ -436,11 +437,10 @@ const styles = StyleSheet.create({
     bottom: 16,
     alignItems: 'stretch',
   },
-  // Standard app primary CTA — matches PodcastIntroCard.startBtn /
-  // PodcastSummaryCard.continueBtn / couple-dilemma.cta. row-reverse so the
-  // chevron icon sits on the LEFT (continue = forward in RTL).
+  // Standard app primary CTA — width injected inline from useWindowDimensions
+  // (NOT module-level Dimensions). row-reverse so the chevron icon sits on
+  // the LEFT (continue = forward in RTL).
   continueBtn: {
-    width: CONTINUE_BTN_W,
     flexDirection: 'row-reverse',
     backgroundColor: '#0ea5e9',
     borderRadius: 18,

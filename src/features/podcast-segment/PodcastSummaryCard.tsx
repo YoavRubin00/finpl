@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { View, Text, StyleSheet, Pressable, Dimensions } from 'react-native';
+import { View, Text, StyleSheet, Pressable, useWindowDimensions } from 'react-native';
 import { Image as ExpoImage } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import Animated, {
@@ -25,6 +25,10 @@ export const PodcastSummaryCard = React.memo(function PodcastSummaryCard({
   onContinue,
 }: Props) {
   const insets = useSafeAreaInsets();
+  // See PodcastIntroCard for the same width fix — module-level Dimensions
+  // returns 0 on Android cold start, so the inline width comes from a hook.
+  const { width: windowW } = useWindowDimensions();
+  const continueBtnWidth = windowW - 48;
   useEffect(() => {
     successHaptic();
   }, []);
@@ -71,6 +75,7 @@ export const PodcastSummaryCard = React.memo(function PodcastSummaryCard({
           accessibilityLabel="המשך לשאלות"
           style={({ pressed }) => [
             styles.continueBtn,
+            { width: continueBtnWidth },
             pressed && { opacity: 0.92, transform: [{ scale: 0.98 }] },
           ]}
         >
@@ -83,9 +88,6 @@ export const PodcastSummaryCard = React.memo(function PodcastSummaryCard({
 });
 
 const DAISY_SIZE = 180;
-// Explicit pixel width — alignSelf:'stretch' + width:'100%' were not
-// stretching the Pressable on Android, so we compute SW - footer padding.
-const CONTINUE_BTN_W = Dimensions.get('window').width - 48;
 
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: '#fce7e7' },
@@ -149,9 +151,9 @@ const styles = StyleSheet.create({
     paddingTop: 12,
     alignItems: 'stretch',
   },
-  // Standard app primary CTA — sky blue with full borders + 3D lip + glow.
+  // Standard app primary CTA — width injected inline from useWindowDimensions
+  // (NOT a module-level Dimensions read: that returns 0 on Android cold start).
   continueBtn: {
-    width: CONTINUE_BTN_W,
     flexDirection: 'row-reverse',
     alignItems: 'center',
     justifyContent: 'center',

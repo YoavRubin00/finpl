@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, StyleSheet, Pressable, Dimensions } from 'react-native';
+import { View, Text, StyleSheet, Pressable, Dimensions, useWindowDimensions } from 'react-native';
 import { Image as ExpoImage } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import Animated, {
@@ -17,11 +17,6 @@ import type { PodcastSegment } from '../chapter-1-content/types';
 const { width: SW } = Dimensions.get('window');
 const DAISY_W = Math.min(SW * 0.62, 260);
 const DAISY_H = Math.round(DAISY_W * 1.4);
-// Footer's paddingHorizontal is 24 on each side → button takes the remainder.
-// Computed explicitly because width: '100%' + alignSelf: 'stretch' weren't
-// producing a stretched button on Android (Pressable was rendering at
-// intrinsic width — text + icon only).
-const START_BTN_W = SW - 48;
 const RTL = { writingDirection: 'rtl' as const, textAlign: 'center' as const };
 
 interface Props {
@@ -38,6 +33,12 @@ export const PodcastIntroCard = React.memo(function PodcastIntroCard({
   onStart,
 }: Props) {
   const insets = useSafeAreaInsets();
+  // useWindowDimensions returns reliable width AFTER native init. The module-
+  // level Dimensions.get('window') call was sometimes returning 0 on Android
+  // during cold start, which made startBtnWidth resolve to -48 → invalid →
+  // Pressable shrank to intrinsic content width.
+  const { width: windowW } = useWindowDimensions();
+  const startBtnWidth = windowW - 48;
   React.useEffect(() => {
     mediumHaptic();
   }, []);
@@ -110,6 +111,7 @@ export const PodcastIntroCard = React.memo(function PodcastIntroCard({
           accessibilityLabel="התחל את הפודקסט"
           style={({ pressed }) => [
             styles.startBtn,
+            { width: startBtnWidth },
             pressed && { opacity: 0.92, transform: [{ scale: 0.98 }] },
           ]}
         >
@@ -186,11 +188,10 @@ const styles = StyleSheet.create({
     paddingTop: 12,
     alignItems: 'stretch',
   },
-  // Standard app primary CTA pattern: explicit pixel width (NOT % — alignSelf
-  // wasn't stretching the Pressable on Android), sky blue with 2px top/side
-  // border, 5px Duolingo-style bottom border lip, soft glow.
+  // Standard app primary CTA — width is injected inline from useWindowDimensions
+  // (NOT a module-level constant: that read 0 from Dimensions on Android cold
+  // start). Sky blue, 2px sides border, 5px Duolingo bottom lip, soft glow.
   startBtn: {
-    width: START_BTN_W,
     flexDirection: 'row-reverse',
     alignItems: 'center',
     justifyContent: 'center',

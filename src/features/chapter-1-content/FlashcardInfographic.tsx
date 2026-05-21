@@ -8,7 +8,7 @@
  */
 import { useState, useCallback, useEffect, useRef } from "react";
 import { View, Image, Text, StyleSheet, Pressable, Modal, Platform } from "react-native";
-import Animated, { useSharedValue, useAnimatedStyle, withTiming, withRepeat, withSequence, Easing } from "react-native-reanimated";
+import Animated, { useSharedValue, useAnimatedStyle, withTiming, withRepeat, withSequence, Easing, interpolate, Extrapolation } from "react-native-reanimated";
 import { Image as ExpoImage } from "expo-image";
 import type { ImageSource, ImageLoadEventData } from "expo-image";
 import type { ImageSourcePropType } from "react-native";
@@ -538,10 +538,14 @@ export function FlashcardInfographic({ cardId, diveStep = 0, zoomRegions }: Prop
     ],
   }));
 
-  // Text overlays patch typos in the static PNG. The same `zoomStyle` transform
-  // (translateX/Y + scale) is applied to the overlay so it stays pinned to the
-  // underlying content area during dive-mode zoom — instead of fading out and
-  // re-exposing the typo when the camera moves.
+  // Text overlays patch typos in the static PNG. They're visible in the normal
+  // (unzoomed) card view, then fade out the moment dive-mode zoom begins so they
+  // don't stick around as a stray rectangle while the image moves underneath.
+  // interp [1, 1.1] -> [1, 0] = gone by the time zoom hits 10% (well within the
+  // 600ms dive transition).
+  const overlayFadeStyle = useAnimatedStyle(() => ({
+    opacity: interpolate(zoomScale.value, [1, 1.1], [1, 0], Extrapolation.CLAMP),
+  }));
 
   if (!source && !lottieSource && !finnTapSource) return null;
 
@@ -594,7 +598,7 @@ export function FlashcardInfographic({ cardId, diveStep = 0, zoomRegions }: Prop
                   justifyContent: "center",
                   alignItems: "center",
                 },
-                zoomStyle,
+                overlayFadeStyle,
               ]}
             >
               {o.text ? (
