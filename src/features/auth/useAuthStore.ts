@@ -6,7 +6,7 @@ import type { UserProfile } from "./types";
 import { upsertUserProfile, deleteUserProfile } from "../../db/sync/syncUserProfile";
 import { logoutRevenueCat } from "../../services/revenueCat";
 import { identifyUser, resetUser, captureEvent } from "../../lib/posthog";
-import { logCompletedRegistration } from "../../utils/fbEvents";
+import { logCompletedRegistration, logOnboardingComplete } from "../../utils/fbEvents";
 
 interface AuthState {
   isAuthenticated: boolean;
@@ -122,10 +122,14 @@ export const useAuthStore = create<AuthState>()(
         captureEvent('guest_converted_to_user');
         // Guest → real user IS a registration event for Facebook attribution.
         logCompletedRegistration('email');
+        // Converting a guest also implies they already finished onboarding, since
+        // they reached this conversion through the in-app upgrade flow.
+        logOnboardingComplete();
       },
 
       completeOnboarding: (profile: UserProfile) => {
         set({ hasCompletedOnboarding: true, profile });
+        logOnboardingComplete();
       },
 
       updateProfile: (partial) => {

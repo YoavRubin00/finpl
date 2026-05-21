@@ -6,7 +6,6 @@ import {
   Pressable,
   Dimensions,
   ScrollView,
-  type NativeSyntheticEvent,
 } from 'react-native';
 import { Image as ExpoImage } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -22,7 +21,7 @@ import Animated, {
   withSequence,
   withTiming,
 } from 'react-native-reanimated';
-import { Pause, Play, RotateCcw, FastForward } from 'lucide-react-native';
+import { Pause, Play, RotateCcw } from 'lucide-react-native';
 import {
   tapHaptic,
   heavyHaptic,
@@ -113,12 +112,16 @@ interface ListenStageProps {
   onFinished: () => void;
 }
 
-const TRANSCRIPT_HEIGHT = 90;
-const DAISY_W = Math.min(SW * 0.78, 320);
-const DAISY_H = Math.round(DAISY_W * 1.4);
+// Trimmed proportions: Daisy frame went 78%→62% of screen width and the
+// transcript card grew from 90→124px. Net effect: more transcript context
+// visible (3 lines instead of 2), Daisy still hero but doesn't crowd the
+// audio/text balance, and the bottom controls breathe.
+const TRANSCRIPT_HEIGHT = 124;
+const DAISY_W = Math.min(SW * 0.62, 260);
+const DAISY_H = Math.round(DAISY_W * 1.3);
 
 function PodcastListenStage({ podcast, onFinished }: ListenStageProps) {
-  const { phase, progress, togglePlayPause, replay, seekForward } = usePodcastPlayer(
+  const { phase, progress, togglePlayPause, replay } = usePodcastPlayer(
     podcast.audio.uri,
     () => {
       heavyHaptic();
@@ -183,31 +186,31 @@ function PodcastListenStage({ podcast, onFinished }: ListenStageProps) {
     [progress, words.length],
   );
   const scrollRef = useRef<ScrollView>(null);
-  const wordPositionsRef = useRef<number[]>([]);
+  const contentHeightRef = useRef<number>(0);
 
-  /** Auto-scroll: keep the most recently revealed word centered in the visible window. */
+  /** Auto-scroll proportionally to audio progress. We avoid relying on per-word
+   *  onLayout (Android doesn't fire onLayout for nested Text children), which
+   *  previously left the highlighted word stuck off-screen. */
   useEffect(() => {
-    if (revealedWords < 4) return; // small text — no scrolling needed yet
-    const y = wordPositionsRef.current[revealedWords - 1] ?? 0;
-    const targetY = Math.max(0, y - TRANSCRIPT_HEIGHT * 0.45);
+    const total = contentHeightRef.current;
+    if (total <= TRANSCRIPT_HEIGHT) return;
+    const targetY = Math.max(0, (total - TRANSCRIPT_HEIGHT) * progress);
     scrollRef.current?.scrollTo({ y: targetY, animated: true });
-  }, [revealedWords]);
-
-  const captureWordY = (i: number) => (e: NativeSyntheticEvent<{ layout: { y: number } }>) => {
-    wordPositionsRef.current[i] = e.nativeEvent.layout.y;
-  };
+  }, [progress]);
 
   const isPlaying = phase === 'playing';
   const isPaused = phase === 'paused';
   const isFinished = phase === 'finished';
 
-  // Daisy source: WebP during playing/loading, happy on finished, mic at paused
-  const daisySource =
-    isPlaying || phase === 'loading'
-      ? DAISY_TALKING_WEBP
-      : isFinished
-        ? DAISY_ASSETS.happy
-        : DAISY_ASSETS.mic;
+  // Daisy source: talking WebP ONLY while audio is actually playing. During
+  // loading she holds the static mic pose so her mouth doesn't move before
+  // she has anything to say (user was seeing the talking animation start
+  // before the audio did, breaking sync).
+  const daisySource = isPlaying
+    ? DAISY_TALKING_WEBP
+    : isFinished
+      ? DAISY_ASSETS.happy
+      : DAISY_ASSETS.mic;
 
   return (
     <View style={styles.stage}>
@@ -262,13 +265,13 @@ function PodcastListenStage({ podcast, onFinished }: ListenStageProps) {
           ref={scrollRef}
           showsVerticalScrollIndicator={false}
           contentContainerStyle={styles.transcriptContent}
+          onContentSizeChange={(_w, h) => { contentHeightRef.current = h; }}
           scrollEnabled={false}
         >
           <Text style={[styles.transcriptText, RTL]}>
             {words.map((w, i) => (
               <Text
                 key={i}
-                onLayout={captureWordY(i)}
                 style={
                   i < revealedWords - 1
                     ? styles.transcriptWordPast
@@ -285,7 +288,10 @@ function PodcastListenStage({ podcast, onFinished }: ListenStageProps) {
         </ScrollView>
       </Animated.View>
 
-      {/* 3 buttons: restart · play/pause · seek -5s */}
+      {/* 2 buttons: replay (secondary) + play/pause (primary).
+          Dropped the "+5s seek" — for a 22-second podcast the skip
+          felt gimmicky and added a third control that visually crowded
+          the play/pause hero button. */}
       <Animated.View entering={FadeIn.duration(360).delay(120)} style={styles.buttonsRow}>
         <Pressable
           onPress={() => { tapHaptic(); replay(); }}
@@ -320,19 +326,6 @@ function PodcastListenStage({ podcast, onFinished }: ListenStageProps) {
             {isPlaying ? 'השהה' : isFinished ? 'נגן שוב' : 'המשך'}
           </Text>
         </Pressable>
-
-        <Pressable
-          onPress={() => { tapHaptic(); seekForward(5); }}
-          accessibilityRole="button"
-          accessibilityLabel="קפיצה 5 שניות קדימה"
-          style={({ pressed }) => [
-            styles.btnGhost,
-            pressed && { opacity: 0.85, transform: [{ scale: 0.97 }] },
-          ]}
-        >
-          <FastForward color="#0369a1" size={18} strokeWidth={2.6} />
-          <Text style={styles.btnGhostText}>5 שניות</Text>
-        </Pressable>
       </Animated.View>
 
       {isPaused ? (
@@ -346,7 +339,9 @@ function PodcastListenStage({ podcast, onFinished }: ListenStageProps) {
 
 // ─────────────────────── Ambient bubbles overlay ───────────────────────
 
-const BUBBLE_COUNT = 9;
+// Trimmed from 9 → 5: studio mood preserved, visual noise reduced so the
+// eye lands on Daisy + transcript faster.
+const BUBBLE_COUNT = 5;
 const BUBBLE_CONFIGS = Array.from({ length: BUBBLE_COUNT }, (_, i) => ({
   // Pseudo-random but stable across renders
   leftPct: ((i * 173) % 92) + 4,        // 4..96

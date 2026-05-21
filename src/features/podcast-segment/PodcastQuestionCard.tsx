@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useMemo } from 'react';
 import { View, Text, StyleSheet, Pressable, ScrollView } from 'react-native';
 import Animated, {
   FadeIn,
@@ -12,14 +12,42 @@ import Animated, {
 } from 'react-native-reanimated';
 import { Image as ExpoImage } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { tapHaptic, successHaptic, errorHaptic } from '../../utils/haptics';
 import { GoldCoinIcon } from '../../components/ui/GoldCoinIcon';
-import { FlyingRewards } from '../../components/ui/FlyingRewards';
-import { ConfettiExplosion } from '../../components/ui/ConfettiExplosion';
 import { DAISY_HAPPY_CELEBRATE_WEBP, DAISY_EMPATHIC_WEBP } from './daisy-assets';
 import type { PodcastQuestion, PodcastQuestionOption } from '../chapter-1-content/types';
 
 const RTL = { writingDirection: 'rtl' as const, textAlign: 'right' as const };
+
+/** Gen-Z friendly feedback variants — rotated by question hash so the same
+ *  user sees variety across podcasts but a single question stays consistent.
+ *  The animated Daisy WebP is the primary celebration; the text is the
+ *  voice. Avoids the repetitive "יפה!" → "יפה!" → "יפה!" feeling. */
+const CORRECT_TITLES = ['יפה!', 'בול!', 'מצוין!', 'יאללה!', 'איזה ראש!', 'תפסת!'] as const;
+const WRONG_TITLES   = ['כמעט!', 'לא בדיוק...', 'אופס', 'טעות חכמה...', 'כמעט שם...'] as const;
+
+/** Deterministic shuffle keyed by question.id so the same question always
+ *  presents options in the same order across renders/sessions, but the
+ *  correct option isn't always parked at index 1 (the previous data convention). */
+function hashStringToSeed(s: string): number {
+  let h = 0;
+  for (let i = 0; i < s.length; i++) {
+    h = ((h << 5) - h + s.charCodeAt(i)) | 0;
+  }
+  return Math.abs(h);
+}
+
+function seededShuffle<T>(arr: readonly T[], seed: number): T[] {
+  const a = [...arr];
+  let s = seed || 1;
+  for (let i = a.length - 1; i > 0; i--) {
+    s = (s * 9301 + 49297) % 233280;
+    const j = s % (i + 1);
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
 
 interface Props {
   question: PodcastQuestion;
@@ -34,13 +62,23 @@ export const PodcastQuestionCard = React.memo(function PodcastQuestionCard({
   onAnswered,
   onContinue,
 }: Props) {
+  const insets = useSafeAreaInsets();
   const [selected, setSelected] = useState<number | null>(null);
   const [showResult, setShowResult] = useState(false);
-  const [showConfetti, setShowConfetti] = useState(false);
-  const [showFlyingCoins, setShowFlyingCoins] = useState(false);
 
-  const selectedOption = selected !== null ? question.options[selected] : null;
+  // Shuffled once per question; the correct answer is no longer pinned to index 1.
+  const shuffledOptions = useMemo(
+    () => seededShuffle(question.options, hashStringToSeed(question.id)),
+    [question.id, question.options],
+  );
+
+  const selectedOption = selected !== null ? shuffledOptions[selected] : null;
   const isCorrect = selectedOption?.isCorrect ?? false;
+
+  const feedbackTitle = useMemo(() => {
+    const pool = isCorrect ? CORRECT_TITLES : WRONG_TITLES;
+    return pool[hashStringToSeed(question.id) % pool.length];
+  }, [isCorrect, question.id]);
 
   const handleSelect = useCallback(
     (index: number, option: PodcastQuestionOption) => {
@@ -50,8 +88,6 @@ export const PodcastQuestionCard = React.memo(function PodcastQuestionCard({
       setShowResult(true);
       if (option.isCorrect) {
         successHaptic();
-        setShowConfetti(true);
-        setShowFlyingCoins(true);
       } else {
         errorHaptic();
       }
@@ -95,7 +131,7 @@ export const PodcastQuestionCard = React.memo(function PodcastQuestionCard({
 
         {/* Options */}
         <View style={styles.optionsCol}>
-          {question.options.map((option, idx) => (
+          {shuffledOptions.map((option, idx) => (
             <OptionButton
               key={`${question.id}-${idx}`}
               option={option}
@@ -122,9 +158,7 @@ export const PodcastQuestionCard = React.memo(function PodcastQuestionCard({
               contentFit="contain"
               accessible={false}
             />
-            <Text style={[styles.feedbackTitle, RTL]}>
-              {isCorrect ? 'יפה!' : 'לא בדיוק...'}
-            </Text>
+            <Text style={[styles.feedbackTitle, RTL]}>{feedbackTitle}</Text>
             <Text style={[styles.feedbackBody, RTL]}>{selectedOption.feedback}</Text>
             {isCorrect ? (
               <View style={styles.rewardRow}>
@@ -141,9 +175,14 @@ export const PodcastQuestionCard = React.memo(function PodcastQuestionCard({
         ) : null}
       </ScrollView>
 
-      {/* Sticky Continue button — always visible above the fold once answer chosen */}
+      {/* Sticky Continue button — always visible above the fold once answer chosen.
+          `bottom` respects the Android system nav bar / iOS home indicator inset
+          so the button isn't clipped behind it. */}
       {showResult ? (
-        <Animated.View entering={FadeIn.duration(280)} style={styles.stickyFooter}>
+        <Animated.View
+          entering={FadeIn.duration(280)}
+          style={[styles.stickyFooter, { bottom: insets.bottom + 12 }]}
+        >
           <Pressable
             onPress={() => { tapHaptic(); onContinue(); }}
             accessibilityRole="button"
@@ -160,14 +199,6 @@ export const PodcastQuestionCard = React.memo(function PodcastQuestionCard({
         </Animated.View>
       ) : null}
 
-      {showConfetti ? <ConfettiExplosion onComplete={() => setShowConfetti(false)} /> : null}
-      {showFlyingCoins ? (
-        <FlyingRewards
-          type="coins"
-          amount={question.coinReward}
-          onComplete={() => setShowFlyingCoins(false)}
-        />
-      ) : null}
     </View>
   );
 });
@@ -244,9 +275,9 @@ const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: '#f0f9ff' },
   scrollContent: {
     paddingHorizontal: 16,
-    paddingTop: 12,
-    paddingBottom: 96, // leave room for sticky footer button
-    gap: 14,
+    paddingTop: 10,
+    paddingBottom: 88, // leave room for sticky footer button
+    gap: 10,
   },
 
   header: {
@@ -259,7 +290,7 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(14,165,233,0.35)',
     borderWidth: 1,
     paddingHorizontal: 12,
-    paddingVertical: 6,
+    paddingVertical: 5,
     borderRadius: 999,
   },
   typeChipText: {
@@ -277,22 +308,22 @@ const styles = StyleSheet.create({
     backgroundColor: '#ffffff',
     borderColor: 'rgba(14,165,233,0.20)',
     borderWidth: 1,
-    borderRadius: 16,
-    padding: 16,
+    borderRadius: 14,
+    padding: 12,
     shadowColor: '#0ea5e9',
     shadowOpacity: 0.08,
-    shadowRadius: 8,
+    shadowRadius: 6,
     shadowOffset: { width: 0, height: 2 },
     elevation: 1,
   },
   questionText: {
     color: '#1e293b',
-    fontSize: 17,
+    fontSize: 16,
     fontWeight: '800',
-    lineHeight: 25,
+    lineHeight: 23,
   },
 
-  optionsCol: { gap: 10 },
+  optionsCol: { gap: 8 },
   optionBtn: {
     flexDirection: 'row-reverse',
     alignItems: 'center',
@@ -301,7 +332,7 @@ const styles = StyleSheet.create({
     borderWidth: 1.5,
     borderRadius: 14,
     paddingHorizontal: 14,
-    paddingVertical: 14,
+    paddingVertical: 12,
     gap: 12,
   },
   optionLetterCircle: {
@@ -341,8 +372,8 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(14,165,233,0.20)',
     borderWidth: 1,
     borderRadius: 14,
-    padding: 14,
-    gap: 8,
+    padding: 12,
+    gap: 4,
     alignItems: 'center',
     shadowColor: '#0ea5e9',
     shadowOpacity: 0.06,
@@ -351,11 +382,11 @@ const styles = StyleSheet.create({
     elevation: 1,
   },
   feedbackDaisy: {
-    width: 96,
-    height: 96,
+    width: 84,
+    height: 84,
   },
-  feedbackTitle: { fontSize: 15, fontWeight: '900', color: '#0369a1', textAlign: 'right', writingDirection: 'rtl', alignSelf: 'stretch' },
-  feedbackBody: { fontSize: 14, lineHeight: 21, color: '#334155', textAlign: 'right', writingDirection: 'rtl', alignSelf: 'stretch' },
+  feedbackTitle: { fontSize: 18, fontWeight: '900', color: '#0369a1', textAlign: 'right', writingDirection: 'rtl', alignSelf: 'stretch' },
+  feedbackBody: { fontSize: 13, lineHeight: 19, color: '#334155', textAlign: 'right', writingDirection: 'rtl', alignSelf: 'stretch' },
 
   rewardRow: { flexDirection: 'row-reverse', gap: 8, marginTop: 4 },
   rewardPill: {
@@ -389,7 +420,7 @@ const styles = StyleSheet.create({
   continueBtn: {
     backgroundColor: '#0ea5e9',
     borderRadius: 16,
-    paddingVertical: 16,
+    paddingVertical: 14,
     alignItems: 'center',
     borderBottomWidth: 4,
     borderBottomColor: '#0369a1',

@@ -113,6 +113,7 @@ import { PodcastSegmentScreen } from "../podcast-segment/PodcastSegmentScreen";
 import { getPodcastForModule } from "../podcast-segment/podcasts";
 import { getCoupleDilemmaForModule } from "../couple-dilemma/coupleDilemmas";
 import { CoupleDilemmaScreen } from "../couple-dilemma/CoupleDilemmaScreen";
+import { prefetchCoupleDilemmaAsset } from "../couple-dilemma/couple-dilemma-prefetch";
 
 // Small helper that advances phase → summary via useEffect (never during render).
 function FallbackToSummary({ setPhase }: { setPhase: (p: "summary") => void }) {
@@ -2556,6 +2557,15 @@ export function LessonFlowScreen() {
     () => (mod?.id ? getCoupleDilemmaForModule(mod.id) : undefined),
     [mod?.id],
   );
+  // Kick off video + audio download the moment we know a couple-dilemma is
+  // wired to this module. We have ~70% of the lesson worth of reading time
+  // before the dilemma triggers, plenty to fully download the 5s mp4 even
+  // on a slow connection.
+  useEffect(() => {
+    if (!modCoupleDilemma) return;
+    prefetchCoupleDilemmaAsset(modCoupleDilemma.videoUri);
+    prefetchCoupleDilemmaAsset(modCoupleDilemma.narrationAudioUri);
+  }, [modCoupleDilemma]);
   /** Last flashcard index AFTER which the couple dilemma appears. -1 if absent or unresolvable. */
   const coupleDilemmaTriggerAfter = useMemo(() => {
     if (!mod || !modCoupleDilemma || mod.flashcards.length < 2) return -1;
@@ -3503,7 +3513,7 @@ export function LessonFlowScreen() {
               phase === "podcast" && modPodcast
                 ? `🎙️  ${modPodcast.title}`
                 : phase === "couple-dilemma"
-                  ? "💞 הדילמות של הזוג הצעיר"
+                  ? "הדילמות של הזוג הצעיר"
                   : phase === "interactive-recall"
                     ? "בואו נתרגל"
                     : mod.title;

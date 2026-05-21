@@ -8,6 +8,7 @@ import Animated, {
   ZoomIn,
 } from 'react-native-reanimated';
 import { ChevronLeft } from 'lucide-react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { tapHaptic, successHaptic } from '../../utils/haptics';
 import { DAISY_ASSETS } from './daisy-assets';
 import type { PodcastSegment } from '../chapter-1-content/types';
@@ -23,6 +24,7 @@ export const PodcastSummaryCard = React.memo(function PodcastSummaryCard({
   podcast: _podcast,
   onContinue,
 }: Props) {
+  const insets = useSafeAreaInsets();
   useEffect(() => {
     successHaptic();
   }, []);
@@ -55,7 +57,10 @@ export const PodcastSummaryCard = React.memo(function PodcastSummaryCard({
         </Animated.View>
       </View>
 
-      <Animated.View entering={FadeInUp.duration(400).delay(240)} style={styles.footer}>
+      <Animated.View
+        entering={FadeInUp.duration(400).delay(240)}
+        style={[styles.footer, { paddingBottom: insets.bottom + 16 }]}
+      >
         <Pressable
           onPress={() => { tapHaptic(); onContinue(); }}
           accessibilityRole="button"

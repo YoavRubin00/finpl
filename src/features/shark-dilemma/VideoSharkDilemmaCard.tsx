@@ -305,7 +305,7 @@ function OptionButton({ chip, option, onPress }: OptionButtonProps) {
             <View style={styles.optionChip}>
               <Text style={styles.optionChipText}>{chip}</Text>
             </View>
-            <Text style={styles.optionLabel} numberOfLines={2}>
+            <Text style={styles.optionLabel} numberOfLines={3}>
               {option.label}
             </Text>
           </View>
@@ -487,11 +487,11 @@ const styles = StyleSheet.create({
     transform: [{ translateY: 1 }],
   },
   optionInner: {
-    minHeight: 64,
+    minHeight: 84,
     flexDirection: "row-reverse",
     alignItems: "center",
     paddingHorizontal: 14,
-    paddingVertical: 12,
+    paddingVertical: 14,
     gap: 12,
   },
   optionChip: {

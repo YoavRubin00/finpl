@@ -6,14 +6,18 @@ import { createAudioPlayer, type AudioPlayer } from 'expo-audio';
  *
  * Stripped-down version of usePodcastPlayer:
  *   - no progress / no seek / no pause-resume controls
- *   - auto-plays once on mount, fires onFinished, cleans up on unmount
+ *   - auto-plays once `enabled` flips to true, fires onFinished, cleans up on unmount
  *
- * Audio plays in parallel with the (muted) video.
+ * Audio plays in parallel with the (muted) video. Callers should pass
+ * `enabled: false` until the video has at least one frame on screen, so the
+ * user doesn't hear Daisy talking before they see her.
  */
 export function useCoupleNarration(
   audioUri: string,
   onFinished?: () => void,
+  options?: { enabled?: boolean },
 ): { isFinished: boolean } {
+  const enabled = options?.enabled ?? true;
   const [isFinished, setIsFinished] = useState(false);
   const playerRef = useRef<AudioPlayer | null>(null);
   const finishedFiredRef = useRef(false);
@@ -24,6 +28,7 @@ export function useCoupleNarration(
   }, [onFinished]);
 
   useEffect(() => {
+    if (!enabled) return;
     setIsFinished(false);
     finishedFiredRef.current = false;
 
@@ -49,7 +54,7 @@ export function useCoupleNarration(
       try { player.remove(); } catch { /* ignore */ }
       playerRef.current = null;
     };
-  }, [audioUri]);
+  }, [audioUri, enabled]);
 
   return { isFinished };
 }

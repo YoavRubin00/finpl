@@ -14,6 +14,9 @@ import { getLevelFromXP, getPyramidLayer } from "../../utils/progression";
 import { upsertInventory } from "../../db/sync/syncInventory";
 import { useAuthStore } from "../auth/useAuthStore";
 import * as Notifications from "expo-notifications";
+import { logLevelUp, logStreakMilestone } from "../../utils/fbEvents";
+
+const STREAK_MILESTONE_DAYS: ReadonlySet<number> = new Set([3, 7, 14, 30, 60, 90]);
 
 interface EconomyState {
   xp: number;
@@ -196,6 +199,7 @@ export const useEconomyStore = create<EconomyState>()(
         const newLayer = getPyramidLayer(xp);
         if (newLevel > prevLevel) {
           set({ pendingLevelUp: newLevel });
+          logLevelUp(newLevel);
         }
         // Notify when investments unlock (layer 2)
         if (prevLayer < 2 && newLayer >= 2) {
@@ -370,6 +374,10 @@ export const useEconomyStore = create<EconomyState>()(
           recentActivityHours: [...state.recentActivityHours.slice(-13), new Date().getHours()],
         }));
 
+        if (newStreak > streak && STREAK_MILESTONE_DAYS.has(newStreak)) {
+          logStreakMilestone(newStreak);
+        }
+
         // Cancel today's streak reminder, user already completed the daily task
         try {
           const notifMod = require("../notifications/useNotificationStore");
@@ -427,6 +435,10 @@ export const useEconomyStore = create<EconomyState>()(
           : trimDates(frozenDates);
 
         const netFreezeDelta = (grantFreeze ? 1 : 0) - (freezeConsumed ? 1 : 0);
+
+        if (newStreak > streak && STREAK_MILESTONE_DAYS.has(newStreak)) {
+          logStreakMilestone(newStreak);
+        }
 
         set((state) => ({
           xp: state.xp + LOGIN_BONUS_XP,

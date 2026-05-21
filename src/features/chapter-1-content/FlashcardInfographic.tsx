@@ -431,18 +431,6 @@ interface TextOverlay {
 
 /** Patches over typos in cloud-hosted PNG infographics. Position % is relative to the rendered image. */
 const TEXT_OVERLAYS: Record<string, TextOverlay[]> = {
-  "fc-0-2-4": [
-    {
-      topPct: 40,
-      leftPct: 26,
-      widthPct: 24,
-      heightPct: 7,
-      text: "חשבון",
-      fontSize: 22,
-      color: "#0f172a",
-      backgroundColor: "#ffffff",
-    },
-  ],
   "fc-1-2-4": [
     {
       topPct: 65,

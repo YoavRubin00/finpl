@@ -8,6 +8,8 @@ import Animated, {
   ZoomIn,
 } from 'react-native-reanimated';
 import { Play } from 'lucide-react-native';
+import { Asset } from 'expo-asset';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { tapHaptic, mediumHaptic } from '../../utils/haptics';
 import { DAISY_ASSETS } from './daisy-assets';
 import type { PodcastSegment } from '../chapter-1-content/types';
@@ -30,9 +32,17 @@ export const PodcastIntroCard = React.memo(function PodcastIntroCard({
   totalEpisodes,
   onStart,
 }: Props) {
+  const insets = useSafeAreaInsets();
   React.useEffect(() => {
     mediumHaptic();
   }, []);
+
+  // Warm the podcast audio cache while the user reads the intro title. By
+  // the time they tap "התחל" the mp3 is already on disk, so the listen
+  // stage doesn't sit on a blank "loading" screen waiting for the network.
+  React.useEffect(() => {
+    void Asset.fromURI(podcast.audio.uri).downloadAsync().catch(() => {});
+  }, [podcast.audio.uri]);
 
   return (
     <View style={styles.root}>
@@ -75,7 +85,10 @@ export const PodcastIntroCard = React.memo(function PodcastIntroCard({
         </Animated.View>
       </View>
 
-      <Animated.View entering={FadeInUp.duration(400).delay(280)} style={styles.footer}>
+      <Animated.View
+        entering={FadeInUp.duration(400).delay(280)}
+        style={[styles.footer, { paddingBottom: insets.bottom + 16 }]}
+      >
         <Pressable
           onPress={() => { tapHaptic(); onStart(); }}
           accessibilityRole="button"
