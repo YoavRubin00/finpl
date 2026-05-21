@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, StyleSheet, Pressable, Dimensions, useWindowDimensions } from 'react-native';
+import { View, Text, StyleSheet, Pressable, Dimensions } from 'react-native';
 import { Image as ExpoImage } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import Animated, {
@@ -11,6 +11,7 @@ import { Play } from 'lucide-react-native';
 import { Asset } from 'expo-asset';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { tapHaptic, mediumHaptic } from '../../utils/haptics';
+import { useSoundEffect } from '../../hooks/useSoundEffect';
 import { DAISY_ASSETS } from './daisy-assets';
 import type { PodcastSegment } from '../chapter-1-content/types';
 
@@ -33,12 +34,7 @@ export const PodcastIntroCard = React.memo(function PodcastIntroCard({
   onStart,
 }: Props) {
   const insets = useSafeAreaInsets();
-  // useWindowDimensions returns reliable width AFTER native init. The module-
-  // level Dimensions.get('window') call was sometimes returning 0 on Android
-  // during cold start, which made startBtnWidth resolve to -48 → invalid →
-  // Pressable shrank to intrinsic content width.
-  const { width: windowW } = useWindowDimensions();
-  const startBtnWidth = windowW - 48;
+  const { playSound } = useSoundEffect();
   React.useEffect(() => {
     mediumHaptic();
   }, []);
@@ -106,16 +102,15 @@ export const PodcastIntroCard = React.memo(function PodcastIntroCard({
         style={[styles.footer, { paddingBottom: insets.bottom + 16 }]}
       >
         <Pressable
-          onPress={() => { tapHaptic(); onStart(); }}
+          onPress={() => { playSound('btn_click_heavy'); tapHaptic(); onStart(); }}
           accessibilityRole="button"
           accessibilityLabel="התחל את הפודקסט"
           style={({ pressed }) => [
             styles.startBtn,
-            { width: startBtnWidth },
-            pressed && { opacity: 0.92, transform: [{ scale: 0.98 }] },
+            pressed && { opacity: 0.92, transform: [{ translateY: 2 }] },
           ]}
         >
-          <Play color="#ffffff" size={22} fill="#ffffff" />
+          <Play color="#ffffff" size={20} fill="#ffffff" />
           <Text style={styles.startBtnText}>התחל</Text>
         </Pressable>
       </Animated.View>
@@ -188,9 +183,12 @@ const styles = StyleSheet.create({
     paddingTop: 12,
     alignItems: 'stretch',
   },
-  // Standard app primary CTA — width is injected inline from useWindowDimensions
-  // (NOT a module-level constant: that read 0 from Dimensions on Android cold
-  // start). Sky blue, 2px sides border, 5px Duolingo bottom lip, soft glow.
+  // Canonical lesson primary CTA — same base as LessonFlowScreen but with the
+  // glow + side border kept so it stays prominent against the pink/cyan
+  // gradient background of the intro card (without the glow the cyan washes
+  // into the gradient and the button reads as "white on light"). All other
+  // podcast cards use the simpler variant because they sit on a flat white
+  // backdrop where the glow is unnecessary.
   startBtn: {
     flexDirection: 'row-reverse',
     alignItems: 'center',

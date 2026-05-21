@@ -125,9 +125,13 @@ const TRANSCRIPT_HEIGHT = 152;
 const DAISY_W = Math.min(SW * 0.62, 260);
 const DAISY_H = Math.round(DAISY_W * 1.3);
 
+// Apple Podcasts–style speed cycle: tap to advance 1x → 1.2x → 1.5x → 1x.
+// Single pill instead of three buttons keeps the chrome minimal on a 22s clip.
+const SPEED_OPTIONS = [1, 1.2, 1.5] as const;
+
 function PodcastListenStage({ podcast, onContinue }: ListenStageProps) {
   const insets = useSafeAreaInsets();
-  const { phase, progress, togglePlayPause, seekForward, replay } = usePodcastPlayer(
+  const { phase, progress, rate, togglePlayPause, seekForward, replay, setRate } = usePodcastPlayer(
     podcast.audio.uri,
     () => {
       // Audio naturally finished — celebrate with haptic but DO NOT
@@ -136,20 +140,34 @@ function PodcastListenStage({ podcast, onContinue }: ListenStageProps) {
     },
   );
 
+  const cycleRate = () => {
+    const i = SPEED_OPTIONS.indexOf(rate as (typeof SPEED_OPTIONS)[number]);
+    const next = SPEED_OPTIONS[(i + 1) % SPEED_OPTIONS.length];
+    tapHaptic();
+    setRate(next);
+  };
+
   useEffect(() => {
     if (phase === 'playing') mediumHaptic();
   }, [phase]);
 
-  /* Ambient floating motion — gentle Y-bob + slow scale "breath" applied to
-   *  the Daisy frame. The WebP itself only animates her mouth + flower; this
-   *  layer gives the whole character a sense of weight in water so even
-   *  during the loop seam she never feels frozen. */
+  /* Ambient floating motion — strong, layered, ALWAYS running. The WebP
+   *  itself only loops once on some devices (its metadata reports loopCount=1
+   *  rather than 0), which used to leave Daisy frozen while bubbles continued
+   *  smoothly — visually broken. This outer-frame animation keeps her *whole
+   *  body* alive even if the underlying WebP stops cycling. We combine 3 axes:
+   *    - vertical bob (translateY ±6px, 2.2s)
+   *    - breathing scale (0.985 ↔ 1.02, 3.2s)
+   *    - slow sway rotation (±1.2°, 4.4s)
+   *  Each axis has its own period so the motion never repeats in lockstep —
+   *  feels organic instead of mechanical. */
   const floatY = useSharedValue(0);
   const breathScale = useSharedValue(1);
+  const swayRot = useSharedValue(0);
   useEffect(() => {
     floatY.value = withRepeat(
       withSequence(
-        withTiming(-4, { duration: 2200, easing: Easing.inOut(Easing.sin) }),
+        withTiming(-6, { duration: 2200, easing: Easing.inOut(Easing.sin) }),
         withTiming(0, { duration: 2200, easing: Easing.inOut(Easing.sin) }),
       ),
       -1,
@@ -157,8 +175,16 @@ function PodcastListenStage({ podcast, onContinue }: ListenStageProps) {
     );
     breathScale.value = withRepeat(
       withSequence(
-        withTiming(1.015, { duration: 3200, easing: Easing.inOut(Easing.sin) }),
-        withTiming(1, { duration: 3200, easing: Easing.inOut(Easing.sin) }),
+        withTiming(1.02, { duration: 3200, easing: Easing.inOut(Easing.sin) }),
+        withTiming(0.985, { duration: 3200, easing: Easing.inOut(Easing.sin) }),
+      ),
+      -1,
+      false,
+    );
+    swayRot.value = withRepeat(
+      withSequence(
+        withTiming(1.2, { duration: 4400, easing: Easing.inOut(Easing.sin) }),
+        withTiming(-1.2, { duration: 4400, easing: Easing.inOut(Easing.sin) }),
       ),
       -1,
       false,
@@ -166,36 +192,60 @@ function PodcastListenStage({ podcast, onContinue }: ListenStageProps) {
     return () => {
       cancelAnimation(floatY);
       cancelAnimation(breathScale);
+      cancelAnimation(swayRot);
     };
-  }, [floatY, breathScale]);
+  }, [floatY, breathScale, swayRot]);
   const daisyFloatingStyle = useAnimatedStyle(() => ({
     transform: [
       { translateY: floatY.value },
       { scale: breathScale.value },
+      { rotate: `${swayRot.value}deg` },
     ],
   }));
 
-  /* sound waves halo */
+  /* Force-restart the talking WebP loop. Many WebP files declare loopCount=1
+   *  (encoder default) and freeze on the last frame after one cycle. By
+   *  bumping a counter into the ExpoImage `key` every 4.5s while audio is
+   *  actively playing, we remount the image and replay the animation from
+   *  frame 0. The 300ms expo-image transition crossfades the remount so it
+   *  reads as a smooth loop, not a hard cut. The interval pauses when audio
+   *  is paused/loading/finished so we don't burn renders. */
+  const [loopTick, setLoopTick] = useState(0);
+  useEffect(() => {
+    if (phase !== 'playing') return;
+    const id = setInterval(() => setLoopTick((t) => t + 1), 4500);
+    return () => clearInterval(id);
+  }, [phase]);
+
+  /* Speaking halo — pulse rate matches a natural speech cadence (~480ms per
+   * beat) instead of the previous 1800ms studio-pulse. The animation is
+   * GATED strictly by the audio phase: when expo-audio reports playing=false
+   * (paused/loading/finished) we cancel the shared values so the halo
+   * freezes in lockstep with the sound. Two waves offset by 240ms create the
+   * stacked ripple effect without the robotic feel of a fixed period.
+   */
   const wave0 = useSharedValue(0);
   const wave1 = useSharedValue(0);
   useEffect(() => {
     if (phase === 'playing') {
-      const start = (sv: typeof wave0, delay: number) => {
+      const startWave = (sv: typeof wave0, initialDelay: number) => {
         sv.value = 0;
-        sv.value = withRepeat(
-          withSequence(
-            withTiming(0, { duration: delay }),
-            withTiming(1, { duration: 1800, easing: Easing.out(Easing.quad) }),
+        sv.value = withSequence(
+          withTiming(0, { duration: initialDelay }),
+          withRepeat(
+            withTiming(1, { duration: 480, easing: Easing.out(Easing.quad) }),
+            -1,
+            false,
           ),
-          -1,
-          false,
         );
       };
-      start(wave0, 0);
-      start(wave1, 900);
+      startWave(wave0, 0);
+      startWave(wave1, 240);
     } else {
       cancelAnimation(wave0);
       cancelAnimation(wave1);
+      wave0.value = 0;
+      wave1.value = 0;
     }
     return () => {
       cancelAnimation(wave0);
@@ -296,6 +346,7 @@ function PodcastListenStage({ podcast, onContinue }: ListenStageProps) {
         </Pressable>
       </Animated.View>
 
+
       {/* Podcast progress — sits at top, right below module's general progress bar */}
       <Animated.View
         entering={FadeInDown.duration(280).springify()}
@@ -317,11 +368,12 @@ function PodcastListenStage({ podcast, onContinue }: ListenStageProps) {
         <Animated.View style={[styles.wave, wave1Style]} />
         <Animated.View style={[styles.daisyFrame, daisyFloatingStyle]}>
           <ExpoImage
+            key={`daisy-${isPlaying ? `talk-${loopTick}` : isFinished ? 'happy' : 'mic'}`}
             source={daisySource}
             style={styles.daisyImage}
             contentFit="cover"
             cachePolicy="memory-disk"
-            transition={400}
+            transition={300}
             autoplay
           />
         </Animated.View>
@@ -385,6 +437,12 @@ function PodcastListenStage({ podcast, onContinue }: ListenStageProps) {
         </Animated.View>
       ) : (
         <Animated.View entering={FadeIn.duration(360).delay(120)} style={styles.buttonsRow}>
+          {/* Spotify Podcasts transport layout (RTL-flipped):
+              [skip-back] [play/pause hero] [skip-forward] | [speed pill]
+              In Spotify the speed control sits at the FAR end of the row,
+              opposite the symmetric skip pair. Here the leading edge in RTL is
+              the right, so the speed pill anchors the LEFT edge — visually
+              "outside" the symmetric transport triad. */}
           <Pressable
             onPress={() => { tapHaptic(); seekForward(-5); }}
             accessibilityRole="button"
@@ -426,6 +484,25 @@ function PodcastListenStage({ podcast, onContinue }: ListenStageProps) {
           >
             <Text style={styles.btnRoundText}>5+</Text>
           </Pressable>
+
+          {/* Speed control — pinned to the leading edge in RTL (left). Cycles
+              1x → 1.2x → 1.5x. >1x states tint solid cyan so the active speed
+              is visible from across the screen. */}
+          <Pressable
+            onPress={cycleRate}
+            accessibilityRole="button"
+            accessibilityLabel={`מהירות נגינה ${rate}x. הקש להחלפה`}
+            style={({ pressed }) => [
+              styles.speedPillInner,
+              rate > 1 && styles.speedPillInnerActive,
+              pressed && { opacity: 0.85, transform: [{ scale: 0.96 }] },
+            ]}
+            hitSlop={8}
+          >
+            <Text style={[styles.speedPillText, rate > 1 && styles.speedPillTextActive]}>
+              {rate}x
+            </Text>
+          </Pressable>
         </Animated.View>
       )}
 
@@ -450,6 +527,11 @@ const BUBBLE_CONFIGS = Array.from({ length: BUBBLE_COUNT }, (_, i) => ({
   durationMs: 8000 + ((i * 311) % 4000), // 8..12 sec (slower, more graceful)
   delayMs: (i * 850) % 5000,             // 0..5s stagger
   wobbleAmp: 4 + ((i * 17) % 6),         // 4..10px horizontal wobble
+  // Independent wobble period (1.5..2.3s) — decoupled from rise duration so
+  // every bubble shimmies at a real-time cadence rather than a fraction of its
+  // own journey. Faster bubbles don't wobble faster; the motion feels like
+  // buoyancy in water, not a synced loop.
+  wobblePeriodMs: 1500 + ((i * 137) % 800),
 }));
 
 function AmbientBubbles() {
@@ -469,49 +551,69 @@ interface BubbleConfig {
   durationMs: number;
   delayMs: number;
   wobbleAmp: number;
+  wobblePeriodMs: number;
 }
 
 function AmbientBubble({ cfg, screenH }: { cfg: BubbleConfig; screenH: number }) {
+  // `t` drives the vertical rise (0 → 1 once per loop, with delayMs head start).
+  // `wobblePhase` drives horizontal sway in absolute real time (1500-2300ms
+  // per cycle), independent of rise speed. This is the key fix: previously the
+  // wobble was Math.sin(t * π * 3), so a slow bubble shimmied slowly and a fast
+  // bubble shimmied quickly — both looking robotic. Now every bubble shimmies
+  // at its own natural buoyancy-cadence regardless of rise speed.
   const t = useSharedValue(0);
+  const wobblePhase = useSharedValue(0);
   useEffect(() => {
-    // Always loops, independent of audio state. -1 = infinite, no reverse.
-    // The bubble starts fully below the screen (bottom: -size*3) and ends
-    // fully above (translateY clears screenH + extra), so the snap from
-    // t=1 → t=0 happens entirely off-screen.
     t.value = withRepeat(
       withSequence(
         withTiming(0, { duration: cfg.delayMs }),
-        withTiming(1, {
-          duration: cfg.durationMs,
-          // Slight ease-out — bubbles decelerate near the surface like real
-          // air rising through water losing buoyancy gradient.
-          easing: Easing.out(Easing.quad),
-        }),
+        // Linear easing — bubbles in water rise at terminal velocity (drag
+        // balances buoyancy almost immediately). Easing.out(Easing.quad) was
+        // actually backwards: it made bubbles SLOW down near the top, which
+        // is the opposite of real fluid dynamics. Linear feels like physics.
+        withTiming(1, { duration: cfg.durationMs, easing: Easing.linear }),
       ),
       -1,
       false,
     );
-    return () => cancelAnimation(t);
-  }, [cfg.delayMs, cfg.durationMs, t]);
+    wobblePhase.value = withRepeat(
+      withTiming(2 * Math.PI, {
+        duration: cfg.wobblePeriodMs,
+        easing: Easing.linear,
+      }),
+      -1,
+      false,
+    );
+    return () => {
+      cancelAnimation(t);
+      cancelAnimation(wobblePhase);
+    };
+  }, [cfg.delayMs, cfg.durationMs, cfg.wobblePeriodMs, t, wobblePhase]);
 
   const style = useAnimatedStyle(() => {
-    // Horizontal wobble — 3 full cycles over the journey, mimics buoyancy
-    // wobble against water resistance.
-    const wobble = Math.sin(t.value * Math.PI * 3) * cfg.wobbleAmp;
+    // Horizontal wobble — real-time sine wave, NOT tied to rise progress.
+    const wobble = Math.sin(wobblePhase.value) * cfg.wobbleAmp;
     // Distance covers the entire screen height + a buffer so the bubble
     // disappears completely before t=1 → t=0 snaps it back to start.
     const rise = -t.value * (screenH + cfg.size * 4);
-    // Opacity envelope: fade in over first 12%, fade out over last 18% —
-    // both ends hit opacity 0, so the loop snap is invisible.
+    // Opacity envelope: fade in over first 6%, plateau, fade out over the
+    // last 10%. Softer ramp-in (was 12%) so bubbles pop into view faster,
+    // later fade-out (was 82%) so they don't disappear mid-screen.
     let opacity = 0;
-    if (t.value < 0.12) opacity = (t.value / 0.12) * 0.55;
-    else if (t.value > 0.82) opacity = ((1 - t.value) / 0.18) * 0.55;
+    if (t.value < 0.06) opacity = (t.value / 0.06) * 0.55;
+    else if (t.value > 0.90) opacity = ((1 - t.value) / 0.10) * 0.55;
     else opacity = 0.55;
+    // Subtle "birth" scale — bubble starts at 0.92, grows to 1.0 over the
+    // first 8% of the rise. Mimics surface-tension expansion at release.
+    const birthScale = t.value < 0.08
+      ? 0.92 + (t.value / 0.08) * 0.08
+      : 1;
     return {
       opacity,
       transform: [
         { translateX: wobble },
         { translateY: rise },
+        { scale: birthScale },
       ],
     };
   });
@@ -701,6 +803,39 @@ const styles = StyleSheet.create({
     color: '#0369a1',
     fontSize: 13,
     fontWeight: '900',
+  },
+
+  // Spotify-style speed pill — lives INSIDE the buttonsRow at the leading
+  // (left, in RTL) edge, opposite the symmetric -5/play/+5 triad. White pill
+  // with cyan border by default; flips to solid cyan when >1x so the
+  // accelerated state is obvious without forcing the user to read text.
+  speedPillInner: {
+    minWidth: 48,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(255,255,255,0.92)',
+    borderColor: 'rgba(14,165,233,0.45)',
+    borderWidth: 1.5,
+    paddingHorizontal: 10,
+    paddingVertical: 9,
+    borderRadius: 999,
+    shadowColor: '#0369a1',
+    shadowOpacity: 0.2,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 3,
+  },
+  speedPillInnerActive: {
+    backgroundColor: '#0ea5e9',
+    borderColor: '#0284c7',
+  },
+  speedPillText: {
+    color: '#0369a1',
+    fontSize: 13,
+    fontWeight: '900',
+  },
+  speedPillTextActive: {
+    color: '#ffffff',
   },
 
   // Finished-state row: Continue (primary blue) + Back (Replay) — mirrors

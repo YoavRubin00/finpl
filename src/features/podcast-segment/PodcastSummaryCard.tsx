@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { View, Text, StyleSheet, Pressable, useWindowDimensions } from 'react-native';
+import { View, Text, StyleSheet, Pressable } from 'react-native';
 import { Image as ExpoImage } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import Animated, {
@@ -10,6 +10,7 @@ import Animated, {
 import { ChevronLeft } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { tapHaptic, successHaptic } from '../../utils/haptics';
+import { useSoundEffect } from '../../hooks/useSoundEffect';
 import { DAISY_HAPPY_CELEBRATE_WEBP } from './daisy-assets';
 import type { PodcastSegment } from '../chapter-1-content/types';
 
@@ -25,10 +26,7 @@ export const PodcastSummaryCard = React.memo(function PodcastSummaryCard({
   onContinue,
 }: Props) {
   const insets = useSafeAreaInsets();
-  // See PodcastIntroCard for the same width fix — module-level Dimensions
-  // returns 0 on Android cold start, so the inline width comes from a hook.
-  const { width: windowW } = useWindowDimensions();
-  const continueBtnWidth = windowW - 48;
+  const { playSound } = useSoundEffect();
   useEffect(() => {
     successHaptic();
   }, []);
@@ -61,6 +59,15 @@ export const PodcastSummaryCard = React.memo(function PodcastSummaryCard({
 
         <Animated.View entering={FadeInDown.duration(380).delay(160).springify()}>
           <Text style={[styles.title, RTL]}>🎙️ סיימתם להאזין!</Text>
+          {/* Story closer — gives the protagonist's takeaway a beat before we
+              jump to questions. Anchors the lesson ("budget = pain", "emergency
+              fund = safety net") emotionally so the quiz that follows feels
+              like *her* dilemma, not a test the user has to perform on. */}
+          <View style={styles.quoteCard}>
+            <Text style={styles.quoteText}>
+              {'בפועל 5000 לא הספיק לטיול בתאילנד. אני חייבת ללמוד לנהל תקציב... אבל לפחות לא בזבזתי מהקרן חירום שלי!'}
+            </Text>
+          </View>
           <Text style={[styles.subtitle, RTL]}>מוכנים לבחון את עצמכם?</Text>
         </Animated.View>
       </View>
@@ -70,17 +77,16 @@ export const PodcastSummaryCard = React.memo(function PodcastSummaryCard({
         style={[styles.footer, { paddingBottom: insets.bottom + 16 }]}
       >
         <Pressable
-          onPress={() => { tapHaptic(); onContinue(); }}
+          onPress={() => { playSound('btn_click_heavy'); tapHaptic(); onContinue(); }}
           accessibilityRole="button"
           accessibilityLabel="המשך לשאלות"
           style={({ pressed }) => [
             styles.continueBtn,
-            { width: continueBtnWidth },
-            pressed && { opacity: 0.92, transform: [{ scale: 0.98 }] },
+            pressed && { opacity: 0.92, transform: [{ translateY: 2 }] },
           ]}
         >
           <Text style={styles.continueBtnText}>המשך לשאלות</Text>
-          <ChevronLeft color="#ffffff" size={22} strokeWidth={2.6} />
+          <ChevronLeft color="#ffffff" size={20} strokeWidth={2.8} />
         </Pressable>
       </Animated.View>
     </View>
@@ -137,12 +143,40 @@ const styles = StyleSheet.create({
     fontSize: 24,
     fontWeight: '900',
     lineHeight: 30,
+    textAlign: 'center',
+  },
+  // Soft white card holding the protagonist's closing line. Centered Hebrew
+  // quote with italic style + cyan accent bar on the right edge (RTL = leading
+  // edge) so it reads visually as a *block quote*, not body copy.
+  quoteCard: {
+    marginTop: 14,
+    backgroundColor: 'rgba(255,255,255,0.72)',
+    borderRadius: 14,
+    paddingVertical: 12,
+    paddingHorizontal: 14,
+    borderRightWidth: 3,
+    borderRightColor: '#0ea5e9',
+    shadowColor: '#0369a1',
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 1,
+  },
+  quoteText: {
+    color: '#0c2138',
+    fontSize: 14,
+    fontWeight: '600',
+    lineHeight: 22,
+    fontStyle: 'italic',
+    writingDirection: 'rtl',
+    textAlign: 'right',
   },
   subtitle: {
     color: '#475569',
     fontSize: 15,
     fontWeight: '600',
-    marginTop: 6,
+    marginTop: 14,
+    textAlign: 'center',
   },
 
   footer: {
@@ -151,8 +185,10 @@ const styles = StyleSheet.create({
     paddingTop: 12,
     alignItems: 'stretch',
   },
-  // Standard app primary CTA — width injected inline from useWindowDimensions
-  // (NOT a module-level Dimensions read: that returns 0 on Android cold start).
+  // Same heavy CTA variant as PodcastIntroCard — both cards sit on the same
+  // pink/cyan gradient backdrop where the simpler flat-blue button would wash
+  // out. Keeping the side border + cyan glow guarantees the CTA reads as the
+  // primary action even on the lightest part of the gradient.
   continueBtn: {
     flexDirection: 'row-reverse',
     alignItems: 'center',

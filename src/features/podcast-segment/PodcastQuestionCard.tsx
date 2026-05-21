@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useMemo } from 'react';
-import { View, Text, StyleSheet, Pressable, ScrollView, useWindowDimensions } from 'react-native';
+import { View, Text, StyleSheet, Pressable, ScrollView } from 'react-native';
 import Animated, {
   FadeIn,
   FadeInDown,
@@ -15,6 +15,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ChevronLeft } from 'lucide-react-native';
 import { tapHaptic, successHaptic, errorHaptic } from '../../utils/haptics';
+import { useSoundEffect } from '../../hooks/useSoundEffect';
 import { GoldCoinIcon } from '../../components/ui/GoldCoinIcon';
 import { DAISY_HAPPY_CELEBRATE_WEBP, DAISY_EMPATHIC_WEBP } from './daisy-assets';
 import type { PodcastQuestion, PodcastQuestionOption } from '../chapter-1-content/types';
@@ -64,10 +65,7 @@ export const PodcastQuestionCard = React.memo(function PodcastQuestionCard({
   onContinue,
 }: Props) {
   const insets = useSafeAreaInsets();
-  // Inline width via useWindowDimensions — module-level Dimensions returns 0
-  // on Android cold start. stickyFooter is left/right 16, so subtract 32.
-  const { width: windowW } = useWindowDimensions();
-  const continueBtnWidth = windowW - 32;
+  const { playSound } = useSoundEffect();
   const [selected, setSelected] = useState<number | null>(null);
   const [showResult, setShowResult] = useState(false);
 
@@ -88,17 +86,20 @@ export const PodcastQuestionCard = React.memo(function PodcastQuestionCard({
   const handleSelect = useCallback(
     (index: number, option: PodcastQuestionOption) => {
       if (showResult) return;
+      playSound('btn_click_soft_1');
       tapHaptic();
       setSelected(index);
       setShowResult(true);
       if (option.isCorrect) {
+        playSound('modal_open_2');
         successHaptic();
       } else {
+        playSound('bubble_transition');
         errorHaptic();
       }
       onAnswered(option.isCorrect);
     },
-    [showResult, onAnswered],
+    [showResult, onAnswered, playSound],
   );
 
   return (
@@ -194,19 +195,18 @@ export const PodcastQuestionCard = React.memo(function PodcastQuestionCard({
           style={[styles.stickyFooter, { bottom: insets.bottom + 12 }]}
         >
           <Pressable
-            onPress={() => { tapHaptic(); onContinue(); }}
+            onPress={() => { playSound('btn_click_heavy'); tapHaptic(); onContinue(); }}
             accessibilityRole="button"
             accessibilityLabel={questionNumber === 1 ? 'לשאלה הבאה' : 'המשך'}
             style={({ pressed }) => [
               styles.continueBtn,
-              { width: continueBtnWidth },
-              pressed && { opacity: 0.92, transform: [{ scale: 0.98 }] },
+              pressed && { opacity: 0.92, transform: [{ translateY: 2 }] },
             ]}
           >
             <Text style={styles.continueBtnText}>
               {questionNumber === 1 ? 'לשאלה הבאה' : 'המשך'}
             </Text>
-            <ChevronLeft color="#ffffff" size={22} strokeWidth={2.6} />
+            <ChevronLeft color="#ffffff" size={20} strokeWidth={2.8} />
           </Pressable>
         </Animated.View>
       ) : null}
@@ -437,9 +437,9 @@ const styles = StyleSheet.create({
     bottom: 16,
     alignItems: 'stretch',
   },
-  // Standard app primary CTA — width injected inline from useWindowDimensions
-  // (NOT module-level Dimensions). row-reverse so the chevron icon sits on
-  // the LEFT (continue = forward in RTL).
+  // Same heavy CTA variant used in PodcastIntroCard + PodcastSummaryCard so the
+  // primary action looks identical across the four podcast screens. Side border
+  // + cyan glow keep the button prominent even on the lightest backgrounds.
   continueBtn: {
     flexDirection: 'row-reverse',
     backgroundColor: '#0ea5e9',
@@ -454,9 +454,9 @@ const styles = StyleSheet.create({
     borderBottomColor: '#0369a1',
     shadowColor: '#0ea5e9',
     shadowOpacity: 0.45,
-    shadowRadius: 12,
-    shadowOffset: { width: 0, height: 5 },
-    elevation: 7,
+    shadowRadius: 14,
+    shadowOffset: { width: 0, height: 6 },
+    elevation: 8,
   },
   continueBtnText: {
     color: '#ffffff',

@@ -741,8 +741,11 @@ export function ChatScreen({ lessonContext }: { lessonContext?: LessonContext } 
     <SafeAreaView className="flex-1" edges={['bottom']}>
       <KeyboardAvoidingView
         className="flex-1"
-        behavior="padding"
-        keyboardVerticalOffset={Platform.OS === "ios" ? 100 : 30}
+        // On Android we don't set behavior — the system's default `adjustResize`
+        // already shrinks the window when the keyboard appears. Adding padding
+        // on top of that double-shifts the input and hides it under the keyboard.
+        behavior={Platform.OS === "ios" ? "padding" : undefined}
+        keyboardVerticalOffset={Platform.OS === "ios" ? 100 : 0}
       >
         {/* WhatsApp-style header */}
         <View style={headerStyles.container}>

@@ -13,10 +13,14 @@ export interface PodcastPlayerState {
   phase: PodcastPlayerPhase;
   /** 0..1 fraction of audio played */
   progress: number;
+  /** Current playback rate (1.0 = normal). */
+  rate: number;
   togglePlayPause: () => void;
   replay: () => void;
   /** Seek forwards by N seconds (clamped at duration). Auto-resumes if paused. */
   seekForward: (seconds: number) => void;
+  /** Set playback speed (e.g. 1.0, 1.2, 1.5). Survives play/pause cycles. */
+  setRate: (rate: number) => void;
 }
 
 /**
@@ -33,7 +37,11 @@ export function usePodcastPlayer(
 ): PodcastPlayerState {
   const [phase, setPhase] = useState<PodcastPlayerPhase>('loading');
   const [progress, setProgress] = useState(0);
+  const [rate, setRateState] = useState(1);
   const playerRef = useRef<AudioPlayer | null>(null);
+  // Keep the latest selected rate so we can re-apply it after replay() recreates
+  // the playback session (some Android devices reset to 1.0 on seekTo(0) + play).
+  const rateRef = useRef(1);
   const hasStartedRef = useRef(false);
   const finishedFiredRef = useRef(false);
   const retriedRef = useRef(false);
@@ -59,6 +67,12 @@ export function usePodcastPlayer(
 
     const player = createAudioPlayer({ uri: audioUri });
     playerRef.current = player;
+    // Re-apply the user-selected rate to the freshly created player. If the
+    // listener swaps audioUri (rare, but happens if a re-render restarts the
+    // effect), we keep whatever 1.0/1.2/1.5 the user had selected previously.
+    if (rateRef.current !== 1) {
+      try { player.setPlaybackRate(rateRef.current); } catch { /* ignore */ }
+    }
     player.play();
 
     const sub = player.addListener('playbackStatusUpdate', (status) => {
@@ -167,6 +181,11 @@ export function usePodcastPlayer(
     if (!p) return;
     try {
       p.seekTo(0);
+      // Some Android builds reset playbackRate to 1.0 after seekTo(0); re-apply
+      // the user's selection so "replay" doesn't silently downshift to 1x.
+      if (rateRef.current !== 1) {
+        try { p.setPlaybackRate(rateRef.current); } catch { /* ignore */ }
+      }
       p.play();
       finishedFiredRef.current = false;
       setPhase('loading');
@@ -199,5 +218,16 @@ export function usePodcastPlayer(
     } catch { /* ignore */ }
   }, [phase]);
 
-  return { phase, progress, togglePlayPause, replay, seekForward };
+  const setRate = useCallback((nextRate: number) => {
+    // Clamp to the range expo-audio accepts on every platform (0.5–2.0 per
+    // docs); our UI only exposes 1.0/1.2/1.5 but defend against bad input.
+    const clamped = Math.max(0.5, Math.min(2, nextRate));
+    rateRef.current = clamped;
+    setRateState(clamped);
+    const p = playerRef.current;
+    if (!p) return;
+    try { p.setPlaybackRate(clamped); } catch { /* ignore */ }
+  }, []);
+
+  return { phase, progress, rate, togglePlayPause, replay, seekForward, setRate };
 }
