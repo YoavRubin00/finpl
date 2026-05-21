@@ -1,5 +1,6 @@
 // src/lib/api/client.ts
 import { tokenStore } from '../auth/secureStore';
+import { captureEvent } from '../posthog';
 
 const API_BASE = process.env.EXPO_PUBLIC_API_BASE ?? '';
 
@@ -40,6 +41,7 @@ async function request<TBody, TResponse>(
   }
 
   if (res.status === 401) {
+    try { captureEvent('auth_token_invalid', { endpoint: path }); } catch { /* swallow */ }
     if (onUnauthorizedHandler) onUnauthorizedHandler();
     throw new ApiError('Unauthorized', 401, null);
   }

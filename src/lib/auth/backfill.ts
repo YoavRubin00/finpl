@@ -5,6 +5,7 @@ import { postBackfillV1 } from '../api/migrate';
 import { queryClient } from '../queryClient';
 import { profileQueryKey } from '../../features/auth/useProfile';
 import { progressQueryKey } from '../../features/chapter-1-content/useProgress';
+import { captureEvent } from '../posthog';
 
 // Complete list of legacy keys; the wipe step uses this AFTER backfill succeeds.
 // Audited as of 2026-05-21 — finalize during P0 review by grepping the codebase
@@ -60,13 +61,24 @@ export async function runBackfillV1(): Promise<void> {
     return;
   }
 
-  const response = await postBackfillV1({
-    profile: local.profile,
-    modules: local.modules,
-  });
+  const moduleCount = Array.isArray(local.modules) ? local.modules.length : 0;
+  captureEvent('backfill_started', { hasProfile: !!local.profile, moduleCount });
 
-  queryClient.setQueryData(profileQueryKey, response.profile);
-  queryClient.setQueryData(progressQueryKey, response.progress);
+  const startMs = Date.now();
+  try {
+    const response = await postBackfillV1({
+      profile: local.profile,
+      modules: local.modules,
+    });
 
-  await AsyncStorage.multiRemove(LEGACY_KEYS_V0).catch(() => { /* swallow */ });
+    queryClient.setQueryData(profileQueryKey, response.profile);
+    queryClient.setQueryData(progressQueryKey, response.progress);
+
+    captureEvent('backfill_succeeded', { durationMs: Date.now() - startMs });
+
+    await AsyncStorage.multiRemove(LEGACY_KEYS_V0).catch(() => { /* swallow */ });
+  } catch (err) {
+    captureEvent('backfill_failed', { reason: err instanceof Error ? err.message : String(err) });
+    throw err;
+  }
 }

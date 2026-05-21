@@ -24,17 +24,32 @@ import { getSubscription, syncSubscription } from '../api/subscription';
 import { getProgress } from '../api/progress';
 import { getUserStats } from '../api/userStats';
 import { useAuthStore } from '../../features/auth/useAuthStore';
+import { captureEvent } from '../posthog';
 
 type ProfileLike = { id: string; authId: string; displayName: string | null; email: string | null };
 
+function makePrefetchFn<T>(queryKey: readonly unknown[], fn: () => Promise<T>): () => Promise<T> {
+  return async () => {
+    try {
+      return await fn();
+    } catch (err) {
+      captureEvent('hydration_failed', {
+        queryKey: JSON.stringify(queryKey),
+        reason: err instanceof Error ? err.message : String(err),
+      });
+      throw err;
+    }
+  };
+}
+
 async function prefetchAll(): Promise<void> {
   await Promise.all([
-    queryClient.prefetchQuery({ queryKey: profileQueryKey, queryFn: async () => (await getProfile()).profile }),
-    queryClient.prefetchQuery({ queryKey: economyQueryKey, queryFn: async () => (await getEconomy()).economy }),
-    queryClient.prefetchQuery({ queryKey: streakQueryKey, queryFn: async () => (await getStreak()).streak }),
-    queryClient.prefetchQuery({ queryKey: subscriptionQueryKey, queryFn: async () => (await getSubscription()).subscription }),
-    queryClient.prefetchQuery({ queryKey: progressQueryKey, queryFn: async () => (await getProgress()).progress }),
-    queryClient.prefetchQuery({ queryKey: userStatsQueryKey, queryFn: async () => (await getUserStats()).userStats }),
+    queryClient.prefetchQuery({ queryKey: profileQueryKey, queryFn: makePrefetchFn(profileQueryKey, async () => (await getProfile()).profile) }),
+    queryClient.prefetchQuery({ queryKey: economyQueryKey, queryFn: makePrefetchFn(economyQueryKey, async () => (await getEconomy()).economy) }),
+    queryClient.prefetchQuery({ queryKey: streakQueryKey, queryFn: makePrefetchFn(streakQueryKey, async () => (await getStreak()).streak) }),
+    queryClient.prefetchQuery({ queryKey: subscriptionQueryKey, queryFn: makePrefetchFn(subscriptionQueryKey, async () => (await getSubscription()).subscription) }),
+    queryClient.prefetchQuery({ queryKey: progressQueryKey, queryFn: makePrefetchFn(progressQueryKey, async () => (await getProgress()).progress) }),
+    queryClient.prefetchQuery({ queryKey: userStatsQueryKey, queryFn: makePrefetchFn(userStatsQueryKey, async () => (await getUserStats()).userStats) }),
   ]);
 }
 
@@ -50,7 +65,17 @@ export async function signInWithProfile(profile: ProfileLike, token: string): Pr
   await tokenStore.set(token);
 
   configureRevenueCat(profile.id);
-  await loginRevenueCat(profile.id).catch(() => { /* soft */ });
+  await loginRevenueCat(profile.id).then(
+    (customerInfo) => {
+      const hasEntitlements = customerInfo
+        ? Object.keys(customerInfo.entitlements.active).length > 0
+        : false;
+      captureEvent('rc_login_succeeded', { hasEntitlements });
+    },
+    (err: unknown) => {
+      captureEvent('rc_login_failed', { reason: err instanceof Error ? err.message : String(err) });
+    },
+  );
 
   if (!(await backfillFlag.isDone())) {
     try {
@@ -73,20 +98,34 @@ export async function signInWithProfile(profile: ProfileLike, token: string): Pr
 }
 
 export async function signOut(): Promise<void> {
-  try { await logoutRevenueCat(); } catch { /* swallow */ }
+  try {
+    try {
+      await logoutRevenueCat();
+    } catch (err) {
+      captureEvent('rc_logout_failed', { reason: err instanceof Error ? err.message : String(err) });
+    }
 
-  queryClient.clear();
-  resetAllLocalStores();
+    queryClient.clear();
+    resetAllLocalStores();
 
-  const keys = getLocalStorageKeys();
-  if (keys.length > 0) {
-    await AsyncStorage.multiRemove(keys).catch(() => { /* swallow */ });
+    const keys = getLocalStorageKeys();
+    if (keys.length > 0) {
+      await AsyncStorage.multiRemove(keys).catch(() => { /* swallow */ });
+    }
+
+    await tokenStore.clear();
+    await backfillFlag.reset();
+
+    useAuthStore.getState().clear();
+
+    captureEvent('sign_out_completed');
+  } catch (err) {
+    captureEvent('sign_out_failed', {
+      step: 'unknown',
+      reason: err instanceof Error ? err.message : String(err),
+    });
+    throw err;
   }
-
-  await tokenStore.clear();
-  await backfillFlag.reset();
-
-  useAuthStore.getState().clear();
 }
 
 export async function bootFromToken(): Promise<{ isAuthenticated: boolean }> {
@@ -103,7 +142,17 @@ export async function bootFromToken(): Promise<{ isAuthenticated: boolean }> {
   if (!profile) return { isAuthenticated: false };
 
   configureRevenueCat(profile.id);
-  await loginRevenueCat(profile.id).catch(() => { /* soft */ });
+  await loginRevenueCat(profile.id).then(
+    (customerInfo) => {
+      const hasEntitlements = customerInfo
+        ? Object.keys(customerInfo.entitlements.active).length > 0
+        : false;
+      captureEvent('rc_login_succeeded', { hasEntitlements });
+    },
+    (err: unknown) => {
+      captureEvent('rc_login_failed', { reason: err instanceof Error ? err.message : String(err) });
+    },
+  );
 
   if (!(await backfillFlag.isDone())) {
     try {
