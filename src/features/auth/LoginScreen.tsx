@@ -88,6 +88,12 @@ export function LoginScreen() {
         return;
       }
       await signInWithProfile(data.profile, resolvedToken);
+      // This screen is "sign in to an existing account" — by definition the
+      // user already onboarded. Mark it locally so the _layout nav guard routes
+      // them into the app instead of bouncing back to /(auth)/onboarding.
+      // (hasCompletedOnboarding is local-only state and was reset by the
+      // auth-store-v3 key bump, so returning users would otherwise be stuck.)
+      useAuthStore.getState().setOnboardingCompleted(true);
       router.replace("/(tabs)/" as never);
     } catch {
       captureEvent('login_failed', { method: 'email', reason: 'network' });

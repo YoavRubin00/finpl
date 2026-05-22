@@ -1,4 +1,5 @@
 // src/lib/auth/lifecycle.ts
+import { Platform } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
   configureRevenueCat,
@@ -82,6 +83,12 @@ async function prefetchAll(): Promise<void> {
 }
 
 async function syncRevenueCatToServer(): Promise<void> {
+  // RevenueCat is native-only. On web there is no SDK, so getCustomerInfo()
+  // returns null → this would POST isPro:false and clobber the server's real
+  // subscription state on every web sign-in. Skip entirely on web; there the
+  // DB is the source of truth and the app only reads subscription state.
+  if (Platform.OS === 'web') return;
+
   const customerInfo = await getCustomerInfo();
   const isPro = customerInfo?.entitlements.active[RC_ENTITLEMENT_PRO] !== undefined;
   const proExpiresAt = customerInfo?.entitlements.active[RC_ENTITLEMENT_PRO]?.expirationDate ?? null;
