@@ -16,6 +16,18 @@ export type AuthedHandler = (
 
 export function withAuth(handler: AuthedHandler) {
   return async (req: VercelRequest, res: VercelResponse) => {
+    // CORS — auth is via Bearer header (not cookies), so `*` is safe and
+    // enables browser-based dev/testing from a different origin. In prod the
+    // web app is same-origin, so these headers are simply redundant.
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Access-Control-Allow-Methods', 'GET,POST,OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+    res.setHeader('Access-Control-Expose-Headers', 'X-Auth-Refreshed-Token');
+    if (req.method === 'OPTIONS') {
+      res.status(204).end();
+      return;
+    }
+
     const authHeader = req.headers.authorization ?? '';
     const match = /^Bearer (.+)$/.exec(authHeader);
     if (!match) {
