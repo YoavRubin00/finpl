@@ -1,7 +1,8 @@
 import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
 import { zustandStorage } from '../../lib/zustandStorage';
-import { useEconomyStore } from "../economy/useEconomyStore";
+import { registerLocalStore } from '../../lib/stores/registry';
+import { useEconomyUIStore } from "../economy/useEconomyUIStore";
 import { DAILY_CHALLENGES } from "./arenaData";
 import type { ChallengeProgress } from "./types";
 
@@ -16,6 +17,7 @@ interface ArenaState {
   progress: ProgressMap;
   completeChallenge: (challengeId: string) => void;
   isChallengeCompleted: (challengeId: string) => boolean;
+  reset: () => void;
 }
 
 const initialProgress: ProgressMap = Object.fromEntries(
@@ -37,8 +39,8 @@ export const useArenaStore = create<ArenaState>()(
         const challenge = DAILY_CHALLENGES.find((c) => c.id === challengeId);
         if (!challenge) return;
 
-        // Award coins and XP via the economy store directly
-        const economy = useEconomyStore.getState();
+        // Award coins and XP via the economy UI store
+        const economy = useEconomyUIStore.getState();
         economy.addXP(challenge.xpReward, "challenge_complete");
         economy.addCoins(challenge.coinReward);
 
@@ -63,6 +65,8 @@ export const useArenaStore = create<ArenaState>()(
         const today = todayISO();
         return get().progress[challengeId]?.completedDate === today;
       },
+
+      reset: () => set({ progress: initialProgress }),
     }),
     {
       name: "arena-store",
@@ -71,3 +75,5 @@ export const useArenaStore = create<ArenaState>()(
     }
   )
 );
+
+registerLocalStore('arena-store', useArenaStore, 'arena-store');

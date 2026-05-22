@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import { zustandStorage } from '../../lib/zustandStorage';
+import { registerLocalStore } from '../../lib/stores/registry';
 
 export type ModifierType = 'real_estate_discount' | 'salary_boost';
 
@@ -16,6 +17,7 @@ interface ModifiersState {
   addModifier: (type: ModifierType, value: number, durationHours: number) => void;
   getActiveModifierValue: (type: ModifierType) => number; // Returns the max value of active modifiers of this type
   clearExpired: () => void;
+  reset: () => void;
 }
 
 export const useModifiersStore = create<ModifiersState>()(
@@ -52,6 +54,8 @@ export const useModifiersStore = create<ModifiersState>()(
           set({ activeModifiers: valid });
         }
       },
+
+      reset: () => set({ activeModifiers: [] }),
     }),
     {
       name: 'modifiers-store',
@@ -59,3 +63,5 @@ export const useModifiersStore = create<ModifiersState>()(
     }
   )
 );
+
+registerLocalStore('modifiers-store', useModifiersStore, 'modifiers-store');

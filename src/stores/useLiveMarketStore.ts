@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { getApiBase } from '../db/apiBase';
 import type { LiveMarketData } from '../features/finfeed/liveMarketTypes';
+import { registerLocalStore } from '../lib/stores/registry';
 
 const TTL_MS = 10 * 60 * 1000; // 10 minutes
 
@@ -10,6 +11,7 @@ interface LiveMarketState {
   error: string | null;
   lastFetchedAt: number | null;
   fetch: () => Promise<void>;
+  reset: () => void;
 }
 
 export const useLiveMarketStore = create<LiveMarketState>()((set, get) => ({
@@ -17,6 +19,8 @@ export const useLiveMarketStore = create<LiveMarketState>()((set, get) => ({
   loading: false,
   error: null,
   lastFetchedAt: null,
+
+  reset: () => set({ data: null, loading: false, error: null, lastFetchedAt: null }),
 
   fetch: async () => {
     const { lastFetchedAt, loading } = get();
@@ -34,3 +38,5 @@ export const useLiveMarketStore = create<LiveMarketState>()((set, get) => ({
     }
   },
 }));
+
+registerLocalStore('live-market-store', useLiveMarketStore, null);

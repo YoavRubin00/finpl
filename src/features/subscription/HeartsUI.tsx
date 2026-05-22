@@ -19,27 +19,32 @@ import Animated, {
 import { Heart } from 'lucide-react-native';
 import LottieView from '../../components/ui/SafeLottieView';
 import { FINN_STANDARD } from '../retention-loops/finnMascotConfig';
-import { useSubscriptionStore, getTimeUntilNextHeart } from './useSubscriptionStore';
-import { useEconomyStore } from '../../features/economy/useEconomyStore';
+import { useHeartsStore, MAX_HEARTS } from './useHeartsStore';
+import { getTimeUntilNextHeart } from './subscriptionConstants';
+import { useIsPro } from './useSubscription';
+import { useEconomy } from '../../features/economy/useEconomy';
+import { applyEconomyDelta } from '../../lib/api/economy';
+import { queryClient } from '../../lib/queryClient';
+import { economyQueryKey } from '../../features/economy/useEconomy';
+import type { Economy } from '../../lib/api/economy';
 import { tapHaptic, successHaptic } from '../../utils/haptics';
 import { useRewardedAd } from '../../hooks/useRewardedAd';
-import { useChapterStore } from '../chapter-1-content/useChapterStore';
+import { useChapterUIStore } from '../chapter-1-content/useChapterUIStore';
+import { useProgress } from '../chapter-1-content/useProgress';
 import { useBandit } from '../bandit/useBandit';
 import { useAppActive } from '../../hooks/useAppActive';
-
-const MAX_HEARTS = 5;
 
 /* ------------------------------------------------------------------ */
 /*  HeartsDisplay, shows in lesson header                             */
 /* ------------------------------------------------------------------ */
 
 export function HeartsDisplay() {
-    const hearts = useSubscriptionStore((s) => s.hearts);
-    const isPro = useSubscriptionStore((s) => s.tier === "pro" && s.status === "active");
+    const hearts = useHeartsStore((s) => s.hearts);
+    const isPro = useIsPro();
 
     // Trigger refill check once on mount
     useEffect(() => {
-        useSubscriptionStore.getState().refillHearts();
+        useHeartsStore.getState().refillHearts();
     }, []);
 
     const heartsDisplayValue = isPro ? Infinity : hearts;
@@ -102,11 +107,12 @@ function formatTime(ms: number): string {
 
 export function OutOfHeartsModal({ visible, onDismiss, onUpgrade, onHeartsRefilled }: OutOfHeartsModalProps) {
     const router = useRouter();
-    const lastHeartLostAt = useSubscriptionStore((s) => s.lastHeartLostAt);
-    const getHearts = useSubscriptionStore((s) => s.getHearts);
+    const lastHeartLostAt = useHeartsStore((s) => s.lastHeartLostAt);
+    const getHearts = useHeartsStore((s) => s.getHearts);
     const hearts = getHearts();
-    const coins = useEconomyStore((s) => s.coins);
-    const gems = useEconomyStore((s) => s.gems);
+    const { data: economyData } = useEconomy();
+    const coins = economyData?.coins ?? 0;
+    const gems = economyData?.gems ?? 0;
     const [timeLeft, setTimeLeft] = useState('');
     const canAffordRefill = coins >= HEART_REFILL_COIN_COST;
     const appActive = useAppActive();
@@ -160,12 +166,18 @@ export function OutOfHeartsModal({ visible, onDismiss, onUpgrade, onHeartsRefill
     }, [onUpgrade]);
 
     const handleCoinRefill = useCallback(() => {
-        const store = useSubscriptionStore.getState();
+        const store = useHeartsStore.getState();
         const current = store.hearts ?? 0;
         if (current >= MAX_HEARTS) { onDismiss(); return; }
-        const success = useEconomyStore.getState().spendCoins(HEART_REFILL_COIN_COST);
-        if (success) {
-            useSubscriptionStore.setState({ hearts: current + 1, lastHeartLostAt: current + 1 >= MAX_HEARTS ? null : store.lastHeartLostAt });
+        const cachedEco = queryClient.getQueryData<Economy | null>(economyQueryKey);
+        const canAffordCoins = (cachedEco?.coins ?? 0) >= HEART_REFILL_COIN_COST;
+        if (canAffordCoins) {
+          applyEconomyDelta({ coinsDelta: -HEART_REFILL_COIN_COST })
+            .then(() => queryClient.invalidateQueries({ queryKey: economyQueryKey }))
+            .catch(() => {});
+        }
+        if (canAffordCoins) {
+            useHeartsStore.setState({ hearts: current + 1, lastHeartLostAt: current + 1 >= MAX_HEARTS ? null : store.lastHeartLostAt });
             successHaptic();
             trackConversion();
             if (onHeartsRefilled) {
@@ -182,10 +194,10 @@ export function OutOfHeartsModal({ visible, onDismiss, onUpgrade, onHeartsRefill
         tapHaptic();
         showAd(() => {
             // Reward: restore 1 heart
-            const store = useSubscriptionStore.getState();
+            const store = useHeartsStore.getState();
             const current = store.hearts ?? 0;
             if (current < MAX_HEARTS) {
-                useSubscriptionStore.setState({ hearts: current + 1, lastHeartLostAt: null });
+                useHeartsStore.setState({ hearts: current + 1, lastHeartLostAt: null });
             }
             successHaptic();
             trackConversion();
@@ -197,12 +209,12 @@ export function OutOfHeartsModal({ visible, onDismiss, onUpgrade, onHeartsRefill
         });
     }, [showAd, onDismiss, onHeartsRefilled, trackConversion]);
 
-    const startPracticeForHeart = useSubscriptionStore((s) => s.startPracticeForHeart);
-    const practiceRefillsToday = useSubscriptionStore((s) => s.practiceRefillsToday);
-    const practiceRefillDate = useSubscriptionStore((s) => s.practiceRefillDate);
-    const chapterProgress = useChapterStore((s) => s.progress);
-    const setCurrentChapter = useChapterStore((s) => s.setCurrentChapter);
-    const setCurrentModule = useChapterStore((s) => s.setCurrentModule);
+    const startPracticeForHeart = useHeartsStore((s) => s.startPracticeForHeart);
+    const practiceRefillsToday = useHeartsStore((s) => s.practiceRefillsToday);
+    const practiceRefillDate = useHeartsStore((s) => s.practiceRefillDate);
+    const { data: progressData } = useProgress();
+    const setCurrentChapter = useChapterUIStore((s) => s.setCurrentChapter);
+    const setCurrentModule = useChapterUIStore((s) => s.setCurrentModule);
 
     const practiceCountToday = practiceRefillDate === new Date().toISOString().slice(0, 10)
         ? practiceRefillsToday
@@ -212,14 +224,13 @@ export function OutOfHeartsModal({ visible, onDismiss, onUpgrade, onHeartsRefill
     const handlePracticeRefill = useCallback(() => {
         tapHaptic();
         // Pick a random completed module across all chapters
-        const options: { chapterId: string; moduleId: string; moduleIndex: number }[] = [];
-        Object.entries(chapterProgress).forEach(([chapterId, prog]) => {
-            prog.completedModules.forEach((moduleId) => {
-                // Try to infer moduleIndex from the moduleId (e.g. "mod-1-3" → 2 = index)
-                const parts = moduleId.split("-");
-                const idx = Number(parts[parts.length - 1]);
-                options.push({ chapterId, moduleId, moduleIndex: Number.isFinite(idx) ? Math.max(0, idx - 1) : 0 });
-            });
+        const completedRows = progressData?.filter((m) => m.status === 'completed') ?? [];
+        const options = completedRows.map((m) => {
+            // Infer chapterId store key from moduleId prefix (e.g. "mod-1-3" → "ch-1")
+            const parts = m.moduleId.split('-');
+            const chapterId = `ch-${parts[1] ?? '1'}`;
+            const idx = Number(parts[parts.length - 1]);
+            return { chapterId, moduleId: m.moduleId, moduleIndex: Number.isFinite(idx) ? Math.max(0, idx - 1) : 0 };
         });
         if (options.length === 0) {
             // No completed modules, nothing to practice, just dismiss
@@ -238,17 +249,23 @@ export function OutOfHeartsModal({ visible, onDismiss, onUpgrade, onHeartsRefill
         // Convert store key (ch-1) → data id (chapter-1) for URL; replay=1 so no re-complete
         const urlChapterId = `chapter-${pick.chapterId.split("-")[1]}`;
         router.push(`/lesson/${pick.moduleId}?chapterId=${urlChapterId}&replay=1` as never);
-    }, [chapterProgress, startPracticeForHeart, setCurrentChapter, setCurrentModule, onDismiss, router]);
+    }, [progressData, startPracticeForHeart, setCurrentChapter, setCurrentModule, onDismiss, router]);
 
     const handleGemRefill = useCallback(() => {
         tapHaptic();
         if (gems >= HEART_REFILL_GEM_COST) {
-            const store = useSubscriptionStore.getState();
+            const store = useHeartsStore.getState();
             const current = store.hearts ?? 0;
             if (current >= MAX_HEARTS) { onDismiss(); return; }
-            const success = useEconomyStore.getState().spendGems(HEART_REFILL_GEM_COST);
-            if (success) {
-                useSubscriptionStore.setState({ hearts: current + 1, lastHeartLostAt: current + 1 >= MAX_HEARTS ? null : store.lastHeartLostAt });
+            const cachedEcoGems = queryClient.getQueryData<Economy | null>(economyQueryKey);
+            const canAffordGems = (cachedEcoGems?.gems ?? 0) >= HEART_REFILL_GEM_COST;
+            if (canAffordGems) {
+              applyEconomyDelta({ gemsDelta: -HEART_REFILL_GEM_COST })
+                .then(() => queryClient.invalidateQueries({ queryKey: economyQueryKey }))
+                .catch(() => {});
+            }
+            if (canAffordGems) {
+                useHeartsStore.setState({ hearts: current + 1, lastHeartLostAt: current + 1 >= MAX_HEARTS ? null : store.lastHeartLostAt });
                 successHaptic();
                 trackConversion();
                 if (onHeartsRefilled) {

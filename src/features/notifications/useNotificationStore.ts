@@ -2,6 +2,7 @@ import * as Notifications from "expo-notifications";
 import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
 import { zustandStorage } from '../../lib/zustandStorage';
+import { registerLocalStore } from '../../lib/stores/registry';
 import type { NotificationChannelId, NotificationState } from "./notificationTypes";
 
 // ─── Default handler, show banners in foreground ───────────────────────────
@@ -128,6 +129,7 @@ async function ensureAndroidChannels() {
 interface NotificationActions {
   requestPermission: () => Promise<boolean>;
   dismissBanner: () => void;
+  reset: () => void;
   scheduleStreakReminder: (hourOfDay?: number) => Promise<void>;
   scheduleStreakReminderWithCopy: (content: Notifications.NotificationContentInput, hourOfDay?: number) => Promise<void>;
   scheduleMorningMotivation: (content: Notifications.NotificationContentInput) => Promise<void>;
@@ -409,6 +411,16 @@ export const useNotificationStore = create<NotificationState & NotificationActio
         });
         set({ scheduled: [...scheduled.filter((s) => s.channelId !== "marketHook"), { channelId: "marketHook" as const, identifier }] });
       },
+
+      reset: () => set({
+        permissionGranted: false,
+        scheduled: [],
+        bannerDismissed: false,
+        preferences: { streak: false, chest: false, challenge: false, dailyChallenge: false, squadInvite: false, squadChest: false, morning: false, inactivity: false, marketHook: false, aiInsight: false, upgradeNudge: false },
+        lastScheduledDate: null,
+        lastFinnCopyTitle: null,
+        lastAIInsightNotifDate: null,
+      }),
     }),
     {
       name: "notification-store",
@@ -424,3 +436,5 @@ export const useNotificationStore = create<NotificationState & NotificationActio
     },
   ),
 );
+
+registerLocalStore('notification-store', useNotificationStore, 'notification-store');

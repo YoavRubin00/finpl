@@ -6,6 +6,7 @@
  * the moment it does — so the next banner waits at least 10s.
  */
 import { create } from 'zustand';
+import { registerLocalStore } from '../../lib/stores/registry';
 
 const COOLDOWN_MS = 10_000;
 
@@ -14,6 +15,7 @@ interface BannerCooldownState {
   markShown: () => void;
   msUntilNextSlot: () => number;
   canShowNow: () => boolean;
+  reset: () => void;
 }
 
 export const useBannerCooldownStore = create<BannerCooldownState>((set, get) => ({
@@ -22,4 +24,7 @@ export const useBannerCooldownStore = create<BannerCooldownState>((set, get) => 
   msUntilNextSlot: () =>
     Math.max(0, COOLDOWN_MS - (Date.now() - get().lastShownAt)),
   canShowNow: () => Date.now() - get().lastShownAt >= COOLDOWN_MS,
+  reset: () => set({ lastShownAt: 0 }),
 }));
+
+registerLocalStore('banner-cooldown-store', useBannerCooldownStore, null);

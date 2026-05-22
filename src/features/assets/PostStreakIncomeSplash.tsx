@@ -12,7 +12,9 @@ import { FINN_STANDARD } from "../retention-loops/finnMascotConfig";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useRealAssetsStore } from "./useRealAssetsStore";
 import { useAuthStore } from "../auth/useAuthStore";
-import { useEconomyStore } from "../economy/useEconomyStore";
+import { queryClient } from "../../lib/queryClient";
+import { economyQueryKey } from "../economy/useEconomy";
+import type { Economy } from "../../lib/api/economy";
 import { getLevelFromXP } from "../../utils/progression";
 import { AnimatedPressable } from "../../components/ui/AnimatedPressable";
 import { useRouter } from "expo-router";
@@ -55,7 +57,8 @@ export function PostStreakIncomeSplash() {
         const currentHasAssets = Object.keys(store.ownedAssets).length > 0;
 
         // Don't show "earn while sleeping" promo until level 2+
-        const userLevel = getLevelFromXP(useEconomyStore.getState().xp);
+        const eco = queryClient.getQueryData<Economy | null>(economyQueryKey);
+        const userLevel = getLevelFromXP(eco?.xp ?? 0);
         if (!currentHasAssets && userLevel < 2) return;
 
         setHasAssetsAtShow(currentHasAssets);

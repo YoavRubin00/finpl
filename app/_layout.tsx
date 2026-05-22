@@ -1,4 +1,6 @@
 import "../global.css";
+import { QueryClientProvider } from '@tanstack/react-query';
+import { queryClient } from '../src/lib/queryClient';
 import { initSentry } from "../src/lib/sentry";
 import { initPostHog } from "../src/lib/posthog";
 import { I18nManager } from "react-native";
@@ -42,7 +44,9 @@ initPostHog();
 import { Slot, useRouter, useSegments, useRootNavigationState } from "expo-router";
 import { useEffect, useRef, useState } from "react";
 import { AppState, Platform, Text, TextInput } from "react-native";
-import { useUserStatsStore } from "../src/features/user-stats/useUserStatsStore";
+import { useUserStatsUIStore } from "../src/features/user-stats/useUserStatsUIStore";
+import { recordSessionTime as apiRecordSessionTime } from "../src/lib/api/userStats";
+import { userStatsQueryKey } from "../src/features/user-stats/useUserStats";
 import { setAudioModeAsync } from "expo-audio";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { useFonts } from "@expo-google-fonts/heebo";
@@ -55,7 +59,14 @@ import {
   Heebo_900Black,
 } from "@expo-google-fonts/heebo";
 import { useAuthStore } from "../src/features/auth/useAuthStore";
-import { useEconomyStore } from "../src/features/economy/useEconomyStore";
+import { useEconomyUIStore } from "../src/features/economy/useEconomyUIStore";
+import { setOnUnauthorized } from "../src/lib/api/client";
+import { signOut as lifecycleSignOut, bootFromToken } from "../src/lib/auth/lifecycle";
+import { startAppStateListener } from "../src/lib/auth/appStateListener";
+
+setOnUnauthorized(() => {
+  lifecycleSignOut().catch(() => { /* swallow */ });
+});
 import { RewardAnimationProvider } from "../src/hooks/useRewardAnimation";
 import { StreakCelebrationProvider } from "../src/hooks/useStreakCelebration";
 import { WisdomPopupCard } from "../src/features/wisdom-flashes/WisdomPopupCard";
@@ -76,8 +87,7 @@ import { GlobalQuestCompletionModal } from "../src/features/daily-quests/GlobalQ
 import { DailyBridgeNudgeModal } from "../src/components/ui/DailyBridgeNudgeModal";
 import { InviteFriendsNudgeModal } from "../src/components/ui/InviteFriendsNudgeModal";
 import { GuestRegisterDailyNudge } from "../src/features/auth/GuestRegisterDailyNudge";
-import { configureRevenueCat, loginRevenueCat } from "../src/services/revenueCat";
-import { useSubscriptionStore } from "../src/features/subscription/useSubscriptionStore";
+import { configureRevenueCat } from "../src/services/revenueCat";
 import { AppWalkthroughOverlay } from "../src/features/onboarding/AppWalkthroughOverlay";
 import { StreakFreezeSaveModal } from "../src/features/streak/StreakFreezeSaveModal";
 import { StreakRepairModal } from "../src/features/streak/StreakRepairModal";
@@ -137,14 +147,14 @@ const origInputRender = (TextInput as unknown as { render: Function }).render;
 };
 
 function FreezeSaveModalGate() {
-  const pending = useEconomyStore((s) => s.pendingFreezeSaveAck);
-  const dismiss = useEconomyStore((s) => s.dismissFreezeSaveAck);
+  const pending = useEconomyUIStore((s) => s.pendingFreezeSaveAck);
+  const dismiss = useEconomyUIStore((s) => s.dismissFreezeSaveAck);
   return <StreakFreezeSaveModal visible={pending} onDismiss={dismiss} />;
 }
 
 function StreakRepairModalGate() {
-  const pending = useEconomyStore((s) => s.pendingRepairOffer);
-  const dismiss = useEconomyStore((s) => s.dismissRepairOffer);
+  const pending = useEconomyUIStore((s) => s.pendingRepairOffer);
+  const dismiss = useEconomyUIStore((s) => s.dismissRepairOffer);
   return <StreakRepairModal visible={pending} onDismiss={dismiss} />;
 }
 
@@ -175,11 +185,20 @@ export default function RootLayout() {
         if (foregroundEnteredAt.current !== null) {
           const secs = Math.round((Date.now() - foregroundEnteredAt.current) / 1000);
           foregroundEnteredAt.current = null;
-          useUserStatsStore.getState().addSessionSeconds(secs);
+          useUserStatsUIStore.getState().addSessionSeconds(secs);
+          apiRecordSessionTime(secs)
+            .then(() => queryClient.invalidateQueries({ queryKey: userStatsQueryKey }))
+            .catch(() => { /* fire-and-forget */ });
         }
       }
     });
     return () => sub.remove();
+  }, []);
+
+  // ── Foreground refetch: invalidate queries after 5min background ──
+  useEffect(() => {
+    const stop = startAppStateListener();
+    return stop;
   }, []);
 
   // ── iOS audio session: allow sounds even when device is on Silent ──
@@ -235,33 +254,19 @@ export default function RootLayout() {
     configureRevenueCat();
   }, []);
 
-  // DEV-only: force premium tier on web so we can test pro-gated features
-  // without going through Google login + RevenueCat. __DEV__ is false in any
-  // EAS / production build (mobile or web export), so this never ships.
-  useEffect(() => {
-    if (__DEV__ && Platform.OS === "web") {
-      const s = useSubscriptionStore.getState();
-      if (s.tier !== "pro") s.upgradeToPro();
-    }
-  }, []);
+  // DEV-only web pro override removed: subscription tier is now server-driven
+  // via useSubscription() / React Query. Dev accounts that need Pro access
+  // should be whitelisted server-side (see syncRevenueCatToServer in lifecycle.ts).
 
-  // Sync RevenueCat when user logs in
   const userEmail = useAuthStore((s) => s.email);
-  useEffect(() => {
-    if (!userEmail) return;
-    loginRevenueCat(userEmail).catch(() => {});
-    useSubscriptionStore.getState().syncWithRevenueCat();
-    const unsub = useSubscriptionStore.getState().startRevenueCatListener();
-    return unsub;
-  }, [userEmail]);
 
   // Award daily login XP on app open
   useEffect(() => {
-    useEconomyStore.getState().awardLoginBonus();
+    useEconomyUIStore.getState().awardLoginBonus();
     // Stacking session bonus — coins for repeat returns within the same day.
     // Tiered: 1h=50, 2h=120, 4h=300, 8h=800, 12h+=2000. Surfaces as banner via
     // pendingSessionBonus state (consumed wherever the UI wants to show it).
-    useEconomyStore.getState().awardSessionStackingBonus();
+    useEconomyUIStore.getState().awardSessionStackingBonus();
   }, []);
 
   // Reset Shark CTA session tokens on cold start (so BridgeCTA / ReferralCTA can fire once per session)
@@ -397,7 +402,7 @@ export default function RootLayout() {
         await AsyncStorage.removeItem(screenMod.PENDING_REFERRAL_STORAGE_KEY);
         if (cancelled) return;
         if (result) {
-          try { useEconomyStore.getState().addCoins(result.bonusGranted); } catch { /* non-fatal */ }
+          try { useEconomyUIStore.getState().addCoins(result.bonusGranted); } catch { /* non-fatal */ }
         }
       } catch { /* non-fatal — deep link redeem will be retried next launch if user re-enters via link */ }
     })();
@@ -405,12 +410,18 @@ export default function RootLayout() {
   }, [userEmail, hasCompletedOnboarding]);
 
   const [hydrated, setHydrated] = useState(false);
+  const [bootComplete, setBootComplete] = useState(false);
   const [splashVisible, setSplashVisible] = useState(true);
 
   useEffect(() => {
     const unsub = useAuthStore.persist.onFinishHydration(() => setHydrated(true));
     if (useAuthStore.persist.hasHydrated()) setHydrated(true);
     return unsub;
+  }, []);
+
+  // Cold-launch boot: attempt to restore session from stored JWT before rendering routes
+  useEffect(() => {
+    bootFromToken().finally(() => setBootComplete(true));
   }, []);
 
   useEffect(() => {
@@ -449,11 +460,12 @@ export default function RootLayout() {
     }
   }, [isAuthenticated, hasCompletedOnboarding, segments, navState?.key, hydrated]);
 
-  if (!hydrated || !navState?.key || !fontsLoaded) {
+  if (!hydrated || !bootComplete || !navState?.key || !fontsLoaded) {
     return <LoadingWisdom />;
   }
 
   return (
+    <QueryClientProvider client={queryClient}>
     <GestureHandlerRootView style={{ flex: 1 }}>
       <GlobalErrorBoundary>
         <RewardAnimationProvider>
@@ -500,5 +512,6 @@ export default function RootLayout() {
       </GlobalErrorBoundary>
       {splashVisible && <AppIntroSplash onDismiss={() => setSplashVisible(false)} />}
     </GestureHandlerRootView>
+    </QueryClientProvider>
   );
 }

@@ -7,7 +7,10 @@ import React, {
   useState,
 } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { useEconomyStore } from "../features/economy/useEconomyStore";
+import { useEconomyUIStore } from "../features/economy/useEconomyUIStore";
+import { queryClient } from "../lib/queryClient";
+import { streakQueryKey } from "../features/economy/useStreak";
+import type { StreakState } from "../lib/api/streak";
 import { StreakCelebrationScreen } from "../features/streak/StreakCelebrationScreen";
 import { useNudgeQueueStore } from "../stores/useNudgeQueueStore";
 import { useTutorialStore } from "../stores/useTutorialStore";
@@ -34,7 +37,8 @@ export function StreakCelebrationProvider({
   const prevStreak = useRef<number | null>(null);
 
   const showStreakCelebration = useCallback(() => {
-    const streak = useEconomyStore.getState().streak;
+    const streakState = queryClient.getQueryData<StreakState | null>(streakQueryKey);
+    const streak = streakState?.currentStreak ?? 0;
     setCelebrationStreak(streak);
     // 2 s delay so the popup lands softly after the app finishes mounting,
     // rather than slamming on top of the splash/home render.
@@ -44,31 +48,32 @@ export function StreakCelebrationProvider({
     }, 2000);
   }, []);
 
-  // Detect streak increases via store subscription
+  // Detect streak increases by subscribing to UIStore activeDates changes.
+  // When completeDailyTask or awardLoginBonus fires, lastDailyTaskDate /
+  // activeDates update. We derive the new streak from the query cache.
   useEffect(() => {
-    // Seed with the current streak on mount so the FIRST state change after
-    // the provider mounts is checked. Earlier impl initialised prevStreak
-    // to null and consumed the first subscribe call just to set it, which
-    // meant the very first streak bump of the session never fired the
-    // celebration — users reported the popup "never showing up".
-    prevStreak.current = useEconomyStore.getState().streak;
+    const getStreak = () => {
+      const s = queryClient.getQueryData<StreakState | null>(streakQueryKey);
+      return s?.currentStreak ?? 0;
+    };
+    prevStreak.current = getStreak();
 
-    const unsub = useEconomyStore.subscribe((state) => {
+    const unsub = useEconomyUIStore.subscribe((state, prevState) => {
+      if (state.activeDates === prevState.activeDates) return;
+      const currentStreak = getStreak();
       if (prevStreak.current === null) {
-        prevStreak.current = state.streak;
+        prevStreak.current = currentStreak;
         return;
       }
-
       // Streak increased — show celebration after a short delay
-      if (state.streak > prevStreak.current && state.streak > 0) {
-        setCelebrationStreak(state.streak);
+      if (currentStreak > (prevStreak.current ?? 0) && currentStreak > 0) {
+        setCelebrationStreak(currentStreak);
         setTimeout(() => {
           setVisible(true);
           useNudgeQueueStore.getState().markStreakShown();
         }, 600);
       }
-
-      prevStreak.current = state.streak;
+      prevStreak.current = currentStreak;
     });
 
     return unsub;
@@ -90,7 +95,9 @@ export function StreakCelebrationProvider({
     let cancelled = false;
 
     (async () => {
-      const { streak, lastDailyTaskDate } = useEconomyStore.getState();
+      const streakState = queryClient.getQueryData<StreakState | null>(streakQueryKey);
+      const streak = streakState?.currentStreak ?? 0;
+      const lastDailyTaskDate = useEconomyUIStore.getState().lastDailyTaskDate;
       if (streak <= 0) return;
       const today = new Date().toISOString().slice(0, 10);
       if (lastDailyTaskDate === today) return; // already completed today
@@ -102,10 +109,12 @@ export function StreakCelebrationProvider({
       timer = setTimeout(() => {
         // Re-check at fire time: user might have completed a lesson in the
         // 5s window, which would make the nudge stale.
-        const fresh = useEconomyStore.getState();
-        if (fresh.lastDailyTaskDate === today) return;
+        const freshLastTask = useEconomyUIStore.getState().lastDailyTaskDate;
+        if (freshLastTask === today) return;
         AsyncStorage.setItem(DAILY_STREAK_NUDGE_KEY, today).catch(() => {});
-        setCelebrationStreak(fresh.streak);
+        const freshStreakState = queryClient.getQueryData<StreakState | null>(streakQueryKey);
+        const freshStreak = freshStreakState?.currentStreak ?? 0;
+        setCelebrationStreak(freshStreak);
         setVisible(true);
         useNudgeQueueStore.getState().markStreakShown();
       }, DAILY_STREAK_NUDGE_DELAY_MS);

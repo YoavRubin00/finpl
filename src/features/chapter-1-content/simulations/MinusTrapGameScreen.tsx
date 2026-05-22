@@ -20,7 +20,8 @@ import { AnimatedPressable } from '../../../components/ui/AnimatedPressable';
 import { LottieIcon } from '../../../components/ui/LottieIcon';
 import { FINN_STANDARD } from '../../retention-loops/finnMascotConfig';
 import { tapHaptic, successHaptic, errorHaptic, heavyHaptic } from '../../../utils/haptics';
-import { useSubscriptionStore } from '../../subscription/useSubscriptionStore';
+import { useHeartsStore } from '../../subscription/useHeartsStore';
+import { useIsPro } from '../../subscription/useSubscription';
 import { useSoundEffect } from '../../../hooks/useSoundEffect';
 import { SimLottieBackground } from '../../../components/ui/SimLottieBackground';
 import { getChapterTheme } from '../../../constants/theme';
@@ -641,6 +642,7 @@ function ScoreScreen({
 /* ------------------------------------------------------------------ */
 
 export function MinusTrapGameScreen({ onComplete }: { onComplete: () => void }) {
+    const isPro = useIsPro();
     const {
         state,
         currentCard,
@@ -694,7 +696,7 @@ const [rewardsGranted, setRewardsGranted] = useState(false);
             setTimeout(() => heavyHaptic(), 300);
             if (!heartDeductedRef.current) {
                 heartDeductedRef.current = true;
-                useSubscriptionStore.getState().useHeart();
+                useHeartsStore.getState().useHeart(isPro);
             }
         }
     }, [state.isGameOver, gameOverAnimDone]);

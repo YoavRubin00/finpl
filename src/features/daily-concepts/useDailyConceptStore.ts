@@ -1,6 +1,7 @@
 import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
 import { zustandStorage } from '../../lib/zustandStorage';
+import { registerLocalStore } from '../../lib/stores/registry';
 import { DAILY_CONCEPTS } from "./dailyConceptsData";
 
 interface DailyConceptState {
@@ -8,6 +9,7 @@ interface DailyConceptState {
   markCompleted: (id: string) => void;
   getTodayPair: (activeChapterId: number) => [string, string];
   isCompleted: (id: string) => boolean;
+  reset: () => void;
 }
 
 /** Deterministic daily pair based on date string and chapter */
@@ -41,6 +43,7 @@ export const useDailyConceptStore = create<DailyConceptState>()(
       },
       getTodayPair: (activeChapterId: number) => getTodayPairIds(activeChapterId),
       isCompleted: (id: string) => get().completedConcepts.includes(id),
+      reset: () => set({ completedConcepts: [] }),
     }),
     {
       name: "daily-concepts-store",
@@ -48,3 +51,5 @@ export const useDailyConceptStore = create<DailyConceptState>()(
     },
   ),
 );
+
+registerLocalStore('daily-concepts-store', useDailyConceptStore, 'daily-concepts-store');

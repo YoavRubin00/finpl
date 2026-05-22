@@ -11,8 +11,10 @@ import { StarterPackModal } from './StarterPackModal';
 import { STARTER_PACK_PRICE_LABEL, STARTER_PACK_ORIGINAL_PRICE_LABEL, STARTER_PACK_DISCOUNT_PCT } from './starterPack';
 import { generateDailyDeals } from './dailyDeals';
 import { ConfirmModal } from './ConfirmModal';
-import { useEconomyStore } from '../economy/useEconomyStore';
-import { useSubscriptionStore } from '../subscription/useSubscriptionStore';
+import { useEconomy, useSpendCoins, useSpendGems, useAwardGems } from '../economy/useEconomy';
+import { useEconomyUIStore } from '../economy/useEconomyUIStore';
+import { useHeartsStore, MAX_HEARTS } from '../subscription/useHeartsStore';
+import { useIsPro } from '../subscription/useSubscription';
 import { useAuthStore } from '../auth/useAuthStore';
 import { successHaptic } from '../../utils/haptics';
 import { useAppActive } from '../../hooks/useAppActive';
@@ -40,9 +42,10 @@ function formatCountdown(ms: number): string {
 
 export function DailyDealsSection() {
   const router = useRouter();
-  const spendCoins = useEconomyStore((s) => s.spendCoins);
-  const spendGems = useEconomyStore((s) => s.spendGems);
-  const isPro = useSubscriptionStore((s) => s.isPro());
+  const { data: economyDataDD } = useEconomy();
+  const spendCoinsHookDD = useSpendCoins();
+  const spendGemsHookDD = useSpendGems();
+  const isPro = useIsPro();
   const [dateKey, setDateKey] = useState(getTodayISO);
   const [remaining, setRemaining] = useState(msUntilMidnight);
   const [purchasedIds, setPurchasedIds] = useState<Set<string>>(new Set());
@@ -69,16 +72,16 @@ export function DailyDealsSection() {
     return () => clearInterval(id);
   }, [dateKey, appActive]);
 
-  const addGems = useEconomyStore((s) => s.addGems);
-  const addStreakFreezes = useEconomyStore((s) => s.addStreakFreezes);
+  const addGemsHookDD = useAwardGems();
+  const addStreakFreezes = useEconomyUIStore((s) => s.addStreakFreezes);
   const addOwnedAvatar = useAuthStore((s) => s.addOwnedAvatar);
   const setAvatar = useAuthStore((s) => s.setAvatar);
   const isMinor = useAuthStore((s) => s.profile?.ageGroup === 'minor');
 
   const handleClaimFreeGems = useCallback(() => {
-    addGems(5);
+    addGemsHookDD(5);
     successHaptic();
-  }, [addGems]);
+  }, [addGemsHookDD]);
 
   const handleProClaim = useCallback((deal: DailyDeal) => {
     const itemId = deal.item.id;
@@ -93,10 +96,10 @@ export function DailyDealsSection() {
     } else if (itemId === 'streak-freeze-bundle') {
       addStreakFreezes(3);
     } else if (itemId === 'heart-refill-full') {
-      useSubscriptionStore.getState().restoreAllHearts();
+      useHeartsStore.getState().restoreAllHearts();
     } else if (itemId === 'heart-refill-1') {
-      const s = useSubscriptionStore.getState();
-      if (s.hearts < 5) useSubscriptionStore.setState({ hearts: s.hearts + 1 });
+      const s = useHeartsStore.getState();
+      if (s.hearts < MAX_HEARTS) useHeartsStore.setState({ hearts: s.hearts + 1 });
     }
     successHaptic();
     setPurchasedIds((prev) => new Set(prev).add(deal.id));
@@ -105,11 +108,13 @@ export function DailyDealsSection() {
   const handleConfirm = useCallback(() => {
     if (!pendingDeal) return;
     const isGem = pendingDeal.currency === 'gems';
-    const ok = isGem
-      ? spendGems(pendingDeal.discountedCost)
-      : spendCoins(pendingDeal.discountedCost);
+    const currentGems = economyDataDD?.gems ?? 0;
+    const currentCoins = economyDataDD?.coins ?? 0;
+    const canAfford = isGem
+      ? currentGems >= pendingDeal.discountedCost
+      : currentCoins >= pendingDeal.discountedCost;
 
-    if (!ok) {
+    if (!canAfford) {
       setPendingDeal(null);
       Alert.alert(
         isGem ? 'אין מספיק ג\'מים' : 'אין מספיק מטבעות',
@@ -120,18 +125,24 @@ export function DailyDealsSection() {
       return;
     }
 
+    if (isGem) {
+      spendGemsHookDD(pendingDeal.discountedCost);
+    } else {
+      spendCoinsHookDD(pendingDeal.discountedCost);
+    }
+
     const itemId = pendingDeal.item.id;
     if (itemId === 'heart-refill-full') {
-      useSubscriptionStore.getState().restoreAllHearts();
+      useHeartsStore.getState().restoreAllHearts();
     } else if (itemId === 'heart-refill-1') {
-      const s = useSubscriptionStore.getState();
-      if (s.hearts < 4) useSubscriptionStore.setState({ hearts: s.hearts + 1 });
+      const s = useHeartsStore.getState();
+      if (s.hearts < MAX_HEARTS) useHeartsStore.setState({ hearts: s.hearts + 1 });
     }
 
     successHaptic();
     setPurchasedIds((prev) => new Set(prev).add(pendingDeal.id));
     setPendingDeal(null);
-  }, [pendingDeal, spendCoins, spendGems]);
+  }, [pendingDeal, economyDataDD, spendCoinsHookDD, spendGemsHookDD]);
 
   return (
     <View>

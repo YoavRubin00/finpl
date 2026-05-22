@@ -1,10 +1,15 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useRouter } from 'expo-router';
-import { useSubscriptionStore } from '../subscription/useSubscriptionStore';
+import { useIsPro } from '../subscription/useSubscription';
 import { useWeeklyInsightStore } from './useWeeklyInsightStore';
 import { useAuthStore } from '../auth/useAuthStore';
-import { useEconomyStore } from '../economy/useEconomyStore';
-import { useChapterStore } from '../chapter-1-content/useChapterStore';
+import { queryClient } from '../../lib/queryClient';
+import { economyQueryKey } from '../economy/useEconomy';
+import { streakQueryKey } from '../economy/useStreak';
+import type { Economy } from '../../lib/api/economy';
+import type { StreakState } from '../../lib/api/streak';
+import { progressQueryKey } from '../chapter-1-content/useProgress';
+import type { ModuleProgressRow } from '../../lib/api/progress';
 import { MODULE_NAMES } from '../chat/chatData';
 import { getApiBase } from '../../db/apiBase';
 import { useTutorialStore } from '../../stores/useTutorialStore';
@@ -15,9 +20,10 @@ const DEFAULT_BANNER_MSG = 'יש לי תובנה חדשה עבורכם';
 async function fetchBannerTip(): Promise<string | null> {
   try {
     const auth = useAuthStore.getState();
-    const eco = useEconomyStore.getState();
-    const allModuleIds = Object.values(useChapterStore.getState().progress)
-      .flatMap((cp) => cp.completedModules);
+    const eco = queryClient.getQueryData<Economy | null>(economyQueryKey);
+    const streakState = queryClient.getQueryData<StreakState | null>(streakQueryKey);
+    const progressData = queryClient.getQueryData<ModuleProgressRow[]>(progressQueryKey) ?? [];
+    const allModuleIds = progressData.filter((m) => m.status === 'completed').map((m) => m.moduleId);
     const lastModuleName = allModuleIds.length > 0
       ? (MODULE_NAMES[allModuleIds[allModuleIds.length - 1]] ?? null)
       : null;
@@ -27,8 +33,8 @@ async function fetchBannerTip(): Promise<string | null> {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         name: auth.displayName ?? 'חבר',
-        xp: eco.xp,
-        streak: eco.streak,
+        xp: eco?.xp ?? 0,
+        streak: streakState?.currentStreak ?? 0,
         completedModuleCount: allModuleIds.length,
         lastModuleName,
         financialGoal: auth.profile?.financialGoal,
@@ -45,7 +51,7 @@ async function fetchBannerTip(): Promise<string | null> {
 
 export function useAIInsightBanner() {
   const router = useRouter();
-  const isPro = useSubscriptionStore((s) => s.tier === 'pro' && s.status === 'active');
+  const isPro = useIsPro();
   const [visible, setVisible] = useState(false);
   const [message, setMessage] = useState(DEFAULT_BANNER_MSG);
   const fetchedRef = useRef(false);

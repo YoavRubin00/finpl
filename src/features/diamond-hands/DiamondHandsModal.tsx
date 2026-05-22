@@ -19,7 +19,7 @@ import Animated, {
 } from "react-native-reanimated";
 import { LinearGradient } from "expo-linear-gradient";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { useEconomyStore } from "../economy/useEconomyStore";
+import { useEconomyUIStore } from "../economy/useEconomyUIStore";
 import {
   doubleHeavyHaptic,
   errorHaptic,
@@ -48,8 +48,8 @@ export function DiamondHandsModal({ visible, onClose }: Props) {
   const [screen, setScreen] = useState<ScreenMode>("intro");
   const [paperHandsMs, setPaperHandsMs] = useState(0);
   const { width, height } = useWindowDimensions();
-  const addXP = useEconomyStore((s) => s.addXP);
-  const addCoins = useEconomyStore((s) => s.addCoins);
+  const addXP = useEconomyUIStore((s) => s.addXP);
+  const addCoins = useEconomyUIStore((s) => s.addCoins);
   const recordVictory = useDiamondHandsCooldown((s) => s.recordVictory);
   const recordAttempt = useDiamondHandsCooldown((s) => s.recordAttempt);
 

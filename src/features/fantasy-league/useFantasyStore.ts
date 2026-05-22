@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import { zustandStorage } from '../../lib/zustandStorage';
+import { registerLocalStore } from '../../lib/stores/registry';
 import type {
   FantasyLeague,
   FantasyPortfolio,
@@ -17,6 +18,7 @@ interface FantasyActions {
   refreshPrices: () => Promise<void>;
   computePortfolioValue: () => number;
   getLeaderboard: () => LeaderboardEntry[];
+  reset: () => void;
 }
 
 interface FantasyStoreState {
@@ -132,6 +134,13 @@ export const useFantasyStore = create<FantasyStore>()(
         return portfolio.cashRemaining + positionsValue;
       },
 
+      reset: () => set({
+        currentLeague: null,
+        portfolio: null,
+        leaderboard: [],
+        lastUpdated: null,
+      }),
+
       getLeaderboard: () => {
         const { portfolio } = get();
         const portfolioValue = get().computePortfolioValue();
@@ -167,3 +176,5 @@ export const useFantasyStore = create<FantasyStore>()(
     },
   ),
 );
+
+registerLocalStore('fantasy-store', useFantasyStore, 'fantasy-store');

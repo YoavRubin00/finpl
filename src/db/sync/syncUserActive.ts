@@ -1,5 +1,5 @@
 import { getApiBase } from '../apiBase';
-import { useAuthStore } from '../../features/auth/useAuthStore';
+import { tokenStore } from '../../lib/auth/secureStore';
 
 /**
  * Tells the server "this user is active today" by updating
@@ -11,9 +11,9 @@ import { useAuthStore } from '../../features/auth/useAuthStore';
  */
 export async function pingActiveToday(authId: string): Promise<void> {
   const base = getApiBase();
-  const token = useAuthStore.getState().syncToken;
+  const token = await tokenStore.get();
   const headers: Record<string, string> = { 'Content-Type': 'application/json' };
-  if (token) headers['X-Sync-Token'] = token;
+  if (token) headers['Authorization'] = `Bearer ${token}`;
 
   try {
     const res = await fetch(`${base}/api/users/ping`, {

@@ -1,14 +1,11 @@
 import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
 import { zustandStorage } from "../../lib/zustandStorage";
+import { registerLocalStore } from "../../lib/stores/registry";
 
-interface UserStatsState {
-  moduleDurations: number[];
-  dailySessionSeconds: Record<string, number>;
-
-  recordModuleDuration: (seconds: number) => void;
-  addSessionSeconds: (seconds: number) => void;
-}
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
 
 function todayISO(): string {
   return new Date().toISOString().slice(0, 10);
@@ -20,18 +17,26 @@ function cutoffISO(): string {
   return d.toISOString().slice(0, 10);
 }
 
-export const useUserStatsStore = create<UserStatsState>()(
+// ---------------------------------------------------------------------------
+// State
+// ---------------------------------------------------------------------------
+
+interface UserStatsUIState {
+  /** Per-day session seconds map. Keys are ISO date strings (YYYY-MM-DD). */
+  dailySessionSeconds: Record<string, number>;
+
+  addSessionSeconds: (seconds: number) => void;
+  reset: () => void;
+}
+
+const INITIAL_STATE = {
+  dailySessionSeconds: {} as Record<string, number>,
+};
+
+export const useUserStatsUIStore = create<UserStatsUIState>()(
   persist(
     (set) => ({
-      moduleDurations: [],
-      dailySessionSeconds: {},
-
-      recordModuleDuration: (seconds: number) => {
-        if (seconds < 5 || seconds > 7200) return;
-        set((s) => ({
-          moduleDurations: [...s.moduleDurations, seconds].slice(-200),
-        }));
-      },
+      ...INITIAL_STATE,
 
       addSessionSeconds: (seconds: number) => {
         if (seconds <= 0) return;
@@ -47,14 +52,17 @@ export const useUserStatsStore = create<UserStatsState>()(
           return { dailySessionSeconds: trimmed };
         });
       },
+
+      reset: () => set(INITIAL_STATE),
     }),
     {
-      name: "user-stats-store",
+      name: "user-stats-ui-store-v1",
       storage: createJSONStorage(() => zustandStorage),
       partialize: (s) => ({
-        moduleDurations: s.moduleDurations,
         dailySessionSeconds: s.dailySessionSeconds,
       }),
     }
   )
 );
+
+registerLocalStore("user-stats-ui-store-v1", useUserStatsUIStore, "user-stats-ui-store-v1");

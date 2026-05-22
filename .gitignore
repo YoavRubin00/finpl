@@ -38,7 +38,9 @@ assets/IMAGES/modules/
 assets/images/games/
 
 # Dev/build scripts — local tooling only
-scripts/
+scripts/*
+# Exception: TDD-style test scripts are versioned (requires `/*` above, not `/`)
+!scripts/test-*.ts
 notebooklm-py/
 
 # Local scratch folders for one-shot asset generation pipelines

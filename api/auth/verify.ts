@@ -4,6 +4,7 @@ import { neon } from '@neondatabase/serverless';
 import { drizzle } from 'drizzle-orm/neon-http';
 import { userProfiles } from '../../src/db/schema';
 import { sendWelcomeEmail } from '../_shared/sendWelcomeEmail';
+import { signSession } from '../_shared/jwt';
 
 function getDb() {
   const url = process.env.DATABASE_URL ?? '';
@@ -98,7 +99,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       });
     }
 
-    return res.status(200).json({ ok: true, profile });
+    if (!profile) {
+      return res.status(500).json({ error: 'Profile lookup failed after upsert' });
+    }
+
+    const sessionToken = signSession({ sub: profile.id, authId: profile.authId });
+
+    return res.status(200).json({ ok: true, profile, token: sessionToken });
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : 'Internal server error';
     return res.status(500).json({ error: message });

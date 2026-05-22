@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import { zustandStorage } from '../lib/zustandStorage';
+import { registerLocalStore } from '../lib/stores/registry';
 import { getApiBase } from '../db/apiBase';
 import type { NewsQuizData } from '../features/finfeed/liveMarketTypes';
 
@@ -23,6 +24,7 @@ interface NewsQuizState {
   fetch: () => Promise<void>;
   hasAnsweredToday: () => boolean;
   markAnswered: () => void;
+  reset: () => void;
 }
 
 const FALLBACK_QUIZ: NewsQuizData = {
@@ -87,6 +89,14 @@ export const useNewsQuizStore = create<NewsQuizState>()(
           set({ answeredDates: [...answeredDates.slice(-30), today] });
         }
       },
+
+      reset: () => set({
+        data: null,
+        loading: false,
+        error: false,
+        answeredDates: [],
+        lastFetched: 0,
+      }),
     }),
     {
       name: 'news-quiz-store',
@@ -95,3 +105,5 @@ export const useNewsQuizStore = create<NewsQuizState>()(
     },
   ),
 );
+
+registerLocalStore('news-quiz-store', useNewsQuizStore, 'news-quiz-store');

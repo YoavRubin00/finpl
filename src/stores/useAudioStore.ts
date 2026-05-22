@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import { zustandStorage } from '../lib/zustandStorage';
+import { registerLocalStore } from '../lib/stores/registry';
 
 interface AudioState {
     isVideoPlaying: boolean;
@@ -9,6 +10,7 @@ interface AudioState {
     setVideoPlaying: (playing: boolean) => void;
     toggleMusic: () => void;
     toggleSfx: () => void;
+    reset: () => void;
 }
 
 export const useAudioStore = create<AudioState>()(
@@ -20,6 +22,7 @@ export const useAudioStore = create<AudioState>()(
             setVideoPlaying: (playing) => set({ isVideoPlaying: playing }),
             toggleMusic: () => set((s) => ({ musicEnabled: !s.musicEnabled })),
             toggleSfx: () => set((s) => ({ sfxEnabled: !s.sfxEnabled })),
+            reset: () => set({ isVideoPlaying: false, musicEnabled: true, sfxEnabled: true }),
         }),
         {
             name: 'audio-settings',
@@ -28,3 +31,5 @@ export const useAudioStore = create<AudioState>()(
         },
     ),
 );
+
+registerLocalStore('audio-settings', useAudioStore, 'audio-settings');

@@ -15,7 +15,8 @@ import { SimFeedbackBar } from '../../../components/ui/SimFeedbackBar';
 import { SimLottieBackground } from '../../../components/ui/SimLottieBackground';
 import { LottieIcon } from '../../../components/ui/LottieIcon';
 import { successHaptic, errorHaptic } from '../../../utils/haptics';
-import { useSubscriptionStore } from '../../subscription/useSubscriptionStore';
+import { useHeartsStore } from '../../subscription/useHeartsStore';
+import { useIsPro } from '../../subscription/useSubscription';
 import { useCarLoanGame } from './useCarLoanGame';
 import { carLoanConfig } from './carLoanData';
 import type { CarLoanScore, CarLoanGrade, CarLoanOption } from './carLoanTypes';
@@ -281,6 +282,7 @@ const carLoanRaceStickyStyles = StyleSheet.create({
 /* ------------------------------------------------------------------ */
 
 export function CarLoanRaceScreen({ onComplete }: { onComplete: () => void }) {
+    const isPro = useIsPro();
     const {
         state,
         currentScenario,
@@ -310,7 +312,7 @@ const [showFeedback, setShowFeedback] = useState(false);
             if (state.isRepossessed) {
                 errorHaptic();
                 // Fail outcome → deduct a heart.
-                useSubscriptionStore.getState().useHeart();
+                useHeartsStore.getState().useHeart(isPro);
             } else {
                 successHaptic();
             }

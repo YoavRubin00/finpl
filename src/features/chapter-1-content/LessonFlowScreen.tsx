@@ -42,7 +42,8 @@ import { chapter2Data } from "../chapter-2-content/chapter2Data";
 import { chapter3Data } from "../chapter-3-content/chapter3Data";
 import { chapter4Data } from "../chapter-4-content/chapter4Data";
 import { chapter5Data } from "../chapter-5-content/chapter5Data";
-import { useChapterStore } from "./useChapterStore";
+import { useChapterUIStore } from "./useChapterUIStore";
+import { useProgress, useUpsertModuleProgress, progressQueryKey, getCompletedModulesSync } from "./useProgress";
 import { useLifestyleBreakStore } from "../inter-module-break/useLifestyleBreakStore";
 import { pickNextLifestyleVideo, type LifestyleVideoSpec } from "../inter-module-break/lifestyleVideoConfig";
 import {
@@ -59,10 +60,19 @@ import { InteractiveIntroCard } from "./InteractiveIntroCard";
 import { QuizStartPopup } from "./QuizStartPopup";
 import { SimulatorLoader } from "./SimulatorLoader";
 import { useAITelemetryStore } from "../ai-personalization/useAITelemetryStore";
-import { useEconomyStore } from "../economy/useEconomyStore";
-import { useUserStatsStore } from "../user-stats/useUserStatsStore";
+import { useEconomy, economyQueryKey } from "../economy/useEconomy";
+import { useEconomyUIStore } from "../economy/useEconomyUIStore";
+import { useStreak } from "../economy/useStreak";
+import { applyEconomyDelta } from "../../lib/api/economy";
+import type { Economy } from "../../lib/api/economy";
+import { recordModuleDuration as apiRecordModuleDuration } from "../../lib/api/userStats";
+import { userStatsQueryKey } from "../user-stats/useUserStats";
 import { useWisdomStore } from "../wisdom-flashes/useWisdomStore";
-import { useSubscriptionStore } from "../subscription/useSubscriptionStore";
+import { useIsPro, subscriptionQueryKey } from "../subscription/useSubscription";
+import { useHeartsStore } from "../subscription/useHeartsStore";
+import { useUsageStore } from "../subscription/useUsageStore";
+import { queryClient } from "../../lib/queryClient";
+import type { SubscriptionState } from "../../lib/api/subscription";
 import { useUpgradeModalStore } from "../../stores/useUpgradeModalStore";
 import { PRO_LOCKED_SIMS } from "../../constants/proGates";
 import { OutOfHeartsModal } from "../subscription/HeartsUI";
@@ -1921,7 +1931,8 @@ function SlotsFullModal({
   onGemOpen: () => void;
   onDiscard: () => void;
 }) {
-  const gems = useEconomyStore((s) => s.gems);
+  const { data: economyDataGem } = useEconomy();
+  const gems = economyDataGem?.gems ?? 0;
   const canAfford = gems >= INSTANT_OPEN_GEM_COST;
 
   if (!visible || !rarity) return null;
@@ -2360,26 +2371,63 @@ export function LessonFlowScreen() {
     };
   }, []);
 
-  const isPro = useSubscriptionStore((s) => s.tier === "pro" && s.status === "active");
-  const heartsCount = useSubscriptionStore((s) => s.getHearts());
-  const recordQuizAnswer = useChapterStore((s) => s.recordQuizAnswer);
-  const completeModule = useChapterStore((s) => s.completeModule);
-  const saveResume = useChapterStore((s) => s.saveResume);
-  const clearResume = useChapterStore((s) => s.clearResume);
-  const progress = useChapterStore(useShallow((s) => s.progress));
-  const setCurrentChapter = useChapterStore((s) => s.setCurrentChapter);
-  const setCurrentModule = useChapterStore((s) => s.setCurrentModule);
-  const quizResults = useChapterStore(
-    (s) => s.progress[s.currentChapterId]?.quizResults ?? {},
-  );
+  const isPro = useIsPro();
+  const heartsCount = useHeartsStore((s) => s.getHearts());
+  const recordQuizAnswer = useChapterUIStore((s) => s.recordQuizAnswer);
+  const saveResume = useChapterUIStore((s) => s.saveResume);
+  const clearResume = useChapterUIStore((s) => s.clearResume);
+  const setCurrentChapter = useChapterUIStore((s) => s.setCurrentChapter);
+  const setCurrentModule = useChapterUIStore((s) => s.setCurrentModule);
+  const { data: progressData } = useProgress();
+  const { mutate: upsertProgress } = useUpsertModuleProgress();
+  const quizResults = useChapterUIStore((s) => s.quizResults);
 
-  // Point the chapter store at whichever chapter this lesson belongs to,
-  // so completeModule(id) writes into the correct chapter's progress array.
-  // Without this, mod-0-1 completion was being written to ch-1 (the default),
-  // leaving ch-0's completedModules empty and looping the user back to mod-0-1.
+  // Keep UI nav store in sync with the currently-viewed chapter
   useEffect(() => {
     if (chapterId) setCurrentChapter(chapterStoreKey(chapterId));
   }, [chapterId, setCurrentChapter]);
+
+  // completeModule: server-sync + telemetry + XP/coins (mirrors old store action)
+  const MODULE_COMPLETE_XP = 30;
+  const completeModule = useCallback((moduleId: string) => {
+    // Guard: skip if already completed (server is source of truth)
+    const alreadyDone = getCompletedModulesSync(chapterStoreKey(chapterId ?? 'chapter-1'));
+    if (alreadyDone.includes(moduleId)) return;
+
+    // Telemetry event
+    const totalCompletedBefore = (queryClient.getQueryData<import('../../lib/api/progress').ModuleProgressRow[]>(progressQueryKey) ?? [])
+      .filter((m) => m.status === 'completed').length;
+    captureEvent('lesson_completed', {
+      module_id: moduleId,
+      chapter_id: chapterId ?? '',
+      is_first_lesson: totalCompletedBefore === 0,
+      total_completed: totalCompletedBefore + 1,
+    });
+
+    // XP + coins
+    useEconomyUIStore.getState().addXP(MODULE_COMPLETE_XP, 'lesson_complete');
+    useEconomyUIStore.getState().addCoins(150, 'lesson');
+
+    // AI telemetry
+    const quiz = useChapterUIStore.getState().quizResults[moduleId];
+    useAITelemetryStore.getState().addEvent('module_complete', moduleId, {
+      correct: quiz ? quiz.correct > 0 : null,
+      meta: {
+        quizCorrect: quiz?.correct ?? 0,
+        quizTotal: quiz?.total ?? 0,
+      },
+    });
+
+    // Server sync (optimistic via upsertProgress)
+    upsertProgress({
+      moduleId,
+      status: 'completed',
+      quizScore: quiz?.correct,
+      quizAttempts: quiz?.total,
+      bestScore: quiz?.correct,
+      xpEarned: MODULE_COMPLETE_XP,
+    });
+  }, [chapterId, upsertProgress]);
 
   const { isMuted, toggleMute } = useLessonMusic();
   const safeTimeout = useTimeoutCleanup();
@@ -2420,20 +2468,20 @@ export function LessonFlowScreen() {
     if (chapterIdx < 0) return true;
     for (let ci = 0; ci < chapterIdx; ci++) {
       const prev = ALL_CHAPTERS_ORDERED[ci];
-      const prevCompleted = progress[chapterStoreKey(prev.id)]?.completedModules ?? [];
+      const prevCompleted = getCompletedModulesSync(chapterStoreKey(prev.id));
       if (!prev.modules.every((m) => m.comingSoon || PRO_LOCKED_SIMS.has(m.id) || prevCompleted.includes(m.id))) return false;
     }
     const chapter = ALL_CHAPTERS_ORDERED[chapterIdx];
     const modIdx = chapter.modules.findIndex((m) => m.id === id);
     if (modIdx < 0) return true;
-    const completed = progress[chapterStoreKey(chapter.id)]?.completedModules ?? [];
+    const completed = getCompletedModulesSync(chapterStoreKey(chapter.id));
     for (let mi = 0; mi < modIdx; mi++) {
       if (chapter.modules[mi].comingSoon) continue;
       if (PRO_LOCKED_SIMS.has(chapter.modules[mi].id)) continue;
       if (!completed.includes(chapter.modules[mi].id)) return false;
     }
     return true;
-  }, [isPro, chapterId, id, progress]);
+  }, [isPro, chapterId, id, progressData]);
 
   const [showProGate, setShowProGate] = useState(false);
 
@@ -2460,9 +2508,8 @@ export function LessonFlowScreen() {
       router.replace("/(tabs)" as never);
       return;
     }
-    const freshProgress = useChapterStore.getState().progress;
     for (const ch of ALL_CHAPTERS_ORDERED) {
-      const completed = freshProgress[chapterStoreKey(ch.id)]?.completedModules ?? [];
+      const completed = getCompletedModulesSync(chapterStoreKey(ch.id));
       const nextIdx = ch.modules.findIndex((m) => !m.comingSoon && (isPro || !PRO_LOCKED_SIMS.has(m.id)) && !completed.includes(m.id));
       if (nextIdx >= 0) {
         const nextMod = ch.modules[nextIdx];
@@ -2501,7 +2548,7 @@ export function LessonFlowScreen() {
       return;
     }
     for (const ch of ALL_CHAPTERS_ORDERED) {
-      const completed = progress[chapterStoreKey(ch.id)]?.completedModules ?? [];
+      const completed = getCompletedModulesSync(chapterStoreKey(ch.id));
       const nextIdx = ch.modules.findIndex((m) => !m.comingSoon && (isPro || !PRO_LOCKED_SIMS.has(m.id)) && !completed.includes(m.id));
       if (nextIdx >= 0) {
         const nextMod = ch.modules[nextIdx];
@@ -2517,7 +2564,7 @@ export function LessonFlowScreen() {
   const [phase, setPhase] = useState<FlowPhase>(() => {
     // On replay (user explicitly chose "do it again"), ignore the resume
     // checkpoint — they want to start from intro, not pick up at quizzes.
-    const r = !isReplay && mod?.id ? useChapterStore.getState().moduleResume[mod.id] : undefined;
+    const r = !isReplay && mod?.id ? useChapterUIStore.getState().moduleResume[mod.id] : undefined;
     if (r && RESTORABLE_PHASES.has(r.phase as FlowPhase)) return r.phase as FlowPhase;
     if (mod?.videoHookAsset) return "video";
     if (mod?.id && MODULE_HERO_MAP[mod.id]) return "hero";
@@ -2536,7 +2583,7 @@ export function LessonFlowScreen() {
     }
   }, [mod, isModuleAccessible, phase]);
   const [flashcardIndex, setFlashcardIndex] = useState(() => {
-    const r = !isReplay && mod?.id ? useChapterStore.getState().moduleResume[mod.id] : undefined;
+    const r = !isReplay && mod?.id ? useChapterUIStore.getState().moduleResume[mod.id] : undefined;
     return (r && RESTORABLE_PHASES.has(r.phase as FlowPhase)) ? r.flashcardIndex : 0;
   });
 
@@ -2630,15 +2677,15 @@ export function LessonFlowScreen() {
   const lifestyleOneShotSeenIds = useLifestyleBreakStore(useShallow((s) => s.oneShotSeenIds));
   const markLifestyleSeen = useLifestyleBreakStore((s) => s.markSeen);
   const [quizIndex, setQuizIndex] = useState(() => {
-    const r = !isReplay && mod?.id ? useChapterStore.getState().moduleResume[mod.id] : undefined;
+    const r = !isReplay && mod?.id ? useChapterUIStore.getState().moduleResume[mod.id] : undefined;
     return (r && RESTORABLE_PHASES.has(r.phase as FlowPhase)) ? r.quizIndex : 0;
   });
   const [consecutiveCorrect, setConsecutiveCorrect] = useState(() => {
-    const r = !isReplay && mod?.id ? useChapterStore.getState().moduleResume[mod.id] : undefined;
+    const r = !isReplay && mod?.id ? useChapterUIStore.getState().moduleResume[mod.id] : undefined;
     return (r && RESTORABLE_PHASES.has(r.phase as FlowPhase)) ? r.consecutiveCorrect : 0;
   });
   const [peakStreak, setPeakStreak] = useState(() => {
-    const r = !isReplay && mod?.id ? useChapterStore.getState().moduleResume[mod.id] : undefined;
+    const r = !isReplay && mod?.id ? useChapterUIStore.getState().moduleResume[mod.id] : undefined;
     return (r && RESTORABLE_PHASES.has(r.phase as FlowPhase)) ? (r.peakStreak ?? 0) : 0;
   });
   const [showStreakPopup, setShowStreakPopup] = useState(false);
@@ -2672,7 +2719,8 @@ export function LessonFlowScreen() {
   const [chestRewards, setChestRewards] = useState<ChestReward | null>(null);
   const [flyingXp, setFlyingXp] = useState(0);
   const [flyingCoins, setFlyingCoins] = useState(0);
-  const streak = useEconomyStore((s) => s.streak);
+  const { data: streakDataLesson } = useStreak();
+  const streak = streakDataLesson?.currentStreak ?? 0;
 
   const completedRef = useRef(false);
   const confettiLottieRef = useRef<LottieView>(null);
@@ -2711,7 +2759,7 @@ export function LessonFlowScreen() {
     if (prevIdRef.current === id) return;
     prevIdRef.current = id;
     // Same guard as the initial useState: replay = ignore resume checkpoint.
-    const r = !isReplay && mod?.id ? useChapterStore.getState().moduleResume[mod.id] : undefined;
+    const r = !isReplay && mod?.id ? useChapterUIStore.getState().moduleResume[mod.id] : undefined;
     const resumable = r !== undefined && RESTORABLE_PHASES.has(r.phase as FlowPhase);
     setPhase(resumable ? r!.phase as FlowPhase : (mod?.videoHookAsset ? "video" : (mod?.id && MODULE_HERO_MAP[mod.id]) ? "hero" : "intro"));
     setFlashcardIndex(resumable ? r!.flashcardIndex : 0);
@@ -2773,7 +2821,7 @@ export function LessonFlowScreen() {
     setShowDoubleOrNothing(false);
     const rewards = pendingMultiplierRewards;
     if (rewards) {
-      const eco = useEconomyStore.getState();
+      const eco = useEconomyUIStore.getState();
       if (multiplier === 2) {
         // Correct! Double coins only (XP is not at risk)
         eco.addCoins(rewards.coins, 'lesson');
@@ -2783,7 +2831,9 @@ export function LessonFlowScreen() {
         }, 400);
       } else if (multiplier === 0) {
         // Wrong! Lose the original 1x that was already granted
-        eco.spendCoins(rewards.coins);
+        applyEconomyDelta({ coinsDelta: -rewards.coins })
+          .then(() => queryClient.invalidateQueries({ queryKey: economyQueryKey }))
+          .catch(() => {});
         // Fly coins back DOWN
         safeTimeout(() => {
           setFlyingCoinsDown(rewards.coins);
@@ -2869,8 +2919,7 @@ export function LessonFlowScreen() {
   const chapterModules = chapterData?.modules ?? [];
   const currentModIdx = chapterModules.findIndex((m) => m.id === id);
   const chapterStoreId = chapterId ? `ch-${chapterId.split("-")[1]}` : "";
-  const chapterProg = useChapterStore((s) => s.progress[chapterStoreId]);
-  const completedSet = chapterProg?.completedModules ?? [];
+  const completedSet = getCompletedModulesSync(chapterStoreId);
   const currentAlreadyCounted = id ? completedSet.includes(id) : false;
   const completedInChapter = completedSet.length + (phase === "summary" && !currentAlreadyCounted ? 1 : 0);
   const isLastModule = currentModIdx === chapterModules.length - 1;
@@ -2911,14 +2960,14 @@ export function LessonFlowScreen() {
 
       // Practice-to-Refill (US-006): if this replay was started from OutOfHeartsModal, grant +1 heart
       if (isReplay) {
-        useSubscriptionStore.getState().grantPracticeHeart();
+        useHeartsStore.getState().grantPracticeHeart();
       }
 
       // Generate chest drop: premium for arena/chapter completion, regular for module
       // Skip rewards on replay
       if (!isReplay) {
         const dropType = isLastModule ? "premium" : "regular";
-        const currentStreak = useEconomyStore.getState().streak;
+        const currentStreak = streak;
         const drop = generateChestDrop(dropType, currentStreak);
         pendingChestDropRef.current = { rarity: drop.rarity, rewards: drop.rewards, streakBonusPercent: drop.streakBonusPercent };
       }
@@ -2992,30 +3041,28 @@ export function LessonFlowScreen() {
   useEffect(() => {
     if (!chestClaimed || !isLastModule || showDoubleOrNothing || showSharkLove || showPostCelebration || showPartyInvite || showPartyVideo) return;
     // Count total completed modules across all chapters
-    const totalCompleted = Object.values(progress).reduce(
-      (sum, ch) => sum + (ch?.completedModules?.length ?? 0), 0
-    );
+    const totalCompleted = (queryClient.getQueryData<import('../../lib/api/progress').ModuleProgressRow[]>(progressQueryKey) ?? [])
+      .filter((m) => m.status === 'completed').length;
     // Show party every 4 completed modules, only at chapter end
     if (totalCompleted > 0 && totalCompleted % 4 === 0) {
       const timer = setTimeout(() => setShowPartyInvite(true), 3000);
       return () => clearTimeout(timer);
     }
-  }, [chestClaimed, isLastModule, showDoubleOrNothing, showPostCelebration, showPartyInvite, showPartyVideo, progress]);
+  }, [chestClaimed, isLastModule, showDoubleOrNothing, showPostCelebration, showPartyInvite, showPartyVideo, progressData]);
 
   // Lifestyle break, every 3 total completed modules — fires at any module end.
   // Skipped on % 4 multiples so Shark Party (chapter end) takes priority on collisions.
   useEffect(() => {
     if (!chestClaimed || showDoubleOrNothing || showSharkLove || showPostCelebration || showPartyInvite || showPartyVideo || showLifestyleInvite || showLifestyleVideo) return;
-    const totalCompleted = Object.values(progress).reduce(
-      (sum, ch) => sum + (ch?.completedModules?.length ?? 0), 0
-    );
+    const totalCompleted = (queryClient.getQueryData<import('../../lib/api/progress').ModuleProgressRow[]>(progressQueryKey) ?? [])
+      .filter((m) => m.status === 'completed').length;
     if (totalCompleted > 0 && totalCompleted % 3 === 0 && totalCompleted % 4 !== 0) {
       const next = pickNextLifestyleVideo(lifestyleSeenIds, lifestyleOneShotSeenIds);
       setLifestyleVideo(next);
       const timer = setTimeout(() => setShowLifestyleInvite(true), 2500);
       return () => clearTimeout(timer);
     }
-  }, [chestClaimed, showDoubleOrNothing, showSharkLove, showPostCelebration, showPartyInvite, showPartyVideo, showLifestyleInvite, showLifestyleVideo, progress, lifestyleSeenIds, lifestyleOneShotSeenIds]);
+  }, [chestClaimed, showDoubleOrNothing, showSharkLove, showPostCelebration, showPartyInvite, showPartyVideo, showLifestyleInvite, showLifestyleVideo, progressData, lifestyleSeenIds, lifestyleOneShotSeenIds]);
 
   const moduleResult = mod ? quizResults[mod.id] : undefined;
   const correctCount = moduleResult?.correct ?? 0;
@@ -3044,7 +3091,7 @@ export function LessonFlowScreen() {
       tapHaptic();
     } else if (MODULES_WITH_SIM.has(mod.id) && !SIM_FIRST_MODULES.has(mod.id)) {
       // Normal flow: quizzes → sim (skip for sim-first modules, sim already done)
-      if (PRO_LOCKED_SIMS.has(mod.id) && !useSubscriptionStore.getState().canUse("simulator")) {
+      if (PRO_LOCKED_SIMS.has(mod.id) && !useUsageStore.getState().canUse("simulator", queryClient.getQueryData<SubscriptionState | null>(subscriptionQueryKey)?.isPro === true)) {
         useUpgradeModalStore.getState().show("simulator");
         return;
       }
@@ -3062,7 +3109,9 @@ export function LessonFlowScreen() {
   const handleCorrectAnswer = useCallback(() => {
     if (!mod) return;
     const quiz = mod.quizzes[quizIndex];
-    recordQuizAnswer(mod.id, quiz.id, true, quiz.conceptTag);
+    recordQuizAnswer(mod.id, true);
+    // AI telemetry for quiz answers
+    useAITelemetryStore.getState().addEvent('quiz_answer', mod.id, { correct: true, meta: { questionId: quiz.id } });
     const newStreak = consecutiveCorrect + 1;
     setConsecutiveCorrect(newStreak);
     if (newStreak > peakStreak) setPeakStreak(newStreak);
@@ -3084,7 +3133,7 @@ export function LessonFlowScreen() {
     setConsecutiveCorrect(0); // Reset streak on ANY wrong answer
     const quiz = mod.quizzes[quizIndex];
     if (isReplay) return;
-    const heartUsed = useSubscriptionStore.getState().useHeart();
+    const heartUsed = useHeartsStore.getState().useHeart(isPro);
     if (heartUsed) {
       setShowHeartBreak(true);
       heavyHaptic();
@@ -3103,10 +3152,15 @@ export function LessonFlowScreen() {
   const handleWrongRevealed = useCallback(() => {
     if (!mod) return;
     const quiz = mod.quizzes[quizIndex];
-    recordQuizAnswer(mod.id, quiz.id, false, quiz.conceptTag);
+    recordQuizAnswer(mod.id, false);
+    // AI telemetry + adaptive for wrong answers
+    useAITelemetryStore.getState().addEvent('quiz_answer', mod.id, { correct: false, meta: { questionId: quiz.id } });
+    if (quiz.conceptTag) {
+      useAdaptiveStore.getState().logFailure(quiz.id, quiz.conceptTag, mod.id);
+    }
     setConsecutiveCorrect(0);
     // If hearts ran out, stop playing, show out-of-hearts
-    const currentHearts = useSubscriptionStore.getState().getHearts();
+    const currentHearts = useHeartsStore.getState().getHearts();
     if (!isPro && currentHearts <= 0) {
       setShowOutOfHearts(true);
       return;
@@ -3342,7 +3396,7 @@ export function LessonFlowScreen() {
       return <FallbackToSummary setPhase={setPhase} />;
     }
     const handleDilemmaComplete = (result: import("../shark-dilemma/types").DilemmaResult) => {
-      const eco = useEconomyStore.getState();
+      const eco = useEconomyUIStore.getState();
       // Branching dilemmas only: base 5 coins + 3 per net-positive score point.
       // Legacy single-slide dilemmas keep the original flat 5-coin reward to avoid
       // retroactive inflation across the 49 unchanged dilemmas.
@@ -3353,8 +3407,8 @@ export function LessonFlowScreen() {
       // useHeart() returns false silently at 0 — the in-card feedback IS the feedback.
       // Skipped on replay to encourage practice without punishment.
       if (!isReplay) {
-        const sub = useSubscriptionStore.getState();
-        for (let i = 0; i < result.unwiseCount; i++) sub.useHeart();
+        const isProNow = queryClient.getQueryData<SubscriptionState | null>(subscriptionQueryKey)?.isPro === true;
+        for (let i = 0; i < result.unwiseCount; i++) useHeartsStore.getState().useHeart(isProNow);
       }
       // XP bonus only for branching dilemmas with a perfect path.
       if (result.unwiseCount === 0 && result.path.length > 1) {
@@ -3941,15 +3995,19 @@ export function LessonFlowScreen() {
                                 if (peakStreak >= 3) {
                                   const bonusMultiplier = peakStreak >= 7 ? 1.0 : peakStreak >= 5 ? 0.75 : 0.5;
                                   const bonusXp = Math.round(30 * bonusMultiplier);
-                                  useEconomyStore.getState().addXP(bonusXp, "streak_bonus");
+                                  useEconomyUIStore.getState().addXP(bonusXp, "streak_bonus");
                                 }
                                 completeModule(mod.id);
                                 clearResume(mod.id);
-                                useEconomyStore.getState().completeDailyTask();
+                                useEconomyUIStore.getState().completeDailyTask();
                                 const durationSec = Math.round((Date.now() - moduleStartTimeRef.current) / 1000);
-                                useUserStatsStore.getState().recordModuleDuration(durationSec);
+                                if (durationSec >= 5 && durationSec <= 7200) {
+                                  apiRecordModuleDuration(mod.id, durationSec)
+                                    .then(() => queryClient.invalidateQueries({ queryKey: userStatsQueryKey }))
+                                    .catch(() => { /* fire-and-forget */ });
+                                }
                               }
-                              const eco = useEconomyStore.getState();
+                              const eco = useEconomyUIStore.getState();
                               eco.addCoins(drop.rewards.coins, 'lesson');
                               eco.addXP(drop.rewards.xp, "chest_reward");
                               if (drop.rewards.gems > 0) eco.addGems(drop.rewards.gems);
@@ -3963,9 +4021,8 @@ export function LessonFlowScreen() {
                           safeTimeout(() => {
                             setChestClaimed(true);
                             // Shark Love, every 3rd completed module (3, 6, 9...)
-                            const totalCompletedNow = Object.values(progress).reduce(
-                              (sum, ch) => sum + (ch?.completedModules?.length ?? 0), 0
-                            );
+                            const totalCompletedNow = (queryClient.getQueryData<import('../../lib/api/progress').ModuleProgressRow[]>(progressQueryKey) ?? [])
+                              .filter((m) => m.status === 'completed').length;
                             if (totalCompletedNow > 0 && totalCompletedNow % 3 === 0) {
                               safeTimeout(() => {
                                 setShowSharkLove(true);
@@ -3997,7 +4054,7 @@ export function LessonFlowScreen() {
                             // the blocker state before the drain useEffect schedules its
                             // 600ms timer — eliminates the chest-claim race.
                             // Chapter 0: Cover CTA after the 2nd module
-                            const ch0Done = progress["chapter-0"]?.completedModules?.length ?? 0;
+                            const ch0Done = getCompletedModulesSync('ch-0').length;
                             const willShowCoverCh0 = isBridgeEligible && chapterId === "chapter-0" && ch0Done === 2;
                             // Chapter 1: Cover CTA for first 2 bridge triggers (replaces normal bridge)
                             const willShowCoverCh1 = isBridgeEligible && chapterId !== "chapter-0" && willShowBridge && coverCTAShownCount < 2;
@@ -4189,7 +4246,7 @@ export function LessonFlowScreen() {
                   tapHaptic();
                   setShowAdBonus(false);
                   showRewardedAd(() => {
-                    useEconomyStore.getState().addCoins(200);
+                    useEconomyUIStore.getState().addCoins(200);
                     successHaptic();
                     setFlyingCoins(200);
                   });

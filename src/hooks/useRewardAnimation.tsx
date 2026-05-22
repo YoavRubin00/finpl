@@ -9,7 +9,9 @@ import React, {
 import { StyleSheet, View } from "react-native";
 
 import { usePathname } from "expo-router";
-import { useEconomyStore } from "../features/economy/useEconomyStore";
+import { queryClient } from "../lib/queryClient";
+import { economyQueryKey } from "../features/economy/useEconomy";
+import type { Economy } from "../lib/api/economy";
 import { RewardPopup, type RewardType } from "../components/ui/RewardPopup";
 import {
   ParticleBurst,
@@ -128,25 +130,36 @@ export function RewardAnimationProvider({
     successHaptic();
   }, []);
 
-  // Subscribe to economy store changes
+  // Subscribe to react-query cache updates for economy data
   useEffect(() => {
-    const unsub = useEconomyStore.subscribe((state, prevState) => {
-      if (prevXP.current === null) prevXP.current = prevState.xp;
-      if (prevCoins.current === null) prevCoins.current = prevState.coins;
-      if (prevGems.current === null) prevGems.current = prevState.gems;
+    const unsub = queryClient.getQueryCache().subscribe((event) => {
+      if (
+        event.type !== 'updated' ||
+        event.query.queryKey[0] !== economyQueryKey[0]
+      ) return;
 
-      const xpDiff = state.xp - (prevXP.current ?? state.xp);
-      const coinsDiff = state.coins - (prevCoins.current ?? state.coins);
-      const gemsDiff = state.gems - (prevGems.current ?? state.gems);
+      const state = event.query.state.data as Economy | null | undefined;
+      if (!state) return;
 
-      prevXP.current = state.xp;
-      prevCoins.current = state.coins;
-      prevGems.current = state.gems;
+      const xp = state.xp ?? 0;
+      const coins = state.coins ?? 0;
+      const gems = state.gems ?? 0;
+
+      if (prevXP.current === null) prevXP.current = xp;
+      if (prevCoins.current === null) prevCoins.current = coins;
+      if (prevGems.current === null) prevGems.current = gems;
+
+      const xpDiff = xp - (prevXP.current ?? xp);
+      const coinsDiff = coins - (prevCoins.current ?? coins);
+      const gemsDiff = gems - (prevGems.current ?? gems);
+
+      prevXP.current = xp;
+      prevCoins.current = coins;
+      prevGems.current = gems;
 
       const hasReward = xpDiff > 0 || coinsDiff > 0 || gemsDiff > 0;
       if (!hasReward) return;
 
-      // Always fire immediately, regardless of what screen we are on
       fireRewardAnimations(
         xpDiff > 0 ? xpDiff : 0,
         coinsDiff > 0 ? coinsDiff : 0,

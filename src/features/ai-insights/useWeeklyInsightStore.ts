@@ -1,6 +1,7 @@
 import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
 import { zustandStorage } from '../../lib/zustandStorage';
+import { registerLocalStore } from '../../lib/stores/registry';
 
 export interface FreeInsight {
   emoji: string;
@@ -21,6 +22,7 @@ interface WeeklyInsightState {
   markBannerShown: () => void;
   shouldRefetchBannerMessage: () => boolean;
   saveBannerMessage: (message: string) => void;
+  reset: () => void;
 }
 
 function todayISO(): string {
@@ -74,6 +76,14 @@ export const useWeeklyInsightStore = create<WeeklyInsightState>()(
       saveBannerMessage: (message: string) => {
         set({ bannerMessage: message, bannerMessageDate: todayISO() });
       },
+
+      reset: () => set({
+        lastFetchedAt: null,
+        cachedInsight: null,
+        lastBannerShownAt: null,
+        bannerMessage: null,
+        bannerMessageDate: null,
+      }),
     }),
     {
       name: "weekly-insight-storage",
@@ -88,3 +98,5 @@ export const useWeeklyInsightStore = create<WeeklyInsightState>()(
     },
   ),
 );
+
+registerLocalStore('weekly-insight-storage', useWeeklyInsightStore, 'weekly-insight-storage');

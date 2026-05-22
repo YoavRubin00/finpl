@@ -29,9 +29,10 @@ import { Check, X } from "lucide-react-native";
 import { ScrollView } from "react-native-gesture-handler";
 import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
-import { useSubscriptionStore } from "./useSubscriptionStore";
+import { useIsPro, useSyncFromRevenueCat } from "./useSubscription";
+import { useUsageStore } from "./useUsageStore";
 import { useAuthStore } from "../auth/useAuthStore";
-import { getOffering, purchasePackage, RC_ENTITLEMENT_PRO } from "../../services/revenueCat";
+import { getOffering, purchasePackage, RC_ENTITLEMENT_PRO, restorePurchases } from "../../services/revenueCat";
 import type { PurchasesPackage } from "../../services/revenueCat";
 import { BackButton } from "../../components/ui/BackButton";
 import { useTheme } from "../../hooks/useTheme";
@@ -157,15 +158,12 @@ function useProBadgePulse() {
 export function PricingScreen() {
   const theme = useTheme();
   const router = useRouter();
-  const isCurrentlyPro = useSubscriptionStore(
-    (s) => s.tier === "pro" && s.status === "active",
-  );
-  const hasSeenProWelcome = useSubscriptionStore((s) => s.hasSeenProWelcome);
+  const isCurrentlyPro = useIsPro();
+  const hasSeenProWelcome = useUsageStore((s) => s.hasSeenProWelcome);
   const displayName = useAuthStore((s) => s.displayName);
   const [isLoading, setIsLoading] = useState(false);
   const [activePackage, setActivePackage] = useState<PurchasesPackage | null>(null);
-  const upgradeToPro = useSubscriptionStore((s) => s.upgradeToPro);
-  const restoreSubscription = useSubscriptionStore((s) => s.restoreSubscription);
+  const { mutateAsync: syncFromRC } = useSyncFromRevenueCat();
 
   const { payload: paywallPayload, trackImpression, trackConversion } = useBandit('upgrade_paywall_headline');
 
@@ -232,7 +230,7 @@ export function PricingScreen() {
 
       if (isPro) {
         captureEvent('subscription_purchased', { plan: pkg.packageType, price: pkg.product.priceString });
-        upgradeToPro();
+        await syncFromRC(customerInfo);
         trackConversion();
         if (!hasSeenProWelcome) {
           router.replace("/pro-welcome" as never);
@@ -253,13 +251,15 @@ export function PricingScreen() {
     } finally {
       setIsLoading(false);
     }
-  }, [displayName, upgradeToPro, hasSeenProWelcome, router]);
+  }, [displayName, syncFromRC, hasSeenProWelcome, router, trackConversion]);
 
   const handleRestore = useCallback(async () => {
     setIsLoading(true);
     try {
-      const restored = await restoreSubscription();
+      const customerInfo = await restorePurchases();
+      const restored = customerInfo.entitlements.active[RC_ENTITLEMENT_PRO] !== undefined;
       if (restored) {
+        await syncFromRC(customerInfo);
         Alert.alert("שוחזר!", "מנוי PRO שוחזר בהצלחה.");
       } else {
         Alert.alert("לא נמצא", "לא נמצא מנוי פעיל לשחזור.");
@@ -269,7 +269,7 @@ export function PricingScreen() {
     } finally {
       setIsLoading(false);
     }
-  }, [restoreSubscription]);
+  }, [syncFromRC]);
 
   return (
     <View style={[styles.root, { backgroundColor: theme.bg }]}>

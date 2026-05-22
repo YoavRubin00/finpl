@@ -23,6 +23,7 @@ export const userProfiles = pgTable("user_profiles", {
 	dailyEmailSentAt: timestamp("daily_email_sent_at", { withTimezone: true, mode: 'string' }),
 	dailyEmailEnabled: boolean("daily_email_enabled").default(true),
 	syncToken: text("sync_token"),
+	preferences: jsonb("preferences"),
 	virtualBalance: numeric("virtual_balance", { precision: 18, scale: 2 }).default('100000').notNull(),
 	createdAt: timestamp("created_at", { withTimezone: true, mode: 'string' }).defaultNow(),
 	updatedAt: timestamp("updated_at", { withTimezone: true, mode: 'string' }).defaultNow(),
@@ -230,4 +231,17 @@ export const referrals = pgTable("referrals", {
 	index("idx_referrals_referrer").using("btree", table.referrerAuthId.asc()),
 	index("idx_referrals_code").using("btree", table.inviteCode.asc()),
 	check("referrals_check", sql`referrer_auth_id <> referee_auth_id`),
+]);
+
+export const userStats = pgTable("user_stats", {
+  userId: uuid("user_id").primaryKey().notNull(),
+  totalSessionSeconds: integer("total_session_seconds").default(0).notNull(),
+  moduleDurations: jsonb("module_durations").default(sql`'{}'::jsonb`),
+  updatedAt: timestamp("updated_at", { withTimezone: true, mode: 'string' }).defaultNow(),
+}, (table) => [
+  foreignKey({
+    columns: [table.userId],
+    foreignColumns: [userProfiles.id],
+    name: "user_stats_user_id_fkey"
+  }).onDelete("cascade"),
 ]);

@@ -6,7 +6,7 @@
  * `chapter-N-mindmap.json` files are empty stubs and intentionally not loaded.
  */
 import { useMemo } from 'react';
-import { useChapterStore } from '../chapter-1-content/useChapterStore';
+import { useCompletedModulesForChapter } from '../chapter-1-content/useProgress';
 import type { Chapter } from '../chapter-1-content/types';
 import { isModuleAccessible } from '../subscription/moduleAccess';
 import { chapter0Data } from '../chapter-0-content/chapter0Data';
@@ -53,16 +53,16 @@ export interface UseChapterMindMapResult {
 }
 
 export function useChapterMindMap(chapterId: string): UseChapterMindMapResult {
-  const progress = useChapterStore((s) => s.progress);
+  const completedModules = useCompletedModulesForChapter(chapterStoreKey(chapterId));
 
   const root = MIND_MAP_DATA[chapterId] ?? null;
   const chapter = CHAPTERS[chapterId] ?? null;
   const moduleIdByPath = MIND_MAP_MODULE_MAP[chapterId] ?? EMPTY_PATH_MAP;
 
-  const completedModuleIds = useMemo<ReadonlySet<string>>(() => {
-    const ids = progress[chapterStoreKey(chapterId)]?.completedModules ?? [];
-    return new Set(ids);
-  }, [progress, chapterId]);
+  const completedModuleIds = useMemo<ReadonlySet<string>>(
+    () => new Set(completedModules),
+    [completedModules],
+  );
 
   const lockedModuleIds = useMemo<ReadonlySet<string>>(() => {
     if (!chapter) return new Set();
@@ -72,8 +72,8 @@ export function useChapterMindMap(chapterId: string): UseChapterMindMapResult {
       if (!isModuleAccessible(m.id, chapter.id)) locked.add(m.id);
     }
     return locked;
-    // chapter is stable; re-eval when progress changes (isModuleAccessible reads it)
-  }, [chapter, progress]);
+    // re-eval when completedModuleIds changes (isModuleAccessible reads queryClient cache)
+  }, [chapter, completedModuleIds]);
 
   return { root, chapter, completedModuleIds, lockedModuleIds, moduleIdByPath };
 }

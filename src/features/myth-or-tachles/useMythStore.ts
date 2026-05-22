@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import { zustandStorage } from '../../lib/zustandStorage';
+import { registerLocalStore } from '../../lib/stores/registry';
 
 const SESSION_LIMIT = 3;
 export const MYTH_COOLDOWN_MS = 4 * 60 * 60 * 1000; // 4 hours
@@ -15,6 +16,7 @@ interface MythState {
     resetSeen: () => void;
     canPlayMyth: (isPro: boolean) => boolean;
     resetMythSessionIfCooldownElapsed: () => void;
+    reset: () => void;
 }
 
 export const useMythStore = create<MythState>()(
@@ -59,6 +61,14 @@ export const useMythStore = create<MythState>()(
                     set({ mythSessionCount: 0, lastMythSessionTime: 0 });
                 }
             },
+
+            reset: () => set({
+                seenIds: [],
+                totalCorrect: 0,
+                totalPlayed: 0,
+                mythSessionCount: 0,
+                lastMythSessionTime: 0,
+            }),
         }),
         {
             name: 'myth-store-v1',
@@ -73,3 +83,5 @@ export const useMythStore = create<MythState>()(
         },
     ),
 );
+
+registerLocalStore('myth-store-v1', useMythStore, 'myth-store-v1');

@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import { zustandStorage } from '../../lib/zustandStorage';
+import { registerLocalStore } from '../../lib/stores/registry';
 import { ASSET_BY_ID } from './tradingHubData';
 import type { AssetType, ChartMode } from './tradingHubTypes';
 import { useTradingStore } from './useTradingStore';
@@ -29,6 +30,7 @@ interface TradingHubUiState {
   hasShownBridgeCtaToday: (todayKey: string) => boolean;
   setChartMode: (mode: ChartMode) => void;
   setChartMAPeriod: (period: number) => void;
+  reset: () => void;
 }
 
 export const useTradingHubUiStore = create<TradingHubUiState>()(
@@ -82,6 +84,16 @@ export const useTradingHubUiStore = create<TradingHubUiState>()(
       setChartMAPeriod: (period) => {
         set({ chartMAPeriod: period });
       },
+
+      reset: () => set({
+        watchlist: [],
+        unlockedAssetTypes: DEFAULT_UNLOCKED,
+        dismissedTipDate: null,
+        lastBridgeCtaDate: null,
+        chartMode: null,
+        chartMAPeriod: 20,
+        _hydrated: false,
+      }),
     }),
     {
       name: 'trading-hub-ui-store',
@@ -127,3 +139,5 @@ export const useTradingHubUiStore = create<TradingHubUiState>()(
     },
   ),
 );
+
+registerLocalStore('trading-hub-ui-store', useTradingHubUiStore, 'trading-hub-ui-store');

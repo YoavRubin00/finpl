@@ -32,8 +32,9 @@ import Animated, {
 } from "react-native-reanimated";
 import { X, Send, Lock } from "lucide-react-native";
 import { useAuthStore } from "../auth/useAuthStore";
-import { useChapterStore } from "../chapter-1-content/useChapterStore";
-import { useSubscriptionStore } from "../subscription/useSubscriptionStore";
+import { useChapterUIStore } from "../chapter-1-content/useChapterUIStore";
+import { useProgress } from "../chapter-1-content/useProgress";
+import { useIsPro } from "../subscription/useSubscription";
 import { streamChatRequest } from "../../utils/streamChat";
 import { useUpgradeModalStore } from "../../stores/useUpgradeModalStore";
 import { COMPANION_PERSONALITIES } from "../chat/chatData";
@@ -148,9 +149,9 @@ export function LifelineChatOverlay({ visible, conceptTag, onClose }: Props) {
   const companionId: CompanionId = profile?.companionId ?? "warren-buffett";
   const companion = COMPANION_PERSONALITIES[companionId] ?? COMPANION_PERSONALITIES["warren-buffett"];
   const displayName = useAuthStore((s) => s.displayName);
-  const progress = useChapterStore((s) => s.progress);
-  const allCompleted = Object.values(progress).flatMap((cp) => cp.completedModules);
-  const currentChapter = useChapterStore((s) => s.currentChapterId);
+  const { data: progressData } = useProgress();
+  const allCompleted = progressData?.filter((m) => m.status === 'completed').map((m) => m.moduleId) ?? [];
+  const currentChapter = useChapterUIStore((s) => s.currentChapterId);
   const conceptLabel = getConceptLabel(conceptTag);
   const safeInsets = useSafeAreaInsets();
   // Push the header (and the X close button) clear of the Android status bar.
@@ -158,7 +159,7 @@ export function LifelineChatOverlay({ visible, conceptTag, onClose }: Props) {
   const headerTopPad = Platform.OS === "android"
     ? Math.max(safeInsets.top, 28) + 28
     : safeInsets.top + 10;
-  const isPro = useSubscriptionStore((s) => s.isPro());
+  const isPro = useIsPro();
 
   const authId = useAuthStore((s) => s.email);
 

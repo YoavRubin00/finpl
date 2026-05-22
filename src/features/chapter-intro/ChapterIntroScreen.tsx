@@ -10,7 +10,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { ArrowRight, Check, Lock, Play } from 'lucide-react-native';
 import { AnimatedPressable } from '../../components/ui/AnimatedPressable';
 import { MindMapTree } from '../../components/ui/MindMapTree';
-import { useChapterStore } from '../chapter-1-content/useChapterStore';
+import { useChapterUIStore } from '../chapter-1-content/useChapterUIStore';
 import {
   isModuleAccessible,
   nextAccessibleModule,
@@ -28,8 +28,8 @@ export function ChapterIntroScreen() {
   const chapterId = params.chapterId ?? 'chapter-0';
   const router = useRouter();
 
-  const setCurrentChapter = useChapterStore((s) => s.setCurrentChapter);
-  const setCurrentModule = useChapterStore((s) => s.setCurrentModule);
+  const setCurrentChapter = useChapterUIStore((s) => s.setCurrentChapter);
+  const setCurrentModule = useChapterUIStore((s) => s.setCurrentModule);
 
   const { root, chapter, completedModuleIds, lockedModuleIds, moduleIdByPath } =
     useChapterMindMap(chapterId);
@@ -91,7 +91,7 @@ export function ChapterIntroScreen() {
       return;
     }
     tapHaptic();
-    setCurrentChapter(next.storeChapterId);
+    setCurrentChapter(next.storeChapterId ?? chapterStoreKey(next.chapterId));
     const ch = chapter;
     if (ch && next.chapterId === ch.id) {
       const idx = ch.modules.findIndex((m) => m.id === next.moduleId);

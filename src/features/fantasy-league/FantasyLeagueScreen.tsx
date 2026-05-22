@@ -10,7 +10,8 @@ import { TRADABLE_ASSETS } from '../trading-hub/tradingHubData';
 import { fetchLatestPrice } from '../trading-hub/marketApiService';
 import type { TradableAsset } from '../trading-hub/tradingHubTypes';
 import { successHaptic } from '../../utils/haptics';
-import { useEconomyStore } from '../economy/useEconomyStore';
+import { useEconomy, useSpendGems, useSpendCoins } from '../economy/useEconomy';
+import { useEconomyUIStore } from '../economy/useEconomyUIStore';
 import type { FantasyPosition, LeaderboardEntry } from './fantasyTypes';
 import { DraftScreen } from './DraftScreen';
 
@@ -911,10 +912,11 @@ function EntryGateOverlay({
   onEnter: () => void;
   onCancel: () => void;
 }) {
-  const gems = useEconomyStore((s) => s.gems);
-  const coins = useEconomyStore((s) => s.coins);
-  const spendGems = useEconomyStore((s) => s.spendGems);
-  const spendCoins = useEconomyStore((s) => s.spendCoins);
+  const { data: economyDataFG } = useEconomy();
+  const gems = economyDataFG?.gems ?? 0;
+  const coins = economyDataFG?.coins ?? 0;
+  const spendGemsHook = useSpendGems();
+  const spendCoinsHook = useSpendCoins();
   const [method, setMethod] = useState<'gems' | 'coins'>('gems');
   
   if (!visible) return null;
@@ -923,10 +925,10 @@ function EntryGateOverlay({
 
   const handlePay = () => {
     if (method === 'gems' && gems >= 5) {
-      spendGems(5);
+      spendGemsHook(5);
       onEnter();
     } else if (method === 'coins' && coins >= 500) {
-      spendCoins(500);
+      spendCoinsHook(500);
       onEnter();
     }
   };
@@ -1032,9 +1034,9 @@ export function FantasyLeagueScreen() {
   const [sellResult, setSellResult] = useState<SellResult | null>(null);
   const [showResultsOverlay, setShowResultsOverlay] = useState(false);
   const [leagueReward, setLeagueReward] = useState<LeagueReward>(DEFAULT_REWARD);
-  const addXP = useEconomyStore((s) => s.addXP);
-  const addCoins = useEconomyStore((s) => s.addCoins);
-  const addGems = useEconomyStore((s) => s.addGems);
+  const addXP = useEconomyUIStore((s) => s.addXP);
+  const addCoins = useEconomyUIStore((s) => s.addCoins);
+  const addGems = useEconomyUIStore((s) => s.addGems);
   const [showEntryGate, setShowEntryGate] = useState(false);
 
   // Finn arena splash on enter, static 1.5s or tap to dismiss

@@ -14,7 +14,8 @@ import Animated, {
 } from "react-native-reanimated";
 import { X } from "lucide-react-native";
 import { useRouter } from "expo-router";
-import { useEconomyStore } from "../economy/useEconomyStore";
+import { useStreak } from "../economy/useStreak";
+import { useEconomyUIStore } from "../economy/useEconomyUIStore";
 import { useRewardedAd } from "../../hooks/useRewardedAd";
 import { tapHaptic, successHaptic } from "../../utils/haptics";
 
@@ -28,9 +29,10 @@ function todayISO(): string {
 /** Friendly inline nudge banner when streak is at risk, shows once per day max */
 export function StreakAtRiskBanner() {
   const router = useRouter();
-  const streak = useEconomyStore((s) => s.streak);
+  const { data: streakData } = useStreak();
+  const streak = streakData?.currentStreak ?? 0;
   const { showAd, isLoaded: adReady, isPro } = useRewardedAd();
-  const lastDailyTaskDate = useEconomyStore((s) => s.lastDailyTaskDate);
+  const lastDailyTaskDate = useEconomyUIStore((s) => s.lastDailyTaskDate);
   const [dismissed, setDismissed] = useState(true); // hidden until we check storage
 
   // On mount, check if already dismissed today
@@ -112,7 +114,7 @@ export function StreakAtRiskBanner() {
             onPress={() => {
               tapHaptic();
               showAd(() => {
-                useEconomyStore.getState().addStreakFreezes(1);
+                useEconomyUIStore.getState().addStreakFreezes(1);
                 successHaptic();
                 dismiss();
               });

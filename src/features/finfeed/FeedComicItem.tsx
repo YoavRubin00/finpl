@@ -4,7 +4,7 @@ import { Image as ExpoImage } from "expo-image";
 import Animated from "react-native-reanimated";
 import { useRouter } from "expo-router";
 import { CLASH } from "../../constants/theme";
-import { useChapterStore } from "../chapter-1-content/useChapterStore";
+import { useChapterUIStore } from "../chapter-1-content/useChapterUIStore";
 import { useSoundEffect } from "../../hooks/useSoundEffect";
 import { tapHaptic } from "../../utils/haptics";
 import LottieView from "lottie-react-native";
@@ -20,8 +20,8 @@ interface Props {
 
 export const FeedComicItem = React.memo(function FeedComicItem({ item, isActive }: Props) {
   const router = useRouter();
-  const setCurrentChapter = useChapterStore((s) => s.setCurrentChapter);
-  const setCurrentModule = useChapterStore((s) => s.setCurrentModule);
+  const setCurrentChapter = useChapterUIStore((s) => s.setCurrentChapter);
+  const setCurrentModule = useChapterUIStore((s) => s.setCurrentModule);
   const { playSound } = useSoundEffect();
 
   const ctaColors = CHAPTER_CTA_COLORS[item.chapterId] ?? CHAPTER_CTA_COLORS["chapter-1"];

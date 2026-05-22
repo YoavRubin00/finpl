@@ -1,6 +1,7 @@
 import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
 import { zustandStorage } from '../lib/zustandStorage';
+import { registerLocalStore } from '../lib/stores/registry';
 import { pingActiveToday } from '../db/sync/syncUserActive';
 import { useAuthStore } from '../features/auth/useAuthStore';
 
@@ -35,6 +36,7 @@ interface FunState {
   openMail: () => void;
   rollEasterEgg: (completedModules: string[]) => void;
   claimEasterEgg: () => void;
+  reset: () => void;
 }
 
 const getTodayDateString = (): string => {
@@ -117,6 +119,7 @@ export const useFunStore = create<FunState>()(
       claimEasterEgg: () => {
         set({ easterEggNodeId: null });
       },
+      reset: () => set({ hasUnreadMail: false, mailContent: null, easterEggNodeId: null, lastMailDate: null, lastActiveDate: null, pizzaIndexSeen: false, _hydrated: false }),
     }),
     {
       name: "fun-store",
@@ -127,3 +130,5 @@ export const useFunStore = create<FunState>()(
     }
   )
 );
+
+registerLocalStore('fun-store', useFunStore, 'fun-store');

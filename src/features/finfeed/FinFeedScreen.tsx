@@ -37,7 +37,7 @@ import { FeedSidebar } from "./FeedSidebar";
 import { useFeedInteractionsStore } from "./useFeedInteractionsStore";
 import { FeedBookmarkButton } from "../saved-items/FeedBookmarkButton";
 import { getBookmarkVariant } from "../saved-items/getBookmarkVariant";
-import { useChapterStore } from "../chapter-1-content/useChapterStore";
+import { useProgress } from "../chapter-1-content/useProgress";
 import { useAITelemetryStore } from "../ai-personalization/useAITelemetryStore";
 import { MacroEventCard } from "../macro-events/MacroEventCard";
 import { macroEventsData } from "../macro-events/macroEventsData";
@@ -45,7 +45,8 @@ import { useMacroEventStore } from "../macro-events/useMacroEventStore";
 import { FeedSkeleton } from "../../components/ui/FeedSkeleton";
 import { NotificationPermissionBanner } from "../../components/ui/NotificationPermissionBanner";
 import { useTutorialStore } from "../../stores/useTutorialStore";
-import { useEconomyStore } from "../economy/useEconomyStore";
+import { useEconomy } from "../economy/useEconomy";
+import { useStreak } from "../economy/useStreak";
 import { useTheme } from "../../hooks/useTheme";
 import { MythFeedCard } from "../myth-or-tachles/MythFeedCard";
 import { FeedPremiumLearningCard } from "./FeedPremiumLearningCard";
@@ -624,12 +625,14 @@ export function FinFeedScreen() {
     flatListRef.current?.scrollToIndex({ index, animated: true });
   };
 
-  const progress = useChapterStore((s) => s.progress);
+  const { data: progressData } = useProgress();
   const aiProfile = useAITelemetryStore((s) => s.profile);
   const getUnansweredMacroEvents = useMacroEventStore((s) => s.getUnanswered);
   const completedScenarios = useScenarioLabStore((s) => s.completedScenarios);
-  const xp = useEconomyStore((s) => s.xp);
-  const streak = useEconomyStore((s) => s.streak);
+  const { data: economyData } = useEconomy();
+  const { data: streakData } = useStreak();
+  const xp = economyData?.xp ?? 0;
+  const streak = streakData?.currentStreak ?? 0;
   const { layer: currentLayer } = getPyramidStatus(xp);
   const todayQuiz = useDailyQuizStore((s) => s.todayQuiz);
   const hasAnsweredQuizToday = useDailyQuizStore((s) => s.hasAnsweredToday);
@@ -738,8 +741,8 @@ export function FinFeedScreen() {
       // so we don't hit brand-new users with feedback on their very first day.
       // Guard against double-open: if the modal is already showing (e.g. from a rapid
       // re-focus), skip, don't re-stamp the AsyncStorage key or re-schedule.
-      const createdAtStr = useAuthStore.getState().createdAt;
-      const createdAtMs = createdAtStr ? new Date(createdAtStr).getTime() : 0;
+      // createdAt is no longer stored locally; default to 0 (past-day-1 gate always passes)
+      const createdAtMs = 0;
       const ONE_DAY = 24 * 60 * 60 * 1000;
       const pastFirstDay = createdAtMs > 0 && (Date.now() - createdAtMs) >= ONE_DAY;
 
@@ -768,7 +771,11 @@ export function FinFeedScreen() {
 
     // Hook cards, top 4 uncompleted per chapter across all 5 chapters
     const hooks: FeedModuleHook[] = CHAPTER_META.flatMap(({ data, storeId, chapterId, name, layer }) => {
-      const completedSet = new Set(progress[storeId]?.completedModules ?? []);
+      const chNum = storeId.replace('ch-', '');
+      const prefix = `mod-${chNum}-`;
+      const completedSet = new Set(
+        progressData?.filter((m) => m.moduleId.startsWith(prefix) && m.status === 'completed').map((m) => m.moduleId) ?? [],
+      );
       const result: FeedModuleHook[] = [];
       for (let index = 0; index < data.modules.length && result.length < 4; index++) {
         const m = data.modules[index];
@@ -1009,7 +1016,7 @@ export function FinFeedScreen() {
     // they interleave naturally between text/quote items as the user scrolls.)
 
     return filteredMerged;
-  }, [feedSeed, simSeed, progress, aiProfile, getUnansweredMacroEvents, completedScenarios, isAuthedNonGuest]);
+  }, [feedSeed, simSeed, progressData, aiProfile, getUnansweredMacroEvents, completedScenarios, isAuthedNonGuest]);
 
   // Execute pending scroll by ID once feedItems are populated
   useEffect(() => {

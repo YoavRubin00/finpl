@@ -1,6 +1,7 @@
 import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
 import { zustandStorage } from "../../lib/zustandStorage";
+import { registerLocalStore } from '../../lib/stores/registry';
 
 const RECENT_HISTORY = 4;
 
@@ -42,3 +43,5 @@ export const useLifestyleBreakStore = create<LifestyleBreakState>()(
     }
   )
 );
+
+registerLocalStore('lifestyle-break-store', useLifestyleBreakStore, 'lifestyle-break-store');

@@ -4,12 +4,12 @@ import Animated from 'react-native-reanimated';
 import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import { tapHaptic } from '../../utils/haptics';
-import { useEconomyStore } from '../economy/useEconomyStore';
+import { useEconomyUIStore } from '../economy/useEconomyUIStore';
 import { useSoundEffect } from '../../hooks/useSoundEffect';
 import { LottieIcon } from '../../components/ui/LottieIcon';
 import { buildPersonalizedDeck } from './mythData';
 import { useMythStore, MYTH_COOLDOWN_MS } from './useMythStore';
-import { useSubscriptionStore } from '../subscription/useSubscriptionStore';
+import { useIsPro } from '../subscription/useSubscription';
 import { useAuthStore } from '../auth/useAuthStore';
 import { MythCardDeck } from './MythCardDeck';
 import { MythFeedbackModal } from './MythFeedbackModal';
@@ -31,7 +31,7 @@ export const MythFeedCard = React.memo(function MythFeedCard({ isInterModule, on
         resetMythSessionIfCooldownElapsed,
         lastMythSessionTime,
     } = useMythStore();
-    const isPro = useSubscriptionStore((s) => s.tier === 'pro' && s.status === 'active');
+    const isPro = useIsPro();
     const { playSound } = useSoundEffect();
 
     useEffect(() => { resetMythSessionIfCooldownElapsed(); }, []);
@@ -81,8 +81,8 @@ export const MythFeedCard = React.memo(function MythFeedCard({ isInterModule, on
             const correct = (direction === 'right') === card.isTrue;
             markAnswered(card.id, correct);
             if (correct) {
-                useEconomyStore.getState().addCoins(10);
-                useEconomyStore.getState().addXP(5, 'quiz_correct');
+                useEconomyUIStore.getState().addCoins(10);
+                useEconomyUIStore.getState().addXP(5, 'quiz_correct');
                 setShowFlyingCoins(true);
                 setTimeout(() => setShowFlyingCoins(false), 1500);
                 setSessionCorrect((n) => n + 1);

@@ -3,7 +3,7 @@ import { View, Text, Pressable, StyleSheet, Modal, Dimensions } from "react-nati
 import Animated, { FadeIn, FadeInDown, useAnimatedStyle, useSharedValue, withTiming } from "react-native-reanimated";
 import { useDailyConceptStore } from "./useDailyConceptStore";
 import { DAILY_CONCEPTS } from "./dailyConceptsData";
-import { useEconomyStore } from "../economy/useEconomyStore";
+import { useEconomyUIStore } from "../economy/useEconomyUIStore";
 import { tapHaptic, successHaptic } from "../../utils/haptics";
 import { LottieIcon } from "../../components/ui/LottieIcon";
 import { GoldCoinIcon } from "../../components/ui/GoldCoinIcon";
@@ -23,8 +23,8 @@ export const DailyMissionCard = React.memo(function DailyMissionCard({ activeCha
   const getTodayPair = useDailyConceptStore((s) => s.getTodayPair);
   const isCompleted = useDailyConceptStore((s) => s.isCompleted);
   const markCompleted = useDailyConceptStore((s) => s.markCompleted);
-  const addXP = useEconomyStore((s) => s.addXP);
-  const addCoins = useEconomyStore((s) => s.addCoins);
+  const addXP = useEconomyUIStore((s) => s.addXP);
+  const addCoins = useEconomyUIStore((s) => s.addCoins);
 
   // We must compute todayPair dynamically when open or rendering progress
   const todayPair = getTodayPair(activeChapterId);

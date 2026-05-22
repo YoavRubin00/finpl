@@ -13,9 +13,10 @@
 import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
 import { zustandStorage } from '../../lib/zustandStorage';
+import { registerLocalStore } from '../../lib/stores/registry';
 import type { ReferredFriend } from "./referralTypes";
 import { generateReferralCode, getISODateKey } from "./referralData";
-import { useEconomyStore } from "../economy/useEconomyStore";
+import { useEconomyUIStore } from "../economy/useEconomyUIStore";
 import {
   registerReferralCode,
   fetchReferralState,
@@ -50,6 +51,7 @@ interface ReferralState {
   canCollectDividend: () => boolean;
   collectDividend: (authId?: string) => void;
   claimDiamondChest: (friendId: string) => void;
+  reset: () => void;
 }
 
 /** Map a server-returned friend row into the legacy ReferredFriend shape. */
@@ -133,7 +135,7 @@ export const useReferralStore = create<ReferralState>()(
           // state.
           if (snapshot.pendingSignupBonus > 0) {
             try {
-              useEconomyStore.getState().addCoins(snapshot.pendingSignupBonus);
+              useEconomyUIStore.getState().addCoins(snapshot.pendingSignupBonus);
             } catch { /* non-fatal — user will see them on next refresh sync */ }
           }
           const friends = snapshot.friends.map(mapServerFriend);
@@ -159,7 +161,7 @@ export const useReferralStore = create<ReferralState>()(
           // economy store is updated here so the user sees the coin counter
           // tick up immediately.
           try {
-            useEconomyStore.getState().addCoins(result.amount);
+            useEconomyUIStore.getState().addCoins(result.amount);
           } catch { /* non-fatal */ }
           set((s) => ({
             totalDividendCoins: s.totalDividendCoins + result.amount,
@@ -191,6 +193,21 @@ export const useReferralStore = create<ReferralState>()(
         // Diamond Chests aren't part of the real reward model — users get
         // 500 + 500 + 5% (see referralConstants).
       },
+
+      reset: () => set({
+        referralCode: "",
+        referredFriends: [],
+        totalDividendCoins: 0,
+        totalDividendXP: 0,
+        hasClaimedDiamondChest: {},
+        lastDividendDate: "",
+        dividendAvailable: 0,
+        alreadyCollectedToday: false,
+        totalYesterdayLearningCoins: 0,
+        isLoading: false,
+        lastSyncedAt: 0,
+        isRegisteredOnServer: false,
+      }),
     }),
     {
       name: "referral-store-v2",
@@ -211,6 +228,8 @@ export const useReferralStore = create<ReferralState>()(
     }
   )
 );
+
+registerLocalStore('referral-store-v2', useReferralStore, 'referral-store-v2');
 
 // Bootstrap: ensure code exists. Server registration happens on first
 // authenticated render via ReferralScreen / nudge — not here, because the

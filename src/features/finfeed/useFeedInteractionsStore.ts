@@ -1,6 +1,7 @@
 import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
 import { zustandStorage } from '../../lib/zustandStorage';
+import { registerLocalStore } from '../../lib/stores/registry';
 
 interface FeedInteractionsState {
   likedIds: Record<string, boolean>;
@@ -13,6 +14,7 @@ interface FeedInteractionsState {
   getLikes: (id: string, baseLikes: number) => number;
   isVideoActive: boolean;
   setIsVideoActive: (active: boolean) => void;
+  reset: () => void;
 }
 
 export const useFeedInteractionsStore = create<FeedInteractionsState>()(
@@ -45,6 +47,7 @@ export const useFeedInteractionsStore = create<FeedInteractionsState>()(
       isLiked: (id) => !!get().likedIds[id],
       isSaved: (id) => !!get().savedIds[id],
       getLikes: (id, baseLikes) => get().likeCounts[id] ?? baseLikes,
+      reset: () => set({ likedIds: {}, savedIds: {}, likeCounts: {}, isVideoActive: false }),
     }),
     {
       name: "feed-interactions-storage",
@@ -57,3 +60,5 @@ export const useFeedInteractionsStore = create<FeedInteractionsState>()(
     },
   ),
 );
+
+registerLocalStore('feed-interactions-storage', useFeedInteractionsStore, 'feed-interactions-storage');

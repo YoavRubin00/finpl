@@ -2,7 +2,7 @@ import { Modal, Pressable, StyleSheet, Text, View } from "react-native";
 import { Image as ExpoImage } from "expo-image";
 import Animated, { FadeIn, FadeInDown } from "react-native-reanimated";
 import { useRouter } from "expo-router";
-import { useEconomyStore } from "../economy/useEconomyStore";
+import { useEconomyUIStore } from "../economy/useEconomyUIStore";
 import { FINN_EMPATHIC } from "../retention-loops/finnMascotConfig";
 import { successHaptic } from "../../utils/haptics";
 
@@ -13,7 +13,7 @@ interface StreakFreezeSaveModalProps {
 
 export function StreakFreezeSaveModal({ visible, onDismiss }: StreakFreezeSaveModalProps) {
   const router = useRouter();
-  const streakFreezes = useEconomyStore((s) => s.streakFreezes);
+  const streakFreezes = useEconomyUIStore((s) => s.streakFreezes);
 
   const handleContinue = () => {
     successHaptic();

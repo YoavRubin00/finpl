@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'expo-router';
-import { useSubscriptionStore } from '../subscription/useSubscriptionStore';
+import { useIsPro } from '../subscription/useSubscription';
 import { useMonetizationIntentStore } from './useMonetizationIntentStore';
 import { pickUpgradeNudgeCopy } from './monetizationNotificationCopy';
 import { useAuthStore } from '../auth/useAuthStore';
@@ -9,7 +9,7 @@ import { useBannerCooldownStore } from '../notifications/useBannerCooldownStore'
 
 export function useUpgradeNudgeBanner() {
   const router = useRouter();
-  const isPro = useSubscriptionStore((s) => s.tier === 'pro' && s.status === 'active');
+  const isPro = useIsPro();
   const [visible, setVisible] = useState(false);
   const [copy, setCopy] = useState<{ title: string; body: string } | null>(null);
 

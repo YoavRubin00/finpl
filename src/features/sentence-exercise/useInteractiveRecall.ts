@@ -7,7 +7,8 @@ import type {
   RecallPrompt,
   TimelineOrderPrompt,
 } from "./sentenceTypes";
-import { useSubscriptionStore } from "../subscription/useSubscriptionStore";
+import { useHeartsStore } from "../subscription/useHeartsStore";
+import { useIsPro } from "../subscription/useSubscription";
 
 const FIRST_TRY_XP = 8;
 const FIRST_TRY_COINS = 4;
@@ -95,6 +96,7 @@ export interface UseInteractiveRecallApi {
 export function useInteractiveRecall(
   set: InteractiveRecallSet | undefined,
 ): UseInteractiveRecallApi {
+  const isPro = useIsPro();
   const [state, setState] = useState<InteractiveRecallState>(() =>
     set ? buildInitialState(set) : ({
       currentIndex: 0,
@@ -145,7 +147,7 @@ export function useInteractiveRecall(
   const applyWrong = useCallback(
     (prompt: RecallPrompt): RecallAttemptResult => {
       // Deduct a heart on every wrong answer — no softening.
-      useSubscriptionStore.getState().useHeart();
+      useHeartsStore.getState().useHeart(isPro);
       setState((prev) => {
         const prevWrongs = prev.wrongCount[prompt.id] ?? 0;
         const nextWrongs = prevWrongs + 1;
@@ -161,7 +163,7 @@ export function useInteractiveRecall(
       });
       return { correct: false, completesPrompt: false, finishesSet: false };
     },
-    [],
+    [isPro],
   );
 
   const attemptFillBlank = useCallback(

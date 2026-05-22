@@ -14,7 +14,8 @@ import { GlobalWealthHeader } from '../../components/ui/GlobalWealthHeader';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ASSET_BY_ID } from './tradingHubData';
 import { useTradingStore } from './useTradingStore';
-import { useEconomyStore } from '../economy/useEconomyStore';
+import { useEconomy } from '../economy/useEconomy';
+import { useEconomyUIStore } from '../economy/useEconomyUIStore';
 import { clearPriceCache, fetchLatestPrice } from './marketApiService';
 import { tapHaptic, successHaptic } from '../../utils/haptics';
 import type { ActivePosition } from './tradingHubTypes';
@@ -41,8 +42,9 @@ export function HoldingsScreen() {
     const closePosition = useTradingStore((s) => s.closePosition);
     const updatePrices = useTradingStore((s) => s.updatePrices);
     const cancelLimitOrder = useTradingStore((s) => s.cancelLimitOrder);
-    const coins = useEconomyStore((s) => s.coins);
-    const addCoins = useEconomyStore((s) => s.addCoins);
+    const { data: economyData } = useEconomy();
+    const coins = economyData?.coins ?? 0;
+    const addCoins = useEconomyUIStore((s) => s.addCoins);
     const insets = useSafeAreaInsets();
 
     const [closeResult, setCloseResult] = useState<CloseResult | null>(null);

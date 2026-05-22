@@ -61,7 +61,6 @@ export const CrowdQuestionCard = React.memo(function CrowdQuestionCard({ market,
   const getUserVoteFor = useCrowdQuestionStore((s) => s.getUserVoteFor);
   const recordLocalVote = useCrowdQuestionStore((s) => s.recordLocalVote);
   const authId = useAuthStore((s) => s.email ?? 'guest');
-  const syncToken = useAuthStore((s) => s.syncToken);
 
   const question = useMemo<CrowdQuestion>(() => getTodayQuestion(market), [getTodayQuestion, market]);
   const alreadyVoted = hasVotedToday();
@@ -89,7 +88,6 @@ export const CrowdQuestionCard = React.memo(function CrowdQuestionCard({ market,
         const dateIL = getIsraelDateISO();
         const result = await submitCrowdVote({
           authId,
-          syncToken,
           questionId: question.id,
           choice: option.id,
           voteDateIL: dateIL,
@@ -103,7 +101,7 @@ export const CrowdQuestionCard = React.memo(function CrowdQuestionCard({ market,
         errorHaptic();
       }
     },
-    [alreadyVoted, chosen, question.id, authId, syncToken, recordLocalVote],
+    [alreadyVoted, chosen, question.id, authId, recordLocalVote],
   );
 
   return (

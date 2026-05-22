@@ -6,7 +6,7 @@ import Animated, { FadeIn, FadeOut } from 'react-native-reanimated';
 import { FINN_STANDARD } from '../retention-loops/finnMascotConfig';
 import { useTradingStore } from './useTradingStore';
 import { useTradingHubUiStore } from './useTradingHubUiStore';
-import { useEconomyStore } from '../economy/useEconomyStore';
+import { useStreak } from '../economy/useStreak';
 import { pickSharkTip } from './sharkTipsData';
 import { tapHaptic } from '../../utils/haptics';
 
@@ -18,7 +18,8 @@ function todayKey(): string {
 
 export function SharkInlineTip() {
   const positions = useTradingStore((s) => s.positions);
-  const streak = useEconomyStore((s) => s.streak);
+  const { data: streakData } = useStreak();
+  const streak = streakData?.currentStreak ?? 0;
   const dismissTipForToday = useTradingHubUiStore((s) => s.dismissTipForToday);
   const dismissedTipDate = useTradingHubUiStore((s) => s.dismissedTipDate);
 

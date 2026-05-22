@@ -14,7 +14,7 @@ import { GoldCoinIcon } from '../../components/ui/GoldCoinIcon';
 import { ConfettiExplosion } from '../../components/ui/ConfettiExplosion';
 import { FlyingRewards } from '../../components/ui/FlyingRewards';
 import { useDailyQuizStore } from './useDailyQuizStore';
-import { useEconomyStore } from '../economy/useEconomyStore';
+import { useEconomyUIStore } from '../economy/useEconomyUIStore';
 import { stripGlossaryTags, renderGlossaryText } from '../glossary/renderGlossaryText';
 import { GlossaryTooltip } from '../glossary/GlossaryTooltip';
 import type { GlossaryEntry } from '../glossary/glossaryData';
@@ -95,8 +95,8 @@ export const DailyQuizCard = React.memo(function DailyQuizCard({ quiz, locked = 
     const wasCorrect = index === quiz.correctAnswerIndex;
     if (wasCorrect) {
       successHaptic();
-      useEconomyStore.getState().addXP(quiz.xpReward, 'quiz_correct');
-      useEconomyStore.getState().addCoins(quiz.coinReward, 'quiz');
+      useEconomyUIStore.getState().addXP(quiz.xpReward, 'quiz_correct');
+      useEconomyUIStore.getState().addCoins(quiz.coinReward, 'quiz');
       setShowConfetti(true);
       setShowFlyingCoins(true);
       setTimeout(() => setShowConfetti(false), 2000);

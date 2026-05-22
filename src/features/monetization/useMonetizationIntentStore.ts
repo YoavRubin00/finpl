@@ -1,10 +1,11 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import { zustandStorage } from '../../lib/zustandStorage';
-import type { GatedFeature } from '../subscription/useSubscriptionStore';
-import { useSubscriptionStore } from '../subscription/useSubscriptionStore';
-import { useUserStatsStore } from '../user-stats/useUserStatsStore';
-import { useEconomyStore } from '../economy/useEconomyStore';
+import { registerLocalStore } from '../../lib/stores/registry';
+import type { GatedFeature } from '../subscription/subscriptionConstants';
+import { useHeartsStore } from '../subscription/useHeartsStore';
+import { useUserStatsUIStore } from '../user-stats/useUserStatsUIStore';
+import { useEconomyUIStore } from '../economy/useEconomyUIStore';
 import { useAITelemetryStore } from '../ai-personalization/useAITelemetryStore';
 import { useBanditStore } from '../bandit/useBanditStore';
 import { getVariantPayload } from '../bandit/banditConfig';
@@ -29,6 +30,7 @@ interface MonetizationIntentState {
   canSendUpgradeNotif: () => boolean;
   markUpgradeNotifSent: () => void;
   shouldShowPaywallNow: (feature: GatedFeature) => boolean;
+  reset: () => void;
 }
 
 const SEVEN_DAYS_MS = 7 * 24 * 60 * 60 * 1000;
@@ -71,13 +73,13 @@ export const useMonetizationIntentStore = create<MonetizationIntentState>()(
         const recentVisits = pricingVisitTimestamps.filter((t) => now - t < SEVEN_DAYS_MS).length;
 
         // Session depth: average daily seconds over last 7 days
-        const dailySecs = useUserStatsStore.getState().dailySessionSeconds;
+        const dailySecs = useUserStatsUIStore.getState().dailySessionSeconds;
         const last7Keys = Object.keys(dailySecs).sort().slice(-7);
         const avgDailySecs = last7Keys.length > 0
           ? last7Keys.reduce((sum, k) => sum + (dailySecs[k] ?? 0), 0) / last7Keys.length
           : 0;
 
-        const activeDays = useEconomyStore.getState().activeDates.length;
+        const activeDays = useEconomyUIStore.getState().activeDates.length;
         const vector = useAITelemetryStore.getState().profile?.monetizationVector ?? null;
 
         let score = 0;
@@ -115,6 +117,8 @@ export const useMonetizationIntentStore = create<MonetizationIntentState>()(
         set({ lastUpgradeNotifAt: Date.now() });
       },
 
+      reset: () => set({ proTaps: [], pricingVisitTimestamps: [], lastUpgradeNotifAt: null }),
+
       shouldShowPaywallNow: (feature: GatedFeature): boolean => {
         const variantId = useBanditStore.getState().selectVariant('upgrade_trigger_timing');
         const variant = getVariantPayload('upgrade_trigger_timing', variantId);
@@ -122,7 +126,7 @@ export const useMonetizationIntentStore = create<MonetizationIntentState>()(
           case 'immediate':
             return true;
           case 'after_3_hearts_lost':
-            return useSubscriptionStore.getState().sessionHeartsLost >= 3;
+            return useHeartsStore.getState().sessionHeartsLost >= 3;
           case 'after_feature_blocked_twice': {
             const tapsOnFeature = get().proTaps.filter((t) => t.feature === feature).length;
             return tapsOnFeature >= 2;
@@ -141,3 +145,5 @@ export const useMonetizationIntentStore = create<MonetizationIntentState>()(
     },
   ),
 );
+
+registerLocalStore('monetization-intent-store', useMonetizationIntentStore, 'monetization-intent-store');

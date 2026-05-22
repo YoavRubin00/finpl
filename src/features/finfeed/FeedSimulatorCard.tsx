@@ -13,7 +13,7 @@ import { LinearGradient } from "expo-linear-gradient";
 import { Lock, X } from "lucide-react-native";
 import { SimulatorLoader } from "../chapter-1-content/SimulatorLoader";
 import { isModuleAccessible, nextAccessibleModule } from "../subscription/moduleAccess";
-import { useChapterStore } from "../chapter-1-content/useChapterStore";
+import { useChapterUIStore } from "../chapter-1-content/useChapterUIStore";
 import { FINN_STANDARD } from "../retention-loops/finnMascotConfig";
 import { useSoundEffect } from "../../hooks/useSoundEffect";
 import { tapHaptic } from "../../utils/haptics";
@@ -50,11 +50,11 @@ export const FeedSimulatorCard = React.memo(function FeedSimulatorCard({ simulat
     tapHaptic();
     playSound("btn_click_soft_2");
     if (accessible) {
-      useChapterStore.getState().setCurrentChapter(simulator.storeChapterId);
-      useChapterStore.getState().setCurrentModule(simulator.moduleIndex);
+      useChapterUIStore.getState().setCurrentChapter(simulator.storeChapterId);
+      useChapterUIStore.getState().setCurrentModule(simulator.moduleIndex);
       router.push(`/lesson/${simulator.moduleId}?chapterId=${simulator.chapterId}` as never);
     } else if (next) {
-      useChapterStore.getState().setCurrentChapter(next.storeChapterId);
+      useChapterUIStore.getState().setCurrentChapter(next.storeChapterId);
       router.push(`/lesson/${next.moduleId}?chapterId=${next.chapterId}` as never);
     }
   }

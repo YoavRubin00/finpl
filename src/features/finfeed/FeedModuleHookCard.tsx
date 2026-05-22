@@ -7,7 +7,7 @@ import { Zap, Play, Volume2, VolumeX, Map } from "lucide-react-native";
 import Animated from "react-native-reanimated";
 import LottieView from "lottie-react-native";
 import { WebView } from "react-native-webview";
-import { useChapterStore } from "../chapter-1-content/useChapterStore";
+import { useChapterUIStore } from "../chapter-1-content/useChapterUIStore";
 import { useAudioStore } from "../../stores/useAudioStore";
 import { CLASH } from "../../constants/theme";
 import { FINN_STANDARD } from "../retention-loops/finnMascotConfig";
@@ -52,8 +52,8 @@ if(window.ReactNativeWebView) window.ReactNativeWebView.postMessage('READY');
 
 export const FeedModuleHookCard = React.memo(function FeedModuleHookCard({ item, isActive }: Props) {
   const router = useRouter();
-  const setCurrentChapter = useChapterStore((s) => s.setCurrentChapter);
-  const setCurrentModule = useChapterStore((s) => s.setCurrentModule);
+  const setCurrentChapter = useChapterUIStore((s) => s.setCurrentChapter);
+  const setCurrentModule = useChapterUIStore((s) => s.setCurrentModule);
   const setVideoPlaying = useAudioStore((s) => s.setVideoPlaying);
   const webViewRef = useRef<WebView>(null);
   const [isPlaying, setIsPlaying] = useState(true);
