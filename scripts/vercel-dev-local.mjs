@@ -43,8 +43,11 @@ try {
 }
 
 const port = process.env.LOCAL_API_PORT || '5050';
+// Bind all interfaces (not just localhost) so a phone on the same Wi-Fi can
+// reach the API at http://<PC-LAN-IP>:<port>. Localhost/web still works too.
+const host = process.env.LOCAL_API_HOST || '0.0.0.0';
 
-const child = spawn('vercel', ['dev', '--listen', port], {
+const child = spawn('vercel', ['dev', '--listen', `${host}:${port}`], {
   stdio: 'inherit',
   env: process.env,
   shell: true,
