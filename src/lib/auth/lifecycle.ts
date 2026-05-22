@@ -23,10 +23,38 @@ import { getStreak } from '../api/streak';
 import { getSubscription, syncSubscription } from '../api/subscription';
 import { getProgress } from '../api/progress';
 import { getUserStats } from '../api/userStats';
+import { verifyEmail } from '../api/auth';
 import { useAuthStore } from '../../features/auth/useAuthStore';
 import { captureEvent } from '../posthog';
 
 type ProfileLike = { id: string; authId: string; displayName: string | null; email: string | null };
+
+/**
+ * Reads the pre-JWT auth session left behind by an older build.
+ * Existing users authenticated with a `syncToken` stored under `auth-store-v2`;
+ * the new build uses a JWT in secure-store. On first launch they have no JWT,
+ * so we recover their email from the old store and re-mint a JWT seamlessly.
+ * Returns null if there is no recoverable authenticated session.
+ */
+async function readLegacyAuthSession(): Promise<{ email: string; displayName: string | null } | null> {
+  try {
+    const raw = await AsyncStorage.getItem('auth-store-v2');
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as Record<string, unknown>;
+    const state = (typeof parsed.state === 'object' && parsed.state !== null
+      ? parsed.state
+      : parsed) as Record<string, unknown>;
+    if (state.isAuthenticated === true && typeof state.email === 'string' && state.email) {
+      return {
+        email: state.email,
+        displayName: typeof state.displayName === 'string' ? state.displayName : null,
+      };
+    }
+  } catch {
+    /* corrupt/absent — treat as no legacy session */
+  }
+  return null;
+}
 
 function makePrefetchFn<T>(queryKey: readonly unknown[], fn: () => Promise<T>): () => Promise<T> {
   return async () => {
@@ -130,7 +158,32 @@ export async function signOut(): Promise<void> {
 
 export async function bootFromToken(): Promise<{ isAuthenticated: boolean }> {
   const token = await tokenStore.get();
-  if (!token) return { isAuthenticated: false };
+
+  // No JWT yet. Before sending the user to the login screen, check for a
+  // pre-JWT session from an older build and migrate it seamlessly. Email login
+  // is passwordless, so re-minting a JWT from the stored email is transparent.
+  // signInWithProfile runs the one-time backfill, so local-only data is pushed
+  // to the server during this migration — no data loss, no forced re-login.
+  if (!token) {
+    const legacy = await readLegacyAuthSession();
+    if (legacy) {
+      try {
+        captureEvent('legacy_session_migration_started');
+        const res = await verifyEmail(legacy.email, legacy.displayName);
+        if (res?.ok && res.profile && res.token) {
+          await signInWithProfile(res.profile, res.token);
+          captureEvent('legacy_session_migration_succeeded');
+          return { isAuthenticated: true };
+        }
+      } catch (e) {
+        captureEvent('legacy_session_migration_failed', {
+          reason: e instanceof Error ? e.message : String(e),
+        });
+        if (__DEV__) console.warn('[boot] legacy session migration failed:', e);
+      }
+    }
+    return { isAuthenticated: false };
+  }
 
   let profile;
   try {
