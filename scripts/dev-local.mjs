@@ -14,7 +14,7 @@ try {
   raw = fs.readFileSync('.env.local', 'utf8');
 } catch {
   fail('No .env.local found. Create it with DATABASE_URL (Neon p0-test branch), '
-    + 'AUTH_JWT_SECRET, BACKFILL_V1_ENABLED=true, EXPO_PUBLIC_API_URL=http://localhost:3000');
+    + 'AUTH_JWT_SECRET, BACKFILL_V1_ENABLED=true, EXPO_PUBLIC_API_URL=http://localhost:5050');
 }
 
 const url = (raw.match(/^DATABASE_URL=(.*)$/m)?.[1] ?? '').trim();

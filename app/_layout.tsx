@@ -158,7 +158,7 @@ function StreakRepairModalGate() {
   return <StreakRepairModal visible={pending} onDismiss={dismiss} />;
 }
 
-export default function RootLayout() {
+function RootLayoutInner() {
   useGoogleAuth();
   
   const [fontsLoaded] = useFonts({
@@ -465,7 +465,6 @@ export default function RootLayout() {
   }
 
   return (
-    <QueryClientProvider client={queryClient}>
     <GestureHandlerRootView style={{ flex: 1 }}>
       <GlobalErrorBoundary>
         <RewardAnimationProvider>
@@ -512,6 +511,13 @@ export default function RootLayout() {
       </GlobalErrorBoundary>
       {splashVisible && <AppIntroSplash onDismiss={() => setSplashVisible(false)} />}
     </GestureHandlerRootView>
+  );
+}
+
+export default function RootLayout() {
+  return (
+    <QueryClientProvider client={queryClient}>
+      <RootLayoutInner />
     </QueryClientProvider>
   );
 }
