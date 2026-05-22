@@ -1,6 +1,8 @@
 export type CompetitionPhase = 'pre_draft' | 'draft' | 'competition' | 'results';
 export type FantasyTier = 'silver' | 'gold' | 'diamond';
-export type StockCategoryId = 'tech' | 'banks' | 'energy' | 'health' | 'crypto';
+export type StockCategoryId = 'tech' | 'spec_growth' | 'energy' | 'israel' | 'crypto';
+
+export type Currency = '$' | '₪';
 
 export interface TierConfig {
   id: FantasyTier;
@@ -9,6 +11,8 @@ export interface TierConfig {
   entryCost: number;
   prizeMultipliers: [number, number, number, number, number];
   prizeXP: [number, number, number, number, number];
+  /** Diamonds awarded for 1st-5th place; later slots typically 0. */
+  prizeDiamonds: [number, number, number, number, number];
 }
 
 export interface DraftStock {
@@ -19,12 +23,14 @@ export interface DraftStock {
   mockPrice: number;
   mockWeeklyChange: number;
   sharkAnalysis: string;
+  currency?: Currency;
 }
 
 export interface StockCategory {
   id: StockCategoryId;
   label: string;
   emoji: string;
+  description: string;
   stocks: DraftStock[];
 }
 
@@ -35,6 +41,8 @@ export interface DraftPick {
   entryPrice: number;
   finalPrice: number | null;
   returnPercent: number | null;
+  /** Coins allocated to this pick — sum across all picks equals entry pool. */
+  allocation: number;
 }
 
 export interface WeeklyEntry {
@@ -48,6 +56,10 @@ export interface WeeklyEntry {
   xpEarned: number | null;
   claimed: boolean;
   draftStreakWeeks: number;
+  /** FPL-style captain — ticker doubles its points contribution. */
+  captainTicker: string | null;
+  /** Vice captain — ×1.5 fallback when captain underperforms. */
+  viceTicker: string | null;
 }
 
 export interface FantasyLeaderboardEntry {

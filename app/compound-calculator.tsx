@@ -1,17 +1,65 @@
-import { View } from "react-native";
-import { useRouter } from "expo-router";
-import { CompoundSimScreen } from "../src/features/chapter-1-content/simulations/CompoundSimScreen";
-import { BackButton } from "../src/components/ui/BackButton";
+import { Pressable, StyleSheet, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { useRouter } from 'expo-router';
+import { ChevronRight } from 'lucide-react-native';
+import { CompoundSimScreen } from '../src/features/chapter-1-content/simulations/CompoundSimScreen';
+import { tapHaptic } from '../src/utils/haptics';
 
+/**
+ * Compound-interest tutorial route. A SafeArea-aware top bar reserves space
+ * for the back button so the sim content beneath it never gets overlapped.
+ */
 export default function CompoundCalculatorRoute() {
   const router = useRouter();
-  const goToTools = () => router.replace("/(tabs)/tools" as never);
+  const goToTools = () => {
+    tapHaptic();
+    router.replace('/(tabs)/tools' as never);
+  };
+
   return (
-    <View style={{ flex: 1 }}>
-      <CompoundSimScreen onComplete={goToTools} />
-      <View style={{ position: "absolute", top: 54, right: 16, zIndex: 50 }}>
-        <BackButton color="#fff" onPress={goToTools} />
+    <SafeAreaView edges={['top']} style={styles.container}>
+      <View style={styles.topBar}>
+        <Pressable
+          onPress={goToTools}
+          style={styles.backCircle}
+          accessibilityRole="button"
+          accessibilityLabel="חזרה לכלים"
+          hitSlop={10}
+        >
+          <ChevronRight size={20} color="#0f172a" strokeWidth={2.8} />
+        </Pressable>
       </View>
-    </View>
+      <View style={{ flex: 1 }}>
+        <CompoundSimScreen onComplete={goToTools} />
+      </View>
+    </SafeAreaView>
   );
 }
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: '#f0fdf4',
+  },
+  topBar: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    flexDirection: 'row-reverse',
+    alignItems: 'center',
+  },
+  backCircle: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    backgroundColor: 'rgba(255,255,255,0.94)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#0f172a',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.18,
+    shadowRadius: 8,
+    elevation: 6,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.9)',
+  },
+});

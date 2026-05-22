@@ -1,54 +1,57 @@
 import React, { useMemo, useState } from 'react';
-import {
-  Alert,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  View,
-} from 'react-native';
-import Slider from '@react-native-community/slider';
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import Animated, { FadeInDown } from 'react-native-reanimated';
-import { ChevronLeft, PiggyBank, Share2 } from 'lucide-react-native';
+import { router } from 'expo-router';
+import {
+  ChevronLeft,
+  PiggyBank,
+  Search,
+  Sparkles,
+} from 'lucide-react-native';
 
 import { STITCH } from '../../../constants/theme';
-import { formatShekel } from '../../../utils/format';
+import { clamp, formatShekel } from '../../../utils/format';
+import { tapHaptic } from '../../../utils/haptics';
+import { findTool } from '../toolsRegistry';
 import { ToolHeader } from '../components/ToolHeader';
-import { ToolSharkTip } from '../components/ToolSharkTip';
+import {
+  CalculateButton,
+  FinTip,
+  LegalDisclaimer,
+  MoneyInput,
+  MoneySlider,
+  SectionLabel,
+  StatHero,
+} from '../components/atoms';
+import { PensionBenchmarkCard } from '../components/PensionBenchmarkCard';
 
-/**
- * Chunks 4.1 (Schema) + 4.2 (Logic) + 4.3 (UI).
- *
- * `monthlySalary` is a string because it binds to a `TextInput` —
- * coercion to number happens inside `useMemo`. Fee fields stay numeric
- * for the sliders.
- *
- * Convention: `currentDepositFee` / `alternativeDepositFee` are דמי ניהול
- * מהפקדה (% of each deposit). `currentAccumulationFee` /
- * `alternativeAccumulationFee` are דמי ניהול מצבירה (% of total balance,
- * annually). `expectedReturn` is annual gross return before fees (%).
- */
-
-const ACCENT = '#ec4899';      // pink-500
-const ACCENT_DIM = '#fce7f3';  // pink-100
-const ACCENT_DARK = '#be185d'; // pink-700
-const NEUTRAL_DIM = '#f3f4f6'; // gray-100 (for "current/expensive" side)
+const TOOL = findTool('pension-fees')!;
+const NEUTRAL_DIM = '#f3f4f6';
 const NEUTRAL_DARK = '#475569';
 
 const RETIREMENT_AGE = 67;
 const TOTAL_DEPOSIT_RATE = 0.185; // 6% עובד + 6.5% מעסיק + 6% פיצויים
-const PAYOUT_FACTOR = 200;        // מקדם המרה לקצבה (פישוט)
+const PAYOUT_FACTOR = 200; // מקדם המרה לקצבה (פישוט)
+
+const SALARY_MIN = 5_000;
+const SALARY_MAX = 60_000;
+const SALARY_STEP = 500;
+
+/**
+ * Trivially achievable lowest fees on the Israeli market — bid winners of the
+ * Ministry of Finance "default track" (קרן ברירת מחדל) tender.
+ * Last updated by Warren agent: 2026-05.
+ */
+const LOWEST_MARKET_DEPOSIT_FEE = 1.0;
+const LOWEST_MARKET_ACCUMULATION_FEE = 0.05;
+
+/** Future-value reference return for the "what if you invested the savings" projection. */
+const SIDE_RETURN_MONTHLY = 0.07 / 12;
 
 /**
  * Pure month-by-month simulation. Compounds the running balance at the
  * net monthly return (gross return − accumulation-fee drag) and adds the
  * net monthly deposit (after deposit fee) each month.
- *
- * Safe by construction for `years === 0` (loop skipped → returns 0) and
- * `annualReturn === 0` / `accumulationFeeRate === 0` (multiplier stays
- * finite — never produces NaN).
  */
 function simulatePension(
   monthlySalary: number,
@@ -95,12 +98,10 @@ const DEFAULT_STATE: PensionInput = {
   monthlySalary: '15000',
   currentDepositFee: 3.0,
   currentAccumulationFee: 0.3,
-  alternativeDepositFee: 1.5,
-  alternativeAccumulationFee: 0.15,
+  alternativeDepositFee: LOWEST_MARKET_DEPOSIT_FEE,
+  alternativeAccumulationFee: LOWEST_MARKET_ACCUMULATION_FEE,
   expectedReturn: 5.0,
 };
-
-export type { PensionInput, PensionResult };
 
 export function PensionFeesComparator(): React.ReactElement {
   const [state, setState] = useState<PensionInput>(DEFAULT_STATE);
@@ -136,214 +137,259 @@ export function PensionFeesComparator(): React.ReactElement {
 
   const hasLoss = result.lostToFees > 0;
   const lostPositive = Math.max(0, result.lostToFees);
+  const salarySlider = clamp(Number(state.monthlySalary) || SALARY_MIN, SALARY_MIN, SALARY_MAX);
+
+  /**
+   * Monthly cost of the current fund's extra fees (lost-to-fees amortized
+   * over working years) and the FV-of-annuity projection if that monthly
+   * delta were invested in a global index at 7% nominal.
+   *
+   * Memoized: `result` only changes when the user adjusts age / salary / fees,
+   * not on every TextInput keystroke for unrelated state. Math.pow is cheap
+   * but the dependency-narrowing also keeps downstream JSX stable.
+   */
+  const savings = useMemo(() => {
+    const monthsToRetirement = Math.max(1, result.yearsToRetirement * 12);
+    const monthlyFeeSavings = Math.max(0, Math.round(result.lostToFees / monthsToRetirement));
+    const savingsGrowth =
+      monthlyFeeSavings > 0
+        ? Math.round(
+            (monthlyFeeSavings * (Math.pow(1 + SIDE_RETURN_MONTHLY, monthsToRetirement) - 1)) /
+              SIDE_RETURN_MONTHLY,
+          )
+        : 0;
+    return { monthlyFeeSavings, savingsGrowth };
+  }, [result.lostToFees, result.yearsToRetirement]);
+  const { monthlyFeeSavings, savingsGrowth } = savings;
 
   return (
-    <SafeAreaView style={s.safe} edges={['top']}>
+    <SafeAreaView style={styles.safe} edges={['top']}>
       <ToolHeader
         title="דמי ניהול פנסיה"
         subtitle="כמה אבד לך לבית ההשקעות לאורך הצבירה?"
-        accentColor={ACCENT}
+        accentColor={TOOL.hue}
         Icon={PiggyBank}
       />
 
       <ScrollView
-        contentContainerStyle={s.scroll}
+        contentContainerStyle={styles.scroll}
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
-        {/* Primary result card */}
-        <Animated.View entering={FadeInDown.duration(360)} style={s.resultCard}>
-          <Text style={s.resultLabel}>
-            {hasLoss
+        <StatHero
+          label={
+            hasLoss
               ? 'הלכו לבית ההשקעות במקום אליך'
-              : 'הקרן הנוכחית שלך זולה יותר — שמור עליה'}
-          </Text>
-          <Text style={s.resultNumber}>{formatShekel(lostPositive)}</Text>
-          <Text style={s.resultUnit}>
-            במשך {result.yearsToRetirement} שנים עד גיל פרישה
-          </Text>
-        </Animated.View>
+              : 'הקרן הנוכחית שלך זולה יותר — שמור עליה'
+          }
+          value={lostPositive}
+          accentColor={TOOL.hue}
+          sublabel={`במשך ${result.yearsToRetirement} שנים עד גיל פרישה`}
+        />
 
         {/* Comparison — RTL reading flow: current (before) on the right,
             alternative (after) on the left. */}
-        <View style={s.compareWrap}>
+        <View style={styles.compareWrap}>
           <ComparisonColumn
             title="הקרן הנוכחית"
             total={result.currentTotal}
             monthly={result.monthlyPensionCurrent}
           />
           <ComparisonColumn
-            title="קרן זולה"
+            title="להשוואה"
             total={result.alternativeTotal}
             monthly={result.monthlyPensionAlternative}
             highlight
           />
         </View>
 
-        {/* Personal inputs */}
-        <View style={s.card}>
-          <Text style={s.cardTitle}>הנתונים שלך</Text>
+        <PensionBenchmarkCard
+          age={state.age}
+          monthlySalary={Number(state.monthlySalary) || 0}
+          currentDepositFee={state.currentDepositFee}
+          currentAccumulationFee={state.currentAccumulationFee}
+          accentColor={TOOL.hue}
+        />
 
-          <View style={s.field}>
-            <Text style={s.label}>שכר חודשי ברוטו (₪)</Text>
-            <TextInput
-              style={s.input}
-              value={state.monthlySalary}
-              onChangeText={(v) =>
-                setState((p) => ({ ...p, monthlySalary: v }))
-              }
-              keyboardType="numeric"
-              accessibilityLabel="שכר חודשי ברוטו בשקלים"
-            />
+        {hasLoss && monthlyFeeSavings > 0 ? (
+          <View style={styles.savingsCard}>
+            <View style={styles.savingsTopRow}>
+              <View style={styles.savingsMonthlyWrap}>
+                <Text style={styles.savingsMonthlyLabel}>חיסכון פוטנציאלי</Text>
+                <Text style={styles.savingsMonthlyValue}>
+                  {formatShekel(monthlyFeeSavings)}
+                  <Text style={styles.savingsMonthlySuffix}> / חודש</Text>
+                </Text>
+              </View>
+            </View>
+            <Text style={styles.savingsCaption}>
+              אם תקח את ה-{formatShekel(monthlyFeeSavings)} האלה ותפקיד אותם בקרן מדדים גלובלית
+              ב-7% תשואה, ב-{result.yearsToRetirement} שנים זה גדל ל-
+              <Text style={styles.savingsCaptionStrong}>{formatShekel(savingsGrowth)}</Text>.
+            </Text>
           </View>
+        ) : null}
 
-          <View style={s.field}>
-            <View style={s.sliderHeader}>
-              <Text style={s.sliderValue}>{state.age}</Text>
-              <Text style={s.label}>גיל נוכחי</Text>
-            </View>
-            <Slider
-              value={state.age}
-              onValueChange={(v) =>
-                setState((p) => ({ ...p, age: Math.round(v) }))
-              }
-              minimumValue={18}
-              maximumValue={66}
-              step={1}
-              minimumTrackTintColor={ACCENT}
-              maximumTrackTintColor={STITCH.surfaceHighest}
-              thumbTintColor={ACCENT}
-              accessibilityLabel="גיל נוכחי"
+        {/* Bridge to real-data CTA — high-priority placement right under the
+            primary result so the user is hooked while the loss is fresh. */}
+        <Pressable
+          style={styles.bridgeCta}
+          onPress={() => {
+            tapHaptic();
+            router.push('/bridge');
+          }}
+          accessibilityRole="button"
+          accessibilityLabel="עברו לעמוד הגשר כדי לבדוק את הנתונים האמיתיים שלכם"
+        >
+          <View style={styles.bridgeCtaIcon}>
+            <Search size={18} color="#ffffff" />
+          </View>
+          <View style={styles.bridgeCtaTextWrap}>
+            <Text style={styles.bridgeCtaTitle}>בואו לבדוק את הנתונים האמיתיים שלכם</Text>
+            <Text style={styles.bridgeCtaSubtitle}>חברו את הקרן שלכם וגלו כמה אתם באמת משלמים</Text>
+          </View>
+          <ChevronLeft size={20} color="#ffffff" />
+        </Pressable>
+
+        <SectionLabel>הנתונים שלך</SectionLabel>
+
+        <View style={styles.inputCard}>
+          <MoneyInput
+            label="שכר חודשי ברוטו"
+            value={state.monthlySalary}
+            onChangeText={(v) => setState((p) => ({ ...p, monthlySalary: v }))}
+            placeholder="15,000"
+            accentColor={TOOL.hue}
+            step={500}
+            min={SALARY_MIN}
+            max={SALARY_MAX}
+          />
+          <View style={styles.sliderWrap}>
+            <MoneySlider
+              label="החליקו לבחירת שכר"
+              value={salarySlider}
+              onChange={(v) => setState((p) => ({ ...p, monthlySalary: String(v) }))}
+              min={SALARY_MIN}
+              max={SALARY_MAX}
+              step={SALARY_STEP}
+              unit=" ₪"
+              accentColor={TOOL.hue}
+              hideValueDisplay
             />
-            <View style={s.sliderRangeRow}>
-              <Text style={s.sliderRange}>66</Text>
-              <Text style={s.sliderRange}>18</Text>
-            </View>
           </View>
         </View>
 
-        {/* Current fund fees */}
-        <View style={s.card}>
-          <Text style={s.cardTitle}>הקרן הנוכחית — דמי ניהול</Text>
+        <View style={styles.inputCard}>
+          <MoneySlider
+            label="גיל נוכחי"
+            value={state.age}
+            onChange={(v) => setState((p) => ({ ...p, age: v }))}
+            min={18}
+            max={66}
+            step={1}
+            unit=""
+            accentColor={TOOL.hue}
+            formatValue={(v) => String(v)}
+          />
+        </View>
 
-          <FeeSlider
+        <SectionLabel>הקרן הנוכחית — דמי ניהול</SectionLabel>
+
+        <View style={styles.feeCard}>
+          <MoneySlider
             label="דמי ניהול מהפקדה"
             value={state.currentDepositFee}
-            onChange={(v) =>
-              setState((p) => ({ ...p, currentDepositFee: v }))
-            }
+            onChange={(v) => setState((p) => ({ ...p, currentDepositFee: v }))}
             min={0}
             max={6}
             step={0.1}
             unit="%"
-            color={NEUTRAL_DARK}
+            accentColor={NEUTRAL_DARK}
           />
-
-          <FeeSlider
+          <MoneySlider
             label="דמי ניהול מצבירה (שנתי)"
             value={state.currentAccumulationFee}
-            onChange={(v) =>
-              setState((p) => ({ ...p, currentAccumulationFee: v }))
-            }
+            onChange={(v) => setState((p) => ({ ...p, currentAccumulationFee: v }))}
             min={0}
             max={1}
             step={0.05}
             unit="%"
-            color={NEUTRAL_DARK}
+            accentColor={NEUTRAL_DARK}
           />
         </View>
 
-        {/* Alternative fund fees */}
-        <View style={s.card}>
-          <Text style={s.cardTitle}>קרן זולה — דמי ניהול</Text>
+        <View style={styles.cardTitleRow}>
+          <View style={[styles.cardTitleBadge, { backgroundColor: TOOL.light }]}>
+            <Sparkles size={12} color={TOOL.deep} />
+            <Text style={[styles.cardTitleBadgeText, { color: TOOL.deep }]}>שווי שוק 2026</Text>
+          </View>
+          <SectionLabel>להשוואה — דמי ניהול</SectionLabel>
+        </View>
 
-          <FeeSlider
+        <View style={styles.feeCard}>
+          <MoneySlider
             label="דמי ניהול מהפקדה"
             value={state.alternativeDepositFee}
-            onChange={(v) =>
-              setState((p) => ({ ...p, alternativeDepositFee: v }))
-            }
+            onChange={(v) => setState((p) => ({ ...p, alternativeDepositFee: v }))}
             min={0}
             max={6}
             step={0.1}
             unit="%"
-            color={ACCENT}
+            accentColor={TOOL.hue}
           />
-
-          <FeeSlider
+          <MoneySlider
             label="דמי ניהול מצבירה (שנתי)"
             value={state.alternativeAccumulationFee}
-            onChange={(v) =>
-              setState((p) => ({ ...p, alternativeAccumulationFee: v }))
-            }
+            onChange={(v) => setState((p) => ({ ...p, alternativeAccumulationFee: v }))}
             min={0}
             max={1}
             step={0.05}
             unit="%"
-            color={ACCENT}
+            accentColor={TOOL.hue}
           />
         </View>
 
-        {/* Expected return */}
-        <View style={s.card}>
-          <Text style={s.cardTitle}>תשואה צפויה</Text>
-          <FeeSlider
+        <SectionLabel>תשואה צפויה</SectionLabel>
+        <View style={styles.feeCard}>
+          <MoneySlider
             label="תשואה שנתית ברוטו (לפני דמי ניהול)"
             value={state.expectedReturn}
-            onChange={(v) =>
-              setState((p) => ({ ...p, expectedReturn: v }))
-            }
+            onChange={(v) => setState((p) => ({ ...p, expectedReturn: v }))}
             min={2}
             max={8}
             step={0.1}
             unit="%"
-            color={ACCENT}
+            accentColor={TOOL.hue}
           />
-          <Text style={s.helper}>
+          <Text style={styles.helper}>
             הממוצע ההיסטורי של קרנות פנסיה בישראל: 4%–5% נטו לשנה.
           </Text>
         </View>
 
-        {/* Shark tip — once per tool */}
-        <ToolSharkTip
+        <FinTip
+          kind="secret"
           text='"0.1% דמי ניהול מצבירה זה לא קטן."'
-          subtext="על פני 35 שנה — זה אגף שלם בדירה."
-          mood="talking"
-          accentColor={ACCENT_DARK}
-          accentSurface={ACCENT_DIM}
+          subtext={`על פני ${Math.max(20, result.yearsToRetirement)} שנה — זה אגף שלם בדירה.`}
         />
 
-        {/* Share */}
-        <Pressable
-          style={s.shareBtn}
-          onPress={() =>
-            Alert.alert('שיתוף', 'שיתוף התוצאה יתווסף בקרוב.')
+        <CalculateButton
+          label="חברו את החשבונות שלכם ותראו את הפוטנציאל האמיתי לחסוך"
+          sublabel={
+            hasLoss && lostPositive > 0
+              ? `פוטנציאל חיסכון משוער ${formatShekel(lostPositive)}`
+              : undefined
           }
-          accessibilityRole="button"
-          accessibilityLabel="שתף את התוצאה"
-        >
-          <Text style={s.shareText}>שתף תוצאה</Text>
-          <Share2 size={18} color={ACCENT_DARK} />
-        </Pressable>
+          variant="pink"
+          onPress={() => {
+            tapHaptic();
+            router.push('/bridge?tab=insurance' as never);
+          }}
+        />
 
-        {/* CTA לשיעור */}
-        <Pressable
-          style={s.ctaBtn}
-          onPress={() =>
-            Alert.alert('שיעור', 'הפניה לשיעור על דמי ניהול תתווסף בקרוב.')
-          }
-          accessibilityRole="button"
-          accessibilityLabel="המשך לשיעור על דמי ניהול ופנסיה"
-        >
-          <ChevronLeft size={20} color="#ffffff" />
-          <Text style={s.ctaText}>למד איך להחליף קרן ולחסוך</Text>
-        </Pressable>
-
-        {/* Disclaimer */}
-        <Text style={s.disclaimer}>
-          הערכה בלבד, לא תחליף לייעוץ פנסיוני. מבוסס על הפקדה של 18.5% מהשכר
-          (עובד + מעסיק + פיצויים) ותשואה קבועה לאורך כל התקופה.
-        </Text>
+        <LegalDisclaimer
+          scope="pension"
+          extra="המבוסס על הפקדה של 18.5% מהשכר (עובד + מעסיק + פיצויים) ותשואה קבועה לאורך כל התקופה. ממוצעי שוק הם הערכה ועלולים להשתנות."
+        />
       </ScrollView>
     </SafeAreaView>
   );
@@ -363,145 +409,40 @@ function ComparisonColumn({
   return (
     <View
       style={[
-        s.compareCol,
+        styles.compareCol,
         {
-          backgroundColor: highlight ? ACCENT_DIM : NEUTRAL_DIM,
-          borderColor: highlight ? ACCENT : STITCH.surfaceHighest,
+          backgroundColor: highlight ? TOOL.light : NEUTRAL_DIM,
+          borderColor: highlight ? TOOL.hue : STITCH.surfaceHighest,
         },
       ]}
     >
       <Text
-        style={[
-          s.compareTitle,
-          { color: highlight ? ACCENT_DARK : NEUTRAL_DARK },
-        ]}
+        style={[styles.compareTitle, { color: highlight ? TOOL.deep : NEUTRAL_DARK }]}
       >
         {title}
       </Text>
       <Text
-        style={[
-          s.compareTotal,
-          { color: highlight ? ACCENT_DARK : STITCH.onSurface },
-        ]}
+        style={[styles.compareTotal, { color: highlight ? TOOL.deep : STITCH.onSurface }]}
       >
         {formatShekel(total)}
       </Text>
-      <Text style={s.compareTotalLabel}>סה"כ צבירה</Text>
-      <View style={s.compareDivider} />
+      <Text style={styles.compareTotalLabel}>סה"כ צבירה</Text>
+      <View style={styles.compareDivider} />
       <Text
-        style={[
-          s.compareMonthly,
-          { color: highlight ? ACCENT_DARK : STITCH.onSurface },
-        ]}
+        style={[styles.compareMonthly, { color: highlight ? TOOL.deep : STITCH.onSurface }]}
       >
         {formatShekel(monthly)}
       </Text>
-      <Text style={s.compareMonthlyLabel}>קצבה חודשית</Text>
+      <Text style={styles.compareMonthlyLabel}>קצבה חודשית</Text>
     </View>
   );
 }
 
-function FeeSlider({
-  label,
-  value,
-  onChange,
-  min,
-  max,
-  step,
-  unit,
-  color,
-}: {
-  label: string;
-  value: number;
-  onChange: (v: number) => void;
-  min: number;
-  max: number;
-  step: number;
-  unit: string;
-  color: string;
-}): React.ReactElement {
-  const decimals = step < 0.1 ? 2 : step < 1 ? 1 : 0;
-  return (
-    <View style={s.field}>
-      <View style={s.sliderHeader}>
-        <Text style={[s.sliderValue, { color }]}>
-          {value.toFixed(decimals)}{unit}
-        </Text>
-        <Text style={s.label}>{label}</Text>
-      </View>
-      <Slider
-        value={value}
-        onValueChange={(v) => {
-          const snapped = Math.round(v / step) * step;
-          onChange(Number(snapped.toFixed(decimals)));
-        }}
-        minimumValue={min}
-        maximumValue={max}
-        step={step}
-        minimumTrackTintColor={color}
-        maximumTrackTintColor={STITCH.surfaceHighest}
-        thumbTintColor={color}
-        accessibilityLabel={label}
-      />
-      <View style={s.sliderRangeRow}>
-        <Text style={s.sliderRange}>{max}{unit}</Text>
-        <Text style={s.sliderRange}>{min}{unit}</Text>
-      </View>
-    </View>
-  );
-}
+const styles = StyleSheet.create({
+  safe: { flex: 1, backgroundColor: STITCH.background },
+  scroll: { padding: 16, paddingBottom: 80, gap: 14 },
 
-const s = StyleSheet.create({
-  safe: {
-    flex: 1,
-    backgroundColor: STITCH.background,
-  },
-  scroll: {
-    padding: 16,
-    paddingBottom: 48,
-    gap: 16,
-  },
-  // Primary result card
-  resultCard: {
-    backgroundColor: STITCH.surfaceLowest,
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: STITCH.surfaceHighest,
-    padding: 20,
-    shadowColor: '#000',
-    shadowOpacity: 0.06,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 4 },
-    elevation: 2,
-  },
-  resultLabel: {
-    fontSize: 13,
-    color: STITCH.onSurfaceVariant,
-    textAlign: 'right',
-    writingDirection: 'rtl',
-  },
-  resultNumber: {
-    fontSize: 56,
-    fontWeight: '900',
-    color: ACCENT,
-    textAlign: 'right',
-    writingDirection: 'rtl',
-    marginTop: 4,
-    letterSpacing: -1,
-  },
-  resultUnit: {
-    fontSize: 13,
-    color: STITCH.onSurfaceVariant,
-    textAlign: 'right',
-    writingDirection: 'rtl',
-    marginTop: 2,
-  },
-
-  // Comparison
-  compareWrap: {
-    flexDirection: 'row-reverse',
-    gap: 12,
-  },
+  compareWrap: { flexDirection: 'row-reverse', gap: 10 },
   compareCol: {
     flex: 1,
     borderRadius: 16,
@@ -524,7 +465,6 @@ const s = StyleSheet.create({
   compareTotalLabel: {
     fontSize: 11,
     color: STITCH.onSurfaceVariant,
-    textAlign: 'right',
     writingDirection: 'rtl',
   },
   compareDivider: {
@@ -533,143 +473,150 @@ const s = StyleSheet.create({
     backgroundColor: 'rgba(0,0,0,0.08)',
     marginVertical: 10,
   },
-  compareMonthly: {
-    fontSize: 16,
-    fontWeight: '700',
-    writingDirection: 'rtl',
-  },
+  compareMonthly: { fontSize: 16, fontWeight: '700', writingDirection: 'rtl' },
   compareMonthlyLabel: {
     fontSize: 11,
     color: STITCH.onSurfaceVariant,
-    textAlign: 'right',
     writingDirection: 'rtl',
   },
 
-  // Generic card
-  card: {
+  // Monthly savings insight card
+  savingsCard: {
     backgroundColor: STITCH.surfaceLowest,
     borderRadius: 16,
-    borderWidth: 1,
-    borderColor: STITCH.surfaceHighest,
-    padding: 16,
-    gap: 12,
-    shadowColor: '#000',
-    shadowOpacity: 0.06,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 4 },
-    elevation: 1,
-  },
-  cardTitle: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: STITCH.onSurface,
-    textAlign: 'right',
-    writingDirection: 'rtl',
-  },
-
-  // Field
-  field: {
-    gap: 6,
-  },
-  label: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: STITCH.onSurfaceVariant,
-    textAlign: 'right',
-    writingDirection: 'rtl',
-  },
-  input: {
-    minHeight: 44,
-    borderWidth: 1,
-    borderColor: STITCH.surfaceHighest,
-    borderRadius: 10,
-    paddingHorizontal: 12,
-    fontSize: 16,
-    color: STITCH.onSurface,
-    backgroundColor: STITCH.surfaceLow,
-    textAlign: 'right',
-    writingDirection: 'rtl',
-  },
-  helper: {
-    fontSize: 12,
-    color: STITCH.onSurfaceVariant,
-    textAlign: 'right',
-    writingDirection: 'rtl',
-  },
-
-  // Slider
-  sliderHeader: {
-    flexDirection: 'row-reverse',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  sliderValue: {
-    fontSize: 16,
-    fontWeight: '700',
-    writingDirection: 'rtl',
-  },
-  sliderRangeRow: {
-    flexDirection: 'row-reverse',
-    justifyContent: 'space-between',
-    marginTop: -4,
-  },
-  sliderRange: {
-    fontSize: 11,
-    color: STITCH.onSurfaceVariant,
-  },
-
-  // Share
-  shareBtn: {
-    flexDirection: 'row-reverse',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-    minHeight: 44,
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: ACCENT_DARK,
-    backgroundColor: STITCH.surfaceLowest,
-  },
-  shareText: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: ACCENT_DARK,
-    writingDirection: 'rtl',
-  },
-
-  // CTA
-  ctaBtn: {
-    flexDirection: 'row-reverse',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-    minHeight: 52,
-    paddingHorizontal: 16,
-    borderRadius: 14,
-    backgroundColor: ACCENT,
-    shadowColor: ACCENT,
-    shadowOpacity: 0.25,
-    shadowRadius: 8,
+    padding: 14,
+    borderWidth: 1.5,
+    borderColor: TOOL.hue + '40',
+    shadowColor: TOOL.hue,
+    shadowOpacity: 0.12,
+    shadowRadius: 12,
     shadowOffset: { width: 0, height: 4 },
     elevation: 3,
+    gap: 6,
   },
-  ctaText: {
-    fontSize: 15,
+  savingsTopRow: {
+    flexDirection: 'row-reverse',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  savingsMonthlyWrap: { alignItems: 'flex-end' },
+  savingsMonthlyLabel: {
+    fontSize: 11,
     fontWeight: '800',
+    color: STITCH.onSurfaceVariant,
+    writingDirection: 'rtl',
+    letterSpacing: 0.3,
+  },
+  savingsMonthlyValue: {
+    fontSize: 26,
+    fontWeight: '900',
+    color: TOOL.hue,
+    letterSpacing: -0.5,
+    marginTop: 2,
+    writingDirection: 'rtl',
+  },
+  savingsMonthlySuffix: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: STITCH.onSurfaceVariant,
+  },
+  savingsCaption: {
+    fontSize: 12,
+    color: STITCH.onSurface,
+    writingDirection: 'rtl',
+    textAlign: 'right',
+    lineHeight: 19,
+    fontWeight: '600',
+  },
+  savingsCaptionStrong: { color: TOOL.hue, fontWeight: '900' },
+
+  // Bridge CTA — premium pink with glow
+  bridgeCta: {
+    flexDirection: 'row-reverse',
+    alignItems: 'center',
+    gap: 12,
+    backgroundColor: TOOL.hue,
+    borderRadius: 16,
+    paddingHorizontal: 14,
+    paddingVertical: 14,
+    shadowColor: TOOL.hue,
+    shadowOpacity: 0.35,
+    shadowRadius: 14,
+    shadowOffset: { width: 0, height: 6 },
+    elevation: 6,
+  },
+  bridgeCtaIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: 999,
+    backgroundColor: 'rgba(255,255,255,0.22)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  bridgeCtaTextWrap: { flex: 1, alignItems: 'flex-end', gap: 2 },
+  bridgeCtaTitle: {
+    fontSize: 14,
+    fontWeight: '900',
     color: '#ffffff',
+    writingDirection: 'rtl',
+    textAlign: 'right',
+  },
+  bridgeCtaSubtitle: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: 'rgba(255,255,255,0.92)',
+    writingDirection: 'rtl',
+    textAlign: 'right',
+  },
+
+  cardTitleRow: {
+    flexDirection: 'row-reverse',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  cardTitleBadge: {
+    flexDirection: 'row-reverse',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 999,
+  },
+  cardTitleBadgeText: {
+    fontSize: 10,
+    fontWeight: '800',
     writingDirection: 'rtl',
   },
 
-  // Disclaimer
+  inputCard: {
+    backgroundColor: STITCH.surfaceLowest,
+    borderRadius: 16,
+    padding: 12,
+    borderWidth: 1,
+    borderColor: STITCH.surfaceHighest,
+    gap: 8,
+  },
+  sliderWrap: { paddingHorizontal: 2, paddingTop: 4 },
+  feeCard: {
+    backgroundColor: STITCH.surfaceLowest,
+    borderRadius: 16,
+    padding: 14,
+    borderWidth: 1,
+    borderColor: STITCH.surfaceHighest,
+    gap: 14,
+  },
+  helper: {
+    fontSize: 11,
+    color: STITCH.onSurfaceVariant,
+    textAlign: 'right',
+    writingDirection: 'rtl',
+  },
   disclaimer: {
     fontSize: 11,
     color: STITCH.onSurfaceVariant,
     textAlign: 'center',
     writingDirection: 'rtl',
-    paddingHorizontal: 12,
-    marginTop: 4,
+    marginTop: 8,
     lineHeight: 16,
   },
 });

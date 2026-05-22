@@ -14,7 +14,8 @@ import {
   AccessibilityInfo,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { Send, Check, CheckCheck, MessageCircle, ChevronLeft } from "lucide-react-native";
+import { Send, Check, CheckCheck, MessageCircle, ChevronLeft, Phone, Crown } from "lucide-react-native";
+import { LinearGradient } from "expo-linear-gradient";
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -763,7 +764,89 @@ export function ChatScreen({ lessonContext }: { lessonContext?: LessonContext } 
                 {loading ? "מקליד..." : "מחובר"}
               </Text>
             </View>
-            {/* Settings gear removed, chat tone now in app Settings screen */}
+            <Pressable
+              onPress={() => {
+                if (!isPro) {
+                  router.push("/pricing" as never);
+                  return;
+                }
+                router.push("/shark-voice" as never);
+              }}
+              accessibilityRole="button"
+              accessibilityLabel={isPro ? "שיחה אחד על אחד עם שארק" : "שיחה אחד על אחד עם שארק - PRO בלבד"}
+              style={{ marginLeft: 8, position: "relative" }}
+            >
+              {isPro ? (
+                <LinearGradient
+                  colors={["#fbbf24", "#f59e0b", "#d97706"]}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
+                  style={{
+                    width: 44,
+                    height: 44,
+                    borderRadius: 22,
+                    alignItems: "center",
+                    justifyContent: "center",
+                    shadowColor: "#f59e0b",
+                    shadowOpacity: 0.4,
+                    shadowRadius: 8,
+                    shadowOffset: { width: 0, height: 2 },
+                    elevation: 4,
+                  }}
+                >
+                  <Phone size={20} color="#ffffff" fill="#ffffff" />
+                  <View
+                    style={{
+                      position: "absolute",
+                      top: -4,
+                      right: -4,
+                      backgroundColor: "#fef3c7",
+                      borderRadius: 8,
+                      width: 16,
+                      height: 16,
+                      alignItems: "center",
+                      justifyContent: "center",
+                      borderWidth: 1.5,
+                      borderColor: "#ffffff",
+                    }}
+                  >
+                    <Crown size={9} color="#b45309" fill="#b45309" />
+                  </View>
+                </LinearGradient>
+              ) : (
+                <View
+                  style={{
+                    width: 44,
+                    height: 44,
+                    borderRadius: 22,
+                    backgroundColor: "#f1f5f9",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    borderWidth: 1,
+                    borderColor: "#e2e8f0",
+                  }}
+                >
+                  <Phone size={20} color="#94a3b8" />
+                  <View
+                    style={{
+                      position: "absolute",
+                      top: -8,
+                      right: -8,
+                      width: 26,
+                      height: 26,
+                    }}
+                    pointerEvents="none"
+                  >
+                    <LottieIcon
+                      source={require("../../../assets/lottie/Crown.json")}
+                      size={26}
+                      autoPlay
+                      loop
+                    />
+                  </View>
+                </View>
+              )}
+            </Pressable>
           </View>
 
           {/* Recent conversations strip, Pro only */}

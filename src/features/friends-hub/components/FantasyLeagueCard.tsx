@@ -84,8 +84,9 @@ export function FantasyLeagueCard(): React.ReactElement {
           overflow: 'hidden',
         }}
       >
-        {/* ── Teal accent strip (RTL: right edge) ── */}
-        <View style={{ position: 'absolute', right: 0, top: 0, bottom: 0, width: 4, backgroundColor: '#0891b2', opacity: 0.9, zIndex: 1 }} />
+        {/* ── Premium gold + light-blue accent strip (RTL: right edge) ── */}
+        <View style={{ position: 'absolute', right: 0, top: 0, bottom: 0, width: 4, backgroundColor: '#fbbf24', zIndex: 1 }} />
+        <View style={{ position: 'absolute', right: 4, top: 0, bottom: 0, width: 2, backgroundColor: '#7dd3fc', opacity: 0.85, zIndex: 1 }} />
 
         {/* ── Header ── */}
         <View
@@ -103,9 +104,11 @@ export function FantasyLeagueCard(): React.ReactElement {
               width: 46,
               height: 46,
               borderRadius: 23,
-              backgroundColor: '#cffafe',
+              backgroundColor: '#e0f2fe',
               alignItems: 'center',
               justifyContent: 'center',
+              borderWidth: 1.5,
+              borderColor: '#fbbf24',
             }}
           >
             <Text style={{ fontSize: 24 }}>{tierEmoji}</Text>

@@ -115,7 +115,8 @@
         "backgroundColor": "#0a1628"
       },
       "permissions": [
-        "com.android.vending.BILLING"
+        "com.android.vending.BILLING",
+        "android.permission.RECORD_AUDIO"
       ],
       "blockedPermissions": [
         "android.permission.ACTIVITY_RECOGNITION",
@@ -163,6 +164,7 @@
         "applinks:finplay.me"
       ],
       "infoPlist": {
+        "NSMicrophoneUsageDescription": "קפטן שארק רוצה לשמוע אותך כדי לענות לך בשיחת קול חיה.",
         "UIBackgroundModes": [],
         "CFBundleURLTypes": [
           {

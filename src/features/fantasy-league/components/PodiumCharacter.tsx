@@ -1,7 +1,6 @@
 import React from 'react';
 import { View, Text } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { LEAGUE_GOLD } from '../../../constants/theme';
 
 interface Props {
   rank: 1 | 2 | 3;
@@ -13,14 +12,16 @@ interface Props {
 
 const PODIUM_CFG: Record<1 | 2 | 3, {
   height: number;
-  gradient: [string, string];
+  gradient: readonly [string, string, string];
   border: string;
   numberColor: string;
   starCount: number;
+  avatarBg: string;
+  avatarStar: string;
 }> = {
-  1: { height: 96, gradient: [LEAGUE_GOLD.bgFrom, LEAGUE_GOLD.bgTo], border: LEAGUE_GOLD.border, numberColor: '#78350f', starCount: 5 },
-  2: { height: 70, gradient: ['#cbd5e1', '#94a3b8'], border: '#64748b', numberColor: '#1e293b', starCount: 3 },
-  3: { height: 56, gradient: ['#fb923c', '#ea580c'], border: '#c2410c', numberColor: '#7c2d12', starCount: 2 },
+  1: { height: 100, gradient: ['#fef3c7', '#fbbf24', '#d97706'], border: '#92570a', numberColor: '#3b1f00', starCount: 5, avatarBg: '#fef3c7', avatarStar: '#fef3c7' },
+  2: { height: 72,  gradient: ['#f1f5f9', '#cbd5e1', '#94a3b8'], border: '#64748b', numberColor: '#1e293b', starCount: 3, avatarBg: '#f1f5f9', avatarStar: 'rgba(255,255,255,0.85)' },
+  3: { height: 58,  gradient: ['#bae6fd', '#7dd3fc', '#0284c7'], border: '#075985', numberColor: '#0a1e3a', starCount: 2, avatarBg: '#e0f2fe', avatarStar: 'rgba(255,255,255,0.85)' },
 };
 
 const RTL = { writingDirection: 'rtl' as const, textAlign: 'center' as const };
@@ -52,7 +53,7 @@ export function PodiumCharacter({ rank, name, returnPercent, isLocal, avatarEmoj
               width: 4,
               height: 4,
               borderRadius: 2,
-              backgroundColor: rank === 1 ? '#fef3c7' : 'rgba(255,255,255,0.7)',
+              backgroundColor: cfg.avatarStar,
             }}
           />
         ))}
@@ -64,7 +65,7 @@ export function PodiumCharacter({ rank, name, returnPercent, isLocal, avatarEmoj
           width: rank === 1 ? 64 : 52,
           height: rank === 1 ? 64 : 52,
           borderRadius: 999,
-          backgroundColor: isLocal ? '#fef3c7' : '#f1f5f9',
+          backgroundColor: isLocal ? '#fef3c7' : cfg.avatarBg,
           borderWidth: 3,
           borderColor: isLocal ? '#f59e0b' : cfg.border,
           alignItems: 'center',

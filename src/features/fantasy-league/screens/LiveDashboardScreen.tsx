@@ -1,33 +1,37 @@
 import React, { useMemo, useEffect, useState } from 'react';
-import { View, Text, ScrollView, Pressable, StyleSheet } from 'react-native';
+import { View, Text, ScrollView, Pressable } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 import Animated, { FadeInDown, FadeIn } from 'react-native-reanimated';
-import { DUO, ZONE } from '../../../constants/theme';
+import { FANTASY, type FantasySectorId } from '../../../constants/theme';
 import { useFantasyStore } from '../useFantasyStore';
-import { STOCK_CATEGORIES, simulateWeeklyReturn } from '../fantasyData';
 import { useEconomyStore } from '../../economy/useEconomyStore';
-import { PortfolioSlotCard } from '../components/PortfolioSlotCard';
-import { LeaderboardRow, ZoneDivider } from '../components/LeaderboardZone';
-import { LeagueShield, type LeagueShieldPosition } from '../components/LeagueShield';
+import { STOCK_CATEGORIES, simulateWeeklyReturn } from '../fantasyData';
+import {
+  F2Header,
+  F2Ambient,
+  F2ScoreboardHero,
+  F2LivePick,
+  F2LeaderRow,
+} from '../v2/components';
+import {
+  F2Section,
+  F2GameweekMeter,
+  F2WalletCluster,
+  F2Tag,
+} from '../v2/atoms';
+import { F2SharkMark, F2Chevron } from '../v2/icons';
 import type { StockCategoryId, FantasyTier } from '../fantasyTypes';
+import type { SparkPath } from '../v2/atoms';
 
 const RTL = { writingDirection: 'rtl' as const, textAlign: 'right' as const };
 
-// ─── Helpers ─────────────────────────────────────────────────────────────────
-const SECTOR_LABEL: Record<StockCategoryId, string> = {
-  tech: 'טכנולוגיה',
-  banks: 'בנקים',
-  energy: 'אנרגיה',
-  health: 'בריאות',
-  crypto: 'קריפטו',
-};
-
-const TIER_TO_SHIELD: Record<FantasyTier, LeagueShieldPosition> = {
-  silver: 'silver',
-  gold: 'gold',
-  diamond: 'gold',
+const CATEGORY_TO_SECTOR: Record<StockCategoryId, FantasySectorId> = {
+  tech: 'tech',
+  spec_growth: 'spec_growth',
+  energy: 'energy',
+  israel: 'israel',
+  crypto: 'crypto',
 };
 
 const TIER_LABEL: Record<FantasyTier, string> = {
@@ -36,53 +40,60 @@ const TIER_LABEL: Record<FantasyTier, string> = {
   diamond: 'ליגת היהלומים',
 };
 
-const EMOJI_AVATARS = ['🦈', '🦋', '🐱', '🦊', '🦁', '🐯', '🐸', '🐻', '🐼', '🐨', '🦄', '🐢'];
-function emojiForName(name: string): string {
-  let hash = 0;
-  for (let i = 0; i < name.length; i++) hash = (hash * 31 + name.charCodeAt(i)) | 0;
-  return EMOJI_AVATARS[Math.abs(hash) % EMOJI_AVATARS.length];
+function sparkForReturn(ret: number): SparkPath {
+  if (ret >= 8) return 'rally';
+  if (ret >= 3) return 'rising';
+  if (ret >= 0.5) return 'up';
+  if (ret > -0.5) return 'wave';
+  if (ret > -3) return 'flat';
+  if (ret > -8) return 'down';
+  return 'crash';
 }
 
-function zoneForRank(rank: number, total: number): 'promote' | 'safe' | 'relegate' {
+function zoneForRank(rank: number, total: number): 'promoted' | 'demoted' | 'stable' {
   const promote = Math.max(3, Math.ceil(total * 0.2));
   const relegate = Math.max(3, Math.ceil(total * 0.2));
-  if (rank <= promote) return 'promote';
-  if (rank > total - relegate) return 'relegate';
-  return 'safe';
+  if (rank <= promote) return 'promoted';
+  if (rank > total - relegate) return 'demoted';
+  return 'stable';
 }
 
-// ─── Main screen ─────────────────────────────────────────────────────────────
 export function LiveDashboardScreen(): React.ReactElement {
   const currentEntry = useFantasyStore((s) => s.currentEntry);
   const getLeaderboardWithLocal = useFantasyStore((s) => s.getLeaderboardWithLocal);
   const getAverageReturn = useFantasyStore((s) => s.getAverageReturn);
+  const getEffectiveAverageReturn = useFantasyStore((s) => s.getEffectiveAverageReturn);
   const coins = useEconomyStore((s) => s.coins);
+  const xp = useEconomyStore((s) => s.xp);
 
+  // Tick every minute to refresh "live" returns
   const [tick, setTick] = useState(0);
   useEffect(() => {
     const id = setInterval(() => setTick((t) => t + 1), 60_000);
     return () => clearInterval(id);
   }, []);
 
-  const leaderboard = useMemo(() => getLeaderboardWithLocal(), [getLeaderboardWithLocal]);
+  const leaderboard = useMemo(
+    () => getLeaderboardWithLocal(),
+    [getLeaderboardWithLocal, tick],
+  );
   const localEntry = leaderboard.find((e) => e.isLocal);
   const avgReturn = getAverageReturn();
-  const returnPositive = avgReturn >= 0;
+  const effReturn = getEffectiveAverageReturn();
+  const captainBoost = Math.round((effReturn - avgReturn) * 100) / 100;
+  const rank = localEntry?.rank ?? leaderboard.length + 1;
   const totalPlayers = leaderboard.length || 100;
 
+  // Live returns mock — refreshed by tick
   const liveReturns = useMemo(() => {
     if (!currentEntry) return {};
-    const weekId = currentEntry.weekId + String(Math.floor(tick / 5));
+    const weekKey = currentEntry.weekId + String(Math.floor(tick / 5));
     const result: Record<string, number> = {};
     currentEntry.picks.forEach((pick) => {
-      result[pick.ticker] = simulateWeeklyReturn(pick.ticker, weekId);
+      result[pick.ticker] = simulateWeeklyReturn(pick.ticker, weekKey);
     });
     return result;
   }, [currentEntry, tick]);
-
-  const daysActive = currentEntry?.lockedAt
-    ? Math.max(1, Math.floor((Date.now() - new Date(currentEntry.lockedAt).getTime()) / (24 * 60 * 60 * 1000)))
-    : 5;
 
   const stockToCategory = useMemo(() => {
     const map: Record<string, StockCategoryId> = {};
@@ -92,231 +103,272 @@ export function LiveDashboardScreen(): React.ReactElement {
     return map;
   }, []);
 
-  // Build leaderboard with zones
-  const enrichedLeaderboard = useMemo(() => {
-    return leaderboard.slice(0, 30).map((e) => ({
-      ...e,
-      zone: zoneForRank(e.rank, totalPlayers),
-    }));
-  }, [leaderboard, totalPlayers]);
+  // Top 4 promote zone + local + bottom 2 relegate zone
+  const top4 = leaderboard.slice(0, 4);
+  const bottom2 = leaderboard.slice(-2);
+
+  const tierLabel = currentEntry ? TIER_LABEL[currentEntry.tier] : 'ליגת הזהב';
+
+  // Pre-entry empty state
+  if (!currentEntry) {
+    return (
+      <View style={{ flex: 1, backgroundColor: FANTASY.bg }}>
+        <F2Ambient tone="sky" />
+        <SafeAreaView style={{ flex: 1 }} edges={['top']}>
+          <F2Header
+            eyebrow={tierLabel}
+            title="לוח חי"
+            back
+            onBack={() => {
+              if (router.canGoBack()) {
+                router.back();
+              } else {
+                router.replace('/(tabs)/fantasy');
+              }
+            }}
+            right={<F2WalletCluster xp={xp} coins={coins} />}
+          />
+          <View style={{
+            flex: 1,
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: 32,
+            gap: 14,
+          }}>
+            <F2SharkMark size={64} />
+            <Text style={{
+              fontSize: 18,
+              fontWeight: '900',
+              color: FANTASY.ink,
+              ...RTL,
+              textAlign: 'center',
+            }}>
+              לא נרשמת לתחרות השבוע
+            </Text>
+            <Text style={{
+              fontSize: 13,
+              color: FANTASY.inkMuted,
+              ...RTL,
+              textAlign: 'center',
+              lineHeight: 19,
+            }}>
+              הצטרף לדראפט, בחר 5 מניות, ונה קפטן —{'\n'}ותתחיל לאסוף נקודות
+            </Text>
+            <Pressable
+              onPress={() => router.push('/fantasy/draft')}
+              style={({ pressed }) => ({
+                marginTop: 12,
+                backgroundColor: FANTASY.primary,
+                paddingVertical: 12,
+                paddingHorizontal: 24,
+                borderRadius: 12,
+                borderBottomWidth: 3,
+                borderBottomColor: FANTASY.primaryDark,
+                opacity: pressed ? 0.9 : 1,
+              })}
+            >
+              <Text style={{ color: '#fff', fontSize: 13, fontWeight: '900' }}>
+                פתח את הדראפט
+              </Text>
+            </Pressable>
+          </View>
+        </SafeAreaView>
+      </View>
+    );
+  }
 
   return (
-    <SafeAreaView style={styles.root} edges={['top']}>
-      {/* Header */}
-      <View style={styles.header}>
-        <Pressable
-          onPress={() => router.back()}
-          style={styles.backBtn}
-          accessibilityRole="button"
-          accessibilityLabel="חזור"
-          hitSlop={12}
+    <View style={{ flex: 1, backgroundColor: FANTASY.bg }}>
+      <F2Ambient tone="sky" />
+      <SafeAreaView style={{ flex: 1 }} edges={['top']}>
+        <F2Header
+          eyebrow={`${tierLabel} · חי`}
+          title="לוח חי"
+          back
+          onBack={() => {
+            if (router.canGoBack()) {
+              router.back();
+            } else {
+              router.replace('/(tabs)/fantasy');
+            }
+          }}
+          right={<F2WalletCluster xp={xp} coins={coins} />}
+        />
+
+        <ScrollView
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={{ paddingBottom: 120, paddingHorizontal: 16, gap: 12 }}
         >
-          <Text style={{ fontSize: 22, color: '#0f172a', fontWeight: '700' }}>→</Text>
-        </Pressable>
-        <View style={styles.headerCenter}>
-          <Text style={styles.headerTitle}>
-            {currentEntry ? TIER_LABEL[currentEntry.tier] : 'ליגת הזהב'} · חי
-          </Text>
-        </View>
-        <View style={styles.statsRow}>
-          <View style={styles.statChip}>
-            <Text style={styles.statText}>❤️ 4/5</Text>
-          </View>
-          <View style={styles.statChip}>
-            <Text style={styles.statText}>💎 24</Text>
-          </View>
-          <View style={styles.statChip}>
-            <Text style={styles.statText}>💰 {coins.toLocaleString('he-IL')}</Text>
-          </View>
-        </View>
-      </View>
-
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 120 }}>
-        {/* ─── Live rank hero card ─── */}
-        {currentEntry ? (
-          <Animated.View entering={FadeInDown.duration(360)} style={styles.heroWrap}>
-            <LinearGradient
-              colors={returnPositive ? ['#16a34a', '#15803d'] : ['#dc2626', '#991b1b']}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 1 }}
-              style={styles.hero}
-            >
-              <View style={styles.heroTopRow}>
-                <View style={styles.liveBadge}>
-                  <View style={styles.livePulse} />
-                  <Text style={styles.liveBadgeText}>תחרות חיה</Text>
-                </View>
-                <Text style={styles.heroTitle}>תיק הפנטזי שלך</Text>
-              </View>
-
-              <View style={styles.heroMainRow}>
-                <View style={styles.rankPillBig}>
-                  <Text style={styles.rankPillText}>#{localEntry?.rank ?? '—'}</Text>
-                  <Text style={styles.rankPillTotal}>מ-{totalPlayers}</Text>
-                  <LeagueShield position={currentEntry ? TIER_TO_SHIELD[currentEntry.tier] : 'gold'} size={20} />
-                </View>
-                <View style={{ alignItems: 'flex-end', flex: 1 }}>
-                  <Text style={styles.heroReturn}>
-                    {returnPositive ? '+' : ''}{avgReturn.toFixed(1)}%
-                  </Text>
-                  <Text style={styles.heroSub}>מתוך {daysActive} ימים בליגה</Text>
-                </View>
-              </View>
-            </LinearGradient>
+          {/* Scoreboard hero */}
+          <Animated.View entering={FadeInDown.duration(360)}>
+            <F2ScoreboardHero
+              returnPercent={effReturn}
+              rank={rank}
+              rankDelta={rank <= 3 ? 2 : -1}
+              prevRank={rank + 2}
+              captainBoost={Math.abs(captainBoost) > 0.01 ? captainBoost : undefined}
+            />
           </Animated.View>
-        ) : (
-          <View style={styles.noEntry}>
-            <Text style={styles.noEntryEmoji}>🎯</Text>
-            <Text style={styles.noEntryTitle}>לא נרשמת לתחרות השבוע</Text>
-            <Text style={styles.noEntrySub}>הירשם והתחל לאסוף תשואות</Text>
-          </View>
-        )}
 
-        {/* ─── My portfolio section ─── */}
-        {currentEntry && currentEntry.picks.length > 0 && (
-          <Animated.View entering={FadeInDown.delay(120).duration(320)} style={styles.section}>
-            <View style={styles.sectionHeader}>
-              <Pressable
-                onPress={() => router.push('/fantasy/draft')}
-                accessibilityRole="button"
-                accessibilityLabel="ערוך תיק"
-                hitSlop={8}
+          {/* Gameweek meter */}
+          <Animated.View entering={FadeInDown.delay(60).duration(320)}>
+            <F2GameweekMeter day={4} total={7} deadline="2י׳ 14:32" />
+          </Animated.View>
+
+          {/* Portfolio */}
+          {currentEntry.picks.length > 0 && (
+            <Animated.View entering={FadeInDown.delay(120).duration(320)}>
+              <F2Section
+                action="ערוך תיק"
+                hint="לחץ על תיק לפרטים"
+                onActionPress={() => router.push('/fantasy/draft')}
               >
-                <Text style={styles.sectionAction}>ערוך תיק</Text>
-              </Pressable>
-              <Text style={styles.sectionTitle}>התיק שלך</Text>
-            </View>
+                התיק שלך
+              </F2Section>
+              <View style={{ gap: 7 }}>
+                {currentEntry.picks.map((pick, idx) => {
+                  const categoryId = stockToCategory[pick.ticker] ?? pick.categoryId;
+                  const sector = CATEGORY_TO_SECTOR[categoryId] ?? 'tech';
+                  const ret = liveReturns[pick.ticker] ?? pick.returnPercent ?? 0;
+                  const isCap = currentEntry.captainTicker === pick.ticker;
+                  return (
+                    <Animated.View
+                      key={pick.ticker}
+                      entering={FadeIn.delay(idx * 60).duration(280)}
+                    >
+                      <F2LivePick
+                        ticker={pick.ticker}
+                        name={pick.stockName}
+                        sector={sector}
+                        todayChange={ret / 5}
+                        totalChange={ret}
+                        isCaptain={isCap}
+                        allocation={pick.allocation}
+                        spark={sparkForReturn(ret)}
+                      />
+                    </Animated.View>
+                  );
+                })}
+              </View>
+            </Animated.View>
+          )}
 
-            <View style={{ gap: 8 }}>
-              {currentEntry.picks.map((pick, idx) => (
-                <Animated.View key={pick.ticker} entering={FadeIn.delay(idx * 60).duration(280)}>
-                  <PortfolioSlotCard
-                    ticker={pick.ticker}
-                    name={pick.stockName}
-                    sectorLabel={SECTOR_LABEL[stockToCategory[pick.ticker] ?? pick.categoryId]}
-                    categoryId={stockToCategory[pick.ticker] ?? pick.categoryId}
-                    returnPercent={liveReturns[pick.ticker] ?? pick.returnPercent ?? 0}
-                  />
-                </Animated.View>
-              ))}
-            </View>
-          </Animated.View>
-        )}
+          {/* Leaderboard */}
+          <Animated.View entering={FadeInDown.delay(200).duration(320)}>
+            <F2Section hint={`#${rank} · אזור ${zoneForRank(rank, totalPlayers) === 'promoted' ? 'עלייה' : zoneForRank(rank, totalPlayers) === 'demoted' ? 'ירידה' : 'בטוח'}`}>
+              לוח התוצאות
+            </F2Section>
 
-        {/* ─── Leaderboard with zones ─── */}
-        {enrichedLeaderboard.length > 0 && (
-          <Animated.View entering={FadeInDown.delay(200).duration(320)} style={styles.section}>
-            <View style={styles.sectionHeader}>
-              <Text style={styles.sectionMeta}>
-                {`▲ 1-10 · 11-90 · 91-100 ▼`}
+            {/* Promote banner */}
+            <View style={{
+              backgroundColor: FANTASY.positiveSoft,
+              borderWidth: 1,
+              borderColor: FANTASY.positiveStroke,
+              borderRadius: 10,
+              paddingVertical: 6,
+              paddingHorizontal: 10,
+              flexDirection: 'row-reverse',
+              alignItems: 'center',
+              gap: 4,
+              marginBottom: 8,
+            }}>
+              <F2Chevron size={10} dir="up" color={FANTASY.positiveDark} />
+              <Text style={{
+                fontSize: 10,
+                color: FANTASY.positiveDark,
+                fontWeight: '800',
+                letterSpacing: 0.4,
+              }}>
+                עולים לליגה הבאה · 4 ראשונים
               </Text>
-              <Text style={styles.sectionTitle}>לוח התוצאות</Text>
             </View>
 
-            {/* Promote zone */}
-            <ZoneDivider zone="promote" rangeLabel="1-10 עולים לליגה" />
-            {enrichedLeaderboard.filter((e) => e.zone === 'promote').slice(0, 4).map((entry) => {
-              const medalMap: Record<number, string> = { 1: '🥇', 2: '🥈', 3: '🥉' };
-              return (
-                <LeaderboardRow
+            {/* Top 4 (promote zone) */}
+            <View style={{ gap: 5 }}>
+              {top4.map((entry) => (
+                <F2LeaderRow
                   key={entry.playerId}
                   rank={entry.rank}
-                  name={entry.displayName}
+                  name={entry.isLocal ? 'את/ה' : entry.displayName}
                   returnPercent={entry.returnPercent}
+                  change={entry.change}
                   isLocal={entry.isLocal}
-                  zone="promote"
-                  isNew={entry.change === 'new'}
-                  medalEmoji={medalMap[entry.rank]}
-                  avatarEmoji={emojiForName(entry.displayName)}
+                  position="promoted"
                 />
-              );
-            })}
+              ))}
+            </View>
 
-            {/* Local entry — always shown */}
-            {localEntry && localEntry.rank > 4 && localEntry.rank <= totalPlayers - 4 && (
+            {/* Local position if outside top 4 and bottom 2 */}
+            {localEntry && localEntry.rank > 4 && localEntry.rank < totalPlayers - 1 && (
               <>
-                <ZoneDivider zone="safe" rangeLabel={`#${localEntry.rank} — המיקום שלך`} />
-                <LeaderboardRow
+                <View style={{
+                  alignItems: 'center',
+                  paddingVertical: 6,
+                  marginTop: 4,
+                  marginBottom: 4,
+                }}>
+                  <Text style={{
+                    fontSize: 10,
+                    color: FANTASY.inkFaint,
+                    fontWeight: '800',
+                    letterSpacing: 0.6,
+                  }}>
+                    · · ·
+                  </Text>
+                </View>
+                <F2LeaderRow
                   rank={localEntry.rank}
-                  name={localEntry.displayName}
+                  name="את/ה"
                   returnPercent={localEntry.returnPercent}
+                  change={localEntry.change}
                   isLocal
-                  zone={zoneForRank(localEntry.rank, totalPlayers)}
-                  avatarEmoji={emojiForName(localEntry.displayName)}
+                  position={zoneForRank(localEntry.rank, totalPlayers)}
                 />
               </>
             )}
 
-            {/* Relegate zone */}
-            <ZoneDivider zone="relegate" rangeLabel="91-100 יורדים" />
-            {enrichedLeaderboard.filter((e) => e.zone === 'relegate').slice(-2).map((entry) => (
-              <LeaderboardRow
-                key={entry.playerId}
-                rank={entry.rank}
-                name={entry.displayName}
-                returnPercent={entry.returnPercent}
-                isLocal={entry.isLocal}
-                zone="relegate"
-                avatarEmoji={emojiForName(entry.displayName)}
-              />
-            ))}
+            {/* Demote banner */}
+            <View style={{
+              backgroundColor: FANTASY.negativeSoft,
+              borderWidth: 1,
+              borderColor: FANTASY.negativeStroke,
+              borderRadius: 10,
+              paddingVertical: 6,
+              paddingHorizontal: 10,
+              flexDirection: 'row-reverse',
+              alignItems: 'center',
+              gap: 4,
+              marginTop: 10,
+              marginBottom: 8,
+            }}>
+              <F2Chevron size={10} dir="down" color={FANTASY.negativeDark} />
+              <Text style={{
+                fontSize: 10,
+                color: FANTASY.negativeDark,
+                fontWeight: '800',
+                letterSpacing: 0.4,
+              }}>
+                יורדים ליגה · 2 אחרונים
+              </Text>
+            </View>
+
+            {/* Bottom 2 (relegate zone) */}
+            <View style={{ gap: 5 }}>
+              {bottom2.map((entry) => (
+                <F2LeaderRow
+                  key={entry.playerId}
+                  rank={entry.rank}
+                  name={entry.isLocal ? 'את/ה' : entry.displayName}
+                  returnPercent={entry.returnPercent}
+                  change={entry.change}
+                  isLocal={entry.isLocal}
+                  position="demoted"
+                />
+              ))}
+            </View>
           </Animated.View>
-        )}
-      </ScrollView>
-    </SafeAreaView>
+        </ScrollView>
+      </SafeAreaView>
+    </View>
   );
 }
-
-const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: DUO.bg },
-  header: {
-    paddingHorizontal: 16,
-    paddingTop: 8,
-    paddingBottom: 12,
-    backgroundColor: DUO.surface,
-    borderBottomWidth: 1,
-    borderBottomColor: DUO.border,
-    flexDirection: 'row-reverse',
-    alignItems: 'center',
-    gap: 10,
-  },
-  backBtn: { padding: 4 },
-  headerCenter: { flex: 1 },
-  headerTitle: { fontSize: 18, fontWeight: '900', color: '#0f172a', ...RTL },
-  statsRow: { flexDirection: 'row-reverse', gap: 6 },
-  statChip: { backgroundColor: DUO.surface, borderWidth: 1, borderColor: DUO.border, borderRadius: 999, paddingHorizontal: 8, paddingVertical: 3 },
-  statText: { fontSize: 11, fontWeight: '800', color: '#0f172a' },
-  heroWrap: {
-    marginHorizontal: 16,
-    marginTop: 14,
-    marginBottom: 14,
-    borderRadius: 18,
-    overflow: 'hidden',
-    shadowColor: '#16a34a',
-    shadowOpacity: 0.18,
-    shadowRadius: 14,
-    shadowOffset: { width: 0, height: 6 },
-    elevation: 4,
-  },
-  hero: { padding: 18, gap: 14 },
-  heroTopRow: { flexDirection: 'row-reverse', alignItems: 'center', justifyContent: 'space-between' },
-  heroTitle: { fontSize: 14, fontWeight: '800', color: 'rgba(255,255,255,0.95)', ...RTL },
-  liveBadge: { flexDirection: 'row-reverse', alignItems: 'center', gap: 6, backgroundColor: 'rgba(255,255,255,0.2)', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 999 },
-  livePulse: { width: 8, height: 8, borderRadius: 4, backgroundColor: '#86efac' },
-  liveBadgeText: { fontSize: 11, fontWeight: '900', color: '#ffffff' },
-  heroMainRow: { flexDirection: 'row-reverse', alignItems: 'center', justifyContent: 'space-between', gap: 14 },
-  rankPillBig: { backgroundColor: 'rgba(255,255,255,0.15)', borderRadius: 14, paddingHorizontal: 14, paddingVertical: 12, alignItems: 'center', gap: 4, minWidth: 88 },
-  rankPillText: { fontSize: 28, fontWeight: '900', color: '#ffffff', letterSpacing: -0.8 },
-  rankPillTotal: { fontSize: 11, color: 'rgba(255,255,255,0.85)', fontWeight: '700' },
-  heroReturn: { fontSize: 44, fontWeight: '900', color: '#ffffff', letterSpacing: -1.4 },
-  heroSub: { fontSize: 12, color: 'rgba(255,255,255,0.85)', fontWeight: '700', ...RTL, marginTop: 2 },
-  noEntry: { margin: 16, padding: 32, alignItems: 'center', backgroundColor: DUO.surface, borderRadius: 16, borderWidth: 1, borderColor: DUO.border, gap: 8 },
-  noEntryEmoji: { fontSize: 40 },
-  noEntryTitle: { fontSize: 16, fontWeight: '900', color: '#0f172a', ...RTL },
-  noEntrySub: { fontSize: 13, color: '#64748b', ...RTL },
-  section: { marginHorizontal: 16, marginBottom: 16 },
-  sectionHeader: { flexDirection: 'row-reverse', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10, paddingHorizontal: 4 },
-  sectionTitle: { fontSize: 15, fontWeight: '900', color: '#0f172a', ...RTL },
-  sectionAction: { fontSize: 13, fontWeight: '800', color: DUO.blue, ...RTL },
-  sectionMeta: { fontSize: 10, fontWeight: '700', color: ZONE.safe.text, ...RTL },
-});

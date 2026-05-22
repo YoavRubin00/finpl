@@ -32,12 +32,23 @@ interface FantasyStoreState {
 interface FantasyStoreActions {
   enterCompetition: (tier: FantasyTier) => boolean;
   pickStock: (categoryId: StockCategoryId, ticker: string, stockName: string, mockPrice: number) => void;
+  /** Set how many coins are allocated to one pick. Clamped so total ≤ entry pool. */
+  setAllocation: (ticker: string, amount: number) => void;
+  /** Reset all allocations to equal-share of the entry pool. */
+  redistributeAllocationsEqually: () => void;
+  /** Mark a pick as ×2 leverage. Pass null to clear. */
+  setCaptain: (ticker: string | null) => void;
   lockDraft: () => void;
   simulateFinalPrices: () => void;
   claimResults: () => void;
   resetForNewWeek: () => void;
   getLeaderboardWithLocal: () => FantasyLeaderboardEntry[];
+  /** Allocation-weighted average return (% of pool), without leverage. */
   getAverageReturn: () => number;
+  /** Allocation-weighted return with ×2 multiplier applied to the leveraged pick. */
+  getEffectiveAverageReturn: () => number;
+  /** Sum of all picks' allocations. */
+  getAllocatedTotal: () => number;
 }
 
 type FantasyStore = FantasyStoreState & FantasyStoreActions;
@@ -76,6 +87,8 @@ export const useFantasyStore = create<FantasyStore>()(
           xpEarned: null,
           claimed: false,
           draftStreakWeeks: streak,
+          captainTicker: null,
+          viceTicker: null,
         };
 
         const missions = getWeeklyMissions(weekId);
@@ -89,6 +102,7 @@ export const useFantasyStore = create<FantasyStore>()(
         const { currentEntry } = get();
         if (!currentEntry || currentEntry.lockedAt) return;
 
+        // Replace any existing pick in this category — one per category.
         const existing = currentEntry.picks.filter((p) => p.categoryId !== categoryId);
         const newPick: DraftPick = {
           categoryId,
@@ -97,10 +111,69 @@ export const useFantasyStore = create<FantasyStore>()(
           entryPrice: mockPrice,
           finalPrice: null,
           returnPercent: null,
+          allocation: 0,
         };
 
+        // Auto-equalize allocations across the new pick set.
+        const newPicks = [...existing, newPick];
+        const each = Math.floor(currentEntry.coinsPaid / newPicks.length);
+        const remainder = currentEntry.coinsPaid - each * newPicks.length;
+        const rebalanced = newPicks.map((p, i) => ({
+          ...p,
+          allocation: each + (i === 0 ? remainder : 0),
+        }));
+
         set({
-          currentEntry: { ...currentEntry, picks: [...existing, newPick] },
+          currentEntry: { ...currentEntry, picks: rebalanced },
+          lastUpdated: new Date().toISOString(),
+        });
+      },
+
+      setAllocation: (ticker: string, amount: number) => {
+        const { currentEntry } = get();
+        if (!currentEntry || currentEntry.lockedAt) return;
+        const pick = currentEntry.picks.find((p) => p.ticker === ticker);
+        if (!pick) return;
+
+        const otherSum = currentEntry.picks
+          .filter((p) => p.ticker !== ticker)
+          .reduce((s, p) => s + p.allocation, 0);
+        const maxAllowed = currentEntry.coinsPaid - otherSum;
+        const clamped = Math.max(0, Math.min(maxAllowed, Math.round(amount)));
+
+        const updatedPicks = currentEntry.picks.map((p) =>
+          p.ticker === ticker ? { ...p, allocation: clamped } : p,
+        );
+
+        set({
+          currentEntry: { ...currentEntry, picks: updatedPicks },
+          lastUpdated: new Date().toISOString(),
+        });
+      },
+
+      redistributeAllocationsEqually: () => {
+        const { currentEntry } = get();
+        if (!currentEntry || currentEntry.lockedAt) return;
+        if (currentEntry.picks.length === 0) return;
+        const each = Math.floor(currentEntry.coinsPaid / currentEntry.picks.length);
+        const remainder = currentEntry.coinsPaid - each * currentEntry.picks.length;
+        const updatedPicks = currentEntry.picks.map((p, i) => ({
+          ...p,
+          allocation: each + (i === 0 ? remainder : 0),
+        }));
+        set({
+          currentEntry: { ...currentEntry, picks: updatedPicks },
+          lastUpdated: new Date().toISOString(),
+        });
+      },
+
+      setCaptain: (ticker: string | null) => {
+        const { currentEntry } = get();
+        if (!currentEntry) return;
+        if (ticker !== null && !currentEntry.picks.some((p) => p.ticker === ticker)) return;
+        // Vice retired: always clear it when setting/clearing captain.
+        set({
+          currentEntry: { ...currentEntry, captainTicker: ticker, viceTicker: null },
           lastUpdated: new Date().toISOString(),
         });
       },
@@ -109,6 +182,9 @@ export const useFantasyStore = create<FantasyStore>()(
         const { currentEntry } = get();
         if (!currentEntry || currentEntry.lockedAt) return;
         if (currentEntry.picks.length < 5) return;
+        // All allocations must sum to the entry pool.
+        const sumAllocation = currentEntry.picks.reduce((s, p) => s + p.allocation, 0);
+        if (sumAllocation !== currentEntry.coinsPaid) return;
 
         set({
           currentEntry: { ...currentEntry, lockedAt: new Date().toISOString() },
@@ -136,21 +212,20 @@ export const useFantasyStore = create<FantasyStore>()(
         const { currentEntry, leaderboard } = get();
         if (!currentEntry || currentEntry.claimed) return;
 
-        // Average return across all 5 picks
-        const avgReturn = get().getAverageReturn();
-
-        // Coins returned: entry × (1 + avgReturn%)
-        const coinsReturned = Math.round(currentEntry.coinsPaid * (1 + avgReturn / 100));
-
         // Find rank among leaderboard (local player)
         const localEntry = leaderboard.find((e) => e.isLocal);
         const rank = localEntry?.rank ?? leaderboard.length + 1;
 
-        // XP: tier prizes for top 5, consolation otherwise
+        // Place-based prizes (top 5) — uses tier's prize multipliers vs entryCost.
+        // Outside top 5: consolation 0.1× of entry to soften the loss.
         const tierConfig = TIER_CONFIGS[currentEntry.tier];
-        let xpEarned = 25; // consolation
+        let coinsReturned = Math.round(currentEntry.coinsPaid * 0.1);
+        let xpEarned = 25;
+        let diamondsEarned = 0;
         if (rank >= 1 && rank <= 5) {
+          coinsReturned = Math.round(currentEntry.coinsPaid * tierConfig.prizeMultipliers[rank - 1]);
           xpEarned = tierConfig.prizeXP[rank - 1];
+          diamondsEarned = tierConfig.prizeDiamonds[rank - 1];
         }
 
         // Streak bonus XP
@@ -168,6 +243,9 @@ export const useFantasyStore = create<FantasyStore>()(
         const { useEconomyStore } = require('../economy/useEconomyStore');
         useEconomyStore.getState().addCoins(coinsReturned);
         useEconomyStore.getState().addXP(xpEarned, 'challenge_complete');
+        if (diamondsEarned > 0) {
+          useEconomyStore.getState().addGems(diamondsEarned);
+        }
 
         set({
           currentEntry: {
@@ -218,14 +296,36 @@ export const useFantasyStore = create<FantasyStore>()(
       getAverageReturn: (): number => {
         const { currentEntry } = get();
         if (!currentEntry || currentEntry.picks.length === 0) return 0;
-        const picks = currentEntry.picks.filter((p) => p.returnPercent !== null);
-        if (picks.length === 0) return 0;
-        const sum = picks.reduce((s, p) => s + (p.returnPercent ?? 0), 0);
-        return Math.round((sum / picks.length) * 100) / 100;
+        const totalAlloc = currentEntry.picks.reduce((s, p) => s + p.allocation, 0);
+        if (totalAlloc === 0) return 0;
+        const weighted = currentEntry.picks.reduce(
+          (s, p) => s + p.allocation * (p.returnPercent ?? 0),
+          0,
+        );
+        return Math.round((weighted / totalAlloc) * 100) / 100;
+      },
+
+      getEffectiveAverageReturn: (): number => {
+        const { currentEntry } = get();
+        if (!currentEntry || currentEntry.picks.length === 0) return 0;
+        const totalAlloc = currentEntry.picks.reduce((s, p) => s + p.allocation, 0);
+        if (totalAlloc === 0) return 0;
+        const weighted = currentEntry.picks.reduce((s, p) => {
+          const r = p.returnPercent ?? 0;
+          const mult = currentEntry.captainTicker === p.ticker ? 2 : 1;
+          return s + p.allocation * r * mult;
+        }, 0);
+        return Math.round((weighted / totalAlloc) * 100) / 100;
+      },
+
+      getAllocatedTotal: (): number => {
+        const { currentEntry } = get();
+        if (!currentEntry) return 0;
+        return currentEntry.picks.reduce((s, p) => s + p.allocation, 0);
       },
     }),
     {
-      name: 'fantasy-store-v2',
+      name: 'fantasy-store-v5',
       storage: createJSONStorage(() => zustandStorage),
       partialize: (state) => ({
         currentEntry: state.currentEntry,

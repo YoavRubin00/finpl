@@ -9,10 +9,11 @@ import {
   FINN_TALKING,
   FINN_HELLO,
   FINN_FIRE,
+  FINN_STANDARD,
 } from '../../retention-loops/finnMascotConfig';
 import { STITCH } from '../../../constants/theme';
 
-export type ToolSharkMood = 'happy' | 'empathic' | 'talking' | 'hello' | 'fire';
+export type ToolSharkMood = 'happy' | 'empathic' | 'talking' | 'hello' | 'fire' | 'standard';
 
 interface ToolSharkTipProps {
   /** The line שארק says — appears in the speech bubble next to him. */
@@ -33,6 +34,7 @@ const MOOD_TO_SOURCE: Record<ToolSharkMood, ImageSource> = {
   talking: FINN_TALKING,
   hello: FINN_HELLO,
   fire: FINN_FIRE,
+  standard: FINN_STANDARD,
 };
 
 /**

@@ -1,9 +1,11 @@
 import React from 'react';
 import { Modal, View, Text, Pressable, ScrollView } from 'react-native';
 import { Image as ExpoImage } from 'expo-image';
-import { CLASH } from '../../../constants/theme';
+import { LinearGradient } from 'expo-linear-gradient';
+import { LUXE, LUXE_GRADIENTS } from '../../../constants/theme';
 import { FINN_TABLET } from '../../retention-loops/finnMascotConfig';
-import type { DraftStock } from '../fantasyTypes';
+import { GoldCoinIcon } from '../../../components/ui/GoldCoinIcon';
+import type { DraftStock, StockCategoryId } from '../fantasyTypes';
 
 interface Props {
   stock: DraftStock | null;
@@ -13,19 +15,24 @@ interface Props {
   isPicked: boolean;
 }
 
-const CATEGORY_SHARK_INTRO: Record<string, string> = {
+const CATEGORY_SHARK_INTRO: Record<StockCategoryId, string> = {
   tech: 'כשאני מנתח טכנולוגיה, אני מסתכל על צמיחה ב-Revenue ועל ה-moat. הנה הדעה שלי:',
-  banks: 'בנקים הם בסיס כל כלכלה — ואני יודע איפה הכסף הגדול מסתתר:',
+  spec_growth: 'צמיחה ספקולטיביות זה Bet על העתיד — סיכון גבוה, תשואה אפשרית מטורפת. הניתוח שלי:',
   energy: 'שוק האנרגיה הוא מורכב, אבל עם הניתוח הנכון אפשר לנצח:',
-  health: 'בריאות זה שוק שצומח תמיד — בין מגפות ובין מהפכות:',
+  israel: 'שוק תל אביב פחות תנודתי, אבל יש פנינים. הנה הראייה שלי:',
   crypto: 'קריפטו הוא עולם בפני עצמו — ספקולציה, טכנולוגיה ופסיכולוגיה:',
 };
+
+function formatPriceAmount(price: number): string {
+  return price.toLocaleString('en-US', { maximumFractionDigits: 2 });
+}
 
 export function SharkAnalysisModal({ stock, visible, onClose, onPick, isPicked }: Props): React.ReactElement {
   if (!stock) return <></>;
 
   const intro = CATEGORY_SHARK_INTRO[stock.categoryId] ?? '';
   const changePositive = stock.mockWeeklyChange >= 0;
+  const priceFormatted = formatPriceAmount(stock.mockPrice);
 
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
@@ -36,7 +43,7 @@ export function SharkAnalysisModal({ stock, visible, onClose, onPick, isPicked }
         <Pressable onPress={() => {}}>
           <View
             style={{
-              backgroundColor: CLASH.bgPrimary,
+              backgroundColor: LUXE.bgPrimary,
               borderTopLeftRadius: 28,
               borderTopRightRadius: 28,
               paddingBottom: 40,
@@ -64,7 +71,7 @@ export function SharkAnalysisModal({ stock, visible, onClose, onPick, isPicked }
                 paddingTop: 18,
                 paddingBottom: 16,
                 borderBottomWidth: 1,
-                borderBottomColor: 'rgba(255,255,255,0.08)',
+                borderBottomColor: LUXE.borderSubtle,
                 gap: 12,
               }}
             >
@@ -73,7 +80,7 @@ export function SharkAnalysisModal({ stock, visible, onClose, onPick, isPicked }
                   style={{
                     fontSize: 22,
                     fontWeight: '900',
-                    color: '#ffffff',
+                    color: LUXE.textPrimary,
                     writingDirection: 'rtl',
                     textAlign: 'right',
                   }}
@@ -83,15 +90,15 @@ export function SharkAnalysisModal({ stock, visible, onClose, onPick, isPicked }
                 <View style={{ flexDirection: 'row-reverse', alignItems: 'center', gap: 8, marginTop: 4 }}>
                   <View
                     style={{
-                      backgroundColor: 'rgba(212,160,23,0.2)',
+                      backgroundColor: 'rgba(251,191,36,0.18)',
                       borderRadius: 6,
                       paddingHorizontal: 8,
                       paddingVertical: 2,
                       borderWidth: 1,
-                      borderColor: CLASH.goldBorder + '60',
+                      borderColor: 'rgba(251,191,36,0.45)',
                     }}
                   >
-                    <Text style={{ fontSize: 12, fontWeight: '800', color: CLASH.goldLight }}>
+                    <Text style={{ fontSize: 12, fontWeight: '800', color: LUXE.goldLight }}>
                       {stock.ticker}
                     </Text>
                   </View>
@@ -99,16 +106,19 @@ export function SharkAnalysisModal({ stock, visible, onClose, onPick, isPicked }
                     style={{
                       fontSize: 13,
                       fontWeight: '700',
-                      color: changePositive ? '#4ade80' : '#f87171',
+                      color: changePositive ? LUXE.positive : LUXE.negative,
                     }}
                   >
                     {changePositive ? '+' : ''}{stock.mockWeeklyChange}% השבוע
                   </Text>
                 </View>
               </View>
-              <Text style={{ fontSize: 13, fontWeight: '800', color: 'rgba(255,255,255,0.7)' }}>
-                ${stock.mockPrice.toLocaleString('en-US')}
-              </Text>
+              <View style={{ flexDirection: 'row-reverse', alignItems: 'center', gap: 4 }}>
+                <GoldCoinIcon size={14} />
+                <Text style={{ fontSize: 13, fontWeight: '800', color: 'rgba(255,255,255,0.78)' }}>
+                  {priceFormatted}
+                </Text>
+              </View>
             </View>
 
             {/* Finn + Analysis */}
@@ -123,24 +133,29 @@ export function SharkAnalysisModal({ stock, visible, onClose, onPick, isPicked }
                   gap: 12,
                 }}
               >
-                {/* Finn tablet image */}
+                {/* Shark + tablet image — premium frame */}
                 <View
                   style={{
-                    width: 64,
-                    height: 64,
-                    borderRadius: 32,
-                    backgroundColor: 'rgba(56,189,248,0.15)',
+                    width: 68,
+                    height: 68,
+                    borderRadius: 34,
+                    backgroundColor: 'rgba(125,211,252,0.18)',
                     borderWidth: 2,
-                    borderColor: 'rgba(56,189,248,0.3)',
+                    borderColor: LUXE.blueLight,
                     alignItems: 'center',
                     justifyContent: 'center',
                     overflow: 'hidden',
                     flexShrink: 0,
+                    shadowColor: LUXE.gold,
+                    shadowOpacity: 0.35,
+                    shadowRadius: 10,
+                    shadowOffset: { width: 0, height: 3 },
+                    elevation: 6,
                   }}
                 >
                   <ExpoImage
                     source={FINN_TABLET}
-                    style={{ width: 56, height: 56 }}
+                    style={{ width: 60, height: 60 }}
                     contentFit="contain"
                     accessible={false}
                   />
@@ -152,19 +167,19 @@ export function SharkAnalysisModal({ stock, visible, onClose, onPick, isPicked }
                     style={{
                       fontSize: 12,
                       fontWeight: '800',
-                      color: CLASH.goldLight,
+                      color: LUXE.goldLight,
                       writingDirection: 'rtl',
                       textAlign: 'right',
                       letterSpacing: 0.5,
                       textTransform: 'uppercase',
                     }}
                   >
-                    🦈 קפטן שארק אומר:
+                    קפטן שארק אומר:
                   </Text>
                   <Text
                     style={{
                       fontSize: 12,
-                      color: 'rgba(255,255,255,0.55)',
+                      color: LUXE.textMuted,
                       writingDirection: 'rtl',
                       textAlign: 'right',
                       marginTop: 2,
@@ -178,19 +193,19 @@ export function SharkAnalysisModal({ stock, visible, onClose, onPick, isPicked }
               {/* Analysis text */}
               <View
                 style={{
-                  backgroundColor: 'rgba(255,255,255,0.05)',
+                  backgroundColor: LUXE.surfaceCard,
                   borderRadius: 14,
                   padding: 16,
                   borderWidth: 1,
-                  borderColor: 'rgba(212,160,23,0.15)',
+                  borderColor: 'rgba(251,191,36,0.20)',
                   borderRightWidth: 3,
-                  borderRightColor: CLASH.goldBorder,
+                  borderRightColor: LUXE.gold,
                 }}
               >
                 <Text
                   style={{
                     fontSize: 15,
-                    color: 'rgba(255,255,255,0.9)',
+                    color: 'rgba(255,255,255,0.92)',
                     writingDirection: 'rtl',
                     textAlign: 'right',
                     lineHeight: 24,
@@ -208,23 +223,25 @@ export function SharkAnalysisModal({ stock, visible, onClose, onPick, isPicked }
                 }}
               >
                 {[
-                  { label: 'מחיר כניסה', value: `$${stock.mockPrice.toLocaleString('en-US')}` },
-                  { label: 'שינוי שבועי', value: `${stock.mockWeeklyChange >= 0 ? '+' : ''}${stock.mockWeeklyChange}%`, color: stock.mockWeeklyChange >= 0 ? '#4ade80' : '#f87171' },
+                  { label: 'מחיר כניסה', value: priceFormatted },
+                  { label: 'שינוי שבועי', value: `${stock.mockWeeklyChange >= 0 ? '+' : ''}${stock.mockWeeklyChange}%`, color: stock.mockWeeklyChange >= 0 ? LUXE.positive : LUXE.negative },
                 ].map((stat) => (
                   <View
                     key={stat.label}
                     style={{
                       flex: 1,
-                      backgroundColor: 'rgba(255,255,255,0.06)',
+                      backgroundColor: LUXE.surfaceCard,
                       borderRadius: 10,
                       padding: 10,
                       alignItems: 'center',
+                      borderWidth: 1,
+                      borderColor: LUXE.borderSubtle,
                     }}
                   >
-                    <Text style={{ fontSize: 15, fontWeight: '900', color: stat.color ?? '#ffffff' }}>
+                    <Text style={{ fontSize: 15, fontWeight: '900', color: stat.color ?? LUXE.textPrimary }}>
                       {stat.value}
                     </Text>
-                    <Text style={{ fontSize: 10, color: 'rgba(255,255,255,0.5)', marginTop: 2, writingDirection: 'rtl' }}>
+                    <Text style={{ fontSize: 10, color: LUXE.textFaint, marginTop: 2, writingDirection: 'rtl' }}>
                       {stat.label}
                     </Text>
                   </View>
@@ -237,19 +254,44 @@ export function SharkAnalysisModal({ stock, visible, onClose, onPick, isPicked }
               <Pressable
                 onPress={() => { onPick(); onClose(); }}
                 style={({ pressed }) => ({
-                  backgroundColor: isPicked ? '#334155' : pressed ? CLASH.goldLight : CLASH.goldBorder,
                   borderRadius: 14,
-                  paddingVertical: 15,
-                  alignItems: 'center',
-                  borderWidth: isPicked ? 1 : 0,
-                  borderColor: isPicked ? 'rgba(255,255,255,0.2)' : 'transparent',
+                  overflow: 'hidden',
+                  opacity: pressed ? 0.92 : 1,
+                  shadowColor: isPicked ? 'transparent' : LUXE.gold,
+                  shadowOpacity: isPicked ? 0 : 0.55,
+                  shadowRadius: 14,
+                  shadowOffset: { width: 0, height: 4 },
+                  elevation: isPicked ? 0 : 8,
                 })}
                 accessibilityRole="button"
                 accessibilityLabel={isPicked ? 'הסר בחירה' : `בחר ${stock.name}`}
               >
-                <Text style={{ fontSize: 16, fontWeight: '900', color: isPicked ? 'rgba(255,255,255,0.7)' : '#000000' }}>
-                  {isPicked ? '✓ נבחרה — הסר בחירה' : `✚ בחר ${stock.ticker} לתיק`}
-                </Text>
+                {isPicked ? (
+                  <View
+                    style={{
+                      backgroundColor: '#334155',
+                      paddingVertical: 15,
+                      alignItems: 'center',
+                      borderWidth: 1,
+                      borderColor: 'rgba(255,255,255,0.2)',
+                    }}
+                  >
+                    <Text style={{ fontSize: 16, fontWeight: '900', color: 'rgba(255,255,255,0.75)' }}>
+                      ✓ נבחרה — הסר בחירה
+                    </Text>
+                  </View>
+                ) : (
+                  <LinearGradient
+                    colors={LUXE_GRADIENTS.ctaGold}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 0 }}
+                    style={{ paddingVertical: 15, alignItems: 'center' }}
+                  >
+                    <Text style={{ fontSize: 16, fontWeight: '900', color: LUXE.textOnGold, letterSpacing: 0.3 }}>
+                      ✚ בחר {stock.ticker} לתיק
+                    </Text>
+                  </LinearGradient>
+                )}
               </Pressable>
               <Pressable
                 onPress={onClose}
@@ -257,7 +299,7 @@ export function SharkAnalysisModal({ stock, visible, onClose, onPick, isPicked }
                 accessibilityRole="button"
                 accessibilityLabel="סגור"
               >
-                <Text style={{ fontSize: 14, color: 'rgba(255,255,255,0.45)' }}>סגור</Text>
+                <Text style={{ fontSize: 14, color: LUXE.textFaint }}>סגור</Text>
               </Pressable>
             </View>
           </View>

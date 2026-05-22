@@ -1,15 +1,6 @@
 import React, { useMemo, useState } from 'react';
-import {
-  ScrollView,
-  View,
-  Text,
-  TextInput,
-  Pressable,
-  StyleSheet,
-  Alert,
-} from 'react-native';
+import { Alert, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import Animated, { FadeInDown } from 'react-native-reanimated';
 import { ReceiptText, Share2 } from 'lucide-react-native';
 
 import {
@@ -17,9 +8,25 @@ import {
   type MaritalStatus,
 } from '../utils/taxBrackets2026';
 import { STITCH } from '../../../constants/theme';
-import { tapHaptic } from '../../../utils/haptics';
+import { clamp, formatShekel } from '../../../utils/format';
+import { findTool } from '../toolsRegistry';
 import { ToolHeader } from '../components/ToolHeader';
-import { ToolSharkTip } from '../components/ToolSharkTip';
+import {
+  CalculateButton,
+  FinTip,
+  LegalDisclaimer,
+  MoneyInput,
+  MoneySlider,
+  PeriodChips,
+  SectionLabel,
+  StatHero,
+} from '../components/atoms';
+
+const TOOL = findTool('tax-refund')!;
+
+const ANNUAL_MIN = 30_000;
+const ANNUAL_MAX = 800_000;
+const ANNUAL_STEP = 5_000;
 
 interface TaxRefundInput {
   annualGross: string;
@@ -46,21 +53,15 @@ const DEFAULT_STATE: TaxRefundInput = {
   extraDeposits: '0',
 };
 
-const ACCENT = '#fb923c';
-
-const STATUS_OPTIONS: { value: MaritalStatus; label: string }[] = [
+const STATUS_OPTIONS: readonly { value: MaritalStatus; label: string }[] = [
   { value: 'single', label: 'רווק/ה' },
   { value: 'married', label: 'נשוי/אה' },
   { value: 'divorced', label: 'גרוש/ה' },
   { value: 'widowed', label: 'אלמן/ה' },
 ];
 
-const MONTHS_OPTIONS = [6, 9, 12];
-const KIDS_OPTIONS = [0, 1, 2, 3];
-
-function formatShekel(n: number): string {
-  return '₪' + Math.round(n).toLocaleString('he-IL');
-}
+const MONTHS_OPTIONS: readonly number[] = [6, 9, 12];
+const KIDS_OPTIONS: readonly number[] = [0, 1, 2, 3];
 
 function getCreditPoints(status: MaritalStatus, kids: number): number {
   const base = status === 'divorced' ? 3.25 : 2.25;
@@ -93,183 +94,183 @@ export function TaxRefundCalculator(): React.ReactElement {
     };
   }, [state]);
 
-  const hasInput = (Number(state.annualGross) || 0) > 0 && (Number(state.taxPaid) || 0) > 0;
+  const hasInput =
+    (Number(state.annualGross) || 0) > 0 && (Number(state.taxPaid) || 0) > 0;
+  const sliderValue = clamp(
+    Number(state.annualGross) || ANNUAL_MIN,
+    ANNUAL_MIN,
+    ANNUAL_MAX,
+  );
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
       <ToolHeader
         title="החזר מס"
-        subtitle="8 מתוך 10 ישראלים זכאים — ממוצע ₪10,500"
-        accentColor={ACCENT}
+        subtitle="8 מתוך 10 ישראלים זכאים, ממוצע ₪10,500"
+        accentColor={TOOL.hue}
         Icon={ReceiptText}
       />
 
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
-        <Animated.View entering={FadeInDown.duration(360)} style={styles.resultCard}>
-          <Text style={styles.resultLabel}>
-            {hasInput ? 'אולי מחכים לך' : 'מלא את הפרטים כדי לראות הערכה'}
-          </Text>
-          <Text style={styles.resultBig} numberOfLines={1} adjustsFontSizeToFit>
-            {formatShekel(result.estimatedRefund)}
-          </Text>
-        </Animated.View>
+        <StatHero
+          label={hasInput ? 'אולי מחכים לך' : 'מלא את הפרטים כדי לראות הערכה'}
+          value={result.estimatedRefund}
+          accentColor={TOOL.hue}
+        />
 
         {hasInput ? (
-          <ToolSharkTip
-            text="תיגש לקחת — זה הכסף שלך"
-            mood="happy"
-            accentColor={ACCENT}
-            accentSurface="#fff7ed"
+          <FinTip
+            kind="grow"
+            text="תגשו לקחת, זה הכסף שלכם."
+            subtext="החזר מס מוגש דרך אזור אישי של רשות המסים — בלי תור בסניף."
           />
         ) : null}
 
-        <View style={styles.card}>
-          <Text style={styles.cardLabel}>ברוטו שנתי (סך טופס 106)</Text>
-          <TextInput
-            style={styles.input}
+        <SectionLabel>הנתונים שלך</SectionLabel>
+
+        <View style={styles.inputCard}>
+          <MoneyInput
+            label="ברוטו שנתי (סך טופס 106)"
             value={state.annualGross}
-            onChangeText={(v) => setState({ ...state, annualGross: v.replace(/[^0-9]/g, '') })}
-            keyboardType="numeric"
+            onChangeText={(v) => setState({ ...state, annualGross: v })}
             placeholder="120,000"
-            placeholderTextColor="#94a3b8"
+            accentColor={TOOL.hue}
+            step={5000}
+            min={ANNUAL_MIN}
+            max={ANNUAL_MAX}
           />
-        </View>
-
-        <View style={styles.card}>
-          <Text style={styles.cardLabel}>מס שנוכה בפועל</Text>
-          <TextInput
-            style={styles.input}
-            value={state.taxPaid}
-            onChangeText={(v) => setState({ ...state, taxPaid: v.replace(/[^0-9]/g, '') })}
-            keyboardType="numeric"
-            placeholder="13,000"
-            placeholderTextColor="#94a3b8"
-          />
-        </View>
-
-        <View style={styles.card}>
-          <Text style={styles.cardLabel}>חודשי עבודה השנה</Text>
-          <View style={styles.row}>
-            {MONTHS_OPTIONS.map((m) => {
-              const selected = state.monthsWorked === m;
-              return (
-                <Pressable
-                  key={m}
-                  onPress={() => {
-                    tapHaptic();
-                    setState({ ...state, monthsWorked: m });
-                  }}
-                  style={[styles.chip, selected && styles.chipActive]}
-                  accessibilityRole="button"
-                  accessibilityLabel={`${m} חודשי עבודה`}
-                  accessibilityState={{ selected }}
-                >
-                  <Text style={[styles.chipText, selected && styles.chipTextActive]}>{m}</Text>
-                </Pressable>
-              );
-            })}
+          <View style={styles.sliderWrap}>
+            <MoneySlider
+              label="החליקו לבחירת ברוטו שנתי"
+              value={sliderValue}
+              onChange={(v) => setState((p) => ({ ...p, annualGross: String(v) }))}
+              min={ANNUAL_MIN}
+              max={ANNUAL_MAX}
+              step={ANNUAL_STEP}
+              unit=" ₪"
+              accentColor={TOOL.hue}
+              hideValueDisplay
+            />
           </View>
         </View>
 
-        <View style={styles.card}>
-          <Text style={styles.cardLabel}>ילדים</Text>
-          <View style={styles.row}>
-            {KIDS_OPTIONS.map((k) => {
-              const selected = state.kidsCount === k;
-              return (
-                <Pressable
-                  key={k}
-                  onPress={() => {
-                    tapHaptic();
-                    setState({ ...state, kidsCount: k });
-                  }}
-                  style={[styles.chip, selected && styles.chipActive]}
-                  accessibilityRole="button"
-                  accessibilityLabel={`${k} ילדים`}
-                  accessibilityState={{ selected }}
-                >
-                  <Text style={[styles.chipText, selected && styles.chipTextActive]}>{k === 3 ? '3+' : k}</Text>
-                </Pressable>
-              );
-            })}
-          </View>
-        </View>
+        <MoneyInput
+          label="מס שנוכה בפועל"
+          value={state.taxPaid}
+          onChangeText={(v) => setState({ ...state, taxPaid: v })}
+          placeholder="13,000"
+          accentColor={TOOL.hue}
+          step={500}
+          min={0}
+          max={200_000}
+        />
 
-        <View style={styles.card}>
-          <Text style={styles.cardLabel}>מצב משפחתי</Text>
-          <View style={styles.row}>
-            {STATUS_OPTIONS.map((s) => {
-              const selected = state.status === s.value;
-              return (
-                <Pressable
-                  key={s.value}
-                  onPress={() => {
-                    tapHaptic();
-                    setState({ ...state, status: s.value });
-                  }}
-                  style={[styles.chipWide, selected && styles.chipActive]}
-                  accessibilityRole="button"
-                  accessibilityLabel={s.label}
-                  accessibilityState={{ selected }}
-                >
-                  <Text style={[styles.chipText, selected && styles.chipTextActive]}>{s.label}</Text>
-                </Pressable>
-              );
-            })}
-          </View>
-        </View>
+        <PeriodChips
+          label="חודשי עבודה השנה"
+          value={state.monthsWorked}
+          options={MONTHS_OPTIONS}
+          onChange={(v) => setState({ ...state, monthsWorked: v })}
+          unit=""
+          accentColor={TOOL.hue}
+        />
 
-        <View style={styles.card}>
-          <Text style={styles.cardLabel}>הפקדות עצמאיות לקופ"ג (לא דרך תלוש)</Text>
-          <TextInput
-            style={styles.input}
-            value={state.extraDeposits}
-            onChangeText={(v) => setState({ ...state, extraDeposits: v.replace(/[^0-9]/g, '') })}
-            keyboardType="numeric"
-            placeholder="0"
-            placeholderTextColor="#94a3b8"
-          />
-        </View>
+        <PeriodChips
+          label="ילדים"
+          value={state.kidsCount}
+          options={KIDS_OPTIONS}
+          onChange={(v) => setState({ ...state, kidsCount: v })}
+          renderLabel={(v) => (v === 3 ? '3+' : String(v))}
+          accentColor={TOOL.hue}
+        />
+
+        <PeriodChips
+          label="מצב משפחתי"
+          value={state.status}
+          options={STATUS_OPTIONS.map((s) => s.value)}
+          onChange={(v) => setState({ ...state, status: v })}
+          renderLabel={(v) =>
+            STATUS_OPTIONS.find((s) => s.value === v)?.label ?? String(v)
+          }
+          accentColor={TOOL.hue}
+        />
+
+        <MoneyInput
+          label='הפקדות עצמאיות לקופ"ג (לא דרך תלוש)'
+          value={state.extraDeposits}
+          onChangeText={(v) => setState({ ...state, extraDeposits: v })}
+          placeholder="0"
+          accentColor={TOOL.hue}
+          step={1000}
+          min={0}
+          max={100_000}
+          hint="זיכוי של 35% עד תקרה שנתית"
+        />
 
         {hasInput ? (
-          <View style={styles.card}>
-            <Text style={styles.cardLabel}>פירוט</Text>
-            <BreakdownRow label="מס שנוכה בפועל" amount={result.actualTax} />
-            <BreakdownRow label="מס תיאורטי לחודשי עבודה" amount={result.theoreticalTax} />
-            {result.depositCredit > 0 ? (
-              <BreakdownRow label="זיכוי על הפקדות (35%)" amount={result.depositCredit} />
-            ) : null}
-            <View style={styles.divider} />
-            <BreakdownRow label="החזר משוער" amount={result.estimatedRefund} bold />
-          </View>
+          <>
+            <SectionLabel>פירוט החישוב</SectionLabel>
+            <View style={styles.breakdownCard}>
+              <BreakdownRow label="מס שנוכה בפועל" amount={result.actualTax} />
+              <BreakdownRow label="מס תיאורטי לחודשי עבודה" amount={result.theoreticalTax} />
+              {result.depositCredit > 0 ? (
+                <BreakdownRow label="זיכוי על הפקדות (35%)" amount={result.depositCredit} />
+              ) : null}
+              <View style={styles.divider} />
+              <BreakdownRow
+                label="החזר משוער"
+                amount={result.estimatedRefund}
+                bold
+                accent={TOOL.hue}
+              />
+            </View>
+          </>
         ) : null}
 
-        <Pressable
-          style={styles.shareBtn}
-          onPress={() => {
-            tapHaptic();
-            Alert.alert('שיתוף', `מגיע לי החזר מס משוער של ${formatShekel(result.estimatedRefund)}!`);
-          }}
-          accessibilityRole="button"
-          accessibilityLabel="שתף תוצאה"
-        >
-          <Share2 size={18} color="#fff" />
-          <Text style={styles.shareText}>שתף תוצאה</Text>
-        </Pressable>
+        <CalculateButton
+          label="שתף תוצאה"
+          sublabel={`מגיע לי ${formatShekel(result.estimatedRefund)} החזר`}
+          variant="orange"
+          iconLeft={<Share2 size={18} color="#ffffff" strokeWidth={2.6} />}
+          onPress={() =>
+            Alert.alert(
+              'שיתוף',
+              `מגיע לי החזר מס משוער של ${formatShekel(result.estimatedRefund)}!`,
+            )
+          }
+        />
 
-        <Text style={styles.disclaimer}>
-          הערכה בלבד, לא תחליף לייעוץ מס אישי. החזר בפועל מחושב ע"י רשות המסים על סמך טפסי 106 והכנסות נוספות.
-        </Text>
+        <LegalDisclaimer
+          scope="tax"
+          extra="החזר בפועל מחושב ע״י רשות המסים על סמך טפסי 106 והכנסות נוספות."
+        />
       </ScrollView>
     </SafeAreaView>
   );
 }
 
-function BreakdownRow({ label, amount, bold }: { label: string; amount: number; bold?: boolean }) {
+function BreakdownRow({
+  label,
+  amount,
+  bold,
+  accent,
+}: {
+  label: string;
+  amount: number;
+  bold?: boolean;
+  accent?: string;
+}): React.ReactElement {
   return (
     <View style={styles.breakdownRow}>
-      <Text style={[styles.breakdownLabel, bold && styles.breakdownBold]}>{label}</Text>
-      <Text style={[styles.breakdownAmount, bold && styles.breakdownBold]}>{formatShekel(amount)}</Text>
+      <Text style={[styles.breakdownLabel, bold && styles.breakdownLabelBold]}>{label}</Text>
+      <Text
+        style={[
+          styles.breakdownAmount,
+          bold && styles.breakdownAmountBold,
+          bold && accent ? { color: accent } : null,
+        ]}
+      >
+        {formatShekel(amount)}
+      </Text>
     </View>
   );
 }
@@ -277,87 +278,58 @@ function BreakdownRow({ label, amount, bold }: { label: string; amount: number; 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: STITCH.background },
   scroll: { padding: 16, paddingBottom: 80, gap: 14 },
-  resultCard: {
-    backgroundColor: '#fff',
-    borderRadius: 20,
-    padding: 24,
-    alignItems: 'center',
-    shadowColor: ACCENT,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.18,
-    shadowRadius: 14,
-    elevation: 4,
-    borderWidth: 1,
-    borderColor: '#fed7aa',
-  },
-  resultLabel: { fontSize: 13, color: STITCH.onSurfaceVariant, writingDirection: 'rtl', marginBottom: 4, textAlign: 'center' },
-  resultBig: { fontSize: 56, fontWeight: '900', color: ACCENT, lineHeight: 64, letterSpacing: -1 },
-  resultSub: { fontSize: 14, color: STITCH.onSurface, writingDirection: 'rtl', marginTop: 8, fontWeight: '700' },
-  card: {
-    backgroundColor: '#fff',
+  inputCard: {
+    backgroundColor: STITCH.surfaceLowest,
     borderRadius: 16,
-    padding: 16,
+    padding: 12,
     borderWidth: 1,
     borderColor: STITCH.surfaceHighest,
-    gap: 10,
-  },
-  cardLabel: { fontSize: 13, fontWeight: '800', color: STITCH.onSurface, textAlign: 'right', writingDirection: 'rtl' },
-  input: {
-    backgroundColor: STITCH.background,
-    borderRadius: 12,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-    fontSize: 22,
-    fontWeight: '800',
-    color: STITCH.onSurface,
-    textAlign: 'right',
-    writingDirection: 'rtl',
-    minHeight: 50,
-  },
-  row: { flexDirection: 'row-reverse', flexWrap: 'wrap', gap: 8 },
-  chip: {
-    minWidth: 60,
-    minHeight: 44,
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: 10,
-    borderWidth: 1.5,
-    borderColor: STITCH.surfaceHighest,
-    backgroundColor: STITCH.background,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  chipWide: {
-    flexBasis: '47%',
-    flexGrow: 1,
-    minHeight: 44,
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: 10,
-    borderWidth: 1.5,
-    borderColor: STITCH.surfaceHighest,
-    backgroundColor: STITCH.background,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  chipActive: { borderColor: ACCENT, backgroundColor: '#fff7ed' },
-  chipText: { fontSize: 15, fontWeight: '800', color: STITCH.onSurface, writingDirection: 'rtl' },
-  chipTextActive: { color: ACCENT },
-  breakdownRow: { flexDirection: 'row-reverse', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 4 },
-  breakdownLabel: { fontSize: 13, color: STITCH.onSurfaceVariant, writingDirection: 'rtl' },
-  breakdownAmount: { fontSize: 14, fontWeight: '700', color: STITCH.onSurface },
-  breakdownBold: { fontWeight: '900', color: ACCENT, fontSize: 16 },
-  divider: { height: 1, backgroundColor: STITCH.surfaceHighest, marginVertical: 4 },
-  shareBtn: {
-    flexDirection: 'row-reverse',
-    alignItems: 'center',
-    justifyContent: 'center',
     gap: 8,
-    backgroundColor: ACCENT,
-    borderRadius: 14,
-    paddingVertical: 14,
-    minHeight: 50,
   },
-  shareText: { color: '#fff', fontSize: 15, fontWeight: '900', writingDirection: 'rtl' },
-  disclaimer: { fontSize: 11, color: STITCH.onSurfaceVariant, textAlign: 'center', writingDirection: 'rtl', marginTop: 8, lineHeight: 16 },
+  sliderWrap: { paddingHorizontal: 2, paddingTop: 4 },
+  breakdownCard: {
+    backgroundColor: STITCH.surfaceLowest,
+    borderRadius: 16,
+    padding: 14,
+    borderWidth: 1,
+    borderColor: STITCH.surfaceHighest,
+    gap: 2,
+  },
+  breakdownRow: {
+    flexDirection: 'row-reverse',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 4,
+  },
+  breakdownLabel: {
+    fontSize: 13,
+    color: STITCH.onSurfaceVariant,
+    writingDirection: 'rtl',
+  },
+  breakdownLabelBold: {
+    fontWeight: '900',
+    color: STITCH.onSurface,
+  },
+  breakdownAmount: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: STITCH.onSurface,
+  },
+  breakdownAmountBold: {
+    fontWeight: '900',
+    fontSize: 16,
+  },
+  divider: {
+    height: 1,
+    backgroundColor: STITCH.surfaceHighest,
+    marginVertical: 4,
+  },
+  disclaimer: {
+    fontSize: 11,
+    color: STITCH.onSurfaceVariant,
+    textAlign: 'center',
+    writingDirection: 'rtl',
+    marginTop: 8,
+    lineHeight: 16,
+  },
 });

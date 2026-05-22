@@ -29,6 +29,10 @@ const FEATURE_INFO: Record<GatedFeature, { title: string; body: string }> = {
     title: "פריטים שמורים, PRO בלבד",
     body: "שמירת שיעורים ותכנים לגישה מהירה זמינה לחברי PRO בלבד.\nשדרג כדי לשמור תכנים ללא הגבלה.",
   },
+  "shark-voice": {
+    title: "שיחת קול עם שארק, PRO בלבד",
+    body: "שיחה חיה אחד-על-אחד עם קפטן שארק זמינה לחברי PRO.\nעד 10 דקות שיחה ביום.",
+  },
 };
 
 /** Standalone usage, must be placed once in app/_layout.tsx */

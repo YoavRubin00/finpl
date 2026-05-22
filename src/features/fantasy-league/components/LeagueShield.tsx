@@ -11,10 +11,10 @@ interface Props {
   size?: number;
 }
 
-const FALLBACK_CONFIG: Record<LeagueShieldPosition, { colors: [string, string]; border: string; emoji: string }> = {
-  bronze: { colors: ['#a16207', '#78350f'], border: '#92400e', emoji: '⭐' },
-  silver: { colors: ['#cbd5e1', '#94a3b8'], border: '#64748b', emoji: '🌿' },
-  gold:   { colors: ['#facc15', '#d4a017'], border: '#a16207', emoji: '👑' },
+const FALLBACK_CONFIG: Record<LeagueShieldPosition, { colors: readonly [string, string, string]; border: string; emoji: string }> = {
+  bronze: { colors: ['#bae6fd', '#7dd3fc', '#0284c7'], border: '#075985', emoji: '💎' },
+  silver: { colors: ['#e2e8f0', '#cbd5e1', '#94a3b8'], border: '#64748b', emoji: '🥈' },
+  gold:   { colors: ['#fcd34d', '#fbbf24', '#d97706'], border: '#92570a', emoji: '👑' },
 };
 
 const URL_KEY: Record<LeagueShieldPosition, keyof typeof FANTASY_ASSETS> = {

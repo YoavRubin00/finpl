@@ -1,6 +1,6 @@
-import React from 'react';
-import { ScrollView, View, Text, Pressable } from 'react-native';
-import { CLASH } from '../../../constants/theme';
+import React, { useEffect, useRef, useState } from 'react';
+import { ScrollView, View, Text, Pressable, Dimensions } from 'react-native';
+import { FANTASY } from '../../../constants/theme';
 import type { StockCategoryId, StockCategory } from '../fantasyTypes';
 
 interface Props {
@@ -11,10 +11,37 @@ interface Props {
 }
 
 export function DraftCategoryTabs({ categories, activeId, pickedCategories, onSelect }: Props): React.ReactElement {
+  // The bar uses LTR-native scroll with a row-reverse container, so item[0]
+  // (tech) sits at the visual right and item[N-1] (crypto) at the visual left.
+  // We measure each tab's layout and auto-scroll so the *active* tab is always
+  // centered in view — solves the "I can't reach crypto" problem.
+  const scrollRef = useRef<ScrollView>(null);
+  const [layouts, setLayouts] = useState<Record<string, { x: number; width: number }>>({});
+  const viewportWidth = Dimensions.get('window').width;
+
+  useEffect(() => {
+    const layout = layouts[activeId];
+    if (!layout || !scrollRef.current) return;
+    // Center the active tab horizontally; clamp to ≥ 0.
+    const target = Math.max(0, layout.x - viewportWidth / 2 + layout.width / 2);
+    scrollRef.current.scrollTo({ x: target, animated: true });
+  }, [activeId, layouts, viewportWidth]);
+
   return (
     <ScrollView
+      ref={scrollRef}
       horizontal
       showsHorizontalScrollIndicator={false}
+      onContentSizeChange={() => {
+        // On first layout, snap to the right edge so tech is visible immediately.
+        const layout = layouts[activeId];
+        if (layout) {
+          const target = Math.max(0, layout.x - viewportWidth / 2 + layout.width / 2);
+          scrollRef.current?.scrollTo({ x: target, animated: false });
+        } else {
+          scrollRef.current?.scrollToEnd({ animated: false });
+        }
+      }}
       contentContainerStyle={{
         paddingHorizontal: 16,
         paddingVertical: 10,
@@ -30,6 +57,14 @@ export function DraftCategoryTabs({ categories, activeId, pickedCategories, onSe
           <Pressable
             key={cat.id}
             onPress={() => onSelect(cat.id)}
+            onLayout={(e) => {
+              const { x, width } = e.nativeEvent.layout;
+              setLayouts((prev) => {
+                const cur = prev[cat.id];
+                if (cur && Math.abs(cur.x - x) < 1 && Math.abs(cur.width - width) < 1) return prev;
+                return { ...prev, [cat.id]: { x, width } };
+              });
+            }}
             accessibilityRole="tab"
             accessibilityState={{ selected: isActive }}
             accessibilityLabel={cat.label}
@@ -42,13 +77,13 @@ export function DraftCategoryTabs({ categories, activeId, pickedCategories, onSe
               borderRadius: 20,
               borderWidth: isActive ? 1.5 : 1,
               borderColor: isActive
-                ? CLASH.goldBorder
-                : 'rgba(255,255,255,0.15)',
+                ? FANTASY.primary
+                : FANTASY.border,
               backgroundColor: isActive
-                ? 'rgba(212,160,23,0.15)'
+                ? FANTASY.primaryTint
                 : pressed
-                ? 'rgba(255,255,255,0.06)'
-                : 'rgba(255,255,255,0.04)',
+                ? FANTASY.surfaceLow
+                : FANTASY.surfaceCard,
             })}
           >
             <Text style={{ fontSize: 16 }}>{cat.emoji}</Text>
@@ -56,7 +91,7 @@ export function DraftCategoryTabs({ categories, activeId, pickedCategories, onSe
               style={{
                 fontSize: 13,
                 fontWeight: isActive ? '800' : '600',
-                color: isActive ? CLASH.goldLight : 'rgba(255,255,255,0.65)',
+                color: isActive ? FANTASY.primary : FANTASY.inkLabel,
                 writingDirection: 'rtl',
               }}
             >
@@ -68,12 +103,12 @@ export function DraftCategoryTabs({ categories, activeId, pickedCategories, onSe
                   width: 16,
                   height: 16,
                   borderRadius: 8,
-                  backgroundColor: '#4ade80',
+                  backgroundColor: FANTASY.positive,
                   alignItems: 'center',
                   justifyContent: 'center',
                 }}
               >
-                <Text style={{ fontSize: 9, fontWeight: '900', color: '#000' }}>✓</Text>
+                <Text style={{ fontSize: 9, fontWeight: '900', color: '#fff' }}>✓</Text>
               </View>
             )}
           </Pressable>

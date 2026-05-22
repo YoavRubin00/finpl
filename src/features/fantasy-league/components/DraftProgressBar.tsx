@@ -1,7 +1,7 @@
 import React, { useEffect, useRef } from 'react';
 import { View, Text, Pressable } from 'react-native';
 import LottieView from 'lottie-react-native';
-import { CLASH, DUO } from '../../../constants/theme';
+import { FANTASY } from '../../../constants/theme';
 import type { StockCategory, DraftPick } from '../fantasyTypes';
 
 interface Props {
@@ -9,12 +9,16 @@ interface Props {
   picks: DraftPick[];
   onLock: () => void;
   locked: boolean;
+  /** Optional: when false (and provided), the lock CTA shows a "not yet" hint instead of being active. */
+  lockReady?: boolean;
+  lockBlockReason?: string;
 }
 
-export function DraftProgressBar({ categories, picks, onLock, locked }: Props): React.ReactElement {
+export function DraftProgressBar({ categories, picks, onLock, locked, lockReady, lockBlockReason }: Props): React.ReactElement {
   const pickedCount = picks.length;
   const total = categories.length;
   const allPicked = pickedCount === total;
+  const canLock = allPicked && (lockReady ?? true);
   const checkRef = useRef<LottieView>(null);
   const prevCount = useRef(pickedCount);
 
@@ -28,9 +32,9 @@ export function DraftProgressBar({ categories, picks, onLock, locked }: Props): 
   return (
     <View
       style={{
-        backgroundColor: CLASH.bgPrimary,
+        backgroundColor: FANTASY.surfaceCard,
         borderTopWidth: 1,
-        borderTopColor: 'rgba(255,255,255,0.08)',
+        borderTopColor: FANTASY.border,
         paddingHorizontal: 16,
         paddingTop: 12,
         paddingBottom: 28,
@@ -55,9 +59,9 @@ export function DraftProgressBar({ categories, picks, onLock, locked }: Props): 
                   width: 36,
                   height: 36,
                   borderRadius: 18,
-                  backgroundColor: isPicked ? 'rgba(212,160,23,0.2)' : 'rgba(255,255,255,0.06)',
+                  backgroundColor: isPicked ? FANTASY.primaryTint : FANTASY.surfaceLow,
                   borderWidth: 1.5,
-                  borderColor: isPicked ? CLASH.goldBorder : 'rgba(255,255,255,0.12)',
+                  borderColor: isPicked ? FANTASY.primary : FANTASY.borderStrong,
                   alignItems: 'center',
                   justifyContent: 'center',
                 }}
@@ -72,7 +76,7 @@ export function DraftProgressBar({ categories, picks, onLock, locked }: Props): 
                     width: 6,
                     height: 6,
                     borderRadius: 3,
-                    backgroundColor: CLASH.goldBorder,
+                    backgroundColor: FANTASY.primary,
                   }}
                 />
               )}
@@ -96,55 +100,69 @@ export function DraftProgressBar({ categories, picks, onLock, locked }: Props): 
           style={{
             fontSize: 13,
             fontWeight: '700',
-            color: allPicked ? '#4ade80' : 'rgba(255,255,255,0.6)',
+            color: canLock ? FANTASY.positiveDark : FANTASY.inkMuted,
             textAlign: 'center',
             writingDirection: 'rtl',
           }}
         >
-          {allPicked
-            ? 'כל המניות נבחרו — מוכן לנעול!'
-            : `בחרת ${pickedCount}/${total} מניות`}
+          {!allPicked
+            ? `בחרת ${pickedCount}/${total} מניות`
+            : !canLock
+              ? (lockBlockReason ?? 'יש להשלים את ההקצאה')
+              : 'הכל מוכן — לנעול!'}
         </Text>
       </View>
 
-      {/* Progress track */}
+      {/* Progress track — fills right→left for RTL */}
       <View
         style={{
           height: 4,
-          backgroundColor: DUO.border,
+          backgroundColor: FANTASY.surfaceMuted,
           borderRadius: 2,
           overflow: 'hidden',
+          flexDirection: 'row-reverse',
         }}
       >
         <View
           style={{
             height: 4,
             width: `${(pickedCount / total) * 100}%`,
-            backgroundColor: allPicked ? DUO.green : DUO.blue,
+            backgroundColor: allPicked ? FANTASY.gold : FANTASY.primary,
             borderRadius: 2,
           }}
         />
       </View>
 
-      {/* Lock CTA — only shown when all picked */}
+      {/* Lock CTA — only shown when all picked AND lockReady (allocation balanced) */}
       {allPicked && !locked && (
         <Pressable
           onPress={onLock}
+          disabled={!canLock}
           accessibilityRole="button"
           accessibilityLabel="נעל דראפט"
           style={({ pressed }) => ({
-            backgroundColor: pressed ? CLASH.goldLight : CLASH.goldBorder,
+            backgroundColor: !canLock
+              ? FANTASY.surfaceMuted
+              : pressed
+                ? '#fbbf24'
+                : FANTASY.gold,
             borderRadius: 14,
             paddingVertical: 15,
             alignItems: 'center',
-            shadowColor: CLASH.goldGlow,
-            shadowOpacity: 0.8,
-            shadowRadius: 12,
+            shadowColor: canLock ? FANTASY.gold : 'transparent',
+            shadowOpacity: canLock ? 0.5 : 0,
+            shadowRadius: 14,
             shadowOffset: { width: 0, height: 4 },
-            elevation: 8,
+            elevation: canLock ? 8 : 0,
+            opacity: !canLock ? 0.7 : 1,
           })}
         >
-          <Text style={{ fontSize: 16, fontWeight: '900', color: '#000000' }}>
+          <Text style={{
+            fontSize: 16,
+            fontWeight: '900',
+            color: canLock ? '#451a03' : FANTASY.inkFaint,
+            letterSpacing: 0.3,
+          }}>
             🔒 נעל את הדראפט לשבוע!
           </Text>
         </Pressable>
@@ -153,15 +171,15 @@ export function DraftProgressBar({ categories, picks, onLock, locked }: Props): 
       {locked && (
         <View
           style={{
-            backgroundColor: 'rgba(74,222,128,0.1)',
+            backgroundColor: FANTASY.positiveSoft,
             borderRadius: 14,
             paddingVertical: 13,
             alignItems: 'center',
             borderWidth: 1,
-            borderColor: 'rgba(74,222,128,0.3)',
+            borderColor: FANTASY.positiveStroke,
           }}
         >
-          <Text style={{ fontSize: 15, fontWeight: '800', color: '#4ade80' }}>
+          <Text style={{ fontSize: 15, fontWeight: '800', color: FANTASY.positiveDark }}>
             ✅ הדראפט נעול — בהצלחה!
           </Text>
         </View>

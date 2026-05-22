@@ -2,7 +2,7 @@ import React from 'react';
 import { View, Text, Pressable } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import type { FantasyTier, TierConfig } from '../fantasyTypes';
-import { CLASH } from '../../../constants/theme';
+import { LUXE } from '../../../constants/theme';
 
 interface Props {
   config: TierConfig;
@@ -11,21 +11,28 @@ interface Props {
   onSelect: (tier: FantasyTier) => void;
 }
 
-const TIER_GRADIENTS: Record<FantasyTier, readonly [string, string]> = {
-  silver: ['#64748b', '#334155'],
-  gold: ['#d4a017', '#92570a'],
-  diamond: ['#38bdf8', '#0369a1'],
+const TIER_GRADIENTS: Record<FantasyTier, readonly [string, string, string]> = {
+  silver: ['#e2e8f0', '#cbd5e1', '#94a3b8'],
+  gold: ['#fcd34d', '#fbbf24', '#d97706'],
+  diamond: ['#bae6fd', '#7dd3fc', '#0284c7'],
 };
 
 const TIER_GLOW: Record<FantasyTier, string> = {
-  silver: 'rgba(100,116,139,0.4)',
-  gold: 'rgba(212,160,23,0.45)',
-  diamond: 'rgba(56,189,248,0.4)',
+  silver: 'rgba(203,213,225,0.55)',
+  gold: 'rgba(251,191,36,0.55)',
+  diamond: 'rgba(125,211,252,0.55)',
+};
+
+const TIER_INK: Record<FantasyTier, string> = {
+  silver: '#0f172a',
+  gold: '#3b1f00',
+  diamond: '#0a1e3a',
 };
 
 export function TierSelectionCard({ config, selected, disabled, onSelect }: Props): React.ReactElement {
   const gradient = TIER_GRADIENTS[config.id];
   const glow = TIER_GLOW[config.id];
+  const ink = TIER_INK[config.id];
 
   return (
     <Pressable
@@ -61,7 +68,7 @@ export function TierSelectionCard({ config, selected, disabled, onSelect }: Prop
           style={{
             fontSize: 12,
             fontWeight: '900',
-            color: '#ffffff',
+            color: ink,
             writingDirection: 'rtl',
             textAlign: 'center',
           }}
@@ -69,33 +76,68 @@ export function TierSelectionCard({ config, selected, disabled, onSelect }: Prop
         >
           {config.label}
         </Text>
+        {/* Entry cost */}
         <View
           style={{
-            backgroundColor: 'rgba(0,0,0,0.3)',
+            backgroundColor: 'rgba(255,255,255,0.40)',
             borderRadius: 8,
             paddingHorizontal: 8,
             paddingVertical: 4,
             flexDirection: 'row-reverse',
             alignItems: 'center',
             gap: 3,
+            borderWidth: 1,
+            borderColor: 'rgba(255,255,255,0.55)',
           }}
         >
-          <Text style={{ fontSize: 11, color: CLASH.goldLight }}>🪙</Text>
-          <Text style={{ fontSize: 11, fontWeight: '800', color: CLASH.goldLight }}>
+          <Text style={{ fontSize: 11, color: ink }}>🪙</Text>
+          <Text style={{ fontSize: 11, fontWeight: '900', color: ink }}>
             {config.entryCost.toLocaleString('he-IL')}
           </Text>
         </View>
-        {/* Top 5 prize hint */}
-        <Text
-          style={{
-            fontSize: 9,
-            color: 'rgba(255,255,255,0.65)',
-            writingDirection: 'rtl',
-            textAlign: 'center',
-          }}
-        >
-          {'1st: ×' + config.prizeMultipliers[0]}
-        </Text>
+        {/* Top 3 prize breakdown */}
+        <View style={{ gap: 2, marginTop: 2, alignItems: 'center' }}>
+          {[0, 1, 2].map((i) => {
+            const place = i + 1;
+            const coins = Math.round(config.entryCost * config.prizeMultipliers[i]);
+            const diamonds = config.prizeDiamonds[i];
+            const medal = place === 1 ? '🥇' : place === 2 ? '🥈' : '🥉';
+            return (
+              <View
+                key={place}
+                style={{
+                  flexDirection: 'row-reverse',
+                  alignItems: 'center',
+                  gap: 3,
+                }}
+              >
+                <Text style={{ fontSize: 9 }}>{medal}</Text>
+                <Text
+                  style={{
+                    fontSize: 9,
+                    fontWeight: '900',
+                    color: ink,
+                    opacity: 0.85,
+                  }}
+                >
+                  🪙{coins >= 1000 ? `${(coins / 1000).toFixed(coins % 1000 ? 1 : 0)}K` : coins}
+                </Text>
+                {diamonds > 0 && (
+                  <Text
+                    style={{
+                      fontSize: 9,
+                      fontWeight: '900',
+                      color: ink,
+                      opacity: 0.85,
+                    }}
+                  >
+                    💎{diamonds}
+                  </Text>
+                )}
+              </View>
+            );
+          })}
+        </View>
         {selected && (
           <View
             style={{
@@ -108,9 +150,11 @@ export function TierSelectionCard({ config, selected, disabled, onSelect }: Prop
               backgroundColor: '#ffffff',
               alignItems: 'center',
               justifyContent: 'center',
+              borderWidth: 1,
+              borderColor: 'rgba(0,0,0,0.1)',
             }}
           >
-            <Text style={{ fontSize: 10 }}>✓</Text>
+            <Text style={{ fontSize: 10, color: ink }}>✓</Text>
           </View>
         )}
       </LinearGradient>

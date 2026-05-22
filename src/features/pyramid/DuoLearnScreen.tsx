@@ -526,40 +526,10 @@ function ModuleNode({
     ? Math.min(nodeCenter + NODE_SIZE / 2 + 6, CONTENT_W - CHAR_SIZE)
     : Math.max(nodeCenter - NODE_SIZE / 2 - CHAR_SIZE - 6, 0);
 
-  // Daisy decorative sticker — appears sparsely (every 6th non-active node)
-  // on the side OPPOSITE the label, so the path feels alive while scrolling
-  // but at most ~one Daisy is on screen at a time (a typical phone shows
-  // ~4-5 rows). Standard pose on completed nodes (positive vibe), empathic
-  // on locked (gentle "you'll get there" cue). Hidden on the active row to
-  // give Finn focus.
-  const daisyGoesRight = !finnGoesRight;
-  const daisyLeft = daisyGoesRight
-    ? Math.min(nodeCenter + NODE_SIZE / 2 + 6, CONTENT_W - DAISY_DECO_SIZE)
-    : Math.max(nodeCenter - NODE_SIZE / 2 - DAISY_DECO_SIZE - 6, 0);
-  const showDaisyDeco =
-    !showCharacter && state !== "active" && modIndex > 0 && modIndex % 6 === 3;
-  const daisySource = state === "completed" ? DAISY_STANDARD_WEBP : DAISY_EMPATHIC_WEBP;
-
   return (
     <View style={[styles.nodeRow, { height: ROW_HEIGHT }]}>
-      {/* Daisy decorative sticker on non-active nodes — sits opposite the
-          label so it never overlaps copy. Pointer-events:none so it can't
-          steal taps from the node itself. */}
-      {showDaisyDeco && (
-        <View
-          pointerEvents="none"
-          style={[styles.characterWrapper, { left: daisyLeft }]}
-        >
-          <ExpoImage
-            source={daisySource}
-            accessible={false}
-            style={{ width: DAISY_DECO_SIZE, height: DAISY_DECO_SIZE, opacity: state === "locked" ? 0.55 : 1 }}
-            contentFit="contain"
-          />
-        </View>
-      )}
-
-      {/* Finn mascot beside active node */}
+      {/* Captain Shark (Finn) beside the active lesson node — gives the user
+          a guiding companion. Speech bubble floats just above him. */}
       {showCharacter && (
         <>
           <Animated.View
@@ -570,7 +540,6 @@ function ModuleNode({
               <ExpoImage source={FINN_STANDARD} accessible={false} style={{ width: CHAR_SIZE, height: CHAR_SIZE }} contentFit="contain" />
             </View>
           </Animated.View>
-          {/* Speech bubble directly above Finn */}
           <Animated.View
             entering={FadeInDown.delay(200).duration(400)}
             style={[styles.speechBubbleBelow, {

@@ -10,7 +10,7 @@ import {
 } from "../../services/revenueCat";
 import type { CustomerInfo } from "../../services/revenueCat";
 
-export type GatedFeature = "simulator" | "arena" | "chat" | "aiInsights" | "saved_items";
+export type GatedFeature = "simulator" | "arena" | "chat" | "aiInsights" | "saved_items" | "shark-voice";
 
 export const BASIC_LIMITS: Record<GatedFeature, number> = {
   simulator: 3,
@@ -18,7 +18,10 @@ export const BASIC_LIMITS: Record<GatedFeature, number> = {
   chat: 3,
   aiInsights: 0,
   saved_items: 0,
+  "shark-voice": 0,
 };
+
+export const SHARK_VOICE_DAILY_CAP_SECONDS = 600;
 
 /* ------------------------------------------------------------------ */
 /*  Hearts constants                                                   */
@@ -53,10 +56,18 @@ interface SubscriptionState {
   practiceRefillDate: string | null;
   pendingPracticeForHeart: boolean;
 
+  // Shark Voice — 1-on-1 live call (Pro-only, 10 min/day cap)
+  sharkVoiceSecondsToday: number;
+  sharkVoiceResetDate: string | null;
+
   // Selectors
   isPro: () => boolean;
   canAccessFeature: (feature: GatedFeature) => boolean;
   canUse: (feature: GatedFeature) => boolean;
+
+  // Shark Voice selectors
+  getSharkVoiceSecondsRemaining: () => number;
+  canUseSharkVoice: () => boolean;
 
   // Hearts selectors
   getHearts: () => number;
@@ -80,6 +91,9 @@ interface SubscriptionState {
   startPracticeForHeart: () => boolean; // true = under daily limit, flag set
   grantPracticeHeart: () => boolean; // called at lesson completion; +1 heart if flag set
   clearPracticeFlag: () => void; // bail-out if user navigates away
+
+  // Shark Voice actions
+  recordSharkVoiceUsage: (seconds: number) => void;
 
   // Pro actions
   upgradeToPro: () => void;
@@ -113,6 +127,8 @@ function getUsageCount(
     case "aiInsights":
       return 0;
     case "saved_items":
+      return 0;
+    case "shark-voice":
       return 0;
   }
 }
@@ -153,6 +169,10 @@ export const useSubscriptionStore = create<SubscriptionState>()(
       practiceRefillDate: null,
       pendingPracticeForHeart: false,
 
+      // Shark Voice
+      sharkVoiceSecondsToday: 0,
+      sharkVoiceResetDate: null,
+
       // Pro welcome
       hasSeenProWelcome: false,
 
@@ -167,6 +187,7 @@ export const useSubscriptionStore = create<SubscriptionState>()(
         const state = get();
         if (state.isPro()) return true;
         if (feature === "aiInsights") return false;
+        if (feature === "shark-voice") return false;
         return true;
       },
 
@@ -197,6 +218,21 @@ export const useSubscriptionStore = create<SubscriptionState>()(
 
       hasHearts: (): boolean => {
         return get().getHearts() > 0;
+      },
+
+      /* ---- Shark Voice selectors ---- */
+
+      getSharkVoiceSecondsRemaining: (): number => {
+        const state = get();
+        const today = todayISO();
+        const usedToday = state.sharkVoiceResetDate === today ? state.sharkVoiceSecondsToday : 0;
+        return Math.max(0, SHARK_VOICE_DAILY_CAP_SECONDS - usedToday);
+      },
+
+      canUseSharkVoice: (): boolean => {
+        const state = get();
+        if (!state.isPro()) return false;
+        return state.getSharkVoiceSecondsRemaining() > 0;
       },
 
       /* ---- Actions ---- */
@@ -303,6 +339,19 @@ export const useSubscriptionStore = create<SubscriptionState>()(
         set({ pendingPracticeForHeart: false });
       },
 
+      /* ---- Shark Voice actions ---- */
+
+      recordSharkVoiceUsage: (seconds: number) => {
+        if (!Number.isFinite(seconds) || seconds <= 0) return;
+        const today = todayISO();
+        const state = get();
+        const usedToday = state.sharkVoiceResetDate === today ? state.sharkVoiceSecondsToday : 0;
+        set({
+          sharkVoiceSecondsToday: usedToday + seconds,
+          sharkVoiceResetDate: today,
+        });
+      },
+
       /* ---- Pro actions ---- */
 
       upgradeToPro: () => {
@@ -392,7 +441,15 @@ export const useSubscriptionStore = create<SubscriptionState>()(
         state.hearts = MAX_HEARTS;
         state.lastHeartLostAt = null;
       },
-      version: 2,
+      version: 3,
+      migrate: (persisted: unknown, _version: number) => {
+        const safe = (persisted ?? {}) as Record<string, unknown>;
+        return {
+          ...safe,
+          sharkVoiceSecondsToday: 0,
+          sharkVoiceResetDate: null,
+        };
+      },
       storage: createJSONStorage(() => zustandStorage),
       partialize: (state) => ({
         tier: state.tier,
@@ -407,6 +464,8 @@ export const useSubscriptionStore = create<SubscriptionState>()(
         hasSeenProWelcome: state.hasSeenProWelcome,
         practiceRefillsToday: state.practiceRefillsToday,
         practiceRefillDate: state.practiceRefillDate,
+        sharkVoiceSecondsToday: state.sharkVoiceSecondsToday,
+        sharkVoiceResetDate: state.sharkVoiceResetDate,
         // pendingPracticeForHeart intentionally NOT persisted, transient flag
       }),
     }

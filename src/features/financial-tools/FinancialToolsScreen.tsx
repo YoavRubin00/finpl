@@ -1,240 +1,103 @@
-import React from "react";
-import { ScrollView, View, Text, Pressable, StyleSheet } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
-import { useRouter } from "expo-router";
-import Animated, { FadeInDown } from "react-native-reanimated";
-import {
-  FileText,
-  TrendingUp,
-  Rocket,
-  PieChart,
-  LineChart,
-  Wallet,
-  ChevronLeft,
-  Coins,
-  ReceiptText,
-  Home,
-  PiggyBank,
-  type LucideIcon,
-} from "lucide-react-native";
+import React from 'react';
+import { ScrollView, View, Text, StyleSheet } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { LinearGradient } from 'expo-linear-gradient';
+import Animated, { FadeInDown } from 'react-native-reanimated';
+import Svg, { Path } from 'react-native-svg';
 
-import { STITCH } from "../../constants/theme";
-import { tapHaptic } from "../../utils/haptics";
+import { STITCH } from '../../constants/theme';
+import { TOOLS_REGISTRY } from './toolsRegistry';
+import { ToolHubCard } from './components/ToolHubCard';
+import { SectionLabel } from './components/atoms/SectionLabel';
+import { FinTip } from './components/atoms/FinTip';
 
 /**
- * Financial Tools hub — the 6th global tab, anchored rightmost in the RTL
- * bottom tab bar. Surfaces calculators and analyzers that previously lived
- * inside MoreScreen, plus three teaser entries for upcoming features.
+ * Financial Tools hub — the 6th global tab (rightmost in RTL bottom bar).
+ * Stitch design: dark hero stat strip + 2-column grid of ToolHubCards.
+ *
+ * Active tools and coming-soon teasers come from `toolsRegistry.ts` —
+ * adding a new tool is a one-line registry change.
  */
 
-type ToolStatus = "active" | "coming_soon";
-
-interface ToolEntry {
-  key: string;
-  label: string;
-  description: string;
-  Icon: LucideIcon;
-  accentColor: string;
-  status: ToolStatus;
-  /** Route to push when status === 'active'. Ignored for coming-soon entries. */
-  route?: string;
-}
-
-const TOOLS: readonly ToolEntry[] = [
-  {
-    key: "payslip",
-    label: "קריאת תלוש שכר",
-    description: "ניתוח AI של תלוש משכורת עם שארק רואה החשבון",
-    Icon: FileText,
-    accentColor: "#005bb1",
-    status: "active",
-    route: "/payslip-analyzer",
-  },
-  {
-    key: "compound",
-    label: "מחשבון ריבית דריבית",
-    description: "כמה הכסף שלך יגדל לאורך זמן",
-    Icon: TrendingUp,
-    accentColor: "#0891b2",
-    status: "active",
-    route: "/compound-calculator",
-  },
-  {
-    key: "fire",
-    label: "מחשבון FIRE",
-    description: "מסלול לעצמאות כלכלית מוקדמת",
-    Icon: Rocket,
-    accentColor: "#7c3aed",
-    status: "active",
-    route: "/fire-calculator",
-  },
-  {
-    key: "salary-net",
-    label: "שכר ברוטו ↔ נטו",
-    description: "כמה נכנס לך לכיס באמת — מס, ב\"ל, מס בריאות",
-    Icon: Coins,
-    accentColor: "#22c55e",
-    status: "active",
-    route: "/salary-net-calculator",
-  },
-  {
-    key: "tax-refund",
-    label: "החזר מס — כמה מגיע לי?",
-    description: "8 מתוך 10 ישראלים זכאים. ממוצע ₪10,500.",
-    Icon: ReceiptText,
-    accentColor: "#fb923c",
-    status: "active",
-    route: "/tax-refund-calculator",
-  },
-  {
-    key: "mortgage",
-    label: "מחשבון משכנתא",
-    description: "כמה זה יעלה לך באמת — והאם תאושר?",
-    Icon: Home,
-    accentColor: "#6366f1",
-    status: "active",
-    route: "/mortgage-calculator",
-  },
-  {
-    key: "pension-fees",
-    label: "דמי ניהול פנסיה",
-    description: "כמה אבד לך לבית ההשקעות לאורך 40 שנה?",
-    Icon: PiggyBank,
-    accentColor: "#ec4899",
-    status: "active",
-    route: "/pension-fees-comparator",
-  },
-  {
-    key: "portfolio",
-    label: "מנתח תיקי מניות",
-    description: "ניתוח חכם של פיזור והסיכון בתיק",
-    Icon: PieChart,
-    accentColor: "#94a3b8",
-    status: "coming_soon",
-  },
-  {
-    key: "analyst",
-    label: "אנליסט מניות",
-    description: "תחזיות AI על מניות בודדות",
-    Icon: LineChart,
-    accentColor: "#94a3b8",
-    status: "coming_soon",
-  },
-  {
-    key: "cashflow",
-    label: "ניהול תזרים חודשי",
-    description: "מעקב הכנסות והוצאות עם AI",
-    Icon: Wallet,
-    accentColor: "#94a3b8",
-    status: "coming_soon",
-  },
-];
-
-function ToolCard({ tool, index }: { tool: ToolEntry; index: number }) {
-  const router = useRouter();
-  const isComingSoon = tool.status === "coming_soon";
-  const { Icon } = tool;
-
-  const handlePress = () => {
-    if (isComingSoon) {
-      tapHaptic();
-      return;
-    }
-    if (tool.route) {
-      tapHaptic();
-      router.push(tool.route as never);
-    }
-  };
-
-  return (
-    <Animated.View entering={FadeInDown.delay(120 + index * 60).duration(360)}>
-      <Pressable
-        style={[
-          styles.card,
-          isComingSoon && styles.cardDisabled,
-        ]}
-        onPress={handlePress}
-        accessibilityRole="button"
-        accessibilityLabel={tool.label}
-        accessibilityHint={isComingSoon ? "בקרוב — כלי זה עדיין לא זמין" : tool.description}
-        accessibilityState={{ disabled: isComingSoon }}
-      >
-        <View
-          style={[
-            styles.iconCircle,
-            { backgroundColor: isComingSoon ? "#e2e8f0" : tool.accentColor },
-          ]}
-        >
-          <Icon size={26} color={isComingSoon ? "#94a3b8" : "#ffffff"} strokeWidth={2.4} />
-        </View>
-
-        <View style={styles.cardBody}>
-          <View style={styles.cardHeaderRow}>
-            <Text
-              style={[
-                styles.cardLabel,
-                isComingSoon && styles.cardLabelDisabled,
-              ]}
-            >
-              {tool.label}
-            </Text>
-            {isComingSoon ? (
-              <View style={styles.comingSoonChip}>
-                <Text style={styles.comingSoonChipText}>בקרוב</Text>
-              </View>
-            ) : null}
-          </View>
-          <Text
-            style={[
-              styles.cardDescription,
-              isComingSoon && styles.cardDescriptionDisabled,
-            ]}
-            numberOfLines={2}
-          >
-            {tool.description}
-          </Text>
-        </View>
-
-        {!isComingSoon ? (
-          <ChevronLeft size={20} color={STITCH.onSurfaceVariant} strokeWidth={2.4} />
-        ) : null}
-      </Pressable>
-    </Animated.View>
-  );
-}
-
 export function FinancialToolsScreen(): React.ReactElement {
+  const activeCount = TOOLS_REGISTRY.filter((t) => t.status === 'active').length;
+  const comingCount = TOOLS_REGISTRY.length - activeCount;
+
   return (
-    <SafeAreaView style={styles.safe} edges={["top"]}>
+    <SafeAreaView style={styles.safe} edges={['top']}>
+      {/* Header — title centered; counter floats top-right as a corner chip. */}
       <View style={styles.header}>
-        <View style={styles.headerIconWrap}>
-          <Text style={styles.headerEmoji}>🧰</Text>
-        </View>
-        <View style={{ flex: 1 }}>
+        <Text style={styles.headerCounter}>
+          {activeCount} כלים · {comingCount} בדרך
+        </Text>
+        <View style={styles.headerCenter}>
+          <View style={styles.headerIconWrap}>
+            <Text style={styles.headerEmoji}>🧰</Text>
+          </View>
           <Text accessibilityRole="header" style={styles.headerTitle}>
             כלים פיננסיים
           </Text>
-          <Text style={styles.headerSubtitle}>
-            מחשבונים ומנתחים לקבלת החלטות חכמות
-          </Text>
+          <Text style={styles.headerSubtitle}>החלטות חכמות בנתונים אמיתיים</Text>
         </View>
       </View>
 
       <ScrollView
-        contentContainerStyle={styles.scrollContent}
+        contentContainerStyle={styles.scroll}
         showsVerticalScrollIndicator={false}
       >
-        {TOOLS.map((tool, i) => (
-          <ToolCard key={tool.key} tool={tool} index={i} />
-        ))}
+        <HeroStatStrip />
 
-        <View style={styles.footer}>
-          <Text style={styles.footerText}>
-            עוד כלים בדרך — נשמח לשמוע אילו כלים יעזרו לכם הכי הרבה.
-          </Text>
+        <SectionLabel>כל הכלים</SectionLabel>
+
+        <View style={styles.grid}>
+          {TOOLS_REGISTRY.map((tool, i) => (
+            <ToolHubCard key={tool.key} tool={tool} index={i} />
+          ))}
         </View>
+
+        <FinTip
+          kind="tip"
+          text="כל כלי שתסיים נותן XP — סיימת את כולם? פותחת לך מערכת פיננסית מלאה."
+        />
       </ScrollView>
     </SafeAreaView>
+  );
+}
+
+/**
+ * Dark gradient hero strip showing aggregate worth (mock value for now —
+ * later wired to a real net-worth store). Reinforces the "premium intel"
+ * positioning of the tools section.
+ */
+function HeroStatStrip(): React.ReactElement {
+  return (
+    <Animated.View entering={FadeInDown.duration(360)}>
+      <LinearGradient
+        colors={[STITCH.premiumDarkBg, STITCH.premiumDarkSurface, STITCH.premiumDarkAccent]}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={styles.hero}
+      >
+        <View style={styles.heroHalo} pointerEvents="none" />
+
+        <View style={styles.heroRow}>
+          <View style={styles.heroBadge}>
+            <Svg width={12} height={12} viewBox="0 0 24 24">
+              <Path
+                d="M12 2 L13.5 10.5 L22 12 L13.5 13.5 L12 22 L10.5 13.5 L2 12 L10.5 10.5 Z"
+                fill={STITCH.tertiaryGoldBright}
+              />
+            </Svg>
+            <Text style={styles.heroBadgeText}>FIN ENGINE</Text>
+          </View>
+          <View style={styles.heroRight}>
+            <Text style={styles.heroLabel}>שווי נקי משוער</Text>
+            <Text style={styles.heroValue}>₪128,450</Text>
+            <Text style={styles.heroDelta}>↗ +4.2% החודש</Text>
+          </View>
+        </View>
+      </LinearGradient>
+    </Animated.View>
   );
 }
 
@@ -244,124 +107,140 @@ const styles = StyleSheet.create({
     backgroundColor: STITCH.background,
   },
   header: {
-    backgroundColor: "#ffffff",
+    backgroundColor: STITCH.surfaceLowest,
     paddingHorizontal: 16,
-    paddingTop: 14,
+    paddingTop: 16,
     paddingBottom: 14,
     borderBottomWidth: 1,
     borderBottomColor: STITCH.surfaceHighest,
-    flexDirection: "row-reverse",
-    alignItems: "center",
-    gap: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    position: 'relative',
+  },
+  headerCenter: {
+    alignItems: 'center',
+    gap: 6,
+  },
+  headerCounter: {
+    position: 'absolute',
+    top: 14,
+    right: 12,
+    fontSize: 10,
+    fontWeight: '800',
+    color: STITCH.onSurfaceVariant,
+    letterSpacing: 0.4,
+    backgroundColor: STITCH.surfaceLow,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 999,
+    writingDirection: 'rtl',
   },
   headerIconWrap: {
-    width: 42,
-    height: 42,
-    borderRadius: 21,
-    backgroundColor: "#e0f2fe",
-    alignItems: "center",
-    justifyContent: "center",
+    width: 44,
+    height: 44,
+    borderRadius: 14,
+    backgroundColor: '#e0f2fe',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: '#bae6fd',
   },
-  headerEmoji: {
-    fontSize: 22,
-  },
+  headerEmoji: { fontSize: 22 },
   headerTitle: {
-    fontSize: 22,
-    fontWeight: "900",
+    fontSize: 20,
+    fontWeight: '900',
     color: STITCH.onSurface,
-    writingDirection: "rtl",
-    textAlign: "right",
+    writingDirection: 'rtl',
+    textAlign: 'center',
     letterSpacing: -0.3,
   },
   headerSubtitle: {
     fontSize: 12,
     color: STITCH.onSurfaceVariant,
-    writingDirection: "rtl",
-    textAlign: "right",
-    marginTop: 1,
+    writingDirection: 'rtl',
+    textAlign: 'center',
+    fontWeight: '600',
   },
-  scrollContent: {
-    paddingTop: 16,
-    paddingHorizontal: 16,
+  scroll: {
+    padding: 16,
     paddingBottom: 120,
-    gap: 12,
-  },
-  card: {
-    flexDirection: "row-reverse",
-    alignItems: "center",
-    backgroundColor: "#ffffff",
-    borderRadius: 16,
-    padding: 14,
     gap: 14,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.06,
-    shadowRadius: 8,
-    elevation: 3,
-    borderWidth: 1,
-    borderColor: STITCH.surfaceHighest,
   },
-  cardDisabled: {
-    opacity: 0.6,
-    backgroundColor: "#f8fafc",
+
+  // Hero stat strip
+  hero: {
+    borderRadius: 20,
+    paddingHorizontal: 16,
+    paddingVertical: 16,
+    overflow: 'hidden',
+    shadowColor: STITCH.premiumDarkBg,
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.3,
+    shadowRadius: 16,
+    elevation: 6,
   },
-  iconCircle: {
-    width: 52,
-    height: 52,
-    borderRadius: 14,
-    alignItems: "center",
-    justifyContent: "center",
+  heroHalo: {
+    position: 'absolute',
+    top: -30,
+    left: -30,
+    width: 130,
+    height: 130,
+    borderRadius: 130,
+    backgroundColor: 'rgba(233,196,0,0.18)',
   },
-  cardBody: {
-    flex: 1,
-    gap: 4,
+  heroRow: {
+    flexDirection: 'row-reverse',
+    alignItems: 'center',
+    justifyContent: 'space-between',
   },
-  cardHeaderRow: {
-    flexDirection: "row-reverse",
-    alignItems: "center",
-    gap: 8,
+  heroRight: {
+    alignItems: 'flex-end',
   },
-  cardLabel: {
-    fontSize: 15,
-    fontWeight: "800",
-    color: STITCH.onSurface,
-    writingDirection: "rtl",
-    textAlign: "right",
-    flexShrink: 1,
-  },
-  cardLabelDisabled: {
-    color: STITCH.onSurfaceVariant,
-  },
-  cardDescription: {
-    fontSize: 12,
-    color: STITCH.onSurfaceVariant,
-    writingDirection: "rtl",
-    textAlign: "right",
-    lineHeight: 17,
-  },
-  cardDescriptionDisabled: {
-    color: "#94a3b8",
-  },
-  comingSoonChip: {
-    backgroundColor: "#cbd5e1",
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: 8,
-  },
-  comingSoonChipText: {
+  heroLabel: {
     fontSize: 10,
-    fontWeight: "800",
-    color: "#475569",
-    writingDirection: "rtl",
+    fontWeight: '800',
+    color: STITCH.premiumDarkText,
+    letterSpacing: 0.4,
+    writingDirection: 'rtl',
   },
-  footer: {
-    marginTop: 12,
-    paddingHorizontal: 8,
+  heroValue: {
+    fontSize: 26,
+    fontWeight: '900',
+    color: STITCH.tertiaryGoldBright,
+    letterSpacing: -0.5,
+    marginTop: 2,
+    fontVariant: ['tabular-nums'],
+    writingDirection: 'rtl',
   },
-  footerText: {
-    fontSize: 11,
-    color: STITCH.onSurfaceVariant,
-    textAlign: "center",
-    writingDirection: "rtl",
+  heroDelta: {
+    fontSize: 10,
+    fontWeight: '800',
+    color: '#86efac',
+    marginTop: 2,
+    writingDirection: 'rtl',
+  },
+  heroBadge: {
+    flexDirection: 'row-reverse',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 999,
+    backgroundColor: 'rgba(233,196,0,0.18)',
+    borderWidth: 1,
+    borderColor: 'rgba(233,196,0,0.4)',
+  },
+  heroBadgeText: {
+    fontSize: 9,
+    fontWeight: '900',
+    color: STITCH.tertiaryGoldBright,
+    letterSpacing: 0.6,
+  },
+
+  // Grid
+  grid: {
+    flexDirection: 'row-reverse',
+    flexWrap: 'wrap',
+    gap: 10,
   },
 });

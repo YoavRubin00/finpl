@@ -1,6 +1,9 @@
 import React from 'react';
 import { View, Text, Pressable } from 'react-native';
-import { CLASH } from '../../../constants/theme';
+import { Image as ExpoImage } from 'expo-image';
+import { LUXE } from '../../../constants/theme';
+import { FINN_TABLET } from '../../retention-loops/finnMascotConfig';
+import { GoldCoinIcon } from '../../../components/ui/GoldCoinIcon';
 import type { DraftStock } from '../fantasyTypes';
 
 interface Props {
@@ -8,6 +11,10 @@ interface Props {
   isPicked: boolean;
   onPick: () => void;
   onAnalysis: () => void;
+}
+
+function formatPriceAmount(price: number): string {
+  return price.toLocaleString('en-US', { maximumFractionDigits: 2 });
 }
 
 export function StockDraftCard({ stock, isPicked, onPick, onAnalysis }: Props): React.ReactElement {
@@ -24,18 +31,18 @@ export function StockDraftCard({ stock, isPicked, onPick, onAnalysis }: Props): 
         margin: 5,
         borderRadius: 16,
         borderWidth: isPicked ? 2 : 1,
-        borderColor: isPicked ? CLASH.goldBorder : 'rgba(255,255,255,0.12)',
+        borderColor: isPicked ? LUXE.gold : LUXE.borderSubtle,
         backgroundColor: isPicked
-          ? 'rgba(212,160,23,0.12)'
+          ? 'rgba(251,191,36,0.12)'
           : pressed
-          ? 'rgba(255,255,255,0.07)'
-          : 'rgba(255,255,255,0.04)',
+          ? LUXE.surfaceCardHi
+          : LUXE.surfaceCard,
         overflow: 'hidden',
-        shadowColor: isPicked ? CLASH.goldGlow : 'transparent',
-        shadowOpacity: isPicked ? 1 : 0,
-        shadowRadius: 10,
-        shadowOffset: { width: 0, height: 2 },
-        elevation: isPicked ? 6 : 1,
+        shadowColor: isPicked ? LUXE.gold : 'transparent',
+        shadowOpacity: isPicked ? 0.45 : 0,
+        shadowRadius: 14,
+        shadowOffset: { width: 0, height: 4 },
+        elevation: isPicked ? 8 : 1,
       })}
     >
       {/* Picked overlay indicator */}
@@ -48,13 +55,13 @@ export function StockDraftCard({ stock, isPicked, onPick, onAnalysis }: Props): 
             width: 22,
             height: 22,
             borderRadius: 11,
-            backgroundColor: CLASH.goldBorder,
+            backgroundColor: LUXE.gold,
             alignItems: 'center',
             justifyContent: 'center',
             zIndex: 1,
           }}
         >
-          <Text style={{ fontSize: 11, fontWeight: '900', color: '#000' }}>✓</Text>
+          <Text style={{ fontSize: 11, fontWeight: '900', color: LUXE.textOnGold }}>✓</Text>
         </View>
       )}
 
@@ -63,22 +70,22 @@ export function StockDraftCard({ stock, isPicked, onPick, onAnalysis }: Props): 
         <View style={{ flexDirection: 'row-reverse', alignItems: 'center', justifyContent: 'space-between' }}>
           <View
             style={{
-              backgroundColor: 'rgba(212,160,23,0.18)',
+              backgroundColor: 'rgba(251,191,36,0.18)',
               borderRadius: 6,
               paddingHorizontal: 7,
               paddingVertical: 2,
               borderWidth: 1,
-              borderColor: CLASH.goldBorder + '50',
+              borderColor: 'rgba(251,191,36,0.45)',
             }}
           >
-            <Text style={{ fontSize: 11, fontWeight: '900', color: CLASH.goldLight }}>
+            <Text style={{ fontSize: 11, fontWeight: '900', color: LUXE.goldLight }}>
               {stock.ticker}
             </Text>
           </View>
           {/* Weekly change chip */}
           <View
             style={{
-              backgroundColor: changePositive ? 'rgba(74,222,128,0.15)' : 'rgba(248,113,113,0.15)',
+              backgroundColor: changePositive ? LUXE.positiveTint : LUXE.negativeTint,
               borderRadius: 6,
               paddingHorizontal: 6,
               paddingVertical: 2,
@@ -88,7 +95,7 @@ export function StockDraftCard({ stock, isPicked, onPick, onAnalysis }: Props): 
               style={{
                 fontSize: 10,
                 fontWeight: '800',
-                color: changePositive ? '#4ade80' : '#f87171',
+                color: changePositive ? LUXE.positive : LUXE.negative,
               }}
             >
               {changePositive ? '+' : ''}{stock.mockWeeklyChange}%
@@ -101,7 +108,7 @@ export function StockDraftCard({ stock, isPicked, onPick, onAnalysis }: Props): 
           style={{
             fontSize: 13,
             fontWeight: '800',
-            color: '#ffffff',
+            color: LUXE.textPrimary,
             writingDirection: 'rtl',
             textAlign: 'right',
           }}
@@ -114,7 +121,7 @@ export function StockDraftCard({ stock, isPicked, onPick, onAnalysis }: Props): 
         <Text
           style={{
             fontSize: 10,
-            color: 'rgba(255,255,255,0.5)',
+            color: LUXE.textFaint,
             writingDirection: 'rtl',
             textAlign: 'right',
           }}
@@ -123,18 +130,28 @@ export function StockDraftCard({ stock, isPicked, onPick, onAnalysis }: Props): 
           {stock.tagline}
         </Text>
 
-        {/* Price */}
-        <Text
+        {/* Price — in-game coins */}
+        <View
           style={{
-            fontSize: 13,
-            fontWeight: '700',
-            color: 'rgba(255,255,255,0.85)',
-            writingDirection: 'rtl',
-            textAlign: 'right',
+            flexDirection: 'row-reverse',
+            alignItems: 'center',
+            gap: 4,
+            alignSelf: 'flex-start',
           }}
         >
-          ${stock.mockPrice.toLocaleString('en-US', { maximumFractionDigits: 2 })}
-        </Text>
+          <GoldCoinIcon size={14} />
+          <Text
+            style={{
+              fontSize: 13,
+              fontWeight: '700',
+              color: 'rgba(255,255,255,0.85)',
+              writingDirection: 'rtl',
+              textAlign: 'right',
+            }}
+          >
+            {formatPriceAmount(stock.mockPrice)}
+          </Text>
+        </View>
 
         {/* Shark analysis button */}
         <Pressable
@@ -143,19 +160,24 @@ export function StockDraftCard({ stock, isPicked, onPick, onAnalysis }: Props): 
             flexDirection: 'row-reverse',
             alignItems: 'center',
             justifyContent: 'center',
-            gap: 4,
-            backgroundColor: pressed ? 'rgba(56,189,248,0.2)' : 'rgba(56,189,248,0.1)',
+            gap: 6,
+            backgroundColor: pressed ? 'rgba(125,211,252,0.22)' : 'rgba(125,211,252,0.10)',
             borderRadius: 8,
             paddingVertical: 7,
             borderWidth: 1,
-            borderColor: 'rgba(56,189,248,0.25)',
+            borderColor: 'rgba(125,211,252,0.32)',
             marginTop: 4,
           })}
           accessibilityRole="button"
           accessibilityLabel={`ניתוח קפטן שארק על ${stock.name}`}
         >
-          <Text style={{ fontSize: 11 }}>🦈</Text>
-          <Text style={{ fontSize: 11, fontWeight: '700', color: '#7dd3fc' }}>
+          <ExpoImage
+            source={FINN_TABLET}
+            style={{ width: 16, height: 16 }}
+            contentFit="contain"
+            accessible={false}
+          />
+          <Text style={{ fontSize: 11, fontWeight: '700', color: LUXE.blueLight }}>
             ניתוח הכריש
           </Text>
         </Pressable>

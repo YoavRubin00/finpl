@@ -13,9 +13,9 @@ import type {
 /**
  * Computes the current competition phase based on the day of week + hour.
  * Week cycle (Israel time, day 0 = Sunday):
- *   Sun 09:00 → Sat 20:00  competition
- *   Thu 09:00 → Sun 09:00  draft (overlaps with competition Thu–Sat)
- *   Sat 20:00 → Thu 09:00  results / pre-draft
+ *   Sat 20:00 → Mon 09:00  draft window (edit portfolio for next week)
+ *   Mon 09:00 → Fri 23:05  competition (live, portfolio locked)
+ *   Fri 23:05 → Sat 20:00  results (claim prizes, leagues settled)
  */
 export function getCompetitionPhase(now: Date = new Date()): CompetitionPhase {
   // ⚠️ DEV OVERRIDE — always return 'draft' so the league can be entered any
@@ -27,28 +27,24 @@ export function getCompetitionPhase(now: Date = new Date()): CompetitionPhase {
   const minute = now.getMinutes();
   const timeDecimal = hour + minute / 60;
 
-  const isSunAfter9 = day === 0 && timeDecimal >= 9;
-  const isMon = day === 1;
+  // ── Draft window: Sat 20:00 → Mon 09:00 ──
+  const isSatAfter20 = day === 6 && timeDecimal >= 20;
+  const isSun = day === 0;
+  const isMonBefore9 = day === 1 && timeDecimal < 9;
+  const inDraftWindow = isSatAfter20 || isSun || isMonBefore9;
+
+  // ── Competition window: Mon 09:00 → Fri 23:05 ──
+  const isMonAfter9 = day === 1 && timeDecimal >= 9;
   const isTue = day === 2;
   const isWed = day === 3;
-  const isThuAfter9 = day === 4 && timeDecimal >= 9;
-  const isFri = day === 5;
+  const isThu = day === 4;
+  const isFriBefore2305 = day === 5 && (hour < 23 || (hour === 23 && minute < 5));
+  const inCompetition = isMonAfter9 || isTue || isWed || isThu || isFriBefore2305;
+
+  // ── Results window: Fri 23:05 → Sat 20:00 ──
+  const isFriAfter2305 = day === 5 && (hour > 23 || (hour === 23 && minute >= 5));
   const isSatBefore20 = day === 6 && timeDecimal < 20;
-  const isSatAfter20 = day === 6 && timeDecimal >= 20;
-  const isSunBefore9 = day === 0 && timeDecimal < 9;
-  const isThuBefore9 = day === 4 && timeDecimal < 9;
-
-  // Draft window: Thu 09:00 → Sun 09:00
-  const inDraftWindow =
-    isThuAfter9 || isFri || isSatBefore20 || isSatAfter20 || isSunBefore9;
-
-  // Competition window: Sun 09:00 → Sat 20:00
-  const inCompetition =
-    isSunAfter9 || isMon || isTue || isWed || isThuBefore9 ||
-    (day === 4 && timeDecimal < 9) || isFri || isSatBefore20;
-
-  // Results: Sat 20:00 → Thu 09:00 (next week)
-  const inResults = isSatAfter20 || isSunBefore9;
+  const inResults = isFriAfter2305 || isSatBefore20;
 
   if (inResults) return 'results';
   if (inDraftWindow) return 'draft';
@@ -67,17 +63,8 @@ export function getCurrentWeekId(now: Date = new Date()): string {
   return `${year}-W${String(week).padStart(2, '0')}`;
 }
 
-/** Next draft open time: upcoming Thursday 09:00 */
+/** Next draft open time: upcoming Saturday 20:00 (edit window opens). */
 export function getNextDraftOpen(now: Date = new Date()): Date {
-  const d = new Date(now);
-  const daysUntilThu = (4 - d.getDay() + 7) % 7 || 7;
-  d.setDate(d.getDate() + daysUntilThu);
-  d.setHours(9, 0, 0, 0);
-  return d;
-}
-
-/** Competition end: upcoming Saturday 20:00 */
-export function getCompetitionEnd(now: Date = new Date()): Date {
   const d = new Date(now);
   const daysUntilSat = (6 - d.getDay() + 7) % 7 || 7;
   d.setDate(d.getDate() + daysUntilSat);
@@ -85,11 +72,20 @@ export function getCompetitionEnd(now: Date = new Date()): Date {
   return d;
 }
 
-/** Draft close: upcoming Sunday 09:00 */
+/** Competition end: upcoming Friday 23:05 (Israel time — when markets close in NY) */
+export function getCompetitionEnd(now: Date = new Date()): Date {
+  const d = new Date(now);
+  const daysUntilFri = (5 - d.getDay() + 7) % 7 || 7;
+  d.setDate(d.getDate() + daysUntilFri);
+  d.setHours(23, 5, 0, 0);
+  return d;
+}
+
+/** Draft close: upcoming Monday 09:00 (edit window closes, competition starts). */
 export function getDraftClose(now: Date = new Date()): Date {
   const d = new Date(now);
-  const daysUntilSun = (7 - d.getDay()) % 7 || 7;
-  d.setDate(d.getDate() + daysUntilSun);
+  const daysUntilMon = (1 - d.getDay() + 7) % 7 || 7;
+  d.setDate(d.getDate() + daysUntilMon);
   d.setHours(9, 0, 0, 0);
   return d;
 }
@@ -104,29 +100,37 @@ export const TIER_CONFIGS: Record<string, TierConfig> = {
     label: 'ליגת הכסף',
     emoji: '🥈',
     entryCost: 1_000,
-    prizeMultipliers: [3, 2, 1.5, 1.2, 1.1],
-    prizeXP: [1000, 500, 300, 150, 100],
+    // 1st: 5× coins (5,000), 2nd: 3× (3,000), 3rd: 2× (2,000), 4th: 1.5×, 5th: 1.2×
+    prizeMultipliers: [5, 3, 2, 1.5, 1.2],
+    prizeXP: [500, 300, 200, 100, 50],
+    // Top 3 also win diamonds
+    prizeDiamonds: [10, 5, 3, 0, 0],
   },
   gold: {
     id: 'gold',
     label: 'ליגת הזהב',
     emoji: '🥇',
     entryCost: 10_000,
-    prizeMultipliers: [3, 2, 1.5, 1.2, 1.1],
-    prizeXP: [1000, 500, 300, 150, 100],
+    // 1st: 5× (50,000), 2nd: 3× (30,000), 3rd: 2× (20,000), 4th: 1.5×, 5th: 1.2×
+    prizeMultipliers: [5, 3, 2, 1.5, 1.2],
+    prizeXP: [2000, 1200, 800, 400, 200],
+    prizeDiamonds: [50, 25, 15, 0, 0],
   },
   diamond: {
     id: 'diamond',
     label: 'ליגת היהלומים',
     emoji: '💎',
     entryCost: 100_000,
-    prizeMultipliers: [3, 2, 1.5, 1.2, 1.1],
-    prizeXP: [1000, 500, 300, 150, 100],
+    // 1st: 5× (500,000), 2nd: 3× (300,000), 3rd: 2× (200,000), 4th: 1.5×, 5th: 1.2×
+    prizeMultipliers: [5, 3, 2, 1.5, 1.2],
+    prizeXP: [5000, 3000, 2000, 1000, 500],
+    prizeDiamonds: [250, 125, 75, 0, 0],
   },
 };
 
 // ---------------------------------------------------------------------------
-// Stock universe — 5 categories × 6 stocks
+// Stock universe — 5 categories
+// tech (6) · spec_growth (6) · energy (6) · israel (10) · crypto (6)
 // ---------------------------------------------------------------------------
 
 export const STOCK_CATEGORIES: StockCategory[] = [
@@ -134,6 +138,9 @@ export const STOCK_CATEGORIES: StockCategory[] = [
     id: 'tech',
     label: 'טכנולוגיה',
     emoji: '🤖',
+    description:
+      'ענקיות הטק שמעצבות את העולם הדיגיטלי — Apple, Nvidia, Google. ' +
+      'יציבות יחסית עם פוטנציאל צמיחה גבוה, חשיפה ישירה למהפכת ה-AI.',
     stocks: [
       {
         ticker: 'AAPL',
@@ -198,69 +205,73 @@ export const STOCK_CATEGORIES: StockCategory[] = [
     ],
   },
   {
-    id: 'banks',
-    label: 'בנקים',
-    emoji: '🏦',
+    id: 'spec_growth',
+    label: 'צמיחה ספקולטיביות',
+    emoji: '🚀',
+    description:
+      'מניות בשלב מוקדם עם פוטנציאל קפיצה אדיר — וגם סיכון גבוה. ' +
+      'חברות שמשנות תעשיות שלמות: אנרגיה גרעינית מודולרית, מחשוב קוונטי, חלל, AI לממשלות. ' +
+      'תנודתיות גבוהה, פוטנציאל עצום — בחר רק אם אתה מוכן לתנודות.',
     stocks: [
       {
-        ticker: 'JPM',
-        name: 'JPMorgan Chase',
-        tagline: 'הבנק הגדול בעולם',
-        categoryId: 'banks',
-        mockPrice: 198.40,
-        mockWeeklyChange: 1.1,
+        ticker: 'OKLO',
+        name: 'Oklo Inc',
+        tagline: 'כורים גרעיניים זעירים — מהפכת ה-AI Energy',
+        categoryId: 'spec_growth',
+        mockPrice: 28.40,
+        mockWeeklyChange: 8.2,
         sharkAnalysis:
-          'ג\'יי-פי-מורגן הוא הבנק החזק ביותר בעולם — $50B+ רווח שנתי, הנהגה מעולה ויציבות בכל תרחיש שוק. סביבת ריביות גבוהות מגדילה הכנסות ריבית. זה ה"Blue Chip" האולטימטיבי בסקטור.',
+          'אוקלו בונה SMR (כורים גרעיניים זעירים) כדי להזין את מרכזי הנתונים של ה-AI. סם אלטמן מסטארטאפ OpenAI יושב ב-board. אישור NRC קרב — אם יגיע, המניה יכולה לטוס. סיכון: ביצוע ולוחות זמנים.',
       },
       {
-        ticker: 'GS',
-        name: 'Goldman Sachs',
-        tagline: 'בנק ההשקעות האגדי',
-        categoryId: 'banks',
-        mockPrice: 453.20,
-        mockWeeklyChange: 2.3,
+        ticker: 'IONQ',
+        name: 'IonQ',
+        tagline: 'חלוץ המחשוב הקוונטי המסחרי',
+        categoryId: 'spec_growth',
+        mockPrice: 42.10,
+        mockWeeklyChange: 6.5,
         sharkAnalysis:
-          'גולדמן סאקס חוזר לשורשים — עסקאות, השקעות וניהול עושר. האסטרטגיה הצרכנית Marcus נגמרה, והמיקוד חזר ל-Trading ו-IB. IPO boom מחכה ברביע הראשון.',
+          'IonQ היא חברת המחשוב הקוונטי הראשונה שנסחרה בבורסה. שותפויות עם AWS, Azure ו-Google Cloud. מחשוב קוונטי עדיין בשלביו המוקדמים, אבל IonQ מובילה בטכנולוגיית trapped-ion. רכבת הרים.',
       },
       {
-        ticker: 'BAC',
-        name: 'Bank of America',
-        tagline: 'בנק אמריקה',
-        categoryId: 'banks',
-        mockPrice: 38.90,
-        mockWeeklyChange: 0.8,
+        ticker: 'RKLB',
+        name: 'Rocket Lab',
+        tagline: 'החלל לפי דרישה',
+        categoryId: 'spec_growth',
+        mockPrice: 24.80,
+        mockWeeklyChange: 4.1,
         sharkAnalysis:
-          'BofA הוא הבנק הקמעוני הגדול בארה"ב עם 67M לקוחות. הכנסות ריבית ייהנו ממדיניות Fed. הסיכון: חשיפה לאגרות חוב ארוכות שנפגעו בעלייה הריבית — אבל זה כבר מתומחר.',
+          'רוקט לאב היא SpaceX הקטנה — שיגורים מסחריים תכופים עם Electron, ובקרוב גם Neutron rocket (כבד יותר). חוזים עם NASA וצבא ארה"ב. עולה במהירות מהוצאה לעבודה לרווחיות.',
       },
       {
-        ticker: 'WFC',
-        name: 'Wells Fargo',
-        tagline: 'הפמיליה הבנקאית',
-        categoryId: 'banks',
-        mockPrice: 54.60,
-        mockWeeklyChange: 1.4,
+        ticker: 'PLTR',
+        name: 'Palantir',
+        tagline: 'מוח ה-AI של ממשלות וחברות',
+        categoryId: 'spec_growth',
+        mockPrice: 67.30,
+        mockWeeklyChange: 3.8,
         sharkAnalysis:
-          'וולס פארגו סיים את ה-asset cap שהוטל עליו ב-2018 — פוטנציאל צמיחה עצום. מנהיג חדש, מיקוד חדש. המניה נסחרת בדיסקאונט על שאר הבנקים הגדולים.',
+          'פלאנטיר מספקת תוכנת AI לפנטגון, CIA וגם לחברות ענק. AIP (Artificial Intelligence Platform) צובר תאוצה במגזר העסקי. תמחור מטורף — אבל הצמיחה האמיתית עוד לפנינו.',
       },
       {
-        ticker: 'MS',
-        name: 'Morgan Stanley',
-        tagline: 'עושי העסקאות',
-        categoryId: 'banks',
-        mockPrice: 97.30,
-        mockWeeklyChange: 1.9,
+        ticker: 'ASTS',
+        name: 'AST SpaceMobile',
+        tagline: 'אינטרנט סלולרי מהחלל',
+        categoryId: 'spec_growth',
+        mockPrice: 31.20,
+        mockWeeklyChange: 9.1,
         sharkAnalysis:
-          'מורגן סטנלי הפך לחברת ניהול עושר מהולה עם Wealth Management מייצר $7B+ הכנסות. E*Trade נותן גישה לשוק הקמעוני. פחות תנודתי מ-Goldman.',
+          'ASTS בונה לוויינים שמדברים ישירות עם הסמארטפון שלך — בלי אנטנה מיוחדת. שותפויות עם AT&T, Verizon ו-Vodafone. אם הטכנולוגיה תעבוד בגדול, זה משנה לתמיד את התקשורת העולמית.',
       },
       {
-        ticker: 'C',
-        name: 'Citigroup',
-        tagline: 'הבנק הגלובלי',
-        categoryId: 'banks',
-        mockPrice: 64.80,
-        mockWeeklyChange: -0.5,
+        ticker: 'SMR',
+        name: 'NuScale Power',
+        tagline: 'אנרגיה גרעינית מודולרית מאושרת NRC',
+        categoryId: 'spec_growth',
+        mockPrice: 22.60,
+        mockWeeklyChange: 5.7,
         sharkAnalysis:
-          'סיטי עובר reorg ארגוני מסיבי — מנכ"לית ג\'יין פרייזר מפשטת את המבנה. המניה נסחרת מתחת לBook Value, מה שמציע פוטנציאל upside אם הרה-ארגון מצליח. high risk, high reward.',
+          'NuScale היא חברת SMR האמריקאית הראשונה שקיבלה אישור עיצוב מ-NRC. הביקוש מצד מרכזי נתונים ל-AI הופך אותה לרלוונטית עכשיו. הסיכון: הפרויקט הראשון בוטל ב-2023 — מחפשים לקוח עוגן.',
       },
     ],
   },
@@ -268,6 +279,9 @@ export const STOCK_CATEGORIES: StockCategory[] = [
     id: 'energy',
     label: 'אנרגיה',
     emoji: '⚡',
+    description:
+      'ענקיות הנפט, הגז והאנרגיה המתחדשת — Exxon, Chevron, NextEra. ' +
+      'דיבידנדים יציבים, רגישות גבוהה למחירי הסחורות הגלובליים.',
     stocks: [
       {
         ticker: 'XOM',
@@ -332,69 +346,123 @@ export const STOCK_CATEGORIES: StockCategory[] = [
     ],
   },
   {
-    id: 'health',
-    label: 'בריאות',
-    emoji: '💊',
+    id: 'israel',
+    label: 'שוק ישראלי',
+    emoji: '🇮🇱',
+    description:
+      '10 המניות הגדולות בת"א-25 — הבורסה של תל אביב. ' +
+      'חברות ישראליות שאתה מכיר מהיומיום: בנקים, תרופות, נדל"ן, ביטחון והייטק. ' +
+      'סיכון נמוך-בינוני, עיגון מקומי, מחירים בשקלים.',
     stocks: [
       {
-        ticker: 'JNJ',
-        name: 'Johnson & Johnson',
-        tagline: 'ענק הבריאות',
-        categoryId: 'health',
-        mockPrice: 145.60,
-        mockWeeklyChange: 0.7,
+        ticker: 'TEVA',
+        name: 'טבע',
+        tagline: 'ענקית הגנריקה הישראלית',
+        categoryId: 'israel',
+        mockPrice: 55.80,
+        mockWeeklyChange: 1.6,
+        currency: '₪',
         sharkAnalysis:
-          'J&J פיצלה את Kenvue (Consumer Health) ועכשיו מתמקדת בתרופות ובציוד רפואי. Darzalex ו-Stelara ממשיכים לצמוח. זה Blue Chip רפואי עם 60+ שנות דיבידנד גדל.',
+          'טבע השלימה turnaround מרשים תחת המנכ"ל ריצ\'רד פרנסיס. AUSTEDO ו-UZEDY (תרופות חדשות) צומחים מהר. החוב ירד משמעותית. אחרי עשור קשה, המניה בדרך חזרה לאהדה.',
       },
       {
-        ticker: 'PFE',
-        name: 'Pfizer',
-        tagline: 'מפתחי החיסון',
-        categoryId: 'health',
-        mockPrice: 28.40,
-        mockWeeklyChange: -1.5,
+        ticker: 'ICL',
+        name: 'כי"ל',
+        tagline: 'מלך האשלג והדשנים העולמי',
+        categoryId: 'israel',
+        mockPrice: 17.20,
+        mockWeeklyChange: 0.9,
+        currency: '₪',
         sharkAnalysis:
-          'פייזר נסחרת קרוב לשפל 10 שנים לאחר ירידת הכנסות קורונה. אבל pipeline חזק — תרופות לסרטן ו-RSV. בתמחור הנוכחי, הסיכוי/סיכון נוטה לטובה. דיבידנד של 6.5% נדיר בסקטור.',
+          'כי"ל היא ספקית אשלג מובילה בעולם — מהמרת ים המלח. ביקוש דשנים תלוי במזון ובאוכלוסייה. מלחמת אוקראינה הפכה את כי"ל לקריטית — היא אחת היחידות שיכולות להחליף את רוסיה.',
       },
       {
-        ticker: 'UNH',
-        name: 'UnitedHealth',
-        tagline: 'ביטוח הבריאות',
-        categoryId: 'health',
-        mockPrice: 512.80,
-        mockWeeklyChange: 1.3,
+        ticker: 'NICE',
+        name: 'נייס',
+        tagline: 'תוכנת השירות שמפעילה את העולם',
+        categoryId: 'israel',
+        mockPrice: 642.50,
+        mockWeeklyChange: 2.3,
+        currency: '₪',
         sharkAnalysis:
-          'UnitedHealth היא חברת ביטוח הבריאות הגדולה בארה"ב עם 50M+ מבוטחים. מרווחי רווח עקביים גם בתקופות אי-ודאות. Optum Health (IT ורפואה ראשונית) מוסיפה stream הכנסות אחר.',
+          'נייס מובילה גלובלית ב-CCaaS (Contact Center as a Service) ו-AI לשירות לקוחות. רוב הכנסותיה במנויים cloud עם גידול חזק. אלקטיב למשקיעים שמחפשים חשיפת SaaS ישראלית עם איכות גלובלית.',
       },
       {
-        ticker: 'ABT',
-        name: 'Abbott',
-        tagline: 'ציוד רפואי',
-        categoryId: 'health',
-        mockPrice: 111.30,
+        ticker: 'ESLT',
+        name: 'אלביט מערכות',
+        tagline: 'החוד של תעשיית הביטחון',
+        categoryId: 'israel',
+        mockPrice: 970.00,
+        mockWeeklyChange: 3.4,
+        currency: '₪',
+        sharkAnalysis:
+          'אלביט נהנית מ-tailwind ביטחוני חסר תקדים — הזמנות שיא בעקבות מלחמות אוקראינה, אירופה והמזה"ת. רשימת הזמנות ל-3+ שנים קדימה. אחת מה-pure plays הטובות ביותר בעולם בענף.',
+      },
+      {
+        ticker: 'POLI',
+        name: 'בנק הפועלים',
+        tagline: 'הבנק הגדול בישראל',
+        categoryId: 'israel',
+        mockPrice: 36.40,
+        mockWeeklyChange: 1.1,
+        currency: '₪',
+        sharkAnalysis:
+          'הפועלים הוא הבנק הגדול בישראל עם נתח שוק עצום. ריביות גבוהות מגדילות את מרווח הריבית. דיבידנד נדיב ויחס הון חזק. שותפות פיננסית יציבה לכלכלה הישראלית.',
+      },
+      {
+        ticker: 'LUMI',
+        name: 'בנק לאומי',
+        tagline: 'הבנק הוותיק והיציב',
+        categoryId: 'israel',
+        mockPrice: 32.10,
         mockWeeklyChange: 1.0,
+        currency: '₪',
         sharkAnalysis:
-          'אבוט היא מנהיגה בציוד סוכרת (FreeStyle Libre) ובאבחון מהיר. Libre בלבד שווה יותר מ-$5B הכנסות שנתיות. הפנייה לניטור רצוף של גלוקוז — שוק שצומח 20%+ בשנה.',
+          'לאומי שני בגודלו אך לעיתים ראשון ברווחיות. ROE עקבי גבוה, חשיפה מאוזנת בין משק הבית לעסקים. ההשקעה ב-Pepper הציבה אותו כמוביל דיגיטל. בנק קלאסי עם DNA חדשני.',
       },
       {
-        ticker: 'MRK',
-        name: 'Merck',
-        tagline: 'חברת התרופות',
-        categoryId: 'health',
-        mockPrice: 128.90,
-        mockWeeklyChange: 2.0,
+        ticker: 'MZTF',
+        name: 'מזרחי טפחות',
+        tagline: 'מלך המשכנתאות הישראלי',
+        categoryId: 'israel',
+        mockPrice: 152.30,
+        mockWeeklyChange: 1.4,
+        currency: '₪',
         sharkAnalysis:
-          'מרק — Keytruda לסרטן הוא התרופה הנמכרת ביותר בעולם ב-2024 עם $25B+ הכנסות. Gardasil לHPV מתרחבת לאסיה. הפטנט של Keytruda פג ב-2028 — שנים של צמיחה לפני כן.',
+          'מזרחי טפחות שולט בשוק המשכנתאות הישראלי. הריבית הגבוהה הגדילה את הכנסות הריבית באופן עקבי. תיק המשכנתאות איכותי עם NPL נמוך. אחד הבנקים הרווחיים ביותר ב-OECD.',
       },
       {
-        ticker: 'LLY',
-        name: 'Eli Lilly',
-        tagline: 'מהפכת הסוכרת והשמנה',
-        categoryId: 'health',
-        mockPrice: 798.50,
-        mockWeeklyChange: 4.2,
+        ticker: 'AZRG',
+        name: 'עזריאלי',
+        tagline: 'אימפריית הקניונים והנדל"ן',
+        categoryId: 'israel',
+        mockPrice: 215.80,
+        mockWeeklyChange: 0.8,
+        currency: '₪',
         sharkAnalysis:
-          'אלי לילי היא הסיפור הגדול ביותר בפארמה — Mounjaro ו-Zepbound (GLP-1) משנות טיפול בסוכרת ובהשמנה. שוק GLP-1 יכול לגדול ל-$100B+ עד 2030. המניה יקרה — אבל הצמיחה מצדיקה.',
+          'עזריאלי מחזיקה בקניונים, משרדים ומרכזי נתונים בישראל. מרכזי הנתונים הם המנוע הצומח החדש — ביקוש מ-AI מצד היפר-סקיילרים. תיק נדל"ן איכותי שמייצר תזרים יציב.',
+      },
+      {
+        ticker: 'ENLT',
+        name: 'אנלייט אנרגיה',
+        tagline: 'האנרגיה המתחדשת של ישראל',
+        categoryId: 'israel',
+        mockPrice: 50.40,
+        mockWeeklyChange: 2.7,
+        currency: '₪',
+        sharkAnalysis:
+          'אנלייט בונה ומפעילה חוות סולאר ורוח באירופה, ישראל וארה"ב. צבר פרויקטים עצום של GW-ים. נהנית מסבסוד וביקוש מתמדים לאנרגיה ירוקה. סיכון: הריבית הגבוהה מייקרת מימון.',
+      },
+      {
+        ticker: 'BEZQ',
+        name: 'בזק',
+        tagline: 'תשתית התקשורת של ישראל',
+        categoryId: 'israel',
+        mockPrice: 5.65,
+        mockWeeklyChange: 0.5,
+        currency: '₪',
+        sharkAnalysis:
+          'בזק היא תשתית הסיב האופטי, הסלולר (פלאפון) והטלוויזיה (yes) של ישראל. רגולציה מקלה אפשרה reorg ארגוני. תזרים מזומנים יציב, דיבידנד אטרקטיבי. הימור defensive על תשתית.',
       },
     ],
   },
@@ -402,6 +470,9 @@ export const STOCK_CATEGORIES: StockCategory[] = [
     id: 'crypto',
     label: 'קריפטו',
     emoji: '₿',
+    description:
+      'מטבעות דיגיטליים — ביטקוין, אית\'ריום, סולנה. ' +
+      'נכס חדש לחלוטין עם תנודתיות גבוהה — סוף שבוע יכול להזיז 10%+.',
     stocks: [
       {
         ticker: 'BTC',
@@ -528,7 +599,7 @@ export function getWeeklyMissions(weekId: string): WeeklyMission[] {
       id: 'mission-diverse',
       description: r > 0.5
         ? 'בחר מניה מקטגוריית האנרגיה'
-        : 'בחר מניה מקטגוריית הבריאות',
+        : 'בחר מניה מהשוק הישראלי',
       bonusXP: 100,
       completed: false,
     },
