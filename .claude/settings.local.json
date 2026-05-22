@@ -77,7 +77,8 @@
       "mcp__claude_ai_higgsfield__job_display",
       "Skill(יפיופי)",
       "Skill(יפיופי:*)",
-      "PowerShell($pidcheck = \\(Get-NetTCPConnection -LocalPort 8081 -ErrorAction SilentlyContinue | Select-Object -First 1\\).OwningProcess; if \\($pidcheck\\) { \"Metro on 8081 still running PID=$pidcheck\" } else { \"Nothing on 8081 - Metro stopped\" })"
+      "PowerShell($pidcheck = \\(Get-NetTCPConnection -LocalPort 8081 -ErrorAction SilentlyContinue | Select-Object -First 1\\).OwningProcess; if \\($pidcheck\\) { \"Metro on 8081 still running PID=$pidcheck\" } else { \"Nothing on 8081 - Metro stopped\" })",
+      "mcp__claude_ai_PostHog__exec"
     ],
     "additionalDirectories": [
       "\\tmp",
