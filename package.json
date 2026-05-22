@@ -8,6 +8,7 @@
     "ios": "expo start --ios",
     "web": "expo start --web",
     "dev:local": "node scripts/dev-local.mjs && concurrently -k -n API,WEB -c blue,green \"vercel dev --listen 3000\" \"expo start --web\"",
+    "db:migrate:local": "node scripts/migrate-local.mjs",
     "typecheck": "tsc --noEmit",
     "share": "eas update --branch preview --message 'update'",
     "export:content": "tsx scripts/export-content.ts",

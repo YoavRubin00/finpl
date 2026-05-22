@@ -43,6 +43,7 @@ scripts/*
 !scripts/test-*.ts
 # Exception: local dev launcher guard
 !scripts/dev-local.mjs
+!scripts/migrate-local.mjs
 notebooklm-py/
 
 # Local scratch folders for one-shot asset generation pipelines
