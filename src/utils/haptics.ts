@@ -8,6 +8,14 @@ export function tapHaptic(): void {
 }
 
 /**
+ * Subtle "tick" — use for continuous changes (drag-to-reorder, picker scrolling,
+ * slider snapping). Softer than tapHaptic and designed for high-frequency calls.
+ */
+export function selectionHaptic(): void {
+  Haptics.selectionAsync();
+}
+
+/**
  * Success notification — use when XP/Coins are earned.
  */
 export function successHaptic(): void {

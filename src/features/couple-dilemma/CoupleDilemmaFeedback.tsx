@@ -55,11 +55,13 @@ export function CoupleDilemmaFeedback({ chosen, onContinue }: Props) {
       {/* Daisy WebP, center — wise = celebration loop, !wise = empathic
           loop. Both are transparent-background animated WebPs bundled
           locally (assets/daisy/webp/) so the feedback shows instantly,
-          no fade-in delay, no remote fetch. */}
+          no fade-in delay, no remote fetch. Celebration uses the full
+          screen width as the "she's the hero" moment; empathic stays
+          compact since unwise feedback shouldn't dominate the screen. */}
       <View style={styles.daisyWrap} pointerEvents="none">
         <ExpoImage
           source={wise ? DAISY_HAPPY_CELEBRATE_WEBP : DAISY_EMPATHIC_WEBP}
-          style={styles.daisy}
+          style={wise ? styles.daisyCelebrate : styles.daisy}
           contentFit="contain"
           accessible={false}
         />
@@ -104,9 +106,12 @@ const styles = StyleSheet.create({
     elevation: 8,
   },
   bubbleWise: {
-    backgroundColor: 'rgba(34,197,94,0.96)',
-    borderColor: 'rgba(255,255,255,0.35)',
-    shadowColor: '#22c55e',
+    // Soft mint-green (Tailwind green-200/300 blend) — feels like a
+    // congratulatory glow rather than a harsh "correct" stamp. The user
+    // already won; the color should reward, not shout.
+    backgroundColor: 'rgba(187,247,208,0.96)',
+    borderColor: 'rgba(255,255,255,0.55)',
+    shadowColor: '#86efac',
   },
   bubbleNotWise: {
     backgroundColor: 'rgba(250,204,21,0.96)',
@@ -120,7 +125,7 @@ const styles = StyleSheet.create({
     textAlign: 'right',
     writingDirection: 'rtl',
   },
-  labelWise: { color: '#052e16' },
+  labelWise: { color: '#065f46' },
   labelNotWise: { color: '#422006' },
   bubbleBody: {
     fontSize: 15,
@@ -129,7 +134,7 @@ const styles = StyleSheet.create({
     textAlign: 'right',
     writingDirection: 'rtl',
   },
-  bodyWise: { color: '#062b15' },
+  bodyWise: { color: '#064e3b' },
   bodyNotWise: { color: '#1f1300' },
 
   daisyWrap: {
@@ -138,13 +143,16 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   daisy: {
-    // Half-screen sticker centered in the daisyWrap (the daisyWrap is
-    // already flex:1 + center-aligned). 46% width keeps her compact —
-    // big enough to read the celebration, small enough that the bubble
-    // and CTA breathe around her.
+    // Empathic/compact: small, centered. Unwise feedback gets a
+    // restrained reaction so the message lands without melodrama.
     width: '46%',
     aspectRatio: 1,
     maxWidth: 220,
+  },
+  daisyCelebrate: {
+    // Wise feedback: hero of the moment but not overwhelming.
+    width: '74%',
+    aspectRatio: 1,
   },
 
   ctaWrap: {

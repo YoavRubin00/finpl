@@ -25,6 +25,14 @@ assets/audio-podcasts/
 assets/audio-couple-dilemmas/
 assets/audio-samples/
 assets/couple/
+# Daisy animation WebPs — uploaded to Vercel Blob 2026-05-22 and referenced
+# by URL from src/features/podcast-segment/daisy-assets.ts. Local files may
+# exist on a developer's machine but should never enter the repo or the
+# native bundle (the app downloads them at runtime from CloudFront/Blob).
+assets/webp/daisy/
+# Podcast studio background PNG — same Vercel Blob pipeline as the Daisy
+# WebPs above.
+assets/images/podcast/
 voices-temp.json
 voices-hebrew*.json
 voices-israeli.json

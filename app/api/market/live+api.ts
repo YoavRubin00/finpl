@@ -20,23 +20,56 @@ const sig = () => {
   return ctrl.signal;
 };
 
+/**
+ * Fetch the latest close + previous-day close from Yahoo Finance for any
+ * 2-letter currency pair (USD/ILS, EUR/ILS, etc.). Yahoo's forex tickers
+ * have the form `USDILS=X`. Two-day range gives us a real changePct so the
+ * UI can show direction + magnitude, instead of a hardcoded zero.
+ */
+async function fetchYahooFxPair(
+  yahooTicker: string,
+  validRange: { min: number; max: number },
+): Promise<{ latest: number; prev: number } | null> {
+  try {
+    const res = await fetch(
+      `https://query1.finance.yahoo.com/v8/finance/chart/${yahooTicker}?interval=1d&range=5d`,
+      { signal: sig() },
+    );
+    if (!res.ok) return null;
+    const json = await res.json() as { chart?: { result?: Array<{ indicators?: { quote?: Array<{ close?: Array<number | null> }> } }> } };
+    const closes = json.chart?.result?.[0]?.indicators?.quote?.[0]?.close ?? [];
+    const cleaned = closes.filter((c): c is number => typeof c === 'number' && isFinite(c) && c > validRange.min && c < validRange.max);
+    if (cleaned.length < 2) return null;
+    return { latest: cleaned[cleaned.length - 1], prev: cleaned[cleaned.length - 2] };
+  } catch {
+    return null;
+  }
+}
+
+function makeFxRateItem(label: string, symbol: string, latest: number, prev: number): RateItem {
+  const changePct = prev > 0 ? ((latest - prev) / prev) * 100 : 0;
+  const direction: RateItem['direction'] = changePct > 0.05 ? 'up' : changePct < -0.05 ? 'down' : 'stable';
+  return {
+    value: `₪${latest.toFixed(2)}`,
+    numericValue: latest,
+    changePct: parseFloat(changePct.toFixed(2)),
+    direction,
+    label,
+    symbol,
+  };
+}
+
 // ── USD / ILS ──────────────────────────────────────────────────────────────
 async function fetchUsdIls(): Promise<RateItem> {
-  // Primary: open.er-api.com (no auth)
+  // Primary: Yahoo (gives us 2-day history → real changePct)
+  const yahoo = await fetchYahooFxPair('USDILS=X', { min: 1, max: 10 });
+  if (yahoo) {
+    return makeFxRateItem('דולר / שקל', '$', yahoo.latest, yahoo.prev);
+  }
+
+  // Secondary: open.er-api.com (current only — no historical, so changePct=0 fallback)
   try {
     const res = await fetch('https://open.er-api.com/v6/latest/USD', { signal: sig() });
-    if (res.ok) {
-      const json = await res.json() as { rates?: Record<string, number> };
-      const rate = Number(json?.rates?.ILS);
-      if (isFinite(rate) && rate > 1 && rate < 10) {
-        return { value: `₪${rate.toFixed(2)}`, numericValue: rate, changePct: 0, direction: 'stable', label: 'דולר / שקל', symbol: '$' };
-      }
-    }
-  } catch { /* fall through */ }
-
-  // Secondary: exchangerate.host
-  try {
-    const res = await fetch('https://api.exchangerate.host/latest?base=USD&symbols=ILS', { signal: sig() });
     if (res.ok) {
       const json = await res.json() as { rates?: Record<string, number> };
       const rate = Number(json?.rates?.ILS);
@@ -51,19 +84,13 @@ async function fetchUsdIls(): Promise<RateItem> {
 
 // ── EUR / ILS ──────────────────────────────────────────────────────────────
 async function fetchEurIls(): Promise<RateItem> {
-  try {
-    const res = await fetch('https://open.er-api.com/v6/latest/EUR', { signal: sig() });
-    if (res.ok) {
-      const json = await res.json() as { rates?: Record<string, number> };
-      const rate = Number(json?.rates?.ILS);
-      if (isFinite(rate) && rate > 1 && rate < 15) {
-        return { value: `₪${rate.toFixed(2)}`, numericValue: rate, changePct: 0, direction: 'stable', label: 'יורו / שקל', symbol: '€' };
-      }
-    }
-  } catch { /* fall through */ }
+  const yahoo = await fetchYahooFxPair('EURILS=X', { min: 1, max: 15 });
+  if (yahoo) {
+    return makeFxRateItem('יורו / שקל', '€', yahoo.latest, yahoo.prev);
+  }
 
   try {
-    const res = await fetch('https://api.exchangerate.host/latest?base=EUR&symbols=ILS', { signal: sig() });
+    const res = await fetch('https://open.er-api.com/v6/latest/EUR', { signal: sig() });
     if (res.ok) {
       const json = await res.json() as { rates?: Record<string, number> };
       const rate = Number(json?.rates?.ILS);
@@ -152,8 +179,20 @@ async function fetchInterestRate(): Promise<RateItem> {
           const latest = Number(obs[sorted[0]]?.[0]);
           const prev = sorted.length > 1 ? Number(obs[sorted[1]]?.[0]) : latest;
           if (isFinite(latest)) {
-            const direction: RateItem['direction'] = latest > prev ? 'up' : latest < prev ? 'down' : 'stable';
-            return { value: `${latest.toFixed(2)}%`, numericValue: latest, changePct: 0, direction, label: 'ריבית בנק ישראל', symbol: '🏦' };
+            // Interest rate "change" is best expressed as a delta in PERCENTAGE
+            // POINTS (e.g. 4.50% → 4.75% = +0.25 pp), not as a percent of the rate.
+            // The client renders changePct with a "%" suffix, so we pass the raw
+            // delta and accept that "+0.25%" reads as "+0.25 pp" in the UI.
+            const delta = isFinite(prev) ? latest - prev : 0;
+            const direction: RateItem['direction'] = delta > 0 ? 'up' : delta < 0 ? 'down' : 'stable';
+            return {
+              value: `${latest.toFixed(2)}%`,
+              numericValue: latest,
+              changePct: parseFloat(delta.toFixed(2)),
+              direction,
+              label: 'ריבית בנק ישראל',
+              symbol: '🏦',
+            };
           }
         }
       }

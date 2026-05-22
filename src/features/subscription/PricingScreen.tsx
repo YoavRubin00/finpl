@@ -38,6 +38,7 @@ import { useTheme } from "../../hooks/useTheme";
 import { useMonetizationIntentStore } from "../monetization/useMonetizationIntentStore";
 import { useBandit } from "../bandit/useBandit";
 import { captureEvent } from "../../lib/posthog";
+import { logTrialStart, logPurchase } from "../../utils/fbEvents";
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
 
@@ -227,11 +228,21 @@ export function PricingScreen() {
         return;
       }
 
+      // Initiate-checkout signal — fires BEFORE the native paywall opens, so we
+      // still get attribution even if the user abandons at the system payment sheet.
+      logTrialStart(pkg.packageType);
+
       const customerInfo = await purchasePackage(pkg);
       const isPro = customerInfo.entitlements.active[RC_ENTITLEMENT_PRO] !== undefined;
 
       if (isPro) {
         captureEvent('subscription_purchased', { plan: pkg.packageType, price: pkg.product.priceString });
+        // Standard FB / GA4 purchase event — feeds Meta Ads + Google Ads
+        // optimization (App Campaign for Subscribers, Advantage+ Conversion).
+        logPurchase(pkg.product.price, pkg.product.currencyCode, {
+          plan: pkg.packageType,
+          price_string: pkg.product.priceString,
+        });
         upgradeToPro();
         trackConversion();
         if (!hasSeenProWelcome) {

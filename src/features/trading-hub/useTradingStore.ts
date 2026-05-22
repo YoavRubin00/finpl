@@ -60,6 +60,10 @@ function logTradeFireAndForget(
 interface TradingStore {
   positions: ActivePosition[];
   pendingOrders: PendingLimitOrder[];
+  /** Per-asset previous trading-day close — used by HoldingsScreen to compute
+   *  daily change (separate from lifetime-since-entry P&L). Updated alongside
+   *  current price in HoldingsScreen on mount/refresh. */
+  previousClosesByAsset: Record<string, number>;
 
   /**
    * Open a long (`buy`) or short (`sell`) position. Debits virtual_balance by
@@ -81,6 +85,8 @@ interface TradingStore {
   closePosition: (positionId: string) => ActivePosition | null;
 
   updatePrices: (assetId: string, currentPrice: number) => void;
+  /** Store the previous trading-day close for an asset. Cheap and idempotent. */
+  setPreviousClose: (assetId: string, previousClose: number) => void;
 
   placeLimitOrder: (
     assetId: string,
@@ -111,6 +117,7 @@ export const useTradingStore = create<TradingStore>()(
     (set, get) => ({
       positions: [],
       pendingOrders: [],
+      previousClosesByAsset: {},
 
       openPosition: (assetId, type, entryPrice, amountInvested) => {
         // Affordability gate — same path used everywhere for paper trades.
@@ -188,6 +195,15 @@ export const useTradingStore = create<TradingStore>()(
           },
         );
         return position;
+      },
+
+      setPreviousClose: (assetId, previousClose) => {
+        if (!isFinite(previousClose) || previousClose <= 0) return;
+        const current = get().previousClosesByAsset[assetId];
+        if (current === previousClose) return;
+        set((state) => ({
+          previousClosesByAsset: { ...state.previousClosesByAsset, [assetId]: previousClose },
+        }));
       },
 
       updatePrices: (assetId, currentPrice) => {

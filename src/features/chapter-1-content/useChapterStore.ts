@@ -7,6 +7,7 @@ import { upsertModuleProgress } from "../../db/sync/syncModuleProgress";
 import { useAITelemetryStore } from "../ai-personalization/useAITelemetryStore";
 import { useAdaptiveStore } from "../social/useAdaptiveStore";
 import { captureEvent } from "../../lib/posthog";
+import { logLessonComplete, logModuleComplete, logChapterComplete } from "../../utils/fbEvents";
 
 const MODULE_COMPLETE_XP = 30;
 const MODULE_COMPLETE_COINS = 150;
@@ -83,9 +84,14 @@ export const useChapterStore = create<ChapterState>()(
       },
 
       markBossComplete: (chapterId: string) => {
+        const alreadyComplete = get().bossCompleted[chapterId];
         set((state) => ({
           bossCompleted: { ...state.bossCompleted, [chapterId]: true },
         }));
+        // Fire only on first completion — boss = chapter cleared.
+        if (!alreadyComplete) {
+          logChapterComplete(chapterId);
+        }
       },
 
       setCurrentChapter: (chapterId: string) => {
@@ -115,6 +121,8 @@ export const useChapterStore = create<ChapterState>()(
           is_first_lesson: totalCompletedBefore === 0,
           total_completed: totalCompletedBefore + 1,
         });
+        logLessonComplete(moduleId, currentChapterId);
+        logModuleComplete(moduleId);
 
         set((state) => {
           const prev = state.progress[state.currentChapterId] ?? { ...emptyProgress };
