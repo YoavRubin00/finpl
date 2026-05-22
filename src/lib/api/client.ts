@@ -1,8 +1,7 @@
 // src/lib/api/client.ts
 import { tokenStore } from '../auth/secureStore';
 import { captureEvent } from '../posthog';
-
-const API_BASE = process.env.EXPO_PUBLIC_API_BASE ?? '';
+import { getApiBase } from '../../db/apiBase';
 
 export class ApiError extends Error {
   constructor(
@@ -28,7 +27,8 @@ async function request<TBody, TResponse>(
   const headers: Record<string, string> = { 'Content-Type': 'application/json' };
   if (token) headers.Authorization = `Bearer ${token}`;
 
-  const url = API_BASE ? `${API_BASE}${path}` : path;
+  const base = getApiBase();
+  const url = base ? `${base}${path}` : path;
   const res = await fetch(url, {
     method,
     headers,
