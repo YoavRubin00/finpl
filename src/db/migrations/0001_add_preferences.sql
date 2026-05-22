@@ -1,3 +1,3 @@
 -- Migration: add user_profiles.preferences JSONB column
--- Run manually against Neon via psql or the Neon console.
-ALTER TABLE "user_profiles" ADD COLUMN "preferences" jsonb;
+-- Idempotent — safe to run repeatedly (used by `npm run dev:local`, psql, or Neon console).
+ALTER TABLE "user_profiles" ADD COLUMN IF NOT EXISTS "preferences" jsonb;
