@@ -23,6 +23,10 @@ import { spawn } from 'node:child_process';
 import fs from 'node:fs';
 
 process.env.TS_NODE_SKIP_PROJECT = 'true';
+// vercel dev recompiles each function with ts-node on every request. Skip type
+// checking (transpile only) to roughly halve the per-request latency. Type
+// safety is still enforced by `npm run typecheck` and the Vercel cloud build.
+process.env.TS_NODE_TRANSPILE_ONLY = 'true';
 
 // Load .env.local into this process's env (KEY=VALUE, optional quotes, skip
 // comments/blanks). Values here take precedence so the local test branch wins.
