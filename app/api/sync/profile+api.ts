@@ -5,6 +5,7 @@ import { userProfiles } from '../../../src/db/schema';
 import { enforceRateLimit } from '../_shared/rateLimit';
 import { safeErrorResponse } from '../_shared/safeError';
 import { sanitizeString, clampNumber, validateSyncAuth } from '../_shared/validate';
+import { sendWelcomeEmail } from '../../../api/_shared/sendWelcomeEmail';
 
 function getDb() {
   const url = process.env.DATABASE_URL ?? '';
@@ -137,6 +138,21 @@ export async function POST(request: Request): Promise<Response> {
       .limit(1);
 
     const profile = rows[0] ?? null;
+
+    // Send welcome email on first-ever sync if it hasn't been sent yet. This
+    // covers the email/password registration path which never hits
+    // /api/auth/verify (only Google + Apple OAuth do). sendWelcomeEmail is
+    // idempotent — it flips welcomeEmailSent=true on success — so a second
+    // sync call won't re-send. Awaited because the function catches its own
+    // errors and never throws.
+    if (profile && !profile.welcomeEmailSent && profile.email) {
+      await sendWelcomeEmail({
+        db,
+        userId: profile.id,
+        email: profile.email,
+        displayName: profile.displayName,
+      });
+    }
 
     return Response.json({ ok: true, profile });
   } catch (err: unknown) {
