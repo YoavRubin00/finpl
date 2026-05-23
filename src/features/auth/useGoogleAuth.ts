@@ -43,10 +43,16 @@ export function useGoogleAuth() {
     scheme: "finpl"
   });
 
+  // expo-auth-session's useAuthRequest throws synchronously during render if
+  // the platform-specific clientId is missing — bringing down the whole app.
+  // Fall back to a dummy placeholder so the hook initializes; the actual
+  // sign-in attempt will fail loudly later (handled below) instead of
+  // crashing the root layout at boot.
+  const DUMMY_CLIENT_ID = "missing-client-id.apps.googleusercontent.com";
   const [request, response, promptAsync] = Google.useAuthRequest({
-    webClientId: GOOGLE_WEB_CLIENT_ID,
-    iosClientId: GOOGLE_IOS_CLIENT_ID || undefined,
-    androidClientId: GOOGLE_ANDROID_CLIENT_ID || undefined,
+    webClientId: GOOGLE_WEB_CLIENT_ID || DUMMY_CLIENT_ID,
+    iosClientId: GOOGLE_IOS_CLIENT_ID || DUMMY_CLIENT_ID,
+    androidClientId: GOOGLE_ANDROID_CLIENT_ID || DUMMY_CLIENT_ID,
     scopes: ["profile", "email"],
     redirectUri,
   });

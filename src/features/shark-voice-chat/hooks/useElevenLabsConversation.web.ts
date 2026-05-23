@@ -1,5 +1,11 @@
 import { useCallback, useEffect, useRef } from 'react';
-import { Conversation } from '@elevenlabs/client';
+import { Platform } from 'react-native';
+// `@elevenlabs/client` is a web-only SDK — its top-level code reads
+// `navigator.userAgent.includes(...)` during module init, which throws on
+// React Native (navigator is undefined). Import the type only at compile
+// time; load the runtime via require() behind a Platform guard so the
+// module never evaluates on Android/iOS.
+import type { Conversation as ConversationType } from '@elevenlabs/client';
 import { useSharkVoiceStore } from '../useSharkVoiceStore';
 import { fetchSignedUrl } from '../services/voiceSessionClient';
 
@@ -16,7 +22,7 @@ import { fetchSignedUrl } from '../services/voiceSessionClient';
  * "listening / speaking / thinking" states correctly.
  */
 
-type ConversationHandle = Awaited<ReturnType<typeof Conversation.startSession>>;
+type ConversationHandle = Awaited<ReturnType<typeof ConversationType.startSession>>;
 
 /**
  * Strip Eleven v3 inline emotion tags (e.g. "[happy]", "[warmly]") from the
@@ -67,6 +73,10 @@ export function useElevenLabsConversation() {
 
   const connect = useCallback(async () => {
     if (startingRef.current || conversationRef.current) return;
+    if (Platform.OS !== 'web') {
+      setError('שיחת הקול זמינה כרגע רק בגרסת ה-Web. בקרוב גם במובייל.');
+      return;
+    }
     startingRef.current = true;
     setStatus('connecting');
     setError(null);
@@ -81,6 +91,8 @@ export function useElevenLabsConversation() {
     }
 
     try {
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
+      const { Conversation } = require('@elevenlabs/client') as typeof import('@elevenlabs/client');
       const conv = await Conversation.startSession({
         signedUrl,
         onConnect: () => {
