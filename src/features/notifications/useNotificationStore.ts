@@ -135,6 +135,10 @@ interface NotificationActions {
   dismissBanner: () => void;
   scheduleStreakReminder: (hourOfDay?: number) => Promise<void>;
   scheduleStreakReminderWithCopy: (content: Notifications.NotificationContentInput, hourOfDay?: number) => Promise<void>;
+  /** Schedule the daily Breaking News push at `hourOfDay` (0-23, local TZ).
+   *  Cancels any previous breakingNews schedule so a re-schedule cleanly
+   *  replaces it. No-op when permission isn't granted. */
+  scheduleBreakingNewsDaily: (hourOfDay: number) => Promise<void>;
   scheduleMorningMotivation: (content: Notifications.NotificationContentInput) => Promise<void>;
   scheduleInactivityEscalation: (notifications: Array<{ content: Notifications.NotificationContentInput; delayHours: number }>) => Promise<void>;
   scheduleMarketHook: (content: Notifications.NotificationContentInput) => Promise<void>;
@@ -316,6 +320,25 @@ export const useNotificationStore = create<NotificationState & NotificationActio
 
         set({
           scheduled: [...scheduled, { channelId: "squadChest", identifier }],
+        });
+      },
+
+      scheduleBreakingNewsDaily: async (hourOfDay: number): Promise<void> => {
+        const { permissionGranted, scheduled, cancelChannel } = get();
+        if (!permissionGranted) return;
+        const hour = Math.max(0, Math.min(23, Math.round(hourOfDay)));
+        await cancelChannel("breakingNews");
+        const identifier = await Notifications.scheduleNotificationAsync({
+          content: CONTENT.breakingNews,
+          trigger: {
+            type: Notifications.SchedulableTriggerInputTypes.DAILY,
+            hour,
+            minute: 0,
+            channelId: "breakingNews",
+          },
+        });
+        set({
+          scheduled: [...scheduled, { channelId: "breakingNews", identifier }],
         });
       },
 

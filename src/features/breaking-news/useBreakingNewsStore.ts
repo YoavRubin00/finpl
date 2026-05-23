@@ -33,6 +33,11 @@ interface BreakingNewsState {
   serverTradingDay: string | null;
   /** Per-ticker last day the user opened the card. */
   lastReadDate: Record<string, string>;
+  /** Hour (0-23) in the user's local timezone for the daily push notification.
+   *  Default 9 — paired with the 06:00-UTC cron that generates summaries. The
+   *  cron runs once globally; the local-notification schedule is what shifts
+   *  delivery to whatever hour the user prefers. */
+  notificationHour: number;
   /** Replace the local mirror after a server /list. */
   setItems: (items: CachedTickerSummary[], tradingDay: string) => void;
   /** Local-only add — used optimistically before the server POST completes. */
@@ -41,6 +46,8 @@ interface BreakingNewsState {
   removeLocal: (ticker: string) => void;
   /** Mark a ticker as read for today — clears its red dot. */
   markRead: (ticker: string) => void;
+  /** Update the preferred daily-notification hour (0-23). */
+  setNotificationHour: (hour: number) => void;
   /** True when at least one tracked ticker has a fresher summary than the
    *  user has read. Drives the red dot on the hub card. */
   hasUnreadToday: () => boolean;
@@ -52,6 +59,7 @@ export const useBreakingNewsStore = create<BreakingNewsState>()(
       items: [],
       serverTradingDay: null,
       lastReadDate: {},
+      notificationHour: 9,
 
       setItems: (items, tradingDay) =>
         set({ items, serverTradingDay: tradingDay }),
@@ -88,6 +96,11 @@ export const useBreakingNewsStore = create<BreakingNewsState>()(
           return { lastReadDate: { ...s.lastReadDate, [ticker]: item.tradingDay } };
         }),
 
+      setNotificationHour: (hour) => {
+        const clamped = Math.max(0, Math.min(23, Math.round(hour)));
+        set({ notificationHour: clamped });
+      },
+
       hasUnreadToday: () => {
         const { items, lastReadDate, serverTradingDay } = get();
         if (!serverTradingDay) return false;
@@ -105,6 +118,7 @@ export const useBreakingNewsStore = create<BreakingNewsState>()(
         items: s.items,
         serverTradingDay: s.serverTradingDay,
         lastReadDate: s.lastReadDate,
+        notificationHour: s.notificationHour,
       }),
     },
   ),

@@ -1,7 +1,6 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
-  Alert,
   Pressable,
   RefreshControl,
   ScrollView,
@@ -10,17 +9,19 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Plus, Sparkles } from 'lucide-react-native';
+import { AlertTriangle, Bell, Plus, Sparkles, X } from 'lucide-react-native';
 
 import { STITCH } from '../../constants/theme';
 import { tapHaptic } from '../../utils/haptics';
 import { ToolHeader } from '../financial-tools/components/ToolHeader';
 import { useSubscriptionStore, BREAKING_NEWS_PRO_TICKER_CAP, BASIC_LIMITS } from '../subscription/useSubscriptionStore';
 import { useUpgradeModalStore } from '../../stores/useUpgradeModalStore';
+import { useNotificationStore } from '../notifications/useNotificationStore';
 
 import { BreakingNewsCard } from './components/BreakingNewsCard';
 import { EmptyState } from './components/EmptyState';
 import { TickerPickerSheet } from './components/TickerPickerSheet';
+import { NotificationHourPicker } from './components/NotificationHourPicker';
 import { useBreakingNewsStore } from './useBreakingNewsStore';
 import {
   addTrackedTicker,
@@ -51,13 +52,21 @@ export function BreakingNewsScreen(): React.ReactElement {
   const addLocal = useBreakingNewsStore((s) => s.addLocal);
   const removeLocal = useBreakingNewsStore((s) => s.removeLocal);
   const markRead = useBreakingNewsStore((s) => s.markRead);
+  const notificationHour = useBreakingNewsStore((s) => s.notificationHour);
+  const setNotificationHour = useBreakingNewsStore((s) => s.setNotificationHour);
 
   const isPro = useSubscriptionStore((s) => s.isPro());
   const showUpgrade = useUpgradeModalStore((s) => s.show);
+  const scheduleBreakingNewsDaily = useNotificationStore((s) => s.scheduleBreakingNewsDaily);
+  const notifPermissionGranted = useNotificationStore((s) => s.permissionGranted);
 
   const [refreshing, setRefreshing] = useState(false);
   const [pickerOpen, setPickerOpen] = useState(false);
+  const [hourPickerOpen, setHourPickerOpen] = useState(false);
   const [generating, setGenerating] = useState<string | null>(null);
+  /** Inline error banner — replaces Alert.alert which doesn't render on
+   *  React Native Web. Cleared when the user dismisses it or on next pick. */
+  const [errorBanner, setErrorBanner] = useState<string | null>(null);
 
   const trackedTickers = items.map((i) => i.ticker);
   const limit = isPro ? BREAKING_NEWS_PRO_TICKER_CAP : BASIC_LIMITS['breaking-news'];
@@ -86,6 +95,15 @@ export function BreakingNewsScreen(): React.ReactElement {
     void refresh();
   }, [refresh]);
 
+  // Keep the daily local notification synced with the user's preferred hour.
+  // Runs once on mount and again any time `notificationHour` changes.
+  // No-op when notification permission hasn't been granted yet.
+  useEffect(() => {
+    if (!notifPermissionGranted) return;
+    if (items.length === 0) return; // No tickers → nothing to remind about.
+    void scheduleBreakingNewsDaily(notificationHour);
+  }, [notificationHour, notifPermissionGranted, items.length, scheduleBreakingNewsDaily]);
+
   const handleOpenPicker = () => {
     tapHaptic();
     if (atLimit && !isPro) {
@@ -93,9 +111,8 @@ export function BreakingNewsScreen(): React.ReactElement {
       return;
     }
     if (atLimit && isPro) {
-      Alert.alert(
-        'הגעת למקסימום',
-        `אפשר לעקוב אחרי עד ${BREAKING_NEWS_PRO_TICKER_CAP} מניות בו-זמנית. הסר אחת כדי להוסיף חדשה.`,
+      setErrorBanner(
+        `הגעת למקסימום ${BREAKING_NEWS_PRO_TICKER_CAP} מניות. הסר אחת כדי להוסיף חדשה.`,
       );
       return;
     }
@@ -105,6 +122,7 @@ export function BreakingNewsScreen(): React.ReactElement {
   const handlePickTicker = async (ticker: string) => {
     // eslint-disable-next-line no-console
     console.log('[BreakingNews] handlePickTicker entry:', ticker);
+    setErrorBanner(null);
     setPickerOpen(false);
     // Optimistic: render the placeholder card immediately so the user sees feedback.
     addLocal(ticker);
@@ -116,8 +134,10 @@ export function BreakingNewsScreen(): React.ReactElement {
       await refresh();
     } catch (err) {
       removeLocal(ticker);
-      const message = err instanceof Error ? err.message : 'unknown';
-      Alert.alert('משהו השתבש', `לא הצלחנו להוסיף את ${ticker} — נסה שוב. (${message.slice(0, 80)})`);
+      const message = err instanceof Error ? err.message : String(err);
+      // Inline banner — Alert.alert silently no-ops on React Native Web, so
+      // the user would otherwise see literally nothing.
+      setErrorBanner(`לא הצלחנו להוסיף את ${ticker}: ${message.slice(0, 140)}`);
     } finally {
       setGenerating(null);
     }
@@ -157,13 +177,41 @@ export function BreakingNewsScreen(): React.ReactElement {
           <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={ACCENT} />
         }
       >
+        {errorBanner ? (
+          <View style={styles.errorBanner}>
+            <AlertTriangle size={16} color="#991b1b" strokeWidth={2.4} />
+            <Text style={styles.errorText} allowFontScaling={false}>{errorBanner}</Text>
+            <Pressable
+              onPress={() => setErrorBanner(null)}
+              hitSlop={10}
+              accessibilityRole="button"
+              accessibilityLabel="סגור הודעה"
+            >
+              <X size={16} color="#991b1b" strokeWidth={2.4} />
+            </Pressable>
+          </View>
+        ) : null}
+
         {!hasItems ? (
           <EmptyState onPickFirstTicker={handleOpenPicker} />
         ) : (
           <>
-            <Text style={styles.dayLabel} allowFontScaling={false}>
-              {serverTradingDay ? `סיכום ליום ${serverTradingDay}` : 'הסיכום היומי שלך'}
-            </Text>
+            <View style={styles.dayHeaderRow}>
+              <Text style={styles.dayLabel} allowFontScaling={false}>
+                {serverTradingDay ? `סיכום ליום ${serverTradingDay}` : 'הסיכום היומי שלך'}
+              </Text>
+              <Pressable
+                onPress={() => { tapHaptic(); setHourPickerOpen(true); }}
+                style={({ pressed }) => [styles.hourChip, pressed && { opacity: 0.7 }]}
+                accessibilityRole="button"
+                accessibilityLabel={`התראה יומית בשעה ${notificationHour}:00`}
+              >
+                <Bell size={12} color={STITCH.primary} strokeWidth={2.4} />
+                <Text style={styles.hourChipText} allowFontScaling={false}>
+                  התראה ב-{String(notificationHour).padStart(2, '0')}:00
+                </Text>
+              </Pressable>
+            </View>
 
             {items.map((item) => (
               <BreakingNewsCard
@@ -205,11 +253,21 @@ export function BreakingNewsScreen(): React.ReactElement {
             </Pressable>
 
             <Text style={styles.footerHint} allowFontScaling={false}>
-              סיכומים חדשים נוצרים אוטומטית כל יום ב-9:00 בבוקר. נקבל התראה ברגע שהם מוכנים.
+              סיכומים חדשים נוצרים אוטומטית כל יום ב-9:00 בבוקר. ההתראה שלך תגיע ב-{String(notificationHour).padStart(2, '0')}:00.
             </Text>
           </>
         )}
       </ScrollView>
+
+      <NotificationHourPicker
+        visible={hourPickerOpen}
+        currentHour={notificationHour}
+        onClose={() => setHourPickerOpen(false)}
+        onPick={(h) => {
+          setNotificationHour(h);
+          setHourPickerOpen(false);
+        }}
+      />
 
       <TickerPickerSheet
         visible={pickerOpen}
@@ -231,6 +289,12 @@ const styles = StyleSheet.create({
     paddingBottom: 80,
     gap: 12,
   },
+  dayHeaderRow: {
+    flexDirection: 'row-reverse',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 4,
+  },
   dayLabel: {
     fontSize: 11,
     fontWeight: '900',
@@ -238,7 +302,41 @@ const styles = StyleSheet.create({
     textAlign: 'right',
     writingDirection: 'rtl',
     letterSpacing: 0.4,
-    paddingHorizontal: 4,
+  },
+  hourChip: {
+    flexDirection: 'row-reverse',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 999,
+    backgroundColor: STITCH.primary + '14',
+    borderWidth: 1,
+    borderColor: STITCH.primary + '33',
+  },
+  hourChipText: {
+    fontSize: 11,
+    fontWeight: '800',
+    color: STITCH.primary,
+    writingDirection: 'rtl',
+  },
+  errorBanner: {
+    flexDirection: 'row-reverse',
+    alignItems: 'center',
+    gap: 8,
+    padding: 10,
+    backgroundColor: '#fee2e2',
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: '#fecaca',
+  },
+  errorText: {
+    flex: 1,
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#991b1b',
+    textAlign: 'right',
+    writingDirection: 'rtl',
   },
   generatingRow: {
     flexDirection: 'row-reverse',
