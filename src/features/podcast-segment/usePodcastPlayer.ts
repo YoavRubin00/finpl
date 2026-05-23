@@ -21,6 +21,14 @@ export interface PodcastPlayerState {
   seekForward: (seconds: number) => void;
   /** Set playback speed (e.g. 1.0, 1.2, 1.5). Survives play/pause cycles. */
   setRate: (rate: number) => void;
+  /** True once we've been in `loading` phase for ≥800ms with no progress —
+   *  signal to the UI that it should surface a "טוען..." indicator. */
+  showLoadingHint: boolean;
+  /** True once we've been in `loading` for ≥5s without the audio starting —
+   *  signal to surface a manual "נסה שוב" CTA. */
+  showSlowHint: boolean;
+  /** Force a full re-load of the audio (tears down the player and starts over). */
+  retry: () => void;
 }
 
 /**
@@ -38,6 +46,15 @@ export function usePodcastPlayer(
   const [phase, setPhase] = useState<PodcastPlayerPhase>('loading');
   const [progress, setProgress] = useState(0);
   const [rate, setRateState] = useState(1);
+  // UI hints driven by how long we've been stuck in 'loading'. These are
+  // separate from `phase` because the player can be technically in 'loading'
+  // for short normal startup windows (50–300ms) and we don't want to flash
+  // a spinner on every clip.
+  const [showLoadingHint, setShowLoadingHint] = useState(false);
+  const [showSlowHint, setShowSlowHint] = useState(false);
+  /** Bumped to force the audio-loading useEffect to fully tear down + rebuild
+   *  the AudioPlayer (used by retry()). */
+  const [reloadKey, setReloadKey] = useState(0);
   const playerRef = useRef<AudioPlayer | null>(null);
   // Keep the latest selected rate so we can re-apply it after replay() recreates
   // the playback session (some Android devices reset to 1.0 on seekTo(0) + play).
@@ -61,9 +78,19 @@ export function usePodcastPlayer(
   useEffect(() => {
     setPhase('loading');
     setProgress(0);
+    setShowLoadingHint(false);
+    setShowSlowHint(false);
     hasStartedRef.current = false;
     finishedFiredRef.current = false;
     retriedRef.current = false;
+
+    // UI feedback timers — only surface once load takes longer than expected.
+    const hintTimer = setTimeout(() => {
+      if (!hasStartedRef.current) setShowLoadingHint(true);
+    }, 800);
+    const slowTimer = setTimeout(() => {
+      if (!hasStartedRef.current) setShowSlowHint(true);
+    }, 5000);
 
     const player = createAudioPlayer({ uri: audioUri });
     playerRef.current = player;
@@ -175,6 +202,8 @@ export function usePodcastPlayer(
       clearTimeout(playDelay);
       clearTimeout(retry1);
       clearTimeout(retry2);
+      clearTimeout(hintTimer);
+      clearTimeout(slowTimer);
       if (pausedDebounceRef.current) {
         clearTimeout(pausedDebounceRef.current);
         pausedDebounceRef.current = null;
@@ -189,7 +218,7 @@ export function usePodcastPlayer(
       try { player.remove(); } catch { /* ignore */ }
       playerRef.current = null;
     };
-  }, [audioUri]);
+  }, [audioUri, reloadKey]);
 
   const togglePlayPause = useCallback(() => {
     const p = playerRef.current;
@@ -254,5 +283,13 @@ export function usePodcastPlayer(
     try { p.setPlaybackRate(clamped); } catch { /* ignore */ }
   }, []);
 
-  return { phase, progress, rate, togglePlayPause, replay, seekForward, setRate };
+  const retry = useCallback(() => {
+    // Bumping reloadKey re-runs the audio-loading useEffect, which tears the
+    // current player down (cleanup) and creates a fresh AudioPlayer + listeners
+    // from scratch. This is the cleanest way to recover from a hung load.
+    captureEvent('podcast_audio_retry', { platform: Platform.OS });
+    setReloadKey((k) => k + 1);
+  }, []);
+
+  return { phase, progress, rate, togglePlayPause, replay, seekForward, setRate, showLoadingHint, showSlowHint, retry };
 }

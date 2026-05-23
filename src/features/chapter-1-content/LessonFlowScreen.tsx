@@ -3152,10 +3152,13 @@ export function LessonFlowScreen() {
     if (!mod) return;
     playSound('btn_click_soft_1');
 
-    // Return from checkpoint review → jump back to where we were
+    // Return from checkpoint review → jump back to where we were and
+    // re-open the "is everything OK?" modal so the user can pick another
+    // segment to revisit or click "all clear, let's go" to continue forward.
     if (checkpointReturnIndex !== null) {
       setFlashcardIndex(checkpointReturnIndex);
       setCheckpointReturnIndex(null);
+      setShowMidCheckpoint(true);
       return;
     }
 

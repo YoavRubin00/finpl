@@ -6,6 +6,7 @@ import {
   Pressable,
   Dimensions,
   ScrollView,
+  ActivityIndicator,
 } from 'react-native';
 import { Image as ExpoImage } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -194,7 +195,7 @@ function Waveform({ progress, active }: { progress: number; active: boolean }) {
 function PodcastListenStage({ podcast, onContinue }: ListenStageProps) {
   const insets = useSafeAreaInsets();
   const { playSound } = useSoundEffect();
-  const { phase, progress, rate, togglePlayPause, seekForward, replay, setRate } = usePodcastPlayer(
+  const { phase, progress, rate, togglePlayPause, seekForward, replay, setRate, showLoadingHint, showSlowHint, retry } = usePodcastPlayer(
     podcast.audio.uri,
     () => {
       // Audio naturally finished — celebrate with haptic but DO NOT
@@ -669,6 +670,28 @@ function PodcastListenStage({ podcast, onContinue }: ListenStageProps) {
       {isPaused ? (
         <Animated.View entering={FadeIn.duration(200)} style={styles.pausedBadge}>
           <Text style={styles.pausedBadgeText}>מושהה</Text>
+        </Animated.View>
+      ) : null}
+
+      {/* Loading hint — shown after 800ms of audio not starting. Replaces the
+          frozen-UI rage-click pattern (PostHog: 80% of player rage-clicks fire
+          during this exact window). showSlowHint adds a retry CTA after 5s. */}
+      {phase === 'loading' && showLoadingHint ? (
+        <Animated.View entering={FadeIn.duration(200)} style={styles.loadingOverlay}>
+          <ActivityIndicator size="small" color="#0284c7" />
+          <Text style={styles.loadingOverlayText}>
+            {showSlowHint ? 'טעינה איטית' : 'טוען…'}
+          </Text>
+          {showSlowHint ? (
+            <Pressable
+              onPress={() => { tapHaptic(); retry(); }}
+              accessibilityRole="button"
+              accessibilityLabel="נסה לטעון שוב"
+              style={({ pressed }) => [styles.loadingRetryBtn, pressed && { opacity: 0.85 }]}
+            >
+              <Text style={styles.loadingRetryBtnText}>נסה שוב</Text>
+            </Pressable>
+          ) : null}
         </Animated.View>
       ) : null}
     </View>
@@ -1269,6 +1292,46 @@ const styles = StyleSheet.create({
     color: '#ffffff',
     fontSize: 16,
     fontWeight: '800',
+  },
+
+  loadingOverlay: {
+    position: 'absolute',
+    top: '40%',
+    alignSelf: 'center',
+    flexDirection: 'row-reverse',
+    alignItems: 'center',
+    gap: 10,
+    backgroundColor: 'rgba(255,255,255,0.96)',
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: 'rgba(14,165,233,0.30)',
+    shadowColor: '#0891b2',
+    shadowOpacity: 0.12,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 4,
+  },
+  loadingOverlayText: {
+    color: '#0369a1',
+    fontSize: 13,
+    fontWeight: '800',
+    writingDirection: 'rtl',
+  },
+  loadingRetryBtn: {
+    backgroundColor: '#0ea5e9',
+    borderRadius: 999,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderBottomWidth: 2,
+    borderBottomColor: '#0284c7',
+  },
+  loadingRetryBtnText: {
+    color: '#ffffff',
+    fontSize: 12,
+    fontWeight: '900',
+    writingDirection: 'rtl',
   },
 
   pausedBadge: {

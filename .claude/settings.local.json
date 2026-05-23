@@ -85,7 +85,10 @@
       "Bash(curl -sS -X PATCH https://api.elevenlabs.io/v1/convai/agents/agent_5801ks7nx4mqe2ctvy0d0fbp5v02 -H 'xi-api-key: sk_bfa849564e04d15b2bc10a9f68385745dda80b938ddc76bd' -H 'Content-Type: application/json' --data '{\"conversation_config\":{\"tts\":{\"voice_id\":\"kmaX87Elkhr17lXoSFOQ\",\"model_id\":\"eleven_v3_conversational\"}}}')",
       "Bash(curl -sS -o /tmp/shark-harvard.png \"https://d8j0ntlcm91z4.cloudfront.net/user_3Ag7CTqAcygcnLQdO6PuD3qQkb9/hf_20260523_000635_8be83f25-18be-4011-831a-55af6123e1b2.png\")",
       "Read(//tmp/**)",
-      "mcp__claude_ai_higgsfield__generate_image"
+      "mcp__claude_ai_higgsfield__generate_image",
+      "mcp__claude_ai_PostHog__exec",
+      "Bash(git add *)",
+      "Bash(git commit *)"
     ],
     "additionalDirectories": [
       "\\tmp",
