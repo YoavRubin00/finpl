@@ -93,6 +93,35 @@ export async function fetchQuickAnalysis(req: QuickRequest): Promise<QuickServer
   return (await res.json()) as QuickServerResponse;
 }
 
+interface FollowupRequest {
+  ticker: string;
+  companyName: string;
+  mode: 'quick' | 'deep';
+  analysisJson: string;
+  history: Array<{ role: 'user' | 'shark'; text: string }>;
+  question: string;
+}
+
+interface FollowupResponse {
+  ok: true;
+  answer: string;
+}
+
+export async function fetchFollowupAnswer(req: FollowupRequest): Promise<string> {
+  const base = resolveBase();
+  const res = await fetch(`${base}/api/ai/analyst-followup`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(req),
+  });
+  if (!res.ok) {
+    const detail = await res.text().catch(() => '');
+    throw new Error(`followup failed (${res.status}): ${detail.slice(0, 120)}`);
+  }
+  const json = (await res.json()) as FollowupResponse;
+  return json.answer;
+}
+
 export async function fetchDeepAnalysis(req: DeepRequest): Promise<StockAnalysisDeep> {
   const base = resolveBase();
   const res = await fetch(`${base}/api/ai/stock-analyze-deep`, {

@@ -1,7 +1,8 @@
 import React from 'react';
 import { View, Text, Pressable, Modal, ScrollView, Alert } from 'react-native';
-import { ChevronRight, Trash2, Share2, Zap, Brain } from 'lucide-react-native';
+import { ChevronRight, Trash2, Share2, Zap, Brain, Eye } from 'lucide-react-native';
 import { useAnalystHistoryStore, type HistoryEntry } from '../useAnalystHistoryStore';
+import { useStockAnalystStore } from '../useStockAnalystStore';
 import { shareQuickAnalysis, shareDeepAnalysis } from '../services/shareAnalysis';
 import { RecommendationChip } from './RecommendationChip';
 import { tapHaptic } from '../../../utils/haptics';
@@ -30,6 +31,7 @@ export function HistoryModal({ visible, onClose }: Props): React.ReactElement {
   const entries = useAnalystHistoryStore((s) => s.entries);
   const removeEntry = useAnalystHistoryStore((s) => s.removeEntry);
   const clearAll = useAnalystHistoryStore((s) => s.clearAll);
+  const appendMessage = useStockAnalystStore((s) => s.appendMessage);
 
   const handleShare = async (entry: HistoryEntry) => {
     tapHaptic();
@@ -40,6 +42,19 @@ export function HistoryModal({ visible, onClose }: Props): React.ReactElement {
   const handleDelete = (id: string) => {
     tapHaptic();
     removeEntry(id);
+  };
+
+  /** Re-open a historical analysis: append it to the current feed
+      (matching the shape of useAnalystSubmit) and close the modal. */
+  const handleOpen = (entry: HistoryEntry) => {
+    tapHaptic();
+    const id = `hist-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+    if (entry.mode === 'quick') {
+      appendMessage({ id, kind: 'quick-card', data: entry.data, ts: Date.now() });
+    } else {
+      appendMessage({ id, kind: 'deep-card', data: entry.data, ts: Date.now() });
+    }
+    onClose();
   };
 
   const handleClearAll = () => {
@@ -245,11 +260,11 @@ export function HistoryModal({ visible, onClose }: Props): React.ReactElement {
                   }}
                 >
                   <Pressable
-                    onPress={() => handleShare(entry)}
+                    onPress={() => handleOpen(entry)}
                     accessibilityRole="button"
-                    accessibilityLabel="שתף ניתוח"
+                    accessibilityLabel="פתח את הניתוח המלא"
                     style={{
-                      flex: 1,
+                      flex: 1.4,
                       flexDirection: 'row-reverse',
                       alignItems: 'center',
                       justifyContent: 'center',
@@ -259,8 +274,30 @@ export function HistoryModal({ visible, onClose }: Props): React.ReactElement {
                       borderRadius: 8,
                     }}
                   >
-                    <Share2 size={14} color="#fff" />
-                    <Text style={{ color: '#fff', fontSize: 12, fontWeight: '700' }}>שתף</Text>
+                    <Eye size={14} color="#fff" />
+                    <Text style={{ color: '#fff', fontSize: 12, fontWeight: '800' }}>
+                      פתח ניתוח מלא
+                    </Text>
+                  </Pressable>
+                  <Pressable
+                    onPress={() => handleShare(entry)}
+                    accessibilityRole="button"
+                    accessibilityLabel="שתף ניתוח"
+                    style={{
+                      flex: 1,
+                      flexDirection: 'row-reverse',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: 6,
+                      backgroundColor: 'rgba(255,255,255,0.12)',
+                      paddingVertical: 8,
+                      borderRadius: 8,
+                      borderWidth: 1,
+                      borderColor: 'rgba(255,255,255,0.16)',
+                    }}
+                  >
+                    <Share2 size={13} color="#cbd5e1" />
+                    <Text style={{ color: '#cbd5e1', fontSize: 12, fontWeight: '700' }}>שתף</Text>
                   </Pressable>
                   <Pressable
                     onPress={() => handleDelete(entry.id)}

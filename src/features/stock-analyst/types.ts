@@ -207,4 +207,12 @@ export type AnalystMessage =
   | { id: string; kind: 'missed-opportunity'; data: MissedOpportunity; ts: number }
   | { id: string; kind: 'captain-warning'; data: CaptainWarning; ts: number }
   | { id: string; kind: 'error'; text: string; ts: number }
-  | { id: string; kind: 'loading'; mode: AnalystMode; ticker: string; ts: number };
+  | { id: string; kind: 'loading'; mode: AnalystMode; ticker: string; ts: number }
+  | { id: string; kind: 'followup-question'; text: string; ts: number }
+  | { id: string; kind: 'followup-answer'; text: string; ts: number }
+  | { id: string; kind: 'followup-loading'; ts: number };
+
+export interface FollowupTurn {
+  role: 'user' | 'shark';
+  text: string;
+}

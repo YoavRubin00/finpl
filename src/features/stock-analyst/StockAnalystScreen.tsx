@@ -5,12 +5,15 @@ import {
   ScrollView,
   KeyboardAvoidingView,
   Platform,
+  Pressable,
   StyleSheet,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Image as ExpoImage } from 'expo-image';
+import { Plus } from 'lucide-react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { tapHaptic } from '../../utils/haptics';
 import { useSubscriptionStore } from '../subscription/useSubscriptionStore';
 import { useStockAnalystStore } from './useStockAnalystStore';
 import { useAnalystSubmit } from './hooks/useAnalystSubmit';
@@ -32,6 +35,13 @@ import { FirstLaunchConsentModal } from './components/FirstLaunchConsentModal';
 import { CapExceededAnalystModal } from './components/CapExceededAnalystModal';
 import { HistoryModal } from './components/HistoryModal';
 import { IntroVideo } from './components/IntroVideo';
+import {
+  FollowupAnswerBubble,
+  FollowupLoadingBubble,
+  FollowupQuestionBubble,
+} from './components/FollowupBubbles';
+import { FollowupInput } from './components/FollowupInput';
+import { fetchFollowupAnswer } from './services/stockAnalystClient';
 import { useAnalystHistoryStore } from './useAnalystHistoryStore';
 import type { AnalystMessage } from './types';
 
@@ -48,6 +58,7 @@ export function StockAnalystScreen(): React.ReactElement {
   const setTicker = useStockAnalystStore((s) => s.setTicker);
   const appendMessage = useStockAnalystStore((s) => s.appendMessage);
   const clearSession = useStockAnalystStore((s) => s.clearSession);
+  const removeMessage = useStockAnalystStore((s) => s.removeMessage);
 
   const isPro = useSubscriptionStore((s) => s.isPro);
   const quickRemaining = useSubscriptionStore((s) => s.getAnalystQuickRemaining)();
@@ -94,13 +105,25 @@ export function StockAnalystScreen(): React.ReactElement {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Auto-scroll on new messages
+  // Auto-scroll on new messages.
+  //  - When a quick/deep card lands, scroll to its TOP so the user starts
+  //    reading from the Fundamentals header (not the price-targets footer).
+  //  - Otherwise (user query, captain text, etc.) scroll to end as usual.
+  const cardOffsetsRef = useRef<Map<string, number>>(new Map());
   useEffect(() => {
+    const last = messages[messages.length - 1];
     const t = setTimeout(() => {
+      if (last && (last.kind === 'quick-card' || last.kind === 'deep-card')) {
+        const y = cardOffsetsRef.current.get(last.id);
+        if (typeof y === 'number') {
+          scrollRef.current?.scrollTo({ y: Math.max(0, y - 8), animated: true });
+          return;
+        }
+      }
       scrollRef.current?.scrollToEnd({ animated: true });
-    }, 50);
+    }, 150);
     return () => clearTimeout(t);
-  }, [messages.length, loading]);
+  }, [messages.length, loading, messages]);
 
   const handleConsentAccept = async () => {
     try { await AsyncStorage.setItem(CONSENT_KEY, '1'); } catch { /* non-fatal */ }
@@ -121,15 +144,92 @@ export function StockAnalystScreen(): React.ReactElement {
     const result = await submit('NVDA');
     if (!result.ok && result.reason === 'gate') setCapModalMode(mode);
   };
-  const handleWhatToBuy = () => {
-    setTicker('AAPL');
-  };
   const handlePortfolioStatus = () => {
     setTicker('SPY');
   };
 
   const proLikely = isPro();
   const memoMessages = useMemo(() => messages, [messages]);
+  // Once an analysis card lands, hide the full composer (chips + mode +
+  // horizon + input) and surface a single "ניתוח חדש" CTA. Keeps focus on
+  // the result and prevents accidental re-runs.
+  const hasAnalysis = useMemo(
+    () => messages.some((m) => m.kind === 'quick-card' || m.kind === 'deep-card'),
+    [messages],
+  );
+
+  // Follow-up Q&A — find the latest analysis card and use it as context.
+  const latestAnalysis = useMemo(() => {
+    for (let i = messages.length - 1; i >= 0; i -= 1) {
+      const m = messages[i];
+      if (m.kind === 'quick-card' || m.kind === 'deep-card') return m;
+    }
+    return null;
+  }, [messages]);
+
+  const [followupLoading, setFollowupLoading] = useState(false);
+
+  const handleFollowupSubmit = async (question: string) => {
+    if (!latestAnalysis) return;
+    const qId = `fq-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+    const loadingId = `fl-${Date.now()}`;
+    appendMessage({ id: qId, kind: 'followup-question', text: question, ts: Date.now() });
+    appendMessage({ id: loadingId, kind: 'followup-loading', ts: Date.now() });
+    setFollowupLoading(true);
+
+    try {
+      // Build conversation history from prior follow-up turns
+      const history = messages
+        .filter((m) => m.kind === 'followup-question' || m.kind === 'followup-answer')
+        .map((m) => ({
+          role: m.kind === 'followup-question' ? ('user' as const) : ('shark' as const),
+          text: (m as { text: string }).text,
+        }))
+        .slice(-8);
+
+      const answer = await fetchFollowupAnswer({
+        ticker: latestAnalysis.data.ticker,
+        companyName: latestAnalysis.data.companyName,
+        mode: latestAnalysis.kind === 'deep-card' ? 'deep' : 'quick',
+        analysisJson: JSON.stringify(latestAnalysis.data).slice(0, 12000),
+        history,
+        question,
+      });
+
+      removeMessage(loadingId);
+      appendMessage({
+        id: `fa-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+        kind: 'followup-answer',
+        text: answer,
+        ts: Date.now(),
+      });
+    } catch (err) {
+      removeMessage(loadingId);
+      const detail = err instanceof Error ? err.message : 'שגיאה לא ידועה';
+      appendMessage({
+        id: `fe-${Date.now()}`,
+        kind: 'error',
+        text: `לא הצלחנו לקבל תשובה: ${detail}`,
+        ts: Date.now(),
+      });
+    } finally {
+      setFollowupLoading(false);
+    }
+  };
+
+  const handleStartNewAnalysis = () => {
+    clearSession();
+    setTicker('');
+    cardOffsetsRef.current.clear();
+    // Re-seed the greeting so the empty state feels intentional.
+    appendMessage({
+      id: 'greet',
+      kind: 'captain-text',
+      pose: 'hello',
+      text: 'אהוי! אני קפטן שארק, האנליסט החינוכי שלך. הקלד טיקר ואצלול לנתח. בחר קצרה לסקירה מהירה, או מעמיקה לניתוח עומק עם חשיבה מורחבת.',
+      ts: Date.now(),
+    });
+  };
 
   const showHero = memoMessages.length <= 1; // empty or only the greeting
 
@@ -227,31 +327,77 @@ export function StockAnalystScreen(): React.ReactElement {
                 </Text>
               </View>
             ) : (
-              memoMessages.map((m) => <MessageRow key={m.id} m={m} />)
+              memoMessages.map((m) => (
+                <View
+                  key={m.id}
+                  onLayout={(e) => {
+                    // Record the Y position of card-style messages so we can
+                    // scroll back to their top once the analysis lands.
+                    if (m.kind === 'quick-card' || m.kind === 'deep-card') {
+                      cardOffsetsRef.current.set(m.id, e.nativeEvent.layout.y);
+                    }
+                  }}
+                >
+                  <MessageRow m={m} />
+                </View>
+              ))
             )}
           </ScrollView>
 
-          {/* Bottom composer */}
-          <View style={styles.composer}>
-            <QuickActionChips
-              onAnalyzeNvda={handleQuickAnalyzeNvda}
-              onWhatToBuy={handleWhatToBuy}
-              onPortfolioStatus={handlePortfolioStatus}
-            />
-            <ModeToggle
-              mode={mode}
-              onChange={setMode}
-              quickRemaining={proLikely ? null : quickRemaining}
-              deepRemaining={proLikely ? null : deepRemaining}
-            />
-            <HorizonSelector value={horizon} onChange={setHorizon} />
-            <AnalystInput
-              value={ticker}
-              onChange={setTicker}
-              onSubmit={handleSubmit}
-              loading={loading}
-            />
-          </View>
+          {/* Bottom composer — hidden once an analysis card is showing.
+              Replaced by a follow-up Q&A input + a "new analysis" CTA. */}
+          {hasAnalysis ? (
+            <View style={styles.newAnalysisBar}>
+              <FollowupInput
+                loading={followupLoading}
+                onSubmit={handleFollowupSubmit}
+              />
+              <Pressable
+                onPress={() => { tapHaptic(); handleStartNewAnalysis(); }}
+                accessibilityRole="button"
+                accessibilityLabel="ניתוח חדש"
+                style={{ borderRadius: 14, overflow: 'hidden', marginTop: 10 }}
+              >
+                <LinearGradient
+                  colors={['#0ea5e9', '#0369a1']}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
+                  style={{
+                    flexDirection: 'row-reverse',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: 8,
+                    paddingVertical: 12,
+                  }}
+                >
+                  <Plus size={16} color="#fff" />
+                  <Text style={{ color: '#fff', fontSize: 14, fontWeight: '800' }}>
+                    ניתוח חדש
+                  </Text>
+                </LinearGradient>
+              </Pressable>
+            </View>
+          ) : (
+            <View style={styles.composer}>
+              <QuickActionChips
+                onAnalyzeNvda={handleQuickAnalyzeNvda}
+                onPortfolioStatus={handlePortfolioStatus}
+              />
+              <ModeToggle
+                mode={mode}
+                onChange={setMode}
+                quickRemaining={proLikely ? null : quickRemaining}
+                deepRemaining={proLikely ? null : deepRemaining}
+              />
+              <HorizonSelector value={horizon} onChange={setHorizon} />
+              <AnalystInput
+                value={ticker}
+                onChange={setTicker}
+                onSubmit={handleSubmit}
+                loading={loading}
+              />
+            </View>
+          )}
         </KeyboardAvoidingView>
       </SafeAreaView>
 
@@ -285,6 +431,12 @@ function MessageRow({ m }: { m: AnalystMessage }): React.ReactElement | null {
       return <CaptainWarningCard data={m.data} />;
     case 'loading':
       return <LoadingBubble mode={m.mode} ticker={m.ticker} />;
+    case 'followup-question':
+      return <FollowupQuestionBubble text={m.text} />;
+    case 'followup-answer':
+      return <FollowupAnswerBubble text={m.text} />;
+    case 'followup-loading':
+      return <FollowupLoadingBubble />;
     case 'error':
       return (
         <View
@@ -313,6 +465,14 @@ const styles = StyleSheet.create({
     paddingBottom: 12,
     gap: 8,
     backgroundColor: 'rgba(2,6,23,0.65)',
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(56,189,248,0.18)',
+  },
+  newAnalysisBar: {
+    paddingHorizontal: 12,
+    paddingTop: 12,
+    paddingBottom: 14,
+    backgroundColor: 'rgba(2,6,23,0.7)',
     borderTopWidth: 1,
     borderTopColor: 'rgba(56,189,248,0.18)',
   },

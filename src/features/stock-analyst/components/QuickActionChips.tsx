@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, Text, Pressable, ScrollView } from 'react-native';
-import { Plus, Briefcase, Sparkles, Target } from 'lucide-react-native';
+import { Plus, Briefcase, Target } from 'lucide-react-native';
 import { tapHaptic } from '../../../utils/haptics';
 
 interface Chip {
@@ -11,7 +11,6 @@ interface Chip {
 
 interface Props {
   onAnalyzeNvda: () => void;
-  onWhatToBuy: () => void;
   onPortfolioStatus: () => void;
 }
 
@@ -22,12 +21,12 @@ interface Props {
  */
 export function QuickActionChips({
   onAnalyzeNvda,
-  onWhatToBuy,
   onPortfolioStatus,
 }: Props): React.ReactElement {
+  // Intentionally no "what to buy/sell today?" — that's a recommendation
+  // question and would cross the educational-only line.
   const chips: Chip[] = [
     { label: 'מצב התיק', Icon: Briefcase, onPress: onPortfolioStatus },
-    { label: 'מה כדאי לקנות היום?', Icon: Sparkles, onPress: onWhatToBuy },
     { label: 'נתח את NVDA', Icon: Target, onPress: onAnalyzeNvda },
   ];
 

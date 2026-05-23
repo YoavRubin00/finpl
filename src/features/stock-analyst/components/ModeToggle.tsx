@@ -1,10 +1,10 @@
 import React from 'react';
 import { View, Text, Pressable } from 'react-native';
-import { Zap, Brain } from 'lucide-react-native';
+import { Zap, Brain, Clock } from 'lucide-react-native';
 import type { AnalystMode } from '../types';
 import { tapHaptic } from '../../../utils/haptics';
 
-const RTL = { writingDirection: 'rtl' as const };
+const RTL = { writingDirection: 'rtl' as const, textAlign: 'right' as const };
 
 interface Props {
   mode: AnalystMode;
@@ -15,41 +15,71 @@ interface Props {
 
 export function ModeToggle({ mode, onChange, quickRemaining, deepRemaining }: Props): React.ReactElement {
   return (
-    <View
-      style={{
-        flexDirection: 'row-reverse',
-        backgroundColor: '#f1f5f9',
-        borderRadius: 14,
-        padding: 4,
-        gap: 4,
-      }}
-    >
-      <Segment
-        active={mode === 'quick'}
-        onPress={() => {
-          if (mode !== 'quick') {
-            tapHaptic();
-            onChange('quick');
-          }
+    <View style={{ gap: 6 }}>
+      <View
+        style={{
+          flexDirection: 'row-reverse',
+          backgroundColor: '#f1f5f9',
+          borderRadius: 14,
+          padding: 4,
+          gap: 4,
         }}
-        label="קצרה"
-        Icon={Zap}
-        accent="#0ea5e9"
-        remaining={quickRemaining}
-      />
-      <Segment
-        active={mode === 'deep'}
-        onPress={() => {
-          if (mode !== 'deep') {
-            tapHaptic();
-            onChange('deep');
-          }
-        }}
-        label="מעמיקה"
-        Icon={Brain}
-        accent="#7c3aed"
-        remaining={deepRemaining}
-      />
+      >
+        <Segment
+          active={mode === 'quick'}
+          onPress={() => {
+            if (mode !== 'quick') {
+              tapHaptic();
+              onChange('quick');
+            }
+          }}
+          label="קצרה"
+          Icon={Zap}
+          accent="#0ea5e9"
+          remaining={quickRemaining}
+        />
+        <Segment
+          active={mode === 'deep'}
+          onPress={() => {
+            if (mode !== 'deep') {
+              tapHaptic();
+              onChange('deep');
+            }
+          }}
+          label="מעמיקה"
+          Icon={Brain}
+          accent="#7c3aed"
+          remaining={deepRemaining}
+        />
+      </View>
+
+      {/* When 'deep' is selected, surface the expected duration up front so
+          users don't think the request died after 30s. */}
+      {mode === 'deep' ? (
+        <View
+          style={{
+            flexDirection: 'row-reverse',
+            alignItems: 'center',
+            gap: 6,
+            backgroundColor: 'rgba(124,58,237,0.18)',
+            borderColor: 'rgba(167,139,250,0.4)',
+            borderWidth: 1,
+            paddingHorizontal: 10,
+            paddingVertical: 6,
+            borderRadius: 10,
+          }}
+        >
+          <Clock size={12} color="#c4b5fd" />
+          <Text
+            style={[
+              RTL,
+              { color: '#ddd6fe', fontSize: 11, fontWeight: '700', flex: 1 },
+            ]}
+          >
+            ניתוח מעמיק לוקח 1–2 דקות. השארק חושב בעמקים.
+          </Text>
+        </View>
+      ) : null}
     </View>
   );
 }

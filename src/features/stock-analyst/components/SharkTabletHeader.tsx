@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { View, Text, Pressable } from 'react-native';
+import { View, Text, Pressable, Alert, Platform } from 'react-native';
 import { router } from 'expo-router';
 import { ChevronRight, Clock } from 'lucide-react-native';
 import Animated, {
@@ -41,13 +41,38 @@ export function SharkTabletHeader({ loading, onOpenHistory, historyCount = 0 }: 
 
   const dotStyle = useAnimatedStyle(() => ({ opacity: dot.value }));
 
-  const handleClose = () => {
-    tapHaptic();
+  const goBack = () => {
     if (router.canGoBack()) {
       router.back();
     } else {
       router.replace('/(tabs)/tools' as never);
     }
+  };
+
+  const handleClose = () => {
+    tapHaptic();
+    if (!loading) {
+      goBack();
+      return;
+    }
+    // Confirm before bailing mid-analysis so the user doesn't lose a long
+    // deep run by accident.
+    if (Platform.OS === 'web') {
+      const win = (globalThis as { confirm?: (msg: string) => boolean });
+      const ok = win.confirm
+        ? win.confirm('הניתוח עדיין רץ. ביציאה הוא ייעצר ולא יישמר. להמשיך?')
+        : true;
+      if (ok) goBack();
+      return;
+    }
+    Alert.alert(
+      'הניתוח עדיין רץ',
+      'אם תצא עכשיו, השארק יפסיק לנתח והתוצאה לא תישמר. להמשיך?',
+      [
+        { text: 'להישאר', style: 'cancel' },
+        { text: 'לצאת בכל זאת', style: 'destructive', onPress: goBack },
+      ],
+    );
   };
 
   return (
