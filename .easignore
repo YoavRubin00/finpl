@@ -17,6 +17,11 @@ stitch-skills/
 skills/
 public/
 /db/
+# Design system reference (HTML/JSX/CSS exports from Claude Web — never bundled,
+# only referenced in code comments as "Source: …"). Saves ~14MB upload.
+assets/DESIGN/
+# Orphan HTML asset library — not imported by any code.
+assets/shop/
 
 # Heavy assets — all served from Vercel Blob CDN
 assets/video/

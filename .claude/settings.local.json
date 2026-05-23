@@ -88,7 +88,8 @@
       "mcp__claude_ai_higgsfield__generate_image",
       "mcp__claude_ai_PostHog__exec",
       "Bash(git add *)",
-      "Bash(git commit *)"
+      "Bash(git commit *)",
+      "Bash(npx expo-doctor *)"
     ],
     "additionalDirectories": [
       "\\tmp",
