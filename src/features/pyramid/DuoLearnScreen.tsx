@@ -1042,22 +1042,12 @@ export function DuoLearnScreen() {
     setShowEasterEggReward("coins");
   }, [addCoins]);
 
-  // Scroll to top + refresh content on every tab focus
-  useFocusEffect(
-    useCallback(() => {
-      // refreshQuests(); syncQuestCompletions();, disabled temporarily
-      if (isFirstMount.current) {
-        isFirstMount.current = false;
-        return;
-      }
-      scrollRef.current?.scrollTo({ y: 0, animated: true });
-      setRefreshKey((k) => k + 1);
-    }, [])
-  );
-
-  // Auto-scroll to the active module (Finn position) on mount
-  useEffect(() => {
-    let y = 150; // approximate greeting + DailyIncomeCard + top padding
+  // Compute the y-offset of the user's current active module (the first
+  // un-completed, unlocked module in the first unlocked chapter). Used to
+  // auto-scroll the learn screen so the user lands on their next lesson
+  // instead of the top of the path.
+  const calcResumeScrollY = useCallback(() => {
+    let y = 150; // approximate greeting + top padding
     for (let chIdx = 0; chIdx < ALL_CHAPTERS.length; chIdx++) {
       const ch = ALL_CHAPTERS[chIdx];
       const done = progress[storeKey(ch.id)]?.completedModules ?? [];
@@ -1075,13 +1065,34 @@ export function DuoLearnScreen() {
         y += 80; // banner height
         y += 16; // marginTop
         y += activeIdx * 160; // approximate row + connector per module
-        break;
+        return y;
       }
       // Entire chapter completed, add its total height
       y += 80 + 44; // banner + container margins
       y += ch.modules.length * 160;
     }
+    return y;
+  }, [progress, isPro]);
 
+  // On every tab focus, scroll to the user's current module instead of the
+  // top. Skips the very first mount because the dedicated mount effect below
+  // already runs then (and uses animated:false to land instantly).
+  useFocusEffect(
+    useCallback(() => {
+      // refreshQuests(); syncQuestCompletions();, disabled temporarily
+      if (isFirstMount.current) {
+        isFirstMount.current = false;
+        return;
+      }
+      const targetY = calcResumeScrollY();
+      scrollRef.current?.scrollTo({ y: Math.max(0, targetY - 80), animated: true });
+      setRefreshKey((k) => k + 1);
+    }, [calcResumeScrollY])
+  );
+
+  // Auto-scroll to the active module on initial mount
+  useEffect(() => {
+    const y = calcResumeScrollY();
     if (y > 300) {
       setTimeout(() => {
         scrollRef.current?.scrollTo({ y: y - 80, animated: false });

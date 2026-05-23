@@ -39,7 +39,7 @@ function ScaleVisual({ balance }: { balance: number }) {
 
   useEffect(() => {
     // Clamp rotation between -12 and 12 degrees
-    rotation.value = withSpring(Math.max(-12, Math.min(12, balance / 15)), {
+    rotation.value = withSpring(Math.max(-12, Math.min(12, -balance / 15)), {
       damping: 14,
       stiffness: 120,
     });

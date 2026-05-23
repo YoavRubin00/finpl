@@ -7,11 +7,13 @@ import Animated, {
   useAnimatedStyle,
   useReducedMotion,
   useSharedValue,
+  withSequence,
   withSpring,
+  withTiming,
 } from "react-native-reanimated";
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import { ChevronUp, ChevronDown } from "lucide-react-native";
-import { successHaptic, tapHaptic, mediumHaptic, selectionHaptic } from "../../utils/haptics";
+import { successHaptic, tapHaptic, mediumHaptic, selectionHaptic, errorHaptic } from "../../utils/haptics";
 import { ConfettiExplosion } from "../../components/ui/ConfettiExplosion";
 import type { TimelineOrderPrompt } from "./sentenceTypes";
 
@@ -27,7 +29,6 @@ interface TimelineOrderCardProps {
   onCorrectSettled: () => void;
 }
 
-const REVEAL_HOLD_MS = 1800;
 const HELP_DELAY_MS = 20_000;
 
 const RANK_COLORS = ["#f97316", "#eab308", "#22c55e", "#3b82f6"];
@@ -239,9 +240,23 @@ export function TimelineOrderCard({
   const [showYears, setShowYears] = useState<boolean>(false);
   const [helpVisible, setHelpVisible] = useState<boolean>(false);
   const [resolvedOrder, setResolvedOrder] = useState<string[] | null>(null);
-  // reducedMotion שמור לעתיד אם נחזיר shake animation, אבל בלי submit button
-  // אין יותר נקודת fail visible — ההתקדמות אוטומטית כשהסדר נכון.
-  useReducedMotion();
+  const reducedMotion = useReducedMotion();
+
+  // Shake animation for incorrect Check attempts. Skipped under reducedMotion.
+  const shakeX = useSharedValue(0);
+  const shakeStyle = useAnimatedStyle(() => ({
+    transform: [{ translateX: shakeX.value }],
+  }));
+  const triggerShake = useCallback(() => {
+    if (reducedMotion) return;
+    shakeX.value = withSequence(
+      withTiming(-8, { duration: 60 }),
+      withTiming(8, { duration: 60 }),
+      withTiming(-6, { duration: 60 }),
+      withTiming(6, { duration: 60 }),
+      withTiming(0, { duration: 60 }),
+    );
+  }, [reducedMotion, shakeX]);
 
   const onCorrectSettledRef = useRef(onCorrectSettled);
   useEffect(() => { onCorrectSettledRef.current = onCorrectSettled; });
@@ -269,8 +284,8 @@ export function TimelineOrderCard({
     return () => { if (helpTimerRef.current) clearTimeout(helpTimerRef.current); };
   }, [locked, resetHelpTimer]);
 
-  // מהלך לוגי משותף ל-swap ע"י חצים ול-drag: מעביר item ל-toIdx, מאמת אם
-  // הסדר נכון, ומפעיל את ה-flow של הצלחה. fromIdx==toIdx → אין שינוי.
+  // מהלך לוגי משותף ל-swap ע"י חצים ול-drag: מעביר item ל-toIdx. ולידציה
+  // התנתקה מ-moveItem ועברה לכפתור "בדוק" — כך המשתמש שולט מתי לבדוק.
   const moveItem = useCallback(
     (fromIdx: number, toIdx: number) => {
       if (locked) return;
@@ -282,22 +297,8 @@ export function TimelineOrderCard({
       next.splice(clamped, 0, moved);
       setLocalOrder(next);
       tapHaptic();
-
-      const isCorrect = next.every((itemId, i) => {
-        const item = prompt.items.find((it) => it.id === itemId);
-        return item !== undefined && item.correctOrder === i;
-      });
-
-      if (isCorrect) {
-        successHaptic();
-        setLocked(true);
-        setConfetti((n) => n + 1);
-        setShowYears(true);
-        onSubmit(next);
-        setTimeout(() => { onCorrectSettledRef.current(); }, REVEAL_HOLD_MS);
-      }
     },
-    [locked, prompt.items, onSubmit],
+    [locked],
   );
 
   const swapAt = useCallback(
@@ -306,6 +307,32 @@ export function TimelineOrderCard({
     },
     [moveItem],
   );
+
+  // לחיצה על "בדוק". אם הסדר נכון: locked + confetti + שנים נחשפות, ומופיע
+  // כפתור "המשך". אם שגוי: shake + errorHaptic, נשאר פתוח להמשך עריכה.
+  const handleCheck = useCallback(() => {
+    if (locked) return;
+    const current = localOrderRef.current;
+    const isCorrect = current.every((itemId, i) => {
+      const item = prompt.items.find((it) => it.id === itemId);
+      return item !== undefined && item.correctOrder === i;
+    });
+
+    if (isCorrect) {
+      successHaptic();
+      setLocked(true);
+      setConfetti((n) => n + 1);
+      setShowYears(true);
+      onSubmit(current);
+    } else {
+      errorHaptic();
+      triggerShake();
+    }
+  }, [locked, prompt.items, onSubmit, triggerShake]);
+
+  const handleContinue = useCallback(() => {
+    onCorrectSettledRef.current();
+  }, []);
 
   const handleYes = useCallback(() => {
     const correctOrder = [...prompt.items]
@@ -316,7 +343,7 @@ export function TimelineOrderCard({
     successHaptic();
     setLocked(true);
     setShowYears(true);
-    setTimeout(() => { onCorrectSettledRef.current(); }, REVEAL_HOLD_MS);
+    // No auto-advance — user clicks "המשך" when they're ready to move on.
   }, [prompt.items]);
 
   const handleNo = useCallback(() => {
@@ -329,7 +356,7 @@ export function TimelineOrderCard({
   return (
     <Animated.View
       entering={FadeInUp.duration(300)}
-      style={styles.card}
+      style={[styles.card, shakeStyle]}
     >
       {confetti > 0 && (
         <View pointerEvents="none" style={StyleSheet.absoluteFill}>
@@ -422,10 +449,35 @@ export function TimelineOrderCard({
         </Animated.View>
       )}
 
-      {/* No submit button — when the user reaches the correct order the
-          moveItem flow auto-validates, locks, fires confetti, and advances
-          via onCorrectSettled. The help panel (after 20s of struggle) is the
-          escape hatch if a user gives up. */}
+      {/* Check / Continue button — until the user locks in a correct order
+          via "בדוק", they stay on the card and can keep rearranging. Once
+          locked (either by Check or by the help-panel auto-solve) the button
+          flips to "המשך" so the user controls the pace of advancing. */}
+      {locked ? (
+        <Pressable
+          onPress={handleContinue}
+          accessibilityRole="button"
+          accessibilityLabel="המשך"
+          style={({ pressed }) => [
+            styles.primaryBtn,
+            { backgroundColor: "#0ea5e9", borderBottomColor: "#0284c7", opacity: pressed ? 0.85 : 1 },
+          ]}
+        >
+          <Text style={styles.primaryBtnText}>המשך</Text>
+        </Pressable>
+      ) : (
+        <Pressable
+          onPress={handleCheck}
+          accessibilityRole="button"
+          accessibilityLabel="בדוק"
+          style={({ pressed }) => [
+            styles.primaryBtn,
+            { backgroundColor: accentColor, borderBottomColor: "#1e293b", opacity: pressed ? 0.85 : 1 },
+          ]}
+        >
+          <Text style={styles.primaryBtnText}>בדוק</Text>
+        </Pressable>
+      )}
     </Animated.View>
   );
 }
@@ -600,6 +652,20 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: "800",
     color: "#374151",
+    writingDirection: "rtl",
+  },
+  primaryBtn: {
+    borderRadius: 16,
+    paddingVertical: 14,
+    alignItems: "center",
+    justifyContent: "center",
+    borderBottomWidth: 3,
+    marginTop: 4,
+  },
+  primaryBtnText: {
+    fontSize: 16,
+    fontWeight: "900",
+    color: "#ffffff",
     writingDirection: "rtl",
   },
 });
