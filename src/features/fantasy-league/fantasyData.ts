@@ -277,71 +277,71 @@ export const STOCK_CATEGORIES: StockCategory[] = [
   },
   {
     id: 'energy',
-    label: 'אנרגיה',
+    label: 'ערך',
     emoji: '⚡',
     description:
-      'ענקיות הנפט, הגז והאנרגיה המתחדשת — Exxon, Chevron, NextEra. ' +
-      'דיבידנדים יציבים, רגישות גבוהה למחירי הסחורות הגלובליים.',
+      'מניות הערך הקלאסיות של וול סטריט — Walmart, Coca-Cola, Berkshire. ' +
+      'מותגים גלובליים, דיבידנדים יציבים ותנודתיות נמוכה — הסלע של התיק.',
     stocks: [
       {
-        ticker: 'XOM',
-        name: 'ExxonMobil',
-        tagline: 'ענק הנפט',
+        ticker: 'WMT',
+        name: 'Walmart',
+        tagline: 'מלך הקמעונאות',
         categoryId: 'energy',
-        mockPrice: 112.40,
-        mockWeeklyChange: 0.9,
+        mockPrice: 198.40,
+        mockWeeklyChange: 0.8,
         sharkAnalysis:
-          'אקסון מוביל היא הנפט שלא הולך לשום מקום — $36B רווח שנתי ודיבידנד גדל 40 שנה ברציפות. רכישת Pioneer הופכת אותה לאחת מגדולות שדות הפרמייאן. אנרגיה עדיין שולטת.',
+          'וולמארט היא ענקית הקמעונאות הגדולה בעולם — $650B מכירות שנתיות ומעל 10,500 חנויות. e-commerce צומח 25% שנתי וWalmart+ מתחרה ב-Amazon Prime. דיבידנד עולה 50 שנה ברצף.',
       },
       {
-        ticker: 'CVX',
-        name: 'Chevron',
-        tagline: 'כוח האנרגיה',
+        ticker: 'KO',
+        name: 'Coca-Cola',
+        tagline: 'המותג מספר 1 בעולם',
         categoryId: 'energy',
-        mockPrice: 154.70,
-        mockWeeklyChange: 1.2,
+        mockPrice: 67.30,
+        mockWeeklyChange: 0.5,
         sharkAnalysis:
-          'שברון מציעה ייצור נפט וגז עם balance sheet חזקה. buyback program מסיבי מחזיר ערך לבעלי מניות. המניה פחות תנודתית ממחיר הנפט הגולמי, מה שמעניק ביטחון יחסי.',
+          'קוקה קולה — המותג המוכר בעולם, נמכר ב-200+ מדינות. Buffett מחזיק 9% מהמניה כי המודל פשוט: סירופ ב-cents, מותג של מיליארדים. דיבידנד עולה 62 שנה ברציפות — Dividend King.',
       },
       {
-        ticker: 'BP',
-        name: 'BP plc',
-        tagline: 'הנפט הבריטי',
+        ticker: 'PG',
+        name: 'Procter & Gamble',
+        tagline: 'מותגי הצרכן הקלאסיים',
         categoryId: 'energy',
-        mockPrice: 36.20,
-        mockWeeklyChange: -0.3,
-        sharkAnalysis:
-          'BP עושה pivot לאנרגיה ירוקה תוך שמירה על רווחיות נפט. המניה נסחרת בדיסקאונט על מתחרותיה האמריקאיות — חלקית בגלל סיכון רגולטורי אירופאי. דיבידנד נדיב.',
-      },
-      {
-        ticker: 'COP',
-        name: 'ConocoPhillips',
-        tagline: 'חברת הנפט העצמאית',
-        categoryId: 'energy',
-        mockPrice: 112.90,
-        mockWeeklyChange: 1.7,
-        sharkAnalysis:
-          'קונוקו היא חברת E&P טהורה — חפירה וייצור בלבד, בלי זיקוק. זה אומר הכנסות ישירות ממחיר הנפט. חוב נמוך ו-buyback aggressive. מגיבה מהר לעלייה בנפט.',
-      },
-      {
-        ticker: 'NEE',
-        name: 'NextEra Energy',
-        tagline: 'מלך האנרגיה המתחדשת',
-        categoryId: 'energy',
-        mockPrice: 73.40,
-        mockWeeklyChange: 2.1,
-        sharkAnalysis:
-          'NextEra היא הגדולה בעולם באנרגיה מהרוח ומהשמש. Florida Power & Light מספקת תזרים יציב, וענף הסולאר צומח 25% שנתי. הריבית הגבוהה פגעה בה — אבל הורדת ריבית תהיה קטליסטור חיובי.',
-      },
-      {
-        ticker: 'SLB',
-        name: 'Schlumberger',
-        tagline: 'שירותי הנפט',
-        categoryId: 'energy',
-        mockPrice: 46.80,
+        mockPrice: 172.10,
         mockWeeklyChange: 0.6,
         sharkAnalysis:
-          'SLB (לשעבר Schlumberger) הוא הספק הגדול בעולם לשירותי קידוח. כל חברת נפט צריכה אותו. מרוויח ממחיר נפט גבוה דרך עלייה בקידוחים. Diversified גלובלית — ערבי, לטאם, צפון ים.',
+          'P&G הוא בית של Tide, Pampers, Gillette ועוד — 65 מותגים שבכל בית. Pricing power חזק במיוחד באינפלציה. דיבידנד עולה 68 שנה ברצף. defensive play קלאסי לכל סוגי השוק.',
+      },
+      {
+        ticker: 'JNJ',
+        name: 'Johnson & Johnson',
+        tagline: 'ענקית בריאות-צרכן',
+        categoryId: 'energy',
+        mockPrice: 158.90,
+        mockWeeklyChange: 0.4,
+        sharkAnalysis:
+          'JNJ היא Healthcare giant עם 130 שנה של רצף. AAA credit rating — אחד מ-2 בלבד באמריקה. דיבידנד עולה 61 שנה ברצף. עבר spin-off של Kenvue, נשאר עם pharma + medical devices — שני הסקטורים הכי חזקים.',
+      },
+      {
+        ticker: 'BRK.B',
+        name: 'Berkshire Hathaway',
+        tagline: 'האימפריה של באפט',
+        categoryId: 'energy',
+        mockPrice: 432.50,
+        mockWeeklyChange: 1.1,
+        sharkAnalysis:
+          'ברקשייר היא ה-conglomerate של וורן באפט — מחזיקה Apple, Coca-Cola, GEICO, BNSF Railway ועוד עשרות חברות. $200B+ במזומן מוכן להזדמנויות. אין דיבידנד — באפט מעדיף buybacks. רכוש אותה כדי לישון בשקט.',
+      },
+      {
+        ticker: 'MCD',
+        name: "McDonald's",
+        tagline: 'הקשתות הזהובות',
+        categoryId: 'energy',
+        mockPrice: 295.20,
+        mockWeeklyChange: 0.7,
+        sharkAnalysis:
+          'מקדונלדס היא במהותה חברת נדל"ן ש-ranchising מסעדות. 40,000+ סניפים גלובליים, רובם מתופעלים ע"י זכיינים — מודל הון נמוך, תזרים גבוה. דיבידנד עולה 48 שנה ברצף. recession-proof.',
       },
     ],
   },
@@ -564,7 +564,7 @@ export function getMockLeaderboard(
     const r = seededRandom(seed + i * 17);
     const returnPct = (r * 30 - 10); // -10% to +20%
     const change = i % 3 === 0 ? '+1' : i % 3 === 1 ? '-1' : 'same';
-    const pos = i < 3 ? 'promoted' : i > 11 ? 'demoted' : 'stable';
+    // No promotion/relegation — every entry is 'stable'.
     return {
       rank: i + 1,
       playerId: `ai-${String(i).padStart(2, '0')}`,
@@ -572,7 +572,7 @@ export function getMockLeaderboard(
       returnPercent: Math.round(returnPct * 10) / 10,
       isLocal: false,
       change: change as FantasyLeaderboardEntry['change'],
-      leaguePosition: pos as FantasyLeaderboardEntry['leaguePosition'],
+      leaguePosition: 'stable' as const,
     };
   });
 }
@@ -598,7 +598,7 @@ export function getWeeklyMissions(weekId: string): WeeklyMission[] {
     {
       id: 'mission-diverse',
       description: r > 0.5
-        ? 'בחר מניה מקטגוריית האנרגיה'
+        ? 'בחר מניה מקטגוריית הערך'
         : 'בחר מניה מהשוק הישראלי',
       bonusXP: 100,
       completed: false,

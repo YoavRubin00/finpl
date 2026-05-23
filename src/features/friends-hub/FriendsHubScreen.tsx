@@ -16,6 +16,7 @@ import { HotThisWeekCard } from './cards/HotThisWeekCard';
 import { Ta35ForecastCard } from './cards/Ta35ForecastCard';
 import { AnonymousPayslipCard } from './cards/AnonymousPayslipCard';
 import { PremiumFantasyButton } from './components/PremiumFantasyButton';
+import { PortfolioShareCard } from './components/PortfolioShareCard';
 
 // ─── Facebook-feed palette (light, social-first) ─────────────────────
 const FEED_BG = '#f3f4f6';
@@ -235,6 +236,13 @@ export function FriendsHubScreen(): React.ReactElement {
           <View style={{ backgroundColor: '#ffffff' }}>
             <ReferralCard />
           </View>
+        </StaggeredEntry>
+
+        <FeedDivider />
+
+        {/* ─── Portfolio sharing feed — bottom of hub ─── */}
+        <StaggeredEntry index={9}>
+          <PortfolioShareCard />
         </StaggeredEntry>
       </ScrollView>
     </SafeAreaView>

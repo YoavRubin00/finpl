@@ -15,6 +15,7 @@ import {
   FileText,
   Home,
   LineChart,
+  Newspaper,
   PieChart,
   PiggyBank,
   ReceiptText,
@@ -32,11 +33,19 @@ export type ToolKey =
   | 'tax-refund'
   | 'mortgage'
   | 'pension-fees'
+  | 'breaking-news'
   | 'portfolio'
   | 'analyst'
   | 'cashflow';
 
 export type ToolStatus = 'active' | 'coming_soon';
+
+/**
+ * Splits the hub into two accordion sections.
+ * - `investor`: long-horizon wealth tools (analyst, compound, news, portfolio)
+ * - `financial`: personal-finance tools (paycheck, tax, mortgage, pension, cashflow…)
+ */
+export type ToolCategory = 'investor' | 'financial';
 
 export interface ToolMeta {
   key: ToolKey;
@@ -57,9 +66,25 @@ export interface ToolMeta {
   /** XP rewarded on first completed calculation today. */
   xpReward: number;
   status: ToolStatus;
+  category: ToolCategory;
 }
 
 export const TOOLS_REGISTRY: readonly ToolMeta[] = [
+  {
+    key: 'analyst',
+    route: '/stock-analyst',
+    label: 'אנליסט מניות',
+    subtitle: 'תחזיות AI על מניות',
+    Icon: LineChart,
+    hue: '#0ea5e9',
+    light: '#e0f2fe',
+    deep: '#0369a1',
+    emoji: '🔮',
+    premiumDark: false,
+    xpReward: 10,
+    status: 'active',
+    category: 'investor',
+  },
   {
     key: 'payslip',
     route: '/payslip-analyzer',
@@ -73,6 +98,7 @@ export const TOOLS_REGISTRY: readonly ToolMeta[] = [
     premiumDark: false,
     xpReward: 25,
     status: 'active',
+    category: 'financial',
   },
   {
     key: 'compound',
@@ -87,6 +113,7 @@ export const TOOLS_REGISTRY: readonly ToolMeta[] = [
     premiumDark: true,
     xpReward: 20,
     status: 'active',
+    category: 'investor',
   },
   {
     key: 'fire',
@@ -101,6 +128,7 @@ export const TOOLS_REGISTRY: readonly ToolMeta[] = [
     premiumDark: true,
     xpReward: 30,
     status: 'active',
+    category: 'financial',
   },
   {
     key: 'salary-net',
@@ -115,6 +143,7 @@ export const TOOLS_REGISTRY: readonly ToolMeta[] = [
     premiumDark: false,
     xpReward: 15,
     status: 'active',
+    category: 'financial',
   },
   {
     key: 'tax-refund',
@@ -129,6 +158,7 @@ export const TOOLS_REGISTRY: readonly ToolMeta[] = [
     premiumDark: false,
     xpReward: 20,
     status: 'active',
+    category: 'financial',
   },
   {
     key: 'mortgage',
@@ -143,6 +173,7 @@ export const TOOLS_REGISTRY: readonly ToolMeta[] = [
     premiumDark: false,
     xpReward: 25,
     status: 'active',
+    category: 'financial',
   },
   {
     key: 'pension-fees',
@@ -157,6 +188,22 @@ export const TOOLS_REGISTRY: readonly ToolMeta[] = [
     premiumDark: false,
     xpReward: 20,
     status: 'active',
+    category: 'financial',
+  },
+  {
+    key: 'breaking-news',
+    route: '/breaking-news',
+    label: 'חדשות מתפרצות',
+    subtitle: 'סיכום AI יומי + מדד הייפ',
+    Icon: Newspaper,
+    hue: '#dc2626',
+    light: '#fee2e2',
+    deep: '#991b1b',
+    emoji: '🔥',
+    premiumDark: true,
+    xpReward: 25,
+    status: 'active',
+    category: 'investor',
   },
   {
     key: 'portfolio',
@@ -171,20 +218,7 @@ export const TOOLS_REGISTRY: readonly ToolMeta[] = [
     premiumDark: false,
     xpReward: 0,
     status: 'coming_soon',
-  },
-  {
-    key: 'analyst',
-    route: '/coming-soon',
-    label: 'אנליסט מניות',
-    subtitle: 'תחזיות AI על מניות',
-    Icon: LineChart,
-    hue: '#94a3b8',
-    light: '#f1f5f9',
-    deep: '#475569',
-    emoji: '🔮',
-    premiumDark: false,
-    xpReward: 0,
-    status: 'coming_soon',
+    category: 'investor',
   },
   {
     key: 'cashflow',
@@ -199,6 +233,7 @@ export const TOOLS_REGISTRY: readonly ToolMeta[] = [
     premiumDark: false,
     xpReward: 0,
     status: 'coming_soon',
+    category: 'financial',
   },
 ];
 

@@ -1,15 +1,21 @@
-import React from 'react';
-import { ScrollView, View, Text, StyleSheet } from 'react-native';
+import React, { useMemo } from 'react';
+import { Pressable, ScrollView, View, Text, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
+import { useRouter } from 'expo-router';
 import Animated, { FadeInDown } from 'react-native-reanimated';
-import Svg, { Path } from 'react-native-svg';
+import { ChevronLeft, Sparkles, UserCog } from 'lucide-react-native';
 
 import { STITCH } from '../../constants/theme';
+import { formatShekel } from '../../utils/format';
+import { tapHaptic } from '../../utils/haptics';
+import { useNetWorthStore } from '../net-worth-dashboard/useNetWorthStore';
 import { TOOLS_REGISTRY } from './toolsRegistry';
 import { ToolHubCard } from './components/ToolHubCard';
-import { SectionLabel } from './components/atoms/SectionLabel';
+import { AccordionSection } from './components/AccordionSection';
 import { FinTip } from './components/atoms/FinTip';
+import { useFinancialProfileStore, hasAnyFinancialData } from './useFinancialProfileStore';
+import { describeProfileFreshness } from './financialProfile';
 
 /**
  * Financial Tools hub — the 6th global tab (rightmost in RTL bottom bar).
@@ -23,22 +29,29 @@ export function FinancialToolsScreen(): React.ReactElement {
   const activeCount = TOOLS_REGISTRY.filter((t) => t.status === 'active').length;
   const comingCount = TOOLS_REGISTRY.length - activeCount;
 
+  const investorTools = useMemo(
+    () => TOOLS_REGISTRY.filter((t) => t.category === 'investor'),
+    [],
+  );
+  const financialTools = useMemo(
+    () => TOOLS_REGISTRY.filter((t) => t.category === 'financial'),
+    [],
+  );
+
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
-      {/* Header — title centered; counter floats top-right as a corner chip. */}
+      {/* Header — compact: emoji + title on one row, subtitle as a tiny tagline. */}
       <View style={styles.header}>
         <Text style={styles.headerCounter}>
           {activeCount} כלים · {comingCount} בדרך
         </Text>
-        <View style={styles.headerCenter}>
-          <View style={styles.headerIconWrap}>
-            <Text style={styles.headerEmoji}>🧰</Text>
-          </View>
+        <View style={styles.headerTitleRow}>
+          <Text style={styles.headerEmoji}>🧰</Text>
           <Text accessibilityRole="header" style={styles.headerTitle}>
             כלים פיננסיים
           </Text>
-          <Text style={styles.headerSubtitle}>החלטות חכמות בנתונים אמיתיים</Text>
         </View>
+        <Text style={styles.headerSubtitle}>החלטות חכמות בנתונים אמיתיים</Text>
       </View>
 
       <ScrollView
@@ -47,13 +60,23 @@ export function FinancialToolsScreen(): React.ReactElement {
       >
         <HeroStatStrip />
 
-        <SectionLabel>כל הכלים</SectionLabel>
+        <FinancialProfileCta />
 
-        <View style={styles.grid}>
-          {TOOLS_REGISTRY.map((tool, i) => (
-            <ToolHubCard key={tool.key} tool={tool} index={i} />
-          ))}
-        </View>
+        <AccordionSection title="כלים למשקיעים" count={investorTools.length}>
+          <View style={styles.grid}>
+            {investorTools.map((tool, i) => (
+              <ToolHubCard key={tool.key} tool={tool} index={i} />
+            ))}
+          </View>
+        </AccordionSection>
+
+        <AccordionSection title="כלים פיננסיים" count={financialTools.length}>
+          <View style={styles.grid}>
+            {financialTools.map((tool, i) => (
+              <ToolHubCard key={tool.key} tool={tool} index={i} />
+            ))}
+          </View>
+        </AccordionSection>
 
         <FinTip
           kind="tip"
@@ -65,38 +88,120 @@ export function FinancialToolsScreen(): React.ReactElement {
 }
 
 /**
- * Dark gradient hero strip showing aggregate worth (mock value for now —
- * later wired to a real net-worth store). Reinforces the "premium intel"
- * positioning of the tools section.
+ * Live entry point into the Net Worth dashboard. Reads from `useNetWorthStore`
+ * — when empty, shows a CTA to add the first asset; when populated, shows the
+ * user's real net worth + projected YoY growth. Tap anywhere → opens the
+ * dashboard screen.
  */
 function HeroStatStrip(): React.ReactElement {
+  const router = useRouter();
+  const totalValue = useNetWorthStore((s) => s.totalValue());
+  const yoyDeltaPct = useNetWorthStore((s) => s.yoyDeltaPct());
+  const annualGrowth = useNetWorthStore((s) => s.projectedAnnualGrowth());
+  const hasAssets = totalValue > 0;
+
+  const yoyText =
+    hasAssets && yoyDeltaPct > 0
+      ? `↗ +${(yoyDeltaPct * 100).toFixed(1)}% השנה הקרובה (משוער)`
+      : null;
+
+  function handlePress() {
+    tapHaptic();
+    router.push('/net-worth-dashboard' as never);
+  }
+
   return (
     <Animated.View entering={FadeInDown.duration(360)}>
-      <LinearGradient
-        colors={[STITCH.premiumDarkBg, STITCH.premiumDarkSurface, STITCH.premiumDarkAccent]}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-        style={styles.hero}
+      <Pressable
+        onPress={handlePress}
+        accessibilityRole="button"
+        accessibilityLabel={
+          hasAssets
+            ? `שווי נכסים ${formatShekel(totalValue)}, פתיחת דשבורד הנכסים`
+            : 'הוספת הנכסים הראשונים שלך'
+        }
       >
-        <View style={styles.heroHalo} pointerEvents="none" />
+        <LinearGradient
+          colors={[STITCH.premiumDarkBg, STITCH.premiumDarkSurface, STITCH.premiumDarkAccent]}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={styles.hero}
+        >
+          <View style={styles.heroHalo} pointerEvents="none" />
 
-        <View style={styles.heroRow}>
-          <View style={styles.heroBadge}>
-            <Svg width={12} height={12} viewBox="0 0 24 24">
-              <Path
-                d="M12 2 L13.5 10.5 L22 12 L13.5 13.5 L12 22 L10.5 13.5 L2 12 L10.5 10.5 Z"
-                fill={STITCH.tertiaryGoldBright}
-              />
-            </Svg>
-            <Text style={styles.heroBadgeText}>FIN ENGINE</Text>
+          <View style={styles.heroRow}>
+            <View style={styles.heroRight}>
+              <Text style={styles.heroLabel}>
+                {hasAssets ? 'שווי נכסים כולל' : 'דשבורד הנכסים שלך'}
+              </Text>
+              <Text style={styles.heroValue}>
+                {hasAssets ? formatShekel(totalValue) : '+ הוסיפו נכסים'}
+              </Text>
+              {hasAssets && annualGrowth > 0 ? (
+                <Text style={styles.heroDelta}>{yoyText}</Text>
+              ) : (
+                <Text style={styles.heroEmptyHint}>
+                  לחצו לבניית התמונה הפיננסית שלכם
+                </Text>
+              )}
+            </View>
+            <ChevronLeft size={20} color="rgba(255,255,255,0.6)" strokeWidth={2.6} />
           </View>
-          <View style={styles.heroRight}>
-            <Text style={styles.heroLabel}>שווי נקי משוער</Text>
-            <Text style={styles.heroValue}>₪128,450</Text>
-            <Text style={styles.heroDelta}>↗ +4.2% החודש</Text>
-          </View>
+        </LinearGradient>
+      </Pressable>
+    </Animated.View>
+  );
+}
+
+/**
+ * "בנה פרופיל פיננסי" CTA — sits between the net-worth hero and the tool
+ * grid. When the user has never edited their financial profile, this is a
+ * bright invite to fill it in once (so every tool below opens pre-filled).
+ * Once data exists, it morphs into a quieter "עודכן לפני N · עדכון" badge
+ * so it doesn't compete with the tools for attention.
+ */
+function FinancialProfileCta(): React.ReactElement {
+  const router = useRouter();
+  const profile = useFinancialProfileStore((s) => s.profile);
+  const hasData = hasAnyFinancialData(profile);
+  const freshness = describeProfileFreshness(profile.updatedAt);
+
+  const handlePress = () => {
+    tapHaptic();
+    router.push('/financial-profile' as never);
+  };
+
+  return (
+    <Animated.View entering={FadeInDown.delay(80).duration(360)}>
+      <Pressable
+        onPress={handlePress}
+        style={({ pressed }) => [
+          styles.profileCta,
+          hasData ? styles.profileCtaDim : styles.profileCtaBright,
+          pressed && { opacity: 0.85 },
+        ]}
+        accessibilityRole="button"
+        accessibilityLabel={hasData ? 'עדכון פרופיל פיננסי' : 'בניית פרופיל פיננסי'}
+      >
+        <View style={styles.profileCtaIcon}>
+          {hasData ? (
+            <UserCog size={20} color={STITCH.primary} strokeWidth={2.4} />
+          ) : (
+            <Sparkles size={20} color={STITCH.primary} strokeWidth={2.4} />
+          )}
         </View>
-      </LinearGradient>
+        <View style={styles.profileCtaBody}>
+          <Text style={styles.profileCtaTitle}>
+            {hasData ? 'הפרופיל הפיננסי שלך' : 'בנה פרופיל פיננסי'}
+          </Text>
+          <Text style={styles.profileCtaSubtitle}>
+            {hasData
+              ? `${freshness ?? 'נשמר'} · ההצעות וההמלצות מתאימות אישית אליך`
+              : 'מילוי חד-פעמי · הצעות והמלצות מותאמות בכל הכלים'}
+          </Text>
+        </View>
+        <ChevronLeft size={20} color={STITCH.onSurfaceVariant} strokeWidth={2.4} />
+      </Pressable>
     </Animated.View>
   );
 }
@@ -109,21 +214,22 @@ const styles = StyleSheet.create({
   header: {
     backgroundColor: STITCH.surfaceLowest,
     paddingHorizontal: 16,
-    paddingTop: 16,
-    paddingBottom: 14,
+    paddingTop: 8,
+    paddingBottom: 8,
     borderBottomWidth: 1,
     borderBottomColor: STITCH.surfaceHighest,
     alignItems: 'center',
     justifyContent: 'center',
     position: 'relative',
   },
-  headerCenter: {
+  headerTitleRow: {
+    flexDirection: 'row-reverse',
     alignItems: 'center',
     gap: 6,
   },
   headerCounter: {
     position: 'absolute',
-    top: 14,
+    top: 8,
     right: 12,
     fontSize: 10,
     fontWeight: '800',
@@ -131,23 +237,13 @@ const styles = StyleSheet.create({
     letterSpacing: 0.4,
     backgroundColor: STITCH.surfaceLow,
     paddingHorizontal: 8,
-    paddingVertical: 4,
+    paddingVertical: 3,
     borderRadius: 999,
     writingDirection: 'rtl',
   },
-  headerIconWrap: {
-    width: 44,
-    height: 44,
-    borderRadius: 14,
-    backgroundColor: '#e0f2fe',
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: '#bae6fd',
-  },
-  headerEmoji: { fontSize: 22 },
+  headerEmoji: { fontSize: 18, lineHeight: 22 },
   headerTitle: {
-    fontSize: 20,
+    fontSize: 18,
     fontWeight: '900',
     color: STITCH.onSurface,
     writingDirection: 'rtl',
@@ -155,11 +251,12 @@ const styles = StyleSheet.create({
     letterSpacing: -0.3,
   },
   headerSubtitle: {
-    fontSize: 12,
+    fontSize: 11,
     color: STITCH.onSurfaceVariant,
     writingDirection: 'rtl',
     textAlign: 'center',
     fontWeight: '600',
+    marginTop: 2,
   },
   scroll: {
     padding: 16,
@@ -169,23 +266,23 @@ const styles = StyleSheet.create({
 
   // Hero stat strip
   hero: {
-    borderRadius: 20,
-    paddingHorizontal: 16,
-    paddingVertical: 16,
+    borderRadius: 18,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
     overflow: 'hidden',
     shadowColor: STITCH.premiumDarkBg,
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.3,
-    shadowRadius: 16,
-    elevation: 6,
+    shadowOffset: { width: 0, height: 5 },
+    shadowOpacity: 0.28,
+    shadowRadius: 14,
+    elevation: 5,
   },
   heroHalo: {
     position: 'absolute',
-    top: -30,
-    left: -30,
-    width: 130,
-    height: 130,
-    borderRadius: 130,
+    top: -26,
+    left: -26,
+    width: 110,
+    height: 110,
+    borderRadius: 110,
     backgroundColor: 'rgba(233,196,0,0.18)',
   },
   heroRow: {
@@ -194,7 +291,16 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
   },
   heroRight: {
+    flex: 1,
     alignItems: 'flex-end',
+    paddingHorizontal: 8,
+  },
+  heroEmptyHint: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: STITCH.premiumDarkText,
+    marginTop: 2,
+    writingDirection: 'rtl',
   },
   heroLabel: {
     fontSize: 10,
@@ -204,7 +310,7 @@ const styles = StyleSheet.create({
     writingDirection: 'rtl',
   },
   heroValue: {
-    fontSize: 26,
+    fontSize: 22,
     fontWeight: '900',
     color: STITCH.tertiaryGoldBright,
     letterSpacing: -0.5,
@@ -219,24 +325,50 @@ const styles = StyleSheet.create({
     marginTop: 2,
     writingDirection: 'rtl',
   },
-  heroBadge: {
+  // Profile CTA (between hero and grid)
+  profileCta: {
     flexDirection: 'row-reverse',
     alignItems: 'center',
-    gap: 4,
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 999,
-    backgroundColor: 'rgba(233,196,0,0.18)',
+    gap: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 14,
+    borderRadius: 16,
     borderWidth: 1,
-    borderColor: 'rgba(233,196,0,0.4)',
   },
-  heroBadgeText: {
-    fontSize: 9,
+  profileCtaBright: {
+    backgroundColor: STITCH.primary + '14',
+    borderColor: STITCH.primary + '40',
+  },
+  profileCtaDim: {
+    backgroundColor: STITCH.surfaceLowest,
+    borderColor: STITCH.surfaceHighest,
+  },
+  profileCtaIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    backgroundColor: STITCH.primary + '1f',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  profileCtaBody: {
+    flex: 1,
+  },
+  profileCtaTitle: {
+    fontSize: 15,
     fontWeight: '900',
-    color: STITCH.tertiaryGoldBright,
-    letterSpacing: 0.6,
+    color: STITCH.onSurface,
+    textAlign: 'right',
+    writingDirection: 'rtl',
   },
-
+  profileCtaSubtitle: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: STITCH.onSurfaceVariant,
+    textAlign: 'right',
+    writingDirection: 'rtl',
+    marginTop: 2,
+  },
   // Grid
   grid: {
     flexDirection: 'row-reverse',

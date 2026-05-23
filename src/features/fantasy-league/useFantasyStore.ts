@@ -278,16 +278,14 @@ export const useFantasyStore = create<FantasyStore>()(
           leaguePosition: 'stable',
         };
 
+        // Promotion/relegation is disabled — every entry is 'stable'.
+        // Tier is a fixed stake choice (silver / gold / diamond), not a ladder.
         const merged = [...leaderboard.filter((e) => !e.isLocal), localEntry]
           .sort((a, b) => b.returnPercent - a.returnPercent)
           .map((e, idx) => ({
             ...e,
             rank: idx + 1,
-            leaguePosition: (idx < Math.ceil(leaderboard.length * 0.2)
-              ? 'promoted'
-              : idx > Math.floor(leaderboard.length * 0.8)
-              ? 'demoted'
-              : 'stable') as FantasyLeaderboardEntry['leaguePosition'],
+            leaguePosition: 'stable' as const,
           }));
 
         return merged;

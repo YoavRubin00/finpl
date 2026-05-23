@@ -427,8 +427,9 @@ export default function RootLayout() {
       "pizza-index", "accessibility-statement",
       "compound-calculator", "fire-calculator", "salary-net-calculator",
       "tax-refund-calculator", "mortgage-calculator", "pension-fees-comparator",
+      "net-worth-dashboard", "financial-profile", "breaking-news",
       "tower-defense-boss", "interstitial", "ai-insights", "saved-items",
-      "clan", "anon-advice", "payslip-analyzer",
+      "clan", "anon-advice", "payslip-analyzer", "shark-voice", "stock-analyst",
     ].includes(segments[0] as string);
 
     if (!isAuthenticated) {

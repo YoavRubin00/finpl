@@ -559,6 +559,8 @@ export function F2H2HCard({ me, opp }: H2HCardProps): React.ReactElement {
 
 // ─── Leaderboard row ────────────────────────────────────────────────────────
 type LeaderChange = '+1' | '-1' | 'new' | 'same';
+// `ZonePosition` kept as a type-only export for backward compat with callers
+// that may still pass `position` — it has no visual effect anymore.
 type ZonePosition = 'promoted' | 'demoted' | 'stable';
 
 interface LeaderRowProps {
@@ -568,6 +570,7 @@ interface LeaderRowProps {
   returnPercent: number;
   change?: LeaderChange;
   isLocal?: boolean;
+  /** Deprecated — promotion/relegation visuals removed. Accepted but ignored. */
   position?: ZonePosition;
   onPress?: () => void;
 }
@@ -577,11 +580,9 @@ export function F2LeaderRow({
   returnPercent,
   change = 'same',
   isLocal = false,
-  position = 'stable',
   onPress,
 }: LeaderRowProps): React.ReactElement {
   const positive = returnPercent >= 0;
-  const positionColor = position === 'promoted' ? FANTASY.positive : position === 'demoted' ? FANTASY.negative : null;
   return (
     <Pressable
       onPress={onPress}
@@ -604,18 +605,6 @@ export function F2LeaderRow({
         overflow: 'hidden',
       })}
     >
-      {positionColor && (
-        <View style={{
-          position: 'absolute',
-          right: -2,
-          top: 6,
-          bottom: 6,
-          width: 3,
-          backgroundColor: positionColor,
-          borderRadius: 999,
-        }} />
-      )}
-
       <View style={{ width: 32, alignItems: 'center' }}>
         {rank <= 3 ? (
           <F2RankCrest rank={rank as 1 | 2 | 3} size={26} />
@@ -659,17 +648,6 @@ export function F2LeaderRow({
             </View>
           )}
         </View>
-        {position !== 'stable' && (
-          <Text style={{
-            fontSize: 9,
-            fontWeight: '800',
-            color: positionColor ?? FANTASY.inkFaint,
-            ...RTL,
-            marginTop: 1,
-          }}>
-            {position === 'promoted' ? '↑ אזור עלייה' : '↓ אזור ירידה'}
-          </Text>
-        )}
       </View>
 
       <View style={{
@@ -776,13 +754,15 @@ interface MarketCardProps {
   ticker: string;
   name: string;
   sector: FantasySectorId;
+  /** This-week return % (e.g. +1.40) — shown as a chip near the name. */
   change: number;
   aiScore: number;
   spark?: SparkPath;
-  risk?: 'low' | 'med' | 'high';
   selected?: boolean;
   hot?: boolean;
+  /** Real-world currency symbol — '$' for US stocks, '₪' for Israeli. */
   currency?: '$' | '₪';
+  /** Last market price in the real currency (reference only — not game coins). */
   price?: number;
   onPress?: () => void;
 }
@@ -793,113 +773,135 @@ export function F2MarketCard({
   change,
   aiScore,
   spark = 'wave',
-  risk = 'med',
   selected = false,
   hot = false,
   currency = '$',
   price,
   onPress,
 }: MarketCardProps): React.ReactElement {
-  // currency prop kept for backward compat — all prices now render as in-game coins
-  void currency;
   const s = F2_SECTORS[sector];
   const priceText = price != null
-    ? price.toLocaleString('en-US', { maximumFractionDigits: 2 })
+    ? currency === '₪'
+      ? `${price.toLocaleString('en-US', { maximumFractionDigits: 2 })} ₪`
+      : `$${price.toLocaleString('en-US', { maximumFractionDigits: 2 })}`
     : null;
   return (
-    <Pressable
-      onPress={onPress}
-      style={({ pressed }) => ({
+    <View
+      style={{
         flex: 1,
         borderRadius: 14,
         padding: 10,
-        opacity: pressed ? 0.92 : 1,
         shadowColor: selected ? s.color : '#0f172a',
-        shadowOpacity: selected ? 0.45 : 0.04,
+        shadowOpacity: selected ? 0.3 : 0.04,
         shadowOffset: { width: 0, height: 3 },
-        shadowRadius: selected ? 16 : 2,
-        elevation: selected ? 6 : 1,
+        shadowRadius: selected ? 14 : 2,
+        elevation: selected ? 5 : 1,
         overflow: 'hidden',
-        backgroundColor: selected ? 'transparent' : FANTASY.surfaceCard,
-        borderWidth: selected ? 0 : 1.5,
-        borderColor: FANTASY.border,
-      })}
+        backgroundColor: FANTASY.surfaceCard,
+        borderWidth: selected ? 2 : 1.5,
+        borderColor: selected ? s.color : FANTASY.border,
+      }}
     >
-      {selected && (
-        <LinearGradient
-          colors={[s.g1, s.g2]}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-          style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}
-        />
-      )}
-      {/* Header row: ticker tile + name */}
+      {/* Header row: ticker tile + name + last price */}
       <View style={{ flexDirection: 'row-reverse', alignItems: 'center', gap: 8, marginBottom: 8 }}>
         <F2TickerTile ticker={ticker} sector={sector} size={36} radius={9} />
         <View style={{ flex: 1, minWidth: 0 }}>
-          <Text
-            style={{
-              fontSize: 12,
-              fontWeight: '900',
-              color: selected ? '#fff' : FANTASY.ink,
-              ...RTL,
-              lineHeight: 14,
-            }}
-            numberOfLines={1}
-          >
-            {name}
-          </Text>
-          <View style={{ flexDirection: 'row-reverse', alignItems: 'center', gap: 4, marginTop: 3 }}>
+          <View style={{ flexDirection: 'row-reverse', alignItems: 'center', gap: 5 }}>
+            <Text
+              style={{ fontSize: 12, fontWeight: '900', color: FANTASY.ink, ...RTL, lineHeight: 14, flexShrink: 1 }}
+              numberOfLines={1}
+            >
+              {name}
+            </Text>
+            {hot && <F2Flame size={11} color="#f97316" />}
+          </View>
+          <View style={{ flexDirection: 'row-reverse', alignItems: 'center', gap: 5, marginTop: 3 }}>
             <F2Return pct={change} />
-            {hot && <F2Flame size={11} color={selected ? '#fff' : '#f97316'} />}
+            {priceText && (
+              <Text style={{
+                fontSize: 10,
+                fontWeight: '800',
+                color: FANTASY.inkMuted,
+                fontVariant: ['tabular-nums'],
+              }}>
+                {priceText}
+              </Text>
+            )}
           </View>
         </View>
       </View>
 
       {/* Sparkline + AI score ring */}
       <View style={{ flexDirection: 'row-reverse', alignItems: 'center', gap: 8, marginBottom: 8 }}>
-        <F2Spark
-          path={spark}
-          width={70}
-          height={26}
-          color={selected ? '#fff' : undefined}
-          strokeWidth={1.8}
-          withFill={!selected}
-        />
+        <F2Spark path={spark} width={70} height={26} strokeWidth={1.8} withFill={true} />
         <F2AIScoreRing score={aiScore} size={36} />
       </View>
 
-      {/* Risk + price */}
-      <View
-        style={{
-          flexDirection: 'row-reverse',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          paddingVertical: 6,
-          paddingHorizontal: 8,
-          borderRadius: 8,
-          backgroundColor: selected ? 'rgba(255,255,255,0.18)' : FANTASY.surfaceLow,
-        }}
+      {/* Add / Selected button — primary CTA */}
+      <Pressable
+        onPress={onPress}
+        accessibilityRole="button"
+        accessibilityLabel={selected ? `הסר את ${name}` : `הוסף את ${name}`}
+        accessibilityState={{ selected }}
+        style={({ pressed }) => ({
+          borderRadius: 10,
+          overflow: 'hidden',
+          opacity: pressed ? 0.88 : 1,
+          shadowColor: selected ? s.color : FANTASY.primary,
+          shadowOpacity: 0.4,
+          shadowOffset: { width: 0, height: 3 },
+          shadowRadius: 8,
+          elevation: 4,
+        })}
       >
-        <F2RiskMark level={risk} size={9} />
-        {priceText && (
-          <View style={{ flexDirection: 'row-reverse', alignItems: 'center', gap: 3 }}>
-            <GoldCoinIcon size={11} />
-            <Text
-              style={{
-                fontSize: 11,
-                fontWeight: '900',
-                color: selected ? '#fff' : FANTASY.ink,
-                fontVariant: ['tabular-nums'],
-              }}
-              numberOfLines={1}
-            >
-              {priceText}
+        {selected ? (
+          <View style={{
+            paddingVertical: 9,
+            paddingHorizontal: 10,
+            borderRadius: 10,
+            backgroundColor: '#fff',
+            borderWidth: 2,
+            borderColor: s.color,
+            borderBottomWidth: 3,
+            borderBottomColor: s.color,
+            flexDirection: 'row-reverse',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: 5,
+          }}>
+            <Text style={{ fontSize: 13, fontWeight: '900', color: s.color }}>✓</Text>
+            <Text style={{ fontSize: 12, fontWeight: '900', color: s.color, letterSpacing: 0.2 }}>
+              נבחר
+            </Text>
+            <Text style={{ fontSize: 9, fontWeight: '700', color: FANTASY.inkFaint }}>
+              · לחץ אחר להחלפה
             </Text>
           </View>
+        ) : (
+          <LinearGradient
+            colors={[s.g1, s.g2]}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={{
+              paddingVertical: 10,
+              paddingHorizontal: 10,
+              borderRadius: 10,
+              borderBottomWidth: 3,
+              borderBottomColor: s.color,
+              flexDirection: 'row-reverse',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: 4,
+            }}
+          >
+            <Text style={{ fontSize: 14, fontWeight: '900', color: '#fff', lineHeight: 16 }}>+</Text>
+            <Text style={{ fontSize: 12, fontWeight: '900', color: '#fff', letterSpacing: 0.3 }}>
+              הוסף לתיק
+            </Text>
+          </LinearGradient>
         )}
-      </View>
-    </Pressable>
+      </Pressable>
+    </View>
   );
 }
 
@@ -1312,20 +1314,15 @@ export function F2PickAllocationRow({
   );
 }
 
-// ─── League Arena Card (Clash-style) ────────────────────────────────────────
-// Big league showcase: tier shield, rank, promote/relegate zone, next-tier tease.
-// Used as the hero card on the lobby alongside ScoreboardHero.
+// ─── League Arena Card ──────────────────────────────────────────────────────
+// League showcase: tier shield, rank, neutral position bar.
+// No promotion/relegation zones — tier is a fixed stake choice.
 
 interface LeagueArenaCardProps {
   tier: TierKey;
   tierLabel: string;
   rank: number;
   totalPlayers: number;
-  promoteCutoff?: number;
-  relegateCutoff?: number;
-  nextTierLabel?: string;
-  /** Short reward tease text, e.g. "50,000 🪙 + 50 💎" */
-  nextTierReward?: string;
   weekDay?: number;
   weekTotalDays?: number;
 }
@@ -1335,62 +1332,24 @@ export function F2LeagueArenaCard({
   tierLabel,
   rank,
   totalPlayers,
-  promoteCutoff = 4,
-  relegateCutoff = 2,
-  nextTierLabel,
-  nextTierReward,
   weekDay,
   weekTotalDays = 5,
 }: LeagueArenaCardProps): React.ReactElement {
-  const inPromote = rank <= promoteCutoff;
-  const inRelegate = rank > totalPlayers - relegateCutoff;
-  const inSafe = !inPromote && !inRelegate;
-
-  const statusColor = inPromote
-    ? FANTASY.positive
-    : inRelegate
-      ? FANTASY.negative
-      : FANTASY.primary;
-  const statusBg = inPromote
-    ? FANTASY.positiveSoft
-    : inRelegate
-      ? FANTASY.negativeSoft
-      : FANTASY.primaryTint;
-  const statusStroke = inPromote
-    ? FANTASY.positiveStroke
-    : inRelegate
-      ? FANTASY.negativeStroke
-      : '#bfdbfe';
-  const statusLabel = inPromote
-    ? '🚀 אזור עלייה — עולה ליגה!'
-    : inRelegate
-      ? '⚠️ אזור ירידה — בסכנה!'
-      : '🛡️ אזור בטוח';
-
-  const distanceToPromote = inPromote
-    ? 0
-    : Math.max(1, rank - promoteCutoff);
-  const distanceToRelegate = inRelegate
-    ? 0
-    : Math.max(1, totalPlayers - relegateCutoff - rank);
-
-  // Ladder fill: where the player sits within the entire league (right = top, left = bottom in RTL terms).
+  // Where the player sits in the league (right = top in RTL; left = bottom).
   const ladderPct = Math.min(100, Math.max(0, ((totalPlayers - rank + 1) / totalPlayers) * 100));
+  const isLeading = rank <= 3;
 
   return (
     <LinearGradient
-      colors={[
-        inPromote ? '#ecfdf5' : inRelegate ? '#fef2f2' : '#eff6ff',
-        '#ffffff',
-      ] as const}
+      colors={['#eff6ff', '#ffffff'] as const}
       start={{ x: 0, y: 0 }}
       end={{ x: 0, y: 1 }}
       style={{
         borderRadius: 18,
         borderWidth: 1.5,
-        borderColor: statusStroke,
+        borderColor: '#bfdbfe',
         padding: 14,
-        shadowColor: statusColor,
+        shadowColor: FANTASY.primary,
         shadowOpacity: 0.12,
         shadowOffset: { width: 0, height: 6 },
         shadowRadius: 18,
@@ -1398,7 +1357,7 @@ export function F2LeagueArenaCard({
         overflow: 'hidden',
       }}
     >
-      {/* Glow blobs in corners */}
+      {/* Glow blob in corner */}
       <View style={{
         position: 'absolute',
         top: -24,
@@ -1406,11 +1365,11 @@ export function F2LeagueArenaCard({
         width: 96,
         height: 96,
         borderRadius: 48,
-        backgroundColor: statusColor,
+        backgroundColor: FANTASY.primary,
         opacity: 0.08,
       }} />
 
-      {/* Top row: shield + tier name + rank crest */}
+      {/* Top row: shield + tier name + rank chip */}
       <View style={{ flexDirection: 'row-reverse', alignItems: 'center', gap: 12 }}>
         <F2TierShield tier={tier} size={62} />
 
@@ -1445,16 +1404,16 @@ export function F2LeagueArenaCard({
           </Text>
         </View>
 
-        {/* Rank chip */}
+        {/* Rank chip — neutral primary color, no zone tinting */}
         <View style={{
           alignItems: 'center',
           backgroundColor: '#fff',
           borderRadius: 14,
           borderWidth: 2,
-          borderColor: statusColor,
+          borderColor: FANTASY.primary,
           paddingVertical: 8,
           paddingHorizontal: 12,
-          shadowColor: statusColor,
+          shadowColor: FANTASY.primary,
           shadowOpacity: 0.25,
           shadowOffset: { width: 0, height: 3 },
           shadowRadius: 8,
@@ -1473,7 +1432,7 @@ export function F2LeagueArenaCard({
             {
               fontSize: 24,
               fontWeight: '900',
-              color: statusColor,
+              color: FANTASY.primary,
               lineHeight: 26,
               marginTop: 2,
             },
@@ -1484,76 +1443,33 @@ export function F2LeagueArenaCard({
         </View>
       </View>
 
-      {/* Status banner */}
-      <View style={{
-        marginTop: 12,
-        backgroundColor: statusBg,
-        borderWidth: 1,
-        borderColor: statusStroke,
-        borderRadius: 10,
-        paddingVertical: 7,
-        paddingHorizontal: 10,
-        flexDirection: 'row-reverse',
-        alignItems: 'center',
-        justifyContent: 'space-between',
+      {/* Positive motivational line — no threat language */}
+      <Text style={{
+        marginTop: 10,
+        fontSize: 12,
+        fontWeight: '800',
+        color: FANTASY.primary,
+        textAlign: 'center',
+        writingDirection: 'rtl',
       }}>
-        <Text style={{
-          fontSize: 11,
-          fontWeight: '900',
-          color: statusColor === FANTASY.positive
-            ? FANTASY.positiveDark
-            : statusColor === FANTASY.negative
-              ? FANTASY.negativeDark
-              : FANTASY.primary,
-          ...RTL,
-        }}>
-          {statusLabel}
-        </Text>
-        {inSafe && (distanceToPromote <= 3 || distanceToRelegate <= 3) && (
-          <Text style={[
-            { fontSize: 10, fontWeight: '800', color: FANTASY.inkMuted },
-            NUM_STYLE,
-          ]}>
-            {distanceToPromote <= distanceToRelegate
-              ? `↑ ${distanceToPromote} לעלייה`
-              : `↓ ${distanceToRelegate} לירידה`}
-          </Text>
-        )}
-      </View>
+        {isLeading
+          ? '🔥 אתה מוביל — תחזיק חזק עד הסוף'
+          : 'המשך לעלות לראש הטבלה — כל אחוז נחשב'}
+      </Text>
 
-      {/* Ladder bar — RTL: top of ladder on the right */}
+      {/* Neutral position bar — single track with player marker (no red/green zones) */}
       <View style={{ marginTop: 10 }}>
         <View style={{
-          height: 10,
+          height: 8,
           borderRadius: 999,
-          overflow: 'hidden',
-          flexDirection: 'row-reverse',
           backgroundColor: FANTASY.surfaceMuted,
           borderWidth: 1,
           borderColor: FANTASY.borderStrong,
-        }}>
-          {/* Promote zone (right side, green) */}
-          <View style={{
-            width: `${(promoteCutoff / totalPlayers) * 100}%`,
-            backgroundColor: FANTASY.positive,
-            opacity: 0.85,
-          }} />
-          {/* Safe zone (middle) */}
-          <View style={{
-            flex: 1,
-            backgroundColor: 'transparent',
-          }} />
-          {/* Relegate zone (left side, red) */}
-          <View style={{
-            width: `${(relegateCutoff / totalPlayers) * 100}%`,
-            backgroundColor: FANTASY.negative,
-            opacity: 0.85,
-          }} />
-        </View>
+        }} />
         {/* Player position marker */}
         <View style={{
           position: 'absolute',
-          top: -2,
+          top: -3,
           right: `${ladderPct}%`,
           marginRight: -7,
           width: 14,
@@ -1561,52 +1477,13 @@ export function F2LeagueArenaCard({
           borderRadius: 7,
           backgroundColor: '#fff',
           borderWidth: 2.5,
-          borderColor: statusColor,
-          shadowColor: statusColor,
+          borderColor: FANTASY.primary,
+          shadowColor: FANTASY.primary,
           shadowOpacity: 0.5,
           shadowRadius: 4,
           elevation: 3,
         }} />
       </View>
-
-      {/* Next tier tease */}
-      {nextTierLabel && nextTierReward && (
-        <View style={{
-          marginTop: 12,
-          backgroundColor: FANTASY.goldSoft,
-          borderWidth: 1,
-          borderColor: FANTASY.goldStroke,
-          borderRadius: 10,
-          paddingVertical: 8,
-          paddingHorizontal: 10,
-          flexDirection: 'row-reverse',
-          alignItems: 'center',
-          gap: 8,
-        }}>
-          <Text style={{ fontSize: 16 }}>🏆</Text>
-          <View style={{ flex: 1 }}>
-            <Text style={{
-              fontSize: 10,
-              fontWeight: '900',
-              color: FANTASY.warningDark,
-              letterSpacing: 0.6,
-              textTransform: 'uppercase',
-              ...RTL,
-            }}>
-              פרס במקום ראשון · {nextTierLabel}
-            </Text>
-            <Text style={{
-              fontSize: 12,
-              fontWeight: '900',
-              color: FANTASY.warningDark,
-              ...RTL,
-              marginTop: 1,
-            }}>
-              {nextTierReward}
-            </Text>
-          </View>
-        </View>
-      )}
 
       {/* Optional gameweek progress dots */}
       {weekDay != null && (

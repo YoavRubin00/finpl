@@ -4,13 +4,17 @@
   "outputDirectory": "public",
   "functions": {
     "api/**/*.ts": {
-      "maxDuration": 30,
+      "maxDuration": 120,
       "includeFiles": "src/features/email/welcomeEmail.html"
     }
   },
   "crons": [
     {
       "path": "/api/email/send-daily",
+      "schedule": "0 6 * * *"
+    },
+    {
+      "path": "/api/breaking-news/cron",
       "schedule": "0 6 * * *"
     }
   ],

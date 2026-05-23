@@ -14,7 +14,7 @@ import {
   AccessibilityInfo,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { Send, Check, CheckCheck, MessageCircle, ChevronLeft, Phone, Crown } from "lucide-react-native";
+import { Send, Check, CheckCheck, MessageCircle, ChevronLeft, Video, Crown } from "lucide-react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import Animated, {
   useSharedValue,
@@ -773,7 +773,7 @@ export function ChatScreen({ lessonContext }: { lessonContext?: LessonContext } 
                 router.push("/shark-voice" as never);
               }}
               accessibilityRole="button"
-              accessibilityLabel={isPro ? "שיחה אחד על אחד עם שארק" : "שיחה אחד על אחד עם שארק - PRO בלבד"}
+              accessibilityLabel={isPro ? "שיחת וידאו אחד על אחד עם שארק" : "שיחת וידאו עם שארק - PRO בלבד"}
               style={{ marginLeft: 8, position: "relative" }}
             >
               {isPro ? (
@@ -794,7 +794,7 @@ export function ChatScreen({ lessonContext }: { lessonContext?: LessonContext } 
                     elevation: 4,
                   }}
                 >
-                  <Phone size={20} color="#ffffff" fill="#ffffff" />
+                  <Video size={22} color="#ffffff" strokeWidth={2.4} />
                   <View
                     style={{
                       position: "absolute",
@@ -826,7 +826,7 @@ export function ChatScreen({ lessonContext }: { lessonContext?: LessonContext } 
                     borderColor: "#e2e8f0",
                   }}
                 >
-                  <Phone size={20} color="#94a3b8" />
+                  <Video size={22} color="#94a3b8" strokeWidth={2.4} />
                   <View
                     style={{
                       position: "absolute",

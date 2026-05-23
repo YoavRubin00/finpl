@@ -21,9 +21,9 @@ import {
   F2ScoreboardHero,
   F2LivePick,
   F2QuickAction,
-  F2H2HCard,
   F2LeagueArenaCard,
 } from '../v2/components';
+import { LeaguePrizesCard } from '../components/LeaguePrizesCard';
 import {
   F2Section,
   F2Panel,
@@ -254,8 +254,6 @@ export function FantasyLobbyScreen(): React.ReactElement {
   const localEntry = leaderboard.find((e) => e.isLocal);
   const rank = localEntry?.rank ?? leaderboard.length + 1;
   const totalPlayers = leaderboard.length || 100;
-  // Opponent for H2H: player one rank above local
-  const opponent = leaderboard.find((e) => !e.isLocal && e.rank === Math.max(1, rank - 1));
 
   // Build StockCategoryId → ticker map for sectors
   const stockToCategory = useMemo(() => {
@@ -273,24 +271,8 @@ export function FantasyLobbyScreen(): React.ReactElement {
   // No-captain nudge
   const hasNoCaptain = isLocked && currentEntry && !currentEntry.captainTicker && picks.length === 5;
 
-  // Next-tier promotion reward (1st-place prize in the league ABOVE current)
-  const nextTier = currentEntry?.tier === 'silver'
-    ? 'gold'
-    : currentEntry?.tier === 'gold'
-      ? 'diamond'
-      : null;
-  const nextTierReward = nextTier
-    ? (() => {
-        const cfg = TIER_CONFIGS[nextTier];
-        const coinsPrize = Math.round(cfg.entryCost * cfg.prizeMultipliers[0]);
-        const diamondsPrize = cfg.prizeDiamonds[0];
-        const coinsLabel = coinsPrize >= 1000
-          ? `${(coinsPrize / 1000).toFixed(coinsPrize % 1000 ? 1 : 0)}K`
-          : String(coinsPrize);
-        return `${coinsLabel} 🪙 · ${diamondsPrize} 💎`;
-      })()
-    : undefined;
-  const nextTierLabel = nextTier ? TIER_CONFIGS[nextTier].label : undefined;
+  // Prize breakdown for the current league (shown in the lobby).
+  const tierConfig = currentEntry ? TIER_CONFIGS[currentEntry.tier] : null;
 
   return (
     <View style={{ flex: 1, backgroundColor: FANTASY.bg }}>
@@ -321,7 +303,7 @@ export function FantasyLobbyScreen(): React.ReactElement {
             <DraftOpenCard hasEntered={hasEntered} isLocked={isLocked} />
           )}
 
-          {/* League arena card — Clash-style tier + rank ladder */}
+          {/* League arena card — tier shield + rank (no promote/relegate zones) */}
           {hasEntered && currentEntry && (
             <Animated.View entering={FadeInDown.duration(360)}>
               <F2LeagueArenaCard
@@ -329,8 +311,6 @@ export function FantasyLobbyScreen(): React.ReactElement {
                 tierLabel={TIER_LABEL[currentEntry.tier]}
                 rank={rank}
                 totalPlayers={totalPlayers}
-                nextTierLabel={nextTierLabel}
-                nextTierReward={nextTierReward}
                 weekDay={gameweekDay > 5 ? 5 : gameweekDay}
                 weekTotalDays={5}
               />
@@ -455,19 +435,17 @@ export function FantasyLobbyScreen(): React.ReactElement {
             </Animated.View>
           )}
 
-          {/* H2H card */}
-          {hasEntered && opponent && (
-            <Animated.View entering={FadeInDown.delay(240).duration(320)}>
-              <F2Section action="לוח חי ←" onActionPress={() => router.push('/fantasy/live')}>
-                קרב ה-H2H של השבוע
-              </F2Section>
-              <F2H2HCard
-                me={{ name: 'את/ה', returnPercent: effReturn, picks: picks.length }}
-                opp={{
-                  name: opponent.displayName,
-                  returnPercent: opponent.returnPercent,
-                  picks: 5,
-                }}
+          {/* League prizes — placed below the live cards for full transparency */}
+          {hasEntered && currentEntry && tierConfig && (
+            <Animated.View entering={FadeInDown.delay(240).duration(360)}>
+              <LeaguePrizesCard
+                tier={currentEntry.tier}
+                tierLabel={TIER_LABEL[currentEntry.tier]}
+                entryCost={tierConfig.entryCost}
+                prizeMultipliers={tierConfig.prizeMultipliers}
+                prizeDiamonds={tierConfig.prizeDiamonds}
+                prizeXP={tierConfig.prizeXP}
+                currentRank={rank}
               />
             </Animated.View>
           )}

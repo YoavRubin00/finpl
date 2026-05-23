@@ -31,14 +31,6 @@ const TIER_LABEL: Record<FantasyTier, string> = {
 
 type FilterKey = 'global' | 'friends' | 'month' | 'season';
 
-function zoneForRank(rank: number, total: number): 'promoted' | 'demoted' | 'stable' {
-  const promote = Math.max(3, Math.ceil(total * 0.2));
-  const relegate = Math.max(3, Math.ceil(total * 0.2));
-  if (rank <= promote) return 'promoted';
-  if (rank > total - relegate) return 'demoted';
-  return 'stable';
-}
-
 export function LeaderboardScreen(): React.ReactElement {
   const currentEntry = useFantasyStore((s) => s.currentEntry);
   const getLeaderboardWithLocal = useFantasyStore((s) => s.getLeaderboardWithLocal);
@@ -61,15 +53,9 @@ export function LeaderboardScreen(): React.ReactElement {
   // Opponent for H2H: player one rank above local
   const opponent = leaderboard.find((e) => !e.isLocal && e.rank === Math.max(1, rank - 1));
 
-  // Partition rows: top 4 promote, local row + neighbors, bottom 2 relegate
-  const top4 = leaderboard.slice(0, 4);
-  const bottom2 = leaderboard.slice(-2);
-  const middleStart = Math.max(4, rank - 2);
-  const middleEnd = Math.min(leaderboard.length - 2, rank + 2);
-  const middleRows =
-    localEntry && localEntry.rank > 4 && localEntry.rank < totalPlayers - 1
-      ? leaderboard.slice(middleStart, middleEnd + 1)
-      : [];
+  // Continuous list: top 10 + ellipsis + local row if not in top 10.
+  const top10 = leaderboard.slice(0, 10);
+  const showLocalSeparately = !!localEntry && localEntry.rank > 10;
 
   const tierLabel = currentEntry ? TIER_LABEL[currentEntry.tier] : 'ליגת הזהב';
 
@@ -173,34 +159,11 @@ export function LeaderboardScreen(): React.ReactElement {
             </Animated.View>
           )}
 
-          {/* Top 4 — Promote zone */}
+          {/* Continuous leaderboard — top 10 + ellipsis + local row */}
           <Animated.View entering={FadeInDown.delay(120).duration(320)}>
-            <F2Section hint="עולים לליגה הבאה">דירוג סופי</F2Section>
-            <View style={{
-              backgroundColor: FANTASY.positiveSoft,
-              borderWidth: 1,
-              borderColor: FANTASY.positiveStroke,
-              borderRadius: 10,
-              paddingVertical: 6,
-              paddingHorizontal: 10,
-              flexDirection: 'row-reverse',
-              alignItems: 'center',
-              gap: 4,
-              marginBottom: 8,
-              alignSelf: 'flex-start',
-            }}>
-              <F2Chevron size={10} dir="up" color={FANTASY.positiveDark} />
-              <Text style={{
-                fontSize: 10,
-                color: FANTASY.positiveDark,
-                fontWeight: '800',
-                letterSpacing: 0.4,
-              }}>
-                אזור עלייה · 4 ראשונים
-              </Text>
-            </View>
+            <F2Section hint={`${totalPlayers} שחקנים`}>דירוג הליגה</F2Section>
             <View style={{ gap: 5 }}>
-              {top4.map((entry) => (
+              {top10.map((entry) => (
                 <F2LeaderRow
                   key={entry.playerId}
                   rank={entry.rank}
@@ -208,91 +171,29 @@ export function LeaderboardScreen(): React.ReactElement {
                   returnPercent={entry.returnPercent}
                   change={entry.change}
                   isLocal={entry.isLocal}
-                  position="promoted"
                 />
               ))}
-            </View>
-          </Animated.View>
-
-          {/* Middle (local + neighbors) */}
-          {middleRows.length > 0 && (
-            <Animated.View entering={FadeInDown.delay(200).duration(320)}>
-              <View style={{
-                backgroundColor: FANTASY.surfaceMuted,
-                borderRadius: 10,
-                paddingVertical: 6,
-                paddingHorizontal: 10,
-                flexDirection: 'row-reverse',
-                alignItems: 'center',
-                gap: 4,
-                marginBottom: 8,
-                alignSelf: 'flex-start',
-              }}>
-                <Text style={{
-                  fontSize: 10,
-                  color: FANTASY.inkLabel,
-                  fontWeight: '800',
-                  letterSpacing: 0.4,
-                }}>
-                  אזור בטוח · המיקום שלך
-                </Text>
-              </View>
-              <View style={{ gap: 5 }}>
-                {middleRows.map((entry) => {
-                  const zone = zoneForRank(entry.rank, totalPlayers);
-                  return (
-                    <F2LeaderRow
-                      key={entry.playerId}
-                      rank={entry.rank}
-                      name={entry.isLocal ? 'את/ה' : entry.displayName}
-                      returnPercent={entry.returnPercent}
-                      change={entry.change}
-                      isLocal={entry.isLocal}
-                      position={zone}
-                    />
-                  );
-                })}
-              </View>
-            </Animated.View>
-          )}
-
-          {/* Bottom 2 — Relegate zone */}
-          <Animated.View entering={FadeInDown.delay(280).duration(320)}>
-            <View style={{
-              backgroundColor: FANTASY.negativeSoft,
-              borderWidth: 1,
-              borderColor: FANTASY.negativeStroke,
-              borderRadius: 10,
-              paddingVertical: 6,
-              paddingHorizontal: 10,
-              flexDirection: 'row-reverse',
-              alignItems: 'center',
-              gap: 4,
-              marginBottom: 8,
-              alignSelf: 'flex-start',
-            }}>
-              <F2Chevron size={10} dir="down" color={FANTASY.negativeDark} />
-              <Text style={{
-                fontSize: 10,
-                color: FANTASY.negativeDark,
-                fontWeight: '800',
-                letterSpacing: 0.4,
-              }}>
-                אזור ירידה · 2 אחרונים
-              </Text>
-            </View>
-            <View style={{ gap: 5 }}>
-              {bottom2.map((entry) => (
-                <F2LeaderRow
-                  key={entry.playerId}
-                  rank={entry.rank}
-                  name={entry.isLocal ? 'את/ה' : entry.displayName}
-                  returnPercent={entry.returnPercent}
-                  change={entry.change}
-                  isLocal={entry.isLocal}
-                  position="demoted"
-                />
-              ))}
+              {showLocalSeparately && localEntry && (
+                <>
+                  <View style={{ alignItems: 'center', paddingVertical: 4 }}>
+                    <Text style={{
+                      fontSize: 11,
+                      color: FANTASY.inkFaint,
+                      fontWeight: '800',
+                      letterSpacing: 0.6,
+                    }}>
+                      · · ·
+                    </Text>
+                  </View>
+                  <F2LeaderRow
+                    rank={localEntry.rank}
+                    name="את/ה"
+                    returnPercent={localEntry.returnPercent}
+                    change={localEntry.change}
+                    isLocal
+                  />
+                </>
+              )}
             </View>
           </Animated.View>
         </ScrollView>

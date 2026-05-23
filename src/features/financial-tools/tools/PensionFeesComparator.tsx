@@ -14,6 +14,10 @@ import { clamp, formatShekel } from '../../../utils/format';
 import { tapHaptic } from '../../../utils/haptics';
 import { findTool } from '../toolsRegistry';
 import { ToolHeader } from '../components/ToolHeader';
+import { ProfileFingerprint } from '../components/ProfileFingerprint';
+import { ToolNextStepCard } from '../components/ToolNextStepCard';
+import { buildPensionInitial } from '../financialProfile';
+import { useFinancialProfileStore } from '../useFinancialProfileStore';
 import {
   CalculateButton,
   FinTip,
@@ -104,7 +108,15 @@ const DEFAULT_STATE: PensionInput = {
 };
 
 export function PensionFeesComparator(): React.ReactElement {
-  const [state, setState] = useState<PensionInput>(DEFAULT_STATE);
+  const [state, setState] = useState<PensionInput>(() => {
+    const overrides = buildPensionInitial(useFinancialProfileStore.getState().profile, {
+      age: DEFAULT_STATE.age,
+      monthlySalary: DEFAULT_STATE.monthlySalary,
+      currentDepositFee: DEFAULT_STATE.currentDepositFee,
+      currentAccumulationFee: DEFAULT_STATE.currentAccumulationFee,
+    });
+    return { ...DEFAULT_STATE, ...overrides };
+  });
 
   const result: PensionResult = useMemo(() => {
     const salary = Number(state.monthlySalary) || 0;
@@ -176,6 +188,8 @@ export function PensionFeesComparator(): React.ReactElement {
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
+        <ProfileFingerprint accentColor={TOOL.hue} />
+
         <StatHero
           label={
             hasLoss
@@ -385,6 +399,8 @@ export function PensionFeesComparator(): React.ReactElement {
             router.push('/bridge?tab=insurance' as never);
           }}
         />
+
+        <ToolNextStepCard toolKey="pension-fees" accentColor={TOOL.hue} />
 
         <LegalDisclaimer
           scope="pension"

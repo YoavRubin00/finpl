@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { View, StyleSheet } from 'react-native';
 import { Image as ExpoImage } from 'expo-image';
 import Animated, {
@@ -27,10 +27,10 @@ const SOURCES: Record<SharkExpression, number> = {
 const GLOW_BY_STATUS: Record<string, string> = {
   idle: DUO.blueSurface,
   connecting: DUO.blueSurface,
-  listening: '#86efac', // green-300
-  thinking: '#fde68a', // amber-200
-  speaking: '#fdba74', // orange-300
-  error: '#fca5a5', // red-300
+  listening: '#86efac',
+  thinking: '#fde68a',
+  speaking: '#fdba74',
+  error: '#fca5a5',
 };
 
 interface SharkAvatarProps {
@@ -41,69 +41,82 @@ export function SharkAvatar({ size = 280 }: SharkAvatarProps): React.ReactElemen
   const expression = useSharkAvatarState();
   const status = useSharkVoiceStore((s) => s.status);
 
-  const previousExpression = useRef<SharkExpression>(expression);
-  const layerA = useSharedValue(1);
-  const layerB = useSharedValue(0);
-  const showA = useRef(true);
-  const sourceA = useRef(SOURCES[expression]);
-  const sourceB = useRef(SOURCES[expression]);
+  const [layerASource, setLayerASource] = useState<number>(SOURCES[expression]);
+  const [layerBSource, setLayerBSource] = useState<number>(SOURCES[expression]);
+  const showALayerRef = useRef(true);
+  const prevExpressionRef = useRef<SharkExpression>(expression);
 
+  const layerAOpacity = useSharedValue(1);
+  const layerBOpacity = useSharedValue(0);
   const pulse = useSharedValue(1);
 
+  // Cross-fade between two image layers whenever the expression changes —
+  // putting sources in useState (instead of refs) forces ExpoImage to
+  // re-render with the new source while the opacity animation plays.
   useEffect(() => {
-    if (status === 'listening' || status === 'speaking') {
-      pulse.value = withRepeat(
-        withSequence(
-          withTiming(1.04, { duration: 700, easing: Easing.inOut(Easing.ease) }),
-          withTiming(1.0, { duration: 700, easing: Easing.inOut(Easing.ease) }),
-        ),
-        -1,
-        false,
-      );
+    if (expression === prevExpressionRef.current) return;
+    prevExpressionRef.current = expression;
+    const nextSource = SOURCES[expression];
+    if (showALayerRef.current) {
+      setLayerBSource(nextSource);
+      layerBOpacity.value = withTiming(1, { duration: 250 });
+      layerAOpacity.value = withTiming(0, { duration: 250 });
     } else {
-      pulse.value = withTiming(1, { duration: 250 });
+      setLayerASource(nextSource);
+      layerAOpacity.value = withTiming(1, { duration: 250 });
+      layerBOpacity.value = withTiming(0, { duration: 250 });
     }
+    showALayerRef.current = !showALayerRef.current;
+  }, [expression, layerAOpacity, layerBOpacity]);
+
+  // Subtle pulse while actively listening or speaking
+  useEffect(() => {
+    const active = status === 'listening' || status === 'speaking';
+    pulse.value = active
+      ? withRepeat(
+          withSequence(
+            withTiming(1.05, { duration: 700, easing: Easing.inOut(Easing.ease) }),
+            withTiming(1, { duration: 700, easing: Easing.inOut(Easing.ease) }),
+          ),
+          -1,
+          false,
+        )
+      : withTiming(1, { duration: 300 });
   }, [status, pulse]);
 
-  useEffect(() => {
-    if (expression === previousExpression.current) return;
-    previousExpression.current = expression;
-    if (showA.current) {
-      sourceB.current = SOURCES[expression];
-      layerB.value = withTiming(1, { duration: 250 });
-      layerA.value = withTiming(0, { duration: 250 });
-    } else {
-      sourceA.current = SOURCES[expression];
-      layerA.value = withTiming(1, { duration: 250 });
-      layerB.value = withTiming(0, { duration: 250 });
-    }
-    showA.current = !showA.current;
-  }, [expression, layerA, layerB]);
-
-  const animatedA = useAnimatedStyle(() => ({ opacity: layerA.value }));
-  const animatedB = useAnimatedStyle(() => ({ opacity: layerB.value }));
+  const animatedA = useAnimatedStyle(() => ({ opacity: layerAOpacity.value }));
+  const animatedB = useAnimatedStyle(() => ({ opacity: layerBOpacity.value }));
   const animatedScale = useAnimatedStyle(() => ({ transform: [{ scale: pulse.value }] }));
 
   const glowColor = GLOW_BY_STATUS[status] ?? DUO.blueSurface;
 
   return (
     <Animated.View style={[{ width: size, height: size }, animatedScale]}>
+      {/* Soft glow behind the shark */}
       <View
         style={[
           StyleSheet.absoluteFillObject,
           {
             backgroundColor: glowColor,
             borderRadius: size / 2,
-            opacity: 0.35,
-            transform: [{ scale: 1.1 }],
+            opacity: 0.32,
+            transform: [{ scale: 1.08 }],
           },
         ]}
       />
       <Animated.View style={[StyleSheet.absoluteFillObject, animatedA]} pointerEvents="none">
-        <ExpoImage source={sourceA.current} style={{ width: size, height: size }} contentFit="contain" />
+        <ExpoImage
+          source={layerASource}
+          style={{ width: size, height: size }}
+          contentFit="contain"
+        />
       </Animated.View>
       <Animated.View style={[StyleSheet.absoluteFillObject, animatedB]} pointerEvents="none">
-        <ExpoImage source={sourceB.current} style={{ width: size, height: size }} contentFit="contain" />
+        <ExpoImage
+          source={layerBSource}
+          style={{ width: size, height: size }}
+          contentFit="contain"
+        />
       </Animated.View>
     </Animated.View>
   );

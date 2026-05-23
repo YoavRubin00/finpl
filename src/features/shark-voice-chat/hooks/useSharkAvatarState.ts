@@ -4,12 +4,20 @@ import type { SharkVoiceStatus } from '../useSharkVoiceStore';
 
 /**
  * Drives which "expression" video the shark avatar plays based on the live
- * voice session status. Talking states rotate randomly between three loops
- * so the shark doesn't look mechanically identical every time it speaks.
+ * voice session status.
  *
- * For now we re-use existing animated WebP assets bundled in the repo
- * (see assets/webp). Once Higgsfield-generated WebM loops are saved into
- * assets/video, switch the imports there.
+ * Two visual states:
+ *  - `talking-1` — when the SDK reports the agent is `speaking`
+ *  - `empathic`  — every other status (`listening`, `thinking`, `idle`, …)
+ *
+ * **Mid-speech flicker guard:** the SDK briefly reports non-speaking modes
+ * during natural pauses (commas, breaths, inter-sentence gaps) even though
+ * the agent's turn isn't over. Without a guard, the WebP flips back and
+ * forth empathic↔talking many times per response, looking glitchy.
+ *
+ * We hold the `talking-1` expression for `TALKING_HOLD_MS` after the last
+ * `speaking` status. If `speaking` returns within that window, the timeout
+ * is cancelled and the avatar never visually leaves talking mode.
  */
 
 export type SharkExpression =
@@ -22,48 +30,46 @@ export type SharkExpression =
   | 'empathic'
   | 'victory';
 
-const TALKING_VARIANTS: SharkExpression[] = ['talking-1', 'talking-2', 'talking-3'];
+// Short hold only — its job is to absorb sub-frame flickers between
+// the SDK firing `listening` and the next audio chunk arriving. The
+// real silence detection lives in `useElevenLabsConversation.ts`.
+// Keep this tight so the avatar feels responsive to actual end-of-turn.
+const TALKING_HOLD_MS = 300;
 
-function pickTalking(prev: SharkExpression | null): SharkExpression {
-  const choices = prev
-    ? TALKING_VARIANTS.filter((c) => c !== prev)
-    : TALKING_VARIANTS;
-  const idx = Math.floor(Math.random() * choices.length);
-  return choices[idx] ?? 'talking-1';
-}
-
-function mapStatusToExpression(
-  status: SharkVoiceStatus,
-  lastTalking: SharkExpression | null,
-): SharkExpression {
-  switch (status) {
-    case 'connecting':
-    case 'idle':
-      return 'idle';
-    case 'listening':
-      return 'listening';
-    case 'thinking':
-      return 'thinking';
-    case 'speaking':
-      return pickTalking(lastTalking);
-    case 'error':
-      return 'empathic';
-    default:
-      return 'idle';
-  }
+function isSpeaking(status: SharkVoiceStatus): boolean {
+  return status === 'speaking';
 }
 
 export function useSharkAvatarState(): SharkExpression {
   const status = useSharkVoiceStore((s) => s.status);
-  const lastTalkingRef = useRef<SharkExpression | null>(null);
-  const [expression, setExpression] = useState<SharkExpression>('idle');
+  const [expression, setExpression] = useState<SharkExpression>('empathic');
+  const exitTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
-    const next = mapStatusToExpression(status, lastTalkingRef.current);
-    if (next.startsWith('talking-')) {
-      lastTalkingRef.current = next;
+    if (isSpeaking(status)) {
+      if (exitTimerRef.current) {
+        clearTimeout(exitTimerRef.current);
+        exitTimerRef.current = null;
+      }
+      setExpression('talking-1');
+      return;
     }
-    setExpression(next);
+
+    // Status moved away from speaking — only commit the visual change after
+    // the hold window. If `speaking` returns first, the cleanup function
+    // cancels the pending transition (no visible flicker).
+    if (exitTimerRef.current) clearTimeout(exitTimerRef.current);
+    exitTimerRef.current = setTimeout(() => {
+      setExpression('empathic');
+      exitTimerRef.current = null;
+    }, TALKING_HOLD_MS);
+
+    return () => {
+      if (exitTimerRef.current) {
+        clearTimeout(exitTimerRef.current);
+        exitTimerRef.current = null;
+      }
+    };
   }, [status]);
 
   return expression;

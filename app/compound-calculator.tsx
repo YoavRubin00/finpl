@@ -3,11 +3,17 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { ChevronRight } from 'lucide-react-native';
 import { CompoundSimScreen } from '../src/features/chapter-1-content/simulations/CompoundSimScreen';
+import { ToolNextStepCard } from '../src/features/financial-tools/components/ToolNextStepCard';
 import { tapHaptic } from '../src/utils/haptics';
 
+const COMPOUND_ACCENT = '#0891b2';
+
 /**
- * Compound-interest tutorial route. A SafeArea-aware top bar reserves space
- * for the back button so the sim content beneath it never gets overlapped.
+ * Compound-interest tutorial route. SafeArea-aware top bar reserves space
+ * for the back button and the bottom strip pins a "next step" card so the
+ * user always has an obvious exit + sibling-tool suggestion. The strip uses
+ * `pointerEvents="box-none"` so taps on transparent areas still reach the
+ * sim underneath.
  */
 export default function CompoundCalculatorRoute() {
   const router = useRouter();
@@ -29,9 +35,14 @@ export default function CompoundCalculatorRoute() {
           <ChevronRight size={20} color="#0f172a" strokeWidth={2.8} />
         </Pressable>
       </View>
+
       <View style={{ flex: 1 }}>
         <CompoundSimScreen onComplete={goToTools} />
       </View>
+
+      <SafeAreaView edges={['bottom']} style={styles.bottomStrip} pointerEvents="box-none">
+        <ToolNextStepCard toolKey="compound" accentColor={COMPOUND_ACCENT} />
+      </SafeAreaView>
     </SafeAreaView>
   );
 }
@@ -61,5 +72,11 @@ const styles = StyleSheet.create({
     elevation: 6,
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.9)',
+  },
+  bottomStrip: {
+    paddingHorizontal: 12,
+    paddingTop: 8,
+    paddingBottom: 4,
+    backgroundColor: 'rgba(240, 253, 244, 0.95)',
   },
 });

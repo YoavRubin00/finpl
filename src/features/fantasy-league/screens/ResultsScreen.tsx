@@ -89,31 +89,12 @@ function ConfettiBurst(): React.ReactElement {
 }
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
-const TIER_TO_SHIELD: Record<FantasyTier, TierKey> = {
-  silver: 'silver',
-  gold: 'gold',
-  diamond: 'gold',
-};
-
-const NEXT_TIER: Record<FantasyTier, FantasyTier> = {
-  silver: 'gold',
-  gold: 'diamond',
-  diamond: 'diamond',
-};
 
 const TIER_LABEL: Record<FantasyTier, string> = {
   silver: 'ליגת הכסף',
   gold: 'ליגת הזהב',
   diamond: 'ליגת היהלומים',
 };
-
-function zoneForRank(rank: number, total: number): 'promote' | 'safe' | 'relegate' {
-  const promote = Math.max(3, Math.ceil(total * 0.2));
-  const relegate = Math.max(3, Math.ceil(total * 0.2));
-  if (rank <= promote) return 'promote';
-  if (rank > total - relegate) return 'relegate';
-  return 'safe';
-}
 
 // ─── Main screen ─────────────────────────────────────────────────────────────
 export function ResultsScreen(): React.ReactElement {
@@ -156,9 +137,6 @@ export function ResultsScreen(): React.ReactElement {
     (tierConfig && rank >= 1 && rank <= 5 ? tierConfig.prizeXP[rank - 1] : 25);
   const gemsEarned = isTop3 ? 50 : rank <= 5 ? 30 : 10;
 
-  const zone = zoneForRank(rank, totalPlayers);
-  const isPromoted = zone === 'promote';
-  const isDemoted = zone === 'relegate';
 
   // Top 3 podium — substitute local player if they made it
   const top3 = useMemo(() => {
@@ -169,8 +147,6 @@ export function ResultsScreen(): React.ReactElement {
     return list;
   }, [leaderboard, rank, currentEntry]);
 
-  const fromTier: FantasyTier = currentEntry?.tier ?? 'silver';
-  const toTier: FantasyTier = NEXT_TIER[fromTier];
 
   const handleClaim = (): void => {
     claimResults();
@@ -224,65 +200,6 @@ export function ResultsScreen(): React.ReactElement {
               isLocal: e.isLocal,
             }))} />
           </AnimatedReanimated.View>
-
-          {/* Promotion banner */}
-          {isPromoted && currentEntry && toTier !== fromTier && (
-            <AnimatedReanimated.View entering={FadeInDown.delay(320).duration(360)}>
-              <View style={{
-                backgroundColor: FANTASY.purpleSoft,
-                borderRadius: 14,
-                borderWidth: 1.5,
-                borderColor: '#c4b5fd',
-                padding: 14,
-                flexDirection: 'row-reverse',
-                alignItems: 'center',
-                gap: 12,
-              }}>
-                <F2TierShield tier={TIER_TO_SHIELD[toTier]} size={44} />
-                <View style={{ flex: 1 }}>
-                  <Text style={{
-                    fontSize: 10,
-                    fontWeight: '900',
-                    color: FANTASY.purple,
-                    letterSpacing: 1.4,
-                    textTransform: 'uppercase',
-                    ...RTL,
-                  }}>
-                    קידום!
-                  </Text>
-                  <Text style={{ fontSize: 14, fontWeight: '900', color: FANTASY.ink, ...RTL, marginTop: 2 }}>
-                    עלית ל{TIER_LABEL[toTier]} 🎉
-                  </Text>
-                </View>
-              </View>
-            </AnimatedReanimated.View>
-          )}
-
-          {/* Demotion banner */}
-          {isDemoted && (
-            <AnimatedReanimated.View entering={FadeInDown.delay(320).duration(360)}>
-              <View style={{
-                backgroundColor: FANTASY.negativeSoft,
-                borderRadius: 14,
-                borderWidth: 1,
-                borderColor: FANTASY.negativeStroke,
-                padding: 14,
-                flexDirection: 'row-reverse',
-                alignItems: 'center',
-                gap: 12,
-              }}>
-                <Text style={{ fontSize: 26 }}>📉</Text>
-                <View style={{ flex: 1 }}>
-                  <Text style={{ fontSize: 15, fontWeight: '900', color: FANTASY.negativeDark, ...RTL }}>
-                    ירדת ליגה
-                  </Text>
-                  <Text style={{ fontSize: 12, color: FANTASY.negativeDark, ...RTL, marginTop: 2 }}>
-                    שבוע הבא הזדמנות לחזרה
-                  </Text>
-                </View>
-              </View>
-            </AnimatedReanimated.View>
-          )}
 
           {/* Prizes grid */}
           {currentEntry && (
@@ -363,7 +280,6 @@ export function ResultsScreen(): React.ReactElement {
             <View style={{ gap: 5 }}>
               {leaderboard.slice(0, 5).map((entry) => {
                 const isLocalRow = currentEntry ? entry.rank === rank && rank <= 5 : false;
-                const entryZone = zoneForRank(entry.rank, totalPlayers);
                 return (
                   <F2LeaderRow
                     key={entry.playerId}
@@ -372,7 +288,6 @@ export function ResultsScreen(): React.ReactElement {
                     returnPercent={entry.returnPercent}
                     change={entry.change}
                     isLocal={isLocalRow}
-                    position={entryZone === 'promote' ? 'promoted' : entryZone === 'relegate' ? 'demoted' : 'stable'}
                   />
                 );
               })}
@@ -392,7 +307,6 @@ export function ResultsScreen(): React.ReactElement {
                     name="את/ה"
                     returnPercent={effReturn}
                     isLocal
-                    position={zone === 'promote' ? 'promoted' : zone === 'relegate' ? 'demoted' : 'stable'}
                   />
                 </>
               )}

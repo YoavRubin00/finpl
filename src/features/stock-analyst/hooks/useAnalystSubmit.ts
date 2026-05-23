@@ -1,0 +1,190 @@
+import { useCallback } from 'react';
+import { useStockAnalystStore } from '../useStockAnalystStore';
+import { useSubscriptionStore } from '../../subscription/useSubscriptionStore';
+import { useTradingStore } from '../../trading-hub/useTradingStore';
+import { fetchQuickAnalysis, fetchDeepAnalysis, fetchLiveQuote } from '../services/stockAnalystClient';
+import { buildPortfolioContext } from '../services/portfolioContext';
+import { useAnalystHistoryStore } from '../useAnalystHistoryStore';
+import type { AnalystMessage, StockAnalysisDeep, StockAnalysisQuick } from '../types';
+
+function nextId(prefix: string): string {
+  return `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+}
+
+// Best-effort lookup of a human company name. The market service caches
+// quotes but doesn't expose a name endpoint — for now we fall back to the
+// ticker itself; future iteration can add an Alpha Vantage overview call.
+function deriveCompanyName(ticker: string): string {
+  const map: Record<string, string> = {
+    NVDA: 'NVIDIA',
+    AAPL: 'Apple',
+    MSFT: 'Microsoft',
+    GOOGL: 'Alphabet',
+    AMZN: 'Amazon',
+    META: 'Meta Platforms',
+    TSLA: 'Tesla',
+    NFLX: 'Netflix',
+    AMD: 'AMD',
+    INTC: 'Intel',
+    JPM: 'JPMorgan Chase',
+    V: 'Visa',
+    MA: 'Mastercard',
+    DIS: 'Disney',
+    BA: 'Boeing',
+  };
+  return map[ticker] ?? ticker;
+}
+
+/**
+ * Drives the submit lifecycle: gate → loading message → API call → result
+ * cards → optional portfolio context card → cleanup. Records usage on the
+ * subscription store on success.
+ */
+export function useAnalystSubmit() {
+  const mode = useStockAnalystStore((s) => s.mode);
+  const horizon = useStockAnalystStore((s) => s.horizon);
+  const appendMessage = useStockAnalystStore((s) => s.appendMessage);
+  const removeMessage = useStockAnalystStore((s) => s.removeMessage);
+  const setLoading = useStockAnalystStore((s) => s.setLoading);
+  const setError = useStockAnalystStore((s) => s.setError);
+
+  const canUseAnalystQuick = useSubscriptionStore((s) => s.canUseAnalystQuick);
+  const canUseAnalystDeep = useSubscriptionStore((s) => s.canUseAnalystDeep);
+  const recordAnalystQuickUsage = useSubscriptionStore((s) => s.recordAnalystQuickUsage);
+  const recordAnalystDeepUsage = useSubscriptionStore((s) => s.recordAnalystDeepUsage);
+  const addQuickToHistory = useAnalystHistoryStore((s) => s.addQuick);
+  const addDeepToHistory = useAnalystHistoryStore((s) => s.addDeep);
+
+  const submit = useCallback(
+    async (rawTicker: string): Promise<{ ok: true } | { ok: false; reason: 'gate' | 'error'; message?: string }> => {
+      const ticker = rawTicker.trim().toUpperCase();
+      if (!ticker) return { ok: false, reason: 'error', message: 'הקלד טיקר' };
+
+      // Gate
+      if (mode === 'quick' && !canUseAnalystQuick()) return { ok: false, reason: 'gate' };
+      if (mode === 'deep' && !canUseAnalystDeep()) return { ok: false, reason: 'gate' };
+
+      const companyName = deriveCompanyName(ticker);
+
+      // 1. user-query bubble
+      const userMsg: AnalystMessage = {
+        id: nextId('q'),
+        kind: 'user-query',
+        text: mode === 'deep' ? `נתח לעומק את ${ticker}` : `נתח את ${ticker}`,
+        ts: Date.now(),
+      };
+      appendMessage(userMsg);
+
+      // 2. loading bubble
+      const loadingId = nextId('l');
+      appendMessage({ id: loadingId, kind: 'loading', mode, ticker, ts: Date.now() });
+      setLoading(true);
+      setError(null);
+
+      try {
+        // 3. Fetch live market data from the deployed Vercel quote endpoint.
+        //    Doing this directly (instead of via marketApiService) avoids the
+        //    relative-URL fallback to mock data when running on localhost web.
+        const quote = await fetchLiveQuote(ticker);
+        const price = quote?.price ?? 0;
+        const prevClose = quote?.previousClose ?? null;
+        const priceChangePct =
+          prevClose && prevClose > 0 ? ((price - prevClose) / prevClose) * 100 : 0;
+        const spark = (quote?.chart ?? []).slice(-30).map((d) => ({ t: d.timestamp, p: d.price }));
+
+        if (mode === 'quick') {
+          const result = await fetchQuickAnalysis({
+            ticker,
+            companyName,
+            exchange: 'NASDAQ',
+            horizon,
+            priceContext: { price, priceChangePct, currency: 'USD' },
+          });
+
+          const card: StockAnalysisQuick = {
+            ticker,
+            companyName,
+            exchange: 'NASDAQ',
+            horizon,
+            price,
+            priceChangePct,
+            currency: 'USD',
+            spark,
+            verdict: result.verdict,
+            confidence: result.confidence,
+            captainNote: result.captainNote,
+            targetNote: result.targetNote,
+            commentary: result.commentary,
+          };
+
+          // Replace loading with intro + quick card (matches the mockup —
+          // a quick captain text bubble before the card).
+          removeMessage(loadingId);
+          appendMessage({
+            id: nextId('intro'),
+            kind: 'captain-text',
+            pose: 'tablet',
+            text: `בדקתי את ${ticker} במים העמוקים 🌊 הנה הסיכום:`,
+            ts: Date.now(),
+          });
+          appendMessage({ id: nextId('qc'), kind: 'quick-card', data: card, ts: Date.now() });
+          recordAnalystQuickUsage();
+          addQuickToHistory(card);
+        } else {
+          const deep = await fetchDeepAnalysis({
+            ticker,
+            companyName,
+            exchange: 'NASDAQ',
+            horizon,
+            marketContext: { price, priceChangePct, currency: 'USD' },
+          });
+          const safeDeep: StockAnalysisDeep = { ...deep, ticker, companyName, horizon };
+          removeMessage(loadingId);
+          appendMessage({
+            id: nextId('intro'),
+            kind: 'captain-text',
+            pose: 'tablet',
+            text: `צללתי לעומקה של ${ticker} 🦈 הנה ניתוח מלא לפי הטווח שבחרת:`,
+            ts: Date.now(),
+          });
+          appendMessage({ id: nextId('dc'), kind: 'deep-card', data: safeDeep, ts: Date.now() });
+          recordAnalystDeepUsage();
+          addDeepToHistory(safeDeep);
+        }
+
+        // 4. Optional portfolio context card
+        const positions = useTradingStore.getState().positions;
+        const ctx = buildPortfolioContext(positions);
+        if (ctx) {
+          appendMessage({ id: nextId('pc'), kind: 'portfolio-context', data: ctx, ts: Date.now() });
+        }
+
+        return { ok: true };
+      } catch (err) {
+        removeMessage(loadingId);
+        const message = err instanceof Error ? err.message : 'משהו השתבש. נסה שוב בעוד רגע.';
+        appendMessage({ id: nextId('e'), kind: 'error', text: message, ts: Date.now() });
+        setError(message);
+        return { ok: false, reason: 'error', message };
+      } finally {
+        setLoading(false);
+      }
+    },
+    [
+      mode,
+      horizon,
+      canUseAnalystQuick,
+      canUseAnalystDeep,
+      recordAnalystQuickUsage,
+      recordAnalystDeepUsage,
+      appendMessage,
+      removeMessage,
+      setLoading,
+      setError,
+      addQuickToHistory,
+      addDeepToHistory,
+    ],
+  );
+
+  return { submit };
+}

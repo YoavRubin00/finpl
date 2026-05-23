@@ -23,7 +23,8 @@
       "assets/fonts/**",
       "assets/IMAGES/**",
       "assets/images/**",
-      "assets/sounds/**"
+      "assets/sounds/**",
+      "assets/videos/**"
     ],
     "web": {
       "bundler": "metro",

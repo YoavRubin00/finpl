@@ -7,7 +7,6 @@ import Animated, { FadeInDown } from 'react-native-reanimated';
 import { STITCH } from '../../../constants/theme';
 import { tapHaptic } from '../../../utils/haptics';
 import type { ToolMeta } from '../toolsRegistry';
-import { PremiumRibbon } from './atoms/PremiumRibbon';
 
 interface ToolHubCardProps {
   tool: ToolMeta;
@@ -55,13 +54,6 @@ function ToolHubCardInner({ tool, index }: ToolHubCardProps): React.ReactElement
           style={[styles.halo, { backgroundColor: tool.hue + '22' }]}
           pointerEvents="none"
         />
-
-        {/* Badge cluster top-left */}
-        {tool.premiumDark && !isComingSoon ? (
-          <View style={styles.badge}>
-            <PremiumRibbon compact />
-          </View>
-        ) : null}
 
         {/* Icon tile */}
         <View
@@ -162,12 +154,6 @@ const styles = StyleSheet.create({
     width: 90,
     height: 90,
     borderRadius: 90,
-  },
-  badge: {
-    position: 'absolute',
-    top: 10,
-    left: 10,
-    zIndex: 2,
   },
   iconTile: {
     width: 42,

@@ -1,124 +1,73 @@
 import { useCallback, useEffect, useRef } from 'react';
-import { Platform } from 'react-native';
+import { Conversation } from '@elevenlabs/client';
 import { useSharkVoiceStore } from '../useSharkVoiceStore';
 import { fetchSignedUrl } from '../services/voiceSessionClient';
 
 /**
- * Drives the ElevenLabs Conversational AI WebSocket session.
+ * Drives the ElevenLabs Conversational AI session via the official SDK.
  *
- * Web implementation:
- *  - getUserMedia for the mic, MediaRecorder for streaming PCM-ish audio
- *    chunks up the WebSocket. JSON frames are interpreted as agent events
- *    (transcripts, responses, audio markers).
+ * The SDK handles:
+ *  - Microphone capture + PCM16 16kHz encoding (the format the agent expects).
+ *  - WebSocket framing of audio chunks (`{ user_audio_chunk: <base64> }`).
+ *  - Decoding + playback of the agent's audio replies.
+ *  - VAD-based turn detection so the agent waits for you to stop talking.
  *
- * Native implementation (iOS/Android):
- *  - Wired once ELEVENLABS_AGENT_ID is provisioned and the native SDK is
- *    installed. The current flow connects the WebSocket so transcripts and
- *    text frames work; mic streaming requires the native bridge.
- *
- * Public API:
- *   connect()    — fetches signed URL, opens WebSocket, requests mic on web.
- *   disconnect() — closes WebSocket and releases mic.
- *   toggleMute() — stops/resumes upstream mic frames (no-op on native v1).
+ * We just wire its callbacks into our local Zustand store so the UI reflects
+ * "listening / speaking / thinking" states correctly.
  */
 
-interface AgentMessage {
-  type: string;
-  user_transcript?: string;
-  agent_response?: string;
-  audio_event?: { audio_base_64?: string };
+type ConversationHandle = Awaited<ReturnType<typeof Conversation.startSession>>;
+
+/**
+ * Strip Eleven v3 inline emotion tags (e.g. "[happy]", "[warmly]") from the
+ * text shown to the user. The TTS engine interprets them as prosody control
+ * and renders them inaudibly, but the underlying string still contains them
+ * and would otherwise leak into the on-screen transcript.
+ */
+function cleanTranscriptText(text: string): string {
+  return text
+    .replace(/\[[^\]]{1,40}\]/g, '')
+    .replace(/\s{2,}/g, ' ')
+    .trim();
 }
 
-// Browser globals are accessed dynamically because this module also runs in
-// React Native, where MediaRecorder/navigator/BlobEvent aren't part of the
-// type lib. Using a loose-typed reference keeps the file portable without
-// pulling lib.dom into the project tsconfig.
-type AnyBrowser = {
-  MediaRecorder?: new (stream: unknown, options?: { mimeType?: string }) => {
-    start: (timeslice?: number) => void;
-    stop: () => void;
-    state: string;
-    ondataavailable: ((event: { data: { size: number } }) => void) | null;
-  };
-  navigator?: {
-    mediaDevices?: {
-      getUserMedia: (constraints: { audio?: boolean }) => Promise<unknown>;
-    };
-  };
-};
-
-function getBrowser(): AnyBrowser {
-  return globalThis as unknown as AnyBrowser;
-}
+// After this many ms without an audio chunk arriving we declare the agent
+// done speaking and flip back to "listening". TTS streams chunks at
+// 20–100ms intervals during active speech, so a real inter-sentence gap
+// of 600–800ms is unusual mid-turn. 900ms is generous for natural pauses
+// but tight enough that the WebP stops looking "stuck talking" after
+// the agent's reply ends.
+const AUDIO_SILENCE_MS = 900;
 
 export function useElevenLabsConversation() {
-  const wsRef = useRef<WebSocket | null>(null);
-  const micStreamRef = useRef<unknown>(null);
-  const mediaRecorderRef = useRef<{ stop: () => void; state: string } | null>(null);
+  const conversationRef = useRef<ConversationHandle | null>(null);
+  const startingRef = useRef(false);
+  const speakingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const lastAudioAtRef = useRef<number>(0);
 
   const setStatus = useSharkVoiceStore((s) => s.setStatus);
   const setUserTranscript = useSharkVoiceStore((s) => s.setUserTranscript);
-  const appendSharkText = useSharkVoiceStore((s) => s.appendSharkText);
   const setSharkText = useSharkVoiceStore((s) => s.setSharkText);
   const setError = useSharkVoiceStore((s) => s.setError);
+  const setMuted = useSharkVoiceStore((s) => s.setMuted);
 
-  const handleAgentMessage = useCallback(
-    (data: AgentMessage) => {
-      switch (data.type) {
-        case 'user_transcript':
-          if (data.user_transcript) {
-            setUserTranscript(data.user_transcript);
-            setStatus('thinking');
-          }
-          break;
-        case 'agent_response':
-          if (data.agent_response) {
-            setSharkText(data.agent_response);
-            setStatus('speaking');
-          }
-          break;
-        case 'agent_response_chunk':
-          if (data.agent_response) {
-            appendSharkText(data.agent_response);
-          }
-          break;
-        case 'audio':
-          setStatus('speaking');
-          break;
-        case 'interruption':
-          setStatus('listening');
-          break;
-        case 'ping':
-          wsRef.current?.send(JSON.stringify({ type: 'pong' }));
-          break;
-        default:
-          break;
+  const disconnect = useCallback(async () => {
+    const conv = conversationRef.current;
+    conversationRef.current = null;
+    startingRef.current = false;
+    if (conv) {
+      try {
+        await conv.endSession();
+      } catch {
+        // Best-effort cleanup
       }
-    },
-    [appendSharkText, setSharkText, setStatus, setUserTranscript],
-  );
-
-  const disconnect = useCallback(() => {
-    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
-      mediaRecorderRef.current.stop();
     }
-    mediaRecorderRef.current = null;
-
-    const stream = micStreamRef.current as { getTracks?: () => Array<{ stop: () => void }> } | null;
-    if (stream && typeof stream.getTracks === 'function') {
-      stream.getTracks().forEach((track) => track.stop());
-    }
-    micStreamRef.current = null;
-
-    if (wsRef.current && wsRef.current.readyState <= WebSocket.OPEN) {
-      wsRef.current.close();
-    }
-    wsRef.current = null;
-
     setStatus('idle');
   }, [setStatus]);
 
   const connect = useCallback(async () => {
+    if (startingRef.current || conversationRef.current) return;
+    startingRef.current = true;
     setStatus('connecting');
     setError(null);
 
@@ -127,78 +76,85 @@ export function useElevenLabsConversation() {
       signedUrl = await fetchSignedUrl();
     } catch {
       setError('לא הצלחנו להתחיל את השיחה. נסה שוב בעוד רגע.');
+      startingRef.current = false;
       return;
     }
 
     try {
-      const ws = new WebSocket(signedUrl);
-      wsRef.current = ws;
-
-      ws.onopen = () => {
-        setStatus('listening');
-      };
-
-      ws.onmessage = (event) => {
-        const raw = (event as { data: unknown }).data;
-        if (typeof raw === 'string') {
-          try {
-            handleAgentMessage(JSON.parse(raw) as AgentMessage);
-          } catch {
-            // Non-JSON frames are ignored — binary audio is handled by the
-            // platform audio adapter (TODO when native mic stream lands).
+      const conv = await Conversation.startSession({
+        signedUrl,
+        onConnect: () => {
+          setStatus('listening');
+        },
+        onDisconnect: () => {
+          setStatus('idle');
+        },
+        onError: (message) => {
+          setError(message || 'שגיאה בשירות הקול.');
+        },
+        onMessage: ({ message, role }) => {
+          if (!message) return;
+          const cleaned = cleanTranscriptText(message);
+          if (!cleaned) return;
+          if (role === 'user') {
+            setUserTranscript(cleaned);
+            // While the agent generates its reply we're effectively "thinking"
+            setStatus('thinking');
+          } else if (role === 'agent') {
+            setSharkText(cleaned);
           }
-        }
-      };
-
-      ws.onerror = () => {
-        setError('שגיאה בחיבור לשירות הקול.');
-      };
-
-      ws.onclose = () => {
-        setStatus('idle');
-      };
-    } catch {
-      setError('לא ניתן לפתוח חיבור לשירות הקול.');
-      return;
-    }
-
-    if (Platform.OS === 'web') {
-      const browser = getBrowser();
-      if (!browser.navigator?.mediaDevices || !browser.MediaRecorder) {
-        return;
-      }
-      try {
-        const stream = await browser.navigator.mediaDevices.getUserMedia({ audio: true });
-        micStreamRef.current = stream;
-        const recorder = new browser.MediaRecorder(stream, { mimeType: 'audio/webm' });
-        recorder.ondataavailable = (e) => {
-          if (e.data.size > 0 && wsRef.current?.readyState === WebSocket.OPEN) {
-            wsRef.current.send(e.data as unknown as ArrayBuffer);
+        },
+        onModeChange: ({ mode }) => {
+          if (mode === 'speaking') {
+            setStatus('speaking');
+            return;
           }
-        };
-        recorder.start(250);
-        mediaRecorderRef.current = recorder;
-      } catch {
-        setError('נדרשת הרשאת מיקרופון להמשך השיחה.');
-        disconnect();
-      }
-    }
-  }, [disconnect, handleAgentMessage, setError, setStatus]);
-
-  const toggleMute = useCallback((muted: boolean) => {
-    const stream = micStreamRef.current as
-      | { getAudioTracks?: () => Array<{ enabled: boolean }> }
-      | null;
-    if (stream && typeof stream.getAudioTracks === 'function') {
-      stream.getAudioTracks().forEach((track) => {
-        track.enabled = !muted;
+          // SDK fires "listening" during brief mid-turn audio gaps (silence
+          // between sentences, breaths). Ignore those — only flip back when
+          // the silence timer below has confirmed sustained quiet.
+          const now = Date.now();
+          const elapsed = now - lastAudioAtRef.current;
+          if (elapsed < AUDIO_SILENCE_MS) return;
+          if (speakingTimeoutRef.current) clearTimeout(speakingTimeoutRef.current);
+          setStatus('listening');
+        },
+        onAudio: () => {
+          // Every audio chunk = "still talking". Keep us in speaking state and
+          // reset the silence timer. Only when no chunks arrive for the full
+          // AUDIO_SILENCE_MS window do we acknowledge the turn is over.
+          lastAudioAtRef.current = Date.now();
+          setStatus('speaking');
+          if (speakingTimeoutRef.current) clearTimeout(speakingTimeoutRef.current);
+          speakingTimeoutRef.current = setTimeout(() => {
+            setStatus('listening');
+          }, AUDIO_SILENCE_MS);
+        },
       });
+      conversationRef.current = conv;
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'לא ניתן לפתוח חיבור לשירות הקול.';
+      setError(message);
+      startingRef.current = false;
     }
-  }, []);
+  }, [setError, setSharkText, setStatus, setUserTranscript]);
+
+  const toggleMute = useCallback(
+    (muted: boolean) => {
+      const conv = conversationRef.current;
+      // The SDK exposes setMicMuted on the underlying input controller — guard
+      // for shape changes between SDK versions.
+      const anyConv = conv as unknown as { setMicMuted?: (m: boolean) => void };
+      if (anyConv && typeof anyConv.setMicMuted === 'function') {
+        anyConv.setMicMuted(muted);
+      }
+      setMuted(muted);
+    },
+    [setMuted],
+  );
 
   useEffect(() => {
     return () => {
-      disconnect();
+      void disconnect();
     };
   }, [disconnect]);
 

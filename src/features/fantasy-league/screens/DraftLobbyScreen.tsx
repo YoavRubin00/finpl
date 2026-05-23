@@ -71,10 +71,11 @@ function riskForChange(change: number): 'low' | 'med' | 'high' {
 export function DraftLobbyScreen(): React.ReactElement {
   const currentEntry = useFantasyStore((s) => s.currentEntry);
   const picks = currentEntry?.picks ?? [];
-  const isLocked = !!currentEntry?.lockedAt;
+  // No hard manual lock — portfolio is editable for the entire draft phase
+  // (Sat 20:00 → Mon 09:00). At competition start, phase logic freezes edits.
+  const isLocked = false;
   const enterCompetition = useFantasyStore((s) => s.enterCompetition);
   const pickStock = useFantasyStore((s) => s.pickStock);
-  const lockDraft = useFantasyStore((s) => s.lockDraft);
   const setCaptain = useFantasyStore((s) => s.setCaptain);
   const setAllocation = useFantasyStore((s) => s.setAllocation);
   const redistributeAllocationsEqually = useFantasyStore((s) => s.redistributeAllocationsEqually);
@@ -84,7 +85,6 @@ export function DraftLobbyScreen(): React.ReactElement {
   const [analysisStock, setAnalysisStock] = useState<DraftStock | null>(null);
   const [showRules, setShowRules] = useState(false);
   const [confirmJoin, setConfirmJoin] = useState(false);
-  const [confirmLock, setConfirmLock] = useState(false);
   const [errorModal, setErrorModal] = useState<{ title: string; message: string } | null>(null);
 
   const hasEntered = currentEntry !== null;
@@ -122,9 +122,15 @@ export function DraftLobbyScreen(): React.ReactElement {
   const handlePickStock = useCallback(
     (stock: DraftStock) => {
       if (!hasEntered || isLocked) return;
+
+      // Same-category swap → stay on this tab so the user sees the replacement happen.
+      const isSwapInCategory = picks.some((p) => p.categoryId === stock.categoryId);
+
       pickStock(stock.categoryId, stock.ticker, stock.name, stock.mockPrice);
 
-      // Auto-advance to the next un-picked category so the user keeps flowing.
+      if (isSwapInCategory) return;
+
+      // First pick in this category → auto-advance to next un-picked category.
       const pickedIds = new Set<StockCategoryId>([
         ...picks.map((p) => p.categoryId),
         stock.categoryId,
@@ -137,22 +143,17 @@ export function DraftLobbyScreen(): React.ReactElement {
     [hasEntered, isLocked, pickStock, picks],
   );
 
-  const handleLock = useCallback(() => {
-    setConfirmLock(true);
+  const handleContinueToLive = useCallback(() => {
+    router.push('/fantasy/live');
   }, []);
-
-  const handleConfirmLock = useCallback(() => {
-    setConfirmLock(false);
-    lockDraft();
-  }, [lockDraft]);
 
   const handleToggleLeverage = useCallback(
     (ticker: string) => {
-      if (!hasEntered || isLocked) return;
+      if (!hasEntered) return;
       const isCurrent = currentEntry?.captainTicker === ticker;
       setCaptain(isCurrent ? null : ticker);
     },
-    [currentEntry?.captainTicker, hasEntered, isLocked, setCaptain],
+    [currentEntry?.captainTicker, hasEntered, setCaptain],
   );
 
   return (
@@ -459,6 +460,7 @@ export function DraftLobbyScreen(): React.ReactElement {
                         style={{ flex: 1 }}
                       >
                         <Pressable
+                          onPress={() => handlePickStock(item)}
                           onLongPress={() => setAnalysisStock(item)}
                           delayLongPress={250}
                         >
@@ -469,7 +471,6 @@ export function DraftLobbyScreen(): React.ReactElement {
                             change={item.mockWeeklyChange}
                             aiScore={aiScoreFor(item.ticker, item.mockWeeklyChange, item.mockPrice)}
                             spark={sparkForChange(item.mockWeeklyChange)}
-                            risk={riskForChange(item.mockWeeklyChange)}
                             selected={isPicked}
                             hot={hot}
                             currency={item.currency ?? '$'}
@@ -495,55 +496,94 @@ export function DraftLobbyScreen(): React.ReactElement {
           )}
         </ScrollView>
 
-        {/* ─── Sticky bottom progress bar (during draft) ─── */}
-        {hasEntered && !isLocked && (
-          <View style={styles.stickyBottom}>
-            <DraftProgressBar
-              categories={STOCK_CATEGORIES}
-              picks={picks}
-              onLock={handleLock}
-              locked={isLocked}
-              lockReady={allocationBalanced}
-              lockBlockReason={
-                poolRemaining > 0
-                  ? `נשארו לחלק ${poolRemaining.toLocaleString('en-US')} מטבעות`
-                  : undefined
-              }
-            />
-          </View>
-        )}
-
-        {/* ─── Sticky bottom continue CTA (after lock) ─── */}
-        {hasEntered && isLocked && (
+        {/* ─── Sticky bottom: progress bar + continue CTA ─── */}
+        {hasEntered && (
           <View style={styles.stickyBottom}>
             <View style={{
               backgroundColor: FANTASY.surfaceCard,
               borderTopWidth: 1,
               borderTopColor: FANTASY.border,
               paddingHorizontal: 16,
-              paddingTop: 12,
-              paddingBottom: 28,
+              paddingTop: 10,
+              paddingBottom: 24,
               gap: 8,
             }}>
+              {/* Status line */}
+              <View style={{
+                flexDirection: 'row-reverse',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: 8,
+              }}>
+                <Text style={{
+                  fontSize: 12,
+                  fontWeight: '800',
+                  color: picks.length === 5 && allocationBalanced
+                    ? FANTASY.positiveDark
+                    : FANTASY.inkMuted,
+                  textAlign: 'center',
+                  writingDirection: 'rtl',
+                }}>
+                  {picks.length < 5
+                    ? `בחרת ${picks.length}/5 מניות`
+                    : !allocationBalanced
+                      ? `נשארו לחלק ${poolRemaining.toLocaleString('en-US')} 🪙`
+                      : currentEntry?.captainTicker
+                        ? `✓ מוכן · ${currentEntry.captainTicker} ממונף ×2`
+                        : '✓ מוכן · ללא מנוף'}
+                </Text>
+              </View>
+
+              {/* Mini progress dots — 1 per category */}
+              <View style={{
+                flexDirection: 'row-reverse',
+                gap: 6,
+                justifyContent: 'center',
+              }}>
+                {STOCK_CATEGORIES.map((cat) => {
+                  const isPicked = picks.some((p) => p.categoryId === cat.id);
+                  return (
+                    <View
+                      key={cat.id}
+                      style={{
+                        width: 26,
+                        height: 4,
+                        borderRadius: 999,
+                        backgroundColor: isPicked ? FANTASY.positive : FANTASY.surfaceMuted,
+                      }}
+                    />
+                  );
+                })}
+              </View>
+
+              {/* Continue CTA — primary when ready, ghost otherwise */}
+              <F2Button
+                tone={picks.length === 5 && allocationBalanced ? 'primary' : 'ghost'}
+                size="lg"
+                onPress={handleContinueToLive}
+                disabled={picks.length === 5 && !allocationBalanced}
+                iconRight={
+                  picks.length === 5 && allocationBalanced
+                    ? <F2Chevron size={14} color="#fff" dir="left" />
+                    : undefined
+                }
+              >
+                {picks.length === 5 && allocationBalanced
+                  ? 'המשך ללוח החי'
+                  : picks.length < 5
+                    ? 'בנה את התיק להמשך'
+                    : 'השלם הקצאה כדי להמשיך'}
+              </F2Button>
+
               <Text style={{
-                fontSize: 11,
-                color: FANTASY.inkMuted,
+                fontSize: 10,
+                color: FANTASY.inkFaint,
                 fontWeight: '700',
                 textAlign: 'center',
                 writingDirection: 'rtl',
               }}>
-                {currentEntry?.captainTicker
-                  ? `⚡ ${currentEntry.captainTicker} ממונף ×2`
-                  : '✓ ההרכב נעול · ללא מנוף'}
+                💡 אפשר לערוך את התיק עד יום שני 09:00
               </Text>
-              <F2Button
-                tone="primary"
-                size="lg"
-                onPress={() => router.push('/fantasy/live')}
-                iconRight={<F2Chevron size={14} color="#fff" dir="left" />}
-              >
-                המשך ללוח החי
-              </F2Button>
             </View>
           </View>
         )}
@@ -573,18 +613,6 @@ export function DraftLobbyScreen(): React.ReactElement {
           tone="gold"
           onConfirm={handleConfirmJoin}
           onCancel={() => setConfirmJoin(false)}
-        />
-
-        {/* Captain Shark — lock confirmation */}
-        <SharkConfirmModal
-          visible={confirmLock}
-          title="לנעול את התיק?"
-          message="ברגע שתנעל לא נוכל לשנות את ההקצאות או את המנוף ×2. הצוות שלי מצביע — אתה מוכן לקרב!"
-          confirmLabel="נועלים 🔒"
-          cancelLabel="עוד דקה"
-          tone="primary"
-          onConfirm={handleConfirmLock}
-          onCancel={() => setConfirmLock(false)}
         />
 
         {/* Captain Shark — error (insufficient coins / generic) */}

@@ -30,6 +30,8 @@ import { SharkAccountantBanner, type SharkBannerMood } from "./components/SharkA
 import { UploadDropzone } from "./components/UploadDropzone";
 import { AnalyzingState } from "./components/AnalyzingState";
 import { ResultCard } from "./components/ResultCard";
+import { ToolNextStepCard } from "../financial-tools/components/ToolNextStepCard";
+import { useFinancialProfileStore } from "../financial-tools/useFinancialProfileStore";
 import { LegalGateModal } from "./components/LegalGateModal";
 import type { ChosenFile, PayslipPhase } from "./types";
 
@@ -221,6 +223,29 @@ export function PayslipAnalyzerScreen() {
         // for the clan-comparison Robinhood card. Users can opt out via AnonymousPayslipCard.
         const anonymized = buildAnonymizedStats(response.result);
         usePayslipMetaStore.getState().setAnonymizedStats(anonymized);
+        // Persist a private fingerprint to the standalone Financial
+        // Profile store so every financial tool (Salary Net, Tax Refund,
+        // Pension Fees…) opens pre-filled. Only writes when confidence
+        // is high enough to trust the extraction; the user can always
+        // overwrite via the Financial Profile screen if a field is wrong.
+        // This store is intentionally separate from the onboarding
+        // `useAuthStore.profile` so payslip data never leaks into the
+        // signup flow.
+        if (response.result.confidence >= 0.6) {
+          const incomeTaxDeduction = response.result.deductions
+            .filter((d) => d.kind === 'income_tax')
+            .reduce((sum, d) => sum + d.amount, 0);
+          const creditPointsMetric = response.result.metrics.find(
+            (m) => m.kind === 'credit_points',
+          );
+          useFinancialProfileStore.getState().update({
+            monthlySalaryGross: Math.round(response.result.brutto),
+            monthlyTaxPaid: incomeTaxDeduction > 0
+              ? Math.round(incomeTaxDeduction)
+              : undefined,
+            creditPoints: creditPointsMetric?.value,
+          });
+        }
         const reward = grantPayslipReward();
         if (!rewardGranted) {
           markRewardGranted();
@@ -360,6 +385,12 @@ export function PayslipAnalyzerScreen() {
         ) : null}
 
         {phase === "success" && result ? <ResultCard result={result} /> : null}
+
+        {phase === "success" && result ? (
+          <View style={styles.nextStepWrap}>
+            <ToolNextStepCard toolKey="payslip" accentColor="#005bb1" />
+          </View>
+        ) : null}
 
         {phase === "error" ? (
           <View style={styles.errorWrap}>
@@ -507,6 +538,11 @@ const styles = StyleSheet.create({
     paddingTop: 6,
     paddingBottom: 18,
     alignItems: "center",
+  },
+  nextStepWrap: {
+    paddingHorizontal: 16,
+    paddingTop: 8,
+    paddingBottom: 16,
   },
   errorWrap: {
     paddingHorizontal: 24,

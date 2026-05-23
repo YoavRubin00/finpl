@@ -224,9 +224,9 @@ export const SHOP_ITEMS: readonly ShopItem[] = [
 // hidden until their inventory systems exist (purchasing today wouldn't grant
 // anything in code). `premium` stays as the future-content placeholder.
 export const SHOP_CATEGORIES: readonly { key: ShopCategory; label: string; lottieSource?: number }[] = [
+  { key: 'avatars', label: 'אווטארים', lottieSource: require('../../../assets/lottie/wired-flat-44-avatar-user-in-circle-hover-looking-around.json') },
   { key: 'hearts', label: 'לבבות', lottieSource: require('../../../assets/lottie/wired-flat-20-love-heart-hover-heartbeat.json') },
   { key: 'boosts', label: 'בוסטרים', lottieSource: require('../../../assets/lottie/wired-flat-489-rocket-space-hover-flying.json') },
   { key: 'protection', label: 'הגנה', lottieSource: require('../../../assets/lottie/wired-flat-457-shield-security-hover-pinch.json') },
   { key: 'premium', label: 'פרימיום', lottieSource: require('../../../assets/lottie/Diamond.json') },
-  { key: 'avatars', label: 'אווטארים', lottieSource: require('../../../assets/lottie/wired-flat-44-avatar-user-in-circle-hover-looking-around.json') },
 ];

@@ -72,6 +72,11 @@ const CONTENT: Record<NotificationChannelId, Notifications.NotificationContentIn
     body: "ניסיתם להשתמש בפיצ'רים PRO. בואו נסגור את זה?",
     data: { screen: "/pricing" },
   },
+  breakingNews: {
+    title: "🔥 הסיכומים היומיים שלך מוכנים",
+    body: "כל החדשות מאתמול על המניות שלך — תוך 30 שניות.",
+    data: { screen: "/breaking-news" },
+  },
 };
 
 // ─── Android channel setup ───────────────────────────────────────────────────
@@ -154,7 +159,7 @@ export const useNotificationStore = create<NotificationState & NotificationActio
       // Apple 4.5.4: ALL notification preferences default to OFF on fresh install.
       // Notifications are only scheduled after the user explicitly toggles a
       // preference ON in Settings, which triggers the system permission prompt.
-      preferences: { streak: false, chest: false, challenge: false, dailyChallenge: false, squadInvite: false, squadChest: false, morning: false, inactivity: false, marketHook: false, aiInsight: false, upgradeNudge: false },
+      preferences: { streak: false, chest: false, challenge: false, dailyChallenge: false, squadInvite: false, squadChest: false, morning: false, inactivity: false, marketHook: false, aiInsight: false, upgradeNudge: false, breakingNews: false },
       lastScheduledDate: null as string | null,
       lastFinnCopyTitle: null as string | null,
       lastAIInsightNotifDate: null as string | null,
@@ -326,7 +331,7 @@ export const useNotificationStore = create<NotificationState & NotificationActio
       cancelAll: async (): Promise<void> => {
         await Notifications.cancelAllScheduledNotificationsAsync();
         // Apple 4.5.4: reset preferences to all-OFF (mirrors initial state).
-        set({ scheduled: [], preferences: { streak: false, chest: false, challenge: false, dailyChallenge: false, squadInvite: false, squadChest: false, morning: false, inactivity: false, marketHook: false, aiInsight: false, upgradeNudge: false } });
+        set({ scheduled: [], preferences: { streak: false, chest: false, challenge: false, dailyChallenge: false, squadInvite: false, squadChest: false, morning: false, inactivity: false, marketHook: false, aiInsight: false, upgradeNudge: false, breakingNews: false } });
       },
 
       setPreference: (channelId, enabled) => {

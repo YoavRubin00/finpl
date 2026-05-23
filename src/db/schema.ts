@@ -231,3 +231,34 @@ export const referrals = pgTable("referrals", {
 	index("idx_referrals_code").using("btree", table.inviteCode.asc()),
 	check("referrals_check", sql`referrer_auth_id <> referee_auth_id`),
 ]);
+
+// Breaking News — per-user tickers the user follows for daily AI summaries.
+export const breakingNewsTracked = pgTable("breaking_news_tracked", {
+	id: uuid().default(sql`uuid_generate_v4()`).primaryKey().notNull(),
+	userId: uuid("user_id").notNull(),
+	ticker: text().notNull(),
+	addedAt: timestamp("added_at", { withTimezone: true, mode: 'string' }).notNull().defaultNow(),
+}, (table) => [
+	unique("breaking_news_tracked_user_ticker_uniq").on(table.userId, table.ticker),
+	index("idx_breaking_news_tracked_ticker").using("btree", table.ticker.asc()),
+	foreignKey({ columns: [table.userId], foreignColumns: [userProfiles.id], name: "breaking_news_tracked_user_fk" }).onDelete("cascade"),
+]);
+
+// Breaking News — global cache of AI summaries keyed by (ticker, trading_day).
+// Shared across all users so we pay Tavily+Gemini once per ticker per day.
+export const breakingNewsSummaries = pgTable("breaking_news_summaries", {
+	id: uuid().default(sql`uuid_generate_v4()`).primaryKey().notNull(),
+	ticker: text().notNull(),
+	tradingDay: date("trading_day").notNull(),
+	summaryText: text("summary_text").notNull(),
+	hypeIndex: integer("hype_index").notNull(),
+	sentiment: text().notNull(),
+	keyEvents: jsonb("key_events").notNull().default(sql`'[]'::jsonb`),
+	sources: jsonb().notNull().default(sql`'[]'::jsonb`),
+	generatedAt: timestamp("generated_at", { withTimezone: true, mode: 'string' }).notNull().defaultNow(),
+}, (table) => [
+	unique("breaking_news_summaries_ticker_day_uniq").on(table.ticker, table.tradingDay),
+	index("idx_breaking_news_summaries_ticker_day").using("btree", table.ticker.asc(), table.tradingDay.desc()),
+	check("breaking_news_summaries_hype_check", sql`hype_index BETWEEN 0 AND 100`),
+	check("breaking_news_summaries_sentiment_check", sql`sentiment IN ('bullish', 'bearish', 'neutral')`),
+]);

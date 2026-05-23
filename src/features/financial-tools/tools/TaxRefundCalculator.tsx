@@ -11,6 +11,10 @@ import { STITCH } from '../../../constants/theme';
 import { clamp, formatShekel } from '../../../utils/format';
 import { findTool } from '../toolsRegistry';
 import { ToolHeader } from '../components/ToolHeader';
+import { ProfileFingerprint } from '../components/ProfileFingerprint';
+import { ToolNextStepCard } from '../components/ToolNextStepCard';
+import { buildTaxRefundInitial } from '../financialProfile';
+import { useFinancialProfileStore } from '../useFinancialProfileStore';
 import {
   CalculateButton,
   FinTip,
@@ -69,7 +73,9 @@ function getCreditPoints(status: MaritalStatus, kids: number): number {
 }
 
 export function TaxRefundCalculator(): React.ReactElement {
-  const [state, setState] = useState<TaxRefundInput>(DEFAULT_STATE);
+  const [state, setState] = useState<TaxRefundInput>(() =>
+    buildTaxRefundInitial(useFinancialProfileStore.getState().profile, DEFAULT_STATE),
+  );
 
   const result: TaxRefundResult = useMemo(() => {
     const annualGross = Number(state.annualGross) || 0;
@@ -112,6 +118,8 @@ export function TaxRefundCalculator(): React.ReactElement {
       />
 
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
+        <ProfileFingerprint accentColor={TOOL.hue} />
+
         <StatHero
           label={hasInput ? 'אולי מחכים לך' : 'מלא את הפרטים כדי לראות הערכה'}
           value={result.estimatedRefund}
@@ -238,6 +246,8 @@ export function TaxRefundCalculator(): React.ReactElement {
             )
           }
         />
+
+        <ToolNextStepCard toolKey="tax-refund" accentColor={TOOL.hue} />
 
         <LegalDisclaimer
           scope="tax"

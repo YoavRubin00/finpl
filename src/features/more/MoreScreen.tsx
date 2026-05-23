@@ -168,35 +168,11 @@ export function MoreScreen() {
                   onPress={() => router.push("/(tabs)/shop" as never)}
                 />
                 <MoreRow
-                  icon={<SafeLottie source={require('../../../assets/lottie/wired-flat-161-growth-hover-pinch.json')} style={styles.lottieIcon} autoPlay loop  />}
-                  label="לשחק עם המספרים"
-                  onPress={() => router.push("/simulator")}
-                />
-                <MoreRow
+                  isLast
                   icon={<SafeLottie source={require('../../../assets/lottie/wired-flat-426-brain-hover-pinch.json')} style={styles.lottieIcon} autoPlay loop  />}
                   label="תובנות AI"
                   onPress={() => router.push("/ai-insights" as never)}
                   badgeLottie
-                />
-                <MoreRow
-                  icon={<SafeLottie source={require('../../../assets/lottie/wired-flat-458-goal-target-hover-hit.json')} style={styles.lottieIcon} autoPlay loop  />}
-                  label="דו-קרב 1v1"
-                  onPress={() => router.push("/duels")}
-                  badge="בקרוב"
-                  disabled
-                />
-                <MoreRow
-                  icon={<SafeLottie source={require('../../../assets/lottie/wired-flat-411-news-newspaper-hover-pinch.json')} style={styles.lottieIcon} autoPlay loop  />}
-                  label="חדשות"
-                  onPress={() => router.push("/finfeed")}
-                  badge="בקרוב"
-                  disabled
-                />
-                <MoreRow
-                  isLast
-                  icon={<Text style={{ fontSize: 24 }}>🛡️</Text>}
-                  label="הקבוצה"
-                  onPress={() => router.push("/clan")}
                 />
               </View>
             </GlowCard>

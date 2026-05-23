@@ -50,14 +50,6 @@ function sparkForReturn(ret: number): SparkPath {
   return 'crash';
 }
 
-function zoneForRank(rank: number, total: number): 'promoted' | 'demoted' | 'stable' {
-  const promote = Math.max(3, Math.ceil(total * 0.2));
-  const relegate = Math.max(3, Math.ceil(total * 0.2));
-  if (rank <= promote) return 'promoted';
-  if (rank > total - relegate) return 'demoted';
-  return 'stable';
-}
-
 export function LiveDashboardScreen(): React.ReactElement {
   const currentEntry = useFantasyStore((s) => s.currentEntry);
   const getLeaderboardWithLocal = useFantasyStore((s) => s.getLeaderboardWithLocal);
@@ -102,10 +94,6 @@ export function LiveDashboardScreen(): React.ReactElement {
     });
     return map;
   }, []);
-
-  // Top 4 promote zone + local + bottom 2 relegate zone
-  const top4 = leaderboard.slice(0, 4);
-  const bottom2 = leaderboard.slice(-2);
 
   const tierLabel = currentEntry ? TIER_LABEL[currentEntry.tier] : 'ליגת הזהב';
 
@@ -253,39 +241,15 @@ export function LiveDashboardScreen(): React.ReactElement {
             </Animated.View>
           )}
 
-          {/* Leaderboard */}
+          {/* Leaderboard — continuous list, no zone banners */}
           <Animated.View entering={FadeInDown.delay(200).duration(320)}>
-            <F2Section hint={`#${rank} · אזור ${zoneForRank(rank, totalPlayers) === 'promoted' ? 'עלייה' : zoneForRank(rank, totalPlayers) === 'demoted' ? 'ירידה' : 'בטוח'}`}>
+            <F2Section hint={`#${rank} מתוך ${totalPlayers}`}>
               לוח התוצאות
             </F2Section>
 
-            {/* Promote banner */}
-            <View style={{
-              backgroundColor: FANTASY.positiveSoft,
-              borderWidth: 1,
-              borderColor: FANTASY.positiveStroke,
-              borderRadius: 10,
-              paddingVertical: 6,
-              paddingHorizontal: 10,
-              flexDirection: 'row-reverse',
-              alignItems: 'center',
-              gap: 4,
-              marginBottom: 8,
-            }}>
-              <F2Chevron size={10} dir="up" color={FANTASY.positiveDark} />
-              <Text style={{
-                fontSize: 10,
-                color: FANTASY.positiveDark,
-                fontWeight: '800',
-                letterSpacing: 0.4,
-              }}>
-                עולים לליגה הבאה · 4 ראשונים
-              </Text>
-            </View>
-
-            {/* Top 4 (promote zone) */}
+            {/* Top 10 */}
             <View style={{ gap: 5 }}>
-              {top4.map((entry) => (
+              {leaderboard.slice(0, 10).map((entry) => (
                 <F2LeaderRow
                   key={entry.playerId}
                   rank={entry.rank}
@@ -293,78 +257,36 @@ export function LiveDashboardScreen(): React.ReactElement {
                   returnPercent={entry.returnPercent}
                   change={entry.change}
                   isLocal={entry.isLocal}
-                  position="promoted"
                 />
               ))}
-            </View>
 
-            {/* Local position if outside top 4 and bottom 2 */}
-            {localEntry && localEntry.rank > 4 && localEntry.rank < totalPlayers - 1 && (
-              <>
-                <View style={{
-                  alignItems: 'center',
-                  paddingVertical: 6,
-                  marginTop: 4,
-                  marginBottom: 4,
-                }}>
-                  <Text style={{
-                    fontSize: 10,
-                    color: FANTASY.inkFaint,
-                    fontWeight: '800',
-                    letterSpacing: 0.6,
+              {/* Local position if outside top 10 */}
+              {localEntry && localEntry.rank > 10 && (
+                <>
+                  <View style={{
+                    alignItems: 'center',
+                    paddingVertical: 6,
+                    marginTop: 4,
+                    marginBottom: 4,
                   }}>
-                    · · ·
-                  </Text>
-                </View>
-                <F2LeaderRow
-                  rank={localEntry.rank}
-                  name="את/ה"
-                  returnPercent={localEntry.returnPercent}
-                  change={localEntry.change}
-                  isLocal
-                  position={zoneForRank(localEntry.rank, totalPlayers)}
-                />
-              </>
-            )}
-
-            {/* Demote banner */}
-            <View style={{
-              backgroundColor: FANTASY.negativeSoft,
-              borderWidth: 1,
-              borderColor: FANTASY.negativeStroke,
-              borderRadius: 10,
-              paddingVertical: 6,
-              paddingHorizontal: 10,
-              flexDirection: 'row-reverse',
-              alignItems: 'center',
-              gap: 4,
-              marginTop: 10,
-              marginBottom: 8,
-            }}>
-              <F2Chevron size={10} dir="down" color={FANTASY.negativeDark} />
-              <Text style={{
-                fontSize: 10,
-                color: FANTASY.negativeDark,
-                fontWeight: '800',
-                letterSpacing: 0.4,
-              }}>
-                יורדים ליגה · 2 אחרונים
-              </Text>
-            </View>
-
-            {/* Bottom 2 (relegate zone) */}
-            <View style={{ gap: 5 }}>
-              {bottom2.map((entry) => (
-                <F2LeaderRow
-                  key={entry.playerId}
-                  rank={entry.rank}
-                  name={entry.isLocal ? 'את/ה' : entry.displayName}
-                  returnPercent={entry.returnPercent}
-                  change={entry.change}
-                  isLocal={entry.isLocal}
-                  position="demoted"
-                />
-              ))}
+                    <Text style={{
+                      fontSize: 10,
+                      color: FANTASY.inkFaint,
+                      fontWeight: '800',
+                      letterSpacing: 0.6,
+                    }}>
+                      · · ·
+                    </Text>
+                  </View>
+                  <F2LeaderRow
+                    rank={localEntry.rank}
+                    name="את/ה"
+                    returnPercent={localEntry.returnPercent}
+                    change={localEntry.change}
+                    isLocal
+                  />
+                </>
+              )}
             </View>
           </Animated.View>
         </ScrollView>

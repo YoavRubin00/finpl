@@ -10,7 +10,16 @@ import {
 } from "../../services/revenueCat";
 import type { CustomerInfo } from "../../services/revenueCat";
 
-export type GatedFeature = "simulator" | "arena" | "chat" | "aiInsights" | "saved_items" | "shark-voice";
+export type GatedFeature =
+  | "simulator"
+  | "arena"
+  | "chat"
+  | "aiInsights"
+  | "saved_items"
+  | "shark-voice"
+  | "analyst-quick"
+  | "analyst-deep"
+  | "breaking-news";
 
 export const BASIC_LIMITS: Record<GatedFeature, number> = {
   simulator: 3,
@@ -19,9 +28,15 @@ export const BASIC_LIMITS: Record<GatedFeature, number> = {
   aiInsights: 0,
   saved_items: 0,
   "shark-voice": 0,
+  "analyst-quick": 1, // free: 1 quick analysis per day
+  "analyst-deep": 0, // free: lifetime cap of 1 deep analysis (tracked separately)
+  "breaking-news": 1, // free: track 1 ticker for daily AI summaries
 };
 
+export const BREAKING_NEWS_PRO_TICKER_CAP = 5;
+
 export const SHARK_VOICE_DAILY_CAP_SECONDS = 600;
+export const ANALYST_DEEP_LIFETIME_FREE_LIMIT = 1;
 
 /* ------------------------------------------------------------------ */
 /*  Hearts constants                                                   */
@@ -60,6 +75,11 @@ interface SubscriptionState {
   sharkVoiceSecondsToday: number;
   sharkVoiceResetDate: string | null;
 
+  // Stock Analyst (free: 1 quick/day + 1 deep lifetime; Pro: unlimited)
+  analystQuickUsedToday: number;
+  analystQuickResetDate: string | null;
+  analystDeepUsedLifetime: number;
+
   // Selectors
   isPro: () => boolean;
   canAccessFeature: (feature: GatedFeature) => boolean;
@@ -68,6 +88,12 @@ interface SubscriptionState {
   // Shark Voice selectors
   getSharkVoiceSecondsRemaining: () => number;
   canUseSharkVoice: () => boolean;
+
+  // Stock Analyst selectors
+  canUseAnalystQuick: () => boolean;
+  canUseAnalystDeep: () => boolean;
+  getAnalystQuickRemaining: () => number;
+  getAnalystDeepRemaining: () => number;
 
   // Hearts selectors
   getHearts: () => number;
@@ -94,6 +120,10 @@ interface SubscriptionState {
 
   // Shark Voice actions
   recordSharkVoiceUsage: (seconds: number) => void;
+
+  // Stock Analyst actions
+  recordAnalystQuickUsage: () => void;
+  recordAnalystDeepUsage: () => void;
 
   // Pro actions
   upgradeToPro: () => void;
@@ -129,6 +159,12 @@ function getUsageCount(
     case "saved_items":
       return 0;
     case "shark-voice":
+      return 0;
+    case "analyst-quick":
+      return state.analystQuickResetDate === todayISO() ? state.analystQuickUsedToday : 0;
+    case "analyst-deep":
+      return state.analystDeepUsedLifetime;
+    case "breaking-news":
       return 0;
   }
 }
@@ -172,6 +208,11 @@ export const useSubscriptionStore = create<SubscriptionState>()(
       // Shark Voice
       sharkVoiceSecondsToday: 0,
       sharkVoiceResetDate: null,
+
+      // Stock Analyst
+      analystQuickUsedToday: 0,
+      analystQuickResetDate: null,
+      analystDeepUsedLifetime: 0,
 
       // Pro welcome
       hasSeenProWelcome: false,
@@ -233,6 +274,34 @@ export const useSubscriptionStore = create<SubscriptionState>()(
         const state = get();
         if (!state.isPro()) return false;
         return state.getSharkVoiceSecondsRemaining() > 0;
+      },
+
+      /* ---- Stock Analyst selectors ---- */
+
+      canUseAnalystQuick: (): boolean => {
+        const state = get();
+        if (state.isPro()) return true;
+        return state.getAnalystQuickRemaining() > 0;
+      },
+
+      canUseAnalystDeep: (): boolean => {
+        const state = get();
+        if (state.isPro()) return true;
+        return state.getAnalystDeepRemaining() > 0;
+      },
+
+      getAnalystQuickRemaining: (): number => {
+        const state = get();
+        if (state.isPro()) return Infinity;
+        const today = todayISO();
+        const usedToday = state.analystQuickResetDate === today ? state.analystQuickUsedToday : 0;
+        return Math.max(0, BASIC_LIMITS["analyst-quick"] - usedToday);
+      },
+
+      getAnalystDeepRemaining: (): number => {
+        const state = get();
+        if (state.isPro()) return Infinity;
+        return Math.max(0, ANALYST_DEEP_LIFETIME_FREE_LIMIT - state.analystDeepUsedLifetime);
       },
 
       /* ---- Actions ---- */
@@ -352,6 +421,22 @@ export const useSubscriptionStore = create<SubscriptionState>()(
         });
       },
 
+      /* ---- Stock Analyst actions ---- */
+
+      recordAnalystQuickUsage: () => {
+        const today = todayISO();
+        const state = get();
+        const usedToday = state.analystQuickResetDate === today ? state.analystQuickUsedToday : 0;
+        set({
+          analystQuickUsedToday: usedToday + 1,
+          analystQuickResetDate: today,
+        });
+      },
+
+      recordAnalystDeepUsage: () => {
+        set((s) => ({ analystDeepUsedLifetime: s.analystDeepUsedLifetime + 1 }));
+      },
+
       /* ---- Pro actions ---- */
 
       upgradeToPro: () => {
@@ -441,13 +526,16 @@ export const useSubscriptionStore = create<SubscriptionState>()(
         state.hearts = MAX_HEARTS;
         state.lastHeartLostAt = null;
       },
-      version: 3,
+      version: 4,
       migrate: (persisted: unknown, _version: number) => {
         const safe = (persisted ?? {}) as Record<string, unknown>;
         return {
           ...safe,
-          sharkVoiceSecondsToday: 0,
-          sharkVoiceResetDate: null,
+          sharkVoiceSecondsToday: safe.sharkVoiceSecondsToday ?? 0,
+          sharkVoiceResetDate: safe.sharkVoiceResetDate ?? null,
+          analystQuickUsedToday: 0,
+          analystQuickResetDate: null,
+          analystDeepUsedLifetime: 0,
         };
       },
       storage: createJSONStorage(() => zustandStorage),
@@ -466,6 +554,9 @@ export const useSubscriptionStore = create<SubscriptionState>()(
         practiceRefillDate: state.practiceRefillDate,
         sharkVoiceSecondsToday: state.sharkVoiceSecondsToday,
         sharkVoiceResetDate: state.sharkVoiceResetDate,
+        analystQuickUsedToday: state.analystQuickUsedToday,
+        analystQuickResetDate: state.analystQuickResetDate,
+        analystDeepUsedLifetime: state.analystDeepUsedLifetime,
         // pendingPracticeForHeart intentionally NOT persisted, transient flag
       }),
     }

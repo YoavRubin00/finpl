@@ -3,25 +3,35 @@
  *
  * Fetches a short-lived signed WebSocket URL for the ElevenLabs Conversational
  * AI agent. Throws when the backend is misconfigured or unreachable.
+ *
+ * On local web dev (localhost:8082) Expo Router doesn't serve `+api.ts`
+ * routes in `output: "single"` mode, so we hit the deployed Vercel API
+ * directly. Everywhere else we use the shared `getApiBase()` resolver.
  */
 
-import Constants from 'expo-constants';
+import { Platform } from 'react-native';
+import { getApiBase } from '../../../db/apiBase';
+
+const PROD_API_BASE = 'https://finpl.vercel.app';
 
 interface SessionResponse {
   signedUrl?: string;
   error?: string;
 }
 
-function getApiBase(): string {
-  const explicit = process.env.EXPO_PUBLIC_API_BASE;
-  if (explicit) return explicit.replace(/\/$/, '');
-  const hostUri = (Constants.expoConfig?.hostUri ?? '').split(':')[0];
-  if (hostUri) return `http://${hostUri}:8081`;
-  return '';
+function resolveBase(): string {
+  if (Platform.OS === 'web' && typeof window !== 'undefined') {
+    const host = window.location?.hostname ?? '';
+    if (host === 'localhost' || host === '127.0.0.1') {
+      return PROD_API_BASE;
+    }
+  }
+  const base = getApiBase();
+  return base || PROD_API_BASE;
 }
 
 export async function fetchSignedUrl(): Promise<string> {
-  const base = getApiBase();
+  const base = resolveBase();
   const res = await fetch(`${base}/api/voice/session`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },

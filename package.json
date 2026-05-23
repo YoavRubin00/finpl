@@ -14,7 +14,9 @@
     "postinstall": "patch-package"
   },
   "dependencies": {
+    "@ai-sdk/anthropic": "^3.0.79",
     "@ai-sdk/google": "^3.0.64",
+    "@elevenlabs/client": "^1.8.1",
     "@expo-google-fonts/heebo": "^0.4.2",
     "@expo/cli": "^55.0.30",
     "@expo/metro-runtime": "^55.0.6",

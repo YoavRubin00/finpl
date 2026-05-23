@@ -15,3 +15,4 @@ export { FinTip, type FinTipKind } from './FinTip';
 export { SectionLabel } from './SectionLabel';
 export { PremiumRibbon } from './PremiumRibbon';
 export { LegalDisclaimer, type LegalScope } from './LegalDisclaimer';
+export { LabeledTextInput } from './LabeledTextInput';

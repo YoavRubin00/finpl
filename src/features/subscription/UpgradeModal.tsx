@@ -33,6 +33,18 @@ const FEATURE_INFO: Record<GatedFeature, { title: string; body: string }> = {
     title: "שיחת קול עם שארק, PRO בלבד",
     body: "שיחה חיה אחד-על-אחד עם קפטן שארק זמינה לחברי PRO.\nעד 10 דקות שיחה ביום.",
   },
+  "analyst-quick": {
+    title: "אנליסט מניות, הגעת למכסה היומית",
+    body: "משתמשי FREE מקבלים ניתוח מהיר אחד ביום.\nשדרג ל-PRO לניתוחים מהירים ללא הגבלה.",
+  },
+  "analyst-deep": {
+    title: "ניתוח מעמיק, PRO בלבד",
+    body: "ניתוחים מעמיקים עם Claude Opus 4.7 זמינים ללא הגבלה ל-PRO.\nמשתמש FREE זוכה לניתוח מעמיק אחד לחיים.",
+  },
+  "breaking-news": {
+    title: "חדשות מתפרצות, הגעת למגבלה",
+    body: `משתמשי FREE עוקבים אחרי ${BASIC_LIMITS["breaking-news"]} מניה. שדרגו ל-PRO לעקוב אחרי 5 מניות בו-זמנית עם סיכום AI יומי + מדד הייפ חברתי.`,
+  },
 };
 
 /** Standalone usage, must be placed once in app/_layout.tsx */

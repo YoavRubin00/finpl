@@ -12,6 +12,10 @@ import { STITCH } from '../../../constants/theme';
 import { clamp, formatShekel } from '../../../utils/format';
 import { findTool } from '../toolsRegistry';
 import { ToolHeader } from '../components/ToolHeader';
+import { ProfileFingerprint } from '../components/ProfileFingerprint';
+import { ToolNextStepCard } from '../components/ToolNextStepCard';
+import { buildSalaryNetInitial } from '../financialProfile';
+import { useFinancialProfileStore } from '../useFinancialProfileStore';
 import {
   CalculateButton,
   FinTip,
@@ -70,7 +74,9 @@ const CREDIT_PRESETS: readonly { label: string; value: number }[] = [
 const CREDIT_VALUES = CREDIT_PRESETS.map((p) => p.value);
 
 export function SalaryNetCalculator(): React.ReactElement {
-  const [state, setState] = useState<CalculatorState>(INITIAL_STATE);
+  const [state, setState] = useState<CalculatorState>(() =>
+    buildSalaryNetInitial(useFinancialProfileStore.getState().profile, INITIAL_STATE),
+  );
 
   const result: TaxCalculationResult = useMemo(() => {
     const monthlyGross = Number(state.monthlyGross) || 0;
@@ -129,6 +135,8 @@ export function SalaryNetCalculator(): React.ReactElement {
       />
 
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
+        <ProfileFingerprint accentColor={TOOL.hue} />
+
         <StatHero
           label="נטו לכיס בחודש"
           value={result.netMonthly}
@@ -224,6 +232,8 @@ export function SalaryNetCalculator(): React.ReactElement {
           text={`עלות מעסיק = ₪${Math.round(totalEmployerCost).toLocaleString('he-IL')} — כשמשווים שכר עצמאי לעיר שכיר, זה הסכום הרלוונטי.`}
           subtext="המס השולי שלך עולה עם השכר — לכן חשוב לדעת איפה אתה במדרגות."
         />
+
+        <ToolNextStepCard toolKey="salary-net" accentColor={TOOL.hue} />
 
         <LegalDisclaimer scope="tax" extra="נכון לשנת המס 2026." />
       </ScrollView>

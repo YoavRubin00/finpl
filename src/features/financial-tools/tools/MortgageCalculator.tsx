@@ -7,6 +7,10 @@ import { STITCH } from '../../../constants/theme';
 import { clamp, formatPercent, formatShekel } from '../../../utils/format';
 import { findTool } from '../toolsRegistry';
 import { ToolHeader } from '../components/ToolHeader';
+import { ProfileFingerprint } from '../components/ProfileFingerprint';
+import { ToolNextStepCard } from '../components/ToolNextStepCard';
+import { buildMortgageInitial } from '../financialProfile';
+import { useFinancialProfileStore } from '../useFinancialProfileStore';
 import {
   CalculateButton,
   FinTip,
@@ -65,7 +69,9 @@ const DEFAULT_STATE: MortgageInput = {
 };
 
 export function MortgageCalculator(): React.ReactElement {
-  const [state, setState] = useState<MortgageInput>(DEFAULT_STATE);
+  const [state, setState] = useState<MortgageInput>(() =>
+    buildMortgageInitial(useFinancialProfileStore.getState().profile, DEFAULT_STATE),
+  );
 
   const result: MortgageResult = useMemo(() => {
     const price = Number(state.propertyPrice) || 0;
@@ -144,6 +150,8 @@ export function MortgageCalculator(): React.ReactElement {
       />
 
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
+        <ProfileFingerprint accentColor={TOOL.hue} />
+
         <PaymentBigDisplay
           amount={result.monthlyPayment}
           label="החזר חודשי משוער"
@@ -354,6 +362,8 @@ export function MortgageCalculator(): React.ReactElement {
             )
           }
         />
+
+        <ToolNextStepCard toolKey="mortgage" accentColor={TOOL.hue} />
 
         <LegalDisclaimer
           scope="mortgage"

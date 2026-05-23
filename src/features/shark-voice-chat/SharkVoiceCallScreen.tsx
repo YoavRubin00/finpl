@@ -1,10 +1,11 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { View, Text, Pressable, StatusBar } from 'react-native';
+import { View, Text, Pressable, StatusBar, Dimensions, ImageBackground } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 import { X } from 'lucide-react-native';
 import { tapHaptic } from '../../utils/haptics';
+import { UnderwaterBubbles } from './components/UnderwaterBubbles';
 import { useSubscriptionStore } from '../subscription/useSubscriptionStore';
 import { useSharkVoiceStore } from './useSharkVoiceStore';
 import { useElevenLabsConversation } from './hooks/useElevenLabsConversation';
@@ -24,9 +25,6 @@ function formatRemaining(seconds: number): string {
 }
 
 export function SharkVoiceCallScreen(): React.ReactElement {
-  if (typeof console !== 'undefined') {
-    console.log('[SharkVoice] screen mounting');
-  }
   const canUseSharkVoice = useSubscriptionStore((s) => s.canUseSharkVoice);
   const getRemaining = useSubscriptionStore((s) => s.getSharkVoiceSecondsRemaining);
   const recordUsage = useSubscriptionStore((s) => s.recordSharkVoiceUsage);
@@ -90,24 +88,53 @@ export function SharkVoiceCallScreen(): React.ReactElement {
     };
   }, [status, disconnect, getRemaining, recordUsage]);
 
+  // Always return to chat — the call is conceptually a chat session, not a
+  // free-floating screen. Using `router.back()` can land on whatever tab the
+  // user was on before opening chat (e.g. learning), which feels jarring.
   const handleClose = () => {
     tapHaptic();
-    disconnect();
-    router.back();
+    void disconnect();
+    router.replace('/(tabs)/chat' as never);
   };
 
   const handleCapAcknowledge = () => {
     setCapModalVisible(false);
-    router.back();
+    router.replace('/(tabs)/chat' as never);
   };
 
   return (
-    <View style={{ flex: 1, backgroundColor: '#020617' }}>
+    <View style={{ flex: 1, backgroundColor: '#f6c3b8' }}>
       <StatusBar barStyle="light-content" />
+      {/* Studio backdrop — full-bleed cover. The peach-tinted gradient
+          underneath catches any letterboxing on extreme aspect ratios so
+          the seams never show. */}
       <LinearGradient
-        colors={['#020617', '#0f172a', '#1e3a8a']}
+        colors={['#fbd7ce', '#f6c3b8', '#e8a89a']}
+        locations={[0, 0.55, 1]}
         style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}
       />
+      <ImageBackground
+        source={require('../../../assets/IMAGES/shark-voice-stage.png')}
+        style={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          alignItems: 'center',
+          justifyContent: 'center',
+        }}
+        imageStyle={{ resizeMode: 'contain' }}
+        resizeMode="contain"
+      />
+      {/* Soft dark vignette to keep top/bottom UI legible over the busy image. */}
+      <LinearGradient
+        colors={['rgba(0,0,0,0.25)', 'rgba(0,0,0,0)', 'rgba(0,0,0,0.25)']}
+        locations={[0, 0.45, 1]}
+        style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}
+      />
+      {/* Subtle ambient bubbles drifting upward — adds life over the static stage */}
+      <UnderwaterBubbles />
       <SafeAreaView style={{ flex: 1 }} edges={['top', 'bottom']}>
         {/* Top bar — close X (RTL: visually left) + remaining time */}
         <View
@@ -150,9 +177,22 @@ export function SharkVoiceCallScreen(): React.ReactElement {
         </View>
 
         {/* Centerpiece */}
-        <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', gap: 24 }}>
-          <SharkAvatar size={260} />
-          <Text style={[RTL, { color: '#fff', fontSize: 22, fontWeight: '700' }]}>
+        <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', gap: 20 }}>
+          <SharkAvatar size={Math.min(Dimensions.get('window').width * 0.85, 360)} />
+          <Text
+            style={[
+              RTL,
+              {
+                color: '#fff',
+                fontSize: 28,
+                fontWeight: '800',
+                textShadowColor: 'rgba(0,0,0,0.5)',
+                textShadowOffset: { width: 0, height: 2 },
+                textShadowRadius: 8,
+                letterSpacing: 0.5,
+              },
+            ]}
+          >
             קפטן שארק
           </Text>
           <TranscriptOverlay />
