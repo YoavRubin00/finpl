@@ -1,0 +1,25 @@
+diff --git a/node_modules/react-native/.gradle/nb-cache/trust/4888C0A0F998F6A8549078144782CBDC9D24951F5C1C08FC783B3C610A068DCB b/node_modules/react-native/.gradle/nb-cache/trust/4888C0A0F998F6A8549078144782CBDC9D24951F5C1C08FC783B3C610A068DCB
+new file mode 100644
+index 0000000..21c4aa0
+--- /dev/null
++++ b/node_modules/react-native/.gradle/nb-cache/trust/4888C0A0F998F6A8549078144782CBDC9D24951F5C1C08FC783B3C610A068DCB
+@@ -0,0 +1 @@
++07DF055D934E89031A16D9554E70394212BF12A80904FB05BEE6B91C7D80C877
+diff --git a/node_modules/react-native/ReactAndroid/src/main/java/com/facebook/react/ReactActivityDelegate.java b/node_modules/react-native/ReactAndroid/src/main/java/com/facebook/react/ReactActivityDelegate.java
+index 37845bc..7ac6b90 100644
+--- a/node_modules/react-native/ReactAndroid/src/main/java/com/facebook/react/ReactActivityDelegate.java
++++ b/node_modules/react-native/ReactAndroid/src/main/java/com/facebook/react/ReactActivityDelegate.java
+@@ -189,7 +189,12 @@ public class ReactActivityDelegate {
+   }
+ 
+   public void onUserLeaveHint() {
+-    Objects.requireNonNull(mReactDelegate).onUserLeaveHint();
++    // Guard against NPE: onUserLeaveHint can fire while mReactDelegate is still
++    // null (early lifecycle, e.g. dev-client deep-link launch) or after teardown.
++    // The stock `Objects.requireNonNull` crashes the app in that window.
++    if (mReactDelegate != null) {
++      mReactDelegate.onUserLeaveHint();
++    }
+   }
+ 
+   public void onPause() {
