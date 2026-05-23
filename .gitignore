@@ -45,6 +45,7 @@ scripts/*
 !scripts/dev-local.mjs
 !scripts/migrate-local.mjs
 !scripts/vercel-dev-local.mjs
+!scripts/dev-phone.mjs
 notebooklm-py/
 
 # Local scratch folders for one-shot asset generation pipelines
