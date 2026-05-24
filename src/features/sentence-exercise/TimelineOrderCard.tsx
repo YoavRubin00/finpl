@@ -19,8 +19,9 @@ import type { TimelineOrderPrompt } from "./sentenceTypes";
 
 // משוער — גובה item כולל gap. משמש את ה-pan gesture לחישוב כמה מקומות
 // המשתמש גרר. אם תעדכן את itemRow padding או itemsColumn gap, עדכן גם פה.
-// פריט: paddingVertical 8 + content ~32 + border 3 = ~52; gap 6 → step ≈ 58.
-const ITEM_STEP_HEIGHT = 58;
+// פריט: paddingVertical 8+8 + content max(28,22) + border 1.5+1.5 = ~47;
+// gap 6 → step ≈ 53. נשתמש ב-52 כדי שגרירה גדולה תרגיש מדויקת.
+const ITEM_STEP_HEIGHT = 52;
 
 /**
  * State that the card exposes to its parent so the parent can render a
