@@ -131,6 +131,8 @@ const styles = StyleSheet.create({
     flexGrow: 1,
   },
   card: {
+    flex: 1, // Stretch to the row's tallest sibling so cards in the same row
+             // share an identical height regardless of subtitle line count.
     backgroundColor: STITCH.surfaceLowest,
     borderRadius: 18,
     padding: 12,
@@ -191,8 +193,12 @@ const styles = StyleSheet.create({
   footerDivider: {
     height: 1,
     backgroundColor: STITCH.surfaceHighest,
-    marginTop: 10,
+    // `marginTop: 'auto'` pushes the divider + footer to the bottom of the
+    // card, so the chevron sits at the same height across every tile in a row
+    // regardless of subtitle line count (1 vs 2 lines).
+    marginTop: 'auto',
     marginBottom: 8,
+    paddingTop: 10,
   },
   footer: {
     flexDirection: 'row-reverse',

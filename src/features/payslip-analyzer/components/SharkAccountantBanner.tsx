@@ -123,13 +123,19 @@ export function SharkAccountantBanner({
         </Animated.View>
       ) : null}
 
+      {/* Crop the top ~10% of the source WebP — the export has a small
+          grime patch above the captain's head that ruins the silhouette.
+          Wrapper clips, image is shifted up so only the dirty band is hidden.
+          Matches the same crop pattern used in StockAnalystScreen's hero. */}
       <Animated.View style={[styles.finnWrap, finnStyle]}>
-        <ExpoImage
-          source={source}
-          accessible={false}
-          style={styles.finn}
-          contentFit="contain"
-        />
+        <View style={styles.finnClip}>
+          <ExpoImage
+            source={source}
+            accessible={false}
+            style={styles.finn}
+            contentFit="contain"
+          />
+        </View>
       </Animated.View>
     </Animated.View>
   );
@@ -145,13 +151,19 @@ const styles = StyleSheet.create({
   },
   finnWrap: {
     width: 112,
-    height: 112,
+    height: 101,
     alignItems: "center",
     justifyContent: "center",
+  },
+  finnClip: {
+    width: 112,
+    height: 101,
+    overflow: "hidden",
   },
   finn: {
     width: 112,
     height: 112,
+    marginTop: -11,
   },
   bubbleWrap: {
     flex: 1,

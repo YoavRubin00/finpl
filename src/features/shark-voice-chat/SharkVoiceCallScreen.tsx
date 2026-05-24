@@ -124,8 +124,8 @@ export function SharkVoiceCallScreen(): React.ReactElement {
           alignItems: 'center',
           justifyContent: 'center',
         }}
-        imageStyle={{ resizeMode: 'contain' }}
-        resizeMode="contain"
+        imageStyle={{ resizeMode: 'cover' }}
+        resizeMode="cover"
       />
       {/* Soft dark vignette to keep top/bottom UI legible over the busy image. */}
       <LinearGradient
@@ -176,9 +176,18 @@ export function SharkVoiceCallScreen(): React.ReactElement {
           </Pressable>
         </View>
 
-        {/* Centerpiece */}
-        <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', gap: 20 }}>
-          <SharkAvatar size={Math.min(Dimensions.get('window').width * 0.85, 360)} />
+        {/* Centerpiece — avatar pushed below center so the studio backdrop
+            stays the visual hero; the WebP is intentionally smaller now. */}
+        <View
+          style={{
+            flex: 1,
+            alignItems: 'center',
+            justifyContent: 'flex-end',
+            gap: 16,
+            paddingBottom: 24,
+          }}
+        >
+          <SharkAvatar size={Math.min(Dimensions.get('window').width * 0.5, 220)} />
           <Text
             style={[
               RTL,

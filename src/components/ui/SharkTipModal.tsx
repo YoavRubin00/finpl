@@ -12,6 +12,12 @@ interface SharkTipModalProps {
   onClose: () => void;
   /** Optional override for the confirm button label (default: "הבנתי"). */
   ctaLabel?: string;
+  /** Optional override for the header title (default: "קפטן שארק"). */
+  title?: string;
+  /** When true, hide the shark avatar + "קפטן שארק" attribution entirely.
+   *  Use for system-level messages (e.g. error modals) where attributing the
+   *  message to the mascot reads as if the brand is to blame. */
+  hideAuthor?: boolean;
 }
 
 const RTL = { writingDirection: "rtl" as const, textAlign: "right" as const };
@@ -22,7 +28,14 @@ const RTL_CENTER = { writingDirection: "rtl" as const, textAlign: "center" as co
  * `Alert.alert(...)` calls that looked harsh on dark-mode Android.
  * Bottom-sheet style with Finn avatar + short message + single CTA.
  */
-export function SharkTipModal({ visible, message, onClose, ctaLabel = "הבנתי" }: SharkTipModalProps) {
+export function SharkTipModal({
+  visible,
+  message,
+  onClose,
+  ctaLabel = "הבנתי",
+  title,
+  hideAuthor = false,
+}: SharkTipModalProps) {
   const insets = useSafeAreaInsets();
 
   const handleClose = () => {
@@ -39,12 +52,20 @@ export function SharkTipModal({ visible, message, onClose, ctaLabel = "הבנת�
         >
           {/* Inner Pressable blocks backdrop-dismiss on sheet taps. */}
           <Pressable onPress={() => {}} accessible={false}>
-            <View style={styles.header}>
-              <ExpoImage source={FINN_STANDARD} style={styles.finn} contentFit="contain" accessible={false} />
-              <Text style={[styles.title, RTL]} allowFontScaling={false}>
-                קפטן שארק
-              </Text>
-            </View>
+            {hideAuthor ? (
+              title ? (
+                <Text style={[styles.standaloneTitle, RTL]} allowFontScaling={false}>
+                  {title}
+                </Text>
+              ) : null
+            ) : (
+              <View style={styles.header}>
+                <ExpoImage source={FINN_STANDARD} style={styles.finn} contentFit="contain" accessible={false} />
+                <Text style={[styles.title, RTL]} allowFontScaling={false}>
+                  {title ?? "קפטן שארק"}
+                </Text>
+              </View>
+            )}
 
             <Animated.Text entering={FadeIn.delay(80).duration(280)} style={[styles.message, RTL]} allowFontScaling={false}>
               {message}
@@ -97,6 +118,13 @@ const styles = StyleSheet.create({
     fontWeight: "900",
     color: "#0369a1",
   },
+  standaloneTitle: {
+    fontSize: 18,
+    fontWeight: "900",
+    color: "#0c4a6e",
+    marginBottom: 8,
+    textAlign: "right",
+  },
   message: {
     fontSize: 15,
     fontWeight: "600",
@@ -105,18 +133,16 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   cta: {
-    backgroundColor: "#1d4ed8",
+    backgroundColor: "#2563eb",
     borderRadius: 16,
-    paddingVertical: 15,
+    paddingVertical: 16,
     alignItems: "center",
     justifyContent: "center",
-    borderBottomWidth: 4,
-    borderBottomColor: "#1e3a8a",
-    shadowColor: "#1d4ed8",
-    shadowOffset: { width: 0, height: 3 },
+    shadowColor: "#2563eb",
+    shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.35,
-    shadowRadius: 6,
-    elevation: 4,
+    shadowRadius: 14,
+    elevation: 8,
   },
   ctaText: {
     fontSize: 17,

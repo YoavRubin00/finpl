@@ -76,7 +76,7 @@ export function ModeToggle({ mode, onChange, quickRemaining, deepRemaining }: Pr
               { color: '#ddd6fe', fontSize: 11, fontWeight: '700', flex: 1 },
             ]}
           >
-            ניתוח מעמיק לוקח 1–2 דקות. השארק חושב בעמקים.
+            ניתוח מעמיק לוקח 1–2 דקות. השארק חושב במעמקים.
           </Text>
         </View>
       ) : null}

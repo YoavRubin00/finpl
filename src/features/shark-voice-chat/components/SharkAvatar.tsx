@@ -104,20 +104,40 @@ export function SharkAvatar({ size = 280 }: SharkAvatarProps): React.ReactElemen
           },
         ]}
       />
-      <Animated.View style={[StyleSheet.absoluteFillObject, animatedA]} pointerEvents="none">
+      {/* Zoom + downward shift: the source WebPs have generous whitespace
+          padding above the captain's head. Scaling the image up by 1.22 and
+          nudging it down ~12px brings the face into the visual center of
+          the avatar circle without changing the outer container size. The
+          parent clips the overflow via the wrapping View. */}
+      <Animated.View
+        style={[StyleSheet.absoluteFillObject, animatedA, styles.imageClip]}
+        pointerEvents="none"
+      >
         <ExpoImage
           source={layerASource}
-          style={{ width: size, height: size }}
+          style={[styles.imageInner, { width: size, height: size }]}
           contentFit="contain"
         />
       </Animated.View>
-      <Animated.View style={[StyleSheet.absoluteFillObject, animatedB]} pointerEvents="none">
+      <Animated.View
+        style={[StyleSheet.absoluteFillObject, animatedB, styles.imageClip]}
+        pointerEvents="none"
+      >
         <ExpoImage
           source={layerBSource}
-          style={{ width: size, height: size }}
+          style={[styles.imageInner, { width: size, height: size }]}
           contentFit="contain"
         />
       </Animated.View>
     </Animated.View>
   );
 }
+
+const styles = StyleSheet.create({
+  imageClip: {
+    overflow: 'visible',
+  },
+  imageInner: {
+    transform: [{ scale: 1.22 }, { translateY: 14 }],
+  },
+});

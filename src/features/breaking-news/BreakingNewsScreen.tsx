@@ -9,11 +9,13 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { AlertTriangle, Bell, Plus, Sparkles, X } from 'lucide-react-native';
+import { router } from 'expo-router';
+import { AlertTriangle, ArrowLeft, Bell, LogIn, Newspaper, Plus, Sparkles, X } from 'lucide-react-native';
 
 import { STITCH } from '../../constants/theme';
 import { tapHaptic } from '../../utils/haptics';
 import { ToolHeader } from '../financial-tools/components/ToolHeader';
+import { useAuthStore } from '../auth/useAuthStore';
 import { useSubscriptionStore, BREAKING_NEWS_PRO_TICKER_CAP, BASIC_LIMITS } from '../subscription/useSubscriptionStore';
 import { useUpgradeModalStore } from '../../stores/useUpgradeModalStore';
 import { useNotificationStore } from '../notifications/useNotificationStore';
@@ -55,6 +57,13 @@ export function BreakingNewsScreen(): React.ReactElement {
   const notificationHour = useBreakingNewsStore((s) => s.notificationHour);
   const setNotificationHour = useBreakingNewsStore((s) => s.setNotificationHour);
 
+  // Guest users (and anyone whose auth-store email hasn't been hydrated yet)
+  // can't hit the server endpoints — they all require authId. Gate the
+  // whole feature behind a register CTA instead of letting the user pick a
+  // ticker and then get a cryptic "Not authenticated" error from the api.
+  const email = useAuthStore((s) => s.email);
+  const isGuest = !email;
+
   const isPro = useSubscriptionStore((s) => s.isPro());
   const showUpgrade = useUpgradeModalStore((s) => s.show);
   const scheduleBreakingNewsDaily = useNotificationStore((s) => s.scheduleBreakingNewsDaily);
@@ -90,10 +99,11 @@ export function BreakingNewsScreen(): React.ReactElement {
     }
   }, [setItems]);
 
-  // Initial server refresh on mount.
+  // Initial server refresh on mount — skip for guests (server requires authId).
   useEffect(() => {
+    if (isGuest) return;
     void refresh();
-  }, [refresh]);
+  }, [refresh, isGuest]);
 
   // Keep the daily local notification synced with the user's preferred hour.
   // Runs once on mount and again any time `notificationHour` changes.
@@ -160,6 +170,57 @@ export function BreakingNewsScreen(): React.ReactElement {
   };
 
   const hasItems = items.length > 0;
+
+  if (isGuest) {
+    return (
+      <SafeAreaView style={styles.safe} edges={['top']}>
+        <ToolHeader
+          title="חדשות מתפרצות"
+          subtitle="סיכום AI יומי + מדד הייפ למניות שלך"
+          accentColor={ACCENT}
+          Icon={Sparkles}
+        />
+        <ScrollView
+          contentContainerStyle={styles.guestScroll}
+          showsVerticalScrollIndicator={false}
+        >
+          <View style={styles.guestIconWrap}>
+            <LogIn size={32} color="#2563eb" strokeWidth={2.4} />
+          </View>
+
+          <Text style={styles.guestTitle} allowFontScaling={false}>
+            צריך חשבון כדי לעקוב אחרי מניות
+          </Text>
+          <Text style={styles.guestSubtitle} allowFontScaling={false}>
+            ההרשמה לוקחת 30 שניות. אחרי זה כל בוקר תקבל סיכום AI של החדשות והסנטימנט על המניות שבחרת.
+          </Text>
+
+          <View style={styles.guestFeatures}>
+            <GuestFeatureRow Icon={Newspaper} text="סיכום AI יומי מ-10 מקורות אמיתיים" />
+            <GuestFeatureRow Icon={Sparkles} text="מדד הייפ חברתי 0–100 לכל מניה" />
+            <GuestFeatureRow Icon={Bell} text="התראה כל בוקר בשעה שתבחר" />
+          </View>
+
+          <Pressable
+            onPress={() => { tapHaptic(); router.push('/register' as never); }}
+            style={({ pressed }) => [styles.guestCta, pressed && styles.guestCtaPressed]}
+            accessibilityRole="button"
+            accessibilityLabel="הרשמה או התחברות"
+          >
+            <ArrowLeft size={20} color="#ffffff" strokeWidth={2.6} />
+            <Text style={styles.guestCtaText} allowFontScaling={false}>
+              הרשמה / התחברות
+            </Text>
+            <LogIn size={20} color="#ffffff" strokeWidth={2.6} />
+          </Pressable>
+
+          <Text style={styles.guestFinePrint} allowFontScaling={false}>
+            חינם לחלוטין. בלי כרטיס אשראי.
+          </Text>
+        </ScrollView>
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
@@ -279,6 +340,25 @@ export function BreakingNewsScreen(): React.ReactElement {
   );
 }
 
+function GuestFeatureRow({
+  Icon,
+  text,
+}: {
+  Icon: typeof Sparkles;
+  text: string;
+}): React.ReactElement {
+  return (
+    <View style={styles.guestFeatureRow}>
+      <View style={styles.guestFeatureIconBg}>
+        <Icon size={16} color="#2563eb" strokeWidth={2.4} />
+      </View>
+      <Text style={styles.guestFeatureText} allowFontScaling={false}>
+        {text}
+      </Text>
+    </View>
+  );
+}
+
 const styles = StyleSheet.create({
   safe: {
     flex: 1,
@@ -385,5 +465,114 @@ const styles = StyleSheet.create({
     writingDirection: 'rtl',
     lineHeight: 16,
     marginTop: 4,
+  },
+  guestScroll: {
+    flexGrow: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 20,
+    paddingTop: 24,
+    paddingBottom: 32,
+    gap: 14,
+  },
+  guestIconWrap: {
+    width: 76,
+    height: 76,
+    borderRadius: 38,
+    backgroundColor: '#dbeafe',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 4,
+    shadowColor: '#2563eb',
+    shadowOpacity: 0.2,
+    shadowRadius: 18,
+    shadowOffset: { width: 0, height: 6 },
+    elevation: 6,
+  },
+  guestTitle: {
+    fontSize: 22,
+    fontWeight: '900',
+    color: STITCH.onSurface,
+    textAlign: 'center',
+    writingDirection: 'rtl',
+    letterSpacing: -0.4,
+  },
+  guestSubtitle: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: STITCH.onSurfaceVariant,
+    textAlign: 'center',
+    writingDirection: 'rtl',
+    lineHeight: 21,
+    maxWidth: 340,
+  },
+  guestFeatures: {
+    alignSelf: 'stretch',
+    gap: 8,
+    marginTop: 12,
+    marginBottom: 8,
+  },
+  guestFeatureRow: {
+    flexDirection: 'row-reverse',
+    alignItems: 'center',
+    gap: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    backgroundColor: '#ffffff',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+  },
+  guestFeatureIconBg: {
+    width: 30,
+    height: 30,
+    borderRadius: 8,
+    backgroundColor: '#dbeafe',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  guestFeatureText: {
+    flex: 1,
+    fontSize: 13,
+    fontWeight: '700',
+    color: STITCH.onSurface,
+    textAlign: 'right',
+    writingDirection: 'rtl',
+  },
+  guestCta: {
+    alignSelf: 'stretch',
+    flexDirection: 'row-reverse',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 10,
+    paddingVertical: 18,
+    paddingHorizontal: 20,
+    borderRadius: 16,
+    backgroundColor: '#2563eb',
+    marginTop: 4,
+    shadowColor: '#2563eb',
+    shadowOpacity: 0.35,
+    shadowRadius: 18,
+    shadowOffset: { width: 0, height: 8 },
+    elevation: 10,
+  },
+  guestCtaPressed: {
+    backgroundColor: '#1d4ed8',
+    transform: [{ scale: 0.98 }],
+  },
+  guestCtaText: {
+    color: '#ffffff',
+    fontSize: 17,
+    fontWeight: '900',
+    writingDirection: 'rtl',
+    letterSpacing: -0.2,
+  },
+  guestFinePrint: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: STITCH.onSurfaceVariant,
+    textAlign: 'center',
+    writingDirection: 'rtl',
+    marginTop: 6,
   },
 });

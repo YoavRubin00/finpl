@@ -87,6 +87,7 @@ const ANOMALY_SEVERITIES: readonly PayslipAnomalySeverity[] = [
 interface GeminiResponse {
   candidates?: Array<{
     content?: { parts?: Array<{ text?: string }> };
+    finishReason?: string;
   }>;
 }
 
@@ -232,13 +233,16 @@ function normalizeAnomaly(value: unknown): PayslipAnomaly | null {
   };
 }
 
+const SHARK_SUMMARY_FALLBACK =
+  'הניתוח הושלם, אך השארק לא הצליח לכתוב סיכום מילולי הפעם. בדוק את הנתונים למטה — הם בידיים שלך.';
+
 function normalizePayslipResult(parsed: unknown): PayslipResult | null {
   if (!parsed || typeof parsed !== 'object') return null;
   const p = parsed as Record<string, unknown>;
 
   const confidence = clampFiniteNumber(p.confidence, 0, 1);
 
-  const payPeriod = asTrimmedString(p.payPeriod, 40);
+  const payPeriodRaw = asTrimmedString(p.payPeriod, 40);
   const brutto = clampFiniteNumber(p.brutto, 0, 10_000_000);
   const netto = clampFiniteNumber(p.netto, 0, 10_000_000);
   const totalDeductions = clampFiniteNumber(p.totalDeductions, 0, 10_000_000);
@@ -261,7 +265,7 @@ function normalizePayslipResult(parsed: unknown): PayslipResult | null {
     .map(normalizeAnomaly)
     .filter((a): a is PayslipAnomaly => a !== null);
 
-  const sharkSummary = asTrimmedString(p.sharkSummary, 400);
+  const sharkSummaryRaw = asTrimmedString(p.sharkSummary, 400);
 
   const rawActionItems = Array.isArray(p.actionItems) ? p.actionItems : [];
   const actionItems: string[] = rawActionItems
@@ -269,18 +273,22 @@ function normalizePayslipResult(parsed: unknown): PayslipResult | null {
     .map((item) => asTrimmedString(item, 200))
     .filter((item) => item.length > 0);
 
-  if (!sharkSummary) return null;
+  // Only fail when the numeric core is unusable. A working Gemini call that
+  // happens to drop the prose summary still produces a useful card — the
+  // user gets the numbers + a fallback summary line rather than a hard error.
+  const allCoreNumbersMissing = brutto === 0 && netto === 0 && totalDeductions === 0;
+  if (allCoreNumbersMissing) return null;
 
   return {
     confidence,
-    payPeriod,
+    payPeriod: payPeriodRaw || '—',
     brutto,
     netto,
     totalDeductions,
     deductions,
     metrics,
     anomalies,
-    sharkSummary,
+    sharkSummary: sharkSummaryRaw || SHARK_SUMMARY_FALLBACK,
     actionItems,
   };
 }
@@ -334,7 +342,15 @@ export async function POST(request: Request): Promise<Response> {
   }
 
   const decodedLength = expectedByteSize(fileBase64);
-  if (Math.abs(decodedLength - byteSize) > 4) {
+  // Widened from ±4 to ±32: base64 size drift between client preprocessing
+  // (preprocessImage) and server-side decode can exceed 4 bytes on edge cases
+  // (e.g., padding variants) without indicating tampering.
+  if (Math.abs(decodedLength - byteSize) > 32) {
+    console.warn('[payslip-analyze] parse_failed', {
+      reason: 'declared byteSize mismatch',
+      declared: byteSize,
+      decoded: decodedLength,
+    });
     return errorResponse('parse_failed', 'Declared size does not match payload.', 400);
   }
   if (decodedLength > sizeLimit) {
@@ -398,6 +414,10 @@ export async function POST(request: Request): Promise<Response> {
       return errorResponse('service_unavailable', 'AI service unavailable.', 502);
     }
     if (!response.ok) {
+      console.warn('[payslip-analyze] parse_failed', {
+        reason: 'gemini non-2xx',
+        status: response.status,
+      });
       return errorResponse('parse_failed', 'AI service rejected the request.', 502);
     }
 
@@ -405,11 +425,16 @@ export async function POST(request: Request): Promise<Response> {
     try {
       data = (await response.json()) as GeminiResponse;
     } catch {
+      console.warn('[payslip-analyze] parse_failed', { reason: 'gemini envelope not JSON' });
       return errorResponse('parse_failed', 'Malformed AI response.', 502);
     }
 
     const rawText = data.candidates?.[0]?.content?.parts?.[0]?.text ?? '';
     if (!rawText) {
+      console.warn('[payslip-analyze] parse_failed', {
+        reason: 'empty AI response',
+        finishReason: data.candidates?.[0]?.finishReason ?? null,
+      });
       return errorResponse('parse_failed', 'Empty AI response.', 502);
     }
 
@@ -417,15 +442,27 @@ export async function POST(request: Request): Promise<Response> {
     try {
       parsed = JSON.parse(rawText);
     } catch {
+      console.warn('[payslip-analyze] parse_failed', {
+        reason: 'rawText not JSON',
+        snippet: rawText.slice(0, 200),
+      });
       return errorResponse('parse_failed', 'AI response was not valid JSON.', 502);
     }
 
     const result = normalizePayslipResult(parsed);
     if (!result) {
+      console.warn('[payslip-analyze] parse_failed', {
+        reason: 'schema check failed — numeric core missing',
+        keys: parsed && typeof parsed === 'object' ? Object.keys(parsed) : null,
+      });
       return errorResponse('parse_failed', 'AI response failed schema check.', 502);
     }
 
-    if (result.confidence < 0.4) {
+    // Lowered from 0.4 → 0.25: keep the safety net for obvious garbage (blank
+    // photos, blurry shots) but let through borderline reads that still
+    // produce usable numbers. ResultCard can surface a soft warning when the
+    // value is in the 0.25-0.5 band if needed.
+    if (result.confidence < 0.25) {
       return errorResponse(
         'unreadable',
         'Confidence too low to surface results.',

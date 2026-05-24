@@ -1,5 +1,5 @@
-import React from 'react';
-import { View, Text, Pressable } from 'react-native';
+import React, { useMemo, useRef, useState } from 'react';
+import { View, Text, Pressable, PanResponder } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import Animated, { FadeIn } from 'react-native-reanimated';
 import { FANTASY, F2_SECTORS, type FantasySectorId } from '../../../constants/theme';
@@ -1178,24 +1178,72 @@ export function F2PickAllocationRow({
   const canDec = !readOnly && allocation > 0;
   const canInc = !readOnly && poolRemaining > 0;
 
+  // ── Draggable allocation bar — RTL: right edge = 0, left edge = poolMax ──
+  const [barWidth, setBarWidth] = useState(0);
+  const [isDragging, setIsDragging] = useState(false);
+  // Keep latest props in refs so PanResponder closures stay fresh without
+  // having to recreate the responder on every render (would break gestures).
+  const stateRef = useRef({ allocation, poolMax, poolRemaining, stp, readOnly });
+  stateRef.current = { allocation, poolMax, poolRemaining, stp, readOnly };
+  const barWidthRef = useRef(0);
+  barWidthRef.current = barWidth;
+
+  const computeFromTouchX = (touchX: number): number => {
+    const { poolMax: pm, allocation: alloc, poolRemaining: rem, stp: step } = stateRef.current;
+    const w = barWidthRef.current;
+    if (w <= 0 || pm <= 0) return alloc;
+    // RTL fill: from right→left as value grows.
+    const filledPx = Math.max(0, Math.min(w, w - touchX));
+    const ratio = filledPx / w;
+    const raw = Math.round(ratio * pm);
+    const snapped = Math.round(raw / step) * step;
+    const maxAllowed = alloc + rem;
+    return Math.max(0, Math.min(maxAllowed, snapped));
+  };
+
+  const panResponder = useMemo(
+    () =>
+      PanResponder.create({
+        onStartShouldSetPanResponder: () => !stateRef.current.readOnly,
+        onMoveShouldSetPanResponder: () => !stateRef.current.readOnly,
+        onPanResponderTerminationRequest: () => false,
+        onPanResponderGrant: (e) => {
+          setIsDragging(true);
+          const next = computeFromTouchX(e.nativeEvent.locationX);
+          if (next !== stateRef.current.allocation) onAllocationChange(next);
+        },
+        onPanResponderMove: (e) => {
+          const next = computeFromTouchX(e.nativeEvent.locationX);
+          if (next !== stateRef.current.allocation) onAllocationChange(next);
+        },
+        onPanResponderRelease: () => setIsDragging(false),
+        onPanResponderTerminate: () => setIsDragging(false),
+      }),
+    // onAllocationChange is stable via parent useCallback in normal usage.
+    [onAllocationChange],
+  );
+
+  const fillColor = isLeverage ? '#f59e0b' : s.color;
+  const fillColorLight = isLeverage ? '#fbbf24' : s.g1;
+
   return (
     <View
       style={{
         backgroundColor: isLeverage ? '#fffbeb' : FANTASY.surfaceCard,
-        borderRadius: 12,
+        borderRadius: 14,
         borderWidth: isLeverage ? 2 : 1,
         borderColor: isLeverage ? '#facc15' : FANTASY.border,
-        paddingVertical: 10,
-        paddingHorizontal: 10,
+        paddingVertical: 11,
+        paddingHorizontal: 11,
         shadowColor: isLeverage ? '#facc15' : '#0f172a',
-        shadowOpacity: isLeverage ? 0.25 : 0.04,
-        shadowOffset: { width: 0, height: 2 },
-        shadowRadius: isLeverage ? 12 : 2,
-        elevation: isLeverage ? 4 : 1,
-        gap: 8,
+        shadowOpacity: isLeverage ? 0.3 : 0.04,
+        shadowOffset: { width: 0, height: 3 },
+        shadowRadius: isLeverage ? 14 : 2,
+        elevation: isLeverage ? 5 : 1,
+        gap: 10,
       }}
     >
-      {/* Top row: ticker + name + leverage toggle */}
+      {/* Top row: ticker + name + ×2 leverage toggle (bold) */}
       <View style={{ flexDirection: 'row-reverse', alignItems: 'center', gap: 10 }}>
         <F2TickerTile ticker={ticker} sector={sector} size={36} radius={9} />
         <View style={{ flex: 1, minWidth: 0 }}>
@@ -1204,36 +1252,90 @@ export function F2PickAllocationRow({
           </Text>
           <Text style={{ fontSize: 9, fontWeight: '800', color: s.color, marginTop: 2 }}>{s.short}</Text>
         </View>
+        {/* ── Leverage ×2 toggle — bigger, gold gradient, clear ── */}
         <Pressable
           onPress={readOnly ? undefined : onToggleLeverage}
           disabled={readOnly}
           accessibilityRole="button"
+          accessibilityState={{ selected: isLeverage }}
           accessibilityLabel={`מנף את ${name} פי 2`}
           style={({ pressed }) => ({
-            paddingHorizontal: 10,
-            paddingVertical: 6,
-            borderRadius: 8,
-            backgroundColor: isLeverage ? '#facc15' : '#fff',
-            borderWidth: isLeverage ? 0 : 1.5,
-            borderColor: isLeverage ? 'transparent' : FANTASY.borderStrong,
-            borderBottomWidth: 3,
-            borderBottomColor: isLeverage ? '#92400e' : FANTASY.silver,
-            opacity: readOnly ? (isLeverage ? 0.95 : 0.5) : pressed ? 0.85 : 1,
-            flexDirection: 'row-reverse',
-            alignItems: 'center',
-            gap: 3,
+            borderRadius: 10,
+            overflow: 'hidden',
+            transform: [{ scale: pressed ? 0.96 : 1 }],
+            opacity: readOnly ? (isLeverage ? 0.95 : 0.5) : 1,
+            shadowColor: isLeverage ? '#f59e0b' : 'transparent',
+            shadowOpacity: isLeverage ? 0.6 : 0,
+            shadowRadius: isLeverage ? 10 : 0,
+            shadowOffset: { width: 0, height: 3 },
+            elevation: isLeverage ? 5 : 0,
           })}
         >
-          <Text style={{ fontSize: 11, fontWeight: '900', color: isLeverage ? '#78350f' : FANTASY.inkFaint }}>
-            מנף
-          </Text>
-          <Text style={[{ fontSize: 11, fontWeight: '900', color: isLeverage ? '#78350f' : FANTASY.inkFaint }, NUM_STYLE]}>
-            ×2
-          </Text>
+          {isLeverage ? (
+            <LinearGradient
+              colors={['#fde047', '#f59e0b', '#b45309']}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={{
+                paddingHorizontal: 13,
+                paddingVertical: 9,
+                borderBottomWidth: 3,
+                borderBottomColor: '#78350f',
+                flexDirection: 'row-reverse',
+                alignItems: 'center',
+                gap: 4,
+              }}
+            >
+              <Text style={{ fontSize: 13 }}>⚡</Text>
+              <Text style={{ fontSize: 13, fontWeight: '900', color: '#451a03', letterSpacing: 0.3 }}>
+                מנף
+              </Text>
+              <Text style={[{ fontSize: 13, fontWeight: '900', color: '#451a03' }, NUM_STYLE]}>
+                ×2
+              </Text>
+            </LinearGradient>
+          ) : (
+            <View
+              style={{
+                paddingHorizontal: 13,
+                paddingVertical: 9,
+                backgroundColor: '#fffdf5',
+                borderWidth: 1.5,
+                borderColor: '#fcd34d',
+                borderBottomWidth: 3,
+                borderBottomColor: '#f59e0b',
+                borderRadius: 10,
+                flexDirection: 'row-reverse',
+                alignItems: 'center',
+                gap: 4,
+              }}
+            >
+              <Text style={{ fontSize: 13, opacity: 0.65 }}>⚡</Text>
+              <Text style={{ fontSize: 13, fontWeight: '900', color: '#92400e', letterSpacing: 0.3 }}>
+                מנף
+              </Text>
+              <Text style={[{ fontSize: 13, fontWeight: '900', color: '#92400e' }, NUM_STYLE]}>
+                ×2
+              </Text>
+            </View>
+          )}
         </Pressable>
       </View>
 
-      {/* Allocation stepper row */}
+      {/* Amount + percent header */}
+      <View style={{ flexDirection: 'row-reverse', alignItems: 'baseline', justifyContent: 'space-between' }}>
+        <View style={{ flexDirection: 'row-reverse', alignItems: 'baseline', gap: 4 }}>
+          <Text style={[{ fontSize: 18, fontWeight: '900', color: FANTASY.ink }, NUM_STYLE]}>
+            {allocation.toLocaleString('en-US')}
+          </Text>
+          <Text style={{ fontSize: 11, fontWeight: '700', color: FANTASY.inkMuted }}>🪙</Text>
+        </View>
+        <Text style={[{ fontSize: 11, fontWeight: '800', color: FANTASY.inkFaint }, NUM_STYLE]}>
+          {pct}% מהקופה
+        </Text>
+      </View>
+
+      {/* ── Draggable allocation bar (tall, RTL fill right→left) ── */}
       <View style={{ flexDirection: 'row-reverse', alignItems: 'center', gap: 8 }}>
         <Pressable
           onPress={() => onAllocationChange(allocation - stp)}
@@ -1241,8 +1343,8 @@ export function F2PickAllocationRow({
           accessibilityRole="button"
           accessibilityLabel="הפחת הקצאה"
           style={({ pressed }) => ({
-            width: 32,
-            height: 32,
+            width: 30,
+            height: 30,
             borderRadius: 8,
             backgroundColor: canDec ? '#fff' : FANTASY.surfaceLow,
             borderWidth: 1.5,
@@ -1254,38 +1356,72 @@ export function F2PickAllocationRow({
             opacity: !canDec ? 0.4 : pressed ? 0.7 : 1,
           })}
         >
-          <Text style={{ fontSize: 18, fontWeight: '900', color: FANTASY.ink, lineHeight: 18 }}>−</Text>
+          <Text style={{ fontSize: 17, fontWeight: '900', color: FANTASY.ink, lineHeight: 17 }}>−</Text>
         </Pressable>
 
-        <View style={{ flex: 1, alignItems: 'center' }}>
-          <View style={{ flexDirection: 'row-reverse', alignItems: 'baseline', gap: 4 }}>
-            <Text style={[{ fontSize: 17, fontWeight: '900', color: FANTASY.ink }, NUM_STYLE]}>
-              {allocation.toLocaleString('en-US')}
-            </Text>
-            <Text style={{ fontSize: 10, fontWeight: '700', color: FANTASY.inkMuted }}>🪙</Text>
-            <Text style={[{ fontSize: 10, fontWeight: '700', color: FANTASY.inkFaint }, NUM_STYLE]}>
-              · {pct}%
-            </Text>
-          </View>
-          {/* Allocation share bar */}
-          <View style={{
-            width: '100%',
-            height: 4,
-            backgroundColor: FANTASY.surfaceMuted,
-            borderRadius: 999,
-            overflow: 'hidden',
-            flexDirection: 'row-reverse',
-            marginTop: 4,
-          }}>
-            <View
+        <View
+          {...panResponder.panHandlers}
+          onLayout={(e) => setBarWidth(e.nativeEvent.layout.width)}
+          style={{
+            flex: 1,
+            height: 28,
+            justifyContent: 'center',
+            // Wider hit area without changing visual height.
+            paddingVertical: 6,
+          }}
+          accessibilityRole="adjustable"
+          accessibilityLabel={`הקצאת ${name}`}
+          accessibilityValue={{ min: 0, max: poolMax, now: allocation }}
+        >
+          {/* Track */}
+          <View
+            style={{
+              height: 16,
+              backgroundColor: FANTASY.surfaceMuted,
+              borderRadius: 999,
+              overflow: 'hidden',
+              flexDirection: 'row-reverse',
+              borderWidth: 1,
+              borderColor: FANTASY.border,
+            }}
+          >
+            {/* Fill (gradient) */}
+            <LinearGradient
+              colors={[fillColorLight, fillColor]}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 0 }}
               style={{
                 width: `${pct}%`,
                 height: '100%',
-                backgroundColor: isLeverage ? '#f59e0b' : s.color,
                 borderRadius: 999,
               }}
             />
           </View>
+          {/* Thumb — positioned at the fill boundary (left edge of fill in RTL) */}
+          {barWidth > 0 && (
+            <View
+              pointerEvents="none"
+              style={{
+                position: 'absolute',
+                // In RTL: fill grows from right; thumb sits at (barWidth - filledPx).
+                left: Math.max(0, Math.min(barWidth - 22, barWidth - (pct / 100) * barWidth - 11)),
+                top: '50%',
+                marginTop: -11,
+                width: 22,
+                height: 22,
+                borderRadius: 11,
+                backgroundColor: '#ffffff',
+                borderWidth: 2.5,
+                borderColor: fillColor,
+                shadowColor: fillColor,
+                shadowOpacity: isDragging ? 0.6 : 0.3,
+                shadowRadius: isDragging ? 10 : 4,
+                shadowOffset: { width: 0, height: 2 },
+                elevation: isDragging ? 6 : 2,
+                transform: [{ scale: isDragging ? 1.15 : 1 }],
+              }}
+            />
+          )}
         </View>
 
         <Pressable
@@ -1294,8 +1430,8 @@ export function F2PickAllocationRow({
           accessibilityRole="button"
           accessibilityLabel="הגדל הקצאה"
           style={({ pressed }) => ({
-            width: 32,
-            height: 32,
+            width: 30,
+            height: 30,
             borderRadius: 8,
             backgroundColor: canInc ? FANTASY.primary : FANTASY.surfaceLow,
             borderWidth: canInc ? 0 : 1.5,
@@ -1307,7 +1443,7 @@ export function F2PickAllocationRow({
             opacity: !canInc ? 0.4 : pressed ? 0.85 : 1,
           })}
         >
-          <Text style={{ fontSize: 18, fontWeight: '900', color: canInc ? '#fff' : FANTASY.ink, lineHeight: 18 }}>+</Text>
+          <Text style={{ fontSize: 17, fontWeight: '900', color: canInc ? '#fff' : FANTASY.ink, lineHeight: 17 }}>+</Text>
         </Pressable>
       </View>
     </View>

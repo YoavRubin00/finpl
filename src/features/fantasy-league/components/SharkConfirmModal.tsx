@@ -4,6 +4,7 @@ import { Image as ExpoImage } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { FANTASY } from '../../../constants/theme';
 import { FINN_TABLET } from '../../retention-loops/finnMascotConfig';
+import type { FantasyTier } from '../fantasyTypes';
 
 interface Props {
   visible: boolean;
@@ -11,17 +12,22 @@ interface Props {
   message: string;
   confirmLabel?: string;
   cancelLabel?: string;
+  /** Generic tone — used when `tier` is not provided. */
   tone?: 'gold' | 'danger' | 'primary';
+  /** When set, the primary CTA gradient + border match the league's tier. */
+  tier?: FantasyTier;
   onConfirm: () => void;
   onCancel: () => void;
 }
 
-const TONE: Record<'gold' | 'danger' | 'primary', {
+interface ToneStyle {
   g: readonly [string, string];
   border: string;
   text: string;
   shadow: string;
-}> = {
+}
+
+const TONE: Record<'gold' | 'danger' | 'primary', ToneStyle> = {
   gold: {
     g: ['#facc15', '#f59e0b'],
     border: '#92400e',
@@ -42,6 +48,29 @@ const TONE: Record<'gold' | 'danger' | 'primary', {
   },
 };
 
+// Per-tier CTA palette — sourced from LeagueShield.tsx so the modal CTA
+// matches the league emblem the user is about to join.
+const TIER_STYLE: Record<FantasyTier, ToneStyle> = {
+  silver: {
+    g: ['#e2e8f0', '#94a3b8'],
+    border: '#475569',
+    text: '#0f172a',
+    shadow: 'rgba(100,116,139,0.35)',
+  },
+  gold: {
+    g: ['#fcd34d', '#d97706'],
+    border: '#92570a',
+    text: '#451a03',
+    shadow: 'rgba(217,119,6,0.4)',
+  },
+  diamond: {
+    g: ['#bae6fd', '#0284c7'],
+    border: '#075985',
+    text: '#ffffff',
+    shadow: 'rgba(2,132,199,0.4)',
+  },
+};
+
 export function SharkConfirmModal({
   visible,
   title,
@@ -49,10 +78,11 @@ export function SharkConfirmModal({
   confirmLabel = 'אישור',
   cancelLabel = 'ביטול',
   tone = 'gold',
+  tier,
   onConfirm,
   onCancel,
 }: Props): React.ReactElement {
-  const t = TONE[tone];
+  const t = tier ? TIER_STYLE[tier] : TONE[tone];
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onCancel}>
       <Pressable
@@ -155,22 +185,22 @@ export function SharkConfirmModal({
               {message}
             </Text>
 
-            {/* Buttons */}
-            <View style={{ flexDirection: 'row-reverse', gap: 8, width: '100%' }}>
+            {/* Buttons — stacked, full-width. Primary on top, secondary below. */}
+            <View style={{ width: '100%', gap: 10 }}>
               <Pressable
                 onPress={onConfirm}
                 accessibilityRole="button"
                 accessibilityLabel={confirmLabel}
                 style={({ pressed }) => ({
-                  flex: 1.4,
-                  borderRadius: 12,
+                  width: '100%',
+                  borderRadius: 14,
                   overflow: 'hidden',
-                  opacity: pressed ? 0.9 : 1,
+                  transform: [{ scale: pressed ? 0.98 : 1 }],
                   shadowColor: t.shadow,
-                  shadowOpacity: 0.7,
-                  shadowRadius: 12,
-                  shadowOffset: { width: 0, height: 4 },
-                  elevation: 6,
+                  shadowOpacity: 0.85,
+                  shadowRadius: 16,
+                  shadowOffset: { width: 0, height: 6 },
+                  elevation: 10,
                 })}
               >
                 <LinearGradient
@@ -178,13 +208,40 @@ export function SharkConfirmModal({
                   start={{ x: 0, y: 0 }}
                   end={{ x: 1, y: 1 }}
                   style={{
-                    paddingVertical: 12,
+                    paddingVertical: 15,
+                    paddingHorizontal: 16,
                     alignItems: 'center',
-                    borderBottomWidth: 3,
+                    justifyContent: 'center',
+                    borderBottomWidth: 4,
                     borderBottomColor: t.border,
+                    borderTopWidth: 1,
+                    borderTopColor: 'rgba(255,255,255,0.35)',
                   }}
                 >
-                  <Text style={{ fontSize: 14, fontWeight: '900', color: t.text, letterSpacing: 0.3 }}>
+                  {/* Top highlight strip for a glossy feel */}
+                  <View
+                    pointerEvents="none"
+                    style={{
+                      position: 'absolute',
+                      top: 1,
+                      left: 8,
+                      right: 8,
+                      height: 14,
+                      borderRadius: 999,
+                      backgroundColor: 'rgba(255,255,255,0.18)',
+                    }}
+                  />
+                  <Text
+                    style={{
+                      fontSize: 16,
+                      fontWeight: '900',
+                      color: t.text,
+                      letterSpacing: 0.4,
+                      textShadowColor: 'rgba(0,0,0,0.18)',
+                      textShadowOffset: { width: 0, height: 1 },
+                      textShadowRadius: 2,
+                    }}
+                  >
                     {confirmLabel}
                   </Text>
                 </LinearGradient>
@@ -194,18 +251,19 @@ export function SharkConfirmModal({
                 accessibilityRole="button"
                 accessibilityLabel={cancelLabel}
                 style={({ pressed }) => ({
-                  flex: 1,
-                  borderRadius: 12,
+                  width: '100%',
+                  borderRadius: 14,
                   backgroundColor: pressed ? FANTASY.surfaceMuted : FANTASY.surfaceLow,
                   borderWidth: 1.5,
                   borderColor: FANTASY.borderStrong,
                   borderBottomWidth: 3,
                   borderBottomColor: FANTASY.silver,
-                  paddingVertical: 12,
+                  paddingVertical: 13,
                   alignItems: 'center',
+                  justifyContent: 'center',
                 })}
               >
-                <Text style={{ fontSize: 14, fontWeight: '900', color: FANTASY.inkMuted }}>
+                <Text style={{ fontSize: 13, fontWeight: '800', color: FANTASY.inkMuted }}>
                   {cancelLabel}
                 </Text>
               </Pressable>

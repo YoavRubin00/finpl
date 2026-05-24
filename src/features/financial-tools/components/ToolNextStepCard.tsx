@@ -62,55 +62,72 @@ export function ToolNextStepCard({ toolKey, accentColor }: ToolNextStepCardProps
 
   return (
     <View style={styles.wrap}>
-      <Text style={styles.sectionLabel} allowFontScaling={false}>
-        מה הלאה
-      </Text>
-
-      <View style={styles.row}>
-        {/* Primary action — wider, brand-colored */}
-        <Pressable
-          onPress={handleAction}
-          style={({ pressed }) => [
-            styles.actionBtn,
-            { backgroundColor: accentColor },
-            pressed && styles.btnPressed,
-          ]}
-          accessibilityRole="button"
-          accessibilityLabel={entry.actionLabel}
-          hitSlop={4}
-        >
-          {isExternal ? (
-            <ExternalLink size={16} color="#ffffff" strokeWidth={2.4} />
-          ) : (
-            <ArrowLeft size={16} color="#ffffff" strokeWidth={2.4} />
-          )}
-          <Text style={styles.actionText} allowFontScaling={false} numberOfLines={2}>
-            {entry.actionLabel}
-          </Text>
-        </Pressable>
-
-        {/* Lesson chip — quieter, outlined */}
-        <Pressable
-          onPress={handleLesson}
-          style={({ pressed }) => [
-            styles.lessonBtn,
-            { borderColor: accentColor + '4d' },
-            pressed && styles.btnPressed,
-          ]}
-          accessibilityRole="button"
-          accessibilityLabel={`למד: ${entry.lessonLabel}`}
-          hitSlop={4}
-        >
-          <BookOpen size={16} color={accentColor} strokeWidth={2.4} />
-          <Text
-            style={[styles.lessonText, { color: accentColor }]}
-            allowFontScaling={false}
-            numberOfLines={2}
-          >
-            {entry.lessonLabel}
-          </Text>
-        </Pressable>
+      <View style={styles.headerRow}>
+        <View style={[styles.headerDot, { backgroundColor: accentColor }]} />
+        <Text style={styles.sectionLabel} allowFontScaling={false}>
+          מה הלאה
+        </Text>
       </View>
+
+      {/* Primary action — full-width, prominent CTA */}
+      <Pressable
+        onPress={handleAction}
+        style={({ pressed }) => [
+          styles.actionBtn,
+          { backgroundColor: accentColor, shadowColor: accentColor },
+          pressed && styles.btnPressed,
+        ]}
+        accessibilityRole="button"
+        accessibilityLabel={entry.actionLabel}
+        hitSlop={4}
+      >
+        <View style={styles.actionIconWrap}>
+          {isExternal ? (
+            <ExternalLink size={18} color="#ffffff" strokeWidth={2.6} />
+          ) : (
+            <ArrowLeft size={18} color="#ffffff" strokeWidth={2.6} />
+          )}
+        </View>
+        <Text
+          style={styles.actionText}
+          allowFontScaling={false}
+          numberOfLines={1}
+          adjustsFontSizeToFit
+          minimumFontScale={0.85}
+        >
+          {entry.actionLabel}
+        </Text>
+      </Pressable>
+
+      {/* Lesson CTA — light-tinted, Duolingo-style button (same shape as
+          CalculateButton, lighter shade so it sits as a secondary call). */}
+      <Pressable
+        onPress={handleLesson}
+        style={({ pressed }) => [
+          styles.lessonBtn,
+          {
+            backgroundColor: accentColor + '33',
+            borderBottomColor: accentColor,
+          },
+          pressed && styles.lessonBtnPressed,
+        ]}
+        accessibilityRole="button"
+        accessibilityLabel={`למד: ${entry.lessonLabel}`}
+        hitSlop={4}
+      >
+        <View style={[styles.lessonIconWrap, { backgroundColor: accentColor + '40' }]}>
+          <BookOpen size={18} color={accentColor} strokeWidth={2.6} />
+        </View>
+        <Text
+          style={[styles.lessonText, { color: accentColor }]}
+          allowFontScaling={false}
+          numberOfLines={2}
+          adjustsFontSizeToFit
+          minimumFontScale={0.85}
+        >
+          {entry.lessonLabel}
+        </Text>
+      </Pressable>
     </View>
   );
 }
@@ -124,59 +141,88 @@ const styles = StyleSheet.create({
     borderColor: STITCH.surfaceHighest,
     gap: 10,
   },
+  headerRow: {
+    flexDirection: 'row-reverse',
+    alignItems: 'center',
+    gap: 6,
+  },
+  headerDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+  },
   sectionLabel: {
-    fontSize: 11,
+    fontSize: 12,
     fontWeight: '800',
     color: STITCH.onSurfaceVariant,
     textAlign: 'right',
     writingDirection: 'rtl',
     letterSpacing: 0.4,
   },
-  row: {
-    flexDirection: 'row-reverse',
-    gap: 10,
-  },
   actionBtn: {
-    flex: 1.4,
     flexDirection: 'row-reverse',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 6,
-    paddingVertical: 12,
-    paddingHorizontal: 10,
-    borderRadius: 12,
-    minHeight: 48,
+    gap: 8,
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    borderRadius: 14,
+    minHeight: 52,
+    shadowOpacity: 0.28,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 5 },
+    elevation: 4,
+  },
+  actionIconWrap: {
+    width: 24,
+    height: 24,
+    borderRadius: 999,
+    backgroundColor: 'rgba(255,255,255,0.22)',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   actionText: {
     color: '#ffffff',
-    fontSize: 13,
+    fontSize: 14,
     fontWeight: '900',
     textAlign: 'center',
     writingDirection: 'rtl',
     flexShrink: 1,
+    letterSpacing: 0.2,
   },
   lessonBtn: {
-    flex: 1,
     flexDirection: 'row-reverse',
     alignItems: 'center',
-    justifyContent: 'center',
-    gap: 6,
+    justifyContent: 'flex-start',
+    gap: 12,
     paddingVertical: 12,
-    paddingHorizontal: 10,
-    borderRadius: 12,
-    borderWidth: 1.5,
-    backgroundColor: '#ffffff',
-    minHeight: 48,
+    paddingHorizontal: 14,
+    borderRadius: 14,
+    borderBottomWidth: 3,
+    minHeight: 52,
+  },
+  lessonIconWrap: {
+    width: 32,
+    height: 32,
+    borderRadius: 999,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   lessonText: {
-    fontSize: 12,
-    fontWeight: '800',
-    textAlign: 'center',
+    flex: 1,
+    fontSize: 13,
+    fontWeight: '900',
+    textAlign: 'right',
     writingDirection: 'rtl',
     flexShrink: 1,
+    lineHeight: 17,
   },
   btnPressed: {
-    opacity: 0.7,
-    transform: [{ scale: 0.97 }],
+    opacity: 0.85,
+    transform: [{ scale: 0.98 }],
+  },
+  lessonBtnPressed: {
+    opacity: 0.92,
+    transform: [{ translateY: 1 }],
   },
 });

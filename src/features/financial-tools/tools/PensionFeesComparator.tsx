@@ -3,9 +3,7 @@ import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import {
-  ChevronLeft,
   PiggyBank,
-  Search,
   Sparkles,
 } from 'lucide-react-native';
 
@@ -35,19 +33,23 @@ const NEUTRAL_DARK = '#475569';
 
 const RETIREMENT_AGE = 67;
 const TOTAL_DEPOSIT_RATE = 0.185; // 6% עובד + 6.5% מעסיק + 6% פיצויים
-const PAYOUT_FACTOR = 200; // מקדם המרה לקצבה (פישוט)
+// Pension conversion factor — updated 2026-05 from Warren research. Modern
+// actuarial tables for a 67-y-o male trend toward 185-190 as longevity rises;
+// 190 is a current central estimate (older textbook value was 200).
+const PAYOUT_FACTOR = 190;
 
 const SALARY_MIN = 5_000;
 const SALARY_MAX = 60_000;
 const SALARY_STEP = 500;
 
 /**
- * Trivially achievable lowest fees on the Israeli market — bid winners of the
- * Ministry of Finance "default track" (קרן ברירת מחדל) tender.
- * Last updated by Warren agent: 2026-05.
+ * Trivially achievable lowest fees on the Israeli market — caps from the
+ * current "default track" (קרן ברירת מחדל) tender that took effect Nov 1 2024
+ * and is valid through Nov 30 2028. Winners: Meitav, Altshuler Shacham, Mor,
+ * Infinity. Last verified by Warren agent: 2026-05.
  */
 const LOWEST_MARKET_DEPOSIT_FEE = 1.0;
-const LOWEST_MARKET_ACCUMULATION_FEE = 0.05;
+const LOWEST_MARKET_ACCUMULATION_FEE = 0.22;
 
 /** Future-value reference return for the "what if you invested the savings" projection. */
 const SIDE_RETURN_MONTHLY = 0.07 / 12;
@@ -92,7 +94,12 @@ interface PensionResult {
   yearsToRetirement: number;
   currentTotal: number;
   alternativeTotal: number;
-  lostToFees: number;
+  /** What you'd accumulate with zero fees — reference baseline for `totalFeesPaid`. */
+  zeroFeeTotal: number;
+  /** Total taken by the *current* fund (vs zero-fee baseline). Shown in StatHero. */
+  totalFeesPaid: number;
+  /** Extra you'd have if you switched to the alternative low-cost fund. */
+  potentialSavings: number;
   monthlyPensionCurrent: number;
   monthlyPensionAlternative: number;
 }
@@ -136,33 +143,37 @@ export function PensionFeesComparator(): React.ReactElement {
       state.alternativeDepositFee,
       state.alternativeAccumulationFee,
     );
+    // Zero-fee baseline — represents what the user *could* accumulate if the
+    // fund didn't take any fees at all. The gap (zeroFee − current) is the
+    // "total taken by the investment house" headline number.
+    const zeroFeeTotal = simulatePension(salary, years, state.expectedReturn, 0, 0);
 
     return {
       yearsToRetirement: years,
       currentTotal: Math.round(currentTotal),
       alternativeTotal: Math.round(alternativeTotal),
-      lostToFees: Math.round(alternativeTotal - currentTotal),
+      zeroFeeTotal: Math.round(zeroFeeTotal),
+      totalFeesPaid: Math.max(0, Math.round(zeroFeeTotal - currentTotal)),
+      potentialSavings: Math.max(0, Math.round(alternativeTotal - currentTotal)),
       monthlyPensionCurrent: Math.round(currentTotal / PAYOUT_FACTOR),
       monthlyPensionAlternative: Math.round(alternativeTotal / PAYOUT_FACTOR),
     };
   }, [state]);
 
-  const hasLoss = result.lostToFees > 0;
-  const lostPositive = Math.max(0, result.lostToFees);
+  // StatHero headline value — total taken by the current fund (vs zero-fee baseline).
+  const hasFees = result.totalFeesPaid > 0;
+  const hasPotentialSavings = result.potentialSavings > 0;
   const salarySlider = clamp(Number(state.monthlySalary) || SALARY_MIN, SALARY_MIN, SALARY_MAX);
 
   /**
-   * Monthly cost of the current fund's extra fees (lost-to-fees amortized
-   * over working years) and the FV-of-annuity projection if that monthly
-   * delta were invested in a global index at 7% nominal.
-   *
-   * Memoized: `result` only changes when the user adjusts age / salary / fees,
-   * not on every TextInput keystroke for unrelated state. Math.pow is cheap
-   * but the dependency-narrowing also keeps downstream JSX stable.
+   * Monthly equivalent of the potential savings (vs the alternative low-cost
+   * fund), and the FV-of-annuity projection if that monthly delta were
+   * invested in a global index at 7% nominal — used in the savings card to
+   * dramatize "what if you switched and reinvested the difference".
    */
   const savings = useMemo(() => {
     const monthsToRetirement = Math.max(1, result.yearsToRetirement * 12);
-    const monthlyFeeSavings = Math.max(0, Math.round(result.lostToFees / monthsToRetirement));
+    const monthlyFeeSavings = Math.max(0, Math.round(result.potentialSavings / monthsToRetirement));
     const savingsGrowth =
       monthlyFeeSavings > 0
         ? Math.round(
@@ -171,7 +182,7 @@ export function PensionFeesComparator(): React.ReactElement {
           )
         : 0;
     return { monthlyFeeSavings, savingsGrowth };
-  }, [result.lostToFees, result.yearsToRetirement]);
+  }, [result.potentialSavings, result.yearsToRetirement]);
   const { monthlyFeeSavings, savingsGrowth } = savings;
 
   return (
@@ -190,81 +201,7 @@ export function PensionFeesComparator(): React.ReactElement {
       >
         <ProfileFingerprint accentColor={TOOL.hue} />
 
-        <StatHero
-          label={
-            hasLoss
-              ? 'הלכו לבית ההשקעות במקום אליך'
-              : 'הקרן הנוכחית שלך זולה יותר — שמור עליה'
-          }
-          value={lostPositive}
-          accentColor={TOOL.hue}
-          sublabel={`במשך ${result.yearsToRetirement} שנים עד גיל פרישה`}
-        />
-
-        {/* Comparison — RTL reading flow: current (before) on the right,
-            alternative (after) on the left. */}
-        <View style={styles.compareWrap}>
-          <ComparisonColumn
-            title="הקרן הנוכחית"
-            total={result.currentTotal}
-            monthly={result.monthlyPensionCurrent}
-          />
-          <ComparisonColumn
-            title="להשוואה"
-            total={result.alternativeTotal}
-            monthly={result.monthlyPensionAlternative}
-            highlight
-          />
-        </View>
-
-        <PensionBenchmarkCard
-          age={state.age}
-          monthlySalary={Number(state.monthlySalary) || 0}
-          currentDepositFee={state.currentDepositFee}
-          currentAccumulationFee={state.currentAccumulationFee}
-          accentColor={TOOL.hue}
-        />
-
-        {hasLoss && monthlyFeeSavings > 0 ? (
-          <View style={styles.savingsCard}>
-            <View style={styles.savingsTopRow}>
-              <View style={styles.savingsMonthlyWrap}>
-                <Text style={styles.savingsMonthlyLabel}>חיסכון פוטנציאלי</Text>
-                <Text style={styles.savingsMonthlyValue}>
-                  {formatShekel(monthlyFeeSavings)}
-                  <Text style={styles.savingsMonthlySuffix}> / חודש</Text>
-                </Text>
-              </View>
-            </View>
-            <Text style={styles.savingsCaption}>
-              אם תקח את ה-{formatShekel(monthlyFeeSavings)} האלה ותפקיד אותם בקרן מדדים גלובלית
-              ב-7% תשואה, ב-{result.yearsToRetirement} שנים זה גדל ל-
-              <Text style={styles.savingsCaptionStrong}>{formatShekel(savingsGrowth)}</Text>.
-            </Text>
-          </View>
-        ) : null}
-
-        {/* Bridge to real-data CTA — high-priority placement right under the
-            primary result so the user is hooked while the loss is fresh. */}
-        <Pressable
-          style={styles.bridgeCta}
-          onPress={() => {
-            tapHaptic();
-            router.push('/bridge');
-          }}
-          accessibilityRole="button"
-          accessibilityLabel="עברו לעמוד הגשר כדי לבדוק את הנתונים האמיתיים שלכם"
-        >
-          <View style={styles.bridgeCtaIcon}>
-            <Search size={18} color="#ffffff" />
-          </View>
-          <View style={styles.bridgeCtaTextWrap}>
-            <Text style={styles.bridgeCtaTitle}>בואו לבדוק את הנתונים האמיתיים שלכם</Text>
-            <Text style={styles.bridgeCtaSubtitle}>חברו את הקרן שלכם וגלו כמה אתם באמת משלמים</Text>
-          </View>
-          <ChevronLeft size={20} color="#ffffff" />
-        </Pressable>
-
+        {/* ─── INPUTS — top of the screen ─── */}
         <SectionLabel>הנתונים שלך</SectionLabel>
 
         <View style={styles.inputCard}>
@@ -380,6 +317,61 @@ export function PensionFeesComparator(): React.ReactElement {
           </Text>
         </View>
 
+        {/* ─── OUTPUTS — what your inputs mean ─── */}
+        <StatHero
+          label={
+            hasFees
+              ? 'הלכו לבית ההשקעות במקום אליך'
+              : 'אין דמי ניהול — מצוין!'
+          }
+          value={result.totalFeesPaid}
+          accentColor={TOOL.hue}
+          sublabel={`סה"כ דמי ניהול לאורך ${result.yearsToRetirement} שנים עד גיל פרישה`}
+        />
+
+        {/* Comparison — RTL reading flow: current (before) on the right,
+            alternative (after) on the left. */}
+        <View style={styles.compareWrap}>
+          <ComparisonColumn
+            title="הקרן הנוכחית"
+            total={result.currentTotal}
+            monthly={result.monthlyPensionCurrent}
+          />
+          <ComparisonColumn
+            title="להשוואה"
+            total={result.alternativeTotal}
+            monthly={result.monthlyPensionAlternative}
+            highlight
+          />
+        </View>
+
+        <PensionBenchmarkCard
+          age={state.age}
+          monthlySalary={Number(state.monthlySalary) || 0}
+          currentDepositFee={state.currentDepositFee}
+          currentAccumulationFee={state.currentAccumulationFee}
+          accentColor={TOOL.hue}
+        />
+
+        {hasPotentialSavings && monthlyFeeSavings > 0 ? (
+          <View style={styles.savingsCard}>
+            <View style={styles.savingsTopRow}>
+              <View style={styles.savingsMonthlyWrap}>
+                <Text style={styles.savingsMonthlyLabel}>חיסכון פוטנציאלי</Text>
+                <Text style={styles.savingsMonthlyValue}>
+                  {formatShekel(monthlyFeeSavings)}
+                  <Text style={styles.savingsMonthlySuffix}> / חודש</Text>
+                </Text>
+              </View>
+            </View>
+            <Text style={styles.savingsCaption}>
+              אם תקח את ה-{formatShekel(monthlyFeeSavings)} האלה ותפקיד אותם בקרן מדדים גלובלית
+              ב-7% תשואה, ב-{result.yearsToRetirement} שנים זה גדל ל-
+              <Text style={styles.savingsCaptionStrong}>{formatShekel(savingsGrowth)}</Text>.
+            </Text>
+          </View>
+        ) : null}
+
         <FinTip
           kind="secret"
           text='"0.1% דמי ניהול מצבירה זה לא קטן."'
@@ -389,8 +381,8 @@ export function PensionFeesComparator(): React.ReactElement {
         <CalculateButton
           label="חברו את החשבונות שלכם ותראו את הפוטנציאל האמיתי לחסוך"
           sublabel={
-            hasLoss && lostPositive > 0
-              ? `פוטנציאל חיסכון משוער ${formatShekel(lostPositive)}`
+            hasPotentialSavings
+              ? `פוטנציאל חיסכון משוער ${formatShekel(result.potentialSavings)}`
               : undefined
           }
           variant="pink"
@@ -545,45 +537,6 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   savingsCaptionStrong: { color: TOOL.hue, fontWeight: '900' },
-
-  // Bridge CTA — premium pink with glow
-  bridgeCta: {
-    flexDirection: 'row-reverse',
-    alignItems: 'center',
-    gap: 12,
-    backgroundColor: TOOL.hue,
-    borderRadius: 16,
-    paddingHorizontal: 14,
-    paddingVertical: 14,
-    shadowColor: TOOL.hue,
-    shadowOpacity: 0.35,
-    shadowRadius: 14,
-    shadowOffset: { width: 0, height: 6 },
-    elevation: 6,
-  },
-  bridgeCtaIcon: {
-    width: 36,
-    height: 36,
-    borderRadius: 999,
-    backgroundColor: 'rgba(255,255,255,0.22)',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  bridgeCtaTextWrap: { flex: 1, alignItems: 'flex-end', gap: 2 },
-  bridgeCtaTitle: {
-    fontSize: 14,
-    fontWeight: '900',
-    color: '#ffffff',
-    writingDirection: 'rtl',
-    textAlign: 'right',
-  },
-  bridgeCtaSubtitle: {
-    fontSize: 11,
-    fontWeight: '600',
-    color: 'rgba(255,255,255,0.92)',
-    writingDirection: 'rtl',
-    textAlign: 'right',
-  },
 
   cardTitleRow: {
     flexDirection: 'row-reverse',

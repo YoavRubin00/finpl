@@ -134,7 +134,7 @@ export async function fetchInterestRate(): Promise<DataPoint> {
     return result;
   } catch {
     const fallback: DataPoint = {
-      value: '4.75%',
+      value: '4.25%',
       label: 'ריבית בנק ישראל',
       direction: 'stable',
       category: 'INTEREST_RATE',

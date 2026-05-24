@@ -11,6 +11,7 @@ import {
   Text,
   View,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { X } from 'lucide-react-native';
 
 import { STITCH } from '../../constants/theme';
@@ -157,11 +158,12 @@ export function AssetEditModal({
       animationType="slide"
       presentationStyle="formSheet"
     >
-      <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        style={styles.safe}
-      >
-        <View style={styles.header}>
+      <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          style={styles.flex}
+        >
+          <View style={styles.header}>
           <Pressable
             onPress={onClose}
             style={styles.closeBtn}
@@ -178,7 +180,9 @@ export function AssetEditModal({
         <ScrollView
           contentContainerStyle={styles.scroll}
           keyboardShouldPersistTaps="handled"
+          keyboardDismissMode="on-drag"
           showsVerticalScrollIndicator={false}
+          automaticallyAdjustKeyboardInsets
         >
           <SectionLabel>סוג הנכס</SectionLabel>
           <AssetTypePicker value={type} onChange={handleTypeChange} />
@@ -293,13 +297,15 @@ export function AssetEditModal({
             onPress={handleSave}
           />
         </View>
-      </KeyboardAvoidingView>
+        </KeyboardAvoidingView>
+      </SafeAreaView>
     </Modal>
   );
 }
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: STITCH.background },
+  flex: { flex: 1 },
   header: {
     flexDirection: 'row-reverse',
     alignItems: 'center',
@@ -318,7 +324,7 @@ const styles = StyleSheet.create({
     writingDirection: 'rtl',
   },
   closeBtn: { width: 36, height: 36, alignItems: 'center', justifyContent: 'center' },
-  scroll: { padding: 16, paddingBottom: 32, gap: 12 },
+  scroll: { padding: 16, paddingBottom: 120, gap: 12 },
 
   switchCard: {
     flexDirection: 'row-reverse',

@@ -89,7 +89,8 @@ export function TaxRefundCalculator(): React.ReactElement {
         : annualGross;
     const theoreticalTaxFull = calculateIncomeTax(annualizedGross, totalCreditPoints);
     const theoreticalTaxProRata = theoreticalTaxFull * (state.monthsWorked / 12);
-    const depositCredit = Math.min(extraDeposits * 0.35, 7_700);
+    // 2026 annual זיכוי cap on קופ"ג deposits — re-indexed ~3% from 2025 (₪7,700).
+    const depositCredit = Math.min(extraDeposits * 0.35, 7_920);
     const refund = Math.max(0, actualTax - theoreticalTaxProRata) + depositCredit;
 
     return {

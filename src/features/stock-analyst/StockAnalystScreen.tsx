@@ -279,11 +279,17 @@ export function StockAnalystScreen(): React.ReactElement {
           >
             {showHero ? (
               <View style={{ alignItems: 'center', paddingTop: 16, paddingBottom: 8, gap: 14 }}>
-                <ExpoImage
-                  source={require('../../../assets/webp/fin-tablet-1.webp')}
-                  style={{ width: 180, height: 180 }}
-                  contentFit="contain"
-                />
+                {/* Crop the top ~10% of the source WebP — the export has a
+                    small grime patch above the captain's head that ruins
+                    the silhouette. Wrapper clips, image is shifted up so
+                    only the dirty band is hidden. */}
+                <View style={{ width: 180, height: 162, overflow: 'hidden' }}>
+                  <ExpoImage
+                    source={require('../../../assets/webp/fin-tablet-1.webp')}
+                    style={{ width: 180, height: 180, marginTop: -18 }}
+                    contentFit="contain"
+                  />
+                </View>
                 {/* Gold "Captain of the Sea" title pill — matches mockup */}
                 <LinearGradient
                   colors={['#fde68a', '#fbbf24', '#f59e0b']}
@@ -401,7 +407,14 @@ export function StockAnalystScreen(): React.ReactElement {
         </KeyboardAvoidingView>
       </SafeAreaView>
 
-      <FirstLaunchConsentModal visible={consentVisible} onAccept={handleConsentAccept} />
+      {/* Consent must wait for the intro video to finish (or be skipped) so it
+          doesn't overlap the full-screen video. The intro is the very first
+          thing the user sees; the disclaimer is the gate to actually using
+          the analyst, so it should land right after. */}
+      <FirstLaunchConsentModal
+        visible={consentVisible && !introVisible}
+        onAccept={handleConsentAccept}
+      />
       <CapExceededAnalystModal
         visible={capModalMode !== null}
         mode={capModalMode ?? 'quick'}

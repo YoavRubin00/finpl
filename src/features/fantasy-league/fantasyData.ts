@@ -147,7 +147,7 @@ export const STOCK_CATEGORIES: StockCategory[] = [
         name: 'Apple',
         tagline: 'ממלכת האייפון',
         categoryId: 'tech',
-        mockPrice: 213.50,
+        mockPrice: 222.30,
         mockWeeklyChange: 2.4,
         sharkAnalysis:
           'אפל ממשיכה לשלוט בשוק הסמארטפונים עם שולי רווח עצומים. מחזור ה-Services צומח ב-15% שנה-על-שנה ומציע יציבות אמיתית. אני מאמין שהמניה מוצאת תמיכה חזקה ב-$200 לפני כל תנועה לכיוון $230.',
@@ -157,17 +157,17 @@ export const STOCK_CATEGORIES: StockCategory[] = [
         name: 'NVIDIA',
         tagline: 'מלך הבינה המלאכותית',
         categoryId: 'tech',
-        mockPrice: 875.20,
+        mockPrice: 155.40,
         mockWeeklyChange: 5.1,
         sharkAnalysis:
-          'NVIDIA היא המנועה האמיתית של מהפכת ה-AI. ביקוש ל-GPU לצ\'אט-בוטים ומרכזי נתונים ממשיך לרסק שיאים. סיכון: תמחור גבוה מאוד — P/E מעל 70. אבל אם ה-AI ממשיך לגדול, NVDA תוביל.',
+          'NVIDIA היא המנוע האמיתי של מהפכת ה-AI. אחרי 10:1 split ביוני 2024, המניה נגישה ליותר משקיעים. ביקוש ל-GPU למרכזי נתונים ממשיך לרסק שיאים. סיכון: תמחור גבוה — אבל אם ה-AI ממשיך לגדול, NVDA תוביל.',
       },
       {
         ticker: 'GOOGL',
         name: 'Alphabet',
         tagline: 'אדוני החיפוש',
         categoryId: 'tech',
-        mockPrice: 178.90,
+        mockPrice: 198.60,
         mockWeeklyChange: 1.8,
         sharkAnalysis:
           'גוגל מחזיקה ב-92% מחיפוש הגלובלי — הגנה עסקית שקשה לשבור. Google Cloud צומח ב-28% ומאיים על AWS. האתגר הגדול: שילוב Gemini ב-Search בלי לפגוע בהכנסות מפרסום.',
@@ -177,7 +177,7 @@ export const STOCK_CATEGORIES: StockCategory[] = [
         name: 'Meta',
         tagline: 'אימפריית הרשתות החברתיות',
         categoryId: 'tech',
-        mockPrice: 512.30,
+        mockPrice: 702.80,
         mockWeeklyChange: 3.2,
         sharkAnalysis:
           'Meta שינתה כיוון דרמטית — מ"Year of Efficiency" להשקעות AI מסיביות. Family of Apps מייצרת $40B+ רווח תפעולי. Quest 3 ו-Ray-Ban Glasses פותחים שוק חדש. זה לא רק פייסבוק.',
@@ -187,7 +187,7 @@ export const STOCK_CATEGORIES: StockCategory[] = [
         name: 'Microsoft',
         tagline: 'ענקית התוכנה',
         categoryId: 'tech',
-        mockPrice: 415.60,
+        mockPrice: 492.40,
         mockWeeklyChange: 1.5,
         sharkAnalysis:
           'מיקרוסופט הפכה ל-AI infrastructure company עם Copilot ו-Azure OpenAI. הכנסות Azure צמחו 31% — ומשמשות כבסיס לכל שירותי ה-AI הארגוניים. המניה יציבה יחסית עם דיבידנד.',
@@ -197,7 +197,7 @@ export const STOCK_CATEGORIES: StockCategory[] = [
         name: 'Tesla',
         tagline: 'חלוצת הרכב החשמלי',
         categoryId: 'tech',
-        mockPrice: 248.80,
+        mockPrice: 376.50,
         mockWeeklyChange: -1.2,
         sharkAnalysis:
           'טסלה היא גם חברת רכב, גם חברת אנרגיה וגם חברת AI — זה מה שמצדיק את התמחור. Robotaxi ו-Full Self-Driving יכולים לשנות הכל. אבל המחרה על עתיד רחוק יוצר תנודתיות גבוהה.',
@@ -288,17 +288,17 @@ export const STOCK_CATEGORIES: StockCategory[] = [
         name: 'Walmart',
         tagline: 'מלך הקמעונאות',
         categoryId: 'energy',
-        mockPrice: 198.40,
+        mockPrice: 99.80,
         mockWeeklyChange: 0.8,
         sharkAnalysis:
-          'וולמארט היא ענקית הקמעונאות הגדולה בעולם — $650B מכירות שנתיות ומעל 10,500 חנויות. e-commerce צומח 25% שנתי וWalmart+ מתחרה ב-Amazon Prime. דיבידנד עולה 50 שנה ברצף.',
+          'וולמארט היא ענקית הקמעונאות הגדולה בעולם — $650B מכירות שנתיות ומעל 10,500 חנויות. אחרי 3:1 split בפברואר 2024 המניה נגישה יותר. e-commerce צומח 25% שנתי וWalmart+ מתחרה ב-Amazon Prime. דיבידנד עולה 50 שנה ברצף.',
       },
       {
         ticker: 'KO',
         name: 'Coca-Cola',
         tagline: 'המותג מספר 1 בעולם',
         categoryId: 'energy',
-        mockPrice: 67.30,
+        mockPrice: 71.60,
         mockWeeklyChange: 0.5,
         sharkAnalysis:
           'קוקה קולה — המותג המוכר בעולם, נמכר ב-200+ מדינות. Buffett מחזיק 9% מהמניה כי המודל פשוט: סירופ ב-cents, מותג של מיליארדים. דיבידנד עולה 62 שנה ברציפות — Dividend King.',
@@ -308,7 +308,7 @@ export const STOCK_CATEGORIES: StockCategory[] = [
         name: 'Procter & Gamble',
         tagline: 'מותגי הצרכן הקלאסיים',
         categoryId: 'energy',
-        mockPrice: 172.10,
+        mockPrice: 168.40,
         mockWeeklyChange: 0.6,
         sharkAnalysis:
           'P&G הוא בית של Tide, Pampers, Gillette ועוד — 65 מותגים שבכל בית. Pricing power חזק במיוחד באינפלציה. דיבידנד עולה 68 שנה ברצף. defensive play קלאסי לכל סוגי השוק.',
@@ -318,7 +318,7 @@ export const STOCK_CATEGORIES: StockCategory[] = [
         name: 'Johnson & Johnson',
         tagline: 'ענקית בריאות-צרכן',
         categoryId: 'energy',
-        mockPrice: 158.90,
+        mockPrice: 164.20,
         mockWeeklyChange: 0.4,
         sharkAnalysis:
           'JNJ היא Healthcare giant עם 130 שנה של רצף. AAA credit rating — אחד מ-2 בלבד באמריקה. דיבידנד עולה 61 שנה ברצף. עבר spin-off של Kenvue, נשאר עם pharma + medical devices — שני הסקטורים הכי חזקים.',
@@ -328,20 +328,20 @@ export const STOCK_CATEGORIES: StockCategory[] = [
         name: 'Berkshire Hathaway',
         tagline: 'האימפריה של באפט',
         categoryId: 'energy',
-        mockPrice: 432.50,
+        mockPrice: 508.70,
         mockWeeklyChange: 1.1,
         sharkAnalysis:
-          'ברקשייר היא ה-conglomerate של וורן באפט — מחזיקה Apple, Coca-Cola, GEICO, BNSF Railway ועוד עשרות חברות. $200B+ במזומן מוכן להזדמנויות. אין דיבידנד — באפט מעדיף buybacks. רכוש אותה כדי לישון בשקט.',
+          'ברקשייר היא ה-conglomerate של וורן באפט — מחזיקה Apple, Coca-Cola, GEICO, BNSF Railway ועוד עשרות חברות. $300B+ במזומן מוכן להזדמנויות. אין דיבידנד — באפט מעדיף buybacks. רכוש אותה כדי לישון בשקט.',
       },
       {
         ticker: 'MCD',
         name: "McDonald's",
         tagline: 'הקשתות הזהובות',
         categoryId: 'energy',
-        mockPrice: 295.20,
+        mockPrice: 308.40,
         mockWeeklyChange: 0.7,
         sharkAnalysis:
-          'מקדונלדס היא במהותה חברת נדל"ן ש-ranchising מסעדות. 40,000+ סניפים גלובליים, רובם מתופעלים ע"י זכיינים — מודל הון נמוך, תזרים גבוה. דיבידנד עולה 48 שנה ברצף. recession-proof.',
+          'מקדונלדס היא במהותה חברת נדל"ן שמשכירה מסעדות לזכיינים. 40,000+ סניפים גלובליים, רובם מתופעלים ע"י זכיינים — מודל הון נמוך, תזרים גבוה. דיבידנד עולה 48 שנה ברצף. recession-proof.',
       },
     ],
   },
@@ -359,7 +359,7 @@ export const STOCK_CATEGORIES: StockCategory[] = [
         name: 'טבע',
         tagline: 'ענקית הגנריקה הישראלית',
         categoryId: 'israel',
-        mockPrice: 55.80,
+        mockPrice: 71.40,
         mockWeeklyChange: 1.6,
         currency: '₪',
         sharkAnalysis:
@@ -392,7 +392,7 @@ export const STOCK_CATEGORIES: StockCategory[] = [
         name: 'אלביט מערכות',
         tagline: 'החוד של תעשיית הביטחון',
         categoryId: 'israel',
-        mockPrice: 970.00,
+        mockPrice: 1620.00,
         mockWeeklyChange: 3.4,
         currency: '₪',
         sharkAnalysis:
@@ -403,7 +403,7 @@ export const STOCK_CATEGORIES: StockCategory[] = [
         name: 'בנק הפועלים',
         tagline: 'הבנק הגדול בישראל',
         categoryId: 'israel',
-        mockPrice: 36.40,
+        mockPrice: 47.30,
         mockWeeklyChange: 1.1,
         currency: '₪',
         sharkAnalysis:
@@ -414,7 +414,7 @@ export const STOCK_CATEGORIES: StockCategory[] = [
         name: 'בנק לאומי',
         tagline: 'הבנק הוותיק והיציב',
         categoryId: 'israel',
-        mockPrice: 32.10,
+        mockPrice: 41.80,
         mockWeeklyChange: 1.0,
         currency: '₪',
         sharkAnalysis:
@@ -425,7 +425,7 @@ export const STOCK_CATEGORIES: StockCategory[] = [
         name: 'מזרחי טפחות',
         tagline: 'מלך המשכנתאות הישראלי',
         categoryId: 'israel',
-        mockPrice: 152.30,
+        mockPrice: 218.50,
         mockWeeklyChange: 1.4,
         currency: '₪',
         sharkAnalysis:
@@ -479,27 +479,27 @@ export const STOCK_CATEGORIES: StockCategory[] = [
         name: 'Bitcoin',
         tagline: 'אם המטבעות',
         categoryId: 'crypto',
-        mockPrice: 67_400,
+        mockPrice: 104_500,
         mockWeeklyChange: 3.8,
         sharkAnalysis:
-          'ביטקוין הוא "זהב דיגיטלי" — 21 מיליון יחידות בלבד לעולם. ה-Halving האחרון הפחית היצע חדש, ו-ETF-ים מוסדיים מגדילים ביקוש. ההיסטוריה מראה: אחרי Halving, מגיע Bull run. אני כאן.',
+          'ביטקוין הוא "זהב דיגיטלי" — 21 מיליון יחידות בלבד לעולם. ה-Halving של אפריל 2024 הפחית היצע חדש, ו-ETF-ים מוסדיים (BlackRock, Fidelity) צוברים מיליארדים. ההיסטוריה מראה: אחרי Halving, מגיע Bull run. אני כאן.',
       },
       {
         ticker: 'ETH',
         name: 'Ethereum',
         tagline: 'פלטפורמת החוזים החכמים',
         categoryId: 'crypto',
-        mockPrice: 3_520,
+        mockPrice: 3_820,
         mockWeeklyChange: 2.9,
         sharkAnalysis:
-          'אית\'ריום היא תשתית האפליקציות הדצנטרליזציות — DeFi, NFT, Layer 2. Staking מוריד supply בשוק. ה-Layer 2 ecosystem (Arbitrum, Optimism) צומח ומחזק ETH כנכס reserve.',
+          'אית\'ריום היא תשתית האפליקציות הדצנטרליזציות — DeFi, NFT, Layer 2. Staking מוריד supply בשוק. ה-Layer 2 ecosystem (Arbitrum, Optimism, Base) צומח ומחזק ETH כנכס reserve.',
       },
       {
         ticker: 'SOL',
         name: 'Solana',
         tagline: 'המהיר שביניהם',
         categoryId: 'crypto',
-        mockPrice: 178.30,
+        mockPrice: 192.40,
         mockWeeklyChange: 6.1,
         sharkAnalysis:
           'סולנה היא הרשת הכי מהירה (65K tx/sec) והזולה. Meme coins, DePIN וDeFi פועלים כאן בעלות שבריר. Firedancer upgrade יגדיל throughput פי 10. תנודתיות גבוהה — פוטנציאל גבוה.',
@@ -509,7 +509,7 @@ export const STOCK_CATEGORIES: StockCategory[] = [
         name: 'BNB',
         tagline: 'מטבע הבורסה',
         categoryId: 'crypto',
-        mockPrice: 568.20,
+        mockPrice: 648.30,
         mockWeeklyChange: 1.4,
         sharkAnalysis:
           'BNB הוא המטבע של Binance — הבורסה הגדולה בעולם. Fee discounts, BNB Chain DApps וLaunchpad נותנים ל-BNB ערך utility אמיתי. הסיכון הרגולטורי על Binance ידוע — ומתומחר חלקית.',
@@ -519,7 +519,7 @@ export const STOCK_CATEGORIES: StockCategory[] = [
         name: 'Cardano',
         tagline: 'הבלוקצ׳יין האקדמי',
         categoryId: 'crypto',
-        mockPrice: 0.62,
+        mockPrice: 0.71,
         mockWeeklyChange: 4.5,
         sharkAnalysis:
           'קרדנו מפותח בגישה "peer-reviewed" — כל קוד עובר מחקר אקדמי. Hydra protocol יאפשר מיליוני tx/sec. עדיין מאחורי Ethereum ו-Solana באימוץ — אבל הבסיס הטכני חזק מאוד.',
@@ -529,7 +529,7 @@ export const STOCK_CATEGORIES: StockCategory[] = [
         name: 'Dogecoin',
         tagline: 'ה-Meme שהפך אמיתי',
         categoryId: 'crypto',
-        mockPrice: 0.18,
+        mockPrice: 0.22,
         mockWeeklyChange: 8.3,
         sharkAnalysis:
           'דוג\'קוין התחיל כבדיחה — אבל קהילה של מיליונים ותמיכת Elon Musk הפכו אותו לאמיתי. X (טוויטר) שוקל קבלת DOGE כתשלום. ספקולציה טהורה עם upside מטורף — וגם downside בהתאם.',
@@ -618,7 +618,7 @@ export function getWeeklyMissions(weekId: string): WeeklyMission[] {
 // ---------------------------------------------------------------------------
 
 export const COMPETITION_RULES = [
-  'אסור להחליף מניות לאחר נעילת הדראפט ביום ראשון 09:00',
+  'אסור להחליף מניות לאחר נעילת הדראפט ביום שני 09:00',
   'הניקוד מבוסס על ממוצע אחוזי השינוי של 5 המניות שבחרת',
   'חמשת הראשונים בכל קטגוריה מקבלים פרסים נוספים',
   'הרווח/הפסד מחושב על דמי הכניסה ששילמת',

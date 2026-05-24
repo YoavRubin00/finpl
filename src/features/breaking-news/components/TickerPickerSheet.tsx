@@ -8,6 +8,7 @@ import {
   TextInput,
   View,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Search, X, TrendingUp } from 'lucide-react-native';
 
 import { STITCH } from '../../../constants/theme';
@@ -39,6 +40,7 @@ export function TickerPickerSheet({
   onClose,
   onPick,
 }: TickerPickerSheetProps): React.ReactElement | null {
+  const insets = useSafeAreaInsets();
   const [query, setQuery] = useState('');
 
   const matches = useMemo(() => searchCatalog(query, 30), [query]);
@@ -76,7 +78,7 @@ export function TickerPickerSheet({
         accessibilityLabel="סגור"
       />
 
-      <View style={styles.sheet}>
+      <View style={[styles.sheet, { paddingBottom: Math.max(insets.bottom + 8, 16) }]}>
         <View style={styles.handle} />
 
         <View style={styles.header}>
@@ -231,8 +233,8 @@ const styles = StyleSheet.create({
     borderTopRightRadius: 24,
     paddingHorizontal: 16,
     paddingTop: 8,
-    paddingBottom: 16,
-    maxHeight: '85%',
+    // paddingBottom merged at render time with safe-area inset.
+    maxHeight: '80%',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: -4 },
     shadowOpacity: 0.18,
@@ -288,11 +290,11 @@ const styles = StyleSheet.create({
     padding: 0,
   },
   list: {
-    flexGrow: 0,
+    flexShrink: 1,
   },
   listContent: {
     paddingBottom: 12,
-    gap: 4,
+    gap: 6,
   },
   emptyText: {
     fontSize: 13,
@@ -304,47 +306,48 @@ const styles = StyleSheet.create({
   row: {
     flexDirection: 'row-reverse',
     alignItems: 'center',
-    gap: 12,
-    paddingVertical: 12,
-    paddingHorizontal: 8,
-    borderRadius: 10,
-    borderBottomWidth: 1,
-    borderBottomColor: '#f1f5f9',
+    gap: 14,
+    paddingVertical: 16,
+    paddingHorizontal: 12,
+    borderRadius: 12,
+    backgroundColor: '#f8fafc',
   },
   rowDisabled: {
     opacity: 0.5,
   },
   tickerCol: {
     alignItems: 'flex-end',
-    minWidth: 70,
+    minWidth: 82,
   },
   ticker: {
-    fontSize: 14,
+    fontSize: 17,
     fontWeight: '900',
     color: STITCH.onSurface,
     letterSpacing: -0.3,
   },
   exchange: {
-    fontSize: 10,
+    fontSize: 11,
     fontWeight: '600',
     color: STITCH.onSurfaceVariant,
+    marginTop: 2,
   },
   nameCol: {
     flex: 1,
     alignItems: 'flex-end',
   },
   nameHe: {
-    fontSize: 13,
+    fontSize: 15,
     fontWeight: '700',
     color: STITCH.onSurface,
     textAlign: 'right',
     writingDirection: 'rtl',
   },
   nameEn: {
-    fontSize: 11,
+    fontSize: 12,
     fontWeight: '500',
     color: STITCH.onSurfaceVariant,
     textAlign: 'right',
+    marginTop: 2,
   },
   alreadyChip: {
     backgroundColor: '#dcfce7',

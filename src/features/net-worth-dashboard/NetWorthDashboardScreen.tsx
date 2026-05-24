@@ -7,7 +7,7 @@ import { ChevronRight, Plus } from 'lucide-react-native';
 
 import { STITCH } from '../../constants/theme';
 import { tapHaptic } from '../../utils/haptics';
-import { FINN_HAPPY } from '../retention-loops/finnMascotConfig';
+import { FINN_HAPPY, FINN_STANDARD } from '../retention-loops/finnMascotConfig';
 import {
   CalculateButton,
   LegalDisclaimer,
@@ -60,16 +60,18 @@ export function NetWorthDashboardScreen(): React.ReactElement {
   const isEmpty = assets.length === 0;
 
   return (
-    <SafeAreaView edges={['top']} style={styles.safe}>
+    <SafeAreaView edges={['top', 'bottom']} style={styles.safe}>
       <View style={styles.header}>
         <Pressable
           onPress={() => {
             tapHaptic();
-            router.back();
+            // The dashboard is conceptually owned by the Financial Tools hub —
+            // always return there, not to whatever screen happened to push it.
+            router.replace('/(tabs)/tools' as never);
           }}
           style={styles.backBtn}
           accessibilityRole="button"
-          accessibilityLabel="חזרה"
+          accessibilityLabel="חזרה לכלים"
           hitSlop={10}
         >
           <ChevronRight size={22} color={STITCH.onSurface} strokeWidth={2.6} />
@@ -80,7 +82,12 @@ export function NetWorthDashboardScreen(): React.ReactElement {
           </Text>
           <Text style={styles.subtitle}>המידע נשמר רק במכשיר שלכם</Text>
         </View>
-        <View style={styles.backBtn} />
+        <ExpoImage
+          source={FINN_STANDARD}
+          accessible={false}
+          style={styles.sharkAvatar}
+          contentFit="contain"
+        />
       </View>
 
       <ScrollView
@@ -224,6 +231,7 @@ const styles = StyleSheet.create({
     marginBottom: 6,
   },
 
+  sharkAvatar: { width: 40, height: 40 },
   fab: {
     position: 'absolute',
     bottom: 26,
@@ -231,10 +239,10 @@ const styles = StyleSheet.create({
     width: 56,
     height: 56,
     borderRadius: 28,
-    backgroundColor: ACCENT,
+    backgroundColor: STITCH.primary,
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: ACCENT,
+    shadowColor: STITCH.primary,
     shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.4,
     shadowRadius: 12,

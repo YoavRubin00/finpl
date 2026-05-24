@@ -59,9 +59,12 @@ export const TAX_BRACKETS_2026: readonly TaxBracket[] = [
   { from: 721_560,  to: null,     rate: 0.50 },
 ];
 
-export const CREDIT_POINT_VALUE_ANNUAL = 2_976;
-export const BL_MAX_MONTHLY = 50_695;
-export const BL_BREAK_MONTHLY = 7_522;
+// Re-indexed for 2026 (Warren 2026-05): credit point ~₪255/mo, BL break = 60%
+// of average wage (~₪13,300), BL ceiling = 5× average wage. Refresh after the
+// official MoF + ביטוח לאומי tables for 2026 publish.
+export const CREDIT_POINT_VALUE_ANNUAL = 3_060;
+export const BL_MAX_MONTHLY = 52_220;
+export const BL_BREAK_MONTHLY = 7_980;
 // Employee-only Bituach Leumi rates (excluding Mas Briut, which is its own line).
 // Combined BL+Health is 3.5% / 12% — that's the figure paychecks display in one row,
 // but the calculator splits them so each appears separately in the breakdown UI.

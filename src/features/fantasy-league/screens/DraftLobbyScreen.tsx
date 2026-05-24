@@ -1,30 +1,26 @@
-import React, { useState, useCallback, useMemo } from 'react';
+import React, { useState, useCallback } from 'react';
 import {
   View,
   Text,
   ScrollView,
   Pressable,
   FlatList,
-  Alert,
-  Platform,
   StyleSheet,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import Animated, { FadeInDown, FadeIn } from 'react-native-reanimated';
 import { FANTASY, type FantasySectorId } from '../../../constants/theme';
+import { tapHaptic } from '../../../utils/haptics';
 import { useFantasyStore } from '../useFantasyStore';
-import { STOCK_CATEGORIES, TIER_CONFIGS, COMPETITION_RULES } from '../fantasyData';
+import { STOCK_CATEGORIES, TIER_CONFIGS } from '../fantasyData';
 import { TierSelectionCard } from '../components/TierSelectionCard';
 import { DraftCategoryTabs } from '../components/DraftCategoryTabs';
-import { DraftProgressBar } from '../components/DraftProgressBar';
 import { SharkAnalysisModal } from '../components/SharkAnalysisModal';
 import { SharkConfirmModal } from '../components/SharkConfirmModal';
-import { RulesModal } from '../components/RulesModal';
-import { F2Header, F2Ambient, F2MarketCard, F2PickAllocationRow } from '../v2/components';
-import { F2Panel, F2Section, F2Button } from '../v2/atoms';
-import { F2CaptainBadge, F2Trophy, F2Chevron } from '../v2/icons';
-import { GoldCoinIcon } from '../../../components/ui/GoldCoinIcon';
+import { F2Header, F2Ambient, F2MarketCard } from '../v2/components';
+import { F2Panel, F2Button } from '../v2/atoms';
+import { F2Trophy, F2Chevron } from '../v2/icons';
 import type { FantasyTier, StockCategoryId, DraftStock } from '../fantasyTypes';
 import type { SparkPath } from '../v2/atoms';
 
@@ -76,14 +72,11 @@ export function DraftLobbyScreen(): React.ReactElement {
   const isLocked = false;
   const enterCompetition = useFantasyStore((s) => s.enterCompetition);
   const pickStock = useFantasyStore((s) => s.pickStock);
-  const setCaptain = useFantasyStore((s) => s.setCaptain);
-  const setAllocation = useFantasyStore((s) => s.setAllocation);
-  const redistributeAllocationsEqually = useFantasyStore((s) => s.redistributeAllocationsEqually);
 
+  const insets = useSafeAreaInsets();
   const [selectedTier, setSelectedTier] = useState<FantasyTier>('silver');
   const [activeCategory, setActiveCategory] = useState<StockCategoryId>('tech');
   const [analysisStock, setAnalysisStock] = useState<DraftStock | null>(null);
-  const [showRules, setShowRules] = useState(false);
   const [confirmJoin, setConfirmJoin] = useState(false);
   const [errorModal, setErrorModal] = useState<{ title: string; message: string } | null>(null);
 
@@ -93,15 +86,7 @@ export function DraftLobbyScreen(): React.ReactElement {
   const activeCategoryData = STOCK_CATEGORIES.find((c) => c.id === activeCategory);
   const activeStocks = activeCategoryData?.stocks ?? [];
 
-  // Real coin allocation pool — total = entry coins paid
-  const poolMax = currentEntry?.coinsPaid ?? 0;
-  const allocatedTotal = useMemo(
-    () => picks.reduce((s, p) => s + p.allocation, 0),
-    [picks],
-  );
-  const poolRemaining = poolMax - allocatedTotal;
   const allPicked = picks.length === 5;
-  const allocationBalanced = allPicked && poolRemaining === 0;
 
   const handleEnter = useCallback(() => {
     setConfirmJoin(true);
@@ -143,18 +128,10 @@ export function DraftLobbyScreen(): React.ReactElement {
     [hasEntered, isLocked, pickStock, picks],
   );
 
-  const handleContinueToLive = useCallback(() => {
-    router.push('/fantasy/live');
+  const handleContinueToYourPicks = useCallback(() => {
+    tapHaptic();
+    router.push('/fantasy/your-picks');
   }, []);
-
-  const handleToggleLeverage = useCallback(
-    (ticker: string) => {
-      if (!hasEntered) return;
-      const isCurrent = currentEntry?.captainTicker === ticker;
-      setCaptain(isCurrent ? null : ticker);
-    },
-    [currentEntry?.captainTicker, hasEntered, setCaptain],
-  );
 
   return (
     <View style={{ flex: 1, backgroundColor: FANTASY.bg }}>
@@ -177,7 +154,7 @@ export function DraftLobbyScreen(): React.ReactElement {
         <ScrollView
           style={{ flex: 1 }}
           showsVerticalScrollIndicator={false}
-          contentContainerStyle={{ paddingBottom: 200, paddingHorizontal: 16, gap: 12 }}
+          contentContainerStyle={{ paddingBottom: 220 + insets.bottom, paddingHorizontal: 16, gap: 12 }}
         >
           {/* ─── Tier selection (pre-entry) ─── */}
           {!hasEntered && (
@@ -210,188 +187,6 @@ export function DraftLobbyScreen(): React.ReactElement {
               >
                 הצטרף ל{TIER_CONFIGS[selectedTier].label}
               </F2Button>
-            </Animated.View>
-          )}
-
-          {/* ─── Rules card (always visible after entry) ─── */}
-          {hasEntered && (
-            <Animated.View entering={FadeInDown.delay(40).duration(320)}>
-              <F2Panel pad={12}>
-                <View style={{
-                  flexDirection: 'row-reverse',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  marginBottom: 6,
-                }}>
-                  <Text style={{ fontSize: 12, fontWeight: '900', color: FANTASY.ink, ...RTL }}>
-                    📋 חוקים בקצרה
-                  </Text>
-                  <Pressable onPress={() => setShowRules(true)} hitSlop={8}>
-                    <Text style={{ fontSize: 11, fontWeight: '800', color: FANTASY.primary }}>
-                      כל החוקים ←
-                    </Text>
-                  </Pressable>
-                </View>
-                {COMPETITION_RULES.slice(0, 2).map((rule, i) => (
-                  <View key={i} style={{ flexDirection: 'row-reverse', gap: 6, marginTop: 4 }}>
-                    <Text style={{ fontSize: 12, color: FANTASY.gold, marginTop: 1 }}>•</Text>
-                    <Text style={{
-                      fontSize: 11,
-                      color: FANTASY.inkMuted,
-                      ...RTL,
-                      flex: 1,
-                      lineHeight: 17,
-                    }}>
-                      {rule}
-                    </Text>
-                  </View>
-                ))}
-              </F2Panel>
-            </Animated.View>
-          )}
-
-          {/* ─── Coin allocation pool (real entry coins) ─── */}
-          {hasEntered && picks.length > 0 && (
-            <Animated.View entering={FadeInDown.delay(60).duration(320)}>
-              <View style={{
-                backgroundColor: FANTASY.surfaceCard,
-                borderRadius: 14,
-                borderWidth: 1,
-                borderColor: FANTASY.border,
-                paddingVertical: 12,
-                paddingHorizontal: 14,
-                shadowColor: '#0f172a',
-                shadowOpacity: 0.04,
-                shadowOffset: { width: 0, height: 1 },
-                shadowRadius: 2,
-                elevation: 1,
-                gap: 8,
-              }}>
-                <View style={{
-                  flexDirection: 'row-reverse',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                }}>
-                  <Text style={{
-                    fontSize: 10,
-                    color: FANTASY.inkFaint,
-                    fontWeight: '800',
-                    letterSpacing: 0.6,
-                    textTransform: 'uppercase',
-                  }}>
-                    קופת הליגה
-                  </Text>
-                  <View style={{ flexDirection: 'row-reverse', alignItems: 'center', gap: 5 }}>
-                    <GoldCoinIcon size={14} />
-                    <Text style={[
-                      { fontSize: 16, fontWeight: '900', color: poolRemaining === 0 ? FANTASY.positiveDark : FANTASY.ink },
-                      { fontVariant: ['tabular-nums' as const] },
-                    ]}>
-                      {allocatedTotal.toLocaleString('en-US')}
-                    </Text>
-                    <Text style={{ fontSize: 10, color: FANTASY.inkMuted, fontWeight: '700' }}>
-                      / {poolMax.toLocaleString('en-US')}
-                    </Text>
-                  </View>
-                </View>
-                <View style={{
-                  height: 8,
-                  borderRadius: 999,
-                  backgroundColor: FANTASY.surfaceMuted,
-                  overflow: 'hidden',
-                  flexDirection: 'row-reverse',
-                }}>
-                  <View
-                    style={{
-                      height: '100%',
-                      width: `${poolMax > 0 ? (allocatedTotal / poolMax) * 100 : 0}%`,
-                      backgroundColor: poolRemaining === 0 ? FANTASY.positive : FANTASY.primary,
-                      borderRadius: 999,
-                    }}
-                  />
-                </View>
-                {!isLocked && (
-                  <View style={{ flexDirection: 'row-reverse', alignItems: 'center', justifyContent: 'space-between' }}>
-                    <Text style={{
-                      fontSize: 11,
-                      color: poolRemaining === 0 ? FANTASY.positiveDark : FANTASY.warningDark,
-                      fontWeight: '800',
-                      ...RTL,
-                    }}>
-                      {poolRemaining === 0
-                        ? '✓ כל הקופה הוקצתה'
-                        : `נשארו לחלק: ${poolRemaining.toLocaleString('en-US')} 🪙`}
-                    </Text>
-                    {picks.length > 0 && (
-                      <Pressable
-                        onPress={redistributeAllocationsEqually}
-                        hitSlop={8}
-                        style={({ pressed }) => ({
-                          paddingHorizontal: 10,
-                          paddingVertical: 4,
-                          borderRadius: 999,
-                          backgroundColor: pressed ? FANTASY.primaryTint : FANTASY.surfaceLow,
-                          borderWidth: 1,
-                          borderColor: FANTASY.borderStrong,
-                        })}
-                        accessibilityLabel="חלוקה שווה"
-                      >
-                        <Text style={{ fontSize: 10, fontWeight: '900', color: FANTASY.primary }}>
-                          ⚖ חלוקה שווה
-                        </Text>
-                      </Pressable>
-                    )}
-                  </View>
-                )}
-              </View>
-            </Animated.View>
-          )}
-
-          {/* ─── Allocation + ×2 leverage rows (after picks added) ─── */}
-          {hasEntered && picks.length > 0 && (
-            <Animated.View entering={FadeInDown.delay(80).duration(320)} style={{ gap: 10 }}>
-              <View style={{
-                backgroundColor: FANTASY.goldSoft,
-                borderRadius: 14,
-                borderWidth: 1.5,
-                borderColor: FANTASY.goldStroke,
-                padding: 12,
-                flexDirection: 'row-reverse',
-                alignItems: 'center',
-                gap: 10,
-              }}>
-                <F2CaptainBadge size={32} />
-                <View style={{ flex: 1 }}>
-                  <Text style={{ fontSize: 13, fontWeight: '900', color: FANTASY.warningDark, ...RTL }}>
-                    הקצה מטבעות + בחר מנוף ×2
-                  </Text>
-                  <Text style={{ fontSize: 11, color: FANTASY.warningDark, ...RTL, marginTop: 2 }}>
-                    אפשר למנף מניה אחת ×2 על התשואה — בחר בחוכמה
-                  </Text>
-                </View>
-              </View>
-
-              <F2Section>הבחירות שלך</F2Section>
-              <View style={{ gap: 7 }}>
-                {picks.map((p) => {
-                  const sector = CATEGORY_TO_SECTOR[p.categoryId] ?? 'tech';
-                  const isLeverage = currentEntry?.captainTicker === p.ticker;
-                  return (
-                    <F2PickAllocationRow
-                      key={p.ticker}
-                      ticker={p.ticker}
-                      name={p.stockName}
-                      sector={sector}
-                      allocation={p.allocation}
-                      poolMax={poolMax}
-                      poolRemaining={poolRemaining}
-                      isLeverage={isLeverage}
-                      onAllocationChange={(amount) => setAllocation(p.ticker, amount)}
-                      onToggleLeverage={() => handleToggleLeverage(p.ticker)}
-                    />
-                  );
-                })}
-              </View>
             </Animated.View>
           )}
 
@@ -496,7 +291,7 @@ export function DraftLobbyScreen(): React.ReactElement {
           )}
         </ScrollView>
 
-        {/* ─── Sticky bottom: progress bar + continue CTA ─── */}
+        {/* ─── Sticky bottom: progress dots + continue-to-phase-2 CTA ─── */}
         {hasEntered && (
           <View style={styles.stickyBottom}>
             <View style={{
@@ -505,34 +300,18 @@ export function DraftLobbyScreen(): React.ReactElement {
               borderTopColor: FANTASY.border,
               paddingHorizontal: 16,
               paddingTop: 10,
-              paddingBottom: 24,
+              paddingBottom: Math.max(insets.bottom + 8, 24),
               gap: 8,
             }}>
-              {/* Status line */}
-              <View style={{
-                flexDirection: 'row-reverse',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: 8,
+              <Text style={{
+                fontSize: 12,
+                fontWeight: '800',
+                color: allPicked ? FANTASY.positiveDark : FANTASY.inkMuted,
+                textAlign: 'center',
+                writingDirection: 'rtl',
               }}>
-                <Text style={{
-                  fontSize: 12,
-                  fontWeight: '800',
-                  color: picks.length === 5 && allocationBalanced
-                    ? FANTASY.positiveDark
-                    : FANTASY.inkMuted,
-                  textAlign: 'center',
-                  writingDirection: 'rtl',
-                }}>
-                  {picks.length < 5
-                    ? `בחרת ${picks.length}/5 מניות`
-                    : !allocationBalanced
-                      ? `נשארו לחלק ${poolRemaining.toLocaleString('en-US')} 🪙`
-                      : currentEntry?.captainTicker
-                        ? `✓ מוכן · ${currentEntry.captainTicker} ממונף ×2`
-                        : '✓ מוכן · ללא מנוף'}
-                </Text>
-              </View>
+                {allPicked ? '✓ כל המניות נבחרו — הזמן לסדר את התיק' : `בחרת ${picks.length}/5 מניות`}
+              </Text>
 
               {/* Mini progress dots — 1 per category */}
               <View style={{
@@ -556,23 +335,15 @@ export function DraftLobbyScreen(): React.ReactElement {
                 })}
               </View>
 
-              {/* Continue CTA — primary when ready, ghost otherwise */}
+              {/* Continue to phase 2 — primary when all 5 picked, ghost otherwise */}
               <F2Button
-                tone={picks.length === 5 && allocationBalanced ? 'primary' : 'ghost'}
+                tone={allPicked ? 'primary' : 'ghost'}
                 size="lg"
-                onPress={handleContinueToLive}
-                disabled={picks.length === 5 && !allocationBalanced}
-                iconRight={
-                  picks.length === 5 && allocationBalanced
-                    ? <F2Chevron size={14} color="#fff" dir="left" />
-                    : undefined
-                }
+                onPress={handleContinueToYourPicks}
+                disabled={!allPicked}
+                iconRight={allPicked ? <F2Chevron size={14} color="#fff" dir="left" /> : undefined}
               >
-                {picks.length === 5 && allocationBalanced
-                  ? 'המשך ללוח החי'
-                  : picks.length < 5
-                    ? 'בנה את התיק להמשך'
-                    : 'השלם הקצאה כדי להמשיך'}
+                {allPicked ? 'המשך לסידור התיק' : 'בנה את התיק להמשך'}
               </F2Button>
 
               <Text style={{
@@ -601,16 +372,14 @@ export function DraftLobbyScreen(): React.ReactElement {
             )
           }
         />
-        <RulesModal visible={showRules} onClose={() => setShowRules(false)} />
-
-        {/* Captain Shark — join confirmation */}
+        {/* Captain Shark — join confirmation. CTA is tinted by the selected tier. */}
         <SharkConfirmModal
           visible={confirmJoin}
           title={`עולים על הסיפון, ${TIER_CONFIGS[selectedTier].label}?`}
           message={`קופת הקרב — ${TIER_CONFIGS[selectedTier].entryCost.toLocaleString('he-IL')} מטבעות. תחלק חכם בין 5 המניות, מנף את הסוס המוביל, ותתפוס לי מקום בפודיום!`}
-          confirmLabel="יוצאים לקרב 🦈"
+          confirmLabel="צאו לקרב"
           cancelLabel="עוד רגע"
-          tone="gold"
+          tier={selectedTier}
           onConfirm={handleConfirmJoin}
           onCancel={() => setConfirmJoin(false)}
         />

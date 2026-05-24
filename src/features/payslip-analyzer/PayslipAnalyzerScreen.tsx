@@ -6,6 +6,7 @@ import {
   ScrollView,
   ActivityIndicator,
   StatusBar,
+  Pressable,
 } from "react-native";
 import { Image as ExpoImage } from "expo-image";
 import { LinearGradient } from "expo-linear-gradient";
@@ -15,7 +16,6 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { FileText, X } from "lucide-react-native";
 import { useRouter } from "expo-router";
 import { BackButton } from "../../components/ui/BackButton";
-import { SharkTipModal } from "../../components/ui/SharkTipModal";
 import { SharkLoveModal } from "../../components/ui/SharkLoveModal";
 import { SupercellButton } from "../../components/ui/SupercellButton";
 import { AnimatedPressable } from "../../components/ui/AnimatedPressable";
@@ -26,10 +26,12 @@ import { analyzePayslipFile } from "./lib/uploadFile";
 import { grantPayslipReward } from "./lib/rewardPolicy";
 import { ERROR_COPY } from "./lib/errorCopy";
 import { buildAnonymizedStats } from "./lib/anonymizedStats";
+import { tapHaptic } from "../../utils/haptics";
 import { SharkAccountantBanner, type SharkBannerMood } from "./components/SharkAccountantBanner";
 import { UploadDropzone } from "./components/UploadDropzone";
 import { AnalyzingState } from "./components/AnalyzingState";
 import { ResultCard } from "./components/ResultCard";
+import { PayslipChat } from "./components/PayslipChat";
 import { ToolNextStepCard } from "../financial-tools/components/ToolNextStepCard";
 import { useFinancialProfileStore } from "../financial-tools/useFinancialProfileStore";
 import { LegalGateModal } from "./components/LegalGateModal";
@@ -169,7 +171,6 @@ export function PayslipAnalyzerScreen() {
   const financialGoal = useAuthStore((s) => s.profile?.financialGoal);
 
   const [showLegal, setShowLegal] = useState<boolean>(legalAcceptedAt === null);
-  const [showErrorModal, setShowErrorModal] = useState(false);
   const [showRewardModal, setShowRewardModal] = useState(false);
   const [rewardSummary, setRewardSummary] = useState<{
     xp: number;
@@ -198,12 +199,6 @@ export function PayslipAnalyzerScreen() {
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-
-  useEffect(() => {
-    if (errorCode) {
-      setShowErrorModal(true);
-    }
-  }, [errorCode]);
 
   const banner = useMemo(() => bannerCopyForPhase(phase), [phase]);
 
@@ -286,23 +281,6 @@ export function PayslipAnalyzerScreen() {
     }
     clearAll();
   }, [file?.uri, clearAll]);
-
-  const handleErrorClose = useCallback(() => {
-    setShowErrorModal(false);
-    if (errorCode === "picker_cancelled") {
-      clearAll();
-    } else if (
-      errorCode === "invalid_mime" ||
-      errorCode === "file_too_large" ||
-      errorCode === "not_a_payslip" ||
-      errorCode === "password_pdf"
-    ) {
-      clearAll();
-    } else {
-      // retryable: revert to idle so the dropzone is shown
-      clearAll();
-    }
-  }, [errorCode, clearAll]);
 
   const handleLegalAccepted = useCallback(() => {
     setShowLegal(false);
@@ -392,6 +370,10 @@ export function PayslipAnalyzerScreen() {
           </View>
         ) : null}
 
+        {phase === "success" && result ? (
+          <PayslipChat result={result} fileName={file?.displayName} />
+        ) : null}
+
         {phase === "error" ? (
           <View style={styles.errorWrap}>
             <Text style={[styles.errorTitle, RTL_CENTER]} allowFontScaling={false}>
@@ -401,27 +383,26 @@ export function PayslipAnalyzerScreen() {
               {errorCopy?.body ?? "נסו שוב."}
             </Text>
             <View style={styles.errorCtaWrap}>
-              <SupercellButton
-                label={errorCopy?.cta ?? "נסה שוב"}
-                variant="blue"
-                buttonStyle="duo"
-                size="md"
+              <Pressable
                 onPress={() => {
+                  tapHaptic();
                   clearAll();
-                  setShowErrorModal(false);
                 }}
-              />
+                accessibilityRole="button"
+                accessibilityLabel={errorCopy?.cta ?? "נסה שוב"}
+                style={({ pressed }) => [
+                  styles.retryButton,
+                  pressed && styles.retryButtonPressed,
+                ]}
+              >
+                <Text style={styles.retryButtonText} allowFontScaling={false}>
+                  {errorCopy?.cta ?? "נסה שוב"}
+                </Text>
+              </Pressable>
             </View>
           </View>
         ) : null}
       </ScrollView>
-
-      <SharkTipModal
-        visible={showErrorModal && errorCopy !== null}
-        message={`${errorCopy?.title ?? ""}\n${errorCopy?.body ?? ""}`}
-        onClose={handleErrorClose}
-        ctaLabel={errorCopy?.cta ?? "הבנתי"}
-      />
 
       <LegalGateModal
         visible={showLegal}
@@ -565,5 +546,29 @@ const styles = StyleSheet.create({
     width: "100%",
     maxWidth: 280,
     marginTop: 8,
+  },
+  retryButton: {
+    alignSelf: "stretch",
+    paddingVertical: 14,
+    borderRadius: 14,
+    backgroundColor: "#2563eb",
+    alignItems: "center",
+    justifyContent: "center",
+    shadowColor: "#2563eb",
+    shadowOpacity: 0.3,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 6 },
+    elevation: 6,
+  },
+  retryButtonPressed: {
+    backgroundColor: "#1d4ed8",
+    transform: [{ scale: 0.98 }],
+  },
+  retryButtonText: {
+    color: "#ffffff",
+    fontSize: 16,
+    fontWeight: "900",
+    writingDirection: "rtl",
+    letterSpacing: -0.2,
   },
 });

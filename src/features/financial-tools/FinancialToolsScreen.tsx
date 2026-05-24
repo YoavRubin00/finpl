@@ -58,11 +58,15 @@ export function FinancialToolsScreen(): React.ReactElement {
         contentContainerStyle={styles.scroll}
         showsVerticalScrollIndicator={false}
       >
-        <HeroStatStrip />
-
         <FinancialProfileCta />
 
-        <AccordionSection title="כלים למשקיעים" count={investorTools.length}>
+        <HeroStatStrip />
+
+        <AccordionSection
+          title="כלים למשקיעים"
+          count={investorTools.length}
+          accent="investor"
+        >
           <View style={styles.grid}>
             {investorTools.map((tool, i) => (
               <ToolHubCard key={tool.key} tool={tool} index={i} />
@@ -70,7 +74,11 @@ export function FinancialToolsScreen(): React.ReactElement {
           </View>
         </AccordionSection>
 
-        <AccordionSection title="כלים פיננסיים" count={financialTools.length}>
+        <AccordionSection
+          title="כלים פיננסיים"
+          count={financialTools.length}
+          accent="financial"
+        >
           <View style={styles.grid}>
             {financialTools.map((tool, i) => (
               <ToolHubCard key={tool.key} tool={tool} index={i} />
@@ -175,32 +183,35 @@ function FinancialProfileCta(): React.ReactElement {
     <Animated.View entering={FadeInDown.delay(80).duration(360)}>
       <Pressable
         onPress={handlePress}
-        style={({ pressed }) => [
-          styles.profileCta,
-          hasData ? styles.profileCtaDim : styles.profileCtaBright,
-          pressed && { opacity: 0.85 },
-        ]}
+        style={({ pressed }) => [styles.profileCtaShell, pressed && { opacity: 0.92 }]}
         accessibilityRole="button"
         accessibilityLabel={hasData ? 'עדכון פרופיל פיננסי' : 'בניית פרופיל פיננסי'}
       >
-        <View style={styles.profileCtaIcon}>
-          {hasData ? (
-            <UserCog size={20} color={STITCH.primary} strokeWidth={2.4} />
-          ) : (
-            <Sparkles size={20} color={STITCH.primary} strokeWidth={2.4} />
-          )}
-        </View>
-        <View style={styles.profileCtaBody}>
-          <Text style={styles.profileCtaTitle}>
-            {hasData ? 'הפרופיל הפיננסי שלך' : 'בנה פרופיל פיננסי'}
-          </Text>
-          <Text style={styles.profileCtaSubtitle}>
-            {hasData
-              ? `${freshness ?? 'נשמר'} · ההצעות וההמלצות מתאימות אישית אליך`
-              : 'מילוי חד-פעמי · הצעות והמלצות מותאמות בכל הכלים'}
-          </Text>
-        </View>
-        <ChevronLeft size={20} color={STITCH.onSurfaceVariant} strokeWidth={2.4} />
+        <LinearGradient
+          colors={['#e6f4fb', '#bfe1f1']}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={styles.profileCta}
+        >
+          <View style={styles.profileCtaIcon}>
+            {hasData ? (
+              <UserCog size={20} color="#053a5e" strokeWidth={2.4} />
+            ) : (
+              <Sparkles size={20} color="#053a5e" strokeWidth={2.4} />
+            )}
+          </View>
+          <View style={styles.profileCtaBody}>
+            <Text style={styles.profileCtaTitle}>
+              {hasData ? 'הפרופיל הפיננסי שלך' : 'בנה פרופיל פיננסי'}
+            </Text>
+            <Text style={styles.profileCtaSubtitle}>
+              {hasData
+                ? `${freshness ?? 'נשמר'} · ההצעות וההמלצות מתאימות אישית אליך`
+                : 'מילוי חד-פעמי · הצעות והמלצות מותאמות בכל הכלים'}
+            </Text>
+          </View>
+          <ChevronLeft size={20} color="#053a5e" strokeWidth={2.4} />
+        </LinearGradient>
       </Pressable>
     </Animated.View>
   );
@@ -214,8 +225,8 @@ const styles = StyleSheet.create({
   header: {
     backgroundColor: STITCH.surfaceLowest,
     paddingHorizontal: 16,
-    paddingTop: 8,
-    paddingBottom: 8,
+    paddingTop: 2,
+    paddingBottom: 6,
     borderBottomWidth: 1,
     borderBottomColor: STITCH.surfaceHighest,
     alignItems: 'center',
@@ -229,7 +240,7 @@ const styles = StyleSheet.create({
   },
   headerCounter: {
     position: 'absolute',
-    top: 8,
+    top: 2,
     right: 12,
     fontSize: 10,
     fontWeight: '800',
@@ -256,10 +267,11 @@ const styles = StyleSheet.create({
     writingDirection: 'rtl',
     textAlign: 'center',
     fontWeight: '600',
-    marginTop: 2,
+    marginTop: 1,
   },
   scroll: {
-    padding: 16,
+    paddingHorizontal: 16,
+    paddingTop: 10,
     paddingBottom: 120,
     gap: 14,
   },
@@ -326,28 +338,30 @@ const styles = StyleSheet.create({
     writingDirection: 'rtl',
   },
   // Profile CTA (between hero and grid)
+  profileCtaShell: {
+    borderRadius: 18,
+    overflow: 'hidden',
+    shadowColor: '#0b1735',
+    shadowOpacity: 0.08,
+    shadowOffset: { width: 0, height: 4 },
+    shadowRadius: 10,
+    elevation: 2,
+  },
   profileCta: {
     flexDirection: 'row-reverse',
     alignItems: 'center',
     gap: 12,
     paddingHorizontal: 14,
     paddingVertical: 14,
-    borderRadius: 16,
+    borderRadius: 18,
     borderWidth: 1,
-  },
-  profileCtaBright: {
-    backgroundColor: STITCH.primary + '14',
-    borderColor: STITCH.primary + '40',
-  },
-  profileCtaDim: {
-    backgroundColor: STITCH.surfaceLowest,
-    borderColor: STITCH.surfaceHighest,
+    borderColor: '#8fc7e1',
   },
   profileCtaIcon: {
     width: 40,
     height: 40,
     borderRadius: 12,
-    backgroundColor: STITCH.primary + '1f',
+    backgroundColor: 'rgba(255,255,255,0.55)',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -357,14 +371,14 @@ const styles = StyleSheet.create({
   profileCtaTitle: {
     fontSize: 15,
     fontWeight: '900',
-    color: STITCH.onSurface,
+    color: '#053a5e',
     textAlign: 'right',
     writingDirection: 'rtl',
   },
   profileCtaSubtitle: {
     fontSize: 12,
     fontWeight: '600',
-    color: STITCH.onSurfaceVariant,
+    color: '#0b4a76',
     textAlign: 'right',
     writingDirection: 'rtl',
     marginTop: 2,

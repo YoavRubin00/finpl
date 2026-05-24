@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { ScrollView, View, Text, Pressable, Dimensions } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import { FANTASY } from '../../../constants/theme';
 import type { StockCategoryId, StockCategory } from '../fantasyTypes';
 
@@ -10,11 +11,32 @@ interface Props {
   onSelect: (id: StockCategoryId) => void;
 }
 
+// Each category gets a distinct, vivid palette so the bar reads at a glance.
+const TAB_PALETTE: Record<
+  StockCategoryId,
+  {
+    /** Active gradient (top → bottom). */
+    g1: string;
+    g2: string;
+    /** Strong line color used for active border/shadow & inactive accent. */
+    color: string;
+    /** Soft tinted background for the inactive state. */
+    bg: string;
+    /** Inactive border. */
+    border: string;
+  }
+> = {
+  tech:        { g1: '#60a5fa', g2: '#1d4ed8', color: '#2563eb', bg: '#eff6ff', border: '#bfdbfe' }, // electric blue
+  spec_growth: { g1: '#c084fc', g2: '#7c3aed', color: '#9333ea', bg: '#faf5ff', border: '#e9d5ff' }, // violet
+  energy:      { g1: '#fbbf24', g2: '#b45309', color: '#d97706', bg: '#fffbeb', border: '#fde68a' }, // gold (ערך)
+  israel:      { g1: '#38bdf8', g2: '#0369a1', color: '#0284c7', bg: '#f0f9ff', border: '#bae6fd' }, // sky cyan
+  crypto:      { g1: '#fb923c', g2: '#c2410c', color: '#ea580c', bg: '#fff7ed', border: '#fed7aa' }, // bitcoin orange
+};
+
 export function DraftCategoryTabs({ categories, activeId, pickedCategories, onSelect }: Props): React.ReactElement {
-  // The bar uses LTR-native scroll with a row-reverse container, so item[0]
-  // (tech) sits at the visual right and item[N-1] (crypto) at the visual left.
+  // Items use row-reverse so item[0] sits at the visual right (Hebrew RTL).
   // We measure each tab's layout and auto-scroll so the *active* tab is always
-  // centered in view — solves the "I can't reach crypto" problem.
+  // centered — solves the "I can't reach crypto" problem.
   const scrollRef = useRef<ScrollView>(null);
   const [layouts, setLayouts] = useState<Record<string, { x: number; width: number }>>({});
   const viewportWidth = Dimensions.get('window').width;
@@ -22,7 +44,6 @@ export function DraftCategoryTabs({ categories, activeId, pickedCategories, onSe
   useEffect(() => {
     const layout = layouts[activeId];
     if (!layout || !scrollRef.current) return;
-    // Center the active tab horizontally; clamp to ≥ 0.
     const target = Math.max(0, layout.x - viewportWidth / 2 + layout.width / 2);
     scrollRef.current.scrollTo({ x: target, animated: true });
   }, [activeId, layouts, viewportWidth]);
@@ -33,7 +54,6 @@ export function DraftCategoryTabs({ categories, activeId, pickedCategories, onSe
       horizontal
       showsHorizontalScrollIndicator={false}
       onContentSizeChange={() => {
-        // On first layout, snap to the right edge so tech is visible immediately.
         const layout = layouts[activeId];
         if (layout) {
           const target = Math.max(0, layout.x - viewportWidth / 2 + layout.width / 2);
@@ -52,6 +72,7 @@ export function DraftCategoryTabs({ categories, activeId, pickedCategories, onSe
       {categories.map((cat) => {
         const isActive = cat.id === activeId;
         const isPicked = pickedCategories.includes(cat.id);
+        const palette = TAB_PALETTE[cat.id];
 
         return (
           <Pressable
@@ -69,46 +90,101 @@ export function DraftCategoryTabs({ categories, activeId, pickedCategories, onSe
             accessibilityState={{ selected: isActive }}
             accessibilityLabel={cat.label}
             style={({ pressed }) => ({
-              flexDirection: 'row-reverse',
-              alignItems: 'center',
-              gap: 6,
-              paddingHorizontal: 14,
-              paddingVertical: 8,
-              borderRadius: 20,
-              borderWidth: isActive ? 1.5 : 1,
-              borderColor: isActive
-                ? FANTASY.primary
-                : FANTASY.border,
-              backgroundColor: isActive
-                ? FANTASY.primaryTint
-                : pressed
-                ? FANTASY.surfaceLow
-                : FANTASY.surfaceCard,
+              opacity: pressed ? 0.92 : 1,
+              borderRadius: 22,
+              shadowColor: isActive ? palette.color : 'transparent',
+              shadowOpacity: isActive ? 0.35 : 0,
+              shadowRadius: isActive ? 10 : 0,
+              shadowOffset: { width: 0, height: 4 },
+              elevation: isActive ? 6 : 0,
             })}
           >
-            <Text style={{ fontSize: 16 }}>{cat.emoji}</Text>
-            <Text
-              style={{
-                fontSize: 13,
-                fontWeight: isActive ? '800' : '600',
-                color: isActive ? FANTASY.primary : FANTASY.inkLabel,
-                writingDirection: 'rtl',
-              }}
-            >
-              {cat.label}
-            </Text>
-            {isPicked && (
-              <View
+            {isActive ? (
+              <LinearGradient
+                colors={[palette.g1, palette.g2]}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 0, y: 1 }}
                 style={{
-                  width: 16,
-                  height: 16,
-                  borderRadius: 8,
-                  backgroundColor: FANTASY.positive,
+                  flexDirection: 'row-reverse',
                   alignItems: 'center',
-                  justifyContent: 'center',
+                  gap: 6,
+                  paddingHorizontal: 14,
+                  paddingVertical: 9,
+                  borderRadius: 22,
+                  borderWidth: 1.5,
+                  borderColor: '#ffffff',
+                  borderBottomWidth: 3,
+                  borderBottomColor: palette.g2,
                 }}
               >
-                <Text style={{ fontSize: 9, fontWeight: '900', color: '#fff' }}>✓</Text>
+                <Text style={{ fontSize: 16, color: '#fff' }}>{cat.emoji}</Text>
+                <Text
+                  style={{
+                    fontSize: 13,
+                    fontWeight: '900',
+                    color: '#ffffff',
+                    writingDirection: 'rtl',
+                    letterSpacing: 0.2,
+                  }}
+                >
+                  {cat.label}
+                </Text>
+                {isPicked && (
+                  <View
+                    style={{
+                      width: 16,
+                      height: 16,
+                      borderRadius: 8,
+                      backgroundColor: '#ffffff',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      borderWidth: 1,
+                      borderColor: palette.color,
+                    }}
+                  >
+                    <Text style={{ fontSize: 9, fontWeight: '900', color: palette.color }}>✓</Text>
+                  </View>
+                )}
+              </LinearGradient>
+            ) : (
+              <View
+                style={{
+                  flexDirection: 'row-reverse',
+                  alignItems: 'center',
+                  gap: 6,
+                  paddingHorizontal: 14,
+                  paddingVertical: 9,
+                  borderRadius: 22,
+                  borderWidth: 1.5,
+                  borderColor: isPicked ? palette.color : palette.border,
+                  backgroundColor: palette.bg,
+                }}
+              >
+                <Text style={{ fontSize: 15 }}>{cat.emoji}</Text>
+                <Text
+                  style={{
+                    fontSize: 12,
+                    fontWeight: '800',
+                    color: palette.color,
+                    writingDirection: 'rtl',
+                  }}
+                >
+                  {cat.label}
+                </Text>
+                {isPicked && (
+                  <View
+                    style={{
+                      width: 16,
+                      height: 16,
+                      borderRadius: 8,
+                      backgroundColor: FANTASY.positive,
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                    }}
+                  >
+                    <Text style={{ fontSize: 9, fontWeight: '900', color: '#fff' }}>✓</Text>
+                  </View>
+                )}
               </View>
             )}
           </Pressable>

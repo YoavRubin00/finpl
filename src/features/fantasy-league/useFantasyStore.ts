@@ -36,8 +36,12 @@ interface FantasyStoreActions {
   setAllocation: (ticker: string, amount: number) => void;
   /** Reset all allocations to equal-share of the entry pool. */
   redistributeAllocationsEqually: () => void;
-  /** Mark a pick as ×2 leverage. Pass null to clear. */
+  /** Mark a pick as ×2 leverage (captain). Pass null to clear. */
   setCaptain: (ticker: string | null) => void;
+  /** Mark a pick as ×1.5 leverage (vice). Pass null to clear. */
+  setVice: (ticker: string | null) => void;
+  /** True when picks=5, captain+vice set on distinct stocks, allocations sum to entry pool. */
+  isReadyForBattle: () => boolean;
   lockDraft: () => void;
   simulateFinalPrices: () => void;
   claimResults: () => void;
@@ -171,11 +175,36 @@ export const useFantasyStore = create<FantasyStore>()(
         const { currentEntry } = get();
         if (!currentEntry) return;
         if (ticker !== null && !currentEntry.picks.some((p) => p.ticker === ticker)) return;
-        // Vice retired: always clear it when setting/clearing captain.
+        // Captain and vice must be distinct — only clear vice if it collides.
+        const nextVice = currentEntry.viceTicker === ticker ? null : currentEntry.viceTicker;
         set({
-          currentEntry: { ...currentEntry, captainTicker: ticker, viceTicker: null },
+          currentEntry: { ...currentEntry, captainTicker: ticker, viceTicker: nextVice },
           lastUpdated: new Date().toISOString(),
         });
+      },
+
+      setVice: (ticker: string | null) => {
+        const { currentEntry } = get();
+        if (!currentEntry) return;
+        if (ticker !== null && !currentEntry.picks.some((p) => p.ticker === ticker)) return;
+        const nextCaptain = currentEntry.captainTicker === ticker ? null : currentEntry.captainTicker;
+        set({
+          currentEntry: { ...currentEntry, viceTicker: ticker, captainTicker: nextCaptain },
+          lastUpdated: new Date().toISOString(),
+        });
+      },
+
+      isReadyForBattle: (): boolean => {
+        const { currentEntry } = get();
+        if (!currentEntry) return false;
+        const allocSum = currentEntry.picks.reduce((s, p) => s + p.allocation, 0);
+        return (
+          currentEntry.picks.length === 5 &&
+          currentEntry.captainTicker !== null &&
+          currentEntry.viceTicker !== null &&
+          currentEntry.captainTicker !== currentEntry.viceTicker &&
+          allocSum === currentEntry.coinsPaid
+        );
       },
 
       lockDraft: () => {
@@ -310,7 +339,10 @@ export const useFantasyStore = create<FantasyStore>()(
         if (totalAlloc === 0) return 0;
         const weighted = currentEntry.picks.reduce((s, p) => {
           const r = p.returnPercent ?? 0;
-          const mult = currentEntry.captainTicker === p.ticker ? 2 : 1;
+          const mult =
+            currentEntry.captainTicker === p.ticker ? 2 :
+            currentEntry.viceTicker === p.ticker ? 1.5 :
+            1;
           return s + p.allocation * r * mult;
         }, 0);
         return Math.round((weighted / totalAlloc) * 100) / 100;

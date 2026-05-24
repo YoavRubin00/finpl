@@ -14,6 +14,7 @@ import { STITCH } from '../../constants/theme';
 import { tapHaptic } from '../../utils/haptics';
 import { useFinancialProfileStore, type MaritalStatus } from './useFinancialProfileStore';
 import { ToolHeader } from './components/ToolHeader';
+import { CalculateButton } from './components/atoms/CalculateButton';
 
 const ACCENT = STITCH.primary;
 
@@ -188,21 +189,15 @@ export function FinancialProfileScreen(): React.ReactElement {
           placeholder="0.3"
         />
 
-        <Pressable
-          onPress={handleSave}
-          style={({ pressed }) => [
-            styles.saveBtn,
-            saved && styles.saveBtnSuccess,
-            pressed && { opacity: 0.85 },
-          ]}
-          accessibilityRole="button"
-          accessibilityLabel="שמור פרופיל"
-        >
-          <Check size={18} color="#ffffff" strokeWidth={2.6} />
-          <Text style={styles.saveText} allowFontScaling={false}>
-            {saved ? 'נשמר ✓' : 'שמור פרופיל'}
-          </Text>
-        </Pressable>
+        <View style={styles.saveWrap}>
+          <CalculateButton
+            label={saved ? 'נשמר ✓' : 'שמור פרופיל'}
+            variant="blue"
+            onPress={handleSave}
+            iconLeft={<Check size={18} color="#ffffff" strokeWidth={2.6} />}
+            accessibilityLabel="שמור פרופיל"
+          />
+        </View>
 
         <Text style={styles.disclaimer}>
           הנתונים נשמרים במכשיר ומסונכרנים לחשבון שלך. ניתן לעדכן בכל זמן.
@@ -323,24 +318,7 @@ const styles = StyleSheet.create({
     writingDirection: 'rtl',
   },
   chipTextActive: { color: ACCENT },
-  saveBtn: {
-    flexDirection: 'row-reverse',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-    backgroundColor: ACCENT,
-    borderRadius: 14,
-    paddingVertical: 14,
-    minHeight: 52,
-    marginTop: 8,
-  },
-  saveBtnSuccess: { backgroundColor: '#16a34a' },
-  saveText: {
-    color: '#ffffff',
-    fontSize: 15,
-    fontWeight: '900',
-    writingDirection: 'rtl',
-  },
+  saveWrap: { marginTop: 8 },
   disclaimer: {
     fontSize: 11,
     color: STITCH.onSurfaceVariant,
