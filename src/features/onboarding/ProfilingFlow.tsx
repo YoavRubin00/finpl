@@ -1951,7 +1951,7 @@ function IntroStep({ onRegister, onGuest, onLoginSuccess }: IntroStepProps) {
           <Text style={introStyles.title}>{"התחברות"}</Text>
         </Animated.View>
 
-        <Animated.View style={[ctaAnimStyle, { width: "100%", gap: 10 }]}>
+        <Animated.View style={[ctaAnimStyle, { width: "100%", gap: 10 }]} pointerEvents={ctaReady ? 'auto' : 'none'}>
           {/* Apple Sign-In, required by App Store Guideline 4.8 (iOS only) */}
           {appleAvailable && (
             <Pressable
