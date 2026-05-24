@@ -19,7 +19,8 @@ import type { TimelineOrderPrompt } from "./sentenceTypes";
 
 // משוער — גובה item כולל gap. משמש את ה-pan gesture לחישוב כמה מקומות
 // המשתמש גרר. אם תעדכן את itemRow padding או itemsColumn gap, עדכן גם פה.
-const ITEM_STEP_HEIGHT = 70;
+// פריט: paddingVertical 8 + content ~32 + border 3 = ~52; gap 6 → step ≈ 58.
+const ITEM_STEP_HEIGHT = 58;
 
 /**
  * State that the card exposes to its parent so the parent can render a
@@ -482,11 +483,11 @@ export function TimelineOrderCard({
 const styles = StyleSheet.create({
   card: {
     marginHorizontal: 16,
-    marginTop: 12,
+    marginTop: 6,
     backgroundColor: "#ffffff",
-    borderRadius: 24,
-    padding: 18,
-    gap: 14,
+    borderRadius: 20,
+    padding: 12,
+    gap: 10,
     shadowColor: "#6366f1",
     shadowOpacity: 0.08,
     shadowRadius: 20,
@@ -510,39 +511,39 @@ const styles = StyleSheet.create({
     writingDirection: "rtl",
   },
   instruction: {
-    fontSize: 17,
+    fontSize: 15,
     fontWeight: "700",
     color: "#1e293b",
     textAlign: "right",
     writingDirection: "rtl",
-    lineHeight: 26,
+    lineHeight: 22,
   },
   itemsColumn: {
-    gap: 8,
+    gap: 6,
   },
   itemRow: {
     flexDirection: "row-reverse",
     alignItems: "center",
     gap: 10,
-    paddingVertical: 11,
-    paddingHorizontal: 12,
+    paddingVertical: 8,
+    paddingHorizontal: 10,
     borderWidth: 1.5,
-    borderRadius: 16,
+    borderRadius: 14,
     shadowOpacity: 0.05,
     shadowRadius: 6,
     shadowOffset: { width: 0, height: 2 },
     elevation: 2,
   },
   rankBadge: {
-    width: 32,
-    height: 32,
-    borderRadius: 10,
+    width: 28,
+    height: 28,
+    borderRadius: 9,
     borderWidth: 2,
     alignItems: "center",
     justifyContent: "center",
   },
   rankText: {
-    fontSize: 15,
+    fontSize: 14,
     fontWeight: "900",
   },
   itemContent: {
@@ -604,16 +605,16 @@ const styles = StyleSheet.create({
   },
   helpPanel: {
     backgroundColor: "#eff6ff",
-    borderRadius: 16,
+    borderRadius: 14,
     borderWidth: 1.5,
     borderColor: "#93c5fd",
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    gap: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    gap: 6,
     alignItems: "center",
   },
   helpText: {
-    fontSize: 15,
+    fontSize: 13,
     fontWeight: "800",
     color: "#1e293b",
     writingDirection: "rtl",
@@ -621,32 +622,32 @@ const styles = StyleSheet.create({
   },
   helpRow: {
     flexDirection: "row-reverse",
-    gap: 10,
+    gap: 8,
   },
   helpYesBtn: {
-    paddingHorizontal: 20,
-    paddingVertical: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 7,
     backgroundColor: "#3b82f6",
-    borderRadius: 14,
-    borderBottomWidth: 3,
+    borderRadius: 12,
+    borderBottomWidth: 2,
     borderBottomColor: "#1d4ed8",
   },
   helpYesBtnText: {
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: "800",
     color: "#ffffff",
     writingDirection: "rtl",
   },
   helpNoBtn: {
-    paddingHorizontal: 16,
-    paddingVertical: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 7,
     backgroundColor: "#e2e8f0",
-    borderRadius: 14,
-    borderBottomWidth: 3,
+    borderRadius: 12,
+    borderBottomWidth: 2,
     borderBottomColor: "#94a3b8",
   },
   helpNoBtnText: {
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: "800",
     color: "#374151",
     writingDirection: "rtl",

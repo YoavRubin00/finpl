@@ -412,7 +412,7 @@ const styles = StyleSheet.create({
     opacity: 0.65,
   },
   chipText: {
-    fontSize: 16,
+    fontSize: 13,
     fontWeight: "800",
     color: "#ffffff",
     textAlign: "center",
