@@ -1782,29 +1782,38 @@ function IntroStep({ onRegister, onGuest, onLoginSuccess }: IntroStepProps) {
   const [showPassword, setShowPassword] = useState(false);
   const isLoginValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) && password.length > 0;
 
-  // Entrance animations
+  // Entrance animations — CTAs animate via opacity (not scale) so the
+  // Pressables stay full-size and accept taps from the first frame. The
+  // ctaReady gate disables touches until the entrance finishes, matching
+  // ProfileSummaryScreen's pattern.
   const finnScale = useSharedValue(0.8);
   const finnOpacity = useSharedValue(0);
   const textOpacity = useSharedValue(0);
   const textTy = useSharedValue(24);
-  const ctaScale = useSharedValue(0);
+  const ctaOpacity = useSharedValue(0);
+  const [ctaReady, setCtaReady] = useState(false);
 
   useEffect(() => {
     finnOpacity.value = withTiming(1, { duration: 400 });
     finnScale.value = withTiming(1, { duration: 350, easing: Easing.out(Easing.quad) });
     textOpacity.value = withDelay(300, withTiming(1, { duration: 300 }));
     textTy.value = withDelay(300, withTiming(0, { duration: 300, easing: Easing.out(Easing.quad) }));
-    ctaScale.value = withDelay(600, withTiming(1, { duration: 250, easing: Easing.out(Easing.quad) }));
+    ctaOpacity.value = withDelay(600, withTiming(1, { duration: 250, easing: Easing.out(Easing.quad) }));
+    const t = setTimeout(() => setCtaReady(true), 850);
+    return () => clearTimeout(t);
   }, []);
 
   // Re-trigger content animation on sub-step change
   useEffect(() => {
     textOpacity.value = 0;
     textTy.value = 24;
-    ctaScale.value = 0;
+    ctaOpacity.value = 0;
+    setCtaReady(false);
     textOpacity.value = withTiming(1, { duration: 250 });
     textTy.value = withTiming(0, { duration: 250, easing: Easing.out(Easing.quad) });
-    ctaScale.value = withDelay(150, withTiming(1, { duration: 200, easing: Easing.out(Easing.quad) }));
+    ctaOpacity.value = withDelay(150, withTiming(1, { duration: 200, easing: Easing.out(Easing.quad) }));
+    const t = setTimeout(() => setCtaReady(true), 350);
+    return () => clearTimeout(t);
   }, [subStep]);
 
   const finnStyle = useAnimatedStyle(() => ({
@@ -1815,7 +1824,7 @@ function IntroStep({ onRegister, onGuest, onLoginSuccess }: IntroStepProps) {
     opacity: textOpacity.value,
     transform: [{ translateY: textTy.value }],
   }));
-  const ctaAnimStyle = useAnimatedStyle(() => ({ transform: [{ scale: ctaScale.value }] }));
+  const ctaAnimStyle = useAnimatedStyle(() => ({ opacity: ctaOpacity.value }));
 
   const inputStyle = {
     borderRadius: 14,
@@ -1880,7 +1889,7 @@ function IntroStep({ onRegister, onGuest, onLoginSuccess }: IntroStepProps) {
           <Text style={introStyles.title}>{"איך נתחיל?"}</Text>
         </Animated.View>
 
-        <Animated.View style={[ctaAnimStyle, { alignItems: "center", gap: 10, width: "100%" }]}>
+        <Animated.View style={[ctaAnimStyle, { alignItems: "center", gap: 10, width: "100%" }]} pointerEvents={ctaReady ? 'auto' : 'none'}>
           {/* Terms acceptance is implicit on first CTA tap — same pattern Duolingo /
               Spotify / Bumble use. PostHog showed that the explicit checkbox gate
               was the single biggest blocker on this screen (the disabled-opacity

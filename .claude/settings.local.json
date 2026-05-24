@@ -82,7 +82,8 @@
       "Bash(Get-Content \"C:\\\\Users\\\\yrubi\\\\OneDrive\\\\Desktop\\\\.claude\\\\projects\\\\finpl-current\\\\src\\\\features\\\\chapter-0-content\\\\chapter0Data.ts\")",
       "Bash(npx eas *)",
       "Bash(git add *)",
-      "Bash(git push *)"
+      "Bash(git push *)",
+      "Bash(git checkout *)"
     ],
     "additionalDirectories": [
       "\\tmp",
