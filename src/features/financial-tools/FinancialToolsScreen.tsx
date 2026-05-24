@@ -1,6 +1,6 @@
 import React, { useMemo } from 'react';
 import { Pressable, ScrollView, View, Text, StyleSheet } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import Animated, { FadeInDown } from 'react-native-reanimated';
@@ -26,6 +26,13 @@ import { describeProfileFreshness } from './financialProfile';
  */
 
 export function FinancialToolsScreen(): React.ReactElement {
+  // Manually trim the top safe-area inset so the title sits closer to the
+  // status bar. SafeAreaView with `edges={['top']}` was reserving the full
+  // inset on iPhones (~47px), which left an unnecessary gap above the
+  // header. We still keep enough room to clear the notch/status bar.
+  const insets = useSafeAreaInsets();
+  const topPad = Math.max(insets.top - 10, 6);
+
   const activeCount = TOOLS_REGISTRY.filter((t) => t.status === 'active').length;
   const comingCount = TOOLS_REGISTRY.length - activeCount;
 
@@ -39,9 +46,9 @@ export function FinancialToolsScreen(): React.ReactElement {
   );
 
   return (
-    <SafeAreaView style={styles.safe} edges={['top']}>
+    <SafeAreaView style={styles.safe} edges={[]}>
       {/* Header — compact: emoji + title on one row, subtitle as a tiny tagline. */}
-      <View style={styles.header}>
+      <View style={[styles.header, { paddingTop: topPad }]}>
         <Text style={styles.headerCounter}>
           {activeCount} כלים · {comingCount} בדרך
         </Text>
@@ -225,7 +232,7 @@ const styles = StyleSheet.create({
   header: {
     backgroundColor: STITCH.surfaceLowest,
     paddingHorizontal: 16,
-    paddingTop: 2,
+    // paddingTop set inline at render so the screen can trim the safe-area inset.
     paddingBottom: 6,
     borderBottomWidth: 1,
     borderBottomColor: STITCH.surfaceHighest,

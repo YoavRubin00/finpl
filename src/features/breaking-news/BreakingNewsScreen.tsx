@@ -10,7 +10,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
-import { AlertTriangle, ArrowLeft, Bell, LogIn, Newspaper, Plus, Sparkles, X } from 'lucide-react-native';
+import { AlertTriangle, Bell, LogIn, Newspaper, Plus, Sparkles, X } from 'lucide-react-native';
 
 import { STITCH } from '../../constants/theme';
 import { tapHaptic } from '../../utils/haptics';
@@ -24,6 +24,7 @@ import { BreakingNewsCard } from './components/BreakingNewsCard';
 import { EmptyState } from './components/EmptyState';
 import { TickerPickerSheet } from './components/TickerPickerSheet';
 import { NotificationHourPicker } from './components/NotificationHourPicker';
+import { CalculateButton } from '../financial-tools/components/atoms/CalculateButton';
 import { useBreakingNewsStore } from './useBreakingNewsStore';
 import {
   addTrackedTicker,
@@ -179,6 +180,7 @@ export function BreakingNewsScreen(): React.ReactElement {
           subtitle="סיכום AI יומי + מדד הייפ למניות שלך"
           accentColor={ACCENT}
           Icon={Sparkles}
+          toolKey="breaking-news"
         />
         <ScrollView
           contentContainerStyle={styles.guestScroll}
@@ -201,18 +203,15 @@ export function BreakingNewsScreen(): React.ReactElement {
             <GuestFeatureRow Icon={Bell} text="התראה כל בוקר בשעה שתבחר" />
           </View>
 
-          <Pressable
-            onPress={() => { tapHaptic(); router.push('/register' as never); }}
-            style={({ pressed }) => [styles.guestCta, pressed && styles.guestCtaPressed]}
-            accessibilityRole="button"
-            accessibilityLabel="הרשמה או התחברות"
-          >
-            <ArrowLeft size={20} color="#ffffff" strokeWidth={2.6} />
-            <Text style={styles.guestCtaText} allowFontScaling={false}>
-              הרשמה / התחברות
-            </Text>
-            <LogIn size={20} color="#ffffff" strokeWidth={2.6} />
-          </Pressable>
+          <View style={{ alignSelf: 'stretch', marginTop: 4 }}>
+            <CalculateButton
+              label="הירשם"
+              variant="blue"
+              iconLeft={<LogIn size={18} color="#ffffff" strokeWidth={2.6} />}
+              onPress={() => router.push('/register' as never)}
+              accessibilityLabel="הירשם"
+            />
+          </View>
 
           <Text style={styles.guestFinePrint} allowFontScaling={false}>
             חינם לחלוטין. בלי כרטיס אשראי.
@@ -229,6 +228,7 @@ export function BreakingNewsScreen(): React.ReactElement {
         subtitle="סיכום AI יומי + מדד הייפ למניות שלך"
         accentColor={ACCENT}
         Icon={Sparkles}
+        toolKey="breaking-news"
       />
 
       <ScrollView
@@ -538,34 +538,6 @@ const styles = StyleSheet.create({
     color: STITCH.onSurface,
     textAlign: 'right',
     writingDirection: 'rtl',
-  },
-  guestCta: {
-    alignSelf: 'stretch',
-    flexDirection: 'row-reverse',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 10,
-    paddingVertical: 18,
-    paddingHorizontal: 20,
-    borderRadius: 16,
-    backgroundColor: '#2563eb',
-    marginTop: 4,
-    shadowColor: '#2563eb',
-    shadowOpacity: 0.35,
-    shadowRadius: 18,
-    shadowOffset: { width: 0, height: 8 },
-    elevation: 10,
-  },
-  guestCtaPressed: {
-    backgroundColor: '#1d4ed8',
-    transform: [{ scale: 0.98 }],
-  },
-  guestCtaText: {
-    color: '#ffffff',
-    fontSize: 17,
-    fontWeight: '900',
-    writingDirection: 'rtl',
-    letterSpacing: -0.2,
   },
   guestFinePrint: {
     fontSize: 12,

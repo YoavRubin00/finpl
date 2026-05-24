@@ -24,7 +24,7 @@ import { tapHaptic } from "../../utils/haptics";
 // Steps
 // ---------------------------------------------------------------------------
 
-type ScreenSignal = 'learn' | 'lesson-preview' | 'feed' | 'chat' | 'shop' | 'bridge' | null;
+type ScreenSignal = 'learn' | 'lesson-preview' | 'tools' | 'chat' | 'shop' | 'bridge' | null;
 
 interface WalkthroughStep {
   title: string;
@@ -61,18 +61,18 @@ const STEPS: WalkthroughStep[] = [
     emoji: "🎓",
     message: "6 פרקים, מאפס ועד מומחה. כל מה שצריך כדי להבין את עולם הכסף. גללו למטה ותראו!",
     navigateTo: "/(tabs)/index",
-    ctaLabel: "עכשיו לפיד",
+    ctaLabel: "עכשיו לכלים",
     screenSignal: "lesson-preview",
     audioUrl: "https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/audios/walkthrough/step-2-pdqXZwiv2qVntQy0hzWaQnkaj6cPbV.mp3",
   },
   {
-    title: "הפיד היומי",
-    emoji: "🎯",
-    message: "כאן תמצאו משחקים יומיים, דילמות כלכליות, מיתוסים ותוכן שמתעדכן כל יום.",
-    navigateTo: "/(tabs)/learn",
+    title: "כלים",
+    emoji: "🧰",
+    message: "כאן תוכלו להשתמש בכלים פיננסיים שפיתחנו, כדי לנהל את הכסף שלכם נכון יותר.",
+    navigateTo: "/(tabs)/tools",
     ctaLabel: "המשך",
-    screenSignal: "feed",
-    audioUrl: "https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/audios/walkthrough/step-3-zwq7Ob4c2qz5wXEFANX40AzefZ9hu9.mp3",
+    screenSignal: "tools",
+    audioUrl: "https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/audios/walkthrough/walkthrough-tools.mp3",
   },
   {
     title: "תבחרו סגנון לשארק",

@@ -89,7 +89,8 @@
       "mcp__claude_ai_PostHog__exec",
       "Bash(git add *)",
       "Bash(git commit *)",
-      "Bash(npx expo-doctor *)"
+      "Bash(npx expo-doctor *)",
+      "Bash(awk '{print \\($1 - $2\\) \" \" $3}')"
     ],
     "additionalDirectories": [
       "\\tmp",

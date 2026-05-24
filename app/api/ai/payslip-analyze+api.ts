@@ -376,9 +376,21 @@ export async function POST(request: Request): Promise<Response> {
       },
     ],
     generationConfig: {
-      maxOutputTokens: 2048,
-      temperature: 0.2,
-      thinkingConfig: { thinkingBudget: 0 },
+      // Doubled from 2048. Long payslips with many deduction rows + a few
+      // anomalies + a Hebrew sharkSummary frequently topped out at the old
+      // budget, leaving Gemini to truncate the JSON mid-object — which the
+      // server then surfaced as `parse_failed` ("rawText not JSON").
+      maxOutputTokens: 4096,
+      // 0 forces deterministic outputs — for a structured extraction task
+      // (read image → fill fixed JSON schema) there's no reason to want any
+      // creativity. Lower variance → fewer hallucinated fields.
+      temperature: 0,
+      // Was `{ thinkingBudget: 0 }` (thinking disabled). Reading a payslip
+      // is a multi-step reasoning task: OCR → field identification →
+      // arithmetic sanity-checks → anomaly detection. 2.5-flash *can* do it
+      // in a single shot but reliability collapses without thinking. 2048 is
+      // generous enough to support the chain and still cheap.
+      thinkingConfig: { thinkingBudget: 2048 },
       responseMimeType: 'application/json',
     },
   };

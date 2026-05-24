@@ -132,6 +132,7 @@ export function SalaryNetCalculator(): React.ReactElement {
         subtitle="כמה נכנס לך לכיס באמת"
         accentColor={TOOL.hue}
         Icon={Coins}
+        toolKey="salary-net"
       />
 
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>

@@ -689,7 +689,7 @@ function CelebrationScreen({ onDone }: { onDone: () => void }) {
 
         <Text style={styles.celebTitle}>הפרופיל שלכם מוכן!</Text>
         <Text style={styles.celebSub}>
-          הכנו את הפיד שלכם.{"\n"}הגיע הזמן להפוך ידע לכסף. 💰
+          הכנו את הכלים שלכם.{"\n"}הגיע הזמן להפוך ידע לכסף. 💰
         </Text>
 
         {/* CTA */}

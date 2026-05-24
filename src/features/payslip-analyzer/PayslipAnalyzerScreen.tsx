@@ -13,7 +13,7 @@ import { LinearGradient } from "expo-linear-gradient";
 import * as FileSystem from "expo-file-system/legacy";
 import Animated, { FadeIn, FadeInDown } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { FileText, X } from "lucide-react-native";
+import { FileText, RotateCcw, X } from "lucide-react-native";
 import { useRouter } from "expo-router";
 import { BackButton } from "../../components/ui/BackButton";
 import { SharkLoveModal } from "../../components/ui/SharkLoveModal";
@@ -382,24 +382,30 @@ export function PayslipAnalyzerScreen() {
             <Text style={[styles.errorBody, RTL_CENTER]} allowFontScaling={false}>
               {errorCopy?.body ?? "נסו שוב."}
             </Text>
-            <View style={styles.errorCtaWrap}>
-              <Pressable
-                onPress={() => {
-                  tapHaptic();
-                  clearAll();
-                }}
-                accessibilityRole="button"
-                accessibilityLabel={errorCopy?.cta ?? "נסה שוב"}
-                style={({ pressed }) => [
-                  styles.retryButton,
-                  pressed && styles.retryButtonPressed,
-                ]}
-              >
-                <Text style={styles.retryButtonText} allowFontScaling={false}>
-                  {errorCopy?.cta ?? "נסה שוב"}
+            {errorCode ? (
+              <View style={styles.errorCodeChip}>
+                <Text style={styles.errorCodeText} allowFontScaling={false}>
+                  קוד שגיאה: {errorCode}
                 </Text>
-              </Pressable>
-            </View>
+              </View>
+            ) : null}
+            <Pressable
+              onPress={() => {
+                tapHaptic();
+                clearAll();
+              }}
+              accessibilityRole="button"
+              accessibilityLabel={errorCopy?.cta ?? "נסה שוב"}
+              style={({ pressed }) => [
+                styles.retryButton,
+                pressed && styles.retryButtonPressed,
+              ]}
+            >
+              <RotateCcw size={18} color="#ffffff" strokeWidth={2.6} />
+              <Text style={styles.retryButtonText} allowFontScaling={false}>
+                {errorCopy?.cta ?? "נסה שוב"}
+              </Text>
+            </Pressable>
           </View>
         ) : null}
       </ScrollView>
@@ -542,23 +548,39 @@ const styles = StyleSheet.create({
     color: "#475569",
     lineHeight: 20,
   },
-  errorCtaWrap: {
-    width: "100%",
-    maxWidth: 280,
-    marginTop: 8,
+  errorCodeChip: {
+    backgroundColor: "#fef3c7",
+    borderWidth: 1,
+    borderColor: "#fcd34d",
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 999,
+    marginTop: 4,
+  },
+  errorCodeText: {
+    fontSize: 11,
+    fontWeight: "700",
+    color: "#78350f",
+    writingDirection: "rtl",
   },
   retryButton: {
-    alignSelf: "stretch",
-    paddingVertical: 14,
-    borderRadius: 14,
-    backgroundColor: "#2563eb",
+    flexDirection: "row-reverse",
     alignItems: "center",
     justifyContent: "center",
+    gap: 10,
+    width: "100%",
+    maxWidth: 320,
+    minHeight: 56,
+    paddingVertical: 16,
+    paddingHorizontal: 24,
+    borderRadius: 16,
+    backgroundColor: "#2563eb",
+    marginTop: 12,
     shadowColor: "#2563eb",
-    shadowOpacity: 0.3,
-    shadowRadius: 12,
-    shadowOffset: { width: 0, height: 6 },
-    elevation: 6,
+    shadowOpacity: 0.4,
+    shadowRadius: 14,
+    shadowOffset: { width: 0, height: 8 },
+    elevation: 8,
   },
   retryButtonPressed: {
     backgroundColor: "#1d4ed8",
@@ -566,7 +588,7 @@ const styles = StyleSheet.create({
   },
   retryButtonText: {
     color: "#ffffff",
-    fontSize: 16,
+    fontSize: 17,
     fontWeight: "900",
     writingDirection: "rtl",
     letterSpacing: -0.2,

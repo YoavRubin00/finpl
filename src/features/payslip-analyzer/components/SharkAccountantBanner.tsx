@@ -109,6 +109,10 @@ export function SharkAccountantBanner({
           style={styles.bubbleWrap}
           pointerEvents="none"
         >
+          {/* Tail first — sits to the LEFT of the bubble, pointing further left
+              toward the captain (who is rendered on the visual-left by the
+              parent's row-reverse). */}
+          <View style={styles.bubbleTail} />
           <View style={styles.bubble}>
             <Text style={[styles.bubbleText, RTL]} allowFontScaling={false}>
               {bubbleText}
@@ -119,7 +123,6 @@ export function SharkAccountantBanner({
               </Text>
             ) : null}
           </View>
-          <View style={styles.bubbleTail} />
         </Animated.View>
       ) : null}
 
@@ -201,12 +204,12 @@ const styles = StyleSheet.create({
   bubbleTail: {
     width: 0,
     height: 0,
-    marginRight: -1,
+    marginLeft: -1,
     borderTopWidth: 8,
     borderBottomWidth: 8,
-    borderLeftWidth: 10,
+    borderRightWidth: 10,
     borderTopColor: "transparent",
     borderBottomColor: "transparent",
-    borderLeftColor: "#ffffff",
+    borderRightColor: "#ffffff",
   },
 });

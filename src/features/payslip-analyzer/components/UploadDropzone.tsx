@@ -1,5 +1,5 @@
 import { useCallback, useState } from "react";
-import { View, Text, StyleSheet } from "react-native";
+import { View, Text, StyleSheet, Platform } from "react-native";
 import { Upload, Camera, Lock, Trash2, Sparkles } from "lucide-react-native";
 import * as DocumentPicker from "expo-document-picker";
 import * as ImagePicker from "expo-image-picker";
@@ -52,6 +52,16 @@ async function resolveByteSize(
 ): Promise<number> {
   if (typeof hinted === "number" && hinted > 0 && Number.isFinite(hinted)) {
     return hinted;
+  }
+  // Web: blob: URIs don't work with expo-file-system; fetch them as blobs.
+  if (Platform.OS === "web") {
+    try {
+      const res = await fetch(uri);
+      const blob = await res.blob();
+      if (blob.size > 0) return blob.size;
+    } catch {
+      // fall through to native path / 0
+    }
   }
   try {
     const info = await FileSystem.getInfoAsync(uri);

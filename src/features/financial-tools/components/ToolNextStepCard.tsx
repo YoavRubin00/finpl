@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text, Pressable, StyleSheet, Alert, Linking } from 'react-native';
 import { useRouter } from 'expo-router';
-import { BookOpen, ArrowLeft, ExternalLink } from 'lucide-react-native';
+import { BookOpen, ChevronLeft, ExternalLink, ArrowLeft } from 'lucide-react-native';
 
 import { STITCH } from '../../../constants/theme';
 import { tapHaptic } from '../../../utils/haptics';
@@ -69,27 +69,34 @@ export function ToolNextStepCard({ toolKey, accentColor }: ToolNextStepCardProps
         </Text>
       </View>
 
-      {/* Primary action — full-width, prominent CTA */}
+      {/* Primary action — Duolingo-style "share result" shape, but in a
+          softer pastel tint: same round icon + label + chevron-left layout
+          as CalculateButton, with a 4px bottom border for the 3D press effect.
+          Light pastel background + full-color text/icon reads as "lighter"
+          than the saturated CalculateButton variants. */}
       <Pressable
         onPress={handleAction}
         style={({ pressed }) => [
           styles.actionBtn,
-          { backgroundColor: accentColor, shadowColor: accentColor },
-          pressed && styles.btnPressed,
+          {
+            backgroundColor: accentColor + '1F',
+            borderBottomColor: accentColor,
+          },
+          pressed && styles.actionBtnPressed,
         ]}
         accessibilityRole="button"
         accessibilityLabel={entry.actionLabel}
         hitSlop={4}
       >
-        <View style={styles.actionIconWrap}>
+        <View style={[styles.actionIconWrap, { backgroundColor: accentColor + '33' }]}>
           {isExternal ? (
-            <ExternalLink size={18} color="#ffffff" strokeWidth={2.6} />
+            <ExternalLink size={18} color={accentColor} strokeWidth={2.6} />
           ) : (
-            <ArrowLeft size={18} color="#ffffff" strokeWidth={2.6} />
+            <ArrowLeft size={18} color={accentColor} strokeWidth={2.6} />
           )}
         </View>
         <Text
-          style={styles.actionText}
+          style={[styles.actionText, { color: accentColor }]}
           allowFontScaling={false}
           numberOfLines={1}
           adjustsFontSizeToFit
@@ -97,6 +104,7 @@ export function ToolNextStepCard({ toolKey, accentColor }: ToolNextStepCardProps
         >
           {entry.actionLabel}
         </Text>
+        <ChevronLeft size={20} color={accentColor} strokeWidth={2.8} />
       </Pressable>
 
       {/* Lesson CTA — light-tinted, Duolingo-style button (same shape as
@@ -162,32 +170,31 @@ const styles = StyleSheet.create({
   actionBtn: {
     flexDirection: 'row-reverse',
     alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-    paddingVertical: 14,
+    justifyContent: 'flex-start',
+    gap: 12,
+    paddingVertical: 12,
     paddingHorizontal: 16,
-    borderRadius: 14,
-    minHeight: 52,
-    shadowOpacity: 0.28,
-    shadowRadius: 12,
-    shadowOffset: { width: 0, height: 5 },
-    elevation: 4,
+    borderRadius: 16,
+    borderBottomWidth: 4,
+    minHeight: 56,
+  },
+  actionBtnPressed: {
+    opacity: 0.9,
+    transform: [{ translateY: 1 }],
   },
   actionIconWrap: {
-    width: 24,
-    height: 24,
+    width: 36,
+    height: 36,
     borderRadius: 999,
-    backgroundColor: 'rgba(255,255,255,0.22)',
     alignItems: 'center',
     justifyContent: 'center',
   },
   actionText: {
-    color: '#ffffff',
-    fontSize: 14,
+    fontSize: 15,
     fontWeight: '900',
-    textAlign: 'center',
+    textAlign: 'right',
     writingDirection: 'rtl',
-    flexShrink: 1,
+    flex: 1,
     letterSpacing: 0.2,
   },
   lessonBtn: {
@@ -216,10 +223,6 @@ const styles = StyleSheet.create({
     writingDirection: 'rtl',
     flexShrink: 1,
     lineHeight: 17,
-  },
-  btnPressed: {
-    opacity: 0.85,
-    transform: [{ scale: 0.98 }],
   },
   lessonBtnPressed: {
     opacity: 0.92,

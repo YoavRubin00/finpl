@@ -116,6 +116,7 @@ export function TaxRefundCalculator(): React.ReactElement {
         subtitle="8 מתוך 10 ישראלים זכאים, ממוצע ₪10,500"
         accentColor={TOOL.hue}
         Icon={ReceiptText}
+        toolKey="tax-refund"
       />
 
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>

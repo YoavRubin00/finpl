@@ -5,6 +5,10 @@ import { ChevronRight, type LucideIcon } from 'lucide-react-native';
 
 import { STITCH } from '../../../constants/theme';
 import { tapHaptic } from '../../../utils/haptics';
+import { useTutorialStore } from '../../../stores/useTutorialStore';
+import type { ToolKey } from '../toolsRegistry';
+import { TOOL_TUTORIALS } from '../data/toolTutorials';
+import { ToolTutorialOverlay } from './ToolTutorialOverlay';
 
 interface ToolHeaderProps {
   title: string;
@@ -13,6 +17,12 @@ interface ToolHeaderProps {
   accentColor?: string;
   /** Optional Lucide icon shown in a colored circle next to the title (Duo-style). */
   Icon?: LucideIcon;
+  /**
+   * When provided, ToolHeader auto-mounts the first-visit Captain Shark
+   * tutorial overlay if the user hasn't seen it yet for this tool.
+   * Skip on tools that don't have an entry in TOOL_TUTORIALS.
+   */
+  toolKey?: ToolKey;
 }
 
 /**
@@ -20,8 +30,17 @@ interface ToolHeaderProps {
  * the user to the Tools hub (/(tabs)/tools) — never relies on history, so deep
  * links and back-on-first-screen both land on the hub instead of bailing out.
  */
-export function ToolHeader({ title, subtitle, accentColor = STITCH.primary, Icon }: ToolHeaderProps) {
+export function ToolHeader({ title, subtitle, accentColor = STITCH.primary, Icon, toolKey }: ToolHeaderProps) {
   const router = useRouter();
+
+  // First-visit tutorial — only render the overlay when the user hasn't
+  // seen it AND the tool has a tutorial defined. Reading the flag with a
+  // narrow selector avoids re-renders when other tutorial flags change.
+  const tutorialSteps = toolKey ? TOOL_TUTORIALS[toolKey] : undefined;
+  const hasSeenTutorial = useTutorialStore(
+    (s) => (toolKey ? s.hasSeenToolTutorial[toolKey] ?? false : true),
+  );
+  const showTutorial = !!toolKey && !!tutorialSteps && !hasSeenTutorial;
 
   const handleBack = () => {
     tapHaptic();
@@ -61,6 +80,10 @@ export function ToolHeader({ title, subtitle, accentColor = STITCH.primary, Icon
           </Text>
         ) : null}
       </View>
+
+      {showTutorial && toolKey && tutorialSteps ? (
+        <ToolTutorialOverlay toolKey={toolKey} steps={tutorialSteps} />
+      ) : null}
     </View>
   );
 }

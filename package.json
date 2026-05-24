@@ -10,6 +10,7 @@
     "typecheck": "tsc --noEmit",
     "share": "eas update --branch preview --message 'update'",
     "export:content": "tsx scripts/export-content.ts",
+    "generate-tool-audio": "node --env-file=.env.local scripts/generate-tool-tutorial-audio.mjs",
     "eas-build-pre-install": "rm -f package-lock.json",
     "postinstall": "patch-package"
   },

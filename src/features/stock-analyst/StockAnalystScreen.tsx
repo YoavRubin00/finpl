@@ -18,7 +18,6 @@ import { useSubscriptionStore } from '../subscription/useSubscriptionStore';
 import { useStockAnalystStore } from './useStockAnalystStore';
 import { useAnalystSubmit } from './hooks/useAnalystSubmit';
 import { SharkTabletHeader } from './components/SharkTabletHeader';
-import { LegalDisclaimerBanner } from './components/LegalDisclaimerBanner';
 import { ModeToggle } from './components/ModeToggle';
 import { HorizonSelector } from './components/HorizonSelector';
 import { AnalystInput } from './components/AnalystInput';
@@ -257,12 +256,18 @@ export function StockAnalystScreen(): React.ReactElement {
           historyCount={historyCount}
           onOpenHistory={() => setHistoryVisible(true)}
         />
-        <LegalDisclaimerBanner />
-
         <KeyboardAvoidingView
           style={{ flex: 1 }}
-          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-          keyboardVerticalOffset={Platform.OS === 'ios' ? 80 : 0}
+          // Was `behavior=undefined` on Android — which disabled avoidance entirely
+          // and let the keyboard cover the input. `'height'` is the recommended
+          // value on Android (works with `adjustResize` in the manifest), and
+          // `'padding'` is the canonical value on iOS.
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          // 0 on both — SafeAreaView already wraps this view and consumes the
+          // top inset; the SharkTabletHeader above is a sibling INSIDE the same
+          // safe area, so KeyboardAvoidingView's own top edge is already
+          // correctly placed and needs no extra offset.
+          keyboardVerticalOffset={0}
         >
           {/* Chat feed */}
           <ScrollView
@@ -276,6 +281,12 @@ export function StockAnalystScreen(): React.ReactElement {
               flexGrow: 1,
             }}
             showsVerticalScrollIndicator={false}
+            // Lets the user tap chips/suggestions while the keyboard is open
+            // without the first tap silently being eaten to dismiss it.
+            keyboardShouldPersistTaps="handled"
+            // iOS-only: auto-pads the scroll content so the focused TextInput
+            // is always visible above the keyboard, even mid-sentence.
+            automaticallyAdjustKeyboardInsets
           >
             {showHero ? (
               <View style={{ alignItems: 'center', paddingTop: 16, paddingBottom: 8, gap: 14 }}>

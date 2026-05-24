@@ -147,6 +147,7 @@ export function MortgageCalculator(): React.ReactElement {
         subtitle="האם אני יכול להרשות לעצמי?"
         accentColor={TOOL.hue}
         Icon={Home}
+        toolKey="mortgage"
       />
 
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>

@@ -3,14 +3,12 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { ChevronRight } from 'lucide-react-native';
 import { FIRECalcScreen } from '../src/features/chapter-5-content/simulations/FIRECalcScreen';
-import { ToolNextStepCard } from '../src/features/financial-tools/components/ToolNextStepCard';
+import { ToolTutorialMount } from '../src/features/financial-tools/components/ToolTutorialMount';
 import { tapHaptic } from '../src/utils/haptics';
-
-const FIRE_ACCENT = '#7c3aed';
 
 /**
  * FIRE simulator route. SafeArea-aware top bar reserves space for the back
- * button and a bottom strip pins the next-step card (lesson + sibling tool).
+ * button.
  */
 export default function FireCalculatorRoute() {
   const router = useRouter();
@@ -37,9 +35,7 @@ export default function FireCalculatorRoute() {
         <FIRECalcScreen onComplete={goToTools} />
       </View>
 
-      <SafeAreaView edges={['bottom']} style={styles.bottomStrip} pointerEvents="box-none">
-        <ToolNextStepCard toolKey="fire" accentColor={FIRE_ACCENT} />
-      </SafeAreaView>
+      <ToolTutorialMount toolKey="fire" />
     </SafeAreaView>
   );
 }
@@ -69,11 +65,5 @@ const styles = StyleSheet.create({
     elevation: 6,
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.9)',
-  },
-  bottomStrip: {
-    paddingHorizontal: 12,
-    paddingTop: 8,
-    paddingBottom: 4,
-    backgroundColor: 'rgba(237, 233, 254, 0.95)',
   },
 });

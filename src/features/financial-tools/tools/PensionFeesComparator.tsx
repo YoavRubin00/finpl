@@ -192,6 +192,7 @@ export function PensionFeesComparator(): React.ReactElement {
         subtitle="כמה אבד לך לבית ההשקעות לאורך הצבירה?"
         accentColor={TOOL.hue}
         Icon={PiggyBank}
+        toolKey="pension-fees"
       />
 
       <ScrollView
