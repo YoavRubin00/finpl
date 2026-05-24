@@ -39,10 +39,6 @@ import { StreakAtRiskBanner } from "../streak/StreakAtRiskBanner";
 import { StreakCalendarModal } from "../streak/StreakCalendarModal";
 import { CalendarDays } from "lucide-react-native";
 import { FINN_STANDARD } from "../retention-loops/finnMascotConfig";
-import {
-  DAISY_STANDARD_WEBP,
-  DAISY_EMPATHIC_WEBP,
-} from "../podcast-segment/daisy-assets";
 import { FeedNudgeBanner } from "../../components/ui/FeedNudgeBanner";
 import { useFeedNudge } from "../../hooks/useFeedNudge";
 import { useDailyChallengesStore } from "../daily-challenges/use-daily-challenges-store";
@@ -77,8 +73,6 @@ const CENTER_X = CONTENT_W / 2;
 // Duolingo-style smooth sine-wave curve
 const NODE_SIZE = 78;
 const CHAR_SIZE = 105;
-// Daisy decorative sticker — same scale as Finn so the row feels balanced.
-const DAISY_DECO_SIZE = CHAR_SIZE;
 const ROW_HEIGHT = NODE_SIZE + 36;
 const WAVE_AMPLITUDE = 42;
 const WAVE_PERIOD = 6; // complete S-curve every 6 nodes
