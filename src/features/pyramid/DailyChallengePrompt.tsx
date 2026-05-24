@@ -4,7 +4,7 @@ import { useRouter } from "expo-router";
 import Animated from "react-native-reanimated";
 import { LinearGradient } from "expo-linear-gradient";
 import { Zap, ChevronLeft } from "lucide-react-native";
-import { useEconomy } from "../economy/useEconomy";
+import { useEconomyStore } from "../economy/useEconomyStore";
 import { getPyramidStatus } from "../../utils/progression";
 import { ARENAS } from "./arenaConfig";
 import {
@@ -16,8 +16,7 @@ import { tapHaptic } from "../../utils/haptics";
 
 export function DailyChallengePrompt() {
   const router = useRouter();
-  const { data: economyData } = useEconomy();
-  const xp = economyData?.xp ?? 0;
+  const xp = useEconomyStore((s) => s.xp);
 
   const entranceStyle = useEntranceAnimation(fadeInUp, {
     delay: 200,

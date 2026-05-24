@@ -1,8 +1,7 @@
 import { View, Text } from "react-native";
 import Animated from "react-native-reanimated";
 import { Flame, Star, Coins } from "lucide-react-native";
-import { useEconomy } from "../economy/useEconomy";
-import { useStreak } from "../economy/useStreak";
+import { useEconomyStore } from "../economy/useEconomyStore";
 import {
   useEntranceAnimation,
   fadeInUp,
@@ -29,11 +28,9 @@ function StatItem({ icon, value, color }: StatItemProps) {
 }
 
 export function ArenaStatsBar() {
-  const { data: economyData } = useEconomy();
-  const { data: streakData } = useStreak();
-  const xp = economyData?.xp ?? 0;
-  const coins = economyData?.coins ?? 0;
-  const streak = streakData?.currentStreak ?? 0;
+  const xp = useEconomyStore((s) => s.xp);
+  const coins = useEconomyStore((s) => s.coins);
+  const streak = useEconomyStore((s) => s.streak);
 
   const entranceStyle = useEntranceAnimation(fadeInUp, { delay: 100 });
 

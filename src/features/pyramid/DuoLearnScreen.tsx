@@ -22,13 +22,9 @@ import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
 import { useFocusEffect } from "@react-navigation/native";
 import { Lock, ChevronDown, Home, Shield, Scale, TrendingUp, Crown, FastForward, X } from "lucide-react-native";
-import { useEconomy } from "../economy/useEconomy";
-import { useStreak } from "../economy/useStreak";
-import { useEconomyUIStore } from "../economy/useEconomyUIStore";
-import { useChapterUIStore } from "../chapter-1-content/useChapterUIStore";
-import { useProgress, useUpsertModuleProgress, progressQueryKey } from "../chapter-1-content/useProgress";
-import { queryClient } from "../../lib/queryClient";
-import { useIsPro } from "../subscription/useSubscription";
+import { useEconomyStore } from "../economy/useEconomyStore";
+import { useChapterStore } from "../chapter-1-content/useChapterStore";
+import { useSubscriptionStore } from "../subscription/useSubscriptionStore";
 import { useAuthStore } from "../auth/useAuthStore";
 import { getPyramidStatus } from "../../utils/progression";
 import { ARENAS, type ArenaConfig } from "./arenaConfig";
@@ -43,6 +39,10 @@ import { StreakAtRiskBanner } from "../streak/StreakAtRiskBanner";
 import { StreakCalendarModal } from "../streak/StreakCalendarModal";
 import { CalendarDays } from "lucide-react-native";
 import { FINN_STANDARD } from "../retention-loops/finnMascotConfig";
+import {
+  DAISY_STANDARD_WEBP,
+  DAISY_EMPATHIC_WEBP,
+} from "../podcast-segment/daisy-assets";
 import { FeedNudgeBanner } from "../../components/ui/FeedNudgeBanner";
 import { useFeedNudge } from "../../hooks/useFeedNudge";
 import { useDailyChallengesStore } from "../daily-challenges/use-daily-challenges-store";
@@ -63,6 +63,7 @@ import { useDailyQuestsStore } from "../daily-quests/useDailyQuestsStore";
 import { DailyQuestWidget } from "../daily-quests/DailyQuestWidget";
 import { DailyQuestsSheet } from "../daily-quests/DailyQuestsSheet";
 import { QuestPathNode } from "../daily-quests/QuestPathNode";
+import { PayslipPathNode } from "../payslip-analyzer/PayslipPathNode";
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -77,6 +78,7 @@ const CENTER_X = CONTENT_W / 2;
 const NODE_SIZE = 78;
 const CHAR_SIZE = 105;
 // Daisy decorative sticker — same scale as Finn so the row feels balanced.
+const DAISY_DECO_SIZE = CHAR_SIZE;
 const ROW_HEIGHT = NODE_SIZE + 36;
 const WAVE_AMPLITUDE = 42;
 const WAVE_PERIOD = 6; // complete S-curve every 6 nodes
@@ -526,7 +528,8 @@ function ModuleNode({
 
   return (
     <View style={[styles.nodeRow, { height: ROW_HEIGHT }]}>
-      {/* Finn mascot beside active node */}
+      {/* Captain Shark (Finn) beside the active lesson node — gives the user
+          a guiding companion. Speech bubble floats just above him. */}
       {showCharacter && (
         <>
           <Animated.View
@@ -537,7 +540,6 @@ function ModuleNode({
               <ExpoImage source={FINN_STANDARD} accessible={false} style={{ width: CHAR_SIZE, height: CHAR_SIZE }} contentFit="contain" />
             </View>
           </Animated.View>
-          {/* Speech bubble directly above Finn */}
           <Animated.View
             entering={FadeInDown.delay(200).duration(400)}
             style={[styles.speechBubbleBelow, {
@@ -850,6 +852,12 @@ const ChapterSection = React.memo(function ChapterSection({
           const showQuestBox = !!questPathNodeProps && hasNext && (i + 1) % 3 === 0;
           const questOffsetX = -getNodeOffset(i);
 
+          // Payslip analyzer side-quest: appears between mod-1-5 and the next module.
+          // Pre-completion → quiet blue "discoverable" state. Post-completion → gold celebratory state with shark peek.
+          const showPayslipNode = module.id === "mod-1-5" && hasNext;
+          const payslipUnlocked = completedModules.includes("mod-1-5");
+          const payslipOffsetX = -getNodeOffset(i);
+
           return (
             <View key={module.id}>
               <ModuleNode
@@ -899,7 +907,27 @@ const ChapterSection = React.memo(function ChapterSection({
                   />
                 </>
               )}
-              {hasNext && !showQuestBox && (
+              {showPayslipNode && !showQuestBox && (
+                <>
+                  <PathConnector
+                    fromOffsetX={getNodeOffset(i)}
+                    toOffsetX={payslipOffsetX}
+                    done={trailDone}
+                    color={colors.glow}
+                  />
+                  <PayslipPathNode
+                    offsetX={payslipOffsetX}
+                    unlocked={payslipUnlocked}
+                  />
+                  <PathConnector
+                    fromOffsetX={payslipOffsetX}
+                    toOffsetX={getNodeOffset(i + 1)}
+                    done={trailDone && payslipUnlocked}
+                    color={colors.glow}
+                  />
+                </>
+              )}
+              {hasNext && !showQuestBox && !showPayslipNode && (
                 <PathConnector
                   fromOffsetX={getNodeOffset(i)}
                   toOffsetX={getNodeOffset(i + 1)}
@@ -923,12 +951,10 @@ export function DuoLearnScreen() {
   const router = useRouter();
   const isWalkthroughActive = !useTutorialStore((s) => s.hasSeenAppWalkthrough);
   const walkthroughScreen = useTutorialStore((s) => s.walkthroughActiveScreen);
-  const { data: economyData } = useEconomy();
-  const { data: streakData } = useStreak();
-  const xp = economyData?.xp ?? 0;
-  const streak = streakData?.currentStreak ?? 0;
-  const { data: progressData } = useProgress();
-  const isPro = useIsPro();
+  const xp = useEconomyStore((s) => s.xp);
+  const streak = useEconomyStore((s) => s.streak);
+  const progress = useChapterStore((s) => s.progress);
+  const isPro = useSubscriptionStore((s) => s.tier === "pro" && s.status === "active");
   const displayName = useAuthStore((s) => s.displayName) ?? "";
   const { layer } = getPyramidStatus(xp);
   const [lockedModalVisible, setLockedModalVisible] = useState(false);
@@ -941,9 +967,9 @@ export function DuoLearnScreen() {
   const [refreshKey, setRefreshKey] = useState(0);
   const isFirstMount = useRef(true);
 
-  const setCurrentChapter = useChapterUIStore((s) => s.setCurrentChapter);
-  const setCurrentModule = useChapterUIStore((s) => s.setCurrentModule);
-  const { mutate: upsertProgress } = useUpsertModuleProgress();
+  const setCurrentChapter = useChapterStore((s) => s.setCurrentChapter);
+  const setCurrentModule = useChapterStore((s) => s.setCurrentModule);
+  const skipIntroChapter = useChapterStore((s) => s.skipIntroChapter);
   const { nudge, dismiss: dismissNudge } = useFeedNudge();
   const dilemmaAnswered = useDailyChallengesStore((s) => s.hasDilemmaAnsweredToday());
   const [questSheetVisible, setQuestSheetVisible] = useState(false);
@@ -981,17 +1007,21 @@ export function DuoLearnScreen() {
   const easterEggNodeId = useFunStore((s) => s.easterEggNodeId);
   const rollEasterEgg = useFunStore((s) => s.rollEasterEgg);
   const claimEasterEgg = useFunStore((s) => s.claimEasterEgg);
-  const addCoins = useEconomyUIStore((s) => s.addCoins);
+  const addCoins = useEconomyStore((s) => s.addCoins);
   const [showEasterEggReward, setShowEasterEggReward] = useState<"xp" | "coins" | null>(null);
 
   // Roll Easter egg on screen focus (20% chance to place coin on a completed node)
   useFocusEffect(
     useCallback(() => {
-      const allCompleted = progressData?.filter((m) => m.status === 'completed').map((m) => m.moduleId) ?? [];
+      const allCompleted: string[] = [];
+      for (const ch of ALL_CHAPTERS) {
+        const done = progress[storeKey(ch.id)]?.completedModules ?? [];
+        allCompleted.push(...done);
+      }
       if (allCompleted.length > 0) {
         rollEasterEgg(allCompleted);
       }
-    }, [progressData, rollEasterEgg])
+    }, [progress, rollEasterEgg])
   );
 
   const [showScratchModal, setShowScratchModal] = useState(false);
@@ -1016,16 +1046,12 @@ export function DuoLearnScreen() {
     let y = 150; // approximate greeting + top padding
     for (let chIdx = 0; chIdx < ALL_CHAPTERS.length; chIdx++) {
       const ch = ALL_CHAPTERS[chIdx];
-      const chNum = storeKey(ch.id).replace('ch-', '');
-      const prefix = `mod-${chNum}-`;
-      const done = progressData?.filter((m) => m.moduleId.startsWith(prefix) && m.status === 'completed').map((m) => m.moduleId) ?? [];
+      const done = progress[storeKey(ch.id)]?.completedModules ?? [];
 
       let unlocked = isPro || chIdx === 0;
       if (!isPro && chIdx > 0) {
         const prev = ALL_CHAPTERS[chIdx - 1];
-        const prevNum = storeKey(prev.id).replace('ch-', '');
-        const prevPrefix = `mod-${prevNum}-`;
-        const prevDone = progressData?.filter((m) => m.moduleId.startsWith(prevPrefix) && m.status === 'completed').map((m) => m.moduleId) ?? [];
+        const prevDone = progress[storeKey(prev.id)]?.completedModules ?? [];
         unlocked = prev.modules.every((m) => m.comingSoon || (!isPro && PRO_LOCKED_SIMS.has(m.id)) || prevDone.includes(m.id));
       }
       if (!unlocked) break;
@@ -1042,7 +1068,7 @@ export function DuoLearnScreen() {
       y += ch.modules.length * 160;
     }
     return y;
-  }, [progressData, isPro]);
+  }, [progress, isPro]);
 
   // On every tab focus, scroll to the user's current module instead of the
   // top. Skips the very first mount because the dedicated mount effect below
@@ -1100,16 +1126,17 @@ export function DuoLearnScreen() {
   const handleModulePress = useCallback(
     (moduleId: string, chapterId: string, moduleIndex: number) => {
       // Check if module is already completed, show summary preview first
-      const done = progressData?.filter((m) => m.status === 'completed').map((m) => m.moduleId) ?? [];
+      const chKey = storeKey(chapterId);
+      const done = progress[chKey]?.completedModules ?? [];
       if (done.includes(moduleId)) {
         setReplayModule({ moduleId, chapterId, moduleIndex });
         return;
       }
-      setCurrentChapter(storeKey(chapterId));
+      setCurrentChapter(chKey);
       setCurrentModule(moduleIndex);
       router.push(`/lesson/${moduleId}?chapterId=${chapterId}` as never);
     },
-    [router, setCurrentChapter, setCurrentModule, progressData],
+    [router, setCurrentChapter, setCurrentModule, progress],
   );
 
   const handleReplay = useCallback(() => {
@@ -1121,15 +1148,12 @@ export function DuoLearnScreen() {
   }, [replayModule, router, setCurrentChapter, setCurrentModule]);
 
   const handleSkipIntro = useCallback(() => {
-    // Server-sync all ch-0 modules as completed
-    for (const mod of chapter0Data.modules) {
-      upsertProgress({ moduleId: mod.id, status: 'completed', xpEarned: 0 });
-    }
+    skipIntroChapter(chapter0Data.modules.map(m => m.id));
     setTimeout(() => {
       // scroll down to let the user see chapter 1 unlocked
       scrollRef.current?.scrollTo({ y: 800, animated: true });
     }, 300);
-  }, [upsertProgress]);
+  }, [skipIntroChapter]);
 
   // Stable callbacks for ChapterSection (avoids inline arrow re-creation per render)
   const handleLockedPress = useCallback(() => setLockedModalVisible(true), []);
@@ -1201,18 +1225,14 @@ export function DuoLearnScreen() {
           {/* Chapter sections */}
           {ARENAS.map((arena, idx) => {
             const chapter = ALL_CHAPTERS[idx];
-            const chNum = storeKey(chapter.id).replace('ch-', '');
-            const prefix = `mod-${chNum}-`;
-            const completedModules = progressData?.filter((m) => m.moduleId.startsWith(prefix) && m.status === 'completed').map((m) => m.moduleId) ?? [];
+            const completedModules = progress[storeKey(chapter.id)]?.completedModules ?? [];
 
             // PRO: everything open. Free: unit unlocks only after ALL modules of previous unit completed.
             // Unit 1 is always unlocked.
             let isUnlocked = isPro || idx === 0;
             if (!isPro && idx > 0) {
               const prevChapter = ALL_CHAPTERS[idx - 1];
-              const prevNum = storeKey(prevChapter.id).replace('ch-', '');
-              const prevPrefix = `mod-${prevNum}-`;
-              const prevCompleted = progressData?.filter((m) => m.moduleId.startsWith(prevPrefix) && m.status === 'completed').map((m) => m.moduleId) ?? [];
+              const prevCompleted = progress[storeKey(prevChapter.id)]?.completedModules ?? [];
               isUnlocked = prevChapter.modules.every((m) => m.comingSoon || (!isPro && PRO_LOCKED_SIMS.has(m.id)) || prevCompleted.includes(m.id));
             }
 
@@ -1426,9 +1446,7 @@ export function DuoLearnScreen() {
               >
               {ARENAS.map((arena, idx) => {
                 const ch = ALL_CHAPTERS[idx];
-                const chNum2 = storeKey(ch.id).replace('ch-', '');
-                const prefix2 = `mod-${chNum2}-`;
-                const done = progressData?.filter((m) => m.moduleId.startsWith(prefix2) && m.status === 'completed').map((m) => m.moduleId) ?? [];
+                const done = progress[storeKey(ch.id)]?.completedModules ?? [];
                 const totalModules = ch.modules.filter(m => !m.comingSoon).length;
                 const completedCount = done.length;
                 const isComplete = completedCount >= totalModules;
@@ -1436,9 +1454,7 @@ export function DuoLearnScreen() {
                 let chapterUnlocked = isPro || idx === 0;
                 if (!isPro && idx > 0) {
                   const prev = ALL_CHAPTERS[idx - 1];
-                  const prevNum2 = storeKey(prev.id).replace('ch-', '');
-                  const prevPrefix2 = `mod-${prevNum2}-`;
-                  const prevDone = progressData?.filter((m) => m.moduleId.startsWith(prevPrefix2) && m.status === 'completed').map((m) => m.moduleId) ?? [];
+                  const prevDone = progress[storeKey(prev.id)]?.completedModules ?? [];
                   chapterUnlocked = prev.modules.every((m) => m.comingSoon || (!isPro && PRO_LOCKED_SIMS.has(m.id)) || prevDone.includes(m.id));
                 }
 
@@ -1546,10 +1562,8 @@ export function DuoLearnScreen() {
           visible={!!nudge && !isWalkthroughActive}
           onPress={() => {
             if (nudge) {
-              // The daily-challenge nudge routes to the feed (which is /(tabs)/learn).
-              // Tell the feed to auto-scroll to the dilemma card so the user lands on
-              // the challenge itself, not at the top of the feed.
-              import('../finfeed/FinFeedScreen').then(({ setPendingFeedScrollById }) => {
+              // Feed removed; legacy auto-scroll stubbed out.
+              import('../inter-module-content/feedScrollStubs').then(({ setPendingFeedScrollById }) => {
                 setPendingFeedScrollById('daily-dilemma');
               });
               router.push(nudge.route as never);
