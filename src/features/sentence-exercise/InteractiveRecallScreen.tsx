@@ -1,10 +1,10 @@
-import { useCallback, useRef } from "react";
-import { View, Text, StyleSheet, ScrollView } from "react-native";
+import { useCallback, useRef, useState } from "react";
+import { View, Text, Pressable, StyleSheet, ScrollView } from "react-native";
 import Animated, { FadeIn, FadeOut } from "react-native-reanimated";
 import { useEconomyUIStore } from "../economy/useEconomyUIStore";
 import { FinnCoach } from "./FinnCoach";
 import { FillBlankCard } from "./FillBlankCard";
-import { TimelineOrderCard } from "./TimelineOrderCard";
+import { TimelineOrderCard, type TimelineOrderCardState } from "./TimelineOrderCard";
 import { getRecallSet } from "./sentenceData";
 import { useInteractiveRecall } from "./useInteractiveRecall";
 
@@ -33,6 +33,11 @@ export function InteractiveRecallScreen({
 
   const recallRef = useRef(recall);
   recallRef.current = recall;
+
+  // CTA state lifted from TimelineOrderCard so the Check/Continue button can
+  // live in a sticky footer below the ScrollView. Reset whenever the prompt
+  // changes so a stale callback from the previous prompt can't fire.
+  const [cardState, setCardState] = useState<TimelineOrderCardState | null>(null);
 
   const handleCorrectSettled = useCallback(() => {
     const { state, advance } = recallRef.current;
@@ -95,10 +100,36 @@ export function InteractiveRecallScreen({
                 return { correct: r.correct, finishesSet: r.finishesSet };
               }}
               onCorrectSettled={handleCorrectSettled}
+              onStateChange={setCardState}
             />
           )}
         </Animated.View>
       </ScrollView>
+
+      {/* Sticky CTA footer — only rendered when a TimelineOrderCard is
+          mounted (FillBlankCard auto-advances and exposes nothing). Sits
+          above FinnCoach so it's always visible regardless of card height. */}
+      {prompt.type !== "fill-blank" && cardState && (
+        <View style={styles.stickyFooter}>
+          <Pressable
+            onPress={cardState.locked ? cardState.continue_ : cardState.check}
+            accessibilityRole="button"
+            accessibilityLabel={cardState.locked ? "המשך" : "בדוק"}
+            style={({ pressed }) => [
+              styles.primaryBtn,
+              {
+                backgroundColor: cardState.locked ? "#0ea5e9" : unitColors.bg,
+                borderBottomColor: cardState.locked ? "#0284c7" : "#1e293b",
+                opacity: pressed ? 0.85 : 1,
+              },
+            ]}
+          >
+            <Text style={styles.primaryBtnText}>
+              {cardState.locked ? "המשך" : "בדוק"}
+            </Text>
+          </Pressable>
+        </View>
+      )}
 
       <FinnCoach
         mood={finnMood}
@@ -130,6 +161,26 @@ const styles = StyleSheet.create({
   emptyText: {
     fontSize: 16,
     color: "#6b7280",
+    writingDirection: "rtl",
+  },
+  stickyFooter: {
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    backgroundColor: "#ffffff",
+    borderTopWidth: 1,
+    borderTopColor: "#e2e8f0",
+  },
+  primaryBtn: {
+    borderRadius: 16,
+    paddingVertical: 14,
+    alignItems: "center",
+    justifyContent: "center",
+    borderBottomWidth: 3,
+  },
+  primaryBtnText: {
+    fontSize: 16,
+    fontWeight: "900",
+    color: "#ffffff",
     writingDirection: "rtl",
   },
 });

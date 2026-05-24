@@ -21,12 +21,26 @@ import type { TimelineOrderPrompt } from "./sentenceTypes";
 // המשתמש גרר. אם תעדכן את itemRow padding או itemsColumn gap, עדכן גם פה.
 const ITEM_STEP_HEIGHT = 70;
 
+/**
+ * State that the card exposes to its parent so the parent can render a
+ * sticky bottom CTA. Lifted out of the card body so the button is never
+ * trapped below the fold of a long card or hidden behind the FinnCoach.
+ */
+export interface TimelineOrderCardState {
+  locked: boolean;
+  check: () => void;
+  continue_: () => void;
+}
+
 interface TimelineOrderCardProps {
   prompt: TimelineOrderPrompt;
   initialOrder: string[];
   accentColor: string;
   onSubmit: (order: string[]) => { correct: boolean; finishesSet: boolean };
   onCorrectSettled: () => void;
+  /** Fires whenever the card's lock state or callbacks change, so the
+   *  parent can render the primary CTA button outside the card. */
+  onStateChange?: (state: TimelineOrderCardState) => void;
 }
 
 const HELP_DELAY_MS = 20_000;
@@ -230,6 +244,7 @@ export function TimelineOrderCard({
   accentColor,
   onSubmit,
   onCorrectSettled,
+  onStateChange,
 }: TimelineOrderCardProps) {
   const [localOrder, setLocalOrder] = useState<string[]>(initialOrder);
   const localOrderRef = useRef<string[]>(localOrder);
@@ -333,6 +348,12 @@ export function TimelineOrderCard({
   const handleContinue = useCallback(() => {
     onCorrectSettledRef.current();
   }, []);
+
+  // Push the latest state to the parent so it can render the sticky CTA.
+  // Re-fires whenever `locked` flips or a callback identity changes.
+  useEffect(() => {
+    onStateChange?.({ locked, check: handleCheck, continue_: handleContinue });
+  }, [locked, handleCheck, handleContinue, onStateChange]);
 
   const handleYes = useCallback(() => {
     const correctOrder = [...prompt.items]
@@ -449,35 +470,11 @@ export function TimelineOrderCard({
         </Animated.View>
       )}
 
-      {/* Check / Continue button — until the user locks in a correct order
-          via "בדוק", they stay on the card and can keep rearranging. Once
-          locked (either by Check or by the help-panel auto-solve) the button
-          flips to "המשך" so the user controls the pace of advancing. */}
-      {locked ? (
-        <Pressable
-          onPress={handleContinue}
-          accessibilityRole="button"
-          accessibilityLabel="המשך"
-          style={({ pressed }) => [
-            styles.primaryBtn,
-            { backgroundColor: "#0ea5e9", borderBottomColor: "#0284c7", opacity: pressed ? 0.85 : 1 },
-          ]}
-        >
-          <Text style={styles.primaryBtnText}>המשך</Text>
-        </Pressable>
-      ) : (
-        <Pressable
-          onPress={handleCheck}
-          accessibilityRole="button"
-          accessibilityLabel="בדוק"
-          style={({ pressed }) => [
-            styles.primaryBtn,
-            { backgroundColor: accentColor, borderBottomColor: "#1e293b", opacity: pressed ? 0.85 : 1 },
-          ]}
-        >
-          <Text style={styles.primaryBtnText}>בדוק</Text>
-        </Pressable>
-      )}
+      {/* Check / Continue button is rendered as a sticky footer by the
+          parent (InteractiveRecallScreen). Lifting it out of the card body
+          guarantees it stays visible regardless of card height — previously
+          it could be hidden below the fold or covered by the FinnCoach,
+          since the row-level pan gesture also stole scroll attempts. */}
     </Animated.View>
   );
 }
@@ -652,20 +649,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: "800",
     color: "#374151",
-    writingDirection: "rtl",
-  },
-  primaryBtn: {
-    borderRadius: 16,
-    paddingVertical: 14,
-    alignItems: "center",
-    justifyContent: "center",
-    borderBottomWidth: 3,
-    marginTop: 4,
-  },
-  primaryBtnText: {
-    fontSize: 16,
-    fontWeight: "900",
-    color: "#ffffff",
     writingDirection: "rtl",
   },
 });
