@@ -14,14 +14,18 @@ export function useAppleAuth() {
 
   const isAvailable = Platform.OS === "ios";
 
-  const verifyWithServer = async (authId: string, displayName: string): Promise<{ syncToken: string | null; hasProfile: boolean }> => {
+  const verifyWithServer = async (
+    appleUserId: string,
+    email: string | null,
+    displayName: string,
+  ): Promise<{ syncToken: string | null; hasProfile: boolean }> => {
     try {
       const controller = new AbortController();
       const timeout = setTimeout(() => controller.abort(), 5000);
       const res = await fetch(`${getApiBase()}/api/auth/verify`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ provider: 'apple', appleUserId: authId, displayName }),
+        body: JSON.stringify({ provider: 'apple', appleUserId, email, displayName }),
         signal: controller.signal,
       });
       clearTimeout(timeout);
@@ -47,10 +51,16 @@ export function useAppleAuth() {
       const displayName =
         [fullName?.givenName, fullName?.familyName].filter(Boolean).join(" ").trim() ||
         "משתמש Apple";
-      // user identifier is stable; use it as fallback when email is hidden
-      const authId = credential.email ?? credential.user;
-      const { syncToken, hasProfile } = await verifyWithServer(authId, displayName);
-      signIn(displayName, authId, hasProfile, syncToken);
+      // ALWAYS use credential.user as the authId — it is the stable identifier
+      // Apple returns on every sign-in. The previous code fell back to email
+      // which is only returned on FIRST sign-in, so subsequent sign-ins
+      // produced a different authId and created an orphan row server-side.
+      // credential.email is sent separately so the server can persist it
+      // (and migrate any legacy row keyed on it).
+      const stableUserId = credential.user;
+      const emailFromApple = credential.email ?? null;
+      const { syncToken, hasProfile } = await verifyWithServer(stableUserId, emailFromApple, displayName);
+      signIn(displayName, stableUserId, hasProfile, syncToken);
 
       // Explicit routing — iOS-safe pattern matching the email/Google flows.
       // Auto-routing via _layout effect fails on iOS because the async prompt
