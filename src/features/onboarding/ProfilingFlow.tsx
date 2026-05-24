@@ -605,12 +605,7 @@ function CelebrationScreen({ onDone }: { onDone: () => void }) {
   const badgeScale = useSharedValue(0.2);
   const badgeRotate = useSharedValue(-15);
   const xpScale = useSharedValue(0);
-  // CTA fades in via opacity (not scale) so the Pressable's hit-rect is
-  // already at full size on mount. Mirror of ProfileSummaryScreen's
-  // ctaReady gate: explicitly disable touches until the entrance finishes
-  // so early taps don't get swallowed by an under-built hit area.
-  const ctaOpacity = useSharedValue(0);
-  const [ctaReady, setCtaReady] = useState(false);
+  const ctaScale = useSharedValue(0);
 
   useEffect(() => {
     badgeScale.value = withSequence(
@@ -619,9 +614,7 @@ function CelebrationScreen({ onDone }: { onDone: () => void }) {
     );
     badgeRotate.value = withSpring(0, { damping: 14, stiffness: 100 });
     xpScale.value = withDelay(350, withSpring(1, { damping: 14, stiffness: 120 }));
-    ctaOpacity.value = withDelay(700, withTiming(1, { duration: 280 }));
-    const t = setTimeout(() => setCtaReady(true), 950);
-    return () => clearTimeout(t);
+    ctaScale.value = withDelay(700, withSpring(1, { damping: 14, stiffness: 110 }));
   }, []);
 
   const [showCodeField, setShowCodeField] = useState(false);
@@ -653,7 +646,7 @@ function CelebrationScreen({ onDone }: { onDone: () => void }) {
     transform: [{ scale: badgeScale.value }, { rotate: `${badgeRotate.value}deg` }],
   }));
   const xpStyle = useAnimatedStyle(() => ({ transform: [{ scale: xpScale.value }] }));
-  const ctaStyle = useAnimatedStyle(() => ({ opacity: ctaOpacity.value }));
+  const ctaStyle = useAnimatedStyle(() => ({ transform: [{ scale: ctaScale.value }] }));
 
   return (
     <ImageBackground source={CHAT_BG} style={{ flex: 1 }} resizeMode="cover">
@@ -702,14 +695,8 @@ function CelebrationScreen({ onDone }: { onDone: () => void }) {
         </Text>
 
         {/* CTA */}
-        <Animated.View style={ctaStyle} pointerEvents={ctaReady ? 'auto' : 'none'}>
-          <Pressable
-            onPress={onDone}
-            hitSlop={{ top: 16, bottom: 16, left: 24, right: 24 }}
-            style={styles.celebCTA}
-            accessibilityRole="button"
-            accessibilityLabel="בואו נתחיל"
-          >
+        <Animated.View style={ctaStyle}>
+          <Pressable onPress={onDone} style={styles.celebCTA} accessibilityRole="button" accessibilityLabel="בואו נתחיל">
             <Text style={styles.celebCTAText}>בואו נתחיל</Text>
           </Pressable>
         </Animated.View>
