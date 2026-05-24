@@ -208,7 +208,7 @@ export function BreakingNewsScreen(): React.ReactElement {
               label="הירשם"
               variant="blue"
               iconLeft={<LogIn size={18} color="#ffffff" strokeWidth={2.6} />}
-              onPress={() => router.push('/register' as never)}
+              onPress={() => router.push(`/(auth)/register?returnTo=${encodeURIComponent('/breaking-news')}` as never)}
               accessibilityLabel="הירשם"
             />
           </View>

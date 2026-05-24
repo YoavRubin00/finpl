@@ -1,8 +1,9 @@
 import React from 'react';
-import { View, Text, Pressable, StyleSheet } from 'react-native';
-import { Sparkles, Bell, Newspaper, Flame } from 'lucide-react-native';
+import { View, Text, StyleSheet } from 'react-native';
+import { Sparkles, Bell, Newspaper, Flame, TrendingUp } from 'lucide-react-native';
 
 import { STITCH } from '../../../constants/theme';
+import { CalculateButton } from '../../financial-tools/components/atoms/CalculateButton';
 
 interface EmptyStateProps {
   onPickFirstTicker: () => void;
@@ -33,16 +34,15 @@ export function EmptyState({ onPickFirstTicker }: EmptyStateProps): React.ReactE
         <FeatureRow Icon={Bell} text="התראה כל בוקר ב-9:00" />
       </View>
 
-      <Pressable
-        onPress={onPickFirstTicker}
-        style={({ pressed }) => [styles.cta, pressed && { opacity: 0.85 }]}
-        accessibilityRole="button"
-        accessibilityLabel="בחר את המניה הראשונה שלך"
-      >
-        <Text style={styles.ctaText} allowFontScaling={false}>
-          בחר את המניה הראשונה שלך
-        </Text>
-      </Pressable>
+      <View style={{ alignSelf: 'stretch', marginTop: 8 }}>
+        <CalculateButton
+          label="בחר את המניה הראשונה שלך"
+          variant="blue"
+          iconLeft={<TrendingUp size={18} color="#ffffff" strokeWidth={2.6} />}
+          onPress={onPickFirstTicker}
+          accessibilityLabel="בחר את המניה הראשונה שלך"
+        />
+      </View>
 
       <Text style={styles.hint} allowFontScaling={false}>
         💡 הפעל התראות כדי לקבל את הסיכום אוטומטית
@@ -140,25 +140,6 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: STITCH.onSurface,
     textAlign: 'right',
-    writingDirection: 'rtl',
-  },
-  cta: {
-    alignSelf: 'stretch',
-    paddingVertical: 14,
-    borderRadius: 14,
-    backgroundColor: '#2563eb',
-    alignItems: 'center',
-    marginTop: 8,
-    shadowColor: '#2563eb',
-    shadowOpacity: 0.25,
-    shadowRadius: 12,
-    shadowOffset: { width: 0, height: 6 },
-    elevation: 6,
-  },
-  ctaText: {
-    color: '#ffffff',
-    fontSize: 15,
-    fontWeight: '900',
     writingDirection: 'rtl',
   },
   hint: {
