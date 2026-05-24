@@ -1,15 +1,25 @@
 import React from 'react';
-import { View, Text, StyleSheet, Pressable, Dimensions } from 'react-native';
+import { View, Text, StyleSheet, Dimensions } from 'react-native';
+import { AnimatedPressable } from '../../components/ui/AnimatedPressable';
 import { Image as ExpoImage } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import Animated, {
+  FadeIn,
   FadeInDown,
   FadeInUp,
-  ZoomIn,
 } from 'react-native-reanimated';
 import { Play } from 'lucide-react-native';
-import { tapHaptic, mediumHaptic } from '../../utils/haptics';
-import { DAISY_ASSETS } from './daisy-assets';
+import { Asset } from 'expo-asset';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { mediumHaptic } from '../../utils/haptics';
+import { useSoundEffect } from '../../hooks/useSoundEffect';
+import {
+  DAISY_ASSETS,
+  DAISY_TALKING_WEBP_V2,
+  PODCAST_STUDIO_BG_V2,
+  DAISY_HAPPY_CELEBRATE_WEBP,
+  DAISY_EMPATHIC_WEBP,
+} from './daisy-assets';
 import type { PodcastSegment } from '../chapter-1-content/types';
 
 const { width: SW } = Dimensions.get('window');
@@ -30,8 +40,34 @@ export const PodcastIntroCard = React.memo(function PodcastIntroCard({
   totalEpisodes,
   onStart,
 }: Props) {
+  const insets = useSafeAreaInsets();
+  const { playSound } = useSoundEffect();
   React.useEffect(() => {
     mediumHaptic();
+  }, []);
+
+  // Warm the podcast audio cache while the user reads the intro title. By
+  // the time they tap "התחל" the mp3 is already on disk, so the listen
+  // stage doesn't sit on a blank "loading" screen waiting for the network.
+  React.useEffect(() => {
+    void Asset.fromURI(podcast.audio.uri).downloadAsync().catch(() => {});
+  }, [podcast.audio.uri]);
+
+  // Prefetch every Daisy + studio asset the listen + question stages will
+  // need, so the user never sees a blank/partially-rendered Daisy when
+  // arriving at the listen screen. ExpoImage.prefetch() pushes the bytes
+  // into the disk cache; subsequent ExpoImage components reading the same
+  // URI render instantly. Without this, the talking WebP and studio
+  // backdrop start downloading only when the listen screen mounts, which
+  // is why the user previously heard audio before seeing mouth movement.
+  React.useEffect(() => {
+    void ExpoImage.prefetch([
+      DAISY_TALKING_WEBP_V2.uri,
+      PODCAST_STUDIO_BG_V2.uri,
+      DAISY_HAPPY_CELEBRATE_WEBP.uri,
+      DAISY_EMPATHIC_WEBP.uri,
+      DAISY_ASSETS.happy.uri,
+    ]).catch(() => { /* prefetch failures are non-fatal */ });
   }, []);
 
   return (
@@ -42,17 +78,27 @@ export const PodcastIntroCard = React.memo(function PodcastIntroCard({
         style={StyleSheet.absoluteFill}
       />
 
-      <View style={styles.content}>
-        <Animated.View
-          entering={FadeInDown.duration(380).springify()}
-          style={styles.episodeChip}
-        >
-          <Text style={styles.episodeIcon}>🎙️</Text>
-          <Text style={styles.episodeChipText}>פודקסט</Text>
-        </Animated.View>
+      {/* "פודקסט" chip pinned top-right, clear of the parent lesson progress bar
+          via insets.top + clearance. Used to live inside the centered content
+          column which made it float in the middle of the screen. */}
+      {/* Icon-only badge — the surrounding context (lesson header + Daisy
+          on stage + "On Air" sign in the WebP) already tells the user this
+          is a podcast, so the literal "פודקסט" label was redundant text noise. */}
+      <Animated.View
+        entering={FadeInDown.duration(380)}
+        style={[styles.episodeChipFloat, { top: insets.top + 56 }]}
+        accessible
+        accessibilityLabel="פודקסט"
+        accessibilityRole="image"
+      >
+        <Text style={styles.episodeIcon}>🎙️</Text>
+      </Animated.View>
 
+      <View style={styles.content}>
+        {/* Calm FadeIn instead of ZoomIn.springify (which was bouncing Daisy
+            in like a vibration). The daisy frame should land, not jiggle. */}
         <Animated.View
-          entering={ZoomIn.duration(520).springify().damping(13)}
+          entering={FadeIn.duration(420)}
           style={styles.daisyWrap}
         >
           <View style={styles.daisyFrame}>
@@ -75,19 +121,18 @@ export const PodcastIntroCard = React.memo(function PodcastIntroCard({
         </Animated.View>
       </View>
 
-      <Animated.View entering={FadeInUp.duration(400).delay(280)} style={styles.footer}>
-        <Pressable
-          onPress={() => { tapHaptic(); onStart(); }}
+      <Animated.View
+        entering={FadeInUp.duration(400).delay(280)}
+        style={[styles.footer, { paddingBottom: insets.bottom + 16 }]}
+      >
+        <AnimatedPressable
+          onPress={() => { playSound('btn_click_heavy'); onStart(); }}
           accessibilityRole="button"
           accessibilityLabel="התחל את הפודקסט"
-          style={({ pressed }) => [
-            styles.startBtn,
-            pressed && { opacity: 0.92, transform: [{ scale: 0.98 }] },
-          ]}
+          style={{ backgroundColor: "#0ea5e9", borderRadius: 16, paddingVertical: 14, alignItems: "center", justifyContent: "center", borderBottomWidth: 3, borderBottomColor: "#0284c7" }}
         >
-          <Play color="#ffffff" size={22} fill="#ffffff" />
-          <Text style={styles.startBtnText}>התחל</Text>
-        </Pressable>
+          <Text style={{ color: "#fff", fontSize: 16, fontWeight: "800" }}>התחל</Text>
+        </AnimatedPressable>
       </Animated.View>
     </View>
   );
@@ -103,19 +148,21 @@ const styles = StyleSheet.create({
     gap: 18,
   },
 
-  episodeChip: {
-    flexDirection: 'row-reverse',
+  // Icon-only badge: tight square pill, the mic emoji is the whole content.
+  episodeChipFloat: {
+    position: 'absolute',
+    right: 16,
+    zIndex: 10,
+    width: 38,
+    height: 38,
     alignItems: 'center',
-    gap: 8,
-    backgroundColor: 'rgba(14,165,233,0.12)',
-    borderColor: 'rgba(14,165,233,0.35)',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(14,165,233,0.18)',
+    borderColor: 'rgba(14,165,233,0.45)',
     borderWidth: 1,
-    paddingHorizontal: 16,
-    paddingVertical: 8,
     borderRadius: 999,
   },
-  episodeIcon: { fontSize: 16 },
-  episodeChipText: { color: '#0369a1', fontSize: 13, fontWeight: '800' },
+  episodeIcon: { fontSize: 18 },
 
   daisyWrap: {
     alignItems: 'center',
@@ -154,27 +201,25 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
     paddingBottom: 28,
     paddingTop: 12,
+    alignItems: 'stretch',
   },
+  // Copied 1:1 from LessonFlowScreen line 783 — text-only "המשך" pattern
+  // used in flashcard module CTAs. fontSize:16, fontWeight:800 (NOT 17/900
+  // like my earlier custom variant).
   startBtn: {
-    flexDirection: 'row-reverse',
+    width: '100%',
+    alignSelf: 'stretch',
+    backgroundColor: '#0ea5e9',
+    borderRadius: 16,
+    paddingVertical: 14,
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 10,
-    backgroundColor: '#0ea5e9',
-    borderRadius: 18,
-    paddingVertical: 18,
-    borderBottomWidth: 4,
-    borderBottomColor: '#0369a1',
-    shadowColor: '#0ea5e9',
-    shadowOpacity: 0.4,
-    shadowRadius: 14,
-    shadowOffset: { width: 0, height: 6 },
-    elevation: 8,
+    borderBottomWidth: 3,
+    borderBottomColor: '#0284c7',
   },
   startBtnText: {
     color: '#ffffff',
-    fontSize: 18,
-    fontWeight: '900',
-    letterSpacing: 0.5,
+    fontSize: 16,
+    fontWeight: '800',
   },
 });

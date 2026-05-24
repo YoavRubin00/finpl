@@ -7,6 +7,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useCoupleNarration } from './useCoupleNarration';
 import { CoupleDilemmaSwipeCard } from './CoupleDilemmaSwipeCard';
 import { CoupleDilemmaFeedback } from './CoupleDilemmaFeedback';
+import { resolveCoupleDilemmaAssetUri } from './couple-dilemma-prefetch';
 import type {
   CoupleDilemmaOption,
   CoupleDilemmaSegment,
@@ -34,9 +35,19 @@ export function CoupleDilemmaScreen({ dilemma, onComplete }: Props) {
   const insets = useSafeAreaInsets();
   const [phase, setPhase] = useState<Phase>('intro-video');
   const [chosen, setChosen] = useState<CoupleDilemmaOption | null>(null);
+  // `videoStarted` flips true once the player advances past frame 0 — used to
+  // gate audio narration so Daisy never starts talking before her video is
+  // visible. (Was a noticeable issue on slow connections where audio loaded
+  // first while the mp4 was still buffering.)
+  const [videoStarted, setVideoStarted] = useState(false);
   const transitionedRef = useRef(false);
 
-  const player = useVideoPlayer(dilemma.videoUri, (p) => {
+  // Prefer the pre-downloaded local file (warmed by LessonFlowScreen) and fall
+  // back to streaming the remote URI if the prefetch didn't finish in time.
+  const resolvedVideoUri = resolveCoupleDilemmaAssetUri(dilemma.videoUri);
+  const resolvedAudioUri = resolveCoupleDilemmaAssetUri(dilemma.narrationAudioUri);
+
+  const player = useVideoPlayer(resolvedVideoUri, (p) => {
     p.loop = false;
     p.muted = true;
     p.bufferOptions = {
@@ -47,8 +58,8 @@ export function CoupleDilemmaScreen({ dilemma, onComplete }: Props) {
     p.play();
   });
 
-  // Audio narration plays once on mount and self-cleans.
-  useCoupleNarration(dilemma.narrationAudioUri);
+  // Audio narration is gated until the video has shown at least one frame.
+  useCoupleNarration(resolvedAudioUri, undefined, { enabled: videoStarted });
 
   // Move to swipe stage at ~4.5s into the video, with a wall-clock fallback at
   // 4.8s so the screen always advances even if expo-video's currentTime is flaky.
@@ -62,7 +73,9 @@ export function CoupleDilemmaScreen({ dilemma, onComplete }: Props) {
     };
     const id = setInterval(() => {
       try {
-        if (player.currentTime >= 4.5) toSwipe();
+        const t = player.currentTime;
+        if (t > 0.1) setVideoStarted(true);
+        if (t >= 4.5) toSwipe();
       } catch {
         /* ignore — player may not be ready */
       }

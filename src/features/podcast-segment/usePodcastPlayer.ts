@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Platform } from 'react-native';
+import { AppState, Platform } from 'react-native';
 import { createAudioPlayer, type AudioPlayer } from 'expo-audio';
 import { captureEvent } from '../../lib/posthog';
 
@@ -13,10 +13,22 @@ export interface PodcastPlayerState {
   phase: PodcastPlayerPhase;
   /** 0..1 fraction of audio played */
   progress: number;
+  /** Current playback rate (1.0 = normal). */
+  rate: number;
   togglePlayPause: () => void;
   replay: () => void;
   /** Seek forwards by N seconds (clamped at duration). Auto-resumes if paused. */
   seekForward: (seconds: number) => void;
+  /** Set playback speed (e.g. 1.0, 1.2, 1.5). Survives play/pause cycles. */
+  setRate: (rate: number) => void;
+  /** True once we've been in `loading` phase for ≥800ms with no progress —
+   *  signal to the UI that it should surface a "טוען..." indicator. */
+  showLoadingHint: boolean;
+  /** True once we've been in `loading` for ≥5s without the audio starting —
+   *  signal to surface a manual "נסה שוב" CTA. */
+  showSlowHint: boolean;
+  /** Force a full re-load of the audio (tears down the player and starts over). */
+  retry: () => void;
 }
 
 /**
@@ -33,7 +45,20 @@ export function usePodcastPlayer(
 ): PodcastPlayerState {
   const [phase, setPhase] = useState<PodcastPlayerPhase>('loading');
   const [progress, setProgress] = useState(0);
+  const [rate, setRateState] = useState(1);
+  // UI hints driven by how long we've been stuck in 'loading'. These are
+  // separate from `phase` because the player can be technically in 'loading'
+  // for short normal startup windows (50–300ms) and we don't want to flash
+  // a spinner on every clip.
+  const [showLoadingHint, setShowLoadingHint] = useState(false);
+  const [showSlowHint, setShowSlowHint] = useState(false);
+  /** Bumped to force the audio-loading useEffect to fully tear down + rebuild
+   *  the AudioPlayer (used by retry()). */
+  const [reloadKey, setReloadKey] = useState(0);
   const playerRef = useRef<AudioPlayer | null>(null);
+  // Keep the latest selected rate so we can re-apply it after replay() recreates
+  // the playback session (some Android devices reset to 1.0 on seekTo(0) + play).
+  const rateRef = useRef(1);
   const hasStartedRef = useRef(false);
   const finishedFiredRef = useRef(false);
   const retriedRef = useRef(false);
@@ -53,13 +78,36 @@ export function usePodcastPlayer(
   useEffect(() => {
     setPhase('loading');
     setProgress(0);
+    setShowLoadingHint(false);
+    setShowSlowHint(false);
     hasStartedRef.current = false;
     finishedFiredRef.current = false;
     retriedRef.current = false;
 
+    // UI feedback timers — only surface once load takes longer than expected.
+    const hintTimer = setTimeout(() => {
+      if (!hasStartedRef.current) setShowLoadingHint(true);
+    }, 800);
+    const slowTimer = setTimeout(() => {
+      if (!hasStartedRef.current) setShowSlowHint(true);
+    }, 5000);
+
     const player = createAudioPlayer({ uri: audioUri });
     playerRef.current = player;
-    player.play();
+    // Re-apply the user-selected rate to the freshly created player. If the
+    // listener swaps audioUri (rare, but happens if a re-render restarts the
+    // effect), we keep whatever 1.0/1.2/1.5 the user had selected previously.
+    if (rateRef.current !== 1) {
+      try { player.setPlaybackRate(rateRef.current); } catch { /* ignore */ }
+    }
+    // Delay audio start by 500ms so the visual Daisy WebP has time to load
+    // and reach a "talking" frame before sound begins. Without this delay
+    // there was a ~1s gap where the user heard speech but Daisy still
+    // looked frozen, breaking sync. The retry timers below still cover any
+    // case where the play() fails silently and needs a second attempt.
+    const playDelay = setTimeout(() => {
+      try { player.play(); } catch { /* ignore */ }
+    }, 500);
 
     const sub = player.addListener('playbackStatusUpdate', (status) => {
       const d = status.duration ?? 0;
@@ -138,19 +186,39 @@ export function usePodcastPlayer(
       }
     }, 1000);
 
+    // AppState handler — pause the audio when the user backgrounds the app
+    // (or opens another app on top). Without this, expo-audio keeps the mp3
+    // playing in the background even though the user has clearly left the
+    // podcast UI, which is jarring and drains battery. We don't auto-resume
+    // when the user comes back; they tap play themselves so they don't miss
+    // story content while glancing away.
+    const appStateSub = AppState.addEventListener('change', (next) => {
+      if (next !== 'active') {
+        try { player.pause(); } catch { /* ignore */ }
+      }
+    });
+
     return () => {
+      clearTimeout(playDelay);
       clearTimeout(retry1);
       clearTimeout(retry2);
+      clearTimeout(hintTimer);
+      clearTimeout(slowTimer);
       if (pausedDebounceRef.current) {
         clearTimeout(pausedDebounceRef.current);
         pausedDebounceRef.current = null;
       }
+      appStateSub.remove();
       sub.remove();
+      // Hard-stop on unmount: pause first to halt audio immediately, then
+      // remove the player so its native resources are freed. Both calls are
+      // wrapped in try/catch because either one can throw if the player is
+      // already in a terminal state.
       try { player.pause(); } catch { /* ignore */ }
       try { player.remove(); } catch { /* ignore */ }
       playerRef.current = null;
     };
-  }, [audioUri]);
+  }, [audioUri, reloadKey]);
 
   const togglePlayPause = useCallback(() => {
     const p = playerRef.current;
@@ -167,6 +235,11 @@ export function usePodcastPlayer(
     if (!p) return;
     try {
       p.seekTo(0);
+      // Some Android builds reset playbackRate to 1.0 after seekTo(0); re-apply
+      // the user's selection so "replay" doesn't silently downshift to 1x.
+      if (rateRef.current !== 1) {
+        try { p.setPlaybackRate(rateRef.current); } catch { /* ignore */ }
+      }
       p.play();
       finishedFiredRef.current = false;
       setPhase('loading');
@@ -182,9 +255,11 @@ export function usePodcastPlayer(
       // is not reliably exposed on all expo-audio versions and may return 0/undefined.
       const current = currentTimeRef.current;
       const dur = durationRef.current;
-      // Clamp just before the end so we don't accidentally trigger didJustFinish
+      // Clamp just before the end so we don't accidentally trigger didJustFinish.
+      // Negative `seconds` is allowed (seek backward) — Math.max(0, …) keeps us
+      // from rewinding past the start of the file.
       const maxTarget = dur > 0 ? Math.max(0, dur - 0.1) : current + seconds;
-      const target = Math.min(maxTarget, current + seconds);
+      const target = Math.max(0, Math.min(maxTarget, current + seconds));
       p.seekTo(target);
       if (dur > 0) {
         setProgress(Math.min(1, Math.max(0, target / dur)));
@@ -197,5 +272,24 @@ export function usePodcastPlayer(
     } catch { /* ignore */ }
   }, [phase]);
 
-  return { phase, progress, togglePlayPause, replay, seekForward };
+  const setRate = useCallback((nextRate: number) => {
+    // Clamp to the range expo-audio accepts on every platform (0.5–2.0 per
+    // docs); our UI only exposes 1.0/1.2/1.5 but defend against bad input.
+    const clamped = Math.max(0.5, Math.min(2, nextRate));
+    rateRef.current = clamped;
+    setRateState(clamped);
+    const p = playerRef.current;
+    if (!p) return;
+    try { p.setPlaybackRate(clamped); } catch { /* ignore */ }
+  }, []);
+
+  const retry = useCallback(() => {
+    // Bumping reloadKey re-runs the audio-loading useEffect, which tears the
+    // current player down (cleanup) and creates a fresh AudioPlayer + listeners
+    // from scratch. This is the cleanest way to recover from a hung load.
+    captureEvent('podcast_audio_retry', { platform: Platform.OS });
+    setReloadKey((k) => k + 1);
+  }, []);
+
+  return { phase, progress, rate, togglePlayPause, replay, seekForward, setRate, showLoadingHint, showSlowHint, retry };
 }

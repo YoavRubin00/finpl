@@ -16,7 +16,7 @@ import { ASSET_BY_ID } from './tradingHubData';
 import { useTradingStore } from './useTradingStore';
 import { useEconomy } from '../economy/useEconomy';
 import { useEconomyUIStore } from '../economy/useEconomyUIStore';
-import { clearPriceCache, fetchLatestPrice } from './marketApiService';
+import { clearPriceCache, fetchLatestPrice, fetchPreviousClose } from './marketApiService';
 import { tapHaptic, successHaptic } from '../../utils/haptics';
 import type { ActivePosition } from './tradingHubTypes';
 
@@ -39,8 +39,10 @@ export function HoldingsScreen() {
     const router = useRouter();
     const positions = useTradingStore((s) => s.positions);
     const pendingOrders = useTradingStore((s) => s.pendingOrders);
+    const previousClosesByAsset = useTradingStore((s) => s.previousClosesByAsset);
     const closePosition = useTradingStore((s) => s.closePosition);
     const updatePrices = useTradingStore((s) => s.updatePrices);
+    const setPreviousClose = useTradingStore((s) => s.setPreviousClose);
     const cancelLimitOrder = useTradingStore((s) => s.cancelLimitOrder);
     const { data: economyData } = useEconomy();
     const coins = economyData?.coins ?? 0;
@@ -55,11 +57,18 @@ export function HoldingsScreen() {
         const assetIds = [...new Set(useTradingStore.getState().positions.map((p) => p.assetId))];
         assetIds.forEach(async (id) => {
             try {
-                const price = await fetchLatestPrice(id);
-                if (price > 0 && mountedRef.current) updatePrices(id, price);
+                // Both calls hit the same backend request internally (deduped via
+                // inflightQuotes in marketApiService), so this is one network trip per asset.
+                const [price, prevClose] = await Promise.all([
+                    fetchLatestPrice(id),
+                    fetchPreviousClose(id),
+                ]);
+                if (!mountedRef.current) return;
+                if (price > 0) updatePrices(id, price);
+                if (prevClose !== null && prevClose > 0) setPreviousClose(id, prevClose);
             } catch { /* skip */ }
         });
-    }, [updatePrices]);
+    }, [updatePrices, setPreviousClose]);
 
     useEffect(() => {
         mountedRef.current = true;
@@ -81,6 +90,35 @@ export function HoldingsScreen() {
     }, 0);
     const totalPnl = totalCurrentValue - totalInvested;
     const totalPnlPercent = totalInvested > 0 ? (totalPnl / totalInvested) * 100 : 0;
+
+    // Daily change of the whole portfolio. For each position with a known previousClose:
+    //   • yesterdayValue ≈ amountInvested × (1 + pnlPercentAsOfYesterday/100)
+    //     where pnlPercentAsOfYesterday is calculated from entry→prevClose with the
+    //     same long/short logic the store already uses for the current pnlPercent.
+    //   • todayValue = the current value already in totalCurrentValue.
+    // We aggregate only positions that have a previousClose available; the rest get
+    // skipped (their contribution to the delta would be 0 anyway because we have no
+    // reference value to compare against).
+    let portfolioPrevValueCovered = 0;
+    let portfolioTodayValueCovered = 0;
+    let portfolioCoveredInvested = 0;
+    for (const p of positions) {
+        const prevClose = previousClosesByAsset[p.assetId];
+        if (!prevClose || p.entryPrice <= 0) continue;
+        const rawChange = (prevClose - p.entryPrice) / p.entryPrice;
+        const pnlAsOfPrevClose = p.type === 'buy' ? rawChange * 100 : -rawChange * 100;
+        const yesterdayVal = p.amountInvested * (1 + pnlAsOfPrevClose / 100);
+        const todayVal = p.amountInvested * (1 + p.pnlPercent / 100);
+        portfolioPrevValueCovered += yesterdayVal;
+        portfolioTodayValueCovered += todayVal;
+        portfolioCoveredInvested += p.amountInvested;
+    }
+    const portfolioDailyChange = portfolioCoveredInvested > 0
+        ? Math.round(portfolioTodayValueCovered - portfolioPrevValueCovered)
+        : null;
+    const portfolioDailyChangePct = portfolioCoveredInvested > 0 && portfolioPrevValueCovered > 0
+        ? ((portfolioTodayValueCovered - portfolioPrevValueCovered) / portfolioPrevValueCovered) * 100
+        : null;
 
     const handleSell = useCallback((pos: ActivePosition) => {
         tapHaptic();
@@ -148,6 +186,8 @@ export function HoldingsScreen() {
                         totalPnl={totalPnl}
                         totalPnlPercent={totalPnlPercent}
                         availableCoins={coins}
+                        dailyChange={portfolioDailyChange}
+                        dailyChangePct={portfolioDailyChangePct}
                     />
 
                     {/* Positions */}
@@ -165,6 +205,20 @@ export function HoldingsScreen() {
                                 const pnlBg = isPosProfit ? CALM.profitSurface : CALM.lossSurface;
                                 const pnlSign = isPosProfit ? '+' : '';
 
+                                // Daily change: how the asset moved between previous trading
+                                // day's close and the latest price, independent of when this
+                                // user opened the position. Direction sign flips for shorts.
+                                const prevClose = previousClosesByAsset[pos.assetId];
+                                let dailyPct: number | null = null;
+                                if (prevClose && prevClose > 0) {
+                                    const rawChange = (pos.currentPrice - prevClose) / prevClose;
+                                    dailyPct = pos.type === 'buy' ? rawChange * 100 : -rawChange * 100;
+                                }
+                                const isDailyProfit = dailyPct !== null && dailyPct >= 0;
+                                const dailyColor = isDailyProfit ? CALM.profit : CALM.loss;
+                                const dailyBg = isDailyProfit ? CALM.profitSurface : CALM.lossSurface;
+                                const dailySign = isDailyProfit ? '+' : '';
+
                                 return (
                                     <Animated.View key={pos.id} entering={FadeInDown.delay(i * 60).duration(300)}>
                                         <View style={styles.posCard}>
@@ -179,10 +233,19 @@ export function HoldingsScreen() {
                                                         <Text style={styles.posAssetTicker}>{pos.assetId}</Text>
                                                     </View>
                                                 </View>
-                                                <View style={[styles.posPnlBadge, { backgroundColor: pnlBg }]}>
-                                                    <Text style={[styles.posPnlText, { color: pnlColor }]}>
-                                                        {pnlSign}{pos.pnlPercent.toFixed(2)}%
-                                                    </Text>
+                                                <View style={{ alignItems: 'flex-end', gap: 4 }}>
+                                                    <View style={[styles.posPnlBadge, { backgroundColor: pnlBg }]}>
+                                                        <Text style={[styles.posPnlText, { color: pnlColor }]}>
+                                                            {pnlSign}{pos.pnlPercent.toFixed(2)}% מהקנייה
+                                                        </Text>
+                                                    </View>
+                                                    {dailyPct !== null && (
+                                                        <View style={[styles.posDailyBadge, { backgroundColor: dailyBg }]}>
+                                                            <Text style={[styles.posDailyText, { color: dailyColor }]}>
+                                                                {dailySign}{dailyPct.toFixed(2)}% היום
+                                                            </Text>
+                                                        </View>
+                                                    )}
                                                 </View>
                                             </View>
 
@@ -452,6 +515,16 @@ const styles = StyleSheet.create({
     posPnlText: {
         fontSize: 14,
         fontWeight: '900',
+        fontVariant: ['tabular-nums'],
+    },
+    posDailyBadge: {
+        paddingHorizontal: 8,
+        paddingVertical: 2,
+        borderRadius: 6,
+    },
+    posDailyText: {
+        fontSize: 11,
+        fontWeight: '800',
         fontVariant: ['tabular-nums'],
     },
     posPriceRow: {

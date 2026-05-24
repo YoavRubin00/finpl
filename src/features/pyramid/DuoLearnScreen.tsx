@@ -43,10 +43,6 @@ import { StreakAtRiskBanner } from "../streak/StreakAtRiskBanner";
 import { StreakCalendarModal } from "../streak/StreakCalendarModal";
 import { CalendarDays } from "lucide-react-native";
 import { FINN_STANDARD } from "../retention-loops/finnMascotConfig";
-import {
-  DAISY_STANDARD_WEBP,
-  DAISY_EMPATHIC_WEBP,
-} from "../podcast-segment/daisy-assets";
 import { FeedNudgeBanner } from "../../components/ui/FeedNudgeBanner";
 import { useFeedNudge } from "../../hooks/useFeedNudge";
 import { useDailyChallengesStore } from "../daily-challenges/use-daily-challenges-store";
@@ -81,7 +77,6 @@ const CENTER_X = CONTENT_W / 2;
 const NODE_SIZE = 78;
 const CHAR_SIZE = 105;
 // Daisy decorative sticker — same scale as Finn so the row feels balanced.
-const DAISY_DECO_SIZE = CHAR_SIZE;
 const ROW_HEIGHT = NODE_SIZE + 36;
 const WAVE_AMPLITUDE = 42;
 const WAVE_PERIOD = 6; // complete S-curve every 6 nodes
@@ -529,39 +524,8 @@ function ModuleNode({
     ? Math.min(nodeCenter + NODE_SIZE / 2 + 6, CONTENT_W - CHAR_SIZE)
     : Math.max(nodeCenter - NODE_SIZE / 2 - CHAR_SIZE - 6, 0);
 
-  // Daisy decorative sticker — appears sparsely (every 6th non-active node)
-  // on the side OPPOSITE the label, so the path feels alive while scrolling
-  // but at most ~one Daisy is on screen at a time (a typical phone shows
-  // ~4-5 rows). Standard pose on completed nodes (positive vibe), empathic
-  // on locked (gentle "you'll get there" cue). Hidden on the active row to
-  // give Finn focus.
-  const daisyGoesRight = !finnGoesRight;
-  const daisyLeft = daisyGoesRight
-    ? Math.min(nodeCenter + NODE_SIZE / 2 + 6, CONTENT_W - DAISY_DECO_SIZE)
-    : Math.max(nodeCenter - NODE_SIZE / 2 - DAISY_DECO_SIZE - 6, 0);
-  const showDaisyDeco =
-    !showCharacter && state !== "active" && modIndex > 0 && modIndex % 6 === 3;
-  const daisySource = state === "completed" ? DAISY_STANDARD_WEBP : DAISY_EMPATHIC_WEBP;
-
   return (
     <View style={[styles.nodeRow, { height: ROW_HEIGHT }]}>
-      {/* Daisy decorative sticker on non-active nodes — sits opposite the
-          label so it never overlaps copy. Pointer-events:none so it can't
-          steal taps from the node itself. */}
-      {showDaisyDeco && (
-        <View
-          pointerEvents="none"
-          style={[styles.characterWrapper, { left: daisyLeft }]}
-        >
-          <ExpoImage
-            source={daisySource}
-            accessible={false}
-            style={{ width: DAISY_DECO_SIZE, height: DAISY_DECO_SIZE, opacity: state === "locked" ? 0.55 : 1 }}
-            contentFit="contain"
-          />
-        </View>
-      )}
-
       {/* Finn mascot beside active node */}
       {showCharacter && (
         <>
@@ -1044,22 +1008,12 @@ export function DuoLearnScreen() {
     setShowEasterEggReward("coins");
   }, [addCoins]);
 
-  // Scroll to top + refresh content on every tab focus
-  useFocusEffect(
-    useCallback(() => {
-      // refreshQuests(); syncQuestCompletions();, disabled temporarily
-      if (isFirstMount.current) {
-        isFirstMount.current = false;
-        return;
-      }
-      scrollRef.current?.scrollTo({ y: 0, animated: true });
-      setRefreshKey((k) => k + 1);
-    }, [])
-  );
-
-  // Auto-scroll to the active module (Finn position) on mount
-  useEffect(() => {
-    let y = 150; // approximate greeting + DailyIncomeCard + top padding
+  // Compute the y-offset of the user's current active module (the first
+  // un-completed, unlocked module in the first unlocked chapter). Used to
+  // auto-scroll the learn screen so the user lands on their next lesson
+  // instead of the top of the path.
+  const calcResumeScrollY = useCallback(() => {
+    let y = 150; // approximate greeting + top padding
     for (let chIdx = 0; chIdx < ALL_CHAPTERS.length; chIdx++) {
       const ch = ALL_CHAPTERS[chIdx];
       const chNum = storeKey(ch.id).replace('ch-', '');
@@ -1081,13 +1035,34 @@ export function DuoLearnScreen() {
         y += 80; // banner height
         y += 16; // marginTop
         y += activeIdx * 160; // approximate row + connector per module
-        break;
+        return y;
       }
       // Entire chapter completed, add its total height
       y += 80 + 44; // banner + container margins
       y += ch.modules.length * 160;
     }
+    return y;
+  }, [progressData, isPro]);
 
+  // On every tab focus, scroll to the user's current module instead of the
+  // top. Skips the very first mount because the dedicated mount effect below
+  // already runs then (and uses animated:false to land instantly).
+  useFocusEffect(
+    useCallback(() => {
+      // refreshQuests(); syncQuestCompletions();, disabled temporarily
+      if (isFirstMount.current) {
+        isFirstMount.current = false;
+        return;
+      }
+      const targetY = calcResumeScrollY();
+      scrollRef.current?.scrollTo({ y: Math.max(0, targetY - 80), animated: true });
+      setRefreshKey((k) => k + 1);
+    }, [calcResumeScrollY])
+  );
+
+  // Auto-scroll to the active module on initial mount
+  useEffect(() => {
+    const y = calcResumeScrollY();
     if (y > 300) {
       setTimeout(() => {
         scrollRef.current?.scrollTo({ y: y - 80, animated: false });

@@ -15,6 +15,7 @@ export function useAppleAuth() {
 
   const verifyWithServer = async (
     appleUserId: string,
+    email: string | null,
     displayName: string,
   ): Promise<{ token: string; profile: { id: string; authId: string; displayName: string | null; email: string | null; hasCompletedOnboarding?: boolean } } | null> => {
     try {
@@ -23,7 +24,7 @@ export function useAppleAuth() {
       const res = await fetch(`${getApiBase()}/api/auth/verify`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ provider: 'apple', appleUserId, displayName }),
+        body: JSON.stringify({ provider: 'apple', appleUserId, email, displayName }),
         signal: controller.signal,
       });
       clearTimeout(timeout);
@@ -56,9 +57,15 @@ export function useAppleAuth() {
       const displayName =
         [fullName?.givenName, fullName?.familyName].filter(Boolean).join(" ").trim() ||
         "משתמש Apple";
-      // user identifier is stable; use it as fallback when email is hidden
-      const appleUserId = credential.email ?? credential.user;
-      const result = await verifyWithServer(appleUserId, displayName);
+      // ALWAYS use credential.user as the authId — it is the stable identifier
+      // Apple returns on every sign-in. The previous code fell back to email
+      // which is only returned on FIRST sign-in, so subsequent sign-ins
+      // produced a different authId and created an orphan row server-side.
+      // credential.email is sent separately so the server can persist it
+      // (and migrate any legacy row keyed on it).
+      const appleUserId = credential.user;
+      const emailFromApple = credential.email ?? null;
+      const result = await verifyWithServer(appleUserId, emailFromApple, displayName);
       if (!result) {
         captureEvent('auth_failed', { method: 'apple', error_code: 'verify_failed' });
         useAuthStore.getState().setAuthError("הכניסה עם Apple נכשלה. נסה שוב או בחר שיטה אחרת.");

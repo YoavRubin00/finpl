@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import { Image as ExpoImage } from "expo-image";
-import { View, Text, Image, TextInput, Pressable, ScrollView, Dimensions, StyleSheet, ImageBackground, PanResponder, KeyboardAvoidingView, Platform } from "react-native";
+import { View, Text, Image, TextInput, Pressable, ScrollView, Dimensions, StyleSheet, ImageBackground, PanResponder, KeyboardAvoidingView, Platform, ActivityIndicator } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
 import { LottieIcon } from "../../components/ui/LottieIcon";
@@ -506,10 +506,26 @@ type EditableStep = 'dream' | 'goal' | 'knowledge' | 'daily-goal';
 
 function ProfileSummaryScreen({ collected, onDone, onEditStep }: { collected: Collected; onDone: () => void; onEditStep?: (step: EditableStep) => void }) {
   const ctaScale = useSharedValue(0);
+  // CTA is rendered with scale 0 → 1 over 350ms (delay 350ms + spring). During
+  // that window the rendered button has zero size and taps can land on the
+  // wrong target. We gate `pointerEvents` to 'none' until the animation is
+  // (mostly) complete and the hit-test rect is meaningful.
+  const [ctaReady, setCtaReady] = useState(false);
+  // Prevent multi-tap on the CTA — without this users rage-tap because there's
+  // no visual feedback after the first press (see PostHog rage-click data on
+  // profile-summary: 7 users firing ~4 events each).
+  const [pressed, setPressed] = useState(false);
   useEffect(() => {
     ctaScale.value = withDelay(350, withSpring(1, { damping: 14, stiffness: 120 }));
+    const t = setTimeout(() => setCtaReady(true), 600);
+    return () => clearTimeout(t);
   }, []);
   const ctaStyle = useAnimatedStyle(() => ({ transform: [{ scale: ctaScale.value }] }));
+  const handlePress = useCallback(() => {
+    if (pressed) return;
+    setPressed(true);
+    onDone();
+  }, [pressed, onDone]);
 
   const dreamLabel = collected.financialDream ? DREAMS.find((d) => d.id === collected.financialDream)?.label : null;
   const goalLabel = collected.financialGoal ? GOALS.find((g) => g.id === collected.financialGoal)?.label : null;
@@ -563,14 +579,20 @@ function ProfileSummaryScreen({ collected, onDone, onEditStep }: { collected: Co
           </Pressable>
         ))}
       </Animated.View>
-      <Animated.View style={[ctaStyle, { width: '100%', alignItems: 'center' }]}>
+      <Animated.View
+        style={[ctaStyle, { width: '100%', alignItems: 'center' }]}
+        pointerEvents={ctaReady ? 'auto' : 'none'}
+      >
         <Pressable
-          onPress={onDone}
-          style={[styles.celebCTA, { width: '100%', alignItems: 'center' }]}
+          onPress={handlePress}
+          disabled={pressed}
+          style={[styles.celebCTA, { width: '100%', alignItems: 'center', flexDirection: 'row', justifyContent: 'center', gap: 8 }, pressed && { opacity: 0.6 }]}
           accessibilityRole="button"
           accessibilityLabel="אשר ותמשיך לחגיגה"
+          accessibilityState={{ disabled: pressed, busy: pressed }}
         >
           <Text style={styles.celebCTAText}>נראה מצוין!</Text>
+          {pressed && <ActivityIndicator size="small" color="#ffffff" />}
         </Pressable>
       </Animated.View>
     </SafeAreaView>
@@ -1846,60 +1868,44 @@ function IntroStep({ onRegister, onGuest, onLoginSuccess }: IntroStepProps) {
         </Animated.View>
 
         <Animated.View style={[ctaAnimStyle, { alignItems: "center", gap: 10, width: "100%" }]}>
-          {/* Terms checkbox, must accept before guest path */}
+          {/* Terms acceptance is implicit on first CTA tap — same pattern Duolingo /
+              Spotify / Bumble use. PostHog showed that the explicit checkbox gate
+              was the single biggest blocker on this screen (the disabled-opacity
+              CTAs looked broken to most users). The link below makes the legal
+              context visible without requiring an extra action. */}
           <Pressable
-            onPress={() => setTermsAccepted((v) => !v)}
-            accessibilityRole="checkbox"
-            accessibilityLabel="אני מסכים לתנאי השימוש ומדיניות הפרטיות"
-            accessibilityState={{ checked: termsAccepted }}
-            style={{ flexDirection: "row-reverse", alignItems: "center", paddingHorizontal: 8, marginTop: 4 }}
-          >
-            <View
-              style={{
-                height: 20, width: 20, alignItems: "center", justifyContent: "center",
-                borderRadius: 4, borderWidth: 1.5,
-                borderColor: termsAccepted ? "#0891b2" : "#cbd5e1",
-                backgroundColor: termsAccepted ? "#0891b2" : "#f8fafc",
-              }}
-            >
-              {termsAccepted && (
-                <Text style={{ fontSize: 12, fontWeight: "700", color: "#ffffff" }}>✓</Text>
-              )}
-            </View>
-            <Text
-              style={{ marginRight: 8, flex: 1, fontSize: 12, color: "#64748b", writingDirection: "rtl", textAlign: "right" }}
-            >
-              {"אני מסכים/ה ל"}
-              <Text
-                style={{ color: "#0891b2", textDecorationLine: "underline" }}
-                accessibilityRole="link"
-                accessibilityLabel="תנאי השימוש ומדיניות הפרטיות"
-                onPress={(e) => { e.stopPropagation(); introRouter.push("/(auth)/terms" as never); }}
-              >
-                תנאי השימוש ומדיניות הפרטיות
-              </Text>
-            </Text>
-          </Pressable>
-
-          <Pressable
-            onPress={() => { if (termsAccepted) onRegister(); }}
-            style={[introStyles.cta, { width: "100%", alignItems: "center", paddingHorizontal: 0, opacity: termsAccepted ? 1 : 0.5 }]}
+            onPress={() => { setTermsAccepted(true); onRegister(); }}
+            style={[introStyles.cta, { width: "100%", alignItems: "center", paddingHorizontal: 0 }]}
             accessibilityRole="button"
             accessibilityLabel="הרשם"
-            accessibilityState={{ disabled: !termsAccepted }}
           >
             <Text style={introStyles.ctaText}>הרשם</Text>
           </Pressable>
 
           <Pressable
-            onPress={() => { if (termsAccepted) onGuest(); }}
+            onPress={() => { setTermsAccepted(true); onGuest(); }}
             accessibilityRole="button"
             accessibilityLabel="התחל ללא הרשמה"
-            accessibilityState={{ disabled: !termsAccepted }}
-            style={[introStyles.ctaOutline, { opacity: termsAccepted ? 1 : 0.5 }]}
+            style={{ paddingVertical: 6, paddingHorizontal: 10 }}
           >
-            <Text style={introStyles.ctaOutlineText}>התחל ללא הרשמה</Text>
+            <Text style={{ color: "#64748b", fontSize: 14, fontWeight: "600", writingDirection: "rtl", textAlign: "center", textDecorationLine: "underline" }}>
+              התחל ללא הרשמה
+            </Text>
           </Pressable>
+
+          <Text
+            style={{ marginTop: 6, fontSize: 11, color: "#94a3b8", writingDirection: "rtl", textAlign: "center", lineHeight: 16 }}
+          >
+            {"בלחיצה אתם מאשרים את "}
+            <Text
+              style={{ color: "#0891b2", textDecorationLine: "underline" }}
+              accessibilityRole="link"
+              accessibilityLabel="תנאי השימוש ומדיניות הפרטיות"
+              onPress={() => introRouter.push("/(auth)/terms" as never)}
+            >
+              תנאי השימוש ומדיניות הפרטיות
+            </Text>
+          </Text>
 
           <Pressable onPress={() => setSubStep("welcome")} style={{ marginTop: 2 }} accessibilityRole="button" accessibilityLabel="חזרה" hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
             <Text style={introStyles.loginLink}>{"חזרה"}</Text>
@@ -2334,7 +2340,13 @@ export function ProfilingFlow({ mode = "onboarding", onRedoComplete }: Profiling
   }
 
   if (step === "celebration") return <CelebrationScreen onDone={handleDone} />;
-  if (step === "profile-summary") return <ProfileSummaryScreen collected={collected} onDone={() => setStep("building-profile")} onEditStep={editSummaryStep} />;
+  if (step === "profile-summary") return <ProfileSummaryScreen collected={collected} onDone={() => {
+    // Fire the funnel event manually since this transition does NOT use `slide()`.
+    // Without this PostHog showed an 86% drop here — most of which was actually
+    // missing telemetry rather than real abandonment.
+    captureEvent('onboarding_step_completed', { step_name: 'profile-summary', next_step: 'building-profile', mode: isRedo ? 'redo' : 'new' });
+    setStep("building-profile");
+  }} onEditStep={editSummaryStep} />;
   if (step === "building-profile") return <BuildingProfileScreen onDone={isRedo ? handleDone : () => setStep("celebration")} />;
   if (!isRedo && step === "intro") return (
     <IntroStep

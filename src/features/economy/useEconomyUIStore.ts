@@ -19,6 +19,9 @@ import { queryClient } from "../../lib/queryClient";
 import { economyQueryKey } from "./useEconomy";
 import { registerLocalStore } from "../../lib/stores/registry";
 import type { Economy } from "../../lib/api/economy";
+import { logLevelUp, logStreakMilestone } from "../../utils/fbEvents";
+
+const STREAK_MILESTONE_DAYS: ReadonlySet<number> = new Set([3, 7, 14, 30, 60, 90]);
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -186,6 +189,7 @@ export const useEconomyUIStore = create<EconomyUIState>()(
         const newLayer = getPyramidLayer(newXP);
         if (newLevel > prevLevel) {
           set({ pendingLevelUp: newLevel });
+          logLevelUp(newLevel);
         }
         // Notify when investments unlock (layer 2)
         if (prevLayer < 2 && newLayer >= 2) {
@@ -342,7 +346,12 @@ export const useEconomyUIStore = create<EconomyUIState>()(
           if (newLevel > prevLevel) set({ pendingLevelUp: newLevel });
         }
 
-        // Cancel today's streak reminder
+        // Log streak milestone analytics
+        if (newStreak > streak && STREAK_MILESTONE_DAYS.has(newStreak)) {
+          logStreakMilestone(newStreak);
+        }
+
+        // Cancel today's streak reminder, user already completed the daily task
         try {
           const notifMod = require("../notifications/useNotificationStore");
           const notifStore = notifMod.useNotificationStore.getState();
@@ -410,6 +419,10 @@ export const useEconomyUIStore = create<EconomyUIState>()(
           : trimDates(frozenDates);
 
         const netFreezeDelta = (grantFreeze ? 1 : 0) - (freezeConsumed ? 1 : 0);
+
+        if (newStreak > derivedStreak && STREAK_MILESTONE_DAYS.has(newStreak)) {
+          logStreakMilestone(newStreak);
+        }
 
         set((state) => ({
           lastLoginBonusDate: today,

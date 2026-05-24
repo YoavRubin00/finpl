@@ -1,5 +1,6 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useMemo } from 'react';
 import { View, Text, StyleSheet, Pressable, ScrollView } from 'react-native';
+import { AnimatedPressable } from '../../components/ui/AnimatedPressable';
 import Animated, {
   FadeIn,
   FadeInDown,
@@ -12,14 +13,44 @@ import Animated, {
 } from 'react-native-reanimated';
 import { Image as ExpoImage } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { ChevronLeft } from 'lucide-react-native';
 import { tapHaptic, successHaptic, errorHaptic } from '../../utils/haptics';
+import { useSoundEffect } from '../../hooks/useSoundEffect';
 import { GoldCoinIcon } from '../../components/ui/GoldCoinIcon';
-import { FlyingRewards } from '../../components/ui/FlyingRewards';
-import { ConfettiExplosion } from '../../components/ui/ConfettiExplosion';
 import { DAISY_HAPPY_CELEBRATE_WEBP, DAISY_EMPATHIC_WEBP } from './daisy-assets';
 import type { PodcastQuestion, PodcastQuestionOption } from '../chapter-1-content/types';
 
 const RTL = { writingDirection: 'rtl' as const, textAlign: 'right' as const };
+
+/** Gen-Z friendly feedback variants — rotated by question hash so the same
+ *  user sees variety across podcasts but a single question stays consistent.
+ *  The animated Daisy WebP is the primary celebration; the text is the
+ *  voice. Avoids the repetitive "יפה!" → "יפה!" → "יפה!" feeling. */
+const CORRECT_TITLES = ['יפה!', 'בול!', 'מצוין!', 'יאללה!', 'איזה ראש!', 'תפסת!'] as const;
+const WRONG_TITLES   = ['כמעט!', 'לא בדיוק...', 'אופס', 'טעות חכמה...', 'כמעט שם...'] as const;
+
+/** Deterministic shuffle keyed by question.id so the same question always
+ *  presents options in the same order across renders/sessions, but the
+ *  correct option isn't always parked at index 1 (the previous data convention). */
+function hashStringToSeed(s: string): number {
+  let h = 0;
+  for (let i = 0; i < s.length; i++) {
+    h = ((h << 5) - h + s.charCodeAt(i)) | 0;
+  }
+  return Math.abs(h);
+}
+
+function seededShuffle<T>(arr: readonly T[], seed: number): T[] {
+  const a = [...arr];
+  let s = seed || 1;
+  for (let i = a.length - 1; i > 0; i--) {
+    s = (s * 9301 + 49297) % 233280;
+    const j = s % (i + 1);
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
 
 interface Props {
   question: PodcastQuestion;
@@ -34,30 +65,42 @@ export const PodcastQuestionCard = React.memo(function PodcastQuestionCard({
   onAnswered,
   onContinue,
 }: Props) {
+  const insets = useSafeAreaInsets();
+  const { playSound } = useSoundEffect();
   const [selected, setSelected] = useState<number | null>(null);
   const [showResult, setShowResult] = useState(false);
-  const [showConfetti, setShowConfetti] = useState(false);
-  const [showFlyingCoins, setShowFlyingCoins] = useState(false);
 
-  const selectedOption = selected !== null ? question.options[selected] : null;
+  // Shuffled once per question; the correct answer is no longer pinned to index 1.
+  const shuffledOptions = useMemo(
+    () => seededShuffle(question.options, hashStringToSeed(question.id)),
+    [question.id, question.options],
+  );
+
+  const selectedOption = selected !== null ? shuffledOptions[selected] : null;
   const isCorrect = selectedOption?.isCorrect ?? false;
+
+  const feedbackTitle = useMemo(() => {
+    const pool = isCorrect ? CORRECT_TITLES : WRONG_TITLES;
+    return pool[hashStringToSeed(question.id) % pool.length];
+  }, [isCorrect, question.id]);
 
   const handleSelect = useCallback(
     (index: number, option: PodcastQuestionOption) => {
       if (showResult) return;
+      playSound('btn_click_soft_1');
       tapHaptic();
       setSelected(index);
       setShowResult(true);
       if (option.isCorrect) {
+        playSound('modal_open_2');
         successHaptic();
-        setShowConfetti(true);
-        setShowFlyingCoins(true);
       } else {
+        playSound('bubble_transition');
         errorHaptic();
       }
       onAnswered(option.isCorrect);
     },
-    [showResult, onAnswered],
+    [showResult, onAnswered, playSound],
   );
 
   return (
@@ -95,7 +138,7 @@ export const PodcastQuestionCard = React.memo(function PodcastQuestionCard({
 
         {/* Options */}
         <View style={styles.optionsCol}>
-          {question.options.map((option, idx) => (
+          {shuffledOptions.map((option, idx) => (
             <OptionButton
               key={`${question.id}-${idx}`}
               option={option}
@@ -107,67 +150,64 @@ export const PodcastQuestionCard = React.memo(function PodcastQuestionCard({
           ))}
         </View>
 
-        {/* Feedback box */}
+        {/* Feedback box — Daisy on the LEFT (row-reverse first child renders
+            on the right in RTL flow, so the text column comes first and the
+            Daisy WebP renders to her left), vertically centered next to the
+            text block. Bigger WebP (~110) makes the reaction feel like a
+            beat, not a decoration. */}
         {showResult && selectedOption ? (
           <Animated.View
             entering={FadeInUp.duration(320).springify()}
             style={styles.feedbackCard}
           >
-            {/* Daisy reacts to the answer — celebrate on correct,
-                empathic on wrong. Small, centered above the title so
-                the gesture feels like part of the feedback, not a takeover. */}
-            <ExpoImage
-              source={isCorrect ? DAISY_HAPPY_CELEBRATE_WEBP : DAISY_EMPATHIC_WEBP}
-              style={styles.feedbackDaisy}
-              contentFit="contain"
-              accessible={false}
-            />
-            <Text style={[styles.feedbackTitle, RTL]}>
-              {isCorrect ? 'יפה!' : 'לא בדיוק...'}
-            </Text>
-            <Text style={[styles.feedbackBody, RTL]}>{selectedOption.feedback}</Text>
-            {isCorrect ? (
-              <View style={styles.rewardRow}>
-                <View style={styles.rewardPill}>
-                  <Text style={styles.rewardXP}>+{question.xpReward} XP</Text>
-                </View>
-                <View style={styles.rewardPillCoin}>
-                  <GoldCoinIcon size={14} />
-                  <Text style={styles.rewardCoin}>+{question.coinReward}</Text>
-                </View>
+            <View style={styles.feedbackRow}>
+              <View style={styles.feedbackTextCol}>
+                <Text style={[styles.feedbackTitle, RTL]}>{feedbackTitle}</Text>
+                <Text style={[styles.feedbackBody, RTL]}>{selectedOption.feedback}</Text>
+                {isCorrect ? (
+                  <View style={styles.rewardRow}>
+                    <View style={styles.rewardPill}>
+                      <Text style={styles.rewardXP}>+{question.xpReward} XP</Text>
+                    </View>
+                    <View style={styles.rewardPillCoin}>
+                      <GoldCoinIcon size={14} />
+                      <Text style={styles.rewardCoin}>+{question.coinReward}</Text>
+                    </View>
+                  </View>
+                ) : null}
               </View>
-            ) : null}
+              <ExpoImage
+                source={isCorrect ? DAISY_HAPPY_CELEBRATE_WEBP : DAISY_EMPATHIC_WEBP}
+                style={styles.feedbackDaisy}
+                contentFit="contain"
+                accessible={false}
+              />
+            </View>
           </Animated.View>
         ) : null}
       </ScrollView>
 
-      {/* Sticky Continue button — always visible above the fold once answer chosen */}
+      {/* Sticky Continue button — always visible above the fold once answer chosen.
+          `bottom` respects the Android system nav bar / iOS home indicator inset
+          so the button isn't clipped behind it. */}
       {showResult ? (
-        <Animated.View entering={FadeIn.duration(280)} style={styles.stickyFooter}>
-          <Pressable
-            onPress={() => { tapHaptic(); onContinue(); }}
+        <Animated.View
+          entering={FadeIn.duration(280)}
+          style={[styles.stickyFooter, { bottom: insets.bottom + 2 }]}
+        >
+          <AnimatedPressable
+            onPress={() => { playSound('btn_click_heavy'); onContinue(); }}
             accessibilityRole="button"
-            accessibilityLabel={questionNumber === 1 ? 'לשאלה הבאה' : 'סיים'}
-            style={({ pressed }) => [
-              styles.continueBtn,
-              pressed && { opacity: 0.92, transform: [{ scale: 0.98 }] },
-            ]}
+            accessibilityLabel={questionNumber === 1 ? 'לשאלה הבאה' : 'המשך'}
+            style={{ backgroundColor: "#0ea5e9", borderRadius: 16, paddingVertical: 14, alignItems: "center", justifyContent: "center", borderBottomWidth: 3, borderBottomColor: "#0284c7" }}
           >
-            <Text style={styles.continueBtnText}>
-              {questionNumber === 1 ? 'לשאלה הבאה' : 'סיים'}
+            <Text style={{ color: "#fff", fontSize: 16, fontWeight: "800" }}>
+              {questionNumber === 1 ? 'לשאלה הבאה' : 'המשך'}
             </Text>
-          </Pressable>
+          </AnimatedPressable>
         </Animated.View>
       ) : null}
 
-      {showConfetti ? <ConfettiExplosion onComplete={() => setShowConfetti(false)} /> : null}
-      {showFlyingCoins ? (
-        <FlyingRewards
-          type="coins"
-          amount={question.coinReward}
-          onComplete={() => setShowFlyingCoins(false)}
-        />
-      ) : null}
     </View>
   );
 });
@@ -244,9 +284,9 @@ const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: '#f0f9ff' },
   scrollContent: {
     paddingHorizontal: 16,
-    paddingTop: 12,
-    paddingBottom: 96, // leave room for sticky footer button
-    gap: 14,
+    paddingTop: 10,
+    paddingBottom: 88, // leave room for sticky footer button
+    gap: 10,
   },
 
   header: {
@@ -259,7 +299,7 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(14,165,233,0.35)',
     borderWidth: 1,
     paddingHorizontal: 12,
-    paddingVertical: 6,
+    paddingVertical: 5,
     borderRadius: 999,
   },
   typeChipText: {
@@ -277,22 +317,22 @@ const styles = StyleSheet.create({
     backgroundColor: '#ffffff',
     borderColor: 'rgba(14,165,233,0.20)',
     borderWidth: 1,
-    borderRadius: 16,
-    padding: 16,
+    borderRadius: 14,
+    padding: 12,
     shadowColor: '#0ea5e9',
     shadowOpacity: 0.08,
-    shadowRadius: 8,
+    shadowRadius: 6,
     shadowOffset: { width: 0, height: 2 },
     elevation: 1,
   },
   questionText: {
     color: '#1e293b',
-    fontSize: 17,
+    fontSize: 16,
     fontWeight: '800',
-    lineHeight: 25,
+    lineHeight: 23,
   },
 
-  optionsCol: { gap: 10 },
+  optionsCol: { gap: 8 },
   optionBtn: {
     flexDirection: 'row-reverse',
     alignItems: 'center',
@@ -301,7 +341,7 @@ const styles = StyleSheet.create({
     borderWidth: 1.5,
     borderRadius: 14,
     paddingHorizontal: 14,
-    paddingVertical: 14,
+    paddingVertical: 12,
     gap: 12,
   },
   optionLetterCircle: {
@@ -341,21 +381,28 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(14,165,233,0.20)',
     borderWidth: 1,
     borderRadius: 14,
-    padding: 14,
-    gap: 8,
-    alignItems: 'center',
+    padding: 12,
     shadowColor: '#0ea5e9',
     shadowOpacity: 0.06,
     shadowRadius: 6,
     shadowOffset: { width: 0, height: 2 },
     elevation: 1,
   },
+  feedbackRow: {
+    flexDirection: 'row-reverse',
+    alignItems: 'center',
+    gap: 12,
+  },
+  feedbackTextCol: {
+    flex: 1,
+    gap: 4,
+  },
   feedbackDaisy: {
     width: 96,
     height: 96,
   },
-  feedbackTitle: { fontSize: 15, fontWeight: '900', color: '#0369a1', textAlign: 'right', writingDirection: 'rtl', alignSelf: 'stretch' },
-  feedbackBody: { fontSize: 14, lineHeight: 21, color: '#334155', textAlign: 'right', writingDirection: 'rtl', alignSelf: 'stretch' },
+  feedbackTitle: { fontSize: 20, fontWeight: '900', color: '#0369a1', textAlign: 'right', writingDirection: 'rtl' },
+  feedbackBody: { fontSize: 13, lineHeight: 19, color: '#334155', textAlign: 'right', writingDirection: 'rtl' },
 
   rewardRow: { flexDirection: 'row-reverse', gap: 8, marginTop: 4 },
   rewardPill: {
@@ -385,24 +432,23 @@ const styles = StyleSheet.create({
     left: 16,
     right: 16,
     bottom: 16,
+    alignItems: 'stretch',
   },
+  // Copied 1:1 from LessonFlowScreen line 783 pattern.
   continueBtn: {
+    width: '100%',
+    alignSelf: 'stretch',
     backgroundColor: '#0ea5e9',
     borderRadius: 16,
-    paddingVertical: 16,
+    paddingVertical: 14,
     alignItems: 'center',
-    borderBottomWidth: 4,
-    borderBottomColor: '#0369a1',
-    shadowColor: '#0ea5e9',
-    shadowOpacity: 0.35,
-    shadowRadius: 10,
-    shadowOffset: { width: 0, height: 4 },
-    elevation: 6,
+    justifyContent: 'center',
+    borderBottomWidth: 3,
+    borderBottomColor: '#0284c7',
   },
   continueBtnText: {
     color: '#ffffff',
-    fontSize: 17,
-    fontWeight: '900',
-    letterSpacing: 0.3,
+    fontSize: 16,
+    fontWeight: '800',
   },
 });

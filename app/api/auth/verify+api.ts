@@ -38,6 +38,7 @@ export async function POST(request: Request): Promise<Response> {
 
     let verifiedEmail: string | null = null;
     let verifiedName: string | null = null;
+    let appleEmailFromClient: string | null = null;
 
     if (provider === 'google') {
       if (!token) {
@@ -84,12 +85,13 @@ export async function POST(request: Request): Promise<Response> {
     } else if (provider === 'apple') {
       // Apple hidden-email users get a stable identifier (not an email format).
       // We trust Apple's identifier as the authId — no server-side JWT verification.
-      const appleId = sanitizeString(body.appleUserId ?? body.email, 254);
-      if (!appleId) {
+      const appleUserId = sanitizeString(body.appleUserId, 254);
+      if (!appleUserId) {
         return Response.json({ error: 'Missing Apple identifier' }, { status: 400 });
       }
-      verifiedEmail = appleId;
+      verifiedEmail = appleUserId; // used as authId below
       verifiedName = sanitizeString(body.displayName, 100) ?? null;
+      appleEmailFromClient = sanitizeString(body.email, 254) ?? null;
     } else {
       return Response.json({ error: 'Unsupported provider' }, { status: 400 });
     }
@@ -103,8 +105,47 @@ export async function POST(request: Request): Promise<Response> {
 
     const db = getDb();
 
-    // Only save as email if it looks like one (Apple hidden-email users have stable IDs, not emails)
-    const emailForDb = isValidEmail(verifiedEmail) ? verifiedEmail : null;
+    // ── Apple legacy authId migration ──
+    // Before fix: client used credential.email as authId. Apple only returns
+    // email on FIRST sign-in, so subsequent sign-ins produced a different
+    // authId (credential.user) and created an orphan row. If the legacy row
+    // (authId = email) exists and no row yet exists for the stable Apple ID,
+    // transfer the row by updating its authId. Only runs when email was
+    // provided by the client (i.e. Apple returned it — typically only on
+    // sign-ins where the user re-granted access via iOS Settings).
+    if (provider === 'apple' && appleEmailFromClient && isValidEmail(appleEmailFromClient)) {
+      const byStableId = await db
+        .select({ id: userProfiles.id })
+        .from(userProfiles)
+        .where(eq(userProfiles.authId, verifiedEmail))
+        .limit(1);
+      if (byStableId.length === 0) {
+        const byEmail = await db
+          .select({ id: userProfiles.id })
+          .from(userProfiles)
+          .where(eq(userProfiles.authId, appleEmailFromClient))
+          .limit(1);
+        if (byEmail.length > 0) {
+          try {
+            await db
+              .update(userProfiles)
+              .set({ authId: verifiedEmail, updatedAt: new Date().toISOString() })
+              .where(eq(userProfiles.authId, appleEmailFromClient));
+            console.info(`[auth/verify] migrated Apple authId from email to stable ID for user ${byEmail[0].id}`);
+          } catch (migErr) {
+            console.warn('[auth/verify] Apple migration failed:', migErr);
+          }
+        }
+      }
+    }
+
+    // Email stored in the DB: Google/email providers use the verified email,
+    // Apple uses the explicit email from the client (verifiedEmail is the
+    // stable Apple ID, not an email format).
+    const emailForDb =
+      provider === 'apple'
+        ? (appleEmailFromClient && isValidEmail(appleEmailFromClient) ? appleEmailFromClient : null)
+        : (isValidEmail(verifiedEmail) ? verifiedEmail : null);
 
     await db
       .insert(userProfiles)

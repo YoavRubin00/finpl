@@ -10,6 +10,7 @@ import Animated, {
 import LottieView from 'lottie-react-native';
 import { Lock } from 'lucide-react-native';
 import { tapHaptic, successHaptic, errorHaptic } from '../../utils/haptics';
+import { useSoundEffect } from '../../hooks/useSoundEffect';
 import { GoldCoinIcon } from '../../components/ui/GoldCoinIcon';
 import { ConfettiExplosion } from '../../components/ui/ConfettiExplosion';
 import { FlyingRewards } from '../../components/ui/FlyingRewards';
@@ -52,6 +53,7 @@ interface Props {
 export const DailyQuizCard = React.memo(function DailyQuizCard({ quiz, locked = false }: Props) {
   const hasAnsweredToday = useDailyQuizStore((s) => s.hasAnsweredToday);
   const answerQuiz = useDailyQuizStore((s) => s.answerQuiz);
+  const { playSound } = useSoundEffect();
   const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
   const [showResult, setShowResult] = useState(false);
   const [showConfetti, setShowConfetti] = useState(false);
@@ -88,12 +90,14 @@ export const DailyQuizCard = React.memo(function DailyQuizCard({ quiz, locked = 
 
   const handleAnswer = (index: number) => {
     if (showResult || answered) return;
+    playSound('btn_click_soft_1');
     tapHaptic();
     setSelectedIndex(index);
     setShowResult(true);
 
     const wasCorrect = index === quiz.correctAnswerIndex;
     if (wasCorrect) {
+      playSound('modal_open_2');
       successHaptic();
       useEconomyUIStore.getState().addXP(quiz.xpReward, 'quiz_correct');
       useEconomyUIStore.getState().addCoins(quiz.coinReward, 'quiz');
@@ -102,6 +106,7 @@ export const DailyQuizCard = React.memo(function DailyQuizCard({ quiz, locked = 
       setTimeout(() => setShowConfetti(false), 2000);
       setTimeout(() => setShowFlyingCoins(false), 1500);
     } else {
+      playSound('bubble_transition');
       errorHaptic();
     }
 

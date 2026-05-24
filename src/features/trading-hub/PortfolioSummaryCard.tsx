@@ -13,6 +13,10 @@ interface PortfolioSummaryCardProps {
     totalPnl: number;
     totalPnlPercent: number;
     availableCoins: number;
+    /** Change in coins between yesterday's close and today's price across the whole
+     *  portfolio. Null when no positions have a previousClose yet (still loading). */
+    dailyChange?: number | null;
+    dailyChangePct?: number | null;
 }
 
 export function PortfolioSummaryCard({
@@ -21,11 +25,19 @@ export function PortfolioSummaryCard({
     totalPnl,
     totalPnlPercent,
     availableCoins,
+    dailyChange,
+    dailyChangePct,
 }: PortfolioSummaryCardProps) {
     const isProfit = totalPnl >= 0;
     const pnlColor = isProfit ? CALM.profit : CALM.loss;
     const pnlBg = isProfit ? CALM.profitSurface : CALM.lossSurface;
     const pnlSign = isProfit ? '+' : '';
+
+    const hasDaily = typeof dailyChange === 'number' && typeof dailyChangePct === 'number';
+    const isDailyProfit = hasDaily && (dailyChange as number) >= 0;
+    const dailyColor = isDailyProfit ? CALM.profit : CALM.loss;
+    const dailyBg = isDailyProfit ? CALM.profitSurface : CALM.lossSurface;
+    const dailySign = isDailyProfit ? '+' : '';
 
     return (
         <View style={styles.card}>
@@ -41,7 +53,7 @@ export function PortfolioSummaryCard({
             {/* Stats 2x2 grid */}
             <View style={styles.statsGrid}>
                 <View style={styles.statCell}>
-                    <Text style={[RTL, styles.statLabel]}>רווח/הפסד</Text>
+                    <Text style={[RTL, styles.statLabel]}>רווח/הפסד מהקנייה</Text>
                     <View style={[styles.pnlBadge, { backgroundColor: pnlBg }]}>
                         <Text style={[styles.pnlText, { color: pnlColor }]}>
                             {pnlSign}{totalPnl.toLocaleString('he-IL')} ({pnlSign}{totalPnlPercent.toFixed(1)}%)
@@ -59,6 +71,19 @@ export function PortfolioSummaryCard({
                     </View>
                 </View>
             </View>
+
+            {hasDaily && (
+                <View style={styles.statsGrid}>
+                    <View style={styles.statCell}>
+                        <Text style={[RTL, styles.statLabel]}>יום מסחר אחרון</Text>
+                        <View style={[styles.pnlBadge, { backgroundColor: dailyBg }]}>
+                            <Text style={[styles.pnlText, { color: dailyColor }]}>
+                                {dailySign}{(dailyChange as number).toLocaleString('he-IL')} ({dailySign}{(dailyChangePct as number).toFixed(2)}%)
+                            </Text>
+                        </View>
+                    </View>
+                </View>
+            )}
 
             <View style={styles.statsGrid}>
                 <View style={styles.statCell}>

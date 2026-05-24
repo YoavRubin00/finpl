@@ -5,6 +5,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { zustandStorage } from '../../lib/zustandStorage';
 import type { UserProfile } from './types';
 import { registerLocalStore } from '../../lib/stores/registry';
+import { logCompletedRegistration, logOnboardingComplete } from '../../utils/fbEvents';
 
 interface SessionState {
   userId: string | null;
@@ -81,7 +82,7 @@ export const useAuthStore = create<SessionState & SessionActions>()(
       enterGuestMode: () =>
         set({ isAuthenticated: true, isGuest: true, displayName: 'אורח/ת' }),
 
-      convertGuestToUser: (displayName: string, email: string) =>
+      convertGuestToUser: (displayName: string, email: string) => {
         set((state) => ({
           isGuest: false,
           hasCompletedOnboarding: true,
@@ -102,10 +103,18 @@ export const useAuthStore = create<SessionState & SessionActions>()(
             avatarId: null,
             ownedAvatars: [],
           },
-        })),
+        }));
+        // Guest → real user IS a registration event for Facebook attribution.
+        logCompletedRegistration('email');
+        // Converting a guest also implies they already finished onboarding, since
+        // they reached this conversion through the in-app upgrade flow.
+        logOnboardingComplete();
+      },
 
-      completeOnboarding: (profile: UserProfile) =>
-        set({ hasCompletedOnboarding: true, profile }),
+      completeOnboarding: (profile: UserProfile) => {
+        set({ hasCompletedOnboarding: true, profile });
+        logOnboardingComplete();
+      },
 
       updateProfile: (partial) =>
         set((state) => ({

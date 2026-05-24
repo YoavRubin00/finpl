@@ -90,7 +90,6 @@ export function RegisterScreen() {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const [termsAccepted, setTermsAccepted] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
 
   const passwordStrength = getPasswordStrength(password);
@@ -112,13 +111,15 @@ export function RegisterScreen() {
     return () => clearTimeout(t);
   }, [showSuccess, isAuthenticated, isGuest, returnTo, router]);
 
+  // Terms were already accepted implicitly when the user tapped one of the
+  // CTAs on the previous Welcome screen (per Duolingo/Spotify pattern). We
+  // don't gate the register button on it a second time.
   const isValid =
     name.trim().length >= 2 &&
     isValidEmail(email) &&
     passwordStrength !== "weak" &&
     password === confirmPassword &&
-    confirmPassword.length > 0 &&
-    termsAccepted;
+    confirmPassword.length > 0;
 
   return (
     <View style={{ flex: 1, backgroundColor: "#ffffff" }}>
@@ -337,33 +338,20 @@ export function RegisterScreen() {
               </Pressable>
             </View>
 
-            {/* Terms, link + checkbox (separated so link doesn't toggle checkbox) */}
-            <View style={{ marginBottom: 16 }}>
-              <Pressable
-                onPress={() => router.push("/(auth)/terms")}
-                style={{ marginBottom: 8 }}
-                accessibilityRole="link"
-                accessibilityLabel="קרא את תנאי השימוש ומדיניות הפרטיות"
-              >
-                <Text style={{ fontSize: 12, color: "#0891b2", textDecorationLine: "underline", writingDirection: "rtl", textAlign: "right", fontWeight: "600" }}>
-                  קרא/י את תנאי השימוש ומדיניות הפרטיות
-                </Text>
-              </Pressable>
-              <Pressable
-                onPress={() => setTermsAccepted((v) => !v)}
-                style={{ flexDirection: "row-reverse", alignItems: "center" }}
-                accessibilityRole="checkbox"
-                accessibilityLabel="קראתי ואני מסכים לתנאי השימוש"
-                accessibilityState={{ checked: termsAccepted }}
-              >
-                <View style={{ height: 20, width: 20, alignItems: "center", justifyContent: "center", borderRadius: 4, borderWidth: 1.5, borderColor: termsAccepted ? "#0891b2" : "#cbd5e1", backgroundColor: termsAccepted ? "#0891b2" : "#f8fafc" }}>
-                  {termsAccepted && <Text style={{ fontSize: 12, fontWeight: "700", color: "#ffffff" }}>✓</Text>}
-                </View>
-                <Text style={{ marginRight: 8, fontSize: 12, color: "#64748b", writingDirection: "rtl", textAlign: "right" }}>
-                  קראתי ואני מסכים/ה לתנאי השימוש ומדיניות הפרטיות
-                </Text>
-              </Pressable>
-            </View>
+            {/* Terms reminder — implicit consent on Register tap; this is just
+                a discoverable link to read them. No checkbox: the gate already
+                happened on the Welcome screen. */}
+            <Pressable
+              onPress={() => router.push("/(auth)/terms")}
+              style={{ marginBottom: 16, alignSelf: "flex-end" }}
+              accessibilityRole="link"
+              accessibilityLabel="קרא את תנאי השימוש ומדיניות הפרטיות"
+            >
+              <Text style={{ fontSize: 11, color: "#94a3b8", writingDirection: "rtl", textAlign: "right" }}>
+                {"בלחיצה על 'הרשמה' אתם מאשרים את "}
+                <Text style={{ color: "#0891b2", textDecorationLine: "underline" }}>תנאי השימוש ומדיניות הפרטיות</Text>
+              </Text>
+            </Pressable>
 
             {/* Register Button */}
             <Pressable
@@ -507,7 +495,10 @@ export function RegisterScreen() {
               </Text>
             </Pressable>
 
-            {/* Skip registration, guest mode → onboarding */}
+            {/* Skip-to-guest — kept as a subtle text link so it doesn't compete
+                with the primary "Register" CTA above (which is the conversion
+                goal). Was previously a full-width outlined button which drew
+                too much attention away from sign-up. */}
             <Pressable
               onPress={() => {
                 captureEvent('signup_skipped_for_guest');
@@ -515,23 +506,10 @@ export function RegisterScreen() {
               }}
               accessibilityRole="button"
               accessibilityLabel="התחל ללא חשבון"
-              style={{
-                marginTop: 8,
-                width: "100%",
-                borderRadius: 14,
-                borderWidth: 2,
-                borderColor: "#0891b2",
-                backgroundColor: "rgba(8,145,178,0.06)",
-                paddingVertical: 12,
-                borderBottomWidth: 4,
-                borderBottomColor: "#0e7490",
-              }}
+              style={{ marginTop: 12, paddingVertical: 6, alignSelf: "center" }}
             >
-              <Text style={{ textAlign: "center", fontSize: 15, fontWeight: "800", color: "#0891b2", writingDirection: "rtl" }}>
+              <Text style={{ textAlign: "center", fontSize: 13, color: "#94a3b8", writingDirection: "rtl", textDecorationLine: "underline" }}>
                 התחל ללא חשבון
-              </Text>
-              <Text style={{ textAlign: "center", fontSize: 11, color: "#64748b", marginTop: 2, writingDirection: "rtl" }}>
-                תמיד אפשר להירשם אחר כך
               </Text>
             </Pressable>
 

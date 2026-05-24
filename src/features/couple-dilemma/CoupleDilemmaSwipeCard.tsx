@@ -154,12 +154,12 @@ export function CoupleDilemmaSwipeCard({ dilemma, onChoose }: Props) {
             <View style={styles.optionRow}>
               <View style={styles.optionLeft}>
                 <Text style={styles.optionArrow}>←</Text>
-                <Text style={styles.optionLabel} numberOfLines={2}>
+                <Text style={styles.optionLabel} numberOfLines={3}>
                   {dilemma.optionB.label}
                 </Text>
               </View>
               <View style={styles.optionRight}>
-                <Text style={styles.optionLabel} numberOfLines={2}>
+                <Text style={styles.optionLabel} numberOfLines={3}>
                   {dilemma.optionA.label}
                 </Text>
                 <Text style={styles.optionArrow}>→</Text>
@@ -297,7 +297,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'flex-start',
     gap: 6,
-    padding: 10,
+    paddingVertical: 14,
+    paddingHorizontal: 10,
+    minHeight: 84,
     borderRadius: 14,
     backgroundColor: 'rgba(244,114,182,0.12)',
     borderWidth: 1.5,
@@ -309,7 +311,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'flex-end',
     gap: 6,
-    padding: 10,
+    paddingVertical: 14,
+    paddingHorizontal: 10,
+    minHeight: 84,
     borderRadius: 14,
     backgroundColor: 'rgba(14,165,233,0.12)',
     borderWidth: 1.5,

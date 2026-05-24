@@ -25,33 +25,58 @@ export const PODCAST_STUDIO_BG = {
   uri: `${BLOB_BASE}/podcast-studio-bg.png`,
 } as const;
 
-/** Daisy talking loop — animated WebP. Used during `playing` phase only. */
+/** Daisy talking loop — original animated WebP from Vercel Blob. Has a
+ *  known imperfection: the bubble animation baked into the WebP "snaps"
+ *  back when the loop restarts (Android loopCount=1 metadata quirk). We
+ *  tried replacing this with a ffmpeg-generated V2 WebP but its frame
+ *  structure crashed expo-image on device; the V2 assets are saved on
+ *  disk for later experimentation but not bundled. This original asset
+ *  ships and works on both platforms — preferred until we can build a
+ *  cleaner replacement via cwebp -anim or a similar pipeline. */
 export const DAISY_TALKING_WEBP = {
   uri: `${BLOB_BASE}/daisy-talking.webp`,
+} as const;
+
+/** Daisy talking loop V2 — animated WebP with true alpha channel,
+ *  chroma-keyed from a kling3_0 green-screen video. start_image===end_image
+ *  in generation + ffmpeg `-loop 0` → seamless infinite loop. 600×600,
+ *  15fps, 3s, ~660KB. Served from Vercel Blob (not bundled locally) so the
+ *  user's existing dev client picks it up at runtime without a rebuild. */
+export const DAISY_TALKING_WEBP_V2 = {
+  uri: `${BLOB_BASE}/daisy-talking-v2.webp`,
+} as const;
+
+/** Podcast studio background V2 — PNG of the empty room (acoustic panels,
+ *  ON AIR sign, lighting). No character, no bubbles, no microphone — Daisy
+ *  renders on top via DAISY_TALKING_WEBP_V2. 1024×1024 ~1.7MB. Served from
+ *  Vercel Blob for the same dev-client compatibility reason. */
+export const PODCAST_STUDIO_BG_V2 = {
+  uri: `${BLOB_BASE}/podcast-studio-bg-v2.png`,
 } as const;
 
 /** Daisy in a full celebration loop on a transparent background — closes
  *  eyes, opens mouth wide, raises both fins, blue sparkle stars pop around
  *  her. ~5s loop @ 15fps, chroma-keyed from a Higgsfield seedance video.
- *  Used in contexts that compose her over their own gradient (e.g.
- *  couple-dilemma feedback wise=true) where the podcast studio scenery
- *  would clash. Bundled locally (assets/webp/daisy/) so feedback appears
- *  instantly without waiting on Vercel Blob. */
-export const DAISY_HAPPY_CELEBRATE_WEBP =
-  require("../../../assets/webp/daisy/daisy-happy-celebrate.webp") as number;
+ *  Served from Vercel Blob (uploaded 2026-05-22) — no longer bundled
+ *  locally so we don't need an EAS rebuild to ship asset updates. Use the
+ *  prefetch in callers that need instant readiness. */
+export const DAISY_HAPPY_CELEBRATE_WEBP = {
+  uri: `${BLOB_BASE}/daisy-happy-celebrate.webp`,
+} as const;
 
 /** Daisy in a gentle empathic idle — eyes softly open, small closed-lip
  *  smile, fin to chin in a thinking gesture. ~5s loop @ 15fps on a fully
  *  transparent background. Used on couple-dilemma feedback wise=false
  *  (the "נקודה למחשבה" path) so an unwise pick gets a compassionate
- *  reaction instead of the celebration. */
-export const DAISY_EMPATHIC_WEBP =
-  require("../../../assets/webp/daisy/daisy-empathic.webp") as number;
+ *  reaction instead of the celebration. Served from Vercel Blob. */
+export const DAISY_EMPATHIC_WEBP = {
+  uri: `${BLOB_BASE}/daisy-empathic.webp`,
+} as const;
 
 /** Daisy default neutral pose — fins relaxed at sides, soft closed-lip
  *  smile. 2-frame blink loop (3s open / 140ms closed = natural ~1 blink
  *  every ~3s) on a fully transparent background, ~28 KB. Use as her
- *  resting state — alongside non-reactive UI or wherever a static mascot
- *  would feel dead. Mirrors fin-standard for Captain Shark but with life. */
-export const DAISY_STANDARD_WEBP =
-  require("../../../assets/webp/daisy/daisy-standard.webp") as number;
+ *  resting state. Served from Vercel Blob. */
+export const DAISY_STANDARD_WEBP = {
+  uri: `${BLOB_BASE}/daisy-standard.webp`,
+} as const;

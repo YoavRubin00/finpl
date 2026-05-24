@@ -431,33 +431,12 @@ interface TextOverlay {
 
 /** Patches over typos in cloud-hosted PNG infographics. Position % is relative to the rendered image. */
 const TEXT_OVERLAYS: Record<string, TextOverlay[]> = {
-  "fc-0-2-4": [
-    {
-      topPct: 40,
-      leftPct: 26,
-      widthPct: 24,
-      heightPct: 7,
-      text: "חשבון",
-      fontSize: 22,
-      color: "#0f172a",
-      backgroundColor: "#ffffff",
-    },
-  ],
-  "fc-1-2-4": [
-    {
-      topPct: 65,
-      leftPct: 30,
-      widthPct: 15,
-      heightPct: 5,
-      backgroundColor: "#e0f2fe",
-    },
-  ],
   "fc-1-2-1": [
     {
-      topPct: 80,
-      leftPct: 35,
+      topPct: 78,
+      leftPct: 38,
       widthPct: 13,
-      heightPct: 4,
+      heightPct: 3,
       backgroundColor: "#e0f2fe",
     },
   ],
@@ -559,10 +538,11 @@ export function FlashcardInfographic({ cardId, diveStep = 0, zoomRegions }: Prop
     ],
   }));
 
-  // Text overlays patch typos in the static PNG. They should fade away the
-  // moment the zoom-in begins, so the patched image doesn't keep its visible
-  // bandage while the camera moves around. interp [1, 1.1] -> [1, 0] means
-  // by the time the zoom hits 10% it's gone — well within the 600ms transition.
+  // Text overlays patch typos in the static PNG. They're visible in the normal
+  // (unzoomed) card view, then fade out the moment dive-mode zoom begins so they
+  // don't stick around as a stray rectangle while the image moves underneath.
+  // interp [1, 1.1] -> [1, 0] = gone by the time zoom hits 10% (well within the
+  // 600ms dive transition).
   const overlayFadeStyle = useAnimatedStyle(() => ({
     opacity: interpolate(zoomScale.value, [1, 1.1], [1, 0], Extrapolation.CLAMP),
   }));
