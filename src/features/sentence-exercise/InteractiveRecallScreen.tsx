@@ -1,5 +1,5 @@
 import { useCallback, useRef } from "react";
-import { View, Text, StyleSheet } from "react-native";
+import { View, Text, StyleSheet, ScrollView } from "react-native";
 import Animated, { FadeIn, FadeOut } from "react-native-reanimated";
 import { useEconomyUIStore } from "../economy/useEconomyUIStore";
 import { FinnCoach } from "./FinnCoach";
@@ -61,7 +61,12 @@ export function InteractiveRecallScreen({
 
   return (
     <View style={styles.root}>
-      <View style={styles.content}>
+      <ScrollView
+        style={styles.content}
+        contentContainerStyle={styles.contentContainer}
+        showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
+      >
         <Animated.View
           key={prompt.id}
           entering={FadeIn.duration(240)}
@@ -93,7 +98,7 @@ export function InteractiveRecallScreen({
             />
           )}
         </Animated.View>
-      </View>
+      </ScrollView>
 
       <FinnCoach
         mood={finnMood}
@@ -111,7 +116,11 @@ const styles = StyleSheet.create({
   },
   content: {
     flex: 1,
+  },
+  contentContainer: {
+    flexGrow: 1,
     paddingTop: 4,
+    paddingBottom: 12,
   },
   empty: {
     flex: 1,
