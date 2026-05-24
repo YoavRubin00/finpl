@@ -45,8 +45,6 @@ interface TimelineOrderCardProps {
   onStateChange?: (state: TimelineOrderCardState) => void;
 }
 
-const HELP_DELAY_MS = 20_000;
-
 const RANK_COLORS = ["#f97316", "#eab308", "#22c55e", "#3b82f6"];
 const RANK_BG = ["#fff7ed", "#fefce8", "#f0fdf4", "#eff6ff"];
 
@@ -255,8 +253,6 @@ export function TimelineOrderCard({
   const [confetti, setConfetti] = useState<number>(0);
   const [locked, setLocked] = useState<boolean>(false);
   const [showYears, setShowYears] = useState<boolean>(false);
-  const [helpVisible, setHelpVisible] = useState<boolean>(false);
-  const [resolvedOrder, setResolvedOrder] = useState<string[] | null>(null);
   const reducedMotion = useReducedMotion();
 
   // Shake animation for incorrect Check attempts. Skipped under reducedMotion.
@@ -278,28 +274,11 @@ export function TimelineOrderCard({
   const onCorrectSettledRef = useRef(onCorrectSettled);
   useEffect(() => { onCorrectSettledRef.current = onCorrectSettled; });
 
-  const helpTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
   const itemMap = useMemo(() => {
     const m: Record<string, (typeof prompt.items)[number]> = {};
     for (const it of prompt.items) m[it.id] = it;
     return m;
   }, [prompt.items]);
-
-  const resetHelpTimer = useCallback(() => {
-    if (helpTimerRef.current) clearTimeout(helpTimerRef.current);
-    helpTimerRef.current = setTimeout(() => setHelpVisible(true), HELP_DELAY_MS);
-  }, []);
-
-  useEffect(() => {
-    if (locked) {
-      if (helpTimerRef.current) { clearTimeout(helpTimerRef.current); helpTimerRef.current = null; }
-      setHelpVisible(false);
-      return;
-    }
-    resetHelpTimer();
-    return () => { if (helpTimerRef.current) clearTimeout(helpTimerRef.current); };
-  }, [locked, resetHelpTimer]);
 
   // מהלך לוגי משותף ל-swap ע"י חצים ול-drag: מעביר item ל-toIdx. ולידציה
   // התנתקה מ-moveItem ועברה לכפתור "בדוק" — כך המשתמש שולט מתי לבדוק.
@@ -357,24 +336,7 @@ export function TimelineOrderCard({
     onStateChange?.({ locked, check: handleCheck, continue_: handleContinue });
   }, [locked, handleCheck, handleContinue, onStateChange]);
 
-  const handleYes = useCallback(() => {
-    const correctOrder = [...prompt.items]
-      .sort((a, b) => a.correctOrder - b.correctOrder)
-      .map((it) => it.id);
-    setResolvedOrder(correctOrder);
-    setHelpVisible(false);
-    successHaptic();
-    setLocked(true);
-    setShowYears(true);
-    // No auto-advance — user clicks "המשך" when they're ready to move on.
-  }, [prompt.items]);
-
-  const handleNo = useCallback(() => {
-    setHelpVisible(false);
-    resetHelpTimer();
-  }, [resetHelpTimer]);
-
-  const displayOrder = resolvedOrder ?? localOrder;
+  const displayOrder = localOrder;
 
   return (
     <Animated.View
@@ -443,34 +405,6 @@ export function TimelineOrderCard({
           );
         })}
       </View>
-
-      {/* ── Help panel (only when visible, inside card flow so never overflows) ── */}
-      {helpVisible && !locked && (
-        <Animated.View
-          entering={FadeInUp.duration(220)}
-          style={styles.helpPanel}
-        >
-          <Text style={styles.helpText}>צריכים עזרה?</Text>
-          <View style={styles.helpRow}>
-            <Pressable
-              onPress={handleYes}
-              accessibilityRole="button"
-              accessibilityLabel="כן, פתרו עבורי"
-              style={styles.helpYesBtn}
-            >
-              <Text style={styles.helpYesBtnText}>כן, תעזרו לי</Text>
-            </Pressable>
-            <Pressable
-              onPress={handleNo}
-              accessibilityRole="button"
-              accessibilityLabel="לא, אני ממשיך לנסות"
-              style={styles.helpNoBtn}
-            >
-              <Text style={styles.helpNoBtnText}>אני מנסה</Text>
-            </Pressable>
-          </View>
-        </Animated.View>
-      )}
 
       {/* Check / Continue button is rendered as a sticky footer by the
           parent (InteractiveRecallScreen). Lifting it out of the card body
@@ -603,54 +537,5 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: "900",
     color: "#059669",
-  },
-  helpPanel: {
-    backgroundColor: "#eff6ff",
-    borderRadius: 14,
-    borderWidth: 1.5,
-    borderColor: "#93c5fd",
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    gap: 6,
-    alignItems: "center",
-  },
-  helpText: {
-    fontSize: 13,
-    fontWeight: "800",
-    color: "#1e293b",
-    writingDirection: "rtl",
-    textAlign: "center",
-  },
-  helpRow: {
-    flexDirection: "row-reverse",
-    gap: 8,
-  },
-  helpYesBtn: {
-    paddingHorizontal: 14,
-    paddingVertical: 7,
-    backgroundColor: "#3b82f6",
-    borderRadius: 12,
-    borderBottomWidth: 2,
-    borderBottomColor: "#1d4ed8",
-  },
-  helpYesBtnText: {
-    fontSize: 13,
-    fontWeight: "800",
-    color: "#ffffff",
-    writingDirection: "rtl",
-  },
-  helpNoBtn: {
-    paddingHorizontal: 12,
-    paddingVertical: 7,
-    backgroundColor: "#e2e8f0",
-    borderRadius: 12,
-    borderBottomWidth: 2,
-    borderBottomColor: "#94a3b8",
-  },
-  helpNoBtnText: {
-    fontSize: 13,
-    fontWeight: "800",
-    color: "#374151",
-    writingDirection: "rtl",
   },
 });
