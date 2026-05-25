@@ -27,6 +27,7 @@ import Animated, {
   withDelay,
   cancelAnimation,
   FadeInDown,
+  FadeIn,
   ZoomIn,
   Easing,
 } from 'react-native-reanimated';
@@ -581,10 +582,10 @@ export function BridgeScreen({ walkthroughAutoScroll }: BridgeScreenProps = {}) 
         onRequestClose={() => setShowPostRedemptionModal(false)}
       >
         <View style={styles.modalOverlay}>
-          <Animated.View entering={FadeInDown.duration(220)} style={styles.modalBackdrop} pointerEvents="none" />
+          <Animated.View entering={FadeIn.duration(220)} style={styles.modalBackdrop} pointerEvents="none" />
 
           <Animated.View
-            entering={FadeInDown.duration(320)}
+            entering={FadeIn.duration(220)}
             style={styles.postRedemptionCard}
           >
             <ExpoImage
@@ -623,9 +624,9 @@ export function BridgeScreen({ walkthroughAutoScroll }: BridgeScreenProps = {}) 
         onRequestClose={() => setStatModalKind(null)}
       >
         <View style={styles.modalOverlay}>
-          <Animated.View entering={FadeInDown.duration(220)} style={styles.modalBackdrop} pointerEvents="none" />
+          <Animated.View entering={FadeIn.duration(220)} style={styles.modalBackdrop} pointerEvents="none" />
 
-          <Animated.View entering={FadeInDown.duration(320)} style={styles.statModalCard}>
+          <Animated.View entering={FadeIn.duration(220)} style={styles.statModalCard}>
             {statModalKind === 'redeemed' && (() => {
               const redeemed = BRIDGE_BENEFITS.filter(b => isBenefitRedeemed(b.id));
               return (
