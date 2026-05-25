@@ -52,6 +52,19 @@ export function InteractiveRecallScreen({
     }
   }, [set?.prompts.length, addXP, addCoins, onComplete]);
 
+  // Stable references for the per-prompt submit handlers so the card's
+  // useEffect-driven onStateChange doesn't fire on every parent render
+  // (which would loop: setCardState → re-render → new inline function →
+  // new effect deps → setCardState again → "Maximum update depth exceeded").
+  const handleSubmitFillBlank = useCallback((slotId: string, choiceId: string) => {
+    const r = recallRef.current.attemptFillBlank(slotId, choiceId);
+    return { correct: r.correct, finishesSet: r.finishesSet };
+  }, []);
+  const handleSubmitTimeline = useCallback((order: string[]) => {
+    const r = recallRef.current.submitTimelineOrder(order);
+    return { correct: r.correct, finishesSet: r.finishesSet };
+  }, []);
+
   if (!set || !recall.current) {
     return (
       <View style={styles.empty} accessibilityRole="alert" accessibilityLabel="אין תרגילים זמינים">
@@ -84,10 +97,7 @@ export function InteractiveRecallScreen({
                 (recall.state.placement[prompt.id] as Record<string, string | null>) ?? {}
               }
               accentColor={unitColors.bg}
-              onAttempt={(slotId, choiceId) => {
-                const r = recall.attemptFillBlank(slotId, choiceId);
-                return { correct: r.correct, finishesSet: r.finishesSet };
-              }}
+              onAttempt={handleSubmitFillBlank}
               onCorrectSettled={handleCorrectSettled}
             />
           ) : (
@@ -95,10 +105,7 @@ export function InteractiveRecallScreen({
               prompt={prompt}
               initialOrder={(recall.state.placement[prompt.id] as string[]) ?? []}
               accentColor={unitColors.bg}
-              onSubmit={(order) => {
-                const r = recall.submitTimelineOrder(order);
-                return { correct: r.correct, finishesSet: r.finishesSet };
-              }}
+              onSubmit={handleSubmitTimeline}
               onCorrectSettled={handleCorrectSettled}
               onStateChange={setCardState}
             />
