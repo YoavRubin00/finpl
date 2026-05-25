@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect, useRef } from 'react';
+import { useState, useCallback, useEffect, useMemo, useRef } from 'react';
 import { View, Text, ScrollView, Pressable, Modal, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -82,43 +82,45 @@ export function HoldingsScreen() {
         refreshPrices();
     }, [refreshPrices]);
 
-    // Compute totals
-    const totalInvested = positions.reduce((s, p) => s + p.amountInvested, 0);
-    const totalCurrentValue = positions.reduce((s, p) => {
-        const factor = 1 + p.pnlPercent / 100;
-        return s + Math.round(p.amountInvested * factor);
-    }, 0);
-    const totalPnl = totalCurrentValue - totalInvested;
-    const totalPnlPercent = totalInvested > 0 ? (totalPnl / totalInvested) * 100 : 0;
+    const { totalInvested, totalCurrentValue, totalPnl, totalPnlPercent, portfolioDailyChange, portfolioDailyChangePct } = useMemo(() => {
+        const invested = positions.reduce((s, p) => s + p.amountInvested, 0);
+        const currentValue = positions.reduce((s, p) => {
+            const factor = 1 + p.pnlPercent / 100;
+            return s + Math.round(p.amountInvested * factor);
+        }, 0);
+        const pnl = currentValue - invested;
+        const pnlPct = invested > 0 ? (pnl / invested) * 100 : 0;
 
-    // Daily change of the whole portfolio. For each position with a known previousClose:
-    //   • yesterdayValue ≈ amountInvested × (1 + pnlPercentAsOfYesterday/100)
-    //     where pnlPercentAsOfYesterday is calculated from entry→prevClose with the
-    //     same long/short logic the store already uses for the current pnlPercent.
-    //   • todayValue = the current value already in totalCurrentValue.
-    // We aggregate only positions that have a previousClose available; the rest get
-    // skipped (their contribution to the delta would be 0 anyway because we have no
-    // reference value to compare against).
-    let portfolioPrevValueCovered = 0;
-    let portfolioTodayValueCovered = 0;
-    let portfolioCoveredInvested = 0;
-    for (const p of positions) {
-        const prevClose = previousClosesByAsset[p.assetId];
-        if (!prevClose || p.entryPrice <= 0) continue;
-        const rawChange = (prevClose - p.entryPrice) / p.entryPrice;
-        const pnlAsOfPrevClose = p.type === 'buy' ? rawChange * 100 : -rawChange * 100;
-        const yesterdayVal = p.amountInvested * (1 + pnlAsOfPrevClose / 100);
-        const todayVal = p.amountInvested * (1 + p.pnlPercent / 100);
-        portfolioPrevValueCovered += yesterdayVal;
-        portfolioTodayValueCovered += todayVal;
-        portfolioCoveredInvested += p.amountInvested;
-    }
-    const portfolioDailyChange = portfolioCoveredInvested > 0
-        ? Math.round(portfolioTodayValueCovered - portfolioPrevValueCovered)
-        : null;
-    const portfolioDailyChangePct = portfolioCoveredInvested > 0 && portfolioPrevValueCovered > 0
-        ? ((portfolioTodayValueCovered - portfolioPrevValueCovered) / portfolioPrevValueCovered) * 100
-        : null;
+        let prevValueCovered = 0;
+        let todayValueCovered = 0;
+        let coveredInvested = 0;
+        for (const p of positions) {
+            const prevClose = previousClosesByAsset[p.assetId];
+            if (!prevClose || p.entryPrice <= 0) continue;
+            const rawChange = (prevClose - p.entryPrice) / p.entryPrice;
+            const pnlAsOfPrevClose = p.type === 'buy' ? rawChange * 100 : -rawChange * 100;
+            const yesterdayVal = p.amountInvested * (1 + pnlAsOfPrevClose / 100);
+            const todayVal = p.amountInvested * (1 + p.pnlPercent / 100);
+            prevValueCovered += yesterdayVal;
+            todayValueCovered += todayVal;
+            coveredInvested += p.amountInvested;
+        }
+        const dailyChange = coveredInvested > 0
+            ? Math.round(todayValueCovered - prevValueCovered)
+            : null;
+        const dailyChangePct = coveredInvested > 0 && prevValueCovered > 0
+            ? ((todayValueCovered - prevValueCovered) / prevValueCovered) * 100
+            : null;
+
+        return {
+            totalInvested: invested,
+            totalCurrentValue: currentValue,
+            totalPnl: pnl,
+            totalPnlPercent: pnlPct,
+            portfolioDailyChange: dailyChange,
+            portfolioDailyChangePct: dailyChangePct,
+        };
+    }, [positions, previousClosesByAsset]);
 
     const handleSell = useCallback((pos: ActivePosition) => {
         tapHaptic();

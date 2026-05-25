@@ -108,7 +108,7 @@ export const INFOGRAPHIC_MAP: Record<string, ImageSource | null> = {
   "fc-1-4-5": { uri: 'https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/infographics/mod-1-4/fc-1-4-5.png' },
   "fc-1-4-6": { uri: 'https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/infographics/mod-1-4/fc-1-4-6.png' },
   // Module 1-5: לקרוא תלוש שכר
-  "fc-1-5-1": require('../../../assets/IMAGES/SACHAR_OFFICERS.jpeg'),
+  "fc-1-5-1": { uri: 'https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/infographics/mod-1-5/officers.jpeg' },
   "fc-1-5-2": { uri: 'https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/infographics/mod-1-5/fc-1-5-2.png' },
   "fc-1-5-3": { uri: 'https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/infographics/mod-1-5/fc-1-5-3.png' },
   "fc-1-5-4": { uri: 'https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/infographics/mod-1-5/fc-1-5-4.png' },

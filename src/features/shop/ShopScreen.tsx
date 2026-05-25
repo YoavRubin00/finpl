@@ -5,6 +5,7 @@ import LottieView from 'lottie-react-native';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
+  useReducedMotion,
   withSpring,
   withRepeat,
   withSequence,
@@ -83,18 +84,19 @@ const SHADOW_OFFSET = { width: 0, height: 4 } as const;
 
 function usePulseGlow(color: string, active = true) {
   const glow = useSharedValue(0.3);
+  const reduceMotion = useReducedMotion();
   useEffect(() => {
-    if (active) {
+    if (active && !reduceMotion) {
       glow.value = withRepeat(
         withSequence(withTiming(1, { duration: 1100 }), withTiming(0.3, { duration: 1100 })),
         -1, true,
       );
     } else {
       cancelAnimation(glow);
-      glow.value = 0.3;
+      glow.value = reduceMotion ? 0.65 : 0.3;
     }
     return () => cancelAnimation(glow);
-  }, [active]);
+  }, [active, reduceMotion]);
   return useAnimatedStyle(() => ({
     shadowColor: color,
     shadowOpacity: interpolate(glow.value, [0.3, 1], [0.4, 0.95]),
