@@ -20,6 +20,7 @@ import Animated, {
   withSequence,
   withRepeat,
   withDelay,
+  cancelAnimation,
   Easing,
   runOnJS,
   FadeIn,
@@ -331,6 +332,7 @@ function TypingDots() {
   const t = useSharedValue(0);
   useEffect(() => {
     t.value = withRepeat(withTiming(1, { duration: 600, easing: Easing.linear }), -1, false);
+    return () => { cancelAnimation(t); };
   }, [t]);
   const dot = (offset: number) =>
     useAnimatedStyle(() => {
@@ -583,7 +585,11 @@ function CelebrationScreen({ onDone }: { onDone: () => void }) {
   const badgeScale = useSharedValue(0.2);
   const badgeRotate = useSharedValue(-15);
   const xpScale = useSharedValue(0);
-  const ctaScale = useSharedValue(0);
+  // CTA fades in via opacity (not scale). When using scale: 0 → 1, the
+  // Pressable's hit-rect stays collapsed and on some Reanimated/RN versions
+  // it never recovers — the button looks visible but doesn't respond to taps.
+  // Opacity doesn't affect hit-testing, so the button is tappable from mount.
+  const ctaOpacity = useSharedValue(0);
 
   useEffect(() => {
     badgeScale.value = withSequence(
@@ -592,7 +598,7 @@ function CelebrationScreen({ onDone }: { onDone: () => void }) {
     );
     badgeRotate.value = withSpring(0, { damping: 14, stiffness: 100 });
     xpScale.value = withDelay(350, withSpring(1, { damping: 14, stiffness: 120 }));
-    ctaScale.value = withDelay(700, withSpring(1, { damping: 14, stiffness: 110 }));
+    ctaOpacity.value = withDelay(700, withTiming(1, { duration: 280 }));
   }, []);
 
   const [showCodeField, setShowCodeField] = useState(false);
@@ -624,7 +630,7 @@ function CelebrationScreen({ onDone }: { onDone: () => void }) {
     transform: [{ scale: badgeScale.value }, { rotate: `${badgeRotate.value}deg` }],
   }));
   const xpStyle = useAnimatedStyle(() => ({ transform: [{ scale: xpScale.value }] }));
-  const ctaStyle = useAnimatedStyle(() => ({ transform: [{ scale: ctaScale.value }] }));
+  const ctaStyle = useAnimatedStyle(() => ({ opacity: ctaOpacity.value }));
 
   return (
     <ImageBackground source={CHAT_BG} style={{ flex: 1 }} resizeMode="cover">
@@ -1846,60 +1852,42 @@ function IntroStep({ onRegister, onGuest, onLoginSuccess }: IntroStepProps) {
         </Animated.View>
 
         <Animated.View style={[ctaAnimStyle, { alignItems: "center", gap: 10, width: "100%" }]}>
-          {/* Terms checkbox, must accept before guest path */}
+          {/* Terms acceptance is implicit on first CTA tap — Duolingo/Spotify
+              pattern. The explicit checkbox was the biggest blocker on this
+              screen. The link below makes the legal context visible. */}
           <Pressable
-            onPress={() => setTermsAccepted((v) => !v)}
-            accessibilityRole="checkbox"
-            accessibilityLabel="אני מסכים לתנאי השימוש ומדיניות הפרטיות"
-            accessibilityState={{ checked: termsAccepted }}
-            style={{ flexDirection: "row-reverse", alignItems: "center", paddingHorizontal: 8, marginTop: 4 }}
-          >
-            <View
-              style={{
-                height: 20, width: 20, alignItems: "center", justifyContent: "center",
-                borderRadius: 4, borderWidth: 1.5,
-                borderColor: termsAccepted ? "#0891b2" : "#cbd5e1",
-                backgroundColor: termsAccepted ? "#0891b2" : "#f8fafc",
-              }}
-            >
-              {termsAccepted && (
-                <Text style={{ fontSize: 12, fontWeight: "700", color: "#ffffff" }}>✓</Text>
-              )}
-            </View>
-            <Text
-              style={{ marginRight: 8, flex: 1, fontSize: 12, color: "#64748b", writingDirection: "rtl", textAlign: "right" }}
-            >
-              {"אני מסכים/ה ל"}
-              <Text
-                style={{ color: "#0891b2", textDecorationLine: "underline" }}
-                accessibilityRole="link"
-                accessibilityLabel="תנאי השימוש ומדיניות הפרטיות"
-                onPress={(e) => { e.stopPropagation(); introRouter.push("/(auth)/terms" as never); }}
-              >
-                תנאי השימוש ומדיניות הפרטיות
-              </Text>
-            </Text>
-          </Pressable>
-
-          <Pressable
-            onPress={() => { if (termsAccepted) onRegister(); }}
-            style={[introStyles.cta, { width: "100%", alignItems: "center", paddingHorizontal: 0, opacity: termsAccepted ? 1 : 0.5 }]}
+            onPress={() => { setTermsAccepted(true); onRegister(); }}
+            style={[introStyles.cta, { width: "100%", alignItems: "center", paddingHorizontal: 0 }]}
             accessibilityRole="button"
             accessibilityLabel="הרשם"
-            accessibilityState={{ disabled: !termsAccepted }}
           >
             <Text style={introStyles.ctaText}>הרשם</Text>
           </Pressable>
 
           <Pressable
-            onPress={() => { if (termsAccepted) onGuest(); }}
+            onPress={() => { setTermsAccepted(true); onGuest(); }}
             accessibilityRole="button"
             accessibilityLabel="התחל ללא הרשמה"
-            accessibilityState={{ disabled: !termsAccepted }}
-            style={[introStyles.ctaOutline, { opacity: termsAccepted ? 1 : 0.5 }]}
+            style={{ paddingVertical: 6, paddingHorizontal: 10 }}
           >
-            <Text style={introStyles.ctaOutlineText}>התחל ללא הרשמה</Text>
+            <Text style={{ color: "#64748b", fontSize: 14, fontWeight: "600", writingDirection: "rtl", textAlign: "center", textDecorationLine: "underline" }}>
+              התחל ללא הרשמה
+            </Text>
           </Pressable>
+
+          <Text
+            style={{ marginTop: 6, fontSize: 11, color: "#94a3b8", writingDirection: "rtl", textAlign: "center", lineHeight: 16 }}
+          >
+            {"בלחיצה אתם מאשרים את "}
+            <Text
+              style={{ color: "#0891b2", textDecorationLine: "underline" }}
+              accessibilityRole="link"
+              accessibilityLabel="תנאי השימוש ומדיניות הפרטיות"
+              onPress={() => introRouter.push("/(auth)/terms" as never)}
+            >
+              תנאי השימוש ומדיניות הפרטיות
+            </Text>
+          </Text>
 
           <Pressable onPress={() => setSubStep("welcome")} style={{ marginTop: 2 }} accessibilityRole="button" accessibilityLabel="חזרה" hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
             <Text style={introStyles.loginLink}>{"חזרה"}</Text>
@@ -2250,20 +2238,26 @@ export function ProfilingFlow({ mode = "onboarding", onRedoComplete }: Profiling
   }, []);
 
   function slide(nextStep: FlowStep, patch: Partial<Collected>) {
-    captureEvent('onboarding_step_completed', {
-      step_name: step,
-      next_step: nextStep,
-      mode: isRedo ? 'redo' : 'new',
-    });
+    // tapHaptic is fine immediately (press feedback). captureEvent + playSound
+    // are deferred to doUpdate so they don't hold the JS thread for 16-30ms
+    // before the fade-out animation begins (was making transitions choppy).
     setIsGlobalTyping(false);
     if (globalTypingResetRef.current) clearTimeout(globalTypingResetRef.current);
     tapHaptic();
     setShowBubbles(true);
-    playSound('bubble_transition');
     if (bubbleTimeout.current) clearTimeout(bubbleTimeout.current);
     bubbleTimeout.current = setTimeout(() => setShowBubbles(false), 900);
 
     function doUpdate() {
+      try {
+        captureEvent('onboarding_step_completed', {
+          step_name: step,
+          next_step: nextStep,
+          mode: isRedo ? 'redo' : 'new',
+        });
+      } catch { /* non-fatal */ }
+      try { playSound('bubble_transition'); } catch { /* non-fatal */ }
+
       setCollected((prev) => ({ ...prev, ...patch }));
       setStep(nextStep);
       // Bloom in, fade + spring scale/Y from slightly below
@@ -2305,12 +2299,20 @@ export function ProfilingFlow({ mode = "onboarding", onRedoComplete }: Profiling
       onRedoComplete?.();
       return;
     }
-    captureEvent('onboarding_completed', {
-      duration_sec: Math.round((Date.now() - onboardingStartedAtRef.current) / 1000),
-      total_steps: TOTAL_STEPS,
-    });
-    addXP(ONBOARDING_XP, "onboarding");
-    addCoins(50);
+    try {
+      captureEvent('onboarding_completed', {
+        duration_sec: Math.round((Date.now() - onboardingStartedAtRef.current) / 1000),
+        total_steps: TOTAL_STEPS,
+      });
+    } catch (e) { if (__DEV__) console.warn('[onboarding] captureEvent failed:', e); }
+    try { addXP(ONBOARDING_XP, "onboarding"); } catch (e) { if (__DEV__) console.warn('[onboarding] addXP failed:', e); }
+    try { addCoins(50); } catch (e) { if (__DEV__) console.warn('[onboarding] addCoins failed:', e); }
+    // CRITICAL: ensure user is at least a guest before marking onboarding done.
+    // Otherwise `_layout`'s auth redirect bounces them back to /(auth)/onboarding
+    // (because isAuthenticated=false → first branch always wins).
+    if (!isAuthenticated) {
+      enterGuestMode();
+    }
     completeOnboarding({
       displayName,
       financialDream: collected.financialDream ?? null,
@@ -2326,6 +2328,9 @@ export function ProfilingFlow({ mode = "onboarding", onRedoComplete }: Profiling
       avatarId: collected.avatarId ?? null,
       ownedAvatars: [],
     });
+    // Explicit navigation — don't rely solely on `_layout`'s effect-based
+    // redirect, which has been flaky in dev mode with mid-flight state updates.
+    router.replace("/(tabs)" as never);
   }
 
   function editSummaryStep(target: EditableStep) {
@@ -2334,7 +2339,15 @@ export function ProfilingFlow({ mode = "onboarding", onRedoComplete }: Profiling
   }
 
   if (step === "celebration") return <CelebrationScreen onDone={handleDone} />;
-  if (step === "profile-summary") return <ProfileSummaryScreen collected={collected} onDone={() => setStep("building-profile")} onEditStep={editSummaryStep} />;
+  if (step === "profile-summary") return <ProfileSummaryScreen collected={collected} onDone={() => {
+    // Fire the funnel event manually since this transition does NOT use `slide()`.
+    // Without this PostHog showed an 86% drop here — most of which was missing
+    // telemetry, not real abandonment.
+    try {
+      captureEvent('onboarding_step_completed', { step_name: 'profile-summary', next_step: 'building-profile', mode: isRedo ? 'redo' : 'new' });
+    } catch { /* non-fatal */ }
+    setStep("building-profile");
+  }} onEditStep={editSummaryStep} />;
   if (step === "building-profile") return <BuildingProfileScreen onDone={isRedo ? handleDone : () => setStep("celebration")} />;
   if (!isRedo && step === "intro") return (
     <IntroStep
