@@ -4549,15 +4549,15 @@ export function LessonFlowScreen() {
               <Text style={{ ...RTL_STYLE, fontSize: 15, fontWeight: "600", color: "#334155", lineHeight: 24, textAlign: "center", marginBottom: 20 }}>
                 תכף נתחיל להשקיע ביחד באפליקציה, ואז משם נמשיך לעולם האמיתי! תכנס לעמוד הגשר לראות מה מצפה לנו
               </Text>
-              <View style={{ width: "100%", borderRadius: 18, shadowColor: "#2563eb", shadowOffset: { width: 0, height: 0 }, shadowOpacity: 0.65, shadowRadius: 24, elevation: 0, marginBottom: 0 }}>
+              <View style={{ width: "100%", borderRadius: 18, shadowColor: "#2563eb", shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.45, shadowRadius: 12, elevation: 6 }}>
                 <Pressable
                   onPress={() => { tapHaptic(); setShowFinnBridgeNudge(false); router.push("/bridge" as never); }}
-                  style={({ pressed }) => ({ backgroundColor: "#2563eb", borderRadius: 18, paddingVertical: 15, paddingHorizontal: 24, width: "100%", flexDirection: "row-reverse", alignItems: "center", justifyContent: "center", gap: 12, borderWidth: 2, borderColor: "#1d4ed8", borderBottomWidth: 5, borderBottomColor: "#1e40af", overflow: "hidden", elevation: 12, opacity: pressed ? 0.88 : 1 })}
+                  style={({ pressed }) => ({ backgroundColor: "#2563eb", borderRadius: 18, paddingVertical: 16, paddingHorizontal: 20, width: "100%", flexDirection: "row-reverse", alignItems: "center", justifyContent: "center", gap: 10, borderBottomWidth: 4, borderBottomColor: "#1e40af", opacity: pressed ? 0.88 : 1 })}
                   accessibilityRole="button"
                   accessibilityLabel="קח אותי לגשר"
                 >
-                  <Text style={{ fontSize: 16, fontWeight: "900", color: "#fff", textShadowColor: "rgba(0,0,0,0.3)", textShadowOffset: { width: 0, height: 1 }, textShadowRadius: 2 }}>קח אותי לגשר</Text>
-                  <LottieIcon source={LOTTIE_BRIDGE} size={36} autoPlay loop />
+                  <Text style={{ fontSize: 17, fontWeight: "900", color: "#ffffff", textAlign: "center" }}>קח אותי לגשר</Text>
+                  <Text style={{ fontSize: 22 }}>🌉</Text>
                 </Pressable>
               </View>
               <Pressable
