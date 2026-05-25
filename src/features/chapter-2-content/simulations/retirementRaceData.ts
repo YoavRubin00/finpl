@@ -4,14 +4,16 @@ import { Runner, RetirementRaceConfig } from './retirementRaceTypes';
 
 /**
  * נטע, starts early at 22, lower deposit
- * Employee: ₪500/mo, Employer: ₪600/mo (6% + 6.5% on ₪10K salary)
+ * Employee: ₪500/mo (6%), Employer: ₪650/mo (6.5%) on ₪10K salary.
+ * (Severance contribution of additional 6% omitted for simplicity — only
+ * the 6.5% pension portion grows in the fund here.)
  */
 const netaRunner: Runner = {
   name: 'נטע',
   emoji: '👩',
   startAge: 22,
   monthlyDeposit: 500,
-  employerMatch: 600,
+  employerMatch: 650,
   currentBalance: 0,
   color: '#10B981', // emerald-green
   yearData: [],
@@ -19,14 +21,14 @@ const netaRunner: Runner = {
 
 /**
  * אורי, starts late at 35, higher deposit
- * Employee: ₪1,000/mo, Employer: ₪1,200/mo (6% + 6.5% on ₪20K salary)
+ * Employee: ₪1,200/mo (6%), Employer: ₪1,300/mo (6.5%) on ₪20K salary.
  */
 const oriRunner: Runner = {
   name: 'אורי',
   emoji: '👨',
   startAge: 35,
-  monthlyDeposit: 1_000,
-  employerMatch: 1_200,
+  monthlyDeposit: 1_200,
+  employerMatch: 1_300,
   currentBalance: 0,
   color: '#3B82F6', // sapphire-blue
   yearData: [],
