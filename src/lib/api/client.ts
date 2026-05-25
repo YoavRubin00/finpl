@@ -42,7 +42,11 @@ async function request<TBody, TResponse>(
 
   if (res.status === 401) {
     try { captureEvent('auth_token_invalid', { endpoint: path }); } catch { /* swallow */ }
-    if (onUnauthorizedHandler) onUnauthorizedHandler();
+    // Only fire sign-out if a token was actually attempted and rejected.
+    // No-token 401s mean the user is a guest who never authenticated —
+    // signing them out here would clear their guest session and bounce
+    // them back to onboarding mid-flow.
+    if (token && onUnauthorizedHandler) onUnauthorizedHandler();
     throw new ApiError('Unauthorized', 401, null);
   }
 
