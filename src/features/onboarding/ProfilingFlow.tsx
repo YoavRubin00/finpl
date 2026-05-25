@@ -56,8 +56,8 @@ import type {
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
 const CHAT_BG = { uri: 'https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/images/HOMEPAGE.png' };
-const SLIDE_MS = 300;
-const AUTO_ADVANCE_MS = 1150; // 900ms typing + 250ms extra before transition
+const SLIDE_MS = 150;
+const AUTO_ADVANCE_MS = 575; // ~halved from original 1150ms for snappier flow
 const TOTAL_STEPS = 8;
 
 const CONFETTI_COLORS = [
@@ -1095,7 +1095,7 @@ function DailyGoalStep({ onNext }: { onNext: (v: DailyGoalMinutes) => void }) {
   const [sel, setSel] = useState<DailyGoalMinutes | null>(null);
   const tap = useCallback((id: DailyGoalMinutes) => {
     setSel(id);
-    const delay = (id === 15 || id === 30) ? 1400 : AUTO_ADVANCE_MS;
+    const delay = (id === 15 || id === 30) ? 700 : AUTO_ADVANCE_MS;
     setTimeout(() => onNext(id), delay);
   }, [onNext]);
 
