@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import { Image as ExpoImage } from "expo-image";
-import { View, Text, Image, TextInput, Pressable, ScrollView, Dimensions, StyleSheet, ImageBackground, PanResponder, KeyboardAvoidingView, Platform, ActivityIndicator } from "react-native";
+import { View, Text, Image, TextInput, Pressable, ScrollView, Dimensions, StyleSheet, ImageBackground, PanResponder, KeyboardAvoidingView, Platform } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
 import { LottieIcon } from "../../components/ui/LottieIcon";
@@ -56,8 +56,8 @@ import type {
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
 const CHAT_BG = { uri: 'https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/images/HOMEPAGE.png' };
-const SLIDE_MS = 150;
-const AUTO_ADVANCE_MS = 575; // ~halved from original 1150ms for snappier flow
+const SLIDE_MS = 300;
+const AUTO_ADVANCE_MS = 1150; // 900ms typing + 250ms extra before transition
 const TOTAL_STEPS = 8;
 
 const CONFETTI_COLORS = [
@@ -506,26 +506,10 @@ type EditableStep = 'dream' | 'goal' | 'knowledge' | 'daily-goal';
 
 function ProfileSummaryScreen({ collected, onDone, onEditStep }: { collected: Collected; onDone: () => void; onEditStep?: (step: EditableStep) => void }) {
   const ctaScale = useSharedValue(0);
-  // CTA is rendered with scale 0 → 1 over 350ms (delay 350ms + spring). During
-  // that window the rendered button has zero size and taps can land on the
-  // wrong target. We gate `pointerEvents` to 'none' until the animation is
-  // (mostly) complete and the hit-test rect is meaningful.
-  const [ctaReady, setCtaReady] = useState(false);
-  // Prevent multi-tap on the CTA — without this users rage-tap because there's
-  // no visual feedback after the first press (see PostHog rage-click data on
-  // profile-summary: 7 users firing ~4 events each).
-  const [pressed, setPressed] = useState(false);
   useEffect(() => {
     ctaScale.value = withDelay(350, withSpring(1, { damping: 14, stiffness: 120 }));
-    const t = setTimeout(() => setCtaReady(true), 600);
-    return () => clearTimeout(t);
   }, []);
   const ctaStyle = useAnimatedStyle(() => ({ transform: [{ scale: ctaScale.value }] }));
-  const handlePress = useCallback(() => {
-    if (pressed) return;
-    setPressed(true);
-    onDone();
-  }, [pressed, onDone]);
 
   const dreamLabel = collected.financialDream ? DREAMS.find((d) => d.id === collected.financialDream)?.label : null;
   const goalLabel = collected.financialGoal ? GOALS.find((g) => g.id === collected.financialGoal)?.label : null;
@@ -579,20 +563,14 @@ function ProfileSummaryScreen({ collected, onDone, onEditStep }: { collected: Co
           </Pressable>
         ))}
       </Animated.View>
-      <Animated.View
-        style={[ctaStyle, { width: '100%', alignItems: 'center' }]}
-        pointerEvents={ctaReady ? 'auto' : 'none'}
-      >
+      <Animated.View style={[ctaStyle, { width: '100%', alignItems: 'center' }]}>
         <Pressable
-          onPress={handlePress}
-          disabled={pressed}
-          style={[styles.celebCTA, { width: '100%', alignItems: 'center', flexDirection: 'row', justifyContent: 'center', gap: 8 }, pressed && { opacity: 0.6 }]}
+          onPress={onDone}
+          style={[styles.celebCTA, { width: '100%', alignItems: 'center' }]}
           accessibilityRole="button"
           accessibilityLabel="אשר ותמשיך לחגיגה"
-          accessibilityState={{ disabled: pressed, busy: pressed }}
         >
           <Text style={styles.celebCTAText}>נראה מצוין!</Text>
-          {pressed && <ActivityIndicator size="small" color="#ffffff" />}
         </Pressable>
       </Animated.View>
     </SafeAreaView>
@@ -605,11 +583,7 @@ function CelebrationScreen({ onDone }: { onDone: () => void }) {
   const badgeScale = useSharedValue(0.2);
   const badgeRotate = useSharedValue(-15);
   const xpScale = useSharedValue(0);
-  // CTA fades in via opacity (not scale) so the Pressable's hit-rect is
-  // already full-size on mount. ctaReady gates touches until entrance
-  // completes — same pattern as ProfileSummaryScreen.
-  const ctaOpacity = useSharedValue(0);
-  const [ctaReady, setCtaReady] = useState(false);
+  const ctaScale = useSharedValue(0);
 
   useEffect(() => {
     badgeScale.value = withSequence(
@@ -618,9 +592,7 @@ function CelebrationScreen({ onDone }: { onDone: () => void }) {
     );
     badgeRotate.value = withSpring(0, { damping: 14, stiffness: 100 });
     xpScale.value = withDelay(350, withSpring(1, { damping: 14, stiffness: 120 }));
-    ctaOpacity.value = withDelay(700, withTiming(1, { duration: 280 }));
-    const t = setTimeout(() => setCtaReady(true), 950);
-    return () => clearTimeout(t);
+    ctaScale.value = withDelay(700, withSpring(1, { damping: 14, stiffness: 110 }));
   }, []);
 
   const [showCodeField, setShowCodeField] = useState(false);
@@ -652,7 +624,7 @@ function CelebrationScreen({ onDone }: { onDone: () => void }) {
     transform: [{ scale: badgeScale.value }, { rotate: `${badgeRotate.value}deg` }],
   }));
   const xpStyle = useAnimatedStyle(() => ({ transform: [{ scale: xpScale.value }] }));
-  const ctaStyle = useAnimatedStyle(() => ({ opacity: ctaOpacity.value }));
+  const ctaStyle = useAnimatedStyle(() => ({ transform: [{ scale: ctaScale.value }] }));
 
   return (
     <ImageBackground source={CHAT_BG} style={{ flex: 1 }} resizeMode="cover">
@@ -701,14 +673,8 @@ function CelebrationScreen({ onDone }: { onDone: () => void }) {
         </Text>
 
         {/* CTA */}
-        <Animated.View style={ctaStyle} pointerEvents={ctaReady ? 'auto' : 'none'}>
-          <Pressable
-            onPress={onDone}
-            hitSlop={{ top: 16, bottom: 16, left: 24, right: 24 }}
-            style={styles.celebCTA}
-            accessibilityRole="button"
-            accessibilityLabel="בואו נתחיל"
-          >
+        <Animated.View style={ctaStyle}>
+          <Pressable onPress={onDone} style={styles.celebCTA} accessibilityRole="button" accessibilityLabel="בואו נתחיל">
             <Text style={styles.celebCTAText}>בואו נתחיל</Text>
           </Pressable>
         </Animated.View>
@@ -1095,7 +1061,7 @@ function DailyGoalStep({ onNext }: { onNext: (v: DailyGoalMinutes) => void }) {
   const [sel, setSel] = useState<DailyGoalMinutes | null>(null);
   const tap = useCallback((id: DailyGoalMinutes) => {
     setSel(id);
-    const delay = (id === 15 || id === 30) ? 700 : AUTO_ADVANCE_MS;
+    const delay = (id === 15 || id === 30) ? 1400 : AUTO_ADVANCE_MS;
     setTimeout(() => onNext(id), delay);
   }, [onNext]);
 
@@ -1880,44 +1846,60 @@ function IntroStep({ onRegister, onGuest, onLoginSuccess }: IntroStepProps) {
         </Animated.View>
 
         <Animated.View style={[ctaAnimStyle, { alignItems: "center", gap: 10, width: "100%" }]}>
-          {/* Terms acceptance is implicit on first CTA tap — same pattern Duolingo /
-              Spotify / Bumble use. PostHog showed that the explicit checkbox gate
-              was the single biggest blocker on this screen (the disabled-opacity
-              CTAs looked broken to most users). The link below makes the legal
-              context visible without requiring an extra action. */}
+          {/* Terms checkbox, must accept before guest path */}
           <Pressable
-            onPress={() => { setTermsAccepted(true); onRegister(); }}
-            style={[introStyles.cta, { width: "100%", alignItems: "center", paddingHorizontal: 0 }]}
+            onPress={() => setTermsAccepted((v) => !v)}
+            accessibilityRole="checkbox"
+            accessibilityLabel="אני מסכים לתנאי השימוש ומדיניות הפרטיות"
+            accessibilityState={{ checked: termsAccepted }}
+            style={{ flexDirection: "row-reverse", alignItems: "center", paddingHorizontal: 8, marginTop: 4 }}
+          >
+            <View
+              style={{
+                height: 20, width: 20, alignItems: "center", justifyContent: "center",
+                borderRadius: 4, borderWidth: 1.5,
+                borderColor: termsAccepted ? "#0891b2" : "#cbd5e1",
+                backgroundColor: termsAccepted ? "#0891b2" : "#f8fafc",
+              }}
+            >
+              {termsAccepted && (
+                <Text style={{ fontSize: 12, fontWeight: "700", color: "#ffffff" }}>✓</Text>
+              )}
+            </View>
+            <Text
+              style={{ marginRight: 8, flex: 1, fontSize: 12, color: "#64748b", writingDirection: "rtl", textAlign: "right" }}
+            >
+              {"אני מסכים/ה ל"}
+              <Text
+                style={{ color: "#0891b2", textDecorationLine: "underline" }}
+                accessibilityRole="link"
+                accessibilityLabel="תנאי השימוש ומדיניות הפרטיות"
+                onPress={(e) => { e.stopPropagation(); introRouter.push("/(auth)/terms" as never); }}
+              >
+                תנאי השימוש ומדיניות הפרטיות
+              </Text>
+            </Text>
+          </Pressable>
+
+          <Pressable
+            onPress={() => { if (termsAccepted) onRegister(); }}
+            style={[introStyles.cta, { width: "100%", alignItems: "center", paddingHorizontal: 0, opacity: termsAccepted ? 1 : 0.5 }]}
             accessibilityRole="button"
             accessibilityLabel="הרשם"
+            accessibilityState={{ disabled: !termsAccepted }}
           >
             <Text style={introStyles.ctaText}>הרשם</Text>
           </Pressable>
 
           <Pressable
-            onPress={() => { setTermsAccepted(true); onGuest(); }}
+            onPress={() => { if (termsAccepted) onGuest(); }}
             accessibilityRole="button"
             accessibilityLabel="התחל ללא הרשמה"
-            style={{ paddingVertical: 6, paddingHorizontal: 10 }}
+            accessibilityState={{ disabled: !termsAccepted }}
+            style={[introStyles.ctaOutline, { opacity: termsAccepted ? 1 : 0.5 }]}
           >
-            <Text style={{ color: "#64748b", fontSize: 14, fontWeight: "600", writingDirection: "rtl", textAlign: "center", textDecorationLine: "underline" }}>
-              התחל ללא הרשמה
-            </Text>
+            <Text style={introStyles.ctaOutlineText}>התחל ללא הרשמה</Text>
           </Pressable>
-
-          <Text
-            style={{ marginTop: 6, fontSize: 11, color: "#94a3b8", writingDirection: "rtl", textAlign: "center", lineHeight: 16 }}
-          >
-            {"בלחיצה אתם מאשרים את "}
-            <Text
-              style={{ color: "#0891b2", textDecorationLine: "underline" }}
-              accessibilityRole="link"
-              accessibilityLabel="תנאי השימוש ומדיניות הפרטיות"
-              onPress={() => introRouter.push("/(auth)/terms" as never)}
-            >
-              תנאי השימוש ומדיניות הפרטיות
-            </Text>
-          </Text>
 
           <Pressable onPress={() => setSubStep("welcome")} style={{ marginTop: 2 }} accessibilityRole="button" accessibilityLabel="חזרה" hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
             <Text style={introStyles.loginLink}>{"חזרה"}</Text>
@@ -2352,13 +2334,7 @@ export function ProfilingFlow({ mode = "onboarding", onRedoComplete }: Profiling
   }
 
   if (step === "celebration") return <CelebrationScreen onDone={handleDone} />;
-  if (step === "profile-summary") return <ProfileSummaryScreen collected={collected} onDone={() => {
-    // Fire the funnel event manually since this transition does NOT use `slide()`.
-    // Without this PostHog showed an 86% drop here — most of which was actually
-    // missing telemetry rather than real abandonment.
-    captureEvent('onboarding_step_completed', { step_name: 'profile-summary', next_step: 'building-profile', mode: isRedo ? 'redo' : 'new' });
-    setStep("building-profile");
-  }} onEditStep={editSummaryStep} />;
+  if (step === "profile-summary") return <ProfileSummaryScreen collected={collected} onDone={() => setStep("building-profile")} onEditStep={editSummaryStep} />;
   if (step === "building-profile") return <BuildingProfileScreen onDone={isRedo ? handleDone : () => setStep("celebration")} />;
   if (!isRedo && step === "intro") return (
     <IntroStep
