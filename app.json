@@ -93,7 +93,8 @@
           }
         }
       ],
-      "./plugins/with-modular-podfile"
+      "./plugins/with-modular-podfile",
+      "expo-web-browser"
     ],
     "extra": {
       "router": {},
