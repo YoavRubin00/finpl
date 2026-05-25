@@ -559,7 +559,7 @@ export function InvestmentPathScreen({
               <Text accessibilityRole="header" style={[styles.title, RTL]}>מסלול המכשולים</Text>
             </View>
             <Text style={[styles.subtitle, RTL]}>
-              15 שנים של חיסכון בקופת גמל. האם תחזיק מעמד?
+              15 שנים של חיסכון בקופת גמל להשקעה. האם תחזיק מעמד?
             </Text>
             <Text style={[styles.subtitle, RTL, { fontSize: 12, opacity: 0.9, marginTop: 2 }]}>
               {'תשואה ממוצעת של 7% שנתי, מבוססת על תשואת S&P 500 הריאלית ההיסטורית (1926-2023)'}
@@ -570,13 +570,14 @@ export function InvestmentPathScreen({
             <View style={[sim3Styles.scoreCard, { marginBottom: 20 }]}>
               <View style={styles.introCard}>
                 <Text style={[styles.introText, RTL]}>
-                  הפקדת ₪{config.initialDeposit.toLocaleString('he-IL')} לקופת גמל,
+                  הפקדת ₪{config.initialDeposit.toLocaleString('he-IL')} לקופת גמל להשקעה,
                   עם הפקדה חודשית של ₪
                   {config.monthlyDeposit.toLocaleString('he-IL')}.
                 </Text>
                 <Text style={[styles.introText, RTL, { marginTop: 10 }]}>
                   בדרך יהיו מכשולים: ירידות שוק, פיתויים, ולחץ למשוך. כל משיכה
-                  מוקדמת = 25% מס על הרווחים!
+                  הונית = 25% מס על הרווח הריאלי, בכל גיל. רק קצבה חודשית אחרי
+                  גיל 60 פטורה ממס.
                 </Text>
                 <View style={{ flexDirection: 'row-reverse', alignItems: 'center', gap: 8, marginTop: 10 }}>
                   <LottieIcon source={LOTTIE_ROCKET} size={22} />
@@ -652,7 +653,7 @@ export function InvestmentPathScreen({
             </Text>
           </Animated.View>
           <Text style={[styles.balanceLabel, RTL]}>
-            {state.hasWithdrawn ? 'סכום שנמשך (אחרי מס)' : 'יתרה בקופת גמל'}
+            {state.hasWithdrawn ? 'סכום שנמשך (אחרי מס)' : 'יתרה בקופת גמל להשקעה'}
           </Text>
 
           {/* Ghost balance comparison */}

@@ -1,8 +1,11 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { View, Text, Pressable, StyleSheet } from "react-native";
+import { Image as ExpoImage } from "expo-image";
 import Animated, {
   FadeInDown,
   FadeInUp,
+  FadeIn,
+  FadeOut,
   runOnJS,
   useAnimatedStyle,
   useReducedMotion,
@@ -15,7 +18,10 @@ import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import { ChevronUp, ChevronDown } from "lucide-react-native";
 import { successHaptic, tapHaptic, mediumHaptic, selectionHaptic, errorHaptic } from "../../utils/haptics";
 import { ConfettiExplosion } from "../../components/ui/ConfettiExplosion";
+import { FINN_TALKING } from "../retention-loops/finnMascotConfig";
 import type { TimelineOrderPrompt } from "./sentenceTypes";
+
+const HELP_OFFER_DELAY_MS = 15_000;
 
 // משוער — גובה item כולל gap. משמש את ה-pan gesture לחישוב כמה מקומות
 // המשתמש גרר. אם תעדכן את itemRow padding או itemsColumn gap, עדכן גם פה.
@@ -255,6 +261,26 @@ export function TimelineOrderCard({
   const [showYears, setShowYears] = useState<boolean>(false);
   const reducedMotion = useReducedMotion();
 
+  // Captain Shark help offer — appears after 15s of inactivity. If the user
+  // accepts, we auto-arrange the items in their correct order. Each user
+  // interaction (drag, arrow tap) resets the inactivity timer.
+  const [showHelpOffer, setShowHelpOffer] = useState<boolean>(false);
+  const [helpDismissed, setHelpDismissed] = useState<boolean>(false);
+  const helpTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const resetInactivityTimer = useCallback(() => {
+    if (helpTimerRef.current) clearTimeout(helpTimerRef.current);
+    if (helpDismissed || locked) return;
+    helpTimerRef.current = setTimeout(() => {
+      setShowHelpOffer(true);
+    }, HELP_OFFER_DELAY_MS);
+  }, [helpDismissed, locked]);
+  useEffect(() => {
+    resetInactivityTimer();
+    return () => {
+      if (helpTimerRef.current) clearTimeout(helpTimerRef.current);
+    };
+  }, [resetInactivityTimer]);
+
   // Shake animation for incorrect Check attempts. Skipped under reducedMotion.
   const shakeX = useSharedValue(0);
   const shakeStyle = useAnimatedStyle(() => ({
@@ -293,9 +319,28 @@ export function TimelineOrderCard({
       next.splice(clamped, 0, moved);
       setLocalOrder(next);
       tapHaptic();
+      // Any user interaction resets the help-offer countdown.
+      resetInactivityTimer();
     },
-    [locked],
+    [locked, resetInactivityTimer],
   );
+
+  // Apply the correct order in one shot when the user accepts shark's help.
+  const applyCorrectOrder = useCallback(() => {
+    const sorted = [...prompt.items]
+      .sort((a, b) => a.correctOrder - b.correctOrder)
+      .map((it) => it.id);
+    setLocalOrder(sorted);
+    successHaptic();
+    setShowHelpOffer(false);
+    setHelpDismissed(true);
+  }, [prompt.items]);
+
+  const declineHelp = useCallback(() => {
+    setShowHelpOffer(false);
+    setHelpDismissed(true);
+    selectionHaptic();
+  }, []);
 
   const swapAt = useCallback(
     (idx: number, dir: -1 | 1) => {
@@ -405,6 +450,52 @@ export function TimelineOrderCard({
           );
         })}
       </View>
+
+      {/* Captain Shark help offer — appears after 15s of inactivity.
+          Accepting auto-arranges the items in their correct order. */}
+      {showHelpOffer && !locked && (
+        <Animated.View
+          entering={FadeIn.duration(220)}
+          exiting={FadeOut.duration(160)}
+          style={styles.helpOffer}
+        >
+          <View style={styles.helpRow}>
+            <ExpoImage
+              source={FINN_TALKING}
+              style={styles.helpFinn}
+              contentFit="contain"
+              accessible={false}
+            />
+            <Text style={styles.helpText}>צריכים עזרה? אני יכול לסדר את זה.</Text>
+          </View>
+          <View style={styles.helpActions}>
+            <Pressable
+              onPress={applyCorrectOrder}
+              accessibilityRole="button"
+              accessibilityLabel="כן, עזור לי לסדר"
+              style={({ pressed }) => [
+                styles.helpBtn,
+                styles.helpBtnYes,
+                { backgroundColor: accentColor, opacity: pressed ? 0.85 : 1 },
+              ]}
+            >
+              <Text style={styles.helpBtnYesText}>כן, עזור</Text>
+            </Pressable>
+            <Pressable
+              onPress={declineHelp}
+              accessibilityRole="button"
+              accessibilityLabel="לא תודה, אני אסתדר"
+              style={({ pressed }) => [
+                styles.helpBtn,
+                styles.helpBtnNo,
+                { opacity: pressed ? 0.6 : 1 },
+              ]}
+            >
+              <Text style={styles.helpBtnNoText}>אני אסתדר</Text>
+            </Pressable>
+          </View>
+        </Animated.View>
+      )}
 
       {/* Check / Continue button is rendered as a sticky footer by the
           parent (InteractiveRecallScreen). Lifting it out of the card body
@@ -537,5 +628,60 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: "900",
     color: "#059669",
+  },
+  helpOffer: {
+    marginTop: 14,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    borderRadius: 14,
+    backgroundColor: "#f0f9ff",
+    borderWidth: 1,
+    borderColor: "#bae6fd",
+    gap: 10,
+  },
+  helpRow: {
+    flexDirection: "row-reverse",
+    alignItems: "center",
+    gap: 10,
+  },
+  helpFinn: {
+    width: 44,
+    height: 44,
+  },
+  helpText: {
+    flex: 1,
+    fontSize: 14,
+    fontWeight: "700",
+    color: "#0c4a6e",
+    writingDirection: "rtl",
+    textAlign: "right",
+  },
+  helpActions: {
+    flexDirection: "row-reverse",
+    gap: 8,
+  },
+  helpBtn: {
+    flex: 1,
+    paddingVertical: 10,
+    borderRadius: 10,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  helpBtnYes: {
+    borderBottomWidth: 2,
+    borderBottomColor: "rgba(0,0,0,0.15)",
+  },
+  helpBtnYesText: {
+    fontSize: 14,
+    fontWeight: "900",
+    color: "#ffffff",
+  },
+  helpBtnNo: {
+    backgroundColor: "transparent",
+  },
+  helpBtnNoText: {
+    fontSize: 13,
+    fontWeight: "700",
+    color: "#64748b",
   },
 });

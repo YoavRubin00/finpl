@@ -113,26 +113,34 @@ export function InteractiveRecallScreen({
         </Animated.View>
       </ScrollView>
 
-      {/* Sticky CTA footer — only rendered when a TimelineOrderCard is
-          mounted (FillBlankCard auto-advances and exposes nothing). Sits
-          above FinnCoach so it's always visible regardless of card height. */}
-      {prompt.type !== "fill-blank" && cardState && (
+      {/* Sticky CTA footer — always rendered for TimelineOrderCard so the
+          button is visible from the first frame even before the card's
+          useEffect has pushed its state up (which on slow devices could
+          leave the user with no visible CTA for a beat). FillBlankCard
+          auto-advances and doesn't need a CTA, so skip for that type. */}
+      {prompt.type !== "fill-blank" && (
         <View style={styles.stickyFooter}>
           <Pressable
-            onPress={cardState.locked ? cardState.continue_ : cardState.check}
+            onPress={() => {
+              if (!cardState) return;
+              if (cardState.locked) cardState.continue_();
+              else cardState.check();
+            }}
+            disabled={!cardState}
             accessibilityRole="button"
-            accessibilityLabel={cardState.locked ? "המשך" : "בדוק"}
+            accessibilityLabel={cardState?.locked ? "המשך" : "בדוק"}
+            accessibilityState={{ disabled: !cardState }}
             style={({ pressed }) => [
               styles.primaryBtn,
               {
-                backgroundColor: cardState.locked ? "#0ea5e9" : unitColors.bg,
-                borderBottomColor: cardState.locked ? "#0284c7" : "#1e293b",
-                opacity: pressed ? 0.85 : 1,
+                backgroundColor: cardState?.locked ? "#0ea5e9" : unitColors.bg,
+                borderBottomColor: cardState?.locked ? "#0284c7" : "#1e293b",
+                opacity: pressed ? 0.85 : (cardState ? 1 : 0.7),
               },
             ]}
           >
             <Text style={styles.primaryBtnText}>
-              {cardState.locked ? "המשך" : "בדוק"}
+              {cardState?.locked ? "המשך" : "בדוק"}
             </Text>
           </Pressable>
         </View>
