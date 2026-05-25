@@ -4036,7 +4036,11 @@ export function LessonFlowScreen() {
                               playSound('modal_open_4');
                             }, 700);
                           }
-                          // 2s: auto-advance to "מודול הושלם"
+                          // 1.2s: auto-advance to "מודול הושלם". Earlier this was 2s,
+                          // which felt like a dead pause between chest-open animation and
+                          // the Continue CTA appearing — users tapped repeatedly thinking
+                          // the app froze. 1.2s lets the chest open + first coin-fly land,
+                          // then immediately surfaces the next-lesson CTA.
                           safeTimeout(() => {
                             setChestClaimed(true);
                             // Shark Love, every 3rd completed module (3, 6, 9...)
@@ -4054,7 +4058,7 @@ export function LessonFlowScreen() {
                                 playSound('modal_open_4');
                               }, 500);
                             } else if (!isPro && id !== "mod-0-1") {
-                              safeTimeout(() => setShowAdBonus(true), 1800);
+                              safeTimeout(() => setShowAdBonus(true), 1000);
                             }
                             // Duolingo A/B: ride the chest-dopamine peak (1.5-2s), not after it fades
                             // Bridge CTA, every 4 completed modules (4, 8, 12...)
