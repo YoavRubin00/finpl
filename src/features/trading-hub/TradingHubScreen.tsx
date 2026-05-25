@@ -96,8 +96,9 @@ export function TradingHubScreen() {
     const [showIndicesNudge, setShowIndicesNudge] = useState(false);
 
     const updatePrices = useTradingStore((s) => s.updatePrices);
-    const positions = useTradingStore((s) => s.positions);
-    const positionCount = positions.length;
+    // Subscribe to the count only — `positions` is consumed elsewhere (HoldingsScreen)
+    // but here we just want a badge, so re-rendering on every PnL tick is wasteful.
+    const positionCount = useTradingStore((s) => s.positions.length);
 
     // ── UI state: watchlist + progressive unlock + missions + chart mode ──────
     const watchlist = useTradingHubUiStore((s) => s.watchlist);
