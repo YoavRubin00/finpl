@@ -13,7 +13,13 @@ const MONTHLY_DEPOSIT = 500;
 /** Annual return rate (7%) */
 const ANNUAL_RETURN = 0.07;
 
-/** Tax rate on gains for early withdrawal (before age 60) */
+/**
+ * Tax rate on gains for a lump-sum (הונית) withdrawal from קופת גמל להשקעה.
+ * Applies at ANY age — including after 60 if withdrawn as a lump sum. The 0%
+ * tax break only kicks in for monthly-annuity withdrawals (קצבה) after age 60.
+ * The simulation models 15 years of life, so all in-sim withdrawals are
+ * lump-sum and pay this rate.
+ */
 const EARLY_WITHDRAWAL_TAX = 0.25;
 
 // ── Path Events (8 events over 15 years) ──────────────────────────────
@@ -91,23 +97,26 @@ const events: PathEvent[] = [
   {
     id: 'event-4',
     year: 6,
-    description: 'הקופה הפכה לנזילה! עכשיו אפשר למשוך בלי קנס. הכסף שלכם גדל יפה.',
-    emoji: '🔓',
+    // NOTE: קופת גמל להשקעה היא נזילה מהיום הראשון — אין כלל "שש שנים".
+    // כלל ה-6 שנים שייך לקרן השתלמות (מוצר שונה). כאן מציינים אבן דרך
+    // התנהגותית: 6 שנות משמעת + ריבית דריבית שמתחילה להאיץ.
+    description: 'אבן דרך: 6 שנים של משמעת! ריבית דריבית מתחילה להאיץ — הרווחים מרוויחים רווחים.',
+    emoji: '🚀',
     type: 'milestone',
     options: [
       {
         id: 'e4-continue',
-        label: 'מעולה, ממשיך',
+        label: 'ממשיך כמו שעון',
         effect: 'continue',
         taxImplication: 0,
-        feedback: 'חכמים! רק כי הכסף נזיל, לא חייבים למשוך אותו. תנו לו לצמוח.',
+        feedback: 'חכמים! קופת גמל להשקעה נזילה תמיד, אבל הכוח האמיתי הוא הזמן. תנו לו לצמוח עד גיל 60 כדי לקבל קצבה פטורה ממס.',
       },
       {
         id: 'e4-withdraw',
-        label: 'סוף סוף! משוך הכל',
+        label: 'משוך לטיול שאני חולם עליו',
         effect: 'withdraw',
         taxImplication: EARLY_WITHDRAWAL_TAX,
-        feedback: 'משכתם! שילמתם 25% מס על הרווחים. הכסף היה יכול לצמוח עוד הרבה...',
+        feedback: 'משכתם! בקופת גמל להשקעה משיכה הונית חייבת תמיד ב-25% מס על הרווח הריאלי — בכל גיל. הפסדתם גם את הפטור על הקצבה בגיל 60.',
       },
     ],
   },
@@ -207,8 +216,12 @@ export const investmentPathConfig: InvestmentPathConfig = {
   events,
 };
 
-/** Tax rate on gains for early withdrawal (before age 60) */
+/** Tax rate on real gains for any lump-sum (הונית) withdrawal — applies at every age. */
 export const EARLY_TAX_RATE = EARLY_WITHDRAWAL_TAX;
 
-/** Tax rate on gains for post-60 withdrawal */
-export const POST_60_TAX_RATE = 0;
+/**
+ * Tax rate when the saver elects to withdraw as a monthly annuity (קצבה
+ * מוכרת) after age 60 AND meets the minimum-pension condition. 0% only in
+ * this specific path; a post-60 lump-sum still pays EARLY_TAX_RATE.
+ */
+export const POST_60_ANNUITY_TAX_RATE = 0;
