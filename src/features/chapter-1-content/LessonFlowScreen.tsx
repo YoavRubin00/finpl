@@ -4117,6 +4117,13 @@ export function LessonFlowScreen() {
                 </View>
               }
               onContinue={() => {
+                // Defensive: ensure the current module is marked complete before
+                // navigating. Normally the chest-opening flow does this, but if
+                // the chest path is skipped or fails silently, the user would
+                // loop back to the same module from goToNextSequentialModule().
+                if (mod && !isReplay) {
+                  completeModule(mod.id);
+                }
                 // Skip the inter-module game when the next route is itself a
                 // game/interstitial — otherwise the user plays two minigames
                 // back-to-back. Today this only affects mod-0-3, which routes
