@@ -53,6 +53,6 @@ export const inflationRaceConfig: InflationRaceConfig = {
   inflationRate: INFLATION_RATE,
   investmentReturn: INVESTMENT_RETURN,
   minYears: 1,
-  maxYears: 20,
+  maxYears: 10,
   products,
 };

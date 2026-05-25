@@ -177,20 +177,9 @@ export function LifelineChatOverlay({ visible, conceptTag, onClose }: Props) {
     }
   }, [visible, isPro]);
 
-  // Auto-send initial question once quota check resolves (locked === false).
-  // Guarding on locked === false (not !locked) prevents firing before the async
-  // getDailyUsage call in the effect above has settled from null.
-  useEffect(() => {
-    if (visible && conceptTag && messages.length === 0 && locked === false) {
-      const autoMsg = `היי, אני לא מבין/ה את הנושא "${conceptLabel}". אפשר הסבר פשוט?`;
-      setMessages([{ role: "user", content: autoMsg }]);
-      callGemini([{ role: "user", content: autoMsg }]);
-      if (!isPro) {
-        incrementDailyUsage(authId);
-      }
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [visible, conceptTag, locked]);
+  // No auto-send — the intro bubble invites the user to ask their own
+  // question, matching the regular ChatScreen UX. Quota is incremented
+  // when the user actually sends a message (see sendMessage).
 
   // Reset when closed — back to null so next open waits for quota check again.
   useEffect(() => {
@@ -203,7 +192,41 @@ export function LifelineChatOverlay({ visible, conceptTag, onClose }: Props) {
   }, [visible]);
 
   const abortControllerRef = useRef<AbortController | null>(null);
-  useEffect(() => () => { abortControllerRef.current?.abort(); }, []);
+  // Typewriter: chunks accumulate in pendingRef and drain at a steady cadence
+  // so the UI paints incrementally (~2 chars/40ms = ~50 cps) even when the
+  // transport delivers the whole body in one chunk. Same pattern as ChatScreen.
+  const pendingRef = useRef<string>("");
+  const drainTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  const stopDrain = useCallback(() => {
+    if (drainTimerRef.current) {
+      clearInterval(drainTimerRef.current);
+      drainTimerRef.current = null;
+    }
+  }, []);
+
+  const startDrain = useCallback(() => {
+    if (drainTimerRef.current) return;
+    const CHARS_PER_TICK = 2;
+    const TICK_MS = 40;
+    drainTimerRef.current = setInterval(() => {
+      if (pendingRef.current.length === 0) return;
+      const take = pendingRef.current.slice(0, CHARS_PER_TICK);
+      pendingRef.current = pendingRef.current.slice(CHARS_PER_TICK);
+      setMessages((prev) => {
+        const last = prev[prev.length - 1];
+        if (!last || last.role !== "assistant") return prev;
+        return [...prev.slice(0, -1), { ...last, content: last.content + take }];
+      });
+      setTimeout(() => scrollRef.current?.scrollToEnd({ animated: false }), 0);
+    }, TICK_MS);
+  }, []);
+
+  useEffect(() => () => {
+    abortControllerRef.current?.abort();
+    stopDrain();
+    pendingRef.current = "";
+  }, [stopDrain]);
 
   const callGemini = useCallback(
     (msgs: ChatMsg[]) => {
@@ -226,7 +249,7 @@ export function LifelineChatOverlay({ visible, conceptTag, onClose }: Props) {
         content: m.content,
       }));
 
-      setMessages((prev) => [...prev, { role: "assistant", content: "" }]);
+      pendingRef.current = "";
 
       abortControllerRef.current?.abort();
       abortControllerRef.current = new AbortController();
@@ -238,36 +261,40 @@ export function LifelineChatOverlay({ visible, conceptTag, onClose }: Props) {
         (chunk) => {
           if (firstChunk) {
             setLoading(false);
+            setMessages((prev) => [...prev, { role: "assistant", content: "" }]);
             firstChunk = false;
+            startDrain();
           }
+          pendingRef.current += chunk;
           accumulated += chunk;
-          setMessages((prev) =>
-            prev.map((m, i) =>
-              i === prev.length - 1 && m.role === "assistant"
-                ? { ...m, content: m.content + chunk }
-                : m,
-            ),
-          );
-          setTimeout(() => scrollRef.current?.scrollToEnd({ animated: false }), 50);
         },
         abortControllerRef.current.signal,
       ).then(({ ok }) => {
-        if (!ok) {
-          setMessages((prev) =>
-            prev.map((m, i) =>
-              i === prev.length - 1 && m.role === "assistant"
-                ? { ...m, content: "שגיאה בחיבור. נסו שוב." }
-                : m,
-            ),
-          );
-        } else if (accumulated) {
-          AccessibilityInfo.announceForAccessibility(accumulated);
-        }
-        setLoading(false);
-        setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 100);
+        // Wait for drain to flush remaining buffer, then finalize.
+        const finalize = () => {
+          stopDrain();
+          if (!ok) {
+            setMessages((prev) =>
+              prev.map((m, i) =>
+                i === prev.length - 1 && m.role === "assistant"
+                  ? { ...m, content: "שגיאה בחיבור. נסו שוב." }
+                  : m,
+              ),
+            );
+          } else if (accumulated) {
+            AccessibilityInfo.announceForAccessibility(accumulated);
+          }
+          setLoading(false);
+          setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 100);
+        };
+        const check = () => {
+          if (pendingRef.current.length === 0) finalize();
+          else setTimeout(check, 50);
+        };
+        check();
       });
     },
-    [displayName, profile, companionId, companion, allCompleted, currentChapter, conceptLabel],
+    [displayName, profile, companionId, companion, allCompleted, currentChapter, conceptLabel, startDrain, stopDrain],
   );
 
   const sendMessage = useCallback(() => {
@@ -277,7 +304,12 @@ export function LifelineChatOverlay({ visible, conceptTag, onClose }: Props) {
     const newMsgs: ChatMsg[] = [...messages, { role: "user", content: text }];
     setMessages(newMsgs);
     callGemini(newMsgs);
-  }, [input, loading, messages, callGemini]);
+    // Quota counts user-initiated sends (the auto-send was removed; this is
+    // the only path that hits the server now).
+    if (!isPro) {
+      incrementDailyUsage(authId);
+    }
+  }, [input, loading, messages, callGemini, isPro, authId]);
 
   return (
     <Modal
@@ -287,11 +319,7 @@ export function LifelineChatOverlay({ visible, conceptTag, onClose }: Props) {
       statusBarTranslucent
       onRequestClose={onClose}
     >
-      <ImageBackground
-        source={{ uri: 'https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/images/CHAT%20BACK.jpg' }}
-        style={{ flex: 1 }}
-        resizeMode="cover"
-      >
+      <View style={{ flex: 1, backgroundColor: '#ffffff' }}>
         <KeyboardAvoidingView
           style={st.root}
           behavior={Platform.OS === "ios" ? "padding" : undefined}
@@ -416,7 +444,7 @@ export function LifelineChatOverlay({ visible, conceptTag, onClose }: Props) {
             </>
           )}
         </KeyboardAvoidingView>
-      </ImageBackground>
+      </View>
     </Modal>
   );
 }
@@ -482,7 +510,8 @@ const st = StyleSheet.create({
     flex: 1,
   },
   messagesContent: {
-    padding: 16,
+    paddingHorizontal: 20,
+    paddingVertical: 16,
     gap: 12,
     paddingBottom: 20,
   },
@@ -533,11 +562,12 @@ const st = StyleSheet.create({
     fontSize: 13,
   },
   bubble: {
-    maxWidth: "78%",
+    maxWidth: "72%",
+    flexShrink: 1,
     borderRadius: 16,
-    paddingHorizontal: 12,
-    paddingTop: 8,
-    paddingBottom: 4,
+    paddingHorizontal: 14,
+    paddingTop: 10,
+    paddingBottom: 8,
   },
   userBubble: {
     backgroundColor: "#ede9fe",
