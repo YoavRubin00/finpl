@@ -17,6 +17,8 @@ interface Props {
 
 export function AppIntroSplash({ onDismiss }: Props) {
   const dismissedRef = useRef(false);
+  const onDismissRef = useRef(onDismiss);
+  onDismissRef.current = onDismiss;
 
   const player = useVideoPlayer(VIDEO_URL, (p) => {
     p.loop = false;
@@ -28,24 +30,30 @@ export function AppIntroSplash({ onDismiss }: Props) {
     };
   });
 
+  // Mount-only effect — must NOT depend on `onDismiss` (recreated each parent
+  // render) or `player` (recreated by useVideoPlayer). Re-running this effect
+  // resets the auto-dismiss timer, leaving the splash stuck on screen with
+  // zIndex 99999 blocking every button below. Read both via refs instead.
+  const playerRef = useRef(player);
+  playerRef.current = player;
   useEffect(() => {
     const dismissOnce = () => {
       if (dismissedRef.current) return;
       dismissedRef.current = true;
-      try { player.pause(); } catch { /* ignore */ }
-      onDismiss();
+      try { playerRef.current.pause(); } catch { /* ignore */ }
+      onDismissRef.current();
     };
 
-    try { player.play(); } catch { /* ignore */ }
+    try { playerRef.current.play(); } catch { /* ignore */ }
     const timer = setTimeout(dismissOnce, DISPLAY_MS);
     return () => clearTimeout(timer);
-  }, [player, onDismiss]);
+  }, []);
 
   const handleTap = () => {
     if (dismissedRef.current) return;
     dismissedRef.current = true;
-    try { player.pause(); } catch { /* ignore */ }
-    onDismiss();
+    try { playerRef.current.pause(); } catch { /* ignore */ }
+    onDismissRef.current();
   };
 
   return (
