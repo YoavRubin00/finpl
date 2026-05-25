@@ -67,6 +67,19 @@ import { startAppStateListener } from "../src/lib/auth/appStateListener";
 setOnUnauthorized(() => {
   lifecycleSignOut().catch(() => { /* swallow */ });
 });
+
+// Dev-only: auto-grant PRO subscription + refill hearts so dev iteration
+// isn't blocked by paywall/hearts-out. Removed in production builds.
+if (__DEV__) {
+  // Auto-grant PRO in subscription cache so useIsPro() returns true everywhere
+  queryClient.setQueryData(['subscription'], { isPro: true, proExpiresAt: null });
+  // Refill hearts on cold start
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const { useHeartsStore, MAX_HEARTS } = require('../src/features/subscription/useHeartsStore');
+    useHeartsStore.setState({ hearts: MAX_HEARTS, lastLostAt: null });
+  } catch { /* swallow */ }
+}
 import { RewardAnimationProvider } from "../src/hooks/useRewardAnimation";
 import { StreakCelebrationProvider } from "../src/hooks/useStreakCelebration";
 import { WisdomPopupCard } from "../src/features/wisdom-flashes/WisdomPopupCard";
