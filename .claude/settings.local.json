@@ -83,7 +83,8 @@
       "Bash(npx eas *)",
       "Bash(git add *)",
       "Bash(git push *)",
-      "Bash(git checkout *)"
+      "Bash(git checkout *)",
+      "Bash(powershell -NoProfile -Command 'Get-ChildItem -File | Sort-Object Length -Descending | ForEach-Object { Write-Host \\([math]::Round\\($_.Length/1MB,2\\)\\) '\\\\''|'\\\\'' $_.Name }')"
     ],
     "additionalDirectories": [
       "\\tmp",
