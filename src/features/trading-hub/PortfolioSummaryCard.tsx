@@ -1,9 +1,9 @@
 import { View, Text, StyleSheet } from 'react-native';
 import { CALM } from '../../constants/theme';
 import { LottieIcon } from '../../components/ui/LottieIcon';
+import { GoldCoinIcon } from '../../components/ui/GoldCoinIcon';
 
 const LOTTIE_CHART = require('../../../assets/lottie/wired-flat-153-bar-chart-hover-pinch.json');
-const LOTTIE_COIN = require('../../../assets/lottie/wired-flat-291-coin-dollar-hover-pinch.json');
 
 const RTL = { writingDirection: 'rtl' as const, textAlign: 'right' as const };
 
@@ -64,7 +64,7 @@ export function PortfolioSummaryCard({
                 <View style={styles.statCell}>
                     <Text style={[RTL, styles.statLabel]}>כח קניה</Text>
                     <View style={{ flexDirection: 'row-reverse', alignItems: 'center', gap: 4 }}>
-                        <LottieIcon source={LOTTIE_COIN} size={18} />
+                        <GoldCoinIcon size={18} />
                         <Text style={styles.statValue}>
                             {availableCoins.toLocaleString('he-IL')}
                         </Text>

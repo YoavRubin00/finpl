@@ -13,6 +13,7 @@ import { StockIcon } from './StockIcon';
 import { FINN_STANDARD } from '../retention-loops/finnMascotConfig';
 import { tapHaptic, successHaptic } from '../../utils/haptics';
 import { LiquidButton } from '../../components/ui/LiquidButton';
+import { GoldCoinIcon } from '../../components/ui/GoldCoinIcon';
 
 const RTL = { writingDirection: 'rtl' as const, textAlign: 'right' as const };
 const QUICK_AMOUNTS = [100, 500, 1000];
@@ -215,7 +216,7 @@ export function BuySheet({ visible, assetId, currentPrice, previousClose, onClos
                             <View style={styles.balanceRow}>
                                 <Text style={[RTL, styles.balanceLabel]}>מטבעות זמינים</Text>
                                 <View style={{ flexDirection: 'row-reverse', alignItems: 'center', gap: 6 }}>
-                                    <Text style={{ fontSize: 18 }} accessible={false}>🪙</Text>
+                                    <GoldCoinIcon size={18} />
                                     <Text style={styles.balanceValue}>
                                         {coins.toLocaleString('he-IL', { maximumFractionDigits: 0 })}
                                     </Text>
