@@ -51,10 +51,16 @@ export function HoldingsScreen() {
 
     const [closeResult, setCloseResult] = useState<CloseResult | null>(null);
 
-    // Refresh prices on mount (and on demand via refresh button)
+    // Refresh prices on mount (and on demand via refresh button).
+    // Includes pending limit orders' assets — otherwise a limit on an asset the
+    // user doesn't yet hold would never get a fresh price to trigger against.
     const mountedRef = useRef(true);
     const refreshPrices = useCallback(() => {
-        const assetIds = [...new Set(useTradingStore.getState().positions.map((p) => p.assetId))];
+        const state = useTradingStore.getState();
+        const assetIds = [...new Set([
+            ...state.positions.map((p) => p.assetId),
+            ...state.pendingOrders.map((o) => o.assetId),
+        ])];
         assetIds.forEach(async (id) => {
             try {
                 // Both calls hit the same backend request internally (deduped via
@@ -64,6 +70,9 @@ export function HoldingsScreen() {
                     fetchPreviousClose(id),
                 ]);
                 if (!mountedRef.current) return;
+                // updatePrices also evaluates pending limit orders for this asset,
+                // so updating an asset the user only has a pending order on is what
+                // triggers the limit fill.
                 if (price > 0) updatePrices(id, price);
                 if (prevClose !== null && prevClose > 0) setPreviousClose(id, prevClose);
             } catch { /* skip */ }
