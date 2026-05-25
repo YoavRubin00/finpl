@@ -5,8 +5,13 @@ import { Platform } from 'react-native';
 const TOKEN_KEY = 'finplay_auth_token';
 const BACKFILL_FLAG_KEY = 'finplay_backfill_v1_done';
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const webStorage = (): any => (globalThis as Record<string, unknown>)['localStorage'];
+interface WebStorageLike {
+  getItem(key: string): string | null;
+  setItem(key: string, value: string): void;
+  removeItem(key: string): void;
+}
+const webStorage = (): WebStorageLike | undefined =>
+  (globalThis as Record<string, unknown>)['localStorage'] as WebStorageLike | undefined;
 
 async function setItem(key: string, value: string): Promise<void> {
   if (Platform.OS === 'web') {

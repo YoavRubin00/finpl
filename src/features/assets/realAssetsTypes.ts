@@ -1,3 +1,5 @@
+import type { ImageSourcePropType } from 'react-native';
+
 export type AssetType =
   | 'real_estate'
   | 'commercial'
@@ -10,7 +12,7 @@ export interface RealAsset {
   id: string;
   name: string;
   emoji: string;
-  image?: any;
+  image?: ImageSourcePropType;
   type: AssetType;
   tier: 1 | 2 | 3;
   baseCost: number;
