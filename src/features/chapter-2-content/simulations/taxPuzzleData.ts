@@ -146,7 +146,10 @@ export const ATTRIBUTE_LABELS: Record<string, string> = {
 };
 
 /**
- * Simplified Israeli progressive tax brackets (2024-approximate).
+ * Israeli progressive tax brackets (2026, post-January widening).
+ * The 20% bracket extended from 193,800 → 228,000 ₪/year, and the 31%
+ * bracket from 269,280 → 301,200 ₪/year — meaning salaries of ₪16-19K/month
+ * stay in the 20% band instead of crossing into 31%.
  * Returns monthly tax for a given monthly gross salary.
  */
 export function calculateMonthlyTax(monthlyGross: number): number {
@@ -155,8 +158,8 @@ export function calculateMonthlyTax(monthlyGross: number): number {
   const brackets: { limit: number; rate: number }[] = [
     { limit: 84_120, rate: 0.1 },
     { limit: 120_720, rate: 0.14 },
-    { limit: 193_800, rate: 0.2 },
-    { limit: 269_280, rate: 0.31 },
+    { limit: 228_000, rate: 0.2 },
+    { limit: 301_200, rate: 0.31 },
     { limit: 560_280, rate: 0.35 },
     { limit: 721_560, rate: 0.47 },
     { limit: Infinity, rate: 0.5 },

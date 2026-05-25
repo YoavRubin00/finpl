@@ -26,16 +26,16 @@ export const MORTGAGE_OPTIONS: MortgageOption[] = [
     fixedPercent: 1.0,
     variablePercent: 0,
     years: 25,
-    monthlyPayment: 6_665, // ₪1.2M at 4.5% fixed, 25yr
+    monthlyPayment: 6_840, // ₪1.2M at 4.75% fixed, 25yr (2026 avg fixed non-indexed)
   },
   {
     id: 'balanced-mix',
     label: '50/50 מיקס',
-    description: 'חצי קבועה 4%, חצי משתנה 3.5%. מאוזן, חוסך קצת אבל עם סיכון קטן.',
+    description: 'חצי קבועה 4.5%, חצי משתנה 4%. מאוזן, חוסך מעט אבל עם סיכון קטן.',
     fixedPercent: 0.5,
     variablePercent: 0.5,
     years: 25,
-    monthlyPayment: 6_165, // ₪600K at 4% + ₪600K at 3.5%, 25yr
+    monthlyPayment: 6_500, // ₪600K at 4.5% + ₪600K at 4%, 25yr
   },
   {
     id: 'variable-risky',
@@ -44,16 +44,19 @@ export const MORTGAGE_OPTIONS: MortgageOption[] = [
     fixedPercent: 0,
     variablePercent: 1.0,
     years: 30,
-    monthlyPayment: 5_058, // ₪1.2M at 3% variable, 30yr
+    monthlyPayment: 5_730, // ₪1.2M at 4% variable, 30yr
   },
 ];
 
 // ── Fixed & Variable Rates ───────────────────────────────────────────
-// Used by the hook to compute actual payments and apply rate events
-export const FIXED_RATE = 0.045; // 4.5% for option 1
-export const FIXED_RATE_MIX = 0.04; // 4% for the fixed portion of option 2
-export const VARIABLE_RATE_INITIAL = 0.035; // 3.5% initial for option 2 variable portion
-export const VARIABLE_RATE_FULL = 0.03; // 3% initial for option 3 (all variable)
+// Used by the hook to compute actual payments and apply rate events.
+// Aligned with Bank of Israel avg mortgage rates (April 2026): fixed
+// non-indexed ~4.77%, variable non-indexed ~4.76%, prime ~4.84%. Variable
+// is set slightly below fixed so rate-hike events can demonstrate the risk.
+export const FIXED_RATE = 0.0475; // 4.75% for option 1
+export const FIXED_RATE_MIX = 0.045; // 4.5% for the fixed portion of option 2
+export const VARIABLE_RATE_INITIAL = 0.04; // 4% initial for option 2 variable portion
+export const VARIABLE_RATE_FULL = 0.04; // 4% initial for option 3 (all variable)
 
 // ── Life Events ──────────────────────────────────────────────────────
 export const REAL_ESTATE_EVENTS: RealEstateEvent[] = [
