@@ -79,8 +79,12 @@ export function buildChartHtml({ mode, data, timeframe, maPeriod, theme }: Build
       color: (d.close as number) >= (d.open as number) ? t.volumeUp : t.volumeDown,
     }));
 
-  // Indicators only render in advanced mode, on weekly data, when enough points exist.
-  const showIndicators = mode === 'advanced' && timeframe === '1W' && candles.length >= Math.max(maPeriod, 15);
+  // Indicators render in advanced mode on 1D (hourly bars over 5 days, ~33 points)
+  // and 1W (daily bars). Earlier 1D was disabled because 5-min bars gave a noisy
+  // MA; with the hourly switch we have enough density without the noise.
+  // The `candles.length >= maPeriod` guard still prevents MA200 from rendering
+  // when there isn't enough history (e.g. MA20 only on 1D since 1D has ~33 bars).
+  const showIndicators = mode === 'advanced' && (timeframe === '1D' || timeframe === '1W') && candles.length >= Math.max(maPeriod, 15);
 
   let ma: Array<{ time: number; value: number }> = [];
   if (showIndicators) {
