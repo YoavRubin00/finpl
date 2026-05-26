@@ -106,6 +106,7 @@ import { StreakFreezeSaveModal } from "../src/features/streak/StreakFreezeSaveMo
 import { StreakRepairModal } from "../src/features/streak/StreakRepairModal";
 import { useTutorialStore } from "../src/stores/useTutorialStore";
 import { useGoogleAuth } from "../src/features/auth/useGoogleAuth";
+import { useIsModuleCompleted } from "../src/features/chapter-1-content/useProgress";
 
 // ── Global font override: all <Text> and <TextInput> use Heebo ──
 const FONT_FAMILY = "Heebo_400Regular";
@@ -363,6 +364,13 @@ function RootLayoutInner() {
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
   const hasCompletedOnboarding = useAuthStore((s) => s.hasCompletedOnboarding);
   const hasSeenWalkthrough = useTutorialStore((s) => s.hasSeenAppWalkthrough);
+  // Suppress all auto-popup modals until the user finishes the very first
+  // lesson (mod-0-1). New users complaining that the GlobalQuestCompletion
+  // modal kicked them out of the in-app walkthrough the moment they pressed
+  // "בואו נתחיל" — any quest auto-completion during the tutorial fired the
+  // popup and broke the first-run experience.
+  const isMod01Complete = useIsModuleCompleted("mod-0-1");
+  const allowAutoPopups = hasCompletedOnboarding && hasSeenWalkthrough && isMod01Complete;
 
   // ── Android Play Install Referrer — runs once on first launch ──
   // When a user clicks finplay.me/invite/CODE and installs from the Play Store,
@@ -485,10 +493,10 @@ function RootLayoutInner() {
               <Slot />
               {isAuthenticated && hasCompletedOnboarding && <AppWalkthroughOverlay />}
               <ShopModal />
-              <GlobalUpgradeModal />
-              <PostStreakIncomeSplash />
-              <WisdomPopupCard />
-              <GlobalQuestCompletionModal />
+              {allowAutoPopups && <GlobalUpgradeModal />}
+              {allowAutoPopups && <PostStreakIncomeSplash />}
+              {allowAutoPopups && <WisdomPopupCard />}
+              {allowAutoPopups && <GlobalQuestCompletionModal />}
               <DailyBridgeNudgeModal />
               <InviteFriendsNudgeModal />
               {hasCompletedOnboarding && hasSeenWalkthrough && <GuestRegisterDailyNudge />}

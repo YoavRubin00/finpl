@@ -308,11 +308,19 @@ export const SwipeGameCard = React.memo(function SwipeGameCard({ isActive }: Pro
           </View>
         )}
 
-        {/* Swipeable card, flanked by Bear (שורט) left and Bull (לונג) right */}
+        {/* Swipeable card, flanked by Bear (שורט) left and Bull (לונג) right.
+            Side pills are tappable too — many users (and small screens) can't
+            comfortably drag the narrow middle card, so tap = the same choice. */}
         {gameState === 'playing' && currentIndex < cards.length && !lastFeedback && (
           <View style={styles.swipeArea}>
-            {/* LEFT, Bear / SHORT */}
-            <View style={styles.sideColumn}>
+            {/* LEFT, Bear / SHORT — tap = שורט */}
+            <Pressable
+              onPress={() => handleSwipe(false)}
+              style={styles.sideColumn}
+              accessibilityRole="button"
+              accessibilityLabel="בחר שורט"
+              hitSlop={8}
+            >
               <View style={[styles.sidePill, styles.sidePillShort]}>
                 <View accessible={false}>
                   <LottieIcon source={LOTTIE_BEAR} size={68} />
@@ -322,7 +330,7 @@ export const SwipeGameCard = React.memo(function SwipeGameCard({ isActive }: Pro
                   <Text style={[styles.sideLabel, { color: '#b91c1c' }]}>שורט</Text>
                 </View>
               </View>
-            </View>
+            </Pressable>
 
             {/* MIDDLE, Swipeable card */}
             <View style={styles.cardMiddleCol}>
@@ -333,8 +341,14 @@ export const SwipeGameCard = React.memo(function SwipeGameCard({ isActive }: Pro
               />
             </View>
 
-            {/* RIGHT, Bull / LONG */}
-            <View style={styles.sideColumn}>
+            {/* RIGHT, Bull / LONG — tap = לונג */}
+            <Pressable
+              onPress={() => handleSwipe(true)}
+              style={styles.sideColumn}
+              accessibilityRole="button"
+              accessibilityLabel="בחר לונג"
+              hitSlop={8}
+            >
               <View style={[styles.sidePill, styles.sidePillLong]}>
                 <View accessible={false}>
                   <LottieIcon source={LOTTIE_BULL} size={68} />
@@ -344,7 +358,7 @@ export const SwipeGameCard = React.memo(function SwipeGameCard({ isActive }: Pro
                   <Text style={[styles.sideArrow, { color: '#16a34a' }]}>→</Text>
                 </View>
               </View>
-            </View>
+            </Pressable>
           </View>
         )}
 
