@@ -775,14 +775,12 @@ export function ChatScreen({ lessonContext }: { lessonContext?: LessonContext } 
             </View>
             <Pressable
               onPress={() => {
-                if (!isPro) {
-                  router.push("/pricing" as never);
-                  return;
-                }
+                // Free users get a 1-minute lifetime trial — let them in;
+                // the call screen handles the cap + upgrade modal once it's used.
                 router.push("/shark-voice" as never);
               }}
               accessibilityRole="button"
-              accessibilityLabel={isPro ? "שיחת וידאו אחד על אחד עם שארק" : "שיחת וידאו עם שארק - PRO בלבד"}
+              accessibilityLabel={isPro ? "שיחת וידאו אחד על אחד עם שארק" : "שיחת היכרות עם שארק - דקה חינם"}
               style={{ marginLeft: 8, position: "relative" }}
             >
               {isPro ? (

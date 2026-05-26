@@ -7,6 +7,7 @@ import { X } from 'lucide-react-native';
 import { tapHaptic } from '../../utils/haptics';
 import { UnderwaterBubbles } from './components/UnderwaterBubbles';
 import { useSubscriptionStore } from '../subscription/useSubscriptionStore';
+import { useUpgradeModalStore } from '../../stores/useUpgradeModalStore';
 import { useSharkVoiceStore } from './useSharkVoiceStore';
 import { useElevenLabsConversation } from './hooks/useElevenLabsConversation';
 import { SharkAvatar } from './components/SharkAvatar';
@@ -28,6 +29,8 @@ export function SharkVoiceCallScreen(): React.ReactElement {
   const canUseSharkVoice = useSubscriptionStore((s) => s.canUseSharkVoice);
   const getRemaining = useSubscriptionStore((s) => s.getSharkVoiceSecondsRemaining);
   const recordUsage = useSubscriptionStore((s) => s.recordSharkVoiceUsage);
+  const isPro = useSubscriptionStore((s) => s.isPro());
+  const showUpgradeModal = useUpgradeModalStore((s) => s.show);
 
   const status = useSharkVoiceStore((s) => s.status);
   const errorMessage = useSharkVoiceStore((s) => s.errorMessage);
@@ -102,6 +105,13 @@ export function SharkVoiceCallScreen(): React.ReactElement {
     router.replace('/(tabs)/chat' as never);
   };
 
+  const handleCapUpgrade = () => {
+    setCapModalVisible(false);
+    router.replace('/(tabs)/chat' as never);
+    // Defer so the navigation transition completes before the modal pops in.
+    setTimeout(() => showUpgradeModal('shark-voice'), 250);
+  };
+
   return (
     <View style={{ flex: 1, backgroundColor: '#f6c3b8' }}>
       <StatusBar barStyle="light-content" />
@@ -124,8 +134,8 @@ export function SharkVoiceCallScreen(): React.ReactElement {
           alignItems: 'center',
           justifyContent: 'center',
         }}
-        imageStyle={{ resizeMode: 'cover' }}
-        resizeMode="cover"
+        imageStyle={{ resizeMode: 'contain' }}
+        resizeMode="contain"
       />
       {/* Soft dark vignette to keep top/bottom UI legible over the busy image. */}
       <LinearGradient
@@ -215,7 +225,12 @@ export function SharkVoiceCallScreen(): React.ReactElement {
         <CallControls onEndCall={handleClose} onToggleMute={toggleMute} />
       </SafeAreaView>
 
-      <CapExceededModal visible={capModalVisible} onClose={handleCapAcknowledge} />
+      <CapExceededModal
+        visible={capModalVisible}
+        reason={isPro ? 'daily-cap' : 'free-trial-over'}
+        onClose={handleCapAcknowledge}
+        onUpgrade={handleCapUpgrade}
+      />
     </View>
   );
 }

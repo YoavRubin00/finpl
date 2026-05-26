@@ -36,6 +36,9 @@ export const BASIC_LIMITS: Record<GatedFeature, number> = {
 export const BREAKING_NEWS_PRO_TICKER_CAP = 5;
 
 export const SHARK_VOICE_DAILY_CAP_SECONDS = 600;
+/** One free taste-test for non-Pro users — they get a single minute,
+ *  lifetime, then hit the upgrade prompt. */
+export const SHARK_VOICE_FREE_LIFETIME_SECONDS = 60;
 export const ANALYST_DEEP_LIFETIME_FREE_LIMIT = 1;
 
 /* ------------------------------------------------------------------ */
@@ -71,9 +74,12 @@ interface SubscriptionState {
   practiceRefillDate: string | null;
   pendingPracticeForHeart: boolean;
 
-  // Shark Voice — 1-on-1 live call (Pro-only, 10 min/day cap)
+  // Shark Voice — 1-on-1 live call.
+  //   Pro:  10 min/day (sharkVoiceSecondsToday + sharkVoiceResetDate).
+  //   Free: 1 min lifetime taste-test (sharkVoiceSecondsUsedFree, never resets).
   sharkVoiceSecondsToday: number;
   sharkVoiceResetDate: string | null;
+  sharkVoiceSecondsUsedFree: number;
 
   // Stock Analyst (free: 1 quick/day + 1 deep lifetime; Pro: unlimited)
   analystQuickUsedToday: number;
@@ -208,6 +214,7 @@ export const useSubscriptionStore = create<SubscriptionState>()(
       // Shark Voice
       sharkVoiceSecondsToday: 0,
       sharkVoiceResetDate: null,
+      sharkVoiceSecondsUsedFree: 0,
 
       // Stock Analyst
       analystQuickUsedToday: 0,
@@ -265,15 +272,16 @@ export const useSubscriptionStore = create<SubscriptionState>()(
 
       getSharkVoiceSecondsRemaining: (): number => {
         const state = get();
+        if (!state.isPro()) {
+          return Math.max(0, SHARK_VOICE_FREE_LIFETIME_SECONDS - state.sharkVoiceSecondsUsedFree);
+        }
         const today = todayISO();
         const usedToday = state.sharkVoiceResetDate === today ? state.sharkVoiceSecondsToday : 0;
         return Math.max(0, SHARK_VOICE_DAILY_CAP_SECONDS - usedToday);
       },
 
       canUseSharkVoice: (): boolean => {
-        const state = get();
-        if (!state.isPro()) return false;
-        return state.getSharkVoiceSecondsRemaining() > 0;
+        return get().getSharkVoiceSecondsRemaining() > 0;
       },
 
       /* ---- Stock Analyst selectors ---- */
@@ -412,8 +420,14 @@ export const useSubscriptionStore = create<SubscriptionState>()(
 
       recordSharkVoiceUsage: (seconds: number) => {
         if (!Number.isFinite(seconds) || seconds <= 0) return;
-        const today = todayISO();
         const state = get();
+        if (!state.isPro()) {
+          set({
+            sharkVoiceSecondsUsedFree: state.sharkVoiceSecondsUsedFree + seconds,
+          });
+          return;
+        }
+        const today = todayISO();
         const usedToday = state.sharkVoiceResetDate === today ? state.sharkVoiceSecondsToday : 0;
         set({
           sharkVoiceSecondsToday: usedToday + seconds,
@@ -526,13 +540,14 @@ export const useSubscriptionStore = create<SubscriptionState>()(
         state.hearts = MAX_HEARTS;
         state.lastHeartLostAt = null;
       },
-      version: 4,
+      version: 5,
       migrate: (persisted: unknown, _version: number) => {
         const safe = (persisted ?? {}) as Record<string, unknown>;
         return {
           ...safe,
           sharkVoiceSecondsToday: safe.sharkVoiceSecondsToday ?? 0,
           sharkVoiceResetDate: safe.sharkVoiceResetDate ?? null,
+          sharkVoiceSecondsUsedFree: safe.sharkVoiceSecondsUsedFree ?? 0,
           analystQuickUsedToday: 0,
           analystQuickResetDate: null,
           analystDeepUsedLifetime: 0,
@@ -554,6 +569,7 @@ export const useSubscriptionStore = create<SubscriptionState>()(
         practiceRefillDate: state.practiceRefillDate,
         sharkVoiceSecondsToday: state.sharkVoiceSecondsToday,
         sharkVoiceResetDate: state.sharkVoiceResetDate,
+        sharkVoiceSecondsUsedFree: state.sharkVoiceSecondsUsedFree,
         analystQuickUsedToday: state.analystQuickUsedToday,
         analystQuickResetDate: state.analystQuickResetDate,
         analystDeepUsedLifetime: state.analystDeepUsedLifetime,

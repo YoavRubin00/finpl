@@ -4,12 +4,46 @@ import { Image as ExpoImage } from 'expo-image';
 
 const RTL = { writingDirection: 'rtl' as const, textAlign: 'center' as const };
 
+export type CapExceededReason = 'daily-cap' | 'free-trial-over';
+
 interface CapExceededModalProps {
   visible: boolean;
+  reason: CapExceededReason;
   onClose: () => void;
+  /** Invoked when the user taps the upgrade CTA (only shown for free-trial-over). */
+  onUpgrade?: () => void;
 }
 
-export function CapExceededModal({ visible, onClose }: CapExceededModalProps): React.ReactElement {
+interface CopyVariant {
+  title: string;
+  body: string;
+  primaryLabel: string;
+  secondaryLabel?: string;
+}
+
+const COPY: Record<CapExceededReason, CopyVariant> = {
+  'daily-cap': {
+    title: 'השארק עייף 🦈',
+    body: 'הגעת לעשר דקות השיחה היומיות שלך. נדבר שוב מחר!',
+    primaryLabel: 'סבבה',
+  },
+  'free-trial-over': {
+    title: 'רוצה להמשיך לדבר עם השארק? 🦈',
+    body: 'דקת ההתנסות שלך הסתיימה. שדרג לפרו לעוד עשר דקות שיחה ביום + פיצ׳רים מתקדמים.',
+    primaryLabel: 'שדרג לפרו',
+    secondaryLabel: 'אולי אחר כך',
+  },
+};
+
+export function CapExceededModal({
+  visible,
+  reason,
+  onClose,
+  onUpgrade,
+}: CapExceededModalProps): React.ReactElement {
+  const copy = COPY[reason];
+  const showUpgrade = reason === 'free-trial-over' && !!onUpgrade;
+
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
       <View
@@ -38,14 +72,15 @@ export function CapExceededModal({ visible, onClose }: CapExceededModalProps): R
             contentFit="contain"
           />
           <Text style={[RTL, { color: '#fff', fontSize: 20, fontWeight: '700' }]}>
-            השארק עייף 🦈
+            {copy.title}
           </Text>
           <Text style={[RTL, { color: '#cbd5e1', fontSize: 15, lineHeight: 22 }]}>
-            הגעת לעשר דקות השיחה היומיות שלך. נדבר שוב מחר!
+            {copy.body}
           </Text>
           <Pressable
-            onPress={onClose}
+            onPress={showUpgrade ? onUpgrade : onClose}
             accessibilityRole="button"
+            accessibilityLabel={copy.primaryLabel}
             style={{
               marginTop: 4,
               backgroundColor: '#3b82f6',
@@ -54,8 +89,22 @@ export function CapExceededModal({ visible, onClose }: CapExceededModalProps): R
               borderRadius: 999,
             }}
           >
-            <Text style={{ color: '#fff', fontSize: 16, fontWeight: '700' }}>סבבה</Text>
+            <Text style={{ color: '#fff', fontSize: 16, fontWeight: '700' }}>
+              {copy.primaryLabel}
+            </Text>
           </Pressable>
+          {copy.secondaryLabel ? (
+            <Pressable
+              onPress={onClose}
+              accessibilityRole="button"
+              accessibilityLabel={copy.secondaryLabel}
+              hitSlop={8}
+            >
+              <Text style={{ color: '#94a3b8', fontSize: 14, fontWeight: '600' }}>
+                {copy.secondaryLabel}
+              </Text>
+            </Pressable>
+          ) : null}
         </View>
       </View>
     </Modal>

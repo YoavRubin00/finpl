@@ -4,7 +4,7 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import Animated, { FadeInDown } from 'react-native-reanimated';
-import { ChevronLeft, Sparkles, TrendingUp, UserCog } from 'lucide-react-native';
+import { ChevronLeft, Sparkles, TrendingUp, UserCog, Wrench } from 'lucide-react-native';
 
 import { STITCH } from '../../constants/theme';
 import { formatShekel } from '../../utils/format';
@@ -41,16 +41,35 @@ export function FinancialToolsScreen(): React.ReactElement {
     () => TOOLS_REGISTRY.filter((t) => t.category === 'financial'),
     [],
   );
+  const activeCount = useMemo(
+    () => TOOLS_REGISTRY.filter((t) => t.status === 'active').length,
+    [],
+  );
 
   return (
     <SafeAreaView style={styles.safe} edges={[]}>
-      <ScrollView
-        contentContainerStyle={[styles.scroll, { paddingTop: topPad + 10 }]}
-        showsVerticalScrollIndicator={false}
-      >
-        <Text accessibilityRole="header" style={styles.pageTitle}>
+      <View style={[styles.header, { paddingTop: topPad + 8 }]}>
+        <LinearGradient
+          colors={['#dbeafe', '#bfdbfe']}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={styles.headerIconCircle}
+        >
+          <Wrench size={20} color={FB_BLUE} strokeWidth={2.4} />
+        </LinearGradient>
+        <Text accessibilityRole="header" style={styles.headerTitle}>
           כלים פיננסיים
         </Text>
+        <View style={styles.headerChip}>
+          <Sparkles size={11} color={FB_BLUE} strokeWidth={2.8} fill={FB_BLUE} />
+          <Text style={styles.headerChipText}>{activeCount} זמינים</Text>
+        </View>
+      </View>
+
+      <ScrollView
+        contentContainerStyle={styles.scroll}
+        showsVerticalScrollIndicator={false}
+      >
 
         <FinancialProfileCta />
 
@@ -217,21 +236,66 @@ function FinancialProfileCta(): React.ReactElement {
   );
 }
 
+const FB_BLUE = '#1877f2';
+const TEXT_PRIMARY = '#1f2937';
+
 const styles = StyleSheet.create({
   safe: {
     flex: 1,
     backgroundColor: STITCH.background,
   },
-  pageTitle: {
-    fontSize: 20,
+  header: {
+    backgroundColor: '#ffffff',
+    paddingHorizontal: 16,
+    paddingBottom: 14,
+    flexDirection: 'row-reverse',
+    alignItems: 'center',
+    gap: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(15,23,42,0.06)',
+  },
+  headerIconCircle: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: FB_BLUE,
+    shadowOpacity: 0.18,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 3 },
+    elevation: 3,
+  },
+  headerTitle: {
+    flex: 1,
+    fontSize: 22,
     fontWeight: '900',
-    color: '#1e293b',
+    color: TEXT_PRIMARY,
     writingDirection: 'rtl',
     textAlign: 'right',
-    alignSelf: 'flex-end',
+    letterSpacing: -0.3,
+  },
+  headerChip: {
+    flexDirection: 'row-reverse',
+    alignItems: 'center',
+    gap: 5,
+    backgroundColor: '#e0f2fe',
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: 'rgba(24,119,242,0.18)',
+  },
+  headerChipText: {
+    fontSize: 11,
+    fontWeight: '900',
+    color: FB_BLUE,
+    writingDirection: 'rtl',
+    letterSpacing: 0.2,
   },
   scroll: {
     paddingHorizontal: 16,
+    paddingTop: 12,
     paddingBottom: 120,
     gap: 14,
   },
