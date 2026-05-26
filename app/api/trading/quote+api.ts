@@ -20,10 +20,13 @@ const TIMEFRAME_PARAMS: Record<Timeframe, YahooParams> = {
   '1MIN': { interval: '1m', range: '1d' },
   '5MIN': { interval: '5m', range: '1d' },
   '1H': { interval: '1h', range: '5d' },
-  // 1D = intraday 5-minute bars over the most recent trading day. The user sees
-  // "today's session so far" during market hours, "yesterday's full session"
-  // outside market hours (Yahoo returns the last completed session).
-  '1D': { interval: '5m', range: '1d' },
+  // 1D = HOURLY candles over the last 5 trading days. Earlier this was 5-minute
+  // bars over 1 day (~78 bars) which (a) felt noisy and (b) gave too few points
+  // for indicators like MA20 to render. With 1h/5d we get ~33 bars — denser
+  // context for trend reading, and enough data for MA overlays in advanced mode.
+  // The header % shown on this timeframe is still "today vs yesterday's close",
+  // not "5-day change" — those bars are only for visual context.
+  '1D': { interval: '1h', range: '5d' },
   // 1W = daily candles over the last 8 calendar days, giving ~5-7 trading days.
   // This matches what users see as "last week" on TradingView, instead of the
   // previous 5-year weekly view that returned ~260 bars.

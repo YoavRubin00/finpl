@@ -369,15 +369,32 @@ export function TradingHubScreen() {
                     <View style={styles.chartCard}>
                         {(() => {
                             const asset = ASSET_BY_ID.get(selectedId);
-                            // 1D timeframe data is intraday (5-min bars over today), so bar[-2]→bar[-1]
-                            // would only be a 5-minute change — useless. Use currentPrice vs previousClose
-                            // instead, which reflects "today vs yesterday's close" (or, when market is
-                            // closed: last trading day vs the day before — i.e. the most recent completed
-                            // day's change). For 1W, daily/weekly bars from chart are correct.
+                            // For 1D (hourly bars over the last 5 days): "yesterday's close" is the
+                            // close of the last bar that occurred before today's session began.
+                            // Deriving baseline directly from chart data keeps numerator + denominator
+                            // self-consistent — previously we mixed Yahoo's `meta.previousClose` with a
+                            // potentially-stale cached `currentPrice`, which produced absurd numbers
+                            // (e.g. NASDAQ "+9%") whenever the two snapshots were out of sync.
+                            // For 1W (daily bars), the previous candle's close = previous trading day.
                             let baseline = 0;
                             let latest = 0;
                             if (timeframe === '1D') {
-                                baseline = previousClose ?? 0;
+                                // Find the last hourly bar whose timestamp falls on a calendar day
+                                // before today (Israel local time — same zone as users open the app in).
+                                const todayStart = new Date();
+                                todayStart.setHours(0, 0, 0, 0);
+                                const todayStartMs = todayStart.getTime();
+                                let baselineFromChart = 0;
+                                for (let i = chartData.length - 1; i >= 0; i--) {
+                                    if (chartData[i].timestamp < todayStartMs) {
+                                        baselineFromChart = chartData[i].close ?? chartData[i].price ?? 0;
+                                        break;
+                                    }
+                                }
+                                // Prefer chart-derived baseline (self-consistent with `latest`); fall
+                                // back to the API's `previousClose` only if the chart didn't include
+                                // a prior-day bar (e.g. first session back from a long weekend).
+                                baseline = baselineFromChart > 0 ? baselineFromChart : (previousClose ?? 0);
                                 latest = currentPrice > 0
                                     ? currentPrice
                                     : (chartData.length >= 1 ? (chartData[chartData.length - 1].close ?? chartData[chartData.length - 1].price ?? 0) : 0);
@@ -389,10 +406,17 @@ export function TradingHubScreen() {
                                     ? (chartData[chartData.length - 1].close ?? chartData[chartData.length - 1].price ?? 0)
                                     : 0;
                             }
-                            const pctChange = baseline > 0 && latest > 0
+                            let pctChange = baseline > 0 && latest > 0
                                 ? ((latest - baseline) / baseline) * 100
                                 : 0;
-                            const hasPctChange = baseline > 0 && latest > 0;
+                            // Sanity cap: a real-world 1-day move >15% on an index or large-cap
+                            // is exceptionally rare (most "limit up" days max around 7-10%). A pct
+                            // outside this range almost certainly reflects mismatched snapshots
+                            // (live price vs week-old previousClose). Suppress the badge in that case
+                            // rather than show a misleading number.
+                            const isSanePct = Math.abs(pctChange) <= 15;
+                            const hasPctChange = baseline > 0 && latest > 0 && isSanePct;
+                            if (!isSanePct) pctChange = 0;
                             const rising = pctChange >= 0;
                             return (
                                 <View style={styles.chartHeader}>
@@ -467,7 +491,7 @@ export function TradingHubScreen() {
                             </Pressable>
                         </View>
                         <Text style={styles.timeframeDesc}>
-                            {timeframe === '1D' ? 'כל נר = 5 דקות · מציג היום (אחוז = שינוי מאתמול)' : 'כל נר = שבוע · מציג ~6 חודשים (אחוז = שינוי משבוע קודם)'}
+                            {timeframe === '1D' ? 'כל נר = שעה · מציג 5 ימים אחרונים (אחוז = שינוי מאתמול)' : 'כל נר = יום · מציג ~6 חודשים (אחוז = שינוי משבוע קודם)'}
                         </Text>
 
                         {/* Chart mode toggle, hidden until the user has made their onboarding choice */}
