@@ -1121,15 +1121,23 @@ export function DuoLearnScreen() {
   }, [replayModule, router, setCurrentChapter, setCurrentModule]);
 
   const handleSkipIntro = useCallback(() => {
-    // Server-sync all ch-0 modules as completed
+    successHaptic();
+    // Server-sync all ch-0 modules as completed. onMutate optimistically updates
+    // the local progress cache so the UI flips to "all ch-0 done → ch-1 unlocked
+    // → cursor on mod-1-1" within the same frame.
     for (const mod of chapter0Data.modules) {
       upsertProgress({ moduleId: mod.id, status: 'completed', xpEarned: 0 });
     }
+    // Move the "current chapter / module" pointer to mod-1-1 so any UI bit that
+    // reads it (lesson resume, header) lands on compound interest, not on the
+    // last completed ch-0 module.
+    setCurrentChapter('ch-1');
+    setCurrentModule(0);
     setTimeout(() => {
       // scroll down to let the user see chapter 1 unlocked
       scrollRef.current?.scrollTo({ y: 800, animated: true });
     }, 300);
-  }, [upsertProgress]);
+  }, [upsertProgress, setCurrentChapter, setCurrentModule]);
 
   // Stable callbacks for ChapterSection (avoids inline arrow re-creation per render)
   const handleLockedPress = useCallback(() => setLockedModalVisible(true), []);
