@@ -473,25 +473,47 @@ export function TimelineOrderCard({
               onPress={applyCorrectOrder}
               accessibilityRole="button"
               accessibilityLabel="כן, עזור לי לסדר"
-              style={({ pressed }) => [
-                styles.helpBtn,
-                styles.helpBtnYes,
-                { opacity: pressed ? 0.85 : 1 },
-              ]}
+              style={({ pressed }) => ({
+                flex: 1,
+                minHeight: 48,
+                paddingVertical: 12,
+                paddingHorizontal: 16,
+                borderRadius: 12,
+                alignItems: "center",
+                justifyContent: "center",
+                backgroundColor: "#38bdf8",
+                borderBottomWidth: 3,
+                borderBottomColor: "#0284c7",
+                elevation: 3,
+                opacity: pressed ? 0.85 : 1,
+              })}
             >
-              <Text style={styles.helpBtnText}>עזור לי</Text>
+              <Text style={{ fontSize: 16, fontWeight: "900", color: "#ffffff", writingDirection: "rtl" }}>
+                עזור לי
+              </Text>
             </Pressable>
             <Pressable
               onPress={declineHelp}
               accessibilityRole="button"
               accessibilityLabel="לא תודה, אני אסתדר"
-              style={({ pressed }) => [
-                styles.helpBtn,
-                styles.helpBtnNo,
-                { opacity: pressed ? 0.85 : 1 },
-              ]}
+              style={({ pressed }) => ({
+                flex: 1,
+                minHeight: 48,
+                paddingVertical: 12,
+                paddingHorizontal: 16,
+                borderRadius: 12,
+                alignItems: "center",
+                justifyContent: "center",
+                backgroundColor: "#2563eb",
+                borderBottomWidth: 3,
+                borderBottomColor: "#1e40af",
+                elevation: 3,
+                opacity: pressed ? 0.85 : 1,
+              })}
             >
-              <Text style={styles.helpBtnText}>אני אסתדר</Text>
+              <Text style={{ fontSize: 16, fontWeight: "900", color: "#ffffff", writingDirection: "rtl" }}>
+                אני אסתדר
+              </Text>
             </Pressable>
           </View>
         </Animated.View>

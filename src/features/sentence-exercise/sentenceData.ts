@@ -326,18 +326,20 @@ export const recallExerciseSets: Record<string, InteractiveRecallSet> = {
         template: "שווי נקודת זיכוי אחת במס הכנסה בישראל הוא כ-{{w}} ₪ בשנה (2026).",
         difficulty: "medium",
         slots: [
-          { slotId: "w", correctChoiceId: "n3024", explanation: "נכון, נקודת זיכוי שווה כ-₪3,024 בשנה (כ-252 ₪ בחודש) ומפחיתה ישירות את המס." },
+          // Updated 2026-05-26 from rashut-hamisim — Israeli tax credit point
+          // value 2026 = 242₪/month × 12 = 2,904₪/year (frozen 2025-2027).
+          { slotId: "w", correctChoiceId: "n2904", explanation: "נכון, נקודת זיכוי שווה כ-₪2,904 בשנה (כ-242 ₪ בחודש) ומפחיתה ישירות את המס." },
         ],
         choices: [
-          { id: "n3024", text: "3,024" },
-          { id: "n252", text: "252" },
+          { id: "n2904", text: "2,904" },
+          { id: "n242", text: "242" },
           { id: "n500", text: "500" },
           { id: "n10000", text: "10,000" },
         ],
         finn: {
           correct: ["מדויק!", "יפה!", "זוכרים את השווי!"],
           empathicFirst: "שימו לב אם המספר שנתי או חודשי.",
-          hintAfterTwoWrongs: "רמז: 252 זה השווי החודשי — כפול 12 זה השנתי.",
+          hintAfterTwoWrongs: "רמז: 242 זה השווי החודשי — כפול 12 זה השנתי.",
         },
       },
       {
