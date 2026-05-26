@@ -1,10 +1,10 @@
-import { useCallback, useRef } from "react";
-import { View, Text, StyleSheet } from "react-native";
+import { useCallback, useRef, useState } from "react";
+import { View, Text, Pressable, StyleSheet, ScrollView } from "react-native";
 import Animated, { FadeIn, FadeOut } from "react-native-reanimated";
-import { useEconomyStore } from "../economy/useEconomyStore";
+import { useEconomyUIStore } from "../economy/useEconomyUIStore";
 import { FinnCoach } from "./FinnCoach";
 import { FillBlankCard } from "./FillBlankCard";
-import { TimelineOrderCard } from "./TimelineOrderCard";
+import { TimelineOrderCard, type TimelineOrderCardState } from "./TimelineOrderCard";
 import { getRecallSet } from "./sentenceData";
 import { useInteractiveRecall } from "./useInteractiveRecall";
 
@@ -28,11 +28,16 @@ export function InteractiveRecallScreen({
 }: InteractiveRecallScreenProps) {
   const set = getRecallSet(moduleId);
   const recall = useInteractiveRecall(set);
-  const addXP = useEconomyStore((s) => s.addXP);
-  const addCoins = useEconomyStore((s) => s.addCoins);
+  const addXP = useEconomyUIStore((s) => s.addXP);
+  const addCoins = useEconomyUIStore((s) => s.addCoins);
 
   const recallRef = useRef(recall);
   recallRef.current = recall;
+
+  // CTA state lifted from TimelineOrderCard so the Check/Continue button can
+  // live in a sticky footer below the ScrollView. Reset whenever the prompt
+  // changes so a stale callback from the previous prompt can't fire.
+  const [cardState, setCardState] = useState<TimelineOrderCardState | null>(null);
 
   const handleCorrectSettled = useCallback(() => {
     const { state, advance } = recallRef.current;
@@ -46,6 +51,19 @@ export function InteractiveRecallScreen({
       advance();
     }
   }, [set?.prompts.length, addXP, addCoins, onComplete]);
+
+  // Stable references for the per-prompt submit handlers so the card's
+  // useEffect-driven onStateChange doesn't fire on every parent render
+  // (which would loop: setCardState → re-render → new inline function →
+  // new effect deps → setCardState again → "Maximum update depth exceeded").
+  const handleSubmitFillBlank = useCallback((slotId: string, choiceId: string) => {
+    const r = recallRef.current.attemptFillBlank(slotId, choiceId);
+    return { correct: r.correct, finishesSet: r.finishesSet };
+  }, []);
+  const handleSubmitTimeline = useCallback((order: string[]) => {
+    const r = recallRef.current.submitTimelineOrder(order);
+    return { correct: r.correct, finishesSet: r.finishesSet };
+  }, []);
 
   if (!set || !recall.current) {
     return (
@@ -61,7 +79,12 @@ export function InteractiveRecallScreen({
 
   return (
     <View style={styles.root}>
-      <View style={styles.content}>
+      <ScrollView
+        style={styles.content}
+        contentContainerStyle={styles.contentContainer}
+        showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
+      >
         <Animated.View
           key={prompt.id}
           entering={FadeIn.duration(240)}
@@ -74,10 +97,7 @@ export function InteractiveRecallScreen({
                 (recall.state.placement[prompt.id] as Record<string, string | null>) ?? {}
               }
               accentColor={unitColors.bg}
-              onAttempt={(slotId, choiceId) => {
-                const r = recall.attemptFillBlank(slotId, choiceId);
-                return { correct: r.correct, finishesSet: r.finishesSet };
-              }}
+              onAttempt={handleSubmitFillBlank}
               onCorrectSettled={handleCorrectSettled}
             />
           ) : (
@@ -85,15 +105,64 @@ export function InteractiveRecallScreen({
               prompt={prompt}
               initialOrder={(recall.state.placement[prompt.id] as string[]) ?? []}
               accentColor={unitColors.bg}
-              onSubmit={(order) => {
-                const r = recall.submitTimelineOrder(order);
-                return { correct: r.correct, finishesSet: r.finishesSet };
-              }}
+              onSubmit={handleSubmitTimeline}
               onCorrectSettled={handleCorrectSettled}
+              onStateChange={setCardState}
             />
           )}
         </Animated.View>
-      </View>
+      </ScrollView>
+
+      {/* Sticky CTA footer — always rendered for TimelineOrderCard so the
+          button is visible from the first frame even before the card's
+          useEffect has pushed its state up (which on slow devices could
+          leave the user with no visible CTA for a beat). FillBlankCard
+          auto-advances and doesn't need a CTA, so skip for that type. */}
+      {prompt.type !== "fill-blank" && (
+        <View
+          style={{
+            paddingHorizontal: 16,
+            paddingVertical: 10,
+            backgroundColor: "#ffffff",
+            borderTopWidth: 1,
+            borderTopColor: "#e2e8f0",
+          }}
+        >
+          <Pressable
+            onPress={() => {
+              if (!cardState) return;
+              if (cardState.locked) cardState.continue_();
+              else cardState.check();
+            }}
+            disabled={!cardState}
+            accessibilityRole="button"
+            accessibilityLabel={cardState?.locked ? "המשך" : "בדוק"}
+            accessibilityState={{ disabled: !cardState }}
+            style={{
+              height: 56,
+              borderRadius: 16,
+              alignItems: "center",
+              justifyContent: "center",
+              borderBottomWidth: 3,
+              backgroundColor: cardState?.locked
+                ? "#22c55e"              // correct → green
+                : cardState?.wrong
+                  ? "#ef4444"            // wrong → red
+                  : (unitColors.bg ?? "#2563eb"), // default → blue
+              borderBottomColor: cardState?.locked
+                ? "#16a34a"
+                : cardState?.wrong
+                  ? "#b91c1c"
+                  : "#1e293b",
+              opacity: cardState ? 1 : 0.7,
+            }}
+          >
+            <Text style={{ fontSize: 16, fontWeight: "900", color: "#ffffff", writingDirection: "rtl" }}>
+              {cardState?.locked ? "המשך" : "בדוק"}
+            </Text>
+          </Pressable>
+        </View>
+      )}
 
       <FinnCoach
         mood={finnMood}
@@ -111,7 +180,11 @@ const styles = StyleSheet.create({
   },
   content: {
     flex: 1,
+  },
+  contentContainer: {
+    flexGrow: 1,
     paddingTop: 4,
+    paddingBottom: 12,
   },
   empty: {
     flex: 1,

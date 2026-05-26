@@ -2,7 +2,7 @@ import { useState, useCallback, useRef, useEffect } from 'react';
 import type { Scenario, SimState, ScenarioGrade } from './scenarioLabTypes';
 import { STARTING_CAPITAL, calcGrade, GRADE_REWARDS } from './scenarioLabData';
 import { useScenarioLabStore } from './useScenarioLabStore';
-import { useEconomyStore } from '../economy/useEconomyStore';
+import { useEconomyUIStore } from '../economy/useEconomyUIStore';
 
 const MONTH_DURATION_MS = 700; // how fast each month plays
 
@@ -183,7 +183,7 @@ export function useScenarioSim(scenario: Scenario) {
     rewardedRef.current = true;
 
     const rewards = GRADE_REWARDS[state.finalGrade];
-    const economy = useEconomyStore.getState();
+    const economy = useEconomyUIStore.getState();
     economy.addXP(rewards.xp, 'sim_complete');
     economy.addCoins(rewards.coins);
 

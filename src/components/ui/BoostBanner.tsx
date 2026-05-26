@@ -8,7 +8,7 @@
 import { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, Pressable } from 'react-native';
 import { LottieIcon } from './LottieIcon';
-import { useEconomyStore } from '../../features/economy/useEconomyStore';
+import { useEconomyUIStore } from '../../features/economy/useEconomyUIStore';
 import { useAppActive } from '../../hooks/useAppActive';
 
 const ROCKET_LOTTIE = require('../../../assets/lottie/wired-flat-489-rocket-space-hover-flying.json');
@@ -39,7 +39,7 @@ interface Props {
 }
 
 export function BoostBanner({ onPress }: Props) {
-  const activeBoosts = useEconomyStore((s) => s.activeBoosts);
+  const activeBoosts = useEconomyUIStore((s) => s.activeBoosts);
   const appActive = useAppActive();
   const [tick, setTick] = useState(0);
 

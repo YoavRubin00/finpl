@@ -6,7 +6,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { X } from 'lucide-react-native';
 import { tapHaptic, successHaptic } from '../../utils/haptics';
 import { LottieIcon } from '../../components/ui/LottieIcon';
-import { useEconomyStore } from '../economy/useEconomyStore';
+import { useEconomy, useAwardGems, useAwardCoins, useSpendGems } from '../economy/useEconomy';
 import { ConfettiExplosion } from '../../components/ui/ConfettiExplosion';
 import { purchaseGemBundle } from '../../services/revenueCat';
 import { logPurchase } from '../../utils/fbEvents';
@@ -36,12 +36,13 @@ interface IAPModalProps {
 }
 
 export function IAPModal({ visible, bundle, onDismiss, onPurchaseSuccess }: IAPModalProps) {
-  const addGems = useEconomyStore((s) => s.addGems);
-  const addCoins = useEconomyStore((s) => s.addCoins);
+  const addGems = useAwardGems();
+  const addCoins = useAwardCoins();
+  const { data: economyDataIAP } = useEconomy();
   const [showConfetti, setShowConfetti] = useState(false);
   const insets = useSafeAreaInsets();
 
-  const spendGems = useEconomyStore((s) => s.spendGems);
+  const spendGems = useSpendGems();
 
   useEffect(() => {
     if (visible && bundle) {
@@ -64,10 +65,12 @@ export function IAPModal({ visible, bundle, onDismiss, onPurchaseSuccess }: IAPM
 
     if (isCoinBundle(bundle)) {
       // Coin bundles cost gems, local transaction
-      if (!spendGems(bundle.gemCost)) {
+      const currentGems = economyDataIAP?.gems ?? 0;
+      if (currentGems < bundle.gemCost) {
         captureEvent('purchase_failed', { bundle_id: bundle.id, reason: 'insufficient_gems' });
         return;
       }
+      spendGems(bundle.gemCost);
       addCoins(bundle.coins);
       captureEvent('purchase_completed', { bundle_id: bundle.id, bundle_type: 'coin_bundle', coins: bundle.coins });
     } else {

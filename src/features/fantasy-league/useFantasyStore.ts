@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import { zustandStorage } from '../../lib/zustandStorage';
+import { registerLocalStore } from '../../lib/stores/registry';
 import type {
   FantasyTier,
   StockCategoryId,
@@ -366,3 +367,5 @@ export const useFantasyStore = create<FantasyStore>()(
     },
   ),
 );
+
+registerLocalStore('fantasy-store', useFantasyStore, 'fantasy-store');

@@ -1,7 +1,8 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import { zustandStorage } from '../../lib/zustandStorage';
-import { useEconomyStore } from '../economy/useEconomyStore';
+import { registerLocalStore } from '../../lib/stores/registry';
+import { useEconomyUIStore } from '../economy/useEconomyUIStore';
 import type { MacroEvent } from './types';
 
 const XP_PER_CORRECT   = 10;
@@ -56,10 +57,10 @@ export const useMacroEventStore = create<MacroEventState>()(
         });
 
         // Economy rewards
-        useEconomyStore.getState().addXP(wasCorrect ? XP_PER_CORRECT : 0, 'quiz_correct');
-        useEconomyStore.getState().addCoins(wasCorrect ? COINS_PER_CORRECT : 0);
+        useEconomyUIStore.getState().addXP(wasCorrect ? XP_PER_CORRECT : 0, 'quiz_correct');
+        useEconomyUIStore.getState().addCoins(wasCorrect ? COINS_PER_CORRECT : 0);
         if (streakBonus) {
-          useEconomyStore.getState().addCoins(STREAK_BONUS_COINS);
+          useEconomyUIStore.getState().addCoins(STREAK_BONUS_COINS);
         }
 
         return { streakBonus };
@@ -100,3 +101,5 @@ export const useMacroEventStore = create<MacroEventState>()(
     }
   )
 );
+
+registerLocalStore('macro-event-store', useMacroEventStore, 'macro-event-store');

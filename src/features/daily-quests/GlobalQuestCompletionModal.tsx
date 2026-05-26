@@ -9,7 +9,7 @@ import { LottieIcon } from "../../components/ui/LottieIcon";
 import { ConfettiExplosion } from "../../components/ui/ConfettiExplosion";
 import { FlyingRewards } from "../../components/ui/FlyingRewards";
 import { useDailyQuestsStore } from "./useDailyQuestsStore";
-import { useEconomyStore } from "../economy/useEconomyStore";
+import { useStreak } from "../economy/useStreak";
 import { previewQuestReward } from "./useDailyQuestsStore";
 
 const LOTTIE_CHEST = require("../../../assets/lottie/3D Treasure Box.json");
@@ -21,7 +21,8 @@ export function GlobalQuestCompletionModal() {
   const clearNewlyCompleted = useDailyQuestsStore((s) => s.clearNewlyCompleted);
   const rewardClaimed = useDailyQuestsStore((s) => s.rewardClaimed);
   const claimReward = useDailyQuestsStore((s) => s.claimReward);
-  const streak = useEconomyStore((s) => s.streak);
+  const { data: streakData } = useStreak();
+  const streak = streakData?.currentStreak ?? 0;
   
   const [visible, setVisible] = useState(false);
   const [showClaimAnim, setShowClaimAnim] = useState(false);

@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import { zustandStorage } from '../../lib/zustandStorage';
+import { registerLocalStore } from '../../lib/stores/registry';
 import { wisdomQuotes } from './wisdomData';
 import { psychWisdomFlashes } from './psychWisdomData';
 import type { WisdomItem } from './types';
@@ -33,6 +34,7 @@ interface WisdomState {
     isFavorite: (id: string) => boolean;
     /** Get all favorite items */
     getFavoriteItems: () => WisdomItem[];
+    reset: () => void;
 }
 
 export const useWisdomStore = create<WisdomState>()(
@@ -79,6 +81,8 @@ export const useWisdomStore = create<WisdomState>()(
                 const { favorites } = get();
                 return ALL_WISDOM.filter((item) => favorites.includes(item.id));
             },
+
+            reset: () => set({ seenIds: [], favorites: [], activeItem: null }),
         }),
         {
             name: 'wisdom-store',
@@ -91,3 +95,5 @@ export const useWisdomStore = create<WisdomState>()(
         },
     ),
 );
+
+registerLocalStore('wisdom-store', useWisdomStore, 'wisdom-store');

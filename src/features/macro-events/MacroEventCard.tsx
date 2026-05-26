@@ -26,7 +26,7 @@ import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import { ConfettiExplosion } from '../../components/ui/ConfettiExplosion';
 import { FlyingRewards } from '../../components/ui/FlyingRewards';
-import { useEconomyStore } from '../economy/useEconomyStore';
+import { useEconomy, useSpendGems } from '../economy/useEconomy';
 import { useModifiersStore } from '../economy/useModifiersStore';
 import { useMacroEventStore, MACRO_COOLDOWN_MS } from './useMacroEventStore';
 import {
@@ -38,7 +38,7 @@ import {
   getFinnImage,
   type FinnAnimationState,
 } from '../retention-loops/finnMascotConfig';
-import { useSubscriptionStore } from '../subscription/useSubscriptionStore';
+import { useIsPro } from '../subscription/useSubscription';
 import { macroEventsData } from './macroEventsData';
 import { tapHaptic, successHaptic, errorHaptic } from '../../utils/haptics';
 import { useAppActive } from '../../hooks/useAppActive';
@@ -70,7 +70,7 @@ export const MacroEventCard = React.memo(function MacroEventCard({ item, isActiv
   const canAnswerMacro = useMacroEventStore((s) => s.canAnswerMacro);
   const resetSessionIfCooldownElapsed = useMacroEventStore((s) => s.resetSessionIfCooldownElapsed);
   const lastMacroSessionTime = useMacroEventStore((s) => s.lastMacroSessionTime);
-  const isPro = useSubscriptionStore((s) => s.tier === 'pro' && s.status === 'active');
+  const isPro = useIsPro();
   const appActive = useAppActive();
 
   useEffect(() => { resetSessionIfCooldownElapsed(); }, [isActive]);
@@ -98,22 +98,23 @@ export const MacroEventCard = React.memo(function MacroEventCard({ item, isActiv
 
   // Premium lock
   const [isUnlockedPremium, setIsUnlockedPremium] = useState(false);
-  const gems = useEconomyStore((s) => s.gems);
-  const spendGems = useEconomyStore((s) => s.spendGems);
+  const { data: economyDataME } = useEconomy();
+  const gems = economyDataME?.gems ?? 0;
+  const spendGemsHookME = useSpendGems();
   const addModifier = useModifiersStore((s) => s.addModifier);
   const showPremiumLock = event.isPremium && !isUnlockedPremium && answerState === 'idle';
 
   const handleUnlockPremium = useCallback(() => {
     if (gems >= 2) {
       tapHaptic();
-      spendGems(2);
+      spendGemsHookME(2);
       setIsUnlockedPremium(true);
       successHaptic();
     } else {
       errorHaptic();
       // Need 2 gems
     }
-  }, [gems, spendGems]);
+  }, [gems, spendGemsHookME]);
   const [chosenDirection, setChosenDirection] = useState<'up' | 'down' | null>(null);
   const [showConfetti, setShowConfetti] = useState(false);
   const [streakBonusVisible, setStreakBonusVisible] = useState(false);

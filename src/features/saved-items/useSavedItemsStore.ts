@@ -1,6 +1,7 @@
 import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
 import { zustandStorage } from '../../lib/zustandStorage';
+import { registerLocalStore } from '../../lib/stores/registry';
 import type { SavedItem, AddSavedResult } from "./savedItemTypes";
 import { MAX_SAVED_ITEMS } from "./savedItemTypes";
 
@@ -10,6 +11,7 @@ interface SavedItemsState {
   removeItem: (id: string) => void;
   isSaved: (id: string) => boolean;
   getByType: (type: SavedItem["type"]) => SavedItem[];
+  reset: () => void;
 }
 
 export const useSavedItemsStore = create<SavedItemsState>()(
@@ -39,6 +41,7 @@ export const useSavedItemsStore = create<SavedItemsState>()(
       isSaved: (id) => get().items.some((i) => i.id === id),
 
       getByType: (type) => get().items.filter((i) => i.type === type),
+      reset: () => set({ items: [] }),
     }),
     {
       name: "finplay-saved-items",
@@ -53,3 +56,5 @@ export const useSavedItemsStore = create<SavedItemsState>()(
     },
   ),
 );
+
+registerLocalStore('finplay-saved-items', useSavedItemsStore, 'finplay-saved-items');

@@ -2,7 +2,8 @@ import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import { zustandStorage } from '../../lib/zustandStorage';
 import type { DailyQuiz, DailyQuizState } from './dailyQuizTypes';
-import { useEconomyStore } from '../economy/useEconomyStore';
+import { useEconomyUIStore } from '../economy/useEconomyUIStore';
+import { registerLocalStore } from '../../lib/stores/registry';
 
 function todayStr(): string {
   return new Date().toISOString().slice(0, 10);
@@ -31,7 +32,7 @@ export const useDailyQuizStore = create<DailyQuizState>()(
         const streakBonus = wasCorrect && newStreak >= 3 ? 80 : 0;
 
         if (wasCorrect) {
-          const economy = useEconomyStore.getState();
+          const economy = useEconomyUIStore.getState();
           economy.addXP(xpReward, 'daily_task');
           economy.addCoins(coinReward + streakBonus, 'quiz');
         }
@@ -47,6 +48,14 @@ export const useDailyQuizStore = create<DailyQuizState>()(
       setTodayQuiz: (quiz: DailyQuiz) => {
         set({ todayQuiz: quiz });
       },
+
+      reset: () => set({
+        todayQuiz: null,
+        answeredDates: [],
+        correctCount: 0,
+        totalAnswered: 0,
+        streak: 0,
+      }),
     }),
     {
       name: 'daily-quiz-store',
@@ -61,3 +70,5 @@ export const useDailyQuizStore = create<DailyQuizState>()(
     },
   ),
 );
+
+registerLocalStore('daily-quiz-store', useDailyQuizStore, 'daily-quiz-store');

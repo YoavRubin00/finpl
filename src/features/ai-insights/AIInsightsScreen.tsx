@@ -14,10 +14,11 @@ import { Lock, RefreshCw } from "lucide-react-native";
 import { useWeeklyInsightStore } from "./useWeeklyInsightStore";
 
 import { BackButton } from "../../components/ui/BackButton";
-import { useSubscriptionStore } from "../subscription/useSubscriptionStore";
-import { useEconomyStore } from "../economy/useEconomyStore";
+import { useIsPro } from "../subscription/useSubscription";
+import { useEconomy } from "../economy/useEconomy";
+import { useStreak } from "../economy/useStreak";
 import { useAuthStore } from "../auth/useAuthStore";
-import { useChapterStore } from "../chapter-1-content/useChapterStore";
+import { useProgress } from "../chapter-1-content/useProgress";
 import { useAITelemetryStore } from "../ai-personalization/useAITelemetryStore";
 import { useAdaptiveStore } from "../social/useAdaptiveStore";
 import { MODULE_NAMES } from "../chat/chatData";
@@ -60,19 +61,21 @@ const BUBBLE_BORDER: Record<Insight['category'], string> = {
 
 /* ── Shared context builder ── */
 function useInsightContext() {
-  const xp = useEconomyStore((s) => s.xp);
-  const streak = useEconomyStore((s) => s.streak);
+  const { data: economyData } = useEconomy();
+  const { data: streakData } = useStreak();
+  const xp = economyData?.xp ?? 0;
+  const streak = streakData?.currentStreak ?? 0;
   const displayName = useAuthStore((s) => s.displayName);
   const profile = useAuthStore((s) => s.profile);
-  const chapterProgress = useChapterStore((s) => s.progress);
+  const { data: progressData } = useProgress();
   const aiProfile = useAITelemetryStore((s) => s.profile);
-  return { xp, streak, displayName, profile, chapterProgress, aiProfile };
+  const allModuleIds = progressData?.filter((m) => m.status === 'completed').map((m) => m.moduleId) ?? [];
+  return { xp, streak, displayName, profile, allModuleIds, aiProfile };
 }
 
 async function fetchFromAPI(ctx: ReturnType<typeof useInsightContext>): Promise<Insight[]> {
-  const { xp, streak, displayName, profile, chapterProgress, aiProfile } = ctx;
+  const { xp, streak, displayName, profile, allModuleIds, aiProfile } = ctx;
   const weakConcepts = useAdaptiveStore.getState().getConsistentlyFailedConcepts().map((c) => c.conceptTag);
-  const allModuleIds = Object.values(chapterProgress).flatMap((cp) => cp.completedModules);
   const completedModuleNames = allModuleIds.map((id) => MODULE_NAMES[id] ?? id).filter(Boolean);
   const lastModuleName = allModuleIds.length > 0
     ? (MODULE_NAMES[allModuleIds[allModuleIds.length - 1]] ?? null)
@@ -223,7 +226,7 @@ function UpgradeCTA({ onPress }: { onPress: () => void }) {
 export function AIInsightsScreen() {
   const router = useRouter();
   const { top: topInset, bottom: bottomInset } = useSafeAreaInsets();
-  const isPro = useSubscriptionStore((s) => s.tier === 'pro' && s.status === 'active');
+  const isPro = useIsPro();
   const ctx = useInsightContext();
   const { aiProfile, displayName } = ctx;
 

@@ -1,6 +1,7 @@
 import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
 import { zustandStorage } from '../../lib/zustandStorage';
+import { registerLocalStore } from '../../lib/stores/registry';
 import type { DraftPick, DraftState } from "./draftTypes";
 import { TOTAL_ROUNDS, getCurrentWeekId } from "./draftData";
 
@@ -8,6 +9,7 @@ interface DraftActions {
   initWeek: () => void;
   makePick: (assetId: string, categoryId: string, entryPrice: number) => void;
   resetDraft: () => void;
+  reset: () => void;
 }
 
 const initialState: DraftState = {
@@ -51,6 +53,7 @@ export const useDraftStore = create<DraftState & DraftActions>()(
       resetDraft: () => {
         set({ ...initialState, weekId: getCurrentWeekId() });
       },
+      reset: () => set({ ...initialState }),
     }),
     {
       name: "draft-store-v1",
@@ -64,3 +67,5 @@ export const useDraftStore = create<DraftState & DraftActions>()(
     },
   ),
 );
+
+registerLocalStore('draft-store-v1', useDraftStore, 'draft-store-v1');

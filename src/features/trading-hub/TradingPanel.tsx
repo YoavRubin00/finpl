@@ -15,7 +15,8 @@ import {
 import { LinearGradient } from 'expo-linear-gradient';
 import Animated, { FadeInDown, FadeIn } from 'react-native-reanimated';
 import { CLASH, TEXT_SHADOW } from '../../constants/theme';
-import { useEconomyStore } from '../economy/useEconomyStore';
+import { useEconomy, useSpendVirtual } from '../economy/useEconomy';
+import { useEconomyUIStore } from '../economy/useEconomyUIStore';
 import { useTradingStore } from './useTradingStore';
 import { tapHaptic } from '../../utils/haptics';
 import { ActivePosition } from './tradingHubTypes';
@@ -62,9 +63,10 @@ export function TradingPanel({ assetId, currentPrice, onTrade }: TradingPanelPro
   const [limitPriceText, setLimitPriceText] = useState('');
   const [feedback, setFeedback] = useState<string | null>(null);
 
-  const virtualBalance = useEconomyStore((s) => s.virtualBalance);
-  const spendVirtual = useEconomyStore((s) => s.spendVirtual);
-  const addCoins = useEconomyStore((s) => s.addCoins);
+  const { data: economyData } = useEconomy();
+  const virtualBalance = economyData?.virtualBalance ? parseFloat(economyData.virtualBalance) : 0;
+  const spendVirtual = useSpendVirtual();
+  const addCoins = useEconomyUIStore((s) => s.addCoins);
   const positions = useTradingStore((s) => s.positions);
   const pendingOrders = useTradingStore((s) => s.pendingOrders);
   const closePosition = useTradingStore((s) => s.closePosition);
@@ -87,25 +89,22 @@ export function TradingPanel({ assetId, currentPrice, onTrade }: TradingPanelPro
   const handleMarketBuy = () => {
     if (!isAmountValid || currentPrice <= 0) return;
     tapHaptic();
-    const success = spendVirtual(amount);
-    if (success) {
-      onTrade('buy', amount, currentPrice);
-      setAmountText('');
-      showFeedback(`✅ קנית ${assetId} במחיר $${currentPrice.toFixed(2)}`);
-    }
+    // isAmountValid already checks amount <= virtualBalance
+    spendVirtual(amount);
+    onTrade('buy', amount, currentPrice);
+    setAmountText('');
+    showFeedback(`✅ קנית ${assetId} במחיר $${currentPrice.toFixed(2)}`);
   };
 
   const handleLimitBuy = () => {
     if (!isLimitValid || currentPrice <= 0) return;
     tapHaptic();
-    // Always execute immediately regardless of limit price
-    const success = spendVirtual(amount);
-    if (success) {
-      onTrade('buy', amount, currentPrice);
-      setAmountText('');
-      setLimitPriceText('');
-      showFeedback(`✅ קנית ${assetId} במחיר $${currentPrice.toFixed(2)}`);
-    }
+    // Always execute immediately regardless of limit price; isAmountValid checks affordability
+    spendVirtual(amount);
+    onTrade('buy', amount, currentPrice);
+    setAmountText('');
+    setLimitPriceText('');
+    showFeedback(`✅ קנית ${assetId} במחיר $${currentPrice.toFixed(2)}`);
   };
 
   const handleClosePosition = (pos: ActivePosition) => {

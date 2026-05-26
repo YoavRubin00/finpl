@@ -2,11 +2,13 @@ import { useMemo } from "react";
 import { View, Text } from "react-native";
 import Animated, { FadeInUp } from "react-native-reanimated";
 import { useShallow } from "zustand/react/shallow";
-import { useEconomyStore } from "../economy/useEconomyStore";
-import { useChapterStore } from "../chapter-1-content/useChapterStore";
+import { useEconomyUIStore } from "../economy/useEconomyUIStore";
+import { useProgress } from "../chapter-1-content/useProgress";
+import type { ModuleProgressRow } from "../../lib/api/progress";
 import { useDailyChallengesStore } from "../daily-challenges/use-daily-challenges-store";
 import type { PlayCountMap } from "../daily-challenges/daily-challenge-types";
-import { useUserStatsStore } from "./useUserStatsStore";
+import { useUserStats } from "./useUserStats";
+import { useUserStatsUIStore } from "./useUserStatsUIStore";
 import { useTheme } from "../../hooks/useTheme";
 import { STITCH } from "../../constants/theme";
 
@@ -41,7 +43,7 @@ function formatDuration(seconds: number): string {
 function computeStats(
   activeDates: string[],
   recentActivityHours: number[],
-  chapterProgress: ReturnType<typeof useChapterStore.getState>["progress"],
+  progressRows: ModuleProgressRow[],
   dilemmaPlays: PlayCountMap,
   investmentPlays: PlayCountMap,
   crashGamePlays: PlayCountMap,
@@ -62,9 +64,7 @@ function computeStats(
   const activeDaysValue = String(activeDayCount || "--");
 
   // 2. Avg modules/day
-  const totalModules = Object.values(chapterProgress).reduce(
-    (s, ch) => s + (ch?.completedModules?.length ?? 0), 0
-  );
+  const totalModules = progressRows.filter((m) => m.status === 'completed').length;
   const avgModulesPerDay = activeDayCount > 0 && totalModules > 0
     ? (totalModules / activeDayCount).toFixed(1)
     : "--";
@@ -80,12 +80,12 @@ function computeStats(
     ? (totalPlays / activeDayCount).toFixed(1)
     : "--";
 
-  // 4. Quiz accuracy
+  // 4. Quiz accuracy — derived from server bestScore/quizScore fields
   let totalCorrect = 0, totalAnswered = 0;
-  for (const ch of Object.values(chapterProgress)) {
-    for (const qr of Object.values(ch?.quizResults ?? {})) {
-      totalCorrect += qr.correct;
-      totalAnswered += qr.total;
+  for (const m of progressRows) {
+    if (m.status === 'completed' && m.quizScore != null && m.quizAttempts != null && m.quizAttempts > 0) {
+      totalCorrect += m.quizScore;
+      totalAnswered += m.quizAttempts;
     }
   }
   const quizAccuracy = totalAnswered >= 5
@@ -220,10 +220,10 @@ function StatCard({
 export function PersonalStatsSection() {
   const theme = useTheme();
 
-  const activeDates = useEconomyStore((s) => s.activeDates);
-  const recentActivityHours = useEconomyStore((s) => s.recentActivityHours);
+  const activeDates = useEconomyUIStore((s) => s.activeDates);
+  const recentActivityHours = useEconomyUIStore((s) => s.recentActivityHours);
 
-  const chapterProgress = useChapterStore(useShallow((s) => s.progress));
+  const { data: progressRows } = useProgress();
 
   const challenges = useDailyChallengesStore(
     useShallow((s) => ({
@@ -241,19 +241,18 @@ export function PersonalStatsSection() {
     }))
   );
 
-  const { moduleDurations, dailySessionSeconds } = useUserStatsStore(
-    useShallow((s) => ({
-      moduleDurations: s.moduleDurations,
-      dailySessionSeconds: s.dailySessionSeconds,
-    }))
-  );
+  const { data: userStatsData } = useUserStats();
+  const moduleDurations = userStatsData?.moduleDurations
+    ? Object.values(userStatsData.moduleDurations)
+    : [];
+  const dailySessionSeconds = useUserStatsUIStore((s) => s.dailySessionSeconds);
 
   const stats = useMemo(
     () =>
       computeStats(
         activeDates,
         recentActivityHours ?? [],
-        chapterProgress,
+        progressRows ?? [],
         challenges.dilemmaPlays,
         challenges.investmentPlays,
         challenges.crashGamePlays,
@@ -269,7 +268,7 @@ export function PersonalStatsSection() {
         dailySessionSeconds,
       ),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [activeDates, recentActivityHours, chapterProgress, challenges, moduleDurations, dailySessionSeconds]
+    [activeDates, recentActivityHours, progressRows, challenges, moduleDurations, dailySessionSeconds]
   );
 
   return (

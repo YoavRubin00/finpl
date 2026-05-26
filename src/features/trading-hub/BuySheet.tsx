@@ -5,7 +5,7 @@ import Animated, { FadeInUp } from 'react-native-reanimated';
 import { Info } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { CALM } from '../../constants/theme';
-import { useEconomyStore } from '../economy/useEconomyStore';
+import { useEconomy } from '../economy/useEconomy';
 import { useTradingStore } from './useTradingStore';
 import { useTradingHubUiStore } from './useTradingHubUiStore';
 import { ASSET_BY_ID } from './tradingHubData';
@@ -13,6 +13,7 @@ import { StockIcon } from './StockIcon';
 import { FINN_STANDARD } from '../retention-loops/finnMascotConfig';
 import { tapHaptic, successHaptic } from '../../utils/haptics';
 import { LiquidButton } from '../../components/ui/LiquidButton';
+import { GoldCoinIcon } from '../../components/ui/GoldCoinIcon';
 
 const RTL = { writingDirection: 'rtl' as const, textAlign: 'right' as const };
 const QUICK_AMOUNTS = [100, 500, 1000];
@@ -43,7 +44,8 @@ interface BuySheetProps {
 }
 
 export function BuySheet({ visible, assetId, currentPrice, previousClose, onClose, onBuyComplete, onAssetTypeUnlocked }: BuySheetProps) {
-    const coins = useEconomyStore((s) => s.coins);
+    const { data: economyData } = useEconomy();
+    const coins = economyData?.coins ?? 0;
     const openPosition = useTradingStore((s) => s.openPosition);
     const unlockAssetType = useTradingHubUiStore((s) => s.unlockAssetType);
     const insets = useSafeAreaInsets();
@@ -214,7 +216,7 @@ export function BuySheet({ visible, assetId, currentPrice, previousClose, onClos
                             <View style={styles.balanceRow}>
                                 <Text style={[RTL, styles.balanceLabel]}>מטבעות זמינים</Text>
                                 <View style={{ flexDirection: 'row-reverse', alignItems: 'center', gap: 6 }}>
-                                    <Text style={{ fontSize: 18 }} accessible={false}>🪙</Text>
+                                    <GoldCoinIcon size={18} />
                                     <Text style={styles.balanceValue}>
                                         {coins.toLocaleString('he-IL', { maximumFractionDigits: 0 })}
                                     </Text>

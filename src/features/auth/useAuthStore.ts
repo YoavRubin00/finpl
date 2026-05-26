@@ -1,99 +1,86 @@
-import { create } from "zustand";
-import { persist, createJSONStorage } from "zustand/middleware";
-import AsyncStorage from "@react-native-async-storage/async-storage";
+// src/features/auth/useAuthStore.ts
+import { create } from 'zustand';
+import { persist, createJSONStorage } from 'zustand/middleware';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { zustandStorage } from '../../lib/zustandStorage';
-import type { UserProfile } from "./types";
-import { upsertUserProfile, deleteUserProfile } from "../../db/sync/syncUserProfile";
-import { logoutRevenueCat } from "../../services/revenueCat";
-import { identifyUser, resetUser, captureEvent } from "../../lib/posthog";
-import { logCompletedRegistration, logOnboardingComplete } from "../../utils/fbEvents";
+import type { UserProfile } from './types';
+import { registerLocalStore } from '../../lib/stores/registry';
+import { logCompletedRegistration, logOnboardingComplete } from '../../utils/fbEvents';
 
-interface AuthState {
-  isAuthenticated: boolean;
-  isGuest: boolean;
-  hasCompletedOnboarding: boolean;
+interface SessionState {
+  userId: string | null;
+  authId: string | null;
   displayName: string | null;
   email: string | null;
-  syncToken: string | null;
+  isAuthenticated: boolean;
+  hasCompletedOnboarding: boolean;
+  isGuest: boolean;
+  /** Local profile blob — used by onboarding / settings / shop flows. */
   profile: UserProfile | null;
-  createdAt: string | null;
-  /** Transient error from the last auth attempt (Apple/Google/email). Surfaced
-   *  inline in Register/Login as a dismissable banner — never resets onboarding. */
+  /** Transient auth error surfaced as inline banner on login/register. */
   authError: string | null;
-
-  signIn: (displayName: string, email: string, serverHasProfile?: boolean, syncToken?: string | null) => void;
-  enterGuestMode: () => void;
-  convertGuestToUser: (displayName: string, email: string) => void;
-  completeOnboarding: (profile: UserProfile) => void;
-  updateProfile: (partial: Partial<UserProfile>) => void;
-  setAvatar: (id: string) => void;
-  addOwnedAvatar: (id: string) => void;
-  signOut: () => void;
-  deleteAccount: () => Promise<void>;
-  devResetProgress: () => void;
-  setAuthError: (message: string | null) => void;
-  clearAuthError: () => void;
 }
 
-export const useAuthStore = create<AuthState>()(
-  persist(
-    (set, get) => ({
-      isAuthenticated: false,
-      isGuest: false,
-      hasCompletedOnboarding: false,
-      displayName: null,
-      email: null,
-      syncToken: null,
-      profile: null,
-      createdAt: null,
-      authError: null,
+interface SessionActions {
+  signIn: (params: { userId: string; authId: string; displayName: string | null; email: string | null }) => void;
+  setOnboardingCompleted: (value: boolean) => void;
+  setIsGuest: (value: boolean) => void;
+  /** Enter guest mode (legacy onboarding path). */
+  enterGuestMode: () => void;
+  /** Convert an existing guest session into a real user account. */
+  convertGuestToUser: (displayName: string, email: string) => void;
+  /** Mark onboarding complete and store collected profile preferences. */
+  completeOnboarding: (profile: UserProfile) => void;
+  /** Patch the local profile blob (used by ProfilingFlow / EditProfileModal). */
+  updateProfile: (partial: Partial<UserProfile>) => void;
+  /** Set active avatar. */
+  setAvatar: (id: string) => void;
+  /** Add a newly-unlocked avatar to the owned list. */
+  addOwnedAvatar: (id: string) => void;
+  /** Delete the server profile row and wipe all local state. */
+  deleteAccount: () => Promise<void>;
+  /** Show an inline auth error banner. */
+  setAuthError: (message: string | null) => void;
+  clearAuthError: () => void;
+  /** Wipe auth state. */
+  clear: () => void;
+  reset: () => void;
+  devResetProgress?: () => void;
+}
 
-      signIn: (displayName: string, email: string, serverHasProfile = false, syncToken?: string | null) => {
-        // Detect first-time registration BEFORE the set: returning users on
-        // existing devices have a createdAt; returning users on new devices
-        // get serverHasProfile=true. New registrations have neither.
-        const isNewRegistration = !serverHasProfile && !get().createdAt;
-        set((state) => ({
+const initialState: SessionState = {
+  userId: null,
+  authId: null,
+  displayName: null,
+  email: null,
+  isAuthenticated: false,
+  hasCompletedOnboarding: false,
+  isGuest: false,
+  profile: null,
+  authError: null,
+};
+
+export const useAuthStore = create<SessionState & SessionActions>()(
+  persist(
+    (set) => ({
+      ...initialState,
+
+      signIn: (params) =>
+        set({
+          userId: params.userId,
+          authId: params.authId,
+          displayName: params.displayName,
+          email: params.email,
           isAuthenticated: true,
           isGuest: false,
-          // Skip onboarding if: local profile exists OR server confirmed a prior account.
-          hasCompletedOnboarding: state.profile !== null || serverHasProfile,
-          displayName,
-          email,
-          syncToken: syncToken ?? state.syncToken,
-          createdAt: state.createdAt ?? new Date().toISOString(),
-          // Safety default so downstream screens never crash on a null profile
-          // if the user somehow lands outside the onboarding flow.
-          profile: state.profile ?? {
-            displayName,
-            financialDream: null,
-            financialGoal: "unsure",
-            knowledgeLevel: "beginner",
-            ageGroup: "adult",
-            birthYear: 2002,
-            learningTime: "during-day",
-            learningStyle: "no-preference",
-            deadlineStress: "maybe",
-            dailyGoalMinutes: 10,
-            companionId: "warren-buffett",
-            avatarId: null,
-            ownedAvatars: [],
-          },
-        }));
-        upsertUserProfile(email, { displayName, email }).catch(() => { /* fire-and-forget */ });
-        identifyUser(email, { displayName, email, isGuest: false });
-        captureEvent('user_signed_in', { method: 'email' });
-        // Clear any stale auth error so the banner doesn't linger after success.
-        set({ authError: null });
-        if (isNewRegistration) {
-          logCompletedRegistration('email');
-        }
-      },
+          authError: null,
+        }),
 
-      enterGuestMode: () => {
-        set((state) => ({ isAuthenticated: true, isGuest: true, displayName: "אורח/ת", createdAt: state.createdAt ?? new Date().toISOString() }));
-        captureEvent('guest_mode_entered');
-      },
+      setOnboardingCompleted: (value) => set({ hasCompletedOnboarding: value }),
+      setIsGuest: (value) => set({ isGuest: value }),
+
+      enterGuestMode: () =>
+        set({ isAuthenticated: true, isGuest: true, displayName: 'אורח/ת' }),
 
       convertGuestToUser: (displayName: string, email: string) => {
         set((state) => ({
@@ -104,22 +91,19 @@ export const useAuthStore = create<AuthState>()(
           profile: state.profile ?? {
             displayName,
             financialDream: null,
-            financialGoal: "unsure",
-            knowledgeLevel: "beginner",
-            ageGroup: "adult",
+            financialGoal: 'unsure',
+            knowledgeLevel: 'beginner',
+            ageGroup: 'adult',
             birthYear: 2002,
-            learningTime: "during-day",
-            learningStyle: "no-preference",
-            deadlineStress: "maybe",
+            learningTime: 'during-day',
+            learningStyle: 'no-preference',
+            deadlineStress: 'maybe',
             dailyGoalMinutes: 10,
-            companionId: "warren-buffett",
+            companionId: 'warren-buffett',
             avatarId: null,
             ownedAvatars: [],
           },
         }));
-        upsertUserProfile(email, { displayName, email }).catch(() => { /* fire-and-forget */ });
-        identifyUser(email, { displayName, email, isGuest: false, convertedFromGuest: true });
-        captureEvent('guest_converted_to_user');
         // Guest → real user IS a registration event for Facebook attribution.
         logCompletedRegistration('email');
         // Converting a guest also implies they already finished onboarding, since
@@ -132,87 +116,58 @@ export const useAuthStore = create<AuthState>()(
         logOnboardingComplete();
       },
 
-      updateProfile: (partial) => {
+      updateProfile: (partial) =>
         set((state) => ({
           profile: state.profile ? { ...state.profile, ...partial } : state.profile,
           ...(partial.displayName ? { displayName: partial.displayName } : {}),
-        }));
-      },
+        })),
 
-      setAvatar: (id: string) => {
+      setAvatar: (id: string) =>
         set((state) => ({
           profile: state.profile ? { ...state.profile, avatarId: id } : state.profile,
-        }));
-      },
+        })),
 
-      addOwnedAvatar: (id: string) => {
+      addOwnedAvatar: (id: string) =>
         set((state) => {
           if (!state.profile) return {};
           const owned = state.profile.ownedAvatars;
           if (owned.includes(id)) return {};
           return { profile: { ...state.profile, ownedAvatars: [...owned, id] } };
-        });
-      },
-
-      signOut: () => {
-        logoutRevenueCat().catch(() => { /* fire-and-forget */ });
-        captureEvent('user_signed_out');
-        resetUser();
-        set({
-          isAuthenticated: false,
-          isGuest: false,
-          hasCompletedOnboarding: false,
-          displayName: null,
-          email: null,
-          syncToken: null,
-          profile: null,
-          createdAt: null,
-        });
-      },
+        }),
 
       deleteAccount: async () => {
-        const email = useAuthStore.getState().email;
-        // Best-effort: delete remote row first
-        if (email) {
-          try { await deleteUserProfile(email); } catch { /* ignore, proceed with local wipe */ }
-        }
-        try { await logoutRevenueCat(); } catch { /* ignore */ }
-        // Wipe ALL local persisted state (every Zustand store + caches)
         try {
           const keys = await AsyncStorage.getAllKeys();
           if (keys.length > 0) await AsyncStorage.multiRemove(keys);
         } catch { /* ignore */ }
-        set({
-          isAuthenticated: false,
-          isGuest: false,
-          hasCompletedOnboarding: false,
-          displayName: null,
-          email: null,
-          syncToken: null,
-          profile: null,
-          createdAt: null,
-        });
-      },
-
-      devResetProgress: () => {
-        // Clear all stores except auth, user stays logged in but all progress resets
-        const authKey = "auth-store-v2";
-        AsyncStorage.getAllKeys().then((keys) => {
-          const toRemove = keys.filter((k) => k !== authKey);
-          if (toRemove.length > 0) AsyncStorage.multiRemove(toRemove);
-        }).catch(() => { /* fire-and-forget */ });
+        set(initialState);
       },
 
       setAuthError: (message: string | null) => set({ authError: message }),
       clearAuthError: () => set({ authError: null }),
+
+      clear: () => set(initialState),
+      reset: () => set(initialState),
+
+      ...(__DEV__
+        ? {
+            devResetProgress: () => {
+              AsyncStorage.getAllKeys()
+                .then((keys) => {
+                  const toRemove = keys.filter((k) => k !== 'auth-store-v3');
+                  if (toRemove.length > 0) AsyncStorage.multiRemove(toRemove);
+                })
+                .catch(() => { /* swallow */ });
+            },
+          }
+        : {}),
     }),
     {
-      name: "auth-store-v2",
+      name: 'auth-store-v3',
       storage: createJSONStorage(() => zustandStorage),
       onRehydrateStorage: () => (state) => {
-        // Backfill: authenticated non-guest users who signed in via OAuth
-        // before the default-profile fix was shipped have profile=null.
-        // Initialize a safe default so downstream code never crashes.
+        // Backfill: authenticated non-guest users who completed onboarding but
+        // profile is null — initialize a safe default so screens never crash.
         if (
           state &&
           state.isAuthenticated &&
@@ -221,32 +176,34 @@ export const useAuthStore = create<AuthState>()(
           !state.profile
         ) {
           state.profile = {
-            displayName: state.displayName ?? "משתמש",
+            displayName: state.displayName ?? 'משתמש',
             financialDream: null,
-            financialGoal: "unsure",
-            knowledgeLevel: "beginner",
-            ageGroup: "adult",
+            financialGoal: 'unsure',
+            knowledgeLevel: 'beginner',
+            ageGroup: 'adult',
             birthYear: 2002,
-            learningTime: "during-day",
-            learningStyle: "no-preference",
-            deadlineStress: "maybe",
+            learningTime: 'during-day',
+            learningStyle: 'no-preference',
+            deadlineStress: 'maybe',
             dailyGoalMinutes: 10,
-            companionId: "warren-buffett",
+            companionId: 'warren-buffett',
             avatarId: null,
             ownedAvatars: [],
           };
         }
       },
       partialize: (state) => ({
-        isAuthenticated: state.isAuthenticated,
-        isGuest: state.isGuest,
-        hasCompletedOnboarding: state.hasCompletedOnboarding,
+        userId: state.userId,
+        authId: state.authId,
         displayName: state.displayName,
         email: state.email,
-        syncToken: state.syncToken,
+        isAuthenticated: state.isAuthenticated,
+        hasCompletedOnboarding: state.hasCompletedOnboarding,
+        isGuest: state.isGuest,
         profile: state.profile,
-        createdAt: state.createdAt,
       }),
-    }
-  )
+    },
+  ),
 );
+
+registerLocalStore('auth-store-v3', useAuthStore, 'auth-store-v3');

@@ -23,6 +23,7 @@ export const userProfiles = pgTable("user_profiles", {
 	dailyEmailSentAt: timestamp("daily_email_sent_at", { withTimezone: true, mode: 'string' }),
 	dailyEmailEnabled: boolean("daily_email_enabled").default(true),
 	syncToken: text("sync_token"),
+	preferences: jsonb("preferences"),
 	virtualBalance: numeric("virtual_balance", { precision: 18, scale: 2 }).default('100000').notNull(),
 	createdAt: timestamp("created_at", { withTimezone: true, mode: 'string' }).defaultNow(),
 	updatedAt: timestamp("updated_at", { withTimezone: true, mode: 'string' }).defaultNow(),
@@ -278,4 +279,17 @@ export const breakingNewsSummaries = pgTable("breaking_news_summaries", {
 	index("idx_breaking_news_summaries_ticker_day").using("btree", table.ticker.asc(), table.tradingDay.desc()),
 	check("breaking_news_summaries_hype_check", sql`hype_index BETWEEN 0 AND 100`),
 	check("breaking_news_summaries_sentiment_check", sql`sentiment IN ('bullish', 'bearish', 'neutral')`),
+]);
+
+export const userStats = pgTable("user_stats", {
+  userId: uuid("user_id").primaryKey().notNull(),
+  totalSessionSeconds: integer("total_session_seconds").default(0).notNull(),
+  moduleDurations: jsonb("module_durations").default(sql`'{}'::jsonb`),
+  updatedAt: timestamp("updated_at", { withTimezone: true, mode: 'string' }).defaultNow(),
+}, (table) => [
+  foreignKey({
+    columns: [table.userId],
+    foreignColumns: [userProfiles.id],
+    name: "user_stats_user_id_fkey"
+  }).onDelete("cascade"),
 ]);

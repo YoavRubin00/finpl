@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import { zustandStorage } from '../../lib/zustandStorage';
+import { registerLocalStore } from '../../lib/stores/registry';
 import { getIsraelDateISO } from '../../utils/israelTime';
 import { CROWD_QUESTIONS } from './crowdQuestionsData';
 import { buildSelectionContext, selectTodayQuestion } from './selectQuestion';
@@ -20,6 +21,7 @@ interface CrowdQuestionState {
   hasVotedToday: () => boolean;
   getUserVoteFor: (questionId: string) => CrowdOption['id'] | null;
   recordLocalVote: (questionId: string, optionId: CrowdOption['id']) => void;
+  reset: () => void;
 }
 
 function findById(id: string): CrowdQuestion {
@@ -63,6 +65,8 @@ export const useCrowdQuestionStore = create<CrowdQuestionState>()(
           userVotes: { ...state.userVotes, [questionId]: optionId },
         });
       },
+
+      reset: () => set({ votedDates: [], userVotes: {}, cachedSelection: null }),
     }),
     {
       name: 'crowd-question-store',
@@ -75,3 +79,5 @@ export const useCrowdQuestionStore = create<CrowdQuestionState>()(
     },
   ),
 );
+
+registerLocalStore('crowd-question-store', useCrowdQuestionStore, 'crowd-question-store');

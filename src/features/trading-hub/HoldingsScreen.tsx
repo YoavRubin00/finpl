@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect, useRef } from 'react';
+import { useState, useCallback, useEffect, useMemo, useRef } from 'react';
 import { View, Text, ScrollView, Pressable, Modal, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -14,7 +14,8 @@ import { GlobalWealthHeader } from '../../components/ui/GlobalWealthHeader';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ASSET_BY_ID } from './tradingHubData';
 import { useTradingStore } from './useTradingStore';
-import { useEconomyStore } from '../economy/useEconomyStore';
+import { useEconomy } from '../economy/useEconomy';
+import { useEconomyUIStore } from '../economy/useEconomyUIStore';
 import { clearPriceCache, fetchLatestPrice, fetchPreviousClose } from './marketApiService';
 import { tapHaptic, successHaptic } from '../../utils/haptics';
 import type { ActivePosition } from './tradingHubTypes';
@@ -43,16 +44,23 @@ export function HoldingsScreen() {
     const updatePrices = useTradingStore((s) => s.updatePrices);
     const setPreviousClose = useTradingStore((s) => s.setPreviousClose);
     const cancelLimitOrder = useTradingStore((s) => s.cancelLimitOrder);
-    const coins = useEconomyStore((s) => s.coins);
-    const addCoins = useEconomyStore((s) => s.addCoins);
+    const { data: economyData } = useEconomy();
+    const coins = economyData?.coins ?? 0;
+    const addCoins = useEconomyUIStore((s) => s.addCoins);
     const insets = useSafeAreaInsets();
 
     const [closeResult, setCloseResult] = useState<CloseResult | null>(null);
 
-    // Refresh prices on mount (and on demand via refresh button)
+    // Refresh prices on mount (and on demand via refresh button).
+    // Includes pending limit orders' assets — otherwise a limit on an asset the
+    // user doesn't yet hold would never get a fresh price to trigger against.
     const mountedRef = useRef(true);
     const refreshPrices = useCallback(() => {
-        const assetIds = [...new Set(useTradingStore.getState().positions.map((p) => p.assetId))];
+        const state = useTradingStore.getState();
+        const assetIds = [...new Set([
+            ...state.positions.map((p) => p.assetId),
+            ...state.pendingOrders.map((o) => o.assetId),
+        ])];
         assetIds.forEach(async (id) => {
             try {
                 // Both calls hit the same backend request internally (deduped via
@@ -62,6 +70,9 @@ export function HoldingsScreen() {
                     fetchPreviousClose(id),
                 ]);
                 if (!mountedRef.current) return;
+                // updatePrices also evaluates pending limit orders for this asset,
+                // so updating an asset the user only has a pending order on is what
+                // triggers the limit fill.
                 if (price > 0) updatePrices(id, price);
                 if (prevClose !== null && prevClose > 0) setPreviousClose(id, prevClose);
             } catch { /* skip */ }
@@ -80,43 +91,45 @@ export function HoldingsScreen() {
         refreshPrices();
     }, [refreshPrices]);
 
-    // Compute totals
-    const totalInvested = positions.reduce((s, p) => s + p.amountInvested, 0);
-    const totalCurrentValue = positions.reduce((s, p) => {
-        const factor = 1 + p.pnlPercent / 100;
-        return s + Math.round(p.amountInvested * factor);
-    }, 0);
-    const totalPnl = totalCurrentValue - totalInvested;
-    const totalPnlPercent = totalInvested > 0 ? (totalPnl / totalInvested) * 100 : 0;
+    const { totalInvested, totalCurrentValue, totalPnl, totalPnlPercent, portfolioDailyChange, portfolioDailyChangePct } = useMemo(() => {
+        const invested = positions.reduce((s, p) => s + p.amountInvested, 0);
+        const currentValue = positions.reduce((s, p) => {
+            const factor = 1 + p.pnlPercent / 100;
+            return s + Math.round(p.amountInvested * factor);
+        }, 0);
+        const pnl = currentValue - invested;
+        const pnlPct = invested > 0 ? (pnl / invested) * 100 : 0;
 
-    // Daily change of the whole portfolio. For each position with a known previousClose:
-    //   • yesterdayValue ≈ amountInvested × (1 + pnlPercentAsOfYesterday/100)
-    //     where pnlPercentAsOfYesterday is calculated from entry→prevClose with the
-    //     same long/short logic the store already uses for the current pnlPercent.
-    //   • todayValue = the current value already in totalCurrentValue.
-    // We aggregate only positions that have a previousClose available; the rest get
-    // skipped (their contribution to the delta would be 0 anyway because we have no
-    // reference value to compare against).
-    let portfolioPrevValueCovered = 0;
-    let portfolioTodayValueCovered = 0;
-    let portfolioCoveredInvested = 0;
-    for (const p of positions) {
-        const prevClose = previousClosesByAsset[p.assetId];
-        if (!prevClose || p.entryPrice <= 0) continue;
-        const rawChange = (prevClose - p.entryPrice) / p.entryPrice;
-        const pnlAsOfPrevClose = p.type === 'buy' ? rawChange * 100 : -rawChange * 100;
-        const yesterdayVal = p.amountInvested * (1 + pnlAsOfPrevClose / 100);
-        const todayVal = p.amountInvested * (1 + p.pnlPercent / 100);
-        portfolioPrevValueCovered += yesterdayVal;
-        portfolioTodayValueCovered += todayVal;
-        portfolioCoveredInvested += p.amountInvested;
-    }
-    const portfolioDailyChange = portfolioCoveredInvested > 0
-        ? Math.round(portfolioTodayValueCovered - portfolioPrevValueCovered)
-        : null;
-    const portfolioDailyChangePct = portfolioCoveredInvested > 0 && portfolioPrevValueCovered > 0
-        ? ((portfolioTodayValueCovered - portfolioPrevValueCovered) / portfolioPrevValueCovered) * 100
-        : null;
+        let prevValueCovered = 0;
+        let todayValueCovered = 0;
+        let coveredInvested = 0;
+        for (const p of positions) {
+            const prevClose = previousClosesByAsset[p.assetId];
+            if (!prevClose || p.entryPrice <= 0) continue;
+            const rawChange = (prevClose - p.entryPrice) / p.entryPrice;
+            const pnlAsOfPrevClose = p.type === 'buy' ? rawChange * 100 : -rawChange * 100;
+            const yesterdayVal = p.amountInvested * (1 + pnlAsOfPrevClose / 100);
+            const todayVal = p.amountInvested * (1 + p.pnlPercent / 100);
+            prevValueCovered += yesterdayVal;
+            todayValueCovered += todayVal;
+            coveredInvested += p.amountInvested;
+        }
+        const dailyChange = coveredInvested > 0
+            ? Math.round(todayValueCovered - prevValueCovered)
+            : null;
+        const dailyChangePct = coveredInvested > 0 && prevValueCovered > 0
+            ? ((todayValueCovered - prevValueCovered) / prevValueCovered) * 100
+            : null;
+
+        return {
+            totalInvested: invested,
+            totalCurrentValue: currentValue,
+            totalPnl: pnl,
+            totalPnlPercent: pnlPct,
+            portfolioDailyChange: dailyChange,
+            portfolioDailyChangePct: dailyChangePct,
+        };
+    }, [positions, previousClosesByAsset]);
 
     const handleSell = useCallback((pos: ActivePosition) => {
         tapHaptic();

@@ -2,7 +2,7 @@ import { useState, useMemo, useCallback } from 'react';
 import { View, Text, Modal, Pressable, StyleSheet, SafeAreaView, StatusBar } from 'react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { useAuthStore } from '../auth/useAuthStore';
-import { useEconomyStore } from '../economy/useEconomyStore';
+import { useEconomyUIStore } from '../economy/useEconomyUIStore';
 import { useSoundEffect } from '../../hooks/useSoundEffect';
 import { tapHaptic } from '../../utils/haptics';
 import { buildPersonalizedDeck } from './mythData';
@@ -49,8 +49,8 @@ export function MythOrTachlesScreen({ visible, onClose }: Props) {
             markAnswered(card.id, correct);
 
             if (correct) {
-                useEconomyStore.getState().addCoins(COIN_REWARD);
-                useEconomyStore.getState().addXP(5, 'quiz_correct');
+                useEconomyUIStore.getState().addCoins(COIN_REWARD);
+                useEconomyUIStore.getState().addXP(5, 'quiz_correct');
                 setSessionCorrect((n) => n + 1);
             } else {
                 setSessionWrong((n) => n + 1);

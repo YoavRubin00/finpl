@@ -300,11 +300,11 @@ export const PODCAST_DRAFTS: readonly PodcastDraft[] = [
     comprehensionQuiz: {
       id: 'pod-9-comp',
       type: 'comprehension',
-      question: 'מה הלקח של הסיפור?',
+      question: 'מה גורם לרוב המועמדים לא להתמקח על ההצעה הראשונה?',
       options: [
-        { text: 'אסור לעבוד לפני שמשיגים את המקסימום', isCorrect: false, feedback: 'הלקח הוא לבקש - לא להסתכן בלהפסיד את העבודה כליל.' },
-        { text: 'שווה לבקש סכום גבוה יותר ממה שהציעו', isCorrect: true, feedback: 'בדיוק. הצעה ראשונית = רצפה, לא תקרה.' },
-        { text: 'מנהלים תמיד משלמים מעט', isCorrect: false, feedback: 'הם משלמים מה שמבקשים. צריך לדעת לבקש.' },
+        { text: 'פחד לאבד את ההצעה אם יבקשו יותר', isCorrect: true, feedback: 'בדיוק. הפחד הזה עולה עשרות אלפי שקלים — ההצעה הראשונה היא רצפה, לא תקרה.' },
+        { text: 'הצעת המעסיק היא תמיד הסכום המקסימלי שיסכים לשלם', isCorrect: false, feedback: 'לא נכון. כמעט תמיד יש מרווח של 10-20% מעל ההצעה הראשונית.' },
+        { text: 'החוק בישראל אוסר על משא ומתן על שכר בראיון עבודה', isCorrect: false, feedback: 'אין חוק כזה. ההפך — משא ומתן הוא חלק לגיטימי ומצופה בתהליך.' },
       ],
       xpReward: 20,
       coinReward: 50,

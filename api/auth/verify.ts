@@ -4,6 +4,7 @@ import { neon } from '@neondatabase/serverless';
 import { drizzle } from 'drizzle-orm/neon-http';
 import { userProfiles } from '../../src/db/schema';
 import { sendWelcomeEmail } from '../_shared/sendWelcomeEmail';
+import { signSession } from '../_shared/jwt';
 
 function getDb() {
   const url = process.env.DATABASE_URL ?? '';
@@ -24,6 +25,13 @@ interface VerifyRequestBody {
 }
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'POST,OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+  if (req.method === 'OPTIONS') {
+    res.status(204).end();
+    return;
+  }
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
@@ -98,7 +106,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       });
     }
 
-    return res.status(200).json({ ok: true, profile });
+    if (!profile) {
+      return res.status(500).json({ error: 'Profile lookup failed after upsert' });
+    }
+
+    const sessionToken = signSession({ sub: profile.id, authId: profile.authId });
+
+    return res.status(200).json({ ok: true, profile, token: sessionToken });
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : 'Internal server error';
     return res.status(500).json({ error: message });

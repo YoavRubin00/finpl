@@ -6,6 +6,7 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import { zustandStorage } from '../../lib/zustandStorage';
+import { registerLocalStore } from '../../lib/stores/registry';
 
 export interface LearningEvent {
   type: 'module' | 'quiz' | 'dilemma' | 'investment' | 'crash-game' | 'swipe-game' | 'macro-event' | 'bullshit-swipe' | 'higher-lower' | 'budget-ninja' | 'price-slider' | 'cashout-rush' | 'fomo-killer';
@@ -32,6 +33,7 @@ interface DailyLogState {
   addCorrectAnswer: () => void;
   getTodayEvents: () => LearningEvent[];
   getTodaySummaryText: (displayName: string) => string;
+  reset: () => void;
 }
 
 function todayStr(): string {
@@ -103,6 +105,14 @@ export const useDailyLogStore = create<DailyLogState>()(
         return state.events;
       },
 
+      reset: () => set({
+        currentDate: todayStr(),
+        events: [],
+        todayXP: 0,
+        todayCoins: 0,
+        todayCorrect: 0,
+      }),
+
       getTodaySummaryText: (displayName: string): string => {
         const state = get();
         if (state.currentDate !== todayStr() || state.events.length === 0) {
@@ -163,3 +173,5 @@ export const useDailyLogStore = create<DailyLogState>()(
     },
   ),
 );
+
+registerLocalStore('daily-log-store', useDailyLogStore, 'daily-log-store');

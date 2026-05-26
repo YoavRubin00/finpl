@@ -1,6 +1,7 @@
 import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
 import { zustandStorage } from "../../lib/zustandStorage";
+import { registerLocalStore } from '../../lib/stores/registry';
 
 interface CooldownState {
   lastVictoryAt: number | null;
@@ -9,6 +10,7 @@ interface CooldownState {
   recordVictory: () => void;
   recordAttempt: () => void;
   isOnCooldown: () => boolean;
+  reset: () => void;
 }
 
 const COOLDOWN_MS = 24 * 60 * 60 * 1000;
@@ -34,6 +36,7 @@ export const useDiamondHandsCooldown = create<CooldownState>()(
         if (!last) return false;
         return Date.now() - last < COOLDOWN_MS;
       },
+      reset: () => set({ lastVictoryAt: null, lastAttemptAt: null, totalVictories: 0 }),
     }),
     {
       name: "diamond-hands-cooldown",
@@ -41,3 +44,5 @@ export const useDiamondHandsCooldown = create<CooldownState>()(
     }
   )
 );
+
+registerLocalStore('diamond-hands-cooldown', useDiamondHandsCooldown, 'diamond-hands-cooldown');

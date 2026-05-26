@@ -14,7 +14,7 @@ import { Image as ExpoImage } from "expo-image";
 import { AssetIcon } from "./AssetIcon";
 import { X } from "lucide-react-native";
 import { GoldCoinIcon } from "../../components/ui/GoldCoinIcon";
-import { useEconomyStore } from "../economy/useEconomyStore";
+import { useEconomy } from "../economy/useEconomy";
 import { FINN_STANDARD } from "../retention-loops/finnMascotConfig";
 import { useRealAssetsStore } from "./useRealAssetsStore";
 import {
@@ -64,8 +64,9 @@ export function MarketScreen() {
     const router = useRouter();
     const isFocused = useIsFocused();
     const insets = useSafeAreaInsets();
-    const coins = useEconomyStore((s) => s.coins);
-    const gems = useEconomyStore((s) => s.gems);
+    const { data: economyData } = useEconomy();
+    const coins = economyData?.coins ?? 0;
+    const gems = economyData?.gems ?? 0;
     const ownedAssets = useRealAssetsStore((s) => s.ownedAssets);
     const purchaseAsset = useRealAssetsStore((s) => s.purchaseAsset);
     const purchaseWithMortgage = useRealAssetsStore((s) => s.purchaseWithMortgage);

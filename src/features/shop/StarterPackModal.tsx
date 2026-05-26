@@ -20,7 +20,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { X } from 'lucide-react-native';
 import LottieView from 'lottie-react-native';
 import { GoldCoinIcon } from '../../components/ui/GoldCoinIcon';
-import { useEconomyStore } from '../economy/useEconomyStore';
+import { useEconomyUIStore } from '../economy/useEconomyUIStore';
 import { useAuthStore } from '../auth/useAuthStore';
 import { getAvatarById } from '../avatars/avatarData';
 import { getAvatarSvgIcon } from '../../components/svg/avatars/AvatarMascots';
@@ -51,8 +51,8 @@ const HAS_RC_KEY = Platform.OS === 'android'
 
 export function StarterPackModal({ visible, onDismiss, onPurchaseSuccess }: Props) {
   const router = useRouter();
-  const addCoins = useEconomyStore((s) => s.addCoins);
-  const addGems = useEconomyStore((s) => s.addGems);
+  const addCoins = useEconomyUIStore((s) => s.addCoins);
+  const addGems = useEconomyUIStore((s) => s.addGems);
   const addOwnedAvatar = useAuthStore((s) => s.addOwnedAvatar);
   const setAvatar = useAuthStore((s) => s.setAvatar);
   const isMinor = useAuthStore((s) => s.profile?.ageGroup === 'minor');

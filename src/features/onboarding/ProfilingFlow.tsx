@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import { Image as ExpoImage } from "expo-image";
-import { View, Text, Image, TextInput, Pressable, ScrollView, Dimensions, StyleSheet, ImageBackground, PanResponder, KeyboardAvoidingView, Platform, ActivityIndicator } from "react-native";
+import { View, Text, Image, TextInput, Pressable, ScrollView, Dimensions, StyleSheet, ImageBackground, PanResponder, KeyboardAvoidingView, Platform } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
 import { LottieIcon } from "../../components/ui/LottieIcon";
@@ -20,6 +20,7 @@ import Animated, {
   withSequence,
   withRepeat,
   withDelay,
+  cancelAnimation,
   Easing,
   runOnJS,
   FadeIn,
@@ -28,8 +29,10 @@ import Animated, {
 } from "react-native-reanimated";
 import { useSoundEffect } from "../../hooks/useSoundEffect";
 import { tapHaptic } from "../../utils/haptics";
-import { useEconomyStore } from "../economy/useEconomyStore";
+import { useEconomyUIStore } from "../economy/useEconomyUIStore";
 import { useAuthStore } from "../auth/useAuthStore";
+import { signInWithProfile } from "../../lib/auth/lifecycle";
+import { getApiBase } from "../../db/apiBase";
 import { useGoogleAuthStore } from "../auth/useGoogleAuthStore";
 import { useAppleAuth } from "../auth/useAppleAuth";
 import { consumeTermsAcceptedFlag } from "../auth/termsAcceptedFlag";
@@ -329,6 +332,7 @@ function TypingDots() {
   const t = useSharedValue(0);
   useEffect(() => {
     t.value = withRepeat(withTiming(1, { duration: 600, easing: Easing.linear }), -1, false);
+    return () => { cancelAnimation(t); };
   }, [t]);
   const dot = (offset: number) =>
     useAnimatedStyle(() => {
@@ -504,26 +508,10 @@ type EditableStep = 'dream' | 'goal' | 'knowledge' | 'daily-goal';
 
 function ProfileSummaryScreen({ collected, onDone, onEditStep }: { collected: Collected; onDone: () => void; onEditStep?: (step: EditableStep) => void }) {
   const ctaScale = useSharedValue(0);
-  // CTA is rendered with scale 0 → 1 over 350ms (delay 350ms + spring). During
-  // that window the rendered button has zero size and taps can land on the
-  // wrong target. We gate `pointerEvents` to 'none' until the animation is
-  // (mostly) complete and the hit-test rect is meaningful.
-  const [ctaReady, setCtaReady] = useState(false);
-  // Prevent multi-tap on the CTA — without this users rage-tap because there's
-  // no visual feedback after the first press (see PostHog rage-click data on
-  // profile-summary: 7 users firing ~4 events each).
-  const [pressed, setPressed] = useState(false);
   useEffect(() => {
     ctaScale.value = withDelay(350, withSpring(1, { damping: 14, stiffness: 120 }));
-    const t = setTimeout(() => setCtaReady(true), 600);
-    return () => clearTimeout(t);
   }, []);
   const ctaStyle = useAnimatedStyle(() => ({ transform: [{ scale: ctaScale.value }] }));
-  const handlePress = useCallback(() => {
-    if (pressed) return;
-    setPressed(true);
-    onDone();
-  }, [pressed, onDone]);
 
   const dreamLabel = collected.financialDream ? DREAMS.find((d) => d.id === collected.financialDream)?.label : null;
   const goalLabel = collected.financialGoal ? GOALS.find((g) => g.id === collected.financialGoal)?.label : null;
@@ -577,20 +565,14 @@ function ProfileSummaryScreen({ collected, onDone, onEditStep }: { collected: Co
           </Pressable>
         ))}
       </Animated.View>
-      <Animated.View
-        style={[ctaStyle, { width: '100%', alignItems: 'center' }]}
-        pointerEvents={ctaReady ? 'auto' : 'none'}
-      >
+      <Animated.View style={[ctaStyle, { width: '100%', alignItems: 'center' }]}>
         <Pressable
-          onPress={handlePress}
-          disabled={pressed}
-          style={[styles.celebCTA, { width: '100%', alignItems: 'center', flexDirection: 'row', justifyContent: 'center', gap: 8 }, pressed && { opacity: 0.6 }]}
+          onPress={onDone}
+          style={[styles.celebCTA, { width: '100%', alignItems: 'center' }]}
           accessibilityRole="button"
           accessibilityLabel="אשר ותמשיך לחגיגה"
-          accessibilityState={{ disabled: pressed, busy: pressed }}
         >
           <Text style={styles.celebCTAText}>נראה מצוין!</Text>
-          {pressed && <ActivityIndicator size="small" color="#ffffff" />}
         </Pressable>
       </Animated.View>
     </SafeAreaView>
@@ -603,7 +585,11 @@ function CelebrationScreen({ onDone }: { onDone: () => void }) {
   const badgeScale = useSharedValue(0.2);
   const badgeRotate = useSharedValue(-15);
   const xpScale = useSharedValue(0);
-  const ctaScale = useSharedValue(0);
+  // CTA fades in via opacity (not scale). When using scale: 0 → 1, the
+  // Pressable's hit-rect stays collapsed and on some Reanimated/RN versions
+  // it never recovers — the button looks visible but doesn't respond to taps.
+  // Opacity doesn't affect hit-testing, so the button is tappable from mount.
+  const ctaOpacity = useSharedValue(0);
 
   useEffect(() => {
     badgeScale.value = withSequence(
@@ -612,7 +598,7 @@ function CelebrationScreen({ onDone }: { onDone: () => void }) {
     );
     badgeRotate.value = withSpring(0, { damping: 14, stiffness: 100 });
     xpScale.value = withDelay(350, withSpring(1, { damping: 14, stiffness: 120 }));
-    ctaScale.value = withDelay(700, withSpring(1, { damping: 14, stiffness: 110 }));
+    ctaOpacity.value = withDelay(700, withTiming(1, { duration: 280 }));
   }, []);
 
   const [showCodeField, setShowCodeField] = useState(false);
@@ -644,7 +630,7 @@ function CelebrationScreen({ onDone }: { onDone: () => void }) {
     transform: [{ scale: badgeScale.value }, { rotate: `${badgeRotate.value}deg` }],
   }));
   const xpStyle = useAnimatedStyle(() => ({ transform: [{ scale: xpScale.value }] }));
-  const ctaStyle = useAnimatedStyle(() => ({ transform: [{ scale: ctaScale.value }] }));
+  const ctaStyle = useAnimatedStyle(() => ({ opacity: ctaOpacity.value }));
 
   return (
     <ImageBackground source={CHAT_BG} style={{ flex: 1 }} resizeMode="cover">
@@ -1746,7 +1732,6 @@ interface IntroStepProps {
 
 function IntroStep({ onRegister, onGuest, onLoginSuccess }: IntroStepProps) {
   const [subStep, setSubStep] = useState<"welcome" | "choice" | "login">("welcome");
-  const signIn = useAuthStore((s) => s.signIn);
   const promptGoogleSignIn = useGoogleAuthStore((s) => s.promptGoogleSignIn);
   const googleReady = useGoogleAuthStore((s) => s.isReady);
   const { promptAppleSignIn, isAvailable: appleAvailable } = useAppleAuth();
@@ -1867,11 +1852,9 @@ function IntroStep({ onRegister, onGuest, onLoginSuccess }: IntroStepProps) {
         </Animated.View>
 
         <Animated.View style={[ctaAnimStyle, { alignItems: "center", gap: 10, width: "100%" }]}>
-          {/* Terms acceptance is implicit on first CTA tap — same pattern Duolingo /
-              Spotify / Bumble use. PostHog showed that the explicit checkbox gate
-              was the single biggest blocker on this screen (the disabled-opacity
-              CTAs looked broken to most users). The link below makes the legal
-              context visible without requiring an extra action. */}
+          {/* Terms acceptance is implicit on first CTA tap — Duolingo/Spotify
+              pattern. The explicit checkbox was the biggest blocker on this
+              screen. The link below makes the legal context visible. */}
           <Pressable
             onPress={() => { setTermsAccepted(true); onRegister(); }}
             style={[introStyles.cta, { width: "100%", alignItems: "center", paddingHorizontal: 0 }]}
@@ -2011,11 +1994,26 @@ function IntroStep({ onRegister, onGuest, onLoginSuccess }: IntroStepProps) {
           {/* Login button */}
           <Pressable
             disabled={!isLoginValid}
-            onPress={() => {
-              if (isLoginValid) {
-                signIn("", email.trim());
-                onLoginSuccess();
-              }
+            onPress={async () => {
+              if (!isLoginValid) return;
+              try {
+                const res = await fetch(`${getApiBase()}/api/auth/verify`, {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ provider: 'email', email: email.trim().toLowerCase() }),
+                });
+                const data = await res.json() as {
+                  ok: boolean;
+                  token?: string;
+                  syncToken?: string;
+                  profile: { id: string; authId: string; displayName: string | null; email: string | null } | null;
+                };
+                const resolvedToken = data.token ?? data.syncToken ?? null;
+                if (res.ok && data?.ok && data.profile && resolvedToken) {
+                  await signInWithProfile(data.profile, resolvedToken);
+                }
+              } catch { /* non-fatal — let onLoginSuccess route */ }
+              onLoginSuccess();
             }}
             accessibilityRole="button"
             accessibilityLabel="התחבר"
@@ -2165,8 +2163,8 @@ interface ProfilingFlowProps {
 
 export function ProfilingFlow({ mode = "onboarding", onRedoComplete }: ProfilingFlowProps = {}) {
   const router = useRouter();
-  const addXP = useEconomyStore((s) => s.addXP);
-  const addCoins = useEconomyStore((s) => s.addCoins);
+  const addXP = useEconomyUIStore((s) => s.addXP);
+  const addCoins = useEconomyUIStore((s) => s.addCoins);
   const completeOnboarding = useAuthStore((s) => s.completeOnboarding);
   const enterGuestMode = useAuthStore((s) => s.enterGuestMode);
   const updateProfile = useAuthStore((s) => s.updateProfile);
@@ -2240,20 +2238,26 @@ export function ProfilingFlow({ mode = "onboarding", onRedoComplete }: Profiling
   }, []);
 
   function slide(nextStep: FlowStep, patch: Partial<Collected>) {
-    captureEvent('onboarding_step_completed', {
-      step_name: step,
-      next_step: nextStep,
-      mode: isRedo ? 'redo' : 'new',
-    });
+    // tapHaptic is fine immediately (press feedback). captureEvent + playSound
+    // are deferred to doUpdate so they don't hold the JS thread for 16-30ms
+    // before the fade-out animation begins (was making transitions choppy).
     setIsGlobalTyping(false);
     if (globalTypingResetRef.current) clearTimeout(globalTypingResetRef.current);
     tapHaptic();
     setShowBubbles(true);
-    playSound('bubble_transition');
     if (bubbleTimeout.current) clearTimeout(bubbleTimeout.current);
     bubbleTimeout.current = setTimeout(() => setShowBubbles(false), 900);
 
     function doUpdate() {
+      try {
+        captureEvent('onboarding_step_completed', {
+          step_name: step,
+          next_step: nextStep,
+          mode: isRedo ? 'redo' : 'new',
+        });
+      } catch { /* non-fatal */ }
+      try { playSound('bubble_transition'); } catch { /* non-fatal */ }
+
       setCollected((prev) => ({ ...prev, ...patch }));
       setStep(nextStep);
       // Bloom in, fade + spring scale/Y from slightly below
@@ -2276,7 +2280,9 @@ export function ProfilingFlow({ mode = "onboarding", onRedoComplete }: Profiling
   function handleDone() {
     if (isRedo) {
       // Reset all progress (XP, coins, chapters, etc.), user starts fresh
-      devResetProgress();
+      if (__DEV__) {
+        devResetProgress?.();
+      }
       updateProfile({
         financialDream: collected.financialDream ?? undefined,
         financialGoal: collected.financialGoal ?? undefined,
@@ -2293,12 +2299,20 @@ export function ProfilingFlow({ mode = "onboarding", onRedoComplete }: Profiling
       onRedoComplete?.();
       return;
     }
-    captureEvent('onboarding_completed', {
-      duration_sec: Math.round((Date.now() - onboardingStartedAtRef.current) / 1000),
-      total_steps: TOTAL_STEPS,
-    });
-    addXP(ONBOARDING_XP, "onboarding");
-    addCoins(50);
+    try {
+      captureEvent('onboarding_completed', {
+        duration_sec: Math.round((Date.now() - onboardingStartedAtRef.current) / 1000),
+        total_steps: TOTAL_STEPS,
+      });
+    } catch (e) { if (__DEV__) console.warn('[onboarding] captureEvent failed:', e); }
+    try { addXP(ONBOARDING_XP, "onboarding"); } catch (e) { if (__DEV__) console.warn('[onboarding] addXP failed:', e); }
+    try { addCoins(50); } catch (e) { if (__DEV__) console.warn('[onboarding] addCoins failed:', e); }
+    // CRITICAL: ensure user is at least a guest before marking onboarding done.
+    // Otherwise `_layout`'s auth redirect bounces them back to /(auth)/onboarding
+    // (because isAuthenticated=false → first branch always wins).
+    if (!isAuthenticated) {
+      enterGuestMode();
+    }
     completeOnboarding({
       displayName,
       financialDream: collected.financialDream ?? null,
@@ -2314,6 +2328,9 @@ export function ProfilingFlow({ mode = "onboarding", onRedoComplete }: Profiling
       avatarId: collected.avatarId ?? null,
       ownedAvatars: [],
     });
+    // Explicit navigation — don't rely solely on `_layout`'s effect-based
+    // redirect, which has been flaky in dev mode with mid-flight state updates.
+    router.replace("/(tabs)" as never);
   }
 
   function editSummaryStep(target: EditableStep) {
@@ -2324,9 +2341,11 @@ export function ProfilingFlow({ mode = "onboarding", onRedoComplete }: Profiling
   if (step === "celebration") return <CelebrationScreen onDone={handleDone} />;
   if (step === "profile-summary") return <ProfileSummaryScreen collected={collected} onDone={() => {
     // Fire the funnel event manually since this transition does NOT use `slide()`.
-    // Without this PostHog showed an 86% drop here — most of which was actually
-    // missing telemetry rather than real abandonment.
-    captureEvent('onboarding_step_completed', { step_name: 'profile-summary', next_step: 'building-profile', mode: isRedo ? 'redo' : 'new' });
+    // Without this PostHog showed an 86% drop here — most of which was missing
+    // telemetry, not real abandonment.
+    try {
+      captureEvent('onboarding_step_completed', { step_name: 'profile-summary', next_step: 'building-profile', mode: isRedo ? 'redo' : 'new' });
+    } catch { /* non-fatal */ }
     setStep("building-profile");
   }} onEditStep={editSummaryStep} />;
   if (step === "building-profile") return <BuildingProfileScreen onDone={isRedo ? handleDone : () => setStep("celebration")} />;

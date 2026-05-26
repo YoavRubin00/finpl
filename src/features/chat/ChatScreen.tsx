@@ -29,9 +29,13 @@ import Animated, {
   SlideInUp,
 } from "react-native-reanimated";
 import { useAuthStore } from "../auth/useAuthStore";
-import { useChapterStore } from "../chapter-1-content/useChapterStore";
+import { useChapterUIStore } from "../chapter-1-content/useChapterUIStore";
+import { useProgress } from "../chapter-1-content/useProgress";
 import { useAdaptiveStore } from "../social/useAdaptiveStore";
-import { useSubscriptionStore } from "../subscription/useSubscriptionStore";
+import { useIsPro, subscriptionQueryKey } from "../subscription/useSubscription";
+import { useUsageStore } from "../subscription/useUsageStore";
+import { queryClient } from "../../lib/queryClient";
+import type { SubscriptionState } from "../../lib/api/subscription";
 import { useRouter } from "expo-router";
 import { getConceptLabel } from "../social/LifelineModal";
 import { AnimatedPressable } from "../../components/ui/AnimatedPressable";
@@ -309,8 +313,8 @@ export function ChatScreen({ lessonContext }: { lessonContext?: LessonContext } 
   const displayName = useAuthStore((s) => s.displayName);
   const updateProfile = useAuthStore((s) => s.updateProfile);
   const profile = useAuthStore((s) => s.profile);
-  const currentChapterId = useChapterStore((s) => s.currentChapterId);
-  const progress = useChapterStore((s) => s.progress);
+  const currentChapterId = useChapterUIStore((s) => s.currentChapterId);
+  const { data: progressData } = useProgress();
   const hasChosenStyle = useTutorialStore((s) => s.hasChosenChatStyle);
   const completeChatStyleChoice = useTutorialStore((s) => s.completeChatStyleChoice);
   const [showStylePicker, setShowStylePicker] = useState(false);
@@ -368,12 +372,16 @@ export function ChatScreen({ lessonContext }: { lessonContext?: LessonContext } 
 
   // Aggregate completed modules across ALL chapters for full context-awareness
   const allCompletedModules = useMemo(
-    () => Object.values(progress).flatMap((cp) => cp.completedModules),
-    [progress],
+    () => progressData?.filter((m) => m.status === 'completed').map((m) => m.moduleId) ?? [],
+    [progressData],
   );
   // Current chapter's modules for backward-compatible suggestion logic
-  const chapterProgress = progress[currentChapterId];
-  const completedModules = chapterProgress?.completedModules ?? [];
+  const chNum = currentChapterId.replace('ch-', '');
+  const chPrefix = `mod-${chNum}-`;
+  const completedModules = useMemo(
+    () => allCompletedModules.filter((id) => id.startsWith(chPrefix)),
+    [allCompletedModules, chPrefix],
+  );
 
   const suggestions = useMemo(
     () => getContextualSuggestions(allCompletedModules, currentChapterId),
@@ -602,8 +610,9 @@ export function ChatScreen({ lessonContext }: { lessonContext?: LessonContext } 
     if (!text || loading) return;
 
     // Free-tier daily quota gate — input should already be disabled, this is a safety net
-    const storeState = useSubscriptionStore.getState();
-    if (!storeState.canUse("chat")) {
+    const subData = queryClient.getQueryData<SubscriptionState | null>(subscriptionQueryKey);
+    const isProNow = subData?.isPro === true;
+    if (!useUsageStore.getState().canUse("chat", isProNow)) {
       setInput("");
       return;
     }
@@ -698,11 +707,11 @@ export function ChatScreen({ lessonContext }: { lessonContext?: LessonContext } 
       setAnimationState("idle");
     } else {
       if (accumulated) AccessibilityInfo.announceForAccessibility(accumulated);
-      if (!storeState.isPro()) {
-        storeState.incrementUsage("chat");
+      if (!isProNow) {
+        useUsageStore.getState().incrementUsage("chat");
       }
       markAllRead();
-      const atLimitAfterSend = !useSubscriptionStore.getState().canUse("chat");
+      const atLimitAfterSend = !useUsageStore.getState().canUse("chat", isProNow);
       if (atLimitAfterSend) {
         setMessages((prev) => {
           if (prev.some((m) => m.kind === "upgrade_prompt")) return prev;
@@ -725,10 +734,10 @@ export function ChatScreen({ lessonContext }: { lessonContext?: LessonContext } 
     setTimeout(() => scrollViewRef.current?.scrollToEnd({ animated: true }), 100);
   }, [input, loading, messages, displayName, profile, companionId, companion, allCompletedModules, currentChapterId, lifelineConcept, markAllRead]);
 
-  const isPro = useSubscriptionStore((s) => s.isPro());
+  const isPro = useIsPro();
   // Subscribe to chatMessagesToday so canSendChat re-evaluates after each send
-  const chatMessagesToday = useSubscriptionStore((s) => s.chatMessagesToday);
-  const canSendChat = useSubscriptionStore((s) => s.canUse("chat"));
+  const chatMessagesToday = useUsageStore((s) => s.chatMessagesToday);
+  const canSendChat = useUsageStore((s) => s.canUse("chat", isPro));
   void chatMessagesToday;
 
   const handleStyleSelect = useCallback((id: CompanionId) => {

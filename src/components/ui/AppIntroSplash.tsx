@@ -5,11 +5,8 @@ import { useVideoPlayer, VideoView } from "expo-video";
 const VIDEO_URL =
   "https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/finn-videos/finn-daily-return.mp4";
 
-/** Cold-start intro splash: plays finn-daily-return for ~1s, tap to skip.
- *  Reduced from 2000ms after PostHog data showed 240 users (57% of installs)
- *  open the app and leave before tapping "Get Started". Every extra second on
- *  the splash compounds with slow-network asset loading. */
-const DISPLAY_MS = 1000;
+/** Cold-start intro splash: plays finn-daily-return for ~3s, tap to skip. */
+const DISPLAY_MS = 3000;
 
 interface Props {
   onDismiss: () => void;
@@ -17,6 +14,8 @@ interface Props {
 
 export function AppIntroSplash({ onDismiss }: Props) {
   const dismissedRef = useRef(false);
+  const onDismissRef = useRef(onDismiss);
+  onDismissRef.current = onDismiss;
 
   const player = useVideoPlayer(VIDEO_URL, (p) => {
     p.loop = false;
@@ -28,24 +27,30 @@ export function AppIntroSplash({ onDismiss }: Props) {
     };
   });
 
+  // Mount-only effect — must NOT depend on `onDismiss` (recreated each parent
+  // render) or `player` (recreated by useVideoPlayer). Re-running this effect
+  // resets the auto-dismiss timer, leaving the splash stuck on screen with
+  // zIndex 99999 blocking every button below. Read both via refs instead.
+  const playerRef = useRef(player);
+  playerRef.current = player;
   useEffect(() => {
     const dismissOnce = () => {
       if (dismissedRef.current) return;
       dismissedRef.current = true;
-      try { player.pause(); } catch { /* ignore */ }
-      onDismiss();
+      try { playerRef.current.pause(); } catch { /* ignore */ }
+      onDismissRef.current();
     };
 
-    try { player.play(); } catch { /* ignore */ }
+    try { playerRef.current.play(); } catch { /* ignore */ }
     const timer = setTimeout(dismissOnce, DISPLAY_MS);
     return () => clearTimeout(timer);
-  }, [player, onDismiss]);
+  }, []);
 
   const handleTap = () => {
     if (dismissedRef.current) return;
     dismissedRef.current = true;
-    try { player.pause(); } catch { /* ignore */ }
-    onDismiss();
+    try { playerRef.current.pause(); } catch { /* ignore */ }
+    onDismissRef.current();
   };
 
   return (

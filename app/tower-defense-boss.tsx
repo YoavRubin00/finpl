@@ -1,12 +1,12 @@
 import React, { useCallback } from "react";
 import { StatusBar } from "expo-status-bar";
 import { useRouter } from "expo-router";
-import { useChapterStore } from "../src/features/chapter-1-content/useChapterStore";
+import { useChapterUIStore } from "../src/features/chapter-1-content/useChapterUIStore";
 import { TowerDefenseScreen } from "../src/features/tower-defense/TowerDefenseScreen";
 
 export default function TowerDefenseBossPage() {
   const router = useRouter();
-  const markBossComplete = useChapterStore((s) => s.markBossComplete);
+  const markBossComplete = useChapterUIStore((s) => s.markBossComplete);
 
   const handleExit = useCallback(() => {
     if (router.canGoBack()) {

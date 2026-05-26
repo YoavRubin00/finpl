@@ -6,7 +6,7 @@ import { LinearGradient } from "expo-linear-gradient";
 import { AnimatedPressable } from "../../components/ui/AnimatedPressable";
 import { useUpgradeModalStore } from "../../stores/useUpgradeModalStore";
 import { heavyHaptic } from "../../utils/haptics";
-import { BASIC_LIMITS, type GatedFeature } from "./useSubscriptionStore";
+import { BASIC_LIMITS, type GatedFeature } from "./subscriptionConstants";
 
 const FEATURE_INFO: Record<GatedFeature, { title: string; body: string }> = {
   simulator: {

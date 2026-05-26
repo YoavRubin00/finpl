@@ -22,9 +22,13 @@ import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
 import { useFocusEffect } from "@react-navigation/native";
 import { Lock, ChevronDown, Home, Shield, Scale, TrendingUp, Crown, FastForward, X } from "lucide-react-native";
-import { useEconomyStore } from "../economy/useEconomyStore";
-import { useChapterStore } from "../chapter-1-content/useChapterStore";
-import { useSubscriptionStore } from "../subscription/useSubscriptionStore";
+import { useEconomy } from "../economy/useEconomy";
+import { useStreak } from "../economy/useStreak";
+import { useEconomyUIStore } from "../economy/useEconomyUIStore";
+import { useChapterUIStore } from "../chapter-1-content/useChapterUIStore";
+import { useProgress, useUpsertModuleProgress, progressQueryKey } from "../chapter-1-content/useProgress";
+import { queryClient } from "../../lib/queryClient";
+import { useIsPro } from "../subscription/useSubscription";
 import { useAuthStore } from "../auth/useAuthStore";
 import { getPyramidStatus } from "../../utils/progression";
 import { ARENAS, type ArenaConfig } from "./arenaConfig";
@@ -491,6 +495,8 @@ function ModuleNode({
   hasEasterEgg,
   onClaimEasterEgg,
   onPress,
+  activeStreak,
+  onActiveStreakPress,
 }: {
   module: Module;
   state: "completed" | "active" | "locked";
@@ -507,6 +513,11 @@ function ModuleNode({
   hasEasterEgg?: boolean;
   onClaimEasterEgg?: () => void;
   onPress: () => void;
+  /** Current streak count — shown as a pill on the opposite side of Finn at
+   *  the active node so it stays visible even when the top header has scrolled
+   *  off. Only rendered when `showCharacter` is true. */
+  activeStreak?: number;
+  onActiveStreakPress?: () => void;
 }) {
   const colors = ARENA_COLORS[arenaId];
 
@@ -549,6 +560,39 @@ function ModuleNode({
               {getFinnPhrase(modIndex, displayName)}
             </Text>
           </Animated.View>
+          {/* Streak pill, opposite-edge side from Finn so the journal indicator
+              is still visible when the top header scrolls off after auto-scroll. */}
+          {activeStreak !== undefined && (
+            <Animated.View
+              entering={FadeInDown.delay(150).duration(400)}
+              style={[
+                styles.activeStreakPill,
+                finnGoesRight
+                  ? { left: 8 }
+                  : { right: 8 },
+              ]}
+            >
+              <Pressable
+                onPress={onActiveStreakPress}
+                accessibilityRole="button"
+                accessibilityLabel={`רצף ${activeStreak} ימים, פתח לוח שנה`}
+                style={styles.activeStreakInner}
+              >
+                <CalendarDays
+                  size={14}
+                  color={activeStreak >= 8 ? "#a855f7" : activeStreak >= 4 ? "#3b82f6" : "#f97316"}
+                />
+                <Text
+                  style={[
+                    styles.activeStreakText,
+                    { color: activeStreak >= 8 ? "#a855f7" : activeStreak >= 4 ? "#3b82f6" : "#f97316" },
+                  ]}
+                >
+                  {activeStreak}
+                </Text>
+              </Pressable>
+            </Animated.View>
+          )}
         </>
       )}
 
@@ -750,6 +794,8 @@ const ChapterSection = React.memo(function ChapterSection({
   easterEggNodeId,
   onClaimEasterEgg,
   questPathNodeProps,
+  activeStreak,
+  onActiveStreakPress,
 }: {
   arena: ArenaConfig;
   chapter: typeof chapter1Data;
@@ -773,6 +819,8 @@ const ChapterSection = React.memo(function ChapterSection({
     rewardClaimed: boolean;
     onPress: () => void;
   };
+  activeStreak?: number;
+  onActiveStreakPress?: () => void;
 }) {
   const firstIncompleteIndex = chapter.modules.findIndex(
     (m) => !completedModules.includes(m.id) && !m.comingSoon && (isPro || !PRO_LOCKED_SIMS.has(m.id)),
@@ -872,6 +920,8 @@ const ChapterSection = React.memo(function ChapterSection({
                 friendEmojis={friendsOnModule[module.id]}
                 hasEasterEgg={easterEggNodeId === module.id}
                 onClaimEasterEgg={onClaimEasterEgg}
+                activeStreak={isActive ? activeStreak : undefined}
+                onActiveStreakPress={onActiveStreakPress}
                 onPress={() => {
                   if (isLocked) {
                     onLockedPress();
@@ -948,10 +998,12 @@ export function DuoLearnScreen() {
   const router = useRouter();
   const isWalkthroughActive = !useTutorialStore((s) => s.hasSeenAppWalkthrough);
   const walkthroughScreen = useTutorialStore((s) => s.walkthroughActiveScreen);
-  const xp = useEconomyStore((s) => s.xp);
-  const streak = useEconomyStore((s) => s.streak);
-  const progress = useChapterStore((s) => s.progress);
-  const isPro = useSubscriptionStore((s) => s.tier === "pro" && s.status === "active");
+  const { data: economyData } = useEconomy();
+  const { data: streakData } = useStreak();
+  const xp = economyData?.xp ?? 0;
+  const streak = streakData?.currentStreak ?? 0;
+  const { data: progressData } = useProgress();
+  const isPro = useIsPro();
   const displayName = useAuthStore((s) => s.displayName) ?? "";
   const { layer } = getPyramidStatus(xp);
   const [lockedModalVisible, setLockedModalVisible] = useState(false);
@@ -964,9 +1016,9 @@ export function DuoLearnScreen() {
   const [refreshKey, setRefreshKey] = useState(0);
   const isFirstMount = useRef(true);
 
-  const setCurrentChapter = useChapterStore((s) => s.setCurrentChapter);
-  const setCurrentModule = useChapterStore((s) => s.setCurrentModule);
-  const skipIntroChapter = useChapterStore((s) => s.skipIntroChapter);
+  const setCurrentChapter = useChapterUIStore((s) => s.setCurrentChapter);
+  const setCurrentModule = useChapterUIStore((s) => s.setCurrentModule);
+  const { mutate: upsertProgress } = useUpsertModuleProgress();
   const { nudge, dismiss: dismissNudge } = useFeedNudge();
   const dilemmaAnswered = useDailyChallengesStore((s) => s.hasDilemmaAnsweredToday());
   const [questSheetVisible, setQuestSheetVisible] = useState(false);
@@ -1009,21 +1061,17 @@ export function DuoLearnScreen() {
   const easterEggNodeId = useFunStore((s) => s.easterEggNodeId);
   const rollEasterEgg = useFunStore((s) => s.rollEasterEgg);
   const claimEasterEgg = useFunStore((s) => s.claimEasterEgg);
-  const addCoins = useEconomyStore((s) => s.addCoins);
+  const addCoins = useEconomyUIStore((s) => s.addCoins);
   const [showEasterEggReward, setShowEasterEggReward] = useState<"xp" | "coins" | null>(null);
 
   // Roll Easter egg on screen focus (20% chance to place coin on a completed node)
   useFocusEffect(
     useCallback(() => {
-      const allCompleted: string[] = [];
-      for (const ch of ALL_CHAPTERS) {
-        const done = progress[storeKey(ch.id)]?.completedModules ?? [];
-        allCompleted.push(...done);
-      }
+      const allCompleted = progressData?.filter((m) => m.status === 'completed').map((m) => m.moduleId) ?? [];
       if (allCompleted.length > 0) {
         rollEasterEgg(allCompleted);
       }
-    }, [progress, rollEasterEgg])
+    }, [progressData, rollEasterEgg])
   );
 
   const [showScratchModal, setShowScratchModal] = useState(false);
@@ -1048,12 +1096,16 @@ export function DuoLearnScreen() {
     let y = 150; // approximate greeting + top padding
     for (let chIdx = 0; chIdx < ALL_CHAPTERS.length; chIdx++) {
       const ch = ALL_CHAPTERS[chIdx];
-      const done = progress[storeKey(ch.id)]?.completedModules ?? [];
+      const chNum = storeKey(ch.id).replace('ch-', '');
+      const prefix = `mod-${chNum}-`;
+      const done = progressData?.filter((m) => m.moduleId.startsWith(prefix) && m.status === 'completed').map((m) => m.moduleId) ?? [];
 
       let unlocked = isPro || chIdx === 0;
       if (!isPro && chIdx > 0) {
         const prev = ALL_CHAPTERS[chIdx - 1];
-        const prevDone = progress[storeKey(prev.id)]?.completedModules ?? [];
+        const prevNum = storeKey(prev.id).replace('ch-', '');
+        const prevPrefix = `mod-${prevNum}-`;
+        const prevDone = progressData?.filter((m) => m.moduleId.startsWith(prevPrefix) && m.status === 'completed').map((m) => m.moduleId) ?? [];
         unlocked = prev.modules.every((m) => m.comingSoon || (!isPro && PRO_LOCKED_SIMS.has(m.id)) || prevDone.includes(m.id));
       }
       if (!unlocked) break;
@@ -1070,7 +1122,7 @@ export function DuoLearnScreen() {
       y += ch.modules.length * 160;
     }
     return y;
-  }, [progress, isPro]);
+  }, [progressData, isPro]);
 
   // On every tab focus, scroll to the user's current module instead of the
   // top. Skips the very first mount because the dedicated mount effect below
@@ -1128,17 +1180,16 @@ export function DuoLearnScreen() {
   const handleModulePress = useCallback(
     (moduleId: string, chapterId: string, moduleIndex: number) => {
       // Check if module is already completed, show summary preview first
-      const chKey = storeKey(chapterId);
-      const done = progress[chKey]?.completedModules ?? [];
+      const done = progressData?.filter((m) => m.status === 'completed').map((m) => m.moduleId) ?? [];
       if (done.includes(moduleId)) {
         setReplayModule({ moduleId, chapterId, moduleIndex });
         return;
       }
-      setCurrentChapter(chKey);
+      setCurrentChapter(storeKey(chapterId));
       setCurrentModule(moduleIndex);
       router.push(`/lesson/${moduleId}?chapterId=${chapterId}` as never);
     },
-    [router, setCurrentChapter, setCurrentModule, progress],
+    [router, setCurrentChapter, setCurrentModule, progressData],
   );
 
   const handleReplay = useCallback(() => {
@@ -1150,12 +1201,23 @@ export function DuoLearnScreen() {
   }, [replayModule, router, setCurrentChapter, setCurrentModule]);
 
   const handleSkipIntro = useCallback(() => {
-    skipIntroChapter(chapter0Data.modules.map(m => m.id));
+    successHaptic();
+    // Server-sync all ch-0 modules as completed. onMutate optimistically updates
+    // the local progress cache so the UI flips to "all ch-0 done → ch-1 unlocked
+    // → cursor on mod-1-1" within the same frame.
+    for (const mod of chapter0Data.modules) {
+      upsertProgress({ moduleId: mod.id, status: 'completed', xpEarned: 0 });
+    }
+    // Move the "current chapter / module" pointer to mod-1-1 so any UI bit that
+    // reads it (lesson resume, header) lands on compound interest, not on the
+    // last completed ch-0 module.
+    setCurrentChapter('ch-1');
+    setCurrentModule(0);
     setTimeout(() => {
       // scroll down to let the user see chapter 1 unlocked
       scrollRef.current?.scrollTo({ y: 800, animated: true });
     }, 300);
-  }, [skipIntroChapter]);
+  }, [upsertProgress, setCurrentChapter, setCurrentModule]);
 
   // Stable callbacks for ChapterSection (avoids inline arrow re-creation per render)
   const handleLockedPress = useCallback(() => setLockedModalVisible(true), []);
@@ -1245,14 +1307,18 @@ export function DuoLearnScreen() {
           {/* Chapter sections */}
           {ARENAS.map((arena, idx) => {
             const chapter = ALL_CHAPTERS[idx];
-            const completedModules = progress[storeKey(chapter.id)]?.completedModules ?? [];
+            const chNum = storeKey(chapter.id).replace('ch-', '');
+            const prefix = `mod-${chNum}-`;
+            const completedModules = progressData?.filter((m) => m.moduleId.startsWith(prefix) && m.status === 'completed').map((m) => m.moduleId) ?? [];
 
             // PRO: everything open. Free: unit unlocks only after ALL modules of previous unit completed.
             // Unit 1 is always unlocked.
             let isUnlocked = isPro || idx === 0;
             if (!isPro && idx > 0) {
               const prevChapter = ALL_CHAPTERS[idx - 1];
-              const prevCompleted = progress[storeKey(prevChapter.id)]?.completedModules ?? [];
+              const prevNum = storeKey(prevChapter.id).replace('ch-', '');
+              const prevPrefix = `mod-${prevNum}-`;
+              const prevCompleted = progressData?.filter((m) => m.moduleId.startsWith(prevPrefix) && m.status === 'completed').map((m) => m.moduleId) ?? [];
               isUnlocked = prevChapter.modules.every((m) => m.comingSoon || (!isPro && PRO_LOCKED_SIMS.has(m.id)) || prevCompleted.includes(m.id));
             }
 
@@ -1467,7 +1533,9 @@ export function DuoLearnScreen() {
               >
               {ARENAS.map((arena, idx) => {
                 const ch = ALL_CHAPTERS[idx];
-                const done = progress[storeKey(ch.id)]?.completedModules ?? [];
+                const chNum2 = storeKey(ch.id).replace('ch-', '');
+                const prefix2 = `mod-${chNum2}-`;
+                const done = progressData?.filter((m) => m.moduleId.startsWith(prefix2) && m.status === 'completed').map((m) => m.moduleId) ?? [];
                 const totalModules = ch.modules.filter(m => !m.comingSoon).length;
                 const completedCount = done.length;
                 const isComplete = completedCount >= totalModules;
@@ -1475,7 +1543,9 @@ export function DuoLearnScreen() {
                 let chapterUnlocked = isPro || idx === 0;
                 if (!isPro && idx > 0) {
                   const prev = ALL_CHAPTERS[idx - 1];
-                  const prevDone = progress[storeKey(prev.id)]?.completedModules ?? [];
+                  const prevNum2 = storeKey(prev.id).replace('ch-', '');
+                  const prevPrefix2 = `mod-${prevNum2}-`;
+                  const prevDone = progressData?.filter((m) => m.moduleId.startsWith(prevPrefix2) && m.status === 'completed').map((m) => m.moduleId) ?? [];
                   chapterUnlocked = prev.modules.every((m) => m.comingSoon || (!isPro && PRO_LOCKED_SIMS.has(m.id)) || prevDone.includes(m.id));
                 }
 

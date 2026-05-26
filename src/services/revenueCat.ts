@@ -12,8 +12,13 @@ const LOG_LEVEL_DEBUG = IS_WEB ? 0 : RNPurchases?.LOG_LEVEL?.DEBUG;
 // across minor SDK bumps. Without this filter, getProducts on Android returns
 // an empty array for consumable IAPs (the starter pack + gem bundles), which
 // surfaces to users as a silent failure or a "product not found" error.
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const PRODUCT_CATEGORY: any = IS_WEB ? null : (RNPurchases?.PRODUCT_CATEGORY ?? RNPurchases?.ProductCategory ?? RNPurchases?.ProductType);
+interface ProductCategoryEnum {
+  NON_SUBSCRIPTION?: string;
+  INAPP?: string;
+}
+const PRODUCT_CATEGORY: ProductCategoryEnum | null = IS_WEB
+  ? null
+  : ((RNPurchases?.PRODUCT_CATEGORY ?? RNPurchases?.ProductCategory ?? RNPurchases?.ProductType) as ProductCategoryEnum | null);
 const NON_SUBSCRIPTION_TYPE = PRODUCT_CATEGORY?.NON_SUBSCRIPTION ?? PRODUCT_CATEGORY?.INAPP;
 
 /** Re-export types for consumers (type-only — no runtime cost) */
@@ -21,6 +26,7 @@ export type { PurchasesOffering, PurchasesPackage, CustomerInfo } from 'react-na
 type CustomerInfo = import('react-native-purchases').CustomerInfo;
 type PurchasesOffering = import('react-native-purchases').PurchasesOffering;
 type PurchasesPackage = import('react-native-purchases').PurchasesPackage;
+type PurchasesStoreProduct = import('react-native-purchases').PurchasesStoreProduct;
 
 /* ── API Keys ──────────────────────────────────────────────────────────
  * Replace with your real RevenueCat public SDK keys.
@@ -59,18 +65,15 @@ export const GEM_PRODUCT_IDS: Record<string, string> = {
 
 /* ── Initialization ────────────────────────────────────────────────── */
 
-let isConfigured = false;
+let configuredFor: string | null = null;
 
-/**
- * Initialize RevenueCat SDK. Call once at app startup (e.g. in _layout.tsx).
- * Safe to call multiple times — only configures once.
- * No-op on web.
- */
 export function configureRevenueCat(appUserId?: string): void {
-  if (IS_WEB || isConfigured || !Purchases) return;
+  if (IS_WEB || !Purchases) return;
+
+  const targetId = appUserId ?? null;
+  if (configuredFor === targetId) return;
 
   const apiKey = Platform.OS === 'ios' ? RC_API_KEY_APPLE : RC_API_KEY_GOOGLE;
-
   if (!apiKey) {
     if (__DEV__) {
       // eslint-disable-next-line no-console
@@ -79,16 +82,13 @@ export function configureRevenueCat(appUserId?: string): void {
     return;
   }
 
-  Purchases.configure({
-    apiKey,
-    appUserID: appUserId ?? undefined,
-  });
+  Purchases.configure({ apiKey, appUserID: appUserId ?? undefined });
 
   if (__DEV__ && LOG_LEVEL_DEBUG !== undefined) {
     Purchases.setLogLevel(LOG_LEVEL_DEBUG);
   }
 
-  isConfigured = true;
+  configuredFor = targetId;
 }
 
 /* ── User identification ───────────────────────────────────────────── */
@@ -153,7 +153,6 @@ export async function purchaseGemBundle(
     throw new Error(`Unknown gem bundle: ${bundleId}`);
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const fetchWithTimeout = async <T,>(p: Promise<T>, ms: number): Promise<T> => {
     return Promise.race([
       p,
@@ -164,8 +163,7 @@ export async function purchaseGemBundle(
   };
 
   // ── Strategy 1: typed getProducts (matches the working Starter Pack flow) ──
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  let products: any[] = [];
+  let products: PurchasesStoreProduct[] = [];
   try {
     products = await fetchWithTimeout(
       Purchases.getProducts([productId], NON_SUBSCRIPTION_TYPE),
@@ -201,7 +199,6 @@ export async function purchaseGemBundle(
   try {
     const offering = await getOffering();
     if (offering) {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const pkg = offering.availablePackages.find(
         (p) => p.product?.identifier === productId,
       );

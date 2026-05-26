@@ -22,7 +22,7 @@ import { useRouter } from 'expo-router';
 
 import { AnimatedPressable } from '../../components/ui/AnimatedPressable';
 import { LottieIcon } from '../../components/ui/LottieIcon';
-import { useChapterStore } from '../chapter-1-content/useChapterStore';
+import { useChapterUIStore } from '../chapter-1-content/useChapterUIStore';
 import type { PremiumLearningModule } from './types';
 import { FINN_STANDARD } from '../retention-loops/finnMascotConfig';
 import { useSoundEffect } from '../../hooks/useSoundEffect';
@@ -247,8 +247,8 @@ export const PremiumLearningCard = React.memo(function PremiumLearningCard({ ite
       onContinue();
       return;
     }
-    useChapterStore.getState().setCurrentChapter(item.storeChapterId);
-    useChapterStore.getState().setCurrentModule(item.moduleIndex);
+    useChapterUIStore.getState().setCurrentChapter(item.storeChapterId);
+    useChapterUIStore.getState().setCurrentModule(item.moduleIndex);
     router.push(`/lesson/${item.moduleId}?chapterId=${item.chapterId}` as never);
   }, [item, router, playSound, onContinue]);
 

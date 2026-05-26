@@ -28,4 +28,5 @@ export interface DailyQuizState {
   hasAnsweredToday: () => boolean;
   answerQuiz: (date: string, wasCorrect: boolean) => void;
   setTodayQuiz: (quiz: DailyQuiz) => void;
+  reset: () => void;
 }

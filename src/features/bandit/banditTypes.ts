@@ -113,4 +113,5 @@ export interface BanditState {
   getBanditReport: () => BanditReport;
   resetExperiment: (experimentId: ExperimentId) => void;
   hydrateFromServer: () => Promise<void>;
+  reset: () => void;
 }

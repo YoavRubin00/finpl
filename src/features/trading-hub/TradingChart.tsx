@@ -121,7 +121,7 @@ export function TradingChart({
     );
   }
 
-  const showIndicatorBadges = mode === 'advanced' && timeframe === '1W' && ohlcv.length >= Math.max(maPeriod, 15);
+  const showIndicatorBadges = mode === 'advanced' && (timeframe === '1D' || timeframe === '1W') && ohlcv.length >= Math.max(maPeriod, 15);
   const showTimeframeNote = mode === 'advanced' && timeframe === '1D';
   const showMAPeriodBar = mode === 'advanced';
 

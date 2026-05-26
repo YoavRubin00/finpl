@@ -1,15 +1,38 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Platform } from "react-native";
-import { useSubscriptionStore } from "../features/subscription/useSubscriptionStore";
+import { useIsPro } from "../features/subscription/useSubscription";
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-let AdsModule: any = null;
+// Minimal shape of react-native-google-mobile-ads we actually call. Typed
+// this way so we don't pull the SDK's type tree (it would crash the web build,
+// which doesn't have the module installed) but still get type-safety on use.
+interface RewardedAdEventListener {
+  (event: unknown): void;
+}
+interface RewardedAdInstance {
+  addAdEventListener(eventType: string, listener: RewardedAdEventListener): void;
+  load(): void;
+  show(): void;
+}
+interface AdsModuleShape {
+  TestIds: { REWARDED: string };
+  RewardedAd: {
+    createForAdRequest(
+      adUnitId: string,
+      opts: { requestNonPersonalizedAdsOnly?: boolean },
+    ): RewardedAdInstance;
+  };
+  RewardedAdEventType: { LOADED: string; EARNED_REWARD: string };
+  AdEventType: { CLOSED: string; ERROR: string };
+}
+
+let AdsModule: AdsModuleShape | null = null;
 let AD_UNIT_ID = "";
 let USING_TEST_IDS = false;
 
 if (Platform.OS !== "web") {
   try {
-    AdsModule = require("react-native-google-mobile-ads");
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    AdsModule = require("react-native-google-mobile-ads") as AdsModuleShape;
     const realIosId = process.env.EXPO_PUBLIC_ADMOB_REWARDED_IOS;
     const realAndroidId = process.env.EXPO_PUBLIC_ADMOB_REWARDED_ANDROID;
     const platformId = Platform.select({
@@ -34,12 +57,9 @@ if (Platform.OS !== "web") {
  * Returns { showAd, isLoaded, isPro } — call showAd(onReward) to display.
  */
 export function useRewardedAd() {
-  const isPro = useSubscriptionStore(
-    (s) => s.tier === "pro" && s.status === "active",
-  );
+  const isPro = useIsPro();
   const [isLoaded, setIsLoaded] = useState(false);
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const adRef = useRef<any>(null);
+  const adRef = useRef<RewardedAdInstance | null>(null);
   const callbackRef = useRef<(() => void) | null>(null);
 
   const loadAd = useCallback(() => {

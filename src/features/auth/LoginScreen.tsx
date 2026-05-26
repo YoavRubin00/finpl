@@ -16,9 +16,10 @@ import { FINN_HELLO } from "../retention-loops/finnMascotConfig";
 import { useAuthStore } from "./useAuthStore";
 import { useGoogleAuthStore } from "./useGoogleAuthStore";
 import { useAppleAuth } from "./useAppleAuth";
-import { fetchUserProfile } from "../../db/sync/syncUserProfile";
-import { useEconomyStore } from "../economy/useEconomyStore";
 import { captureEvent } from "../../lib/posthog";
+import { signInWithProfile } from "../../lib/auth/lifecycle";
+import { getApiBase } from "../../db/apiBase";
+import { ProfileBootScreen } from "./ProfileBootScreen";
 
 function isValidEmail(email: string): boolean {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
@@ -44,7 +45,6 @@ const inputStyle = {
 
 export function LoginScreen() {
   const router = useRouter();
-  const signIn = useAuthStore((s) => s.signIn);
   const authError = useAuthStore((s) => s.authError);
   const clearAuthError = useAuthStore((s) => s.clearAuthError);
   const promptGoogleSignIn = useGoogleAuthStore((s) => s.promptGoogleSignIn);
@@ -54,6 +54,7 @@ export function LoginScreen() {
   const [email, setEmail] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [signingIn, setSigningIn] = useState(false);
 
   useEffect(() => {
     captureEvent('login_form_viewed');
@@ -66,27 +67,45 @@ export function LoginScreen() {
     captureEvent('login_method_clicked', { method: 'email' });
     setLoading(true);
     setError(null);
+    setSigningIn(true);
     try {
-      const profile = await fetchUserProfile(email.trim().toLowerCase());
-      if (!profile) {
+      const response = await fetch(`${getApiBase()}/api/auth/verify`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ provider: 'email', email: email.trim().toLowerCase() }),
+      });
+      const data = await response.json() as {
+        ok: boolean;
+        token?: string;
+        syncToken?: string;
+        profile: { id: string; authId: string; displayName: string | null; email: string | null } | null;
+      };
+      const resolvedToken = data.token ?? data.syncToken ?? null;
+      if (!response.ok || !data?.ok || !data.profile || !resolvedToken) {
         captureEvent('login_failed', { method: 'email', reason: 'not_found' });
         setError("לא נמצא חשבון עם כתובת אימייל זו");
+        setSigningIn(false);
         return;
       }
-      // Hydrate paper-trading currency from server. NUMERIC comes over JSON
-      // as a string, so parse before handing to the store.
-      const serverBalance = parseFloat(String(profile.virtual_balance ?? '0'));
-      if (Number.isFinite(serverBalance)) {
-        useEconomyStore.getState().setVirtualBalance(serverBalance);
-      }
-      signIn((profile.displayName as string) ?? email, email.trim().toLowerCase());
+      await signInWithProfile(data.profile, resolvedToken);
+      // This screen is "sign in to an existing account" — by definition the
+      // user already onboarded. Mark it locally so the _layout nav guard routes
+      // them into the app instead of bouncing back to /(auth)/onboarding.
+      // (hasCompletedOnboarding is local-only state and was reset by the
+      // auth-store-v3 key bump, so returning users would otherwise be stuck.)
+      useAuthStore.getState().setOnboardingCompleted(true);
       router.replace("/(tabs)/" as never);
     } catch {
       captureEvent('login_failed', { method: 'email', reason: 'network' });
       setError("שגיאה בחיבור לשרת, נסה שוב");
+      setSigningIn(false);
     } finally {
       setLoading(false);
     }
+  }
+
+  if (signingIn) {
+    return <ProfileBootScreen loading onRetry={() => setSigningIn(false)} />;
   }
 
   return (

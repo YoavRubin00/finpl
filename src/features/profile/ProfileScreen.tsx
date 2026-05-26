@@ -18,10 +18,11 @@ import {
   Zap, Star, Target, ChevronRight,
   Crown, Swords, Pencil, X,
 } from "lucide-react-native";
-import { useEconomyStore } from "../economy/useEconomyStore";
+import { useEconomy } from "../economy/useEconomy";
+import { useStreak } from "../economy/useStreak";
 import { useDuelsStore } from "../social/useDuelsStore";
 import { useAuthStore } from "../auth/useAuthStore";
-import { useSubscriptionStore } from "../subscription/useSubscriptionStore";
+import { useIsPro } from "../subscription/useSubscription";
 import { HeartsDisplay } from "../subscription/HeartsUI";
 import { getPyramidStatus } from "../../utils/progression";
 import { TransitionOverlay } from "../../components/ui/TransitionOverlay";
@@ -96,13 +97,15 @@ export function ProfileScreen() {
   const [transitionTarget, setTransitionTarget] = useState<'referral' | null>(null);
   const theme = useTheme();
   const isDark = useColorScheme() === "dark";
-  const xp = useEconomyStore((s) => s.xp);
-  const coins = useEconomyStore((s) => s.coins);
-  const streak = useEconomyStore((s) => s.streak);
+  const { data: economyData } = useEconomy();
+  const { data: streakData } = useStreak();
+  const xp = economyData?.xp ?? 0;
+  const coins = economyData?.coins ?? 0;
+  const streak = streakData?.currentStreak ?? 0;
   const duelRecord = useDuelsStore((s) => s.record);
   const displayName = useAuthStore((s) => s.displayName);
   const profile = useAuthStore((s) => s.profile);
-  const isPro = useSubscriptionStore((s) => s.tier === "pro" && s.status === "active");
+  const isPro = useIsPro();
   const isMinor = profile?.ageGroup === "minor";
   const referredFriends = useReferralStore((s) => s.referredFriends);
   const { showStreakCelebration } = useStreakCelebration();

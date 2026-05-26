@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import { zustandStorage } from '../../lib/zustandStorage';
 import { EXPERIMENT_CONFIGS } from './banditConfig';
+import { registerLocalStore } from '../../lib/stores/registry';
 import { postBanditEvent, fetchBanditState } from '../../db/sync/syncBandit';
 import { sampleBeta } from './sampleBetaBandit';
 import type {
@@ -168,6 +169,8 @@ export const useBanditStore = create<BanditState>()(
         });
       },
 
+      reset: () => set({ experiments: buildInitialExperiments() }),
+
       hydrateFromServer: async () => {
         const serverState = await fetchBanditState().catch(() => null);
         if (!serverState) return;
@@ -222,3 +225,5 @@ export const useBanditStore = create<BanditState>()(
     }
   )
 );
+
+registerLocalStore('bandit-store', useBanditStore, 'bandit-store');

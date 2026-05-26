@@ -1,9 +1,14 @@
 import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
 import { zustandStorage } from '../../lib/zustandStorage';
-import { useEconomyStore } from "../economy/useEconomyStore";
+import { registerLocalStore } from '../../lib/stores/registry';
+import { useEconomyUIStore } from "../economy/useEconomyUIStore";
+import { queryClient } from "../../lib/queryClient";
+import { streakQueryKey } from "../economy/useStreak";
+import type { StreakState } from "../../lib/api/streak";
 import { useDailyChallengesStore } from "../daily-challenges/use-daily-challenges-store";
-import { useChapterStore } from "../chapter-1-content/useChapterStore";
+import { progressQueryKey } from "../chapter-1-content/useProgress";
+import type { ModuleProgressRow } from "../../lib/api/progress";
 import type { DailyQuest, QuestRewardSummary } from "./daily-quest-types";
 import {
   QUEST_TEMPLATES,
@@ -73,6 +78,7 @@ interface DailyQuestsState {
 
   completedCount: () => number;
   allCompleted: () => boolean;
+  reset: () => void;
 }
 
 export const useDailyQuestsStore = create<DailyQuestsState>()(
@@ -112,11 +118,11 @@ export const useDailyQuestsStore = create<DailyQuestsState>()(
         if (questDate !== today || quests.length === 0) return;
 
         const challengeStore = useDailyChallengesStore.getState();
-        const chapterStore = useChapterStore.getState();
+        const progressData = queryClient.getQueryData<ModuleProgressRow[]>(progressQueryKey) ?? [];
 
         const dilemmaPlays = challengeStore.getDilemmaPlaysToday();
         const swipePlays = challengeStore.getSwipeGamePlaysToday();
-        const todayCompletedMods = Object.values(chapterStore.progress).flatMap((p) => p.completedModules).length;
+        const todayCompletedMods = progressData.filter((m) => m.status === 'completed').length;
 
         const updated = quests.map((q) => {
           if (q.isCompleted) return q;
@@ -156,14 +162,15 @@ export const useDailyQuestsStore = create<DailyQuestsState>()(
         });
         if (alreadyClaimed) return null;
 
-        const economy = useEconomyStore.getState();
-        const streak = economy.streak;
+        const economy = useEconomyUIStore.getState();
+        const streakState = queryClient.getQueryData<StreakState | null>(streakQueryKey);
+        const streak = streakState?.currentStreak ?? 0;
         const mult = streakBonusMultiplier(streak);
 
         const xp = Math.round(QUEST_XP_REWARD * mult);
         const coins = Math.round(QUEST_COIN_REWARD * mult);
         const gems = Math.random() < QUEST_GEM_CHANCE ? QUEST_GEM_AMOUNT : 0;
-        // NOTE: streak freeze on day-7 is already granted by useEconomyStore milestone
+        // NOTE: streak freeze on day-7 is already granted by completeDailyTask milestone
         // logic, no duplicate grant here, only surfaced in summary for UI celebration.
         const freezes = 0;
 
@@ -192,17 +199,18 @@ export const useDailyQuestsStore = create<DailyQuestsState>()(
         });
         if (alreadyClaimed) return null;
 
-        const economy = useEconomyStore.getState();
-        const streak = economy.streak;
+        const economy2 = useEconomyUIStore.getState();
+        const streakState2 = queryClient.getQueryData<StreakState | null>(streakQueryKey);
+        const streak = streakState2?.currentStreak ?? 0;
         const mult = streakBonusMultiplier(streak);
 
         const xp = Math.round(QUEST_XP_REWARD * QUEST_PRO_XP_MULTIPLIER * mult);
         const coins = Math.round(QUEST_COIN_REWARD * QUEST_PRO_COIN_MULTIPLIER * mult);
         const gems = QUEST_PRO_GEMS_GUARANTEED;
 
-        economy.addXP(xp, "daily_task");
-        economy.addCoins(coins, 'daily-quest');
-        economy.addGems(gems);
+        economy2.addXP(xp, "daily_task");
+        economy2.addCoins(coins, 'daily-quest');
+        economy2.addGems(gems);
 
         const summary: QuestRewardSummary = { xp, coins, gems, freezes: 0, streakBonusPct: streakBonusPct(streak) };
         return summary;
@@ -210,6 +218,7 @@ export const useDailyQuestsStore = create<DailyQuestsState>()(
 
       completedCount: () => get().quests.filter((q) => q.isCompleted).length,
       allCompleted: () => get().quests.length > 0 && get().quests.every((q) => q.isCompleted),
+      reset: () => set({ quests: [], questDate: "", rewardClaimed: false, proRewardClaimed: false, newlyCompleted: false, lastRewardSummary: null }),
     }),
     {
       name: "daily-quests-store",
@@ -224,3 +233,5 @@ export const useDailyQuestsStore = create<DailyQuestsState>()(
     }
   )
 );
+
+registerLocalStore('daily-quests-store', useDailyQuestsStore, 'daily-quests-store');

@@ -27,11 +27,14 @@ import Animated, {
   withDelay,
   cancelAnimation,
   FadeInDown,
+  FadeIn,
   ZoomIn,
   Easing,
 } from 'react-native-reanimated';
-import { useEconomyStore } from '../economy/useEconomyStore';
-import { useSubscriptionStore } from '../subscription/useSubscriptionStore';
+import { useEconomy, economyQueryKey } from '../economy/useEconomy';
+import { queryClient } from '../../lib/queryClient';
+import type { Economy } from '../../lib/api/economy';
+import { useIsPro } from '../subscription/useSubscription';
 import { useAuthStore } from '../auth/useAuthStore';
 import { useBridgeStore } from './useBridgeStore';
 import { trackBridgeClick } from '../../utils/trackBridgeClick';
@@ -186,8 +189,9 @@ interface BridgeScreenProps {
 
 export function BridgeScreen({ walkthroughAutoScroll }: BridgeScreenProps = {}) {
   const router = useRouter();
-  const coins = useEconomyStore((s) => s.coins);
-  const isPro = useSubscriptionStore((s) => s.tier === "pro" && s.status === "active");
+  const { data: economyData } = useEconomy();
+  const coins = economyData?.coins ?? 0;
+  const isPro = useIsPro();
   const email = useAuthStore((s) => s.email);
   const isBenefitRedeemed = useBridgeStore((s) => s.isBenefitRedeemed);
   const redeemBenefit = useBridgeStore((s) => s.redeemBenefit);
@@ -317,7 +321,7 @@ export function BridgeScreen({ walkthroughAutoScroll }: BridgeScreenProps = {}) 
         openPartnerUrl(benefit.partnerUrl);
       }
     } else {
-      const currentCoins = useEconomyStore.getState().coins;
+      const currentCoins = queryClient.getQueryData<Economy | null>(economyQueryKey)?.coins ?? 0;
       if (!benefit.isAvailable) {
         Alert.alert('ההטבה אינה זמינה כרגע', 'חזרו בקרוב!');
       } else if (currentCoins < benefit.costCoins) {
@@ -357,7 +361,7 @@ export function BridgeScreen({ walkthroughAutoScroll }: BridgeScreenProps = {}) 
       }
     } else {
       // Surface the failure to the user so they understand why nothing happened.
-      const coins = useEconomyStore.getState().coins;
+      const coins = queryClient.getQueryData<Economy | null>(economyQueryKey)?.coins ?? 0;
       if (!selectedBenefit.isAvailable) {
         Alert.alert('ההטבה אינה זמינה כרגע', 'חזרו בקרוב!');
       } else if (coins < selectedBenefit.costCoins) {
@@ -578,10 +582,10 @@ export function BridgeScreen({ walkthroughAutoScroll }: BridgeScreenProps = {}) 
         onRequestClose={() => setShowPostRedemptionModal(false)}
       >
         <View style={styles.modalOverlay}>
-          <Animated.View entering={FadeInDown.duration(220)} style={styles.modalBackdrop} pointerEvents="none" />
+          <Animated.View entering={FadeIn.duration(220)} style={styles.modalBackdrop} pointerEvents="none" />
 
           <Animated.View
-            entering={FadeInDown.duration(320)}
+            entering={FadeIn.duration(220)}
             style={styles.postRedemptionCard}
           >
             <ExpoImage
@@ -620,9 +624,9 @@ export function BridgeScreen({ walkthroughAutoScroll }: BridgeScreenProps = {}) 
         onRequestClose={() => setStatModalKind(null)}
       >
         <View style={styles.modalOverlay}>
-          <Animated.View entering={FadeInDown.duration(220)} style={styles.modalBackdrop} pointerEvents="none" />
+          <Animated.View entering={FadeIn.duration(220)} style={styles.modalBackdrop} pointerEvents="none" />
 
-          <Animated.View entering={FadeInDown.duration(320)} style={styles.statModalCard}>
+          <Animated.View entering={FadeIn.duration(220)} style={styles.statModalCard}>
             {statModalKind === 'redeemed' && (() => {
               const redeemed = BRIDGE_BENEFITS.filter(b => isBenefitRedeemed(b.id));
               return (

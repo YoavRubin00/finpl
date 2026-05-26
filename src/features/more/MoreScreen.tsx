@@ -17,6 +17,7 @@ import Animated, { FadeInUp } from "react-native-reanimated";
 
 import { tapHaptic } from "../../utils/haptics";
 import { useAuthStore } from "../auth/useAuthStore";
+import { signOut as lifecycleSignOut } from "../../lib/auth/lifecycle";
 import { RTL, SHADOW_STRONG } from "../chapter-4-content/simulations/simTheme";
 import { AnimatedPressable } from "../../components/ui/AnimatedPressable";
 import { GlowCard } from "../../components/ui/GlowCard";
@@ -118,13 +119,12 @@ function MoreRow({ icon, label, onPress, badge, badgeColor = STITCH_BLUE.textSec
 
 export function MoreScreen() {
   const router = useRouter();
-  const signOut = useAuthStore((s) => s.signOut);
   const devResetProgress = useAuthStore((s) => s.devResetProgress);
   const [showMailModal, setShowMailModal] = useState(false);
 
   function handleSignOut() {
     if (Platform.OS === "web") {
-      signOut();
+      lifecycleSignOut().catch(() => { /* swallow */ });
       setTimeout(() => router.replace("/(auth)/onboarding" as never), 100);
       return;
     }
@@ -136,9 +136,9 @@ export function MoreScreen() {
         {
           text: "יציאה",
           style: "destructive",
-          onPress: () => {
-            signOut();
-            setTimeout(() => router.replace("/(auth)/onboarding" as never), 100);
+          onPress: async () => {
+            await lifecycleSignOut();
+            router.replace("/(auth)/onboarding" as never);
           },
         },
       ]
@@ -258,7 +258,9 @@ export function MoreScreen() {
                         text: "אפס",
                         style: "destructive",
                         onPress: () => {
-                          devResetProgress();
+                          if (__DEV__) {
+                            devResetProgress?.();
+                          }
                           Alert.alert("בוצע", "הפעל מחדש את האפליקציה כדי להשלים את האיפוס.");
                         },
                       },

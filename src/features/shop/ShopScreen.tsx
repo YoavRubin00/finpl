@@ -5,6 +5,7 @@ import LottieView from 'lottie-react-native';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
+  useReducedMotion,
   withSpring,
   withRepeat,
   withSequence,
@@ -17,8 +18,11 @@ import Animated, {
 } from 'react-native-reanimated';
 import { LinearGradient } from 'expo-linear-gradient';
 import { X } from 'lucide-react-native';
-import { useEconomyStore } from '../economy/useEconomyStore';
-import { useSubscriptionStore } from '../subscription/useSubscriptionStore';
+import { useEconomy, useSpendCoins, useSpendGems } from '../economy/useEconomy';
+import { useEconomyUIStore } from '../economy/useEconomyUIStore';
+import { useStreak } from '../economy/useStreak';
+import { useHeartsStore, MAX_HEARTS } from '../subscription/useHeartsStore';
+import { useIsPro } from '../subscription/useSubscription';
 import { useAuthStore } from '../auth/useAuthStore';
 import { useRouter } from 'expo-router';
 import { useTutorialStore } from '../../stores/useTutorialStore';
@@ -80,18 +84,19 @@ const SHADOW_OFFSET = { width: 0, height: 4 } as const;
 
 function usePulseGlow(color: string, active = true) {
   const glow = useSharedValue(0.3);
+  const reduceMotion = useReducedMotion();
   useEffect(() => {
-    if (active) {
+    if (active && !reduceMotion) {
       glow.value = withRepeat(
         withSequence(withTiming(1, { duration: 1100 }), withTiming(0.3, { duration: 1100 })),
         -1, true,
       );
     } else {
       cancelAnimation(glow);
-      glow.value = 0.3;
+      glow.value = reduceMotion ? 0.65 : 0.3;
     }
     return () => cancelAnimation(glow);
-  }, [active]);
+  }, [active, reduceMotion]);
   return useAnimatedStyle(() => ({
     shadowColor: color,
     shadowOpacity: interpolate(glow.value, [0.3, 1], [0.4, 0.95]),
@@ -296,15 +301,17 @@ export function ShopScreen() {
   const isFocused = useIsFocused();
   const router = useRouter();
   const theme = useTheme();
-  const coins = useEconomyStore((s) => s.coins);
-  const gems = useEconomyStore((s) => s.gems);
-  const xp = useEconomyStore((s) => s.xp);
-  const streak = useEconomyStore((s) => s.streak);
-  const spendCoins = useEconomyStore((s) => s.spendCoins);
-  const spendGems = useEconomyStore((s) => s.spendGems);
-  const addCoins = useEconomyStore((s) => s.addCoins);
-  const restoreAllHearts = useSubscriptionStore((s) => s.restoreAllHearts);
-  const isPro = useSubscriptionStore((s) => s.tier === 'pro' && s.status === 'active');
+  const { data: economyData } = useEconomy();
+  const coins = economyData?.coins ?? 0;
+  const gems = economyData?.gems ?? 0;
+  const xp = economyData?.xp ?? 0;
+  const { data: streakData } = useStreak();
+  const streak = streakData?.currentStreak ?? 0;
+  const spendCoinsHook = useSpendCoins();
+  const spendGemsHook = useSpendGems();
+  const addCoins = useEconomyUIStore((s) => s.addCoins);
+  const restoreAllHearts = useHeartsStore((s) => s.restoreAllHearts);
+  const isPro = useIsPro();
   const avatarId = useAuthStore((s) => s.profile?.avatarId ?? null);
   const ownedAvatars = useAuthStore((s) => s.profile?.ownedAvatars ?? []);
   const setAvatar = useAuthStore((s) => s.setAvatar);
@@ -369,14 +376,17 @@ export function ShopScreen() {
   const handleConfirm = useCallback(() => {
     if (!pendingItem) return;
     const isGem = (pendingItem.gemCost ?? 0) > 0;
-    const ok = isGem ? spendGems(pendingItem.gemCost ?? 0) : spendCoins(pendingItem.coinCost);
-    if (ok) {
-      const eco = useEconomyStore.getState();
+    const gemCost = pendingItem.gemCost ?? 0;
+    const coinCost = pendingItem.coinCost;
+    const canAfford = isGem ? gems >= gemCost : coins >= coinCost;
+    if (canAfford) {
+      if (isGem) { spendGemsHook(gemCost); } else { spendCoinsHook(coinCost); }
+      const eco = useEconomyUIStore.getState();
       const ONE_HOUR = 60 * 60 * 1000;
       if (pendingItem.id === 'heart-refill-full') restoreAllHearts();
       else if (pendingItem.id === 'heart-refill-1') {
-        const s = useSubscriptionStore.getState();
-        if (s.hearts < 4) useSubscriptionStore.setState({ hearts: s.hearts + 1 });
+        const s = useHeartsStore.getState();
+        if (s.hearts < MAX_HEARTS) useHeartsStore.setState({ hearts: s.hearts + 1 });
       } else if (pendingItem.id === 'streak-freeze') {
         eco.addStreakFreezes(1);
         successHaptic();
@@ -420,15 +430,17 @@ export function ShopScreen() {
       }
     }
     setPendingItem(null);
-  }, [pendingItem, spendCoins, spendGems, restoreAllHearts, addOwnedAvatar, setAvatar]);
+  }, [pendingItem, coins, gems, spendCoinsHook, spendGemsHook, restoreAllHearts, addOwnedAvatar, setAvatar]);
 
   const handleGemExchange = useCallback((gemsNeeded: number, coinsReward: number) => {
     if (gems < gemsNeeded) {
       Alert.alert('אין מספיק ג\'מס', `צריך ${gemsNeeded} 💎 להמרה זו.`);
       return;
     }
-    if (spendGems(gemsNeeded)) { addCoins(coinsReward); successHaptic(); }
-  }, [gems, spendGems, addCoins]);
+    spendGemsHook(gemsNeeded);
+    addCoins(coinsReward);
+    successHaptic();
+  }, [gems, spendGemsHook, addCoins]);
 
   return (
     <View style={[styles.root, { backgroundColor: theme.bg }]}>

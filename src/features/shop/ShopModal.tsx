@@ -5,8 +5,10 @@ import Animated from "react-native-reanimated";
 import { Coins, Diamond, X, ArrowRight, ChevronRight } from "lucide-react-native";
 import LottieView from "lottie-react-native";
 import { useRouter } from "expo-router";
-import { useEconomyStore } from "../economy/useEconomyStore";
-import { useSubscriptionStore } from "../subscription/useSubscriptionStore";
+import { useEconomy, useSpendCoins, useSpendGems } from "../economy/useEconomy";
+import { useEconomyUIStore } from "../economy/useEconomyUIStore";
+import { useHeartsStore, MAX_HEARTS } from "../subscription/useHeartsStore";
+import { useIsPro } from "../subscription/useSubscription";
 import { useAuthStore } from "../auth/useAuthStore";
 import { ShopItemCard } from "./ShopItemCard";
 import { EmptyPremium } from "../../components/svg/shop/EmptyStates";
@@ -51,13 +53,13 @@ export function ShopModal() {
   const visible = useShopModalStore((s) => s.visible);
   const close = useShopModalStore((s) => s.close);
 
-  const coins = useEconomyStore((s) => s.coins);
-  const gems = useEconomyStore((s) => s.gems);
-  const spendCoins = useEconomyStore((s) => s.spendCoins);
-  const spendGems = useEconomyStore((s) => s.spendGems);
-  const addCoins = useEconomyStore((s) => s.addCoins);
-  const restoreAllHearts = useSubscriptionStore((s) => s.restoreAllHearts);
-  const isPro = useSubscriptionStore((s) => s.tier === "pro" && s.status === "active");
+  const { data: economyDataSM } = useEconomy();
+  const coins = economyDataSM?.coins ?? 0;
+  const gems = economyDataSM?.gems ?? 0;
+  const spendCoinsHookSM = useSpendCoins();
+  const spendGemsHookSM = useSpendGems();
+  const restoreAllHearts = useHeartsStore((s) => s.restoreAllHearts);
+  const isPro = useIsPro();
   const addOwnedAvatar = useAuthStore((s) => s.addOwnedAvatar);
   const setAvatar = useAuthStore((s) => s.setAvatar);
 
@@ -101,22 +103,22 @@ export function ShopModal() {
     if (!pendingItem) return;
 
     const isGemItem = (pendingItem.gemCost ?? 0) > 0;
-    const success = isGemItem
-      ? spendGems(pendingItem.gemCost ?? 0)
-      : spendCoins(effectiveCoinCost(pendingItem));
+    const cost = isGemItem ? (pendingItem.gemCost ?? 0) : effectiveCoinCost(pendingItem);
+    const canAffordNow = isGemItem ? gems >= cost : coins >= cost;
 
-    if (success) {
+    if (canAffordNow) {
+      if (isGemItem) spendGemsHookSM(cost); else spendCoinsHookSM(cost);
       // Hay Day pattern: confetti burst on successful purchase. Pure visual joy.
       setSparkleTrigger(Date.now());
-      const eco = useEconomyStore.getState();
+      const eco = useEconomyUIStore.getState();
       const ONE_HOUR = 60 * 60 * 1000;
       if (pendingItem.id === "heart-refill-full") {
         restoreAllHearts();
       } else if (pendingItem.id === "heart-refill-1") {
-        const store = useSubscriptionStore.getState();
+        const store = useHeartsStore.getState();
         const current = store.hearts;
-        if (current < 5) {
-          useSubscriptionStore.setState({ hearts: current + 1 });
+        if (current < MAX_HEARTS) {
+          useHeartsStore.setState({ hearts: current + 1 });
         }
       } else if (pendingItem.id === "streak-freeze") {
         eco.addStreakFreezes(1);
@@ -168,7 +170,7 @@ export function ShopModal() {
       }
     }
     setPendingItem(null);
-  }, [pendingItem, spendCoins, spendGems, effectiveCoinCost, restoreAllHearts, addOwnedAvatar, setAvatar]);
+  }, [pendingItem, coins, gems, spendCoinsHookSM, spendGemsHookSM, effectiveCoinCost, restoreAllHearts, addOwnedAvatar, setAvatar]);
 
   const handleCancel = useCallback(() => {
     setPendingItem(null);
@@ -181,16 +183,16 @@ export function ShopModal() {
     close();
   }, [close]);
 
+  const addCoinsHookSM = useEconomyUIStore((s) => s.addCoins);
   const handleGemExchange = useCallback((gemsNeeded: number, coinsReward: number) => {
     if (gems < gemsNeeded) {
       Alert.alert("אין מספיק ג'מס", `צריך ${gemsNeeded} 💎 להמרה זו.`);
       return;
     }
-    if (spendGems(gemsNeeded)) {
-      addCoins(coinsReward);
-      successHaptic();
-    }
-  }, [gems, spendGems, addCoins]);
+    spendGemsHookSM(gemsNeeded);
+    addCoinsHookSM(coinsReward);
+    successHaptic();
+  }, [gems, spendGemsHookSM, addCoinsHookSM]);
 
   return (
     <Modal

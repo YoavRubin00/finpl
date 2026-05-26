@@ -19,6 +19,7 @@ import Animated, { FadeInDown, FadeInUp } from "react-native-reanimated";
 
 import { tapHaptic } from "../../utils/haptics";
 import { useAuthStore } from "../auth/useAuthStore";
+import { signOut as lifecycleSignOut } from "../../lib/auth/lifecycle";
 import { useNotificationStore } from "../notifications/useNotificationStore";
 import { useAudioStore } from "../../stores/useAudioStore";
 import { AVATAR_LIST, DEFAULT_AVATAR_EMOJI } from "../avatars/avatarData";
@@ -120,7 +121,6 @@ export function SettingsScreen() {
   const displayName = useAuthStore((s) => s.displayName);
   const profile = useAuthStore((s) => s.profile);
   const updateProfile = useAuthStore((s) => s.updateProfile);
-  const signOut = useAuthStore((s) => s.signOut);
   const deleteAccount = useAuthStore((s) => s.deleteAccount);
 
   // Notification store
@@ -153,12 +153,8 @@ export function SettingsScreen() {
   const currentAvatarId = profile?.avatarId ?? "lion";
   const currentAvatar = AVATAR_LIST.find((a) => a.id === currentAvatarId);
 
-  // Member since
-  const createdAt = useAuthStore((s) => s.createdAt);
-  const memberSinceLabel = (() => {
-    const d = createdAt ? new Date(createdAt) : new Date();
-    return d.toLocaleDateString("he-IL", { year: "numeric", month: "long" });
-  })();
+  // Member since — createdAt is now server-authoritative; default to current month
+  const memberSinceLabel = new Date().toLocaleDateString("he-IL", { year: "numeric", month: "long" });
 
   // Handlers
   function handleSaveName() {
@@ -229,7 +225,7 @@ export function SettingsScreen() {
   function handleSignOut() {
     Alert.alert("התנתקות", "להתנתק מהחשבון?", [
       { text: "ביטול", style: "cancel" },
-      { text: "התנתק", onPress: () => { signOut(); router.replace("/login" as never); } },
+      { text: "התנתק", onPress: async () => { await lifecycleSignOut(); router.replace("/login" as never); } },
     ]);
   }
 

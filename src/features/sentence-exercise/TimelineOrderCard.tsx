@@ -1,8 +1,11 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
-import { View, Text, Pressable, StyleSheet } from "react-native";
+import { View, Text, Pressable, StyleSheet, Vibration } from "react-native";
+import { Image as ExpoImage } from "expo-image";
 import Animated, {
   FadeInDown,
   FadeInUp,
+  FadeIn,
+  FadeOut,
   runOnJS,
   useAnimatedStyle,
   useReducedMotion,
@@ -15,11 +18,30 @@ import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import { ChevronUp, ChevronDown } from "lucide-react-native";
 import { successHaptic, tapHaptic, mediumHaptic, selectionHaptic, errorHaptic } from "../../utils/haptics";
 import { ConfettiExplosion } from "../../components/ui/ConfettiExplosion";
+import { FINN_TALKING } from "../retention-loops/finnMascotConfig";
 import type { TimelineOrderPrompt } from "./sentenceTypes";
+
+const HELP_OFFER_DELAY_MS = 15_000;
 
 // משוער — גובה item כולל gap. משמש את ה-pan gesture לחישוב כמה מקומות
 // המשתמש גרר. אם תעדכן את itemRow padding או itemsColumn gap, עדכן גם פה.
-const ITEM_STEP_HEIGHT = 70;
+// פריט: paddingVertical 8+8 + content max(28,22) + border 1.5+1.5 = ~47;
+// gap 6 → step ≈ 53. נשתמש ב-52 כדי שגרירה גדולה תרגיש מדויקת.
+const ITEM_STEP_HEIGHT = 52;
+
+/**
+ * State that the card exposes to its parent so the parent can render a
+ * sticky bottom CTA. Lifted out of the card body so the button is never
+ * trapped below the fold of a long card or hidden behind the FinnCoach.
+ */
+export interface TimelineOrderCardState {
+  locked: boolean;
+  /** True briefly after an incorrect "בדוק" tap — drives the red error state on
+   *  the sticky CTA button. Auto-clears after a short delay. */
+  wrong: boolean;
+  check: () => void;
+  continue_: () => void;
+}
 
 interface TimelineOrderCardProps {
   prompt: TimelineOrderPrompt;
@@ -27,9 +49,10 @@ interface TimelineOrderCardProps {
   accentColor: string;
   onSubmit: (order: string[]) => { correct: boolean; finishesSet: boolean };
   onCorrectSettled: () => void;
+  /** Fires whenever the card's lock state or callbacks change, so the
+   *  parent can render the primary CTA button outside the card. */
+  onStateChange?: (state: TimelineOrderCardState) => void;
 }
-
-const HELP_DELAY_MS = 20_000;
 
 const RANK_COLORS = ["#f97316", "#eab308", "#22c55e", "#3b82f6"];
 const RANK_BG = ["#fff7ed", "#fefce8", "#f0fdf4", "#eff6ff"];
@@ -230,6 +253,7 @@ export function TimelineOrderCard({
   accentColor,
   onSubmit,
   onCorrectSettled,
+  onStateChange,
 }: TimelineOrderCardProps) {
   const [localOrder, setLocalOrder] = useState<string[]>(initialOrder);
   const localOrderRef = useRef<string[]>(localOrder);
@@ -237,10 +261,30 @@ export function TimelineOrderCard({
 
   const [confetti, setConfetti] = useState<number>(0);
   const [locked, setLocked] = useState<boolean>(false);
+  const [wrong, setWrong] = useState<boolean>(false);
+  const wrongTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [showYears, setShowYears] = useState<boolean>(false);
-  const [helpVisible, setHelpVisible] = useState<boolean>(false);
-  const [resolvedOrder, setResolvedOrder] = useState<string[] | null>(null);
   const reducedMotion = useReducedMotion();
+
+  // Captain Shark help offer — appears after 15s of inactivity. If the user
+  // accepts, we auto-arrange the items in their correct order. Each user
+  // interaction (drag, arrow tap) resets the inactivity timer.
+  const [showHelpOffer, setShowHelpOffer] = useState<boolean>(false);
+  const [helpDismissed, setHelpDismissed] = useState<boolean>(false);
+  const helpTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const resetInactivityTimer = useCallback(() => {
+    if (helpTimerRef.current) clearTimeout(helpTimerRef.current);
+    if (helpDismissed || locked) return;
+    helpTimerRef.current = setTimeout(() => {
+      setShowHelpOffer(true);
+    }, HELP_OFFER_DELAY_MS);
+  }, [helpDismissed, locked]);
+  useEffect(() => {
+    resetInactivityTimer();
+    return () => {
+      if (helpTimerRef.current) clearTimeout(helpTimerRef.current);
+    };
+  }, [resetInactivityTimer]);
 
   // Shake animation for incorrect Check attempts. Skipped under reducedMotion.
   const shakeX = useSharedValue(0);
@@ -261,28 +305,11 @@ export function TimelineOrderCard({
   const onCorrectSettledRef = useRef(onCorrectSettled);
   useEffect(() => { onCorrectSettledRef.current = onCorrectSettled; });
 
-  const helpTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
   const itemMap = useMemo(() => {
     const m: Record<string, (typeof prompt.items)[number]> = {};
     for (const it of prompt.items) m[it.id] = it;
     return m;
   }, [prompt.items]);
-
-  const resetHelpTimer = useCallback(() => {
-    if (helpTimerRef.current) clearTimeout(helpTimerRef.current);
-    helpTimerRef.current = setTimeout(() => setHelpVisible(true), HELP_DELAY_MS);
-  }, []);
-
-  useEffect(() => {
-    if (locked) {
-      if (helpTimerRef.current) { clearTimeout(helpTimerRef.current); helpTimerRef.current = null; }
-      setHelpVisible(false);
-      return;
-    }
-    resetHelpTimer();
-    return () => { if (helpTimerRef.current) clearTimeout(helpTimerRef.current); };
-  }, [locked, resetHelpTimer]);
 
   // מהלך לוגי משותף ל-swap ע"י חצים ול-drag: מעביר item ל-toIdx. ולידציה
   // התנתקה מ-moveItem ועברה לכפתור "בדוק" — כך המשתמש שולט מתי לבדוק.
@@ -297,9 +324,31 @@ export function TimelineOrderCard({
       next.splice(clamped, 0, moved);
       setLocalOrder(next);
       tapHaptic();
+      // User started fixing the order — clear the red error state.
+      setWrong(false);
+      if (wrongTimerRef.current) clearTimeout(wrongTimerRef.current);
+      // Any user interaction resets the help-offer countdown.
+      resetInactivityTimer();
     },
-    [locked],
+    [locked, resetInactivityTimer],
   );
+
+  // Apply the correct order in one shot when the user accepts shark's help.
+  const applyCorrectOrder = useCallback(() => {
+    const sorted = [...prompt.items]
+      .sort((a, b) => a.correctOrder - b.correctOrder)
+      .map((it) => it.id);
+    setLocalOrder(sorted);
+    successHaptic();
+    setShowHelpOffer(false);
+    setHelpDismissed(true);
+  }, [prompt.items]);
+
+  const declineHelp = useCallback(() => {
+    setShowHelpOffer(false);
+    setHelpDismissed(true);
+    selectionHaptic();
+  }, []);
 
   const swapAt = useCallback(
     (idx: number, dir: -1 | 1) => {
@@ -320,13 +369,23 @@ export function TimelineOrderCard({
 
     if (isCorrect) {
       successHaptic();
+      setWrong(false);
+      if (wrongTimerRef.current) clearTimeout(wrongTimerRef.current);
       setLocked(true);
       setConfetti((n) => n + 1);
       setShowYears(true);
       onSubmit(current);
     } else {
       errorHaptic();
+      // Sustained buzz on top of the single error haptic so the "wrong" is
+      // unmistakable. Android honours the pattern; iOS falls back to a buzz.
+      Vibration.vibrate([0, 140, 90, 140, 90, 200]);
       triggerShake();
+      // Flip the CTA to its red error state, then auto-clear so the user can
+      // edit and try again with a fresh blue button.
+      setWrong(true);
+      if (wrongTimerRef.current) clearTimeout(wrongTimerRef.current);
+      wrongTimerRef.current = setTimeout(() => setWrong(false), 1400);
     }
   }, [locked, prompt.items, onSubmit, triggerShake]);
 
@@ -334,24 +393,18 @@ export function TimelineOrderCard({
     onCorrectSettledRef.current();
   }, []);
 
-  const handleYes = useCallback(() => {
-    const correctOrder = [...prompt.items]
-      .sort((a, b) => a.correctOrder - b.correctOrder)
-      .map((it) => it.id);
-    setResolvedOrder(correctOrder);
-    setHelpVisible(false);
-    successHaptic();
-    setLocked(true);
-    setShowYears(true);
-    // No auto-advance — user clicks "המשך" when they're ready to move on.
-  }, [prompt.items]);
+  // Clear the pending red-flash timer on unmount.
+  useEffect(() => () => {
+    if (wrongTimerRef.current) clearTimeout(wrongTimerRef.current);
+  }, []);
 
-  const handleNo = useCallback(() => {
-    setHelpVisible(false);
-    resetHelpTimer();
-  }, [resetHelpTimer]);
+  // Push the latest state to the parent so it can render the sticky CTA.
+  // Re-fires whenever `locked`/`wrong` flips or a callback identity changes.
+  useEffect(() => {
+    onStateChange?.({ locked, wrong, check: handleCheck, continue_: handleContinue });
+  }, [locked, wrong, handleCheck, handleContinue, onStateChange]);
 
-  const displayOrder = resolvedOrder ?? localOrder;
+  const displayOrder = localOrder;
 
   return (
     <Animated.View
@@ -421,63 +474,85 @@ export function TimelineOrderCard({
         })}
       </View>
 
-      {/* ── Help panel (only when visible, inside card flow so never overflows) ── */}
-      {helpVisible && !locked && (
+      {/* Captain Shark help offer — appears after 15s of inactivity.
+          Accepting auto-arranges the items in their correct order. */}
+      {showHelpOffer && !locked && (
         <Animated.View
-          entering={FadeInUp.duration(220)}
-          style={styles.helpPanel}
+          entering={FadeIn.duration(220)}
+          exiting={FadeOut.duration(160)}
+          style={styles.helpOffer}
         >
-          <Text style={styles.helpText}>צריכים עזרה?</Text>
           <View style={styles.helpRow}>
+            <ExpoImage
+              source={FINN_TALKING}
+              style={styles.helpFinn}
+              contentFit="contain"
+              accessible={false}
+            />
+            <Text style={styles.helpText}>צריכים עזרה? אני יכול לסדר את זה.</Text>
+          </View>
+          <View style={styles.helpActions}>
             <Pressable
-              onPress={handleYes}
+              onPress={applyCorrectOrder}
               accessibilityRole="button"
-              accessibilityLabel="כן, פתרו עבורי"
-              style={styles.helpYesBtn}
+              accessibilityLabel="כן, עזור לי לסדר"
+              style={({ pressed }) => ({
+                flex: 1,
+                minHeight: 48,
+                paddingVertical: 12,
+                paddingHorizontal: 8,
+                borderRadius: 12,
+                alignItems: "center",
+                justifyContent: "center",
+                backgroundColor: "#38bdf8",
+                borderBottomWidth: 3,
+                borderBottomColor: "#0284c7",
+                elevation: 3,
+                opacity: pressed ? 0.85 : 1,
+              })}
             >
-              <Text style={styles.helpYesBtnText}>כן, תעזרו לי</Text>
+              <Text
+                numberOfLines={1}
+                style={{ fontSize: 15, fontWeight: "900", color: "#1e293b", writingDirection: "rtl", textAlign: "center" }}
+              >
+                עזור לי
+              </Text>
             </Pressable>
             <Pressable
-              onPress={handleNo}
+              onPress={declineHelp}
               accessibilityRole="button"
-              accessibilityLabel="לא, אני ממשיך לנסות"
-              style={styles.helpNoBtn}
+              accessibilityLabel="לא תודה, אני אסתדר"
+              style={({ pressed }) => ({
+                flex: 1,
+                minHeight: 48,
+                paddingVertical: 12,
+                paddingHorizontal: 8,
+                borderRadius: 12,
+                alignItems: "center",
+                justifyContent: "center",
+                backgroundColor: "#2563eb",
+                borderBottomWidth: 3,
+                borderBottomColor: "#1e40af",
+                elevation: 3,
+                opacity: pressed ? 0.85 : 1,
+              })}
             >
-              <Text style={styles.helpNoBtnText}>אני מנסה</Text>
+              <Text
+                numberOfLines={1}
+                style={{ fontSize: 15, fontWeight: "900", color: "#1e293b", writingDirection: "rtl", textAlign: "center" }}
+              >
+                אני אסתדר
+              </Text>
             </Pressable>
           </View>
         </Animated.View>
       )}
 
-      {/* Check / Continue button — until the user locks in a correct order
-          via "בדוק", they stay on the card and can keep rearranging. Once
-          locked (either by Check or by the help-panel auto-solve) the button
-          flips to "המשך" so the user controls the pace of advancing. */}
-      {locked ? (
-        <Pressable
-          onPress={handleContinue}
-          accessibilityRole="button"
-          accessibilityLabel="המשך"
-          style={({ pressed }) => [
-            styles.primaryBtn,
-            { backgroundColor: "#0ea5e9", borderBottomColor: "#0284c7", opacity: pressed ? 0.85 : 1 },
-          ]}
-        >
-          <Text style={styles.primaryBtnText}>המשך</Text>
-        </Pressable>
-      ) : (
-        <Pressable
-          onPress={handleCheck}
-          accessibilityRole="button"
-          accessibilityLabel="בדוק"
-          style={({ pressed }) => [
-            styles.primaryBtn,
-            { backgroundColor: accentColor, borderBottomColor: "#1e293b", opacity: pressed ? 0.85 : 1 },
-          ]}
-        >
-          <Text style={styles.primaryBtnText}>בדוק</Text>
-        </Pressable>
-      )}
+      {/* Check / Continue button is rendered as a sticky footer by the
+          parent (InteractiveRecallScreen). Lifting it out of the card body
+          guarantees it stays visible regardless of card height — previously
+          it could be hidden below the fold or covered by the FinnCoach,
+          since the row-level pan gesture also stole scroll attempts. */}
     </Animated.View>
   );
 }
@@ -485,11 +560,11 @@ export function TimelineOrderCard({
 const styles = StyleSheet.create({
   card: {
     marginHorizontal: 16,
-    marginTop: 12,
+    marginTop: 6,
     backgroundColor: "#ffffff",
-    borderRadius: 24,
-    padding: 18,
-    gap: 14,
+    borderRadius: 20,
+    padding: 12,
+    gap: 10,
     shadowColor: "#6366f1",
     shadowOpacity: 0.08,
     shadowRadius: 20,
@@ -513,39 +588,39 @@ const styles = StyleSheet.create({
     writingDirection: "rtl",
   },
   instruction: {
-    fontSize: 17,
+    fontSize: 15,
     fontWeight: "700",
     color: "#1e293b",
     textAlign: "right",
     writingDirection: "rtl",
-    lineHeight: 26,
+    lineHeight: 22,
   },
   itemsColumn: {
-    gap: 8,
+    gap: 6,
   },
   itemRow: {
     flexDirection: "row-reverse",
     alignItems: "center",
     gap: 10,
-    paddingVertical: 11,
-    paddingHorizontal: 12,
+    paddingVertical: 8,
+    paddingHorizontal: 10,
     borderWidth: 1.5,
-    borderRadius: 16,
+    borderRadius: 14,
     shadowOpacity: 0.05,
     shadowRadius: 6,
     shadowOffset: { width: 0, height: 2 },
     elevation: 2,
   },
   rankBadge: {
-    width: 32,
-    height: 32,
-    borderRadius: 10,
+    width: 28,
+    height: 28,
+    borderRadius: 9,
     borderWidth: 2,
     alignItems: "center",
     justifyContent: "center",
   },
   rankText: {
-    fontSize: 15,
+    fontSize: 14,
     fontWeight: "900",
   },
   itemContent: {
@@ -605,65 +680,57 @@ const styles = StyleSheet.create({
     fontWeight: "900",
     color: "#059669",
   },
-  helpPanel: {
-    backgroundColor: "#eff6ff",
-    borderRadius: 16,
-    borderWidth: 1.5,
-    borderColor: "#93c5fd",
-    paddingHorizontal: 16,
+  helpOffer: {
+    marginTop: 14,
+    paddingHorizontal: 14,
     paddingVertical: 12,
+    borderRadius: 14,
+    backgroundColor: "#f0f9ff",
+    borderWidth: 1,
+    borderColor: "#bae6fd",
     gap: 10,
-    alignItems: "center",
-  },
-  helpText: {
-    fontSize: 15,
-    fontWeight: "800",
-    color: "#1e293b",
-    writingDirection: "rtl",
-    textAlign: "center",
   },
   helpRow: {
     flexDirection: "row-reverse",
+    alignItems: "center",
     gap: 10,
   },
-  helpYesBtn: {
-    paddingHorizontal: 20,
-    paddingVertical: 10,
-    backgroundColor: "#3b82f6",
-    borderRadius: 14,
-    borderBottomWidth: 3,
-    borderBottomColor: "#1d4ed8",
+  helpFinn: {
+    width: 44,
+    height: 44,
   },
-  helpYesBtnText: {
+  helpText: {
+    flex: 1,
     fontSize: 14,
-    fontWeight: "800",
-    color: "#ffffff",
+    fontWeight: "700",
+    color: "#0c4a6e",
     writingDirection: "rtl",
+    textAlign: "right",
   },
-  helpNoBtn: {
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    backgroundColor: "#e2e8f0",
-    borderRadius: 14,
-    borderBottomWidth: 3,
-    borderBottomColor: "#94a3b8",
+  helpActions: {
+    flexDirection: "row-reverse",
+    gap: 8,
   },
-  helpNoBtnText: {
-    fontSize: 14,
-    fontWeight: "800",
-    color: "#374151",
-    writingDirection: "rtl",
-  },
-  primaryBtn: {
-    borderRadius: 16,
-    paddingVertical: 14,
+  helpBtn: {
+    flex: 1,
+    paddingVertical: 12,
+    borderRadius: 12,
     alignItems: "center",
     justifyContent: "center",
     borderBottomWidth: 3,
-    marginTop: 4,
   },
-  primaryBtnText: {
-    fontSize: 16,
+  // "עזור לי" — light blue (primary suggestion)
+  helpBtnYes: {
+    backgroundColor: "#38bdf8",
+    borderBottomColor: "#0284c7",
+  },
+  // "אני אסתדר" — blue (decline)
+  helpBtnNo: {
+    backgroundColor: "#2563eb",
+    borderBottomColor: "#1e40af",
+  },
+  helpBtnText: {
+    fontSize: 15,
     fontWeight: "900",
     color: "#ffffff",
     writingDirection: "rtl",

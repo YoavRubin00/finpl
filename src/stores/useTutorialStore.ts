@@ -2,6 +2,7 @@ import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
 import { zustandStorage } from '../lib/zustandStorage';
 import type { ToolKey } from '../features/financial-tools/toolsRegistry';
+import { registerLocalStore } from '../lib/stores/registry';
 
 type WalkthroughScreen = 'learn' | 'lesson-preview' | 'tools' | 'chat' | 'shop' | 'bridge' | null;
 
@@ -35,6 +36,7 @@ interface TutorialState {
   setWalkthroughGlowTab: (tab: string | null) => void;
   setWalkthroughActiveScreen: (screen: WalkthroughScreen) => void;
   resetWalkthrough: () => void;
+  reset: () => void;
 }
 
 export const useTutorialStore = create<TutorialState>()(
@@ -71,6 +73,7 @@ export const useTutorialStore = create<TutorialState>()(
       setWalkthroughGlowTab: (tab: string | null) => set({ walkthroughGlowTab: tab }),
       setWalkthroughActiveScreen: (screen: WalkthroughScreen) => set({ walkthroughActiveScreen: screen }),
       resetWalkthrough: () => set({ hasSeenAppWalkthrough: false, appWalkthroughStep: 0, walkthroughGlowTab: null, walkthroughActiveScreen: null, hasSeenToolTutorial: {} }),
+      reset: () => set({ hasSeenTradingHubIntro: true, hasSeenAppWalkthrough: false, hasChosenChatStyle: false, hasSeenPizzaIndexModal: false, hasSeenCh0BullshitInterstitial: false, hasSeenMod01BarterNotif: false, hasSeenWatchlistHint: false, hasSeenAssetUnlockIntro: false, hasSeenIndicesOnlyNudge: false, hasSeenToolTutorial: {}, appWalkthroughStep: 0, walkthroughGlowTab: null, walkthroughActiveScreen: null, _hydrated: false }),
     }),
     {
       name: "tutorial-store-v13",
@@ -81,3 +84,5 @@ export const useTutorialStore = create<TutorialState>()(
     }
   )
 );
+
+registerLocalStore('tutorial-store-v12', useTutorialStore, 'tutorial-store-v12');

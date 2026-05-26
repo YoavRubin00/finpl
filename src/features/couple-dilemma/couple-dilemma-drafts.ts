@@ -98,20 +98,23 @@ export const COUPLE_DILEMMA_DRAFTS: CoupleDilemmaDraft[] = [
     id: 'cd-cafe-bill',
     blobAudioKey: 'audio/couple-dilemmas/cd-cafe-bill.mp3',
     videoBlobId: 'couple-cafe-bill',
-    scriptForTTS: 'פעמיים בשבוע פה — שמונה מאות שקל בחודש. נחלוק או נצמצם?',
-    caption: 'קפה זוגי כל פעם מחדש',
-    scenario: 'מי משלם על הקפה הזוגי?',
+    // NOTE: Content updated 2026-05-25 — old script was about splitting the bill,
+    // new content focuses on monthly cash-flow visibility (matches mod-0-4 topic).
+    // Audio still narrates the old script until generate-couple-narrations.ts is re-run.
+    scriptForTTS: 'אתה יודע בכלל כמה נכנס וכמה יצא לנו בחודש שעבר — בלי להציץ באפליקציה?',
+    caption: 'שקיפות תזרים חודשי',
+    scenario: 'כמה באמת נכנס וכמה יצא בחודש שעבר?',
     optionA: {
       id: 'a',
-      label: 'מתחלקים שווה כל פעם',
+      label: '15 דקות יחד בסוף החודש',
       isWise: true,
-      feedback: 'קפה זוגי ב-ת"א ~55₪ לפעם. פעמיים בשבוע = ~440₪/חודש. חלוקה הוגנת = פחות שיחות קשות.',
+      feedback: 'סקירה חודשית של 15 דק׳ מעלה הוצאות "סמויות" שמסתננות בלי שתשימו לב. זוגות שעושים את זה חוסכים בממוצע 8-12% מההוצאה החודשית — בלי לוותר על שום דבר משמעותי.',
     },
     optionB: {
       id: 'b',
-      label: 'אחד תמיד מכסה',
+      label: 'מספיק שהיתרה לא שלילית',
       isWise: false,
-      feedback: 'אם אחד מסבסד 220₪/חודש = 2,640₪/שנה. אחרי שנתיים יחד זה כבר 5,000₪ של אי-שקיפות.',
+      feedback: 'בלי מודעות שוטפת, ההוצאות "הקטנות" מצטברות בשקט. אפילו 500₪ לחודש שאתם לא יודעים לאן הולכים = 6,000₪/שנה. ב-3 שנים זה חופשה משפחתית או 18,000₪ שיכלו להתחיל קרן.',
     },
   },
   {
