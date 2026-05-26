@@ -1,4 +1,4 @@
-import { Pressable, StyleSheet, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { ChevronRight } from 'lucide-react-native';
@@ -29,6 +29,14 @@ export default function CompoundCalculatorRoute() {
         >
           <ChevronRight size={20} color="#0f172a" strokeWidth={2.8} />
         </Pressable>
+        <View style={styles.titleWrap} pointerEvents="none">
+          <Text style={styles.titleEmoji}>📈</Text>
+          <Text style={styles.title} accessibilityRole="header">
+            ריבית דריבית
+          </Text>
+        </View>
+        {/* Spacer mirrors the back button so the title sits perfectly centered. */}
+        <View style={styles.backCircleSpacer} />
       </View>
 
       <View style={{ flex: 1 }}>
@@ -50,6 +58,7 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
     flexDirection: 'row-reverse',
     alignItems: 'center',
+    justifyContent: 'space-between',
   },
   backCircle: {
     width: 38,
@@ -65,5 +74,25 @@ const styles = StyleSheet.create({
     elevation: 6,
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.9)',
+  },
+  backCircleSpacer: {
+    width: 38,
+    height: 38,
+  },
+  titleWrap: {
+    flexDirection: 'row-reverse',
+    alignItems: 'center',
+    gap: 8,
+  },
+  titleEmoji: {
+    fontSize: 20,
+    lineHeight: 24,
+  },
+  title: {
+    fontSize: 17,
+    fontWeight: '900',
+    color: '#0f172a',
+    writingDirection: 'rtl',
+    letterSpacing: -0.3,
   },
 });
