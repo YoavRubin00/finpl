@@ -9,6 +9,7 @@
 
 import { getApiBase } from '../../db/apiBase';
 import { useAuthStore } from '../auth/useAuthStore';
+import { tokenStore } from '../../lib/auth/secureStore';
 import type { BreakingNewsSummary } from './types';
 
 interface AuthCtx {
@@ -16,10 +17,11 @@ interface AuthCtx {
   syncToken: string;
 }
 
-function getAuthOrThrow(): AuthCtx {
-  const { email, syncToken } = useAuthStore.getState();
+async function getAuthOrThrow(): Promise<AuthCtx> {
+  const { email } = useAuthStore.getState();
   if (!email) throw new Error('Not authenticated');
-  return { authId: email, syncToken: syncToken ?? '' };
+  const token = (await tokenStore.get()) ?? '';
+  return { authId: email, syncToken: token };
 }
 
 function headers(syncToken: string): Record<string, string> {
@@ -44,7 +46,7 @@ interface ListResponse {
 }
 
 export async function fetchBreakingNewsList(): Promise<ListResponse> {
-  const { authId, syncToken } = getAuthOrThrow();
+  const { authId, syncToken } = await getAuthOrThrow();
   const base = getApiBase();
   const url = `${base}/api/breaking-news/list?authId=${encodeURIComponent(authId)}`;
   const res = await fetch(url, { headers: headers(syncToken) });
@@ -53,7 +55,7 @@ export async function fetchBreakingNewsList(): Promise<ListResponse> {
 }
 
 export async function addTrackedTicker(ticker: string): Promise<void> {
-  const { authId, syncToken } = getAuthOrThrow();
+  const { authId, syncToken } = await getAuthOrThrow();
   const base = getApiBase();
   const res = await fetch(`${base}/api/breaking-news/track`, {
     method: 'POST',
@@ -64,7 +66,7 @@ export async function addTrackedTicker(ticker: string): Promise<void> {
 }
 
 export async function removeTrackedTicker(ticker: string): Promise<void> {
-  const { authId, syncToken } = getAuthOrThrow();
+  const { authId, syncToken } = await getAuthOrThrow();
   const base = getApiBase();
   const url = `${base}/api/breaking-news/track?authId=${encodeURIComponent(authId)}&ticker=${encodeURIComponent(ticker)}`;
   const res = await fetch(url, { method: 'DELETE', headers: headers(syncToken) });
@@ -80,7 +82,7 @@ interface GenerateResponse {
 }
 
 export async function generateBreakingNewsForTicker(ticker: string): Promise<GenerateResponse> {
-  const { authId, syncToken } = getAuthOrThrow();
+  const { authId, syncToken } = await getAuthOrThrow();
   const base = getApiBase();
   const res = await fetch(`${base}/api/breaking-news/generate`, {
     method: 'POST',

@@ -18,7 +18,8 @@ import { tapHaptic, successHaptic } from "../../utils/haptics";
 import { submitCrowdVote } from "../../db/sync/syncCrowdQuestion";
 import { getIsraelDateISO } from "../../utils/israelTime";
 import { useAuthStore } from "../auth/useAuthStore";
-import { useEconomyStore } from "../economy/useEconomyStore";
+import { tokenStore } from "../../lib/auth/secureStore";
+import { useEconomyUIStore } from "../economy/useEconomyUIStore";
 
 const VOTE_COIN_REWARD = 50;
 
@@ -63,7 +64,7 @@ export function CrowdWisdomScreen(): React.ReactElement {
 
       // Reward immediately on a successful local vote — the user expects the
       // payout the moment they answer, regardless of remote-sync outcome.
-      useEconomyStore.getState().addCoins(VOTE_COIN_REWARD);
+      useEconomyUIStore.getState().addCoins(VOTE_COIN_REWARD);
       successHaptic();
 
       // Best-effort Neon sync. The current /api/crowd-question/vote endpoint
@@ -73,9 +74,10 @@ export function CrowdWisdomScreen(): React.ReactElement {
       if (choiceId === 'a' || choiceId === 'b') {
         try {
           const auth = useAuthStore.getState();
+          const syncToken = await tokenStore.get();
           await submitCrowdVote({
             authId: auth.email ?? 'guest',
-            syncToken: auth.syncToken,
+            syncToken,
             questionId,
             choice: choiceId,
             voteDateIL: getIsraelDateISO(),

@@ -1,5 +1,5 @@
 import { useEffect, useRef } from "react";
-import { useEconomyStore } from "../economy/useEconomyStore";
+import { useEconomy } from "../economy/useEconomy";
 
 /**
  * Listens for the user's lifetime coin count crossing key milestones (10K,
@@ -17,7 +17,8 @@ interface ClanMilestoneToastHandler {
 }
 
 export function useClanMilestoneToast({ showToast }: ClanMilestoneToastHandler) {
-  const coins = useEconomyStore((s) => s.coins);
+  const { data: economyData } = useEconomy();
+  const coins = economyData?.coins ?? 0;
   // Track which milestones we already announced — avoid re-firing on rerender.
   const announced = useRef<Set<number>>(new Set());
 

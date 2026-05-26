@@ -5,7 +5,7 @@ import { router } from 'expo-router';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { FANTASY } from '../../../constants/theme';
 import { useFantasyStore } from '../useFantasyStore';
-import { useEconomyStore } from '../../economy/useEconomyStore';
+import { useEconomy } from '../../economy/useEconomy';
 import {
   getCompetitionPhase,
   getNextDraftOpen,
@@ -199,8 +199,9 @@ function DraftOpenCard({ hasEntered, isLocked }: DraftOpenProps): React.ReactEle
 export function FantasyLobbyScreen(): React.ReactElement {
   const currentEntry = useFantasyStore((s) => s.currentEntry);
   const getLeaderboardWithLocal = useFantasyStore((s) => s.getLeaderboardWithLocal);
-  const coins = useEconomyStore((s) => s.coins);
-  const xp = useEconomyStore((s) => s.xp);
+  const { data: economyData } = useEconomy();
+  const coins = economyData?.coins ?? 0;
+  const xp = economyData?.xp ?? 0;
 
   const phase = getCompetitionPhase();
   const hasEntered = currentEntry !== null;

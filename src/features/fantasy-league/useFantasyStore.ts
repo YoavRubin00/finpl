@@ -54,6 +54,8 @@ interface FantasyStoreActions {
   getEffectiveAverageReturn: () => number;
   /** Sum of all picks' allocations. */
   getAllocatedTotal: () => number;
+  /** Reset to initial state — used by global resetAllLocalStores. */
+  reset: () => void;
 }
 
 type FantasyStore = FantasyStoreState & FantasyStoreActions;
@@ -353,6 +355,10 @@ export const useFantasyStore = create<FantasyStore>()(
         const { currentEntry } = get();
         if (!currentEntry) return 0;
         return currentEntry.picks.reduce((s, p) => s + p.allocation, 0);
+      },
+
+      reset: () => {
+        set({ currentEntry: null, leaderboard: [], missions: [], lastUpdated: null });
       },
     }),
     {

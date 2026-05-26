@@ -7,13 +7,13 @@
  * resets but `streak` is preserved (decremented if a day was skipped).
  *
  * Reward economics mirror useDailyQuestsStore — XP/coin grants flow through
- * useEconomyStore so the chest payout shows up in the global hub strip.
+ * useEconomyUIStore so the chest payout shows up in the global hub strip.
  */
 
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import { zustandStorage } from '../../lib/zustandStorage';
-import { useEconomyStore } from '../economy/useEconomyStore';
+import { useEconomyUIStore } from '../economy/useEconomyUIStore';
 import type { DailyChallenge, ItemAnswer } from './types';
 
 /** YYYY-MM-DD anchored to the device's local time. Server uses Asia/Jerusalem;
@@ -163,7 +163,7 @@ export const useDailyNewsChallengeStore = create<NewsChallengeState>()(
         if (!state.hasCompletedToday()) return null;
 
         const reward = previewRegularReward(state.streak);
-        const economy = useEconomyStore.getState();
+        const economy = useEconomyUIStore.getState();
         economy.addXP(reward.xp, 'daily_task');
         economy.addCoins(reward.coins, 'quiz');
         // gems handled by economy store if supported; safe-call avoids crash.
@@ -182,7 +182,7 @@ export const useDailyNewsChallengeStore = create<NewsChallengeState>()(
         // Caller (UI) is responsible for gating on isPro(). Store grants
         // unconditionally — same posture as useDailyQuestsStore.
         const reward = previewProReward(state.streak);
-        const economy = useEconomyStore.getState();
+        const economy = useEconomyUIStore.getState();
         economy.addXP(reward.xp, 'daily_task');
         economy.addCoins(reward.coins, 'quiz');
         const addGems = (economy as unknown as { addGems?: (n: number) => void }).addGems;

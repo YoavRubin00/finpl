@@ -5,7 +5,7 @@ import { router } from 'expo-router';
 import Animated, { FadeInDown, FadeIn } from 'react-native-reanimated';
 import { FANTASY } from '../../../constants/theme';
 import { useFantasyStore } from '../useFantasyStore';
-import { useEconomyStore } from '../../economy/useEconomyStore';
+import { useEconomy } from '../../economy/useEconomy';
 import {
   F2Header,
   F2Ambient,
@@ -35,8 +35,9 @@ export function LeaderboardScreen(): React.ReactElement {
   const currentEntry = useFantasyStore((s) => s.currentEntry);
   const getLeaderboardWithLocal = useFantasyStore((s) => s.getLeaderboardWithLocal);
   const getEffectiveAverageReturn = useFantasyStore((s) => s.getEffectiveAverageReturn);
-  const coins = useEconomyStore((s) => s.coins);
-  const xp = useEconomyStore((s) => s.xp);
+  const { data: economyData } = useEconomy();
+  const coins = economyData?.coins ?? 0;
+  const xp = economyData?.xp ?? 0;
 
   const [filter, setFilter] = useState<FilterKey>('global');
 

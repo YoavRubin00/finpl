@@ -5,7 +5,7 @@ import { router } from 'expo-router';
 import Animated, { FadeInDown, FadeIn } from 'react-native-reanimated';
 import { FANTASY, type FantasySectorId } from '../../../constants/theme';
 import { useFantasyStore } from '../useFantasyStore';
-import { useEconomyStore } from '../../economy/useEconomyStore';
+import { useEconomy } from '../../economy/useEconomy';
 import { STOCK_CATEGORIES, simulateWeeklyReturn } from '../fantasyData';
 import {
   F2Header,
@@ -55,8 +55,9 @@ export function LiveDashboardScreen(): React.ReactElement {
   const getLeaderboardWithLocal = useFantasyStore((s) => s.getLeaderboardWithLocal);
   const getAverageReturn = useFantasyStore((s) => s.getAverageReturn);
   const getEffectiveAverageReturn = useFantasyStore((s) => s.getEffectiveAverageReturn);
-  const coins = useEconomyStore((s) => s.coins);
-  const xp = useEconomyStore((s) => s.xp);
+  const { data: economyData } = useEconomy();
+  const coins = economyData?.coins ?? 0;
+  const xp = economyData?.xp ?? 0;
 
   // Tick every minute to refresh "live" returns
   const [tick, setTick] = useState(0);

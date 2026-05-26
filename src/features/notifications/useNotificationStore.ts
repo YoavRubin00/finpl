@@ -444,7 +444,7 @@ export const useNotificationStore = create<NotificationState & NotificationActio
         permissionGranted: false,
         scheduled: [],
         bannerDismissed: false,
-        preferences: { streak: false, chest: false, challenge: false, dailyChallenge: false, squadInvite: false, squadChest: false, morning: false, inactivity: false, marketHook: false, aiInsight: false, upgradeNudge: false },
+        preferences: { streak: false, chest: false, challenge: false, dailyChallenge: false, squadInvite: false, squadChest: false, morning: false, inactivity: false, marketHook: false, aiInsight: false, upgradeNudge: false, breakingNews: false },
         lastScheduledDate: null,
         lastFinnCopyTitle: null,
         lastAIInsightNotifDate: null,

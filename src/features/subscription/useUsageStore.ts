@@ -96,6 +96,10 @@ export const useUsageStore = create<UsageState & UsageActions>()(
             return state.chatMessagesToday < limit;
           case 'aiInsights':
           case 'saved_items':
+          case 'breaking-news':
+          case 'shark-voice':
+          case 'analyst-quick':
+          case 'analyst-deep':
             return false;
         }
       },

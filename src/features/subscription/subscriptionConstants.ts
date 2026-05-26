@@ -1,7 +1,16 @@
 // Shared types and constants extracted from the legacy useSubscriptionStore.
 // These do NOT depend on React or Zustand — import freely from anywhere.
 
-export type GatedFeature = "simulator" | "arena" | "chat" | "aiInsights" | "saved_items";
+export type GatedFeature =
+  | "simulator"
+  | "arena"
+  | "chat"
+  | "aiInsights"
+  | "saved_items"
+  | "breaking-news"
+  | "shark-voice"
+  | "analyst-quick"
+  | "analyst-deep";
 
 export const BASIC_LIMITS: Record<GatedFeature, number> = {
   simulator: 3,
@@ -9,6 +18,10 @@ export const BASIC_LIMITS: Record<GatedFeature, number> = {
   chat: 3,
   aiInsights: 0,
   saved_items: 0,
+  "breaking-news": 1,
+  "shark-voice": 0,
+  "analyst-quick": 1,
+  "analyst-deep": 0,
 };
 
 const HEART_REFILL_MS = 5 * 60 * 60 * 1000; // 5 hours per heart

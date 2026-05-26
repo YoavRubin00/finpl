@@ -1,4 +1,4 @@
-import { useEconomyStore } from '../../economy/useEconomyStore';
+import { useEconomyUIStore } from '../../economy/useEconomyUIStore';
 import { usePayslipMetaStore } from '../usePayslipMetaStore';
 
 const FIRST_TIME_XP = 50;
@@ -32,7 +32,7 @@ export function grantPayslipReward(): PayslipRewardResult {
   const xp = isFirstTime ? FIRST_TIME_XP : REPEAT_XP;
   const coins = isFirstTime ? FIRST_TIME_COINS : REPEAT_COINS;
 
-  const economy = useEconomyStore.getState();
+  const economy = useEconomyUIStore.getState();
   economy.addXP(xp, isFirstTime ? 'payslip_first' : 'payslip_repeat');
   economy.addCoins(coins);
 

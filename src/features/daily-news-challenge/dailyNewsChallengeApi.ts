@@ -7,6 +7,7 @@
 
 import { getApiBase } from '../../db/apiBase';
 import { useAuthStore } from '../auth/useAuthStore';
+import { tokenStore } from '../../lib/auth/secureStore';
 import type { DailyChallenge, ChatTurn } from './types';
 
 interface TodayResponse {
@@ -49,8 +50,9 @@ export async function postChatMessage(args: {
   history: ChatTurn[];
   message: string;
 }): Promise<string> {
-  const { email, syncToken } = useAuthStore.getState();
+  const { email } = useAuthStore.getState();
   if (!email) throw new Error('Not authenticated');
+  const syncToken = await tokenStore.get();
 
   const base = getApiBase();
   const res = await fetch(`${base}/api/daily-news-challenge/chat`, {

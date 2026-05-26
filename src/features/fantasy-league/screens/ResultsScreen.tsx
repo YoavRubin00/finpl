@@ -5,7 +5,7 @@ import { router } from 'expo-router';
 import AnimatedReanimated, { FadeInDown, ZoomIn } from 'react-native-reanimated';
 import { FANTASY } from '../../../constants/theme';
 import { useFantasyStore } from '../useFantasyStore';
-import { useEconomyStore } from '../../economy/useEconomyStore';
+import { useEconomy } from '../../economy/useEconomy';
 import { getMockLeaderboard, getCurrentWeekId, TIER_CONFIGS } from '../fantasyData';
 import {
   F2Header,
@@ -104,8 +104,9 @@ export function ResultsScreen(): React.ReactElement {
   const resetForNewWeek = useFantasyStore((s) => s.resetForNewWeek);
   const getAverageReturn = useFantasyStore((s) => s.getAverageReturn);
   const getEffectiveAverageReturn = useFantasyStore((s) => s.getEffectiveAverageReturn);
-  const coins = useEconomyStore((s) => s.coins);
-  const xp = useEconomyStore((s) => s.xp);
+  const { data: economyData } = useEconomy();
+  const coins = economyData?.coins ?? 0;
+  const xp = economyData?.xp ?? 0;
 
   useEffect(() => {
     if (currentEntry && currentEntry.picks.some((p) => p.finalPrice === null)) {

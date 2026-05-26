@@ -1867,6 +1867,34 @@ const styles = StyleSheet.create({
     zIndex: 20,
     alignItems: "center",
   },
+
+  // Active-streak pill — sits opposite-side from Finn at the active node
+  activeStreakPill: {
+    position: "absolute",
+    top: 18,
+    zIndex: 19,
+  },
+  activeStreakInner: {
+    flexDirection: "row-reverse",
+    alignItems: "center",
+    gap: 4,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 999,
+    backgroundColor: "#ffffff",
+    borderWidth: 1.5,
+    borderColor: "#e5e7eb",
+    shadowColor: "#0f172a",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  activeStreakText: {
+    fontSize: 13,
+    fontWeight: "900",
+    writingDirection: "rtl",
+  },
   speechBubbleBelow: {
     position: "absolute",
     zIndex: 21,
