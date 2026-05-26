@@ -18,6 +18,8 @@ import Animated, {
 const ZERO_SHADOW_OFFSET = { width: 0, height: 0 } as const;
 import Svg, { Circle } from "react-native-svg";
 import { useEconomy } from "../../features/economy/useEconomy";
+import { useStreak } from "../../features/economy/useStreak";
+import { StreakCalendarModal } from "../../features/streak/StreakCalendarModal";
 import { useHeartsStore } from "../../features/subscription/useHeartsStore";
 import { useIsPro } from "../../features/subscription/useSubscription";
 import { useAuthStore } from "../../features/auth/useAuthStore";
@@ -193,6 +195,8 @@ export function GlobalWealthHeader({ compact = false }: GlobalWealthHeaderProps)
   const xp = economyData?.xp ?? 0;
   const coins = economyData?.coins ?? 0;
   const gems = economyData?.gems ?? 0;
+  const { data: streakData } = useStreak();
+  const streak = streakData?.currentStreak ?? 0;
   const isPro = useIsPro();
   const avatarId = useAuthStore((st) => st.profile?.avatarId ?? null);
   const appActive = useAppActive();
@@ -213,6 +217,7 @@ export function GlobalWealthHeader({ compact = false }: GlobalWealthHeaderProps)
 
   const { level, layer, layerName, progressToNextLevel, xpToNextLevel } = getPyramidStatus(xp);
   const [showLevelPopup, setShowLevelPopup] = useState(false);
+  const [showStreakModal, setShowStreakModal] = useState(false);
 
   const navigateToShop = useCallback(() => {
     tapHaptic();
@@ -414,7 +419,18 @@ export function GlobalWealthHeader({ compact = false }: GlobalWealthHeaderProps)
         </ResourcePill>
         </View>
 
-
+        {/* Streak pill */}
+        <View style={walkthroughActive ? { opacity: 0.3 } : undefined} pointerEvents={walkthroughActive ? "none" : "auto"}>
+        <ResourcePill
+          icon={<LottieIcon source={require("../../../assets/lottie/wired-flat-2804-fire-flame-hover-pinch.json") as number} size={28} autoPlay loop active={appActive} />}
+          glowColor="#fb923c"
+          trackedValue={streak}
+          accessibilityLabel={`רצף ${streak} ימים, פתח לוח שנה`}
+          onPress={() => setShowStreakModal(true)}
+        >
+          <AnimatedNumber value={streak} color="#f97316" />
+        </ResourcePill>
+        </View>
 
         {/* Level badge with XP progress ring */}
         <Pressable
@@ -449,7 +465,8 @@ export function GlobalWealthHeader({ compact = false }: GlobalWealthHeaderProps)
               strokeDasharray={RING_CIRCUMFERENCE}
               animatedProps={ringAnimatedProps}
               rotation="-90"
-              origin={`${RING_SIZE / 2}, ${RING_SIZE / 2}`}
+              originX={RING_SIZE / 2}
+              originY={RING_SIZE / 2}
             />
           </Svg>
           <View style={s.levelBadgeInner}>
@@ -511,6 +528,12 @@ export function GlobalWealthHeader({ compact = false }: GlobalWealthHeaderProps)
         progress={progressToNextLevel}
         xpToNext={xpToNextLevel}
         xp={xp}
+      />
+
+      {/* Streak calendar modal */}
+      <StreakCalendarModal
+        visible={showStreakModal}
+        onClose={() => setShowStreakModal(false)}
       />
 
     </View>
@@ -821,8 +844,8 @@ const s = StyleSheet.create({
     fontSize: 22,
   },
   profileNameCompact: {
-    fontSize: 14,
-    fontWeight: "800",
+    fontSize: 12,
+    fontWeight: "700",
     color: STITCH.onSurfaceVariant,
     writingDirection: "rtl",
   },

@@ -5,6 +5,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
 import { LottieIcon } from "../../components/ui/LottieIcon";
 import { ConfettiExplosion } from "../../components/ui/ConfettiExplosion";
+import { GoogleLogo } from "../../components/ui/GoogleLogo";
 import LottieView from "lottie-react-native";
 import { FINN_STANDARD, FINN_HELLO, FINN_HAPPY, FINN_TABLET } from "../retention-loops/finnMascotConfig";
 import { useRouter } from "expo-router";
@@ -31,6 +32,7 @@ import Animated, {
 import { useSoundEffect } from "../../hooks/useSoundEffect";
 import { tapHaptic } from "../../utils/haptics";
 import { useEconomyUIStore } from "../economy/useEconomyUIStore";
+import { useRecordDailyActivity } from "../economy/useStreak";
 import { useAuthStore } from "../auth/useAuthStore";
 import { signInWithProfile } from "../../lib/auth/lifecycle";
 import { getApiBase } from "../../db/apiBase";
@@ -589,7 +591,18 @@ function ProfileSummaryScreen({ collected, onDone, onEditStep }: { collected: Co
 
 // ─── Celebration screen ───────────────────────────────────────────────────────
 
+// DEMO ONLY: forces a specific reward tier to preview the variable-rewards UX.
+// Set to "bronze" (50 coins), "silver" (75 + 🍀), or "gold" (150 + 🎰).
+// Remove this constant and switch to a weighted random pick before production.
+const DEMO_REWARD_TIER: "bronze" | "silver" | "gold" = "gold";
+
 function CelebrationScreen({ onDone }: { onDone: () => void }) {
+  const rewardTier = DEMO_REWARD_TIER;
+  const rewardCoins = rewardTier === "gold" ? 150 : rewardTier === "silver" ? 75 : 50;
+  const rewardLabel = rewardTier === "gold" ? "🎰 ג'קפוט!" : rewardTier === "silver" ? "🍀 בונוס מזל!" : null;
+  // Bonus tiers (silver/gold) show a popup first so users understand they won
+  // something extra. Bronze (default 50) skips the popup entirely.
+  const [showBonusPopup, setShowBonusPopup] = useState(rewardTier !== "bronze");
   const badgeScale = useSharedValue(0.2);
   const badgeRotate = useSharedValue(-15);
   const xpScale = useSharedValue(0);
@@ -686,19 +699,19 @@ function CelebrationScreen({ onDone }: { onDone: () => void }) {
             <Text style={styles.rewardXP}>+{ONBOARDING_XP} XP</Text>
           </View>
           <View style={[styles.rewardPill, styles.rewardPillGold]}>
-            <Text style={styles.rewardCoins}>+50 מטבעות</Text>
+            <Text style={styles.rewardCoins}>+{rewardCoins} מטבעות</Text>
           </View>
         </Animated.View>
 
-        <Text style={styles.celebTitle}>הפרופיל שלכם מוכן!</Text>
+        <Text style={styles.celebTitle}>הפרופיל שלך מוכן!</Text>
         <Text style={styles.celebSub}>
-          הכנו את הפיד שלכם.{"\n"}הגיע הזמן להפוך ידע לכסף. 💰
+          הכנו את הפיד שלך.{"\n"}הגיע הזמן להפוך ידע לכסף. 💰
         </Text>
 
         {/* CTA */}
         <Animated.View style={ctaStyle}>
           <Pressable onPress={handleStart} disabled={bursting} style={styles.celebCTA} accessibilityRole="button" accessibilityLabel="בואו נתחיל">
-            <Text style={styles.celebCTAText}>בואו נתחיל</Text>
+            <Text style={styles.celebCTAText}>מתחילים</Text>
           </Pressable>
         </Animated.View>
 
@@ -711,7 +724,7 @@ function CelebrationScreen({ onDone }: { onDone: () => void }) {
 
         {/* Optional invite code entry */}
         {codeSaved ? (
-          <Text style={styles.codeSavedText}>✓ קוד ישמר ויחובר לחשבון שלכם</Text>
+          <Text style={styles.codeSavedText}>✓ קוד ישמר ויחובר לחשבון שלך</Text>
         ) : showCodeField ? (
           <Animated.View style={[styles.codeRow, codeAreaStyle]}>
             <TextInput
@@ -743,6 +756,167 @@ function CelebrationScreen({ onDone }: { onDone: () => void }) {
           </Pressable>
         )}
       </SafeAreaView>
+
+      {/* Bonus popup, solid + on-brand. Anchored reveal puts the gold +150
+          next to a faded +50 so the rarity is visual, not just textual. */}
+      {showBonusPopup && rewardLabel && (
+        <View
+          style={{
+            position: "absolute", top: 0, left: 0, right: 0, bottom: 0,
+            backgroundColor: "rgba(15, 23, 42, 0.6)",
+            alignItems: "center", justifyContent: "center",
+            zIndex: 9999,
+          }}
+        >
+
+          <Animated.View
+            entering={FadeInUp.duration(500).springify().damping(8)}
+            style={{
+              backgroundColor: "#ffffff",
+              borderRadius: 24,
+              paddingVertical: 28, paddingHorizontal: 24,
+              alignItems: "center",
+              marginHorizontal: 24,
+              maxWidth: 380,
+              width: "85%",
+              borderWidth: 1,
+              borderColor: "#e2e8f0",
+              shadowColor: "#0f172a",
+              shadowOffset: { width: 0, height: 8 },
+              shadowOpacity: 0.18, shadowRadius: 24, elevation: 14,
+            }}
+          >
+            {/* Diamond Lottie, the hero icon. Defines what the reward is. */}
+            <Animated.View
+              entering={FadeIn.duration(600).delay(200)}
+              style={{ marginBottom: 4, alignItems: "center", justifyContent: "center" }}
+            >
+              <LottieView
+                source={require("../../../assets/lottie/Diamond.json")}
+                style={{ width: 120, height: 120 }}
+                autoPlay
+                loop
+                renderMode="SOFTWARE"
+              />
+            </Animated.View>
+
+            {/* Headline */}
+            <Animated.Text
+              entering={FadeInDown.duration(500).delay(350)}
+              style={{
+                fontSize: 28, fontWeight: "900",
+                color: "#0f172a",
+                textAlign: "center", writingDirection: "rtl",
+                marginBottom: 6,
+                letterSpacing: -0.3,
+              }}
+            >
+              תפסת אוצר!
+            </Animated.Text>
+
+            <Animated.Text
+              entering={FadeInDown.duration(500).delay(450)}
+              style={{
+                fontSize: 14, fontWeight: "600",
+                color: "#64748b",
+                textAlign: "center", writingDirection: "rtl",
+                marginBottom: 24,
+                lineHeight: 20,
+              }}
+            >
+              {rewardTier === "gold"
+                ? "רוב הצוללנים לא מוצאים את זה"
+                : "מטמון נדיר על קרקעית הים"}
+            </Animated.Text>
+
+            {/* Anchored reveal, regular vs your rare */}
+            <Animated.View
+              entering={FadeInUp.duration(500).delay(600).springify().damping(10)}
+              style={{
+                flexDirection: "row-reverse", alignItems: "center", gap: 18,
+                marginBottom: 6,
+              }}
+            >
+              {/* Regular reward, anchor */}
+              <View style={{ alignItems: "center", opacity: 0.4 }}>
+                <Text style={{ fontSize: 10, fontWeight: "700", color: "#64748b", letterSpacing: 0.5, marginBottom: 6 }}>
+                  רוב המשתמשים
+                </Text>
+                <Text style={{ fontSize: 24, fontWeight: "800", color: "#94a3b8", textDecorationLine: "line-through" }}>
+                  +50
+                </Text>
+              </View>
+
+              {/* Arrow */}
+              <Text style={{ fontSize: 20, color: "#cbd5e1", marginTop: 14 }}>←</Text>
+
+              {/* Your rare reward, the only golden element on the screen */}
+              <View style={{ alignItems: "center" }}>
+                <Text style={{ fontSize: 10, fontWeight: "800", color: "#0891b2", letterSpacing: 0.5, marginBottom: 6 }}>
+                  אתה
+                </Text>
+                <Text style={{
+                  fontSize: 44, fontWeight: "900",
+                  color: "#ca8a04",
+                  letterSpacing: -1.5,
+                  lineHeight: 44,
+                }}>
+                  +{rewardCoins}
+                </Text>
+              </View>
+            </Animated.View>
+
+            {/* Label for both numbers */}
+            <Animated.Text
+              entering={FadeIn.duration(500).delay(700)}
+              style={{
+                fontSize: 12, fontWeight: "700",
+                color: "#475569",
+                textAlign: "center", writingDirection: "rtl",
+                marginBottom: 22,
+                letterSpacing: 0.5,
+              }}
+            >
+              מטבעות
+            </Animated.Text>
+
+            {/* Rarity badge, single subtle highlight */}
+            <Animated.View
+              entering={FadeIn.duration(500).delay(800)}
+              style={{
+                backgroundColor: "#fef3c7",
+                paddingHorizontal: 14, paddingVertical: 5,
+                borderRadius: 999,
+                marginBottom: 22,
+              }}
+            >
+              <Text style={{ fontSize: 11, fontWeight: "800", color: "#92400e", letterSpacing: 0.5 }}>
+                {rewardTier === "gold" ? "נדיר במיוחד" : "נדיר"}
+              </Text>
+            </Animated.View>
+
+            {/* CTA, brand primary */}
+            <Animated.View entering={FadeInUp.duration(400).delay(900)}>
+              <Pressable
+                onPress={() => setShowBonusPopup(false)}
+                accessibilityRole="button"
+                accessibilityLabel="קח את האוצר"
+                style={{
+                  backgroundColor: "#0891b2",
+                  paddingHorizontal: 36, paddingVertical: 14,
+                  borderRadius: 999,
+                  borderBottomWidth: 4,
+                  borderBottomColor: "#0e7490",
+                }}
+              >
+                <Text style={{ fontSize: 16, fontWeight: "900", color: "#ffffff", letterSpacing: 0.3 }}>
+                  תפסתי בשיניים
+                </Text>
+              </Pressable>
+            </Animated.View>
+          </Animated.View>
+        </View>
+      )}
     </ImageBackground>
   );
 }
@@ -771,7 +945,7 @@ function DreamStep({ onNext }: { onNext: (v: FinancialDream) => void }) {
   }, [onNext]);
 
   return (
-    <StepShell stepIndex={0} question="מה החלום הפיננסי שלכם?" hint="נתחיל מהמטרה, והדרך תתגלה" finnState={sel ? "tablet" : "thinking"}>
+    <StepShell stepIndex={0} question="מה החלום הפיננסי שלך?" hint="נתחיל מהמטרה, הדרך תתגלה" finnState={sel ? "tablet" : "thinking"}>
       <View style={styles.grid}>
         {DREAMS.map((d, i) => (
           <AnimatedGridCard
@@ -841,16 +1015,16 @@ const DEADLINE_LOTTIES: Record<DeadlineStress, number> = {
 const GOALS: { id: FinancialGoal; label: string; sub: string }[] = [
   { id: "cash-flow", label: "הכסף בורח לי מהידיים", sub: "תזרים ותקציב" },
   { id: "investing", label: "אני רוצה שהכסף יעבוד", sub: "השקעות" },
-  { id: "army-release", label: "אני משתחרר/ת", sub: "שחרור מהצבא" },
+  { id: "army-release", label: "שחרור מהצבא", sub: "התחלה חדשה" },
   { id: "expand-horizons", label: "הרחבת אופקים", sub: "להבין את העולם" },
-  { id: "unsure", label: "לא בטוח/ה", sub: "סתם מסתכל/ת" },
+  { id: "unsure", label: "עדיין לא בטוח", sub: "סתם מציץ" },
 ];
 
 const DREAM_REACTIONS: Record<FinancialDream, string> = {
-  trip: "טיול גדול זה יעד מדהים! בואו נראה מאיפה מתחילים.",
-  car: "רכב ראשון? לגמרי אפשרי לפצח את זה.",
-  apartment: "דירה זה פרויקט רציני, טוב שאתם פה!",
-  freedom: "חופש מוחלט. זו המטרה של כולנו.",
+  trip: "טיול גדול זה יעד מדהים. נראה מאיפה מתחילים.",
+  car: "רכב ראשון? לגמרי אפשרי לצלול לזה.",
+  apartment: "דירה זה ים גדול. טוב שצללת.",
+  freedom: "חופש מוחלט. היעד הכי שווה שיש.",
 };
 
 function GoalStep({ dream, onNext, onBack }: { dream: FinancialDream | null; onNext: (v: FinancialGoal) => void; onBack?: () => void }) {
@@ -860,10 +1034,10 @@ function GoalStep({ dream, onNext, onBack }: { dream: FinancialDream | null; onN
     setTimeout(() => onNext(id), AUTO_ADVANCE_MS);
   }, [onNext]);
 
-  const dynamicHint = dream ? DREAM_REACTIONS[dream] : "זה יעצב את הפיד שלכם";
+  const dynamicHint = dream ? DREAM_REACTIONS[dream] : "זה יעצב את הפיד שלך";
 
   return (
-    <StepShell stepIndex={1} question="למה אתם פה?" hint={dynamicHint} finnState={sel ? "tablet" : "idle"} onBack={onBack}>
+    <StepShell stepIndex={1} question="למה הצטרפת?" hint={dynamicHint} finnState={sel ? "tablet" : "idle"} onBack={onBack}>
       <View>
         {GOALS.map((g, i) => (
           <AnimatedCard key={g.id} index={i} label={g.label} sublabel={g.sub}
@@ -917,9 +1091,9 @@ function KnowledgeStep({ goal, onNext }: { goal: FinancialGoal | null; onNext: (
 
 const CY = new Date().getFullYear();
 const AGE_GROUPS: { label: string; sub: string; ageGroup: AgeGroup; birthYear: number }[] = [
-  { label: "16–17", sub: "מתחיל מוקדם!", ageGroup: "minor", birthYear: CY - 16 },
-  { label: "18–23", sub: "טרי/ה מהצבא", ageGroup: "adult", birthYear: CY - 21 },
-  { label: "24–29", sub: "מתחיל/ה לחשוב", ageGroup: "adult", birthYear: CY - 26 },
+  { label: "16–17", sub: "מקדימים את כולם", ageGroup: "minor", birthYear: CY - 16 },
+  { label: "18–23", sub: "טרי מהים", ageGroup: "adult", birthYear: CY - 21 },
+  { label: "24–29", sub: "צוללים פנימה", ageGroup: "adult", birthYear: CY - 26 },
   { label: "30+", sub: "מאוחר? אף פעם לא", ageGroup: "adult", birthYear: CY - 33 },
 ];
 
@@ -942,7 +1116,7 @@ function AgeStep({ knowledge, onNext, onBack }: { knowledge: KnowledgeLevel | nu
   const dynamicHint = knowledge ? KNOWLEDGE_REACTIONS[knowledge] : "רק בשביל להתאים את ההמלצות";
 
   return (
-    <StepShell stepIndex={2} question="בן כמה את/ה?" hint={dynamicHint} finnState={sel !== null ? "tablet" : "idle"} onBack={onBack}>
+    <StepShell stepIndex={2} question="מה הגיל שלך?" hint={dynamicHint} finnState={sel !== null ? "tablet" : "idle"} onBack={onBack}>
       {AGE_GROUPS.map((g, i) => (
         <AnimatedCard key={g.label} index={i} label={g.label} sublabel={g.sub}
           selected={sel === i} onPress={() => tap(i)}
@@ -1842,13 +2016,13 @@ function IntroStep({ onRegister, onGuest, onLoginSuccess }: IntroStepProps) {
             {"!"}
           </Text>
           <Text style={introStyles.subtitle}>
-            {"בואו נהפוך את הכסף שלכם למשחק מהנה."}
+            {"זה הזמן להפוך את הכסף שלך למשחק מהנה."}
           </Text>
         </Animated.View>
 
         <View style={{ alignItems: "center", gap: 16 }}>
-          <Pressable onPress={() => setSubStep("choice")} style={introStyles.cta} accessibilityRole="button" accessibilityLabel="בואו נתחיל">
-            <Text style={introStyles.ctaText}>בואו נתחיל</Text>
+          <Pressable onPress={() => setSubStep("choice")} style={introStyles.cta} accessibilityRole="button" accessibilityLabel="מתחילים">
+            <Text style={introStyles.ctaText}>מתחילים</Text>
           </Pressable>
           <Pressable onPress={() => setSubStep("login")} accessibilityRole="link" accessibilityLabel="כבר יש לכם חשבון? התחבר כאן">
             <Text style={introStyles.loginLink}>
@@ -1871,8 +2045,8 @@ function IntroStep({ onRegister, onGuest, onLoginSuccess }: IntroStepProps) {
           </LinearGradient>
         </Animated.View>
 
-        <Animated.View style={[introStyles.textBlock, textStyle, { marginBottom: 20 }]}>
-          <Text style={[introStyles.title, { marginBottom: 0 }]}>{"איך נתחיל?"}</Text>
+        <Animated.View style={[introStyles.textBlock, textStyle, { marginBottom: 28 }]}>
+          <Text style={[introStyles.title, { marginBottom: 0 }]}>{"שנתחיל?"}</Text>
         </Animated.View>
 
         <Animated.View style={[ctaAnimStyle, { alignItems: "center", gap: 10, width: "100%" }]}>
@@ -1900,9 +2074,9 @@ function IntroStep({ onRegister, onGuest, onLoginSuccess }: IntroStepProps) {
           </Pressable>
 
           <Text
-            style={{ marginTop: 6, fontSize: 11, color: "#94a3b8", writingDirection: "rtl", textAlign: "center", lineHeight: 16 }}
+            style={{ marginTop: 6, fontSize: 11, color: "#94a3b8", writingDirection: "rtl", textAlign: "center", lineHeight: 16, maxWidth: 280, alignSelf: "center" }}
           >
-            {"בלחיצה אתם מאשרים את "}
+            {"הלחיצה מהווה אישור של "}
             <Text
               style={{ color: "#0891b2", textDecorationLine: "underline" }}
               accessibilityRole="link"
@@ -1913,9 +2087,9 @@ function IntroStep({ onRegister, onGuest, onLoginSuccess }: IntroStepProps) {
             </Text>
           </Text>
 
-          <Pressable onPress={() => setSubStep("login")} accessibilityRole="link" accessibilityLabel="כבר יש לכם חשבון? התחבר כאן" style={{ marginTop: 8 }}>
+          <Pressable onPress={() => setSubStep("login")} accessibilityRole="link" accessibilityLabel="כבר יש לך חשבון? התחבר כאן" style={{ marginTop: 8 }}>
             <Text style={introStyles.loginLink}>
-              {"כבר יש לכם חשבון? "}
+              {"כבר יש לך חשבון? "}
               <Text style={introStyles.loginLinkAccent}>{"התחבר כאן"}</Text>
             </Text>
           </Pressable>
@@ -1970,8 +2144,8 @@ function IntroStep({ onRegister, onGuest, onLoginSuccess }: IntroStepProps) {
             accessibilityLabel="התחבר עם Google"
             style={introStyles.googleBtn}
           >
-            <Text style={{ fontSize: 18, marginRight: 8, color: "#1e293b" }}>G</Text>
             <Text style={{ fontSize: 15, fontWeight: "600", color: "#1e293b" }}>התחבר עם Google</Text>
+            <GoogleLogo size={20} />
           </Pressable>
 
           {/* Divider */}
@@ -2192,6 +2366,7 @@ export function ProfilingFlow({ mode = "onboarding", onRedoComplete }: Profiling
   const router = useRouter();
   const addXP = useEconomyUIStore((s) => s.addXP);
   const addCoins = useEconomyUIStore((s) => s.addCoins);
+  const recordDailyActivity = useRecordDailyActivity();
   const completeOnboarding = useAuthStore((s) => s.completeOnboarding);
   const enterGuestMode = useAuthStore((s) => s.enterGuestMode);
   const updateProfile = useAuthStore((s) => s.updateProfile);
@@ -2333,7 +2508,13 @@ export function ProfilingFlow({ mode = "onboarding", onRedoComplete }: Profiling
       });
     } catch (e) { if (__DEV__) console.warn('[onboarding] captureEvent failed:', e); }
     try { addXP(ONBOARDING_XP, "onboarding"); } catch (e) { if (__DEV__) console.warn('[onboarding] addXP failed:', e); }
-    try { addCoins(50); } catch (e) { if (__DEV__) console.warn('[onboarding] addCoins failed:', e); }
+    // DEMO: actual coin amount must match DEMO_REWARD_TIER display.
+    // gold = 150, silver = 75, bronze = 50.
+    const demoCoinAmount = DEMO_REWARD_TIER === "gold" ? 150 : DEMO_REWARD_TIER === "silver" ? 75 : 50;
+    try { addCoins(demoCoinAmount); } catch (e) { if (__DEV__) console.warn('[onboarding] addCoins failed:', e); }
+    // Day 1 of streak starts immediately on onboarding completion, gives users
+    // something to protect from minute zero (loss aversion + retention).
+    try { recordDailyActivity.mutate(); } catch (e) { if (__DEV__) console.warn('[onboarding] streak start failed:', e); }
     // CRITICAL: ensure user is at least a guest before marking onboarding done.
     // Otherwise `_layout`'s auth redirect bounces them back to /(auth)/onboarding
     // (because isAuthenticated=false → first branch always wins).
@@ -2952,6 +3133,8 @@ const introStyles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     paddingHorizontal: 28,
+    paddingTop: 24,
+    paddingBottom: 24,
   },
   finnWrap: {
     marginBottom: 28,
@@ -3032,6 +3215,7 @@ const introStyles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
+    gap: 8,
     borderRadius: 14,
     borderWidth: 1.5,
     borderColor: "#e2e8f0",
