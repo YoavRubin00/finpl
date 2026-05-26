@@ -4166,6 +4166,16 @@ export function LessonFlowScreen() {
                 <Text style={{ color: "#475569", fontSize: 18, fontWeight: "800", lineHeight: 20 }}>✕</Text>
               </Pressable>
             </View>
+            {/* ScrollView so games whose results screen (chart + score + shark
+                explanation + rewards + Continue) is taller than the viewport
+                (Fear or Greed in particular) don't trap users with a button
+                cut off below the screen edge. */}
+            <ScrollView
+              style={{ flex: 1 }}
+              contentContainerStyle={{ paddingBottom: Math.max(safeInsets.bottom + 24, 48), flexGrow: 1 }}
+              showsVerticalScrollIndicator={false}
+              keyboardShouldPersistTaps="handled"
+            >
             {mod.interModuleGame === 'investment' && (
               <InvestmentCard isActive onContinue={() => { setShowInterGame(false); goToNextSequentialModule(); }} />
             )}
@@ -4247,6 +4257,7 @@ export function LessonFlowScreen() {
                 )}
               </>
             )}
+            </ScrollView>
           </GestureHandlerRootView>
         </Modal>
       )}
