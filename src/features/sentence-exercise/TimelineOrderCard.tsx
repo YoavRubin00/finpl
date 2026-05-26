@@ -476,10 +476,10 @@ export function TimelineOrderCard({
               style={({ pressed }) => [
                 styles.helpBtn,
                 styles.helpBtnYes,
-                { backgroundColor: accentColor, opacity: pressed ? 0.85 : 1 },
+                { opacity: pressed ? 0.85 : 1 },
               ]}
             >
-              <Text style={styles.helpBtnYesText}>כן, עזור</Text>
+              <Text style={styles.helpBtnText}>עזור לי</Text>
             </Pressable>
             <Pressable
               onPress={declineHelp}
@@ -488,10 +488,10 @@ export function TimelineOrderCard({
               style={({ pressed }) => [
                 styles.helpBtn,
                 styles.helpBtnNo,
-                { opacity: pressed ? 0.6 : 1 },
+                { opacity: pressed ? 0.85 : 1 },
               ]}
             >
-              <Text style={styles.helpBtnNoText}>אני אסתדר</Text>
+              <Text style={styles.helpBtnText}>אני אסתדר</Text>
             </Pressable>
           </View>
         </Animated.View>
@@ -662,26 +662,26 @@ const styles = StyleSheet.create({
   },
   helpBtn: {
     flex: 1,
-    paddingVertical: 10,
-    borderRadius: 10,
+    paddingVertical: 12,
+    borderRadius: 12,
     alignItems: "center",
     justifyContent: "center",
+    borderBottomWidth: 3,
   },
+  // "עזור לי" — light blue (primary suggestion)
   helpBtnYes: {
-    borderBottomWidth: 2,
-    borderBottomColor: "rgba(0,0,0,0.15)",
+    backgroundColor: "#38bdf8",
+    borderBottomColor: "#0284c7",
   },
-  helpBtnYesText: {
-    fontSize: 14,
+  // "אני אסתדר" — blue (decline)
+  helpBtnNo: {
+    backgroundColor: "#2563eb",
+    borderBottomColor: "#1e40af",
+  },
+  helpBtnText: {
+    fontSize: 15,
     fontWeight: "900",
     color: "#ffffff",
-  },
-  helpBtnNo: {
-    backgroundColor: "transparent",
-  },
-  helpBtnNoText: {
-    fontSize: 13,
-    fontWeight: "700",
-    color: "#64748b",
+    writingDirection: "rtl",
   },
 });
