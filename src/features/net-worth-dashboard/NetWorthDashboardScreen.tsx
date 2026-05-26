@@ -10,7 +10,6 @@ import { tapHaptic } from '../../utils/haptics';
 import { FINN_HAPPY, FINN_STANDARD } from '../retention-loops/finnMascotConfig';
 import {
   CalculateButton,
-  LegalDisclaimer,
   SectionLabel,
 } from '../financial-tools/components/atoms';
 import { useNetWorthStore } from './useNetWorthStore';

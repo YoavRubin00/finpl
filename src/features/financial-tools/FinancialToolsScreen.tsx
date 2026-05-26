@@ -33,9 +33,6 @@ export function FinancialToolsScreen(): React.ReactElement {
   const insets = useSafeAreaInsets();
   const topPad = Math.max(insets.top - 10, 6);
 
-  const activeCount = TOOLS_REGISTRY.filter((t) => t.status === 'active').length;
-  const comingCount = TOOLS_REGISTRY.length - activeCount;
-
   const investorTools = useMemo(
     () => TOOLS_REGISTRY.filter((t) => t.category === 'investor'),
     [],
@@ -47,24 +44,14 @@ export function FinancialToolsScreen(): React.ReactElement {
 
   return (
     <SafeAreaView style={styles.safe} edges={[]}>
-      {/* Header — compact: emoji + title on one row, subtitle as a tiny tagline. */}
-      <View style={[styles.header, { paddingTop: topPad }]}>
-        <Text style={styles.headerCounter}>
-          {activeCount} כלים · {comingCount} בדרך
-        </Text>
-        <View style={styles.headerTitleRow}>
-          <Text style={styles.headerEmoji}>🧰</Text>
-          <Text accessibilityRole="header" style={styles.headerTitle}>
-            כלים פיננסיים
-          </Text>
-        </View>
-        <Text style={styles.headerSubtitle}>החלטות חכמות בנתונים אמיתיים</Text>
-      </View>
-
       <ScrollView
-        contentContainerStyle={styles.scroll}
+        contentContainerStyle={[styles.scroll, { paddingTop: topPad + 10 }]}
         showsVerticalScrollIndicator={false}
       >
+        <Text accessibilityRole="header" style={styles.pageTitle}>
+          כלים פיננסיים
+        </Text>
+
         <FinancialProfileCta />
 
         <HeroStatStrip />
@@ -235,56 +222,16 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: STITCH.background,
   },
-  header: {
-    backgroundColor: STITCH.surfaceLowest,
-    paddingHorizontal: 16,
-    // paddingTop set inline at render so the screen can trim the safe-area inset.
-    paddingBottom: 6,
-    borderBottomWidth: 1,
-    borderBottomColor: STITCH.surfaceHighest,
-    alignItems: 'center',
-    justifyContent: 'center',
-    position: 'relative',
-  },
-  headerTitleRow: {
-    flexDirection: 'row-reverse',
-    alignItems: 'center',
-    gap: 6,
-  },
-  headerCounter: {
-    position: 'absolute',
-    top: 2,
-    right: 12,
-    fontSize: 10,
-    fontWeight: '800',
-    color: STITCH.onSurfaceVariant,
-    letterSpacing: 0.4,
-    backgroundColor: STITCH.surfaceLow,
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 999,
-    writingDirection: 'rtl',
-  },
-  headerEmoji: { fontSize: 18, lineHeight: 22 },
-  headerTitle: {
-    fontSize: 18,
+  pageTitle: {
+    fontSize: 20,
     fontWeight: '900',
-    color: STITCH.onSurface,
+    color: '#1e293b',
     writingDirection: 'rtl',
-    textAlign: 'center',
-    letterSpacing: -0.3,
-  },
-  headerSubtitle: {
-    fontSize: 11,
-    color: STITCH.onSurfaceVariant,
-    writingDirection: 'rtl',
-    textAlign: 'center',
-    fontWeight: '600',
-    marginTop: 1,
+    textAlign: 'right',
+    alignSelf: 'flex-end',
   },
   scroll: {
     paddingHorizontal: 16,
-    paddingTop: 10,
     paddingBottom: 120,
     gap: 14,
   },
