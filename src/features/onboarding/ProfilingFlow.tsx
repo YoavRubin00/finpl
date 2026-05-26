@@ -4,10 +4,11 @@ import { View, Text, Image, TextInput, Pressable, ScrollView, Dimensions, StyleS
 import { SafeAreaView } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
 import { LottieIcon } from "../../components/ui/LottieIcon";
+import { ConfettiExplosion } from "../../components/ui/ConfettiExplosion";
 import LottieView from "lottie-react-native";
 import { FINN_STANDARD, FINN_HELLO, FINN_HAPPY, FINN_TABLET } from "../retention-loops/finnMascotConfig";
 import { useRouter } from "expo-router";
-import { Sparkles, TrendingUp, Pencil, ChevronDown, ChevronUp } from "lucide-react-native";
+import { Sparkles, TrendingUp, Pencil, ChevronDown, ChevronUp, ChevronRight } from "lucide-react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { SkiaInteractiveChart } from "../../components/ui/SkiaInteractiveChart";
 import type { ChartDataPoint } from "../../components/ui/SkiaInteractiveChart";
@@ -59,7 +60,7 @@ const { width: SCREEN_WIDTH } = Dimensions.get("window");
 const CHAT_BG = { uri: 'https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/images/HOMEPAGE.png' };
 const SLIDE_MS = 300;
 const AUTO_ADVANCE_MS = 1150; // 900ms typing + 250ms extra before transition
-const TOTAL_STEPS = 8;
+const TOTAL_STEPS = 3;
 
 const CONFETTI_COLORS = [
   "#0891b2", "#4ade80", "#fbbf24", "#22d3ee",
@@ -71,7 +72,7 @@ const CONFETTI_COLORS = [
 const finnTriggerRef: { current: (() => void) | null } = { current: null };
 
 const STEPS_WITH_PERSISTENT_FINN = new Set([
-  "dream", "goal", "knowledge", "age", "learning-time", "learning-style", "daily-goal",
+  "dream", "goal", "age",
 ]);
 
 // Pre-computed so particles are deterministic (no Math.random in render)
@@ -354,6 +355,7 @@ function StepShell({
   question,
   hint,
   children,
+  onBack,
 }: {
   stepIndex: number;
   question: string;
@@ -361,6 +363,7 @@ function StepShell({
   children: React.ReactNode;
   finnState?: "idle" | "celebrate" | "empathy" | "thinking" | "tablet";
   compact?: boolean;
+  onBack?: () => void;
 }) {
   const headerTy = useSharedValue(-20);
   const headerOpacity = useSharedValue(0);
@@ -432,8 +435,13 @@ function StepShell({
     <ImageBackground source={CHAT_BG} style={{ flex: 1 }} resizeMode="cover">
       <BubbleOverlay />
       <SafeAreaView style={styles.shell} edges={["top", "bottom"]}>
-        {/* Progress bar */}
+        {/* Progress bar with optional back chevron */}
         <View style={styles.topRow}>
+          {onBack ? (
+            <Pressable onPress={onBack} accessibilityRole="button" accessibilityLabel="חזרה לשאלה הקודמת" hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }} style={{ padding: 4 }}>
+              <ChevronRight size={22} color="#64748b" />
+            </Pressable>
+          ) : null}
           <GlowBar current={stepIndex} />
         </View>
 
@@ -585,11 +593,13 @@ function CelebrationScreen({ onDone }: { onDone: () => void }) {
   const badgeScale = useSharedValue(0.2);
   const badgeRotate = useSharedValue(-15);
   const xpScale = useSharedValue(0);
-  // CTA fades in via opacity (not scale). When using scale: 0 → 1, the
+  // CTA fades in via opacity (not scale). When using scale 0 to 1, the
   // Pressable's hit-rect stays collapsed and on some Reanimated/RN versions
-  // it never recovers — the button looks visible but doesn't respond to taps.
+  // it never recovers, the button looks visible but doesn't respond to taps.
   // Opacity doesn't affect hit-testing, so the button is tappable from mount.
   const ctaOpacity = useSharedValue(0);
+  const [bursting, setBursting] = useState(false);
+  const { playSound: playCelebSound } = useSoundEffect();
 
   useEffect(() => {
     badgeScale.value = withSequence(
@@ -600,6 +610,13 @@ function CelebrationScreen({ onDone }: { onDone: () => void }) {
     xpScale.value = withDelay(350, withSpring(1, { damping: 14, stiffness: 120 }));
     ctaOpacity.value = withDelay(700, withTiming(1, { duration: 280 }));
   }, []);
+
+  function handleStart() {
+    if (bursting) return;
+    setBursting(true);
+    try { tapHaptic(); } catch { /* non-fatal */ }
+    try { playCelebSound('modal_open_4'); } catch { /* non-fatal */ }
+  }
 
   const [showCodeField, setShowCodeField] = useState(false);
   const [inviteCode, setInviteCode] = useState('');
@@ -680,10 +697,17 @@ function CelebrationScreen({ onDone }: { onDone: () => void }) {
 
         {/* CTA */}
         <Animated.View style={ctaStyle}>
-          <Pressable onPress={onDone} style={styles.celebCTA} accessibilityRole="button" accessibilityLabel="בואו נתחיל">
+          <Pressable onPress={handleStart} disabled={bursting} style={styles.celebCTA} accessibilityRole="button" accessibilityLabel="בואו נתחיל">
             <Text style={styles.celebCTAText}>בואו נתחיל</Text>
           </Pressable>
         </Animated.View>
+
+        {/* Coin / confetti burst on CTA tap, then onDone */}
+        {bursting && (
+          <View pointerEvents="none" style={StyleSheet.absoluteFillObject}>
+            <ConfettiExplosion onComplete={onDone} />
+          </View>
+        )}
 
         {/* Optional invite code entry */}
         {codeSaved ? (
@@ -829,7 +853,7 @@ const DREAM_REACTIONS: Record<FinancialDream, string> = {
   freedom: "חופש מוחלט. זו המטרה של כולנו.",
 };
 
-function GoalStep({ dream, onNext }: { dream: FinancialDream | null; onNext: (v: FinancialGoal) => void }) {
+function GoalStep({ dream, onNext, onBack }: { dream: FinancialDream | null; onNext: (v: FinancialGoal) => void; onBack?: () => void }) {
   const [sel, setSel] = useState<FinancialGoal | null>(null);
   const tap = useCallback((id: FinancialGoal) => {
     setSel(id);
@@ -839,7 +863,7 @@ function GoalStep({ dream, onNext }: { dream: FinancialDream | null; onNext: (v:
   const dynamicHint = dream ? DREAM_REACTIONS[dream] : "זה יעצב את הפיד שלכם";
 
   return (
-    <StepShell stepIndex={1} question="למה אתם פה?" hint={dynamicHint} finnState={sel ? "tablet" : "idle"}>
+    <StepShell stepIndex={1} question="למה אתם פה?" hint={dynamicHint} finnState={sel ? "tablet" : "idle"} onBack={onBack}>
       <View>
         {GOALS.map((g, i) => (
           <AnimatedCard key={g.id} index={i} label={g.label} sublabel={g.sub}
@@ -907,7 +931,7 @@ const KNOWLEDGE_REACTIONS: Record<string, string> = {
   expert: "זאב מוול סטריט אה? מצוין, נראה כמה אתם באמת יודעים.",
 };
 
-function AgeStep({ knowledge, onNext }: { knowledge: KnowledgeLevel | null; onNext: (ag: AgeGroup, by: number) => void }) {
+function AgeStep({ knowledge, onNext, onBack }: { knowledge: KnowledgeLevel | null; onNext: (ag: AgeGroup, by: number) => void; onBack?: () => void }) {
   const [sel, setSel] = useState<number | null>(null);
   const tap = useCallback((i: number) => {
     setSel(i);
@@ -918,7 +942,7 @@ function AgeStep({ knowledge, onNext }: { knowledge: KnowledgeLevel | null; onNe
   const dynamicHint = knowledge ? KNOWLEDGE_REACTIONS[knowledge] : "רק בשביל להתאים את ההמלצות";
 
   return (
-    <StepShell stepIndex={4} question="בן כמה את/ה?" hint={dynamicHint} finnState={sel !== null ? "tablet" : "idle"}>
+    <StepShell stepIndex={2} question="בן כמה את/ה?" hint={dynamicHint} finnState={sel !== null ? "tablet" : "idle"} onBack={onBack}>
       {AGE_GROUPS.map((g, i) => (
         <AnimatedCard key={g.label} index={i} label={g.label} sublabel={g.sub}
           selected={sel === i} onPress={() => tap(i)}
@@ -1731,7 +1755,7 @@ interface IntroStepProps {
 }
 
 function IntroStep({ onRegister, onGuest, onLoginSuccess }: IntroStepProps) {
-  const [subStep, setSubStep] = useState<"welcome" | "choice" | "login">("welcome");
+  const [subStep, setSubStep] = useState<"welcome" | "choice" | "login">("choice");
   const promptGoogleSignIn = useGoogleAuthStore((s) => s.promptGoogleSignIn);
   const googleReady = useGoogleAuthStore((s) => s.isReady);
   const { promptAppleSignIn, isAvailable: appleAvailable } = useAppleAuth();
@@ -1847,8 +1871,8 @@ function IntroStep({ onRegister, onGuest, onLoginSuccess }: IntroStepProps) {
           </LinearGradient>
         </Animated.View>
 
-        <Animated.View style={[introStyles.textBlock, textStyle]}>
-          <Text style={introStyles.title}>{"איך נתחיל?"}</Text>
+        <Animated.View style={[introStyles.textBlock, textStyle, { marginBottom: 20 }]}>
+          <Text style={[introStyles.title, { marginBottom: 0 }]}>{"איך נתחיל?"}</Text>
         </Animated.View>
 
         <Animated.View style={[ctaAnimStyle, { alignItems: "center", gap: 10, width: "100%" }]}>
@@ -1889,8 +1913,11 @@ function IntroStep({ onRegister, onGuest, onLoginSuccess }: IntroStepProps) {
             </Text>
           </Text>
 
-          <Pressable onPress={() => setSubStep("welcome")} style={{ marginTop: 2 }} accessibilityRole="button" accessibilityLabel="חזרה" hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-            <Text style={introStyles.loginLink}>{"חזרה"}</Text>
+          <Pressable onPress={() => setSubStep("login")} accessibilityRole="link" accessibilityLabel="כבר יש לכם חשבון? התחבר כאן" style={{ marginTop: 8 }}>
+            <Text style={introStyles.loginLink}>
+              {"כבר יש לכם חשבון? "}
+              <Text style={introStyles.loginLinkAccent}>{"התחבר כאן"}</Text>
+            </Text>
           </Pressable>
         </Animated.View>
       </SafeAreaView>
@@ -2023,8 +2050,8 @@ function IntroStep({ onRegister, onGuest, onLoginSuccess }: IntroStepProps) {
             <Text style={introStyles.ctaText}>התחבר</Text>
           </Pressable>
 
-          <Pressable onPress={() => setSubStep("welcome")} style={{ alignSelf: "center", marginTop: 8 }} accessibilityRole="button" accessibilityLabel="חזרה" hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-            <Text style={introStyles.loginLink}>{"חזרה"}</Text>
+          <Pressable onPress={() => setSubStep("choice")} style={{ alignSelf: "center", marginTop: 8, padding: 8 }} accessibilityRole="button" accessibilityLabel="חזרה" hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+            <ChevronRight size={24} color="#64748b" />
           </Pressable>
         </Animated.View>
       </KeyboardAvoidingView>
@@ -2246,7 +2273,7 @@ export function ProfilingFlow({ mode = "onboarding", onRedoComplete }: Profiling
     tapHaptic();
     setShowBubbles(true);
     if (bubbleTimeout.current) clearTimeout(bubbleTimeout.current);
-    bubbleTimeout.current = setTimeout(() => setShowBubbles(false), 900);
+    bubbleTimeout.current = setTimeout(() => setShowBubbles(false), 400);
 
     function doUpdate() {
       try {
@@ -2264,17 +2291,17 @@ export function ProfilingFlow({ mode = "onboarding", onRedoComplete }: Profiling
       screenOpacity.value = 0;
       screenScale.value = 0.94;
       screenTy.value = 18;
-      screenOpacity.value = withTiming(1, { duration: 360, easing: Easing.out(Easing.cubic) });
+      screenOpacity.value = withTiming(1, { duration: 220, easing: Easing.out(Easing.cubic) });
       screenScale.value = withSpring(1, { damping: 22, stiffness: 280, mass: 0.8 });
       screenTy.value = withSpring(0, { damping: 22, stiffness: 280, mass: 0.8 });
     }
     // Soft fade-out, slides up and fades
-    screenOpacity.value = withTiming(0, { duration: 260, easing: Easing.inOut(Easing.quad) }, () => {
+    screenOpacity.value = withTiming(0, { duration: 160, easing: Easing.inOut(Easing.quad) }, () => {
       "worklet";
       runOnJS(doUpdate)();
     });
-    screenScale.value = withTiming(0.95, { duration: 260, easing: Easing.inOut(Easing.quad) });
-    screenTy.value = withTiming(-10, { duration: 260, easing: Easing.in(Easing.cubic) });
+    screenScale.value = withTiming(0.95, { duration: 160, easing: Easing.inOut(Easing.quad) });
+    screenTy.value = withTiming(-10, { duration: 160, easing: Easing.in(Easing.cubic) });
   }
 
   function handleDone() {
@@ -2328,9 +2355,10 @@ export function ProfilingFlow({ mode = "onboarding", onRedoComplete }: Profiling
       avatarId: collected.avatarId ?? null,
       ownedAvatars: [],
     });
-    // Explicit navigation — don't rely solely on `_layout`'s effect-based
-    // redirect, which has been flaky in dev mode with mid-flight state updates.
-    router.replace("/(tabs)" as never);
+    // Drop the user straight into the first module (mod-0-1) for a hands-on
+    // first taste before the walkthrough offers a tour. The walkthrough only
+    // fires once they're in a tab, so navigating to lesson keeps it suppressed.
+    router.replace("/lesson/mod-0-1?chapterId=chapter-0" as never);
   }
 
   function editSummaryStep(target: EditableStep) {
@@ -2367,24 +2395,16 @@ export function ProfilingFlow({ mode = "onboarding", onRedoComplete }: Profiling
           if (returnToSummary) { setReturnToSummary(false); slide("profile-summary", { financialDream: v }); }
           else { slide("goal", { financialDream: v }); }
         }} />}
-        {step === "goal" && <GoalStep dream={collected.financialDream} onNext={(v) => {
-          if (returnToSummary) { setReturnToSummary(false); slide("profile-summary", { financialGoal: v }); }
-          else { slide("first-sim", { financialGoal: v }); }
-        }} />}
-        {step === "first-sim" && (
-          <SimOnboardingStep onNext={() => slide("knowledge", {})} />
-        )}
-        {step === "knowledge" && <KnowledgeStep goal={collected.financialGoal} onNext={(v) => {
-          if (returnToSummary) { setReturnToSummary(false); slide("profile-summary", { knowledgeLevel: v }); }
-          else { slide("age", { knowledgeLevel: v }); }
-        }} />}
-        {step === "age" && <AgeStep knowledge={collected.knowledgeLevel} onNext={(ag, by) => slide("learning-time", { ageGroup: ag, birthYear: by })} />}
-        {step === "learning-time" && <LearningTimeStep onNext={(v) => slide("learning-style", { learningTime: v })} />}
-        {step === "learning-style" && <LearningStyleStep ageGroup={collected.ageGroup} birthYear={collected.birthYear} onNext={(v) => slide("daily-goal", { learningStyle: v })} />}
-        {step === "daily-goal" && <DailyGoalStep onNext={(v) => {
-          if (returnToSummary) { setReturnToSummary(false); slide("profile-summary", { dailyGoalMinutes: v }); }
-          else { slide("profile-summary", { dailyGoalMinutes: v }); }
-        }} />}
+        {step === "goal" && <GoalStep
+          dream={collected.financialDream}
+          onNext={(v) => { slide("age", { financialGoal: v }); }}
+          onBack={() => slide("dream", {})}
+        />}
+        {step === "age" && <AgeStep
+          knowledge={collected.knowledgeLevel}
+          onNext={(ag, by) => slide("celebration", { ageGroup: ag, birthYear: by })}
+          onBack={() => slide("goal", {})}
+        />}
       </Animated.View>
 
       {/* Persistent Finn, outside slideStyle so he stays fixed during transitions */}
@@ -2413,43 +2433,15 @@ export function ProfilingFlow({ mode = "onboarding", onRedoComplete }: Profiling
         </View>
       )}
 
-      {/* Bubble transition overlay */}
+      {/* Bubble transition overlay, single fast central burst */}
       {showBubbles && (
         <View pointerEvents="none" style={StyleSheet.absoluteFillObject}>
-          {/* Main central burst */}
           <LottieView
             source={require("../../../assets/lottie/Bubbles.json")}
             style={{ width: SCREEN_WIDTH, height: SCREEN_WIDTH * 1.6, position: "absolute", top: "5%", alignSelf: "center" }}
             autoPlay
             loop={false}
-            speed={1.2}
-            renderMode="SOFTWARE"
-          />
-          {/* Bottom-left cluster */}
-          <LottieView
-            source={require("../../../assets/lottie/jumping blue bubbles.json")}
-            style={{ width: SCREEN_WIDTH * 0.65, height: SCREEN_WIDTH * 0.65, position: "absolute", bottom: "8%", left: "0%" }}
-            autoPlay
-            loop={false}
-            speed={1.1}
-            renderMode="SOFTWARE"
-          />
-          {/* Top-right cluster, delayed via slower speed for stagger feel */}
-          <LottieView
-            source={require("../../../assets/lottie/jumping blue bubbles.json")}
-            style={{ width: SCREEN_WIDTH * 0.5, height: SCREEN_WIDTH * 0.5, position: "absolute", top: "2%", right: "-5%" }}
-            autoPlay
-            loop={false}
-            speed={0.9}
-            renderMode="SOFTWARE"
-          />
-          {/* Mid-screen accent */}
-          <LottieView
-            source={require("../../../assets/lottie/Bubbles.json")}
-            style={{ width: SCREEN_WIDTH * 0.7, height: SCREEN_WIDTH * 0.7, position: "absolute", top: "35%", left: "-10%" }}
-            autoPlay
-            loop={false}
-            speed={1.5}
+            speed={2.2}
             renderMode="SOFTWARE"
           />
         </View>
@@ -2585,8 +2577,6 @@ const styles = StyleSheet.create({
     marginTop: 4,
     writingDirection: "rtl",
     textAlign: "right",
-    paddingRight: 16,
-    marginRight: 8,
   },
   // Cards
   cardWrap: {

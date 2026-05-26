@@ -370,6 +370,7 @@ function RootLayoutInner() {
   // "בואו נתחיל" — any quest auto-completion during the tutorial fired the
   // popup and broke the first-run experience.
   const isMod01Complete = useIsModuleCompleted("mod-0-1");
+  const isMod02Complete = useIsModuleCompleted("mod-0-2");
   const allowAutoPopups = hasCompletedOnboarding && hasSeenWalkthrough && isMod01Complete;
 
   // ── Android Play Install Referrer — runs once on first launch ──
@@ -491,7 +492,7 @@ function RootLayoutInner() {
         <RewardAnimationProvider>
             <StreakCelebrationProvider>
               <Slot />
-              {isAuthenticated && hasCompletedOnboarding && <AppWalkthroughOverlay />}
+              {isAuthenticated && hasCompletedOnboarding && isMod01Complete && <AppWalkthroughOverlay />}
               <ShopModal />
               {allowAutoPopups && <GlobalUpgradeModal />}
               {allowAutoPopups && <PostStreakIncomeSplash />}
@@ -499,7 +500,7 @@ function RootLayoutInner() {
               {allowAutoPopups && <GlobalQuestCompletionModal />}
               <DailyBridgeNudgeModal />
               <InviteFriendsNudgeModal />
-              {hasCompletedOnboarding && hasSeenWalkthrough && <GuestRegisterDailyNudge />}
+              {hasCompletedOnboarding && hasSeenWalkthrough && isMod02Complete && <GuestRegisterDailyNudge />}
               {/* Global top banners — suppressed during onboarding/tutorial to avoid distracting the first-run experience */}
               {hasCompletedOnboarding && hasSeenWalkthrough && (
                 <>
