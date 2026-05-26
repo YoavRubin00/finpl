@@ -41,7 +41,7 @@ import { NotificationPermissionBanner } from "../../components/ui/NotificationPe
 import { NoFreezeUpsellBanner } from "../streak/NoFreezeUpsellBanner";
 import { StreakAtRiskBanner } from "../streak/StreakAtRiskBanner";
 import { StreakCalendarModal } from "../streak/StreakCalendarModal";
-import { CalendarDays } from "lucide-react-native";
+import { CalendarDays, Newspaper } from "lucide-react-native";
 import { FINN_STANDARD } from "../retention-loops/finnMascotConfig";
 import { FeedNudgeBanner } from "../../components/ui/FeedNudgeBanner";
 import { useFeedNudge } from "../../hooks/useFeedNudge";
@@ -63,7 +63,6 @@ import { useDailyQuestsStore } from "../daily-quests/useDailyQuestsStore";
 import { DailyQuestsSheet } from "../daily-quests/DailyQuestsSheet";
 import { QuestPathNode } from "../daily-quests/QuestPathNode";
 import { PayslipPathNode } from "../payslip-analyzer/PayslipPathNode";
-import { DailyNewsChallengeCard } from "../daily-news-challenge/DailyNewsChallengeCard";
 import { DailyNewsChallengeSheet } from "../daily-news-challenge/DailyNewsChallengeSheet";
 import { useDailyNewsChallengeStore } from "../daily-news-challenge/useDailyNewsChallengeStore";
 import { fetchTodayChallenge } from "../daily-news-challenge/dailyNewsChallengeApi";
@@ -476,6 +475,245 @@ function PulsingGlow({ color }: { color: string }) {
 }
 
 // ---------------------------------------------------------------------------
+// StreakCombo — shared pill that bundles the streak indicator (fire + count
+// + calendar) with the Daily News Challenge entry point (newspaper icon with
+// red-dot unread marker). Used in two places: the top header and floating
+// next to Captain Shark at the active module. Same component so both stay
+// visually consistent.
+// ---------------------------------------------------------------------------
+
+function streakColor(streak: number): string {
+  if (streak >= 8) return "#a855f7";
+  if (streak >= 4) return "#3b82f6";
+  return "#f97316";
+}
+
+/**
+ * Newspaper entry-point button with an attention-grabbing pulse + glow halo
+ * that keeps drawing the eye until the user completes today's challenge.
+ * The animation is cancelled and the icon turns muted gray ONLY after
+ * `newsCompleted` flips true — server availability of today's challenge
+ * (`hasNewsChallenge`) is intentionally NOT a gate, so the entry point
+ * keeps inviting taps even before the API has loaded its payload.
+ * Honors reduced-motion.
+ */
+function NewsIconButton({
+  size,
+  hasNewsChallenge,
+  newsCompleted,
+  onPress,
+  compact = false,
+}: {
+  size: number;
+  hasNewsChallenge: boolean;
+  newsCompleted: boolean;
+  onPress: () => void;
+  /** Tighter halo for the floating-at-node variant so it doesn't bleed
+   *  into neighbouring lesson labels. */
+  compact?: boolean;
+}): React.ReactElement {
+  const reducedMotion = useReducedMotion();
+  const shouldPulse = !newsCompleted && !reducedMotion;
+
+  const scale = useSharedValue(1);
+  const glow = useSharedValue(0);
+
+  useEffect(() => {
+    if (!shouldPulse) {
+      cancelAnimation(scale);
+      cancelAnimation(glow);
+      scale.value = withTiming(1, { duration: 200 });
+      glow.value = withTiming(0, { duration: 200 });
+      return;
+    }
+    scale.value = withRepeat(
+      withSequence(
+        withTiming(1.22, { duration: 650 }),
+        withTiming(1, { duration: 650 }),
+      ),
+      -1,
+      false,
+    );
+    glow.value = withRepeat(
+      withSequence(
+        withTiming(1, { duration: 650 }),
+        withTiming(0, { duration: 650 }),
+      ),
+      -1,
+      false,
+    );
+  }, [shouldPulse, scale, glow]);
+
+  const iconStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: scale.value }],
+  }));
+  const glowStyle = useAnimatedStyle(() => ({
+    opacity: (compact ? 0.45 : 0.6) * glow.value,
+    transform: [{ scale: 0.85 + (compact ? 0.45 : 0.75) * glow.value }],
+  }));
+
+  // Blue accent across the board (was red) — matches STITCH.primary used in
+  // the rest of the streak combo + ToolHeader pattern.
+  const ACTIVE_COLOR = "#005bb1"; // STITCH.primary
+  const GLOW_COLOR = "#93c5fd";    // soft blue halo
+  const DOT_COLOR = "#005bb1";
+
+  const iconColor = newsCompleted ? "#94a3b8" : ACTIVE_COLOR;
+  const showUnreadDot = !newsCompleted;
+  // Smaller halo in compact mode so it doesn't bleed into nearby lesson
+  // labels on the active node row.
+  const halo = size * (compact ? 1.15 : 1.6);
+
+  return (
+    <Pressable
+      onPress={onPress}
+      accessibilityRole="button"
+      accessibilityLabel={
+        newsCompleted
+          ? "אקטואליה פיננסית — הושלם להיום"
+          : hasNewsChallenge
+            ? "אקטואליה פיננסית — אתגר חדש"
+            : "אקטואליה פיננסית"
+      }
+      hitSlop={8}
+      style={{
+        width: size + 8,
+        height: size + 8,
+        alignItems: "center",
+        justifyContent: "center",
+        position: "relative",
+      }}
+    >
+      {/* Soft blue halo behind the icon, pulses with the scale.
+          Only rendered while the user hasn't completed today's challenge. */}
+      {shouldPulse ? (
+        <Animated.View
+          pointerEvents="none"
+          style={[
+            {
+              position: "absolute",
+              width: halo,
+              height: halo,
+              borderRadius: halo / 2,
+              backgroundColor: GLOW_COLOR,
+            },
+            glowStyle,
+          ]}
+        />
+      ) : null}
+      <Animated.View style={iconStyle}>
+        <Newspaper size={size} color={iconColor} strokeWidth={2.4} />
+      </Animated.View>
+      {showUnreadDot ? (
+        <View
+          style={{
+            position: "absolute",
+            top: 2,
+            right: 2,
+            width: 10,
+            height: 10,
+            borderRadius: 5,
+            backgroundColor: DOT_COLOR,
+            borderWidth: 2,
+            borderColor: "#ffffff",
+          }}
+        />
+      ) : null}
+    </Pressable>
+  );
+}
+
+function StreakCombo({
+  streak,
+  hasNewsChallenge,
+  newsCompleted,
+  onCalendarPress,
+  onNewsPress,
+  compact = false,
+}: {
+  streak: number;
+  hasNewsChallenge: boolean;
+  newsCompleted: boolean;
+  onCalendarPress: () => void;
+  /** Optional — when absent, the news icon is hidden (e.g. server unreachable). */
+  onNewsPress?: () => void;
+  /** Tighter spacing for the floating-at-node variant. */
+  compact?: boolean;
+}): React.ReactElement {
+  const color = streakColor(streak);
+  const flameSize = compact ? 28 : 44;
+  const calIconSize = compact ? 18 : 24;
+  const numSize = compact ? 16 : 22;
+  const newsSize = compact ? 20 : 26;
+
+  return (
+    <View
+      style={{
+        flexDirection: "row-reverse",
+        alignItems: "center",
+        gap: compact ? 10 : 14,
+        // Solid background only on the floating variant — top header sits on
+        // the page background already.
+        ...(compact
+          ? {
+              backgroundColor: "#ffffff",
+              borderRadius: 999,
+              paddingHorizontal: 10,
+              paddingVertical: 5,
+              borderWidth: 1.5,
+              borderColor: "#e5e7eb",
+              shadowColor: "#0f172a",
+              shadowOpacity: 0.08,
+              shadowRadius: 6,
+              shadowOffset: { width: 0, height: 2 },
+              elevation: 3,
+            }
+          : {}),
+      }}
+    >
+      {/* News icon — visually rightmost in RTL (first child under row-reverse).
+          Always rendered when onNewsPress is wired so the entry point exists
+          even before today's challenge loads. Pulses + glows while unread. */}
+      {onNewsPress ? (
+        <NewsIconButton
+          size={newsSize}
+          hasNewsChallenge={hasNewsChallenge}
+          newsCompleted={newsCompleted}
+          onPress={onNewsPress}
+          compact={compact}
+        />
+      ) : null}
+
+      {/* Streak cluster: flame + count + calendar — single Pressable since
+          they share the calendar modal as their action. */}
+      <Pressable
+        onPress={onCalendarPress}
+        accessibilityRole="button"
+        accessibilityLabel={`רצף ${streak} ימים, פתח לוח שנה`}
+        hitSlop={6}
+        style={{
+          flexDirection: "row-reverse",
+          alignItems: "center",
+          gap: compact ? 5 : 8,
+        }}
+      >
+        <View style={{ width: flameSize, height: flameSize }} accessible={false}>
+          <LottieView
+            source={require("../../../assets/lottie/wired-flat-2804-fire-flame-hover-pinch.json")}
+            style={{ width: flameSize, height: flameSize }}
+            autoPlay
+            loop
+            colorFilters={[{ keypath: "**", color }]}
+          />
+        </View>
+        <Text style={{ fontSize: numSize, fontWeight: "900", color }}>{streak}</Text>
+        <CalendarDays size={calIconSize} color={color} style={{ opacity: 0.7 }} />
+      </Pressable>
+    </View>
+  );
+}
+
+// ---------------------------------------------------------------------------
 // ModuleNode, with 3D depth effect
 // ---------------------------------------------------------------------------
 
@@ -497,6 +735,9 @@ function ModuleNode({
   onPress,
   activeStreak,
   onActiveStreakPress,
+  hasNewsChallenge,
+  newsCompleted,
+  onNewsPress,
 }: {
   module: Module;
   state: "completed" | "active" | "locked";
@@ -518,6 +759,12 @@ function ModuleNode({
    *  off. Only rendered when `showCharacter` is true. */
   activeStreak?: number;
   onActiveStreakPress?: () => void;
+  /** Daily news challenge wiring — surfaces the actuality entry-point
+   *  alongside the streak so the user can launch it without scrolling
+   *  back to the top header. Hidden when there's no challenge today. */
+  hasNewsChallenge?: boolean;
+  newsCompleted?: boolean;
+  onNewsPress?: () => void;
 }) {
   const colors = ARENA_COLORS[arenaId];
 
@@ -560,37 +807,25 @@ function ModuleNode({
               {getFinnPhrase(modIndex, displayName)}
             </Text>
           </Animated.View>
-          {/* Streak pill, opposite-edge side from Finn so the journal indicator
-              is still visible when the top header scrolls off after auto-scroll. */}
+          {/* Streak+News combo, opposite-edge side from Finn so the journal
+              and actuality indicators stay visible at the user's current
+              position even after the top header has scrolled off. */}
           {activeStreak !== undefined && (
             <Animated.View
               entering={FadeInDown.delay(150).duration(400)}
               style={[
                 styles.activeStreakPill,
-                finnGoesRight
-                  ? { left: 8 }
-                  : { right: 8 },
+                finnGoesRight ? { left: 8 } : { right: 8 },
               ]}
             >
-              <Pressable
-                onPress={onActiveStreakPress}
-                accessibilityRole="button"
-                accessibilityLabel={`רצף ${activeStreak} ימים, פתח לוח שנה`}
-                style={styles.activeStreakInner}
-              >
-                <CalendarDays
-                  size={14}
-                  color={activeStreak >= 8 ? "#a855f7" : activeStreak >= 4 ? "#3b82f6" : "#f97316"}
-                />
-                <Text
-                  style={[
-                    styles.activeStreakText,
-                    { color: activeStreak >= 8 ? "#a855f7" : activeStreak >= 4 ? "#3b82f6" : "#f97316" },
-                  ]}
-                >
-                  {activeStreak}
-                </Text>
-              </Pressable>
+              <StreakCombo
+                compact
+                streak={activeStreak}
+                hasNewsChallenge={!!hasNewsChallenge}
+                newsCompleted={!!newsCompleted}
+                onCalendarPress={onActiveStreakPress ?? (() => undefined)}
+                onNewsPress={onNewsPress}
+              />
             </Animated.View>
           )}
         </>
@@ -796,6 +1031,9 @@ const ChapterSection = React.memo(function ChapterSection({
   questPathNodeProps,
   activeStreak,
   onActiveStreakPress,
+  hasNewsChallenge,
+  newsCompleted,
+  onNewsPress,
 }: {
   arena: ArenaConfig;
   chapter: typeof chapter1Data;
@@ -821,6 +1059,9 @@ const ChapterSection = React.memo(function ChapterSection({
   };
   activeStreak?: number;
   onActiveStreakPress?: () => void;
+  hasNewsChallenge?: boolean;
+  newsCompleted?: boolean;
+  onNewsPress?: () => void;
 }) {
   const firstIncompleteIndex = chapter.modules.findIndex(
     (m) => !completedModules.includes(m.id) && !m.comingSoon && (isPro || !PRO_LOCKED_SIMS.has(m.id)),
@@ -922,6 +1163,9 @@ const ChapterSection = React.memo(function ChapterSection({
                 onClaimEasterEgg={onClaimEasterEgg}
                 activeStreak={isActive ? activeStreak : undefined}
                 onActiveStreakPress={onActiveStreakPress}
+                hasNewsChallenge={isActive ? hasNewsChallenge : undefined}
+                newsCompleted={isActive ? newsCompleted : undefined}
+                onNewsPress={isActive ? onNewsPress : undefined}
                 onPress={() => {
                   if (isLocked) {
                     onLockedPress();
@@ -1140,16 +1384,27 @@ export function DuoLearnScreen() {
     }, [calcResumeScrollY])
   );
 
-  // Auto-scroll to the active module on initial mount
+  // Auto-scroll to the active module on initial mount. Runs in two waves:
+  //   1. Immediately after first paint (best-effort if content is ready).
+  //   2. Again on the first content-size change (covers the common case
+  //      where chapters/nodes lay out after the initial paint).
+  // We drop the previous `y > 300` threshold so users on early modules also
+  // land on their current node instead of the top of the path.
+  const didInitialScrollRef = useRef(false);
   useEffect(() => {
     const y = calcResumeScrollY();
-    if (y > 300) {
-      setTimeout(() => {
-        scrollRef.current?.scrollTo({ y: y - 80, animated: false });
-      }, 150);
-    }
+    requestAnimationFrame(() => {
+      scrollRef.current?.scrollTo({ y: Math.max(0, y - 80), animated: false });
+    });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+  const handleContentSizeChange = useCallback(() => {
+    if (didInitialScrollRef.current) return;
+    const y = calcResumeScrollY();
+    if (y <= 0) return;
+    scrollRef.current?.scrollTo({ y: Math.max(0, y - 80), animated: false });
+    didInitialScrollRef.current = true;
+  }, [calcResumeScrollY]);
 
   // Open roadmap modal during walkthrough lesson-preview step
   useEffect(() => {
@@ -1248,6 +1503,7 @@ export function DuoLearnScreen() {
           showsVerticalScrollIndicator={false}
           contentContainerStyle={styles.scrollContent}
           style={styles.scrollView}
+          onContentSizeChange={handleContentSizeChange}
         >
 
           {/* Header Row: Greeting+Finn (Right) | Streak (Left) */}
@@ -1265,44 +1521,18 @@ export function DuoLearnScreen() {
               </View>
             </View>
 
-            {/* Left side: Streak Flame + Calendar (Quest widget replaced
-                by the Daily News Challenge card below the header) */}
-            <View style={{ flexDirection: "row-reverse", alignItems: "center", gap: 10 }}>
-            <Pressable
-              onPress={() => { tapHaptic(); setShowStreakCalendar(true); }}
-              style={{ alignItems: "center", flexDirection: "row-reverse", gap: 4 }}
-              accessibilityRole="button"
-              accessibilityLabel={`רצף ${streak} ימים, פתח לוח שנה`}
-            >
-              <View style={{ width: 36, height: 36 }} accessible={false}>
-                <LottieView
-                  source={require("../../../assets/lottie/wired-flat-2804-fire-flame-hover-pinch.json")}
-                  style={{ width: 36, height: 36 }}
-                  autoPlay
-                  loop
-                  colorFilters={[{ keypath: "**", color: streak >= 8 ? "#a855f7" : streak >= 4 ? "#3b82f6" : "#f97316" }]}
-                />
-              </View>
-              <Text style={{ fontSize: 18, fontWeight: "900", color: streak >= 8 ? "#a855f7" : streak >= 4 ? "#3b82f6" : "#f97316" }}>
-                {streak}
-              </Text>
-              <CalendarDays size={16} color={streak >= 8 ? "#a855f7" : streak >= 4 ? "#3b82f6" : "#f97316"} style={{ opacity: 0.7 }} />
-            </Pressable>
-            </View>
+            {/* Left side: Streak Flame + Calendar + Daily News Challenge.
+                The news icon sits right of the flame (rendered first in
+                row-reverse). The big DailyNewsChallengeCard was replaced by
+                this compact icon — the feature is reachable from here. */}
+            <StreakCombo
+              streak={streak}
+              hasNewsChallenge={!!newsChallenge}
+              newsCompleted={newsCompleted}
+              onCalendarPress={() => { tapHaptic(); setShowStreakCalendar(true); }}
+              onNewsPress={handleNewsPress}
+            />
           </View>
-
-          {/* Daily News Challenge — newspaper card replacing the old 3-quests widget */}
-          {newsChallenge && (
-            <View style={{ paddingHorizontal: 16, paddingBottom: 8 }}>
-              <DailyNewsChallengeCard
-                challenge={newsChallenge}
-                completed={newsCompleted}
-                proChestOpened={newsProChestOpened}
-                isPro={isPro}
-                onPress={handleNewsPress}
-              />
-            </View>
-          )}
 
           {/* Chapter sections */}
           {ARENAS.map((arena, idx) => {
@@ -1352,6 +1582,11 @@ export function DuoLearnScreen() {
                   rewardClaimed: questRewardClaimed,
                   onPress: handleQuestPress,
                 } : undefined}
+                activeStreak={hasActiveModule ? streak : undefined}
+                onActiveStreakPress={() => { tapHaptic(); setShowStreakCalendar(true); }}
+                hasNewsChallenge={!!newsChallenge}
+                newsCompleted={newsCompleted}
+                onNewsPress={handleNewsPress}
               />
             );
 
@@ -1868,11 +2103,14 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
 
-  // Active-streak pill — sits opposite-side from Finn at the active node
+  // Active-streak pill — sits opposite-side from Finn at the active node.
+  // Anchored BELOW the node row (in the connector strip to the next module)
+  // so it can never overlap the lesson-label bubbles that flank the path.
+  // zIndex kept low so any text element naturally paints above it.
   activeStreakPill: {
     position: "absolute",
-    top: 18,
-    zIndex: 19,
+    top: ROW_HEIGHT - 18,
+    zIndex: 5,
   },
   activeStreakInner: {
     flexDirection: "row-reverse",
