@@ -119,7 +119,15 @@ export function InteractiveRecallScreen({
           leave the user with no visible CTA for a beat). FillBlankCard
           auto-advances and doesn't need a CTA, so skip for that type. */}
       {prompt.type !== "fill-blank" && (
-        <View style={styles.stickyFooter}>
+        <View
+          style={{
+            paddingHorizontal: 16,
+            paddingVertical: 10,
+            backgroundColor: "#ffffff",
+            borderTopWidth: 1,
+            borderTopColor: "#e2e8f0",
+          }}
+        >
           <Pressable
             onPress={() => {
               if (!cardState) return;
@@ -130,16 +138,21 @@ export function InteractiveRecallScreen({
             accessibilityRole="button"
             accessibilityLabel={cardState?.locked ? "המשך" : "בדוק"}
             accessibilityState={{ disabled: !cardState }}
-            style={({ pressed }) => [
-              styles.primaryBtn,
-              {
-                backgroundColor: cardState?.locked ? "#0ea5e9" : unitColors.bg,
-                borderBottomColor: cardState?.locked ? "#0284c7" : "#1e293b",
-                opacity: pressed ? 0.85 : (cardState ? 1 : 0.7),
-              },
-            ]}
+            style={({ pressed }) => ({
+              minHeight: 52,
+              borderRadius: 16,
+              paddingVertical: 14,
+              paddingHorizontal: 24,
+              alignItems: "center",
+              justifyContent: "center",
+              backgroundColor: cardState?.locked ? "#0ea5e9" : (unitColors.bg ?? "#2563eb"),
+              borderBottomWidth: 3,
+              borderBottomColor: cardState?.locked ? "#0284c7" : "#1e293b",
+              elevation: 3,
+              opacity: pressed ? 0.85 : (cardState ? 1 : 0.7),
+            })}
           >
-            <Text style={styles.primaryBtnText}>
+            <Text style={{ fontSize: 16, fontWeight: "900", color: "#ffffff", writingDirection: "rtl" }}>
               {cardState?.locked ? "המשך" : "בדוק"}
             </Text>
           </Pressable>
