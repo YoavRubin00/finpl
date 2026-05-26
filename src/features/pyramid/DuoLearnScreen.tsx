@@ -492,6 +492,8 @@ function ModuleNode({
   hasEasterEgg,
   onClaimEasterEgg,
   onPress,
+  activeStreak,
+  onActiveStreakPress,
 }: {
   module: Module;
   state: "completed" | "active" | "locked";
@@ -508,6 +510,11 @@ function ModuleNode({
   hasEasterEgg?: boolean;
   onClaimEasterEgg?: () => void;
   onPress: () => void;
+  /** Current streak count — shown as a pill on the opposite side of Finn at
+   *  the active node so it stays visible even when the top header has scrolled
+   *  off. Only rendered when `showCharacter` is true. */
+  activeStreak?: number;
+  onActiveStreakPress?: () => void;
 }) {
   const colors = ARENA_COLORS[arenaId];
 
@@ -550,6 +557,39 @@ function ModuleNode({
               {getFinnPhrase(modIndex, displayName)}
             </Text>
           </Animated.View>
+          {/* Streak pill, opposite-edge side from Finn so the journal indicator
+              is still visible when the top header scrolls off after auto-scroll. */}
+          {activeStreak !== undefined && (
+            <Animated.View
+              entering={FadeInDown.delay(150).duration(400)}
+              style={[
+                styles.activeStreakPill,
+                finnGoesRight
+                  ? { left: 8 }
+                  : { right: 8 },
+              ]}
+            >
+              <Pressable
+                onPress={onActiveStreakPress}
+                accessibilityRole="button"
+                accessibilityLabel={`רצף ${activeStreak} ימים, פתח לוח שנה`}
+                style={styles.activeStreakInner}
+              >
+                <CalendarDays
+                  size={14}
+                  color={activeStreak >= 8 ? "#a855f7" : activeStreak >= 4 ? "#3b82f6" : "#f97316"}
+                />
+                <Text
+                  style={[
+                    styles.activeStreakText,
+                    { color: activeStreak >= 8 ? "#a855f7" : activeStreak >= 4 ? "#3b82f6" : "#f97316" },
+                  ]}
+                >
+                  {activeStreak}
+                </Text>
+              </Pressable>
+            </Animated.View>
+          )}
         </>
       )}
 
@@ -751,6 +791,8 @@ const ChapterSection = React.memo(function ChapterSection({
   easterEggNodeId,
   onClaimEasterEgg,
   questPathNodeProps,
+  activeStreak,
+  onActiveStreakPress,
 }: {
   arena: ArenaConfig;
   chapter: typeof chapter1Data;
@@ -774,6 +816,8 @@ const ChapterSection = React.memo(function ChapterSection({
     rewardClaimed: boolean;
     onPress: () => void;
   };
+  activeStreak?: number;
+  onActiveStreakPress?: () => void;
 }) {
   const firstIncompleteIndex = chapter.modules.findIndex(
     (m) => !completedModules.includes(m.id) && !m.comingSoon && (isPro || !PRO_LOCKED_SIMS.has(m.id)),
@@ -867,6 +911,8 @@ const ChapterSection = React.memo(function ChapterSection({
                 friendEmojis={friendsOnModule[module.id]}
                 hasEasterEgg={easterEggNodeId === module.id}
                 onClaimEasterEgg={onClaimEasterEgg}
+                activeStreak={isActive ? activeStreak : undefined}
+                onActiveStreakPress={onActiveStreakPress}
                 onPress={() => {
                   if (isLocked) {
                     onLockedPress();
