@@ -5,10 +5,8 @@ import { useVideoPlayer, VideoView } from "expo-video";
 const VIDEO_URL =
   "https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/finn-videos/finn-daily-return.mp4";
 
-/** Cold-start intro splash: plays finn-daily-return for ~1s, tap to skip.
- *  Reduced from 2000ms after PostHog showed 57% of installs leave during the
- *  splash. Every extra second compounds with slow-network asset loading. */
-const DISPLAY_MS = 1000;
+/** Cold-start intro splash: plays finn-daily-return for ~3s, tap to skip. */
+const DISPLAY_MS = 3000;
 
 interface Props {
   onDismiss: () => void;
