@@ -1,7 +1,7 @@
 import { ChartDataPoint, Timeframe } from './tradingHubTypes';
 import { ASSET_BY_ID } from './tradingHubData';
-import Constants from 'expo-constants';
 import { Platform } from 'react-native';
+import { getApiBase } from '../../db/apiBase';
 
 // ── Trading-day cache ──
 // Prices/charts refresh once per trading day at 23:30 Israel time. The cache
@@ -148,19 +148,15 @@ const round2 = (n: number): number => Math.round(n * 100) / 100;
 // ── Core API functions ──
 
 // ── API route proxy (avoids CORS issues with Yahoo Finance) ──
+// Single source of truth for the API host: getApiBase() handles web (relative
+// URLs), native dev (laptop LAN IP + :5050, auto-tracked across Wi-Fi), and
+// prod (EXPO_PUBLIC_API_URL from eas.json).
 const PRODUCTION_API = 'https://finpl.vercel.app/api/trading/quote';
-let API_BASE = '/api/trading/quote';
-
-if (Platform.OS !== 'web') {
-  if (__DEV__ && Constants.expoConfig?.hostUri) {
-    API_BASE = `http://${Constants.expoConfig.hostUri}/api/trading/quote`;
-  } else if (process.env.EXPO_PUBLIC_API_URL) {
-    API_BASE = `${process.env.EXPO_PUBLIC_API_URL}/api/trading/quote`;
-  } else {
-    // Fallback for native EAS builds where EXPO_PUBLIC_API_URL is not injected
-    API_BASE = PRODUCTION_API;
-  }
-}
+const apiBase = getApiBase();
+const API_BASE = apiBase
+  ? `${apiBase}/api/trading/quote`
+  // Empty base = web (relative) or native with no env injected (fall back to prod).
+  : Platform.OS === 'web' ? '/api/trading/quote' : PRODUCTION_API;
 
 interface QuoteApiResponse {
   ok: true;

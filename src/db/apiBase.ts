@@ -21,9 +21,16 @@ export function getApiBase(): string {
     return _base;
   }
 
+  // Dev fallback: derive the laptop's current LAN IP from the Expo dev-server
+  // host (hostUri is e.g. "10.1.188.207:8081"), but point at the local API
+  // port (vercel dev on :5050), not Metro's port. This auto-tracks whatever
+  // Wi-Fi the laptop is on, so .env.local never needs a hardcoded IP — just
+  // ensure the phone is on the same network. Override the port if needed.
   const hostUri = Constants.expoConfig?.hostUri;
   if (hostUri) {
-    _base = `http://${hostUri}`;
+    const host = hostUri.split(':')[0];
+    const devPort = process.env.EXPO_PUBLIC_DEV_API_PORT ?? '5050';
+    _base = `http://${host}:${devPort}`;
     return _base;
   }
 

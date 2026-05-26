@@ -138,19 +138,24 @@ export function InteractiveRecallScreen({
             accessibilityRole="button"
             accessibilityLabel={cardState?.locked ? "המשך" : "בדוק"}
             accessibilityState={{ disabled: !cardState }}
-            style={({ pressed }) => ({
-              minHeight: 52,
+            style={{
+              height: 56,
               borderRadius: 16,
-              paddingVertical: 14,
-              paddingHorizontal: 24,
               alignItems: "center",
               justifyContent: "center",
-              backgroundColor: cardState?.locked ? "#0ea5e9" : (unitColors.bg ?? "#2563eb"),
               borderBottomWidth: 3,
-              borderBottomColor: cardState?.locked ? "#0284c7" : "#1e293b",
-              elevation: 3,
-              opacity: pressed ? 0.85 : (cardState ? 1 : 0.7),
-            })}
+              backgroundColor: cardState?.locked
+                ? "#22c55e"              // correct → green
+                : cardState?.wrong
+                  ? "#ef4444"            // wrong → red
+                  : (unitColors.bg ?? "#2563eb"), // default → blue
+              borderBottomColor: cardState?.locked
+                ? "#16a34a"
+                : cardState?.wrong
+                  ? "#b91c1c"
+                  : "#1e293b",
+              opacity: cardState ? 1 : 0.7,
+            }}
           >
             <Text style={{ fontSize: 16, fontWeight: "900", color: "#ffffff", writingDirection: "rtl" }}>
               {cardState?.locked ? "המשך" : "בדוק"}
@@ -189,26 +194,6 @@ const styles = StyleSheet.create({
   emptyText: {
     fontSize: 16,
     color: "#6b7280",
-    writingDirection: "rtl",
-  },
-  stickyFooter: {
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    backgroundColor: "#ffffff",
-    borderTopWidth: 1,
-    borderTopColor: "#e2e8f0",
-  },
-  primaryBtn: {
-    borderRadius: 16,
-    paddingVertical: 14,
-    alignItems: "center",
-    justifyContent: "center",
-    borderBottomWidth: 3,
-  },
-  primaryBtnText: {
-    fontSize: 16,
-    fontWeight: "900",
-    color: "#ffffff",
     writingDirection: "rtl",
   },
 });

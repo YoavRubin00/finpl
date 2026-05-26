@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
-import { View, Text, Pressable, StyleSheet } from "react-native";
+import { View, Text, Pressable, StyleSheet, Vibration } from "react-native";
 import { Image as ExpoImage } from "expo-image";
 import Animated, {
   FadeInDown,
@@ -36,6 +36,9 @@ const ITEM_STEP_HEIGHT = 52;
  */
 export interface TimelineOrderCardState {
   locked: boolean;
+  /** True briefly after an incorrect "בדוק" tap — drives the red error state on
+   *  the sticky CTA button. Auto-clears after a short delay. */
+  wrong: boolean;
   check: () => void;
   continue_: () => void;
 }
@@ -258,6 +261,8 @@ export function TimelineOrderCard({
 
   const [confetti, setConfetti] = useState<number>(0);
   const [locked, setLocked] = useState<boolean>(false);
+  const [wrong, setWrong] = useState<boolean>(false);
+  const wrongTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [showYears, setShowYears] = useState<boolean>(false);
   const reducedMotion = useReducedMotion();
 
@@ -319,6 +324,9 @@ export function TimelineOrderCard({
       next.splice(clamped, 0, moved);
       setLocalOrder(next);
       tapHaptic();
+      // User started fixing the order — clear the red error state.
+      setWrong(false);
+      if (wrongTimerRef.current) clearTimeout(wrongTimerRef.current);
       // Any user interaction resets the help-offer countdown.
       resetInactivityTimer();
     },
@@ -361,13 +369,23 @@ export function TimelineOrderCard({
 
     if (isCorrect) {
       successHaptic();
+      setWrong(false);
+      if (wrongTimerRef.current) clearTimeout(wrongTimerRef.current);
       setLocked(true);
       setConfetti((n) => n + 1);
       setShowYears(true);
       onSubmit(current);
     } else {
       errorHaptic();
+      // Sustained buzz on top of the single error haptic so the "wrong" is
+      // unmistakable. Android honours the pattern; iOS falls back to a buzz.
+      Vibration.vibrate([0, 140, 90, 140, 90, 200]);
       triggerShake();
+      // Flip the CTA to its red error state, then auto-clear so the user can
+      // edit and try again with a fresh blue button.
+      setWrong(true);
+      if (wrongTimerRef.current) clearTimeout(wrongTimerRef.current);
+      wrongTimerRef.current = setTimeout(() => setWrong(false), 1400);
     }
   }, [locked, prompt.items, onSubmit, triggerShake]);
 
@@ -375,11 +393,16 @@ export function TimelineOrderCard({
     onCorrectSettledRef.current();
   }, []);
 
+  // Clear the pending red-flash timer on unmount.
+  useEffect(() => () => {
+    if (wrongTimerRef.current) clearTimeout(wrongTimerRef.current);
+  }, []);
+
   // Push the latest state to the parent so it can render the sticky CTA.
-  // Re-fires whenever `locked` flips or a callback identity changes.
+  // Re-fires whenever `locked`/`wrong` flips or a callback identity changes.
   useEffect(() => {
-    onStateChange?.({ locked, check: handleCheck, continue_: handleContinue });
-  }, [locked, handleCheck, handleContinue, onStateChange]);
+    onStateChange?.({ locked, wrong, check: handleCheck, continue_: handleContinue });
+  }, [locked, wrong, handleCheck, handleContinue, onStateChange]);
 
   const displayOrder = localOrder;
 
@@ -477,7 +500,7 @@ export function TimelineOrderCard({
                 flex: 1,
                 minHeight: 48,
                 paddingVertical: 12,
-                paddingHorizontal: 16,
+                paddingHorizontal: 8,
                 borderRadius: 12,
                 alignItems: "center",
                 justifyContent: "center",
@@ -488,7 +511,10 @@ export function TimelineOrderCard({
                 opacity: pressed ? 0.85 : 1,
               })}
             >
-              <Text style={{ fontSize: 16, fontWeight: "900", color: "#ffffff", writingDirection: "rtl" }}>
+              <Text
+                numberOfLines={1}
+                style={{ fontSize: 15, fontWeight: "900", color: "#1e293b", writingDirection: "rtl", textAlign: "center" }}
+              >
                 עזור לי
               </Text>
             </Pressable>
@@ -500,7 +526,7 @@ export function TimelineOrderCard({
                 flex: 1,
                 minHeight: 48,
                 paddingVertical: 12,
-                paddingHorizontal: 16,
+                paddingHorizontal: 8,
                 borderRadius: 12,
                 alignItems: "center",
                 justifyContent: "center",
@@ -511,7 +537,10 @@ export function TimelineOrderCard({
                 opacity: pressed ? 0.85 : 1,
               })}
             >
-              <Text style={{ fontSize: 16, fontWeight: "900", color: "#ffffff", writingDirection: "rtl" }}>
+              <Text
+                numberOfLines={1}
+                style={{ fontSize: 15, fontWeight: "900", color: "#1e293b", writingDirection: "rtl", textAlign: "center" }}
+              >
                 אני אסתדר
               </Text>
             </Pressable>
