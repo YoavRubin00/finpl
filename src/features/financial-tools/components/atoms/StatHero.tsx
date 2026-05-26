@@ -58,7 +58,22 @@ export function StatHero({
           end={{ x: 1, y: 1 }}
           style={[styles.card, styles.cardDark]}
         >
-          <View style={styles.goldHalo} pointerEvents="none" />
+          {/* Top-left gilt glow */}
+          <LinearGradient
+            colors={['rgba(233,196,0,0.34)', 'rgba(233,196,0,0)']}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={styles.goldHalo}
+            pointerEvents="none"
+          />
+          {/* Bottom-right indigo wash for balanced depth */}
+          <LinearGradient
+            colors={['rgba(124,58,237,0.32)', 'rgba(124,58,237,0)']}
+            start={{ x: 1, y: 1 }}
+            end={{ x: 0, y: 0 }}
+            style={styles.haloBottom}
+            pointerEvents="none"
+          />
           <View style={styles.content}>
             <Text style={[styles.label, styles.labelDark]}>{label}</Text>
             <View style={styles.numberRow}>
@@ -76,6 +91,14 @@ export function StatHero({
               </View>
             ) : null}
           </View>
+          {/* Hairline gilt sweep at the bottom — gives the card a finished edge */}
+          <LinearGradient
+            colors={['rgba(233,196,0,0)', 'rgba(233,196,0,0.55)', 'rgba(233,196,0,0)']}
+            start={{ x: 0, y: 0.5 }}
+            end={{ x: 1, y: 0.5 }}
+            style={styles.bottomSweep}
+            pointerEvents="none"
+          />
         </LinearGradient>
       </Animated.View>
     );
@@ -86,20 +109,62 @@ export function StatHero({
       entering={FadeInDown.duration(360)}
       style={[styles.card, styles.cardLight, { shadowColor: accentColor, borderColor: accentColor + '33' }]}
     >
-      <View style={[styles.halo, { backgroundColor: accentColor + '18' }]} pointerEvents="none" />
+      {/* Top-left accent halo (gradient) — replaces flat tinted disc */}
+      <LinearGradient
+        colors={[accentColor + '2E', accentColor + '00']}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={styles.halo}
+        pointerEvents="none"
+      />
+      {/* Bottom-right echo halo — balances composition, fakes inner glow */}
+      <LinearGradient
+        colors={[accentColor + '22', accentColor + '00']}
+        start={{ x: 1, y: 1 }}
+        end={{ x: 0, y: 0 }}
+        style={styles.haloBottom}
+        pointerEvents="none"
+      />
       <View style={styles.content}>
         <Text style={styles.label}>{label}</Text>
         <View style={styles.numberRow}>
-          <Text style={[styles.number, { color: accentColor }]}>{display}</Text>
+          <Text
+            style={[
+              styles.number,
+              {
+                color: accentColor,
+                textShadowColor: accentColor + '55',
+              },
+            ]}
+          >
+            {display}
+          </Text>
         </View>
         {sublabel ? <Text style={styles.sublabel}>{sublabel}</Text> : null}
         {deltaDisplay ? (
-          <View style={[styles.deltaPill, { backgroundColor: accentColor + '18' }]}>
+          <View
+            style={[
+              styles.deltaPill,
+              {
+                backgroundColor: accentColor + '18',
+                borderColor: accentColor + '40',
+                shadowColor: accentColor,
+              },
+            ]}
+          >
             <Text style={[styles.deltaValue, { color: accentColor }]}>{deltaDisplay}</Text>
             {deltaLabel ? <Text style={styles.deltaLabel}>{deltaLabel}</Text> : null}
           </View>
         ) : null}
       </View>
+      {/* Hairline accent sweep at the bottom edge */}
+      <LinearGradient
+        colors={[accentColor + '00', accentColor + 'AA', accentColor + '00']}
+        start={{ x: 0, y: 0.5 }}
+        end={{ x: 1, y: 0.5 }}
+        style={styles.bottomSweep}
+        pointerEvents="none"
+      />
     </Animated.View>
   );
 }
@@ -131,9 +196,17 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: -50,
     left: -50,
-    width: 160,
-    height: 160,
-    borderRadius: 160,
+    width: 170,
+    height: 170,
+    borderRadius: 170,
+  },
+  haloBottom: {
+    position: 'absolute',
+    bottom: -60,
+    right: -50,
+    width: 170,
+    height: 170,
+    borderRadius: 170,
   },
   goldHalo: {
     position: 'absolute',
@@ -142,7 +215,13 @@ const styles = StyleSheet.create({
     width: 180,
     height: 180,
     borderRadius: 180,
-    backgroundColor: 'rgba(233,196,0,0.16)',
+  },
+  bottomSweep: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    height: 2,
   },
   content: {
     alignItems: 'flex-end',
@@ -169,6 +248,8 @@ const styles = StyleSheet.create({
     letterSpacing: -1.2,
     lineHeight: 56,
     writingDirection: 'rtl',
+    textShadowOffset: { width: 0, height: 0 },
+    textShadowRadius: 16,
   },
   numberDark: {
     fontSize: 48,
@@ -196,7 +277,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: 999,
+    borderWidth: 1,
     marginTop: 10,
+    shadowOpacity: 0.15,
+    shadowOffset: { width: 0, height: 2 },
+    shadowRadius: 6,
+    elevation: 2,
   },
   deltaPillDark: {
     flexDirection: 'row-reverse',

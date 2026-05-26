@@ -5,6 +5,7 @@ import Animated, {
   useAnimatedStyle,
   withSpring,
 } from 'react-native-reanimated';
+import { LinearGradient } from 'expo-linear-gradient';
 import { ChevronLeft, Sparkles } from 'lucide-react-native';
 import { tapHaptic } from '../../../../utils/haptics';
 
@@ -68,10 +69,22 @@ export function CalculateButton({
         accessibilityState={{ disabled }}
         style={[
           styles.btn,
-          { backgroundColor: colors.bg, borderBottomColor: colors.shadow },
+          {
+            backgroundColor: colors.bg,
+            borderBottomColor: colors.shadow,
+            shadowColor: colors.bg,
+          },
           disabled && styles.disabled,
         ]}
       >
+        {/* Top sheen — subtle white wash that fakes a raised, glossy surface */}
+        <LinearGradient
+          colors={['rgba(255,255,255,0.22)', 'rgba(255,255,255,0)']}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 0, y: 1 }}
+          style={styles.sheen}
+          pointerEvents="none"
+        />
         <View style={styles.iconWrap}>
           {iconLeft ?? <Sparkles size={18} color="#ffffff" strokeWidth={2.6} />}
         </View>
@@ -107,6 +120,18 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     borderRadius: 16,
     borderBottomWidth: 4,
+    overflow: 'hidden',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.32,
+    shadowRadius: 10,
+    elevation: 5,
+  },
+  sheen: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    height: '52%',
   },
   disabled: {
     opacity: 0.5,

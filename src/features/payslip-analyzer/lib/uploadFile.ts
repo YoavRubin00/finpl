@@ -21,6 +21,13 @@ function errorResponse(
   return { ok: false, code, error: message };
 }
 
+/** Single-source console-warn helper so the file isn't sprinkled with
+ *  eslint-disable comments. Tagged for easy grepping in Metro logs. */
+function warn(reason: string, details?: Record<string, unknown>): void {
+  // eslint-disable-next-line no-console
+  console.warn(`[payslip-analyze] ${reason}`, details ?? '');
+}
+
 function isPayslipResponse(value: unknown): value is PayslipAnalyzeResponse {
   if (!value || typeof value !== 'object') return false;
   const v = value as Record<string, unknown>;
@@ -34,9 +41,7 @@ function isPayslipResponse(value: unknown): value is PayslipAnalyzeResponse {
 function base64DecodedSize(b64: string): number {
   const len = b64.length;
   if (len === 0) return 0;
-  let padding = 0;
-  if (b64.endsWith('==')) padding = 2;
-  else if (b64.endsWith('=')) padding = 1;
+  const padding = b64.endsWith('==') ? 2 : b64.endsWith('=') ? 1 : 0;
   return Math.floor((len * 3) / 4) - padding;
 }
 
@@ -101,14 +106,53 @@ export async function analyzePayslipFile(
       signal: controller.signal,
     });
 
+    // Read the response as text first so we can distinguish JSON errors
+    // (parse_failed = actual server failure) from non-JSON responses (404
+    // HTML page when running `npm run web` without API routes, NGINX error
+    // pages, network captive portals, etc.).
+    const rawText = await response.text();
+
+    if (!response.ok) {
+      warn('HTTP error', {
+        status: response.status,
+        statusText: response.statusText,
+        bodySnippet: rawText.slice(0, 200),
+      });
+      if (response.status === 404 || response.status === 405) {
+        return errorResponse(
+          'service_unavailable',
+          'API route not available. Run `vercel dev` or use a preview build.',
+        );
+      }
+      if (response.status === 429) {
+        return errorResponse('rate_limited', 'Rate limit reached.');
+      }
+      if (response.status >= 500) {
+        return errorResponse('service_unavailable', 'Server error.');
+      }
+    }
+
     let data: unknown;
     try {
-      data = await response.json();
+      data = JSON.parse(rawText);
     } catch {
+      warn('non-JSON response', {
+        status: response.status,
+        contentType: response.headers.get('content-type'),
+        bodySnippet: rawText.slice(0, 200),
+      });
+      // Empty body or HTML → API route almost certainly missing.
+      if (!rawText || rawText.trim().startsWith('<')) {
+        return errorResponse(
+          'service_unavailable',
+          'API route returned HTML. Run with `vercel dev` for full API support.',
+        );
+      }
       return errorResponse('parse_failed', 'Malformed server response.');
     }
 
     if (!isPayslipResponse(data)) {
+      warn('unexpected response shape', { data });
       return errorResponse('parse_failed', 'Unexpected server response.');
     }
 
@@ -118,6 +162,8 @@ export async function analyzePayslipFile(
     if (name === 'AbortError' || name === 'TimeoutError') {
       return errorResponse('timeout', 'Request timed out.');
     }
+    const message = err instanceof Error ? err.message : String(err);
+    warn('network error', { message });
     return errorResponse('network', 'Network failure.');
   } finally {
     clearTimeout(timeoutId);

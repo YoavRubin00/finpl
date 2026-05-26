@@ -18,7 +18,11 @@ web-build/
 
 # Large media — hosted on CDN (Vercel Blob / R2), not bundled in repo
 assets/video/
-assets/AUDIO/
+# Per-tool tutorial VO — uploaded to Vercel Blob via
+# scripts/upload-tool-tutorial-audio.mjs and referenced by URL from
+# src/features/financial-tools/data/toolTutorials.ts. Local MP3s exist on
+# the developer machine that generated them; never enter the repo or bundle.
+assets/audio/
 assets/vercel_stage/
 assets/daisy/
 assets/audio-podcasts/

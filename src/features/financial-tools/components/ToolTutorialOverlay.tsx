@@ -62,14 +62,14 @@ export function ToolTutorialOverlay({ toolKey, steps }: Props): React.ReactEleme
 
   const stepConfig = steps[step] ?? null;
   const isLast = step >= steps.length - 1;
-  const stepAudio = stepConfig?.audio;
+  const stepAudioUrl = stepConfig?.audioUrl;
 
   // Auto-play step audio; cleanly stop + dispose on step change / unmount.
   useEffect(() => {
-    if (!visible || stepAudio == null) return;
+    if (!visible || !stepAudioUrl) return;
     let playerObj: AudioPlayer | null = null;
     try {
-      const player = createAudioPlayer(stepAudio);
+      const player = createAudioPlayer({ uri: stepAudioUrl });
       player.play();
       playerObj = player;
     } catch {
@@ -85,7 +85,7 @@ export function ToolTutorialOverlay({ toolKey, steps }: Props): React.ReactEleme
         }
       }
     };
-  }, [stepAudio, visible]);
+  }, [stepAudioUrl, visible]);
 
   const close = useCallback(() => {
     setVisible(false);

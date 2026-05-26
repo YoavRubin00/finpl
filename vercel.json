@@ -16,6 +16,10 @@
     {
       "path": "/api/breaking-news/cron",
       "schedule": "0 6 * * *"
+    },
+    {
+      "path": "/api/daily-news-challenge/cron",
+      "schedule": "0 4 * * *"
     }
   ],
   "git": {

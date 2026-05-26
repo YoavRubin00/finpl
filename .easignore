@@ -30,8 +30,9 @@ assets/comics/
 # Only exclude subfolders; root PNGs are required by didYouKnowData.ts
 assets/infographics/*/
 assets/SOUND/
-assets/AUDIO/
 assets/STOCK/
+# Per-tool tutorial VO — streamed from Vercel Blob, not bundled.
+assets/audio/
 assets/vercel_stage/
 
 # Daisy work files — originals from Higgsfield (PNG + MP4 + WebP source).

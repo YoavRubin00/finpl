@@ -56,10 +56,13 @@ import { useFunStore } from "../../stores/useFunStore";
 import { FlyingRewards } from "../../components/ui/FlyingRewards";
 import { MapEasterEggModal } from "../../components/fun/MapEasterEggModal";
 import { useDailyQuestsStore } from "../daily-quests/useDailyQuestsStore";
-import { DailyQuestWidget } from "../daily-quests/DailyQuestWidget";
 import { DailyQuestsSheet } from "../daily-quests/DailyQuestsSheet";
 import { QuestPathNode } from "../daily-quests/QuestPathNode";
 import { PayslipPathNode } from "../payslip-analyzer/PayslipPathNode";
+import { DailyNewsChallengeCard } from "../daily-news-challenge/DailyNewsChallengeCard";
+import { DailyNewsChallengeSheet } from "../daily-news-challenge/DailyNewsChallengeSheet";
+import { useDailyNewsChallengeStore } from "../daily-news-challenge/useDailyNewsChallengeStore";
+import { fetchTodayChallenge } from "../daily-news-challenge/dailyNewsChallengeApi";
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -967,6 +970,11 @@ export function DuoLearnScreen() {
   const { nudge, dismiss: dismissNudge } = useFeedNudge();
   const dilemmaAnswered = useDailyChallengesStore((s) => s.hasDilemmaAnsweredToday());
   const [questSheetVisible, setQuestSheetVisible] = useState(false);
+  const [newsSheetVisible, setNewsSheetVisible] = useState(false);
+  const newsChallenge = useDailyNewsChallengeStore((s) => s.todayChallenge);
+  const newsCompleted = useDailyNewsChallengeStore((s) => s.hasCompletedToday());
+  const newsProChestOpened = useDailyNewsChallengeStore((s) => s.proChestOpened);
+  const setNewsChallenge = useDailyNewsChallengeStore((s) => s.setTodayChallenge);
   const refreshQuests = useDailyQuestsStore((s) => s.refreshQuests);
   const syncQuestCompletions = useDailyQuestsStore((s) => s.syncCompletions);
   const questCompletedCount = useDailyQuestsStore((s) => s.completedCount());
@@ -1153,6 +1161,17 @@ export function DuoLearnScreen() {
   const handleLockedPress = useCallback(() => setLockedModalVisible(true), []);
   const handleRoadmapPress = useCallback(() => setRoadmapVisible(true), []);
   const handleQuestPress = useCallback(() => setQuestSheetVisible(true), []);
+  const handleNewsPress = useCallback(() => { tapHaptic(); setNewsSheetVisible(true); }, []);
+
+  // Background-fetch today's news challenge on mount. Persist cache in store
+  // so the card renders instantly on subsequent opens.
+  useEffect(() => {
+    let cancelled = false;
+    fetchTodayChallenge()
+      .then((data) => { if (!cancelled) setNewsChallenge(data); })
+      .catch(() => { /* non-fatal — card stays hidden if server is down */ });
+    return () => { cancelled = true; };
+  }, [setNewsChallenge]);
   const handleMindMap = useCallback((idx: number) => { tapHaptic(); setMindMapChapter(idx); }, []);
 
   return (
@@ -1184,15 +1203,9 @@ export function DuoLearnScreen() {
               </View>
             </View>
 
-            {/* Left side: Quest Widget + Streak Flame + Calendar */}
+            {/* Left side: Streak Flame + Calendar (Quest widget replaced
+                by the Daily News Challenge card below the header) */}
             <View style={{ flexDirection: "row-reverse", alignItems: "center", gap: 10 }}>
-              {questTotalCount > 0 && (
-                <DailyQuestWidget
-                  completedCount={questCompletedCount}
-                  totalQuests={questTotalCount}
-                  onPress={handleQuestPress}
-                />
-              )}
             <Pressable
               onPress={() => { tapHaptic(); setShowStreakCalendar(true); }}
               style={{ alignItems: "center", flexDirection: "row-reverse", gap: 4 }}
@@ -1215,6 +1228,19 @@ export function DuoLearnScreen() {
             </Pressable>
             </View>
           </View>
+
+          {/* Daily News Challenge — newspaper card replacing the old 3-quests widget */}
+          {newsChallenge && (
+            <View style={{ paddingHorizontal: 16, paddingBottom: 8 }}>
+              <DailyNewsChallengeCard
+                challenge={newsChallenge}
+                completed={newsCompleted}
+                proChestOpened={newsProChestOpened}
+                isPro={isPro}
+                onPress={handleNewsPress}
+              />
+            </View>
+          )}
 
           {/* Chapter sections */}
           {ARENAS.map((arena, idx) => {
@@ -1393,6 +1419,7 @@ export function DuoLearnScreen() {
         )}
 
         <DailyQuestsSheet visible={questSheetVisible} onClose={() => setQuestSheetVisible(false)} />
+        <DailyNewsChallengeSheet visible={newsSheetVisible} onClose={() => setNewsSheetVisible(false)} />
 
         {/* Learning Roadmap Overlay (Replaced Native Modal to support iOS Walkthrough overlap) */}
         {roadmapVisible && (

@@ -4,7 +4,7 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import Animated, { FadeInDown } from 'react-native-reanimated';
-import { ChevronLeft, Sparkles, UserCog } from 'lucide-react-native';
+import { ChevronLeft, Sparkles, TrendingUp, UserCog } from 'lucide-react-native';
 
 import { STITCH } from '../../constants/theme';
 import { formatShekel } from '../../utils/format';
@@ -117,7 +117,7 @@ function HeroStatStrip(): React.ReactElement {
 
   const yoyText =
     hasAssets && yoyDeltaPct > 0
-      ? `↗ +${(yoyDeltaPct * 100).toFixed(1)}% השנה הקרובה (משוער)`
+      ? `+${(yoyDeltaPct * 100).toFixed(1)}% השנה הקרובה (משוער)`
       : null;
 
   function handlePress() {
@@ -143,6 +143,7 @@ function HeroStatStrip(): React.ReactElement {
           style={styles.hero}
         >
           <View style={styles.heroHalo} pointerEvents="none" />
+          <View style={styles.heroHaloBottom} pointerEvents="none" />
 
           <View style={styles.heroRow}>
             <View style={styles.heroRight}>
@@ -153,14 +154,19 @@ function HeroStatStrip(): React.ReactElement {
                 {hasAssets ? formatShekel(totalValue) : '+ הוסיפו נכסים'}
               </Text>
               {hasAssets && annualGrowth > 0 ? (
-                <Text style={styles.heroDelta}>{yoyText}</Text>
+                <View style={styles.heroDeltaRow}>
+                  <TrendingUp size={11} color="#86efac" strokeWidth={3} />
+                  <Text style={styles.heroDelta}>{yoyText}</Text>
+                </View>
               ) : (
                 <Text style={styles.heroEmptyHint}>
                   לחצו לבניית התמונה הפיננסית שלכם
                 </Text>
               )}
             </View>
-            <ChevronLeft size={20} color="rgba(255,255,255,0.6)" strokeWidth={2.6} />
+            <View style={styles.heroChevron}>
+              <ChevronLeft size={18} color="#ffffff" strokeWidth={2.8} />
+            </View>
           </View>
         </LinearGradient>
       </Pressable>
@@ -304,6 +310,25 @@ const styles = StyleSheet.create({
     borderRadius: 110,
     backgroundColor: 'rgba(233,196,0,0.18)',
   },
+  heroHaloBottom: {
+    position: 'absolute',
+    bottom: -38,
+    right: -22,
+    width: 130,
+    height: 130,
+    borderRadius: 130,
+    backgroundColor: 'rgba(99,102,241,0.18)',
+  },
+  heroChevron: {
+    width: 30,
+    height: 30,
+    borderRadius: 999,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(255,255,255,0.12)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.16)',
+  },
   heroRow: {
     flexDirection: 'row-reverse',
     alignItems: 'center',
@@ -329,19 +354,27 @@ const styles = StyleSheet.create({
     writingDirection: 'rtl',
   },
   heroValue: {
-    fontSize: 22,
+    fontSize: 24,
     fontWeight: '900',
     color: STITCH.tertiaryGoldBright,
-    letterSpacing: -0.5,
+    letterSpacing: -0.6,
     marginTop: 2,
     fontVariant: ['tabular-nums'],
     writingDirection: 'rtl',
+    textShadowColor: 'rgba(233,196,0,0.45)',
+    textShadowOffset: { width: 0, height: 0 },
+    textShadowRadius: 14,
+  },
+  heroDeltaRow: {
+    flexDirection: 'row-reverse',
+    alignItems: 'center',
+    gap: 4,
+    marginTop: 4,
   },
   heroDelta: {
     fontSize: 10,
     fontWeight: '800',
     color: '#86efac',
-    marginTop: 2,
     writingDirection: 'rtl',
   },
   // Profile CTA (between hero and grid)

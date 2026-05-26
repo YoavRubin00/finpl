@@ -1,5 +1,6 @@
 import React from 'react';
 import { View, Text, Pressable, StyleSheet } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import { STITCH } from '../../../../constants/theme';
 import { tapHaptic } from '../../../../utils/haptics';
 
@@ -28,6 +29,13 @@ export function PercentInput({
 }: PercentInputProps): React.ReactElement {
   return (
     <View style={styles.card}>
+      <LinearGradient
+        colors={[STITCH.surfaceLowest, accentColor + '0A']}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 0, y: 1 }}
+        style={StyleSheet.absoluteFill}
+        pointerEvents="none"
+      />
       <Text style={styles.label}>{label}</Text>
       <View style={styles.row}>
         <View style={styles.valueWrap}>
@@ -46,7 +54,10 @@ export function PercentInput({
                 }}
                 style={[
                   styles.chip,
-                  selected && { backgroundColor: accentColor },
+                  selected && {
+                    backgroundColor: accentColor,
+                    shadowColor: accentColor,
+                  },
                 ]}
                 accessibilityRole="button"
                 accessibilityLabel={`${p} אחוז`}
@@ -65,6 +76,13 @@ export function PercentInput({
           })}
         </View>
       </View>
+      <LinearGradient
+        colors={[accentColor + '00', accentColor + '88', accentColor + '00']}
+        start={{ x: 0, y: 0.5 }}
+        end={{ x: 1, y: 0.5 }}
+        style={styles.bottomSweep}
+        pointerEvents="none"
+      />
     </View>
   );
 }
@@ -78,6 +96,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: STITCH.surfaceHighest,
     gap: 8,
+    overflow: 'hidden',
   },
   label: {
     fontSize: 11,
@@ -121,6 +140,17 @@ const styles = StyleSheet.create({
     borderRadius: 6,
     minWidth: 32,
     alignItems: 'center',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
+    elevation: 0,
+  },
+  bottomSweep: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    height: 2,
   },
   chipText: {
     fontSize: 10,

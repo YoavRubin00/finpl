@@ -6,7 +6,6 @@ import {
   ScrollView,
   ActivityIndicator,
   StatusBar,
-  Pressable,
 } from "react-native";
 import { Image as ExpoImage } from "expo-image";
 import { LinearGradient } from "expo-linear-gradient";
@@ -389,23 +388,19 @@ export function PayslipAnalyzerScreen() {
                 </Text>
               </View>
             ) : null}
-            <Pressable
-              onPress={() => {
-                tapHaptic();
-                clearAll();
-              }}
-              accessibilityRole="button"
-              accessibilityLabel={errorCopy?.cta ?? "נסה שוב"}
-              style={({ pressed }) => [
-                styles.retryButton,
-                pressed && styles.retryButtonPressed,
-              ]}
-            >
-              <RotateCcw size={18} color="#ffffff" strokeWidth={2.6} />
-              <Text style={styles.retryButtonText} allowFontScaling={false}>
-                {errorCopy?.cta ?? "נסה שוב"}
-              </Text>
-            </Pressable>
+            <View style={styles.retryButtonWrap}>
+              <SupercellButton
+                label={errorCopy?.cta ?? "נסה שוב"}
+                variant="blue"
+                buttonStyle="duo"
+                size="md"
+                onPress={() => {
+                  tapHaptic();
+                  clearAll();
+                }}
+                icon={<RotateCcw size={18} color="#ffffff" strokeWidth={2.6} />}
+              />
+            </View>
           </View>
         ) : null}
       </ScrollView>
@@ -563,34 +558,8 @@ const styles = StyleSheet.create({
     color: "#78350f",
     writingDirection: "rtl",
   },
-  retryButton: {
-    flexDirection: "row-reverse",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 10,
-    width: "100%",
-    maxWidth: 320,
-    minHeight: 56,
-    paddingVertical: 16,
-    paddingHorizontal: 24,
-    borderRadius: 16,
-    backgroundColor: "#2563eb",
+  retryButtonWrap: {
+    alignSelf: "stretch",
     marginTop: 12,
-    shadowColor: "#2563eb",
-    shadowOpacity: 0.4,
-    shadowRadius: 14,
-    shadowOffset: { width: 0, height: 8 },
-    elevation: 8,
-  },
-  retryButtonPressed: {
-    backgroundColor: "#1d4ed8",
-    transform: [{ scale: 0.98 }],
-  },
-  retryButtonText: {
-    color: "#ffffff",
-    fontSize: 17,
-    fontWeight: "900",
-    writingDirection: "rtl",
-    letterSpacing: -0.2,
   },
 });

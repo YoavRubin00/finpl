@@ -2,7 +2,13 @@ import React from 'react';
 import { View, Text, Pressable, StyleSheet } from 'react-native';
 import { useRouter } from 'expo-router';
 import { ChevronLeft, Lock, Zap } from 'lucide-react-native';
-import Animated, { FadeInDown } from 'react-native-reanimated';
+import Animated, {
+  FadeInDown,
+  useAnimatedStyle,
+  useSharedValue,
+  withSpring,
+} from 'react-native-reanimated';
+import { LinearGradient } from 'expo-linear-gradient';
 
 import { STITCH } from '../../../constants/theme';
 import { tapHaptic } from '../../../utils/haptics';
@@ -14,20 +20,28 @@ interface ToolHubCardProps {
   index: number;
 }
 
+const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
+
 /**
  * Stitch-style tool tile. Renders inside a 2-column grid in the hub.
- * Shows: corner color halo, emoji icon, label + subtitle, footer with
- * XP chip (active) or lock icon (coming_soon), premium ribbon if applicable.
+ * Shows: corner gradient halo, icon tile (tinted gradient), label + subtitle,
+ * bottom accent band in the tool's hue, footer with XP chip (active) or lock
+ * icon (coming_soon). Press feedback is a soft spring scale-down.
  *
- * Memoized: the registry entries are module-level constants, so the `tool`
- * prop is referentially stable across re-renders. `index` only changes on
- * registry edits. With `React.memo`, a parent state change in the hub no
- * longer cascades into all 10 cards.
+ * Memoized: registry entries are module-level constants, so `tool` is
+ * referentially stable. `index` only changes on registry edits. With
+ * React.memo, a parent state change in the hub no longer cascades into
+ * every card.
  */
 function ToolHubCardInner({ tool, index }: ToolHubCardProps): React.ReactElement {
   const router = useRouter();
   const isComingSoon = tool.status === 'coming_soon';
   const { Icon } = tool;
+
+  const pressScale = useSharedValue(1);
+  const pressAnim = useAnimatedStyle(() => ({
+    transform: [{ scale: pressScale.value }],
+  }));
 
   const handlePress = () => {
     tapHaptic();
@@ -41,27 +55,47 @@ function ToolHubCardInner({ tool, index }: ToolHubCardProps): React.ReactElement
       entering={FadeInDown.delay(80 + index * 50).duration(360)}
       style={styles.outer}
     >
-      <Pressable
+      <AnimatedPressable
         onPress={handlePress}
-        style={[styles.card, isComingSoon && styles.cardDisabled]}
+        onPressIn={() => {
+          pressScale.value = withSpring(0.96, { damping: 18, stiffness: 280 });
+        }}
+        onPressOut={() => {
+          pressScale.value = withSpring(1, { damping: 16, stiffness: 220 });
+        }}
+        style={[styles.card, isComingSoon && styles.cardDisabled, pressAnim]}
         accessibilityRole="button"
         accessibilityLabel={tool.label}
         accessibilityHint={isComingSoon ? 'בקרוב' : tool.subtitle}
         accessibilityState={{ disabled: isComingSoon }}
       >
-        {/* Corner color halo */}
-        <View
-          style={[styles.halo, { backgroundColor: tool.hue + '22' }]}
+        {/* Top-left gradient halo — richer than a flat tinted disc */}
+        <LinearGradient
+          colors={
+            isComingSoon
+              ? ['rgba(148,163,184,0.22)', 'rgba(148,163,184,0)']
+              : [tool.hue + '38', tool.hue + '00']
+          }
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={styles.halo}
           pointerEvents="none"
         />
 
-        {/* Icon tile */}
-        <View
+        {/* Icon tile with subtle gradient fill */}
+        <LinearGradient
+          colors={
+            isComingSoon
+              ? [STITCH.surfaceLow, STITCH.surfaceLow]
+              : [tool.light, tool.hue + '1A']
+          }
+          start={{ x: 0, y: 0 }}
+          end={{ x: 0, y: 1 }}
           style={[
             styles.iconTile,
             {
-              backgroundColor: isComingSoon ? STITCH.surfaceLow : tool.light,
-              borderColor: isComingSoon ? STITCH.surfaceHighest : tool.hue + '40',
+              borderColor: isComingSoon ? STITCH.surfaceHighest : tool.hue + '4D',
+              shadowColor: isComingSoon ? 'transparent' : tool.hue,
             },
           ]}
         >
@@ -70,7 +104,7 @@ function ToolHubCardInner({ tool, index }: ToolHubCardProps): React.ReactElement
             color={isComingSoon ? STITCH.onSurfaceVariant : tool.hue}
             strokeWidth={2.4}
           />
-        </View>
+        </LinearGradient>
 
         <Text
           style={[styles.label, isComingSoon && styles.labelDisabled]}
@@ -108,6 +142,7 @@ function ToolHubCardInner({ tool, index }: ToolHubCardProps): React.ReactElement
               styles.chevronCircle,
               {
                 backgroundColor: isComingSoon ? STITCH.surfaceLow : tool.hue,
+                shadowColor: isComingSoon ? 'transparent' : tool.hue,
               },
             ]}
           >
@@ -118,7 +153,18 @@ function ToolHubCardInner({ tool, index }: ToolHubCardProps): React.ReactElement
             />
           </View>
         </View>
-      </Pressable>
+
+        {/* Bottom accent band — colored hairline that lifts the tile */}
+        {!isComingSoon ? (
+          <LinearGradient
+            colors={[tool.hue + '00', tool.hue + 'CC', tool.hue + '00']}
+            start={{ x: 0, y: 0.5 }}
+            end={{ x: 1, y: 0.5 }}
+            style={styles.bottomAccent}
+            pointerEvents="none"
+          />
+        ) : null}
+      </AnimatedPressable>
     </Animated.View>
   );
 }
@@ -136,14 +182,15 @@ const styles = StyleSheet.create({
     backgroundColor: STITCH.surfaceLowest,
     borderRadius: 18,
     padding: 12,
+    paddingBottom: 14,
     borderWidth: 1,
     borderColor: STITCH.surfaceHighest,
     overflow: 'hidden',
     minHeight: 158,
     shadowColor: '#0f172a',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.07,
+    shadowRadius: 8,
     elevation: 2,
   },
   cardDisabled: {
@@ -151,11 +198,11 @@ const styles = StyleSheet.create({
   },
   halo: {
     position: 'absolute',
-    top: -22,
-    left: -22,
-    width: 90,
-    height: 90,
-    borderRadius: 90,
+    top: -28,
+    left: -28,
+    width: 110,
+    height: 110,
+    borderRadius: 110,
   },
   iconTile: {
     width: 42,
@@ -165,6 +212,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 10,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.18,
+    shadowRadius: 5,
+    elevation: 2,
   },
   label: {
     fontSize: 14,
@@ -222,5 +273,18 @@ const styles = StyleSheet.create({
     borderRadius: 999,
     alignItems: 'center',
     justifyContent: 'center',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.35,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  // A 2px colored sweep at the bottom — gives the tile a finished, gilt-edge
+  // feel without competing with the chevron.
+  bottomAccent: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    height: 2,
   },
 });
