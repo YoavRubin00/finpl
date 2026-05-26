@@ -136,11 +136,6 @@ export function NetWorthDashboardScreen(): React.ReactElement {
             <InvestmentNudgeCard idleCash={idleCash} />
           </>
         )}
-
-        <LegalDisclaimer
-          scope="general"
-          extra="המידע שתזינו כאן נשמר רק על המכשיר שלכם ואינו נשלח לשרתים שלנו, אינו מועבר לצדדים שלישיים ואינו משמש לפרסום. תוכלו למחוק את כל הנתונים בכל רגע על ידי מחיקת הנכסים או הסרת האפליקציה. הסכומים מבוססים על מה שתזינו — נכונותם באחריותכם בלבד."
-        />
       </ScrollView>
 
       {!isEmpty ? (
