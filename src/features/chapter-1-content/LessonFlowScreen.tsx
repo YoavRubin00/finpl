@@ -2759,7 +2759,6 @@ export function LessonFlowScreen() {
   const [showCoverCTA, setShowCoverCTA] = useState(false);
   const [coverCTAShownCount, setCoverCTAShownCount] = useState(0);
 
-
   // Persist mid-module progress (debounced) so the user can resume on re-entry
   useEffect(() => {
     if (!mod?.id || !RESTORABLE_PHASES.has(phase)) return;
