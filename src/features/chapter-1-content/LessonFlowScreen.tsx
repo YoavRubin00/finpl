@@ -2529,6 +2529,31 @@ export function LessonFlowScreen() {
     return null;
   }
 
+  /**
+   * Returns the same destination URL that goToNextSequentialModule would have
+   * navigated to if this were a registered user. Used as `returnTo` when the
+   * guest accepts the register CTA, so after registration they continue with
+   * the next lesson in the sequence instead of landing on the learn map.
+   */
+  function getNextRouteAfterRegister(): string {
+    if (id === 'mod-0-3') return '/interstitial/bullshit-ch0';
+    if (id === 'mod-1-9') return '/tower-defense-boss';
+    if (chapterId && currentModIdx >= 0 && currentModIdx + 1 < chapterModules.length) {
+      const next = chapterModules[currentModIdx + 1];
+      if (!next.comingSoon && (isPro || !PRO_LOCKED_SIMS.has(next.id))) {
+        return `/lesson/${next.id}?chapterId=${chapterId}`;
+      }
+    }
+    for (const ch of ALL_CHAPTERS_ORDERED) {
+      const completed = getCompletedModulesSync(chapterStoreKey(ch.id));
+      const nextIdx = ch.modules.findIndex((m) => !m.comingSoon && (isPro || !PRO_LOCKED_SIMS.has(m.id)) && !completed.includes(m.id));
+      if (nextIdx >= 0) {
+        return `/lesson/${ch.modules[nextIdx].id}?chapterId=${ch.id}`;
+      }
+    }
+    return '/(tabs)';
+  }
+
   /** Navigate past mod-0-1 to the next incomplete module (called from register nudge buttons) */
   function navigateToNextModuleNormally() {
     // Force-complete mod-0-1 before navigating so we never loop back to it.
@@ -4812,7 +4837,11 @@ export function LessonFlowScreen() {
                   tapHaptic();
                   try { captureEvent('register_cta_accepted', { module_id: id, source: 'lesson' }); } catch { /* non-fatal */ }
                   setShowRegisterNudge(false);
-                  router.replace(`/(auth)/register?returnTo=${encodeURIComponent("/(tabs)")}` as never);
+                  // After registration, return the user to the next module in
+                  // sequence — NOT to /(tabs). Mirrors goToNextSequentialModule
+                  // for the post-mod-0-3/4/5 cases.
+                  const returnTo = getNextRouteAfterRegister();
+                  router.replace(`/(auth)/register?returnTo=${encodeURIComponent(returnTo)}` as never);
                 }}
                 style={{ backgroundColor: "#0ea5e9", borderRadius: 16, paddingVertical: 16, width: "100%", alignItems: "center", borderBottomWidth: 4, borderBottomColor: "#0284c7", shadowColor: "#0ea5e9", shadowOpacity: 0.3, shadowRadius: 8, shadowOffset: { width: 0, height: 3 }, elevation: 6 }}
                 accessibilityRole="button"
