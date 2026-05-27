@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { View, Text, Pressable, Platform } from 'react-native';
+import { View, Text, Pressable } from 'react-native';
 import { VideoView, useVideoPlayer } from 'expo-video';
 import { SkipForward } from 'lucide-react-native';
 import { tapHaptic } from '../../../utils/haptics';
@@ -13,12 +13,12 @@ import { tapHaptic } from '../../../utils/haptics';
  * `onDone` runs automatically when playback finishes naturally.
  */
 
-// Use the local bundled asset on native (fastest, no network).
-// On web we point at the public Vercel Blob copy — `require('.mp4')` on
-// web sometimes returns an object with a `default` field; the public URL
-// is the simplest path that works on every platform.
-const NATIVE_SOURCE = require('../../../../assets/videos/captain-shark-intro.mp4');
-const WEB_SOURCE = 'https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/videos/captain-shark-intro.mp4';
+// Served from Vercel Blob on every platform. `assets/videos/` is intentionally
+// excluded from the native bundle (.easignore + .gitattributes export-ignore) —
+// the app-wide convention is "heavy media streams from the CDN". expo-video
+// plays the ~340KB clip directly; the first frame paints fast and the 8s
+// safety-net below covers any network hiccup.
+const VIDEO_SOURCE = 'https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/videos/captain-shark-intro.mp4';
 
 interface Props {
   onDone: () => void;
@@ -37,7 +37,7 @@ export function IntroVideo({ onDone }: Props): React.ReactElement {
   };
 
   const player = useVideoPlayer(
-    Platform.OS === 'web' ? WEB_SOURCE : NATIVE_SOURCE,
+    VIDEO_SOURCE,
     (p) => {
       p.loop = false;
       p.muted = false;
