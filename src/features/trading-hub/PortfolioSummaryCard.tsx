@@ -46,9 +46,12 @@ export function PortfolioSummaryCard({
                 <LottieIcon source={LOTTIE_CHART} size={28} />
                 <Text style={[RTL, styles.headerLabel]}>שווי תיק</Text>
             </View>
-            <Text style={styles.totalValue}>
-                {totalCurrentValue.toLocaleString('he-IL')} 
-            </Text>
+            <View style={styles.totalValueRow}>
+                <GoldCoinIcon size={28} />
+                <Text style={styles.totalValue}>
+                    {totalCurrentValue.toLocaleString('he-IL')}
+                </Text>
+            </View>
 
             {/* Stats 2x2 grid */}
             <View style={styles.statsGrid}>
@@ -116,6 +119,12 @@ const styles = StyleSheet.create({
         fontSize: 14,
         fontWeight: '700',
         color: CALM.textSecondary,
+    },
+    totalValueRow: {
+        flexDirection: 'row-reverse',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: 8,
     },
     totalValue: {
         fontSize: 32,

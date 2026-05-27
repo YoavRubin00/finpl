@@ -210,7 +210,13 @@ export async function GET(request: Request): Promise<Response> {
     }
 
     const currentPrice: number = result.meta.regularMarketPrice;
-    const rawPrevClose = result.meta.previousClose ?? result.meta.chartPreviousClose ?? null;
+    // Use ONLY Yahoo's official prior-session close. Do NOT fall back to
+    // `chartPreviousClose`: for the 1D request (range 5d) that is the close
+    // *before the 5-day window* — i.e. ~a week ago — which would turn a
+    // multi-day drift into a fake "daily change" of several percent. When the
+    // official value is missing we recover the true prior-session close from
+    // daily candles below instead.
+    const rawPrevClose = result.meta.previousClose ?? null;
     let previousClose: number | null =
       typeof rawPrevClose === 'number' && isFinite(rawPrevClose) ? rawPrevClose : null;
 

@@ -33,7 +33,8 @@ import Animated, {
 import { useSoundEffect } from "../../hooks/useSoundEffect";
 import { tapHaptic } from "../../utils/haptics";
 import { useEconomyUIStore } from "../economy/useEconomyUIStore";
-import { useRecordDailyActivity } from "../economy/useStreak";
+import { useRecordDailyActivity, useStreak } from "../economy/useStreak";
+import { StreakCelebrationScreen } from "../streak/StreakCelebrationScreen";
 import { useAuthStore } from "../auth/useAuthStore";
 import { signInWithProfile } from "../../lib/auth/lifecycle";
 import { getApiBase } from "../../db/apiBase";
@@ -2188,7 +2189,7 @@ function BuildingProfileScreen({ onDone }: { onDone: () => void }) {
 type FlowStep =
   | "intro" | "dream" | "first-sim" | "goal" | "knowledge" | "age" | "learning-time"
   | "learning-style" | "deadline" | "daily-goal" | "companion" | "finance-experts"
-  | "avatar" | "building-profile" | "profile-summary" | "celebration";
+  | "avatar" | "building-profile" | "profile-summary" | "celebration" | "streak";
 
 interface Collected {
   financialDream: FinancialDream | null;
@@ -2215,6 +2216,7 @@ export function ProfilingFlow({ mode = "onboarding", onRedoComplete }: Profiling
   const addXP = useEconomyUIStore((s) => s.addXP);
   const addCoins = useEconomyUIStore((s) => s.addCoins);
   const recordDailyActivity = useRecordDailyActivity();
+  const { data: streakData } = useStreak();
   const completeOnboarding = useAuthStore((s) => s.completeOnboarding);
   const enterGuestMode = useAuthStore((s) => s.enterGuestMode);
   const updateProfile = useAuthStore((s) => s.updateProfile);
@@ -2365,6 +2367,19 @@ export function ProfilingFlow({ mode = "onboarding", onRedoComplete }: Profiling
     // so day 2+ continues the streak — recordDailyActivity is idempotent per day,
     // so multiple calls in the same day are safe.
     try { recordDailyActivity.mutate(); } catch (e) { if (__DEV__) console.warn('[onboarding] streak start failed:', e); }
+    // Show the day-1 streak celebration as a dedicated step BEFORE finalizing
+    // onboarding. We intentionally defer enterGuestMode + completeOnboarding to
+    // enterFirstModule() (fired on streak dismiss): completeOnboarding flips
+    // hasCompletedOnboarding=true, which would trigger _layout's auth redirect
+    // to mod-0-1 and skip right past this celebration. Staying unauthenticated
+    // on (auth)/onboarding keeps the redirect dormant while the streak shows.
+    setStep("streak");
+  }
+
+  // Finalize onboarding and enter the first module. Called when the day-1 streak
+  // celebration is dismissed (tap or auto-dismiss), so the sequence is:
+  // profile-ready celebration → streak celebration → mod-0-1.
+  function enterFirstModule() {
     // CRITICAL: ensure user is at least a guest before marking onboarding done.
     // Otherwise `_layout`'s auth redirect bounces them back to /(auth)/onboarding
     // (because isAuthenticated=false → first branch always wins).
@@ -2398,6 +2413,20 @@ export function ProfilingFlow({ mode = "onboarding", onRedoComplete }: Profiling
   }
 
   if (step === "celebration") return <CelebrationScreen onDone={handleDone} />;
+  // Day-1 streak celebration, shown between the profile-ready celebration and
+  // the first module. Dismiss (tap or 5s auto) finalizes onboarding + navigates.
+  // The dark wrapper matches the celebration gradient's darkest stop so its
+  // overlay fade-in reads as dark→dark (seamless) instead of flashing white.
+  if (step === "streak") {
+    return (
+      <View style={{ flex: 1, backgroundColor: "#072a42" }}>
+        <StreakCelebrationScreen
+          streak={Math.max(1, streakData?.currentStreak ?? 0)}
+          onDismiss={enterFirstModule}
+        />
+      </View>
+    );
+  }
   if (step === "profile-summary") return <ProfileSummaryScreen collected={collected} onDone={() => {
     // Fire the funnel event manually since this transition does NOT use `slide()`.
     // Without this PostHog showed an 86% drop here — most of which was missing

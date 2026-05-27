@@ -21,6 +21,14 @@ export function NotificationPermissionBanner() {
   const hasCompletedOnboarding = useAuthStore((s) => s.hasCompletedOnboarding);
   const hasSeenWalkthrough = useTutorialStore((s) => s.hasSeenAppWalkthrough);
 
+  // Reconcile the cached permission flag with the real OS state on mount. A
+  // stale permissionGranted=true (granted in a past test/session, or never
+  // synced after an OS-level revoke) would otherwise suppress this banner
+  // forever — the most common reason the post-walkthrough prompt "never shows".
+  useEffect(() => {
+    void useNotificationStore.getState().syncPermissionStatus();
+  }, []);
+
   const eligible =
     !permissionGranted &&
     !bannerDismissed &&
