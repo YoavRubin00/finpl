@@ -89,9 +89,12 @@ export function BarterPuzzleScreen({
     errorHaptic();
     setSpeech(TARGET_MERCHANT.rejectLine);
     setSpeechKey((k) => k + 1);
+    // Skip the chicken→François barter swap (Yoav 2026-05-27 — the rejection
+    // scene is enough to demonstrate the friction of barter). Go straight to
+    // the coin reveal so users don't have to drag through an extra step.
     setTimeout(() => {
-      setShowHint(true);
-      setPhase("swap1");
+      setSpeech("");
+      setPhase("coinDrop");
     }, 1200);
   }, []);
 

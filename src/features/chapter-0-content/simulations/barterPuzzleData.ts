@@ -68,7 +68,7 @@ export const STARTING_ITEM: BarterItem = { emoji: '🐔', label: 'תרנגולת
 
 export const COIN_ITEM: BarterItem = { emoji: '🪙', label: 'מטבע' };
 
-export const FINN_COMMENT = 'וואו, 2 החלפות בשביל דבר אחד פשוט? 😮‍💨';
+export const FINN_COMMENT = 'נראה לי שיש פתרון יותר חכם 😮‍💨';
 
 export const INSIGHT_TEXT =
   'כסף = הסכמה אוניברסלית.\nבמקום 2 החלפות, פעולה אחת.\nזו ההמצאה שפתרה הכל.';
