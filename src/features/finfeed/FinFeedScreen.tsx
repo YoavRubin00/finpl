@@ -213,6 +213,11 @@ function getDailyQuote(): { text: string; author: string; icon: string } {
 
 /** Module-level ref so WelcomeCard can scroll the feed list */
 let _feedListScrollToIndex: ((index: number) => void) | null = null;
+/** Live scroll-by-id function, registered while the feed is mounted. Used so
+ * external callers (DailyQuestsSheet, FeedNudgeBanner) can scroll immediately
+ * when the feed is already on screen, instead of relying on focus/mount effects
+ * that don't re-fire on modal close. */
+let _scrollToFeedItemById: ((id: string) => boolean) | null = null;
 
 /** Pending scroll-to index, set externally, consumed on next focus */
 export let _pendingFeedScrollIndex: number | null = null;
@@ -223,6 +228,10 @@ export function setPendingFeedScroll(index: number) {
 }
 
 export function setPendingFeedScrollById(id: string) {
+  // Try to scroll immediately if the feed is mounted (e.g. caller opened a
+  // modal from the learn tab — no focus event will fire on modal close).
+  if (_scrollToFeedItemById && _scrollToFeedItemById(id)) return;
+  // Otherwise arm for the next focus / feedItems-ready effect.
   _pendingFeedScrollTargetId = id;
 }
 
@@ -727,6 +736,13 @@ export function FinFeedScreen() {
         }, 300);
       }
 
+      // Consume pending scroll-by-id (e.g. tapped a daily quest from another tab)
+      if (_pendingFeedScrollTargetId !== null) {
+        const targetId = _pendingFeedScrollTargetId;
+        _pendingFeedScrollTargetId = null;
+        _scrollToFeedItemById?.(targetId);
+      }
+
       // Daily streak nudge moved to StreakCelebrationProvider — it now fires
       // 5s after app launch from anywhere, gated on "lesson not yet done today",
       // so we don't need a tab-specific trigger here. Keeping
@@ -1030,6 +1046,22 @@ export function FinFeedScreen() {
         }, 400); // Wait for the transition into the screen
       }
     }
+  }, [feedItems, listHeight]);
+
+  // Register the live scroll-by-id callback used by setPendingFeedScrollById.
+  // Closes over feedItems via the dependency array so it always sees the
+  // current feed when called.
+  useEffect(() => {
+    _scrollToFeedItemById = (id: string) => {
+      if (feedItems.length === 0 || listHeight === 0) return false;
+      const idx = feedItems.findIndex((i) => i.id === id);
+      if (idx < 0) return false;
+      setTimeout(() => {
+        flatListRef.current?.scrollToIndex({ index: idx, animated: true });
+      }, 400);
+      return true;
+    };
+    return () => { _scrollToFeedItemById = null; };
   }, [feedItems, listHeight]);
 
   // BENBEN half-watch shark nudge, if user stays on a BENBEN video for 30s

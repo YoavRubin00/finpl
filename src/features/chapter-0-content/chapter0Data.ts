@@ -172,6 +172,7 @@ export const chapter0Data: Chapter = {
         title: 'מתאימים מושגים',
         description: 'משחקון התאמת מילים (בנק, פנסיה, עו"ש) לתיאורים מחיי היום-יום כדי לעשות סדר בבלאגן.',
       },
+      interModuleGame: 'dilemma',
     },
     {
       id: 'mod-0-3',

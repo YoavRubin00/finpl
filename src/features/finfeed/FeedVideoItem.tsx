@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, Dimensions, Pressable, ActivityIndicator } from
 import { LinearGradient } from "expo-linear-gradient";
 import { Play, Volume2, VolumeX } from "lucide-react-native";
 import { useRouter } from "expo-router";
+import { useIsFocused } from "@react-navigation/native";
 import { useVideoPlayer, VideoView } from "expo-video";
 import type { FeedVideo } from "./types";
 
@@ -20,6 +21,7 @@ interface FeedVideoItemProps {
 
 export const FeedVideoItem = React.memo(function FeedVideoItem({ item, isActive }: FeedVideoItemProps) {
   const router = useRouter();
+  const isScreenFocused = useIsFocused();
   const [isLoading, setIsLoading] = useState(true);
   const [hasError, setHasError] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
@@ -44,19 +46,21 @@ export const FeedVideoItem = React.memo(function FeedVideoItem({ item, isActive 
     };
   });
 
-  // Play/pause based on feed visibility.
+  // Play/pause based on feed visibility AND screen focus. Without the focus
+  // check the player keeps playing audio after the user tabs away (feed screen
+  // stays mounted, isActive stays true) — sound bleeds into chat / other tabs.
   // Re-applies mute/volume on every activation — works around an Android
   // expo-video quirk where .muted set before play() doesn't always propagate.
   useEffect(() => {
     if (!videoUri) return;
-    if (isActive) {
+    if (isActive && isScreenFocused) {
       player.muted = isMuted;
       player.volume = isMuted ? 0 : 1.0;
       player.play();
     } else {
       player.pause();
     }
-  }, [isActive, player, videoUri, isMuted]);
+  }, [isActive, isScreenFocused, player, videoUri, isMuted]);
 
   // Mute control — set both .muted and .volume for Android reliability
   useEffect(() => {

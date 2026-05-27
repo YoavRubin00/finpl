@@ -259,16 +259,17 @@ export function AppWalkthroughOverlay() {
         try { useNotificationStore.getState().resetBannerDismissed(); } catch { /* non-fatal */ }
         try { useBannerCooldownStore.getState().reset(); } catch { /* non-fatal */ }
         setActiveScreen(null);
-        setTimeout(() => {
-          try {
-            // Walkthrough completes AFTER mod-0-1 (2026-05-27 redesign), so
-            // sending the user back to mod-0-1 here would force them to repeat
-            // a lesson they just finished. Drop them on the learn map instead.
-            router.replace("/(tabs)" as never);
-          } catch {
-            // No-op — already on a safe route.
-          }
-        }, 200);
+        // Navigate immediately — the previous 200ms timeout left the bridge
+        // screen visible while the overlay state cleaned up, producing a
+        // visible "flicker" before the learn map transition.
+        try {
+          // Walkthrough completes AFTER mod-0-1 (2026-05-27 redesign), so
+          // sending the user back to mod-0-1 here would force them to repeat
+          // a lesson they just finished. Drop them on the learn map instead.
+          router.replace("/(tabs)" as never);
+        } catch {
+          // No-op — already on a safe route.
+        }
         return;
       }
 

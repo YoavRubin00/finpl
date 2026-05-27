@@ -1,5 +1,5 @@
-import { useEffect, useRef, useState, useCallback } from "react";
-import { View, Text, Pressable, StyleSheet, Modal } from "react-native";
+import { useEffect, useRef, useState, useCallback, useMemo } from "react";
+import { View, Text, Pressable, StyleSheet, Modal, useWindowDimensions } from "react-native";
 import { useRouter } from "expo-router";
 import { Crown, Plus, Settings } from "lucide-react-native";
 import Animated, {
@@ -80,9 +80,10 @@ function useAnimatedCounter(value: number) {
 interface AnimatedNumberProps {
   value: number;
   color?: string;
+  fontSize?: number;
 }
 
-function AnimatedNumber({ value, color }: AnimatedNumberProps) {
+function AnimatedNumber({ value, color, fontSize }: AnimatedNumberProps) {
   const animatedVal = useAnimatedCounter(value);
   const [display, setDisplay] = useState(value.toLocaleString());
 
@@ -97,7 +98,7 @@ function AnimatedNumber({ value, color }: AnimatedNumberProps) {
   );
 
   return (
-    <Text style={[s.pillText, { color: color ?? "#1e293b" }]}>
+    <Text style={[s.pillText, { color: color ?? "#1e293b" }, fontSize !== undefined && { fontSize }]}>
       {display}
     </Text>
   );
@@ -117,9 +118,12 @@ interface ResourcePillProps {
   onPress?: () => void;
   trackedValue?: number;
   accessibilityLabel?: string;
+  /** Override sizes for narrow screens. */
+  pillStyle?: { paddingHorizontal: number; paddingVertical: number; gap: number; borderRadius: number };
+  iconFrameStyle?: { width: number; height: number; borderRadius: number };
 }
 
-function ResourcePill({ icon, children, glowColor, showPlus, onPress, trackedValue, accessibilityLabel }: ResourcePillProps) {
+function ResourcePill({ icon, children, glowColor, showPlus, onPress, trackedValue, accessibilityLabel, pillStyle, iconFrameStyle }: ResourcePillProps) {
   const scale = useSharedValue(1);
   const isFirstRender = useRef(true);
 
@@ -158,10 +162,11 @@ function ResourcePill({ icon, children, glowColor, showPlus, onPress, trackedVal
       accessibilityRole="button"
       accessibilityLabel={accessibilityLabel}
     >
-      <Animated.View style={[s.resourcePill, animStyle]}>
+      <Animated.View style={[s.resourcePill, pillStyle, animStyle]}>
         <View
           style={[
             s.iconFrame,
+            iconFrameStyle,
             glowColor
               ? { shadowColor: glowColor, shadowOpacity: 0.7, shadowRadius: 6, shadowOffset: ZERO_SHADOW_OFFSET, elevation: 5 }
               : undefined,
@@ -200,6 +205,51 @@ export function GlobalWealthHeader({ compact = false }: GlobalWealthHeaderProps)
   const isPro = useIsPro();
   const avatarId = useAuthStore((st) => st.profile?.avatarId ?? null);
   const appActive = useAppActive();
+  const displayName = useAuthStore((st) => st.displayName);
+
+  // ---------------------------------------------------------------------------
+  // Responsive density. The header packs 6 elements (settings + 3 pills + level
+  // ring + profile) into a single row. On narrow Android screens (~360-380px)
+  // the default sizes overflow off-screen. Scale all paddings/icons/fonts down
+  // proportionally to the screen width, anchored at 410 (Pixel/Galaxy class).
+  // ---------------------------------------------------------------------------
+  const { width: screenWidth } = useWindowDimensions();
+  const d = useMemo(() => {
+    const scale = Math.max(0.72, Math.min(1, screenWidth / 410));
+    const ringSize = Math.round(46 * scale);
+    const ringStroke = 3.5;
+    const ringRadius = (ringSize - ringStroke) / 2;
+    return {
+      scale,
+      pillPadH: Math.max(5, Math.round(10 * scale)),
+      pillPadV: Math.max(3, Math.round(6 * scale)),
+      pillGap: Math.max(2, Math.round(4 * scale)),
+      pillRadius: Math.round(22 * scale),
+      pillFont: Math.max(11, Math.round(14 * scale)),
+      iconFrame: Math.round(22 * scale),
+      coinIconSize: Math.max(14, Math.round(18 * scale)),
+      lottieSize: Math.max(20, Math.round(28 * scale)),
+      ringSize,
+      ringStroke,
+      ringRadius,
+      ringCircum: 2 * Math.PI * ringRadius,
+      ringInner: ringSize - ringStroke * 2 - 4,
+      avatarSize: Math.max(26, Math.round(36 * scale)),
+      avatarBorderR: Math.max(13, Math.round(18 * scale)),
+      nameFont: Math.max(10, Math.round(12 * scale)),
+      nameMaxW: Math.max(44, Math.round(70 * scale)),
+      profileGap: Math.max(4, Math.round(8 * scale)),
+      profilePadR: Math.max(3, Math.round(6 * scale)),
+      profilePadL: Math.max(5, Math.round(12 * scale)),
+      profilePadV: Math.max(3, Math.round(5 * scale)),
+      profileRadius: Math.round(24 * scale),
+      shortcutSize: Math.max(28, Math.round(36 * scale)),
+      shortcutRadius: Math.max(14, Math.round(18 * scale)),
+      shortcutIcon: Math.max(14, Math.round(18 * scale)),
+      rowGap: Math.max(3, Math.round(6 * scale)),
+      containerPadH: Math.max(4, Math.round(6 * scale)),
+    };
+  }, [screenWidth]);
 
   // ---- Fun store: mail icon ----
   const hasUnreadMail = useFunStore((st) => st.hasUnreadMail);
@@ -239,7 +289,7 @@ export function GlobalWealthHeader({ compact = false }: GlobalWealthHeaderProps)
 
   // ---- Level ring animated props ----
   const ringAnimatedProps = useAnimatedProps(() => ({
-    strokeDashoffset: RING_CIRCUMFERENCE * (1 - progressAnim.value),
+    strokeDashoffset: d.ringCircum * (1 - progressAnim.value),
   }));
 
   // ---- Level-up flash + confetti ----
@@ -349,8 +399,21 @@ export function GlobalWealthHeader({ compact = false }: GlobalWealthHeaderProps)
     transform: [{ scale: mailPulse.value }],
   }));
 
+  const pillStyle = useMemo(() => ({
+    paddingHorizontal: d.pillPadH,
+    paddingVertical: d.pillPadV,
+    gap: d.pillGap,
+    borderRadius: d.pillRadius,
+  }), [d]);
+
+  const iconFrameStyle = useMemo(() => ({
+    width: d.iconFrame,
+    height: d.iconFrame,
+    borderRadius: d.iconFrame / 2,
+  }), [d]);
+
   return (
-    <View style={s.container}>
+    <View style={[s.container, { paddingHorizontal: d.containerPadH }]}>
       {/* Level-up flash overlay */}
       <Animated.View
         pointerEvents="none"
@@ -377,17 +440,17 @@ export function GlobalWealthHeader({ compact = false }: GlobalWealthHeaderProps)
       <SparkleOverlay color="#67e8f9" density="low" active={appActive} />
 
       {/* Token row, Single compact header */}
-      <View style={[s.tokenRow, compact && { justifyContent: "center" }]}>
+      <View style={[s.tokenRow, { gap: d.rowGap }, compact && { justifyContent: "center" }]}>
 
         {!compact && (
           <View style={[s.shortcutIcons, walkthroughActive && { opacity: 0.3 }]}>
             <Pressable
               onPress={walkthroughActive ? undefined : () => { tapHaptic(); router.push("/(tabs)/more" as never); }}
-              style={s.shortcutBtnCompact}
+              style={[s.shortcutBtnCompact, { width: d.shortcutSize, height: d.shortcutSize, borderRadius: d.shortcutRadius }]}
               accessibilityRole="button"
               accessibilityLabel="הגדרות"
             >
-              <Settings size={18} color="#64748b" />
+              <Settings size={d.shortcutIcon} color="#64748b" />
             </Pressable>
             {/* Mail moved to feed WelcomeCard */}
           </View>
@@ -396,39 +459,45 @@ export function GlobalWealthHeader({ compact = false }: GlobalWealthHeaderProps)
         {/* Coins pill */}
         <View style={walkthroughActive ? { opacity: 0.3 } : undefined} pointerEvents={walkthroughActive ? "none" : "auto"}>
         <ResourcePill
-          icon={<GoldCoinIcon size={18} />}
+          icon={<GoldCoinIcon size={d.coinIconSize} />}
           glowColor={CLASH.goldLight}
           onPress={walkthroughActive ? undefined : navigateToShop}
           trackedValue={coins}
           accessibilityLabel={`${coins} מטבעות`}
+          pillStyle={pillStyle}
+          iconFrameStyle={iconFrameStyle}
         >
-          <AnimatedNumber value={coins} color={CLASH.goldLight} />
+          <AnimatedNumber value={coins} color={CLASH.goldLight} fontSize={d.pillFont} />
         </ResourcePill>
         </View>
 
         {/* Gems pill */}
         <View style={walkthroughActive ? { opacity: 0.3 } : undefined} pointerEvents={walkthroughActive ? "none" : "auto"}>
         <ResourcePill
-          icon={<LottieIcon source={require("../../../assets/lottie/Diamond.json") as number} size={28} autoPlay loop active={appActive} />}
+          icon={<LottieIcon source={require("../../../assets/lottie/Diamond.json") as number} size={d.lottieSize} autoPlay loop active={appActive} />}
           glowColor="#67e8f9"
           onPress={walkthroughActive ? undefined : navigateToShop}
           trackedValue={gems}
           accessibilityLabel={`${gems} יהלומים`}
+          pillStyle={pillStyle}
+          iconFrameStyle={iconFrameStyle}
         >
-          <AnimatedNumber value={gems} color="#67e8f9" />
+          <AnimatedNumber value={gems} color="#67e8f9" fontSize={d.pillFont} />
         </ResourcePill>
         </View>
 
         {/* Streak pill */}
         <View style={walkthroughActive ? { opacity: 0.3 } : undefined} pointerEvents={walkthroughActive ? "none" : "auto"}>
         <ResourcePill
-          icon={<LottieIcon source={require("../../../assets/lottie/wired-flat-2804-fire-flame-hover-pinch.json") as number} size={28} autoPlay loop active={appActive} />}
+          icon={<LottieIcon source={require("../../../assets/lottie/wired-flat-2804-fire-flame-hover-pinch.json") as number} size={d.lottieSize} autoPlay loop active={appActive} />}
           glowColor="#fb923c"
           trackedValue={streak}
           accessibilityLabel={`רצף ${streak} ימים, פתח לוח שנה`}
           onPress={() => setShowStreakModal(true)}
+          pillStyle={pillStyle}
+          iconFrameStyle={iconFrameStyle}
         >
-          <AnimatedNumber value={streak} color="#f97316" />
+          <AnimatedNumber value={streak} color="#f97316" fontSize={d.pillFont} />
         </ResourcePill>
         </View>
 
@@ -438,40 +507,40 @@ export function GlobalWealthHeader({ compact = false }: GlobalWealthHeaderProps)
             tapHaptic();
             setShowLevelPopup(true);
           }}
-          style={s.levelRingWrapper}
+          style={[s.levelRingWrapper, { width: d.ringSize, height: d.ringSize }]}
           accessibilityRole="button"
           accessibilityLabel={`רמה ${level}`}
           accessibilityHint="הצג התקדמות רמה"
         >
-          <Svg width={RING_SIZE} height={RING_SIZE} style={s.ringSvg}>
+          <Svg width={d.ringSize} height={d.ringSize} style={s.ringSvg}>
             {/* Background track */}
             <Circle
-              cx={RING_SIZE / 2}
-              cy={RING_SIZE / 2}
-              r={RING_RADIUS}
+              cx={d.ringSize / 2}
+              cy={d.ringSize / 2}
+              r={d.ringRadius}
               stroke="rgba(14,165,233,0.15)"
-              strokeWidth={RING_STROKE}
+              strokeWidth={d.ringStroke}
               fill="none"
             />
             {/* Animated progress arc */}
             <AnimatedCircle
-              cx={RING_SIZE / 2}
-              cy={RING_SIZE / 2}
-              r={RING_RADIUS}
+              cx={d.ringSize / 2}
+              cy={d.ringSize / 2}
+              r={d.ringRadius}
               stroke="#38bdf8"
-              strokeWidth={RING_STROKE}
+              strokeWidth={d.ringStroke}
               fill="none"
               strokeLinecap="round"
-              strokeDasharray={RING_CIRCUMFERENCE}
+              strokeDasharray={d.ringCircum}
               animatedProps={ringAnimatedProps}
               rotation="-90"
-              originX={RING_SIZE / 2}
-              originY={RING_SIZE / 2}
+              originX={d.ringSize / 2}
+              originY={d.ringSize / 2}
             />
           </Svg>
-          <View style={s.levelBadgeInner}>
-            <Crown size={11} color="#38bdf8" fill="#38bdf8" />
-            <Text style={s.levelText}>{layer}</Text>
+          <View style={[s.levelBadgeInner, { width: d.ringInner, height: d.ringInner, borderRadius: d.ringInner / 2 }]}>
+            <Crown size={Math.max(9, Math.round(11 * d.scale))} color="#38bdf8" fill="#38bdf8" />
+            <Text style={[s.levelText, { fontSize: Math.max(9, Math.round(11 * d.scale)) }]}>{layer}</Text>
           </View>
         </Pressable>
 
@@ -481,24 +550,36 @@ export function GlobalWealthHeader({ compact = false }: GlobalWealthHeaderProps)
             accessibilityRole="button"
             accessibilityLabel="פרופיל"
             accessibilityHint="עבור לעמוד הפרופיל"
+            style={{ flexShrink: 1, minWidth: 0 }}
           >
             <Animated.View style={[
                 s.profileBannerCompact,
+                {
+                  paddingRight: d.profilePadR,
+                  paddingLeft: d.profilePadL,
+                  paddingVertical: d.profilePadV,
+                  gap: d.profileGap,
+                  borderRadius: d.profileRadius,
+                },
                 profileIsGlowTarget ? walkthroughProfileStyle : profileGlowStyle,
                 isPro && { elevation: 3 },
               ]}>
-              <View style={[s.profileAvatarCompact, isPro && { borderColor: "#facc15" }]}>
-                <AvatarImage avatarId={avatarId} size={32} emojiStyle={s.profileAvatarEmojiCompact} />
+              <View style={[
+                s.profileAvatarCompact,
+                { width: d.avatarSize, height: d.avatarSize, borderRadius: d.avatarBorderR },
+                isPro && { borderColor: "#facc15" },
+              ]}>
+                <AvatarImage avatarId={avatarId} size={Math.round(d.avatarSize * 0.89)} emojiStyle={s.profileAvatarEmojiCompact} />
                 {isPro && (
                   <View style={s.profileCrownCompact}>
                     <Crown size={8} color="#facc15" fill="#f59e0b" />
                   </View>
                 )}
                 {/* Floating confetti particles */}
-                <View style={{ position: "absolute", top: -14, left: -14, right: -14, bottom: -14, pointerEvents: "none" }}>
+                <View style={{ position: "absolute", top: -22, left: -22, right: -22, bottom: -22, pointerEvents: "none" }}>
                   <LottieIcon
                     source={require("../../../assets/lottie/Confetti Effects Lottie Animation.json") as number}
-                    size={56}
+                    size={Math.max(48, Math.round(72 * d.scale))}
                     autoPlay
                     loop
                     speed={0.3}
@@ -506,8 +587,12 @@ export function GlobalWealthHeader({ compact = false }: GlobalWealthHeaderProps)
                   />
                 </View>
               </View>
-              <Text style={[s.profileNameCompact, isPro && { color: "#d97706" }]} numberOfLines={1}>
-                {(useAuthStore.getState().displayName ?? "שחקן").split(" ")[0]}
+              <Text
+                style={[s.profileNameCompact, { fontSize: d.nameFont, maxWidth: d.nameMaxW }, isPro && { color: "#d97706" }]}
+                numberOfLines={1}
+                ellipsizeMode="tail"
+              >
+                {(displayName ?? "שחקן").split(" ")[0]}
               </Text>
             </Animated.View>
           </Pressable>

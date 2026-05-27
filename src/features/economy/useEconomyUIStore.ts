@@ -152,9 +152,36 @@ function fireEconomyDelta(delta: {
   gemsDelta?: number;
   virtualBalanceSet?: number;
 }) {
+  // Optimistic cache update so useEconomy() consumers (the wealth header, etc.)
+  // reflect the delta immediately. Without this the UI waits for the server
+  // roundtrip + invalidate — which silently never resolves when /api/sync/economy
+  // isn't deployed (DEV without server, missing route). XP earned in modules
+  // was effectively invisible until next cold start.
+  queryClient.setQueryData<Economy | null>(economyQueryKey, (old) => {
+    if (!old) {
+      return {
+        xp: delta.xpDelta ?? 0,
+        coins: delta.coinsDelta ?? 0,
+        gems: delta.gemsDelta ?? 0,
+        level: null,
+        virtualBalance: typeof delta.virtualBalanceSet === 'number'
+          ? delta.virtualBalanceSet.toString()
+          : '0',
+      };
+    }
+    return {
+      ...old,
+      xp: (old.xp ?? 0) + (delta.xpDelta ?? 0),
+      coins: (old.coins ?? 0) + (delta.coinsDelta ?? 0),
+      gems: (old.gems ?? 0) + (delta.gemsDelta ?? 0),
+      virtualBalance: typeof delta.virtualBalanceSet === 'number'
+        ? delta.virtualBalanceSet.toString()
+        : old.virtualBalance,
+    };
+  });
   applyEconomyDelta(delta)
     .then(() => queryClient.invalidateQueries({ queryKey: economyQueryKey }))
-    .catch(() => { /* swallow — server will sync next pull */ });
+    .catch(() => { /* swallow — optimistic state stays until server is reachable */ });
 }
 
 // ---------------------------------------------------------------------------

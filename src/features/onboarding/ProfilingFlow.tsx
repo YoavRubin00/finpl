@@ -631,6 +631,10 @@ function CelebrationScreen({ onDone }: { onDone: () => void }) {
     setBursting(true);
     try { tapHaptic(); } catch { /* non-fatal */ }
     try { playCelebSound('modal_open_4'); } catch { /* non-fatal */ }
+    // Advance after a short burst window — long enough to see confetti, short
+    // enough that the user doesn't feel the button "stuck". Previously we
+    // waited for ConfettiExplosion's full 1200ms onComplete which felt slow.
+    setTimeout(() => onDone(), 400);
   }
 
   const [showCodeField, setShowCodeField] = useState(false);
@@ -718,10 +722,12 @@ function CelebrationScreen({ onDone }: { onDone: () => void }) {
           </Pressable>
         </Animated.View>
 
-        {/* Coin / confetti burst on CTA tap, then onDone */}
+        {/* Coin / confetti burst on CTA tap. onDone is scheduled from
+            handleStart with a short delay so navigation isn't blocked on the
+            full confetti animation. */}
         {bursting && (
           <View pointerEvents="none" style={StyleSheet.absoluteFillObject}>
-            <ConfettiExplosion onComplete={onDone} />
+            <ConfettiExplosion />
           </View>
         )}
 

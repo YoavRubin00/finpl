@@ -99,10 +99,18 @@ export const DilemmaCard = React.memo(function DilemmaCard({ isActive, onContinu
       setShowConfetti(true);
       setShowFlyingCoins(true);
       setTimeout(() => setShowConfetti(false), 2000);
-      setTimeout(() => setShowCelebration(true), 1800);
+      // Inter-module mode: skip the celebration modal — it hijacks the screen
+      // and navigates to /(tabs)/learn, which drops the user out of the lesson
+      // flow instead of advancing to the next module. The inline "המשך" button
+      // (rendered when onContinue is set) is the proper advance mechanism here.
+      if (!onContinue) {
+        setTimeout(() => setShowCelebration(true), 1800);
+      }
     } else {
       errorHaptic();
-      setTimeout(() => setShowCelebration(true), 2500);
+      if (!onContinue) {
+        setTimeout(() => setShowCelebration(true), 2500);
+      }
     }
 
     try {

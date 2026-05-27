@@ -4759,9 +4759,11 @@ export function LessonFlowScreen() {
 
       {/* mod-0-1 continue CTA: single button that drops to learn map. Tapping it
           (or dismissing via Back/backdrop) opts the user into the walkthrough,
-          which then fires on the next frame inside AppWalkthroughOverlay. */}
+          which then fires on the next frame inside AppWalkthroughOverlay.
+          animationType="none" so the walkthrough overlay can take over without
+          waiting for a fade-out transition (~300ms perceived delay). */}
       {showMod01ContinueCTA && (
-        <Modal visible transparent animationType="fade" onRequestClose={() => {
+        <Modal visible transparent animationType="none" onRequestClose={() => {
           try { captureEvent('mod01_continue_cta_tapped', { trigger: 'system_back' }); } catch { /* non-fatal */ }
           useTutorialStore.getState().triggerWalkthrough();
           setShowMod01ContinueCTA(false);
@@ -5235,7 +5237,7 @@ export function LessonFlowScreen() {
         }}
       >
         <SafeAreaView style={{ flex: 1, backgroundColor: "#0f172a" }} accessibilityViewIsModal>
-          <View style={{ flexDirection: "row-reverse", paddingHorizontal: 16, paddingTop: 12, paddingBottom: 8 }}>
+          <View style={{ flexDirection: "row-reverse", paddingHorizontal: 16, paddingTop: Math.max(safeInsets.top + 4, 12), paddingBottom: 8 }}>
             <Pressable
               onPress={() => {
                 Keyboard.dismiss();
