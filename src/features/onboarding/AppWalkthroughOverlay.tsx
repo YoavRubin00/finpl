@@ -251,13 +251,12 @@ export function AppWalkthroughOverlay() {
         setActiveScreen(null);
         setTimeout(() => {
           try {
-            // All users → drop straight into the first lesson.
-            // After finishing mod-0-1, the lesson's "continue" button
-            // will return them to the main learning map.
-            router.replace({ pathname: "/lesson/[id]", params: { id: "mod-0-1", chapterId: "chapter-0" } } as never);
+            // Walkthrough completes AFTER mod-0-1 (2026-05-27 redesign), so
+            // sending the user back to mod-0-1 here would force them to repeat
+            // a lesson they just finished. Drop them on the learn map instead.
+            router.replace("/(tabs)" as never);
           } catch {
-            // Fallback: go to safe home tab
-            try { router.replace("/(tabs)" as never); } catch {}
+            // No-op — already on a safe route.
           }
         }, 200);
         return;
