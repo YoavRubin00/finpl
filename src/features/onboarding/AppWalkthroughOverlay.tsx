@@ -107,7 +107,7 @@ const STEPS: WalkthroughStep[] = [
     emoji: "🌉",
     message: "הידע שלכם שווה כסף אמיתי! בגשר תמירו את המטבעות שצברתם להטבות ומוצרים פיננסיים בעולם האמיתי.",
     navigateTo: "/bridge",
-    ctaLabel: "בואו נתחיל ללמוד!",
+    ctaLabel: "המשך",
     screenSignal: "bridge",
     isLast: true,
     audioUrl: "https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/audios/walkthrough/step-7-7rr5fmPQ7ZVwKa6BczIDjwsShoKQL0.mp3",
@@ -157,8 +157,10 @@ export function AppWalkthroughOverlay() {
   const segments = useSegments();
   const [transitioning, setTransitioning] = useState(false);
   const reducedMotion = useReducedMotion();
-  // Delay walkthrough by 1 second after the user lands on the tab (post mod-0-1),
-  // only for the initial step.
+  // Delay walkthrough by 2 seconds after the user lands on the tab post mod-0-1.
+  // 1s wasn't enough — the mod-0-1 continue modal close animation + tab navigation
+  // were still resolving when the walkthrough overlay started fading in, so the
+  // two visually overlapped.
   const [ready, setReady] = useState(step > 0);
   useEffect(() => {
     if (hasSeenWalkthrough || ready) return;
@@ -168,7 +170,7 @@ export function AppWalkthroughOverlay() {
       if (step === 0) {
         try { captureEvent('walkthrough_started', {}); } catch { /* non-fatal */ }
       }
-    }, 1000);
+    }, 2000);
     return () => clearTimeout(timer);
   }, [hasSeenWalkthrough, ready, step]);
   // Track whether user pressed CTA on the chat-style step and is now choosing

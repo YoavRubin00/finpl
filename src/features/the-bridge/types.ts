@@ -19,8 +19,9 @@ export interface Benefit {
   description: string;
   partnerName: string;
   partnerLogo: string; // emoji fallback
-  /** Real partner brand PNG/JPG, takes priority over lottieSource + emoji. */
-  partnerLogoImage?: number;
+  /** Real partner brand PNG/JPG, takes priority over lottieSource + emoji.
+   *  Either a local require()'d module id (number) or a remote `{ uri }` source. */
+  partnerLogoImage?: number | { uri: string };
   lottieSource?: number;
   costCoins: number;
   category: BenefitCategory;
