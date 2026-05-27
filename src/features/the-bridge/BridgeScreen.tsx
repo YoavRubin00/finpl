@@ -38,6 +38,7 @@ import { useIsPro } from '../subscription/useSubscription';
 import { useAuthStore } from '../auth/useAuthStore';
 import { useBridgeStore } from './useBridgeStore';
 import { trackBridgeClick } from '../../utils/trackBridgeClick';
+import { captureEvent } from '../../lib/posthog';
 import { BRIDGE_BENEFITS } from './bridgeData';
 import { BenefitCard } from './BenefitCard';
 import { RedemptionModal } from './RedemptionModal';
@@ -209,6 +210,13 @@ export function BridgeScreen({ walkthroughAutoScroll }: BridgeScreenProps = {}) 
   const [showPostRedemptionModal, setShowPostRedemptionModal] = useState(false);
   const [statModalKind, setStatModalKind] = useState<'redeemed' | 'savings' | null>(null);
   const awaitingReturnFromPartner = useRef(false);
+
+  // Bridge entry — fire once on mount so PostHog has the "כניסות לגשר" count
+  // (the daily הוג report reads this alongside the gem/starter/pro paywalls).
+  useEffect(() => {
+    try { captureEvent('bridge_viewed', { entry_category: activeCategory }); } catch { /* best-effort */ }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Listen for return from partner website
   useEffect(() => {

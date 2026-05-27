@@ -712,7 +712,7 @@ function CelebrationScreen({ onDone }: { onDone: () => void }) {
 
         <Text style={styles.celebTitle}>הפרופיל שלך מוכן!</Text>
         <Text style={styles.celebSub}>
-          הכנו את הפיד שלך.{"\n"}הגיע הזמן להפוך ידע לכסף. 💰
+          הכנו את הכלים שלך.{"\n"}הגיע הזמן להפוך ידע לכסף. 💰
         </Text>
 
         {/* CTA */}
@@ -883,7 +883,7 @@ function GoalStep({ dream, onNext, onBack }: { dream: FinancialDream | null; onN
     setTimeout(() => onNext(id), AUTO_ADVANCE_MS);
   }, [onNext]);
 
-  const dynamicHint = dream ? DREAM_REACTIONS[dream] : "זה יעצב את הפיד שלך";
+  const dynamicHint = dream ? DREAM_REACTIONS[dream] : "זה יעצב את מסלול הלמידה שלך";
 
   return (
     <StepShell stepIndex={1} question="למה הצטרפת?" hint={dynamicHint} finnState={sel ? "tablet" : "idle"} onBack={onBack}>

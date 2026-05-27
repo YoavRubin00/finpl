@@ -98,6 +98,8 @@ import { TA125WarRecoveryChart } from "../chapter-4-content/components/TA125WarR
 import { FlyingRewards } from "../../components/ui/FlyingRewards";
 import { GoldCoinIcon } from "../../components/ui/GoldCoinIcon";
 import { useAuthStore } from "../auth/useAuthStore";
+import { InModuleProfileQuestion, type ProfileQuestionKind } from "../onboarding/InModuleProfileQuestion";
+import { PayslipBonusCard } from "../payslip-analyzer/PayslipBonusCard";
 import { useRewardedAd } from "../../hooks/useRewardedAd";
 import { DecorationOverlay } from "../../components/ui/DecorationOverlay";
 import { generateChestDrop } from "../retention-loops/chestDrops";
@@ -2493,6 +2495,8 @@ export function LessonFlowScreen() {
   }, [isPro, chapterId, id, progressData]);
 
   const [showProGate, setShowProGate] = useState(false);
+  // Graduate Onboarding: deferred profile question shown after specific modules.
+  const [profileQuestionKind, setProfileQuestionKind] = useState<ProfileQuestionKind | null>(null);
 
   // Guard: show locked modal immediately if module isn't accessible
   /** After hook video → check access before proceeding */
@@ -2514,6 +2518,10 @@ export function LessonFlowScreen() {
     if (id === 'mod-0-1') {
       setCurrentChapter('ch-0');
       setCurrentModule(1);
+      // Opt the user into the app walkthrough — the overlay is gated on this
+      // (walkthroughTriggered) and fires once they land on the learn map.
+      // No-op if they've already seen it (overlay checks hasSeenAppWalkthrough).
+      useTutorialStore.getState().triggerWalkthrough();
       router.replace("/(tabs)" as never);
       return;
     }
@@ -2531,8 +2539,34 @@ export function LessonFlowScreen() {
     router.replace("/(tabs)" as never);
   }
 
+  /**
+   * Maps a just-completed module to the profile question we want to ask after it.
+   * Returns null if the user already answered that field (skip-on-known) or if
+   * the module has no associated question. Graduate Onboarding (2026-05 redesign):
+   * onboarding now asks only 3 questions up front and defers the rest to here.
+   */
+  function pendingProfileQuestionFor(moduleId: string): ProfileQuestionKind | null {
+    // Snapshot read — called from event handlers (lesson complete), not during render.
+    const profile = useAuthStore.getState().profile;
+    if (moduleId === "mod-0-2" && !profile?.knowledgeLevel) return "knowledgeLevel";
+    if (moduleId === "mod-0-3" && !profile?.learningTime) return "learningTime";
+    if (moduleId === "mod-0-4" && !profile?.dailyGoalMinutes) return "dailyGoal";
+    return null;
+  }
+
   /** Navigate to user's next sequential module */
   function goToNextSequentialModule() {
+    // Graduate Onboarding gate: if this module owns a profile question and the
+    // user hasn't answered it yet, show the question first. The question's
+    // onDone callback re-invokes this function, which then short-circuits
+    // (profile is now populated, pendingProfileQuestionFor returns null).
+    if (id) {
+      const q = pendingProfileQuestionFor(id);
+      if (q) {
+        setProfileQuestionKind(q);
+        return;
+      }
+    }
     // After completing the first module (mod-0-1), show register nudge for guests;
     // navigation advances when the user acts on the nudge (any button).
     if (id === 'mod-0-1') {
@@ -4646,6 +4680,20 @@ export function LessonFlowScreen() {
         </Modal>
         );
       })()}
+
+      {/* Graduate Onboarding: deferred profile question after specific modules */}
+      {profileQuestionKind && (
+        <InModuleProfileQuestion
+          visible={true}
+          kind={profileQuestionKind}
+          onDone={() => {
+            setProfileQuestionKind(null);
+            // Re-enter the next-module flow now that profile is populated;
+            // pendingProfileQuestionFor returns null this time.
+            goToNextSequentialModule();
+          }}
+        />
+      )}
 
       {/* Registration nudge for guests after mod-0-1 */}
       {showRegisterNudge && (

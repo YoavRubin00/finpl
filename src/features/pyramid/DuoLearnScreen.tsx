@@ -807,10 +807,13 @@ function ModuleNode({
               {getFinnPhrase(modIndex, displayName)}
             </Text>
           </Animated.View>
-          {/* Streak+News combo, opposite-edge side from Finn so the journal
-              and actuality indicators stay visible at the user's current
-              position even after the top header has scrolled off. */}
-          {activeStreak !== undefined && (
+          {/* Daily News Challenge entry point, opposite-edge side from Finn so
+              the actuality icon stays beside the user's current position even
+              after the top header has scrolled off. Per the 2026-05 layout: the
+              streak (flame + count + calendar) now lives ONLY in the top header;
+              here we surface just the glowing news icon. `activeStreak !==
+              undefined` still marks "this is the active node". */}
+          {activeStreak !== undefined && onNewsPress && (
             <Animated.View
               entering={FadeInDown.delay(150).duration(400)}
               style={[
@@ -818,13 +821,11 @@ function ModuleNode({
                 finnGoesRight ? { left: 8 } : { right: 8 },
               ]}
             >
-              <StreakCombo
-                compact
-                streak={activeStreak}
+              <NewsIconButton
+                size={30}
                 hasNewsChallenge={!!hasNewsChallenge}
                 newsCompleted={!!newsCompleted}
-                onCalendarPress={onActiveStreakPress ?? (() => undefined)}
-                onNewsPress={onNewsPress}
+                onPress={onNewsPress}
               />
             </Animated.View>
           )}
@@ -1521,16 +1522,16 @@ export function DuoLearnScreen() {
               </View>
             </View>
 
-            {/* Left side: Streak Flame + Calendar + Daily News Challenge.
-                The news icon sits right of the flame (rendered first in
-                row-reverse). The big DailyNewsChallengeCard was replaced by
-                this compact icon — the feature is reachable from here. */}
+            {/* Left side: Streak Flame + count + Calendar. Per the 2026-05
+                layout, the streak indicator lives here in the top header
+                ("moved to the top sidebar"); the Daily News Challenge icon was
+                moved out to sit beside the active module (near the user). Omit
+                onNewsPress so StreakCombo renders streak-only here. */}
             <StreakCombo
               streak={streak}
               hasNewsChallenge={!!newsChallenge}
               newsCompleted={newsCompleted}
               onCalendarPress={() => { tapHaptic(); setShowStreakCalendar(true); }}
-              onNewsPress={handleNewsPress}
             />
           </View>
 

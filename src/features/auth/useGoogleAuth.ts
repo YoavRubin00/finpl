@@ -158,8 +158,14 @@ export function useGoogleAuth() {
       }
       await signInWithProfile(verified.profile, verified.token);
 
-      // Explicit routing — iOS-safe pattern matching the email flow.
-      if (verified.profile.hasCompletedOnboarding) {
+      // Route by the post-signIn store value rather than the raw server flag.
+      // The store preserves prior-session hasCompletedOnboarding when the server
+      // doesn't include the field, so returning users on the same device land
+      // straight in /(tabs) without bouncing through onboarding.
+      const completed =
+        verified.profile.hasCompletedOnboarding === true ||
+        useAuthStore.getState().hasCompletedOnboarding === true;
+      if (completed) {
         router.replace("/(tabs)/" as never);
       } else {
         router.replace("/(auth)/onboarding" as never);
