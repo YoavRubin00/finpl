@@ -6,8 +6,9 @@ import { LinearGradient } from "expo-linear-gradient";
 import { LottieIcon } from "../../components/ui/LottieIcon";
 import { ConfettiExplosion } from "../../components/ui/ConfettiExplosion";
 import { GoogleLogo } from "../../components/ui/GoogleLogo";
+import { GoldCoinIcon } from "../../components/ui/GoldCoinIcon";
 import LottieView from "lottie-react-native";
-import { FINN_STANDARD, FINN_HELLO, FINN_HAPPY, FINN_TABLET } from "../retention-loops/finnMascotConfig";
+import { FINN_STANDARD, FINN_HELLO, FINN_HAPPY, FINN_TABLET, FINN_DANCING } from "../retention-loops/finnMascotConfig";
 import { useRouter, type Href } from "expo-router";
 import { Sparkles, TrendingUp, Pencil, ChevronDown, ChevronUp, ChevronRight } from "lucide-react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
@@ -695,7 +696,7 @@ function CelebrationScreen({ onDone }: { onDone: (tier: RewardTier) => void }) {
         {/* Finn celebrating */}
         <Animated.View style={[styles.celebBadge, badgeStyle]}>
           <ExpoImage
-            source={FINN_HAPPY}
+            source={FINN_DANCING}
             style={{ width: 120, height: 120 }}
             contentFit="contain"
             accessible={false}
@@ -717,8 +718,9 @@ function CelebrationScreen({ onDone }: { onDone: (tier: RewardTier) => void }) {
           <View style={styles.rewardPill}>
             <Text style={styles.rewardXP}>+{ONBOARDING_XP} XP</Text>
           </View>
-          <View style={[styles.rewardPill, styles.rewardPillGold]}>
-            <Text style={styles.rewardCoins}>+{rewardCoins} מטבעות</Text>
+          <View style={[styles.rewardPill, styles.rewardPillGold, { flexDirection: "row-reverse", alignItems: "center", gap: 6 }]}>
+            <Text style={styles.rewardCoins}>+{rewardCoins}</Text>
+            <GoldCoinIcon size={20} />
           </View>
         </Animated.View>
 
