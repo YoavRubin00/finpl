@@ -28,7 +28,7 @@ import { LinearGradient } from "expo-linear-gradient";
 import { Check, X } from "lucide-react-native";
 import { ScrollView } from "react-native-gesture-handler";
 import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
-import { useRouter } from "expo-router";
+import { useRouter, useLocalSearchParams } from "expo-router";
 import { useIsPro, useSyncFromRevenueCat } from "./useSubscription";
 import { useUsageStore } from "./useUsageStore";
 import { useAuthStore } from "../auth/useAuthStore";
@@ -159,6 +159,9 @@ function useProBadgePulse() {
 export function PricingScreen() {
   const theme = useTheme();
   const router = useRouter();
+  // When opened mid-flow (e.g. the post-mod-0-4 paywall), returnTo holds the
+  // route to continue to on dismiss/purchase so the user is never stranded.
+  const { returnTo } = useLocalSearchParams<{ returnTo?: string }>();
   const isCurrentlyPro = useIsPro();
   const hasSeenProWelcome = useUsageStore((s) => s.hasSeenProWelcome);
   const displayName = useAuthStore((s) => s.displayName);
@@ -244,7 +247,18 @@ export function PricingScreen() {
         });
         trackConversion();
         if (!hasSeenProWelcome) {
-          router.replace("/pro-welcome" as never);
+          // Forward returnTo through pro-welcome so the user lands back in the
+          // lesson flow (e.g. mod-0-5) after the welcome screen.
+          const dest = returnTo
+            ? `/pro-welcome?returnTo=${encodeURIComponent(returnTo)}`
+            : "/pro-welcome";
+          router.replace(dest as never);
+          return;
+        }
+        // Already saw pro-welcome: continue the flow directly if we have a
+        // returnTo, otherwise just confirm.
+        if (returnTo) {
+          router.replace(returnTo as never);
           return;
         }
         Alert.alert("ברוכים הבאים ל-Pro! 🎉", "גישה מלאה פתוחה. תהנו!");
@@ -462,7 +476,7 @@ export function PricingScreen() {
                   </Pressable>
                 </View>
 
-                <Pressable onPress={() => { captureEvent('paywall_dismissed', { paywall: 'subscription_pricing' }); if (router.canGoBack()) router.back(); else router.replace('/(tabs)' as never); }} style={styles.noThanksBtn} accessibilityRole="button" accessibilityLabel="ליציאה" hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+                <Pressable onPress={() => { captureEvent('paywall_dismissed', { paywall: 'subscription_pricing' }); if (returnTo) { router.replace(returnTo as never); } else if (router.canGoBack()) { router.back(); } else { router.replace('/(tabs)' as never); } }} style={styles.noThanksBtn} accessibilityRole="button" accessibilityLabel="ליציאה" hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
                   <Text style={[styles.noThanksText, { color: theme.textMuted }]}>ליציאה</Text>
                 </Pressable>
 

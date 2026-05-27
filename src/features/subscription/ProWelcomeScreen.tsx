@@ -6,7 +6,7 @@ import Animated, {
   FadeInUp,
   ZoomIn,
 } from "react-native-reanimated";
-import { useRouter } from "expo-router";
+import { useRouter, useLocalSearchParams } from "expo-router";
 import LottieView from "lottie-react-native";
 import { useVideoPlayer, VideoView } from "expo-video";
 import { FINN_STANDARD } from "../retention-loops/finnMascotConfig";
@@ -38,17 +38,22 @@ const BENEFITS = [
 
 export function ProWelcomeScreen() {
   const router = useRouter();
+  // returnTo forwarded from the paywall so the user continues their lesson flow
+  // (e.g. mod-0-5) after the welcome screen instead of dropping to the tabs.
+  const { returnTo } = useLocalSearchParams<{ returnTo?: string }>();
   const markSeen = useUsageStore((s) => s.markProWelcomeSeen);
 
   const handleContinue = useCallback(() => {
     heavyHaptic();
     markSeen();
-    if (router.canGoBack()) {
+    if (returnTo) {
+      router.replace(returnTo as never);
+    } else if (router.canGoBack()) {
       router.back();
     } else {
       router.replace("/(tabs)" as never);
     }
-  }, [markSeen, router]);
+  }, [markSeen, router, returnTo]);
 
   const proPlayer = useVideoPlayer(PRO_VIDEO_URL, (p) => {
     p.loop = true;
