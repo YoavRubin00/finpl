@@ -62,7 +62,7 @@ import { SimulatorLoader } from "./SimulatorLoader";
 import { useAITelemetryStore } from "../ai-personalization/useAITelemetryStore";
 import { useEconomy, economyQueryKey } from "../economy/useEconomy";
 import { useEconomyUIStore } from "../economy/useEconomyUIStore";
-import { useStreak } from "../economy/useStreak";
+import { useStreak, useRecordDailyActivity } from "../economy/useStreak";
 import { applyEconomyDelta } from "../../lib/api/economy";
 import type { Economy } from "../../lib/api/economy";
 import { recordModuleDuration as apiRecordModuleDuration } from "../../lib/api/userStats";
@@ -2389,6 +2389,11 @@ export function LessonFlowScreen() {
   const { data: progressData } = useProgress();
   const { mutate: upsertProgress } = useUpsertModuleProgress();
   const quizResults = useChapterUIStore((s) => s.quizResults);
+  // Streak: record on any lesson completion so the user only enters the streak
+  // system once they've actually engaged with content (used to fire at the end
+  // of onboarding — but with D1 retention ~7%, most users never came back and
+  // their "streak" was meaningless / led to confusing at-risk nudges).
+  const recordDailyActivity = useRecordDailyActivity();
 
   // Keep UI nav store in sync with the currently-viewed chapter
   useEffect(() => {
@@ -2416,6 +2421,9 @@ export function LessonFlowScreen() {
     useEconomyUIStore.getState().addXP(MODULE_COMPLETE_XP, 'lesson_complete');
     useEconomyUIStore.getState().addCoins(150, 'lesson');
 
+    // Streak: idempotent per day, so calling on every lesson completion is safe.
+    try { recordDailyActivity.mutate(); } catch (e) { if (__DEV__) console.warn('[streak] recordDailyActivity failed:', e); }
+
     // AI telemetry
     const quiz = useChapterUIStore.getState().quizResults[moduleId];
     useAITelemetryStore.getState().addEvent('module_complete', moduleId, {
@@ -2435,7 +2443,7 @@ export function LessonFlowScreen() {
       bestScore: quiz?.correct,
       xpEarned: MODULE_COMPLETE_XP,
     });
-  }, [chapterId, upsertProgress]);
+  }, [chapterId, upsertProgress, recordDailyActivity]);
 
   const { isMuted, toggleMute } = useLessonMusic();
   const safeTimeout = useTimeoutCleanup();

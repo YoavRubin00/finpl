@@ -2065,7 +2065,7 @@ function IntroStep({ onRegister, onGuest, onLoginSuccess }: IntroStepProps) {
       <SafeAreaView style={introStyles.shell} edges={["top", "bottom"]}>
         <Animated.View style={[introStyles.finnWrap, finnStyle]}>
           <LinearGradient colors={["#ecfeff", "#f0fdfa"]} style={introStyles.finnBg} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}>
-            <ExpoImage source={FINN_STANDARD} style={{ width: 140, height: 140 }} contentFit="contain" />
+            <ExpoImage source={FINN_HELLO} style={{ width: 140, height: 140 }} contentFit="contain" accessibilityLabel="פין הכריש מנופף שלום" />
           </LinearGradient>
         </Animated.View>
 
@@ -2535,8 +2535,10 @@ export function ProfilingFlow({ mode = "onboarding", onRedoComplete }: Profiling
     try { addXP(ONBOARDING_XP, "onboarding"); } catch (e) { if (__DEV__) console.warn('[onboarding] addXP failed:', e); }
     // Coin amount matches the tier shown in CelebrationScreen (passed via onDone).
     try { addCoins(REWARD_COINS[rewardTier]); } catch (e) { if (__DEV__) console.warn('[onboarding] addCoins failed:', e); }
-    // Day 1 of streak starts immediately on onboarding completion, gives users
-    // something to protect from minute zero (loss aversion + retention).
+    // Day 1 of streak starts here so the user has something to protect from
+    // minute zero (loss aversion). Lesson completion also calls recordDailyActivity
+    // so day 2+ continues the streak — recordDailyActivity is idempotent per day,
+    // so multiple calls in the same day are safe.
     try { recordDailyActivity.mutate(); } catch (e) { if (__DEV__) console.warn('[onboarding] streak start failed:', e); }
     // CRITICAL: ensure user is at least a guest before marking onboarding done.
     // Otherwise `_layout`'s auth redirect bounces them back to /(auth)/onboarding
