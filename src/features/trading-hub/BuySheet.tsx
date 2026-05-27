@@ -8,7 +8,7 @@ import { CALM } from '../../constants/theme';
 import { useEconomy } from '../economy/useEconomy';
 import { useTradingStore } from './useTradingStore';
 import { useTradingHubUiStore } from './useTradingHubUiStore';
-import { ASSET_BY_ID } from './tradingHubData';
+import { ASSET_BY_ID, formatAssetPrice, isAgorotAsset } from './tradingHubData';
 import { StockIcon } from './StockIcon';
 import { FINN_STANDARD } from '../retention-loops/finnMascotConfig';
 import { tapHaptic, successHaptic } from '../../utils/haptics';
@@ -87,7 +87,7 @@ export function BuySheet({ visible, assetId, currentPrice, previousClose, onClos
             }
         }
 
-        const typeLabel = orderType === 'market' ? '' : ` (לימיט $${limitPrice})`;
+        const typeLabel = orderType === 'market' ? '' : ` (לימיט ${formatAssetPrice(assetId, limitPrice)})`;
         setFeedback(`קנית ${asset?.name ?? assetId} ב-${amount} מטבעות!${typeLabel}`);
         setAmountText('');
         setLimitPriceText('');
@@ -134,7 +134,7 @@ export function BuySheet({ visible, assetId, currentPrice, previousClose, onClos
                                         {asset?.name ?? assetId}
                                     </Text>
                                     <Text style={styles.assetPrice}>
-                                        ${currentPrice > 0 ? currentPrice.toFixed(2) : '—'}
+                                        {formatAssetPrice(assetId, currentPrice)}
                                     </Text>
                                 </View>
                             </View>
@@ -151,7 +151,7 @@ export function BuySheet({ visible, assetId, currentPrice, previousClose, onClos
                                     <View
                                         style={styles.sharkBubble}
                                         accessibilityRole="text"
-                                        accessibilityLabel={`קפטן שארק: מחיר סגירה אחרון ${previousClose.toFixed(2)} דולר. מאז ${directionWord} ב-${Math.abs(deltaPct).toFixed(2)} אחוזים`}
+                                        accessibilityLabel={`קפטן שארק: מחיר סגירה אחרון ${previousClose.toFixed(2)} ${isAgorotAsset(assetId) ? 'אגורות' : 'דולר'}. מאז ${directionWord} ב-${Math.abs(deltaPct).toFixed(2)} אחוזים`}
                                     >
                                         <ExpoImage
                                             source={FINN_STANDARD}
@@ -161,7 +161,7 @@ export function BuySheet({ visible, assetId, currentPrice, previousClose, onClos
                                         <View style={{ flex: 1 }}>
                                             <Text style={styles.sharkLabel}>קפטן שארק</Text>
                                             <Text style={styles.sharkText}>
-                                                מחיר סגירה אחרון: ${previousClose.toFixed(2)}
+                                                מחיר סגירה אחרון: {formatAssetPrice(assetId, previousClose)}
                                             </Text>
                                             <Text style={[styles.sharkDelta, { color: deltaColor }]}>
                                                 {arrow} {rising ? '+' : ''}{delta.toFixed(2)} ({rising ? '+' : ''}{deltaPct.toFixed(2)}%)
@@ -205,7 +205,7 @@ export function BuySheet({ visible, assetId, currentPrice, previousClose, onClos
                                         style={styles.input}
                                         value={limitPriceText}
                                         onChangeText={setLimitPriceText}
-                                        placeholder={`מחיר מקסימלי (נוכחי: $${currentPrice.toFixed(2)})`}
+                                        placeholder={`מחיר מקסימלי (נוכחי: ${formatAssetPrice(assetId, currentPrice)})`}
                                         placeholderTextColor={CALM.textTertiary}
                                         keyboardType="decimal-pad"
                                         textAlign="center"

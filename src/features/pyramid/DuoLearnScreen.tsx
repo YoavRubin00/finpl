@@ -26,6 +26,7 @@ import { useEconomy } from "../economy/useEconomy";
 import { useStreak } from "../economy/useStreak";
 import { captureEvent } from "../../lib/posthog";
 import { useEconomyUIStore } from "../economy/useEconomyUIStore";
+import { useCompletedModulesStore } from "../economy/useCompletedModulesStore";
 import { useChapterUIStore } from "../chapter-1-content/useChapterUIStore";
 import { useProgress, useUpsertModuleProgress, progressQueryKey } from "../chapter-1-content/useProgress";
 import { queryClient } from "../../lib/queryClient";
@@ -1172,6 +1173,10 @@ export function DuoLearnScreen() {
     for (const mod of chapter0Data.modules) {
       upsertProgress({ moduleId: mod.id, status: 'completed', xpEarned: 0 });
     }
+    // Durable local record so the skip survives the 404 rollback for guests and
+    // cold starts (upsertProgress alone only touches the react-query cache, which
+    // is wiped when the server sync fails for an unregistered user).
+    useCompletedModulesStore.getState().markManyCompleted(chapter0Data.modules.map((m) => m.id));
     // Move the "current chapter / module" pointer to mod-1-1 so any UI bit that
     // reads it (lesson resume, header) lands on compound interest, not on the
     // last completed ch-0 module.

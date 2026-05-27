@@ -153,3 +153,26 @@ export const TRADABLE_ASSETS: TradableAsset[] = [
 export const ASSET_BY_ID = new Map(
   TRADABLE_ASSETS.map((asset) => [asset.id, asset]),
 );
+
+/**
+ * Israeli-listed assets (Tel-Aviv Stock Exchange) are quoted in agorot, not USD.
+ * Identified by the Yahoo ".TA" suffix (e.g. TA125.TA).
+ */
+export function isAgorotAsset(assetId: string): boolean {
+  return assetId.endsWith('.TA');
+}
+
+/**
+ * Format a per-unit asset price in its native quote currency:
+ *   - Israeli (.TA) assets → agorot, e.g. "2,280.00 אג׳"  (no dollar sign)
+ *   - everything else      → USD,    e.g. "$248.00"
+ * Returns "—" for missing/invalid prices.
+ */
+export function formatAssetPrice(assetId: string, price: number, decimals = 2): string {
+  if (!isFinite(price) || price <= 0) return '—';
+  const num = price.toLocaleString('en-US', {
+    minimumFractionDigits: decimals,
+    maximumFractionDigits: decimals,
+  });
+  return isAgorotAsset(assetId) ? `${num} אג׳` : `$${num}`;
+}

@@ -125,10 +125,14 @@ export function RegisterScreen() {
 
   return (
     <View style={{ flex: 1, backgroundColor: "#ffffff" }}>
-      {/* Back chevron, returns to onboarding choice screen */}
+      {/* Back chevron. When we arrived from an in-game register CTA (returnTo set),
+          advance FORWARD to that destination instead of popping back to the lesson
+          that's still on the stack — otherwise the user lands back on the module
+          they just finished and feels stuck. No returnTo → onboarding choice. */}
       <Pressable
         onPress={() => {
-          if (router.canGoBack()) router.back();
+          if (returnTo) router.replace(decodeURIComponent(returnTo) as never);
+          else if (router.canGoBack()) router.back();
           else router.replace("/(auth)/onboarding" as never);
         }}
         accessibilityRole="button"
@@ -508,11 +512,14 @@ export function RegisterScreen() {
               </Text>
             </Pressable>
 
-            {/* Bottom "back to game" link — for guest users who decided not to register now */}
+            {/* Bottom "back to game" link — for guest users who decided not to register now.
+                Advance to returnTo (the next step after the CTA) so declining registration
+                still moves the user FORWARD in the sequence, never back to the same module. */}
             {isGuest && (
               <Pressable
                 onPress={() => {
-                  if (router.canGoBack()) router.back();
+                  if (returnTo) router.replace(decodeURIComponent(returnTo) as never);
+                  else if (router.canGoBack()) router.back();
                   else router.replace("/(tabs)" as never);
                 }}
                 accessibilityRole="button"

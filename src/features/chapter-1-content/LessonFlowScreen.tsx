@@ -4159,6 +4159,14 @@ export function LessonFlowScreen() {
                             // CTA that drops the user back to the learn map, where the
                             // walkthrough fires 1s later. (2026-05-27 redesign.)
                             if (id === 'mod-0-1') {
+                              // Reset replay: a user who already saw the walkthrough whose
+                              // progress was wiped lands on mod-0-1 again. Don't re-show the
+                              // continue CTA or re-fire the walkthrough — go straight to the
+                              // learn map (cursor on mod-0-2).
+                              if (useTutorialStore.getState().hasSeenAppWalkthrough) {
+                                safeTimeout(() => navigateToNextModuleNormally(), 300);
+                                return;
+                              }
                               safeTimeout(() => {
                                 try { captureEvent('mod01_continue_cta_shown', {}); } catch { /* non-fatal */ }
                                 setShowMod01ContinueCTA(true);
@@ -4784,6 +4792,9 @@ export function LessonFlowScreen() {
               for (const m of chapter0Data.modules) {
                 upsertProgress({ moduleId: m.id, status: 'completed', xpEarned: 0 });
               }
+              // Durable local record so the skip survives the 404 rollback for guests
+              // and cold starts (mirrors completeModule's markCompleted).
+              useCompletedModulesStore.getState().markManyCompleted(chapter0Data.modules.map((m) => m.id));
               setCurrentChapter('ch-1');
               setCurrentModule(0);
               try { captureEvent('expert_grade_skip', { from_module: id }); } catch { /* non-fatal */ }

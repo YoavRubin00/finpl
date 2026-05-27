@@ -12,7 +12,7 @@ import { PortfolioSummaryCard } from './PortfolioSummaryCard';
 import { StockIcon } from './StockIcon';
 import { GlobalWealthHeader } from '../../components/ui/GlobalWealthHeader';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { ASSET_BY_ID } from './tradingHubData';
+import { ASSET_BY_ID, formatAssetPrice } from './tradingHubData';
 import { useTradingStore } from './useTradingStore';
 import { useEconomy } from '../economy/useEconomy';
 import { useEconomyUIStore } from '../economy/useEconomyUIStore';
@@ -21,6 +21,11 @@ import { tapHaptic, successHaptic } from '../../utils/haptics';
 import type { ActivePosition } from './tradingHubTypes';
 
 const RTL = { writingDirection: 'rtl' as const, textAlign: 'right' as const };
+
+// Above this single-session move (%) the daily change is treated as a mismatched
+// snapshot (stale previousClose / mock fallback) and suppressed, rather than shown
+// as a misleading number. Generous enough to keep real crypto volatility visible.
+const DAILY_MOVE_SANITY_PCT = 25;
 
 const LOTTIE_CHART = require('../../../assets/lottie/wired-flat-153-bar-chart-hover-pinch.json');
 const LOTTIE_TROPHY = require('../../../assets/lottie/wired-flat-3263-trophy-circle-hover-roll.json');
@@ -105,7 +110,11 @@ export function HoldingsScreen() {
         let coveredInvested = 0;
         for (const p of positions) {
             const prevClose = previousClosesByAsset[p.assetId];
-            if (!prevClose || p.entryPrice <= 0) continue;
+            if (!prevClose || p.entryPrice <= 0 || p.currentPrice <= 0) continue;
+            // Exclude positions whose implied single-session move is unrealistic
+            // (mismatched snapshot) so they don't pollute the portfolio daily change.
+            const impliedDailyMove = Math.abs((p.currentPrice - prevClose) / prevClose) * 100;
+            if (impliedDailyMove > DAILY_MOVE_SANITY_PCT) continue;
             const rawChange = (prevClose - p.entryPrice) / p.entryPrice;
             const pnlAsOfPrevClose = p.type === 'buy' ? rawChange * 100 : -rawChange * 100;
             const yesterdayVal = p.amountInvested * (1 + pnlAsOfPrevClose / 100);
@@ -221,9 +230,14 @@ export function HoldingsScreen() {
                                 // user opened the position. Direction sign flips for shorts.
                                 const prevClose = previousClosesByAsset[pos.assetId];
                                 let dailyPct: number | null = null;
-                                if (prevClose && prevClose > 0) {
+                                if (prevClose && prevClose > 0 && pos.currentPrice > 0) {
                                     const rawChange = (pos.currentPrice - prevClose) / prevClose;
-                                    dailyPct = pos.type === 'buy' ? rawChange * 100 : -rawChange * 100;
+                                    const pct = pos.type === 'buy' ? rawChange * 100 : -rawChange * 100;
+                                    // Sanity guard: a >25% single-session move is almost always a
+                                    // mismatched snapshot (stale previousClose / mock fallback),
+                                    // not a real daily move. Suppress rather than mislead. The bound
+                                    // is generous so genuine crypto volatility still shows.
+                                    if (Math.abs(pct) <= DAILY_MOVE_SANITY_PCT) dailyPct = pct;
                                 }
                                 const isDailyProfit = dailyPct !== null && dailyPct >= 0;
                                 const dailyColor = isDailyProfit ? CALM.profit : CALM.loss;
@@ -264,13 +278,13 @@ export function HoldingsScreen() {
                                             <View style={styles.posPriceRow}>
                                                 <View style={styles.posPriceCol}>
                                                     <Text style={[RTL, styles.posPriceLabel]}>כניסה</Text>
-                                                    <Text style={styles.posPriceValue}>${pos.entryPrice.toFixed(2)}</Text>
+                                                    <Text style={styles.posPriceValue}>{formatAssetPrice(pos.assetId, pos.entryPrice)}</Text>
                                                 </View>
                                                 <Text style={styles.posArrow}>←</Text>
                                                 <View style={styles.posPriceCol}>
                                                     <Text style={[RTL, styles.posPriceLabel]}>נוכחי</Text>
                                                     <Text style={[styles.posPriceValue, { color: pnlColor }]}>
-                                                        ${pos.currentPrice.toFixed(2)}
+                                                        {formatAssetPrice(pos.assetId, pos.currentPrice)}
                                                     </Text>
                                                 </View>
                                             </View>
@@ -331,7 +345,7 @@ export function HoldingsScreen() {
                                                 {asset?.name ?? order.assetId}
                                             </Text>
                                             <Text style={styles.orderLimit}>
-                                                @${order.limitPrice.toFixed(2)}
+                                                @{formatAssetPrice(order.assetId, order.limitPrice)}
                                             </Text>
                                             <Text style={styles.orderAmount}>
                                                 {order.amountInvested} 

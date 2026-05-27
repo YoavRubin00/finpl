@@ -128,6 +128,11 @@ async function ensureAndroidChannels() {
 // ─── Store ────────────────────────────────────────────────────────────────────
 interface NotificationActions {
   requestPermission: () => Promise<boolean>;
+  /** Reconcile the cached permissionGranted flag with the real OS permission
+   *  state WITHOUT prompting. The cached flag can drift (granted in a past
+   *  session then revoked in OS settings, or never synced), which would
+   *  permanently suppress the permission banner. Call on banner mount. */
+  syncPermissionStatus: () => Promise<void>;
   dismissBanner: () => void;
   /** Clear the dismissed state so the banner can be shown again — used after
    *  walkthrough completion so the post-tour permission prompt always fires
@@ -180,6 +185,16 @@ export const useNotificationStore = create<NotificationState & NotificationActio
         const granted = finalStatus === "granted";
         set({ permissionGranted: granted });
         return granted;
+      },
+
+      syncPermissionStatus: async (): Promise<void> => {
+        try {
+          const { status } = await Notifications.getPermissionsAsync();
+          const granted = status === "granted";
+          if (get().permissionGranted !== granted) set({ permissionGranted: granted });
+        } catch {
+          /* non-fatal — leave cached value untouched */
+        }
       },
 
       /** Schedule a daily repeating streak reminder at `hourOfDay` (default 20 = 8pm) */
