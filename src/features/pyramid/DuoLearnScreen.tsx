@@ -24,6 +24,7 @@ import { useFocusEffect } from "@react-navigation/native";
 import { Lock, Home, Shield, Scale, TrendingUp, Crown, FastForward, X, Star, ChevronUp } from "lucide-react-native";
 import { useEconomy } from "../economy/useEconomy";
 import { useStreak } from "../economy/useStreak";
+import { captureEvent } from "../../lib/posthog";
 import { useEconomyUIStore } from "../economy/useEconomyUIStore";
 import { useChapterUIStore } from "../chapter-1-content/useChapterUIStore";
 import { useProgress, useUpsertModuleProgress, progressQueryKey } from "../chapter-1-content/useProgress";
@@ -1164,6 +1165,7 @@ export function DuoLearnScreen() {
 
   const handleSkipIntro = useCallback(() => {
     successHaptic();
+    try { captureEvent('skip_intro_clicked', { is_guest: isGuest }); } catch { /* non-fatal */ }
     // Server-sync all ch-0 modules as completed. onMutate optimistically updates
     // the local progress cache so the UI flips to "all ch-0 done → ch-1 unlocked
     // → cursor on mod-1-1" within the same frame.
@@ -1182,7 +1184,10 @@ export function DuoLearnScreen() {
     // Guests: surface the register CTA immediately so they don't lose the skipped
     // progress if they uninstall before completing mod-1-1.
     if (isGuest) {
-      setTimeout(() => setShowSkipIntroRegisterCTA(true), 600);
+      setTimeout(() => {
+        try { captureEvent('register_cta_shown', { module_id: 'mod-1-1', source: 'skip-intro' }); } catch { /* non-fatal */ }
+        setShowSkipIntroRegisterCTA(true);
+      }, 600);
     }
   }, [upsertProgress, setCurrentChapter, setCurrentModule, isGuest]);
 
@@ -1201,10 +1206,16 @@ export function DuoLearnScreen() {
 
       {/* Skip-intro register CTA for guests — fires after handleSkipIntro */}
       {showSkipIntroRegisterCTA && (
-        <Modal visible transparent animationType="fade" onRequestClose={() => setShowSkipIntroRegisterCTA(false)}>
+        <Modal visible transparent animationType="fade" onRequestClose={() => {
+          try { captureEvent('register_cta_dismissed', { module_id: 'mod-1-1', source: 'skip-intro', trigger: 'system_back' }); } catch { /* non-fatal */ }
+          setShowSkipIntroRegisterCTA(false);
+        }}>
           <Pressable
             style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.6)", justifyContent: "center", alignItems: "center", paddingHorizontal: 24 }}
-            onPress={() => setShowSkipIntroRegisterCTA(false)}
+            onPress={() => {
+              try { captureEvent('register_cta_dismissed', { module_id: 'mod-1-1', source: 'skip-intro', trigger: 'backdrop' }); } catch { /* non-fatal */ }
+              setShowSkipIntroRegisterCTA(false);
+            }}
             accessibilityRole="button"
             accessibilityLabel="סגור"
           >
@@ -1223,6 +1234,7 @@ export function DuoLearnScreen() {
               <AnimatedPressable
                 onPress={() => {
                   tapHaptic();
+                  try { captureEvent('register_cta_accepted', { module_id: 'mod-1-1', source: 'skip-intro' }); } catch { /* non-fatal */ }
                   setShowSkipIntroRegisterCTA(false);
                   router.replace(`/(auth)/register?returnTo=${encodeURIComponent("/lesson/mod-1-1?chapterId=chapter-1")}` as never);
                 }}
@@ -1233,7 +1245,11 @@ export function DuoLearnScreen() {
                 <Text style={{ fontSize: 16, fontWeight: "900", color: "#fff" }}>הרשמו בחינם</Text>
               </AnimatedPressable>
               <Pressable
-                onPress={() => { tapHaptic(); setShowSkipIntroRegisterCTA(false); }}
+                onPress={() => {
+                  tapHaptic();
+                  try { captureEvent('register_cta_dismissed', { module_id: 'mod-1-1', source: 'skip-intro', trigger: 'skip_button' }); } catch { /* non-fatal */ }
+                  setShowSkipIntroRegisterCTA(false);
+                }}
                 style={{ marginTop: 12, paddingVertical: 8 }}
                 accessibilityRole="button"
                 accessibilityLabel="המשך כאורח"

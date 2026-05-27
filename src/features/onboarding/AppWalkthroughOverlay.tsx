@@ -19,6 +19,7 @@ import { useTutorialStore } from "../../stores/useTutorialStore";
 import { useAuthStore } from "../auth/useAuthStore";
 import { FINN_HELLO } from "../retention-loops/finnMascotConfig";
 import { tapHaptic } from "../../utils/haptics";
+import { captureEvent } from "../../lib/posthog";
 
 // ---------------------------------------------------------------------------
 // Steps
@@ -161,9 +162,15 @@ export function AppWalkthroughOverlay() {
   const [ready, setReady] = useState(step > 0);
   useEffect(() => {
     if (hasSeenWalkthrough || ready) return;
-    const timer = setTimeout(() => setReady(true), 1000);
+    const timer = setTimeout(() => {
+      setReady(true);
+      // First time the walkthrough becomes visible — log the start event.
+      if (step === 0) {
+        try { captureEvent('walkthrough_started', {}); } catch { /* non-fatal */ }
+      }
+    }, 1000);
     return () => clearTimeout(timer);
-  }, [hasSeenWalkthrough, ready]);
+  }, [hasSeenWalkthrough, ready, step]);
   // Track whether user pressed CTA on the chat-style step and is now choosing
   const [waitingForChatChoice, setWaitingForChatChoice] = useState(false);
   // Key to force re-mount of content for enter/exit animation between steps
@@ -239,6 +246,7 @@ export function AppWalkthroughOverlay() {
       }
 
       if (step >= stepsWithLast.length - 1) {
+        try { captureEvent('walkthrough_completed', { total_steps: stepsWithLast.length }); } catch { /* non-fatal */ }
         completeWalkthrough();
         setActiveScreen(null);
         setTimeout(() => {
@@ -256,6 +264,7 @@ export function AppWalkthroughOverlay() {
       }
 
       const nextConfig = stepsWithLast[step + 1];
+      try { captureEvent('walkthrough_step_completed', { step_index: step, step_screen: stepsWithLast[step]?.screenSignal ?? null }); } catch { /* non-fatal */ }
       // First update the step (instant), then navigate if needed
       setStep(step + 1);
       setContentKey((k) => k + 1);
@@ -305,11 +314,12 @@ export function AppWalkthroughOverlay() {
   const handleSkip = useCallback(() => {
     try {
       try { tapHaptic(); } catch { /* ignore */ }
+      try { captureEvent('walkthrough_skipped', { at_step: step }); } catch { /* non-fatal */ }
       completeWalkthrough();
     } catch (e) {
       console.warn("[Walkthrough.handleSkip]", e instanceof Error ? e.message : String(e));
     }
-  }, [completeWalkthrough]);
+  }, [completeWalkthrough, step]);
 
   if (hasSeenWalkthrough || step < 0 || !stepConfig || !ready) return null;
 

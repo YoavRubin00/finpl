@@ -2579,6 +2579,7 @@ export function LessonFlowScreen() {
     // The CTA copy is "כבר למדנו ביחד 💪 — לא הגיע הזמן להתחייב?". User can
     // dismiss; we re-prompt at every subsequent ch-0 module until they register.
     if (isGuest && (id === 'mod-0-3' || id === 'mod-0-4' || id === 'mod-0-5')) {
+      try { captureEvent('register_cta_shown', { module_id: id, source: 'lesson' }); } catch { /* non-fatal */ }
       setShowRegisterNudge(true);
       return;
     }
@@ -2593,6 +2594,18 @@ export function LessonFlowScreen() {
     if (id === 'mod-0-3') {
       router.replace("/interstitial/bullshit-ch0" as never);
       return;
+    }
+    // Prefer the next module in the current chapter, by index. The global
+    // search below can regress to the just-completed module because completion
+    // may not be persisted yet when this runs.
+    if (chapterId && currentModIdx >= 0 && currentModIdx + 1 < chapterModules.length) {
+      const next = chapterModules[currentModIdx + 1];
+      if (!next.comingSoon && (isPro || !PRO_LOCKED_SIMS.has(next.id))) {
+        setCurrentChapter(chapterStoreKey(chapterId));
+        setCurrentModule(currentModIdx + 1);
+        router.replace(`/lesson/${next.id}?chapterId=${chapterId}` as never);
+        return;
+      }
     }
     for (const ch of ALL_CHAPTERS_ORDERED) {
       const completed = getCompletedModulesSync(chapterStoreKey(ch.id));
@@ -2703,6 +2716,7 @@ export function LessonFlowScreen() {
 
   const [finnTransitionSource, setFinnTransitionSource] = useState<{ uri: string } | null>(null);
   const [finnTipText, setFinnTipText] = useState<string | null>(null);
+  useEffect(() => { setFinnTipText(null); }, [phase]);
   // Mid-lesson Finn checkpoint
   const [showMidCheckpoint, setShowMidCheckpoint] = useState(false);
   const [checkpointReturnIndex, setCheckpointReturnIndex] = useState<number | null>(null);
@@ -4098,7 +4112,10 @@ export function LessonFlowScreen() {
                             // CTA that drops the user back to the learn map, where the
                             // walkthrough fires 1s later. (2026-05-27 redesign.)
                             if (id === 'mod-0-1') {
-                              safeTimeout(() => setShowMod01ContinueCTA(true), 600);
+                              safeTimeout(() => {
+                                try { captureEvent('mod01_continue_cta_shown', {}); } catch { /* non-fatal */ }
+                                setShowMod01ContinueCTA(true);
+                              }, 600);
                               return;
                             }
                             // Shark Love, every 3rd completed module (3, 6, 9...)
@@ -4720,10 +4737,18 @@ export function LessonFlowScreen() {
       {/* mod-0-1 continue CTA: single button that drops to learn map. Walkthrough
           fires 1s after the user lands (see app/_layout.tsx + AppWalkthroughOverlay). */}
       {showMod01ContinueCTA && (
-        <Modal visible transparent animationType="fade" onRequestClose={() => { setShowMod01ContinueCTA(false); navigateToNextModuleNormally(); }}>
+        <Modal visible transparent animationType="fade" onRequestClose={() => {
+          try { captureEvent('mod01_continue_cta_tapped', { trigger: 'system_back' }); } catch { /* non-fatal */ }
+          setShowMod01ContinueCTA(false);
+          navigateToNextModuleNormally();
+        }}>
           <Pressable
             style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.6)", justifyContent: "center", alignItems: "center", paddingHorizontal: 24 }}
-            onPress={() => { setShowMod01ContinueCTA(false); navigateToNextModuleNormally(); }}
+            onPress={() => {
+              try { captureEvent('mod01_continue_cta_tapped', { trigger: 'backdrop' }); } catch { /* non-fatal */ }
+              setShowMod01ContinueCTA(false);
+              navigateToNextModuleNormally();
+            }}
             accessibilityRole="button"
             accessibilityLabel="המשך"
           >
@@ -4740,7 +4765,12 @@ export function LessonFlowScreen() {
                 סיימת את השיעור הראשון. בואו נכיר את האפליקציה.
               </Text>
               <AnimatedPressable
-                onPress={() => { tapHaptic(); setShowMod01ContinueCTA(false); navigateToNextModuleNormally(); }}
+                onPress={() => {
+                  tapHaptic();
+                  try { captureEvent('mod01_continue_cta_tapped', { trigger: 'cta' }); } catch { /* non-fatal */ }
+                  setShowMod01ContinueCTA(false);
+                  navigateToNextModuleNormally();
+                }}
                 style={{ backgroundColor: "#0ea5e9", borderRadius: 16, paddingVertical: 16, width: "100%", alignItems: "center", borderBottomWidth: 4, borderBottomColor: "#0284c7", shadowColor: "#0ea5e9", shadowOpacity: 0.3, shadowRadius: 8, shadowOffset: { width: 0, height: 3 }, elevation: 6 }}
                 accessibilityRole="button"
                 accessibilityLabel="המשך"
@@ -4754,8 +4784,21 @@ export function LessonFlowScreen() {
 
       {/* Registration nudge for guests after mod-0-3/4/5 (fires from goToNextSequentialModule) */}
       {showRegisterNudge && (
-        <Modal visible transparent animationType="fade" onRequestClose={() => { setShowRegisterNudge(false); navigateToNextModuleNormally(); }}>
-          <Pressable style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.6)", justifyContent: "center", alignItems: "center", paddingHorizontal: 24 }} onPress={() => { setShowRegisterNudge(false); navigateToNextModuleNormally(); }} accessibilityRole="button" accessibilityLabel="סגור">
+        <Modal visible transparent animationType="fade" onRequestClose={() => {
+          try { captureEvent('register_cta_dismissed', { module_id: id, source: 'lesson', trigger: 'system_back' }); } catch { /* non-fatal */ }
+          setShowRegisterNudge(false);
+          navigateToNextModuleNormally();
+        }}>
+          <Pressable
+            style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.6)", justifyContent: "center", alignItems: "center", paddingHorizontal: 24 }}
+            onPress={() => {
+              try { captureEvent('register_cta_dismissed', { module_id: id, source: 'lesson', trigger: 'backdrop' }); } catch { /* non-fatal */ }
+              setShowRegisterNudge(false);
+              navigateToNextModuleNormally();
+            }}
+            accessibilityRole="button"
+            accessibilityLabel="סגור"
+          >
             <Pressable style={{ backgroundColor: "#e0f2fe", borderRadius: 24, padding: 24, width: "100%", maxWidth: 340, alignItems: "center" }} onPress={() => {}} accessible={false}>
               <ExpoImage source={FINN_HAPPY} accessible={false} style={{ width: 80, height: 80, marginBottom: 12 }} contentFit="contain" />
               <Text style={{ ...RTL_STYLE, fontSize: 18, fontWeight: "900", color: "#0c4a6e", marginBottom: 10, textAlign: "center" }}>
@@ -4767,6 +4810,7 @@ export function LessonFlowScreen() {
               <AnimatedPressable
                 onPress={() => {
                   tapHaptic();
+                  try { captureEvent('register_cta_accepted', { module_id: id, source: 'lesson' }); } catch { /* non-fatal */ }
                   setShowRegisterNudge(false);
                   router.replace(`/(auth)/register?returnTo=${encodeURIComponent("/(tabs)")}` as never);
                 }}
@@ -4777,7 +4821,12 @@ export function LessonFlowScreen() {
                 <Text style={{ fontSize: 16, fontWeight: "900", color: "#fff" }}>הרשמו בחינם</Text>
               </AnimatedPressable>
               <Pressable
-                onPress={() => { tapHaptic(); setShowRegisterNudge(false); navigateToNextModuleNormally(); }}
+                onPress={() => {
+                  tapHaptic();
+                  try { captureEvent('register_cta_dismissed', { module_id: id, source: 'lesson', trigger: 'skip_button' }); } catch { /* non-fatal */ }
+                  setShowRegisterNudge(false);
+                  navigateToNextModuleNormally();
+                }}
                 style={{ marginTop: 12, paddingVertical: 8 }}
                 accessibilityRole="button"
                 accessibilityLabel="המשך"
