@@ -2049,7 +2049,7 @@ function IntroStep({ onRegister, onGuest, onLoginSuccess }: IntroStepProps) {
           <Text style={{ fontSize: 14, fontWeight: "600", color: "#0891b2", textAlign: "center", writingDirection: "rtl", marginBottom: 8, letterSpacing: 0.3 }}>
             {"היי, אני קפטן שארק"}
           </Text>
-          <Text style={[introStyles.title, { marginBottom: 0 }]}>{"נשחק עם הכסף שלך."}</Text>
+          <Text style={[introStyles.title, { marginBottom: 0 }]}>{"בואו נתחיל לשחק עם הכסף שלכם."}</Text>
         </Animated.View>
 
         <Animated.View style={[ctaAnimStyle, { alignItems: "center", gap: 10, width: "100%" }]}>
@@ -2078,10 +2078,10 @@ function IntroStep({ onRegister, onGuest, onLoginSuccess }: IntroStepProps) {
             </Text>
           </Text>
 
-          <Pressable onPress={() => setSubStep("login")} accessibilityRole="link" accessibilityLabel="כבר יש לך חשבון? התחבר כאן" style={{ marginTop: 8 }}>
+          <Pressable onPress={() => setSubStep("login")} accessibilityRole="link" accessibilityLabel="כבר יש לי חשבון? התחבר" style={{ marginTop: 8 }}>
             <Text style={introStyles.loginLink}>
-              {"כבר יש לך חשבון? "}
-              <Text style={introStyles.loginLinkAccent}>{"התחבר כאן"}</Text>
+              {"כבר יש לי חשבון? "}
+              <Text style={introStyles.loginLinkAccent}>{"התחבר"}</Text>
             </Text>
           </Pressable>
         </Animated.View>
