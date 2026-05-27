@@ -159,22 +159,22 @@ export function AppWalkthroughOverlay() {
   const segments = useSegments();
   const [transitioning, setTransitioning] = useState(false);
   const reducedMotion = useReducedMotion();
-  // Delay walkthrough by 2 seconds after the user lands on the tab post mod-0-1.
-  // 1s wasn't enough — the mod-0-1 continue modal close animation + tab navigation
-  // were still resolving when the walkthrough overlay started fading in, so the
-  // two visually overlapped.
+  // The walkthrough only starts once the user has explicitly opted in by
+  // tapping "המשך" on the mod-0-1 completion modal (which sets
+  // walkthroughTriggered=true). Without this gate, the overlay used to
+  // race the mod-0-1 modal close + tab transition and the user saw two
+  // "continue" prompts back-to-back.
+  const walkthroughTriggered = useTutorialStore((s) => s.walkthroughTriggered);
   const [ready, setReady] = useState(step > 0);
   useEffect(() => {
     if (hasSeenWalkthrough || ready) return;
-    const timer = setTimeout(() => {
-      setReady(true);
-      // First time the walkthrough becomes visible — log the start event.
-      if (step === 0) {
-        try { captureEvent('walkthrough_started', {}); } catch { /* non-fatal */ }
-      }
-    }, 2000);
-    return () => clearTimeout(timer);
-  }, [hasSeenWalkthrough, ready, step]);
+    if (!walkthroughTriggered) return;
+    setReady(true);
+    // First time the walkthrough becomes visible — log the start event.
+    if (step === 0) {
+      try { captureEvent('walkthrough_started', {}); } catch { /* non-fatal */ }
+    }
+  }, [hasSeenWalkthrough, ready, step, walkthroughTriggered]);
   // Track whether user pressed CTA on the chat-style step and is now choosing
   const [waitingForChatChoice, setWaitingForChatChoice] = useState(false);
   // Key to force re-mount of content for enter/exit animation between steps

@@ -1970,13 +1970,21 @@ function IntroStep({ onRegister, onGuest, onLoginSuccess }: IntroStepProps) {
             </Pressable>
           )}
 
-          {/* Google Sign-In */}
+          {/* Google Sign-In — intentionally NOT disabled when !googleReady so the
+              user always gets feedback. If the request isn't ready,
+              promptGoogleSignIn surfaces an error message via setAuthError
+              instead of swallowing the tap. */}
           <Pressable
-            disabled={!googleReady}
-            onPress={() => promptGoogleSignIn?.()}
+            onPress={() => {
+              if (!googleReady || !promptGoogleSignIn) {
+                useAuthStore.getState().setAuthError("הכניסה עם Google לא זמינה כרגע. נסה שוב בעוד רגע.");
+                return;
+              }
+              promptGoogleSignIn();
+            }}
             accessibilityRole="button"
             accessibilityLabel="התחבר עם Google"
-            style={introStyles.googleBtn}
+            style={[introStyles.googleBtn, !googleReady && { opacity: 0.6 }]}
           >
             <Text style={{ fontSize: 15, fontWeight: "600", color: "#1e293b" }}>התחבר עם Google</Text>
             <GoogleLogo size={20} />

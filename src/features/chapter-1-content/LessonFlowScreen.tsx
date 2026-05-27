@@ -2600,10 +2600,12 @@ export function LessonFlowScreen() {
       navigateToNextModuleNormally();
       return;
     }
-    // Register CTA cadence (guests only): fire after mod-0-3, 0-4, 0-5.
-    // The CTA copy is "כבר למדנו ביחד 💪 — לא הגיע הזמן להתחייב?". User can
-    // dismiss; we re-prompt at every subsequent ch-0 module until they register.
-    if (isGuest && (id === 'mod-0-3' || id === 'mod-0-4' || id === 'mod-0-5')) {
+    // Register CTA cadence (guests only): fire after mod-0-3/4/5, but ONLY on
+    // odd-indexed modules (mod-0-4) where the PostCelebration "Netflix?" modal
+    // doesn't fire. This prevents the two end-of-module modals from stacking on
+    // the same module (mod-0-3 and mod-0-5 are even-indexed and own the Netflix
+    // slot). User can dismiss; we re-prompt the next time the odd slot lines up.
+    if (isGuest && (id === 'mod-0-3' || id === 'mod-0-4' || id === 'mod-0-5') && currentModIdx % 2 !== 0) {
       try { captureEvent('register_cta_shown', { module_id: id, source: 'lesson' }); } catch { /* non-fatal */ }
       setShowRegisterNudge(true);
       return;
@@ -3129,13 +3131,9 @@ export function LessonFlowScreen() {
     ) return;
     // mod-0-1: clean — no PostCelebration modal, dedicated Mod01ContinueCTA handles it.
     if (id === 'mod-0-1') return;
-    // Guest finishing mod-0-3/4/5: skip "Netflix?" modal, show register nudge after chest.
-    // The actual nudge dispatch happens in goToNextSequentialModule — this effect
-    // just prevents the Netflix modal from competing for the slot.
-    if (isGuest && (id === 'mod-0-3' || id === 'mod-0-4' || id === 'mod-0-5')) {
-      return;
-    }
-    // Show every other module (0, 2, 4... = yes, 1, 3, 5... = no)
+    // Show every other module (0, 2, 4... = yes, 1, 3, 5... = no).
+    // For guests in mod-0-3/4/5 the register CTA fires from goToNextSequentialModule
+    // *only on the odd-indexed mod-0-4*, so the two modals never stack on the same module.
     if (currentModIdx % 2 !== 0) return;
     // Wait 2s after all higher-priority nudges have cleared
     const timer = setTimeout(() => setShowPostCelebration(true), 2000);
@@ -4759,11 +4757,13 @@ export function LessonFlowScreen() {
         />
       )}
 
-      {/* mod-0-1 continue CTA: single button that drops to learn map. Walkthrough
-          fires 1s after the user lands (see app/_layout.tsx + AppWalkthroughOverlay). */}
+      {/* mod-0-1 continue CTA: single button that drops to learn map. Tapping it
+          (or dismissing via Back/backdrop) opts the user into the walkthrough,
+          which then fires on the next frame inside AppWalkthroughOverlay. */}
       {showMod01ContinueCTA && (
         <Modal visible transparent animationType="fade" onRequestClose={() => {
           try { captureEvent('mod01_continue_cta_tapped', { trigger: 'system_back' }); } catch { /* non-fatal */ }
+          useTutorialStore.getState().triggerWalkthrough();
           setShowMod01ContinueCTA(false);
           navigateToNextModuleNormally();
         }}>
@@ -4771,6 +4771,7 @@ export function LessonFlowScreen() {
             style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.6)", justifyContent: "center", alignItems: "center", paddingHorizontal: 24 }}
             onPress={() => {
               try { captureEvent('mod01_continue_cta_tapped', { trigger: 'backdrop' }); } catch { /* non-fatal */ }
+              useTutorialStore.getState().triggerWalkthrough();
               setShowMod01ContinueCTA(false);
               navigateToNextModuleNormally();
             }}
@@ -4793,6 +4794,7 @@ export function LessonFlowScreen() {
                 onPress={() => {
                   tapHaptic();
                   try { captureEvent('mod01_continue_cta_tapped', { trigger: 'cta' }); } catch { /* non-fatal */ }
+                  useTutorialStore.getState().triggerWalkthrough();
                   setShowMod01ContinueCTA(false);
                   navigateToNextModuleNormally();
                 }}
