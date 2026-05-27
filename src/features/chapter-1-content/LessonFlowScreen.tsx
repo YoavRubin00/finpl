@@ -98,6 +98,7 @@ import { TA125WarRecoveryChart } from "../chapter-4-content/components/TA125WarR
 import { FlyingRewards } from "../../components/ui/FlyingRewards";
 import { GoldCoinIcon } from "../../components/ui/GoldCoinIcon";
 import { useAuthStore } from "../auth/useAuthStore";
+import { InModuleProfileQuestion, type ProfileQuestionKind } from "../onboarding/InModuleProfileQuestion";
 import { useRewardedAd } from "../../hooks/useRewardedAd";
 import { DecorationOverlay } from "../../components/ui/DecorationOverlay";
 import { generateChestDrop } from "../retention-loops/chestDrops";
@@ -840,9 +841,9 @@ function FlashcardCard({
             </Animated.View>
           )}
 
-          {/* Bottom navigation bar for comics */}
+          {/* Bottom navigation bar for comics. RTL: back chevron on right side. */}
           <View style={{ paddingHorizontal: 16, paddingVertical: 4 }}>
-            <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+            <View style={{ flexDirection: "row-reverse", alignItems: "center", gap: 8 }}>
               <AnimatedPressable onPress={handlePrevBtn} disabled={index === 0 && (!isDiveMode || diveStep === 0)} style={{ padding: 8, opacity: (index === 0 && (!isDiveMode || diveStep === 0)) ? 0.3 : 1 }} accessibilityRole="button" accessibilityLabel="הקודם">
                 <ChevronRight size={28} color={unitColors.bg} />
               </AnimatedPressable>
@@ -871,9 +872,9 @@ function FlashcardCard({
             <View style={{ height: 10 }} />
           )}
 
-          {/* Bottom navigation bar */}
+          {/* Bottom navigation bar. RTL: back chevron on right side. */}
           <View style={{ paddingHorizontal: 8, paddingVertical: 8, paddingBottom: 16 }}>
-            <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+            <View style={{ flexDirection: "row-reverse", alignItems: "center", gap: 8 }}>
               <AnimatedPressable
                 onPress={handlePrevBtn}
                 disabled={index === 0 && (!isDiveMode || diveStep === 0)}
@@ -937,9 +938,9 @@ function FlashcardCard({
             </ScrollView>
           </View>
 
-          {/* Bottom navigation bar, back + continue */}
+          {/* Bottom navigation bar, continue + back (RTL: continue on right side, back chevron on left in DOM = right in RTL). */}
           <View style={{ paddingHorizontal: 8, paddingVertical: 8, paddingBottom: 16 }}>
-            <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+            <View style={{ flexDirection: "row-reverse", alignItems: "center", gap: 8 }}>
               <AnimatedPressable
                 onPress={handlePrevBtn}
                 disabled={index === 0 && (!isDiveMode || diveStep === 0)}
@@ -2503,6 +2504,21 @@ export function LessonFlowScreen() {
     }
   }, [isModuleAccessible]);
 
+  /**
+   * Maps a just-completed module to the profile question we want to ask after it.
+   * Returns null if the user already answered that field (skip-on-known) or if
+   * the module has no associated question.
+   */
+  function pendingProfileQuestionFor(moduleId: string): ProfileQuestionKind | null {
+    // Snapshot read — called from event handlers (lesson complete), not during render.
+    // Subscribing via the hook would add re-renders for no benefit.
+    const profile = useAuthStore.getState().profile;
+    if (moduleId === "mod-0-1" && !profile?.knowledgeLevel) return "knowledgeLevel";
+    if (moduleId === "mod-0-4" && !profile?.learningTime) return "learningTime";
+    if (moduleId === "mod-0-5" && !profile?.dailyGoalMinutes) return "dailyGoal";
+    return null;
+  }
+
   /** Navigate past mod-0-1 to the next incomplete module (called from register nudge buttons) */
   function navigateToNextModuleNormally() {
     // Force-complete mod-0-1 before navigating so we never loop back to it.
@@ -2531,15 +2547,29 @@ export function LessonFlowScreen() {
 
   /** Navigate to user's next sequential module */
   function goToNextSequentialModule() {
-    // After completing the first module (mod-0-1), show register nudge for guests;
-    // navigation advances when the user acts on the nudge (any button).
-    if (id === 'mod-0-1') {
-      if (isGuest) {
-        setShowRegisterNudge(true);
-      } else {
-        // Signed-in user: drop back to the learn map on mod-0-2, not the next lesson.
-        navigateToNextModuleNormally();
+    // Graduate Onboarding gate: if this module owns a profile question and the
+    // user hasn't answered it yet, show the question first. The question's
+    // onDone callback re-invokes this function, which will then short-circuit
+    // (profile is now populated, pendingProfileQuestionFor returns null).
+    if (id) {
+      const q = pendingProfileQuestionFor(id);
+      if (q) {
+        setProfileQuestionKind(q);
+        return;
       }
+    }
+    // mod-0-1: clean lesson, no signup popup. Just drop back to the learn map.
+    // Earlier behavior: nudge fired here for guests, but that overwhelmed users
+    // right after their first taste of content. Cadence policy now triggers the
+    // nudge after mod-0-3 (see interrupt-cadence-strategy doc).
+    if (id === 'mod-0-1') {
+      navigateToNextModuleNormally();
+      return;
+    }
+    // mod-0-3: by now the guest has finished three modules, the right moment
+    // to ask them to save their progress (relationship pacing).
+    if (id === 'mod-0-3' && isGuest) {
+      setShowRegisterNudge(true);
       return;
     }
     // After completing the Emergency Fund module, route to the Tower Defense boss.
@@ -2723,6 +2753,11 @@ export function LessonFlowScreen() {
   const [showFinnBridgeNudge, setShowFinnBridgeNudge] = useState(false);
   const [showExitConfirm, setShowExitConfirm] = useState(false);
   const [showRegisterNudge, setShowRegisterNudge] = useState(false);
+  // In-module profile question (Graduate Onboarding, see interrupt-cadence doc).
+  // mod-0-1, knowledgeLevel. mod-0-4, learningTime. mod-0-5, dailyGoalMinutes.
+  // The question fires only if the user has not already answered it in onboarding
+  // or in a previous module visit (skip-on-known).
+  const [profileQuestionKind, setProfileQuestionKind] = useState<ProfileQuestionKind | null>(null);
   const [showPizzaModal, setShowPizzaModal] = useState(false);
   const [showMod01BarterNotif, setShowMod01BarterNotif] = useState(false);
   const hasSeenPizza = useTutorialStore((s) => s.hasSeenPizzaIndexModal);
@@ -3040,8 +3075,9 @@ export function LessonFlowScreen() {
       showBreakMessage ||
       pendingPostChestNudge !== null
     ) return;
-    // Guest finishing mod-0-1: skip "Netflix?" modal, show register nudge right after chest
-    if (id === 'mod-0-1' && isGuest) {
+    // Guest finishing mod-0-3: skip "Netflix?" modal, show register nudge after chest.
+    // Cadence policy moved this trigger from mod-0-1 to mod-0-3, see strategy doc.
+    if (id === 'mod-0-3' && isGuest) {
       const timer = setTimeout(() => setShowRegisterNudge(true), 1500);
       return () => clearTimeout(timer);
     }
@@ -4643,6 +4679,20 @@ export function LessonFlowScreen() {
         </Modal>
         );
       })()}
+
+      {/* Graduate Onboarding: profile question after specific modules */}
+      {profileQuestionKind && (
+        <InModuleProfileQuestion
+          visible={true}
+          kind={profileQuestionKind}
+          onDone={() => {
+            setProfileQuestionKind(null);
+            // Re-enter the next-module flow now that profile is populated.
+            // pendingProfileQuestionFor will return null this time.
+            goToNextSequentialModule();
+          }}
+        />
+      )}
 
       {/* Registration nudge for guests after mod-0-1 */}
       {showRegisterNudge && (

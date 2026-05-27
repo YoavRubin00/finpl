@@ -364,13 +364,16 @@ function RootLayoutInner() {
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
   const hasCompletedOnboarding = useAuthStore((s) => s.hasCompletedOnboarding);
   const hasSeenWalkthrough = useTutorialStore((s) => s.hasSeenAppWalkthrough);
-  // Suppress all auto-popup modals until the user finishes the very first
-  // lesson (mod-0-1). New users complaining that the GlobalQuestCompletion
-  // modal kicked them out of the in-app walkthrough the moment they pressed
-  // "בואו נתחיל" — any quest auto-completion during the tutorial fired the
-  // popup and broke the first-run experience.
+  // Interrupt cadence (decision 2026-05-27, "relationship pacing"):
+  //   mod-0-1, clean. Only celebration. No tour, no popups.
+  //   mod-0-2, tour walkthrough fires.
+  //   mod-0-3, signup nudge fires (handled by GuestRegisterDailyNudge).
+  //   mod-0-4 onwards, full popup set allowed.
+  // One interrupt per lesson, never two stacked.
   const isMod01Complete = useIsModuleCompleted("mod-0-1");
-  const allowAutoPopups = hasCompletedOnboarding && hasSeenWalkthrough && isMod01Complete;
+  const isMod02Complete = useIsModuleCompleted("mod-0-2");
+  const isMod03Complete = useIsModuleCompleted("mod-0-3");
+  const allowAutoPopups = hasCompletedOnboarding && hasSeenWalkthrough && isMod02Complete;
 
   // ── Android Play Install Referrer — runs once on first launch ──
   // When a user clicks finplay.me/invite/CODE and installs from the Play Store,
@@ -491,7 +494,7 @@ function RootLayoutInner() {
         <RewardAnimationProvider>
             <StreakCelebrationProvider>
               <Slot />
-              {isAuthenticated && hasCompletedOnboarding && <AppWalkthroughOverlay />}
+              {isAuthenticated && hasCompletedOnboarding && isMod02Complete && <AppWalkthroughOverlay />}
               <ShopModal />
               {allowAutoPopups && <GlobalUpgradeModal />}
               {allowAutoPopups && <PostStreakIncomeSplash />}
@@ -499,7 +502,7 @@ function RootLayoutInner() {
               {allowAutoPopups && <GlobalQuestCompletionModal />}
               <DailyBridgeNudgeModal />
               <InviteFriendsNudgeModal />
-              {hasCompletedOnboarding && hasSeenWalkthrough && <GuestRegisterDailyNudge />}
+              {hasCompletedOnboarding && hasSeenWalkthrough && isMod03Complete && <GuestRegisterDailyNudge />}
               {/* Global top banners — suppressed during onboarding/tutorial to avoid distracting the first-run experience */}
               {hasCompletedOnboarding && hasSeenWalkthrough && (
                 <>

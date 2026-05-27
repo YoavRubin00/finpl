@@ -1,13 +1,15 @@
-import React, { useState, useEffect, useCallback, useRef } from "react";
+import React, { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { Image as ExpoImage } from "expo-image";
-import { View, Text, Image, TextInput, Pressable, ScrollView, Dimensions, StyleSheet, ImageBackground, PanResponder, KeyboardAvoidingView, Platform } from "react-native";
+import { View, Text, Image, TextInput, Pressable, ScrollView, Dimensions, StyleSheet, ImageBackground, PanResponder, KeyboardAvoidingView, Platform, Modal } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
 import { LottieIcon } from "../../components/ui/LottieIcon";
+import { ConfettiExplosion } from "../../components/ui/ConfettiExplosion";
+import { GoogleLogo } from "../../components/ui/GoogleLogo";
 import LottieView from "lottie-react-native";
 import { FINN_STANDARD, FINN_HELLO, FINN_HAPPY, FINN_TABLET } from "../retention-loops/finnMascotConfig";
-import { useRouter } from "expo-router";
-import { Sparkles, TrendingUp, Pencil, ChevronDown, ChevronUp } from "lucide-react-native";
+import { useRouter, type Href } from "expo-router";
+import { Sparkles, TrendingUp, Pencil, ChevronDown, ChevronUp, ChevronRight } from "lucide-react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { SkiaInteractiveChart } from "../../components/ui/SkiaInteractiveChart";
 import type { ChartDataPoint } from "../../components/ui/SkiaInteractiveChart";
@@ -30,6 +32,7 @@ import Animated, {
 import { useSoundEffect } from "../../hooks/useSoundEffect";
 import { tapHaptic } from "../../utils/haptics";
 import { useEconomyUIStore } from "../economy/useEconomyUIStore";
+import { useRecordDailyActivity } from "../economy/useStreak";
 import { useAuthStore } from "../auth/useAuthStore";
 import { signInWithProfile } from "../../lib/auth/lifecycle";
 import { getApiBase } from "../../db/apiBase";
@@ -59,7 +62,7 @@ const { width: SCREEN_WIDTH } = Dimensions.get("window");
 const CHAT_BG = { uri: 'https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/images/HOMEPAGE.png' };
 const SLIDE_MS = 300;
 const AUTO_ADVANCE_MS = 1150; // 900ms typing + 250ms extra before transition
-const TOTAL_STEPS = 8;
+const TOTAL_STEPS = 3;
 
 const CONFETTI_COLORS = [
   "#0891b2", "#4ade80", "#fbbf24", "#22d3ee",
@@ -71,7 +74,7 @@ const CONFETTI_COLORS = [
 const finnTriggerRef: { current: (() => void) | null } = { current: null };
 
 const STEPS_WITH_PERSISTENT_FINN = new Set([
-  "dream", "goal", "knowledge", "age", "learning-time", "learning-style", "daily-goal",
+  "dream", "goal", "age",
 ]);
 
 // Pre-computed so particles are deterministic (no Math.random in render)
@@ -354,6 +357,7 @@ function StepShell({
   question,
   hint,
   children,
+  onBack,
 }: {
   stepIndex: number;
   question: string;
@@ -361,6 +365,7 @@ function StepShell({
   children: React.ReactNode;
   finnState?: "idle" | "celebrate" | "empathy" | "thinking" | "tablet";
   compact?: boolean;
+  onBack?: () => void;
 }) {
   const headerTy = useSharedValue(-20);
   const headerOpacity = useSharedValue(0);
@@ -432,8 +437,13 @@ function StepShell({
     <ImageBackground source={CHAT_BG} style={{ flex: 1 }} resizeMode="cover">
       <BubbleOverlay />
       <SafeAreaView style={styles.shell} edges={["top", "bottom"]}>
-        {/* Progress bar */}
+        {/* Progress bar with optional back chevron */}
         <View style={styles.topRow}>
+          {onBack ? (
+            <Pressable onPress={onBack} accessibilityRole="button" accessibilityLabel="חזרה לשאלה הקודמת" hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }} style={{ padding: 4 }}>
+              <ChevronRight size={22} color="#64748b" />
+            </Pressable>
+          ) : null}
           <GlowBar current={stepIndex} />
         </View>
 
@@ -581,15 +591,46 @@ function ProfileSummaryScreen({ collected, onDone, onEditStep }: { collected: Co
 
 // ─── Celebration screen ───────────────────────────────────────────────────────
 
-function CelebrationScreen({ onDone }: { onDone: () => void }) {
+// Variable rewards — bronze is the baseline (no popup), silver/gold are
+// surprises that fire the "תפסת אוצר" popup. Weights tuned for rarity:
+// bronze 60%, silver 30%, gold 10%. Picked once per mount via useMemo so
+// the celebration UI and the coin grant in handleDone stay in sync.
+type RewardTier = "bronze" | "silver" | "gold";
+
+function pickRewardTier(): RewardTier {
+  const r = Math.random();
+  if (r < 0.6) return "bronze";
+  if (r < 0.9) return "silver";
+  return "gold";
+}
+
+const REWARD_COINS: Record<RewardTier, number> = {
+  bronze: 50,
+  silver: 75,
+  gold: 150,
+};
+
+function CelebrationScreen({ onDone }: { onDone: (tier: RewardTier) => void }) {
+  const rewardTier = useMemo(() => pickRewardTier(), []);
+  const rewardCoins = REWARD_COINS[rewardTier];
+  const rewardLabel = rewardTier === "gold" ? "🎰 ג'קפוט!" : rewardTier === "silver" ? "🍀 בונוס מזל!" : null;
+  // Bonus tiers (silver/gold) show a popup first so users understand they won
+  // something extra. Bronze (default 50) skips the popup entirely.
+  const [showBonusPopup, setShowBonusPopup] = useState(rewardTier !== "bronze");
   const badgeScale = useSharedValue(0.2);
   const badgeRotate = useSharedValue(-15);
   const xpScale = useSharedValue(0);
-  // CTA fades in via opacity (not scale). When using scale: 0 → 1, the
+  // CTA fades in via opacity (not scale). When using scale 0 to 1, the
   // Pressable's hit-rect stays collapsed and on some Reanimated/RN versions
-  // it never recovers — the button looks visible but doesn't respond to taps.
+  // it never recovers, the button looks visible but doesn't respond to taps.
   // Opacity doesn't affect hit-testing, so the button is tappable from mount.
   const ctaOpacity = useSharedValue(0);
+  const [bursting, setBursting] = useState(false);
+  // Synchronous guard against double-tap in the same frame. useState's stale
+  // closure can let two taps both pass the `bursting` check before either
+  // setBursting commits.
+  const burstingRef = useRef(false);
+  const { playSound: playCelebSound } = useSoundEffect();
 
   useEffect(() => {
     badgeScale.value = withSequence(
@@ -600,6 +641,14 @@ function CelebrationScreen({ onDone }: { onDone: () => void }) {
     xpScale.value = withDelay(350, withSpring(1, { damping: 14, stiffness: 120 }));
     ctaOpacity.value = withDelay(700, withTiming(1, { duration: 280 }));
   }, []);
+
+  function handleStart() {
+    if (burstingRef.current) return;
+    burstingRef.current = true;
+    setBursting(true);
+    try { tapHaptic(); } catch { /* non-fatal */ }
+    try { playCelebSound('modal_open_4'); } catch { /* non-fatal */ }
+  }
 
   const [showCodeField, setShowCodeField] = useState(false);
   const [inviteCode, setInviteCode] = useState('');
@@ -669,25 +718,32 @@ function CelebrationScreen({ onDone }: { onDone: () => void }) {
             <Text style={styles.rewardXP}>+{ONBOARDING_XP} XP</Text>
           </View>
           <View style={[styles.rewardPill, styles.rewardPillGold]}>
-            <Text style={styles.rewardCoins}>+50 מטבעות</Text>
+            <Text style={styles.rewardCoins}>+{rewardCoins} מטבעות</Text>
           </View>
         </Animated.View>
 
-        <Text style={styles.celebTitle}>הפרופיל שלכם מוכן!</Text>
+        <Text style={styles.celebTitle}>הפרופיל שלך מוכן!</Text>
         <Text style={styles.celebSub}>
-          הכנו את הפיד שלכם.{"\n"}הגיע הזמן להפוך ידע לכסף. 💰
+          הכנו את הפיד שלך.{"\n"}הגיע הזמן להפוך ידע לכסף. 💰
         </Text>
 
         {/* CTA */}
         <Animated.View style={ctaStyle}>
-          <Pressable onPress={onDone} style={styles.celebCTA} accessibilityRole="button" accessibilityLabel="בואו נתחיל">
-            <Text style={styles.celebCTAText}>בואו נתחיל</Text>
+          <Pressable onPress={handleStart} disabled={bursting} style={styles.celebCTA} accessibilityRole="button" accessibilityLabel="בואו נתחיל">
+            <Text style={styles.celebCTAText}>מתחילים</Text>
           </Pressable>
         </Animated.View>
 
+        {/* Coin / confetti burst on CTA tap, then onDone */}
+        {bursting && (
+          <View pointerEvents="none" style={StyleSheet.absoluteFillObject}>
+            <ConfettiExplosion onComplete={() => onDone(rewardTier)} />
+          </View>
+        )}
+
         {/* Optional invite code entry */}
         {codeSaved ? (
-          <Text style={styles.codeSavedText}>✓ קוד ישמר ויחובר לחשבון שלכם</Text>
+          <Text style={styles.codeSavedText}>✓ קוד ישמר ויחובר לחשבון שלך</Text>
         ) : showCodeField ? (
           <Animated.View style={[styles.codeRow, codeAreaStyle]}>
             <TextInput
@@ -719,6 +775,172 @@ function CelebrationScreen({ onDone }: { onDone: () => void }) {
           </Pressable>
         )}
       </SafeAreaView>
+
+      {/* Bonus popup, wrapped in Modal so Android Back closes it.
+          Anchored reveal puts the gold +150 next to a faded +50 so the
+          rarity is visual, not just textual. */}
+      <Modal
+        visible={showBonusPopup && rewardLabel !== null}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowBonusPopup(false)}
+      >
+        <View
+          style={{
+            flex: 1,
+            backgroundColor: "rgba(15, 23, 42, 0.6)",
+            alignItems: "center", justifyContent: "center",
+          }}
+        >
+
+          <Animated.View
+            entering={FadeInUp.duration(500).springify().damping(8)}
+            style={{
+              backgroundColor: "#ffffff",
+              borderRadius: 24,
+              paddingVertical: 28, paddingHorizontal: 24,
+              alignItems: "center",
+              marginHorizontal: 24,
+              maxWidth: 380,
+              width: "85%",
+              borderWidth: 1,
+              borderColor: "#e2e8f0",
+              shadowColor: "#0f172a",
+              shadowOffset: { width: 0, height: 8 },
+              shadowOpacity: 0.18, shadowRadius: 24, elevation: 14,
+            }}
+          >
+            {/* Diamond Lottie, the hero icon. Defines what the reward is. */}
+            <Animated.View
+              entering={FadeIn.duration(600).delay(200)}
+              style={{ marginBottom: 4, alignItems: "center", justifyContent: "center" }}
+            >
+              <LottieView
+                source={require("../../../assets/lottie/Diamond.json")}
+                style={{ width: 120, height: 120 }}
+                autoPlay
+                loop
+                renderMode="SOFTWARE"
+              />
+            </Animated.View>
+
+            {/* Headline */}
+            <Animated.Text
+              entering={FadeInDown.duration(500).delay(350)}
+              style={{
+                fontSize: 28, fontWeight: "900",
+                color: "#0f172a",
+                textAlign: "center", writingDirection: "rtl",
+                marginBottom: 6,
+                letterSpacing: -0.3,
+              }}
+            >
+              תפסת אוצר!
+            </Animated.Text>
+
+            <Animated.Text
+              entering={FadeInDown.duration(500).delay(450)}
+              style={{
+                fontSize: 14, fontWeight: "600",
+                color: "#64748b",
+                textAlign: "center", writingDirection: "rtl",
+                marginBottom: 24,
+                lineHeight: 20,
+              }}
+            >
+              {rewardTier === "gold"
+                ? "רוב הצוללנים לא מוצאים את זה"
+                : "מטמון נדיר על קרקעית הים"}
+            </Animated.Text>
+
+            {/* Anchored reveal, regular vs your rare */}
+            <Animated.View
+              entering={FadeInUp.duration(500).delay(600).springify().damping(10)}
+              style={{
+                flexDirection: "row-reverse", alignItems: "center", gap: 18,
+                marginBottom: 6,
+              }}
+            >
+              {/* Regular reward, anchor */}
+              <View style={{ alignItems: "center", opacity: 0.4 }}>
+                <Text style={{ fontSize: 10, fontWeight: "700", color: "#64748b", letterSpacing: 0.5, marginBottom: 6 }}>
+                  רוב המשתמשים
+                </Text>
+                <Text style={{ fontSize: 24, fontWeight: "800", color: "#94a3b8", textDecorationLine: "line-through" }}>
+                  +50
+                </Text>
+              </View>
+
+              {/* Arrow */}
+              <Text style={{ fontSize: 20, color: "#cbd5e1", marginTop: 14 }}>←</Text>
+
+              {/* Your rare reward, the only golden element on the screen */}
+              <View style={{ alignItems: "center" }}>
+                <Text style={{ fontSize: 10, fontWeight: "800", color: "#0891b2", letterSpacing: 0.5, marginBottom: 6 }}>
+                  אתה
+                </Text>
+                <Text style={{
+                  fontSize: 44, fontWeight: "900",
+                  color: "#ca8a04",
+                  letterSpacing: -1.5,
+                  lineHeight: 44,
+                }}>
+                  +{rewardCoins}
+                </Text>
+              </View>
+            </Animated.View>
+
+            {/* Label for both numbers */}
+            <Animated.Text
+              entering={FadeIn.duration(500).delay(700)}
+              style={{
+                fontSize: 12, fontWeight: "700",
+                color: "#475569",
+                textAlign: "center", writingDirection: "rtl",
+                marginBottom: 22,
+                letterSpacing: 0.5,
+              }}
+            >
+              מטבעות
+            </Animated.Text>
+
+            {/* Rarity badge, single subtle highlight */}
+            <Animated.View
+              entering={FadeIn.duration(500).delay(800)}
+              style={{
+                backgroundColor: "#fef3c7",
+                paddingHorizontal: 14, paddingVertical: 5,
+                borderRadius: 999,
+                marginBottom: 22,
+              }}
+            >
+              <Text style={{ fontSize: 11, fontWeight: "800", color: "#92400e", letterSpacing: 0.5 }}>
+                {rewardTier === "gold" ? "נדיר במיוחד" : "נדיר"}
+              </Text>
+            </Animated.View>
+
+            {/* CTA, brand primary */}
+            <Animated.View entering={FadeInUp.duration(400).delay(900)}>
+              <Pressable
+                onPress={() => setShowBonusPopup(false)}
+                accessibilityRole="button"
+                accessibilityLabel="קח את האוצר"
+                style={{
+                  backgroundColor: "#0891b2",
+                  paddingHorizontal: 36, paddingVertical: 14,
+                  borderRadius: 999,
+                  borderBottomWidth: 4,
+                  borderBottomColor: "#0e7490",
+                }}
+              >
+                <Text style={{ fontSize: 16, fontWeight: "900", color: "#ffffff", letterSpacing: 0.3 }}>
+                  תפסתי בשיניים
+                </Text>
+              </Pressable>
+            </Animated.View>
+          </Animated.View>
+        </View>
+      </Modal>
     </ImageBackground>
   );
 }
@@ -747,7 +969,7 @@ function DreamStep({ onNext }: { onNext: (v: FinancialDream) => void }) {
   }, [onNext]);
 
   return (
-    <StepShell stepIndex={0} question="מה החלום הפיננסי שלכם?" hint="נתחיל מהמטרה, והדרך תתגלה" finnState={sel ? "tablet" : "thinking"}>
+    <StepShell stepIndex={0} question="מה החלום הפיננסי שלך?" hint="נתחיל מהמטרה, הדרך תתגלה" finnState={sel ? "tablet" : "thinking"}>
       <View style={styles.grid}>
         {DREAMS.map((d, i) => (
           <AnimatedGridCard
@@ -817,29 +1039,29 @@ const DEADLINE_LOTTIES: Record<DeadlineStress, number> = {
 const GOALS: { id: FinancialGoal; label: string; sub: string }[] = [
   { id: "cash-flow", label: "הכסף בורח לי מהידיים", sub: "תזרים ותקציב" },
   { id: "investing", label: "אני רוצה שהכסף יעבוד", sub: "השקעות" },
-  { id: "army-release", label: "אני משתחרר/ת", sub: "שחרור מהצבא" },
+  { id: "army-release", label: "שחרור מהצבא", sub: "התחלה חדשה" },
   { id: "expand-horizons", label: "הרחבת אופקים", sub: "להבין את העולם" },
-  { id: "unsure", label: "לא בטוח/ה", sub: "סתם מסתכל/ת" },
+  { id: "unsure", label: "עדיין לא בטוח", sub: "סתם מציץ" },
 ];
 
 const DREAM_REACTIONS: Record<FinancialDream, string> = {
-  trip: "טיול גדול זה יעד מדהים! בואו נראה מאיפה מתחילים.",
-  car: "רכב ראשון? לגמרי אפשרי לפצח את זה.",
-  apartment: "דירה זה פרויקט רציני, טוב שאתם פה!",
-  freedom: "חופש מוחלט. זו המטרה של כולנו.",
+  trip: "טיול גדול זה יעד מדהים. נראה מאיפה מתחילים.",
+  car: "רכב ראשון? לגמרי אפשרי לצלול לזה.",
+  apartment: "דירה זה ים גדול. טוב שצללת.",
+  freedom: "חופש מוחלט. היעד הכי שווה שיש.",
 };
 
-function GoalStep({ dream, onNext }: { dream: FinancialDream | null; onNext: (v: FinancialGoal) => void }) {
+function GoalStep({ dream, onNext, onBack }: { dream: FinancialDream | null; onNext: (v: FinancialGoal) => void; onBack?: () => void }) {
   const [sel, setSel] = useState<FinancialGoal | null>(null);
   const tap = useCallback((id: FinancialGoal) => {
     setSel(id);
     setTimeout(() => onNext(id), AUTO_ADVANCE_MS);
   }, [onNext]);
 
-  const dynamicHint = dream ? DREAM_REACTIONS[dream] : "זה יעצב את הפיד שלכם";
+  const dynamicHint = dream ? DREAM_REACTIONS[dream] : "זה יעצב את הפיד שלך";
 
   return (
-    <StepShell stepIndex={1} question="למה אתם פה?" hint={dynamicHint} finnState={sel ? "tablet" : "idle"}>
+    <StepShell stepIndex={1} question="למה הצטרפת?" hint={dynamicHint} finnState={sel ? "tablet" : "idle"} onBack={onBack}>
       <View>
         {GOALS.map((g, i) => (
           <AnimatedCard key={g.id} index={i} label={g.label} sublabel={g.sub}
@@ -893,9 +1115,9 @@ function KnowledgeStep({ goal, onNext }: { goal: FinancialGoal | null; onNext: (
 
 const CY = new Date().getFullYear();
 const AGE_GROUPS: { label: string; sub: string; ageGroup: AgeGroup; birthYear: number }[] = [
-  { label: "16–17", sub: "מתחיל מוקדם!", ageGroup: "minor", birthYear: CY - 16 },
-  { label: "18–23", sub: "טרי/ה מהצבא", ageGroup: "adult", birthYear: CY - 21 },
-  { label: "24–29", sub: "מתחיל/ה לחשוב", ageGroup: "adult", birthYear: CY - 26 },
+  { label: "16–17", sub: "מקדימים את כולם", ageGroup: "minor", birthYear: CY - 16 },
+  { label: "18–23", sub: "טרי מהים", ageGroup: "adult", birthYear: CY - 21 },
+  { label: "24–29", sub: "צוללים פנימה", ageGroup: "adult", birthYear: CY - 26 },
   { label: "30+", sub: "מאוחר? אף פעם לא", ageGroup: "adult", birthYear: CY - 33 },
 ];
 
@@ -907,7 +1129,7 @@ const KNOWLEDGE_REACTIONS: Record<string, string> = {
   expert: "זאב מוול סטריט אה? מצוין, נראה כמה אתם באמת יודעים.",
 };
 
-function AgeStep({ knowledge, onNext }: { knowledge: KnowledgeLevel | null; onNext: (ag: AgeGroup, by: number) => void }) {
+function AgeStep({ knowledge, onNext, onBack }: { knowledge: KnowledgeLevel | null; onNext: (ag: AgeGroup, by: number) => void; onBack?: () => void }) {
   const [sel, setSel] = useState<number | null>(null);
   const tap = useCallback((i: number) => {
     setSel(i);
@@ -918,7 +1140,7 @@ function AgeStep({ knowledge, onNext }: { knowledge: KnowledgeLevel | null; onNe
   const dynamicHint = knowledge ? KNOWLEDGE_REACTIONS[knowledge] : "רק בשביל להתאים את ההמלצות";
 
   return (
-    <StepShell stepIndex={4} question="בן כמה את/ה?" hint={dynamicHint} finnState={sel !== null ? "tablet" : "idle"}>
+    <StepShell stepIndex={2} question="מה הגיל שלך?" hint={dynamicHint} finnState={sel !== null ? "tablet" : "idle"} onBack={onBack}>
       {AGE_GROUPS.map((g, i) => (
         <AnimatedCard key={g.label} index={i} label={g.label} sublabel={g.sub}
           selected={sel === i} onPress={() => tap(i)}
@@ -1731,7 +1953,7 @@ interface IntroStepProps {
 }
 
 function IntroStep({ onRegister, onGuest, onLoginSuccess }: IntroStepProps) {
-  const [subStep, setSubStep] = useState<"welcome" | "choice" | "login">("welcome");
+  const [subStep, setSubStep] = useState<"welcome" | "choice" | "login">("choice");
   const promptGoogleSignIn = useGoogleAuthStore((s) => s.promptGoogleSignIn);
   const googleReady = useGoogleAuthStore((s) => s.isReady);
   const { promptAppleSignIn, isAvailable: appleAvailable } = useAppleAuth();
@@ -1818,13 +2040,13 @@ function IntroStep({ onRegister, onGuest, onLoginSuccess }: IntroStepProps) {
             {"!"}
           </Text>
           <Text style={introStyles.subtitle}>
-            {"בואו נהפוך את הכסף שלכם למשחק מהנה."}
+            {"זה הזמן להפוך את הכסף שלך למשחק מהנה."}
           </Text>
         </Animated.View>
 
         <View style={{ alignItems: "center", gap: 16 }}>
-          <Pressable onPress={() => setSubStep("choice")} style={introStyles.cta} accessibilityRole="button" accessibilityLabel="בואו נתחיל">
-            <Text style={introStyles.ctaText}>בואו נתחיל</Text>
+          <Pressable onPress={() => setSubStep("choice")} style={introStyles.cta} accessibilityRole="button" accessibilityLabel="מתחילים">
+            <Text style={introStyles.ctaText}>מתחילים</Text>
           </Pressable>
           <Pressable onPress={() => setSubStep("login")} accessibilityRole="link" accessibilityLabel="כבר יש לכם חשבון? התחבר כאן">
             <Text style={introStyles.loginLink}>
@@ -1847,8 +2069,8 @@ function IntroStep({ onRegister, onGuest, onLoginSuccess }: IntroStepProps) {
           </LinearGradient>
         </Animated.View>
 
-        <Animated.View style={[introStyles.textBlock, textStyle]}>
-          <Text style={introStyles.title}>{"איך נתחיל?"}</Text>
+        <Animated.View style={[introStyles.textBlock, textStyle, { marginBottom: 28 }]}>
+          <Text style={[introStyles.title, { marginBottom: 0 }]}>{"שנתחיל?"}</Text>
         </Animated.View>
 
         <Animated.View style={[ctaAnimStyle, { alignItems: "center", gap: 10, width: "100%" }]}>
@@ -1876,9 +2098,9 @@ function IntroStep({ onRegister, onGuest, onLoginSuccess }: IntroStepProps) {
           </Pressable>
 
           <Text
-            style={{ marginTop: 6, fontSize: 11, color: "#94a3b8", writingDirection: "rtl", textAlign: "center", lineHeight: 16 }}
+            style={{ marginTop: 6, fontSize: 11, color: "#94a3b8", writingDirection: "rtl", textAlign: "center", lineHeight: 16, maxWidth: 280, alignSelf: "center" }}
           >
-            {"בלחיצה אתם מאשרים את "}
+            {"הלחיצה מהווה אישור של "}
             <Text
               style={{ color: "#0891b2", textDecorationLine: "underline" }}
               accessibilityRole="link"
@@ -1889,8 +2111,11 @@ function IntroStep({ onRegister, onGuest, onLoginSuccess }: IntroStepProps) {
             </Text>
           </Text>
 
-          <Pressable onPress={() => setSubStep("welcome")} style={{ marginTop: 2 }} accessibilityRole="button" accessibilityLabel="חזרה" hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-            <Text style={introStyles.loginLink}>{"חזרה"}</Text>
+          <Pressable onPress={() => setSubStep("login")} accessibilityRole="link" accessibilityLabel="כבר יש לך חשבון? התחבר כאן" style={{ marginTop: 8 }}>
+            <Text style={introStyles.loginLink}>
+              {"כבר יש לך חשבון? "}
+              <Text style={introStyles.loginLinkAccent}>{"התחבר כאן"}</Text>
+            </Text>
           </Pressable>
         </Animated.View>
       </SafeAreaView>
@@ -1943,8 +2168,8 @@ function IntroStep({ onRegister, onGuest, onLoginSuccess }: IntroStepProps) {
             accessibilityLabel="התחבר עם Google"
             style={introStyles.googleBtn}
           >
-            <Text style={{ fontSize: 18, marginRight: 8, color: "#1e293b" }}>G</Text>
             <Text style={{ fontSize: 15, fontWeight: "600", color: "#1e293b" }}>התחבר עם Google</Text>
+            <GoogleLogo size={20} />
           </Pressable>
 
           {/* Divider */}
@@ -2023,8 +2248,8 @@ function IntroStep({ onRegister, onGuest, onLoginSuccess }: IntroStepProps) {
             <Text style={introStyles.ctaText}>התחבר</Text>
           </Pressable>
 
-          <Pressable onPress={() => setSubStep("welcome")} style={{ alignSelf: "center", marginTop: 8 }} accessibilityRole="button" accessibilityLabel="חזרה" hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-            <Text style={introStyles.loginLink}>{"חזרה"}</Text>
+          <Pressable onPress={() => setSubStep("choice")} style={{ alignSelf: "center", marginTop: 8, padding: 8 }} accessibilityRole="button" accessibilityLabel="חזרה" hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+            <ChevronRight size={24} color="#64748b" />
           </Pressable>
         </Animated.View>
       </KeyboardAvoidingView>
@@ -2165,6 +2390,7 @@ export function ProfilingFlow({ mode = "onboarding", onRedoComplete }: Profiling
   const router = useRouter();
   const addXP = useEconomyUIStore((s) => s.addXP);
   const addCoins = useEconomyUIStore((s) => s.addCoins);
+  const recordDailyActivity = useRecordDailyActivity();
   const completeOnboarding = useAuthStore((s) => s.completeOnboarding);
   const enterGuestMode = useAuthStore((s) => s.enterGuestMode);
   const updateProfile = useAuthStore((s) => s.updateProfile);
@@ -2234,6 +2460,7 @@ export function ProfilingFlow({ mode = "onboarding", onRedoComplete }: Profiling
     return () => {
       finnTriggerRef.current = null;
       if (globalTypingResetRef.current) clearTimeout(globalTypingResetRef.current);
+      if (bubbleTimeout.current) clearTimeout(bubbleTimeout.current);
     };
   }, []);
 
@@ -2246,7 +2473,7 @@ export function ProfilingFlow({ mode = "onboarding", onRedoComplete }: Profiling
     tapHaptic();
     setShowBubbles(true);
     if (bubbleTimeout.current) clearTimeout(bubbleTimeout.current);
-    bubbleTimeout.current = setTimeout(() => setShowBubbles(false), 900);
+    bubbleTimeout.current = setTimeout(() => setShowBubbles(false), 400);
 
     function doUpdate() {
       try {
@@ -2264,20 +2491,20 @@ export function ProfilingFlow({ mode = "onboarding", onRedoComplete }: Profiling
       screenOpacity.value = 0;
       screenScale.value = 0.94;
       screenTy.value = 18;
-      screenOpacity.value = withTiming(1, { duration: 360, easing: Easing.out(Easing.cubic) });
+      screenOpacity.value = withTiming(1, { duration: 220, easing: Easing.out(Easing.cubic) });
       screenScale.value = withSpring(1, { damping: 22, stiffness: 280, mass: 0.8 });
       screenTy.value = withSpring(0, { damping: 22, stiffness: 280, mass: 0.8 });
     }
     // Soft fade-out, slides up and fades
-    screenOpacity.value = withTiming(0, { duration: 260, easing: Easing.inOut(Easing.quad) }, () => {
+    screenOpacity.value = withTiming(0, { duration: 160, easing: Easing.inOut(Easing.quad) }, () => {
       "worklet";
       runOnJS(doUpdate)();
     });
-    screenScale.value = withTiming(0.95, { duration: 260, easing: Easing.inOut(Easing.quad) });
-    screenTy.value = withTiming(-10, { duration: 260, easing: Easing.in(Easing.cubic) });
+    screenScale.value = withTiming(0.95, { duration: 160, easing: Easing.inOut(Easing.quad) });
+    screenTy.value = withTiming(-10, { duration: 160, easing: Easing.in(Easing.cubic) });
   }
 
-  function handleDone() {
+  function handleDone(rewardTier: RewardTier = "bronze") {
     if (isRedo) {
       // Reset all progress (XP, coins, chapters, etc.), user starts fresh
       if (__DEV__) {
@@ -2306,7 +2533,11 @@ export function ProfilingFlow({ mode = "onboarding", onRedoComplete }: Profiling
       });
     } catch (e) { if (__DEV__) console.warn('[onboarding] captureEvent failed:', e); }
     try { addXP(ONBOARDING_XP, "onboarding"); } catch (e) { if (__DEV__) console.warn('[onboarding] addXP failed:', e); }
-    try { addCoins(50); } catch (e) { if (__DEV__) console.warn('[onboarding] addCoins failed:', e); }
+    // Coin amount matches the tier shown in CelebrationScreen (passed via onDone).
+    try { addCoins(REWARD_COINS[rewardTier]); } catch (e) { if (__DEV__) console.warn('[onboarding] addCoins failed:', e); }
+    // Day 1 of streak starts immediately on onboarding completion, gives users
+    // something to protect from minute zero (loss aversion + retention).
+    try { recordDailyActivity.mutate(); } catch (e) { if (__DEV__) console.warn('[onboarding] streak start failed:', e); }
     // CRITICAL: ensure user is at least a guest before marking onboarding done.
     // Otherwise `_layout`'s auth redirect bounces them back to /(auth)/onboarding
     // (because isAuthenticated=false → first branch always wins).
@@ -2328,9 +2559,10 @@ export function ProfilingFlow({ mode = "onboarding", onRedoComplete }: Profiling
       avatarId: collected.avatarId ?? null,
       ownedAvatars: [],
     });
-    // Explicit navigation — don't rely solely on `_layout`'s effect-based
-    // redirect, which has been flaky in dev mode with mid-flight state updates.
-    router.replace("/(tabs)" as never);
+    // Drop the user straight into the first module (mod-0-1) for a hands-on
+    // first taste before the walkthrough offers a tour. The walkthrough only
+    // fires once they're in a tab, so navigating to lesson keeps it suppressed.
+    router.replace("/lesson/mod-0-1?chapterId=chapter-0" as Href);
   }
 
   function editSummaryStep(target: EditableStep) {
@@ -2367,24 +2599,16 @@ export function ProfilingFlow({ mode = "onboarding", onRedoComplete }: Profiling
           if (returnToSummary) { setReturnToSummary(false); slide("profile-summary", { financialDream: v }); }
           else { slide("goal", { financialDream: v }); }
         }} />}
-        {step === "goal" && <GoalStep dream={collected.financialDream} onNext={(v) => {
-          if (returnToSummary) { setReturnToSummary(false); slide("profile-summary", { financialGoal: v }); }
-          else { slide("first-sim", { financialGoal: v }); }
-        }} />}
-        {step === "first-sim" && (
-          <SimOnboardingStep onNext={() => slide("knowledge", {})} />
-        )}
-        {step === "knowledge" && <KnowledgeStep goal={collected.financialGoal} onNext={(v) => {
-          if (returnToSummary) { setReturnToSummary(false); slide("profile-summary", { knowledgeLevel: v }); }
-          else { slide("age", { knowledgeLevel: v }); }
-        }} />}
-        {step === "age" && <AgeStep knowledge={collected.knowledgeLevel} onNext={(ag, by) => slide("learning-time", { ageGroup: ag, birthYear: by })} />}
-        {step === "learning-time" && <LearningTimeStep onNext={(v) => slide("learning-style", { learningTime: v })} />}
-        {step === "learning-style" && <LearningStyleStep ageGroup={collected.ageGroup} birthYear={collected.birthYear} onNext={(v) => slide("daily-goal", { learningStyle: v })} />}
-        {step === "daily-goal" && <DailyGoalStep onNext={(v) => {
-          if (returnToSummary) { setReturnToSummary(false); slide("profile-summary", { dailyGoalMinutes: v }); }
-          else { slide("profile-summary", { dailyGoalMinutes: v }); }
-        }} />}
+        {step === "goal" && <GoalStep
+          dream={collected.financialDream}
+          onNext={(v) => { slide("age", { financialGoal: v }); }}
+          onBack={() => slide("dream", {})}
+        />}
+        {step === "age" && <AgeStep
+          knowledge={collected.knowledgeLevel}
+          onNext={(ag, by) => slide("celebration", { ageGroup: ag, birthYear: by })}
+          onBack={() => slide("goal", {})}
+        />}
       </Animated.View>
 
       {/* Persistent Finn, outside slideStyle so he stays fixed during transitions */}
@@ -2413,43 +2637,15 @@ export function ProfilingFlow({ mode = "onboarding", onRedoComplete }: Profiling
         </View>
       )}
 
-      {/* Bubble transition overlay */}
+      {/* Bubble transition overlay, single fast central burst */}
       {showBubbles && (
         <View pointerEvents="none" style={StyleSheet.absoluteFillObject}>
-          {/* Main central burst */}
           <LottieView
             source={require("../../../assets/lottie/Bubbles.json")}
             style={{ width: SCREEN_WIDTH, height: SCREEN_WIDTH * 1.6, position: "absolute", top: "5%", alignSelf: "center" }}
             autoPlay
             loop={false}
-            speed={1.2}
-            renderMode="SOFTWARE"
-          />
-          {/* Bottom-left cluster */}
-          <LottieView
-            source={require("../../../assets/lottie/jumping blue bubbles.json")}
-            style={{ width: SCREEN_WIDTH * 0.65, height: SCREEN_WIDTH * 0.65, position: "absolute", bottom: "8%", left: "0%" }}
-            autoPlay
-            loop={false}
-            speed={1.1}
-            renderMode="SOFTWARE"
-          />
-          {/* Top-right cluster, delayed via slower speed for stagger feel */}
-          <LottieView
-            source={require("../../../assets/lottie/jumping blue bubbles.json")}
-            style={{ width: SCREEN_WIDTH * 0.5, height: SCREEN_WIDTH * 0.5, position: "absolute", top: "2%", right: "-5%" }}
-            autoPlay
-            loop={false}
-            speed={0.9}
-            renderMode="SOFTWARE"
-          />
-          {/* Mid-screen accent */}
-          <LottieView
-            source={require("../../../assets/lottie/Bubbles.json")}
-            style={{ width: SCREEN_WIDTH * 0.7, height: SCREEN_WIDTH * 0.7, position: "absolute", top: "35%", left: "-10%" }}
-            autoPlay
-            loop={false}
-            speed={1.5}
+            speed={2.2}
             renderMode="SOFTWARE"
           />
         </View>
@@ -2585,8 +2781,6 @@ const styles = StyleSheet.create({
     marginTop: 4,
     writingDirection: "rtl",
     textAlign: "right",
-    paddingRight: 16,
-    marginRight: 8,
   },
   // Cards
   cardWrap: {
@@ -2962,6 +3156,8 @@ const introStyles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     paddingHorizontal: 28,
+    paddingTop: 24,
+    paddingBottom: 24,
   },
   finnWrap: {
     marginBottom: 28,
@@ -3042,6 +3238,7 @@ const introStyles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
+    gap: 8,
     borderRadius: 14,
     borderWidth: 1.5,
     borderColor: "#e2e8f0",

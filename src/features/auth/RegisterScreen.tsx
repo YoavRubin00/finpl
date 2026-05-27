@@ -12,6 +12,8 @@ import {
 import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { useRouter, useLocalSearchParams } from "expo-router";
 import Animated, { FadeIn, FadeInDown } from "react-native-reanimated";
+import { ChevronRight } from "lucide-react-native";
+import { GoogleLogo } from "../../components/ui/GoogleLogo";
 import { FINN_HELLO, FINN_DANCING } from "../retention-loops/finnMascotConfig";
 import { getPasswordStrength } from "./password-utils";
 import type { PasswordStrength } from "./types";
@@ -123,35 +125,27 @@ export function RegisterScreen() {
 
   return (
     <View style={{ flex: 1, backgroundColor: "#ffffff" }}>
-      {/* Back/cancel button, positioned at root so safe-area insets are explicit */}
+      {/* Back chevron, returns to onboarding choice screen */}
       <Pressable
         onPress={() => {
           if (router.canGoBack()) router.back();
-          else router.replace("/(tabs)" as never);
+          else router.replace("/(auth)/onboarding" as never);
         }}
         accessibilityRole="button"
-        accessibilityLabel="חזרה למשחק"
+        accessibilityLabel="חזרה"
         hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
         style={{
           position: "absolute",
           top: insets.top + 8,
           right: 16,
           zIndex: 20,
-          flexDirection: "row-reverse",
           alignItems: "center",
-          gap: 4,
-          height: 36,
-          paddingHorizontal: 12,
-          borderRadius: 18,
-          backgroundColor: "#f0f9ff",
-          borderWidth: 1,
-          borderColor: "#bae6fd",
           justifyContent: "center",
+          width: 36,
+          height: 36,
         }}
       >
-        <Text style={{ fontSize: 14, fontWeight: "800", color: "#0891b2", writingDirection: "rtl" }}>
-          ← חזרה למשחק
-        </Text>
+        <ChevronRight size={24} color="#64748b" />
       </Pressable>
       <KeyboardAvoidingView
         style={{ flex: 1 }}
@@ -209,7 +203,7 @@ export function RegisterScreen() {
           }}
         >
           <ScrollView
-            contentContainerStyle={{ paddingHorizontal: 24, paddingBottom: 16 }}
+            contentContainerStyle={{ paddingHorizontal: 24, paddingBottom: 24, flexGrow: 1, justifyContent: "center" }}
             showsVerticalScrollIndicator={false}
             keyboardShouldPersistTaps="handled"
           >
@@ -455,6 +449,7 @@ export function RegisterScreen() {
                 flexDirection: "row",
                 alignItems: "center",
                 justifyContent: "center",
+                gap: 8,
                 borderRadius: 14,
                 borderWidth: 1.5,
                 borderColor: "#e2e8f0",
@@ -469,10 +464,10 @@ export function RegisterScreen() {
                 elevation: 3,
               }}
             >
-              <Text style={{ fontSize: 16, marginRight: 8, color: "#1e293b" }}>G</Text>
               <Text style={{ fontSize: 14, fontWeight: "600", color: "#1e293b" }}>
                 הירשם עם Google
               </Text>
+              <GoogleLogo size={18} />
             </Pressable>
 
             {/* Login Link */}
