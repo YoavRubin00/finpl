@@ -2521,9 +2521,11 @@ export function LessonFlowScreen() {
     // Snapshot read — called from event handlers (lesson complete), not during render.
     // Subscribing via the hook would add re-renders for no benefit.
     const profile = useAuthStore.getState().profile;
-    if (moduleId === "mod-0-1" && !profile?.knowledgeLevel) return "knowledgeLevel";
-    if (moduleId === "mod-0-4" && !profile?.learningTime) return "learningTime";
-    if (moduleId === "mod-0-5" && !profile?.dailyGoalMinutes) return "dailyGoal";
+    // Mapping moved (2026-05-27 redesign): mod-0-1 is clean (no question — see post-chest
+    // logic for mod-0-1), mod-0-5 holds a register CTA for guests instead of a question.
+    if (moduleId === "mod-0-2" && !profile?.knowledgeLevel) return "knowledgeLevel";
+    if (moduleId === "mod-0-3" && !profile?.learningTime) return "learningTime";
+    if (moduleId === "mod-0-4" && !profile?.dailyGoalMinutes) return "dailyGoal";
     return null;
   }
 
@@ -2568,15 +2570,15 @@ export function LessonFlowScreen() {
     }
     // mod-0-1: clean lesson, no signup popup. Just drop back to the learn map.
     // Earlier behavior: nudge fired here for guests, but that overwhelmed users
-    // right after their first taste of content. Cadence policy now triggers the
-    // nudge after mod-0-3 (see interrupt-cadence-strategy doc).
+    // right after their first taste of content.
     if (id === 'mod-0-1') {
       navigateToNextModuleNormally();
       return;
     }
-    // mod-0-3: by now the guest has finished three modules, the right moment
-    // to ask them to save their progress (relationship pacing).
-    if (id === 'mod-0-3' && isGuest) {
+    // Register CTA cadence (guests only): fire after mod-0-3, 0-4, 0-5.
+    // The CTA copy is "כבר למדנו ביחד 💪 — לא הגיע הזמן להתחייב?". User can
+    // dismiss; we re-prompt at every subsequent ch-0 module until they register.
+    if (isGuest && (id === 'mod-0-3' || id === 'mod-0-4' || id === 'mod-0-5')) {
       setShowRegisterNudge(true);
       return;
     }
@@ -2761,6 +2763,9 @@ export function LessonFlowScreen() {
   const [showFinnBridgeNudge, setShowFinnBridgeNudge] = useState(false);
   const [showExitConfirm, setShowExitConfirm] = useState(false);
   const [showRegisterNudge, setShowRegisterNudge] = useState(false);
+  // mod-0-1 dedicated continue CTA — replaces the entire post-chest modal queue
+  // for the first lesson so the user lands on a single "המשך" button.
+  const [showMod01ContinueCTA, setShowMod01ContinueCTA] = useState(false);
   // In-module profile question (Graduate Onboarding, see interrupt-cadence doc).
   // mod-0-1, knowledgeLevel. mod-0-4, learningTime. mod-0-5, dailyGoalMinutes.
   // The question fires only if the user has not already answered it in onboarding
@@ -3083,11 +3088,13 @@ export function LessonFlowScreen() {
       showBreakMessage ||
       pendingPostChestNudge !== null
     ) return;
-    // Guest finishing mod-0-3: skip "Netflix?" modal, show register nudge after chest.
-    // Cadence policy moved this trigger from mod-0-1 to mod-0-3, see strategy doc.
-    if (id === 'mod-0-3' && isGuest) {
-      const timer = setTimeout(() => setShowRegisterNudge(true), 1500);
-      return () => clearTimeout(timer);
+    // mod-0-1: clean — no PostCelebration modal, dedicated Mod01ContinueCTA handles it.
+    if (id === 'mod-0-1') return;
+    // Guest finishing mod-0-3/4/5: skip "Netflix?" modal, show register nudge after chest.
+    // The actual nudge dispatch happens in goToNextSequentialModule — this effect
+    // just prevents the Netflix modal from competing for the slot.
+    if (isGuest && (id === 'mod-0-3' || id === 'mod-0-4' || id === 'mod-0-5')) {
+      return;
     }
     // Show every other module (0, 2, 4... = yes, 1, 3, 5... = no)
     if (currentModIdx % 2 !== 0) return;
@@ -4086,6 +4093,14 @@ export function LessonFlowScreen() {
                           // then immediately surfaces the next-lesson CTA.
                           safeTimeout(() => {
                             setChestClaimed(true);
+                            // mod-0-1: clean continue. Suppress SharkLove/DoubleOrNothing/
+                            // AdBonus/Bridge/Referral/Cover queue and show a single "המשך"
+                            // CTA that drops the user back to the learn map, where the
+                            // walkthrough fires 1s later. (2026-05-27 redesign.)
+                            if (id === 'mod-0-1') {
+                              safeTimeout(() => setShowMod01ContinueCTA(true), 600);
+                              return;
+                            }
                             // Shark Love, every 3rd completed module (3, 6, 9...)
                             const totalCompletedNow = (queryClient.getQueryData<import('../../lib/api/progress').ModuleProgressRow[]>(progressQueryKey) ?? [])
                               .filter((m) => m.status === 'completed').length;
@@ -4702,17 +4717,52 @@ export function LessonFlowScreen() {
         />
       )}
 
-      {/* Registration nudge for guests after mod-0-1 */}
+      {/* mod-0-1 continue CTA: single button that drops to learn map. Walkthrough
+          fires 1s after the user lands (see app/_layout.tsx + AppWalkthroughOverlay). */}
+      {showMod01ContinueCTA && (
+        <Modal visible transparent animationType="fade" onRequestClose={() => { setShowMod01ContinueCTA(false); navigateToNextModuleNormally(); }}>
+          <Pressable
+            style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.6)", justifyContent: "center", alignItems: "center", paddingHorizontal: 24 }}
+            onPress={() => { setShowMod01ContinueCTA(false); navigateToNextModuleNormally(); }}
+            accessibilityRole="button"
+            accessibilityLabel="המשך"
+          >
+            <Pressable
+              style={{ backgroundColor: "#e0f2fe", borderRadius: 24, padding: 24, width: "100%", maxWidth: 340, alignItems: "center" }}
+              onPress={() => {}}
+              accessible={false}
+            >
+              <ExpoImage source={FINN_HAPPY} accessible={false} style={{ width: 80, height: 80, marginBottom: 12 }} contentFit="contain" />
+              <Text style={{ ...RTL_STYLE, fontSize: 18, fontWeight: "900", color: "#0c4a6e", marginBottom: 8, textAlign: "center" }}>
+                כל הכבוד! 🎉
+              </Text>
+              <Text style={{ ...RTL_STYLE, fontSize: 15, fontWeight: "600", color: "#334155", lineHeight: 22, textAlign: "center", marginBottom: 20 }}>
+                סיימת את השיעור הראשון. בואו נכיר את האפליקציה.
+              </Text>
+              <AnimatedPressable
+                onPress={() => { tapHaptic(); setShowMod01ContinueCTA(false); navigateToNextModuleNormally(); }}
+                style={{ backgroundColor: "#0ea5e9", borderRadius: 16, paddingVertical: 16, width: "100%", alignItems: "center", borderBottomWidth: 4, borderBottomColor: "#0284c7", shadowColor: "#0ea5e9", shadowOpacity: 0.3, shadowRadius: 8, shadowOffset: { width: 0, height: 3 }, elevation: 6 }}
+                accessibilityRole="button"
+                accessibilityLabel="המשך"
+              >
+                <Text style={{ fontSize: 16, fontWeight: "900", color: "#fff" }}>המשך</Text>
+              </AnimatedPressable>
+            </Pressable>
+          </Pressable>
+        </Modal>
+      )}
+
+      {/* Registration nudge for guests after mod-0-3/4/5 (fires from goToNextSequentialModule) */}
       {showRegisterNudge && (
         <Modal visible transparent animationType="fade" onRequestClose={() => { setShowRegisterNudge(false); navigateToNextModuleNormally(); }}>
           <Pressable style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.6)", justifyContent: "center", alignItems: "center", paddingHorizontal: 24 }} onPress={() => { setShowRegisterNudge(false); navigateToNextModuleNormally(); }} accessibilityRole="button" accessibilityLabel="סגור">
             <Pressable style={{ backgroundColor: "#e0f2fe", borderRadius: 24, padding: 24, width: "100%", maxWidth: 340, alignItems: "center" }} onPress={() => {}} accessible={false}>
               <ExpoImage source={FINN_HAPPY} accessible={false} style={{ width: 80, height: 80, marginBottom: 12 }} contentFit="contain" />
               <Text style={{ ...RTL_STYLE, fontSize: 18, fontWeight: "900", color: "#0c4a6e", marginBottom: 10, textAlign: "center" }}>
-                רוצה לשמור את ההתקדמות?
+                כבר למדנו ביחד 💪
               </Text>
               <Text style={{ ...RTL_STYLE, fontSize: 15, fontWeight: "600", color: "#334155", lineHeight: 24, textAlign: "center", marginBottom: 20 }}>
-                הרשמו בחינם כדי שהנתונים שלכם לא יאבדו ותוכלו להמשיך מאיפה שעצרתם
+                לא הגיע הזמן להתחייב? הרשמו בחינם ושמרו את כל ההתקדמות שלכם
               </Text>
               <AnimatedPressable
                 onPress={() => {

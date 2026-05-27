@@ -966,6 +966,11 @@ export function DuoLearnScreen() {
   const { data: progressData } = useProgress();
   const isPro = useIsPro();
   const displayName = useAuthStore((s) => s.displayName) ?? "";
+  const isGuest = useAuthStore((s) => s.isGuest);
+  // Skip-intro register CTA — fired from handleSkipIntro when a guest skips ch-0.
+  // Pushes them to /(auth)/register with returnTo=/lesson/mod-1-1 so they land in
+  // chapter 1 as a registered user with all skip-intro progress preserved.
+  const [showSkipIntroRegisterCTA, setShowSkipIntroRegisterCTA] = useState(false);
   const { layer } = getPyramidStatus(xp);
   const [lockedModalVisible, setLockedModalVisible] = useState(false);
   const [showStreakCalendar, setShowStreakCalendar] = useState(false);
@@ -1174,7 +1179,12 @@ export function DuoLearnScreen() {
       // scroll down to let the user see chapter 1 unlocked
       scrollRef.current?.scrollTo({ y: 800, animated: true });
     }, 300);
-  }, [upsertProgress, setCurrentChapter, setCurrentModule]);
+    // Guests: surface the register CTA immediately so they don't lose the skipped
+    // progress if they uninstall before completing mod-1-1.
+    if (isGuest) {
+      setTimeout(() => setShowSkipIntroRegisterCTA(true), 600);
+    }
+  }, [upsertProgress, setCurrentChapter, setCurrentModule, isGuest]);
 
   // Stable callbacks for ChapterSection (avoids inline arrow re-creation per render)
   const handleLockedPress = useCallback(() => setLockedModalVisible(true), []);
@@ -1188,6 +1198,52 @@ export function DuoLearnScreen() {
       {!isWalkthroughActive && <StreakAtRiskBanner />}
       {!isWalkthroughActive && <NoFreezeUpsellBanner />}
       <StreakCalendarModal visible={showStreakCalendar} onClose={() => setShowStreakCalendar(false)} />
+
+      {/* Skip-intro register CTA for guests — fires after handleSkipIntro */}
+      {showSkipIntroRegisterCTA && (
+        <Modal visible transparent animationType="fade" onRequestClose={() => setShowSkipIntroRegisterCTA(false)}>
+          <Pressable
+            style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.6)", justifyContent: "center", alignItems: "center", paddingHorizontal: 24 }}
+            onPress={() => setShowSkipIntroRegisterCTA(false)}
+            accessibilityRole="button"
+            accessibilityLabel="סגור"
+          >
+            <Pressable
+              style={{ backgroundColor: "#e0f2fe", borderRadius: 24, padding: 24, width: "100%", maxWidth: 340, alignItems: "center" }}
+              onPress={() => {}}
+              accessible={false}
+            >
+              <ExpoImage source={FINN_STANDARD} accessible={false} style={{ width: 80, height: 80, marginBottom: 12 }} contentFit="contain" />
+              <Text style={{ writingDirection: "rtl", fontSize: 18, fontWeight: "900", color: "#0c4a6e", marginBottom: 8, textAlign: "center" }}>
+                מדלגים קדימה? 🚀
+              </Text>
+              <Text style={{ writingDirection: "rtl", fontSize: 15, fontWeight: "600", color: "#334155", lineHeight: 22, textAlign: "center", marginBottom: 20 }}>
+                הרשמו בחינם כדי לשמור את ההתקדמות ולהמשיך מפרק 1 בלי לאבד כלום
+              </Text>
+              <AnimatedPressable
+                onPress={() => {
+                  tapHaptic();
+                  setShowSkipIntroRegisterCTA(false);
+                  router.replace(`/(auth)/register?returnTo=${encodeURIComponent("/lesson/mod-1-1?chapterId=chapter-1")}` as never);
+                }}
+                style={{ backgroundColor: "#0ea5e9", borderRadius: 16, paddingVertical: 16, width: "100%", alignItems: "center", borderBottomWidth: 4, borderBottomColor: "#0284c7", shadowColor: "#0ea5e9", shadowOpacity: 0.3, shadowRadius: 8, shadowOffset: { width: 0, height: 3 }, elevation: 6 }}
+                accessibilityRole="button"
+                accessibilityLabel="הרשמו בחינם"
+              >
+                <Text style={{ fontSize: 16, fontWeight: "900", color: "#fff" }}>הרשמו בחינם</Text>
+              </AnimatedPressable>
+              <Pressable
+                onPress={() => { tapHaptic(); setShowSkipIntroRegisterCTA(false); }}
+                style={{ marginTop: 12, paddingVertical: 8 }}
+                accessibilityRole="button"
+                accessibilityLabel="המשך כאורח"
+              >
+                <Text style={{ fontSize: 13, fontWeight: "600", color: "#64748b" }}>המשך כאורח</Text>
+              </Pressable>
+            </Pressable>
+          </Pressable>
+        </Modal>
+      )}
       <SafeAreaView style={{ flex: 1 }} edges={["left", "right"]}>
         <ScrollView
           ref={scrollRef}

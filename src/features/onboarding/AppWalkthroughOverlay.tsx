@@ -156,11 +156,12 @@ export function AppWalkthroughOverlay() {
   const segments = useSegments();
   const [transitioning, setTransitioning] = useState(false);
   const reducedMotion = useReducedMotion();
-  // Delay walkthrough by 2 seconds, only for the initial step
+  // Delay walkthrough by 1 second after the user lands on the tab (post mod-0-1),
+  // only for the initial step.
   const [ready, setReady] = useState(step > 0);
   useEffect(() => {
     if (hasSeenWalkthrough || ready) return;
-    const timer = setTimeout(() => setReady(true), 2000);
+    const timer = setTimeout(() => setReady(true), 1000);
     return () => clearTimeout(timer);
   }, [hasSeenWalkthrough, ready]);
   // Track whether user pressed CTA on the chat-style step and is now choosing

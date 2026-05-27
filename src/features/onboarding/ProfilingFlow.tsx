@@ -1,6 +1,6 @@
-import React, { useState, useEffect, useCallback, useRef, useMemo } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import { Image as ExpoImage } from "expo-image";
-import { View, Text, Image, TextInput, Pressable, ScrollView, Dimensions, StyleSheet, ImageBackground, PanResponder, KeyboardAvoidingView, Platform, Modal } from "react-native";
+import { View, Text, Image, TextInput, Pressable, ScrollView, Dimensions, StyleSheet, ImageBackground, PanResponder, KeyboardAvoidingView, Platform } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
 import { LottieIcon } from "../../components/ui/LottieIcon";
@@ -592,32 +592,14 @@ function ProfileSummaryScreen({ collected, onDone, onEditStep }: { collected: Co
 
 // ─── Celebration screen ───────────────────────────────────────────────────────
 
-// Variable rewards — bronze is the baseline (no popup), silver/gold are
-// surprises that fire the "תפסת אוצר" popup. Weights tuned for rarity:
-// bronze 60%, silver 30%, gold 10%. Picked once per mount via useMemo so
-// the celebration UI and the coin grant in handleDone stay in sync.
-type RewardTier = "bronze" | "silver" | "gold";
+// Onboarding completion reward — flat +50 coins for everyone. Variable rewards
+// were tested but the "treasure popup" interrupted the flow into mod-0-1; user
+// decided to keep the path clean and move surprise/variable mechanics to chest
+// drops inside the learning modules.
+const ONBOARDING_COINS = 50;
 
-function pickRewardTier(): RewardTier {
-  const r = Math.random();
-  if (r < 0.6) return "bronze";
-  if (r < 0.9) return "silver";
-  return "gold";
-}
-
-const REWARD_COINS: Record<RewardTier, number> = {
-  bronze: 50,
-  silver: 75,
-  gold: 150,
-};
-
-function CelebrationScreen({ onDone }: { onDone: (tier: RewardTier) => void }) {
-  const rewardTier = useMemo(() => pickRewardTier(), []);
-  const rewardCoins = REWARD_COINS[rewardTier];
-  const rewardLabel = rewardTier === "gold" ? "🎰 ג'קפוט!" : rewardTier === "silver" ? "🍀 בונוס מזל!" : null;
-  // Bonus tiers (silver/gold) show a popup first so users understand they won
-  // something extra. Bronze (default 50) skips the popup entirely.
-  const [showBonusPopup, setShowBonusPopup] = useState(rewardTier !== "bronze");
+function CelebrationScreen({ onDone }: { onDone: () => void }) {
+  const rewardCoins = ONBOARDING_COINS;
   const badgeScale = useSharedValue(0.2);
   const badgeRotate = useSharedValue(-15);
   const xpScale = useSharedValue(0);
@@ -739,7 +721,7 @@ function CelebrationScreen({ onDone }: { onDone: (tier: RewardTier) => void }) {
         {/* Coin / confetti burst on CTA tap, then onDone */}
         {bursting && (
           <View pointerEvents="none" style={StyleSheet.absoluteFillObject}>
-            <ConfettiExplosion onComplete={() => onDone(rewardTier)} />
+            <ConfettiExplosion onComplete={onDone} />
           </View>
         )}
 
@@ -778,171 +760,6 @@ function CelebrationScreen({ onDone }: { onDone: (tier: RewardTier) => void }) {
         )}
       </SafeAreaView>
 
-      {/* Bonus popup, wrapped in Modal so Android Back closes it.
-          Anchored reveal puts the gold +150 next to a faded +50 so the
-          rarity is visual, not just textual. */}
-      <Modal
-        visible={showBonusPopup && rewardLabel !== null}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setShowBonusPopup(false)}
-      >
-        <View
-          style={{
-            flex: 1,
-            backgroundColor: "rgba(15, 23, 42, 0.6)",
-            alignItems: "center", justifyContent: "center",
-          }}
-        >
-
-          <Animated.View
-            entering={FadeInUp.duration(500).springify().damping(8)}
-            style={{
-              backgroundColor: "#ffffff",
-              borderRadius: 24,
-              paddingVertical: 28, paddingHorizontal: 24,
-              alignItems: "center",
-              marginHorizontal: 24,
-              maxWidth: 380,
-              width: "85%",
-              borderWidth: 1,
-              borderColor: "#e2e8f0",
-              shadowColor: "#0f172a",
-              shadowOffset: { width: 0, height: 8 },
-              shadowOpacity: 0.18, shadowRadius: 24, elevation: 14,
-            }}
-          >
-            {/* Diamond Lottie, the hero icon. Defines what the reward is. */}
-            <Animated.View
-              entering={FadeIn.duration(600).delay(200)}
-              style={{ marginBottom: 4, alignItems: "center", justifyContent: "center" }}
-            >
-              <LottieView
-                source={require("../../../assets/lottie/Diamond.json")}
-                style={{ width: 120, height: 120 }}
-                autoPlay
-                loop
-                renderMode="SOFTWARE"
-              />
-            </Animated.View>
-
-            {/* Headline */}
-            <Animated.Text
-              entering={FadeInDown.duration(500).delay(350)}
-              style={{
-                fontSize: 28, fontWeight: "900",
-                color: "#0f172a",
-                textAlign: "center", writingDirection: "rtl",
-                marginBottom: 6,
-                letterSpacing: -0.3,
-              }}
-            >
-              תפסת אוצר!
-            </Animated.Text>
-
-            <Animated.Text
-              entering={FadeInDown.duration(500).delay(450)}
-              style={{
-                fontSize: 14, fontWeight: "600",
-                color: "#64748b",
-                textAlign: "center", writingDirection: "rtl",
-                marginBottom: 24,
-                lineHeight: 20,
-              }}
-            >
-              {rewardTier === "gold"
-                ? "רוב הצוללנים לא מוצאים את זה"
-                : "מטמון נדיר על קרקעית הים"}
-            </Animated.Text>
-
-            {/* Anchored reveal, regular vs your rare */}
-            <Animated.View
-              entering={FadeInUp.duration(500).delay(600).springify().damping(10)}
-              style={{
-                flexDirection: "row-reverse", alignItems: "center", gap: 18,
-                marginBottom: 6,
-              }}
-            >
-              {/* Regular reward, anchor */}
-              <View style={{ alignItems: "center", opacity: 0.4 }}>
-                <Text style={{ fontSize: 10, fontWeight: "700", color: "#64748b", letterSpacing: 0.5, marginBottom: 6 }}>
-                  רוב המשתמשים
-                </Text>
-                <Text style={{ fontSize: 24, fontWeight: "800", color: "#94a3b8", textDecorationLine: "line-through" }}>
-                  +50
-                </Text>
-              </View>
-
-              {/* Arrow */}
-              <Text style={{ fontSize: 20, color: "#cbd5e1", marginTop: 14 }}>←</Text>
-
-              {/* Your rare reward, the only golden element on the screen */}
-              <View style={{ alignItems: "center" }}>
-                <Text style={{ fontSize: 10, fontWeight: "800", color: "#0891b2", letterSpacing: 0.5, marginBottom: 6 }}>
-                  אתה
-                </Text>
-                <Text style={{
-                  fontSize: 44, fontWeight: "900",
-                  color: "#ca8a04",
-                  letterSpacing: -1.5,
-                  lineHeight: 44,
-                }}>
-                  +{rewardCoins}
-                </Text>
-              </View>
-            </Animated.View>
-
-            {/* Label for both numbers */}
-            <Animated.Text
-              entering={FadeIn.duration(500).delay(700)}
-              style={{
-                fontSize: 12, fontWeight: "700",
-                color: "#475569",
-                textAlign: "center", writingDirection: "rtl",
-                marginBottom: 22,
-                letterSpacing: 0.5,
-              }}
-            >
-              מטבעות
-            </Animated.Text>
-
-            {/* Rarity badge, single subtle highlight */}
-            <Animated.View
-              entering={FadeIn.duration(500).delay(800)}
-              style={{
-                backgroundColor: "#fef3c7",
-                paddingHorizontal: 14, paddingVertical: 5,
-                borderRadius: 999,
-                marginBottom: 22,
-              }}
-            >
-              <Text style={{ fontSize: 11, fontWeight: "800", color: "#92400e", letterSpacing: 0.5 }}>
-                {rewardTier === "gold" ? "נדיר במיוחד" : "נדיר"}
-              </Text>
-            </Animated.View>
-
-            {/* CTA, brand primary */}
-            <Animated.View entering={FadeInUp.duration(400).delay(900)}>
-              <Pressable
-                onPress={() => setShowBonusPopup(false)}
-                accessibilityRole="button"
-                accessibilityLabel="קח את האוצר"
-                style={{
-                  backgroundColor: "#0891b2",
-                  paddingHorizontal: 36, paddingVertical: 14,
-                  borderRadius: 999,
-                  borderBottomWidth: 4,
-                  borderBottomColor: "#0e7490",
-                }}
-              >
-                <Text style={{ fontSize: 16, fontWeight: "900", color: "#ffffff", letterSpacing: 0.3 }}>
-                  תפסתי בשיניים
-                </Text>
-              </Pressable>
-            </Animated.View>
-          </Animated.View>
-        </View>
-      </Modal>
     </ImageBackground>
   );
 }
@@ -2497,7 +2314,7 @@ export function ProfilingFlow({ mode = "onboarding", onRedoComplete }: Profiling
     screenTy.value = withTiming(-10, { duration: 160, easing: Easing.in(Easing.cubic) });
   }
 
-  function handleDone(rewardTier: RewardTier = "bronze") {
+  function handleDone() {
     if (isRedo) {
       // Reset all progress (XP, coins, chapters, etc.), user starts fresh
       if (__DEV__) {
@@ -2526,8 +2343,9 @@ export function ProfilingFlow({ mode = "onboarding", onRedoComplete }: Profiling
       });
     } catch (e) { if (__DEV__) console.warn('[onboarding] captureEvent failed:', e); }
     try { addXP(ONBOARDING_XP, "onboarding"); } catch (e) { if (__DEV__) console.warn('[onboarding] addXP failed:', e); }
-    // Coin amount matches the tier shown in CelebrationScreen (passed via onDone).
-    try { addCoins(REWARD_COINS[rewardTier]); } catch (e) { if (__DEV__) console.warn('[onboarding] addCoins failed:', e); }
+    // Flat +50 coins for onboarding completion (2026-05-27 redesign — variable
+    // rewards removed; clean path into mod-0-1).
+    try { addCoins(ONBOARDING_COINS); } catch (e) { if (__DEV__) console.warn('[onboarding] addCoins failed:', e); }
     // Day 1 of streak starts here so the user has something to protect from
     // minute zero (loss aversion). Lesson completion also calls recordDailyActivity
     // so day 2+ continues the streak — recordDailyActivity is idempotent per day,

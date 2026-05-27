@@ -364,16 +364,17 @@ function RootLayoutInner() {
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
   const hasCompletedOnboarding = useAuthStore((s) => s.hasCompletedOnboarding);
   const hasSeenWalkthrough = useTutorialStore((s) => s.hasSeenAppWalkthrough);
-  // Interrupt cadence (decision 2026-05-27, "relationship pacing"):
-  //   mod-0-1, clean. Only celebration. No tour, no popups.
-  //   mod-0-2, tour walkthrough fires.
-  //   mod-0-3, signup nudge fires (handled by GuestRegisterDailyNudge).
-  //   mod-0-4 onwards, full popup set allowed.
-  // One interrupt per lesson, never two stacked.
+  // Interrupt cadence (updated 2026-05-27 redesign):
+  //   mod-0-1, clean. Only celebration. No tour, no popups (gated in LessonFlowScreen).
+  //   After mod-0-1 lands on tabs → 1s delay → walkthrough fires.
+  //   After walkthrough → notification permission banner.
+  //   mod-0-2 onwards: engagement content (SharkLove/DoN/Netflix prompt/videos) allowed,
+  //                    plus profile questions and (for guests) register CTAs.
+  //   GuestRegisterDailyNudge (bottom banner) stays gated to mod-0-3 — register CTAs
+  //   from LessonFlowScreen handle the per-module nudge from 0-3/4/5.
   const isMod01Complete = useIsModuleCompleted("mod-0-1");
-  const isMod02Complete = useIsModuleCompleted("mod-0-2");
   const isMod03Complete = useIsModuleCompleted("mod-0-3");
-  const allowAutoPopups = hasCompletedOnboarding && hasSeenWalkthrough && isMod02Complete;
+  const allowAutoPopups = hasCompletedOnboarding && hasSeenWalkthrough && isMod01Complete;
 
   // ── Android Play Install Referrer — runs once on first launch ──
   // When a user clicks finplay.me/invite/CODE and installs from the Play Store,
@@ -478,11 +479,19 @@ function RootLayoutInner() {
       // other auth routes (register, sign-in, terms) for already-authenticated
       // guests who want to upgrade to a real account.
       const onAuthOnboarding = inAuthGroup && (segments as string[])[1] === "onboarding";
-      if (onAuthOnboarding || (!inTabsGroup && !inContentRoute && !inAuthGroup)) {
+      if (onAuthOnboarding) {
+        // First-time completion: drop directly into mod-0-1 (matches the
+        // intent of handleDone in ProfilingFlow). Returning user that already
+        // finished mod-0-1 → land on the learn map as before.
+        // Without this branch, this effect can race ProfilingFlow's own
+        // router.replace and override it with "/(tabs)".
+        const target = isMod01Complete ? "/(tabs)" : "/lesson/mod-0-1?chapterId=chapter-0";
+        router.replace(target as never);
+      } else if (!inTabsGroup && !inContentRoute && !inAuthGroup) {
         router.replace("/(tabs)");
       }
     }
-  }, [isAuthenticated, hasCompletedOnboarding, segments, navState?.key, hydrated]);
+  }, [isAuthenticated, hasCompletedOnboarding, segments, navState?.key, hydrated, isMod01Complete]);
 
   if (!hydrated || !bootComplete || !navState?.key || !fontsLoaded) {
     return <LoadingWisdom />;
@@ -494,7 +503,7 @@ function RootLayoutInner() {
         <RewardAnimationProvider>
             <StreakCelebrationProvider>
               <Slot />
-              {isAuthenticated && hasCompletedOnboarding && isMod02Complete && <AppWalkthroughOverlay />}
+              {isAuthenticated && hasCompletedOnboarding && isMod01Complete && <AppWalkthroughOverlay />}
               <ShopModal />
               {allowAutoPopups && <GlobalUpgradeModal />}
               {allowAutoPopups && <PostStreakIncomeSplash />}
