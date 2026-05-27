@@ -21,7 +21,7 @@ import { LottieIcon } from "../../components/ui/LottieIcon";
 import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
 import { useFocusEffect } from "@react-navigation/native";
-import { Lock, ChevronDown, Home, Shield, Scale, TrendingUp, Crown, FastForward, X } from "lucide-react-native";
+import { Lock, Home, Shield, Scale, TrendingUp, Crown, FastForward, X, Star, ChevronUp } from "lucide-react-native";
 import { useEconomy } from "../economy/useEconomy";
 import { useStreak } from "../economy/useStreak";
 import { useEconomyUIStore } from "../economy/useEconomyUIStore";
@@ -41,7 +41,6 @@ import { NotificationPermissionBanner } from "../../components/ui/NotificationPe
 import { NoFreezeUpsellBanner } from "../streak/NoFreezeUpsellBanner";
 import { StreakAtRiskBanner } from "../streak/StreakAtRiskBanner";
 import { StreakCalendarModal } from "../streak/StreakCalendarModal";
-import { CalendarDays } from "lucide-react-native";
 import { FINN_STANDARD } from "../retention-loops/finnMascotConfig";
 import { FeedNudgeBanner } from "../../components/ui/FeedNudgeBanner";
 import { useFeedNudge } from "../../hooks/useFeedNudge";
@@ -60,7 +59,6 @@ import { useFunStore } from "../../stores/useFunStore";
 import { FlyingRewards } from "../../components/ui/FlyingRewards";
 import { MapEasterEggModal } from "../../components/fun/MapEasterEggModal";
 import { useDailyQuestsStore } from "../daily-quests/useDailyQuestsStore";
-import { DailyQuestWidget } from "../daily-quests/DailyQuestWidget";
 import { DailyQuestsSheet } from "../daily-quests/DailyQuestsSheet";
 import { QuestPathNode } from "../daily-quests/QuestPathNode";
 
@@ -162,20 +160,10 @@ function storeKey(chapterId: string): string {
   return `ch-${chapterId.split("-")[1]}`;
 }
 
-// Finn speech bubble phrases (cycles by modIndex, first is personalized)
-const FINN_PHRASES_STATIC = [
-  "בואו נלמד!",
-  "השלב הבא!",
-  "מאמין בכם!",
-  "מוכנים?",
-];
-
-function getFinnPhrase(index: number, displayName: string): string {
-  const total = FINN_PHRASES_STATIC.length + 1;
-  const slot = index % total;
-  if (slot === 0) return `יאללה ${displayName || "חברים"}!`;
-  return FINN_PHRASES_STATIC[slot - 1];
-}
+// Finn speech bubble. Single steady copy, the trophy badge on the character
+// communicates the quest hook visually. Future iteration: rotate per chapter
+// (not per module) to give a subtle "new chapter, new vibe" feel.
+const FINN_PHRASE_DEFAULT = "האתגרים היומיים שלך כאן";
 
 // Time-based Hebrew greeting
 function getGreeting(): string {
@@ -410,16 +398,7 @@ function ArenaHeaderBanner({
           return null;
         })()}
       </Pressable>
-      {!isLocked && onMindMap && (
-        <Pressable
-          onPress={onMindMap}
-          style={{ alignSelf: 'flex-start', backgroundColor: '#e0f2fe', borderRadius: 10, paddingHorizontal: 12, paddingVertical: 6, marginTop: 6, marginLeft: H_PAD, flexDirection: 'row-reverse', alignItems: 'center', gap: 4, borderWidth: 1, borderColor: '#bae6fd' }}
-          accessibilityRole="button"
-          accessibilityLabel="מפת הלמידה"
-        >
-          <Text style={{ color: '#0369a1', fontSize: 12, fontWeight: '700' }}>🗺 מפת הלמידה</Text>
-        </Pressable>
-      )}
+      {/* Removed: "מפת הלמידה" button (Yoav approved removal 2026-05-27) */}
     </>
   );
 }
@@ -473,6 +452,33 @@ function PulsingGlow({ color }: { color: string }) {
 }
 
 // ---------------------------------------------------------------------------
+// ProgressStars, 3 stars under the active character, Duolingo-style.
+// Fill proportional to chapter completion.
+// ---------------------------------------------------------------------------
+
+function ProgressStars({ completedCount, totalCount }: { completedCount: number; totalCount: number }) {
+  const filledStars = totalCount > 0
+    ? Math.min(3, Math.round((completedCount / totalCount) * 3))
+    : 0;
+  return (
+    <View style={styles.progressStarsRow}>
+      {[0, 1, 2].map((i) => {
+        const filled = i < filledStars;
+        return (
+          <Star
+            key={i}
+            size={16}
+            color={filled ? "#facc15" : "#cbd5e1"}
+            fill={filled ? "#facc15" : "transparent"}
+            strokeWidth={2}
+          />
+        );
+      })}
+    </View>
+  );
+}
+
+// ---------------------------------------------------------------------------
 // ModuleNode, with 3D depth effect
 // ---------------------------------------------------------------------------
 
@@ -492,8 +498,9 @@ function ModuleNode({
   hasEasterEgg,
   onClaimEasterEgg,
   onPress,
-  activeStreak,
-  onActiveStreakPress,
+  questCompletedCount,
+  questTotalCount,
+  onQuestPress,
 }: {
   module: Module;
   state: "completed" | "active" | "locked";
@@ -510,11 +517,9 @@ function ModuleNode({
   hasEasterEgg?: boolean;
   onClaimEasterEgg?: () => void;
   onPress: () => void;
-  /** Current streak count — shown as a pill on the opposite side of Finn at
-   *  the active node so it stays visible even when the top header has scrolled
-   *  off. Only rendered when `showCharacter` is true. */
-  activeStreak?: number;
-  onActiveStreakPress?: () => void;
+  questCompletedCount?: number;
+  questTotalCount?: number;
+  onQuestPress?: () => void;
 }) {
   const colors = ARENA_COLORS[arenaId];
 
@@ -540,9 +545,23 @@ function ModuleNode({
             entering={FadeInDown.delay(100).duration(400)}
             style={[styles.characterWrapper, { left: charLeft }]}
           >
-            <View style={{ width: CHAR_SIZE, height: CHAR_SIZE, overflow: "hidden" }}>
-              <ExpoImage source={FINN_STANDARD} accessible={false} style={{ width: CHAR_SIZE, height: CHAR_SIZE }} contentFit="contain" />
-            </View>
+            <Pressable
+              onPress={onQuestPress}
+              disabled={!onQuestPress}
+              accessibilityRole={onQuestPress ? "button" : undefined}
+              accessibilityLabel={onQuestPress ? `משימות יומיות, ${questCompletedCount ?? 0} מתוך ${questTotalCount ?? 0}` : undefined}
+              style={{ width: CHAR_SIZE, height: CHAR_SIZE }}
+            >
+              <View style={{ width: CHAR_SIZE, height: CHAR_SIZE, overflow: "hidden" }}>
+                <ExpoImage source={FINN_STANDARD} accessible={false} style={{ width: CHAR_SIZE, height: CHAR_SIZE }} contentFit="contain" />
+              </View>
+            </Pressable>
+            {questTotalCount !== undefined && questTotalCount > 0 && (
+              <ProgressStars
+                completedCount={questCompletedCount ?? 0}
+                totalCount={questTotalCount}
+              />
+            )}
           </Animated.View>
           {/* Speech bubble directly above Finn */}
           <Animated.View
@@ -554,42 +573,9 @@ function ModuleNode({
           >
             <View style={styles.speechArrow} />
             <Text style={styles.speechText} numberOfLines={2}>
-              {getFinnPhrase(modIndex, displayName)}
+              {FINN_PHRASE_DEFAULT}
             </Text>
           </Animated.View>
-          {/* Streak pill, opposite-edge side from Finn so the journal indicator
-              is still visible when the top header scrolls off after auto-scroll. */}
-          {activeStreak !== undefined && (
-            <Animated.View
-              entering={FadeInDown.delay(150).duration(400)}
-              style={[
-                styles.activeStreakPill,
-                finnGoesRight
-                  ? { left: 8 }
-                  : { right: 8 },
-              ]}
-            >
-              <Pressable
-                onPress={onActiveStreakPress}
-                accessibilityRole="button"
-                accessibilityLabel={`רצף ${activeStreak} ימים, פתח לוח שנה`}
-                style={styles.activeStreakInner}
-              >
-                <CalendarDays
-                  size={14}
-                  color={activeStreak >= 8 ? "#a855f7" : activeStreak >= 4 ? "#3b82f6" : "#f97316"}
-                />
-                <Text
-                  style={[
-                    styles.activeStreakText,
-                    { color: activeStreak >= 8 ? "#a855f7" : activeStreak >= 4 ? "#3b82f6" : "#f97316" },
-                  ]}
-                >
-                  {activeStreak}
-                </Text>
-              </Pressable>
-            </Animated.View>
-          )}
         </>
       )}
 
@@ -791,8 +777,9 @@ const ChapterSection = React.memo(function ChapterSection({
   easterEggNodeId,
   onClaimEasterEgg,
   questPathNodeProps,
-  activeStreak,
-  onActiveStreakPress,
+  questCompletedCount,
+  questTotalCount,
+  onQuestPress,
 }: {
   arena: ArenaConfig;
   chapter: typeof chapter1Data;
@@ -816,8 +803,9 @@ const ChapterSection = React.memo(function ChapterSection({
     rewardClaimed: boolean;
     onPress: () => void;
   };
-  activeStreak?: number;
-  onActiveStreakPress?: () => void;
+  questCompletedCount?: number;
+  questTotalCount?: number;
+  onQuestPress?: () => void;
 }) {
   const firstIncompleteIndex = chapter.modules.findIndex(
     (m) => !completedModules.includes(m.id) && !m.comingSoon && (isPro || !PRO_LOCKED_SIMS.has(m.id)),
@@ -835,31 +823,32 @@ const ChapterSection = React.memo(function ChapterSection({
           onPress={onSkipIntro}
           style={{
             alignSelf: 'center',
-            marginTop: 20,
-            paddingHorizontal: 20,
-            paddingVertical: 10,
+            marginTop: 16,
+            marginBottom: 28,
+            paddingHorizontal: 14,
+            paddingVertical: 6,
             backgroundColor: 'rgba(255,255,255,0.95)',
-            borderRadius: 28,
+            borderRadius: 22,
             flexDirection: 'row-reverse',
             alignItems: 'center',
-            gap: 10,
+            gap: 6,
             shadowColor: '#1d4ed8',
-            shadowOpacity: 0.25,
-            shadowRadius: 12,
-            elevation: 4
+            shadowOpacity: 0.15,
+            shadowRadius: 8,
+            elevation: 2
           }}
           accessibilityRole="button"
           accessibilityLabel="כבר יש לי בסיס, דלג לפרק 1"
         >
-          <View style={{ width: 36, height: 36, overflow: 'hidden' }} accessible={false}>
+          <View style={{ width: 24, height: 24, overflow: 'hidden' }} accessible={false}>
             <LottieView
               source={require('../../../assets/lottie/wired-flat-489-rocket-space-hover-flying.json')}
-              style={{ width: 36, height: 36 }}
+              style={{ width: 24, height: 24 }}
               autoPlay loop speed={0.8}
             />
           </View>
-          <Text style={{ fontFamily: 'Heebo_500Medium', color: '#1d4ed8', fontSize: 15 }}>כבר יש לי בסיס, דלג לפרק 1</Text>
-          <FastForward size={16} color="#1d4ed8" />
+          <Text style={{ fontFamily: 'Heebo_500Medium', color: '#1d4ed8', fontSize: 12 }}>כבר יש לי בסיס, דלג לפרק 1</Text>
+          <FastForward size={13} color="#1d4ed8" />
         </AnimatedPressable>
       )}
 
@@ -911,8 +900,9 @@ const ChapterSection = React.memo(function ChapterSection({
                 friendEmojis={friendsOnModule[module.id]}
                 hasEasterEgg={easterEggNodeId === module.id}
                 onClaimEasterEgg={onClaimEasterEgg}
-                activeStreak={isActive ? activeStreak : undefined}
-                onActiveStreakPress={onActiveStreakPress}
+                questCompletedCount={isActive ? questCompletedCount : undefined}
+                questTotalCount={isActive ? questTotalCount : undefined}
+                onQuestPress={isActive ? onQuestPress : undefined}
                 onPress={() => {
                   if (isLocked) {
                     onLockedPress();
@@ -993,6 +983,7 @@ export function DuoLearnScreen() {
   const { nudge, dismiss: dismissNudge } = useFeedNudge();
   const dilemmaAnswered = useDailyChallengesStore((s) => s.hasDilemmaAnsweredToday());
   const [questSheetVisible, setQuestSheetVisible] = useState(false);
+  const [hasScrolledDown, setHasScrolledDown] = useState(false);
   const refreshQuests = useDailyQuestsStore((s) => s.refreshQuests);
   const syncQuestCompletions = useDailyQuestsStore((s) => s.syncCompletions);
   const questCompletedCount = useDailyQuestsStore((s) => s.completedCount());
@@ -1203,54 +1194,12 @@ export function DuoLearnScreen() {
           showsVerticalScrollIndicator={false}
           contentContainerStyle={styles.scrollContent}
           style={styles.scrollView}
+          onScroll={(e) => {
+            const y = e.nativeEvent.contentOffset.y;
+            setHasScrolledDown(y > 400);
+          }}
+          scrollEventThrottle={100}
         >
-
-          {/* Header Row: Greeting+Finn (Right) | Streak (Left) */}
-          <View style={[styles.greetingRow, { justifyContent: "space-between", paddingHorizontal: 16, paddingVertical: 10 }]}>
-            {/* Right side: Greeting + Finn */}
-            <View style={{ flexDirection: "row-reverse", alignItems: "center", gap: 10 }}>
-              <ExpoImage source={FINN_STANDARD} accessible={false} style={{ width: 56, height: 56 }} contentFit="contain" />
-              <View style={{ alignItems: "flex-end" }}>
-                <Text style={[styles.greetingText, { fontSize: 15, color: "#64748b" }]}>
-                  {getGreeting()}
-                </Text>
-                <Text style={[styles.greetingText, { fontSize: 20, color: "#0f172a" }]}>
-                  {displayName || "אורח"}
-                </Text>
-              </View>
-            </View>
-
-            {/* Left side: Quest Widget + Streak Flame + Calendar */}
-            <View style={{ flexDirection: "row-reverse", alignItems: "center", gap: 10 }}>
-              {questTotalCount > 0 && (
-                <DailyQuestWidget
-                  completedCount={questCompletedCount}
-                  totalQuests={questTotalCount}
-                  onPress={handleQuestPress}
-                />
-              )}
-            <Pressable
-              onPress={() => { tapHaptic(); setShowStreakCalendar(true); }}
-              style={{ alignItems: "center", flexDirection: "row-reverse", gap: 4 }}
-              accessibilityRole="button"
-              accessibilityLabel={`רצף ${streak} ימים, פתח לוח שנה`}
-            >
-              <View style={{ width: 36, height: 36 }} accessible={false}>
-                <LottieView
-                  source={require("../../../assets/lottie/wired-flat-2804-fire-flame-hover-pinch.json")}
-                  style={{ width: 36, height: 36 }}
-                  autoPlay
-                  loop
-                  colorFilters={[{ keypath: "**", color: streak >= 8 ? "#a855f7" : streak >= 4 ? "#3b82f6" : "#f97316" }]}
-                />
-              </View>
-              <Text style={{ fontSize: 18, fontWeight: "900", color: streak >= 8 ? "#a855f7" : streak >= 4 ? "#3b82f6" : "#f97316" }}>
-                {streak}
-              </Text>
-              <CalendarDays size={16} color={streak >= 8 ? "#a855f7" : streak >= 4 ? "#3b82f6" : "#f97316"} style={{ opacity: 0.7 }} />
-            </Pressable>
-            </View>
-          </View>
 
           {/* Chapter sections */}
           {ARENAS.map((arena, idx) => {
@@ -1300,6 +1249,9 @@ export function DuoLearnScreen() {
                   rewardClaimed: questRewardClaimed,
                   onPress: handleQuestPress,
                 } : undefined}
+                questCompletedCount={hasActiveModule ? questCompletedCount : undefined}
+                questTotalCount={hasActiveModule ? questTotalCount : undefined}
+                onQuestPress={hasActiveModule ? handleQuestPress : undefined}
               />
             );
 
@@ -1348,15 +1300,16 @@ export function DuoLearnScreen() {
 
         </ScrollView>
 
-        {/* Floating scroll-to-bottom button */}
-        <AnimatedPressable
-          style={styles.scrollFAB}
-          onPress={() => scrollRef.current?.scrollToEnd({ animated: true })}
-          accessibilityRole="button"
-          accessibilityLabel="גלול לסוף"
-        >
-          <ChevronDown size={22} color="#1d4ed8" strokeWidth={2.5} />
-        </AnimatedPressable>
+        {hasScrolledDown && (
+          <AnimatedPressable
+            style={styles.scrollFAB}
+            onPress={() => scrollRef.current?.scrollTo({ y: 0, animated: true })}
+            accessibilityRole="button"
+            accessibilityLabel="חזרה למעלה"
+          >
+            <ChevronUp size={22} color="#1d4ed8" strokeWidth={2.5} />
+          </AnimatedPressable>
+        )}
 
         <LockedModuleModal
           visible={lockedModalVisible}
@@ -1661,7 +1614,7 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     paddingVertical: 14,
     paddingHorizontal: 18,
-    marginBottom: 4,
+    marginBottom: 12,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
@@ -1816,6 +1769,38 @@ const styles = StyleSheet.create({
     zIndex: 20,
     alignItems: "center",
   },
+  progressStarsRow: {
+    flexDirection: "row",
+    gap: 4,
+    marginTop: -6,
+    paddingHorizontal: 6,
+    paddingVertical: 3,
+    backgroundColor: "rgba(255,255,255,0.92)",
+    borderRadius: 999,
+    shadowColor: "#0ea5e9",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
+    elevation: 2,
+  },
+  scrollFAB: {
+    position: "absolute",
+    right: 20,
+    bottom: 24,
+    width: 48,
+    height: 48,
+    borderRadius: 12,
+    backgroundColor: "#ffffff",
+    alignItems: "center",
+    justifyContent: "center",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 8,
+    elevation: 6,
+    borderWidth: 1,
+    borderColor: "#e5e7eb",
+  },
   speechBubbleBelow: {
     position: "absolute",
     zIndex: 21,
@@ -1852,26 +1837,6 @@ const styles = StyleSheet.create({
     borderLeftColor: "transparent",
     borderRightColor: "transparent",
     borderTopColor: "#ffffff",
-  },
-
-  // Floating scroll-to-bottom button
-  scrollFAB: {
-    position: "absolute",
-    right: 20,
-    bottom: 24,
-    width: 48,
-    height: 48,
-    borderRadius: 12,
-    backgroundColor: "#ffffff",
-    alignItems: "center",
-    justifyContent: "center",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.15,
-    shadowRadius: 8,
-    elevation: 6,
-    borderWidth: 1,
-    borderColor: "#e5e7eb",
   },
 
   // Modal

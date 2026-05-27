@@ -9,6 +9,7 @@ Tech Stack: React Native (Expo), TypeScript (Strict), Zustand, NativeWind.
 - **State:** Zustand for global logic (XP/Coins). Atomic updates only.
 - **UI:** NativeWind (Tailwind). Follow "Gaming-Neon" branding from docs.
 - **Folder Structure:** Feature-based (`src/features/[featureName]`).
+- **Hebrew copy:** Read `docs/BRAND.md` BEFORE writing any user-facing string. It defines tone, gender handling (singular for onboarding/AI voice, plural for system messages), and Captain Shark's voice.
 
 ## Ralph Loops & Workflows
 - Break tasks into 10-minute autonomous chunks.

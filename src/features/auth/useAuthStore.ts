@@ -80,7 +80,7 @@ export const useAuthStore = create<SessionState & SessionActions>()(
       setIsGuest: (value) => set({ isGuest: value }),
 
       enterGuestMode: () =>
-        set({ isAuthenticated: true, isGuest: true, displayName: 'אורח/ת' }),
+        set({ isAuthenticated: true, isGuest: true, displayName: 'אורח' }),
 
       convertGuestToUser: (displayName: string, email: string) => {
         set((state) => ({
