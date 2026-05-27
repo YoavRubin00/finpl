@@ -2594,9 +2594,16 @@ export function LessonFlowScreen() {
     // user hasn't answered it yet, show the question first. The question's
     // onDone callback re-invokes this function, which will then short-circuit
     // (profile is now populated, pendingProfileQuestionFor returns null).
+    //
+    // The askedRef guard prevents an infinite re-show loop: tapping "דלג" (skip)
+    // on the question calls onDone WITHOUT setting the profile field, so without
+    // this guard pendingProfileQuestionFor would keep returning the same kind and
+    // re-open the modal forever. We ask each module's question at most once per
+    // visit — skip or answer both then fall through to the next step.
     if (id) {
       const q = pendingProfileQuestionFor(id);
-      if (q) {
+      if (q && profileQuestionAskedRef.current !== id) {
+        profileQuestionAskedRef.current = id;
         setProfileQuestionKind(q);
         return;
       }
@@ -2831,6 +2838,9 @@ export function LessonFlowScreen() {
   // The question fires only if the user has not already answered it in onboarding
   // or in a previous module visit (skip-on-known).
   const [profileQuestionKind, setProfileQuestionKind] = useState<ProfileQuestionKind | null>(null);
+  // Tracks the module id whose profile question was already presented this visit,
+  // so skipping (which doesn't set the profile field) can't re-trigger it in a loop.
+  const profileQuestionAskedRef = useRef<string | null>(null);
   // "Grade skip" celebration — shown when the user self-identifies as an expert
   // ("כריש מוול סטריט") on the mod-0-2 knowledge question. We mark all of chapter 0
   // complete, park the cursor on mod-1-1, and surface this screen instead of
