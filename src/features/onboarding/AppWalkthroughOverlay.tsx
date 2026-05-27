@@ -17,6 +17,8 @@ import Animated, {
 import { ChevronLeft, ChevronRight } from "lucide-react-native";
 import { useTutorialStore } from "../../stores/useTutorialStore";
 import { useAuthStore } from "../auth/useAuthStore";
+import { useNotificationStore } from "../notifications/useNotificationStore";
+import { useBannerCooldownStore } from "../notifications/useBannerCooldownStore";
 import { FINN_HELLO } from "../retention-loops/finnMascotConfig";
 import { tapHaptic } from "../../utils/haptics";
 import { captureEvent } from "../../lib/posthog";
@@ -250,6 +252,12 @@ export function AppWalkthroughOverlay() {
       if (step >= stepsWithLast.length - 1) {
         try { captureEvent('walkthrough_completed', { total_steps: stepsWithLast.length }); } catch { /* non-fatal */ }
         completeWalkthrough();
+        // Notification permission banner: clear any prior dismissal + cooldown
+        // so the post-walkthrough prompt fires reliably the moment the user
+        // lands on the learn map. Without this, a stale dismissed flag from
+        // an earlier session can silently suppress the one-shot prompt.
+        try { useNotificationStore.getState().resetBannerDismissed(); } catch { /* non-fatal */ }
+        try { useBannerCooldownStore.getState().reset(); } catch { /* non-fatal */ }
         setActiveScreen(null);
         setTimeout(() => {
           try {
@@ -317,6 +325,10 @@ export function AppWalkthroughOverlay() {
       try { tapHaptic(); } catch { /* ignore */ }
       try { captureEvent('walkthrough_skipped', { at_step: step }); } catch { /* non-fatal */ }
       completeWalkthrough();
+      // Same reset as the completion path — skipping the tour still counts as
+      // "user is now in the app" and should still see the permission prompt.
+      try { useNotificationStore.getState().resetBannerDismissed(); } catch { /* non-fatal */ }
+      try { useBannerCooldownStore.getState().reset(); } catch { /* non-fatal */ }
     } catch (e) {
       console.warn("[Walkthrough.handleSkip]", e instanceof Error ? e.message : String(e));
     }

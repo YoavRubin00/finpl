@@ -19,9 +19,10 @@ function todayISO(): string {
  * Shown once per day to guest users, prompting registration so their progress
  * is saved across devices. Mirrors the DailyBridgeNudgeModal pattern.
  */
-// Routes where the nudge must NOT appear — active learning surfaces and the
-// content feed should never be interrupted by a registration prompt.
-const SUPPRESS_ROUTES = new Set<string>(["lesson", "finfeed", "simulator", "interstitial"]);
+// Routes where the nudge must NOT appear — active learning surfaces, the
+// content feed, and auth screens (showing "please register" on /register itself
+// is confusing).
+const SUPPRESS_ROUTES = new Set<string>(["lesson", "finfeed", "simulator", "interstitial", "(auth)", "register", "sign-in", "terms"]);
 
 export function GuestRegisterDailyNudge() {
   const router = useRouter();

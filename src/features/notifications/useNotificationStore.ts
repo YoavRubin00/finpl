@@ -129,6 +129,10 @@ async function ensureAndroidChannels() {
 interface NotificationActions {
   requestPermission: () => Promise<boolean>;
   dismissBanner: () => void;
+  /** Clear the dismissed state so the banner can be shown again — used after
+   *  walkthrough completion so the post-tour permission prompt always fires
+   *  even if the user dismissed it during a previous session/test. */
+  resetBannerDismissed: () => void;
   reset: () => void;
   scheduleStreakReminder: (hourOfDay?: number) => Promise<void>;
   scheduleStreakReminderWithCopy: (content: Notifications.NotificationContentInput, hourOfDay?: number) => Promise<void>;
@@ -162,6 +166,8 @@ export const useNotificationStore = create<NotificationState & NotificationActio
       lastAIInsightNotifDate: null as string | null,
 
       dismissBanner: () => set({ bannerDismissed: true }),
+
+      resetBannerDismissed: () => set({ bannerDismissed: false }),
 
       requestPermission: async (): Promise<boolean> => {
         await ensureAndroidChannels();
