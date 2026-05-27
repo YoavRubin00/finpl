@@ -73,10 +73,13 @@ export function useAppleAuth() {
       }
       await signInWithProfile(result.profile, result.token);
 
-      // Explicit routing — iOS-safe pattern matching the email/Google flows.
-      // Auto-routing via _layout effect fails on iOS because the async prompt
-      // timing loses the state-change window.
-      if (result.profile.hasCompletedOnboarding) {
+      // Route by the post-signIn store value rather than the raw server flag,
+      // so returning users on the same device aren't bounced through onboarding
+      // even when the server response is missing the field.
+      const completed =
+        result.profile.hasCompletedOnboarding === true ||
+        useAuthStore.getState().hasCompletedOnboarding === true;
+      if (completed) {
         router.replace("/(tabs)/" as never);
       } else {
         router.replace("/(auth)/onboarding" as never);
