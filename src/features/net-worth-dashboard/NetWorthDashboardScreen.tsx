@@ -1,6 +1,6 @@
 import React, { useCallback, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Image as ExpoImage } from 'expo-image';
 import { useRouter } from 'expo-router';
 import { ChevronRight, Plus } from 'lucide-react-native';
@@ -27,6 +27,7 @@ import { AssetEditModal } from './AssetEditModal';
  */
 export function NetWorthDashboardScreen(): React.ReactElement {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const assets = useNetWorthStore((s) => s.assets);
   const totalValue = useNetWorthStore((s) => s.totalValue());
   const totalLiquid = useNetWorthStore((s) => s.totalLiquid());
@@ -140,7 +141,7 @@ export function NetWorthDashboardScreen(): React.ReactElement {
       {!isEmpty ? (
         <Pressable
           onPress={handleAdd}
-          style={styles.fab}
+          style={[styles.fab, { bottom: insets.bottom + 16 }]}
           accessibilityRole="button"
           accessibilityLabel="הוסף נכס"
         >
@@ -228,7 +229,9 @@ const styles = StyleSheet.create({
   sharkAvatar: { width: 40, height: 40 },
   fab: {
     position: 'absolute',
-    bottom: 26,
+    // `bottom` is set inline from safe-area insets so the FAB always clears the
+    // home indicator (a static bottom offset let the lower edge slip off-screen
+    // on devices with a gesture bar).
     left: 20,
     width: 56,
     height: 56,

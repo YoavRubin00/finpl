@@ -1,12 +1,16 @@
 import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
-import { Sparkles, Bell, Newspaper, Flame, TrendingUp } from 'lucide-react-native';
+import { View, Text, Pressable, StyleSheet } from 'react-native';
+import { Sparkles, Bell, BellRing, Check, Newspaper, Flame, TrendingUp } from 'lucide-react-native';
 
 import { STITCH } from '../../../constants/theme';
 import { CalculateButton } from '../../financial-tools/components/atoms/CalculateButton';
 
 interface EmptyStateProps {
   onPickFirstTicker: () => void;
+  /** Request OS notification permission so the daily summary push can fire. */
+  onEnableNotifications: () => void;
+  /** True once the user has granted notification permission. */
+  notificationsEnabled: boolean;
 }
 
 /**
@@ -14,7 +18,11 @@ interface EmptyStateProps {
  * tool's value (daily AI summary + hype score + push at 9:00) and routes
  * straight into the ticker picker.
  */
-export function EmptyState({ onPickFirstTicker }: EmptyStateProps): React.ReactElement {
+export function EmptyState({
+  onPickFirstTicker,
+  onEnableNotifications,
+  notificationsEnabled,
+}: EmptyStateProps): React.ReactElement {
   return (
     <View style={styles.wrap}>
       <View style={styles.heroIconWrap}>
@@ -44,9 +52,26 @@ export function EmptyState({ onPickFirstTicker }: EmptyStateProps): React.ReactE
         />
       </View>
 
-      <Text style={styles.hint} allowFontScaling={false}>
-        💡 הפעל התראות כדי לקבל את הסיכום אוטומטית
-      </Text>
+      {notificationsEnabled ? (
+        <View style={styles.notifEnabledRow}>
+          <Check size={16} color="#15803d" strokeWidth={3} />
+          <Text style={styles.notifEnabledText} allowFontScaling={false}>
+            התראות מופעלות — הסיכום יגיע כל בוקר
+          </Text>
+        </View>
+      ) : (
+        <Pressable
+          onPress={onEnableNotifications}
+          style={({ pressed }) => [styles.notifBtn, pressed && { opacity: 0.85, transform: [{ scale: 0.98 }] }]}
+          accessibilityRole="button"
+          accessibilityLabel="אשר התראות"
+        >
+          <BellRing size={18} color={STITCH.primary} strokeWidth={2.6} />
+          <Text style={styles.notifBtnText} allowFontScaling={false}>
+            אשר התראות
+          </Text>
+        </Pressable>
+      )}
     </View>
   );
 }
@@ -142,12 +167,41 @@ const styles = StyleSheet.create({
     textAlign: 'right',
     writingDirection: 'rtl',
   },
-  hint: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: STITCH.onSurfaceVariant,
-    textAlign: 'center',
-    writingDirection: 'rtl',
+  notifBtn: {
+    alignSelf: 'stretch',
+    flexDirection: 'row-reverse',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
     marginTop: 4,
+    paddingVertical: 13,
+    borderRadius: 14,
+    backgroundColor: STITCH.primary + '12',
+    borderWidth: 1.5,
+    borderColor: STITCH.primary + '40',
+  },
+  notifBtnText: {
+    fontSize: 14,
+    fontWeight: '900',
+    color: STITCH.primary,
+    writingDirection: 'rtl',
+  },
+  notifEnabledRow: {
+    flexDirection: 'row-reverse',
+    alignItems: 'center',
+    gap: 6,
+    marginTop: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 999,
+    backgroundColor: '#dcfce7',
+    borderWidth: 1,
+    borderColor: '#86efac',
+  },
+  notifEnabledText: {
+    fontSize: 12,
+    fontWeight: '800',
+    color: '#15803d',
+    writingDirection: 'rtl',
   },
 });

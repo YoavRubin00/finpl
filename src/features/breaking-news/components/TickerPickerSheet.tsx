@@ -20,7 +20,6 @@ import Animated, {
 import { Search, X, TrendingUp, Flame, Sparkles, Check } from 'lucide-react-native';
 
 import { STITCH } from '../../../constants/theme';
-import { tapHaptic } from '../../../utils/haptics';
 import { searchCatalog, type CatalogEntry } from '../tickerCatalog';
 
 const FLAME_GRADIENT = ['#dc2626', '#f97316', '#fbbf24'] as const;
@@ -69,9 +68,7 @@ export function TickerPickerSheet({
   };
 
   const handlePick = (ticker: string) => {
-    // eslint-disable-next-line no-console
-    console.log('[BreakingNews] picker handlePick fired:', ticker);
-    try { tapHaptic(); } catch { /* haptics may throw on web — never block the pick */ }
+    // No haptic here — this screen is intentionally vibration-free.
     setQuery('');
     setSearchFocused(false);
     onPick(ticker);
@@ -91,7 +88,7 @@ export function TickerPickerSheet({
       />
 
       <Animated.View
-        entering={FadeInDown.duration(280).springify().damping(18)}
+        entering={FadeInDown.duration(240)}
         style={[styles.sheet, { paddingBottom: Math.max(insets.bottom + 8, 16) }]}
       >
         {/* Flame gradient hero header — matches the breaking-news brand. */}
@@ -237,7 +234,7 @@ function CatalogRow({
 
   return (
     <Animated.View
-      entering={FadeInDown.duration(240).delay(delay).springify().damping(20)}
+      entering={FadeInDown.duration(200).delay(delay)}
       style={animatedStyle}
     >
       <Pressable
@@ -302,7 +299,7 @@ function RawAddRow({
 
   return (
     <Animated.View
-      entering={FadeInDown.duration(240).springify().damping(18)}
+      entering={FadeInDown.duration(200)}
       style={animatedStyle}
     >
       <Pressable

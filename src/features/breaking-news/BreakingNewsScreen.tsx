@@ -69,6 +69,7 @@ export function BreakingNewsScreen(): React.ReactElement {
   const showUpgrade = useUpgradeModalStore((s) => s.show);
   const scheduleBreakingNewsDaily = useNotificationStore((s) => s.scheduleBreakingNewsDaily);
   const notifPermissionGranted = useNotificationStore((s) => s.permissionGranted);
+  const requestNotifPermission = useNotificationStore((s) => s.requestPermission);
 
   const [refreshing, setRefreshing] = useState(false);
   const [pickerOpen, setPickerOpen] = useState(false);
@@ -114,6 +115,15 @@ export function BreakingNewsScreen(): React.ReactElement {
     if (items.length === 0) return; // No tickers → nothing to remind about.
     void scheduleBreakingNewsDaily(notificationHour);
   }, [notificationHour, notifPermissionGranted, items.length, scheduleBreakingNewsDaily]);
+
+  const handleEnableNotifications = useCallback(async () => {
+    tapHaptic();
+    await requestNotifPermission();
+    // If the user already has a ticker, sync the daily push right away.
+    if (items.length > 0) {
+      void scheduleBreakingNewsDaily(notificationHour);
+    }
+  }, [requestNotifPermission, items.length, scheduleBreakingNewsDaily, notificationHour]);
 
   const handleOpenPicker = () => {
     tapHaptic();
@@ -254,7 +264,11 @@ export function BreakingNewsScreen(): React.ReactElement {
         ) : null}
 
         {!hasItems ? (
-          <EmptyState onPickFirstTicker={handleOpenPicker} />
+          <EmptyState
+            onPickFirstTicker={handleOpenPicker}
+            onEnableNotifications={handleEnableNotifications}
+            notificationsEnabled={notifPermissionGranted}
+          />
         ) : (
           <>
             <View style={styles.dayHeaderRow}>
