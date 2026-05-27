@@ -62,6 +62,7 @@ import { SimulatorLoader } from "./SimulatorLoader";
 import { useAITelemetryStore } from "../ai-personalization/useAITelemetryStore";
 import { useEconomy, economyQueryKey } from "../economy/useEconomy";
 import { useEconomyUIStore } from "../economy/useEconomyUIStore";
+import { useCompletedModulesStore } from "../economy/useCompletedModulesStore";
 import { useStreak, useRecordDailyActivity } from "../economy/useStreak";
 import { applyEconomyDelta } from "../../lib/api/economy";
 import type { Economy } from "../../lib/api/economy";
@@ -2417,6 +2418,10 @@ export function LessonFlowScreen() {
       total_completed: totalCompletedBefore + 1,
     });
 
+    // Durable local completion record — unlocks the next module immediately and
+    // survives stale/empty server refetches + cold starts (see useProgress.ts).
+    useCompletedModulesStore.getState().markCompleted(moduleId);
+
     // XP + coins
     useEconomyUIStore.getState().addXP(MODULE_COMPLETE_XP, 'lesson_complete');
     useEconomyUIStore.getState().addCoins(150, 'lesson');
@@ -2477,6 +2482,9 @@ export function LessonFlowScreen() {
 
   // Check if this module is accessible (in sequence or PRO)
   const ALL_CHAPTERS_ORDERED = [chapter0Data as unknown as typeof chapter1Data, chapter1Data, chapter2Data, chapter3Data, chapter4Data, chapter5Data];
+  // Subscribe to the durable local completion store so the gate re-evaluates the
+  // instant a module is marked complete (getCompletedModulesSync unions it in).
+  const localCompletedIds = useCompletedModulesStore((s) => s.completedIds);
   const isModuleAccessible = useMemo(() => {
     if (isPro) return true;
     if (!chapterId) return true; // no chapter context, allow
@@ -2497,7 +2505,7 @@ export function LessonFlowScreen() {
       if (!completed.includes(chapter.modules[mi].id)) return false;
     }
     return true;
-  }, [isPro, chapterId, id, progressData]);
+  }, [isPro, chapterId, id, progressData, localCompletedIds]);
 
   const [showProGate, setShowProGate] = useState(false);
 
@@ -2608,6 +2616,17 @@ export function LessonFlowScreen() {
     if (isGuest && (id === 'mod-0-3' || id === 'mod-0-4' || id === 'mod-0-5') && currentModIdx % 2 !== 0) {
       try { captureEvent('register_cta_shown', { module_id: id, source: 'lesson' }); } catch { /* non-fatal */ }
       setShowRegisterNudge(true);
+      return;
+    }
+    // After mod-0-4 (non-guest, non-Pro): show the Pro paywall once, before
+    // mod-0-5. Both dismiss and purchase route forward to mod-0-5 via the
+    // returnTo param, so the user is never stranded on the paywall. Guests are
+    // handled by the register CTA above and skip this. Shown a single time.
+    if (id === 'mod-0-4' && !isPro && !useUsageStore.getState().hasSeenMod04Paywall) {
+      useUsageStore.getState().markMod04PaywallSeen();
+      try { captureEvent('paywall_shown', { source: 'post_mod_0_4' }); } catch { /* non-fatal */ }
+      const returnTo = '/lesson/mod-0-5?chapterId=chapter-0';
+      router.replace(`/pricing?returnTo=${encodeURIComponent(returnTo)}` as never);
       return;
     }
     // After completing the Emergency Fund module, route to the Tower Defense boss.
@@ -2812,6 +2831,11 @@ export function LessonFlowScreen() {
   // The question fires only if the user has not already answered it in onboarding
   // or in a previous module visit (skip-on-known).
   const [profileQuestionKind, setProfileQuestionKind] = useState<ProfileQuestionKind | null>(null);
+  // "Grade skip" celebration — shown when the user self-identifies as an expert
+  // ("כריש מוול סטריט") on the mod-0-2 knowledge question. We mark all of chapter 0
+  // complete, park the cursor on mod-1-1, and surface this screen instead of
+  // marching them through the remaining beginner modules.
+  const [showGradeSkipCelebration, setShowGradeSkipCelebration] = useState(false);
   const [showPizzaModal, setShowPizzaModal] = useState(false);
   const [showMod01BarterNotif, setShowMod01BarterNotif] = useState(false);
   const hasSeenPizza = useTutorialStore((s) => s.hasSeenPizzaIndexModal);
@@ -4749,12 +4773,67 @@ export function LessonFlowScreen() {
           visible={true}
           kind={profileQuestionKind}
           onDone={() => {
+            const answeredKind = profileQuestionKind;
             setProfileQuestionKind(null);
+            // Self-declared expert ("כריש מוול סטריט") on the mod-0-2 knowledge
+            // question → bump straight to chapter 1 instead of grinding the rest
+            // of chapter 0. Mark all ch-0 modules complete (server-synced via
+            // upsertProgress) and move the learn-map cursor to mod-1-1, then show
+            // the celebration. "המשך" drops them on the learn map with ch-1 open.
+            if (answeredKind === 'knowledgeLevel' && useAuthStore.getState().profile?.knowledgeLevel === 'expert') {
+              for (const m of chapter0Data.modules) {
+                upsertProgress({ moduleId: m.id, status: 'completed', xpEarned: 0 });
+              }
+              setCurrentChapter('ch-1');
+              setCurrentModule(0);
+              try { captureEvent('expert_grade_skip', { from_module: id }); } catch { /* non-fatal */ }
+              setShowGradeSkipCelebration(true);
+              return;
+            }
             // Re-enter the next-module flow now that profile is populated.
             // pendingProfileQuestionFor will return null this time.
             goToNextSequentialModule();
           }}
         />
+      )}
+
+      {/* Expert "grade skip" celebration — Captain Shark bumps the user up to
+          chapter 1. Single "המשך" CTA → learn map with mod-1-1 unlocked. */}
+      {showGradeSkipCelebration && (
+        <Modal visible transparent animationType="fade" onRequestClose={() => {
+          setShowGradeSkipCelebration(false);
+          router.replace("/(tabs)" as never);
+        }}>
+          <Pressable
+            style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.6)", justifyContent: "center", alignItems: "center", paddingHorizontal: 24 }}
+            onPress={() => {}}
+            accessible={false}
+          >
+            <ConfettiExplosion />
+            <Pressable style={{ backgroundColor: "#e0f2fe", borderRadius: 24, padding: 24, width: "100%", maxWidth: 340, alignItems: "center" }} onPress={() => {}} accessible={false}>
+              <ExpoImage source={FINN_DANCING} accessible={false} style={{ width: 120, height: 120, marginBottom: 12 }} contentFit="contain" />
+              <Text style={{ ...RTL_STYLE, fontSize: 20, fontWeight: "900", color: "#0c4a6e", marginBottom: 8, textAlign: "center" }}>
+                הקפצנו אותך כיתה!
+              </Text>
+              <Text style={{ ...RTL_STYLE, fontSize: 15, fontWeight: "600", color: "#334155", lineHeight: 24, textAlign: "center", marginBottom: 20 }}>
+                הידע שלך כבר מעבר לבסיס, אז דילגנו על פרק 0. פרק 1 פתוח ומחכה — קדימה לצלול למים העמוקים.
+              </Text>
+              <AnimatedPressable
+                onPress={() => {
+                  tapHaptic();
+                  try { captureEvent('expert_grade_skip_continue', {}); } catch { /* non-fatal */ }
+                  setShowGradeSkipCelebration(false);
+                  router.replace("/(tabs)" as never);
+                }}
+                style={{ backgroundColor: "#0ea5e9", borderRadius: 16, paddingVertical: 16, width: "100%", alignItems: "center", borderBottomWidth: 4, borderBottomColor: "#0284c7", shadowColor: "#0ea5e9", shadowOpacity: 0.3, shadowRadius: 8, shadowOffset: { width: 0, height: 3 }, elevation: 6 }}
+                accessibilityRole="button"
+                accessibilityLabel="המשך"
+              >
+                <Text style={{ fontSize: 16, fontWeight: "900", color: "#fff" }}>המשך</Text>
+              </AnimatedPressable>
+            </Pressable>
+          </Pressable>
+        </Modal>
       )}
 
       {/* mod-0-1 continue CTA: single button that drops to learn map. Tapping it

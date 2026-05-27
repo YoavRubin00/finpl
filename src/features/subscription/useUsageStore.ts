@@ -21,6 +21,8 @@ interface UsageState {
 
   // Pro welcome gate
   hasSeenProWelcome: boolean;
+  // One-time post-mod-0-4 paywall gate (shown once between mod-0-4 and mod-0-5)
+  hasSeenMod04Paywall: boolean;
 }
 
 interface UsageActions {
@@ -29,6 +31,7 @@ interface UsageActions {
   /** Pass isPro from server subscription so the store doesn't need to know about RC */
   canUse: (feature: GatedFeature, isPro: boolean) => boolean;
   markProWelcomeSeen: () => void;
+  markMod04PaywallSeen: () => void;
   reset: () => void;
 }
 
@@ -38,6 +41,7 @@ const initialState: UsageState = {
   chatMessagesToday: 0,
   lastUsageResetDate: null,
   hasSeenProWelcome: false,
+  hasSeenMod04Paywall: false,
 };
 
 export const useUsageStore = create<UsageState & UsageActions>()(
@@ -104,6 +108,10 @@ export const useUsageStore = create<UsageState & UsageActions>()(
         set({ hasSeenProWelcome: true });
       },
 
+      markMod04PaywallSeen: () => {
+        set({ hasSeenMod04Paywall: true });
+      },
+
       reset: () => set(initialState),
     }),
     {
@@ -115,6 +123,7 @@ export const useUsageStore = create<UsageState & UsageActions>()(
         chatMessagesToday: state.chatMessagesToday,
         lastUsageResetDate: state.lastUsageResetDate,
         hasSeenProWelcome: state.hasSeenProWelcome,
+        hasSeenMod04Paywall: state.hasSeenMod04Paywall,
       }),
     },
   ),
