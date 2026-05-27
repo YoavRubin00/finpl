@@ -17,14 +17,17 @@ import Animated, {
 import { ChevronLeft, ChevronRight } from "lucide-react-native";
 import { useTutorialStore } from "../../stores/useTutorialStore";
 import { useAuthStore } from "../auth/useAuthStore";
+import { useNotificationStore } from "../notifications/useNotificationStore";
+import { useBannerCooldownStore } from "../notifications/useBannerCooldownStore";
 import { FINN_HELLO } from "../retention-loops/finnMascotConfig";
 import { tapHaptic } from "../../utils/haptics";
+import { captureEvent } from "../../lib/posthog";
 
 // ---------------------------------------------------------------------------
 // Steps
 // ---------------------------------------------------------------------------
 
-type ScreenSignal = 'learn' | 'lesson-preview' | 'tools' | 'chat' | 'shop' | 'bridge' | null;
+type ScreenSignal = 'learn' | 'lesson-preview' | 'feed' | 'chat' | 'shop' | 'bridge' | null;
 
 interface WalkthroughStep {
   title: string;
@@ -61,18 +64,18 @@ const STEPS: WalkthroughStep[] = [
     emoji: "🎓",
     message: "6 פרקים, מאפס ועד מומחה. כל מה שצריך כדי להבין את עולם הכסף. גללו למטה ותראו!",
     navigateTo: "/(tabs)/index",
-    ctaLabel: "עכשיו לכלים",
+    ctaLabel: "עכשיו לפיד",
     screenSignal: "lesson-preview",
     audioUrl: "https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/audios/walkthrough/step-2-pdqXZwiv2qVntQy0hzWaQnkaj6cPbV.mp3",
   },
   {
-    title: "כלים",
-    emoji: "🧰",
-    message: "כאן תוכלו להשתמש בכלים פיננסיים שפיתחנו, כדי לנהל את הכסף שלכם נכון יותר.",
-    navigateTo: "/(tabs)/tools",
+    title: "הפיד היומי",
+    emoji: "🎯",
+    message: "כאן תמצאו משחקים יומיים, דילמות כלכליות, מיתוסים ותוכן שמתעדכן כל יום.",
+    navigateTo: "/(tabs)/learn",
     ctaLabel: "המשך",
-    screenSignal: "tools",
-    audioUrl: "https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/audios/walkthrough/walkthrough-tools.mp3",
+    screenSignal: "feed",
+    audioUrl: "https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/audios/walkthrough/step-3-zwq7Ob4c2qz5wXEFANX40AzefZ9hu9.mp3",
   },
   {
     title: "תבחרו סגנון לשארק",
@@ -106,7 +109,7 @@ const STEPS: WalkthroughStep[] = [
     emoji: "🌉",
     message: "הידע שלכם שווה כסף אמיתי! בגשר תמירו את המטבעות שצברתם להטבות ומוצרים פיננסיים בעולם האמיתי.",
     navigateTo: "/bridge",
-    ctaLabel: "בואו נתחיל ללמוד!",
+    ctaLabel: "המשך",
     screenSignal: "bridge",
     isLast: true,
     audioUrl: "https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/audios/walkthrough/step-7-7rr5fmPQ7ZVwKa6BczIDjwsShoKQL0.mp3",
@@ -156,13 +159,22 @@ export function AppWalkthroughOverlay() {
   const segments = useSegments();
   const [transitioning, setTransitioning] = useState(false);
   const reducedMotion = useReducedMotion();
-  // Delay walkthrough by 2 seconds, only for the initial step
+  // The walkthrough only starts once the user has explicitly opted in by
+  // tapping "המשך" on the mod-0-1 completion modal (which sets
+  // walkthroughTriggered=true). Without this gate, the overlay used to
+  // race the mod-0-1 modal close + tab transition and the user saw two
+  // "continue" prompts back-to-back.
+  const walkthroughTriggered = useTutorialStore((s) => s.walkthroughTriggered);
   const [ready, setReady] = useState(step > 0);
   useEffect(() => {
     if (hasSeenWalkthrough || ready) return;
-    const timer = setTimeout(() => setReady(true), 2000);
-    return () => clearTimeout(timer);
-  }, [hasSeenWalkthrough, ready]);
+    if (!walkthroughTriggered) return;
+    setReady(true);
+    // First time the walkthrough becomes visible — log the start event.
+    if (step === 0) {
+      try { captureEvent('walkthrough_started', {}); } catch { /* non-fatal */ }
+    }
+  }, [hasSeenWalkthrough, ready, step, walkthroughTriggered]);
   // Track whether user pressed CTA on the chat-style step and is now choosing
   const [waitingForChatChoice, setWaitingForChatChoice] = useState(false);
   // Key to force re-mount of content for enter/exit animation between steps
@@ -238,23 +250,31 @@ export function AppWalkthroughOverlay() {
       }
 
       if (step >= stepsWithLast.length - 1) {
+        try { captureEvent('walkthrough_completed', { total_steps: stepsWithLast.length }); } catch { /* non-fatal */ }
         completeWalkthrough();
+        // Notification permission banner: clear any prior dismissal + cooldown
+        // so the post-walkthrough prompt fires reliably the moment the user
+        // lands on the learn map. Without this, a stale dismissed flag from
+        // an earlier session can silently suppress the one-shot prompt.
+        try { useNotificationStore.getState().resetBannerDismissed(); } catch { /* non-fatal */ }
+        try { useBannerCooldownStore.getState().reset(); } catch { /* non-fatal */ }
         setActiveScreen(null);
-        setTimeout(() => {
-          try {
-            // All users → drop straight into the first lesson.
-            // After finishing mod-0-1, the lesson's "continue" button
-            // will return them to the main learning map.
-            router.replace({ pathname: "/lesson/[id]", params: { id: "mod-0-1", chapterId: "chapter-0" } } as never);
-          } catch {
-            // Fallback: go to safe home tab
-            try { router.replace("/(tabs)" as never); } catch {}
-          }
-        }, 200);
+        // Navigate immediately — the previous 200ms timeout left the bridge
+        // screen visible while the overlay state cleaned up, producing a
+        // visible "flicker" before the learn map transition.
+        try {
+          // Walkthrough completes AFTER mod-0-1 (2026-05-27 redesign), so
+          // sending the user back to mod-0-1 here would force them to repeat
+          // a lesson they just finished. Drop them on the learn map instead.
+          router.replace("/(tabs)" as never);
+        } catch {
+          // No-op — already on a safe route.
+        }
         return;
       }
 
       const nextConfig = stepsWithLast[step + 1];
+      try { captureEvent('walkthrough_step_completed', { step_index: step, step_screen: stepsWithLast[step]?.screenSignal ?? null }); } catch { /* non-fatal */ }
       // First update the step (instant), then navigate if needed
       setStep(step + 1);
       setContentKey((k) => k + 1);
@@ -304,11 +324,16 @@ export function AppWalkthroughOverlay() {
   const handleSkip = useCallback(() => {
     try {
       try { tapHaptic(); } catch { /* ignore */ }
+      try { captureEvent('walkthrough_skipped', { at_step: step }); } catch { /* non-fatal */ }
       completeWalkthrough();
+      // Same reset as the completion path — skipping the tour still counts as
+      // "user is now in the app" and should still see the permission prompt.
+      try { useNotificationStore.getState().resetBannerDismissed(); } catch { /* non-fatal */ }
+      try { useBannerCooldownStore.getState().reset(); } catch { /* non-fatal */ }
     } catch (e) {
       console.warn("[Walkthrough.handleSkip]", e instanceof Error ? e.message : String(e));
     }
-  }, [completeWalkthrough]);
+  }, [completeWalkthrough, step]);
 
   if (hasSeenWalkthrough || step < 0 || !stepConfig || !ready) return null;
 
