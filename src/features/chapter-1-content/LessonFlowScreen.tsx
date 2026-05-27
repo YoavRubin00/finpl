@@ -2608,12 +2608,12 @@ export function LessonFlowScreen() {
       navigateToNextModuleNormally();
       return;
     }
-    // Register CTA cadence (guests only): fire after mod-0-3/4/5, but ONLY on
-    // odd-indexed modules (mod-0-4) where the PostCelebration "Netflix?" modal
-    // doesn't fire. This prevents the two end-of-module modals from stacking on
-    // the same module (mod-0-3 and mod-0-5 are even-indexed and own the Netflix
+    // Register CTA cadence (guests only): fire after mod-0-2/3/4/5, but ONLY on
+    // odd-indexed modules (mod-0-2, mod-0-4) where the PostCelebration "Netflix?"
+    // modal doesn't fire. This prevents the two end-of-module modals from stacking
+    // on the same module (mod-0-3 and mod-0-5 are even-indexed and own the Netflix
     // slot). User can dismiss; we re-prompt the next time the odd slot lines up.
-    if (isGuest && (id === 'mod-0-3' || id === 'mod-0-4' || id === 'mod-0-5') && currentModIdx % 2 !== 0) {
+    if (isGuest && (id === 'mod-0-2' || id === 'mod-0-3' || id === 'mod-0-4' || id === 'mod-0-5') && currentModIdx % 2 !== 0) {
       try { captureEvent('register_cta_shown', { module_id: id, source: 'lesson' }); } catch { /* non-fatal */ }
       setShowRegisterNudge(true);
       return;
