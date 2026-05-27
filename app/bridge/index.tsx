@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { Image as ExpoImage } from "expo-image";
 import { Text, Pressable, StyleSheet } from "react-native";
 import Animated, { FadeIn, FadeInDown } from "react-native-reanimated";
@@ -11,7 +11,17 @@ const RTL = { writingDirection: "rtl" as const, textAlign: "right" as const };
 export default function BridgePage() {
   const hasSeenWalkthrough = useTutorialStore((s) => s.hasSeenAppWalkthrough);
   const isWalkthrough = !hasSeenWalkthrough;
+  // Welcome hook only shows on the FIRST visit AND only if the walkthrough has
+  // never been seen. Otherwise the walkthrough's step 7 already introduced the
+  // bridge — re-introducing it the moment the user finishes the tour is jarring
+  // (and they're being redirected to the learn map anyway).
   const [showWelcome, setShowWelcome] = useState(!hasSeenWalkthrough);
+
+  // If hasSeenWalkthrough flips to true while this page is mounted (the user
+  // just completed the tour on step 7), tear the welcome card down immediately.
+  useEffect(() => {
+    if (hasSeenWalkthrough) setShowWelcome(false);
+  }, [hasSeenWalkthrough]);
 
   const dismiss = useCallback(() => {
     setShowWelcome(false);

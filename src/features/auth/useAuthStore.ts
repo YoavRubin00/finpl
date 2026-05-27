@@ -22,7 +22,7 @@ interface SessionState {
 }
 
 interface SessionActions {
-  signIn: (params: { userId: string; authId: string; displayName: string | null; email: string | null }) => void;
+  signIn: (params: { userId: string; authId: string; displayName: string | null; email: string | null; hasCompletedOnboarding?: boolean }) => void;
   setOnboardingCompleted: (value: boolean) => void;
   setIsGuest: (value: boolean) => void;
   /** Enter guest mode (legacy onboarding path). */
@@ -66,7 +66,7 @@ export const useAuthStore = create<SessionState & SessionActions>()(
       ...initialState,
 
       signIn: (params) =>
-        set({
+        set((state) => ({
           userId: params.userId,
           authId: params.authId,
           displayName: params.displayName,
@@ -74,13 +74,18 @@ export const useAuthStore = create<SessionState & SessionActions>()(
           isAuthenticated: true,
           isGuest: false,
           authError: null,
-        }),
+          // Propagate hasCompletedOnboarding from the server profile so the
+          // auth-redirect effect in _layout.tsx doesn't bounce a returning user
+          // back to the onboarding flow on login. Falls back to current value
+          // if the caller didn't provide one (legacy callers).
+          hasCompletedOnboarding: params.hasCompletedOnboarding ?? state.hasCompletedOnboarding,
+        })),
 
       setOnboardingCompleted: (value) => set({ hasCompletedOnboarding: value }),
       setIsGuest: (value) => set({ isGuest: value }),
 
       enterGuestMode: () =>
-        set({ isAuthenticated: true, isGuest: true, displayName: 'אורח/ת' }),
+        set({ isAuthenticated: true, isGuest: true, displayName: 'אורח' }),
 
       convertGuestToUser: (displayName: string, email: string) => {
         set((state) => ({

@@ -28,7 +28,7 @@ import { verifyEmail } from '../api/auth';
 import { useAuthStore } from '../../features/auth/useAuthStore';
 import { captureEvent } from '../posthog';
 
-type ProfileLike = { id: string; authId: string; displayName: string | null; email: string | null };
+type ProfileLike = { id: string; authId: string; displayName: string | null; email: string | null; hasCompletedOnboarding?: boolean };
 
 /**
  * Reads the pre-JWT auth session left behind by an older build.
@@ -129,6 +129,7 @@ export async function signInWithProfile(profile: ProfileLike, token: string): Pr
     authId: profile.authId,
     displayName: profile.displayName ?? null,
     email: profile.email ?? null,
+    hasCompletedOnboarding: profile.hasCompletedOnboarding,
   });
 }
 

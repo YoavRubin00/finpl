@@ -1,8 +1,8 @@
-import { eq } from 'drizzle-orm';
+import { eq, and } from 'drizzle-orm';
 import { neon } from '@neondatabase/serverless';
 import { drizzle } from 'drizzle-orm/neon-http';
 import { randomBytes } from 'crypto';
-import { userProfiles } from '../../../src/db/schema';
+import { userProfiles, moduleProgress } from '../../../src/db/schema';
 import { enforceRateLimit } from '../_shared/rateLimit';
 import { safeErrorResponse } from '../_shared/safeError';
 import { sendWelcomeEmail } from '../../../api/_shared/sendWelcomeEmail';
@@ -189,10 +189,26 @@ export async function POST(request: Request): Promise<Response> {
       });
     }
 
-    // Security log
-    console.info(`[auth] verify ok: provider=${provider} email=${verifiedEmail}`);
+    // Derive hasCompletedOnboarding from server state. The user_profiles table has
+    // no dedicated column for this, so we use module-progress as the source of
+    // truth: any completed module means the user already cleared the onboarding
+    // flow that funnels into mod-0-1. Without this, returning users signing in
+    // on a fresh device (no local state) would be sent back through onboarding.
+    let hasCompletedOnboarding = false;
+    if (profile) {
+      const completedRows = await db
+        .select({ id: moduleProgress.id })
+        .from(moduleProgress)
+        .where(and(eq(moduleProgress.userId, profile.id), eq(moduleProgress.status, 'completed')))
+        .limit(1);
+      hasCompletedOnboarding = completedRows.length > 0;
+    }
+    const profileWithFlag = profile ? { ...profile, hasCompletedOnboarding } : null;
 
-    return Response.json({ ok: true, profile, syncToken });
+    // Security log
+    console.info(`[auth] verify ok: provider=${provider} email=${verifiedEmail} returning=${hasCompletedOnboarding}`);
+
+    return Response.json({ ok: true, profile: profileWithFlag, syncToken });
   } catch (err: unknown) {
     return safeErrorResponse(err, 'auth/verify');
   }
