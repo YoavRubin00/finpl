@@ -4420,16 +4420,16 @@ export function LessonFlowScreen() {
                 רוצה עוד מטבעות?
               </Text>
               <Text style={{ ...RTL_STYLE, fontSize: 14, fontWeight: "600", color: "rgba(255,255,255,0.6)", textAlign: "center", marginBottom: 24 }}>
-                צפה בסרטון קצר וקבל 200 מטבעות בונוס!
+                צפה בסרטון קצר וקבל 500 מטבעות בונוס!
               </Text>
               <Pressable
                 onPress={() => {
                   tapHaptic();
                   setShowAdBonus(false);
                   showRewardedAd(() => {
-                    useEconomyUIStore.getState().addCoins(200);
+                    useEconomyUIStore.getState().addCoins(500);
                     successHaptic();
-                    setFlyingCoins(200);
+                    setFlyingCoins(500);
                   });
                 }}
                 style={{ backgroundColor: "#0284c7", borderRadius: 16, paddingVertical: 16, width: "100%", alignItems: "center", borderBottomWidth: 4, borderBottomColor: "#0369a1" }}
