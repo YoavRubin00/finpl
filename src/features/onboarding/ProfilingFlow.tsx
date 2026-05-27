@@ -2067,36 +2067,27 @@ function IntroStep({ onRegister, onGuest, onLoginSuccess }: IntroStepProps) {
       <SafeAreaView style={introStyles.shell} edges={["top", "bottom"]}>
         <Animated.View style={[introStyles.finnWrap, finnStyle]}>
           <LinearGradient colors={["#ecfeff", "#f0fdfa"]} style={introStyles.finnBg} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}>
-            <ExpoImage source={FINN_HELLO} style={{ width: 140, height: 140 }} contentFit="contain" accessibilityLabel="פין הכריש מנופף שלום" />
+            <ExpoImage source={FINN_HELLO} style={{ width: 160, height: 160 }} contentFit="contain" accessibilityLabel="פין הכריש מנופף שלום" />
           </LinearGradient>
         </Animated.View>
 
         <Animated.View style={[introStyles.textBlock, textStyle, { marginBottom: 28 }]}>
-          <Text style={[introStyles.title, { marginBottom: 0 }]}>{"שנתחיל?"}</Text>
+          <Text style={{ fontSize: 14, fontWeight: "600", color: "#0891b2", textAlign: "center", writingDirection: "rtl", marginBottom: 8, letterSpacing: 0.3 }}>
+            {"היי, אני קפטן שארק"}
+          </Text>
+          <Text style={[introStyles.title, { marginBottom: 0 }]}>{"נשחק עם הכסף שלך."}</Text>
         </Animated.View>
 
         <Animated.View style={[ctaAnimStyle, { alignItems: "center", gap: 10, width: "100%" }]}>
-          {/* Terms acceptance is implicit on first CTA tap — Duolingo/Spotify
-              pattern. The explicit checkbox was the biggest blocker on this
-              screen. The link below makes the legal context visible. */}
-          <Pressable
-            onPress={() => { setTermsAccepted(true); onRegister(); }}
-            style={[introStyles.cta, { width: "100%", alignItems: "center", paddingHorizontal: 0 }]}
-            accessibilityRole="button"
-            accessibilityLabel="הרשם"
-          >
-            <Text style={introStyles.ctaText}>הרשם</Text>
-          </Pressable>
-
+          {/* Single CTA, guest-default. Auth deferred to post-first-module per
+              BRAND.md cadence policy. Terms acceptance is implicit on tap. */}
           <Pressable
             onPress={() => { setTermsAccepted(true); onGuest(); }}
+            style={[introStyles.cta, { width: "100%", alignItems: "center", paddingHorizontal: 0 }]}
             accessibilityRole="button"
-            accessibilityLabel="התחל ללא הרשמה"
-            style={{ paddingVertical: 6, paddingHorizontal: 10 }}
+            accessibilityLabel="מתחילים"
           >
-            <Text style={{ color: "#64748b", fontSize: 14, fontWeight: "600", writingDirection: "rtl", textAlign: "center", textDecorationLine: "underline" }}>
-              התחל ללא הרשמה
-            </Text>
+            <Text style={introStyles.ctaText}>מתחילים</Text>
           </Pressable>
 
           <Text
