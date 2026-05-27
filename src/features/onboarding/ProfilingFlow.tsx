@@ -1,6 +1,6 @@
-import React, { useState, useEffect, useCallback, useRef } from "react";
+import React, { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { Image as ExpoImage } from "expo-image";
-import { View, Text, Image, TextInput, Pressable, ScrollView, Dimensions, StyleSheet, ImageBackground, PanResponder, KeyboardAvoidingView, Platform } from "react-native";
+import { View, Text, Image, TextInput, Pressable, ScrollView, Dimensions, StyleSheet, ImageBackground, PanResponder, KeyboardAvoidingView, Platform, Modal } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
 import { LottieIcon } from "../../components/ui/LottieIcon";
@@ -8,7 +8,7 @@ import { ConfettiExplosion } from "../../components/ui/ConfettiExplosion";
 import { GoogleLogo } from "../../components/ui/GoogleLogo";
 import LottieView from "lottie-react-native";
 import { FINN_STANDARD, FINN_HELLO, FINN_HAPPY, FINN_TABLET } from "../retention-loops/finnMascotConfig";
-import { useRouter } from "expo-router";
+import { useRouter, type Href } from "expo-router";
 import { Sparkles, TrendingUp, Pencil, ChevronDown, ChevronUp, ChevronRight } from "lucide-react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { SkiaInteractiveChart } from "../../components/ui/SkiaInteractiveChart";
@@ -591,14 +591,28 @@ function ProfileSummaryScreen({ collected, onDone, onEditStep }: { collected: Co
 
 // ─── Celebration screen ───────────────────────────────────────────────────────
 
-// DEMO ONLY: forces a specific reward tier to preview the variable-rewards UX.
-// Set to "bronze" (50 coins), "silver" (75 + 🍀), or "gold" (150 + 🎰).
-// Remove this constant and switch to a weighted random pick before production.
-const DEMO_REWARD_TIER: "bronze" | "silver" | "gold" = "gold";
+// Variable rewards — bronze is the baseline (no popup), silver/gold are
+// surprises that fire the "תפסת אוצר" popup. Weights tuned for rarity:
+// bronze 60%, silver 30%, gold 10%. Picked once per mount via useMemo so
+// the celebration UI and the coin grant in handleDone stay in sync.
+type RewardTier = "bronze" | "silver" | "gold";
 
-function CelebrationScreen({ onDone }: { onDone: () => void }) {
-  const rewardTier = DEMO_REWARD_TIER;
-  const rewardCoins = rewardTier === "gold" ? 150 : rewardTier === "silver" ? 75 : 50;
+function pickRewardTier(): RewardTier {
+  const r = Math.random();
+  if (r < 0.6) return "bronze";
+  if (r < 0.9) return "silver";
+  return "gold";
+}
+
+const REWARD_COINS: Record<RewardTier, number> = {
+  bronze: 50,
+  silver: 75,
+  gold: 150,
+};
+
+function CelebrationScreen({ onDone }: { onDone: (tier: RewardTier) => void }) {
+  const rewardTier = useMemo(() => pickRewardTier(), []);
+  const rewardCoins = REWARD_COINS[rewardTier];
   const rewardLabel = rewardTier === "gold" ? "🎰 ג'קפוט!" : rewardTier === "silver" ? "🍀 בונוס מזל!" : null;
   // Bonus tiers (silver/gold) show a popup first so users understand they won
   // something extra. Bronze (default 50) skips the popup entirely.
@@ -612,6 +626,10 @@ function CelebrationScreen({ onDone }: { onDone: () => void }) {
   // Opacity doesn't affect hit-testing, so the button is tappable from mount.
   const ctaOpacity = useSharedValue(0);
   const [bursting, setBursting] = useState(false);
+  // Synchronous guard against double-tap in the same frame. useState's stale
+  // closure can let two taps both pass the `bursting` check before either
+  // setBursting commits.
+  const burstingRef = useRef(false);
   const { playSound: playCelebSound } = useSoundEffect();
 
   useEffect(() => {
@@ -625,7 +643,8 @@ function CelebrationScreen({ onDone }: { onDone: () => void }) {
   }, []);
 
   function handleStart() {
-    if (bursting) return;
+    if (burstingRef.current) return;
+    burstingRef.current = true;
     setBursting(true);
     try { tapHaptic(); } catch { /* non-fatal */ }
     try { playCelebSound('modal_open_4'); } catch { /* non-fatal */ }
@@ -718,7 +737,7 @@ function CelebrationScreen({ onDone }: { onDone: () => void }) {
         {/* Coin / confetti burst on CTA tap, then onDone */}
         {bursting && (
           <View pointerEvents="none" style={StyleSheet.absoluteFillObject}>
-            <ConfettiExplosion onComplete={onDone} />
+            <ConfettiExplosion onComplete={() => onDone(rewardTier)} />
           </View>
         )}
 
@@ -757,15 +776,20 @@ function CelebrationScreen({ onDone }: { onDone: () => void }) {
         )}
       </SafeAreaView>
 
-      {/* Bonus popup, solid + on-brand. Anchored reveal puts the gold +150
-          next to a faded +50 so the rarity is visual, not just textual. */}
-      {showBonusPopup && rewardLabel && (
+      {/* Bonus popup, wrapped in Modal so Android Back closes it.
+          Anchored reveal puts the gold +150 next to a faded +50 so the
+          rarity is visual, not just textual. */}
+      <Modal
+        visible={showBonusPopup && rewardLabel !== null}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowBonusPopup(false)}
+      >
         <View
           style={{
-            position: "absolute", top: 0, left: 0, right: 0, bottom: 0,
+            flex: 1,
             backgroundColor: "rgba(15, 23, 42, 0.6)",
             alignItems: "center", justifyContent: "center",
-            zIndex: 9999,
           }}
         >
 
@@ -916,7 +940,7 @@ function CelebrationScreen({ onDone }: { onDone: () => void }) {
             </Animated.View>
           </Animated.View>
         </View>
-      )}
+      </Modal>
     </ImageBackground>
   );
 }
@@ -2436,6 +2460,7 @@ export function ProfilingFlow({ mode = "onboarding", onRedoComplete }: Profiling
     return () => {
       finnTriggerRef.current = null;
       if (globalTypingResetRef.current) clearTimeout(globalTypingResetRef.current);
+      if (bubbleTimeout.current) clearTimeout(bubbleTimeout.current);
     };
   }, []);
 
@@ -2479,7 +2504,7 @@ export function ProfilingFlow({ mode = "onboarding", onRedoComplete }: Profiling
     screenTy.value = withTiming(-10, { duration: 160, easing: Easing.in(Easing.cubic) });
   }
 
-  function handleDone() {
+  function handleDone(rewardTier: RewardTier = "bronze") {
     if (isRedo) {
       // Reset all progress (XP, coins, chapters, etc.), user starts fresh
       if (__DEV__) {
@@ -2508,10 +2533,8 @@ export function ProfilingFlow({ mode = "onboarding", onRedoComplete }: Profiling
       });
     } catch (e) { if (__DEV__) console.warn('[onboarding] captureEvent failed:', e); }
     try { addXP(ONBOARDING_XP, "onboarding"); } catch (e) { if (__DEV__) console.warn('[onboarding] addXP failed:', e); }
-    // DEMO: actual coin amount must match DEMO_REWARD_TIER display.
-    // gold = 150, silver = 75, bronze = 50.
-    const demoCoinAmount = DEMO_REWARD_TIER === "gold" ? 150 : DEMO_REWARD_TIER === "silver" ? 75 : 50;
-    try { addCoins(demoCoinAmount); } catch (e) { if (__DEV__) console.warn('[onboarding] addCoins failed:', e); }
+    // Coin amount matches the tier shown in CelebrationScreen (passed via onDone).
+    try { addCoins(REWARD_COINS[rewardTier]); } catch (e) { if (__DEV__) console.warn('[onboarding] addCoins failed:', e); }
     // Day 1 of streak starts immediately on onboarding completion, gives users
     // something to protect from minute zero (loss aversion + retention).
     try { recordDailyActivity.mutate(); } catch (e) { if (__DEV__) console.warn('[onboarding] streak start failed:', e); }
@@ -2539,7 +2562,7 @@ export function ProfilingFlow({ mode = "onboarding", onRedoComplete }: Profiling
     // Drop the user straight into the first module (mod-0-1) for a hands-on
     // first taste before the walkthrough offers a tour. The walkthrough only
     // fires once they're in a tab, so navigating to lesson keeps it suppressed.
-    router.replace("/lesson/mod-0-1?chapterId=chapter-0" as never);
+    router.replace("/lesson/mod-0-1?chapterId=chapter-0" as Href);
   }
 
   function editSummaryStep(target: EditableStep) {

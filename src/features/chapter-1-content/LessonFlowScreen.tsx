@@ -2510,6 +2510,8 @@ export function LessonFlowScreen() {
    * the module has no associated question.
    */
   function pendingProfileQuestionFor(moduleId: string): ProfileQuestionKind | null {
+    // Snapshot read — called from event handlers (lesson complete), not during render.
+    // Subscribing via the hook would add re-renders for no benefit.
     const profile = useAuthStore.getState().profile;
     if (moduleId === "mod-0-1" && !profile?.knowledgeLevel) return "knowledgeLevel";
     if (moduleId === "mod-0-4" && !profile?.learningTime) return "learningTime";

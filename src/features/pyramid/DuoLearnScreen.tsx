@@ -1302,7 +1302,7 @@ export function DuoLearnScreen() {
 
         {hasScrolledDown && (
           <AnimatedPressable
-            style={styles.scrollFAB}
+            style={styles.scrollToTopFAB}
             onPress={() => scrollRef.current?.scrollTo({ y: 0, animated: true })}
             accessibilityRole="button"
             accessibilityLabel="חזרה למעלה"
@@ -1783,7 +1783,7 @@ const styles = StyleSheet.create({
     shadowRadius: 3,
     elevation: 2,
   },
-  scrollFAB: {
+  scrollToTopFAB: {
     position: "absolute",
     right: 20,
     bottom: 24,

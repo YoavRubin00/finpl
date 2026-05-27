@@ -61,6 +61,8 @@ export function InModuleProfileQuestion({ visible, kind, onDone }: Props) {
   const handlePick = useCallback((id: string | number) => {
     setSel(id);
     tapHaptic();
+    // Casts are safe — each kind has its own typed options array (see KNOWLEDGE_OPTIONS / TIME_OPTIONS / DAILY_OPTIONS),
+    // so `id` at runtime is always a valid member of the corresponding enum.
     if (kind === "knowledgeLevel") {
       updateProfile({ knowledgeLevel: id as KnowledgeLevel });
     } else if (kind === "learningTime") {
