@@ -133,35 +133,55 @@ export async function signInWithProfile(profile: ProfileLike, token: string): Pr
   });
 }
 
+// In-flight guard: prefetchAll's 6 parallel 401s used to fan out to 6 concurrent
+// signOut() calls, each firing rc_logout_failed + sign_out_completed. Now any
+// caller arriving while a sign-out is running just awaits the same promise.
+let signOutInFlight: Promise<void> | null = null;
+
 export async function signOut(): Promise<void> {
-  try {
+  if (signOutInFlight) return signOutInFlight;
+
+  // Idempotent early-exit: nothing to sign out from. Without this guard, a
+  // repeated invocation after the first successful sign-out would still call
+  // RevenueCat.logOut() — which throws when already anonymous and emitted
+  // rc_logout_failed thousands of times per user (3,793x observed in PostHog).
+  const existingToken = await tokenStore.get();
+  const authStillSignedIn = useAuthStore.getState().isAuthenticated;
+  if (!existingToken && !authStillSignedIn) return;
+
+  signOutInFlight = (async () => {
     try {
-      await logoutRevenueCat();
+      try {
+        await logoutRevenueCat();
+      } catch (err) {
+        captureEvent('rc_logout_failed', { reason: err instanceof Error ? err.message : String(err) });
+      }
+
+      queryClient.clear();
+      resetAllLocalStores();
+
+      const keys = getLocalStorageKeys();
+      if (keys.length > 0) {
+        await AsyncStorage.multiRemove(keys).catch(() => { /* swallow */ });
+      }
+
+      await tokenStore.clear();
+      await backfillFlag.reset();
+
+      useAuthStore.getState().clear();
+
+      captureEvent('sign_out_completed');
     } catch (err) {
-      captureEvent('rc_logout_failed', { reason: err instanceof Error ? err.message : String(err) });
+      captureEvent('sign_out_failed', {
+        step: 'unknown',
+        reason: err instanceof Error ? err.message : String(err),
+      });
+      throw err;
+    } finally {
+      signOutInFlight = null;
     }
-
-    queryClient.clear();
-    resetAllLocalStores();
-
-    const keys = getLocalStorageKeys();
-    if (keys.length > 0) {
-      await AsyncStorage.multiRemove(keys).catch(() => { /* swallow */ });
-    }
-
-    await tokenStore.clear();
-    await backfillFlag.reset();
-
-    useAuthStore.getState().clear();
-
-    captureEvent('sign_out_completed');
-  } catch (err) {
-    captureEvent('sign_out_failed', {
-      step: 'unknown',
-      reason: err instanceof Error ? err.message : String(err),
-    });
-    throw err;
-  }
+  })();
+  return signOutInFlight;
 }
 
 export async function bootFromToken(): Promise<{ isAuthenticated: boolean }> {
