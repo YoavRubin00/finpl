@@ -211,19 +211,24 @@ const styles = StyleSheet.create({
     fontWeight: "700",
   },
   cta: {
+    // Fantasy-League glow: large soft tinted halo around the button so it
+    // visibly pulses off the dark backdrop. Paired with a 4px bottom border
+    // (on ctaGradient below) for Duolingo-style 3D depth.
     width: "100%",
     borderRadius: 16,
     overflow: "hidden",
     marginBottom: 12,
     shadowColor: "#22d3ee",
-    shadowOpacity: 0.4,
-    shadowRadius: 12,
-    shadowOffset: { width: 0, height: 4 },
-    elevation: 8,
+    shadowOpacity: 0.7,
+    shadowRadius: 18,
+    shadowOffset: { width: 0, height: 6 },
+    elevation: 14,
   },
   ctaGradient: {
     paddingVertical: 16,
     alignItems: "center",
+    borderBottomWidth: 4,
+    borderBottomColor: "#0e7490",
   },
   ctaText: {
     color: "#ffffff",

@@ -1,6 +1,6 @@
 import React, { useMemo } from 'react';
 import { Pressable, ScrollView, View, Text, StyleSheet } from 'react-native';
-import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import Animated, { FadeInDown } from 'react-native-reanimated';
@@ -26,13 +26,9 @@ import { describeProfileFreshness } from './financialProfile';
  */
 
 export function FinancialToolsScreen(): React.ReactElement {
-  // Manually trim the top safe-area inset so the title sits closer to the
-  // status bar. SafeAreaView with `edges={['top']}` was reserving the full
-  // inset on iPhones (~47px), which left an unnecessary gap above the
-  // header. We still keep enough room to clear the notch/status bar.
-  const insets = useSafeAreaInsets();
-  const topPad = Math.max(insets.top - 10, 6);
-
+  // Screen renders inside (tabs), which already reserves the status-bar
+  // safe-area above GlobalWealthHeader + BoostBanner. Only a small gap
+  // below the banner is needed here.
   const investorTools = useMemo(
     () => TOOLS_REGISTRY.filter((t) => t.category === 'investor'),
     [],
@@ -48,7 +44,7 @@ export function FinancialToolsScreen(): React.ReactElement {
 
   return (
     <SafeAreaView style={styles.safe} edges={[]}>
-      <View style={[styles.header, { paddingTop: topPad + 8 }]}>
+      <View style={styles.header}>
         <LinearGradient
           colors={['#dbeafe', '#bfdbfe']}
           start={{ x: 0, y: 0 }}
@@ -247,6 +243,7 @@ const styles = StyleSheet.create({
   header: {
     backgroundColor: '#ffffff',
     paddingHorizontal: 16,
+    paddingTop: 8,
     paddingBottom: 14,
     flexDirection: 'row-reverse',
     alignItems: 'center',

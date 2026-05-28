@@ -108,7 +108,7 @@ export function FriendsHubScreen(): React.ReactElement {
   }, [router]);
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: FEED_BG }} edges={['top']}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: FEED_BG }} edges={[]}>
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ paddingBottom: 100 }}

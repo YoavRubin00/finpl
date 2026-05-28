@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { Alert, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Alert, ScrollView, Share, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Coins, Share2 } from 'lucide-react-native';
 
@@ -199,12 +199,11 @@ export function SalaryNetCalculator(): React.ReactElement {
           sublabel={`נטו: ${formatShekel(result.netMonthly)}/חודש`}
           variant="green"
           iconLeft={<Share2 size={18} color="#ffffff" strokeWidth={2.6} />}
-          onPress={() =>
-            Alert.alert(
-              'שיתוף',
-              `הנטו שלי: ${formatShekel(result.netMonthly)}/חודש`,
-            )
-          }
+          onPress={() => {
+            Share.share({
+              message: `💰 בדקתי ברוטו↔נטו ב-FinPlay 🦈\n\nהנטו שלי: ${formatShekel(result.netMonthly)}/חודש\n\nתבדוק גם אתה ב-FinPlay`,
+            }).catch(() => { /* user dismissed — non-fatal */ });
+          }}
         />
 
         <SectionLabel>עלות מעסיק חודשית</SectionLabel>

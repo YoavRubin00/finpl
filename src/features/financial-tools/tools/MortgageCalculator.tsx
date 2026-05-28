@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { Alert, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Alert, ScrollView, Share, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { HardHat, Home, Info, Share2 } from 'lucide-react-native';
 
@@ -17,7 +17,6 @@ import {
   LegalDisclaimer,
   MoneyInput,
   MoneySlider,
-  PeriodChips,
   SectionLabel,
 } from '../components/atoms';
 import { MortgageBreakdown, PaymentBigDisplay } from '../components/charts';
@@ -35,9 +34,6 @@ const DOWN_STEP = 25_000;
 const INCOME_MIN = 5_000;
 const INCOME_MAX = 50_000;
 const INCOME_STEP = 500;
-
-const RATE_OPTIONS: readonly number[] = [3.5, 4.0, 4.5, 5.0, 5.5, 6.0];
-const YEARS_OPTIONS: readonly number[] = [15, 20, 25, 30];
 
 const pct1 = (n: number) => formatPercent(n, 1);
 
@@ -281,23 +277,34 @@ export function MortgageCalculator(): React.ReactElement {
           </View>
         </View>
 
-        <PeriodChips
-          label="ריבית שנתית"
-          value={state.annualRate}
-          options={RATE_OPTIONS}
-          onChange={(v) => setState({ ...state, annualRate: v })}
-          unit="%"
-          accentColor={TOOL.hue}
-        />
+        {/* Rate + repayment period as continuous sliders so the user can pick
+            the exact value, not just the bucketed chips. RTL drag (right→left
+            increases) is handled inside MoneySlider via transform: scaleX(-1). */}
+        <View style={styles.inputCard}>
+          <MoneySlider
+            label="ריבית שנתית"
+            value={state.annualRate}
+            onChange={(v) => setState((p) => ({ ...p, annualRate: v }))}
+            min={2.5}
+            max={8.0}
+            step={0.1}
+            unit="%"
+            accentColor={TOOL.hue}
+          />
+        </View>
 
-        <PeriodChips
-          label="תקופת החזר"
-          value={state.years}
-          options={YEARS_OPTIONS}
-          onChange={(v) => setState({ ...state, years: v })}
-          renderLabel={(v) => `${v} שנ׳`}
-          accentColor={TOOL.hue}
-        />
+        <View style={styles.inputCard}>
+          <MoneySlider
+            label="תקופת החזר"
+            value={state.years}
+            onChange={(v) => setState((p) => ({ ...p, years: v }))}
+            min={5}
+            max={30}
+            step={1}
+            formatValue={(v) => `${v} שנ׳`}
+            accentColor={TOOL.hue}
+          />
+        </View>
 
         {result.loanAmount > 0 ? (
           <>
@@ -356,15 +363,24 @@ export function MortgageCalculator(): React.ReactElement {
           sublabel={`${formatShekel(result.monthlyPayment)}/חודש · ${state.years} שנים`}
           variant="indigo"
           iconLeft={<Share2 size={18} color="#ffffff" strokeWidth={2.6} />}
-          onPress={() =>
-            Alert.alert(
-              'שיתוף',
-              `החזר חודשי ${formatShekel(result.monthlyPayment)} למשך ${state.years} שנים — סך ריבית ${formatShekel(result.totalInterest)}`,
-            )
-          }
+          onPress={() => {
+            // Opens the native share sheet (iOS) / chooser (Android) so the
+            // user can send the result via WhatsApp, Messages, Email, etc.
+            Share.share({
+              message: `📊 בדקתי משכנתא ב-FinPlay 🦈\n\nהחזר חודשי: ${formatShekel(result.monthlyPayment)}\nתקופה: ${state.years} שנים\nסך ריבית: ${formatShekel(result.totalInterest)}\n\nתבדוק גם אתה ב-FinPlay`,
+            }).catch(() => { /* user dismissed — non-fatal */ });
+          }}
         />
 
-        <ToolNextStepCard toolKey="mortgage" accentColor={TOOL.hue} />
+        {/* Mortgage TOOL.hue is indigo — identical to the "שתף תוצאה" button
+            above. Override the next-step CTA to solid sky-blue so it reads as
+            a brighter, distinct CTA next to the share button. */}
+        <ToolNextStepCard
+          toolKey="mortgage"
+          accentColor={TOOL.hue}
+          actionColor="#38bdf8"
+          actionShadowColor="#0284c7"
+        />
 
         <LegalDisclaimer
           scope="mortgage"

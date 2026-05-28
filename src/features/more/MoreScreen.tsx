@@ -147,7 +147,7 @@ export function MoreScreen() {
 
   return (
     <View style={{ flex: 1, backgroundColor: '#f0f9ff' }}>
-      <SafeAreaView style={styles.safe} edges={['top']}>
+      <SafeAreaView style={styles.safe} edges={[]}>
         <View style={{ alignItems: 'flex-end', paddingHorizontal: 16, paddingVertical: 8 }}>
           <BackButton color={STITCH_BLUE.textPrimary} />
         </View>

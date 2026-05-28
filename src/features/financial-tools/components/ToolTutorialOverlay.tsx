@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { Image as ExpoImage } from 'expo-image';
-import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { createAudioPlayer, type AudioPlayer } from 'expo-audio';
 import Animated, {
   FadeIn,
@@ -56,6 +56,7 @@ function FinnPulse() {
 export function ToolTutorialOverlay({ toolKey, steps }: Props): React.ReactElement | null {
   const markSeen = useTutorialStore((s) => s.markToolTutorialSeen);
   const reducedMotion = useReducedMotion();
+  const insets = useSafeAreaInsets();
   const [step, setStep] = useState(0);
   const [contentKey, setContentKey] = useState(0);
   const [visible, setVisible] = useState(true);
@@ -125,85 +126,89 @@ export function ToolTutorialOverlay({ toolKey, steps }: Props): React.ReactEleme
   const enterAnim = reducedMotion ? undefined : FadeIn.duration(280);
 
   return (
-    <Modal
-      visible
-      transparent
-      animationType="none"
-      statusBarTranslucent
+    // Absolutely-positioned overlay (no <Modal>) — Modal on iOS leaves the
+    // host view's touch handling tangled after dismissal so the tool buttons
+    // beneath stay unresponsive. Mounting as an absolute sibling cleans up
+    // touches the moment ToolTutorialMount sees `hasSeen=true` and returns
+    // null. Same pattern as TickerPickerSheet.
+    <View
+      style={s.overlay}
       accessibilityViewIsModal
-      onRequestClose={close}
+      pointerEvents="box-none"
     >
-      <View style={s.overlay}>
-        {/* ── Top: title pill + X dismiss ── */}
-        <SafeAreaView edges={['top']} style={s.topRow}>
-          <Animated.View
-            key={`pill-${contentKey}`}
-            entering={reducedMotion ? undefined : FadeInDown.duration(350)}
-            style={s.titlePill}
+      {/* Dimmed backdrop — covers the screen but doesn't capture taps so the
+          press already handled by inner Pressables flows correctly. */}
+      <View style={s.backdrop} pointerEvents="none" />
+
+      {/* ── Top: title pill CENTERED + X dismiss top-right ── */}
+      <SafeAreaView edges={['top']} style={s.topArea}>
+        <Animated.View
+          key={`pill-${contentKey}`}
+          entering={reducedMotion ? undefined : FadeInDown.duration(350)}
+          style={s.titlePill}
+        >
+          {stepConfig.emoji ? <Text style={s.titleEmoji}>{stepConfig.emoji}</Text> : null}
+          <Text style={s.titleText} accessibilityRole="header">
+            {stepConfig.title}
+          </Text>
+          <View style={s.stepCounter}>
+            <Text style={s.stepCounterText}>{`${step + 1}/${steps.length}`}</Text>
+          </View>
+        </Animated.View>
+        <Pressable
+          onPress={handleSkip}
+          style={[s.dismissBtn, { top: insets.top + 72 }]}
+          hitSlop={12}
+          accessibilityRole="button"
+          accessibilityLabel="סגירת ההדרכה"
+        >
+          <X size={20} color="#0c4a6e" strokeWidth={2.6} />
+        </Pressable>
+      </SafeAreaView>
+
+      {/* Middle is intentionally empty + pointer-events: none so the real
+          screen below stays visible AND uninteractive while the overlay
+          is up. */}
+
+      {/* ── Bottom: Finn card + CTA ── */}
+      <SafeAreaView edges={['bottom']} style={s.bottomArea}>
+        <Animated.View
+          entering={reducedMotion ? undefined : FadeInUp.duration(500)}
+          style={s.card}
+        >
+          <View style={s.glowBorder} />
+
+          <View style={s.finnWrap}>
+            <FinnPulse />
+            <ExpoImage source={FINN_HELLO} style={s.finn} contentFit="contain" accessible={false} />
+          </View>
+
+          <Animated.Text key={`msg-${contentKey}`} entering={enterAnim} style={s.message}>
+            {stepConfig.message}
+          </Animated.Text>
+
+          <View
+            style={s.dotsRow}
+            accessibilityLabel={`שלב ${step + 1} מתוך ${steps.length}`}
+            accessibilityRole="text"
           >
-            {stepConfig.emoji ? <Text style={s.titleEmoji}>{stepConfig.emoji}</Text> : null}
-            <Text style={s.titleText} accessibilityRole="header">
-              {stepConfig.title}
-            </Text>
-            <View style={s.stepCounter}>
-              <Text style={s.stepCounterText}>{`${step + 1}/${steps.length}`}</Text>
-            </View>
-          </Animated.View>
+            {steps.map((_, i) => (
+              <View key={i} style={[s.dot, i === step && s.dotActive]} />
+            ))}
+          </View>
+
           <Pressable
-            onPress={handleSkip}
-            style={s.dismissBtn}
-            hitSlop={12}
+            onPress={handleNext}
+            style={s.ctaBtn}
             accessibilityRole="button"
-            accessibilityLabel="סגירת ההדרכה"
+            accessibilityLabel={isLast ? 'סיום ההדרכה' : 'המשך לשלב הבא'}
           >
-            <X size={20} color="#0c4a6e" strokeWidth={2.6} />
+            <Text style={s.ctaText}>{isLast ? 'סיימתי' : 'המשך'}</Text>
+            {!isLast ? <ChevronLeft size={20} color="#ffffff" /> : null}
           </Pressable>
-        </SafeAreaView>
-
-        {/* Tap-through area so the real screen below is visible (but not
-            interactive while overlay is up). */}
-        <View style={{ flex: 1 }} />
-
-        {/* ── Bottom: Finn card + CTA ── */}
-        <SafeAreaView edges={['bottom']} style={{ paddingHorizontal: 16 }}>
-          <Animated.View
-            entering={reducedMotion ? undefined : FadeInUp.duration(500)}
-            style={s.card}
-          >
-            <View style={s.glowBorder} />
-
-            <View style={s.finnWrap}>
-              <FinnPulse />
-              <ExpoImage source={FINN_HELLO} style={s.finn} contentFit="contain" accessible={false} />
-            </View>
-
-            <Animated.Text key={`msg-${contentKey}`} entering={enterAnim} style={s.message}>
-              {stepConfig.message}
-            </Animated.Text>
-
-            <View
-              style={s.dotsRow}
-              accessibilityLabel={`שלב ${step + 1} מתוך ${steps.length}`}
-              accessibilityRole="text"
-            >
-              {steps.map((_, i) => (
-                <View key={i} style={[s.dot, i === step && s.dotActive]} />
-              ))}
-            </View>
-
-            <Pressable
-              onPress={handleNext}
-              style={s.ctaBtn}
-              accessibilityRole="button"
-              accessibilityLabel={isLast ? 'סיום ההדרכה' : 'המשך לשלב הבא'}
-            >
-              <Text style={s.ctaText}>{isLast ? 'סיימתי' : 'המשך'}</Text>
-              {!isLast ? <ChevronLeft size={20} color="#ffffff" /> : null}
-            </Pressable>
-          </Animated.View>
-        </SafeAreaView>
-      </View>
-    </Modal>
+        </Animated.View>
+      </SafeAreaView>
+    </View>
   );
 }
 
@@ -211,16 +216,41 @@ const CARD_RADIUS = 28;
 
 const s = StyleSheet.create({
   overlay: {
-    flex: 1,
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    zIndex: 1000,
+    // RN-Web stable fixed positioning so the overlay stays put on scroll.
+    ...(Platform.OS === 'web' ? { position: 'fixed' as 'absolute' } : {}),
+  },
+  backdrop: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
     backgroundColor: 'rgba(10, 22, 40, 0.18)',
   },
-  topRow: {
-    flexDirection: 'row-reverse',
+  topArea: {
+    // Centered title pill + absolute-positioned X (top-right). Pill itself
+    // is centered horizontally and pushed slightly lower than the original
+    // 36px so it reads as the screen's focal title, not a top-bar element.
     alignItems: 'center',
-    justifyContent: 'space-between',
+    justifyContent: 'flex-start',
+    paddingTop: 72,
     paddingHorizontal: 16,
-    paddingTop: 36,
-    gap: 10,
+    position: 'relative',
+  },
+  bottomArea: {
+    paddingHorizontal: 16,
+    // Bottom area sits absolutely at the screen bottom so the middle stays
+    // tap-through and the card always hugs the safe-area bottom edge.
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 0,
   },
   titlePill: {
     flexDirection: 'row-reverse',
@@ -256,6 +286,11 @@ const s = StyleSheet.create({
     color: '#0284c7',
   },
   dismissBtn: {
+    // Pinned to the visual top-left of the screen (RTL = trailing edge).
+    // The `top` is set inline at the render site so it includes the safe-area
+    // inset and stays aligned with the centered pill across all iPhones.
+    position: 'absolute',
+    left: 16,
     width: 36,
     height: 36,
     borderRadius: 999,

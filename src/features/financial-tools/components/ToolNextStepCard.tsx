@@ -1,5 +1,11 @@
 import React from 'react';
 import { View, Text, Pressable, StyleSheet, Alert, Linking } from 'react-native';
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withSpring,
+} from 'react-native-reanimated';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { BookOpen, ChevronLeft, ExternalLink, ArrowLeft } from 'lucide-react-native';
 
@@ -10,19 +16,35 @@ import { NEXT_STEPS, type FinancialToolKey } from '../financialNextStepMap';
 interface ToolNextStepCardProps {
   /** Which tool is rendering this card — drives the lesson + action lookup. */
   toolKey: FinancialToolKey;
-  /** Brand accent that tints the primary action button. */
+  /** Page accent. Drives the two derived shades for the buttons. */
   accentColor: string;
+  /** Manual override for the primary action background. Used when
+   *  `accentColor` collides with the page's share-result variant and a
+   *  visually distinct shade reads better. */
+  actionColor?: string;
+  /** Paired bottom-border shadow for `actionColor`. Auto-derives a darker
+   *  shade if omitted. */
+  actionShadowColor?: string;
 }
 
 /**
- * Two-CTA closing card for every Financial Tool. Renders directly above the
- * disclaimer at the bottom of each calculator's ScrollView. Left-side (RTL:
- * visually right) is a quiet "ללמוד עוד" chip linking to the relevant
- * lesson; right-side is the primary "next step" — usually a sibling tool
- * (auto-pre-filled from the shared financial profile) or, for tax-refund,
- * an external gov.il link wrapped in a confirm dialog.
+ * Two stacked Duolingo-style CTAs that close every tool screen. Both share
+ * the same shape as the "שתף תוצאה" `CalculateButton` (solid bg + 4px
+ * bottom-border + sheen + spring-scale press) but render in two different
+ * shades of the page accent so neither competes with the share button above.
+ *
+ *   • Primary action  — deeper shade of `accentColor`, white text/icon.
+ *   • Lesson          — soft pastel of `accentColor`, dark accent text/icon.
+ *
+ * No wrapping card frame: each button sits as its own standalone block,
+ * matching how the share button presents above.
  */
-export function ToolNextStepCard({ toolKey, accentColor }: ToolNextStepCardProps) {
+export function ToolNextStepCard({
+  toolKey,
+  accentColor,
+  actionColor,
+  actionShadowColor,
+}: ToolNextStepCardProps) {
   const router = useRouter();
   const entry = NEXT_STEPS[toolKey];
 
@@ -60,6 +82,12 @@ export function ToolNextStepCard({ toolKey, accentColor }: ToolNextStepCardProps
 
   const isExternal = !!entry.actionUrl;
 
+  const actionBg = actionColor ?? mix(accentColor, 'black', 0.12);
+  const actionShadow = actionShadowColor ?? mix(actionBg, 'black', 0.35);
+  const lessonBg = mix(accentColor, 'white', 0.78);
+  const lessonShadow = mix(accentColor, 'black', 0.1);
+  const lessonFg = mix(accentColor, 'black', 0.45);
+
   return (
     <View style={styles.wrap}>
       <View style={styles.headerRow}>
@@ -69,90 +97,121 @@ export function ToolNextStepCard({ toolKey, accentColor }: ToolNextStepCardProps
         </Text>
       </View>
 
-      {/* Primary action — Duolingo-style "share result" shape, but in a
-          softer pastel tint: same round icon + label + chevron-left layout
-          as CalculateButton, with a 4px bottom border for the 3D press effect.
-          Light pastel background + full-color text/icon reads as "lighter"
-          than the saturated CalculateButton variants. */}
-      <Pressable
-        onPress={handleAction}
-        style={({ pressed }) => [
-          styles.actionBtn,
-          {
-            backgroundColor: accentColor + '1F',
-            borderBottomColor: accentColor,
-          },
-          pressed && styles.actionBtnPressed,
-        ]}
-        accessibilityRole="button"
-        accessibilityLabel={entry.actionLabel}
-        hitSlop={4}
-      >
-        <View style={[styles.actionIconWrap, { backgroundColor: accentColor + '33' }]}>
-          {isExternal ? (
-            <ExternalLink size={18} color={accentColor} strokeWidth={2.6} />
+      <NextStepButton
+        label={entry.actionLabel}
+        bg={actionBg}
+        shadow={actionShadow}
+        fg="#ffffff"
+        iconBg="rgba(255,255,255,0.22)"
+        icon={
+          isExternal ? (
+            <ExternalLink size={18} color="#ffffff" strokeWidth={2.6} />
           ) : (
-            <ArrowLeft size={18} color={accentColor} strokeWidth={2.6} />
-          )}
-        </View>
-        <Text
-          style={[styles.actionText, { color: accentColor }]}
-          allowFontScaling={false}
-          numberOfLines={1}
-          adjustsFontSizeToFit
-          minimumFontScale={0.85}
-        >
-          {entry.actionLabel}
-        </Text>
-        <ChevronLeft size={20} color={accentColor} strokeWidth={2.8} />
-      </Pressable>
+            <ArrowLeft size={18} color="#ffffff" strokeWidth={2.6} />
+          )
+        }
+        onPress={handleAction}
+      />
 
-      {/* Lesson CTA — light-tinted, Duolingo-style button (same shape as
-          CalculateButton, lighter shade so it sits as a secondary call). */}
-      <Pressable
+      <NextStepButton
+        label={entry.lessonLabel}
+        bg={lessonBg}
+        shadow={lessonShadow}
+        fg={lessonFg}
+        iconBg="rgba(0,0,0,0.06)"
+        icon={<BookOpen size={18} color={lessonFg} strokeWidth={2.6} />}
         onPress={handleLesson}
-        style={({ pressed }) => [
-          styles.lessonBtn,
-          {
-            backgroundColor: accentColor + '33',
-            borderBottomColor: accentColor,
-          },
-          pressed && styles.lessonBtnPressed,
-        ]}
+      />
+    </View>
+  );
+}
+
+function NextStepButton({
+  label,
+  bg,
+  shadow,
+  fg,
+  iconBg,
+  icon,
+  onPress,
+}: {
+  label: string;
+  bg: string;
+  shadow: string;
+  fg: string;
+  iconBg: string;
+  icon: React.ReactNode;
+  onPress: () => void;
+}): React.ReactElement {
+  const scale = useSharedValue(1);
+  const animatedStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: scale.value }],
+  }));
+  return (
+    <Animated.View style={animatedStyle}>
+      <Pressable
+        onPressIn={() => {
+          scale.value = withSpring(0.97, { damping: 18, stiffness: 280 });
+        }}
+        onPressOut={() => {
+          scale.value = withSpring(1, { damping: 18, stiffness: 280 });
+        }}
+        onPress={onPress}
         accessibilityRole="button"
-        accessibilityLabel={`למד: ${entry.lessonLabel}`}
+        accessibilityLabel={label}
         hitSlop={4}
+        style={[
+          styles.btn,
+          { backgroundColor: bg, borderBottomColor: shadow, shadowColor: bg },
+        ]}
       >
-        <View style={[styles.lessonIconWrap, { backgroundColor: accentColor + '40' }]}>
-          <BookOpen size={18} color={accentColor} strokeWidth={2.6} />
-        </View>
+        <LinearGradient
+          colors={['rgba(255,255,255,0.22)', 'rgba(255,255,255,0)']}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 0, y: 1 }}
+          style={styles.sheen}
+          pointerEvents="none"
+        />
+        <View style={[styles.iconWrap, { backgroundColor: iconBg }]}>{icon}</View>
         <Text
-          style={[styles.lessonText, { color: accentColor }]}
+          style={[styles.label, { color: fg }]}
           allowFontScaling={false}
           numberOfLines={2}
           adjustsFontSizeToFit
           minimumFontScale={0.85}
         >
-          {entry.lessonLabel}
+          {label}
         </Text>
+        <ChevronLeft size={20} color={fg} strokeWidth={2.8} />
       </Pressable>
-    </View>
+    </Animated.View>
   );
+}
+
+// Mix `hex` toward white or black by amount `t` (0..1). Used to derive
+// distinct shades of the page accent for the two stacked buttons.
+function mix(hex: string, toward: 'white' | 'black', t: number): string {
+  const h = hex.replace('#', '');
+  const r = parseInt(h.slice(0, 2), 16);
+  const g = parseInt(h.slice(2, 4), 16);
+  const b = parseInt(h.slice(4, 6), 16);
+  const target = toward === 'white' ? 255 : 0;
+  const ch = (c: number) => {
+    const v = Math.max(0, Math.min(255, Math.round(c + (target - c) * t)));
+    return v.toString(16).padStart(2, '0');
+  };
+  return `#${ch(r)}${ch(g)}${ch(b)}`;
 }
 
 const styles = StyleSheet.create({
   wrap: {
-    backgroundColor: '#ffffff',
-    borderRadius: 16,
-    padding: 14,
-    borderWidth: 1,
-    borderColor: STITCH.surfaceHighest,
     gap: 10,
   },
   headerRow: {
     flexDirection: 'row-reverse',
     alignItems: 'center',
     gap: 6,
+    marginBottom: 2,
   },
   headerDot: {
     width: 6,
@@ -167,65 +226,42 @@ const styles = StyleSheet.create({
     writingDirection: 'rtl',
     letterSpacing: 0.4,
   },
-  actionBtn: {
+  btn: {
     flexDirection: 'row-reverse',
     alignItems: 'center',
     justifyContent: 'flex-start',
     gap: 12,
-    paddingVertical: 12,
+    minHeight: 56,
     paddingHorizontal: 16,
+    paddingVertical: 12,
     borderRadius: 16,
     borderBottomWidth: 4,
-    minHeight: 56,
+    overflow: 'hidden',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.28,
+    shadowRadius: 10,
+    elevation: 5,
   },
-  actionBtnPressed: {
-    opacity: 0.9,
-    transform: [{ translateY: 1 }],
+  sheen: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    height: '52%',
   },
-  actionIconWrap: {
+  iconWrap: {
     width: 36,
     height: 36,
     borderRadius: 999,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  actionText: {
+  label: {
+    flex: 1,
     fontSize: 15,
     fontWeight: '900',
     textAlign: 'right',
     writingDirection: 'rtl',
-    flex: 1,
     letterSpacing: 0.2,
-  },
-  lessonBtn: {
-    flexDirection: 'row-reverse',
-    alignItems: 'center',
-    justifyContent: 'flex-start',
-    gap: 12,
-    paddingVertical: 12,
-    paddingHorizontal: 14,
-    borderRadius: 14,
-    borderBottomWidth: 3,
-    minHeight: 52,
-  },
-  lessonIconWrap: {
-    width: 32,
-    height: 32,
-    borderRadius: 999,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  lessonText: {
-    flex: 1,
-    fontSize: 13,
-    fontWeight: '900',
-    textAlign: 'right',
-    writingDirection: 'rtl',
-    flexShrink: 1,
-    lineHeight: 17,
-  },
-  lessonBtnPressed: {
-    opacity: 0.92,
-    transform: [{ translateY: 1 }],
   },
 });

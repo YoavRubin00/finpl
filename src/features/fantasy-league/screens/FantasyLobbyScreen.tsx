@@ -279,7 +279,7 @@ export function FantasyLobbyScreen(): React.ReactElement {
     <View style={{ flex: 1, backgroundColor: FANTASY.bg }}>
       <F2Ambient tone="sky" />
 
-      <SafeAreaView style={{ flex: 1 }} edges={['top']}>
+      <SafeAreaView style={{ flex: 1 }} edges={[]}>
         <ScrollView
           showsVerticalScrollIndicator={false}
           contentContainerStyle={{ paddingBottom: 110, paddingHorizontal: 16, gap: 12 }}

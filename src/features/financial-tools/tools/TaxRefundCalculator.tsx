@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { Alert, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Alert, ScrollView, Share, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { ReceiptText, Share2 } from 'lucide-react-native';
 
@@ -241,12 +241,11 @@ export function TaxRefundCalculator(): React.ReactElement {
           sublabel={`מגיע לי ${formatShekel(result.estimatedRefund)} החזר`}
           variant="orange"
           iconLeft={<Share2 size={18} color="#ffffff" strokeWidth={2.6} />}
-          onPress={() =>
-            Alert.alert(
-              'שיתוף',
-              `מגיע לי החזר מס משוער של ${formatShekel(result.estimatedRefund)}!`,
-            )
-          }
+          onPress={() => {
+            Share.share({
+              message: `🧾 בדקתי החזר מס ב-FinPlay 🦈\n\nמגיע לי החזר מס משוער של ${formatShekel(result.estimatedRefund)}!\n\nתבדוק גם אתה ב-FinPlay`,
+            }).catch(() => { /* user dismissed — non-fatal */ });
+          }}
         />
 
         <ToolNextStepCard toolKey="tax-refund" accentColor={TOOL.hue} />
