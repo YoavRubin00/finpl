@@ -2,7 +2,8 @@ import "../global.css";
 import { QueryClientProvider } from '@tanstack/react-query';
 import { queryClient } from '../src/lib/queryClient';
 import { initSentry } from "../src/lib/sentry";
-import { initPostHog } from "../src/lib/posthog";
+import { initPostHog, getPostHogClient, captureScreen } from "../src/lib/posthog";
+import { PostHogProvider } from "posthog-react-native";
 import { I18nManager } from "react-native";
 
 // Undo forceRTL that was set by build 30, it caused layout crashes
@@ -41,7 +42,7 @@ try {
 initSentry();
 initPostHog();
 
-import { Slot, useRouter, useSegments, useRootNavigationState } from "expo-router";
+import { Slot, useRouter, useSegments, useRootNavigationState, usePathname } from "expo-router";
 import { useEffect, useRef, useState } from "react";
 import { AppState, Platform, Text, TextInput } from "react-native";
 import { useUserStatsUIStore } from "../src/features/user-stats/useUserStatsUIStore";
@@ -547,10 +548,46 @@ function RootLayoutInner() {
   );
 }
 
+/**
+ * PostHog screen tracker for expo-router. The PostHogProvider's
+ * `captureScreens` autocapture relies on a NavigationContainer ref that
+ * expo-router doesn't expose — per the SDK docs, the recommended way is to
+ * watch `usePathname()` and emit `$screen` manually. Fires one $screen per
+ * route change so PostHog's path/funnel/stickiness queries that key off
+ * $screen finally have data (was 0 events / 0 users for the past 30 days).
+ */
+function ScreenTracker(): null {
+  const pathname = usePathname();
+  const lastSentRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (!pathname || pathname === lastSentRef.current) return;
+    lastSentRef.current = pathname;
+    captureScreen(pathname);
+  }, [pathname]);
+  return null;
+}
+
 export default function RootLayout() {
-  return (
+  // Use the singleton client created in initPostHog(); PostHogProvider then
+  // exposes it via context to any `usePostHog()` hook in the tree. We set
+  // `captureScreens: false` because the SDK's autocapture for that flag
+  // requires a NavigationContainer ref (deprecated path) — ScreenTracker
+  // above replaces it for expo-router. `captureAppLifecycleEvents` is kept
+  // true so Application Opened/Backgrounded keep flowing.
+  const phClient = getPostHogClient();
+  const tree = (
     <QueryClientProvider client={queryClient}>
+      <ScreenTracker />
       <RootLayoutInner />
     </QueryClientProvider>
+  );
+  if (!phClient) return tree;
+  return (
+    <PostHogProvider
+      client={phClient}
+      autocapture={{ captureScreens: false, captureTouches: false }}
+    >
+      {tree}
+    </PostHogProvider>
   );
 }

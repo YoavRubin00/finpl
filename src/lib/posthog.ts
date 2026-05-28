@@ -59,6 +59,21 @@ export function captureScreen(screenName: string, properties?: EventProperties):
   client?.screen(screenName, properties);
 }
 
+/**
+ * Update person properties for the currently-identified user without
+ * re-capturing an `$identify` event. Use this when a property changes
+ * mid-session (e.g. user purchased Pro, exited guest mode) so subsequent
+ * insights segment them correctly. No-op when the SDK isn't initialized.
+ */
+export function setPersonProperties(properties: EventProperties): void {
+  // posthog-react-native fans `identify(distinctId, props)` calls to a $set
+  // mutation, which is exactly what we want — re-passing the existing
+  // distinct_id with new props patches the person record.
+  const distinctId = client?.getDistinctId();
+  if (!distinctId) return;
+  client?.identify(distinctId, properties);
+}
+
 export function resetUser(): void {
   client?.reset();
 }

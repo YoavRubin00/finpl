@@ -151,10 +151,17 @@ export async function signInWithProfile(profile: ProfileLike, token: string, met
   // sign-in boundary (e.g. guest_mode_entered -> purchase_completed) return 0
   // because the events live on two unlinked anonymous IDs. The May-21 auth
   // refactor dropped the only call site to identifyUser; this restores it.
+  // Pull the freshest subscription snapshot from the React Query cache (just
+  // populated by prefetchAll above) so PostHog person properties carry the
+  // is_pro flag from sign-in onward. Without it every DAU / retention query
+  // collapses Pro and Free users into one segment.
+  const subscriptionData = queryClient.getQueryData<{ isPro?: boolean }>(subscriptionQueryKey);
   identifyUser(profile.id, {
     email: profile.email,
     displayName: profile.displayName,
     auth_method: method,
+    is_pro: subscriptionData?.isPro === true,
+    is_guest: false,
   });
 
   // Fire the guest-conversion event AFTER identify so PostHog sees it on the
@@ -295,11 +302,16 @@ export async function bootFromToken(): Promise<{ isAuthenticated: boolean }> {
 
   // Re-identify on every cold boot of an authenticated session so PostHog
   // continues attributing this device's events to the same user instead of
-  // creating a new anonymous identity each launch.
+  // creating a new anonymous identity each launch. Refresh is_pro from the
+  // freshly-prefetched subscription cache — keeps Pro/Free segmentation
+  // accurate across app restarts.
+  const cachedSubscription = queryClient.getQueryData<{ isPro?: boolean }>(subscriptionQueryKey);
   identifyUser(profile.id, {
     email: profile.email,
     displayName: profile.displayName,
     auth_method: 'token-restore',
+    is_pro: cachedSubscription?.isPro === true,
+    is_guest: false,
   });
 
   return { isAuthenticated: true };

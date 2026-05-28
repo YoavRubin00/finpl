@@ -6,7 +6,7 @@ import { zustandStorage } from '../../lib/zustandStorage';
 import type { UserProfile } from './types';
 import { registerLocalStore } from '../../lib/stores/registry';
 import { logCompletedRegistration, logOnboardingComplete } from '../../utils/fbEvents';
-import { captureEvent } from '../../lib/posthog';
+import { captureEvent, identifyUser, setPersonProperties } from '../../lib/posthog';
 
 interface SessionState {
   userId: string | null;
@@ -85,8 +85,14 @@ export const useAuthStore = create<SessionState & SessionActions>()(
       setOnboardingCompleted: (value) => set({ hasCompletedOnboarding: value }),
       setIsGuest: (value) => set({ isGuest: value }),
 
-      enterGuestMode: () =>
-        set({ isAuthenticated: true, isGuest: true, displayName: 'אורח' }),
+      enterGuestMode: () => {
+        set({ isAuthenticated: true, isGuest: true, displayName: 'אורח' });
+        // Tag the anonymous distinct_id with is_guest=true so PostHog can
+        // segment DAU/retention by guest vs registered without needing to
+        // wait for a sign-in. Re-identify (with no userId) is invalid, so we
+        // patch the current person via $set instead.
+        setPersonProperties({ is_guest: true });
+      },
 
       convertGuestToUser: (displayName: string, email: string) => {
         set((state) => ({
@@ -112,6 +118,19 @@ export const useAuthStore = create<SessionState & SessionActions>()(
         }));
         // Guest → real user IS a registration event for Facebook attribution.
         logCompletedRegistration('email');
+        // Identify in PostHog so this conversion lands on a stable identity
+        // and merges the prior anonymous events into the real person record.
+        // Email-only registration (no OAuth) doesn't have a server-side
+        // profile.id yet — use the email as the distinct_id; a subsequent
+        // signInWithProfile via OAuth will re-identify with the canonical
+        // profile.id and PostHog will alias the two.
+        identifyUser(email, {
+          email,
+          displayName,
+          auth_method: 'email',
+          is_pro: false,
+          is_guest: false,
+        });
         // PostHog: this is the key monetization-funnel signal — a guest just
         // became a real user. The event went silent in the May 21 auth refactor;
         // restoring it here covers the email registration path. Google/Apple
