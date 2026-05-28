@@ -86,3 +86,7 @@ BRAND_VOICE.md
 INFOGRAPHIC_RECIPE.md
 PRD_FinPlay_Stich.md
 .vercelignore
+
+# Claude Code runtime artifacts — not source. The lock file is created by
+# CronCreate to track session-level scheduled tasks and must not be shared.
+.claude/scheduled_tasks.lock
