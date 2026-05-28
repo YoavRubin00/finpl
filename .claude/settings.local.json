@@ -87,7 +87,9 @@
       "Bash(powershell -NoProfile -Command 'Get-ChildItem -File | Sort-Object Length -Descending | ForEach-Object { Write-Host \\([math]::Round\\($_.Length/1MB,2\\)\\) '\\\\''|'\\\\'' $_.Name }')",
       "Bash(git commit -m ' *)",
       "Bash(git merge *)",
-      "Bash(git pull *)"
+      "Bash(git pull *)",
+      "Bash(git commit *)",
+      "Bash(rm .git/COMMIT_MSG.txt)"
     ],
     "additionalDirectories": [
       "\\tmp",

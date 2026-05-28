@@ -362,6 +362,10 @@ export function RegisterScreen() {
                   } else {
                     // New registrations: use email as authId placeholder until server profile is created
                     signIn({ userId: email.trim(), authId: email.trim(), displayName: name.trim(), email: email.trim() });
+                    // Mirror the user_signed_in emission from the lifecycle/guest paths
+                    // so the Activation Funnel step 3 fires for this non-guest registration
+                    // path too. (Convert-guest path already fires it from the store action.)
+                    captureEvent('user_signed_in', { method: 'email' });
                   }
                   // Navigation deferred to the useEffect below — it waits for
                   // the zustand state to actually reflect isAuthenticated before
