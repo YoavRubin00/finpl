@@ -38,7 +38,7 @@ import { BackButton } from "../../components/ui/BackButton";
 import { useTheme } from "../../hooks/useTheme";
 import { useMonetizationIntentStore } from "../monetization/useMonetizationIntentStore";
 import { useBandit } from "../bandit/useBandit";
-import { captureEvent } from "../../lib/posthog";
+import { captureEvent, setPersonProperties } from "../../lib/posthog";
 import { logTrialStart, logPurchase } from "../../utils/fbEvents";
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
@@ -238,6 +238,10 @@ export function PricingScreen() {
 
       if (isPro) {
         captureEvent('subscription_purchased', { plan: pkg.packageType, price: pkg.product.priceString });
+        // Patch the PostHog person record so all subsequent insights segment
+        // this user as Pro. Without this update, DAU/retention queries with
+        // breakdown=is_pro keep returning them as Free even after the purchase.
+        setPersonProperties({ is_pro: true });
         await syncFromRC(customerInfo);
         // Standard FB / GA4 purchase event — feeds Meta Ads + Google Ads
         // optimization (App Campaign for Subscribers, Advantage+ Conversion).

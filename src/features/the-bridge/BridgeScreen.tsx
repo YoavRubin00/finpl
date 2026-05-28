@@ -38,6 +38,7 @@ import { useIsPro } from '../subscription/useSubscription';
 import { useAuthStore } from '../auth/useAuthStore';
 import { useBridgeStore } from './useBridgeStore';
 import { trackBridgeClick } from '../../utils/trackBridgeClick';
+import { captureEvent } from '../../lib/posthog';
 import { BRIDGE_BENEFITS } from './bridgeData';
 import { BenefitCard } from './BenefitCard';
 import { RedemptionModal } from './RedemptionModal';
@@ -199,9 +200,9 @@ export function BridgeScreen({ walkthroughAutoScroll }: BridgeScreenProps = {}) 
   const savedValue = useBridgeStore((s) => s.getTotalSavedValue());
 
   const { tab } = useLocalSearchParams<{ tab?: BenefitCategory }>();
-  const [activeCategory, setActiveCategory] = useState<BenefitCategory>(
-    tab && (ALL_CATEGORIES as string[]).includes(tab) ? tab : 'investments'
-  );
+  const initialCategory: BenefitCategory =
+    tab && (ALL_CATEGORIES as string[]).includes(tab) ? tab : 'investments';
+  const [activeCategory, setActiveCategory] = useState<BenefitCategory>(initialCategory);
   const [selectedBenefit, setSelectedBenefit] = useState<Benefit | null>(null);
   const [modalVisible, setModalVisible] = useState(false);
   const [showConfetti, setShowConfetti] = useState(false);
@@ -210,18 +211,60 @@ export function BridgeScreen({ walkthroughAutoScroll }: BridgeScreenProps = {}) 
   const [statModalKind, setStatModalKind] = useState<'redeemed' | 'savings' | null>(null);
   const awaitingReturnFromPartner = useRef(false);
 
+  // PostHog: full conversion funnel for the Bridge — every page step is an
+  // event with the same property shape so the same insight can break down
+  // by `category` (each tab = a separate "page" in the user's mental model),
+  // `partner_name`, `is_pro`, `can_afford`, etc. Was completely untracked
+  // until this commit — the only existing instrumentation was the
+  // server-side trackBridgeClick() ping for partner billing.
+  useEffect(() => {
+    captureEvent('bridge_viewed', {
+      category: initialCategory,
+      coins_at_view: coins,
+      is_pro: isPro,
+      benefits_in_category: BRIDGE_BENEFITS.filter(b => b.category === initialCategory).length,
+      came_from_deeplink_tab: !!tab,
+    });
+    // Mount-only — once per screen entry. The dependency intentionally
+    // excludes coins / isPro so we do not re-fire on every coin change.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const prevCategoryRef = useRef<BenefitCategory>(initialCategory);
+  useEffect(() => {
+    if (prevCategoryRef.current === activeCategory) return;
+    captureEvent('bridge_tab_switched', {
+      from_category: prevCategoryRef.current,
+      to_category: activeCategory,
+      coins_at_switch: coins,
+      is_pro: isPro,
+    });
+    prevCategoryRef.current = activeCategory;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeCategory]);
+
   // Listen for return from partner website
   useEffect(() => {
     const subscription = AppState.addEventListener('change', (nextAppState) => {
       if (nextAppState === 'active' && awaitingReturnFromPartner.current) {
         awaitingReturnFromPartner.current = false;
+        // The user came back into the app after the partner URL was opened —
+        // strong signal that they at least *saw* the partner page. Without
+        // this we can't tell the difference between "tapped link" (intent)
+        // and "actually engaged with partner" (which is the real conversion).
+        captureEvent('bridge_partner_returned', {
+          last_benefit_id: selectedBenefit?.id ?? null,
+          last_partner_name: selectedBenefit?.partnerName ?? null,
+          last_category: selectedBenefit?.category ?? null,
+          active_category: activeCategory,
+        });
         setTimeout(() => {
           setShowPostRedemptionModal(true);
         }, 600);
       }
     });
     return () => subscription.remove();
-  }, []);
+  }, [selectedBenefit, activeCategory]);
 
   // Progress bar
   const progressBarPct = useSharedValue(0);
@@ -276,9 +319,20 @@ export function BridgeScreen({ walkthroughAutoScroll }: BridgeScreenProps = {}) 
   const visibleBenefits = BRIDGE_BENEFITS.filter(b => b.category === activeCategory);
 
   const handleCardPress = useCallback((benefit: Benefit) => {
+    captureEvent('bridge_benefit_tapped', {
+      benefit_id: benefit.id,
+      partner_name: benefit.partnerName,
+      category: benefit.category,
+      cost_coins: benefit.costCoins,
+      coins_at_tap: coins,
+      can_afford: coins >= benefit.costCoins,
+      is_pro: isPro,
+      is_available: benefit.isAvailable,
+      already_redeemed: isBenefitRedeemed(benefit.id),
+    });
     setSelectedBenefit(benefit);
     setModalVisible(true);
-  }, []);
+  }, [coins, isPro, isBenefitRedeemed]);
 
   const handleCancel = useCallback(() => {
     setModalVisible(false);
@@ -308,6 +362,15 @@ export function BridgeScreen({ walkthroughAutoScroll }: BridgeScreenProps = {}) 
       // Re-open partner URL only, don't re-spend.
       if (benefit.partnerUrl) {
         trackBridgeClick(benefit.id, 'link_open', email);
+        captureEvent('bridge_partner_url_opened', {
+          benefit_id: benefit.id,
+          partner_name: benefit.partnerName,
+          category: benefit.category,
+          cost_coins: benefit.costCoins,
+          entry_point: 'quick_purchase_repeat',
+          was_redeemed_before: true,
+          is_pro: isPro,
+        });
         openPartnerUrl(benefit.partnerUrl);
       }
       return;
@@ -317,11 +380,40 @@ export function BridgeScreen({ walkthroughAutoScroll }: BridgeScreenProps = {}) 
       setSuccessTitle(benefit.title);
       setShowConfetti(true);
       trackBridgeClick(benefit.id, 'redeem', email);
+      captureEvent('bridge_redeem_confirmed', {
+        benefit_id: benefit.id,
+        partner_name: benefit.partnerName,
+        category: benefit.category,
+        cost_coins: benefit.costCoins,
+        entry_point: 'quick_purchase',
+        is_pro: isPro,
+      });
       if (benefit.partnerUrl) {
+        captureEvent('bridge_partner_url_opened', {
+          benefit_id: benefit.id,
+          partner_name: benefit.partnerName,
+          category: benefit.category,
+          cost_coins: benefit.costCoins,
+          entry_point: 'quick_purchase',
+          was_redeemed_before: false,
+          is_pro: isPro,
+        });
         openPartnerUrl(benefit.partnerUrl);
       }
     } else {
       const currentCoins = queryClient.getQueryData<Economy | null>(economyQueryKey)?.coins ?? 0;
+      // Track failed-to-redeem attempts too — the funnel needs to see them
+      // to distinguish "didn't try" from "tried but blocked".
+      captureEvent('bridge_redeem_failed', {
+        benefit_id: benefit.id,
+        partner_name: benefit.partnerName,
+        category: benefit.category,
+        cost_coins: benefit.costCoins,
+        reason: !benefit.isAvailable ? 'not_available' : currentCoins < benefit.costCoins ? 'insufficient_coins' : 'unknown',
+        coins_at_attempt: currentCoins,
+        entry_point: 'quick_purchase',
+        is_pro: isPro,
+      });
       if (!benefit.isAvailable) {
         Alert.alert('ההטבה אינה זמינה כרגע', 'חזרו בקרוב!');
       } else if (currentCoins < benefit.costCoins) {
@@ -333,7 +425,7 @@ export function BridgeScreen({ walkthroughAutoScroll }: BridgeScreenProps = {}) 
         Alert.alert('שגיאה ברכישה', 'נסו שוב מאוחר יותר.');
       }
     }
-  }, [isBenefitRedeemed, redeemBenefit, openPartnerUrl, email]);
+  }, [isBenefitRedeemed, redeemBenefit, openPartnerUrl, email, isPro]);
 
   const handleConfirm = useCallback(() => {
     if (!selectedBenefit) return;
@@ -345,6 +437,15 @@ export function BridgeScreen({ walkthroughAutoScroll }: BridgeScreenProps = {}) 
       setSelectedBenefit(null);
       if (selectedBenefit.partnerUrl) {
         trackBridgeClick(selectedBenefit.id, 'link_open', email);
+        captureEvent('bridge_partner_url_opened', {
+          benefit_id: selectedBenefit.id,
+          partner_name: selectedBenefit.partnerName,
+          category: selectedBenefit.category,
+          cost_coins: selectedBenefit.costCoins,
+          entry_point: 'modal_repeat',
+          was_redeemed_before: true,
+          is_pro: isPro,
+        });
         openPartnerUrl(selectedBenefit.partnerUrl);
       }
       return;
@@ -356,12 +457,39 @@ export function BridgeScreen({ walkthroughAutoScroll }: BridgeScreenProps = {}) 
       setSuccessTitle(selectedBenefit.title);
       setShowConfetti(true);
       trackBridgeClick(selectedBenefit.id, 'redeem', email);
+      captureEvent('bridge_redeem_confirmed', {
+        benefit_id: selectedBenefit.id,
+        partner_name: selectedBenefit.partnerName,
+        category: selectedBenefit.category,
+        cost_coins: selectedBenefit.costCoins,
+        entry_point: 'modal',
+        is_pro: isPro,
+      });
       if (selectedBenefit.partnerUrl) {
+        captureEvent('bridge_partner_url_opened', {
+          benefit_id: selectedBenefit.id,
+          partner_name: selectedBenefit.partnerName,
+          category: selectedBenefit.category,
+          cost_coins: selectedBenefit.costCoins,
+          entry_point: 'modal',
+          was_redeemed_before: false,
+          is_pro: isPro,
+        });
         openPartnerUrl(selectedBenefit.partnerUrl);
       }
     } else {
       // Surface the failure to the user so they understand why nothing happened.
       const coins = queryClient.getQueryData<Economy | null>(economyQueryKey)?.coins ?? 0;
+      captureEvent('bridge_redeem_failed', {
+        benefit_id: selectedBenefit.id,
+        partner_name: selectedBenefit.partnerName,
+        category: selectedBenefit.category,
+        cost_coins: selectedBenefit.costCoins,
+        reason: !selectedBenefit.isAvailable ? 'not_available' : coins < selectedBenefit.costCoins ? 'insufficient_coins' : 'unknown',
+        coins_at_attempt: coins,
+        entry_point: 'modal',
+        is_pro: isPro,
+      });
       if (!selectedBenefit.isAvailable) {
         Alert.alert('ההטבה אינה זמינה כרגע', 'חזרו בקרוב!');
       } else if (coins < selectedBenefit.costCoins) {
@@ -373,7 +501,7 @@ export function BridgeScreen({ walkthroughAutoScroll }: BridgeScreenProps = {}) 
         Alert.alert('ההמרה נכשלה', 'נסו שוב בעוד רגע.');
       }
     }
-  }, [selectedBenefit, redeemBenefit, email, isBenefitRedeemed, openPartnerUrl]);
+  }, [selectedBenefit, redeemBenefit, email, isBenefitRedeemed, openPartnerUrl, isPro]);
 
   return (
     <View style={styles.root}>

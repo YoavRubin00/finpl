@@ -16,6 +16,7 @@ import { GoldCoinIcon } from '../../components/ui/GoldCoinIcon';
 
 import type { Benefit } from './types';
 import { trackBridgeClick } from '../../utils/trackBridgeClick';
+import { captureEvent } from '../../lib/posthog';
 
 const RTL = { writingDirection: 'rtl' as const, textAlign: 'right' as const };
 
@@ -98,6 +99,19 @@ export function BenefitCard({ benefit, coins, isRedeemed, isPro, onPress, onPurc
   const handleOpenPartnerUrl = () => {
     if (benefit.partnerUrl) {
       trackBridgeClick(benefit.id, 'link_open');
+      // Direct "open partner" tap from the card itself (used for the
+      // already-redeemed re-entry path). Same event name as BridgeScreen's
+      // openPartnerUrl call sites so the partner-conversion insight stays
+      // one event with `entry_point` as the breakdown.
+      captureEvent('bridge_partner_url_opened', {
+        benefit_id: benefit.id,
+        partner_name: benefit.partnerName,
+        category: benefit.category,
+        cost_coins: benefit.costCoins,
+        entry_point: 'benefit_card_external_link',
+        was_redeemed_before: isRedeemed,
+        is_pro: isPro,
+      });
       Linking.openURL(benefit.partnerUrl);
     }
   };
