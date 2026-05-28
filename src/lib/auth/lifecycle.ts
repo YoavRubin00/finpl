@@ -164,6 +164,15 @@ export async function signInWithProfile(profile: ProfileLike, token: string, met
     is_guest: false,
   });
 
+  // `user_signed_in` is what the dashboard's Activation Funnel keys off
+  // (step 3: Application Installed -> Application Opened -> user_signed_in).
+  // The event was dropped in the May-21 auth refactor (no call site in code
+  // for 7 days; the 116 residue events in PostHog are from before). Restoring
+  // it here covers every sign-in path that flows through signInWithProfile:
+  // Google, Apple, email-login (LoginScreen), in-onboarding email, and the
+  // legacy session migration.
+  captureEvent('user_signed_in', { method });
+
   // Fire the guest-conversion event AFTER identify so PostHog sees it on the
   // identified distinct_id, which keeps the funnel chain intact. Skip for
   // `email` method — RegisterScreen's convertGuestToUser already fired it on

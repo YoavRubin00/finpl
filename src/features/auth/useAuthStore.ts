@@ -137,6 +137,11 @@ export const useAuthStore = create<SessionState & SessionActions>()(
         // paths fire the same event from lifecycle.signInWithProfile when the
         // pre-signin auth store was in guest mode.
         captureEvent('guest_converted_to_user', { method: 'email' });
+        // Mirror the user_signed_in event from the lifecycle path so the
+        // Activation Funnel works for email-registration too — RegisterScreen
+        // doesn't go through signInWithProfile, so without this call the
+        // funnel's step 3 never fires for the email path.
+        captureEvent('user_signed_in', { method: 'email' });
         // Converting a guest also implies they already finished onboarding, since
         // they reached this conversion through the in-app upgrade flow.
         logOnboardingComplete();
