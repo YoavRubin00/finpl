@@ -2627,7 +2627,11 @@ export function LessonFlowScreen() {
     // handled by the register CTA above and skip this. Shown a single time.
     if (id === 'mod-0-4' && !isPro && !useUsageStore.getState().hasSeenMod04Paywall) {
       useUsageStore.getState().markMod04PaywallSeen();
-      try { captureEvent('paywall_shown', { source: 'post_mod_0_4' }); } catch { /* non-fatal */ }
+      // Use `paywall_viewed` (the canonical event used by StarterPackModal,
+      // IAPModal, PricingScreen) instead of the legacy `paywall_shown` name.
+      // The two-name split fragmented funnels — all paywall surfaces now land
+      // on the same event with `paywall` / `source` properties for breakdown.
+      try { captureEvent('paywall_viewed', { paywall: 'post_mod_0_4', source: 'post_mod_0_4' }); } catch { /* non-fatal */ }
       const returnTo = '/lesson/mod-0-5?chapterId=chapter-0';
       router.replace(`/pricing?returnTo=${encodeURIComponent(returnTo)}` as never);
       return;
