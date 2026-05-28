@@ -30,6 +30,10 @@ import { captureEvent } from '../posthog';
 
 type ProfileLike = { id: string; authId: string; displayName: string | null; email: string | null; hasCompletedOnboarding?: boolean };
 
+/** The authentication channel used to obtain the JWT. Threaded into PostHog
+ * `guest_converted_to_user` and `user_signed_in` for funnel analysis. */
+export type SignInMethod = 'email' | 'google' | 'apple' | 'legacy';
+
 /**
  * Reads the pre-JWT auth session left behind by an older build.
  * Existing users authenticated with a `syncToken` stored under `auth-store-v2`;
@@ -96,7 +100,16 @@ async function syncRevenueCatToServer(): Promise<void> {
   await queryClient.invalidateQueries({ queryKey: subscriptionQueryKey });
 }
 
-export async function signInWithProfile(profile: ProfileLike, token: string): Promise<void> {
+export async function signInWithProfile(profile: ProfileLike, token: string, method: SignInMethod = 'email'): Promise<void> {
+  // Capture pre-signIn guest state — useAuthStore.signIn() flips isGuest to
+  // false, so we must read it now to detect a guest→registered conversion.
+  // The May-21 auth refactor dropped the original `guest_converted_to_user`
+  // emission; this restores it for the Google/Apple/Email-login paths.
+  // (Email-registration via RegisterScreen calls convertGuestToUser, which
+  // emits the same event with method:'email' — kept separate so both paths
+  // land on the same PostHog event without double-counting.)
+  const wasGuest = useAuthStore.getState().isGuest === true;
+
   await tokenStore.set(token);
 
   configureRevenueCat(profile.id);
@@ -131,6 +144,15 @@ export async function signInWithProfile(profile: ProfileLike, token: string): Pr
     email: profile.email ?? null,
     hasCompletedOnboarding: profile.hasCompletedOnboarding,
   });
+
+  // Fire the guest-conversion event AFTER signIn so PostHog sees it on the
+  // identified distinct_id (post-`$identify`), which keeps the funnel chain
+  // intact. Skip for `email` method — RegisterScreen's convertGuestToUser
+  // already fired it on the same store transition; firing here too would
+  // double-count.
+  if (wasGuest && method !== 'email') {
+    captureEvent('guest_converted_to_user', { method });
+  }
 }
 
 // In-flight guard: prefetchAll's 6 parallel 401s used to fan out to 6 concurrent
@@ -199,7 +221,7 @@ export async function bootFromToken(): Promise<{ isAuthenticated: boolean }> {
         captureEvent('legacy_session_migration_started');
         const res = await verifyEmail(legacy.email, legacy.displayName);
         if (res?.ok && res.profile && res.token) {
-          await signInWithProfile(res.profile, res.token);
+          await signInWithProfile(res.profile, res.token, 'legacy');
           captureEvent('legacy_session_migration_succeeded');
           return { isAuthenticated: true };
         }

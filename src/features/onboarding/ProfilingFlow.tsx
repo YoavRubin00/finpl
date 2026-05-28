@@ -2060,7 +2060,7 @@ function IntroStep({ onRegister, onGuest, onLoginSuccess }: IntroStepProps) {
                 };
                 const resolvedToken = data.token ?? data.syncToken ?? null;
                 if (res.ok && data?.ok && data.profile && resolvedToken) {
-                  await signInWithProfile(data.profile, resolvedToken);
+                  await signInWithProfile(data.profile, resolvedToken, 'email');
                 }
               } catch { /* non-fatal — let onLoginSuccess route */ }
               onLoginSuccess();

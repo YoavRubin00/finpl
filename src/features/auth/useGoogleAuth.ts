@@ -150,7 +150,7 @@ export function useGoogleAuth() {
       if (googleUser?.name && !verified.profile.displayName) {
         verified.profile.displayName = googleUser.name;
       }
-      await signInWithProfile(verified.profile, verified.token);
+      await signInWithProfile(verified.profile, verified.token, 'google');
 
       // Route by the post-signIn store value rather than the raw server flag.
       // The store preserves prior-session hasCompletedOnboarding when the server

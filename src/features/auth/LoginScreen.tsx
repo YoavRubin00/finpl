@@ -87,7 +87,7 @@ export function LoginScreen() {
         setSigningIn(false);
         return;
       }
-      await signInWithProfile(data.profile, resolvedToken);
+      await signInWithProfile(data.profile, resolvedToken, 'email');
       // This screen is "sign in to an existing account" — by definition the
       // user already onboarded. Mark it locally so the _layout nav guard routes
       // them into the app instead of bouncing back to /(auth)/onboarding.
