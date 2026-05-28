@@ -1180,9 +1180,7 @@ function QuizCard({
         }}>
             <View style={{ flexDirection: "row-reverse", alignItems: "flex-start", gap: 8 }}>
               <Text
-                numberOfLines={4}
-                adjustsFontSizeToFit
-                minimumFontScale={0.85}
+                numberOfLines={5}
                 style={[RTL_STYLE, { fontSize: 15, fontWeight: "700", color: "#1f2937", lineHeight: 22, marginBottom: 6, flex: 1 }]}
               >
                 {renderBoldText(quiz.question, onTermPress)}
@@ -1291,9 +1289,7 @@ function QuizCard({
                     accessibilityState={{ selected: isRevealed && idx === answerState?.selectedIndex, disabled: isRevealed || isWrong }}
                   >
                     <Text
-                      numberOfLines={3}
-                      adjustsFontSizeToFit
-                      minimumFontScale={0.8}
+                      numberOfLines={4}
                       style={[RTL_STYLE, { fontSize: 13, lineHeight: 18, color: isWrong && !isRevealed ? "#64748b" : "#1f2937" }]}
                     >
                       {renderBoldText(option, onTermPress)}
