@@ -278,14 +278,16 @@ const styles = StyleSheet.create({
   /* Outer shell: carries 3D border + drop-shadow (no overflow clip so
    * borderBottomWidth is visible). Press state sinks the button. */
   confirmBtnShell: {
+    // Fantasy-League glow: bumped shadowOpacity 0.55 → 0.7 so the cyan halo
+    // pulses off the white sheet background and matches the F2Button vibe.
     borderRadius: 999,
     borderBottomWidth: 5,
     borderBottomColor: '#0369a1',
     shadowColor: '#0284c7',
     shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.55,
-    shadowRadius: 18,
-    elevation: 14,
+    shadowOpacity: 0.7,
+    shadowRadius: 20,
+    elevation: 16,
     marginTop: 4,
     marginBottom: 8,
     alignSelf: 'stretch',

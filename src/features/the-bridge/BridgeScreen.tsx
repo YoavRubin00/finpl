@@ -929,12 +929,16 @@ const styles = StyleSheet.create({
 
   // PRO card
   proCard: {
+    // Fantasy-League glow: was missing `shadowOpacity` entirely (defaults to
+    // 0 on iOS → no halo). Tinted soft halo + downward drop now matches the
+    // glowing CTA pattern used by F2Button + the redemption confirm button.
     borderRadius: 18,
     borderWidth: 1.5,
     shadowColor: '#0ea5e9',
-    shadowOffset: { width: 0, height: 0 },
-    shadowRadius: 14,
-    elevation: 8,
+    shadowOpacity: 0.6,
+    shadowOffset: { width: 0, height: 4 },
+    shadowRadius: 18,
+    elevation: 12,
     overflow: 'hidden',
   },
   proCardInner: {
