@@ -26,7 +26,7 @@ import { getProgress } from '../api/progress';
 import { getUserStats } from '../api/userStats';
 import { verifyEmail } from '../api/auth';
 import { useAuthStore } from '../../features/auth/useAuthStore';
-import { captureEvent } from '../posthog';
+import { captureEvent, identifyUser, resetUser } from '../posthog';
 
 type ProfileLike = { id: string; authId: string; displayName: string | null; email: string | null; hasCompletedOnboarding?: boolean };
 
@@ -145,11 +145,22 @@ export async function signInWithProfile(profile: ProfileLike, token: string, met
     hasCompletedOnboarding: profile.hasCompletedOnboarding,
   });
 
-  // Fire the guest-conversion event AFTER signIn so PostHog sees it on the
-  // identified distinct_id (post-`$identify`), which keeps the funnel chain
-  // intact. Skip for `email` method — RegisterScreen's convertGuestToUser
-  // already fired it on the same store transition; firing here too would
-  // double-count.
+  // Identify the user in PostHog so all subsequent events land on a stable
+  // distinct_id — and so the anon distinct_id from before sign-in is merged
+  // into this identity. Without this call, ordered funnels that span the
+  // sign-in boundary (e.g. guest_mode_entered -> purchase_completed) return 0
+  // because the events live on two unlinked anonymous IDs. The May-21 auth
+  // refactor dropped the only call site to identifyUser; this restores it.
+  identifyUser(profile.id, {
+    email: profile.email,
+    displayName: profile.displayName,
+    auth_method: method,
+  });
+
+  // Fire the guest-conversion event AFTER identify so PostHog sees it on the
+  // identified distinct_id, which keeps the funnel chain intact. Skip for
+  // `email` method — RegisterScreen's convertGuestToUser already fired it on
+  // the same store transition; firing here too would double-count.
   if (wasGuest && method !== 'email') {
     captureEvent('guest_converted_to_user', { method });
   }
@@ -191,6 +202,12 @@ export async function signOut(): Promise<void> {
       await backfillFlag.reset();
 
       useAuthStore.getState().clear();
+
+      // Detach the identified user from PostHog so the next session starts
+      // anonymous instead of continuing to attribute events to the signed-out
+      // identity. Without reset, the anonymous events captured before the
+      // next sign-in would merge back into the previous user's profile.
+      resetUser();
 
       captureEvent('sign_out_completed');
     } catch (err) {
@@ -274,6 +291,15 @@ export async function bootFromToken(): Promise<{ isAuthenticated: boolean }> {
     authId: profile.authId,
     displayName: profile.displayName ?? null,
     email: profile.email ?? null,
+  });
+
+  // Re-identify on every cold boot of an authenticated session so PostHog
+  // continues attributing this device's events to the same user instead of
+  // creating a new anonymous identity each launch.
+  identifyUser(profile.id, {
+    email: profile.email,
+    displayName: profile.displayName,
+    auth_method: 'token-restore',
   });
 
   return { isAuthenticated: true };
