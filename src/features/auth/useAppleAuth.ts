@@ -71,7 +71,7 @@ export function useAppleAuth() {
         useAuthStore.getState().setAuthError("הכניסה עם Apple נכשלה. נסה שוב או בחר שיטה אחרת.");
         return;
       }
-      await signInWithProfile(result.profile, result.token);
+      await signInWithProfile(result.profile, result.token, 'apple');
 
       // Route by the post-signIn store value rather than the raw server flag,
       // so returning users on the same device aren't bounced through onboarding

@@ -6,6 +6,7 @@ import { zustandStorage } from '../../lib/zustandStorage';
 import type { UserProfile } from './types';
 import { registerLocalStore } from '../../lib/stores/registry';
 import { logCompletedRegistration, logOnboardingComplete } from '../../utils/fbEvents';
+import { captureEvent } from '../../lib/posthog';
 
 interface SessionState {
   userId: string | null;
@@ -111,6 +112,12 @@ export const useAuthStore = create<SessionState & SessionActions>()(
         }));
         // Guest → real user IS a registration event for Facebook attribution.
         logCompletedRegistration('email');
+        // PostHog: this is the key monetization-funnel signal — a guest just
+        // became a real user. The event went silent in the May 21 auth refactor;
+        // restoring it here covers the email registration path. Google/Apple
+        // paths fire the same event from lifecycle.signInWithProfile when the
+        // pre-signin auth store was in guest mode.
+        captureEvent('guest_converted_to_user', { method: 'email' });
         // Converting a guest also implies they already finished onboarding, since
         // they reached this conversion through the in-app upgrade flow.
         logOnboardingComplete();
