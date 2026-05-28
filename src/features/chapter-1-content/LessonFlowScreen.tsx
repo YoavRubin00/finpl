@@ -1180,9 +1180,7 @@ function QuizCard({
         }}>
             <View style={{ flexDirection: "row-reverse", alignItems: "flex-start", gap: 8 }}>
               <Text
-                numberOfLines={4}
-                adjustsFontSizeToFit
-                minimumFontScale={0.85}
+                numberOfLines={5}
                 style={[RTL_STYLE, { fontSize: 15, fontWeight: "700", color: "#1f2937", lineHeight: 22, marginBottom: 6, flex: 1 }]}
               >
                 {renderBoldText(quiz.question, onTermPress)}
@@ -1291,9 +1289,7 @@ function QuizCard({
                     accessibilityState={{ selected: isRevealed && idx === answerState?.selectedIndex, disabled: isRevealed || isWrong }}
                   >
                     <Text
-                      numberOfLines={3}
-                      adjustsFontSizeToFit
-                      minimumFontScale={0.8}
+                      numberOfLines={4}
                       style={[RTL_STYLE, { fontSize: 13, lineHeight: 18, color: isWrong && !isRevealed ? "#64748b" : "#1f2937" }]}
                     >
                       {renderBoldText(option, onTermPress)}
@@ -4420,16 +4416,16 @@ export function LessonFlowScreen() {
                 רוצה עוד מטבעות?
               </Text>
               <Text style={{ ...RTL_STYLE, fontSize: 14, fontWeight: "600", color: "rgba(255,255,255,0.6)", textAlign: "center", marginBottom: 24 }}>
-                צפה בסרטון קצר וקבל 200 מטבעות בונוס!
+                צפה בסרטון קצר וקבל 500 מטבעות בונוס!
               </Text>
               <Pressable
                 onPress={() => {
                   tapHaptic();
                   setShowAdBonus(false);
                   showRewardedAd(() => {
-                    useEconomyUIStore.getState().addCoins(200);
+                    useEconomyUIStore.getState().addCoins(500);
                     successHaptic();
-                    setFlyingCoins(200);
+                    setFlyingCoins(500);
                   });
                 }}
                 style={{ backgroundColor: "#0284c7", borderRadius: 16, paddingVertical: 16, width: "100%", alignItems: "center", borderBottomWidth: 4, borderBottomColor: "#0369a1" }}
