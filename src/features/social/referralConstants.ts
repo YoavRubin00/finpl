@@ -61,8 +61,14 @@ export function buildInviteShareMessage(code: string): string {
 
 /** Short copy fragments for nudge modals / referral screen. */
 export const REFERRAL_COPY = {
-  /** Short headline for invite CTA — used in feed nudges and share dialogs. */
-  signupBonusHeadline: `${REFERRAL_SIGNUP_BONUS_COINS} 🪙 לחבר + ${REFERRAL_SIGNUP_BONUS_COINS} 🪙 לכם`,
+  /**
+   * Short headline for the invite CTA.
+   * Prefer the `<SignupBonusHeadline />` component for in-app rendering — it
+   * uses the real gold-coin icon. The 🪙 emoji here falls back to a moon glyph
+   * on older OS fonts; this string is kept only for share-sheet / OS-level
+   * notification copy where component rendering isn't possible.
+   */
+  signupBonusHeadline: `${REFERRAL_SIGNUP_BONUS_COINS} מטבעות לחבר + ${REFERRAL_SIGNUP_BONUS_COINS} מטבעות לכם`,
   /** Long explanation for the referral screen body. */
   fullRewardExplain:
     `כל חבר שיירשם דרך הקישור שלכם — שניכם מקבלים ${REFERRAL_SIGNUP_BONUS_COINS} מטבעות מיידית. ` +
