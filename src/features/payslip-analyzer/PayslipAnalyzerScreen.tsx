@@ -15,7 +15,6 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { FileText, RotateCcw, X } from "lucide-react-native";
 import { useRouter } from "expo-router";
 import { BackButton } from "../../components/ui/BackButton";
-import { SharkLoveModal } from "../../components/ui/SharkLoveModal";
 import { SupercellButton } from "../../components/ui/SupercellButton";
 import { AnimatedPressable } from "../../components/ui/AnimatedPressable";
 import { useAuthStore } from "../auth/useAuthStore";
@@ -170,15 +169,8 @@ export function PayslipAnalyzerScreen() {
   const financialGoal = useAuthStore((s) => s.profile?.financialGoal);
 
   const [showLegal, setShowLegal] = useState<boolean>(legalAcceptedAt === null);
-  const [showRewardModal, setShowRewardModal] = useState(false);
-  const [rewardSummary, setRewardSummary] = useState<{
-    xp: number;
-    coins: number;
-    firstTime: boolean;
-  } | null>(null);
   const [analyzing, setAnalyzing] = useState(false);
 
-  const analysisStartRef = useRef<number>(Date.now());
   const lastFileUriRef = useRef<string | null>(null);
 
   useEffect(() => {
@@ -204,7 +196,6 @@ export function PayslipAnalyzerScreen() {
   const handleAnalyze = useCallback(async () => {
     if (!file || analyzing) return;
     setAnalyzing(true);
-    analysisStartRef.current = Date.now();
     startAnalyzing();
     try {
       const response = await analyzePayslipFile(file, {
@@ -240,17 +231,10 @@ export function PayslipAnalyzerScreen() {
             creditPoints: creditPointsMetric?.value,
           });
         }
-        const reward = grantPayslipReward();
+        // Grant XP/coins silently — no celebration modal between analysis and result.
         if (!rewardGranted) {
+          grantPayslipReward();
           markRewardGranted();
-          if (!reward.capped) {
-            setRewardSummary({
-              xp: reward.xp,
-              coins: reward.coins,
-              firstTime: reward.isFirstTime,
-            });
-            setShowRewardModal(true);
-          }
         }
       } else {
         setError(response.code);
@@ -289,18 +273,6 @@ export function PayslipAnalyzerScreen() {
     setShowLegal(false);
     router.replace('/(tabs)/tools' as never);
   }, [router]);
-
-  const handleRewardClaim = useCallback(() => {
-    setShowRewardModal(false);
-  }, []);
-
-  const elapsedSeconds = useMemo(() => {
-    if (!rewardSummary) return 0;
-    return Math.max(
-      1,
-      Math.round((Date.now() - analysisStartRef.current) / 1000),
-    );
-  }, [rewardSummary]);
 
   const errorCopy = errorCode ? ERROR_COPY[errorCode] : null;
 
@@ -410,15 +382,6 @@ export function PayslipAnalyzerScreen() {
         onAccepted={handleLegalAccepted}
         onDismiss={handleLegalDismiss}
       />
-
-      {showRewardModal && rewardSummary ? (
-        <SharkLoveModal
-          xpEarned={rewardSummary.xp}
-          coinsEarned={rewardSummary.coins}
-          elapsedSeconds={elapsedSeconds}
-          onClaim={handleRewardClaim}
-        />
-      ) : null}
     </View>
   );
 }

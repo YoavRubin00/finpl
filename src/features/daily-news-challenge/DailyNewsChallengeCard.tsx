@@ -93,7 +93,7 @@ export function DailyNewsChallengeCard({
             <View style={styles.heroImagePlaceholder}>
               <Sparkles size={18} color="rgba(255,255,255,0.5)" strokeWidth={2} />
               <Text style={styles.placeholderText} allowFontScaling={false}>
-                {challenge.items[0]?.source ?? 'חדשות הבוקר'}
+                חדשות הבוקר
               </Text>
             </View>
           )}

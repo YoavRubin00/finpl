@@ -473,15 +473,8 @@ export function DailyNewsChallengeSheet({ visible, onClose }: DailyNewsChallenge
                 </Animated.View>
               ) : null}
 
-              {/* Sources attribution */}
-              {challenge.sourcesUsed.length > 0 ? (
-                <View style={styles.sourcesBox}>
-                  <Text style={styles.sourcesLabel} allowFontScaling={false}>📰 מקורות שנעזרנו בהם</Text>
-                  <Text style={styles.sourcesText} allowFontScaling={false}>
-                    {challenge.sourcesUsed.map((s) => s.name).filter(Boolean).join(' · ')}
-                  </Text>
-                </View>
-              ) : null}
+              {/* Source attribution intentionally omitted — we don't surface
+                  which feeds the LLM pulled from. */}
             </>
           ) : null}
         </ScrollView>

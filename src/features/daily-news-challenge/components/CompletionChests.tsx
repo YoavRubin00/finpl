@@ -12,6 +12,7 @@ import Animated, {
 import type { AnimationObject } from 'lottie-react-native';
 
 import { LottieIcon } from '../../../components/ui/LottieIcon';
+import { GoldCoinIcon } from '../../../components/ui/GoldCoinIcon';
 import { STITCH } from '../../../constants/theme';
 import { tapHaptic, successHaptic } from '../../../utils/haptics';
 import { previewRegularReward, previewProReward, type ChallengeRewardSummary } from '../useDailyNewsChallengeStore';
@@ -110,55 +111,53 @@ export function CompletionChests({
 
   return (
     <Animated.View entering={FadeIn.duration(360)} style={styles.wrap}>
-      <View style={styles.row}>
-        {/* PRO chest — larger, on the LEFT (visually first in RTL) */}
-        <View style={styles.proCol}>
-          <View style={styles.crownWrap}>
-            <LottieIcon source={LOTTIE_CROWN as unknown as number} size={36} autoPlay={!reduceMotion} loop={false} active={!reduceMotion} />
-          </View>
-          <View style={styles.chestOuter}>
-            {unlocked && isPro && !proOpened && (
-              <Animated.View pointerEvents="none" style={[styles.glowHalo, { backgroundColor: '#d97706' }, glowStyle]} />
-            )}
-            <Pressable
-              onPress={handleClaimPro}
-              disabled={proOpened}
-              accessibilityRole="button"
-              accessibilityLabel={!isPro ? 'שדרגו לפרו לפתיחת תיבה גדולה' : proOpened ? 'תיבת פרו נפתחה' : 'פתח תיבת פרו'}
-              style={[
-                styles.chestWrap,
-                styles.chestWrapPro,
-                unlocked && isPro && !proOpened && styles.chestWrapReady,
-                { opacity: proOpened ? 0.65 : 1 },
-              ]}
-            >
-              <LottieIcon
-                source={LOTTIE_CHEST as unknown as number}
-                size={130}
-                autoPlay={false}
-                active={proJustOpened || proOpened}
-                loop={false}
-              />
-              <View style={styles.proBadge} pointerEvents="none">
-                <Text style={styles.proBadgeText}>PRO</Text>
-              </View>
-              {!isPro && (
-                <View style={styles.lockOverlay} accessible={false}>
-                  <Text style={{ fontSize: 28 }}>🔒</Text>
-                  <Text style={styles.lockText}>שדרגו לפרו</Text>
-                </View>
+      <View style={[styles.row, !isPro && styles.rowSingle]}>
+        {/* PRO chest — rendered ONLY for Pro subscribers. Non-Pro users see
+            just the regular chest (no lock/upsell here — the Pro upsell lives
+            elsewhere in the app, no need to clutter the chest area). */}
+        {isPro && (
+          <View style={styles.proCol}>
+            <View style={styles.crownWrap}>
+              <LottieIcon source={LOTTIE_CROWN as unknown as number} size={36} autoPlay={!reduceMotion} loop={false} active={!reduceMotion} />
+            </View>
+            <View style={styles.chestOuter}>
+              {unlocked && !proOpened && (
+                <Animated.View pointerEvents="none" style={[styles.glowHalo, { backgroundColor: '#d97706' }, glowStyle]} />
               )}
-            </Pressable>
+              <Pressable
+                onPress={handleClaimPro}
+                disabled={proOpened}
+                accessibilityRole="button"
+                accessibilityLabel={proOpened ? 'תיבת פרו נפתחה' : 'פתח תיבת פרו'}
+                style={[
+                  styles.chestWrap,
+                  styles.chestWrapPro,
+                  unlocked && !proOpened && styles.chestWrapReady,
+                  { opacity: proOpened ? 0.65 : 1 },
+                ]}
+              >
+                <LottieIcon
+                  source={LOTTIE_CHEST as unknown as number}
+                  size={130}
+                  autoPlay={false}
+                  active={proJustOpened || proOpened}
+                  loop={false}
+                />
+                <View style={styles.proBadge} pointerEvents="none">
+                  <Text style={styles.proBadgeText}>PRO</Text>
+                </View>
+              </Pressable>
+            </View>
+            <Text style={styles.chestLabel} allowFontScaling={false}>תיבת פרו</Text>
+            <View style={styles.rewardRow}>
+              <RewardPill label="XP" value={`+${(lastPro ?? proPreview).xp}`} color="#a78bfa" />
+              <RewardPill icon={<GoldCoinIcon size={14} />} value={`+${(lastPro ?? proPreview).coins}`} color="#facc15" />
+              {(lastPro ?? proPreview).gems > 0 && (
+                <RewardPill label="💎" value={`+${(lastPro ?? proPreview).gems}`} color="#22d3ee" />
+              )}
+            </View>
           </View>
-          <Text style={styles.chestLabel} allowFontScaling={false}>תיבת פרו</Text>
-          <View style={styles.rewardRow}>
-            <RewardPill label="XP" value={`+${(lastPro ?? proPreview).xp}`} color="#a78bfa" />
-            <RewardPill label="🪙" value={`+${(lastPro ?? proPreview).coins}`} color="#facc15" />
-            {(lastPro ?? proPreview).gems > 0 && (
-              <RewardPill label="💎" value={`+${(lastPro ?? proPreview).gems}`} color="#22d3ee" />
-            )}
-          </View>
-        </View>
+        )}
 
         {/* Regular chest — smaller, on the RIGHT */}
         <View style={styles.regularCol}>
@@ -190,7 +189,7 @@ export function CompletionChests({
           <Text style={styles.chestLabel} allowFontScaling={false}>תיבה רגילה</Text>
           <View style={styles.rewardRow}>
             <RewardPill label="XP" value={`+${(lastRegular ?? regularPreview).xp}`} color="#a78bfa" />
-            <RewardPill label="🪙" value={`+${(lastRegular ?? regularPreview).coins}`} color="#facc15" />
+            <RewardPill icon={<GoldCoinIcon size={14} />} value={`+${(lastRegular ?? regularPreview).coins}`} color="#facc15" />
           </View>
         </View>
       </View>
@@ -204,10 +203,26 @@ export function CompletionChests({
   );
 }
 
-function RewardPill({ label, value, color }: { label: string; value: string; color: string }) {
+function RewardPill({
+  label,
+  icon,
+  value,
+  color,
+}: {
+  label?: string;
+  /** Optional icon node — preferred for coins (GoldCoinIcon) so we don't show
+   *  a misaligned emoji glyph. Mutually exclusive with `label`. */
+  icon?: React.ReactNode;
+  value: string;
+  color: string;
+}) {
   return (
     <View style={[styles.pill, { borderColor: color }]}>
-      <Text style={styles.pillLabel} allowFontScaling={false}>{label}</Text>
+      {icon ? (
+        <View style={styles.pillIconWrap}>{icon}</View>
+      ) : (
+        <Text style={styles.pillLabel} allowFontScaling={false}>{label}</Text>
+      )}
       <Text style={[styles.pillValue, { color }]} allowFontScaling={false}>{value}</Text>
     </View>
   );
@@ -223,6 +238,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: 10,
     alignItems: 'flex-end',
+  },
+  // When only the regular chest is shown (non-Pro user), center it instead
+  // of leaving the Pro slot as empty whitespace on one side.
+  rowSingle: {
+    justifyContent: 'center',
   },
   proCol: {
     flex: 13,
@@ -333,6 +353,12 @@ const styles = StyleSheet.create({
     fontSize: 9,
     fontWeight: '700',
     color: STITCH.onSurfaceVariant,
+  },
+  pillIconWrap: {
+    width: 14,
+    height: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   pillValue: {
     fontSize: 11,

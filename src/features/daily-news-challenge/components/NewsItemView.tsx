@@ -1,10 +1,9 @@
 import React from 'react';
-import { View, Text, StyleSheet, Image, Linking, Pressable } from 'react-native';
+import { View, Text, StyleSheet, Image } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Newspaper, ExternalLink } from 'lucide-react-native';
+import { Newspaper } from 'lucide-react-native';
 
 import { STITCH } from '../../../constants/theme';
-import { tapHaptic } from '../../../utils/haptics';
 import type { ChallengeItem } from '../types';
 
 interface NewsItemViewProps {
@@ -13,16 +12,11 @@ interface NewsItemViewProps {
 }
 
 /**
- * Single news item card — image + paraphrased headline + summary + source.
- * Image falls back to a brand gradient if Higgsfield URL is missing.
+ * Single news item card — image + paraphrased headline + summary.
+ * Source attribution is intentionally HIDDEN from the UI per product
+ * decision (we don't want to advertise which feeds the LLM pulled from).
  */
 export function NewsItemView({ item, index }: NewsItemViewProps): React.ReactElement {
-  const handleSourcePress = () => {
-    if (!item.sourceUrl) return;
-    tapHaptic();
-    Linking.openURL(item.sourceUrl).catch(() => { /* deep-link may fail on web; non-fatal */ });
-  };
-
   return (
     <View style={styles.wrap}>
       {/* Hero image */}
@@ -39,23 +33,11 @@ export function NewsItemView({ item, index }: NewsItemViewProps): React.ReactEle
         </LinearGradient>
       )}
 
-      {/* Eyebrow: item number + source attribution */}
+      {/* Eyebrow: item number only — source attribution intentionally omitted. */}
       <View style={styles.eyebrowRow}>
         <Text style={styles.itemNumber} allowFontScaling={false}>
           {index === 0 ? '01' : '02'}
         </Text>
-        <Pressable
-          onPress={handleSourcePress}
-          accessibilityRole="link"
-          accessibilityLabel={`מקור: ${item.source}`}
-          style={styles.sourceLink}
-          hitSlop={8}
-        >
-          <Text style={styles.sourceText} allowFontScaling={false}>
-            לפי {item.source}
-          </Text>
-          <ExternalLink size={11} color={STITCH.onSurfaceVariant} strokeWidth={2.2} />
-        </Pressable>
       </View>
 
       {/* Paraphrased headline (NEVER the original — copyright safe) */}

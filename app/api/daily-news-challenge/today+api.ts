@@ -34,19 +34,26 @@ export async function GET(request: Request): Promise<Response> {
       return Response.json({ ok: false, error: 'no challenge available yet' }, { status: 404 });
     }
 
-    const payload: DailyChallengePayload = {
-      heroTitle: row.heroTitle,
-      heroImageUrl: row.heroImageUrl,
-      items: row.items as DailyChallengePayload['items'],
-      sourcesUsed: row.sourcesUsed as DailyChallengePayload['sourcesUsed'],
-    };
+    // Strip source attribution from the client-facing response — we don't
+    // surface which feeds the LLM pulled from. The DB still has the full
+    // sourcesUsed + per-item source/sourceUrl/originalTitle for audit.
+    const rawItems = row.items as DailyChallengePayload['items'];
+    const safeItems = rawItems.map((it) => ({
+      ...it,
+      source: '',
+      sourceUrl: '',
+      originalTitle: '',
+    })) as DailyChallengePayload['items'];
 
     return Response.json({
       ok: true,
       dateKey: row.dateKey,
       isToday: row.dateKey === dateKey,
       isFallback: row.isFallback ?? false,
-      ...payload,
+      heroTitle: row.heroTitle,
+      heroImageUrl: row.heroImageUrl,
+      items: safeItems,
+      sourcesUsed: [],
     });
   } catch (err) {
     return safeErrorResponse(err, 'daily-news-challenge/today');
