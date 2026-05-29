@@ -49,7 +49,7 @@ export async function GET(request: Request): Promise<Response> {
         FROM bridge_clicks
         GROUP BY benefit_id
         ORDER BY redeems DESC
-      ` as Array<Omit<BenefitTotals, 'conversion_pct'>>,
+      ` as unknown as Array<Omit<BenefitTotals, 'conversion_pct'>>,
       sql`
         SELECT
           to_char(DATE(created_at), 'YYYY-MM-DD') AS day,
@@ -60,7 +60,7 @@ export async function GET(request: Request): Promise<Response> {
           AND created_at >= NOW() - INTERVAL '30 days'
         GROUP BY day, platform
         ORDER BY day DESC, redeems DESC
-      ` as DailyRow[],
+      ` as unknown as DailyRow[],
       sql`
         SELECT
           COUNT(*) FILTER (WHERE action = 'redeem')::int    AS total_redeems,
@@ -70,7 +70,7 @@ export async function GET(request: Request): Promise<Response> {
           MIN(created_at)::text AS first_click,
           MAX(created_at)::text AS last_click
         FROM bridge_clicks
-      ` as OverallRow[],
+      ` as unknown as OverallRow[],
     ]);
 
     const perBenefit: BenefitTotals[] = perBenefitRaw.map((row) => ({

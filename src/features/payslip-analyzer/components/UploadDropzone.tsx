@@ -1,6 +1,6 @@
 import { useCallback, useState } from "react";
 import { View, Text, StyleSheet, Platform } from "react-native";
-import { Upload, Camera, Lock, Trash2, Sparkles } from "lucide-react-native";
+import { Upload, Camera, Image as ImageIcon, Lock, Trash2, Sparkles } from "lucide-react-native";
 import * as DocumentPicker from "expo-document-picker";
 import * as ImagePicker from "expo-image-picker";
 import * as FileSystem from "expo-file-system/legacy";
@@ -202,6 +202,46 @@ export function UploadDropzone() {
     }
   }, [busy, finalizeChosen, setError]);
 
+  const handleGallery = useCallback(async () => {
+    if (busy) return;
+    setBusy(true);
+    try {
+      const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (!perm.granted) {
+        setError("picker_cancelled");
+        return;
+      }
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ["images"],
+        allowsEditing: false,
+        quality: 0.95,
+        base64: false,
+        exif: false,
+      });
+      if (result.canceled || !result.assets || result.assets.length === 0) {
+        setError("picker_cancelled");
+        return;
+      }
+      const asset = result.assets[0];
+      if (!asset) {
+        setError("picker_cancelled");
+        return;
+      }
+      const mimeType = inferMimeFromAsset(asset.mimeType, asset.uri);
+      const byteSize = await resolveByteSize(asset.uri, asset.fileSize);
+      await finalizeChosen({
+        uri: asset.uri,
+        mimeType,
+        byteSize,
+        displayName: deriveDisplayName(asset.fileName, asset.uri),
+      });
+    } catch {
+      setError("unknown");
+    } finally {
+      setBusy(false);
+    }
+  }, [busy, finalizeChosen, setError]);
+
   return (
     <Animated.View entering={FadeIn.duration(280)} style={styles.wrap}>
       <GlowCard glowColor={STITCH.secondaryPurple} pressable={false} style={styles.card}>
@@ -222,6 +262,17 @@ export function UploadDropzone() {
               onPress={handleUpload}
               disabled={busy}
               icon={<Upload size={18} color="#ffffff" strokeWidth={2.5} />}
+            />
+          </View>
+          <View style={styles.buttonCol}>
+            <SupercellButton
+              label="גלריה"
+              variant="green"
+              buttonStyle="duo"
+              size="md"
+              onPress={handleGallery}
+              disabled={busy}
+              icon={<ImageIcon size={18} color="#ffffff" strokeWidth={2.5} />}
             />
           </View>
           <View style={styles.buttonCol}>
