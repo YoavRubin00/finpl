@@ -102,6 +102,7 @@ import { GlobalQuestCompletionModal } from "../src/features/daily-quests/GlobalQ
 import { DailyBridgeNudgeModal } from "../src/components/ui/DailyBridgeNudgeModal";
 import { InviteFriendsNudgeModal } from "../src/components/ui/InviteFriendsNudgeModal";
 import { GuestRegisterDailyNudge } from "../src/features/auth/GuestRegisterDailyNudge";
+import { PostWalkthroughRegisterCTAGate } from "../src/features/auth/PostWalkthroughRegisterCTA";
 import { configureRevenueCat } from "../src/services/revenueCat";
 import { AppWalkthroughOverlay } from "../src/features/onboarding/AppWalkthroughOverlay";
 import { StreakFreezeSaveModal } from "../src/features/streak/StreakFreezeSaveModal";
@@ -520,6 +521,11 @@ function RootLayoutInner() {
               <DailyBridgeNudgeModal />
               <InviteFriendsNudgeModal />
               {hasCompletedOnboarding && hasSeenWalkthrough && isMod03Complete && <GuestRegisterDailyNudge />}
+              {/* Post-walkthrough register CTA for Guests. The gate handles
+                  all conditions internally: pendingPostWalkthroughCTA flag
+                  set by AppWalkthroughOverlay on completion + isGuest +
+                  pathname check (only on the learn map, not /pricing). */}
+              <PostWalkthroughRegisterCTAGate />
               {/* Global top banners — suppressed during onboarding/tutorial to avoid distracting the first-run experience */}
               {hasCompletedOnboarding && hasSeenWalkthrough && (
                 <>

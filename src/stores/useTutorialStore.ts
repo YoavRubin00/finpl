@@ -23,6 +23,12 @@ interface TutorialState {
   appWalkthroughStep: number;
   walkthroughGlowTab: string | null;
   walkthroughActiveScreen: WalkthroughScreen;
+  /** Set when the walkthrough completes for a Guest user. The gate in
+   *  app/_layout.tsx renders the post-walkthrough register-CTA modal as
+   *  soon as the user lands on /(tabs) and clears the flag on dismiss /
+   *  accept. Persisted so that closing the app between the walkthrough
+   *  end and the Pricing screen does not lose the CTA. */
+  pendingPostWalkthroughCTA: boolean;
   _hydrated: boolean;
   completeTradingHubIntro: () => void;
   completeAppWalkthrough: () => void;
@@ -37,6 +43,7 @@ interface TutorialState {
   setAppWalkthroughStep: (step: number) => void;
   setWalkthroughGlowTab: (tab: string | null) => void;
   setWalkthroughActiveScreen: (screen: WalkthroughScreen) => void;
+  setPendingPostWalkthroughCTA: (value: boolean) => void;
   resetWalkthrough: () => void;
   reset: () => void;
 }
@@ -57,6 +64,7 @@ export const useTutorialStore = create<TutorialState>()(
       appWalkthroughStep: 0,
       walkthroughGlowTab: null,
       walkthroughActiveScreen: null,
+      pendingPostWalkthroughCTA: false,
       _hydrated: false,
       completeTradingHubIntro: () => set({ hasSeenTradingHubIntro: true }),
       completeAppWalkthrough: () => set({ hasSeenAppWalkthrough: true, appWalkthroughStep: -1, walkthroughGlowTab: null, walkthroughActiveScreen: null, walkthroughTriggered: false }),
@@ -71,8 +79,9 @@ export const useTutorialStore = create<TutorialState>()(
       setAppWalkthroughStep: (step: number) => set({ appWalkthroughStep: step }),
       setWalkthroughGlowTab: (tab: string | null) => set({ walkthroughGlowTab: tab }),
       setWalkthroughActiveScreen: (screen: WalkthroughScreen) => set({ walkthroughActiveScreen: screen }),
-      resetWalkthrough: () => set({ hasSeenAppWalkthrough: false, appWalkthroughStep: 0, walkthroughGlowTab: null, walkthroughActiveScreen: null, walkthroughTriggered: true }),
-      reset: () => set({ hasSeenTradingHubIntro: true, hasSeenAppWalkthrough: false, walkthroughTriggered: false, hasChosenChatStyle: false, hasSeenPizzaIndexModal: false, hasSeenCh0BullshitInterstitial: false, hasSeenMod01BarterNotif: false, hasSeenWatchlistHint: false, hasSeenAssetUnlockIntro: false, hasSeenIndicesOnlyNudge: false, appWalkthroughStep: 0, walkthroughGlowTab: null, walkthroughActiveScreen: null, _hydrated: false }),
+      setPendingPostWalkthroughCTA: (value: boolean) => set({ pendingPostWalkthroughCTA: value }),
+      resetWalkthrough: () => set({ hasSeenAppWalkthrough: false, appWalkthroughStep: 0, walkthroughGlowTab: null, walkthroughActiveScreen: null, walkthroughTriggered: true, pendingPostWalkthroughCTA: false }),
+      reset: () => set({ hasSeenTradingHubIntro: true, hasSeenAppWalkthrough: false, walkthroughTriggered: false, hasChosenChatStyle: false, hasSeenPizzaIndexModal: false, hasSeenCh0BullshitInterstitial: false, hasSeenMod01BarterNotif: false, hasSeenWatchlistHint: false, hasSeenAssetUnlockIntro: false, hasSeenIndicesOnlyNudge: false, appWalkthroughStep: 0, walkthroughGlowTab: null, walkthroughActiveScreen: null, pendingPostWalkthroughCTA: false, _hydrated: false }),
     }),
     {
       name: "tutorial-store-v12",

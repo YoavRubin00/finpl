@@ -17,6 +17,7 @@ import Animated, {
 import { ChevronLeft, ChevronRight } from "lucide-react-native";
 import { useTutorialStore } from "../../stores/useTutorialStore";
 import { useAuthStore } from "../auth/useAuthStore";
+import { useIsPro } from "../subscription/useSubscription";
 import { useNotificationStore } from "../notifications/useNotificationStore";
 import { useBannerCooldownStore } from "../notifications/useBannerCooldownStore";
 import { FINN_HELLO } from "../retention-loops/finnMascotConfig";
@@ -180,6 +181,9 @@ export function AppWalkthroughOverlay() {
   // Key to force re-mount of content for enter/exit animation between steps
   const [contentKey, setContentKey] = useState(0);
   const isMinor = useAuthStore((s) => s.profile?.ageGroup === "minor");
+  const isGuest = useAuthStore((s) => s.isGuest);
+  const isPro = useIsPro();
+  const setPendingPostWalkthroughCTA = useTutorialStore((s) => s.setPendingPostWalkthroughCTA);
 
   // Filter out Bridge step for minors (legal protection, no real-money features)
   const activeSteps = isMinor ? STEPS.filter((s) => s.screenSignal !== "bridge") : STEPS;
@@ -259,14 +263,30 @@ export function AppWalkthroughOverlay() {
         try { useNotificationStore.getState().resetBannerDismissed(); } catch { /* non-fatal */ }
         try { useBannerCooldownStore.getState().reset(); } catch { /* non-fatal */ }
         setActiveScreen(null);
-        // Navigate immediately — the previous 200ms timeout left the bridge
-        // screen visible while the overlay state cleaned up, producing a
-        // visible "flicker" before the learn map transition.
+
+        // Arm the post-walkthrough register-CTA modal for Guests. The gate
+        // in app/_layout.tsx renders it the moment we land on /(tabs).
+        // Non-Guests (already registered) do not see this CTA.
+        if (isGuest) {
+          try { setPendingPostWalkthroughCTA(true); } catch { /* non-fatal */ }
+        }
+
+        // Non-Pro users see a one-step Pro pitch via the existing
+        // PricingScreen at /pricing. Both purchase and dismiss route to
+        // /(tabs) via the returnTo query param, so every button on the
+        // paywall lands the user on the learn map — where the Guest CTA
+        // then fires from the gate. Pro users skip the paywall entirely
+        // and go straight to the learn map.
         try {
-          // Walkthrough completes AFTER mod-0-1 (2026-05-27 redesign), so
-          // sending the user back to mod-0-1 here would force them to repeat
-          // a lesson they just finished. Drop them on the learn map instead.
-          router.replace("/(tabs)" as never);
+          if (!isPro) {
+            try { captureEvent('paywall_viewed', { paywall: 'post_walkthrough', source: 'post_walkthrough' }); } catch { /* non-fatal */ }
+            router.replace(`/pricing?returnTo=${encodeURIComponent('/(tabs)')}&source=post_walkthrough` as never);
+          } else {
+            // Walkthrough completes AFTER mod-0-1 (2026-05-27 redesign), so
+            // sending the user back to mod-0-1 here would force them to repeat
+            // a lesson they just finished. Drop them on the learn map instead.
+            router.replace("/(tabs)" as never);
+          }
         } catch {
           // No-op — already on a safe route.
         }
@@ -303,7 +323,7 @@ export function AppWalkthroughOverlay() {
     } catch (e) {
       console.warn("[Walkthrough.handleNext]", e instanceof Error ? e.message : String(e));
     }
-  }, [step, setStep, completeWalkthrough, setActiveScreen, router, transitioning, isAlreadyOnRoute, hasChosenChatStyle, stepsWithLast]);
+  }, [step, setStep, completeWalkthrough, setActiveScreen, router, transitioning, isAlreadyOnRoute, hasChosenChatStyle, stepsWithLast, isGuest, isPro, setPendingPostWalkthroughCTA]);
 
   const handleBack = useCallback(() => {
     try {
