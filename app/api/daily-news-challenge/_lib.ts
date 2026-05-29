@@ -71,20 +71,20 @@ interface TavilyHeadlineBundle {
 }
 
 /**
- * Aggregate news from IL financial press + global macro. Two searches in
- * parallel: one biased to Israeli sources, one to global macro. Results
- * combine into a single bundle the LLM prioritizes.
+ * Aggregate news from IL financial press + US markets. Two parallel searches:
+ *   1. Israeli macro/markets (Tel Aviv exchange, Bank of Israel, local economy).
+ *   2. US markets — S&P 500, NASDAQ, big tech, Fed decisions, earnings — the
+ *      market most Israeli retail investors actually trade in (IBKR / Blink /
+ *      local brokers all funnel to US equities), so this is high-relevance.
+ * Results combine into a single bundle the LLM picks from.
  */
 async function fetchDailyNewsBundle(): Promise<TavilyHeadlineBundle> {
-  // Use the existing tavilyNewsSearch wrapper with disambiguating queries.
-  // The wrapper's `include_domains` list already covers Calcalist/Globes/TheMarker
-  // alongside global financial press, so a single broad query gets us both.
-  const [il, world] = await Promise.all([
-    tavilyNewsSearch('Israel economy interest rate stock market', { timeRange: 'day', maxResults: 8 }),
-    tavilyNewsSearch('global stock market today Fed economy', { timeRange: 'day', maxResults: 6 }),
+  const [il, us] = await Promise.all([
+    tavilyNewsSearch('Israel economy Bank of Israel interest rate Tel Aviv stock exchange', { timeRange: 'day', maxResults: 8 }),
+    tavilyNewsSearch('US stock market S&P 500 NASDAQ Fed today big tech earnings', { timeRange: 'day', maxResults: 8 }),
   ]);
 
-  const combined = [...il.results, ...world.results]
+  const combined = [...il.results, ...us.results]
     .filter((r) => r.title && r.url)
     .slice(0, 14)
     .map((r) => ({
@@ -121,28 +121,34 @@ function extractSourceFromUrl(url: string): string {
 
 /* ─────────────────── Gemini Flash 2.5 — paraphrase + Qs ─────────────────── */
 
-const SYSTEM_PROMPT = `אתה כותב את "אתגר היומי" של FinPlay — אפליקציית גיימיפיקציה פיננסית לדור Z בעברית.
+const SYSTEM_PROMPT = `אתה כותב את "אקטואליה פיננסית" — אפליקציית גיימיפיקציה פיננסית לדור Z בעברית, לישראלים שמשקיעים גם בבורסת תל אביב וגם בארה"ב (S&P 500, NASDAQ, מניות גדולות).
 
-המשימה: מקבל אוסף כותרות חדשות פיננסיות מ-24 השעות האחרונות, מחזיר דוח JSON עם:
+המשימה: מקבל אוסף כותרות חדשות פיננסיות אמיתיות מ-24 השעות האחרונות, מחזיר JSON עם:
 - heroTitle: כותרת באנר (עד 8 מילים, סגנון דור Z, אמוג'י 1 בסוף).
-- שני items — האחד ישראלי, השני גלובלי (אם אין IL טוב, שניהם גלובליים).
+- בדיוק שני items — לפי הסדר הבא:
+    1) item[0] = השוק הישראלי (בנק ישראל, ריבית, בורסת ת"א, מק"מ, מניות ת"א-35, נדל"ן, פנסיה).
+    2) item[1] = שוק ארה"ב (S&P/NASDAQ, החלטות הפד, אינפלציה אמריקאית, ענקיות הטק AAPL/NVDA/MSFT/GOOG/META/TSLA/AMZN, דוחות רבעוניים).
+   אם אין כותרת ישראלית טובה ב-24 שעות האחרונות — תקן את item[0] למקרו עולמי שמשפיע ישירות על השווקים בארץ (למשל החלטת ריבית באירופה/ארה"ב, מלחמת סחר), והבהר בסיכום את ההשפעה על משקיע ישראלי.
+
 - לכל item:
   * headlineHe: כותרת מנוסחת מחדש (לא העתק מהמקור), עברית קולחת, דור Z, 6-12 מילים.
-  * summaryHe: 2 משפטים תמציתיים שמסבירים מה קרה ולמה אכפת.
-  * source + sourceUrl + originalTitle (לאודיט, לא יוצג).
+  * summaryHe: 2 משפטים תמציתיים — מה קרה ולמה זה חשוב למשקיע ישראלי.
+  * source + sourceUrl + originalTitle: חובה להעתיק מתוך הכותרות שהוזנו לך. אסור להמציא URL או מקור.
   * question: שאלה אחת קצרה (איך זה משפיע / מה לעשות / האם זה חכם).
   * options: 4 תשובות באורך דומה, רק אחת נכונה.
   * correctIdx: 0-3.
   * explanation: 2-3 משפטים "תכל'ס" למה התשובה נכונה.
-  * historicalExample: דוגמה דומה מהעבר (תאריך + מה קרה אז).
+  * historicalExample: דוגמה דומה מהעבר (תאריך + מה קרה אז) — רק אם אתה בטוח במאה אחוז שזה אמיתי, אחרת השאר מחרוזת ריקה.
   * chatContext: פסקה אחת ש-AI mentor יקבל כקונטקסט אם המשתמש לוחץ "שאל".
 
-חוקי זהב:
-- אסור להעתיק כותרות מילולית. תמיד לנסח מחדש.
+חוקי זהב — אקטואליה אמיתית בלבד:
+- כל פריט חייב להתבסס על אחת מהכותרות בקלט. אסור לסנתז עובדות מכמה כותרות לאחת ולהציג אותה כסיפור חדש.
+- ה-sourceUrl חייב להיות אחד מה-URLs שהוזנו לך — מילה במילה. אם תמציא, המערכת תזרוק שגיאה.
+- אסור לציין מספרים, אחוזים, שמות חברות או תאריכים שלא מופיעים במקור או שאינך בטוח בהם.
 - עברית טבעית, לא תרגום מילולי מאנגלית.
-- אם כותרת אחת לא ברורה / שטחית, דלג עליה ובחר אחרת.
-- ה-options חייבות להיות באמת סבירות (לא "נכונה ברורה + 3 מטופשות").
-- מקור (source) חייב להיות מצוין בכל item — קרדיט.`;
+- אסור להעתיק כותרות מילולית — לנסח מחדש.
+- אם כותרת שטחית / לא קשורה לפיננסי — דלג ובחר אחרת.
+- options חייבות להיות סבירות באמת (לא "נכונה ברורה + 3 מטופשות").`;
 
 interface GeminiResponse {
   candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }>;
@@ -209,10 +215,16 @@ async function generateChallengePayload(
   if (!rawJson) throw new Error('Gemini returned empty content');
 
   const parsed = JSON.parse(rawJson) as RawGeminiPayload;
-  return normalizePayload(parsed);
+  return normalizePayload(parsed, bundle);
 }
 
-function normalizePayload(raw: RawGeminiPayload): DailyChallengePayload {
+function normalizePayload(
+  raw: RawGeminiPayload,
+  bundle: TavilyHeadlineBundle,
+): DailyChallengePayload {
+  // Build a lookup of real Tavily URLs so we can reject any URL the LLM
+  // hallucinated — keeps "אקטואליה אמיתית, לא בכאילו" honest.
+  const realUrls = new Set(bundle.results.map((r) => r.url));
   if (!raw.heroTitle || typeof raw.heroTitle !== 'string') {
     throw new Error('Gemini payload missing heroTitle');
   }
@@ -233,6 +245,14 @@ function normalizePayload(raw: RawGeminiPayload): DailyChallengePayload {
       !it.explanation
     ) {
       throw new Error(`Gemini item ${idx} malformed`);
+    }
+    // Anti-hallucination: the sourceUrl MUST be one of the URLs we fed Tavily
+    // → Gemini. If the LLM invented or mangled the URL, fail loudly so we
+    // never publish made-up "actuality".
+    if (!it.sourceUrl || !realUrls.has(it.sourceUrl)) {
+      throw new Error(
+        `Gemini item ${idx} has fabricated sourceUrl: ${it.sourceUrl ?? '(missing)'} — not in Tavily bundle`,
+      );
     }
     return {
       headlineHe: it.headlineHe,

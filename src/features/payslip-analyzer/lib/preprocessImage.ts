@@ -47,7 +47,12 @@ export async function preprocessImage(
     height = undefined;
   }
 
+  // Source must already be JPEG to skip the re-encode — callers relabel the
+  // result as `image/jpeg` unconditionally, so a PNG/WebP/HEIC that takes
+  // this fast-path would ship declared-JPEG with non-JPEG bytes and get
+  // rejected by the server's magic-bytes check.
   const isAlreadySmall =
+    file.mimeType === 'image/jpeg' &&
     typeof width === 'number' &&
     width <= TARGET_WIDTH &&
     file.byteSize > 0 &&

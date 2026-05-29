@@ -14,6 +14,7 @@ import { SharkAvatar } from './components/SharkAvatar';
 import { TranscriptOverlay } from './components/TranscriptOverlay';
 import { CallControls } from './components/CallControls';
 import { CapExceededModal } from './components/CapExceededModal';
+import { SharkVoiceProvider } from './SharkVoiceProvider';
 
 const RTL = { writingDirection: 'rtl' as const };
 const TICK_SECONDS = 5;
@@ -26,6 +27,17 @@ function formatRemaining(seconds: number): string {
 }
 
 export function SharkVoiceCallScreen(): React.ReactElement {
+  // On native the ElevenLabs SDK requires its ConversationProvider to be
+  // mounted above any component that calls `useConversation`. The provider
+  // is a passthrough on web (see `SharkVoiceProvider.tsx`).
+  return (
+    <SharkVoiceProvider>
+      <SharkVoiceCallContent />
+    </SharkVoiceProvider>
+  );
+}
+
+function SharkVoiceCallContent(): React.ReactElement {
   const canUseSharkVoice = useSubscriptionStore((s) => s.canUseSharkVoice);
   const getRemaining = useSubscriptionStore((s) => s.getSharkVoiceSecondsRemaining);
   const recordUsage = useSubscriptionStore((s) => s.recordSharkVoiceUsage);

@@ -25,11 +25,18 @@ export const userProfiles = pgTable("user_profiles", {
 	syncToken: text("sync_token"),
 	preferences: jsonb("preferences"),
 	virtualBalance: numeric("virtual_balance", { precision: 18, scale: 2 }).default('100000').notNull(),
+	// Refer-a-friend invite code. Read by /api/referral/redeem (SELECT auth_id
+	// WHERE referral_code = …) and written by /api/referral/register-code —
+	// both use raw SQL on this column, so it MUST stay in the ORM model even
+	// though there's no Drizzle-typed reference. Was accidentally missing from
+	// schema.ts → drizzle-kit push wanted to delete it (366 rows of live data).
+	referralCode: text("referral_code"),
 	createdAt: timestamp("created_at", { withTimezone: true, mode: 'string' }).defaultNow(),
 	updatedAt: timestamp("updated_at", { withTimezone: true, mode: 'string' }).defaultNow(),
 }, (table) => [
 	unique("user_profiles_auth_id_key").on(table.authId),
 	unique("user_profiles_email_key").on(table.email),
+	unique("user_profiles_referral_code_key").on(table.referralCode),
 ]);
 
 export const moduleProgress = pgTable("module_progress", {

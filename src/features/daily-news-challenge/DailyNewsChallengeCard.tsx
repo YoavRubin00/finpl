@@ -41,7 +41,7 @@ export function DailyNewsChallengeCard({
   const ctaText = (() => {
     if (!completed) return 'התחל לעדכן את עצמך';
     if (isPro && !proChestOpened) return 'פתח גם את תיבת ה-Pro';
-    return 'סיימת את האתגר היומי 🎉';
+    return 'סיימת את האקטואליה הפיננסית להיום 🎉';
   })();
 
   const handlePress = () => {
@@ -56,7 +56,7 @@ export function DailyNewsChallengeCard({
         onPressIn={() => { scale.value = withSpring(0.98, { damping: 18, stiffness: 280 }); }}
         onPressOut={() => { scale.value = withSpring(1, { damping: 18, stiffness: 280 }); }}
         accessibilityRole="button"
-        accessibilityLabel="אתגר יומי — חדשות מהבוקר"
+        accessibilityLabel="אקטואליה פיננסית — חדשות מהבוקר"
       >
         <LinearGradient
           colors={HERO_GRADIENT}
@@ -71,7 +71,7 @@ export function DailyNewsChallengeCard({
             </View>
             <View style={{ flex: 1 }}>
               <Text style={styles.eyebrow} allowFontScaling={false}>
-                אתגר יומי · עיתון פיננסי
+                אקטואליה פיננסית
               </Text>
               <Text style={styles.heroTitle} numberOfLines={2} allowFontScaling={false}>
                 {challenge.heroTitle}

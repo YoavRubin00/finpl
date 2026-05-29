@@ -19,6 +19,11 @@ interface SessionResponse {
   error?: string;
 }
 
+interface TokenResponse {
+  conversationToken?: string;
+  error?: string;
+}
+
 function resolveBase(): string {
   if (Platform.OS === 'web' && typeof window !== 'undefined') {
     const host = window.location?.hostname ?? '';
@@ -47,4 +52,29 @@ export async function fetchSignedUrl(): Promise<string> {
     throw new Error('voice/session: missing signedUrl');
   }
   return data.signedUrl;
+}
+
+/**
+ * Native (iOS/Android) counterpart of `fetchSignedUrl`. The React Native
+ * SDK (`@elevenlabs/react-native`) connects via LiveKit/WebRTC, not the
+ * raw WSS transport the web SDK uses — so it needs a conversation token
+ * (`/api/voice/token`), not a signed URL.
+ */
+export async function fetchConversationToken(): Promise<string> {
+  const base = resolveBase();
+  const res = await fetch(`${base}/api/voice/token`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({}),
+  });
+
+  if (!res.ok) {
+    throw new Error(`voice/token failed: ${res.status}`);
+  }
+
+  const data = (await res.json()) as TokenResponse;
+  if (!data.conversationToken) {
+    throw new Error('voice/token: missing conversationToken');
+  }
+  return data.conversationToken;
 }

@@ -186,7 +186,7 @@ export function DailyNewsChallengeSheet({ visible, onClose }: DailyNewsChallenge
       })
       .catch((err) => {
         console.error('[DailyNewsChallenge] fetch failed', err);
-        setError('לא הצלחנו להוריד את האתגר היומי. נסה שוב.');
+        setError('לא הצלחנו להוריד את האקטואליה הפיננסית. נסה שוב.');
       })
       .finally(() => setLoading(false));
   }, [visible, challenge, setChallenge]);
@@ -326,7 +326,7 @@ export function DailyNewsChallengeSheet({ visible, onClose }: DailyNewsChallenge
 
           <View style={styles.headerTitleWrap}>
             <Text style={styles.headerTitle} numberOfLines={1} allowFontScaling={false}>
-              אתגר יומי · עיתון פיננסי
+              אקטואליה פיננסית
             </Text>
             {challenge?.heroTitle ? (
               <Text style={styles.headerSubtitle} numberOfLines={1} allowFontScaling={false}>

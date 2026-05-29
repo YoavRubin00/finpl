@@ -48,43 +48,51 @@ export function ToolHeader({ title, subtitle, accentColor = STITCH.primary, Icon
   };
 
   return (
-    <View style={styles.bar}>
-      {/* Back button — anchored on the right edge in RTL */}
-      <Pressable
-        onPress={handleBack}
-        style={({ pressed }) => [
-          styles.backBtn,
-          { borderColor: accentColor + '33', backgroundColor: accentColor + '14' },
-          pressed && styles.backBtnPressed,
-        ]}
-        accessibilityRole="button"
-        accessibilityLabel="חזרה לכלים"
-        hitSlop={8}
-      >
-        <ChevronRight size={22} color={accentColor} strokeWidth={2.6} />
-      </Pressable>
+    <>
+      <View style={styles.bar}>
+        {/* Back button — anchored on the right edge in RTL */}
+        <Pressable
+          onPress={handleBack}
+          style={({ pressed }) => [
+            styles.backBtn,
+            { borderColor: accentColor + '33', backgroundColor: accentColor + '14' },
+            pressed && styles.backBtnPressed,
+          ]}
+          accessibilityRole="button"
+          accessibilityLabel="חזרה לכלים"
+          hitSlop={8}
+        >
+          <ChevronRight size={22} color={accentColor} strokeWidth={2.6} />
+        </Pressable>
 
-      {Icon ? (
-        <View style={[styles.iconWrap, { backgroundColor: accentColor + '1f' }]}>
-          <Icon size={22} color={accentColor} strokeWidth={2.4} />
-        </View>
-      ) : null}
-
-      <View style={styles.titleWrap}>
-        <Text style={styles.title} numberOfLines={1} allowFontScaling={false}>
-          {title}
-        </Text>
-        {subtitle ? (
-          <Text style={styles.subtitle} numberOfLines={1} allowFontScaling={false}>
-            {subtitle}
-          </Text>
+        {Icon ? (
+          <View style={[styles.iconWrap, { backgroundColor: accentColor + '1f' }]}>
+            <Icon size={22} color={accentColor} strokeWidth={2.4} />
+          </View>
         ) : null}
+
+        <View style={styles.titleWrap}>
+          <Text style={styles.title} numberOfLines={1} allowFontScaling={false}>
+            {title}
+          </Text>
+          {subtitle ? (
+            <Text style={styles.subtitle} numberOfLines={1} allowFontScaling={false}>
+              {subtitle}
+            </Text>
+          ) : null}
+        </View>
       </View>
 
+      {/* Tutorial overlay is rendered as a SIBLING of the bar (not a child).
+          `position: absolute` resolves against the nearest ancestor, so when
+          the overlay sat inside the ~60px bar its `bottom: 0` anchored to
+          the bar's bottom edge instead of the screen's. Hoisting it out
+          lets the SafeAreaView host of the tool screen become the anchor,
+          giving the overlay full-screen height. */}
       {showTutorial && toolKey && tutorialSteps ? (
         <ToolTutorialOverlay toolKey={toolKey} steps={tutorialSteps} />
       ) : null}
-    </View>
+    </>
   );
 }
 
