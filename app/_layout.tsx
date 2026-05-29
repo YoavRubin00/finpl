@@ -61,6 +61,7 @@ import {
 } from "@expo-google-fonts/heebo";
 import { useAuthStore } from "../src/features/auth/useAuthStore";
 import { useEconomyUIStore } from "../src/features/economy/useEconomyUIStore";
+import { useStreakDailyTick } from "../src/features/economy/useStreak";
 import { setOnUnauthorized } from "../src/lib/api/client";
 import { signOut as lifecycleSignOut, bootFromToken } from "../src/lib/auth/lifecycle";
 import { startAppStateListener } from "../src/lib/auth/appStateListener";
@@ -449,6 +450,12 @@ function RootLayoutInner() {
   useEffect(() => {
     bootFromToken().finally(() => setBootComplete(true));
   }, []);
+
+  // Daily streak tick — fire `recordDailyActivity` once per Israeli day on app
+  // open + foreground. Without this, the streak only advances on lesson/onboarding
+  // completion, leaving DAUs who only play arena/feed/trading/quizzes stuck at 0.
+  // Server endpoint is idempotent per dateIl; AsyncStorage gate spares the round-trip.
+  useStreakDailyTick(hydrated && bootComplete && isAuthenticated);
 
   useEffect(() => {
     if (!navState?.key || !hydrated) return;
