@@ -161,7 +161,12 @@ export function PricingScreen() {
   const router = useRouter();
   // When opened mid-flow (e.g. the post-mod-0-4 paywall), returnTo holds the
   // route to continue to on dismiss/purchase so the user is never stranded.
-  const { returnTo } = useLocalSearchParams<{ returnTo?: string }>();
+  // `source` lets upstream callers (e.g. AppWalkthroughOverlay) tag the
+  // funnel so paywall_dismissed events can be sliced separately. Defaults
+  // to 'subscription_pricing' when omitted so existing call sites still
+  // get a value on the event.
+  const { returnTo, source: rawSource } = useLocalSearchParams<{ returnTo?: string; source?: string }>();
+  const source = typeof rawSource === 'string' && rawSource ? rawSource : 'subscription_pricing';
   const isCurrentlyPro = useIsPro();
   const hasSeenProWelcome = useUsageStore((s) => s.hasSeenProWelcome);
   const displayName = useAuthStore((s) => s.displayName);
@@ -480,7 +485,7 @@ export function PricingScreen() {
                   </Pressable>
                 </View>
 
-                <Pressable onPress={() => { captureEvent('paywall_dismissed', { paywall: 'subscription_pricing' }); if (returnTo) { router.replace(returnTo as never); } else if (router.canGoBack()) { router.back(); } else { router.replace('/(tabs)' as never); } }} style={styles.noThanksBtn} accessibilityRole="button" accessibilityLabel="ליציאה" hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+                <Pressable onPress={() => { captureEvent('paywall_dismissed', { paywall: 'subscription_pricing', source }); if (returnTo) { router.replace(returnTo as never); } else if (router.canGoBack()) { router.back(); } else { router.replace('/(tabs)' as never); } }} style={styles.noThanksBtn} accessibilityRole="button" accessibilityLabel="ליציאה" hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
                   <Text style={[styles.noThanksText, { color: theme.textMuted }]}>ליציאה</Text>
                 </Pressable>
 
