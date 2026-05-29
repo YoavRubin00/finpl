@@ -1,13 +1,11 @@
 import { useEffect, useState, useCallback } from 'react';
 import { Image as ExpoImage } from "expo-image";
-import { View, Text, Pressable, StyleSheet, Modal, Image, ScrollView,
+import { View, Text, Pressable, StyleSheet, Modal, ScrollView,
 } from 'react-native';
 import { useRouter } from 'expo-router';
-import { GoldCoinIcon } from '../../components/ui/GoldCoinIcon';
 import Animated, {
     useSharedValue,
     useAnimatedStyle,
-    withSpring,
     withRepeat,
     withSequence,
     withTiming,
@@ -17,11 +15,9 @@ import Animated, {
     FadeOut,
 } from 'react-native-reanimated';
 import { Heart } from 'lucide-react-native';
-import LottieView from '../../components/ui/SafeLottieView';
 import { FINN_STANDARD } from '../retention-loops/finnMascotConfig';
 import { useHeartsStore, MAX_HEARTS } from './useHeartsStore';
 import { getTimeUntilNextHeart } from './subscriptionConstants';
-import { useIsPro } from './useSubscription';
 import { useEconomy } from '../../features/economy/useEconomy';
 import { applyEconomyDelta } from '../../lib/api/economy';
 import { queryClient } from '../../lib/queryClient';
@@ -29,10 +25,9 @@ import { economyQueryKey } from '../../features/economy/useEconomy';
 import type { Economy } from '../../lib/api/economy';
 import { tapHaptic, successHaptic } from '../../utils/haptics';
 import { useRewardedAd } from '../../hooks/useRewardedAd';
-import { useChapterUIStore } from '../chapter-1-content/useChapterUIStore';
-import { useProgress } from '../chapter-1-content/useProgress';
 import { useBandit } from '../bandit/useBandit';
 import { useAppActive } from '../../hooks/useAppActive';
+import { useIsPro } from './useSubscription';
 
 /* ------------------------------------------------------------------ */
 /*  HeartsDisplay, shows in lesson header                             */
@@ -86,7 +81,6 @@ export function HeartsDisplay() {
 /*  OutOfHeartsModal, dramatic overlay when hearts = 0                */
 /* ------------------------------------------------------------------ */
 
-const HEART_REFILL_COIN_COST = 1500;
 const HEART_REFILL_GEM_COST = 25;
 
 interface OutOfHeartsModalProps {
@@ -111,10 +105,8 @@ export function OutOfHeartsModal({ visible, onDismiss, onUpgrade, onHeartsRefill
     const getHearts = useHeartsStore((s) => s.getHearts);
     const hearts = getHearts();
     const { data: economyData } = useEconomy();
-    const coins = economyData?.coins ?? 0;
     const gems = economyData?.gems ?? 0;
     const [timeLeft, setTimeLeft] = useState('');
-    const canAffordRefill = coins >= HEART_REFILL_COIN_COST;
     const appActive = useAppActive();
 
     const { payload: banditPayload, trackImpression, trackConversion, trackDismiss } = useBandit('hearts_depleted_nudge');
@@ -165,29 +157,6 @@ export function OutOfHeartsModal({ visible, onDismiss, onUpgrade, onHeartsRefill
         onUpgrade();
     }, [onUpgrade]);
 
-    const handleCoinRefill = useCallback(() => {
-        const store = useHeartsStore.getState();
-        const current = store.hearts ?? 0;
-        if (current >= MAX_HEARTS) { onDismiss(); return; }
-        const cachedEco = queryClient.getQueryData<Economy | null>(economyQueryKey);
-        const canAffordCoins = (cachedEco?.coins ?? 0) >= HEART_REFILL_COIN_COST;
-        if (canAffordCoins) {
-          applyEconomyDelta({ coinsDelta: -HEART_REFILL_COIN_COST })
-            .then(() => queryClient.invalidateQueries({ queryKey: economyQueryKey }))
-            .catch(() => {});
-        }
-        if (canAffordCoins) {
-            useHeartsStore.setState({ hearts: current + 1, lastHeartLostAt: current + 1 >= MAX_HEARTS ? null : store.lastHeartLostAt });
-            successHaptic();
-            trackConversion();
-            if (onHeartsRefilled) {
-                onHeartsRefilled();
-            } else {
-                onDismiss();
-            }
-        }
-    }, [onDismiss, onHeartsRefilled, trackConversion]);
-
     const { showAd, isLoaded: adReady, isPro } = useRewardedAd();
 
     const handleAdRefill = useCallback(() => {
@@ -208,48 +177,6 @@ export function OutOfHeartsModal({ visible, onDismiss, onUpgrade, onHeartsRefill
             }
         });
     }, [showAd, onDismiss, onHeartsRefilled, trackConversion]);
-
-    const startPracticeForHeart = useHeartsStore((s) => s.startPracticeForHeart);
-    const practiceRefillsToday = useHeartsStore((s) => s.practiceRefillsToday);
-    const practiceRefillDate = useHeartsStore((s) => s.practiceRefillDate);
-    const { data: progressData } = useProgress();
-    const setCurrentChapter = useChapterUIStore((s) => s.setCurrentChapter);
-    const setCurrentModule = useChapterUIStore((s) => s.setCurrentModule);
-
-    const practiceCountToday = practiceRefillDate === new Date().toISOString().slice(0, 10)
-        ? practiceRefillsToday
-        : 0;
-    const canPractice = practiceCountToday < 2;
-
-    const handlePracticeRefill = useCallback(() => {
-        tapHaptic();
-        // Pick a random completed module across all chapters
-        const completedRows = progressData?.filter((m) => m.status === 'completed') ?? [];
-        const options = completedRows.map((m) => {
-            // Infer chapterId store key from moduleId prefix (e.g. "mod-1-3" → "ch-1")
-            const parts = m.moduleId.split('-');
-            const chapterId = `ch-${parts[1] ?? '1'}`;
-            const idx = Number(parts[parts.length - 1]);
-            return { chapterId, moduleId: m.moduleId, moduleIndex: Number.isFinite(idx) ? Math.max(0, idx - 1) : 0 };
-        });
-        if (options.length === 0) {
-            // No completed modules, nothing to practice, just dismiss
-            onDismiss();
-            return;
-        }
-        const ok = startPracticeForHeart();
-        if (!ok) {
-            onDismiss();
-            return;
-        }
-        const pick = options[Math.floor(Math.random() * options.length)];
-        setCurrentChapter(pick.chapterId);
-        setCurrentModule(pick.moduleIndex);
-        onDismiss();
-        // Convert store key (ch-1) → data id (chapter-1) for URL; replay=1 so no re-complete
-        const urlChapterId = `chapter-${pick.chapterId.split("-")[1]}`;
-        router.push(`/lesson/${pick.moduleId}?chapterId=${urlChapterId}&replay=1` as never);
-    }, [progressData, startPracticeForHeart, setCurrentChapter, setCurrentModule, onDismiss, router]);
 
     const handleGemRefill = useCallback(() => {
         tapHaptic();
@@ -334,25 +261,6 @@ export function OutOfHeartsModal({ visible, onDismiss, onUpgrade, onHeartsRefill
                         </Pressable>
                     )}
 
-                    {/* Practice-to-Refill (US-006), free, pedagogical, 2/day cap */}
-                    {canPractice && (
-                        <Pressable
-                            onPress={handlePracticeRefill}
-                            style={styles.practiceRefillBtn}
-                            accessibilityRole="button"
-                            accessibilityLabel={`תרגלו שיעור ישן וקבלו לב חינם, נותרו ${2 - practiceCountToday} היום`}
-                            hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
-                        >
-                            <View style={{ flex: 1, alignItems: 'flex-end' }}>
-                                <Text style={styles.practiceRefillBtnText}>תרגלו שיעור ישן, קבלו ❤️</Text>
-                                <Text style={styles.practiceRefillBtnSubtext}>
-                                    נותרו {2 - practiceCountToday} היום
-                                </Text>
-                            </View>
-                            <Text style={styles.btnIcon}>📚</Text>
-                        </Pressable>
-                    )}
-
                     {/* Gem instant refill CTA */}
                     <Pressable onPress={handleGemRefill} style={styles.gemRefillBtn} accessibilityRole="button" accessibilityLabel="הוסף לב אחד עם יהלום">
                         <View style={{ flex: 1, flexDirection: 'row-reverse', alignItems: 'center', gap: 4 }}>
@@ -363,36 +271,6 @@ export function OutOfHeartsModal({ visible, onDismiss, onUpgrade, onHeartsRefill
                             </Text>
                         </View>
                         <Text style={styles.btnIcon}>💎</Text>
-                    </Pressable>
-
-                    {/* Coin refill CTA */}
-                    <Pressable
-                        onPress={handleCoinRefill}
-                        style={[
-                            styles.coinRefillBtn,
-                            !canAffordRefill && styles.coinRefillBtnDisabled,
-                        ]}
-                        disabled={!canAffordRefill}
-                        accessibilityRole="button"
-                        accessibilityLabel="מלא לבבות עם מטבעות"
-                        accessibilityState={{ disabled: !canAffordRefill }}
-                    >
-                        <View style={{ flex: 1, alignItems: 'flex-end' }}>
-                            <View style={{ flexDirection: 'row-reverse', alignItems: 'center', gap: 6 }}>
-                                <Text style={styles.coinRefillBtnText}>{`❤️ +1`}</Text>
-                                <Text style={[styles.coinRefillBtnText, { fontWeight: '700', opacity: 0.85 }]}>•</Text>
-                                <Text style={styles.coinRefillBtnText}>{HEART_REFILL_COIN_COST}</Text>
-                                <GoldCoinIcon size={18} />
-                            </View>
-                            {!canAffordRefill && (
-                                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, direction: 'rtl' }}>
-                                    <Text style={styles.coinRefillSubtext}>(חסרים</Text>
-                                    <Text style={styles.coinRefillSubtext}>{HEART_REFILL_COIN_COST - coins}</Text>
-                                    <GoldCoinIcon size={14} />
-                                    <Text style={styles.coinRefillSubtext}>)</Text>
-                                </View>
-                            )}
-                        </View>
                     </Pressable>
 
                     {/* Upgrade CTA */}
@@ -504,43 +382,6 @@ const styles = StyleSheet.create({
     btnIcon: {
         fontSize: 20,
     },
-    coinRefillBtn: {
-        width: '100%',
-        flexDirection: 'row-reverse',
-        backgroundColor: '#ffffff',
-        borderRadius: 16,
-        paddingVertical: 14,
-        paddingHorizontal: 16,
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        marginBottom: 10,
-        borderWidth: 1.5,
-        borderColor: '#e2e8f0',
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.06,
-        shadowRadius: 8,
-        elevation: 2,
-    },
-    coinRefillBtnDisabled: {
-        backgroundColor: '#f1f5f9',
-        borderColor: '#e2e8f0',
-    },
-    coinRefillBtnText: {
-        fontSize: 15,
-        fontWeight: '800',
-        color: '#1e293b',
-        writingDirection: 'rtl',
-        textAlign: 'right',
-    },
-    coinRefillSubtext: {
-        fontSize: 11,
-        fontWeight: '600',
-        color: '#64748b',
-        marginTop: 2,
-        writingDirection: 'rtl',
-        textAlign: 'right',
-    },
     upgradeBtn: {
         width: '100%',
         flexDirection: 'row-reverse',
@@ -599,33 +440,6 @@ const styles = StyleSheet.create({
         fontWeight: '800',
         color: '#ffffff',
         writingDirection: 'rtl',
-    },
-    practiceRefillBtn: {
-        width: '100%',
-        flexDirection: 'row-reverse',
-        backgroundColor: '#7dd3fc',
-        borderRadius: 16,
-        paddingVertical: 14,
-        paddingHorizontal: 16,
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        marginBottom: 10,
-        borderBottomWidth: 3,
-        borderBottomColor: '#0284c7',
-    },
-    practiceRefillBtnText: {
-        fontSize: 15,
-        fontWeight: '800',
-        color: '#082f49',
-        writingDirection: 'rtl',
-    },
-    practiceRefillBtnSubtext: {
-        fontSize: 11,
-        fontWeight: '600',
-        color: '#082f49',
-        opacity: 0.7,
-        writingDirection: 'rtl',
-        marginTop: 2,
     },
     gemRefillBtn: {
         width: '100%',
