@@ -7,6 +7,7 @@ import { Newspaper, Sparkles, CheckCircle2, ChevronLeft, Flame, Snowflake } from
 import { STITCH } from '../../constants/theme';
 import { tapHaptic } from '../../utils/haptics';
 import { useDailyNewsChallengeStore } from './useDailyNewsChallengeStore';
+import { useEconomyUIStore } from '../economy/useEconomyUIStore';
 import type { DailyChallenge } from './types';
 
 const HERO_GRADIENT = ['#1e3a8a', '#0c4a6e', '#0e7490'] as const;
@@ -34,8 +35,10 @@ export function DailyNewsChallengeCard({
   const scale = useSharedValue(1);
   const animatedStyle = useAnimatedStyle(() => ({ transform: [{ scale: scale.value }] }));
   const streak = useDailyNewsChallengeStore((s) => s.streak);
-  const freezesAvailable = useDailyNewsChallengeStore((s) => s.streakFreezesAvailable);
   const perfectDays = useDailyNewsChallengeStore((s) => s.perfectDays);
+  // Read freeze count from the global economy store — there's only one
+  // source of truth for streak freezes, shared with [[StreakFreezeSaveModal]].
+  const freezesAvailable = useEconomyUIStore((s) => s.streakFreezes);
 
   if (!challenge) return null;
 

@@ -7,11 +7,7 @@ import Animated, {
   FadeIn,
   FadeInDown,
   FadeInUp,
-  useAnimatedStyle,
   useReducedMotion,
-  useSharedValue,
-  withRepeat,
-  withTiming,
 } from 'react-native-reanimated';
 import { ChevronLeft, X } from 'lucide-react-native';
 import { FINN_HELLO } from '../../retention-loops/finnMascotConfig';
@@ -25,18 +21,11 @@ interface Props {
   steps: ToolTutorialStep[];
 }
 
+// Static glow — pulsing animation removed (אודרי restraint: with the dot row
+// + voice-over already carrying the rhythm, the glow doesn't need a third
+// channel of attention).
 function FinnPulse() {
-  const reducedMotion = useReducedMotion();
-  const pulse = useSharedValue(1);
-  useEffect(() => {
-    if (reducedMotion) return;
-    pulse.value = withRepeat(withTiming(1.25, { duration: 1800 }), -1, true);
-  }, [reducedMotion, pulse]);
-  const animStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: pulse.value }],
-    opacity: 2 - pulse.value,
-  }));
-  return <Animated.View style={[s.finnGlow, animStyle]} />;
+  return <View style={s.finnGlow} />;
 }
 
 /**

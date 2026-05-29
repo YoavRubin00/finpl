@@ -14,6 +14,7 @@ import { TOOLS_REGISTRY } from './toolsRegistry';
 import { ToolHubCard } from './components/ToolHubCard';
 import { AccordionSection } from './components/AccordionSection';
 import { FinTip } from './components/atoms/FinTip';
+import { CountUpNumber } from './components/atoms/CountUpNumber';
 import { useFinancialProfileStore, hasAnyFinancialData } from './useFinancialProfileStore';
 import { describeProfileFreshness } from './financialProfile';
 
@@ -139,22 +140,25 @@ function HeroStatStrip(): React.ReactElement {
         }
       >
         <LinearGradient
-          colors={[STITCH.premiumDarkBg, STITCH.premiumDarkSurface, STITCH.premiumDarkAccent]}
+          colors={[STITCH.premiumDarkBg, STITCH.premiumDarkSurface]}
           start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
+          end={{ x: 0, y: 1 }}
           style={styles.hero}
         >
-          <View style={styles.heroHalo} pointerEvents="none" />
-          <View style={styles.heroHaloBottom} pointerEvents="none" />
-
           <View style={styles.heroRow}>
             <View style={styles.heroRight}>
               <Text style={styles.heroLabel}>
                 {hasAssets ? 'שווי נכסים כולל' : 'דשבורד הנכסים שלך'}
               </Text>
-              <Text style={styles.heroValue}>
-                {hasAssets ? formatShekel(totalValue) : '+ הוסיפו נכסים'}
-              </Text>
+              {hasAssets ? (
+                <CountUpNumber
+                  value={totalValue}
+                  format={formatShekel}
+                  style={styles.heroValue}
+                />
+              ) : (
+                <Text style={styles.heroValue}>+ הוסיפו נכסים</Text>
+              )}
               {hasAssets && annualGrowth > 0 ? (
                 <View style={styles.heroDeltaRow}>
                   <TrendingUp size={11} color="#86efac" strokeWidth={3} />
@@ -308,24 +312,6 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.28,
     shadowRadius: 14,
     elevation: 5,
-  },
-  heroHalo: {
-    position: 'absolute',
-    top: -26,
-    left: -26,
-    width: 110,
-    height: 110,
-    borderRadius: 110,
-    backgroundColor: 'rgba(233,196,0,0.18)',
-  },
-  heroHaloBottom: {
-    position: 'absolute',
-    bottom: -38,
-    right: -22,
-    width: 130,
-    height: 130,
-    borderRadius: 130,
-    backgroundColor: 'rgba(99,102,241,0.18)',
   },
   heroChevron: {
     width: 30,

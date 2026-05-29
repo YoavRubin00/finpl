@@ -4,10 +4,13 @@ import Animated, {
   useSharedValue,
   useAnimatedStyle,
   withSpring,
+  withSequence,
+  withTiming,
+  Easing,
 } from 'react-native-reanimated';
 import { LinearGradient } from 'expo-linear-gradient';
 import { ChevronLeft, Sparkles } from 'lucide-react-native';
-import { tapHaptic } from '../../../../utils/haptics';
+import { successHaptic, tapHaptic } from '../../../../utils/haptics';
 
 type CalcVariant = 'green' | 'orange' | 'blue' | 'red' | 'gold' | 'purple' | 'indigo' | 'pink';
 
@@ -51,6 +54,16 @@ export function CalculateButton({
     if (disabled) return;
     tapHaptic();
     onPress();
+    // Post-press flourish — after the natural press-out spring settles
+    // (~150ms) the button gives an extra triumphant micro-bounce + success
+    // haptic. Turns the CALC tap from a no-op press into a tiny moment.
+    setTimeout(() => {
+      successHaptic();
+      scale.value = withSequence(
+        withTiming(1.04, { duration: 140, easing: Easing.out(Easing.cubic) }),
+        withSpring(1, { damping: 14, stiffness: 240 }),
+      );
+    }, 200);
   };
 
   return (

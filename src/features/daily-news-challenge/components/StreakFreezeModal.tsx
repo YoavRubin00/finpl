@@ -1,13 +1,10 @@
 import React from 'react';
-import { Modal, View, Text, Pressable, StyleSheet } from 'react-native';
-import Animated, { FadeIn, FadeInDown } from 'react-native-reanimated';
-import { LinearGradient } from 'expo-linear-gradient';
-import { Snowflake } from 'lucide-react-native';
+import { View, Text, Pressable, StyleSheet, Platform } from 'react-native';
+import Animated, { FadeIn, FadeOut } from 'react-native-reanimated';
+import { X, Snowflake } from 'lucide-react-native';
+import { tapHaptic } from '../../../utils/haptics';
 
-import { STITCH } from '../../../constants/theme';
-import { tapHaptic, successHaptic } from '../../../utils/haptics';
-
-interface StreakFreezeModalProps {
+interface Props {
   visible: boolean;
   streak: number;
   freezesAvailable: number;
@@ -16,8 +13,9 @@ interface StreakFreezeModalProps {
 }
 
 /**
- * Soft, non-punitive prompt that appears when the user missed yesterday but
- * still has a freeze available. Frames the freeze as a save, never a shame.
+ * Streak Freeze prompt — surfaces inside the Daily News Challenge flow when
+ * the user is about to break their daily streak but has freeze tokens to
+ * spend. Minimal first cut; visuals will be polished by the design pass.
  */
 export function StreakFreezeModal({
   visible,
@@ -25,122 +23,136 @@ export function StreakFreezeModal({
   freezesAvailable,
   onUseFreeze,
   onDismiss,
-}: StreakFreezeModalProps): React.ReactElement {
+}: Props): React.ReactElement | null {
+  if (!visible) return null;
+  const canFreeze = freezesAvailable > 0;
   return (
-    <Modal visible={visible} transparent animationType="fade" onRequestClose={onDismiss}>
-      <Animated.View entering={FadeIn.duration(200)} style={styles.backdrop}>
-        <Animated.View entering={FadeInDown.duration(260).springify().damping(16)} style={styles.card}>
-          <LinearGradient
-            colors={['#0ea5e9', '#0c4a6e']}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-            style={styles.iconWrap}
-          >
-            <Snowflake size={42} color="#fff" strokeWidth={2.2} />
-          </LinearGradient>
+    <Animated.View
+      entering={FadeIn.duration(200)}
+      exiting={FadeOut.duration(160)}
+      style={s.overlay}
+      pointerEvents="box-none"
+    >
+      <Pressable style={s.backdrop} onPress={onDismiss} accessibilityLabel="סגור" />
+      <View style={s.card} pointerEvents="auto">
+        <Pressable onPress={onDismiss} hitSlop={12} style={s.closeBtn} accessibilityRole="button" accessibilityLabel="סגור">
+          <X size={18} color="#0c4a6e" />
+        </Pressable>
 
-          <Text style={styles.title} allowFontScaling={false}>קפאון שמר על הרצף שלך</Text>
-          <Text style={styles.subtitle} allowFontScaling={false}>
-            פספסת אתמול, אבל יש לך {freezesAvailable === 1 ? 'קפאון' : `${freezesAvailable} קפאונים`} זמין —
-            רוצה להשתמש בו ולשמור על רצף של {streak} ימים?
-          </Text>
+        <View style={s.icon}>
+          <Snowflake size={36} color="#0ea5e9" />
+        </View>
+        <Text style={s.title}>הצילו את הרצף!</Text>
+        <Text style={s.body}>
+          {canFreeze
+            ? `יש לך ${freezesAvailable} הקפאה. השתמש כדי לשמור על רצף של ${streak} ימים.`
+            : `אין לך הקפאות זמינות. הרצף של ${streak} ימים בסכנה.`}
+        </Text>
 
+        {canFreeze ? (
           <Pressable
-            onPress={() => { tapHaptic(); successHaptic(); onUseFreeze(); }}
+            onPress={() => { tapHaptic(); onUseFreeze(); }}
+            style={({ pressed }) => [s.primaryBtn, pressed && { opacity: 0.85 }]}
             accessibilityRole="button"
-            accessibilityLabel="השתמש בקפאון"
-            style={({ pressed }) => [styles.primaryBtn, pressed && { opacity: 0.9 }]}
           >
-            <Text style={styles.primaryBtnText} allowFontScaling={false}>
-              💙 השתמש בקפאון
-            </Text>
+            <Text style={s.primaryBtnText}>השתמש בהקפאה</Text>
           </Pressable>
-
-          <Pressable
-            onPress={() => { tapHaptic(); onDismiss(); }}
-            accessibilityRole="button"
-            accessibilityLabel="לא עכשיו"
-            style={styles.secondaryBtn}
-          >
-            <Text style={styles.secondaryBtnText} allowFontScaling={false}>לא עכשיו</Text>
-          </Pressable>
-        </Animated.View>
-      </Animated.View>
-    </Modal>
+        ) : null}
+        <Pressable
+          onPress={onDismiss}
+          style={s.secondaryBtn}
+          accessibilityRole="button"
+        >
+          <Text style={s.secondaryBtnText}>לא עכשיו</Text>
+        </Pressable>
+      </View>
+    </Animated.View>
   );
 }
 
-const styles = StyleSheet.create({
-  backdrop: {
-    flex: 1,
-    backgroundColor: 'rgba(15, 23, 42, 0.55)',
+const s = StyleSheet.create({
+  overlay: {
+    position: 'absolute',
+    top: 0, left: 0, right: 0, bottom: 0,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: 28,
+    zIndex: 9000,
+    ...(Platform.OS === 'web' ? { position: 'fixed' as 'absolute' } : {}),
+  },
+  backdrop: {
+    position: 'absolute',
+    top: 0, left: 0, right: 0, bottom: 0,
+    backgroundColor: 'rgba(0,0,0,0.55)',
   },
   card: {
-    width: '100%',
-    backgroundColor: STITCH.surface,
-    borderRadius: 24,
+    width: '86%',
+    maxWidth: 360,
+    backgroundColor: '#ffffff',
+    borderRadius: 22,
     padding: 22,
     alignItems: 'center',
     gap: 12,
+    shadowColor: '#0c4a6e',
+    shadowOpacity: 0.3,
+    shadowRadius: 20,
+    shadowOffset: { width: 0, height: 8 },
+    elevation: 16,
   },
-  iconWrap: {
-    width: 84,
-    height: 84,
-    borderRadius: 42,
+  closeBtn: {
+    position: 'absolute',
+    top: 10,
+    left: 10,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: 'rgba(14,165,233,0.10)',
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: '#0ea5e9',
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.5,
-    shadowRadius: 14,
-    elevation: 8,
+  },
+  icon: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    backgroundColor: 'rgba(14,165,233,0.12)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 6,
   },
   title: {
-    fontSize: 20,
+    fontSize: 19,
     fontWeight: '900',
-    color: STITCH.onSurface,
-    writingDirection: 'rtl',
+    color: '#0c4a6e',
     textAlign: 'center',
+    writingDirection: 'rtl',
   },
-  subtitle: {
+  body: {
     fontSize: 14,
-    fontWeight: '500',
-    color: STITCH.onSurfaceVariant,
-    writingDirection: 'rtl',
+    color: '#475569',
     textAlign: 'center',
-    lineHeight: 22,
+    writingDirection: 'rtl',
+    lineHeight: 20,
   },
   primaryBtn: {
     width: '100%',
-    paddingVertical: 14,
-    borderRadius: 14,
     backgroundColor: '#0ea5e9',
+    paddingVertical: 13,
+    borderRadius: 14,
     alignItems: 'center',
-    justifyContent: 'center',
-    shadowColor: '#0284c7',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.45,
-    shadowRadius: 10,
-    elevation: 6,
+    borderBottomWidth: 4,
+    borderBottomColor: '#0369a1',
     marginTop: 6,
   },
   primaryBtnText: {
-    fontSize: 16,
+    color: '#ffffff',
+    fontSize: 15,
     fontWeight: '900',
-    color: '#fff',
-    writingDirection: 'rtl',
   },
   secondaryBtn: {
     paddingVertical: 8,
-    paddingHorizontal: 12,
   },
   secondaryBtnText: {
+    color: '#64748b',
     fontSize: 13,
     fontWeight: '700',
-    color: STITCH.onSurfaceVariant,
-    writingDirection: 'rtl',
   },
 });

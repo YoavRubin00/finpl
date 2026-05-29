@@ -1,7 +1,8 @@
-import React, { useMemo, useState } from 'react';
-import { Alert, ScrollView, Share, StyleSheet, Text, View } from 'react-native';
+import React, { useCallback, useMemo, useRef, useState } from 'react';
+import { ScrollView, Share, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Coins, Share2 } from 'lucide-react-native';
+import Animated, { ZoomIn } from 'react-native-reanimated';
+import { Calculator, Coins, Share2 } from 'lucide-react-native';
 
 import {
   calculateNet,
@@ -73,31 +74,47 @@ const CREDIT_PRESETS: readonly { label: string; value: number }[] = [
 
 const CREDIT_VALUES = CREDIT_PRESETS.map((p) => p.value);
 
-export function SalaryNetCalculator(): React.ReactElement {
-  const [state, setState] = useState<CalculatorState>(() =>
-    buildSalaryNetInitial(useFinancialProfileStore.getState().profile, INITIAL_STATE),
-  );
+function computeNet(input: CalculatorState): TaxCalculationResult {
+  const monthlyGross = Number(input.monthlyGross) || 0;
+  return calculateNet({
+    grossAnnual: monthlyGross * 12,
+    creditPoints: input.creditPoints,
+    age: 30,
+    status: input.status,
+  });
+}
 
-  const result: TaxCalculationResult = useMemo(() => {
-    const monthlyGross = Number(state.monthlyGross) || 0;
-    const grossAnnual = monthlyGross * 12;
-    return calculateNet({
-      grossAnnual,
-      creditPoints: state.creditPoints,
-      age: 30,
-      status: state.status,
-    });
+export function SalaryNetCalculator(): React.ReactElement {
+  // State split — live inputs feed the slider position + CALC button preview;
+  // committed inputs drive the result hero + deduction breakdown + employer
+  // card. CALC commits live → committed and bumps `commitCount` to re-fire
+  // the ZoomIn ceremony.
+  const initial = useMemo(
+    () => buildSalaryNetInitial(useFinancialProfileStore.getState().profile, INITIAL_STATE),
+    [],
+  );
+  const [state, setState] = useState<CalculatorState>(initial);
+  const [committedState, setCommittedState] = useState<CalculatorState>(initial);
+  const [commitCount, setCommitCount] = useState(0);
+  const scrollRef = useRef<ScrollView>(null);
+
+  const result: TaxCalculationResult = useMemo(() => computeNet(committedState), [committedState]);
+  const livePreview: TaxCalculationResult = useMemo(() => computeNet(state), [state]);
+
+  const handleCalculate = useCallback(() => {
+    setCommittedState(state);
+    setCommitCount((c) => c + 1);
+    setTimeout(() => {
+      scrollRef.current?.scrollTo({ y: 0, animated: true });
+    }, 100);
   }, [state]);
 
+  const liveDiffers = livePreview.netMonthly !== result.netMonthly;
+
   const derived = useMemo(() => {
-    const monthlyGrossNum = Number(state.monthlyGross) || 0;
+    const monthlyGrossNum = Number(committedState.monthlyGross) || 0;
     const monthlyDeductions =
       (result.incomeTax + result.bituachLeumi + result.masBriut) / 12;
-    const sliderValue = clamp(
-      monthlyGrossNum || SALARY_MIN,
-      SALARY_MIN,
-      SALARY_MAX,
-    );
     const employerPension = monthlyGrossNum * EMPLOYER_PENSION;
     const employerSeverance = monthlyGrossNum * EMPLOYER_SEVERANCE;
     const employerBl = employerBlCost(monthlyGrossNum);
@@ -105,7 +122,6 @@ export function SalaryNetCalculator(): React.ReactElement {
     return {
       monthlyGrossNum,
       monthlyDeductions,
-      sliderValue,
       employerPension,
       employerSeverance,
       employerBl,
@@ -113,17 +129,23 @@ export function SalaryNetCalculator(): React.ReactElement {
       totalEmployerCost: monthlyGrossNum + employerExtraCost,
       employerMarkupPct: monthlyGrossNum > 0 ? employerExtraCost / monthlyGrossNum : 0,
     };
-  }, [state.monthlyGross, result.incomeTax, result.bituachLeumi, result.masBriut]);
+  }, [committedState.monthlyGross, result.incomeTax, result.bituachLeumi, result.masBriut]);
   const {
     monthlyGrossNum,
     monthlyDeductions,
-    sliderValue,
     employerPension,
     employerSeverance,
     employerBl,
     totalEmployerCost,
     employerMarkupPct,
   } = derived;
+
+  // Slider position must reflect live input, not the frozen committed value.
+  const sliderValue = clamp(
+    Number(state.monthlyGross) || SALARY_MIN,
+    SALARY_MIN,
+    SALARY_MAX,
+  );
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
@@ -135,15 +157,24 @@ export function SalaryNetCalculator(): React.ReactElement {
         toolKey="salary-net"
       />
 
-      <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        ref={scrollRef}
+        contentContainerStyle={styles.scroll}
+        showsVerticalScrollIndicator={false}
+      >
         <ProfileFingerprint accentColor={TOOL.hue} />
 
-        <StatHero
-          label="נטו לכיס בחודש"
-          value={result.netMonthly}
-          accentColor={TOOL.hue}
-          sublabel={`${result.effectiveRate.toFixed(1)}% מס אפקטיבי · ${formatShekel(monthlyDeductions)} ניכויים`}
-        />
+        {/* Result hero, re-mounted on every commit so the ZoomIn + count-up
+            ceremony replays. */}
+        <Animated.View key={commitCount} entering={ZoomIn.springify().damping(8).mass(0.6)}>
+          <StatHero
+            label="נטו לכיס בחודש"
+            value={result.netMonthly}
+            accentColor={TOOL.hue}
+            disableEntering
+            sublabel={`${result.effectiveRate.toFixed(1)}% מס אפקטיבי · ${formatShekel(monthlyDeductions)} ניכויים`}
+          />
+        </Animated.View>
 
         <SectionLabel>הנתונים שלך</SectionLabel>
 
@@ -193,6 +224,21 @@ export function SalaryNetCalculator(): React.ReactElement {
           <View style={styles.divider} />
           <BreakdownRow label="סך הכל ניכויים" amount={monthlyDeductions} bold />
         </View>
+
+        {/* Primary commit — locks the current inputs into the result hero
+            above and re-fires the ZoomIn ceremony. Sublabel previews the
+            uncommitted net so the user knows what the tap will produce. */}
+        <CalculateButton
+          label="חשב"
+          sublabel={
+            liveDiffers
+              ? `נטו משוער: ${formatShekel(livePreview.netMonthly)}/חודש`
+              : 'תוצאה עדכנית'
+          }
+          variant="blue"
+          iconLeft={<Calculator size={18} color="#ffffff" strokeWidth={2.6} />}
+          onPress={handleCalculate}
+        />
 
         <CalculateButton
           label="שתף תוצאה"

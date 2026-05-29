@@ -1,8 +1,10 @@
-import React, { useMemo, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import React, { useCallback, useMemo, useRef, useState } from 'react';
+import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
+import Animated, { ZoomIn } from 'react-native-reanimated';
 import {
+  Calculator,
   PiggyBank,
   Sparkles,
 } from 'lucide-react-native';
@@ -114,8 +116,47 @@ const DEFAULT_STATE: PensionInput = {
   expectedReturn: 5.0,
 };
 
+function computePension(input: PensionInput): PensionResult {
+  const salary = Number(input.monthlySalary) || 0;
+  const years = Math.max(0, RETIREMENT_AGE - input.age);
+
+  const currentTotal = simulatePension(
+    salary,
+    years,
+    input.expectedReturn,
+    input.currentDepositFee,
+    input.currentAccumulationFee,
+  );
+  const alternativeTotal = simulatePension(
+    salary,
+    years,
+    input.expectedReturn,
+    input.alternativeDepositFee,
+    input.alternativeAccumulationFee,
+  );
+  // Zero-fee baseline — what the user *could* accumulate if the fund took
+  // zero fees. The gap (zeroFee − current) is the "total taken by the
+  // investment house" headline.
+  const zeroFeeTotal = simulatePension(salary, years, input.expectedReturn, 0, 0);
+
+  return {
+    yearsToRetirement: years,
+    currentTotal: Math.round(currentTotal),
+    alternativeTotal: Math.round(alternativeTotal),
+    zeroFeeTotal: Math.round(zeroFeeTotal),
+    totalFeesPaid: Math.max(0, Math.round(zeroFeeTotal - currentTotal)),
+    potentialSavings: Math.max(0, Math.round(alternativeTotal - currentTotal)),
+    monthlyPensionCurrent: Math.round(currentTotal / PAYOUT_FACTOR),
+    monthlyPensionAlternative: Math.round(alternativeTotal / PAYOUT_FACTOR),
+  };
+}
+
 export function PensionFeesComparator(): React.ReactElement {
-  const [state, setState] = useState<PensionInput>(() => {
+  // State split — live inputs drive the slider positions + the CALC button
+  // preview; committed inputs drive every output card below (StatHero, the
+  // current↔alternative comparison columns, PensionBenchmarkCard, savings
+  // card). CALC commits live → committed and re-fires the ZoomIn ceremony.
+  const initial = useMemo<PensionInput>(() => {
     const overrides = buildPensionInitial(useFinancialProfileStore.getState().profile, {
       age: DEFAULT_STATE.age,
       monthlySalary: DEFAULT_STATE.monthlySalary,
@@ -123,46 +164,28 @@ export function PensionFeesComparator(): React.ReactElement {
       currentAccumulationFee: DEFAULT_STATE.currentAccumulationFee,
     });
     return { ...DEFAULT_STATE, ...overrides };
-  });
+  }, []);
+  const [state, setState] = useState<PensionInput>(initial);
+  const [committedState, setCommittedState] = useState<PensionInput>(initial);
+  const [commitCount, setCommitCount] = useState(0);
+  const scrollRef = useRef<ScrollView>(null);
 
-  const result: PensionResult = useMemo(() => {
-    const salary = Number(state.monthlySalary) || 0;
-    const years = Math.max(0, RETIREMENT_AGE - state.age);
+  const result: PensionResult = useMemo(() => computePension(committedState), [committedState]);
+  const livePreview: PensionResult = useMemo(() => computePension(state), [state]);
 
-    const currentTotal = simulatePension(
-      salary,
-      years,
-      state.expectedReturn,
-      state.currentDepositFee,
-      state.currentAccumulationFee,
-    );
-    const alternativeTotal = simulatePension(
-      salary,
-      years,
-      state.expectedReturn,
-      state.alternativeDepositFee,
-      state.alternativeAccumulationFee,
-    );
-    // Zero-fee baseline — represents what the user *could* accumulate if the
-    // fund didn't take any fees at all. The gap (zeroFee − current) is the
-    // "total taken by the investment house" headline number.
-    const zeroFeeTotal = simulatePension(salary, years, state.expectedReturn, 0, 0);
-
-    return {
-      yearsToRetirement: years,
-      currentTotal: Math.round(currentTotal),
-      alternativeTotal: Math.round(alternativeTotal),
-      zeroFeeTotal: Math.round(zeroFeeTotal),
-      totalFeesPaid: Math.max(0, Math.round(zeroFeeTotal - currentTotal)),
-      potentialSavings: Math.max(0, Math.round(alternativeTotal - currentTotal)),
-      monthlyPensionCurrent: Math.round(currentTotal / PAYOUT_FACTOR),
-      monthlyPensionAlternative: Math.round(alternativeTotal / PAYOUT_FACTOR),
-    };
+  const handleCalculate = useCallback(() => {
+    setCommittedState(state);
+    setCommitCount((c) => c + 1);
+    setTimeout(() => {
+      scrollRef.current?.scrollTo({ y: 0, animated: true });
+    }, 100);
   }, [state]);
 
   // StatHero headline value — total taken by the current fund (vs zero-fee baseline).
   const hasFees = result.totalFeesPaid > 0;
   const hasPotentialSavings = result.potentialSavings > 0;
+  const liveDiffers = livePreview.totalFeesPaid !== result.totalFeesPaid;
+  // Slider position must reflect live input — not the frozen committed value.
   const salarySlider = clamp(Number(state.monthlySalary) || SALARY_MIN, SALARY_MIN, SALARY_MAX);
 
   /**
@@ -196,6 +219,7 @@ export function PensionFeesComparator(): React.ReactElement {
       />
 
       <ScrollView
+        ref={scrollRef}
         contentContainerStyle={styles.scroll}
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
@@ -318,17 +342,37 @@ export function PensionFeesComparator(): React.ReactElement {
           </Text>
         </View>
 
-        {/* ─── OUTPUTS — what your inputs mean ─── */}
-        <StatHero
-          label={
-            hasFees
-              ? 'הלכו לבית ההשקעות במקום אליך'
-              : 'אין דמי ניהול — מצוין!'
+        {/* Primary commit — locks current inputs into the outputs below and
+            re-fires the ZoomIn ceremony. Sublabel previews the uncommitted
+            fee total so the user sees the impact of their last change. */}
+        <CalculateButton
+          label="חשב"
+          sublabel={
+            liveDiffers
+              ? `דמי ניהול משוערים: ${formatShekel(livePreview.totalFeesPaid)}`
+              : 'תוצאה עדכנית'
           }
-          value={result.totalFeesPaid}
-          accentColor={TOOL.hue}
-          sublabel={`סה"כ דמי ניהול לאורך ${result.yearsToRetirement} שנים עד גיל פרישה`}
+          variant="blue"
+          iconLeft={<Calculator size={18} color="#ffffff" strokeWidth={2.6} />}
+          onPress={handleCalculate}
         />
+
+        {/* ─── OUTPUTS — what your inputs mean ─── */}
+        {/* StatHero re-mounted on every commit so the ZoomIn + count-up
+            ceremony replays together. */}
+        <Animated.View key={commitCount} entering={ZoomIn.springify().damping(8).mass(0.6)}>
+          <StatHero
+            label={
+              hasFees
+                ? 'הלכו לבית ההשקעות במקום אליך'
+                : 'אין דמי ניהול — מצוין!'
+            }
+            value={result.totalFeesPaid}
+            accentColor={TOOL.hue}
+            disableEntering
+            sublabel={`סה"כ דמי ניהול לאורך ${result.yearsToRetirement} שנים עד גיל פרישה`}
+          />
+        </Animated.View>
 
         {/* Comparison — RTL reading flow: current (before) on the right,
             alternative (after) on the left. */}
@@ -347,10 +391,10 @@ export function PensionFeesComparator(): React.ReactElement {
         </View>
 
         <PensionBenchmarkCard
-          age={state.age}
-          monthlySalary={Number(state.monthlySalary) || 0}
-          currentDepositFee={state.currentDepositFee}
-          currentAccumulationFee={state.currentAccumulationFee}
+          age={committedState.age}
+          monthlySalary={Number(committedState.monthlySalary) || 0}
+          currentDepositFee={committedState.currentDepositFee}
+          currentAccumulationFee={committedState.currentAccumulationFee}
           accentColor={TOOL.hue}
         />
 

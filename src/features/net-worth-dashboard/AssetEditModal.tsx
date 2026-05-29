@@ -19,7 +19,7 @@ import { tapHaptic } from '../../utils/haptics';
 import {
   LabeledTextInput,
   MoneyInput,
-  PercentInput,
+  MoneySlider,
   PeriodChips,
   SectionLabel,
 } from '../financial-tools/components/atoms';
@@ -236,26 +236,34 @@ export function AssetEditModal({
             />
           ) : null}
 
-          <MoneyInput
-            label="הפקדה חודשית"
-            value={monthlyDeposit}
-            onChangeText={setMonthlyDeposit}
-            placeholder="0"
-            accentColor={ACCENT}
-            step={100}
-            min={0}
-          />
+          <View style={styles.sliderCard}>
+            <MoneySlider
+              label="הפקדה חודשית"
+              value={Number(monthlyDeposit) || 0}
+              onChange={(v) => setMonthlyDeposit(String(v))}
+              min={0}
+              max={20_000}
+              step={100}
+              unit=" ₪"
+              accentColor={ACCENT}
+              milestones={[1_000, 5_000, 10_000]}
+            />
+          </View>
 
-          <View style={styles.returnRow}>
-            <PercentInput
+          <View style={styles.sliderCard}>
+            <MoneySlider
               label={`תשואה שנתית משוערת · דיפולט ${defaultReturn.toFixed(1)}%`}
               value={expectedReturn ?? defaultReturn}
               onChange={(v) => setExpectedReturn(v)}
-              presets={[3, 5, 7, 10]}
-              decimals={1}
+              min={0}
+              max={12}
+              step={0.5}
+              unit="%"
+              formatValue={(v) => v.toFixed(1)}
               accentColor={ACCENT}
+              milestones={[3, 5, 7, 10]}
             />
-            {expectedReturn !== undefined ? (
+            {expectedReturn !== undefined && expectedReturn !== defaultReturn ? (
               <Pressable
                 style={styles.resetBtn}
                 onPress={() => setExpectedReturn(undefined)}
@@ -353,11 +361,19 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
 
-  returnRow: { gap: 6 },
+  sliderCard: {
+    backgroundColor: STITCH.surfaceLowest,
+    borderRadius: 16,
+    padding: 14,
+    borderWidth: 1,
+    borderColor: STITCH.surfaceHighest,
+    gap: 6,
+  },
   resetBtn: {
     alignSelf: 'flex-end',
     paddingHorizontal: 10,
     paddingVertical: 4,
+    marginTop: 4,
   },
   resetBtnText: {
     fontSize: 11,

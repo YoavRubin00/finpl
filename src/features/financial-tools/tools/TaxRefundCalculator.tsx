@@ -1,7 +1,10 @@
-import React, { useMemo, useState } from 'react';
-import { Alert, ScrollView, Share, StyleSheet, Text, View } from 'react-native';
+import React, { useCallback, useMemo, useRef, useState } from 'react';
+import { Pressable, ScrollView, Share, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { ReceiptText, Share2 } from 'lucide-react-native';
+import Animated, { ZoomIn } from 'react-native-reanimated';
+import { Calculator, Minus, Plus, ReceiptText, Share2 } from 'lucide-react-native';
+
+import { tapHaptic } from '../../../utils/haptics';
 
 import {
   calculateIncomeTax,
@@ -65,44 +68,63 @@ const STATUS_OPTIONS: readonly { value: MaritalStatus; label: string }[] = [
 ];
 
 const MONTHS_OPTIONS: readonly number[] = [6, 9, 12];
-const KIDS_OPTIONS: readonly number[] = [0, 1, 2, 3];
 
 function getCreditPoints(status: MaritalStatus, kids: number): number {
   const base = status === 'divorced' ? 3.25 : 2.25;
   return base + kids;
 }
 
+function computeRefund(input: TaxRefundInput): TaxRefundResult {
+  const annualGross = Number(input.annualGross) || 0;
+  const actualTax = Number(input.taxPaid) || 0;
+  const extraDeposits = Number(input.extraDeposits) || 0;
+
+  const totalCreditPoints = getCreditPoints(input.status, input.kidsCount);
+  const annualizedGross =
+    input.monthsWorked < 12 && input.monthsWorked > 0
+      ? (annualGross / input.monthsWorked) * 12
+      : annualGross;
+  const theoreticalTaxFull = calculateIncomeTax(annualizedGross, totalCreditPoints);
+  const theoreticalTaxProRata = theoreticalTaxFull * (input.monthsWorked / 12);
+  // 2026 annual זיכוי cap on קופ"ג deposits — re-indexed ~3% from 2025 (₪7,700).
+  const depositCredit = Math.min(extraDeposits * 0.35, 7_920);
+  const refund = Math.max(0, actualTax - theoreticalTaxProRata) + depositCredit;
+
+  return {
+    estimatedRefund: Math.round(refund),
+    theoreticalTax: Math.round(theoreticalTaxProRata),
+    actualTax,
+    depositCredit: Math.round(depositCredit),
+  };
+}
+
 export function TaxRefundCalculator(): React.ReactElement {
-  const [state, setState] = useState<TaxRefundInput>(() =>
-    buildTaxRefundInitial(useFinancialProfileStore.getState().profile, DEFAULT_STATE),
+  // State split — live inputs drive sliders + the CALC button preview,
+  // committed inputs drive the result hero + breakdown. CALC commits live
+  // → committed and bumps `commitCount` to re-fire the ZoomIn ceremony.
+  const initial = useMemo(
+    () => buildTaxRefundInitial(useFinancialProfileStore.getState().profile, DEFAULT_STATE),
+    [],
   );
+  const [state, setState] = useState<TaxRefundInput>(initial);
+  const [committedState, setCommittedState] = useState<TaxRefundInput>(initial);
+  const [commitCount, setCommitCount] = useState(0);
+  const scrollRef = useRef<ScrollView>(null);
 
-  const result: TaxRefundResult = useMemo(() => {
-    const annualGross = Number(state.annualGross) || 0;
-    const actualTax = Number(state.taxPaid) || 0;
-    const extraDeposits = Number(state.extraDeposits) || 0;
+  const result: TaxRefundResult = useMemo(() => computeRefund(committedState), [committedState]);
+  const livePreview: TaxRefundResult = useMemo(() => computeRefund(state), [state]);
 
-    const totalCreditPoints = getCreditPoints(state.status, state.kidsCount);
-    const annualizedGross =
-      state.monthsWorked < 12 && state.monthsWorked > 0
-        ? (annualGross / state.monthsWorked) * 12
-        : annualGross;
-    const theoreticalTaxFull = calculateIncomeTax(annualizedGross, totalCreditPoints);
-    const theoreticalTaxProRata = theoreticalTaxFull * (state.monthsWorked / 12);
-    // 2026 annual זיכוי cap on קופ"ג deposits — re-indexed ~3% from 2025 (₪7,700).
-    const depositCredit = Math.min(extraDeposits * 0.35, 7_920);
-    const refund = Math.max(0, actualTax - theoreticalTaxProRata) + depositCredit;
-
-    return {
-      estimatedRefund: Math.round(refund),
-      theoreticalTax: Math.round(theoreticalTaxProRata),
-      actualTax,
-      depositCredit: Math.round(depositCredit),
-    };
+  const handleCalculate = useCallback(() => {
+    setCommittedState(state);
+    setCommitCount((c) => c + 1);
+    setTimeout(() => {
+      scrollRef.current?.scrollTo({ y: 0, animated: true });
+    }, 100);
   }, [state]);
 
   const hasInput =
     (Number(state.annualGross) || 0) > 0 && (Number(state.taxPaid) || 0) > 0;
+  const liveDiffers = livePreview.estimatedRefund !== result.estimatedRefund;
   const sliderValue = clamp(
     Number(state.annualGross) || ANNUAL_MIN,
     ANNUAL_MIN,
@@ -119,14 +141,31 @@ export function TaxRefundCalculator(): React.ReactElement {
         toolKey="tax-refund"
       />
 
-      <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        ref={scrollRef}
+        contentContainerStyle={styles.scroll}
+        showsVerticalScrollIndicator={false}
+      >
         <ProfileFingerprint accentColor={TOOL.hue} />
 
-        <StatHero
-          label={hasInput ? 'אולי מחכים לך' : 'מלא את הפרטים כדי לראות הערכה'}
-          value={result.estimatedRefund}
-          accentColor={TOOL.hue}
-        />
+        {/* Result hero, re-mounted on every commit so ZoomIn + the inner
+            count-up replay together as the "Calculate Ceremony". */}
+        <Animated.View key={commitCount} entering={ZoomIn.springify().damping(8).mass(0.6)}>
+          <StatHero
+            label={hasInput ? 'החזר משוער' : 'מלא את הפרטים כדי לראות הערכה'}
+            value={result.estimatedRefund}
+            accentColor={TOOL.hue}
+            disableEntering
+            magnitudeTiers={
+              hasInput
+                ? [
+                    { threshold: 500, sublabel: 'זה שלך.' },
+                    { threshold: 5000, sublabel: 'זה שלך. שווה לבדוק.', accentColor: '#e9c400' },
+                  ]
+                : undefined
+            }
+          />
+        </Animated.View>
 
         {hasInput ? (
           <FinTip
@@ -184,12 +223,9 @@ export function TaxRefundCalculator(): React.ReactElement {
           accentColor={TOOL.hue}
         />
 
-        <PeriodChips
-          label="ילדים"
+        <KidsStepper
           value={state.kidsCount}
-          options={KIDS_OPTIONS}
           onChange={(v) => setState({ ...state, kidsCount: v })}
-          renderLabel={(v) => (v === 3 ? '3+' : String(v))}
           accentColor={TOOL.hue}
         />
 
@@ -236,6 +272,21 @@ export function TaxRefundCalculator(): React.ReactElement {
           </>
         ) : null}
 
+        {/* Primary commit — locks the current inputs into the result hero
+            above and re-fires the ZoomIn ceremony. Sublabel previews the
+            uncommitted value so the user knows what the tap will produce. */}
+        <CalculateButton
+          label="חשב"
+          sublabel={
+            liveDiffers
+              ? `תוצאה משוערת: ${formatShekel(livePreview.estimatedRefund)}`
+              : 'תוצאה עדכנית'
+          }
+          variant="blue"
+          iconLeft={<Calculator size={18} color="#ffffff" strokeWidth={2.6} />}
+          onPress={handleCalculate}
+        />
+
         <CalculateButton
           label="שתף תוצאה"
           sublabel={`מגיע לי ${formatShekel(result.estimatedRefund)} החזר`}
@@ -256,6 +307,80 @@ export function TaxRefundCalculator(): React.ReactElement {
         />
       </ScrollView>
     </SafeAreaView>
+  );
+}
+
+/**
+ * Compact +/- stepper for the kids count — replaces the full-width
+ * PeriodChips row so the input feels less like a tax form. Range 0..3 with
+ * "3+" displayed at the top end.
+ */
+function KidsStepper({
+  value,
+  onChange,
+  accentColor,
+}: {
+  value: number;
+  onChange: (v: number) => void;
+  accentColor: string;
+}): React.ReactElement {
+  const handleDec = () => {
+    if (value <= 0) return;
+    tapHaptic();
+    onChange(value - 1);
+  };
+  const handleInc = () => {
+    if (value >= 3) return;
+    tapHaptic();
+    onChange(value + 1);
+  };
+  return (
+    <View style={styles.stepperRow}>
+      <Text style={styles.stepperLabel}>ילדים</Text>
+      <View style={styles.stepperControls}>
+        <Pressable
+          onPress={handleDec}
+          disabled={value === 0}
+          style={({ pressed }) => [
+            styles.stepperBtn,
+            { borderColor: accentColor + '33' },
+            value === 0 && styles.stepperBtnDisabled,
+            pressed && { opacity: 0.7 },
+          ]}
+          accessibilityRole="button"
+          accessibilityLabel="פחות ילדים"
+          hitSlop={6}
+        >
+          <Minus
+            size={16}
+            color={value === 0 ? STITCH.onSurfaceVariant : accentColor}
+            strokeWidth={2.6}
+          />
+        </Pressable>
+        <Text style={[styles.stepperValue, { color: accentColor }]}>
+          {value === 3 ? '3+' : value}
+        </Text>
+        <Pressable
+          onPress={handleInc}
+          disabled={value === 3}
+          style={({ pressed }) => [
+            styles.stepperBtn,
+            { borderColor: accentColor + '33' },
+            value === 3 && styles.stepperBtnDisabled,
+            pressed && { opacity: 0.7 },
+          ]}
+          accessibilityRole="button"
+          accessibilityLabel="עוד ילדים"
+          hitSlop={6}
+        >
+          <Plus
+            size={16}
+            color={value === 3 ? STITCH.onSurfaceVariant : accentColor}
+            strokeWidth={2.6}
+          />
+        </Pressable>
+      </View>
+    </View>
   );
 }
 
@@ -298,6 +423,42 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   sliderWrap: { paddingHorizontal: 2, paddingTop: 4 },
+  stepperRow: {
+    flexDirection: 'row-reverse',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 4,
+    paddingHorizontal: 4,
+  },
+  stepperLabel: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: STITCH.onSurfaceVariant,
+    writingDirection: 'rtl',
+  },
+  stepperControls: {
+    flexDirection: 'row-reverse',
+    alignItems: 'center',
+    gap: 14,
+  },
+  stepperBtn: {
+    width: 32,
+    height: 32,
+    borderRadius: 999,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1.5,
+    backgroundColor: '#ffffff',
+  },
+  stepperBtnDisabled: {
+    opacity: 0.4,
+  },
+  stepperValue: {
+    fontSize: 16,
+    fontWeight: '900',
+    minWidth: 28,
+    textAlign: 'center',
+  },
   breakdownCard: {
     backgroundColor: STITCH.surfaceLowest,
     borderRadius: 16,

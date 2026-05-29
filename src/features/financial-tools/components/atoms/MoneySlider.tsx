@@ -1,8 +1,15 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withTiming,
+  withSequence,
+  withSpring,
+} from 'react-native-reanimated';
 import Slider from '@react-native-community/slider';
 import { STITCH } from '../../../../constants/theme';
-import { selectionHaptic } from '../../../../utils/haptics';
+import { mediumHaptic, selectionHaptic } from '../../../../utils/haptics';
 
 interface MoneySliderProps {
   label: string;
@@ -24,6 +31,10 @@ interface MoneySliderProps {
    * (e.g., a TextInput synced to the same state).
    */
   hideValueDisplay?: boolean;
+  /** Round thresholds that, when crossed in either direction, swap the soft
+   *  selection-tick haptic for a stronger medium one + briefly pulse the value
+   *  text. Makes the slider feel like a journey instead of a metronome. */
+  milestones?: readonly number[];
 }
 
 /**
@@ -44,6 +55,7 @@ export function MoneySlider({
   ticks,
   accentColor = STITCH.tertiaryGoldBright,
   hideValueDisplay = false,
+  milestones,
 }: MoneySliderProps): React.ReactElement {
   const decimals = step < 0.1 ? 2 : step < 1 ? 1 : 0;
   const display = formatValue
@@ -53,37 +65,73 @@ export function MoneySlider({
         maximumFractionDigits: decimals,
       });
 
+  // Grab feedback: soft accent halo + 2% scale on the slider row while the
+  // user is actively dragging. Released on sliding-complete.
+  const grabbed = useSharedValue(0);
+  // Milestone pulse: brief value-text scale-up when the user crosses a
+  // configured round threshold.
+  const milestonePulse = useSharedValue(0);
+
+  const grabRowStyle = useAnimatedStyle(() => ({
+    shadowColor: accentColor,
+    shadowOpacity: grabbed.value * 0.45,
+    shadowRadius: 6 + grabbed.value * 8,
+    shadowOffset: { width: 0, height: 0 },
+    transform: [{ scale: 1 + grabbed.value * 0.02 }],
+  }));
+  const milestoneValueStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: 1 + milestonePulse.value * 0.08 }],
+  }));
+
   return (
     <View style={styles.wrap}>
       {!hideValueDisplay ? (
         <View style={styles.header}>
-          <Text style={[styles.value, { color: accentColor }]}>
+          <Animated.Text style={[styles.value, { color: accentColor }, milestoneValueStyle]}>
             {display}
             {unit}
-          </Text>
+          </Animated.Text>
           <Text style={styles.label}>{label}</Text>
         </View>
       ) : null}
 
-      <Slider
-        style={styles.slider}
-        value={value}
-        onValueChange={(v) => {
-          const snapped = Math.round(v / step) * step;
-          const safe = Number(snapped.toFixed(decimals));
-          if (safe !== value) {
-            selectionHaptic();
+      <Animated.View style={grabRowStyle}>
+        <Slider
+          style={styles.slider}
+          value={value}
+          onValueChange={(v) => {
+            const snapped = Math.round(v / step) * step;
+            const safe = Number(snapped.toFixed(decimals));
+            if (safe === value) return;
+            const crossedMilestone = milestones?.some(
+              (m) => (value < m && safe >= m) || (value > m && safe <= m),
+            );
+            if (crossedMilestone) {
+              mediumHaptic();
+              milestonePulse.value = withSequence(
+                withTiming(1, { duration: 90 }),
+                withTiming(0, { duration: 240 }),
+              );
+            } else {
+              selectionHaptic();
+            }
             onChange(safe);
-          }
-        }}
-        minimumValue={min}
-        maximumValue={max}
-        step={step}
-        minimumTrackTintColor={accentColor}
-        maximumTrackTintColor={STITCH.surfaceHighest}
-        thumbTintColor={accentColor}
-        accessibilityLabel={label}
-      />
+          }}
+          onSlidingStart={() => {
+            grabbed.value = withTiming(1, { duration: 140 });
+          }}
+          onSlidingComplete={() => {
+            grabbed.value = withSpring(0, { damping: 16, stiffness: 200 });
+          }}
+          minimumValue={min}
+          maximumValue={max}
+          step={step}
+          minimumTrackTintColor={accentColor}
+          maximumTrackTintColor={STITCH.surfaceHighest}
+          thumbTintColor={accentColor}
+          accessibilityLabel={label}
+        />
+      </Animated.View>
 
       {ticks && ticks.length > 0 ? (
         <View style={styles.tickRow}>

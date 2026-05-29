@@ -84,8 +84,6 @@ export function ToolNextStepCard({
 
   const actionBg = actionColor ?? mix(accentColor, 'black', 0.12);
   const actionShadow = actionShadowColor ?? mix(actionBg, 'black', 0.35);
-  const lessonBg = mix(accentColor, 'white', 0.78);
-  const lessonShadow = mix(accentColor, 'black', 0.1);
   const lessonFg = mix(accentColor, 'black', 0.45);
 
   return (
@@ -113,15 +111,22 @@ export function ToolNextStepCard({
         onPress={handleAction}
       />
 
-      <NextStepButton
-        label={entry.lessonLabel}
-        bg={lessonBg}
-        shadow={lessonShadow}
-        fg={lessonFg}
-        iconBg="rgba(0,0,0,0.06)"
-        icon={<BookOpen size={18} color={lessonFg} strokeWidth={2.6} />}
+      <Pressable
         onPress={handleLesson}
-      />
+        accessibilityRole="button"
+        accessibilityLabel={`למד: ${entry.lessonLabel}`}
+        hitSlop={8}
+        style={({ pressed }) => [styles.lessonLink, pressed && { opacity: 0.55 }]}
+      >
+        <BookOpen size={14} color={lessonFg} strokeWidth={2.6} />
+        <Text
+          style={[styles.lessonLinkText, { color: lessonFg }]}
+          allowFontScaling={false}
+          numberOfLines={2}
+        >
+          {entry.lessonLabel}
+        </Text>
+      </Pressable>
     </View>
   );
 }
@@ -263,5 +268,21 @@ const styles = StyleSheet.create({
     textAlign: 'right',
     writingDirection: 'rtl',
     letterSpacing: 0.2,
+  },
+  lessonLink: {
+    flexDirection: 'row-reverse',
+    alignItems: 'center',
+    gap: 6,
+    alignSelf: 'flex-end',
+    paddingVertical: 8,
+    paddingHorizontal: 4,
+  },
+  lessonLinkText: {
+    fontSize: 13,
+    fontWeight: '700',
+    writingDirection: 'rtl',
+    textAlign: 'right',
+    textDecorationLine: 'underline',
+    textDecorationStyle: 'solid',
   },
 });

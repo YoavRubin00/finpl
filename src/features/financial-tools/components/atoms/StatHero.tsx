@@ -1,8 +1,21 @@
-import React from 'react';
+import React, { useCallback } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { STITCH } from '../../../../constants/theme';
+import { CountUpNumber } from './CountUpNumber';
+
+interface MagnitudeTier {
+  /** Tier applies when `value >= threshold`. Sort doesn't matter — the
+   *  highest-threshold matching tier wins. */
+  threshold: number;
+  /** Override `accentColor` when this tier matches (e.g. shift to gold once
+   *  the refund crosses a "meaningful" mark). */
+  accentColor?: string;
+  /** Override `sublabel` when this tier matches. Use for restrained,
+   *  magnitude-aware copy (e.g. "זה שלך."). */
+  sublabel?: string;
+}
 
 interface StatHeroProps {
   /** Big number shown in the hero card. */
@@ -22,6 +35,15 @@ interface StatHeroProps {
   accentColor?: string;
   /** When true, swap to the premium dark indigo gradient. */
   dark?: boolean;
+  /** Optional magnitude-aware tiers — the result's *size* quietly changes
+   *  the accent / sublabel without any extra ornament. Highest matching
+   *  threshold wins. Use for restrained, "the number is the story" copy. */
+  magnitudeTiers?: readonly MagnitudeTier[];
+  /** When the parent wraps StatHero in its own keyed Animated.View (e.g. the
+   *  "Calculate Ceremony" pattern that bumps a key on commit to re-fire
+   *  ZoomIn), pass `true` to suppress the built-in FadeInDown so the two
+   *  entering animations don't compose into jitter. */
+  disableEntering?: boolean;
 }
 
 /**
@@ -40,18 +62,33 @@ export function StatHero({
   sublabel,
   accentColor = STITCH.tertiaryGoldBright,
   dark = false,
+  magnitudeTiers,
+  disableEntering = false,
 }: StatHeroProps): React.ReactElement {
-  const display = formatValue
-    ? formatValue(value)
-    : `${currency}${Math.round(value).toLocaleString('he-IL')}`;
+  const entering = disableEntering ? undefined : FadeInDown.duration(360);
+  const formatter = useCallback(
+    (n: number): string =>
+      formatValue ? formatValue(n) : `${currency}${Math.round(n).toLocaleString('he-IL')}`,
+    [formatValue, currency],
+  );
   const deltaDisplay =
     deltaValue !== undefined
       ? `${deltaValue >= 0 ? '+' : '−'}${currency}${Math.round(Math.abs(deltaValue)).toLocaleString('he-IL')}`
       : null;
+  // Pick the highest-threshold tier the value satisfies. No tier → defaults
+  // win. The "magnitude" lifts only the accent/sublabel — no extra ornament,
+  // because the number itself is the celebration here.
+  const matchedTier = magnitudeTiers
+    ? [...magnitudeTiers]
+        .sort((a, b) => b.threshold - a.threshold)
+        .find((t) => value >= t.threshold)
+    : undefined;
+  const effectiveAccent = matchedTier?.accentColor ?? accentColor;
+  const effectiveSublabel = matchedTier?.sublabel ?? sublabel;
 
   if (dark) {
     return (
-      <Animated.View entering={FadeInDown.duration(360)}>
+      <Animated.View entering={entering}>
         <LinearGradient
           colors={[STITCH.premiumDarkBg, STITCH.premiumDarkSurface, STITCH.premiumDarkAccent]}
           start={{ x: 0, y: 0 }}
@@ -77,10 +114,10 @@ export function StatHero({
           <View style={styles.content}>
             <Text style={[styles.label, styles.labelDark]}>{label}</Text>
             <View style={styles.numberRow}>
-              <Text style={[styles.numberDark]}>{display}</Text>
+              <CountUpNumber value={value} format={formatter} durationMs={750} style={styles.numberDark} />
             </View>
-            {sublabel ? (
-              <Text style={[styles.sublabel, styles.sublabelDark]}>{sublabel}</Text>
+            {effectiveSublabel ? (
+              <Text style={[styles.sublabel, styles.sublabelDark]}>{effectiveSublabel}</Text>
             ) : null}
             {deltaDisplay ? (
               <View style={styles.deltaPillDark}>
@@ -106,12 +143,12 @@ export function StatHero({
 
   return (
     <Animated.View
-      entering={FadeInDown.duration(360)}
-      style={[styles.card, styles.cardLight, { shadowColor: accentColor, borderColor: accentColor + '33' }]}
+      entering={entering}
+      style={[styles.card, styles.cardLight, { shadowColor: effectiveAccent, borderColor: effectiveAccent + '33' }]}
     >
       {/* Top-left accent halo (gradient) — replaces flat tinted disc */}
       <LinearGradient
-        colors={[accentColor + '2E', accentColor + '00']}
+        colors={[effectiveAccent + '2E', effectiveAccent + '00']}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
         style={styles.halo}
@@ -119,7 +156,7 @@ export function StatHero({
       />
       {/* Bottom-right echo halo — balances composition, fakes inner glow */}
       <LinearGradient
-        colors={[accentColor + '22', accentColor + '00']}
+        colors={[effectiveAccent + '22', effectiveAccent + '00']}
         start={{ x: 1, y: 1 }}
         end={{ x: 0, y: 0 }}
         style={styles.haloBottom}
@@ -128,38 +165,39 @@ export function StatHero({
       <View style={styles.content}>
         <Text style={styles.label}>{label}</Text>
         <View style={styles.numberRow}>
-          <Text
+          <CountUpNumber
+            value={value}
+            format={formatter}
+            durationMs={750}
             style={[
               styles.number,
               {
-                color: accentColor,
-                textShadowColor: accentColor + '55',
+                color: effectiveAccent,
+                textShadowColor: effectiveAccent + '55',
               },
             ]}
-          >
-            {display}
-          </Text>
+          />
         </View>
-        {sublabel ? <Text style={styles.sublabel}>{sublabel}</Text> : null}
+        {effectiveSublabel ? <Text style={styles.sublabel}>{effectiveSublabel}</Text> : null}
         {deltaDisplay ? (
           <View
             style={[
               styles.deltaPill,
               {
-                backgroundColor: accentColor + '18',
-                borderColor: accentColor + '40',
-                shadowColor: accentColor,
+                backgroundColor: effectiveAccent + '18',
+                borderColor: effectiveAccent + '40',
+                shadowColor: effectiveAccent,
               },
             ]}
           >
-            <Text style={[styles.deltaValue, { color: accentColor }]}>{deltaDisplay}</Text>
+            <Text style={[styles.deltaValue, { color: effectiveAccent }]}>{deltaDisplay}</Text>
             {deltaLabel ? <Text style={styles.deltaLabel}>{deltaLabel}</Text> : null}
           </View>
         ) : null}
       </View>
       {/* Hairline accent sweep at the bottom edge */}
       <LinearGradient
-        colors={[accentColor + '00', accentColor + 'AA', accentColor + '00']}
+        colors={[effectiveAccent + '00', effectiveAccent + 'AA', effectiveAccent + '00']}
         start={{ x: 0, y: 0.5 }}
         end={{ x: 1, y: 0.5 }}
         style={styles.bottomSweep}

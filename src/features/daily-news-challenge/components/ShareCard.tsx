@@ -15,12 +15,14 @@ interface ShareCardProps {
   onShared?: () => void;
 }
 
-const APP_URL = 'https://finplay.co.il';
-
 /**
  * Wordle-style share card: spoiler-free emoji grid that conveys 2/2 or 1/2
  * without revealing the actual headlines. Tapping the share button opens the
  * native sheet with a text-only payload — no image generation required.
+ *
+ * No URL in the body: Wordle proved the brand-recognition pattern works
+ * better than a promo link, and a bare URL kills the shareability in
+ * WhatsApp groups (looks like spam, not like a flex).
  */
 export function ShareCard({ dateKey, results, streak, onShared }: ShareCardProps): React.ReactElement {
   const grid = results.map((r) => (r ? '✅' : '❌')).join(' ');
@@ -33,10 +35,8 @@ export function ShareCard({ dateKey, results, streak, onShared }: ShareCardProps
       `📰 אקטואליה פיננסית · ${dateLabel}`,
       '',
       grid,
-      score === 2 ? '🏆 יום מושלם!' : `${score}/2 כותרות`,
+      score === 2 ? '🏆 יום מושלם' : `${score}/2 כותרות`,
       streak > 0 ? `🔥 רצף של ${streak} ימים` : null,
-      '',
-      `נסה גם: ${APP_URL}`,
     ]
       .filter(Boolean)
       .join('\n');

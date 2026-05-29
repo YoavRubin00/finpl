@@ -31,6 +31,21 @@ const { width: SCREEN_W, height: SCREEN_H } = Dimensions.get('window');
 const ACCENT_GOLD = '#facc15';
 const ACCENT_GOLD_DEEP = '#d97706';
 
+// Captain Shark voice — snarky but warm, no shark emoji. We pick one of two
+// lines per item so the second card doesn't echo the first verbatim.
+const CORRECT_LINES = [
+  'מטורף, פיצחת בלי לחשוב פעמיים',
+  'קלאסי. סיבוב הבא יותר קשה',
+];
+function pickCorrectLine(index: number): string {
+  return CORRECT_LINES[index % CORRECT_LINES.length];
+}
+function pickWrongLine(entity: string, index: number): string {
+  return index === 0
+    ? `הא, חשבת? התשובה: ${entity}. בא נלקח את הבא`
+    : `נגעת אבל לא לקחת. ${entity} הייתה התשובה`;
+}
+
 interface ChallengePageProps {
   item: ChallengeItem;
   index: 0 | 1;
@@ -202,7 +217,9 @@ export function ChallengePage({
                   style={[styles.resultHeaderText, { color: wasCorrect ? '#15803d' : '#b91c1c' }]}
                   allowFontScaling={false}
                 >
-                  {wasCorrect ? 'יפה! פיצחת את הכותרת' : `התשובה הנכונה: ${revealEntity}`}
+                  {wasCorrect
+                    ? pickCorrectLine(index)
+                    : pickWrongLine(revealEntity, index)}
                 </Text>
               </View>
               <Text style={styles.summary} allowFontScaling={false}>

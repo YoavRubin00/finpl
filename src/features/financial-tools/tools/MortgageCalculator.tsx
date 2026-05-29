@@ -1,7 +1,8 @@
-import React, { useMemo, useState } from 'react';
-import { Alert, ScrollView, Share, StyleSheet, Text, View } from 'react-native';
+import React, { useCallback, useMemo, useRef, useState } from 'react';
+import { ScrollView, Share, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { HardHat, Home, Info, Share2 } from 'lucide-react-native';
+import Animated, { ZoomIn } from 'react-native-reanimated';
+import { Calculator, HardHat, Home, Info, Share2 } from 'lucide-react-native';
 
 import { STITCH } from '../../../constants/theme';
 import { clamp, formatPercent, formatShekel } from '../../../utils/format';
@@ -64,50 +65,71 @@ const DEFAULT_STATE: MortgageInput = {
   householdIncome: '20000',
 };
 
+function computeMortgage(input: MortgageInput): MortgageResult {
+  const price = Number(input.propertyPrice) || 0;
+  const down = Number(input.downPayment) || 0;
+  const income = Number(input.householdIncome) || 0;
+
+  const loanAmount = Math.max(0, price - down);
+  const monthlyRate = input.annualRate / 100 / 12;
+  const n = input.years * 12;
+
+  let monthlyPayment = 0;
+  if (loanAmount > 0 && n > 0) {
+    monthlyPayment =
+      monthlyRate === 0
+        ? loanAmount / n
+        : (loanAmount * monthlyRate * Math.pow(1 + monthlyRate, n)) /
+          (Math.pow(1 + monthlyRate, n) - 1);
+  }
+
+  const totalPaid = monthlyPayment * n;
+  const totalInterest = totalPaid - loanAmount;
+  const incomeRatio = income > 0 ? monthlyPayment / income : 0;
+  const isApproved = incomeRatio <= 0.4 && incomeRatio > 0;
+  const downPaymentRatio = price > 0 ? down / price : 0;
+  const meetsDownPaymentReq = downPaymentRatio >= 0.25;
+
+  return {
+    loanAmount,
+    monthlyPayment: Math.round(monthlyPayment),
+    totalInterest: Math.round(totalInterest),
+    totalPaid: Math.round(totalPaid),
+    incomeRatio,
+    isApproved,
+    downPaymentRatio,
+    meetsDownPaymentReq,
+  };
+}
+
 export function MortgageCalculator(): React.ReactElement {
-  const [state, setState] = useState<MortgageInput>(() =>
-    buildMortgageInitial(useFinancialProfileStore.getState().profile, DEFAULT_STATE),
+  // State split — live inputs drive slider positions + the CALC preview;
+  // committed inputs drive the payment hero, status badge, breakdown chart
+  // and the "shorten 5y" insight. CALC commits live → committed and bumps
+  // `commitCount` to re-fire the ZoomIn ceremony.
+  const initial = useMemo(
+    () => buildMortgageInitial(useFinancialProfileStore.getState().profile, DEFAULT_STATE),
+    [],
   );
+  const [state, setState] = useState<MortgageInput>(initial);
+  const [committedState, setCommittedState] = useState<MortgageInput>(initial);
+  const [commitCount, setCommitCount] = useState(0);
+  const scrollRef = useRef<ScrollView>(null);
 
-  const result: MortgageResult = useMemo(() => {
-    const price = Number(state.propertyPrice) || 0;
-    const down = Number(state.downPayment) || 0;
-    const income = Number(state.householdIncome) || 0;
+  const result: MortgageResult = useMemo(() => computeMortgage(committedState), [committedState]);
+  const livePreview: MortgageResult = useMemo(() => computeMortgage(state), [state]);
 
-    const loanAmount = Math.max(0, price - down);
-    const monthlyRate = state.annualRate / 100 / 12;
-    const n = state.years * 12;
-
-    let monthlyPayment = 0;
-    if (loanAmount > 0 && n > 0) {
-      monthlyPayment =
-        monthlyRate === 0
-          ? loanAmount / n
-          : (loanAmount * monthlyRate * Math.pow(1 + monthlyRate, n)) /
-            (Math.pow(1 + monthlyRate, n) - 1);
-    }
-
-    const totalPaid = monthlyPayment * n;
-    const totalInterest = totalPaid - loanAmount;
-    const incomeRatio = income > 0 ? monthlyPayment / income : 0;
-    const isApproved = incomeRatio <= 0.4 && incomeRatio > 0;
-    const downPaymentRatio = price > 0 ? down / price : 0;
-    const meetsDownPaymentReq = downPaymentRatio >= 0.25;
-
-    return {
-      loanAmount,
-      monthlyPayment: Math.round(monthlyPayment),
-      totalInterest: Math.round(totalInterest),
-      totalPaid: Math.round(totalPaid),
-      incomeRatio,
-      isApproved,
-      downPaymentRatio,
-      meetsDownPaymentReq,
-    };
+  const handleCalculate = useCallback(() => {
+    setCommittedState(state);
+    setCommitCount((c) => c + 1);
+    setTimeout(() => {
+      scrollRef.current?.scrollTo({ y: 0, animated: true });
+    }, 100);
   }, [state]);
 
   const approvalStatus = result.isApproved && result.meetsDownPaymentReq;
   const interestHeavy = result.totalInterest > result.loanAmount * 0.5;
+  const liveDiffers = livePreview.monthlyPayment !== result.monthlyPayment;
 
   const priceSliderValue = clamp(Number(state.propertyPrice) || PRICE_MIN, PRICE_MIN, PRICE_MAX);
   const downSliderValue = clamp(Number(state.downPayment) || DOWN_MIN, DOWN_MIN, DOWN_MAX);
@@ -117,12 +139,15 @@ export function MortgageCalculator(): React.ReactElement {
    * "Shorten-by-5" — what happens if you cut the loan term by 5 years?
    * Higher monthly payment but big interest savings. The eye-opener is the
    * total-interest delta, which most people massively underestimate.
+   *
+   * Reads `committedState` (not `state`) so the insight stays consistent
+   * with the rest of the result region — values change only on CALC.
    */
   const shortenInsight = useMemo(() => {
-    const shortenedYears = Math.max(5, state.years - 5);
-    if (shortenedYears === state.years || result.loanAmount <= 0) return null;
+    const shortenedYears = Math.max(5, committedState.years - 5);
+    if (shortenedYears === committedState.years || result.loanAmount <= 0) return null;
     const nShort = shortenedYears * 12;
-    const monthlyRate = state.annualRate / 100 / 12;
+    const monthlyRate = committedState.annualRate / 100 / 12;
     const monthlyShort =
       monthlyRate === 0
         ? result.loanAmount / nShort
@@ -134,7 +159,7 @@ export function MortgageCalculator(): React.ReactElement {
       extraMonthly: Math.round(monthlyShort - result.monthlyPayment),
       interestSaved: Math.round(result.totalInterest - totalInterestShort),
     };
-  }, [state.years, state.annualRate, result.loanAmount, result.monthlyPayment, result.totalInterest]);
+  }, [committedState.years, committedState.annualRate, result.loanAmount, result.monthlyPayment, result.totalInterest]);
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
@@ -146,16 +171,25 @@ export function MortgageCalculator(): React.ReactElement {
         toolKey="mortgage"
       />
 
-      <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        ref={scrollRef}
+        contentContainerStyle={styles.scroll}
+        showsVerticalScrollIndicator={false}
+      >
         <ProfileFingerprint accentColor={TOOL.hue} />
 
-        <PaymentBigDisplay
-          amount={result.monthlyPayment}
-          label="החזר חודשי משוער"
-          sublabel={`למשך ${state.years} שנים · ${state.annualRate}% ריבית שנתית`}
-          accentColor={TOOL.hue}
-          tintColor={TOOL.light}
-        />
+        {/* Payment hero, re-mounted on every commit so the ZoomIn ceremony
+            replays. PaymentBigDisplay has no internal entering animation so
+            the wrapper's ZoomIn plays clean. */}
+        <Animated.View key={commitCount} entering={ZoomIn.springify().damping(8).mass(0.6)}>
+          <PaymentBigDisplay
+            amount={result.monthlyPayment}
+            label="החזר חודשי משוער"
+            sublabel={`למשך ${committedState.years} שנים · ${committedState.annualRate}% ריבית שנתית`}
+            accentColor={TOOL.hue}
+            tintColor={TOOL.light}
+          />
+        </Animated.View>
 
         {result.loanAmount > 0 ? (
           <View
@@ -170,9 +204,7 @@ export function MortgageCalculator(): React.ReactElement {
                 approvalStatus ? styles.statusOkText : styles.statusBadText,
               ]}
             >
-              {approvalStatus
-                ? '🟢 עוברת תקרות בנק ישראל'
-                : '🔴 לא עוברת תקרות בנק ישראל'}
+              {approvalStatus ? 'נראה אפשרי' : 'שווה לבדוק שוב'}
             </Text>
           </View>
         ) : null}
@@ -320,7 +352,7 @@ export function MortgageCalculator(): React.ReactElement {
                     <Text style={styles.shortenBadgeText}>תקצר ב-5 שנים</Text>
                   </View>
                   <Text style={styles.shortenTitle}>
-                    החזר על פני {shortenInsight.years} שנים במקום {state.years}
+                    החזר על פני {shortenInsight.years} שנים במקום {committedState.years}
                   </Text>
                 </View>
                 <View style={styles.shortenTilesRow}>
@@ -358,16 +390,31 @@ export function MortgageCalculator(): React.ReactElement {
           </Text>
         </View>
 
+        {/* Primary commit — locks current inputs into the payment hero and
+            re-fires the ZoomIn ceremony. Sublabel previews the uncommitted
+            payment so the user knows what the tap will produce. */}
+        <CalculateButton
+          label="חשב"
+          sublabel={
+            liveDiffers
+              ? `החזר משוער: ${formatShekel(livePreview.monthlyPayment)}/חודש`
+              : 'תוצאה עדכנית'
+          }
+          variant="blue"
+          iconLeft={<Calculator size={18} color="#ffffff" strokeWidth={2.6} />}
+          onPress={handleCalculate}
+        />
+
         <CalculateButton
           label="שתף תוצאה"
-          sublabel={`${formatShekel(result.monthlyPayment)}/חודש · ${state.years} שנים`}
+          sublabel={`${formatShekel(result.monthlyPayment)}/חודש · ${committedState.years} שנים`}
           variant="indigo"
           iconLeft={<Share2 size={18} color="#ffffff" strokeWidth={2.6} />}
           onPress={() => {
             // Opens the native share sheet (iOS) / chooser (Android) so the
             // user can send the result via WhatsApp, Messages, Email, etc.
             Share.share({
-              message: `📊 בדקתי משכנתא ב-FinPlay 🦈\n\nהחזר חודשי: ${formatShekel(result.monthlyPayment)}\nתקופה: ${state.years} שנים\nסך ריבית: ${formatShekel(result.totalInterest)}\n\nתבדוק גם אתה ב-FinPlay`,
+              message: `📊 בדקתי משכנתא ב-FinPlay 🦈\n\nהחזר חודשי: ${formatShekel(result.monthlyPayment)}\nתקופה: ${committedState.years} שנים\nסך ריבית: ${formatShekel(result.totalInterest)}\n\nתבדוק גם אתה ב-FinPlay`,
             }).catch(() => { /* user dismissed — non-fatal */ });
           }}
         />

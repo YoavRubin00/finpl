@@ -9,6 +9,7 @@ import { useTutorialStore } from '../../../stores/useTutorialStore';
 import type { ToolKey } from '../toolsRegistry';
 import { TOOL_TUTORIALS } from '../data/toolTutorials';
 import { ToolTutorialOverlay } from './ToolTutorialOverlay';
+import { useRecordToolUsage } from '../hooks/useRecordToolUsage';
 
 interface ToolHeaderProps {
   title: string;
@@ -32,6 +33,11 @@ interface ToolHeaderProps {
  */
 export function ToolHeader({ title, subtitle, accentColor = STITCH.primary, Icon, toolKey }: ToolHeaderProps) {
   const router = useRouter();
+
+  // Spending >30s inside a real tool (toolKey set) counts as today's streak
+  // day — the utility moment earns identity credit the same way a lesson
+  // would. Idempotent at the API layer.
+  useRecordToolUsage(!!toolKey);
 
   // First-visit tutorial — only render the overlay when the user hasn't
   // seen it AND the tool has a tutorial defined. Reading the flag with a

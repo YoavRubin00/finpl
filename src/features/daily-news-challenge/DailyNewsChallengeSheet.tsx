@@ -25,7 +25,6 @@ import { captureEvent } from '../../lib/posthog';
 
 import { ChallengePage } from './components/ChallengePage';
 import { ChestsPage } from './components/ChestsPage';
-import { StreakFreezeModal } from './components/StreakFreezeModal';
 import { ItemChatOverlay } from './components/ItemChatOverlay';
 import { fetchTodayChallenge } from './dailyNewsChallengeApi';
 import { useDailyNewsChallengeStore, type ChallengeRewardSummary } from './useDailyNewsChallengeStore';
@@ -70,13 +69,10 @@ export function DailyNewsChallengeSheet({ visible, onClose }: DailyNewsChallenge
   const regularChestOpened = useDailyNewsChallengeStore((s) => s.regularChestOpened);
   const proChestOpened = useDailyNewsChallengeStore((s) => s.proChestOpened);
   const streak = useDailyNewsChallengeStore((s) => s.streak);
-  const streakFreezesAvailable = useDailyNewsChallengeStore((s) => s.streakFreezesAvailable);
   const setChallenge = useDailyNewsChallengeStore((s) => s.setTodayChallenge);
   const recordAnswer = useDailyNewsChallengeStore((s) => s.recordAnswer);
   const claimRegular = useDailyNewsChallengeStore((s) => s.claimRegularChest);
   const claimPro = useDailyNewsChallengeStore((s) => s.claimProChest);
-  const shouldOfferStreakFreeze = useDailyNewsChallengeStore((s) => s.shouldOfferStreakFreeze);
-  const useStreakFreeze = useDailyNewsChallengeStore((s) => s.useStreakFreeze);
   const todayPerfect = useDailyNewsChallengeStore((s) => s.todayPerfect);
 
   const isPro = useSubscriptionStore((s) => s.isPro());
@@ -86,7 +82,6 @@ export function DailyNewsChallengeSheet({ visible, onClose }: DailyNewsChallenge
   const [error, setError] = useState<string | null>(null);
   const [chatItem, setChatItem] = useState<ChallengeItem | null>(null);
   const [exitConfirmOpen, setExitConfirmOpen] = useState(false);
-  const [freezeModalOpen, setFreezeModalOpen] = useState(false);
   const [activePage, setActivePage] = useState(0);
 
   // Chest-open fly-up particles — self-resets via FlyingRewards.onComplete.
@@ -143,14 +138,6 @@ export function DailyNewsChallengeSheet({ visible, onClose }: DailyNewsChallenge
       captureEvent('news_challenge_viewed', { date_key: challenge.dateKey });
     }
   }, [visible, challenge]);
-
-  // Offer streak freeze when conditions met (sheet just opened with a gap)
-  useEffect(() => {
-    if (!visible) return;
-    if (shouldOfferStreakFreeze()) {
-      setFreezeModalOpen(true);
-    }
-  }, [visible, shouldOfferStreakFreeze]);
 
   // Completed event — fires when both items become answered for the first time
   useEffect(() => {
@@ -420,15 +407,6 @@ export function DailyNewsChallengeSheet({ visible, onClose }: DailyNewsChallenge
         visible={exitConfirmOpen}
         onStay={() => setExitConfirmOpen(false)}
         onLeave={confirmLeave}
-      />
-
-      {/* Streak freeze prompt */}
-      <StreakFreezeModal
-        visible={freezeModalOpen}
-        streak={streak}
-        freezesAvailable={streakFreezesAvailable}
-        onUseFreeze={() => { useStreakFreeze(); setFreezeModalOpen(false); }}
-        onDismiss={() => setFreezeModalOpen(false)}
       />
 
       {/* Fly-up reward particles — must sit above the pager so glyphs reach

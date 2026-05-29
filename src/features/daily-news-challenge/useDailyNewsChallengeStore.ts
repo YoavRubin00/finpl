@@ -14,7 +14,20 @@ import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import { zustandStorage } from '../../lib/zustandStorage';
 import { useEconomyUIStore } from '../economy/useEconomyUIStore';
+import { recordDailyActivity } from '../../lib/api/streak';
+import { queryClient } from '../../lib/queryClient';
+import { streakQueryKey } from '../economy/useStreak';
+import type { StreakState } from '../../lib/api/streak';
 import type { DailyChallenge, ItemAnswer } from './types';
+
+/** Israel-local YYYY-MM-DD — matches the server's day boundary. */
+function todayIsraelDate(): string {
+  const fmt = new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Asia/Jerusalem',
+    year: 'numeric', month: '2-digit', day: '2-digit',
+  });
+  return fmt.format(new Date());
+}
 
 /** YYYY-MM-DD anchored to the device's local time. Server uses Asia/Jerusalem;
  *  for most users in Israel these match. */
@@ -41,8 +54,6 @@ const CHALLENGE_STREAK_BONUS_STEP = 5;   // every 5-day milestone
 const CHALLENGE_STREAK_BONUS_PCT = 0.1;  // +10%
 /** Bonus gem(s) added to BOTH chests when the user answered 2/2 correctly today. */
 const CHALLENGE_PERFECT_BONUS_GEMS = 1;
-/** A free Streak Freeze is granted at most once per N days. */
-const FREE_FREEZE_GRANT_INTERVAL_DAYS = 7;
 
 export interface ChallengeRewardSummary {
   xp: number;
@@ -84,12 +95,6 @@ export function previewProReward(streak: number, perfect: boolean = false): Chal
   };
 }
 
-function daysBetween(a: string, b: string): number {
-  const dayA = new Date(`${a}T00:00:00Z`).getTime();
-  const dayB = new Date(`${b}T00:00:00Z`).getTime();
-  return Math.round((dayB - dayA) / (24 * 60 * 60 * 1000));
-}
-
 /* ─────────────────── Store ─────────────────── */
 
 interface NewsChallengeState {
@@ -102,19 +107,12 @@ interface NewsChallengeState {
   /** Chests already opened today. */
   regularChestOpened: boolean;
   proChestOpened: boolean;
-  /** Streak — increments when BOTH items answered (correctness doesn't matter). */
+  /** Streak (news-challenge local) — increments when BOTH items answered.
+   *  Note: the global streak lives in useStreak/server. We also bump that one
+   *  via `recordDailyActivity` so notifications see this user as active. */
   streak: number;
   lastCompletedDate: string | null;
 
-  /* ─── v2: Streak Freeze ─── */
-  /** Freezes the user has in inventory; max 1. Granted free at most once per week. */
-  streakFreezesAvailable: number;
-  /** Last date we granted a free freeze — used to rate-limit the freebie. */
-  lastFreezeGrantedDate: string | null;
-  /** Set when a freeze was just consumed today so the UI can show a one-time tooltip. */
-  freezeUsedToday: boolean;
-
-  /* ─── v2: Perfect Days ─── */
   /** Lifetime count of days the user answered 2/2 correctly. */
   perfectDays: number;
   /** Convenience: was today a perfect day? Derived from `answered`. */
@@ -126,13 +124,6 @@ interface NewsChallengeState {
   hasCompletedToday: () => boolean;
   claimRegularChest: () => ChallengeRewardSummary | null;
   claimProChest: () => ChallengeRewardSummary | null;
-  /** Grant a free freeze if it's been ≥ FREE_FREEZE_GRANT_INTERVAL_DAYS since last grant. */
-  maybeGrantFreeFreeze: () => void;
-  /** Spend a freeze to bump streak instead of resetting. Returns true on success. */
-  useStreakFreeze: () => boolean;
-  /** Returns true if a streak-rescue prompt should be shown right now (gap of
-   *  exactly 1-2 days since last completion, freeze available, today not done). */
-  shouldOfferStreakFreeze: () => boolean;
 }
 
 export const useDailyNewsChallengeStore = create<NewsChallengeState>()(
@@ -145,9 +136,6 @@ export const useDailyNewsChallengeStore = create<NewsChallengeState>()(
       proChestOpened: false,
       streak: 0,
       lastCompletedDate: null,
-      streakFreezesAvailable: 0,
-      lastFreezeGrantedDate: null,
-      freezeUsedToday: false,
       perfectDays: 0,
 
       todayPerfect: () => {
@@ -167,14 +155,11 @@ export const useDailyNewsChallengeStore = create<NewsChallengeState>()(
             answered: [null, null],
             regularChestOpened: false,
             proChestOpened: false,
-            freezeUsedToday: false,
           });
         } else {
           // Same day, refresh payload (e.g. images filled in later).
           set({ todayChallenge: challenge });
         }
-        // Try to grant a free freeze (rate-limited internally).
-        get().maybeGrantFreeFreeze();
       },
 
       recordAnswer: (itemIdx, selectedIdx, wasCorrect) => {
@@ -199,6 +184,15 @@ export const useDailyNewsChallengeStore = create<NewsChallengeState>()(
             const bothCorrect = next[0]?.wasCorrect === true && next[1]?.wasCorrect === true;
             if (bothCorrect) perfectDays += 1;
           }
+          // Tell the server this user was active today. Without this the
+          // global Captain Shark notification scheduler will think the user
+          // was idle and fire a misleading "📉 יומיים בלי FinPlay" push.
+          // Fire-and-forget; the server dedups by date_il.
+          void recordDailyActivity(todayIsraelDate())
+            .then((res) => {
+              queryClient.setQueryData<StreakState | null>(streakQueryKey, res.streak);
+            })
+            .catch(() => { /* offline / 401 → server stays out of sync, no UI impact */ });
         }
 
         set({ answered: next, streak, lastCompletedDate, perfectDays });
@@ -245,53 +239,11 @@ export const useDailyNewsChallengeStore = create<NewsChallengeState>()(
         set({ proChestOpened: true });
         return reward;
       },
-
-      maybeGrantFreeFreeze: () => {
-        const state = get();
-        if (state.streakFreezesAvailable >= 1) return; // already capped
-        const today = state.cachedFor ?? todayKey();
-        if (state.lastFreezeGrantedDate) {
-          const gap = daysBetween(state.lastFreezeGrantedDate, today);
-          if (gap < FREE_FREEZE_GRANT_INTERVAL_DAYS) return;
-        }
-        set({ streakFreezesAvailable: 1, lastFreezeGrantedDate: today });
-      },
-
-      shouldOfferStreakFreeze: () => {
-        const state = get();
-        if (state.streakFreezesAvailable <= 0) return false;
-        if (state.streak <= 0) return false;
-        if (state.freezeUsedToday) return false;
-        if (!state.lastCompletedDate) return false;
-        const today = state.cachedFor ?? todayKey();
-        if (state.lastCompletedDate === today) return false; // already done today
-        const gap = daysBetween(state.lastCompletedDate, today);
-        // Offer only when a gap of 2 days (yesterday missed) would otherwise
-        // break the streak. Gaps of 1 are still consecutive; 3+ are too late.
-        return gap === 2;
-      },
-
-      useStreakFreeze: () => {
-        const state = get();
-        if (state.streakFreezesAvailable <= 0) return false;
-        const today = state.cachedFor ?? todayKey();
-        // Pretend yesterday was completed so today's recordAnswer will treat
-        // the streak as consecutive.
-        const yesterday = new Date(`${today}T00:00:00Z`);
-        yesterday.setUTCDate(yesterday.getUTCDate() - 1);
-        const yesterdayKey = yesterday.toISOString().slice(0, 10);
-        set({
-          streakFreezesAvailable: state.streakFreezesAvailable - 1,
-          lastCompletedDate: yesterdayKey,
-          freezeUsedToday: true,
-        });
-        return true;
-      },
     }),
     {
       name: 'daily-news-challenge-store',
       storage: createJSONStorage(() => zustandStorage),
-      version: 2,
+      version: 3,
       partialize: (state) => ({
         todayChallenge: state.todayChallenge,
         cachedFor: state.cachedFor,
@@ -300,9 +252,6 @@ export const useDailyNewsChallengeStore = create<NewsChallengeState>()(
         proChestOpened: state.proChestOpened,
         streak: state.streak,
         lastCompletedDate: state.lastCompletedDate,
-        streakFreezesAvailable: state.streakFreezesAvailable,
-        lastFreezeGrantedDate: state.lastFreezeGrantedDate,
-        freezeUsedToday: state.freezeUsedToday,
         perfectDays: state.perfectDays,
       }),
     },
