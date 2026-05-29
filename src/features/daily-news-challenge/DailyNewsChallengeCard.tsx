@@ -2,10 +2,11 @@ import React from 'react';
 import { View, Text, Pressable, StyleSheet, Image } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import Animated, { FadeInDown, useSharedValue, useAnimatedStyle, withSpring } from 'react-native-reanimated';
-import { Newspaper, Sparkles, CheckCircle2, ChevronLeft } from 'lucide-react-native';
+import { Newspaper, Sparkles, CheckCircle2, ChevronLeft, Flame, Snowflake } from 'lucide-react-native';
 
 import { STITCH } from '../../constants/theme';
 import { tapHaptic } from '../../utils/haptics';
+import { useDailyNewsChallengeStore } from './useDailyNewsChallengeStore';
 import type { DailyChallenge } from './types';
 
 const HERO_GRADIENT = ['#1e3a8a', '#0c4a6e', '#0e7490'] as const;
@@ -32,6 +33,9 @@ export function DailyNewsChallengeCard({
 }: DailyNewsChallengeCardProps): React.ReactElement | null {
   const scale = useSharedValue(1);
   const animatedStyle = useAnimatedStyle(() => ({ transform: [{ scale: scale.value }] }));
+  const streak = useDailyNewsChallengeStore((s) => s.streak);
+  const freezesAvailable = useDailyNewsChallengeStore((s) => s.streakFreezesAvailable);
+  const perfectDays = useDailyNewsChallengeStore((s) => s.perfectDays);
 
   if (!challenge) return null;
 
@@ -77,9 +81,27 @@ export function DailyNewsChallengeCard({
                 {challenge.heroTitle}
               </Text>
             </View>
-            {fullyDone && (
-              <CheckCircle2 size={22} color={ACCENT_GOLD} strokeWidth={2.4} />
-            )}
+            <View style={styles.badgeStack}>
+              {streak > 0 && (
+                <View style={styles.streakBadge} accessibilityLabel={`רצף ${streak} ימים`}>
+                  <Flame size={11} color="#f97316" strokeWidth={2.6} />
+                  <Text style={styles.streakBadgeText} allowFontScaling={false}>{streak}</Text>
+                </View>
+              )}
+              {freezesAvailable > 0 && (
+                <View style={styles.freezeBadge} accessibilityLabel="קפאון זמין">
+                  <Snowflake size={11} color="#0ea5e9" strokeWidth={2.6} />
+                </View>
+              )}
+              {perfectDays > 0 && (
+                <Text style={styles.perfectBadge} allowFontScaling={false} accessibilityLabel={`${perfectDays} ימים מושלמים`}>
+                  🏆
+                </Text>
+              )}
+              {fullyDone && (
+                <CheckCircle2 size={22} color={ACCENT_GOLD} strokeWidth={2.4} />
+              )}
+            </View>
           </View>
 
           {/* Optional hero image strip */}
@@ -131,6 +153,36 @@ const styles = StyleSheet.create({
     flexDirection: 'row-reverse',
     alignItems: 'center',
     gap: 10,
+  },
+  badgeStack: {
+    flexDirection: 'row-reverse',
+    alignItems: 'center',
+    gap: 6,
+  },
+  streakBadge: {
+    flexDirection: 'row-reverse',
+    alignItems: 'center',
+    gap: 2,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 999,
+    backgroundColor: 'rgba(255, 247, 237, 0.95)',
+  },
+  streakBadgeText: {
+    fontSize: 11,
+    fontWeight: '900',
+    color: '#f97316',
+  },
+  freezeBadge: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    backgroundColor: 'rgba(224, 242, 254, 0.95)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  perfectBadge: {
+    fontSize: 14,
   },
   iconBadge: {
     width: 38,

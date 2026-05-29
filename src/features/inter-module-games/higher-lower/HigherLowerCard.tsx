@@ -45,6 +45,10 @@ interface Props {
   /** Optional callback invoked when the user taps "המשך" on the done summary.
    *  Inter-module flow uses this to skip the obscure top-right ✕ button. */
   onComplete?: () => void;
+  /** When true, skip all daily-quota writes — the round is pure entertainment
+   *  (e.g. mounted inside the stock-analyst wait overlay). The user can still
+   *  earn this game as their real daily challenge later in the day. */
+  freePlay?: boolean;
 }
 
 /* ------------------------------------------------------------------ */
@@ -261,10 +265,11 @@ function FeedbackCard({
 /*  Main card                                                         */
 /* ------------------------------------------------------------------ */
 
-export const HigherLowerCard = React.memo(function HigherLowerCard({ isActive: _isActive, onComplete }: Props) {
+export const HigherLowerCard = React.memo(function HigherLowerCard({ isActive: _isActive, onComplete, freePlay = false }: Props) {
   const playHigherLower = useDailyChallengesStore((s) => s.playHigherLower);
-  const hasPlayedToday = useDailyChallengesStore((s) => s.hasHigherLowerPlayedToday());
+  const hasPlayedTodayReal = useDailyChallengesStore((s) => s.hasHigherLowerPlayedToday());
   const playsToday = useDailyChallengesStore((s) => s.getHigherLowerPlaysToday());
+  const hasPlayedToday = freePlay ? false : hasPlayedTodayReal;
 
   const [deck] = useState<HigherLowerScenario[]>(() => {
     const today = new Date().toISOString().slice(0, 10);
@@ -307,6 +312,7 @@ export const HigherLowerCard = React.memo(function HigherLowerCard({ isActive: _
     (totalCorrect: number) => {
       if (finalizedRef.current) return;
       finalizedRef.current = true;
+      if (freePlay) return; // wait-state mount — entertainment only, no rewards/quota write
       const today = new Date().toISOString().slice(0, 10);
       playHigherLower(today, totalCorrect > 0);
 
@@ -323,7 +329,7 @@ export const HigherLowerCard = React.memo(function HigherLowerCard({ isActive: _
         log.addCorrectAnswer();
       }
     },
-    [playHigherLower],
+    [playHigherLower, freePlay],
   );
 
   const handlePick = useCallback(
@@ -397,7 +403,9 @@ export const HigherLowerCard = React.memo(function HigherLowerCard({ isActive: _
             <Text style={[styles.headerSub, RTL]}>
               {done
                 ? `סיימתם! ${sessionCorrect}/${deck.length} נכונות`
-                : `שוק ההון מסוכן, אבל אפשר ללמוד. ${remainingPlays}/${MAX_DAILY_PLAYS} סבבים`}
+                : freePlay
+                  ? 'שוק ההון מסוכן, אבל אפשר ללמוד.'
+                  : `שוק ההון מסוכן, אבל אפשר ללמוד. ${remainingPlays}/${MAX_DAILY_PLAYS} סבבים`}
             </Text>
           </View>
         </Animated.View>

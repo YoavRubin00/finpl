@@ -14,6 +14,7 @@
     "share": "eas update --branch preview --message 'update'",
     "export:content": "tsx scripts/export-content.ts",
     "generate-tool-audio": "node --env-file=.env.local scripts/generate-tool-tutorial-audio.mjs",
+    "generate-news-sfx": "node scripts/generate-daily-news-sfx.mjs",
     "upload-walkthrough-tools-audio": "node --env-file=.env.local scripts/upload-walkthrough-tools-audio.mjs",
     "upload-tool-tutorial-audio": "node --env-file=.env.local scripts/upload-tool-tutorial-audio.mjs",
     "eas-build-pre-install": "rm -f package-lock.json",

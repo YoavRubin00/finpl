@@ -11,18 +11,33 @@ export interface ChallengeItem {
   headlineHe: string;
   /** 2-sentence summary. */
   summaryHe: string;
-  /** Source attribution name (e.g. "Calcalist"). Shown under each item. */
+  /** Source attribution name (e.g. "Calcalist"). Stored in DB; UI hides it. */
   source: string;
   sourceUrl: string;
   /** Higgsfield-generated brand-styled image, or null → render gradient placeholder. */
   imageUrl: string | null;
-  question: string;
-  options: [string, string, string, string];
-  correctIdx: 0 | 1 | 2 | 3;
   explanation: string;
   historicalExample: string;
   /** 1-paragraph briefing handed to the AI mentor when the user opens the chat overlay. */
   chatContext: string;
+
+  /* ───── Blanked-Headline format (v2) ─────
+   * The headline with one central entity replaced by `____` (4 underscores).
+   * User picks which chip fills the blank — curiosity-gap reveal pattern. */
+  blankedHeadline: string;
+  /** The entity that was blanked out (matches one of `chips`). */
+  blankedEntity: string;
+  /** 4 candidates — exactly one (`chips[correctChipIdx]`) equals `blankedEntity`. */
+  chips: [string, string, string, string];
+  correctChipIdx: 0 | 1 | 2 | 3;
+
+  /* ───── Legacy fields (v1) — optional for backward compat ─────
+   * Cached payloads written before the v2 cron deploy still carry these.
+   * UI falls back to them if `blankedHeadline` is missing. Drop after the
+   * cache TTL has rolled over (~24h post-deploy). */
+  question?: string;
+  options?: [string, string, string, string];
+  correctIdx?: 0 | 1 | 2 | 3;
 }
 
 export interface DailyChallenge {

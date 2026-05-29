@@ -39,12 +39,19 @@ const CHALLENGE_PRO_COIN_MULTIPLIER = 2;
 const CHALLENGE_PRO_GEMS_GUARANTEED = 3;
 const CHALLENGE_STREAK_BONUS_STEP = 5;   // every 5-day milestone
 const CHALLENGE_STREAK_BONUS_PCT = 0.1;  // +10%
+/** Bonus gem(s) added to BOTH chests when the user answered 2/2 correctly today. */
+const CHALLENGE_PERFECT_BONUS_GEMS = 1;
+/** A free Streak Freeze is granted at most once per N days. */
+const FREE_FREEZE_GRANT_INTERVAL_DAYS = 7;
 
 export interface ChallengeRewardSummary {
   xp: number;
   coins: number;
   gems: number;
   streakBonusPct: number;
+  /** Set when the user answered 2/2 correctly — UI uses this to render the
+   *  "perfect day" pill/burst. The gem count already includes the bonus. */
+  perfectBonusApplied: boolean;
 }
 
 function streakMultiplier(streak: number): number {
@@ -55,24 +62,32 @@ function streakBonusPct(streak: number): number {
   return Math.floor(streak / CHALLENGE_STREAK_BONUS_STEP) * Math.round(CHALLENGE_STREAK_BONUS_PCT * 100);
 }
 
-export function previewRegularReward(streak: number): ChallengeRewardSummary {
+export function previewRegularReward(streak: number, perfect: boolean = false): ChallengeRewardSummary {
   const m = streakMultiplier(streak);
   return {
     xp: Math.round(CHALLENGE_XP_REWARD * m),
     coins: Math.round(CHALLENGE_COIN_REWARD * m),
-    gems: CHALLENGE_GEM_AMOUNT,
+    gems: CHALLENGE_GEM_AMOUNT + (perfect ? CHALLENGE_PERFECT_BONUS_GEMS : 0),
     streakBonusPct: streakBonusPct(streak),
+    perfectBonusApplied: perfect,
   };
 }
 
-export function previewProReward(streak: number): ChallengeRewardSummary {
+export function previewProReward(streak: number, perfect: boolean = false): ChallengeRewardSummary {
   const m = streakMultiplier(streak);
   return {
     xp: Math.round(CHALLENGE_XP_REWARD * CHALLENGE_PRO_XP_MULTIPLIER * m),
     coins: Math.round(CHALLENGE_COIN_REWARD * CHALLENGE_PRO_COIN_MULTIPLIER * m),
-    gems: CHALLENGE_PRO_GEMS_GUARANTEED,
+    gems: CHALLENGE_PRO_GEMS_GUARANTEED + (perfect ? CHALLENGE_PERFECT_BONUS_GEMS : 0),
     streakBonusPct: streakBonusPct(streak),
+    perfectBonusApplied: perfect,
   };
+}
+
+function daysBetween(a: string, b: string): number {
+  const dayA = new Date(`${a}T00:00:00Z`).getTime();
+  const dayB = new Date(`${b}T00:00:00Z`).getTime();
+  return Math.round((dayB - dayA) / (24 * 60 * 60 * 1000));
 }
 
 /* ─────────────────── Store ─────────────────── */
@@ -91,12 +106,33 @@ interface NewsChallengeState {
   streak: number;
   lastCompletedDate: string | null;
 
+  /* ─── v2: Streak Freeze ─── */
+  /** Freezes the user has in inventory; max 1. Granted free at most once per week. */
+  streakFreezesAvailable: number;
+  /** Last date we granted a free freeze — used to rate-limit the freebie. */
+  lastFreezeGrantedDate: string | null;
+  /** Set when a freeze was just consumed today so the UI can show a one-time tooltip. */
+  freezeUsedToday: boolean;
+
+  /* ─── v2: Perfect Days ─── */
+  /** Lifetime count of days the user answered 2/2 correctly. */
+  perfectDays: number;
+  /** Convenience: was today a perfect day? Derived from `answered`. */
+  todayPerfect: () => boolean;
+
   /* ─── actions ─── */
   setTodayChallenge: (challenge: DailyChallenge) => void;
   recordAnswer: (itemIdx: 0 | 1, selectedIdx: number, wasCorrect: boolean) => void;
   hasCompletedToday: () => boolean;
   claimRegularChest: () => ChallengeRewardSummary | null;
   claimProChest: () => ChallengeRewardSummary | null;
+  /** Grant a free freeze if it's been ≥ FREE_FREEZE_GRANT_INTERVAL_DAYS since last grant. */
+  maybeGrantFreeFreeze: () => void;
+  /** Spend a freeze to bump streak instead of resetting. Returns true on success. */
+  useStreakFreeze: () => boolean;
+  /** Returns true if a streak-rescue prompt should be shown right now (gap of
+   *  exactly 1-2 days since last completion, freeze available, today not done). */
+  shouldOfferStreakFreeze: () => boolean;
 }
 
 export const useDailyNewsChallengeStore = create<NewsChallengeState>()(
@@ -109,6 +145,17 @@ export const useDailyNewsChallengeStore = create<NewsChallengeState>()(
       proChestOpened: false,
       streak: 0,
       lastCompletedDate: null,
+      streakFreezesAvailable: 0,
+      lastFreezeGrantedDate: null,
+      freezeUsedToday: false,
+      perfectDays: 0,
+
+      todayPerfect: () => {
+        const { answered } = get();
+        return (
+          answered[0]?.wasCorrect === true && answered[1]?.wasCorrect === true
+        );
+      },
 
       setTodayChallenge: (challenge) => {
         const state = get();
@@ -120,11 +167,14 @@ export const useDailyNewsChallengeStore = create<NewsChallengeState>()(
             answered: [null, null],
             regularChestOpened: false,
             proChestOpened: false,
+            freezeUsedToday: false,
           });
         } else {
           // Same day, refresh payload (e.g. images filled in later).
           set({ todayChallenge: challenge });
         }
+        // Try to grant a free freeze (rate-limited internally).
+        get().maybeGrantFreeFreeze();
       },
 
       recordAnswer: (itemIdx, selectedIdx, wasCorrect) => {
@@ -139,17 +189,19 @@ export const useDailyNewsChallengeStore = create<NewsChallengeState>()(
 
         // Bump streak only when BOTH items are now answered for the first time today.
         const bothAnswered = next[0] !== null && next[1] !== null;
-        let { streak, lastCompletedDate } = state;
+        let { streak, lastCompletedDate, perfectDays } = state;
         if (bothAnswered) {
           const today = state.cachedFor ?? todayKey();
           if (lastCompletedDate !== today) {
             const consecutive = lastCompletedDate ? isConsecutive(lastCompletedDate, today) : false;
             streak = consecutive ? streak + 1 : 1;
             lastCompletedDate = today;
+            const bothCorrect = next[0]?.wasCorrect === true && next[1]?.wasCorrect === true;
+            if (bothCorrect) perfectDays += 1;
           }
         }
 
-        set({ answered: next, streak, lastCompletedDate });
+        set({ answered: next, streak, lastCompletedDate, perfectDays });
       },
 
       hasCompletedToday: () => {
@@ -162,7 +214,8 @@ export const useDailyNewsChallengeStore = create<NewsChallengeState>()(
         if (state.regularChestOpened) return null;
         if (!state.hasCompletedToday()) return null;
 
-        const reward = previewRegularReward(state.streak);
+        const perfect = state.todayPerfect();
+        const reward = previewRegularReward(state.streak, perfect);
         const economy = useEconomyUIStore.getState();
         economy.addXP(reward.xp, 'daily_task');
         economy.addCoins(reward.coins, 'quiz');
@@ -181,7 +234,8 @@ export const useDailyNewsChallengeStore = create<NewsChallengeState>()(
 
         // Caller (UI) is responsible for gating on isPro(). Store grants
         // unconditionally — same posture as useDailyQuestsStore.
-        const reward = previewProReward(state.streak);
+        const perfect = state.todayPerfect();
+        const reward = previewProReward(state.streak, perfect);
         const economy = useEconomyUIStore.getState();
         economy.addXP(reward.xp, 'daily_task');
         economy.addCoins(reward.coins, 'quiz');
@@ -191,10 +245,53 @@ export const useDailyNewsChallengeStore = create<NewsChallengeState>()(
         set({ proChestOpened: true });
         return reward;
       },
+
+      maybeGrantFreeFreeze: () => {
+        const state = get();
+        if (state.streakFreezesAvailable >= 1) return; // already capped
+        const today = state.cachedFor ?? todayKey();
+        if (state.lastFreezeGrantedDate) {
+          const gap = daysBetween(state.lastFreezeGrantedDate, today);
+          if (gap < FREE_FREEZE_GRANT_INTERVAL_DAYS) return;
+        }
+        set({ streakFreezesAvailable: 1, lastFreezeGrantedDate: today });
+      },
+
+      shouldOfferStreakFreeze: () => {
+        const state = get();
+        if (state.streakFreezesAvailable <= 0) return false;
+        if (state.streak <= 0) return false;
+        if (state.freezeUsedToday) return false;
+        if (!state.lastCompletedDate) return false;
+        const today = state.cachedFor ?? todayKey();
+        if (state.lastCompletedDate === today) return false; // already done today
+        const gap = daysBetween(state.lastCompletedDate, today);
+        // Offer only when a gap of 2 days (yesterday missed) would otherwise
+        // break the streak. Gaps of 1 are still consecutive; 3+ are too late.
+        return gap === 2;
+      },
+
+      useStreakFreeze: () => {
+        const state = get();
+        if (state.streakFreezesAvailable <= 0) return false;
+        const today = state.cachedFor ?? todayKey();
+        // Pretend yesterday was completed so today's recordAnswer will treat
+        // the streak as consecutive.
+        const yesterday = new Date(`${today}T00:00:00Z`);
+        yesterday.setUTCDate(yesterday.getUTCDate() - 1);
+        const yesterdayKey = yesterday.toISOString().slice(0, 10);
+        set({
+          streakFreezesAvailable: state.streakFreezesAvailable - 1,
+          lastCompletedDate: yesterdayKey,
+          freezeUsedToday: true,
+        });
+        return true;
+      },
     }),
     {
       name: 'daily-news-challenge-store',
       storage: createJSONStorage(() => zustandStorage),
+      version: 2,
       partialize: (state) => ({
         todayChallenge: state.todayChallenge,
         cachedFor: state.cachedFor,
@@ -203,6 +300,10 @@ export const useDailyNewsChallengeStore = create<NewsChallengeState>()(
         proChestOpened: state.proChestOpened,
         streak: state.streak,
         lastCompletedDate: state.lastCompletedDate,
+        streakFreezesAvailable: state.streakFreezesAvailable,
+        lastFreezeGrantedDate: state.lastFreezeGrantedDate,
+        freezeUsedToday: state.freezeUsedToday,
+        perfectDays: state.perfectDays,
       }),
     },
   ),

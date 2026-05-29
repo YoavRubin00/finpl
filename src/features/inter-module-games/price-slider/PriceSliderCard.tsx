@@ -39,6 +39,10 @@ interface Props {
   isActive: boolean;
   /** Inter-module overlay sets this to render a "המשך" button on the result. */
   onContinue?: () => void;
+  /** When true, skip all daily-quota writes — the round is pure entertainment
+   *  (e.g. mounted inside the stock-analyst wait overlay). The user can still
+   *  earn this game as their real daily challenge later in the day. */
+  freePlay?: boolean;
 }
 
 type Phase = 'guessing' | 'revealing' | 'done';
@@ -166,10 +170,11 @@ function ValueTicker({ target, color, delayMs }: { target: number; color: string
   );
 }
 
-export const PriceSliderCard = React.memo(function PriceSliderCard({ isActive: _isActive, onContinue }: Props) {
+export const PriceSliderCard = React.memo(function PriceSliderCard({ isActive: _isActive, onContinue, freePlay = false }: Props) {
   const playPriceSlider = useDailyChallengesStore((s) => s.playPriceSlider);
-  const hasPlayedToday = useDailyChallengesStore((s) => s.hasPriceSliderPlayedToday());
+  const hasPlayedTodayReal = useDailyChallengesStore((s) => s.hasPriceSliderPlayedToday());
   const playsToday = useDailyChallengesStore((s) => s.getPriceSliderPlaysToday());
+  const hasPlayedToday = freePlay ? false : hasPlayedTodayReal;
 
   const [item] = useState<PriceSliderItem>(() => {
     const today = new Date().toISOString().slice(0, 10);
@@ -207,6 +212,13 @@ export const PriceSliderCard = React.memo(function PriceSliderCard({ isActive: _
     (finalAccuracy: number) => {
       if (finalizedRef.current) return;
       finalizedRef.current = true;
+      if (finalAccuracy >= 80) {
+        successHaptic();
+        setShowConfetti(true);
+        setShowFlyingRewards(true);
+        timersRef.current.push(setTimeout(() => setShowConfetti(false), 2400));
+      }
+      if (freePlay) return; // wait-state mount — entertainment only, no rewards/quota write
       const today = new Date().toISOString().slice(0, 10);
       playPriceSlider(today, finalAccuracy);
 
@@ -222,15 +234,8 @@ export const PriceSliderCard = React.memo(function PriceSliderCard({ isActive: _
         log.addTodayCoins(CHALLENGE_COIN_REWARD);
         log.addCorrectAnswer();
       }
-
-      if (finalAccuracy >= 80) {
-        successHaptic();
-        setShowConfetti(true);
-        setShowFlyingRewards(true);
-        timersRef.current.push(setTimeout(() => setShowConfetti(false), 2400));
-      }
     },
-    [playPriceSlider],
+    [playPriceSlider, freePlay],
   );
 
   const handleReveal = useCallback(() => {

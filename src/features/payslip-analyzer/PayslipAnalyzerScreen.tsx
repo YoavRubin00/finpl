@@ -6,6 +6,8 @@ import {
   ScrollView,
   ActivityIndicator,
   StatusBar,
+  KeyboardAvoidingView,
+  Platform,
 } from "react-native";
 import { Image as ExpoImage } from "expo-image";
 import { LinearGradient } from "expo-linear-gradient";
@@ -172,6 +174,17 @@ export function PayslipAnalyzerScreen() {
   const [analyzing, setAnalyzing] = useState(false);
 
   const lastFileUriRef = useRef<string | null>(null);
+  const outerScrollRef = useRef<ScrollView | null>(null);
+
+  // When the chat input gains focus we scroll the outer ScrollView to the
+  // bottom so the input bar isn't hidden behind the keyboard. KAV reclaims
+  // the bottom inset but the outer ScrollView still needs to surface the
+  // input — without this scroll the user just sees more of the result above.
+  const handleChatInputFocus = useCallback(() => {
+    setTimeout(() => {
+      outerScrollRef.current?.scrollToEnd({ animated: true });
+    }, 250);
+  }, []);
 
   useEffect(() => {
     lastFileUriRef.current = file?.uri ?? lastFileUriRef.current;
@@ -277,7 +290,10 @@ export function PayslipAnalyzerScreen() {
   const errorCopy = errorCode ? ERROR_COPY[errorCode] : null;
 
   return (
-    <View style={[styles.root, { paddingTop: insets.top }]}>
+    <KeyboardAvoidingView
+      style={[styles.root, { paddingTop: insets.top }]}
+      behavior={Platform.OS === "ios" ? "padding" : undefined}
+    >
       <StatusBar barStyle="dark-content" backgroundColor="transparent" translucent />
       <LinearGradient
         colors={["#f0f9ff", "#e0f2fe", "#f8fafc"]}
@@ -306,12 +322,14 @@ export function PayslipAnalyzerScreen() {
       />
 
       <ScrollView
+        ref={outerScrollRef}
         style={styles.scroll}
         contentContainerStyle={[
           styles.scrollContent,
           { paddingBottom: Math.max(32, insets.bottom + 16) },
         ]}
         showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
       >
         {phase === "idle" ? <UploadDropzone /> : null}
 
@@ -342,7 +360,11 @@ export function PayslipAnalyzerScreen() {
         ) : null}
 
         {phase === "success" && result ? (
-          <PayslipChat result={result} fileName={file?.displayName} />
+          <PayslipChat
+            result={result}
+            fileName={file?.displayName}
+            onInputFocus={handleChatInputFocus}
+          />
         ) : null}
 
         {phase === "error" ? (
@@ -382,7 +404,7 @@ export function PayslipAnalyzerScreen() {
         onAccepted={handleLegalAccepted}
         onDismiss={handleLegalDismiss}
       />
-    </View>
+    </KeyboardAvoidingView>
   );
 }
 

@@ -37,6 +37,8 @@ export async function GET(request: Request): Promise<Response> {
     // Strip source attribution from the client-facing response — we don't
     // surface which feeds the LLM pulled from. The DB still has the full
     // sourcesUsed + per-item source/sourceUrl/originalTitle for audit.
+    // Note: spread preserves the v2 fields (blankedHeadline/blankedEntity/
+    // chips/correctChipIdx) so the client can render the curiosity-gap UI.
     const rawItems = row.items as DailyChallengePayload['items'];
     const safeItems = rawItems.map((it) => ({
       ...it,

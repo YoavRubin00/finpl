@@ -47,6 +47,7 @@ export function useAnalystSubmit() {
   const removeMessage = useStockAnalystStore((s) => s.removeMessage);
   const setLoading = useStockAnalystStore((s) => s.setLoading);
   const setError = useStockAnalystStore((s) => s.setError);
+  const setPendingDeepCard = useStockAnalystStore((s) => s.setPendingDeepCard);
 
   const canUseAnalystQuick = useSubscriptionStore((s) => s.canUseAnalystQuick);
   const canUseAnalystDeep = useSubscriptionStore((s) => s.canUseAnalystDeep);
@@ -80,6 +81,13 @@ export function useAnalystSubmit() {
       appendMessage({ id: loadingId, kind: 'loading', mode, ticker, ts: Date.now() });
       setLoading(true);
       setError(null);
+
+      // Deep mode defers the card reveal — we keep `loading` true past the
+      // fetch resolution so the input stays locked while the toast waits to
+      // be tapped. `revealPendingDeepCard()` (or the auto-reveal timer in
+      // StockAnalystScreen) clears loading. Other paths (quick success,
+      // any error) clear loading in `finally`.
+      let deepPending = false;
 
       try {
         // 3. Fetch live market data from the deployed Vercel quote endpoint.
@@ -139,24 +147,32 @@ export function useAnalystSubmit() {
             marketContext: { price, priceChangePct, currency: 'USD' },
           });
           const safeDeep: StockAnalysisDeep = { ...deep, ticker, companyName, horizon };
-          removeMessage(loadingId);
-          appendMessage({
-            id: nextId('intro'),
-            kind: 'captain-text',
-            pose: 'tablet',
-            text: `צללתי לעומקה של ${ticker} 🦈 הנה ניתוח מלא לפי הטווח שבחרת:`,
+          // Deep mode defers the card reveal so the "הניתוח מוכן" toast can
+          // surface first — the user might be mid-game in `WaitGameOverlay`.
+          // Reveal flow: `revealPendingDeepCard()` removes the loading bubble
+          // AND appends the deep card in one atomic store update. The intro
+          // captain-text bubble piggybacks on the reveal to feel coherent.
+          const deepCardMsg: AnalystMessage = {
+            id: nextId('dc'),
+            kind: 'deep-card',
+            data: safeDeep,
             ts: Date.now(),
-          });
-          appendMessage({ id: nextId('dc'), kind: 'deep-card', data: safeDeep, ts: Date.now() });
+          };
+          setPendingDeepCard(deepCardMsg, loadingId);
           recordAnalystDeepUsage();
           addDeepToHistory(safeDeep);
+          deepPending = true;
         }
 
-        // 4. Optional portfolio context card
-        const positions = useTradingStore.getState().positions;
-        const ctx = buildPortfolioContext(positions);
-        if (ctx) {
-          appendMessage({ id: nextId('pc'), kind: 'portfolio-context', data: ctx, ts: Date.now() });
+        // 4. Optional portfolio context card — appended only for quick mode.
+        //    For deep mode the deep-card is still pending behind the toast;
+        //    revealing the deep card later is enough surface for context.
+        if (!deepPending) {
+          const positions = useTradingStore.getState().positions;
+          const ctx = buildPortfolioContext(positions);
+          if (ctx) {
+            appendMessage({ id: nextId('pc'), kind: 'portfolio-context', data: ctx, ts: Date.now() });
+          }
         }
 
         return { ok: true };
@@ -167,7 +183,9 @@ export function useAnalystSubmit() {
         setError(message);
         return { ok: false, reason: 'error', message };
       } finally {
-        setLoading(false);
+        // Deep success keeps loading true until the user reveals; everything
+        // else (quick success / errors / gate-skips-don't-reach-here) clears.
+        if (!deepPending) setLoading(false);
       }
     },
     [
@@ -181,6 +199,7 @@ export function useAnalystSubmit() {
       removeMessage,
       setLoading,
       setError,
+      setPendingDeepCard,
       addQuickToHistory,
       addDeepToHistory,
     ],

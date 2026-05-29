@@ -43,17 +43,20 @@ export interface ChallengeOption {
 
 export interface ChallengeItem {
   headlineHe: string;        // paraphrased — NEVER verbatim source
-  summaryHe: string;          // 2 sentences, casual Hebrew
+  summaryHe: string;          // 2 sentences, casual Hebrew — revealed AFTER pick
   source: string;             // "Calcalist" / "Globes" / "CNBC"
   sourceUrl: string;
   originalTitle: string;      // stored for audit only; NEVER shown to user
   imageUrl: string | null;    // Higgsfield CDN URL or null (fallback gradient)
-  question: string;
-  options: [string, string, string, string];
-  correctIdx: 0 | 1 | 2 | 3;
   explanation: string;        // "תכל'ס" 2-3 sentences
   historicalExample: string;  // similar past event
   chatContext: string;        // briefing fed to AI mentor on "ask" tap
+
+  // Blanked-Headline v2 — curiosity-gap question format.
+  blankedHeadline: string;    // headlineHe with the central entity replaced by ____
+  blankedEntity: string;      // exact entity that was blanked (matches one chip)
+  chips: [string, string, string, string];
+  correctChipIdx: 0 | 1 | 2 | 3;
 }
 
 export interface DailyChallengePayload {
@@ -131,13 +134,14 @@ const SYSTEM_PROMPT = `אתה כותב את "אקטואליה פיננסית" �
    אם אין כותרת ישראלית טובה ב-24 שעות האחרונות — תקן את item[0] למקרו עולמי שמשפיע ישירות על השווקים בארץ (למשל החלטת ריבית באירופה/ארה"ב, מלחמת סחר), והבהר בסיכום את ההשפעה על משקיע ישראלי.
 
 - לכל item:
-  * headlineHe: כותרת מנוסחת מחדש (לא העתק מהמקור), עברית קולחת, דור Z, 6-12 מילים.
-  * summaryHe: 2 משפטים תמציתיים — מה קרה ולמה זה חשוב למשקיע ישראלי.
+  * headlineHe: כותרת מנוסחת מחדש (לא העתק מהמקור), עברית קולחת, דור Z, 6-12 מילים. **חובה** שבכותרת יופיע entity מרכזי אחד (שם חברה ספציפי, סכום כספי, מספר אחוז, מדינה, שם אישיות) — לא רק מילים גנריות.
+  * summaryHe: 2 משפטים תמציתיים — מה קרה ולמה זה חשוב למשקיע ישראלי. ה-summary ייחשף **רק אחרי** שהמשתמש פותר את הכותרת.
   * source + sourceUrl + originalTitle: חובה להעתיק מתוך הכותרות שהוזנו לך. אסור להמציא URL או מקור.
-  * question: שאלה אחת קצרה (איך זה משפיע / מה לעשות / האם זה חכם).
-  * options: 4 תשובות באורך דומה, רק אחת נכונה.
-  * correctIdx: 0-3.
-  * explanation: 2-3 משפטים "תכל'ס" למה התשובה נכונה.
+  * blankedEntity: ה-entity המדויק מהכותרת שיוסתר (חברה / סכום / אחוז / מדינה — מספיק ייחודי שאי אפשר לנחש סתם, אבל גם לא משפט שלם). חובה להופיע מילה-במילה ב-headlineHe.
+  * blankedHeadline: ה-headlineHe המקורי כשה-blankedEntity מוחלף בארבעה underscores (____). חובה להכיל בדיוק "____" פעם אחת.
+  * chips: מערך של 4 מועמדים. אחד מהם **חייב** להיות זהה מילולית ל-blankedEntity. שלושת השאר distractors מאותה קטגוריה (אם blankedEntity הוא חברה → השאר חברות מאותו תחום; אם הוא אחוז → השאר אחוזים בטווח דומה; אם הוא סכום → השאר סכומים באותו סדר גודל).
+  * correctChipIdx: 0-3 — האינדקס של ה-chip שזהה ל-blankedEntity. ערבב את הסדר אקראית.
+  * explanation: 2-3 משפטים "תכל'ס" למה התשובה נכונה ולמה זה חשוב.
   * historicalExample: דוגמה דומה מהעבר (תאריך + מה קרה אז) — רק אם אתה בטוח במאה אחוז שזה אמיתי, אחרת השאר מחרוזת ריקה.
   * chatContext: פסקה אחת ש-AI mentor יקבל כקונטקסט אם המשתמש לוחץ "שאל".
 
@@ -148,7 +152,18 @@ const SYSTEM_PROMPT = `אתה כותב את "אקטואליה פיננסית" �
 - עברית טבעית, לא תרגום מילולי מאנגלית.
 - אסור להעתיק כותרות מילולית — לנסח מחדש.
 - אם כותרת שטחית / לא קשורה לפיננסי — דלג ובחר אחרת.
-- options חייבות להיות סבירות באמת (לא "נכונה ברורה + 3 מטופשות").`;
+- chips חייבות להיות סבירות באמת — distractors מאותה קטגוריה גרמטית וסמנטית (אם הנכון "אנבידיה" → תן "AMD", "אינטל", "ברודקום" — לא "פיצה", "תפוח", "תרדמת").
+- chips[correctChipIdx] חייב להיות זהה תוויתית ל-blankedEntity. המערכת תפיל את הפריט אם לא.
+
+דוגמה לפלט תקין:
+{
+  "headlineHe": "אנבידיה חצתה שווי שוק של 4 טריליון דולר",
+  "blankedHeadline": "אנבידיה חצתה שווי שוק של ____ דולר",
+  "blankedEntity": "4 טריליון",
+  "chips": ["2 טריליון", "4 טריליון", "6 טריליון", "8 טריליון"],
+  "correctChipIdx": 1,
+  ...
+}`;
 
 interface GeminiResponse {
   candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }>;
@@ -162,9 +177,10 @@ interface RawGeminiPayload {
     source?: string;
     sourceUrl?: string;
     originalTitle?: string;
-    question?: string;
-    options?: string[];
-    correctIdx?: number;
+    blankedHeadline?: string;
+    blankedEntity?: string;
+    chips?: string[];
+    correctChipIdx?: number;
     explanation?: string;
     historicalExample?: string;
     chatContext?: string;
@@ -236,15 +252,16 @@ function normalizePayload(
     if (
       !it.headlineHe ||
       !it.summaryHe ||
-      !it.question ||
-      !Array.isArray(it.options) ||
-      it.options.length !== 4 ||
-      typeof it.correctIdx !== 'number' ||
-      it.correctIdx < 0 ||
-      it.correctIdx > 3 ||
+      !it.blankedHeadline ||
+      !it.blankedEntity ||
+      !Array.isArray(it.chips) ||
+      it.chips.length !== 4 ||
+      typeof it.correctChipIdx !== 'number' ||
+      it.correctChipIdx < 0 ||
+      it.correctChipIdx > 3 ||
       !it.explanation
     ) {
-      throw new Error(`Gemini item ${idx} malformed`);
+      throw new Error(`Gemini item ${idx} malformed (missing required v2 fields)`);
     }
     // Anti-hallucination: the sourceUrl MUST be one of the URLs we fed Tavily
     // → Gemini. If the LLM invented or mangled the URL, fail loudly so we
@@ -254,6 +271,27 @@ function normalizePayload(
         `Gemini item ${idx} has fabricated sourceUrl: ${it.sourceUrl ?? '(missing)'} — not in Tavily bundle`,
       );
     }
+    // Blanked-Headline integrity: the chip at correctChipIdx must equal the
+    // blankedEntity, otherwise the UI's reveal animation will show the wrong
+    // text. Fail loudly so we regenerate rather than ship a broken puzzle.
+    if (it.chips[it.correctChipIdx] !== it.blankedEntity) {
+      throw new Error(
+        `Gemini item ${idx}: chips[correctChipIdx]="${it.chips[it.correctChipIdx]}" ≠ blankedEntity="${it.blankedEntity}"`,
+      );
+    }
+    // The blanked headline must contain exactly one "____" marker, otherwise
+    // the morph animation has nowhere to splice the answer in.
+    const blanks = it.blankedHeadline.match(/____/g);
+    if (!blanks || blanks.length !== 1) {
+      throw new Error(
+        `Gemini item ${idx}: blankedHeadline must contain exactly one "____" marker (found ${blanks?.length ?? 0})`,
+      );
+    }
+    // Chips must be unique — duplicates make the puzzle ambiguous.
+    const uniqueChips = new Set(it.chips);
+    if (uniqueChips.size !== 4) {
+      throw new Error(`Gemini item ${idx}: chips contain duplicates`);
+    }
     return {
       headlineHe: it.headlineHe,
       summaryHe: it.summaryHe,
@@ -261,9 +299,10 @@ function normalizePayload(
       sourceUrl: it.sourceUrl ?? '',
       originalTitle: it.originalTitle ?? '',
       imageUrl: null, // filled in by Higgsfield step
-      question: it.question,
-      options: it.options as [string, string, string, string],
-      correctIdx: it.correctIdx as 0 | 1 | 2 | 3,
+      blankedHeadline: it.blankedHeadline,
+      blankedEntity: it.blankedEntity,
+      chips: it.chips as [string, string, string, string],
+      correctChipIdx: it.correctChipIdx as 0 | 1 | 2 | 3,
       explanation: it.explanation,
       historicalExample: it.historicalExample ?? '',
       chatContext: it.chatContext ?? `${it.headlineHe}\n\n${it.summaryHe}`,

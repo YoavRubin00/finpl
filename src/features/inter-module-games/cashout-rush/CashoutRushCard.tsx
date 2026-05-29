@@ -69,6 +69,10 @@ interface Props {
   isActive: boolean;
   /** Inter-module overlay sets this to render a "המשך" button on the result. */
   onContinue?: () => void;
+  /** When true, skip all daily-quota writes — the round is pure entertainment
+   *  (e.g. mounted inside the stock-analyst wait overlay). The user can still
+   *  earn this game as their real daily challenge later in the day. */
+  freePlay?: boolean;
 }
 
 type Phase = 'idle' | 'running' | 'cashed' | 'crashed' | 'education';
@@ -213,10 +217,11 @@ function GambleWarning() {
   );
 }
 
-export const CashoutRushCard = React.memo(function CashoutRushCard({ isActive, onContinue }: Props) {
+export const CashoutRushCard = React.memo(function CashoutRushCard({ isActive, onContinue, freePlay = false }: Props) {
   const playCashoutRush = useDailyChallengesStore((s) => s.playCashoutRush);
-  const hasPlayedToday = useDailyChallengesStore((s) => s.hasCashoutRushPlayedToday());
+  const hasPlayedTodayReal = useDailyChallengesStore((s) => s.hasCashoutRushPlayedToday());
   const playsToday = useDailyChallengesStore((s) => s.getCashoutRushPlaysToday());
+  const hasPlayedToday = freePlay ? false : hasPlayedTodayReal;
 
   const [phase, setPhase] = useState<Phase>('idle');
   const [currentTick, setCurrentTick] = useState(0);
@@ -275,6 +280,13 @@ export const CashoutRushCard = React.memo(function CashoutRushCard({ isActive, o
     (cashedOut: boolean) => {
       if (finalizedRef.current) return;
       finalizedRef.current = true;
+      if (cashedOut) {
+        successHaptic();
+        setShowConfetti(true);
+        setShowFlyingRewards(true);
+        confettiRef.current = setTimeout(() => setShowConfetti(false), 2400);
+      }
+      if (freePlay) return; // wait-state mount — entertainment only, no rewards/quota write
       const today = new Date().toISOString().slice(0, 10);
       playCashoutRush(today, cashedOut);
 
@@ -290,19 +302,12 @@ export const CashoutRushCard = React.memo(function CashoutRushCard({ isActive, o
         log.addTodayCoins(CHALLENGE_COIN_REWARD);
       }
 
-      if (cashedOut) {
-        successHaptic();
-        setShowConfetti(true);
-        setShowFlyingRewards(true);
-        confettiRef.current = setTimeout(() => setShowConfetti(false), 2400);
-      }
-
       // Educational twist: after 3 plays, show the "it's gambling" message
       if (playsToday + 1 >= 3) {
         setShowEducation(true);
       }
     },
-    [playCashoutRush, playsToday],
+    [playCashoutRush, playsToday, freePlay],
   );
 
   const startGame = useCallback(() => {
@@ -383,7 +388,9 @@ export const CashoutRushCard = React.memo(function CashoutRushCard({ isActive, o
                   ? 'יצאת בזמן'
                   : phase === 'crashed'
                     ? 'השוק קרס בתאווה קיצונית'
-                    : `${remainingPlays}/${MAX_DAILY_PLAYS} סבבים נותרו`}
+                    : freePlay
+                      ? 'שחק עד לקריסה — או יציאה בזמן.'
+                      : `${remainingPlays}/${MAX_DAILY_PLAYS} סבבים נותרו`}
             </Text>
           </View>
         </Animated.View>

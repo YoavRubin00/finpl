@@ -30,6 +30,8 @@ import { PortfolioContextCard } from './components/PortfolioContextCard';
 import { MissedOpportunityCard } from './components/MissedOpportunityCard';
 import { CaptainWarningCard } from './components/CaptainWarningCard';
 import { LoadingBubble } from './components/LoadingBubble';
+import { WaitGameOverlay } from './components/WaitGameOverlay';
+import { AnalysisReadyToast } from './components/AnalysisReadyToast';
 import { FirstLaunchConsentModal } from './components/FirstLaunchConsentModal';
 import { CapExceededAnalystModal } from './components/CapExceededAnalystModal';
 import { HistoryModal } from './components/HistoryModal';
@@ -62,6 +64,11 @@ export function StockAnalystScreen(): React.ReactElement {
   const isPro = useSubscriptionStore((s) => s.isPro);
   const quickRemaining = useSubscriptionStore((s) => s.getAnalystQuickRemaining)();
   const deepRemaining = useSubscriptionStore((s) => s.getAnalystDeepRemaining)();
+
+  const pendingDeepCard = useStockAnalystStore((s) => s.pendingDeepCard);
+  const revealPendingDeepCard = useStockAnalystStore((s) => s.revealPendingDeepCard);
+  const waitOverlayVisible = useStockAnalystStore((s) => s.waitOverlayVisible);
+  const closeWaitOverlay = useStockAnalystStore((s) => s.closeWaitOverlay);
 
   const { submit } = useAnalystSubmit();
 
@@ -433,6 +440,16 @@ export function StockAnalystScreen(): React.ReactElement {
       />
       <HistoryModal visible={historyVisible} onClose={() => setHistoryVisible(false)} />
       {introVisible ? <IntroVideo onDone={() => setIntroVisible(false)} /> : null}
+
+      {/* Wait-state minigame overlay — mounts above the chat while the user
+          taps "🎮 שחק בינתיים" inside LoadingBubble. Self-contained: picks
+          a random game from the registry and renders it in freePlay mode. */}
+      <WaitGameOverlay visible={waitOverlayVisible} onClose={closeWaitOverlay} />
+
+      {/* Analysis-ready toast — surfaces when a deep analysis has landed but
+          hasn't been revealed yet. Tap → reveals the deep card AND closes
+          any open wait overlay (handled inside revealPendingDeepCard). */}
+      <AnalysisReadyToast visible={!!pendingDeepCard} onReveal={revealPendingDeepCard} />
     </View>
   );
 }

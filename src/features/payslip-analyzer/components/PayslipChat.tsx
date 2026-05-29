@@ -20,6 +20,9 @@ import type { PayslipResult } from '../types';
 interface PayslipChatProps {
   result: PayslipResult;
   fileName?: string;
+  /** Fired when the chat input gains focus. The parent screen uses this to
+   *  scroll its outer ScrollView so the input bar lands above the keyboard. */
+  onInputFocus?: () => void;
 }
 
 interface ChatMessage {
@@ -50,7 +53,7 @@ const RTL = { writingDirection: 'rtl' as const, textAlign: 'right' as const };
  * deliberately — bubble shapes, input bar, send button, starter chips — so
  * the experience feels continuous with the main app chat.
  */
-export function PayslipChat({ result, fileName }: PayslipChatProps): React.ReactElement {
+export function PayslipChat({ result, fileName, onInputFocus }: PayslipChatProps): React.ReactElement {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
@@ -245,6 +248,7 @@ export function PayslipChat({ result, fileName }: PayslipChatProps): React.React
             maxLength={500}
             style={[styles.textInput, RTL]}
             accessibilityLabel="שאלה לשארק על התלוש"
+            onFocus={onInputFocus}
           />
         </View>
         <Pressable
