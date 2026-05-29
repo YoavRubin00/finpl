@@ -159,13 +159,19 @@ export function LoadingBubble({ mode, ticker }: Props): React.ReactElement {
               borderRadius: 999,
               backgroundColor: 'rgba(186,230,253,0.5)',
               overflow: 'hidden',
+              // RTL: anchor the growing fill to the right edge so the bar
+              // grows from right→left as the analysis progresses. Matches the
+              // Hebrew reading direction (and the project-wide RTL slider rule).
+              flexDirection: 'row-reverse',
             }}
           >
             <Animated.View style={[barStyle, { height: '100%' }]}>
               <LinearGradient
                 colors={isReady ? ['#22c55e', '#16a34a'] : ['#38bdf8', '#0369a1']}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 0 }}
+                // Gradient direction also flipped — the bright stop now sits
+                // on the right (the leading edge of the fill in RTL).
+                start={{ x: 1, y: 0 }}
+                end={{ x: 0, y: 0 }}
                 style={{ flex: 1 }}
               />
             </Animated.View>
