@@ -786,6 +786,7 @@ const ChapterSection = React.memo(function ChapterSection({
   questCompletedCount,
   questTotalCount,
   onQuestPress,
+  newsBadgeNode,
 }: {
   arena: ArenaConfig;
   chapter: typeof chapter1Data;
@@ -812,6 +813,11 @@ const ChapterSection = React.memo(function ChapterSection({
   questCompletedCount?: number;
   questTotalCount?: number;
   onQuestPress?: () => void;
+  /** When present, renders this node (the Daily News Challenge button) on the
+   *  opposite side of the active module — the "dead space" the user's eye
+   *  lands on when they open the learn screen. Only the chapter containing
+   *  the active module receives this prop. */
+  newsBadgeNode?: React.ReactNode;
 }) {
   const firstIncompleteIndex = chapter.modules.findIndex(
     (m) => !completedModules.includes(m.id) && !m.comingSoon && (isPro || !PRO_LOCKED_SIMS.has(m.id)),
@@ -890,7 +896,28 @@ const ChapterSection = React.memo(function ChapterSection({
           const questOffsetX = -getNodeOffset(i);
 
           return (
-            <View key={module.id}>
+            <View key={module.id} style={isActive ? { position: 'relative' } : undefined}>
+              {/* Daily News Challenge badge — floats beside the active module
+                  on the opposite side of the Duolingo-style alternating path,
+                  so it sits in the "dead space" the user's eye lands on when
+                  the screen auto-scrolls them to their next module. */}
+              {isActive && newsBadgeNode && (
+                <View
+                  pointerEvents="box-none"
+                  style={{
+                    position: 'absolute',
+                    top: 12,
+                    // Flip the side relative to the active node so we land in
+                    // the empty half-row. getNodeOffset alternates ±48ish px;
+                    // -offset puts us on the visual opposite side.
+                    left: getNodeOffset(i) >= 0 ? 14 : undefined,
+                    right: getNodeOffset(i) < 0 ? 14 : undefined,
+                    zIndex: 20,
+                  }}
+                >
+                  {newsBadgeNode}
+                </View>
+              )}
               <ModuleNode
                 module={module}
                 state={state}
@@ -1125,13 +1152,19 @@ export function DuoLearnScreen() {
     }, [calcResumeScrollY])
   );
 
-  // Auto-scroll to the active module on initial mount
+  // Auto-scroll to the active module on initial mount — always, not only
+  // when the active node is below the fold. User wants the learn screen to
+  // open straight to "where you are next," so the news badge + glowing node
+  // both sit in the natural eye-line on first paint.
   useEffect(() => {
     const y = calcResumeScrollY();
-    if (y > 300) {
+    if (y > 0) {
+      // Two-pass scroll: snap immediately so the first paint already lands
+      // on the active node, then a tiny smooth nudge once layout settles.
+      scrollRef.current?.scrollTo({ y: Math.max(0, y - 120), animated: false });
       setTimeout(() => {
-        scrollRef.current?.scrollTo({ y: y - 80, animated: false });
-      }, 150);
+        scrollRef.current?.scrollTo({ y: Math.max(0, y - 120), animated: true });
+      }, 250);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -1288,32 +1321,6 @@ export function DuoLearnScreen() {
         </Modal>
       )}
       <SafeAreaView style={{ flex: 1 }} edges={["left", "right"]}>
-        {/* Floating Daily News Challenge entry — pulses + glows in the
-            top-left (RTL: top-LEFT = "dead" space; learn map is right-anchored)
-            until the user completes today's challenge. The unread dot signals
-            a fresh challenge; the pulse stops + icon goes muted gray when
-            done. Hidden during walkthrough to avoid stealing the tutorial's
-            attention. Rendered as an absolute overlay so it floats above the
-            ScrollView without pushing chapters down. */}
-        {!isWalkthroughActive && (
-          <View
-            pointerEvents="box-none"
-            style={{
-              position: 'absolute',
-              top: 8,
-              left: 12,
-              zIndex: 50,
-            }}
-          >
-            <NewsIconButton
-              size={32}
-              hasNewsChallenge={!!newsChallenge}
-              newsCompleted={newsCompleted}
-              onPress={handleNewsPress}
-              compact
-            />
-          </View>
-        )}
         <ScrollView
           ref={scrollRef}
           showsVerticalScrollIndicator={false}
@@ -1383,6 +1390,15 @@ export function DuoLearnScreen() {
                 questCompletedCount={hasActiveModule ? questCompletedCount : undefined}
                 questTotalCount={hasActiveModule ? questTotalCount : undefined}
                 onQuestPress={hasActiveModule ? handleQuestPress : undefined}
+                newsBadgeNode={hasActiveModule && !isWalkthroughActive ? (
+                  <NewsIconButton
+                    size={36}
+                    hasNewsChallenge={!!newsChallenge}
+                    newsCompleted={newsCompleted}
+                    onPress={handleNewsPress}
+                    compact
+                  />
+                ) : undefined}
               />
             );
 

@@ -1,7 +1,6 @@
 {
   "pod-1-credit": "https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/audio/podcasts/pod-1-credit.mp3",
   "pod-2-bnpl": "https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/audio/podcasts/pod-2-bnpl.mp3",
-  "pod-3-emergency": "https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/audio/podcasts/pod-3-emergency.mp3",
   "pod-4-firstsalary": "https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/audio/podcasts/pod-4-firstsalary.mp3",
   "pod-5-lending": "https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/audio/podcasts/pod-5-lending.mp3",
   "pod-6-travel": "https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/audio/podcasts/pod-6-travel.mp3",
@@ -10,5 +9,6 @@
   "pod-9-salary": "https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/audio/podcasts/pod-9-salary.mp3",
   "pod-10-mortgage": "https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/audio/podcasts/pod-10-mortgage.mp3",
   "pod-11-inflation": "https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/audio/podcasts/pod-11-inflation.mp3",
-  "pod-12-startinvesting": "https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/audio/podcasts/pod-12-startinvesting.mp3"
+  "pod-12-startinvesting": "https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/audio/podcasts/pod-12-startinvesting.mp3",
+  "pod-3-emergency": "https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/audio/podcasts/pod-3-emergency.mp3"
 }

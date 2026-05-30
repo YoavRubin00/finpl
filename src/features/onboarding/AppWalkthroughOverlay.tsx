@@ -78,15 +78,11 @@ const STEPS: WalkthroughStep[] = [
     screenSignal: "tools",
     audioUrl: "https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/audios/walkthrough/step-3-zwq7Ob4c2qz5wXEFANX40AzefZ9hu9.mp3",
   },
-  {
-    title: "תבחרו סגנון לשארק",
-    emoji: "",
-    message: "לפני שנמשיך, תבחרו איך תרצו ששארק ידבר איתכם! חכם? ישיר? חם? אנליטי?",
-    navigateTo: "/(tabs)/chat",
-    ctaLabel: "יאללה לבחור!",
-    screenSignal: "chat",
-    audioUrl: "https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/audios/walkthrough/step-4-w8O4mJUove3xxf8REvE8tXRchgcyuD.mp3",
-  },
+  // Chat-style picker moved out of the walkthrough — the picker auto-shows
+  // on the user's first chat entry (see ChatScreen `!hasChosenStyle` gate).
+  // The chat tab still gets highlighted via `screenSignal: 'chat'` so users
+  // know where to find it; navigation is intentionally null because routing
+  // to /(tabs)/chat here would race the picker with this overlay.
   {
     title: "הצ'אט של שארק",
     emoji: "💬",
@@ -176,8 +172,6 @@ export function AppWalkthroughOverlay() {
       try { captureEvent('walkthrough_started', {}); } catch { /* non-fatal */ }
     }
   }, [hasSeenWalkthrough, ready, step, walkthroughTriggered]);
-  // Track whether user pressed CTA on the chat-style step and is now choosing
-  const [waitingForChatChoice, setWaitingForChatChoice] = useState(false);
   // Key to force re-mount of content for enter/exit animation between steps
   const [contentKey, setContentKey] = useState(0);
   const isMinor = useAuthStore((s) => s.profile?.ageGroup === "minor");
@@ -193,17 +187,6 @@ export function AppWalkthroughOverlay() {
   const stepConfig = step >= 0 && step < stepsWithLast.length ? stepsWithLast[step] : null;
 
   const setActiveScreen = useTutorialStore((s) => s.setWalkthroughActiveScreen);
-  const hasChosenChatStyle = useTutorialStore((s) => s.hasChosenChatStyle);
-
-  // Auto-advance from step 4 → 5 once user has chosen a chat style
-  useEffect(() => {
-    if (step === 4 && waitingForChatChoice && hasChosenChatStyle) {
-      setWaitingForChatChoice(false);
-      setStep(5);
-      setContentKey((k) => k + 1);
-      setActiveScreen("chat");
-    }
-  }, [step, waitingForChatChoice, hasChosenChatStyle, setStep, setActiveScreen]);
 
   // Audio Playback, narrow deps to audioUrl only so stepConfig reference
   // changes (from .map() each render) don't re-create the player every render.
@@ -211,7 +194,7 @@ export function AppWalkthroughOverlay() {
   useEffect(() => {
     let playerObj: AudioPlayer | null = null;
 
-    if (stepAudioUrl && ready && !waitingForChatChoice) {
+    if (stepAudioUrl && ready) {
       try {
         const player = createAudioPlayer({ uri: stepAudioUrl });
         player.play();
@@ -224,7 +207,7 @@ export function AppWalkthroughOverlay() {
         try { playerObj.pause(); playerObj.remove(); } catch { /* ignore */ }
       }
     };
-  }, [stepAudioUrl, ready, waitingForChatChoice]);
+  }, [stepAudioUrl, ready]);
 
   /** Check if we're already on the target route to avoid redundant navigation */
   const isAlreadyOnRoute = useCallback((target: string | null) => {
@@ -273,16 +256,6 @@ export function AppWalkthroughOverlay() {
       if (transitioning) return;
       try { tapHaptic(); } catch { /* haptics can fail on iPad */ }
 
-      // Step 4 (chat style): pressing CTA hides overlay so user can pick a style
-      if (step === 4 && !hasChosenChatStyle) {
-        setWaitingForChatChoice(true);
-        setActiveScreen("chat");
-        if (!isAlreadyOnRoute("/(tabs)/chat")) {
-          try { router.replace("/(tabs)/chat" as never); } catch {}
-        }
-        return;
-      }
-
       if (step >= stepsWithLast.length - 1) {
         try { captureEvent('walkthrough_completed', { total_steps: stepsWithLast.length }); } catch { /* non-fatal */ }
         completeWalkthrough();
@@ -326,7 +299,7 @@ export function AppWalkthroughOverlay() {
     } catch (e) {
       console.warn("[Walkthrough.handleNext]", e instanceof Error ? e.message : String(e));
     }
-  }, [step, setStep, completeWalkthrough, setActiveScreen, router, transitioning, isAlreadyOnRoute, hasChosenChatStyle, stepsWithLast, routePostWalkthrough]);
+  }, [step, setStep, completeWalkthrough, setActiveScreen, router, transitioning, isAlreadyOnRoute, stepsWithLast, routePostWalkthrough]);
 
   const handleBack = useCallback(() => {
     try {
@@ -353,16 +326,15 @@ export function AppWalkthroughOverlay() {
       // "user is now in the app" and should still see the permission prompt.
       try { useNotificationStore.getState().resetBannerDismissed(); } catch { /* non-fatal */ }
       try { useBannerCooldownStore.getState().reset(); } catch { /* non-fatal */ }
+      // Same post-walkthrough flow as completion: Pro paywall (non-Pro) +
+      // register CTA (guest) once we land back on /(tabs).
+      routePostWalkthrough('skipped');
     } catch (e) {
       console.warn("[Walkthrough.handleSkip]", e instanceof Error ? e.message : String(e));
     }
-  }, [completeWalkthrough, step]);
+  }, [completeWalkthrough, step, routePostWalkthrough]);
 
   if (hasSeenWalkthrough || step < 0 || !stepConfig || !ready) return null;
-
-  // Fully unmount while user picks chat style — visible={false} on iOS
-  // can still intercept touches and block the ChatStylePicker below.
-  if (waitingForChatChoice && !hasChosenChatStyle) return null;
 
   const enterAnim = reducedMotion ? undefined : FadeIn.duration(280);
 
