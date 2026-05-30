@@ -70,13 +70,29 @@ interface FeatureRow {
   pro: string | boolean;
 }
 
+// 6 focused rows — Moni 2026-05-30 paywall rebuild. Industry rule of thumb
+// (Brawl Pass, Duolingo Super, Spotify Premium): 5-8 rows max. More than
+// that → cognitive overload, conversion drops. Every row here answers
+// "what am I getting that I can't live without?"
+//
+// Removed from the previous list:
+//  - "משחקי פיד" — feature removed entirely (commit 42286b7)
+//  - "ארנה"      — superseded by "סימולציות פרימיום" content lock
+//  - "פריטי פרימיום מהחנות" — cosmetic, weak conversion driver
+// Intentionally NOT added: shark voice call (feature not yet shipped).
 const FEATURES: FeatureRow[] = [
-  { label: "לבבות ללא הגבלה", free: false, pro: true },
+  // The line Yoav specifically asked for — "Financial Tools, limited vs full"
+  { label: "כלים פיננסיים מתקדמים", free: "גישה מוגבלת", pro: "גישה מלאה" },
+  // AI chat is the real value driver (lifeline + analyst + insights)
+  { label: "צ'אט AI עם שארק", free: "טעימה יומית", pro: "ללא הגבלה" },
+  // Content lock — the 7 Pro-only simulations in proGates.ts
+  { label: "7 סימולציות פרימיום", free: false, pro: true },
+  // The most viscerally felt daily friction
+  { label: "לבבות", free: "5", pro: "אינסוף ♾️" },
+  // Universal Pro signal — everyone understands the value
   { label: "ללא פרסומות", free: false, pro: true },
-  { label: "משחקי פיד", free: "3 ברצף", pro: "ללא הגבלה" },
-  { label: "צ'אט AI", free: "2 הודעות", pro: "ללא הגבלה" },
-  { label: "תובנות AI מתקדמות", free: false, pro: true },
-  { label: "פריטי פרימיום מהחנות", free: false, pro: true },
+  // Progression boost — small but compounds over time
+  { label: "בוסט XP", free: "x1", pro: "x1.5" },
 ];
 
 // ── Decorative sparkle dots ──────────────────────────────────────────────
