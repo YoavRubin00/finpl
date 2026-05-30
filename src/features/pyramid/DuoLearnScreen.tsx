@@ -79,6 +79,10 @@ import { MapEasterEggModal } from "../../components/fun/MapEasterEggModal";
 import { useDailyQuestsStore } from "../daily-quests/useDailyQuestsStore";
 import { DailyQuestsSheet } from "../daily-quests/DailyQuestsSheet";
 import { QuestPathNode } from "../daily-quests/QuestPathNode";
+import { PearlNode } from "../pearls/PearlNode";
+import { PearlSheet } from "../pearls/PearlSheet";
+import { pearlConfigFor, pearlIdFor, type PearlContent } from "../pearls/pearlConfig";
+import { usePearlsStore } from "../pearls/usePearlsStore";
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -800,6 +804,8 @@ const ChapterSection = React.memo(function ChapterSection({
   onQuestPress,
   newsBadgeNode,
   isGlobalActiveChapter,
+  onPearlPress,
+  completedPearlIds,
 }: {
   arena: ArenaConfig;
   chapter: typeof chapter1Data;
@@ -837,6 +843,12 @@ const ChapterSection = React.memo(function ChapterSection({
    *  lands on when they open the learn screen. Only the chapter containing
    *  the active module receives this prop. */
   newsBadgeNode?: React.ReactNode;
+  /** Opens the Pearl sheet for the given pearl. Tap on a Pearl node calls
+   *  this; locked Pearls don't call it (they're rendered non-pressable). */
+  onPearlPress: (pearl: PearlContent) => void;
+  /** Pearl ids the user has already completed at least once — drives the
+   *  green checkmark on the path node. */
+  completedPearlIds: string[];
 }) {
   const firstIncompleteIndex = chapter.modules.findIndex(
     (m) => !completedModules.includes(m.id) && !m.comingSoon && (isPro || !PRO_LOCKED_SIMS.has(m.id)),
@@ -918,55 +930,35 @@ const ChapterSection = React.memo(function ChapterSection({
           const questOffsetX = -getNodeOffset(i);
 
           return (
-            <View key={module.id}>
-              {/* Daily News Challenge — own dedicated row above the active
-                  module so it doesn't overlap with lesson labels or the path
-                  connector. Previously was absolute-positioned beside the
-                  active node which collided with the side label chip. Now
-                  occupies its own vertical slice with breathing room. */}
+            <View key={module.id} style={isActive ? { position: 'relative' } : undefined}>
+              {/* Daily News Challenge badge — floats beside the SAME side as
+                  Finn/shark (not the opposite side which is where the lesson
+                  label chip lives). top:88 places it below the shark's head,
+                  next to the shark's body, so it visually belongs to the
+                  character without overlapping the label chip or the path. */}
               {isActive && newsBadgeNode && (
                 <View
+                  pointerEvents="box-none"
                   style={{
-                    flexDirection: 'row',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: 10,
-                    marginTop: 8,
-                    marginBottom: 18,
-                    paddingHorizontal: 16,
+                    position: 'absolute',
+                    top: 88,
+                    // Match Finn's side. finnGoesRight = offsetX >= 0 (see
+                    // ModuleNode). Same side = next-to-shark + opposite of
+                    // the label chip → no overlap.
+                    left: getNodeOffset(i) < 0 ? 16 : undefined,
+                    right: getNodeOffset(i) >= 0 ? 16 : undefined,
+                    zIndex: 100,
+                    elevation: 12,
+                    backgroundColor: '#ffffff',
+                    padding: 8,
+                    borderRadius: 999,
+                    shadowColor: '#0c4a6e',
+                    shadowOffset: { width: 0, height: 4 },
+                    shadowOpacity: 0.18,
+                    shadowRadius: 10,
                   }}
                 >
-                  <View
-                    style={{
-                      flexDirection: 'row',
-                      alignItems: 'center',
-                      gap: 10,
-                      backgroundColor: '#ffffff',
-                      paddingVertical: 8,
-                      paddingHorizontal: 14,
-                      borderRadius: 999,
-                      shadowColor: '#0c4a6e',
-                      shadowOffset: { width: 0, height: 4 },
-                      shadowOpacity: 0.18,
-                      shadowRadius: 10,
-                      elevation: 6,
-                      borderWidth: 1,
-                      borderColor: 'rgba(0,91,177,0.15)',
-                    }}
-                  >
-                    {newsBadgeNode}
-                    <Text
-                      style={{
-                        fontSize: 13,
-                        fontWeight: '800',
-                        color: '#005bb1',
-                        writingDirection: 'rtl',
-                      }}
-                      accessibilityLabel="האקטואליה היומית"
-                    >
-                      אקטואליה פיננסית יומית
-                    </Text>
-                  </View>
+                  {newsBadgeNode}
                 </View>
               )}
               <ModuleNode
@@ -1019,14 +1011,55 @@ const ChapterSection = React.memo(function ChapterSection({
                   />
                 </>
               )}
-              {hasNext && !showQuestBox && (
-                <PathConnector
-                  fromOffsetX={getNodeOffset(i)}
-                  toOffsetX={getNodeOffset(i + 1)}
-                  done={trailDone}
-                  color={colors.glow}
-                />
-              )}
+              {hasNext && !showQuestBox && (() => {
+                // Bonus PEARL between modules[i] and modules[i+1]. Renders on
+                // the OPPOSITE side of the current node (questOffsetX = -offset)
+                // so it lands in the empty half-row of the alternating path.
+                // Locked until module[i] is completed; once completed it
+                // becomes interactive and inherits a green check on subsequent
+                // visits via completedPearlIds.
+                const pearl = pearlConfigFor(module.id);
+                if (!pearl) {
+                  return (
+                    <PathConnector
+                      fromOffsetX={getNodeOffset(i)}
+                      toOffsetX={getNodeOffset(i + 1)}
+                      done={trailDone}
+                      color={colors.glow}
+                    />
+                  );
+                }
+                const pearlOffsetX = -getNodeOffset(i);
+                const moduleCompleted = completedModules.includes(module.id);
+                const pearlState =
+                  !moduleCompleted ? 'locked' as const
+                  : completedPearlIds.includes(pearlIdFor(pearl)) ? 'completed' as const
+                  : 'unlocked' as const;
+                return (
+                  <>
+                    <PathConnector
+                      fromOffsetX={getNodeOffset(i)}
+                      toOffsetX={pearlOffsetX}
+                      done={trailDone}
+                      color={colors.glow}
+                    />
+                    <View style={{ alignItems: 'center' }}>
+                      <PearlNode
+                        state={pearlState}
+                        offsetX={pearlOffsetX}
+                        haloColor={colors.glow}
+                        onPress={pearlState === 'locked' ? undefined : () => onPearlPress(pearl)}
+                      />
+                    </View>
+                    <PathConnector
+                      fromOffsetX={pearlOffsetX}
+                      toOffsetX={getNodeOffset(i + 1)}
+                      done={trailDone && pearlState === 'completed'}
+                      color={colors.glow}
+                    />
+                  </>
+                );
+              })()}
             </View>
           );
         })}
@@ -1070,6 +1103,17 @@ export function DuoLearnScreen() {
   // modal. State + store reads live at screen-level so the card can render at
   // mount-time and the sheet can open/close from a single source.
   const [newsSheetVisible, setNewsSheetVisible] = useState(false);
+
+  // Pearls — bonus intermezzo nodes between modules. State is held here at
+  // screen-level so any chapter can pop the same sheet, and the completed
+  // set is read once into ChapterSection's prop so each section doesn't
+  // subscribe independently.
+  const [activePearl, setActivePearl] = useState<PearlContent | null>(null);
+  const completedPearlIds = usePearlsStore((s) => s.completedIds);
+  const handlePearlPress = useCallback((pearl: PearlContent) => {
+    tapHaptic();
+    setActivePearl(pearl);
+  }, []);
   const newsChallenge = useDailyNewsChallengeStore((s) => s.todayChallenge);
   const newsCompleted = useDailyNewsChallengeStore((s) => s.hasCompletedToday());
   const newsProChestOpened = useDailyNewsChallengeStore((s) => s.proChestOpened);
@@ -1350,6 +1394,7 @@ export function DuoLearnScreen() {
       {!isWalkthroughActive && <NoFreezeUpsellBanner />}
       <StreakCalendarModal visible={showStreakCalendar} onClose={() => setShowStreakCalendar(false)} />
       <DailyNewsChallengeSheet visible={newsSheetVisible} onClose={() => setNewsSheetVisible(false)} />
+      <PearlSheet visible={!!activePearl} pearl={activePearl} onClose={() => setActivePearl(null)} />
 
       {/* Profile-question backstop before gated chapter-0/1 modules.
           Mapping lives in PROFILE_QUESTION_BACKSTOPS (top of file). */}
@@ -1526,6 +1571,8 @@ export function DuoLearnScreen() {
                     compact
                   />
                 ) : undefined}
+                onPearlPress={handlePearlPress}
+                completedPearlIds={completedPearlIds}
               />
             );
 

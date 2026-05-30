@@ -226,7 +226,7 @@ export function BarterPuzzleScreen({
     return (
       <View style={styles.container}>
         <FinnBubble text={FINN_COMMENT} />
-        <CoinDropButton onPress={handleCoinDrop} />
+        <CoinDropAuto onComplete={handleCoinDrop} />
       </View>
     );
   }
@@ -504,44 +504,65 @@ function DraggableItem({
   );
 }
 
-// ─── CoinDropButton ─────────────────────────────────────────────────────────
+// ─── CoinDropAuto ──────────────────────────────────────────────────────────
+// Auto-progressive coin reveal — no explicit "קבל מטבעות" button. The coin
+// drops from above with a spring, the user sees + hears it land (heavy
+// haptic), then it transitions itself to the moneyPhase where the draggable
+// coin appears. Removes friction: the user proved they completed the barter
+// puzzle, no reason to ask them to tap again to claim the reward.
 
-function CoinDropButton({ onPress }: { onPress: () => void }) {
-  const btnY = useSharedValue(-200);
-  const btnScale = useSharedValue(0.5);
-  const glow = useSharedValue(0.3);
+const COIN_DROP_TOTAL_MS = 1700;
+const COIN_FLY_OUT_DELAY_MS = 1100;
+
+function CoinDropAuto({ onComplete }: { onComplete: () => void }) {
+  const coinY = useSharedValue(-260);
+  const coinScale = useSharedValue(0.4);
+  const coinOpacity = useSharedValue(0);
 
   useEffect(() => {
-    const timer = setTimeout(() => {
-      btnY.value = withSpring(0, SPRING_BOUNCY);
-      btnScale.value = withSpring(1, SPRING_BOUNCY);
-      glow.value = withRepeat(
-        withSequence(
-          withTiming(0.8, { duration: 600 }),
-          withTiming(0.3, { duration: 600 }),
-        ),
-        -1,
-        true,
-      );
-    }, 1500);
-    return () => clearTimeout(timer);
+    // Stage 1 (0ms): coin falls from above into the visible "you got coins" spot.
+    coinOpacity.value = withTiming(1, { duration: 220 });
+    coinY.value = withSpring(0, SPRING_BOUNCY);
+    coinScale.value = withSpring(1, SPRING_BOUNCY);
+
+    // Stage 2 (1100ms): fly toward the bottom-of-screen draggable position
+    // (the spot where the coin will appear in moneyPhase). Then fade.
+    const flyOut = setTimeout(() => {
+      try { heavyHaptic(); } catch { /* haptics optional */ }
+      coinY.value = withTiming(220, { duration: 480, easing: Easing.in(Easing.cubic) });
+      coinScale.value = withTiming(0.7, { duration: 480 });
+      coinOpacity.value = withTiming(0, { duration: 420 });
+    }, COIN_FLY_OUT_DELAY_MS);
+
+    // Stage 3 (1700ms): hand off to moneyPhase — the coin now reappears in
+    // the screen as the draggable item, completing the visual continuity.
+    const handoff = setTimeout(() => {
+      onComplete();
+    }, COIN_DROP_TOTAL_MS);
+
+    return () => {
+      clearTimeout(flyOut);
+      clearTimeout(handoff);
+    };
   }, []);
 
-  const btnStyle = useAnimatedStyle(() => ({
-    transform: [{ translateY: btnY.value }, { scale: btnScale.value }],
-    shadowOpacity: glow.value,
+  const coinStyle = useAnimatedStyle(() => ({
+    opacity: coinOpacity.value,
+    transform: [{ translateY: coinY.value }, { scale: coinScale.value }],
   }));
 
   return (
-    <Animated.View style={[styles.coinDropWrap, btnStyle]}>
-      <AnimatedPressable
-        onPress={onPress}
-        style={styles.coinDropBtn}
-        accessibilityRole="button"
-        accessibilityLabel="קבל מטבעות"
-      >
-        <Text style={styles.coinDropText}>✨ קבל מטבעות ✨</Text>
-      </AnimatedPressable>
+    <Animated.View
+      style={[styles.coinDropWrap, coinStyle]}
+      accessibilityLiveRegion="polite"
+      accessibilityLabel="קיבלת מטבעות"
+    >
+      <LottieView
+        source={COIN_LOTTIE}
+        autoPlay
+        loop
+        style={{ width: 140, height: 140 }}
+      />
     </Animated.View>
   );
 }
