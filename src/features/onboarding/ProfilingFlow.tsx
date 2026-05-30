@@ -1920,13 +1920,8 @@ function IntroStep({ onRegister: _onRegister, onGuest, onLoginSuccess }: IntroSt
           </LinearGradient>
         </Animated.View>
 
-        <Animated.View style={[introStyles.textBlock, textStyle, { marginBottom: 22 }]}>
-          <Text style={[introStyles.title, { marginBottom: 6 }]}>
-            {"ברוך הבא ל-"}
-            <Text style={introStyles.titleAccent}>{"FinPlay"}</Text>
-            {"!"}
-          </Text>
-          <Text style={introStyles.subtitle}>
+        <Animated.View style={[introStyles.textBlock, textStyle, { marginBottom: 28 }]}>
+          <Text style={[introStyles.subtitle, { fontSize: 16, lineHeight: 25 }]}>
             {"צרו חשבון כדי לשמור את ההתקדמות שלכם בין מכשירים."}
           </Text>
         </Animated.View>
