@@ -1,18 +1,21 @@
 import { useEffect, useRef } from 'react';
-import { useRecordDailyActivity } from '../../economy/useStreak';
+import { markDailyActivityCompleted } from '../../economy/useStreak';
 
 /**
  * Records today as a streak day when the user spends >30s inside a financial
  * tool — mirroring the Duolingo "Stories → streak" fix that gave utility
- * moments credit toward the daily-habit identity. Idempotent: the streak API
+ * moments credit toward the daily-habit identity. Idempotent: the helper
  * no-ops if today is already recorded.
  *
  * Mount inside `ToolHeader` so every tool inherits the behavior with zero
  * per-tool wiring. The 30s threshold filters out accidental opens and bounce
  * traffic — only meaningful time-on-tool earns a streak day.
+ *
+ * Uses the unified markDailyActivityCompleted() so the user gets the
+ * StreakCelebrationScreen popup + activeDates calendar mark just like a
+ * lesson, pearl, DNC, or daily quest completion would.
  */
 export function useRecordToolUsage(enabled: boolean): void {
-  const { mutate } = useRecordDailyActivity();
   const firedRef = useRef(false);
 
   useEffect(() => {
@@ -20,8 +23,8 @@ export function useRecordToolUsage(enabled: boolean): void {
     const timer = setTimeout(() => {
       if (firedRef.current) return;
       firedRef.current = true;
-      mutate();
+      markDailyActivityCompleted();
     }, 30_000);
     return () => clearTimeout(timer);
-  }, [enabled, mutate]);
+  }, [enabled]);
 }

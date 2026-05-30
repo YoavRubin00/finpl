@@ -3,7 +3,6 @@ import * as Notifications from "expo-notifications";
 import { useRouter } from "expo-router";
 import { useNotificationStore } from "./useNotificationStore";
 import { useFinnNotificationScheduler } from "./useFinnNotificationScheduler";
-import { setPendingFeedScroll } from "../finfeed/FinFeedScreen";
 
 /**
  * Call once at the root layout level.
@@ -22,10 +21,9 @@ export function useNotificationSetup() {
     const sub = Notifications.addNotificationResponseReceivedListener((response) => {
       const data = response.notification.request.content.data;
       const screen = data?.screen as string | undefined;
-      const feedScrollIndex = data?.feedScrollIndex as number | undefined;
-      if (feedScrollIndex !== undefined) {
-        setPendingFeedScroll(feedScrollIndex);
-      }
+      // feedScrollIndex payloads from before 2026-05-30 are ignored — the
+      // Feed surface they targeted has been deleted and its content moved
+      // into the Pearl. Notifications still navigate via `screen`.
       if (screen) {
         router.push(screen as never);
       }

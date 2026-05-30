@@ -9,7 +9,10 @@ import {
   Platform,
   KeyboardAvoidingView,
   ActivityIndicator,
+  Dimensions,
 } from 'react-native';
+
+const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Animated, { FadeIn, FadeOut } from 'react-native-reanimated';
 import { Send, X, MessageCircle } from 'lucide-react-native';
@@ -170,12 +173,15 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(15,23,42,0.55)',
   },
   sheet: {
-    position: 'relative',
+    // Explicit pixel height — percentage min/maxHeight inside a
+    // justifyContent:'flex-end' parent was collapsing to content height
+    // (~200px) which hid the KeyboardAvoidingView + input row entirely.
+    // 70% of screen guarantees the input row is visible above the keyboard
+    // and the messages ScrollView has room to grow.
+    height: Math.round(SCREEN_HEIGHT * 0.7),
     backgroundColor: '#fff',
     borderTopLeftRadius: 22,
     borderTopRightRadius: 22,
-    maxHeight: '85%',
-    minHeight: '55%',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: -6 },
     shadowOpacity: 0.2,

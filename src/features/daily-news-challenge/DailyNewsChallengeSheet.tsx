@@ -28,6 +28,7 @@ import { ChestsPage } from './components/ChestsPage';
 import { ItemChatOverlay } from './components/ItemChatOverlay';
 import { fetchTodayChallenge } from './dailyNewsChallengeApi';
 import { useDailyNewsChallengeStore, type ChallengeRewardSummary } from './useDailyNewsChallengeStore';
+import { useStreak } from '../economy/useStreak';
 import type { ChallengeItem } from './types';
 import { FlyingRewards } from '../../components/ui/FlyingRewards';
 import { GlobalWealthHeader } from '../../components/ui/GlobalWealthHeader';
@@ -69,7 +70,10 @@ export function DailyNewsChallengeSheet({ visible, onClose }: DailyNewsChallenge
   const answered = useDailyNewsChallengeStore((s) => s.answered);
   const regularChestOpened = useDailyNewsChallengeStore((s) => s.regularChestOpened);
   const proChestOpened = useDailyNewsChallengeStore((s) => s.proChestOpened);
-  const streak = useDailyNewsChallengeStore((s) => s.streak);
+  // Reward calc + chest preview use the unified daily streak (same number
+  // the user sees in the header), not the retired DNC-local field.
+  const { data: streakData } = useStreak();
+  const streak = streakData?.currentStreak ?? 0;
   const setChallenge = useDailyNewsChallengeStore((s) => s.setTodayChallenge);
   const recordAnswer = useDailyNewsChallengeStore((s) => s.recordAnswer);
   const claimRegular = useDailyNewsChallengeStore((s) => s.claimRegularChest);

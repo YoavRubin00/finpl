@@ -46,6 +46,9 @@ import { PearlProgressBar } from './PearlProgressBar';
 import { PearlVideoStage } from './stages/PearlVideoStage';
 import { PearlGameStage } from './stages/PearlGameStage';
 import { PearlProfileQuestionStage } from './stages/PearlProfileQuestionStage';
+import { PearlDailyConceptStage } from './stages/PearlDailyConceptStage';
+import { PearlDailyQuoteStage } from './stages/PearlDailyQuoteStage';
+import { PearlCaptainMailStage } from './stages/PearlCaptainMailStage';
 
 const SCREEN_W = Dimensions.get('window').width;
 
@@ -55,7 +58,7 @@ interface PearlSheetProps {
   onClose: () => void;
 }
 
-type StageKind = 'profile-question' | 'video' | 'game';
+type StageKind = 'profile-question' | 'daily-concept' | 'daily-quote' | 'captain-mail' | 'video' | 'game';
 
 interface StageDescriptor {
   kind: StageKind;
@@ -88,6 +91,12 @@ export function PearlSheet({ visible, pearl, onClose }: PearlSheetProps): React.
 
   // Stages list is derived from the pearl + profile-question gating, computed
   // once per visible-open so the pager indices stay stable.
+  //
+  // Flow (post-2026-05-30 redesign): optional profile-question → daily concept
+  // → daily quote → captain shark mail → lifestyle video → mini-game.
+  // The three daily stages (concept/quote/mail) replaced the deleted Feed
+  // screen as the surface for that rotating content — they appear in every
+  // pearl so users who skipped previous pearls still encounter today's pick.
   const stages = useMemo<StageDescriptor[]>(() => {
     if (!pearl) return [];
     const list: StageDescriptor[] = [];
@@ -95,6 +104,9 @@ export function PearlSheet({ visible, pearl, onClose }: PearlSheetProps): React.
     if (pearl.profileQuestion && !profileQuestionSet(pearl.profileQuestion)) {
       list.push({ kind: 'profile-question', index: idx++ });
     }
+    list.push({ kind: 'daily-concept', index: idx++ });
+    list.push({ kind: 'daily-quote', index: idx++ });
+    list.push({ kind: 'captain-mail', index: idx++ });
     list.push({ kind: 'video', index: idx++ });
     list.push({ kind: 'game', index: idx++ });
     return list;
@@ -178,6 +190,27 @@ export function PearlSheet({ visible, pearl, onClose }: PearlSheetProps): React.
               kind={pearl.profileQuestion}
               onDone={handleStageDone}
             />
+          </View>
+        );
+      }
+      if (item.kind === 'daily-concept') {
+        return (
+          <View style={containerStyle}>
+            <PearlDailyConceptStage isActive={isActive} onContinue={handleStageDone} />
+          </View>
+        );
+      }
+      if (item.kind === 'daily-quote') {
+        return (
+          <View style={containerStyle}>
+            <PearlDailyQuoteStage isActive={isActive} onContinue={handleStageDone} />
+          </View>
+        );
+      }
+      if (item.kind === 'captain-mail') {
+        return (
+          <View style={containerStyle}>
+            <PearlCaptainMailStage isActive={isActive} onContinue={handleStageDone} />
           </View>
         );
       }

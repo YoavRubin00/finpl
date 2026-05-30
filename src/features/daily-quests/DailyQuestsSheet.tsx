@@ -218,12 +218,14 @@ export function DailyQuestsSheet({ visible, onClose }: DailyQuestsSheetProps) {
     if (quest.isCompleted) return; // completed quests are informational only
     tapHaptic();
     onClose();
-    // Both swipe + dilemma live in the FinFeed (learn tab); module → learn map
-    if (quest.type === "swipe" || quest.type === "dilemma") {
-      import('../finfeed/FinFeedScreen').then(({ setPendingFeedScrollById }) => {
-        setPendingFeedScrollById(quest.type === "swipe" ? "swipe-game" : "daily-dilemma");
-        router.push("/(tabs)/learn" as never);
-      });
+    // Feed-tab scroll-to-card retired (2026-05-30 Feed deletion). Swipe + dilemma
+    // each now have a dedicated host route under /quest/* that renders the game
+    // standalone with bypassDailyGate — the cards still mark the quest complete
+    // via useDailyQuestsStore on finish, so no other wiring is needed.
+    if (quest.type === "swipe") {
+      router.push("/quest/swipe-game" as never);
+    } else if (quest.type === "dilemma") {
+      router.push("/quest/daily-dilemma" as never);
     } else if (quest.type === "module") {
       router.push("/(tabs)" as never);
     }
