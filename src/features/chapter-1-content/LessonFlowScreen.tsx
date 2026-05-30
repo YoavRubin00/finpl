@@ -2679,12 +2679,18 @@ export function LessonFlowScreen() {
     // Prefer the next module in the current chapter, by index. The global
     // search below can regress to the just-completed module because completion
     // may not be persisted yet when this runs.
+    //
+    // 2026-05-30: Route to the learn map (not directly to the next lesson)
+    // so the user lands on the path with the just-unlocked Pearl visible
+    // beside the next module — opt-in bonus content gets a fair chance.
+    // The setCurrentChapter / setCurrentModule calls keep the auto-scroll
+    // logic in DuoLearnScreen parked on the right row.
     if (chapterId && currentModIdx >= 0 && currentModIdx + 1 < chapterModules.length) {
       const next = chapterModules[currentModIdx + 1];
       if (!next.comingSoon && (isPro || !PRO_LOCKED_SIMS.has(next.id))) {
         setCurrentChapter(chapterStoreKey(chapterId));
         setCurrentModule(currentModIdx + 1);
-        router.replace(`/lesson/${next.id}?chapterId=${chapterId}` as never);
+        router.replace("/(tabs)" as never);
         return;
       }
     }
@@ -2695,7 +2701,7 @@ export function LessonFlowScreen() {
         const nextMod = ch.modules[nextIdx];
         setCurrentChapter(chapterStoreKey(ch.id));
         setCurrentModule(nextIdx);
-        router.replace(`/lesson/${nextMod.id}?chapterId=${ch.id}` as never);
+        router.replace("/(tabs)" as never);
         return;
       }
     }
@@ -4363,21 +4369,19 @@ export function LessonFlowScreen() {
                 if (mod && !isReplay) {
                   completeModule(mod.id);
                 }
-                // Skip the inter-module game when the next route is itself a
-                // game/interstitial — otherwise the user plays two minigames
-                // back-to-back. Today this only affects mod-0-3, which routes
-                // directly to /interstitial/bullshit-ch0; keep the list explicit
-                // so future routing rules don't silently chain games again.
-                const ROUTES_TO_GAME = new Set(['mod-0-3']);
-                const nextIsGame = mod ? ROUTES_TO_GAME.has(mod.id) : false;
-                if (mod?.interModuleGame && !showInterGame && !nextIsGame) {
-                  setInterGamePhase('video');
-                  setShowInterGame(true);
-                } else if (mod?.interModuleContent && !showInterContent && !nextIsGame) {
-                  // Surface a Feed-derived card (premium-learning, did-you-know,
-                  // live-market, or live-news) before advancing. Each module
-                  // assigns at most one — see Module.interModuleContent in
-                  // chapter-1-content/types.ts.
+                // The legacy "auto inter-module game" modal that used to fire
+                // here was replaced by the Pearl bonus node on the learn map
+                // (src/features/pearls/). Pearls are opt-in — the user lands
+                // back on the map, sees the just-unlocked pearl beside the
+                // also-unlocked next module, and picks which one to enter.
+                // Special routes inside goToNextSequentialModule (mod-0-3
+                // interstitial, mod-0-4 paywall, mod-1-9 tower-defense) still
+                // fire — only the "regular next-module" branch was rewired
+                // there to land on the map instead of auto-starting.
+                if (mod?.interModuleContent && !showInterContent) {
+                  // Feed-derived cards (premium-learning, did-you-know,
+                  // live-market, live-news) still surface inline since the
+                  // Pearl only hosts the mini-games + lifestyle video.
                   setShowInterContent(true);
                 } else {
                   goToNextSequentialModule();
@@ -4393,120 +4397,14 @@ export function LessonFlowScreen() {
         )}
       </View>
 
-      {/* Inter-module game overlay */}
-      {showInterGame && mod?.interModuleGame && (
-        <Modal visible transparent animationType="slide" statusBarTranslucent onRequestClose={() => { setShowInterGame(false); goToNextSequentialModule(); }} accessibilityViewIsModal>
-          <GestureHandlerRootView style={{ flex: 1, backgroundColor: "#f8fafc" }} accessibilityViewIsModal>
-            <View style={{ flexDirection: "row-reverse", paddingHorizontal: 16, paddingTop: Math.max(safeInsets.top + 12, 50), paddingBottom: 8 }}>
-              <Pressable
-                onPress={() => { setShowInterGame(false); goToNextSequentialModule(); }}
-                style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: "rgba(0,0,0,0.06)", alignItems: "center", justifyContent: "center" }}
-                accessibilityRole="button"
-                accessibilityLabel="סגור והמשך"
-                hitSlop={8}
-              >
-                <Text style={{ color: "#475569", fontSize: 18, fontWeight: "800", lineHeight: 20 }}>✕</Text>
-              </Pressable>
-            </View>
-            {/* ScrollView so games whose results screen (chart + score + shark
-                explanation + rewards + Continue) is taller than the viewport
-                (Fear or Greed in particular) don't trap users with a button
-                cut off below the screen edge. */}
-            <ScrollView
-              style={{ flex: 1 }}
-              contentContainerStyle={{ paddingBottom: Math.max(safeInsets.bottom + 24, 48), flexGrow: 1 }}
-              showsVerticalScrollIndicator={false}
-              keyboardShouldPersistTaps="handled"
-            >
-            {mod.interModuleGame === 'investment' && (
-              <InvestmentCard isActive onContinue={() => { setShowInterGame(false); goToNextSequentialModule(); }} />
-            )}
-            {mod.interModuleGame === 'crash' && (
-              <CrashGameCard isActive onContinue={() => { setShowInterGame(false); goToNextSequentialModule(); }} />
-            )}
-            {mod.interModuleGame === 'myth' && (
-              useMythStore.getState().canPlayMyth(isPro)
-                ? <MythFeedCard isInterModule onSkip={() => { setShowInterGame(false); goToNextSequentialModule(); }} />
-                : <MythInterModuleAutoSkip onSkip={() => { setShowInterGame(false); goToNextSequentialModule(); }} />
-            )}
-            {mod.interModuleGame === 'dilemma' && (
-              <DilemmaCard isActive onContinue={() => { setShowInterGame(false); goToNextSequentialModule(); }} />
-            )}
-            {mod.interModuleGame === 'fomo-killer' && (
-              <FomoKillerCard isActive onContinue={() => { setShowInterGame(false); goToNextSequentialModule(); }} />
-            )}
-            {mod.interModuleGame === 'bullshit-swipe' && (
-              <BullshitSwipeCard
-                isActive
-                bypassDailyGate
-                onContinue={() => { setShowInterGame(false); goToNextSequentialModule(); }}
-              />
-            )}
-            {mod.interModuleGame === 'higher-lower' && (
-              <HigherLowerCard
-                isActive
-                onComplete={() => { setShowInterGame(false); goToNextSequentialModule(); }}
-              />
-            )}
-            {mod.interModuleGame === 'price-slider' && (
-              <PriceSliderCard isActive onContinue={() => { setShowInterGame(false); goToNextSequentialModule(); }} />
-            )}
-            {mod.interModuleGame === 'budget-ninja' && (
-              <BudgetNinjaCard isActive onContinue={() => { setShowInterGame(false); goToNextSequentialModule(); }} />
-            )}
-            {mod.interModuleGame === 'cashout-rush' && (
-              <CashoutRushCard isActive onContinue={() => { setShowInterGame(false); goToNextSequentialModule(); }} />
-            )}
-            {mod.interModuleGame === 'macro-event' && mod.interModuleMacroEventId && (() => {
-              const event = macroEventsData.find((e) => e.id === mod.interModuleMacroEventId);
-              if (!event) return null;
-              return (
-                <MacroEventCard
-                  item={{ id: event.id, type: 'macro-event', event }}
-                  isActive
-                  onContinue={() => { setShowInterGame(false); goToNextSequentialModule(); }}
-                />
-              );
-            })()}
-            {mod.interModuleGame === 'video' && mod.interModuleVideoAsset !== undefined && (
-              <>
-                {interGamePhase === 'video' && (
-                  <VideoHookPlayer
-                    videoUri={typeof mod.interModuleVideoAsset === 'number' ? mod.interModuleVideoAsset : mod.interModuleVideoAsset.uri}
-                    hookText=""
-                    onFinish={() => setInterGamePhase('finn')}
-                    unitColors={unitColors}
-                    fitContain
-                  />
-                )}
-                {interGamePhase === 'finn' && (
-                  <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', padding: 32, gap: 24 }}>
-                    <ExpoImage source={FINN_DANCING} style={{ width: 140, height: 140 }} contentFit="contain" accessible={false} />
-                    <View style={{ backgroundColor: '#f0f9ff', borderRadius: 20, padding: 20, borderWidth: 1.5, borderColor: '#bae6fd', maxWidth: 320 }}>
-                      <Text style={{ fontSize: 18, fontWeight: '800', color: '#1e293b', textAlign: 'right', writingDirection: 'rtl', lineHeight: 28 }}>
-                        {mod.interModuleFinnMessage}
-                      </Text>
-                    </View>
-                    <Pressable
-                      onPress={() => { setShowInterGame(false); goToNextSequentialModule(); }}
-                      style={{ backgroundColor: '#0891b2', borderRadius: 16, paddingHorizontal: 32, paddingVertical: 14, minHeight: 44, justifyContent: 'center', borderBottomWidth: 3, borderBottomColor: '#0e7490' }}
-                      accessibilityRole="button"
-                      accessibilityLabel="המשך"
-                    >
-                      <Text style={{ color: '#fff', fontSize: 16, fontWeight: '900', textAlign: 'center' }}>המשך ←</Text>
-                    </Pressable>
-                  </View>
-                )}
-              </>
-            )}
-            </ScrollView>
-          </GestureHandlerRootView>
-        </Modal>
-      )}
+      {/* Inter-module game overlay was REMOVED 2026-05-30 — the same mini-
+          games now live inside the Pearl bonus node on the learn map
+          (src/features/pearls/). Keeping the imports here for any historical
+          tooling that still references them; tree-shaking drops them. */}
 
-      {/* Inter-module CONTENT overlay — fires only when interModuleGame is
-          absent. Renders the first present field from interModuleContent.
-          The cards are reused as-is from the (now-retired) FinFeed surface. */}
+      {/* Inter-module CONTENT overlay — still fires inline because Feed-derived
+          cards (premium-learning, did-you-know, live-market, live-news) aren't
+          part of the Pearl experience. */}
       {showInterContent && mod?.interModuleContent && (
         <Modal
           visible
