@@ -9,11 +9,12 @@ export default function TowerDefenseBossPage() {
   const markBossComplete = useChapterUIStore((s) => s.markBossComplete);
 
   const handleExit = useCallback(() => {
-    if (router.canGoBack()) {
-      router.back();
-    } else {
-      router.replace("/(tabs)" as never);
-    }
+    // Always jump straight to the tabs root. router.back() lands on the
+    // mod-1-9 summary screen whose "המשך" routes through
+    // goToNextSequentialModule → tower-defense again, trapping the user in
+    // an infinite loop (QA audit 2026-05-31). Use replace so the stack is
+    // wiped and there's no Back path back into the boss fight either.
+    router.replace("/(tabs)" as never);
   }, [router]);
 
   const handleVictory = useCallback(() => {

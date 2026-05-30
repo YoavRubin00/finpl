@@ -21,6 +21,7 @@ import Animated, {
   cancelAnimation,
   useReducedMotion,
 } from 'react-native-reanimated';
+import type { SharedValue } from 'react-native-reanimated';
 import { LinearGradient } from 'expo-linear-gradient';
 import LottieView from 'lottie-react-native';
 import { Image as ExpoImage } from 'expo-image';
@@ -82,8 +83,8 @@ function pickCorrectLine(index: number): string {
 }
 function pickWrongLine(entity: string, index: number): string {
   return index === 0
-    ? `הא, חשבת? התשובה: ${entity}. בא נלקח את הבא`
-    : `נגעת אבל לא לקחת. ${entity} הייתה התשובה`;
+    ? `התשובה הנכונה: ${entity}. הנה למה`
+    : `התשובה: ${entity}. נמשיך הלאה`;
 }
 
 interface ChallengePageProps {
@@ -183,22 +184,20 @@ export function ChallengePage({
     );
   }, [showResult, reduceMotion, continuePulse]);
 
-  // Per-chip press scale animation refs — separate so 4 chips don't stomp
-  // each other's spring state.
-  const chipScales = [
-    useSharedValue(1),
-    useSharedValue(1),
-    useSharedValue(1),
-    useSharedValue(1),
-  ];
-  const chipPressIn = useCallback((idx: number) => {
-    chipScales[idx].value = withSpring(0.94, { damping: 14, stiffness: 220 });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-  const chipPressOut = useCallback((idx: number) => {
-    chipScales[idx].value = withSpring(1, { damping: 12, stiffness: 200 });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  // Per-chip press scale shared values held in fixed-shape refs at the
+  // component's top level — must NEVER live inside a conditional render
+  // (e.g. inside `!showResult && chips.map(...)`), otherwise the number of
+  // hooks called drops between renders and React throws
+  // "Rendered fewer hooks than expected". The actual useAnimatedStyle now
+  // lives inside ChipButton (one stable hook per child).
+  const chipScale0 = useSharedValue(1);
+  const chipScale1 = useSharedValue(1);
+  const chipScale2 = useSharedValue(1);
+  const chipScale3 = useSharedValue(1);
+  const chipScales = useMemo(
+    () => [chipScale0, chipScale1, chipScale2, chipScale3],
+    [chipScale0, chipScale1, chipScale2, chipScale3],
+  );
 
   const handleSelect = useCallback(
     (idx: number) => {
@@ -348,43 +347,15 @@ export function ChallengePage({
 
         {!showResult && (
           <View style={styles.chipsGrid}>
-            {chips.map((chip, idx) => {
-              const emoji = chipEmoji(chip);
-              const animStyle = useAnimatedStyle(() => ({
-                transform: [{ scale: chipScales[idx].value }],
-              }));
-              return (
-                <Animated.View
-                  key={idx}
-                  entering={FadeInDown.delay(idx * 80).springify().damping(14)}
-                  style={[styles.chipWrap, animStyle]}
-                >
-                  <Pressable
-                    onPress={() => handleSelect(idx)}
-                    onPressIn={() => chipPressIn(idx)}
-                    onPressOut={() => chipPressOut(idx)}
-                    accessibilityRole="button"
-                    accessibilityLabel={`בחר: ${chip}`}
-                    hitSlop={4}
-                    style={styles.chip}
-                  >
-                    <LinearGradient
-                      colors={['#ffffff', '#f0f9ff']}
-                      start={{ x: 0, y: 0 }}
-                      end={{ x: 1, y: 1 }}
-                      style={styles.chipGradient}
-                    >
-                      <Text style={styles.chipEmoji} allowFontScaling={false}>
-                        {emoji}
-                      </Text>
-                      <Text style={styles.chipText} allowFontScaling={false}>
-                        {chip}
-                      </Text>
-                    </LinearGradient>
-                  </Pressable>
-                </Animated.View>
-              );
-            })}
+            {chips.map((chip, idx) => (
+              <ChipButton
+                key={idx}
+                idx={idx}
+                chip={chip}
+                scale={chipScales[idx]}
+                onPress={handleSelect}
+              />
+            ))}
           </View>
         )}
 
@@ -869,6 +840,68 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
 });
+
+/**
+ * Single chip in the 4-option grid. Lives in its own component so that
+ * `useAnimatedStyle` is a stable hook called once per render — putting the
+ * hook inside the parent's `chips.map(...)` worked while `!showResult` was
+ * true but vanished the instant the user answered, dropping the parent's
+ * hook count and triggering "Rendered fewer hooks than expected". Each
+ * ChipButton owns its own animated style; the shared value is still hoisted
+ * in the parent so spring state survives parent re-renders.
+ */
+function ChipButton({
+  idx,
+  chip,
+  scale,
+  onPress,
+}: {
+  idx: number;
+  chip: string;
+  scale: SharedValue<number>;
+  onPress: (idx: number) => void;
+}): React.ReactElement {
+  const animStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: scale.value }],
+  }));
+  const handlePressIn = useCallback(() => {
+    scale.value = withSpring(0.94, { damping: 14, stiffness: 220 });
+  }, [scale]);
+  const handlePressOut = useCallback(() => {
+    scale.value = withSpring(1, { damping: 12, stiffness: 200 });
+  }, [scale]);
+  const emoji = chipEmoji(chip);
+  return (
+    <Animated.View
+      entering={FadeInDown.delay(idx * 80).springify().damping(14)}
+      style={[styles.chipWrap, animStyle]}
+    >
+      <Pressable
+        onPress={() => onPress(idx)}
+        onPressIn={handlePressIn}
+        onPressOut={handlePressOut}
+        accessibilityRole="button"
+        accessibilityLabel={`בחר: ${chip}`}
+        hitSlop={4}
+        style={styles.chip}
+      >
+        <LinearGradient
+          colors={['#ffffff', '#f0f9ff']}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={styles.chipGradient}
+        >
+          <Text style={styles.chipEmoji} allowFontScaling={false}>
+            {emoji}
+          </Text>
+          <Text style={styles.chipText} allowFontScaling={false}>
+            {chip}
+          </Text>
+        </LinearGradient>
+      </Pressable>
+    </Animated.View>
+  );
+}
 
 /**
  * Tap-to-expand detail pill — used inside the result panel so the long-form

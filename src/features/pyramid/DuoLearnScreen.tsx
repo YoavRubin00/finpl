@@ -1118,6 +1118,16 @@ export function DuoLearnScreen() {
   // subscribe independently.
   const [activePearl, setActivePearl] = useState<PearlContent | null>(null);
   const completedPearlIds = usePearlsStore((s) => s.completedIds);
+  // Subscribe to the local completed-modules store so the learn map reflects
+  // offline-completed modules even when the server upsert hasn't landed yet.
+  // Without this, completing a module while offline leaves it marked as
+  // "active" on the map until the next successful server sync (QA 2026-05-31).
+  const localCompletedModuleIds = useCompletedModulesStore((s) => s.completedIds);
+  // Per-session memory of which modules already triggered the
+  // PROFILE_QUESTION_BACKSTOPS modal. Skipping the modal doesn't flip the
+  // store flag — without this guard a user could be re-prompted on every
+  // tap (QA 2026-05-31).
+  const backstopAskedRef = useRef<Set<string>>(new Set());
   const handlePearlPress = useCallback((pearl: PearlContent) => {
     tapHaptic();
     setActivePearl(pearl);
@@ -1346,13 +1356,19 @@ export function DuoLearnScreen() {
       // Backstop: catch users who skipped past an in-lesson profile question by
       // exiting before tapping "Continue". Re-ask before they enter the gate
       // module. PROFILE_QUESTION_BACKSTOPS owns the mapping.
+      // The backstopAskedRef remembers which modules have already prompted
+      // the question this session — without it, tapping a module → "דלג"
+      // → tap again would re-open the modal indefinitely, since "skip"
+      // doesn't update the *Set store flag (QA audit 2026-05-31).
       const backstopKind = PROFILE_QUESTION_BACKSTOPS[moduleId];
       if (backstopKind) {
         const alreadyAnswered =
           (backstopKind === 'knowledgeLevel' && knowledgeLevelSet) ||
           (backstopKind === 'learningTime' && learningTimeSet) ||
           (backstopKind === 'dailyGoal' && dailyGoalSet);
-        if (!alreadyAnswered) {
+        const alreadyAskedThisSession = backstopAskedRef.current.has(moduleId);
+        if (!alreadyAnswered && !alreadyAskedThisSession) {
+          backstopAskedRef.current.add(moduleId);
           setPendingProfileQuestion({ kind: backstopKind, nav: { moduleId, chapterId, moduleIndex } });
           return;
         }
@@ -1524,18 +1540,28 @@ export function DuoLearnScreen() {
             // appear on every chapter that still has work — user reported seeing
             // two cursors. Only ONE chapter — the earliest with an incomplete
             // playable module — should host the active markers.
+            // Merge server progress (from React Query) with the local
+            // completed-modules store. The local store is the source of
+            // truth between a successful local completion and the next
+            // server sync — without merging, offline completions vanish
+            // from the map.
+            const completedByPrefix = (pfx: string): string[] => {
+              const serverIds = progressData?.filter((m) => m.moduleId.startsWith(pfx) && m.status === 'completed').map((m) => m.moduleId) ?? [];
+              const localIds = localCompletedModuleIds.filter((id) => id.startsWith(pfx));
+              return [...new Set([...serverIds, ...localIds])];
+            };
             let globalActiveIdx = -1;
             for (let i = 0; i < ARENAS.length; i++) {
               const ch = ALL_CHAPTERS[i];
               const num = storeKey(ch.id).replace('ch-', '');
               const pfx = `mod-${num}-`;
-              const done = progressData?.filter((m) => m.moduleId.startsWith(pfx) && m.status === 'completed').map((m) => m.moduleId) ?? [];
+              const done = completedByPrefix(pfx);
               // Same unlock rule as below — Pro: always; Free: prev chapter fully done.
               let unlocked = isPro || i === 0;
               if (!isPro && i > 0) {
                 const prev = ALL_CHAPTERS[i - 1];
                 const prevPfx = `mod-${storeKey(prev.id).replace('ch-', '')}-`;
-                const prevDone = progressData?.filter((m) => m.moduleId.startsWith(prevPfx) && m.status === 'completed').map((m) => m.moduleId) ?? [];
+                const prevDone = completedByPrefix(prevPfx);
                 unlocked = prev.modules.every((m) => m.comingSoon || (!isPro && PRO_LOCKED_SIMS.has(m.id)) || prevDone.includes(m.id));
               }
               if (!unlocked) continue;
@@ -1546,7 +1572,7 @@ export function DuoLearnScreen() {
             const chapter = ALL_CHAPTERS[idx];
             const chNum = storeKey(chapter.id).replace('ch-', '');
             const prefix = `mod-${chNum}-`;
-            const completedModules = progressData?.filter((m) => m.moduleId.startsWith(prefix) && m.status === 'completed').map((m) => m.moduleId) ?? [];
+            const completedModules = completedByPrefix(prefix);
 
             // PRO: everything open. Free: unit unlocks only after ALL modules of previous unit completed.
             // Unit 1 is always unlocked.
@@ -1555,7 +1581,7 @@ export function DuoLearnScreen() {
               const prevChapter = ALL_CHAPTERS[idx - 1];
               const prevNum = storeKey(prevChapter.id).replace('ch-', '');
               const prevPrefix = `mod-${prevNum}-`;
-              const prevCompleted = progressData?.filter((m) => m.moduleId.startsWith(prevPrefix) && m.status === 'completed').map((m) => m.moduleId) ?? [];
+              const prevCompleted = completedByPrefix(prevPrefix);
               isUnlocked = prevChapter.modules.every((m) => m.comingSoon || (!isPro && PRO_LOCKED_SIMS.has(m.id)) || prevCompleted.includes(m.id));
             }
 

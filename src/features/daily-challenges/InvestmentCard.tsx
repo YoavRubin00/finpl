@@ -93,7 +93,9 @@ export const InvestmentCard = React.memo(function InvestmentCard({ isActive, onC
   const profit = resultValue - budget;
   const isProfit = profit >= 0;
 
-  // Already answered, compact state
+  // Already answered, compact state. When the card is rendered inside a
+  // Pearl (onContinue set), surface a Continue button so the user can
+  // advance — otherwise the Pearl pager is dead-ended (QA audit 2026-05-31).
   if (answered && !showResult) {
     return (
       <View style={styles.container}>
@@ -101,6 +103,16 @@ export const InvestmentCard = React.memo(function InvestmentCard({ isActive, onC
           <Text style={styles.answeredIcon}>📈</Text>
           <Text style={[styles.answeredTitle, RTL]}>ההשקעה של היום הושלמה!</Text>
           <Text style={[styles.answeredSub, RTL]}>חזור מחר לתרחיש חדש</Text>
+          {onContinue ? (
+            <Pressable
+              onPress={() => { tapHaptic(); onContinue(); }}
+              accessibilityRole="button"
+              accessibilityLabel="המשך"
+              style={styles.continueBtn}
+            >
+              <Text style={styles.continueBtnText} allowFontScaling={false}>המשך</Text>
+            </Pressable>
+          ) : null}
         </View>
       </View>
     );

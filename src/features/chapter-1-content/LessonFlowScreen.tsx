@@ -3014,6 +3014,10 @@ export function LessonFlowScreen() {
     completedRef.current = false;
     chestAnimationStartedRef.current = false;
     pendingChestDropRef.current = null;
+    // Reset the per-module profile-question guard so a user who skipped
+    // the in-lesson prompt the first time gets another chance to answer
+    // when they re-enter the same module later (QA audit 2026-05-31).
+    profileQuestionAskedRef.current = null;
   }, [id, mod]);
 
   // Auto-dismiss hero phase after 2 seconds
@@ -4496,16 +4500,45 @@ export function LessonFlowScreen() {
                   const item = PREMIUM_LEARNING_ITEMS.find((i) => i.id === c.premiumLearning);
                   return item ? <PremiumLearningCard item={item} isActive onContinue={close} /> : null;
                 }
+                // DidYouKnow / LiveMarket / LiveNewsQuiz cards don't expose an
+                // onContinue prop (they were lifted from the retired FinFeed
+                // surface unchanged). Without one the user has to hunt the
+                // tiny ✕ in the modal header to advance — flagged as a
+                // missing-route in the QA audit (2026-05-31). Wrap each with
+                // an explicit Continue button below the card so dismissal is
+                // a single, obvious tap.
+                const interContentWrap = (node: React.ReactNode) => (
+                  <View>
+                    {node}
+                    <View style={{ paddingHorizontal: 20, paddingTop: 14, paddingBottom: 24 }}>
+                      <Pressable
+                        onPress={() => { tapHaptic(); close(); }}
+                        accessibilityRole="button"
+                        accessibilityLabel="המשך"
+                        style={{
+                          paddingVertical: 14,
+                          paddingHorizontal: 22,
+                          borderRadius: 16,
+                          backgroundColor: '#facc15',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                        }}
+                      >
+                        <Text style={{ fontSize: 16, fontWeight: '900', color: '#0f172a', writingDirection: 'rtl' }} allowFontScaling={false}>המשך</Text>
+                      </Pressable>
+                    </View>
+                  </View>
+                );
                 if (c?.didYouKnow) {
-                  return <DidYouKnowCard isActive itemId={c.didYouKnow} />;
+                  return interContentWrap(<DidYouKnowCard isActive itemId={c.didYouKnow} />);
                 }
                 if (c?.liveMarketTicker) {
                   // LiveMarketCard reads its own ticker internally; we just
                   // mount it. (Per-ticker selection lives in liveMarketTypes.)
-                  return <LiveMarketCard />;
+                  return interContentWrap(<LiveMarketCard />);
                 }
                 if (c?.liveNewsId) {
-                  return <LiveNewsQuizCard isActive />;
+                  return interContentWrap(<LiveNewsQuizCard isActive />);
                 }
                 return null;
               })()}

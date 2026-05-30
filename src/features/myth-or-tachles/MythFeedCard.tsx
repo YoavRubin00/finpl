@@ -170,6 +170,23 @@ export const MythFeedCard = React.memo(function MythFeedCard({ isInterModule, on
                         />
                     </Animated.View>
 
+                    {/* Inside a Pearl/inter-module flow the deck is otherwise
+                        infinite — there's no natural "end of session" event
+                        to advance the pager. After the user has played at
+                        least 3 cards, surface an explicit "סיימתי" button
+                        that calls onSkip so the Pearl can move on. */}
+                    {isInterModule && onSkip && (sessionCorrect + sessionWrong) >= 3 ? (
+                        <View style={styles.doneWrap}>
+                            <Pressable
+                                onPress={() => { tapHaptic(); onSkip(); }}
+                                accessibilityRole="button"
+                                accessibilityLabel="סיימתי, המשך"
+                                style={styles.doneBtn}
+                            >
+                                <Text style={styles.doneBtnText} allowFontScaling={false}>סיימתי, המשך</Text>
+                            </Pressable>
+                        </View>
+                    ) : null}
                 </>
             )}
 
@@ -190,6 +207,25 @@ const styles = StyleSheet.create({
         minHeight: 560,
         backgroundColor: '#f8fafc',
         paddingTop: 8,
+    },
+    doneWrap: {
+        paddingHorizontal: 20,
+        paddingTop: 14,
+        paddingBottom: 18,
+    },
+    doneBtn: {
+        paddingVertical: 12,
+        paddingHorizontal: 22,
+        borderRadius: 14,
+        backgroundColor: '#facc15',
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    doneBtnText: {
+        fontSize: 16,
+        fontWeight: '900',
+        color: '#0f172a',
+        writingDirection: 'rtl',
     },
     header: {
         paddingHorizontal: 20,

@@ -128,7 +128,8 @@ export const DilemmaCard = React.memo(function DilemmaCard({ isActive, onContinu
     }
   };
 
-  // Already answered, compact completed state
+  // Already answered, compact completed state. Surface a Continue button
+  // when rendered inside a Pearl so the pager doesn't dead-end (QA 2026-05-31).
   if (answered && !showResult) {
     return (
       <FeedGameShell
@@ -141,6 +142,16 @@ export const DilemmaCard = React.memo(function DilemmaCard({ isActive, onContinu
         <View style={styles.stateBox}>
           <Text style={[styles.answeredTitle, RTL]}>האתגר היומי הושלם!</Text>
           <Text style={[styles.answeredSub, RTL]}>חזרו מחר לאתגר חדש</Text>
+          {onContinue ? (
+            <Pressable
+              onPress={() => { tapHaptic(); onContinue(); }}
+              accessibilityRole="button"
+              accessibilityLabel="המשך"
+              style={styles.continueBtn}
+            >
+              <Text style={styles.continueBtnText} allowFontScaling={false}>המשך</Text>
+            </Pressable>
+          ) : null}
         </View>
       </FeedGameShell>
     );
