@@ -441,6 +441,7 @@ export function StockAnalystScreen(): React.ReactElement {
       <CapExceededAnalystModal
         visible={capModalMode !== null}
         mode={capModalMode ?? 'quick'}
+        isPro={isPro}
         onClose={() => setCapModalMode(null)}
       />
       <HistoryModal visible={historyVisible} onClose={() => setHistoryVisible(false)} />

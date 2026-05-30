@@ -8,7 +8,7 @@ import { AnimatedPressable } from "../../components/ui/AnimatedPressable";
 import { useUpgradeModalStore } from "../../stores/useUpgradeModalStore";
 import { heavyHaptic } from "../../utils/haptics";
 import { captureEvent } from "../../lib/posthog";
-import { BASIC_LIMITS, type GatedFeature } from "./subscriptionConstants";
+import { BASIC_LIMITS, PRO_LIMITS, type GatedFeature } from "./subscriptionConstants";
 
 const FEATURE_INFO: Record<GatedFeature, { title: string; body: string }> = {
   simulator: {
@@ -45,7 +45,7 @@ const FEATURE_INFO: Record<GatedFeature, { title: string; body: string }> = {
   },
   "analyst-deep": {
     title: "ניתוח עומק AI, הגעת למכסה השבועית",
-    body: `ב‑Free מקבלים ${BASIC_LIMITS["analyst-deep"]} ניתוח עומק בשבוע, כולל follow-up, מצגי תזרים ובדיקות שווי.\nב‑PRO ניתוחי עומק ללא הגבלה.`,
+    body: `ב‑Free מקבלים ${BASIC_LIMITS["analyst-deep"]} ניתוח עומק בשבוע, כולל follow-up, מצגי תזרים ובדיקות שווי.\nב‑PRO מקבלים ${PRO_LIMITS["analyst-deep"]} בשבוע — פי 5.`,
   },
   payslip: {
     title: "ניתוח תלוש שכר, הגעת למכסה החודשית",

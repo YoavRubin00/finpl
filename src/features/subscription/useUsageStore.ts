@@ -15,7 +15,7 @@ import { persist, createJSONStorage } from 'zustand/middleware';
 import { zustandStorage } from '../../lib/zustandStorage';
 import { registerLocalStore } from '../../lib/stores/registry';
 import type { GatedFeature } from './subscriptionConstants';
-import { BASIC_LIMITS } from './subscriptionConstants';
+import { BASIC_LIMITS, PRO_LIMITS } from './subscriptionConstants';
 
 function todayISO(): string {
   return new Date().toISOString().slice(0, 10);
@@ -177,8 +177,12 @@ export const useUsageStore = create<UsageState & UsageActions>()(
       },
 
       canUse: (feature: GatedFeature, isPro: boolean): boolean => {
-        if (isPro) return true;
-        const limit = BASIC_LIMITS[feature];
+        // Pro is unlimited UNLESS PRO_LIMITS lists this feature — those
+        // are soft caps on expensive AI calls (currently analyst-deep at
+        // 5/week). When a Pro feature is capped, the same bucketed counter
+        // applies regardless of tier; Pro just gets the higher limit.
+        const limit = isPro ? (PRO_LIMITS[feature] ?? Infinity) : BASIC_LIMITS[feature];
+        if (limit === Infinity) return true;
         if (limit === 0) return false;
 
         const state = get();
@@ -216,8 +220,11 @@ export const useUsageStore = create<UsageState & UsageActions>()(
       },
 
       remainingUses: (feature: GatedFeature, isPro: boolean): number => {
-        if (isPro) return Infinity;
-        const limit = BASIC_LIMITS[feature];
+        // Same Pro-cap mirror as canUse — Pro is Infinity unless PRO_LIMITS
+        // lists the feature, in which case we count the Pro user's bucket
+        // against the higher cap.
+        const limit = isPro ? (PRO_LIMITS[feature] ?? Infinity) : BASIC_LIMITS[feature];
+        if (limit === Infinity) return Infinity;
         if (limit === 0) return 0;
 
         const state = get();

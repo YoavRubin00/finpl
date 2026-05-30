@@ -45,6 +45,18 @@ export const BASIC_LIMITS: Record<GatedFeature, number> = {
 /** How many tickers a Pro user can track for daily Breaking News summaries. */
 export const BREAKING_NEWS_PRO_TICKER_CAP = 5;
 
+// Pro-tier soft caps for expensive AI features. Only features listed here
+// are capped for Pro; everything else stays unlimited. Goal (Moni 2026-05-30):
+// keep AI compute costs predictable per-user — a single deep stock analysis
+// fans out 4-6 model calls (live quote → quick context → deep reasoning →
+// follow-up suggestions). 5/week per Pro user keeps the p99 cost well
+// inside the ₪29/month subscription margin without hurting genuine power
+// users (avg Pro use is 1-2/week per Slotomania/Duolingo Super telemetry
+// from comparable AI features).
+export const PRO_LIMITS: Partial<Record<GatedFeature, number>> = {
+  "analyst-deep": 5,    // 5 deep analyses per WEEK for Pro
+};
+
 const HEART_REFILL_MS = 5 * 60 * 60 * 1000; // 5 hours per heart
 
 /** Time until next heart refill in ms */
