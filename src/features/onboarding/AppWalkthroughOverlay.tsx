@@ -370,10 +370,10 @@ export function AppWalkthroughOverlay() {
       animationType="none"
       statusBarTranslucent
       accessibilityViewIsModal
-      // No-op on accidental dismiss signals (Android back / iOS system events).
-      // The walkthrough should only end via the explicit "דלג" button or the
-      // last-step CTA, not because the route transitioned under the Modal.
-      onRequestClose={() => { /* intentionally empty */ }}
+      // Android hardware back: go to previous step if possible, else hold.
+      // Never silently skip the whole walkthrough from a system back signal —
+      // users have an explicit "דלג" button for that.
+      onRequestClose={() => { if (step > 0) handleBack(); }}
     >
       <View style={s.overlay}>
         {/* ── Top: Step title pill with counter (hidden on step 0 — welcome card has no pill) ── */}

@@ -25,11 +25,16 @@ export const userProfiles = pgTable("user_profiles", {
 	syncToken: text("sync_token"),
 	preferences: jsonb("preferences"),
 	virtualBalance: numeric("virtual_balance", { precision: 18, scale: 2 }).default('100000').notNull(),
+	// User's personal invite code used by app/api/referral/{redeem,register-code}+api.ts.
+	// Unique per user (constraint in DB). Was missing from this file — schema drift —
+	// which caused drizzle-kit push to propose dropping the column. DO NOT remove.
+	referralCode: text("referral_code"),
 	createdAt: timestamp("created_at", { withTimezone: true, mode: 'string' }).defaultNow(),
 	updatedAt: timestamp("updated_at", { withTimezone: true, mode: 'string' }).defaultNow(),
 }, (table) => [
 	unique("user_profiles_auth_id_key").on(table.authId),
 	unique("user_profiles_email_key").on(table.email),
+	unique("user_profiles_referral_code_key").on(table.referralCode),
 ]);
 
 export const moduleProgress = pgTable("module_progress", {
