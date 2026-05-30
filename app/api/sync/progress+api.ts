@@ -105,7 +105,11 @@ export async function POST(request: Request): Promise<Response> {
     const bestScore = clampNumber(body.bestScore, 0, 100);
     const xpEarned = clampNumber(body.xpEarned, 0, 100_000);
 
-    await db
+    // RETURNING the upserted row only — the client already holds the rest of
+    // their progress history; sending it back on every POST is bandwidth waste
+    // that grows linearly with completed modules. Caller merges this single
+    // row into their local progress map.
+    const upserted = await db
       .insert(moduleProgress)
       .values({
         userId: user.id,
@@ -130,14 +134,10 @@ export async function POST(request: Request): Promise<Response> {
           completedAt,
           updatedAt: new Date().toISOString(),
         },
-      });
+      })
+      .returning();
 
-    const rows = await db
-      .select()
-      .from(moduleProgress)
-      .where(eq(moduleProgress.userId, user.id));
-
-    return Response.json({ ok: true, progress: rows });
+    return Response.json({ ok: true, progress: upserted });
   } catch (err: unknown) {
     return safeErrorResponse(err, 'sync/progress POST');
   }

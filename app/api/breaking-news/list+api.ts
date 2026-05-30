@@ -10,7 +10,7 @@
  * joins.
  */
 
-import { desc, eq } from 'drizzle-orm';
+import { desc, eq, inArray } from 'drizzle-orm';
 import {
   breakingNewsSummaries,
   breakingNewsTracked,
@@ -58,45 +58,49 @@ export async function GET(request: Request): Promise<Response> {
       .where(eq(breakingNewsTracked.userId, user.id));
 
     const todayKey = getTradingDayKey();
-    const items: ListItem[] = await Promise.all(
-      trackedRows.map(async (t) => {
-        // Latest summary for this ticker (any day). Prefer today; fall back
-        // to most recent so a fresh tracker on a quiet day still shows something.
-        const latest = await db
-          .select()
+
+    // Fetch the latest summary for every tracked ticker in ONE round-trip.
+    // DISTINCT ON (ticker) + ORDER BY ticker, tradingDay DESC gives us the
+    // newest row per ticker — replaces the prior N+1 (one SELECT per ticker).
+    const tickers = trackedRows.map((t) => t.ticker);
+    const latestByTicker = tickers.length === 0
+      ? []
+      : await db
+          .selectDistinctOn([breakingNewsSummaries.ticker])
           .from(breakingNewsSummaries)
-          .where(eq(breakingNewsSummaries.ticker, t.ticker))
-          .orderBy(desc(breakingNewsSummaries.tradingDay))
-          .limit(1);
-        const row = latest[0];
+          .where(inArray(breakingNewsSummaries.ticker, tickers))
+          .orderBy(breakingNewsSummaries.ticker, desc(breakingNewsSummaries.tradingDay));
 
-        if (!row) {
-          return {
-            ticker: t.ticker,
-            addedAt: t.addedAt,
-            summary: null,
-            tradingDay: null,
-            generatedAt: null,
-            pendingToday: true,
-          };
-        }
+    const summaryByTicker = new Map<string, typeof latestByTicker[number]>();
+    for (const row of latestByTicker) summaryByTicker.set(row.ticker, row);
 
+    const items: ListItem[] = trackedRows.map((t) => {
+      const row = summaryByTicker.get(t.ticker);
+      if (!row) {
         return {
           ticker: t.ticker,
           addedAt: t.addedAt,
-          summary: {
-            summary: row.summaryText,
-            hypeIndex: row.hypeIndex,
-            sentiment: row.sentiment as 'bullish' | 'bearish' | 'neutral',
-            keyEvents: (row.keyEvents as BreakingNewsSummary['keyEvents']) ?? [],
-            sources: (row.sources as BreakingNewsSummary['sources']) ?? [],
-          },
-          tradingDay: row.tradingDay,
-          generatedAt: row.generatedAt,
-          pendingToday: row.tradingDay !== todayKey,
+          summary: null,
+          tradingDay: null,
+          generatedAt: null,
+          pendingToday: true,
         };
-      }),
-    );
+      }
+      return {
+        ticker: t.ticker,
+        addedAt: t.addedAt,
+        summary: {
+          summary: row.summaryText,
+          hypeIndex: row.hypeIndex,
+          sentiment: row.sentiment as 'bullish' | 'bearish' | 'neutral',
+          keyEvents: (row.keyEvents as BreakingNewsSummary['keyEvents']) ?? [],
+          sources: (row.sources as BreakingNewsSummary['sources']) ?? [],
+        },
+        tradingDay: row.tradingDay,
+        generatedAt: row.generatedAt,
+        pendingToday: row.tradingDay !== todayKey,
+      };
+    });
 
     return Response.json({ ok: true, items, tradingDay: todayKey });
   } catch (err) {

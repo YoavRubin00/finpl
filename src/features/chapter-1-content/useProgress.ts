@@ -77,11 +77,21 @@ export function useUpsertModuleProgress() {
     onError: (_e, _p, ctx) => {
       if (ctx?.prev !== undefined) qc.setQueryData(progressQueryKey, ctx.prev);
     },
-    // The POST returns the full authoritative progress array — set it directly
-    // so the cache reflects the server without a blind refetch that could race
-    // and momentarily drop the just-completed row.
+    // The POST now returns ONLY the upserted row (server changed from SELECT *
+    // of every row to a thin RETURNING — saves bandwidth that grew linearly
+    // with completed modules). Merge it into the existing cache by moduleId so
+    // the user's other progress isn't dropped.
     onSuccess: (data) => {
-      if (Array.isArray(data)) qc.setQueryData(progressQueryKey, data);
+      if (!Array.isArray(data) || data.length === 0) return;
+      qc.setQueryData<ModuleProgressRow[]>(progressQueryKey, (old) => {
+        const next = old ? [...old] : [];
+        for (const row of data) {
+          const idx = next.findIndex((m) => m.moduleId === row.moduleId);
+          if (idx >= 0) next[idx] = row;
+          else next.push(row);
+        }
+        return next;
+      });
     },
   });
 }

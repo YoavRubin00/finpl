@@ -13,6 +13,33 @@ function getDb() {
   return drizzle(sql);
 }
 
+/**
+ * Strips server-internal fields from a profile row before sending it to the
+ * client. CRITICAL: `syncToken` is the auth credential itself — leaking it in
+ * any response makes every sync endpoint trivially impersonatable. Email-flow
+ * booleans (welcomeEmailSent / tipEmailSent / dailyEmail*) are server-internal
+ * scheduling state with no client-side consumer.
+ */
+type ProfileRow = Awaited<ReturnType<typeof getDb>>['select'] extends never
+  ? never
+  : { [K in keyof typeof userProfiles.$inferSelect]: (typeof userProfiles.$inferSelect)[K] };
+
+function publicProfile<T extends Partial<ProfileRow> | null>(row: T): T {
+  if (!row) return row;
+  // Destructure to discard server-internal fields; `_unused` is intentional.
+  /* eslint-disable @typescript-eslint/no-unused-vars */
+  const {
+    syncToken: _syncToken,
+    welcomeEmailSent: _welcomeEmailSent,
+    tipEmailSent: _tipEmailSent,
+    dailyEmailSentAt: _dailyEmailSentAt,
+    dailyEmailEnabled: _dailyEmailEnabled,
+    ...safe
+  } = row as Record<string, unknown>;
+  /* eslint-enable @typescript-eslint/no-unused-vars */
+  return safe as T;
+}
+
 interface ProfileUpsertBody {
   authId: string;
   displayName?: string | null;
@@ -53,7 +80,7 @@ export async function GET(request: Request): Promise<Response> {
       return Response.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    return Response.json({ ok: true, profile });
+    return Response.json({ ok: true, profile: publicProfile(profile) });
   } catch (err: unknown) {
     return safeErrorResponse(err, 'sync/profile GET');
   }
@@ -154,7 +181,7 @@ export async function POST(request: Request): Promise<Response> {
       });
     }
 
-    return Response.json({ ok: true, profile });
+    return Response.json({ ok: true, profile: publicProfile(profile) });
   } catch (err: unknown) {
     return safeErrorResponse(err, 'sync/profile POST');
   }
