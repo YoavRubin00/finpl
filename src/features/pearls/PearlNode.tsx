@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { View, Pressable, Platform } from 'react-native';
+import { View, Pressable } from 'react-native';
 import { Image as ExpoImage } from 'expo-image';
 import { Check } from 'lucide-react-native';
 import Animated, {
@@ -14,16 +14,6 @@ import Animated, {
 
 const PEARL_COLORED = require('../../../assets/webp/pearl-colored.webp');
 const PEARL_LOCKED = require('../../../assets/webp/pearl-locked.webp');
-
-// CSS blend-mode hack — Higgsfield's pearl webps ship with an opaque white
-// background. `multiply` on web turns near-white pixels into "no change"
-// against the (near-white) path canvas, so the pearl visually floats with
-// no white box. Native platforms (iOS/Android) ignore the style — there
-// the box still shows; we'll regenerate the asset with a true alpha
-// channel before the next TestFlight build.
-const WEB_BG_FIX = Platform.OS === 'web'
-  ? ({ mixBlendMode: 'multiply' } as unknown as object)
-  : undefined;
 
 export type PearlNodeState = 'locked' | 'unlocked' | 'completed';
 
@@ -158,15 +148,28 @@ export function PearlNode({
       ) : null}
       <Animated.View style={pearlStyle}>
         {/* The Higgsfield-generated pearl — the original first-pass image
-            the user picked. mixBlendMode on web drops the white background
-            so it visually floats on the path; native still shows a faint
-            white pill until we ship an asset with a real alpha channel. */}
-        <ExpoImage
-          source={state === 'locked' ? PEARL_LOCKED : PEARL_COLORED}
-          style={[{ width: size, height: size }, WEB_BG_FIX]}
-          contentFit="contain"
-          accessible={false}
-        />
+            the user picked. The webp ships with an opaque white background
+            but the pearl shape itself is round, so a circular clip
+            (borderRadius + overflow:hidden) removes the 4 white corners
+            cleanly on every platform — no more white square showing up on
+            the ocean-depth backdrop in chapters 5–6. The animated cyan
+            halo PearlNode renders separately (when glow=true) sits
+            OUTSIDE this clip so its glow keeps radiating past the edge. */}
+        <View
+          style={{
+            width: size,
+            height: size,
+            borderRadius: size / 2,
+            overflow: 'hidden',
+          }}
+        >
+          <ExpoImage
+            source={state === 'locked' ? PEARL_LOCKED : PEARL_COLORED}
+            style={{ width: size, height: size }}
+            contentFit="contain"
+            accessible={false}
+          />
+        </View>
       </Animated.View>
 
       {state === 'completed' ? (
