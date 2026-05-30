@@ -31,7 +31,9 @@ import { X } from 'lucide-react-native';
 
 import { STITCH } from '../../constants/theme';
 import { tapHaptic } from '../../utils/haptics';
+import { captureEvent } from '../../lib/posthog';
 import { useAuthStore } from '../auth/useAuthStore';
+import { useIsPro } from '../subscription/useSubscription';
 import { GlobalWealthHeader } from '../../components/ui/GlobalWealthHeader';
 import {
   LIFESTYLE_VIDEOS,
@@ -115,6 +117,11 @@ export function PearlSheet({ visible, pearl, onClose }: PearlSheetProps): React.
 
   const [activePage, setActivePage] = useState(0);
   const listRef = useRef<FlatList<StageDescriptor> | null>(null);
+  const isPro = useIsPro();
+  // Track open time so pearl_completed can carry time_to_complete_ms.
+  // `performance.now()` works on web; the native shim returns Date.now()
+  // — both are monotonic enough for "did this take 10s or 2 minutes" UX.
+  const openedAtRef = useRef<number>(0);
 
   // Reset state on each open. Picking the video here so it's stable across
   // pager paging within a single session — see LIFESTYLE_VIDEOS comment.
@@ -124,18 +131,50 @@ export function PearlSheet({ visible, pearl, onClose }: PearlSheetProps): React.
       // No history-aware avoidance yet — pickNext just needs the empty
       // history array. (We could later persist a seen-list per-user.)
       setVideo(pickNextLifestyleVideo([], []));
+      openedAtRef.current = Date.now();
+      try {
+        captureEvent('pearl_opened', {
+          after_module_id: pearl.afterModuleId,
+          next_module_id: pearl.nextModuleId,
+          chapter_id: pearl.chapterId,
+          game_key: pearl.gameKey,
+          stages_count: stages.length,
+          has_profile_question: !!pearl.profileQuestion,
+          is_pro: isPro,
+        });
+      } catch { /* non-fatal */ }
     }
-  }, [visible, pearl]);
+  }, [visible, pearl, stages.length, isPro]);
 
-  // Android back: close gracefully.
+  // Wrapped close: emits pearl_dismissed when the user bails before the
+  // last stage. pearl_completed fires from handleStageDone in that case,
+  // so we only emit dismissed when we know they HAVEN'T finished.
+  const handleDismiss = useCallback(() => {
+    if (pearl && activePage < stages.length) {
+      const currentStage = stages[activePage];
+      try {
+        captureEvent('pearl_dismissed', {
+          after_module_id: pearl.afterModuleId,
+          chapter_id: pearl.chapterId,
+          stage_kind: currentStage?.kind,
+          stage_index: activePage,
+          stages_count: stages.length,
+          time_open_ms: openedAtRef.current ? Date.now() - openedAtRef.current : null,
+        });
+      } catch { /* non-fatal */ }
+    }
+    onClose();
+  }, [pearl, activePage, stages, onClose]);
+
+  // Android back: close gracefully + emit dismiss.
   useEffect(() => {
     if (!visible) return;
     const sub = BackHandler.addEventListener('hardwareBackPress', () => {
-      onClose();
+      handleDismiss();
       return true;
     });
     return () => sub.remove();
-  }, [visible, onClose]);
+  }, [visible, handleDismiss]);
 
   const goToPage = useCallback((index: number) => {
     listRef.current?.scrollToIndex({ index, animated: true });
@@ -144,6 +183,16 @@ export function PearlSheet({ visible, pearl, onClose }: PearlSheetProps): React.
 
   const handleStageDone = useCallback(() => {
     if (!pearl) return;
+    const completedStage = stages[activePage];
+    try {
+      captureEvent('pearl_stage_completed', {
+        after_module_id: pearl.afterModuleId,
+        stage_kind: completedStage?.kind,
+        stage_index: activePage,
+        stages_count: stages.length,
+      });
+    } catch { /* non-fatal */ }
+
     const nextIdx = activePage + 1;
     if (nextIdx < stages.length) {
       goToPage(nextIdx);
@@ -152,12 +201,22 @@ export function PearlSheet({ visible, pearl, onClose }: PearlSheetProps): React.
     // Final stage — mark the pearl complete, close the sheet, and push the
     // user into the next module's lesson. The map will show the pearl as
     // completed when the user returns to it.
+    try {
+      captureEvent('pearl_completed', {
+        after_module_id: pearl.afterModuleId,
+        next_module_id: pearl.nextModuleId,
+        chapter_id: pearl.chapterId,
+        game_key: pearl.gameKey,
+        stages_count: stages.length,
+        time_to_complete_ms: openedAtRef.current ? Date.now() - openedAtRef.current : null,
+      });
+    } catch { /* non-fatal */ }
     markCompleted(pearlIdFor(pearl));
     onClose();
     // Push, not replace — keeps the map underneath so the back stack works
     // naturally if the user backs out of the lesson without finishing.
     router.push(`/lesson/${pearl.nextModuleId}?chapterId=${pearl.chapterId}` as never);
-  }, [pearl, activePage, stages.length, goToPage, markCompleted, onClose, router]);
+  }, [pearl, activePage, stages, goToPage, markCompleted, onClose, router]);
 
   const onMomentumScrollEnd = useCallback(
     (e: NativeSyntheticEvent<NativeScrollEvent>) => {
@@ -245,14 +304,14 @@ export function PearlSheet({ visible, pearl, onClose }: PearlSheetProps): React.
       transparent={false}
       animationType="slide"
       statusBarTranslucent
-      onRequestClose={onClose}
+      onRequestClose={handleDismiss}
     >
       <SafeAreaView style={styles.safeArea} edges={['top', 'left', 'right']}>
         <GlobalWealthHeader compact />
 
         <View style={styles.topBar}>
           <Pressable
-            onPress={() => { tapHaptic(); onClose(); }}
+            onPress={() => { tapHaptic(); handleDismiss(); }}
             style={({ pressed }) => [styles.closeBtn, pressed && { opacity: 0.7 }]}
             accessibilityRole="button"
             accessibilityLabel="סגור פנינה"

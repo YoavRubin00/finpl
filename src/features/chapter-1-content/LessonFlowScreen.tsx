@@ -2878,8 +2878,9 @@ export function LessonFlowScreen() {
   const [showStreakPopup, setShowStreakPopup] = useState(false);
   const [showQuizIntro, setShowQuizIntro] = useState(false);
   const [showWisdom, setShowWisdom] = useState(false);
-  const [showInterGame, setShowInterGame] = useState(false);
-  const [interGamePhase, setInterGamePhase] = useState<'video' | 'finn'>('video');
+  // (legacy showInterGame + interGamePhase removed — the inter-module game
+  //  modal moved to the Pearl bonus node on the learn map; see
+  //  src/features/pearls/. No callers remain in this file.)
   // Inter-module CONTENT (Feed-derived cards: PremiumLearning, DidYouKnow,
   // LiveMarket, LiveNews). Fires only when interModuleGame is absent — each
   // module gets at most one inter-module artifact, never both back-to-back.

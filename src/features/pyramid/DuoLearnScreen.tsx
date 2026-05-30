@@ -1320,6 +1320,29 @@ export function DuoLearnScreen() {
         setReplayModule({ moduleId, chapterId, moduleIndex });
         return;
       }
+      // Detect "user skipped the pearl that sits before this module". If the
+      // previous module in this chapter has a pearl AND that pearl is
+      // unlocked (prev module completed) AND not yet finished, the user is
+      // walking past a reachable bonus. Fire pearl_skipped_to_next_module
+      // so we can measure opt-in vs skip rate. Best-effort — wrapped in a
+      // try/catch so a missing chapter ref never blocks navigation.
+      try {
+        if (moduleIndex > 0) {
+          const ch = ALL_CHAPTERS.find((c) => c.id === chapterId);
+          const prevModule = ch?.modules[moduleIndex - 1];
+          if (prevModule && done.includes(prevModule.id)) {
+            const pearl = pearlConfigFor(prevModule.id);
+            if (pearl && !completedPearlIds.includes(pearlIdFor(pearl))) {
+              captureEvent('pearl_skipped_to_next_module', {
+                after_module_id: pearl.afterModuleId,
+                next_module_id: pearl.nextModuleId,
+                chapter_id: pearl.chapterId,
+                game_key: pearl.gameKey,
+              });
+            }
+          }
+        }
+      } catch { /* non-fatal */ }
       // Backstop: catch users who skipped past an in-lesson profile question by
       // exiting before tapping "Continue". Re-ask before they enter the gate
       // module. PROFILE_QUESTION_BACKSTOPS owns the mapping.
@@ -1338,7 +1361,7 @@ export function DuoLearnScreen() {
       setCurrentModule(moduleIndex);
       router.push(`/lesson/${moduleId}?chapterId=${chapterId}` as never);
     },
-    [router, setCurrentChapter, setCurrentModule, progressData, knowledgeLevelSet, learningTimeSet, dailyGoalSet],
+    [router, setCurrentChapter, setCurrentModule, progressData, knowledgeLevelSet, learningTimeSet, dailyGoalSet, completedPearlIds],
   );
 
   // Once the user picks (or skips) the backstop question, navigate to the

@@ -115,12 +115,18 @@ function renderGameCard(
   }
 }
 
-/** Mounts and immediately calls onMount — used for game keys we want to
- *  skip without breaking the pager flow. */
+/** Mounts and immediately calls onMount EXACTLY ONCE — used for game keys
+ *  we want to skip without breaking the pager flow. Stashes onMount in a
+ *  ref so a re-render in the parent (e.g. PearlSheet recreating
+ *  handleStageDone on every render) doesn't re-fire the effect and skip
+ *  multiple stages. */
 function FallbackContinueOnMount({ onMount }: { onMount: () => void }): null {
+  const onMountRef = React.useRef(onMount);
+  onMountRef.current = onMount;
   React.useEffect(() => {
-    onMount();
-  }, [onMount]);
+    onMountRef.current?.();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   return null;
 }
 
