@@ -43,7 +43,7 @@ export function PearlNode({
   state,
   offsetX = 0,
   onPress,
-  haloColor = '#93c5fd',
+  haloColor: _haloColor,
   size = 56,
 }: PearlNodeProps): React.ReactElement {
   const reducedMotion = useReducedMotion();
@@ -51,42 +51,31 @@ export function PearlNode({
   const shouldAnimate = isUnlocked && !reducedMotion;
 
   const scale = useSharedValue(1);
-  const haloOpacity = useSharedValue(0);
 
   useEffect(() => {
     if (!shouldAnimate) {
       cancelAnimation(scale);
-      cancelAnimation(haloOpacity);
       scale.value = withTiming(1, { duration: 200 });
-      haloOpacity.value = withTiming(0, { duration: 200 });
       return;
     }
+    // Gentle breathing only — no surrounding halo. The pearl's own
+    // iridescent rendering carries the visual interest; the blue halo
+    // looked like a separate UI element and read as noise on top of
+    // an already-busy path.
     scale.value = withRepeat(
       withSequence(
-        withTiming(1.08, { duration: 850 }),
-        withTiming(1, { duration: 850 }),
+        withTiming(1.06, { duration: 950 }),
+        withTiming(1, { duration: 950 }),
       ),
       -1,
       false,
     );
-    haloOpacity.value = withRepeat(
-      withSequence(
-        withTiming(0.55, { duration: 850 }),
-        withTiming(0.15, { duration: 850 }),
-      ),
-      -1,
-      false,
-    );
-  }, [shouldAnimate, scale, haloOpacity]);
+  }, [shouldAnimate, scale]);
 
   const pearlStyle = useAnimatedStyle(() => ({
     transform: [{ scale: scale.value }],
   }));
-  const haloStyle = useAnimatedStyle(() => ({
-    opacity: haloOpacity.value,
-  }));
 
-  const halo = size * 1.7;
   const accessibilityLabel =
     state === 'locked'
       ? 'פנינה — נעולה. סיים את המודולה כדי לפתוח'
@@ -104,24 +93,6 @@ export function PearlNode({
         position: 'relative',
       }}
     >
-      {/* Halo — only animates when unlocked. Positioned absolutely so it
-          radiates from behind the pearl image. */}
-      {shouldAnimate ? (
-        <Animated.View
-          pointerEvents="none"
-          style={[
-            {
-              position: 'absolute',
-              width: halo,
-              height: halo,
-              borderRadius: halo / 2,
-              backgroundColor: haloColor,
-            },
-            haloStyle,
-          ]}
-        />
-      ) : null}
-
       <Animated.View style={pearlStyle}>
         <ExpoImage
           source={state === 'locked' ? PEARL_LOCKED : PEARL_COLORED}
