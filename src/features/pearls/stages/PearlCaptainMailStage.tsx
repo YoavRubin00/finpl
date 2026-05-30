@@ -7,6 +7,7 @@ import { useFunStore } from '../../../stores/useFunStore';
 import { FINN_DAD_JOKES, FINN_FUN_FACTS } from '../../fun/finnJokesData';
 import { FINN_HAPPY } from '../../retention-loops/finnMascotConfig';
 import { tapHaptic } from '../../../utils/haptics';
+import { pearlStageStyles } from './sharedStageStyles';
 
 interface PearlCaptainMailStageProps {
   isActive: boolean;
@@ -108,15 +109,15 @@ export function PearlCaptainMailStage({ isActive, onContinue }: PearlCaptainMail
         </Animated.View>
       </ScrollView>
 
-      <View style={styles.ctaWrap}>
+      <View style={[pearlStageStyles.ctaWrap, styles.ctaWrapOverride]}>
         <Pressable
           onPress={handleContinue}
-          style={styles.cta}
+          style={pearlStageStyles.cta}
           accessibilityRole="button"
-          accessibilityLabel="המשך"
+          accessibilityLabel="סיימתי לקרוא, המשך לשלב הבא"
           disabled={!isActive}
         >
-          <Text style={styles.ctaText} allowFontScaling={false}>המשך ←</Text>
+          <Text style={pearlStageStyles.ctaText} allowFontScaling={false}>סיימתי ←</Text>
         </Pressable>
       </View>
     </View>
@@ -226,24 +227,10 @@ const styles = StyleSheet.create({
     writingDirection: 'rtl',
     lineHeight: 20,
   },
-  ctaWrap: {
+  // CTA uses sharedStageStyles; this override only adjusts page-level padding
+  // since the mail card uses a ScrollView wrapper (unlike concept/quote).
+  ctaWrapOverride: {
     paddingHorizontal: 20,
     paddingBottom: 24,
-  },
-  cta: {
-    backgroundColor: '#0891b2',
-    borderRadius: 16,
-    paddingVertical: 14,
-    alignItems: 'center',
-    justifyContent: 'center',
-    minHeight: 50,
-    borderBottomWidth: 4,
-    borderBottomColor: '#0e7490',
-  },
-  ctaText: {
-    color: '#fff',
-    fontSize: 17,
-    fontWeight: '900',
-    writingDirection: 'rtl',
   },
 });

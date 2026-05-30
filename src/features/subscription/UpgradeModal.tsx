@@ -24,8 +24,8 @@ const FEATURE_INFO: Record<GatedFeature, { title: string; body: string }> = {
     body: `משתמשי FREE מקבלים ${BASIC_LIMITS.chat} הודעות בצ'אט.\nשדרג ל-PRO לשיחות AI ללא הגבלה עם פינן.`,
   },
   aiInsights: {
-    title: "AI Insights, PRO בלבד",
-    body: "ניתוח השקעות מבוסס AI זמין לחברי PRO בלבד.\nשדרג כדי לפתוח תובנות מותאמות אישית.",
+    title: "תובנות AI, הגעת למכסה החודשית",
+    body: `ב‑Free יש לכם ${BASIC_LIMITS.aiInsights} תובנה אמיתית בחודש.\nב‑PRO תובנות מותאמות אישית ללא הגבלה — חדשות כל שבוע.`,
   },
   saved_items: {
     title: "פריטים שמורים, PRO בלבד",
@@ -40,12 +40,16 @@ const FEATURE_INFO: Record<GatedFeature, { title: string; body: string }> = {
     body: "ב‑Free יש לכם דקה אחת ניסיון. ב‑PRO מקבלים עד 10 דקות שיחה ביום עם קפטן שארק על כל דבר פיננסי.",
   },
   "analyst-quick": {
-    title: "אנליסט מניות מהיר, PRO בלבד",
-    body: "ב‑Free מקבלים ניתוח מהיר אחד ביום. ב‑PRO ניתוחים ללא הגבלה — כל מניה, כל שאלה.",
+    title: "אנליסט מניות מהיר, הגעת למכסה היומית",
+    body: `ב‑Free מקבלים ${BASIC_LIMITS["analyst-quick"]} ניתוחים מהירים ביום.\nב‑PRO ניתוחים ללא הגבלה — כל מניה, כל שאלה.`,
   },
   "analyst-deep": {
-    title: "ניתוח עומק AI, PRO בלבד",
-    body: "ניתוח עומק עם follow-up, מצגי תזרים ובדיקות שווי שמור לחברי PRO.\nשדרג כדי לפתוח את האנליסט המלא.",
+    title: "ניתוח עומק AI, הגעת למכסה השבועית",
+    body: `ב‑Free מקבלים ${BASIC_LIMITS["analyst-deep"]} ניתוח עומק בשבוע, כולל follow-up, מצגי תזרים ובדיקות שווי.\nב‑PRO ניתוחי עומק ללא הגבלה.`,
+  },
+  payslip: {
+    title: "ניתוח תלוש שכר, הגעת למכסה החודשית",
+    body: `ב‑Free מקבלים ${BASIC_LIMITS.payslip} ניתוח תלוש בחודש.\nב‑PRO תוכלו לנתח תלוש בכל פעם שתרצו — כל חודש, כל בונוס, כל שינוי במשרה.`,
   },
 };
 

@@ -222,12 +222,18 @@ export function DailyQuestsSheet({ visible, onClose }: DailyQuestsSheetProps) {
     // each now have a dedicated host route under /quest/* that renders the game
     // standalone with bypassDailyGate — the cards still mark the quest complete
     // via useDailyQuestsStore on finish, so no other wiring is needed.
+    //
+    // The router.push runs after the Modal close animation begins. On iOS,
+    // navigating WHILE a Modal dismisses can abort the dismiss + leave the
+    // sheet visible underneath the new route. Defer the push by one slide
+    // duration (~280ms) so the sheet fully closes first.
+    const navigate = (path: string) => setTimeout(() => router.push(path as never), 280);
     if (quest.type === "swipe") {
-      router.push("/quest/swipe-game" as never);
+      navigate("/quest/swipe-game");
     } else if (quest.type === "dilemma") {
-      router.push("/quest/daily-dilemma" as never);
+      navigate("/quest/daily-dilemma");
     } else if (quest.type === "module") {
-      router.push("/(tabs)" as never);
+      navigate("/(tabs)");
     }
   };
 

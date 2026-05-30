@@ -1,6 +1,7 @@
 import { useCallback } from 'react';
 import { useStockAnalystStore } from '../useStockAnalystStore';
 import { useIsPro } from '../../subscription/useSubscription';
+import { useUsageStore } from '../../subscription/useUsageStore';
 import { useTradingStore } from '../../trading-hub/useTradingStore';
 import { fetchQuickAnalysis, fetchDeepAnalysis, fetchLiveQuote } from '../services/stockAnalystClient';
 import { buildPortfolioContext } from '../services/portfolioContext';
@@ -49,15 +50,19 @@ export function useAnalystSubmit() {
   const setError = useStockAnalystStore((s) => s.setError);
   const setPendingDeepCard = useStockAnalystStore((s) => s.setPendingDeepCard);
 
-  // Tier gate: Pro = unlimited; Free = blocked (always shows upgrade modal).
-  // Per-day quotas for Free are a follow-up — drop them in once the tool has
-  // engagement data and we know what cadence to allow. For now this matches
-  // the rest of dev's Pro-locked tools (aiInsights, saved_items).
+  // Tier gate (Moni Sample Loop, 2026-05-30): Free users get 2 quick
+  // analyses per DAY and 1 deep analysis per WEEK; Pro is unlimited. Quotas
+  // are enforced by useUsageStore which tracks bucketed counters with their
+  // own reset cadences (day vs week). When canUse() is false, useAnalystSubmit
+  // returns { ok: false, reason: 'gate' } and the screen surfaces the
+  // CapExceededAnalystModal — same UX as the prior hard-blocked behavior.
   const isPro = useIsPro();
-  const canUseAnalystQuick = useCallback(() => isPro, [isPro]);
-  const canUseAnalystDeep = useCallback(() => isPro, [isPro]);
-  const recordAnalystQuickUsage = useCallback(() => { /* no-op; quota deferred */ }, []);
-  const recordAnalystDeepUsage = useCallback(() => { /* no-op; quota deferred */ }, []);
+  const canUse = useUsageStore((s) => s.canUse);
+  const incrementUsage = useUsageStore((s) => s.incrementUsage);
+  const canUseAnalystQuick = useCallback(() => canUse('analyst-quick', isPro), [canUse, isPro]);
+  const canUseAnalystDeep = useCallback(() => canUse('analyst-deep', isPro), [canUse, isPro]);
+  const recordAnalystQuickUsage = useCallback(() => incrementUsage('analyst-quick'), [incrementUsage]);
+  const recordAnalystDeepUsage = useCallback(() => incrementUsage('analyst-deep'), [incrementUsage]);
   const addQuickToHistory = useAnalystHistoryStore((s) => s.addQuick);
   const addDeepToHistory = useAnalystHistoryStore((s) => s.addDeep);
 

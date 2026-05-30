@@ -44,7 +44,10 @@ export const useWeeklyInsightStore = create<WeeklyInsightState>()(
         const daysSince = Math.floor(
           (Date.now() - new Date(lastFetchedAt).getTime()) / (1000 * 60 * 60 * 24),
         );
-        return daysSince >= 7;
+        // Moni 2026-05-30: Free tier shifted from weekly to monthly cadence
+        // to align with BASIC_LIMITS.aiInsights = 1/month. Note the store
+        // file name is legacy — the cadence here is the source of truth.
+        return daysSince >= 30;
       },
 
       saveInsight: (insight: FreeInsight) => {

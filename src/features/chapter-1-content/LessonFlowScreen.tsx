@@ -164,6 +164,14 @@ const MODULES_WITH_SIM = new Set(["mod-0-1", "mod-0-3", "mod-0-4", "mod-1-1", "m
 const SIM_FIRST_MODULES = new Set(["mod-0-1", "mod-1-1", "mod-2-12", "mod-2-13", "mod-3-18", "mod-4-20", "mod-4-22", "mod-4-23", "mod-4-27", "mod-4-b4"]);
 
 /**
+ * Module whose quiz-tail injects the knowledgeLevel onboarding question
+ * inline (see advanceQuiz). Bound to the FIRST chapter-0 slot — currently
+ * the financial-basics content after the 2026-05-30 swap. Keep it as a
+ * named constant so a future content reorg only updates one place.
+ */
+const KNOWLEDGE_LEVEL_INLINE_MODULE_ID = 'mod-0-1';
+
+/**
  * Modules that insert an Interactive Recall phase between flashcards and quizzes.
  * Each moduleId listed here must also have a matching entry in
  * `recallExerciseSets` (see src/features/sentence-exercise/sentenceData.ts);
@@ -3382,8 +3390,8 @@ export function LessonFlowScreen() {
     // mod-0-1 (post-2026-05-30 swap = financial basics, first lesson) acts as a
     // continuation of onboarding: ask knowledgeLevel RIGHT after the last quiz,
     // before the simulation. The resume action runs once the user answers/skips.
-    if (mod.id === 'mod-0-1' && !useAuthStore.getState().profile?.knowledgeLevel && profileQuestionAskedRef.current !== 'mod-0-1') {
-      profileQuestionAskedRef.current = 'mod-0-1';
+    if (mod.id === KNOWLEDGE_LEVEL_INLINE_MODULE_ID && !useAuthStore.getState().profile?.knowledgeLevel && profileQuestionAskedRef.current !== KNOWLEDGE_LEVEL_INLINE_MODULE_ID) {
+      profileQuestionAskedRef.current = KNOWLEDGE_LEVEL_INLINE_MODULE_ID;
       pendingPostQuestionActionRef.current = advanceToNextPhase;
       setProfileQuestionKind('knowledgeLevel');
       return;
@@ -4913,9 +4921,36 @@ export function LessonFlowScreen() {
               // Durable local record so the skip survives the 404 rollback for guests
               // and cold starts (mirrors completeModule's markCompleted).
               useCompletedModulesStore.getState().markManyCompleted(chapter0Data.modules.map((m) => m.id));
+              // Grade-skip compensation — pre-audit the skipper lost ~250 XP and
+              // ~150 coins of legitimate chapter-0 yield (all 5 lessons granted
+              // upsertProgress with xpEarned:0). The skip is self-aware, not a
+              // free ride, so we grant the sum-of-chapter XP equivalent plus a
+              // small "expertise bonus" so being honest about the level isn't
+              // strictly punished. Matches per-module yield used by mod-0-x
+              // completion (~50 XP / lesson + chest coins ~30/lesson).
+              const chapter0ModuleCount = chapter0Data.modules.length;
+              const PER_MODULE_XP_EQUIV = 50;
+              const PER_MODULE_COINS_EQUIV = 30;
+              const EXPERT_BONUS_XP = 100;
+              try {
+                useEconomyUIStore.getState().addXP(
+                  chapter0ModuleCount * PER_MODULE_XP_EQUIV + EXPERT_BONUS_XP,
+                  'lesson_complete',
+                );
+                useEconomyUIStore.getState().addCoins(
+                  chapter0ModuleCount * PER_MODULE_COINS_EQUIV,
+                  'lesson',
+                );
+              } catch { /* non-fatal */ }
               setCurrentChapter('ch-1');
               setCurrentModule(0);
-              try { captureEvent('expert_grade_skip', { from_module: id }); } catch { /* non-fatal */ }
+              try {
+                captureEvent('expert_grade_skip', {
+                  from_module: id,
+                  xp_granted: chapter0ModuleCount * PER_MODULE_XP_EQUIV + EXPERT_BONUS_XP,
+                  coins_granted: chapter0ModuleCount * PER_MODULE_COINS_EQUIV,
+                });
+              } catch { /* non-fatal */ }
               setShowGradeSkipCelebration(true);
               return;
             }

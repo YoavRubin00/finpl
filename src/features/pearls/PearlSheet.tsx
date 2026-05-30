@@ -2,12 +2,19 @@
  * Full-screen Pearl sheet — drops over the learn screen when the user taps
  * a pearl node. Plays a short pager of stages:
  *
- *   [optional] profile-question  →  lifestyle video  →  mini-game
+ *   [optional] profile-question  →  daily-pick (concept/quote/mail)  →  mini-game
  *
- * On the final stage's onContinue the sheet marks the pearl completed in
- * usePearlsStore, dismisses, and pushes the user straight into the lesson
- * of the next module. Exit-mid-flow (X tap) doesn't penalize — the pearl
- * simply stays unlocked for next time.
+ * Post-2026-05-30 multi-agent audit: the earlier 6-stage flow (concept +
+ * quote + mail + video + game) had a predicted 15-20pp drop-off vs the
+ * 3-stage version (Duolingo Stories benchmark) and zero payout. This sheet
+ * now caps at 3 swipes, rotates the daily content (one per day), and grants
+ * a small XP+coin payout on completion to keep the bonus feeling like a
+ * reward.
+ *
+ * Exit-mid-flow (X tap) doesn't penalize the pearl progress — the pearl
+ * stays unlocked for next time — but the streak-tick fires once the user
+ * has cleared the daily-pick stage (so a near-completion still counts for
+ * the daily activity if the pearl was their only session today).
  */
 
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
@@ -35,24 +42,27 @@ import { captureEvent } from '../../lib/posthog';
 import { useAuthStore } from '../auth/useAuthStore';
 import { useIsPro } from '../subscription/useSubscription';
 import { GlobalWealthHeader } from '../../components/ui/GlobalWealthHeader';
-import {
-  LIFESTYLE_VIDEOS,
-  pickNextLifestyleVideo,
-  type LifestyleVideoSpec,
-} from '../inter-module-break/lifestyleVideoConfig';
 import type { ProfileQuestionKind } from '../onboarding/InModuleProfileQuestion';
 
 import { usePearlsStore } from './usePearlsStore';
 import { pearlIdFor, type PearlContent } from './pearlConfig';
 import { PearlProgressBar } from './PearlProgressBar';
-import { PearlVideoStage } from './stages/PearlVideoStage';
 import { PearlGameStage } from './stages/PearlGameStage';
 import { PearlProfileQuestionStage } from './stages/PearlProfileQuestionStage';
 import { PearlDailyConceptStage } from './stages/PearlDailyConceptStage';
 import { PearlDailyQuoteStage } from './stages/PearlDailyQuoteStage';
 import { PearlCaptainMailStage } from './stages/PearlCaptainMailStage';
+import { useEconomyUIStore } from '../economy/useEconomyUIStore';
+import { useFunStore } from '../../stores/useFunStore';
+import { markDailyActivityCompleted } from '../economy/useStreak';
 
 const SCREEN_W = Dimensions.get('window').width;
+
+/** Pearl completion payout — anchored to Brawl Pass tier-1 yield (small,
+ *  not a free meal). The pre-audit state granted ZERO and the bonus felt
+ *  like a sink-with-no-source; this restores the source side. */
+const PEARL_COMPLETE_XP = 25;
+const PEARL_COMPLETE_COINS = 50;
 
 interface PearlSheetProps {
   visible: boolean;
@@ -60,7 +70,28 @@ interface PearlSheetProps {
   onClose: () => void;
 }
 
-type StageKind = 'profile-question' | 'daily-concept' | 'daily-quote' | 'captain-mail' | 'video' | 'game';
+type StageKind = 'profile-question' | 'daily-pick' | 'game';
+
+/** Which daily-content card the daily-pick stage should render today. The
+ *  rotation is deterministic per UTC day so every user sees the same kind on
+ *  the same date — same anchor as DAILY_CONCEPTS / wisdomQuotes. The mail
+ *  variant is filtered out on days the user already opened it (see
+ *  useFunStore.lastMailDate) so we don't spam-feel the user. */
+type DailyPickKind = 'concept' | 'quote' | 'captain-mail';
+
+function pickDailyContentKind(mailAlreadyShownToday: boolean): DailyPickKind {
+  const dayIndex = Math.floor(Date.now() / 86400000);
+  const rotation: DailyPickKind[] = ['concept', 'quote', 'captain-mail'];
+  const pick = rotation[dayIndex % rotation.length];
+  // Captain mail gating: if the user already opened mail today, fall through
+  // to concept (won't see the mail twice across multiple pearls in one day).
+  if (pick === 'captain-mail' && mailAlreadyShownToday) return 'concept';
+  return pick;
+}
+
+function todayISO(): string {
+  return new Date().toISOString().slice(0, 10);
+}
 
 interface StageDescriptor {
   kind: StageKind;
@@ -86,19 +117,26 @@ export function PearlSheet({ visible, pearl, onClose }: PearlSheetProps): React.
     return true;
   };
 
-  // Pick the lifestyle video once per sheet open — keep the same clip for
-  // the lifetime of this session so re-tapping a pearl during the same
-  // session doesn't shuffle videos mid-flow.
-  const [video, setVideo] = useState<LifestyleVideoSpec | null>(null);
+  // Pick the daily content kind once per sheet open — concept / quote / mail
+  // rotation by UTC day, gated to once-per-day for mail so a user with 3
+  // pearls in one day doesn't see the same envelope thrice.
+  const lastMailDate = useFunStore((s) => s.lastMailDate);
+  const dailyPickKind = useMemo<DailyPickKind>(
+    () => pickDailyContentKind(lastMailDate === todayISO()),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [lastMailDate, pearl?.afterModuleId],
+  );
 
-  // Stages list is derived from the pearl + profile-question gating, computed
-  // once per visible-open so the pager indices stay stable.
+  // Stages list is derived from the pearl + profile-question gating. Computed
+  // once per visible-open so the pager indices stay stable across re-renders.
   //
-  // Flow (post-2026-05-30 redesign): optional profile-question → daily concept
-  // → daily quote → captain shark mail → lifestyle video → mini-game.
-  // The three daily stages (concept/quote/mail) replaced the deleted Feed
-  // screen as the surface for that rotating content — they appear in every
-  // pearl so users who skipped previous pearls still encounter today's pick.
+  // Flow (post-2026-05-30 redesign, tightened by audit):
+  //   optional profile-question → daily-pick (ONE of concept/quote/mail) → game
+  //
+  // Earlier iteration had 5-6 stages (concept + quote + mail + video + game).
+  // Audit consensus (7/10 agents) flagged the length as a drop-off cliff —
+  // bonus contents should be ≤3 swipes. The lifestyle video was retired here
+  // and the daily content is rotated, not stacked.
   const stages = useMemo<StageDescriptor[]>(() => {
     if (!pearl) return [];
     const list: StageDescriptor[] = [];
@@ -106,10 +144,7 @@ export function PearlSheet({ visible, pearl, onClose }: PearlSheetProps): React.
     if (pearl.profileQuestion && !profileQuestionSet(pearl.profileQuestion)) {
       list.push({ kind: 'profile-question', index: idx++ });
     }
-    list.push({ kind: 'daily-concept', index: idx++ });
-    list.push({ kind: 'daily-quote', index: idx++ });
-    list.push({ kind: 'captain-mail', index: idx++ });
-    list.push({ kind: 'video', index: idx++ });
+    list.push({ kind: 'daily-pick', index: idx++ });
     list.push({ kind: 'game', index: idx++ });
     return list;
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -123,14 +158,17 @@ export function PearlSheet({ visible, pearl, onClose }: PearlSheetProps): React.
   // — both are monotonic enough for "did this take 10s or 2 minutes" UX.
   const openedAtRef = useRef<number>(0);
 
-  // Reset state on each open. Picking the video here so it's stable across
-  // pager paging within a single session — see LIFESTYLE_VIDEOS comment.
+  // Reset state on each open + emit pearl_opened. The lifestyle video stage
+  // was retired in the 2026-05-30 audit (Pearl trimmed to 3 stages), so the
+  // earlier `setVideo(pickNextLifestyleVideo(...))` is gone.
+  //
+  // `stages.length` is intentionally NOT in deps — answering the profile
+  // question shortens the array mid-session; including it caused
+  // `pearl_opened` to fire twice (audit P1). The `isPro` and `stages.length`
+  // values get snapshotted via captureEvent at open-time, which is correct.
   useEffect(() => {
     if (visible && pearl) {
       setActivePage(0);
-      // No history-aware avoidance yet — pickNext just needs the empty
-      // history array. (We could later persist a seen-list per-user.)
-      setVideo(pickNextLifestyleVideo([], []));
       openedAtRef.current = Date.now();
       try {
         captureEvent('pearl_opened', {
@@ -144,7 +182,8 @@ export function PearlSheet({ visible, pearl, onClose }: PearlSheetProps): React.
         });
       } catch { /* non-fatal */ }
     }
-  }, [visible, pearl, stages.length, isPro]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [visible, pearl]);
 
   // Wrapped close: emits pearl_dismissed when the user bails before the
   // last stage. pearl_completed fires from handleStageDone in that case,
@@ -193,14 +232,23 @@ export function PearlSheet({ visible, pearl, onClose }: PearlSheetProps): React.
       });
     } catch { /* non-fatal */ }
 
+    // Streak-tick fires once the user clears the daily-pick stage (engaged
+    // with content), not just at final completion. Without this, a user who
+    // drops mid-game still made the pearl their daily activity but loses
+    // the streak. The helper is idempotent per-day so the final-stage
+    // completion below safely fires it again.
+    if (completedStage?.kind === 'daily-pick') {
+      markDailyActivityCompleted();
+    }
+
     const nextIdx = activePage + 1;
     if (nextIdx < stages.length) {
       goToPage(nextIdx);
       return;
     }
-    // Final stage — mark the pearl complete, close the sheet, and push the
-    // user into the next module's lesson. The map will show the pearl as
-    // completed when the user returns to it.
+    // Final stage — mark the pearl complete, grant XP + coins, close the
+    // sheet, and push the user into the next module's lesson. The map will
+    // show the pearl as completed when the user returns to it.
     try {
       captureEvent('pearl_completed', {
         after_module_id: pearl.afterModuleId,
@@ -210,6 +258,13 @@ export function PearlSheet({ visible, pearl, onClose }: PearlSheetProps): React.
         stages_count: stages.length,
         time_to_complete_ms: openedAtRef.current ? Date.now() - openedAtRef.current : null,
       });
+    } catch { /* non-fatal */ }
+    // Pearl payout — small but real, matching Brawl Pass tier-1 yield. Zero
+    // payout (the pre-audit state) felt like a sink with no source and made
+    // the bonus skip-by-default after a few sessions.
+    try {
+      useEconomyUIStore.getState().addXP(PEARL_COMPLETE_XP, 'challenge_complete');
+      useEconomyUIStore.getState().addCoins(PEARL_COMPLETE_COINS, 'daily-quest');
     } catch { /* non-fatal */ }
     markCompleted(pearlIdFor(pearl));
     onClose();
@@ -252,31 +307,26 @@ export function PearlSheet({ visible, pearl, onClose }: PearlSheetProps): React.
           </View>
         );
       }
-      if (item.kind === 'daily-concept') {
-        return (
-          <View style={containerStyle}>
-            <PearlDailyConceptStage isActive={isActive} onContinue={handleStageDone} />
-          </View>
-        );
-      }
-      if (item.kind === 'daily-quote') {
-        return (
-          <View style={containerStyle}>
-            <PearlDailyQuoteStage isActive={isActive} onContinue={handleStageDone} />
-          </View>
-        );
-      }
-      if (item.kind === 'captain-mail') {
+      if (item.kind === 'daily-pick') {
+        // Render today's chosen daily-content sub-card. The rotation already
+        // gates mail to once-per-day; concept/quote rotate as fallback.
+        if (dailyPickKind === 'concept') {
+          return (
+            <View style={containerStyle}>
+              <PearlDailyConceptStage isActive={isActive} onContinue={handleStageDone} />
+            </View>
+          );
+        }
+        if (dailyPickKind === 'quote') {
+          return (
+            <View style={containerStyle}>
+              <PearlDailyQuoteStage isActive={isActive} onContinue={handleStageDone} />
+            </View>
+          );
+        }
         return (
           <View style={containerStyle}>
             <PearlCaptainMailStage isActive={isActive} onContinue={handleStageDone} />
-          </View>
-        );
-      }
-      if (item.kind === 'video' && video) {
-        return (
-          <View style={containerStyle}>
-            <PearlVideoStage isActive={isActive} video={video} onContinue={handleStageDone} />
           </View>
         );
       }
@@ -293,7 +343,7 @@ export function PearlSheet({ visible, pearl, onClose }: PearlSheetProps): React.
       }
       return <View style={containerStyle} />;
     },
-    [pearl, video, activePage, handleStageDone],
+    [pearl, dailyPickKind, activePage, handleStageDone],
   );
 
   if (!visible || !pearl) return null;

@@ -54,6 +54,7 @@ interface Props {
  */
 export function LoadingBubble({ mode, ticker }: Props): React.ReactElement {
   const [idx, setIdx] = useState(0);
+  const [pct, setPct] = useState(0);
   const messages = mode === 'deep' ? DEEP_MESSAGES : QUICK_MESSAGES;
   const dot = useSharedValue(0.3);
   const progress = useSharedValue(0);
@@ -97,6 +98,26 @@ export function LoadingBubble({ mode, ticker }: Props): React.ReactElement {
       progress.value = withTiming(1, { duration: 240 });
     }
   }, [pendingDeepCard, loading, mode, progress]);
+
+  // Parallel JS-side ticker for the numeric percentage label. Mirrors the
+  // same Easing.out(cubic) curve so the displayed number tracks the bar
+  // fill visually. Stops updating once the analysis lands (jumps to 100).
+  useEffect(() => {
+    if (mode !== 'deep') return undefined;
+    const startedAt = Date.now();
+    const id = setInterval(() => {
+      const elapsed = Date.now() - startedAt;
+      const t = Math.min(1, elapsed / EXPECTED_DEEP_MS);
+      const eased = 1 - Math.pow(1 - t, 3); // matches Easing.out(cubic)
+      setPct(Math.min(95, Math.round(eased * 95)));
+    }, 240);
+    return () => clearInterval(id);
+  }, [mode]);
+
+  useEffect(() => {
+    if (mode !== 'deep') return;
+    if (pendingDeepCard || !loading) setPct(100);
+  }, [pendingDeepCard, loading, mode]);
 
   const dotStyle = useAnimatedStyle(() => ({ opacity: dot.value }));
   const barStyle = useAnimatedStyle(() => ({ width: `${progress.value * 100}%` }));
@@ -151,11 +172,22 @@ export function LoadingBubble({ mode, ticker }: Props): React.ReactElement {
           like noise. */}
       {mode === 'deep' ? (
         <>
+          <View style={{ flexDirection: 'row-reverse', alignItems: 'center', justifyContent: 'space-between' }}>
+            <Text style={[RTL, { color: '#0c4a6e', fontSize: 11, fontWeight: '700', letterSpacing: 0.2 }]}>
+              {isReady ? 'הניתוח הושלם' : 'מנתח…'}
+            </Text>
+            <Text
+              style={{ color: isReady ? '#16a34a' : '#0369a1', fontSize: 12, fontWeight: '900', fontVariant: ['tabular-nums'] }}
+              accessibilityLabel={`${pct} אחוז`}
+            >
+              {pct}%
+            </Text>
+          </View>
           <View
             accessibilityLabel="התקדמות הניתוח"
             accessibilityRole="progressbar"
             style={{
-              height: 4,
+              height: 6,
               borderRadius: 999,
               backgroundColor: 'rgba(186,230,253,0.5)',
               overflow: 'hidden',

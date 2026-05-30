@@ -10,7 +10,7 @@
  */
 
 import React, { useCallback, useRef } from "react";
-import { View, Text, Pressable, StyleSheet, ScrollView } from "react-native";
+import { Text, Pressable, StyleSheet, ScrollView } from "react-native";
 import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 
@@ -72,7 +72,7 @@ const styles = StyleSheet.create({
   },
   closeBtn: {
     position: "absolute",
-    right: 16,
+    left: 16, // RTL: X close lives top-left, matching iOS-native + CaptainSharkOverlay/FinnMailModal convention
     width: 36,
     height: 36,
     borderRadius: 18,

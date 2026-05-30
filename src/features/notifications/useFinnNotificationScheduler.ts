@@ -107,9 +107,10 @@ export function useFinnNotificationScheduler() {
                     // US-009: 23:00 fallback only if task not done and primary isn't at 23
                     if (economyCompat.lastDailyTaskDate !== today && primaryHour < 23) {
                         const streakDays = economyCompat.streak;
+                        // CALM theme: emoji-free titles (matches 2026-05-30 push copy audit).
                         const fallbackCopy = streakDays > 0
-                            ? { title: `🕚 רצף של ${streakDays} ימים בסכנה`, body: 'שעה אחרונה לשמור עליו, 2 דקות וזהו' }
-                            : { title: '🕚 שעה אחרונה ליום', body: 'לא מאוחר מדי להתחיל רצף חדש היום' };
+                            ? { title: `רצף של ${streakDays} ימים בסכנה`, body: 'שעה אחרונה לשמור עליו. 2 דקות וזהו.' }
+                            : { title: 'שעה אחרונה ליום', body: 'לא מאוחר מדי להתחיל רצף חדש היום.' };
                         await store.scheduleStreakReminderWithCopy(
                             { title: fallbackCopy.title, body: fallbackCopy.body, data: { screen: '/(tabs)/learn' } },
                             23,

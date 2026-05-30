@@ -18,29 +18,32 @@ Notifications.setNotificationHandler({
 
 // ─── Notification content definitions ───────────────────────────────────────
 const CONTENT: Record<NotificationChannelId, Notifications.NotificationContentInput> = {
+  // Push titles intentionally emoji-free (2026-05-30 audit: CALM theme dictates
+  // restraint; emojis read as casino-creep). Emojis in body copy still ok when
+  // they add information (e.g. mascot avatar).
   streak: {
-    title: "🔥 אל תשברו את הרצף!",
-    body: "לא למדתם היום עדיין. שמרו על הסטריק שלכם!",
+    title: "אל תשברו את הרצף",
+    body: "לא למדתם היום עדיין. שמרו על הסטריק שלכם.",
     data: { screen: "/(tabs)/learn" },
   },
   chest: {
-    title: "📦 ארגז מחכה לפתיחה!",
-    body: "הארגז שלכם חיכה מספיק, פתחו אותו עכשיו ואספו את הפרס!",
+    title: "ארגז מחכה לפתיחה",
+    body: "הארגז שלכם חיכה מספיק. פתחו ואספו את הפרס.",
     data: { screen: "/(tabs)/learn" },
   },
   challenge: {
-    title: "⚔️ אתגר ממתין לכם!",
-    body: "חבר שלח לכם אתגר, אל תתנו לו לנצח!",
+    title: "אתגר ממתין לכם",
+    body: "חבר שלח לכם אתגר. אל תתנו לו לנצח.",
     data: { screen: "/duels" },
   },
   squadInvite: {
-    title: "🤝 הזמנה לסקוואד!",
-    body: "מישהו הזמין אתכם להצטרף לסקוואד שלו. בואו נרוויח יחד!",
+    title: "הזמנה לסקוואד",
+    body: "מישהו הזמין אתכם להצטרף לסקוואד שלו. בואו נרוויח יחד.",
     data: { screen: "/squads" },
   },
   squadChest: {
-    title: "💎 תיבת הסקוואד נפתחה!",
-    body: "הסקוואד שלכם הגיע ליעד! בואו לאסוף את הפרס השלל המשותף.",
+    title: "תיבת הסקוואד נפתחה",
+    body: "הסקוואד שלכם הגיע ליעד. בואו לאסוף את השלל המשותף.",
     data: { screen: "/squads" },
   },
   morning: {
@@ -54,27 +57,31 @@ const CONTENT: Record<NotificationChannelId, Notifications.NotificationContentIn
     data: { screen: "/(tabs)/learn" },
   },
   dailyChallenge: {
-    title: "🎯 האתגר היומי מחכה לכם!",
-    body: "דילמה פיננסית חדשה, בואו לפתור ולצבור XP!",
-    data: { screen: "/(tabs)/learn", feedScrollIndex: 0 },
+    title: "האתגר היומי מחכה לכם",
+    body: "דילמה פיננסית חדשה. בואו לפתור ולצבור XP.",
+    // 2026-05-30: was `/(tabs)/learn` + orphan `feedScrollIndex` (Feed-scroll
+    // anchor from the deleted FinFeedScreen). The push body promises a dilemma
+    // — route directly to the dedicated host so the user lands in the game,
+    // not on the pyramid map.
+    data: { screen: "/quest/daily-dilemma" },
   },
   breakingNews: {
-    title: "🔥 הסיכומים היומיים שלך מוכנים",
+    title: "הסיכומים היומיים שלך מוכנים",
     body: "כל החדשות מאתמול על המניות שלך — תוך 30 שניות.",
     data: { screen: "/breaking-news" },
   },
   marketHook: {
-    title: "📊 השוקים זזים!",
-    body: "בואו לראות מה קורה בעולם הפיננסי",
+    title: "השוקים זזים",
+    body: "בואו לראות מה קורה בעולם הפיננסי.",
     data: { screen: "/(tabs)/investments" },
   },
   aiInsight: {
-    title: "💡 תובנה חדשה מקפטן שארק",
-    body: "יש לכם תובנה פיננסית מותאמת אישית, בואו לראות!",
+    title: "תובנה חדשה מקפטן שארק",
+    body: "יש לכם תובנה פיננסית מותאמת אישית. בואו לראות.",
     data: { screen: "/(tabs)/" },
   },
   upgradeNudge: {
-    title: "🦈 קפטן שארק שם לב אליכם",
+    title: "קפטן שארק שם לב אליכם",
     body: "ניסיתם להשתמש בפיצ'רים PRO. בואו נסגור את זה?",
     data: { screen: "/pricing" },
   },

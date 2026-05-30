@@ -4,6 +4,7 @@ import { Image as ExpoImage } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 import { tapHaptic } from '../../../utils/haptics';
+import { BASIC_LIMITS } from '../../subscription/subscriptionConstants';
 
 const RTL = { writingDirection: 'rtl' as const, textAlign: 'center' as const };
 
@@ -15,10 +16,10 @@ interface Props {
 
 export function CapExceededAnalystModal({ visible, mode, onClose }: Props): React.ReactElement {
   const isDeep = mode === 'deep';
-  const title = isDeep ? 'הניתוח המעמיק שלך נוצל' : 'הניתוח החינמי היומי נוצל';
+  const title = isDeep ? 'נגמרה המכסה השבועית של ניתוחי העומק' : 'נגמרה המכסה היומית של הניתוחים המהירים';
   const body = isDeep
-    ? 'משתמש חינם זוכה לניתוח מעמיק אחד לחיים. שדרוג ל-PRO יפתח לך ניתוחי עומק ללא הגבלה.'
-    : 'משתמש חינם זוכה לניתוח מהיר אחד ביום. שדרוג ל-PRO יפתח ניתוחים ללא הגבלה.';
+    ? `ב‑Free מקבלים ${BASIC_LIMITS['analyst-deep']} ניתוח עומק בשבוע. ב‑PRO ניתוחי עומק ללא הגבלה — כולל follow-up, מצגי תזרים ובדיקות שווי.`
+    : `ב‑Free מקבלים ${BASIC_LIMITS['analyst-quick']} ניתוחים מהירים ביום. ב‑PRO ניתוחים ללא הגבלה — כל מניה, כל שאלה.`;
 
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>

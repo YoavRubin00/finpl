@@ -12,7 +12,7 @@
  */
 
 import React, { useCallback, useRef } from "react";
-import { View, Text, Pressable, StyleSheet, ScrollView } from "react-native";
+import { Text, Pressable, StyleSheet, ScrollView } from "react-native";
 import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 
@@ -25,6 +25,9 @@ export default function QuestSwipeGamePage(): React.ReactElement {
   const finishedRef = useRef(false);
 
   const handleClose = useCallback(() => {
+    // If the post-finish setTimeout is already in flight, let it run rather
+    // than racing it — otherwise X-tap during the 800ms tail double-navigates.
+    if (finishedRef.current) return;
     tapHaptic();
     if (router.canGoBack()) router.back();
     else router.replace("/(tabs)/learn" as never);
@@ -80,7 +83,7 @@ const styles = StyleSheet.create({
   },
   closeBtn: {
     position: "absolute",
-    right: 16,
+    left: 16, // RTL: X close lives top-left, matching iOS-native + CaptainSharkOverlay/FinnMailModal convention
     width: 36,
     height: 36,
     borderRadius: 18,
