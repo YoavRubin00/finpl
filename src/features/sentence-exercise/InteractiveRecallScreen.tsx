@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { View, Text, Pressable, StyleSheet, ScrollView } from "react-native";
 import Animated, { FadeIn, FadeOut } from "react-native-reanimated";
 import { useEconomyUIStore } from "../economy/useEconomyUIStore";
@@ -36,7 +36,9 @@ export function InteractiveRecallScreen({
 
   // CTA state lifted from TimelineOrderCard so the Check/Continue button can
   // live in a sticky footer below the ScrollView. Reset whenever the prompt
-  // changes so a stale callback from the previous prompt can't fire.
+  // changes so a stale callback (or stale helpVisible flag — which we use to
+  // override the FinnCoach bubble) from the previous prompt can't fire on
+  // the new one before that prompt's card mounts and pushes its own state.
   const [cardState, setCardState] = useState<TimelineOrderCardState | null>(null);
 
   const handleCorrectSettled = useCallback(() => {
@@ -74,8 +76,24 @@ export function InteractiveRecallScreen({
   }
 
   const prompt = recall.current;
-  const finnMood = recall.state.finnMood;
-  const finnMessage = recall.state.finnMessage;
+
+  // Drop the lifted card state when the prompt changes. Without this, the
+  // helpVisible flag (and the check/continue callbacks) leak from prompt N
+  // into prompt N+1 — visible as a flash of "צריכים עזרה?" in the FinnCoach
+  // bubble on the next card before its own state pushes through.
+  useEffect(() => {
+    setCardState(null);
+  }, [prompt.id]);
+
+  // When the timeline card's help offer is open, override Finn's bubble with
+  // the "צריכים עזרה?" copy. The buttons sit higher in the card; pulling the
+  // question into the bottom Finn bubble keeps both halves visible at once
+  // (the previous in-card "text + buttons" block sat below the fold).
+  const helpVisible = cardState?.helpVisible ?? false;
+  const finnMood = helpVisible ? "talking" : recall.state.finnMood;
+  const finnMessage = helpVisible
+    ? "צריכים עזרה? אני יכול לסדר את זה."
+    : recall.state.finnMessage;
 
   return (
     <View style={styles.root}>

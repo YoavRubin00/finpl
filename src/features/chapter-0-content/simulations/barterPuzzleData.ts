@@ -66,7 +66,10 @@ export const SWAP_MERCHANTS: Merchant[] = [
 
 export const STARTING_ITEM: BarterItem = { emoji: '🐔', label: 'תרנגולת' };
 
-export const COIN_ITEM: BarterItem = { emoji: '🪙', label: 'מטבע' };
+// Use 💰 (Emoji 1.0, universal) rather than 🪙 (Emoji 13.0, 2020) — the latter
+// renders as a "tofu" / moon fallback on older OS fonts, which is what the
+// barter puzzle visibly showed on some devices.
+export const COIN_ITEM: BarterItem = { emoji: '💰', label: 'מטבע' };
 
 export const FINN_COMMENT = 'נראה לי שיש פתרון יותר חכם 😮‍💨';
 

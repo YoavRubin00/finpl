@@ -45,6 +45,7 @@ import {
   buildInviteUrl,
   buildInviteShareMessage,
 } from "./referralConstants";
+import { SignupBonusHeadline } from "./SignupBonusHeadline";
 
 // ── Lottie sources ──
 const LOTTIE_DIVIDEND = require("../../../assets/lottie/wired-flat-945-dividends-hover-pinch.json");
@@ -152,7 +153,7 @@ export function ReferralScreen() {
             <BackButton />
             <View style={styles.titleCol}>
               <Text style={styles.title}>החברים שלי</Text>
-              <Text style={styles.subtitle}>{REFERRAL_COPY.signupBonusHeadline}</Text>
+              <SignupBonusHeadline textStyle={styles.subtitle} />
             </View>
             <Pressable
               onPress={handleRefresh}

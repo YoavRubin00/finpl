@@ -25,7 +25,8 @@ import { FINN_HELLO } from '../retention-loops/finnMascotConfig';
 import { useAuthStore } from '../auth/useAuthStore';
 import { useEconomyUIStore } from '../economy/useEconomyUIStore';
 import { redeemReferralCode } from '../../db/sync/syncReferral';
-import { REFERRAL_SIGNUP_BONUS_COINS, REFERRAL_COPY } from './referralConstants';
+import { REFERRAL_SIGNUP_BONUS_COINS } from './referralConstants';
+import { SignupBonusHeadline } from './SignupBonusHeadline';
 import { successHaptic, heavyHaptic } from '../../utils/haptics';
 
 const PENDING_REFERRAL_KEY = 'pending_referral_code_v1';
@@ -123,7 +124,7 @@ export function InviteRedemptionScreen() {
       {status === 'saved' && (
         <>
           <Text style={styles.title}>נהדר! ההזמנה נקלטה 🎉</Text>
-          <Text style={styles.subtitle}>{REFERRAL_COPY.signupBonusHeadline}</Text>
+          <SignupBonusHeadline textStyle={styles.subtitle} />
           <Text style={styles.body}>סיימו את ההרשמה והבונוס נכנס מיד.</Text>
         </>
       )}

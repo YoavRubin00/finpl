@@ -18,7 +18,6 @@ import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import { ChevronUp, ChevronDown } from "lucide-react-native";
 import { successHaptic, tapHaptic, mediumHaptic, selectionHaptic, errorHaptic } from "../../utils/haptics";
 import { ConfettiExplosion } from "../../components/ui/ConfettiExplosion";
-import { FINN_TALKING } from "../retention-loops/finnMascotConfig";
 import type { TimelineOrderPrompt } from "./sentenceTypes";
 
 const HELP_OFFER_DELAY_MS = 15_000;
@@ -39,6 +38,11 @@ export interface TimelineOrderCardState {
   /** True briefly after an incorrect "בדוק" tap — drives the red error state on
    *  the sticky CTA button. Auto-clears after a short delay. */
   wrong: boolean;
+  /** True while the post-15s help offer is visible. The parent moves the
+   *  "צריכים עזרה?" copy into the FinnCoach bubble at the bottom, leaving
+   *  only the action buttons in-card (per UX feedback: the previous in-card
+   *  text + buttons were sitting below the fold and easy to miss). */
+  helpVisible: boolean;
   check: () => void;
   continue_: () => void;
 }
@@ -401,8 +405,8 @@ export function TimelineOrderCard({
   // Push the latest state to the parent so it can render the sticky CTA.
   // Re-fires whenever `locked`/`wrong` flips or a callback identity changes.
   useEffect(() => {
-    onStateChange?.({ locked, wrong, check: handleCheck, continue_: handleContinue });
-  }, [locked, wrong, handleCheck, handleContinue, onStateChange]);
+    onStateChange?.({ locked, wrong, helpVisible: showHelpOffer && !locked, check: handleCheck, continue_: handleContinue });
+  }, [locked, wrong, showHelpOffer, handleCheck, handleContinue, onStateChange]);
 
   const displayOrder = localOrder;
 
@@ -425,6 +429,73 @@ export function TimelineOrderCard({
       </View>
 
       <Text style={styles.instruction}>{prompt.instruction}</Text>
+
+      {/* Captain Shark help offer — appears after 15s of inactivity.
+          ONLY the two action buttons render here; the "צריכים עזרה?" copy
+          moves down to the FinnCoach bubble (see InteractiveRecallScreen)
+          so users can actually see the choices instead of having them
+          buried at the bottom of the card. Accepting auto-arranges the
+          items in their correct order. */}
+      {showHelpOffer && !locked && (
+        <Animated.View
+          entering={FadeIn.duration(220)}
+          exiting={FadeOut.duration(160)}
+          style={styles.helpActions}
+        >
+          <Pressable
+            onPress={applyCorrectOrder}
+            accessibilityRole="button"
+            accessibilityLabel="כן, עזור לי לסדר"
+            style={({ pressed }) => ({
+              flex: 1,
+              minHeight: 48,
+              paddingVertical: 12,
+              paddingHorizontal: 8,
+              borderRadius: 12,
+              alignItems: "center",
+              justifyContent: "center",
+              backgroundColor: "#38bdf8",
+              borderBottomWidth: 3,
+              borderBottomColor: "#0284c7",
+              elevation: 3,
+              opacity: pressed ? 0.85 : 1,
+            })}
+          >
+            <Text
+              numberOfLines={1}
+              style={{ fontSize: 15, fontWeight: "900", color: "#1e293b", writingDirection: "rtl", textAlign: "center" }}
+            >
+              עזור לי
+            </Text>
+          </Pressable>
+          <Pressable
+            onPress={declineHelp}
+            accessibilityRole="button"
+            accessibilityLabel="לא תודה, אני אסתדר"
+            style={({ pressed }) => ({
+              flex: 1,
+              minHeight: 48,
+              paddingVertical: 12,
+              paddingHorizontal: 8,
+              borderRadius: 12,
+              alignItems: "center",
+              justifyContent: "center",
+              backgroundColor: "#2563eb",
+              borderBottomWidth: 3,
+              borderBottomColor: "#1e40af",
+              elevation: 3,
+              opacity: pressed ? 0.85 : 1,
+            })}
+          >
+            <Text
+              numberOfLines={1}
+              style={{ fontSize: 15, fontWeight: "900", color: "#1e293b", writingDirection: "rtl", textAlign: "center" }}
+            >
+              אני אסתדר
+            </Text>
+          </Pressable>
+        </Animated.View>
+      )}
 
       {/* ── Items ── */}
       <View style={styles.itemsColumn}>
@@ -473,80 +544,6 @@ export function TimelineOrderCard({
           );
         })}
       </View>
-
-      {/* Captain Shark help offer — appears after 15s of inactivity.
-          Accepting auto-arranges the items in their correct order. */}
-      {showHelpOffer && !locked && (
-        <Animated.View
-          entering={FadeIn.duration(220)}
-          exiting={FadeOut.duration(160)}
-          style={styles.helpOffer}
-        >
-          <View style={styles.helpRow}>
-            <ExpoImage
-              source={FINN_TALKING}
-              style={styles.helpFinn}
-              contentFit="contain"
-              accessible={false}
-            />
-            <Text style={styles.helpText}>צריכים עזרה? אני יכול לסדר את זה.</Text>
-          </View>
-          <View style={styles.helpActions}>
-            <Pressable
-              onPress={applyCorrectOrder}
-              accessibilityRole="button"
-              accessibilityLabel="כן, עזור לי לסדר"
-              style={({ pressed }) => ({
-                flex: 1,
-                minHeight: 48,
-                paddingVertical: 12,
-                paddingHorizontal: 8,
-                borderRadius: 12,
-                alignItems: "center",
-                justifyContent: "center",
-                backgroundColor: "#38bdf8",
-                borderBottomWidth: 3,
-                borderBottomColor: "#0284c7",
-                elevation: 3,
-                opacity: pressed ? 0.85 : 1,
-              })}
-            >
-              <Text
-                numberOfLines={1}
-                style={{ fontSize: 15, fontWeight: "900", color: "#1e293b", writingDirection: "rtl", textAlign: "center" }}
-              >
-                עזור לי
-              </Text>
-            </Pressable>
-            <Pressable
-              onPress={declineHelp}
-              accessibilityRole="button"
-              accessibilityLabel="לא תודה, אני אסתדר"
-              style={({ pressed }) => ({
-                flex: 1,
-                minHeight: 48,
-                paddingVertical: 12,
-                paddingHorizontal: 8,
-                borderRadius: 12,
-                alignItems: "center",
-                justifyContent: "center",
-                backgroundColor: "#2563eb",
-                borderBottomWidth: 3,
-                borderBottomColor: "#1e40af",
-                elevation: 3,
-                opacity: pressed ? 0.85 : 1,
-              })}
-            >
-              <Text
-                numberOfLines={1}
-                style={{ fontSize: 15, fontWeight: "900", color: "#1e293b", writingDirection: "rtl", textAlign: "center" }}
-              >
-                אני אסתדר
-              </Text>
-            </Pressable>
-          </View>
-        </Animated.View>
-      )}
 
       {/* Check / Continue button is rendered as a sticky footer by the
           parent (InteractiveRecallScreen). Lifting it out of the card body
@@ -680,59 +677,9 @@ const styles = StyleSheet.create({
     fontWeight: "900",
     color: "#059669",
   },
-  helpOffer: {
-    marginTop: 14,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-    borderRadius: 14,
-    backgroundColor: "#f0f9ff",
-    borderWidth: 1,
-    borderColor: "#bae6fd",
-    gap: 10,
-  },
-  helpRow: {
-    flexDirection: "row-reverse",
-    alignItems: "center",
-    gap: 10,
-  },
-  helpFinn: {
-    width: 44,
-    height: 44,
-  },
-  helpText: {
-    flex: 1,
-    fontSize: 14,
-    fontWeight: "700",
-    color: "#0c4a6e",
-    writingDirection: "rtl",
-    textAlign: "right",
-  },
   helpActions: {
     flexDirection: "row-reverse",
     gap: 8,
-  },
-  helpBtn: {
-    flex: 1,
-    paddingVertical: 12,
-    borderRadius: 12,
-    alignItems: "center",
-    justifyContent: "center",
-    borderBottomWidth: 3,
-  },
-  // "עזור לי" — light blue (primary suggestion)
-  helpBtnYes: {
-    backgroundColor: "#38bdf8",
-    borderBottomColor: "#0284c7",
-  },
-  // "אני אסתדר" — blue (decline)
-  helpBtnNo: {
-    backgroundColor: "#2563eb",
-    borderBottomColor: "#1e40af",
-  },
-  helpBtnText: {
-    fontSize: 15,
-    fontWeight: "900",
-    color: "#ffffff",
-    writingDirection: "rtl",
+    marginTop: 4,
   },
 });

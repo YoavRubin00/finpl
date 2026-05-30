@@ -3152,7 +3152,14 @@ export function LessonFlowScreen() {
     if (!mod) return;
     if (phase === "summary" && !completedRef.current) {
       completedRef.current = true;
-      // Module completion rewards delayed, granted when chest is opened (or claimed)
+      // Mark the module completed the moment the chest screen appears —
+      // earlier the completion fired only on chest-tap, so a user who reached
+      // the summary but exited without tapping was left stuck (server +
+      // local-durable store both missed the upsert, next module re-locked).
+      // The chest BONUS rewards (drop.rewards) still grant on tap; this only
+      // ensures the completion record + base XP/coins land on summary entry.
+      // Replay stays guarded — completeModule's own dedupe handles re-entry.
+      if (!isReplay) completeModule(mod.id);
       successHaptic();
       playSound('modal_open_1');
 
@@ -3203,7 +3210,7 @@ export function LessonFlowScreen() {
       cancelAnimation(chestGlowOpacity);
       cancelAnimation(chestBodyScale);
     };
-  }, [phase, mod?.id, completeModule, mod, isLastModule, playSound, safeTimeout]);
+  }, [phase, mod?.id, completeModule, mod, isLastModule, isReplay, playSound, safeTimeout]);
 
   // Post-module celebration ("Continue or Netflix?") is intentionally LAST in the
   // end-of-module nudge sequence. Wait for every other modal AND for the pending

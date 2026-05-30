@@ -25,6 +25,7 @@ import Animated, {
 import LottieView from "lottie-react-native";
 import { AnimatedPressable } from "../../../components/ui/AnimatedPressable";
 import { ConfettiExplosion } from "../../../components/ui/ConfettiExplosion";
+import { GoldCoinIcon } from "../../../components/ui/GoldCoinIcon";
 import { FINN_HAPPY } from "../../retention-loops/finnMascotConfig";
 import { SPRING_BOUNCY, SPRING_SMOOTH } from "../../../utils/animations";
 import {
@@ -257,9 +258,10 @@ export function BarterPuzzleScreen({
     visibleMerchants.unshift(TARGET_MERCHANT);
   }
 
+  const inMoneyPhaseTitle = phase === "moneyPhase";
   const phaseTitle =
-    phase === "moneyPhase"
-      ? "גרור את המטבע לכל סוחר 🪙"
+    inMoneyPhaseTitle
+      ? "גרור את המטבע לכל סוחר"
       : phase === "payDebt"
         ? "עכשיו תן לאבו-חסן את הדגים!"
         : "גרור את הפריט לסוחר הנכון";
@@ -268,10 +270,14 @@ export function BarterPuzzleScreen({
     <View style={styles.container}>
       {showConfetti && <ConfettiExplosion onComplete={() => setShowConfetti(false)} />}
 
-      {/* Title */}
-      <Animated.Text entering={FadeIn.duration(300)} style={styles.phaseTitle}>
-        {phaseTitle}
-      </Animated.Text>
+      {/* Title — render the gold-coin icon (same as the wallet header) as a sibling
+          rather than an emoji, so the visual matches the app's currency icon and
+          doesn't depend on the device's emoji font (🪙 falls back to a moon glyph
+          on older OS fonts). */}
+      <Animated.View entering={FadeIn.duration(300)} style={styles.phaseTitleRow}>
+        <Text style={styles.phaseTitle}>{phaseTitle}</Text>
+        {inMoneyPhaseTitle && <GoldCoinIcon size={20} />}
+      </Animated.View>
 
       {/* Merchants */}
       <View style={styles.merchantsRow}>
@@ -380,7 +386,14 @@ function MerchantSlot({
         <Text style={styles.merchantName}>{merchant.name}</Text>
         {!accepted ? (
           <View style={styles.wantsBadge}>
-            <Text style={styles.wantsText}>רוצה {inMoneyPhase ? '🪙' : merchant.wants}</Text>
+            {inMoneyPhase ? (
+              <View style={styles.wantsRow}>
+                <Text style={styles.wantsText}>רוצה</Text>
+                <GoldCoinIcon size={14} />
+              </View>
+            ) : (
+              <Text style={styles.wantsText}>רוצה {merchant.wants}</Text>
+            )}
           </View>
         ) : (
           <Animated.View entering={ZoomIn.duration(300)} style={styles.checkBadge}>
@@ -590,12 +603,18 @@ const styles = StyleSheet.create({
   },
 
   // Phase title
+  phaseTitleRow: {
+    flexDirection: "row-reverse",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    marginBottom: 24,
+  },
   phaseTitle: {
     fontSize: 17,
     fontWeight: "800",
     color: "#92400e",
     ...RTL_CENTER,
-    marginBottom: 24,
   },
 
   // Merchants row
@@ -641,6 +660,11 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     paddingHorizontal: 8,
     paddingVertical: 3,
+  },
+  wantsRow: {
+    flexDirection: "row-reverse",
+    alignItems: "center",
+    gap: 4,
   },
   wantsText: {
     fontSize: 11,
