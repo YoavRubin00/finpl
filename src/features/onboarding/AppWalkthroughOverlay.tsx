@@ -238,6 +238,36 @@ export function AppWalkthroughOverlay() {
   // Outer try/catch on each gesture callback prevents Hermes from
   // propagating an exception to native code as SIGABRT — Apple 2.1(a)
   // reject pattern from build 1.0 (90), iPad Air 5th gen.
+  // Shared exit routing for both "complete" (handleNext at last step) and
+  // "skip" (handleSkip from any step). Skippers used to silently land on
+  // whatever screen they were on — no Pro paywall, no post-walkthrough
+  // register CTA — which black-holed the entire post-walkthrough funnel
+  // for them. Now both paths end in the same flow, differentiated only
+  // by the `via` property on the paywall_viewed event.
+  const routePostWalkthrough = useCallback((via: 'completed' | 'skipped') => {
+    setActiveScreen(null);
+
+    // Arm the post-walkthrough register-CTA modal for Guests. The gate in
+    // app/_layout.tsx renders it the moment we land on /(tabs).
+    if (isGuest) {
+      try { setPendingPostWalkthroughCTA(true); } catch { /* non-fatal */ }
+    }
+
+    try {
+      if (!isPro) {
+        try { captureEvent('paywall_viewed', { paywall: 'post_walkthrough', source: 'post_walkthrough', via }); } catch { /* non-fatal */ }
+        router.replace(`/pricing?returnTo=${encodeURIComponent('/(tabs)')}&source=post_walkthrough` as never);
+      } else {
+        // Walkthrough completes AFTER mod-0-1 (2026-05-27 redesign), so
+        // sending the user back to mod-0-1 here would force them to repeat
+        // a lesson they just finished. Drop them on the learn map instead.
+        router.replace("/(tabs)" as never);
+      }
+    } catch {
+      // No-op — already on a safe route.
+    }
+  }, [isGuest, isPro, router, setActiveScreen, setPendingPostWalkthroughCTA]);
+
   const handleNext = useCallback(() => {
     try {
       if (transitioning) return;
@@ -262,34 +292,7 @@ export function AppWalkthroughOverlay() {
         // an earlier session can silently suppress the one-shot prompt.
         try { useNotificationStore.getState().resetBannerDismissed(); } catch { /* non-fatal */ }
         try { useBannerCooldownStore.getState().reset(); } catch { /* non-fatal */ }
-        setActiveScreen(null);
-
-        // Arm the post-walkthrough register-CTA modal for Guests. The gate
-        // in app/_layout.tsx renders it the moment we land on /(tabs).
-        // Non-Guests (already registered) do not see this CTA.
-        if (isGuest) {
-          try { setPendingPostWalkthroughCTA(true); } catch { /* non-fatal */ }
-        }
-
-        // Non-Pro users see a one-step Pro pitch via the existing
-        // PricingScreen at /pricing. Both purchase and dismiss route to
-        // /(tabs) via the returnTo query param, so every button on the
-        // paywall lands the user on the learn map — where the Guest CTA
-        // then fires from the gate. Pro users skip the paywall entirely
-        // and go straight to the learn map.
-        try {
-          if (!isPro) {
-            try { captureEvent('paywall_viewed', { paywall: 'post_walkthrough', source: 'post_walkthrough' }); } catch { /* non-fatal */ }
-            router.replace(`/pricing?returnTo=${encodeURIComponent('/(tabs)')}&source=post_walkthrough` as never);
-          } else {
-            // Walkthrough completes AFTER mod-0-1 (2026-05-27 redesign), so
-            // sending the user back to mod-0-1 here would force them to repeat
-            // a lesson they just finished. Drop them on the learn map instead.
-            router.replace("/(tabs)" as never);
-          }
-        } catch {
-          // No-op — already on a safe route.
-        }
+        routePostWalkthrough('completed');
         return;
       }
 
@@ -323,7 +326,7 @@ export function AppWalkthroughOverlay() {
     } catch (e) {
       console.warn("[Walkthrough.handleNext]", e instanceof Error ? e.message : String(e));
     }
-  }, [step, setStep, completeWalkthrough, setActiveScreen, router, transitioning, isAlreadyOnRoute, hasChosenChatStyle, stepsWithLast, isGuest, isPro, setPendingPostWalkthroughCTA]);
+  }, [step, setStep, completeWalkthrough, setActiveScreen, router, transitioning, isAlreadyOnRoute, hasChosenChatStyle, stepsWithLast, routePostWalkthrough]);
 
   const handleBack = useCallback(() => {
     try {

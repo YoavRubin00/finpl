@@ -43,7 +43,7 @@ import { NotificationPermissionBanner } from "../../components/ui/NotificationPe
 import { NoFreezeUpsellBanner } from "../streak/NoFreezeUpsellBanner";
 import { StreakAtRiskBanner } from "../streak/StreakAtRiskBanner";
 import { StreakCalendarModal } from "../streak/StreakCalendarModal";
-import { DailyNewsChallengeCard } from "../daily-news-challenge/DailyNewsChallengeCard";
+import { NewsIconButton } from "../daily-news-challenge/NewsIconButton";
 import { DailyNewsChallengeSheet } from "../daily-news-challenge/DailyNewsChallengeSheet";
 import { useDailyNewsChallengeStore } from "../daily-news-challenge/useDailyNewsChallengeStore";
 import { fetchTodayChallenge } from "../daily-news-challenge/dailyNewsChallengeApi";
@@ -1288,6 +1288,32 @@ export function DuoLearnScreen() {
         </Modal>
       )}
       <SafeAreaView style={{ flex: 1 }} edges={["left", "right"]}>
+        {/* Floating Daily News Challenge entry — pulses + glows in the
+            top-left (RTL: top-LEFT = "dead" space; learn map is right-anchored)
+            until the user completes today's challenge. The unread dot signals
+            a fresh challenge; the pulse stops + icon goes muted gray when
+            done. Hidden during walkthrough to avoid stealing the tutorial's
+            attention. Rendered as an absolute overlay so it floats above the
+            ScrollView without pushing chapters down. */}
+        {!isWalkthroughActive && (
+          <View
+            pointerEvents="box-none"
+            style={{
+              position: 'absolute',
+              top: 8,
+              left: 12,
+              zIndex: 50,
+            }}
+          >
+            <NewsIconButton
+              size={32}
+              hasNewsChallenge={!!newsChallenge}
+              newsCompleted={newsCompleted}
+              onPress={handleNewsPress}
+              compact
+            />
+          </View>
+        )}
         <ScrollView
           ref={scrollRef}
           showsVerticalScrollIndicator={false}
@@ -1300,16 +1326,11 @@ export function DuoLearnScreen() {
           scrollEventThrottle={100}
         >
 
-          {/* Daily News Challenge — hero card at the top, replaces the legacy
-              daily-quest widget. Renders null when no challenge is available,
-              so it disappears cleanly on offline / missing-cron days. */}
-          <DailyNewsChallengeCard
-            challenge={newsChallenge}
-            completed={newsCompleted}
-            proChestOpened={newsProChestOpened}
-            isPro={isPro}
-            onPress={handleNewsPress}
-          />
+          {/* Daily News Challenge entry — the hero card was removed per user
+              feedback (felt heavy / pushed chapters down). Entry now lives in
+              the floating NewsIconButton at the top-right of the learn screen
+              (see render below) — a glowing newspaper icon that keeps pulsing
+              until today's challenge is completed. */}
 
           {/* Chapter sections */}
           {ARENAS.map((arena, idx) => {

@@ -227,10 +227,13 @@ export function DailyNewsChallengeSheet({ visible, onClose }: DailyNewsChallenge
     (idx: number) => {
       if (!listRef.current) return;
       const clamped = Math.max(0, Math.min(PAGE_COUNT - 1, idx));
-      listRef.current.scrollToOffset({ offset: clamped * pageWidth, animated: true });
+      // scrollToIndex works correctly with `inverted` (handles the flipped
+      // offset for us); using scrollToOffset directly would land on the
+      // wrong page when the list is inverted.
+      listRef.current.scrollToIndex({ index: clamped, animated: true });
       setActivePage(clamped);
     },
-    [pageWidth],
+    [],
   );
 
   const handleContinue = useCallback(
@@ -385,10 +388,10 @@ export function DailyNewsChallengeSheet({ visible, onClose }: DailyNewsChallenge
                 offset: pageWidth * index,
                 index,
               })}
-              // RTL note: FlatList horizontal already respects I18nManager.isRTL
-              // when device locale is RTL, but in our app most users keep the
-              // device in LTR + we control direction inside each page, so
-              // LTR scrolling (page 0 → 1 → 2 on left swipe) is intentional.
+              // RTL swipe: `inverted` flips horizontal scroll so page 0 sits
+              // on the right and swiping right→left advances forward — matches
+              // the natural Hebrew reading direction (user feedback 2026-05-30).
+              inverted
             />
           </Animated.View>
         ) : null}

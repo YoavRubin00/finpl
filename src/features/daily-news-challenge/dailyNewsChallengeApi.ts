@@ -23,9 +23,11 @@ interface TodayResponse {
 
 export async function fetchTodayChallenge(): Promise<DailyChallenge> {
   const base = getApiBase();
-  const res = await fetch(`${base}/api/daily-news-challenge/today`, {
-    headers: { 'Content-Type': 'application/json' },
-  });
+  // No body, no custom headers → keeps the request "simple" so the browser
+  // skips the CORS preflight. The previous Content-Type: application/json
+  // header forced an OPTIONS preflight that the local Vercel dev server
+  // didn't answer with 2xx, blocking the call entirely on web.
+  const res = await fetch(`${base}/api/daily-news-challenge/today`);
   if (!res.ok) throw new Error(`daily-news-challenge/today ${res.status}`);
 
   const data = (await res.json()) as TodayResponse;
