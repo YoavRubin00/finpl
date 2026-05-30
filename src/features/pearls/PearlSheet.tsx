@@ -137,18 +137,13 @@ export function PearlSheet({ visible, pearl, onClose }: PearlSheetProps): React.
   // Audit consensus (7/10 agents) flagged the length as a drop-off cliff —
   // bonus contents should be ≤3 swipes. The lifestyle video was retired here
   // and the daily content is rotated, not stacked.
-  const stages = useMemo<StageDescriptor[]>(() => {
-    if (!pearl) return [];
-    const list: StageDescriptor[] = [];
-    let idx = 0;
-    if (pearl.profileQuestion && !profileQuestionSet(pearl.profileQuestion)) {
-      list.push({ kind: 'profile-question', index: idx++ });
-    }
-    list.push({ kind: 'daily-pick', index: idx++ });
-    list.push({ kind: 'game', index: idx++ });
-    return list;
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pearl?.afterModuleId, knowledgeLevelSet, learningTimeSet, dailyGoalSet]);
+  // Stages are snapshotted in state (not useMemo) at the moment the sheet
+  // becomes visible. If we recomputed on every render, answering a profile
+  // question would flip its "*Set" flag, shrink the array from 3 → 2, and
+  // the user's activePage cursor would now point at 'game' instead of
+  // 'daily-pick' — silently skipping the daily content stage (QA 2026-05-31).
+  // Snapshotting keeps the pager indices stable for the full pearl lifetime.
+  const [stages, setStages] = useState<StageDescriptor[]>([]);
 
   const [activePage, setActivePage] = useState(0);
   const listRef = useRef<FlatList<StageDescriptor> | null>(null);
@@ -168,6 +163,18 @@ export function PearlSheet({ visible, pearl, onClose }: PearlSheetProps): React.
   // values get snapshotted via captureEvent at open-time, which is correct.
   useEffect(() => {
     if (visible && pearl) {
+      // Snapshot the stages list ONCE per open. The profile-question
+      // membership is decided based on the store's current state at this
+      // instant, then frozen — answering it mid-pearl doesn't reshape the
+      // array and so doesn't break the activePage cursor.
+      const snapshot: StageDescriptor[] = [];
+      let idx = 0;
+      if (pearl.profileQuestion && !profileQuestionSet(pearl.profileQuestion)) {
+        snapshot.push({ kind: 'profile-question', index: idx++ });
+      }
+      snapshot.push({ kind: 'daily-pick', index: idx++ });
+      snapshot.push({ kind: 'game', index: idx++ });
+      setStages(snapshot);
       setActivePage(0);
       openedAtRef.current = Date.now();
       try {
@@ -176,7 +183,7 @@ export function PearlSheet({ visible, pearl, onClose }: PearlSheetProps): React.
           next_module_id: pearl.nextModuleId,
           chapter_id: pearl.chapterId,
           game_key: pearl.gameKey,
-          stages_count: stages.length,
+          stages_count: snapshot.length,
           has_profile_question: !!pearl.profileQuestion,
           is_pro: isPro,
         });

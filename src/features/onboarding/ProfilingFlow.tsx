@@ -787,9 +787,16 @@ const DREAMS: { id: FinancialDream; emoji: string; label: string; sub: string }[
   { id: "freedom", emoji: "", label: "חופש כלכלי", sub: "הכל אפשרי" },
 ];
 
-function DreamStep({ onNext }: { onNext: (v: FinancialDream) => void }) {
-  const [sel, setSel] = useState<FinancialDream | null>(null);
+function DreamStep({ onNext, initialValue }: { onNext: (v: FinancialDream) => void; initialValue?: FinancialDream | null }) {
+  // Seed local selection from collected.financialDream so that a Back
+  // navigation re-mounts the step with the previous choice already
+  // highlighted (QA audit 2026-05-31).
+  const [sel, setSel] = useState<FinancialDream | null>(initialValue ?? null);
   const advancedRef = useRef(false);
+  // Reset the lock every time the step is mounted (e.g. user came Back).
+  // Without this the auto-advance ref stays true and Tap is silently
+  // ignored.
+  useEffect(() => { advancedRef.current = false; }, []);
   const tap = useCallback((id: FinancialDream) => {
     if (advancedRef.current) return;
     advancedRef.current = true;
@@ -880,9 +887,10 @@ const DREAM_REACTIONS: Record<FinancialDream, string> = {
   freedom: "חופש מוחלט. היעד הכי שווה שיש.",
 };
 
-function GoalStep({ dream, onNext, onBack }: { dream: FinancialDream | null; onNext: (v: FinancialGoal) => void; onBack?: () => void }) {
-  const [sel, setSel] = useState<FinancialGoal | null>(null);
+function GoalStep({ dream, onNext, onBack, initialValue }: { dream: FinancialDream | null; onNext: (v: FinancialGoal) => void; onBack?: () => void; initialValue?: FinancialGoal | null }) {
+  const [sel, setSel] = useState<FinancialGoal | null>(initialValue ?? null);
   const advancedRef = useRef(false);
+  useEffect(() => { advancedRef.current = false; }, []);
   const tap = useCallback((id: FinancialGoal) => {
     if (advancedRef.current) return;
     advancedRef.current = true;
@@ -925,7 +933,14 @@ const GOAL_REACTIONS: Record<FinancialGoal, string> = {
 
 function KnowledgeStep({ goal, onNext }: { goal: FinancialGoal | null; onNext: (v: KnowledgeLevel) => void }) {
   const [sel, setSel] = useState<KnowledgeLevel | null>(null);
+  // Double-tap guard. Without this a fast tap on two different options
+  // inside AUTO_ADVANCE_MS calls onNext twice → slide() twice → state
+  // corruption (QA audit 2026-05-31).
+  const advancedRef = useRef(false);
+  useEffect(() => { advancedRef.current = false; }, []);
   const tap = useCallback((id: KnowledgeLevel) => {
+    if (advancedRef.current) return;
+    advancedRef.current = true;
     setSel(id);
     setTimeout(() => onNext(id), AUTO_ADVANCE_MS);
   }, [onNext]);
@@ -961,9 +976,13 @@ const KNOWLEDGE_REACTIONS: Record<string, string> = {
   expert: "זאב מוול סטריט אה? מצוין, נראה כמה אתם באמת יודעים.",
 };
 
-function AgeStep({ knowledge, onNext, onBack }: { knowledge: KnowledgeLevel | null; onNext: (ag: AgeGroup, by: number) => void; onBack?: () => void }) {
-  const [sel, setSel] = useState<number | null>(null);
+function AgeStep({ knowledge, onNext, onBack, initialAgeGroup }: { knowledge: KnowledgeLevel | null; onNext: (ag: AgeGroup, by: number) => void; onBack?: () => void; initialAgeGroup?: AgeGroup | null }) {
+  const initialIdx = initialAgeGroup
+    ? AGE_GROUPS.findIndex((a) => a.ageGroup === initialAgeGroup)
+    : -1;
+  const [sel, setSel] = useState<number | null>(initialIdx >= 0 ? initialIdx : null);
   const advancedRef = useRef(false);
+  useEffect(() => { advancedRef.current = false; }, []);
   const tap = useCallback((i: number) => {
     if (advancedRef.current) return;
     advancedRef.current = true;
@@ -995,7 +1014,11 @@ const TIMES: { id: LearningTime; label: string; sub: string }[] = [
 
 function LearningTimeStep({ onNext }: { onNext: (v: LearningTime) => void }) {
   const [sel, setSel] = useState<LearningTime | null>(null);
+  const advancedRef = useRef(false);
+  useEffect(() => { advancedRef.current = false; }, []);
   const tap = useCallback((id: LearningTime) => {
+    if (advancedRef.current) return;
+    advancedRef.current = true;
     setSel(id);
     setTimeout(() => onNext(id), AUTO_ADVANCE_MS);
   }, [onNext]);
@@ -1029,7 +1052,11 @@ const LEARN_STYLES: { id: LearningStyle; label: string; sub: string }[] = [
 
 function LearningStyleStep({ ageGroup, birthYear, onNext }: { ageGroup: AgeGroup | null; birthYear: number | null; onNext: (v: LearningStyle) => void }) {
   const [sel, setSel] = useState<LearningStyle | null>(null);
+  const advancedRef = useRef(false);
+  useEffect(() => { advancedRef.current = false; }, []);
   const tap = useCallback((id: LearningStyle) => {
+    if (advancedRef.current) return;
+    advancedRef.current = true;
     setSel(id);
     setTimeout(() => onNext(id), AUTO_ADVANCE_MS);
   }, [onNext]);
@@ -1062,6 +1089,8 @@ const DEADLINE_OPTS: { id: DeadlineStress; label: string }[] = [
 
 function DeadlineStep({ onNext }: { onNext: (v: DeadlineStress) => void }) {
   const [sel, setSel] = useState<DeadlineStress | null>(null);
+  const advancedRef = useRef(false);
+  useEffect(() => { advancedRef.current = false; }, []);
 
   const wrapTy = useSharedValue(30);
   const wrapOpacity = useSharedValue(0);
@@ -1075,6 +1104,8 @@ function DeadlineStep({ onNext }: { onNext: (v: DeadlineStress) => void }) {
   }));
 
   function tap(id: DeadlineStress) {
+    if (advancedRef.current) return;
+    advancedRef.current = true;
     setSel(id);
     setTimeout(() => onNext(id), AUTO_ADVANCE_MS);
   }
@@ -1122,7 +1153,11 @@ const DAILY_OPTS: { id: DailyGoalMinutes; emoji: string; label: string; sub: str
 
 function DailyGoalStep({ onNext }: { onNext: (v: DailyGoalMinutes) => void }) {
   const [sel, setSel] = useState<DailyGoalMinutes | null>(null);
+  const advancedRef = useRef(false);
+  useEffect(() => { advancedRef.current = false; }, []);
   const tap = useCallback((id: DailyGoalMinutes) => {
+    if (advancedRef.current) return;
+    advancedRef.current = true;
     setSel(id);
     const delay = (id === 15 || id === 30) ? 1400 : AUTO_ADVANCE_MS;
     setTimeout(() => onNext(id), delay);
@@ -1806,9 +1841,14 @@ function IntroStep({ onRegister: _onRegister, onGuest, onLoginSuccess }: IntroSt
   // Auto-check terms when returning from terms page after pressing "קראתי"
   useEffect(() => {
     if (subStep !== "register") return;
+    // Polling cadence loosened from 300ms → 1500ms. The flag is set when
+    // the user returns from the terms modal (effectively a one-shot
+    // event), so sub-second polling burns battery and the JS thread for
+    // no real-time benefit. 1.5s feels instant when returning from the
+    // modal but is 5× lighter (QA audit 2026-05-31).
     const id = setInterval(() => {
       if (consumeTermsAcceptedFlag()) setTermsAccepted(true);
-    }, 300);
+    }, 1500);
     return () => clearInterval(id);
   }, [subStep]);
 
@@ -2541,12 +2581,16 @@ export function ProfilingFlow({ mode = "onboarding", onRedoComplete }: Profiling
   return (
     <View style={{ flex: 1, backgroundColor: "#ffffff", overflow: "hidden" }}>
       <Animated.View style={[{ flex: 1 }, slideStyle]}>
-        {step === "dream" && <DreamStep onNext={(v) => {
-          if (returnToSummary) { setReturnToSummary(false); slide("profile-summary", { financialDream: v }); }
-          else { slide("goal", { financialDream: v }); }
-        }} />}
+        {step === "dream" && <DreamStep
+          initialValue={collected.financialDream}
+          onNext={(v) => {
+            if (returnToSummary) { setReturnToSummary(false); slide("profile-summary", { financialDream: v }); }
+            else { slide("goal", { financialDream: v }); }
+          }}
+        />}
         {step === "goal" && <GoalStep
           dream={collected.financialDream}
+          initialValue={collected.financialGoal}
           onNext={(v) => {
             if (returnToSummary) { setReturnToSummary(false); slide("profile-summary", { financialGoal: v }); }
             else { slide("age", { financialGoal: v }); }
@@ -2555,7 +2599,13 @@ export function ProfilingFlow({ mode = "onboarding", onRedoComplete }: Profiling
         />}
         {step === "age" && <AgeStep
           knowledge={collected.knowledgeLevel}
-          onNext={(ag, by) => slide("celebration", { ageGroup: ag, birthYear: by })}
+          initialAgeGroup={collected.ageGroup}
+          // Route to profile-summary first so the user sees a recap and can
+          // edit before the flow finalizes. The summary's onDone advances to
+          // building-profile → celebration → streak. Previously this jumped
+          // straight to celebration, hiding profile-summary entirely from
+          // new users (only redo flow reached it).
+          onNext={(ag, by) => slide("profile-summary", { ageGroup: ag, birthYear: by })}
           onBack={() => slide("goal", {})}
         />}
         {/* Edit-only steps reachable from ProfileSummaryScreen → editSummaryStep.

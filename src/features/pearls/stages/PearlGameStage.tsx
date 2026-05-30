@@ -50,7 +50,7 @@ export function PearlGameStage({ isActive, gameKey, macroEventId, onContinue, on
   const insets = useSafeAreaInsets();
   const isPro = useIsPro();
 
-  const card = renderGameCard(gameKey, macroEventId, isPro, onContinue);
+  const card = renderGameCard(gameKey, macroEventId, isPro, onContinue, isActive);
   if (!card) return null;
 
   return (
@@ -93,30 +93,35 @@ function renderGameCard(
   macroEventId: string | undefined,
   isPro: boolean,
   onContinue: () => void,
+  isActive: boolean,
 ): React.ReactNode {
+  // Forward the pager's real isActive into each card. Previously every
+  // card was passed `isActive` shorthand (=true) so animations + sounds
+  // kept running on non-visible pages — minor jank flagged in the QA
+  // audit (2026-05-31).
   switch (gameKey) {
     case 'investment':
-      return <InvestmentCard isActive onContinue={onContinue} />;
+      return <InvestmentCard isActive={isActive} onContinue={onContinue} />;
     case 'crash':
-      return <CrashGameCard isActive onContinue={onContinue} />;
+      return <CrashGameCard isActive={isActive} onContinue={onContinue} />;
     case 'dilemma':
-      return <DilemmaCard isActive onContinue={onContinue} />;
+      return <DilemmaCard isActive={isActive} onContinue={onContinue} />;
     case 'myth':
       return useMythStore.getState().canPlayMyth(isPro)
         ? <MythFeedCard isInterModule onSkip={onContinue} />
         : <FallbackContinueOnMount onMount={onContinue} />;
     case 'fomo-killer':
-      return <FomoKillerCard isActive onContinue={onContinue} />;
+      return <FomoKillerCard isActive={isActive} onContinue={onContinue} />;
     case 'bullshit-swipe':
-      return <BullshitSwipeCard isActive bypassDailyGate onContinue={onContinue} />;
+      return <BullshitSwipeCard isActive={isActive} bypassDailyGate onContinue={onContinue} />;
     case 'higher-lower':
-      return <HigherLowerCard isActive onComplete={onContinue} />;
+      return <HigherLowerCard isActive={isActive} onComplete={onContinue} />;
     case 'price-slider':
-      return <PriceSliderCard isActive onContinue={onContinue} />;
+      return <PriceSliderCard isActive={isActive} onContinue={onContinue} />;
     case 'budget-ninja':
-      return <BudgetNinjaCard isActive onContinue={onContinue} />;
+      return <BudgetNinjaCard isActive={isActive} onContinue={onContinue} />;
     case 'cashout-rush':
-      return <CashoutRushCard isActive onContinue={onContinue} />;
+      return <CashoutRushCard isActive={isActive} onContinue={onContinue} />;
     case 'macro-event': {
       if (!macroEventId) return null;
       const event = macroEventsData.find((e) => e.id === macroEventId);
@@ -124,7 +129,7 @@ function renderGameCard(
       return (
         <MacroEventCard
           item={{ id: event.id, type: 'macro-event', event }}
-          isActive
+          isActive={isActive}
           onContinue={onContinue}
         />
       );

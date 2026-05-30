@@ -26,6 +26,7 @@ import { captureEvent } from '../../lib/posthog';
 import { ChallengePage } from './components/ChallengePage';
 import { ChestsPage } from './components/ChestsPage';
 import { ItemChatOverlay } from './components/ItemChatOverlay';
+import { DidYouKnowCard } from '../did-you-know/DidYouKnowCard';
 import { fetchTodayChallenge } from './dailyNewsChallengeApi';
 import { useDailyNewsChallengeStore, type ChallengeRewardSummary } from './useDailyNewsChallengeStore';
 import { useStreak } from '../economy/useStreak';
@@ -39,18 +40,25 @@ interface DailyNewsChallengeSheetProps {
   onClose: () => void;
 }
 
-const PAGE_COUNT = 3;
+// Pager layout: news[0] → did-you-know intermezzo → news[1] → chests.
+// The "הידעת" page sits between the two news items to break the rhythm —
+// one curiosity-fact between the two quizzes (requested 2026-05-31).
+const PAGE_COUNT = 4;
 const SCREEN_W = Dimensions.get('window').width;
 
 interface PageDescriptor {
-  kind: 'challenge' | 'chests';
+  kind: 'challenge' | 'did-you-know' | 'chests';
+  /** Position in the pager. Drives FlatList keys + dot indicators. */
   index: number;
+  /** Only set when kind==='challenge': which of the two news items (0|1). */
+  itemIdx?: 0 | 1;
 }
 
 const PAGE_DESCRIPTORS: PageDescriptor[] = [
-  { kind: 'challenge', index: 0 },
-  { kind: 'challenge', index: 1 },
-  { kind: 'chests', index: 2 },
+  { kind: 'challenge', index: 0, itemIdx: 0 },
+  { kind: 'did-you-know', index: 1 },
+  { kind: 'challenge', index: 2, itemIdx: 1 },
+  { kind: 'chests', index: 3 },
 ];
 
 /**
@@ -96,6 +104,17 @@ export function DailyNewsChallengeSheet({ visible, onClose }: DailyNewsChallenge
 
   const listRef = useRef<FlatList<PageDescriptor> | null>(null);
   const pageWidth = SCREEN_W;
+  // Guards against duplicate `news_challenge_completed` events. The
+  // dependency array on the completion effect re-runs on every sheet mount
+  // where both answers exist (Zustand-persisted), so the event used to
+  // fire ~29× per real completion (PostHog 2026-05-30: 2 answered → 58
+  // completed). The ref records the last dateKey we already reported and
+  // refuses to re-emit for it.
+  const completionFiredForDateKey = useRef<string | null>(null);
+  // In-flight guard for fetchTodayChallenge. Without it a cold-start race
+  // between DuoLearnScreen's fetch (1129) and the sheet's lazy fetch (124)
+  // sends two parallel API calls.
+  const fetchInFlightRef = useRef(false);
 
   const item0Answered = answered[0] !== null;
   const item1Answered = answered[1] !== null;
@@ -120,10 +139,13 @@ export function DailyNewsChallengeSheet({ visible, onClose }: DailyNewsChallenge
   const handleClaimRegular = useCallback(() => wrapClaim(claimRegular)(), [wrapClaim, claimRegular]);
   const handleClaimPro = useCallback(() => wrapClaim(claimPro)(), [wrapClaim, claimPro]);
 
-  // Lazy load
+  // Lazy load. DuoLearnScreen also fires fetchTodayChallenge on mount, so
+  // an in-flight ref dedupes the cold-start race between the two callers.
   useEffect(() => {
     if (!visible) return;
     if (challenge) return;
+    if (fetchInFlightRef.current) return;
+    fetchInFlightRef.current = true;
     setLoading(true);
     setError(null);
     fetchTodayChallenge()
@@ -135,7 +157,10 @@ export function DailyNewsChallengeSheet({ visible, onClose }: DailyNewsChallenge
         console.error('[DailyNewsChallenge] fetch failed', err);
         setError('לא הצלחנו להוריד את האקטואליה הפיננסית. נסה שוב.');
       })
-      .finally(() => setLoading(false));
+      .finally(() => {
+        setLoading(false);
+        fetchInFlightRef.current = false;
+      });
   }, [visible, challenge, setChallenge]);
 
   useEffect(() => {
@@ -144,17 +169,34 @@ export function DailyNewsChallengeSheet({ visible, onClose }: DailyNewsChallenge
     }
   }, [visible, challenge]);
 
-  // Completed event — fires when both items become answered for the first time
+  // Completed event — fires ONCE per (dateKey, session), not on every
+  // sheet mount where both answers happen to be persisted. The ref
+  // remembers the last dateKey for which we already emitted; reopening the
+  // sheet later in the day is a no-op.
   useEffect(() => {
-    if (answered[0] && answered[1]) {
-      captureEvent('news_challenge_completed', {
-        date_key: challenge?.dateKey ?? null,
-        both_correct: answered[0].wasCorrect && answered[1].wasCorrect,
-        streak,
-      });
-    }
+    if (!answered[0] || !answered[1]) return;
+    const dateKey = challenge?.dateKey ?? null;
+    if (!dateKey) return;
+    if (completionFiredForDateKey.current === dateKey) return;
+    completionFiredForDateKey.current = dateKey;
+    captureEvent('news_challenge_completed', {
+      date_key: dateKey,
+      both_correct: answered[0].wasCorrect && answered[1].wasCorrect,
+      streak,
+    });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [answered[0]?.answeredAt, answered[1]?.answeredAt]);
+  }, [answered[0]?.answeredAt, answered[1]?.answeredAt, challenge?.dateKey]);
+
+  // Reset transient sheet state when the sheet closes. Without this, a
+  // half-open exit confirm or a stale chatItem would re-appear instantly
+  // on the next open — discovered in the QA audit (2026-05-31).
+  useEffect(() => {
+    if (!visible) {
+      setExitConfirmOpen(false);
+      setChatItem(null);
+      setActivePage(0);
+    }
+  }, [visible]);
 
   // Hardware back / web ESC → exit guard
   useEffect(() => {
@@ -290,7 +332,35 @@ export function DailyNewsChallengeSheet({ visible, onClose }: DailyNewsChallenge
           />
         );
       }
-      const idx = page.index as 0 | 1;
+      if (page.kind === 'did-you-know') {
+        // Intermezzo between the two news items. Picks a rotating fact from
+        // DID_YOU_KNOW_ITEMS (by-day deterministic) so the same opener
+        // sees the same fact across a session — and a different one each
+        // day. Continue advances to the next news item.
+        return (
+          <View style={{ width: pageWidth, flex: 1 }}>
+            <DidYouKnowCard isActive itemId={`dnc-${challenge?.dateKey ?? 'today'}`} />
+            <View style={{ paddingHorizontal: 20, paddingTop: 14, paddingBottom: 24 }}>
+              <Pressable
+                onPress={() => { tapHaptic(); handleContinue(page.index); }}
+                accessibilityRole="button"
+                accessibilityLabel="המשך"
+                style={{
+                  paddingVertical: 14,
+                  paddingHorizontal: 22,
+                  borderRadius: 16,
+                  backgroundColor: '#facc15',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
+              >
+                <Text style={{ fontSize: 16, fontWeight: '900', color: '#0f172a', writingDirection: 'rtl' }} allowFontScaling={false}>המשך</Text>
+              </Pressable>
+            </View>
+          </View>
+        );
+      }
+      const idx = (page.itemIdx ?? 0) as 0 | 1;
       if (!challenge) return <View style={{ width: pageWidth }} />;
       return (
         <ChallengePage
@@ -299,7 +369,7 @@ export function DailyNewsChallengeSheet({ visible, onClose }: DailyNewsChallenge
           index={idx}
           preAnsweredIdx={answered[idx]?.selectedIdx}
           onAnswered={handleAnswer(idx)}
-          onContinue={() => handleContinue(idx)}
+          onContinue={() => handleContinue(page.index)}
           onOpenChat={() => handleOpenChat(challenge.items[idx])}
         />
       );

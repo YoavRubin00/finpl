@@ -80,6 +80,12 @@ export default function BullshitCh0InterstitialPage() {
           isActive={!showIntro}
           bypassDailyGate
           onFinish={handleGameFinish}
+          // Pass onContinue so the card surfaces an explicit "המשך" button on
+          // its result screen, instead of relying solely on the 1400 ms
+          // delayed speech overlay. If the timer is cancelled (cleanup /
+          // navigation race) the user used to be stranded with only the ✕
+          // home button as an escape (QA 2026-05-31).
+          onContinue={handleContinue}
         />
       </ScrollView>
 
