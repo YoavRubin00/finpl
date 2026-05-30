@@ -29,7 +29,7 @@ export type GatedFeature =
 export const BASIC_LIMITS: Record<GatedFeature, number> = {
   simulator: 3,
   arena: 3,
-  chat: 3,
+  chat: 2,              // 2 chat messages per DAY for Free
   aiInsights: 1,        // 1 weekly insight per CALENDAR MONTH for Free
   saved_items: 0,       // No taste — hard Pro lock
   // One ticker tracked for Free (preview of the daily summary); Pro caps at

@@ -84,7 +84,7 @@ const FEATURES: FeatureRow[] = [
   // The line Yoav specifically asked for — "Financial Tools, limited vs full"
   { label: "כלים פיננסיים מתקדמים", free: "גישה מוגבלת", pro: "גישה מלאה" },
   // AI chat is the real value driver (lifeline + analyst + insights)
-  { label: "צ'אט AI עם שארק", free: "טעימה יומית", pro: "ללא הגבלה" },
+  { label: "צ'אט AI עם שארק", free: "2 הודעות ביום", pro: "ללא הגבלה" },
   // Content lock — the 7 Pro-only simulations in proGates.ts
   { label: "7 סימולציות פרימיום", free: false, pro: true },
   // The most viscerally felt daily friction
