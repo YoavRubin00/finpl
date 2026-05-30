@@ -146,7 +146,21 @@ const INITIAL_STATE = {
 // Fire-and-forget economy delta (for non-hook action contexts)
 // ---------------------------------------------------------------------------
 
-function fireEconomyDelta(delta: {
+/**
+ * Canonical "fire and forget economy delta" for non-hook call sites (Zustand
+ * actions, callbacks, async event handlers). Does three things:
+ *   1. Optimistic cache write — useEconomy() consumers (wealth header, etc.)
+ *      reflect the change immediately.
+ *   2. POST /api/sync/economy.
+ *   3. On success, writes the server's authoritative Economy row straight
+ *      into the cache (NO invalidate — saves a redundant GET round-trip after
+ *      every XP/coin/gem mutation across the app).
+ *
+ * Exported so trading-hub, real-assets, bridge, hearts, and LessonFlow can
+ * stop duplicating the `applyEconomyDelta(...).then(() => invalidate)`
+ * boilerplate at 11 call sites and get optimistic UX for free.
+ */
+export function fireEconomyDelta(delta: {
   xpDelta?: number;
   coinsDelta?: number;
   gemsDelta?: number;

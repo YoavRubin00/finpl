@@ -61,10 +61,9 @@ import { QuizStartPopup } from "./QuizStartPopup";
 import { SimulatorLoader } from "./SimulatorLoader";
 import { useAITelemetryStore } from "../ai-personalization/useAITelemetryStore";
 import { useEconomy, economyQueryKey } from "../economy/useEconomy";
-import { useEconomyUIStore } from "../economy/useEconomyUIStore";
+import { useEconomyUIStore, fireEconomyDelta } from "../economy/useEconomyUIStore";
 import { useCompletedModulesStore } from "../economy/useCompletedModulesStore";
 import { useStreak, useRecordDailyActivity } from "../economy/useStreak";
-import { applyEconomyDelta } from "../../lib/api/economy";
 import type { Economy } from "../../lib/api/economy";
 import { recordModuleDuration as apiRecordModuleDuration } from "../../lib/api/userStats";
 import { userStatsQueryKey } from "../user-stats/useUserStats";
@@ -3053,9 +3052,7 @@ export function LessonFlowScreen() {
         }, 400);
       } else if (multiplier === 0) {
         // Wrong! Lose the original 1x that was already granted
-        applyEconomyDelta({ coinsDelta: -rewards.coins })
-          .then(() => queryClient.invalidateQueries({ queryKey: economyQueryKey }))
-          .catch(() => {});
+        fireEconomyDelta({ coinsDelta: -rewards.coins });
         // Fly coins back DOWN
         safeTimeout(() => {
           setFlyingCoinsDown(rewards.coins);

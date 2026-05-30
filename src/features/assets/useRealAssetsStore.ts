@@ -4,8 +4,7 @@ import { zustandStorage } from '../../lib/zustandStorage';
 import { registerLocalStore } from '../../lib/stores/registry';
 import type { RealAsset, RealAssetsState, PortfolioCombo, MilestoneId } from './realAssetsTypes';
 import { getBaseAsset, getYieldForTier, PORTFOLIO_COMBOS, ASSET_IDS, MORTGAGE_TERMS } from './realAssetsData';
-import { useEconomyUIStore } from '../economy/useEconomyUIStore';
-import { applyEconomyDelta } from '../../lib/api/economy';
+import { useEconomyUIStore, fireEconomyDelta } from '../economy/useEconomyUIStore';
 import { queryClient } from '../../lib/queryClient';
 import { economyQueryKey } from '../economy/useEconomy';
 import type { Economy } from '../../lib/api/economy';
@@ -109,9 +108,7 @@ export const useRealAssetsStore = create<RealAssetsState>()(
 
         const cachedEco = queryClient.getQueryData<Economy | null>(economyQueryKey);
         if ((cachedEco?.coins ?? 0) < base.baseCost) return false;
-        applyEconomyDelta({ coinsDelta: -base.baseCost })
-          .then(() => queryClient.invalidateQueries({ queryKey: economyQueryKey }))
-          .catch(() => {});
+        fireEconomyDelta({ coinsDelta: -base.baseCost });
         const spent = true;
 
         const now = Date.now();
@@ -152,9 +149,7 @@ export const useRealAssetsStore = create<RealAssetsState>()(
         const downpayment = Math.ceil(base.baseCost * MORTGAGE_TERMS.downpayment);
         const cachedEco2 = queryClient.getQueryData<Economy | null>(economyQueryKey);
         if ((cachedEco2?.coins ?? 0) < downpayment) return false;
-        applyEconomyDelta({ coinsDelta: -downpayment })
-          .then(() => queryClient.invalidateQueries({ queryKey: economyQueryKey }))
-          .catch(() => {});
+        fireEconomyDelta({ coinsDelta: -downpayment });
         const spent = true;
 
         const loanAmount = base.baseCost - downpayment;
@@ -188,9 +183,7 @@ export const useRealAssetsStore = create<RealAssetsState>()(
 
         const cachedEco3 = queryClient.getQueryData<Economy | null>(economyQueryKey);
         if ((cachedEco3?.coins ?? 0) < asset.upgradeCost) return false;
-        applyEconomyDelta({ coinsDelta: -asset.upgradeCost })
-          .then(() => queryClient.invalidateQueries({ queryKey: economyQueryKey }))
-          .catch(() => {});
+        fireEconomyDelta({ coinsDelta: -asset.upgradeCost });
         const spent = true;
 
         const nextTier = (asset.tier + 1) as 1 | 2 | 3;

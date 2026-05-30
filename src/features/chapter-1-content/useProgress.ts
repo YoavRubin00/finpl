@@ -4,6 +4,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { getProgress, upsertModuleProgress, type ModuleProgressRow } from '../../lib/api/progress';
 import { queryClient } from '../../lib/queryClient';
 import { useCompletedModulesStore } from '../economy/useCompletedModulesStore';
+import { useAuthStore } from '../auth/useAuthStore';
 
 export const progressQueryKey = ['progress'] as const;
 
@@ -20,10 +21,16 @@ function localCompletedForChapter(chapterStoreKey: string): string[] {
 }
 
 export function useProgress() {
+  // Skip for guests — server progress is keyed by authId; guests use the
+  // local useCompletedModulesStore (mirrored into MMKV) so completions are
+  // remembered across cold starts even pre-account.
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
+  const isGuest = useAuthStore((s) => s.isGuest);
   const query = useQuery({
     queryKey: progressQueryKey,
     queryFn: async () => (await getProgress()).progress,
     staleTime: 5 * 60_000,
+    enabled: isAuthenticated && !isGuest,
   });
   // Backfill the durable local store with whatever the server reports as
   // completed, so the local store stays a superset of the server and never

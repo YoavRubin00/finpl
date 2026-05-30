@@ -1,14 +1,19 @@
 // src/features/auth/useProfile.ts
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { getProfile, updateProfile, type ProfileRow } from '../../lib/api/profile';
+import { useAuthStore } from './useAuthStore';
 
 export const profileQueryKey = ['profile'] as const;
 
 export function useProfile() {
+  // Skip for guests — they have no server-side profile and would just 401.
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
+  const isGuest = useAuthStore((s) => s.isGuest);
   return useQuery({
     queryKey: profileQueryKey,
     queryFn: async () => (await getProfile()).profile,
     staleTime: 60_000,
+    enabled: isAuthenticated && !isGuest,
   });
 }
 
