@@ -1,7 +1,7 @@
 import React, { useEffect } from 'react';
-import { View, Pressable } from 'react-native';
-import { Check, Gem } from 'lucide-react-native';
-import { LinearGradient } from 'expo-linear-gradient';
+import { View, Pressable, Platform } from 'react-native';
+import { Image as ExpoImage } from 'expo-image';
+import { Check } from 'lucide-react-native';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -11,6 +11,19 @@ import Animated, {
   cancelAnimation,
   useReducedMotion,
 } from 'react-native-reanimated';
+
+const PEARL_COLORED = require('../../../assets/webp/pearl-colored.webp');
+const PEARL_LOCKED = require('../../../assets/webp/pearl-locked.webp');
+
+// CSS blend-mode hack — Higgsfield's pearl webps ship with an opaque white
+// background. `multiply` on web turns near-white pixels into "no change"
+// against the (near-white) path canvas, so the pearl visually floats with
+// no white box. Native platforms (iOS/Android) ignore the style — there
+// the box still shows; we'll regenerate the asset with a true alpha
+// channel before the next TestFlight build.
+const WEB_BG_FIX = Platform.OS === 'web'
+  ? ({ mixBlendMode: 'multiply' } as unknown as object)
+  : undefined;
 
 export type PearlNodeState = 'locked' | 'unlocked' | 'completed';
 
@@ -144,40 +157,16 @@ export function PearlNode({
         />
       ) : null}
       <Animated.View style={pearlStyle}>
-        {/* Gem-in-a-bubble: a soft circular gradient backdrop with a Lucide
-            Gem icon on top. The earlier WebP attempt baked the
-            transparency-checker pattern into the image as real pixels, so
-            the path now uses pure-vector rendering — clean at any size,
-            zero asset weight, and trivially recolorable for locked/active. */}
-        <LinearGradient
-          colors={
-            state === 'locked'
-              ? ['#cbd5e1', '#94a3b8']
-              : ['#67e8f9', '#0ea5e9', '#0c4a6e']
-          }
-          start={{ x: 0.2, y: 0.1 }}
-          end={{ x: 0.9, y: 1 }}
-          style={{
-            width: size,
-            height: size,
-            borderRadius: size / 2,
-            alignItems: 'center',
-            justifyContent: 'center',
-            shadowColor: state === 'locked' ? '#475569' : '#0c4a6e',
-            shadowOffset: { width: 0, height: 4 },
-            shadowOpacity: state === 'locked' ? 0.18 : 0.32,
-            shadowRadius: 8,
-            elevation: state === 'locked' ? 2 : 6,
-            borderWidth: 2,
-            borderColor: state === 'locked' ? '#94a3b8' : '#bae6fd',
-          }}
-        >
-          <Gem
-            size={size * 0.5}
-            color={state === 'locked' ? '#475569' : '#ffffff'}
-            strokeWidth={2.4}
-          />
-        </LinearGradient>
+        {/* The Higgsfield-generated pearl — the original first-pass image
+            the user picked. mixBlendMode on web drops the white background
+            so it visually floats on the path; native still shows a faint
+            white pill until we ship an asset with a real alpha channel. */}
+        <ExpoImage
+          source={state === 'locked' ? PEARL_LOCKED : PEARL_COLORED}
+          style={[{ width: size, height: size }, WEB_BG_FIX]}
+          contentFit="contain"
+          accessible={false}
+        />
       </Animated.View>
 
       {state === 'completed' ? (
