@@ -30,6 +30,7 @@ import { fetchTodayChallenge } from './dailyNewsChallengeApi';
 import { useDailyNewsChallengeStore, type ChallengeRewardSummary } from './useDailyNewsChallengeStore';
 import type { ChallengeItem } from './types';
 import { FlyingRewards } from '../../components/ui/FlyingRewards';
+import { GlobalWealthHeader } from '../../components/ui/GlobalWealthHeader';
 import { playChestOpenSwoosh } from './lib/sounds';
 
 interface DailyNewsChallengeSheetProps {
@@ -324,6 +325,11 @@ export function DailyNewsChallengeSheet({ visible, onClose }: DailyNewsChallenge
   return (
     <View style={styles.container}>
       <SafeAreaView style={styles.safeArea} edges={['top', 'left', 'right']}>
+        {/* Global wealth header (coins / XP / streak / hearts) — user asked to
+            keep it visible inside the sheet so the daily ritual still shows
+            their wallet at a glance. Compact mode matches the in-app header. */}
+        <GlobalWealthHeader compact />
+
         {/* Top bar: close button right (RTL leading) + progress dots */}
         <View style={styles.topBar}>
           <Pressable

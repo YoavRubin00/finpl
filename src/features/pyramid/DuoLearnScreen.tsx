@@ -32,7 +32,19 @@ import { useProgress, useUpsertModuleProgress, progressQueryKey } from "../chapt
 import { queryClient } from "../../lib/queryClient";
 import { useIsPro } from "../subscription/useSubscription";
 import { useAuthStore } from "../auth/useAuthStore";
+import { InModuleProfileQuestion, type ProfileQuestionKind } from "../onboarding/InModuleProfileQuestion";
 import { getPyramidStatus } from "../../utils/progression";
+
+// Profile-question backstops: each profile question is asked on its source
+// module's "Continue" tap inside the lesson (see LessonFlowScreen). If the
+// user exits before tapping continue, they would never see it. We re-ask on
+// entry to a downstream module as a safety net. Skipping still proceeds —
+// it's a nudge, not a hard gate.
+const PROFILE_QUESTION_BACKSTOPS: Record<string, ProfileQuestionKind> = {
+  'mod-0-3': 'knowledgeLevel', // source: mod-0-1
+  'mod-0-5': 'learningTime',   // source: mod-0-4
+  'mod-1-1': 'dailyGoal',      // source: mod-0-5
+};
 import { ARENAS, type ArenaConfig } from "./arenaConfig";
 import { PRO_LOCKED_SIMS } from "../../constants/proGates";
 import { useReferralStore } from "../social/useReferralStore";
@@ -830,7 +842,7 @@ const ChapterSection = React.memo(function ChapterSection({
     <Animated.View entering={FadeInDown.delay(sectionIndex * 80).duration(350)}>
       <ArenaHeaderBanner arena={arena} sectionIndex={sectionIndex} isLocked={!isUnlocked} onPress={onChapterPress} onMindMap={onMindMap} />
 
-      {sectionIndex === 0 && completedModules.length < chapter.modules.length && onSkipIntro && (
+      {sectionIndex === 0 && completedModules.length < chapter.modules.length && !completedModules.some((id) => id.startsWith('mod-1-')) && onSkipIntro && (
         <AnimatedPressable
           onPress={onSkipIntro}
           style={{
@@ -900,19 +912,31 @@ const ChapterSection = React.memo(function ChapterSection({
               {/* Daily News Challenge badge — floats beside the active module
                   on the opposite side of the Duolingo-style alternating path,
                   so it sits in the "dead space" the user's eye lands on when
-                  the screen auto-scrolls them to their next module. */}
+                  the screen auto-scrolls them to their next module. White
+                  pill backdrop + z=100 so it doesn't get buried by chapter
+                  decorations or the PathConnector. */}
               {isActive && newsBadgeNode && (
                 <View
                   pointerEvents="box-none"
                   style={{
                     position: 'absolute',
-                    top: 12,
-                    // Flip the side relative to the active node so we land in
-                    // the empty half-row. getNodeOffset alternates ±48ish px;
+                    top: 24,
+                    // Flip side relative to the active node so the badge lands
+                    // in the empty half-row. getNodeOffset alternates ±~48px;
                     // -offset puts us on the visual opposite side.
-                    left: getNodeOffset(i) >= 0 ? 14 : undefined,
-                    right: getNodeOffset(i) < 0 ? 14 : undefined,
-                    zIndex: 20,
+                    left: getNodeOffset(i) >= 0 ? 16 : undefined,
+                    right: getNodeOffset(i) < 0 ? 16 : undefined,
+                    zIndex: 100,
+                    elevation: 12,
+                    // White rounded pill backing so the news icon reads as a
+                    // distinct UI element on top of the busy chapter map.
+                    backgroundColor: '#ffffff',
+                    padding: 8,
+                    borderRadius: 999,
+                    shadowColor: '#0c4a6e',
+                    shadowOffset: { width: 0, height: 4 },
+                    shadowOpacity: 0.18,
+                    shadowRadius: 10,
                   }}
                 >
                   {newsBadgeNode}
@@ -1000,6 +1024,16 @@ export function DuoLearnScreen() {
   const isPro = useIsPro();
   const displayName = useAuthStore((s) => s.displayName) ?? "";
   const isGuest = useAuthStore((s) => s.isGuest);
+  // Profile-question backstops: subscribe to all three fields so the map-tap
+  // gate (see handleModulePress) can re-ask any question the user skipped by
+  // exiting before tapping "Continue" inside the source lesson.
+  const knowledgeLevelSet = useAuthStore((s) => Boolean(s.profile?.knowledgeLevel));
+  const learningTimeSet = useAuthStore((s) => Boolean(s.profile?.learningTime));
+  const dailyGoalSet = useAuthStore((s) => Boolean(s.profile?.dailyGoalMinutes));
+  const [pendingProfileQuestion, setPendingProfileQuestion] = useState<{
+    kind: ProfileQuestionKind;
+    nav: { moduleId: string; chapterId: string; moduleIndex: number };
+  } | null>(null);
   // Skip-intro register CTA — fired from handleSkipIntro when a guest skips ch-0.
   // Pushes them to /(auth)/register with returnTo=/lesson/mod-1-1 so they land in
   // chapter 1 as a registered user with all skip-intro progress preserved.
@@ -1203,12 +1237,38 @@ export function DuoLearnScreen() {
         setReplayModule({ moduleId, chapterId, moduleIndex });
         return;
       }
+      // Backstop: catch users who skipped past an in-lesson profile question by
+      // exiting before tapping "Continue". Re-ask before they enter the gate
+      // module. PROFILE_QUESTION_BACKSTOPS owns the mapping.
+      const backstopKind = PROFILE_QUESTION_BACKSTOPS[moduleId];
+      if (backstopKind) {
+        const alreadyAnswered =
+          (backstopKind === 'knowledgeLevel' && knowledgeLevelSet) ||
+          (backstopKind === 'learningTime' && learningTimeSet) ||
+          (backstopKind === 'dailyGoal' && dailyGoalSet);
+        if (!alreadyAnswered) {
+          setPendingProfileQuestion({ kind: backstopKind, nav: { moduleId, chapterId, moduleIndex } });
+          return;
+        }
+      }
       setCurrentChapter(storeKey(chapterId));
       setCurrentModule(moduleIndex);
       router.push(`/lesson/${moduleId}?chapterId=${chapterId}` as never);
     },
-    [router, setCurrentChapter, setCurrentModule, progressData],
+    [router, setCurrentChapter, setCurrentModule, progressData, knowledgeLevelSet, learningTimeSet, dailyGoalSet],
   );
+
+  // Once the user picks (or skips) the backstop question, navigate to the
+  // originally-tapped module. Skipping still proceeds — the question is a
+  // nudge, not a hard gate.
+  const handleProfileQuestionDone = useCallback(() => {
+    const pending = pendingProfileQuestion;
+    setPendingProfileQuestion(null);
+    if (!pending) return;
+    setCurrentChapter(storeKey(pending.nav.chapterId));
+    setCurrentModule(pending.nav.moduleIndex);
+    router.push(`/lesson/${pending.nav.moduleId}?chapterId=${pending.nav.chapterId}` as never);
+  }, [pendingProfileQuestion, router, setCurrentChapter, setCurrentModule]);
 
   const handleReplay = useCallback(() => {
     if (!replayModule) return;
@@ -1263,6 +1323,16 @@ export function DuoLearnScreen() {
       {!isWalkthroughActive && <NoFreezeUpsellBanner />}
       <StreakCalendarModal visible={showStreakCalendar} onClose={() => setShowStreakCalendar(false)} />
       <DailyNewsChallengeSheet visible={newsSheetVisible} onClose={() => setNewsSheetVisible(false)} />
+
+      {/* Profile-question backstop before gated chapter-0/1 modules.
+          Mapping lives in PROFILE_QUESTION_BACKSTOPS (top of file). */}
+      {pendingProfileQuestion && (
+        <InModuleProfileQuestion
+          visible
+          kind={pendingProfileQuestion.kind}
+          onDone={handleProfileQuestionDone}
+        />
+      )}
 
       {/* Skip-intro register CTA for guests — fires after handleSkipIntro */}
       {showSkipIntroRegisterCTA && (
@@ -1340,7 +1410,32 @@ export function DuoLearnScreen() {
               until today's challenge is completed. */}
 
           {/* Chapter sections */}
-          {ARENAS.map((arena, idx) => {
+          {(() => {
+            // Compute the GLOBALLY-first chapter that holds an incomplete module.
+            // For Pro users every chapter is unlocked, so without this guard the
+            // active marker (Finn cursor + news badge + quest widget) would
+            // appear on every chapter that still has work — user reported seeing
+            // two cursors. Only ONE chapter — the earliest with an incomplete
+            // playable module — should host the active markers.
+            let globalActiveIdx = -1;
+            for (let i = 0; i < ARENAS.length; i++) {
+              const ch = ALL_CHAPTERS[i];
+              const num = storeKey(ch.id).replace('ch-', '');
+              const pfx = `mod-${num}-`;
+              const done = progressData?.filter((m) => m.moduleId.startsWith(pfx) && m.status === 'completed').map((m) => m.moduleId) ?? [];
+              // Same unlock rule as below — Pro: always; Free: prev chapter fully done.
+              let unlocked = isPro || i === 0;
+              if (!isPro && i > 0) {
+                const prev = ALL_CHAPTERS[i - 1];
+                const prevPfx = `mod-${storeKey(prev.id).replace('ch-', '')}-`;
+                const prevDone = progressData?.filter((m) => m.moduleId.startsWith(prevPfx) && m.status === 'completed').map((m) => m.moduleId) ?? [];
+                unlocked = prev.modules.every((m) => m.comingSoon || (!isPro && PRO_LOCKED_SIMS.has(m.id)) || prevDone.includes(m.id));
+              }
+              if (!unlocked) continue;
+              const hasIncomplete = ch.modules.some((m) => !done.includes(m.id) && !m.comingSoon && (isPro || !PRO_LOCKED_SIMS.has(m.id)));
+              if (hasIncomplete) { globalActiveIdx = i; break; }
+            }
+            return ARENAS.map((arena, idx) => {
             const chapter = ALL_CHAPTERS[idx];
             const chNum = storeKey(chapter.id).replace('ch-', '');
             const prefix = `mod-${chNum}-`;
@@ -1357,10 +1452,9 @@ export function DuoLearnScreen() {
               isUnlocked = prevChapter.modules.every((m) => m.comingSoon || (!isPro && PRO_LOCKED_SIMS.has(m.id)) || prevCompleted.includes(m.id));
             }
 
-            // Show quest widget on the chapter that has the active (first incomplete) module
-            const hasActiveModule = isUnlocked && chapter.modules.some(
-              (m, i) => !completedModules.includes(m.id) && !m.comingSoon && (isPro || !PRO_LOCKED_SIMS.has(m.id))
-            );
+            // Active marker (cursor / quest widget / news badge) belongs to the
+            // GLOBAL first-incomplete chapter only — never two at once.
+            const hasActiveModule = idx === globalActiveIdx;
 
             const chapterView = (
               <ChapterSection
@@ -1390,7 +1484,12 @@ export function DuoLearnScreen() {
                 questCompletedCount={hasActiveModule ? questCompletedCount : undefined}
                 questTotalCount={hasActiveModule ? questTotalCount : undefined}
                 onQuestPress={hasActiveModule ? handleQuestPress : undefined}
-                newsBadgeNode={hasActiveModule && !isWalkthroughActive ? (
+                newsBadgeNode={hasActiveModule ? (
+                  // Always show on the active chapter — even during the
+                  // walkthrough — so users who haven't formally completed
+                  // the tutorial still see the entry point. The pulse +
+                  // halo handle their own attention grab independent of
+                  // walkthrough state.
                   <NewsIconButton
                     size={36}
                     hasNewsChallenge={!!newsChallenge}
@@ -1438,7 +1537,8 @@ export function DuoLearnScreen() {
             }
 
             return <View key={arena.id} style={{ zIndex: 2 }}>{chapterView}</View>;
-          })}
+            });
+          })()}
 
           {/* Ocean depth tagline */}
           <Text style={{ textAlign: 'center', color: '#0ea5e9', fontSize: 13, fontWeight: '700', paddingVertical: 20, paddingBottom: 36, writingDirection: 'rtl' }}>

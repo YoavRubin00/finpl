@@ -43,19 +43,21 @@ const { width: SCREEN_W, height: SCREEN_H } = Dimensions.get('window');
 const ACCENT_GOLD = '#facc15';
 const ACCENT_GOLD_DEEP = '#d97706';
 
-// Heuristic: figure out which market the item is about so the hero pill can
-// display a flag. Falls back to a globe when nothing matches — strict matchers
-// to avoid false positives on the wrong country.
+// Heuristic: figure out which market the item is about. We use a small SVG-safe
+// emoji (📍/🏛️) plus the country label in Hebrew — regional-indicator flag
+// emojis (🇺🇸/🇮🇱/🇪🇺) render as raw "US"/"IL"/"EU" letter pairs on Windows web
+// (no flag font), which read as "vs ארה״ב" garbage. The neutral pin keeps the
+// pill universally legible.
 function inferSourceFlag(item: ChallengeItem): { flag: string; label: string } {
   const haystack = `${item.source ?? ''} ${item.summaryHe ?? ''} ${item.headlineHe ?? ''}`;
   if (/בנק ישראל|בורסה.*תל אביב|ת"א|TA-?125|ישראל|שקל/i.test(haystack)) {
-    return { flag: '🇮🇱', label: 'ישראל' };
+    return { flag: '🏛️', label: 'ישראל' };
   }
   if (/Fed|S&P|Nasdaq|דאו|וול ?סטריט|ארה"ב|ארה״ב|דולר/i.test(haystack)) {
-    return { flag: '🇺🇸', label: 'ארה״ב' };
+    return { flag: '🏛️', label: 'ארה״ב' };
   }
   if (/ECB|אירו|אירופה|גרמני|צרפת/i.test(haystack)) {
-    return { flag: '🇪🇺', label: 'אירופה' };
+    return { flag: '🏛️', label: 'אירופה' };
   }
   return { flag: '🌐', label: 'גלובלי' };
 }
