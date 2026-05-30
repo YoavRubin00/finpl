@@ -48,8 +48,8 @@ import { DailyNewsChallengeSheet } from "../daily-news-challenge/DailyNewsChalle
 import { useDailyNewsChallengeStore } from "../daily-news-challenge/useDailyNewsChallengeStore";
 import { fetchTodayChallenge } from "../daily-news-challenge/dailyNewsChallengeApi";
 import { FINN_STANDARD } from "../retention-loops/finnMascotConfig";
-import { FeedNudgeBanner } from "../../components/ui/FeedNudgeBanner";
-import { useFeedNudge } from "../../hooks/useFeedNudge";
+// FeedNudgeBanner / useFeedNudge removed — Feed is retired. Daily-challenge
+// entry lives in the Daily News Challenge card (added in Stage A).
 import { useDailyChallengesStore } from "../daily-challenges/use-daily-challenges-store";
 import { chapter0Data } from "../chapter-0-content/chapter0Data";
 import { chapter1Data } from "../chapter-1-content/chapter1Data";
@@ -1009,7 +1009,6 @@ export function DuoLearnScreen() {
   const setCurrentChapter = useChapterUIStore((s) => s.setCurrentChapter);
   const setCurrentModule = useChapterUIStore((s) => s.setCurrentModule);
   const { mutate: upsertProgress } = useUpsertModuleProgress();
-  const { nudge, dismiss: dismissNudge } = useFeedNudge();
   const dilemmaAnswered = useDailyChallengesStore((s) => s.hasDilemmaAnsweredToday());
   const [questSheetVisible, setQuestSheetVisible] = useState(false);
   const [hasScrolledDown, setHasScrolledDown] = useState(false);
@@ -1658,24 +1657,9 @@ export function DuoLearnScreen() {
           <FlyingRewards type="coins" amount={50} onComplete={() => setShowEasterEggReward(null)} />
         )}
 
-        {/* Feed engagement nudge, hidden during walkthrough */}
-        <FeedNudgeBanner
-          message={nudge?.message ?? ""}
-          visible={!!nudge && !isWalkthroughActive}
-          onPress={() => {
-            if (nudge) {
-              // The daily-challenge nudge routes to the feed (which is /(tabs)/learn).
-              // Tell the feed to auto-scroll to the dilemma card so the user lands on
-              // the challenge itself, not at the top of the feed.
-              import('../finfeed/FinFeedScreen').then(({ setPendingFeedScrollById }) => {
-                setPendingFeedScrollById('daily-dilemma');
-              });
-              router.push(nudge.route as never);
-            }
-            dismissNudge();
-          }}
-          onDismiss={dismissNudge}
-        />
+        {/* FeedNudgeBanner removed — the only entry point to the daily challenge
+            is now the Captain Shark Daily News Challenge card at the top of the
+            learn screen (added in Stage A). The Feed tab itself is retired. */}
       </SafeAreaView>
     </View>
   );
