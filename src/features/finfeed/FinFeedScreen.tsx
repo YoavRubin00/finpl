@@ -609,10 +609,14 @@ export function FinFeedScreen() {
   const flatListRef = useRef<FlashListRef<FeedItem>>(null);
   useScrollToTop(flatListRef);
 
-  // Continuous auto-scroll during walkthrough feed step, feels infinite
+  // Continuous auto-scroll during walkthrough feed step, feels infinite.
+  // The walkthrough no longer routes to the Feed step (it points at the
+  // Tools tab instead), so this effect is dead in practice — the comparison
+  // is kept against the legacy 'learn' signal so the typecheck stays clean
+  // until the FinFeed screen itself is removed in a follow-up.
   const walkthroughScreen = useTutorialStore((s) => s.walkthroughActiveScreen);
   useEffect(() => {
-    if (walkthroughScreen !== 'feed') return;
+    if (walkthroughScreen !== 'learn') return;
     let scrollIdx = 0;
     let interval: ReturnType<typeof setInterval> | null = null;
     const delay = setTimeout(() => {

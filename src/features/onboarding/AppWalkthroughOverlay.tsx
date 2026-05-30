@@ -28,7 +28,7 @@ import { captureEvent } from "../../lib/posthog";
 // Steps
 // ---------------------------------------------------------------------------
 
-type ScreenSignal = 'learn' | 'lesson-preview' | 'feed' | 'chat' | 'shop' | 'bridge' | null;
+type ScreenSignal = 'learn' | 'lesson-preview' | 'tools' | 'chat' | 'shop' | 'bridge' | null;
 
 interface WalkthroughStep {
   title: string;
@@ -65,17 +65,17 @@ const STEPS: WalkthroughStep[] = [
     emoji: "🎓",
     message: "6 פרקים, מאפס ועד מומחה. כל מה שצריך כדי להבין את עולם הכסף. גללו למטה ותראו!",
     navigateTo: "/(tabs)/index",
-    ctaLabel: "עכשיו לפיד",
+    ctaLabel: "עכשיו לכלים",
     screenSignal: "lesson-preview",
     audioUrl: "https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/audios/walkthrough/step-2-pdqXZwiv2qVntQy0hzWaQnkaj6cPbV.mp3",
   },
   {
-    title: "הפיד היומי",
-    emoji: "🎯",
-    message: "כאן תמצאו משחקים יומיים, דילמות כלכליות, מיתוסים ותוכן שמתעדכן כל יום.",
-    navigateTo: "/(tabs)/learn",
+    title: "הכלים הפיננסיים",
+    emoji: "🛠️",
+    message: "מחשבונים, אנליסט מניות, ניתוח תלוש שכר ועוד. כל הכלים שצריך כדי לנהל את הכסף נכון, ישר בכף יד.",
+    navigateTo: "/(tabs)/tools",
     ctaLabel: "המשך",
-    screenSignal: "feed",
+    screenSignal: "tools",
     audioUrl: "https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/audios/walkthrough/step-3-zwq7Ob4c2qz5wXEFANX40AzefZ9hu9.mp3",
   },
   {

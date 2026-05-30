@@ -78,6 +78,9 @@ export const useUsageStore = create<UsageState & UsageActions>()(
           case 'aiInsights':
           case 'saved_items':
           case 'breaking-news':
+          case 'shark-voice':
+          case 'analyst-quick':
+          case 'analyst-deep':
             break;
         }
       },
@@ -102,6 +105,9 @@ export const useUsageStore = create<UsageState & UsageActions>()(
           case 'aiInsights':
           case 'saved_items':
           case 'breaking-news':
+          case 'shark-voice':
+          case 'analyst-quick':
+          case 'analyst-deep':
             return false;
         }
       },

@@ -1,7 +1,16 @@
 // Shared types and constants extracted from the legacy useSubscriptionStore.
 // These do NOT depend on React or Zustand — import freely from anywhere.
 
-export type GatedFeature = "simulator" | "arena" | "chat" | "aiInsights" | "saved_items" | "breaking-news";
+export type GatedFeature =
+  | "simulator"
+  | "arena"
+  | "chat"
+  | "aiInsights"
+  | "saved_items"
+  | "breaking-news"
+  | "shark-voice"
+  | "analyst-quick"
+  | "analyst-deep";
 
 export const BASIC_LIMITS: Record<GatedFeature, number> = {
   simulator: 3,
@@ -13,7 +22,16 @@ export const BASIC_LIMITS: Record<GatedFeature, number> = {
   // user taps the "open the Pro chest" CTA inside the challenge sheet, which
   // triggers the standard upgrade modal.
   "breaking-news": 0,
+  // Tier limits for the new tools — currently surfaced only by the upgrade
+  // modal (free users get blocked on first use, Pro is unlimited). Per-day
+  // quotas land in a follow-up once the tools have real engagement data.
+  "shark-voice": 0,
+  "analyst-quick": 0,
+  "analyst-deep": 0,
 };
+
+/** How many tickers a Pro user can track for daily Breaking News summaries. */
+export const BREAKING_NEWS_PRO_TICKER_CAP = 5;
 
 const HEART_REFILL_MS = 5 * 60 * 60 * 1000; // 5 hours per heart
 

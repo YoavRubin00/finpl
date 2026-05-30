@@ -33,6 +33,18 @@ const FEATURE_INFO: Record<GatedFeature, { title: string; body: string }> = {
     title: "תיבת הבונוס של ה‑Pro",
     body: "הצפת האקטואליה הפיננסית פתוחה לכולם. תיבת הבונוס היומית עם XP ומטבעות נוספים שמורה לחברי PRO.\nשדרג כדי לפתוח אותה כל יום.",
   },
+  "shark-voice": {
+    title: "שיחת קול עם קפטן שארק, PRO בלבד",
+    body: "ב‑Free יש לכם דקה אחת ניסיון. ב‑PRO מקבלים עד 10 דקות שיחה ביום עם קפטן שארק על כל דבר פיננסי.",
+  },
+  "analyst-quick": {
+    title: "אנליסט מניות מהיר, PRO בלבד",
+    body: "ב‑Free מקבלים ניתוח מהיר אחד ביום. ב‑PRO ניתוחים ללא הגבלה — כל מניה, כל שאלה.",
+  },
+  "analyst-deep": {
+    title: "ניתוח עומק AI, PRO בלבד",
+    body: "ניתוח עומק עם follow-up, מצגי תזרים ובדיקות שווי שמור לחברי PRO.\nשדרג כדי לפתוח את האנליסט המלא.",
+  },
 };
 
 /** Standalone usage, must be placed once in app/_layout.tsx */
