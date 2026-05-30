@@ -957,21 +957,22 @@ const ChapterSection = React.memo(function ChapterSection({
                   }
                 }}
               />
-              {/* Daily News Challenge — just the newspaper icon (no pill,
-                  no label, no white card). Anchored directly under the
-                  MIDDLE star of the row that sits below the shark.
-                  ModuleNode renders Finn offset to one side of the node
-                  (right when offsetX >= 0) with his 3-star strip
-                  perfectly centered under him. We mirror that horizontal
-                  center here with a translateX matching Finn's offset, so
-                  the news icon lines up exactly under the middle star. */}
+              {/* Daily News Challenge — newspaper icon anchored directly
+                  under the MIDDLE star of the row that sits below the
+                  shark. Finn = node center + WAVE offset + ~half-NODE
+                  out to the side, so the icon's horizontal translate is
+                  getNodeOffset(i) + ~55 in the matching direction. The
+                  positive marginTop pushes it visually below the star
+                  strip rather than crowding it. */}
               {isActive && newsBadgeNode && (
                 <View
                   style={{
                     alignItems: 'center',
-                    marginTop: -4,
-                    marginBottom: 8,
-                    transform: [{ translateX: getNodeOffset(i) >= 0 ? 50 : -50 }],
+                    marginTop: 6,
+                    marginBottom: 12,
+                    transform: [{
+                      translateX: getNodeOffset(i) + (getNodeOffset(i) >= 0 ? 55 : -55),
+                    }],
                   }}
                 >
                   {newsBadgeNode}
