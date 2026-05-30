@@ -244,7 +244,14 @@ export interface FeedReferralNudge {
 export interface FeedSimulatorTeaser {
   id: string;
   type: "simulator-teaser";
-  simulator: import("./feedSimulatorsData").FeedSimulator;
+  // Inlined minimal shape — was `import("./feedSimulatorsData").FeedSimulator`
+  // but that file was deleted with the feed surface. saved-items still has to
+  // render legacy bookmarks of this kind, and the only fields it touches are
+  // these two, so the rest of the FeedSimulator type isn't needed anymore.
+  simulator: {
+    teaserTitle: string;
+    teaserSub: string;
+  };
 }
 
 export interface FeedLiveMarket {
