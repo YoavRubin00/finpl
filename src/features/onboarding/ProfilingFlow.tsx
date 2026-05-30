@@ -1787,8 +1787,15 @@ interface IntroStepProps {
   onLoginSuccess: () => void;
 }
 
-function IntroStep({ onRegister, onGuest, onLoginSuccess }: IntroStepProps) {
-  const [subStep, setSubStep] = useState<"welcome" | "choice" | "login">("choice");
+function IntroStep({ onRegister: _onRegister, onGuest, onLoginSuccess }: IntroStepProps) {
+  // 2026-05-30 redesign — register-first per Duolingo cadence:
+  //   "register" — DEFAULT first screen. Big Apple/Google CTAs at top, visible
+  //                "Start without account" button below (not a tiny link — users
+  //                see it and don't bounce). Subtle "I have an account" at the
+  //                bottom routes to the email login subStep.
+  //   "login"    — Apple/Google + email form for returning users.
+  //   The old "welcome" + "choice" subStates were merged into "register".
+  const [subStep, setSubStep] = useState<"register" | "login">("register");
   const promptGoogleSignIn = useGoogleAuthStore((s) => s.promptGoogleSignIn);
   const googleReady = useGoogleAuthStore((s) => s.isReady);
   const { promptAppleSignIn, isAvailable: appleAvailable } = useAppleAuth();
@@ -1797,7 +1804,7 @@ function IntroStep({ onRegister, onGuest, onLoginSuccess }: IntroStepProps) {
 
   // Auto-check terms when returning from terms page after pressing "קראתי"
   useEffect(() => {
-    if (subStep !== "choice") return;
+    if (subStep !== "register") return;
     const id = setInterval(() => {
       if (consumeTermsAcceptedFlag()) setTermsAccepted(true);
     }, 300);
@@ -1858,73 +1865,110 @@ function IntroStep({ onRegister, onGuest, onLoginSuccess }: IntroStepProps) {
     textAlign: "right" as const,
   };
 
-  // ── Welcome sub-state ──
-  if (subStep === "welcome") {
+  // ── Register sub-state (DEFAULT — first thing unauthenticated users see) ──
+  // Duolingo-style: big mascot, prominent OAuth CTAs, visible-but-secondary
+  // "Start without account" button (not a tiny link — users explicitly asked
+  // for this so they don't bounce). Login link sits at the bottom for returning
+  // users.
+  if (subStep === "register") {
     return (
       <SafeAreaView style={introStyles.shell} edges={["top", "bottom"]}>
-        <Animated.View style={[introStyles.finnWrap, finnStyle]}>
-          <LinearGradient colors={["#ecfeff", "#f0fdfa"]} style={introStyles.finnBg} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}>
-            <ExpoImage source={FINN_HELLO} style={{ width: 160, height: 160 }} contentFit="contain" accessibilityLabel="פין הכריש מנופף שלום" />
+        <Animated.View style={[introStyles.finnWrap, finnStyle, { marginBottom: 18 }]}>
+          <LinearGradient colors={["#ecfeff", "#f0fdfa"]} style={[introStyles.finnBg, { width: 160, height: 160, borderRadius: 80 }]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}>
+            <ExpoImage source={FINN_HELLO} style={{ width: 130, height: 130 }} contentFit="contain" accessibilityLabel="פין הכריש מנופף שלום" />
           </LinearGradient>
         </Animated.View>
 
-        <Animated.View style={[introStyles.textBlock, textStyle]}>
-          <Text style={introStyles.title}>
+        <Animated.View style={[introStyles.textBlock, textStyle, { marginBottom: 22 }]}>
+          <Text style={[introStyles.title, { marginBottom: 6 }]}>
             {"ברוך הבא ל-"}
             <Text style={introStyles.titleAccent}>{"FinPlay"}</Text>
             {"!"}
           </Text>
           <Text style={introStyles.subtitle}>
-            {"זה הזמן להפוך את הכסף שלך למשחק מהנה."}
+            {"צרו חשבון כדי לשמור את ההתקדמות שלכם בין מכשירים."}
           </Text>
         </Animated.View>
 
-        <View style={{ alignItems: "center", gap: 16 }}>
-          <Pressable onPress={() => setSubStep("choice")} style={introStyles.cta} accessibilityRole="button" accessibilityLabel="מתחילים">
-            <Text style={introStyles.ctaText}>מתחילים</Text>
+        <Animated.View style={[ctaAnimStyle, { width: "100%", gap: 10 }]}>
+          {/* Apple Sign-Up — required by App Store Guideline 4.8 on iOS */}
+          {appleAvailable && (
+            <Pressable
+              onPress={() => { setTermsAccepted(true); promptAppleSignIn().then(onLoginSuccess); }}
+              accessibilityRole="button"
+              accessibilityLabel="הירשם עם Apple"
+              style={{
+                width: "100%",
+                flexDirection: "row",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: 8,
+                borderRadius: 14,
+                backgroundColor: "#000000",
+                paddingVertical: 15,
+                borderBottomWidth: 3,
+                borderBottomColor: "#1f2937",
+              }}
+            >
+              <Text style={{ fontSize: 18, color: "#ffffff" }}></Text>
+              <Text style={{ fontSize: 16, fontWeight: "700", color: "#ffffff" }}>הירשם עם Apple</Text>
+            </Pressable>
+          )}
+
+          {/* Google Sign-Up — feedback path identical to login subStep */}
+          <Pressable
+            onPress={() => {
+              setTermsAccepted(true);
+              if (!googleReady || !promptGoogleSignIn) {
+                useAuthStore.getState().setAuthError("הכניסה עם Google לא זמינה כרגע. נסה שוב בעוד רגע.");
+                return;
+              }
+              promptGoogleSignIn();
+            }}
+            accessibilityRole="button"
+            accessibilityLabel="הירשם עם Google"
+            style={[introStyles.googleBtn, { paddingVertical: 15 }, !googleReady && { opacity: 0.6 }]}
+          >
+            <Text style={{ fontSize: 16, fontWeight: "700", color: "#1e293b" }}>הירשם עם Google</Text>
+            <GoogleLogo size={20} />
           </Pressable>
-          <Pressable onPress={() => setSubStep("login")} accessibilityRole="link" accessibilityLabel="כבר יש לכם חשבון? התחבר כאן">
-            <Text style={introStyles.loginLink}>
-              {"כבר יש לכם חשבון? "}
-              <Text style={introStyles.loginLinkAccent}>{"התחבר כאן"}</Text>
-            </Text>
-          </Pressable>
-        </View>
-      </SafeAreaView>
-    );
-  }
 
-  // ── Choice sub-state ──
-  if (subStep === "choice") {
-    return (
-      <SafeAreaView style={introStyles.shell} edges={["top", "bottom"]}>
-        <Animated.View style={[introStyles.finnWrap, finnStyle]}>
-          <LinearGradient colors={["#ecfeff", "#f0fdfa"]} style={introStyles.finnBg} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}>
-            <ExpoImage source={FINN_HELLO} style={{ width: 160, height: 160 }} contentFit="contain" accessibilityLabel="פין הכריש מנופף שלום" />
-          </LinearGradient>
-        </Animated.View>
+          {/* "Or" divider — separates account creation from the guest path so
+              users see the boundary clearly. */}
+          <View style={{ flexDirection: "row", alignItems: "center", marginVertical: 4 }}>
+            <View style={{ flex: 1, height: 1, backgroundColor: "#e2e8f0" }} />
+            <Text style={{ marginHorizontal: 12, fontSize: 13, color: "#94a3b8", fontWeight: "600" }}>או</Text>
+            <View style={{ flex: 1, height: 1, backgroundColor: "#e2e8f0" }} />
+          </View>
 
-        <Animated.View style={[introStyles.textBlock, textStyle, { marginBottom: 28 }]}>
-          <Text style={{ fontSize: 14, fontWeight: "600", color: "#0891b2", textAlign: "center", writingDirection: "rtl", marginBottom: 8, letterSpacing: 0.3 }}>
-            {"היי, אני קפטן שארק"}
-          </Text>
-          <Text style={[introStyles.title, { marginBottom: 0 }]}>{"בואו נתחיל לשחק עם הכסף שלכם."}</Text>
-        </Animated.View>
-
-        <Animated.View style={[ctaAnimStyle, { alignItems: "center", gap: 10, width: "100%" }]}>
-          {/* Single CTA, guest-default. Auth deferred to post-first-module per
-              BRAND.md cadence policy. Terms acceptance is implicit on tap. */}
+          {/* Guest CTA — explicitly NOT a tiny link. Full-width outlined button
+              with the same vertical rhythm as the OAuth buttons so users see
+              it as a real alternative (not a hidden fallback). They asked for
+              this so first-time users don't bounce when they aren't ready to
+              create an account yet. */}
           <Pressable
             onPress={() => { setTermsAccepted(true); onGuest(); }}
-            style={[introStyles.cta, { width: "100%", alignItems: "center", paddingHorizontal: 0 }]}
+            style={{
+              width: "100%",
+              borderRadius: 14,
+              paddingVertical: 14,
+              alignItems: "center",
+              justifyContent: "center",
+              borderWidth: 1.5,
+              borderColor: "#0891b2",
+              backgroundColor: "#ecfeff",
+            }}
             accessibilityRole="button"
-            accessibilityLabel="מתחילים"
+            accessibilityLabel="התחל ללא חשבון"
           >
-            <Text style={introStyles.ctaText}>מתחילים</Text>
+            <Text style={{ color: "#0891b2", fontSize: 15, fontWeight: "800", writingDirection: "rtl" }}>
+              התחל ללא חשבון
+            </Text>
           </Pressable>
 
+          {/* Terms — implicit consent on any tap above (Duolingo pattern) */}
           <Text
-            style={{ marginTop: 6, fontSize: 11, color: "#94a3b8", writingDirection: "rtl", textAlign: "center", lineHeight: 16, maxWidth: 280, alignSelf: "center" }}
+            style={{ marginTop: 8, fontSize: 11, color: "#94a3b8", writingDirection: "rtl", textAlign: "center", lineHeight: 16, maxWidth: 280, alignSelf: "center" }}
           >
             {"הלחיצה מהווה אישור של "}
             <Text
@@ -1937,7 +1981,8 @@ function IntroStep({ onRegister, onGuest, onLoginSuccess }: IntroStepProps) {
             </Text>
           </Text>
 
-          <Pressable onPress={() => setSubStep("login")} accessibilityRole="link" accessibilityLabel="כבר יש לי חשבון? התחבר" style={{ marginTop: 8 }}>
+          {/* Existing-account link — bottom row, subtle but reachable */}
+          <Pressable onPress={() => setSubStep("login")} accessibilityRole="link" accessibilityLabel="כבר יש לי חשבון, התחבר" style={{ marginTop: 6, alignSelf: "center", paddingVertical: 4 }}>
             <Text style={introStyles.loginLink}>
               {"כבר יש לי חשבון? "}
               <Text style={introStyles.loginLinkAccent}>{"התחבר"}</Text>
@@ -2082,7 +2127,7 @@ function IntroStep({ onRegister, onGuest, onLoginSuccess }: IntroStepProps) {
             <Text style={introStyles.ctaText}>התחבר</Text>
           </Pressable>
 
-          <Pressable onPress={() => setSubStep("choice")} style={{ alignSelf: "center", marginTop: 8, padding: 8 }} accessibilityRole="button" accessibilityLabel="חזרה" hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+          <Pressable onPress={() => setSubStep("register")} style={{ alignSelf: "center", marginTop: 8, padding: 8 }} accessibilityRole="button" accessibilityLabel="חזרה" hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
             <ChevronRight size={24} color="#64748b" />
           </Pressable>
         </Animated.View>
