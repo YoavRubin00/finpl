@@ -28,8 +28,10 @@ import { ChestsPage } from './components/ChestsPage';
 import { ItemChatOverlay } from './components/ItemChatOverlay';
 import { fetchTodayChallenge } from './dailyNewsChallengeApi';
 import { useDailyNewsChallengeStore, type ChallengeRewardSummary } from './useDailyNewsChallengeStore';
+import { useStreak } from '../economy/useStreak';
 import type { ChallengeItem } from './types';
 import { FlyingRewards } from '../../components/ui/FlyingRewards';
+import { GlobalWealthHeader } from '../../components/ui/GlobalWealthHeader';
 import { playChestOpenSwoosh } from './lib/sounds';
 
 interface DailyNewsChallengeSheetProps {
@@ -68,7 +70,10 @@ export function DailyNewsChallengeSheet({ visible, onClose }: DailyNewsChallenge
   const answered = useDailyNewsChallengeStore((s) => s.answered);
   const regularChestOpened = useDailyNewsChallengeStore((s) => s.regularChestOpened);
   const proChestOpened = useDailyNewsChallengeStore((s) => s.proChestOpened);
-  const streak = useDailyNewsChallengeStore((s) => s.streak);
+  // Reward calc + chest preview use the unified daily streak (same number
+  // the user sees in the header), not the retired DNC-local field.
+  const { data: streakData } = useStreak();
+  const streak = streakData?.currentStreak ?? 0;
   const setChallenge = useDailyNewsChallengeStore((s) => s.setTodayChallenge);
   const recordAnswer = useDailyNewsChallengeStore((s) => s.recordAnswer);
   const claimRegular = useDailyNewsChallengeStore((s) => s.claimRegularChest);
@@ -324,6 +329,11 @@ export function DailyNewsChallengeSheet({ visible, onClose }: DailyNewsChallenge
   return (
     <View style={styles.container}>
       <SafeAreaView style={styles.safeArea} edges={['top', 'left', 'right']}>
+        {/* Global wealth header (coins / XP / streak / hearts) — user asked to
+            keep it visible inside the sheet so the daily ritual still shows
+            their wallet at a glance. Compact mode matches the in-app header. */}
+        <GlobalWealthHeader compact />
+
         {/* Top bar: close button right (RTL leading) + progress dots */}
         <View style={styles.topBar}>
           <Pressable

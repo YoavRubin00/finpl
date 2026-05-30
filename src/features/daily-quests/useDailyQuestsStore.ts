@@ -4,7 +4,7 @@ import { zustandStorage } from '../../lib/zustandStorage';
 import { registerLocalStore } from '../../lib/stores/registry';
 import { useEconomyUIStore } from "../economy/useEconomyUIStore";
 import { queryClient } from "../../lib/queryClient";
-import { streakQueryKey } from "../economy/useStreak";
+import { streakQueryKey, markDailyActivityCompleted } from "../economy/useStreak";
 import type { StreakState } from "../../lib/api/streak";
 import { useDailyChallengesStore } from "../daily-challenges/use-daily-challenges-store";
 import { progressQueryKey } from "../chapter-1-content/useProgress";
@@ -141,6 +141,12 @@ export const useDailyQuestsStore = create<DailyQuestsState>()(
             quests: updated,
             ...(allDoneNow && !wasAllDone ? { newlyCompleted: true } : {})
           });
+          // Daily quest completion counts toward the unified streak. Most
+          // quest types are downstream of activities (lesson/dilemma/swipe)
+          // that already fire markDailyActivityCompleted directly, so this
+          // is mostly belt-and-suspenders — the helper is idempotent per
+          // day so duplicate calls are safe and free.
+          markDailyActivityCompleted();
         }
       },
 

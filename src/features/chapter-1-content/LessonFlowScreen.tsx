@@ -164,6 +164,14 @@ const MODULES_WITH_SIM = new Set(["mod-0-1", "mod-0-3", "mod-0-4", "mod-1-1", "m
 const SIM_FIRST_MODULES = new Set(["mod-0-1", "mod-1-1", "mod-2-12", "mod-2-13", "mod-3-18", "mod-4-20", "mod-4-22", "mod-4-23", "mod-4-27", "mod-4-b4"]);
 
 /**
+ * Module whose quiz-tail injects the knowledgeLevel onboarding question
+ * inline (see advanceQuiz). Bound to the FIRST chapter-0 slot — currently
+ * the financial-basics content after the 2026-05-30 swap. Keep it as a
+ * named constant so a future content reorg only updates one place.
+ */
+const KNOWLEDGE_LEVEL_INLINE_MODULE_ID = 'mod-0-1';
+
+/**
  * Modules that insert an Interactive Recall phase between flashcards and quizzes.
  * Each moduleId listed here must also have a matching entry in
  * `recallExerciseSets` (see src/features/sentence-exercise/sentenceData.ts);
@@ -181,8 +189,8 @@ const MODULES_WITH_INTERACTIVE_RECALL = new Set([
 
 /** Modules with a NotebookLM-generated infographic shown before the summary/chest */
 const MODULE_INFOGRAPHIC_MAP: Record<string, { uri: string }> = {
-  "mod-0-1": { uri: 'https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/infographics/ch0-upgrade/mod-0-1-upgrade.png' },
-  "mod-0-2": { uri: 'https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/infographics/ch0-upgrade/mod-0-2-upgrade.png' },
+  "mod-0-1": { uri: 'https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/infographics/ch0-upgrade/mod-0-2-upgrade.png' },
+  "mod-0-2": { uri: 'https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/infographics/ch0-upgrade/mod-0-1-upgrade.png' },
   "mod-0-3": { uri: 'https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/infographics/ch0-upgrade/mod-0-3-upgrade.png' },
   "mod-0-4": { uri: 'https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/infographics/ch0-upgrade/mod-0-4-upgrade.png' },
   "mod-0-5": { uri: 'https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/infographics/ch0-upgrade/mod-0-5-upgrade.png' },
@@ -190,9 +198,9 @@ const MODULE_INFOGRAPHIC_MAP: Record<string, { uri: string }> = {
 
 /** Modules with a video shown AFTER the infographic (before the chest) */
 const MODULE_POST_VIDEO_MAP: Record<string, string> = {
-  "mod-0-1": "https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/0-1.mp4",
-  // Chapter 0 — money/banking/interest/credit/pension
-  "mod-0-2": "https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/finn-videos/finn-ch0-money.mp4",
+  "mod-0-1": "https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/finn-videos/finn-ch0-money.mp4",
+  // Chapter 0 — money/banking/interest/credit/pension (NEW first slot — was mod-0-2 content)
+  "mod-0-2": "https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/0-1.mp4",
   "mod-0-3": "https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/finn-videos/finn-studying.mp4",
   "mod-0-4": "https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/finn-videos/finn-mod-0-4.mp4",
   "mod-0-5": "https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/finn-videos/finn-mod-0-5.mp4",
@@ -2553,9 +2561,11 @@ export function LessonFlowScreen() {
     // Snapshot read — called from event handlers (lesson complete), not during render.
     // Subscribing via the hook would add re-renders for no benefit.
     const profile = useAuthStore.getState().profile;
-    // Mapping moved (2026-05-27 redesign): mod-0-1 is clean (no question — see post-chest
-    // logic for mod-0-1), mod-0-5 holds a register CTA for guests instead of a question.
-    if (moduleId === "mod-0-2" && !profile?.knowledgeLevel) return "knowledgeLevel";
+    // Mapping moved (2026-05-30 swap): mod-0-1 now teaches financial basics
+    // (was mod-0-2). The knowledgeLevel question is asked INLINE right after
+    // mod-0-1's last quiz (see advanceQuiz) so it feels like a continuation of
+    // onboarding rather than a post-module modal. The mod-0-2 entry below is
+    // intentionally removed to avoid double-asking.
     if (moduleId === "mod-0-3" && !profile?.learningTime) return "learningTime";
     if (moduleId === "mod-0-4" && !profile?.dailyGoalMinutes) return "dailyGoal";
     return null;
@@ -2679,12 +2689,18 @@ export function LessonFlowScreen() {
     // Prefer the next module in the current chapter, by index. The global
     // search below can regress to the just-completed module because completion
     // may not be persisted yet when this runs.
+    //
+    // 2026-05-30: Route to the learn map (not directly to the next lesson)
+    // so the user lands on the path with the just-unlocked Pearl visible
+    // beside the next module — opt-in bonus content gets a fair chance.
+    // The setCurrentChapter / setCurrentModule calls keep the auto-scroll
+    // logic in DuoLearnScreen parked on the right row.
     if (chapterId && currentModIdx >= 0 && currentModIdx + 1 < chapterModules.length) {
       const next = chapterModules[currentModIdx + 1];
       if (!next.comingSoon && (isPro || !PRO_LOCKED_SIMS.has(next.id))) {
         setCurrentChapter(chapterStoreKey(chapterId));
         setCurrentModule(currentModIdx + 1);
-        router.replace(`/lesson/${next.id}?chapterId=${chapterId}` as never);
+        router.replace("/(tabs)" as never);
         return;
       }
     }
@@ -2695,7 +2711,7 @@ export function LessonFlowScreen() {
         const nextMod = ch.modules[nextIdx];
         setCurrentChapter(chapterStoreKey(ch.id));
         setCurrentModule(nextIdx);
-        router.replace(`/lesson/${nextMod.id}?chapterId=${ch.id}` as never);
+        router.replace("/(tabs)" as never);
         return;
       }
     }
@@ -2870,8 +2886,9 @@ export function LessonFlowScreen() {
   const [showStreakPopup, setShowStreakPopup] = useState(false);
   const [showQuizIntro, setShowQuizIntro] = useState(false);
   const [showWisdom, setShowWisdom] = useState(false);
-  const [showInterGame, setShowInterGame] = useState(false);
-  const [interGamePhase, setInterGamePhase] = useState<'video' | 'finn'>('video');
+  // (legacy showInterGame + interGamePhase removed — the inter-module game
+  //  modal moved to the Pearl bonus node on the learn map; see
+  //  src/features/pearls/. No callers remain in this file.)
   // Inter-module CONTENT (Feed-derived cards: PremiumLearning, DidYouKnow,
   // LiveMarket, LiveNews). Fires only when interModuleGame is absent — each
   // module gets at most one inter-module artifact, never both back-to-back.
@@ -2901,6 +2918,11 @@ export function LessonFlowScreen() {
   // Tracks the module id whose profile question was already presented this visit,
   // so skipping (which doesn't set the profile field) can't re-trigger it in a loop.
   const profileQuestionAskedRef = useRef<string | null>(null);
+  // When a profile question is injected MID-MODULE (e.g. mod-0-1 knowledgeLevel
+  // fires between last quiz and sim-intro), this holds the resume action to run
+  // after the modal closes. If null, the modal close falls through to the normal
+  // post-module nav flow (goToNextSequentialModule).
+  const pendingPostQuestionActionRef = useRef<(() => void) | null>(null);
   // "Grade skip" celebration — shown when the user self-identifies as an expert
   // ("כריש מוול סטריט") on the mod-0-2 knowledge question. We mark all of chapter 0
   // complete, park the cursor on mod-1-1, and surface this screen instead of
@@ -2912,6 +2934,8 @@ export function LessonFlowScreen() {
   const markPizzaSeen = useTutorialStore((s) => s.markPizzaIndexSeen);
   const hasSeenMod01BarterNotif = useTutorialStore((s) => s.hasSeenMod01BarterNotif);
   const markMod01BarterNotifSeen = useTutorialStore((s) => s.markMod01BarterNotifSeen);
+  const hasSeenMod05BridgeCTA = useTutorialStore((s) => s.hasSeenMod05BridgeCTA);
+  const markMod05BridgeCTASeen = useTutorialStore((s) => s.markMod05BridgeCTASeen);
   const isGuest = useAuthStore((s) => s.isGuest);
   const [chestFullScreen, setChestFullScreen] = useState(false);
   const [chestClaimed, setChestClaimed] = useState(false);
@@ -3137,12 +3161,13 @@ export function LessonFlowScreen() {
   // immediately before the game, not during the mod-0-3 summary phase
   // where the chest + celebration sat in between.)
 
-  // mod-0-1 barter notif, dancing shark joke right after the post-infographic video.
-  // Fires when entering shark-dilemma phase (which immediately follows the video),
-  // so the joke lands while the barter context is fresh.
+  // Barter notif (dancing shark) right after the post-infographic video of the
+  // "what is money / barter" module. Content lives at mod-0-2 since the 2026-05-30
+  // swap (mod-0-1 now teaches financial basics; mod-0-2 teaches barter/money origin).
+  // The notif intentionally fires while the barter context is fresh.
   useEffect(() => {
     if (!mod) return;
-    if (phase === "shark-dilemma" && mod.id === "mod-0-1" && !hasSeenMod01BarterNotif) {
+    if (phase === "shark-dilemma" && mod.id === "mod-0-2" && !hasSeenMod01BarterNotif) {
       safeTimeout(() => setShowMod01BarterNotif(true), 200);
     }
   }, [phase, mod, hasSeenMod01BarterNotif, safeTimeout]);
@@ -3243,8 +3268,16 @@ export function LessonFlowScreen() {
 
   // Auto-next countdown: when the celebration modal opens, start a 3s timer
   // that fires goToNextSequentialModule unless the user cancels or quits.
+  //
+  // Bypass for mod-0-5 first-completion: the special Bridge handoff CTA needs
+  // an explicit user decision (Bridge vs continue), not an auto-advance.
+  // Once the user has seen it, the standard auto-next behaviour resumes.
   useEffect(() => {
     if (!showPostCelebration || showBreakMessage) {
+      setAutoNextSeconds(null);
+      return;
+    }
+    if (mod?.id === 'mod-0-5' && !hasSeenMod05BridgeCTA) {
       setAutoNextSeconds(null);
       return;
     }
@@ -3265,7 +3298,22 @@ export function LessonFlowScreen() {
       });
     }, 1000);
     return () => clearInterval(tick);
-  }, [showPostCelebration, showBreakMessage, mod]);
+  }, [showPostCelebration, showBreakMessage, mod, hasSeenMod05BridgeCTA]);
+
+  // Fire mod05_bridge_cta_shown exactly once per first appearance of the
+  // special Bridge handoff CTA. Tied to PostCelebration becoming visible
+  // while the mod-0-5 + first-completion conditions hold.
+  const mod05BridgeCtaFiredRef = useRef(false);
+  useEffect(() => {
+    if (!showPostCelebration) {
+      mod05BridgeCtaFiredRef.current = false;
+      return;
+    }
+    if (mod?.id === 'mod-0-5' && !hasSeenMod05BridgeCTA && !mod05BridgeCtaFiredRef.current) {
+      mod05BridgeCtaFiredRef.current = true;
+      try { captureEvent('mod05_bridge_cta_shown', { partner: 'altshuler' }); } catch { /* non-fatal */ }
+    }
+  }, [showPostCelebration, mod, hasSeenMod05BridgeCTA]);
 
   // Shark Party, trigger only on chapter transitions (last module of chapter) every 4 total completed modules
   useEffect(() => {
@@ -3319,21 +3367,36 @@ export function LessonFlowScreen() {
     if (quizIndex < mod.quizzes.length - 1) {
       setQuizIndex((prev) => prev + 1);
       tapHaptic();
-    } else if (MODULES_WITH_SIM.has(mod.id) && !SIM_FIRST_MODULES.has(mod.id)) {
-      // Normal flow: quizzes → sim (skip for sim-first modules, sim already done)
-      if (PRO_LOCKED_SIMS.has(mod.id) && !useUsageStore.getState().canUse("simulator", queryClient.getQueryData<SubscriptionState | null>(subscriptionQueryKey)?.isPro === true)) {
-        useUpgradeModalStore.getState().show("simulator");
-        return;
-      }
-      setPhase("sim-intro");
-      mediumHaptic();
-    } else {
-      setPhase(
-        mod.id && MODULE_INFOGRAPHIC_MAP[mod.id] ? "module-infographic" :
-        mod.id && MODULE_POST_VIDEO_MAP[mod.id] ? "post-infographic-video" :
-        mod.id && getDilemma(mod.id) ? "shark-dilemma" : "summary"
-      );
+      return;
     }
+    // Last quiz done. Resolve the next phase first, then decide whether to
+    // inject an inline onboarding-style question before transitioning.
+    const advanceToNextPhase = () => {
+      if (MODULES_WITH_SIM.has(mod.id) && !SIM_FIRST_MODULES.has(mod.id)) {
+        if (PRO_LOCKED_SIMS.has(mod.id) && !useUsageStore.getState().canUse("simulator", queryClient.getQueryData<SubscriptionState | null>(subscriptionQueryKey)?.isPro === true)) {
+          useUpgradeModalStore.getState().show("simulator");
+          return;
+        }
+        setPhase("sim-intro");
+        mediumHaptic();
+      } else {
+        setPhase(
+          mod.id && MODULE_INFOGRAPHIC_MAP[mod.id] ? "module-infographic" :
+          mod.id && MODULE_POST_VIDEO_MAP[mod.id] ? "post-infographic-video" :
+          mod.id && getDilemma(mod.id) ? "shark-dilemma" : "summary"
+        );
+      }
+    };
+    // mod-0-1 (post-2026-05-30 swap = financial basics, first lesson) acts as a
+    // continuation of onboarding: ask knowledgeLevel RIGHT after the last quiz,
+    // before the simulation. The resume action runs once the user answers/skips.
+    if (mod.id === KNOWLEDGE_LEVEL_INLINE_MODULE_ID && !useAuthStore.getState().profile?.knowledgeLevel && profileQuestionAskedRef.current !== KNOWLEDGE_LEVEL_INLINE_MODULE_ID) {
+      profileQuestionAskedRef.current = KNOWLEDGE_LEVEL_INLINE_MODULE_ID;
+      pendingPostQuestionActionRef.current = advanceToNextPhase;
+      setProfileQuestionKind('knowledgeLevel');
+      return;
+    }
+    advanceToNextPhase();
   }, [mod, quizIndex]);
 
   const handleCorrectAnswer = useCallback(() => {
@@ -4363,21 +4426,19 @@ export function LessonFlowScreen() {
                 if (mod && !isReplay) {
                   completeModule(mod.id);
                 }
-                // Skip the inter-module game when the next route is itself a
-                // game/interstitial — otherwise the user plays two minigames
-                // back-to-back. Today this only affects mod-0-3, which routes
-                // directly to /interstitial/bullshit-ch0; keep the list explicit
-                // so future routing rules don't silently chain games again.
-                const ROUTES_TO_GAME = new Set(['mod-0-3']);
-                const nextIsGame = mod ? ROUTES_TO_GAME.has(mod.id) : false;
-                if (mod?.interModuleGame && !showInterGame && !nextIsGame) {
-                  setInterGamePhase('video');
-                  setShowInterGame(true);
-                } else if (mod?.interModuleContent && !showInterContent && !nextIsGame) {
-                  // Surface a Feed-derived card (premium-learning, did-you-know,
-                  // live-market, or live-news) before advancing. Each module
-                  // assigns at most one — see Module.interModuleContent in
-                  // chapter-1-content/types.ts.
+                // The legacy "auto inter-module game" modal that used to fire
+                // here was replaced by the Pearl bonus node on the learn map
+                // (src/features/pearls/). Pearls are opt-in — the user lands
+                // back on the map, sees the just-unlocked pearl beside the
+                // also-unlocked next module, and picks which one to enter.
+                // Special routes inside goToNextSequentialModule (mod-0-3
+                // interstitial, mod-0-4 paywall, mod-1-9 tower-defense) still
+                // fire — only the "regular next-module" branch was rewired
+                // there to land on the map instead of auto-starting.
+                if (mod?.interModuleContent && !showInterContent) {
+                  // Feed-derived cards (premium-learning, did-you-know,
+                  // live-market, live-news) still surface inline since the
+                  // Pearl only hosts the mini-games + lifestyle video.
                   setShowInterContent(true);
                 } else {
                   goToNextSequentialModule();
@@ -4393,120 +4454,14 @@ export function LessonFlowScreen() {
         )}
       </View>
 
-      {/* Inter-module game overlay */}
-      {showInterGame && mod?.interModuleGame && (
-        <Modal visible transparent animationType="slide" statusBarTranslucent onRequestClose={() => { setShowInterGame(false); goToNextSequentialModule(); }} accessibilityViewIsModal>
-          <GestureHandlerRootView style={{ flex: 1, backgroundColor: "#f8fafc" }} accessibilityViewIsModal>
-            <View style={{ flexDirection: "row-reverse", paddingHorizontal: 16, paddingTop: Math.max(safeInsets.top + 12, 50), paddingBottom: 8 }}>
-              <Pressable
-                onPress={() => { setShowInterGame(false); goToNextSequentialModule(); }}
-                style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: "rgba(0,0,0,0.06)", alignItems: "center", justifyContent: "center" }}
-                accessibilityRole="button"
-                accessibilityLabel="סגור והמשך"
-                hitSlop={8}
-              >
-                <Text style={{ color: "#475569", fontSize: 18, fontWeight: "800", lineHeight: 20 }}>✕</Text>
-              </Pressable>
-            </View>
-            {/* ScrollView so games whose results screen (chart + score + shark
-                explanation + rewards + Continue) is taller than the viewport
-                (Fear or Greed in particular) don't trap users with a button
-                cut off below the screen edge. */}
-            <ScrollView
-              style={{ flex: 1 }}
-              contentContainerStyle={{ paddingBottom: Math.max(safeInsets.bottom + 24, 48), flexGrow: 1 }}
-              showsVerticalScrollIndicator={false}
-              keyboardShouldPersistTaps="handled"
-            >
-            {mod.interModuleGame === 'investment' && (
-              <InvestmentCard isActive onContinue={() => { setShowInterGame(false); goToNextSequentialModule(); }} />
-            )}
-            {mod.interModuleGame === 'crash' && (
-              <CrashGameCard isActive onContinue={() => { setShowInterGame(false); goToNextSequentialModule(); }} />
-            )}
-            {mod.interModuleGame === 'myth' && (
-              useMythStore.getState().canPlayMyth(isPro)
-                ? <MythFeedCard isInterModule onSkip={() => { setShowInterGame(false); goToNextSequentialModule(); }} />
-                : <MythInterModuleAutoSkip onSkip={() => { setShowInterGame(false); goToNextSequentialModule(); }} />
-            )}
-            {mod.interModuleGame === 'dilemma' && (
-              <DilemmaCard isActive onContinue={() => { setShowInterGame(false); goToNextSequentialModule(); }} />
-            )}
-            {mod.interModuleGame === 'fomo-killer' && (
-              <FomoKillerCard isActive onContinue={() => { setShowInterGame(false); goToNextSequentialModule(); }} />
-            )}
-            {mod.interModuleGame === 'bullshit-swipe' && (
-              <BullshitSwipeCard
-                isActive
-                bypassDailyGate
-                onContinue={() => { setShowInterGame(false); goToNextSequentialModule(); }}
-              />
-            )}
-            {mod.interModuleGame === 'higher-lower' && (
-              <HigherLowerCard
-                isActive
-                onComplete={() => { setShowInterGame(false); goToNextSequentialModule(); }}
-              />
-            )}
-            {mod.interModuleGame === 'price-slider' && (
-              <PriceSliderCard isActive onContinue={() => { setShowInterGame(false); goToNextSequentialModule(); }} />
-            )}
-            {mod.interModuleGame === 'budget-ninja' && (
-              <BudgetNinjaCard isActive onContinue={() => { setShowInterGame(false); goToNextSequentialModule(); }} />
-            )}
-            {mod.interModuleGame === 'cashout-rush' && (
-              <CashoutRushCard isActive onContinue={() => { setShowInterGame(false); goToNextSequentialModule(); }} />
-            )}
-            {mod.interModuleGame === 'macro-event' && mod.interModuleMacroEventId && (() => {
-              const event = macroEventsData.find((e) => e.id === mod.interModuleMacroEventId);
-              if (!event) return null;
-              return (
-                <MacroEventCard
-                  item={{ id: event.id, type: 'macro-event', event }}
-                  isActive
-                  onContinue={() => { setShowInterGame(false); goToNextSequentialModule(); }}
-                />
-              );
-            })()}
-            {mod.interModuleGame === 'video' && mod.interModuleVideoAsset !== undefined && (
-              <>
-                {interGamePhase === 'video' && (
-                  <VideoHookPlayer
-                    videoUri={typeof mod.interModuleVideoAsset === 'number' ? mod.interModuleVideoAsset : mod.interModuleVideoAsset.uri}
-                    hookText=""
-                    onFinish={() => setInterGamePhase('finn')}
-                    unitColors={unitColors}
-                    fitContain
-                  />
-                )}
-                {interGamePhase === 'finn' && (
-                  <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', padding: 32, gap: 24 }}>
-                    <ExpoImage source={FINN_DANCING} style={{ width: 140, height: 140 }} contentFit="contain" accessible={false} />
-                    <View style={{ backgroundColor: '#f0f9ff', borderRadius: 20, padding: 20, borderWidth: 1.5, borderColor: '#bae6fd', maxWidth: 320 }}>
-                      <Text style={{ fontSize: 18, fontWeight: '800', color: '#1e293b', textAlign: 'right', writingDirection: 'rtl', lineHeight: 28 }}>
-                        {mod.interModuleFinnMessage}
-                      </Text>
-                    </View>
-                    <Pressable
-                      onPress={() => { setShowInterGame(false); goToNextSequentialModule(); }}
-                      style={{ backgroundColor: '#0891b2', borderRadius: 16, paddingHorizontal: 32, paddingVertical: 14, minHeight: 44, justifyContent: 'center', borderBottomWidth: 3, borderBottomColor: '#0e7490' }}
-                      accessibilityRole="button"
-                      accessibilityLabel="המשך"
-                    >
-                      <Text style={{ color: '#fff', fontSize: 16, fontWeight: '900', textAlign: 'center' }}>המשך ←</Text>
-                    </Pressable>
-                  </View>
-                )}
-              </>
-            )}
-            </ScrollView>
-          </GestureHandlerRootView>
-        </Modal>
-      )}
+      {/* Inter-module game overlay was REMOVED 2026-05-30 — the same mini-
+          games now live inside the Pearl bonus node on the learn map
+          (src/features/pearls/). Keeping the imports here for any historical
+          tooling that still references them; tree-shaking drops them. */}
 
-      {/* Inter-module CONTENT overlay — fires only when interModuleGame is
-          absent. Renders the first present field from interModuleContent.
-          The cards are reused as-is from the (now-retired) FinFeed surface. */}
+      {/* Inter-module CONTENT overlay — still fires inline because Feed-derived
+          cards (premium-learning, did-you-know, live-market, live-news) aren't
+          part of the Pearl experience. */}
       {showInterContent && mod?.interModuleContent && (
         <Modal
           visible
@@ -4952,22 +4907,59 @@ export function LessonFlowScreen() {
           onDone={() => {
             const answeredKind = profileQuestionKind;
             setProfileQuestionKind(null);
-            // Self-declared expert ("כריש מוול סטריט") on the mod-0-2 knowledge
-            // question → bump straight to chapter 1 instead of grinding the rest
-            // of chapter 0. Mark all ch-0 modules complete (server-synced via
-            // upsertProgress) and move the learn-map cursor to mod-1-1, then show
-            // the celebration. "המשך" drops them on the learn map with ch-1 open.
+            // Self-declared expert ("כריש מוול סטריט") on the knowledge question
+            // → bump straight to chapter 1 instead of grinding the rest of chapter
+            // 0. Mark all ch-0 modules complete (server-synced via upsertProgress)
+            // and move the learn-map cursor to mod-1-1, then show the celebration.
+            // "המשך" drops them on the learn map with ch-1 open.
             if (answeredKind === 'knowledgeLevel' && useAuthStore.getState().profile?.knowledgeLevel === 'expert') {
+              // Clear any pending mid-module resume — grade skip supersedes it.
+              pendingPostQuestionActionRef.current = null;
               for (const m of chapter0Data.modules) {
                 upsertProgress({ moduleId: m.id, status: 'completed', xpEarned: 0 });
               }
               // Durable local record so the skip survives the 404 rollback for guests
               // and cold starts (mirrors completeModule's markCompleted).
               useCompletedModulesStore.getState().markManyCompleted(chapter0Data.modules.map((m) => m.id));
+              // Grade-skip compensation — pre-audit the skipper lost ~250 XP and
+              // ~150 coins of legitimate chapter-0 yield (all 5 lessons granted
+              // upsertProgress with xpEarned:0). The skip is self-aware, not a
+              // free ride, so we grant the sum-of-chapter XP equivalent plus a
+              // small "expertise bonus" so being honest about the level isn't
+              // strictly punished. Matches per-module yield used by mod-0-x
+              // completion (~50 XP / lesson + chest coins ~30/lesson).
+              const chapter0ModuleCount = chapter0Data.modules.length;
+              const PER_MODULE_XP_EQUIV = 50;
+              const PER_MODULE_COINS_EQUIV = 30;
+              const EXPERT_BONUS_XP = 100;
+              try {
+                useEconomyUIStore.getState().addXP(
+                  chapter0ModuleCount * PER_MODULE_XP_EQUIV + EXPERT_BONUS_XP,
+                  'lesson_complete',
+                );
+                useEconomyUIStore.getState().addCoins(
+                  chapter0ModuleCount * PER_MODULE_COINS_EQUIV,
+                  'lesson',
+                );
+              } catch { /* non-fatal */ }
               setCurrentChapter('ch-1');
               setCurrentModule(0);
-              try { captureEvent('expert_grade_skip', { from_module: id }); } catch { /* non-fatal */ }
+              try {
+                captureEvent('expert_grade_skip', {
+                  from_module: id,
+                  xp_granted: chapter0ModuleCount * PER_MODULE_XP_EQUIV + EXPERT_BONUS_XP,
+                  coins_granted: chapter0ModuleCount * PER_MODULE_COINS_EQUIV,
+                });
+              } catch { /* non-fatal */ }
               setShowGradeSkipCelebration(true);
+              return;
+            }
+            // Mid-module injection (e.g. mod-0-1 quizzes→sim handoff): resume the
+            // queued in-module action instead of navigating to the next module.
+            if (pendingPostQuestionActionRef.current) {
+              const resume = pendingPostQuestionActionRef.current;
+              pendingPostQuestionActionRef.current = null;
+              resume();
               return;
             }
             // Re-enter the next-module flow now that profile is populated.
@@ -5356,6 +5348,50 @@ export function LessonFlowScreen() {
       {/* ── Post-module celebration ── */}
       {showPostCelebration && !showBreakMessage && (
         <Pressable style={[StyleSheet.absoluteFill, { zIndex: 9995, backgroundColor: "rgba(0,0,0,0.6)", justifyContent: "center", alignItems: "center", padding: 24 }]} onPress={() => {}} accessible={false}>
+          {mod?.id === 'mod-0-5' && !hasSeenMod05BridgeCTA ? (
+            /* Special mod-0-5 variant: hands the user off to the Bridge with
+               Altshuler highlighted. Framed as "you unlocked a benefit", not
+               as advertising — taps into earned-reward psychology (מוני).
+               Gold border + amber CTA visually differentiates from the
+               standard green PostCelebration (יפיופי). One-shot per user
+               via hasSeenMod05BridgeCTA (דואו: never show twice). */
+            <Animated.View entering={FadeInUp.duration(500)} style={{ backgroundColor: "#ffffff", borderRadius: 28, padding: 28, width: "100%", maxWidth: 340, alignItems: "center", borderWidth: 2, borderColor: "#f59e0b" }}>
+              <Text style={{ fontSize: 56, marginBottom: 6 }} accessibilityElementsHidden>🔓</Text>
+              <Text style={{ fontSize: 22, fontWeight: "900", color: "#0f172a", textAlign: "center", marginBottom: 6, writingDirection: "rtl" }}>{"פתחת הטבה!"}</Text>
+              <Text style={{ fontSize: 14, fontWeight: "600", color: "#64748b", textAlign: "center", marginBottom: 22, writingDirection: "rtl", lineHeight: 20 }}>
+                {"כי סיימת את שיעור ההשקעה — מחכה לך הטבה אמיתית אצל אלטשולר שחם. הטבה רק לחברי FinPlay."}
+              </Text>
+              <AnimatedPressable
+                onPress={() => {
+                  try { captureEvent('mod05_bridge_cta_tapped', { partner: 'altshuler', action: 'go' }); } catch { /* non-fatal */ }
+                  markMod05BridgeCTASeen();
+                  successHaptic();
+                  setShowPostCelebration(false);
+                  safeTimeout(() => router.push("/bridge?highlight=bridge-invest-altshuler" as never), 80);
+                }}
+                style={{ width: "100%", backgroundColor: "#f59e0b", borderRadius: 16, paddingVertical: 16, alignItems: "center", marginBottom: 12, borderBottomWidth: 4, borderBottomColor: "#d97706" }}
+                accessibilityRole="button"
+                accessibilityLabel="קח את ההטבה ב-Bridge"
+              >
+                <Text style={{ fontSize: 16, fontWeight: "900", color: "#ffffff", writingDirection: "rtl" }}>{"קח את ההטבה ←"}</Text>
+              </AnimatedPressable>
+              <Pressable
+                onPress={() => {
+                  try { captureEvent('mod05_bridge_cta_tapped', { partner: 'altshuler', action: 'later' }); } catch { /* non-fatal */ }
+                  markMod05BridgeCTASeen();
+                  tapHaptic();
+                  setShowPostCelebration(false);
+                  safeTimeout(() => goToNextSequentialModule(), 80);
+                }}
+                hitSlop={12}
+                style={{ paddingVertical: 10 }}
+                accessibilityRole="button"
+                accessibilityLabel="אולי אחר כך"
+              >
+                <Text style={{ fontSize: 13, fontWeight: "700", color: "#64748b", writingDirection: "rtl" }}>{"אולי אחר כך"}</Text>
+              </Pressable>
+            </Animated.View>
+          ) : (
           <Animated.View entering={FadeInUp.duration(500)} style={{ backgroundColor: "#ffffff", borderRadius: 28, padding: 28, width: "100%", maxWidth: 340, alignItems: "center", borderWidth: 2, borderColor: "#22c55e" }}>
             <ExpoImage
               source={FINN_EMPATHIC}
@@ -5408,6 +5444,7 @@ export function LessonFlowScreen() {
               </Text>
             </AnimatedPressable>
           </Animated.View>
+          )}
         </Pressable>
       )}
 

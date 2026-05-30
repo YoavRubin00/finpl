@@ -35,10 +35,16 @@ export function InteractiveRecallScreen({
   recallRef.current = recall;
 
   // CTA state lifted from TimelineOrderCard so the Check/Continue button can
-  // live in a sticky footer below the ScrollView. Reset whenever the prompt
-  // changes so a stale callback (or stale helpVisible flag — which we use to
-  // override the FinnCoach bubble) from the previous prompt can't fire on
-  // the new one before that prompt's card mounts and pushes its own state.
+  // live in a sticky footer below the ScrollView. The card pushes its state
+  // via onStateChange tagged with `promptId`; the parent ignores any state
+  // whose promptId doesn't match the current prompt to avoid stale handlers
+  // firing during the one-frame transition window when the card remounts.
+  //
+  // Do NOT add a `setCardState(null)` reset on prompt change here — React
+  // fires child effects before parent effects, so the reset would clobber
+  // the freshly-mounted card's pushed state and leave the "בדוק" button
+  // permanently disabled. The promptId guard below makes the reset
+  // unnecessary.
   const [cardState, setCardState] = useState<TimelineOrderCardState | null>(null);
 
   const handleCorrectSettled = useCallback(() => {
@@ -77,19 +83,18 @@ export function InteractiveRecallScreen({
 
   const prompt = recall.current;
 
-  // Drop the lifted card state when the prompt changes. Without this, the
-  // helpVisible flag (and the check/continue callbacks) leak from prompt N
-  // into prompt N+1 — visible as a flash of "צריכים עזרה?" in the FinnCoach
-  // bubble on the next card before its own state pushes through.
-  useEffect(() => {
-    setCardState(null);
-  }, [prompt.id]);
+  // Only honor cardState if it was pushed by THIS prompt's card. After a
+  // prompt change, there's a brief window where the parent still holds the
+  // previous prompt's state until the new card mounts and pushes — gating
+  // on promptId here prevents stale callbacks (like a stale `continue_`
+  // double-advancing the user) from firing during that window.
+  const activeCardState = cardState?.promptId === prompt.id ? cardState : null;
 
   // When the timeline card's help offer is open, override Finn's bubble with
   // the "צריכים עזרה?" copy. The buttons sit higher in the card; pulling the
   // question into the bottom Finn bubble keeps both halves visible at once
   // (the previous in-card "text + buttons" block sat below the fold).
-  const helpVisible = cardState?.helpVisible ?? false;
+  const helpVisible = activeCardState?.helpVisible ?? false;
   const finnMood = helpVisible ? "talking" : recall.state.finnMood;
   const finnMessage = helpVisible
     ? "צריכים עזרה? אני יכול לסדר את זה."
@@ -148,35 +153,35 @@ export function InteractiveRecallScreen({
         >
           <Pressable
             onPress={() => {
-              if (!cardState) return;
-              if (cardState.locked) cardState.continue_();
-              else cardState.check();
+              if (!activeCardState) return;
+              if (activeCardState.locked) activeCardState.continue_();
+              else activeCardState.check();
             }}
-            disabled={!cardState}
+            disabled={!activeCardState}
             accessibilityRole="button"
-            accessibilityLabel={cardState?.locked ? "המשך" : "בדוק"}
-            accessibilityState={{ disabled: !cardState }}
+            accessibilityLabel={activeCardState?.locked ? "המשך" : "בדוק"}
+            accessibilityState={{ disabled: !activeCardState }}
             style={{
               height: 56,
               borderRadius: 16,
               alignItems: "center",
               justifyContent: "center",
               borderBottomWidth: 3,
-              backgroundColor: cardState?.locked
+              backgroundColor: activeCardState?.locked
                 ? "#22c55e"              // correct → green
-                : cardState?.wrong
+                : activeCardState?.wrong
                   ? "#ef4444"            // wrong → red
                   : (unitColors.bg ?? "#2563eb"), // default → blue
-              borderBottomColor: cardState?.locked
+              borderBottomColor: activeCardState?.locked
                 ? "#16a34a"
-                : cardState?.wrong
+                : activeCardState?.wrong
                   ? "#b91c1c"
                   : "#1e293b",
-              opacity: cardState ? 1 : 0.7,
+              opacity: activeCardState ? 1 : 0.7,
             }}
           >
             <Text style={{ fontSize: 16, fontWeight: "900", color: "#ffffff", writingDirection: "rtl" }}>
-              {cardState?.locked ? "המשך" : "בדוק"}
+              {activeCardState?.locked ? "המשך" : "בדוק"}
             </Text>
           </Pressable>
         </View>

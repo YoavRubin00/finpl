@@ -2,7 +2,7 @@ import React from 'react';
 import { View, Text, Pressable, StyleSheet, Image } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import Animated, { FadeInDown, useSharedValue, useAnimatedStyle, withSpring } from 'react-native-reanimated';
-import { Newspaper, Sparkles, CheckCircle2, ChevronLeft, Flame, Snowflake } from 'lucide-react-native';
+import { Newspaper, Sparkles, CheckCircle2, ChevronLeft, Snowflake } from 'lucide-react-native';
 
 import { STITCH } from '../../constants/theme';
 import { tapHaptic } from '../../utils/haptics';
@@ -34,7 +34,9 @@ export function DailyNewsChallengeCard({
 }: DailyNewsChallengeCardProps): React.ReactElement | null {
   const scale = useSharedValue(1);
   const animatedStyle = useAnimatedStyle(() => ({ transform: [{ scale: scale.value }] }));
-  const streak = useDailyNewsChallengeStore((s) => s.streak);
+  // DNC-specific streak counter was retired — the unified daily streak in
+  // the header (GlobalWealthHeader → useEconomyUIStore.currentStreak) is the
+  // single source of truth. Showing a second number here was confusing.
   const perfectDays = useDailyNewsChallengeStore((s) => s.perfectDays);
   // Read freeze count from the global economy store — there's only one
   // source of truth for streak freezes, shared with [[StreakFreezeSaveModal]].
@@ -85,12 +87,6 @@ export function DailyNewsChallengeCard({
               </Text>
             </View>
             <View style={styles.badgeStack}>
-              {streak > 0 && (
-                <View style={styles.streakBadge} accessibilityLabel={`רצף ${streak} ימים`}>
-                  <Flame size={11} color="#f97316" strokeWidth={2.6} />
-                  <Text style={styles.streakBadgeText} allowFontScaling={false}>{streak}</Text>
-                </View>
-              )}
               {freezesAvailable > 0 && (
                 <View style={styles.freezeBadge} accessibilityLabel="קפאון זמין">
                   <Snowflake size={11} color="#0ea5e9" strokeWidth={2.6} />

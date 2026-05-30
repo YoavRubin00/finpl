@@ -1,0 +1,4 @@
+import { POST } from '../../app/api/bridge/track-click+api';
+import { toVercelHandler } from '../_shared/webHandlerAdapter';
+
+export default toVercelHandler({ POST });

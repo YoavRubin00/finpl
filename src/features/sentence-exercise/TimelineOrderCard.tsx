@@ -34,6 +34,12 @@ const ITEM_STEP_HEIGHT = 52;
  * trapped below the fold of a long card or hidden behind the FinnCoach.
  */
 export interface TimelineOrderCardState {
+  /** Identifies which prompt this state belongs to. The parent ignores
+   *  cardState whose promptId doesn't match the current prompt — prevents
+   *  the previous prompt's handlers from firing on the new prompt's button
+   *  during the one-render-frame transition window after the card remounts
+   *  (key change) but before its useEffect pushes fresh state. */
+  promptId: string;
   locked: boolean;
   /** True briefly after an incorrect "בדוק" tap — drives the red error state on
    *  the sticky CTA button. Auto-clears after a short delay. */
@@ -404,9 +410,11 @@ export function TimelineOrderCard({
 
   // Push the latest state to the parent so it can render the sticky CTA.
   // Re-fires whenever `locked`/`wrong` flips or a callback identity changes.
+  // promptId is included so the parent can ignore stale state from a previous
+  // prompt during the one-frame transition window after the card remounts.
   useEffect(() => {
-    onStateChange?.({ locked, wrong, helpVisible: showHelpOffer && !locked, check: handleCheck, continue_: handleContinue });
-  }, [locked, wrong, showHelpOffer, handleCheck, handleContinue, onStateChange]);
+    onStateChange?.({ promptId: prompt.id, locked, wrong, helpVisible: showHelpOffer && !locked, check: handleCheck, continue_: handleContinue });
+  }, [prompt.id, locked, wrong, showHelpOffer, handleCheck, handleContinue, onStateChange]);
 
   const displayOrder = localOrder;
 

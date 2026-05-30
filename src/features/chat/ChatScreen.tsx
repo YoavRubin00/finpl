@@ -316,6 +316,10 @@ export function ChatScreen({ lessonContext }: { lessonContext?: LessonContext } 
   const { data: progressData } = useProgress();
   const hasChosenStyle = useTutorialStore((s) => s.hasChosenChatStyle);
   const completeChatStyleChoice = useTutorialStore((s) => s.completeChatStyleChoice);
+  // Suppress the chat-style picker while the app walkthrough overlay is on
+  // the chat step — otherwise both modals stack and the picker steals focus
+  // before the user even sees the overlay's CTA.
+  const walkthroughOnChatStep = useTutorialStore((s) => s.walkthroughActiveScreen === 'chat');
   const [showStylePicker, setShowStylePicker] = useState(false);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState("");
@@ -940,7 +944,7 @@ export function ChatScreen({ lessonContext }: { lessonContext?: LessonContext } 
     </SafeAreaView>
     {/* Picker rendered LAST so it naturally paints on top of sibling views.
         iOS does not always honor zIndex reliably, render order is safer. */}
-    {(!hasChosenStyle || showStylePicker) && <ChatStylePicker onSelect={handleStyleSelect} />}
+    {((!hasChosenStyle && !walkthroughOnChatStep) || showStylePicker) && <ChatStylePicker onSelect={handleStyleSelect} />}
     </View>
   );
 }

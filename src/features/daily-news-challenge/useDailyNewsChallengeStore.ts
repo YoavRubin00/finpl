@@ -14,9 +14,8 @@ import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import { zustandStorage } from '../../lib/zustandStorage';
 import { useEconomyUIStore } from '../economy/useEconomyUIStore';
-import { recordDailyActivity } from '../../lib/api/streak';
 import { queryClient } from '../../lib/queryClient';
-import { streakQueryKey } from '../economy/useStreak';
+import { streakQueryKey, markDailyActivityCompleted } from '../economy/useStreak';
 import type { StreakState } from '../../lib/api/streak';
 import type { DailyChallenge, ItemAnswer } from './types';
 
@@ -40,6 +39,20 @@ function isConsecutive(a: string, b: string): boolean {
   const dayA = new Date(`${a}T00:00:00Z`).getTime();
   const dayB = new Date(`${b}T00:00:00Z`).getTime();
   return dayB - dayA === 24 * 60 * 60 * 1000;
+}
+
+/**
+ * Resolves the streak number to use for reward multipliers. Prefers the
+ * unified global streak from the server (query cache, same value the
+ * header counter shows), falls back to the legacy local DNC streak so
+ * pre-update persisted state is honored for one transition cycle.
+ */
+function getEffectiveStreak(legacyLocal: number): number {
+  try {
+    const cached = queryClient.getQueryData<StreakState | null>(streakQueryKey);
+    if (cached?.currentStreak && cached.currentStreak > 0) return cached.currentStreak;
+  } catch { /* ignore */ }
+  return legacyLocal ?? 0;
 }
 
 /* ─────────────────── Reward constants ─────────────────── */
@@ -172,30 +185,28 @@ export const useDailyNewsChallengeStore = create<NewsChallengeState>()(
           answeredAt: new Date().toISOString(),
         };
 
-        // Bump streak only when BOTH items are now answered for the first time today.
+        // Track lastCompletedDate so claim flows know "today's done", and
+        // perfectDays so the Pro chest can preview the "perfect" bonus.
+        // The DNC-specific `streak` field is no longer authoritative — the
+        // unified daily streak (useEconomyUIStore) is the source of truth.
+        // Leave the persisted `streak` value alone on write so existing
+        // active users don't see "streak 0" right after this update — the
+        // value is now read-only legacy; reward calcs use the global streak.
         const bothAnswered = next[0] !== null && next[1] !== null;
-        let { streak, lastCompletedDate, perfectDays } = state;
+        let { lastCompletedDate, perfectDays } = state;
         if (bothAnswered) {
           const today = state.cachedFor ?? todayKey();
           if (lastCompletedDate !== today) {
-            const consecutive = lastCompletedDate ? isConsecutive(lastCompletedDate, today) : false;
-            streak = consecutive ? streak + 1 : 1;
             lastCompletedDate = today;
             const bothCorrect = next[0]?.wasCorrect === true && next[1]?.wasCorrect === true;
             if (bothCorrect) perfectDays += 1;
           }
-          // Tell the server this user was active today. Without this the
-          // global Captain Shark notification scheduler will think the user
-          // was idle and fire a misleading "📉 יומיים בלי FinPlay" push.
-          // Fire-and-forget; the server dedups by date_il.
-          void recordDailyActivity(todayIsraelDate())
-            .then((res) => {
-              queryClient.setQueryData<StreakState | null>(streakQueryKey, res.streak);
-            })
-            .catch(() => { /* offline / 401 → server stays out of sync, no UI impact */ });
+          // Pearl/lesson/tool/quest/DNC all go through the same helper so the
+          // popup + activeDates calendar + server sync update once per day.
+          markDailyActivityCompleted();
         }
 
-        set({ answered: next, streak, lastCompletedDate, perfectDays });
+        set({ answered: next, lastCompletedDate, perfectDays });
       },
 
       hasCompletedToday: () => {
@@ -209,7 +220,11 @@ export const useDailyNewsChallengeStore = create<NewsChallengeState>()(
         if (!state.hasCompletedToday()) return null;
 
         const perfect = state.todayPerfect();
-        const reward = previewRegularReward(state.streak, perfect);
+        // Use the global unified streak (preferring the freshest, the
+        // economy UI store; falling back to server query cache; else the
+        // legacy local field) so the reward multiplier always matches the
+        // streak number the user sees in the header.
+        const reward = previewRegularReward(getEffectiveStreak(state.streak), perfect);
         const economy = useEconomyUIStore.getState();
         economy.addXP(reward.xp, 'daily_task');
         economy.addCoins(reward.coins, 'quiz');
@@ -229,7 +244,7 @@ export const useDailyNewsChallengeStore = create<NewsChallengeState>()(
         // Caller (UI) is responsible for gating on isPro(). Store grants
         // unconditionally — same posture as useDailyQuestsStore.
         const perfect = state.todayPerfect();
-        const reward = previewProReward(state.streak, perfect);
+        const reward = previewProReward(getEffectiveStreak(state.streak), perfect);
         const economy = useEconomyUIStore.getState();
         economy.addXP(reward.xp, 'daily_task');
         economy.addCoins(reward.coins, 'quiz');

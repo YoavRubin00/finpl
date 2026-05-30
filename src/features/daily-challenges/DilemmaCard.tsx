@@ -12,7 +12,6 @@ import Animated, {
   ZoomIn,
 } from 'react-native-reanimated';
 import { useRouter } from 'expo-router';
-import { setPendingFeedScroll } from '../finfeed/FinFeedScreen';
 import { tapHaptic, successHaptic, errorHaptic } from '../../utils/haptics';
 // glossary rendering available if needed: import { renderGlossaryText } from '../glossary/renderGlossaryText';
 import { ConfettiExplosion } from '../../components/ui/ConfettiExplosion';
@@ -271,12 +270,12 @@ export const DilemmaCard = React.memo(function DilemmaCard({ isActive, onContinu
               </Animated.View>
             )}
             <Pressable
-              onPress={() => { setShowCelebration(false); setPendingFeedScroll(0); router.replace("/(tabs)/learn" as never); }}
+              onPress={() => { setShowCelebration(false); router.replace("/(tabs)/learn" as never); }}
               style={styles.celebrationBtn}
               accessibilityRole="button"
-              accessibilityLabel="חזרה לפיד"
+              accessibilityLabel="חזרה למפת הלמידה"
             >
-              <Text style={styles.celebrationBtnText}>חזרה לפיד</Text>
+              <Text style={styles.celebrationBtnText}>חזרה למפת הלמידה</Text>
             </Pressable>
           </Animated.View>
         </Pressable>

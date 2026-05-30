@@ -70,13 +70,29 @@ interface FeatureRow {
   pro: string | boolean;
 }
 
+// 6 focused rows — Moni 2026-05-30 paywall rebuild. Industry rule of thumb
+// (Brawl Pass, Duolingo Super, Spotify Premium): 5-8 rows max. More than
+// that → cognitive overload, conversion drops. Every row here answers
+// "what am I getting that I can't live without?"
+//
+// Removed from the previous list:
+//  - "משחקי פיד" — feature removed entirely (commit 42286b7)
+//  - "ארנה"      — superseded by "סימולציות פרימיום" content lock
+//  - "פריטי פרימיום מהחנות" — cosmetic, weak conversion driver
+// Intentionally NOT added: shark voice call (feature not yet shipped).
 const FEATURES: FeatureRow[] = [
-  { label: "לבבות ללא הגבלה", free: false, pro: true },
+  // The line Yoav specifically asked for — "Financial Tools, limited vs full"
+  { label: "כלים פיננסיים מתקדמים", free: "גישה מוגבלת", pro: "גישה מלאה" },
+  // AI chat is the real value driver (lifeline + analyst + insights)
+  { label: "צ'אט AI עם שארק", free: "2 הודעות ביום", pro: "ללא הגבלה" },
+  // Content lock — the 7 Pro-only simulations in proGates.ts
+  { label: "7 סימולציות פרימיום", free: false, pro: true },
+  // The most viscerally felt daily friction
+  { label: "לבבות", free: "5", pro: "אינסוף ♾️" },
+  // Universal Pro signal — everyone understands the value
   { label: "ללא פרסומות", free: false, pro: true },
-  { label: "משחקי פיד", free: "3 ברצף", pro: "ללא הגבלה" },
-  { label: "צ'אט AI", free: "2 הודעות", pro: "ללא הגבלה" },
-  { label: "תובנות AI מתקדמות", free: false, pro: true },
-  { label: "פריטי פרימיום מהחנות", free: false, pro: true },
+  // Progression boost — small but compounds over time
+  { label: "בוסט XP", free: "x1", pro: "x1.5" },
 ];
 
 // ── Decorative sparkle dots ──────────────────────────────────────────────
@@ -208,6 +224,27 @@ export function PricingScreen() {
     return "";
   })();
 
+  // Trial detection (Moni 2026-05-30). RevenueCat surfaces the introductory
+  // offer via `product.introPrice` once the store-side config is approved
+  // (App Store Connect → Subscription → Introductory Offer / Play Console →
+  // Base plan → Offer → Free trial). A `price === 0` introPrice IS a free
+  // trial; anything else is a discounted intro and we don't want to claim
+  // "חינם" then. trialDays is normalized to days regardless of which unit
+  // the store reports (Apple usually reports DAYs, Google may report WEEK=1).
+  const introPrice = activePackage?.product.introPrice ?? null;
+  const trialDays = (() => {
+    if (!introPrice || introPrice.price !== 0) return 0;
+    const n = introPrice.periodNumberOfUnits;
+    switch (introPrice.periodUnit) {
+      case 'DAY':   return n;
+      case 'WEEK':  return n * 7;
+      case 'MONTH': return n * 30;
+      case 'YEAR':  return n * 365;
+      default:      return 0;
+    }
+  })();
+  const hasTrial = trialDays > 0;
+
   const insets = useSafeAreaInsets();
   const ctaGlowStyle = useCtaGlow();
   const proBadgeStyle = useProBadgePulse();
@@ -239,10 +276,21 @@ export function PricingScreen() {
       logTrialStart(pkg.packageType);
 
       const customerInfo = await purchasePackage(pkg);
-      const isPro = customerInfo.entitlements.active[RC_ENTITLEMENT_PRO] !== undefined;
+      const entitlement = customerInfo.entitlements.active[RC_ENTITLEMENT_PRO];
+      const isPro = entitlement !== undefined;
 
       if (isPro) {
-        captureEvent('subscription_purchased', { plan: pkg.packageType, price: pkg.product.priceString });
+        // RevenueCat reports periodType per entitlement — TRIAL fires when
+        // Apple/Google grants the introductory free-trial offer we
+        // configured store-side. Split the analytics event so PostHog can
+        // distinguish trial starts from straight purchases (Moni 2026-05-30
+        // — separately tracking trial→paid conversion is the whole point).
+        const isTrial = entitlement.periodType === 'TRIAL';
+        captureEvent(isTrial ? 'trial_started' : 'subscription_purchased', {
+          plan: pkg.packageType,
+          price: pkg.product.priceString,
+          trial_days: isTrial ? trialDays : 0,
+        });
         // Patch the PostHog person record so all subsequent insights segment
         // this user as Pro. Without this update, DAU/retention queries with
         // breakdown=is_pro keep returning them as Free even after the purchase.
@@ -291,7 +339,7 @@ export function PricingScreen() {
     } finally {
       setIsLoading(false);
     }
-  }, [displayName, syncFromRC, hasSeenProWelcome, router, trackConversion]);
+  }, [displayName, syncFromRC, hasSeenProWelcome, router, trackConversion, trialDays, returnTo]);
 
   const handleRestore = useCallback(async () => {
     setIsLoading(true);
@@ -440,17 +488,28 @@ export function PricingScreen() {
                               loop
                             />
                           </View>
-                          <Text style={styles.ctaText}>{paywallPayload.ctaText}</Text>
+                          <Text style={styles.ctaText}>
+                            {hasTrial ? `התחל ניסיון חינם · ${trialDays} ימים` : paywallPayload.ctaText}
+                          </Text>
                         </View>
                       )}
                     </LinearGradient>
                   </Pressable>
                 </Animated.View>
 
-                {/* Localized price + period (Apple 3.1.2(a)) */}
+                {/* Localized price + period (Apple 3.1.2(a)). Trial framing
+                    pushes the "after the trial" disclosure into the same
+                    line so the user sees the recurring charge clearly. */}
                 {priceString ? (
                   <Text style={[styles.priceMain, { color: theme.text }]}>
-                    {priceString} {periodLabel}
+                    {hasTrial
+                      ? `חינם ${trialDays} ימים · אחר כך ${priceString} ${periodLabel}`
+                      : `${priceString} ${periodLabel}`}
+                  </Text>
+                ) : null}
+                {hasTrial ? (
+                  <Text style={[styles.priceMain, { color: theme.textMuted, fontSize: 12, marginTop: 2 }]}>
+                    ביטול חינם בכל עת
                   </Text>
                 ) : null}
 

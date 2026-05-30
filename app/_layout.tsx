@@ -101,8 +101,8 @@ import { useUpgradeNudgeBanner } from "../src/features/monetization/useUpgradeNu
 import { GlobalQuestCompletionModal } from "../src/features/daily-quests/GlobalQuestCompletionModal";
 import { DailyBridgeNudgeModal } from "../src/components/ui/DailyBridgeNudgeModal";
 import { InviteFriendsNudgeModal } from "../src/components/ui/InviteFriendsNudgeModal";
-import { GuestRegisterDailyNudge } from "../src/features/auth/GuestRegisterDailyNudge";
 import { PostWalkthroughRegisterCTAGate } from "../src/features/auth/PostWalkthroughRegisterCTA";
+import { ForceUpdateGate } from "../src/features/force-update/ForceUpdateGate";
 import { configureRevenueCat } from "../src/services/revenueCat";
 import { AppWalkthroughOverlay } from "../src/features/onboarding/AppWalkthroughOverlay";
 import { StreakFreezeSaveModal } from "../src/features/streak/StreakFreezeSaveModal";
@@ -373,10 +373,11 @@ function RootLayoutInner() {
   //   After walkthrough → notification permission banner.
   //   mod-0-2 onwards: engagement content (SharkLove/DoN/Netflix prompt/videos) allowed,
   //                    plus profile questions and (for guests) register CTAs.
-  //   GuestRegisterDailyNudge (bottom banner) stays gated to mod-0-3 — register CTAs
-  //   from LessonFlowScreen handle the per-module nudge from 0-3/4/5.
+  //   Post-walkthrough register CTA (PostWalkthroughRegisterCTAGate) is the
+  //   only global nudge for guests; per-module CTAs from LessonFlowScreen
+  //   handle 0-3/4/5. Old dark-themed GuestRegisterDailyNudge removed
+  //   2026-05-30 — it duplicated the post-walkthrough CTA.
   const isMod01Complete = useIsModuleCompleted("mod-0-1");
-  const isMod03Complete = useIsModuleCompleted("mod-0-3");
   const allowAutoPopups = hasCompletedOnboarding && hasSeenWalkthrough && isMod01Complete;
 
   // ── Android Play Install Referrer — runs once on first launch ──
@@ -527,12 +528,17 @@ function RootLayoutInner() {
               {allowAutoPopups && <GlobalQuestCompletionModal />}
               <DailyBridgeNudgeModal />
               <InviteFriendsNudgeModal />
-              {hasCompletedOnboarding && hasSeenWalkthrough && isMod03Complete && <GuestRegisterDailyNudge />}
               {/* Post-walkthrough register CTA for Guests. The gate handles
                   all conditions internally: pendingPostWalkthroughCTA flag
                   set by AppWalkthroughOverlay on completion + isGuest +
                   pathname check (only on the learn map, not /pricing). */}
               <PostWalkthroughRegisterCTAGate />
+              {/* Force-update gate. Mounted unconditionally — internal fetch
+                  decides whether to block based on remote config. Rendered
+                  AFTER other modals so its full-screen Modal sits on top of
+                  every other overlay when active. Self-contained: no boot
+                  order changes required, no parent gating. */}
+              <ForceUpdateGate />
               {/* Global top banners — suppressed during onboarding/tutorial to avoid distracting the first-run experience */}
               {hasCompletedOnboarding && hasSeenWalkthrough && (
                 <>

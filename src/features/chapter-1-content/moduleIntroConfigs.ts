@@ -1,7 +1,9 @@
 import type { ModuleIntroConfig } from './ModuleIntroShort';
 
 export const MODULE_INTRO_CONFIGS: Record<string, ModuleIntroConfig> = {
-  'mod-0-2': {
+  // 2026-05-30 swap: financial-basics content (formerly mod-0-2) now lives at
+  // mod-0-1 (the first-slot). This intro config follows the content.
+  'mod-0-1': {
     phase0Rows: [
       { label: 'בנק:', value: '₪0 ריבית', note: 'על עו"ש' },
       { label: 'מינוס:', value: 'עד 15%', note: 'ריבית שנתית' },

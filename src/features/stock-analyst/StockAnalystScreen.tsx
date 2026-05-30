@@ -15,6 +15,7 @@ import { Plus } from 'lucide-react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { tapHaptic } from '../../utils/haptics';
 import { useIsPro } from '../subscription/useSubscription';
+import { useUsageStore } from '../subscription/useUsageStore';
 import { useStockAnalystStore } from './useStockAnalystStore';
 import { useAnalystSubmit } from './hooks/useAnalystSubmit';
 import { SharkTabletHeader } from './components/SharkTabletHeader';
@@ -61,11 +62,13 @@ export function StockAnalystScreen(): React.ReactElement {
   const clearSession = useStockAnalystStore((s) => s.clearSession);
   const removeMessage = useStockAnalystStore((s) => s.removeMessage);
 
-  // Tier display: Pro = Infinity (unlimited UI), Free = 0 (always gated).
-  // Per-day quotas for Free are deferred — see useAnalystSubmit comment.
+  // Tier-bucketed remaining uses — Pro is Infinity, Free pulls from
+  // useUsageStore which buckets by day (quick) and ISO week (deep). Subscribed
+  // via selectors so the ModeToggle counter ticks down immediately after a
+  // successful analysis without needing a re-render of the parent.
   const isPro = useIsPro();
-  const quickRemaining = isPro ? Infinity : 0;
-  const deepRemaining = isPro ? Infinity : 0;
+  const quickRemaining = useUsageStore((s) => s.remainingUses('analyst-quick', isPro));
+  const deepRemaining = useUsageStore((s) => s.remainingUses('analyst-deep', isPro));
 
   const pendingDeepCard = useStockAnalystStore((s) => s.pendingDeepCard);
   const revealPendingDeepCard = useStockAnalystStore((s) => s.revealPendingDeepCard);
@@ -438,6 +441,7 @@ export function StockAnalystScreen(): React.ReactElement {
       <CapExceededAnalystModal
         visible={capModalMode !== null}
         mode={capModalMode ?? 'quick'}
+        isPro={isPro}
         onClose={() => setCapModalMode(null)}
       />
       <HistoryModal visible={historyVisible} onClose={() => setHistoryVisible(false)} />

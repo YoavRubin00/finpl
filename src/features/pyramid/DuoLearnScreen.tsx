@@ -32,7 +32,19 @@ import { useProgress, useUpsertModuleProgress, progressQueryKey } from "../chapt
 import { queryClient } from "../../lib/queryClient";
 import { useIsPro } from "../subscription/useSubscription";
 import { useAuthStore } from "../auth/useAuthStore";
+import { InModuleProfileQuestion, type ProfileQuestionKind } from "../onboarding/InModuleProfileQuestion";
 import { getPyramidStatus } from "../../utils/progression";
+
+// Profile-question backstops: each profile question is asked on its source
+// module's "Continue" tap inside the lesson (see LessonFlowScreen). If the
+// user exits before tapping continue, they would never see it. We re-ask on
+// entry to a downstream module as a safety net. Skipping still proceeds —
+// it's a nudge, not a hard gate.
+const PROFILE_QUESTION_BACKSTOPS: Record<string, ProfileQuestionKind> = {
+  'mod-0-3': 'knowledgeLevel', // source: mod-0-1
+  'mod-0-5': 'learningTime',   // source: mod-0-4
+  'mod-1-1': 'dailyGoal',      // source: mod-0-5
+};
 import { ARENAS, type ArenaConfig } from "./arenaConfig";
 import { PRO_LOCKED_SIMS } from "../../constants/proGates";
 import { useReferralStore } from "../social/useReferralStore";
@@ -67,6 +79,10 @@ import { MapEasterEggModal } from "../../components/fun/MapEasterEggModal";
 import { useDailyQuestsStore } from "../daily-quests/useDailyQuestsStore";
 import { DailyQuestsSheet } from "../daily-quests/DailyQuestsSheet";
 import { QuestPathNode } from "../daily-quests/QuestPathNode";
+import { PearlNode } from "../pearls/PearlNode";
+import { PearlSheet } from "../pearls/PearlSheet";
+import { pearlConfigFor, pearlIdFor, type PearlContent } from "../pearls/pearlConfig";
+import { usePearlsStore } from "../pearls/usePearlsStore";
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -786,6 +802,10 @@ const ChapterSection = React.memo(function ChapterSection({
   questCompletedCount,
   questTotalCount,
   onQuestPress,
+  newsBadgeNode,
+  isGlobalActiveChapter,
+  onPearlPress,
+  completedPearlIds,
 }: {
   arena: ArenaConfig;
   chapter: typeof chapter1Data;
@@ -802,6 +822,12 @@ const ChapterSection = React.memo(function ChapterSection({
   onMindMap?: () => void;
   easterEggNodeId?: string | null;
   onClaimEasterEgg?: () => void;
+  // True only for the single chapter that hosts the user's next-to-do module.
+  // Without this flag, every unlocked chapter renders its own Finn mascot +
+  // speech bubble at its local activeIndex, so a Pro user (all unlocked) sees
+  // a Finn per chapter. The parent computes the global active chapter via
+  // `globalActiveIdx` and passes it down here.
+  isGlobalActiveChapter: boolean;
   questPathNodeProps?: {
     completedCount: number;
     totalQuests: number;
@@ -812,6 +838,17 @@ const ChapterSection = React.memo(function ChapterSection({
   questCompletedCount?: number;
   questTotalCount?: number;
   onQuestPress?: () => void;
+  /** When present, renders this node (the Daily News Challenge button) on the
+   *  opposite side of the active module — the "dead space" the user's eye
+   *  lands on when they open the learn screen. Only the chapter containing
+   *  the active module receives this prop. */
+  newsBadgeNode?: React.ReactNode;
+  /** Opens the Pearl sheet for the given pearl. Tap on a Pearl node calls
+   *  this; locked Pearls don't call it (they're rendered non-pressable). */
+  onPearlPress: (pearl: PearlContent) => void;
+  /** Pearl ids the user has already completed at least once — drives the
+   *  green checkmark on the path node. */
+  completedPearlIds: string[];
 }) {
   const firstIncompleteIndex = chapter.modules.findIndex(
     (m) => !completedModules.includes(m.id) && !m.comingSoon && (isPro || !PRO_LOCKED_SIMS.has(m.id)),
@@ -824,7 +861,7 @@ const ChapterSection = React.memo(function ChapterSection({
     <Animated.View entering={FadeInDown.delay(sectionIndex * 80).duration(350)}>
       <ArenaHeaderBanner arena={arena} sectionIndex={sectionIndex} isLocked={!isUnlocked} onPress={onChapterPress} onMindMap={onMindMap} />
 
-      {sectionIndex === 0 && completedModules.length < chapter.modules.length && onSkipIntro && (
+      {sectionIndex === 0 && completedModules.length < chapter.modules.length && !completedModules.some((id) => id.startsWith('mod-1-')) && onSkipIntro && (
         <AnimatedPressable
           onPress={onSkipIntro}
           style={{
@@ -862,7 +899,10 @@ const ChapterSection = React.memo(function ChapterSection({
         {/* Path decorations disabled temporarily */}
 
         {chapter.modules.map((module, i) => {
-          const isActive = isUnlocked && i === activeIndex;
+          // Only the global active chapter hosts the Finn mascot + active
+          // marker. Other unlocked chapters render their nodes statefully
+          // (completed/locked) but never with the "active" cursor.
+          const isActive = isGlobalActiveChapter && isUnlocked && i === activeIndex;
 
           // Coming-soon modules are always locked regardless of user state
           const isModuleComingSoon = !!module.comingSoon;
@@ -890,7 +930,7 @@ const ChapterSection = React.memo(function ChapterSection({
           const questOffsetX = -getNodeOffset(i);
 
           return (
-            <View key={module.id}>
+            <View key={module.id} style={isActive ? { position: 'relative' } : undefined}>
               <ModuleNode
                 module={module}
                 state={state}
@@ -917,6 +957,24 @@ const ChapterSection = React.memo(function ChapterSection({
                   }
                 }}
               />
+              {/* Daily News Challenge — newspaper icon anchored directly
+                  under the MIDDLE star of the row that sits below the
+                  shark. Zero margins so the next PathConnector / pearl
+                  hugs right under it without leaving an empty band. */}
+              {isActive && newsBadgeNode && (
+                <View
+                  style={{
+                    alignItems: 'center',
+                    marginTop: 0,
+                    marginBottom: 0,
+                    transform: [{
+                      translateX: getNodeOffset(i) + (getNodeOffset(i) >= 0 ? 55 : -55),
+                    }],
+                  }}
+                >
+                  {newsBadgeNode}
+                </View>
+              )}
               {showQuestBox && questPathNodeProps && (
                 <>
                   <PathConnector
@@ -941,14 +999,75 @@ const ChapterSection = React.memo(function ChapterSection({
                   />
                 </>
               )}
-              {hasNext && !showQuestBox && (
-                <PathConnector
-                  fromOffsetX={getNodeOffset(i)}
-                  toOffsetX={getNodeOffset(i + 1)}
-                  done={trailDone}
-                  color={colors.glow}
-                />
-              )}
+              {hasNext && !showQuestBox && (() => {
+                // Bonus PEARL between modules[i] and modules[i+1]. Renders on
+                // the OPPOSITE side of the current node (questOffsetX = -offset)
+                // so it lands in the empty half-row of the alternating path.
+                // Locked until module[i] is completed; once completed it
+                // becomes interactive and inherits a green check on subsequent
+                // visits via completedPearlIds.
+                const pearl = pearlConfigFor(module.id);
+                if (!pearl) {
+                  return (
+                    <PathConnector
+                      fromOffsetX={getNodeOffset(i)}
+                      toOffsetX={getNodeOffset(i + 1)}
+                      done={trailDone}
+                      color={colors.glow}
+                    />
+                  );
+                }
+                const pearlOffsetX = -getNodeOffset(i);
+                const moduleCompleted = completedModules.includes(module.id);
+                // Pro unlocks EVERYTHING — including pearls. Without this, a
+                // brand-new Pro user lands on the map and sees nothing but
+                // gray pearls, even though every module is already tappable.
+                // Free users still need to finish the source module first.
+                const pearlState =
+                  completedPearlIds.includes(pearlIdFor(pearl)) ? 'completed' as const
+                  : (isPro || moduleCompleted) ? 'unlocked' as const
+                  : 'locked' as const;
+                return (
+                  <>
+                    <PathConnector
+                      fromOffsetX={getNodeOffset(i)}
+                      toOffsetX={pearlOffsetX}
+                      done={trailDone}
+                      color={colors.glow}
+                    />
+                    {/* Negative margins overlap the pearl with both
+                        connectors so the total row height shrinks ~32px,
+                        eliminating the dead band the user reported between
+                        the active module and the next pearl. */}
+                    <View style={{ alignItems: 'center', marginTop: -18, marginBottom: -18, zIndex: 2 }}>
+                      <PearlNode
+                        state={pearlState}
+                        offsetX={pearlOffsetX}
+                        haloColor={colors.glow}
+                        // Free users: pulse a halo behind the just-unlocked
+                        // pearl so it's obvious which bonus is reachable.
+                        // Pro users see every pearl unlocked, so halos on
+                        // all of them would be noise — suppress them there.
+                        glow={!isPro && pearlState === 'unlocked'}
+                        // Locked pearls share the locked-module tap target
+                        // (the upgrade-to-Pro prompt) instead of being
+                        // inert — same gesture, same outcome.
+                        onPress={
+                          pearlState === 'locked'
+                            ? onLockedPress
+                            : () => onPearlPress(pearl)
+                        }
+                      />
+                    </View>
+                    <PathConnector
+                      fromOffsetX={pearlOffsetX}
+                      toOffsetX={getNodeOffset(i + 1)}
+                      done={trailDone && pearlState === 'completed'}
+                      color={colors.glow}
+                    />
+                  </>
+                );
+              })()}
             </View>
           );
         })}
@@ -973,6 +1092,16 @@ export function DuoLearnScreen() {
   const isPro = useIsPro();
   const displayName = useAuthStore((s) => s.displayName) ?? "";
   const isGuest = useAuthStore((s) => s.isGuest);
+  // Profile-question backstops: subscribe to all three fields so the map-tap
+  // gate (see handleModulePress) can re-ask any question the user skipped by
+  // exiting before tapping "Continue" inside the source lesson.
+  const knowledgeLevelSet = useAuthStore((s) => Boolean(s.profile?.knowledgeLevel));
+  const learningTimeSet = useAuthStore((s) => Boolean(s.profile?.learningTime));
+  const dailyGoalSet = useAuthStore((s) => Boolean(s.profile?.dailyGoalMinutes));
+  const [pendingProfileQuestion, setPendingProfileQuestion] = useState<{
+    kind: ProfileQuestionKind;
+    nav: { moduleId: string; chapterId: string; moduleIndex: number };
+  } | null>(null);
   // Skip-intro register CTA — fired from handleSkipIntro when a guest skips ch-0.
   // Pushes them to /(auth)/register with returnTo=/lesson/mod-1-1 so they land in
   // chapter 1 as a registered user with all skip-intro progress preserved.
@@ -982,6 +1111,17 @@ export function DuoLearnScreen() {
   // modal. State + store reads live at screen-level so the card can render at
   // mount-time and the sheet can open/close from a single source.
   const [newsSheetVisible, setNewsSheetVisible] = useState(false);
+
+  // Pearls — bonus intermezzo nodes between modules. State is held here at
+  // screen-level so any chapter can pop the same sheet, and the completed
+  // set is read once into ChapterSection's prop so each section doesn't
+  // subscribe independently.
+  const [activePearl, setActivePearl] = useState<PearlContent | null>(null);
+  const completedPearlIds = usePearlsStore((s) => s.completedIds);
+  const handlePearlPress = useCallback((pearl: PearlContent) => {
+    tapHaptic();
+    setActivePearl(pearl);
+  }, []);
   const newsChallenge = useDailyNewsChallengeStore((s) => s.todayChallenge);
   const newsCompleted = useDailyNewsChallengeStore((s) => s.hasCompletedToday());
   const newsProChestOpened = useDailyNewsChallengeStore((s) => s.proChestOpened);
@@ -1099,12 +1239,16 @@ export function DuoLearnScreen() {
       if (activeIdx >= 0) {
         y += 80; // banner height
         y += 16; // marginTop
-        y += activeIdx * 160; // approximate row + connector per module
+        // Each module row ≈ NODE_SIZE (78) + 36 padding + ~66 connector/pearl
+        // height. Pearls add ~30px to every previous row vs the pre-pearl
+        // layout, so we bump the per-row estimate from 160 → 195 to keep the
+        // auto-scroll landing on the active module rather than above it.
+        y += activeIdx * 195;
         return y;
       }
       // Entire chapter completed, add its total height
       y += 80 + 44; // banner + container margins
-      y += ch.modules.length * 160;
+      y += ch.modules.length * 195;
     }
     return y;
   }, [progressData, isPro]);
@@ -1125,13 +1269,19 @@ export function DuoLearnScreen() {
     }, [calcResumeScrollY])
   );
 
-  // Auto-scroll to the active module on initial mount
+  // Auto-scroll to the active module on initial mount — always, not only
+  // when the active node is below the fold. User wants the learn screen to
+  // open straight to "where you are next," so the news badge + glowing node
+  // both sit in the natural eye-line on first paint.
   useEffect(() => {
     const y = calcResumeScrollY();
-    if (y > 300) {
+    if (y > 0) {
+      // Two-pass scroll: snap immediately so the first paint already lands
+      // on the active node, then a tiny smooth nudge once layout settles.
+      scrollRef.current?.scrollTo({ y: Math.max(0, y - 120), animated: false });
       setTimeout(() => {
-        scrollRef.current?.scrollTo({ y: y - 80, animated: false });
-      }, 150);
+        scrollRef.current?.scrollTo({ y: Math.max(0, y - 120), animated: true });
+      }, 250);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -1170,12 +1320,61 @@ export function DuoLearnScreen() {
         setReplayModule({ moduleId, chapterId, moduleIndex });
         return;
       }
+      // Detect "user skipped the pearl that sits before this module". If the
+      // previous module in this chapter has a pearl AND that pearl is
+      // unlocked (prev module completed) AND not yet finished, the user is
+      // walking past a reachable bonus. Fire pearl_skipped_to_next_module
+      // so we can measure opt-in vs skip rate. Best-effort — wrapped in a
+      // try/catch so a missing chapter ref never blocks navigation.
+      try {
+        if (moduleIndex > 0) {
+          const ch = ALL_CHAPTERS.find((c) => c.id === chapterId);
+          const prevModule = ch?.modules[moduleIndex - 1];
+          if (prevModule && done.includes(prevModule.id)) {
+            const pearl = pearlConfigFor(prevModule.id);
+            if (pearl && !completedPearlIds.includes(pearlIdFor(pearl))) {
+              captureEvent('pearl_skipped_to_next_module', {
+                after_module_id: pearl.afterModuleId,
+                next_module_id: pearl.nextModuleId,
+                chapter_id: pearl.chapterId,
+                game_key: pearl.gameKey,
+              });
+            }
+          }
+        }
+      } catch { /* non-fatal */ }
+      // Backstop: catch users who skipped past an in-lesson profile question by
+      // exiting before tapping "Continue". Re-ask before they enter the gate
+      // module. PROFILE_QUESTION_BACKSTOPS owns the mapping.
+      const backstopKind = PROFILE_QUESTION_BACKSTOPS[moduleId];
+      if (backstopKind) {
+        const alreadyAnswered =
+          (backstopKind === 'knowledgeLevel' && knowledgeLevelSet) ||
+          (backstopKind === 'learningTime' && learningTimeSet) ||
+          (backstopKind === 'dailyGoal' && dailyGoalSet);
+        if (!alreadyAnswered) {
+          setPendingProfileQuestion({ kind: backstopKind, nav: { moduleId, chapterId, moduleIndex } });
+          return;
+        }
+      }
       setCurrentChapter(storeKey(chapterId));
       setCurrentModule(moduleIndex);
       router.push(`/lesson/${moduleId}?chapterId=${chapterId}` as never);
     },
-    [router, setCurrentChapter, setCurrentModule, progressData],
+    [router, setCurrentChapter, setCurrentModule, progressData, knowledgeLevelSet, learningTimeSet, dailyGoalSet, completedPearlIds],
   );
+
+  // Once the user picks (or skips) the backstop question, navigate to the
+  // originally-tapped module. Skipping still proceeds — the question is a
+  // nudge, not a hard gate.
+  const handleProfileQuestionDone = useCallback(() => {
+    const pending = pendingProfileQuestion;
+    setPendingProfileQuestion(null);
+    if (!pending) return;
+    setCurrentChapter(storeKey(pending.nav.chapterId));
+    setCurrentModule(pending.nav.moduleIndex);
+    router.push(`/lesson/${pending.nav.moduleId}?chapterId=${pending.nav.chapterId}` as never);
+  }, [pendingProfileQuestion, router, setCurrentChapter, setCurrentModule]);
 
   const handleReplay = useCallback(() => {
     if (!replayModule) return;
@@ -1230,6 +1429,17 @@ export function DuoLearnScreen() {
       {!isWalkthroughActive && <NoFreezeUpsellBanner />}
       <StreakCalendarModal visible={showStreakCalendar} onClose={() => setShowStreakCalendar(false)} />
       <DailyNewsChallengeSheet visible={newsSheetVisible} onClose={() => setNewsSheetVisible(false)} />
+      <PearlSheet visible={!!activePearl} pearl={activePearl} onClose={() => setActivePearl(null)} />
+
+      {/* Profile-question backstop before gated chapter-0/1 modules.
+          Mapping lives in PROFILE_QUESTION_BACKSTOPS (top of file). */}
+      {pendingProfileQuestion && (
+        <InModuleProfileQuestion
+          visible
+          kind={pendingProfileQuestion.kind}
+          onDone={handleProfileQuestionDone}
+        />
+      )}
 
       {/* Skip-intro register CTA for guests — fires after handleSkipIntro */}
       {showSkipIntroRegisterCTA && (
@@ -1288,32 +1498,6 @@ export function DuoLearnScreen() {
         </Modal>
       )}
       <SafeAreaView style={{ flex: 1 }} edges={["left", "right"]}>
-        {/* Floating Daily News Challenge entry — pulses + glows in the
-            top-left (RTL: top-LEFT = "dead" space; learn map is right-anchored)
-            until the user completes today's challenge. The unread dot signals
-            a fresh challenge; the pulse stops + icon goes muted gray when
-            done. Hidden during walkthrough to avoid stealing the tutorial's
-            attention. Rendered as an absolute overlay so it floats above the
-            ScrollView without pushing chapters down. */}
-        {!isWalkthroughActive && (
-          <View
-            pointerEvents="box-none"
-            style={{
-              position: 'absolute',
-              top: 8,
-              left: 12,
-              zIndex: 50,
-            }}
-          >
-            <NewsIconButton
-              size={32}
-              hasNewsChallenge={!!newsChallenge}
-              newsCompleted={newsCompleted}
-              onPress={handleNewsPress}
-              compact
-            />
-          </View>
-        )}
         <ScrollView
           ref={scrollRef}
           showsVerticalScrollIndicator={false}
@@ -1333,7 +1517,32 @@ export function DuoLearnScreen() {
               until today's challenge is completed. */}
 
           {/* Chapter sections */}
-          {ARENAS.map((arena, idx) => {
+          {(() => {
+            // Compute the GLOBALLY-first chapter that holds an incomplete module.
+            // For Pro users every chapter is unlocked, so without this guard the
+            // active marker (Finn cursor + news badge + quest widget) would
+            // appear on every chapter that still has work — user reported seeing
+            // two cursors. Only ONE chapter — the earliest with an incomplete
+            // playable module — should host the active markers.
+            let globalActiveIdx = -1;
+            for (let i = 0; i < ARENAS.length; i++) {
+              const ch = ALL_CHAPTERS[i];
+              const num = storeKey(ch.id).replace('ch-', '');
+              const pfx = `mod-${num}-`;
+              const done = progressData?.filter((m) => m.moduleId.startsWith(pfx) && m.status === 'completed').map((m) => m.moduleId) ?? [];
+              // Same unlock rule as below — Pro: always; Free: prev chapter fully done.
+              let unlocked = isPro || i === 0;
+              if (!isPro && i > 0) {
+                const prev = ALL_CHAPTERS[i - 1];
+                const prevPfx = `mod-${storeKey(prev.id).replace('ch-', '')}-`;
+                const prevDone = progressData?.filter((m) => m.moduleId.startsWith(prevPfx) && m.status === 'completed').map((m) => m.moduleId) ?? [];
+                unlocked = prev.modules.every((m) => m.comingSoon || (!isPro && PRO_LOCKED_SIMS.has(m.id)) || prevDone.includes(m.id));
+              }
+              if (!unlocked) continue;
+              const hasIncomplete = ch.modules.some((m) => !done.includes(m.id) && !m.comingSoon && (isPro || !PRO_LOCKED_SIMS.has(m.id)));
+              if (hasIncomplete) { globalActiveIdx = i; break; }
+            }
+            return ARENAS.map((arena, idx) => {
             const chapter = ALL_CHAPTERS[idx];
             const chNum = storeKey(chapter.id).replace('ch-', '');
             const prefix = `mod-${chNum}-`;
@@ -1350,10 +1559,9 @@ export function DuoLearnScreen() {
               isUnlocked = prevChapter.modules.every((m) => m.comingSoon || (!isPro && PRO_LOCKED_SIMS.has(m.id)) || prevCompleted.includes(m.id));
             }
 
-            // Show quest widget on the chapter that has the active (first incomplete) module
-            const hasActiveModule = isUnlocked && chapter.modules.some(
-              (m, i) => !completedModules.includes(m.id) && !m.comingSoon && (isPro || !PRO_LOCKED_SIMS.has(m.id))
-            );
+            // Active marker (cursor / quest widget / news badge) belongs to the
+            // GLOBAL first-incomplete chapter only — never two at once.
+            const hasActiveModule = idx === globalActiveIdx;
 
             const chapterView = (
               <ChapterSection
@@ -1373,6 +1581,7 @@ export function DuoLearnScreen() {
                 onSkipIntro={idx === 0 ? handleSkipIntro : undefined}
                 onChapterPress={handleRoadmapPress}
                 onMindMap={() => handleMindMap(idx)}
+                isGlobalActiveChapter={hasActiveModule}
                 questPathNodeProps={hasActiveModule ? {
                   completedCount: questCompletedCount,
                   totalQuests: questTotalCount,
@@ -1383,6 +1592,22 @@ export function DuoLearnScreen() {
                 questCompletedCount={hasActiveModule ? questCompletedCount : undefined}
                 questTotalCount={hasActiveModule ? questTotalCount : undefined}
                 onQuestPress={hasActiveModule ? handleQuestPress : undefined}
+                newsBadgeNode={hasActiveModule ? (
+                  // Always show on the active chapter — even during the
+                  // walkthrough — so users who haven't formally completed
+                  // the tutorial still see the entry point. The pulse +
+                  // halo handle their own attention grab independent of
+                  // walkthrough state.
+                  <NewsIconButton
+                    size={36}
+                    hasNewsChallenge={!!newsChallenge}
+                    newsCompleted={newsCompleted}
+                    onPress={handleNewsPress}
+                    compact
+                  />
+                ) : undefined}
+                onPearlPress={handlePearlPress}
+                completedPearlIds={completedPearlIds}
               />
             );
 
@@ -1422,7 +1647,8 @@ export function DuoLearnScreen() {
             }
 
             return <View key={arena.id} style={{ zIndex: 2 }}>{chapterView}</View>;
-          })}
+            });
+          })()}
 
           {/* Ocean depth tagline */}
           <Text style={{ textAlign: 'center', color: '#0ea5e9', fontSize: 13, fontWeight: '700', paddingVertical: 20, paddingBottom: 36, writingDirection: 'rtl' }}>

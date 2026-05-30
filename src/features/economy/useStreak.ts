@@ -4,6 +4,8 @@ import { AppState } from 'react-native';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { getStreak, recordDailyActivity, type StreakState } from '../../lib/api/streak';
+import { queryClient } from '../../lib/queryClient';
+import { useEconomyUIStore } from './useEconomyUIStore';
 
 export const streakQueryKey = ['streak'] as const;
 
@@ -42,6 +44,38 @@ export function useRecordDailyActivity() {
  * already idempotent per dateIl — this just spares us redundant network calls.
  */
 export const STREAK_DAILY_TICK_KEY = 'streak-daily-tick:last';
+
+/**
+ * Single entry point for "the user did a streak-eligible activity today".
+ * Fires BOTH:
+ *  1. Local `completeDailyTask` — updates activeDates (the in-app daily
+ *     calendar/log) and the streak counter, which triggers the global
+ *     `StreakCelebrationScreen` popup via useStreakCelebration's subscriber.
+ *  2. Server `recordDailyActivity` — persists the streak day so cross-device
+ *     state + scheduled notifications (e.g. "📉 יומיים בלי FinPlay") stay
+ *     accurate.
+ *
+ * Both layers are idempotent — calling this multiple times on the same day
+ * is a no-op for state (local early-returns if today is already recorded,
+ * server dedups by date_il).
+ *
+ * Call this from every activity that counts toward the daily streak: lesson
+ * completion, pearl completion, financial tool usage, daily news challenge,
+ * daily quest, etc. Consolidating in one helper means popup + log + sync
+ * stay in sync without per-callsite drift.
+ */
+export function markDailyActivityCompleted(): void {
+  // Local first — synchronous, drives the popup + activeDates calendar.
+  try { useEconomyUIStore.getState().completeDailyTask(); } catch { /* non-fatal */ }
+  // Server next — async, persists across devices + powers notifications.
+  // Server is already idempotent per dateIl, so fire-and-forget is safe.
+  void recordDailyActivity(todayIsraelDate())
+    .then((res) => {
+      queryClient.setQueryData<StreakState | null>(streakQueryKey, res.streak);
+      AsyncStorage.setItem(STREAK_DAILY_TICK_KEY, todayIsraelDate()).catch(() => {});
+    })
+    .catch(() => { /* offline / 401 — local state stays correct, server retries on next foreground */ });
+}
 
 /**
  * Fire `recordDailyActivity` once per Israeli calendar day on app open and on

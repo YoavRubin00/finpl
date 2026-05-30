@@ -24,7 +24,7 @@ import Animated, {
 import { LinearGradient } from 'expo-linear-gradient';
 import LottieView from 'lottie-react-native';
 import { Image as ExpoImage } from 'expo-image';
-import { ChevronLeft, MessageCircle, Newspaper } from 'lucide-react-native';
+import { ChevronLeft, MessageCircle, Newspaper, ChevronDown } from 'lucide-react-native';
 
 import { STITCH } from '../../../constants/theme';
 import { tapHaptic, successHaptic, errorHaptic } from '../../../utils/haptics';
@@ -43,19 +43,21 @@ const { width: SCREEN_W, height: SCREEN_H } = Dimensions.get('window');
 const ACCENT_GOLD = '#facc15';
 const ACCENT_GOLD_DEEP = '#d97706';
 
-// Heuristic: figure out which market the item is about so the hero pill can
-// display a flag. Falls back to a globe when nothing matches — strict matchers
-// to avoid false positives on the wrong country.
+// Heuristic: figure out which market the item is about. We use a small SVG-safe
+// emoji (📍/🏛️) plus the country label in Hebrew — regional-indicator flag
+// emojis (🇺🇸/🇮🇱/🇪🇺) render as raw "US"/"IL"/"EU" letter pairs on Windows web
+// (no flag font), which read as "vs ארה״ב" garbage. The neutral pin keeps the
+// pill universally legible.
 function inferSourceFlag(item: ChallengeItem): { flag: string; label: string } {
   const haystack = `${item.source ?? ''} ${item.summaryHe ?? ''} ${item.headlineHe ?? ''}`;
   if (/בנק ישראל|בורסה.*תל אביב|ת"א|TA-?125|ישראל|שקל/i.test(haystack)) {
-    return { flag: '🇮🇱', label: 'ישראל' };
+    return { flag: '🏛️', label: 'ישראל' };
   }
   if (/Fed|S&P|Nasdaq|דאו|וול ?סטריט|ארה"ב|ארה״ב|דולר/i.test(haystack)) {
-    return { flag: '🇺🇸', label: 'ארה״ב' };
+    return { flag: '🏛️', label: 'ארה״ב' };
   }
   if (/ECB|אירו|אירופה|גרמני|צרפת/i.test(haystack)) {
-    return { flag: '🇪🇺', label: 'אירופה' };
+    return { flag: '🏛️', label: 'אירופה' };
   }
   return { flag: '🌐', label: 'גלובלי' };
 }
@@ -275,7 +277,11 @@ export function ChallengePage({
       <ScrollView
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
-        bounces={false}
+        // bounces=true so RN Web honors momentum + the user can always
+        // tug to reveal the bottom even if our padding is off by a few
+        // pixels on a given device. Web's nested-scroll quirks made the
+        // earlier bounces=false feel like the page was frozen.
+        bounces
       >
         <View style={styles.eyebrowRow}>
           {/* News-strap badge — makes it visually obvious this is a real news
@@ -415,19 +421,24 @@ export function ChallengePage({
               <Text style={styles.summary} allowFontScaling={false}>
                 {item.summaryHe}
               </Text>
-              {item.explanation ? (
-                <Text style={styles.explanation} allowFontScaling={false}>
-                  {item.explanation}
-                </Text>
-              ) : null}
-              {item.historicalExample ? (
-                // "Newspaper-clipping" framing: gold left border + 📰 icon —
-                // reads as archived news, not as a textbook reference.
-                <View style={styles.historyBox}>
-                  <Text style={styles.historyLabel} allowFontScaling={false}>📰 דוגמה מהעבר</Text>
-                  <Text style={styles.historyText} allowFontScaling={false}>
-                    {item.historicalExample}
-                  </Text>
+              {/* Detail toggles — default view stays tight (header + summary
+                  + Continue). Curious users tap "למה?" or "דוגמה מהעבר" to
+                  open the wall-of-text deep-dive on demand. */}
+              {(item.explanation || item.historicalExample) ? (
+                <View style={styles.detailRow}>
+                  {item.explanation ? (
+                    <DetailToggle
+                      label="💡 למה?"
+                      body={item.explanation}
+                    />
+                  ) : null}
+                  {item.historicalExample ? (
+                    <DetailToggle
+                      label="📰 דוגמה מהעבר"
+                      body={item.historicalExample}
+                      tone="amber"
+                    />
+                  ) : null}
                 </View>
               ) : null}
               {wasCorrect && !reduceMotion && (
@@ -494,7 +505,11 @@ const styles = StyleSheet.create({
   scrollContent: {
     paddingHorizontal: 20,
     paddingTop: 16,
-    paddingBottom: 36,
+    // Generous bottom padding so expanded toggles (💡 למה? + 📰 דוגמה),
+    // chat CTA, and Continue button stay reachable above the iOS/Android
+    // tab bar + safe-area inset. Without this the last 80-120px get
+    // clipped by the parent navigator's tab strip.
+    paddingBottom: 140,
     gap: 14,
   },
   eyebrowRow: {
@@ -738,6 +753,51 @@ const styles = StyleSheet.create({
     borderLeftWidth: 4,
     borderLeftColor: '#facc15',
   },
+  detailRow: {
+    flexDirection: 'row-reverse',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginTop: 4,
+  },
+  detailPill: {
+    flexDirection: 'row-reverse',
+    alignItems: 'center',
+    gap: 6,
+    paddingVertical: 7,
+    paddingHorizontal: 12,
+    borderRadius: 999,
+    backgroundColor: 'rgba(255,255,255,0.7)',
+    borderWidth: 1,
+    borderColor: 'rgba(15,23,42,0.08)',
+  },
+  detailPillLabel: {
+    fontSize: 12,
+    fontWeight: '800',
+    color: STITCH.onSurface,
+    writingDirection: 'rtl',
+  },
+  detailBody: {
+    marginTop: 8,
+    padding: 10,
+    borderRadius: 10,
+    backgroundColor: 'rgba(255,255,255,0.75)',
+  },
+  detailBodyAmber: {
+    marginTop: 8,
+    padding: 10,
+    borderRadius: 10,
+    backgroundColor: '#fefce8',
+    borderLeftWidth: 4,
+    borderLeftColor: '#facc15',
+  },
+  detailBodyText: {
+    fontSize: 13,
+    fontWeight: '500',
+    color: STITCH.onSurface,
+    writingDirection: 'rtl',
+    textAlign: 'right',
+    lineHeight: 20,
+  },
   chatFinnIcon: {
     width: 24,
     height: 24,
@@ -809,3 +869,37 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
 });
+
+/**
+ * Tap-to-expand detail pill — used inside the result panel so the long-form
+ * explanation + historical example don't slam the user with a wall of text.
+ * Default state: pill only. Tap → body unfolds below. Amber tone gives the
+ * "📰 דוגמה מהעבר" pill its newspaper-clipping feel.
+ */
+function DetailToggle({ label, body, tone }: { label: string; body: string; tone?: 'amber' }): React.ReactElement {
+  const [open, setOpen] = useState(false);
+  return (
+    <View style={{ width: '100%' }}>
+      <Pressable
+        onPress={() => { tapHaptic(); setOpen((v) => !v); }}
+        style={styles.detailPill}
+        accessibilityRole="button"
+        accessibilityLabel={open ? `סגור ${label}` : `פתח ${label}`}
+        hitSlop={6}
+      >
+        <Text style={styles.detailPillLabel} allowFontScaling={false}>{label}</Text>
+        <ChevronDown
+          size={14}
+          color={STITCH.onSurface}
+          strokeWidth={2.4}
+          style={{ transform: [{ rotate: open ? '180deg' : '0deg' }] }}
+        />
+      </Pressable>
+      {open ? (
+        <Animated.View entering={FadeIn.duration(180)} style={tone === 'amber' ? styles.detailBodyAmber : styles.detailBody}>
+          <Text style={styles.detailBodyText} allowFontScaling={false}>{body}</Text>
+        </Animated.View>
+      ) : null}
+    </View>
+  );
+}

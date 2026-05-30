@@ -20,6 +20,9 @@ import { BackButton } from "../../components/ui/BackButton";
 import { SupercellButton } from "../../components/ui/SupercellButton";
 import { AnimatedPressable } from "../../components/ui/AnimatedPressable";
 import { useAuthStore } from "../auth/useAuthStore";
+import { useIsPro } from "../subscription/useSubscription";
+import { useUsageStore } from "../subscription/useUsageStore";
+import { useUpgradeModalStore } from "../../stores/useUpgradeModalStore";
 import { usePayslipAnalyzerStore } from "./usePayslipAnalyzerStore";
 import { usePayslipMetaStore } from "./usePayslipMetaStore";
 import { analyzePayslipFile } from "./lib/uploadFile";
@@ -170,6 +173,16 @@ export function PayslipAnalyzerScreen() {
   const displayName = useAuthStore((s) => s.displayName);
   const financialGoal = useAuthStore((s) => s.profile?.financialGoal);
 
+  // Moni Sample Loop (2026-05-30): Free users get 1 payslip analysis per
+  // week. Pro is unlimited. Gate fires before the actual analyzePayslipFile()
+  // call so we don't burn an OCR/AI invocation on a blocked request — and
+  // because the global UpgradeModal feels more native than letting analysis
+  // start then aborting.
+  const isPro = useIsPro();
+  const canUsePayslip = useUsageStore((s) => s.canUse('payslip', isPro));
+  const incrementUsage = useUsageStore((s) => s.incrementUsage);
+  const showUpgrade = useUpgradeModalStore((s) => s.show);
+
   const [showLegal, setShowLegal] = useState<boolean>(legalAcceptedAt === null);
   const [analyzing, setAnalyzing] = useState(false);
 
@@ -208,6 +221,12 @@ export function PayslipAnalyzerScreen() {
 
   const handleAnalyze = useCallback(async () => {
     if (!file || analyzing) return;
+    if (!canUsePayslip) {
+      // Free user already used their weekly payslip analysis. Surface the
+      // standard upgrade modal — copy lives in UpgradeModal.tsx FEATURE_INFO.
+      showUpgrade('payslip');
+      return;
+    }
     setAnalyzing(true);
     startAnalyzing();
     try {
@@ -216,6 +235,9 @@ export function PayslipAnalyzerScreen() {
         financialGoal: financialGoal ?? undefined,
       });
       if (response.ok) {
+        // Count the use only on success — failed OCR / network errors
+        // shouldn't burn the user's weekly quota.
+        incrementUsage('payslip');
         setResult(response.result);
         // Auto-share an anonymized fingerprint (gross range, pension %, credit points)
         // for the clan-comparison Robinhood card. Users can opt out via AnonymousPayslipCard.
@@ -260,6 +282,9 @@ export function PayslipAnalyzerScreen() {
   }, [
     file,
     analyzing,
+    canUsePayslip,
+    showUpgrade,
+    incrementUsage,
     startAnalyzing,
     displayName,
     financialGoal,
