@@ -199,9 +199,14 @@ export function BridgeScreen({ walkthroughAutoScroll }: BridgeScreenProps = {}) 
   const redeemedCount = useBridgeStore((s) => s.getRedeemedCount());
   const savedValue = useBridgeStore((s) => s.getTotalSavedValue());
 
-  const { tab } = useLocalSearchParams<{ tab?: BenefitCategory }>();
+  const { tab, highlight } = useLocalSearchParams<{ tab?: BenefitCategory; highlight?: string }>();
+  // When a deep-link names a specific benefit (e.g. /bridge?highlight=bridge-invest-altshuler
+  // from the mod-0-5 PostCelebration handoff), force the tab to that benefit's
+  // category so the user lands directly on the right view.
+  const highlightedBenefit = highlight ? BRIDGE_BENEFITS.find(b => b.id === highlight) : undefined;
   const initialCategory: BenefitCategory =
-    tab && (ALL_CATEGORIES as string[]).includes(tab) ? tab : 'investments';
+    highlightedBenefit?.category
+    ?? (tab && (ALL_CATEGORIES as string[]).includes(tab) ? tab : 'investments');
   const [activeCategory, setActiveCategory] = useState<BenefitCategory>(initialCategory);
   const [selectedBenefit, setSelectedBenefit] = useState<Benefit | null>(null);
   const [modalVisible, setModalVisible] = useState(false);
@@ -210,6 +215,10 @@ export function BridgeScreen({ walkthroughAutoScroll }: BridgeScreenProps = {}) 
   const [showPostRedemptionModal, setShowPostRedemptionModal] = useState(false);
   const [statModalKind, setStatModalKind] = useState<'redeemed' | 'savings' | null>(null);
   const awaitingReturnFromPartner = useRef(false);
+  // Tracks the Y offset of the deep-link highlighted benefit card. Set by
+  // its onLayout when the card mounts; the effect below scrolls there once.
+  const highlightedYRef = useRef<number | null>(null);
+  const highlightScrolledRef = useRef(false);
 
   // PostHog: full conversion funnel for the Bridge — every page step is an
   // event with the same property shape so the same insight can break down
@@ -639,6 +648,21 @@ export function BridgeScreen({ walkthroughAutoScroll }: BridgeScreenProps = {}) 
                   ? ZoomIn.duration(400).delay(300)
                   : FadeInDown.duration(400).delay(300 + i * 60)
               }
+              onLayout={(e) => {
+                if (highlight && benefit.id === highlight && !highlightScrolledRef.current) {
+                  highlightedYRef.current = e.nativeEvent.layout.y;
+                  highlightScrolledRef.current = true;
+                  // Small delay so the ScrollView has its content height fully
+                  // laid out before we scroll — without it, scrollTo silently
+                  // no-ops on the first frame.
+                  setTimeout(() => {
+                    const y = highlightedYRef.current ?? 0;
+                    // Subtract ~120 so the card sits below the category tabs, not pinned
+                    // to the very top edge where it visually disappears under them.
+                    scrollViewRef.current?.scrollTo({ y: Math.max(0, y - 120), animated: true });
+                  }, 350);
+                }
+              }}
             >
               <BenefitCard
                 benefit={benefit}
@@ -647,6 +671,7 @@ export function BridgeScreen({ walkthroughAutoScroll }: BridgeScreenProps = {}) 
                 isRedeemed={isBenefitRedeemed(benefit.id)}
                 onPress={() => handleCardPress(benefit)}
                 onPurchase={() => handleQuickPurchase(benefit)}
+                isHighlighted={highlight === benefit.id}
               />
             </Animated.View>
           ))}

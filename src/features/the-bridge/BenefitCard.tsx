@@ -28,9 +28,13 @@ interface BenefitCardProps {
   onPress: () => void;
   /** Direct purchase shortcut: tapping the cost CTA spends coins and opens the partner URL in one step. */
   onPurchase?: () => void;
+  /** When the user arrived via a deep-link `?highlight=<benefit.id>` (e.g. the
+   *  mod-0-5 Bridge handoff CTA), this card renders with a gold border + corner
+   *  badge so the user immediately recognises "this is the one I was sent to". */
+  isHighlighted?: boolean;
 }
 
-export function BenefitCard({ benefit, coins, isRedeemed, isPro, onPress, onPurchase }: BenefitCardProps) {
+export function BenefitCard({ benefit, coins, isRedeemed, isPro, onPress, onPurchase, isHighlighted = false }: BenefitCardProps) {
   const canAfford   = coins >= benefit.costCoins;
   const lockedByPro = benefit.proOnly && !isPro;
   const isAdSlot    = benefit.partnerAdSlot === true;
@@ -71,13 +75,15 @@ export function BenefitCard({ benefit, coins, isRedeemed, isPro, onPress, onPurc
   }, [canAfford, isRedeemed]);
   const glowStyle = useAnimatedStyle(() => ({ opacity: glowOpacity.value }));
 
-  const borderColor = isRedeemed
-    ? '#bae6fd'
-    : canAfford && benefit.isAvailable && !lockedByPro
-      ? '#38bdf8'
-      : isPartnerAd
-        ? '#bae6fd'
-        : 'rgba(186,230,253,0.5)';
+  const borderColor = isHighlighted
+    ? '#f59e0b' // amber/gold — matches the mod-0-5 handoff CTA
+    : isRedeemed
+      ? '#bae6fd'
+      : canAfford && benefit.isAvailable && !lockedByPro
+        ? '#38bdf8'
+        : isPartnerAd
+          ? '#bae6fd'
+          : 'rgba(186,230,253,0.5)';
 
   // ── Partner ad slot ──
   if (isAdSlot) {
@@ -125,13 +131,23 @@ export function BenefitCard({ benefit, coins, isRedeemed, isPro, onPress, onPurc
       {/* Pulsing glow ring when affordable */}
       <Animated.View style={[styles.glowRing, { borderColor: '#0ea5e9' }, glowStyle]} />
 
-      <View style={[styles.card, { borderColor }]}>
+      <View style={[styles.card, { borderColor, borderWidth: isHighlighted ? 2.5 : undefined }]}>
         {isPartnerAd && <SparkleOverlay color="#38bdf8" density="low" active />}
 
         {/* Official partner ribbon */}
         {isPartnerAd && (
           <View style={styles.adRibbon}>
             <Text style={styles.adRibbonText}>שותף רשמי</Text>
+          </View>
+        )}
+
+        {/* "מתאים לך" highlight badge — appears when user arrived via a
+            deep-link that explicitly targets this benefit (e.g. mod-0-5
+            Bridge handoff). Tucked top-left so it doesn't clash with the
+            partner ribbon (top-right). */}
+        {isHighlighted && (
+          <View style={{ position: 'absolute', top: 10, left: 10, zIndex: 5, backgroundColor: '#f59e0b', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 999, flexDirection: 'row-reverse', alignItems: 'center', gap: 4 }}>
+            <Text style={{ fontSize: 11, fontWeight: '900', color: '#ffffff', writingDirection: 'rtl' }}>💡 מתאים לך</Text>
           </View>
         )}
 

@@ -2918,6 +2918,8 @@ export function LessonFlowScreen() {
   const markPizzaSeen = useTutorialStore((s) => s.markPizzaIndexSeen);
   const hasSeenMod01BarterNotif = useTutorialStore((s) => s.hasSeenMod01BarterNotif);
   const markMod01BarterNotifSeen = useTutorialStore((s) => s.markMod01BarterNotifSeen);
+  const hasSeenMod05BridgeCTA = useTutorialStore((s) => s.hasSeenMod05BridgeCTA);
+  const markMod05BridgeCTASeen = useTutorialStore((s) => s.markMod05BridgeCTASeen);
   const isGuest = useAuthStore((s) => s.isGuest);
   const [chestFullScreen, setChestFullScreen] = useState(false);
   const [chestClaimed, setChestClaimed] = useState(false);
@@ -3249,8 +3251,16 @@ export function LessonFlowScreen() {
 
   // Auto-next countdown: when the celebration modal opens, start a 3s timer
   // that fires goToNextSequentialModule unless the user cancels or quits.
+  //
+  // Bypass for mod-0-5 first-completion: the special Bridge handoff CTA needs
+  // an explicit user decision (Bridge vs continue), not an auto-advance.
+  // Once the user has seen it, the standard auto-next behaviour resumes.
   useEffect(() => {
     if (!showPostCelebration || showBreakMessage) {
+      setAutoNextSeconds(null);
+      return;
+    }
+    if (mod?.id === 'mod-0-5' && !hasSeenMod05BridgeCTA) {
       setAutoNextSeconds(null);
       return;
     }
@@ -3271,7 +3281,22 @@ export function LessonFlowScreen() {
       });
     }, 1000);
     return () => clearInterval(tick);
-  }, [showPostCelebration, showBreakMessage, mod]);
+  }, [showPostCelebration, showBreakMessage, mod, hasSeenMod05BridgeCTA]);
+
+  // Fire mod05_bridge_cta_shown exactly once per first appearance of the
+  // special Bridge handoff CTA. Tied to PostCelebration becoming visible
+  // while the mod-0-5 + first-completion conditions hold.
+  const mod05BridgeCtaFiredRef = useRef(false);
+  useEffect(() => {
+    if (!showPostCelebration) {
+      mod05BridgeCtaFiredRef.current = false;
+      return;
+    }
+    if (mod?.id === 'mod-0-5' && !hasSeenMod05BridgeCTA && !mod05BridgeCtaFiredRef.current) {
+      mod05BridgeCtaFiredRef.current = true;
+      try { captureEvent('mod05_bridge_cta_shown', { partner: 'altshuler' }); } catch { /* non-fatal */ }
+    }
+  }, [showPostCelebration, mod, hasSeenMod05BridgeCTA]);
 
   // Shark Party, trigger only on chapter transitions (last module of chapter) every 4 total completed modules
   useEffect(() => {
@@ -5254,6 +5279,50 @@ export function LessonFlowScreen() {
       {/* ── Post-module celebration ── */}
       {showPostCelebration && !showBreakMessage && (
         <Pressable style={[StyleSheet.absoluteFill, { zIndex: 9995, backgroundColor: "rgba(0,0,0,0.6)", justifyContent: "center", alignItems: "center", padding: 24 }]} onPress={() => {}} accessible={false}>
+          {mod?.id === 'mod-0-5' && !hasSeenMod05BridgeCTA ? (
+            /* Special mod-0-5 variant: hands the user off to the Bridge with
+               Altshuler highlighted. Framed as "you unlocked a benefit", not
+               as advertising — taps into earned-reward psychology (מוני).
+               Gold border + amber CTA visually differentiates from the
+               standard green PostCelebration (יפיופי). One-shot per user
+               via hasSeenMod05BridgeCTA (דואו: never show twice). */
+            <Animated.View entering={FadeInUp.duration(500)} style={{ backgroundColor: "#ffffff", borderRadius: 28, padding: 28, width: "100%", maxWidth: 340, alignItems: "center", borderWidth: 2, borderColor: "#f59e0b" }}>
+              <Text style={{ fontSize: 56, marginBottom: 6 }} accessibilityElementsHidden>🔓</Text>
+              <Text style={{ fontSize: 22, fontWeight: "900", color: "#0f172a", textAlign: "center", marginBottom: 6, writingDirection: "rtl" }}>{"פתחת הטבה!"}</Text>
+              <Text style={{ fontSize: 14, fontWeight: "600", color: "#64748b", textAlign: "center", marginBottom: 22, writingDirection: "rtl", lineHeight: 20 }}>
+                {"כי סיימת את שיעור ההשקעה — מחכה לך הטבה אמיתית אצל אלטשולר שחם. הטבה רק לחברי FinPlay."}
+              </Text>
+              <AnimatedPressable
+                onPress={() => {
+                  try { captureEvent('mod05_bridge_cta_tapped', { partner: 'altshuler', action: 'go' }); } catch { /* non-fatal */ }
+                  markMod05BridgeCTASeen();
+                  successHaptic();
+                  setShowPostCelebration(false);
+                  safeTimeout(() => router.push("/bridge?highlight=bridge-invest-altshuler" as never), 80);
+                }}
+                style={{ width: "100%", backgroundColor: "#f59e0b", borderRadius: 16, paddingVertical: 16, alignItems: "center", marginBottom: 12, borderBottomWidth: 4, borderBottomColor: "#d97706" }}
+                accessibilityRole="button"
+                accessibilityLabel="קח את ההטבה ב-Bridge"
+              >
+                <Text style={{ fontSize: 16, fontWeight: "900", color: "#ffffff", writingDirection: "rtl" }}>{"קח את ההטבה ←"}</Text>
+              </AnimatedPressable>
+              <Pressable
+                onPress={() => {
+                  try { captureEvent('mod05_bridge_cta_tapped', { partner: 'altshuler', action: 'later' }); } catch { /* non-fatal */ }
+                  markMod05BridgeCTASeen();
+                  tapHaptic();
+                  setShowPostCelebration(false);
+                  safeTimeout(() => goToNextSequentialModule(), 80);
+                }}
+                hitSlop={12}
+                style={{ paddingVertical: 10 }}
+                accessibilityRole="button"
+                accessibilityLabel="אולי אחר כך"
+              >
+                <Text style={{ fontSize: 13, fontWeight: "700", color: "#64748b", writingDirection: "rtl" }}>{"אולי אחר כך"}</Text>
+              </Pressable>
+            </Animated.View>
+          ) : (
           <Animated.View entering={FadeInUp.duration(500)} style={{ backgroundColor: "#ffffff", borderRadius: 28, padding: 28, width: "100%", maxWidth: 340, alignItems: "center", borderWidth: 2, borderColor: "#22c55e" }}>
             <ExpoImage
               source={FINN_EMPATHIC}
@@ -5306,6 +5375,7 @@ export function LessonFlowScreen() {
               </Text>
             </AnimatedPressable>
           </Animated.View>
+          )}
         </Pressable>
       )}
 
