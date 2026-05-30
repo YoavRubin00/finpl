@@ -959,17 +959,14 @@ const ChapterSection = React.memo(function ChapterSection({
               />
               {/* Daily News Challenge — newspaper icon anchored directly
                   under the MIDDLE star of the row that sits below the
-                  shark. Finn = node center + WAVE offset + ~half-NODE
-                  out to the side, so the icon's horizontal translate is
-                  getNodeOffset(i) + ~55 in the matching direction. The
-                  positive marginTop pushes it visually below the star
-                  strip rather than crowding it. */}
+                  shark. Zero margins so the next PathConnector / pearl
+                  hugs right under it without leaving an empty band. */}
               {isActive && newsBadgeNode && (
                 <View
                   style={{
                     alignItems: 'center',
-                    marginTop: 6,
-                    marginBottom: 12,
+                    marginTop: 0,
+                    marginBottom: 0,
                     transform: [{
                       translateX: getNodeOffset(i) + (getNodeOffset(i) >= 0 ? 55 : -55),
                     }],
@@ -1038,7 +1035,11 @@ const ChapterSection = React.memo(function ChapterSection({
                       done={trailDone}
                       color={colors.glow}
                     />
-                    <View style={{ alignItems: 'center' }}>
+                    {/* Negative margins overlap the pearl with both
+                        connectors so the total row height shrinks ~32px,
+                        eliminating the dead band the user reported between
+                        the active module and the next pearl. */}
+                    <View style={{ alignItems: 'center', marginTop: -18, marginBottom: -18, zIndex: 2 }}>
                       <PearlNode
                         state={pearlState}
                         offsetX={pearlOffsetX}
