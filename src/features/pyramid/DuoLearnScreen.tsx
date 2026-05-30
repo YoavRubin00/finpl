@@ -931,36 +931,6 @@ const ChapterSection = React.memo(function ChapterSection({
 
           return (
             <View key={module.id} style={isActive ? { position: 'relative' } : undefined}>
-              {/* Daily News Challenge badge — floats beside the SAME side as
-                  Finn/shark (not the opposite side which is where the lesson
-                  label chip lives). top:88 places it below the shark's head,
-                  next to the shark's body, so it visually belongs to the
-                  character without overlapping the label chip or the path. */}
-              {isActive && newsBadgeNode && (
-                <View
-                  pointerEvents="box-none"
-                  style={{
-                    position: 'absolute',
-                    top: 88,
-                    // Match Finn's side. finnGoesRight = offsetX >= 0 (see
-                    // ModuleNode). Same side = next-to-shark + opposite of
-                    // the label chip → no overlap.
-                    left: getNodeOffset(i) < 0 ? 16 : undefined,
-                    right: getNodeOffset(i) >= 0 ? 16 : undefined,
-                    zIndex: 100,
-                    elevation: 12,
-                    backgroundColor: '#ffffff',
-                    padding: 8,
-                    borderRadius: 999,
-                    shadowColor: '#0c4a6e',
-                    shadowOffset: { width: 0, height: 4 },
-                    shadowOpacity: 0.18,
-                    shadowRadius: 10,
-                  }}
-                >
-                  {newsBadgeNode}
-                </View>
-              )}
               <ModuleNode
                 module={module}
                 state={state}
@@ -987,6 +957,56 @@ const ChapterSection = React.memo(function ChapterSection({
                   }
                 }}
               />
+              {/* Daily News Challenge — its own dedicated row UNDER the
+                  active module's shark, not above and not floating beside
+                  the head. Sits centered between the module and the next
+                  PathConnector so it doesn't compete with the lesson label
+                  chip or the shark itself. */}
+              {isActive && newsBadgeNode && (
+                <View
+                  style={{
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: 10,
+                    marginTop: 14,
+                    marginBottom: 10,
+                    paddingHorizontal: 16,
+                  }}
+                >
+                  <View
+                    style={{
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      gap: 10,
+                      backgroundColor: '#ffffff',
+                      paddingVertical: 8,
+                      paddingHorizontal: 14,
+                      borderRadius: 999,
+                      shadowColor: '#0c4a6e',
+                      shadowOffset: { width: 0, height: 4 },
+                      shadowOpacity: 0.18,
+                      shadowRadius: 10,
+                      elevation: 6,
+                      borderWidth: 1,
+                      borderColor: 'rgba(0,91,177,0.15)',
+                    }}
+                  >
+                    {newsBadgeNode}
+                    <Text
+                      style={{
+                        fontSize: 13,
+                        fontWeight: '800',
+                        color: '#005bb1',
+                        writingDirection: 'rtl',
+                      }}
+                      accessibilityLabel="האקטואליה היומית"
+                    >
+                      אקטואליה פיננסית יומית
+                    </Text>
+                  </View>
+                </View>
+              )}
               {showQuestBox && questPathNodeProps && (
                 <>
                   <PathConnector

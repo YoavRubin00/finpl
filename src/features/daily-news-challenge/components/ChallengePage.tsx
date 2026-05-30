@@ -277,7 +277,11 @@ export function ChallengePage({
       <ScrollView
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
-        bounces={false}
+        // bounces=true so RN Web honors momentum + the user can always
+        // tug to reveal the bottom even if our padding is off by a few
+        // pixels on a given device. Web's nested-scroll quirks made the
+        // earlier bounces=false feel like the page was frozen.
+        bounces
       >
         <View style={styles.eyebrowRow}>
           {/* News-strap badge — makes it visually obvious this is a real news
@@ -501,7 +505,11 @@ const styles = StyleSheet.create({
   scrollContent: {
     paddingHorizontal: 20,
     paddingTop: 16,
-    paddingBottom: 36,
+    // Generous bottom padding so expanded toggles (💡 למה? + 📰 דוגמה),
+    // chat CTA, and Continue button stay reachable above the iOS/Android
+    // tab bar + safe-area inset. Without this the last 80-120px get
+    // clipped by the parent navigator's tab strip.
+    paddingBottom: 140,
     gap: 14,
   },
   eyebrowRow: {
