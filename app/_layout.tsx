@@ -102,6 +102,7 @@ import { GlobalQuestCompletionModal } from "../src/features/daily-quests/GlobalQ
 import { DailyBridgeNudgeModal } from "../src/components/ui/DailyBridgeNudgeModal";
 import { InviteFriendsNudgeModal } from "../src/components/ui/InviteFriendsNudgeModal";
 import { PostWalkthroughRegisterCTAGate } from "../src/features/auth/PostWalkthroughRegisterCTA";
+import { ForceUpdateGate } from "../src/features/force-update/ForceUpdateGate";
 import { configureRevenueCat } from "../src/services/revenueCat";
 import { AppWalkthroughOverlay } from "../src/features/onboarding/AppWalkthroughOverlay";
 import { StreakFreezeSaveModal } from "../src/features/streak/StreakFreezeSaveModal";
@@ -532,6 +533,12 @@ function RootLayoutInner() {
                   set by AppWalkthroughOverlay on completion + isGuest +
                   pathname check (only on the learn map, not /pricing). */}
               <PostWalkthroughRegisterCTAGate />
+              {/* Force-update gate. Mounted unconditionally — internal fetch
+                  decides whether to block based on remote config. Rendered
+                  AFTER other modals so its full-screen Modal sits on top of
+                  every other overlay when active. Self-contained: no boot
+                  order changes required, no parent gating. */}
+              <ForceUpdateGate />
               {/* Global top banners — suppressed during onboarding/tutorial to avoid distracting the first-run experience */}
               {hasCompletedOnboarding && hasSeenWalkthrough && (
                 <>
