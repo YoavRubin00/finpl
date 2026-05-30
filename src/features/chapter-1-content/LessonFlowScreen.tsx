@@ -95,6 +95,13 @@ import { BudgetNinjaCard } from "../finfeed/minigames/budget-ninja/BudgetNinjaCa
 import { CashoutRushCard } from "../finfeed/minigames/cashout-rush/CashoutRushCard";
 import { MacroEventCard } from "../macro-events/MacroEventCard";
 import { macroEventsData } from "../macro-events/macroEventsData";
+// Inter-module CONTENT components (Feed-derived; rendered when a module
+// declares `interModuleContent` but no `interModuleGame`).
+import { PremiumLearningCard } from "../premium-learning/PremiumLearningCard";
+import { PREMIUM_LEARNING_ITEMS } from "../premium-learning/data";
+import { DidYouKnowCard } from "../did-you-know/DidYouKnowCard";
+import { LiveMarketCard } from "../live-market/LiveMarketCard";
+import { LiveNewsQuizCard } from "../live-news/LiveNewsQuizCard";
 import { TA125WarRecoveryChart } from "../chapter-4-content/components/TA125WarRecoveryChart";
 import { FlyingRewards } from "../../components/ui/FlyingRewards";
 import { GoldCoinIcon } from "../../components/ui/GoldCoinIcon";
@@ -460,6 +467,14 @@ function VideoHookPlayer({ videoUri, hookText, onFinish, unitColors, fitContain,
     ? `bundle:${videoUri}`
     : videoUri.split('/').slice(-2).join('/');
 
+  // Derive lesson_id from the video URI when possible (e.g. "fc-0-2-video.mp4"
+  // → "mod-0-2", "finn-mod-0-4.mp4" → "mod-0-4"). Lets PostHog funnel
+  // lesson_video_started against lesson_started without prop threading.
+  const lessonIdFromUri = typeof videoUri === 'string'
+    ? (videoUri.match(/(?:mod-|fc-)(\d+)-(\d+)/)?.slice(1, 3) ?? null)
+    : null;
+  const derivedLessonId = lessonIdFromUri ? `mod-${lessonIdFromUri[0]}-${lessonIdFromUri[1]}` : null;
+
   const safeFinish = useCallback(() => {
     if (finishedRef.current) return;
     finishedRef.current = true;
@@ -489,6 +504,9 @@ function VideoHookPlayer({ videoUri, hookText, onFinish, unitColors, fitContain,
           reportedStartRef.current = true;
           startedAtRef.current = Date.now();
           captureEvent('video_started', { video_key: videoKey, platform: Platform.OS });
+          if (derivedLessonId) {
+            try { captureEvent('lesson_video_started', { lesson_id: derivedLessonId, video_key: videoKey, platform: Platform.OS }); } catch { /* non-fatal */ }
+          }
         }
       }
       if (hasPlayedRef.current && !e.isPlaying && player.duration > 0 && player.currentTime >= player.duration - trimEnd) {
@@ -2234,6 +2252,7 @@ export function LessonFlowScreen() {
   }
 
   function forceExit() {
+    try { captureEvent('lesson_exited_early', { lesson_id: id ?? null, chapter_id: chapterId ?? null, reason: 'back_button', phase }); } catch { /* non-fatal */ }
     // Mark mod-0-1 complete on any exit so the user never gets stuck on it
     if (id === 'mod-0-1') completeModule('mod-0-1');
     setShowExitConfirm(false);
@@ -2335,7 +2354,16 @@ export function LessonFlowScreen() {
     }
     return [...new Set(videos)];
   }, [mod]);
-  const { imagesReady } = useModulePrefetch(prefetchUris, prefetchVideoUris);
+
+  // Intro audio (MP3 on Vercel Blob). Prefetched in parallel with images and
+  // videos so useIntroAudio can read it from the file cache instead of cold-
+  // downloading on mount — eliminates the silent-Finn period that drove the
+  // `intro_audio_delayed` event spike.
+  const prefetchAudioUris = useMemo<readonly string[]>(() => {
+    if (!mod?.introAudio?.uri) return [];
+    return [mod.introAudio.uri];
+  }, [mod]);
+  const { imagesReady } = useModulePrefetch(prefetchUris, prefetchVideoUris, prefetchAudioUris);
 
   // When the user finishes the intro, we'd like the first flashcard's image
   // already cached so they don't stare at a blank box. Block the transition
@@ -2689,6 +2717,29 @@ export function LessonFlowScreen() {
     setVideoPlaying(phase === "video" || phase === "post-infographic-video");
   }, [phase]);
 
+  // Fire once per lesson session when the user actually reaches the summary
+  // screen — closes the funnel gap between lesson_started and lesson_completed
+  // (some users see the summary then bail before claiming the chest).
+  const summaryViewedFiredRef = useRef(false);
+  useEffect(() => {
+    if (phase === "summary" && mod && !summaryViewedFiredRef.current) {
+      summaryViewedFiredRef.current = true;
+      try { captureEvent('lesson_summary_viewed', { lesson_id: mod.id, chapter_id: chapterId ?? null }); } catch { /* non-fatal */ }
+    }
+  }, [phase, mod, chapterId]);
+
+  // Detect navigation away mid-lesson (user tapped a tab, swipe-back, deep
+  // link, etc.) — distinct from `forceExit` which only covers the explicit
+  // exit-confirm flow. Together they should account for nearly all bails.
+  const ACTIVE_LESSON_PHASES = new Set<FlowPhase>(["flashcards", "interactive-recall", "quizzes", "sim", "summary"]);
+  const wasFocusedRef = useRef(true);
+  useEffect(() => {
+    if (wasFocusedRef.current && !isFocused && mod && ACTIVE_LESSON_PHASES.has(phase) && phase !== "summary") {
+      try { captureEvent('lesson_exited_early', { lesson_id: mod.id, chapter_id: chapterId ?? null, reason: 'navigation', phase }); } catch { /* non-fatal */ }
+    }
+    wasFocusedRef.current = isFocused;
+  }, [isFocused, mod, chapterId, phase]);
+
   // Show Pro gate for locked modules, but only after video finishes
   useEffect(() => {
     if (mod && !isModuleAccessible && phase !== "video") {
@@ -2780,6 +2831,11 @@ export function LessonFlowScreen() {
   // Post-module celebration
   const [showPostCelebration, setShowPostCelebration] = useState(false);
   const [showBreakMessage, setShowBreakMessage] = useState(false);
+  // Auto-next countdown: dataS showed 48% drop between lessons (23 finished
+  // mod-0-2 but only 12 started mod-0-3). Netflix-style 3s auto-advance keeps
+  // the learning streak warm without forcing it — user can cancel to read.
+  const [autoNextSeconds, setAutoNextSeconds] = useState<number | null>(null);
+  const autoNextCancelledRef = useRef(false);
   // Shark Love, every 3rd module completion
   const [showSharkLove, setShowSharkLove] = useState(false);
   const moduleStartTimeRef = useRef(Date.now());
@@ -2816,6 +2872,10 @@ export function LessonFlowScreen() {
   const [showWisdom, setShowWisdom] = useState(false);
   const [showInterGame, setShowInterGame] = useState(false);
   const [interGamePhase, setInterGamePhase] = useState<'video' | 'finn'>('video');
+  // Inter-module CONTENT (Feed-derived cards: PremiumLearning, DidYouKnow,
+  // LiveMarket, LiveNews). Fires only when interModuleGame is absent — each
+  // module gets at most one inter-module artifact, never both back-to-back.
+  const [showInterContent, setShowInterContent] = useState(false);
   const [confettiActive, setConfettiActive] = useState(false);
   const [showXpReward, setShowXpReward] = useState(false);
   const [showCoinsReward, setShowCoinsReward] = useState(false);
@@ -3181,6 +3241,32 @@ export function LessonFlowScreen() {
     return () => clearTimeout(timer);
   }, [chestClaimed, showDoubleOrNothing, showSharkLove, showAdBonus, showReferralCTA, showBridgeCTA, showCoverCTA, showWisdom, showPartyInvite, currentModIdx, showPostCelebration, showBreakMessage, pendingPostChestNudge, id, isGuest]);
 
+  // Auto-next countdown: when the celebration modal opens, start a 3s timer
+  // that fires goToNextSequentialModule unless the user cancels or quits.
+  useEffect(() => {
+    if (!showPostCelebration || showBreakMessage) {
+      setAutoNextSeconds(null);
+      return;
+    }
+    autoNextCancelledRef.current = false;
+    setAutoNextSeconds(3);
+    const tick = setInterval(() => {
+      setAutoNextSeconds((prev) => {
+        if (prev === null || autoNextCancelledRef.current) return null;
+        if (prev <= 1) {
+          clearInterval(tick);
+          try { captureEvent('lesson_auto_next_triggered', { lesson_id: mod?.id ?? null }); } catch { /* non-fatal */ }
+          successHaptic();
+          setShowPostCelebration(false);
+          safeTimeout(() => goToNextSequentialModule(), 80);
+          return null;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+    return () => clearInterval(tick);
+  }, [showPostCelebration, showBreakMessage, mod]);
+
   // Shark Party, trigger only on chapter transitions (last module of chapter) every 4 total completed modules
   useEffect(() => {
     if (!chestClaimed || !isLastModule || showDoubleOrNothing || showSharkLove || showPostCelebration || showPartyInvite || showPartyVideo) return;
@@ -3256,6 +3342,7 @@ export function LessonFlowScreen() {
     recordQuizAnswer(mod.id, true);
     // AI telemetry for quiz answers
     useAITelemetryStore.getState().addEvent('quiz_answer', mod.id, { correct: true, meta: { questionId: quiz.id } });
+    try { captureEvent('lesson_quiz_question_answered', { lesson_id: mod.id, question_index: quizIndex, is_correct: true }); } catch { /* non-fatal */ }
     const newStreak = consecutiveCorrect + 1;
     setConsecutiveCorrect(newStreak);
     if (newStreak > peakStreak) setPeakStreak(newStreak);
@@ -3299,6 +3386,7 @@ export function LessonFlowScreen() {
     recordQuizAnswer(mod.id, false);
     // AI telemetry + adaptive for wrong answers
     useAITelemetryStore.getState().addEvent('quiz_answer', mod.id, { correct: false, meta: { questionId: quiz.id } });
+    try { captureEvent('lesson_quiz_question_answered', { lesson_id: mod.id, question_index: quizIndex, is_correct: false }); } catch { /* non-fatal */ }
     if (quiz.conceptTag) {
       useAdaptiveStore.getState().logFailure(quiz.id, quiz.conceptTag, mod.id);
     }
@@ -4285,6 +4373,12 @@ export function LessonFlowScreen() {
                 if (mod?.interModuleGame && !showInterGame && !nextIsGame) {
                   setInterGamePhase('video');
                   setShowInterGame(true);
+                } else if (mod?.interModuleContent && !showInterContent && !nextIsGame) {
+                  // Surface a Feed-derived card (premium-learning, did-you-know,
+                  // live-market, or live-news) before advancing. Each module
+                  // assigns at most one — see Module.interModuleContent in
+                  // chapter-1-content/types.ts.
+                  setShowInterContent(true);
                 } else {
                   goToNextSequentialModule();
                 }
@@ -4407,6 +4501,64 @@ export function LessonFlowScreen() {
             )}
             </ScrollView>
           </GestureHandlerRootView>
+        </Modal>
+      )}
+
+      {/* Inter-module CONTENT overlay — fires only when interModuleGame is
+          absent. Renders the first present field from interModuleContent.
+          The cards are reused as-is from the (now-retired) FinFeed surface. */}
+      {showInterContent && mod?.interModuleContent && (
+        <Modal
+          visible
+          transparent
+          animationType="slide"
+          statusBarTranslucent
+          onRequestClose={() => { setShowInterContent(false); goToNextSequentialModule(); }}
+          accessibilityViewIsModal
+        >
+          <View style={{ flex: 1, backgroundColor: "#f8fafc" }}>
+            <View style={{ flexDirection: "row-reverse", paddingHorizontal: 16, paddingTop: Math.max(safeInsets.top + 12, 50), paddingBottom: 8 }}>
+              <Pressable
+                onPress={() => { setShowInterContent(false); goToNextSequentialModule(); }}
+                style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: "rgba(0,0,0,0.06)", alignItems: "center", justifyContent: "center" }}
+                accessibilityRole="button"
+                accessibilityLabel="סגור והמשך"
+                hitSlop={8}
+              >
+                <Text style={{ color: "#475569", fontSize: 18, fontWeight: "800", lineHeight: 20 }}>✕</Text>
+              </Pressable>
+            </View>
+            <ScrollView
+              style={{ flex: 1 }}
+              contentContainerStyle={{ paddingBottom: Math.max(safeInsets.bottom + 24, 48), flexGrow: 1 }}
+              showsVerticalScrollIndicator={false}
+            >
+              {(() => {
+                // Each card renders with its native Feed-style API (the components
+                // were extracted from FinFeed unchanged). The X-close button in
+                // the modal header handles dismissal — that's what was hooked into
+                // the scroll-snap on the old Feed, now manual in this surface.
+                const c = mod.interModuleContent;
+                const close = () => { setShowInterContent(false); goToNextSequentialModule(); };
+                if (c?.premiumLearning) {
+                  const item = PREMIUM_LEARNING_ITEMS.find((i) => i.id === c.premiumLearning);
+                  return item ? <PremiumLearningCard item={item} isActive onContinue={close} /> : null;
+                }
+                if (c?.didYouKnow) {
+                  return <DidYouKnowCard isActive itemId={c.didYouKnow} />;
+                }
+                if (c?.liveMarketTicker) {
+                  // LiveMarketCard reads its own ticker internally; we just
+                  // mount it. (Per-ticker selection lives in liveMarketTypes.)
+                  return <LiveMarketCard />;
+                }
+                if (c?.liveNewsId) {
+                  return <LiveNewsQuizCard isActive />;
+                }
+                return null;
+              })()}
+            </ScrollView>
+          </View>
         </Modal>
       )}
 
@@ -5213,12 +5365,44 @@ export function LessonFlowScreen() {
             />
             <Text style={{ fontSize: 22, fontWeight: "900", color: "#0f172a", textAlign: "center", marginBottom: 6 }}>{"כל הכבוד!"}</Text>
             <Text style={{ fontSize: 15, fontWeight: "600", color: "#64748b", textAlign: "center", marginBottom: 24 }}>{"רוצה להמשיך או ללכת לנטפליקס?"}</Text>
-            {/* Continue option */}
-            <AnimatedPressable onPress={() => { successHaptic(); setShowPostCelebration(false); safeTimeout(() => goToNextSequentialModule(), 80); }} style={{ width: "100%", backgroundColor: "#22c55e", borderRadius: 16, paddingVertical: 16, alignItems: "center", marginBottom: 12, borderBottomWidth: 4, borderBottomColor: "#16a34a" }} accessibilityRole="button" accessibilityLabel="המשך למודול הבא">
-              <Text style={{ fontSize: 16, fontWeight: "900", color: "#ffffff" }}>{"ממשיכים לתרגל ולצמוח! 💪"}</Text>
+            {/* Continue option, with auto-next countdown */}
+            <AnimatedPressable
+              onPress={() => {
+                if (autoNextSeconds !== null) {
+                  try { captureEvent('lesson_auto_next_triggered', { lesson_id: mod?.id ?? null, via: 'cta_tap' }); } catch { /* non-fatal */ }
+                }
+                autoNextCancelledRef.current = true;
+                setAutoNextSeconds(null);
+                successHaptic();
+                setShowPostCelebration(false);
+                safeTimeout(() => goToNextSequentialModule(), 80);
+              }}
+              style={{ width: "100%", backgroundColor: "#22c55e", borderRadius: 16, paddingVertical: 16, alignItems: "center", marginBottom: 8, borderBottomWidth: 4, borderBottomColor: "#16a34a" }}
+              accessibilityRole="button"
+              accessibilityLabel="המשך למודול הבא"
+            >
+              <Text style={{ fontSize: 16, fontWeight: "900", color: "#ffffff" }}>
+                {autoNextSeconds !== null ? `השיעור הבא מתחיל בעוד ${autoNextSeconds}...` : "ממשיכים לתרגל ולצמוח! 💪"}
+              </Text>
             </AnimatedPressable>
+            {/* Cancel countdown — visible only while auto-next is active */}
+            {autoNextSeconds !== null && (
+              <Pressable
+                onPress={() => {
+                  try { captureEvent('lesson_auto_next_cancelled', { lesson_id: mod?.id ?? null }); } catch { /* non-fatal */ }
+                  autoNextCancelledRef.current = true;
+                  setAutoNextSeconds(null);
+                }}
+                hitSlop={12}
+                style={{ paddingVertical: 6, marginBottom: 4 }}
+                accessibilityRole="button"
+                accessibilityLabel="בטל את הספירה לאחור"
+              >
+                <Text style={{ fontSize: 13, fontWeight: "600", color: "#94a3b8" }}>{"ביטול ספירה לאחור"}</Text>
+              </Pressable>
+            )}
             {/* Quit option */}
-            <AnimatedPressable onPress={() => { tapHaptic(); setShowBreakMessage(true); }} style={{ width: "100%", backgroundColor: "#f8fafc", borderRadius: 16, paddingVertical: 14, alignItems: "center", borderWidth: 1.5, borderColor: "#e2e8f0" }} accessibilityRole="button" accessibilityLabel="יציאה">
+            <AnimatedPressable onPress={() => { autoNextCancelledRef.current = true; setAutoNextSeconds(null); tapHaptic(); setShowBreakMessage(true); }} style={{ width: "100%", backgroundColor: "#f8fafc", borderRadius: 16, paddingVertical: 14, alignItems: "center", borderWidth: 1.5, borderColor: "#e2e8f0" }} accessibilityRole="button" accessibilityLabel="יציאה">
               <Text style={{ fontSize: 14, fontWeight: "700", color: "#64748b" }}>
                 {["עפתי לנטפליקס 📺", "עפתי לאינסטגרם 📱", "עפתי לטיקטוק 🎵", "אני הולך לישון 😴", "יש לי שווארמה שמחכה 🌯", "יש לי פיצה שמתקררת 🍕"][Math.floor(Math.random() * 6)]}
               </Text>

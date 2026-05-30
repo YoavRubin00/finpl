@@ -1,3 +1,4 @@
+import { useEffect, useRef } from "react";
 import { Text, Modal, StyleSheet, View, Pressable } from "react-native";
 import { X } from "lucide-react-native";
 import Animated, { FadeIn, FadeOut } from "react-native-reanimated";
@@ -6,6 +7,7 @@ import { LinearGradient } from "expo-linear-gradient";
 import { AnimatedPressable } from "../../components/ui/AnimatedPressable";
 import { useUpgradeModalStore } from "../../stores/useUpgradeModalStore";
 import { heavyHaptic } from "../../utils/haptics";
+import { captureEvent } from "../../lib/posthog";
 import { BASIC_LIMITS, type GatedFeature } from "./subscriptionConstants";
 
 const FEATURE_INFO: Record<GatedFeature, { title: string; body: string }> = {
@@ -28,6 +30,22 @@ const FEATURE_INFO: Record<GatedFeature, { title: string; body: string }> = {
   saved_items: {
     title: "פריטים שמורים, PRO בלבד",
     body: "שמירת שיעורים ותכנים לגישה מהירה זמינה לחברי PRO בלבד.\nשדרג כדי לשמור תכנים ללא הגבלה.",
+  },
+  "breaking-news": {
+    title: "תיבת הבונוס של ה‑Pro",
+    body: "הצפת האקטואליה הפיננסית פתוחה לכולם. תיבת הבונוס היומית עם XP ומטבעות נוספים שמורה לחברי PRO.\nשדרג כדי לפתוח אותה כל יום.",
+  },
+  "shark-voice": {
+    title: "שיחת קול עם קפטן שארק, PRO בלבד",
+    body: "ב‑Free יש לכם דקה אחת ניסיון. ב‑PRO מקבלים עד 10 דקות שיחה ביום עם קפטן שארק על כל דבר פיננסי.",
+  },
+  "analyst-quick": {
+    title: "אנליסט מניות מהיר, PRO בלבד",
+    body: "ב‑Free מקבלים ניתוח מהיר אחד ביום. ב‑PRO ניתוחים ללא הגבלה — כל מניה, כל שאלה.",
+  },
+  "analyst-deep": {
+    title: "ניתוח עומק AI, PRO בלבד",
+    body: "ניתוח עומק עם follow-up, מצגי תזרים ובדיקות שווי שמור לחברי PRO.\nשדרג כדי לפתוח את האנליסט המלא.",
   },
 };
 
@@ -56,6 +74,38 @@ export function UpgradeModal({ visible, feature, onDismiss }: UpgradeModalProps)
 
   const { title, body } = FEATURE_INFO[feature];
 
+  // Track dismissal outcome so unmount doesn't fire pro_gate_dismissed when
+  // the user actually pressed the CTA (which also calls onDismiss).
+  const outcomeRef = useRef<'pending' | 'cta' | 'dismissed'>('pending');
+
+  // Fire pro_gate_shown once per open. Without this, every Pro-gated tap
+  // (locked sim, AI Insights, out-of-hearts) was invisible to PostHog.
+  useEffect(() => {
+    if (visible) {
+      outcomeRef.current = 'pending';
+      captureEvent('pro_gate_shown', { feature });
+    } else if (outcomeRef.current === 'pending') {
+      // Modal closed without an explicit choice (back gesture, hardware back).
+      captureEvent('pro_gate_dismissed', { feature, via: 'system' });
+    }
+  }, [visible, feature]);
+
+  const handleDismiss = (via: 'close_x' | 'continue_text' | 'backdrop') => {
+    outcomeRef.current = 'dismissed';
+    captureEvent('pro_gate_dismissed', { feature, via });
+    onDismiss();
+  };
+
+  const handleUpgrade = () => {
+    outcomeRef.current = 'cta';
+    captureEvent('pro_gate_cta_clicked', { feature });
+    heavyHaptic();
+    onDismiss();
+    // Pass source so paywall_viewed on /pricing carries the originating
+    // gate. The source breakdown in PostHog uses this property.
+    router.push(`/pricing?source=pro_gate_${feature}` as never);
+  };
+
   return (
     <Modal transparent animationType="none" visible={visible} statusBarTranslucent onRequestClose={onDismiss} accessibilityViewIsModal>
       <Animated.View
@@ -63,12 +113,18 @@ export function UpgradeModal({ visible, feature, onDismiss }: UpgradeModalProps)
         exiting={FadeOut.duration(80)}
         style={styles.overlay}
       >
+        <Pressable
+          style={StyleSheet.absoluteFill}
+          onPress={() => handleDismiss('backdrop')}
+          accessibilityLabel="סגור על ידי נגיעה ברקע"
+          accessibilityRole="button"
+        />
         <LinearGradient
           colors={["#0a2540", "#0e3a5c", "#0a2540"]}
           style={styles.card}
         >
           {/* Close button */}
-          <Pressable onPress={onDismiss} style={styles.closeBtn} hitSlop={12} accessibilityLabel="סגור" accessibilityRole="button">
+          <Pressable onPress={() => handleDismiss('close_x')} style={styles.closeBtn} hitSlop={12} accessibilityLabel="סגור" accessibilityRole="button">
             <X size={20} color="#64748b" />
           </Pressable>
 
@@ -97,11 +153,7 @@ export function UpgradeModal({ visible, feature, onDismiss }: UpgradeModalProps)
 
           {/* CTA */}
           <AnimatedPressable
-            onPress={() => {
-              heavyHaptic();
-              onDismiss();
-              router.push("/pricing" as never);
-            }}
+            onPress={handleUpgrade}
             style={styles.cta}
             accessibilityRole="button"
             accessibilityLabel="שדרג ל-PRO"
@@ -116,7 +168,7 @@ export function UpgradeModal({ visible, feature, onDismiss }: UpgradeModalProps)
           </AnimatedPressable>
 
           {/* Dismiss */}
-          <AnimatedPressable onPress={onDismiss} style={styles.dismiss} accessibilityRole="button" accessibilityLabel="המשך מאיפה שהפסקתי">
+          <AnimatedPressable onPress={() => handleDismiss('continue_text')} style={styles.dismiss} accessibilityRole="button" accessibilityLabel="המשך מאיפה שהפסקתי">
             <Text style={styles.dismissText}>המשך מאיפה שהפסקתי</Text>
           </AnimatedPressable>
         </LinearGradient>

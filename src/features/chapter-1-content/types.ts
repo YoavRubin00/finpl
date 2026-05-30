@@ -124,6 +124,24 @@ export interface Module {
   interModuleVideoAsset?: { uri: string } | number;
   /** When interModuleGame === 'video', message shown by Finn after video ends */
   interModuleFinnMessage?: string;
+  /**
+   * Bite-sized Feed-style content to surface between this module and the next.
+   * Picks the FIRST present field; each id must exist in its respective
+   * catalog (see src/features/{premium-learning,did-you-know,live-news,
+   * live-market}/). All fields are optional — module data assigns whichever
+   * topical card best reinforces what the user just learned. Replaces the
+   * legacy FinFeedScreen (removed) as the surface for these cards.
+   */
+  interModuleContent?: {
+    /** PremiumLearningCard id from src/features/premium-learning/data.ts */
+    premiumLearning?: string;
+    /** Did-you-know fact id from src/features/did-you-know/didYouKnowData.ts */
+    didYouKnow?: string;
+    /** Live market ticker — renders the live-market card for that ticker */
+    liveMarketTicker?: string;
+    /** Live news item id (one-off news quiz) */
+    liveNewsId?: string;
+  };
   /** When set to 'short', renders a FinPlay Short cinematic intro instead of InteractiveIntroCard */
   introVariant?: 'short';
   /** Optional 20-second podcast segment with two follow-up questions (comprehension + dilemma) */

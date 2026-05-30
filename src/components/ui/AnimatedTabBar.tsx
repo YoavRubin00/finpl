@@ -1,10 +1,10 @@
 import { View, Pressable, StyleSheet, Text, Platform } from "react-native";
 import {
-  Compass,
   BookOpen,
   MessageCircle,
   TrendingUp,
   Users,
+  Wrench,
   type LucideIcon,
 } from "lucide-react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -30,9 +30,6 @@ import { useWalkthroughGlowTab } from "../../features/onboarding/AppWalkthroughO
 
 import Svg, { Defs, RadialGradient, Rect, Stop } from "react-native-svg";
 
-// Module-level flag: first session gold flash for learn tab
-let learnTabFlashedThisSession = false;
-
 // ---------------------------------------------------------------------------
 // Tab config
 // ---------------------------------------------------------------------------
@@ -42,13 +39,17 @@ interface TabConfig {
   label: string;
   Icon: LucideIcon;
   badge?: number;
+  /** Show "חדש" badge to draw attention on first launches. */
+  isNew?: boolean;
 }
 
-// Visual L→R ordering in RTL: chat | friends | למידה (center) | פיד | השקעות
+// Visual L→R ordering in RTL: chat | friends | למידה (center) | השקעות | כלים
 // The array reads right-to-left in RTL, so array[0] = rightmost tab visually.
+// The "learn" key (feed) was dropped and replaced by "tools" — the Financial
+// Tools hub is the new entry point on the right.
 const TABS: TabConfig[] = [
+  { key: "tools",       label: "כלים",    Icon: Wrench, isNew: true },
   { key: "investments", label: "השקעות",  Icon: TrendingUp },
-  { key: "learn",       label: "פיד",     Icon: Compass },
   { key: "index",       label: "למידה",   Icon: BookOpen },
   { key: "friends",     label: "חברים",   Icon: Users },
   { key: "chat",        label: "צ'אט",   Icon: MessageCircle },
@@ -56,7 +57,7 @@ const TABS: TabConfig[] = [
 
 // Per-tab accent colors, unified blue palette
 const TAB_COLORS: Record<string, string> = {
-  learn:       "#0ea5e9", // sky blue (feed)
+  tools:       "#0ea5e9", // sky blue — Financial Tools hub
   index:       "#0891b2", // cyan (learn)
   investments: "#1d4ed8", // blue
   friends:     "#6366f1", // indigo, distinct but harmonizes with blues

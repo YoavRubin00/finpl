@@ -9,7 +9,8 @@ export type NotificationChannelId =
   | "inactivity"
   | "marketHook"
   | "aiInsight"
-  | "upgradeNudge";
+  | "upgradeNudge"
+  | "breakingNews";
 
 export interface ScheduledNotification {
   channelId: NotificationChannelId;

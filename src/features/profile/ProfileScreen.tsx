@@ -437,6 +437,26 @@ export function ProfileScreen() {
               </Animated.View>
             )}
 
+            {/* AI Insights CTA — moved here from the "עוד" tab so the
+                personalized read-out lives next to the user's own profile. */}
+            <AnimatedPressable
+              onPress={() => router.push("/ai-insights" as never)}
+              style={[styles.actionCard, { backgroundColor: theme.surface, borderColor: theme.border }]}
+              accessibilityRole="button"
+              accessibilityLabel="תובנות AI על הביצועים שלך"
+            >
+              <View style={styles.actionCardInner}>
+                <ChevronRight size={20} color={theme.textMuted} style={{ transform: [{ scaleX: -1 }] }} />
+                <View style={{ alignItems: "flex-end", flex: 1 }}>
+                  <Text style={[styles.actionCardSubtitle, { color: theme.textMuted }]}>תובנות AI</Text>
+                  <Text style={[styles.actionCardTitle, { color: theme.text }]}>קפטן שארק מנתח אותך</Text>
+                </View>
+                <View style={[styles.actionIcon, { backgroundColor: isDark ? "rgba(168,85,247,0.15)" : "#faf5ff", borderColor: isDark ? "rgba(192,132,252,0.3)" : "#e9d5ff" }]} accessible={false}>
+                  <LottieIcon source={require("../../../assets/lottie/wired-flat-426-brain-hover-pinch.json")} size={28} autoPlay loop active={isFocused} />
+                </View>
+              </View>
+            </AnimatedPressable>
+
             {/* Pro Upgrade CTA, only for free users */}
             {!isPro && (
               <AnimatedPressable

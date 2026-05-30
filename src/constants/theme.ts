@@ -189,4 +189,198 @@ export const STITCH = {
   progressTrack: '#e0e3e5',      // surfaceVariant for tracks
   ghostBorder: 'rgba(192,199,212,0.15)', // outlineVariant @ 15%
   cardShadow: 'rgba(62,60,143,0.06)',    // tinted purple shadow
+
+  // Premium dark tier — used by advanced financial tools (FIRE, Compound)
+  premiumDarkBg: '#0f172a',
+  premiumDarkSurface: '#1e293b',
+  premiumDarkAccent: '#312e81',          // indigo wash for hero gradient
+  premiumDarkText: '#94a8c2',            // muted slate for sublabels
+} as const;
+
+/** Stock sector colors — fantasy portfolio chips & sparklines */
+export const SECTOR = {
+  tech:        { chip: '#1e40af', chipText: '#ffffff', surface: '#dbeafe', spark: '#3b82f6' },
+  spec_growth: { chip: '#a855f7', chipText: '#ffffff', surface: '#f3e8ff', spark: '#c084fc' },
+  energy:      { chip: '#ea580c', chipText: '#ffffff', surface: '#ffedd5', spark: '#f97316' },
+  israel:      { chip: '#0d80ff', chipText: '#ffffff', surface: '#dbeafe', spark: '#3b82f6' },
+  crypto:      { chip: '#7c3aed', chipText: '#ffffff', surface: '#ede9fe', spark: '#a855f7' },
+} as const;
+
+/**
+ * FANTASY (v2) — Light Stitch premium palette (Pinplay design system).
+ * 8 sectors with gradient tiles + 3 tiers + neutrals.
+ * Used by the new fantasy league screens; replaces LUXE dark navy.
+ */
+export const FANTASY = {
+  /** Backgrounds */
+  bg:          '#f7f9fb',
+  bgElevated:  '#ffffff',
+  surfaceLow:  '#f7f9fb',
+  surfaceCard: '#ffffff',
+  surfaceMuted:'#f1f5f9',
+
+  /** Borders */
+  border:      '#eceef0',
+  borderStrong:'#e5e7eb',
+  borderHigh:  '#cbd5e1',
+
+  /** Text */
+  ink:         '#0f172a',
+  inkSoft:     '#1e293b',
+  inkMuted:    '#6b7280',
+  inkFaint:    '#9ca3af',
+  inkLabel:    '#475569',
+
+  /** Primary brand (Stitch deep blue) */
+  primary:     '#005bb1',
+  primaryHover:'#0077d6',
+  primaryDark: '#1e3a8a',
+  primarySoft: '#dbeafe',
+  primaryTint: '#f0f9ff',
+
+  /** Gold accent */
+  gold:        '#facc15',
+  goldDark:    '#a16207',
+  goldDeep:    '#78350f',
+  goldSoft:    '#fef3c7',
+  goldTint:    '#fffbeb',
+  goldStroke:  '#fde68a',
+
+  /** Silver accent */
+  silver:      '#cbd5e1',
+  silverDark:  '#94a3b8',
+  silverEdge:  '#475569',
+  silverSoft:  '#f1f5f9',
+
+  /** Diamond / light-blue accent */
+  cyan:        '#0891b2',
+  cyanLight:   '#22d3ee',
+  cyanDeep:    '#155e75',
+  cyanSoft:    '#cffafe',
+  cyanTint:    '#ecfeff',
+
+  /** Functional */
+  positive:    '#16a34a',
+  positiveDark:'#15803d',
+  positiveSoft:'#dcfce7',
+  positiveStroke:'#bbf7d0',
+  negative:    '#dc2626',
+  negativeDark:'#b91c1c',
+  negativeSoft:'#fee2e2',
+  negativeStroke:'#fecaca',
+  warning:     '#f59e0b',
+  warningDark: '#92400e',
+  warningSoft: '#fef3c7',
+  warningStroke:'#fde68a',
+  purple:      '#7c3aed',
+  purpleLight: '#a78bfa',
+  purpleSoft:  '#ede9fe',
+
+  /** Score chip (dark navy used everywhere) */
+  scoreChipBg: '#0d2847',
+  scoreChipFg: '#ffffff',
+} as const;
+
+/** 8 sectors — gradient tiles, full palette per sector (Pinplay v2) */
+export const F2_SECTORS = {
+  tech:        { id: 'tech',        label: 'טכנולוגיה', short: 'טק',     color: '#3b82f6', g1: '#60a5fa', g2: '#1d4ed8' },
+  spec_growth: { id: 'spec_growth', label: 'צמיחה ספק׳', short: 'ספק׳',  color: '#a855f7', g1: '#c084fc', g2: '#6d28d9' },
+  banks:       { id: 'banks',       label: 'בנקים',     short: 'בנקים', color: '#10b981', g1: '#34d399', g2: '#047857' },
+  energy:      { id: 'energy',      label: 'אנרגיה',    short: 'אנרגיה',color: '#f59e0b', g1: '#fbbf24', g2: '#b45309' },
+  israel:      { id: 'israel',      label: 'שוק ישראלי',short: 'ישראל', color: '#0d80ff', g1: '#3b82f6', g2: '#1e40af' },
+  health:      { id: 'health',      label: 'בריאות',    short: 'בריאות',color: '#ef4444', g1: '#f87171', g2: '#b91c1c' },
+  crypto:      { id: 'crypto',      label: 'קריפטו',    short: 'קריפטו',color: '#a78bfa', g1: '#c4b5fd', g2: '#6d28d9' },
+  consumer:    { id: 'consumer',    label: 'צריכה',     short: 'צריכה', color: '#ec4899', g1: '#f472b6', g2: '#be185d' },
+} as const;
+
+export type FantasySectorId = keyof typeof F2_SECTORS;
+
+/** Fantasy League — Super Premium palette (gold / silver / light-blue) */
+export const LUXE = {
+  /** Backgrounds — deep premium navy */
+  bgPrimary:    '#0a1e3a',
+  bgSecondary:  '#142a52',
+  bgElevated:   '#1c3a6e',
+
+  /** Light Blue — core accent (Sky palette) */
+  blueLight:    '#7dd3fc',   // Sky-300 — highlights
+  blueLighter:  '#bae6fd',   // Sky-200 — surfaces
+  blueAccent:   '#38bdf8',   // Sky-400 — primary action
+  blueDeep:     '#0284c7',   // Sky-600 — pressed states
+
+  /** Gold — hero CTAs, podium #1, premium accents */
+  gold:         '#fbbf24',   // Amber-400
+  goldLight:    '#fcd34d',   // Amber-300
+  goldDark:     '#d97706',   // Amber-600
+  goldDeep:     '#92570a',
+  goldGlow:     'rgba(251,191,36,0.45)',
+
+  /** Silver — tier 2, secondary metallics */
+  silver:       '#cbd5e1',   // Slate-300
+  silverLight:  '#e2e8f0',   // Slate-200
+  silverDark:   '#94a3b8',   // Slate-400
+
+  /** Surfaces (cards on dark bg) */
+  surfaceCard:   'rgba(255,255,255,0.06)',
+  surfaceCardHi: 'rgba(255,255,255,0.10)',
+  borderSubtle:  'rgba(255,255,255,0.12)',
+  borderHigh:    'rgba(255,255,255,0.18)',
+
+  /** Text */
+  textPrimary: '#ffffff',
+  textMuted:   'rgba(255,255,255,0.65)',
+  textFaint:   'rgba(255,255,255,0.45)',
+  textOnGold:  '#3b1f00',
+  textOnBlue:  '#0a1e3a',
+
+  /** Functional */
+  positive:     '#86efac',   // light green for gains on dark
+  positiveTint: 'rgba(74,222,128,0.18)',
+  negative:     '#fca5a5',   // soft red on dark
+  negativeTint: 'rgba(248,113,113,0.18)',
+} as const;
+
+/** Premium gradients used across the Fantasy League */
+export const LUXE_GRADIENTS = {
+  heroHeader:  ['#0a1e3a', '#1c3a6e', '#0a1e3a'] as const,
+  ctaGold:     ['#fcd34d', '#fbbf24', '#d97706'] as const,
+  ctaBlue:     ['#bae6fd', '#7dd3fc', '#38bdf8'] as const,
+  podiumGold:  ['#fef3c7', '#fbbf24', '#d97706'] as const,
+  podiumSilver:['#f1f5f9', '#cbd5e1', '#94a3b8'] as const,
+  podiumBlue:  ['#bae6fd', '#7dd3fc', '#0284c7'] as const,
+  premiumCard: ['rgba(125,211,252,0.10)', 'rgba(251,191,36,0.08)'] as const,
+} as const;
+
+/** Fantasy League gold theme — promotion banner & podium #1 */
+export const LEAGUE_GOLD = {
+  bgFrom: '#fcd34d',
+  bgTo: '#d97706',
+  border: '#92570a',
+  ink: '#3b1f00',
+  glow: 'rgba(251,191,36,0.55)',
+} as const;
+
+/** Fantasy zone palette — leaderboard promote/safe/relegate */
+export const ZONE = {
+  promote: { bar: '#16a34a', tint: '#dcfce7', text: '#15803d', label: 'אזור עלייה' },
+  safe:    { bar: '#94a3b8', tint: '#f1f5f9', text: '#475569', label: 'אזור בטוח' },
+  relegate:{ bar: '#dc2626', tint: '#fee2e2', text: '#b91c1c', label: 'אזור ירידה' },
+} as const;
+
+/** Clan Hub — Clash Royale dark theme for the social clan zone */
+export const CLAN = {
+  bg: '#0d2847',
+  cardBg: 'rgba(10, 22, 40, 0.85)',
+  tierBronze: '#a16207',
+  tierBronzeLight: '#facc15',
+  tierSilver: '#94a3b8',
+  tierSilverLight: '#e2e8f0',
+  tierGold: '#d4a017',
+  tierGoldLight: '#f5c842',
+  tierDiamond: '#7dd3fc',
+  tierDiamondLight: '#bae6fd',
+  ownBubble: ['#f5c842', '#d4a017'] as const,
+  otherBubble: 'rgba(255,255,255,0.08)',
+  donationGreen: '#16a34a',
+  projectFunded: '#a78bfa',
 } as const;

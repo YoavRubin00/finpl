@@ -1,9 +1,11 @@
 import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
 import { zustandStorage } from '../lib/zustandStorage';
+import type { ToolKey } from '../features/financial-tools/toolsRegistry';
 import { registerLocalStore } from '../lib/stores/registry';
 
-type WalkthroughScreen = 'learn' | 'lesson-preview' | 'feed' | 'chat' | 'shop' | 'bridge' | null;
+// 'tools' replaced 'feed' once the Feed tab was retired (see app/(tabs)/_layout.tsx).
+type WalkthroughScreen = 'learn' | 'lesson-preview' | 'tools' | 'chat' | 'shop' | 'bridge' | null;
 
 interface TutorialState {
   hasSeenTradingHubIntro: boolean;
@@ -20,6 +22,8 @@ interface TutorialState {
   hasSeenWatchlistHint: boolean;
   hasSeenAssetUnlockIntro: boolean;
   hasSeenIndicesOnlyNudge: boolean;
+  /** Per-tool first-visit guard for the in-tool Captain Shark tutorial overlay. */
+  hasSeenToolTutorial: Partial<Record<ToolKey, boolean>>;
   appWalkthroughStep: number;
   walkthroughGlowTab: string | null;
   walkthroughActiveScreen: WalkthroughScreen;
@@ -40,6 +44,7 @@ interface TutorialState {
   markWatchlistHintSeen: () => void;
   markAssetUnlockIntroSeen: () => void;
   markIndicesOnlyNudgeSeen: () => void;
+  markToolTutorialSeen: (toolKey: ToolKey) => void;
   setAppWalkthroughStep: (step: number) => void;
   setWalkthroughGlowTab: (tab: string | null) => void;
   setWalkthroughActiveScreen: (screen: WalkthroughScreen) => void;
@@ -61,6 +66,7 @@ export const useTutorialStore = create<TutorialState>()(
       hasSeenWatchlistHint: false,
       hasSeenAssetUnlockIntro: false,
       hasSeenIndicesOnlyNudge: false,
+      hasSeenToolTutorial: {},
       appWalkthroughStep: 0,
       walkthroughGlowTab: null,
       walkthroughActiveScreen: null,
@@ -76,12 +82,13 @@ export const useTutorialStore = create<TutorialState>()(
       markWatchlistHintSeen: () => set({ hasSeenWatchlistHint: true }),
       markAssetUnlockIntroSeen: () => set({ hasSeenAssetUnlockIntro: true }),
       markIndicesOnlyNudgeSeen: () => set({ hasSeenIndicesOnlyNudge: true }),
+      markToolTutorialSeen: (toolKey: ToolKey) => set((s) => ({ hasSeenToolTutorial: { ...s.hasSeenToolTutorial, [toolKey]: true } })),
       setAppWalkthroughStep: (step: number) => set({ appWalkthroughStep: step }),
       setWalkthroughGlowTab: (tab: string | null) => set({ walkthroughGlowTab: tab }),
       setWalkthroughActiveScreen: (screen: WalkthroughScreen) => set({ walkthroughActiveScreen: screen }),
       setPendingPostWalkthroughCTA: (value: boolean) => set({ pendingPostWalkthroughCTA: value }),
       resetWalkthrough: () => set({ hasSeenAppWalkthrough: false, appWalkthroughStep: 0, walkthroughGlowTab: null, walkthroughActiveScreen: null, walkthroughTriggered: true, pendingPostWalkthroughCTA: false }),
-      reset: () => set({ hasSeenTradingHubIntro: true, hasSeenAppWalkthrough: false, walkthroughTriggered: false, hasChosenChatStyle: false, hasSeenPizzaIndexModal: false, hasSeenCh0BullshitInterstitial: false, hasSeenMod01BarterNotif: false, hasSeenWatchlistHint: false, hasSeenAssetUnlockIntro: false, hasSeenIndicesOnlyNudge: false, appWalkthroughStep: 0, walkthroughGlowTab: null, walkthroughActiveScreen: null, pendingPostWalkthroughCTA: false, _hydrated: false }),
+      reset: () => set({ hasSeenTradingHubIntro: true, hasSeenAppWalkthrough: false, walkthroughTriggered: false, hasChosenChatStyle: false, hasSeenPizzaIndexModal: false, hasSeenCh0BullshitInterstitial: false, hasSeenMod01BarterNotif: false, hasSeenWatchlistHint: false, hasSeenAssetUnlockIntro: false, hasSeenIndicesOnlyNudge: false, hasSeenToolTutorial: {}, appWalkthroughStep: 0, walkthroughGlowTab: null, walkthroughActiveScreen: null, pendingPostWalkthroughCTA: false, _hydrated: false }),
     }),
     {
       name: "tutorial-store-v12",

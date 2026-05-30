@@ -789,7 +789,10 @@ const DREAMS: { id: FinancialDream; emoji: string; label: string; sub: string }[
 
 function DreamStep({ onNext }: { onNext: (v: FinancialDream) => void }) {
   const [sel, setSel] = useState<FinancialDream | null>(null);
+  const advancedRef = useRef(false);
   const tap = useCallback((id: FinancialDream) => {
+    if (advancedRef.current) return;
+    advancedRef.current = true;
     setSel(id);
     setTimeout(() => onNext(id), AUTO_ADVANCE_MS);
   }, [onNext]);
@@ -879,7 +882,10 @@ const DREAM_REACTIONS: Record<FinancialDream, string> = {
 
 function GoalStep({ dream, onNext, onBack }: { dream: FinancialDream | null; onNext: (v: FinancialGoal) => void; onBack?: () => void }) {
   const [sel, setSel] = useState<FinancialGoal | null>(null);
+  const advancedRef = useRef(false);
   const tap = useCallback((id: FinancialGoal) => {
+    if (advancedRef.current) return;
+    advancedRef.current = true;
     setSel(id);
     setTimeout(() => onNext(id), AUTO_ADVANCE_MS);
   }, [onNext]);
@@ -957,7 +963,10 @@ const KNOWLEDGE_REACTIONS: Record<string, string> = {
 
 function AgeStep({ knowledge, onNext, onBack }: { knowledge: KnowledgeLevel | null; onNext: (ag: AgeGroup, by: number) => void; onBack?: () => void }) {
   const [sel, setSel] = useState<number | null>(null);
+  const advancedRef = useRef(false);
   const tap = useCallback((i: number) => {
+    if (advancedRef.current) return;
+    advancedRef.current = true;
     setSel(i);
     const { ageGroup, birthYear } = AGE_GROUPS[i];
     setTimeout(() => onNext(ageGroup, birthYear), AUTO_ADVANCE_MS);

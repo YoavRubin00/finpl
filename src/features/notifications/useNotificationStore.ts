@@ -58,6 +58,11 @@ const CONTENT: Record<NotificationChannelId, Notifications.NotificationContentIn
     body: "דילמה פיננסית חדשה, בואו לפתור ולצבור XP!",
     data: { screen: "/(tabs)/learn", feedScrollIndex: 0 },
   },
+  breakingNews: {
+    title: "🔥 הסיכומים היומיים שלך מוכנים",
+    body: "כל החדשות מאתמול על המניות שלך — תוך 30 שניות.",
+    data: { screen: "/breaking-news" },
+  },
   marketHook: {
     title: "📊 השוקים זזים!",
     body: "בואו לראות מה קורה בעולם הפיננסי",
@@ -146,6 +151,10 @@ interface NotificationActions {
   scheduleMarketHook: (content: Notifications.NotificationContentInput) => Promise<void>;
   scheduleChestReady: (delayMs: number) => Promise<void>;
   scheduleDailyChallenge: (hourOfDay?: number) => Promise<void>;
+  /** Schedule the daily Breaking News push at `hourOfDay` (0-23, local TZ).
+   *  Cancels any previous breakingNews schedule. No-op when permission isn't
+   *  granted. Free-standing — not tied to any preference flag. */
+  scheduleBreakingNewsDaily: (hourOfDay: number) => Promise<void>;
   scheduleChallenge: () => Promise<void>;
   scheduleSquadInvite: () => Promise<void>;
   scheduleSquadChest: () => Promise<void>;
@@ -271,6 +280,25 @@ export const useNotificationStore = create<NotificationState & NotificationActio
             ...scheduled,
             { channelId: "dailyChallenge", identifier },
           ],
+        });
+      },
+
+      scheduleBreakingNewsDaily: async (hourOfDay: number): Promise<void> => {
+        const { permissionGranted, scheduled, cancelChannel } = get();
+        if (!permissionGranted) return;
+        const hour = Math.max(0, Math.min(23, Math.round(hourOfDay)));
+        await cancelChannel("breakingNews");
+        const identifier = await Notifications.scheduleNotificationAsync({
+          content: CONTENT.breakingNews,
+          trigger: {
+            type: Notifications.SchedulableTriggerInputTypes.DAILY,
+            hour,
+            minute: 0,
+            channelId: "breakingNews",
+          },
+        });
+        set({
+          scheduled: [...scheduled, { channelId: "breakingNews", identifier }],
         });
       },
 

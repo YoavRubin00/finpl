@@ -8,7 +8,12 @@ export type XPSource =
   | "sim_complete"
   | "chest_reward"
   | "clash_win"
-  | "clash_draw";
+  | "clash_draw"
+  // Financial Tools — first-use bonus (one-time per tool) vs repeat use.
+  | "payslip_first"
+  | "payslip_repeat"
+  | "tool_first_use"
+  | "tool_repeat_use";
 
 export type PyramidLayer = 0 | 1 | 2 | 3 | 4 | 5;
 

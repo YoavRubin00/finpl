@@ -471,6 +471,13 @@ function RootLayoutInner() {
       "scenario-lab", "suggest-scenario", "graham-personality", "legal", "settings",
       "pizza-index", "accessibility-statement", "fire-calculator",
       "tower-defense-boss", "interstitial", "ai-insights", "saved-items",
+      // Financial Tools hub routes merged from feature/flag — without these
+      // every tap in the Tools hub was bounced back to /(tabs) by the auth/
+      // onboarding redirect guard below.
+      "stock-analyst", "payslip-analyzer", "compound-calculator",
+      "salary-net-calculator", "tax-refund-calculator", "mortgage-calculator",
+      "pension-fees-comparator", "breaking-news", "coming-soon",
+      "net-worth-dashboard", "financial-profile",
     ].includes(segments[0] as string);
 
     if (!isAuthenticated) {

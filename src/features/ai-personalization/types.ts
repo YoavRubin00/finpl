@@ -47,7 +47,9 @@ export type RecommendedAction =
   | 'UNLOCK_ADVANCED_INVESTING'
   | 'INCREASE_DIFFICULTY'
   | 'DECREASE_DIFFICULTY'
-  | 'TRIGGER_TARGETED_IAP';
+  | 'TRIGGER_TARGETED_IAP'
+  | 'SHOW_CALM_TIP'
+  | 'OFFER_REPLAY_LAST_LESSON';
 
 /** When to trigger a monetization offer */
 export type MonetizationTrigger =

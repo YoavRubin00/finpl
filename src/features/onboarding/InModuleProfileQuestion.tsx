@@ -90,6 +90,12 @@ export function InModuleProfileQuestion({ visible, kind, onDone }: Props) {
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={handleSkip}>
       <View style={styles.backdrop}>
+        <Pressable
+          style={StyleSheet.absoluteFill}
+          onPress={handleSkip}
+          accessibilityLabel="סגור על ידי נגיעה ברקע"
+          accessibilityRole="button"
+        />
         <View style={styles.card}>
           <ExpoImage source={FINN_HAPPY} accessible={false} style={styles.finn} contentFit="contain" />
           <Text style={styles.title}>{TITLES[kind]}</Text>
@@ -117,7 +123,7 @@ export function InModuleProfileQuestion({ visible, kind, onDone }: Props) {
             })}
           </View>
 
-          <Pressable onPress={handleSkip} style={styles.skip} accessibilityRole="button" accessibilityLabel="דלג">
+          <Pressable onPress={handleSkip} style={styles.skip} hitSlop={12} accessibilityRole="button" accessibilityLabel="דלג">
             <Text style={styles.skipText}>דלג</Text>
           </Pressable>
         </View>
@@ -190,6 +196,6 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   optSubSelected: { color: "#e0f2fe" },
-  skip: { marginTop: 14, paddingVertical: 6 },
+  skip: { marginTop: 14, paddingVertical: 14, paddingHorizontal: 24 },
   skipText: { fontSize: 13, fontWeight: "600", color: "#64748b" },
 });

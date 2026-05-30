@@ -12,3 +12,8 @@ export function formatPercent(n: number, decimals = 0): string {
         ? `${(n * 100).toFixed(decimals)}%`
         : `${Math.round(n * 100)}%`;
 }
+
+export function clamp(n: number, min: number, max: number): number {
+    if (!Number.isFinite(n)) return min;
+    return Math.min(max, Math.max(min, n));
+}

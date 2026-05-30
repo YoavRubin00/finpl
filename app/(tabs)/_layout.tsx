@@ -27,11 +27,20 @@ export default function TabsLayout() {
           }}
           tabBar={(props) => <AnimatedTabBar {...props} />}
         >
+          {/* Tools tab — leftmost (RTL: rightmost) — the Financial Tools hub
+              replaces the dead Feed entry in the tab order. */}
+          <Tabs.Screen name="tools" />
           <Tabs.Screen name="investments" />
-          <Tabs.Screen name="learn" />
           <Tabs.Screen name="index" />
+          {/* Friends tab — kept visible but its screen content is gated/blocked
+              as it was on dev. Do NOT swap to feature/flag's open Friends Hub. */}
           <Tabs.Screen name="friends" />
           <Tabs.Screen name="chat" />
+          {/* The legacy Feed/learn screen is no longer reachable from the tab
+              bar — its useful content is migrating into the learning modules
+              (see Stage C). Kept registered (href: null) so any deep-link or
+              walkthrough route still resolves until those are migrated. */}
+          <Tabs.Screen name="learn" options={{ href: null }} />
           <Tabs.Screen name="more" options={{ href: null }} />
           <Tabs.Screen name="simulator" options={{ href: null }} />
           <Tabs.Screen name="shop" options={{ href: null }} />

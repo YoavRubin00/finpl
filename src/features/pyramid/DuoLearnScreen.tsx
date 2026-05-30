@@ -43,9 +43,13 @@ import { NotificationPermissionBanner } from "../../components/ui/NotificationPe
 import { NoFreezeUpsellBanner } from "../streak/NoFreezeUpsellBanner";
 import { StreakAtRiskBanner } from "../streak/StreakAtRiskBanner";
 import { StreakCalendarModal } from "../streak/StreakCalendarModal";
+import { NewsIconButton } from "../daily-news-challenge/NewsIconButton";
+import { DailyNewsChallengeSheet } from "../daily-news-challenge/DailyNewsChallengeSheet";
+import { useDailyNewsChallengeStore } from "../daily-news-challenge/useDailyNewsChallengeStore";
+import { fetchTodayChallenge } from "../daily-news-challenge/dailyNewsChallengeApi";
 import { FINN_STANDARD } from "../retention-loops/finnMascotConfig";
-import { FeedNudgeBanner } from "../../components/ui/FeedNudgeBanner";
-import { useFeedNudge } from "../../hooks/useFeedNudge";
+// FeedNudgeBanner / useFeedNudge removed — Feed is retired. Daily-challenge
+// entry lives in the Daily News Challenge card (added in Stage A).
 import { useDailyChallengesStore } from "../daily-challenges/use-daily-challenges-store";
 import { chapter0Data } from "../chapter-0-content/chapter0Data";
 import { chapter1Data } from "../chapter-1-content/chapter1Data";
@@ -973,6 +977,24 @@ export function DuoLearnScreen() {
   // Pushes them to /(auth)/register with returnTo=/lesson/mod-1-1 so they land in
   // chapter 1 as a registered user with all skip-intro progress preserved.
   const [showSkipIntroRegisterCTA, setShowSkipIntroRegisterCTA] = useState(false);
+
+  // Daily News Challenge — hero card at the TOP of the learn screen + full-sheet
+  // modal. State + store reads live at screen-level so the card can render at
+  // mount-time and the sheet can open/close from a single source.
+  const [newsSheetVisible, setNewsSheetVisible] = useState(false);
+  const newsChallenge = useDailyNewsChallengeStore((s) => s.todayChallenge);
+  const newsCompleted = useDailyNewsChallengeStore((s) => s.hasCompletedToday());
+  const newsProChestOpened = useDailyNewsChallengeStore((s) => s.proChestOpened);
+  const setNewsChallenge = useDailyNewsChallengeStore((s) => s.setTodayChallenge);
+  useEffect(() => {
+    let cancelled = false;
+    fetchTodayChallenge()
+      .then((c) => { if (!cancelled && c) setNewsChallenge(c); })
+      .catch(() => { /* non-fatal; card renders null when no challenge */ });
+    return () => { cancelled = true; };
+  }, [setNewsChallenge]);
+  const handleNewsPress = useCallback(() => { tapHaptic(); setNewsSheetVisible(true); }, []);
+
   const { layer } = getPyramidStatus(xp);
   const [lockedModalVisible, setLockedModalVisible] = useState(false);
   const [showStreakCalendar, setShowStreakCalendar] = useState(false);
@@ -987,7 +1009,6 @@ export function DuoLearnScreen() {
   const setCurrentChapter = useChapterUIStore((s) => s.setCurrentChapter);
   const setCurrentModule = useChapterUIStore((s) => s.setCurrentModule);
   const { mutate: upsertProgress } = useUpsertModuleProgress();
-  const { nudge, dismiss: dismissNudge } = useFeedNudge();
   const dilemmaAnswered = useDailyChallengesStore((s) => s.hasDilemmaAnsweredToday());
   const [questSheetVisible, setQuestSheetVisible] = useState(false);
   const [hasScrolledDown, setHasScrolledDown] = useState(false);
@@ -1208,6 +1229,7 @@ export function DuoLearnScreen() {
       {!isWalkthroughActive && <StreakAtRiskBanner />}
       {!isWalkthroughActive && <NoFreezeUpsellBanner />}
       <StreakCalendarModal visible={showStreakCalendar} onClose={() => setShowStreakCalendar(false)} />
+      <DailyNewsChallengeSheet visible={newsSheetVisible} onClose={() => setNewsSheetVisible(false)} />
 
       {/* Skip-intro register CTA for guests — fires after handleSkipIntro */}
       {showSkipIntroRegisterCTA && (
@@ -1266,6 +1288,32 @@ export function DuoLearnScreen() {
         </Modal>
       )}
       <SafeAreaView style={{ flex: 1 }} edges={["left", "right"]}>
+        {/* Floating Daily News Challenge entry — pulses + glows in the
+            top-left (RTL: top-LEFT = "dead" space; learn map is right-anchored)
+            until the user completes today's challenge. The unread dot signals
+            a fresh challenge; the pulse stops + icon goes muted gray when
+            done. Hidden during walkthrough to avoid stealing the tutorial's
+            attention. Rendered as an absolute overlay so it floats above the
+            ScrollView without pushing chapters down. */}
+        {!isWalkthroughActive && (
+          <View
+            pointerEvents="box-none"
+            style={{
+              position: 'absolute',
+              top: 8,
+              left: 12,
+              zIndex: 50,
+            }}
+          >
+            <NewsIconButton
+              size={32}
+              hasNewsChallenge={!!newsChallenge}
+              newsCompleted={newsCompleted}
+              onPress={handleNewsPress}
+              compact
+            />
+          </View>
+        )}
         <ScrollView
           ref={scrollRef}
           showsVerticalScrollIndicator={false}
@@ -1277,6 +1325,12 @@ export function DuoLearnScreen() {
           }}
           scrollEventThrottle={100}
         >
+
+          {/* Daily News Challenge entry — the hero card was removed per user
+              feedback (felt heavy / pushed chapters down). Entry now lives in
+              the floating NewsIconButton at the top-right of the learn screen
+              (see render below) — a glowing newspaper icon that keeps pulsing
+              until today's challenge is completed. */}
 
           {/* Chapter sections */}
           {ARENAS.map((arena, idx) => {
@@ -1624,24 +1678,9 @@ export function DuoLearnScreen() {
           <FlyingRewards type="coins" amount={50} onComplete={() => setShowEasterEggReward(null)} />
         )}
 
-        {/* Feed engagement nudge, hidden during walkthrough */}
-        <FeedNudgeBanner
-          message={nudge?.message ?? ""}
-          visible={!!nudge && !isWalkthroughActive}
-          onPress={() => {
-            if (nudge) {
-              // The daily-challenge nudge routes to the feed (which is /(tabs)/learn).
-              // Tell the feed to auto-scroll to the dilemma card so the user lands on
-              // the challenge itself, not at the top of the feed.
-              import('../finfeed/FinFeedScreen').then(({ setPendingFeedScrollById }) => {
-                setPendingFeedScrollById('daily-dilemma');
-              });
-              router.push(nudge.route as never);
-            }
-            dismissNudge();
-          }}
-          onDismiss={dismissNudge}
-        />
+        {/* FeedNudgeBanner removed — the only entry point to the daily challenge
+            is now the Captain Shark Daily News Challenge card at the top of the
+            learn screen (added in Stage A). The Feed tab itself is retired. */}
       </SafeAreaView>
     </View>
   );

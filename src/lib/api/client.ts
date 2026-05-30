@@ -18,13 +18,12 @@ export function setOnUnauthorized(handler: () => void): void {
   onUnauthorizedHandler = handler;
 }
 
-// Dedup guard: a stale token causes prefetchAll's 6 parallel requests to all 401
-// simultaneously, and react-query retries amplify that. Without dedup the burst
-// fires `auth_token_invalid` + dispatches `signOut` once per request — observed
-// in PostHog as 668x/user for `auth_token_invalid` and 6,532x for sign-out chain.
-// The guard fires both at most once per token-validity epoch; the next 2xx
-// response from a fresh token re-arms it for the future.
-let unauthorizedFiredForToken = false;
+// Dedup guard: one fire per distinct token value. Replaces an earlier boolean
+// flag that re-armed on ANY 2xx response — that re-arm fired the event 20x+
+// per cold start when sync endpoints had mixed 200/401 outcomes against the
+// same stale token. Comparing the token itself means: same bad token → silent,
+// new bad token (rotation, sign-in) → one event.
+let lastFiredAuthToken: string | null = null;
 
 async function request<TBody, TResponse>(
   method: 'GET' | 'POST',
@@ -54,7 +53,6 @@ async function request<TBody, TResponse>(
   const refreshed = res.headers.get('X-Auth-Refreshed-Token');
   if (refreshed) {
     await tokenStore.set(refreshed);
-    unauthorizedFiredForToken = false;
   }
 
   if (res.status === 401) {
@@ -68,24 +66,17 @@ async function request<TBody, TResponse>(
       // eslint-disable-next-line no-console
       console.warn(`[api] ✗ 401 ${method} ${url} — ${errText || '(empty body)'} (token sent: ${token ? 'yes' : 'no'})`);
     }
-    // Fire event + dispatch sign-out at most once per token-validity epoch.
-    // Without this, prefetchAll's 6 parallel 401s each fire the event and
-    // each call onUnauthorizedHandler → signOut() runs 6 times in parallel.
-    if (!unauthorizedFiredForToken) {
-      unauthorizedFiredForToken = true;
+    // Only fire when an actual token was rejected (not for guest 401s — those
+    // are "missing auth" not "invalid token"), and only once per distinct
+    // token value. Guest sessions that hit auth-required endpoints used to
+    // inflate the event count without representing a real session failure.
+    if (token && token !== lastFiredAuthToken) {
+      lastFiredAuthToken = token;
       try { captureEvent('auth_token_invalid', { endpoint: path }); } catch { /* swallow */ }
-      // Only fire sign-out if a token was actually attempted and rejected.
-      // No-token 401s mean the user is a guest who never authenticated —
-      // signing them out here would clear their guest session and bounce
-      // them back to onboarding mid-flow.
-      if (token && onUnauthorizedHandler) onUnauthorizedHandler();
+      if (onUnauthorizedHandler) onUnauthorizedHandler();
     }
     throw new ApiError('Unauthorized', 401, errBody);
   }
-
-  // Any 2xx from a freshly-attached token re-arms the guard so a future
-  // token rotation that goes stale will fire the event/sign-out once more.
-  if (res.ok && token) unauthorizedFiredForToken = false;
 
   const text = await res.text();
   const parsed = text ? JSON.parse(text) : null;
