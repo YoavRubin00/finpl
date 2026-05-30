@@ -947,7 +947,7 @@ function KnowledgeStep({ goal, onNext }: { goal: FinancialGoal | null; onNext: (
 
 const CY = new Date().getFullYear();
 const AGE_GROUPS: { label: string; sub: string; ageGroup: AgeGroup; birthYear: number }[] = [
-  { label: "16–17", sub: "מקדימים את כולם", ageGroup: "minor", birthYear: CY - 16 },
+  { label: "12–17", sub: "מקדימים את כולם", ageGroup: "minor", birthYear: CY - 15 },
   { label: "18–23", sub: "טרי מהים", ageGroup: "adult", birthYear: CY - 21 },
   { label: "24–29", sub: "צוללים פנימה", ageGroup: "adult", birthYear: CY - 26 },
   { label: "30+", sub: "מאוחר? אף פעם לא", ageGroup: "adult", birthYear: CY - 33 },
