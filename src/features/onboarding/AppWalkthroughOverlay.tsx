@@ -76,8 +76,7 @@ const STEPS: WalkthroughStep[] = [
     navigateTo: "/(tabs)/tools",
     ctaLabel: "המשך",
     screenSignal: "tools",
-    // audioUrl intentionally omitted — old recording was for the Feed tab
-    // which was replaced by the Tools tab; new narration pending.
+    audioUrl: "https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/audios/walkthrough/step-3-lv1H3VoC9p0JS9tjD8Hq7ehQGCP1jR.mp3",
   },
   // Chat tab navigation: ChatScreen suppresses the chat-style picker while
   // `walkthroughActiveScreen === 'chat'` so the picker doesn't race this overlay.
