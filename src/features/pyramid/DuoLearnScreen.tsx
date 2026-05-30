@@ -43,6 +43,10 @@ import { NotificationPermissionBanner } from "../../components/ui/NotificationPe
 import { NoFreezeUpsellBanner } from "../streak/NoFreezeUpsellBanner";
 import { StreakAtRiskBanner } from "../streak/StreakAtRiskBanner";
 import { StreakCalendarModal } from "../streak/StreakCalendarModal";
+import { DailyNewsChallengeCard } from "../daily-news-challenge/DailyNewsChallengeCard";
+import { DailyNewsChallengeSheet } from "../daily-news-challenge/DailyNewsChallengeSheet";
+import { useDailyNewsChallengeStore } from "../daily-news-challenge/useDailyNewsChallengeStore";
+import { fetchTodayChallenge } from "../daily-news-challenge/dailyNewsChallengeApi";
 import { FINN_STANDARD } from "../retention-loops/finnMascotConfig";
 import { FeedNudgeBanner } from "../../components/ui/FeedNudgeBanner";
 import { useFeedNudge } from "../../hooks/useFeedNudge";
@@ -973,6 +977,24 @@ export function DuoLearnScreen() {
   // Pushes them to /(auth)/register with returnTo=/lesson/mod-1-1 so they land in
   // chapter 1 as a registered user with all skip-intro progress preserved.
   const [showSkipIntroRegisterCTA, setShowSkipIntroRegisterCTA] = useState(false);
+
+  // Daily News Challenge — hero card at the TOP of the learn screen + full-sheet
+  // modal. State + store reads live at screen-level so the card can render at
+  // mount-time and the sheet can open/close from a single source.
+  const [newsSheetVisible, setNewsSheetVisible] = useState(false);
+  const newsChallenge = useDailyNewsChallengeStore((s) => s.todayChallenge);
+  const newsCompleted = useDailyNewsChallengeStore((s) => s.hasCompletedToday());
+  const newsProChestOpened = useDailyNewsChallengeStore((s) => s.proChestOpened);
+  const setNewsChallenge = useDailyNewsChallengeStore((s) => s.setTodayChallenge);
+  useEffect(() => {
+    let cancelled = false;
+    fetchTodayChallenge()
+      .then((c) => { if (!cancelled && c) setNewsChallenge(c); })
+      .catch(() => { /* non-fatal; card renders null when no challenge */ });
+    return () => { cancelled = true; };
+  }, [setNewsChallenge]);
+  const handleNewsPress = useCallback(() => { tapHaptic(); setNewsSheetVisible(true); }, []);
+
   const { layer } = getPyramidStatus(xp);
   const [lockedModalVisible, setLockedModalVisible] = useState(false);
   const [showStreakCalendar, setShowStreakCalendar] = useState(false);
@@ -1208,6 +1230,7 @@ export function DuoLearnScreen() {
       {!isWalkthroughActive && <StreakAtRiskBanner />}
       {!isWalkthroughActive && <NoFreezeUpsellBanner />}
       <StreakCalendarModal visible={showStreakCalendar} onClose={() => setShowStreakCalendar(false)} />
+      <DailyNewsChallengeSheet visible={newsSheetVisible} onClose={() => setNewsSheetVisible(false)} />
 
       {/* Skip-intro register CTA for guests — fires after handleSkipIntro */}
       {showSkipIntroRegisterCTA && (
@@ -1277,6 +1300,17 @@ export function DuoLearnScreen() {
           }}
           scrollEventThrottle={100}
         >
+
+          {/* Daily News Challenge — hero card at the top, replaces the legacy
+              daily-quest widget. Renders null when no challenge is available,
+              so it disappears cleanly on offline / missing-cron days. */}
+          <DailyNewsChallengeCard
+            challenge={newsChallenge}
+            completed={newsCompleted}
+            proChestOpened={newsProChestOpened}
+            isPro={isPro}
+            onPress={handleNewsPress}
+          />
 
           {/* Chapter sections */}
           {ARENAS.map((arena, idx) => {
