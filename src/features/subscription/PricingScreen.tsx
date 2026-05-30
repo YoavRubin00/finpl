@@ -273,14 +273,20 @@ export function PricingScreen() {
         Alert.alert("ברוכים הבאים ל-Pro! 🎉", "גישה מלאה פתוחה. תהנו!");
       }
     } catch (err: unknown) {
-      const isCancelled =
-        err instanceof Error && err.message.includes('PURCHASE_CANCELLED');
+      // RevenueCat / native sheets surface user cancellation as several
+      // different strings: "PURCHASE_CANCELLED", "Purchase was cancelled.",
+      // "User cancelled", and a userCancelled boolean on the error object.
+      // Match all of them so cancellations don't get logged as failures.
+      const message = err instanceof Error ? err.message : '';
+      const userCancelled =
+        (err as { userCancelled?: boolean } | null)?.userCancelled === true;
+      const isCancelled = userCancelled || /cancel/i.test(message);
       if (isCancelled) {
         captureEvent('subscription_cancelled_at_checkout');
       } else {
-        const message = err instanceof Error ? err.message : "שגיאה לא צפויה";
-        captureEvent('subscription_purchase_failed', { error_message: message });
-        Alert.alert("שגיאת תשלום", message);
+        const fallbackMessage = message || "שגיאה לא צפויה";
+        captureEvent('subscription_purchase_failed', { error_message: fallbackMessage });
+        Alert.alert("שגיאת תשלום", fallbackMessage);
       }
     } finally {
       setIsLoading(false);
