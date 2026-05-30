@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { View, Text, Pressable } from 'react-native';
 import { Image as ExpoImage } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -102,21 +102,36 @@ export function LoadingBubble({ mode, ticker }: Props): React.ReactElement {
   // Parallel JS-side ticker for the numeric percentage label. Mirrors the
   // same Easing.out(cubic) curve so the displayed number tracks the bar
   // fill visually. Stops updating once the analysis lands (jumps to 100).
+  //
+  // Ref-stored so the "analysis done" effect below can cancel it — otherwise
+  // the timer would keep firing and overwrite the 100% jump back down to the
+  // time-based value (which would lock at 95% past EXPECTED_DEEP_MS).
+  const pctTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
   useEffect(() => {
     if (mode !== 'deep') return undefined;
     const startedAt = Date.now();
-    const id = setInterval(() => {
+    pctTimerRef.current = setInterval(() => {
       const elapsed = Date.now() - startedAt;
       const t = Math.min(1, elapsed / EXPECTED_DEEP_MS);
       const eased = 1 - Math.pow(1 - t, 3); // matches Easing.out(cubic)
       setPct(Math.min(95, Math.round(eased * 95)));
     }, 240);
-    return () => clearInterval(id);
+    return () => {
+      if (pctTimerRef.current) clearInterval(pctTimerRef.current);
+      pctTimerRef.current = null;
+    };
   }, [mode]);
 
   useEffect(() => {
     if (mode !== 'deep') return;
-    if (pendingDeepCard || !loading) setPct(100);
+    if (pendingDeepCard || !loading) {
+      if (pctTimerRef.current) {
+        clearInterval(pctTimerRef.current);
+        pctTimerRef.current = null;
+      }
+      setPct(100);
+    }
   }, [pendingDeepCard, loading, mode]);
 
   const dotStyle = useAnimatedStyle(() => ({ opacity: dot.value }));
