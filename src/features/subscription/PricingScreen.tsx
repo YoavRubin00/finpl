@@ -454,7 +454,7 @@ export function PricingScreen() {
           <View style={[styles.ctaSection, { paddingBottom: Math.max(insets.bottom, 16) }]}>
             {isCurrentlyPro ? (
               <View style={styles.currentPlanBadge}>
-                <Text style={styles.currentPlanText}>✦ אתה כבר PRO</Text>
+                <Text style={styles.currentPlanText}>✦ המנוי שלכם פעיל</Text>
               </View>
             ) : (
               <>
