@@ -142,8 +142,6 @@ export function BreakingNewsScreen(): React.ReactElement {
   };
 
   const handlePickTicker = async (ticker: string) => {
-    // eslint-disable-next-line no-console
-    console.log('[BreakingNews] handlePickTicker entry:', ticker);
     setErrorBanner(null);
     setPickerOpen(false);
     // Optimistic: render the placeholder card immediately so the user sees feedback.
