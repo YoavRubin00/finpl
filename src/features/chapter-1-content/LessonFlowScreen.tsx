@@ -95,6 +95,13 @@ import { BudgetNinjaCard } from "../finfeed/minigames/budget-ninja/BudgetNinjaCa
 import { CashoutRushCard } from "../finfeed/minigames/cashout-rush/CashoutRushCard";
 import { MacroEventCard } from "../macro-events/MacroEventCard";
 import { macroEventsData } from "../macro-events/macroEventsData";
+// Inter-module CONTENT components (Feed-derived; rendered when a module
+// declares `interModuleContent` but no `interModuleGame`).
+import { PremiumLearningCard } from "../premium-learning/PremiumLearningCard";
+import { PREMIUM_LEARNING_ITEMS } from "../premium-learning/data";
+import { DidYouKnowCard } from "../did-you-know/DidYouKnowCard";
+import { LiveMarketCard } from "../live-market/LiveMarketCard";
+import { LiveNewsQuizCard } from "../live-news/LiveNewsQuizCard";
 import { TA125WarRecoveryChart } from "../chapter-4-content/components/TA125WarRecoveryChart";
 import { FlyingRewards } from "../../components/ui/FlyingRewards";
 import { GoldCoinIcon } from "../../components/ui/GoldCoinIcon";
@@ -2816,6 +2823,10 @@ export function LessonFlowScreen() {
   const [showWisdom, setShowWisdom] = useState(false);
   const [showInterGame, setShowInterGame] = useState(false);
   const [interGamePhase, setInterGamePhase] = useState<'video' | 'finn'>('video');
+  // Inter-module CONTENT (Feed-derived cards: PremiumLearning, DidYouKnow,
+  // LiveMarket, LiveNews). Fires only when interModuleGame is absent — each
+  // module gets at most one inter-module artifact, never both back-to-back.
+  const [showInterContent, setShowInterContent] = useState(false);
   const [confettiActive, setConfettiActive] = useState(false);
   const [showXpReward, setShowXpReward] = useState(false);
   const [showCoinsReward, setShowCoinsReward] = useState(false);
@@ -4278,6 +4289,12 @@ export function LessonFlowScreen() {
                 if (mod?.interModuleGame && !showInterGame && !nextIsGame) {
                   setInterGamePhase('video');
                   setShowInterGame(true);
+                } else if (mod?.interModuleContent && !showInterContent && !nextIsGame) {
+                  // Surface a Feed-derived card (premium-learning, did-you-know,
+                  // live-market, or live-news) before advancing. Each module
+                  // assigns at most one — see Module.interModuleContent in
+                  // chapter-1-content/types.ts.
+                  setShowInterContent(true);
                 } else {
                   goToNextSequentialModule();
                 }
@@ -4400,6 +4417,64 @@ export function LessonFlowScreen() {
             )}
             </ScrollView>
           </GestureHandlerRootView>
+        </Modal>
+      )}
+
+      {/* Inter-module CONTENT overlay — fires only when interModuleGame is
+          absent. Renders the first present field from interModuleContent.
+          The cards are reused as-is from the (now-retired) FinFeed surface. */}
+      {showInterContent && mod?.interModuleContent && (
+        <Modal
+          visible
+          transparent
+          animationType="slide"
+          statusBarTranslucent
+          onRequestClose={() => { setShowInterContent(false); goToNextSequentialModule(); }}
+          accessibilityViewIsModal
+        >
+          <View style={{ flex: 1, backgroundColor: "#f8fafc" }}>
+            <View style={{ flexDirection: "row-reverse", paddingHorizontal: 16, paddingTop: Math.max(safeInsets.top + 12, 50), paddingBottom: 8 }}>
+              <Pressable
+                onPress={() => { setShowInterContent(false); goToNextSequentialModule(); }}
+                style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: "rgba(0,0,0,0.06)", alignItems: "center", justifyContent: "center" }}
+                accessibilityRole="button"
+                accessibilityLabel="סגור והמשך"
+                hitSlop={8}
+              >
+                <Text style={{ color: "#475569", fontSize: 18, fontWeight: "800", lineHeight: 20 }}>✕</Text>
+              </Pressable>
+            </View>
+            <ScrollView
+              style={{ flex: 1 }}
+              contentContainerStyle={{ paddingBottom: Math.max(safeInsets.bottom + 24, 48), flexGrow: 1 }}
+              showsVerticalScrollIndicator={false}
+            >
+              {(() => {
+                // Each card renders with its native Feed-style API (the components
+                // were extracted from FinFeed unchanged). The X-close button in
+                // the modal header handles dismissal — that's what was hooked into
+                // the scroll-snap on the old Feed, now manual in this surface.
+                const c = mod.interModuleContent;
+                const close = () => { setShowInterContent(false); goToNextSequentialModule(); };
+                if (c?.premiumLearning) {
+                  const item = PREMIUM_LEARNING_ITEMS.find((i) => i.id === c.premiumLearning);
+                  return item ? <PremiumLearningCard item={item} isActive onContinue={close} /> : null;
+                }
+                if (c?.didYouKnow) {
+                  return <DidYouKnowCard isActive itemId={c.didYouKnow} />;
+                }
+                if (c?.liveMarketTicker) {
+                  // LiveMarketCard reads its own ticker internally; we just
+                  // mount it. (Per-ticker selection lives in liveMarketTypes.)
+                  return <LiveMarketCard />;
+                }
+                if (c?.liveNewsId) {
+                  return <LiveNewsQuizCard isActive />;
+                }
+                return null;
+              })()}
+            </ScrollView>
+          </View>
         </Modal>
       )}
 

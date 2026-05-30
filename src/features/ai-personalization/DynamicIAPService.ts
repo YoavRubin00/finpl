@@ -115,12 +115,15 @@ function urgencyToDisplayMs(urgency: MonetizationOffer['urgency']): number {
 }
 
 function urgencyToDelayMs(urgency: MonetizationOffer['urgency']): number {
+  // Cooling-off floor: every offer waits at least 2s so it never lands on
+  // top of an emotional moment. Audrey rule, replaces the old "strike while
+  // hot" 500ms delay that exploited post-failure spikes.
   switch (urgency) {
     case 'high':
-      return 500; // strike while hot
+      return 2_000;
     case 'medium':
-      return 1_500;
+      return 2_500;
     case 'low':
-      return 2_500; // let the moment settle
+      return 3_500;
   }
 }

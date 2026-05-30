@@ -137,20 +137,8 @@ function deriveMonetizationContext(
       });
       break;
     case 'Anxious/Needs Security':
-      offers.push({
-        trigger: 'after_failure',
-        bundleKey: 'safety_net_bundle',
-        headline: 'רשת ביטחון 🛡️',
-        subtext: 'לבבות + ג׳מס כדי שתמיד תהיה מוגן',
-        urgency: 'medium',
-      });
-      offers.push({
-        trigger: 'streak_at_risk',
-        bundleKey: 'streak_shield',
-        headline: 'שמור על הסטריק!',
-        subtext: 'מגן סטריק ל-48 שעות',
-        urgency: 'high',
-      });
+      // Audrey rule: emotional vulnerability is never a monetization vector.
+      // Anxious users get help, not commerce — see deriveActions().
       break;
     case 'Frugal/Value Driven':
       offers.push({
@@ -197,8 +185,11 @@ function deriveActions(
     actions.push('UNLOCK_ADVANCED_INVESTING');
   }
 
-  /** Trigger targeted IAP when vector is known */
-  if (vector !== 'Unknown') {
+  /** Anxious users get help, not a sales push */
+  if (vector === 'Anxious/Needs Security') {
+    actions.push('SHOW_CALM_TIP');
+    actions.push('OFFER_REPLAY_LAST_LESSON');
+  } else if (vector !== 'Unknown') {
     actions.push('TRIGGER_TARGETED_IAP');
   }
 
