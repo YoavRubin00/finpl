@@ -24,7 +24,7 @@ import Animated, {
 import { LinearGradient } from 'expo-linear-gradient';
 import LottieView from 'lottie-react-native';
 import { Image as ExpoImage } from 'expo-image';
-import { ChevronLeft, MessageCircle, Newspaper } from 'lucide-react-native';
+import { ChevronLeft, MessageCircle, Newspaper, ChevronDown } from 'lucide-react-native';
 
 import { STITCH } from '../../../constants/theme';
 import { tapHaptic, successHaptic, errorHaptic } from '../../../utils/haptics';
@@ -417,19 +417,24 @@ export function ChallengePage({
               <Text style={styles.summary} allowFontScaling={false}>
                 {item.summaryHe}
               </Text>
-              {item.explanation ? (
-                <Text style={styles.explanation} allowFontScaling={false}>
-                  {item.explanation}
-                </Text>
-              ) : null}
-              {item.historicalExample ? (
-                // "Newspaper-clipping" framing: gold left border + 📰 icon —
-                // reads as archived news, not as a textbook reference.
-                <View style={styles.historyBox}>
-                  <Text style={styles.historyLabel} allowFontScaling={false}>📰 דוגמה מהעבר</Text>
-                  <Text style={styles.historyText} allowFontScaling={false}>
-                    {item.historicalExample}
-                  </Text>
+              {/* Detail toggles — default view stays tight (header + summary
+                  + Continue). Curious users tap "למה?" or "דוגמה מהעבר" to
+                  open the wall-of-text deep-dive on demand. */}
+              {(item.explanation || item.historicalExample) ? (
+                <View style={styles.detailRow}>
+                  {item.explanation ? (
+                    <DetailToggle
+                      label="💡 למה?"
+                      body={item.explanation}
+                    />
+                  ) : null}
+                  {item.historicalExample ? (
+                    <DetailToggle
+                      label="📰 דוגמה מהעבר"
+                      body={item.historicalExample}
+                      tone="amber"
+                    />
+                  ) : null}
                 </View>
               ) : null}
               {wasCorrect && !reduceMotion && (
@@ -740,6 +745,51 @@ const styles = StyleSheet.create({
     borderLeftWidth: 4,
     borderLeftColor: '#facc15',
   },
+  detailRow: {
+    flexDirection: 'row-reverse',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginTop: 4,
+  },
+  detailPill: {
+    flexDirection: 'row-reverse',
+    alignItems: 'center',
+    gap: 6,
+    paddingVertical: 7,
+    paddingHorizontal: 12,
+    borderRadius: 999,
+    backgroundColor: 'rgba(255,255,255,0.7)',
+    borderWidth: 1,
+    borderColor: 'rgba(15,23,42,0.08)',
+  },
+  detailPillLabel: {
+    fontSize: 12,
+    fontWeight: '800',
+    color: STITCH.onSurface,
+    writingDirection: 'rtl',
+  },
+  detailBody: {
+    marginTop: 8,
+    padding: 10,
+    borderRadius: 10,
+    backgroundColor: 'rgba(255,255,255,0.75)',
+  },
+  detailBodyAmber: {
+    marginTop: 8,
+    padding: 10,
+    borderRadius: 10,
+    backgroundColor: '#fefce8',
+    borderLeftWidth: 4,
+    borderLeftColor: '#facc15',
+  },
+  detailBodyText: {
+    fontSize: 13,
+    fontWeight: '500',
+    color: STITCH.onSurface,
+    writingDirection: 'rtl',
+    textAlign: 'right',
+    lineHeight: 20,
+  },
   chatFinnIcon: {
     width: 24,
     height: 24,
@@ -811,3 +861,37 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
 });
+
+/**
+ * Tap-to-expand detail pill — used inside the result panel so the long-form
+ * explanation + historical example don't slam the user with a wall of text.
+ * Default state: pill only. Tap → body unfolds below. Amber tone gives the
+ * "📰 דוגמה מהעבר" pill its newspaper-clipping feel.
+ */
+function DetailToggle({ label, body, tone }: { label: string; body: string; tone?: 'amber' }): React.ReactElement {
+  const [open, setOpen] = useState(false);
+  return (
+    <View style={{ width: '100%' }}>
+      <Pressable
+        onPress={() => { tapHaptic(); setOpen((v) => !v); }}
+        style={styles.detailPill}
+        accessibilityRole="button"
+        accessibilityLabel={open ? `סגור ${label}` : `פתח ${label}`}
+        hitSlop={6}
+      >
+        <Text style={styles.detailPillLabel} allowFontScaling={false}>{label}</Text>
+        <ChevronDown
+          size={14}
+          color={STITCH.onSurface}
+          strokeWidth={2.4}
+          style={{ transform: [{ rotate: open ? '180deg' : '0deg' }] }}
+        />
+      </Pressable>
+      {open ? (
+        <Animated.View entering={FadeIn.duration(180)} style={tone === 'amber' ? styles.detailBodyAmber : styles.detailBody}>
+          <Text style={styles.detailBodyText} allowFontScaling={false}>{body}</Text>
+        </Animated.View>
+      ) : null}
+    </View>
+  );
+}
