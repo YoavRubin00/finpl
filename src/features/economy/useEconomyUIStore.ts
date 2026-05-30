@@ -180,7 +180,10 @@ function fireEconomyDelta(delta: {
     };
   });
   applyEconomyDelta(delta)
-    .then(() => queryClient.invalidateQueries({ queryKey: economyQueryKey }))
+    // Server response IS the authoritative economy — write it straight to the
+    // cache instead of invalidating (which would trigger a second GET round-trip
+    // for data we already have in hand).
+    .then((res) => queryClient.setQueryData<Economy | null>(economyQueryKey, res.economy))
     .catch(() => { /* swallow — optimistic state stays until server is reachable */ });
 }
 

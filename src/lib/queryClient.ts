@@ -12,7 +12,12 @@ export function createQueryClient(): QueryClient {
         refetchOnReconnect: true,
       },
       mutations: {
-        retry: 1,
+        // Mutations must not retry by default. /api/sync/economy.ts applies
+        // deltas as COALESCE(value, 0) + delta with no Idempotency-Key — a POST
+        // that succeeded server-side but failed to return (transient network) +
+        // a retry = double-granted coins/XP/gems. Until the endpoint becomes
+        // idempotent (request-id based dedup), every mutation gets one shot.
+        retry: 0,
       },
     },
   });

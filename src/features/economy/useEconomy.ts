@@ -42,8 +42,13 @@ export function useApplyEconomyDelta() {
     },
     onError: (_e, _i, ctx) => {
       if (ctx?.prev !== undefined) qc.setQueryData(economyQueryKey, ctx.prev);
+      // Only invalidate on error so the next render pulls fresh server truth.
+      qc.invalidateQueries({ queryKey: economyQueryKey });
     },
-    onSettled: () => qc.invalidateQueries({ queryKey: economyQueryKey }),
+    // Server already returned the authoritative economy row — write it straight
+    // into the cache instead of invalidating, which would trigger a redundant
+    // GET /api/sync/economy after every XP/coin/gem mutation.
+    onSuccess: (economy) => qc.setQueryData(economyQueryKey, economy),
   });
 }
 
