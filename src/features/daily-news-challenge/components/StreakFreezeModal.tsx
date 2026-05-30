@@ -42,11 +42,11 @@ export function StreakFreezeModal({
         <View style={s.icon}>
           <Snowflake size={36} color="#0ea5e9" />
         </View>
-        <Text style={s.title}>הצילו את הרצף!</Text>
+        <Text style={s.title}>לשמור על הרצף?</Text>
         <Text style={s.body}>
           {canFreeze
-            ? `יש לך ${freezesAvailable} הקפאה. השתמש כדי לשמור על רצף של ${streak} ימים.`
-            : `אין לך הקפאות זמינות. הרצף של ${streak} ימים בסכנה.`}
+            ? `יש לך ${freezesAvailable} הקפאה. השתמש כדי לסגור את היום ולשמור על רצף של ${streak} ימים.`
+            : `אין לך הקפאות זמינות. יום אחרון לסגור את הרצף של ${streak} ימים.`}
         </Text>
 
         {canFreeze ? (

@@ -223,8 +223,6 @@ function CatalogRow({
   }));
 
   const handlePress = () => {
-    // eslint-disable-next-line no-console
-    console.log('[BreakingNews] CatalogRow tap:', entry.ticker, 'disabled?', disabled);
     if (!disabled) onPick();
   };
 

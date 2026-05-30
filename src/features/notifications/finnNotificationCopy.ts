@@ -97,7 +97,7 @@ export function getToneFromGoal(goalMinutes: number | null | undefined): GoalTon
 
 /** Casual tone, warm, low-pressure, for 5-10 min/day learners */
 const CASUAL_SAFE_COPY: CopyPool = [
-    { title: "💙 נתחיל עם 5 דקות? 🐟", body: "קפטן שארק כאן. בלי לחץ, סתם 5 דקות קצרות" },
+    { title: "💙 נתחיל עם 5 דקות?", body: "קפטן שארק כאן. בלי לחץ, סתם 5 דקות קצרות" },
     { title: "🌊 תזכורת עדינה מקפטן שארק", body: "רק טיפ אחד היום? 2 דקות, לא יותר" },
     { title: "✨ 5 דקות של למידה שקטה", body: "בואו נלמד משהו קטן ביחד. אין לחץ" },
 ];
