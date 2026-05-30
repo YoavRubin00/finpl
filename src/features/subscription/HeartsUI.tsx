@@ -18,10 +18,9 @@ import { Heart } from 'lucide-react-native';
 import { FINN_STANDARD } from '../retention-loops/finnMascotConfig';
 import { useHeartsStore, MAX_HEARTS } from './useHeartsStore';
 import { getTimeUntilNextHeart } from './subscriptionConstants';
-import { useEconomy } from '../../features/economy/useEconomy';
-import { applyEconomyDelta } from '../../lib/api/economy';
+import { useEconomy, economyQueryKey } from '../../features/economy/useEconomy';
+import { fireEconomyDelta } from '../../features/economy/useEconomyUIStore';
 import { queryClient } from '../../lib/queryClient';
-import { economyQueryKey } from '../../features/economy/useEconomy';
 import type { Economy } from '../../lib/api/economy';
 import { tapHaptic, successHaptic } from '../../utils/haptics';
 import { useRewardedAd } from '../../hooks/useRewardedAd';
@@ -187,9 +186,7 @@ export function OutOfHeartsModal({ visible, onDismiss, onUpgrade, onHeartsRefill
             const cachedEcoGems = queryClient.getQueryData<Economy | null>(economyQueryKey);
             const canAffordGems = (cachedEcoGems?.gems ?? 0) >= HEART_REFILL_GEM_COST;
             if (canAffordGems) {
-              applyEconomyDelta({ gemsDelta: -HEART_REFILL_GEM_COST })
-                .then(() => queryClient.invalidateQueries({ queryKey: economyQueryKey }))
-                .catch(() => {});
+              fireEconomyDelta({ gemsDelta: -HEART_REFILL_GEM_COST });
             }
             if (canAffordGems) {
                 useHeartsStore.setState({ hearts: current + 1, lastHeartLostAt: current + 1 >= MAX_HEARTS ? null : store.lastHeartLostAt });

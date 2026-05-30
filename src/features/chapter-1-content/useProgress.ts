@@ -4,6 +4,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { getProgress, upsertModuleProgress, type ModuleProgressRow } from '../../lib/api/progress';
 import { queryClient } from '../../lib/queryClient';
 import { useCompletedModulesStore } from '../economy/useCompletedModulesStore';
+import { useAuthStore } from '../auth/useAuthStore';
 
 export const progressQueryKey = ['progress'] as const;
 
@@ -20,10 +21,16 @@ function localCompletedForChapter(chapterStoreKey: string): string[] {
 }
 
 export function useProgress() {
+  // Skip for guests — server progress is keyed by authId; guests use the
+  // local useCompletedModulesStore (mirrored into MMKV) so completions are
+  // remembered across cold starts even pre-account.
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
+  const isGuest = useAuthStore((s) => s.isGuest);
   const query = useQuery({
     queryKey: progressQueryKey,
     queryFn: async () => (await getProgress()).progress,
     staleTime: 5 * 60_000,
+    enabled: isAuthenticated && !isGuest,
   });
   // Backfill the durable local store with whatever the server reports as
   // completed, so the local store stays a superset of the server and never
@@ -77,11 +84,21 @@ export function useUpsertModuleProgress() {
     onError: (_e, _p, ctx) => {
       if (ctx?.prev !== undefined) qc.setQueryData(progressQueryKey, ctx.prev);
     },
-    // The POST returns the full authoritative progress array — set it directly
-    // so the cache reflects the server without a blind refetch that could race
-    // and momentarily drop the just-completed row.
+    // The POST now returns ONLY the upserted row (server changed from SELECT *
+    // of every row to a thin RETURNING — saves bandwidth that grew linearly
+    // with completed modules). Merge it into the existing cache by moduleId so
+    // the user's other progress isn't dropped.
     onSuccess: (data) => {
-      if (Array.isArray(data)) qc.setQueryData(progressQueryKey, data);
+      if (!Array.isArray(data) || data.length === 0) return;
+      qc.setQueryData<ModuleProgressRow[]>(progressQueryKey, (old) => {
+        const next = old ? [...old] : [];
+        for (const row of data) {
+          const idx = next.findIndex((m) => m.moduleId === row.moduleId);
+          if (idx >= 0) next[idx] = row;
+          else next.push(row);
+        }
+        return next;
+      });
     },
   });
 }

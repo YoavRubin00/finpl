@@ -1,14 +1,22 @@
 // src/features/economy/useEconomy.ts
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { applyEconomyDelta, getEconomy, type Economy } from '../../lib/api/economy';
+import { useAuthStore } from '../auth/useAuthStore';
 
 export const economyQueryKey = ['economy'] as const;
 
 export function useEconomy() {
+  // Guests cannot read their economy server-side — they have no auth token,
+  // so this query would just generate a 401 every mount. Skip it entirely
+  // for guests; the fire-and-forget optimistic cache writes keep the local
+  // UI in sync until they convert to a real account.
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
+  const isGuest = useAuthStore((s) => s.isGuest);
   return useQuery({
     queryKey: economyQueryKey,
     queryFn: async () => (await getEconomy()).economy,
     staleTime: 30_000,
+    enabled: isAuthenticated && !isGuest,
   });
 }
 
@@ -22,6 +30,12 @@ interface DeltaInput {
 export function useApplyEconomyDelta() {
   const qc = useQueryClient();
   return useMutation({
+    // Sequential scope so two concurrent mutations (e.g. useSpendVirtual +
+    // useCreditVirtual fired together) don't both read the same stale balance
+    // from the cache before either has written its result. React Query queues
+    // mutations sharing a scope.id and runs them one at a time.
+    scope: { id: 'economy' },
+    mutationKey: economyQueryKey,
     mutationFn: async (input: DeltaInput) => (await applyEconomyDelta(input)).economy,
     onMutate: async (input) => {
       await qc.cancelQueries({ queryKey: economyQueryKey });

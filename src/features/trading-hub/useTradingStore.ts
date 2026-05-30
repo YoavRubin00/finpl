@@ -3,9 +3,9 @@ import { persist, createJSONStorage } from 'zustand/middleware';
 import { zustandStorage } from '../../lib/zustandStorage';
 import { registerLocalStore } from '../../lib/stores/registry';
 import { ActivePosition, PendingLimitOrder } from './tradingHubTypes';
-import { applyEconomyDelta } from '../../lib/api/economy';
 import { queryClient } from '../../lib/queryClient';
 import { economyQueryKey } from '../economy/useEconomy';
+import { fireEconomyDelta } from '../economy/useEconomyUIStore';
 import type { Economy } from '../../lib/api/economy';
 
 /**
@@ -52,9 +52,7 @@ function logTradeFireAndForget(
     .then((m) => m.logTrade({ assetSymbol, tradeType, quantity, priceAtExecution, cashDelta, skipPortfolio }))
     .then((result) => {
       if (result.ok) {
-        applyEconomyDelta({ virtualBalanceSet: result.virtualBalance })
-          .then(() => queryClient.invalidateQueries({ queryKey: economyQueryKey }))
-          .catch(() => {});
+        fireEconomyDelta({ virtualBalanceSet: result.virtualBalance });
       } else if (result.status === 402 && onRejected) {
         onRejected();
       }
@@ -134,9 +132,7 @@ export const useTradingStore = create<TradingStore>()(
         const cachedEco = queryClient.getQueryData<Economy | null>(economyQueryKey);
         const canAfford = (cachedEco?.coins ?? 0) >= amountInvested;
         if (!canAfford) return null;
-        applyEconomyDelta({ coinsDelta: -amountInvested })
-          .then(() => queryClient.invalidateQueries({ queryKey: economyQueryKey }))
-          .catch(() => {});
+        fireEconomyDelta({ coinsDelta: -amountInvested });
 
         const id = generateId();
         const position: ActivePosition = {
@@ -162,9 +158,7 @@ export const useTradingStore = create<TradingStore>()(
           // Server rejected (e.g. cross-device race exhausted balance):
           // refund the local debit and remove the ghost position.
           () => {
-            applyEconomyDelta({ coinsDelta: amountInvested })
-              .then(() => queryClient.invalidateQueries({ queryKey: economyQueryKey }))
-              .catch(() => {});
+            fireEconomyDelta({ coinsDelta: amountInvested });
             set((state) => ({
               positions: state.positions.filter((p) => p.id !== id),
             }));
@@ -186,9 +180,7 @@ export const useTradingStore = create<TradingStore>()(
         const pnlFactor = 1 + position.pnlPercent / 100;
         const returned = Math.max(0, Math.round(position.amountInvested * pnlFactor));
         if (returned > 0) {
-          applyEconomyDelta({ coinsDelta: returned })
-            .then(() => queryClient.invalidateQueries({ queryKey: economyQueryKey }))
-            .catch(() => {});
+          fireEconomyDelta({ coinsDelta: returned });
         }
         // Closing a long → SELL (decrements portfolio).
         // Closing a short → BUY, but skipPortfolio=true so no phantom long is created.
@@ -204,9 +196,7 @@ export const useTradingStore = create<TradingStore>()(
           // local credit and restore the position so the user can retry.
           () => {
             if (returned > 0) {
-              applyEconomyDelta({ coinsDelta: -returned })
-                .then(() => queryClient.invalidateQueries({ queryKey: economyQueryKey }))
-                .catch(() => {});
+              fireEconomyDelta({ coinsDelta: -returned });
             }
             set((state) => ({
               positions: [...state.positions, position],

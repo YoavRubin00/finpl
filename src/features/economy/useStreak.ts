@@ -6,14 +6,20 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { getStreak, recordDailyActivity, type StreakState } from '../../lib/api/streak';
 import { queryClient } from '../../lib/queryClient';
 import { useEconomyUIStore } from './useEconomyUIStore';
+import { useAuthStore } from '../auth/useAuthStore';
 
 export const streakQueryKey = ['streak'] as const;
 
 export function useStreak() {
+  // Skip for guests — server streak is keyed off authId; guests use the local
+  // useEconomyUIStore counter instead until they convert.
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
+  const isGuest = useAuthStore((s) => s.isGuest);
   return useQuery({
     queryKey: streakQueryKey,
     queryFn: async () => (await getStreak()).streak,
     staleTime: 60_000,
+    enabled: isAuthenticated && !isGuest,
   });
 }
 

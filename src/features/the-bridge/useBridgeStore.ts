@@ -2,9 +2,9 @@ import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import { zustandStorage } from '../../lib/zustandStorage';
 import { registerLocalStore } from '../../lib/stores/registry';
-import { applyEconomyDelta } from '../../lib/api/economy';
 import { queryClient } from '../../lib/queryClient';
 import { economyQueryKey } from '../economy/useEconomy';
+import { fireEconomyDelta } from '../economy/useEconomyUIStore';
 import type { Economy } from '../../lib/api/economy';
 import { BRIDGE_BENEFITS } from './bridgeData';
 
@@ -33,9 +33,7 @@ export const useBridgeStore = create<BridgeState>()(
         const cachedEco = queryClient.getQueryData<Economy | null>(economyQueryKey);
         const canAfford = (cachedEco?.coins ?? 0) >= benefit.costCoins;
         if (!canAfford) return false;
-        applyEconomyDelta({ coinsDelta: -benefit.costCoins })
-          .then(() => queryClient.invalidateQueries({ queryKey: economyQueryKey }))
-          .catch(() => {});
+        fireEconomyDelta({ coinsDelta: -benefit.costCoins });
 
         set((state) => ({
           redeemedBenefitIds: [...state.redeemedBenefitIds, benefitId],
