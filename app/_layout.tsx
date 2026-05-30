@@ -101,7 +101,6 @@ import { useUpgradeNudgeBanner } from "../src/features/monetization/useUpgradeNu
 import { GlobalQuestCompletionModal } from "../src/features/daily-quests/GlobalQuestCompletionModal";
 import { DailyBridgeNudgeModal } from "../src/components/ui/DailyBridgeNudgeModal";
 import { InviteFriendsNudgeModal } from "../src/components/ui/InviteFriendsNudgeModal";
-import { GuestRegisterDailyNudge } from "../src/features/auth/GuestRegisterDailyNudge";
 import { PostWalkthroughRegisterCTAGate } from "../src/features/auth/PostWalkthroughRegisterCTA";
 import { configureRevenueCat } from "../src/services/revenueCat";
 import { AppWalkthroughOverlay } from "../src/features/onboarding/AppWalkthroughOverlay";
@@ -373,10 +372,11 @@ function RootLayoutInner() {
   //   After walkthrough → notification permission banner.
   //   mod-0-2 onwards: engagement content (SharkLove/DoN/Netflix prompt/videos) allowed,
   //                    plus profile questions and (for guests) register CTAs.
-  //   GuestRegisterDailyNudge (bottom banner) stays gated to mod-0-3 — register CTAs
-  //   from LessonFlowScreen handle the per-module nudge from 0-3/4/5.
+  //   Post-walkthrough register CTA (PostWalkthroughRegisterCTAGate) is the
+  //   only global nudge for guests; per-module CTAs from LessonFlowScreen
+  //   handle 0-3/4/5. Old dark-themed GuestRegisterDailyNudge removed
+  //   2026-05-30 — it duplicated the post-walkthrough CTA.
   const isMod01Complete = useIsModuleCompleted("mod-0-1");
-  const isMod03Complete = useIsModuleCompleted("mod-0-3");
   const allowAutoPopups = hasCompletedOnboarding && hasSeenWalkthrough && isMod01Complete;
 
   // ── Android Play Install Referrer — runs once on first launch ──
@@ -527,7 +527,6 @@ function RootLayoutInner() {
               {allowAutoPopups && <GlobalQuestCompletionModal />}
               <DailyBridgeNudgeModal />
               <InviteFriendsNudgeModal />
-              {hasCompletedOnboarding && hasSeenWalkthrough && isMod03Complete && <GuestRegisterDailyNudge />}
               {/* Post-walkthrough register CTA for Guests. The gate handles
                   all conditions internally: pendingPostWalkthroughCTA flag
                   set by AppWalkthroughOverlay on completion + isGuest +

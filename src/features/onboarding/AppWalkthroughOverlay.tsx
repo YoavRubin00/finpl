@@ -76,18 +76,16 @@ const STEPS: WalkthroughStep[] = [
     navigateTo: "/(tabs)/tools",
     ctaLabel: "המשך",
     screenSignal: "tools",
-    audioUrl: "https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/audios/walkthrough/step-3-zwq7Ob4c2qz5wXEFANX40AzefZ9hu9.mp3",
+    // audioUrl intentionally omitted — old recording was for the Feed tab
+    // which was replaced by the Tools tab; new narration pending.
   },
-  // Chat-style picker moved out of the walkthrough — the picker auto-shows
-  // on the user's first chat entry (see ChatScreen `!hasChosenStyle` gate).
-  // The chat tab still gets highlighted via `screenSignal: 'chat'` so users
-  // know where to find it; navigation is intentionally null because routing
-  // to /(tabs)/chat here would race the picker with this overlay.
+  // Chat tab navigation: ChatScreen suppresses the chat-style picker while
+  // `walkthroughActiveScreen === 'chat'` so the picker doesn't race this overlay.
   {
     title: "הצ'אט של שארק",
     emoji: "💬",
     message: "כאן תוכלו לדבר על כל מה שקשור לכסף. שארק תמיד פה לשאלות והסברים.",
-    navigateTo: null,
+    navigateTo: "/(tabs)/chat",
     ctaLabel: "לחנות",
     screenSignal: "chat",
     audioUrl: "https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/audios/walkthrough/step-5-izvyJZVophx4OdIJ5P7pInn0trmiD5.mp3",

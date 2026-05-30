@@ -799,6 +799,7 @@ const ChapterSection = React.memo(function ChapterSection({
   questTotalCount,
   onQuestPress,
   newsBadgeNode,
+  isGlobalActiveChapter,
 }: {
   arena: ArenaConfig;
   chapter: typeof chapter1Data;
@@ -815,6 +816,12 @@ const ChapterSection = React.memo(function ChapterSection({
   onMindMap?: () => void;
   easterEggNodeId?: string | null;
   onClaimEasterEgg?: () => void;
+  // True only for the single chapter that hosts the user's next-to-do module.
+  // Without this flag, every unlocked chapter renders its own Finn mascot +
+  // speech bubble at its local activeIndex, so a Pro user (all unlocked) sees
+  // a Finn per chapter. The parent computes the global active chapter via
+  // `globalActiveIdx` and passes it down here.
+  isGlobalActiveChapter: boolean;
   questPathNodeProps?: {
     completedCount: number;
     totalQuests: number;
@@ -880,7 +887,10 @@ const ChapterSection = React.memo(function ChapterSection({
         {/* Path decorations disabled temporarily */}
 
         {chapter.modules.map((module, i) => {
-          const isActive = isUnlocked && i === activeIndex;
+          // Only the global active chapter hosts the Finn mascot + active
+          // marker. Other unlocked chapters render their nodes statefully
+          // (completed/locked) but never with the "active" cursor.
+          const isActive = isGlobalActiveChapter && isUnlocked && i === activeIndex;
 
           // Coming-soon modules are always locked regardless of user state
           const isModuleComingSoon = !!module.comingSoon;
@@ -908,38 +918,55 @@ const ChapterSection = React.memo(function ChapterSection({
           const questOffsetX = -getNodeOffset(i);
 
           return (
-            <View key={module.id} style={isActive ? { position: 'relative' } : undefined}>
-              {/* Daily News Challenge badge — floats beside the active module
-                  on the opposite side of the Duolingo-style alternating path,
-                  so it sits in the "dead space" the user's eye lands on when
-                  the screen auto-scrolls them to their next module. White
-                  pill backdrop + z=100 so it doesn't get buried by chapter
-                  decorations or the PathConnector. */}
+            <View key={module.id}>
+              {/* Daily News Challenge — own dedicated row above the active
+                  module so it doesn't overlap with lesson labels or the path
+                  connector. Previously was absolute-positioned beside the
+                  active node which collided with the side label chip. Now
+                  occupies its own vertical slice with breathing room. */}
               {isActive && newsBadgeNode && (
                 <View
-                  pointerEvents="box-none"
                   style={{
-                    position: 'absolute',
-                    top: 24,
-                    // Flip side relative to the active node so the badge lands
-                    // in the empty half-row. getNodeOffset alternates ±~48px;
-                    // -offset puts us on the visual opposite side.
-                    left: getNodeOffset(i) >= 0 ? 16 : undefined,
-                    right: getNodeOffset(i) < 0 ? 16 : undefined,
-                    zIndex: 100,
-                    elevation: 12,
-                    // White rounded pill backing so the news icon reads as a
-                    // distinct UI element on top of the busy chapter map.
-                    backgroundColor: '#ffffff',
-                    padding: 8,
-                    borderRadius: 999,
-                    shadowColor: '#0c4a6e',
-                    shadowOffset: { width: 0, height: 4 },
-                    shadowOpacity: 0.18,
-                    shadowRadius: 10,
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: 10,
+                    marginTop: 8,
+                    marginBottom: 18,
+                    paddingHorizontal: 16,
                   }}
                 >
-                  {newsBadgeNode}
+                  <View
+                    style={{
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      gap: 10,
+                      backgroundColor: '#ffffff',
+                      paddingVertical: 8,
+                      paddingHorizontal: 14,
+                      borderRadius: 999,
+                      shadowColor: '#0c4a6e',
+                      shadowOffset: { width: 0, height: 4 },
+                      shadowOpacity: 0.18,
+                      shadowRadius: 10,
+                      elevation: 6,
+                      borderWidth: 1,
+                      borderColor: 'rgba(0,91,177,0.15)',
+                    }}
+                  >
+                    {newsBadgeNode}
+                    <Text
+                      style={{
+                        fontSize: 13,
+                        fontWeight: '800',
+                        color: '#005bb1',
+                        writingDirection: 'rtl',
+                      }}
+                      accessibilityLabel="האקטואליה היומית"
+                    >
+                      אקטואליה פיננסית יומית
+                    </Text>
+                  </View>
                 </View>
               )}
               <ModuleNode
@@ -1474,6 +1501,7 @@ export function DuoLearnScreen() {
                 onSkipIntro={idx === 0 ? handleSkipIntro : undefined}
                 onChapterPress={handleRoadmapPress}
                 onMindMap={() => handleMindMap(idx)}
+                isGlobalActiveChapter={hasActiveModule}
                 questPathNodeProps={hasActiveModule ? {
                   completedCount: questCompletedCount,
                   totalQuests: questTotalCount,
