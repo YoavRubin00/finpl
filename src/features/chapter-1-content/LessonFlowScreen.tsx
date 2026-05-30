@@ -181,8 +181,8 @@ const MODULES_WITH_INTERACTIVE_RECALL = new Set([
 
 /** Modules with a NotebookLM-generated infographic shown before the summary/chest */
 const MODULE_INFOGRAPHIC_MAP: Record<string, { uri: string }> = {
-  "mod-0-1": { uri: 'https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/infographics/ch0-upgrade/mod-0-1-upgrade.png' },
-  "mod-0-2": { uri: 'https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/infographics/ch0-upgrade/mod-0-2-upgrade.png' },
+  "mod-0-1": { uri: 'https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/infographics/ch0-upgrade/mod-0-2-upgrade.png' },
+  "mod-0-2": { uri: 'https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/infographics/ch0-upgrade/mod-0-1-upgrade.png' },
   "mod-0-3": { uri: 'https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/infographics/ch0-upgrade/mod-0-3-upgrade.png' },
   "mod-0-4": { uri: 'https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/infographics/ch0-upgrade/mod-0-4-upgrade.png' },
   "mod-0-5": { uri: 'https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/infographics/ch0-upgrade/mod-0-5-upgrade.png' },
@@ -190,9 +190,9 @@ const MODULE_INFOGRAPHIC_MAP: Record<string, { uri: string }> = {
 
 /** Modules with a video shown AFTER the infographic (before the chest) */
 const MODULE_POST_VIDEO_MAP: Record<string, string> = {
-  "mod-0-1": "https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/0-1.mp4",
-  // Chapter 0 — money/banking/interest/credit/pension
-  "mod-0-2": "https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/finn-videos/finn-ch0-money.mp4",
+  "mod-0-1": "https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/finn-videos/finn-ch0-money.mp4",
+  // Chapter 0 — money/banking/interest/credit/pension (NEW first slot — was mod-0-2 content)
+  "mod-0-2": "https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/0-1.mp4",
   "mod-0-3": "https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/finn-videos/finn-studying.mp4",
   "mod-0-4": "https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/finn-videos/finn-mod-0-4.mp4",
   "mod-0-5": "https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/finn-videos/finn-mod-0-5.mp4",
@@ -2553,9 +2553,11 @@ export function LessonFlowScreen() {
     // Snapshot read — called from event handlers (lesson complete), not during render.
     // Subscribing via the hook would add re-renders for no benefit.
     const profile = useAuthStore.getState().profile;
-    // Mapping moved (2026-05-27 redesign): mod-0-1 is clean (no question — see post-chest
-    // logic for mod-0-1), mod-0-5 holds a register CTA for guests instead of a question.
-    if (moduleId === "mod-0-2" && !profile?.knowledgeLevel) return "knowledgeLevel";
+    // Mapping moved (2026-05-30 swap): mod-0-1 now teaches financial basics
+    // (was mod-0-2). The knowledgeLevel question is asked INLINE right after
+    // mod-0-1's last quiz (see advanceQuiz) so it feels like a continuation of
+    // onboarding rather than a post-module modal. The mod-0-2 entry below is
+    // intentionally removed to avoid double-asking.
     if (moduleId === "mod-0-3" && !profile?.learningTime) return "learningTime";
     if (moduleId === "mod-0-4" && !profile?.dailyGoalMinutes) return "dailyGoal";
     return null;
@@ -2907,6 +2909,11 @@ export function LessonFlowScreen() {
   // Tracks the module id whose profile question was already presented this visit,
   // so skipping (which doesn't set the profile field) can't re-trigger it in a loop.
   const profileQuestionAskedRef = useRef<string | null>(null);
+  // When a profile question is injected MID-MODULE (e.g. mod-0-1 knowledgeLevel
+  // fires between last quiz and sim-intro), this holds the resume action to run
+  // after the modal closes. If null, the modal close falls through to the normal
+  // post-module nav flow (goToNextSequentialModule).
+  const pendingPostQuestionActionRef = useRef<(() => void) | null>(null);
   // "Grade skip" celebration — shown when the user self-identifies as an expert
   // ("כריש מוול סטריט") on the mod-0-2 knowledge question. We mark all of chapter 0
   // complete, park the cursor on mod-1-1, and surface this screen instead of
@@ -3145,12 +3152,13 @@ export function LessonFlowScreen() {
   // immediately before the game, not during the mod-0-3 summary phase
   // where the chest + celebration sat in between.)
 
-  // mod-0-1 barter notif, dancing shark joke right after the post-infographic video.
-  // Fires when entering shark-dilemma phase (which immediately follows the video),
-  // so the joke lands while the barter context is fresh.
+  // Barter notif (dancing shark) right after the post-infographic video of the
+  // "what is money / barter" module. Content lives at mod-0-2 since the 2026-05-30
+  // swap (mod-0-1 now teaches financial basics; mod-0-2 teaches barter/money origin).
+  // The notif intentionally fires while the barter context is fresh.
   useEffect(() => {
     if (!mod) return;
-    if (phase === "shark-dilemma" && mod.id === "mod-0-1" && !hasSeenMod01BarterNotif) {
+    if (phase === "shark-dilemma" && mod.id === "mod-0-2" && !hasSeenMod01BarterNotif) {
       safeTimeout(() => setShowMod01BarterNotif(true), 200);
     }
   }, [phase, mod, hasSeenMod01BarterNotif, safeTimeout]);
@@ -3350,21 +3358,36 @@ export function LessonFlowScreen() {
     if (quizIndex < mod.quizzes.length - 1) {
       setQuizIndex((prev) => prev + 1);
       tapHaptic();
-    } else if (MODULES_WITH_SIM.has(mod.id) && !SIM_FIRST_MODULES.has(mod.id)) {
-      // Normal flow: quizzes → sim (skip for sim-first modules, sim already done)
-      if (PRO_LOCKED_SIMS.has(mod.id) && !useUsageStore.getState().canUse("simulator", queryClient.getQueryData<SubscriptionState | null>(subscriptionQueryKey)?.isPro === true)) {
-        useUpgradeModalStore.getState().show("simulator");
-        return;
-      }
-      setPhase("sim-intro");
-      mediumHaptic();
-    } else {
-      setPhase(
-        mod.id && MODULE_INFOGRAPHIC_MAP[mod.id] ? "module-infographic" :
-        mod.id && MODULE_POST_VIDEO_MAP[mod.id] ? "post-infographic-video" :
-        mod.id && getDilemma(mod.id) ? "shark-dilemma" : "summary"
-      );
+      return;
     }
+    // Last quiz done. Resolve the next phase first, then decide whether to
+    // inject an inline onboarding-style question before transitioning.
+    const advanceToNextPhase = () => {
+      if (MODULES_WITH_SIM.has(mod.id) && !SIM_FIRST_MODULES.has(mod.id)) {
+        if (PRO_LOCKED_SIMS.has(mod.id) && !useUsageStore.getState().canUse("simulator", queryClient.getQueryData<SubscriptionState | null>(subscriptionQueryKey)?.isPro === true)) {
+          useUpgradeModalStore.getState().show("simulator");
+          return;
+        }
+        setPhase("sim-intro");
+        mediumHaptic();
+      } else {
+        setPhase(
+          mod.id && MODULE_INFOGRAPHIC_MAP[mod.id] ? "module-infographic" :
+          mod.id && MODULE_POST_VIDEO_MAP[mod.id] ? "post-infographic-video" :
+          mod.id && getDilemma(mod.id) ? "shark-dilemma" : "summary"
+        );
+      }
+    };
+    // mod-0-1 (post-2026-05-30 swap = financial basics, first lesson) acts as a
+    // continuation of onboarding: ask knowledgeLevel RIGHT after the last quiz,
+    // before the simulation. The resume action runs once the user answers/skips.
+    if (mod.id === 'mod-0-1' && !useAuthStore.getState().profile?.knowledgeLevel && profileQuestionAskedRef.current !== 'mod-0-1') {
+      profileQuestionAskedRef.current = 'mod-0-1';
+      pendingPostQuestionActionRef.current = advanceToNextPhase;
+      setProfileQuestionKind('knowledgeLevel');
+      return;
+    }
+    advanceToNextPhase();
   }, [mod, quizIndex]);
 
   const handleCorrectAnswer = useCallback(() => {
@@ -4875,12 +4898,14 @@ export function LessonFlowScreen() {
           onDone={() => {
             const answeredKind = profileQuestionKind;
             setProfileQuestionKind(null);
-            // Self-declared expert ("כריש מוול סטריט") on the mod-0-2 knowledge
-            // question → bump straight to chapter 1 instead of grinding the rest
-            // of chapter 0. Mark all ch-0 modules complete (server-synced via
-            // upsertProgress) and move the learn-map cursor to mod-1-1, then show
-            // the celebration. "המשך" drops them on the learn map with ch-1 open.
+            // Self-declared expert ("כריש מוול סטריט") on the knowledge question
+            // → bump straight to chapter 1 instead of grinding the rest of chapter
+            // 0. Mark all ch-0 modules complete (server-synced via upsertProgress)
+            // and move the learn-map cursor to mod-1-1, then show the celebration.
+            // "המשך" drops them on the learn map with ch-1 open.
             if (answeredKind === 'knowledgeLevel' && useAuthStore.getState().profile?.knowledgeLevel === 'expert') {
+              // Clear any pending mid-module resume — grade skip supersedes it.
+              pendingPostQuestionActionRef.current = null;
               for (const m of chapter0Data.modules) {
                 upsertProgress({ moduleId: m.id, status: 'completed', xpEarned: 0 });
               }
@@ -4891,6 +4916,14 @@ export function LessonFlowScreen() {
               setCurrentModule(0);
               try { captureEvent('expert_grade_skip', { from_module: id }); } catch { /* non-fatal */ }
               setShowGradeSkipCelebration(true);
+              return;
+            }
+            // Mid-module injection (e.g. mod-0-1 quizzes→sim handoff): resume the
+            // queued in-module action instead of navigating to the next module.
+            if (pendingPostQuestionActionRef.current) {
+              const resume = pendingPostQuestionActionRef.current;
+              pendingPostQuestionActionRef.current = null;
+              resume();
               return;
             }
             // Re-enter the next-module flow now that profile is populated.

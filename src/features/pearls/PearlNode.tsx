@@ -1,7 +1,7 @@
 import React, { useEffect } from 'react';
 import { View, Pressable } from 'react-native';
-import { Image as ExpoImage } from 'expo-image';
-import { Check } from 'lucide-react-native';
+import { Check, Gem } from 'lucide-react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -12,9 +12,6 @@ import Animated, {
   useReducedMotion,
 } from 'react-native-reanimated';
 
-const PEARL_COLORED = require('../../../assets/webp/pearl-colored.webp');
-const PEARL_LOCKED = require('../../../assets/webp/pearl-locked.webp');
-
 export type PearlNodeState = 'locked' | 'unlocked' | 'completed';
 
 interface PearlNodeProps {
@@ -23,10 +20,17 @@ interface PearlNodeProps {
    *  S-curve placement of module nodes (see getNodeOffset in DuoLearnScreen). */
   offsetX?: number;
   onPress?: () => void;
-  /** Accent color (arena.glow) used for the halo on unlocked Pearls. */
+  /** Accent color used for the halo when `glow` is on. Defaults to the
+   *  ocean-cyan accent. */
   haloColor?: string;
   /** Smaller than NODE_SIZE (78) so it reads as a bonus stop, not a module. */
   size?: number;
+  /** When true, the unlocked Pearl pulses a soft halo behind it to call
+   *  attention — used for FREE users where only the just-unlocked pearl is
+   *  reachable, so the halo signals "this one is yours, tap me". Pro users
+   *  see every pearl as unlocked so the halo would be visual noise on all
+   *  of them; the parent passes `glow={false}` in that case. */
+  glow?: boolean;
 }
 
 /**
@@ -43,45 +47,74 @@ export function PearlNode({
   state,
   offsetX = 0,
   onPress,
-  haloColor: _haloColor,
+  haloColor = '#67e8f9',
   size = 56,
+  glow = false,
 }: PearlNodeProps): React.ReactElement {
   const reducedMotion = useReducedMotion();
   const isUnlocked = state === 'unlocked';
   const shouldAnimate = isUnlocked && !reducedMotion;
+  const shouldGlow = isUnlocked && glow && !reducedMotion;
 
   const scale = useSharedValue(1);
+  const haloOpacity = useSharedValue(0);
+  const haloScale = useSharedValue(0.85);
 
   useEffect(() => {
     if (!shouldAnimate) {
       cancelAnimation(scale);
       scale.value = withTiming(1, { duration: 200 });
-      return;
+    } else {
+      scale.value = withRepeat(
+        withSequence(
+          withTiming(1.06, { duration: 950 }),
+          withTiming(1, { duration: 950 }),
+        ),
+        -1,
+        false,
+      );
     }
-    // Gentle breathing only — no surrounding halo. The pearl's own
-    // iridescent rendering carries the visual interest; the blue halo
-    // looked like a separate UI element and read as noise on top of
-    // an already-busy path.
-    scale.value = withRepeat(
-      withSequence(
-        withTiming(1.06, { duration: 950 }),
-        withTiming(1, { duration: 950 }),
-      ),
-      -1,
-      false,
-    );
-  }, [shouldAnimate, scale]);
+    if (!shouldGlow) {
+      cancelAnimation(haloOpacity);
+      cancelAnimation(haloScale);
+      haloOpacity.value = withTiming(0, { duration: 200 });
+      haloScale.value = withTiming(0.85, { duration: 200 });
+    } else {
+      haloOpacity.value = withRepeat(
+        withSequence(
+          withTiming(0.55, { duration: 950 }),
+          withTiming(0.15, { duration: 950 }),
+        ),
+        -1,
+        false,
+      );
+      haloScale.value = withRepeat(
+        withSequence(
+          withTiming(1.25, { duration: 950 }),
+          withTiming(0.95, { duration: 950 }),
+        ),
+        -1,
+        false,
+      );
+    }
+  }, [shouldAnimate, shouldGlow, scale, haloOpacity, haloScale]);
 
   const pearlStyle = useAnimatedStyle(() => ({
     transform: [{ scale: scale.value }],
   }));
+  const haloStyle = useAnimatedStyle(() => ({
+    opacity: haloOpacity.value,
+    transform: [{ scale: haloScale.value }],
+  }));
 
   const accessibilityLabel =
     state === 'locked'
-      ? 'פנינה — נעולה. סיים את המודולה כדי לפתוח'
+      ? 'פנינה — נעולה. שדרג כדי לפתוח'
       : state === 'completed'
         ? 'פנינה — הושלמה. אפשר לשחק שוב'
         : 'פנינה — בונוס חדש זמין';
+
+  const halo = size * 1.7;
 
   const inner = (
     <View
@@ -93,13 +126,58 @@ export function PearlNode({
         position: 'relative',
       }}
     >
-      <Animated.View style={pearlStyle}>
-        <ExpoImage
-          source={state === 'locked' ? PEARL_LOCKED : PEARL_COLORED}
-          style={{ width: size, height: size }}
-          contentFit="contain"
-          accessible={false}
+      {shouldGlow ? (
+        // Soft cyan halo behind the pearl — Free user's signal that this
+        // bonus is reachable RIGHT NOW. Sits below the image; non-interactive.
+        <Animated.View
+          pointerEvents="none"
+          style={[
+            {
+              position: 'absolute',
+              width: halo,
+              height: halo,
+              borderRadius: halo / 2,
+              backgroundColor: haloColor,
+            },
+            haloStyle,
+          ]}
         />
+      ) : null}
+      <Animated.View style={pearlStyle}>
+        {/* Gem-in-a-bubble: a soft circular gradient backdrop with a Lucide
+            Gem icon on top. The earlier WebP attempt baked the
+            transparency-checker pattern into the image as real pixels, so
+            the path now uses pure-vector rendering — clean at any size,
+            zero asset weight, and trivially recolorable for locked/active. */}
+        <LinearGradient
+          colors={
+            state === 'locked'
+              ? ['#cbd5e1', '#94a3b8']
+              : ['#67e8f9', '#0ea5e9', '#0c4a6e']
+          }
+          start={{ x: 0.2, y: 0.1 }}
+          end={{ x: 0.9, y: 1 }}
+          style={{
+            width: size,
+            height: size,
+            borderRadius: size / 2,
+            alignItems: 'center',
+            justifyContent: 'center',
+            shadowColor: state === 'locked' ? '#475569' : '#0c4a6e',
+            shadowOffset: { width: 0, height: 4 },
+            shadowOpacity: state === 'locked' ? 0.18 : 0.32,
+            shadowRadius: 8,
+            elevation: state === 'locked' ? 2 : 6,
+            borderWidth: 2,
+            borderColor: state === 'locked' ? '#94a3b8' : '#bae6fd',
+          }}
+        >
+          <Gem
+            size={size * 0.5}
+            color={state === 'locked' ? '#475569' : '#ffffff'}
+            strokeWidth={2.4}
+          />
+        </LinearGradient>
       </Animated.View>
 
       {state === 'completed' ? (
@@ -124,9 +202,11 @@ export function PearlNode({
     </View>
   );
 
-  // Locked pearls render as a non-interactive View so screen readers don't
-  // announce a tappable button the user can't actually act on.
-  if (state === 'locked' || !onPress) {
+  // No onPress → render as a plain non-interactive View. Note that locked
+  // Pearls are STILL pressable when the parent supplies an onPress (e.g.
+  // DuoLearnScreen wires it to the same "upgrade to Pro" prompt that locked
+  // modules use) — we just dim the image to communicate "not yet earned".
+  if (!onPress) {
     return (
       <View
         style={{ transform: [{ translateX: offsetX }], opacity: state === 'locked' ? 0.6 : 1 }}

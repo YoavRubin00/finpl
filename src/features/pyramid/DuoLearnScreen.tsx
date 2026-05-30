@@ -1052,7 +1052,19 @@ const ChapterSection = React.memo(function ChapterSection({
                         state={pearlState}
                         offsetX={pearlOffsetX}
                         haloColor={colors.glow}
-                        onPress={pearlState === 'locked' ? undefined : () => onPearlPress(pearl)}
+                        // Free users: pulse a halo behind the just-unlocked
+                        // pearl so it's obvious which bonus is reachable.
+                        // Pro users see every pearl unlocked, so halos on
+                        // all of them would be noise — suppress them there.
+                        glow={!isPro && pearlState === 'unlocked'}
+                        // Locked pearls share the locked-module tap target
+                        // (the upgrade-to-Pro prompt) instead of being
+                        // inert — same gesture, same outcome.
+                        onPress={
+                          pearlState === 'locked'
+                            ? onLockedPress
+                            : () => onPearlPress(pearl)
+                        }
                       />
                     </View>
                     <PathConnector
