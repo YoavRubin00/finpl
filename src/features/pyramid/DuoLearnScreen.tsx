@@ -957,54 +957,23 @@ const ChapterSection = React.memo(function ChapterSection({
                   }
                 }}
               />
-              {/* Daily News Challenge — its own dedicated row UNDER the
-                  active module's shark, not above and not floating beside
-                  the head. Sits centered between the module and the next
-                  PathConnector so it doesn't compete with the lesson label
-                  chip or the shark itself. */}
+              {/* Daily News Challenge — just the newspaper icon (no pill,
+                  no label, no white card). Anchored directly under the
+                  star row that sits below the shark, on the same horizontal
+                  side as the shark itself. ModuleNode places Finn on the
+                  right when offsetX >= 0 (and the stars sit just below
+                  him), so we mirror that side here. */}
               {isActive && newsBadgeNode && (
                 <View
                   style={{
                     flexDirection: 'row',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: 10,
-                    marginTop: 14,
-                    marginBottom: 10,
-                    paddingHorizontal: 16,
+                    justifyContent: getNodeOffset(i) >= 0 ? 'flex-end' : 'flex-start',
+                    paddingHorizontal: 32,
+                    marginTop: -8,
+                    marginBottom: 8,
                   }}
                 >
-                  <View
-                    style={{
-                      flexDirection: 'row',
-                      alignItems: 'center',
-                      gap: 10,
-                      backgroundColor: '#ffffff',
-                      paddingVertical: 8,
-                      paddingHorizontal: 14,
-                      borderRadius: 999,
-                      shadowColor: '#0c4a6e',
-                      shadowOffset: { width: 0, height: 4 },
-                      shadowOpacity: 0.18,
-                      shadowRadius: 10,
-                      elevation: 6,
-                      borderWidth: 1,
-                      borderColor: 'rgba(0,91,177,0.15)',
-                    }}
-                  >
-                    {newsBadgeNode}
-                    <Text
-                      style={{
-                        fontSize: 13,
-                        fontWeight: '800',
-                        color: '#005bb1',
-                        writingDirection: 'rtl',
-                      }}
-                      accessibilityLabel="האקטואליה היומית"
-                    >
-                      אקטואליה פיננסית יומית
-                    </Text>
-                  </View>
+                  {newsBadgeNode}
                 </View>
               )}
               {showQuestBox && questPathNodeProps && (
