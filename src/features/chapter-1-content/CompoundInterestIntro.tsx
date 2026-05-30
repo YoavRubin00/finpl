@@ -206,6 +206,26 @@ export function CompoundInterestIntro({ onStart, unitColors, chartImageUri, audi
           accessible={false}
         />
 
+        {/* Audio status — only when the intro audio is taking too long. */}
+        {audioState === 'slow' && (
+          <Text style={{ color: '#94a3b8', fontSize: 12, marginTop: 4 }}>
+            טוען אודיו...
+          </Text>
+        )}
+        {audioState === 'failed' && (
+          <Pressable
+            onPress={onStart}
+            accessibilityLabel="המשך בלי אודיו"
+            accessibilityRole="button"
+            hitSlop={12}
+            style={{ paddingVertical: 6, paddingHorizontal: 12, marginTop: 4 }}
+          >
+            <Text style={{ color: unitColors.bg, fontSize: 13, fontWeight: '800' }}>
+              המשך בלי אודיו →
+            </Text>
+          </Pressable>
+        )}
+
         {/* ── CenterStage ──────────────────────────────────────────────── */}
         <View style={{ width: STAGE_W, height: 220, alignItems: 'center', justifyContent: 'center' }}>
 

@@ -1,6 +1,6 @@
 import React, { useEffect } from "react";
 import { Image as ExpoImage } from "expo-image";
-import { View, Text, Dimensions } from "react-native";
+import { View, Text, Dimensions, Pressable } from "react-native";
 
 const { width: SW } = Dimensions.get("window");
 import LottieView from "lottie-react-native";
@@ -144,6 +144,26 @@ export const InteractiveIntroCard = React.memo(function InteractiveIntroCard({ i
             </Text>
           </View>
         </Animated.View>
+
+        {/* Audio status — only when the intro audio is taking too long. */}
+        {audioState === 'slow' && (
+          <Text style={{ color: '#94a3b8', fontSize: 12, marginTop: 8, alignSelf: 'center' }}>
+            טוען אודיו...
+          </Text>
+        )}
+        {audioState === 'failed' && (
+          <Pressable
+            onPress={onStart}
+            accessibilityLabel="המשך בלי אודיו"
+            accessibilityRole="button"
+            hitSlop={12}
+            style={{ paddingVertical: 6, paddingHorizontal: 12, marginTop: 8, alignSelf: 'center' }}
+          >
+            <Text style={{ color: unitColors.bg, fontSize: 13, fontWeight: '800' }}>
+              המשך בלי אודיו →
+            </Text>
+          </Pressable>
+        )}
 
         {/* Intro image, between text card and button */}
         {introImageUri ? (
