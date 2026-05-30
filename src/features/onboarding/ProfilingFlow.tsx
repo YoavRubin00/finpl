@@ -1788,14 +1788,15 @@ interface IntroStepProps {
 }
 
 function IntroStep({ onRegister: _onRegister, onGuest, onLoginSuccess }: IntroStepProps) {
-  // 2026-05-30 redesign — register-first per Duolingo cadence:
-  //   "register" — DEFAULT first screen. Big Apple/Google CTAs at top, visible
-  //                "Start without account" button below (not a tiny link — users
-  //                see it and don't bounce). Subtle "I have an account" at the
-  //                bottom routes to the email login subStep.
+  // 2026-05-30 — two-step intro (Duolingo cadence):
+  //   "welcome"  — DEFAULT. Big mascot + "מתחילים" CTA. Friendly first impression
+  //                that doesn't ask for anything; "I have an account" link routes
+  //                returning users to login.
+  //   "register" — Account-creation prompt. Apple/Google up top + a visible
+  //                "Start without account" button (not a tiny link — users see it
+  //                and don't bounce). Reached by tapping "מתחילים" on welcome.
   //   "login"    — Apple/Google + email form for returning users.
-  //   The old "welcome" + "choice" subStates were merged into "register".
-  const [subStep, setSubStep] = useState<"register" | "login">("register");
+  const [subStep, setSubStep] = useState<"welcome" | "register" | "login">("welcome");
   const promptGoogleSignIn = useGoogleAuthStore((s) => s.promptGoogleSignIn);
   const googleReady = useGoogleAuthStore((s) => s.isReady);
   const { promptAppleSignIn, isAvailable: appleAvailable } = useAppleAuth();
@@ -1865,11 +1866,51 @@ function IntroStep({ onRegister: _onRegister, onGuest, onLoginSuccess }: IntroSt
     textAlign: "right" as const,
   };
 
-  // ── Register sub-state (DEFAULT — first thing unauthenticated users see) ──
-  // Duolingo-style: big mascot, prominent OAuth CTAs, visible-but-secondary
-  // "Start without account" button (not a tiny link — users explicitly asked
-  // for this so they don't bounce). Login link sits at the bottom for returning
-  // users.
+  // ── Welcome sub-state (DEFAULT — friendly first impression, no ask) ──
+  // Mirrors the prior screen exactly so returning users see what they expect.
+  // Tap "מתחילים" → "register" subStep (the new account-creation prompt).
+  // "כבר יש לי חשבון" → "login" subStep.
+  if (subStep === "welcome") {
+    return (
+      <SafeAreaView style={introStyles.shell} edges={["top", "bottom"]}>
+        <Animated.View style={[introStyles.finnWrap, finnStyle]}>
+          <LinearGradient colors={["#ecfeff", "#f0fdfa"]} style={introStyles.finnBg} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}>
+            <ExpoImage source={FINN_HELLO} style={{ width: 160, height: 160 }} contentFit="contain" accessibilityLabel="פין הכריש מנופף שלום" />
+          </LinearGradient>
+        </Animated.View>
+
+        <Animated.View style={[introStyles.textBlock, textStyle, { marginBottom: 28 }]}>
+          <Text style={{ fontSize: 14, fontWeight: "600", color: "#0891b2", textAlign: "center", writingDirection: "rtl", marginBottom: 8, letterSpacing: 0.3 }}>
+            {"היי, אני קפטן שארק"}
+          </Text>
+          <Text style={[introStyles.title, { marginBottom: 0 }]}>{"בואו נתחיל לשחק עם הכסף שלכם."}</Text>
+        </Animated.View>
+
+        <Animated.View style={[ctaAnimStyle, { alignItems: "center", gap: 10, width: "100%" }]}>
+          <Pressable
+            onPress={() => setSubStep("register")}
+            style={[introStyles.cta, { width: "100%", alignItems: "center", paddingHorizontal: 0 }]}
+            accessibilityRole="button"
+            accessibilityLabel="מתחילים"
+          >
+            <Text style={introStyles.ctaText}>מתחילים</Text>
+          </Pressable>
+
+          <Pressable onPress={() => setSubStep("login")} accessibilityRole="link" accessibilityLabel="כבר יש לי חשבון? התחבר" style={{ marginTop: 8 }}>
+            <Text style={introStyles.loginLink}>
+              {"כבר יש לי חשבון? "}
+              <Text style={introStyles.loginLinkAccent}>{"התחבר"}</Text>
+            </Text>
+          </Pressable>
+        </Animated.View>
+      </SafeAreaView>
+    );
+  }
+
+  // ── Register sub-state — appears after tapping "מתחילים" on welcome ──
+  // Duolingo-style: prominent OAuth CTAs, visible-but-secondary "Start without
+  // account" button (not a tiny link — users explicitly asked for this so they
+  // don't bounce). Login link sits at the bottom for returning users.
   if (subStep === "register") {
     return (
       <SafeAreaView style={introStyles.shell} edges={["top", "bottom"]}>
@@ -2127,7 +2168,7 @@ function IntroStep({ onRegister: _onRegister, onGuest, onLoginSuccess }: IntroSt
             <Text style={introStyles.ctaText}>התחבר</Text>
           </Pressable>
 
-          <Pressable onPress={() => setSubStep("register")} style={{ alignSelf: "center", marginTop: 8, padding: 8 }} accessibilityRole="button" accessibilityLabel="חזרה" hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+          <Pressable onPress={() => setSubStep("welcome")} style={{ alignSelf: "center", marginTop: 8, padding: 8 }} accessibilityRole="button" accessibilityLabel="חזרה" hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
             <ChevronRight size={24} color="#64748b" />
           </Pressable>
         </Animated.View>
