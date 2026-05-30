@@ -1883,7 +1883,7 @@ function IntroStep({ onRegister: _onRegister, onGuest, onLoginSuccess }: IntroSt
           <Text style={{ fontSize: 14, fontWeight: "600", color: "#0891b2", textAlign: "center", writingDirection: "rtl", marginBottom: 8, letterSpacing: 0.3 }}>
             {"היי, אני קפטן שארק"}
           </Text>
-          <Text style={[introStyles.title, { marginBottom: 0 }]}>{"בואו נתחיל לשחק עם הכסף שלכם."}</Text>
+          <Text style={[introStyles.title, { marginBottom: 0 }]}>{"בואו נתחיל לשחק עם\nהכסף שלכם."}</Text>
         </Animated.View>
 
         <Animated.View style={[ctaAnimStyle, { alignItems: "center", gap: 10, width: "100%" }]}>
