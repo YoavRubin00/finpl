@@ -354,6 +354,16 @@ export const BudgetNinjaCard = React.memo(function BudgetNinjaCard({ isActive, o
           <ExpoImage source={FINN_STANDARD} style={styles.finLarge} contentFit="contain" accessible={false} />
           <Text style={[styles.doneTitle, RTL_CENTER]}>נינג׳ת התקציב, הושלם להיום</Text>
           <Text style={[styles.doneSub, RTL_CENTER]}>חזור מחר לזירה חדשה</Text>
+          {onContinue ? (
+            <Pressable
+              onPress={() => { tapHaptic(); onContinue(); }}
+              accessibilityRole="button"
+              accessibilityLabel="המשך"
+              style={styles.continueBtn}
+            >
+              <Text style={styles.continueBtnText} allowFontScaling={false}>המשך</Text>
+            </Pressable>
+          ) : null}
         </View>
       </View>
     );

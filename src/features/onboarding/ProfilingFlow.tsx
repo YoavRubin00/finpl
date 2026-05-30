@@ -2547,13 +2547,34 @@ export function ProfilingFlow({ mode = "onboarding", onRedoComplete }: Profiling
         }} />}
         {step === "goal" && <GoalStep
           dream={collected.financialDream}
-          onNext={(v) => { slide("age", { financialGoal: v }); }}
+          onNext={(v) => {
+            if (returnToSummary) { setReturnToSummary(false); slide("profile-summary", { financialGoal: v }); }
+            else { slide("age", { financialGoal: v }); }
+          }}
           onBack={() => slide("dream", {})}
         />}
         {step === "age" && <AgeStep
           knowledge={collected.knowledgeLevel}
           onNext={(ag, by) => slide("celebration", { ageGroup: ag, birthYear: by })}
           onBack={() => slide("goal", {})}
+        />}
+        {/* Edit-only steps reachable from ProfileSummaryScreen → editSummaryStep.
+            Without these render blocks, tapping "רמת ידע" or "יעד יומי" on the
+            summary card slides to a blank state with no Back button — a
+            dead-end (QA audit 2026-05-31). Both steps return to the summary
+            after the user picks a new value. */}
+        {step === "knowledge" && <KnowledgeStep
+          goal={collected.financialGoal}
+          onNext={(v) => {
+            if (returnToSummary) { setReturnToSummary(false); slide("profile-summary", { knowledgeLevel: v }); }
+            else { slide("profile-summary", { knowledgeLevel: v }); }
+          }}
+        />}
+        {step === "daily-goal" && <DailyGoalStep
+          onNext={(v) => {
+            if (returnToSummary) { setReturnToSummary(false); slide("profile-summary", { dailyGoalMinutes: v }); }
+            else { slide("profile-summary", { dailyGoalMinutes: v }); }
+          }}
         />}
       </Animated.View>
 

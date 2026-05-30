@@ -350,6 +350,16 @@ export const CashoutRushCard = React.memo(function CashoutRushCard({ isActive, o
           <ExpoImage source={FINN_STANDARD} style={styles.finLarge} contentFit="contain" accessible={false} />
           <Text style={[styles.doneTitle, RTL_CENTER]}>Fear or Greed, הושלם להיום</Text>
           <Text style={[styles.doneSub, RTL_CENTER]}>חזור מחר לסיבוב חדש</Text>
+          {onContinue ? (
+            <Pressable
+              onPress={() => { tapHaptic(); onContinue(); }}
+              accessibilityRole="button"
+              accessibilityLabel="המשך"
+              style={styles.continueBtn}
+            >
+              <Text style={styles.continueBtnText} allowFontScaling={false}>המשך</Text>
+            </Pressable>
+          ) : null}
         </View>
       </View>
     );

@@ -62,6 +62,11 @@ export interface PearlContent {
    *  of the module that just ended (e.g., investment-module → investment
    *  game). */
   gameKey: InterModuleGameKey;
+  /** Required when `gameKey === 'macro-event'`. Picks which historical
+   *  macro event the MacroEventCard plays (e.g., 'me-2020-covid'). Without
+   *  this the card has no payload and PearlGameStage.renderGameCard
+   *  returns null → empty Pearl screen. */
+  macroEventId?: string;
   /** If the source module was supposed to ask an onboarding profile
    *  question on its Continue tap (chapter 0 only) and the user skipped,
    *  the Pearl will offer it again as a soft prompt. The Pearl checks
@@ -109,6 +114,7 @@ function buildConfig(): Map<string, PearlContent> {
         afterModuleId: current.id,
         nextModuleId: next.id,
         gameKey,
+        macroEventId: current.interModuleMacroEventId,
         profileQuestion: PROFILE_QUESTION_BY_SOURCE_MODULE[current.id],
         chapterId: chapter.id,
       });

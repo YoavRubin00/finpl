@@ -336,7 +336,9 @@ export function PearlSheet({ visible, pearl, onClose }: PearlSheetProps): React.
             <PearlGameStage
               isActive={isActive}
               gameKey={pearl.gameKey}
+              macroEventId={pearl.macroEventId}
               onContinue={handleStageDone}
+              onExit={handleDismiss}
             />
           </View>
         );

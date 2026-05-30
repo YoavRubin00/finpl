@@ -1,6 +1,8 @@
 import React from 'react';
-import { View, ScrollView, StyleSheet } from 'react-native';
+import { View, ScrollView, StyleSheet, Pressable } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { X } from 'lucide-react-native';
+import { tapHaptic } from '../../../utils/haptics';
 
 // Game cards — same set the legacy in-LessonFlow "inter-module game" modal
 // imported. We keep the dependency edges identical so we don't double-bundle.
@@ -27,6 +29,11 @@ interface PearlGameStageProps {
   /** Optional macro-event id for the 'macro-event' game type. */
   macroEventId?: string;
   onContinue: () => void;
+  /** Optional explicit Exit handler. When set, renders a floating X in the
+   *  top-right corner so the user always has a guaranteed escape, even if
+   *  the parent sheet's top bar is visually obscured. Distinct from
+   *  onContinue, which advances to the next stage. */
+  onExit?: () => void;
 }
 
 /**
@@ -39,7 +46,7 @@ interface PearlGameStageProps {
  * taller than the viewport (e.g., Fear-or-Greed) don't trap users below a
  * cut-off Continue button.
  */
-export function PearlGameStage({ isActive, gameKey, macroEventId, onContinue }: PearlGameStageProps): React.ReactElement | null {
+export function PearlGameStage({ isActive, gameKey, macroEventId, onContinue, onExit }: PearlGameStageProps): React.ReactElement | null {
   const insets = useSafeAreaInsets();
   const isPro = useIsPro();
 
@@ -47,19 +54,37 @@ export function PearlGameStage({ isActive, gameKey, macroEventId, onContinue }: 
   if (!card) return null;
 
   return (
-    <ScrollView
-      style={styles.scroll}
-      contentContainerStyle={[
-        styles.scrollContent,
-        { paddingBottom: Math.max(insets.bottom + 24, 48) },
-      ]}
-      showsVerticalScrollIndicator={false}
-      keyboardShouldPersistTaps="handled"
-    >
-      <View style={{ opacity: isActive ? 1 : 0.999 }}>
-        {card}
-      </View>
-    </ScrollView>
+    <View style={{ flex: 1 }}>
+      <ScrollView
+        style={styles.scroll}
+        contentContainerStyle={[
+          styles.scrollContent,
+          { paddingBottom: Math.max(insets.bottom + 24, 48) },
+        ]}
+        showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
+      >
+        <View style={{ opacity: isActive ? 1 : 0.999 }}>
+          {card}
+        </View>
+      </ScrollView>
+      {onExit ? (
+        // Floating top-right Exit, guaranteed visible during any game.
+        // The parent PearlSheet's top bar already has a close button, but
+        // this overlay survives even if the user has scrolled the card
+        // upward and the chrome is out of view — a non-negotiable escape
+        // hatch per QA audit 2026-05-31.
+        <Pressable
+          onPress={() => { tapHaptic(); onExit(); }}
+          accessibilityRole="button"
+          accessibilityLabel="צא מהמשחק"
+          hitSlop={12}
+          style={[styles.exitBtn, { top: Math.max(insets.top + 6, 14) }]}
+        >
+          <X size={20} color="#0f172a" strokeWidth={2.8} />
+        </Pressable>
+      ) : null}
+    </View>
   );
 }
 
@@ -133,4 +158,20 @@ function FallbackContinueOnMount({ onMount }: { onMount: () => void }): null {
 const styles = StyleSheet.create({
   scroll: { flex: 1, backgroundColor: '#f8fafc' },
   scrollContent: { flexGrow: 1, paddingTop: 12 },
+  exitBtn: {
+    position: 'absolute',
+    right: 12,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: 'rgba(255,255,255,0.95)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#0f172a',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.18,
+    shadowRadius: 6,
+    elevation: 6,
+    zIndex: 100,
+  },
 });

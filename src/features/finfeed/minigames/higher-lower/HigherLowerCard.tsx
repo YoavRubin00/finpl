@@ -372,6 +372,16 @@ export const HigherLowerCard = React.memo(function HigherLowerCard({ isActive: _
           <ExpoImage source={FINN_STANDARD} style={styles.finLarge} contentFit="contain" accessible={false} />
           <Text style={[styles.doneTitle, RTL_CENTER]}>מי מנצח, הושלם להיום</Text>
           <Text style={[styles.doneSub, RTL_CENTER]}>חזרו מחר לתרחישים חדשים</Text>
+          {onComplete ? (
+            <Pressable
+              onPress={() => { tapHaptic(); onComplete(); }}
+              accessibilityRole="button"
+              accessibilityLabel="המשך"
+              style={styles.continueBtn}
+            >
+              <Text style={styles.continueBtnText} allowFontScaling={false}>המשך</Text>
+            </Pressable>
+          ) : null}
         </View>
       </View>
     );

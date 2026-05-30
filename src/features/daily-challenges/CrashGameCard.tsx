@@ -165,7 +165,8 @@ export const CrashGameCard = React.memo(function CrashGameCard({ isActive, onCon
 
   const remaining = MAX_DAILY_PLAYS - playsToday;
 
-  // All plays used
+  // All plays used. When rendered inside a Pearl (onContinue set) we MUST
+  // surface a Continue button or the Pearl pager dead-ends (QA 2026-05-31).
   if (hasPlayed && gameState === 'idle') {
     return (
       <View style={styles.container}>
@@ -173,6 +174,16 @@ export const CrashGameCard = React.memo(function CrashGameCard({ isActive, onCon
           <Text style={styles.answeredIcon}>📊</Text>
           <Text style={[styles.answeredTitle, RTL]}>שיחקת במרוץ הריבית היום!</Text>
           <Text style={[styles.answeredSub, RTL]}>חזור מחר לסבב חדש</Text>
+          {onContinue ? (
+            <Pressable
+              onPress={() => { tapHaptic(); onContinue(); }}
+              accessibilityRole="button"
+              accessibilityLabel="המשך"
+              style={styles.continueBtn}
+            >
+              <Text style={styles.continueBtnText} allowFontScaling={false}>המשך</Text>
+            </Pressable>
+          ) : null}
         </View>
       </View>
     );
