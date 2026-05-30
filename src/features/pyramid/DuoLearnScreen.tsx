@@ -1031,10 +1031,14 @@ const ChapterSection = React.memo(function ChapterSection({
                 }
                 const pearlOffsetX = -getNodeOffset(i);
                 const moduleCompleted = completedModules.includes(module.id);
+                // Pro unlocks EVERYTHING — including pearls. Without this, a
+                // brand-new Pro user lands on the map and sees nothing but
+                // gray pearls, even though every module is already tappable.
+                // Free users still need to finish the source module first.
                 const pearlState =
-                  !moduleCompleted ? 'locked' as const
-                  : completedPearlIds.includes(pearlIdFor(pearl)) ? 'completed' as const
-                  : 'unlocked' as const;
+                  completedPearlIds.includes(pearlIdFor(pearl)) ? 'completed' as const
+                  : (isPro || moduleCompleted) ? 'unlocked' as const
+                  : 'locked' as const;
                 return (
                   <>
                     <PathConnector
@@ -1231,12 +1235,16 @@ export function DuoLearnScreen() {
       if (activeIdx >= 0) {
         y += 80; // banner height
         y += 16; // marginTop
-        y += activeIdx * 160; // approximate row + connector per module
+        // Each module row ≈ NODE_SIZE (78) + 36 padding + ~66 connector/pearl
+        // height. Pearls add ~30px to every previous row vs the pre-pearl
+        // layout, so we bump the per-row estimate from 160 → 195 to keep the
+        // auto-scroll landing on the active module rather than above it.
+        y += activeIdx * 195;
         return y;
       }
       // Entire chapter completed, add its total height
       y += 80 + 44; // banner + container margins
-      y += ch.modules.length * 160;
+      y += ch.modules.length * 195;
     }
     return y;
   }, [progressData, isPro]);
