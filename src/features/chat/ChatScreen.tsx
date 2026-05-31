@@ -322,20 +322,25 @@ const typingStyles = StyleSheet.create({
 /*  Chat Style Picker, shown on first chat entry                      */
 /* ------------------------------------------------------------------ */
 
-// Picker trimmed 2026-05-31 from 4 → 3 personas. "סומכים עליכם" is the
-// soft third option for users who don't want to pick — it maps to the
-// "warren-buffett" companion (the app's default behavior) and is labeled
-// as the default so the choice carries zero commitment. CompanionId is
-// intentionally not narrowed — existing accounts that already picked
-// "rachel" or "robot" keep their persona; they just won't see those
-// options in the picker again.
+// Picker trimmed 2026-05-31 from 4 always-on personas to 3 + an
+// expandable "more" group. The 3 primary options are the everyday
+// choices; "סומכים עליכם" is a no-commitment default that maps to the
+// warren-buffett persona. The 2 secondary personas (rachel/robot) sit
+// behind a "לעוד סגנונות שיחה" toggle so users who want them can still
+// reach them, without cluttering the first impression.
 const CHAT_STYLES: { id: CompanionId; title: string; desc: string }[] = [
   { id: "warren-buffett", title: "חכם", desc: "מסביר עם אנלוגיות, כמו חבר שיודע הכל על כסף" },
   { id: "moshe-peled", title: "ישיר ותכל׳סי", desc: "ישראלי, לא מסתובב, אומר את זה כמו שזה" },
   { id: "warren-buffett", title: "סומכים עליכם", desc: "צאט ברירת מחדל" },
 ];
 
+const MORE_CHAT_STYLES: { id: CompanionId; title: string; desc: string }[] = [
+  { id: "rachel", title: "חם ומעודד", desc: "רגוע, סבלני, תמיד מוצא מילה טובה ומסביר בנועם" },
+  { id: "robot", title: "אנליטי ומדויק", desc: "מבוסס מספרים, תמציתי, עונה בנקודות קצרות" },
+];
+
 function ChatStylePicker({ onSelect }: { onSelect: (id: CompanionId) => void }) {
+  const [showMore, setShowMore] = useState(false);
   return (
     <Animated.View entering={FadeIn.duration(200)} style={pickerStyles.overlay} pointerEvents="auto">
       <Animated.View entering={FadeIn.duration(400).delay(100)} style={pickerStyles.card}>
@@ -350,7 +355,23 @@ function ChatStylePicker({ onSelect }: { onSelect: (id: CompanionId) => void }) 
               <Text style={pickerStyles.optionDesc}>{s.desc}</Text>
             </Pressable>
           ))}
+          {showMore && MORE_CHAT_STYLES.map((s) => (
+            <Pressable key={s.title} onPress={() => onSelect(s.id)} style={pickerStyles.option} accessibilityRole="button" accessibilityLabel={`סגנון שיחה: ${s.title}`}>
+              <Text style={pickerStyles.optionTitle}>{s.title}</Text>
+              <Text style={pickerStyles.optionDesc}>{s.desc}</Text>
+            </Pressable>
+          ))}
         </View>
+        <Pressable
+          onPress={() => setShowMore((v) => !v)}
+          style={pickerStyles.moreToggle}
+          accessibilityRole="button"
+          accessibilityLabel={showMore ? "הסתר סגנונות נוספים" : "פתח סגנונות שיחה נוספים"}
+        >
+          <Text style={pickerStyles.moreToggleText}>
+            {showMore ? "פחות סגנונות" : "לעוד סגנונות שיחה"}
+          </Text>
+        </Pressable>
       </Animated.View>
     </Animated.View>
   );
@@ -413,6 +434,20 @@ const pickerStyles = StyleSheet.create({
     writingDirection: "rtl",
     textAlign: "right",
     marginTop: 4,
+  },
+  moreToggle: {
+    alignSelf: "center",
+    marginTop: 6,
+    paddingVertical: 8,
+    paddingHorizontal: 14,
+  },
+  moreToggleText: {
+    fontSize: 13,
+    fontWeight: "700",
+    color: "#0369a1",
+    writingDirection: "rtl",
+    textAlign: "center",
+    textDecorationLine: "underline",
   },
 });
 
