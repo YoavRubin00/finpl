@@ -4,6 +4,7 @@ import { useRouter } from 'expo-router';
 import { ChevronRight } from 'lucide-react-native';
 import { CompoundSimScreen } from '../src/features/chapter-1-content/simulations/CompoundSimScreen';
 import { ToolTutorialMount } from '../src/features/financial-tools/components/ToolTutorialMount';
+import { useTutorialStore } from '../src/stores/useTutorialStore';
 import { tapHaptic } from '../src/utils/haptics';
 
 /**
@@ -12,6 +13,11 @@ import { tapHaptic } from '../src/utils/haptics';
  */
 export default function CompoundCalculatorRoute() {
   const router = useRouter();
+  // While the 3-step tool tutorial is showing, hold back the sim's own
+  // narration so the two Captain Shark tracks don't overlap (user report
+  // 2026-05-31). The instant the tutorial overlay marks itself seen, the
+  // suppress flag flips false and the sim's useEffect re-runs to start audio.
+  const hasSeenCompoundTutorial = useTutorialStore((s) => s.hasSeenToolTutorial['compound'] ?? false);
   const goToTools = () => {
     tapHaptic();
     router.replace('/(tabs)/tools' as never);
@@ -40,7 +46,7 @@ export default function CompoundCalculatorRoute() {
       </View>
 
       <View style={{ flex: 1 }}>
-        <CompoundSimScreen onComplete={goToTools} />
+        <CompoundSimScreen onComplete={goToTools} suppressAudio={!hasSeenCompoundTutorial} />
       </View>
 
       <ToolTutorialMount toolKey="compound" />

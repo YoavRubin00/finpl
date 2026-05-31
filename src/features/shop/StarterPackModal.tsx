@@ -26,7 +26,7 @@ import { getAvatarById } from '../avatars/avatarData';
 import { getAvatarSvgIcon } from '../../components/svg/avatars/AvatarMascots';
 import { successHaptic, tapHaptic } from '../../utils/haptics';
 import { logPurchase } from '../../utils/fbEvents';
-import { captureEvent } from '../../lib/posthog';
+import { track } from '../../lib/analytics/events';
 import { purchaseGemBundle } from '../../services/revenueCat';
 import {
   getTodaysStarterPack,
@@ -64,7 +64,7 @@ export function StarterPackModal({ visible, onDismiss, onPurchaseSuccess }: Prop
 
   useEffect(() => {
     if (visible) {
-      captureEvent('paywall_viewed', { paywall: 'starter_pack', pack_id: pack.id, is_minor: isMinor });
+      track({ name: 'paywall_viewed', props: { paywall: 'starter_pack', pack_id: pack.id, is_minor: isMinor } });
     }
   }, [visible, pack.id, isMinor]);
 
@@ -80,11 +80,14 @@ export function StarterPackModal({ visible, onDismiss, onPurchaseSuccess }: Prop
   const handleConfirm = useCallback(async () => {
     if (purchasing) return;
     setPurchasing(true);
-    captureEvent('purchase_initiated', {
-      bundle_id: pack.id,
-      bundle_type: 'starter_pack',
-      price_ils: 19.90,
-      real_money: HAS_RC_KEY,
+    track({
+      name: 'purchase_initiated',
+      props: {
+        bundle_id: pack.id,
+        bundle_type: 'starter_pack',
+        price_ils: 19.90,
+        real_money: HAS_RC_KEY,
+      },
     });
     try {
       if (HAS_RC_KEY) {
@@ -101,14 +104,17 @@ export function StarterPackModal({ visible, onDismiss, onPurchaseSuccess }: Prop
       }
       grantPack();
       successHaptic();
-      captureEvent('purchase_completed', {
-        bundle_id: pack.id,
-        bundle_type: 'starter_pack',
-        coins: pack.coins,
-        gems: pack.gems,
-        avatars: pack.avatarIds.length,
-        price_ils: 19.90,
-        real_money: HAS_RC_KEY,
+      track({
+        name: 'purchase_completed',
+        props: {
+          bundle_id: pack.id,
+          bundle_type: 'starter_pack',
+          coins: pack.coins,
+          gems: pack.gems,
+          avatars: pack.avatarIds.length,
+          price_ils: 19.90,
+          real_money: HAS_RC_KEY,
+        },
       });
       Alert.alert(
         'נרכש בהצלחה!',
@@ -120,11 +126,11 @@ export function StarterPackModal({ visible, onDismiss, onPurchaseSuccess }: Prop
       const msg = err instanceof Error ? err.message : 'שגיאה לא ידועה';
       // RC user-cancel surfaces as a thrown error too — quietly close.
       if (/cancel|user.{0,2}cancell/i.test(msg)) {
-        captureEvent('purchase_cancelled', { bundle_id: pack.id, bundle_type: 'starter_pack' });
+        track({ name: 'purchase_cancelled', props: { bundle_id: pack.id, bundle_type: 'starter_pack' } });
         onDismiss();
         return;
       }
-      captureEvent('purchase_failed', { bundle_id: pack.id, bundle_type: 'starter_pack', error_message: msg });
+      track({ name: 'purchase_failed', props: { bundle_id: pack.id, bundle_type: 'starter_pack', error_message: msg } });
       Alert.alert('הרכישה נכשלה', msg);
     } finally {
       setPurchasing(false);
@@ -133,7 +139,7 @@ export function StarterPackModal({ visible, onDismiss, onPurchaseSuccess }: Prop
 
   const handleCancel = useCallback(() => {
     tapHaptic();
-    captureEvent('paywall_dismissed', { paywall: 'starter_pack', pack_id: pack.id });
+    track({ name: 'paywall_dismissed', props: { paywall: 'starter_pack', pack_id: pack.id } });
     onDismiss();
   }, [onDismiss, pack.id]);
 

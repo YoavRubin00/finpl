@@ -33,7 +33,7 @@ import { X } from 'lucide-react-native';
 
 import { STITCH } from '../../constants/theme';
 import { tapHaptic } from '../../utils/haptics';
-import { captureEvent } from '../../lib/posthog';
+import { track } from '../../lib/analytics/events';
 import { useAuthStore } from '../auth/useAuthStore';
 import { useIsPro } from '../subscription/useSubscription';
 import { GlobalWealthHeader } from '../../components/ui/GlobalWealthHeader';
@@ -224,15 +224,17 @@ export function PearlSheet({ visible, pearl, onClose }: PearlSheetProps): React.
       setActivePage(0);
       openedAtRef.current = Date.now();
       try {
-        captureEvent('pearl_opened', {
-          after_module_id: pearl.afterModuleId,
-          next_module_id: pearl.nextModuleId,
-          chapter_id: pearl.chapterId,
-          game_key: pearl.gameKey,
-          stages_count: snapshot.length,
-          has_profile_question: !!pearl.profileQuestion,
-          has_unique_bundle: hasUniqueBundle,
-          is_pro: isPro,
+        track({
+          name: 'pearl_opened',
+          props: {
+            after_module_id: pearl.afterModuleId,
+            next_module_id: pearl.nextModuleId,
+            chapter_id: pearl.chapterId,
+            game_key: pearl.gameKey,
+            stages_count: snapshot.length,
+            has_profile_question: !!pearl.profileQuestion,
+            has_unique_bundle: hasUniqueBundle,
+          },
         });
       } catch { /* non-fatal */ }
     }
@@ -260,13 +262,16 @@ export function PearlSheet({ visible, pearl, onClose }: PearlSheetProps): React.
     if (pearl && activePage < stages.length) {
       const currentStage = stages[activePage];
       try {
-        captureEvent('pearl_dismissed', {
-          after_module_id: pearl.afterModuleId,
-          chapter_id: pearl.chapterId,
-          stage_kind: currentStage?.kind,
-          stage_index: activePage,
-          stages_count: stages.length,
-          time_open_ms: openedAtRef.current ? Date.now() - openedAtRef.current : null,
+        track({
+          name: 'pearl_dismissed',
+          props: {
+            after_module_id: pearl.afterModuleId,
+            chapter_id: pearl.chapterId,
+            stage_kind: currentStage?.kind,
+            stage_index: activePage,
+            stages_count: stages.length,
+            time_open_ms: openedAtRef.current ? Date.now() - openedAtRef.current : undefined,
+          },
         });
       } catch { /* non-fatal */ }
     }
@@ -300,11 +305,14 @@ export function PearlSheet({ visible, pearl, onClose }: PearlSheetProps): React.
     if (!pearl) return;
     const completedStage = stages[activePage];
     try {
-      captureEvent('pearl_stage_completed', {
-        after_module_id: pearl.afterModuleId,
-        stage_kind: completedStage?.kind,
-        stage_index: activePage,
-        stages_count: stages.length,
+      track({
+        name: 'pearl_stage_completed',
+        props: {
+          after_module_id: pearl.afterModuleId,
+          stage_kind: completedStage?.kind ?? 'unknown',
+          stage_index: activePage,
+          stages_count: stages.length,
+        },
       });
     } catch { /* non-fatal */ }
 
@@ -352,13 +360,15 @@ export function PearlSheet({ visible, pearl, onClose }: PearlSheetProps): React.
     // sheet, and push the user into the next module's lesson. The map will
     // show the pearl as completed when the user returns to it.
     try {
-      captureEvent('pearl_completed', {
-        after_module_id: pearl.afterModuleId,
-        next_module_id: pearl.nextModuleId,
-        chapter_id: pearl.chapterId,
-        game_key: pearl.gameKey,
-        stages_count: stages.length,
-        time_to_complete_ms: openedAtRef.current ? Date.now() - openedAtRef.current : null,
+      track({
+        name: 'pearl_completed',
+        props: {
+          after_module_id: pearl.afterModuleId,
+          next_module_id: pearl.nextModuleId,
+          chapter_id: pearl.chapterId,
+          stages_count: stages.length,
+          time_to_complete_ms: openedAtRef.current ? Date.now() - openedAtRef.current : undefined,
+        },
       });
     } catch { /* non-fatal */ }
     // No additional final payout — the per-stage chunks above already
@@ -554,11 +564,12 @@ export function PearlSheet({ visible, pearl, onClose }: PearlSheetProps): React.
               tapHaptic();
               if (!pearl) { onClose(); return; }
               try {
-                captureEvent('pearl_skipped', {
-                  after_module_id: pearl.afterModuleId,
-                  stage_kind: stages[activePage]?.kind,
-                  stage_index: activePage,
-                  stages_count: stages.length,
+                track({
+                  name: 'pearl_skipped',
+                  props: {
+                    after_module_id: pearl.afterModuleId,
+                    chapter_id: pearl.chapterId,
+                  },
                 });
               } catch { /* non-fatal */ }
               markCompleted(pearlIdFor(pearl));
