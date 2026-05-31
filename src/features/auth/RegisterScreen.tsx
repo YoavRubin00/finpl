@@ -501,20 +501,27 @@ export function RegisterScreen() {
             {/* Skip-to-guest — kept as a subtle text link so it doesn't compete
                 with the primary "Register" CTA above (which is the conversion
                 goal). Was previously a full-width outlined button which drew
-                too much attention away from sign-up. */}
-            <Pressable
-              onPress={() => {
-                captureEvent('signup_skipped_for_guest');
-                enterGuestMode();
-              }}
-              accessibilityRole="button"
-              accessibilityLabel="התחל ללא חשבון"
-              style={{ marginTop: 12, paddingVertical: 6, alignSelf: "center" }}
-            >
-              <Text style={{ textAlign: "center", fontSize: 13, color: "#94a3b8", writingDirection: "rtl", textDecorationLine: "underline" }}>
-                התחל ללא חשבון
-              </Text>
-            </Pressable>
+                too much attention away from sign-up.
+                Hidden when `returnTo` is set: that means the user arrived from
+                an in-app upgrade CTA (e.g., guest tapping "create account from
+                More menu"), and offering "start as guest" there is meaningless
+                — they're already a guest, and the link would just no-op back
+                into the app. Visible only on the initial onboarding path. */}
+            {!returnTo && (
+              <Pressable
+                onPress={() => {
+                  captureEvent('signup_skipped_for_guest');
+                  enterGuestMode();
+                }}
+                accessibilityRole="button"
+                accessibilityLabel="התחל ללא חשבון"
+                style={{ marginTop: 12, paddingVertical: 6, alignSelf: "center" }}
+              >
+                <Text style={{ textAlign: "center", fontSize: 13, color: "#94a3b8", writingDirection: "rtl", textDecorationLine: "underline" }}>
+                  התחל ללא חשבון
+                </Text>
+              </Pressable>
+            )}
 
             {/* The bottom "back to game" link was removed. The top chevron
                 already provides a back path and a second exit duplicated it. */}
