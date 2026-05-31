@@ -68,6 +68,21 @@ export function PearlVideoStage({ isActive, video, onContinue }: PearlVideoStage
         nativeControls={false}
       />
 
+      {/* Skip pill — top-right corner, floats above the video so it's always
+          reachable while the clip plays. Mid-flow only; once the clip
+          finishes we render the "המשך" CTA in the bottom scrim instead. */}
+      {!finished ? (
+        <Pressable
+          onPress={() => { tapHaptic(); onContinue(); }}
+          style={styles.skipBtn}
+          accessibilityRole="button"
+          accessibilityLabel="דלג על הקליפ"
+          hitSlop={10}
+        >
+          <Text style={styles.skipText} allowFontScaling={false}>דלג ›</Text>
+        </Pressable>
+      ) : null}
+
       {/* Gradient/scrim at bottom so the caption + CTA stay legible over
           bright video frames. Using a solid translucent bar keeps it
           dependency-free (no LinearGradient gymnastics needed here). */}
@@ -88,16 +103,7 @@ export function PearlVideoStage({ isActive, video, onContinue }: PearlVideoStage
               <Text style={styles.continueText} allowFontScaling={false}>המשך ←</Text>
             </Pressable>
           </Animated.View>
-        ) : (
-          <Pressable
-            onPress={() => { tapHaptic(); onContinue(); }}
-            style={styles.skipBtn}
-            accessibilityRole="button"
-            accessibilityLabel="דלג על הקליפ"
-          >
-            <Text style={styles.skipText} allowFontScaling={false}>דלג</Text>
-          </Pressable>
-        )}
+        ) : null}
       </View>
     </View>
   );
@@ -149,11 +155,17 @@ const styles = StyleSheet.create({
   },
   continueText: { color: '#fff', fontSize: 17, fontWeight: '900' },
   skipBtn: {
-    alignSelf: 'flex-start',
-    backgroundColor: 'rgba(255,255,255,0.18)',
-    paddingHorizontal: 16,
-    paddingVertical: 8,
+    // Top-right floating pill, sits above the video. Right offset matches
+    // PearlSheet's close-X position so the two top-right interactions stay
+    // visually grouped.
+    position: 'absolute',
+    top: 12,
+    right: 12,
+    backgroundColor: 'rgba(15,23,42,0.55)',
+    paddingHorizontal: 14,
+    paddingVertical: 7,
     borderRadius: 999,
+    zIndex: 10,
   },
-  skipText: { color: '#fff', fontSize: 13, fontWeight: '700' },
+  skipText: { color: '#fff', fontSize: 13, fontWeight: '800', writingDirection: 'rtl' as const },
 });
