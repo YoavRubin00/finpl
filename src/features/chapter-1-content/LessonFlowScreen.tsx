@@ -2584,7 +2584,6 @@ export function LessonFlowScreen() {
    * the next lesson in the sequence instead of landing on the learn map.
    */
   function getNextRouteAfterRegister(): string {
-    if (id === 'mod-0-3') return '/interstitial/bullshit-ch0';
     if (id === 'mod-1-9') return '/tower-defense-boss';
     if (chapterId && currentModIdx >= 0 && currentModIdx + 1 < chapterModules.length) {
       const next = chapterModules[currentModIdx + 1];
@@ -2717,13 +2716,10 @@ export function LessonFlowScreen() {
       router.replace("/tower-defense-boss" as never);
       return;
     }
-    // After mod-0-3, drop into the BullshitSwipe interstitial (critical-thinking
-    // warm-up) before continuing to mod-0-4. Shark delivers the "this is why
-    // I'm here" line after the mini-game finishes. Same one-pass rule as mod-1-9.
-    if (id === 'mod-0-3' && !isReplay) {
-      router.replace("/interstitial/bullshit-ch0" as never);
-      return;
-    }
+    // (Removed 2026-06-01: BullshitSwipe interstitial after mod-0-3 was cut
+    //  per user request — go straight to mod-0-4 / Budget Balance via the
+    //  normal pearl + next-module flow below. The /interstitial/bullshit-ch0
+    //  route is now orphan; safe to delete in a follow-up.)
     // Pearl gate — if the just-completed module has a pearl after it, drop
     // the user on the learn map with `?openPearl=<moduleId>` so DuoLearnScreen
     // auto-opens the pearl sheet. Was missing on this path (only
