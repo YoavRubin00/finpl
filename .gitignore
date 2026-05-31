@@ -58,6 +58,10 @@ scripts/*
 !scripts/migrate-local.mjs
 !scripts/vercel-dev-local.mjs
 !scripts/dev-phone.mjs
+# Exception: DB diagram tooling (npm run db:diagram)
+!scripts/db-diagram.mjs
+!scripts/db-introspect.sql
+!scripts/db-diagram.template.html
 notebooklm-py/
 
 # Local scratch folders for one-shot asset generation pipelines
