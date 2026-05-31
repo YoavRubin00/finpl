@@ -172,10 +172,13 @@ export const MythFeedCard = React.memo(function MythFeedCard({ isInterModule, on
 
                     {/* Inside a Pearl/inter-module flow the deck is otherwise
                         infinite — there's no natural "end of session" event
-                        to advance the pager. After the user has played at
-                        least 3 cards, surface an explicit "סיימתי" button
-                        that calls onSkip so the Pearl can move on. */}
-                    {isInterModule && onSkip && (sessionCorrect + sessionWrong) >= 3 ? (
+                        to advance the pager. Surface the "סיימתי, המשך"
+                        button as soon as the user has answered AT LEAST ONE
+                        card so they're never trapped without a way forward.
+                        Earlier the threshold was 3 (force engagement) but
+                        users reported "אחרי שעניתי אין כפתור המשך" — the gate
+                        broke the pearl flow on iPhone (2026-06-01). */}
+                    {isInterModule && onSkip && (sessionCorrect + sessionWrong) >= 1 ? (
                         <View style={styles.doneWrap}>
                             <Pressable
                                 onPress={() => { tapHaptic(); onSkip(); }}
