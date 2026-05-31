@@ -54,6 +54,7 @@ import { useEconomyUIStore } from '../economy/useEconomyUIStore';
 import { useFunStore } from '../../stores/useFunStore';
 import { markDailyActivityCompleted } from '../economy/useStreak';
 import { LIFESTYLE_VIDEOS } from '../inter-module-break/lifestyleVideoConfig';
+import { prefetchStreamingVideo } from '../../hooks/useModulePrefetch';
 import { FlyingRewards } from '../../components/ui/FlyingRewards';
 import { PearlCtaStage, type PearlCtaKind } from './stages/PearlCtaStage';
 
@@ -237,6 +238,20 @@ export function PearlSheet({ visible, pearl, onClose }: PearlSheetProps): React.
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [visible, pearl]);
+
+  // ── Video warmup ──────────────────────────────────────────────────────
+  // The lifestyle video stage instantiates `useVideoPlayer` only when the
+  // user swipes to it, which means the CDN fetch races the user's swipe.
+  // On 4G that's ~1-2s of blank stage before the first frame. Kick off a
+  // Range-fetch warmup the moment the sheet opens so the OS HTTP cache +
+  // Vercel Blob edge are primed by the time the player mounts. Streaming-
+  // friendly (no FileSystem persist), so we don't violate the lifestyle-
+  // video "no disk persist" guarantee.
+  useEffect(() => {
+    if (!visible || !pearl?.videoId) return;
+    const video = LIFESTYLE_VIDEOS.find((v) => v.id === pearl.videoId);
+    if (video?.videoUri) prefetchStreamingVideo(video.videoUri);
+  }, [visible, pearl?.videoId]);
 
   // Wrapped close: emits pearl_dismissed when the user bails before the
   // last stage. pearl_completed fires from handleStageDone in that case,

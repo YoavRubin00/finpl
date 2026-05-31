@@ -99,6 +99,30 @@ export function prefetchModuleAudio(audioUri: string | undefined): void {
   void prefetchAudio(audioUri);
 }
 
+/** Streaming-friendly video warmup (does NOT download the full file). Issues
+ *  a Range request for the first ~512KB — enough to prime the OS HTTP cache
+ *  and the Vercel Blob edge node so the next expo-video `useVideoPlayer`
+ *  starts playback near-instantly instead of cold-fetching. Use this for
+ *  lifestyle/pearl videos that the project explicitly does NOT want
+ *  persisted to disk (see comment in `lifestyleVideoConfig.ts`).
+ *
+ *  Fire-and-forget — caller does not await. Multiple calls for the same URI
+ *  are safe (the OS dedupes). 512KB ≈ ~3 sec of buffer at typical encoding. */
+const streamingWarmupAttempted = new Set<string>();
+export function prefetchStreamingVideo(uri: string | undefined): void {
+  if (!uri) return;
+  if (streamingWarmupAttempted.has(uri)) return;
+  streamingWarmupAttempted.add(uri);
+  fetch(uri, {
+    method: 'GET',
+    headers: { Range: 'bytes=0-524287' },
+  }).catch(() => {
+    // Network failure on warmup is non-fatal; the real player will retry
+    // when it mounts. Don't even log — this is a best-effort optimization.
+    streamingWarmupAttempted.delete(uri);
+  });
+}
+
 export interface ModulePrefetchState {
   imagesReady: boolean;
   videosReady: boolean;
