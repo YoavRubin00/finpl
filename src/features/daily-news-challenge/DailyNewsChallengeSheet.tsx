@@ -35,9 +35,17 @@ import { FlyingRewards } from '../../components/ui/FlyingRewards';
 import { GlobalWealthHeader } from '../../components/ui/GlobalWealthHeader';
 import { playChestOpenSwoosh } from './lib/sounds';
 
+/** Where the sheet was opened from. Recorded on news_challenge_viewed +
+ *  news_challenge_completed so we can attribute opens by entry point and
+ *  compare engagement across surfaces. */
+export type NewsEntrySource = 'daily_quests_modal' | 'direct' | 'unknown';
+
 interface DailyNewsChallengeSheetProps {
   visible: boolean;
   onClose: () => void;
+  /** Telemetry: which surface opened the sheet. Defaults to 'unknown' so
+   *  callers that haven't been migrated yet still emit a non-null property. */
+  entrySource?: NewsEntrySource;
 }
 
 // Pager layout: news[0] → did-you-know intermezzo → news[1] → chests.
@@ -72,7 +80,7 @@ const PAGE_DESCRIPTORS: PageDescriptor[] = [
  * the pager show current page. The pager is the user's main interaction;
  * tapping "המשך" inside a page also advances it.
  */
-export function DailyNewsChallengeSheet({ visible, onClose }: DailyNewsChallengeSheetProps): React.ReactElement | null {
+export function DailyNewsChallengeSheet({ visible, onClose, entrySource = 'unknown' }: DailyNewsChallengeSheetProps): React.ReactElement | null {
   const insets = useSafeAreaInsets();
   const challenge = useDailyNewsChallengeStore((s) => s.todayChallenge);
   const answered = useDailyNewsChallengeStore((s) => s.answered);
@@ -165,9 +173,12 @@ export function DailyNewsChallengeSheet({ visible, onClose }: DailyNewsChallenge
 
   useEffect(() => {
     if (visible && challenge) {
-      captureEvent('news_challenge_viewed', { date_key: challenge.dateKey });
+      captureEvent('news_challenge_viewed', {
+        date_key: challenge.dateKey,
+        entry_source: entrySource,
+      });
     }
-  }, [visible, challenge]);
+  }, [visible, challenge, entrySource]);
 
   // Completed event — fires ONCE per (dateKey, session). The ref guard
   // (from the QA audit) prevents the 58:2 over-firing bug when the sheet
@@ -184,6 +195,7 @@ export function DailyNewsChallengeSheet({ visible, onClose }: DailyNewsChallenge
       date_key: dateKey,
       both_correct: answered[0].wasCorrect && answered[1].wasCorrect,
       streak,
+      entry_source: entrySource,
     };
     captureEvent('news_challenge_completed', props);
     captureEvent('daily_challenge_completed', { ...props, challenge_type: 'news' });

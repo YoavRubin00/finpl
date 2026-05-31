@@ -7,6 +7,7 @@ import { getStreak, recordDailyActivity, type StreakState } from '../../lib/api/
 import { queryClient } from '../../lib/queryClient';
 import { useEconomyUIStore } from './useEconomyUIStore';
 import { useAuthStore } from '../auth/useAuthStore';
+import { captureEvent } from '../../lib/posthog';
 
 export const streakQueryKey = ['streak'] as const;
 
@@ -71,16 +72,31 @@ export const STREAK_DAILY_TICK_KEY = 'streak-daily-tick:last';
  * stay in sync without per-callsite drift.
  */
 export function markDailyActivityCompleted(): void {
-  // Local first — synchronous, drives the popup + activeDates calendar.
+  // Local first: synchronous, drives the popup + activeDates calendar.
   try { useEconomyUIStore.getState().completeDailyTask(); } catch { /* non-fatal */ }
-  // Server next — async, persists across devices + powers notifications.
+  // Server next: async, persists across devices + powers notifications.
   // Server is already idempotent per dateIl, so fire-and-forget is safe.
   void recordDailyActivity(todayIsraelDate())
-    .then((res) => {
+    .then(async (res) => {
       queryClient.setQueryData<StreakState | null>(streakQueryKey, res.streak);
+      // Fire `daily_active_day` exactly once per Israeli calendar day so
+      // NSM Secondary (Active Streaks) becomes a direct PostHog query
+      // instead of a server-side join. Guarded by STREAK_DAILY_TICK_KEY:
+      // if today's key was already written we've already fired today.
+      try {
+        const last = await AsyncStorage.getItem(STREAK_DAILY_TICK_KEY);
+        const today = todayIsraelDate();
+        if (last !== today) {
+          captureEvent('daily_active_day', {
+            date_il: today,
+            streak: res.streak?.currentStreak ?? 0,
+            longest_streak: res.streak?.longestStreak ?? 0,
+          });
+        }
+      } catch { /* non-fatal */ }
       AsyncStorage.setItem(STREAK_DAILY_TICK_KEY, todayIsraelDate()).catch(() => {});
     })
-    .catch(() => { /* offline / 401 — local state stays correct, server retries on next foreground */ });
+    .catch(() => { /* offline / 401, local state stays correct, server retries on next foreground */ });
 }
 
 /**

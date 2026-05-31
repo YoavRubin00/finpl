@@ -29,6 +29,7 @@ import { FINN_HELLO, FINN_STANDARD, FINN_DANCING } from "../retention-loops/finn
 import { useSpontaneousDancing } from "../retention-loops/useSpontaneousDancing";
 import { heavyHaptic, successHaptic, tapHaptic } from "../../utils/haptics";
 import { useSoundEffect } from "../../hooks/useSoundEffect";
+import { captureEvent } from "../../lib/posthog";
 
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const LOTTIE_CHEST = require("../../../assets/lottie/3D Treasure Box.json") as unknown as AnimationObject;
@@ -46,6 +47,14 @@ const RTL = { writingDirection: "rtl" as const, textAlign: "right" as const };
 interface DailyQuestsSheetProps {
   visible: boolean;
   onClose: () => void;
+  /** Opens the Daily News Challenge sheet. Wired by the host screen (DuoLearn)
+   *  so the news quest can launch the existing news flow without a route. */
+  onOpenNewsChallenge?: () => void;
+  /** Opens the BullshitSwipe quest as a modal. Replaces the broken
+   *  /quest/swipe-game route after the Feed deletion (2026-05-30). */
+  onOpenSwipeQuest?: () => void;
+  /** Opens the daily-dilemma quest as a modal. Replaces /quest/daily-dilemma. */
+  onOpenDilemmaQuest?: () => void;
 }
 
 // Safety fallback for users with old AsyncStorage quests that lack the string fields
@@ -178,7 +187,7 @@ function QuestButton({
   );
 }
 
-export function DailyQuestsSheet({ visible, onClose }: DailyQuestsSheetProps) {
+export function DailyQuestsSheet({ visible, onClose, onOpenNewsChallenge, onOpenSwipeQuest, onOpenDilemmaQuest }: DailyQuestsSheetProps) {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const quests = useDailyQuestsStore((s) => s.quests);
@@ -189,7 +198,6 @@ export function DailyQuestsSheet({ visible, onClose }: DailyQuestsSheetProps) {
   const claimReward = useDailyQuestsStore((s) => s.claimReward);
   const claimProReward = useDailyQuestsStore((s) => s.claimProReward);
   const refreshQuests = useDailyQuestsStore((s) => s.refreshQuests);
-  const syncQuestCompletions = useDailyQuestsStore((s) => s.syncCompletions);
   const { data: streakData } = useStreak();
   const streak = streakData?.currentStreak ?? 0;
   const isPro = useIsPro();
@@ -203,12 +211,26 @@ export function DailyQuestsSheet({ visible, onClose }: DailyQuestsSheetProps) {
       setProChestOpen(false);
       return;
     }
-    if (quests.length === 0) {
-      refreshQuests();
-    } else {
-      syncQuestCompletions();
-    }
-  }, [visible, quests.length, refreshQuests, syncQuestCompletions]);
+    // refreshQuests is idempotent on same-day, and now also tops up the
+    // quest list if the order grew (e.g. 'news' was added mid-day). Calling
+    // it on every open is safe and guarantees the latest order is in state.
+    refreshQuests();
+    // Fire after the sync above so completedCount reflects today's state.
+    // Lets us measure: open rate, completion-at-open rate, and which quests
+    // are still pending when the user enters the sheet.
+    try {
+      const state = useDailyQuestsStore.getState();
+      captureEvent('daily_quests_modal_opened', {
+        quest_count: state.quests.length,
+        completed_count: state.completedCount(),
+        pending_quest_types: state.quests.filter((q) => !q.isCompleted).map((q) => q.type),
+        streak,
+        is_pro: isPro,
+        reward_claimed: state.rewardClaimed,
+        pro_reward_claimed: state.proRewardClaimed,
+      });
+    } catch { /* non-fatal */ }
+  }, [visible, refreshQuests, streak, isPro]);
 
   const preview = previewQuestReward(streak);
   const previewPro = previewProQuestReward(streak);
@@ -217,23 +239,28 @@ export function DailyQuestsSheet({ visible, onClose }: DailyQuestsSheetProps) {
   const handleQuestPress = (quest: DailyQuest) => {
     if (quest.isCompleted) return; // completed quests are informational only
     tapHaptic();
+    captureEvent('daily_quest_clicked', {
+      quest_type: quest.type,
+      quest_id: quest.id,
+    });
     onClose();
-    // Feed-tab scroll-to-card retired (2026-05-30 Feed deletion). Swipe + dilemma
-    // each now have a dedicated host route under /quest/* that renders the game
-    // standalone with bypassDailyGate — the cards still mark the quest complete
-    // via useDailyQuestsStore on finish, so no other wiring is needed.
+    // Post-Feed-deletion architecture (2026-05-30): swipe/dilemma/news each
+    // open as a Modal hosted by DuoLearnScreen via callbacks, replacing the
+    // broken /quest/* routes. Only the "module" quest still uses router.push
+    // because it sends the user back to the learn tab, not to a card.
     //
-    // The router.push runs after the Modal close animation begins. On iOS,
-    // navigating WHILE a Modal dismisses can abort the dismiss + leave the
-    // sheet visible underneath the new route. Defer the push by one slide
-    // duration (~280ms) so the sheet fully closes first.
-    const navigate = (path: string) => setTimeout(() => router.push(path as never), 280);
+    // The handoff runs after the Modal close animation begins. On iOS,
+    // opening a Modal WHILE this one dismisses can abort the dismiss + leave
+    // the sheet visible underneath the new modal. Defer by one slide (~280ms).
+    const defer = (fn: () => void) => setTimeout(fn, 280);
     if (quest.type === "swipe") {
-      navigate("/quest/swipe-game");
+      defer(() => onOpenSwipeQuest?.());
     } else if (quest.type === "dilemma") {
-      navigate("/quest/daily-dilemma");
+      defer(() => onOpenDilemmaQuest?.());
     } else if (quest.type === "module") {
-      navigate("/(tabs)");
+      defer(() => router.push("/(tabs)" as never));
+    } else if (quest.type === "news") {
+      defer(() => onOpenNewsChallenge?.());
     }
   };
 
@@ -398,7 +425,7 @@ export function DailyQuestsSheet({ visible, onClose }: DailyQuestsSheetProps) {
     : allDone
       ? "סיימתם הכל! לחצו על התיבה והפרס שלכם"
       : completedCount === 0
-        ? "אהוי! יש לכם 3 משימות היום. נצא לציד?"
+        ? `אהוי! יש לכם ${quests.length} משימות היום. נצא לציד?`
         : `כל הכבוד! עוד ${quests.length - completedCount} ואני אפתח לכם את התיבה`;
 
   return (

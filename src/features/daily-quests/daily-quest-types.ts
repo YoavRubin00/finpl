@@ -1,6 +1,6 @@
 export interface DailyQuest {
   id: string;
-  type: "dilemma" | "module" | "swipe";
+  type: "dilemma" | "module" | "swipe" | "news";
   titleHe: string;
   /** One-line explanation that tells the user what to actually do. */
   descriptionHe: string;
@@ -114,8 +114,34 @@ export const QUEST_TEMPLATES: Omit<DailyQuest, "id" | "isCompleted">[] = [
   {
     type: "swipe",
     titleHe: "סוויפ חמסה",
-    descriptionHe: "5 כרטיסים מהר — מי המהיר ומדויק יותר?",
+    descriptionHe: "5 כרטיסים מהר - מי המהיר ומדויק יותר?",
     lottieSource: require("../../../assets/lottie/wired-flat-56-document-hover-swipe.json") as number,
+  },
+
+  // News variants
+  {
+    type: "news",
+    titleHe: "מהדורת חדשות היום",
+    descriptionHe: "שתי כותרות אקטואליה, מה באמת קרה?",
+    lottieSource: require("../../../assets/lottie/wired-flat-411-news-newspaper-hover-pinch.json") as number,
+  },
+  {
+    type: "news",
+    titleHe: "קראו את החדשות הפיננסיות",
+    descriptionHe: "סיכום יומי קצר עם שתי שאלות בסוף",
+    lottieSource: require("../../../assets/lottie/wired-flat-411-news-newspaper-hover-pinch.json") as number,
+  },
+  {
+    type: "news",
+    titleHe: "אקטואליה ב-2 דקות",
+    descriptionHe: "מה חשוב לדעת היום, וענו על 2 שאלות",
+    lottieSource: require("../../../assets/lottie/wired-flat-411-news-newspaper-hover-pinch.json") as number,
+  },
+  {
+    type: "news",
+    titleHe: "החדשות של קפטן שארק",
+    descriptionHe: "הסיכום היומי, בלי בולשיט, רק מה שחשוב",
+    lottieSource: require("../../../assets/lottie/wired-flat-411-news-newspaper-hover-pinch.json") as number,
   },
 ];
 
@@ -125,5 +151,6 @@ export function questTemplatesByType(): Record<DailyQuest["type"], typeof QUEST_
     dilemma: QUEST_TEMPLATES.filter((t) => t.type === "dilemma"),
     module: QUEST_TEMPLATES.filter((t) => t.type === "module"),
     swipe: QUEST_TEMPLATES.filter((t) => t.type === "swipe"),
+    news: QUEST_TEMPLATES.filter((t) => t.type === "news"),
   };
 }
