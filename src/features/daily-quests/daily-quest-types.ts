@@ -92,29 +92,35 @@ export const QUEST_TEMPLATES: Omit<DailyQuest, "id" | "isCompleted">[] = [
     lottieSource: require("../../../assets/lottie/wired-flat-112-book-hover-closed.json") as number,
   },
 
-  // ── Swipe variants ───────────────────────────────────────────────
+  // ── Game variants (Yoav 2026-05-31) ──────────────────────────────
+  // Type still 'swipe' for backward-compat with useDailyChallengesStore
+  // tracking. Copy is now game-agnostic — the actual game rotates daily via
+  // app/quest/swipe-game.tsx (10-game rotation: bullshit-swipe, higher-lower,
+  // budget-ninja, price-slider, fomo-killer, cashout-rush, crash, dilemma,
+  // investment, myth). Don't say "סוויפ" in the title since 9/10 days the
+  // game isn't a swipe game.
   {
     type: "swipe",
-    titleHe: "שחקו במשחק סוויפ",
-    descriptionHe: "מחקו מיתוסים פיננסיים בסוויפ ימינה/שמאלה",
+    titleHe: "המשחק היומי",
+    descriptionHe: "משחק פיננסי קצר — בכל יום אחר",
     lottieSource: require("../../../assets/lottie/wired-flat-56-document-hover-swipe.json") as number,
   },
   {
     type: "swipe",
-    titleHe: "מחקו 5 בולשיט פיננסי",
-    descriptionHe: "סוויפ שמאלה לכל פייק — צודקים מקבלים XP",
+    titleHe: "האתגר של היום",
+    descriptionHe: "משחק חדש מחכה לכם — דקה-שתיים",
     lottieSource: require("../../../assets/lottie/wired-flat-56-document-hover-swipe.json") as number,
   },
   {
     type: "swipe",
-    titleHe: "הבחנה בין אמת לשקר",
-    descriptionHe: "תוכן פיננסי שעובר היום ברשתות — מי צודק?",
+    titleHe: "שחקו 2 דקות",
+    descriptionHe: "משחק יומי שמתחלף — סוויפ, דילמה, ניחוש, ועוד",
     lottieSource: require("../../../assets/lottie/wired-flat-56-document-hover-swipe.json") as number,
   },
   {
     type: "swipe",
-    titleHe: "סוויפ חמסה",
-    descriptionHe: "5 כרטיסים מהר - מי המהיר ומדויק יותר?",
+    titleHe: "המשחק של קפטן שארק",
+    descriptionHe: "כל יום משחק אחר — אקטיביות מהירה בלי בולשיט",
     lottieSource: require("../../../assets/lottie/wired-flat-56-document-hover-swipe.json") as number,
   },
 
