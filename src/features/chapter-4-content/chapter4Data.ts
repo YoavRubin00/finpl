@@ -274,6 +274,8 @@ export const chapter4Data: Chapter = {
         description:
           'גרף ‎S&P‎ 500 רץ על המסך ב-fast-forward. המשתמש בוחר מתי "להיכנס" ורואה איך התזמון כמעט לא משנה לאורך 20 שנה.',
       },
+      // Pearl game: scenario-lab (gated to chapter-4 per spec).
+      interModuleGame: 'scenario-lab',
     },
     {
       id: 'mod-4-21',
@@ -542,6 +544,8 @@ export const chapter4Data: Chapter = {
         description:
           'המשתמש בוחר תיק השקעות (סכום, תדירות מסחר, ישראל/חו"ל) ומשווה בין 3 פלטפורמות שונות. המערכת מחשבת את העלות האמיתית השנתית כולל כל העמלות הנסתרות.',
       },
+      // Pearl game: crowd-question — community sentiment after broker compare.
+      interModuleGame: 'crowd-question',
     },
     {
       id: 'mod-4-22',

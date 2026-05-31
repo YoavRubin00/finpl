@@ -117,7 +117,11 @@ export interface Module {
     | 'higher-lower'
     | 'price-slider'
     | 'budget-ninja'
-    | 'cashout-rush';
+    | 'cashout-rush'
+    | 'diamond-hands'
+    | 'crowd-question'
+    | 'payslip-bonus'
+    | 'scenario-lab';
   /** When interModuleGame === 'macro-event', the specific macro event id to show */
   interModuleMacroEventId?: string;
   /** When interModuleGame === 'video', the video asset to play */

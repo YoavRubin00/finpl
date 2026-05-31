@@ -48,7 +48,11 @@ export type InterModuleGameKey =
   | 'higher-lower'
   | 'price-slider'
   | 'budget-ninja'
-  | 'cashout-rush';
+  | 'cashout-rush'
+  | 'diamond-hands'
+  | 'crowd-question'
+  | 'payslip-bonus'
+  | 'scenario-lab';
 
 export interface PearlContent {
   /** The id of the module the Pearl sits AFTER. The Pearl unlocks when
