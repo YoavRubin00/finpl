@@ -163,7 +163,11 @@ export const BULLSHIT_ADS: BullshitAd[] = [
   },
 ];
 
-export const BULLSHIT_ROUND_SIZE = 5;
+// Round size for the daily-challenge surface. Trimmed from 5 → 2 so the
+// 15-card pool (8 scam + 7 legit) lasts more days before the deck starts
+// repeating. The Pearl swipe stage doesn't read this constant — it passes
+// its own `adIds` prop with the topic-matched mini-deck.
+export const BULLSHIT_ROUND_SIZE = 2;
 
 function seededShuffle<T>(arr: T[], seed: number): T[] {
   const result = [...arr];
