@@ -54,12 +54,15 @@ import { useEconomyUIStore } from '../economy/useEconomyUIStore';
 import { useFunStore } from '../../stores/useFunStore';
 import { markDailyActivityCompleted } from '../economy/useStreak';
 import { LIFESTYLE_VIDEOS } from '../inter-module-break/lifestyleVideoConfig';
+import { FlyingRewards } from '../../components/ui/FlyingRewards';
 
-/** Pearl completion payout — anchored to Brawl Pass tier-1 yield (small,
- *  not a free meal). The pre-audit state granted ZERO and the bonus felt
- *  like a sink-with-no-source; this restores the source side. */
-const PEARL_COMPLETE_XP = 25;
-const PEARL_COMPLETE_COINS = 50;
+/** Per-stage payout — every content stage cleared grants this small payout
+ *  on the spot (with flying-coins animation), so the user feels rewarded as
+ *  they go instead of only at the very end. Tuned to total ~24 XP + 48 coins
+ *  across the 4 unique-bundle content stages (video, concept, swipe,
+ *  scenario), matching the previous one-shot completion payout (25 / 50). */
+const PEARL_PER_STAGE_XP = 6;
+const PEARL_PER_STAGE_COINS = 12;
 
 interface PearlSheetProps {
   visible: boolean;
@@ -74,7 +77,7 @@ type StageKind =
   | 'concept'       // unique-bundle: topic-matched concept (not day-rotation)
   | 'swipe'         // unique-bundle: 1-3 bullshit-swipe ads
   | 'scenario'      // unique-bundle: a specific Dilemma or Investment scenario
-  | 'game';         // mini-game (always last)
+  | 'game';         // mini-game (legacy fallback only)
 
 /** Which daily-content card the daily-pick stage should render today. The
  *  rotation is deterministic per UTC day so every user sees the same kind on
@@ -150,6 +153,10 @@ export function PearlSheet({ visible, pearl, onClose }: PearlSheetProps): React.
   const [stages, setStages] = useState<StageDescriptor[]>([]);
 
   const [activePage, setActivePage] = useState(0);
+  // Drives the per-stage flying-coins animation (see below). Bumped after
+  // every content-stage completion so a fresh <FlyingRewards/> instance
+  // remounts and replays.
+  const [flyingCoinsKey, setFlyingCoinsKey] = useState(0);
   const isPro = useIsPro();
   // Track open time so pearl_completed can carry time_to_complete_ms.
   // `performance.now()` works on web; the native shim returns Date.now()
@@ -186,10 +193,11 @@ export function PearlSheet({ visible, pearl, onClose }: PearlSheetProps): React.
       //      pearl still has a beat of content before the game.
       const hasUniqueBundle = !!(pearl.videoId || pearl.conceptId || pearl.swipeIds?.length || pearl.scenarioId);
       if (hasUniqueBundle) {
-        // Per user spec (2026-05-31): every pearl is exactly 4 content
-        // items — video, concept, swipe, scenario. The legacy interModuleGame
-        // stage is no longer appended; the scenario stage already provides
-        // a game-like interaction tied to the module's topic.
+        // 4 curated content items per pearl: video → concept → swipe → scenario.
+        // The mid-pearl CTA stage was rolled back — we'll re-introduce it
+        // using the old finfeed CTA components (FeedReferralNudgeCard etc.,
+        // restorable from git commit 539a582) rather than the placeholder
+        // CTA I had built. Tracked as a follow-up.
         if (pearl.videoId) snapshot.push({ kind: 'video', index: idx++ });
         if (pearl.conceptId) snapshot.push({ kind: 'concept', index: idx++ });
         if (pearl.swipeIds?.length) snapshot.push({ kind: 'swipe', index: idx++ });
@@ -289,6 +297,26 @@ export function PearlSheet({ visible, pearl, onClose }: PearlSheetProps): React.
       markDailyActivityCompleted();
     }
 
+    // Per-stage payout — grant a small XP + coin chunk for every content
+    // stage the user clears (excludes 'cta' and 'profile-question' since
+    // those are skippable / non-content stages). Fires the flying-coins
+    // animation right then so the reward lands DURING the pearl, not at the
+    // very end. Total across 4 content stages ≈ the legacy one-shot payout.
+    const isRewardedStage =
+      completedStage?.kind === 'video' ||
+      completedStage?.kind === 'concept' ||
+      completedStage?.kind === 'swipe' ||
+      completedStage?.kind === 'scenario' ||
+      completedStage?.kind === 'daily-pick' ||
+      completedStage?.kind === 'game';
+    if (isRewardedStage) {
+      try {
+        useEconomyUIStore.getState().addXP(PEARL_PER_STAGE_XP, 'challenge_complete');
+        useEconomyUIStore.getState().addCoins(PEARL_PER_STAGE_COINS, 'daily-quest');
+      } catch { /* non-fatal */ }
+      setFlyingCoinsKey((k) => k + 1);
+    }
+
     const nextIdx = activePage + 1;
     if (nextIdx < stages.length) {
       goToPage(nextIdx);
@@ -307,13 +335,10 @@ export function PearlSheet({ visible, pearl, onClose }: PearlSheetProps): React.
         time_to_complete_ms: openedAtRef.current ? Date.now() - openedAtRef.current : null,
       });
     } catch { /* non-fatal */ }
-    // Pearl payout — small but real, matching Brawl Pass tier-1 yield. Zero
-    // payout (the pre-audit state) felt like a sink with no source and made
-    // the bonus skip-by-default after a few sessions.
-    try {
-      useEconomyUIStore.getState().addXP(PEARL_COMPLETE_XP, 'challenge_complete');
-      useEconomyUIStore.getState().addCoins(PEARL_COMPLETE_COINS, 'daily-quest');
-    } catch { /* non-fatal */ }
+    // No additional final payout — the per-stage chunks above already
+    // distributed the total over the course of the pearl. The equivalent
+    // sum now lives in `PEARL_PER_STAGE_*` and is granted as the user
+    // progresses, not at the end.
     markCompleted(pearlIdFor(pearl));
     onClose();
     // Push, not replace — keeps the map underneath so the back stack works
@@ -481,6 +506,21 @@ export function PearlSheet({ visible, pearl, onClose }: PearlSheetProps): React.
         >
           {stages[activePage] ? renderStage(stages[activePage]) : null}
         </Animated.View>
+
+        {/* Per-stage flying-coins animation. Key changes each time a content
+            stage completes (bumped from handleStageDone) so the FlyingRewards
+            component remounts and replays. pointerEvents 'none' so the
+            falling particles never block the next stage's UI. */}
+        {flyingCoinsKey > 0 ? (
+          <View style={StyleSheet.absoluteFillObject} pointerEvents="none">
+            <FlyingRewards
+              key={flyingCoinsKey}
+              type="coins"
+              amount={PEARL_PER_STAGE_COINS}
+              onComplete={() => {/* particles self-clean; nothing to do */}}
+            />
+          </View>
+        ) : null}
       </SafeAreaView>
     </Modal>
   );
