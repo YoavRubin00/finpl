@@ -11,19 +11,17 @@ export const CURRENT_TERMS_VERSION = '2026-06-01';
 
 /** Short Hebrew bullets shown in the re-consent modal. Keep each under ~100 chars. */
 export const TERMS_UPDATE_SUMMARY_HE: ReadonlyArray<string> = [
-  'הוספנו כלי לניתוח תלוש שכר. הקובץ מעובד אצל Google Gemini ולא נשמר.',
+  'הוספנו כלי לניתוח תלוש שכר. הקובץ מעובד בעזרת AI ולא נשמר.',
   'הוספנו 9 כלים פיננסיים (משכנתא, פנסיה, מס ועוד). הקלט נשמר רק במכשיר.',
-  'הצ\'אט עם Captain Shark משתמש ב-AI של Google ו-Anthropic.',
-  'ניתוח מניות עמוק משתמש ב-Anthropic Claude.',
+  'הצ\'אט עם Captain Shark וניתוח מניות עמוק משתמשים ב-AI לעיבוד הנתונים.',
   'הבהרנו ששמירת סטטיסטיקות אנונימיות של תלוש (טווחים בלבד) מבוצעת מקומית.',
 ];
 
 /** Same summary in English, for users who switch language. */
 export const TERMS_UPDATE_SUMMARY_EN: ReadonlyArray<string> = [
-  'Added a payslip analyzer tool. The file is processed by Google Gemini and not stored.',
+  'Added a payslip analyzer tool. The file is processed by AI and not stored.',
   'Added 9 financial calculators (mortgage, pension, tax, etc.). Input is stored on-device only.',
-  'Captain Shark chat uses AI from Google and Anthropic.',
-  'Deep stock analysis uses Anthropic Claude.',
+  'Captain Shark chat and deep stock analysis use AI for data processing.',
   'Clarified that aggregated anonymized payslip statistics (ranges only) are stored locally.',
 ];
 
