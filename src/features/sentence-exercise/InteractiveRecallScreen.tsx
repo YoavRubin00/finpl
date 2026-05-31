@@ -73,13 +73,18 @@ export function InteractiveRecallScreen({
     return { correct: r.correct, finishesSet: r.finishesSet };
   }, []);
 
-  if (!set || !recall.current) {
-    return (
-      <View style={styles.empty} accessibilityRole="alert" accessibilityLabel="אין תרגילים זמינים">
-        <Text style={styles.emptyText}>אין תרגילים זמינים כרגע.</Text>
-      </View>
-    );
-  }
+  // Self-heal: if the lesson entered this phase but no recall set exists for
+  // the module (gate/data drift), advance straight to the next phase instead
+  // of trapping the user on a dead-end empty state with no button. Fires once
+  // on mount; the lesson treats it as a zero-reward completion.
+  const missingSet = !set || !recall.current;
+  useEffect(() => {
+    if (missingSet) {
+      onComplete({ totalXp: 0, totalCoins: 0 });
+    }
+  }, [missingSet, onComplete]);
+
+  if (missingSet) return null;
 
   const prompt = recall.current;
 
