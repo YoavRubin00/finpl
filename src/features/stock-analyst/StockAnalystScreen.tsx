@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   View,
   Text,
@@ -12,6 +12,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Image as ExpoImage } from 'expo-image';
 import { Plus } from 'lucide-react-native';
+import { useRouter } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { tapHaptic } from '../../utils/haptics';
 import { useIsPro } from '../subscription/useSubscription';
@@ -461,13 +462,22 @@ export function StockAnalystScreen(): React.ReactElement {
 }
 
 function MessageRow({ m }: { m: AnalystMessage }): React.ReactElement | null {
+  const router = useRouter();
+  // The simulator button on every StockCard used to be a no-op because
+  // the parent never supplied onOpenSimulator. Wire it here so taps land
+  // on the compound-interest simulator (/(tabs)/simulator) — a generic
+  // calculator, not stock-specific, so we don't bother threading the
+  // ticker through (the screen has its own inputs).
+  const openSimulator = useCallback(() => {
+    router.push('/(tabs)/simulator' as never);
+  }, [router]);
   switch (m.kind) {
     case 'user-query':
       return <UserQueryBubble text={m.text} />;
     case 'captain-text':
       return <CaptainTextBubble text={m.text} pose={m.pose} />;
     case 'quick-card':
-      return <StockCard data={m.data} />;
+      return <StockCard data={m.data} onOpenSimulator={openSimulator} />;
     case 'deep-card':
       return <DeepAnalysisCard data={m.data} />;
     case 'portfolio-context':
