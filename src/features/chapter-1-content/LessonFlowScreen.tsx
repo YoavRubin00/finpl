@@ -106,6 +106,7 @@ import { FlyingRewards } from "../../components/ui/FlyingRewards";
 import { GoldCoinIcon } from "../../components/ui/GoldCoinIcon";
 import { useAuthStore } from "../auth/useAuthStore";
 import { InModuleProfileQuestion, type ProfileQuestionKind } from "../onboarding/InModuleProfileQuestion";
+import { pearlConfigFor } from "../pearls/pearlConfig";
 import { useRewardedAd } from "../../hooks/useRewardedAd";
 import { DecorationOverlay } from "../../components/ui/DecorationOverlay";
 import { generateChestDrop } from "../retention-loops/chestDrops";
@@ -2609,8 +2610,34 @@ export function LessonFlowScreen() {
   function navigateToNextModuleNormally() {
     // Force-complete mod-0-1 before navigating so we never loop back to it.
     if (id === 'mod-0-1') completeModule('mod-0-1');
+
+    // Pearl gate — if the just-completed module has a pearl after it, drop
+    // the user on the learn map with `?openPearl=<moduleId>` so DuoLearnScreen
+    // auto-opens the pearl sheet. The pearl sheet has its own "דלג על
+    // הפנינה" footer that advances to the next module, so the user always
+    // has both paths (complete the pearl OR skip it). Skipping the pearl
+    // sheet via X just returns to the learn map (pearl stays optional).
+    if (id) {
+      const pearl = pearlConfigFor(id);
+      if (pearl) {
+        // Park the learn cursor on the current chapter so the map opens to
+        // the right place behind the pearl sheet.
+        const chapterStoreId = chapterStoreKey(pearl.chapterId);
+        setCurrentChapter(chapterStoreId);
+        // Find the index of the just-completed module in its chapter so the
+        // cursor highlights the right node behind the pearl modal.
+        const chapter = ALL_CHAPTERS_ORDERED.find((c) => c.id === pearl.chapterId);
+        const myIdx = chapter ? chapter.modules.findIndex((m) => m.id === id) : -1;
+        if (myIdx >= 0) setCurrentModule(myIdx);
+        router.replace(`/(tabs)?openPearl=${id}` as never);
+        return;
+      }
+    }
+
     // After mod-0-1 specifically, return to the main learn map with the
     // cursor parked on mod-0-2, instead of auto-playing the next lesson.
+    // (mod-0-1 also has a pearl now, so this branch is unreachable in
+    // practice — kept as a safety net.)
     if (id === 'mod-0-1') {
       setCurrentChapter('ch-0');
       setCurrentModule(1);
