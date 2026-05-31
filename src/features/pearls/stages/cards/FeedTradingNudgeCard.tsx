@@ -1,4 +1,4 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useRef } from "react";
 import { View, Text, Pressable, StyleSheet, Dimensions } from "react-native";
 import Animated, {
   FadeIn,
@@ -18,6 +18,7 @@ import { tapHaptic, successHaptic } from "../../../../utils/haptics";
 import { useSoundEffect } from "../../../../hooks/useSoundEffect";
 import { trackBridgeClick } from "../../../../utils/trackBridgeClick";
 import { useAuthStore } from "../../../auth/useAuthStore";
+import { track } from "../../../../lib/analytics/events";
 
 const VIDEO_URL =
   "https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/finn-videos/finn-trading-start.mp4";
@@ -28,16 +29,23 @@ interface Props {
   isActive?: boolean;
   /** Pearl flow: advance to the next stage on CTA tap or skip. */
   onContinue?: () => void;
+  /** Pearl context — threaded through for typed pearl_cta_tapped /
+   *  pearl_cta_dismissed analytics. PearlCtaStage emits pearl_cta_shown. */
+  afterModuleId?: string;
+  chapterId?: string;
 }
 
 export const FeedTradingNudgeCard = React.memo(function FeedTradingNudgeCard({
   isActive,
   onContinue,
+  afterModuleId,
+  chapterId,
 }: Props) {
   const router = useRouter();
   const reducedMotion = useReducedMotion();
   const userEmail = useAuthStore((s) => s.email);
   const { playSound } = useSoundEffect();
+  const mountedAtRef = useRef<number>(Date.now());
 
   const player = useVideoPlayer(VIDEO_URL, (p) => {
     p.loop = true;
@@ -82,10 +90,23 @@ export const FeedTradingNudgeCard = React.memo(function FeedTradingNudgeCard({
     playSound("btn_click_soft_2");
     successHaptic();
     trackBridgeClick("feed-trading-nudge", "link_open", userEmail);
+    if (afterModuleId) {
+      try {
+        track({ name: 'pearl_cta_tapped', props: { after_module_id: afterModuleId, chapter_id: chapterId, cta_kind: 'trading', destination_url: '/bridge' } });
+      } catch { /* non-fatal */ }
+    }
     router.push("/bridge" as never);
     onContinue?.();
   };
-  const handleSkip = () => { tapHaptic(); onContinue?.(); };
+  const handleSkip = () => {
+    tapHaptic();
+    if (afterModuleId) {
+      try {
+        track({ name: 'pearl_cta_dismissed', props: { after_module_id: afterModuleId, chapter_id: chapterId, cta_kind: 'trading', time_open_ms: Date.now() - mountedAtRef.current } });
+      } catch { /* non-fatal */ }
+    }
+    onContinue?.();
+  };
 
   return (
     <View style={styles.container}>
