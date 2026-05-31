@@ -243,7 +243,12 @@ function SwipeableAdCard({
   const rotation = useSharedValue(0);
   const swiped = useSharedValue(false);
 
+  // activeOffsetX gates the gesture so it only takes over after a clear
+  // horizontal intent (>12px). Mirrors the SwipeGameCard fix — without
+  // it the Pan competes with the host ScrollView's vertical scroll on
+  // the first frame and Android sometimes swallows the touch entirely.
   const panGesture = Gesture.Pan()
+    .activeOffsetX([-12, 12])
     .onUpdate((event) => {
       if (swiped.value) return;
       translateX.value = event.translationX;

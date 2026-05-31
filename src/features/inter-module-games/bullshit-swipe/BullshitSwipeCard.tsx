@@ -238,7 +238,10 @@ function SwipeableAdCard({
   const rotation = useSharedValue(0);
   const swiped = useSharedValue(false);
 
+  // activeOffsetX gates Pan to horizontal-only intent (>12px), letting the
+  // host ScrollView keep vertical scroll responsive on Android.
   const panGesture = Gesture.Pan()
+    .activeOffsetX([-12, 12])
     .onUpdate((event) => {
       if (swiped.value) return;
       translateX.value = event.translationX;
