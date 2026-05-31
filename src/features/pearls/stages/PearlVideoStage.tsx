@@ -29,10 +29,15 @@ export function PearlVideoStage({ isActive, video, onContinue }: PearlVideoStage
   const player = useVideoPlayer(video.videoUri, (p) => {
     p.loop = false;
     p.muted = false;
+    // 15s of forward buffer (was 5s) so a 30–60s lifestyle clip rarely
+    // rebuffers mid-playback. `waitsToMinimizeStalling: false` + a low
+    // `minBufferForPlayback` keep first-frame latency tight — combined
+    // with the sheet-open warmup in PearlSheet, the OS cache typically
+    // already holds the first chunks by the time the player asks for them.
     p.bufferOptions = {
-      preferredForwardBufferDuration: 5,
+      preferredForwardBufferDuration: 15,
       waitsToMinimizeStalling: false,
-      minBufferForPlayback: 1,
+      minBufferForPlayback: 0.5,
     };
   });
 
