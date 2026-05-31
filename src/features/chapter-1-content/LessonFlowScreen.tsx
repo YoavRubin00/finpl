@@ -156,11 +156,17 @@ const MODULE_HERO_MAP: Record<string, { uri: string } | number> = {
   "mod-5-25": { uri: 'https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/infographics/finn-freedom.png' },
 };
 
-/** Modules that have a playable simulation game */
-const MODULES_WITH_SIM = new Set(["mod-0-1", "mod-0-3", "mod-0-4", "mod-1-1", "mod-1-2", "mod-1-3", "mod-1-4", "mod-1-5", "mod-1-7", "mod-1-8", "mod-1-9", "mod-2-10", "mod-2-11", "mod-2-12", "mod-2-13", "mod-2-14", "mod-3-15", "mod-3-16", "mod-3-17", "mod-3-18", "mod-4-19", "mod-4-20", "mod-4-21", "mod-4-22", "mod-4-23", "mod-4-24", "mod-5-25", "mod-5-26", "mod-5-27", "mod-5-28", "mod-5-29", "mod-4-25", "mod-4-26", "mod-4-27", "mod-4-28", "mod-4-29", "mod-4-30", "mod-5-30", "mod-4-b1", "mod-4-b2", "mod-4-b3", "mod-4-b4"]);
+/** Modules that have a playable simulation game.
+ *  2026-05-30 chapter-0 swap: BarterPuzzleScreen moved from mod-0-1 to
+ *  mod-0-2 (the "מה זה בכלל כסף?" slot). mod-0-1 ("מושגי יסוד פיננסיים")
+ *  has no sim — leaving it in this set caused the lesson to enter
+ *  sim-intro → sim, then SimulatorLoader returned null → blank screen. */
+const MODULES_WITH_SIM = new Set(["mod-0-2", "mod-0-3", "mod-0-4", "mod-1-1", "mod-1-2", "mod-1-3", "mod-1-4", "mod-1-5", "mod-1-7", "mod-1-8", "mod-1-9", "mod-2-10", "mod-2-11", "mod-2-12", "mod-2-13", "mod-2-14", "mod-3-15", "mod-3-16", "mod-3-17", "mod-3-18", "mod-4-19", "mod-4-20", "mod-4-21", "mod-4-22", "mod-4-23", "mod-4-24", "mod-5-25", "mod-5-26", "mod-5-27", "mod-5-28", "mod-5-29", "mod-4-25", "mod-4-26", "mod-4-27", "mod-4-28", "mod-4-29", "mod-4-30", "mod-5-30", "mod-4-b1", "mod-4-b2", "mod-4-b3", "mod-4-b4"]);
 
-/** Modules where sim comes BEFORE flashcards (intro → sim → flashcards → quizzes → summary) */
-const SIM_FIRST_MODULES = new Set(["mod-0-1", "mod-1-1", "mod-2-12", "mod-2-13", "mod-3-18", "mod-4-20", "mod-4-22", "mod-4-23", "mod-4-27", "mod-4-b4"]);
+/** Modules where sim comes BEFORE flashcards (intro → sim → flashcards → quizzes → summary).
+ *  2026-05-30 chapter-0 swap: the barter sim used to open mod-0-1; same
+ *  pattern is preserved for the slot that now hosts it (mod-0-2). */
+const SIM_FIRST_MODULES = new Set(["mod-0-2", "mod-1-1", "mod-2-12", "mod-2-13", "mod-3-18", "mod-4-20", "mod-4-22", "mod-4-23", "mod-4-27", "mod-4-b4"]);
 
 /**
  * Module whose quiz-tail injects the knowledgeLevel onboarding question
