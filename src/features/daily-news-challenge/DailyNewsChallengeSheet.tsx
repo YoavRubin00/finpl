@@ -51,7 +51,9 @@ interface DailyNewsChallengeSheetProps {
 // Pager layout: news[0] → did-you-know intermezzo → news[1] → chests.
 // The "הידעת" page sits between the two news items to break the rhythm —
 // one curiosity-fact between the two quizzes (requested 2026-05-31).
-const PAGE_COUNT = 4;
+// 3 after the chests-page removal: challenge → did-you-know → challenge.
+// Kept in sync with PAGE_DESCRIPTORS below by hand (TDZ-safe — declared first).
+const PAGE_COUNT = 3;
 const SCREEN_W = Dimensions.get('window').width;
 
 interface PageDescriptor {
@@ -62,11 +64,15 @@ interface PageDescriptor {
   itemIdx?: 0 | 1;
 }
 
+// Post-2026 UX rework: trimmed to 3 pages. The chests page (and its streak
+// bonus / share-card screen) is removed — rewards still fire silently on
+// completion (see handleContinue's last-page branch), and the wealth header
+// reflects the XP/coin/gem deltas. End-state is the second "הידעתם?" panel,
+// then the sheet auto-closes when the user taps המשך.
 const PAGE_DESCRIPTORS: PageDescriptor[] = [
   { kind: 'challenge', index: 0, itemIdx: 0 },
   { kind: 'did-you-know', index: 1 },
   { kind: 'challenge', index: 2, itemIdx: 1 },
-  { kind: 'chests', index: 3 },
 ];
 
 /**
@@ -308,9 +314,22 @@ export function DailyNewsChallengeSheet({ visible, onClose, entrySource = 'unkno
 
   const handleContinue = useCallback(
     (currentIdx: number) => {
+      // Last page (post-chests-removal): silently claim any pending rewards
+      // and dismiss the sheet — the wealth header reflects the XP/coin/gem
+      // deltas without the user having to tap a chest. If a chest was
+      // already claimed earlier (re-entry into the sheet on the same day),
+      // claim() is a no-op via the store's `regularChestOpened` guard.
+      if (currentIdx >= PAGE_COUNT - 1) {
+        if (bothAnswered) {
+          if (!regularChestOpened) handleClaimRegular();
+          if (isPro && !proChestOpened) handleClaimPro();
+        }
+        onClose();
+        return;
+      }
       goToPage(currentIdx + 1);
     },
-    [goToPage],
+    [goToPage, bothAnswered, regularChestOpened, proChestOpened, isPro, handleClaimRegular, handleClaimPro, onClose],
   );
 
   const onMomentumScrollEnd = useCallback(
@@ -336,25 +355,9 @@ export function DailyNewsChallengeSheet({ visible, onClose, entrySource = 'unkno
 
   const renderPage = useCallback(
     ({ item: page }: { item: PageDescriptor }) => {
-      if (page.kind === 'chests') {
-        if (!challenge) return <View style={{ width: pageWidth }} />;
-        return (
-          <ChestsPage
-            pageWidth={pageWidth}
-            unlocked={bothAnswered}
-            isPro={isPro}
-            streak={streak}
-            perfect={perfect}
-            regularOpened={regularChestOpened}
-            proOpened={proChestOpened}
-            itemResults={itemResults}
-            dateKey={challenge.dateKey}
-            onClaimRegular={handleClaimRegular}
-            onClaimPro={handleClaimPro}
-            onUpgradePress={handleUpgrade}
-          />
-        );
-      }
+      // 'chests' kind retired in the 2026 UX rework — ChestsPage / CompletionChests /
+      // ShareCard / PerfectDayBurst files are kept around (not deleted) in case we
+      // want to bring the reveal screen back, but the pager no longer renders one.
       if (page.kind === 'did-you-know') {
         // Intermezzo between the two news items. Picks a rotating fact from
         // DID_YOU_KNOW_ITEMS (by-day deterministic) so the same opener
@@ -363,21 +366,23 @@ export function DailyNewsChallengeSheet({ visible, onClose, entrySource = 'unkno
         return (
           <View style={{ width: pageWidth, flex: 1 }}>
             <DidYouKnowCard isActive itemId={`dnc-${challenge?.dateKey ?? 'today'}`} />
-            <View style={{ paddingHorizontal: 20, paddingTop: 14, paddingBottom: 24 }}>
+            <View style={{ paddingHorizontal: 20, paddingTop: 14, paddingBottom: 40 }}>
               <Pressable
                 onPress={() => { tapHaptic(); handleContinue(page.index); }}
                 accessibilityRole="button"
                 accessibilityLabel="המשך"
                 style={{
-                  paddingVertical: 14,
+                  paddingVertical: 16,
                   paddingHorizontal: 22,
                   borderRadius: 16,
-                  backgroundColor: '#facc15',
+                  backgroundColor: '#0891b2',
                   alignItems: 'center',
                   justifyContent: 'center',
+                  borderBottomWidth: 3,
+                  borderBottomColor: '#0e7490',
                 }}
               >
-                <Text style={{ fontSize: 16, fontWeight: '900', color: '#0f172a', writingDirection: 'rtl' }} allowFontScaling={false}>המשך</Text>
+                <Text style={{ fontSize: 17, fontWeight: '900', color: '#ffffff', writingDirection: 'rtl' }} allowFontScaling={false}>המשך</Text>
               </Pressable>
             </View>
           </View>
@@ -427,25 +432,20 @@ export function DailyNewsChallengeSheet({ visible, onClose, entrySource = 'unkno
             their wallet at a glance. Compact mode matches the in-app header. */}
         <GlobalWealthHeader compact />
 
-        {/* Top bar: close button right (RTL leading) + progress dots */}
+        {/* Top bar: progress dots centered. Close (X) is absolute-positioned
+            in the top-RIGHT corner so RTL/LTR layout flips don't move it to
+            the wrong side (the earlier row-reverse approach landed the X on
+            the left in RTL-OS builds — user-reported 2026). */}
         <View style={styles.topBar}>
-          <Pressable
-            onPress={() => { tapHaptic(); requestClose(); }}
-            style={({ pressed }) => [styles.closeBtn, pressed && { opacity: 0.7 }]}
-            accessibilityRole="button"
-            accessibilityLabel="סגור"
-            hitSlop={10}
-          >
-            <X size={22} color={STITCH.onSurface} strokeWidth={2.6} />
-          </Pressable>
-
           <View style={styles.dotsRow} accessibilityLabel={`עמוד ${activePage + 1} מתוך ${PAGE_COUNT}`}>
             {Array.from({ length: PAGE_COUNT }).map((_, i) => {
               const isActive = i === activePage;
+              // Index 0 = Q1, 1 = did-you-know intermezzo, 2 = Q2.
+              // did-you-know is "done" once Q1 has been answered (user passed it).
               const isDone =
                 (i === 0 && item0Answered) ||
-                (i === 1 && item1Answered) ||
-                (i === 2 && bothAnswered && regularChestOpened && (isPro ? proChestOpened : true));
+                (i === 1 && item0Answered) ||
+                (i === 2 && item1Answered);
               return (
                 <View
                   key={i}
@@ -459,8 +459,15 @@ export function DailyNewsChallengeSheet({ visible, onClose, entrySource = 'unkno
             })}
           </View>
 
-          {/* Spacer balancing the close button so dots stay centered */}
-          <View style={styles.topBarSpacer} />
+          <Pressable
+            onPress={() => { tapHaptic(); requestClose(); }}
+            style={({ pressed }) => [styles.closeBtn, pressed && { opacity: 0.7 }]}
+            accessibilityRole="button"
+            accessibilityLabel="סגור"
+            hitSlop={10}
+          >
+            <X size={22} color={STITCH.onSurface} strokeWidth={2.6} />
+          </Pressable>
         </View>
 
         {/* Pager */}
@@ -609,14 +616,16 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   topBar: {
-    flexDirection: 'row-reverse',
-    alignItems: 'center',
     paddingHorizontal: 12,
     paddingTop: 6,
     paddingBottom: 10,
-    gap: 10,
+    minHeight: 52,
+    justifyContent: 'center',
   },
   closeBtn: {
+    position: 'absolute',
+    right: 12,
+    top: 6,
     width: 40,
     height: 40,
     borderRadius: 12,
@@ -625,12 +634,9 @@ const styles = StyleSheet.create({
     backgroundColor: STITCH.surface,
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  topBarSpacer: {
-    width: 40,
+    zIndex: 5,
   },
   dotsRow: {
-    flex: 1,
     flexDirection: 'row-reverse',
     alignItems: 'center',
     justifyContent: 'center',

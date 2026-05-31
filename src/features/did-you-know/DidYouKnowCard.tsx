@@ -224,8 +224,8 @@ const styles = StyleSheet.create({
     lineHeight: 64,
   },
   teaser: {
-    fontSize: 15,
-    lineHeight: 22,
+    fontSize: 17,
+    lineHeight: 26,
     color: '#1e293b',
     fontWeight: '700',
   },

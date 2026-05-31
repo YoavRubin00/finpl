@@ -594,12 +594,15 @@ function ModuleNode({
               />
             )}
           </Animated.View>
-          {/* Speech bubble directly above Finn */}
+          {/* Speech bubble above + offset to the right of Finn so it doesn't
+              cover the active module node directly below (user feedback —
+              the bubble was sitting on top of the module the player was
+              about to tap). Shifts right by 40px and lifts another 22px. */}
           <Animated.View
             entering={FadeInDown.delay(200).duration(400)}
             style={[styles.speechBubbleBelow, {
-              left: Math.max(0, Math.min(charLeft + CHAR_SIZE / 2 - 70, CONTENT_W - 140)),
-              top: 10 - 32,
+              left: Math.max(0, Math.min(charLeft + CHAR_SIZE / 2 - 70 + 40, CONTENT_W - 140)),
+              top: 10 - 54,
             }]}
           >
             <View style={styles.speechArrow} />
@@ -1564,7 +1567,7 @@ export function DuoLearnScreen() {
         <View style={{ flex: 1, backgroundColor: "#f0f9ff" }}>
           <Pressable
             onPress={() => { tapHaptic(); setSwipeQuestVisible(false); }}
-            style={{ position: "absolute", top: insets.top + 8, left: 16, width: 36, height: 36, borderRadius: 18, backgroundColor: "rgba(15,23,42,0.08)", alignItems: "center", justifyContent: "center", zIndex: 50, borderWidth: 1, borderColor: "rgba(15,23,42,0.1)" }}
+            style={{ position: "absolute", top: insets.top + 8, right: 16, width: 36, height: 36, borderRadius: 18, backgroundColor: "rgba(15,23,42,0.08)", alignItems: "center", justifyContent: "center", zIndex: 50, borderWidth: 1, borderColor: "rgba(15,23,42,0.1)" }}
             hitSlop={12}
             accessibilityRole="button"
             accessibilityLabel="סגור"
@@ -1605,7 +1608,7 @@ export function DuoLearnScreen() {
         <View style={{ flex: 1, backgroundColor: "#f0f9ff" }}>
           <Pressable
             onPress={() => { tapHaptic(); setDilemmaQuestVisible(false); }}
-            style={{ position: "absolute", top: insets.top + 8, left: 16, width: 36, height: 36, borderRadius: 18, backgroundColor: "rgba(15,23,42,0.08)", alignItems: "center", justifyContent: "center", zIndex: 50, borderWidth: 1, borderColor: "rgba(15,23,42,0.1)" }}
+            style={{ position: "absolute", top: insets.top + 8, right: 16, width: 36, height: 36, borderRadius: 18, backgroundColor: "rgba(15,23,42,0.08)", alignItems: "center", justifyContent: "center", zIndex: 50, borderWidth: 1, borderColor: "rgba(15,23,42,0.1)" }}
             hitSlop={12}
             accessibilityRole="button"
             accessibilityLabel="סגור"
