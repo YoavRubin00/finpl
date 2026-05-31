@@ -37,6 +37,7 @@ import { useRecordDailyActivity, useStreak } from "../economy/useStreak";
 import { StreakCelebrationScreen } from "../streak/StreakCelebrationScreen";
 import { useAuthStore } from "../auth/useAuthStore";
 import { signInWithProfile } from "../../lib/auth/lifecycle";
+import { SignupGateStep } from "./SignupGateStep";
 import { getApiBase } from "../../db/apiBase";
 import { useGoogleAuthStore } from "../auth/useGoogleAuthStore";
 import { useAppleAuth } from "../auth/useAppleAuth";
@@ -787,7 +788,7 @@ const DREAMS: { id: FinancialDream; emoji: string; label: string; sub: string }[
   { id: "freedom", emoji: "", label: "חופש כלכלי", sub: "הכל אפשרי" },
 ];
 
-function DreamStep({ onNext }: { onNext: (v: FinancialDream) => void }) {
+function DreamStep({ onNext, onBack }: { onNext: (v: FinancialDream) => void; onBack?: () => void }) {
   const [sel, setSel] = useState<FinancialDream | null>(null);
   const advancedRef = useRef(false);
   const tap = useCallback((id: FinancialDream) => {
@@ -798,7 +799,7 @@ function DreamStep({ onNext }: { onNext: (v: FinancialDream) => void }) {
   }, [onNext]);
 
   return (
-    <StepShell stepIndex={0} question="מה החלום הפיננסי שלך?" hint="נתחיל מהמטרה, הדרך תתגלה" finnState={sel ? "tablet" : "thinking"}>
+    <StepShell stepIndex={0} question="מה החלום הפיננסי שלך?" hint="נתחיל מהמטרה, הדרך תתגלה" finnState={sel ? "tablet" : "thinking"} onBack={onBack}>
       <View style={styles.grid}>
         {DREAMS.map((d, i) => (
           <AnimatedGridCard
@@ -1886,20 +1887,49 @@ function IntroStep({ onRegister: _onRegister, onGuest, onLoginSuccess }: IntroSt
           <Text style={[introStyles.title, { marginBottom: 0 }]}>{"בואו נתחיל לשחק עם\nהכסף שלכם."}</Text>
         </Animated.View>
 
-        <Animated.View style={[ctaAnimStyle, { alignItems: "center", gap: 10, width: "100%" }]}>
+        <Animated.View style={[ctaAnimStyle, { alignItems: "center", width: "100%" }]}>
+          {/* Primary CTA */}
           <Pressable
-            onPress={() => setSubStep("register")}
+            onPress={() => {
+              try { captureEvent('welcome_primary_clicked', { destination: 'onboarding_guest' }); } catch { /* non-fatal */ }
+              setTermsAccepted(true);
+              onGuest();
+            }}
             style={[introStyles.cta, { width: "100%", alignItems: "center", paddingHorizontal: 0 }]}
             accessibilityRole="button"
-            accessibilityLabel="מתחילים"
+            accessibilityLabel="בואו נתחיל"
           >
-            <Text style={introStyles.ctaText}>מתחילים</Text>
+            <Text style={introStyles.ctaText}>בואו נתחיל</Text>
           </Pressable>
 
-          <Pressable onPress={() => setSubStep("login")} accessibilityRole="link" accessibilityLabel="כבר יש לי חשבון? התחבר" style={{ marginTop: 8 }}>
-            <Text style={introStyles.loginLink}>
-              {"כבר יש לי חשבון? "}
-              <Text style={introStyles.loginLinkAccent}>{"התחבר"}</Text>
+          {/* Disclaimer right under the primary button */}
+          <Text
+            style={{ marginTop: 8, fontSize: 10.5, color: "#94a3b8", writingDirection: "rtl", textAlign: "center", lineHeight: 15, maxWidth: 300 }}
+          >
+            {"המשך השימוש מהווה אישור של "}
+            <Text
+              style={{ color: "#0891b2" }}
+              accessibilityRole="link"
+              accessibilityLabel="תנאי השימוש"
+              onPress={() => introRouter.push("/(auth)/terms" as never)}
+            >
+              תנאי השימוש
+            </Text>
+          </Text>
+
+          {/* Returning user link, intentionally subdued (signup for new users
+              now happens after the 3 onboarding questions via SignupGateStep) */}
+          <Pressable
+            onPress={() => {
+              try { captureEvent('welcome_login_link_clicked'); } catch { /* non-fatal */ }
+              setSubStep("login");
+            }}
+            accessibilityRole="link"
+            accessibilityLabel="יש לי כבר חשבון"
+            style={{ marginTop: 36, paddingVertical: 6 }}
+          >
+            <Text style={{ fontSize: 13, fontWeight: "500", color: "#94a3b8", writingDirection: "rtl", textAlign: "center" }}>
+              {"יש לי כבר חשבון"}
             </Text>
           </Pressable>
         </Animated.View>
@@ -2032,6 +2062,19 @@ function IntroStep({ onRegister: _onRegister, onGuest, onLoginSuccess }: IntroSt
   // ── Login sub-state ──
   return (
     <SafeAreaView style={introStyles.shell} edges={["top", "bottom"]}>
+      {/* Back chevron, top-right (RTL = visually "back" arrow in Hebrew) */}
+      <Pressable
+        onPress={() => {
+          try { captureEvent('login_back_chevron_clicked'); } catch { /* non-fatal */ }
+          setSubStep("welcome");
+        }}
+        style={{ position: "absolute", top: 16, right: 16, zIndex: 10, padding: 8 }}
+        accessibilityRole="button"
+        accessibilityLabel="חזרה"
+        hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+      >
+        <ChevronRight size={28} color="#64748b" />
+      </Pressable>
       <KeyboardAvoidingView style={{ flex: 1, width: "100%", alignItems: "center", justifyContent: "center" }} behavior={Platform.OS === "ios" ? "padding" : "height"}>
         <Animated.View style={[introStyles.finnWrap, finnStyle]}>
           <LinearGradient colors={["#ecfeff", "#f0fdfa"]} style={introStyles.finnBg} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}>
@@ -2040,7 +2083,7 @@ function IntroStep({ onRegister: _onRegister, onGuest, onLoginSuccess }: IntroSt
         </Animated.View>
 
         <Animated.View style={[introStyles.textBlock, textStyle, { marginBottom: 24 }]}>
-          <Text style={introStyles.title}>{"התחברות"}</Text>
+          <Text style={introStyles.title}>{"התחברות או הרשמה"}</Text>
         </Animated.View>
 
         <Animated.View style={[ctaAnimStyle, { width: "100%", gap: 10 }]}>
@@ -2049,7 +2092,7 @@ function IntroStep({ onRegister: _onRegister, onGuest, onLoginSuccess }: IntroSt
             <Pressable
               onPress={() => { promptAppleSignIn().then(onLoginSuccess); }}
               accessibilityRole="button"
-              accessibilityLabel="התחבר עם Apple"
+              accessibilityLabel="המשך עם Apple"
               style={{
                 width: "100%",
                 flexDirection: "row",
@@ -2063,7 +2106,7 @@ function IntroStep({ onRegister: _onRegister, onGuest, onLoginSuccess }: IntroSt
               }}
             >
               <Text style={{ fontSize: 18, marginRight: 8, color: "#ffffff" }}></Text>
-              <Text style={{ fontSize: 15, fontWeight: "600", color: "#ffffff" }}>התחבר עם Apple</Text>
+              <Text style={{ fontSize: 15, fontWeight: "600", color: "#ffffff" }}>המשך עם Apple</Text>
             </Pressable>
           )}
 
@@ -2080,10 +2123,10 @@ function IntroStep({ onRegister: _onRegister, onGuest, onLoginSuccess }: IntroSt
               promptGoogleSignIn();
             }}
             accessibilityRole="button"
-            accessibilityLabel="התחבר עם Google"
+            accessibilityLabel="המשך עם Google"
             style={[introStyles.googleBtn, !googleReady && { opacity: 0.6 }]}
           >
-            <Text style={{ fontSize: 15, fontWeight: "600", color: "#1e293b" }}>התחבר עם Google</Text>
+            <Text style={{ fontSize: 15, fontWeight: "600", color: "#1e293b" }}>המשך עם Google</Text>
             <GoogleLogo size={20} />
           </Pressable>
 
@@ -2156,16 +2199,27 @@ function IntroStep({ onRegister: _onRegister, onGuest, onLoginSuccess }: IntroSt
               onLoginSuccess();
             }}
             accessibilityRole="button"
-            accessibilityLabel="התחבר"
+            accessibilityLabel="המשך"
             accessibilityState={{ disabled: !isLoginValid }}
             style={[introStyles.cta, { paddingHorizontal: 0, width: "100%", alignItems: "center", opacity: isLoginValid ? 1 : 0.5 }]}
           >
-            <Text style={introStyles.ctaText}>התחבר</Text>
+            <Text style={introStyles.ctaText}>המשך</Text>
           </Pressable>
 
-          <Pressable onPress={() => setSubStep("welcome")} style={{ alignSelf: "center", marginTop: 8, padding: 8 }} accessibilityRole="button" accessibilityLabel="חזרה" hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-            <ChevronRight size={24} color="#64748b" />
-          </Pressable>
+          {/* Legal disclaimer, implicit consent on any tap above (Duolingo pattern) */}
+          <Text
+            style={{ marginTop: 10, fontSize: 11, color: "#94a3b8", writingDirection: "rtl", textAlign: "center", lineHeight: 16, maxWidth: 280, alignSelf: "center" }}
+          >
+            {"הלחיצה מהווה אישור של "}
+            <Text
+              style={{ color: "#0891b2", textDecorationLine: "underline" }}
+              accessibilityRole="link"
+              accessibilityLabel="תנאי השימוש ומדיניות הפרטיות"
+              onPress={() => introRouter.push("/(auth)/terms" as never)}
+            >
+              תנאי השימוש ומדיניות הפרטיות
+            </Text>
+          </Text>
         </Animated.View>
       </KeyboardAvoidingView>
     </SafeAreaView>
@@ -2277,7 +2331,7 @@ function BuildingProfileScreen({ onDone }: { onDone: () => void }) {
 // ─── Orchestrator ─────────────────────────────────────────────────────────────
 
 type FlowStep =
-  | "intro" | "dream" | "first-sim" | "goal" | "knowledge" | "age" | "learning-time"
+  | "intro" | "dream" | "first-sim" | "goal" | "knowledge" | "age" | "signup-gate" | "learning-time"
   | "learning-style" | "deadline" | "daily-goal" | "companion" | "finance-experts"
   | "avatar" | "building-profile" | "profile-summary" | "celebration" | "streak";
 
@@ -2541,10 +2595,16 @@ export function ProfilingFlow({ mode = "onboarding", onRedoComplete }: Profiling
   return (
     <View style={{ flex: 1, backgroundColor: "#ffffff", overflow: "hidden" }}>
       <Animated.View style={[{ flex: 1 }, slideStyle]}>
-        {step === "dream" && <DreamStep onNext={(v) => {
-          if (returnToSummary) { setReturnToSummary(false); slide("profile-summary", { financialDream: v }); }
-          else { slide("goal", { financialDream: v }); }
-        }} />}
+        {step === "dream" && <DreamStep
+          onNext={(v) => {
+            if (returnToSummary) { setReturnToSummary(false); slide("profile-summary", { financialDream: v }); }
+            else { slide("goal", { financialDream: v }); }
+          }}
+          onBack={isGuest ? () => {
+            try { captureEvent('onboarding_dream_back_clicked'); } catch { /* non-fatal */ }
+            setStep("intro");
+          } : undefined}
+        />}
         {step === "goal" && <GoalStep
           dream={collected.financialDream}
           onNext={(v) => { slide("age", { financialGoal: v }); }}
@@ -2552,8 +2612,12 @@ export function ProfilingFlow({ mode = "onboarding", onRedoComplete }: Profiling
         />}
         {step === "age" && <AgeStep
           knowledge={collected.knowledgeLevel}
-          onNext={(ag, by) => slide("celebration", { ageGroup: ag, birthYear: by })}
+          onNext={(ag, by) => slide("signup-gate", { ageGroup: ag, birthYear: by })}
           onBack={() => slide("goal", {})}
+        />}
+        {step === "signup-gate" && <SignupGateStep
+          onSignupSuccess={() => slide("celebration", {})}
+          onSkip={() => slide("celebration", {})}
         />}
       </Animated.View>
 

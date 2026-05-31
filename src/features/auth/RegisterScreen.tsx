@@ -516,25 +516,8 @@ export function RegisterScreen() {
               </Text>
             </Pressable>
 
-            {/* Bottom "back to game" link — for guest users who decided not to register now.
-                Advance to returnTo (the next step after the CTA) so declining registration
-                still moves the user FORWARD in the sequence, never back to the same module. */}
-            {isGuest && (
-              <Pressable
-                onPress={() => {
-                  if (returnTo) router.replace(decodeURIComponent(returnTo) as never);
-                  else if (router.canGoBack()) router.back();
-                  else router.replace("/(tabs)" as never);
-                }}
-                accessibilityRole="button"
-                accessibilityLabel="חזרה למשחק בלי להירשם"
-                style={{ marginTop: 14, paddingVertical: 10, alignItems: "center" }}
-              >
-                <Text style={{ fontSize: 13, fontWeight: "700", color: "#0891b2", writingDirection: "rtl" }}>
-                  ← חזרה למשחק
-                </Text>
-              </Pressable>
-            )}
+            {/* The bottom "back to game" link was removed. The top chevron
+                already provides a back path and a second exit duplicated it. */}
           </ScrollView>
         </View>
       </KeyboardAvoidingView>

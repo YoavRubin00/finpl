@@ -144,14 +144,19 @@ export function DailyNewsChallengeSheet({ visible, onClose }: DailyNewsChallenge
     }
   }, [visible, challenge]);
 
-  // Completed event — fires when both items become answered for the first time
+  // Completed event, fires when both items become answered for the first time.
+  // We emit two names: news_challenge_completed (existing, kept for legacy
+  // funnels) and daily_challenge_completed (canonical NSM Primary input,
+  // alongside lesson_completed and tool_used).
   useEffect(() => {
     if (answered[0] && answered[1]) {
-      captureEvent('news_challenge_completed', {
+      const props = {
         date_key: challenge?.dateKey ?? null,
         both_correct: answered[0].wasCorrect && answered[1].wasCorrect,
         streak,
-      });
+      };
+      captureEvent('news_challenge_completed', props);
+      captureEvent('daily_challenge_completed', { ...props, challenge_type: 'news' });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [answered[0]?.answeredAt, answered[1]?.answeredAt]);

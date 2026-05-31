@@ -51,16 +51,16 @@ export function NewsIconButton({
     }
     scale.value = withRepeat(
       withSequence(
-        withTiming(1.22, { duration: 650 }),
-        withTiming(1, { duration: 650 }),
+        withTiming(1.06, { duration: 900 }),
+        withTiming(1, { duration: 900 }),
       ),
       -1,
       false,
     );
     glow.value = withRepeat(
       withSequence(
-        withTiming(1, { duration: 650 }),
-        withTiming(0, { duration: 650 }),
+        withTiming(1, { duration: 900 }),
+        withTiming(0, { duration: 900 }),
       ),
       -1,
       false,
@@ -71,8 +71,8 @@ export function NewsIconButton({
     transform: [{ scale: scale.value }],
   }));
   const glowStyle = useAnimatedStyle(() => ({
-    opacity: (compact ? 0.45 : 0.6) * glow.value,
-    transform: [{ scale: 0.85 + (compact ? 0.45 : 0.75) * glow.value }],
+    opacity: (compact ? 0.18 : 0.22) * glow.value,
+    transform: [{ scale: 0.85 + (compact ? 0.2 : 0.3) * glow.value }],
   }));
 
   const ACTIVE_COLOR = '#005bb1';

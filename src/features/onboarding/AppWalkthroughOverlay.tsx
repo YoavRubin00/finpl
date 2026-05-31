@@ -401,9 +401,10 @@ export function AppWalkthroughOverlay() {
               ))}
             </View>
 
-            {/* Navigation row, back (right) + next (left) */}
-            <View style={{ flexDirection: "row", alignItems: "center", gap: 10, width: "100%" }}>
-              {step > 0 ? (
+            {/* Navigation row, next (right, primary) + back (left, secondary).
+                Step 1 has no Back, so the row collapses to center the primary. */}
+            <View style={{ flexDirection: "row-reverse", alignItems: "center", gap: 10, width: "100%" }}>
+              {step > 0 && (
                 <Pressable
                   onPress={handleBack}
                   disabled={transitioning}
@@ -430,8 +431,6 @@ export function AppWalkthroughOverlay() {
                 >
                   <ChevronRight size={24} color="#0ea5e9" />
                 </Pressable>
-              ) : (
-                <View style={{ width: 52 }} />
               )}
               <Pressable
                 onPress={handleNext}

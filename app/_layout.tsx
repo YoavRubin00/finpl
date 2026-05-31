@@ -488,7 +488,19 @@ function RootLayoutInner() {
         router.replace("/(auth)/onboarding");
       }
     } else if (!hasCompletedOnboarding) {
-      if (segments.join("/") !== "(auth)/onboarding") {
+      // Allow auth routes (register, sign-in, terms) even before onboarding is
+      // complete. The SignupGateStep at the end of the mini-onboarding sends
+      // users to /(auth)/register and we do not want to bounce them back.
+      const currentPath = segments.join("/");
+      const allowedPreOnboardingPaths = [
+        "(auth)/onboarding",
+        "(auth)/register",
+        "(auth)/sign-in",
+        "(auth)/terms",
+        "(auth)/forgot-password",
+        "oauthredirect",
+      ];
+      if (!allowedPreOnboardingPaths.includes(currentPath)) {
         router.replace("/(auth)/onboarding");
       }
     } else {
