@@ -29,15 +29,22 @@ interface Props {
    *  tap "המשך" skip). Without this prop the card behaves like the old
    *  feed surface (CTA only, no skip). */
   onContinue?: () => void;
+  /** Pearl context — threaded through for typed pearl_cta_tapped /
+   *  pearl_cta_dismissed analytics. PearlCtaStage emits pearl_cta_shown. */
+  afterModuleId?: string;
+  chapterId?: string;
 }
 
 export const FeedReferralNudgeCard = React.memo(function FeedReferralNudgeCard({
   isActive,
   onContinue,
+  afterModuleId,
+  chapterId,
 }: Props) {
   const router = useRouter();
   const reducedMotion = useReducedMotion();
   const { playSound } = useSoundEffect();
+  const mountedAtRef = useRef<number>(Date.now());
 
   const player = useVideoPlayer(VIDEO_URL, (p) => {
     p.loop = true;
@@ -79,6 +86,11 @@ export const FeedReferralNudgeCard = React.memo(function FeedReferralNudgeCard({
     tapHaptic();
     playSound("btn_click_soft_2");
     successHaptic();
+    if (afterModuleId) {
+      try {
+        track({ name: 'pearl_cta_tapped', props: { after_module_id: afterModuleId, chapter_id: chapterId, cta_kind: 'referral', destination_url: '/referral' } });
+      } catch { /* non-fatal */ }
+    }
     router.push("/referral" as never);
     // Advance the pearl pager after navigating out, so closing the referral
     // sheet drops the user back on the next stage rather than this CTA again.
@@ -87,6 +99,11 @@ export const FeedReferralNudgeCard = React.memo(function FeedReferralNudgeCard({
 
   const handleSkip = () => {
     tapHaptic();
+    if (afterModuleId) {
+      try {
+        track({ name: 'pearl_cta_dismissed', props: { after_module_id: afterModuleId, chapter_id: chapterId, cta_kind: 'referral', time_open_ms: Date.now() - mountedAtRef.current } });
+      } catch { /* non-fatal */ }
+    }
     onContinue?.();
   };
 
