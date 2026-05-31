@@ -1041,7 +1041,13 @@ export function ChatScreen({ lessonContext }: { lessonContext?: LessonContext } 
             <AnimatedPressable
               key={idx}
               onPress={() => handleSuggestionTap(suggestion.text)}
-              style={chipStyles.chip}
+              style={[
+                chipStyles.chip,
+                // Long-prompt chips (40+ chars) get extra flex weight so they
+                // don't crush the shorter neighbor while still wrapping to two
+                // lines via numberOfLines={2} on the text below.
+                suggestion.text.length > 28 && chipStyles.chipLong,
+              ]}
               accessibilityRole="button"
               accessibilityLabel={suggestion.text}
             >
@@ -1052,7 +1058,7 @@ export function ChatScreen({ lessonContext }: { lessonContext?: LessonContext } 
                 exiting={FadeOut.duration(200)}
                 style={chipStyles.chipLabel}
               >
-                <Text style={chipStyles.text}>{suggestion.text}</Text>
+                <Text style={chipStyles.text} numberOfLines={2} ellipsizeMode="tail">{suggestion.text}</Text>
               </Animated.View>
             </AnimatedPressable>
           ))}
@@ -1288,15 +1294,22 @@ const chipStyles = StyleSheet.create({
   },
   chip: {
     flex: 1,
-    height: 46,
+    minHeight: 56,
     borderWidth: 1.5,
     borderColor: "#bae6fd",
     borderRadius: 12,
     paddingHorizontal: 10,
+    paddingVertical: 6,
     alignItems: "center",
     justifyContent: "center",
     backgroundColor: "#f0f9ff",
     overflow: "hidden",
+  },
+  // Used on long-text suggestions so they receive extra horizontal space
+  // and don't get truncated next to a shorter neighbor. Applied via the
+  // length-based check in render.
+  chipLong: {
+    flex: 1.5,
   },
   chipLabel: {
     alignItems: "center",
@@ -1315,7 +1328,7 @@ const chipStyles = StyleSheet.create({
     alignItems: "center" as const,
     justifyContent: "center" as const,
     width: 46,
-    height: 46,
+    height: 56,
     borderWidth: 1.5,
     borderColor: "#bae6fd",
     borderRadius: 12,
