@@ -205,17 +205,24 @@ export function PearlSheet({ visible, pearl, onClose }: PearlSheetProps): React.
       //      pearl still has a beat of content before the game.
       const hasUniqueBundle = !!(pearl.videoId || pearl.conceptId || pearl.swipeIds?.length || pearl.scenarioId);
       if (hasUniqueBundle) {
-        // Pearl flow: video → concept → CTA (skippable referral/trading) →
-        // swipe → scenario. CTA uses the restored finfeed cards
-        // (FeedReferralNudgeCard / FeedTradingNudgeCard) wired with an
-        // onContinue=המשך path so users who don't want the CTA still advance.
+        // Pearl flow: video → concept → swipe → scenario → game → CTA.
+        // CTA was moved to the very last stage (2026-05-31) so the user
+        // experiences the full educational content + game climax first, and
+        // the referral/trading nudge only appears after they've already
+        // gotten value. The CTA still uses the restored finfeed cards
+        // (FeedReferralNudgeCard / FeedTradingNudgeCard) wired with
+        // onContinue=המשך so it remains skippable and advances to the next
+        // module via handleStageDone's final-stage branch.
         if (pearl.videoId) snapshot.push({ kind: 'video', index: idx++ });
         if (pearl.conceptId) snapshot.push({ kind: 'concept', index: idx++ });
-        snapshot.push({ kind: 'cta', index: idx++ });
         if (pearl.swipeIds?.length) snapshot.push({ kind: 'swipe', index: idx++ });
         if (pearl.scenarioId && pearl.scenarioPool) snapshot.push({ kind: 'scenario', index: idx++ });
         // Per-module dedicated game from chapter data .interModuleGame.
         if (pearl.gameKey) snapshot.push({ kind: 'game', index: idx++ });
+        // CTA last — appears after the game climax. Its onContinue triggers
+        // handleStageDone with no next stage left → pearl_completed +
+        // router.push to next module.
+        snapshot.push({ kind: 'cta', index: idx++ });
       } else {
         // Legacy fallback only used when nothing was mapped + no fallback
         // bundle (mod-0-1 historically; today every pearl gets a fallback).
