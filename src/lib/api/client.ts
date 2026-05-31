@@ -24,6 +24,14 @@ export function setOnUnauthorized(handler: () => void): void {
 // same stale token. Comparing the token itself means: same bad token → silent,
 // new bad token (rotation, sign-in) → one event.
 let lastFiredAuthToken: string | null = null;
+// Wall-clock ceiling on top of the per-token guard. The token guard alone
+// allowed pathological retry storms (PostHog showed ~72k events / 30 days)
+// when the server rotated tokens on every request via X-Auth-Refreshed-Token:
+// every retry produced a new token → new "first 401" → new event. This caps
+// the firing rate to ≤1 per AUTH_INVALID_MIN_INTERVAL_MS per app session,
+// regardless of how many tokens get rotated.
+const AUTH_INVALID_MIN_INTERVAL_MS = 120_000;
+let lastFiredAuthInvalidAt = 0;
 
 async function request<TBody, TResponse>(
   method: 'GET' | 'POST',
@@ -67,12 +75,21 @@ async function request<TBody, TResponse>(
       console.warn(`[api] ✗ 401 ${method} ${url} — ${errText || '(empty body)'} (token sent: ${token ? 'yes' : 'no'})`);
     }
     // Only fire when an actual token was rejected (not for guest 401s — those
-    // are "missing auth" not "invalid token"), and only once per distinct
-    // token value. Guest sessions that hit auth-required endpoints used to
-    // inflate the event count without representing a real session failure.
+    // are "missing auth" not "invalid token"), only once per distinct token
+    // value, AND with a wall-clock ceiling so rotating-token retry storms
+    // can't inflate the count. Guest sessions that hit auth-required
+    // endpoints used to inflate the event count without representing a real
+    // session failure.
     if (token && token !== lastFiredAuthToken) {
       lastFiredAuthToken = token;
-      try { captureEvent('auth_token_invalid', { endpoint: path }); } catch { /* swallow */ }
+      const now = Date.now();
+      if (now - lastFiredAuthInvalidAt >= AUTH_INVALID_MIN_INTERVAL_MS) {
+        lastFiredAuthInvalidAt = now;
+        try { captureEvent('auth_token_invalid', { endpoint: path }); } catch { /* swallow */ }
+      }
+      // onUnauthorizedHandler still fires every time so the UI sign-out path
+      // (handler in lifecycle.ts) reacts immediately to ANY rejected token —
+      // analytics rate-limit isn't business logic.
       if (onUnauthorizedHandler) onUnauthorizedHandler();
     }
     throw new ApiError('Unauthorized', 401, errBody);
