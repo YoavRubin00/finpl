@@ -110,6 +110,7 @@
     },
     "android": {
       "package": "com.finplay.app",
+      "softwareKeyboardLayoutMode": "resize",
       "googleServicesFile": "./google-services.json",
       "adaptiveIcon": {
         "foregroundImage": "./assets/IMAGES/icon-1024.png",
