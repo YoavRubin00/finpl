@@ -204,13 +204,16 @@ export function WhatIsMoneyIntro({ onStart, unitColors }: Props) {
             </Animated.View>
           )}
 
-          {/* Phase 1, Money bag Lottie */}
+          {/* Phase 1, Money bag Lottie — plays once (a single welcome shake)
+              then settles into a static pose. Earlier `loop` made it shake
+              continuously, which read as visual noise on the otherwise calm
+              intro (user feedback: "טיפה יותר מדי אנימציות של רעידות"). */}
           {phase === 1 && (
             <LottieView
               source={require('../../../assets/lottie/wired-flat-413-money-bag-hover-shake.json')}
               style={{ width: 180, height: 180 }}
               autoPlay
-              loop
+              loop={false}
             />
           )}
 
@@ -223,7 +226,7 @@ export function WhatIsMoneyIntro({ onStart, unitColors }: Props) {
                   source={require('../../../assets/lottie/wired-flat-413-money-bag-hover-shake.json')}
                   style={{ width: 100, height: 100 }}
                   autoPlay
-                  loop
+                  loop={false}
                 />
                 <Text style={[RTL, { color: '#64748b', fontSize: 11, fontWeight: '600', marginTop: -4 }]}>שחרר כאן</Text>
               </View>
