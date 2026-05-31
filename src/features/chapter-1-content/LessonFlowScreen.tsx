@@ -1478,21 +1478,17 @@ function SummaryScreen({
     <View style={{ flex: 1 }}>
       <View style={{ alignItems: "center", paddingTop: 20, gap: 16, paddingHorizontal: 16 }}>
 
-        {/* Finn mascot, free-floating with soft glow */}
-        <Animated.View entering={FadeIn.duration(500)} style={{ alignItems: "center" }}>
-          <View style={{
-            shadowColor: "#0ea5e9",
-            shadowOpacity: 0.3,
-            shadowRadius: 20,
-            shadowOffset: { width: 0, height: 0 },
-            elevation: 8,
-          }}>
-            <ExpoImage
-              source={getFinnImage(summaryFinnState)}
-              style={{ width: 150, height: 150 }}
-              contentFit="contain"
-              />
-          </View>
+        {/* Finn mascot, free-floating. Removed the shadow wrapper: RN-Web
+            translated `shadowColor/shadowOpacity/shadowRadius` into a
+            rectangular box-shadow on the View, which Safari rendered as a
+            visible white/bluish square frame around the character. Native
+            iOS/Android render fine without the shadow too. */}
+        <Animated.View entering={FadeIn.duration(500)} style={{ alignItems: "center", backgroundColor: "transparent" }}>
+          <ExpoImage
+            source={getFinnImage(summaryFinnState)}
+            style={{ width: 150, height: 150, backgroundColor: "transparent" }}
+            contentFit="contain"
+          />
         </Animated.View>
 
         {/* Medals row removed */}

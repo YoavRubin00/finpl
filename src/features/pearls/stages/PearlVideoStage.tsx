@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { View, Text, Pressable, StyleSheet, Dimensions } from 'react-native';
+import { View, Text, Pressable, StyleSheet, Platform } from 'react-native';
 import { useVideoPlayer, VideoView } from 'expo-video';
 import { Image as ExpoImage } from 'expo-image';
 import Animated, { FadeIn } from 'react-native-reanimated';
@@ -13,8 +13,6 @@ interface PearlVideoStageProps {
   video: LifestyleVideoSpec;
   onContinue: () => void;
 }
-
-const SCREEN_H = Dimensions.get('window').height;
 
 /**
  * Video stage inside a Pearl — plays a Captain Shark lifestyle clip and
@@ -64,62 +62,112 @@ export function PearlVideoStage({ isActive, video, onContinue }: PearlVideoStage
     return () => sub.remove();
   }, [player]);
 
+  // Web-only: expo-video's web shim doesn't reliably translate
+  // `nativeControls={false}` into the HTML5 <video> `controls={false}`
+  // attribute on iOS Safari — Safari then renders its own overlay (play /
+  // skip-10 / mute / timeline) that breaks out of the rounded frame.
+  // Force-strip controls + harden playsinline so the clip stays in-frame.
+  // On native (iOS/Android) this useEffect is a no-op.
+  useEffect(() => {
+    if (Platform.OS !== 'web') return;
+    // Access `document` via globalThis to bypass the tsconfig (no DOM lib for
+    // native). Cast keeps the call site tight and avoids per-line ts-expect-error.
+    type WebVideoEl = {
+      controls: boolean;
+      removeAttribute: (name: string) => void;
+      setAttribute: (name: string, value: string) => void;
+    };
+    type WebDoc = { querySelectorAll: (selector: string) => ArrayLike<WebVideoEl> };
+    const doc = (globalThis as { document?: WebDoc }).document;
+    if (!doc) return;
+    const apply = () => {
+      const videos = Array.from(doc.querySelectorAll('video'));
+      videos.forEach((v) => {
+        v.controls = false;
+        v.removeAttribute('controls');
+        v.setAttribute('playsinline', 'true');
+        v.setAttribute('webkit-playsinline', 'true');
+        v.setAttribute('disablepictureinpicture', 'true');
+        v.setAttribute('controlslist', 'nodownload nofullscreen noremoteplayback');
+      });
+    };
+    apply();
+    // expo-video mounts the <video> async on web; retry once after a tick
+    // so we catch the element if it's not in the DOM on first pass.
+    const t = setTimeout(apply, 250);
+    return () => clearTimeout(t);
+  }, []);
+
   return (
-    <View style={styles.root}>
-      <VideoView
-        player={player}
-        style={StyleSheet.absoluteFillObject}
-        contentFit="cover"
-        nativeControls={false}
-      />
+    <View style={styles.outer}>
+      <View style={styles.videoFrame}>
+        <VideoView
+          player={player}
+          style={StyleSheet.absoluteFillObject}
+          contentFit="cover"
+          nativeControls={false}
+        />
 
-      {/* Skip pill — top-right corner, floats above the video so it's always
-          reachable while the clip plays. Mid-flow only; once the clip
-          finishes the bottom scrim takes over with the "המשך" CTA. */}
-      {!finished ? (
-        <Pressable
-          onPress={() => { tapHaptic(); onContinue(); }}
-          style={styles.skipBtn}
-          accessibilityRole="button"
-          accessibilityLabel="דלג על הקליפ"
-          hitSlop={10}
-        >
-          <Text style={styles.skipText} allowFontScaling={false}>דלג ›</Text>
-        </Pressable>
-      ) : null}
-
-      {/* Gradient/scrim at bottom so the caption + CTA stay legible over
-          bright video frames. Using a solid translucent bar keeps it
-          dependency-free (no LinearGradient gymnastics needed here). */}
-      <View style={styles.bottomScrim} pointerEvents="box-none">
-        <Text style={styles.caption} allowFontScaling={false}>
-          {video.caption}
-        </Text>
-
-        {finished ? (
-          <Animated.View entering={FadeIn.duration(220)} style={styles.finishRow}>
-            <ExpoImage source={FINN_DANCING} style={styles.finn} contentFit="contain" accessible={false} />
-            <Pressable
-              onPress={() => { tapHaptic(); onContinue(); }}
-              style={styles.continueBtn}
-              accessibilityRole="button"
-              accessibilityLabel="המשך לשלב הבא"
-            >
-              <Text style={styles.continueText} allowFontScaling={false}>המשך ←</Text>
-            </Pressable>
-          </Animated.View>
+        {/* Skip pill — top-right corner, floats above the video so it's
+            always reachable while the clip plays. Mid-flow only; once the
+            clip finishes the bottom scrim takes over with the "המשך" CTA. */}
+        {!finished ? (
+          <Pressable
+            onPress={() => { tapHaptic(); onContinue(); }}
+            style={styles.skipBtn}
+            accessibilityRole="button"
+            accessibilityLabel="דלג על הקליפ"
+            hitSlop={10}
+          >
+            <Text style={styles.skipText} allowFontScaling={false}>דלג ›</Text>
+          </Pressable>
         ) : null}
+
+        {/* Translucent bar at bottom so the caption + CTA stay legible
+            over bright video frames. */}
+        <View style={styles.bottomScrim} pointerEvents="box-none">
+          <Text style={styles.caption} allowFontScaling={false}>
+            {video.caption}
+          </Text>
+
+          {finished ? (
+            <Animated.View entering={FadeIn.duration(220)} style={styles.finishRow}>
+              <ExpoImage source={FINN_DANCING} style={styles.finn} contentFit="contain" accessible={false} />
+              <Pressable
+                onPress={() => { tapHaptic(); onContinue(); }}
+                style={styles.continueBtn}
+                accessibilityRole="button"
+                accessibilityLabel="המשך לשלב הבא"
+              >
+                <Text style={styles.continueText} allowFontScaling={false}>המשך ←</Text>
+              </Pressable>
+            </Animated.View>
+          ) : null}
+        </View>
       </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  root: {
+  outer: {
     flex: 1,
-    backgroundColor: '#000',
-    minHeight: SCREEN_H * 0.6,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    backgroundColor: 'transparent',
+  },
+  videoFrame: {
+    width: '100%',
+    maxWidth: 480,
+    aspectRatio: 9 / 16,
+    maxHeight: '100%',
+    borderRadius: 20,
     overflow: 'hidden',
+    backgroundColor: '#000',
+    alignSelf: 'center',
+    position: 'relative',
   },
   bottomScrim: {
     position: 'absolute',
