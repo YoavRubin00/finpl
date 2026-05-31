@@ -50,7 +50,7 @@
   <!-- Hebrew -->
   <div id="he-content">
     <h1>תנאי שימוש ומדיניות פרטיות — FinPlay</h1>
-    <p class="updated">עדכון אחרון: מאי 2026</p>
+    <p class="updated">עדכון אחרון: יוני 2026</p>
 
     <h2>תנאי שימוש</h2>
     <p class="section-intro">ברוכים הבאים ל-FinPlay ("האפליקציה"). השימוש באפליקציה מותנה בהסכמתך המלאה לתנאים הבאים.</p>
@@ -77,13 +77,41 @@
     <h3>6. הגבלת אחריות ושיפוי</h3>
     <p>השירות ניתן כמות שהוא (AS IS). FinPlay, מנהליה ועובדיה לא יישאו באחריות לכל נזק, ישיר או עקיף, הפסד פיננסי, אובדן רווחים, תקלות טכניות או עוגמת נפש שייגרמו משימוש באפליקציה או מהסתמכות על תכניה. סמכות השיפוט הבלעדית תהא נתונה לבתי המשפט בתל אביב-יפו.</p>
 
+    <h3>7. כלי בינה מלאכותית (AI) ועיבוד אוטומטי</h3>
+    <p>האפליקציה כוללת מספר כלים המסתמכים על מודלי שפה גדולים (LLMs) של צדדים שלישיים. בעת שימוש בצ'אט עם Captain Shark, בניתוח תלוש שכר, בניתוח מניות (מהיר/עמוק), בתובנות אישיות או ב-Banner Tip — התוכן שאת/ה מספק/ת מועבר באמצעות חיבור מוצפן (TLS 1.2+) לעיבוד אצל Google (Gemini) ו/או Anthropic (Claude), ומתקבלת ממנו תוצאה.
+
+תוצאות AI נועדו ללמידה והעשרה בלבד, אינן מהוות ייעוץ פיננסי, פנסיוני, מיסויי או משפטי, ועלולות לכלול שגיאות, אי-דיוקים או "הזיות" (hallucinations). FinPlay אינה אחראית לתוצאות אלה ולכל הסתמכות עליהן.</p>
+
+    <h3>8. ניתוח תלוש שכר (Payslip Analyzer)</h3>
+    <p>כלי ניתוח תלוש השכר מאפשר לך להעלות תמונה או קובץ PDF של תלוש משכורת לעיבוד אוטומטי. הזרימה:
+• הקובץ נשלח בחיבור מוצפן (TLS 1.2+) לשרת FinPlay בלבד למשך זמן העיבוד.
+• מהשרת הקובץ מועבר ל-Google Gemini לניתוח (פחות מ-60 שניות בממוצע).
+• הקובץ המקורי לא נשמר בשרת FinPlay, לא בלוגים, ולא אצל Google מעבר לזמן העיבוד.
+• תוצאת הניתוח המלאה נשמרת זמנית רק ב-RAM של המכשיר ונמחקת בסגירת המסך.
+• סטטיסטיקות מצרפיות אנונימיות (טווח שכר ברוטו בקפיצות של 1,000₪, אחוז ניכוי פנסיה מעוגל, נוכחות קרן השתלמות — בלי סכומים מדויקים, בלי שם, בלי פירוט מלא) נשמרות מקומית במכשיר ב-MMKV כדי לאפשר את פיצ'ר השיתוף עם 'הקלאן'.
+• ניתן למחוק את הסטטיסטיקות המקומיות בכל עת דרך הגדרות > נקה נתונים.
+
+לפני שימוש ראשון בכלי, מוצג מסך הסכמה ייעודי. המשך השימוש בכלי מהווה הסכמה מפורשת לזרימת העיבוד הזו.</p>
+
+    <h3>9. כלים פיננסיים אינטראקטיביים</h3>
+    <p>האפליקציה מציעה תשעה כלי חישוב פיננסי (מחשבון משכנתא, חישוב פנסיה, פירוק תלוש, חישוב מס הכנסה, יעדי חיסכון, ריבית דריבית, בדיקת תקציב, מחשבון חופשה, ועוד). הקלט שתספק/י לכלים אלה נשמר מקומית בלבד במכשיר (MMKV) לטובת המשך השימוש בכלי, ואינו נשלח לשרת FinPlay או לצד שלישי כלשהו.
+
+התוצאות מהוות הערכה כללית בלבד ואינן מהוות ייעוץ מס, פנסיה, השקעות או משפט. לפני קבלת החלטה פיננסית בעולם האמיתי, יש להתייעץ עם בעל מקצוע מורשה.</p>
+
+    <h3>10. ניסויים, A/B Testing ופרסונליזציה</h3>
+    <p>לטובת שיפור חוויית המשתמש, FinPlay מבצעת ניסויים אוטומטיים על וריאנטים שונים של מסכים, טקסטים והצעות (Multi-Armed Bandit). השיוך לוריאנט הוא אנונימי, אינו תלוי בזהות אישית, ונשמר ב-PostHog למטרות אנליטיקה ושיפור בלבד.</p>
+
     <h2>מדיניות פרטיות</h2>
     <p class="section-intro">FinPlay מחויבת להגנה על פרטיותך ופועלת בהתאם לחוק הגנת הפרטיות, התשמ"א-1981 ותקנותיו.</p>
 
     <h3>1. המידע שאנו אוספים</h3>
     <p>• פרטי חשבון ויצירת קשר: שם מלא, כתובת דוא"ל, מספר טלפון, תאריך לידה, ואווטאר.
 • נתוני למידה והתנהגות: התקדמות במודולים, תוצאות חידונים, בחירות ופעולות בסימולטור ההשקעות, משך שימוש, ורצפי פעילות (Streaks).
-• מידע טכני ודיגיטלי: סוג מכשיר, גרסת מערכת הפעלה, כתובת IP, מזהי פרסום/מכשיר ונתוני אנליטיקה.</p>
+• מידע טכני ודיגיטלי: סוג מכשיר, גרסת מערכת הפעלה, כתובת IP, מזהי פרסום/מכשיר ונתוני אנליטיקה.
+• תוכן שנשלח לעיבוד AI: שאלות שאת/ה שולח/ת לצ'אט עם Captain Shark, קבצי תלוש שכר (לזמן עיבוד בלבד), טיקרים של מניות לניתוח, ופרמטרים שמוזרמים לבקשות תובנות/Banner Tip (שם, XP, סטריק, יעדים פיננסיים).
+• קלט בכלים פיננסיים: ערכים שתזין/י במחשבונים השונים (משכורת, הוצאות, גיל פרישה, יעדי חיסכון וכו') — נשמרים מקומית במכשיר בלבד.
+• סטטיסטיקות מצרפיות אנונימיות: של תלושי שכר (טווחים בלבד, ללא סכומים מדויקים), לטובת השיתוף עם הקלאן. נשמרות מקומית במכשיר.
+• שיוך לוריאנט בניסוי (A/B): מזהה וריאנט אנונימי לטובת מדידת אפקטיביות של מסכים/טקסטים.</p>
 
     <h3>2. מטרות השימוש במידע</h3>
     <p>• תפעול שוטף: אספקת שירותי האפליקציה, ניהול חשבון, חישוב ניקוד והפעלת טבלאות מובילים (Leaderboards).
@@ -93,8 +121,22 @@
     <h3>3. שיתוף מידע עם צדדים שלישיים</h3>
     <p>החברה לעולם לא תמכור את המידע האישי המזהה שלך. שיתוף מידע יתבצע במקרים הבאים:
 • העברת לידים למימוש הטבות: בעת לחיצה על "מימוש הטבה" דרך חנות ההטבות, הנך נותן/ת הסכמה מפורשת להעברת פרטי הקשר שלך לאותו גוף ספציפי.
-• ספקי שירות טכנולוגיים: שירותי ענן, אחסון וניתוח נתונים הפועלים מטעמנו ותחת הסכמי סודיות קפדניים, כולל RevenueCat (ניהול מנויים), Vercel Blob (אחסון תמונות), Google ו-Apple Sign-In (אימות).
-• רשויות החוק: מסירת מידע ככל שנידרש לכך על פי חוק או צו שיפוטי.</p>
+• ספקי שירות AI:
+  - Google (Gemini API) — לעיבוד אוטומטי של צ'אט, תלוש שכר, תובנות אישיות, Banner Tip וניתוח מהיר של מניות. העיבוד מתבצע בשרתי Google בארה"ב.
+  - Anthropic (Claude API) — לניתוח עומק של מניות. העיבוד מתבצע בשרתי Anthropic בארה"ב.
+• ספקי שירות טכנולוגיים: שירותי ענן, אחסון וניתוח נתונים הפועלים מטעמנו ותחת הסכמי סודיות קפדניים:
+  - RevenueCat — ניהול מנויים והרשמות.
+  - Supabase — ניהול חשבונות משתמש ובסיס נתונים.
+  - Vercel — אירוח ה-API והשרת.
+  - Cloudflare R2 / Vercel Blob — אחסון תמונות וקבצים.
+  - PostHog — אנליטיקה, A/B testing ו-session replay (עם מיסוך אוטומטי של שדות קלט).
+  - Firebase (Google) — Analytics ו-Crashlytics לאיתור באגים.
+  - Facebook SDK (Meta) — מזהי פרסום ואירועי המרה (כפוף לאישור App Tracking Transparency).
+  - Google AdMob — מודעות (כפוף לאישור App Tracking Transparency).
+  - Google / Apple Sign-In — אימות התחברות.
+• רשויות החוק: מסירת מידע ככל שנידרש לכך על פי חוק או צו שיפוטי.
+
+העברת מידע אל מחוץ לישראל/EU: חלק מהספקים (Google, Anthropic, Vercel, PostHog) מעבדים מידע בשרתים בארה"ב או באירופה. העברה זו מבוצעת בהתאם לדרישות חוק הגנת הפרטיות הישראלי ובאמצעות הסכמי עיבוד מידע (DPA) סטנדרטיים.</p>
 
     <h3>4. דיוור ישיר והודעות שיווקיות</h3>
     <p>בעצם הרשמתך, הנך מסכים/ה לקבלת הודעות מערכת, תזכורות למידה, התראות פוש, מסרונים ודברי פרסומת מ-FinPlay ומשותפיה, בהתאם לסעיף 30א לחוק התקשורת (בזק ושידורים), התשמ"ב-1982. הודעות פרסומיות יסומנו במילה "פרסומת" בכותרת ההודעה.
@@ -108,8 +150,15 @@
 
 ההסרה תיכנס לתוקף תוך 3 ימי עסקים.</p>
 
-    <h3>5. זכויותיך (עיון, תיקון ומחיקה)</h3>
-    <p>על פי חוק הגנת הפרטיות, הינך זכאי/ת לעיין במידע האישי שלך. לעיון, תיקון או מחיקת חשבון, ניתן לפנות אלינו: <a href="mailto:support@finplay.me">support@finplay.me</a></p>
+    <h3>5. זכויותיך (עיון, תיקון, מחיקה ונייטרליות)</h3>
+    <p>על פי חוק הגנת הפרטיות, הינך זכאי/ת:
+• לעיין במידע האישי שאנו מחזיקים עליך.
+• לתקן מידע שגוי או לא מעודכן.
+• למחוק את חשבונך באופן מלא, לרבות כל הנתונים האישיים — דרך עמוד מחיקת החשבון: <a href="https://yoavrubin00.github.io/finpl/delete-account.html">delete-account</a> או דרך <a href="mailto:support@finplay.me">support@finplay.me</a>.
+• לקבל עותק של הנתונים שלך (Data Portability) — לפי בקשה דרך support@finplay.me, נשלח אליך תוך 30 ימי עסקים קובץ JSON עם הנתונים האישיים שלך.
+• לבקש Opt-Out מעיבוד AI — לפי בקשה דרך support@finplay.me. שים לב שאופציה זו תשבית את היכולת להשתמש בכלי הצ'אט, ניתוח תלוש שכר, וניתוח מניות.
+
+מימוש זכויות אלה הוא בחינם ויטופל תוך 14 ימי עסקים.</p>
 
     <h3>6. אבטחת מידע</h3>
     <p>אנו נוקטים באמצעי אבטחה טכנולוגיים וארגוניים מחמירים כדי להגן על המידע שלך (לרבות הצפנה). עם זאת, מובהר כי אין מערכת המאובטחת באופן הרמטי לחלוטין מפני חדירות סייבר.</p>
@@ -118,13 +167,17 @@
     <p>השימוש באפליקציה מותר מגיל 16 ומעלה. איננו אוספים מידע ביודעין מילדים מתחת לגיל 16. אם נודע לנו שילד מתחת לגיל זה מסר מידע, נמחק אותו מיידית.</p>
 
     <h3>8. שינויים במדיניות</h3>
-    <p>אנו עשויים לעדכן את מדיניות הפרטיות מעת לעת. שינויים מהותיים יפורסמו באפליקציה ויעודכנו בתאריך "עדכון אחרון" בראש מסך זה. המשך השימוש באפליקציה לאחר עדכון מהווה הסכמה למדיניות המעודכנת.</p>
+    <p>אנו עשויים לעדכן את מדיניות הפרטיות מעת לעת. שינויים מהותיים יפורסמו באפליקציה ויעודכנו בתאריך "עדכון אחרון" בראש מסך זה.
+
+בעת עדכון מהותי: יוצג למשתמש מודאל ייעודי בכניסה הבאה לאפליקציה, עם סיכום קצר של מה השתנה, ויידרש לאשר במפורש את התנאים המעודכנים. ללא אישור — לא ניתן יהיה להמשיך להשתמש באפליקציה. במקביל, נשלח מייל לכל המשתמשים הרשומים עם סיכום וקישור לתנאים המלאים.
+
+המשך השימוש באפליקציה לאחר אישור מהווה הסכמה למדיניות המעודכנת.</p>
   </div>
 
   <!-- English -->
   <div id="en-content" style="display:none">
     <h1>Terms of Use & Privacy Policy — FinPlay</h1>
-    <p class="updated">Last updated: May 2026</p>
+    <p class="updated">Last updated: June 2026</p>
 
     <h2>Terms of Use</h2>
     <p class="section-intro">Welcome to FinPlay ("the App"). Use of the App is subject to your full agreement to the following terms.</p>
@@ -151,13 +204,41 @@ We reserve the exclusive right to change benefit prices, limit redemptions, or c
     <h3>6. Limitation of Liability</h3>
     <p>The service is provided AS IS. FinPlay, its directors and employees shall not be liable for any direct or indirect damage, financial loss, lost profits, technical failures, or distress arising from use of the App. Exclusive jurisdiction: Tel Aviv-Jaffa courts.</p>
 
+    <h3>7. AI Tools & Automated Processing</h3>
+    <p>The App includes several tools that rely on third-party large language models (LLMs). When using the chat with Captain Shark, payslip analysis, stock analysis (quick/deep), personal insights, or Banner Tip, the content you provide is transmitted over an encrypted connection (TLS 1.2+) to Google (Gemini) and/or Anthropic (Claude) for processing, and a result is returned.
+
+AI results are intended for learning and enrichment only, do not constitute financial, pension, tax, or legal advice, and may contain errors, inaccuracies, or hallucinations. FinPlay is not responsible for these outputs or any reliance on them.</p>
+
+    <h3>8. Payslip Analyzer</h3>
+    <p>The payslip analyzer lets you upload a photo or PDF of a payslip for automated analysis. The flow:
+• The file is sent over an encrypted connection (TLS 1.2+) to FinPlay's server for the duration of processing only.
+• The file is then transmitted to Google Gemini for analysis (typically under 60 seconds).
+• The original file is not persisted on FinPlay's server, in logs, or at Google beyond the processing window.
+• The full analysis result is stored only in device RAM and is cleared when the screen closes.
+• Anonymized aggregate statistics (gross salary range in ₪1,000 buckets, rounded pension percentage, presence of education fund — without exact amounts, name, or full breakdown) are stored locally on your device in MMKV to enable the clan-sharing feature.
+• You can delete the local statistics at any time via Settings > Clear Data.
+
+A dedicated consent screen is shown before first use of this tool. Continued use constitutes explicit consent to this processing flow.</p>
+
+    <h3>9. Interactive Financial Tools</h3>
+    <p>The App offers nine financial calculators (mortgage, pension, payslip breakdown, income tax, savings goals, compound interest, budget check, vacation calculator, and more). Input you provide to these tools is stored locally on your device only (MMKV) for continued use of the tool, and is not transmitted to FinPlay servers or any third party.
+
+Results are general estimates only and do not constitute tax, pension, investment, or legal advice. Consult a licensed professional before making real-world financial decisions.</p>
+
+    <h3>10. A/B Testing & Personalization</h3>
+    <p>To improve user experience, FinPlay runs automated experiments on different variants of screens, copy, and offers (Multi-Armed Bandit). Variant assignment is anonymous, not tied to personal identity, and stored in PostHog for analytics and improvement purposes only.</p>
+
     <h2>Privacy Policy</h2>
     <p class="section-intro">FinPlay is committed to protecting your privacy and operates in accordance with the Israeli Privacy Protection Law, 5741-1981.</p>
 
     <h3>1. Information We Collect</h3>
     <p>• Account & contact details: full name, email, phone number, date of birth, avatar.
 • Learning & behavioral data: module progress, quiz results, simulator choices and actions, usage duration, activity streaks.
-• Technical & digital info: device type, OS version, IP address, advertising/device identifiers, analytics data.</p>
+• Technical & digital info: device type, OS version, IP address, advertising/device identifiers, analytics data.
+• Content sent for AI processing: questions you send to the Captain Shark chat, payslip files (for processing duration only), stock tickers for analysis, and parameters streamed into insights/Banner Tip requests (name, XP, streak, financial goals).
+• Input to financial tools: values you enter into the various calculators (salary, expenses, retirement age, savings goals, etc.) — stored locally on device only.
+• Anonymized aggregate statistics: of payslips (ranges only, no exact amounts) for the clan-sharing feature. Stored locally on device.
+• A/B test variant assignment: anonymous variant identifier for measuring screen/copy effectiveness.</p>
 
     <h3>2. Purpose of Use</h3>
     <p>• Operations: providing App services, account management, scoring, leaderboards.
@@ -167,8 +248,22 @@ We reserve the exclusive right to change benefit prices, limit redemptions, or c
     <h3>3. Information Sharing</h3>
     <p>We will never sell your personally identifiable information. Sharing occurs in the following cases:
 • Benefit redemption: when you actively click "Redeem Benefit" through the rewards store, you give explicit consent to share your contact details with that specific entity.
-• Technology providers: cloud, storage, and analytics services operating on our behalf under strict confidentiality agreements, including RevenueCat (subscription management), Vercel Blob (image storage), Google and Apple Sign-In (authentication).
-• Law enforcement: as required by law or court order.</p>
+• AI service providers:
+  - Google (Gemini API) — for automated processing of chat, payslip, personal insights, Banner Tip, and quick stock analysis. Processing occurs on Google's servers in the US.
+  - Anthropic (Claude API) — for deep stock analysis. Processing occurs on Anthropic's servers in the US.
+• Technology providers: cloud, storage, and analytics services operating on our behalf under strict confidentiality agreements:
+  - RevenueCat — subscription and purchase management.
+  - Supabase — user accounts and database.
+  - Vercel — API and server hosting.
+  - Cloudflare R2 / Vercel Blob — image and file storage.
+  - PostHog — analytics, A/B testing, and session replay (with automatic input field masking).
+  - Firebase (Google) — Analytics and Crashlytics for debugging.
+  - Facebook SDK (Meta) — advertising identifiers and conversion events (subject to App Tracking Transparency consent).
+  - Google AdMob — ads (subject to App Tracking Transparency consent).
+  - Google / Apple Sign-In — authentication.
+• Law enforcement: as required by law or court order.
+
+International data transfer: Some providers (Google, Anthropic, Vercel, PostHog) process data on servers in the US or Europe. This transfer is performed in compliance with the Israeli Privacy Protection Law and via standard Data Processing Agreements (DPAs).</p>
 
     <h3>4. Direct Marketing & Communications</h3>
     <p>By registering, you agree to receive system messages, learning reminders, push notifications, SMS, and promotional messages from FinPlay and its partners, per Section 30A of the Communications Law (Bezeq and Broadcasts), 5742-1982. Promotional messages will be marked with the word "פרסומת" (advertisement) in the subject line.
@@ -183,7 +278,14 @@ You may unsubscribe at any time via any of the following:
 Unsubscription will take effect within 3 business days.</p>
 
     <h3>5. Your Rights</h3>
-    <p>Under the Privacy Protection Law, you are entitled to review your personal information. For review, correction, or account deletion, contact us at: <a href="mailto:support@finplay.me">support@finplay.me</a></p>
+    <p>Under the Privacy Protection Law, you are entitled to:
+• Access the personal information we hold about you.
+• Correct inaccurate or outdated information.
+• Delete your account fully, including all personal data — via the account deletion page: <a href="https://yoavrubin00.github.io/finpl/delete-account.html">delete-account</a> or via <a href="mailto:support@finplay.me">support@finplay.me</a>.
+• Receive a copy of your data (Data Portability) — upon request via support@finplay.me, we will send you a JSON file with your personal data within 30 business days.
+• Request opt-out from AI processing — upon request via support@finplay.me. Note that this will disable use of the chat tool, payslip analyzer, and stock analysis.
+
+Exercising these rights is free of charge and will be processed within 14 business days.</p>
 
     <h3>6. Data Security</h3>
     <p>We employ strict technological and organizational security measures to protect your data (including encryption). However, no system is completely immune to cyber intrusions.</p>
@@ -192,7 +294,11 @@ Unsubscription will take effect within 3 business days.</p>
     <p>Use is permitted from age 16. We do not knowingly collect information from children under 16. If we learn that a child under 16 has provided information, we will delete it immediately.</p>
 
     <h3>8. Changes to This Policy</h3>
-    <p>We may update this Privacy Policy from time to time. Material changes will be announced in the app and the "Last updated" date at the top of this screen will reflect the change. Continued use of the app after an update constitutes acceptance of the revised policy.</p>
+    <p>We may update this Privacy Policy from time to time. Material changes will be announced in the app and the "Last updated" date at the top of this screen will reflect the change.
+
+Upon a material update: a dedicated modal will be presented to the user on the next app entry, with a short summary of what changed, requiring explicit re-acceptance of the updated terms. Without acceptance — continued use of the app will not be possible. In parallel, an email will be sent to all registered users with a summary and a link to the full updated terms.
+
+Continued use of the app after acceptance constitutes consent to the updated policy.</p>
   </div>
 
   <script>

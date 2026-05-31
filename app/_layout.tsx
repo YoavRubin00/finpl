@@ -103,6 +103,7 @@ import { DailyBridgeNudgeModal } from "../src/components/ui/DailyBridgeNudgeModa
 import { InviteFriendsNudgeModal } from "../src/components/ui/InviteFriendsNudgeModal";
 import { PostWalkthroughRegisterCTAGate } from "../src/features/auth/PostWalkthroughRegisterCTA";
 import { ForceUpdateGate } from "../src/features/force-update/ForceUpdateGate";
+import { TermsReconsentGate } from "../src/features/legal/TermsReconsentGate";
 import { configureRevenueCat } from "../src/services/revenueCat";
 import { AppWalkthroughOverlay } from "../src/features/onboarding/AppWalkthroughOverlay";
 import { StreakFreezeSaveModal } from "../src/features/streak/StreakFreezeSaveModal";
@@ -563,6 +564,11 @@ function RootLayoutInner() {
                   every other overlay when active. Self-contained: no boot
                   order changes required, no parent gating. */}
               <ForceUpdateGate />
+              {/* Terms re-consent gate. Blocks existing users whose accepted
+                  terms version is older than CURRENT_TERMS_VERSION. New users
+                  in onboarding flow are exempted (they accept latest on signup).
+                  Mounted near the bottom so its fullScreen Modal sits on top. */}
+              <TermsReconsentGate />
               {/* Global top banners — suppressed during onboarding/tutorial to avoid distracting the first-run experience */}
               {hasCompletedOnboarding && hasSeenWalkthrough && (
                 <>

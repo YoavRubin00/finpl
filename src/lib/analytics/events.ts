@@ -130,7 +130,10 @@ export type AppEvent =
   // Mirrors setPersonProperties({ bandit_variant__<exp>: <variantId> }) so
   // Hog funnels for ANY downstream event can be sliced by variant via the
   // person property — that's the audit-log half of the same signal.
-  | { name: 'bandit_variant_assigned'; props: { experiment_id: string; variant_id: string; variant_label?: string; uniform_sampling: boolean } };
+  | { name: 'bandit_variant_assigned'; props: { experiment_id: string; variant_id: string; variant_label?: string; uniform_sampling: boolean } }
+
+  // ── Legal / Terms re-consent ────────────────────────────────────────────
+  | { name: 'terms_reaccepted'; props: { from_version: string | null; to_version: string } };
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Baseline properties — attached to every wrapped event
