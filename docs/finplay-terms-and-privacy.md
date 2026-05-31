@@ -131,7 +131,7 @@ FinPlay מחויבת להגנה על פרטיותך ופועלת בהתאם לח
 
 - **לעיין** במידע האישי שאנו מחזיקים עליך.
 - **לתקן** מידע שגוי או לא מעודכן.
-- **למחוק את חשבונך** באופן מלא, לרבות כל הנתונים האישיים — דרך עמוד מחיקת החשבון: https://yoavrubin00.github.io/finpl/delete-account.html או דרך support@finplay.me.
+- **למחוק את חשבונך** באופן מלא, לרבות כל הנתונים האישיים — דרך עמוד מחיקת החשבון: https://finplay.me/delete-account או דרך support@finplay.me.
 - **לקבל עותק של הנתונים שלך** (Data Portability) — לפי בקשה דרך support@finplay.me, נשלח אליך תוך 30 ימי עסקים קובץ JSON עם הנתונים האישיים שלך.
 - **לבקש Opt-Out מעיבוד AI** — לפי בקשה דרך support@finplay.me. שים לב שאופציה זו תשבית את היכולת להשתמש בכלי הצ'אט, ניתוח תלוש שכר, וניתוח מניות.
 
@@ -280,7 +280,7 @@ Under the Privacy Protection Law, you are entitled to:
 
 - **Access** the personal information we hold about you.
 - **Correct** inaccurate or outdated information.
-- **Delete your account** fully, including all personal data — via the account deletion page: https://yoavrubin00.github.io/finpl/delete-account.html or via support@finplay.me.
+- **Delete your account** fully, including all personal data — via the account deletion page: https://finplay.me/delete-account or via support@finplay.me.
 - **Receive a copy of your data** (Data Portability) — upon request via support@finplay.me, we will send you a JSON file with your personal data within 30 business days.
 - **Request opt-out from AI processing** — upon request via support@finplay.me. Note that this will disable use of the chat tool, payslip analyzer, and stock analysis.
 

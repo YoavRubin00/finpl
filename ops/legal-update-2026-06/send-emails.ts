@@ -159,7 +159,7 @@ async function main(): Promise<void> {
         const name = user.user_metadata?.full_name ?? user.user_metadata?.displayName ?? '';
         const html = renderEmail(template, {
           firstName: firstName(name),
-          unsubscribeUrl: `https://yoavrubin00.github.io/finpl/unsubscribe.html?u=${encodeURIComponent(user.id)}`,
+          unsubscribeUrl: `https://finplay.me/unsubscribe?u=${encodeURIComponent(user.id)}`,
         });
 
         if (mode === 'dry-run') {

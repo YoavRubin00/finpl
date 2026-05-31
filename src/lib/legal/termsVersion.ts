@@ -27,6 +27,8 @@ export const TERMS_UPDATE_SUMMARY_EN: ReadonlyArray<string> = [
   'Clarified that aggregated anonymized payslip statistics (ranges only) are stored locally.',
 ];
 
-/** Public URL of the full hosted terms — kept here so the modal + email use the same link. */
-export const TERMS_PUBLIC_URL = 'https://yoavrubin00.github.io/finpl/privacy-policy.html';
-export const DELETE_ACCOUNT_URL = 'https://yoavrubin00.github.io/finpl/delete-account.html';
+/** Public URL of the full hosted terms — kept here so the modal + email use the same link.
+ *  Lives on the finplay.me landing project (Vercel, cleanUrls=true). */
+export const TERMS_PUBLIC_URL = 'https://finplay.me/privacy-policy';
+export const TERMS_OF_SERVICE_URL = 'https://finplay.me/terms-of-service';
+export const DELETE_ACCOUNT_URL = 'https://finplay.me/delete-account';
