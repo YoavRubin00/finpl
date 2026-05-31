@@ -1,4 +1,4 @@
-import { pgTable, unique, uuid, text, integer, date, boolean, timestamp, index, foreignKey, check, jsonb, numeric, serial, bigserial, primaryKey } from "drizzle-orm/pg-core"
+import { pgTable, unique, uniqueIndex, uuid, text, integer, date, boolean, timestamp, index, foreignKey, check, jsonb, numeric, serial, bigserial, primaryKey } from "drizzle-orm/pg-core"
 import { sql } from "drizzle-orm"
 
 
@@ -24,6 +24,9 @@ export const userProfiles = pgTable("user_profiles", {
 	dailyEmailEnabled: boolean("daily_email_enabled").default(true),
 	syncToken: text("sync_token"),
 	preferences: jsonb("preferences"),
+	googleSub: text("google_sub"),
+	appleSub: text("apple_sub"),
+	emailVerified: boolean("email_verified").default(false),
 	virtualBalance: numeric("virtual_balance", { precision: 18, scale: 2 }).default('100000').notNull(),
 	// User's personal invite code used by app/api/referral/{redeem,register-code}+api.ts.
 	// Unique per user (constraint in DB). Was missing from this file — schema drift —
@@ -35,6 +38,8 @@ export const userProfiles = pgTable("user_profiles", {
 	unique("user_profiles_auth_id_key").on(table.authId),
 	unique("user_profiles_email_key").on(table.email),
 	unique("user_profiles_referral_code_key").on(table.referralCode),
+	uniqueIndex("user_profiles_google_sub_key").on(table.googleSub),
+	uniqueIndex("user_profiles_apple_sub_key").on(table.appleSub),
 ]);
 
 export const moduleProgress = pgTable("module_progress", {
@@ -205,6 +210,7 @@ export const banditVariants = pgTable("bandit_variants", {
 export const coinEvents = pgTable("coin_events", {
 	id: bigserial({ mode: 'number' }).primaryKey().notNull(),
 	authId: text("auth_id").notNull(),
+	userId: uuid("user_id"),
 	amount: integer().notNull(),
 	source: text().notNull(),
 	grantedAt: timestamp("granted_at", { withTimezone: true, mode: 'string' }).notNull().defaultNow(),
@@ -217,6 +223,7 @@ export const coinEvents = pgTable("coin_events", {
 
 export const dividendCollections = pgTable("dividend_collections", {
 	authId: text("auth_id").notNull(),
+	userId: uuid("user_id"),
 	dateCollected: date("date_collected").notNull(),
 	amount: integer().notNull(),
 	collectedAt: timestamp("collected_at", { withTimezone: true, mode: 'string' }).notNull().defaultNow(),
@@ -228,6 +235,8 @@ export const dividendCollections = pgTable("dividend_collections", {
 export const referrals = pgTable("referrals", {
 	refereeAuthId: text("referee_auth_id").primaryKey().notNull(),
 	referrerAuthId: text("referrer_auth_id").notNull(),
+	refereeUserId: uuid("referee_user_id"),
+	referrerUserId: uuid("referrer_user_id"),
 	inviteCode: text("invite_code").notNull(),
 	signupBonusPaid: boolean("signup_bonus_paid").notNull().default(false),
 	linkedAt: timestamp("linked_at", { withTimezone: true, mode: 'string' }).notNull().defaultNow(),
