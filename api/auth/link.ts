@@ -44,11 +44,10 @@ export default withAuth(async (req: VercelRequest, res: VercelResponse, ctx) => 
     return res.status(409).json({ error: 'This account is already linked to another user' });
   }
 
-  await db.update(userProfiles).set({
-    googleSub: body.provider === 'google' ? subject : undefined,
-    appleSub: body.provider === 'apple' ? subject : undefined,
-    updatedAt: new Date().toISOString(),
-  }).where(eq(userProfiles.id, ctx.userId));
+  const setFields: Record<string, unknown> = { updatedAt: new Date().toISOString() };
+  if (body.provider === 'google') setFields.googleSub = subject;
+  if (body.provider === 'apple') setFields.appleSub = subject;
+  await db.update(userProfiles).set(setFields).where(eq(userProfiles.id, ctx.userId));
 
   const row = (await db.select().from(userProfiles).where(eq(userProfiles.id, ctx.userId)).limit(1))[0];
   return res.status(200).json({ ok: true, profile: row ?? null });

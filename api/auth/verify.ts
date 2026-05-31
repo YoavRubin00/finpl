@@ -87,12 +87,21 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const db = getDb();
 
     // 1. Find by provider subject.
-    let row =
+    let row: typeof userProfiles.$inferSelect | undefined =
       cred.provider === 'google'
         ? (await db.select().from(userProfiles).where(eq(userProfiles.googleSub, cred.subject)).limit(1))[0]
         : cred.provider === 'apple'
         ? (await db.select().from(userProfiles).where(eq(userProfiles.appleSub, cred.subject)).limit(1))[0]
         : (await db.select().from(userProfiles).where(eq(userProfiles.email, cred.subject)).limit(1))[0];
+
+    // I3: passwordless email login must not land on a row owned by an OAuth
+    // provider (Google/Apple set `email`, so otherwise someone could log in as
+    // a Google user just by typing their address). Pure-email users have both
+    // subs NULL and are unaffected. (Full fix is OTP-verified email — tracked
+    // separately; this preserves the pre-unification trust boundary.)
+    if (cred.provider === 'email' && row && (row.googleSub || row.appleSub)) {
+      row = undefined;
+    }
 
     // 2. Auto-link: a verified credential whose email matches an existing row
     //    attaches its subject to that row. Safe because the provider proved the
@@ -111,6 +120,26 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       }
     }
 
+    // 1c. Legacy rows predate the google_sub/apple_sub columns: an existing
+    //     Apple user has auth_id = <Apple subject> (apple_sub still NULL), and a
+    //     legacy Google/email user has auth_id = <email>. Find them by the legacy
+    //     auth_id key and backfill the subject onto the row, so we attach to the
+    //     SAME uuid instead of creating a duplicate (which would 500 on the
+    //     auth_id UNIQUE constraint and orphan the user's progress).
+    if (!row) {
+      const legacyKey = isEmail(cred.email) ? cred.email : cred.subject;
+      const legacy = (await db.select().from(userProfiles).where(eq(userProfiles.authId, legacyKey)).limit(1))[0];
+      if (legacy && !(cred.provider === 'email' && (legacy.googleSub || legacy.appleSub))) {
+        await db.update(userProfiles).set({
+          googleSub: cred.provider === 'google' ? cred.subject : legacy.googleSub,
+          appleSub: cred.provider === 'apple' ? cred.subject : legacy.appleSub,
+          email: legacy.email ?? (isEmail(cred.email) ? cred.email : legacy.email),
+          updatedAt: new Date().toISOString(),
+        }).where(eq(userProfiles.id, legacy.id));
+        row = (await db.select().from(userProfiles).where(eq(userProfiles.id, legacy.id)).limit(1))[0];
+      }
+    }
+
     // 3. Create. authId stays populated (NOT NULL + legacy email-login path):
     //    use the email when present, else the provider subject (stable, unique).
     if (!row) {
@@ -122,7 +151,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         displayName: cred.displayName,
         googleSub: cred.provider === 'google' ? cred.subject : null,
         appleSub: cred.provider === 'apple' ? cred.subject : null,
-      });
+      }).onConflictDoNothing({ target: userProfiles.authId });
       row = (await db.select().from(userProfiles).where(eq(userProfiles.authId, authId)).limit(1))[0];
     } else if (cred.provider === 'email' && cred.displayName && !row.displayName) {
       await db.update(userProfiles).set({ displayName: cred.displayName, updatedAt: new Date().toISOString() }).where(eq(userProfiles.id, row.id));
