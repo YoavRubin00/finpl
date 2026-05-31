@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { View, Text, Pressable, StyleSheet, Platform } from 'react-native';
+import { View, Text, Pressable, StyleSheet, Platform, ActivityIndicator } from 'react-native';
 import { useVideoPlayer, VideoView } from 'expo-video';
 import { Image as ExpoImage } from 'expo-image';
 import Animated, { FadeIn } from 'react-native-reanimated';
@@ -24,6 +24,12 @@ interface PearlVideoStageProps {
 export function PearlVideoStage({ isActive, video, onContinue }: PearlVideoStageProps): React.ReactElement {
   const [finished, setFinished] = useState(false);
   const finishedRef = useRef(false);
+  // True while expo-video is fetching the first playable frames. We surface a
+  // spinner overlay during that window — without it, slow networks land the
+  // user on a flat black `videoFrame` for 1-2s (TestFlight bug 2026-06-01).
+  // Flipped off either when the player goes 'readyToPlay'/'playing' or as a
+  // 6s safety fallback so we never trap a user behind a dead spinner.
+  const [isBuffering, setIsBuffering] = useState(true);
   const { playSound } = useSoundEffect();
 
   const player = useVideoPlayer(video.videoUri, (p) => {
@@ -54,15 +60,46 @@ export function PearlVideoStage({ isActive, video, onContinue }: PearlVideoStage
   // Detect end-of-clip — expo-video fires statusChange to 'idle' when a
   // non-looping clip reaches its tail. We also expose a manual "Continue"
   // so a user who doesn't want to wait can skip ahead any time.
+  // statusChange also reflects the 'loading' state, which we mirror back
+  // into the buffering overlay so a mid-clip rebuffer re-shows the spinner.
   useEffect(() => {
     const sub = player.addListener('statusChange', (e) => {
       if (e.status === 'idle' && !finishedRef.current) {
         finishedRef.current = true;
         setFinished(true);
       }
+      if (e.status === 'loading') {
+        setIsBuffering(true);
+      }
+      if (e.status === 'error') {
+        // Drop the spinner on error — the user can hit "דלג" to advance.
+        setIsBuffering(false);
+      }
     });
     return () => sub.remove();
   }, [player]);
+
+  // Flip the buffering overlay OFF as soon as the player reports playback
+  // has actually started. `playingChange` fires with isPlaying=true once the
+  // first frame is ready, which is the right signal — the 'idle'/'loading'
+  // statuses don't cleanly indicate "ready to play" on their own.
+  useEffect(() => {
+    const sub = player.addListener('playingChange', (e) => {
+      if (e.isPlaying) {
+        setIsBuffering(false);
+      }
+    });
+    return () => sub.remove();
+  }, [player]);
+
+  // Safety fallback — if neither event ever fires (network dead, codec
+  // mismatch on the CDN side, etc.), drop the spinner after 6s so the user
+  // is never trapped behind a permanent overlay. They can still hit "דלג"
+  // via the skip pill.
+  useEffect(() => {
+    const t = setTimeout(() => setIsBuffering(false), 6000);
+    return () => clearTimeout(t);
+  }, []);
 
   // Web-only: expo-video's web shim doesn't reliably translate
   // `nativeControls={false}` into the HTML5 <video> `controls={false}`
@@ -109,6 +146,19 @@ export function PearlVideoStage({ isActive, video, onContinue }: PearlVideoStage
           contentFit="cover"
           nativeControls={false}
         />
+
+        {/* Buffering overlay — shows on top of the black videoFrame until
+            expo-video reports the player is ready / playing. Auto-dismisses
+            via the 6s safety timeout above so a dead network can't trap
+            users behind a permanent spinner. */}
+        {isBuffering && !finished ? (
+          <View style={styles.bufferOverlay} pointerEvents="none">
+            <ActivityIndicator size="large" color="#22d3ee" />
+            <Text style={styles.bufferText} allowFontScaling={false}>
+              טוען סרטון…
+            </Text>
+          </View>
+        ) : null}
 
         {/* Skip pill — top-right corner, floats above the video so it's
             always reachable while the clip plays. Mid-flow only; once the
@@ -223,4 +273,17 @@ const styles = StyleSheet.create({
     zIndex: 10,
   },
   skipText: { color: '#fff', fontSize: 13, fontWeight: '800', writingDirection: 'rtl' as const },
+  bufferOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(0,0,0,0.55)',
+    gap: 12,
+  },
+  bufferText: {
+    color: '#e2e8f0',
+    fontSize: 13,
+    fontWeight: '700',
+    writingDirection: 'rtl' as const,
+  },
 });

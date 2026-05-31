@@ -21,6 +21,24 @@ export const STAMP_FRAME_GREEN: ImageSourcePropType = {
   uri: `${BLOB_BASE}/bullshit-swipe/stamp-frame-green.webp`,
 };
 
+/** Flat list of every remote URI used by the bullshit-swipe card —
+ *  ad-bg templates + dropstamp frames. Consumers (BullshitSwipeCard
+ *  components) call `ExpoImage.prefetch(uri)` on mount so the CDN cache
+ *  is primed before the user gets to the first card. Without this the
+ *  card rendered with the gradient only while the WebP raced the swipe
+ *  on slow networks (TestFlight bug 2026-06-01). */
+export const BULLSHIT_REMOTE_URIS: readonly string[] = [
+  ...Object.values(TEMPLATE_IMAGES).flatMap((s) =>
+    typeof s === 'object' && s !== null && 'uri' in s && typeof s.uri === 'string' ? [s.uri] : [],
+  ),
+  STAMP_FRAME_RED && typeof STAMP_FRAME_RED === 'object' && 'uri' in STAMP_FRAME_RED && typeof STAMP_FRAME_RED.uri === 'string'
+    ? STAMP_FRAME_RED.uri
+    : '',
+  STAMP_FRAME_GREEN && typeof STAMP_FRAME_GREEN === 'object' && 'uri' in STAMP_FRAME_GREEN && typeof STAMP_FRAME_GREEN.uri === 'string'
+    ? STAMP_FRAME_GREEN.uri
+    : '',
+].filter((u) => !!u);
+
 export const AD_TEMPLATES: Record<AdTemplateId, AdTemplate> = {
   'scam-neon': {
     id: 'scam-neon',

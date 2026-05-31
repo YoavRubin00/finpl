@@ -30,7 +30,7 @@ import { useDailyChallengesStore } from '../../../daily-challenges/use-daily-cha
 import { useDailyLogStore } from '../../../daily-summary/useDailyLogStore';
 import { CHALLENGE_COIN_REWARD, CHALLENGE_XP_REWARD, MAX_DAILY_PLAYS } from '../../../daily-challenges/daily-challenge-types';
 
-import { AD_TEMPLATES } from './adTemplates';
+import { AD_TEMPLATES, BULLSHIT_REMOTE_URIS } from './adTemplates';
 import { getTodayBullshitAds, getBullshitAdsByIds } from './bullshitAdsData';
 import type { BullshitAd, BullshitRoundResult } from './types';
 import { GlossaryInlineToggle } from '../shared/GlossaryInlineToggle';
@@ -98,6 +98,13 @@ function AdCardFront({ ad }: { ad: BullshitAd }) {
         style={StyleSheet.absoluteFill}
         contentFit="cover"
         accessible={false}
+        cachePolicy="memory-disk"
+        transition={200}
+        onError={(e) => {
+          // Surface CDN/network failures to dev logs instead of silently
+          // rendering only the gradient (TestFlight bug 2026-06-01).
+          console.warn(`[BullshitSwipe/finfeed] template image failed: ${template.id}`, e);
+        }}
       />
 
       {ad.badge && (
@@ -376,6 +383,17 @@ export const BullshitSwipeCard = React.memo(function BullshitSwipeCard({
   const playBullshitSwipe = useDailyChallengesStore((s) => s.playBullshitSwipe);
   const hasPlayedToday = useDailyChallengesStore((s) => s.hasBullshitSwipePlayedToday());
   const playsToday = useDailyChallengesStore((s) => s.getBullshitSwipePlaysToday());
+
+  // Prefetch every remote URI used by the card (7 ad-bg templates + 2
+  // dropstamp frames) the moment the component mounts. expo-image keeps
+  // an LRU memory-disk cache so re-prefetching is essentially free on
+  // subsequent mounts. Without this the user saw only the gradient
+  // before the WebP loaded on slow networks (TestFlight bug 2026-06-01).
+  useEffect(() => {
+    BULLSHIT_REMOTE_URIS.forEach((uri) => {
+      ExpoImage.prefetch(uri).catch(() => undefined);
+    });
+  }, []);
 
   // Pearl-driven explicit deck (1-3 ads) takes precedence over the daily mix.
   // Falls back to the daily mix when the override list resolves to zero cards
