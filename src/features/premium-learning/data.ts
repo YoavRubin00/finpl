@@ -366,11 +366,17 @@ export const PREMIUM_LEARNING_ITEMS: PremiumLearningModule[] = [
     ],
   },
   // ── Chapter 0: המבוא, infographic carousels ──
+  // 2026-05-30 chapter-0 swap: the entry `id` slugs are kept as-is for
+  // analytics continuity, but moduleId + moduleIndex + moduleTitle now
+  // point at the slot that matches the actual content (barter cards →
+  // mod-0-2, financial-basics cards → mod-0-1). Don't be confused by the
+  // entry id reading "premium-mod-0-1" while moduleId='mod-0-2' — the
+  // id is a stable handle, the moduleId routes the carousel.
   {
     id: 'premium-mod-0-1',
     type: 'premium-learning',
-    moduleId: 'mod-0-1',
-    moduleIndex: 0,
+    moduleId: 'mod-0-2',
+    moduleIndex: 1,
     chapterId: 'chapter-0',
     storeChapterId: 'ch-0',
     moduleTitle: 'מה זה בכלל כסף?',
@@ -388,8 +394,8 @@ export const PREMIUM_LEARNING_ITEMS: PremiumLearningModule[] = [
   {
     id: 'premium-mod-0-2',
     type: 'premium-learning',
-    moduleId: 'mod-0-2',
-    moduleIndex: 1,
+    moduleId: 'mod-0-1',
+    moduleIndex: 0,
     chapterId: 'chapter-0',
     storeChapterId: 'ch-0',
     moduleTitle: 'מושגי יסוד פיננסיים',

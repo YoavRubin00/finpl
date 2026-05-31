@@ -15,20 +15,24 @@ import type { SharkDilemma } from "./types";
 const DILEMMA_VIDEO_BASE = "https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/finn-dilemmas";
 
 export const SHARK_DILEMMAS: Record<string, SharkDilemma> = {
+  // 2026-05-30 chapter-0 swap: "מושגי יסוד פיננסיים" moved from mod-0-2
+  // to mod-0-1, and "מה זה בכלל כסף?" moved from mod-0-1 to mod-0-2.
+  // These two dilemmas were authored against the OLD slots; their content
+  // (bank-minus vs barter/value) is swapped to follow the topics.
   "mod-0-1": {
     moduleId: "mod-0-1",
-    scenario: "חבר שלכם מציע להחליף איתכם את הסניקרס החדשים שקניתם תמורת קונסולה ישנה שלו. אתם לא בטוחים מה השווי האמיתי של כל אחד. מה הייתי עושה?",
-    options: [
-      { id: "a", label: "סוגרים עסקה, למה לא", feedback: "הגיוני, החלפות ישירות זה כיף. אבל בלי יחידת ערך משותפת, קשה לדעת אם קיבלתם עסקה הוגנת — בדיוק בגלל זה המצאנו כסף.", isWise: false },
-      { id: "b", label: "בודקים מחירי שוק קודם", feedback: "בול. כסף הוא בעצם 'סרגל' שמודד ערך. לפני כל החלפה או עסקה, שווה לבדוק כמה שקלים כל צד שווה באמת בשוק.", isWise: true },
-    ],
-  },
-  "mod-0-2": {
-    moduleId: "mod-0-2",
     scenario: "הבנק שלח לכם הודעה שאתם במינוס של 300 ₪ ושיש 'ריבית חובה' על הסכום. חבר אומר לכם 'זה כלום, תעזוב'. מה הייתי עושה?",
     options: [
       { id: "a", label: "עוזבים, זה רק 300 ₪", feedback: "אני רואה למה — הסכום נשמע קטן. אבל ריבית חובה בישראל יכולה להגיע ל-14% ויותר, והיא רצה ברקע כל יום.", isWise: false },
       { id: "b", label: "מכסים את המינוס מיד", feedback: "מהלך חכם של כריש. מינוס זה לא 'עוד כסף שלכם' — זו הלוואה יקרה מהבנק. ככל שסוגרים מהר, משלמים פחות ריבית.", isWise: true },
+    ],
+  },
+  "mod-0-2": {
+    moduleId: "mod-0-2",
+    scenario: "חבר שלכם מציע להחליף איתכם את הסניקרס החדשים שקניתם תמורת קונסולה ישנה שלו. אתם לא בטוחים מה השווי האמיתי של כל אחד. מה הייתי עושה?",
+    options: [
+      { id: "a", label: "סוגרים עסקה, למה לא", feedback: "הגיוני, החלפות ישירות זה כיף. אבל בלי יחידת ערך משותפת, קשה לדעת אם קיבלתם עסקה הוגנת — בדיוק בגלל זה המצאנו כסף.", isWise: false },
+      { id: "b", label: "בודקים מחירי שוק קודם", feedback: "בול. כסף הוא בעצם 'סרגל' שמודד ערך. לפני כל החלפה או עסקה, שווה לבדוק כמה שקלים כל צד שווה באמת בשוק.", isWise: true },
     ],
   },
   "mod-0-3": {

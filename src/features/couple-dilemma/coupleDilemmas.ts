@@ -47,7 +47,10 @@ export const COUPLE_DILEMMAS = byId as Readonly<Record<string, CoupleDilemmaSegm
 /** Mapping from `module.id` → couple dilemma id. */
 export const MODULE_TO_COUPLE_DILEMMA: Readonly<Record<string, string>> = {
   // Chapter 0 — בסיס
-  'mod-0-2': 'cd-wine-receipt',       // מושגי יסוד — חשבון יין כדוגמת תזרים
+  // After the 2026-05-30 chapter-0 swap, "מושגי יסוד פיננסיים" lives at
+  // mod-0-1 (was mod-0-2). The wine-receipt couple dilemma is anchored
+  // to that topic so it follows the content to mod-0-1.
+  'mod-0-1': 'cd-wine-receipt',       // מושגי יסוד — חשבון יין כדוגמת תזרים
   'mod-0-4': 'cd-cafe-bill',          // כמה נכנס וכמה יוצא — הוצאות חוזרות זוגיות
   // Chapter 2 — הגנה ופיננסים
   'mod-2-13': 'cd-vacation-brochure', // קרן השתלמות — מצוטט בקריינות

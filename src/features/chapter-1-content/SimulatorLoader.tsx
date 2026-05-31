@@ -15,8 +15,10 @@ type SimScreen = ComponentType<{ onComplete: (score: number) => void }>;
  */
 const SIM_LOADERS: Record<string, () => SimScreen> = {
   // Chapter 0
-  "mod-0-1": () => require("../chapter-0-content/simulations/BarterPuzzleScreen").BarterPuzzleScreen,
-  // mod-0-2: no sim (basic financial terms)
+  // mod-0-1: no sim (basic financial terms — bank/interest/pension, after
+  //   the 2026-05-30 chapter-0 swap this slot now holds the old mod-0-2
+  //   content which never had a simulation).
+  "mod-0-2": () => require("../chapter-0-content/simulations/BarterPuzzleScreen").BarterPuzzleScreen,
   "mod-0-3": () => require("../chapter-0-content/simulations/InflationThiefScreen").InflationThiefScreen,
   "mod-0-4": () => require("../chapter-0-content/simulations/BudgetBalanceScreen").BudgetBalanceScreen,
 
