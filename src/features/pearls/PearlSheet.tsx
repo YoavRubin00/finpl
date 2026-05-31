@@ -186,14 +186,20 @@ export function PearlSheet({ visible, pearl, onClose }: PearlSheetProps): React.
       //      pearl still has a beat of content before the game.
       const hasUniqueBundle = !!(pearl.videoId || pearl.conceptId || pearl.swipeIds?.length || pearl.scenarioId);
       if (hasUniqueBundle) {
+        // Per user spec (2026-05-31): every pearl is exactly 4 content
+        // items — video, concept, swipe, scenario. The legacy interModuleGame
+        // stage is no longer appended; the scenario stage already provides
+        // a game-like interaction tied to the module's topic.
         if (pearl.videoId) snapshot.push({ kind: 'video', index: idx++ });
         if (pearl.conceptId) snapshot.push({ kind: 'concept', index: idx++ });
         if (pearl.swipeIds?.length) snapshot.push({ kind: 'swipe', index: idx++ });
         if (pearl.scenarioId && pearl.scenarioPool) snapshot.push({ kind: 'scenario', index: idx++ });
       } else {
+        // Legacy fallback only used when nothing was mapped + no fallback
+        // bundle (mod-0-1 historically; today every pearl gets a fallback).
         snapshot.push({ kind: 'daily-pick', index: idx++ });
+        snapshot.push({ kind: 'game', index: idx++ });
       }
-      snapshot.push({ kind: 'game', index: idx++ });
       setStages(snapshot);
       setActivePage(0);
       openedAtRef.current = Date.now();

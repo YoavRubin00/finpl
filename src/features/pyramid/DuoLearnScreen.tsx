@@ -42,9 +42,11 @@ import { getPyramidStatus } from "../../utils/progression";
 // entry to a downstream module as a safety net. Skipping still proceeds —
 // it's a nudge, not a hard gate.
 const PROFILE_QUESTION_BACKSTOPS: Record<string, ProfileQuestionKind> = {
-  'mod-0-3': 'knowledgeLevel', // source: mod-0-1
-  'mod-0-5': 'learningTime',   // source: mod-0-4
-  'mod-1-1': 'dailyGoal',      // source: mod-0-5
+  // Backstop fires on the module IMMEDIATELY AFTER the pearl that owns the
+  // source question (Pearl-after-mod-X skipped → ask on mod-(X+1) entry).
+  'mod-0-2': 'knowledgeLevel', // source pearl: after mod-0-1
+  'mod-0-5': 'learningTime',   // source pearl: after mod-0-4
+  'mod-1-1': 'dailyGoal',      // source: mod-0-5 (no pearl after last chapter module)
 };
 import { ARENAS, type ArenaConfig } from "./arenaConfig";
 import { PRO_LOCKED_SIMS } from "../../constants/proGates";
