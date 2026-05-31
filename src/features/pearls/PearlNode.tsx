@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { View, Pressable } from 'react-native';
+import { View, Pressable, StyleSheet } from 'react-native';
 import { Image as ExpoImage } from 'expo-image';
 import { Check } from 'lucide-react-native';
 import Animated, {
@@ -13,7 +13,10 @@ import Animated, {
 } from 'react-native-reanimated';
 
 const PEARL_COLORED = require('../../../assets/webp/pearl-colored.webp');
-const PEARL_LOCKED = require('../../../assets/webp/pearl-locked.webp');
+// PEARL_LOCKED used to be a separate gray-sphere webp. Per user request
+// (2026-05-31) locked pearls now render the SAME colored image as unlocked,
+// just dimmed with a translucent slate overlay — so the silhouette and
+// decorative shape are still visible, only the colour is muted.
 
 export type PearlNodeState = 'locked' | 'unlocked' | 'completed';
 
@@ -164,11 +167,20 @@ export function PearlNode({
           }}
         >
           <ExpoImage
-            source={state === 'locked' ? PEARL_LOCKED : PEARL_COLORED}
+            source={PEARL_COLORED}
             style={{ width: size, height: size }}
             contentFit="contain"
             accessible={false}
           />
+          {state === 'locked' ? (
+            // Slate-tone translucent overlay desaturates the colored pearl
+            // for the locked state — keeps the shape recognizable but mutes
+            // the colour palette so the eye reads "preview, not active."
+            <View
+              pointerEvents="none"
+              style={[StyleSheet.absoluteFillObject, { backgroundColor: 'rgba(148,163,184,0.55)' }]}
+            />
+          ) : null}
         </View>
       </Animated.View>
 
@@ -199,9 +211,12 @@ export function PearlNode({
   // DuoLearnScreen wires it to the same "upgrade to Pro" prompt that locked
   // modules use) — we just dim the image to communicate "not yet earned".
   if (!onPress) {
+    // No extra wrapper opacity — the locked-state slate overlay inside
+    // `inner` does the muting; doubling that up with wrapper opacity made
+    // the silhouette too faint to read after the locked-image swap.
     return (
       <View
-        style={{ transform: [{ translateX: offsetX }], opacity: state === 'locked' ? 0.6 : 1 }}
+        style={{ transform: [{ translateX: offsetX }] }}
         accessibilityLabel={accessibilityLabel}
       >
         {inner}
