@@ -29,6 +29,7 @@ import { useEconomyUIStore } from "../economy/useEconomyUIStore";
 import { useCompletedModulesStore } from "../economy/useCompletedModulesStore";
 import { useChapterUIStore } from "../chapter-1-content/useChapterUIStore";
 import { useProgress, useUpsertModuleProgress, progressQueryKey } from "../chapter-1-content/useProgress";
+import type { ModuleProgressRow } from "../../lib/api/progress";
 import { queryClient } from "../../lib/queryClient";
 import { useIsPro } from "../subscription/useSubscription";
 import { useAuthStore } from "../auth/useAuthStore";
@@ -1158,6 +1159,44 @@ export function DuoLearnScreen() {
     setTimeout(() => setSwipeQuestVisible(false), 800);
   }, []);
 
+  // Resolve the user's next unfinished module across all chapters. Walks
+  // the chapter list in order, respects PRO + coming-soon + previous-
+  // chapter-complete gating, and returns the first playable module the
+  // user hasn't completed yet. Used by the "module" daily quest so it
+  // drops the user straight into the lesson they should be doing next
+  // instead of the generic learn tab (user request 2026-05-31).
+  const goToNextModule = useCallback(() => {
+    const localIds = useCompletedModulesStore.getState().completedIds;
+    const serverData = queryClient.getQueryData<ModuleProgressRow[]>(progressQueryKey) ?? [];
+    const completedByPrefix = (pfx: string): string[] => {
+      const serverIds = serverData.filter((m) => m.moduleId.startsWith(pfx) && m.status === 'completed').map((m) => m.moduleId);
+      const local = localIds.filter((id) => id.startsWith(pfx));
+      return [...new Set([...serverIds, ...local])];
+    };
+    for (let i = 0; i < ALL_CHAPTERS.length; i++) {
+      const ch = ALL_CHAPTERS[i];
+      const num = storeKey(ch.id).replace('ch-', '');
+      const pfx = `mod-${num}-`;
+      // Free users only unlock a chapter once the previous one is fully done.
+      let unlocked = isPro || i === 0;
+      if (!isPro && i > 0) {
+        const prev = ALL_CHAPTERS[i - 1];
+        const prevDone = completedByPrefix(`mod-${storeKey(prev.id).replace('ch-', '')}-`);
+        unlocked = prev.modules.every((m) => m.comingSoon || PRO_LOCKED_SIMS.has(m.id) || prevDone.includes(m.id));
+      }
+      if (!unlocked) continue;
+      const done = completedByPrefix(pfx);
+      const next = ch.modules.find((m) => !m.comingSoon && (isPro || !PRO_LOCKED_SIMS.has(m.id)) && !done.includes(m.id));
+      if (next) {
+        router.push(`/lesson/${next.id}?chapterId=${ch.id}` as never);
+        return;
+      }
+    }
+    // Everything's done — fall back to the learn tab so the user at least
+    // lands somewhere meaningful.
+    router.push('/(tabs)' as never);
+  }, [router, isPro]);
+
   // Pearls — bonus intermezzo nodes between modules. State is held here at
   // screen-level so any chapter can pop the same sheet, and the completed
   // set is read once into ChapterSection's prop so each section doesn't
@@ -1883,6 +1922,7 @@ export function DuoLearnScreen() {
           }}
           onOpenSwipeQuest={() => setSwipeQuestVisible(true)}
           onOpenDilemmaQuest={() => setDilemmaQuestVisible(true)}
+          onOpenModuleQuest={goToNextModule}
         />
 
         {/* Learning Roadmap Overlay (Replaced Native Modal to support iOS Walkthrough overlap) */}

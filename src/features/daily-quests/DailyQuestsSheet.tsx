@@ -55,6 +55,11 @@ interface DailyQuestsSheetProps {
   onOpenSwipeQuest?: () => void;
   /** Opens the daily-dilemma quest as a modal. Replaces /quest/daily-dilemma. */
   onOpenDilemmaQuest?: () => void;
+  /** Navigates to the user's next-up module (the first non-completed,
+   *  non-coming-soon, non-PRO-locked module across all chapters). Wired
+   *  by DuoLearnScreen which already has the chapter unlock state to
+   *  compute it. Falls back to /(tabs) if no callback is supplied. */
+  onOpenModuleQuest?: () => void;
 }
 
 // Safety fallback for users with old AsyncStorage quests that lack the string fields
@@ -187,7 +192,7 @@ function QuestButton({
   );
 }
 
-export function DailyQuestsSheet({ visible, onClose, onOpenNewsChallenge, onOpenSwipeQuest, onOpenDilemmaQuest }: DailyQuestsSheetProps) {
+export function DailyQuestsSheet({ visible, onClose, onOpenNewsChallenge, onOpenSwipeQuest, onOpenDilemmaQuest, onOpenModuleQuest }: DailyQuestsSheetProps) {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const quests = useDailyQuestsStore((s) => s.quests);
@@ -258,7 +263,11 @@ export function DailyQuestsSheet({ visible, onClose, onOpenNewsChallenge, onOpen
     } else if (quest.type === "dilemma") {
       defer(() => onOpenDilemmaQuest?.());
     } else if (quest.type === "module") {
-      defer(() => router.push("/(tabs)" as never));
+      // Prefer the host-provided callback so DuoLearnScreen can route
+      // straight to the user's next unfinished module. Falls back to the
+      // learn-tab landing if no callback was supplied (e.g. the sheet was
+      // mounted from a non-DuoLearn host).
+      defer(() => (onOpenModuleQuest ? onOpenModuleQuest() : router.push("/(tabs)" as never)));
     } else if (quest.type === "news") {
       defer(() => onOpenNewsChallenge?.());
     }
