@@ -70,7 +70,7 @@ export function PearlVideoStage({ isActive, video, onContinue }: PearlVideoStage
 
       {/* Skip pill — top-right corner, floats above the video so it's always
           reachable while the clip plays. Mid-flow only; once the clip
-          finishes we render the "המשך" CTA in the bottom scrim instead. */}
+          finishes the bottom scrim takes over with the "המשך" CTA. */}
       {!finished ? (
         <Pressable
           onPress={() => { tapHaptic(); onContinue(); }}
@@ -155,9 +155,9 @@ const styles = StyleSheet.create({
   },
   continueText: { color: '#fff', fontSize: 17, fontWeight: '900' },
   skipBtn: {
-    // Top-right floating pill, sits above the video. Right offset matches
-    // PearlSheet's close-X position so the two top-right interactions stay
-    // visually grouped.
+    // Top-right floating pill, sits above the video. Right-edge placement
+    // matches the PearlSheet close-X above it — same touch zone, immediate
+    // to find for RTL Hebrew users.
     position: 'absolute',
     top: 12,
     right: 12,

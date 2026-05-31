@@ -25,11 +25,6 @@ import {
   StyleSheet,
   Modal,
   BackHandler,
-  FlatList,
-  Dimensions,
-  type NativeSyntheticEvent,
-  type NativeScrollEvent,
-  type ViewToken,
 } from 'react-native';
 import { useSafeAreaInsets, SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -59,8 +54,6 @@ import { useEconomyUIStore } from '../economy/useEconomyUIStore';
 import { useFunStore } from '../../stores/useFunStore';
 import { markDailyActivityCompleted } from '../economy/useStreak';
 import { LIFESTYLE_VIDEOS } from '../inter-module-break/lifestyleVideoConfig';
-
-const SCREEN_W = Dimensions.get('window').width;
 
 /** Pearl completion payout — anchored to Brawl Pass tier-1 yield (small,
  *  not a free meal). The pre-audit state granted ZERO and the bonus felt
@@ -157,7 +150,6 @@ export function PearlSheet({ visible, pearl, onClose }: PearlSheetProps): React.
   const [stages, setStages] = useState<StageDescriptor[]>([]);
 
   const [activePage, setActivePage] = useState(0);
-  const listRef = useRef<FlatList<StageDescriptor> | null>(null);
   const isPro = useIsPro();
   // Track open time so pearl_completed can carry time_to_complete_ms.
   // `performance.now()` works on web; the native shim returns Date.now()
@@ -251,14 +243,16 @@ export function PearlSheet({ visible, pearl, onClose }: PearlSheetProps): React.
     return () => sub.remove();
   }, [visible, handleDismiss]);
 
+  // Direct state-driven advance — no FlatList, no scrolling, no pager
+  // closures. Earlier we used a horizontal `inverted` FlatList for swipe
+  // navigation between stages, but every advance attempt (scrollToIndex /
+  // scrollToOffset) silently no-op'd on this RN version and the user got
+  // stuck staring at the same stage with a disabled CTA. Rendering only
+  // the current stage from `activePage` makes the "advance" deterministic
+  // and removes every scroll-related bug at once. Users lose the ability
+  // to swipe back; they keep the buttons to advance, the X to exit, and
+  // the in-stage "Continue" CTAs.
   const goToPage = useCallback((index: number) => {
-    // scrollToIndex on an `inverted` + `pagingEnabled` horizontal FlatList
-    // silently no-ops on some RN versions — the activePage state advances
-    // but the scroll position stays put. Users then see the same stage
-    // visually + the `isActive=false` mismatch disables the CTA on what
-    // looks to them like the same screen. scrollToOffset with the explicit
-    // logical offset (`SCREEN_W * index`) works reliably with `inverted`.
-    listRef.current?.scrollToOffset({ offset: SCREEN_W * index, animated: true });
     setActivePage(index);
   }, []);
 
@@ -321,26 +315,11 @@ export function PearlSheet({ visible, pearl, onClose }: PearlSheetProps): React.
     router.push(`/lesson/${pearl.nextModuleId}?chapterId=${pearl.chapterId}` as never);
   }, [pearl, activePage, stages, goToPage, markCompleted, onClose, router]);
 
-  const onMomentumScrollEnd = useCallback(
-    (e: NativeSyntheticEvent<NativeScrollEvent>) => {
-      const idx = Math.round(e.nativeEvent.contentOffset.x / SCREEN_W);
-      if (idx !== activePage) setActivePage(idx);
-    },
-    [activePage],
-  );
-
-  const onViewableItemsChanged = useRef(
-    ({ viewableItems }: { viewableItems: ViewToken[] }) => {
-      const first = viewableItems[0];
-      if (first?.index != null) setActivePage(first.index);
-    },
-  ).current;
-  const viewabilityConfig = useRef({ itemVisiblePercentThreshold: 60 }).current;
-
-  const renderPage = useCallback(
-    ({ item }: { item: StageDescriptor }) => {
-      const isActive = item.index === activePage;
-      const containerStyle = { width: SCREEN_W, flex: 1 };
+  const renderStage = useCallback(
+    (item: StageDescriptor) => {
+      // Always isActive — only the current stage is rendered now.
+      const isActive = true;
+      const containerStyle = { flex: 1 };
 
       if (!pearl) return <View style={containerStyle} />;
 
@@ -435,19 +414,21 @@ export function PearlSheet({ visible, pearl, onClose }: PearlSheetProps): React.
       if (item.kind === 'game') {
         return (
           <View style={containerStyle}>
+            {/* No onExit — the PearlSheet's own X in the topBar is the single
+                exit point. Passing onExit here would add a SECOND X overlay
+                on top of the game card (user report 2026-05-31: "double X"). */}
             <PearlGameStage
               isActive={isActive}
               gameKey={pearl.gameKey}
               macroEventId={pearl.macroEventId}
               onContinue={handleStageDone}
-              onExit={handleDismiss}
             />
           </View>
         );
       }
       return <View style={containerStyle} />;
     },
-    [pearl, dailyPickKind, activePage, handleStageDone, handleDismiss],
+    [pearl, dailyPickKind, handleStageDone, handleDismiss],
   );
 
   if (!visible || !pearl) return null;
@@ -487,34 +468,12 @@ export function PearlSheet({ visible, pearl, onClose }: PearlSheetProps): React.
           <View style={styles.spacer} />
         </View>
 
-        <Animated.View entering={FadeIn.duration(220)} style={styles.pagerWrap}>
-          <FlatList
-            ref={listRef}
-            data={stages}
-            keyExtractor={(s) => `${s.kind}-${s.index}`}
-            horizontal
-            pagingEnabled
-            showsHorizontalScrollIndicator={false}
-            bounces={false}
-            renderItem={renderPage}
-            // extraData forces FlatList to re-run renderItem when activePage
-            // changes — without it, the cached items hold stale onContinue
-            // closures (each tied to the activePage at first render). Result:
-            // pressing "הבנתי" on the concept stage was calling the OLD
-            // handleStageDone snapshotted when activePage was 0/1, which
-            // tried to advance from the wrong index and silently no-op'd.
-            extraData={activePage}
-            onMomentumScrollEnd={onMomentumScrollEnd}
-            onViewableItemsChanged={onViewableItemsChanged}
-            viewabilityConfig={viewabilityConfig}
-            getItemLayout={(_, index) => ({
-              length: SCREEN_W,
-              offset: SCREEN_W * index,
-              index,
-            })}
-            // RTL: swipe right→left advances forward (matches Hebrew reading).
-            inverted
-          />
+        <Animated.View
+          key={`stage-${activePage}`}
+          entering={FadeIn.duration(180)}
+          style={styles.pagerWrap}
+        >
+          {stages[activePage] ? renderStage(stages[activePage]) : null}
         </Animated.View>
       </SafeAreaView>
     </Modal>
