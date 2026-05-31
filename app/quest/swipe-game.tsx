@@ -1,28 +1,79 @@
 /**
- * Standalone host for the BullshitSwipe daily-quest game.
+ * Standalone host for the DAILY GAME quest (formerly only BullshitSwipe).
  *
- * Daily quest "סוויפ חמסה" sends users here. We render the card with
- * bypassDailyGate so the quest counts even on a day the user already
- * burned the natural-gate play, then bounce back to the learn map on
- * completion (the card's own completion side-effects mark the quest
- * complete via useDailyQuestsStore).
+ * Yoav 2026-05-31: previously this route hardcoded BullshitSwipeCard so the
+ * daily quest was always "swipe" — same game every day. Now the route picks
+ * one of 10 playable game cards by day-of-year, so every morning the user
+ * gets a different game in their daily quest. The quest type stays 'swipe'
+ * in `useDailyQuestsStore` for completion-tracking compatibility (renaming
+ * the type would clobber existing users' partial daily completions); only
+ * the surfaced game rotates.
  *
- * Replaces the legacy Feed-scroll flow (setPendingFeedScrollById) that
- * was deleted on 2026-05-30 when the FinFeed screen was retired.
+ * Route name preserved as /quest/swipe-game so notifications, deep-links,
+ * and DailyQuestsSheet handoff continue to work without migration.
  */
 
-import React, { useCallback, useRef } from "react";
+import React, { useCallback, useMemo, useRef } from "react";
 import { Text, Pressable, StyleSheet, ScrollView } from "react-native";
 import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 
 import { BullshitSwipeCard } from "../../src/features/finfeed/minigames/bullshit-swipe/BullshitSwipeCard";
+import { HigherLowerCard } from "../../src/features/finfeed/minigames/higher-lower/HigherLowerCard";
+import { BudgetNinjaCard } from "../../src/features/finfeed/minigames/budget-ninja/BudgetNinjaCard";
+import { PriceSliderCard } from "../../src/features/finfeed/minigames/price-slider/PriceSliderCard";
+import { FomoKillerCard } from "../../src/features/finfeed/minigames/fomo-killer/FomoKillerCard";
+import { CashoutRushCard } from "../../src/features/finfeed/minigames/cashout-rush/CashoutRushCard";
+import { CrashGameCard } from "../../src/features/daily-challenges/CrashGameCard";
+import { DilemmaCard } from "../../src/features/daily-challenges/DilemmaCard";
+import { InvestmentCard } from "../../src/features/daily-challenges/InvestmentCard";
+import { MythFeedCard } from "../../src/features/myth-or-tachles/MythFeedCard";
 import { tapHaptic, successHaptic } from "../../src/utils/haptics";
 
-export default function QuestSwipeGamePage(): React.ReactElement {
+// Game rotation pool — 10 playable cards. Index by `Math.floor(Date.now() /
+// 86400000) % 10` so the same day-of-year always picks the same game (UTC
+// boundary; matches the rest of the daily content scheduling). Length 10
+// means each game cycles every 10 days. Order is intentional: starts with
+// fast/familiar games (swipe, higher-lower, ninja, slider), then moves to
+// slower/deeper (cashout, crash, dilemma, investment, myth) so a user who
+// catches the rotation cold (day 5/10) still sees variety in the first week.
+const ROTATION: ReadonlyArray<
+  | 'bullshit-swipe'
+  | 'higher-lower'
+  | 'budget-ninja'
+  | 'price-slider'
+  | 'fomo-killer'
+  | 'cashout-rush'
+  | 'crash'
+  | 'dilemma'
+  | 'investment'
+  | 'myth'
+> = [
+  'bullshit-swipe',
+  'higher-lower',
+  'budget-ninja',
+  'price-slider',
+  'fomo-killer',
+  'cashout-rush',
+  'crash',
+  'dilemma',
+  'investment',
+  'myth',
+];
+
+function pickTodayGame(): typeof ROTATION[number] {
+  const dayIndex = Math.floor(Date.now() / 86400000);
+  return ROTATION[dayIndex % ROTATION.length];
+}
+
+export default function QuestDailyGamePage(): React.ReactElement {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const finishedRef = useRef(false);
+  // Lock the game choice for this mount so the screen doesn't flip if the
+  // user lingers past UTC midnight. Using useMemo with empty deps so it's
+  // computed exactly once when the component first renders.
+  const todayGame = useMemo(pickTodayGame, []);
 
   const handleClose = useCallback(() => {
     // If the post-finish setTimeout is already in flight, let it run rather
@@ -33,8 +84,6 @@ export default function QuestSwipeGamePage(): React.ReactElement {
     else router.replace("/(tabs)/learn" as never);
   }, [router]);
 
-  // The card calls onFinish after the user completes (or runs out of) the
-  // 5-card round. Mark a haptic and drop the user back to the learn map.
   const handleFinish = useCallback(() => {
     if (finishedRef.current) return;
     finishedRef.current = true;
@@ -44,6 +93,31 @@ export default function QuestSwipeGamePage(): React.ReactElement {
       else router.replace("/(tabs)/learn" as never);
     }, 800);
   }, [router]);
+
+  const renderGame = (): React.ReactElement => {
+    switch (todayGame) {
+      case 'bullshit-swipe':
+        return <BullshitSwipeCard isActive bypassDailyGate onFinish={handleFinish} />;
+      case 'higher-lower':
+        return <HigherLowerCard isActive onComplete={handleFinish} />;
+      case 'budget-ninja':
+        return <BudgetNinjaCard isActive onContinue={handleFinish} />;
+      case 'price-slider':
+        return <PriceSliderCard isActive onContinue={handleFinish} />;
+      case 'fomo-killer':
+        return <FomoKillerCard isActive onContinue={handleFinish} />;
+      case 'cashout-rush':
+        return <CashoutRushCard isActive onContinue={handleFinish} />;
+      case 'crash':
+        return <CrashGameCard isActive onContinue={handleFinish} />;
+      case 'dilemma':
+        return <DilemmaCard isActive onContinue={handleFinish} />;
+      case 'investment':
+        return <InvestmentCard isActive onContinue={handleFinish} />;
+      case 'myth':
+        return <MythFeedCard isInterModule onSkip={handleFinish} />;
+    }
+  };
 
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
@@ -61,11 +135,7 @@ export default function QuestSwipeGamePage(): React.ReactElement {
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
-        <BullshitSwipeCard
-          isActive
-          bypassDailyGate
-          onFinish={handleFinish}
-        />
+        {renderGame()}
       </ScrollView>
     </SafeAreaView>
   );
@@ -83,7 +153,7 @@ const styles = StyleSheet.create({
   },
   closeBtn: {
     position: "absolute",
-    right: 16, // RTL Hebrew leading edge — close button lives on the right side per user request
+    right: 16, // RTL Hebrew leading edge
     width: 36,
     height: 36,
     borderRadius: 18,
