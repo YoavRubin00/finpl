@@ -48,7 +48,7 @@ This repo has **no unit-test framework** (the only `*.test.ts` files are in `nod
 - `api/migrate/backfill-v1.ts` — key by `ctx.userId`.
 - `api/sync/progress.ts` — drop `resolveUserId`, use `ctx.userId`.
 - `src/lib/api/auth.ts` — add `linkProvider()` client function (Phase B).
-- `src/features/settings/components/AccountSheet.tsx` — "Connected accounts" UI calling `linkProvider()`. (The Settings screen is `src/features/settings/SettingsScreen.tsx`, re-exported by `app/settings.tsx`; account actions live in its `components/AccountSheet.tsx` + `DangerZoneSection.tsx`. Confirm the exact row group at execution time.)
+- `src/features/settings/SettingsScreen.tsx` — "Connected accounts" rows calling `linkProvider()`. Single 927-line file (re-exported by `app/settings.tsx`). The account section ("חשבון", `<SectionHeader title="חשבון" />` ~line 613) renders `SettingsRow` items (support / "התנתק" handleSignOut / "מחק חשבון לצמיתות"); the new connect rows go in this same `GlowCard`. Use the existing `SettingsRow` component + `STITCH_BLUE` theme; copy per `docs/BRAND.md`.
 
 **Unchanged (verify only):** `api/_shared/jwt.ts`, `api/_shared/withAuth.ts`, `api/sync/user-stats.ts` (already `ctx.userId`), `src/features/auth/useAppleAuth.ts` / `useGoogleAuth.ts` (already post `provider:'apple'`/`'google'`).
 
@@ -646,7 +646,7 @@ git commit -m "feat(auth): authenticated provider-link endpoint for connecting a
 ## Task B5: Client — `linkProvider()` + Settings "Connected accounts" UI
 
 **Files:**
-- Modify: `src/lib/api/auth.ts`, `src/features/settings/components/AccountSheet.tsx`, `src/features/auth/useAppleAuth.ts`, `src/features/auth/useGoogleAuth.ts`
+- Modify: `src/lib/api/auth.ts`, `src/features/settings/SettingsScreen.tsx`, `src/features/auth/useAppleAuth.ts`, `src/features/auth/useGoogleAuth.ts`
 
 - [ ] **Step 1: Add the client API function**
 
@@ -663,11 +663,11 @@ export function linkProvider(
 
 - [ ] **Step 2: Read the Settings screen to find the insertion point**
 
-Open `src/features/settings/SettingsScreen.tsx` and its `components/AccountSheet.tsx`. Locate the account-actions group (where sign-out / account management render). The "Connected accounts" controls go there. (Confirm the exact component — the settings UI is composed of `SettingsSection` / `SettingRow` / `AccountSheet` / `DangerZoneSection`.)
+Open `src/features/settings/SettingsScreen.tsx`. The account section is the `GlowCard` under `<SectionHeader title="חשבון" />` (~line 613), containing `SettingsRow` items for support, "התנתק" (`handleSignOut`), and "מחק חשבון לצמיתות". The connect rows go inside this card, before the sign-out row.
 
 - [ ] **Step 3: Add the Connect controls**
 
-In the account-actions component (`AccountSheet.tsx`), add (matching the file's existing `SettingRow`/section patterns — use the NativeWind classes already used there, and Hebrew copy per `docs/BRAND.md`):
+In `SettingsScreen.tsx`, in the "חשבון" `GlowCard`, add `SettingsRow` items (reuse the existing `SettingsRow` component and `STITCH_BLUE` theme already in the file; Hebrew copy per `docs/BRAND.md`):
 
 ```tsx
 // Near other hooks at the top of the component:
@@ -705,7 +705,7 @@ Apply the equivalent guard in `useGoogleAuth.ts`'s `fetchUserInfo` (call `linkPr
 
 - [ ] **Step 5: Wire the Settings buttons**
 
-In the account-actions component (`AccountSheet.tsx`), render "חבר חשבון Apple" (iOS only, when `appleAvailable`) and "חבר חשבון Google" rows that call `promptAppleSignIn()` / the Google prompt. Because the user is already signed in, the hooks now take the link branch.
+In `SettingsScreen.tsx`'s "חשבון" card, render "חבר חשבון Apple" (iOS only, when `appleAvailable`) and "חבר חשבון Google" `SettingsRow` items whose `onPress` calls `promptAppleSignIn()` / the Google prompt. Because the user is already signed in, the hooks now take the link branch.
 
 - [ ] **Step 6: Typecheck**
 
@@ -719,7 +719,7 @@ Sign in with email, go to Settings, tap "חבר חשבון Apple", complete the 
 - [ ] **Step 8: Commit**
 
 ```bash
-git add src/lib/api/auth.ts src/features/auth/useAppleAuth.ts src/features/auth/useGoogleAuth.ts src/features/settings/components/AccountSheet.tsx
+git add src/lib/api/auth.ts src/features/auth/useAppleAuth.ts src/features/auth/useGoogleAuth.ts src/features/settings/SettingsScreen.tsx
 git commit -m "feat(auth): Settings connect-account flow (link Apple/Google to current uuid)"
 ```
 
