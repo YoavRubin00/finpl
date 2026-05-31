@@ -131,6 +131,14 @@ interface NewsChallengeState {
   perfectDays: number;
   /** Convenience: was today a perfect day? Derived from `answered`. */
   todayPerfect: () => boolean;
+  /** Date-key of the most recent `news_challenge_completed` analytics event.
+   *  Lives in persisted state so the guard survives sheet unmounts (the old
+   *  useRef-based guard reset on every close → 58:2 over-fire bug). */
+  lastCompletionEventDateKey: string | null;
+  /** Returns true if this dateKey was already reported and shouldn't fire
+   *  again. False means: caller should fire AND update via the setter. */
+  hasReportedCompletionFor: (dateKey: string) => boolean;
+  markCompletionReportedFor: (dateKey: string) => void;
 
   /* ─── actions ─── */
   setTodayChallenge: (challenge: DailyChallenge) => void;
@@ -151,6 +159,15 @@ export const useDailyNewsChallengeStore = create<NewsChallengeState>()(
       streak: 0,
       lastCompletedDate: null,
       perfectDays: 0,
+      lastCompletionEventDateKey: null,
+
+      hasReportedCompletionFor: (dateKey) => {
+        return get().lastCompletionEventDateKey === dateKey;
+      },
+      markCompletionReportedFor: (dateKey) => {
+        if (get().lastCompletionEventDateKey === dateKey) return;
+        set({ lastCompletionEventDateKey: dateKey });
+      },
 
       todayPerfect: () => {
         const { answered } = get();
@@ -269,6 +286,7 @@ export const useDailyNewsChallengeStore = create<NewsChallengeState>()(
         streak: state.streak,
         lastCompletedDate: state.lastCompletedDate,
         perfectDays: state.perfectDays,
+        lastCompletionEventDateKey: state.lastCompletionEventDateKey,
       }),
     },
   ),

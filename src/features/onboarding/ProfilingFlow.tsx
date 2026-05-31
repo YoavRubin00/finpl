@@ -18,6 +18,7 @@ import type { ChartDataPoint } from "../../components/ui/SkiaInteractiveChart";
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
+  useReducedMotion,
   withTiming,
   withSpring,
   withSequence,
@@ -336,10 +337,12 @@ const SCREEN_HEIGHT = Dimensions.get("window").height;
 
 function TypingDots() {
   const t = useSharedValue(0);
+  const reducedMotion = useReducedMotion();
   useEffect(() => {
+    if (reducedMotion) return;
     t.value = withRepeat(withTiming(1, { duration: 600, easing: Easing.linear }), -1, false);
     return () => { cancelAnimation(t); };
-  }, [t]);
+  }, [t, reducedMotion]);
   const dot = (offset: number) =>
     useAnimatedStyle(() => {
       const phase = (t.value + offset) % 1;
@@ -1842,16 +1845,19 @@ function IntroStep({ onRegister: _onRegister, onGuest, onLoginSuccess }: IntroSt
   // Auto-check terms when returning from terms page after pressing "קראתי"
   useEffect(() => {
     if (subStep !== "register") return;
-    // Polling cadence loosened from 300ms → 1500ms. The flag is set when
-    // the user returns from the terms modal (effectively a one-shot
-    // event), so sub-second polling burns battery and the JS thread for
-    // no real-time benefit. 1.5s feels instant when returning from the
-    // modal but is 5× lighter (QA audit 2026-05-31).
+    // Once terms have been accepted, stop polling entirely — the flag has
+    // already been consumed and there is nothing more to watch for. Without
+    // this short-circuit the interval keeps firing every 1.5s for the rest
+    // of the register sub-step (battery drain on long sessions).
+    if (termsAccepted) return;
     const id = setInterval(() => {
-      if (consumeTermsAcceptedFlag()) setTermsAccepted(true);
+      if (consumeTermsAcceptedFlag()) {
+        setTermsAccepted(true);
+        clearInterval(id);
+      }
     }, 1500);
     return () => clearInterval(id);
-  }, [subStep]);
+  }, [subStep, termsAccepted]);
 
   // Login form state
   const [email, setEmail] = useState("");
@@ -2672,6 +2678,43 @@ export function ProfilingFlow({ mode = "onboarding", onRedoComplete }: Profiling
         {step === "signup-gate" && <SignupGateStep
           onSignupSuccess={() => slide("celebration", {})}
           onSkip={() => slide("celebration", {})}
+          onBack={() => slide("age", {})}
+          // Persist dream/goal/age/birthYear locally BEFORE any OAuth prompt
+          // so the post-OAuth router.replace (for existing users) and any
+          // server-profile reconciliation don't drop fields the user just
+          // entered. Doesn't flip hasCompletedOnboarding — celebration/streak
+          // still run for new users.
+          saveCollected={() => updateProfile({
+            financialDream: collected.financialDream ?? null,
+            financialGoal: collected.financialGoal ?? "unsure",
+            ageGroup: collected.ageGroup ?? "adult",
+            birthYear: collected.birthYear ?? (CY - 22),
+          })}
+          // Email path: must mark onboarding complete with the FULL collected
+          // profile before pushing to /register. Without this, the layout's
+          // !hasCompletedOnboarding redirect kicks in after register completes
+          // and resets ProfilingFlow back to dream (collected={} again).
+          onEmailPress={() => {
+            if (!isAuthenticated) {
+              enterGuestMode();
+            }
+            completeOnboarding({
+              displayName,
+              financialDream: collected.financialDream ?? null,
+              financialGoal: collected.financialGoal ?? "unsure",
+              knowledgeLevel: collected.knowledgeLevel ?? "beginner",
+              ageGroup: collected.ageGroup ?? "adult",
+              birthYear: collected.birthYear ?? (CY - 22),
+              learningTime: collected.learningTime ?? "during-day",
+              learningStyle: collected.learningStyle ?? "no-preference",
+              deadlineStress: collected.deadlineStress ?? "maybe",
+              dailyGoalMinutes: collected.dailyGoalMinutes ?? 10,
+              companionId: collected.companionId ?? "warren-buffett",
+              avatarId: collected.avatarId ?? null,
+              ownedAvatars: [],
+            });
+            router.push(`/(auth)/register?returnTo=${encodeURIComponent("/")}` as never);
+          }}
         />}
         {/* Edit-only steps reachable from ProfileSummaryScreen → editSummaryStep.
             Without these render blocks, tapping "רמת ידע" or "יעד יומי" on the

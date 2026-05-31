@@ -257,7 +257,15 @@ export function DailyQuestsSheet({ visible, onClose, onOpenNewsChallenge, onOpen
     // The handoff runs after the Modal close animation begins. On iOS,
     // opening a Modal WHILE this one dismisses can abort the dismiss + leave
     // the sheet visible underneath the new modal. Defer by one slide (~280ms).
-    const defer = (fn: () => void) => setTimeout(fn, 280);
+    // Stored in a ref so the unmount cleanup can cancel it before it fires
+    // (prevents a chained sheet from popping after the user closes this one).
+    const defer = (fn: () => void) => {
+      if (handoffTimerRef.current) clearTimeout(handoffTimerRef.current);
+      handoffTimerRef.current = setTimeout(() => {
+        handoffTimerRef.current = null;
+        fn();
+      }, 280);
+    };
     if (quest.type === "swipe") {
       defer(() => onOpenSwipeQuest?.());
     } else if (quest.type === "dilemma") {
@@ -285,6 +293,11 @@ export function DailyQuestsSheet({ visible, onClose, onOpenNewsChallenge, onOpen
   const proHapticTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const proClaimTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const videoCloseTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Holds the 280ms quest-handoff timer so it can be cancelled on unmount —
+  // otherwise a user who taps a quest and immediately closes the sheet
+  // would see the chained DNC/swipe/dilemma sheet pop "out of nowhere"
+  // after the close animation (QA audit 2026-05-31).
+  const handoffTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const chestVideoPlayer = useVideoPlayer(CHEST_VIDEO_URL, (p) => {
     p.loop = false;
@@ -302,6 +315,7 @@ export function DailyQuestsSheet({ visible, onClose, onOpenNewsChallenge, onOpen
     if (proHapticTimerRef.current) clearTimeout(proHapticTimerRef.current);
     if (proClaimTimerRef.current) clearTimeout(proClaimTimerRef.current);
     if (videoCloseTimerRef.current) clearTimeout(videoCloseTimerRef.current);
+    if (handoffTimerRef.current) clearTimeout(handoffTimerRef.current);
   }, []);
 
   // Reset video overlay if user closes the modal manually (e.g. tap outside)
