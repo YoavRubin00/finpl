@@ -18,6 +18,8 @@ import { neon } from '@neondatabase/serverless';
 import { drizzle } from 'drizzle-orm/neon-http';
 import { eq } from 'drizzle-orm';
 
+import { withRetry, isTransientAiError } from '../_shared/retry';
+
 import { dailyNewsChallenge } from '../../../src/db/schema';
 import { tavilyNewsSearch } from '../_shared/tavily';
 
@@ -212,21 +214,29 @@ async function generateChallengePayload(
     },
   };
 
-  const res = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${apiKey}`,
-    {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body),
+  // Wrap the Gemini call in a retry-with-backoff (3 attempts: 500ms,
+  // 1000ms, 2000ms). Transient 429/5xx/timeouts will recover; permanent
+  // 401/403/404 (bad key / model gone) short-circuit immediately so we
+  // don't waste cron budget on hopeless retries.
+  const data = await withRetry<GeminiResponse>(
+    async () => {
+      const res = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${apiKey}`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body),
+        },
+      );
+      if (!res.ok) {
+        const text = await res.text().catch(() => '');
+        throw new Error(`Gemini ${res.status}: ${text.slice(0, 200)}`);
+      }
+      return (await res.json()) as GeminiResponse;
     },
+    { attempts: 3, baseDelayMs: 500, shouldRetry: isTransientAiError, label: 'gemini/dnc' },
   );
 
-  if (!res.ok) {
-    const text = await res.text().catch(() => '');
-    throw new Error(`Gemini ${res.status}: ${text.slice(0, 200)}`);
-  }
-
-  const data = (await res.json()) as GeminiResponse;
   const rawJson = data.candidates?.[0]?.content?.parts?.[0]?.text;
   if (!rawJson) throw new Error('Gemini returned empty content');
 

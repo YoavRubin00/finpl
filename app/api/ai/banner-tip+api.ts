@@ -8,6 +8,7 @@
 import { enforceRateLimit } from '../_shared/rateLimit';
 import { safeErrorResponse } from '../_shared/safeError';
 import { sanitizeString } from '../_shared/validate';
+import { withRetry, isTransientAiError } from '../_shared/retry';
 
 interface BannerTipRequestBody {
   name: string;
@@ -70,26 +71,31 @@ XP: ${xp.toLocaleString()}
 הנושא האחרון: ${lastModuleName ?? 'לא ידוע'}
 מטרה: ${financialGoal}`;
 
-    const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${GEMINI_API_KEY}`,
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          system_instruction: { parts: [{ text: systemPrompt }] },
-          contents: [{ role: 'user', parts: [{ text: userMessage }] }],
-          generationConfig: {
-            maxOutputTokens: 60,
+    const data = await withRetry<GeminiResponse>(
+      async () => {
+        const response = await fetch(
+          `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${GEMINI_API_KEY}`,
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              system_instruction: { parts: [{ text: systemPrompt }] },
+              contents: [{ role: 'user', parts: [{ text: userMessage }] }],
+              generationConfig: {
+                maxOutputTokens: 60,
+              },
+            }),
           },
-        }),
+        );
+        if (!response.ok) {
+          const text = await response.text().catch(() => '');
+          throw new Error(`Gemini ${response.status}: ${text.slice(0, 200)}`);
+        }
+        return (await response.json()) as GeminiResponse;
       },
+      { attempts: 2, baseDelayMs: 300, shouldRetry: isTransientAiError, label: 'gemini/banner-tip' },
     );
 
-    if (!response.ok) {
-      return Response.json({ error: 'AI service temporarily unavailable.' }, { status: 502 });
-    }
-
-    const data = (await response.json()) as GeminiResponse;
     const message = (data.candidates?.[0]?.content?.parts?.[0]?.text ?? '').trim();
 
     if (!message) {
