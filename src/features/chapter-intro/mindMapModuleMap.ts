@@ -22,8 +22,10 @@ export type MindMapModuleMap = Readonly<Record<string, string>>;
  */
 export const MIND_MAP_MODULE_MAP: Readonly<Record<string, MindMapModuleMap>> = {
   "chapter-0": {
-    "מהות הכסף": "mod-0-1",
-    "מושגי יסוד פיננסיים": "mod-0-2",
+    // 2026-05-30 chapter-0 swap: "מושגי יסוד פיננסיים" now lives at mod-0-1
+    // and "מהות הכסף" lives at mod-0-2. Labels follow the content.
+    "מושגי יסוד פיננסיים": "mod-0-1",
+    "מהות הכסף": "mod-0-2",
     "אינפלציה": "mod-0-3",
     "ניהול תזרים": "mod-0-4",
     "עקרונות ההשקעה": "mod-0-5",

@@ -5,14 +5,18 @@ import type { InteractiveRecallSet } from "./sentenceTypes";
 // Each set aims for ~4 prompts mixing fill-blank and timeline-order.
 
 export const recallExerciseSets: Record<string, InteractiveRecallSet> = {
-  "mod-0-2": {
-    moduleId: "mod-0-2",
+  // 2026-05-30 chapter-0 swap: "מושגי יסוד פיננסיים" moved to mod-0-1.
+  // The recall prompts below (interest / overdraft / current-account /
+  // loan) are explicitly Financial Basics, so the set key + moduleId both
+  // shift to mod-0-1 to follow the content.
+  "mod-0-1": {
+    moduleId: "mod-0-1",
     title: "בואו נתרגל!",
     intro: "3 תרגילים מהירים לפני הקוויז. נוודא שהמושגים יושבים.",
     prompts: [
       {
         type: "fill-blank",
-        id: "recall-mod-0-2-fb-1",
+        id: "recall-mod-0-1-fb-1",
         template: "ריבית היא המחיר של {{w}} — הסכום שהבנק גובה או משלם על כסף לאורך זמן.",
         difficulty: "easy",
         slots: [
@@ -32,7 +36,7 @@ export const recallExerciseSets: Record<string, InteractiveRecallSet> = {
       },
       {
         type: "fill-blank",
-        id: "recall-mod-0-2-fb-2",
+        id: "recall-mod-0-1-fb-2",
         template: "חשבון עובר ושב (עו\"ש) הוא חשבון ל{{w}} יומי, בניגוד לחשבון חיסכון שנועד לצבירה.",
         difficulty: "easy",
         slots: [
