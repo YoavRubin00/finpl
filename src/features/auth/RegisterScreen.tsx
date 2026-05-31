@@ -14,6 +14,7 @@ import { useRouter, useLocalSearchParams } from "expo-router";
 import Animated, { FadeIn, FadeInDown } from "react-native-reanimated";
 import { ChevronRight } from "lucide-react-native";
 import { GoogleLogo } from "../../components/ui/GoogleLogo";
+import { AppleLogo } from "../../components/ui/AppleLogo";
 import { FINN_HELLO, FINN_DANCING } from "../retention-loops/finnMascotConfig";
 import { getPasswordStrength } from "./password-utils";
 import type { PasswordStrength } from "./types";
@@ -422,7 +423,10 @@ export function RegisterScreen() {
                 accessibilityLabel="הירשם עם Apple"
                 style={{
                   width: "100%",
-                  flexDirection: "row",
+                  // row-reverse keeps the Hebrew label first in reading order
+                  // but places the Apple logo on the visual RIGHT — matches
+                  // RTL convention for icon placement.
+                  flexDirection: "row-reverse",
                   alignItems: "center",
                   justifyContent: "center",
                   borderRadius: 14,
@@ -438,8 +442,8 @@ export function RegisterScreen() {
                   elevation: 3,
                 }}
               >
-                <Text style={{ fontSize: 18, marginRight: 8, color: "#ffffff" }}></Text>
-                <Text style={{ fontSize: 15, fontWeight: "600", color: "#ffffff" }}>הירשם עם Apple</Text>
+                <AppleLogo size={18} />
+                <Text style={{ fontSize: 15, fontWeight: "600", color: "#ffffff", marginRight: 8 }}>הירשם עם Apple</Text>
               </Pressable>
             )}
 
