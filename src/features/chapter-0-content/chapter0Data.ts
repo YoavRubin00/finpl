@@ -173,6 +173,7 @@ export const chapter0Data: Chapter = {
         title: 'סיפור בהמשכים: סחר חליפין לדיגיטל',
         description: 'המשתמש מתבקש להמיר פרה לחיטה, אז לזהב, ואז ביט סלולרי כדי לחוות את האבולוציה בצורה אינטראקטיבית.',
       },
+      interModuleGame: 'higher-lower',
     },
     {
       id: 'mod-0-3',
