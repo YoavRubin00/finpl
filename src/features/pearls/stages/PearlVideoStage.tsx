@@ -68,6 +68,21 @@ export function PearlVideoStage({ isActive, video, onContinue }: PearlVideoStage
         nativeControls={false}
       />
 
+      {/* Skip pill — top-right corner. Floats above the video so it's always
+          reachable while the clip plays. Only visible mid-clip; once the
+          clip finishes, the bottom scrim takes over with the "המשך" CTA. */}
+      {!finished ? (
+        <Pressable
+          onPress={() => { tapHaptic(); onContinue(); }}
+          style={styles.skipBtn}
+          accessibilityRole="button"
+          accessibilityLabel="דלג על הקליפ"
+          hitSlop={10}
+        >
+          <Text style={styles.skipText} allowFontScaling={false}>דלג ›</Text>
+        </Pressable>
+      ) : null}
+
       {/* Gradient/scrim at bottom so the caption + CTA stay legible over
           bright video frames. Using a solid translucent bar keeps it
           dependency-free (no LinearGradient gymnastics needed here). */}
@@ -88,16 +103,7 @@ export function PearlVideoStage({ isActive, video, onContinue }: PearlVideoStage
               <Text style={styles.continueText} allowFontScaling={false}>המשך ←</Text>
             </Pressable>
           </Animated.View>
-        ) : (
-          <Pressable
-            onPress={() => { tapHaptic(); onContinue(); }}
-            style={styles.skipBtn}
-            accessibilityRole="button"
-            accessibilityLabel="דלג על הקליפ"
-          >
-            <Text style={styles.skipText} allowFontScaling={false}>דלג</Text>
-          </Pressable>
-        )}
+        ) : null}
       </View>
     </View>
   );
@@ -149,11 +155,17 @@ const styles = StyleSheet.create({
   },
   continueText: { color: '#fff', fontSize: 17, fontWeight: '900' },
   skipBtn: {
-    alignSelf: 'flex-start',
-    backgroundColor: 'rgba(255,255,255,0.18)',
-    paddingHorizontal: 16,
-    paddingVertical: 8,
+    // Top-right floating pill, sits above the video so it stays reachable
+    // mid-clip. Right-edge placement matches the PearlSheet close-X above
+    // it — same touch zone, immediate to find for RTL Hebrew users.
+    position: 'absolute',
+    top: 12,
+    right: 12,
+    backgroundColor: 'rgba(15,23,42,0.55)',
+    paddingHorizontal: 14,
+    paddingVertical: 7,
     borderRadius: 999,
+    zIndex: 10,
   },
-  skipText: { color: '#fff', fontSize: 13, fontWeight: '700' },
+  skipText: { color: '#fff', fontSize: 13, fontWeight: '800', writingDirection: 'rtl' as const },
 });
