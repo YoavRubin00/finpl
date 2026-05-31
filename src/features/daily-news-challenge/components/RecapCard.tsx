@@ -170,12 +170,14 @@ export function RecapCard({
           </Animated.View>
         )}
 
-        {/* Tomorrow promise — anchors the daily ritual */}
+        {/* Tomorrow promise — anchors the daily ritual.
+            Streak-aware variant ("מחזיק/ה רצף של X ימים…") was dropped
+            2026-06-01 per user spec: the daily streak isn't interesting
+            on this surface, so we always show the neutral "מחר מהדורה
+            חדשה מחכה" copy regardless of streak. */}
         <Animated.View entering={FadeIn.delay(380).duration(320)} style={styles.tomorrowRow}>
           <Text style={styles.tomorrowText} allowFontScaling={false}>
-            {streak >= 3
-              ? `מחזיק/ה רצף של ${streak} ימים. נתראה מחר באותה שעה.`
-              : 'מחר מהדורה חדשה מחכה. בא/ה לבדוק?'}
+            מחר מהדורה חדשה מחכה. בא/ה לבדוק?
           </Text>
         </Animated.View>
 
