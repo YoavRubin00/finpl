@@ -2728,6 +2728,28 @@ export function LessonFlowScreen() {
       router.replace("/interstitial/bullshit-ch0" as never);
       return;
     }
+    // Pearl gate — if the just-completed module has a pearl after it, drop
+    // the user on the learn map with `?openPearl=<moduleId>` so DuoLearnScreen
+    // auto-opens the pearl sheet. Was missing on this path (only
+    // navigateToNextModuleNormally had it, which only fires from mod-0-1) —
+    // so users on mod-0-2 → mod-0-3 transition never saw the pearl auto-open
+    // (user bug report 2026-05-31). Now every chapter-0 module triggers its
+    // pearl on Continue.
+    if (id) {
+      const pearl = pearlConfigFor(id);
+      if (pearl) {
+        const chapterStoreId = chapterStoreKey(pearl.chapterId);
+        setCurrentChapter(chapterStoreId);
+        const chapter = ALL_CHAPTERS_ORDERED.find((c) => c.id === pearl.chapterId);
+        const myIdx = chapter ? chapter.modules.findIndex((m) => m.id === id) : -1;
+        if (myIdx >= 0) setCurrentModule(myIdx);
+        // Route to /(tabs)/index explicitly — (tabs)/_layout has
+        // initialRouteName="investments", so a bare /(tabs)?openPearl=...
+        // lands on Investments and the openPearl listener never sees it.
+        router.replace(`/(tabs)/index?openPearl=${id}` as never);
+        return;
+      }
+    }
     // Prefer the next module in the current chapter, by index. The global
     // search below can regress to the just-completed module because completion
     // may not be persisted yet when this runs.

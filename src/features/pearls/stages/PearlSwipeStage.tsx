@@ -1,6 +1,12 @@
 import React from 'react';
-import { View, ScrollView, StyleSheet } from 'react-native';
+import { View, StyleSheet } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+// ScrollView from gesture-handler (not react-native) — react-native's
+// ScrollView swallows horizontal pan gestures before BullshitSwipeCard's
+// GestureDetector can receive them, so swipe-left/right stopped working
+// (user report 2026-05-31). The gesture-handler ScrollView shares the
+// gesture state graph so child Pan detectors win on horizontal drags.
+import { ScrollView } from 'react-native-gesture-handler';
 
 import { BullshitSwipeCard } from '../../finfeed/minigames/bullshit-swipe/BullshitSwipeCard';
 
