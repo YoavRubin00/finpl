@@ -65,7 +65,13 @@ function SwipeableCard({
   const cardRotation = useSharedValue(0);
   const swiped = useSharedValue(false);
 
+  // activeOffsetX gates the gesture so it only takes over after a clear
+  // horizontal intent (>12px). Without it the Pan competes with the host
+  // ScrollView's vertical scroll on the first frame and Android sometimes
+  // swallows the touch entirely — user reported "touch didn't work" on
+  // preview build 1.3.0.
   const panGesture = Gesture.Pan()
+    .activeOffsetX([-12, 12])
     .onUpdate((event) => {
       if (swiped.value) return;
       translateX.value = event.translationX;

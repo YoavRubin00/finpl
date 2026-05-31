@@ -211,15 +211,10 @@ export function ChallengePage({
         if (!reduceMotion) setShowConfetti(true);
         void playSuccessChord();
       } else {
+        // Wrong-answer feedback: haptic + soft thud + red flash via the
+        // result panel below — the headline-shake was retired in the 2026
+        // UX rework (read as anxious/buggy alongside the calm intro panels).
         errorHaptic();
-        if (!reduceMotion) {
-          shakeX.value = withSequence(
-            withTiming(-10, { duration: 60 }),
-            withTiming(10, { duration: 60 }),
-            withTiming(-6, { duration: 60 }),
-            withTiming(0, { duration: 60 }),
-          );
-        }
         void playSoftThud();
       }
     },
@@ -582,12 +577,12 @@ const styles = StyleSheet.create({
     letterSpacing: 0.4,
   },
   headline: {
-    fontSize: 22,
+    fontSize: 24,
     fontWeight: '900',
     color: STITCH.onSurface,
     writingDirection: 'rtl',
     textAlign: 'right',
-    lineHeight: 32,
+    lineHeight: 34,
     letterSpacing: -0.3,
   },
   headlineFallback: {
@@ -652,7 +647,7 @@ const styles = StyleSheet.create({
     lineHeight: 22,
   },
   chipText: {
-    fontSize: 14,
+    fontSize: 15,
     fontWeight: '800',
     color: STITCH.primary,
     writingDirection: 'rtl',
@@ -813,21 +808,23 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 6,
-    marginTop: 14,
-    paddingVertical: 14,
+    marginTop: 18,
+    paddingVertical: 16,
     paddingHorizontal: 18,
     borderRadius: 16,
-    backgroundColor: ACCENT_GOLD,
-    shadowColor: ACCENT_GOLD_DEEP,
+    backgroundColor: '#0891b2',
+    borderBottomWidth: 3,
+    borderBottomColor: '#0e7490',
+    shadowColor: '#0e7490',
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.45,
+    shadowOpacity: 0.35,
     shadowRadius: 10,
     elevation: 6,
   },
   continueBtnText: {
-    fontSize: 16,
+    fontSize: 17,
     fontWeight: '900',
-    color: '#0f172a',
+    color: '#ffffff',
     writingDirection: 'rtl',
   },
   confettiOverlay: {
