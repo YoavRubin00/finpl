@@ -29,6 +29,7 @@ import {
 import { useSafeAreaInsets, SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import Animated, { FadeIn } from 'react-native-reanimated';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { X } from 'lucide-react-native';
 
 import { STITCH } from '../../constants/theme';
@@ -207,23 +208,32 @@ export function PearlSheet({ visible, pearl, onClose }: PearlSheetProps): React.
       //      pearl still has a beat of content before the game.
       const hasUniqueBundle = !!(pearl.videoId || pearl.conceptId || pearl.swipeIds?.length || pearl.scenarioId);
       if (hasUniqueBundle) {
-        // Pearl flow: video → concept → swipe → scenario → game → CTA.
-        // CTA was moved to the very last stage (2026-05-31) so the user
-        // experiences the full educational content + game climax first, and
-        // the referral/trading nudge only appears after they've already
-        // gotten value. The CTA still uses the restored finfeed cards
-        // (FeedReferralNudgeCard / FeedTradingNudgeCard) wired with
-        // onContinue=המשך so it remains skippable and advances to the next
-        // module via handleStageDone's final-stage branch.
-        if (pearl.videoId) snapshot.push({ kind: 'video', index: idx++ });
+        // Pearl flow: concept → video → swipe → scenario → game → CTA.
+        //
+        // Concept is FIRST because it's text-only (zero load latency) — the
+        // user can engage with it immediately. Meanwhile the video warmup
+        // effect below kicks off `prefetchStreamingVideo` the moment this
+        // sheet opens, so by the time the user advances past concept the
+        // Vercel Blob CDN cache is primed and the video stage plays almost
+        // instantly. Previously video was first and users stared at a black
+        // frame for 1-2s on 4G before the first frame painted.
+        //
+        // If a pearl has no concept, the conditional below silently skips
+        // it and `video` becomes the natural first stage — no special-case
+        // needed.
+        //
+        // CTA stays last (moved there 2026-05-31): the user gets all the
+        // educational content + game climax first, then the referral/trading
+        // nudge from a position of accumulated value. CTA still uses the
+        // finfeed cards (FeedReferralNudgeCard / FeedTradingNudgeCard) wired
+        // with onContinue=המשך so it remains skippable and advances to the
+        // next module via handleStageDone's final-stage branch.
         if (pearl.conceptId) snapshot.push({ kind: 'concept', index: idx++ });
+        if (pearl.videoId) snapshot.push({ kind: 'video', index: idx++ });
         if (pearl.swipeIds?.length) snapshot.push({ kind: 'swipe', index: idx++ });
         if (pearl.scenarioId && pearl.scenarioPool) snapshot.push({ kind: 'scenario', index: idx++ });
         // Per-module dedicated game from chapter data .interModuleGame.
         if (pearl.gameKey) snapshot.push({ kind: 'game', index: idx++ });
-        // CTA last — appears after the game climax. Its onContinue triggers
-        // handleStageDone with no next stage left → pearl_completed +
-        // router.push to next module.
         snapshot.push({ kind: 'cta', index: idx++ });
       } else {
         // Legacy fallback only used when nothing was mapped + no fallback
@@ -331,14 +341,18 @@ export function PearlSheet({ visible, pearl, onClose }: PearlSheetProps): React.
     // (engaged with content), not just at final completion. Without this, a
     // user who drops mid-game still made the pearl their daily activity but
     // loses the streak. The helper is idempotent per-day so the final-stage
-    // completion below safely fires it again. Both legacy ('daily-pick') and
-    // unique-bundle ('video' as the first content stage) trigger the tick.
-    if (
-      completedStage?.kind === 'daily-pick' ||
-      completedStage?.kind === 'video' ||
-      // Bundle without a video starts with concept — still counts as content.
-      (completedStage?.kind === 'concept' && !stages.some((s) => s.kind === 'video'))
-    ) {
+    // completion below safely fires it again.
+    //
+    // Index-based detection (instead of kind-based) so the tick stays
+    // correct regardless of which content stage happens to be first. With
+    // the concept↔video reorder (2026-06-01) the first content kind is now
+    // 'concept' for full bundles, but 'video' for video-only pearls, and
+    // 'swipe' or 'scenario' for edge cases — the index lookup handles all
+    // of them without enumeration. The legacy fallback ('daily-pick') is
+    // still tagged explicitly because it lives in its own snapshot shape.
+    const firstContentIdx = stages.findIndex((s) => s.kind !== 'profile-question');
+    const isFirstContentStage = firstContentIdx >= 0 && activePage === firstContentIdx;
+    if (completedStage?.kind === 'daily-pick' || isFirstContentStage) {
       markDailyActivityCompleted();
     }
 
@@ -530,6 +544,14 @@ export function PearlSheet({ visible, pearl, onClose }: PearlSheetProps): React.
       statusBarTranslucent
       onRequestClose={handleDismiss}
     >
+      {/* GestureHandlerRootView wrap is REQUIRED here. React Native's <Modal>
+          mounts in a separate native window, and the app-level
+          GestureHandlerRootView in app/_layout.tsx does NOT extend into it.
+          Without this wrap, Gesture.Pan() detectors inside stages (e.g.
+          PearlSwipeStage → BullshitSwipeCard) silently never receive events —
+          the swipe stops working in pearls while tap-Pressables still work.
+          Mirrors the pattern in DoubleOrNothingModal / DiamondHandsModal. */}
+      <GestureHandlerRootView style={{ flex: 1 }}>
       <SafeAreaView style={styles.safeArea} edges={['top', 'left', 'right']}>
         {/* Full GlobalWealthHeader (not compact) — matches the main tabs
             layout exactly so the pearl feels like a continuation of the
@@ -569,7 +591,7 @@ export function PearlSheet({ visible, pearl, onClose }: PearlSheetProps): React.
             the user jump straight to the NEXT module without going through
             the remaining stages. Per user spec (2026-05-31): pearl is
             optional, this is the explicit opt-out path. */}
-        <View style={styles.skipPearlFooter}>
+        <View style={[styles.skipPearlFooter, { paddingBottom: Math.max(insets.bottom, 14) + 8 }]}>
           <Pressable
             onPress={() => {
               tapHaptic();
@@ -612,6 +634,7 @@ export function PearlSheet({ visible, pearl, onClose }: PearlSheetProps): React.
           </View>
         ) : null}
       </SafeAreaView>
+      </GestureHandlerRootView>
     </Modal>
   );
 }
@@ -645,7 +668,8 @@ const styles = StyleSheet.create({
   skipPearlFooter: {
     paddingHorizontal: 16,
     paddingTop: 6,
-    paddingBottom: 14,
+    // paddingBottom is set inline from safe-area inset (Android nav bar
+    // / iOS home indicator) so the pill never gets clipped by system UI.
     alignItems: 'center',
     backgroundColor: '#f8fafc',
   },
