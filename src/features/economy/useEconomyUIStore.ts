@@ -33,20 +33,36 @@ const STREAK_MILESTONE_DAYS: ReadonlySet<number> = new Set([3, 7, 14, 30, 60, 90
 // Helpers
 // ---------------------------------------------------------------------------
 
+// All streak math runs in Israel-local time, matching the server-side
+// `todayIsraelDate()` in ./useStreak.ts. Without this, a user outside
+// UTC+2/+3 (e.g. an Israeli expat in NY at 11pm) sees "today" flip a day
+// before their wall clock — local `activeDates` records UTC's tomorrow
+// while server records IL's today, and the streak silently skips a day.
+// The formatter is reused (intentionally module-scoped) since Intl is
+// the heavy bit; the impl is duplicated rather than imported from
+// useStreak to keep this file free of circular imports (useStreak
+// already imports useEconomyUIStore).
+const IL_DATE_FMT = new Intl.DateTimeFormat('en-CA', {
+  timeZone: 'Asia/Jerusalem',
+  year: 'numeric',
+  month: '2-digit',
+  day: '2-digit',
+});
+
 function todayISO(): string {
-  return new Date().toISOString().slice(0, 10);
+  return IL_DATE_FMT.format(new Date());
 }
 
 function yesterdayISO(): string {
   const d = new Date();
-  d.setDate(d.getDate() - 1);
-  return d.toISOString().slice(0, 10);
+  d.setUTCDate(d.getUTCDate() - 1);
+  return IL_DATE_FMT.format(d);
 }
 
 function ninetyDaysAgoISO(): string {
   const d = new Date();
-  d.setDate(d.getDate() - 90);
-  return d.toISOString().slice(0, 10);
+  d.setUTCDate(d.getUTCDate() - 90);
+  return IL_DATE_FMT.format(d);
 }
 
 function daysBetween(dateA: string, dateB: string): number {
@@ -69,14 +85,19 @@ function deriveStreakFromDates(activeDates: string[], frozenDates: string[]): nu
   let cursor: Date | null = dateSet.has(today2)
     ? new Date()
     : dateSet.has(yest2)
-      ? (() => { const d = new Date(); d.setDate(d.getDate() - 1); return d; })()
+      ? (() => { const d = new Date(); d.setUTCDate(d.getUTCDate() - 1); return d; })()
       : null;
   let count = 0;
   while (cursor) {
-    const iso = cursor.toISOString().slice(0, 10);
+    // Format in Israel time so the cursor's ISO matches the strings stored
+    // in activeDates / frozenDates (which are all IL-zoned per todayISO).
+    // Walking with UTC was a silent bug for users not in UTC+2/+3 — the
+    // initial today/yesterday check passed but the loop's first IL→UTC
+    // mismatch broke the chain at count=0.
+    const iso = IL_DATE_FMT.format(cursor);
     if (!dateSet.has(iso)) break;
     count++;
-    cursor.setDate(cursor.getDate() - 1);
+    cursor.setUTCDate(cursor.getUTCDate() - 1);
     if (count > 365) break;
   }
   return count;
@@ -447,21 +468,11 @@ export const useEconomyUIStore = create<EconomyUIState>()(
         const today = todayISO();
         if (lastLoginBonusDate === today) return;
 
-        const derivedStreak = (() => {
-          const dateSet = new Set([...activeDates, ...frozenDates]);
-          const today2 = todayISO();
-          const yest2 = yesterdayISO();
-          let cursor: Date | null = dateSet.has(today2) ? new Date() : (dateSet.has(yest2) ? (() => { const d = new Date(); d.setDate(d.getDate() - 1); return d; })() : null);
-          let count = 0;
-          while (cursor) {
-            const iso = cursor.toISOString().slice(0, 10);
-            if (!dateSet.has(iso)) break;
-            count++;
-            cursor.setDate(cursor.getDate() - 1);
-            if (count > 365) break;
-          }
-          return count;
-        })();
+        // Reuse the shared helper so the date math here can't drift away
+        // from completeDailyTask / onRehydrateStorage (the inline copy
+        // that used to live here had the same IL-vs-UTC walk bug fixed
+        // in deriveStreakFromDates).
+        const derivedStreak = deriveStreakFromDates(activeDates, frozenDates);
 
         const lastActive = lastDailyTaskDate ?? lastLoginBonusDate;
         const isConsecutiveDay = lastActive === yesterdayISO();

@@ -19,19 +19,20 @@ import { streakQueryKey, markDailyActivityCompleted } from '../economy/useStreak
 import type { StreakState } from '../../lib/api/streak';
 import type { DailyChallenge, ItemAnswer } from './types';
 
-/** Israel-local YYYY-MM-DD — matches the server's day boundary. */
-function todayIsraelDate(): string {
-  const fmt = new Intl.DateTimeFormat('en-CA', {
-    timeZone: 'Asia/Jerusalem',
-    year: 'numeric', month: '2-digit', day: '2-digit',
-  });
-  return fmt.format(new Date());
-}
+/** YYYY-MM-DD anchored to Asia/Jerusalem — same day boundary the server
+ *  and the streak helpers (useEconomyUIStore.todayISO, useStreak.todayIsraelDate)
+ *  use. Was UTC; drifted by a day for users outside UTC+2/+3 so a
+ *  challenge cached "today" client-side wouldn't match a server "today"
+ *  on the next fetch. */
+const IL_DATE_FMT = new Intl.DateTimeFormat('en-CA', {
+  timeZone: 'Asia/Jerusalem',
+  year: 'numeric',
+  month: '2-digit',
+  day: '2-digit',
+});
 
-/** YYYY-MM-DD anchored to the device's local time. Server uses Asia/Jerusalem;
- *  for most users in Israel these match. */
 function todayKey(): string {
-  return new Date().toISOString().slice(0, 10);
+  return IL_DATE_FMT.format(new Date());
 }
 
 /** True if `b` is the calendar day right after `a` (UTC-day arithmetic). */
