@@ -13,6 +13,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import { useRouter } from 'expo-router';
 import { tapHaptic, successHaptic, errorHaptic } from '../../utils/haptics';
+import { useSoundEffect } from '../../hooks/useSoundEffect';
 // glossary rendering available if needed: import { renderGlossaryText } from '../glossary/renderGlossaryText';
 import { ConfettiExplosion } from '../../components/ui/ConfettiExplosion';
 import { FlyingRewards } from '../../components/ui/FlyingRewards';
@@ -45,6 +46,7 @@ export const DilemmaCard = React.memo(function DilemmaCard({ isActive, onContinu
   const answered = hasDilemmaAnsweredToday();
   const playsToday = getDilemmaPlaysToday();
   const remaining = MAX_DILEMMA_DAILY - playsToday;
+  const { playSound } = useSoundEffect();
 
   const [selectedChoice, setSelectedChoice] = useState<DilemmaChoice | null>(null);
   const [showResult, setShowResult] = useState(false);
@@ -90,7 +92,7 @@ export const DilemmaCard = React.memo(function DilemmaCard({ isActive, onContinu
               the X — same as the original behavior. */}
           {onContinue ? (
             <Pressable
-              onPress={() => { tapHaptic(); onContinue(); }}
+              onPress={() => { tapHaptic(); playSound('btn_click_soft_2'); onContinue(); }}
               accessibilityRole="button"
               accessibilityLabel="המשך"
               style={styles.continueBtn}
@@ -107,11 +109,13 @@ export const DilemmaCard = React.memo(function DilemmaCard({ isActive, onContinu
   const handleAnswer = (choice: DilemmaChoice, _index: number) => {
     if (showResult || answered) return;
     tapHaptic();
+    playSound('btn_click_soft_3');
     setSelectedChoice(choice);
     setShowResult(true);
 
     if (choice.isCorrect) {
       successHaptic();
+      playSound('modal_open_4');
       setShowConfetti(true);
       setShowFlyingCoins(true);
       setTimeout(() => setShowConfetti(false), 2000);
@@ -124,6 +128,7 @@ export const DilemmaCard = React.memo(function DilemmaCard({ isActive, onContinu
       }
     } else {
       errorHaptic();
+      playSound('modal_open_1');
       if (!onContinue) {
         setTimeout(() => setShowCelebration(true), 2500);
       }
@@ -164,7 +169,7 @@ export const DilemmaCard = React.memo(function DilemmaCard({ isActive, onContinu
           <Text style={[styles.answeredSub, RTL]}>חזרו מחר לאתגר חדש</Text>
           {onContinue ? (
             <Pressable
-              onPress={() => { tapHaptic(); onContinue(); }}
+              onPress={() => { tapHaptic(); playSound('btn_click_soft_2'); onContinue(); }}
               accessibilityRole="button"
               accessibilityLabel="המשך"
               style={styles.continueBtn}
@@ -263,7 +268,12 @@ export const DilemmaCard = React.memo(function DilemmaCard({ isActive, onContinu
 
         {/* Continue button — appears only when inter-module overlay sets it. */}
         {showResult && onContinue && (
-          <Pressable onPress={onContinue} style={styles.continueBtn} accessibilityRole="button" accessibilityLabel="המשך">
+          <Pressable
+            onPress={() => { tapHaptic(); playSound('btn_click_soft_2'); onContinue(); }}
+            style={styles.continueBtn}
+            accessibilityRole="button"
+            accessibilityLabel="המשך"
+          >
             <Text style={styles.continueBtnText}>המשך</Text>
           </Pressable>
         )}

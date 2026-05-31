@@ -7,6 +7,7 @@ import { useFunStore } from '../../../stores/useFunStore';
 import { FINN_DAD_JOKES, FINN_FUN_FACTS } from '../../fun/finnJokesData';
 import { FINN_HAPPY } from '../../retention-loops/finnMascotConfig';
 import { tapHaptic } from '../../../utils/haptics';
+import { useSoundEffect } from '../../../hooks/useSoundEffect';
 import { pearlStageStyles } from './sharedStageStyles';
 
 interface PearlCaptainMailStageProps {
@@ -27,6 +28,7 @@ export function PearlCaptainMailStage({ isActive, onContinue }: PearlCaptainMail
   const refreshMail = useFunStore((s) => s.refreshMail);
   const openMail = useFunStore((s) => s.openMail);
   const markActiveToday = useFunStore((s) => s.markActiveToday);
+  const { playSound } = useSoundEffect();
 
   // Refresh once per mount so the daily rotation is fresh, and mark today
   // as active so the comeback path uses yesterday's lastActiveDate, not
@@ -41,6 +43,7 @@ export function PearlCaptainMailStage({ isActive, onContinue }: PearlCaptainMail
   const handleContinue = () => {
     if (hasUnreadMail) openMail();
     tapHaptic();
+    playSound('btn_click_soft_2');
     onContinue();
   };
 

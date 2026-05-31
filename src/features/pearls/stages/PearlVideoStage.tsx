@@ -7,6 +7,7 @@ import Animated, { FadeIn } from 'react-native-reanimated';
 import type { LifestyleVideoSpec } from '../../inter-module-break/lifestyleVideoConfig';
 import { FINN_DANCING } from '../../retention-loops/finnMascotConfig';
 import { tapHaptic } from '../../../utils/haptics';
+import { useSoundEffect } from '../../../hooks/useSoundEffect';
 
 interface PearlVideoStageProps {
   isActive: boolean;
@@ -23,6 +24,7 @@ interface PearlVideoStageProps {
 export function PearlVideoStage({ isActive, video, onContinue }: PearlVideoStageProps): React.ReactElement {
   const [finished, setFinished] = useState(false);
   const finishedRef = useRef(false);
+  const { playSound } = useSoundEffect();
 
   const player = useVideoPlayer(video.videoUri, (p) => {
     p.loop = false;
@@ -113,7 +115,7 @@ export function PearlVideoStage({ isActive, video, onContinue }: PearlVideoStage
             clip finishes the bottom scrim takes over with the "המשך" CTA. */}
         {!finished ? (
           <Pressable
-            onPress={() => { tapHaptic(); onContinue(); }}
+            onPress={() => { tapHaptic(); playSound('btn_click_soft_1'); onContinue(); }}
             style={styles.skipBtn}
             accessibilityRole="button"
             accessibilityLabel="דלג על הקליפ"
@@ -134,7 +136,7 @@ export function PearlVideoStage({ isActive, video, onContinue }: PearlVideoStage
             <Animated.View entering={FadeIn.duration(220)} style={styles.finishRow}>
               <ExpoImage source={FINN_DANCING} style={styles.finn} contentFit="contain" accessible={false} />
               <Pressable
-                onPress={() => { tapHaptic(); onContinue(); }}
+                onPress={() => { tapHaptic(); playSound('btn_click_soft_2'); onContinue(); }}
                 style={styles.continueBtn}
                 accessibilityRole="button"
                 accessibilityLabel="המשך לשלב הבא"

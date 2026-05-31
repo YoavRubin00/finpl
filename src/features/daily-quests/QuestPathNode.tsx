@@ -15,6 +15,7 @@ import Animated, {
 import { LottieIcon } from "../../components/ui/LottieIcon";
 import { FINN_HAPPY } from "../retention-loops/finnMascotConfig";
 import { tapHaptic } from "../../utils/haptics";
+import { useSoundEffect } from "../../hooks/useSoundEffect";
 
 const LOTTIE_TROPHY = require("../../../assets/lottie/wired-flat-3263-trophy-circle-hover-roll.json") as number;
 const LOTTIE_CHEST = require("../../../assets/lottie/3D Treasure Box.json") as number;
@@ -48,6 +49,7 @@ function QuestPathNodeInner({
 }: QuestPathNodeProps) {
   const state: QuestState = rewardClaimed ? "claimed" : allCompleted ? "ready" : "pending";
   const reducedMotion = useReducedMotion();
+  const { playSound } = useSoundEffect();
 
   // Pulse glow, stronger when ready-to-claim (golden), softer when pending (blue).
   // Skipped entirely when reduced motion is on.
@@ -96,7 +98,7 @@ function QuestPathNodeInner({
         style={[styles.col, { left: CENTER_X - NODE_SIZE / 2 + offsetX }]}
       >
         <Pressable
-          onPress={() => { tapHaptic(); onPress(); }}
+          onPress={() => { tapHaptic(); playSound('btn_click_soft_2'); onPress(); }}
           accessibilityRole="button"
           accessibilityLabel={`${labelHe}, ${completedCount} מתוך ${totalQuests} הושלמו`}
           accessibilityHint="פותח את גיליון המשימות היומיות"

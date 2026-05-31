@@ -33,6 +33,7 @@ import { X } from 'lucide-react-native';
 
 import { STITCH } from '../../constants/theme';
 import { tapHaptic } from '../../utils/haptics';
+import { useSoundEffect } from '../../hooks/useSoundEffect';
 import { track } from '../../lib/analytics/events';
 import { useAuthStore } from '../auth/useAuthStore';
 import { useIsPro } from '../subscription/useSubscription';
@@ -121,6 +122,7 @@ export function PearlSheet({ visible, pearl, onClose }: PearlSheetProps): React.
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const markCompleted = usePearlsStore((s) => s.markCompleted);
+  const { playSound } = useSoundEffect();
 
   // Per-render snapshot of profile completeness — drives whether we include
   // the profile-question stage at all. The Pearl asks ONLY if the user
@@ -537,7 +539,7 @@ export function PearlSheet({ visible, pearl, onClose }: PearlSheetProps): React.
 
         <View style={styles.topBar}>
           <Pressable
-            onPress={() => { tapHaptic(); handleDismiss(); }}
+            onPress={() => { tapHaptic(); playSound('btn_click_soft_1'); handleDismiss(); }}
             style={({ pressed }) => [styles.closeBtn, pressed && { opacity: 0.7 }]}
             accessibilityRole="button"
             accessibilityLabel="סגור פנינה"
@@ -571,6 +573,7 @@ export function PearlSheet({ visible, pearl, onClose }: PearlSheetProps): React.
           <Pressable
             onPress={() => {
               tapHaptic();
+              playSound('btn_click_soft_1');
               if (!pearl) { onClose(); return; }
               try {
                 track({

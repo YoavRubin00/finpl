@@ -4,6 +4,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { X } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
 import { tapHaptic } from '../../../utils/haptics';
+import { useSoundEffect } from '../../../hooks/useSoundEffect';
 
 import { InvestmentCard } from '../../daily-challenges/InvestmentCard';
 import { CrashGameCard } from '../../daily-challenges/CrashGameCard';
@@ -54,6 +55,7 @@ interface PearlGameStageProps {
 export function PearlGameStage({ isActive, gameKey, macroEventId, onContinue, onExit }: PearlGameStageProps): React.ReactElement | null {
   const insets = useSafeAreaInsets();
   const isPro = useIsPro();
+  const { playSound } = useSoundEffect();
 
   const card = renderGameCard(gameKey, macroEventId, isPro, onContinue, isActive);
   // Self-heal: if the game can't render (unknown gameKey, macro-event missing
@@ -83,7 +85,7 @@ export function PearlGameStage({ isActive, gameKey, macroEventId, onContinue, on
         // upward and the chrome is out of view — a non-negotiable escape
         // hatch per QA audit 2026-05-31.
         <Pressable
-          onPress={() => { tapHaptic(); onExit(); }}
+          onPress={() => { tapHaptic(); playSound('btn_click_soft_1'); onExit(); }}
           accessibilityRole="button"
           accessibilityLabel="צא מהמשחק"
           hitSlop={12}
@@ -178,11 +180,12 @@ function PearlExternalGameWrap({
   children: React.ReactNode;
   onContinue: () => void;
 }): React.ReactElement {
+  const { playSound } = useSoundEffect();
   return (
     <View style={externalStyles.root}>
       <View style={externalStyles.cardArea}>{children}</View>
       <Pressable
-        onPress={() => { tapHaptic(); onContinue(); }}
+        onPress={() => { tapHaptic(); playSound('btn_click_soft_2'); onContinue(); }}
         accessibilityRole="button"
         accessibilityLabel="המשך לשלב הבא"
         style={({ pressed }) => [externalStyles.continueBtn, pressed && externalStyles.continueBtnPressed]}
@@ -223,6 +226,7 @@ const externalStyles = StyleSheet.create({
  */
 function ScenarioLabCtaCard({ seed }: { seed: string | undefined }): React.ReactElement {
   const router = useRouter();
+  const { playSound } = useSoundEffect();
   const scenario = React.useMemo(() => {
     if (!SCENARIOS.length) return null;
     const seedStr = seed ?? 'default';
@@ -243,6 +247,7 @@ function ScenarioLabCtaCard({ seed }: { seed: string | undefined }): React.React
       <Pressable
         onPress={() => {
           tapHaptic();
+          playSound('btn_click_heavy');
           router.push(`/scenario-lab?scenarioId=${scenario.id}` as never);
         }}
         accessibilityRole="button"

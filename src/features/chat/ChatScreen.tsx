@@ -19,7 +19,7 @@ import {
   type LayoutChangeEvent,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { Send, Check, CheckCheck } from "lucide-react-native";
+import { Send, Check, CheckCheck, X } from "lucide-react-native";
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -322,16 +322,13 @@ const typingStyles = StyleSheet.create({
 /*  Chat Style Picker, shown on first chat entry                      */
 /* ------------------------------------------------------------------ */
 
-// Picker trimmed 2026-05-31 from 4 always-on personas to 3 + an
-// expandable "more" group. The 3 primary options are the everyday
-// choices; "סומכים עליכם" is a no-commitment default that maps to the
-// warren-buffett persona. The 2 secondary personas (rachel/robot) sit
-// behind a "לעוד סגנונות שיחה" toggle so users who want them can still
-// reach them, without cluttering the first impression.
+// Picker trimmed 2026-05-31 to 2 primary personas + an expandable "more"
+// group. The X-button bottom-left closes the picker and falls back to
+// warren-buffett (the unwritten default). The 2 secondary personas
+// (rachel/robot) sit behind a "לעוד סגנונות שיחה" toggle.
 const CHAT_STYLES: { id: CompanionId; title: string; desc: string }[] = [
-  { id: "warren-buffett", title: "חכם", desc: "מסביר עם אנלוגיות, כמו חבר שיודע הכל על כסף" },
+  { id: "warren-buffett", title: "אנליסט", desc: "מסביר עם אנלוגיות, כמו חבר שיודע הכל על כסף" },
   { id: "moshe-peled", title: "ישיר ותכל׳סי", desc: "ישראלי, לא מסתובב, אומר את זה כמו שזה" },
-  { id: "warren-buffett", title: "סומכים עליכם", desc: "צאט ברירת מחדל" },
 ];
 
 const MORE_CHAT_STYLES: { id: CompanionId; title: string; desc: string }[] = [
@@ -348,8 +345,6 @@ function ChatStylePicker({ onSelect }: { onSelect: (id: CompanionId) => void }) 
         <Text style={pickerStyles.subtitle}>בחרו את הסגנון שהכי מתאים לכם</Text>
         <View style={pickerStyles.options}>
           {CHAT_STYLES.map((s) => (
-            // Key by title — two entries (חכם / סומכים עליכם) intentionally
-            // share s.id="warren-buffett", so id alone isn't unique.
             <Pressable key={s.title} onPress={() => onSelect(s.id)} style={pickerStyles.option} accessibilityRole="button" accessibilityLabel={`סגנון שיחה: ${s.title}`}>
               <Text style={pickerStyles.optionTitle}>{s.title}</Text>
               <Text style={pickerStyles.optionDesc}>{s.desc}</Text>
@@ -371,6 +366,16 @@ function ChatStylePicker({ onSelect }: { onSelect: (id: CompanionId) => void }) 
           <Text style={pickerStyles.moreToggleText}>
             {showMore ? "פחות סגנונות" : "לעוד סגנונות שיחה"}
           </Text>
+        </Pressable>
+
+        <Pressable
+          onPress={() => onSelect("warren-buffett")}
+          style={pickerStyles.defaultDismiss}
+          accessibilityRole="button"
+          accessibilityLabel="המשך עם ברירת מחדל"
+          hitSlop={10}
+        >
+          <X size={18} color="#94a3b8" strokeWidth={2.5} />
         </Pressable>
       </Animated.View>
     </Animated.View>
@@ -448,6 +453,17 @@ const pickerStyles = StyleSheet.create({
     writingDirection: "rtl",
     textAlign: "center",
     textDecorationLine: "underline",
+  },
+  defaultDismiss: {
+    position: "absolute",
+    bottom: 14,
+    left: 14,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#f1f5f9",
   },
 });
 

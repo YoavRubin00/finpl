@@ -244,6 +244,7 @@ export function DailyQuestsSheet({ visible, onClose, onOpenNewsChallenge, onOpen
   const handleQuestPress = (quest: DailyQuest) => {
     if (quest.isCompleted) return; // completed quests are informational only
     tapHaptic();
+    playSound('btn_click_soft_2');
     captureEvent('daily_quest_clicked', {
       quest_type: quest.type,
       quest_id: quest.id,

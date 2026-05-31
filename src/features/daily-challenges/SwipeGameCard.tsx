@@ -16,6 +16,7 @@ import Animated, {
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import { Pressable } from 'react-native';
 import { successHaptic, errorHaptic } from '../../utils/haptics';
+import { useSoundEffect } from '../../hooks/useSoundEffect';
 import { ConfettiExplosion } from '../../components/ui/ConfettiExplosion';
 import { FlyingRewards } from '../../components/ui/FlyingRewards';
 import { LottieIcon } from '../../components/ui/LottieIcon';
@@ -169,6 +170,7 @@ export const SwipeGameCard = React.memo(function SwipeGameCard({ isActive, onFin
   const hasSwipeGamePlayedToday = useDailyChallengesStore((s) => s.hasSwipeGamePlayedToday);
   const getSwipeGamePlaysToday = useDailyChallengesStore((s) => s.getSwipeGamePlaysToday);
   const playSwipeGame = useDailyChallengesStore((s) => s.playSwipeGame);
+  const { playSound } = useSoundEffect();
   const hasPlayed = hasSwipeGamePlayedToday();
   const playsToday = getSwipeGamePlaysToday();
   // Guard so onFinish fires exactly once per mount even if the card
@@ -218,6 +220,7 @@ export const SwipeGameCard = React.memo(function SwipeGameCard({ isActive, onFin
         // Reward animations: fly coins up + confetti whenever user earns anything
         setShowFlyingCoins(true);
         successHaptic();
+        playSound('modal_open_4');
         if (score >= 3) {
           setShowConfetti(true);
           setTimeout(() => setShowConfetti(false), 2500);
@@ -233,7 +236,7 @@ export const SwipeGameCard = React.memo(function SwipeGameCard({ isActive, onFin
         setTimeout(() => onFinish(), 1200);
       }
     }
-  }, [gameState, hasPlayed, score, playSwipeGame, onFinish]);
+  }, [gameState, hasPlayed, score, playSwipeGame, onFinish, playSound]);
 
   const handleSwipe = useCallback(
     (isLong: boolean) => {
@@ -243,9 +246,11 @@ export const SwipeGameCard = React.memo(function SwipeGameCard({ isActive, onFin
 
       if (correct) {
         successHaptic();
+        playSound('btn_click_soft_3');
         setScore((s) => s + 1);
       } else {
         errorHaptic();
+        playSound('modal_open_1');
       }
 
       setLastFeedback({ correct, explanation: card.explanation });
@@ -261,7 +266,7 @@ export const SwipeGameCard = React.memo(function SwipeGameCard({ isActive, onFin
         }
       }, 3200);
     },
-    [currentIndex, cards, gameState],
+    [currentIndex, cards, gameState, playSound],
   );
 
   // Allow replay

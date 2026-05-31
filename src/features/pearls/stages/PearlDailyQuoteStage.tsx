@@ -5,6 +5,7 @@ import LottieView from 'lottie-react-native';
 
 import { wisdomQuotes } from '../../wisdom-flashes/wisdomData';
 import { tapHaptic } from '../../../utils/haptics';
+import { useSoundEffect } from '../../../hooks/useSoundEffect';
 import { PEARL_STAGE_COLORS, pearlStageStyles } from './sharedStageStyles';
 
 interface PearlDailyQuoteStageProps {
@@ -22,6 +23,7 @@ function getDailyQuote() {
 }
 
 export function PearlDailyQuoteStage({ isActive, onContinue }: PearlDailyQuoteStageProps): React.ReactElement {
+  const { playSound } = useSoundEffect();
   const quote = useMemo(() => getDailyQuote(), []);
 
   return (
@@ -48,7 +50,7 @@ export function PearlDailyQuoteStage({ isActive, onContinue }: PearlDailyQuoteSt
 
       <View style={pearlStageStyles.ctaWrap}>
         <Pressable
-          onPress={() => { tapHaptic(); onContinue(); }}
+          onPress={() => { tapHaptic(); playSound('btn_click_soft_2'); onContinue(); }}
           style={pearlStageStyles.cta}
           accessibilityRole="button"
           accessibilityLabel="תודה, המשך לשלב הבא"

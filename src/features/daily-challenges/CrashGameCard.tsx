@@ -11,6 +11,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import { Svg, Path, Defs, LinearGradient as SvgGradient, Stop } from 'react-native-svg';
 import { tapHaptic, successHaptic, errorHaptic } from '../../utils/haptics';
+import { useSoundEffect } from '../../hooks/useSoundEffect';
 // import { renderGlossaryText } from '../glossary/renderGlossaryText';
 import { useTimeoutCleanup } from '../../hooks/useTimeoutCleanup';
 import { ConfettiExplosion } from '../../components/ui/ConfettiExplosion';
@@ -44,6 +45,7 @@ export const CrashGameCard = React.memo(function CrashGameCard({ isActive, onCon
   const [earnedCoins, setEarnedCoins] = useState(0);
 
   const safeTimeout = useTimeoutCleanup();
+  const { playSound } = useSoundEffect();
   const round = getTodayCrashRound();
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const multiplierRef = useRef(1.0);
@@ -76,6 +78,7 @@ export const CrashGameCard = React.memo(function CrashGameCard({ isActive, onCon
   const startGame = useCallback(() => {
     if (gameState !== 'idle' || hasPlayed) return;
     tapHaptic();
+    playSound('btn_click_heavy');
     setGameState('running');
     multiplierRef.current = 1.0;
     setDisplayMultiplier(1.0);
@@ -93,6 +96,7 @@ export const CrashGameCard = React.memo(function CrashGameCard({ isActive, onCon
         timerRef.current = null;
         setGameState('crashed');
         errorHaptic();
+        playSound('modal_open_1');
         shakeX.value = withRepeat(
           withSequence(
             withTiming(-8, { duration: 40 }),
@@ -107,13 +111,14 @@ export const CrashGameCard = React.memo(function CrashGameCard({ isActive, onCon
         playCrashGame(today, 0);
       }
     }, tickMs);
-  }, [gameState, hasPlayed, round, shakeX, playCrashGame]);
+  }, [gameState, hasPlayed, round, shakeX, playCrashGame, playSound]);
 
   const cashOut = useCallback(() => {
     if (gameState !== 'running') return;
     clearInterval(timerRef.current!);
     timerRef.current = null;
     successHaptic();
+    playSound('modal_open_4');
 
     const coins = CHALLENGE_COIN_REWARD;
     setEarnedCoins(coins);
@@ -130,7 +135,7 @@ export const CrashGameCard = React.memo(function CrashGameCard({ isActive, onCon
     log.addTodayXP(CHALLENGE_XP_REWARD);
     log.addTodayCoins(CHALLENGE_COIN_REWARD);
     log.addCorrectAnswer();
-  }, [gameState, playCrashGame]);
+  }, [gameState, playCrashGame, playSound, safeTimeout]);
 
   // Allow replay after result
   const playAgain = useCallback(() => {
@@ -176,7 +181,7 @@ export const CrashGameCard = React.memo(function CrashGameCard({ isActive, onCon
           <Text style={[styles.answeredSub, RTL]}>חזור מחר לסבב חדש</Text>
           {onContinue ? (
             <Pressable
-              onPress={() => { tapHaptic(); onContinue(); }}
+              onPress={() => { tapHaptic(); playSound('btn_click_soft_2'); onContinue(); }}
               accessibilityRole="button"
               accessibilityLabel="המשך"
               style={styles.continueBtn}
@@ -308,7 +313,12 @@ export const CrashGameCard = React.memo(function CrashGameCard({ isActive, onCon
               )}
               {/* Continue button — appears only when inter-module overlay sets it. */}
               {onContinue && (
-                <Pressable onPress={onContinue} style={styles.continueBtn} accessibilityRole="button" accessibilityLabel="המשך">
+                <Pressable
+                  onPress={() => { tapHaptic(); playSound('btn_click_soft_2'); onContinue(); }}
+                  style={styles.continueBtn}
+                  accessibilityRole="button"
+                  accessibilityLabel="המשך"
+                >
                   <Text style={styles.continueBtnText}>המשך</Text>
                 </Pressable>
               )}
