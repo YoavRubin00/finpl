@@ -320,8 +320,16 @@ export function DailyNewsChallengeSheet({ visible, onClose, entrySource = 'unkno
       setExitConfirmOpen(true);
       return;
     }
+    // Claim any pending rewards on close if both questions were answered —
+    // without this, a user who taps X on the Recap page (instead of המשך)
+    // never claims the chests, and hasReportedCompletionFor=true blocks
+    // re-entry so the rewards are lost permanently (QA blocker 2026-05-31).
+    if (bothAnswered) {
+      if (!regularChestOpened) handleClaimRegular();
+      if (isPro && !proChestOpened) handleClaimPro();
+    }
     onClose();
-  }, [inProgress, onClose]);
+  }, [inProgress, onClose, bothAnswered, regularChestOpened, proChestOpened, isPro, handleClaimRegular, handleClaimPro]);
 
   const confirmLeave = useCallback(() => {
     setExitConfirmOpen(false);
