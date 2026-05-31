@@ -36,7 +36,6 @@ import { useDailyNewsChallengeStore, type ChallengeRewardSummary } from './useDa
 import { useStreak } from '../economy/useStreak';
 import type { ChallengeItem } from './types';
 import { FlyingRewards } from '../../components/ui/FlyingRewards';
-import { GlobalWealthHeader } from '../../components/ui/GlobalWealthHeader';
 import { track } from '../../lib/analytics/events';
 
 /** Where the sheet was opened from. Recorded on news_challenge_viewed +
@@ -497,26 +496,29 @@ export function DailyNewsChallengeSheet({ visible, onClose, entrySource = 'unkno
   return (
     <View style={styles.container}>
       <SafeAreaView style={styles.safeArea} edges={['top', 'left', 'right']}>
-        {/* Global wealth header (coins / XP / streak / hearts) — user asked to
-            keep it visible inside the sheet so the daily ritual still shows
-            their wallet at a glance. Compact mode matches the in-app header. */}
-        <GlobalWealthHeader compact />
-
-        {/* Top bar: Duo-style segmented progress bar + close X in top-RIGHT
-            (absolute, so RTL/LTR flips don't push it to the wrong side). The
-            old 3-dot indicator was replaced June 2026 — bars convey forward
-            momentum better and the active segment pulses subtly. */}
+        {/* Top bar — single "אקטואליה יומית" header strip replaces the
+            previous GlobalWealthHeader + topBar stack (user report
+            2026-06-01: the two strips looked duplicated). Title sits
+            centered, close X is absolute top-RIGHT of the screen so it
+            lands where Hebrew RTL users expect a dismiss affordance.
+            ProgressBar sits below the title in its own row for breathing
+            room. */}
         <View style={styles.topBar}>
-          <ProgressBar
-            segments={[
-              { label: 'Q1', done: item0Answered, active: activePage === 0 },
-              { label: 'הידעת?', done: item0Answered, active: activePage === 1 },
-              { label: 'Q2', done: item1Answered, active: activePage === 2 },
-              { label: 'סיכום', done: bothAnswered && activePage === 3, active: activePage === 3 },
-            ]}
-            currentStep={activePage + 1}
-            totalSteps={PAGE_COUNT}
-          />
+          <Text style={styles.sheetTitle} allowFontScaling={false}>
+            אקטואליה יומית
+          </Text>
+          <View style={styles.progressRow}>
+            <ProgressBar
+              segments={[
+                { label: 'Q1', done: item0Answered, active: activePage === 0 },
+                { label: 'הידעת?', done: item0Answered, active: activePage === 1 },
+                { label: 'Q2', done: item1Answered, active: activePage === 2 },
+                { label: 'סיכום', done: bothAnswered && activePage === 3, active: activePage === 3 },
+              ]}
+              currentStep={activePage + 1}
+              totalSteps={PAGE_COUNT}
+            />
+          </View>
 
           <Pressable
             onPress={() => { tapHaptic(); playSound('btn_click_soft_1'); requestClose(); }}
@@ -682,16 +684,33 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   topBar: {
-    paddingHorizontal: 12,
-    paddingTop: 6,
-    paddingBottom: 10,
-    minHeight: 52,
-    justifyContent: 'center',
+    paddingHorizontal: 16,
+    // Extra breathing room after removing GlobalWealthHeader (2026-06-01) —
+    // the strip now hosts a centered title + progress, so the top/bottom
+    // padding gives the content a less crowded feel.
+    paddingTop: 14,
+    paddingBottom: 14,
+    minHeight: 96,
+    justifyContent: 'flex-start',
+    gap: 12,
+  },
+  sheetTitle: {
+    fontSize: 17,
+    fontWeight: '900',
+    color: STITCH.onSurface,
+    textAlign: 'center',
+    writingDirection: 'rtl',
+    // Leave space on the right for the absolute X so the title doesn't
+    // collide with the button on narrow phones.
+    paddingHorizontal: 52,
+  },
+  progressRow: {
+    paddingHorizontal: 4,
   },
   closeBtn: {
     position: 'absolute',
     right: 12,
-    top: 6,
+    top: 12,
     width: 40,
     height: 40,
     borderRadius: 12,
