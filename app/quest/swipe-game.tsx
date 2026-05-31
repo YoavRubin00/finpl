@@ -83,7 +83,7 @@ const styles = StyleSheet.create({
   },
   closeBtn: {
     position: "absolute",
-    left: 16, // RTL: X close lives top-left, matching iOS-native + CaptainSharkOverlay/FinnMailModal convention
+    right: 16, // RTL Hebrew leading edge — close button lives on the right side per user request
     width: 36,
     height: 36,
     borderRadius: 18,
