@@ -1,4 +1,4 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useRef } from "react";
 import { View, Text, Pressable, StyleSheet, Dimensions } from "react-native";
 import Animated, {
   FadeIn,
@@ -16,6 +16,7 @@ import { useVideoPlayer, VideoView } from "expo-video";
 import { useRouter } from "expo-router";
 import { tapHaptic, successHaptic } from "../../../../utils/haptics";
 import { useSoundEffect } from "../../../../hooks/useSoundEffect";
+import { track } from "../../../../lib/analytics/events";
 
 const VIDEO_URL =
   "https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/finn-videos/finn-referral.mp4";

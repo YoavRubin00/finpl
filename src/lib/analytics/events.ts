@@ -74,6 +74,9 @@ export type AppEvent =
   | { name: 'pearl_dismissed'; props: { after_module_id: string; chapter_id?: string; stage_kind?: string; stage_index?: number; stages_count?: number; time_open_ms?: number } }
   | { name: 'pearl_skipped'; props: { after_module_id: string; chapter_id?: string } }
   | { name: 'pearl_skipped_to_next_module'; props: { module_id: string; current_chapter_id?: string } }
+  | { name: 'pearl_cta_shown'; props: { after_module_id: string; chapter_id?: string; cta_kind: 'referral' | 'trading' | 'whatsapp'; effective_kind: 'referral' | 'trading' | 'whatsapp' } }
+  | { name: 'pearl_cta_tapped'; props: { after_module_id: string; chapter_id?: string; cta_kind: 'referral' | 'trading' | 'whatsapp'; destination_url?: string } }
+  | { name: 'pearl_cta_dismissed'; props: { after_module_id: string; chapter_id?: string; cta_kind: 'referral' | 'trading' | 'whatsapp'; time_open_ms?: number } }
 
   // ── Bridge ─────────────────────────────────────────────────────────────
   | { name: 'bridge_viewed'; props: { category?: string; coins_at_view?: number; benefits_in_category?: number; came_from_deeplink_tab?: boolean } }

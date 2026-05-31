@@ -84,13 +84,16 @@ type StageKind =
   | 'scenario'      // unique-bundle: a specific Dilemma or Investment scenario
   | 'game';         // mini-game (legacy fallback only)
 
-/** Per-pearl stable pick of which CTA card to show — referral vs trading.
- *  Hash of moduleId so the same pearl always shows the same CTA, but two
- *  pearls in the same chapter alternate between the two destinations. */
+/** Per-pearl stable pick of which CTA card to show — trading / referral /
+ *  whatsapp. Hash of moduleId so the same pearl always shows the same CTA,
+ *  but pearls across a chapter rotate through all three destinations.
+ *  WhatsApp was added 2026-06-01 as a 3rd option so the community nudge
+ *  surfaces ~1-in-3 pearls instead of pushing it to every pearl. */
+const CTA_ROTATION: ReadonlyArray<PearlCtaKind> = ['trading', 'referral', 'whatsapp'];
 function pickCtaKindFor(moduleId: string): PearlCtaKind {
   let h = 0;
   for (let i = 0; i < moduleId.length; i++) h = (h * 31 + moduleId.charCodeAt(i)) | 0;
-  return Math.abs(h) % 2 === 0 ? 'trading' : 'referral';
+  return CTA_ROTATION[Math.abs(h) % CTA_ROTATION.length];
 }
 
 /** Which daily-content card the daily-pick stage should render today. The
@@ -460,6 +463,8 @@ export function PearlSheet({ visible, pearl, onClose }: PearlSheetProps): React.
             <PearlCtaStage
               isActive={isActive}
               kind={pickCtaKindFor(pearl.afterModuleId)}
+              afterModuleId={pearl.afterModuleId}
+              chapterId={pearl.chapterId}
               onContinue={handleStageDone}
             />
           </View>

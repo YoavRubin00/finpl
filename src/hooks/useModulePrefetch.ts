@@ -30,65 +30,104 @@ function audioKeyFromUri(uri: string): string {
   return uri.split('/').slice(-2).join('/');
 }
 
+// Retry policy — Vercel Blob has been observed returning intermittent
+// http_403s on iOS (PostHog 2026-05-31 audit: 8 failures across 2 users in
+// one day on /0-1.mp4, /0-2.mp4, /0-3.mp4 + infographics, while the same
+// URLs serve 200 OK to curl from arbitrary IPs). Treating these as
+// fully-transient: a short backoff usually clears them before the user even
+// reaches the playback screen. Also covers Android `Connection reset` /
+// `Unable to resolve host` blips on flaky cellular.
+const RETRY_DELAYS_MS = [1000, 3000, 9000] as const;
+const RETRYABLE_HTTP_STATUSES = new Set([403, 408, 429, 500, 502, 503, 504]);
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
 async function prefetchVideo(uri: string): Promise<void> {
+  const filename = uri.split("/").pop() || "video.mp4";
+  const localPath = VIDEO_CACHE_DIR + filename;
   try {
-    const filename = uri.split("/").pop() || "video.mp4";
-    const localPath = VIDEO_CACHE_DIR + filename;
     const info = await FileSystem.getInfoAsync(localPath);
     if (info.exists && info.size && info.size > 1000) {
       videoCache.set(uri, localPath);
       return;
     }
     await FileSystem.makeDirectoryAsync(VIDEO_CACHE_DIR, { intermediates: true }).catch(() => {});
-    const result = await FileSystem.downloadAsync(uri, localPath);
-    if (result.status === 200) {
-      videoCache.set(uri, localPath);
-    } else {
-      // Non-200 status — log but keep streaming fallback.
-      captureEvent('video_prefetch_failed', {
-        video_key: videoKeyFromUri(uri),
-        platform: Platform.OS,
-        reason: `http_${result.status}`,
-      });
+  } catch {/* fall through to download attempt */}
+
+  let lastReason: string | undefined;
+  for (let attempt = 0; attempt <= RETRY_DELAYS_MS.length; attempt++) {
+    try {
+      const result = await FileSystem.downloadAsync(uri, localPath);
+      if (result.status === 200) {
+        videoCache.set(uri, localPath);
+        if (attempt > 0) {
+          captureEvent('video_prefetch_failed', {
+            video_key: videoKeyFromUri(uri),
+            platform: Platform.OS,
+            reason: `recovered_after_${attempt}_retries`,
+          });
+        }
+        return;
+      }
+      lastReason = `http_${result.status}`;
+      if (!RETRYABLE_HTTP_STATUSES.has(result.status)) break;
+    } catch (err) {
+      lastReason = err instanceof Error ? err.message : 'unknown';
     }
-  } catch (err) {
-    // Network/IO failure — log so we can quantify how often prefetch fails
-    // (silent fall-through to streaming hides this from telemetry).
-    captureEvent('video_prefetch_failed', {
-      video_key: videoKeyFromUri(uri),
-      platform: Platform.OS,
-      reason: err instanceof Error ? err.message : 'unknown',
-    });
+    if (attempt < RETRY_DELAYS_MS.length) {
+      await sleep(RETRY_DELAYS_MS[attempt]);
+    }
   }
+  captureEvent('video_prefetch_failed', {
+    video_key: videoKeyFromUri(uri),
+    platform: Platform.OS,
+    reason: lastReason ?? 'unknown',
+  });
 }
 
 async function prefetchAudio(uri: string): Promise<void> {
+  const filename = uri.split("/").pop() || "audio.mp3";
+  const localPath = AUDIO_CACHE_DIR + filename;
   try {
-    const filename = uri.split("/").pop() || "audio.mp3";
-    const localPath = AUDIO_CACHE_DIR + filename;
     const info = await FileSystem.getInfoAsync(localPath);
     if (info.exists && info.size && info.size > 1000) {
       audioCache.set(uri, localPath);
       return;
     }
     await FileSystem.makeDirectoryAsync(AUDIO_CACHE_DIR, { intermediates: true }).catch(() => {});
-    const result = await FileSystem.downloadAsync(uri, localPath);
-    if (result.status === 200) {
-      audioCache.set(uri, localPath);
-    } else {
-      captureEvent('audio_prefetch_failed', {
-        audio_key: audioKeyFromUri(uri),
-        platform: Platform.OS,
-        reason: `http_${result.status}`,
-      });
+  } catch {/* fall through to download attempt */}
+
+  let lastReason: string | undefined;
+  for (let attempt = 0; attempt <= RETRY_DELAYS_MS.length; attempt++) {
+    try {
+      const result = await FileSystem.downloadAsync(uri, localPath);
+      if (result.status === 200) {
+        audioCache.set(uri, localPath);
+        if (attempt > 0) {
+          captureEvent('audio_prefetch_failed', {
+            audio_key: audioKeyFromUri(uri),
+            platform: Platform.OS,
+            reason: `recovered_after_${attempt}_retries`,
+          });
+        }
+        return;
+      }
+      lastReason = `http_${result.status}`;
+      if (!RETRYABLE_HTTP_STATUSES.has(result.status)) break;
+    } catch (err) {
+      lastReason = err instanceof Error ? err.message : 'unknown';
     }
-  } catch (err) {
-    captureEvent('audio_prefetch_failed', {
-      audio_key: audioKeyFromUri(uri),
-      platform: Platform.OS,
-      reason: err instanceof Error ? err.message : 'unknown',
-    });
+    if (attempt < RETRY_DELAYS_MS.length) {
+      await sleep(RETRY_DELAYS_MS[attempt]);
+    }
   }
+  captureEvent('audio_prefetch_failed', {
+    audio_key: audioKeyFromUri(uri),
+    platform: Platform.OS,
+    reason: lastReason ?? 'unknown',
+  });
 }
 
 // Fire-and-forget eager prefetch. Call this right before `router.push('/lesson/...')`
