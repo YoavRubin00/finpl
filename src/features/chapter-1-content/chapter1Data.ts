@@ -147,7 +147,11 @@ export const chapter1Data: Chapter = {
         description:
           'אתה מכוון השקעה של 10K ומזיז את הסליידר של השנים. עד שנה 10 בקושי זז, בשנה 20 העמודה פורצת את המסך.',
       },
-      interModuleGame: 'higher-lower',
+      // Yoav 2026-05-31: was 'higher-lower'. Switched to 'diamond-hands' —
+      // compound interest IS the diamond-hands lesson. 10-second hold-through-
+      // crash is the perfect primer for "let your money sit and grow".
+      // Earliest diamond-hands exposure (mod-1-1, very first chapter-1 module).
+      interModuleGame: 'diamond-hands',
     },
     {
       id: 'mod-1-2',
@@ -332,7 +336,11 @@ export const chapter1Data: Chapter = {
         description:
           'אתה עובר בתוך מנהרה (העו"ש). ירידה מתחת לקו האפס גורמת ל"מפלצות ריבית" לנגוס בך ולהאט אותך.',
       },
-      interModuleGame: 'investment',
+      // Yoav 2026-05-31: was 'investment'. Switched to 'crowd-question' —
+      // overdraft is a relatable consumer-debt topic, perfect for asking the
+      // community "do you live in overdraft?" sentiment. Brings crowd-question
+      // to chapter 1 (was chapter 4 only).
+      interModuleGame: 'crowd-question',
     },
     {
       id: 'mod-1-3',
@@ -1381,7 +1389,10 @@ export const chapter1Data: Chapter = {
         description:
           'דוחפים עגלה וצריך לאסוף רק מוצרי בסיס ולחמוק משלטי ניאון ענקיים של "מבצע!" שמאיטים אותך.',
       },
-      interModuleGame: 'crash',
+      // Yoav 2026-05-31: was 'crash'. Switched to 'scenario-lab' — marketing
+      // traps tie naturally to historical consumer-spending cycles. Brings
+      // scenario-lab to chapter 1 (was chapter 4 only — gate removed per spec).
+      interModuleGame: 'scenario-lab',
     },
     {
       id: 'mod-1-9',

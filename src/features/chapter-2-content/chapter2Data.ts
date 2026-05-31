@@ -406,6 +406,9 @@ export const chapter2Data: Chapter = {
         description:
           'שני רצים, אחד מתחיל להפריש לפנסיה עכשיו (קטן ועקבי) והשני מתחיל רק בחצי המסלול (גדול ומהיר). המשתמש רואה מי מגיע לקו הסיום עם הר ערימות של כסף.',
       },
+      // Yoav 2026-05-31: filled hole. Pension education + higher-lower
+      // (price prediction) builds quick intuition about long-term trends.
+      interModuleGame: 'higher-lower',
     },
     {
       id: 'mod-2-13',
@@ -671,6 +674,9 @@ export const chapter2Data: Chapter = {
         description:
           'דמות הולכת במסלול מכשולים. היא צריכה לקנות "מגנים" (ביטוחים) ספציפיים. אם היא קונה מגן מיותר (כפל) היא נהיית איטית. אם חסר לה מגן והיא נפגעת, היא חוזרת להתחלה.',
       },
+      // Yoav 2026-05-31: filled hole. Insurance lesson + crash game —
+      // both teach "things go wrong, are you protected?"
+      interModuleGame: 'crash',
     },
   ],
 };

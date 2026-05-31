@@ -258,7 +258,10 @@ export const chapter0Data: Chapter = {
         title: 'סימולטור השחיקה (מדד הלחם)',
         description: 'מדד לחם וירטואלי מציג כיצד שטר אדום מתכווץ ויש לו פחות מקדמי-קנייה ככל שסליידר הזמן מתקדם ל-2026.',
       },
-      interModuleGame: 'higher-lower',
+      // Yoav 2026-05-31: was 'higher-lower' (duplicate of mod-0-2). Switched
+      // to 'myth' so users hit מיתוס-או-תכלס at the very start of the journey
+      // (3rd module total) instead of waiting until mod-1-4.
+      interModuleGame: 'myth',
     },
     {
       id: 'mod-0-4',
