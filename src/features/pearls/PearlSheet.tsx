@@ -551,8 +551,16 @@ export function PearlSheet({ visible, pearl, onClose }: PearlSheetProps): React.
           PearlSwipeStage → BullshitSwipeCard) silently never receive events —
           the swipe stops working in pearls while tap-Pressables still work.
           Mirrors the pattern in DoubleOrNothingModal / DiamondHandsModal. */}
-      <GestureHandlerRootView style={{ flex: 1 }}>
-      <SafeAreaView style={styles.safeArea} edges={['top', 'left', 'right']}>
+      {/* Top inset applied explicitly via the inset hook instead of via
+          <SafeAreaView edges={['top']}> — inside a Modal the
+          SafeAreaProvider from app/_layout.tsx does not always propagate
+          to the new native window, so SafeAreaView read zero on iOS and
+          the GlobalWealthHeader rendered behind the notch / status bar
+          (user report 2026-06-01: "בפנינה הוא חורג מהחלק העליון של המסך").
+          Reading insets at the hook level is reliable because the JS
+          context is the same as the parent app. */}
+      <GestureHandlerRootView style={{ flex: 1, paddingTop: insets.top, backgroundColor: '#f8fafc' }}>
+      <SafeAreaView style={styles.safeArea} edges={['left', 'right']}>
         {/* Full GlobalWealthHeader (not compact) — matches the main tabs
             layout exactly so the pearl feels like a continuation of the
             app, not a stripped-down modal. User report 2026-05-31: compact

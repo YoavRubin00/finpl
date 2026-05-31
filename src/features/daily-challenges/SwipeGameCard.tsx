@@ -142,10 +142,26 @@ function SwipeableCard({
           <Text style={[styles.cardHeadline, RTL, { textAlign: 'center' }]}>{card.headline}</Text>
         </View>
 
-        {/* Hero image, fitting elegantly in remaining space */}
+        {/* Hero image, fitting elegantly in remaining space.
+            onError surfaces CDN/network failures to the console instead of
+            silently rendering a blank space — user reported broken pearl
+            media on TestFlight (2026-06-01). Prefetch on mount (see the
+            useEffect inside SwipeGameCard) warms the OS HTTP cache so the
+            first paint after the swipe-quest opens is near-instant. */}
         {bgSource && (
           <View style={styles.heroImageContainer}>
-            <Animated.Image entering={FadeIn.duration(800)} source={bgSource} style={styles.heroImage} resizeMode="contain" />
+            <Animated.Image
+              entering={FadeIn.duration(800)}
+              source={bgSource}
+              style={styles.heroImage}
+              resizeMode="contain"
+              onError={(e) => {
+                console.warn(
+                  `[SwipeGameCard] background image failed: ${bgSource.uri}`,
+                  e.nativeEvent?.error,
+                );
+              }}
+            />
           </View>
         )}
 
@@ -176,6 +192,19 @@ export const SwipeGameCard = React.memo(function SwipeGameCard({ isActive, onFin
   // Guard so onFinish fires exactly once per mount even if the card
   // re-renders after gameState flips to 'done'.
   const finishFiredRef = useRef(false);
+
+  // Prefetch every swipe-bg from Vercel Blob CDN the moment the user
+  // enters the swipe game. Idempotent + cached by expo-image, so calling
+  // this on every mount is safe and very cheap on repeat. Without it,
+  // each card-flip raced the CDN fetch and on 4G the user saw a blank
+  // space for 1-2s — TestFlight bug report 2026-06-01.
+  useEffect(() => {
+    Object.values(SWIPE_BGS).forEach((src) => {
+      if (src) {
+        ExpoImage.prefetch(src.uri).catch(() => undefined);
+      }
+    });
+  }, []);
 
   const cards = getTodaySwipeCards();
   const [currentIndex, setCurrentIndex] = useState(0);
