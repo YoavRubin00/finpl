@@ -34,10 +34,10 @@ interface ToolHeaderProps {
 export function ToolHeader({ title, subtitle, accentColor = STITCH.primary, Icon, toolKey }: ToolHeaderProps) {
   const router = useRouter();
 
-  // Spending >30s inside a real tool (toolKey set) counts as today's streak
-  // day — the utility moment earns identity credit the same way a lesson
-  // would. Idempotent at the API layer.
-  useRecordToolUsage(!!toolKey);
+  // Spending >10s inside a real tool (toolKey set) counts as today's streak
+  // day. The utility moment earns identity credit the same way a lesson
+  // would. Also fires `tool_used` for NSM measurement. Idempotent.
+  useRecordToolUsage(!!toolKey, toolKey);
 
   // First-visit tutorial — only render the overlay when the user hasn't
   // seen it AND the tool has a tutorial defined. Reading the flag with a

@@ -19,6 +19,12 @@ import { queryClient } from "../../lib/queryClient";
 import { economyQueryKey } from "./useEconomy";
 import { registerLocalStore } from "../../lib/stores/registry";
 import type { Economy } from "../../lib/api/economy";
+import type { StreakState } from "../../lib/api/streak";
+
+// Streak query key — duplicated as a literal here (instead of importing from
+// ./useStreak) to avoid a circular module load (useStreak already imports
+// THIS file). Must stay in sync with streakQueryKey in ./useStreak.ts.
+const STREAK_QUERY_KEY = ['streak'] as const;
 import { logLevelUp, logStreakMilestone } from "../../utils/fbEvents";
 
 const STREAK_MILESTONE_DAYS: ReadonlySet<number> = new Set([3, 7, 14, 30, 60, 90]);
@@ -375,6 +381,22 @@ export const useEconomyUIStore = create<EconomyUIState>()(
             : {}),
           recentActivityHours: [...state.recentActivityHours.slice(-13), new Date().getHours()],
         }));
+
+        // Mirror the new streak into the React Query cache so GlobalWealthHeader
+        // (which reads via useStreak()) reflects the bump immediately, even when
+        // the server-side recordDailyActivity hasn't returned yet — or fails
+        // entirely (offline, or unauthenticated user at end of onboarding before
+        // enterGuestMode runs). The async server response, when it arrives,
+        // overwrites this with the authoritative value via markDailyActivityCompleted's
+        // .then(setQueryData) chain in useStreak.ts.
+        try {
+          const existing = queryClient.getQueryData<StreakState | null>(STREAK_QUERY_KEY);
+          queryClient.setQueryData<StreakState | null>(STREAK_QUERY_KEY, {
+            currentStreak: newStreak,
+            longestStreak: Math.max(existing?.longestStreak ?? 0, newStreak),
+            lastActiveDate: today,
+          });
+        } catch { /* non-fatal */ }
 
         // Fire server-backed XP + coins
         const totalXP = DAILY_TASK_XP + streakBonus + milestoneBonus;

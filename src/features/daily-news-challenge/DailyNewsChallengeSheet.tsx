@@ -169,21 +169,24 @@ export function DailyNewsChallengeSheet({ visible, onClose }: DailyNewsChallenge
     }
   }, [visible, challenge]);
 
-  // Completed event — fires ONCE per (dateKey, session), not on every
-  // sheet mount where both answers happen to be persisted. The ref
-  // remembers the last dateKey for which we already emitted; reopening the
-  // sheet later in the day is a no-op.
+  // Completed event — fires ONCE per (dateKey, session). The ref guard
+  // (from the QA audit) prevents the 58:2 over-firing bug when the sheet
+  // remounts with persisted answered state. PR #3 (Yam) added a second
+  // canonical NSM event name; both fire together under the same guard so
+  // the NSM funnel and the legacy funnel stay in sync.
   useEffect(() => {
     if (!answered[0] || !answered[1]) return;
     const dateKey = challenge?.dateKey ?? null;
     if (!dateKey) return;
     if (completionFiredForDateKey.current === dateKey) return;
     completionFiredForDateKey.current = dateKey;
-    captureEvent('news_challenge_completed', {
+    const props = {
       date_key: dateKey,
       both_correct: answered[0].wasCorrect && answered[1].wasCorrect,
       streak,
-    });
+    };
+    captureEvent('news_challenge_completed', props);
+    captureEvent('daily_challenge_completed', { ...props, challenge_type: 'news' });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [answered[0]?.answeredAt, answered[1]?.answeredAt, challenge?.dateKey]);
 
