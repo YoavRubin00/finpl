@@ -58,6 +58,10 @@ import { StreakCalendarModal } from "../streak/StreakCalendarModal";
 import { DailyNewsChallengeSheet } from "../daily-news-challenge/DailyNewsChallengeSheet";
 import { DilemmaCard } from "../daily-challenges/DilemmaCard";
 import { BullshitSwipeCard } from "../finfeed/minigames/bullshit-swipe/BullshitSwipeCard";
+// Three swipe-game variants rotate per Israeli calendar day in the swipe
+// quest modal so the daily ritual stays fresh (user request 2026-05-31).
+import { SwipeGameCard } from "../daily-challenges/SwipeGameCard";
+import { MythFeedCard } from "../myth-or-tachles/MythFeedCard";
 import { useDailyNewsChallengeStore } from "../daily-news-challenge/useDailyNewsChallengeStore";
 import { fetchTodayChallenge } from "../daily-news-challenge/dailyNewsChallengeApi";
 import { FINN_STANDARD } from "../retention-loops/finnMascotConfig";
@@ -1128,6 +1132,32 @@ export function DuoLearnScreen() {
   const [swipeQuestVisible, setSwipeQuestVisible] = useState(false);
   const [dilemmaQuestVisible, setDilemmaQuestVisible] = useState(false);
 
+  // Pick which swipe game the daily quest hosts today. Rotates by Israeli
+  // day index across 3 cards so the daily ritual stays fresh:
+  //   day % 3 === 0  → BullshitSwipe (סוויף שמאלה לפייק)
+  //   day % 3 === 1  → MythFeedCard (מיתוס או תכל'ס)
+  //   day % 3 === 2  → SwipeGameCard (שורי או דובי / Bull or Bear)
+  // The kind is computed at render time (cheap) and recomputes naturally at
+  // the IL midnight rollover. Snapshotted on modal-open so a mid-session
+  // tick-over doesn't swap the card under the user.
+  const dailySwipeKind = useMemo<'bullshit' | 'myth' | 'bull-bear'>(() => {
+    const dayIndex = Math.floor(Date.now() / 86400000);
+    const variants = ['bullshit', 'myth', 'bull-bear'] as const;
+    return variants[dayIndex % variants.length];
+  }, [swipeQuestVisible]);
+
+  // Single handler so every card path marks the quest complete via the
+  // canonical swipeGamePlays counter (MythFeedCard / BullshitSwipeCard
+  // don't touch useDailyChallengesStore.swipeGamePlays on their own, so
+  // syncCompletions would otherwise miss them). Idempotent per day.
+  const finishSwipeQuest = useCallback(() => {
+    try {
+      const today = new Date().toISOString().slice(0, 10);
+      useDailyChallengesStore.getState().playSwipeGame(today, 0);
+    } catch { /* non-fatal */ }
+    setTimeout(() => setSwipeQuestVisible(false), 800);
+  }, []);
+
   // Pearls — bonus intermezzo nodes between modules. State is held here at
   // screen-level so any chapter can pop the same sheet, and the completed
   // set is read once into ChapterSection's prop so each section doesn't
@@ -1463,10 +1493,12 @@ export function DuoLearnScreen() {
         entrySource={newsEntrySource}
         onClose={() => setNewsSheetVisible(false)}
       />
-      {/* Swipe quest modal. Replaces the broken /quest/swipe-game route by
-          hosting BullshitSwipeCard inside a slide-up modal opened from the
-          Daily Quests sheet. bypassDailyGate so the quest counts even after
-          the natural daily play was burned. */}
+      {/* Swipe quest modal. Hosts whichever of the 3 rotating swipe-games is
+          assigned to today (see dailySwipeKind above). finishSwipeQuest is
+          the single closer — every card path funnels through it so the
+          canonical swipeGamePlays counter ticks and Daily Quests'
+          syncCompletions marks this quest done regardless of which card was
+          shown. */}
       <Modal
         visible={swipeQuestVisible}
         animationType="slide"
@@ -1484,11 +1516,25 @@ export function DuoLearnScreen() {
             <Text style={{ fontSize: 18, fontWeight: "700", color: "#475569" }}>✕</Text>
           </Pressable>
           <ScrollView contentContainerStyle={{ flexGrow: 1, justifyContent: "center", paddingVertical: 12, paddingTop: insets.top + 56 }} showsVerticalScrollIndicator={false}>
-            <BullshitSwipeCard
-              isActive={swipeQuestVisible}
-              bypassDailyGate
-              onFinish={() => setTimeout(() => setSwipeQuestVisible(false), 800)}
-            />
+            {dailySwipeKind === 'bullshit' && (
+              <BullshitSwipeCard
+                isActive={swipeQuestVisible}
+                bypassDailyGate
+                onFinish={finishSwipeQuest}
+              />
+            )}
+            {dailySwipeKind === 'myth' && (
+              <MythFeedCard
+                isInterModule
+                onSkip={finishSwipeQuest}
+              />
+            )}
+            {dailySwipeKind === 'bull-bear' && (
+              <SwipeGameCard
+                isActive={swipeQuestVisible}
+                onFinish={finishSwipeQuest}
+              />
+            )}
           </ScrollView>
         </View>
       </Modal>

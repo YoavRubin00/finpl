@@ -35,6 +35,12 @@ const SWIPE_THRESHOLD = SCREEN_WIDTH * 0.25;
 
 interface Props {
   isActive: boolean;
+  /** Fired exactly once when the game ends (timer expires or all cards
+   *  played). Used by the Daily-Quests host modal so it can close itself
+   *  + mark the swipe quest complete on any host outside the standalone
+   *  card. Safe to leave unset for legacy callers — the card still
+   *  finalizes its own scoring via playSwipeGame. */
+  onFinish?: () => void;
 }
 
 const CDN = 'https://8mnwcjygpqev3keg.public.blob.vercel-storage.com';
@@ -153,12 +159,15 @@ function SwipeableCard({
   );
 }
 
-export const SwipeGameCard = React.memo(function SwipeGameCard({ isActive }: Props) {
+export const SwipeGameCard = React.memo(function SwipeGameCard({ isActive, onFinish }: Props) {
   const hasSwipeGamePlayedToday = useDailyChallengesStore((s) => s.hasSwipeGamePlayedToday);
   const getSwipeGamePlaysToday = useDailyChallengesStore((s) => s.getSwipeGamePlaysToday);
   const playSwipeGame = useDailyChallengesStore((s) => s.playSwipeGame);
   const hasPlayed = hasSwipeGamePlayedToday();
   const playsToday = getSwipeGamePlaysToday();
+  // Guard so onFinish fires exactly once per mount even if the card
+  // re-renders after gameState flips to 'done'.
+  const finishFiredRef = useRef(false);
 
   const cards = getTodaySwipeCards();
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -209,8 +218,16 @@ export const SwipeGameCard = React.memo(function SwipeGameCard({ isActive }: Pro
         }
       }
       log.addCorrectAnswer();
+      // Notify host (e.g. Daily Quests modal) that the game is over.
+      // Guard ensures we don't double-fire if React re-runs the effect.
+      if (!finishFiredRef.current && onFinish) {
+        finishFiredRef.current = true;
+        // Slight delay so the reward animations get a beat to play before
+        // the host closes the modal.
+        setTimeout(() => onFinish(), 1200);
+      }
     }
-  }, [gameState, hasPlayed, score, playSwipeGame]);
+  }, [gameState, hasPlayed, score, playSwipeGame, onFinish]);
 
   const handleSwipe = useCallback(
     (isLong: boolean) => {
