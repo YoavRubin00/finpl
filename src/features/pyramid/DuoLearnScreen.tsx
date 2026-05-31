@@ -2293,7 +2293,10 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   progressStarsRow: {
-    flexDirection: "row",
+    // RTL: stars fill right-to-left (first completed = rightmost) so the
+    // visual progression matches Hebrew reading direction. With `row-reverse`,
+    // index 0 (the first filled star) renders on the visual right side.
+    flexDirection: "row-reverse",
     gap: 4,
     marginTop: -6,
     paddingHorizontal: 6,
