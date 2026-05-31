@@ -487,6 +487,13 @@ export function PearlSheet({ visible, pearl, onClose }: PearlSheetProps): React.
             showsHorizontalScrollIndicator={false}
             bounces={false}
             renderItem={renderPage}
+            // extraData forces FlatList to re-run renderItem when activePage
+            // changes — without it, the cached items hold stale onContinue
+            // closures (each tied to the activePage at first render). Result:
+            // pressing "הבנתי" on the concept stage was calling the OLD
+            // handleStageDone snapshotted when activePage was 0/1, which
+            // tried to advance from the wrong index and silently no-op'd.
+            extraData={activePage}
             onMomentumScrollEnd={onMomentumScrollEnd}
             onViewableItemsChanged={onViewableItemsChanged}
             viewabilityConfig={viewabilityConfig}
