@@ -64,6 +64,8 @@ export type AppEvent =
   | { name: 'lesson_quiz_question_answered'; props: { lesson_id: string; question_index: number; is_correct: boolean; attempt?: number } }
   | { name: 'lesson_completed'; props: { lesson_id: string; chapter_id?: string; duration_ms?: number; completed_at_phase?: string; correct_count?: number; total_questions?: number; is_first_lesson?: boolean } }
   | { name: 'lesson_exited_early'; props: { lesson_id: string; chapter_id?: string; reason: 'back_button' | 'navigation' | 'app_background'; phase?: string } }
+  | { name: 'module_unlocked'; props: { module_id: string; chapter_id?: string; trigger?: 'completion' | 'pro_subscribe' | 'manual' } }
+  | { name: 'chapter_completed'; props: { chapter_id: string; total_modules?: number } }
 
   // ── Pearl ──────────────────────────────────────────────────────────────
   | { name: 'pearl_opened'; props: { after_module_id: string; next_module_id?: string; chapter_id?: string; game_key?: string; stages_count: number; has_profile_question?: boolean; has_unique_bundle?: boolean } }
@@ -71,6 +73,7 @@ export type AppEvent =
   | { name: 'pearl_completed'; props: { after_module_id: string; next_module_id?: string; chapter_id?: string; stages_count: number; time_to_complete_ms?: number } }
   | { name: 'pearl_dismissed'; props: { after_module_id: string; chapter_id?: string; stage_kind?: string; stage_index?: number; stages_count?: number; time_open_ms?: number } }
   | { name: 'pearl_skipped'; props: { after_module_id: string; chapter_id?: string } }
+  | { name: 'pearl_skipped_to_next_module'; props: { module_id: string; current_chapter_id?: string } }
 
   // ── Bridge ─────────────────────────────────────────────────────────────
   | { name: 'bridge_viewed'; props: { category?: string; coins_at_view?: number; benefits_in_category?: number; came_from_deeplink_tab?: boolean } }
@@ -92,11 +95,32 @@ export type AppEvent =
   | { name: 'subscription_cancelled_at_checkout'; props?: Record<string, never> }
   | { name: 'subscription_purchase_failed'; props: { error_message: string } }
 
-  // ── Store / Purchases (entry-level — full Shop instrumentation lands in Stage 2) ─
-  | { name: 'purchase_initiated'; props: { bundle_id: string; bundle_type: 'starter_pack' | 'gem_bundle' | 'coin_bundle' | string; price_ils?: number } }
-  | { name: 'purchase_completed'; props: { bundle_id: string; bundle_type: string; coins?: number; gems?: number; price_ils?: number; real_money?: boolean } }
-  | { name: 'purchase_failed'; props: { bundle_id: string; bundle_type: string; reason?: string; error_message?: string } }
+  // ── Store / Shop / Purchases ───────────────────────────────────────────
+  | { name: 'shop_screen_viewed'; props: { coins: number; gems: number; is_pro: boolean } }
+  | { name: 'shop_item_tapped'; props: { item_id: string; item_type?: string; category?: string; cost_value?: number; cost_currency?: 'coins' | 'gems' | 'ils'; can_afford?: boolean } }
+  | { name: 'shop_gem_exchange_tapped'; props: { gems_cost: number; coins_reward: number; can_afford: boolean } }
+  | { name: 'purchase_initiated'; props: { bundle_id: string; bundle_type: 'starter_pack' | 'gem_bundle' | 'coin_bundle' | string; price_ils?: number | null; real_money?: boolean } }
+  | { name: 'purchase_completed'; props: { bundle_id: string; bundle_type: string; coins?: number; gems?: number; price_ils?: number; real_money?: boolean; avatars?: number } }
+  | { name: 'purchase_failed'; props: { bundle_id: string; bundle_type?: string; reason?: string; error_message?: string } }
   | { name: 'purchase_cancelled'; props: { bundle_id: string; bundle_type: string } }
+
+  // ── Referral / Friends ─────────────────────────────────────────────────
+  | { name: 'referral_screen_viewed'; props: { has_code: boolean; friends_count: number; dividend_available: number; already_collected_today: boolean } }
+  | { name: 'referral_link_copied'; props: { code: string } }
+  | { name: 'referral_link_shared'; props: { code: string } }
+  | { name: 'referral_dividend_collected'; props: { coin_amount: number; friends_count: number } }
+  | { name: 'referral_refresh_tapped'; props: { friends_count: number } }
+
+  // ── Tools (Financial Tools hub) ────────────────────────────────────────
+  | { name: 'tool_opened'; props: { tool_key: string } }
+  | { name: 'tool_used'; props: { tool_key: string; threshold_seconds: number } }
+
+  // ── News Challenge ─────────────────────────────────────────────────────
+  | { name: 'news_challenge_viewed'; props: { question_count?: number; news_date?: string } }
+  | { name: 'news_challenge_question_answered'; props: { question_index: number; is_correct: boolean } }
+  | { name: 'news_challenge_completed'; props: { correct_count: number; total_questions: number; reward_xp?: number; reward_coins?: number } }
+  | { name: 'news_challenge_chat_opened'; props: { question_index: number } }
+  | { name: 'daily_challenge_completed'; props: { challenge_type: 'news' | 'dilemma' | 'investment' | string; correct_count?: number; total_questions?: number } }
 
   // ── Daily / Engagement ────────────────────────────────────────────────
   | { name: 'daily_active_day'; props: { date_il: string; streak: number; longest_streak: number } };

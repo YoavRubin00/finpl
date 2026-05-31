@@ -44,6 +44,7 @@ import { ChampionCard } from '../../components/ui/ChampionCard';
 import { MysteryBoxCard } from '../../components/ui/MysteryBoxCard';
 import { AvatarImage } from '../avatars/AvatarImage';
 import { getPyramidStatus } from '../../utils/progression';
+import { track } from '../../lib/analytics/events';
 import type { ShopCategory, ShopItem, GemBundle, CoinBundle } from './types';
 
 type AnyBundle = GemBundle | CoinBundle;
@@ -334,6 +335,20 @@ export function ShopScreen() {
     return () => clearTimeout(timer);
   }, []);
 
+  // Fire shop_screen_viewed once per mount — without this the Shop→Purchase
+  // funnel was missing its denominator (we had purchase_completed but no
+  // shop_screen_viewed to compute the conversion rate against).
+  const shopViewedFiredRef = useRef(false);
+  useEffect(() => {
+    if (shopViewedFiredRef.current) return;
+    shopViewedFiredRef.current = true;
+    track({ name: 'shop_screen_viewed', props: { coins, gems, is_pro: isPro } });
+    // Coins/gems/isPro are intentionally a one-shot snapshot at entry; we
+    // don't want this firing every time the user buys something and
+    // economy refreshes.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   // Gentle auto-scroll during walkthrough shop step
   useEffect(() => {
     if (walkthroughScreen !== 'shop') return;
@@ -363,13 +378,26 @@ export function ShopScreen() {
   };
 
   const handleBuyPress = useCallback((item: ShopItem) => {
+    const isGem = (item.gemCost ?? 0) > 0;
+    const canAfford = canAffordItem(item);
+    track({
+      name: 'shop_item_tapped',
+      props: {
+        item_id: item.id,
+        item_type: item.category,
+        category: item.category,
+        cost_value: isGem ? (item.gemCost ?? 0) : item.coinCost,
+        cost_currency: isGem ? 'gems' : 'coins',
+        can_afford: canAfford,
+      },
+    });
     if (isAvatarItem(item)) {
       // Use the full id (`avatar-saver`, etc.) — that's how the new avatar
       // system flows through ownedAvatars → profile.avatarId → AvatarImage's
       // SVG lookup. Stripping the prefix orphans the ownership check.
       if (ownedAvatars.includes(item.id)) { setAvatar(item.id); successHaptic(); return; }
     }
-    if (!canAffordItem(item)) return;
+    if (!canAfford) return;
     setPendingItem(item);
   }, [coins, gems, ownedAvatars, setAvatar]);
 
@@ -433,7 +461,12 @@ export function ShopScreen() {
   }, [pendingItem, coins, gems, spendCoinsHook, spendGemsHook, restoreAllHearts, addOwnedAvatar, setAvatar]);
 
   const handleGemExchange = useCallback((gemsNeeded: number, coinsReward: number) => {
-    if (gems < gemsNeeded) {
+    const canAfford = gems >= gemsNeeded;
+    track({
+      name: 'shop_gem_exchange_tapped',
+      props: { gems_cost: gemsNeeded, coins_reward: coinsReward, can_afford: canAfford },
+    });
+    if (!canAfford) {
       Alert.alert('אין מספיק ג\'מס', `צריך ${gemsNeeded} 💎 להמרה זו.`);
       return;
     }

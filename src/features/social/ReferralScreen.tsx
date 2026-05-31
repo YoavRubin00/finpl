@@ -38,6 +38,7 @@ import { EmptyNoFriends } from "../../components/svg/shop/EmptyStates";
 import { useReferralStore } from "./useReferralStore";
 import type { ReferredFriend } from "./referralTypes";
 import { GlobalWealthHeader } from "../../components/ui/GlobalWealthHeader";
+import { track } from "../../lib/analytics/events";
 import {
   REFERRAL_SIGNUP_BONUS_COINS,
   REFERRAL_DAILY_DIVIDEND_RATE,
@@ -96,37 +97,63 @@ export function ReferralScreen() {
   const inviteUrl = buildInviteUrl(referralCode);
 
   // On mount: register code with server (idempotent) + fetch latest state.
+  // Fire `referral_screen_viewed` exactly once per mount (not on every store
+  // re-render) so the funnel denominator stays clean. Sentinel ref avoids
+  // double-fire from React 18 strict mode dev-mode double-mount.
+  const viewedFiredRef = React.useRef(false);
   useEffect(() => {
     if (!userEmail) return;
     if (!isRegisteredOnServer) {
       registerCodeWithServer(userEmail).catch(() => { /* non-fatal */ });
     }
     refresh(userEmail).catch(() => { /* non-fatal */ });
-  }, [userEmail, isRegisteredOnServer, registerCodeWithServer, refresh]);
+    if (!viewedFiredRef.current) {
+      viewedFiredRef.current = true;
+      track({
+        name: 'referral_screen_viewed',
+        props: {
+          has_code: !!referralCode,
+          friends_count: referredFriends.length,
+          dividend_available: dividendAvailable,
+          already_collected_today: alreadyCollectedToday,
+        },
+      });
+    }
+  }, [userEmail, isRegisteredOnServer, registerCodeWithServer, refresh, referralCode, referredFriends.length, dividendAvailable, alreadyCollectedToday]);
 
   const handleCopy = useCallback(async () => {
     tapHaptic();
     // Copy the FULL invite URL — easier for friends to use than just the code.
     await Clipboard.setStringAsync(inviteUrl);
-  }, [inviteUrl]);
+    track({ name: 'referral_link_copied', props: { code: referralCode } });
+  }, [inviteUrl, referralCode]);
 
   const handleShare = useCallback(() => {
     tapHaptic();
     Share.share({ message: buildInviteShareMessage(referralCode) });
+    // Native Share doesn't reliably report success/cancel cross-platform —
+    // fire on tap so we have at least the "intent to share" signal.
+    track({ name: 'referral_link_shared', props: { code: referralCode } });
   }, [referralCode]);
 
   const handleCollectDividend = useCallback(async () => {
     if (!userEmail) return;
     if (alreadyCollectedToday || dividendAvailable <= 0) return;
     successHaptic();
+    const amount = dividendAvailable;
     await collectFromServer(userEmail);
-  }, [userEmail, alreadyCollectedToday, dividendAvailable, collectFromServer]);
+    track({
+      name: 'referral_dividend_collected',
+      props: { coin_amount: amount, friends_count: referredFriends.length },
+    });
+  }, [userEmail, alreadyCollectedToday, dividendAvailable, collectFromServer, referredFriends.length]);
 
   const handleRefresh = useCallback(() => {
     if (!userEmail) return;
     tapHaptic();
     refresh(userEmail).catch(() => {});
-  }, [userEmail, refresh]);
+    track({ name: 'referral_refresh_tapped', props: { friends_count: referredFriends.length } });
+  }, [userEmail, refresh, referredFriends.length]);
 
   return (
     <View style={styles.container}>

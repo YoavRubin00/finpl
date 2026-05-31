@@ -10,7 +10,7 @@ import { useEconomy, useAwardGems, useAwardCoins, useSpendGems } from '../econom
 import { ConfettiExplosion } from '../../components/ui/ConfettiExplosion';
 import { purchaseGemBundle } from '../../services/revenueCat';
 import { logPurchase } from '../../utils/fbEvents';
-import { captureEvent } from '../../lib/posthog';
+import { track } from '../../lib/analytics/events';
 import type { GemBundle, CoinBundle } from './types';
 
 type AnyBundle = GemBundle | CoinBundle;
@@ -46,9 +46,12 @@ export function IAPModal({ visible, bundle, onDismiss, onPurchaseSuccess }: IAPM
 
   useEffect(() => {
     if (visible && bundle) {
-      captureEvent('paywall_viewed', {
-        paywall: isCoinBundle(bundle) ? 'coin_bundle' : 'gem_bundle',
-        bundle_id: bundle.id,
+      track({
+        name: 'paywall_viewed',
+        props: {
+          paywall: isCoinBundle(bundle) ? 'coin_bundle' : 'gem_bundle',
+          bundle_id: bundle.id,
+        },
       });
     }
   }, [visible, bundle]);
@@ -57,22 +60,25 @@ export function IAPModal({ visible, bundle, onDismiss, onPurchaseSuccess }: IAPM
     if (!bundle) return;
     tapHaptic();
 
-    captureEvent('purchase_initiated', {
-      bundle_id: bundle.id,
-      bundle_type: isCoinBundle(bundle) ? 'coin_bundle' : 'gem_bundle',
-      price_ils: isCoinBundle(bundle) ? null : (bundle as GemBundle).priceILS,
+    track({
+      name: 'purchase_initiated',
+      props: {
+        bundle_id: bundle.id,
+        bundle_type: isCoinBundle(bundle) ? 'coin_bundle' : 'gem_bundle',
+        price_ils: isCoinBundle(bundle) ? null : (bundle as GemBundle).priceILS,
+      },
     });
 
     if (isCoinBundle(bundle)) {
       // Coin bundles cost gems, local transaction
       const currentGems = economyDataIAP?.gems ?? 0;
       if (currentGems < bundle.gemCost) {
-        captureEvent('purchase_failed', { bundle_id: bundle.id, reason: 'insufficient_gems' });
+        track({ name: 'purchase_failed', props: { bundle_id: bundle.id, bundle_type: 'coin_bundle', reason: 'insufficient_gems' } });
         return;
       }
       spendGems(bundle.gemCost);
       addCoins(bundle.coins);
-      captureEvent('purchase_completed', { bundle_id: bundle.id, bundle_type: 'coin_bundle', coins: bundle.coins });
+      track({ name: 'purchase_completed', props: { bundle_id: bundle.id, bundle_type: 'coin_bundle', coins: bundle.coins } });
     } else {
       // Gem bundles, real-money purchase via RevenueCat
       try {
@@ -91,12 +97,15 @@ export function IAPModal({ visible, bundle, onDismiss, onPurchaseSuccess }: IAPM
             fb_num_items: bundle.gems,
           });
         }
-        captureEvent('purchase_completed', {
-          bundle_id: bundle.id,
-          bundle_type: 'gem_bundle',
-          gems: bundle.gems,
-          price_ils: bundle.priceILS,
-          real_money: HAS_RC_KEY,
+        track({
+          name: 'purchase_completed',
+          props: {
+            bundle_id: bundle.id,
+            bundle_type: 'gem_bundle',
+            gems: bundle.gems,
+            price_ils: bundle.priceILS,
+            real_money: HAS_RC_KEY,
+          },
         });
       } catch (err: unknown) {
         const msg = err instanceof Error ? err.message : 'שגיאה לא צפויה';
@@ -105,10 +114,10 @@ export function IAPModal({ visible, bundle, onDismiss, onPurchaseSuccess }: IAPM
           (err instanceof Error && err.message.includes('PURCHASE_CANCELLED')) ||
           /cancel|user.{0,2}cancell/i.test(msg)
         ) {
-          captureEvent('purchase_cancelled', { bundle_id: bundle.id, bundle_type: 'gem_bundle' });
+          track({ name: 'purchase_cancelled', props: { bundle_id: bundle.id, bundle_type: 'gem_bundle' } });
           return;
         }
-        captureEvent('purchase_failed', { bundle_id: bundle.id, bundle_type: 'gem_bundle', error_message: msg });
+        track({ name: 'purchase_failed', props: { bundle_id: bundle.id, bundle_type: 'gem_bundle', error_message: msg } });
         Alert.alert('שגיאת רכישה', msg);
         return;
       }
@@ -127,9 +136,12 @@ export function IAPModal({ visible, bundle, onDismiss, onPurchaseSuccess }: IAPM
 
   const handleDismiss = useCallback(() => {
     if (bundle) {
-      captureEvent('paywall_dismissed', {
-        paywall: isCoinBundle(bundle) ? 'coin_bundle' : 'gem_bundle',
-        bundle_id: bundle.id,
+      track({
+        name: 'paywall_dismissed',
+        props: {
+          paywall: isCoinBundle(bundle) ? 'coin_bundle' : 'gem_bundle',
+          bundle_id: bundle.id,
+        },
       });
     }
     onDismiss();

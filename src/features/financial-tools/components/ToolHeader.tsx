@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useRef } from 'react';
 import { View, Text, Pressable, StyleSheet } from 'react-native';
 import { useRouter } from 'expo-router';
 import { ChevronRight, type LucideIcon } from 'lucide-react-native';
@@ -10,6 +10,7 @@ import type { ToolKey } from '../toolsRegistry';
 import { TOOL_TUTORIALS } from '../data/toolTutorials';
 import { ToolTutorialOverlay } from './ToolTutorialOverlay';
 import { useRecordToolUsage } from '../hooks/useRecordToolUsage';
+import { track } from '../../../lib/analytics/events';
 
 interface ToolHeaderProps {
   title: string;
@@ -38,6 +39,17 @@ export function ToolHeader({ title, subtitle, accentColor = STITCH.primary, Icon
   // day. The utility moment earns identity credit the same way a lesson
   // would. Also fires `tool_used` for NSM measurement. Idempotent.
   useRecordToolUsage(!!toolKey, toolKey);
+
+  // Fire `tool_opened` immediately on mount — captures every entry into a tool
+  // screen, not just engagement past the 10s threshold. The pair lets us
+  // compute open-to-use conversion (drop-off in first 10s) which `tool_used`
+  // alone can't show. Same-mount dedup avoids React Strict Mode double-fire.
+  const openedFiredRef = useRef(false);
+  useEffect(() => {
+    if (!toolKey || openedFiredRef.current) return;
+    openedFiredRef.current = true;
+    track({ name: 'tool_opened', props: { tool_key: toolKey } });
+  }, [toolKey]);
 
   // First-visit tutorial — only render the overlay when the user hasn't
   // seen it AND the tool has a tutorial defined. Reading the flag with a

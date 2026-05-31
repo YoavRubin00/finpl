@@ -577,11 +577,17 @@ function DifferenceBadge({ invested, compound }: { invested: number; compound: n
 
 interface CompoundSimScreenProps {
     onComplete?: () => void;
+    /** When true, holds back the sim's own narration MP3. Used by the tool
+     *  route so it can wait for the 3-step tutorial overlay to finish before
+     *  starting the sim's voice — otherwise two Captain Shark tracks play
+     *  on top of each other (user report 2026-05-31). Defaults to false so
+     *  in-lesson usage from SimulatorLoader continues to autoplay. */
+    suppressAudio?: boolean;
 }
 
 import { createAudioPlayer } from 'expo-audio';
 
-export function CompoundSimScreen({ onComplete }: CompoundSimScreenProps) {
+export function CompoundSimScreen({ onComplete, suppressAudio = false }: CompoundSimScreenProps) {
     const { state, updateYears, updateInitialAmount, updateMonthlyContribution, reset } =
         useCompoundSim(compoundConfig);
     const safeTimeout = useTimeoutCleanup();
@@ -591,14 +597,14 @@ export function CompoundSimScreen({ onComplete }: CompoundSimScreenProps) {
     const [isFinished, setIsFinished] = useState(false);
 
     useEffect(() => {
-        if (isFinished) return;
+        if (isFinished || suppressAudio) return;
         const player = createAudioPlayer({ uri: 'https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/audio/sims/sim-compound-interest.mp3' });
         player.play();
         return () => {
             player.pause();
             player.remove();
         };
-    }, [isFinished]);
+    }, [isFinished, suppressAudio]);
     const [rewardsGranted, setRewardsGranted] = useState(false);
     const [hasInteracted, setHasInteracted] = useState(false);
     // Auto-dismiss finger hint after 3 seconds
