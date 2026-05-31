@@ -1,9 +1,9 @@
 // api/sync/progress.ts
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { eq } from 'drizzle-orm';
-import { moduleProgress, userProfiles } from '../../src/db/schema';
-import { getDb, type Db } from '../_shared/db';
-import { withAuth, type AuthContext } from '../_shared/withAuth';
+import { moduleProgress } from '../../src/db/schema';
+import { getDb } from '../_shared/db';
+import { withAuth } from '../_shared/withAuth';
 
 interface ProgressUpsertBody {
   moduleId: string;
@@ -15,21 +15,11 @@ interface ProgressUpsertBody {
   xpEarned?: number;
 }
 
-async function resolveUserId(db: Db, ctx: AuthContext): Promise<string | null> {
-  if (ctx.userId) return ctx.userId;
-  const rows = await db
-    .select({ id: userProfiles.id })
-    .from(userProfiles)
-    .where(eq(userProfiles.authId, ctx.authId))
-    .limit(1);
-  return rows[0]?.id ?? null;
-}
-
 export default withAuth(async (req: VercelRequest, res: VercelResponse, ctx) => {
   const db = getDb();
-  const userId = await resolveUserId(db, ctx);
+  const userId = ctx.userId;
   if (!userId) {
-    return res.status(404).json({ error: 'User not found' });
+    return res.status(401).json({ error: 'Unauthenticated' });
   }
 
   if (req.method === 'GET') {
