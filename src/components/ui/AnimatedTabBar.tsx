@@ -55,13 +55,16 @@ const TABS: TabConfig[] = [
   { key: "chat",        label: "צ'אט",   Icon: MessageCircle },
 ];
 
-// Per-tab accent colors, unified blue palette
+// Unified accent color across all tabs. Active tab pops cyan; inactive tabs
+// stay a quiet slate gray so the bar doesn't shout. Default state = silent.
+const TAB_ACCENT = "#0891b2"; // cyan, only on the focused tab
+const TAB_INACTIVE = "#94a3b8"; // slate-400, quiet
 const TAB_COLORS: Record<string, string> = {
-  tools:       "#0ea5e9", // sky blue — Financial Tools hub
-  index:       "#0891b2", // cyan (learn)
-  investments: "#1d4ed8", // blue
-  friends:     "#6366f1", // indigo, distinct but harmonizes with blues
-  chat:        "#3b82f6", // blue
+  tools:       TAB_ACCENT,
+  index:       TAB_ACCENT,
+  investments: TAB_ACCENT,
+  friends:     TAB_ACCENT,
+  chat:        TAB_ACCENT,
 };
 
 const TAB_BAR_BG = "#fafafa";
@@ -187,8 +190,8 @@ function TabItem({ config, focused, onPress, onLongPress, walkthroughGlow, walkt
               fx="50%"
               fy="50%"
             >
-              <Stop offset="0%" stopColor={activeColor} stopOpacity="0.55" />
-              <Stop offset="40%" stopColor={activeColor} stopOpacity="0.25" />
+              <Stop offset="0%" stopColor={activeColor} stopOpacity="0.25" />
+              <Stop offset="40%" stopColor={activeColor} stopOpacity="0.1" />
               <Stop offset="100%" stopColor={activeColor} stopOpacity="0" />
             </RadialGradient>
           </Defs>
@@ -205,7 +208,7 @@ function TabItem({ config, focused, onPress, onLongPress, walkthroughGlow, walkt
         ]}>
           <Icon
             size={focused ? ICON_SIZE_FOCUSED : ICON_SIZE_DEFAULT}
-            color={walkthroughLocked ? "#cbd5e1" : walkthroughGlow ? "#0ea5e9" : (focused ? activeColor : activeColor + "90")}
+            color={walkthroughLocked ? "#cbd5e1" : walkthroughGlow ? "#0ea5e9" : (focused ? activeColor : TAB_INACTIVE)}
             strokeWidth={focused ? 2.8 : 1.8}
           />
         </View>
@@ -215,7 +218,7 @@ function TabItem({ config, focused, onPress, onLongPress, walkthroughGlow, walkt
       <Text
         style={[
           styles.tabLabel,
-          { color: walkthroughLocked ? "#cbd5e1" : walkthroughGlow ? "#0ea5e9" : (focused ? activeColor : activeColor + "90") },
+          { color: walkthroughLocked ? "#cbd5e1" : walkthroughGlow ? "#0ea5e9" : (focused ? activeColor : TAB_INACTIVE) },
           focused && styles.tabLabelFocused,
           walkthroughLocked && { opacity: 0.2 },
         ]}
