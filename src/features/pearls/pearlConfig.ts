@@ -25,6 +25,7 @@ import { chapter3Data } from '../chapter-3-content/chapter3Data';
 import { chapter4Data } from '../chapter-4-content/chapter4Data';
 import { chapter5Data } from '../chapter-5-content/chapter5Data';
 import type { ProfileQuestionKind } from '../onboarding/InModuleProfileQuestion';
+import { PEARL_CONTENT_MAP, type ScenarioPool } from './pearlContentMap';
 
 const ALL_CHAPTERS = [
   chapter0Data,
@@ -75,6 +76,16 @@ export interface PearlContent {
   profileQuestion?: ProfileQuestionKind;
   /** Chapter id for analytics / display. */
   chapterId: string;
+  /** Per-pearl unique-bundle fields (mod-0-2 onward — manual mapping in
+   *  pearlContentMap.ts). When ANY of these is set the PearlSheet renders
+   *  the unique-bundle flow (Video → Concept → Swipe → Scenario → Game).
+   *  When ALL are absent (mod-0-1 + any unmapped pearl) the sheet falls
+   *  back to the legacy daily-pick flow. */
+  videoId?: string;
+  conceptId?: string;
+  swipeIds?: readonly string[];
+  scenarioId?: string;
+  scenarioPool?: ScenarioPool;
 }
 
 // Chapter 0 modules that ASK a profile question on Continue. If skipped,
@@ -110,6 +121,12 @@ function buildConfig(): Map<string, PearlContent> {
       // and we don't want an empty intermezzo node on the path.
       if (!gameKey) continue;
 
+      // Merge the per-pearl unique-bundle fields when a mapping exists.
+      // Absent mapping (e.g., mod-0-1, or any pearl we haven't curated yet)
+      // → fields stay undefined → PearlSheet renders the legacy daily-pick
+      // flow instead of the unique-bundle flow.
+      const bundle = PEARL_CONTENT_MAP[current.id];
+
       map.set(current.id, {
         afterModuleId: current.id,
         nextModuleId: next.id,
@@ -117,6 +134,11 @@ function buildConfig(): Map<string, PearlContent> {
         macroEventId: current.interModuleMacroEventId,
         profileQuestion: PROFILE_QUESTION_BY_SOURCE_MODULE[current.id],
         chapterId: chapter.id,
+        videoId: bundle?.videoId,
+        conceptId: bundle?.conceptId,
+        swipeIds: bundle?.swipeIds,
+        scenarioId: bundle?.scenarioId,
+        scenarioPool: bundle?.scenarioPool,
       });
     }
   }

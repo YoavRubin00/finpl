@@ -3,25 +3,36 @@ import { View, Text, Pressable, StyleSheet } from 'react-native';
 import Animated, { FadeIn } from 'react-native-reanimated';
 import LottieView from 'lottie-react-native';
 
-import { DAILY_CONCEPTS } from '../../daily-concepts/dailyConceptsData';
+import { DAILY_CONCEPTS, getConceptById } from '../../daily-concepts/dailyConceptsData';
 import { tapHaptic } from '../../../utils/haptics';
 import { PEARL_STAGE_COLORS, pearlStageStyles } from './sharedStageStyles';
 
 interface PearlDailyConceptStageProps {
   isActive: boolean;
   onContinue: () => void;
+  /** Per-pearl override. When provided, the stage shows this specific concept
+   *  instead of the day-rotation fallback. Used by pearls that bind to a
+   *  topic (e.g., mod-1-1 → concept-1 ריבית דריבית). */
+  conceptId?: string;
 }
 
 /** Deterministic per-day pick so every user globally sees the same concept
  *  on the same calendar day, and a different one every day. Mirrors the
- *  legacy FinFeedScreen `getDailyConcept`. */
+ *  legacy FinFeedScreen `getDailyConcept`. Used only as a fallback when no
+ *  conceptId is provided (pearl-after-mod-0-1 + any unmapped pearl). */
 function getDailyConcept() {
   const dayIndex = Math.floor(Date.now() / 86400000);
   return DAILY_CONCEPTS[dayIndex % DAILY_CONCEPTS.length];
 }
 
-export function PearlDailyConceptStage({ isActive, onContinue }: PearlDailyConceptStageProps): React.ReactElement {
-  const concept = useMemo(() => getDailyConcept(), []);
+export function PearlDailyConceptStage({ isActive, onContinue, conceptId }: PearlDailyConceptStageProps): React.ReactElement {
+  const concept = useMemo(() => {
+    if (conceptId) {
+      const specific = getConceptById(conceptId);
+      if (specific) return specific;
+    }
+    return getDailyConcept();
+  }, [conceptId]);
 
   return (
     <View style={pearlStageStyles.root}>

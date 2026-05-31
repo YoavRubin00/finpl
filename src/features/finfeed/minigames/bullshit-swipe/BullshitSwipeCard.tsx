@@ -31,7 +31,7 @@ import { useDailyLogStore } from '../../../daily-summary/useDailyLogStore';
 import { CHALLENGE_COIN_REWARD, CHALLENGE_XP_REWARD, MAX_DAILY_PLAYS } from '../../../daily-challenges/daily-challenge-types';
 
 import { AD_TEMPLATES } from './adTemplates';
-import { getTodayBullshitAds } from './bullshitAdsData';
+import { getTodayBullshitAds, getBullshitAdsByIds } from './bullshitAdsData';
 import type { BullshitAd, BullshitRoundResult } from './types';
 import { GlossaryInlineToggle } from '../shared/GlossaryInlineToggle';
 import { FeedStartButton } from '../shared/FeedStartButton';
@@ -54,6 +54,11 @@ interface Props {
   /** When set, the done summary renders a "המשך" button that calls this.
    *  Inter-module flow uses it so users don't have to hunt for the ✕. */
   onContinue?: () => void;
+  /** Per-pearl override: explicit list of ad ids (in order) to play instead
+   *  of the daily seeded mix. Used by PearlSwipeStage to pin a topic-matched
+   *  mini-deck (1-3 cards) to each pearl. Unknown ids are dropped; empty
+   *  result falls back to the default daily mix. */
+  adIds?: readonly string[];
 }
 
 function AdCardFront({ ad }: { ad: BullshitAd }) {
@@ -361,12 +366,22 @@ export const BullshitSwipeCard = React.memo(function BullshitSwipeCard({
   bypassDailyGate = false,
   onFinish,
   onContinue,
+  adIds,
 }: Props) {
   const playBullshitSwipe = useDailyChallengesStore((s) => s.playBullshitSwipe);
   const hasPlayedToday = useDailyChallengesStore((s) => s.hasBullshitSwipePlayedToday());
   const playsToday = useDailyChallengesStore((s) => s.getBullshitSwipePlaysToday());
 
-  const [adsThisRound] = useState<BullshitAd[]>(() => getTodayBullshitAds());
+  // Pearl-driven explicit deck (1-3 ads) takes precedence over the daily mix.
+  // Falls back to the daily mix when the override list resolves to zero cards
+  // (e.g., id typo) so the game never renders empty.
+  const [adsThisRound] = useState<BullshitAd[]>(() => {
+    if (adIds && adIds.length > 0) {
+      const picked = getBullshitAdsByIds(adIds);
+      if (picked.length > 0) return picked;
+    }
+    return getTodayBullshitAds();
+  });
   const [currentIndex, setCurrentIndex] = useState(0);
   const [results, setResults] = useState<BullshitRoundResult[]>([]);
   const [feedback, setFeedback] = useState<BullshitRoundResult | null>(null);

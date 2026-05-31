@@ -1015,3 +1015,9 @@ export function getTodayDilemma(): DilemmaScenario {
   const dayIndex = Math.floor(Date.now() / 86400000) % DILEMMA_SCENARIOS.length;
   return DILEMMA_SCENARIOS[dayIndex];
 }
+
+/** Look up a specific dilemma by id. Returns null if unknown. Used by the
+ *  Pearl flow to bind a topic-matched dilemma to each pearl. */
+export function getDilemmaById(id: string): DilemmaScenario | null {
+  return DILEMMA_SCENARIOS.find((d) => d.id === id) ?? null;
+}

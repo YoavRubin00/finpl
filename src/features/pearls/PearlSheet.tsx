@@ -52,9 +52,13 @@ import { PearlProfileQuestionStage } from './stages/PearlProfileQuestionStage';
 import { PearlDailyConceptStage } from './stages/PearlDailyConceptStage';
 import { PearlDailyQuoteStage } from './stages/PearlDailyQuoteStage';
 import { PearlCaptainMailStage } from './stages/PearlCaptainMailStage';
+import { PearlVideoStage } from './stages/PearlVideoStage';
+import { PearlSwipeStage } from './stages/PearlSwipeStage';
+import { PearlScenarioStage } from './stages/PearlScenarioStage';
 import { useEconomyUIStore } from '../economy/useEconomyUIStore';
 import { useFunStore } from '../../stores/useFunStore';
 import { markDailyActivityCompleted } from '../economy/useStreak';
+import { LIFESTYLE_VIDEOS } from '../inter-module-break/lifestyleVideoConfig';
 
 const SCREEN_W = Dimensions.get('window').width;
 
@@ -70,7 +74,14 @@ interface PearlSheetProps {
   onClose: () => void;
 }
 
-type StageKind = 'profile-question' | 'daily-pick' | 'game';
+type StageKind =
+  | 'profile-question'
+  | 'daily-pick'    // legacy single rotating concept (used when no unique bundle is mapped)
+  | 'video'         // unique-bundle: Lifestyle video matching the pearl's topic
+  | 'concept'       // unique-bundle: topic-matched concept (not day-rotation)
+  | 'swipe'         // unique-bundle: 1-3 bullshit-swipe ads
+  | 'scenario'      // unique-bundle: a specific Dilemma or Investment scenario
+  | 'game';         // mini-game (always last)
 
 /** Which daily-content card the daily-pick stage should render today. The
  *  rotation is deterministic per UTC day so every user sees the same kind on
@@ -172,7 +183,24 @@ export function PearlSheet({ visible, pearl, onClose }: PearlSheetProps): React.
       if (pearl.profileQuestion && !profileQuestionSet(pearl.profileQuestion)) {
         snapshot.push({ kind: 'profile-question', index: idx++ });
       }
-      snapshot.push({ kind: 'daily-pick', index: idx++ });
+
+      // Two flows:
+      //   1. UNIQUE-BUNDLE — pearl has at least one mapped per-pearl content
+      //      field (mod-0-2 and onward, per pearlContentMap). Render the
+      //      curated Video → Concept → Swipe → Scenario sequence, only the
+      //      stages that have an id.
+      //   2. LEGACY — pearl has none of those fields (mod-0-1 + any
+      //      unmapped pearl). Fall back to a single daily-pick stage so the
+      //      pearl still has a beat of content before the game.
+      const hasUniqueBundle = !!(pearl.videoId || pearl.conceptId || pearl.swipeIds?.length || pearl.scenarioId);
+      if (hasUniqueBundle) {
+        if (pearl.videoId) snapshot.push({ kind: 'video', index: idx++ });
+        if (pearl.conceptId) snapshot.push({ kind: 'concept', index: idx++ });
+        if (pearl.swipeIds?.length) snapshot.push({ kind: 'swipe', index: idx++ });
+        if (pearl.scenarioId && pearl.scenarioPool) snapshot.push({ kind: 'scenario', index: idx++ });
+      } else {
+        snapshot.push({ kind: 'daily-pick', index: idx++ });
+      }
       snapshot.push({ kind: 'game', index: idx++ });
       setStages(snapshot);
       setActivePage(0);
@@ -185,6 +213,7 @@ export function PearlSheet({ visible, pearl, onClose }: PearlSheetProps): React.
           game_key: pearl.gameKey,
           stages_count: snapshot.length,
           has_profile_question: !!pearl.profileQuestion,
+          has_unique_bundle: hasUniqueBundle,
           is_pro: isPro,
         });
       } catch { /* non-fatal */ }
@@ -239,12 +268,18 @@ export function PearlSheet({ visible, pearl, onClose }: PearlSheetProps): React.
       });
     } catch { /* non-fatal */ }
 
-    // Streak-tick fires once the user clears the daily-pick stage (engaged
-    // with content), not just at final completion. Without this, a user who
-    // drops mid-game still made the pearl their daily activity but loses
-    // the streak. The helper is idempotent per-day so the final-stage
-    // completion below safely fires it again.
-    if (completedStage?.kind === 'daily-pick') {
+    // Streak-tick fires once the user clears their FIRST real content stage
+    // (engaged with content), not just at final completion. Without this, a
+    // user who drops mid-game still made the pearl their daily activity but
+    // loses the streak. The helper is idempotent per-day so the final-stage
+    // completion below safely fires it again. Both legacy ('daily-pick') and
+    // unique-bundle ('video' as the first content stage) trigger the tick.
+    if (
+      completedStage?.kind === 'daily-pick' ||
+      completedStage?.kind === 'video' ||
+      // Bundle without a video starts with concept — still counts as content.
+      (completedStage?.kind === 'concept' && !stages.some((s) => s.kind === 'video'))
+    ) {
       markDailyActivityCompleted();
     }
 
@@ -314,6 +349,60 @@ export function PearlSheet({ visible, pearl, onClose }: PearlSheetProps): React.
           </View>
         );
       }
+
+      // ─ Unique-bundle stages (mod-0-2 onward) ─
+      if (item.kind === 'video' && pearl.videoId) {
+        // Resolve videoId → LifestyleVideoSpec. If id is bad (e.g., typo in
+        // the map) we skip the stage to keep the pearl from rendering a
+        // black frame.
+        const video = LIFESTYLE_VIDEOS.find((v) => v.id === pearl.videoId);
+        if (!video) {
+          // Auto-advance silently so the pager doesn't trap the user.
+          handleStageDone();
+          return <View style={containerStyle} />;
+        }
+        return (
+          <View style={containerStyle}>
+            <PearlVideoStage isActive={isActive} video={video} onContinue={handleStageDone} />
+          </View>
+        );
+      }
+      if (item.kind === 'concept') {
+        return (
+          <View style={containerStyle}>
+            <PearlDailyConceptStage
+              isActive={isActive}
+              conceptId={pearl.conceptId}
+              onContinue={handleStageDone}
+            />
+          </View>
+        );
+      }
+      if (item.kind === 'swipe' && pearl.swipeIds?.length) {
+        return (
+          <View style={containerStyle}>
+            <PearlSwipeStage
+              isActive={isActive}
+              swipeIds={pearl.swipeIds}
+              onContinue={handleStageDone}
+            />
+          </View>
+        );
+      }
+      if (item.kind === 'scenario' && pearl.scenarioId && pearl.scenarioPool) {
+        return (
+          <View style={containerStyle}>
+            <PearlScenarioStage
+              isActive={isActive}
+              scenarioId={pearl.scenarioId}
+              scenarioPool={pearl.scenarioPool}
+              onContinue={handleStageDone}
+            />
+          </View>
+        );
+      }
+
+      // ─ Legacy single daily-pick (used only when no unique bundle exists) ─
       if (item.kind === 'daily-pick') {
         // Render today's chosen daily-content sub-card. The rotation already
         // gates mail to once-per-day; concept/quote rotate as fallback.
@@ -352,7 +441,7 @@ export function PearlSheet({ visible, pearl, onClose }: PearlSheetProps): React.
       }
       return <View style={containerStyle} />;
     },
-    [pearl, dailyPickKind, activePage, handleStageDone],
+    [pearl, dailyPickKind, activePage, handleStageDone, handleDismiss],
   );
 
   if (!visible || !pearl) return null;

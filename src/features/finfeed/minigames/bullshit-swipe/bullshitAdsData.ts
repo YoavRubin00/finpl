@@ -190,3 +190,16 @@ export function getTodayBullshitAds(): BullshitAd[] {
   for (let i = 0; i < halfLegit; i++) mixed.push(shuffledLegit[i % shuffledLegit.length]);
   return seededShuffle(mixed, seed + 13);
 }
+
+/** Resolve an ordered list of specific ad ids → BullshitAd[]. Used by the
+ *  Pearl flow to render a topic-matched mini-deck per pearl (1-3 cards).
+ *  Unknown ids are silently dropped. */
+export function getBullshitAdsByIds(ids: readonly string[]): BullshitAd[] {
+  const byId = new Map<string, BullshitAd>(BULLSHIT_ADS.map((a) => [a.id, a]));
+  const out: BullshitAd[] = [];
+  for (const id of ids) {
+    const ad = byId.get(id);
+    if (ad) out.push(ad);
+  }
+  return out;
+}

@@ -394,3 +394,9 @@ export const DAILY_CONCEPTS: DailyConcept[] = [
     chapterId: 2,
   },
 ];
+
+/** Look up a specific concept by id. Used by Pearl flow to bind a
+ *  topic-matched concept to each pearl (e.g., mod-1-1 → concept-1 ריבית דריבית). */
+export function getConceptById(id: string): DailyConcept | null {
+  return DAILY_CONCEPTS.find((c) => c.id === id) ?? null;
+}

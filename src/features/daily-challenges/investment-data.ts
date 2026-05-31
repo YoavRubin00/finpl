@@ -608,3 +608,9 @@ export function getTodayInvestment(): InvestmentScenario {
   const dayIndex = Math.floor(Date.now() / 86400000 + 5) % INVESTMENT_SCENARIOS.length;
   return INVESTMENT_SCENARIOS[dayIndex];
 }
+
+/** Look up a specific scenario by id. Used by the Pearl flow to bind a
+ *  topic-matched scenario to each pearl. */
+export function getInvestmentById(id: string): InvestmentScenario | null {
+  return INVESTMENT_SCENARIOS.find((s) => s.id === id) ?? null;
+}

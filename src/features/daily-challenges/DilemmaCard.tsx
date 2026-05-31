@@ -20,7 +20,7 @@ import { FINN_STANDARD } from '../retention-loops/finnMascotConfig';
 import { GoldCoinIcon } from '../../components/ui/GoldCoinIcon';
 import { useDailyChallengesStore } from './use-daily-challenges-store';
 import { useDailyLogStore } from '../daily-summary/useDailyLogStore';
-import { getTodayDilemma } from './dilemma-data';
+import { getTodayDilemma, getDilemmaById } from './dilemma-data';
 import { MAX_DILEMMA_DAILY, CHALLENGE_XP_REWARD, CHALLENGE_COIN_REWARD } from './daily-challenge-types';
 import type { DilemmaChoice } from './daily-challenge-types';
 import { FeedGameShell } from '../finfeed/minigames/shared/FeedGameShell';
@@ -31,9 +31,13 @@ interface Props {
   isActive: boolean;
   /** Inter-module overlay sets this to render a "המשך" button on the result. */
   onContinue?: () => void;
+  /** Per-pearl override. When set, this specific dilemma is shown instead of
+   *  the day-rotation default. Falls back to today's dilemma if the id is
+   *  unknown. */
+  dilemmaId?: string;
 }
 
-export const DilemmaCard = React.memo(function DilemmaCard({ isActive, onContinue }: Props) {
+export const DilemmaCard = React.memo(function DilemmaCard({ isActive, onContinue, dilemmaId }: Props) {
   const router = useRouter();
   const hasDilemmaAnsweredToday = useDailyChallengesStore((s) => s.hasDilemmaAnsweredToday);
   const getDilemmaPlaysToday = useDailyChallengesStore((s) => s.getDilemmaPlaysToday);
@@ -48,7 +52,7 @@ export const DilemmaCard = React.memo(function DilemmaCard({ isActive, onContinu
   const [showFlyingCoins, setShowFlyingCoins] = useState(false);
   const [showCelebration, setShowCelebration] = useState(false);
 
-  const dilemma = getTodayDilemma();
+  const dilemma = (dilemmaId ? getDilemmaById(dilemmaId) : null) ?? getTodayDilemma();
 
   // Pulsing blue glow for unanswered state, must be before any early return
   const glow = useSharedValue(0.3);

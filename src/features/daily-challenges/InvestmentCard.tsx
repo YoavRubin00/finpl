@@ -17,7 +17,7 @@ import { ConfettiExplosion } from '../../components/ui/ConfettiExplosion';
 import { FlyingRewards } from '../../components/ui/FlyingRewards';
 import { useDailyChallengesStore } from './use-daily-challenges-store';
 import { useDailyLogStore } from '../daily-summary/useDailyLogStore';
-import { getTodayInvestment } from './investment-data';
+import { getTodayInvestment, getInvestmentById } from './investment-data';
 import { MAX_DAILY_PLAYS, CHALLENGE_XP_REWARD, CHALLENGE_COIN_REWARD } from './daily-challenge-types';
 import type { InvestmentOption } from './daily-challenge-types';
 
@@ -28,9 +28,12 @@ interface Props {
   /** Optional callback wired by the inter-module overlay; when set, a
    *  "המשך" button appears on the result so users don't have to find ✕. */
   onContinue?: () => void;
+  /** Per-pearl override. When set, this specific scenario is rendered
+   *  instead of today's rotation. Falls back to today's if id is unknown. */
+  investmentId?: string;
 }
 
-export const InvestmentCard = React.memo(function InvestmentCard({ isActive, onContinue }: Props) {
+export const InvestmentCard = React.memo(function InvestmentCard({ isActive, onContinue, investmentId }: Props) {
   const hasInvestmentAnsweredToday = useDailyChallengesStore((s) => s.hasInvestmentAnsweredToday);
   const getInvestmentPlaysToday = useDailyChallengesStore((s) => s.getInvestmentPlaysToday);
   const answerInvestment = useDailyChallengesStore((s) => s.answerInvestment);
@@ -43,7 +46,7 @@ export const InvestmentCard = React.memo(function InvestmentCard({ isActive, onC
   const [showConfetti, setShowConfetti] = useState(false);
   const [showFlyingCoins, setShowFlyingCoins] = useState(false);
 
-  const scenario = getTodayInvestment();
+  const scenario = (investmentId ? getInvestmentById(investmentId) : null) ?? getTodayInvestment();
   const budget = scenario.virtualBudget;
 
   // Pulsing glow
