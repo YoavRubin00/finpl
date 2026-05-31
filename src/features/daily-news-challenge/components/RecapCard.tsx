@@ -15,10 +15,12 @@ import Animated, {
   withSpring,
 } from 'react-native-reanimated';
 import { Image as ExpoImage } from 'expo-image';
-import { Check, X as XIcon, Flame, Coins, Sparkles } from 'lucide-react-native';
+import { Check, X as XIcon, Sparkles } from 'lucide-react-native';
 
 import { tapHaptic, successHaptic } from '../../../utils/haptics';
 import { FINN_DANCING, FINN_HAPPY } from '../../retention-loops/finnMascotConfig';
+import { GoldCoinIcon } from '../../../components/ui/GoldCoinIcon';
+import { STITCH } from '../../../constants/theme';
 import { previewRegularReward, previewProReward, type ChallengeRewardSummary } from '../useDailyNewsChallengeStore';
 import type { ChallengeItem } from '../types';
 
@@ -134,25 +136,25 @@ export function RecapCard({
           })}
         </Animated.View>
 
-        {/* Rewards stats */}
+        {/* Rewards stats — matches GlobalWealthHeader.resourcePill style so
+            the recap reads as a continuation of the app's main wealth strip
+            rather than its own bespoke design. Daily streak intentionally
+            omitted here (user spec 2026-06-01: "לא צריך להיות שם 1 יום
+            ברצף"). The "מחזיק/ה רצף של X ימים" copy below is kept — it's
+            narrative, not a pill. */}
         <Animated.View entering={FadeIn.delay(220).duration(320)} style={styles.statsRow}>
           <View style={styles.statPill}>
-            <Sparkles size={14} color="#0ea5e9" strokeWidth={2.6} />
+            <View style={styles.statIconFrame}>
+              <Sparkles size={16} color={STITCH.primary} strokeWidth={2.6} />
+            </View>
             <Text style={styles.statValue} allowFontScaling={false}>{`+${reward.xp}`}</Text>
-            <Text style={styles.statLabel} allowFontScaling={false}>XP</Text>
           </View>
           <View style={styles.statPill}>
-            <Coins size={14} color="#d97706" strokeWidth={2.6} />
-            <Text style={styles.statValue} allowFontScaling={false}>{`+${reward.coins}`}</Text>
-            <Text style={styles.statLabel} allowFontScaling={false}>מטבעות</Text>
-          </View>
-          {streak > 0 && (
-            <View style={[styles.statPill, styles.streakPill]}>
-              <Flame size={14} color="#f97316" strokeWidth={2.6} />
-              <Text style={styles.statValue} allowFontScaling={false}>{streak}</Text>
-              <Text style={styles.statLabel} allowFontScaling={false}>{`${streak === 1 ? 'יום' : 'ימים'} ברצף`}</Text>
+            <View style={styles.statIconFrame}>
+              <GoldCoinIcon size={18} />
             </View>
-          )}
+            <Text style={styles.statValue} allowFontScaling={false}>{`+${reward.coins}`}</Text>
+          </View>
         </Animated.View>
 
         {/* Perfect-day bonus card */}
@@ -289,31 +291,35 @@ const styles = StyleSheet.create({
     gap: 8,
     justifyContent: 'flex-start',
   },
+  // Mirrors GlobalWealthHeader.resourcePill so the recap's reward chips
+  // read as the same component family as the main wealth strip.
   statPill: {
     flexDirection: 'row-reverse',
     alignItems: 'center',
-    gap: 6,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 999,
-    backgroundColor: '#f0f9ff',
-    borderWidth: 1,
-    borderColor: '#bae6fd',
+    gap: 4,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 22,
+    backgroundColor: STITCH.surfaceLow,
+    borderWidth: 1.5,
+    borderColor: STITCH.ghostBorder,
+    shadowColor: '#000',
+    shadowOpacity: 0.08,
+    shadowRadius: 4,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 2,
   },
-  streakPill: {
-    backgroundColor: '#fff7ed',
-    borderColor: '#fed7aa',
+  statIconFrame: {
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   statValue: {
     fontSize: 14,
     fontWeight: '900',
-    color: '#0f172a',
-  },
-  statLabel: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: '#475569',
-    writingDirection: 'rtl' as const,
+    color: STITCH.onSurface,
   },
   perfectCard: {
     flexDirection: 'row-reverse',
