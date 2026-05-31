@@ -102,10 +102,13 @@ export function FinnSpeakingAvatar({
     }
     // loading / playing / paused / idle → keep talking layer visible
     setPhase('talking');
-    // Freeze the webp on pause, resume on play
-    if (audioState === 'paused' || audioState === 'loading') {
+    // Freeze the webp ONLY on pause (matches ModuleIntroShort). 'loading'
+    // should let the mouth-loop play as a "pretend to talk" gesture while the
+    // audio buffers — otherwise the webp is frozen on its first frame during
+    // any pre-start latency, defeating the point of the talking variant.
+    if (audioState === 'paused') {
       talkingImgRef.current?.stopAnimating?.();
-    } else if (audioState === 'playing') {
+    } else if (audioState === 'playing' || audioState === 'loading') {
       talkingImgRef.current?.startAnimating?.();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
