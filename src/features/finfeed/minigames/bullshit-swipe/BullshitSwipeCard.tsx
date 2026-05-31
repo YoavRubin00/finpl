@@ -505,7 +505,12 @@ export const BullshitSwipeCard = React.memo(function BullshitSwipeCard({
             <Text style={[styles.headerTitle, RTL]}>סוויפ הבולשיט</Text>
             <Text style={[styles.headerSub, RTL]}>
               {gameState === 'playing'
-                ? `כרטיס ${Math.min(currentIndex + 1, adsThisRound.length)}/${adsThisRound.length} · ${remainingPlays}/${MAX_DAILY_PLAYS} סבבים`
+                ? bypassDailyGate
+                  // Pearl / lesson-interstitial mode — the "X/Y סבבים"
+                  // daily-quota tail is irrelevant here (we bypass that
+                  // limit). Show only the card progress within this deck.
+                  ? `כרטיס ${Math.min(currentIndex + 1, adsThisRound.length)}/${adsThisRound.length}`
+                  : `כרטיס ${Math.min(currentIndex + 1, adsThisRound.length)}/${adsThisRound.length} · ${remainingPlays}/${MAX_DAILY_PLAYS} סבבים`
                 : `סיימת! ${score}/${adsThisRound.length} נכונות`}
             </Text>
           </View>
