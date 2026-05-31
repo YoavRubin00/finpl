@@ -569,19 +569,34 @@ export const BullshitSwipeCard = React.memo(function BullshitSwipeCard({
           </Animated.View>
         )}
 
-        {/* Swipe hints footer */}
+        {/* Swipe hints footer — ALSO tap-to-vote so the card works on hosts
+            where the Pan gesture races with a parent ScrollView (Pearl on
+            Android, user-reported 2026-05-31). Same UX pattern as
+            SwipeGameCard. */}
         {gameState === 'playing' && !feedback && (
           <View style={styles.hintRow}>
-            <View style={styles.hintCol}>
+            <Pressable
+              onPress={() => handleSwipe(true)}
+              style={styles.hintCol}
+              accessibilityRole="button"
+              accessibilityLabel="בחר בולשיט"
+              hitSlop={10}
+            >
               <View accessible={false}><LottieIcon source={LOTTIE_ERROR} size={22} /></View>
               <Text style={styles.hintArrow}>←</Text>
               <Text style={[styles.hintLabelSide, { color: '#dc2626' }]}>בולשיט</Text>
-            </View>
-            <View style={styles.hintCol}>
+            </Pressable>
+            <Pressable
+              onPress={() => handleSwipe(false)}
+              style={styles.hintCol}
+              accessibilityRole="button"
+              accessibilityLabel="בחר לגיטימי"
+              hitSlop={10}
+            >
               <Text style={[styles.hintLabelSide, { color: '#16a34a' }]}>לגיטימי</Text>
               <Text style={styles.hintArrow}>→</Text>
               <View accessible={false}><LottieIcon source={LOTTIE_APPROVED} size={22} /></View>
-            </View>
+            </Pressable>
           </View>
         )}
       </View>

@@ -29,7 +29,8 @@ import {
 import { useSafeAreaInsets, SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import Animated, { FadeIn } from 'react-native-reanimated';
-import { X } from 'lucide-react-native';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import { ChevronRight } from 'lucide-react-native';
 
 import { STITCH } from '../../constants/theme';
 import { tapHaptic } from '../../utils/haptics';
@@ -205,25 +206,34 @@ export function PearlSheet({ visible, pearl, onClose }: PearlSheetProps): React.
       //   2. LEGACY — pearl has none of those fields (mod-0-1 + any
       //      unmapped pearl). Fall back to a single daily-pick stage so the
       //      pearl still has a beat of content before the game.
-      const hasUniqueBundle = !!(pearl.videoId || pearl.conceptId || pearl.swipeIds?.length || pearl.scenarioId);
+      const hasUniqueBundle = !!(pearl.videoId || pearl.conceptId || pearl.swipeIds?.length || pearl.swipeKind || pearl.scenarioId);
       if (hasUniqueBundle) {
-        // Pearl flow: video → concept → swipe → scenario → game → CTA.
-        // CTA was moved to the very last stage (2026-05-31) so the user
-        // experiences the full educational content + game climax first, and
-        // the referral/trading nudge only appears after they've already
-        // gotten value. The CTA still uses the restored finfeed cards
-        // (FeedReferralNudgeCard / FeedTradingNudgeCard) wired with
-        // onContinue=המשך so it remains skippable and advances to the next
-        // module via handleStageDone's final-stage branch.
-        if (pearl.videoId) snapshot.push({ kind: 'video', index: idx++ });
+        // Pearl flow: concept → video → swipe → scenario → game → CTA.
+        //
+        // Concept is FIRST because it's text-only (zero load latency) — the
+        // user engages immediately while the video warmup effect below
+        // primes the Vercel Blob CDN cache. By the time the user advances
+        // past concept the video plays almost instantly.
+        //
+        // Video must NEVER be the first stage (user spec 2026-06-01) — the
+        // warmup needs prior dwell time, and a black-frame opener is bad
+        // UX. Enforced by gating video on `conceptId` being present.
+        //
+        // Swipe stage renders when EITHER `swipeKind` (myth/bull-bear/
+        // bullshit) OR `swipeIds.length` (legacy bullshit-only bundles) is
+        // set. Inside PearlSwipeStage a switch dispatches to the right
+        // deck.
+        //
+        // CTA stays last (moved there 2026-05-31): the user gets all the
+        // educational content + game climax first, then the referral/
+        // trading nudge from a position of accumulated value. Wired with
+        // onContinue=המשך, advancing to next module via the final-stage
+        // branch of handleStageDone.
         if (pearl.conceptId) snapshot.push({ kind: 'concept', index: idx++ });
-        if (pearl.swipeIds?.length) snapshot.push({ kind: 'swipe', index: idx++ });
+        if (pearl.videoId && pearl.conceptId) snapshot.push({ kind: 'video', index: idx++ });
+        if (pearl.swipeKind || pearl.swipeIds?.length) snapshot.push({ kind: 'swipe', index: idx++ });
         if (pearl.scenarioId && pearl.scenarioPool) snapshot.push({ kind: 'scenario', index: idx++ });
-        // Per-module dedicated game from chapter data .interModuleGame.
         if (pearl.gameKey) snapshot.push({ kind: 'game', index: idx++ });
-        // CTA last — appears after the game climax. Its onContinue triggers
-        // handleStageDone with no next stage left → pearl_completed +
-        // router.push to next module.
         snapshot.push({ kind: 'cta', index: idx++ });
       } else {
         // Legacy fallback only used when nothing was mapped + no fallback
@@ -331,14 +341,17 @@ export function PearlSheet({ visible, pearl, onClose }: PearlSheetProps): React.
     // (engaged with content), not just at final completion. Without this, a
     // user who drops mid-game still made the pearl their daily activity but
     // loses the streak. The helper is idempotent per-day so the final-stage
-    // completion below safely fires it again. Both legacy ('daily-pick') and
-    // unique-bundle ('video' as the first content stage) trigger the tick.
-    if (
-      completedStage?.kind === 'daily-pick' ||
-      completedStage?.kind === 'video' ||
-      // Bundle without a video starts with concept — still counts as content.
-      (completedStage?.kind === 'concept' && !stages.some((s) => s.kind === 'video'))
-    ) {
+    // completion below safely fires it again.
+    //
+    // Index-based detection so the tick stays correct regardless of which
+    // content stage happens to be first. After the concept↔video reorder
+    // (2026-06-01) the first content kind is 'concept' for full bundles,
+    // 'video' / 'swipe' / 'scenario' for partial bundles — the index
+    // lookup handles them all. Legacy 'daily-pick' is still tagged
+    // explicitly because it lives in its own snapshot shape.
+    const firstContentIdx = stages.findIndex((s) => s.kind !== 'profile-question');
+    const isFirstContentStage = firstContentIdx >= 0 && activePage === firstContentIdx;
+    if (completedStage?.kind === 'daily-pick' || isFirstContentStage) {
       markDailyActivityCompleted();
     }
 
@@ -452,11 +465,12 @@ export function PearlSheet({ visible, pearl, onClose }: PearlSheetProps): React.
           </View>
         );
       }
-      if (item.kind === 'swipe' && pearl.swipeIds?.length) {
+      if (item.kind === 'swipe' && (pearl.swipeKind || pearl.swipeIds?.length)) {
         return (
           <View style={containerStyle}>
             <PearlSwipeStage
               isActive={isActive}
+              swipeKind={pearl.swipeKind}
               swipeIds={pearl.swipeIds}
               onContinue={handleStageDone}
             />
@@ -530,6 +544,14 @@ export function PearlSheet({ visible, pearl, onClose }: PearlSheetProps): React.
       statusBarTranslucent
       onRequestClose={handleDismiss}
     >
+      {/* GestureHandlerRootView wrap is REQUIRED here. React Native's <Modal>
+          mounts in a separate native window, and the app-level
+          GestureHandlerRootView in app/_layout.tsx does NOT extend into it.
+          Without this wrap, Gesture.Pan() detectors inside stages (e.g.
+          PearlSwipeStage → BullshitSwipeCard) silently never receive events —
+          the swipe stops working in pearls while tap-Pressables still work.
+          Mirrors the pattern in DoubleOrNothingModal / DiamondHandsModal. */}
+      <GestureHandlerRootView style={{ flex: 1 }}>
       <SafeAreaView style={styles.safeArea} edges={['top', 'left', 'right']}>
         {/* Full GlobalWealthHeader (not compact) — matches the main tabs
             layout exactly so the pearl feels like a continuation of the
@@ -538,14 +560,25 @@ export function PearlSheet({ visible, pearl, onClose }: PearlSheetProps): React.
         <GlobalWealthHeader />
 
         <View style={styles.topBar}>
+          {/* Back button (was an X until 2026-06-01) — user spec: pearl is
+              optional, exiting should feel like "back to learning" rather
+              than "close modal". Same ChevronRight pattern used by the
+              lesson screen's top-bar back button. Explicit router.replace
+              to /(tabs)/index so we always land on the learn surface even
+              if the back stack got into a weird state. */}
           <Pressable
-            onPress={() => { tapHaptic(); playSound('btn_click_soft_1'); handleDismiss(); }}
+            onPress={() => {
+              tapHaptic();
+              playSound('btn_click_soft_1');
+              handleDismiss();
+              router.replace('/(tabs)/index' as never);
+            }}
             style={({ pressed }) => [styles.closeBtn, pressed && { opacity: 0.7 }]}
             accessibilityRole="button"
-            accessibilityLabel="סגור פנינה"
+            accessibilityLabel="חזרה למסך הלמידה"
             hitSlop={10}
           >
-            <X size={22} color={STITCH.onSurface} strokeWidth={2.6} />
+            <ChevronRight size={22} color={STITCH.onSurface} strokeWidth={2.6} />
           </Pressable>
 
           <View style={styles.titleWrap}>
@@ -612,6 +645,7 @@ export function PearlSheet({ visible, pearl, onClose }: PearlSheetProps): React.
           </View>
         ) : null}
       </SafeAreaView>
+      </GestureHandlerRootView>
     </Modal>
   );
 }

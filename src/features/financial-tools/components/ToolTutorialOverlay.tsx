@@ -275,11 +275,13 @@ const s = StyleSheet.create({
     color: '#0284c7',
   },
   dismissBtn: {
-    // Pinned to the visual top-left of the screen (RTL = trailing edge).
-    // The `top` is set inline at the render site so it includes the safe-area
-    // inset and stays aligned with the centered pill across all iPhones.
+    // Pinned to the visual top-RIGHT of the screen. In a Hebrew/RTL app the
+    // right corner is where users expect close affordances (mirrors LTR's
+    // top-left). The `top` is set inline at the render site so it includes
+    // the safe-area inset and stays aligned with the centered pill across
+    // all iPhones.
     position: 'absolute',
-    left: 16,
+    right: 16,
     width: 36,
     height: 36,
     borderRadius: 999,

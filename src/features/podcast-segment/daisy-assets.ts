@@ -57,11 +57,12 @@ export const PODCAST_STUDIO_BG_V2 = {
 /** Daisy in a full celebration loop on a transparent background — closes
  *  eyes, opens mouth wide, raises both fins, blue sparkle stars pop around
  *  her. ~5s loop @ 15fps, chroma-keyed from a Higgsfield seedance video.
- *  Served from Vercel Blob (uploaded 2026-05-22) — no longer bundled
- *  locally so we don't need an EAS rebuild to ship asset updates. Use the
- *  prefetch in callers that need instant readiness. */
+ *  Served from Vercel Blob (uploaded 2026-05-22, re-uploaded at 512×512
+ *  on 2026-06-01 — 2× sharper on retina screens). The ?v= query string
+ *  busts expo-image's URL cache so existing installs fetch the new asset
+ *  on next launch without needing an EAS rebuild. */
 export const DAISY_HAPPY_CELEBRATE_WEBP = {
-  uri: `${BLOB_BASE}/daisy-happy-celebrate.webp`,
+  uri: `${BLOB_BASE}/daisy-happy-celebrate.webp?v=2026-06-01`,
 } as const;
 
 /** Daisy in a gentle empathic idle — eyes softly open, small closed-lip

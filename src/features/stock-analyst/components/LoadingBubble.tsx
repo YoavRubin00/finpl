@@ -233,22 +233,30 @@ export function LoadingBubble({ mode, ticker }: Props): React.ReactElement {
               accessibilityRole="button"
               accessibilityLabel="שחק במשחק קצר בזמן ההמתנה"
               style={({ pressed }) => ({
-                flexDirection: 'row-reverse',
+                flexDirection: 'row',
                 alignItems: 'center',
                 justifyContent: 'center',
-                gap: 8,
-                paddingVertical: 10,
-                paddingHorizontal: 14,
-                borderRadius: 12,
-                backgroundColor: 'rgba(14,165,233,0.10)',
-                borderWidth: 1,
-                borderColor: 'rgba(14,165,233,0.30)',
-                opacity: pressed ? 0.85 : 1,
+                gap: 10,
+                paddingVertical: 12,
+                paddingHorizontal: 18,
+                borderRadius: 14,
+                backgroundColor: '#3b82f6',
+                borderWidth: 2,
+                borderColor: '#2563eb',
+                borderBottomWidth: 4,
+                borderBottomColor: '#1d4ed8',
+                shadowColor: '#3b82f6',
+                shadowOffset: { width: 0, height: 2 },
+                shadowOpacity: 0.4,
+                shadowRadius: 8,
+                elevation: 6,
+                opacity: pressed ? 0.88 : 1,
+                transform: pressed ? [{ scale: 0.98 }] : undefined,
               })}
             >
-              <Gamepad2 size={16} color="#0369a1" strokeWidth={2.6} />
-              <Text style={{ color: '#0369a1', fontWeight: '800', fontSize: 13 }}>
-                🎮 שחק בינתיים
+              <Gamepad2 size={18} color="#ffffff" strokeWidth={2.6} />
+              <Text style={{ color: '#ffffff', fontWeight: '900', fontSize: 14, writingDirection: 'rtl' }}>
+                שחק בינתיים
               </Text>
             </Pressable>
           ) : null}

@@ -5,6 +5,13 @@
 import React, { useState, useCallback, useRef, useEffect, useMemo } from "react";
 import { Image as ExpoImage } from "expo-image";
 import { ScrollView, View, Text, Pressable, Modal, Image, StyleSheet, Dimensions } from "react-native";
+// Gesture-handler ScrollView + RootView — used ONLY inside the swipe/dilemma
+// Modals below. RN's Modal mounts in a separate native window so the
+// app-level GestureHandlerRootView doesn't extend into it, and RN's
+// ScrollView swallows horizontal pan gestures. Both fixes are required for
+// BullshitSwipe / MythFeed / SwipeGame card gestures to receive events.
+// Mirrors PearlSheet + PearlSwipeStage + quest/swipe-game fixes.
+import { ScrollView as GHScrollView, GestureHandlerRootView } from "react-native-gesture-handler";
 import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import Animated, {
   useSharedValue,
@@ -1558,12 +1565,16 @@ export function DuoLearnScreen() {
           canonical swipeGamePlays counter ticks and Daily Quests'
           syncCompletions marks this quest done regardless of which card was
           shown. */}
+      {/* Swipe-quest Modal — wrapped in GestureHandlerRootView so Gesture.Pan
+          detectors inside BullshitSwipeCard / MythFeedCard / SwipeGameCard
+          receive events (RN Modal mounts in its own native window). */}
       <Modal
         visible={swipeQuestVisible}
         animationType="slide"
         presentationStyle="pageSheet"
         onRequestClose={() => setSwipeQuestVisible(false)}
       >
+        <GestureHandlerRootView style={{ flex: 1 }}>
         <View style={{ flex: 1, backgroundColor: "#f0f9ff" }}>
           <Pressable
             onPress={() => { tapHaptic(); setSwipeQuestVisible(false); }}
@@ -1574,7 +1585,7 @@ export function DuoLearnScreen() {
           >
             <Text style={{ fontSize: 18, fontWeight: "700", color: "#475569" }}>✕</Text>
           </Pressable>
-          <ScrollView contentContainerStyle={{ flexGrow: 1, justifyContent: "center", paddingVertical: 12, paddingTop: insets.top + 56 }} showsVerticalScrollIndicator={false}>
+          <GHScrollView contentContainerStyle={{ flexGrow: 1, justifyContent: "center", paddingVertical: 12, paddingTop: insets.top + 56 }} showsVerticalScrollIndicator={false}>
             {dailySwipeKind === 'bullshit' && (
               <BullshitSwipeCard
                 isActive={swipeQuestVisible}
@@ -1594,8 +1605,9 @@ export function DuoLearnScreen() {
                 onFinish={finishSwipeQuest}
               />
             )}
-          </ScrollView>
+          </GHScrollView>
         </View>
+        </GestureHandlerRootView>
       </Modal>
       {/* Dilemma quest modal. Same pattern as swipe above. DilemmaCard runs
           its own celebration + close animation on completion via onContinue. */}
@@ -1937,6 +1949,11 @@ export function DuoLearnScreen() {
           visible={questSheetVisible}
           onClose={() => setQuestSheetVisible(false)}
           onOpenNewsChallenge={() => {
+            // If the user already completed today, wipe per-item answers so the
+            // chips render again. Chests and analytics guards stay set →
+            // no double payout / no double `news_challenge_completed`.
+            const dnc = useDailyNewsChallengeStore.getState();
+            if (dnc.hasCompletedToday()) dnc.resetTodayAnswers();
             setNewsEntrySource('daily_quests_modal');
             setNewsSheetVisible(true);
           }}

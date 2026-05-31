@@ -373,9 +373,13 @@ export function PricingScreen() {
           style={styles.heroGradient}
         >
           <SafeAreaView edges={["top"]}>
-            {/* Back button */}
+            {/* Back button — white + circular bg so it pops on the dark
+                gradient (user reported the default gray ChevronRight was
+                invisible against navy bg, 2026-06-01). */}
             <View style={styles.backRow}>
-              <BackButton />
+              <View style={styles.backBtnBg}>
+                <BackButton color="#ffffff" />
+              </View>
             </View>
 
             {/* Decorative sparkles */}
@@ -397,13 +401,26 @@ export function PricingScreen() {
               />
             ))}
 
-            {/* Fin mascot */}
+            {/* Fin mascot + trial speech bubble */}
             <View style={styles.mascotContainer}>
               <ExpoImage source={FINN_DANCING}
                 style={styles.mascot}
                 contentFit="contain"
                 accessible={false}
               />
+              {/* Speech bubble to the LEFT of Captain Shark — reinforces the
+                  free-trial value prop. Shown on every visit (יואב 2026-06). */}
+              <Animated.View
+                entering={FadeInDown.delay(350).duration(420)}
+                style={styles.trialBubble}
+                accessibilityRole="text"
+                accessibilityLabel="הצעה: נסו שבוע בחינם, ללא סיכון"
+              >
+                <Text style={styles.trialBubbleText} allowFontScaling={false}>
+                  נסו שבוע בחינם,{"\n"}ללא סיכון
+                </Text>
+                <View style={styles.trialBubbleTail} pointerEvents="none" />
+              </Animated.View>
             </View>
 
             {/* Social proof */}
@@ -591,6 +608,16 @@ const styles = StyleSheet.create({
     paddingTop: 4,
     alignItems: "flex-end",
   },
+  backBtnBg: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: "rgba(255,255,255,0.16)",
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.28)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
   sparkle: {
     position: "absolute",
     borderRadius: 999,
@@ -599,10 +626,55 @@ const styles = StyleSheet.create({
   mascotContainer: {
     alignItems: "center",
     marginTop: -12,
+    position: "relative",
   },
   mascot: {
     width: 160,
     height: 160,
+    // Shifted slightly RIGHT so the speech bubble (on the screen-left)
+    // has room to breathe + tail aims naturally toward the shark.
+    transform: [{ translateX: 22 }],
+  },
+  trialBubble: {
+    position: "absolute",
+    // On screen-LEFT — bubble's tail points RIGHT toward Captain Shark
+    // (who sits slightly right-of-center after the translateX shift).
+    top: 24,
+    left: 12,
+    paddingVertical: 10,
+    paddingHorizontal: 14,
+    borderRadius: 16,
+    backgroundColor: "rgba(255,255,255,0.96)",
+    maxWidth: 200,
+    shadowColor: "#000",
+    shadowOpacity: 0.18,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 6,
+  },
+  trialBubbleText: {
+    fontSize: 13,
+    fontWeight: "800",
+    color: "#0a2540",
+    writingDirection: "rtl",
+    textAlign: "center",
+    lineHeight: 18,
+  },
+  trialBubbleTail: {
+    position: "absolute",
+    // Tail on the RIGHT side of the bubble, pointing RIGHT toward the
+    // shark (visually "spoken to him"). CSS-triangle: transparent
+    // top/bottom + white left border = a right-pointing tip.
+    top: 22,
+    right: -7,
+    width: 0,
+    height: 0,
+    borderTopWidth: 7,
+    borderBottomWidth: 7,
+    borderLeftWidth: 8,
+    borderTopColor: "transparent",
+    borderBottomColor: "transparent",
+    borderLeftColor: "rgba(255,255,255,0.96)",
   },
   proofContainer: {
     alignItems: "center",

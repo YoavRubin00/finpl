@@ -456,8 +456,8 @@ const pickerStyles = StyleSheet.create({
   },
   defaultDismiss: {
     position: "absolute",
-    bottom: 14,
-    left: 14,
+    top: 14,
+    right: 14,
     width: 32,
     height: 32,
     borderRadius: 16,
