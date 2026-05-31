@@ -184,7 +184,11 @@ const KNOWLEDGE_LEVEL_INLINE_MODULE_ID = 'mod-0-1';
  */
 const MODULES_WITH_INTERACTIVE_RECALL = new Set([
   "mod-1-1",
-  "mod-0-2", "mod-0-3",
+  // 2026-05-30 chapter-0 swap: Financial Basics moved from mod-0-2 to mod-0-1.
+  // The recall prompts (interest / overdraft / loan / pension) belong to that
+  // content, so the gate follows to mod-0-1. mod-0-2 (money-essence) has no
+  // recall set in sentenceData.ts and must NOT enter the recall phase.
+  "mod-0-1", "mod-0-3",
   "mod-1-2",
   "mod-2-10", "mod-2-11",
   "mod-3-15",

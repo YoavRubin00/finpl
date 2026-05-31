@@ -144,7 +144,10 @@ export const DilemmaCard = React.memo(function DilemmaCard({ isActive, onContinu
         variant="light"
       >
         <View style={styles.stateBox}>
-          <Text style={[styles.answeredTitle, RTL]}>האתגר היומי הושלם!</Text>
+          {/* Title above the shell already says "האתגר היומי" — don't repeat
+              it. Just confirm "הושלם" so the eye reads: title → status →
+              when to come back. */}
+          <Text style={[styles.answeredTitle, RTL]}>הושלם להיום ✓</Text>
           <Text style={[styles.answeredSub, RTL]}>חזרו מחר לאתגר חדש</Text>
           {onContinue ? (
             <Pressable
@@ -425,7 +428,12 @@ const styles = StyleSheet.create({
     color: '#16a34a',
   },
   continueBtn: {
-    marginTop: 12,
+    // Stretched + bigger marginTop to match BullshitSwipeCard's continueBtn
+    // exactly (same color, radius, padding, shadow, alignSelf) — gives the
+    // user a consistent "advance" pill across every pearl stage rather than
+    // a small centered one on dilemma and a full-width one on swipe.
+    marginTop: 18,
+    alignSelf: 'stretch',
     backgroundColor: '#0ea5e9',
     borderRadius: 18,
     paddingVertical: 16,
