@@ -55,8 +55,13 @@ import { NotificationPermissionBanner } from "../../components/ui/NotificationPe
 import { NoFreezeUpsellBanner } from "../streak/NoFreezeUpsellBanner";
 import { StreakAtRiskBanner } from "../streak/StreakAtRiskBanner";
 import { StreakCalendarModal } from "../streak/StreakCalendarModal";
-import { NewsIconButton } from "../daily-news-challenge/NewsIconButton";
 import { DailyNewsChallengeSheet } from "../daily-news-challenge/DailyNewsChallengeSheet";
+import { DilemmaCard } from "../daily-challenges/DilemmaCard";
+import { BullshitSwipeCard } from "../finfeed/minigames/bullshit-swipe/BullshitSwipeCard";
+// Three swipe-game variants rotate per Israeli calendar day in the swipe
+// quest modal so the daily ritual stays fresh (user request 2026-05-31).
+import { SwipeGameCard } from "../daily-challenges/SwipeGameCard";
+import { MythFeedCard } from "../myth-or-tachles/MythFeedCard";
 import { useDailyNewsChallengeStore } from "../daily-news-challenge/useDailyNewsChallengeStore";
 import { fetchTodayChallenge } from "../daily-news-challenge/dailyNewsChallengeApi";
 import { FINN_STANDARD } from "../retention-loops/finnMascotConfig";
@@ -479,13 +484,14 @@ function PulsingGlow({ color }: { color: string }) {
 // ---------------------------------------------------------------------------
 
 function ProgressStars({ completedCount, totalCount }: { completedCount: number; totalCount: number }) {
-  const filledStars = totalCount > 0
-    ? Math.min(3, Math.round((completedCount / totalCount) * 3))
-    : 0;
+  // 1:1 mapping: one star per daily quest. Used to be 3 fixed stars with a
+  // ratio fill, but as of the news-edition rollout (newsletter became the 4th
+  // daily quest) Yam wants the outer stars to mirror the modal exactly.
+  if (totalCount <= 0) return null;
   return (
     <View style={styles.progressStarsRow}>
-      {[0, 1, 2].map((i) => {
-        const filled = i < filledStars;
+      {Array.from({ length: totalCount }).map((_, i) => {
+        const filled = i < completedCount;
         return (
           <Star
             key={i}
@@ -1111,6 +1117,46 @@ export function DuoLearnScreen() {
   // modal. State + store reads live at screen-level so the card can render at
   // mount-time and the sheet can open/close from a single source.
   const [newsSheetVisible, setNewsSheetVisible] = useState(false);
+  // Tracks which surface opened the news sheet, threaded into PostHog so we
+  // can compare entry-point performance. As of the news-edition rollout
+  // (newsletter became the 4th daily quest) the modal is the only entry
+  // point, so this also lets us catch regressions where a stray callsite
+  // opens the sheet without setting a source.
+  const [newsEntrySource, setNewsEntrySource] = useState<'daily_quests_modal' | 'direct' | 'unknown'>('unknown');
+
+  // Swipe + dilemma daily-quest modals. Each used to live in /quest/* routes
+  // that hosted the card standalone, but those routes broke after the Feed
+  // deletion (2026-05-30). For consistency with the news entry point, both
+  // quests now render the existing card inside a Modal opened from the
+  // Daily Quests sheet via callbacks.
+  const [swipeQuestVisible, setSwipeQuestVisible] = useState(false);
+  const [dilemmaQuestVisible, setDilemmaQuestVisible] = useState(false);
+
+  // Pick which swipe game the daily quest hosts today. Rotates by Israeli
+  // day index across 3 cards so the daily ritual stays fresh:
+  //   day % 3 === 0  → BullshitSwipe (סוויף שמאלה לפייק)
+  //   day % 3 === 1  → MythFeedCard (מיתוס או תכל'ס)
+  //   day % 3 === 2  → SwipeGameCard (שורי או דובי / Bull or Bear)
+  // The kind is computed at render time (cheap) and recomputes naturally at
+  // the IL midnight rollover. Snapshotted on modal-open so a mid-session
+  // tick-over doesn't swap the card under the user.
+  const dailySwipeKind = useMemo<'bullshit' | 'myth' | 'bull-bear'>(() => {
+    const dayIndex = Math.floor(Date.now() / 86400000);
+    const variants = ['bullshit', 'myth', 'bull-bear'] as const;
+    return variants[dayIndex % variants.length];
+  }, [swipeQuestVisible]);
+
+  // Single handler so every card path marks the quest complete via the
+  // canonical swipeGamePlays counter (MythFeedCard / BullshitSwipeCard
+  // don't touch useDailyChallengesStore.swipeGamePlays on their own, so
+  // syncCompletions would otherwise miss them). Idempotent per day.
+  const finishSwipeQuest = useCallback(() => {
+    try {
+      const today = new Date().toISOString().slice(0, 10);
+      useDailyChallengesStore.getState().playSwipeGame(today, 0);
+    } catch { /* non-fatal */ }
+    setTimeout(() => setSwipeQuestVisible(false), 800);
+  }, []);
 
   // Pearls — bonus intermezzo nodes between modules. State is held here at
   // screen-level so any chapter can pop the same sheet, and the completed
@@ -1132,18 +1178,16 @@ export function DuoLearnScreen() {
     tapHaptic();
     setActivePearl(pearl);
   }, []);
-  const newsChallenge = useDailyNewsChallengeStore((s) => s.todayChallenge);
-  const newsCompleted = useDailyNewsChallengeStore((s) => s.hasCompletedToday());
-  const newsProChestOpened = useDailyNewsChallengeStore((s) => s.proChestOpened);
+  // Prefetch today's news challenge so the Daily Quests modal can fire the
+  // 4th (news) quest cleanly and the sheet renders without a spinner on open.
   const setNewsChallenge = useDailyNewsChallengeStore((s) => s.setTodayChallenge);
   useEffect(() => {
     let cancelled = false;
     fetchTodayChallenge()
       .then((c) => { if (!cancelled && c) setNewsChallenge(c); })
-      .catch(() => { /* non-fatal; card renders null when no challenge */ });
+      .catch(() => { /* non-fatal; sheet shows its own empty state */ });
     return () => { cancelled = true; };
   }, [setNewsChallenge]);
-  const handleNewsPress = useCallback(() => { tapHaptic(); setNewsSheetVisible(true); }, []);
 
   const { layer } = getPyramidStatus(xp);
   const [lockedModalVisible, setLockedModalVisible] = useState(false);
@@ -1444,7 +1488,82 @@ export function DuoLearnScreen() {
       {!isWalkthroughActive && <StreakAtRiskBanner />}
       {!isWalkthroughActive && <NoFreezeUpsellBanner />}
       <StreakCalendarModal visible={showStreakCalendar} onClose={() => setShowStreakCalendar(false)} />
-      <DailyNewsChallengeSheet visible={newsSheetVisible} onClose={() => setNewsSheetVisible(false)} />
+      <DailyNewsChallengeSheet
+        visible={newsSheetVisible}
+        entrySource={newsEntrySource}
+        onClose={() => setNewsSheetVisible(false)}
+      />
+      {/* Swipe quest modal. Hosts whichever of the 3 rotating swipe-games is
+          assigned to today (see dailySwipeKind above). finishSwipeQuest is
+          the single closer — every card path funnels through it so the
+          canonical swipeGamePlays counter ticks and Daily Quests'
+          syncCompletions marks this quest done regardless of which card was
+          shown. */}
+      <Modal
+        visible={swipeQuestVisible}
+        animationType="slide"
+        presentationStyle="pageSheet"
+        onRequestClose={() => setSwipeQuestVisible(false)}
+      >
+        <View style={{ flex: 1, backgroundColor: "#f0f9ff" }}>
+          <Pressable
+            onPress={() => { tapHaptic(); setSwipeQuestVisible(false); }}
+            style={{ position: "absolute", top: insets.top + 8, left: 16, width: 36, height: 36, borderRadius: 18, backgroundColor: "rgba(15,23,42,0.08)", alignItems: "center", justifyContent: "center", zIndex: 50, borderWidth: 1, borderColor: "rgba(15,23,42,0.1)" }}
+            hitSlop={12}
+            accessibilityRole="button"
+            accessibilityLabel="סגור"
+          >
+            <Text style={{ fontSize: 18, fontWeight: "700", color: "#475569" }}>✕</Text>
+          </Pressable>
+          <ScrollView contentContainerStyle={{ flexGrow: 1, justifyContent: "center", paddingVertical: 12, paddingTop: insets.top + 56 }} showsVerticalScrollIndicator={false}>
+            {dailySwipeKind === 'bullshit' && (
+              <BullshitSwipeCard
+                isActive={swipeQuestVisible}
+                bypassDailyGate
+                onFinish={finishSwipeQuest}
+              />
+            )}
+            {dailySwipeKind === 'myth' && (
+              <MythFeedCard
+                isInterModule
+                onSkip={finishSwipeQuest}
+              />
+            )}
+            {dailySwipeKind === 'bull-bear' && (
+              <SwipeGameCard
+                isActive={swipeQuestVisible}
+                onFinish={finishSwipeQuest}
+              />
+            )}
+          </ScrollView>
+        </View>
+      </Modal>
+      {/* Dilemma quest modal. Same pattern as swipe above. DilemmaCard runs
+          its own celebration + close animation on completion via onContinue. */}
+      <Modal
+        visible={dilemmaQuestVisible}
+        animationType="slide"
+        presentationStyle="pageSheet"
+        onRequestClose={() => setDilemmaQuestVisible(false)}
+      >
+        <View style={{ flex: 1, backgroundColor: "#f0f9ff" }}>
+          <Pressable
+            onPress={() => { tapHaptic(); setDilemmaQuestVisible(false); }}
+            style={{ position: "absolute", top: insets.top + 8, left: 16, width: 36, height: 36, borderRadius: 18, backgroundColor: "rgba(15,23,42,0.08)", alignItems: "center", justifyContent: "center", zIndex: 50, borderWidth: 1, borderColor: "rgba(15,23,42,0.1)" }}
+            hitSlop={12}
+            accessibilityRole="button"
+            accessibilityLabel="סגור"
+          >
+            <Text style={{ fontSize: 18, fontWeight: "700", color: "#475569" }}>✕</Text>
+          </Pressable>
+          <ScrollView contentContainerStyle={{ flexGrow: 1, justifyContent: "center", paddingVertical: 12, paddingTop: insets.top + 56 }} showsVerticalScrollIndicator={false}>
+            <DilemmaCard
+              isActive={dilemmaQuestVisible}
+              onContinue={() => setDilemmaQuestVisible(false)}
+            />
+          </ScrollView>
+        </View>
+      </Modal>
       <PearlSheet visible={!!activePearl} pearl={activePearl} onClose={() => setActivePearl(null)} />
 
       {/* Profile-question backstop before gated chapter-0/1 modules.
@@ -1526,11 +1645,11 @@ export function DuoLearnScreen() {
           scrollEventThrottle={100}
         >
 
-          {/* Daily News Challenge entry — the hero card was removed per user
-              feedback (felt heavy / pushed chapters down). Entry now lives in
-              the floating NewsIconButton at the top-right of the learn screen
-              (see render below) — a glowing newspaper icon that keeps pulsing
-              until today's challenge is completed. */}
+          {/* Daily News Challenge entry: floating NewsIconButton was retired.
+              The entry now lives inside the Daily Quests modal as the 4th
+              quest of the day (Captain Shark + 4 stars under him on the
+              active chapter). Tapping the news quest in the modal calls back
+              into this screen via onOpenNewsChallenge to open the same sheet. */}
 
           {/* Chapter sections */}
           {(() => {
@@ -1618,20 +1737,7 @@ export function DuoLearnScreen() {
                 questCompletedCount={hasActiveModule ? questCompletedCount : undefined}
                 questTotalCount={hasActiveModule ? questTotalCount : undefined}
                 onQuestPress={hasActiveModule ? handleQuestPress : undefined}
-                newsBadgeNode={hasActiveModule ? (
-                  // Always show on the active chapter — even during the
-                  // walkthrough — so users who haven't formally completed
-                  // the tutorial still see the entry point. The pulse +
-                  // halo handle their own attention grab independent of
-                  // walkthrough state.
-                  <NewsIconButton
-                    size={36}
-                    hasNewsChallenge={!!newsChallenge}
-                    newsCompleted={newsCompleted}
-                    onPress={handleNewsPress}
-                    compact
-                  />
-                ) : undefined}
+                newsBadgeNode={undefined}
                 onPearlPress={handlePearlPress}
                 completedPearlIds={completedPearlIds}
               />
@@ -1768,7 +1874,16 @@ export function DuoLearnScreen() {
           </Modal>
         )}
 
-        <DailyQuestsSheet visible={questSheetVisible} onClose={() => setQuestSheetVisible(false)} />
+        <DailyQuestsSheet
+          visible={questSheetVisible}
+          onClose={() => setQuestSheetVisible(false)}
+          onOpenNewsChallenge={() => {
+            setNewsEntrySource('daily_quests_modal');
+            setNewsSheetVisible(true);
+          }}
+          onOpenSwipeQuest={() => setSwipeQuestVisible(true)}
+          onOpenDilemmaQuest={() => setDilemmaQuestVisible(true)}
+        />
 
         {/* Learning Roadmap Overlay (Replaced Native Modal to support iOS Walkthrough overlap) */}
         {roadmapVisible && (

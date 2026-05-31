@@ -7,7 +7,9 @@ import { queryClient } from "../../lib/queryClient";
 import { streakQueryKey, markDailyActivityCompleted } from "../economy/useStreak";
 import type { StreakState } from "../../lib/api/streak";
 import { useDailyChallengesStore } from "../daily-challenges/use-daily-challenges-store";
+import { useDailyNewsChallengeStore } from "../daily-news-challenge/useDailyNewsChallengeStore";
 import { progressQueryKey } from "../chapter-1-content/useProgress";
+import { captureEvent } from "../../lib/posthog";
 import type { ModuleProgressRow } from "../../lib/api/progress";
 import type { DailyQuest, QuestRewardSummary } from "./daily-quest-types";
 import {
@@ -95,21 +97,35 @@ export const useDailyQuestsStore = create<DailyQuestsState>()(
 
       refreshQuests: () => {
         const today = todayStr();
-        if (get().questDate === today && get().quests.length > 0) {
-          // Same day, just sync completions
+        const order: DailyQuest["type"][] = ["dilemma", "module", "swipe", "news"];
+        const byType = questTemplatesByType();
+        const existing = get().quests;
+        const sameDay = get().questDate === today && existing.length > 0;
+        // Same-day fast path: only top up if the order grew (e.g. a new quest
+        // type was added mid-day, like 'news' shipping). Existing completions
+        // are preserved by-type so users don't lose progress they earned.
+        if (sameDay && existing.length >= order.length) {
           get().syncCompletions();
           return;
         }
-        // New day — pick one random template per type from the pool of 12.
-        // Keeps the 3-quest rhythm while rotating copy daily (Brawl Stars pattern).
-        const byType = questTemplatesByType();
-        const order: DailyQuest["type"][] = ["dilemma", "module", "swipe"];
         const quests: DailyQuest[] = order.map((type, i) => {
+          if (sameDay) {
+            const preserved = existing.find((q) => q.type === type);
+            if (preserved) return preserved;
+          }
           const pool = byType[type];
           const tpl = pool[Math.floor(Math.random() * pool.length)] ?? QUEST_TEMPLATES[i];
           return { ...tpl, id: `${today}-${i}`, isCompleted: false };
         });
-        set({ quests, questDate: today, rewardClaimed: false, proRewardClaimed: false, newlyCompleted: false, lastRewardSummary: null });
+        if (sameDay) {
+          set({ quests, questDate: today });
+        } else {
+          // New day, full reset.
+          set({ quests, questDate: today, rewardClaimed: false, proRewardClaimed: false, newlyCompleted: false, lastRewardSummary: null });
+        }
+        // Pick up any completions that happened since the last sync (e.g.
+        // news completed earlier today before the news quest existed).
+        get().syncCompletions();
       },
 
       syncCompletions: () => {
@@ -118,10 +134,12 @@ export const useDailyQuestsStore = create<DailyQuestsState>()(
         if (questDate !== today || quests.length === 0) return;
 
         const challengeStore = useDailyChallengesStore.getState();
+        const newsStore = useDailyNewsChallengeStore.getState();
         const progressData = queryClient.getQueryData<ModuleProgressRow[]>(progressQueryKey) ?? [];
 
         const dilemmaPlays = challengeStore.getDilemmaPlaysToday();
         const swipePlays = challengeStore.getSwipeGamePlaysToday();
+        const newsDone = newsStore.hasCompletedToday();
         const todayCompletedMods = progressData.filter((m) => m.status === 'completed').length;
 
         const updated = quests.map((q) => {
@@ -130,6 +148,7 @@ export const useDailyQuestsStore = create<DailyQuestsState>()(
           if (q.type === "dilemma") done = dilemmaPlays > 0;
           else if (q.type === "module") done = todayCompletedMods > 0;
           else if (q.type === "swipe") done = swipePlays > 0;
+          else if (q.type === "news") done = newsDone;
           return done ? { ...q, isCompleted: true } : q;
         });
 
@@ -141,6 +160,18 @@ export const useDailyQuestsStore = create<DailyQuestsState>()(
             quests: updated,
             ...(allDoneNow && !wasAllDone ? { newlyCompleted: true } : {})
           });
+          // Fire once on the transition into "all done". Proxy for "did the
+          // 4th (news) quest help or hurt full-house completion rate?"
+          if (allDoneNow && !wasAllDone) {
+            try {
+              const streak = queryClient.getQueryData<StreakState | null>(streakQueryKey)?.currentStreak ?? 0;
+              captureEvent('daily_quests_all_completed', {
+                quest_count: updated.length,
+                quest_types: updated.map((q) => q.type),
+                streak,
+              });
+            } catch { /* non-fatal */ }
+          }
           // Daily quest completion counts toward the unified streak. Most
           // quest types are downstream of activities (lesson/dilemma/swipe)
           // that already fire markDailyActivityCompleted directly, so this
@@ -192,6 +223,16 @@ export const useDailyQuestsStore = create<DailyQuestsState>()(
           streakBonusPct: streakBonusPct(streak),
         };
         set({ lastRewardSummary: summary });
+        try {
+          captureEvent('daily_quests_chest_claimed', {
+            chest_type: 'regular',
+            xp,
+            coins,
+            gems,
+            streak,
+            streak_bonus_pct: streakBonusPct(streak),
+          });
+        } catch { /* non-fatal */ }
         return summary;
       },
 
@@ -219,6 +260,16 @@ export const useDailyQuestsStore = create<DailyQuestsState>()(
         economy2.addGems(gems);
 
         const summary: QuestRewardSummary = { xp, coins, gems, freezes: 0, streakBonusPct: streakBonusPct(streak) };
+        try {
+          captureEvent('daily_quests_chest_claimed', {
+            chest_type: 'pro',
+            xp,
+            coins,
+            gems,
+            streak,
+            streak_bonus_pct: streakBonusPct(streak),
+          });
+        } catch { /* non-fatal */ }
         return summary;
       },
 
