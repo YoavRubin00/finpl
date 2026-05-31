@@ -2419,8 +2419,18 @@ export function ProfilingFlow({ mode = "onboarding", onRedoComplete }: Profiling
   const { playSound } = useSoundEffect();
 
   const isRedo = mode === "redo";
-  // Skip intro if user already registered/signed-in or is guest (came back from register screen)
-  const [step, setStep] = useState<FlowStep>(isRedo || isAuthenticated || isGuest ? "dream" : "intro");
+  // Skip intro if user already registered/signed-in or is guest (came back from register screen).
+  // Post-OAuth-mid-signup recovery: when a user completes OAuth from the signup-gate, useGoogleAuth /
+  // useAppleAuth do router.replace("/(auth)/onboarding") which re-mounts this component with
+  // isAuthenticated=true. saveCollected() already wrote dream/goal/age into useAuthStore.profile
+  // before the OAuth prompt, so existingProfile.financialDream being truthy is the signal that the
+  // user is mid-signup, not starting fresh — skip straight to celebration instead of dream.
+  const [step, setStep] = useState<FlowStep>(() => {
+    if (isRedo) return "dream";
+    if (isAuthenticated && existingProfile?.financialDream) return "celebration";
+    if (isAuthenticated || isGuest) return "dream";
+    return "intro";
+  });
   // Wall-clock anchor for onboarding duration. Used by the completion event so
   // we can see in PostHog whether users blast through profiling or stall mid-flow.
   const onboardingStartedAtRef = useRef<number>(Date.now());
@@ -2432,7 +2442,13 @@ export function ProfilingFlow({ mode = "onboarding", onRedoComplete }: Profiling
   }, [isRedo]);
   const [returnToSummary, setReturnToSummary] = useState(false);
   const [collected, setCollected] = useState<Collected>(() => {
-    if (isRedo && existingProfile) {
+    // Mirror the post-OAuth-mid-signup detection above: if the user came back
+    // from OAuth with profile.financialDream already populated (via the
+    // saveCollected() call in SignupGateStep), re-seed `collected` so
+    // enterFirstModule's completeOnboarding(...) ships their answers to the
+    // server instead of writing the empty defaults below.
+    const hasMidSignupProfile = !isRedo && isAuthenticated && !!existingProfile?.financialDream;
+    if ((isRedo || hasMidSignupProfile) && existingProfile) {
       return {
         financialDream: existingProfile.financialDream ?? null,
         financialGoal: existingProfile.financialGoal ?? null,
