@@ -88,16 +88,13 @@ export interface PearlContent {
   scenarioPool?: ScenarioPool;
 }
 
-// Chapter 0 modules that ASK a profile question on Continue. If skipped,
-// the Pearl that sits after the same module surfaces the question again.
-// Keys here mirror the SOURCE module (where the question is first asked),
-// not the BACKSTOP target. See InModuleProfileQuestion.tsx +
-// PROFILE_QUESTION_BACKSTOPS in DuoLearnScreen.tsx.
-const PROFILE_QUESTION_BY_SOURCE_MODULE: Record<string, ProfileQuestionKind> = {
-  'mod-0-1': 'knowledgeLevel',
-  'mod-0-4': 'learningTime',
-  'mod-0-5': 'dailyGoal',
-};
+// Per user spec (2026-05-31): profile-question backstops were moved OUT of
+// the pearl and into the middle of the module flow (LessonFlowScreen
+// surfaces them after the inline content phase). Pearls no longer carry a
+// profile-question stage — they're 4 pure content beats. Keep this empty
+// const so any consumer that imports the map gets a no-op instead of a
+// runtime undefined check.
+const PROFILE_QUESTION_BY_SOURCE_MODULE: Record<string, ProfileQuestionKind> = {};
 
 let cachedConfig: Map<string, PearlContent> | null = null;
 

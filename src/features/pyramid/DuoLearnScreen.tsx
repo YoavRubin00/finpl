@@ -19,7 +19,7 @@ import Animated, {
 import LottieView from "lottie-react-native";
 import { LottieIcon } from "../../components/ui/LottieIcon";
 import { LinearGradient } from "expo-linear-gradient";
-import { useRouter } from "expo-router";
+import { useRouter, useLocalSearchParams } from "expo-router";
 import { useFocusEffect } from "@react-navigation/native";
 import { Lock, Home, Shield, Scale, TrendingUp, Crown, FastForward, X, Star, ChevronUp } from "lucide-react-native";
 import { useEconomy } from "../economy/useEconomy";
@@ -1219,6 +1219,21 @@ export function DuoLearnScreen() {
     tapHaptic();
     setActivePearl(pearl);
   }, []);
+
+  // Auto-open the pearl when the lesson screen returns us here with
+  // `?openPearl=<moduleId>` (set by navigateToNextModuleNormally in
+  // LessonFlowScreen). The user sees: finish module -> learn map flashes
+  // briefly -> pearl sheet slides up. Sentinel ref so it fires once per
+  // navigation, even though the param can survive a re-render.
+  const openPearlParam = useLocalSearchParams<{ openPearl?: string }>().openPearl;
+  const openPearlConsumedRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (!openPearlParam) return;
+    if (openPearlConsumedRef.current === openPearlParam) return;
+    openPearlConsumedRef.current = openPearlParam;
+    const pearl = pearlConfigFor(openPearlParam);
+    if (pearl) setActivePearl(pearl);
+  }, [openPearlParam]);
   // Prefetch today's news challenge so the Daily Quests modal can fire the
   // 4th (news) quest cleanly and the sheet renders without a spinner on open.
   const setNewsChallenge = useDailyNewsChallengeStore((s) => s.setTodayChallenge);
