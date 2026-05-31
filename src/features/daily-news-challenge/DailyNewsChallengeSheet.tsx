@@ -498,15 +498,26 @@ export function DailyNewsChallengeSheet({ visible, onClose, entrySource = 'unkno
       <SafeAreaView style={styles.safeArea} edges={['top', 'left', 'right']}>
         {/* Top bar — single "אקטואליה יומית" header strip replaces the
             previous GlobalWealthHeader + topBar stack (user report
-            2026-06-01: the two strips looked duplicated). Title sits
-            centered, close X is absolute top-RIGHT of the screen so it
-            lands where Hebrew RTL users expect a dismiss affordance.
-            ProgressBar sits below the title in its own row for breathing
-            room. */}
+            2026-06-01). Layout (revision 2): the title and the close X
+            share the FIRST row so the strip hugs the safe-area top and
+            doesn't waste vertical space; ProgressBar sits in row 2.
+            row-reverse puts the X visually to the RIGHT of the title for
+            Hebrew RTL users — same affordance as the lesson back-arrow. */}
         <View style={styles.topBar}>
-          <Text style={styles.sheetTitle} allowFontScaling={false}>
-            אקטואליה יומית
-          </Text>
+          <View style={styles.titleRow}>
+            <Pressable
+              onPress={() => { tapHaptic(); playSound('btn_click_soft_1'); requestClose(); }}
+              style={({ pressed }) => [styles.closeBtn, pressed && { opacity: 0.7 }]}
+              accessibilityRole="button"
+              accessibilityLabel="סגור"
+              hitSlop={10}
+            >
+              <X size={22} color={STITCH.onSurface} strokeWidth={2.6} />
+            </Pressable>
+            <Text style={styles.sheetTitle} allowFontScaling={false} numberOfLines={1}>
+              אקטואליה יומית
+            </Text>
+          </View>
           <View style={styles.progressRow}>
             <ProgressBar
               segments={[
@@ -519,16 +530,6 @@ export function DailyNewsChallengeSheet({ visible, onClose, entrySource = 'unkno
               totalSteps={PAGE_COUNT}
             />
           </View>
-
-          <Pressable
-            onPress={() => { tapHaptic(); playSound('btn_click_soft_1'); requestClose(); }}
-            style={({ pressed }) => [styles.closeBtn, pressed && { opacity: 0.7 }]}
-            accessibilityRole="button"
-            accessibilityLabel="סגור"
-            hitSlop={10}
-          >
-            <X size={22} color={STITCH.onSurface} strokeWidth={2.6} />
-          </Pressable>
         </View>
 
         {/* Pager */}
@@ -684,33 +685,43 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   topBar: {
-    paddingHorizontal: 16,
-    // Extra breathing room after removing GlobalWealthHeader (2026-06-01) —
-    // the strip now hosts a centered title + progress, so the top/bottom
-    // padding gives the content a less crowded feel.
-    paddingTop: 14,
-    paddingBottom: 14,
-    minHeight: 96,
-    justifyContent: 'flex-start',
-    gap: 12,
+    // No horizontal padding here — the titleRow + progressRow set their
+    // own. paddingTop: 0 means the title hugs the safe-area inset
+    // directly (user request 2026-06-01 follow-up: "everything up,
+    // close to the top sidebar").
+    paddingTop: 0,
+    paddingBottom: 8,
+    gap: 6,
+  },
+  titleRow: {
+    // Mirrors the financial-tools ToolHeader layout (row-reverse with
+    // back-button + title on a single line). User wanted "אקטואליה
+    // יומית" to feel consistent with the rest of the app's titles.
+    flexDirection: 'row-reverse',
+    alignItems: 'center',
+    gap: 10,
+    paddingHorizontal: 12,
+    paddingTop: 10,
+    paddingBottom: 6,
   },
   sheetTitle: {
-    fontSize: 17,
+    // Matches ToolHeader.title — fontSize 18, weight 900, RTL, slight
+    // negative letter-spacing.
+    flex: 1,
+    fontSize: 18,
     fontWeight: '900',
     color: STITCH.onSurface,
-    textAlign: 'center',
+    textAlign: 'right',
     writingDirection: 'rtl',
-    // Leave space on the right for the absolute X so the title doesn't
-    // collide with the button on narrow phones.
-    paddingHorizontal: 52,
+    letterSpacing: -0.2,
   },
   progressRow: {
-    paddingHorizontal: 4,
+    paddingHorizontal: 16,
   },
   closeBtn: {
-    position: 'absolute',
-    right: 12,
-    top: 12,
+    // Same chip dimensions as the financial-tools back-button. First
+    // child of titleRow → with row-reverse it renders to the visual
+    // RIGHT of the title (Hebrew RTL convention for close affordance).
     width: 40,
     height: 40,
     borderRadius: 12,
@@ -719,7 +730,6 @@ const styles = StyleSheet.create({
     backgroundColor: STITCH.surface,
     alignItems: 'center',
     justifyContent: 'center',
-    zIndex: 5,
   },
   dotsRow: {
     flexDirection: 'row-reverse',
