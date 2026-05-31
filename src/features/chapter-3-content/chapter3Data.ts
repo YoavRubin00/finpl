@@ -140,6 +140,9 @@ export const chapter3Data: Chapter = {
         description:
           'אתה רץ עם עגלה. המחירים על המדפים עולים תוך כדי ריצה, ואתה חייב לאסוף "מטבעות השקעה" כדי שהארנק שלך יגדל מהר יותר מהאינפלציה.',
       },
+      // Yoav 2026-05-31: filled hole. Inflation race + investment game —
+      // investment is the antidote the lesson just taught.
+      interModuleGame: 'investment',
     },
     {
       id: 'mod-3-16',
@@ -421,6 +424,9 @@ export const chapter3Data: Chapter = {
         description:
           'המשתמש בוחר מסלול השקעה. רואה את הכסף מתקדם. בירידה בשוק, המשתמש מחליט אם למשוך (ולשלם מס) או להמשיך ליעד.',
       },
+      // Yoav 2026-05-31: filled hole. Withdraw/continue dilemma + price-slider
+      // (estimate values) — both ask "what's it really worth right now?"
+      interModuleGame: 'price-slider',
     },
     {
       id: 'mod-3-18',

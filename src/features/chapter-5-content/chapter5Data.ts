@@ -548,6 +548,9 @@ export const chapter5Data: Chapter = {
         description:
           'המשתמש בוחר האם למשוך כסף כהון חד-פעמי או כקצבה. המערכת מראה את ההשפעה על המס ועל ההכנסה החודשית ל-30 שנה.',
       },
+      // Yoav 2026-05-31: filled hole. Retirement planning + budget-ninja
+      // (slice income into pension vs spending) — same skill, different game.
+      interModuleGame: 'budget-ninja',
     },
     {
       id: 'mod-5-29',
@@ -681,6 +684,9 @@ export const chapter5Data: Chapter = {
         description:
           'המשתמש בונה עץ משפחה, מעדכן מוטבים ויוצר צוואה וירטואלית. המערכת מריצה "אירוע" ומראה מה קורה עם ובלי תכנון.',
       },
+      // Yoav 2026-05-31: filled hole. Inheritance + cashout-rush (when to take
+      // money out) — both wrestle with "extract value or let it grow?"
+      interModuleGame: 'cashout-rush',
     },
     {
       id: 'mod-5-30',
