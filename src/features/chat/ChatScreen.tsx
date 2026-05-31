@@ -12,9 +12,14 @@ import {
   Pressable,
   StyleSheet, Image, Modal,
   AccessibilityInfo,
+  type NativeSyntheticEvent,
+  type TextInputContentSizeChangeEventData,
+  type StyleProp,
+  type TextStyle,
+  type LayoutChangeEvent,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { Send, Check, CheckCheck, MessageCircle, ChevronLeft } from "lucide-react-native";
+import { Send, Check, CheckCheck } from "lucide-react-native";
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -23,10 +28,13 @@ import Animated, {
   withDelay,
   withSequence,
   withTiming,
-  interpolateColor,
   FadeIn,
+  FadeOut,
   SlideInUp,
+  Easing,
+  runOnJS,
 } from "react-native-reanimated";
+import { LinearGradient } from "expo-linear-gradient";
 import { useAuthStore } from "../auth/useAuthStore";
 import { useChapterUIStore } from "../chapter-1-content/useChapterUIStore";
 import { useProgress } from "../chapter-1-content/useProgress";
@@ -40,11 +48,13 @@ import { getConceptLabel } from "../social/LifelineModal";
 import { AnimatedPressable } from "../../components/ui/AnimatedPressable";
 import { COMPANION_PERSONALITIES, getContextualSuggestions, getContextAwareGreeting } from "./chatData";
 import { buildSystemPrompt, type LessonContext } from "./buildChatPrompt";
-import type { CompanionAnimationState, ChatMessage, MessageStatus } from "./chatTypes";
+import type { CompanionAnimationState, ChatMessage, MessageStatus, ChatSuggestion } from "./chatTypes";
 import type { CompanionId } from "../auth/types";
 import { ProBadge } from "../../components/ui/ProBadge";
 import { useTutorialStore } from "../../stores/useTutorialStore";
 import { streamChatRequest } from "../../utils/streamChat";
+import { generateFollowups } from "./generateFollowups";
+import { MarkdownText } from "./MarkdownText";
 
 /* ------------------------------------------------------------------ */
 /*  Money-themed decoration Lotties (subtle, not green)                */
@@ -57,6 +67,21 @@ const TRENDING_QUESTIONS = [
   "איך עובד ריבית דריבית?",
   "מה זה מניה?",
 ];
+
+// Auto-growing chat input: starts at one line, stretches up to five lines as the
+// user types, then scrolls internally. Heights include the input's vertical
+// padding (contentSize.height reports padding-inclusive height).
+const INPUT_LINE_HEIGHT = 20;
+const INPUT_VPAD = 10; // paddingVertical on inputStyles.textInput
+const INPUT_MIN_HEIGHT = INPUT_LINE_HEIGHT + INPUT_VPAD * 2; // 1 line
+const INPUT_MAX_HEIGHT = INPUT_LINE_HEIGHT * 5 + INPUT_VPAD * 2; // 5 lines
+
+// react-native-web renders the multiline input as a <textarea>, which shows a
+// browser focus outline with squared corners that clashes with our rounded
+// wrapper border. Strip it on web (these keys aren't in RN's TextStyle).
+const WEB_INPUT_RESET = (Platform.OS === "web"
+  ? { outlineStyle: "none", outlineWidth: 0 }
+  : null) as unknown as StyleProp<TextStyle>;
 
 
 /* ------------------------------------------------------------------ */
@@ -132,6 +157,86 @@ function unwrapJsonEnvelope(text: string): string {
   if (leading) cleaned = cleaned.slice(leading[0].length);
   if (trailing) cleaned = cleaned.slice(0, cleaned.length - trailing[0].length);
   return unescapeJsonString(cleaned);
+}
+
+/* ------------------------------------------------------------------ */
+/*  Streaming bot text — Gemini-style reveal                           */
+/* ------------------------------------------------------------------ */
+
+// Renders the full reply text laid out once (so it never reflows/jumps while
+// streaming) and reveals it top-to-bottom with an opaque overlay that slides
+// down. The overlay has a soft gradient top edge — the "fade frontier" — so
+// each line resolves in smoothly. The motion is a pure transform (no bubble
+// height animation), so it stays sub-pixel smooth however the text arrives.
+const REVEAL_PX_PER_MS = 0.55; // reveal speed; higher = faster wipe
+const FRONTIER_HEIGHT = 26;    // soft fade band height at the reveal edge
+
+function StreamingBotText({
+  content,
+  textStyle,
+  networkDone,
+  onRevealEnd,
+}: {
+  content: string;
+  textStyle: StyleProp<TextStyle>;
+  networkDone: boolean;
+  onRevealEnd: () => void;
+}) {
+  const reveal = useSharedValue(0);
+  const [height, setHeight] = useState(0);
+
+  const finish = useCallback(() => onRevealEnd(), [onRevealEnd]);
+
+  useEffect(() => {
+    // Not laid out yet. If there is real text, wait for onLayout to report the
+    // height (the next effect run starts the reveal) so a fast (already-done)
+    // stream still animates. If there's nothing to show, hand off immediately
+    // to avoid a stuck, hidden bubble.
+    if (height <= 0) {
+      if (networkDone && content.trim().length === 0) finish();
+      return;
+    }
+    const remaining = Math.max(0, height - reveal.value);
+    const duration = Math.max(160, Math.min(1400, remaining / REVEAL_PX_PER_MS));
+    reveal.value = withTiming(
+      height,
+      { duration, easing: Easing.linear },
+      (done) => {
+        // Hand off to plain text only once the wipe reached the bottom AND the
+        // stream is fully done (more text may still be arriving otherwise).
+        if (done && networkDone) runOnJS(finish)();
+      },
+    );
+  }, [height, content, networkDone, reveal, finish]);
+
+  const coverStyle = useAnimatedStyle(() => ({
+    transform: [{ translateY: reveal.value }],
+  }));
+
+  const onLayout = useCallback((e: LayoutChangeEvent) => {
+    setHeight(e.nativeEvent.layout.height);
+  }, []);
+
+  return (
+    <View style={{ position: "relative" }}>
+      {/* Full reply laid out once as markdown so it never reflows while the
+          cover slides down to reveal it. */}
+      <MarkdownText content={content} baseStyle={textStyle} onLayout={onLayout} />
+      {/* Opaque white cover that starts over the whole text and slides down to
+          reveal it. absoluteFill auto-sizes to the text, so there's no flash
+          before the height is measured. */}
+      <Animated.View
+        pointerEvents="none"
+        style={[StyleSheet.absoluteFill, { left: -2, right: -2 }, coverStyle]}
+      >
+        <LinearGradient
+          colors={["rgba(255,255,255,0)", "#ffffff"]}
+          style={{ height: FRONTIER_HEIGHT }}
+        />
+        <View style={{ flex: 1, backgroundColor: "#ffffff" }} />
+      </Animated.View>
+    </View>
+  );
 }
 
 /* ------------------------------------------------------------------ */
@@ -323,15 +428,39 @@ export function ChatScreen({ lessonContext }: { lessonContext?: LessonContext } 
   const [showStylePicker, setShowStylePicker] = useState(false);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState("");
+  // Controlled input height so the field grows from 1 line up to 5 lines.
+  const [inputHeight, setInputHeight] = useState(INPUT_MIN_HEIGHT);
   const [loading, setLoading] = useState(false);
   const [showExtraQuestions, setShowExtraQuestions] = useState(false);
   const [_animationState, setAnimationState] = useState<CompanionAnimationState>("idle");
   const scrollViewRef = useRef<ScrollView>(null);
+  const inputRef = useRef<TextInput>(null);
+  // Visible height of the scroll viewport, used to size the "answer block" so a
+  // freshly-sent user message can be pinned to the top with empty space below it.
+  const [viewportH, setViewportH] = useState(0);
+  // Y-offset (within scroll content) of the current turn's anchor — the last
+  // user message. Updated via the answer block's onLayout.
+  const anchorYRef = useRef(0);
   const talkingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
-  const pendingRef = useRef<string>("");
-  const drainTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const draftTsRef = useRef<number>(0);
+  // Timestamp of the bot reply currently revealing (laid out + animating in),
+  // or null when idle. Drives the StreamingBotText reveal in renderMessage.
+  const [streamingTs, setStreamingTs] = useState<number | null>(null);
+  // Set once the network finishes for that reply, so the reveal knows it can
+  // run to the end and hand off to plain (fully-visible) text.
+  const [streamDoneTs, setStreamDoneTs] = useState<number | null>(null);
+
+  // Reveal reached the bottom and the stream is done — drop the streaming
+  // wrapper so the message renders as ordinary, fully-visible text.
+  const handleRevealEnd = useCallback(() => {
+    setStreamingTs(null);
+    setStreamDoneTs(null);
+  }, []);
+  // AI-generated follow-up questions that replace the two default suggestion
+  // chips after each answered turn. null = show the contextual defaults.
+  const [dynamicSuggestions, setDynamicSuggestions] = useState<ChatSuggestion[] | null>(null);
+  const followupAbortRef = useRef<AbortController | null>(null);
 
   const companionId: CompanionId = profile?.companionId ?? "warren-buffett";
   const companion = COMPANION_PERSONALITIES[companionId];
@@ -341,17 +470,10 @@ export function ChatScreen({ lessonContext }: { lessonContext?: LessonContext } 
   const [lifelineConcept] = useState(lifelineConceptRef.current);
   const [autoSendLifeline, setAutoSendLifeline] = useState(false);
 
-  // Input bar focus glow animation
-  const focusProgress = useSharedValue(0);
-  const inputBorderStyle = useAnimatedStyle(() => ({
-    borderColor: interpolateColor(focusProgress.value, [0, 1], ["#cbd5e1", "#0ea5e9"]),
-  }));
-  const handleInputFocus = useCallback(() => {
-    focusProgress.value = withTiming(1, { duration: 250 });
-  }, [focusProgress]);
-  const handleInputBlur = useCallback(() => {
-    focusProgress.value = withTiming(0, { duration: 250 });
-  }, [focusProgress]);
+  // Simple solid accent border while the input is focused.
+  const [inputFocused, setInputFocused] = useState(false);
+  const handleInputFocus = useCallback(() => setInputFocused(true), []);
+  const handleInputBlur = useCallback(() => setInputFocused(false), []);
 
   // Send button pulse animation
   const sendPulse = useSharedValue(1);
@@ -395,6 +517,43 @@ export function ChatScreen({ lessonContext }: { lessonContext?: LessonContext } 
     setInput(text);
   }, []);
 
+  // Grow the input to fit its content, clamped between one and five lines.
+  // Native (iOS/Android): the field is sized straight from the reported content
+  // size, which grows and shrinks correctly on its own.
+  const handleInputSizeChange = useCallback(
+    (e: NativeSyntheticEvent<TextInputContentSizeChangeEventData>) => {
+      const h = e.nativeEvent.contentSize.height;
+      setInputHeight(Math.min(INPUT_MAX_HEIGHT, Math.max(INPUT_MIN_HEIGHT, h)));
+    },
+    [],
+  );
+
+  // Web: size the textarea to its content from one line up to five. We must
+  // collapse the element to 0 first — scrollHeight is floored at the element's
+  // own height (and 'auto' floors it at the default 2 rows), so without the
+  // collapse it can never report a single line or shrink back down.
+  const measureWebInputHeight = useCallback(() => {
+    const node = inputRef.current as unknown as
+      | { scrollHeight?: number; style?: { height: string } }
+      | null;
+    if (!node || typeof node.scrollHeight !== "number" || !node.style) return;
+    node.style.height = "0px";
+    const next = Math.min(INPUT_MAX_HEIGHT, Math.max(INPUT_MIN_HEIGHT, node.scrollHeight));
+    node.style.height = `${next}px`;
+    setInputHeight(next);
+  }, []);
+
+  const handleChangeText = useCallback((t: string) => {
+    setInput(t);
+    measureWebInputHeight();
+  }, [measureWebInputHeight]);
+
+  // Web starts a multiline textarea at its default 2-row height — size it to one
+  // line on mount so it matches the native single-line start.
+  useEffect(() => {
+    measureWebInputHeight();
+  }, [measureWebInputHeight]);
+
   // Mark user messages as "read" after assistant replies
   const markAllRead = useCallback(() => {
     setMessages((prev) =>
@@ -404,72 +563,49 @@ export function ChatScreen({ lessonContext }: { lessonContext?: LessonContext } 
     );
   }, []);
 
-  // Typewriter pacing: push incoming chunks into pendingRef and drain at a steady
-  // cadence so the UI paints incrementally even when the transport delivers the
-  // whole body in one chunk (RN fetch fallback).
-  const stopDrain = useCallback(() => {
-    if (drainTimerRef.current) {
-      clearInterval(drainTimerRef.current);
-      drainTimerRef.current = null;
-    }
+  // Pin the current turn's user message to the top of the viewport (ChatGPT-style),
+  // leaving the answer block's empty space below it for the streaming reply.
+  const scrollToAnchor = useCallback(() => {
+    scrollViewRef.current?.scrollTo({ y: Math.max(0, anchorYRef.current - 8), animated: true });
   }, []);
 
-  const startDrain = useCallback((ts: number) => {
-    if (drainTimerRef.current && draftTsRef.current !== ts) {
-      clearInterval(drainTimerRef.current);
-      drainTimerRef.current = null;
-    }
+  // After a successful answer, quietly fetch two fresh follow-up questions and
+  // crossfade them into the two default suggestion chips. Best-effort: any
+  // failure leaves the current chips untouched. A new call aborts the prior one.
+  const triggerFollowups = useCallback((lastQ: string, lastA: string) => {
+    followupAbortRef.current?.abort();
+    const controller = new AbortController();
+    followupAbortRef.current = controller;
+    generateFollowups(lastQ, lastA, controller.signal)
+      .then((pair) => {
+        if (controller.signal.aborted || !pair) return;
+        setDynamicSuggestions([
+          { text: pair[0], moduleId: null },
+          { text: pair[1], moduleId: null },
+        ]);
+      })
+      .catch(() => {
+        // Swallowed — chips keep whatever they're showing.
+      });
+  }, []);
+
+  // Commit a finished reply: the whole response is accumulated during the stream
+  // (typing dots stay up) and only added to the chat here — as one settled,
+  // fully-sanitized message. Setting streamingTs + streamDoneTs together lets
+  // StreamingBotText reveal it in a single smooth pass over a layout that never
+  // changes (no per-chunk reflow, no mid-reveal re-sanitize → no jank).
+  const commitStreamedReply = useCallback((ts: number, rawText: string) => {
+    const finalText = unwrapJsonEnvelope(stripDebugPreamble(rawText));
     draftTsRef.current = ts;
-    if (drainTimerRef.current) return;
-    const CHARS_PER_TICK = 2;
-    const TICK_MS = 40;
-    drainTimerRef.current = setInterval(() => {
-      if (pendingRef.current.length === 0) return;
-      const take = pendingRef.current.slice(0, CHARS_PER_TICK);
-      pendingRef.current = pendingRef.current.slice(CHARS_PER_TICK);
-      setMessages((prev) =>
-        prev.map((m) => {
-          if (m.role !== "assistant" || m.timestamp !== draftTsRef.current) return m;
-          // Client-side safety-net: strip stray debug markers the model
-          // occasionally emits at the start of the reply (e.g. "OK TRUE REPLY.").
-          const next = m.content + take;
-          const cleaned = m.content.length < 200
-            ? next
-                .replace(/^[\s\W]*OK[\s\W]*TRUE[\s\W]*REPLY[\s\W]*/i, "")
-                .replace(/^[\s\W]*(OK|TRUE|REPLY)[\s\W]+/, "")
-                .replace(/^[\s\u200F]+/, "")
-            : next;
-          return { ...m, content: cleaned };
-        }),
-      );
-    }, TICK_MS);
+    setMessages((prev) => [
+      ...prev,
+      { role: "assistant", content: finalText, timestamp: ts, status: "read" as const },
+    ]);
+    setStreamingTs(ts);
+    setStreamDoneTs(ts);
+    setLoading(false);
+    setAnimationState("talking");
   }, []);
-
-  const flushAndStop = useCallback(
-    () =>
-      new Promise<void>((resolve) => {
-        const check = () => {
-          if (pendingRef.current.length === 0) {
-            stopDrain();
-            // Final-pass sanitizer: strip any debug preamble that survived
-            // per-tick cleaning (rare, but happens when chunks arrive faster
-            // than drain ticks).
-            setMessages((prev) =>
-              prev.map((m) =>
-                m.role === "assistant" && m.timestamp === draftTsRef.current
-                  ? { ...m, content: unwrapJsonEnvelope(stripDebugPreamble(m.content)) }
-                  : m,
-              ),
-            );
-            resolve();
-          } else {
-            setTimeout(check, 20);
-          }
-        };
-        check();
-      }),
-    [stopDrain],
-  );
 
   // Context-aware greeting referencing user's last completed module
   const contextGreeting = useMemo(
@@ -519,11 +655,7 @@ export function ChatScreen({ lessonContext }: { lessonContext?: LessonContext } 
   // Abort any in-flight stream on unmount
   useEffect(() => () => {
     abortControllerRef.current?.abort();
-    if (drainTimerRef.current) {
-      clearInterval(drainTimerRef.current);
-      drainTimerRef.current = null;
-    }
-    pendingRef.current = "";
+    followupAbortRef.current?.abort();
   }, []);
 
   // Auto-trigger AI response for lifeline intervention
@@ -555,55 +687,36 @@ export function ChatScreen({ lessonContext }: { lessonContext?: LessonContext } 
     }));
 
     const draftTs = Date.now();
-    pendingRef.current = "";
 
     abortControllerRef.current?.abort();
     abortControllerRef.current = new AbortController();
-    let firstChunk = true;
     let accumulated = "";
 
     streamChatRequest(
       { systemPrompt, messages: chatMessages, maxOutputTokens: 2500 },
-      (chunk) => {
-        if (firstChunk) {
-          setLoading(false);
-          setAnimationState("talking");
-          setMessages((prev) => [
-            ...prev,
-            { role: "assistant", content: "", timestamp: draftTs, status: "read" as const },
-          ]);
-          firstChunk = false;
-          startDrain(draftTs);
-        }
-        pendingRef.current += chunk;
-        accumulated += chunk;
-      },
+      // Accumulate silently while the typing dots stay up — the reply is added
+      // and revealed once, as a settled block, in the completion handler below.
+      (chunk) => { accumulated += chunk; },
       abortControllerRef.current.signal,
-    ).then(async ({ ok }) => {
-      await flushAndStop();
+    ).then(({ ok }) => {
       if (!ok) {
-        setMessages((prev) => {
-          const hasDraft = prev.some((m) => m.role === "assistant" && m.timestamp === draftTs);
-          if (hasDraft) {
-            return prev.map((m) =>
-              m.role === "assistant" && m.timestamp === draftTs
-                ? { ...m, content: "שגיאה בחיבור. נסו שוב." }
-                : m,
-            );
-          }
-          return [
-            ...prev,
-            { role: "assistant" as const, content: "שגיאה בחיבור. נסו שוב.", timestamp: draftTs, status: "read" as const },
-          ];
-        });
+        setMessages((prev) => [
+          ...prev,
+          { role: "assistant" as const, content: "שגיאה בחיבור. נסו שוב.", timestamp: draftTs, status: "read" as const },
+        ]);
         setAnimationState("idle");
-      } else {
-        if (accumulated) AccessibilityInfo.announceForAccessibility(accumulated);
-        markAllRead();
-        talkingTimeoutRef.current = setTimeout(() => setAnimationState("idle"), 3000);
+        setLoading(false);
+        setTimeout(scrollToAnchor, 100);
+        return;
       }
-      setLoading(false);
-      setTimeout(() => scrollViewRef.current?.scrollToEnd({ animated: true }), 100);
+      commitStreamedReply(draftTs, accumulated);
+      if (accumulated) AccessibilityInfo.announceForAccessibility(accumulated);
+      markAllRead();
+      const lastQ = messages[0]?.content ?? "";
+      const lastA = stripDebugPreamble(accumulated);
+      if (lastQ && lastA) triggerFollowups(lastQ, lastA);
+      talkingTimeoutRef.current = setTimeout(() => setAnimationState("idle"), 3000);
+      setTimeout(scrollToAnchor, 100);
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [autoSendLifeline]);
@@ -617,6 +730,7 @@ export function ChatScreen({ lessonContext }: { lessonContext?: LessonContext } 
     const isProNow = subData?.isPro === true;
     if (!useUsageStore.getState().canUse("chat", isProNow)) {
       setInput("");
+      setInputHeight(INPUT_MIN_HEIGHT);
       return;
     }
 
@@ -630,8 +744,13 @@ export function ChatScreen({ lessonContext }: { lessonContext?: LessonContext } 
 
     setMessages(updatedMessages);
     setInput("");
+    setInputHeight(INPUT_MIN_HEIGHT);
     setLoading(true);
     setAnimationState("thinking");
+
+    // Pop the just-sent message to the top of the chat immediately (the answer
+    // block's min-height has already opened the empty space below it).
+    setTimeout(scrollToAnchor, 80);
 
     // Mark as delivered after short delay
     setTimeout(() => {
@@ -660,55 +779,30 @@ export function ChatScreen({ lessonContext }: { lessonContext?: LessonContext } 
       content: m.content,
     }));
 
-    // Draft bubble is added on first chunk (see onChunk below) — this avoids a
-    // double-shark render while the typing indicator is still visible.
+    // The reply is added once it's fully arrived (see commitStreamedReply) — the
+    // typing dots stay up meanwhile, avoiding a double-shark render and a reflow.
     const draftTs = Date.now();
-    pendingRef.current = "";
 
     abortControllerRef.current?.abort();
     abortControllerRef.current = new AbortController();
-    let firstChunk = true;
     let accumulated = "";
 
     const { ok } = await streamChatRequest(
       { systemPrompt, messages: chatMessages, maxOutputTokens: 2500 },
-      (chunk) => {
-        if (firstChunk) {
-          setLoading(false);
-          setAnimationState("talking");
-          setMessages((prev) => [
-            ...prev,
-            { role: "assistant", content: "", timestamp: draftTs, status: "read" as const },
-          ]);
-          firstChunk = false;
-          startDrain(draftTs);
-        }
-        pendingRef.current += chunk;
-        accumulated += chunk;
-      },
+      // Accumulate silently; the settled block is committed + revealed below.
+      (chunk) => { accumulated += chunk; },
       abortControllerRef.current.signal,
     );
 
-    await flushAndStop();
-
     if (!ok) {
-      setMessages((prev) => {
-        const hasDraft = prev.some((m) => m.role === "assistant" && m.timestamp === draftTs);
-        if (hasDraft) {
-          return prev.map((m) =>
-            m.role === "assistant" && m.timestamp === draftTs
-              ? { ...m, content: "שגיאה בחיבור. נסו שוב." }
-              : m,
-          );
-        }
-        return [
-          ...prev,
-          { role: "assistant" as const, content: "שגיאה בחיבור. נסו שוב.", timestamp: draftTs, status: "read" as const },
-        ];
-      });
+      setMessages((prev) => [
+        ...prev,
+        { role: "assistant" as const, content: "שגיאה בחיבור. נסו שוב.", timestamp: draftTs, status: "read" as const },
+      ]);
       markAllRead();
       setAnimationState("idle");
     } else {
+      commitStreamedReply(draftTs, accumulated);
       if (accumulated) AccessibilityInfo.announceForAccessibility(accumulated);
       if (!isProNow) {
         useUsageStore.getState().incrementUsage("chat");
@@ -729,13 +823,17 @@ export function ChatScreen({ lessonContext }: { lessonContext?: LessonContext } 
             },
           ];
         });
+      } else {
+        // Refresh the suggestion chips with follow-ups tailored to this answer.
+        const lastA = stripDebugPreamble(accumulated);
+        if (lastA) triggerFollowups(text, lastA);
       }
       talkingTimeoutRef.current = setTimeout(() => setAnimationState("idle"), 3000);
     }
 
     setLoading(false);
-    setTimeout(() => scrollViewRef.current?.scrollToEnd({ animated: true }), 100);
-  }, [input, loading, messages, displayName, profile, companionId, companion, allCompletedModules, currentChapterId, lifelineConcept, markAllRead]);
+    setTimeout(scrollToAnchor, 100);
+  }, [input, loading, messages, displayName, profile, companionId, companion, allCompletedModules, currentChapterId, lifelineConcept, markAllRead, scrollToAnchor, triggerFollowups, commitStreamedReply]);
 
   const isPro = useIsPro();
   // Subscribe to chatMessagesToday so canSendChat re-evaluates after each send
@@ -748,6 +846,79 @@ export function ChatScreen({ lessonContext }: { lessonContext?: LessonContext } 
     completeChatStyleChoice();
     setShowStylePicker(false);
   }, [updateProfile, completeChatStyleChoice]);
+
+  // Index of the last user message — the anchor for the current turn. Everything
+  // from here on (the user question + its streaming answer) lives in an "answer
+  // block" tall enough to let the question sit at the very top of the viewport.
+  let anchorIdx = -1;
+  for (let i = messages.length - 1; i >= 0; i--) {
+    if (messages[i].role === "user") { anchorIdx = i; break; }
+  }
+
+  const renderMessage = (msg: ChatMessage, index: number) => {
+    const isBot = msg.role === "assistant";
+    return (
+      <View
+        key={index}
+        style={[msgStyles.messageRow, isBot ? msgStyles.messageRowBot : msgStyles.messageRowUser]}
+      >
+        {isBot && (
+          <View style={msgStyles.avatarCircle}>
+            <ExpoImage
+              source={FINN_STANDARD}
+              style={{ width: 22, height: 22 }}
+              contentFit="contain"
+              accessible={false}
+            />
+          </View>
+        )}
+        <View
+          style={[
+            msgStyles.bubble,
+            isBot ? msgStyles.botBubble : msgStyles.userBubble,
+            !isBot && isPro && { borderColor: "#fde68a" },
+          ]}
+        >
+          {/* While the reply is streaming, render it with the Gemini-style
+              reveal (full text laid out once + sliding fade \u2014 no bubble-height
+              animation). Once done it hands off to a plain, fully-visible Text. */}
+          {isBot && msg.timestamp === streamingTs ? (
+            <StreamingBotText
+              content={msg.content}
+              textStyle={[msgStyles.botText, msgStyles.rtlText]}
+              networkDone={streamDoneTs === msg.timestamp}
+              onRevealEnd={handleRevealEnd}
+            />
+          ) : isBot ? (
+            // Settled bot reply \u2014 render the light markdown the model produced.
+            <MarkdownText content={msg.content} baseStyle={[msgStyles.botText, msgStyles.rtlText]} />
+          ) : (
+            <Text style={[msgStyles.userText, msgStyles.rtlText]}>
+              {/* RLI (U+2067) ... PDI (U+2069): strong RTL bidi isolate so
+                  neutral chars (/, ", ,, .) don't drift around. */}
+              {"\u2067" + msg.content + "\u2069"}
+            </Text>
+          )}
+          {msg.kind === "upgrade_prompt" && (
+            <Pressable
+              onPress={() => router.push("/pricing" as never)}
+              accessibilityRole="button"
+              accessibilityLabel="שדרג לפרו"
+              style={msgStyles.upgradeCta}
+            >
+              <Text style={msgStyles.upgradeCtaText}>שדרג לפרו 💎</Text>
+            </Pressable>
+          )}
+          {/* Timestamp + Read Receipt row */}
+          <View style={msgStyles.metaRow}>
+            {!isBot && isPro && <ProBadge size="sm" />}
+            {!isBot && <ReadReceipt status={msg.status} />}
+            <Text style={msgStyles.timestamp}>{formatTime(msg.timestamp)}</Text>
+          </View>
+        </View>
+      </View>
+    );
+  };
 
   return (
     <View style={{ flex: 1, backgroundColor: '#ffffff' }}>
@@ -778,83 +949,37 @@ export function ChatScreen({ lessonContext }: { lessonContext?: LessonContext } 
             </View>
             {/* Settings gear removed, chat tone now in app Settings screen */}
           </View>
-
-          {/* Recent conversations strip, Pro only */}
-          {isPro && messages.length > 2 && (
-            <View style={headerStyles.recentStrip}>
-              <MessageCircle size={12} color="#64748b" />
-              <Text style={headerStyles.recentLabel}>
-                {messages.filter((m) => m.role === "user").length} הודעות בשיחה הנוכחית
-              </Text>
-            </View>
-          )}
         </View>
 
-        {/* Chat messages, fills from bottom */}
+        {/* Chat messages — the current turn is pinned to the top of the viewport */}
         <ScrollView
           ref={scrollViewRef}
           style={{ flex: 1, paddingHorizontal: 12 }}
-          contentContainerStyle={[msgStyles.scrollContent, { flexGrow: 1, justifyContent: messages.length <= 1 ? "flex-start" : "flex-end" }]}
-          onContentSizeChange={() => scrollViewRef.current?.scrollToEnd({ animated: true })}
+          contentContainerStyle={[msgStyles.scrollContent, { flexGrow: 1, justifyContent: "flex-start" }]}
+          onLayout={(e) => setViewportH(e.nativeEvent.layout.height)}
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
         >
-          {messages.map((msg, index) => {
-            const isBot = msg.role === "assistant";
-            return (
+          {anchorIdx === -1 ? (
+            <>
+              {messages.map((msg, index) => renderMessage(msg, index))}
+              {loading && <TypingIndicator emoji={companion.emoji} />}
+            </>
+          ) : (
+            <>
+              {messages.slice(0, anchorIdx).map((msg, index) => renderMessage(msg, index))}
+              {/* Answer block: at least one viewport tall so the user's question
+                  can sit at the very top, leaving empty space below it that the
+                  streaming reply then fills in (ChatGPT-style). */}
               <View
-                key={index}
-                style={[msgStyles.messageRow, isBot ? msgStyles.messageRowBot : msgStyles.messageRowUser]}
+                onLayout={(e) => { anchorYRef.current = e.nativeEvent.layout.y; }}
+                style={viewportH > 0 ? { minHeight: viewportH - 12 } : undefined}
               >
-                {isBot && (
-                  <View style={msgStyles.avatarCircle}>
-                    <ExpoImage
-                      source={FINN_STANDARD}
-                      style={{ width: 22, height: 22 }}
-                      contentFit="contain"
-                      accessible={false}
-                    />
-                  </View>
-                )}
-                <View style={[
-                  msgStyles.bubble,
-                  isBot ? msgStyles.botBubble : msgStyles.userBubble,
-                  !isBot && isPro && { borderColor: "#fde68a" },
-                ]}>
-                  <Text
-                    style={[
-                      isBot ? msgStyles.botText : msgStyles.userText,
-                      { writingDirection: "rtl", textAlign: "right" },
-                    ]}
-                  >
-                    {/* RLI (U+2067) ... PDI (U+2069) creates a strong RTL bidi isolate.
-                        Stronger than a leading RLM: prevents neutral chars (/, ", ,, .)
-                        from drifting around during streaming as new chunks arrive
-                        and the bidi context keeps re-resolving on each render. */}
-                    {"\u2067" + msg.content + "\u2069"}
-                  </Text>
-                  {msg.kind === "upgrade_prompt" && (
-                    <Pressable
-                      onPress={() => router.push("/pricing" as never)}
-                      accessibilityRole="button"
-                      accessibilityLabel="שדרג לפרו"
-                      style={msgStyles.upgradeCta}
-                    >
-                      <Text style={msgStyles.upgradeCtaText}>שדרג לפרו 💎</Text>
-                    </Pressable>
-                  )}
-                  {/* Timestamp + Read Receipt row */}
-                  <View style={msgStyles.metaRow}>
-                    {!isBot && isPro && <ProBadge size="sm" />}
-                    {!isBot && <ReadReceipt status={msg.status} />}
-                    <Text style={msgStyles.timestamp}>{formatTime(msg.timestamp)}</Text>
-                  </View>
-                </View>
+                {messages.slice(anchorIdx).map((msg, i) => renderMessage(msg, anchorIdx + i))}
+                {loading && <TypingIndicator emoji={companion.emoji} />}
               </View>
-            );
-          })}
-
-          {loading && <TypingIndicator emoji={companion.emoji} />}
+            </>
+          )}
 
           <View className="h-4" />
         </ScrollView>
@@ -867,18 +992,25 @@ export function ChatScreen({ lessonContext }: { lessonContext?: LessonContext } 
             accessibilityRole="button"
             accessibilityLabel={showExtraQuestions ? "הסתר הצעות" : "הצג הצעות"}
           >
-            <ChevronLeft size={14} color="#0369a1" />
-            <Text style={chipStyles.extraText}>לא יודעים מה לשאול?</Text>
+            <Text style={chipStyles.extraText}>?</Text>
           </AnimatedPressable>
-          {suggestions.slice(0, 2).map((suggestion, idx) => (
+          {(dynamicSuggestions ?? suggestions.slice(0, 2)).map((suggestion, idx) => (
             <AnimatedPressable
-              key={`${suggestion.moduleId ?? "gen"}-${idx}`}
+              key={idx}
               onPress={() => handleSuggestionTap(suggestion.text)}
               style={chipStyles.chip}
               accessibilityRole="button"
               accessibilityLabel={suggestion.text}
             >
-              <Text style={chipStyles.text}>{suggestion.text}</Text>
+              {/* Keyed by text so a new follow-up fades in over the old label. */}
+              <Animated.View
+                key={suggestion.text}
+                entering={FadeIn.duration(350)}
+                exiting={FadeOut.duration(200)}
+                style={chipStyles.chipLabel}
+              >
+                <Text style={chipStyles.text}>{suggestion.text}</Text>
+              </Animated.View>
             </AnimatedPressable>
           ))}
         </View>
@@ -906,24 +1038,26 @@ export function ChatScreen({ lessonContext }: { lessonContext?: LessonContext } 
 
         {/* Input bar */}
         <View style={inputStyles.bar}>
-          <Animated.View style={[inputStyles.textInputWrapper, inputBorderStyle]}>
+          <View style={[inputStyles.textInputWrapper, inputFocused && inputStyles.textInputWrapperFocused]}>
             <TextInput
+              ref={inputRef}
               value={input}
-              onChangeText={setInput}
+              onChangeText={handleChangeText}
               editable={canSendChat}
               placeholder={canSendChat ? companion.placeholder : "הגעת למגבלה היומית. חזור מחר או שדרג לפרו 💙"}
               placeholderTextColor="#64748b"
               accessibilityLabel={canSendChat ? "כתבו הודעה" : "הגעת למגבלה היומית, שדרוג לפרו יאפשר שיחה ללא הגבלה"}
               multiline
               maxLength={500}
-              style={inputStyles.textInput}
+              style={[inputStyles.textInput, WEB_INPUT_RESET, { height: inputHeight }]}
+              onContentSizeChange={Platform.OS === "web" ? undefined : handleInputSizeChange}
               onSubmitEditing={sendMessage}
               returnKeyType="send"
               submitBehavior="blurAndSubmit"
               onFocus={handleInputFocus}
               onBlur={handleInputBlur}
             />
-          </Animated.View>
+          </View>
           <Animated.View style={sendPulseStyle}>
             <AnimatedPressable
               onPress={sendMessage}
@@ -994,21 +1128,6 @@ const headerStyles = StyleSheet.create({
     color: "#059669",
     writingDirection: "rtl",
   },
-  recentStrip: {
-    flexDirection: "row-reverse",
-    alignItems: "center",
-    gap: 6,
-    marginTop: 8,
-    paddingTop: 8,
-    borderTopWidth: 1,
-    borderTopColor: "#f1f5f9",
-  },
-  recentLabel: {
-    fontSize: 11,
-    color: "#64748b",
-    fontWeight: "600",
-    writingDirection: "rtl",
-  },
   settingsBtn: {
     width: 36,
     height: 36,
@@ -1058,8 +1177,6 @@ const msgStyles = StyleSheet.create({
   },
   botBubble: {
     backgroundColor: "#ffffff",
-    borderWidth: 1,
-    borderColor: "#e5e7eb",
     borderTopRightRadius: 4,
   },
   userBubble: {
@@ -1070,6 +1187,10 @@ const msgStyles = StyleSheet.create({
     color: "#1f2937",
     fontSize: 14,
     lineHeight: 22,
+  },
+  rtlText: {
+    writingDirection: "rtl",
+    textAlign: "right",
   },
   userText: {
     color: "#1f2937",
@@ -1117,25 +1238,27 @@ const msgStyles = StyleSheet.create({
 const chipStyles = StyleSheet.create({
   container: {
     flexDirection: "row-reverse",
+    alignItems: "center",
     paddingHorizontal: 12,
-    paddingVertical: 8,
-    gap: 8,
+    paddingVertical: 6,
+    gap: 6,
   },
   chip: {
     flex: 1,
-    minHeight: 80,
+    height: 46,
     borderWidth: 1.5,
     borderColor: "#bae6fd",
-    borderRadius: 16,
-    padding: 10,
+    borderRadius: 12,
+    paddingHorizontal: 10,
     alignItems: "center",
     justifyContent: "center",
     backgroundColor: "#f0f9ff",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.12,
-    shadowRadius: 6,
-    elevation: 3,
+    overflow: "hidden",
+  },
+  chipLabel: {
+    alignItems: "center",
+    justifyContent: "center",
+    width: "100%",
   },
   text: {
     color: "#1e3a5f",
@@ -1143,37 +1266,32 @@ const chipStyles = StyleSheet.create({
     fontWeight: "600",
     writingDirection: "rtl" as const,
     textAlign: "center" as const,
-    lineHeight: 18,
+    lineHeight: 16,
   },
   extraChip: {
-    flexDirection: "row" as const,
     alignItems: "center" as const,
     justifyContent: "center" as const,
-    gap: 4,
-    borderWidth: 0,
-    borderRadius: 16,
-    paddingHorizontal: 14,
-    paddingVertical: 9,
-    backgroundColor: "#e0f2fe",
+    width: 46,
+    height: 46,
+    borderWidth: 1.5,
+    borderColor: "#bae6fd",
+    borderRadius: 12,
+    backgroundColor: "#f0f9ff",
   },
   extraText: {
     color: "#0369a1",
-    fontSize: 12,
-    fontWeight: "800" as const,
-    writingDirection: "rtl" as const,
+    fontSize: 17,
+    fontWeight: "700" as const,
+    lineHeight: 20,
+    textAlign: "center" as const,
   },
   trendingChip: {
     borderWidth: 1.5,
     borderColor: "#bae6fd",
-    borderRadius: 16,
+    borderRadius: 999,
     paddingHorizontal: 14,
     paddingVertical: 10,
     backgroundColor: "#f0f9ff",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 4,
-    elevation: 2,
   },
 });
 
@@ -1184,31 +1302,29 @@ const inputStyles = StyleSheet.create({
     gap: 10,
     paddingHorizontal: 16,
     paddingVertical: 12,
-    borderTopWidth: 1,
-    borderTopColor: "#e2e8f0",
     backgroundColor: "#ffffff",
   },
   textInputWrapper: {
     flex: 1,
     backgroundColor: "#f8fafc",
     borderWidth: 1.5,
-    borderColor: "#22d3ee",
+    borderColor: "#cbd5e1",
     borderRadius: 20,
     overflow: "hidden",
-    shadowColor: "#22d3ee",
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.35,
-    shadowRadius: 8,
-    elevation: 4,
+  },
+  textInputWrapperFocused: {
+    borderColor: "#0ea5e9",
   },
   textInput: {
     paddingHorizontal: 16,
-    paddingVertical: 10,
+    paddingVertical: INPUT_VPAD,
     color: "#1f2937",
     fontSize: 14,
-    maxHeight: 100,
+    lineHeight: INPUT_LINE_HEIGHT,
+    maxHeight: INPUT_MAX_HEIGHT,
     writingDirection: "rtl",
     textAlign: "right",
+    textAlignVertical: "top",
   },
   sendButton: {
     width: 40,
