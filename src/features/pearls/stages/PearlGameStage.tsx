@@ -1,11 +1,10 @@
 import React from 'react';
-import { View, ScrollView, StyleSheet, Pressable } from 'react-native';
+import { View, Text, ScrollView, StyleSheet, Pressable } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { X } from 'lucide-react-native';
+import { useRouter } from 'expo-router';
 import { tapHaptic } from '../../../utils/haptics';
 
-// Game cards — same set the legacy in-LessonFlow "inter-module game" modal
-// imported. We keep the dependency edges identical so we don't double-bundle.
 import { InvestmentCard } from '../../daily-challenges/InvestmentCard';
 import { CrashGameCard } from '../../daily-challenges/CrashGameCard';
 import { DilemmaCard } from '../../daily-challenges/DilemmaCard';
@@ -20,6 +19,12 @@ import { CashoutRushCard } from '../../finfeed/minigames/cashout-rush/CashoutRus
 import { MacroEventCard } from '../../macro-events/MacroEventCard';
 import { macroEventsData } from '../../macro-events/macroEventsData';
 import { useIsPro } from '../../subscription/useSubscription';
+// Full game roster (Yoav 2026-05-31) — 4 cards that previously existed but
+// weren't reachable from a pearl. Wrappers below adapt non-onContinue APIs.
+import { DiamondHandsCard } from '../../diamond-hands/DiamondHandsCard';
+import { CrowdQuestionCard } from '../../crowd-question/CrowdQuestionCard';
+import { PayslipBonusCard } from '../../payslip-analyzer/PayslipBonusCard';
+import { SCENARIOS } from '../../scenario-lab/scenarioLabData';
 
 import type { InterModuleGameKey } from '../pearlConfig';
 
@@ -137,6 +142,18 @@ function renderGameCard(
         />
       );
     }
+    case 'diamond-hands':
+      return <PearlExternalGameWrap onContinue={onContinue}><DiamondHandsCard isActive={isActive} /></PearlExternalGameWrap>;
+    case 'crowd-question':
+      return <PearlExternalGameWrap onContinue={onContinue}><CrowdQuestionCard isActive={isActive} /></PearlExternalGameWrap>;
+    case 'payslip-bonus':
+      return <PearlExternalGameWrap onContinue={onContinue}><PayslipBonusCard /></PearlExternalGameWrap>;
+    case 'scenario-lab':
+      return (
+        <PearlExternalGameWrap onContinue={onContinue}>
+          <ScenarioLabCtaCard seed={macroEventId} />
+        </PearlExternalGameWrap>
+      );
     case 'video':
       // 'video' games (Module.interModuleGame === 'video') used to play in
       // the legacy modal. Inside a Pearl the dedicated PearlVideoStage
@@ -147,6 +164,120 @@ function renderGameCard(
       return null;
   }
 }
+
+/**
+ * Wraps a card that lacks a built-in `onContinue` callback (DiamondHands,
+ * Crowd, Payslip CTA, ScenarioLab) with a footer "המשך לשלב הבא" button so
+ * the pearl pager can advance regardless of whether the user engages with
+ * the underlying mini-feature.
+ */
+function PearlExternalGameWrap({
+  children,
+  onContinue,
+}: {
+  children: React.ReactNode;
+  onContinue: () => void;
+}): React.ReactElement {
+  return (
+    <View style={externalStyles.root}>
+      <View style={externalStyles.cardArea}>{children}</View>
+      <Pressable
+        onPress={() => { tapHaptic(); onContinue(); }}
+        accessibilityRole="button"
+        accessibilityLabel="המשך לשלב הבא"
+        style={({ pressed }) => [externalStyles.continueBtn, pressed && externalStyles.continueBtnPressed]}
+      >
+        <Text style={externalStyles.continueText}>המשך לשלב הבא ←</Text>
+      </Pressable>
+    </View>
+  );
+}
+
+const externalStyles = StyleSheet.create({
+  root: { flex: 1 },
+  cardArea: { flex: 1, justifyContent: 'center' },
+  continueBtn: {
+    marginHorizontal: 20,
+    marginBottom: 18,
+    marginTop: 12,
+    paddingVertical: 14,
+    borderRadius: 14,
+    backgroundColor: '#0ea5e9',
+    alignItems: 'center',
+    borderBottomWidth: 3,
+    borderBottomColor: '#0369a1',
+  },
+  continueBtnPressed: { opacity: 0.85, transform: [{ scale: 0.99 }] },
+  continueText: {
+    color: '#ffffff',
+    fontSize: 16,
+    fontWeight: '900',
+    letterSpacing: 0.3,
+    writingDirection: 'rtl' as const,
+  },
+});
+
+/**
+ * Compact CTA for the scenario-lab game. Picks a scenario by hash of seed
+ * → routes to /scenario-lab?scenarioId=<id> on tap. Pearl Continue advances.
+ */
+function ScenarioLabCtaCard({ seed }: { seed: string | undefined }): React.ReactElement {
+  const router = useRouter();
+  const scenario = React.useMemo(() => {
+    if (!SCENARIOS.length) return null;
+    const seedStr = seed ?? 'default';
+    let h = 0;
+    for (let i = 0; i < seedStr.length; i++) h = (h * 31 + seedStr.charCodeAt(i)) | 0;
+    return SCENARIOS[Math.abs(h) % SCENARIOS.length];
+  }, [seed]);
+
+  if (!scenario) return <View />;
+
+  return (
+    <View style={scenarioStyles.card}>
+      <Text style={scenarioStyles.eyebrow}>תרחיש היסטורי</Text>
+      <Text style={scenarioStyles.emoji} accessibilityElementsHidden importantForAccessibility="no">{scenario.emoji}</Text>
+      <Text style={scenarioStyles.title}>{scenario.title}</Text>
+      <Text style={scenarioStyles.year}>{scenario.year}</Text>
+      <Text style={scenarioStyles.briefing} numberOfLines={5}>{scenario.briefing}</Text>
+      <Pressable
+        onPress={() => {
+          tapHaptic();
+          router.push(`/scenario-lab?scenarioId=${scenario.id}` as never);
+        }}
+        accessibilityRole="button"
+        accessibilityLabel={`שחק את התרחיש ${scenario.title}`}
+        style={({ pressed }) => [scenarioStyles.playBtn, pressed && { opacity: 0.85, transform: [{ scale: 0.98 }] }]}
+      >
+        <Text style={scenarioStyles.playText}>שחק את התרחיש →</Text>
+      </Pressable>
+    </View>
+  );
+}
+
+const scenarioStyles = StyleSheet.create({
+  card: {
+    marginHorizontal: 20,
+    marginVertical: 12,
+    padding: 20,
+    borderRadius: 18,
+    backgroundColor: '#0c4a6e',
+    alignItems: 'center',
+    gap: 8,
+    shadowColor: '#0ea5e9',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.4,
+    shadowRadius: 14,
+    elevation: 8,
+  },
+  eyebrow: { fontSize: 11, fontWeight: '800', color: '#7dd3fc', letterSpacing: 2, writingDirection: 'rtl' as const },
+  emoji: { fontSize: 56, marginVertical: 4 },
+  title: { fontSize: 20, fontWeight: '900', color: '#ffffff', textAlign: 'center', writingDirection: 'rtl' as const },
+  year: { fontSize: 13, fontWeight: '700', color: '#bae6fd', writingDirection: 'rtl' as const },
+  briefing: { fontSize: 13, color: '#e0f2fe', textAlign: 'center', writingDirection: 'rtl' as const, lineHeight: 19, marginTop: 8, paddingHorizontal: 4 },
+  playBtn: { marginTop: 14, paddingHorizontal: 22, paddingVertical: 12, borderRadius: 12, backgroundColor: '#0ea5e9', borderBottomWidth: 3, borderBottomColor: '#075985' },
+  playText: { color: '#ffffff', fontSize: 15, fontWeight: '900', writingDirection: 'rtl' as const },
+});
 
 /** Mounts and immediately calls onMount EXACTLY ONCE — used for game keys
  *  we want to skip without breaking the pager flow. Stashes onMount in a

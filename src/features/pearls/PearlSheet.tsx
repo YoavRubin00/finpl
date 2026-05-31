@@ -214,6 +214,8 @@ export function PearlSheet({ visible, pearl, onClose }: PearlSheetProps): React.
         snapshot.push({ kind: 'cta', index: idx++ });
         if (pearl.swipeIds?.length) snapshot.push({ kind: 'swipe', index: idx++ });
         if (pearl.scenarioId && pearl.scenarioPool) snapshot.push({ kind: 'scenario', index: idx++ });
+        // Per-module dedicated game from chapter data .interModuleGame.
+        if (pearl.gameKey) snapshot.push({ kind: 'game', index: idx++ });
       } else {
         // Legacy fallback only used when nothing was mapped + no fallback
         // bundle (mod-0-1 historically; today every pearl gets a fallback).

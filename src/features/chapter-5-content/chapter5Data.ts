@@ -412,6 +412,9 @@ export const chapter5Data: Chapter = {
         description:
           'המשתמש בוחר סקטור REIT (מגורים, לוגיסטיקה, משרדים). המערכת מריצה אירועים (מגפה, בום טכנולוגי, עליית ריבית) ומראה איך כל סקטור מגיב.',
       },
+      // Pearl game: diamond-hands — REIT requires holding through tenant
+      // drama and rate hikes. 10-second hold-the-line is the perfect primer.
+      interModuleGame: 'diamond-hands',
     },
     {
       id: 'mod-5-28',

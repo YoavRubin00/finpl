@@ -835,9 +835,8 @@ export const chapter1Data: Chapter = {
         description:
           'פריטי שכר קופצים לאוויר. צריך להחליק (סווייפ) מיסים לפח האדום, ופנסיה לקופת חיסכון ירוקה, כדי לקבל את הנטו המדויק.',
       },
-      // Pilot: surface a topical Did-You-Know between mod-1-5 (תלוש שכר) and
-      // mod-1-6 (הלוואות) — Israeli tech success story reinforces the "your
-      // income grows when you understand the numbers" payoff. See Stage C.
+      // Pearl game: PayslipBonus CTA — natural follow-up to "read a payslip".
+      interModuleGame: 'payslip-bonus',
       interModuleContent: { didYouKnow: 'dyk-il-mobileye' },
     },
     {
