@@ -46,6 +46,21 @@ export const useBanditStore = create<BanditState>()(
         const exp = get().experiments[experimentId];
         if (!exp || exp.variants.length === 0) return '';
 
+        // Activation threshold (Yoav 2026-05-31): until EVERY variant has at
+        // least WARMUP_IMPRESSIONS exposures, sample uniformly. Below this
+        // floor the prior Beta(1,1) is essentially flat — a single early
+        // conversion (α=2, β=1) pins the bandit to whichever variant happened
+        // to win the cold-start race, even if it's no better than the others.
+        // With only ~3 purchase_completed events per 30 days across 4 paywall
+        // variants, Thompson sampling on this prior is indistinguishable from
+        // a random pick that locks in forever — uniform sampling at least
+        // distributes impressions evenly so the warm-up signal accumulates.
+        const WARMUP_IMPRESSIONS = 30;
+        const isWarm = exp.variants.every((v) => v.impressions >= WARMUP_IMPRESSIONS);
+        if (!isWarm) {
+          return exp.variants[Math.floor(Math.random() * exp.variants.length)].id;
+        }
+
         let bestId = exp.variants[0].id;
         let bestSample = -1;
 

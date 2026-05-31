@@ -123,7 +123,14 @@ export type AppEvent =
   | { name: 'daily_challenge_completed'; props: { challenge_type: 'news' | 'dilemma' | 'investment' | string; correct_count?: number; total_questions?: number } }
 
   // ── Daily / Engagement ────────────────────────────────────────────────
-  | { name: 'daily_active_day'; props: { date_il: string; streak: number; longest_streak: number } };
+  | { name: 'daily_active_day'; props: { date_il: string; streak: number; longest_streak: number } }
+
+  // ── Bandit (Thompson sampling experiments) ────────────────────────────
+  // Fires once per component instance when useBandit() locks a variant.
+  // Mirrors setPersonProperties({ bandit_variant__<exp>: <variantId> }) so
+  // Hog funnels for ANY downstream event can be sliced by variant via the
+  // person property — that's the audit-log half of the same signal.
+  | { name: 'bandit_variant_assigned'; props: { experiment_id: string; variant_id: string; variant_label?: string; uniform_sampling: boolean } };
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Baseline properties — attached to every wrapped event

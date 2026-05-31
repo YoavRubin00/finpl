@@ -191,7 +191,7 @@ export function PricingScreen() {
   const [activePackage, setActivePackage] = useState<PurchasesPackage | null>(null);
   const { mutateAsync: syncFromRC } = useSyncFromRevenueCat();
 
-  const { payload: paywallPayload, trackImpression, trackConversion } = useBandit('upgrade_paywall_headline');
+  const { payload: paywallPayload, trackImpression, trackConversion, trackDismiss } = useBandit('upgrade_paywall_headline');
 
   useEffect(() => {
     useMonetizationIntentStore.getState().trackPricingVisit();
@@ -555,7 +555,7 @@ export function PricingScreen() {
                   </Pressable>
                 </View>
 
-                <Pressable onPress={() => { track({ name: 'paywall_dismissed', props: { paywall: 'subscription_pricing', source } }); if (returnTo) { router.replace(returnTo as never); } else if (router.canGoBack()) { router.back(); } else { router.replace('/(tabs)' as never); } }} style={styles.noThanksBtn} accessibilityRole="button" accessibilityLabel="ליציאה" hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+                <Pressable onPress={() => { track({ name: 'paywall_dismissed', props: { paywall: 'subscription_pricing', source } }); trackDismiss(); if (returnTo) { router.replace(returnTo as never); } else if (router.canGoBack()) { router.back(); } else { router.replace('/(tabs)' as never); } }} style={styles.noThanksBtn} accessibilityRole="button" accessibilityLabel="ליציאה" hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
                   <Text style={[styles.noThanksText, { color: theme.textMuted }]}>ליציאה</Text>
                 </Pressable>
 
