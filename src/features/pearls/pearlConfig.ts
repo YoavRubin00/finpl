@@ -25,7 +25,7 @@ import { chapter3Data } from '../chapter-3-content/chapter3Data';
 import { chapter4Data } from '../chapter-4-content/chapter4Data';
 import { chapter5Data } from '../chapter-5-content/chapter5Data';
 import type { ProfileQuestionKind } from '../onboarding/InModuleProfileQuestion';
-import { PEARL_CONTENT_MAP, type ScenarioPool } from './pearlContentMap';
+import { PEARL_CONTENT_MAP, fallbackBundleFor, type ScenarioPool } from './pearlContentMap';
 
 const ALL_CHAPTERS = [
   chapter0Data,
@@ -121,11 +121,17 @@ function buildConfig(): Map<string, PearlContent> {
       // and we don't want an empty intermezzo node on the path.
       if (!gameKey) continue;
 
-      // Merge the per-pearl unique-bundle fields when a mapping exists.
-      // Absent mapping (e.g., mod-0-1, or any pearl we haven't curated yet)
-      // → fields stay undefined → PearlSheet renders the legacy daily-pick
-      // flow instead of the unique-bundle flow.
-      const bundle = PEARL_CONTENT_MAP[current.id];
+      // Merge the per-pearl unique-bundle fields. Resolution order:
+      //   1. Explicit curated entry in PEARL_CONTENT_MAP (topic-matched)
+      //   2. Deterministic fallback by moduleId hash (when no curated entry
+      //      exists) so EVERY pearl outside of mod-0-1 gets a unique bundle.
+      //   3. mod-0-1 is intentionally left without a bundle — its pearl
+      //      keeps the legacy daily-pick flow + profile-question backstop
+      //      so the very first pearl users see stays short and onboarding-
+      //      friendly. Per the original spec (user requirement: "starting
+      //      from the second module").
+      const explicit = PEARL_CONTENT_MAP[current.id];
+      const bundle = explicit ?? (current.id === 'mod-0-1' ? undefined : fallbackBundleFor(current.id));
 
       map.set(current.id, {
         afterModuleId: current.id,

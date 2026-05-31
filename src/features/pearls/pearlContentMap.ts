@@ -22,6 +22,11 @@
  * pearl feel generic — please match concept titles to module titles.
  */
 
+import { DAILY_CONCEPTS } from '../daily-concepts/dailyConceptsData';
+import { BULLSHIT_ADS } from '../inter-module-games/bullshit-swipe/bullshitAdsData';
+import { DILEMMA_SCENARIOS } from '../daily-challenges/dilemma-data';
+import { LIFESTYLE_VIDEOS } from '../inter-module-break/lifestyleVideoConfig';
+
 export type ScenarioPool = 'dilemma' | 'investment';
 
 export interface PearlBundle {
@@ -30,6 +35,47 @@ export interface PearlBundle {
   swipeIds?: readonly string[];
   scenarioId?: string;
   scenarioPool?: ScenarioPool;
+}
+
+// ---------------------------------------------------------------------------
+// Fallback bundle — when a pearl doesn't have an explicit curated entry
+// below, we still want it to render the unique-bundle flow rather than fall
+// back to the generic daily-pick (which felt "generic" to users who had seen
+// the curated pearls). The fallback picks deterministically by a hash of the
+// moduleId so each pearl always shows the SAME content, and two different
+// pearls don't collide on the same concept/video.
+// ---------------------------------------------------------------------------
+
+const ALL_CONCEPT_IDS: string[] = DAILY_CONCEPTS.map((c) => c.id);
+const ALL_SWIPE_IDS: string[] = BULLSHIT_ADS.map((a) => a.id);
+const ALL_DILEMMA_IDS: string[] = DILEMMA_SCENARIOS.map((d) => d.id);
+const ALL_VIDEO_IDS: string[] = LIFESTYLE_VIDEOS.map((v) => v.id);
+
+function hashModuleId(moduleId: string): number {
+  let h = 0;
+  for (let i = 0; i < moduleId.length; i++) {
+    h = (h * 31 + moduleId.charCodeAt(i)) | 0;
+  }
+  return Math.abs(h);
+}
+
+/**
+ * Returns a deterministic bundle for any moduleId. Used ONLY when the
+ * explicit curated entry below is missing. Stable per moduleId — the same
+ * pearl always shows the same content, but two different pearls hash to
+ * different slots so the visible content does differ across pearls.
+ */
+export function fallbackBundleFor(moduleId: string): PearlBundle {
+  const h = hashModuleId(moduleId);
+  const swipe1 = ALL_SWIPE_IDS[h % ALL_SWIPE_IDS.length];
+  const swipe2 = ALL_SWIPE_IDS[(h + 3) % ALL_SWIPE_IDS.length];
+  return {
+    videoId: ALL_VIDEO_IDS[h % ALL_VIDEO_IDS.length],
+    conceptId: ALL_CONCEPT_IDS[h % ALL_CONCEPT_IDS.length],
+    swipeIds: swipe1 === swipe2 ? [swipe1] : [swipe1, swipe2],
+    scenarioId: ALL_DILEMMA_IDS[h % ALL_DILEMMA_IDS.length],
+    scenarioPool: 'dilemma',
+  };
 }
 
 export const PEARL_CONTENT_MAP: Record<string, PearlBundle> = {
