@@ -484,7 +484,19 @@ function RootLayoutInner() {
     if (!isAuthenticated) {
       // Go to onboarding intro (welcome screen with register/guest options)
       const currentPath = segments.join("/");
-      if (currentPath !== "(auth)/onboarding" && currentPath !== "register" && currentPath !== "(auth)/register" && currentPath !== "(auth)/terms" && currentPath !== "(auth)/sign-in" && currentPath !== "oauthredirect") {
+      // Mirror allowedPreOnboardingPaths below — including forgot-password,
+      // which an unauthenticated user can reach from the sign-in link and
+      // would otherwise be redirected back to onboarding on every render
+      // (an infinite ping-pong loop).
+      if (
+        currentPath !== "(auth)/onboarding"
+        && currentPath !== "register"
+        && currentPath !== "(auth)/register"
+        && currentPath !== "(auth)/terms"
+        && currentPath !== "(auth)/sign-in"
+        && currentPath !== "(auth)/forgot-password"
+        && currentPath !== "oauthredirect"
+      ) {
         router.replace("/(auth)/onboarding");
       }
     } else if (!hasCompletedOnboarding) {

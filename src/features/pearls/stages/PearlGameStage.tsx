@@ -51,7 +51,10 @@ export function PearlGameStage({ isActive, gameKey, macroEventId, onContinue, on
   const isPro = useIsPro();
 
   const card = renderGameCard(gameKey, macroEventId, isPro, onContinue, isActive);
-  if (!card) return null;
+  // Self-heal: if the game can't render (unknown gameKey, macro-event missing
+  // its id, event not found in the data), don't dead-end the pager — auto-
+  // advance so the user never gets stuck on a blank stage with no CTA.
+  if (!card) return <FallbackContinueOnMount onMount={onContinue} />;
 
   return (
     <View style={{ flex: 1 }}>

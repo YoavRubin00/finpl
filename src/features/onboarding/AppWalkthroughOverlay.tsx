@@ -210,8 +210,12 @@ export function AppWalkthroughOverlay() {
   const isAlreadyOnRoute = useCallback((target: string | null) => {
     if (!target) return true;
     const currentPath = "/" + segments.join("/");
-    // Normalize: /(tabs)/index → /(tabs)/index, /(tabs) → /(tabs)
-    return currentPath === target || currentPath === target.replace(/\/index$/, "");
+    // Normalize BOTH sides by stripping a trailing /index so all four variants
+    // (/(tabs), /(tabs)/, /(tabs)/index, /(tabs)/index/) compare equal. The
+    // earlier implementation only stripped /index from the target, so a path
+    // matching the canonical /(tabs)/index would loop into a redundant nav.
+    const normalize = (p: string) => p.replace(/\/index$/, "").replace(/\/$/, "") || "/";
+    return normalize(currentPath) === normalize(target);
   }, [segments]);
 
 

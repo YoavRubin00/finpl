@@ -11,6 +11,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import Animated, { FadeIn, FadeInDown } from "react-native-reanimated";
 import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
+import { ChevronRight } from "lucide-react-native";
 import { FINN_HAPPY } from "../retention-loops/finnMascotConfig";
 import { GoogleLogo } from "../../components/ui/GoogleLogo";
 import { useAuthStore } from "../auth/useAuthStore";
@@ -21,9 +22,19 @@ import { captureEvent } from "../../lib/posthog";
 interface Props {
   onSignupSuccess: () => void;
   onSkip: () => void;
+  /** Called before any signup path navigates away — parent should persist
+   *  the in-progress `collected` profile so OAuth races / register-screen
+   *  redirects don't lose dream/goal/age. Wired in ProfilingFlow. */
+  saveCollected?: () => void;
+  /** Override of the email-signup tap. Parent uses this to call
+   *  completeOnboarding(collected) BEFORE router.push so the root layout's
+   *  !hasCompletedOnboarding redirect doesn't bounce the user back to dream. */
+  onEmailPress?: () => void;
+  /** If provided, renders a back chevron in the header (returns to age). */
+  onBack?: () => void;
 }
 
-export function SignupGateStep({ onSignupSuccess, onSkip }: Props) {
+export function SignupGateStep({ onSignupSuccess, onSkip, saveCollected, onEmailPress, onBack }: Props) {
   const router = useRouter();
   const { promptAppleSignIn, isAvailable: appleAvailable } = useAppleAuth();
   const promptGoogleSignIn = useGoogleAuthStore((s) => s.promptGoogleSignIn);
@@ -40,6 +51,17 @@ export function SignupGateStep({ onSignupSuccess, onSkip }: Props) {
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: "#ffffff" }} edges={["top", "bottom"]}>
+      {onBack && (
+        <Pressable
+          onPress={onBack}
+          accessibilityRole="button"
+          accessibilityLabel="חזור לשאלת הגיל"
+          hitSlop={12}
+          style={{ position: "absolute", top: 12, right: 16, zIndex: 10, padding: 8 }}
+        >
+          <ChevronRight size={26} color="#475569" />
+        </Pressable>
+      )}
       <View style={{ flex: 1, paddingHorizontal: 24, justifyContent: "center", alignItems: "center" }}>
         <Animated.View entering={FadeIn.duration(400)} style={{ alignItems: "center", marginBottom: 24 }}>
           <LinearGradient
@@ -66,6 +88,11 @@ export function SignupGateStep({ onSignupSuccess, onSkip }: Props) {
             <Pressable
               onPress={() => {
                 try { captureEvent("signup_gate_method_clicked", { method: "apple", source: "post_onboarding_questions" }); } catch { /* non-fatal */ }
+                // Persist the in-progress dream/goal/age BEFORE the OAuth
+                // prompt so that useAppleAuth's router.replace (which fires
+                // for existing users before onSignupSuccess) can't strand
+                // the collected fields. Safe to call repeatedly.
+                saveCollected?.();
                 promptAppleSignIn().then(onSignupSuccess);
               }}
               accessibilityRole="button"
@@ -95,6 +122,9 @@ export function SignupGateStep({ onSignupSuccess, onSkip }: Props) {
                 return;
               }
               try { captureEvent("signup_gate_method_clicked", { method: "google", source: "post_onboarding_questions" }); } catch { /* non-fatal */ }
+              // See Apple branch — persist before prompt so Google's redirect
+              // race can't drop dream/goal/age.
+              saveCollected?.();
               promptGoogleSignIn();
             }}
             accessibilityRole="button"
@@ -119,13 +149,18 @@ export function SignupGateStep({ onSignupSuccess, onSkip }: Props) {
             <GoogleLogo size={20} />
           </Pressable>
 
-          {/* Email signup, sends user to dedicated register screen.
-              Mark onboarding completed first, otherwise the root layout
-              redirect intercepts the push and sends us back to the questions. */}
+          {/* Email signup. The parent's onEmailPress wires completeOnboarding
+              with the in-progress collected profile BEFORE the push so the
+              root layout's !hasCompletedOnboarding redirect doesn't bounce the
+              user back to the questions (the historical bug). */}
           <Pressable
             onPress={() => {
               try { captureEvent("signup_gate_method_clicked", { method: "email", source: "post_onboarding_questions" }); } catch { /* non-fatal */ }
-              router.push(`/(auth)/register?returnTo=${encodeURIComponent("/")}` as never);
+              if (onEmailPress) {
+                onEmailPress();
+              } else {
+                router.push(`/(auth)/register?returnTo=${encodeURIComponent("/")}` as never);
+              }
             }}
             accessibilityRole="button"
             accessibilityLabel="הירשם עם אימייל"

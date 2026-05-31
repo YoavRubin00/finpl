@@ -101,6 +101,11 @@ export function DailyNewsChallengeSheet({ visible, onClose, entrySource = 'unkno
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // Bumping this triggers the fetch effect to re-run after the user taps
+  // the retry button in the error state. Without it the effect's
+  // [visible, challenge, setChallenge] deps don't change and the failed
+  // fetch never gets a second chance — the user dead-ends with only the X.
+  const [retryNonce, setRetryNonce] = useState(0);
   const [chatItem, setChatItem] = useState<ChallengeItem | null>(null);
   const [exitConfirmOpen, setExitConfirmOpen] = useState(false);
   const [activePage, setActivePage] = useState(0);
@@ -112,13 +117,15 @@ export function DailyNewsChallengeSheet({ visible, onClose, entrySource = 'unkno
 
   const listRef = useRef<FlatList<PageDescriptor> | null>(null);
   const pageWidth = SCREEN_W;
-  // Guards against duplicate `news_challenge_completed` events. The
-  // dependency array on the completion effect re-runs on every sheet mount
-  // where both answers exist (Zustand-persisted), so the event used to
-  // fire ~29× per real completion (PostHog 2026-05-30: 2 answered → 58
-  // completed). The ref records the last dateKey we already reported and
-  // refuses to re-emit for it.
-  const completionFiredForDateKey = useRef<string | null>(null);
+  // Guards against duplicate `news_challenge_completed` events. The dependency
+  // array on the completion effect re-runs on every sheet mount where both
+  // answers exist (Zustand-persisted), so the event used to fire ~29× per
+  // real completion (PostHog 2026-05-30: 2 answered → 58 completed). The
+  // earlier useRef-based guard reset on every unmount and didn't survive a
+  // close-and-reopen — now lives in the persisted store so the guard sticks
+  // across sessions, remounts, and app restarts (QA audit 2026-05-31).
+  const hasReportedCompletionFor = useDailyNewsChallengeStore((s) => s.hasReportedCompletionFor);
+  const markCompletionReportedFor = useDailyNewsChallengeStore((s) => s.markCompletionReportedFor);
   // In-flight guard for fetchTodayChallenge. Without it a cold-start race
   // between DuoLearnScreen's fetch (1129) and the sheet's lazy fetch (124)
   // sends two parallel API calls.
@@ -169,7 +176,7 @@ export function DailyNewsChallengeSheet({ visible, onClose, entrySource = 'unkno
         setLoading(false);
         fetchInFlightRef.current = false;
       });
-  }, [visible, challenge, setChallenge]);
+  }, [visible, challenge, setChallenge, retryNonce]);
 
   useEffect(() => {
     if (visible && challenge) {
@@ -180,17 +187,18 @@ export function DailyNewsChallengeSheet({ visible, onClose, entrySource = 'unkno
     }
   }, [visible, challenge, entrySource]);
 
-  // Completed event — fires ONCE per (dateKey, session). The ref guard
-  // (from the QA audit) prevents the 58:2 over-firing bug when the sheet
-  // remounts with persisted answered state. PR #3 (Yam) added a second
-  // canonical NSM event name; both fire together under the same guard so
-  // the NSM funnel and the legacy funnel stay in sync.
+  // Completed event — fires ONCE per dateKey LIFETIME (not per session). The
+  // persisted-store guard survives sheet unmounts and app restarts, fixing
+  // the 58:2 over-firing bug where every reopen of an already-completed day
+  // re-emitted both `news_challenge_completed` and `daily_challenge_completed`.
+  // PR #3 (Yam) added the second canonical NSM event name; both fire under
+  // the same guard so the NSM funnel and the legacy funnel stay in sync.
   useEffect(() => {
     if (!answered[0] || !answered[1]) return;
     const dateKey = challenge?.dateKey ?? null;
     if (!dateKey) return;
-    if (completionFiredForDateKey.current === dateKey) return;
-    completionFiredForDateKey.current = dateKey;
+    if (hasReportedCompletionFor(dateKey)) return;
+    markCompletionReportedFor(dateKey);
     const props = {
       date_key: dateKey,
       both_correct: answered[0].wasCorrect && answered[1].wasCorrect,
@@ -463,6 +471,18 @@ export function DailyNewsChallengeSheet({ visible, onClose, entrySource = 'unkno
         ) : error && !challenge ? (
           <View style={styles.errorBox}>
             <Text style={styles.errorText} allowFontScaling={false}>{error}</Text>
+            <Pressable
+              onPress={() => {
+                tapHaptic();
+                setError(null);
+                setRetryNonce((n) => n + 1);
+              }}
+              accessibilityRole="button"
+              accessibilityLabel="נסה שוב להוריד את האקטואליה"
+              style={styles.errorRetryBtn}
+            >
+              <Text style={styles.errorRetryText} allowFontScaling={false}>נסה שוב</Text>
+            </Pressable>
           </View>
         ) : challenge ? (
           <Animated.View entering={FadeIn.duration(220)} style={styles.pagerWrap}>
@@ -650,6 +670,8 @@ const styles = StyleSheet.create({
     backgroundColor: '#fef2f2',
     borderWidth: 1,
     borderColor: '#fecaca',
+    alignItems: 'center',
+    gap: 12,
   },
   errorText: {
     fontSize: 13,
@@ -657,6 +679,18 @@ const styles = StyleSheet.create({
     color: '#b91c1c',
     writingDirection: 'rtl',
     textAlign: 'center',
+  },
+  errorRetryBtn: {
+    paddingHorizontal: 22,
+    paddingVertical: 10,
+    borderRadius: 10,
+    backgroundColor: '#b91c1c',
+  },
+  errorRetryText: {
+    fontSize: 14,
+    fontWeight: '800',
+    color: '#ffffff',
+    writingDirection: 'rtl',
   },
 });
 

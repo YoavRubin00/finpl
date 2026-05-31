@@ -2629,7 +2629,11 @@ export function LessonFlowScreen() {
         const chapter = ALL_CHAPTERS_ORDERED.find((c) => c.id === pearl.chapterId);
         const myIdx = chapter ? chapter.modules.findIndex((m) => m.id === id) : -1;
         if (myIdx >= 0) setCurrentModule(myIdx);
-        router.replace(`/(tabs)?openPearl=${id}` as never);
+        // Route to the Learn screen explicitly. (tabs)/_layout sets
+        // initialRouteName="investments", so a bare /(tabs)?openPearl=... lands
+        // on Investments and the openPearl listener (lives only in DuoLearnScreen,
+        // index/learn) never sees the param — the pearl would never auto-open.
+        router.replace(`/(tabs)/index?openPearl=${id}` as never);
         return;
       }
     }
@@ -2711,14 +2715,16 @@ export function LessonFlowScreen() {
       return;
     }
     // After completing the Emergency Fund module, route to the Tower Defense boss.
-    if (id === 'mod-1-9') {
+    // Skip on replay — the boss/interstitial is a one-time first-pass beat, not
+    // something the user wants to redo every time they revisit the module.
+    if (id === 'mod-1-9' && !isReplay) {
       router.replace("/tower-defense-boss" as never);
       return;
     }
     // After mod-0-3, drop into the BullshitSwipe interstitial (critical-thinking
     // warm-up) before continuing to mod-0-4. Shark delivers the "this is why
-    // I'm here" line after the mini-game finishes.
-    if (id === 'mod-0-3') {
+    // I'm here" line after the mini-game finishes. Same one-pass rule as mod-1-9.
+    if (id === 'mod-0-3' && !isReplay) {
       router.replace("/interstitial/bullshit-ch0" as never);
       return;
     }

@@ -85,6 +85,19 @@ export const DilemmaCard = React.memo(function DilemmaCard({ isActive, onContinu
         <View style={styles.stateBox}>
           <Text style={[styles.answeredTitle, RTL]}>האתגר היומי לא זמין כרגע</Text>
           <Text style={[styles.answeredSub, RTL]}>נסו שוב מאוחר יותר</Text>
+          {/* Inside a Pearl: surface a Continue so a missing dilemmaId doesn't
+              dead-end the pager. Standalone usage (no onContinue) leaves only
+              the X — same as the original behavior. */}
+          {onContinue ? (
+            <Pressable
+              onPress={() => { tapHaptic(); onContinue(); }}
+              accessibilityRole="button"
+              accessibilityLabel="המשך"
+              style={styles.continueBtn}
+            >
+              <Text style={styles.continueBtnText} allowFontScaling={false}>המשך</Text>
+            </Pressable>
+          ) : null}
         </View>
       </FeedGameShell>
     );
