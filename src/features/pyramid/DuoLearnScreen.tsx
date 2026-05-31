@@ -1373,9 +1373,55 @@ export function DuoLearnScreen() {
     return y;
   }, [progressData, isPro]);
 
-  // On every tab focus, scroll to the user's current module instead of the
-  // top. Skips the very first mount because the dedicated mount effect below
-  // already runs then (and uses animated:false to land instantly).
+  // Compute y-offset of the user's most-recently-progressed completed module
+  // (in chapter+module index order, NOT timestamp). Goal: open the learn map
+  // anchored on "what I just finished" so the user sees their progress at
+  // the top of the viewport, with the next lesson glowing right below it —
+  // beats opening on "next lesson" alone (no confirmation of progress).
+  //
+  // Merges server progress + local offline-completed store, same pattern as
+  // the chapter-rendering logic at line 1738. Returns null for fresh users
+  // who haven't completed anything — caller falls back to calcResumeScrollY.
+  const calcLastCompletedScrollY = useCallback((): number | null => {
+    const completed = new Set<string>([
+      ...(progressData?.filter((m) => m.status === 'completed').map((m) => m.moduleId) ?? []),
+      ...localCompletedModuleIds,
+    ]);
+    if (completed.size === 0) return null;
+
+    let targetChapterIdx = -1;
+    let targetModuleIdx = -1;
+    for (let ci = ALL_CHAPTERS.length - 1; ci >= 0 && targetChapterIdx < 0; ci--) {
+      const ch = ALL_CHAPTERS[ci];
+      for (let mi = ch.modules.length - 1; mi >= 0; mi--) {
+        if (completed.has(ch.modules[mi].id)) {
+          targetChapterIdx = ci;
+          targetModuleIdx = mi;
+          break;
+        }
+      }
+    }
+    if (targetChapterIdx < 0) return null;
+
+    // Same per-row constants as calcResumeScrollY:
+    //   greeting padding 150 + per-chapter (banner 80 + container margin 44)
+    //   for completed chapters BEFORE the target, then chapter banner 80 +
+    //   marginTop 16 + moduleIdx * 195 inside the target chapter.
+    let y = 150;
+    for (let ci = 0; ci < targetChapterIdx; ci++) {
+      y += 80 + 44;
+      y += ALL_CHAPTERS[ci].modules.length * 195;
+    }
+    y += 80;
+    y += 16;
+    y += targetModuleIdx * 195;
+    return y;
+  }, [progressData, localCompletedModuleIds]);
+
+  // On every tab focus, scroll to the user's last-completed module (with a
+  // fallback to "next active module" for fresh users). Skips the very first
+  // mount because the dedicated mount effect below already runs then (and
+  // uses animated:false to land instantly).
   useFocusEffect(
     useCallback(() => {
       // refreshQuests(); syncQuestCompletions();, disabled temporarily
@@ -1383,21 +1429,22 @@ export function DuoLearnScreen() {
         isFirstMount.current = false;
         return;
       }
-      const targetY = calcResumeScrollY();
+      const lastY = calcLastCompletedScrollY();
+      const targetY = lastY ?? calcResumeScrollY();
       scrollRef.current?.scrollTo({ y: Math.max(0, targetY - 80), animated: true });
       setRefreshKey((k) => k + 1);
-    }, [calcResumeScrollY])
+    }, [calcResumeScrollY, calcLastCompletedScrollY])
   );
 
-  // Auto-scroll to the active module on initial mount — always, not only
-  // when the active node is below the fold. User wants the learn screen to
-  // open straight to "where you are next," so the news badge + glowing node
-  // both sit in the natural eye-line on first paint.
+  // Auto-scroll on initial mount — prefer last-completed module so the user
+  // lands on "where I finished last time" with the next lesson right below.
+  // Fresh users (no completions) fall back to calcResumeScrollY → mod-0-1.
   useEffect(() => {
-    const y = calcResumeScrollY();
+    const lastY = calcLastCompletedScrollY();
+    const y = lastY ?? calcResumeScrollY();
     if (y > 0) {
       // Two-pass scroll: snap immediately so the first paint already lands
-      // on the active node, then a tiny smooth nudge once layout settles.
+      // on the anchor node, then a tiny smooth nudge once layout settles.
       scrollRef.current?.scrollTo({ y: Math.max(0, y - 120), animated: false });
       setTimeout(() => {
         scrollRef.current?.scrollTo({ y: Math.max(0, y - 120), animated: true });

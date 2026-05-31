@@ -91,10 +91,13 @@ export const FeedReferralNudgeCard = React.memo(function FeedReferralNudgeCard({
         track({ name: 'pearl_cta_tapped', props: { after_module_id: afterModuleId, chapter_id: chapterId, cta_kind: 'referral', destination_url: '/referral' } });
       } catch { /* non-fatal */ }
     }
+    // DON'T advance the pearl here. The previous version called onContinue()
+    // immediately after router.push, which raced the navigation: if this was
+    // the last pearl stage the pager would close → trigger the next-module
+    // open, which overrode the /referral push. User would tap "הזמינו חברים"
+    // and land on the next module instead of /referral (reported 2026-06-01).
+    // Navigate only; user can return + tap "המשך" to advance the pearl.
     router.push("/referral" as never);
-    // Advance the pearl pager after navigating out, so closing the referral
-    // sheet drops the user back on the next stage rather than this CTA again.
-    onContinue?.();
   };
 
   const handleSkip = () => {
@@ -182,14 +185,20 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 14,
   },
+  // Bottom 10% of the video frame is clipped — the source clip has dead
+  // space / a watermark at the bottom. Container is shrunk; the inner
+  // video still renders at its full intended height (391) but the wrapper's
+  // overflow:hidden + flex-start alignment chops off the bottom band.
   videoWrap: {
     width: 220,
-    height: 391,
+    height: 352, // 391 × 0.9 — visible region
     borderRadius: 18,
     overflow: "hidden",
     backgroundColor: "rgba(8, 47, 73, 0.7)",
+    alignItems: "center",
+    justifyContent: "flex-start",
   },
-  video: { width: "100%", height: "100%" },
+  video: { width: 220, height: 391 },
   title: {
     color: "#f0f9ff",
     fontSize: 24,
@@ -203,22 +212,26 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
   },
   ctaGlow: {
-    shadowColor: "#0ea5e9",
-    shadowOpacity: 0.6,
+    shadowColor: "#1d4ed8",
+    shadowOpacity: 0.55,
     shadowRadius: 20,
     shadowOffset: { width: 0, height: 0 },
     elevation: 14,
     marginTop: 4,
   },
+  // Primary CTA — same deep blue palette used for "אני אסתדר" (TimelineOrderCard)
+  // and Continue buttons across the app. Solid fill, bottom border 4px for the
+  // Duo-style 3D lift, no thin outline (those make the button read as "outline only"
+  // against the dark pearl gradient → user feedback 2026-06-01).
   cta: {
-    backgroundColor: "#0ea5e9",
+    backgroundColor: "#1d4ed8",
     borderRadius: 16,
     paddingHorizontal: 36,
     paddingVertical: 16,
     borderBottomWidth: 4,
-    borderBottomColor: "#0369a1",
+    borderBottomColor: "#1e3a8a",
   },
-  ctaPressed: { opacity: 0.85, transform: [{ scale: 0.98 }] },
+  ctaPressed: { opacity: 0.9, transform: [{ scale: 0.98 }] },
   ctaText: {
     color: "#ffffff",
     fontSize: 18,
@@ -226,15 +239,21 @@ const styles = StyleSheet.create({
     letterSpacing: 0.5,
     writingDirection: "rtl",
   },
+  // Secondary "המשך" — lighter blue + filled (matches "עזור לי" in TimelineOrderCard).
+  // Was a near-invisible text-only link; user couldn't tell it was tappable.
   skipBtn: {
-    paddingVertical: 8,
-    paddingHorizontal: 14,
-    marginTop: 4,
+    paddingVertical: 12,
+    paddingHorizontal: 22,
+    marginTop: 8,
+    borderRadius: 14,
+    backgroundColor: "rgba(56, 189, 248, 0.18)",
+    borderWidth: 1.5,
+    borderColor: "rgba(56, 189, 248, 0.55)",
   },
   skipText: {
-    color: "rgba(186,230,253,0.7)",
+    color: "#bae6fd",
     fontSize: 14,
-    fontWeight: "700",
+    fontWeight: "800",
     writingDirection: "rtl",
   },
 });

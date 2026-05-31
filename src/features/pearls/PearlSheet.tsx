@@ -236,7 +236,16 @@ export function PearlSheet({ visible, pearl, onClose }: PearlSheetProps): React.
         if (pearl.videoId && pearl.conceptId) snapshot.push({ kind: 'video', index: idx++ });
         if (pearl.swipeKind || pearl.swipeIds?.length) snapshot.push({ kind: 'swipe', index: idx++ });
         if (pearl.scenarioId && pearl.scenarioPool) snapshot.push({ kind: 'scenario', index: idx++ });
-        if (pearl.gameKey) snapshot.push({ kind: 'game', index: idx++ });
+        // Game stage adds value ONLY when its card type differs from the
+        // scenario stage's card type — otherwise the same DilemmaCard /
+        // InvestmentCard renders twice back-to-back. mod-0-1 and mod-1-6
+        // both hit the dilemma+dilemma collision today; several chapter-3/4
+        // pearls hit the investment+investment one. The guard is generic so
+        // future data drift can't re-introduce the duplicate.
+        const gameDuplicatesScenario =
+          (pearl.scenarioPool === 'dilemma' && pearl.gameKey === 'dilemma') ||
+          (pearl.scenarioPool === 'investment' && pearl.gameKey === 'investment');
+        if (pearl.gameKey && !gameDuplicatesScenario) snapshot.push({ kind: 'game', index: idx++ });
         snapshot.push({ kind: 'cta', index: idx++ });
       } else {
         // Legacy fallback only used when nothing was mapped + no fallback
