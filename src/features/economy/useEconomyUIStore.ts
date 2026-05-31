@@ -55,6 +55,33 @@ function daysBetween(dateA: string, dateB: string): number {
   );
 }
 
+/**
+ * Walks back day-by-day from today (or yesterday, if today isn't yet marked)
+ * over the union of activeDates + frozenDates, counting consecutive days. This
+ * is the local "source of truth" for current streak — used by completeDailyTask
+ * and mirrored into the React Query cache on hydration so the header shows the
+ * correct streak even for guests who can't read the server-side counter.
+ */
+function deriveStreakFromDates(activeDates: string[], frozenDates: string[]): number {
+  const dateSet = new Set([...activeDates, ...frozenDates]);
+  const today2 = todayISO();
+  const yest2 = yesterdayISO();
+  let cursor: Date | null = dateSet.has(today2)
+    ? new Date()
+    : dateSet.has(yest2)
+      ? (() => { const d = new Date(); d.setDate(d.getDate() - 1); return d; })()
+      : null;
+  let count = 0;
+  while (cursor) {
+    const iso = cursor.toISOString().slice(0, 10);
+    if (!dateSet.has(iso)) break;
+    count++;
+    cursor.setDate(cursor.getDate() - 1);
+    if (count > 365) break;
+  }
+  return count;
+}
+
 function trimDates(dates: string[]): string[] {
   const cutoff = ninetyDaysAgoISO();
   return dates.filter((d) => d >= cutoff);
@@ -310,24 +337,8 @@ export const useEconomyUIStore = create<EconomyUIState>()(
 
       completeDailyTask: () => {
         const { lastDailyTaskDate, streakFreezes, activeDates, frozenDates, weeklyShieldUntil, monthlyShieldUntil } = get();
-        const cached = queryClient.getQueryData<Economy | null>(economyQueryKey);
-        const streak = cached ? 0 : 0; // streak is now server-backed via useStreak
-        // Read streak from local activeDates (source of truth for UI store)
-        const derivedStreak = (() => {
-          const dateSet = new Set([...activeDates, ...frozenDates]);
-          const today2 = todayISO();
-          const yest2 = yesterdayISO();
-          let cursor: Date | null = dateSet.has(today2) ? new Date() : (dateSet.has(yest2) ? (() => { const d = new Date(); d.setDate(d.getDate() - 1); return d; })() : null);
-          let count = 0;
-          while (cursor) {
-            const iso = cursor.toISOString().slice(0, 10);
-            if (!dateSet.has(iso)) break;
-            count++;
-            cursor.setDate(cursor.getDate() - 1);
-            if (count > 365) break;
-          }
-          return count;
-        })();
+        // Local activeDates is the source of truth for the UI streak.
+        const derivedStreak = deriveStreakFromDates(activeDates, frozenDates);
 
         const today = todayISO();
         if (lastDailyTaskDate === today) return;
@@ -412,8 +423,10 @@ export const useEconomyUIStore = create<EconomyUIState>()(
           if (newLevel > prevLevel) set({ pendingLevelUp: newLevel });
         }
 
-        // Log streak milestone analytics
-        if (newStreak > streak && STREAK_MILESTONE_DAYS.has(newStreak)) {
+        // Log streak milestone analytics — only when the streak actually
+        // advanced into a milestone slot (avoids re-firing on idempotent
+        // same-day completions).
+        if (newStreak > derivedStreak && STREAK_MILESTONE_DAYS.has(newStreak)) {
           logStreakMilestone(newStreak);
         }
 
@@ -682,6 +695,25 @@ export const useEconomyUIStore = create<EconomyUIState>()(
         if (typeof state.previousStreakBeforeBreak !== "number") state.previousStreakBeforeBreak = 0;
         if (typeof state.lastRepairOfferedAt !== "string" && state.lastRepairOfferedAt !== null) state.lastRepairOfferedAt = null;
         if (!Array.isArray(state.activeBoosts)) state.activeBoosts = [];
+
+        // Cold-start streak hydration: derive the current streak from the
+        // persisted activeDates + frozenDates and seed the React Query cache.
+        // Without this, guests (whose useStreak() server query is disabled)
+        // would see "0" in the header on every cold start until the next
+        // daily activity fires completeDailyTask.
+        try {
+          const derived = deriveStreakFromDates(state.activeDates, state.frozenDates);
+          // Only seed if the cache is empty — don't clobber a freshly-fetched
+          // server value that may have arrived first.
+          const existing = queryClient.getQueryData<StreakState | null>(STREAK_QUERY_KEY);
+          if (!existing) {
+            queryClient.setQueryData<StreakState | null>(STREAK_QUERY_KEY, {
+              currentStreak: derived,
+              longestStreak: derived,
+              lastActiveDate: state.activeDates[state.activeDates.length - 1] ?? null,
+            });
+          }
+        } catch { /* non-fatal */ }
       },
     }
   )
