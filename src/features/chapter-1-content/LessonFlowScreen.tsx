@@ -2760,7 +2760,11 @@ export function LessonFlowScreen() {
       if (!next.comingSoon && (isPro || !PRO_LOCKED_SIMS.has(next.id))) {
         setCurrentChapter(chapterStoreKey(chapterId));
         setCurrentModule(currentModIdx + 1);
-        router.replace("/(tabs)" as never);
+        // Land on Learn map (index tab), NOT default tabs route — the tabs
+        // layout has initialRouteName="investments" so "/(tabs)" sends the
+        // user to the Investments tab instead of seeing the next module
+        // highlighted on the learn map (QA blocker 2026-05-31).
+        router.replace("/(tabs)/index" as never);
         return;
       }
     }
@@ -2771,11 +2775,11 @@ export function LessonFlowScreen() {
         const nextMod = ch.modules[nextIdx];
         setCurrentChapter(chapterStoreKey(ch.id));
         setCurrentModule(nextIdx);
-        router.replace("/(tabs)" as never);
+        router.replace("/(tabs)/index" as never);
         return;
       }
     }
-    router.replace("/(tabs)" as never);
+    router.replace("/(tabs)/index" as never);
   }
 
   const [phase, setPhase] = useState<FlowPhase>(() => {
