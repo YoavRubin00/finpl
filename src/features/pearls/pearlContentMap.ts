@@ -29,10 +29,24 @@ import { LIFESTYLE_VIDEOS } from '../inter-module-break/lifestyleVideoConfig';
 
 export type ScenarioPool = 'dilemma' | 'investment';
 
+/** Which swipe-deck the pearl's Swipe stage should render. Mirrors the
+ *  daily-quest rotation in DuoLearnScreen's `dailySwipeKind` so the user
+ *  cycles through the same three games in both surfaces — just keyed by
+ *  moduleId hash here instead of dayIndex.
+ *  - 'bullshit': BullshitSwipeCard with `swipeIds` ad list
+ *  - 'myth':     MythFeedCard (Myth or Tachles cards)
+ *  - 'bull-bear': SwipeGameCard (Long/Short market cards) */
+export type SwipeKind = 'bullshit' | 'myth' | 'bull-bear';
+
 export interface PearlBundle {
   videoId?: string;
   conceptId?: string;
+  /** Required only when `swipeKind === 'bullshit'`. The other two decks
+   *  source their cards internally (mythData / swipe-game-data). */
   swipeIds?: readonly string[];
+  /** Defaults to 'bullshit' to preserve the historical behaviour for any
+   *  bundle authored before the rotation was introduced. */
+  swipeKind?: SwipeKind;
   scenarioId?: string;
   scenarioPool?: ScenarioPool;
 }
@@ -59,6 +73,11 @@ function hashModuleId(moduleId: string): number {
   return Math.abs(h);
 }
 
+/** Swipe-deck rotation pool. Order matters — `h % 3` selects deterministically
+ *  per moduleId so the same pearl always shows the same swipe game. Mirrors
+ *  DuoLearnScreen's `dailySwipeKind` rotation across days. */
+const SWIPE_KINDS_ROTATION: readonly SwipeKind[] = ['bullshit', 'myth', 'bull-bear'];
+
 /**
  * Returns a deterministic bundle for any moduleId. Used ONLY when the
  * explicit curated entry below is missing. Stable per moduleId — the same
@@ -67,12 +86,19 @@ function hashModuleId(moduleId: string): number {
  */
 export function fallbackBundleFor(moduleId: string): PearlBundle {
   const h = hashModuleId(moduleId);
+  const swipeKind = SWIPE_KINDS_ROTATION[h % SWIPE_KINDS_ROTATION.length];
+  // swipeIds only matter when swipeKind === 'bullshit'. For myth / bull-bear
+  // the deck pulls from its own data source and these ids would be ignored.
   const swipe1 = ALL_SWIPE_IDS[h % ALL_SWIPE_IDS.length];
   const swipe2 = ALL_SWIPE_IDS[(h + 3) % ALL_SWIPE_IDS.length];
+  const swipeIds = swipeKind === 'bullshit'
+    ? (swipe1 === swipe2 ? [swipe1] : [swipe1, swipe2])
+    : undefined;
   return {
     videoId: ALL_VIDEO_IDS[h % ALL_VIDEO_IDS.length],
     conceptId: ALL_CONCEPT_IDS[h % ALL_CONCEPT_IDS.length],
-    swipeIds: swipe1 === swipe2 ? [swipe1] : [swipe1, swipe2],
+    swipeKind,
+    swipeIds,
     scenarioId: ALL_DILEMMA_IDS[h % ALL_DILEMMA_IDS.length],
     scenarioPool: 'dilemma',
   };
@@ -80,10 +106,20 @@ export function fallbackBundleFor(moduleId: string): PearlBundle {
 
 export const PEARL_CONTENT_MAP: Record<string, PearlBundle> = {
   // ─── Chapter 0 ─────────────────────────────────────────────────────────
-  // mod-0-1 — INTENTIONALLY OMITTED. User requirement: unique bundles start
-  // from the second module's pearl onward. The pearl after mod-0-1 keeps the
-  // legacy daily-pick flow (a single rotating concept) + profile-question
-  // backstop + game.
+  // mod-0-1 — the FIRST pearl a user ever sees. Locked to swipeKind='myth'
+  // by explicit user spec (2026-06-01): we want the opening pearl to land
+  // on "מיתוס או תכל'ס" rather than a bullshit ad — friendlier, lower
+  // commercial vibe, and topically broad (covers banks/credit/markets so
+  // it fits "what's money?" framing of mod-0-1). The other content fields
+  // here mirror the fallback shape so the full Video → Concept → Swipe →
+  // Scenario → Game flow renders.
+  'mod-0-1': {
+    videoId: 'finn-life-treasure',
+    conceptId: 'concept-1',
+    swipeKind: 'myth',
+    scenarioId: 'dilemma-1',
+    scenarioPool: 'dilemma',
+  },
 
   'mod-0-2': {
     // 'מה זה בכלל כסף?' (game: higher-lower)

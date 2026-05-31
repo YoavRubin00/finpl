@@ -2,31 +2,54 @@ import React from 'react';
 import { View, StyleSheet } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 // ScrollView from gesture-handler (not react-native) — react-native's
-// ScrollView swallows horizontal pan gestures before BullshitSwipeCard's
+// ScrollView swallows horizontal pan gestures before the child cards'
 // GestureDetector can receive them, so swipe-left/right stopped working
 // (user report 2026-05-31). The gesture-handler ScrollView shares the
 // gesture state graph so child Pan detectors win on horizontal drags.
 import { ScrollView } from 'react-native-gesture-handler';
 
 import { BullshitSwipeCard } from '../../finfeed/minigames/bullshit-swipe/BullshitSwipeCard';
+import { MythFeedCard } from '../../myth-or-tachles/MythFeedCard';
+import { SwipeGameCard } from '../../daily-challenges/SwipeGameCard';
+import type { SwipeKind } from '../pearlContentMap';
 
 interface PearlSwipeStageProps {
   isActive: boolean;
   onContinue: () => void;
-  /** Per-pearl ad ids (1-3 cards) — drives a topic-matched mini-deck. */
-  swipeIds: readonly string[];
+  /** Picks which swipe deck to render. Mirrors the daily-quest rotation in
+   *  DuoLearnScreen (`dailySwipeKind`). Defaults to 'bullshit' for
+   *  backwards-compatibility with legacy bundles that only specified
+   *  `swipeIds`. */
+  swipeKind?: SwipeKind;
+  /** Per-pearl ad ids (1-3 cards) — drives the bullshit deck only. Ignored
+   *  by myth / bull-bear which source their cards internally. */
+  swipeIds?: readonly string[];
 }
 
 /**
- * Pearl-bound swipe stage. Wraps `BullshitSwipeCard` with the per-pearl ad
- * list and `bypassDailyGate` so playing here doesn't burn the user's
- * once-per-day quota when they later open the Daily Challenge surface.
+ * Pearl-bound swipe stage. Dispatches to one of three swipe games by
+ * `swipeKind`:
+ *   - 'myth'      → MythFeedCard ("מיתוס או תכל'ס")
+ *   - 'bull-bear' → SwipeGameCard ("שורי או דובי" / Long-Short)
+ *   - 'bullshit'  → BullshitSwipeCard with per-pearl `swipeIds`
  *
- * Same scroll-wrapper as `PearlGameStage` — long result screens (5+ ads)
- * shouldn't trap users below a cut-off Continue button.
+ * All three already use `Gesture.Pan` from react-native-gesture-handler
+ * and play nicely as children of the gesture-handler ScrollView wrapper
+ * below. `bypassDailyGate` on BullshitSwipeCard prevents the per-pearl
+ * play from burning the user's daily quota; the other two decks aren't
+ * gated by daily quota at the card level so no equivalent flag is needed.
+ *
+ * Same scroll-wrapper as `PearlGameStage` — long result screens
+ * (5+ cards) shouldn't trap users below a cut-off Continue button.
  */
-export function PearlSwipeStage({ isActive, onContinue, swipeIds }: PearlSwipeStageProps): React.ReactElement {
+export function PearlSwipeStage({
+  isActive,
+  onContinue,
+  swipeKind,
+  swipeIds,
+}: PearlSwipeStageProps): React.ReactElement {
   const insets = useSafeAreaInsets();
+  const kind: SwipeKind = swipeKind ?? 'bullshit';
   return (
     <View style={{ flex: 1 }}>
       <ScrollView
@@ -35,12 +58,20 @@ export function PearlSwipeStage({ isActive, onContinue, swipeIds }: PearlSwipeSt
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
       >
-        <BullshitSwipeCard
-          isActive={isActive}
-          bypassDailyGate
-          adIds={swipeIds}
-          onContinue={onContinue}
-        />
+        {kind === 'myth' && (
+          <MythFeedCard isInterModule onSkip={onContinue} />
+        )}
+        {kind === 'bull-bear' && (
+          <SwipeGameCard isActive={isActive} onFinish={onContinue} />
+        )}
+        {kind === 'bullshit' && (
+          <BullshitSwipeCard
+            isActive={isActive}
+            bypassDailyGate
+            adIds={swipeIds}
+            onContinue={onContinue}
+          />
+        )}
       </ScrollView>
     </View>
   );
