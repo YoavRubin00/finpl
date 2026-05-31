@@ -29,6 +29,7 @@ import {
 import { useSafeAreaInsets, SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import Animated, { FadeIn } from 'react-native-reanimated';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { ChevronRight } from 'lucide-react-native';
 
 import { STITCH } from '../../constants/theme';
@@ -543,6 +544,14 @@ export function PearlSheet({ visible, pearl, onClose }: PearlSheetProps): React.
       statusBarTranslucent
       onRequestClose={handleDismiss}
     >
+      {/* GestureHandlerRootView wrap is REQUIRED here. React Native's <Modal>
+          mounts in a separate native window, and the app-level
+          GestureHandlerRootView in app/_layout.tsx does NOT extend into it.
+          Without this wrap, Gesture.Pan() detectors inside stages (e.g.
+          PearlSwipeStage → BullshitSwipeCard) silently never receive events —
+          the swipe stops working in pearls while tap-Pressables still work.
+          Mirrors the pattern in DoubleOrNothingModal / DiamondHandsModal. */}
+      <GestureHandlerRootView style={{ flex: 1 }}>
       <SafeAreaView style={styles.safeArea} edges={['top', 'left', 'right']}>
         {/* Full GlobalWealthHeader (not compact) — matches the main tabs
             layout exactly so the pearl feels like a continuation of the
@@ -636,6 +645,7 @@ export function PearlSheet({ visible, pearl, onClose }: PearlSheetProps): React.
           </View>
         ) : null}
       </SafeAreaView>
+      </GestureHandlerRootView>
     </Modal>
   );
 }

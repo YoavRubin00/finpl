@@ -1,5 +1,9 @@
 import React from 'react';
-import { View, Text, ScrollView, StyleSheet, Pressable } from 'react-native';
+import { View, Text, StyleSheet, Pressable } from 'react-native';
+// ScrollView from gesture-handler (not react-native) — RN's ScrollView
+// swallows horizontal pan gestures from child cards (BullshitSwipe,
+// PriceSlider, HigherLower, etc.) on Android. Mirrors PearlSwipeStage fix.
+import { ScrollView } from 'react-native-gesture-handler';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { X } from 'lucide-react-native';
 import { useRouter } from 'expo-router';

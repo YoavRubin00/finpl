@@ -14,7 +14,13 @@
  */
 
 import React, { useCallback, useMemo, useRef } from "react";
-import { Text, Pressable, StyleSheet, ScrollView } from "react-native";
+import { Text, Pressable, StyleSheet } from "react-native";
+// ScrollView from gesture-handler (not react-native) — react-native's
+// ScrollView swallows horizontal pan gestures before child cards'
+// GestureDetector can receive them, so swipe/drag in BullshitSwipe /
+// PriceSlider / HigherLower / Myth / Dilemma stopped working when launched
+// as the daily quest. Mirrors the fix in PearlSwipeStage.tsx.
+import { ScrollView } from "react-native-gesture-handler";
 import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 

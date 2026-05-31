@@ -1,5 +1,9 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
-import { Text, View, Pressable, StyleSheet, ScrollView } from "react-native";
+import { Text, View, Pressable, StyleSheet } from "react-native";
+// ScrollView from gesture-handler (not react-native) — RN's ScrollView
+// swallows BullshitSwipeCard's horizontal pan gesture on Android, breaking
+// swipe-to-vote. Mirrors PearlSwipeStage + quest/swipe-game fix.
+import { ScrollView } from "react-native-gesture-handler";
 import { Image as ExpoImage } from "expo-image";
 import Animated, { FadeIn, FadeInUp, Easing } from "react-native-reanimated";
 import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";

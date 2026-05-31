@@ -126,9 +126,22 @@ export function VideoSharkDilemmaCard({ dilemma, onComplete }: Props) {
         /* ignore */
       }
     }, 200);
+    // Wall-clock fallback — if the video failed to load at all (404 on CDN,
+    // slow network, codec error) then `player.duration` stays 0 and the
+    // condition above never fires. Without this, the user would stare at a
+    // black screen forever with no way out (reported on mod-1-1 dilemma,
+    // 2026-06-01). 3s is generous for the post-choice freeze-frame, while
+    // still short enough to bail out gracefully on a missing asset.
+    const fallback = setTimeout(() => {
+      if (!hasFinishedRef.current) {
+        hasFinishedRef.current = true;
+        setStage("feedback");
+      }
+    }, 3000);
     return () => {
       sub.remove();
       clearInterval(id);
+      clearTimeout(fallback);
     };
   }, [player, stage]);
 
