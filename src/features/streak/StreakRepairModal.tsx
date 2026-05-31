@@ -1,8 +1,9 @@
 import { useEffect } from "react";
-import { Modal, Pressable, StyleSheet, Text } from "react-native";
+import { Modal, Pressable, StyleSheet, Text, View } from "react-native";
 import { Image as ExpoImage } from "expo-image";
 import Animated, { FadeIn, FadeInDown } from "react-native-reanimated";
 import { useRouter } from "expo-router";
+import { Flame } from "lucide-react-native";
 import { useEconomy } from "../economy/useEconomy";
 import { useEconomyUIStore } from "../economy/useEconomyUIStore";
 import { FINN_EMPATHIC } from "../retention-loops/finnMascotConfig";
@@ -83,6 +84,17 @@ export function StreakRepairModal({ visible, onDismiss }: StreakRepairModalProps
               accessible={false}
             />
 
+            {/* Eyebrow — establishes immediately that this modal is about the
+                user's daily streak, not a generic interruption. Orange flame
+                pill matches the streak indicator in GlobalWealthHeader so the
+                visual chain "header counter → this modal" reads as one thing. */}
+            <View style={styles.eyebrow}>
+              <Flame size={14} color="#f97316" strokeWidth={2.6} fill="#f97316" />
+              <Text style={styles.eyebrowText} allowFontScaling={false}>
+                הרצף היומי שלך
+              </Text>
+            </View>
+
             {/* Title */}
             <Animated.Text
               entering={FadeInDown.delay(100).duration(300)}
@@ -151,22 +163,49 @@ const styles = StyleSheet.create({
     maxWidth: 340,
   },
   content: {
-    backgroundColor: "#0f172a",
+    backgroundColor: "#ffffff",
     borderRadius: 24,
     borderWidth: 2,
-    borderColor: "#38bdf8",
+    // Streak orange instead of cyan — visually classifies this modal as a
+    // streak interaction at a glance (matches the flame eyebrow + the
+    // GlobalWealthHeader streak pill).
+    borderColor: "#fdba74",
     padding: 28,
     alignItems: "center",
+    shadowColor: "#0f172a",
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.18,
+    shadowRadius: 24,
+    elevation: 12,
   },
   finn: {
-    width: 120,
-    height: 120,
-    marginBottom: 16,
+    width: 110,
+    height: 110,
+    marginBottom: 10,
+  },
+  eyebrow: {
+    flexDirection: "row-reverse",
+    alignItems: "center",
+    gap: 6,
+    backgroundColor: "#fff7ed",
+    borderRadius: 999,
+    paddingHorizontal: 12,
+    paddingVertical: 5,
+    marginBottom: 10,
+    borderWidth: 1,
+    borderColor: "#fed7aa",
+  },
+  eyebrowText: {
+    fontSize: 12,
+    fontWeight: "800",
+    color: "#c2410c",
+    writingDirection: "rtl" as const,
+    letterSpacing: 0.4,
   },
   title: {
     fontSize: 20,
     fontWeight: "900",
-    color: "#e0f2fe",
+    color: "#0f172a",
     textAlign: "center",
     writingDirection: "rtl" as const,
     marginBottom: 8,
@@ -174,7 +213,7 @@ const styles = StyleSheet.create({
   subtitle: {
     fontSize: 14,
     fontWeight: "600",
-    color: "#94a3b8",
+    color: "#64748b",
     textAlign: "center",
     writingDirection: "rtl" as const,
     lineHeight: 22,
@@ -201,18 +240,18 @@ const styles = StyleSheet.create({
   },
   adBtn: {
     width: "100%",
-    backgroundColor: "#1e293b",
+    backgroundColor: "#f1f5f9",
     borderRadius: 14,
     paddingVertical: 14,
     alignItems: "center",
     marginBottom: 10,
     borderWidth: 1,
-    borderColor: "#334155",
+    borderColor: "#cbd5e1",
   },
   adBtnText: {
     fontSize: 15,
     fontWeight: "700",
-    color: "#e0f2fe",
+    color: "#334155",
     writingDirection: "rtl" as const,
   },
   secondaryBtn: {
@@ -223,7 +262,7 @@ const styles = StyleSheet.create({
   secondaryBtnText: {
     fontSize: 14,
     fontWeight: "700",
-    color: "#38bdf8",
+    color: "#64748b",
     writingDirection: "rtl" as const,
   },
 });
