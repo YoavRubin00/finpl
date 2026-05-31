@@ -133,7 +133,11 @@ export type AppEvent =
   | { name: 'bandit_variant_assigned'; props: { experiment_id: string; variant_id: string; variant_label?: string; uniform_sampling: boolean } }
 
   // ── Legal / Terms re-consent ────────────────────────────────────────────
-  | { name: 'terms_reaccepted'; props: { from_version: string | null; to_version: string } };
+  | { name: 'terms_reaccepted'; props: { from_version: string | null; to_version: string } }
+
+  // ── Daily News Challenge — recap page (June 2026 Duo polish) ────────────
+  | { name: 'news_recap_viewed'; props: { date_key: string; perfect: boolean; streak: number } }
+  | { name: 'news_recap_closed'; props: { date_key: string; time_open_ms: number } };
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Baseline properties — attached to every wrapped event

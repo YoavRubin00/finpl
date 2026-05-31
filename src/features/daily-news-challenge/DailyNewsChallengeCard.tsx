@@ -1,7 +1,16 @@
-import React from 'react';
+import React, { useEffect, useMemo } from 'react';
 import { View, Text, Pressable, StyleSheet, Image } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import Animated, { FadeInDown, useSharedValue, useAnimatedStyle, withSpring } from 'react-native-reanimated';
+import Animated, {
+  FadeInDown,
+  useSharedValue,
+  useAnimatedStyle,
+  withSpring,
+  withRepeat,
+  withSequence,
+  withTiming,
+  Easing,
+} from 'react-native-reanimated';
 import { Newspaper, Sparkles, CheckCircle2, ChevronLeft, Snowflake } from 'lucide-react-native';
 
 import { STITCH } from '../../constants/theme';
@@ -25,6 +34,24 @@ interface DailyNewsChallengeCardProps {
  * Newspaper-style hero card at the TOP of the learn screen.
  * Replaces the legacy DailyQuestWidget. Tapping opens the news challenge sheet.
  */
+/** Hebrew "morning / afternoon / evening / late-night" label by local hour,
+ *  refreshed once per mount. Drives the eyebrow above the headline so the
+ *  card feels like a daily newspaper edition rather than a generic widget. */
+function timeOfDayBadge(): string {
+  const h = new Date().getHours();
+  if (h >= 6 && h < 12) return 'מהדורת בוקר ☀️';
+  if (h >= 12 && h < 18) return 'מהדורת צהריים 📰';
+  if (h >= 18 && h < 22) return 'מהדורת ערב 🌙';
+  return 'מהדורת לילה 🦉';
+}
+
+/** Whether the daytime pulse-glow should be active. We pulse only between
+ *  06:00–22:00 so a late-night opener isn't bothered by a flashing card. */
+function isPulseHours(): boolean {
+  const h = new Date().getHours();
+  return h >= 6 && h < 22;
+}
+
 export function DailyNewsChallengeCard({
   challenge,
   completed,
@@ -34,6 +61,26 @@ export function DailyNewsChallengeCard({
 }: DailyNewsChallengeCardProps): React.ReactElement | null {
   const scale = useSharedValue(1);
   const animatedStyle = useAnimatedStyle(() => ({ transform: [{ scale: scale.value }] }));
+
+  // Gold pulse glow when there's a fresh challenge waiting and it's daytime.
+  // Loops opacity 0.4 ↔ 0.85 every ~2s. Stops once the user completes today.
+  const glow = useSharedValue(0);
+  const eyebrow = useMemo(() => timeOfDayBadge(), []);
+  useEffect(() => {
+    if (completed || !isPulseHours()) {
+      glow.value = 0;
+      return;
+    }
+    glow.value = withRepeat(
+      withSequence(
+        withTiming(0.85, { duration: 1100, easing: Easing.inOut(Easing.ease) }),
+        withTiming(0.4, { duration: 1100, easing: Easing.inOut(Easing.ease) }),
+      ),
+      -1,
+      false,
+    );
+  }, [completed, glow]);
+  const glowStyle = useAnimatedStyle(() => ({ opacity: glow.value }));
   // DNC-specific streak counter was retired — the unified daily streak in
   // the header (GlobalWealthHeader → useEconomyUIStore.currentStreak) is the
   // single source of truth. Showing a second number here was confusing.
@@ -59,7 +106,13 @@ export function DailyNewsChallengeCard({
   };
 
   return (
-    <Animated.View entering={FadeInDown.duration(320).springify().damping(18)} style={animatedStyle}>
+    <Animated.View entering={FadeInDown.duration(320).springify().damping(18)} style={[animatedStyle, styles.cardWrap]}>
+      {/* Gold pulse ring — only when fresh + daytime. Sits beneath the card
+          so the gradient/content overlays it cleanly. Native shadow on iOS,
+          web falls back to box-shadow via the same color. */}
+      {!completed && (
+        <Animated.View pointerEvents="none" style={[styles.glowRing, glowStyle]} />
+      )}
       <Pressable
         onPress={handlePress}
         onPressIn={() => { scale.value = withSpring(0.98, { damping: 18, stiffness: 280 }); }}
@@ -80,7 +133,7 @@ export function DailyNewsChallengeCard({
             </View>
             <View style={{ flex: 1 }}>
               <Text style={styles.eyebrow} allowFontScaling={false}>
-                אקטואליה פיננסית
+                {eyebrow}
               </Text>
               <Text style={styles.heroTitle} numberOfLines={2} allowFontScaling={false}>
                 {challenge.heroTitle}
@@ -136,6 +189,25 @@ export function DailyNewsChallengeCard({
 }
 
 const styles = StyleSheet.create({
+  cardWrap: {
+    position: 'relative',
+  },
+  // Gold pulse ring — slightly larger than the card so it peeks around the
+  // edges. Negative inset positions it behind the card via z-stacking.
+  glowRing: {
+    position: 'absolute',
+    top: -4,
+    left: -4,
+    right: -4,
+    bottom: -4,
+    borderRadius: 26,
+    borderWidth: 2.5,
+    borderColor: ACCENT_GOLD,
+    shadowColor: ACCENT_GOLD,
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.7,
+    shadowRadius: 12,
+  },
   card: {
     borderRadius: 22,
     paddingHorizontal: 14,
