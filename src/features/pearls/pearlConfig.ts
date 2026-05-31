@@ -123,15 +123,14 @@ function buildConfig(): Map<string, PearlContent> {
 
       // Merge the per-pearl unique-bundle fields. Resolution order:
       //   1. Explicit curated entry in PEARL_CONTENT_MAP (topic-matched)
-      //   2. Deterministic fallback by moduleId hash (when no curated entry
-      //      exists) so EVERY pearl outside of mod-0-1 gets a unique bundle.
-      //   3. mod-0-1 is intentionally left without a bundle — its pearl
-      //      keeps the legacy daily-pick flow + profile-question backstop
-      //      so the very first pearl users see stays short and onboarding-
-      //      friendly. Per the original spec (user requirement: "starting
-      //      from the second module").
+      //   2. Deterministic fallback by moduleId hash for everything else.
+      // Earlier we excluded mod-0-1 from the bundle to keep its pearl short,
+      // but the user complained that pearl still felt "generic" — every
+      // pearl now gets the full Video → Concept → Swipe → Scenario → Game
+      // flow. The profile-question backstop still fires for mod-0-1 on top
+      // of the bundle (see PROFILE_QUESTION_BY_SOURCE_MODULE below).
       const explicit = PEARL_CONTENT_MAP[current.id];
-      const bundle = explicit ?? (current.id === 'mod-0-1' ? undefined : fallbackBundleFor(current.id));
+      const bundle = explicit ?? fallbackBundleFor(current.id);
 
       map.set(current.id, {
         afterModuleId: current.id,
