@@ -55,6 +55,7 @@ import { useFunStore } from '../../stores/useFunStore';
 import { markDailyActivityCompleted } from '../economy/useStreak';
 import { LIFESTYLE_VIDEOS } from '../inter-module-break/lifestyleVideoConfig';
 import { FlyingRewards } from '../../components/ui/FlyingRewards';
+import { PearlCtaStage, type PearlCtaKind } from './stages/PearlCtaStage';
 
 /** Per-stage payout — every content stage cleared grants this small payout
  *  on the spot (with flying-coins animation), so the user feels rewarded as
@@ -75,9 +76,19 @@ type StageKind =
   | 'daily-pick'    // legacy single rotating concept (used when no unique bundle is mapped)
   | 'video'         // unique-bundle: Lifestyle video matching the pearl's topic
   | 'concept'       // unique-bundle: topic-matched concept (not day-rotation)
+  | 'cta'           // mid-pearl referral/trading CTA (restored finfeed cards)
   | 'swipe'         // unique-bundle: 1-3 bullshit-swipe ads
   | 'scenario'      // unique-bundle: a specific Dilemma or Investment scenario
   | 'game';         // mini-game (legacy fallback only)
+
+/** Per-pearl stable pick of which CTA card to show — referral vs trading.
+ *  Hash of moduleId so the same pearl always shows the same CTA, but two
+ *  pearls in the same chapter alternate between the two destinations. */
+function pickCtaKindFor(moduleId: string): PearlCtaKind {
+  let h = 0;
+  for (let i = 0; i < moduleId.length; i++) h = (h * 31 + moduleId.charCodeAt(i)) | 0;
+  return Math.abs(h) % 2 === 0 ? 'trading' : 'referral';
+}
 
 /** Which daily-content card the daily-pick stage should render today. The
  *  rotation is deterministic per UTC day so every user sees the same kind on
@@ -193,13 +204,13 @@ export function PearlSheet({ visible, pearl, onClose }: PearlSheetProps): React.
       //      pearl still has a beat of content before the game.
       const hasUniqueBundle = !!(pearl.videoId || pearl.conceptId || pearl.swipeIds?.length || pearl.scenarioId);
       if (hasUniqueBundle) {
-        // 4 curated content items per pearl: video → concept → swipe → scenario.
-        // The mid-pearl CTA stage was rolled back — we'll re-introduce it
-        // using the old finfeed CTA components (FeedReferralNudgeCard etc.,
-        // restorable from git commit 539a582) rather than the placeholder
-        // CTA I had built. Tracked as a follow-up.
+        // Pearl flow: video → concept → CTA (skippable referral/trading) →
+        // swipe → scenario. CTA uses the restored finfeed cards
+        // (FeedReferralNudgeCard / FeedTradingNudgeCard) wired with an
+        // onContinue=המשך path so users who don't want the CTA still advance.
         if (pearl.videoId) snapshot.push({ kind: 'video', index: idx++ });
         if (pearl.conceptId) snapshot.push({ kind: 'concept', index: idx++ });
+        snapshot.push({ kind: 'cta', index: idx++ });
         if (pearl.swipeIds?.length) snapshot.push({ kind: 'swipe', index: idx++ });
         if (pearl.scenarioId && pearl.scenarioPool) snapshot.push({ kind: 'scenario', index: idx++ });
       } else {
@@ -389,6 +400,17 @@ export function PearlSheet({ visible, pearl, onClose }: PearlSheetProps): React.
             <PearlDailyConceptStage
               isActive={isActive}
               conceptId={pearl.conceptId}
+              onContinue={handleStageDone}
+            />
+          </View>
+        );
+      }
+      if (item.kind === 'cta') {
+        return (
+          <View style={containerStyle}>
+            <PearlCtaStage
+              isActive={isActive}
+              kind={pickCtaKindFor(pearl.afterModuleId)}
               onContinue={handleStageDone}
             />
           </View>
