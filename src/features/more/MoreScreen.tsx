@@ -163,51 +163,17 @@ export function MoreScreen() {
           <Animated.View entering={FadeInUp.delay(100).duration(400)}>
             <GlowCard chapterGlow={STITCH_BLUE.glow} style={styles.cardGlow} pressable={false}>
               <View style={styles.cardInner}>
+                {/* פנטזי ליג / לשחק עם המספרים / מחשבון חופש כלכלי / דו-קרב 1v1
+                    / סקוואדים / חדשות הוסרו מכאן 2026-05-31 לבקשת המשתמש —
+                    רק חנות נשארת. הניתובים `/fantasy`, `/simulator`,
+                    `/fire-calculator`, `/duels`, `/squads`, `/finfeed` עדיין
+                    קיימים ב-app/ ויכולים לחזור אם נחליט להחזיר אותם. */}
                 <MoreRow
                   isFirst
+                  isLast
                   icon={<SafeLottie source={require('../../../assets/lottie/wired-flat-3136-big-shop-hover-pinch.json')} style={styles.lottieIcon} autoPlay loop  />}
                   label="חנות"
                   onPress={() => router.push("/(tabs)/shop" as never)}
-                />
-                <MoreRow
-                  icon={<SafeLottie source={require('../../../assets/lottie/wired-flat-433-cup-prize-hover-roll.json')} style={styles.lottieIcon} autoPlay loop  />}
-                  label="פנטזי ליג"
-                  onPress={() => router.push("/fantasy")}
-                  badge="בקרוב"
-                  disabled
-                />
-                <MoreRow
-                  icon={<SafeLottie source={require('../../../assets/lottie/wired-flat-161-growth-hover-pinch.json')} style={styles.lottieIcon} autoPlay loop  />}
-                  label="לשחק עם המספרים"
-                  onPress={() => router.push("/simulator")}
-                />
-                <MoreRow
-                  icon={<SafeLottie source={require('../../../assets/lottie/wired-flat-489-rocket-space-hover-flying.json')} style={styles.lottieIcon} autoPlay loop  />}
-                  label="מחשבון חופש כלכלי"
-                  badge="חדש"
-                  onPress={() => router.push("/fire-calculator")}
-                />
-                <MoreRow
-                  icon={<SafeLottie source={require('../../../assets/lottie/wired-flat-458-goal-target-hover-hit.json')} style={styles.lottieIcon} autoPlay loop  />}
-                  label="דו-קרב 1v1"
-                  onPress={() => router.push("/duels")}
-                  badge="בקרוב"
-                  disabled
-                />
-                <MoreRow
-                  icon={<SafeLottie source={require('../../../assets/lottie/wired-flat-957-team-work-hover-pinch.json')} style={styles.lottieIcon} autoPlay loop  />}
-                  label="סקוואדים"
-                  onPress={() => router.push("/squads")}
-                  badge="בקרוב"
-                  disabled
-                />
-                <MoreRow
-                  isLast
-                  icon={<SafeLottie source={require('../../../assets/lottie/wired-flat-411-news-newspaper-hover-pinch.json')} style={styles.lottieIcon} autoPlay loop  />}
-                  label="חדשות"
-                  onPress={() => router.push("/finfeed")}
-                  badge="בקרוב"
-                  disabled
                 />
               </View>
             </GlowCard>
@@ -250,7 +216,17 @@ export function MoreScreen() {
                   isFirst
                   icon={<SafeLottie source={require('../../../assets/lottie/wired-flat-202-chat-hover-oscillate.json')} style={styles.lottieIcon} autoPlay loop  />}
                   label="פנו אלינו לתמיכה"
-                  onPress={() => router.push("/support" as never)}
+                  onPress={() => {
+                    // Open the device's default mail composer pre-addressed
+                    // to FinPlay support so users can describe the issue in
+                    // their own words. If no mail client is installed
+                    // (rare; happens on stripped-down Android builds), fall
+                    // back to copy-paste guidance via Alert.
+                    const mailto = "mailto:support@finplay.me?subject=" + encodeURIComponent("תמיכה ב-FinPlay");
+                    Linking.openURL(mailto).catch(() => {
+                      Alert.alert("תמיכה", "כתבו לנו ל-support@finplay.me");
+                    });
+                  }}
                 />
                 <MoreRow
                   icon={<SafeLottie source={require('../../../assets/lottie/wired-flat-202-chat-hover-oscillate.json')} style={styles.lottieIcon} autoPlay loop  />}
