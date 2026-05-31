@@ -48,7 +48,7 @@ This repo has **no unit-test framework** (the only `*.test.ts` files are in `nod
 - `api/migrate/backfill-v1.ts` — key by `ctx.userId`.
 - `api/sync/progress.ts` — drop `resolveUserId`, use `ctx.userId`.
 - `src/lib/api/auth.ts` — add `linkProvider()` client function (Phase B).
-- `app/(tabs)/settings.tsx` — "Connected accounts" UI calling `linkProvider()`.
+- `src/features/settings/components/AccountSheet.tsx` — "Connected accounts" UI calling `linkProvider()`. (The Settings screen is `src/features/settings/SettingsScreen.tsx`, re-exported by `app/settings.tsx`; account actions live in its `components/AccountSheet.tsx` + `DangerZoneSection.tsx`. Confirm the exact row group at execution time.)
 
 **Unchanged (verify only):** `api/_shared/jwt.ts`, `api/_shared/withAuth.ts`, `api/sync/user-stats.ts` (already `ctx.userId`), `src/features/auth/useAppleAuth.ts` / `useGoogleAuth.ts` (already post `provider:'apple'`/`'google'`).
 
@@ -646,7 +646,7 @@ git commit -m "feat(auth): authenticated provider-link endpoint for connecting a
 ## Task B5: Client — `linkProvider()` + Settings "Connected accounts" UI
 
 **Files:**
-- Modify: `src/lib/api/auth.ts`, `app/(tabs)/settings.tsx`
+- Modify: `src/lib/api/auth.ts`, `src/features/settings/components/AccountSheet.tsx`, `src/features/auth/useAppleAuth.ts`, `src/features/auth/useGoogleAuth.ts`
 
 - [ ] **Step 1: Add the client API function**
 
@@ -663,11 +663,11 @@ export function linkProvider(
 
 - [ ] **Step 2: Read the Settings screen to find the insertion point**
 
-Run: open `app/(tabs)/settings.tsx`. Locate the account/sign-out section (the row group that renders sign-out / delete-account). The "Connected accounts" controls go in that group.
+Open `src/features/settings/SettingsScreen.tsx` and its `components/AccountSheet.tsx`. Locate the account-actions group (where sign-out / account management render). The "Connected accounts" controls go there. (Confirm the exact component — the settings UI is composed of `SettingsSection` / `SettingRow` / `AccountSheet` / `DangerZoneSection`.)
 
 - [ ] **Step 3: Add the Connect controls**
 
-In `app/(tabs)/settings.tsx`, within the account section, add (matching the file's existing component/translation patterns — use NativeWind classes already used in that file, and Hebrew copy per `docs/BRAND.md`):
+In the account-actions component (`AccountSheet.tsx`), add (matching the file's existing `SettingRow`/section patterns — use the NativeWind classes already used there, and Hebrew copy per `docs/BRAND.md`):
 
 ```tsx
 // Near other hooks at the top of the component:
@@ -705,7 +705,7 @@ Apply the equivalent guard in `useGoogleAuth.ts`'s `fetchUserInfo` (call `linkPr
 
 - [ ] **Step 5: Wire the Settings buttons**
 
-In `app/(tabs)/settings.tsx`, render "חבר חשבון Apple" (iOS only, when `appleAvailable`) and "חבר חשבון Google" buttons that call `promptAppleSignIn()` / the Google prompt. Because the user is already signed in, the hooks now take the link branch.
+In the account-actions component (`AccountSheet.tsx`), render "חבר חשבון Apple" (iOS only, when `appleAvailable`) and "חבר חשבון Google" rows that call `promptAppleSignIn()` / the Google prompt. Because the user is already signed in, the hooks now take the link branch.
 
 - [ ] **Step 6: Typecheck**
 
@@ -719,7 +719,7 @@ Sign in with email, go to Settings, tap "חבר חשבון Apple", complete the 
 - [ ] **Step 8: Commit**
 
 ```bash
-git add src/lib/api/auth.ts src/features/auth/useAppleAuth.ts src/features/auth/useGoogleAuth.ts "app/(tabs)/settings.tsx"
+git add src/lib/api/auth.ts src/features/auth/useAppleAuth.ts src/features/auth/useGoogleAuth.ts src/features/settings/components/AccountSheet.tsx
 git commit -m "feat(auth): Settings connect-account flow (link Apple/Google to current uuid)"
 ```
 
