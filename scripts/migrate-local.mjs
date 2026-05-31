@@ -28,6 +28,7 @@ console.log('\n[db:migrate:local] Applying migrations to: ' + host);
 const migrationFiles = [
   'src/db/migrations/0001_add_preferences.sql',
   'src/db/migrations/0002_add_user_stats.sql',
+  'src/db/migrations/0003_identity_additive.sql',
 ];
 
 try {
