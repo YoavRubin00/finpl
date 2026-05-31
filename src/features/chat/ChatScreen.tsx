@@ -322,11 +322,17 @@ const typingStyles = StyleSheet.create({
 /*  Chat Style Picker, shown on first chat entry                      */
 /* ------------------------------------------------------------------ */
 
+// Picker trimmed 2026-05-31 from 4 → 3 personas. "סומכים עליכם" is the
+// soft third option for users who don't want to pick — it maps to the
+// "warren-buffett" companion (the app's default behavior) and is labeled
+// as the default so the choice carries zero commitment. CompanionId is
+// intentionally not narrowed — existing accounts that already picked
+// "rachel" or "robot" keep their persona; they just won't see those
+// options in the picker again.
 const CHAT_STYLES: { id: CompanionId; title: string; desc: string }[] = [
-  { id: "warren-buffett", title: "חכם וסבלני", desc: "מסביר עם אנלוגיות, כמו חבר שיודע הכל על כסף" },
+  { id: "warren-buffett", title: "חכם", desc: "מסביר עם אנלוגיות, כמו חבר שיודע הכל על כסף" },
   { id: "moshe-peled", title: "ישיר ותכל׳סי", desc: "ישראלי, לא מסתובב, אומר את זה כמו שזה" },
-  { id: "rachel", title: "חם ומעודד", desc: "רגוע, סבלני, תמיד מוצא מילה טובה ומסביר בנועם" },
-  { id: "robot", title: "אנליטי ומדויק", desc: "מבוסס מספרים, תמציתי, עונה בנקודות קצרות" },
+  { id: "warren-buffett", title: "סומכים עליכם", desc: "צאט ברירת מחדל" },
 ];
 
 function ChatStylePicker({ onSelect }: { onSelect: (id: CompanionId) => void }) {
@@ -337,7 +343,9 @@ function ChatStylePicker({ onSelect }: { onSelect: (id: CompanionId) => void }) 
         <Text style={pickerStyles.subtitle}>בחרו את הסגנון שהכי מתאים לכם</Text>
         <View style={pickerStyles.options}>
           {CHAT_STYLES.map((s) => (
-            <Pressable key={s.id} onPress={() => onSelect(s.id)} style={pickerStyles.option} accessibilityRole="button" accessibilityLabel={`סגנון שיחה: ${s.title}`}>
+            // Key by title — two entries (חכם / סומכים עליכם) intentionally
+            // share s.id="warren-buffett", so id alone isn't unique.
+            <Pressable key={s.title} onPress={() => onSelect(s.id)} style={pickerStyles.option} accessibilityRole="button" accessibilityLabel={`סגנון שיחה: ${s.title}`}>
               <Text style={pickerStyles.optionTitle}>{s.title}</Text>
               <Text style={pickerStyles.optionDesc}>{s.desc}</Text>
             </Pressable>
