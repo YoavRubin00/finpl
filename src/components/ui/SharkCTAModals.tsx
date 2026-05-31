@@ -7,7 +7,7 @@
  *
  * Duolingo A/B learnings applied:
  *   • Copy rotation (3 variants per CTA)
- *   • Reciprocity framing on Referral ("+50 coins per friend")
+ *   • Reciprocity framing on Referral ("+{REFERRAL_SIGNUP_BONUS_COINS} coins per friend")
  *   • Streak pill on Bridge ("X מודולים ברצף")
  *   • Action-verb CTAs with concrete numbers
  *   • Loss-aversion variant for Bridge (cycles in)
@@ -30,6 +30,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useNudgeQueueStore } from "../../stores/useNudgeQueueStore";
 import { STITCH } from "../../constants/theme";
 import { useBandit } from "../../features/bandit/useBandit";
+import { REFERRAL_SIGNUP_BONUS_COINS } from "../../features/social/referralConstants";
 
 /* ────────────────────────────────────────────────────────────────────────────
    BridgeCTA, "למדנו יפה. עכשיו הזמן לעבור לעולם האמיתי."
@@ -144,7 +145,15 @@ interface ReferralCTAProps {
   triggeredByDividend?: boolean;
 }
 
-const COINS_PER_FRIEND = 50;
+// SINGLE SOURCE OF TRUTH for the per-friend bonus is
+// `REFERRAL_SIGNUP_BONUS_COINS` in src/features/social/referralConstants.ts
+// (currently 500). The old local `COINS_PER_FRIEND = 50` constant drifted
+// from the real value and surfaced "+50 מטבעות לכל חבר שמפעיל" on the
+// referral nudge while the actual grant was 500 — a 10× contradiction the
+// user spotted in the shark_voice variant on 2026-05-31. Re-exported below
+// under the old name so any external importers keep compiling, but the value
+// now tracks the constants file.
+const COINS_PER_FRIEND = REFERRAL_SIGNUP_BONUS_COINS;
 const DEFAULT_INVITE_TARGET = 3;
 
 export function SharkReferralCTA({
