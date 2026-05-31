@@ -158,17 +158,33 @@ export function PearlNode({
             the ocean-depth backdrop in chapters 5–6. The animated cyan
             halo PearlNode renders separately (when glow=true) sits
             OUTSIDE this clip so its glow keeps radiating past the edge. */}
+        {/* Circular crop so the webp's white square background gets hidden.
+            The pearl image is overscaled by 1.35× inside the clip so the
+            white border that surrounds the colored sphere in the source asset
+            falls OUTSIDE the visible circle — only the colored center shows.
+            (Earlier attempt rendered the image at the same size as the clip,
+            which left a faint white halo around the colored pearl.) */}
         <View
           style={{
             width: size,
             height: size,
             borderRadius: size / 2,
             overflow: 'hidden',
+            // Background matches the learn map so any sub-pixel rendering
+            // anti-alias bleed (the "soft white edge" against the sky-blue
+            // halo behind active pearls) reads as transparent.
+            backgroundColor: 'transparent',
           }}
         >
           <ExpoImage
             source={PEARL_COLORED}
-            style={{ width: size, height: size }}
+            style={{
+              width: size * 1.35,
+              height: size * 1.35,
+              position: 'absolute',
+              left: -(size * 1.35 - size) / 2,
+              top: -(size * 1.35 - size) / 2,
+            }}
             contentFit="contain"
             accessible={false}
           />
