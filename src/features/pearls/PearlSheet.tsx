@@ -252,7 +252,13 @@ export function PearlSheet({ visible, pearl, onClose }: PearlSheetProps): React.
   }, [visible, handleDismiss]);
 
   const goToPage = useCallback((index: number) => {
-    listRef.current?.scrollToIndex({ index, animated: true });
+    // scrollToIndex on an `inverted` + `pagingEnabled` horizontal FlatList
+    // silently no-ops on some RN versions — the activePage state advances
+    // but the scroll position stays put. Users then see the same stage
+    // visually + the `isActive=false` mismatch disables the CTA on what
+    // looks to them like the same screen. scrollToOffset with the explicit
+    // logical offset (`SCREEN_W * index`) works reliably with `inverted`.
+    listRef.current?.scrollToOffset({ offset: SCREEN_W * index, animated: true });
     setActivePage(index);
   }, []);
 
@@ -455,7 +461,11 @@ export function PearlSheet({ visible, pearl, onClose }: PearlSheetProps): React.
       onRequestClose={handleDismiss}
     >
       <SafeAreaView style={styles.safeArea} edges={['top', 'left', 'right']}>
-        <GlobalWealthHeader compact />
+        {/* Full GlobalWealthHeader (not compact) — matches the main tabs
+            layout exactly so the pearl feels like a continuation of the
+            app, not a stripped-down modal. User report 2026-05-31: compact
+            mode was hiding pieces they expected to see. */}
+        <GlobalWealthHeader />
 
         <View style={styles.topBar}>
           <Pressable
