@@ -7,7 +7,7 @@ import { LinearGradient } from "expo-linear-gradient";
 import { AnimatedPressable } from "../../components/ui/AnimatedPressable";
 import { useUpgradeModalStore } from "../../stores/useUpgradeModalStore";
 import { heavyHaptic } from "../../utils/haptics";
-import { captureEvent } from "../../lib/posthog";
+import { track } from "../../lib/analytics/events";
 import { BASIC_LIMITS, PRO_LIMITS, type GatedFeature } from "./subscriptionConstants";
 
 const FEATURE_INFO: Record<GatedFeature, { title: string; body: string }> = {
@@ -81,28 +81,36 @@ export function UpgradeModal({ visible, feature, onDismiss }: UpgradeModalProps)
   // Track dismissal outcome so unmount doesn't fire pro_gate_dismissed when
   // the user actually pressed the CTA (which also calls onDismiss).
   const outcomeRef = useRef<'pending' | 'cta' | 'dismissed'>('pending');
+  // Previous-visible guard. Without this, the useEffect below fires
+  // `pro_gate_dismissed` on the initial mount (visible=false, outcomeRef
+  // initialized to 'pending'), which inflated dismiss counts in PostHog and
+  // made the funnel impossible to interpret. Only fire on a real true→false
+  // transition.
+  const prevVisibleRef = useRef(false);
 
   // Fire pro_gate_shown once per open. Without this, every Pro-gated tap
   // (locked sim, AI Insights, out-of-hearts) was invisible to PostHog.
   useEffect(() => {
     if (visible) {
       outcomeRef.current = 'pending';
-      captureEvent('pro_gate_shown', { feature });
-    } else if (outcomeRef.current === 'pending') {
-      // Modal closed without an explicit choice (back gesture, hardware back).
-      captureEvent('pro_gate_dismissed', { feature, via: 'system' });
+      track({ name: 'pro_gate_shown', props: { feature } });
+    } else if (prevVisibleRef.current && outcomeRef.current === 'pending') {
+      // Modal closed without an explicit choice (back gesture, hardware back),
+      // AND it was actually showing the moment before.
+      track({ name: 'pro_gate_dismissed', props: { feature, via: 'system' } });
     }
+    prevVisibleRef.current = visible;
   }, [visible, feature]);
 
   const handleDismiss = (via: 'close_x' | 'continue_text' | 'backdrop') => {
     outcomeRef.current = 'dismissed';
-    captureEvent('pro_gate_dismissed', { feature, via });
+    track({ name: 'pro_gate_dismissed', props: { feature, via } });
     onDismiss();
   };
 
   const handleUpgrade = () => {
     outcomeRef.current = 'cta';
-    captureEvent('pro_gate_cta_clicked', { feature });
+    track({ name: 'pro_gate_cta_clicked', props: { feature } });
     heavyHaptic();
     onDismiss();
     // Pass source so paywall_viewed on /pricing carries the originating

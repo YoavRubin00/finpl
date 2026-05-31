@@ -38,7 +38,8 @@ import { BackButton } from "../../components/ui/BackButton";
 import { useTheme } from "../../hooks/useTheme";
 import { useMonetizationIntentStore } from "../monetization/useMonetizationIntentStore";
 import { useBandit } from "../bandit/useBandit";
-import { captureEvent, setPersonProperties } from "../../lib/posthog";
+import { setPersonProperties } from "../../lib/posthog";
+import { track } from "../../lib/analytics/events";
 import { logTrialStart, logPurchase } from "../../utils/fbEvents";
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
@@ -195,8 +196,8 @@ export function PricingScreen() {
   useEffect(() => {
     useMonetizationIntentStore.getState().trackPricingVisit();
     trackImpression();
-    captureEvent('paywall_viewed', { paywall: 'subscription_pricing' });
-  }, [trackImpression]);
+    track({ name: 'paywall_viewed', props: { paywall: 'subscription_pricing', source } });
+  }, [trackImpression, source]);
 
   // Load offering once so we can show the localized price + period before purchase.
   useEffect(() => {
@@ -286,10 +287,14 @@ export function PricingScreen() {
         // distinguish trial starts from straight purchases (Moni 2026-05-30
         // — separately tracking trial→paid conversion is the whole point).
         const isTrial = entitlement.periodType === 'TRIAL';
-        captureEvent(isTrial ? 'trial_started' : 'subscription_purchased', {
-          plan: pkg.packageType,
-          price: pkg.product.priceString,
-          trial_days: isTrial ? trialDays : 0,
+        track({
+          name: isTrial ? 'trial_started' : 'subscription_purchased',
+          props: {
+            plan: pkg.packageType,
+            price: pkg.product.priceString,
+            trial_days: isTrial ? trialDays : 0,
+            source,
+          },
         });
         // Patch the PostHog person record so all subsequent insights segment
         // this user as Pro. Without this update, DAU/retention queries with
@@ -330,10 +335,10 @@ export function PricingScreen() {
         (err as { userCancelled?: boolean } | null)?.userCancelled === true;
       const isCancelled = userCancelled || /cancel/i.test(message);
       if (isCancelled) {
-        captureEvent('subscription_cancelled_at_checkout');
+        track({ name: 'subscription_cancelled_at_checkout' });
       } else {
         const fallbackMessage = message || "שגיאה לא צפויה";
-        captureEvent('subscription_purchase_failed', { error_message: fallbackMessage });
+        track({ name: 'subscription_purchase_failed', props: { error_message: fallbackMessage } });
         Alert.alert("שגיאת תשלום", fallbackMessage);
       }
     } finally {
@@ -550,7 +555,7 @@ export function PricingScreen() {
                   </Pressable>
                 </View>
 
-                <Pressable onPress={() => { captureEvent('paywall_dismissed', { paywall: 'subscription_pricing', source }); if (returnTo) { router.replace(returnTo as never); } else if (router.canGoBack()) { router.back(); } else { router.replace('/(tabs)' as never); } }} style={styles.noThanksBtn} accessibilityRole="button" accessibilityLabel="ליציאה" hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+                <Pressable onPress={() => { track({ name: 'paywall_dismissed', props: { paywall: 'subscription_pricing', source } }); if (returnTo) { router.replace(returnTo as never); } else if (router.canGoBack()) { router.back(); } else { router.replace('/(tabs)' as never); } }} style={styles.noThanksBtn} accessibilityRole="button" accessibilityLabel="ליציאה" hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
                   <Text style={[styles.noThanksText, { color: theme.textMuted }]}>ליציאה</Text>
                 </Pressable>
 
