@@ -33,7 +33,7 @@ import Animated, {
 import { useSoundEffect } from "../../hooks/useSoundEffect";
 import { tapHaptic } from "../../utils/haptics";
 import { useEconomyUIStore } from "../economy/useEconomyUIStore";
-import { useRecordDailyActivity, useStreak } from "../economy/useStreak";
+import { useStreak, markDailyActivityCompleted } from "../economy/useStreak";
 import { StreakCelebrationScreen } from "../streak/StreakCelebrationScreen";
 import { useAuthStore } from "../auth/useAuthStore";
 import { signInWithProfile } from "../../lib/auth/lifecycle";
@@ -2399,7 +2399,8 @@ export function ProfilingFlow({ mode = "onboarding", onRedoComplete }: Profiling
   const router = useRouter();
   const addXP = useEconomyUIStore((s) => s.addXP);
   const addCoins = useEconomyUIStore((s) => s.addCoins);
-  const recordDailyActivity = useRecordDailyActivity();
+  // Streak bump uses markDailyActivityCompleted() helper, not the mutation hook —
+  // see comment at the call site in handleDone for rationale.
   const { data: streakData } = useStreak();
   const completeOnboarding = useAuthStore((s) => s.completeOnboarding);
   const enterGuestMode = useAuthStore((s) => s.enterGuestMode);
@@ -2547,10 +2548,12 @@ export function ProfilingFlow({ mode = "onboarding", onRedoComplete }: Profiling
     // rewards removed; clean path into mod-0-1).
     try { addCoins(ONBOARDING_COINS); } catch (e) { if (__DEV__) console.warn('[onboarding] addCoins failed:', e); }
     // Day 1 of streak starts here so the user has something to protect from
-    // minute zero (loss aversion). Lesson completion also calls recordDailyActivity
-    // so day 2+ continues the streak — recordDailyActivity is idempotent per day,
-    // so multiple calls in the same day are safe.
-    try { recordDailyActivity.mutate(); } catch (e) { if (__DEV__) console.warn('[onboarding] streak start failed:', e); }
+    // minute zero (loss aversion). Use the unified helper (not the raw
+    // mutation): it bumps the LOCAL store first — which now also mirrors the
+    // new streak into the React Query cache — so the header reflects day-1
+    // even before the user becomes a guest / signs in. The server call still
+    // fires in the background and reconciles when auth is available.
+    try { markDailyActivityCompleted(); } catch (e) { if (__DEV__) console.warn('[onboarding] streak start failed:', e); }
     // Show the day-1 streak celebration as a dedicated step BEFORE finalizing
     // onboarding. We intentionally defer enterGuestMode + completeOnboarding to
     // enterFirstModule() (fired on streak dismiss): completeOnboarding flips
