@@ -113,6 +113,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     // 2. Auto-link: a verified credential whose email matches an existing row
     //    attaches its subject to that row. Safe because the provider proved the
     //    user controls the address. Unverified (email-provider) logins skip this.
+    //    Writing cred.subject here cannot collide on the google_sub/apple_sub
+    //    UNIQUE index: step 1 already looked up by that exact subject and missed,
+    //    so no row holds it. (The only residual is a TOCTOU race between two
+    //    concurrent first-logins of the SAME new subject — rare, surfaces as a
+    //    retryable 500 via the outer catch, not data corruption.)
     if (!row && cred.emailVerified && isEmail(cred.email)) {
       const byEmail = (await db.select().from(userProfiles).where(eq(userProfiles.email, cred.email)).limit(1))[0];
       if (byEmail) {
