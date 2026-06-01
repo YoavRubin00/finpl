@@ -2698,14 +2698,34 @@ export function ProfilingFlow({ mode = "onboarding", onRedoComplete }: Profiling
           // Persist dream/goal/age/birthYear locally BEFORE any OAuth prompt
           // so the post-OAuth router.replace (for existing users) and any
           // server-profile reconciliation don't drop fields the user just
-          // entered. Doesn't flip hasCompletedOnboarding — celebration/streak
-          // still run for new users.
-          saveCollected={() => updateProfile({
-            financialDream: collected.financialDream ?? null,
-            financialGoal: collected.financialGoal ?? "unsure",
-            ageGroup: collected.ageGroup ?? "adult",
-            birthYear: collected.birthYear ?? (CY - 22),
-          })}
+          // entered. For a guest with no profile object yet, `updateProfile`
+          // is a no-op (state.profile ? ... : state.profile) — must seed the
+          // profile via completeOnboarding instead (mirrors onEmailPress).
+          // The "celebration" step still runs after OAuth because the post-
+          // OAuth re-mount detects profile.financialDream and slides straight
+          // to celebration (see useState seed at top of this component).
+          saveCollected={() => {
+            const seed = {
+              displayName,
+              financialDream: collected.financialDream ?? null,
+              financialGoal: collected.financialGoal ?? "unsure" as const,
+              knowledgeLevel: collected.knowledgeLevel ?? "beginner" as const,
+              ageGroup: collected.ageGroup ?? "adult" as const,
+              birthYear: collected.birthYear ?? (CY - 22),
+              learningTime: collected.learningTime ?? "during-day" as const,
+              learningStyle: collected.learningStyle ?? "no-preference" as const,
+              deadlineStress: collected.deadlineStress ?? "maybe" as const,
+              dailyGoalMinutes: collected.dailyGoalMinutes ?? 10 as const,
+              companionId: collected.companionId ?? "warren-buffett" as const,
+              avatarId: collected.avatarId ?? null,
+              ownedAvatars: [] as string[],
+            };
+            if (existingProfile) {
+              updateProfile(seed);
+            } else {
+              completeOnboarding(seed);
+            }
+          }}
           // Email path: must mark onboarding complete with the FULL collected
           // profile before pushing to /register. Without this, the layout's
           // !hasCompletedOnboarding redirect kicks in after register completes

@@ -5,6 +5,7 @@ import LottieView from 'lottie-react-native';
 
 import { DAILY_CONCEPTS, getConceptById } from '../../daily-concepts/dailyConceptsData';
 import { tapHaptic } from '../../../utils/haptics';
+import { useSoundEffect } from '../../../hooks/useSoundEffect';
 import { PEARL_STAGE_COLORS, pearlStageStyles } from './sharedStageStyles';
 
 interface PearlDailyConceptStageProps {
@@ -26,6 +27,7 @@ function getDailyConcept() {
 }
 
 export function PearlDailyConceptStage({ isActive, onContinue, conceptId }: PearlDailyConceptStageProps): React.ReactElement {
+  const { playSound } = useSoundEffect();
   const concept = useMemo(() => {
     if (conceptId) {
       const specific = getConceptById(conceptId);
@@ -58,7 +60,7 @@ export function PearlDailyConceptStage({ isActive, onContinue, conceptId }: Pear
 
       <View style={pearlStageStyles.ctaWrap}>
         <Pressable
-          onPress={() => { tapHaptic(); onContinue(); }}
+          onPress={() => { tapHaptic(); playSound('btn_click_soft_2'); onContinue(); }}
           style={pearlStageStyles.cta}
           accessibilityRole="button"
           accessibilityLabel="הבנתי, המשך לשלב הבא"

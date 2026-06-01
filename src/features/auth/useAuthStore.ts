@@ -7,6 +7,20 @@ import type { UserProfile } from './types';
 import { registerLocalStore } from '../../lib/stores/registry';
 import { logCompletedRegistration, logOnboardingComplete } from '../../utils/fbEvents';
 import { captureEvent, identifyUser, setPersonProperties } from '../../lib/posthog';
+import { useTermsStore } from '../legal/useTermsStore';
+import { CURRENT_TERMS_VERSION } from '../../lib/legal/termsVersion';
+
+/** Mark the just-signed-up user as having accepted the current terms version.
+ *  Without this, brand-new users would immediately see the re-consent modal
+ *  after finishing onboarding — which would be confusing UX (they haven't
+ *  seen a *previous* version to re-accept). The Welcome screen already gives
+ *  implicit consent (Duolingo/Spotify pattern), so we pin that consent to the
+ *  current version here. */
+function pinTermsForNewUser(): void {
+  try {
+    useTermsStore.getState().accept(CURRENT_TERMS_VERSION);
+  } catch { /* non-fatal */ }
+}
 
 interface SessionState {
   userId: string | null;
@@ -145,11 +159,13 @@ export const useAuthStore = create<SessionState & SessionActions>()(
         // Converting a guest also implies they already finished onboarding, since
         // they reached this conversion through the in-app upgrade flow.
         logOnboardingComplete();
+        pinTermsForNewUser();
       },
 
       completeOnboarding: (profile: UserProfile) => {
         set({ hasCompletedOnboarding: true, profile });
         logOnboardingComplete();
+        pinTermsForNewUser();
       },
 
       updateProfile: (partial) =>

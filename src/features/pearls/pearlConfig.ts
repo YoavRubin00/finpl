@@ -25,7 +25,7 @@ import { chapter3Data } from '../chapter-3-content/chapter3Data';
 import { chapter4Data } from '../chapter-4-content/chapter4Data';
 import { chapter5Data } from '../chapter-5-content/chapter5Data';
 import type { ProfileQuestionKind } from '../onboarding/InModuleProfileQuestion';
-import { PEARL_CONTENT_MAP, fallbackBundleFor, type ScenarioPool } from './pearlContentMap';
+import { PEARL_CONTENT_MAP, fallbackBundleFor, type ScenarioPool, type SwipeKind } from './pearlContentMap';
 
 const ALL_CHAPTERS = [
   chapter0Data,
@@ -88,6 +88,10 @@ export interface PearlContent {
   videoId?: string;
   conceptId?: string;
   swipeIds?: readonly string[];
+  /** Which swipe deck to render for this pearl's Swipe stage. When
+   *  `swipeKind` is set (or when `swipeIds.length > 0` for legacy
+   *  bullshit-only bundles), the Swipe stage renders. */
+  swipeKind?: SwipeKind;
   scenarioId?: string;
   scenarioPool?: ScenarioPool;
 }
@@ -143,6 +147,7 @@ function buildConfig(): Map<string, PearlContent> {
         videoId: bundle?.videoId,
         conceptId: bundle?.conceptId,
         swipeIds: bundle?.swipeIds,
+        swipeKind: bundle?.swipeKind,
         scenarioId: bundle?.scenarioId,
         scenarioPool: bundle?.scenarioPool,
       });

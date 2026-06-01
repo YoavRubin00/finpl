@@ -18,6 +18,8 @@ import { neon } from '@neondatabase/serverless';
 import { drizzle } from 'drizzle-orm/neon-http';
 import { eq } from 'drizzle-orm';
 
+import { withRetry, isTransientAiError } from '../_shared/retry';
+
 import { dailyNewsChallenge } from '../../../src/db/schema';
 import { tavilyNewsSearch } from '../_shared/tavily';
 
@@ -29,10 +31,23 @@ export function getDb() {
   return drizzle(sql);
 }
 
-/** YYYY-MM-DD anchored to Asia/Jerusalem. Resets at midnight local. */
+/** YYYY-MM-DD anchored to Asia/Jerusalem. Resets at midnight local.
+ *
+ *  Implementation note (2026-06-01): previously this used
+ *  `new Date(now.toLocaleString('en-US', { timeZone: 'Asia/Jerusalem' })).toISOString()`,
+ *  which silently re-interpreted the locale string in the SERVER's TZ
+ *  (UTC on Vercel) — so during 21:00–23:59 UTC, when IL was already on
+ *  the next calendar day, the function returned the UTC date and clients
+ *  asked `/today` for yesterday's row. Using Intl.DateTimeFormat with
+ *  'en-CA' locale yields a YYYY-MM-DD format directly, no parsing. */
 export function getDateKeyIL(now: Date = new Date()): string {
-  const il = new Date(now.toLocaleString('en-US', { timeZone: 'Asia/Jerusalem' }));
-  return il.toISOString().slice(0, 10);
+  const fmt = new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Asia/Jerusalem',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  });
+  return fmt.format(now);
 }
 
 /* ─────────────────── Types ─────────────────── */
@@ -212,21 +227,29 @@ async function generateChallengePayload(
     },
   };
 
-  const res = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${apiKey}`,
-    {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body),
+  // Wrap the Gemini call in a retry-with-backoff (3 attempts: 500ms,
+  // 1000ms, 2000ms). Transient 429/5xx/timeouts will recover; permanent
+  // 401/403/404 (bad key / model gone) short-circuit immediately so we
+  // don't waste cron budget on hopeless retries.
+  const data = await withRetry<GeminiResponse>(
+    async () => {
+      const res = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${apiKey}`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body),
+        },
+      );
+      if (!res.ok) {
+        const text = await res.text().catch(() => '');
+        throw new Error(`Gemini ${res.status}: ${text.slice(0, 200)}`);
+      }
+      return (await res.json()) as GeminiResponse;
     },
+    { attempts: 3, baseDelayMs: 500, shouldRetry: isTransientAiError, label: 'gemini/dnc' },
   );
 
-  if (!res.ok) {
-    const text = await res.text().catch(() => '');
-    throw new Error(`Gemini ${res.status}: ${text.slice(0, 200)}`);
-  }
-
-  const data = (await res.json()) as GeminiResponse;
   const rawJson = data.candidates?.[0]?.content?.parts?.[0]?.text;
   if (!rawJson) throw new Error('Gemini returned empty content');
 

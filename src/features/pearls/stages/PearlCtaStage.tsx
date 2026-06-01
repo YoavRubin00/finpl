@@ -1,35 +1,45 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 
 import { FeedReferralNudgeCard } from './cards/FeedReferralNudgeCard';
 import { FeedTradingNudgeCard } from './cards/FeedTradingNudgeCard';
+import { FeedWhatsAppNudgeCard } from './cards/FeedWhatsAppNudgeCard';
 import { useAuthStore } from '../../auth/useAuthStore';
+import { track } from '../../../lib/analytics/events';
 
-export type PearlCtaKind = 'referral' | 'trading';
+export type PearlCtaKind = 'referral' | 'trading' | 'whatsapp';
 
 interface PearlCtaStageProps {
   isActive: boolean;
   onContinue: () => void;
   /** Which CTA to surface — picked by PearlSheet via a moduleId hash so each
    *  pearl gets a stable, varied destination across the chapter (some
-   *  Friends, some Bridge). */
+   *  Friends, some Bridge, some WhatsApp community). */
   kind: PearlCtaKind;
+  /** Pearl-scoped context, threaded down to the cards so they can fire
+   *  pearl_cta_tapped / pearl_cta_dismissed with the right module attribution. */
+  afterModuleId: string;
+  chapterId?: string;
 }
 
 /**
  * Mid-pearl Call-To-Action stage. Wraps the restored finfeed CTA cards
- * (FeedReferralNudgeCard / FeedTradingNudgeCard) — these were the polished
- * video-driven CTAs from the old feed surface; we don't re-build them, we
- * just thread them through the pearl pager.
+ * (FeedReferralNudgeCard / FeedTradingNudgeCard / FeedWhatsAppNudgeCard) —
+ * the first two were the polished video-driven CTAs from the old feed
+ * surface; the WhatsApp card was added 2026-06-01 to nudge users into the
+ * community channel for retention. We don't re-build them, we just thread
+ * them through the pearl pager.
  *
- * Both cards take an `onContinue` we wire to the pearl's stage-advance so
- * a "המשך" link inside the card moves the user to the next stage without
- * taking the CTA. Tapping the CTA still navigates out (router.push) AND
- * fires onContinue, so when the user returns from the destination the pearl
- * is on the next stage rather than the same CTA.
+ * All three cards take an `onContinue` we wire to the pearl's stage-advance
+ * so a "המשך" link / background tap inside the card moves the user to the
+ * next stage without taking the CTA. Tapping the CTA still navigates out
+ * (router.push / Linking.openURL) AND fires onContinue, so when the user
+ * returns from the destination the pearl is on the next stage rather than
+ * the same CTA.
  *
  * Trading CTA is dropped to Referral for minors (no Bridge access).
+ * WhatsApp is fine for all ages (the channel itself is age-appropriate).
  */
-export function PearlCtaStage({ isActive, onContinue, kind }: PearlCtaStageProps): React.ReactElement {
+export function PearlCtaStage({ isActive, onContinue, kind, afterModuleId, chapterId }: PearlCtaStageProps): React.ReactElement {
   const ageGroup = useAuthStore((s) => s.profile?.ageGroup ?? null);
   const isMinor = ageGroup === 'minor';
 
@@ -38,8 +48,26 @@ export function PearlCtaStage({ isActive, onContinue, kind }: PearlCtaStageProps
   // destination.
   const effectiveKind: PearlCtaKind = kind === 'trading' && isMinor ? 'referral' : kind;
 
-  if (effectiveKind === 'trading') {
-    return <FeedTradingNudgeCard isActive={isActive} onContinue={onContinue} />;
-  }
-  return <FeedReferralNudgeCard isActive={isActive} onContinue={onContinue} />;
+  // One-shot pearl_cta_shown fire when the stage becomes active. Captures
+  // both the picked kind (deterministic hash) AND the effective kind (post
+  // minor-redirect) so PostHog can attribute the visit to either as needed.
+  useEffect(() => {
+    if (!isActive) return;
+    try {
+      track({
+        name: 'pearl_cta_shown',
+        props: {
+          after_module_id: afterModuleId,
+          chapter_id: chapterId,
+          cta_kind: kind,
+          effective_kind: effectiveKind,
+        },
+      });
+    } catch { /* non-fatal */ }
+  }, [isActive, afterModuleId, chapterId, kind, effectiveKind]);
+
+  const cardProps = { isActive, onContinue, afterModuleId, chapterId } as const;
+  if (effectiveKind === 'trading') return <FeedTradingNudgeCard {...cardProps} />;
+  if (effectiveKind === 'whatsapp') return <FeedWhatsAppNudgeCard {...cardProps} />;
+  return <FeedReferralNudgeCard {...cardProps} />;
 }

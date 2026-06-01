@@ -121,7 +121,7 @@ export function BuySheet({ visible, assetId, currentPrice, previousClose, onClos
                         ]}
                         onPress={() => {}}
                     >
-                        <ScrollView showsVerticalScrollIndicator={false} bounces={true} style={{ flexShrink: 1 }} contentContainerStyle={{ paddingBottom: 24, flexGrow: 1 }}>
+                        <ScrollView showsVerticalScrollIndicator={false} bounces={true} style={{ flexShrink: 1 }} contentContainerStyle={{ paddingBottom: 24, flexGrow: 1 }} keyboardShouldPersistTaps="handled" automaticallyAdjustKeyboardInsets>
                         <Animated.View entering={FadeInUp.duration(300)}>
                             {/* Handle bar */}
                             <View style={styles.handleBar} />

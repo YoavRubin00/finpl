@@ -84,6 +84,9 @@ function QuestButton({
   const reduceMotion = useReducedMotion();
   const glow = useSharedValue(0);
   const isDone = quest.isCompleted;
+  // News allows redo even after completion (re-experience the content;
+  // store guards prevent double payout / double analytics).
+  const allowRedo = quest.type === "news";
 
   useEffect(() => {
     if (isDone || reduceMotion) {
@@ -135,13 +138,19 @@ function QuestButton({
         {/* Card uses native Flexbox row-reverse so elements flow natively RTL */}
         <Pressable
           onPress={onPress}
-          disabled={isDone}
+          disabled={isDone && !allowRedo}
           accessibilityRole="button"
-          accessibilityLabel={isDone ? `${titleHe}, הושלם` : `${titleHe}, לחץ לביצוע`}
+          accessibilityLabel={
+            isDone
+              ? allowRedo
+                ? `${titleHe}, הושלם — לחץ לבצע שוב`
+                : `${titleHe}, הושלם`
+              : `${titleHe}, לחץ לביצוע`
+          }
           style={({ pressed }) => [
             questStyles.card,
             isDone ? questStyles.cardDone : questStyles.cardPending,
-            pressed && !isDone && questStyles.cardPressed,
+            pressed && (!isDone || allowRedo) && questStyles.cardPressed,
           ]}
         >
           {/* Rigid side-by-side flex layout to ban Android wrap stacking entirely */}
@@ -163,12 +172,12 @@ function QuestButton({
                 {titleHe}
               </Text>
               {!!descriptionHe && (
-                <Text 
-                  numberOfLines={2} 
-                  adjustsFontSizeToFit 
+                <Text
+                  numberOfLines={2}
+                  adjustsFontSizeToFit
                   style={[questStyles.descText, isDone && questStyles.descTextDone, { marginTop: 2 }]}
                 >
-                  {descriptionHe}
+                  {isDone && allowRedo ? "סיימת היום — לחץ לבצע שוב 🔄" : descriptionHe}
                 </Text>
               )}
             </View>
@@ -242,8 +251,11 @@ export function DailyQuestsSheet({ visible, onClose, onOpenNewsChallenge, onOpen
 
   /** Navigate to the feed item that fulfills this quest. */
   const handleQuestPress = (quest: DailyQuest) => {
-    if (quest.isCompleted) return; // completed quests are informational only
+    // News allows redo even after completion; all other completed quests are
+    // informational only (re-doing them is a no-op + would feel like a dead end).
+    if (quest.isCompleted && quest.type !== "news") return;
     tapHaptic();
+    playSound('btn_click_soft_2');
     captureEvent('daily_quest_clicked', {
       quest_type: quest.type,
       quest_id: quest.id,

@@ -450,38 +450,9 @@ export function TimelineOrderCard({
           exiting={FadeOut.duration(160)}
           style={styles.helpActions}
         >
-          <Pressable
-            onPress={applyCorrectOrder}
-            accessibilityRole="button"
-            accessibilityLabel="כן, עזור לי לסדר"
-            style={({ pressed }) => ({
-              flex: 1,
-              minHeight: 52,
-              paddingVertical: 14,
-              paddingHorizontal: 8,
-              borderRadius: 14,
-              alignItems: "center",
-              justifyContent: "center",
-              backgroundColor: "#7dd3fc",
-              borderWidth: 2,
-              borderColor: "#0ea5e9",
-              borderBottomWidth: 4,
-              borderBottomColor: "#0284c7",
-              shadowColor: "#0ea5e9",
-              shadowOpacity: 0.3,
-              shadowRadius: 6,
-              shadowOffset: { width: 0, height: 2 },
-              elevation: 4,
-              opacity: pressed ? 0.85 : 1,
-            })}
-          >
-            <Text
-              numberOfLines={1}
-              style={{ fontSize: 16, fontWeight: "900", color: "#ffffff", writingDirection: "rtl", textAlign: "center", textShadowColor: "rgba(0,0,0,0.2)", textShadowOffset: { width: 0, height: 1 }, textShadowRadius: 2 }}
-            >
-              עזור לי
-            </Text>
-          </Pressable>
+          {/* Order: "אני אסתדר" first → row-reverse puts it visually LEFT.
+              "עזור לי" second → visually RIGHT. Darker blue on the left as
+              the "primary refuse" CTA; lighter sky-blue on the right invites help. */}
           <Pressable
             onPress={declineHelp}
             accessibilityRole="button"
@@ -494,24 +465,52 @@ export function TimelineOrderCard({
               borderRadius: 14,
               alignItems: "center",
               justifyContent: "center",
-              backgroundColor: "#2563eb",
-              borderWidth: 2,
-              borderColor: "#1e40af",
+              backgroundColor: "#1d4ed8",
               borderBottomWidth: 4,
               borderBottomColor: "#1e3a8a",
-              shadowColor: "#1e40af",
-              shadowOpacity: 0.35,
+              shadowColor: "#1e3a8a",
+              shadowOpacity: 0.4,
               shadowRadius: 6,
               shadowOffset: { width: 0, height: 2 },
-              elevation: 4,
+              elevation: 5,
               opacity: pressed ? 0.85 : 1,
             })}
           >
             <Text
               numberOfLines={1}
-              style={{ fontSize: 16, fontWeight: "900", color: "#ffffff", writingDirection: "rtl", textAlign: "center", textShadowColor: "rgba(0,0,0,0.25)", textShadowOffset: { width: 0, height: 1 }, textShadowRadius: 2 }}
+              style={{ fontSize: 16, fontWeight: "900", color: "#ffffff", writingDirection: "rtl", textAlign: "center" }}
             >
               אני אסתדר
+            </Text>
+          </Pressable>
+          <Pressable
+            onPress={applyCorrectOrder}
+            accessibilityRole="button"
+            accessibilityLabel="כן, עזור לי לסדר"
+            style={({ pressed }) => ({
+              flex: 1,
+              minHeight: 52,
+              paddingVertical: 14,
+              paddingHorizontal: 8,
+              borderRadius: 14,
+              alignItems: "center",
+              justifyContent: "center",
+              backgroundColor: "#38bdf8",
+              borderBottomWidth: 4,
+              borderBottomColor: "#0284c7",
+              shadowColor: "#0ea5e9",
+              shadowOpacity: 0.35,
+              shadowRadius: 6,
+              shadowOffset: { width: 0, height: 2 },
+              elevation: 5,
+              opacity: pressed ? 0.85 : 1,
+            })}
+          >
+            <Text
+              numberOfLines={1}
+              style={{ fontSize: 16, fontWeight: "900", color: "#ffffff", writingDirection: "rtl", textAlign: "center" }}
+            >
+              עזור לי
             </Text>
           </Pressable>
         </Animated.View>

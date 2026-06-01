@@ -146,6 +146,12 @@ interface NewsChallengeState {
   hasCompletedToday: () => boolean;
   claimRegularChest: () => ChallengeRewardSummary | null;
   claimProChest: () => ChallengeRewardSummary | null;
+  /** Allow the user to re-experience today's news challenge after they've
+   *  already completed it. Clears ONLY `answered` so the chips render again;
+   *  keeps `regularChestOpened`/`proChestOpened` (no double payout),
+   *  `lastCompletionEventDateKey` (no double analytics), and `perfectDays`
+   *  (no double-count toward the perfect-day milestone). */
+  resetTodayAnswers: () => void;
 }
 
 export const useDailyNewsChallengeStore = create<NewsChallengeState>()(
@@ -271,6 +277,14 @@ export const useDailyNewsChallengeStore = create<NewsChallengeState>()(
 
         set({ proChestOpened: true });
         return reward;
+      },
+
+      resetTodayAnswers: () => {
+        // Re-do support: wipe the per-item answers so the chips render again.
+        // Chests and analytics guards stay set — second pass yields no XP/coins/gems
+        // and doesn't double-fire `news_challenge_completed`. perfectDays is also
+        // preserved so re-answering wrong after a perfect doesn't lose the streak.
+        set({ answered: [null, null] });
       },
     }),
     {

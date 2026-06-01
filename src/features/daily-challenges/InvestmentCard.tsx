@@ -12,6 +12,7 @@ import Animated, {
 import LottieView from 'lottie-react-native';
 import { FINN_STANDARD } from '../retention-loops/finnMascotConfig';
 import { tapHaptic, successHaptic } from '../../utils/haptics';
+import { useSoundEffect } from '../../hooks/useSoundEffect';
 // import { renderGlossaryText } from '../glossary/renderGlossaryText';
 import { ConfettiExplosion } from '../../components/ui/ConfettiExplosion';
 import { FlyingRewards } from '../../components/ui/FlyingRewards';
@@ -40,6 +41,7 @@ export const InvestmentCard = React.memo(function InvestmentCard({ isActive, onC
   const answered = hasInvestmentAnsweredToday();
   const playsToday = getInvestmentPlaysToday();
   const remaining = MAX_DAILY_PLAYS - playsToday;
+  const { playSound } = useSoundEffect();
 
   const [selectedOption, setSelectedOption] = useState<InvestmentOption | null>(null);
   const [showResult, setShowResult] = useState(false);
@@ -71,9 +73,11 @@ export const InvestmentCard = React.memo(function InvestmentCard({ isActive, onC
   const handleAnswer = (option: InvestmentOption) => {
     if (showResult || answered) return;
     tapHaptic();
+    playSound('btn_click_soft_2');
     setSelectedOption(option);
     setShowResult(true);
     successHaptic();
+    playSound(option.returnMultiplier >= 1 ? 'modal_open_4' : 'modal_open_1');
 
     setShowFlyingCoins(true);
     if (option.returnMultiplier > 1.1) {
@@ -108,7 +112,7 @@ export const InvestmentCard = React.memo(function InvestmentCard({ isActive, onC
           <Text style={[styles.answeredSub, RTL]}>חזור מחר לתרחיש חדש</Text>
           {onContinue ? (
             <Pressable
-              onPress={() => { tapHaptic(); onContinue(); }}
+              onPress={() => { tapHaptic(); playSound('btn_click_soft_2'); onContinue(); }}
               accessibilityRole="button"
               accessibilityLabel="המשך"
               style={styles.continueBtn}
@@ -300,7 +304,12 @@ export const InvestmentCard = React.memo(function InvestmentCard({ isActive, onC
           {/* Continue button — only shown when inter-module overlay provides
               the callback. Keeps daily-feed surface unchanged. */}
           {showResult && onContinue && (
-            <Pressable onPress={onContinue} style={styles.continueBtn} accessibilityRole="button" accessibilityLabel="המשך">
+            <Pressable
+              onPress={() => { tapHaptic(); playSound('btn_click_soft_2'); onContinue(); }}
+              style={styles.continueBtn}
+              accessibilityRole="button"
+              accessibilityLabel="המשך"
+            >
               <Text style={styles.continueBtnText}>המשך</Text>
             </Pressable>
           )}

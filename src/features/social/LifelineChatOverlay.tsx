@@ -322,7 +322,7 @@ export function LifelineChatOverlay({ visible, conceptTag, onClose }: Props) {
       <View style={{ flex: 1, backgroundColor: '#ffffff' }}>
         <KeyboardAvoidingView
           style={st.root}
-          behavior={Platform.OS === "ios" ? "padding" : undefined}
+          behavior={Platform.OS === "ios" ? "padding" : "height"}
         >
           {/* Header */}
           <Animated.View entering={FadeIn.duration(200)} style={[st.header, { paddingTop: headerTopPad }]}>
@@ -371,6 +371,8 @@ export function LifelineChatOverlay({ visible, conceptTag, onClose }: Props) {
                 style={st.messages}
                 contentContainerStyle={st.messagesContent}
                 onContentSizeChange={() => scrollRef.current?.scrollToEnd({ animated: true })}
+                keyboardShouldPersistTaps="handled"
+                automaticallyAdjustKeyboardInsets
               >
                 {/* Intro bubble */}
                 <Animated.View entering={FadeInUp.delay(100).duration(300)} style={st.introBubble}>

@@ -1,0 +1,32 @@
+/**
+ * Single source of truth for the current legal terms version.
+ * Bump this string whenever docs/finplay-terms-and-privacy.md is materially
+ * updated. Date format: YYYY-MM-DD (so lexicographic string comparison gives
+ * the correct ordering: '2026-06-01' > '2026-04-01').
+ *
+ * When you bump this, also update TERMS_UPDATE_SUMMARY_HE below to describe
+ * what changed — that's what the user sees in the re-consent modal.
+ */
+export const CURRENT_TERMS_VERSION = '2026-06-01';
+
+/** Short Hebrew bullets shown in the re-consent modal. Keep each under ~100 chars. */
+export const TERMS_UPDATE_SUMMARY_HE: ReadonlyArray<string> = [
+  'הוספנו כלי לניתוח תלוש שכר. הקובץ מעובד בעזרת AI ולא נשמר.',
+  'הוספנו 9 כלים פיננסיים (משכנתא, פנסיה, מס ועוד). הקלט נשמר רק במכשיר.',
+  'הצ\'אט עם Captain Shark וניתוח מניות עמוק משתמשים ב-AI לעיבוד הנתונים.',
+  'הבהרנו ששמירת סטטיסטיקות אנונימיות של תלוש (טווחים בלבד) מבוצעת מקומית.',
+];
+
+/** Same summary in English, for users who switch language. */
+export const TERMS_UPDATE_SUMMARY_EN: ReadonlyArray<string> = [
+  'Added a payslip analyzer tool. The file is processed by AI and not stored.',
+  'Added 9 financial calculators (mortgage, pension, tax, etc.). Input is stored on-device only.',
+  'Captain Shark chat and deep stock analysis use AI for data processing.',
+  'Clarified that aggregated anonymized payslip statistics (ranges only) are stored locally.',
+];
+
+/** Public URL of the full hosted terms — kept here so the modal + email use the same link.
+ *  Lives on the finplay.me landing project (Vercel, cleanUrls=true). */
+export const TERMS_PUBLIC_URL = 'https://finplay.me/privacy-policy';
+export const TERMS_OF_SERVICE_URL = 'https://finplay.me/terms-of-service';
+export const DELETE_ACCOUNT_URL = 'https://finplay.me/delete-account';

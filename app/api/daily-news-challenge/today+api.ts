@@ -47,11 +47,18 @@ export async function GET(request: Request): Promise<Response> {
       originalTitle: '',
     })) as DailyChallengePayload['items'];
 
+    // Stale-content detection. The row.isFallback DB column is only set
+    // when an operator wrote a curated fallback by hand; it does NOT flip
+    // when the cron silently misses a day and the user sees yesterday's
+    // row. Treat any non-today row as a fallback so the client can
+    // surface a "תוכן של אתמול" hint instead of pretending it's fresh.
+    const isToday = row.dateKey === dateKey;
+    const isFallback = !isToday || (row.isFallback ?? false);
     return Response.json({
       ok: true,
       dateKey: row.dateKey,
-      isToday: row.dateKey === dateKey,
-      isFallback: row.isFallback ?? false,
+      isToday,
+      isFallback,
       heroTitle: row.heroTitle,
       heroImageUrl: row.heroImageUrl,
       items: safeItems,

@@ -564,29 +564,37 @@ export function GlobalWealthHeader({ compact = false }: GlobalWealthHeaderProps)
                 profileIsGlowTarget ? walkthroughProfileStyle : profileGlowStyle,
                 isPro && { elevation: 3 },
               ]}>
-              <View style={[
-                s.profileAvatarCompact,
-                { width: d.avatarSize, height: d.avatarSize, borderRadius: d.avatarBorderR },
-                isPro && { borderColor: "#facc15" },
-              ]}>
-                <AvatarImage avatarId={avatarId} size={Math.round(d.avatarSize * 0.89)} emojiStyle={s.profileAvatarEmojiCompact} />
-                {isPro && (
-                  <View style={s.profileCrownCompact}>
-                    <Crown size={8} color="#facc15" fill="#f59e0b" />
+              {/* Avatar bubble — rendered ONLY when the user actually picked
+                  an avatar. Without one, AvatarImage falls back to the 🎮
+                  gamepad emoji which read as "generic player placeholder"
+                  rather than "FinPlay identity" (user report 2026-06-01:
+                  "תמחק את אימוג'י שלט המשחק"). Showing just the first name
+                  is the cleaner state when no avatar is chosen. */}
+              {avatarId ? (
+                <View style={[
+                  s.profileAvatarCompact,
+                  { width: d.avatarSize, height: d.avatarSize, borderRadius: d.avatarBorderR },
+                  isPro && { borderColor: "#facc15" },
+                ]}>
+                  <AvatarImage avatarId={avatarId} size={Math.round(d.avatarSize * 0.89)} emojiStyle={s.profileAvatarEmojiCompact} />
+                  {isPro && (
+                    <View style={s.profileCrownCompact}>
+                      <Crown size={8} color="#facc15" fill="#f59e0b" />
+                    </View>
+                  )}
+                  {/* Floating confetti particles */}
+                  <View style={{ position: "absolute", top: -22, left: -22, right: -22, bottom: -22, pointerEvents: "none" }}>
+                    <LottieIcon
+                      source={require("../../../assets/lottie/Confetti Effects Lottie Animation.json") as number}
+                      size={Math.max(48, Math.round(72 * d.scale))}
+                      autoPlay
+                      loop
+                      speed={0.3}
+                      active={appActive}
+                    />
                   </View>
-                )}
-                {/* Floating confetti particles */}
-                <View style={{ position: "absolute", top: -22, left: -22, right: -22, bottom: -22, pointerEvents: "none" }}>
-                  <LottieIcon
-                    source={require("../../../assets/lottie/Confetti Effects Lottie Animation.json") as number}
-                    size={Math.max(48, Math.round(72 * d.scale))}
-                    autoPlay
-                    loop
-                    speed={0.3}
-                    active={appActive}
-                  />
                 </View>
-              </View>
+              ) : null}
               <Text
                 style={[s.profileNameCompact, { fontSize: d.nameFont, maxWidth: d.nameMaxW }, isPro && { color: "#d97706" }]}
                 numberOfLines={1}

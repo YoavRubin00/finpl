@@ -77,24 +77,37 @@ export function ItemChatOverlay({ visible, itemContext, itemHeadline, onClose }:
     >
       <Pressable style={styles.backdrop} onPress={onClose} accessibilityLabel="סגור צ'אט" />
       <View style={[styles.sheet, { paddingBottom: Math.max(insets.bottom + 8, 16) }]}>
-        {/* Header */}
+        {/* Header — JSX order is X → title → MessageCircle. Inside a
+            flexDirection: 'row-reverse' parent that resolves to:
+            X visually on the RIGHT, MessageCircle visually on the LEFT
+            (user spec 2026-06-01: dismiss affordance belongs at the
+            trailing edge of Hebrew RTL reading, icon decoration at the
+            leading edge). */}
         <View style={styles.header}>
-          <View style={styles.headerIconWrap}>
-            <MessageCircle size={20} color={STITCH.primary} strokeWidth={2.4} />
-          </View>
+          <Pressable onPress={onClose} hitSlop={10} style={styles.closeBtn} accessibilityRole="button" accessibilityLabel="סגור">
+            <X size={18} color={STITCH.onSurfaceVariant} strokeWidth={2.4} />
+          </Pressable>
           <View style={{ flex: 1 }}>
             <Text style={styles.headerTitle} allowFontScaling={false}>שאל את הקפטן שארק</Text>
             <Text style={styles.headerSubtitle} numberOfLines={1} allowFontScaling={false}>
               {itemHeadline}
             </Text>
           </View>
-          <Pressable onPress={onClose} hitSlop={10} style={styles.closeBtn} accessibilityRole="button" accessibilityLabel="סגור">
-            <X size={18} color={STITCH.onSurfaceVariant} strokeWidth={2.4} />
-          </Pressable>
+          <View style={styles.headerIconWrap}>
+            <MessageCircle size={20} color={STITCH.primary} strokeWidth={2.4} />
+          </View>
         </View>
 
         <KeyboardAvoidingView
           behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+          // Explicit offset = 0 so the KAV's bottom padding equals the
+          // raw keyboard height. Without this prop the default offset
+          // can be off-by-a-status-bar on iOS, leaving the input partly
+          // hidden under the keyboard (user report 2026-06-01: "המקלדת
+          // מסתירה את החלונית"). Since this sheet sits flush at the
+          // screen bottom (justifyContent: flex-end parent) the KAV's
+          // local top == the sheet's top, so 0 is the correct anchor.
+          keyboardVerticalOffset={0}
           style={{ flex: 1 }}
         >
           <ScrollView

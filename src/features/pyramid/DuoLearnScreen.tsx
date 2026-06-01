@@ -5,6 +5,13 @@
 import React, { useState, useCallback, useRef, useEffect, useMemo } from "react";
 import { Image as ExpoImage } from "expo-image";
 import { ScrollView, View, Text, Pressable, Modal, Image, StyleSheet, Dimensions } from "react-native";
+// Gesture-handler ScrollView + RootView — used ONLY inside the swipe/dilemma
+// Modals below. RN's Modal mounts in a separate native window so the
+// app-level GestureHandlerRootView doesn't extend into it, and RN's
+// ScrollView swallows horizontal pan gestures. Both fixes are required for
+// BullshitSwipe / MythFeed / SwipeGame card gestures to receive events.
+// Mirrors PearlSheet + PearlSwipeStage + quest/swipe-game fixes.
+import { ScrollView as GHScrollView, GestureHandlerRootView } from "react-native-gesture-handler";
 import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import Animated, {
   useSharedValue,
@@ -67,6 +74,7 @@ import { SwipeGameCard } from "../daily-challenges/SwipeGameCard";
 import { MythFeedCard } from "../myth-or-tachles/MythFeedCard";
 import { useDailyNewsChallengeStore } from "../daily-news-challenge/useDailyNewsChallengeStore";
 import { fetchTodayChallenge } from "../daily-news-challenge/dailyNewsChallengeApi";
+import { BreakingNewsBadge } from "../breaking-news/components/BreakingNewsBadge";
 import { FINN_STANDARD } from "../retention-loops/finnMascotConfig";
 // FeedNudgeBanner / useFeedNudge removed — Feed is retired. Daily-challenge
 // entry lives in the Daily News Challenge card (added in Stage A).
@@ -1366,9 +1374,55 @@ export function DuoLearnScreen() {
     return y;
   }, [progressData, isPro]);
 
-  // On every tab focus, scroll to the user's current module instead of the
-  // top. Skips the very first mount because the dedicated mount effect below
-  // already runs then (and uses animated:false to land instantly).
+  // Compute y-offset of the user's most-recently-progressed completed module
+  // (in chapter+module index order, NOT timestamp). Goal: open the learn map
+  // anchored on "what I just finished" so the user sees their progress at
+  // the top of the viewport, with the next lesson glowing right below it —
+  // beats opening on "next lesson" alone (no confirmation of progress).
+  //
+  // Merges server progress + local offline-completed store, same pattern as
+  // the chapter-rendering logic at line 1738. Returns null for fresh users
+  // who haven't completed anything — caller falls back to calcResumeScrollY.
+  const calcLastCompletedScrollY = useCallback((): number | null => {
+    const completed = new Set<string>([
+      ...(progressData?.filter((m) => m.status === 'completed').map((m) => m.moduleId) ?? []),
+      ...localCompletedModuleIds,
+    ]);
+    if (completed.size === 0) return null;
+
+    let targetChapterIdx = -1;
+    let targetModuleIdx = -1;
+    for (let ci = ALL_CHAPTERS.length - 1; ci >= 0 && targetChapterIdx < 0; ci--) {
+      const ch = ALL_CHAPTERS[ci];
+      for (let mi = ch.modules.length - 1; mi >= 0; mi--) {
+        if (completed.has(ch.modules[mi].id)) {
+          targetChapterIdx = ci;
+          targetModuleIdx = mi;
+          break;
+        }
+      }
+    }
+    if (targetChapterIdx < 0) return null;
+
+    // Same per-row constants as calcResumeScrollY:
+    //   greeting padding 150 + per-chapter (banner 80 + container margin 44)
+    //   for completed chapters BEFORE the target, then chapter banner 80 +
+    //   marginTop 16 + moduleIdx * 195 inside the target chapter.
+    let y = 150;
+    for (let ci = 0; ci < targetChapterIdx; ci++) {
+      y += 80 + 44;
+      y += ALL_CHAPTERS[ci].modules.length * 195;
+    }
+    y += 80;
+    y += 16;
+    y += targetModuleIdx * 195;
+    return y;
+  }, [progressData, localCompletedModuleIds]);
+
+  // On every tab focus, scroll to the user's last-completed module (with a
+  // fallback to "next active module" for fresh users). Skips the very first
+  // mount because the dedicated mount effect below already runs then (and
+  // uses animated:false to land instantly).
   useFocusEffect(
     useCallback(() => {
       // refreshQuests(); syncQuestCompletions();, disabled temporarily
@@ -1376,21 +1430,22 @@ export function DuoLearnScreen() {
         isFirstMount.current = false;
         return;
       }
-      const targetY = calcResumeScrollY();
+      const lastY = calcLastCompletedScrollY();
+      const targetY = lastY ?? calcResumeScrollY();
       scrollRef.current?.scrollTo({ y: Math.max(0, targetY - 80), animated: true });
       setRefreshKey((k) => k + 1);
-    }, [calcResumeScrollY])
+    }, [calcResumeScrollY, calcLastCompletedScrollY])
   );
 
-  // Auto-scroll to the active module on initial mount — always, not only
-  // when the active node is below the fold. User wants the learn screen to
-  // open straight to "where you are next," so the news badge + glowing node
-  // both sit in the natural eye-line on first paint.
+  // Auto-scroll on initial mount — prefer last-completed module so the user
+  // lands on "where I finished last time" with the next lesson right below.
+  // Fresh users (no completions) fall back to calcResumeScrollY → mod-0-1.
   useEffect(() => {
-    const y = calcResumeScrollY();
+    const lastY = calcLastCompletedScrollY();
+    const y = lastY ?? calcResumeScrollY();
     if (y > 0) {
       // Two-pass scroll: snap immediately so the first paint already lands
-      // on the active node, then a tiny smooth nudge once layout settles.
+      // on the anchor node, then a tiny smooth nudge once layout settles.
       scrollRef.current?.scrollTo({ y: Math.max(0, y - 120), animated: false });
       setTimeout(() => {
         scrollRef.current?.scrollTo({ y: Math.max(0, y - 120), animated: true });
@@ -1558,12 +1613,16 @@ export function DuoLearnScreen() {
           canonical swipeGamePlays counter ticks and Daily Quests'
           syncCompletions marks this quest done regardless of which card was
           shown. */}
+      {/* Swipe-quest Modal — wrapped in GestureHandlerRootView so Gesture.Pan
+          detectors inside BullshitSwipeCard / MythFeedCard / SwipeGameCard
+          receive events (RN Modal mounts in its own native window). */}
       <Modal
         visible={swipeQuestVisible}
         animationType="slide"
         presentationStyle="pageSheet"
         onRequestClose={() => setSwipeQuestVisible(false)}
       >
+        <GestureHandlerRootView style={{ flex: 1 }}>
         <View style={{ flex: 1, backgroundColor: "#f0f9ff" }}>
           <Pressable
             onPress={() => { tapHaptic(); setSwipeQuestVisible(false); }}
@@ -1574,7 +1633,7 @@ export function DuoLearnScreen() {
           >
             <Text style={{ fontSize: 18, fontWeight: "700", color: "#475569" }}>✕</Text>
           </Pressable>
-          <ScrollView contentContainerStyle={{ flexGrow: 1, justifyContent: "center", paddingVertical: 12, paddingTop: insets.top + 56 }} showsVerticalScrollIndicator={false}>
+          <GHScrollView contentContainerStyle={{ flexGrow: 1, justifyContent: "center", paddingVertical: 12, paddingTop: insets.top + 56 }} showsVerticalScrollIndicator={false}>
             {dailySwipeKind === 'bullshit' && (
               <BullshitSwipeCard
                 isActive={swipeQuestVisible}
@@ -1594,8 +1653,9 @@ export function DuoLearnScreen() {
                 onFinish={finishSwipeQuest}
               />
             )}
-          </ScrollView>
+          </GHScrollView>
         </View>
+        </GestureHandlerRootView>
       </Modal>
       {/* Dilemma quest modal. Same pattern as swipe above. DilemmaCard runs
           its own celebration + close animation on completion via onContinue. */}
@@ -1796,7 +1856,7 @@ export function DuoLearnScreen() {
                 questCompletedCount={hasActiveModule ? questCompletedCount : undefined}
                 questTotalCount={hasActiveModule ? questTotalCount : undefined}
                 onQuestPress={hasActiveModule ? handleQuestPress : undefined}
-                newsBadgeNode={undefined}
+                newsBadgeNode={hasActiveModule ? <BreakingNewsBadge /> : undefined}
                 onPearlPress={handlePearlPress}
                 completedPearlIds={completedPearlIds}
               />
@@ -1937,6 +1997,11 @@ export function DuoLearnScreen() {
           visible={questSheetVisible}
           onClose={() => setQuestSheetVisible(false)}
           onOpenNewsChallenge={() => {
+            // If the user already completed today, wipe per-item answers so the
+            // chips render again. Chests and analytics guards stay set →
+            // no double payout / no double `news_challenge_completed`.
+            const dnc = useDailyNewsChallengeStore.getState();
+            if (dnc.hasCompletedToday()) dnc.resetTodayAnswers();
             setNewsEntrySource('daily_quests_modal');
             setNewsSheetVisible(true);
           }}

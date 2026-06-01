@@ -29,8 +29,8 @@ import { ChevronLeft, MessageCircle, Newspaper, ChevronDown } from 'lucide-react
 
 import { STITCH } from '../../../constants/theme';
 import { tapHaptic, successHaptic, errorHaptic } from '../../../utils/haptics';
+import { useSoundEffect } from '../../../hooks/useSoundEffect';
 import { ConfettiExplosion } from '../../../components/ui/ConfettiExplosion';
-import { playSuccessChord, playSoftThud } from '../lib/sounds';
 import { FINN_FIRE, FINN_HAPPY, FINN_EMPATHIC, FINN_TALKING } from '../../retention-loops/finnMascotConfig';
 import type { ChallengeItem } from '../types';
 
@@ -100,6 +100,17 @@ interface ChallengePageProps {
   onOpenChat: () => void;
   /** If the user already answered this item earlier, we restore that state. */
   preAnsweredIdx?: number;
+  /** Current global daily streak. Drives the XP multiplier pill (only shown
+   *  when > 0) and the streak-preservation copy on the last question. */
+  streak?: number;
+}
+
+/** XP multiplier for a given streak. Every full 7 days adds 10%, capped at
+ *  +50%. Streak 0 → no multiplier (pill hidden). Mirror of the same logic
+ *  used elsewhere in the reward preview so the user sees consistent numbers. */
+function streakXpMultiplier(streak: number): number {
+  const bumps = Math.floor(streak / 7);
+  return 1 + Math.min(bumps * 0.1, 0.5);
 }
 
 /**
@@ -119,8 +130,14 @@ export function ChallengePage({
   onContinue,
   onOpenChat,
   preAnsweredIdx,
+  streak = 0,
 }: ChallengePageProps): React.ReactElement {
+  // Last-question framing only matters on Q2 (index 1). On Q1 we don't
+  // want to threaten the streak yet — keep the page focused on the question.
+  const isLastQuestion = index === 1;
+  const xpMultiplier = streakXpMultiplier(streak);
   const reduceMotion = useReducedMotion();
+  const { playSound } = useSoundEffect();
   const [selected, setSelected] = useState<number | null>(preAnsweredIdx ?? null);
   const [showConfetti, setShowConfetti] = useState(false);
 
@@ -203,22 +220,23 @@ export function ChallengePage({
     (idx: number) => {
       if (showResult) return;
       tapHaptic();
+      playSound('btn_click_soft_3');
       const correct = idx === correctIdx;
       setSelected(idx);
       onAnswered(idx, correct);
       if (correct) {
         successHaptic();
+        playSound('modal_open_4');
         if (!reduceMotion) setShowConfetti(true);
-        void playSuccessChord();
       } else {
-        // Wrong-answer feedback: haptic + soft thud + red flash via the
+        // Wrong-answer feedback: haptic + audio cue + red flash via the
         // result panel below — the headline-shake was retired in the 2026
         // UX rework (read as anxious/buggy alongside the calm intro panels).
         errorHaptic();
-        void playSoftThud();
+        playSound('modal_open_1');
       }
     },
-    [showResult, correctIdx, onAnswered, reduceMotion, shakeX],
+    [showResult, correctIdx, onAnswered, reduceMotion, shakeX, playSound],
   );
 
   useEffect(() => {
@@ -286,6 +304,16 @@ export function ChallengePage({
               אקטואליה היום · LIVE
             </Text>
           </View>
+          {/* Streak XP multiplier pill — only when streak ≥ 7 (multiplier
+              activates) so we don't crowd the row with a meaningless ×1.0
+              for brand-new users. */}
+          {xpMultiplier > 1 && (
+            <View style={styles.streakPill} accessibilityLabel={`מכפיל ${xpMultiplier.toFixed(1)} XP מסטריק`}>
+              <Text style={styles.streakPillText} allowFontScaling={false}>
+                {`streak ×${xpMultiplier.toFixed(1)} XP 🔥`}
+              </Text>
+            </View>
+          )}
           <Text style={styles.itemNumber} allowFontScaling={false}>
             {index === 0 ? '01' : '02'} / 02
           </Text>
@@ -416,9 +444,25 @@ export function ChallengePage({
               )}
             </LinearGradient>
 
+            {/* Streak preservation copy — surfaces only on Q2 (the last
+                question before the recap), and only when the user has a
+                streak worth protecting (≥3). Frames the moment as "you JUST
+                saved your streak" — the Duolingo emotional hook for
+                retention. Wrong answer also gets a reassuring line so the
+                user doesn't feel the streak is at risk. */}
+            {isLastQuestion && streak >= 3 && (
+              <Animated.View entering={FadeIn.delay(280).duration(240)} style={styles.streakPreservedRow}>
+                <Text style={styles.streakPreservedText} allowFontScaling={false}>
+                  {wasCorrect
+                    ? `🔥 הסטריק שמור! יום ${streak} ברצף.`
+                    : `הסטריק שלך בטוח (יום ${streak}). לא נורא — נמשיך הלאה.`}
+                </Text>
+              </Animated.View>
+            )}
+
             <Animated.View entering={FadeIn.delay(180).duration(220)}>
               <Pressable
-                onPress={() => { tapHaptic(); onOpenChat(); }}
+                onPress={() => { tapHaptic(); playSound('btn_click_soft_1'); onOpenChat(); }}
                 style={styles.chatButton}
                 accessibilityRole="button"
                 accessibilityLabel="שאל את הקפטן שארק"
@@ -435,6 +479,7 @@ export function ChallengePage({
               <Pressable
                 onPress={() => {
                   tapHaptic();
+                  playSound('btn_click_soft_2');
                   // Bouncy press snap (Hay Day soft).
                   continuePulse.value = withSequence(
                     withTiming(0.92, { duration: 80 }),
@@ -508,6 +553,43 @@ const styles = StyleSheet.create({
     fontWeight: '900',
     color: STITCH.tertiaryGoldBright,
     letterSpacing: 1.2,
+  },
+  // Streak XP multiplier pill — sits between the news strap and item number
+  // on the eyebrow row. Only rendered when streak ≥ 7 (multiplier > ×1.0)
+  // so it's a reward for retention, not noise for new users.
+  streakPill: {
+    flexDirection: 'row-reverse',
+    alignItems: 'center',
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 999,
+    backgroundColor: 'rgba(217,119,6,0.12)',
+    borderWidth: 1,
+    borderColor: 'rgba(217,119,6,0.35)',
+  },
+  streakPillText: {
+    fontSize: 11,
+    fontWeight: '900',
+    color: ACCENT_GOLD_DEEP,
+    writingDirection: 'rtl' as const,
+  },
+  // Streak preservation copy that surfaces on Q2 after the user has
+  // answered. Keeps users emotionally invested: "you JUST saved your streak".
+  streakPreservedRow: {
+    marginTop: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderRadius: 12,
+    backgroundColor: 'rgba(34,197,94,0.10)',
+    borderWidth: 1,
+    borderColor: 'rgba(34,197,94,0.30)',
+  },
+  streakPreservedText: {
+    fontSize: 13,
+    fontWeight: '800',
+    color: '#15803d',
+    writingDirection: 'rtl' as const,
+    textAlign: 'right',
   },
   image: {
     width: '100%',

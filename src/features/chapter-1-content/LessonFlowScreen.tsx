@@ -1478,21 +1478,17 @@ function SummaryScreen({
     <View style={{ flex: 1 }}>
       <View style={{ alignItems: "center", paddingTop: 20, gap: 16, paddingHorizontal: 16 }}>
 
-        {/* Finn mascot, free-floating with soft glow */}
-        <Animated.View entering={FadeIn.duration(500)} style={{ alignItems: "center" }}>
-          <View style={{
-            shadowColor: "#0ea5e9",
-            shadowOpacity: 0.3,
-            shadowRadius: 20,
-            shadowOffset: { width: 0, height: 0 },
-            elevation: 8,
-          }}>
-            <ExpoImage
-              source={getFinnImage(summaryFinnState)}
-              style={{ width: 150, height: 150 }}
-              contentFit="contain"
-              />
-          </View>
+        {/* Finn mascot, free-floating. Removed the shadow wrapper: RN-Web
+            translated `shadowColor/shadowOpacity/shadowRadius` into a
+            rectangular box-shadow on the View, which Safari rendered as a
+            visible white/bluish square frame around the character. Native
+            iOS/Android render fine without the shadow too. */}
+        <Animated.View entering={FadeIn.duration(500)} style={{ alignItems: "center", backgroundColor: "transparent" }}>
+          <ExpoImage
+            source={getFinnImage(summaryFinnState)}
+            style={{ width: 150, height: 150, backgroundColor: "transparent" }}
+            contentFit="contain"
+          />
         </Animated.View>
 
         {/* Medals row removed */}
@@ -2588,7 +2584,6 @@ export function LessonFlowScreen() {
    * the next lesson in the sequence instead of landing on the learn map.
    */
   function getNextRouteAfterRegister(): string {
-    if (id === 'mod-0-3') return '/interstitial/bullshit-ch0';
     if (id === 'mod-1-9') return '/tower-defense-boss';
     if (chapterId && currentModIdx >= 0 && currentModIdx + 1 < chapterModules.length) {
       const next = chapterModules[currentModIdx + 1];
@@ -2721,13 +2716,10 @@ export function LessonFlowScreen() {
       router.replace("/tower-defense-boss" as never);
       return;
     }
-    // After mod-0-3, drop into the BullshitSwipe interstitial (critical-thinking
-    // warm-up) before continuing to mod-0-4. Shark delivers the "this is why
-    // I'm here" line after the mini-game finishes. Same one-pass rule as mod-1-9.
-    if (id === 'mod-0-3' && !isReplay) {
-      router.replace("/interstitial/bullshit-ch0" as never);
-      return;
-    }
+    // (Removed 2026-06-01: BullshitSwipe interstitial after mod-0-3 was cut
+    //  per user request — go straight to mod-0-4 / Budget Balance via the
+    //  normal pearl + next-module flow below. The /interstitial/bullshit-ch0
+    //  route is now orphan; safe to delete in a follow-up.)
     // Pearl gate — if the just-completed module has a pearl after it, drop
     // the user on the learn map with `?openPearl=<moduleId>` so DuoLearnScreen
     // auto-opens the pearl sheet. Was missing on this path (only
@@ -2764,7 +2756,11 @@ export function LessonFlowScreen() {
       if (!next.comingSoon && (isPro || !PRO_LOCKED_SIMS.has(next.id))) {
         setCurrentChapter(chapterStoreKey(chapterId));
         setCurrentModule(currentModIdx + 1);
-        router.replace("/(tabs)" as never);
+        // Land on Learn map (index tab), NOT default tabs route — the tabs
+        // layout has initialRouteName="investments" so "/(tabs)" sends the
+        // user to the Investments tab instead of seeing the next module
+        // highlighted on the learn map (QA blocker 2026-05-31).
+        router.replace("/(tabs)/index" as never);
         return;
       }
     }
@@ -2775,11 +2771,11 @@ export function LessonFlowScreen() {
         const nextMod = ch.modules[nextIdx];
         setCurrentChapter(chapterStoreKey(ch.id));
         setCurrentModule(nextIdx);
-        router.replace("/(tabs)" as never);
+        router.replace("/(tabs)/index" as never);
         return;
       }
     }
-    router.replace("/(tabs)" as never);
+    router.replace("/(tabs)/index" as never);
   }
 
   const [phase, setPhase] = useState<FlowPhase>(() => {
@@ -4920,15 +4916,36 @@ export function LessonFlowScreen() {
               <Text style={{ ...RTL_STYLE, fontSize: 15, fontWeight: "600", color: "#334155", lineHeight: 24, textAlign: "center", marginBottom: 20 }}>
                 תכף נתחיל להשקיע ביחד באפליקציה, ואז משם נמשיך לעולם האמיתי! תכנס לעמוד הגשר לראות מה מצפה לנו
               </Text>
-              <View style={{ width: "100%", borderRadius: 18, shadowColor: "#2563eb", shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.45, shadowRadius: 12, elevation: 6 }}>
+              <View style={{ width: "100%", borderRadius: 18, shadowColor: "#3b82f6", shadowOffset: { width: 0, height: 0 }, shadowOpacity: 0.55, shadowRadius: 16, elevation: 0 }}>
                 <Pressable
                   onPress={() => { tapHaptic(); setShowFinnBridgeNudge(false); router.push("/bridge" as never); }}
-                  style={({ pressed }) => ({ backgroundColor: "#2563eb", borderRadius: 18, paddingVertical: 16, paddingHorizontal: 20, width: "100%", flexDirection: "row-reverse", alignItems: "center", justifyContent: "center", gap: 10, borderBottomWidth: 4, borderBottomColor: "#1e40af", opacity: pressed ? 0.88 : 1 })}
                   accessibilityRole="button"
                   accessibilityLabel="קח אותי לגשר"
                 >
-                  <Text style={{ fontSize: 17, fontWeight: "900", color: "#ffffff", textAlign: "center" }}>קח אותי לגשר</Text>
-                  <Text style={{ fontSize: 22 }}>🌉</Text>
+                  {({ pressed }) => (
+                    <View style={{
+                      flexDirection: "row",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      gap: 10,
+                      backgroundColor: "#3b82f6",
+                      borderRadius: 18,
+                      paddingVertical: 16,
+                      paddingHorizontal: 24,
+                      width: "100%",
+                      borderWidth: 2,
+                      borderColor: "#2563eb",
+                      borderBottomWidth: 5,
+                      borderBottomColor: "#1d4ed8",
+                      overflow: "hidden",
+                      elevation: 12,
+                      opacity: pressed ? 0.88 : 1,
+                      transform: pressed ? [{ scale: 0.98 }] : undefined,
+                    }}>
+                      <Text style={{ fontSize: 17, fontWeight: "900", color: "#ffffff", writingDirection: "rtl", textShadowColor: "rgba(0,0,0,0.25)", textShadowOffset: { width: 0, height: 1 }, textShadowRadius: 2 }}>קח אותי לגשר</Text>
+                      <Text style={{ fontSize: 26, lineHeight: 30 }}>🌉</Text>
+                    </View>
+                  )}
                 </Pressable>
               </View>
               <Pressable

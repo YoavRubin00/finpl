@@ -29,10 +29,12 @@ import {
 import { useSafeAreaInsets, SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import Animated, { FadeIn } from 'react-native-reanimated';
-import { X } from 'lucide-react-native';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import { ChevronRight } from 'lucide-react-native';
 
 import { STITCH } from '../../constants/theme';
 import { tapHaptic } from '../../utils/haptics';
+import { useSoundEffect } from '../../hooks/useSoundEffect';
 import { track } from '../../lib/analytics/events';
 import { useAuthStore } from '../auth/useAuthStore';
 import { useIsPro } from '../subscription/useSubscription';
@@ -82,13 +84,16 @@ type StageKind =
   | 'scenario'      // unique-bundle: a specific Dilemma or Investment scenario
   | 'game';         // mini-game (legacy fallback only)
 
-/** Per-pearl stable pick of which CTA card to show — referral vs trading.
- *  Hash of moduleId so the same pearl always shows the same CTA, but two
- *  pearls in the same chapter alternate between the two destinations. */
+/** Per-pearl stable pick of which CTA card to show — trading / referral /
+ *  whatsapp. Hash of moduleId so the same pearl always shows the same CTA,
+ *  but pearls across a chapter rotate through all three destinations.
+ *  WhatsApp was added 2026-06-01 as a 3rd option so the community nudge
+ *  surfaces ~1-in-3 pearls instead of pushing it to every pearl. */
+const CTA_ROTATION: ReadonlyArray<PearlCtaKind> = ['trading', 'referral', 'whatsapp'];
 function pickCtaKindFor(moduleId: string): PearlCtaKind {
   let h = 0;
   for (let i = 0; i < moduleId.length; i++) h = (h * 31 + moduleId.charCodeAt(i)) | 0;
-  return Math.abs(h) % 2 === 0 ? 'trading' : 'referral';
+  return CTA_ROTATION[Math.abs(h) % CTA_ROTATION.length];
 }
 
 /** Which daily-content card the daily-pick stage should render today. The
@@ -121,6 +126,7 @@ export function PearlSheet({ visible, pearl, onClose }: PearlSheetProps): React.
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const markCompleted = usePearlsStore((s) => s.markCompleted);
+  const { playSound } = useSoundEffect();
 
   // Per-render snapshot of profile completeness — drives whether we include
   // the profile-question stage at all. The Pearl asks ONLY if the user
@@ -203,19 +209,44 @@ export function PearlSheet({ visible, pearl, onClose }: PearlSheetProps): React.
       //   2. LEGACY — pearl has none of those fields (mod-0-1 + any
       //      unmapped pearl). Fall back to a single daily-pick stage so the
       //      pearl still has a beat of content before the game.
-      const hasUniqueBundle = !!(pearl.videoId || pearl.conceptId || pearl.swipeIds?.length || pearl.scenarioId);
+      const hasUniqueBundle = !!(pearl.videoId || pearl.conceptId || pearl.swipeIds?.length || pearl.swipeKind || pearl.scenarioId);
       if (hasUniqueBundle) {
-        // Pearl flow: video → concept → CTA (skippable referral/trading) →
-        // swipe → scenario. CTA uses the restored finfeed cards
-        // (FeedReferralNudgeCard / FeedTradingNudgeCard) wired with an
-        // onContinue=המשך path so users who don't want the CTA still advance.
-        if (pearl.videoId) snapshot.push({ kind: 'video', index: idx++ });
+        // Pearl flow: concept → video → swipe → scenario → game → CTA.
+        //
+        // Concept is FIRST because it's text-only (zero load latency) — the
+        // user engages immediately while the video warmup effect below
+        // primes the Vercel Blob CDN cache. By the time the user advances
+        // past concept the video plays almost instantly.
+        //
+        // Video must NEVER be the first stage (user spec 2026-06-01) — the
+        // warmup needs prior dwell time, and a black-frame opener is bad
+        // UX. Enforced by gating video on `conceptId` being present.
+        //
+        // Swipe stage renders when EITHER `swipeKind` (myth/bull-bear/
+        // bullshit) OR `swipeIds.length` (legacy bullshit-only bundles) is
+        // set. Inside PearlSwipeStage a switch dispatches to the right
+        // deck.
+        //
+        // CTA stays last (moved there 2026-05-31): the user gets all the
+        // educational content + game climax first, then the referral/
+        // trading nudge from a position of accumulated value. Wired with
+        // onContinue=המשך, advancing to next module via the final-stage
+        // branch of handleStageDone.
         if (pearl.conceptId) snapshot.push({ kind: 'concept', index: idx++ });
-        snapshot.push({ kind: 'cta', index: idx++ });
-        if (pearl.swipeIds?.length) snapshot.push({ kind: 'swipe', index: idx++ });
+        if (pearl.videoId && pearl.conceptId) snapshot.push({ kind: 'video', index: idx++ });
+        if (pearl.swipeKind || pearl.swipeIds?.length) snapshot.push({ kind: 'swipe', index: idx++ });
         if (pearl.scenarioId && pearl.scenarioPool) snapshot.push({ kind: 'scenario', index: idx++ });
-        // Per-module dedicated game from chapter data .interModuleGame.
-        if (pearl.gameKey) snapshot.push({ kind: 'game', index: idx++ });
+        // Game stage adds value ONLY when its card type differs from the
+        // scenario stage's card type — otherwise the same DilemmaCard /
+        // InvestmentCard renders twice back-to-back. mod-0-1 and mod-1-6
+        // both hit the dilemma+dilemma collision today; several chapter-3/4
+        // pearls hit the investment+investment one. The guard is generic so
+        // future data drift can't re-introduce the duplicate.
+        const gameDuplicatesScenario =
+          (pearl.scenarioPool === 'dilemma' && pearl.gameKey === 'dilemma') ||
+          (pearl.scenarioPool === 'investment' && pearl.gameKey === 'investment');
+        if (pearl.gameKey && !gameDuplicatesScenario) snapshot.push({ kind: 'game', index: idx++ });
+        snapshot.push({ kind: 'cta', index: idx++ });
       } else {
         // Legacy fallback only used when nothing was mapped + no fallback
         // bundle (mod-0-1 historically; today every pearl gets a fallback).
@@ -322,14 +353,17 @@ export function PearlSheet({ visible, pearl, onClose }: PearlSheetProps): React.
     // (engaged with content), not just at final completion. Without this, a
     // user who drops mid-game still made the pearl their daily activity but
     // loses the streak. The helper is idempotent per-day so the final-stage
-    // completion below safely fires it again. Both legacy ('daily-pick') and
-    // unique-bundle ('video' as the first content stage) trigger the tick.
-    if (
-      completedStage?.kind === 'daily-pick' ||
-      completedStage?.kind === 'video' ||
-      // Bundle without a video starts with concept — still counts as content.
-      (completedStage?.kind === 'concept' && !stages.some((s) => s.kind === 'video'))
-    ) {
+    // completion below safely fires it again.
+    //
+    // Index-based detection so the tick stays correct regardless of which
+    // content stage happens to be first. After the concept↔video reorder
+    // (2026-06-01) the first content kind is 'concept' for full bundles,
+    // 'video' / 'swipe' / 'scenario' for partial bundles — the index
+    // lookup handles them all. Legacy 'daily-pick' is still tagged
+    // explicitly because it lives in its own snapshot shape.
+    const firstContentIdx = stages.findIndex((s) => s.kind !== 'profile-question');
+    const isFirstContentStage = firstContentIdx >= 0 && activePage === firstContentIdx;
+    if (completedStage?.kind === 'daily-pick' || isFirstContentStage) {
       markDailyActivityCompleted();
     }
 
@@ -438,16 +472,19 @@ export function PearlSheet({ visible, pearl, onClose }: PearlSheetProps): React.
             <PearlCtaStage
               isActive={isActive}
               kind={pickCtaKindFor(pearl.afterModuleId)}
+              afterModuleId={pearl.afterModuleId}
+              chapterId={pearl.chapterId}
               onContinue={handleStageDone}
             />
           </View>
         );
       }
-      if (item.kind === 'swipe' && pearl.swipeIds?.length) {
+      if (item.kind === 'swipe' && (pearl.swipeKind || pearl.swipeIds?.length)) {
         return (
           <View style={containerStyle}>
             <PearlSwipeStage
               isActive={isActive}
+              swipeKind={pearl.swipeKind}
               swipeIds={pearl.swipeIds}
               onContinue={handleStageDone}
             />
@@ -521,31 +558,54 @@ export function PearlSheet({ visible, pearl, onClose }: PearlSheetProps): React.
       statusBarTranslucent
       onRequestClose={handleDismiss}
     >
-      <SafeAreaView style={styles.safeArea} edges={['top', 'left', 'right']}>
+      {/* GestureHandlerRootView wrap is REQUIRED here. React Native's <Modal>
+          mounts in a separate native window, and the app-level
+          GestureHandlerRootView in app/_layout.tsx does NOT extend into it.
+          Without this wrap, Gesture.Pan() detectors inside stages (e.g.
+          PearlSwipeStage → BullshitSwipeCard) silently never receive events —
+          the swipe stops working in pearls while tap-Pressables still work.
+          Mirrors the pattern in DoubleOrNothingModal / DiamondHandsModal. */}
+      {/* Top inset applied explicitly via the inset hook instead of via
+          <SafeAreaView edges={['top']}> — inside a Modal the
+          SafeAreaProvider from app/_layout.tsx does not always propagate
+          to the new native window, so SafeAreaView read zero on iOS and
+          the GlobalWealthHeader rendered behind the notch / status bar
+          (user report 2026-06-01: "בפנינה הוא חורג מהחלק העליון של המסך").
+          Reading insets at the hook level is reliable because the JS
+          context is the same as the parent app. */}
+      <GestureHandlerRootView style={{ flex: 1, paddingTop: insets.top, backgroundColor: '#f8fafc' }}>
+      <SafeAreaView style={styles.safeArea} edges={['left', 'right']}>
         {/* Full GlobalWealthHeader (not compact) — matches the main tabs
             layout exactly so the pearl feels like a continuation of the
             app, not a stripped-down modal. User report 2026-05-31: compact
             mode was hiding pieces they expected to see. */}
         <GlobalWealthHeader />
 
-        <View style={styles.topBar}>
-          <Pressable
-            onPress={() => { tapHaptic(); handleDismiss(); }}
-            style={({ pressed }) => [styles.closeBtn, pressed && { opacity: 0.7 }]}
-            accessibilityRole="button"
-            accessibilityLabel="סגור פנינה"
-            hitSlop={10}
-          >
-            <X size={22} color={STITCH.onSurface} strokeWidth={2.6} />
-          </Pressable>
+        {/* Back button — absolute, top-right RTL corner. Was inline in a
+            row with the title+progress bar which made the chevron read as
+            "stacked on the progress bar" on smaller phones (user report
+            2026-06-01: "כפתור חזרה עולה על הבר שמסמן את ההתקדמות").
+            Absolute pulls it out of the flow so the title row stays clean. */}
+        <Pressable
+          onPress={() => {
+            tapHaptic();
+            playSound('btn_click_soft_1');
+            handleDismiss();
+            router.replace('/(tabs)/index' as never);
+          }}
+          style={({ pressed }) => [styles.closeBtn, pressed && { opacity: 0.7 }]}
+          accessibilityRole="button"
+          accessibilityLabel="חזרה למסך הלמידה"
+          hitSlop={10}
+        >
+          <ChevronRight size={22} color={STITCH.onSurface} strokeWidth={2.6} />
+        </Pressable>
 
+        <View style={styles.topBar}>
           <View style={styles.titleWrap}>
             <Text style={styles.title} allowFontScaling={false}>פנינה</Text>
             <PearlProgressBar total={stages.length} current={activePage} />
           </View>
-
-          {/* Right-side spacer balancing the close button so the title stays centered. */}
-          <View style={styles.spacer} />
         </View>
 
         <Animated.View
@@ -559,11 +619,15 @@ export function PearlSheet({ visible, pearl, onClose }: PearlSheetProps): React.
         {/* "דלג על הפנינה" footer — always visible, fixed at bottom. Lets
             the user jump straight to the NEXT module without going through
             the remaining stages. Per user spec (2026-05-31): pearl is
-            optional, this is the explicit opt-out path. */}
-        <View style={styles.skipPearlFooter}>
+            optional, this is the explicit opt-out path.
+            paddingBottom uses safe-area inset so it clears the Android
+            navigation bar (3-button or gesture pill) — user report
+            2026-06-01: "כפתור דלג חורג מהמסך באנדרואיד". */}
+        <View style={[styles.skipPearlFooter, { paddingBottom: Math.max(insets.bottom, 14) + 8 }]}>
           <Pressable
             onPress={() => {
               tapHaptic();
+              playSound('btn_click_soft_1');
               if (!pearl) { onClose(); return; }
               try {
                 track({
@@ -602,6 +666,7 @@ export function PearlSheet({ visible, pearl, onClose }: PearlSheetProps): React.
           </View>
         ) : null}
       </SafeAreaView>
+      </GestureHandlerRootView>
     </Modal>
   );
 }
@@ -609,21 +674,24 @@ export function PearlSheet({ visible, pearl, onClose }: PearlSheetProps): React.
 const styles = StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: '#f8fafc' },
   topBar: {
-    flexDirection: 'row-reverse',
-    alignItems: 'center',
     paddingHorizontal: 12,
-    paddingVertical: 8,
-    gap: 8,
+    paddingTop: 6,
+    paddingBottom: 10,
+    alignItems: 'center',
   },
   closeBtn: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+    position: 'absolute',
+    top: 4,
+    right: 10,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
     backgroundColor: 'rgba(0,0,0,0.06)',
     alignItems: 'center',
     justifyContent: 'center',
+    zIndex: 10,
   },
-  titleWrap: { flex: 1, alignItems: 'center', gap: 6 },
+  titleWrap: { width: '100%', alignItems: 'center', gap: 8, paddingTop: 50 },
   title: {
     fontSize: 13,
     fontWeight: '900',
@@ -635,7 +703,8 @@ const styles = StyleSheet.create({
   skipPearlFooter: {
     paddingHorizontal: 16,
     paddingTop: 6,
-    paddingBottom: 14,
+    // paddingBottom comes from inline insets.bottom (see render above) —
+    // hardcoded value would clip on Android devices with gesture nav.
     alignItems: 'center',
     backgroundColor: '#f8fafc',
   },

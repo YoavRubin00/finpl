@@ -16,6 +16,7 @@ import { FINN_HELLO } from "../retention-loops/finnMascotConfig";
 import { useAuthStore } from "./useAuthStore";
 import { useGoogleAuthStore } from "./useGoogleAuthStore";
 import { useAppleAuth } from "./useAppleAuth";
+import { AppleLogo } from "../../components/ui/AppleLogo";
 import { captureEvent } from "../../lib/posthog";
 import { signInWithProfile } from "../../lib/auth/lifecycle";
 import { getApiBase } from "../../db/apiBase";
@@ -125,7 +126,7 @@ export function LoginScreen() {
         </SafeAreaView>
 
         <View style={{ flex: 1, backgroundColor: "#ffffff", paddingTop: 8 }}>
-          <ScrollView contentContainerStyle={{ paddingHorizontal: 24, paddingBottom: 16 }} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
+          <ScrollView contentContainerStyle={{ paddingHorizontal: 24, paddingBottom: 16 }} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled" automaticallyAdjustKeyboardInsets>
 
             {/* Inline auth error banner — populated by Apple/Google OAuth failures. */}
             {authError && (
@@ -210,10 +211,10 @@ export function LoginScreen() {
                 }}
                 accessibilityRole="button"
                 accessibilityLabel="כניסה עם Apple"
-                style={{ width: "100%", flexDirection: "row", alignItems: "center", justifyContent: "center", borderRadius: 14, backgroundColor: "#000000", paddingVertical: 14, marginBottom: 10, borderBottomWidth: 3, borderBottomColor: "#1f2937" }}
+                style={{ width: "100%", flexDirection: "row-reverse", alignItems: "center", justifyContent: "center", borderRadius: 14, backgroundColor: "#000000", paddingVertical: 14, marginBottom: 10, borderBottomWidth: 3, borderBottomColor: "#1f2937" }}
               >
-                <Text style={{ fontSize: 18, marginRight: 8, color: "#ffffff" }}></Text>
-                <Text style={{ fontSize: 15, fontWeight: "600", color: "#ffffff" }}>כניסה עם Apple</Text>
+                <AppleLogo size={18} />
+                <Text style={{ fontSize: 15, fontWeight: "600", color: "#ffffff", marginRight: 8 }}>כניסה עם Apple</Text>
               </Pressable>
             )}
 

@@ -19,6 +19,7 @@ import { X } from 'lucide-react-native';
 
 import { STITCH } from '../../constants/theme';
 import { tapHaptic } from '../../utils/haptics';
+import { useSoundEffect } from '../../hooks/useSoundEffect';
 import { useIsPro } from '../subscription/useSubscription';
 import { useUpgradeModalStore } from '../../stores/useUpgradeModalStore';
 import { captureEvent } from '../../lib/posthog';
@@ -26,14 +27,16 @@ import { captureEvent } from '../../lib/posthog';
 import { ChallengePage } from './components/ChallengePage';
 import { ChestsPage } from './components/ChestsPage';
 import { ItemChatOverlay } from './components/ItemChatOverlay';
+import { ProgressBar } from './components/ProgressBar';
+import { RecapCard } from './components/RecapCard';
+import { PerfectDayBurst } from './components/PerfectDayBurst';
 import { DidYouKnowCard } from '../did-you-know/DidYouKnowCard';
 import { fetchTodayChallenge } from './dailyNewsChallengeApi';
 import { useDailyNewsChallengeStore, type ChallengeRewardSummary } from './useDailyNewsChallengeStore';
 import { useStreak } from '../economy/useStreak';
 import type { ChallengeItem } from './types';
 import { FlyingRewards } from '../../components/ui/FlyingRewards';
-import { GlobalWealthHeader } from '../../components/ui/GlobalWealthHeader';
-import { playChestOpenSwoosh } from './lib/sounds';
+import { track } from '../../lib/analytics/events';
 
 /** Where the sheet was opened from. Recorded on news_challenge_viewed +
  *  news_challenge_completed so we can attribute opens by entry point and
@@ -48,31 +51,30 @@ interface DailyNewsChallengeSheetProps {
   entrySource?: NewsEntrySource;
 }
 
-// Pager layout: news[0] → did-you-know intermezzo → news[1] → chests.
-// The "הידעת" page sits between the two news items to break the rhythm —
-// one curiosity-fact between the two quizzes (requested 2026-05-31).
-// 3 after the chests-page removal: challenge → did-you-know → challenge.
-// Kept in sync with PAGE_DESCRIPTORS below by hand (TDZ-safe — declared first).
-const PAGE_COUNT = 3;
+// Pager layout (June 2026 — Duo-pattern Recap added as page 4):
+//   Page 0: ChallengePage(Q1)
+//   Page 1: DidYouKnowCard intermezzo
+//   Page 2: ChallengePage(Q2)
+//   Page 3: RecapCard — "היום למדת" + rewards + streak + tomorrow promise
+// The recap page replaces the silent fly-up-and-close ending so the user
+// gets an explicit "you did it" moment that anchors the daily ritual.
+// Reward claim happens on RecapCard's CTA tap (parent handles claim).
+const PAGE_COUNT = 4;
 const SCREEN_W = Dimensions.get('window').width;
 
 interface PageDescriptor {
-  kind: 'challenge' | 'did-you-know' | 'chests';
-  /** Position in the pager. Drives FlatList keys + dot indicators. */
+  kind: 'challenge' | 'did-you-know' | 'chests' | 'recap';
+  /** Position in the pager. Drives FlatList keys + progress segments. */
   index: number;
   /** Only set when kind==='challenge': which of the two news items (0|1). */
   itemIdx?: 0 | 1;
 }
 
-// Post-2026 UX rework: trimmed to 3 pages. The chests page (and its streak
-// bonus / share-card screen) is removed — rewards still fire silently on
-// completion (see handleContinue's last-page branch), and the wealth header
-// reflects the XP/coin/gem deltas. End-state is the second "הידעתם?" panel,
-// then the sheet auto-closes when the user taps המשך.
 const PAGE_DESCRIPTORS: PageDescriptor[] = [
   { kind: 'challenge', index: 0, itemIdx: 0 },
   { kind: 'did-you-know', index: 1 },
   { kind: 'challenge', index: 2, itemIdx: 1 },
+  { kind: 'recap', index: 3 },
 ];
 
 /**
@@ -104,6 +106,7 @@ export function DailyNewsChallengeSheet({ visible, onClose, entrySource = 'unkno
 
   const isPro = useIsPro();
   const showUpgrade = useUpgradeModalStore((s) => s.show);
+  const { playSound } = useSoundEffect();
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -115,6 +118,11 @@ export function DailyNewsChallengeSheet({ visible, onClose, entrySource = 'unkno
   const [chatItem, setChatItem] = useState<ChallengeItem | null>(null);
   const [exitConfirmOpen, setExitConfirmOpen] = useState(false);
   const [activePage, setActivePage] = useState(0);
+  // PerfectDayBurst overlay — shown briefly when transitioning into the
+  // recap page IF the user got both questions right. Auto-dismisses after
+  // 1800ms; user can still scroll/tap the recap underneath.
+  const [perfectBurstVisible, setPerfectBurstVisible] = useState(false);
+  const recapOpenedAtRef = useRef<number | null>(null);
 
   // Chest-open fly-up particles — self-resets via FlyingRewards.onComplete.
   const [flyingXp, setFlyingXp] = useState(0);
@@ -148,14 +156,14 @@ export function DailyNewsChallengeSheet({ visible, onClose, entrySource = 'unkno
       (): ChallengeRewardSummary | null => {
         const reward = claim();
         if (reward) {
-          void playChestOpenSwoosh();
+          playSound('modal_open_4');
           if (reward.xp > 0) setFlyingXp(reward.xp);
           if (reward.coins > 0) setFlyingCoins(reward.coins);
           if (reward.gems > 0) setFlyingGems(reward.gems);
         }
         return reward;
       },
-    [],
+    [playSound],
   );
   const handleClaimRegular = useCallback(() => wrapClaim(claimRegular)(), [wrapClaim, claimRegular]);
   const handleClaimPro = useCallback(() => wrapClaim(claimPro)(), [wrapClaim, claimPro]);
@@ -224,8 +232,28 @@ export function DailyNewsChallengeSheet({ visible, onClose, entrySource = 'unkno
       setExitConfirmOpen(false);
       setChatItem(null);
       setActivePage(0);
+      setPerfectBurstVisible(false);
+      recapOpenedAtRef.current = null;
     }
   }, [visible]);
+
+  // Fires news_recap_viewed once per dateKey when the user first lands on the
+  // recap page. Also stamps recapOpenedAtRef so the close event can compute
+  // time-spent-on-recap.
+  useEffect(() => {
+    if (activePage !== 3) return;
+    if (!challenge?.dateKey) return;
+    if (recapOpenedAtRef.current !== null) return;
+    recapOpenedAtRef.current = Date.now();
+    track({
+      name: 'news_recap_viewed',
+      props: {
+        date_key: challenge.dateKey,
+        perfect: !!(answered[0]?.wasCorrect && answered[1]?.wasCorrect),
+        streak,
+      },
+    });
+  }, [activePage, challenge?.dateKey, answered, streak]);
 
   // Hardware back / web ESC → exit guard
   useEffect(() => {
@@ -291,8 +319,16 @@ export function DailyNewsChallengeSheet({ visible, onClose, entrySource = 'unkno
       setExitConfirmOpen(true);
       return;
     }
+    // Claim any pending rewards on close if both questions were answered —
+    // without this, a user who taps X on the Recap page (instead of המשך)
+    // never claims the chests, and hasReportedCompletionFor=true blocks
+    // re-entry so the rewards are lost permanently (QA blocker 2026-05-31).
+    if (bothAnswered) {
+      if (!regularChestOpened) handleClaimRegular();
+      if (isPro && !proChestOpened) handleClaimPro();
+    }
     onClose();
-  }, [inProgress, onClose]);
+  }, [inProgress, onClose, bothAnswered, regularChestOpened, proChestOpened, isPro, handleClaimRegular, handleClaimPro]);
 
   const confirmLeave = useCallback(() => {
     setExitConfirmOpen(false);
@@ -314,22 +350,41 @@ export function DailyNewsChallengeSheet({ visible, onClose, entrySource = 'unkno
 
   const handleContinue = useCallback(
     (currentIdx: number) => {
-      // Last page (post-chests-removal): silently claim any pending rewards
-      // and dismiss the sheet — the wealth header reflects the XP/coin/gem
-      // deltas without the user having to tap a chest. If a chest was
-      // already claimed earlier (re-entry into the sheet on the same day),
-      // claim() is a no-op via the store's `regularChestOpened` guard.
+      // currentIdx === 2 → moving from Q2 into the recap. This is the
+      // climactic transition: if both right, show PerfectDayBurst overlay
+      // briefly before the user lands on the recap.
+      if (currentIdx === 2) {
+        if (bothAnswered && answered[0]?.wasCorrect && answered[1]?.wasCorrect) {
+          setPerfectBurstVisible(true);
+          setTimeout(() => setPerfectBurstVisible(false), 1800);
+        }
+        goToPage(3);
+        return;
+      }
+      // Recap CTA → claim rewards + close. The RecapCard previews them; the
+      // actual XP/coin/gem deltas happen here via the store's idempotent
+      // claim* methods so re-opens of a completed day are no-ops.
       if (currentIdx >= PAGE_COUNT - 1) {
         if (bothAnswered) {
           if (!regularChestOpened) handleClaimRegular();
           if (isPro && !proChestOpened) handleClaimPro();
+        }
+        if (challenge?.dateKey && recapOpenedAtRef.current !== null) {
+          track({
+            name: 'news_recap_closed',
+            props: {
+              date_key: challenge.dateKey,
+              time_open_ms: Date.now() - recapOpenedAtRef.current,
+            },
+          });
+          recapOpenedAtRef.current = null;
         }
         onClose();
         return;
       }
       goToPage(currentIdx + 1);
     },
-    [goToPage, bothAnswered, regularChestOpened, proChestOpened, isPro, handleClaimRegular, handleClaimPro, onClose],
+    [goToPage, bothAnswered, answered, regularChestOpened, proChestOpened, isPro, handleClaimRegular, handleClaimPro, onClose, challenge?.dateKey],
   );
 
   const onMomentumScrollEnd = useCallback(
@@ -355,9 +410,22 @@ export function DailyNewsChallengeSheet({ visible, onClose, entrySource = 'unkno
 
   const renderPage = useCallback(
     ({ item: page }: { item: PageDescriptor }) => {
-      // 'chests' kind retired in the 2026 UX rework — ChestsPage / CompletionChests /
-      // ShareCard / PerfectDayBurst files are kept around (not deleted) in case we
-      // want to bring the reveal screen back, but the pager no longer renders one.
+      // Recap card — final page, added June 2026 (Duo-pattern polish). Shows
+      // "what you learned today" + rewards preview + streak + tomorrow cue.
+      // CTA tap routes through handleContinue (which claims + closes).
+      if (page.kind === 'recap') {
+        if (!challenge) return <View style={{ width: pageWidth }} />;
+        return (
+          <RecapCard
+            pageWidth={pageWidth}
+            items={challenge.items}
+            results={itemResults}
+            streak={streak}
+            isPro={isPro}
+            onContinue={() => handleContinue(page.index)}
+          />
+        );
+      }
       if (page.kind === 'did-you-know') {
         // Intermezzo between the two news items. Picks a rotating fact from
         // DID_YOU_KNOW_ITEMS (by-day deterministic) so the same opener
@@ -368,7 +436,7 @@ export function DailyNewsChallengeSheet({ visible, onClose, entrySource = 'unkno
             <DidYouKnowCard isActive itemId={`dnc-${challenge?.dateKey ?? 'today'}`} />
             <View style={{ paddingHorizontal: 20, paddingTop: 14, paddingBottom: 40 }}>
               <Pressable
-                onPress={() => { tapHaptic(); handleContinue(page.index); }}
+                onPress={() => { tapHaptic(); playSound('btn_click_soft_2'); handleContinue(page.index); }}
                 accessibilityRole="button"
                 accessibilityLabel="המשך"
                 style={{
@@ -399,6 +467,7 @@ export function DailyNewsChallengeSheet({ visible, onClose, entrySource = 'unkno
           onAnswered={handleAnswer(idx)}
           onContinue={() => handleContinue(page.index)}
           onOpenChat={() => handleOpenChat(challenge.items[idx])}
+          streak={streak}
         />
       );
     },
@@ -427,47 +496,40 @@ export function DailyNewsChallengeSheet({ visible, onClose, entrySource = 'unkno
   return (
     <View style={styles.container}>
       <SafeAreaView style={styles.safeArea} edges={['top', 'left', 'right']}>
-        {/* Global wealth header (coins / XP / streak / hearts) — user asked to
-            keep it visible inside the sheet so the daily ritual still shows
-            their wallet at a glance. Compact mode matches the in-app header. */}
-        <GlobalWealthHeader compact />
-
-        {/* Top bar: progress dots centered. Close (X) is absolute-positioned
-            in the top-RIGHT corner so RTL/LTR layout flips don't move it to
-            the wrong side (the earlier row-reverse approach landed the X on
-            the left in RTL-OS builds — user-reported 2026). */}
+        {/* Top bar — single "אקטואליה יומית" header strip replaces the
+            previous GlobalWealthHeader + topBar stack (user report
+            2026-06-01). Layout (revision 2): the title and the close X
+            share the FIRST row so the strip hugs the safe-area top and
+            doesn't waste vertical space; ProgressBar sits in row 2.
+            row-reverse puts the X visually to the RIGHT of the title for
+            Hebrew RTL users — same affordance as the lesson back-arrow. */}
         <View style={styles.topBar}>
-          <View style={styles.dotsRow} accessibilityLabel={`עמוד ${activePage + 1} מתוך ${PAGE_COUNT}`}>
-            {Array.from({ length: PAGE_COUNT }).map((_, i) => {
-              const isActive = i === activePage;
-              // Index 0 = Q1, 1 = did-you-know intermezzo, 2 = Q2.
-              // did-you-know is "done" once Q1 has been answered (user passed it).
-              const isDone =
-                (i === 0 && item0Answered) ||
-                (i === 1 && item0Answered) ||
-                (i === 2 && item1Answered);
-              return (
-                <View
-                  key={i}
-                  style={[
-                    styles.dot,
-                    isActive && styles.dotActive,
-                    isDone && styles.dotDone,
-                  ]}
-                />
-              );
-            })}
+          <View style={styles.titleRow}>
+            <Pressable
+              onPress={() => { tapHaptic(); playSound('btn_click_soft_1'); requestClose(); }}
+              style={({ pressed }) => [styles.closeBtn, pressed && { opacity: 0.7 }]}
+              accessibilityRole="button"
+              accessibilityLabel="סגור"
+              hitSlop={10}
+            >
+              <X size={22} color={STITCH.onSurface} strokeWidth={2.6} />
+            </Pressable>
+            <Text style={styles.sheetTitle} allowFontScaling={false} numberOfLines={1}>
+              אקטואליה יומית
+            </Text>
           </View>
-
-          <Pressable
-            onPress={() => { tapHaptic(); requestClose(); }}
-            style={({ pressed }) => [styles.closeBtn, pressed && { opacity: 0.7 }]}
-            accessibilityRole="button"
-            accessibilityLabel="סגור"
-            hitSlop={10}
-          >
-            <X size={22} color={STITCH.onSurface} strokeWidth={2.6} />
-          </Pressable>
+          <View style={styles.progressRow}>
+            <ProgressBar
+              segments={[
+                { label: 'Q1', done: item0Answered, active: activePage === 0 },
+                { label: 'הידעת?', done: item0Answered, active: activePage === 1 },
+                { label: 'Q2', done: item1Answered, active: activePage === 2 },
+                { label: 'סיכום', done: bothAnswered && activePage === 3, active: activePage === 3 },
+              ]}
+              currentStep={activePage + 1}
+              totalSteps={PAGE_COUNT}
+            />
+          </View>
         </View>
 
         {/* Pager */}
@@ -534,6 +596,12 @@ export function DailyNewsChallengeSheet({ visible, onClose, entrySource = 'unkno
         onLeave={confirmLeave}
       />
 
+      {/* Perfect Day burst — appears for ~1.8s when the user lands on the
+          recap page with both answers correct. Sits above the pager (zIndex
+          50 in the component) and is pointer-events: none so the recap
+          beneath remains interactive while the badge fades in. */}
+      <PerfectDayBurst show={perfectBurstVisible} />
+
       {/* Fly-up reward particles — must sit above the pager so glyphs reach
           the top header strip without being clipped. */}
       {flyingXp > 0 && (
@@ -570,6 +638,7 @@ function ExitConfirmModal({
   onStay: () => void;
   onLeave: () => void;
 }): React.ReactElement {
+  const { playSound } = useSoundEffect();
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onStay}>
       <View style={confirm.overlay}>
@@ -580,7 +649,7 @@ function ExitConfirmModal({
           </Text>
           <View style={confirm.btnRow}>
             <Pressable
-              onPress={() => { tapHaptic(); onLeave(); }}
+              onPress={() => { tapHaptic(); playSound('btn_click_soft_2'); onLeave(); }}
               style={[confirm.btn, confirm.btnGhost]}
               accessibilityRole="button"
               accessibilityLabel="עזוב את האתגר"
@@ -588,7 +657,7 @@ function ExitConfirmModal({
               <Text style={confirm.btnGhostText}>צא</Text>
             </Pressable>
             <Pressable
-              onPress={() => { tapHaptic(); onStay(); }}
+              onPress={() => { tapHaptic(); playSound('btn_click_soft_3'); onStay(); }}
               style={[confirm.btn, confirm.btnPrimary]}
               accessibilityRole="button"
               accessibilityLabel="המשך באתגר"
@@ -616,16 +685,43 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   topBar: {
+    // No horizontal padding here — the titleRow + progressRow set their
+    // own. paddingTop: 0 means the title hugs the safe-area inset
+    // directly (user request 2026-06-01 follow-up: "everything up,
+    // close to the top sidebar").
+    paddingTop: 0,
+    paddingBottom: 8,
+    gap: 6,
+  },
+  titleRow: {
+    // Mirrors the financial-tools ToolHeader layout (row-reverse with
+    // back-button + title on a single line). User wanted "אקטואליה
+    // יומית" to feel consistent with the rest of the app's titles.
+    flexDirection: 'row-reverse',
+    alignItems: 'center',
+    gap: 10,
     paddingHorizontal: 12,
-    paddingTop: 6,
-    paddingBottom: 10,
-    minHeight: 52,
-    justifyContent: 'center',
+    paddingTop: 10,
+    paddingBottom: 6,
+  },
+  sheetTitle: {
+    // Matches ToolHeader.title — fontSize 18, weight 900, RTL, slight
+    // negative letter-spacing.
+    flex: 1,
+    fontSize: 18,
+    fontWeight: '900',
+    color: STITCH.onSurface,
+    textAlign: 'right',
+    writingDirection: 'rtl',
+    letterSpacing: -0.2,
+  },
+  progressRow: {
+    paddingHorizontal: 16,
   },
   closeBtn: {
-    position: 'absolute',
-    right: 12,
-    top: 6,
+    // Same chip dimensions as the financial-tools back-button. First
+    // child of titleRow → with row-reverse it renders to the visual
+    // RIGHT of the title (Hebrew RTL convention for close affordance).
     width: 40,
     height: 40,
     borderRadius: 12,
@@ -634,7 +730,6 @@ const styles = StyleSheet.create({
     backgroundColor: STITCH.surface,
     alignItems: 'center',
     justifyContent: 'center',
-    zIndex: 5,
   },
   dotsRow: {
     flexDirection: 'row-reverse',

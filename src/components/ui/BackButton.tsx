@@ -6,6 +6,7 @@ import { tapHaptic } from "../../utils/haptics";
 interface BackButtonProps {
   label?: string;
   color?: string;
+  size?: number;
   onPress?: () => void;
 }
 
@@ -13,7 +14,7 @@ interface BackButtonProps {
  * Unified back button for all inner screens.
  * Uses ChevronRight (RTL: means "go back") with optional label.
  */
-export function BackButton({ label = "", color = "#6b7280", onPress }: BackButtonProps) {
+export function BackButton({ label = "", color = "#6b7280", size = 20, onPress }: BackButtonProps) {
   const router = useRouter();
 
   const handlePress = () => {
@@ -29,7 +30,7 @@ export function BackButton({ label = "", color = "#6b7280", onPress }: BackButto
 
   return (
     <Pressable onPress={handlePress} style={styles.btn} hitSlop={12} accessibilityRole="button" accessibilityLabel={label || "חזרה"}>
-      <ChevronRight size={20} color={color} strokeWidth={2.5} />
+      <ChevronRight size={size} color={color} strokeWidth={2.8} />
       {label ? <Text style={[styles.label, { color }]}>{label}</Text> : null}
     </Pressable>
   );
