@@ -74,6 +74,7 @@ import { SwipeGameCard } from "../daily-challenges/SwipeGameCard";
 import { MythFeedCard } from "../myth-or-tachles/MythFeedCard";
 import { useDailyNewsChallengeStore } from "../daily-news-challenge/useDailyNewsChallengeStore";
 import { fetchTodayChallenge } from "../daily-news-challenge/dailyNewsChallengeApi";
+import { BreakingNewsBadge } from "../breaking-news/components/BreakingNewsBadge";
 import { FINN_STANDARD } from "../retention-loops/finnMascotConfig";
 // FeedNudgeBanner / useFeedNudge removed — Feed is retired. Daily-challenge
 // entry lives in the Daily News Challenge card (added in Stage A).
@@ -1855,7 +1856,7 @@ export function DuoLearnScreen() {
                 questCompletedCount={hasActiveModule ? questCompletedCount : undefined}
                 questTotalCount={hasActiveModule ? questTotalCount : undefined}
                 onQuestPress={hasActiveModule ? handleQuestPress : undefined}
-                newsBadgeNode={undefined}
+                newsBadgeNode={hasActiveModule ? <BreakingNewsBadge /> : undefined}
                 onPearlPress={handlePearlPress}
                 completedPearlIds={completedPearlIds}
               />
