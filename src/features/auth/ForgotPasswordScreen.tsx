@@ -49,6 +49,7 @@ export function ForgotPasswordScreen() {
           className="flex-1"
           contentContainerStyle={{ paddingHorizontal: 24, paddingBottom: 24 }}
           keyboardShouldPersistTaps="handled"
+          automaticallyAdjustKeyboardInsets
         >
           {/* Lock animation */}
           <View className="items-center pt-6">

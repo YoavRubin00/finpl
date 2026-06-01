@@ -126,7 +126,7 @@ export function LoginScreen() {
         </SafeAreaView>
 
         <View style={{ flex: 1, backgroundColor: "#ffffff", paddingTop: 8 }}>
-          <ScrollView contentContainerStyle={{ paddingHorizontal: 24, paddingBottom: 16 }} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
+          <ScrollView contentContainerStyle={{ paddingHorizontal: 24, paddingBottom: 16 }} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled" automaticallyAdjustKeyboardInsets>
 
             {/* Inline auth error banner — populated by Apple/Google OAuth failures. */}
             {authError && (

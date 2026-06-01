@@ -125,7 +125,7 @@ export function EditProfileModal({ visible, onClose }: EditProfileModalProps) {
               </Pressable>
             </View>
 
-            <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ gap: 24, paddingBottom: 32 }}>
+            <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ gap: 24, paddingBottom: 32 }} keyboardShouldPersistTaps="handled" automaticallyAdjustKeyboardInsets>
               {/* Name */}
               <View style={s.field}>
                 <Text style={s.label}>שם תצוגה</Text>

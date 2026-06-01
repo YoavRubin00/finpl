@@ -164,7 +164,7 @@ export function SupportChatScreen() {
     <View style={{ flex: 1, backgroundColor: "#f0f9ff" }}>
       <KeyboardAvoidingView
         style={st.root}
-        behavior={Platform.OS === "ios" ? "padding" : undefined}
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
       >
         {/* Header */}
         <Animated.View
@@ -195,6 +195,8 @@ export function SupportChatScreen() {
           style={st.messages}
           contentContainerStyle={st.messagesContent}
           onContentSizeChange={() => scrollRef.current?.scrollToEnd({ animated: true })}
+          keyboardShouldPersistTaps="handled"
+          automaticallyAdjustKeyboardInsets
         >
           {messages.map((msg, i) => (
             <Animated.View
