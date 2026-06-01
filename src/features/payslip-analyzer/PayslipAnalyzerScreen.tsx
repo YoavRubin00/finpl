@@ -317,7 +317,10 @@ export function PayslipAnalyzerScreen() {
   return (
     <KeyboardAvoidingView
       style={[styles.root, { paddingTop: insets.top }]}
-      behavior={Platform.OS === "ios" ? "padding" : undefined}
+      // iOS: 'padding' lifts content. Android: 'height' explicitly measures
+      // the keyboard so the chat input bar at the bottom stays visible —
+      // same pattern as ChatScreen / StockAnalystScreen.
+      behavior={Platform.OS === "ios" ? "padding" : "height"}
     >
       <StatusBar barStyle="dark-content" backgroundColor="transparent" translucent />
       <LinearGradient
@@ -355,6 +358,7 @@ export function PayslipAnalyzerScreen() {
         ]}
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
+        automaticallyAdjustKeyboardInsets
       >
         {phase === "idle" ? <UploadDropzone /> : null}
 

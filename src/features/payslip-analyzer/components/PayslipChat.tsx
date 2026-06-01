@@ -224,11 +224,20 @@ export function PayslipChat({ result, fileName, onInputFocus }: PayslipChatProps
             <Pressable
               key={q}
               onPress={() => void sendMessage(q)}
-              style={({ pressed }) => [styles.chip, pressed && { opacity: 0.7 }]}
+              style={({ pressed }) => [
+                styles.chip,
+                q.length > 28 && styles.chipLong,
+                pressed && { opacity: 0.7 },
+              ]}
               accessibilityRole="button"
               accessibilityLabel={q}
             >
-              <Text style={styles.chipText} allowFontScaling={false}>
+              <Text
+                style={styles.chipText}
+                allowFontScaling={false}
+                numberOfLines={2}
+                ellipsizeMode="tail"
+              >
                 {q}
               </Text>
             </Pressable>
@@ -377,26 +386,31 @@ const styles = StyleSheet.create({
   },
   chipRow: {
     flexDirection: 'row-reverse',
+    alignItems: 'center',
     paddingHorizontal: 12,
-    paddingVertical: 8,
-    gap: 8,
+    paddingVertical: 6,
+    gap: 6,
   },
   chip: {
     flex: 1,
-    minHeight: 70,
+    minHeight: 56,
     borderWidth: 1.5,
     borderColor: '#bae6fd',
-    borderRadius: 14,
-    paddingHorizontal: 8,
-    paddingVertical: 10,
+    borderRadius: 12,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: '#f0f9ff',
+    overflow: 'hidden',
+  },
+  chipLong: {
+    flex: 1.5,
   },
   chipText: {
     color: '#1e3a5f',
-    fontSize: 11,
-    fontWeight: '700',
+    fontSize: 12,
+    fontWeight: '600',
     writingDirection: 'rtl',
     textAlign: 'center',
     lineHeight: 16,
