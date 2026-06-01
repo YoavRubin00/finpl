@@ -4,11 +4,8 @@
   "outputDirectory": "public",
   "functions": {
     "api/**/*.ts": {
-      "maxDuration": 30,
+      "maxDuration": 60,
       "includeFiles": "src/features/email/welcomeEmail.html"
-    },
-    "api/ai/stock-analyze-deep.ts": {
-      "maxDuration": 120
     }
   },
   "headers": [
