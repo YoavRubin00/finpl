@@ -62,11 +62,11 @@ export function EmptyState({
       ) : (
         <Pressable
           onPress={onEnableNotifications}
-          style={({ pressed }) => [styles.notifBtn, pressed && { opacity: 0.85, transform: [{ scale: 0.98 }] }]}
+          style={({ pressed }) => [styles.notifBtn, pressed && { opacity: 0.9, transform: [{ scale: 0.98 }] }]}
           accessibilityRole="button"
           accessibilityLabel="אשר התראות"
         >
-          <BellRing size={18} color={STITCH.primary} strokeWidth={2.6} />
+          <BellRing size={18} color="#ffffff" strokeWidth={2.6} />
           <Text style={styles.notifBtnText} allowFontScaling={false}>
             אשר התראות
           </Text>
@@ -86,7 +86,7 @@ function FeatureRow({
   return (
     <View style={styles.featureRow}>
       <View style={styles.featureIconBg}>
-        <Icon size={16} color={STITCH.primary} strokeWidth={2.4} />
+        <Icon size={16} color="#1d4ed8" strokeWidth={2.6} />
       </View>
       <Text style={styles.featureText} allowFontScaling={false}>
         {text}
@@ -151,13 +151,23 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: STITCH.surfaceHighest,
   },
+  // Solid pastel blue tile w/ subtle glow — replaces flat primary@8% which
+  // read as disabled. Matches the gaming-neon polish on the rest of the
+  // screen (hourChip + ticker card).
   featureIconBg: {
     width: 30,
     height: 30,
     borderRadius: 8,
-    backgroundColor: STITCH.primary + '14',
+    backgroundColor: '#dbeafe',
+    borderWidth: 1,
+    borderColor: '#93c5fd',
     alignItems: 'center',
     justifyContent: 'center',
+    shadowColor: '#2563eb',
+    shadowOpacity: 0.18,
+    shadowRadius: 4,
+    shadowOffset: { width: 0, height: 1 },
+    elevation: 2,
   },
   featureText: {
     flex: 1,
@@ -167,23 +177,32 @@ const styles = StyleSheet.create({
     textAlign: 'right',
     writingDirection: 'rtl',
   },
+  // Solid blue Duo-style CTA (was outline-only sky-blue tint that read as
+  // disabled / link text — user feedback 2026-06-01: "כפתור אשר התראות לא
+  // ברור שהוא לחיץ"). Same palette as TimelineOrderCard "אני אסתדר" + the
+  // pearl referral CTA.
   notifBtn: {
     alignSelf: 'stretch',
     flexDirection: 'row-reverse',
     alignItems: 'center',
     justifyContent: 'center',
     gap: 8,
-    marginTop: 4,
-    paddingVertical: 13,
+    marginTop: 6,
+    paddingVertical: 14,
     borderRadius: 14,
-    backgroundColor: STITCH.primary + '12',
-    borderWidth: 1.5,
-    borderColor: STITCH.primary + '40',
+    backgroundColor: '#1d4ed8',
+    borderBottomWidth: 4,
+    borderBottomColor: '#1e3a8a',
+    shadowColor: '#1e3a8a',
+    shadowOpacity: 0.35,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 6,
   },
   notifBtnText: {
-    fontSize: 14,
+    fontSize: 15,
     fontWeight: '900',
-    color: STITCH.primary,
+    color: '#ffffff',
     writingDirection: 'rtl',
   },
   notifEnabledRow: {

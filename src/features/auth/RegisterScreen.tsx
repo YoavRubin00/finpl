@@ -211,6 +211,7 @@ export function RegisterScreen() {
             contentContainerStyle={{ paddingHorizontal: 24, paddingBottom: 24, flexGrow: 1, justifyContent: "center" }}
             showsVerticalScrollIndicator={false}
             keyboardShouldPersistTaps="handled"
+            automaticallyAdjustKeyboardInsets
           >
             {/* Inline auth error banner — set by Apple/Google/email auth failures.
                 Stays visible until the user taps X or attempts auth again. */}

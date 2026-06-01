@@ -276,11 +276,11 @@ export function BreakingNewsScreen(): React.ReactElement {
               </Text>
               <Pressable
                 onPress={() => { tapHaptic(); setHourPickerOpen(true); }}
-                style={({ pressed }) => [styles.hourChip, pressed && { opacity: 0.7 }]}
+                style={({ pressed }) => [styles.hourChip, pressed && { opacity: 0.85, transform: [{ scale: 0.97 }] }]}
                 accessibilityRole="button"
                 accessibilityLabel={`התראה יומית בשעה ${notificationHour}:00`}
               >
-                <Bell size={12} color={STITCH.primary} strokeWidth={2.4} />
+                <Bell size={13} color="#ffffff" strokeWidth={2.6} />
                 <Text style={styles.hourChipText} allowFontScaling={false}>
                   התראה ב-{String(notificationHour).padStart(2, '0')}:00
                 </Text>
@@ -396,22 +396,32 @@ const styles = StyleSheet.create({
     writingDirection: 'rtl',
     letterSpacing: 0.4,
   },
+  // Neon-blue glow chip — solid Chapter-3 blue with shadow at offset 0,0 so
+  // the bloom radiates on all sides. White bell + white text for high
+  // contrast against the strong primary fill (user feedback 2026-06-01:
+  // "שיהיה ברקע כחול עם גלואו").
   hourChip: {
     flexDirection: 'row-reverse',
     alignItems: 'center',
-    gap: 4,
-    paddingHorizontal: 10,
-    paddingVertical: 4,
+    gap: 5,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
     borderRadius: 999,
-    backgroundColor: STITCH.primary + '14',
-    borderWidth: 1,
-    borderColor: STITCH.primary + '33',
+    backgroundColor: '#2563eb',
+    borderWidth: 1.5,
+    borderColor: '#1d4ed8',
+    shadowColor: '#3b82f6',
+    shadowOpacity: 0.55,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 0 },
+    elevation: 8,
   },
   hourChipText: {
     fontSize: 11,
-    fontWeight: '800',
-    color: STITCH.primary,
+    fontWeight: '900',
+    color: '#ffffff',
     writingDirection: 'rtl',
+    letterSpacing: 0.2,
   },
   errorBanner: {
     flexDirection: 'row-reverse',
@@ -456,14 +466,20 @@ const styles = StyleSheet.create({
     backgroundColor: ACCENT,
     marginTop: 8,
     shadowColor: ACCENT,
-    shadowOpacity: 0.2,
-    shadowRadius: 10,
+    shadowOpacity: 0.4,
+    shadowRadius: 12,
     shadowOffset: { width: 0, height: 4 },
-    elevation: 4,
+    elevation: 6,
   },
+  // At-limit + not-Pro state — was slate-gray (#64748b) which read as
+  // "disabled / nothing to do" rather than "this is your upgrade path".
+  // Switched to deep blue to match the rest of the app's primary CTAs and
+  // make the "שדרג ל-PRO" copy visible (user feedback 2026-06-01).
   addBtnLocked: {
-    backgroundColor: '#64748b',
-    shadowColor: '#64748b',
+    backgroundColor: '#1d4ed8',
+    shadowColor: '#1e3a8a',
+    borderBottomWidth: 4,
+    borderBottomColor: '#1e3a8a',
   },
   addBtnText: {
     color: '#ffffff',
