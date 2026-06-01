@@ -2,9 +2,25 @@ import React, { useCallback, useRef } from "react";
 import { View, Text, Pressable, StyleSheet, Dimensions, Linking } from "react-native";
 import { Image as ExpoImage } from "expo-image";
 import Animated, { FadeIn, FadeInUp } from "react-native-reanimated";
+import Svg, { Path } from "react-native-svg";
 import { tapHaptic, successHaptic } from "../../../../utils/haptics";
 import { useSoundEffect } from "../../../../hooks/useSoundEffect";
 import { track } from "../../../../lib/analytics/events";
+
+/** Official WhatsApp glyph (phone-in-bubble), white on green — keeps CTA
+ *  brand-aligned instead of a generic 💬 emoji that read as "chat" rather
+ *  than "WhatsApp". Path data is the WhatsApp brand mark normalized to a
+ *  24×24 viewBox. */
+function WhatsAppLogo({ size = 22, color = "#ffffff" }: { size?: number; color?: string }): React.ReactElement {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" accessibilityLabel="WhatsApp">
+      <Path
+        fill={color}
+        d="M19.05 4.91A9.82 9.82 0 0 0 12.04 2c-5.46 0-9.91 4.45-9.91 9.91 0 1.75.46 3.45 1.32 4.95L2.05 22l5.25-1.38a9.9 9.9 0 0 0 4.74 1.21h.01c5.46 0 9.91-4.45 9.91-9.91 0-2.65-1.03-5.14-2.9-7.01zM12.04 20.15c-1.48 0-2.93-.4-4.2-1.15l-.3-.18-3.12.82.83-3.04-.2-.31a8.26 8.26 0 0 1-1.26-4.38c0-4.54 3.7-8.24 8.24-8.24 2.2 0 4.27.86 5.82 2.42a8.18 8.18 0 0 1 2.41 5.83c.02 4.54-3.68 8.23-8.22 8.23zm4.52-6.16c-.25-.12-1.47-.72-1.69-.81-.23-.08-.39-.12-.56.12-.16.25-.64.81-.78.97-.14.17-.29.19-.54.06-.25-.12-1.05-.39-1.99-1.23a7.49 7.49 0 0 1-1.38-1.71c-.14-.25-.02-.38.11-.51.11-.11.25-.29.37-.43.13-.14.17-.25.25-.41.08-.17.04-.31-.02-.43-.06-.12-.56-1.34-.76-1.84-.2-.48-.41-.42-.56-.43h-.48c-.17 0-.43.06-.66.31-.22.25-.86.85-.86 2.07 0 1.22.89 2.4 1.01 2.57.12.17 1.75 2.67 4.23 3.74.59.26 1.05.41 1.41.52.59.19 1.13.16 1.56.1.48-.07 1.47-.6 1.67-1.18.21-.58.21-1.07.15-1.18-.07-.11-.23-.17-.48-.29z"
+      />
+    </Svg>
+  );
+}
 
 /** Hosted on Vercel Blob (1074×1911 portrait poster — phone mockup + shark
  *  + "join the community" headline). Served remotely so the asset can be
@@ -86,7 +102,7 @@ export const FeedWhatsAppNudgeCard = React.memo(function FeedWhatsAppNudgeCard({
           {({ pressed }) => (
             <View style={[styles.cta, pressed && styles.ctaPressed]}>
               <Text style={styles.ctaText}>הצטרפו לקהילה</Text>
-              <Text style={styles.ctaEmoji}>💬</Text>
+              <WhatsAppLogo size={22} color="#ffffff" />
             </View>
           )}
         </Pressable>
@@ -162,10 +178,7 @@ const styles = StyleSheet.create({
     textShadowOffset: { width: 0, height: 1 },
     textShadowRadius: 2,
   },
-  ctaEmoji: {
-    fontSize: 22,
-    lineHeight: 26,
-  },
+  // ctaEmoji removed — replaced by inline WhatsAppLogo SVG (brand mark).
   skipHint: {
     fontSize: 12,
     fontWeight: "700",

@@ -581,35 +581,31 @@ export function PearlSheet({ visible, pearl, onClose }: PearlSheetProps): React.
             mode was hiding pieces they expected to see. */}
         <GlobalWealthHeader />
 
-        <View style={styles.topBar}>
-          {/* Back button (was an X until 2026-06-01) — user spec: pearl is
-              optional, exiting should feel like "back to learning" rather
-              than "close modal". Same ChevronRight pattern used by the
-              lesson screen's top-bar back button. Explicit router.replace
-              to /(tabs)/index so we always land on the learn surface even
-              if the back stack got into a weird state. */}
-          <Pressable
-            onPress={() => {
-              tapHaptic();
-              playSound('btn_click_soft_1');
-              handleDismiss();
-              router.replace('/(tabs)/index' as never);
-            }}
-            style={({ pressed }) => [styles.closeBtn, pressed && { opacity: 0.7 }]}
-            accessibilityRole="button"
-            accessibilityLabel="חזרה למסך הלמידה"
-            hitSlop={10}
-          >
-            <ChevronRight size={22} color={STITCH.onSurface} strokeWidth={2.6} />
-          </Pressable>
+        {/* Back button — absolute, top-right RTL corner. Was inline in a
+            row with the title+progress bar which made the chevron read as
+            "stacked on the progress bar" on smaller phones (user report
+            2026-06-01: "כפתור חזרה עולה על הבר שמסמן את ההתקדמות").
+            Absolute pulls it out of the flow so the title row stays clean. */}
+        <Pressable
+          onPress={() => {
+            tapHaptic();
+            playSound('btn_click_soft_1');
+            handleDismiss();
+            router.replace('/(tabs)/index' as never);
+          }}
+          style={({ pressed }) => [styles.closeBtn, pressed && { opacity: 0.7 }]}
+          accessibilityRole="button"
+          accessibilityLabel="חזרה למסך הלמידה"
+          hitSlop={10}
+        >
+          <ChevronRight size={22} color={STITCH.onSurface} strokeWidth={2.6} />
+        </Pressable>
 
+        <View style={styles.topBar}>
           <View style={styles.titleWrap}>
             <Text style={styles.title} allowFontScaling={false}>פנינה</Text>
             <PearlProgressBar total={stages.length} current={activePage} />
           </View>
-
-          {/* Right-side spacer balancing the close button so the title stays centered. */}
-          <View style={styles.spacer} />
         </View>
 
         <Animated.View
@@ -623,8 +619,11 @@ export function PearlSheet({ visible, pearl, onClose }: PearlSheetProps): React.
         {/* "דלג על הפנינה" footer — always visible, fixed at bottom. Lets
             the user jump straight to the NEXT module without going through
             the remaining stages. Per user spec (2026-05-31): pearl is
-            optional, this is the explicit opt-out path. */}
-        <View style={styles.skipPearlFooter}>
+            optional, this is the explicit opt-out path.
+            paddingBottom uses safe-area inset so it clears the Android
+            navigation bar (3-button or gesture pill) — user report
+            2026-06-01: "כפתור דלג חורג מהמסך באנדרואיד". */}
+        <View style={[styles.skipPearlFooter, { paddingBottom: Math.max(insets.bottom, 14) + 8 }]}>
           <Pressable
             onPress={() => {
               tapHaptic();
@@ -675,21 +674,24 @@ export function PearlSheet({ visible, pearl, onClose }: PearlSheetProps): React.
 const styles = StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: '#f8fafc' },
   topBar: {
-    flexDirection: 'row-reverse',
-    alignItems: 'center',
     paddingHorizontal: 12,
-    paddingVertical: 8,
-    gap: 8,
+    paddingTop: 6,
+    paddingBottom: 10,
+    alignItems: 'center',
   },
   closeBtn: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+    position: 'absolute',
+    top: 4,
+    right: 10,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
     backgroundColor: 'rgba(0,0,0,0.06)',
     alignItems: 'center',
     justifyContent: 'center',
+    zIndex: 10,
   },
-  titleWrap: { flex: 1, alignItems: 'center', gap: 6 },
+  titleWrap: { width: '100%', alignItems: 'center', gap: 8, paddingTop: 50 },
   title: {
     fontSize: 13,
     fontWeight: '900',
@@ -701,7 +703,8 @@ const styles = StyleSheet.create({
   skipPearlFooter: {
     paddingHorizontal: 16,
     paddingTop: 6,
-    paddingBottom: 14,
+    // paddingBottom comes from inline insets.bottom (see render above) —
+    // hardcoded value would clip on Android devices with gesture nav.
     alignItems: 'center',
     backgroundColor: '#f8fafc',
   },

@@ -53,9 +53,15 @@ interface Props {
   market?: MarketSnapshot;
   /** When false, skips entering animations to keep FlashList scroll smooth. */
   isActive?: boolean;
+  /** Pearl-flow continue. When provided, the card renders a "המשך" button
+   *  INSIDE its own ScrollView at the very bottom (after the two explanation
+   *  cards). This is what makes the button reachable on Android phones whose
+   *  nav bar was eating the wrapper-level button (user report 2026-06-01:
+   *  "כפתור המשך שם פשוט לא נראה"). */
+  onContinue?: () => void;
 }
 
-export const CrowdQuestionCard = React.memo(function CrowdQuestionCard({ market, isActive = true }: Props) {
+export const CrowdQuestionCard = React.memo(function CrowdQuestionCard({ market, isActive = true, onContinue }: Props) {
   const getTodayQuestion = useCrowdQuestionStore((s) => s.getTodayQuestion);
   const hasVotedToday = useCrowdQuestionStore((s) => s.hasVotedToday);
   const getUserVoteFor = useCrowdQuestionStore((s) => s.getUserVoteFor);
@@ -202,6 +208,21 @@ export const CrowdQuestionCard = React.memo(function CrowdQuestionCard({ market,
                 {question.termExplanation.body}
               </Text>
             </Animated.View>
+          )}
+
+          {/* In-scroll Continue button — rendered inside the ScrollView so
+              it's always reachable below the two explanation cards on every
+              screen size. The wrapper's bottom button was getting clipped by
+              the Android nav bar + pearl skip footer (user report 2026-06-01). */}
+          {onContinue && (
+            <Pressable
+              onPress={() => { tapHaptic(); onContinue(); }}
+              accessibilityRole="button"
+              accessibilityLabel="המשך לשלב הבא"
+              style={({ pressed }) => [styles.continueBtn, pressed && styles.continueBtnPressed]}
+            >
+              <Text style={styles.continueText} allowFontScaling={false}>המשך לשלב הבא ←</Text>
+            </Pressable>
           )}
         </ScrollView>
       </View>
@@ -419,6 +440,33 @@ const styles = StyleSheet.create({
     padding: 20,
     gap: 16,
     flexGrow: 1,
+    // Extra bottom padding so the in-scroll Continue button doesn't sit
+    // flush against the pearl's skip-pearl footer on Android.
+    paddingBottom: 28,
+  },
+  continueBtn: {
+    marginTop: 12,
+    paddingVertical: 16,
+    paddingHorizontal: 24,
+    borderRadius: 16,
+    backgroundColor: '#1d4ed8',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderBottomWidth: 4,
+    borderBottomColor: '#1e3a8a',
+    shadowColor: '#1e3a8a',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.35,
+    shadowRadius: 10,
+    elevation: 6,
+  },
+  continueBtnPressed: { opacity: 0.9, transform: [{ scale: 0.98 }] },
+  continueText: {
+    color: '#ffffff',
+    fontSize: 17,
+    fontWeight: '900',
+    letterSpacing: 0.3,
+    writingDirection: 'rtl' as const,
   },
   header: {
     gap: 8,

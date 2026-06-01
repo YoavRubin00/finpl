@@ -151,7 +151,12 @@ function renderGameCard(
     case 'diamond-hands':
       return <PearlExternalGameWrap onContinue={onContinue}><DiamondHandsCard isActive={isActive} /></PearlExternalGameWrap>;
     case 'crowd-question':
-      return <PearlExternalGameWrap onContinue={onContinue}><CrowdQuestionCard isActive={isActive} /></PearlExternalGameWrap>;
+      // Continue button is rendered INSIDE CrowdQuestionCard's ScrollView
+      // (passed via onContinue) so it always lands below the two explanation
+      // cards in scroll position. The PearlExternalGameWrap version was
+      // getting clipped on Android phones with the nav bar + pearl skip
+      // footer competing for the bottom strip (user report 2026-06-01).
+      return <CrowdQuestionCard isActive={isActive} onContinue={onContinue} />;
     case 'payslip-bonus':
       return <PearlExternalGameWrap onContinue={onContinue}><PayslipBonusCard /></PearlExternalGameWrap>;
     case 'scenario-lab':
