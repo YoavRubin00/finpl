@@ -184,18 +184,21 @@ export function BreakingNewsCard({
 }
 
 const styles = StyleSheet.create({
+  // Gaming-neon card: blue glow border + blue shadow halo. Replaces the
+  // flat white card so the ticker reads as a premium AI surface instead of
+  // a generic note row (user feedback 2026-06-01: "תוסיף כחול, גלואו").
   card: {
     backgroundColor: '#ffffff',
     borderRadius: 18,
     padding: 14,
-    borderWidth: 1,
-    borderColor: STITCH.surfaceHighest,
+    borderWidth: 1.5,
+    borderColor: '#93c5fd',
     gap: 10,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 6,
-    elevation: 2,
+    shadowColor: '#2563eb',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.22,
+    shadowRadius: 14,
+    elevation: 6,
   },
   topRow: {
     flexDirection: 'row-reverse',
