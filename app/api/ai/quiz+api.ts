@@ -50,7 +50,8 @@ export async function POST(request: Request): Promise<Response> {
     );
 
     if (!response.ok) {
-      console.error(`[ai/quiz] Gemini returned ${response.status}`);
+      const body = await response.text().catch(() => '');
+      console.error(`[ai/quiz] Gemini ${response.status}: ${body.slice(0, 500)}`);
       return Response.json({ error: 'AI service temporarily unavailable.' }, { status: 502 });
     }
 

@@ -31,10 +31,23 @@ export function getDb() {
   return drizzle(sql);
 }
 
-/** YYYY-MM-DD anchored to Asia/Jerusalem. Resets at midnight local. */
+/** YYYY-MM-DD anchored to Asia/Jerusalem. Resets at midnight local.
+ *
+ *  Implementation note (2026-06-01): previously this used
+ *  `new Date(now.toLocaleString('en-US', { timeZone: 'Asia/Jerusalem' })).toISOString()`,
+ *  which silently re-interpreted the locale string in the SERVER's TZ
+ *  (UTC on Vercel) — so during 21:00–23:59 UTC, when IL was already on
+ *  the next calendar day, the function returned the UTC date and clients
+ *  asked `/today` for yesterday's row. Using Intl.DateTimeFormat with
+ *  'en-CA' locale yields a YYYY-MM-DD format directly, no parsing. */
 export function getDateKeyIL(now: Date = new Date()): string {
-  const il = new Date(now.toLocaleString('en-US', { timeZone: 'Asia/Jerusalem' }));
-  return il.toISOString().slice(0, 10);
+  const fmt = new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Asia/Jerusalem',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  });
+  return fmt.format(now);
 }
 
 /* ─────────────────── Types ─────────────────── */
