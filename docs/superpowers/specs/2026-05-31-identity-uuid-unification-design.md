@@ -1,9 +1,24 @@
 # Identity Model Unification — One UUID Across the App
 
 **Date:** 2026-05-31
-**Status:** Approved for implementation planning
+**Status:** Approved; plan written (see [`../plans/2026-05-31-identity-uuid-unification.md`](../plans/2026-05-31-identity-uuid-unification.md))
 **Owner:** naveh-elya
 **Supersedes:** the frozen identifier decision in [`2026-05-21-data-persistence-architecture-design.md`](./2026-05-21-data-persistence-architecture-design.md) ("authId continues to be the user's email … migrating to a stable opaque UUID-as-primary-identifier is out of scope"). That non-goal is **reversed** by this spec.
+
+## ⚠️ Production-reality addendum (discovered 2026-05-31, during planning)
+
+Read-only probes of `finpl.vercel.app` established the live backend topology, which differs from what this spec originally assumed:
+
+- **Live backend = the Vercel `api/` functions (JWT + `withAuth`).** Probe: `GET /api/sync/profile` → `"Missing Authorization header"` (the `withAuth` string).
+- **The Expo Router `app/api/**+api.ts` routes are NOT deployed** (`app.json` has `web.output: "single"`, not `"server"`). They are dead code in production. Probe: `GET /api/referral/me` → 404.
+- **Apple Sign-In is currently BROKEN in production.** The client posts `provider:'apple'`, but the live `api/auth/verify.ts` has no Apple branch and returns 400 `"Unsupported provider"`. Apple support exists only in the undeployed `app/api/auth/verify+api.ts`.
+- **Referral endpoints are dead in production** (404). The tables `coin_events` / `dividend_collections` / `referrals` are written only by the undeployed `app/api/referral/*` code, so they are effectively inert in prod.
+
+**Scope consequences (confirmed with owner):**
+1. The login/linking algorithm and the Apple fix land in the **live** `api/auth/verify.ts` (not the `app/api` copy).
+2. Re-keying the three email-keyed tables to UUID + FK proceeds as designed (low urgency since nothing live writes them, but it closes the schema gap and the cascade hole cheaply).
+3. **Porting the referral *endpoints* into the live `api/` backend is OUT OF SCOPE** for this work (separate effort).
+4. **Fixing Apple Sign-In in the live verify is IN SCOPE** — it is the natural caller of the new `apple_sub` linking and fixes a real outage.
 
 ## Problem statement
 

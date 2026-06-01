@@ -60,6 +60,8 @@ scripts/*
 !scripts/dev-phone.mjs
 # Exception: DB diagram tooling (npm run db:diagram)
 !scripts/db-diagram.mjs
+# Exception: ad-hoc SQL verification helper
+!scripts/sql.mjs
 !scripts/db-introspect.sql
 !scripts/db-diagram.template.html
 notebooklm-py/

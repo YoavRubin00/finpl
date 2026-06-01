@@ -25,7 +25,7 @@ export default withAuth(async (req: VercelRequest, res: VercelResponse, ctx) => 
   const profileRows = await db
     .select()
     .from(userProfiles)
-    .where(eq(userProfiles.authId, ctx.authId))
+    .where(eq(userProfiles.id, ctx.userId))
     .limit(1);
   const profileRow = profileRows[0];
   if (!profileRow) {
@@ -59,7 +59,7 @@ export default withAuth(async (req: VercelRequest, res: VercelResponse, ctx) => 
       preferences: mergedProfile.preferences ?? undefined,
       updatedAt: new Date().toISOString(),
     })
-    .where(eq(userProfiles.authId, ctx.authId));
+    .where(eq(userProfiles.id, ctx.userId));
 
   if (Array.isArray(body.modules) && body.modules.length > 0) {
     const userId = profileRow.id;
@@ -110,7 +110,7 @@ export default withAuth(async (req: VercelRequest, res: VercelResponse, ctx) => 
   const finalProfile = await db
     .select()
     .from(userProfiles)
-    .where(eq(userProfiles.authId, ctx.authId))
+    .where(eq(userProfiles.id, ctx.userId))
     .limit(1);
   const finalProgress = await db
     .select()

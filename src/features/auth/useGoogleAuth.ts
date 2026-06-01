@@ -9,6 +9,8 @@ import { useGoogleAuthStore } from "./useGoogleAuthStore";
 import { getApiBase } from "../../db/apiBase";
 import { captureEvent } from "../../lib/posthog";
 import { signInWithProfile } from "../../lib/auth/lifecycle";
+import { tokenStore } from "../../lib/auth/secureStore";
+import { linkProvider } from "../../lib/api/auth";
 
 WebBrowser.maybeCompleteAuthSession();
 
@@ -125,6 +127,17 @@ export function useGoogleAuth() {
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const fetchUserInfo = async (token: string, _isJwt: boolean) => {
     try {
+      // Already signed in → connect-account action, not login.
+      const alreadySignedIn = !!(await tokenStore.get());
+      if (alreadySignedIn) {
+        try {
+          await linkProvider({ provider: 'google', token });
+          useAuthStore.getState().setAuthError(null);
+        } catch {
+          useAuthStore.getState().setAuthError('קישור החשבון נכשל. נסו שוב.');
+        }
+        return;
+      }
       // Optional fallback: only access_tokens can call userinfo.
       // For id_tokens (JWT), skip — server resolves identity via tokeninfo.
       let googleUser: GoogleUserInfo | null = null;
