@@ -5,6 +5,7 @@ import { useUsageStore } from '../../subscription/useUsageStore';
 import { useTradingStore } from '../../trading-hub/useTradingStore';
 import { fetchQuickAnalysis, fetchDeepAnalysis, fetchLiveQuote } from '../services/stockAnalystClient';
 import { buildPortfolioContext } from '../services/portfolioContext';
+import { toSharkVoiceError } from '../services/sharkErrorVoice';
 import { useAnalystHistoryStore } from '../useAnalystHistoryStore';
 import type { AnalystMessage, StockAnalysisDeep, StockAnalysisQuick } from '../types';
 
@@ -188,7 +189,12 @@ export function useAnalystSubmit() {
         return { ok: true };
       } catch (err) {
         removeMessage(loadingId);
-        const message = err instanceof Error ? err.message : 'משהו השתבש. נסה שוב בעוד רגע.';
+        // Display Captain Shark's voice, never the raw "deep analysis
+        // failed (500): {...}" pattern that leaks api-key / SDK details
+        // to the user. The raw message still goes to the analytics /
+        // console as captured by the original error object below if we
+        // ever decide to log it.
+        const message = toSharkVoiceError(err);
         appendMessage({ id: nextId('e'), kind: 'error', text: message, ts: Date.now() });
         setError(message);
         return { ok: false, reason: 'error', message };

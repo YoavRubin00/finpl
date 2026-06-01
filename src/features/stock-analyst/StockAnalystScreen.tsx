@@ -45,6 +45,7 @@ import {
 } from './components/FollowupBubbles';
 import { FollowupInput } from './components/FollowupInput';
 import { fetchFollowupAnswer } from './services/stockAnalystClient';
+import { toSharkVoiceError } from './services/sharkErrorVoice';
 import { useAnalystHistoryStore } from './useAnalystHistoryStore';
 import type { AnalystMessage } from './types';
 
@@ -217,11 +218,12 @@ export function StockAnalystScreen(): React.ReactElement {
       });
     } catch (err) {
       removeMessage(loadingId);
-      const detail = err instanceof Error ? err.message : 'שגיאה לא ידועה';
+      // Captain Shark voice — never expose the raw server detail
+      // ("invalid x-api-key" / "500" / etc.) to the chat bubble.
       appendMessage({
         id: `fe-${Date.now()}`,
         kind: 'error',
-        text: `לא הצלחנו לקבל תשובה: ${detail}`,
+        text: toSharkVoiceError(err),
         ts: Date.now(),
       });
     } finally {
