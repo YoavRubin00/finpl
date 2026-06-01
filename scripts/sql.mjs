@@ -8,7 +8,7 @@ if (!query) { console.error('usage: node scripts/sql.mjs "<SQL>"'); process.exit
 
 let raw = '';
 try { raw = fs.readFileSync('.env.local', 'utf8'); } catch { console.error('No .env.local'); process.exit(1); }
-const url = (raw.match(/^DATABASE_URL=(.*)$/m)?.[1] ?? '').trim();
+const url = (raw.match(/^DATABASE_URL=(.*)$/m)?.[1] ?? '').trim().replace(/^["']|["']$/g, '');
 if (!url) { console.error('DATABASE_URL not set in .env.local'); process.exit(1); }
 
 const host = url.match(/@([^/?]+)/)?.[1] ?? '(unparsed)';
