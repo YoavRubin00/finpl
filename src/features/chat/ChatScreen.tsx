@@ -984,10 +984,11 @@ export function ChatScreen({ lessonContext }: { lessonContext?: LessonContext } 
     <SafeAreaView className="flex-1" edges={['bottom']}>
       <KeyboardAvoidingView
         className="flex-1"
-        // On Android we don't set behavior — the system's default `adjustResize`
-        // already shrinks the window when the keyboard appears. Adding padding
-        // on top of that double-shifts the input and hides it under the keyboard.
-        behavior={Platform.OS === "ios" ? "padding" : undefined}
+        // iOS: 'padding' lifts the input above the keyboard. Android: 'height'
+        // measures the keyboard explicitly so the input bar stays visible — the
+        // previous `undefined` relied on adjustResize alone, which hid the
+        // input on Android. Same pattern as StockAnalystScreen.
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
         keyboardVerticalOffset={Platform.OS === "ios" ? 100 : 0}
       >
         {/* WhatsApp-style header */}
@@ -1018,6 +1019,7 @@ export function ChatScreen({ lessonContext }: { lessonContext?: LessonContext } 
           onLayout={(e) => setViewportH(e.nativeEvent.layout.height)}
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
+          automaticallyAdjustKeyboardInsets
         >
           {anchorIdx === -1 ? (
             <>
