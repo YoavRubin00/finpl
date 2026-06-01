@@ -97,10 +97,17 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     // I3: passwordless email login must not land on a row owned by an OAuth
     // provider (Google/Apple set `email`, so otherwise someone could log in as
     // a Google user just by typing their address). Pure-email users have both
-    // subs NULL and are unaffected. (Full fix is OTP-verified email — tracked
-    // separately; this preserves the pre-unification trust boundary.)
+    // subs NULL and are unaffected. We reject with a 409 directing the user to
+    // their social login rather than fall through to create — creating would
+    // hit the `email` UNIQUE constraint and 500. (Full fix is OTP-verified
+    // email — tracked separately; this preserves the pre-unification boundary.)
     if (cred.provider === 'email' && row && (row.googleSub || row.appleSub)) {
-      row = undefined;
+      const method = row.googleSub ? 'Google' : 'Apple';
+      return res.status(409).json({
+        error: `This email is registered with ${method} sign-in. Please continue with ${method}.`,
+        code: 'USE_SOCIAL_LOGIN',
+        provider: row.googleSub ? 'google' : 'apple',
+      });
     }
 
     // 2. Auto-link: a verified credential whose email matches an existing row
