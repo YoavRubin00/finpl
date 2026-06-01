@@ -209,42 +209,58 @@ export const banditVariants = pgTable("bandit_variants", {
 
 export const coinEvents = pgTable("coin_events", {
 	id: bigserial({ mode: 'number' }).primaryKey().notNull(),
-	authId: text("auth_id").notNull(),
-	userId: uuid("user_id"),
+	userId: uuid("user_id").notNull(),
 	amount: integer().notNull(),
 	source: text().notNull(),
 	grantedAt: timestamp("granted_at", { withTimezone: true, mode: 'string' }).notNull().defaultNow(),
 }, (table) => [
-	index("idx_coin_events_user_date").using("btree", table.authId.asc(), table.grantedAt.asc()),
-	index("idx_coin_events_auth_source_date").using("btree", table.authId.asc(), table.source.asc(), table.grantedAt.desc()),
+	index("idx_coin_events_user_date2").using("btree", table.userId.asc().nullsLast().op("uuid_ops"), table.grantedAt.asc()),
+	foreignKey({
+			columns: [table.userId],
+			foreignColumns: [userProfiles.id],
+			name: "coin_events_user_fk"
+		}).onDelete("cascade"),
 	check("coin_events_amount_check", sql`amount > 0`),
 	check("coin_events_source_check", sql`source = ANY (ARRAY['lesson'::text, 'quiz'::text, 'daily-quest'::text, 'signup-bonus'::text, 'referral-signup-bonus'::text, 'referral-dividend'::text])`),
 ]);
 
 export const dividendCollections = pgTable("dividend_collections", {
-	authId: text("auth_id").notNull(),
-	userId: uuid("user_id"),
+	userId: uuid("user_id").notNull(),
 	dateCollected: date("date_collected").notNull(),
 	amount: integer().notNull(),
 	collectedAt: timestamp("collected_at", { withTimezone: true, mode: 'string' }).notNull().defaultNow(),
 }, (table) => [
-	primaryKey({ columns: [table.authId, table.dateCollected], name: "dividend_collections_pkey" }),
+	primaryKey({ columns: [table.userId, table.dateCollected], name: "dividend_collections_pkey" }),
+	foreignKey({
+			columns: [table.userId],
+			foreignColumns: [userProfiles.id],
+			name: "dividend_collections_user_fk"
+		}).onDelete("cascade"),
 	check("dividend_collections_amount_check", sql`amount >= 0`),
 ]);
 
 export const referrals = pgTable("referrals", {
-	refereeAuthId: text("referee_auth_id").primaryKey().notNull(),
-	referrerAuthId: text("referrer_auth_id").notNull(),
-	refereeUserId: uuid("referee_user_id"),
-	referrerUserId: uuid("referrer_user_id"),
+	refereeUserId: uuid("referee_user_id").notNull(),
+	referrerUserId: uuid("referrer_user_id").notNull(),
 	inviteCode: text("invite_code").notNull(),
 	signupBonusPaid: boolean("signup_bonus_paid").notNull().default(false),
 	linkedAt: timestamp("linked_at", { withTimezone: true, mode: 'string' }).notNull().defaultNow(),
 	referrerLocalCredited: boolean("referrer_local_credited").notNull().default(false),
 }, (table) => [
-	index("idx_referrals_referrer").using("btree", table.referrerAuthId.asc()),
+	primaryKey({ columns: [table.refereeUserId], name: "referrals_pkey" }),
+	index("idx_referrals_referrer_uid").using("btree", table.referrerUserId.asc().nullsLast().op("uuid_ops")),
 	index("idx_referrals_code").using("btree", table.inviteCode.asc()),
-	check("referrals_check", sql`referrer_auth_id <> referee_auth_id`),
+	foreignKey({
+			columns: [table.refereeUserId],
+			foreignColumns: [userProfiles.id],
+			name: "referrals_referee_fk"
+		}).onDelete("cascade"),
+	foreignKey({
+			columns: [table.referrerUserId],
+			foreignColumns: [userProfiles.id],
+			name: "referrals_referrer_fk"
+		}).onDelete("cascade"),
+	check("referrals_uid_check", sql`referrer_user_id <> referee_user_id`),
 ]);
 
 export const userStats = pgTable("user_stats", {

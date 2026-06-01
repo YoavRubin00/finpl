@@ -29,6 +29,7 @@ const migrationFiles = [
   'src/db/migrations/0001_add_preferences.sql',
   'src/db/migrations/0002_add_user_stats.sql',
   'src/db/migrations/0003_identity_additive.sql',
+  'src/db/migrations/0004_identity_rekey_constraints.sql',
 ];
 
 try {
