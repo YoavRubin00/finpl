@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { View, Text, StyleSheet, Dimensions } from 'react-native';
+import { View, Text, StyleSheet, Dimensions, ScrollView } from 'react-native';
 import { Image as ExpoImage } from 'expo-image';
 import Animated, {
   FadeIn,
@@ -77,7 +77,13 @@ export const DidYouKnowCard = React.memo(function DidYouKnowCard({ isActive: _is
   };
 
   return (
-    <View style={styles.container}>
+    <ScrollView
+      style={styles.scrollHost}
+      contentContainerStyle={styles.container}
+      showsVerticalScrollIndicator={false}
+      bounces={true}
+      keyboardShouldPersistTaps="handled"
+    >
       <View style={[styles.card, { backgroundColor: theme.bg, borderColor: theme.border }]}>
         {/* Category chip + "הידעתם" header */}
         <Animated.View entering={FadeInDown.duration(280)} style={styles.header}>
@@ -150,17 +156,22 @@ export const DidYouKnowCard = React.memo(function DidYouKnowCard({ isActive: _is
           </Animated.View>
         )}
       </View>
-    </View>
+    </ScrollView>
   );
 });
 
 const styles = StyleSheet.create({
-  container: {
-    width: SCREEN_WIDTH,
+  scrollHost: {
     flex: 1,
+    width: SCREEN_WIDTH,
+  },
+  container: {
+    flexGrow: 1,
+    width: SCREEN_WIDTH,
     alignItems: 'center',
     justifyContent: 'center',
     padding: 16,
+    paddingBottom: 32,
   },
   card: {
     width: '100%',
