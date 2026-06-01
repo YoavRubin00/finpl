@@ -85,6 +85,11 @@ export function ToolNextStepCard({
   const actionBg = actionColor ?? mix(accentColor, 'black', 0.12);
   const actionShadow = actionShadowColor ?? mix(actionBg, 'black', 0.35);
   const lessonFg = mix(accentColor, 'black', 0.45);
+  // Lesson button mirrors the action button's shape but in a pastel of the
+  // page accent — same prominence, lighter weight so the action still wins.
+  const lessonBg = mix(accentColor, 'white', 0.78);
+  const lessonShadow = mix(accentColor, 'white', 0.5);
+  const lessonIconBg = mix(accentColor, 'white', 0.55);
 
   return (
     <View style={styles.wrap}>
@@ -111,22 +116,15 @@ export function ToolNextStepCard({
         onPress={handleAction}
       />
 
-      <Pressable
+      <NextStepButton
+        label={entry.lessonLabel}
+        bg={lessonBg}
+        shadow={lessonShadow}
+        fg={lessonFg}
+        iconBg={lessonIconBg}
+        icon={<BookOpen size={18} color={lessonFg} strokeWidth={2.6} />}
         onPress={handleLesson}
-        accessibilityRole="button"
-        accessibilityLabel={`למד: ${entry.lessonLabel}`}
-        hitSlop={8}
-        style={({ pressed }) => [styles.lessonLink, pressed && { opacity: 0.55 }]}
-      >
-        <BookOpen size={14} color={lessonFg} strokeWidth={2.6} />
-        <Text
-          style={[styles.lessonLinkText, { color: lessonFg }]}
-          allowFontScaling={false}
-          numberOfLines={2}
-        >
-          {entry.lessonLabel}
-        </Text>
-      </Pressable>
+      />
     </View>
   );
 }
@@ -210,7 +208,7 @@ function mix(hex: string, toward: 'white' | 'black', t: number): string {
 
 const styles = StyleSheet.create({
   wrap: {
-    gap: 10,
+    gap: 12,
   },
   headerRow: {
     flexDirection: 'row-reverse',
@@ -268,21 +266,5 @@ const styles = StyleSheet.create({
     textAlign: 'right',
     writingDirection: 'rtl',
     letterSpacing: 0.2,
-  },
-  lessonLink: {
-    flexDirection: 'row-reverse',
-    alignItems: 'center',
-    gap: 6,
-    alignSelf: 'flex-end',
-    paddingVertical: 8,
-    paddingHorizontal: 4,
-  },
-  lessonLinkText: {
-    fontSize: 13,
-    fontWeight: '700',
-    writingDirection: 'rtl',
-    textAlign: 'right',
-    textDecorationLine: 'underline',
-    textDecorationStyle: 'solid',
   },
 });
