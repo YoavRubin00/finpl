@@ -18,6 +18,7 @@ import type { AnimationObject } from "lottie-react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import { LottieIcon } from "../../components/ui/LottieIcon";
+import { GoldCoinIcon } from "../../components/ui/GoldCoinIcon";
 import { ConfettiExplosion } from "../../components/ui/ConfettiExplosion";
 import { FlyingRewards } from "../../components/ui/FlyingRewards";
 import { STITCH } from "../../constants/theme";
@@ -36,6 +37,12 @@ import { captureEvent } from "../../lib/posthog";
 const LOTTIE_CHEST = require("../../../assets/lottie/3D Treasure Box.json") as unknown as AnimationObject;
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const LOTTIE_CROWN = require("../../../assets/lottie/Crown.json") as unknown as AnimationObject;
+// PRO chest art, bespoke PNG (Yam, 2026-06-03). Replaces the generic
+// "3D Treasure Box" Lottie for the PRO card so the visual tells the
+// value story: open chest, coins + bills inside, gold trim, built-in
+// PRO tag.
+// eslint-disable-next-line @typescript-eslint/no-var-requires
+const PRO_CHEST_PNG = require("../../../assets/chests/pro-chest.png");
 
 /** Finn-opens-the-chest celebration video, plays after flying rewards complete */
 const CHEST_VIDEO_URL =
@@ -562,7 +569,7 @@ export function DailyQuestsSheet({ visible, onClose, onOpenNewsChallenge, onOpen
                   </Animated.View>
                 </View>
                 <View style={chestCardStyles.rewardsRow}>
-                  <Text style={chestCardStyles.rewardIcon} allowFontScaling={false}>🪙</Text>
+                  <GoldCoinIcon size={18} />
                   <Text style={chestCardStyles.rewardValue} allowFontScaling={false}>{preview.coins}</Text>
                   <Text style={chestCardStyles.rewardLabel} allowFontScaling={false}>מטבעות</Text>
                 </View>
@@ -584,6 +591,11 @@ export function DailyQuestsSheet({ visible, onClose, onOpenNewsChallenge, onOpen
                 <View style={chestCardStyles.crownCorner}>
                   <LottieIcon source={LOTTIE_CROWN as unknown as number} size={28} autoPlay={!reduceMotion} loop active={!reduceMotion} />
                 </View>
+                {/* The orange "PRO" pill is intentionally still rendered
+                    above the title because the PNG's built-in tag sits in
+                    a different corner and is small; the pill at the top
+                    keeps the card's eyebrow consistent with the regular
+                    card's "רגיל" tag. */}
                 <View style={[chestCardStyles.tag, chestCardStyles.tagPro]}>
                   <Text style={[chestCardStyles.tagText, chestCardStyles.tagTextPro]} allowFontScaling={false}>PRO</Text>
                 </View>
@@ -593,11 +605,16 @@ export function DailyQuestsSheet({ visible, onClose, onOpenNewsChallenge, onOpen
                     <Animated.View pointerEvents="none" style={[styles.chestGlowHalo, { backgroundColor: "#d97706" }, chestGlowStyle]} />
                   )}
                   <Animated.View style={isPro && allDone && !proRewardClaimed ? chestPulseStyle : undefined}>
-                    <LottieIcon source={LOTTIE_CHEST as unknown as number} size={120} autoPlay={false} active={proChestOpen} loop={false} />
+                    <ExpoImage
+                      source={PRO_CHEST_PNG}
+                      style={{ width: 140, height: 140 }}
+                      contentFit="contain"
+                      accessible={false}
+                    />
                   </Animated.View>
                 </View>
                 <View style={chestCardStyles.rewardsRow}>
-                  <Text style={chestCardStyles.rewardIcon} allowFontScaling={false}>🪙</Text>
+                  <GoldCoinIcon size={18} />
                   <Text style={chestCardStyles.rewardValue} allowFontScaling={false}>{previewPro.coins}</Text>
                   <Text style={chestCardStyles.rewardLabel} allowFontScaling={false}>מטבעות</Text>
                   <Text style={chestCardStyles.rewardPlus} allowFontScaling={false}>+</Text>
