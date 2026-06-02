@@ -1000,7 +1000,6 @@ const chestCardStyles = StyleSheet.create({
     alignItems: "stretch",
   },
   card: {
-    flex: 1,
     borderRadius: 18,
     paddingTop: 14,
     paddingBottom: 12,
@@ -1013,10 +1012,15 @@ const chestCardStyles = StyleSheet.create({
     overflow: "hidden",
   },
   cardRegular: {
+    flex: 1,
     backgroundColor: STITCH.surfaceLow,
     borderColor: STITCH.surfaceHighest,
   },
   cardPro: {
+    // PRO card is wider (flex 1.35 vs regular flex 1) so the eye
+    // immediately reads PRO as "the bigger deal". Matches the reference
+    // Yam sent where the PRO card is visibly larger.
+    flex: 1.35,
     backgroundColor: "#fffbeb",
     borderColor: "#f59e0b",
     borderWidth: 2,
