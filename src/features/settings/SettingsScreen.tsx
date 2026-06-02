@@ -19,6 +19,8 @@ import Animated, { FadeInDown, FadeInUp } from "react-native-reanimated";
 
 import { tapHaptic } from "../../utils/haptics";
 import { useAuthStore } from "../auth/useAuthStore";
+import { useAppleAuth } from "../auth/useAppleAuth";
+import { useGoogleAuthStore } from "../auth/useGoogleAuthStore";
 import { signOut as lifecycleSignOut } from "../../lib/auth/lifecycle";
 import { useNotificationStore } from "../notifications/useNotificationStore";
 import { useAudioStore } from "../../stores/useAudioStore";
@@ -122,6 +124,10 @@ export function SettingsScreen() {
   const profile = useAuthStore((s) => s.profile);
   const updateProfile = useAuthStore((s) => s.updateProfile);
   const deleteAccount = useAuthStore((s) => s.deleteAccount);
+
+  // Connect-account (link a second login provider to the current uuid)
+  const { promptAppleSignIn, isAvailable: appleLinkAvailable } = useAppleAuth();
+  const promptGoogleSignIn = useGoogleAuthStore((s) => s.promptGoogleSignIn);
 
   // Notification store
   const permissionGranted = useNotificationStore((s) => s.permissionGranted);
@@ -629,6 +635,28 @@ export function SettingsScreen() {
                   onPress={handleContactSupport}
                 />
                 <Divider />
+                {appleLinkAvailable && (
+                  <>
+                    <SettingsRow
+                      icon={<Text style={{ fontSize: 20 }}>🍎</Text>}
+                      label="חבר חשבון Apple"
+                      subtitle="התחברות נוספת לאותו חשבון"
+                      onPress={() => { void promptAppleSignIn(); }}
+                    />
+                    <Divider />
+                  </>
+                )}
+                {promptGoogleSignIn && (
+                  <>
+                    <SettingsRow
+                      icon={<Text style={{ fontSize: 20 }}>🔵</Text>}
+                      label="חבר חשבון Google"
+                      subtitle="התחברות נוספת לאותו חשבון"
+                      onPress={() => { void promptGoogleSignIn(); }}
+                    />
+                    <Divider />
+                  </>
+                )}
                 <SettingsRow
                   icon={
                     <LottieView

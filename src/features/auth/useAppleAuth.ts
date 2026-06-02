@@ -5,6 +5,8 @@ import { useAuthStore } from "./useAuthStore";
 import { getApiBase } from "../../db/apiBase";
 import { captureEvent } from "../../lib/posthog";
 import { signInWithProfile } from "../../lib/auth/lifecycle";
+import { tokenStore } from "../../lib/auth/secureStore";
+import { linkProvider } from "../../lib/api/auth";
 
 /**
  * Apple Sign-In hook, required by App Store Guideline 4.8 when other
@@ -64,6 +66,19 @@ export function useAppleAuth() {
       // credential.email is sent separately so the server can persist it
       // (and migrate any legacy row keyed on it).
       const appleUserId = credential.user;
+      // If already signed in, this is a "connect account" action, not a login:
+      // attach the Apple subject to the current uuid and stop (do NOT re-run the
+      // sign-in path, which would mint a new session / re-prefetch).
+      const alreadySignedIn = !!(await tokenStore.get());
+      if (alreadySignedIn) {
+        try {
+          await linkProvider({ provider: 'apple', appleUserId });
+          useAuthStore.getState().setAuthError(null);
+        } catch {
+          useAuthStore.getState().setAuthError('קישור החשבון נכשל. נסו שוב.');
+        }
+        return;
+      }
       const emailFromApple = credential.email ?? null;
       const result = await verifyWithServer(appleUserId, emailFromApple, displayName);
       if (!result) {

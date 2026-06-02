@@ -106,9 +106,19 @@ export const FeedWhatsAppNudgeCard = React.memo(function FeedWhatsAppNudgeCard({
             </View>
           )}
         </Pressable>
-        <Text style={styles.skipHint} allowFontScaling={false}>
-          לחצו במקום אחר כדי להמשיך
-        </Text>
+        {/* Explicit blue "המשך" — the previous "tap anywhere to continue"
+            hint was easy to miss (user feedback 2026-06-02). Same deep-blue
+            palette as the rest of the app's primary CTAs. */}
+        {onContinue && (
+          <Pressable
+            onPress={handleBackgroundTap}
+            accessibilityRole="button"
+            accessibilityLabel="המשך לשלב הבא"
+            style={({ pressed }) => [styles.continueBtn, pressed && styles.continueBtnPressed]}
+          >
+            <Text style={styles.continueText} allowFontScaling={false}>המשך לשלב הבא ←</Text>
+          </Pressable>
+        )}
       </Animated.View>
     </Pressable>
   );
@@ -179,11 +189,31 @@ const styles = StyleSheet.create({
     textShadowRadius: 2,
   },
   // ctaEmoji removed — replaced by inline WhatsAppLogo SVG (brand mark).
-  skipHint: {
-    fontSize: 12,
-    fontWeight: "700",
-    color: "rgba(15,23,42,0.55)",
-    writingDirection: "rtl",
-    textAlign: "center",
+  // Explicit blue continue button — matches the deep-blue palette used by
+  // TimelineOrderCard "אני אסתדר", CrowdQuestionCard Continue, and
+  // DiamondHandsCard Continue. Replaces the easy-to-miss skip hint text.
+  continueBtn: {
+    marginTop: 10,
+    paddingVertical: 14,
+    paddingHorizontal: 24,
+    borderRadius: 14,
+    backgroundColor: "#1d4ed8",
+    borderBottomWidth: 4,
+    borderBottomColor: "#1e3a8a",
+    alignItems: "center",
+    justifyContent: "center",
+    minWidth: 200,
+    shadowColor: "#1e3a8a",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.35,
+    shadowRadius: 10,
+    elevation: 6,
+  },
+  continueBtnPressed: { opacity: 0.9, transform: [{ scale: 0.98 }] },
+  continueText: {
+    fontSize: 16,
+    fontWeight: "900",
+    color: "#ffffff",
+    writingDirection: "rtl" as const,
   },
 });

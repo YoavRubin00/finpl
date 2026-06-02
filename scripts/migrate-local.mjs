@@ -17,7 +17,7 @@ try {
   fail('No .env.local found.');
 }
 
-const url = (raw.match(/^DATABASE_URL=(.*)$/m)?.[1] ?? '').trim();
+const url = (raw.match(/^DATABASE_URL=(.*)$/m)?.[1] ?? '').trim().replace(/^["']|["']$/g, '');
 if (!url || url.includes('REPLACE_ME')) {
   fail('DATABASE_URL in .env.local is not set to a real branch.');
 }
@@ -28,6 +28,8 @@ console.log('\n[db:migrate:local] Applying migrations to: ' + host);
 const migrationFiles = [
   'src/db/migrations/0001_add_preferences.sql',
   'src/db/migrations/0002_add_user_stats.sql',
+  'src/db/migrations/0003_identity_additive.sql',
+  'src/db/migrations/0004_identity_rekey_constraints.sql',
 ];
 
 try {
@@ -35,9 +37,12 @@ try {
   const sql = neon(url);
   for (const file of migrationFiles) {
     const ddl = fs.readFileSync(file, 'utf8');
+    // Strip line comments BEFORE splitting on ';' — a comment may legitimately
+    // contain a ';' (prose) that would otherwise break a statement in two.
     const statements = ddl
+      .replace(/--.*$/gm, '')
       .split(';')
-      .map((s) => s.replace(/--.*$/gm, '').trim())
+      .map((s) => s.trim())
       .filter((s) => s.length > 0);
     for (const stmt of statements) {
       await sql.query(stmt);

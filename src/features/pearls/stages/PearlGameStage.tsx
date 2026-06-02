@@ -149,7 +149,10 @@ function renderGameCard(
       );
     }
     case 'diamond-hands':
-      return <PearlExternalGameWrap onContinue={onContinue}><DiamondHandsCard isActive={isActive} /></PearlExternalGameWrap>;
+      // Continue button is rendered INSIDE DiamondHandsCard (via onContinue)
+      // so it stays visible on Android — same fix as crowd-question
+      // (user report 2026-06-02: "לא רואים את כפתור המשך").
+      return <DiamondHandsCard isActive={isActive} onContinue={onContinue} />;
     case 'crowd-question':
       // Continue button is rendered INSIDE CrowdQuestionCard's ScrollView
       // (passed via onContinue) so it always lands below the two explanation

@@ -20,7 +20,7 @@ export default withAuth(async (req: VercelRequest, res: VercelResponse, ctx) => 
         proExpiresAt: userProfiles.proExpiresAt,
       })
       .from(userProfiles)
-      .where(eq(userProfiles.authId, ctx.authId))
+      .where(eq(userProfiles.id, ctx.userId))
       .limit(1);
     return res.status(200).json({ ok: true, subscription: rows[0] ?? null });
   }
@@ -37,7 +37,7 @@ export default withAuth(async (req: VercelRequest, res: VercelResponse, ctx) => 
         proExpiresAt: body.proExpiresAt ?? null,
         updatedAt: new Date().toISOString(),
       })
-      .where(eq(userProfiles.authId, ctx.authId));
+      .where(eq(userProfiles.id, ctx.userId));
 
     const rows = await db
       .select({
@@ -45,7 +45,7 @@ export default withAuth(async (req: VercelRequest, res: VercelResponse, ctx) => 
         proExpiresAt: userProfiles.proExpiresAt,
       })
       .from(userProfiles)
-      .where(eq(userProfiles.authId, ctx.authId))
+      .where(eq(userProfiles.id, ctx.userId))
       .limit(1);
     return res.status(200).json({ ok: true, subscription: rows[0] ?? null });
   }

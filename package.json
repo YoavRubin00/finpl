@@ -10,6 +10,8 @@
     "dev:local": "node scripts/dev-local.mjs && concurrently -k -n API,WEB -c blue,green \"node scripts/vercel-dev-local.mjs\" \"expo start --web\"",
     "dev:phone": "node scripts/dev-local.mjs && node scripts/dev-phone.mjs",
     "db:migrate:local": "node scripts/migrate-local.mjs",
+    "db:studio": "drizzle-kit studio",
+    "db:diagram": "node scripts/db-diagram.mjs",
     "typecheck": "tsc --noEmit",
     "share": "eas update --branch preview --message 'update'",
     "export:content": "tsx scripts/export-content.ts",

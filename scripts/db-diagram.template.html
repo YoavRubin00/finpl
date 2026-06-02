@@ -1,0 +1,394 @@
+<!doctype html>
+<!--
+  FinPlay DB diagram — self-contained renderer, served by scripts/db-diagram.mjs.
+  The page fetches the live schema from /schema (same-origin localhost) on load and on
+  the ⟳ Refresh button, so it always reflects the real, current Neon schema.
+  Libraries load from esm.sh (needs internet); a single React instance is guaranteed by
+  the import map below. No build step.
+-->
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>FinPlay · DB Diagram</title>
+    <link rel="stylesheet" href="https://esm.sh/@xyflow/react@12.3.5/dist/style.css" />
+    <style>
+      :root { color-scheme: dark; }
+      * { box-sizing: border-box; }
+      html, body, #root { height: 100%; margin: 0; }
+      body { background: #0b0f1a; color: #e5e7eb; font: 13px/1.4 ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif; }
+      .toolbar {
+        position: fixed; top: 12px; left: 12px; z-index: 10; display: flex; gap: 8px; align-items: center;
+        background: rgba(17,24,39,.85); border: 1px solid #1f2937; border-radius: 10px; padding: 8px 12px;
+        backdrop-filter: blur(6px);
+      }
+      .toolbar b { color: #a78bfa; }
+      .toolbar .meta { color: #9ca3af; }
+      .toolbar select { background: #111827; color: #e5e7eb; border: 1px solid #374151; border-radius: 6px; padding: 3px 6px; }
+      .err { padding: 40px; max-width: 720px; margin: 40px auto; background: #1f2937; border-radius: 12px; }
+
+      .overlay { position: fixed; inset: 0; z-index: 20; display: flex; align-items: center; justify-content: center; pointer-events: none; }
+      .overlay .card { background: rgba(17,24,39,.95); border: 1px solid #334155; border-radius: 12px; padding: 20px 28px; pointer-events: auto; max-width: 560px; }
+      .overlay .card.bad { border-color: #7f1d1d; }
+      .spin { display: inline-block; animation: sp 0.9s linear infinite; }
+      @keyframes sp { to { transform: rotate(360deg); } }
+
+      .bottombar {
+        position: fixed; bottom: 16px; left: 50%; transform: translateX(-50%); z-index: 10;
+        display: flex; gap: 6px; align-items: center; padding: 6px;
+        background: rgba(17,24,39,.9); border: 1px solid #1f2937; border-radius: 10px; backdrop-filter: blur(6px);
+      }
+      .bottombar .sep { width: 1px; height: 22px; background: #374151; margin: 0 2px; }
+      .bottombar button {
+        min-width: 34px; height: 30px; padding: 0 10px; font-size: 14px; cursor: pointer;
+        background: #111827; color: #e5e7eb; border: 1px solid #374151; border-radius: 7px;
+      }
+      .bottombar button:hover { background: #1f2937; }
+      .bottombar button.primary { background: linear-gradient(90deg, #6d28d9, #2563eb); border-color: transparent; font-weight: 600; font-size: 12px; }
+      .bottombar button:disabled { opacity: .6; cursor: default; }
+
+      /* table node */
+      .tbl { width: 240px; background: #111827; border: 1px solid #334155; border-radius: 10px; overflow: hidden; box-shadow: 0 6px 20px rgba(0,0,0,.35); }
+      .tbl.dim { opacity: .2; }
+      .tbl.hl { border-color: #a78bfa; box-shadow: 0 0 0 2px rgba(167,139,250,.5), 0 6px 20px rgba(0,0,0,.45); }
+      .tbl-h { display: flex; justify-content: space-between; align-items: center; padding: 8px 10px; font-weight: 700; cursor: grab;
+               background: linear-gradient(90deg, #6d28d9, #2563eb); color: #fff; }
+      .tbl-h .schema { font-size: 10px; font-weight: 600; opacity: .8; }
+      .tbl-row { display: flex; justify-content: space-between; gap: 10px; height: 24px; align-items: center; padding: 0 10px; border-top: 1px solid #1f2937; }
+      .tbl-row .nm { display: flex; gap: 6px; align-items: center; }
+      .tbl-row .ty { color: #6b7280; font-size: 11px; white-space: nowrap; }
+      .tbl-row.pk .nm { color: #fbbf24; font-weight: 600; }
+      .tbl-row.fk .nm { color: #34d399; }
+      .badge { font-size: 9px; }
+
+      /* per-column connection handles (only rendered on FK / referenced columns) */
+      .react-flow__handle { width: 8px; height: 8px; border: 1.5px solid #0b0f1a; border-radius: 50%; }
+      .react-flow__handle-left { background: #a78bfa; }   /* referenced (target) */
+      .react-flow__handle-right { background: #34d399; }  /* foreign key (source) */
+    </style>
+  </head>
+  <body>
+    <div id="root"></div>
+
+    <script type="importmap">
+      {
+        "imports": {
+          "react": "https://esm.sh/react@18.3.1",
+          "react/jsx-runtime": "https://esm.sh/react@18.3.1/jsx-runtime",
+          "react-dom": "https://esm.sh/react-dom@18.3.1",
+          "react-dom/client": "https://esm.sh/react-dom@18.3.1/client"
+        }
+      }
+    </script>
+
+    <script type="module">
+      import React, { useMemo, useState, useEffect, useCallback } from 'react';
+      import { createRoot } from 'react-dom/client';
+      import {
+        ReactFlow, Background, MiniMap, Handle, Position, MarkerType,
+        ReactFlowProvider, useNodesState, useEdgesState, useReactFlow,
+      } from 'https://esm.sh/@xyflow/react@12.3.5?external=react,react-dom';
+      import dagre from 'https://esm.sh/@dagrejs/dagre@1.1.4';
+      import ELK from 'https://esm.sh/elkjs@0.9.3/lib/elk.bundled.js';
+      import htm from 'https://esm.sh/htm@3.1.1';
+
+      const html = htm.bind(React.createElement);
+      const elk = new ELK();
+      const NODE_W = 240;
+      const ROW_H = 24;
+      const HEAD_H = 36;
+
+      function buildModel(schema) {
+        const id = (s, t) => `${s}.${t}`;
+        const tables = (schema.tables || []).filter((t) => t.type === 'BASE TABLE');
+
+        const colsByTable = new Map();
+        for (const c of schema.columns || []) {
+          const k = id(c.schema, c.table);
+          if (!colsByTable.has(k)) colsByTable.set(k, []);
+          colsByTable.get(k).push(c);
+        }
+        for (const arr of colsByTable.values()) arr.sort((a, b) => a.ordinal_position - b.ordinal_position);
+
+        const pkSet = new Set();
+        for (const p of schema.pk_info || []) pkSet.add(`${id(p.schema, p.table)}.${(p.column || '').trim()}`);
+
+        const fkColSet = new Set();
+        const edges = [];
+        (schema.fk_info || []).forEach((fk, i) => {
+          const source = id(fk.schema, fk.table);
+          const target = id(fk.reference_schema || 'public', fk.reference_table);
+          fkColSet.add(`${source}.${fk.column}`);
+          edges.push({ source, target, column: fk.column, refColumn: fk.reference_column, key: fk.foreign_key_name || `fk_${i}` });
+        });
+
+        const schemas = ['(all)', ...Array.from(new Set(tables.map((t) => t.schema))).sort()];
+        return { tables, colsByTable, pkSet, fkColSet, edges, schemas, id };
+      }
+
+      // Build positioned nodes + column-level edges for a given schema filter.
+      function computeGraph(model, filter) {
+        const idOf = model.id;
+        const visible = new Set();
+        for (const t of model.tables) {
+          if (filter === '(all)' || t.schema === filter) visible.add(idOf(t.schema, t.table));
+        }
+        const vedges = model.edges.filter((e) => visible.has(e.source) && visible.has(e.target));
+
+        const srcCols = new Map();
+        const tgtCols = new Map();
+        const add = (m, k, c) => { if (!m.has(k)) m.set(k, new Set()); m.get(k).add(c); };
+        for (const e of vedges) { add(srcCols, e.source, e.column); add(tgtCols, e.target, e.refColumn); }
+
+        const g = new dagre.graphlib.Graph();
+        g.setGraph({ rankdir: 'LR', nodesep: 50, ranksep: 130, marginx: 30, marginy: 30 });
+        g.setDefaultEdgeLabel(() => ({}));
+        const vis = model.tables.filter((t) => visible.has(idOf(t.schema, t.table)));
+        for (const t of vis) {
+          const k = idOf(t.schema, t.table);
+          const n = (model.colsByTable.get(k) || []).length;
+          g.setNode(k, { width: NODE_W, height: HEAD_H + n * ROW_H });
+        }
+        for (const e of vedges) g.setEdge(e.source, e.target);
+        dagre.layout(g);
+
+        const nodes = vis.map((t) => {
+          const k = idOf(t.schema, t.table);
+          const n = g.node(k);
+          const sc = srcCols.get(k) || new Set();
+          const tc = tgtCols.get(k) || new Set();
+          const columns = (model.colsByTable.get(k) || []).map((c) => ({
+            name: c.name,
+            type: c.type + (c.is_array ? '[]' : ''),
+            nullable: c.nullable,
+            pk: model.pkSet.has(`${k}.${c.name}`),
+            fk: model.fkColSet.has(`${k}.${c.name}`),
+            src: sc.has(c.name),
+            tgt: tc.has(c.name),
+          }));
+          return {
+            id: k,
+            type: 'table',
+            position: { x: n.x - n.width / 2, y: n.y - n.height / 2 },
+            data: { table: t.table, schema: t.schema, columns, dim: false, hl: false },
+          };
+        });
+
+        const edges = vedges.map((e) => ({
+          id: `${e.key}:${e.source}.${e.column}`,
+          source: e.source,
+          target: e.target,
+          sourceHandle: `s-${e.column}`,
+          targetHandle: `t-${e.refColumn}`,
+          type: 'smoothstep',
+          markerEnd: { type: MarkerType.ArrowClosed, color: '#a78bfa', width: 16, height: 16 },
+          style: { stroke: '#a78bfa', strokeWidth: 1.5 },
+        }));
+
+        return { nodes, edges };
+      }
+
+      function TableNode({ data }) {
+        const handles = [];
+        data.columns.forEach((c, i) => {
+          const top = `${HEAD_H + i * ROW_H + ROW_H / 2}px`;
+          if (c.tgt) handles.push(html`<${Handle} key=${'t-' + c.name} type="target" position=${Position.Left} id=${'t-' + c.name} style=${{ top }} />`);
+          if (c.src) handles.push(html`<${Handle} key=${'s-' + c.name} type="source" position=${Position.Right} id=${'s-' + c.name} style=${{ top }} />`);
+        });
+        return html`
+          <div class=${`tbl ${data.dim ? 'dim' : ''} ${data.hl ? 'hl' : ''}`}>
+            <div class="tbl-h">
+              <span>${data.table}</span>
+              ${data.schema !== 'public' ? html`<span class="schema">${data.schema}</span>` : null}
+            </div>
+            ${data.columns.map(
+              (c) => html`
+                <div key=${c.name} class=${`tbl-row ${c.pk ? 'pk' : ''} ${c.fk ? 'fk' : ''}`}>
+                  <span class="nm">
+                    ${c.pk ? html`<span class="badge">🔑</span>` : null}
+                    ${!c.pk && c.fk ? html`<span class="badge">🔗</span>` : null}
+                    ${c.name}
+                  </span>
+                  <span class="ty">${c.type}${c.nullable ? '' : ' ·'}</span>
+                </div>
+              `
+            )}
+            ${handles}
+          </div>
+        `;
+      }
+
+      const nodeTypes = { table: TableNode };
+      const DEFAULT_FILTER = '(all)';
+
+      function App() {
+        const [model, setModel] = useState(null);
+        const [schemas, setSchemas] = useState(['(all)']);
+        const [schemaFilter, setSchemaFilter] = useState(DEFAULT_FILTER);
+        const [nodes, setNodes, onNodesChange] = useNodesState([]);
+        const [edges, setEdges, onEdgesChange] = useEdgesState([]);
+        const [selected, setSelected] = useState(null);
+        const [laying, setLaying] = useState(false);
+        const [loading, setLoading] = useState(true);
+        const [refreshing, setRefreshing] = useState(false);
+        const [error, setError] = useState(null);
+        const { zoomIn, zoomOut, fitView } = useReactFlow();
+
+        // Fetch the live schema from the local server and (re)build the graph.
+        const load = useCallback(async (isRefresh) => {
+          isRefresh ? setRefreshing(true) : setLoading(true);
+          setError(null);
+          try {
+            const r = await fetch('/schema', { cache: 'no-store' });
+            const schema = await r.json();
+            if (!r.ok || (schema && schema.error)) throw new Error(schema.error || `HTTP ${r.status}`);
+            const m = buildModel(schema);
+            setModel(m);
+            setSchemas(m.schemas);
+            setSelected(null);
+            const filter = m.schemas.includes(schemaFilter) ? schemaFilter : DEFAULT_FILTER;
+            setSchemaFilter(filter);
+            const g = computeGraph(m, filter);
+            setNodes(g.nodes);
+            setEdges(g.edges);
+            setTimeout(() => fitView({ padding: 0.2, duration: 300 }), 60);
+          } catch (e) {
+            setError(String((e && e.message) || e));
+          } finally {
+            isRefresh ? setRefreshing(false) : setLoading(false);
+          }
+        }, [schemaFilter, setNodes, setEdges, fitView]);
+
+        useEffect(() => { load(false); }, []); // initial load
+
+        const onFilter = useCallback((val) => {
+          setSchemaFilter(val);
+          setSelected(null);
+          if (model) {
+            const g = computeGraph(model, val);
+            setNodes(g.nodes);
+            setEdges(g.edges);
+            setTimeout(() => fitView({ padding: 0.2, duration: 300 }), 60);
+          }
+        }, [model, setNodes, setEdges, fitView]);
+
+        // Highlight/dim on selection — updates data & styles WITHOUT resetting drag positions.
+        useEffect(() => {
+          if (!model) return;
+          let neigh = null;
+          if (selected) {
+            neigh = new Set([selected]);
+            for (const e of model.edges) {
+              if (e.source === selected) neigh.add(e.target);
+              if (e.target === selected) neigh.add(e.source);
+            }
+          }
+          setNodes((ns) => ns.map((n) => ({
+            ...n,
+            data: { ...n.data, dim: neigh ? !neigh.has(n.id) : false, hl: selected === n.id },
+          })));
+          setEdges((es) => es.map((e) => {
+            const active = !selected || e.source === selected || e.target === selected;
+            return {
+              ...e,
+              animated: !!selected && active,
+              style: { ...e.style, stroke: active ? '#a78bfa' : '#374151', strokeWidth: active ? 1.5 : 1, opacity: active ? 1 : 0.2 },
+            };
+          }));
+        }, [selected, model, setNodes, setEdges]);
+
+        const onNodeClick = useCallback((_, n) => setSelected((cur) => (cur === n.id ? null : n.id)), []);
+        const onPaneClick = useCallback(() => setSelected(null), []);
+
+        // ELK auto-layout.
+        const autoLayout = useCallback(async () => {
+          setLaying(true);
+          try {
+            const graph = {
+              id: 'root',
+              layoutOptions: {
+                'elk.algorithm': 'layered',
+                'elk.direction': 'RIGHT',
+                'elk.spacing.nodeNode': '45',
+                'elk.layered.spacing.nodeNodeBetweenLayers': '110',
+                'elk.edgeRouting': 'ORTHOGONAL',
+              },
+              children: nodes.map((n) => ({ id: n.id, width: NODE_W, height: HEAD_H + n.data.columns.length * ROW_H })),
+              edges: edges.map((e, i) => ({ id: `e${i}`, sources: [e.source], targets: [e.target] })),
+            };
+            const res = await elk.layout(graph);
+            const pos = {};
+            (res.children || []).forEach((c) => { pos[c.id] = { x: c.x, y: c.y }; });
+            setNodes((ns) => ns.map((n) => (pos[n.id] ? { ...n, position: pos[n.id] } : n)));
+            setTimeout(() => fitView({ padding: 0.2, duration: 400 }), 60);
+          } catch (err) {
+            console.error('ELK layout failed', err);
+          } finally {
+            setLaying(false);
+          }
+        }, [nodes, edges, setNodes, fitView]);
+
+        const overlay =
+          loading
+            ? html`<div class="overlay"><div class="card"><span class="spin">⟳</span> Loading live schema from Neon…</div></div>`
+            : error
+              ? html`<div class="overlay"><div class="card bad"><b>Couldn't load schema</b><pre>${error}</pre><p class="meta">Check the terminal running <code>npm run db:diagram</code>, then press ⟳ Refresh.</p></div></div>`
+              : null;
+
+        return html`
+          <${React.Fragment}>
+            <div class="toolbar">
+              <b>FinPlay DB</b>
+              <span class="meta">${nodes.length} tables · ${edges.length} FKs</span>
+              <label class="meta">schema
+                <select value=${schemaFilter} onChange=${(e) => onFilter(e.target.value)}>
+                  ${schemas.map((s) => html`<option key=${s} value=${s}>${s}</option>`)}
+                </select>
+              </label>
+              <span class="meta">${selected ? '· click background to clear' : '· drag tables · click one to focus'}</span>
+            </div>
+            <${ReactFlow}
+              nodes=${nodes}
+              edges=${edges}
+              onNodesChange=${onNodesChange}
+              onEdgesChange=${onEdgesChange}
+              nodeTypes=${nodeTypes}
+              onNodeClick=${onNodeClick}
+              onPaneClick=${onPaneClick}
+              nodesDraggable
+              fitView
+              minZoom=${0.1}
+              proOptions=${{ hideAttribution: true }}
+            >
+              <${Background} color="#1f2937" gap=${20} />
+              <${MiniMap} pannable zoomable nodeColor="#6d28d9" maskColor="rgba(11,15,26,.7)" />
+            <//>
+            ${overlay}
+            <div class="bottombar">
+              <button onClick=${() => zoomOut({ duration: 200 })} title="Zoom out">−</button>
+              <button onClick=${() => zoomIn({ duration: 200 })} title="Zoom in">+</button>
+              <button onClick=${() => fitView({ padding: 0.2, duration: 400 })} title="Fit to view">⤢ Fit</button>
+              <span class="sep"></span>
+              <button class="primary" disabled=${laying} onClick=${autoLayout} title="Auto layout (ELK)">
+                ${laying ? 'Laying out…' : '✨ Auto layout'}
+              </button>
+              <button disabled=${refreshing} onClick=${() => load(true)} title="Refresh from live Neon">
+                ${refreshing ? 'Refreshing…' : '⟳ Refresh'}
+              </button>
+            </div>
+          <//>
+        `;
+      }
+
+      const rootEl = document.getElementById('root');
+      try {
+        createRoot(rootEl).render(html`<${ReactFlowProvider}><${App} /><//>`);
+      } catch (err) {
+        rootEl.innerHTML =
+          '<div class="err"><h2>Could not start the diagram</h2><pre>' +
+          String(err && err.message ? err.message : err) +
+          '</pre><p>If libraries failed to load, check your internet connection (this page loads React Flow from a CDN).</p></div>';
+      }
+    </script>
+  </body>
+</html>

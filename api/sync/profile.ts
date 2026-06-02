@@ -21,7 +21,7 @@ export default withAuth(async (req: VercelRequest, res: VercelResponse, ctx) => 
     const rows = await db
       .select()
       .from(userProfiles)
-      .where(eq(userProfiles.authId, ctx.authId))
+      .where(eq(userProfiles.id, ctx.userId))
       .limit(1);
     return res.status(200).json({ ok: true, profile: rows[0] ?? null });
   }
@@ -39,12 +39,12 @@ export default withAuth(async (req: VercelRequest, res: VercelResponse, ctx) => 
     await db
       .update(userProfiles)
       .set(setFields)
-      .where(eq(userProfiles.authId, ctx.authId));
+      .where(eq(userProfiles.id, ctx.userId));
 
     const rows = await db
       .select()
       .from(userProfiles)
-      .where(eq(userProfiles.authId, ctx.authId))
+      .where(eq(userProfiles.id, ctx.userId))
       .limit(1);
     return res.status(200).json({ ok: true, profile: rows[0] ?? null });
   }

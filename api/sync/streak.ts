@@ -26,7 +26,7 @@ export default withAuth(async (req: VercelRequest, res: VercelResponse, ctx) => 
         lastActiveDate: userProfiles.lastActiveDate,
       })
       .from(userProfiles)
-      .where(eq(userProfiles.authId, ctx.authId))
+      .where(eq(userProfiles.id, ctx.userId))
       .limit(1);
     return res.status(200).json({ ok: true, streak: rows[0] ?? null });
   }
@@ -44,7 +44,7 @@ export default withAuth(async (req: VercelRequest, res: VercelResponse, ctx) => 
         lastActiveDate: userProfiles.lastActiveDate,
       })
       .from(userProfiles)
-      .where(eq(userProfiles.authId, ctx.authId))
+      .where(eq(userProfiles.id, ctx.userId))
       .limit(1);
 
     const cur = rows[0];
@@ -73,7 +73,7 @@ export default withAuth(async (req: VercelRequest, res: VercelResponse, ctx) => 
         lastActiveDate: body.dateIl,
         updatedAt: new Date().toISOString(),
       })
-      .where(eq(userProfiles.authId, ctx.authId));
+      .where(eq(userProfiles.id, ctx.userId));
 
     return res.status(200).json({
       ok: true,

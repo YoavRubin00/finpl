@@ -13,3 +13,10 @@ export function verifyEmail(email: string, displayName: string | null) {
     { ok: true; profile: ProfileRow; token: string }
   >('/api/auth/verify', { provider: 'email', email, displayName });
 }
+
+/** Attach a second login provider to the currently-signed-in account. */
+export function linkProvider(
+  params: { provider: 'apple'; appleUserId: string } | { provider: 'google'; token: string },
+) {
+  return api.post<typeof params, { ok: true; profile: ProfileRow }>('/api/auth/link', params);
+}
