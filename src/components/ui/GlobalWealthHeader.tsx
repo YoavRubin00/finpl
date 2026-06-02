@@ -234,14 +234,17 @@ export function GlobalWealthHeader({ compact = false }: GlobalWealthHeaderProps)
       ringRadius,
       ringCircum: 2 * Math.PI * ringRadius,
       ringInner: ringSize - ringStroke * 2 - 4,
-      avatarSize: Math.max(26, Math.round(36 * scale)),
-      avatarBorderR: Math.max(13, Math.round(18 * scale)),
-      nameFont: Math.max(10, Math.round(12 * scale)),
-      nameMaxW: Math.max(44, Math.round(70 * scale)),
-      profileGap: Math.max(4, Math.round(8 * scale)),
-      profilePadR: Math.max(3, Math.round(6 * scale)),
-      profilePadL: Math.max(5, Math.round(12 * scale)),
-      profilePadV: Math.max(3, Math.round(5 * scale)),
+      // Avatar shrunk + name bigger (2026-06-02): user wants the profile
+      // banner to be a stronger "tap-me" anchor — name dominant, avatar
+      // small to the side, with prominent confetti on top.
+      avatarSize: Math.max(22, Math.round(28 * scale)),
+      avatarBorderR: Math.max(11, Math.round(14 * scale)),
+      nameFont: Math.max(13, Math.round(16 * scale)),
+      nameMaxW: Math.max(70, Math.round(100 * scale)),
+      profileGap: Math.max(6, Math.round(10 * scale)),
+      profilePadR: Math.max(6, Math.round(10 * scale)),
+      profilePadL: Math.max(8, Math.round(14 * scale)),
+      profilePadV: Math.max(6, Math.round(8 * scale)),
       profileRadius: Math.round(24 * scale),
       shortcutSize: Math.max(28, Math.round(36 * scale)),
       shortcutRadius: Math.max(14, Math.round(18 * scale)),
@@ -555,6 +558,11 @@ export function GlobalWealthHeader({ compact = false }: GlobalWealthHeaderProps)
             <Animated.View style={[
                 s.profileBannerCompact,
                 {
+                  // row-reverse + JSX order [Text, Avatar] → in RTL screens
+                  // the name reads first (right-most) and the avatar sits
+                  // to its left, as requested (user report 2026-06-02:
+                  // "תוסיף את האווטר של המשתמש מימין לשם בקטן").
+                  flexDirection: 'row-reverse',
                   paddingRight: d.profilePadR,
                   paddingLeft: d.profilePadL,
                   paddingVertical: d.profilePadV,
@@ -564,12 +572,31 @@ export function GlobalWealthHeader({ compact = false }: GlobalWealthHeaderProps)
                 profileIsGlowTarget ? walkthroughProfileStyle : profileGlowStyle,
                 isPro && { elevation: 3 },
               ]}>
+              {/* Prominent confetti — wraps the WHOLE banner (not just the
+                  avatar) and bigger / faster than before to draw the eye
+                  and invite a tap. */}
+              <View style={{ position: "absolute", top: -18, left: -18, right: -18, bottom: -18, pointerEvents: "none" }}>
+                <LottieIcon
+                  source={require("../../../assets/lottie/Confetti Effects Lottie Animation.json") as number}
+                  size={Math.max(80, Math.round(120 * d.scale))}
+                  autoPlay
+                  loop
+                  speed={0.5}
+                  active={appActive}
+                />
+              </View>
+
+              <Text
+                style={[s.profileNameCompact, { fontSize: d.nameFont, maxWidth: d.nameMaxW }, isPro && { color: "#d97706" }]}
+                numberOfLines={1}
+                ellipsizeMode="tail"
+              >
+                {(displayName ?? "שחקן").split(" ")[0]}
+              </Text>
+
               {/* Avatar bubble — rendered ONLY when the user actually picked
-                  an avatar. Without one, AvatarImage falls back to the 🎮
-                  gamepad emoji which read as "generic player placeholder"
-                  rather than "FinPlay identity" (user report 2026-06-01:
-                  "תמחק את אימוג'י שלט המשחק"). Showing just the first name
-                  is the cleaner state when no avatar is chosen. */}
+                  an avatar (otherwise the gamepad fallback read as a
+                  generic placeholder, user report 2026-06-01). */}
               {avatarId ? (
                 <View style={[
                   s.profileAvatarCompact,
@@ -582,26 +609,8 @@ export function GlobalWealthHeader({ compact = false }: GlobalWealthHeaderProps)
                       <Crown size={8} color="#facc15" fill="#f59e0b" />
                     </View>
                   )}
-                  {/* Floating confetti particles */}
-                  <View style={{ position: "absolute", top: -22, left: -22, right: -22, bottom: -22, pointerEvents: "none" }}>
-                    <LottieIcon
-                      source={require("../../../assets/lottie/Confetti Effects Lottie Animation.json") as number}
-                      size={Math.max(48, Math.round(72 * d.scale))}
-                      autoPlay
-                      loop
-                      speed={0.3}
-                      active={appActive}
-                    />
-                  </View>
                 </View>
               ) : null}
-              <Text
-                style={[s.profileNameCompact, { fontSize: d.nameFont, maxWidth: d.nameMaxW }, isPro && { color: "#d97706" }]}
-                numberOfLines={1}
-                ellipsizeMode="tail"
-              >
-                {(displayName ?? "שחקן").split(" ")[0]}
-              </Text>
             </Animated.View>
           </Pressable>
         )}
