@@ -51,10 +51,17 @@ export function toSharkVoiceError(err: unknown): string {
     return 'נראה שהחיבור לא יציב כרגע. בדוק את האינטרנט ונסה שוב.';
   }
 
-  // Generic 5xx — server-side problem (includes api-key / Anthropic outage).
+  // 503 — service intentionally off (e.g. ANTHROPIC_API_KEY missing in
+  // Vercel env). Distinct from transient 500/502 so the user understands
+  // "the team knows, don't keep retrying" vs "try again in a minute".
+  if (lower.includes('(503)') || lower.includes('not configured')) {
+    return 'הניתוח המתקדם לא זמין כרגע. אנחנו מטפלים בזה — חזרה תוך זמן קצר.';
+  }
+
+  // 500 / 502 — transient outage or bad request to the upstream model.
   // We deliberately don't say "API key" — it confuses end users and the
   // detail belongs in logs, not in the shark's bubble.
-  if (lower.includes('(500)') || lower.includes('(502)') || lower.includes('(503)')) {
+  if (lower.includes('(500)') || lower.includes('(502)')) {
     return 'התנתקתי לרגע מהאוקיינוס. נסה שוב בעוד דקה — אני אהיה כאן.';
   }
 
