@@ -531,69 +531,64 @@ export function DailyQuestsSheet({ visible, onClose, onOpenNewsChallenge, onOpen
           <Animated.View entering={FadeIn.delay(400).duration(400)} style={{ paddingHorizontal: 20, paddingBottom: 8 }}>
             <View style={{ flexDirection: "row-reverse", gap: 10, alignItems: "flex-end", justifyContent: "center" }}>
 
-              {/* ── PRO chest (visual right in RTL, larger) ── */}
-              <View style={{ flex: 13, alignItems: "center" }}>
+              {/* ── PRO chest (visual right in RTL, ~2x bigger when locked) ── */}
+              {/* New treatment (2026-06-03 take 3): a gray "premium card"
+                  with rounded corners wraps the PRO chest so it reads as
+                  a SHOP item, not a reward. Big, dimmed, with a strike-
+                  through line saying "אין גישה. ניתן לרכוש". The chest
+                  itself is dimmed so the user sees it but knows it is
+                  not theirs (Yam, 2026-06-03 LAN: chips approach was
+                  noisy; she remembered an earlier design where the PRO
+                  chest sat in a gray card with strikethrough copy). */}
+              <View style={{ flex: !isPro ? 17 : 13, alignItems: "center" }}>
                 <LottieIcon source={LOTTIE_CROWN as unknown as number} size={36} autoPlay={!reduceMotion} loop active={!reduceMotion} />
-                <View style={{ position: "relative" }}>
-                  {allDone && isPro && !proRewardClaimed && (
-                    <Animated.View pointerEvents="none" style={[styles.chestGlowHalo, { backgroundColor: "#d97706" }, chestGlowStyle]} />
+                <View style={!isPro ? proLockStyles.shopCard : undefined}>
+                  <View style={{ position: "relative" }}>
+                    {allDone && isPro && !proRewardClaimed && (
+                      <Animated.View pointerEvents="none" style={[styles.chestGlowHalo, { backgroundColor: "#d97706" }, chestGlowStyle]} />
+                    )}
+                    <Animated.View style={isPro && allDone && !proRewardClaimed ? chestPulseStyle : undefined}>
+                      <Pressable
+                        onPress={handleClaimPro}
+                        disabled={proRewardClaimed || showProClaimAnim}
+                        accessibilityRole="button"
+                        accessibilityLabel={!isPro ? "תיבת פרו נעולה. אין גישה. לחץ לרכוש PRO" : proRewardClaimed ? "תיבת פרו נפתחה" : allDone ? "לחצו לפתיחת תיבת הפרו" : "תיבת הפרו נעולה"}
+                        style={({ pressed }) => [
+                          isPro ? styles.chestWrap : proLockStyles.chestWrapShop,
+                          allDone && isPro && !proRewardClaimed && styles.chestWrapReady,
+                          isPro && { borderColor: "#d97706", opacity: proRewardClaimed ? 0.65 : 1 },
+                          pressed && allDone && isPro && !proRewardClaimed && { transform: [{ scale: 0.96 }] },
+                        ]}
+                      >
+                        <View style={!isPro ? proLockStyles.lottieLocked : undefined}>
+                          <LottieIcon
+                            source={LOTTIE_CHEST as unknown as number}
+                            size={!isPro ? 160 : 130}
+                            autoPlay={false}
+                            active={proChestOpen}
+                            loop={false}
+                          />
+                        </View>
+                        <View style={{ position: "absolute", top: -10, right: -6, backgroundColor: "#d97706", borderRadius: 10, paddingHorizontal: 10, paddingVertical: 4, zIndex: 10, borderWidth: 2, borderColor: "#fff", shadowColor: "#000", shadowOpacity: 0.25, shadowRadius: 4, shadowOffset: { width: 0, height: 2 }, elevation: 4, transform: [{ rotate: "8deg" }] }} pointerEvents="none">
+                          <Text style={{ color: "#fff", fontSize: 11, fontWeight: "900", letterSpacing: 1.2 }}>PRO</Text>
+                        </View>
+                      </Pressable>
+                    </Animated.View>
+                  </View>
+                  {!isPro && (
+                    <View style={proLockStyles.shopCardFooter}>
+                      <Text style={proLockStyles.shopCardStrike} allowFontScaling={false}>
+                        אין גישה
+                      </Text>
+                      <View style={proLockStyles.shopCardCtaRow}>
+                        <Lock size={12} color="#475569" strokeWidth={2.6} />
+                        <Text style={proLockStyles.shopCardCta} allowFontScaling={false}>
+                          ניתן לרכוש
+                        </Text>
+                      </View>
+                    </View>
                   )}
-                  <Animated.View style={isPro && allDone && !proRewardClaimed ? chestPulseStyle : undefined}>
-                    <Pressable
-                      onPress={handleClaimPro}
-                      disabled={proRewardClaimed || showProClaimAnim}
-                      accessibilityRole="button"
-                      accessibilityLabel={!isPro ? `תיבת פרו נעולה. בפנים: ${previewPro.xp} XP, ${previewPro.coins} מטבעות, יהלום בונוס. לחץ לשדרג` : proRewardClaimed ? "תיבת פרו נפתחה" : allDone ? "לחצו לפתיחת תיבת הפרו" : "תיבת הפרו נעולה"}
-                      style={({ pressed }) => [
-                        styles.chestWrap,
-                        allDone && isPro && !proRewardClaimed && styles.chestWrapReady,
-                        { borderColor: "#d97706", opacity: proRewardClaimed ? 0.65 : 1 },
-                        pressed && allDone && isPro && !proRewardClaimed && { transform: [{ scale: 0.96 }] },
-                      ]}
-                    >
-                      {/* Chest art. Greyscale + dimmed when locked so the user
-                          sees "the chest is here, you just can't open it yet"
-                          rather than "the chest is hidden". The reward chips
-                          below stay readable through the dim so the value is
-                          legible without opening. */}
-                      <View style={!isPro ? proLockStyles.lottieLocked : undefined}>
-                        <LottieIcon source={LOTTIE_CHEST as unknown as number} size={130} autoPlay={false} active={proChestOpen} loop={false} />
-                      </View>
-                      <View style={{ position: "absolute", top: -10, right: -6, backgroundColor: "#d97706", borderRadius: 10, paddingHorizontal: 10, paddingVertical: 4, zIndex: 10, borderWidth: 2, borderColor: "#fff", shadowColor: "#000", shadowOpacity: 0.25, shadowRadius: 4, shadowOffset: { width: 0, height: 2 }, elevation: 4, transform: [{ rotate: "8deg" }] }} pointerEvents="none">
-                        <Text style={{ color: "#fff", fontSize: 11, fontWeight: "900", letterSpacing: 1.2 }}>PRO</Text>
-                      </View>
-                    </Pressable>
-                  </Animated.View>
                 </View>
-                {/* Reward-peek chips. Always visible so the user sees what's
-                    inside the chest before claim/upgrade. When locked (free
-                    user), chips render at 55% opacity so the numbers stay
-                    readable but the row reads as "preview only". */}
-                <View style={[proLockStyles.peekRow, !isPro && proLockStyles.peekRowLocked]}>
-                  <View style={proLockStyles.peekChip}>
-                    <Text style={proLockStyles.peekIcon} allowFontScaling={false}>⚡</Text>
-                    <Text style={proLockStyles.peekValue} allowFontScaling={false}>{previewPro.xp}</Text>
-                  </View>
-                  <View style={proLockStyles.peekChip}>
-                    <Text style={proLockStyles.peekIcon} allowFontScaling={false}>🪙</Text>
-                    <Text style={proLockStyles.peekValue} allowFontScaling={false}>{previewPro.coins}</Text>
-                  </View>
-                  <View style={[proLockStyles.peekChip, proLockStyles.peekChipGem]}>
-                    <Text style={proLockStyles.peekIcon} allowFontScaling={false}>💎</Text>
-                    <Text style={proLockStyles.peekValue} allowFontScaling={false}>{previewPro.gems}</Text>
-                  </View>
-                </View>
-                {/* Locked badge: small gold pill UNDER the chips for free
-                    users, "🔒 שדרגי לפתוח". Communicates the gate without
-                    covering the chest art or hiding the reward preview. */}
-                {!isPro && (
-                  <View style={proLockStyles.lockPill}>
-                    <Lock size={11} color="#735c00" strokeWidth={2.8} />
-                    <Text style={proLockStyles.lockPillText} allowFontScaling={false}>
-                      שדרגי לפתוח
-                    </Text>
-                  </View>
-                )}
               </View>
 
               {/* ── Regular chest (right, smaller) ── */}
@@ -622,19 +617,6 @@ export function DailyQuestsSheet({ visible, onClose, onOpenNewsChallenge, onOpen
                       </View>
                     </Pressable>
                   </Animated.View>
-                </View>
-                {/* Reward-peek chips for the regular chest. Same row pattern
-                    as the PRO chest above so the eye scans the two as a pair
-                    and the PRO row reads as "PRO has more". */}
-                <View style={proLockStyles.peekRow}>
-                  <View style={proLockStyles.peekChip}>
-                    <Text style={proLockStyles.peekIcon} allowFontScaling={false}>⚡</Text>
-                    <Text style={proLockStyles.peekValue} allowFontScaling={false}>{preview.xp}</Text>
-                  </View>
-                  <View style={proLockStyles.peekChip}>
-                    <Text style={proLockStyles.peekIcon} allowFontScaling={false}>🪙</Text>
-                    <Text style={proLockStyles.peekValue} allowFontScaling={false}>{preview.coins}</Text>
-                  </View>
                 </View>
               </View>
 
@@ -990,71 +972,61 @@ const styles = StyleSheet.create({
   },
 });
 
-// Chest reward-peek + lock styles. Tells the story without covering the
-// chest art: chips ALWAYS visible (so the user sees what is inside), the
-// chest art dims to grayscale when locked, a small gold "🔒 שדרגי לפתוח"
-// pill sits below to communicate the gate. Replaces the earlier full-
-// chest LinearGradient overlay that hid the chest art entirely and gave
-// the locked state no sense of "what is waiting" (Yam, 2026-06-03).
+// PRO chest "shop card" treatment for non-PRO users. The chest sits inside
+// a gray rounded card that reads as a SHOP ITEM (not a reward you have),
+// with strikethrough "אין גישה" and a "ניתן לרכוש" cue. The chest art is
+// dimmed so the user sees what is on offer but knows it is not theirs.
+// Yam, 2026-06-03: previous chip approach read as "win state" because
+// reward chips communicate "you got these". Pre-open state needs shop
+// language, not reward language.
 const proLockStyles = StyleSheet.create({
-  lottieLocked: {
-    // Lottie does not honor RN tintColor; dimming via opacity is the
-    // available lever for "this is locked but here" without swapping the
-    // asset for a separate locked sprite.
-    opacity: 0.45,
-  },
-  peekRow: {
-    flexDirection: "row-reverse",
-    gap: 6,
-    marginTop: 8,
-    alignItems: "center",
-    justifyContent: "center",
-    flexWrap: "wrap",
-  },
-  peekRowLocked: {
-    opacity: 0.65,
-  },
-  peekChip: {
-    flexDirection: "row-reverse",
-    alignItems: "center",
-    gap: 3,
+  shopCard: {
+    backgroundColor: "rgba(148,163,184,0.18)",
+    borderWidth: 1.5,
+    borderColor: "rgba(100,116,139,0.35)",
+    borderRadius: 20,
+    paddingTop: 8,
+    paddingBottom: 12,
     paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 999,
-    backgroundColor: "rgba(233,196,0,0.16)",
-    borderWidth: 1,
-    borderColor: "rgba(217,119,6,0.30)",
+    alignItems: "center",
   },
-  peekChipGem: {
-    backgroundColor: "#fde68a",
-    borderColor: "#d97706",
+  chestWrapShop: {
+    // The PRO Pressable inside the shop card. No gold border, no glow.
+    // The card itself provides the container; the chest is just the
+    // illustration of what is locked away.
+    borderRadius: 12,
+    padding: 4,
   },
-  peekIcon: {
+  lottieLocked: {
+    // Lottie does not honor RN tintColor; opacity is the available lever
+    // for "this is locked but visible" without swapping to a different
+    // asset.
+    opacity: 0.55,
+  },
+  shopCardFooter: {
+    alignItems: "center",
+    marginTop: 6,
+    gap: 4,
+  },
+  shopCardStrike: {
     fontSize: 12,
-    lineHeight: 14,
-  },
-  peekValue: {
-    fontSize: 12,
-    fontWeight: "900",
-    color: "#735c00",
+    fontWeight: "800",
+    color: "#475569",
+    writingDirection: "rtl",
+    textAlign: "center",
+    textDecorationLine: "line-through",
+    textDecorationStyle: "solid",
     letterSpacing: 0.2,
   },
-  lockPill: {
+  shopCardCtaRow: {
     flexDirection: "row-reverse",
     alignItems: "center",
-    gap: 4,
-    marginTop: 6,
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 999,
-    backgroundColor: "#fef3c7",
-    borderWidth: 1.5,
-    borderColor: "#d97706",
+    gap: 5,
   },
-  lockPillText: {
-    fontSize: 10,
+  shopCardCta: {
+    fontSize: 12,
     fontWeight: "900",
-    color: "#735c00",
+    color: "#1e293b",
     writingDirection: "rtl",
     letterSpacing: 0.3,
   },
