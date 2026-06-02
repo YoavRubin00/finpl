@@ -17,12 +17,15 @@ import Animated, {
 import type { AnimationObject } from "lottie-react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
+import { LinearGradient } from "expo-linear-gradient";
+import { Lock } from "lucide-react-native";
 import { LottieIcon } from "../../components/ui/LottieIcon";
 import { ConfettiExplosion } from "../../components/ui/ConfettiExplosion";
 import { FlyingRewards } from "../../components/ui/FlyingRewards";
 import { STITCH } from "../../constants/theme";
 import { useDailyQuestsStore, previewQuestReward, previewProQuestReward } from "./useDailyQuestsStore";
 import { useIsPro } from "../subscription/useSubscription";
+import { useUpgradeModalStore } from "../../stores/useUpgradeModalStore";
 import { type DailyQuest, QUEST_TEMPLATES } from "./daily-quest-types";
 import { useStreak } from "../economy/useStreak";
 import { FINN_HELLO, FINN_STANDARD, FINN_DANCING } from "../retention-loops/finnMascotConfig";
@@ -215,6 +218,7 @@ export function DailyQuestsSheet({ visible, onClose, onOpenNewsChallenge, onOpen
   const { data: streakData } = useStreak();
   const streak = streakData?.currentStreak ?? 0;
   const isPro = useIsPro();
+  const showUpgrade = useUpgradeModalStore((s) => s.show);
 
   // Ensure quests are populated whenever the sheet becomes visible.
   // Safe on every open: refreshQuests is date-idempotent (no-op if already fresh),
@@ -421,9 +425,15 @@ export function DailyQuestsSheet({ visible, onClose, onOpenNewsChallenge, onOpen
 
   const handleClaimPro = () => {
     if (!isPro) {
+      // Free user tap on the locked PRO chest. Surface the in-app upgrade
+      // modal instead of routing out to /subscription (the old flow pulled
+      // the user out of the Daily Quests session, which read as a hard
+      // bounce). The 'breaking-news' feature reuses the canonical "תיבת
+      // הבונוס של ה-Pro" copy that DailyNewsChallenge also uses for its
+      // gated chest, so the messaging stays consistent across surfaces.
       tapHaptic();
       onClose();
-      router.push('/subscription' as never);
+      showUpgrade('breaking-news');
       return;
     }
     if (proRewardClaimed || !allDone || showProClaimAnim) return;
@@ -512,10 +522,17 @@ export function DailyQuestsSheet({ visible, onClose, onOpenNewsChallenge, onOpen
           </View>
 
           {/* ── Pass Royale dual-chest row ── */}
-          <Animated.View entering={FadeIn.delay(400).duration(400)} style={{ paddingHorizontal: 12, paddingBottom: 8 }}>
-            <View style={{ flexDirection: "row", gap: 10, alignItems: "flex-end" }}>
+          {/* paddingHorizontal bumped 12 to 20 (2026-06-02): with the PRO
+              chest's "PRO" badge sitting at right:-6 and the regular chest's
+              "רגיל" badge mirroring it, the 12px padding wasn't enough to
+              keep the badges inside the screen edge on narrow phones, so
+              the right-side chest read as "cropped" in LAN QA. row-reverse
+              also added so the visual order matches RTL reading: PRO on
+              the right (visual start), regular on the left. */}
+          <Animated.View entering={FadeIn.delay(400).duration(400)} style={{ paddingHorizontal: 20, paddingBottom: 8 }}>
+            <View style={{ flexDirection: "row-reverse", gap: 10, alignItems: "flex-end", justifyContent: "center" }}>
 
-              {/* ── PRO chest (left, larger) ── */}
+              {/* ── PRO chest (visual right in RTL, larger) ── */}
               <View style={{ flex: 13, alignItems: "center" }}>
                 <LottieIcon source={LOTTIE_CROWN as unknown as number} size={36} autoPlay={!reduceMotion} loop active={!reduceMotion} />
                 <View style={{ position: "relative" }}>
@@ -540,10 +557,30 @@ export function DailyQuestsSheet({ visible, onClose, onOpenNewsChallenge, onOpen
                         <Text style={{ color: "#fff", fontSize: 11, fontWeight: "900", letterSpacing: 1.2 }}>PRO</Text>
                       </View>
                       {!isPro && (
-                        <View style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, justifyContent: "center", alignItems: "center", backgroundColor: "rgba(0,0,0,0.5)", borderRadius: 16 }} accessible={false}>
-                          <Text style={{ fontSize: 28 }}>🔒</Text>
-                          {allDone && <Text style={{ color: "#fbbf24", fontSize: 10, fontWeight: "800", marginTop: 4 }}>שדרגו לפרו</Text>}
-                        </View>
+                        // Locked PRO chest overlay. Replaces the flat black
+                        // scrim + lock emoji combo, which read as "blocked,
+                        // generic" (Yam, 2026-06-02: "אין תחושת PRO, אין
+                        // exclusivity"). The new treatment is a deep-amber
+                        // gradient with a circular gold lock chip + "תוכן
+                        // בלעדי" eyebrow + "שדרגו לפרו" CTA copy, reads as
+                        // aspirational rather than punitive.
+                        <LinearGradient
+                          colors={['rgba(120,53,15,0.78)', 'rgba(180,83,9,0.85)']}
+                          start={{ x: 0, y: 0 }}
+                          end={{ x: 1, y: 1 }}
+                          style={proLockStyles.overlay}
+                          pointerEvents="none"
+                        >
+                          <View style={proLockStyles.lockChip}>
+                            <Lock size={18} color="#78350f" strokeWidth={2.6} fill="#fde68a" />
+                          </View>
+                          <Text style={proLockStyles.eyebrow} allowFontScaling={false}>תוכן בלעדי</Text>
+                          {allDone && (
+                            <Text style={proLockStyles.cta} allowFontScaling={false}>
+                              שדרגו לפרו ←
+                            </Text>
+                          )}
+                        </LinearGradient>
                       )}
                     </Pressable>
                   </Animated.View>
@@ -928,5 +965,53 @@ const styles = StyleSheet.create({
     textAlign: "center",
     letterSpacing: 0.3,
     includeFontPadding: false,
+  },
+});
+
+// Locked PRO chest overlay styles, separate StyleSheet so the gradient
+// gold-lock treatment can evolve without churning the main sheet styles.
+const proLockStyles = StyleSheet.create({
+  overlay: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    justifyContent: "center",
+    alignItems: "center",
+    borderRadius: 16,
+    gap: 6,
+  },
+  lockChip: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: "#fde68a",
+    borderWidth: 2,
+    borderColor: "#b45309",
+    alignItems: "center",
+    justifyContent: "center",
+    shadowColor: "#78350f",
+    shadowOpacity: 0.4,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 4,
+  },
+  eyebrow: {
+    fontSize: 10,
+    fontWeight: "900",
+    color: "#fde68a",
+    letterSpacing: 1.4,
+    writingDirection: "rtl",
+    textAlign: "center",
+    textTransform: "uppercase",
+  },
+  cta: {
+    fontSize: 11,
+    fontWeight: "900",
+    color: "#ffffff",
+    writingDirection: "rtl",
+    textAlign: "center",
+    letterSpacing: 0.3,
   },
 });
