@@ -546,22 +546,15 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   scrollContent: {
-    // No flexGrow: the content needs to be able to overflow and trigger
-    // scrolling when the result panel + accordion bodies are revealed
-    // (LAN QA 2026-06-02: "אין גלילה כשפותחים התשובה הנכונה"). With
-    // flexGrow:1 the scroll content was forced to exactly match the
-    // screen height, so even with scrollEnabled=true there was nothing
-    // to scroll.
-    // paddingBottom bumped 140 to 220 (2026-06-02 v2): Yam still could
-    // not see the "המשך לדף הבא" CTA after answering on LAN. With
-    // scrollEnabled always-on + nestedScrollEnabled on the ScrollView
-    // (see render above), the extra 220px guarantees the CTA can be
-    // scrolled clear of the home indicator AND any residual bottom
-    // chrome on the Modal layer. Off-fold padding does not affect the
-    // chips-only state, which still reads as a single news screen.
+    // paddingBottom kept tight (2026-06-02 v3): once the horizontal
+    // FlatList was removed (state-driven rendering in
+    // DailyNewsChallengeSheet), the 220px fallback that compensated for
+    // the gesture hijack stopped being needed and read as over-scroll
+    // dead space below the CTA (Yam, LAN QA 2026-06-02). 32px is enough
+    // to clear the home indicator on iOS without leaving an empty gap.
     paddingHorizontal: 20,
     paddingTop: 16,
-    paddingBottom: 220,
+    paddingBottom: 32,
     gap: 14,
   },
   eyebrowRow: {

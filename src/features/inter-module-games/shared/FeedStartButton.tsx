@@ -34,7 +34,12 @@ export function FeedStartButton({ label, onPress, accessibilityLabel, disabled =
         >
           {label}
         </Text>
-        <Play size={20} color="#ffffff" fill="#ffffff" />
+        {/* Play icon flipped on X so the triangle points LEFT in RTL.
+            Hebrew readers parse "forward" as leftward (the direction the
+            eye moves while reading), so a right-pointing Play reads as
+            "back" to a native speaker. Same convention used across the
+            app's RTL CTAs (e.g. ChallengePage's ChevronLeft). */}
+        <Play size={20} color="#ffffff" fill="#ffffff" style={{ transform: [{ scaleX: -1 }] }} />
       </LiquidButton>
     </View>
   );

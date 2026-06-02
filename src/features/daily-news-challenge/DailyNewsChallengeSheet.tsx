@@ -7,11 +7,7 @@ import {
   Platform,
   Modal,
   BackHandler,
-  FlatList,
   Dimensions,
-  type NativeSyntheticEvent,
-  type NativeScrollEvent,
-  type ViewToken,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
@@ -137,7 +133,6 @@ export function DailyNewsChallengeSheet({ visible, onClose, entrySource = 'unkno
   const [flyingCoins, setFlyingCoins] = useState(0);
   const [flyingGems, setFlyingGems] = useState(0);
 
-  const listRef = useRef<FlatList<PageDescriptor> | null>(null);
   const pageWidth = SCREEN_W;
   // Guards against duplicate `news_challenge_completed` events. The dependency
   // array on the completion effect re-runs on every sheet mount where both
@@ -343,18 +338,17 @@ export function DailyNewsChallengeSheet({ visible, onClose, entrySource = 'unkno
     onClose();
   }, [onClose]);
 
-  const goToPage = useCallback(
-    (idx: number) => {
-      if (!listRef.current) return;
-      const clamped = Math.max(0, Math.min(PAGE_COUNT - 1, idx));
-      // scrollToIndex works correctly with `inverted` (handles the flipped
-      // offset for us); using scrollToOffset directly would land on the
-      // wrong page when the list is inverted.
-      listRef.current.scrollToIndex({ index: clamped, animated: true });
-      setActivePage(clamped);
-    },
-    [],
-  );
+  // Direct state-driven advance. No FlatList, no horizontal pager. The
+  // earlier `inverted` horizontal FlatList hijacked vertical gestures, so the
+  // ScrollView inside ChallengePage couldn't scroll on results-heavy decks
+  // (Yam, LAN QA 2026-06-02). Mirrors the same fix landed in PearlSheet (see
+  // its goToPage, lines 343-354). Users keep the "המשך לדף הבא" CTA to
+  // advance; they lose the horizontal swipe-back affordance, which had near
+  // zero discoverability anyway.
+  const goToPage = useCallback((idx: number) => {
+    const clamped = Math.max(0, Math.min(PAGE_COUNT - 1, idx));
+    setActivePage(clamped);
+  }, []);
 
   const handleContinue = useCallback(
     (currentIdx: number) => {
@@ -395,29 +389,13 @@ export function DailyNewsChallengeSheet({ visible, onClose, entrySource = 'unkno
     [goToPage, bothAnswered, answered, regularChestOpened, proChestOpened, isPro, handleClaimRegular, handleClaimPro, onClose, challenge?.dateKey],
   );
 
-  const onMomentumScrollEnd = useCallback(
-    (e: NativeSyntheticEvent<NativeScrollEvent>) => {
-      const idx = Math.round(e.nativeEvent.contentOffset.x / pageWidth);
-      setActivePage(idx);
-    },
-    [pageWidth],
-  );
-
-  const onViewableItemsChanged = useRef(({ viewableItems }: { viewableItems: ViewToken[] }) => {
-    if (viewableItems.length > 0 && viewableItems[0].index != null) {
-      setActivePage(viewableItems[0].index);
-    }
-  }).current;
-
-  const viewabilityConfig = useRef({ itemVisiblePercentThreshold: 70 }).current;
-
   const itemResults = useMemo<[boolean | undefined, boolean | undefined]>(
     () => [answered[0]?.wasCorrect, answered[1]?.wasCorrect],
     [answered],
   );
 
   const renderPage = useCallback(
-    ({ item: page }: { item: PageDescriptor }) => {
+    (page: PageDescriptor) => {
       // Recap card — final page, added June 2026 (Duo-pattern polish). Shows
       // "what you learned today" + rewards preview + streak + tomorrow cue.
       // CTA tap routes through handleContinue (which claims + closes).
@@ -583,29 +561,18 @@ export function DailyNewsChallengeSheet({ visible, onClose, entrySource = 'unkno
             </Pressable>
           </View>
         ) : challenge ? (
-          <Animated.View entering={FadeIn.duration(220)} style={styles.pagerWrap}>
-            <FlatList
-              ref={listRef}
-              data={PAGE_DESCRIPTORS}
-              keyExtractor={(d) => `${d.kind}-${d.index}`}
-              horizontal
-              pagingEnabled
-              showsHorizontalScrollIndicator={false}
-              bounces={false}
-              renderItem={renderPage}
-              onMomentumScrollEnd={onMomentumScrollEnd}
-              onViewableItemsChanged={onViewableItemsChanged}
-              viewabilityConfig={viewabilityConfig}
-              getItemLayout={(_, index) => ({
-                length: pageWidth,
-                offset: pageWidth * index,
-                index,
-              })}
-              // RTL swipe: `inverted` flips horizontal scroll so page 0 sits
-              // on the right and swiping right→left advances forward — matches
-              // the natural Hebrew reading direction (user feedback 2026-05-30).
-              inverted
-            />
+          // State-driven single-page render (2026-06-02). The previous
+          // horizontal `inverted` FlatList hijacked vertical gestures so the
+          // ScrollView inside ChallengePage couldn't scroll once the result
+          // panel + accordions revealed long copy (Yam, LAN QA 2026-06-02).
+          // Same pattern PearlSheet adopted after the same bug. Each page
+          // gets a fresh fade-in via `key={activePage}`.
+          <Animated.View
+            key={activePage}
+            entering={FadeIn.duration(220)}
+            style={styles.pagerWrap}
+          >
+            {PAGE_DESCRIPTORS[activePage] ? renderPage(PAGE_DESCRIPTORS[activePage]) : null}
           </Animated.View>
         ) : null}
       </SafeAreaView>
