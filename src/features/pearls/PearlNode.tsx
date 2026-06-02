@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { View, Pressable, StyleSheet } from 'react-native';
+import { View, Text, Pressable, StyleSheet } from 'react-native';
 import { Image as ExpoImage } from 'expo-image';
 import { Check } from 'lucide-react-native';
 import Animated, {
@@ -219,6 +219,19 @@ export function PearlNode({
           <Check size={12} color="#ffffff" strokeWidth={3.5} />
         </View>
       ) : null}
+
+      {/* "בונוס" badge. Persistent visual cue that the pearl is optional
+          bonus content, not a required module on the critical path. Renders
+          on unlocked + completed states only. Locked pearls stay
+          undecorated so the reveal keeps its surprise. Top-right RTL corner
+          (= visually top-right above the pearl) so it pairs with the green
+          completed check on the bottom-right without overlap. Per user
+          decision 2026-06-02 + exp-002 mockup approval. */}
+      {state !== 'locked' ? (
+        <View style={styles.bonusBadge} pointerEvents="none">
+          <Text style={styles.bonusBadgeText} allowFontScaling={false}>בונוס</Text>
+        </View>
+      ) : null}
     </View>
   );
 
@@ -252,3 +265,40 @@ export function PearlNode({
     </Pressable>
   );
 }
+
+const styles = StyleSheet.create({
+  bonusBadge: {
+    position: 'absolute',
+    // RTL: visual top-right. left:0 in absolute layout reads as left edge,
+    // which in RTL pearl context is the FAR side. We want the badge top-
+    // right (visually) so users read it BEFORE the pearl icon. In RTL
+    // languages "right" stays "right" geometrically; using right:0 anchors
+    // it to the right edge of the inner wrapper, which is the eye's first
+    // landing point when scanning a RTL layout.
+    top: -2,
+    right: -4,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 10,
+    backgroundColor: '#E8B547',
+    borderWidth: 1.5,
+    borderColor: '#FFFFFF',
+    minWidth: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
+    // Light shadow so the pill pops off the ocean-blue learn map backdrop
+    // without competing with the pearl's own gloss.
+    shadowColor: '#000',
+    shadowOpacity: 0.18,
+    shadowOffset: { width: 0, height: 1 },
+    shadowRadius: 2,
+    elevation: 2,
+  },
+  bonusBadgeText: {
+    color: '#5C3E00',
+    fontSize: 9,
+    fontWeight: '900',
+    letterSpacing: 0.3,
+    writingDirection: 'rtl' as const,
+  },
+});

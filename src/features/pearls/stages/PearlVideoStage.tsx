@@ -260,12 +260,12 @@ const styles = StyleSheet.create({
   },
   continueText: { color: '#fff', fontSize: 17, fontWeight: '900' },
   skipBtn: {
-    // Top-right floating pill, sits above the video. Right-edge placement
-    // matches the PearlSheet close-X above it — same touch zone, immediate
-    // to find for RTL Hebrew users.
+    // Bottom-left floating pill (Netflix Skip Intro pattern). Sits above
+    // the video at the bottom edge, giving the content the first 5 seconds
+    // of attention before offering an exit.
     position: 'absolute',
-    top: 12,
-    right: 12,
+    bottom: 12,
+    left: 12,
     backgroundColor: 'rgba(15,23,42,0.55)',
     paddingHorizontal: 14,
     paddingVertical: 7,

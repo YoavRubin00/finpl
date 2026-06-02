@@ -835,10 +835,15 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
 
-  // Quests, list container only; individual quest styles live inline in QuestButton
+  // Quests, list container only; individual quest styles live inline in QuestButton.
+  // paddingHorizontal: 8 reserves space for the glow halo on each card, which extends
+  // 6px outside the card's bounding box (see QuestButton glow style). Without this
+  // padding the ScrollView's implicit overflow clipping cuts off the halo on both
+  // edges, making the cards look unfinished (QA 2026-06-02).
   questList: {
     gap: 12,
     marginBottom: 18,
+    paddingHorizontal: 8,
   },
 
   // Reward

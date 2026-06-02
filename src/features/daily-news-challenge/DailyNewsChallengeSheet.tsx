@@ -13,11 +13,20 @@ import {
   type NativeScrollEvent,
   type ViewToken,
 } from 'react-native';
-import { useSafeAreaInsets, SafeAreaView } from 'react-native-safe-area-context';
-import Animated, { FadeIn } from 'react-native-reanimated';
-import { X } from 'lucide-react-native';
-
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import Animated, {
+  FadeIn,
+  cancelAnimation,
+  useAnimatedStyle,
+  useReducedMotion,
+  useSharedValue,
+  withRepeat,
+  withSequence,
+  withTiming,
+} from 'react-native-reanimated';
 import { STITCH } from '../../constants/theme';
+import { SheetCloseButton } from '../../components/ui/SheetCloseButton';
 import { tapHaptic } from '../../utils/haptics';
 import { useSoundEffect } from '../../hooks/useSoundEffect';
 import { useIsPro } from '../subscription/useSubscription';
@@ -89,7 +98,6 @@ const PAGE_DESCRIPTORS: PageDescriptor[] = [
  * tapping "המשך" inside a page also advances it.
  */
 export function DailyNewsChallengeSheet({ visible, onClose, entrySource = 'unknown' }: DailyNewsChallengeSheetProps): React.ReactElement | null {
-  const insets = useSafeAreaInsets();
   const challenge = useDailyNewsChallengeStore((s) => s.todayChallenge);
   const answered = useDailyNewsChallengeStore((s) => s.answered);
   const regularChestOpened = useDailyNewsChallengeStore((s) => s.regularChestOpened);
@@ -493,9 +501,27 @@ export function DailyNewsChallengeSheet({ visible, onClose, entrySource = 'unkno
 
   if (!visible) return null;
 
+  // Wrapped in a native <Modal> (2026-06-02) so the sheet renders ABOVE the
+  // bottom tab bar. Before this, the sheet was a position:absolute View
+  // inside DuoLearnScreen, which sits inside the tabs layout's flex:1
+  // content View, sibling to the AnimatedTabBar. That meant the tab bar
+  // overlapped the bottom of the sheet, hiding the "המשך לדף הבא" CTA
+  // after a user answered (LAN QA blocker 2026-06-02 from Yam).
+  // GestureHandlerRootView wrap mirrors PearlSheet / swipe-quest Modal:
+  // RN Modal mounts in its own native window so the app-level root view
+  // does not extend into it, and the FlatList page swipe + Pressables
+  // need it to receive gesture events reliably.
   return (
-    <View style={styles.container}>
-      <SafeAreaView style={styles.safeArea} edges={['top', 'left', 'right']}>
+    <Modal
+      visible={visible}
+      transparent={false}
+      animationType="slide"
+      statusBarTranslucent
+      presentationStyle="fullScreen"
+      onRequestClose={requestClose}
+    >
+      <GestureHandlerRootView style={styles.container}>
+      <SafeAreaView style={styles.safeArea} edges={['top', 'left', 'right', 'bottom']}>
         {/* Top bar — single "אקטואליה יומית" header strip replaces the
             previous GlobalWealthHeader + topBar stack (user report
             2026-06-01). Layout (revision 2): the title and the close X
@@ -505,18 +531,21 @@ export function DailyNewsChallengeSheet({ visible, onClose, entrySource = 'unkno
             Hebrew RTL users — same affordance as the lesson back-arrow. */}
         <View style={styles.topBar}>
           <View style={styles.titleRow}>
-            <Pressable
-              onPress={() => { tapHaptic(); playSound('btn_click_soft_1'); requestClose(); }}
-              style={({ pressed }) => [styles.closeBtn, pressed && { opacity: 0.7 }]}
-              accessibilityRole="button"
-              accessibilityLabel="סגור"
-              hitSlop={10}
-            >
-              <X size={22} color={STITCH.onSurface} strokeWidth={2.6} />
-            </Pressable>
+            {/* SheetCloseButton (2026-06-02), unified gold-ring X across all
+                sheets. Owns its own tap haptic; we still play the
+                sheet-specific sound cue here so the audio identity per
+                surface is preserved. */}
+            <SheetCloseButton
+              onPress={() => { playSound('btn_click_soft_1'); requestClose(); }}
+            />
             <Text style={styles.sheetTitle} allowFontScaling={false} numberOfLines={1}>
               אקטואליה יומית
             </Text>
+            {/* Live tag, pulsing red dot + "אקטואליה היום לייב" copy.
+                Sits to the LEFT of the title in RTL row-reverse flow,
+                mimicking a TV-news/radio live indicator (user request
+                2026-06-02). The pulse animation respects reduce-motion. */}
+            <LiveTag />
           </View>
           <View style={styles.progressRow}>
             <ProgressBar
@@ -620,12 +649,97 @@ export function DailyNewsChallengeSheet({ visible, onClose, entrySource = 'unkno
         </View>
       )}
 
-      {/* Bottom insets safe-area pad so the chest CTA isn't blocked by the
-          home indicator on devices with a dynamic island / notch. */}
-      <View style={{ height: insets.bottom }} pointerEvents="none" />
+      </GestureHandlerRootView>
+    </Modal>
+  );
+}
+
+// ─────────────────────────── LiveTag
+// Small "LIVE" indicator with a pulsing red dot + Hebrew copy. Sits inside
+// the top bar to anchor the sheet as a real-time news feed instead of a
+// static quiz (Yam, 2026-06-02). Uses reanimated's withRepeat for the dot
+// pulse; respects useReducedMotion so accessibility users get a static dot.
+function LiveTag(): React.ReactElement {
+  const reduceMotion = useReducedMotion();
+  const pulse = useSharedValue(1);
+
+  useEffect(() => {
+    if (reduceMotion) {
+      cancelAnimation(pulse);
+      pulse.value = 1;
+      return;
+    }
+    pulse.value = withRepeat(
+      withSequence(
+        withTiming(1.35, { duration: 700 }),
+        withTiming(1, { duration: 700 }),
+      ),
+      -1,
+      false,
+    );
+    return () => cancelAnimation(pulse);
+  }, [reduceMotion, pulse]);
+
+  const dotStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: pulse.value }],
+    opacity: 0.35 + 0.65 * (pulse.value - 1) / 0.35,
+  }));
+
+  return (
+    <View style={liveTag.wrap} accessible accessibilityLabel="לייב, אקטואליה היום">
+      <View style={liveTag.dotHost}>
+        <Animated.View style={[liveTag.dotPulse, dotStyle]} />
+        <View style={liveTag.dotCore} />
+      </View>
+      <Text style={liveTag.label} allowFontScaling={false} numberOfLines={1}>
+        LIVE
+      </Text>
     </View>
   );
 }
+
+const liveTag = StyleSheet.create({
+  wrap: {
+    flexDirection: 'row-reverse',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 9,
+    paddingVertical: 4,
+    borderRadius: 999,
+    backgroundColor: '#fef2f2',
+    borderWidth: 1,
+    borderColor: '#fecaca',
+  },
+  dotHost: {
+    width: 10,
+    height: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  dotCore: {
+    position: 'absolute',
+    width: 7,
+    height: 7,
+    borderRadius: 4,
+    backgroundColor: '#dc2626',
+  },
+  dotPulse: {
+    position: 'absolute',
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    backgroundColor: '#dc2626',
+  },
+  label: {
+    // "LIVE" reads as an English chrome label (TV-news convention). Larger
+    // and tighter than the Hebrew copy that lived here before, easier to
+    // spot at a glance in the topper.
+    fontSize: 13,
+    fontWeight: '900',
+    color: '#b91c1c',
+    letterSpacing: 1.2,
+  },
+});
 
 // ─────────────────────────── ExitConfirmModal
 
@@ -675,38 +789,45 @@ function ExitConfirmModal({
 
 const styles = StyleSheet.create({
   container: {
-    position: 'absolute',
-    top: 0, left: 0, right: 0, bottom: 0,
-    zIndex: 1000,
+    // Wrapped in native <Modal> (2026-06-02). The Modal handles full-screen
+    // mounting + sits above the tab bar in its own native window, so we
+    // only need flex:1 here. The old position:absolute + zIndex:1000 stack
+    // was the source of the bottom-tab-bar-overlap bug, sheet was an
+    // absolute child of the tabs screen, sibling to the tab bar, so the
+    // tab bar drew on top of the CTA (LAN QA 2026-06-02).
+    flex: 1,
     backgroundColor: STITCH.background,
-    ...(Platform.OS === 'web' ? { position: 'fixed' as 'absolute' } : {}),
   },
   safeArea: {
     flex: 1,
   },
   topBar: {
-    // No horizontal padding here — the titleRow + progressRow set their
-    // own. paddingTop: 0 means the title hugs the safe-area inset
-    // directly (user request 2026-06-01 follow-up: "everything up,
-    // close to the top sidebar").
+    // Matches the ToolHeader convention used across the financial-tools
+    // family. Slim, single-line title row + a thin progress strip below.
+    // Bottom border ties the strip visually to the rest of the app's
+    // headers (user request 2026-06-02: "thinner topper, app convention").
     paddingTop: 0,
-    paddingBottom: 8,
-    gap: 6,
+    paddingBottom: 6,
+    gap: 4,
+    backgroundColor: '#ffffff',
+    borderBottomWidth: 1,
+    borderBottomColor: STITCH.surfaceHighest,
   },
   titleRow: {
-    // Mirrors the financial-tools ToolHeader layout (row-reverse with
-    // back-button + title on a single line). User wanted "אקטואליה
-    // יומית" to feel consistent with the rest of the app's titles.
+    // ToolHeader pattern, row-reverse + 40px close-chip + title. LiveTag
+    // is appended last so RTL flow renders it visually to the LEFT of
+    // the title (the news-anchor "LIVE" placement).
     flexDirection: 'row-reverse',
     alignItems: 'center',
     gap: 10,
     paddingHorizontal: 12,
-    paddingTop: 10,
-    paddingBottom: 6,
+    paddingTop: 8,
+    paddingBottom: 8,
   },
   sheetTitle: {
-    // Matches ToolHeader.title — fontSize 18, weight 900, RTL, slight
-    // negative letter-spacing.
+    // Matches ToolHeader.title, fontSize 18, weight 900, RTL, slight
+    // negative letter-spacing. flex:1 lets the title expand and push
+    // the LiveTag to the visual far-left of the row.
     flex: 1,
     fontSize: 18,
     fontWeight: '900',
@@ -718,19 +839,7 @@ const styles = StyleSheet.create({
   progressRow: {
     paddingHorizontal: 16,
   },
-  closeBtn: {
-    // Same chip dimensions as the financial-tools back-button. First
-    // child of titleRow → with row-reverse it renders to the visual
-    // RIGHT of the title (Hebrew RTL convention for close affordance).
-    width: 40,
-    height: 40,
-    borderRadius: 12,
-    borderWidth: 1.5,
-    borderColor: STITCH.surfaceHighest,
-    backgroundColor: STITCH.surface,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
+  // closeBtn style removed 2026-06-02, see SheetCloseButton import.
   dotsRow: {
     flexDirection: 'row-reverse',
     alignItems: 'center',
