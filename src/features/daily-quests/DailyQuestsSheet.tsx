@@ -626,14 +626,21 @@ export function DailyQuestsSheet({ visible, onClose, onOpenNewsChallenge, onOpen
                     />
                   </Animated.View>
                 </View>
-                <View style={chestCardStyles.rewardsRow}>
-                  <GoldCoinIcon size={18} />
-                  <Text style={chestCardStyles.rewardValue} allowFontScaling={false}>{previewPro.coins}</Text>
-                  <Text style={chestCardStyles.rewardLabel} allowFontScaling={false}>מטבעות</Text>
-                  <Text style={chestCardStyles.rewardPlus} allowFontScaling={false}>+</Text>
-                  <Text style={chestCardStyles.rewardIcon} allowFontScaling={false}>💎</Text>
-                  <Text style={chestCardStyles.rewardValue} allowFontScaling={false}>{previewPro.gems}</Text>
-                  <Text style={chestCardStyles.rewardLabel} allowFontScaling={false}>יהלומים</Text>
+                {/* Coins + gems on separate rows so each gets its own line
+                    in the card (Yam, 2026-06-03 LAN). Matches the reference
+                    layout where the PRO card stacks the two reward types
+                    vertically. */}
+                <View style={chestCardStyles.rewardsCol}>
+                  <View style={chestCardStyles.rewardsRow}>
+                    <GoldCoinIcon size={18} />
+                    <Text style={chestCardStyles.rewardValue} allowFontScaling={false}>{previewPro.coins}</Text>
+                    <Text style={chestCardStyles.rewardLabel} allowFontScaling={false}>מטבעות</Text>
+                  </View>
+                  <View style={chestCardStyles.rewardsRow}>
+                    <Text style={chestCardStyles.rewardIcon} allowFontScaling={false}>💎</Text>
+                    <Text style={chestCardStyles.rewardValue} allowFontScaling={false}>{previewPro.gems}</Text>
+                    <Text style={chestCardStyles.rewardLabel} allowFontScaling={false}>יהלומים</Text>
+                  </View>
                 </View>
                 {!isPro && (
                   <View style={chestCardStyles.proCta}>
@@ -1127,6 +1134,12 @@ const chestCardStyles = StyleSheet.create({
     justifyContent: "center",
     flexWrap: "wrap",
     gap: 4,
+    marginTop: 8,
+  },
+  rewardsCol: {
+    flexDirection: "column",
+    alignItems: "center",
+    gap: 2,
     marginTop: 8,
   },
   rewardIcon: {
