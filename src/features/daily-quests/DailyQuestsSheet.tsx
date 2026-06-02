@@ -17,7 +17,6 @@ import Animated, {
 import type { AnimationObject } from "lottie-react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
-import { Lock } from "lucide-react-native";
 import { LottieIcon } from "../../components/ui/LottieIcon";
 import { ConfettiExplosion } from "../../components/ui/ConfettiExplosion";
 import { FlyingRewards } from "../../components/ui/FlyingRewards";
@@ -520,106 +519,101 @@ export function DailyQuestsSheet({ visible, onClose, onOpenNewsChallenge, onOpen
             ))}
           </View>
 
-          {/* ── Pass Royale dual-chest row ── */}
-          {/* paddingHorizontal bumped 12 to 20 (2026-06-02): with the PRO
-              chest's "PRO" badge sitting at right:-6 and the regular chest's
-              "רגיל" badge mirroring it, the 12px padding wasn't enough to
-              keep the badges inside the screen edge on narrow phones, so
-              the right-side chest read as "cropped" in LAN QA. row-reverse
-              also added so the visual order matches RTL reading: PRO on
-              the right (visual start), regular on the left. */}
-          <Animated.View entering={FadeIn.delay(400).duration(400)} style={{ paddingHorizontal: 20, paddingBottom: 8 }}>
-            <View style={{ flexDirection: "row-reverse", gap: 10, alignItems: "flex-end", justifyContent: "center" }}>
+          {/* ── Pass Royale dual-chest row (2026-06-03 redesign) ── */}
+          {/* Yam sent a reference: a CARD-based layout with a headline
+              explaining the value, then two cards side-by-side. PRO card
+              is highlighted (gold border + sparkles), reward icons sit
+              under each chest as small labels (not win-state chips),
+              optional orange CTA at the bottom of the PRO card for free
+              users. The headline does the heavy lifting on telling the
+              story; the cards show the proof. */}
+          <Animated.View entering={FadeIn.delay(400).duration(400)} style={chestCardStyles.section}>
+            <Text style={chestCardStyles.sectionTitle} allowFontScaling={false}>
+              השלימו את כל האתגרים היומיים וקבלו תיבה
+            </Text>
+            <Text style={chestCardStyles.sectionSub} allowFontScaling={false}>
+              ברגיל תקבלו פרס קטן, וב-PRO תפתחו פרס משודרג
+            </Text>
 
-              {/* ── PRO chest (visual right in RTL, ~2x bigger when locked) ── */}
-              {/* New treatment (2026-06-03 take 3): a gray "premium card"
-                  with rounded corners wraps the PRO chest so it reads as
-                  a SHOP item, not a reward. Big, dimmed, with a strike-
-                  through line saying "אין גישה. ניתן לרכוש". The chest
-                  itself is dimmed so the user sees it but knows it is
-                  not theirs (Yam, 2026-06-03 LAN: chips approach was
-                  noisy; she remembered an earlier design where the PRO
-                  chest sat in a gray card with strikethrough copy). */}
-              <View style={{ flex: !isPro ? 17 : 13, alignItems: "center" }}>
-                <LottieIcon source={LOTTIE_CROWN as unknown as number} size={36} autoPlay={!reduceMotion} loop active={!reduceMotion} />
-                <View style={!isPro ? proLockStyles.shopCard : undefined}>
-                  <View style={{ position: "relative" }}>
-                    {allDone && isPro && !proRewardClaimed && (
-                      <Animated.View pointerEvents="none" style={[styles.chestGlowHalo, { backgroundColor: "#d97706" }, chestGlowStyle]} />
-                    )}
-                    <Animated.View style={isPro && allDone && !proRewardClaimed ? chestPulseStyle : undefined}>
-                      <Pressable
-                        onPress={handleClaimPro}
-                        disabled={proRewardClaimed || showProClaimAnim}
-                        accessibilityRole="button"
-                        accessibilityLabel={!isPro ? "תיבת פרו נעולה. אין גישה. לחץ לרכוש PRO" : proRewardClaimed ? "תיבת פרו נפתחה" : allDone ? "לחצו לפתיחת תיבת הפרו" : "תיבת הפרו נעולה"}
-                        style={({ pressed }) => [
-                          isPro ? styles.chestWrap : proLockStyles.chestWrapShop,
-                          allDone && isPro && !proRewardClaimed && styles.chestWrapReady,
-                          isPro && { borderColor: "#d97706", opacity: proRewardClaimed ? 0.65 : 1 },
-                          pressed && allDone && isPro && !proRewardClaimed && { transform: [{ scale: 0.96 }] },
-                        ]}
-                      >
-                        <View style={!isPro ? proLockStyles.lottieLocked : undefined}>
-                          <LottieIcon
-                            source={LOTTIE_CHEST as unknown as number}
-                            size={!isPro ? 160 : 130}
-                            autoPlay={false}
-                            active={proChestOpen}
-                            loop={false}
-                          />
-                        </View>
-                        <View style={{ position: "absolute", top: -10, right: -6, backgroundColor: "#d97706", borderRadius: 10, paddingHorizontal: 10, paddingVertical: 4, zIndex: 10, borderWidth: 2, borderColor: "#fff", shadowColor: "#000", shadowOpacity: 0.25, shadowRadius: 4, shadowOffset: { width: 0, height: 2 }, elevation: 4, transform: [{ rotate: "8deg" }] }} pointerEvents="none">
-                          <Text style={{ color: "#fff", fontSize: 11, fontWeight: "900", letterSpacing: 1.2 }}>PRO</Text>
-                        </View>
-                      </Pressable>
-                    </Animated.View>
-                  </View>
-                  {!isPro && (
-                    <View style={proLockStyles.shopCardFooter}>
-                      <Text style={proLockStyles.shopCardStrike} allowFontScaling={false}>
-                        אין גישה
-                      </Text>
-                      <View style={proLockStyles.shopCardCtaRow}>
-                        <Lock size={12} color="#475569" strokeWidth={2.6} />
-                        <Text style={proLockStyles.shopCardCta} allowFontScaling={false}>
-                          ניתן לרכוש
-                        </Text>
-                      </View>
-                    </View>
-                  )}
+            <View style={chestCardStyles.row}>
+              {/* ── Regular card (visual left in RTL row-reverse) ── */}
+              <Pressable
+                onPress={handleClaim}
+                disabled={rewardClaimed || showClaimAnim || !allDone}
+                accessibilityRole="button"
+                accessibilityLabel={rewardClaimed ? "תיבה רגילה נפתחה" : allDone ? `לחצו לפתיחת תיבה רגילה. בפנים: ${preview.coins} מטבעות` : "התיבה הרגילה נעולה"}
+                style={({ pressed }) => [
+                  chestCardStyles.card,
+                  chestCardStyles.cardRegular,
+                  rewardClaimed && chestCardStyles.cardClaimed,
+                  pressed && allDone && !rewardClaimed && { transform: [{ scale: 0.98 }] },
+                ]}
+              >
+                <View style={chestCardStyles.tag}>
+                  <Text style={chestCardStyles.tagText} allowFontScaling={false}>רגיל</Text>
                 </View>
-              </View>
-
-              {/* ── Regular chest (right, smaller) ── */}
-              <View style={{ flex: 10, alignItems: "center" }}>
-                <View style={{ height: 36 }} accessible={false} />
-                <View style={{ position: "relative" }}>
+                <Text style={chestCardStyles.cardTitle} allowFontScaling={false}>תיבה רגילה</Text>
+                <View style={chestCardStyles.chestArt}>
                   {allDone && !rewardClaimed && (
                     <Animated.View pointerEvents="none" style={[styles.chestGlowHalo, chestGlowStyle]} />
                   )}
                   <Animated.View style={allDone && !rewardClaimed ? chestPulseStyle : undefined}>
-                    <Pressable
-                      onPress={handleClaim}
-                      disabled={rewardClaimed || showClaimAnim}
-                      accessibilityRole="button"
-                      accessibilityLabel={rewardClaimed ? "תיבה נפתחה" : allDone ? "לחצו לפתיחת התיבה" : "התיבה נעולה, השלימו את המשימות"}
-                      style={({ pressed }) => [
-                        styles.chestWrap,
-                        allDone && !rewardClaimed && styles.chestWrapReady,
-                        { opacity: rewardClaimed ? 0.65 : 1 },
-                        pressed && allDone && !rewardClaimed && { transform: [{ scale: 0.96 }] },
-                      ]}
-                    >
-                      <LottieIcon source={LOTTIE_CHEST as unknown as number} size={110} autoPlay={false} active={chestOpen} loop={false} />
-                      <View style={{ position: "absolute", top: -10, right: -6, backgroundColor: "#64748b", borderRadius: 10, paddingHorizontal: 10, paddingVertical: 4, zIndex: 10, borderWidth: 2, borderColor: "#fff", shadowColor: "#000", shadowOpacity: 0.25, shadowRadius: 4, shadowOffset: { width: 0, height: 2 }, elevation: 4, transform: [{ rotate: "8deg" }] }} pointerEvents="none">
-                        <Text style={{ color: "#fff", fontSize: 11, fontWeight: "900", letterSpacing: 1.2 }}>רגיל</Text>
-                      </View>
-                    </Pressable>
+                    <LottieIcon source={LOTTIE_CHEST as unknown as number} size={100} autoPlay={false} active={chestOpen} loop={false} />
                   </Animated.View>
                 </View>
-              </View>
+                <View style={chestCardStyles.rewardsRow}>
+                  <Text style={chestCardStyles.rewardIcon} allowFontScaling={false}>🪙</Text>
+                  <Text style={chestCardStyles.rewardValue} allowFontScaling={false}>{preview.coins}</Text>
+                  <Text style={chestCardStyles.rewardLabel} allowFontScaling={false}>מטבעות</Text>
+                </View>
+              </Pressable>
 
+              {/* ── PRO card (visual right in RTL row-reverse) ── */}
+              <Pressable
+                onPress={handleClaimPro}
+                disabled={proRewardClaimed || showProClaimAnim || (isPro && !allDone)}
+                accessibilityRole="button"
+                accessibilityLabel={!isPro ? `תיבת PRO נעולה. בפנים: ${previewPro.coins} מטבעות ו-${previewPro.gems} יהלומים. לחץ לשדרג` : proRewardClaimed ? "תיבת פרו נפתחה" : allDone ? "לחצו לפתיחת תיבת הפרו" : "תיבת הפרו נעולה"}
+                style={({ pressed }) => [
+                  chestCardStyles.card,
+                  chestCardStyles.cardPro,
+                  proRewardClaimed && chestCardStyles.cardClaimed,
+                  pressed && (!isPro || (allDone && !proRewardClaimed)) && { transform: [{ scale: 0.98 }] },
+                ]}
+              >
+                <View style={chestCardStyles.crownCorner}>
+                  <LottieIcon source={LOTTIE_CROWN as unknown as number} size={28} autoPlay={!reduceMotion} loop active={!reduceMotion} />
+                </View>
+                <View style={[chestCardStyles.tag, chestCardStyles.tagPro]}>
+                  <Text style={[chestCardStyles.tagText, chestCardStyles.tagTextPro]} allowFontScaling={false}>PRO</Text>
+                </View>
+                <Text style={[chestCardStyles.cardTitle, chestCardStyles.cardTitlePro]} allowFontScaling={false}>תיבת PRO</Text>
+                <View style={chestCardStyles.chestArt}>
+                  {allDone && isPro && !proRewardClaimed && (
+                    <Animated.View pointerEvents="none" style={[styles.chestGlowHalo, { backgroundColor: "#d97706" }, chestGlowStyle]} />
+                  )}
+                  <Animated.View style={isPro && allDone && !proRewardClaimed ? chestPulseStyle : undefined}>
+                    <LottieIcon source={LOTTIE_CHEST as unknown as number} size={120} autoPlay={false} active={proChestOpen} loop={false} />
+                  </Animated.View>
+                </View>
+                <View style={chestCardStyles.rewardsRow}>
+                  <Text style={chestCardStyles.rewardIcon} allowFontScaling={false}>🪙</Text>
+                  <Text style={chestCardStyles.rewardValue} allowFontScaling={false}>{previewPro.coins}</Text>
+                  <Text style={chestCardStyles.rewardLabel} allowFontScaling={false}>מטבעות</Text>
+                  <Text style={chestCardStyles.rewardPlus} allowFontScaling={false}>+</Text>
+                  <Text style={chestCardStyles.rewardIcon} allowFontScaling={false}>💎</Text>
+                  <Text style={chestCardStyles.rewardValue} allowFontScaling={false}>{previewPro.gems}</Text>
+                  <Text style={chestCardStyles.rewardLabel} allowFontScaling={false}>יהלומים</Text>
+                </View>
+                {!isPro && (
+                  <View style={chestCardStyles.proCta}>
+                    <Text style={chestCardStyles.proCtaIcon} allowFontScaling={false}>👑</Text>
+                    <Text style={chestCardStyles.proCtaText} allowFontScaling={false}>
+                      שדרגו ל-PRO לקבלת פרס גדול יותר
+                    </Text>
+                  </View>
+                )}
+              </Pressable>
             </View>
           </Animated.View>
 
@@ -972,62 +966,171 @@ const styles = StyleSheet.create({
   },
 });
 
-// PRO chest "shop card" treatment for non-PRO users. The chest sits inside
-// a gray rounded card that reads as a SHOP ITEM (not a reward you have),
-// with strikethrough "אין גישה" and a "ניתן לרכוש" cue. The chest art is
-// dimmed so the user sees what is on offer but knows it is not theirs.
-// Yam, 2026-06-03: previous chip approach read as "win state" because
-// reward chips communicate "you got these". Pre-open state needs shop
-// language, not reward language.
-const proLockStyles = StyleSheet.create({
-  shopCard: {
-    backgroundColor: "rgba(148,163,184,0.18)",
-    borderWidth: 1.5,
-    borderColor: "rgba(100,116,139,0.35)",
-    borderRadius: 20,
-    paddingTop: 8,
+// Dual-chest card layout (2026-06-03). Replaces the bare chest sprites with
+// two side-by-side cards: a headline explains the value, each card carries
+// a tag + title + chest art + reward icons, and the PRO card adds an orange
+// upsell strip for free users. Pattern matches Yam's reference: clear value
+// prop at top, side-by-side cards, the PRO one visibly premium.
+const chestCardStyles = StyleSheet.create({
+  section: {
+    paddingHorizontal: 16,
+    paddingTop: 14,
     paddingBottom: 12,
-    paddingHorizontal: 8,
-    alignItems: "center",
   },
-  chestWrapShop: {
-    // The PRO Pressable inside the shop card. No gold border, no glow.
-    // The card itself provides the container; the chest is just the
-    // illustration of what is locked away.
-    borderRadius: 12,
-    padding: 4,
-  },
-  lottieLocked: {
-    // Lottie does not honor RN tintColor; opacity is the available lever
-    // for "this is locked but visible" without swapping to a different
-    // asset.
-    opacity: 0.55,
-  },
-  shopCardFooter: {
-    alignItems: "center",
-    marginTop: 6,
-    gap: 4,
-  },
-  shopCardStrike: {
-    fontSize: 12,
-    fontWeight: "800",
-    color: "#475569",
+  sectionTitle: {
+    fontSize: 15,
+    fontWeight: "900",
+    color: STITCH.onSurface,
     writingDirection: "rtl",
     textAlign: "center",
-    textDecorationLine: "line-through",
-    textDecorationStyle: "solid",
-    letterSpacing: 0.2,
+    letterSpacing: -0.1,
+    marginBottom: 4,
   },
-  shopCardCtaRow: {
+  sectionSub: {
+    fontSize: 12,
+    fontWeight: "600",
+    color: STITCH.onSurfaceVariant,
+    writingDirection: "rtl",
+    textAlign: "center",
+    marginBottom: 14,
+  },
+  row: {
     flexDirection: "row-reverse",
-    alignItems: "center",
-    gap: 5,
+    gap: 10,
+    alignItems: "stretch",
   },
-  shopCardCta: {
+  card: {
+    flex: 1,
+    borderRadius: 18,
+    paddingTop: 14,
+    paddingBottom: 12,
+    paddingHorizontal: 10,
+    alignItems: "center",
+    backgroundColor: "#ffffff",
+    borderWidth: 1.5,
+    borderColor: STITCH.surfaceHighest,
+    position: "relative",
+    overflow: "hidden",
+  },
+  cardRegular: {
+    backgroundColor: STITCH.surfaceLow,
+    borderColor: STITCH.surfaceHighest,
+  },
+  cardPro: {
+    backgroundColor: "#fffbeb",
+    borderColor: "#f59e0b",
+    borderWidth: 2,
+    shadowColor: "#d97706",
+    shadowOpacity: 0.18,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 4,
+  },
+  cardClaimed: {
+    opacity: 0.6,
+  },
+  crownCorner: {
+    position: "absolute",
+    top: 6,
+    left: 6,
+    zIndex: 5,
+  },
+  tag: {
+    paddingHorizontal: 14,
+    paddingVertical: 4,
+    borderRadius: 999,
+    backgroundColor: "#94a3b8",
+    marginBottom: 6,
+  },
+  tagPro: {
+    backgroundColor: "#f97316",
+    shadowColor: "#c2410c",
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 3,
+  },
+  tagText: {
     fontSize: 12,
     fontWeight: "900",
-    color: "#1e293b",
+    color: "#ffffff",
+    letterSpacing: 1.4,
     writingDirection: "rtl",
-    letterSpacing: 0.3,
+  },
+  tagTextPro: {
+    letterSpacing: 1.6,
+  },
+  cardTitle: {
+    fontSize: 14,
+    fontWeight: "900",
+    color: STITCH.onSurfaceVariant,
+    writingDirection: "rtl",
+    textAlign: "center",
+    marginBottom: 4,
+  },
+  cardTitlePro: {
+    color: "#9a3412",
+  },
+  chestArt: {
+    alignItems: "center",
+    justifyContent: "center",
+    marginVertical: 6,
+    position: "relative",
+  },
+  rewardsRow: {
+    flexDirection: "row-reverse",
+    alignItems: "center",
+    justifyContent: "center",
+    flexWrap: "wrap",
+    gap: 4,
+    marginTop: 8,
+  },
+  rewardIcon: {
+    fontSize: 18,
+    lineHeight: 22,
+  },
+  rewardValue: {
+    fontSize: 16,
+    fontWeight: "900",
+    color: STITCH.onSurface,
+    letterSpacing: 0.2,
+  },
+  rewardLabel: {
+    fontSize: 11,
+    fontWeight: "700",
+    color: STITCH.onSurfaceVariant,
+    writingDirection: "rtl",
+    marginLeft: 2,
+  },
+  rewardPlus: {
+    fontSize: 14,
+    fontWeight: "900",
+    color: STITCH.onSurfaceVariant,
+    marginHorizontal: 4,
+  },
+  proCta: {
+    flexDirection: "row-reverse",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+    marginTop: 12,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    borderRadius: 12,
+    backgroundColor: "#f97316",
+    alignSelf: "stretch",
+  },
+  proCtaIcon: {
+    fontSize: 14,
+    lineHeight: 16,
+  },
+  proCtaText: {
+    flex: 1,
+    fontSize: 11,
+    fontWeight: "900",
+    color: "#ffffff",
+    writingDirection: "rtl",
+    textAlign: "center",
+    letterSpacing: 0.2,
   },
 });
