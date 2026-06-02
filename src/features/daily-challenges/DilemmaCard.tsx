@@ -36,9 +36,17 @@ interface Props {
    *  the day-rotation default. Falls back to today's dilemma if the id is
    *  unknown. */
   dilemmaId?: string;
+  /** Pearl flow: when true, the in-card "המשך" button is hidden so the host
+   *  (PearlScenarioStage) can render its own sticky version above the
+   *  "דלג על הפנינה" footer, ensuring the user always sees it even when the
+   *  feedback text pushes it below the fold. */
+  hideContinueButton?: boolean;
+  /** Pearl flow: fires (true) the first time the user answers, (false) on
+   *  reset/retry. PearlScenarioStage uses this to show/hide its sticky CTA. */
+  onReadyToContinue?: (ready: boolean) => void;
 }
 
-export const DilemmaCard = React.memo(function DilemmaCard({ isActive, onContinue, dilemmaId }: Props) {
+export const DilemmaCard = React.memo(function DilemmaCard({ isActive, onContinue, dilemmaId, hideContinueButton, onReadyToContinue }: Props) {
   const router = useRouter();
   const hasDilemmaAnsweredToday = useDailyChallengesStore((s) => s.hasDilemmaAnsweredToday);
   const getDilemmaPlaysToday = useDailyChallengesStore((s) => s.getDilemmaPlaysToday);
@@ -112,6 +120,7 @@ export const DilemmaCard = React.memo(function DilemmaCard({ isActive, onContinu
     playSound('btn_click_soft_3');
     setSelectedChoice(choice);
     setShowResult(true);
+    onReadyToContinue?.(true);
 
     if (choice.isCorrect) {
       successHaptic();
@@ -266,8 +275,9 @@ export const DilemmaCard = React.memo(function DilemmaCard({ isActive, onContinu
           </Animated.View>
         )}
 
-        {/* Continue button — appears only when inter-module overlay sets it. */}
-        {showResult && onContinue && (
+        {/* In-card continue button — hidden when the host (PearlScenarioStage)
+            renders its own sticky version above the pearl footer. */}
+        {showResult && onContinue && !hideContinueButton && (
           <Pressable
             onPress={() => { tapHaptic(); playSound('btn_click_soft_2'); onContinue(); }}
             style={styles.continueBtn}

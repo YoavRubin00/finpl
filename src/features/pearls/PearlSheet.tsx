@@ -30,7 +30,7 @@ import { useSafeAreaInsets, SafeAreaView } from 'react-native-safe-area-context'
 import { useRouter } from 'expo-router';
 import Animated, { FadeIn } from 'react-native-reanimated';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
-import { ChevronRight } from 'lucide-react-native';
+import { X } from 'lucide-react-native';
 
 import { STITCH } from '../../constants/theme';
 import { tapHaptic } from '../../utils/haptics';
@@ -598,7 +598,7 @@ export function PearlSheet({ visible, pearl, onClose }: PearlSheetProps): React.
           accessibilityLabel="חזרה למסך הלמידה"
           hitSlop={10}
         >
-          <ChevronRight size={22} color={STITCH.onSurface} strokeWidth={2.6} />
+          <X size={22} color={STITCH.onSurface} strokeWidth={2.6} />
         </Pressable>
 
         <View style={styles.topBar}>
@@ -691,7 +691,11 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     zIndex: 10,
   },
-  titleWrap: { width: '100%', alignItems: 'center', gap: 8, paddingTop: 50 },
+  // paddingTop kept just enough to clear the absolutely-positioned closeBtn
+  // (top:4 + height:40 ≈ 44px) without leaving dead space below the
+  // GlobalWealthHeader. Was 50 — visibly bloated the gap on Android (user
+  // report 2026-06-02: "מרווח מבוזבז בטירוף בין הכותרת לסיידבר העליון").
+  titleWrap: { width: '100%', alignItems: 'center', gap: 8, paddingTop: 12 },
   title: {
     fontSize: 13,
     fontWeight: '900',

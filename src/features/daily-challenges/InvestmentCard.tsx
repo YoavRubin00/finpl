@@ -32,9 +32,15 @@ interface Props {
   /** Per-pearl override. When set, this specific scenario is rendered
    *  instead of today's rotation. Falls back to today's if id is unknown. */
   investmentId?: string;
+  /** Pearl flow: hide in-card "המשך" so host can render a sticky version
+   *  above the pearl footer. Mirrors DilemmaCard's hideContinueButton. */
+  hideContinueButton?: boolean;
+  /** Pearl flow: fires (true) the first time the user answers, (false) on
+   *  reset. PearlScenarioStage uses this to show/hide its sticky CTA. */
+  onReadyToContinue?: (ready: boolean) => void;
 }
 
-export const InvestmentCard = React.memo(function InvestmentCard({ isActive, onContinue, investmentId }: Props) {
+export const InvestmentCard = React.memo(function InvestmentCard({ isActive, onContinue, investmentId, hideContinueButton, onReadyToContinue }: Props) {
   const hasInvestmentAnsweredToday = useDailyChallengesStore((s) => s.hasInvestmentAnsweredToday);
   const getInvestmentPlaysToday = useDailyChallengesStore((s) => s.getInvestmentPlaysToday);
   const answerInvestment = useDailyChallengesStore((s) => s.answerInvestment);
@@ -76,6 +82,7 @@ export const InvestmentCard = React.memo(function InvestmentCard({ isActive, onC
     playSound('btn_click_soft_2');
     setSelectedOption(option);
     setShowResult(true);
+    onReadyToContinue?.(true);
     successHaptic();
     playSound(option.returnMultiplier >= 1 ? 'modal_open_4' : 'modal_open_1');
 
@@ -301,9 +308,9 @@ export const InvestmentCard = React.memo(function InvestmentCard({ isActive, onC
               <Text style={styles.replayBtnText}>🔄 שחק שוב ({remaining - 1} נותרו)</Text>
             </Pressable>
           )}
-          {/* Continue button — only shown when inter-module overlay provides
-              the callback. Keeps daily-feed surface unchanged. */}
-          {showResult && onContinue && (
+          {/* In-card continue — hidden when host (PearlScenarioStage)
+              renders its own sticky version above the pearl footer. */}
+          {showResult && onContinue && !hideContinueButton && (
             <Pressable
               onPress={() => { tapHaptic(); playSound('btn_click_soft_2'); onContinue(); }}
               style={styles.continueBtn}
