@@ -13,7 +13,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter, useLocalSearchParams } from 'expo-router';
-import { Info } from 'lucide-react-native';
+import { Info, X } from 'lucide-react-native';
 import { Image as ExpoImage } from 'expo-image';
 import { FINN_DANCING, FINN_HAPPY, FINN_TABLET } from '../retention-loops/finnMascotConfig';
 import { GoldCoinIcon } from '../../components/ui/GoldCoinIcon';
@@ -777,9 +777,30 @@ export function BridgeScreen({ walkthroughAutoScroll }: BridgeScreenProps = {}) 
         onRequestClose={() => setStatModalKind(null)}
       >
         <View style={styles.modalOverlay}>
-          <Animated.View entering={FadeIn.duration(220)} style={styles.modalBackdrop} pointerEvents="none" />
+          {/* Tap-outside-to-dismiss backdrop (matches FinnMailModal pattern).
+              The previous pointerEvents="none" backdrop made the savings
+              modal feel "stuck" — user could only dismiss via the bottom
+              button (user feedback 2026-06-02: "כל לחיצה על המסך תצא ממנו"). */}
+          <Pressable
+            style={StyleSheet.absoluteFill}
+            onPress={() => setStatModalKind(null)}
+            accessibilityRole="button"
+            accessibilityLabel="סגור"
+          >
+            <Animated.View entering={FadeIn.duration(220)} style={styles.modalBackdrop} pointerEvents="none" />
+          </Pressable>
 
           <Animated.View entering={FadeIn.duration(220)} style={styles.statModalCard}>
+            {/* X close — top-right RTL corner, matches RedemptionModal / FinnMailModal */}
+            <Pressable
+              onPress={() => setStatModalKind(null)}
+              accessibilityRole="button"
+              accessibilityLabel="סגור"
+              hitSlop={12}
+              style={styles.statModalCloseBtn}
+            >
+              <X size={18} color="#64748b" />
+            </Pressable>
             {statModalKind === 'redeemed' && (() => {
               const redeemed = BRIDGE_BENEFITS.filter(b => isBenefitRedeemed(b.id));
               return (
@@ -827,7 +848,7 @@ export function BridgeScreen({ walkthroughAutoScroll }: BridgeScreenProps = {}) 
             {statModalKind === 'savings' && (
               <>
                 <ExpoImage
-                  source={FINN_TABLET}
+                  source={FINN_DANCING}
                   style={styles.statModalImage}
                   contentFit="contain"
                   accessible={false}
@@ -1211,6 +1232,20 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.18,
     shadowRadius: 22,
     elevation: 12,
+  },
+  // X close button anchored top-right of the modal card — same palette and
+  // dimensions as RedemptionModal / FinnMailModal so all modals feel uniform.
+  statModalCloseBtn: {
+    position: 'absolute',
+    top: 12,
+    right: 12,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: '#f1f5f9',
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 10,
   },
   statModalImage: {
     width: 120,

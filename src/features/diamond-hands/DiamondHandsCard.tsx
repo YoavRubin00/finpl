@@ -16,9 +16,15 @@ import { useDiamondHandsCooldown } from "./useDiamondHandsCooldown";
 
 interface Props {
   isActive: boolean;
+  /** Pearl-flow continue. When provided, renders a "המשך" button at the
+   *  bottom of the card so the pearl pager can advance without relying on
+   *  the wrapper-level button — which was getting clipped on Android by the
+   *  nav bar + pearl skip footer (user report 2026-06-02: "אחרי ידיים של
+   *  יהלום לא רואים את כפתור המשך"). */
+  onContinue?: () => void;
 }
 
-export function DiamondHandsCard({ isActive }: Props) {
+export function DiamondHandsCard({ isActive, onContinue }: Props) {
   const [open, setOpen] = useState(false);
   const totalVictories = useDiamondHandsCooldown((s) => s.totalVictories);
   const reduceMotion = useReducedMotion();
@@ -202,6 +208,43 @@ export function DiamondHandsCard({ isActive }: Props) {
           </View>
         </LinearGradient>
       </Animated.View>
+
+      {/* Pearl-flow Continue — rendered INSIDE the card area so it's always
+          visible. The wrapper's bottom Continue used to get clipped by the
+          Android nav bar + pearl skip footer (same bug fixed for
+          CrowdQuestionCard 2026-06-01). Same deep-blue palette as the rest
+          of the app's primary CTAs. */}
+      {onContinue && (
+        <Pressable
+          onPress={() => { tapHaptic(); onContinue(); }}
+          accessibilityRole="button"
+          accessibilityLabel="המשך לשלב הבא"
+          style={({ pressed }) => ({
+            marginTop: 16,
+            paddingVertical: 14,
+            paddingHorizontal: 28,
+            borderRadius: 14,
+            backgroundColor: '#1d4ed8',
+            borderBottomWidth: 4,
+            borderBottomColor: '#1e3a8a',
+            alignItems: 'center',
+            opacity: pressed ? 0.9 : 1,
+            transform: pressed ? [{ scale: 0.98 }] : undefined,
+          })}
+        >
+          <Text
+            style={{
+              color: '#ffffff',
+              fontSize: 16,
+              fontWeight: '900',
+              writingDirection: 'rtl',
+            }}
+            allowFontScaling={false}
+          >
+            המשך לשלב הבא ←
+          </Text>
+        </Pressable>
+      )}
 
       <DiamondHandsModal visible={open} onClose={handleClose} />
     </View>
