@@ -61,6 +61,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   const apiKey = process.env.ANTHROPIC_API_KEY ?? '';
   if (!apiKey) {
+    // Logged so it shows up in Vercel Logs every time a user hits the
+    // deep-analyze CTA — otherwise the misconfig is silent on the server
+    // side and only the user sees the shark-voice fallback.
+    console.error('[stock-analyze-deep] ANTHROPIC_API_KEY missing — deep analysis disabled');
     return res.status(503).json({ error: 'Deep analysis service not configured.' });
   }
 

@@ -1,7 +1,6 @@
 import React, { useEffect } from 'react';
 import { View, Pressable, StyleSheet } from 'react-native';
 import { Image as ExpoImage } from 'expo-image';
-import { Check } from 'lucide-react-native';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -42,9 +41,11 @@ interface PearlNodeProps {
 /**
  * Bonus-pearl node that sits between two module nodes on the Duolingo-style
  * learn path. Three visual states:
- *   - locked:    grayscale webp, dim, no animation
- *   - unlocked:  colored webp + pulsing halo + gentle scale breathing
- *   - completed: colored webp + small green check badge in the corner
+ *   - locked:    colored webp + slate overlay, no animation
+ *   - unlocked:  colored webp + pulsing cyan halo + gentle scale breathing
+ *   - completed: colored webp + pulsing GREEN halo (replaced the corner check
+ *                badge on 2026-05-31 per user request — the halo reads as
+ *                "earned + still alive" instead of a static "done" stamp).
  *
  * Tap on locked Pearls is a no-op; the node is rendered to give the user a
  * preview of what's coming. Tap on unlocked/completed opens the PearlSheet.
@@ -59,8 +60,15 @@ export function PearlNode({
 }: PearlNodeProps): React.ReactElement {
   const reducedMotion = useReducedMotion();
   const isUnlocked = state === 'unlocked';
+  const isCompleted = state === 'completed';
   const shouldAnimate = isUnlocked && !reducedMotion;
-  const shouldGlow = isUnlocked && glow && !reducedMotion;
+  // Cyan halo pulses on unlocked (the "tap me" Free-user signal).
+  // Green halo is STATIC on completed — user explicitly rejected pulsing
+  // for the completed state ("שיהיה פשוט ירוק, לא מהבהב", 2026-05-31).
+  const shouldGlowCyan = isUnlocked && glow && !reducedMotion;
+  const shouldGlowGreen = isCompleted;
+  const haloVisible = shouldGlowCyan || shouldGlowGreen;
+  const activeHaloColor = isCompleted ? '#16a34a' : haloColor;
 
   const scale = useSharedValue(1);
   const haloOpacity = useSharedValue(0);
@@ -80,12 +88,7 @@ export function PearlNode({
         false,
       );
     }
-    if (!shouldGlow) {
-      cancelAnimation(haloOpacity);
-      cancelAnimation(haloScale);
-      haloOpacity.value = withTiming(0, { duration: 200 });
-      haloScale.value = withTiming(0.85, { duration: 200 });
-    } else {
+    if (shouldGlowCyan) {
       haloOpacity.value = withRepeat(
         withSequence(
           withTiming(0.55, { duration: 950 }),
@@ -102,8 +105,22 @@ export function PearlNode({
         -1,
         false,
       );
+    } else if (shouldGlowGreen) {
+      // Static green ring — no pulsing. Sits there quietly. Opacity raised
+      // to 0.45 so the green reads as actually-green (user iteration
+      // 2026-05-31: "שיהיה יותר ירוק"); paired with the tighter 1.25×
+      // halo so the saturation doesn't bleed past the pearl.
+      cancelAnimation(haloOpacity);
+      cancelAnimation(haloScale);
+      haloOpacity.value = withTiming(0.45, { duration: 200 });
+      haloScale.value = withTiming(1.0, { duration: 200 });
+    } else {
+      cancelAnimation(haloOpacity);
+      cancelAnimation(haloScale);
+      haloOpacity.value = withTiming(0, { duration: 200 });
+      haloScale.value = withTiming(0.85, { duration: 200 });
     }
-  }, [shouldAnimate, shouldGlow, scale, haloOpacity, haloScale]);
+  }, [shouldAnimate, shouldGlowCyan, shouldGlowGreen, scale, haloOpacity, haloScale]);
 
   const pearlStyle = useAnimatedStyle(() => ({
     transform: [{ scale: scale.value }],
@@ -120,7 +137,10 @@ export function PearlNode({
         ? 'פנינה — הושלמה. אפשר לשחק שוב'
         : 'פנינה — בונוס חדש זמין';
 
-  const halo = size * 1.7;
+  // Completed gets a tighter ring (1.25× the pearl) so the green hugs the
+  // pearl instead of bleeding into the path. Cyan tap-me halo stays at 1.7×
+  // so its pulse reads clearly across the screen.
+  const halo = isCompleted ? size * 1.25 : size * 1.7;
 
   const inner = (
     <View
@@ -132,9 +152,10 @@ export function PearlNode({
         position: 'relative',
       }}
     >
-      {shouldGlow ? (
-        // Soft cyan halo behind the pearl — Free user's signal that this
-        // bonus is reachable RIGHT NOW. Sits below the image; non-interactive.
+      {haloVisible ? (
+        // Soft halo behind the pearl. Cyan = unlocked / tap-me (Free user
+        // signal). Green = completed (replaces the corner check badge).
+        // Sits below the image; non-interactive.
         <Animated.View
           pointerEvents="none"
           style={[
@@ -143,7 +164,7 @@ export function PearlNode({
               width: halo,
               height: halo,
               borderRadius: halo / 2,
-              backgroundColor: haloColor,
+              backgroundColor: activeHaloColor,
             },
             haloStyle,
           ]}
@@ -200,25 +221,6 @@ export function PearlNode({
         </View>
       </Animated.View>
 
-      {state === 'completed' ? (
-        <View
-          style={{
-            position: 'absolute',
-            bottom: 0,
-            right: 0,
-            width: 22,
-            height: 22,
-            borderRadius: 11,
-            backgroundColor: '#16a34a',
-            borderWidth: 2,
-            borderColor: '#ffffff',
-            alignItems: 'center',
-            justifyContent: 'center',
-          }}
-        >
-          <Check size={12} color="#ffffff" strokeWidth={3.5} />
-        </View>
-      ) : null}
     </View>
   );
 
