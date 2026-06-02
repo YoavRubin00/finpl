@@ -34,12 +34,15 @@ export function FeedStartButton({ label, onPress, accessibilityLabel, disabled =
         >
           {label}
         </Text>
-        {/* Play icon flipped on X so the triangle points LEFT in RTL.
-            Hebrew readers parse "forward" as leftward (the direction the
-            eye moves while reading), so a right-pointing Play reads as
-            "back" to a native speaker. Same convention used across the
-            app's RTL CTAs (e.g. ChallengePage's ChevronLeft). */}
-        <Play size={20} color="#ffffff" fill="#ffffff" style={{ transform: [{ scaleX: -1 }] }} />
+        {/* Play icon wrapped in a flipped View so the triangle points LEFT
+            in RTL. Hebrew readers parse "forward" as leftward, so a
+            right-pointing Play reads as "back" to a native speaker. The
+            transform sits on a wrapper View (not on the SVG itself)
+            because lucide-react-native drops the icon fill on web when
+            scaleX is applied directly to the component. */}
+        <View style={{ transform: [{ scaleX: -1 }], marginLeft: 10 }}>
+          <Play size={20} color="#ffffff" fill="#ffffff" />
+        </View>
       </LiquidButton>
     </View>
   );
