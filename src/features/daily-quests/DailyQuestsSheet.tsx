@@ -535,8 +535,15 @@ export function DailyQuestsSheet({ visible, onClose, onOpenNewsChallenge, onOpen
               users. The headline does the heavy lifting on telling the
               story; the cards show the proof. */}
           <Animated.View entering={FadeIn.delay(400).duration(400)} style={chestCardStyles.section}>
+            {/* Two Text rows so the Hebrew title breaks cleanly after
+                "היומיים" rather than letting RN wrap "תיבה" to its own
+                orphaned line (Yam, 2026-06-03 LAN: "אנחנו רוצים להימנע
+                ממילאי תאומה בעברית"). */}
             <Text style={chestCardStyles.sectionTitle} allowFontScaling={false}>
-              השלימו את כל האתגרים היומיים וקבלו תיבה
+              השלימו את כל האתגרים היומיים
+            </Text>
+            <Text style={chestCardStyles.sectionTitle} allowFontScaling={false}>
+              וקבלו תיבה
             </Text>
             <Text style={chestCardStyles.sectionSub} allowFontScaling={false}>
               ברגיל תקבלו פרס קטן, וב-PRO תפתחו פרס משודרג
@@ -600,14 +607,20 @@ export function DailyQuestsSheet({ visible, onClose, onOpenNewsChallenge, onOpen
                   <Text style={[chestCardStyles.tagText, chestCardStyles.tagTextPro]} allowFontScaling={false}>PRO</Text>
                 </View>
                 <Text style={[chestCardStyles.cardTitle, chestCardStyles.cardTitlePro]} allowFontScaling={false}>תיבת PRO</Text>
-                <View style={chestCardStyles.chestArt}>
+                {/* PNG has ~25-30px of whitespace around the actual chest.
+                    chestArtPro caps the laid-out height at 130 and the image
+                    visually overflows (top/bottom) thanks to negative
+                    marginVertical, so the title + rewards row sit close to
+                    the chest body rather than the empty bounding box of the
+                    PNG (Yam, 2026-06-03 LAN). */}
+                <View style={chestCardStyles.chestArtPro}>
                   {allDone && isPro && !proRewardClaimed && (
                     <Animated.View pointerEvents="none" style={[styles.chestGlowHalo, { backgroundColor: "#d97706" }, chestGlowStyle]} />
                   )}
                   <Animated.View style={isPro && allDone && !proRewardClaimed ? chestPulseStyle : undefined}>
                     <ExpoImage
                       source={PRO_CHEST_PNG}
-                      style={{ width: 180, height: 180 }}
+                      style={{ width: 180, height: 180, marginVertical: -28 }}
                       contentFit="contain"
                       accessible={false}
                     />
@@ -1097,6 +1110,16 @@ const chestCardStyles = StyleSheet.create({
     justifyContent: "center",
     marginVertical: 6,
     position: "relative",
+  },
+  chestArtPro: {
+    // Shorter laid-out height than the actual PNG (180) so the
+    // surrounding title + rewards close in on the chest body and
+    // ignore the PNG's transparent padding.
+    alignItems: "center",
+    justifyContent: "center",
+    height: 130,
+    position: "relative",
+    overflow: "visible",
   },
   rewardsRow: {
     flexDirection: "row-reverse",
