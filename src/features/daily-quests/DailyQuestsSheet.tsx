@@ -17,7 +17,6 @@ import Animated, {
 import type { AnimationObject } from "lottie-react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
-import { LinearGradient } from "expo-linear-gradient";
 import { Lock } from "lucide-react-native";
 import { LottieIcon } from "../../components/ui/LottieIcon";
 import { ConfettiExplosion } from "../../components/ui/ConfettiExplosion";
@@ -544,7 +543,7 @@ export function DailyQuestsSheet({ visible, onClose, onOpenNewsChallenge, onOpen
                       onPress={handleClaimPro}
                       disabled={proRewardClaimed || showProClaimAnim}
                       accessibilityRole="button"
-                      accessibilityLabel={!isPro ? "שדרגו לפרו לפתיחת התיבה" : proRewardClaimed ? "תיבת פרו נפתחה" : allDone ? "לחצו לפתיחת תיבת הפרו" : "תיבת הפרו נעולה"}
+                      accessibilityLabel={!isPro ? `תיבת פרו נעולה. בפנים: ${previewPro.xp} XP, ${previewPro.coins} מטבעות, יהלום בונוס. לחץ לשדרג` : proRewardClaimed ? "תיבת פרו נפתחה" : allDone ? "לחצו לפתיחת תיבת הפרו" : "תיבת הפרו נעולה"}
                       style={({ pressed }) => [
                         styles.chestWrap,
                         allDone && isPro && !proRewardClaimed && styles.chestWrapReady,
@@ -552,39 +551,49 @@ export function DailyQuestsSheet({ visible, onClose, onOpenNewsChallenge, onOpen
                         pressed && allDone && isPro && !proRewardClaimed && { transform: [{ scale: 0.96 }] },
                       ]}
                     >
-                      <LottieIcon source={LOTTIE_CHEST as unknown as number} size={130} autoPlay={false} active={proChestOpen} loop={false} />
+                      {/* Chest art. Greyscale + dimmed when locked so the user
+                          sees "the chest is here, you just can't open it yet"
+                          rather than "the chest is hidden". The reward chips
+                          below stay readable through the dim so the value is
+                          legible without opening. */}
+                      <View style={!isPro ? proLockStyles.lottieLocked : undefined}>
+                        <LottieIcon source={LOTTIE_CHEST as unknown as number} size={130} autoPlay={false} active={proChestOpen} loop={false} />
+                      </View>
                       <View style={{ position: "absolute", top: -10, right: -6, backgroundColor: "#d97706", borderRadius: 10, paddingHorizontal: 10, paddingVertical: 4, zIndex: 10, borderWidth: 2, borderColor: "#fff", shadowColor: "#000", shadowOpacity: 0.25, shadowRadius: 4, shadowOffset: { width: 0, height: 2 }, elevation: 4, transform: [{ rotate: "8deg" }] }} pointerEvents="none">
                         <Text style={{ color: "#fff", fontSize: 11, fontWeight: "900", letterSpacing: 1.2 }}>PRO</Text>
                       </View>
-                      {!isPro && (
-                        // Locked PRO chest overlay. Replaces the flat black
-                        // scrim + lock emoji combo, which read as "blocked,
-                        // generic" (Yam, 2026-06-02: "אין תחושת PRO, אין
-                        // exclusivity"). The new treatment is a deep-amber
-                        // gradient with a circular gold lock chip + "תוכן
-                        // בלעדי" eyebrow + "שדרגו לפרו" CTA copy, reads as
-                        // aspirational rather than punitive.
-                        <LinearGradient
-                          colors={['rgba(120,53,15,0.78)', 'rgba(180,83,9,0.85)']}
-                          start={{ x: 0, y: 0 }}
-                          end={{ x: 1, y: 1 }}
-                          style={proLockStyles.overlay}
-                          pointerEvents="none"
-                        >
-                          <View style={proLockStyles.lockChip}>
-                            <Lock size={18} color="#78350f" strokeWidth={2.6} fill="#fde68a" />
-                          </View>
-                          <Text style={proLockStyles.eyebrow} allowFontScaling={false}>תוכן בלעדי</Text>
-                          {allDone && (
-                            <Text style={proLockStyles.cta} allowFontScaling={false}>
-                              שדרגו לפרו ←
-                            </Text>
-                          )}
-                        </LinearGradient>
-                      )}
                     </Pressable>
                   </Animated.View>
                 </View>
+                {/* Reward-peek chips. Always visible so the user sees what's
+                    inside the chest before claim/upgrade. When locked (free
+                    user), chips render at 55% opacity so the numbers stay
+                    readable but the row reads as "preview only". */}
+                <View style={[proLockStyles.peekRow, !isPro && proLockStyles.peekRowLocked]}>
+                  <View style={proLockStyles.peekChip}>
+                    <Text style={proLockStyles.peekIcon} allowFontScaling={false}>⚡</Text>
+                    <Text style={proLockStyles.peekValue} allowFontScaling={false}>{previewPro.xp}</Text>
+                  </View>
+                  <View style={proLockStyles.peekChip}>
+                    <Text style={proLockStyles.peekIcon} allowFontScaling={false}>🪙</Text>
+                    <Text style={proLockStyles.peekValue} allowFontScaling={false}>{previewPro.coins}</Text>
+                  </View>
+                  <View style={[proLockStyles.peekChip, proLockStyles.peekChipGem]}>
+                    <Text style={proLockStyles.peekIcon} allowFontScaling={false}>💎</Text>
+                    <Text style={proLockStyles.peekValue} allowFontScaling={false}>{previewPro.gems}</Text>
+                  </View>
+                </View>
+                {/* Locked badge: small gold pill UNDER the chips for free
+                    users, "🔒 שדרגי לפתוח". Communicates the gate without
+                    covering the chest art or hiding the reward preview. */}
+                {!isPro && (
+                  <View style={proLockStyles.lockPill}>
+                    <Lock size={11} color="#735c00" strokeWidth={2.8} />
+                    <Text style={proLockStyles.lockPillText} allowFontScaling={false}>
+                      שדרגי לפתוח
+                    </Text>
+                  </View>
+                )}
               </View>
 
               {/* ── Regular chest (right, smaller) ── */}
@@ -613,6 +622,19 @@ export function DailyQuestsSheet({ visible, onClose, onOpenNewsChallenge, onOpen
                       </View>
                     </Pressable>
                   </Animated.View>
+                </View>
+                {/* Reward-peek chips for the regular chest. Same row pattern
+                    as the PRO chest above so the eye scans the two as a pair
+                    and the PRO row reads as "PRO has more". */}
+                <View style={proLockStyles.peekRow}>
+                  <View style={proLockStyles.peekChip}>
+                    <Text style={proLockStyles.peekIcon} allowFontScaling={false}>⚡</Text>
+                    <Text style={proLockStyles.peekValue} allowFontScaling={false}>{preview.xp}</Text>
+                  </View>
+                  <View style={proLockStyles.peekChip}>
+                    <Text style={proLockStyles.peekIcon} allowFontScaling={false}>🪙</Text>
+                    <Text style={proLockStyles.peekValue} allowFontScaling={false}>{preview.coins}</Text>
+                  </View>
                 </View>
               </View>
 
@@ -968,50 +990,72 @@ const styles = StyleSheet.create({
   },
 });
 
-// Locked PRO chest overlay styles, separate StyleSheet so the gradient
-// gold-lock treatment can evolve without churning the main sheet styles.
+// Chest reward-peek + lock styles. Tells the story without covering the
+// chest art: chips ALWAYS visible (so the user sees what is inside), the
+// chest art dims to grayscale when locked, a small gold "🔒 שדרגי לפתוח"
+// pill sits below to communicate the gate. Replaces the earlier full-
+// chest LinearGradient overlay that hid the chest art entirely and gave
+// the locked state no sense of "what is waiting" (Yam, 2026-06-03).
 const proLockStyles = StyleSheet.create({
-  overlay: {
-    position: "absolute",
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    justifyContent: "center",
-    alignItems: "center",
-    borderRadius: 16,
+  lottieLocked: {
+    // Lottie does not honor RN tintColor; dimming via opacity is the
+    // available lever for "this is locked but here" without swapping the
+    // asset for a separate locked sprite.
+    opacity: 0.45,
+  },
+  peekRow: {
+    flexDirection: "row-reverse",
     gap: 6,
-  },
-  lockChip: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: "#fde68a",
-    borderWidth: 2,
-    borderColor: "#b45309",
+    marginTop: 8,
     alignItems: "center",
     justifyContent: "center",
-    shadowColor: "#78350f",
-    shadowOpacity: 0.4,
-    shadowRadius: 6,
-    shadowOffset: { width: 0, height: 2 },
-    elevation: 4,
+    flexWrap: "wrap",
   },
-  eyebrow: {
+  peekRowLocked: {
+    opacity: 0.65,
+  },
+  peekChip: {
+    flexDirection: "row-reverse",
+    alignItems: "center",
+    gap: 3,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 999,
+    backgroundColor: "rgba(233,196,0,0.16)",
+    borderWidth: 1,
+    borderColor: "rgba(217,119,6,0.30)",
+  },
+  peekChipGem: {
+    backgroundColor: "#fde68a",
+    borderColor: "#d97706",
+  },
+  peekIcon: {
+    fontSize: 12,
+    lineHeight: 14,
+  },
+  peekValue: {
+    fontSize: 12,
+    fontWeight: "900",
+    color: "#735c00",
+    letterSpacing: 0.2,
+  },
+  lockPill: {
+    flexDirection: "row-reverse",
+    alignItems: "center",
+    gap: 4,
+    marginTop: 6,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 999,
+    backgroundColor: "#fef3c7",
+    borderWidth: 1.5,
+    borderColor: "#d97706",
+  },
+  lockPillText: {
     fontSize: 10,
     fontWeight: "900",
-    color: "#fde68a",
-    letterSpacing: 1.4,
+    color: "#735c00",
     writingDirection: "rtl",
-    textAlign: "center",
-    textTransform: "uppercase",
-  },
-  cta: {
-    fontSize: 11,
-    fontWeight: "900",
-    color: "#ffffff",
-    writingDirection: "rtl",
-    textAlign: "center",
     letterSpacing: 0.3,
   },
 });
