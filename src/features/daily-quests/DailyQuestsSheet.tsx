@@ -607,7 +607,7 @@ export function DailyQuestsSheet({ visible, onClose, onOpenNewsChallenge, onOpen
                   <Animated.View style={isPro && allDone && !proRewardClaimed ? chestPulseStyle : undefined}>
                     <ExpoImage
                       source={PRO_CHEST_PNG}
-                      style={{ width: 140, height: 140 }}
+                      style={{ width: 180, height: 180 }}
                       contentFit="contain"
                       accessible={false}
                     />
