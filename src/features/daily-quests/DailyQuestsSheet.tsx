@@ -620,7 +620,7 @@ export function DailyQuestsSheet({ visible, onClose, onOpenNewsChallenge, onOpen
                   <Animated.View style={isPro && allDone && !proRewardClaimed ? chestPulseStyle : undefined}>
                     <ExpoImage
                       source={PRO_CHEST_PNG}
-                      style={{ width: 180, height: 180, marginVertical: -28 }}
+                      style={{ width: 220, height: 220, marginVertical: -38 }}
                       contentFit="contain"
                       accessible={false}
                     />
@@ -1047,10 +1047,10 @@ const chestCardStyles = StyleSheet.create({
     borderColor: STITCH.surfaceHighest,
   },
   cardPro: {
-    // PRO card is wider (flex 1.35 vs regular flex 1) so the eye
-    // immediately reads PRO as "the bigger deal". Matches the reference
-    // Yam sent where the PRO card is visibly larger.
-    flex: 1.35,
+    // PRO card is wider (flex 1.5 vs regular flex 1) so the eye reads
+    // PRO as the bigger deal. Bumped from 1.35 after LAN review showed
+    // the cards still felt equal in proportions.
+    flex: 1.5,
     backgroundColor: "#fffbeb",
     borderColor: "#f59e0b",
     borderWidth: 2,
