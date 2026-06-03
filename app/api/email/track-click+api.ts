@@ -6,7 +6,12 @@ import { safeErrorResponse } from '../_shared/safeError';
 import { verifyEmailClickSig } from '../../../src/features/email/emailClickSig';
 
 const EXPERIMENT_ID = 'daily_email_variant';
-const REDIRECT_URL = 'https://finplay.me/?from=email';
+// Deep link straight into the app — was 'https://finplay.me/?from=email'
+// (landing page), which dumped tappers onto the web instead of the game
+// (user report 2026-06-03). 'finpl://learn' opens the app's learn surface
+// when installed; if the OS doesn't resolve it, the user is no worse off
+// than before (modern mail clients ignore unhandled schemes silently).
+const REDIRECT_URL = 'finpl://learn';
 
 function getDb() {
   const dbSql = neon(process.env.DATABASE_URL ?? '');
