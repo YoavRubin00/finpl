@@ -59,15 +59,54 @@ export function useAppleAuth() {
     }
   };
 
+  /**
+   * Native Apple Sign-In with a single retry on `ERR_REQUEST_UNKNOWN`
+   * (= `ASAuthorizationErrorUnknown`, code -1000). That error is Apple's
+   * generic transient-failure bucket — most often a flaky network probe
+   * to Apple's auth server, a stale keychain cache, or a competing
+   * AuthSession in flight. PostHog showed 9 ERR_REQUEST_UNKNOWN events
+   * on v1.3.0 across 6 distinct users in 36h (50%+ of all Apple-method
+   * clicks) — far above the iOS baseline. A 800 ms delayed retry catches
+   * the transient bucket without making real failures wait noticeably.
+   * Returns null on cancel or final failure; sets the auth-error banner
+   * in either case so the caller doesn't need to.
+   */
+  const tryNativeAppleSignIn = async (): Promise<AppleAuthentication.AppleAuthenticationCredential | null> => {
+    const MAX_ATTEMPTS = 2;
+    for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+      try {
+        return await AppleAuthentication.signInAsync({
+          requestedScopes: [
+            AppleAuthentication.AppleAuthenticationScope.FULL_NAME,
+            AppleAuthentication.AppleAuthenticationScope.EMAIL,
+          ],
+        });
+      } catch (err: unknown) {
+        const code = (err as { code?: string }).code;
+        if (code === "ERR_REQUEST_CANCELED") {
+          captureEvent('auth_cancelled', { method: 'apple' });
+          return null;
+        }
+        if (code === "ERR_REQUEST_UNKNOWN" && attempt < MAX_ATTEMPTS) {
+          captureEvent('auth_retry', { method: 'apple', error_code: code, attempt });
+          console.warn(`[AppleAuth] ERR_REQUEST_UNKNOWN on attempt ${attempt}, retrying in 800ms`);
+          await new Promise((r) => setTimeout(r, 800));
+          continue;
+        }
+        captureEvent('auth_failed', { method: 'apple', error_code: code ?? 'unknown', attempts: attempt });
+        useAuthStore.getState().setAuthError("הכניסה עם Apple נכשלה. נסה Google או אימייל.");
+        console.warn("[AppleAuth] signIn failed (final):", err);
+        return null;
+      }
+    }
+    return null;
+  };
+
   const promptAppleSignIn = async (): Promise<void> => {
     if (!isAvailable) return;
+    const credential = await tryNativeAppleSignIn();
+    if (!credential) return;
     try {
-      const credential = await AppleAuthentication.signInAsync({
-        requestedScopes: [
-          AppleAuthentication.AppleAuthenticationScope.FULL_NAME,
-          AppleAuthentication.AppleAuthenticationScope.EMAIL,
-        ],
-      });
       // Apple returns email/name only on first sign-in. Persist whatever we get.
       const fullName = credential.fullName;
       const displayName =
@@ -114,15 +153,12 @@ export function useAppleAuth() {
         router.replace("/(auth)/onboarding" as never);
       }
     } catch (err: unknown) {
-      const code = (err as { code?: string }).code;
-      // User canceled or auth failed. Silent for cancel, inline banner for real failures.
-      if (code !== "ERR_REQUEST_CANCELED") {
-        captureEvent('auth_failed', { method: 'apple', error_code: code ?? 'unknown' });
-        useAuthStore.getState().setAuthError("הכניסה עם Apple נכשלה. נסה שוב או בחר שיטה אחרת.");
-        console.warn("[AppleAuth] signIn failed:", err);
-      } else {
-        captureEvent('auth_cancelled', { method: 'apple' });
-      }
+      // Post-credential failures only — native sign-in errors are handled
+      // inside tryNativeAppleSignIn above. Anything that reaches here is a
+      // failure in linkProvider/verifyWithServer/signInWithProfile/router.
+      captureEvent('auth_failed', { method: 'apple', error_code: 'post_credential_threw' });
+      useAuthStore.getState().setAuthError("הכניסה עם Apple נכשלה. נסה שוב או בחר שיטה אחרת.");
+      console.warn("[AppleAuth] post-credential flow failed:", err);
     }
   };
 
