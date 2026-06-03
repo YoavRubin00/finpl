@@ -430,15 +430,16 @@ export function DailyQuestsSheet({ visible, onClose, onOpenNewsChallenge, onOpen
 
   const handleClaimPro = () => {
     if (!isPro) {
-      // Free user tap on the locked PRO chest. Surface the in-app upgrade
-      // modal instead of routing out to /subscription (the old flow pulled
-      // the user out of the Daily Quests session, which read as a hard
-      // bounce). The 'breaking-news' feature reuses the canonical "תיבת
-      // הבונוס של ה-Pro" copy that DailyNewsChallenge also uses for its
-      // gated chest, so the messaging stays consistent across surfaces.
+      // Free user tap on the locked PRO chest. Route straight to the
+      // /pricing screen — the previous showUpgrade('breaking-news') modal
+      // pattern competed with the onClose() of this sheet and the user
+      // observed "it goes to the next module instead of pricing" (2026-06-03).
+      // /pricing matches every other Pro CTA across the app (ProfileScreen,
+      // AIInsights, MacroEvent, MythFeed) so the upgrade flow stays
+      // consistent regardless of entry point.
       tapHaptic();
       onClose();
-      showUpgrade('breaking-news');
+      router.push('/pricing?source=daily_chest_pro' as never);
       return;
     }
     if (proRewardClaimed || !allDone || showProClaimAnim) return;
@@ -1038,7 +1039,9 @@ const chestCardStyles = StyleSheet.create({
   },
   card: {
     borderRadius: 18,
-    paddingTop: 14,
+    // paddingTop bumped 14→32 to leave breathing room for the absolutely-
+    // positioned tag chip in the top-right corner (formerly inline).
+    paddingTop: 32,
     paddingBottom: 12,
     paddingHorizontal: 10,
     alignItems: "center",
@@ -1076,12 +1079,19 @@ const chestCardStyles = StyleSheet.create({
     left: 6,
     zIndex: 5,
   },
+  // Tag (eyebrow chip): pulled OUT of the title flow into absolute top-right
+  // so it doesn't overlap the "תיבה רגילה" / "תיבת PRO" headline (user
+  // report 2026-06-03: "הסימן של הפרו לא יהיה על הטקסט"). Card paddingTop
+  // is bumped via tag's height + gap so the title still clears it.
   tag: {
-    paddingHorizontal: 14,
-    paddingVertical: 4,
+    position: "absolute",
+    top: 8,
+    right: 10,
+    paddingHorizontal: 10,
+    paddingVertical: 2,
     borderRadius: 999,
     backgroundColor: "#94a3b8",
-    marginBottom: 6,
+    zIndex: 4,
   },
   tagPro: {
     backgroundColor: "#f97316",
@@ -1134,13 +1144,16 @@ const chestCardStyles = StyleSheet.create({
     justifyContent: "center",
     flexWrap: "wrap",
     gap: 4,
-    marginTop: 8,
+    // Rewards hug the chest now (was marginTop 8 — created a visible gap
+    // that the user read as "rewards belong to the CTA below, not the
+    // chest above", 2026-06-03 user report).
+    marginTop: 0,
   },
   rewardsCol: {
     flexDirection: "column",
     alignItems: "center",
     gap: 2,
-    marginTop: 8,
+    marginTop: 0,
   },
   rewardIcon: {
     fontSize: 18,
@@ -1165,6 +1178,9 @@ const chestCardStyles = StyleSheet.create({
     color: STITCH.onSurfaceVariant,
     marginHorizontal: 4,
   },
+  // CTA color changed orange→deep-blue 2026-06-03 to match every other
+  // "שדרגו לפרו" surface in the app (ProfileScreen, AIInsights,
+  // MacroEvent, MythFeed all use #1d4ed8). Consistency over novelty.
   proCta: {
     flexDirection: "row-reverse",
     alignItems: "center",
@@ -1172,9 +1188,11 @@ const chestCardStyles = StyleSheet.create({
     gap: 6,
     marginTop: 12,
     paddingHorizontal: 10,
-    paddingVertical: 8,
+    paddingVertical: 10,
     borderRadius: 12,
-    backgroundColor: "#f97316",
+    backgroundColor: "#1d4ed8",
+    borderBottomWidth: 3,
+    borderBottomColor: "#1e3a8a",
     alignSelf: "stretch",
   },
   proCtaIcon: {
