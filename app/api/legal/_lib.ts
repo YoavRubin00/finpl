@@ -10,7 +10,11 @@
 
 import { neon } from '@neondatabase/serverless';
 import { drizzle } from 'drizzle-orm/neon-http';
-import { randomBytes } from 'node:crypto';
+// `crypto` (not `node:crypto`) — the rest of the +api.ts surface uses the
+// bare specifier and Metro resolves it via Vercel's Node polyfill at deploy
+// time. The `node:` prefix is rejected by Metro at the client-bundle step
+// (preview Android build 2026-06-03), even though this file is server-only.
+import { randomUUID } from 'crypto';
 
 export function getDb() {
   const url = process.env.DATABASE_URL;
@@ -32,11 +36,11 @@ export function getOrigin(request: Request): string {
   }
 }
 
-/** 32 random bytes → 43-char URL-safe base64 string. Sufficient entropy
- *  (~192 bits) that brute-forcing the email link is computationally
- *  infeasible during the 14-day window. */
+/** ~256 bits of entropy from two concatenated UUIDv4s, hyphens stripped.
+ *  Two UUIDs because a single one (~122 bits) is borderline; we want the
+ *  email-link token to be brute-force infeasible during its 14-day window. */
 export function generateToken(): string {
-  return randomBytes(32).toString('base64url');
+  return (randomUUID() + randomUUID()).replace(/-/g, '');
 }
 
 /** Best-effort client IP for audit trail. Vercel/Cloudflare both populate

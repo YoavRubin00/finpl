@@ -7,7 +7,7 @@
  * When you bump this, also update TERMS_UPDATE_SUMMARY_HE below to describe
  * what changed — that's what the user sees in the re-consent modal.
  */
-export const CURRENT_TERMS_VERSION = '2026-06-03';
+export const CURRENT_TERMS_VERSION = '2026-06-04';
 
 /**
  * Consolidated Hebrew bullets shown in the re-consent modal.
@@ -23,8 +23,10 @@ export const CURRENT_TERMS_VERSION = '2026-06-03';
  * Each bullet under ~110 chars.
  */
 export const TERMS_UPDATE_SUMMARY_HE: ReadonlyArray<string> = [
+  // 2026-06-04 cycle — parental-consent flow shipped
+  'בני 16–17 שמעוניינים במנוי Pro יכולים כעת לקבל אישור הורה ישירות באפליקציה: מזינים אימייל של הורה ושולחים קישור אישור. רכישה תיפתח רק לאחר שההורה ילחץ על האישור.',
   // 2026-06-03 cycle — legal-compliance pass
-  'גיל מינימום באפליקציה: 16. רכישת מנוי Pro והצעות מסחריות פתוחות לגיל 18 ומעלה בלבד.',
+  'גיל מינימום באפליקציה: 16. רכישת מנוי Pro והצעות מסחריות פתוחות לגיל 18 ומעלה, או לבני 16–17 עם אישור הורה.',
   'זכות ביטול מנוי תוך 14 יום מהרכישה (Cooling-Off) עם החזר מלא דרך App Store / Google Play.',
   'מודעות (AdMob) למשתמשים בני 16–17 מתויגות אוטומטית ללא מיקוד התנהגותי (TFUA).',
   // 2026-06-01 cycle — payslip + tools + AI clarifications
@@ -35,8 +37,10 @@ export const TERMS_UPDATE_SUMMARY_HE: ReadonlyArray<string> = [
 
 /** Same consolidated summary in English. Keep ordering identical to HE. */
 export const TERMS_UPDATE_SUMMARY_EN: ReadonlyArray<string> = [
+  // 2026-06-04 cycle
+  'Users aged 16–17 can now obtain parental consent for a Pro subscription directly in the app: enter a parent\'s email, an approval link is sent, and purchase unlocks once the parent clicks to confirm.',
   // 2026-06-03 cycle
-  'Minimum age in the app: 16. Pro purchases and commercial offers are restricted to users 18+.',
+  'Minimum age in the app: 16. Pro purchases and commercial offers are restricted to users 18+, or 16–17 with parental consent.',
   '14-day cancellation right (cooling-off) for subscriptions with full refund via App Store / Google Play.',
   'AdMob ads served to users aged 16–17 are auto-tagged without behavioral targeting (TFUA).',
   // 2026-06-01 cycle

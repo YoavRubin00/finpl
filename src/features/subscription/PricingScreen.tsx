@@ -32,6 +32,8 @@ import { useRouter, useLocalSearchParams } from "expo-router";
 import { useIsPro, useSyncFromRevenueCat } from "./useSubscription";
 import { useUsageStore } from "./useUsageStore";
 import { useAuthStore } from "../auth/useAuthStore";
+import { ParentalConsentGate } from "../legal/ParentalConsentGate";
+import { selectHasActiveParentalConsent, useParentalConsentStore } from "../legal/useParentalConsent";
 import { getOffering, purchasePackage, RC_ENTITLEMENT_PRO, restorePurchases } from "../../services/revenueCat";
 import type { PurchasesPackage } from "../../services/revenueCat";
 import { BackButton } from "../../components/ui/BackButton";
@@ -187,12 +189,16 @@ export function PricingScreen() {
   const isCurrentlyPro = useIsPro();
   const hasSeenProWelcome = useUsageStore((s) => s.hasSeenProWelcome);
   const displayName = useAuthStore((s) => s.displayName);
-  // Block subscription purchases for under-18 (ageGroup === 'minor' = 16-17).
-  // Israeli Capacity Act sec. 4-6 allows a parent to void any subscription a
-  // minor entered without consent — RevenueCat refund risk + Apple/Google
-  // takedown risk under their parental-gate guidelines. Phase 0-1 hard block
-  // until P1-1 parental-consent flow ships (Phase 1).
+  // Minor users (ageGroup === 'minor' = 16-17) can purchase Pro only after
+  // a parent has confirmed consent via the ParentalConsentGate flow. The
+  // gate replaces the upgrade CTA until status === 'confirmed'; once
+  // confirmed, the regular CTA reappears and handleUpgrade proceeds.
+  // Israeli Capacity Act sec. 4-6 — parent can void any minor's ongoing
+  // transaction made without their consent. With consent on file, the
+  // purchase is binding.
   const isMinor = useAuthStore((s) => s.profile?.ageGroup === 'minor');
+  const hasParentalConsent = useParentalConsentStore(selectHasActiveParentalConsent);
+  const minorBlocksPurchase = isMinor && !hasParentalConsent;
   const [isLoading, setIsLoading] = useState(false);
   const [activePackage, setActivePackage] = useState<PurchasesPackage | null>(null);
   const { mutateAsync: syncFromRC } = useSyncFromRevenueCat();
@@ -261,12 +267,13 @@ export function PricingScreen() {
       Alert.alert("שגיאה", "יש להתחבר כדי להירשם.");
       return;
     }
-    // Defense-in-depth: UI already hides the CTA for minors (see render below),
-    // but guard the action too in case a future call-site bypasses the UI.
-    if (isMinor) {
+    // Defense-in-depth: UI already swaps the CTA for ParentalConsentGate
+    // when a minor lacks active consent. Guard the action too in case a
+    // future call-site bypasses the UI.
+    if (minorBlocksPurchase) {
       Alert.alert(
-        "רכישת Pro למשתמשים בני 18+",
-        "רכישת מנוי מחייבת בגרות משפטית בישראל. כל שאר תכני FinPlay זמינים לך כרגיל.",
+        "נדרש אישור הורה",
+        "רכישת מנוי לגיל 16–17 דורשת אישור הורה. השלם/השלימי את האישור בלוח הירוק למטה.",
         [{ text: "הבנתי" }],
       );
       return;
@@ -360,7 +367,7 @@ export function PricingScreen() {
     } finally {
       setIsLoading(false);
     }
-  }, [displayName, isMinor, syncFromRC, hasSeenProWelcome, router, trackConversion, trialDays, returnTo]);
+  }, [displayName, minorBlocksPurchase, syncFromRC, hasSeenProWelcome, router, trackConversion, trialDays, returnTo]);
 
   const handleRestore = useCallback(async () => {
     setIsLoading(true);
@@ -503,16 +510,8 @@ export function PricingScreen() {
               <View style={styles.currentPlanBadge}>
                 <Text style={styles.currentPlanText}>✦ המנוי שלכם פעיל</Text>
               </View>
-            ) : isMinor ? (
-              <View style={styles.minorGate}>
-                <Text style={styles.minorGateTitle} allowFontScaling={false}>
-                  רכישת Pro למשתמשים בני 18+
-                </Text>
-                <Text style={styles.minorGateBody} allowFontScaling={false}>
-                  רכישת מנוי מחייבת בגרות משפטית בישראל. כל תכני FinPlay הלימודיים
-                  זמינים לך כרגיל ללא תשלום.
-                </Text>
-              </View>
+            ) : minorBlocksPurchase ? (
+              <ParentalConsentGate />
             ) : (
               <>
                 <Animated.View style={[styles.ctaWrapper, ctaGlowStyle]}>
