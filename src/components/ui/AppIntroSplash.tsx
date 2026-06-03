@@ -2,8 +2,12 @@ import { useEffect, useRef } from "react";
 import { Pressable, StyleSheet } from "react-native";
 import { useVideoPlayer, VideoView } from "expo-video";
 
-const VIDEO_URL =
-  "https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/finn-videos/finn-daily-return.mp4";
+// Bundled locally (assets/video/finn-daily-return.mp4, ~680 KB) — was a
+// Vercel Blob URL previously, which forced a cold-start network fetch that
+// left the splash black on slow networks (user report 2026-06-03). Local
+// require() lets the video appear instantly the moment the user opens the
+// app and disappear cleanly at the 3s mark.
+const VIDEO_SOURCE = require("../../../assets/video/finn-daily-return.mp4");
 
 /** Cold-start intro splash: plays finn-daily-return for ~3s, tap to skip. */
 const DISPLAY_MS = 3000;
@@ -17,7 +21,7 @@ export function AppIntroSplash({ onDismiss }: Props) {
   const onDismissRef = useRef(onDismiss);
   onDismissRef.current = onDismiss;
 
-  const player = useVideoPlayer(VIDEO_URL, (p) => {
+  const player = useVideoPlayer(VIDEO_SOURCE, (p) => {
     p.loop = false;
     p.muted = true;
     p.bufferOptions = {
