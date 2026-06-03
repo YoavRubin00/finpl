@@ -26,7 +26,7 @@ export function EmptyState({
   return (
     <View style={styles.wrap}>
       <View style={styles.heroIconWrap}>
-        <Flame size={32} color="#dc2626" strokeWidth={2.4} />
+        <Flame size={36} color="#f59e0b" strokeWidth={2.6} />
       </View>
 
       <Text style={styles.title} allowFontScaling={false}>
@@ -103,19 +103,25 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 12,
   },
+  // Amber-on-amber-tint instead of red — pairs with the new sky-blue
+  // accent used across the rest of the screen, while the warm flame still
+  // says "breaking" without screaming "error" (user feedback 2026-06-03:
+  // "אדום+ורוד לא מתאים, שיהיה אחיד עם שאר האפליקציה").
   heroIconWrap: {
-    width: 72,
-    height: 72,
-    borderRadius: 36,
-    backgroundColor: '#fee2e2',
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: '#fef3c7',
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 4,
-    shadowColor: '#dc2626',
-    shadowOpacity: 0.15,
-    shadowRadius: 16,
-    shadowOffset: { width: 0, height: 4 },
-    elevation: 4,
+    borderWidth: 2,
+    borderColor: '#fde68a',
+    shadowColor: '#f59e0b',
+    shadowOpacity: 0.28,
+    shadowRadius: 18,
+    shadowOffset: { width: 0, height: 6 },
+    elevation: 8,
   },
   title: {
     fontSize: 24,
