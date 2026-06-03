@@ -187,6 +187,12 @@ export function PricingScreen() {
   const isCurrentlyPro = useIsPro();
   const hasSeenProWelcome = useUsageStore((s) => s.hasSeenProWelcome);
   const displayName = useAuthStore((s) => s.displayName);
+  // Block subscription purchases for under-18 (ageGroup === 'minor' = 16-17).
+  // Israeli Capacity Act sec. 4-6 allows a parent to void any subscription a
+  // minor entered without consent — RevenueCat refund risk + Apple/Google
+  // takedown risk under their parental-gate guidelines. Phase 0-1 hard block
+  // until P1-1 parental-consent flow ships (Phase 1).
+  const isMinor = useAuthStore((s) => s.profile?.ageGroup === 'minor');
   const [isLoading, setIsLoading] = useState(false);
   const [activePackage, setActivePackage] = useState<PurchasesPackage | null>(null);
   const { mutateAsync: syncFromRC } = useSyncFromRevenueCat();
@@ -253,6 +259,16 @@ export function PricingScreen() {
   const handleUpgrade = useCallback(async () => {
     if (!displayName) {
       Alert.alert("שגיאה", "יש להתחבר כדי להירשם.");
+      return;
+    }
+    // Defense-in-depth: UI already hides the CTA for minors (see render below),
+    // but guard the action too in case a future call-site bypasses the UI.
+    if (isMinor) {
+      Alert.alert(
+        "רכישת Pro למשתמשים בני 18+",
+        "רכישת מנוי מחייבת בגרות משפטית בישראל. כל שאר תכני FinPlay זמינים לך כרגיל.",
+        [{ text: "הבנתי" }],
+      );
       return;
     }
 
@@ -344,7 +360,7 @@ export function PricingScreen() {
     } finally {
       setIsLoading(false);
     }
-  }, [displayName, syncFromRC, hasSeenProWelcome, router, trackConversion, trialDays, returnTo]);
+  }, [displayName, isMinor, syncFromRC, hasSeenProWelcome, router, trackConversion, trialDays, returnTo]);
 
   const handleRestore = useCallback(async () => {
     setIsLoading(true);
@@ -478,6 +494,16 @@ export function PricingScreen() {
               <View style={styles.currentPlanBadge}>
                 <Text style={styles.currentPlanText}>✦ המנוי שלכם פעיל</Text>
               </View>
+            ) : isMinor ? (
+              <View style={styles.minorGate}>
+                <Text style={styles.minorGateTitle} allowFontScaling={false}>
+                  רכישת Pro למשתמשים בני 18+
+                </Text>
+                <Text style={styles.minorGateBody} allowFontScaling={false}>
+                  רכישת מנוי מחייבת בגרות משפטית בישראל. כל תכני FinPlay הלימודיים
+                  זמינים לך כרגיל ללא תשלום.
+                </Text>
+              </View>
             ) : (
               <>
                 <Animated.View style={[styles.ctaWrapper, ctaGlowStyle]}>
@@ -534,6 +560,14 @@ export function PricingScreen() {
                     ביטול חינם בכל עת
                   </Text>
                 ) : null}
+                {/* Cooling-off disclosure (Israeli Consumer Protection Act +
+                    Apple/Google refund policies). Phase 1-2 — surface the
+                    14-day refund right explicitly so the user doesn't think
+                    they're locked in. */}
+                <Text style={[styles.coolingOff, { color: theme.textMuted }]} allowFontScaling={false}>
+                  ניתן לבטל את המנוי תוך 14 ימים מהרכישה ולקבל החזר מלא
+                  דרך {Platform.OS === "ios" ? "App Store" : "Google Play"}.
+                </Text>
 
                 {/* Auto-renew disclosure, platform-specific */}
                 <Text style={[styles.disclosure, { color: theme.textMuted }]}>
@@ -899,5 +933,43 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: "900",
     color: "#ffffff",
+  },
+  // Minor gate panel — shown instead of the upgrade CTA when ageGroup === 'minor'.
+  // Calm copy, no scary red box. We're not blocking the screen, just the purchase.
+  minorGate: {
+    backgroundColor: '#f1f5f9',
+    borderRadius: 16,
+    borderWidth: 1.5,
+    borderColor: '#cbd5e1',
+    paddingVertical: 18,
+    paddingHorizontal: 20,
+    alignItems: 'center',
+    gap: 8,
+    alignSelf: 'stretch',
+    marginHorizontal: 16,
+  },
+  minorGateTitle: {
+    fontSize: 16,
+    fontWeight: '900',
+    color: '#0f172a',
+    textAlign: 'center',
+    writingDirection: 'rtl',
+  },
+  minorGateBody: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#475569',
+    textAlign: 'center',
+    writingDirection: 'rtl',
+    lineHeight: 19,
+  },
+  coolingOff: {
+    fontSize: 11,
+    fontWeight: '600',
+    textAlign: 'center',
+    writingDirection: 'rtl' as const,
+    marginTop: 6,
+    paddingHorizontal: 16,
+    lineHeight: 16,
   },
 });

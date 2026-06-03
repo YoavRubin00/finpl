@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Platform } from "react-native";
 import { useIsPro } from "../features/subscription/useSubscription";
+import { useAuthStore } from "../features/auth/useAuthStore";
 
 // Minimal shape of react-native-google-mobile-ads we actually call. Typed
 // this way so we don't pull the SDK's type tree (it would crash the web build,
@@ -13,6 +14,12 @@ interface RewardedAdInstance {
   load(): void;
   show(): void;
 }
+interface MobileAdsInstance {
+  setRequestConfiguration(opts: {
+    tagForUnderAgeOfConsent?: boolean;
+    tagForChildDirectedTreatment?: boolean;
+  }): Promise<void>;
+}
 interface AdsModuleShape {
   TestIds: { REWARDED: string };
   RewardedAd: {
@@ -23,6 +30,7 @@ interface AdsModuleShape {
   };
   RewardedAdEventType: { LOADED: string; EARNED_REWARD: string };
   AdEventType: { CLOSED: string; ERROR: string };
+  default: () => MobileAdsInstance;
 }
 
 let AdsModule: AdsModuleShape | null = null;
@@ -58,16 +66,34 @@ if (Platform.OS !== "web") {
  */
 export function useRewardedAd() {
   const isPro = useIsPro();
+  // Israeli digital age of consent is 16; 16-17 users are still 'minor' in
+  // capacity law and must be tagged TFUA (Tag For Under Age of Consent) so
+  // AdMob suppresses behavioral targeting. Required by Google Play Families
+  // Policy + Apple guideline 1.3 — missing this is a takedown risk.
+  const isMinor = useAuthStore((s) => s.profile?.ageGroup === 'minor');
   const [isLoaded, setIsLoaded] = useState(false);
   const adRef = useRef<RewardedAdInstance | null>(null);
   const callbackRef = useRef<(() => void) | null>(null);
 
-  const loadAd = useCallback(() => {
+  const loadAd = useCallback(async () => {
     if (isPro || !AdsModule) {
       if (!AdsModule) console.warn("[AdMob] loadAd skipped — AdsModule unavailable");
       return;
     }
     try {
+      // Apply TFUA before requesting the ad. setRequestConfiguration is a
+      // global singleton mutation; re-applying on every load is cheap and
+      // ensures the flag is always in sync with the latest profile state
+      // (e.g. user finishes onboarding mid-session and ageGroup flips).
+      try {
+        await AdsModule.default().setRequestConfiguration({
+          tagForUnderAgeOfConsent: isMinor,
+          tagForChildDirectedTreatment: false, // we don't target <13
+        });
+      } catch (cfgErr) {
+        console.warn("[AdMob] setRequestConfiguration failed:", cfgErr);
+      }
+
       // Non-personalized ads only — avoids ATT requirement + IDFA usage.
       // Safer for App Store review; slightly lower CPM.
       const ad = AdsModule.RewardedAd.createForAdRequest(AD_UNIT_ID, {
@@ -119,7 +145,7 @@ export function useRewardedAd() {
     } catch (error) {
       console.warn("[AdMob] createForAdRequest failed:", error);
     }
-  }, [isPro]);
+  }, [isPro, isMinor]);
 
   useEffect(() => {
     loadAd();
