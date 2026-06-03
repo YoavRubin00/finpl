@@ -438,6 +438,19 @@ export function DailyQuestsSheet({ visible, onClose, onOpenNewsChallenge, onOpen
       // AIInsights, MacroEvent, MythFeed) so the upgrade flow stays
       // consistent regardless of entry point.
       tapHaptic();
+      // 2026-06-03: capture explicit click on the daily-quests PRO surface
+      // so we can measure interest separately from /pricing page visits
+      // (which aggregate clicks from every other CTA in the app). Lets us
+      // answer "is the daily chest a real conversion driver, or just
+      // decoration?". Pair with daily_quests_modal_opened impression event
+      // for click-through rate.
+      captureEvent('daily_quests_pro_upgrade_clicked', {
+        source: 'daily_chest_pro',
+        completed_count: completedCount,
+        all_done: allDone,
+        streak,
+        is_pro: false,
+      });
       onClose();
       router.push('/pricing?source=daily_chest_pro' as never);
       return;
@@ -616,12 +629,12 @@ export function DailyQuestsSheet({ visible, onClose, onOpenNewsChallenge, onOpen
                     PNG (Yam, 2026-06-03 LAN). */}
                 <View style={chestCardStyles.chestArtPro}>
                   {allDone && isPro && !proRewardClaimed && (
-                    <Animated.View pointerEvents="none" style={[styles.chestGlowHalo, { backgroundColor: "#d97706" }, chestGlowStyle]} />
+                    <Animated.View pointerEvents="none" style={[styles.chestGlowHalo, { backgroundColor: "#1d4ed8" }, chestGlowStyle]} />
                   )}
                   <Animated.View style={isPro && allDone && !proRewardClaimed ? chestPulseStyle : undefined}>
                     <ExpoImage
                       source={PRO_CHEST_PNG}
-                      style={{ width: 220, height: 220, marginVertical: -38 }}
+                      style={{ width: 160, height: 160 }}
                       contentFit="contain"
                       accessible={false}
                     />
@@ -1060,11 +1073,15 @@ const chestCardStyles = StyleSheet.create({
     // PRO card is wider (flex 1.5 vs regular flex 1) so the eye reads
     // PRO as the bigger deal. Bumped from 1.35 after LAN review showed
     // the cards still felt equal in proportions.
+    // Palette swap 2026-06-03 (user request): orange-amber → deep blue
+    // to match every other "שדרגו לפרו" surface in the app
+    // (ProfileScreen, AIInsights, MacroEvent, MythFeed, the proCta below).
+    // Single PRO color across the app = no cognitive load, higher trust.
     flex: 1.5,
-    backgroundColor: "#fffbeb",
-    borderColor: "#f59e0b",
+    backgroundColor: "#eff6ff",
+    borderColor: "#1d4ed8",
     borderWidth: 2,
-    shadowColor: "#d97706",
+    shadowColor: "#1e3a8a",
     shadowOpacity: 0.18,
     shadowRadius: 10,
     shadowOffset: { width: 0, height: 4 },
@@ -1094,8 +1111,8 @@ const chestCardStyles = StyleSheet.create({
     zIndex: 4,
   },
   tagPro: {
-    backgroundColor: "#f97316",
-    shadowColor: "#c2410c",
+    backgroundColor: "#1d4ed8",
+    shadowColor: "#1e3a8a",
     shadowOpacity: 0.3,
     shadowRadius: 4,
     shadowOffset: { width: 0, height: 2 },
@@ -1120,7 +1137,7 @@ const chestCardStyles = StyleSheet.create({
     marginBottom: 4,
   },
   cardTitlePro: {
-    color: "#9a3412",
+    color: "#1e3a8a",
   },
   chestArt: {
     alignItems: "center",
@@ -1129,12 +1146,14 @@ const chestCardStyles = StyleSheet.create({
     position: "relative",
   },
   chestArtPro: {
-    // Shorter laid-out height than the actual PNG (180) so the
-    // surrounding title + rewards close in on the chest body and
-    // ignore the PNG's transparent padding.
+    // 2026-06-03 (user report): chest PNG at 220×220 with
+    // marginVertical:-38 over-painted the "תיבת PRO" title above.
+    // Fixed by dropping chest to 160×160 with no negative margin —
+    // contentFit="contain" still keeps the visible chest body
+    // centered inside its frame.
     alignItems: "center",
     justifyContent: "center",
-    height: 130,
+    height: 160,
     position: "relative",
     overflow: "visible",
   },
