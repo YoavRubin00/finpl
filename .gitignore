@@ -18,6 +18,12 @@ web-build/
 
 # Large media — hosted on CDN (Vercel Blob / R2), not bundled in repo
 assets/video/
+# Exception: finn-daily-return.mp4 IS bundled (used by AppIntroSplash for
+# instant cold-start playback). force-added via `git add -f` would put it
+# in git but eas-cli still reads .gitignore when uploading the project,
+# so it would skip the file and the native build would fail with
+# "Unable to resolve module ../../../assets/video/finn-daily-return.mp4".
+!assets/video/finn-daily-return.mp4
 assets/AUDIO/
 assets/vercel_stage/
 assets/daisy/
