@@ -37,6 +37,7 @@ import { ResultCard } from "./components/ResultCard";
 import { PayslipChat } from "./components/PayslipChat";
 import { ToolNextStepCard } from "../financial-tools/components/ToolNextStepCard";
 import { useFinancialProfileStore } from "../financial-tools/useFinancialProfileStore";
+import { useToolInstrumentation } from "../financial-tools/hooks/useToolInstrumentation";
 import { LegalGateModal } from "./components/LegalGateModal";
 import type { ChosenFile, PayslipPhase } from "./types";
 
@@ -154,6 +155,7 @@ function FilePreview({ file, onClear, onAnalyze, busy }: FilePreviewProps) {
 }
 
 export function PayslipAnalyzerScreen() {
+  useToolInstrumentation('payslip');
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const phase = usePayslipAnalyzerStore((s) => s.phase);
