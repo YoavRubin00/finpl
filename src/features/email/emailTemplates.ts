@@ -314,7 +314,12 @@ export function buildWelcomeEmailHtml(params: {
   const appDeepLink = params.appDeepLink ?? 'finpl://learn';
   const appStoreFallback = params.appStoreFallback ?? 'https://finplay.me';
   const whatsappUrl = params.whatsappUrl ?? 'https://chat.whatsapp.com/JzyPhMvOOcyBbiwzlm4psT';
-  const subject = 'ברוכים הבאים ל-FinPlay';
+  // Subject includes "פרסומת | " prefix per the Israeli Communications Law
+  // (section 30A) — the welcome email contains a WhatsApp community CTA
+  // alongside the app deep link, which is enough commercial overtone that
+  // adding the prefix is the safer side of the line. User decision
+  // 2026-06-03: "תשנה את הכותרת כדי שאני יהיה מוכן".
+  const subject = 'פרסומת | ברוכים הבאים ל-FinPlay 🦈';
 
   const html = loadWelcomeTemplate()
     .split('{{name}}').join(escapeHtml(name))
