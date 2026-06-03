@@ -2,12 +2,14 @@ import { useEffect, useRef } from "react";
 import { Pressable, StyleSheet } from "react-native";
 import { useVideoPlayer, VideoView } from "expo-video";
 
-// Bundled locally (assets/video/finn-daily-return.mp4, ~680 KB) — was a
-// Vercel Blob URL previously, which forced a cold-start network fetch that
-// left the splash black on slow networks (user report 2026-06-03). Local
-// require() lets the video appear instantly the moment the user opens the
-// app and disappear cleanly at the 3s mark.
-const VIDEO_SOURCE = require("../../../assets/video/finn-daily-return.mp4");
+// Reverted to URL load 2026-06-03: the local require() change pulled in a
+// new asset (the 680 KB mp4) that the production native binary doesn't
+// know about. expo-updates was falling back to the binary's bundled JS
+// silently because the new bundle's asset graph didn't match the binary's,
+// which blocked every UI change in the same OTAs from reaching users.
+// Re-bundle locally only once a fresh native binary ships.
+const VIDEO_SOURCE =
+  "https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/finn-videos/finn-daily-return.mp4";
 
 /** Cold-start intro splash: plays finn-daily-return for ~3s, tap to skip. */
 const DISPLAY_MS = 3000;
