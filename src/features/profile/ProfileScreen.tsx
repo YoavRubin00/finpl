@@ -45,6 +45,7 @@ import { EditProfileModal } from "./EditProfileModal";
 import { ProfilingFlow } from "../onboarding/ProfilingFlow";
 import { useTheme } from "../../hooks/useTheme";
 import { ProBadge } from "../../components/ui/ProBadge";
+import { ConfettiExplosion } from "../../components/ui/ConfettiExplosion";
 import { ChampionCard } from "../../components/ui/ChampionCard";
 import { AchievementPill } from "../../components/ui/AchievementPill";
 import { useStreakCelebration } from "../../hooks/useStreakCelebration";
@@ -199,32 +200,45 @@ export function ProfileScreen() {
             {layer > 0 && <AchievementPill kind="chapter" count={layer} />}
           </View>
 
-          {/* Avatar + Name */}
-          <Animated.View style={[avatarStyle, styles.avatarSection]}>
+          {/* Name banner — avatar removed (user request 2026-06-03: "בלי
+              האווטר, רק שם בגדול וקונפטי"). The displayName takes center
+              stage as the page's hero element with a ConfettiExplosion burst
+              behind it on every screen open. Tap-to-open ChampionCard is
+              moved onto the name itself (was on the avatar). */}
+          <Animated.View style={[avatarStyle, styles.bannerSection]}>
+            <View style={styles.confettiLayer} pointerEvents="none">
+              <ConfettiExplosion />
+            </View>
             <Pressable
               onPress={() => setShowChampionPopup(true)}
               accessibilityRole="button"
               accessibilityLabel="הצג כרטיס שחקן מלא"
-              hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              style={styles.bannerNameRow}
             >
-              <GoldCircleBadge
-                size={96}
-                glowing
-                borderColor={isPro || hasGoldFrame ? "#facc15" : "#d4a017"}
+              <Text
+                style={[
+                  styles.bannerDisplayName,
+                  { color: isPro ? "#d97706" : theme.text },
+                ]}
+                numberOfLines={1}
+                adjustsFontSizeToFit
+                allowFontScaling={false}
               >
-                <View style={[styles.avatarInner, { backgroundColor: theme.surface, overflow: "hidden" }]}>
-                  <AvatarImage avatarId={profile?.avatarId ?? null} size={80} emojiStyle={styles.avatarEmoji} />
-                </View>
-              </GoldCircleBadge>
+                {displayName ?? "שחקן"}
+              </Text>
               {isPro && (
-                <View style={styles.avatarCrown}>
-                  <Crown size={18} color="#facc15" fill="#f59e0b" />
+                <View style={styles.bannerCrown}>
+                  <Crown size={22} color="#facc15" fill="#f59e0b" />
+                </View>
+              )}
+              {hasWhaleBadge && (
+                <View style={styles.whaleBadge}>
+                  <Text style={styles.whaleBadgeEmoji}>🐋</Text>
+                  <Text style={styles.whaleBadgeText}>WHALE</Text>
                 </View>
               )}
             </Pressable>
-            {avatarName && (
-              <Text style={[styles.avatarNameLabel, { color: theme.textMuted }]}>{avatarName}</Text>
-            )}
             {hasGoldFrame && (
               <View style={styles.goldFrameLabel}>
                 <Text style={styles.goldFrameLabelText}>
@@ -232,10 +246,9 @@ export function ProfileScreen() {
                 </Text>
               </View>
             )}
-            {/* Compact identity row directly under the avatar-name label
-                ("החוסך"): edit-pencil + level pill (tap → progress popup) +
-                hearts. PRO chip removed (the gold crown over the avatar
-                already signals PRO status; a second chip was redundant). */}
+            {/* Compact identity row: edit-pencil + level pill (tap → progress
+                popup) + hearts. Unchanged from the previous avatar layout —
+                only the avatar above it was removed. */}
             <View style={styles.levelRow}>
               <Pressable
                 onPress={() => setEditModalVisible(true)}
@@ -249,26 +262,12 @@ export function ProfileScreen() {
               <Pressable onPress={() => setShowStagePopup(true)} accessibilityRole="button" accessibilityLabel="הצג התקדמות שלב">
                 <View style={[styles.levelPill, isDark && { backgroundColor: "rgba(124,58,237,0.15)", borderColor: "rgba(167,139,250,0.3)" }]}>
                   <Star size={12} color="#7c3aed" />
-                  {/* `layer` (1..5) is the canonical "stage" number rendered
-                      in the GlobalWealthHeader ring. Use it here too so the
-                      two surfaces never disagree. */}
                   <Text style={styles.levelPillText}>
                     שלב {layer} · {LAYER_NAMES_HE[layer] ?? ""}
                   </Text>
                 </View>
               </Pressable>
               <HeartsDisplay />
-            </View>
-            <View style={styles.nameRow}>
-              <Text style={[styles.displayName, { color: isPro ? "#d97706" : theme.text }, isPro && { fontWeight: "900" }]}>
-                {displayName ?? "שחקן"}
-              </Text>
-              {hasWhaleBadge && (
-                <View style={styles.whaleBadge}>
-                  <Text style={styles.whaleBadgeEmoji}>🐋</Text>
-                  <Text style={styles.whaleBadgeText}>WHALE</Text>
-                </View>
-              )}
             </View>
           </Animated.View>
 
@@ -717,6 +716,46 @@ const styles = StyleSheet.create({
   avatarSection: {
     marginBottom: 24,
     alignItems: "center",
+  },
+  // Hero name banner — replaced the avatar circle (2026-06-03 user request).
+  // Confetti sits absolute behind the name with pointerEvents:none so taps
+  // pass straight through to the ChampionCard pressable.
+  bannerSection: {
+    marginBottom: 24,
+    alignItems: "center",
+    paddingVertical: 12,
+    position: "relative",
+  },
+  confettiLayer: {
+    ...StyleSheet.absoluteFillObject,
+    alignItems: "center",
+    justifyContent: "center",
+    zIndex: 0,
+  },
+  bannerNameRow: {
+    flexDirection: "row-reverse",
+    alignItems: "center",
+    gap: 10,
+    zIndex: 1,
+    paddingHorizontal: 8,
+    maxWidth: "100%",
+  },
+  bannerDisplayName: {
+    fontSize: 38,
+    fontWeight: "900",
+    letterSpacing: 0.2,
+    writingDirection: "rtl",
+    textAlign: "center",
+  },
+  bannerCrown: {
+    backgroundColor: "rgba(245,158,11,0.15)",
+    borderRadius: 14,
+    padding: 4,
+    shadowColor: "#f59e0b",
+    shadowOpacity: 0.5,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 0 },
+    elevation: 4,
   },
   avatarInner: {
     width: 80,
