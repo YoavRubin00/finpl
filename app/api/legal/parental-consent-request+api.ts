@@ -18,7 +18,7 @@ import { enforceRateLimit } from '../_shared/rateLimit';
 import { safeErrorResponse } from '../_shared/safeError';
 import { sanitizeString, validateSyncAuth } from '../_shared/validate';
 import { sendParentalConsentEmail } from '../_shared/sendParentalConsentEmail';
-import { generateToken, getClientIp, getDb, getOrigin } from './_lib';
+import { generateToken, getClientIp, getDb, getOrigin } from '../_shared/legal-helpers';
 
 interface RequestBody {
   authId?: string;
