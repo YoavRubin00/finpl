@@ -10,7 +10,11 @@
 
 import { neon } from '@neondatabase/serverless';
 import { drizzle } from 'drizzle-orm/neon-http';
-import { randomUUID } from 'node:crypto';
+// `crypto` (not `node:crypto`) — the rest of the +api.ts surface uses the
+// bare specifier and Metro resolves it via Vercel's Node polyfill at deploy
+// time. The `node:` prefix is rejected by Metro at the client-bundle step
+// (preview Android build 2026-06-03), even though this file is server-only.
+import { randomUUID } from 'crypto';
 
 export function getDb() {
   const url = process.env.DATABASE_URL;
