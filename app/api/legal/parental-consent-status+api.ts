@@ -20,7 +20,7 @@ import { parentalConsents, userProfiles } from '../../../src/db/schema';
 import { enforceRateLimit } from '../_shared/rateLimit';
 import { safeErrorResponse } from '../_shared/safeError';
 import { sanitizeString, validateSyncAuth } from '../_shared/validate';
-import { getDb } from './_lib';
+import { getDb } from '../_shared/legal-helpers';
 
 function maskEmail(email: string): string {
   const [local, domain] = email.split('@');
