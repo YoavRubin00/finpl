@@ -325,7 +325,26 @@ export function BridgeScreen({ walkthroughAutoScroll }: BridgeScreenProps = {}) 
     };
   }, [walkthroughAutoScroll]);
 
-  const visibleBenefits = BRIDGE_BENEFITS.filter(b => b.category === activeCategory);
+  // Sort by what the user can afford NOW, then by cost ascending — so the
+  // grid leads with attainable benefits instead of aspirational ones.
+  // PostHog 02-03/06: 80% of bridge_benefit_tapped events came from
+  // can_afford=false users (avg 285 coins vs avg 3500 cost). Surfacing
+  // affordable items first should convert browsing into actual redeems.
+  // Already-redeemed items sink to the bottom (still tappable for re-open).
+  const visibleBenefits = BRIDGE_BENEFITS
+    .filter(b => b.category === activeCategory)
+    .slice()
+    .sort((a, b) => {
+      const aRedeemed = isBenefitRedeemed(a.id);
+      const bRedeemed = isBenefitRedeemed(b.id);
+      if (aRedeemed !== bRedeemed) return aRedeemed ? 1 : -1;
+      const aAfford = coins >= a.costCoins;
+      const bAfford = coins >= b.costCoins;
+      if (aAfford !== bAfford) return aAfford ? -1 : 1;
+      // Within the same affordability bucket, cheaper first so the user
+      // sees their next achievable target.
+      return a.costCoins - b.costCoins;
+    });
 
   const handleCardPress = useCallback((benefit: Benefit) => {
     captureEvent('bridge_benefit_tapped', {
