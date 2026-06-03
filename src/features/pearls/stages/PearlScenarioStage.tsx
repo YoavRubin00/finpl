@@ -49,15 +49,23 @@ export function PearlScenarioStage({
     onContinue();
   }, [onContinue, playSound]);
 
+  // PearlSheet renders a "דלג על הפנינה" footer ~60px below this stage.
+  // Without explicit offset the sticky CTA sat behind that footer (user
+  // report 2026-06-03 with screenshot showing the blue button clipped).
+  // SKIP_FOOTER_RESERVE approximates the footer's visible height +
+  // breathing room.
+  const SKIP_FOOTER_RESERVE = 60;
+
   return (
     <View style={{ flex: 1 }}>
       <ScrollView
         style={styles.scroll}
         contentContainerStyle={[
           styles.scrollContent,
-          // Reserve room for the sticky CTA so the last bit of feedback
-          // text never lives behind it.
-          { paddingBottom: Math.max(insets.bottom + 24, 48) + (readyToContinue ? 72 : 0) },
+          // Reserve room for the sticky CTA *and* the PearlSheet skip footer
+          // below it, so the last bit of feedback text never lives behind
+          // either control.
+          { paddingBottom: Math.max(insets.bottom + 24, 48) + (readyToContinue ? 80 : 0) + SKIP_FOOTER_RESERVE },
         ]}
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
@@ -82,7 +90,12 @@ export function PearlScenarioStage({
       </ScrollView>
 
       {readyToContinue ? (
-        <View style={styles.stickyBar} pointerEvents="box-none">
+        // Lift the sticky bar above the PearlSheet's skip-pearl footer so
+        // the user actually sees the blue "המשך" CTA.
+        <View
+          style={[styles.stickyBar, { bottom: SKIP_FOOTER_RESERVE + insets.bottom }]}
+          pointerEvents="box-none"
+        >
           <Pressable
             onPress={handlePress}
             accessibilityRole="button"
@@ -114,36 +127,30 @@ const styles = StyleSheet.create({
     borderTopColor: 'rgba(148,163,184,0.25)',
     alignItems: 'center',
   },
+  // Matches the lesson "המשך" CTA exactly (LessonFlowScreen.tsx:831):
+  // sky-blue #0ea5e9 + #0284c7 3px bottom border, fontSize 16/weight 800.
+  // Was a darker / heavier #3b82f6 variant that read as a different button
+  // family — user report 2026-06-03: "כפתורי המשך צריכים להיות אחידים".
   continueBtn: {
     width: '100%',
     maxWidth: 420,
-    backgroundColor: '#3b82f6',
-    borderRadius: 18,
+    backgroundColor: '#0ea5e9',
+    borderRadius: 16,
     paddingVertical: 14,
     paddingHorizontal: 24,
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 2,
-    borderColor: '#2563eb',
-    borderBottomWidth: 4,
-    borderBottomColor: '#1d4ed8',
-    shadowColor: '#3b82f6',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.45,
-    shadowRadius: 12,
-    elevation: 10,
+    borderBottomWidth: 3,
+    borderBottomColor: '#0284c7',
   },
   continueBtnPressed: {
     opacity: 0.88,
     transform: [{ scale: 0.98 }],
   },
   continueBtnText: {
-    fontSize: 17,
-    fontWeight: '900',
+    fontSize: 16,
+    fontWeight: '800',
     color: '#ffffff',
     writingDirection: 'rtl',
-    textShadowColor: 'rgba(0,0,0,0.25)',
-    textShadowOffset: { width: 0, height: 1 },
-    textShadowRadius: 2,
   },
 });

@@ -11,6 +11,13 @@ export type PearlCtaKind = 'referral' | 'trading' | 'whatsapp';
 interface PearlCtaStageProps {
   isActive: boolean;
   onContinue: () => void;
+  /** Finalize the pearl in-place without navigating. Called by the card
+   *  when the user TAPS the CTA (before its own router.push / openURL)
+   *  so the pearl is marked completed and the sheet closed BEFORE the
+   *  card hands the user off to the destination. Avoids the prior
+   *  unfixed bug where tapping a CTA on the final stage left the pearl
+   *  marked unlocked-forever. */
+  onTapCta: () => void;
   /** Which CTA to surface — picked by PearlSheet via a moduleId hash so each
    *  pearl gets a stable, varied destination across the chapter (some
    *  Friends, some Bridge, some WhatsApp community). */
@@ -39,7 +46,7 @@ interface PearlCtaStageProps {
  * Trading CTA is dropped to Referral for minors (no Bridge access).
  * WhatsApp is fine for all ages (the channel itself is age-appropriate).
  */
-export function PearlCtaStage({ isActive, onContinue, kind, afterModuleId, chapterId }: PearlCtaStageProps): React.ReactElement {
+export function PearlCtaStage({ isActive, onContinue, onTapCta, kind, afterModuleId, chapterId }: PearlCtaStageProps): React.ReactElement {
   const ageGroup = useAuthStore((s) => s.profile?.ageGroup ?? null);
   const isMinor = ageGroup === 'minor';
 
@@ -66,7 +73,7 @@ export function PearlCtaStage({ isActive, onContinue, kind, afterModuleId, chapt
     } catch { /* non-fatal */ }
   }, [isActive, afterModuleId, chapterId, kind, effectiveKind]);
 
-  const cardProps = { isActive, onContinue, afterModuleId, chapterId } as const;
+  const cardProps = { isActive, onContinue, onTapCta, afterModuleId, chapterId } as const;
   if (effectiveKind === 'trading') return <FeedTradingNudgeCard {...cardProps} />;
   if (effectiveKind === 'whatsapp') return <FeedWhatsAppNudgeCard {...cardProps} />;
   return <FeedReferralNudgeCard {...cardProps} />;

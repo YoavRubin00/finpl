@@ -140,8 +140,15 @@ export function PearlSheet({ visible, pearl, onClose }: PearlSheetProps): React.
   // Local render gate. Snapshotted at sheet-open from the persisted flag so
   // tapping "הבנתי" (which flips the global flag) doesn't re-trigger on a
   // re-render. Stays true for the lifetime of THIS open instance until the
-  // user explicitly dismisses it.
+  // user explicitly dismisses it OR advances past the first stage (auto-
+  // hide on activePage>0 — see effect below).
   const [showTooltip, setShowTooltip] = useState(false);
+
+  // Auto-close the "פנינה ← תוכן בונוס" tooltip the moment the user
+  // advances to stage 2+. User report 2026-06-03: the tooltip was sticking
+  // around for the entire pearl flow, covering content on every stage.
+  // markPearlTooltipSeen also flips the persisted flag so the tooltip
+  // doesn't reopen on the next pearl.
 
   // Per-render snapshot of profile completeness — drives whether we include
   // the profile-question stage at all. The Pearl asks ONLY if the user
@@ -195,6 +202,15 @@ export function PearlSheet({ visible, pearl, onClose }: PearlSheetProps): React.
   // `performance.now()` works on web; the native shim returns Date.now()
   // — both are monotonic enough for "did this take 10s or 2 minutes" UX.
   const openedAtRef = useRef<number>(0);
+
+  // Auto-hide bonus tooltip when user moves off the first card. Without
+  // this it stayed open for every stage and covered content.
+  useEffect(() => {
+    if (activePage > 0 && showTooltip) {
+      try { markPearlTooltipSeen(); } catch { /* non-fatal */ }
+      setShowTooltip(false);
+    }
+  }, [activePage, showTooltip, markPearlTooltipSeen]);
 
   // Reset state on each open + emit pearl_opened. The lifestyle video stage
   // was retired in the 2026-05-30 audit (Pearl trimmed to 3 stages), so the
@@ -353,6 +369,31 @@ export function PearlSheet({ visible, pearl, onClose }: PearlSheetProps): React.
     setActivePage(index);
   }, []);
 
+  // Finalize the pearl in-place: track completion, mark it, fire flying
+  // coins, close the sheet — but do NOT navigate. Used by CTA cards that
+  // navigate themselves (Bridge / Referral / WhatsApp) so the pearl is
+  // properly closed before they push the user out. Avoids the double-
+  // router.push race that previously kept pearls marked unlocked-forever
+  // when the user tapped a CTA on the final stage and never came back.
+  const finalizeWithoutNavigation = useCallback(() => {
+    if (!pearl) return;
+    try {
+      track({
+        name: 'pearl_completed',
+        props: {
+          after_module_id: pearl.afterModuleId,
+          next_module_id: pearl.nextModuleId,
+          chapter_id: pearl.chapterId,
+          stages_count: stages.length,
+          time_to_complete_ms: openedAtRef.current ? Date.now() - openedAtRef.current : undefined,
+          exit_via: 'cta',
+        },
+      });
+    } catch { /* non-fatal */ }
+    markCompleted(pearlIdFor(pearl));
+    onClose();
+  }, [pearl, stages.length, markCompleted, onClose]);
+
   const handleStageDone = useCallback(() => {
     if (!pearl) return;
     const completedStage = stages[activePage];
@@ -461,12 +502,13 @@ export function PearlSheet({ visible, pearl, onClose }: PearlSheetProps): React.
       if (item.kind === 'video' && pearl.videoId) {
         // Resolve videoId → LifestyleVideoSpec. If id is bad (e.g., typo in
         // the map) we skip the stage to keep the pearl from rendering a
-        // black frame.
+        // black frame. CRITICAL: must defer the advance to a useEffect —
+        // calling handleStageDone() synchronously here mutates state during
+        // render (setActivePage + addXP + addCoins), which React rejects
+        // and can double-pay XP/coins if the next stage is also broken.
         const video = LIFESTYLE_VIDEOS.find((v) => v.id === pearl.videoId);
         if (!video) {
-          // Auto-advance silently so the pager doesn't trap the user.
-          handleStageDone();
-          return <View style={containerStyle} />;
+          return <FallbackContinueOnMount onMount={handleStageDone} />;
         }
         return (
           <View style={containerStyle}>
@@ -494,6 +536,7 @@ export function PearlSheet({ visible, pearl, onClose }: PearlSheetProps): React.
               afterModuleId={pearl.afterModuleId}
               chapterId={pearl.chapterId}
               onContinue={handleStageDone}
+              onTapCta={finalizeWithoutNavigation}
             />
           </View>
         );
@@ -798,3 +841,17 @@ const styles = StyleSheet.create({
     writingDirection: 'rtl' as const,
   },
 });
+
+/** Auto-advances the pager one stage exactly once when mounted. Used as the
+ *  fallback when a stage can't render (e.g. videoId pointing at a missing
+ *  LIFESTYLE_VIDEOS entry). Pinned via a ref so a re-render in the parent
+ *  re-creating handleStageDone doesn't re-fire the effect and skip multiple
+ *  stages. Mirrors the same helper in PearlGameStage.tsx. */
+function FallbackContinueOnMount({ onMount }: { onMount: () => void }): null {
+  const onMountRef = React.useRef(onMount);
+  onMountRef.current = onMount;
+  React.useEffect(() => {
+    onMountRef.current();
+  }, []);
+  return null;
+}

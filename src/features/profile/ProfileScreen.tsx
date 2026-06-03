@@ -415,8 +415,8 @@ export function ProfileScreen() {
                   <View style={{ flexDirection: "row-reverse", flexWrap: "wrap", gap: 8 }}>
                     {[
                       { label: "מטרה", value: GOAL_LABELS[profile.financialGoal] ?? profile.financialGoal },
-                      { label: "ידע", value: KNOWLEDGE_LABELS[profile.knowledgeLevel] ?? profile.knowledgeLevel },
-                      { label: "יעד יומי", value: DAILY_LABELS[profile.dailyGoalMinutes] ?? `${profile.dailyGoalMinutes} דק׳` },
+                      { label: "ידע", value: profile.knowledgeLevel ? (KNOWLEDGE_LABELS[profile.knowledgeLevel] ?? profile.knowledgeLevel) : "טרם נשאל" },
+                      { label: "יעד יומי", value: profile.dailyGoalMinutes ? (DAILY_LABELS[profile.dailyGoalMinutes] ?? `${profile.dailyGoalMinutes} דק׳`) : "טרם נשאל" },
                       { label: "מלווה", value: COMPANION_LABELS[profile.companionId] ?? profile.companionId },
                     ].map((item) => (
                       <View key={item.label} style={[styles.profileChip, { backgroundColor: theme.bg, borderColor: theme.border }]}>

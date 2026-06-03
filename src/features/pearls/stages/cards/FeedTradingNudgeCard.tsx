@@ -27,8 +27,12 @@ const RTL_CENTER = { writingDirection: "rtl" as const, textAlign: "center" as co
 
 interface Props {
   isActive?: boolean;
-  /** Pearl flow: advance to the next stage on CTA tap or skip. */
+  /** Pearl flow: advance to the next stage on skip ("המשך"). */
   onContinue?: () => void;
+  /** Pearl flow: fired when the user TAPS the CTA — closes the pearl and
+   *  marks it completed before this card navigates to /bridge. Without
+   *  it the pearl stays unlocked-forever once the CTA is tapped. */
+  onTapCta?: () => void;
   /** Pearl context — threaded through for typed pearl_cta_tapped /
    *  pearl_cta_dismissed analytics. PearlCtaStage emits pearl_cta_shown. */
   afterModuleId?: string;
@@ -38,6 +42,7 @@ interface Props {
 export const FeedTradingNudgeCard = React.memo(function FeedTradingNudgeCard({
   isActive,
   onContinue,
+  onTapCta,
   afterModuleId,
   chapterId,
 }: Props) {
@@ -66,8 +71,11 @@ export const FeedTradingNudgeCard = React.memo(function FeedTradingNudgeCard({
     }
   }, [isActive, player]);
 
-  // Pulsing CTA glow
-  const glow = useSharedValue(0.6);
+  // Pulsing CTA — was opacity-based (0.55 ↔ 1) which faded the blue
+  // background on the dark card and made the button read as "just white text"
+  // (user report 2026-06-03). Switched to a subtle scale pulse that keeps
+  // the blue fully visible at all times.
+  const glow = useSharedValue(1);
   useEffect(() => {
     if (reducedMotion) {
       glow.value = 1;
@@ -75,15 +83,15 @@ export const FeedTradingNudgeCard = React.memo(function FeedTradingNudgeCard({
     }
     glow.value = withRepeat(
       withSequence(
+        withTiming(1.04, { duration: 950 }),
         withTiming(1, { duration: 950 }),
-        withTiming(0.55, { duration: 950 }),
       ),
       -1,
       false,
     );
     return () => cancelAnimation(glow);
   }, [glow, reducedMotion]);
-  const glowStyle = useAnimatedStyle(() => ({ opacity: glow.value }));
+  const glowStyle = useAnimatedStyle(() => ({ transform: [{ scale: glow.value }] }));
 
   const handlePress = () => {
     tapHaptic();
@@ -95,8 +103,14 @@ export const FeedTradingNudgeCard = React.memo(function FeedTradingNudgeCard({
         track({ name: 'pearl_cta_tapped', props: { after_module_id: afterModuleId, chapter_id: chapterId, cta_kind: 'trading', destination_url: '/bridge' } });
       } catch { /* non-fatal */ }
     }
+    // Finalize the pearl in-place BEFORE navigating. onTapCta closes the
+    // sheet + marks the pearl completed but does NOT do router.push to
+    // the next module, so there's no race with our /bridge push. We
+    // tried "navigate-only" earlier (no pearl-state update) but that
+    // left the pearl unlocked-forever (QA report 2026-06-03). Skip path
+    // (handleSkip below) still calls onContinue for the standard advance.
+    onTapCta?.();
     router.push("/bridge" as never);
-    onContinue?.();
   };
   const handleSkip = () => {
     tapHaptic();

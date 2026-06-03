@@ -111,7 +111,7 @@ ${companion.tone}
 ## על המשתמש
 - שם: ${sanitizeForPrompt(displayName)}
 - מטרה: ${goalLabels[profile.financialGoal] ?? profile.financialGoal}
-- רמת ידע: ${knowledgeLabels[profile.knowledgeLevel] ?? profile.knowledgeLevel}
+- רמת ידע: ${profile.knowledgeLevel ? (knowledgeLabels[profile.knowledgeLevel] ?? profile.knowledgeLevel) : "לא נקבע"}
 - גיל: ${ageLabel} (שנת לידה ${profile.birthYear})
 
 ## התקדמות בלמידה

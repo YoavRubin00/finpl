@@ -2261,7 +2261,7 @@ export function LessonFlowScreen() {
     if (router.canGoBack()) {
       router.back();
     } else {
-      router.replace("/(tabs)" as never);
+      router.replace("/(tabs)/index" as never);
     }
   }
 
@@ -2271,7 +2271,7 @@ export function LessonFlowScreen() {
     if (id === 'mod-0-1') completeModule('mod-0-1');
     setShowExitConfirm(false);
     if (router.canGoBack()) router.back();
-    else router.replace("/(tabs)" as never);
+    else router.replace("/(tabs)/index" as never);
   }
   const safeInsets = useSafeAreaInsets();
   const [activeGlossaryTerm, setActiveGlossaryTerm] = useState<string | null>(null);
@@ -2640,7 +2640,7 @@ export function LessonFlowScreen() {
     if (id === 'mod-0-1') {
       setCurrentChapter('ch-0');
       setCurrentModule(1);
-      router.replace("/(tabs)" as never);
+      router.replace("/(tabs)/index" as never);
       return;
     }
     for (const ch of ALL_CHAPTERS_ORDERED) {
@@ -2654,7 +2654,7 @@ export function LessonFlowScreen() {
         return;
       }
     }
-    router.replace("/(tabs)" as never);
+    router.replace("/(tabs)/index" as never);
   }
 
   /** Navigate to user's next sequential module */
@@ -4113,7 +4113,7 @@ export function LessonFlowScreen() {
               total={mod.flashcards.length}
               onNext={handleFlashcardNext}
               onPrev={handleFlashcardPrev}
-              onClose={() => router.replace("/(tabs)" as never)}
+              onClose={() => router.replace("/(tabs)/index" as never)}
               onSkipAll={() => { mediumHaptic(); setFlashcardIndex(mod.flashcards.length - 1); }}
               unitColors={unitColors}
               onTermPress={setActiveGlossaryTerm}
@@ -4507,7 +4507,7 @@ export function LessonFlowScreen() {
                 }
               }}
               onBack={() => {
-                router.replace("/(tabs)" as never);
+                router.replace("/(tabs)/index" as never);
               }}
             />
             </ScrollView>
@@ -4795,7 +4795,7 @@ export function LessonFlowScreen() {
         visible={showOutOfHearts}
         onDismiss={() => {
           setShowOutOfHearts(false);
-          router.replace("/(tabs)" as never);
+          router.replace("/(tabs)/index" as never);
         }}
         onHeartsRefilled={() => {
           setShowOutOfHearts(false);
@@ -5086,7 +5086,7 @@ export function LessonFlowScreen() {
       {showGradeSkipCelebration && (
         <Modal visible transparent animationType="fade" onRequestClose={() => {
           setShowGradeSkipCelebration(false);
-          router.replace("/(tabs)" as never);
+          router.replace("/(tabs)/index" as never);
         }}>
           <Pressable
             style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.6)", justifyContent: "center", alignItems: "center", paddingHorizontal: 24 }}
@@ -5107,7 +5107,7 @@ export function LessonFlowScreen() {
                   tapHaptic();
                   try { captureEvent('expert_grade_skip_continue', {}); } catch { /* non-fatal */ }
                   setShowGradeSkipCelebration(false);
-                  router.replace("/(tabs)" as never);
+                  router.replace("/(tabs)/index" as never);
                 }}
                 style={{ backgroundColor: "#0ea5e9", borderRadius: 16, paddingVertical: 16, width: "100%", alignItems: "center", borderBottomWidth: 4, borderBottomColor: "#0284c7", shadowColor: "#0ea5e9", shadowOpacity: 0.3, shadowRadius: 8, shadowOffset: { width: 0, height: 3 }, elevation: 6 }}
                 accessibilityRole="button"
@@ -5562,7 +5562,7 @@ export function LessonFlowScreen() {
 
       {/* ── Break farewell message ── */}
       {showBreakMessage && (
-        <Pressable style={[StyleSheet.absoluteFill, { zIndex: 9995, backgroundColor: "rgba(0,0,0,0.6)", justifyContent: "center", alignItems: "center", padding: 24 }]} onPress={() => { setShowBreakMessage(false); setShowPostCelebration(false); safeTimeout(() => router.replace("/(tabs)" as never), 80); }} accessibilityRole="button" accessibilityLabel="חזור לתפריט">
+        <Pressable style={[StyleSheet.absoluteFill, { zIndex: 9995, backgroundColor: "rgba(0,0,0,0.6)", justifyContent: "center", alignItems: "center", padding: 24 }]} onPress={() => { setShowBreakMessage(false); setShowPostCelebration(false); safeTimeout(() => router.replace("/(tabs)/index" as never), 80); }} accessibilityRole="button" accessibilityLabel="חזור לתפריט">
           <Animated.View entering={FadeInUp.duration(400)} style={{ backgroundColor: "#ffffff", borderRadius: 28, padding: 28, width: "100%", maxWidth: 340, alignItems: "center" }}>
             <ExpoImage source={FINN_EMPATHIC} accessible={false} style={{ width: 100, height: 100, marginBottom: 16 }} contentFit="contain" />
             <Text style={{ fontSize: 20, fontWeight: "900", color: "#0f172a", textAlign: "center", marginBottom: 8 }}>{"מצפה לראותך פה מחר! ❤️"}</Text>

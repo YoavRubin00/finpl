@@ -209,12 +209,13 @@ export const CrowdQuestionCard = React.memo(function CrowdQuestionCard({ market,
               </Text>
             </Animated.View>
           )}
+        </ScrollView>
 
-          {/* In-scroll Continue button — rendered inside the ScrollView so
-              it's always reachable below the two explanation cards on every
-              screen size. The wrapper's bottom button was getting clipped by
-              the Android nav bar + pearl skip footer (user report 2026-06-01). */}
-          {onContinue && (
+        {/* Sticky continue — always visible regardless of scroll position.
+            The previous in-scroll button was hidden below the two explanation
+            cards (user report 2026-06-03: "כפתור המשך לא נראה"). */}
+        {onContinue && (
+          <View style={styles.stickyBar} pointerEvents="box-none">
             <Pressable
               onPress={() => { tapHaptic(); onContinue(); }}
               accessibilityRole="button"
@@ -223,8 +224,8 @@ export const CrowdQuestionCard = React.memo(function CrowdQuestionCard({ market,
             >
               <Text style={styles.continueText} allowFontScaling={false}>המשך לשלב הבא ←</Text>
             </Pressable>
-          )}
-        </ScrollView>
+          </View>
+        )}
       </View>
     </View>
   );
@@ -440,12 +441,26 @@ const styles = StyleSheet.create({
     padding: 20,
     gap: 16,
     flexGrow: 1,
-    // Extra bottom padding so the in-scroll Continue button doesn't sit
-    // flush against the pearl's skip-pearl footer on Android.
-    paddingBottom: 28,
+    // Reserve room for the sticky CTA so the last explainCard never sits
+    // behind it.
+    paddingBottom: 96,
+  },
+  stickyBar: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 0,
+    paddingHorizontal: 16,
+    paddingTop: 10,
+    paddingBottom: 12,
+    backgroundColor: 'rgba(255,255,255,0.96)',
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(148,163,184,0.25)',
+    alignItems: 'center',
   },
   continueBtn: {
-    marginTop: 12,
+    width: '100%',
+    maxWidth: 420,
     paddingVertical: 16,
     paddingHorizontal: 24,
     borderRadius: 16,
