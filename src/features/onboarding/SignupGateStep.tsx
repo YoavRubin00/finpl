@@ -41,11 +41,30 @@ export function SignupGateStep({ onSignupSuccess, onSkip, saveCollected, onEmail
   const promptGoogleSignIn = useGoogleAuthStore((s) => s.promptGoogleSignIn);
   const googleReady = useGoogleAuthStore((s) => s.isReady);
 
+  // Track which users close the gate without ever making a decision (no
+  // method click, no skip). Currently invisible in the funnel — PostHog
+  // shows ~25% of shown gates have no follow-up event. The cleanup effect
+  // below fires `signup_gate_abandoned` only if `decisionMadeRef` is still
+  // false at unmount, so we can finally measure intent vs friction.
+  const decisionMadeRef = React.useRef(false);
+  const mountedAtRef = React.useRef(Date.now());
+
   React.useEffect(() => {
     try { captureEvent("signup_gate_shown", { source: "post_onboarding_questions" }); } catch { /* non-fatal */ }
+    return () => {
+      if (!decisionMadeRef.current) {
+        try {
+          captureEvent("signup_gate_abandoned", {
+            source: "post_onboarding_questions",
+            time_open_ms: Date.now() - mountedAtRef.current,
+          });
+        } catch { /* non-fatal */ }
+      }
+    };
   }, []);
 
   const handleSkip = () => {
+    decisionMadeRef.current = true;
     try { captureEvent("signup_gate_skipped", { source: "post_onboarding_questions" }); } catch { /* non-fatal */ }
     onSkip();
   };
@@ -75,19 +94,36 @@ export function SignupGateStep({ onSignupSuccess, onSkip, saveCollected, onEmail
           </LinearGradient>
         </Animated.View>
 
-        <Animated.View entering={FadeInDown.duration(400).delay(150)} style={{ alignItems: "center", marginBottom: 32 }}>
-          <Text style={{ fontSize: 22, fontWeight: "900", color: "#0c4a6e", writingDirection: "rtl", textAlign: "center", marginBottom: 10 }}>
-            {"כל הכבוד!"}
+        <Animated.View entering={FadeInDown.duration(400).delay(150)} style={{ alignItems: "center", marginBottom: 24 }}>
+          <Text style={{ fontSize: 22, fontWeight: "900", color: "#0c4a6e", writingDirection: "rtl", textAlign: "center", marginBottom: 8 }}>
+            {"כל הכבוד! 🎉"}
           </Text>
-          <Text style={{ fontSize: 15, fontWeight: "600", color: "#475569", writingDirection: "rtl", textAlign: "center", lineHeight: 24 }}>
-            {"בנינו לך פרופיל מותאם.\nרוצה לשמור אותו?"}
+          <Text style={{ fontSize: 15, fontWeight: "600", color: "#475569", writingDirection: "rtl", textAlign: "center", lineHeight: 24, marginBottom: 14 }}>
+            {"שמור את ההתקדמות שלך"}
           </Text>
+          {/* Value-prop bullets — explicit answer to "why register". Keeps
+              the gate informative without out-shouting the buttons below. */}
+          <View style={{ alignSelf: "stretch", gap: 6, paddingHorizontal: 12 }}>
+            {[
+              "סנכרון בין מכשירים",
+              "ההתקדמות נשמרת לתמיד",
+              "מטבעות, יהלומים ופיצ׳רי Pro",
+            ].map((text) => (
+              <View key={text} style={{ flexDirection: "row-reverse", alignItems: "center", gap: 8 }}>
+                <Text style={{ fontSize: 14, fontWeight: "900", color: "#0ea5e9" }}>✓</Text>
+                <Text style={{ fontSize: 14, fontWeight: "600", color: "#334155", writingDirection: "rtl", flex: 1 }}>
+                  {text}
+                </Text>
+              </View>
+            ))}
+          </View>
         </Animated.View>
 
         <Animated.View entering={FadeInDown.duration(400).delay(300)} style={{ width: "100%", gap: 10 }}>
           {appleAvailable && (
             <Pressable
               onPress={() => {
+                decisionMadeRef.current = true;
                 try { captureEvent("signup_gate_method_clicked", { method: "apple", source: "post_onboarding_questions" }); } catch { /* non-fatal */ }
                 // Persist the in-progress dream/goal/age BEFORE the OAuth
                 // prompt so that useAppleAuth's router.replace (which fires
@@ -122,6 +158,7 @@ export function SignupGateStep({ onSignupSuccess, onSkip, saveCollected, onEmail
                 useAuthStore.getState().setAuthError("הכניסה עם Google לא זמינה כרגע. נסה שוב בעוד רגע.");
                 return;
               }
+              decisionMadeRef.current = true;
               try { captureEvent("signup_gate_method_clicked", { method: "google", source: "post_onboarding_questions" }); } catch { /* non-fatal */ }
               // See Apple branch — persist before prompt so Google's redirect
               // race can't drop dream/goal/age.
@@ -156,6 +193,7 @@ export function SignupGateStep({ onSignupSuccess, onSkip, saveCollected, onEmail
               user back to the questions (the historical bug). */}
           <Pressable
             onPress={() => {
+              decisionMadeRef.current = true;
               try { captureEvent("signup_gate_method_clicked", { method: "email", source: "post_onboarding_questions" }); } catch { /* non-fatal */ }
               if (onEmailPress) {
                 onEmailPress();
@@ -202,8 +240,13 @@ export function SignupGateStep({ onSignupSuccess, onSkip, saveCollected, onEmail
               backgroundColor: pressed ? "#f1f5f9" : "#f8fafc",
             })}
           >
-            <Text style={{ fontSize: 15, fontWeight: "700", color: "#334155", writingDirection: "rtl" }}>
+            <Text style={{ fontSize: 15, fontWeight: "700", color: "#334155", writingDirection: "rtl", textAlign: "center" }}>
               {"המשך כאורח"}
+            </Text>
+            {/* Soft FOMO sub-copy — explicit cost of guest mode without
+                being scary. Centered to match the main label. */}
+            <Text style={{ fontSize: 11, fontWeight: "500", color: "#94a3b8", writingDirection: "rtl", textAlign: "center", marginTop: 2 }}>
+              {"ההתקדמות תישמר רק במכשיר הזה"}
             </Text>
           </Pressable>
         </Animated.View>

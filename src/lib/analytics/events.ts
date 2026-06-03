@@ -58,6 +58,7 @@ export type AppEvent =
   | { name: 'signup_gate_shown'; props: { source: 'post_onboarding_questions' | 'lesson_gate' | string } }
   | { name: 'signup_gate_method_clicked'; props: { method: 'apple' | 'google' | 'email' | 'guest'; source: string } }
   | { name: 'signup_gate_skipped'; props: { source: string } }
+  | { name: 'signup_gate_abandoned'; props: { source: string; time_open_ms?: number } }
 
   // ── Lesson / Module ────────────────────────────────────────────────────
   | { name: 'lesson_started'; props: { lesson_id: string; chapter_id?: string; is_replay?: boolean; entry_source?: 'map_tap' | 'auto_advance' | 'deeplink' } }
