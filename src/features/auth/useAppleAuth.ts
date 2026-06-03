@@ -30,7 +30,15 @@ export function useAppleAuth() {
         signal: controller.signal,
       });
       clearTimeout(timeout);
-      if (!res.ok) return null;
+      if (!res.ok) {
+        // Match the Google flow's diagnostic — without the body we can't tell
+        // an iOS-side 5xx from a server "Missing Apple identifier" 400. PostHog
+        // sees auth_failed/verify_failed counts climbing without context.
+        const body = await res.text().catch(() => '<unreadable>');
+        console.error("[AppleAuth] /api/auth/verify failed", { status: res.status, body: body.slice(0, 300) });
+        captureEvent('auth_failed', { method: 'apple', error_code: `verify_http_${res.status}` });
+        return null;
+      }
       const data = await res.json() as {
         ok: boolean;
         token?: string;
@@ -38,9 +46,15 @@ export function useAppleAuth() {
         profile: { id: string; authId: string; displayName: string | null; email: string | null; hasCompletedOnboarding?: boolean } | null;
       };
       const resolvedToken = data.token ?? data.syncToken ?? null;
-      if (!data.ok || !data.profile || !resolvedToken) return null;
+      if (!data.ok || !data.profile || !resolvedToken) {
+        console.error("[AppleAuth] /api/auth/verify returned incomplete payload", { ok: data.ok, hasProfile: !!data.profile, hasToken: !!resolvedToken });
+        captureEvent('auth_failed', { method: 'apple', error_code: 'verify_incomplete_payload' });
+        return null;
+      }
       return { token: resolvedToken, profile: data.profile };
-    } catch {
+    } catch (err) {
+      console.error("[AppleAuth] /api/auth/verify threw", err);
+      captureEvent('auth_failed', { method: 'apple', error_code: err instanceof Error && err.name === 'AbortError' ? 'verify_timeout' : 'verify_threw' });
       return null;
     }
   };

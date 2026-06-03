@@ -93,6 +93,10 @@ export function RecapCard({
       <ScrollView
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
+        // Scroll disabled 2026-06-02 (Yam): the recap is sized to fit a
+        // single phone screen. If a device ever clips content, restore
+        // scrollEnabled to default instead of silently growing padding.
+        scrollEnabled={false}
       >
         {/* Mascot + headline */}
         <Animated.View entering={FadeInUp.duration(360).springify().damping(16)} style={styles.heroRow}>

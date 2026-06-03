@@ -30,6 +30,12 @@ interface TutorialState {
    *  to re-discover the Bridge on their own — this CTA closes that loop on
    *  first completion. Per דואו's one-shot rule, never show twice. */
   hasSeenMod05BridgeCTA: boolean;
+  /** One-shot guard for the in-pearl-topper "פנינה = תוכן בונוס, אפשר לדלג
+   *  ולחזור מתי שבא לך" tooltip. Shows the first time the user enters a
+   *  pearl in their lifetime, marks itself seen on tap-"הבנתי", and never
+   *  reappears. Anchors users' mental model around pearls = optional bonus,
+   *  not required path content. Per user decision 2026-06-02 + exp-002. */
+  hasSeenPearlTooltip: boolean;
   appWalkthroughStep: number;
   walkthroughGlowTab: string | null;
   walkthroughActiveScreen: WalkthroughScreen;
@@ -52,6 +58,7 @@ interface TutorialState {
   markIndicesOnlyNudgeSeen: () => void;
   markToolTutorialSeen: (toolKey: ToolKey) => void;
   markMod05BridgeCTASeen: () => void;
+  markPearlTooltipSeen: () => void;
   setAppWalkthroughStep: (step: number) => void;
   setWalkthroughGlowTab: (tab: string | null) => void;
   setWalkthroughActiveScreen: (screen: WalkthroughScreen) => void;
@@ -75,6 +82,7 @@ export const useTutorialStore = create<TutorialState>()(
       hasSeenIndicesOnlyNudge: false,
       hasSeenToolTutorial: {},
       hasSeenMod05BridgeCTA: false,
+      hasSeenPearlTooltip: false,
       appWalkthroughStep: 0,
       walkthroughGlowTab: null,
       walkthroughActiveScreen: null,
@@ -92,12 +100,13 @@ export const useTutorialStore = create<TutorialState>()(
       markIndicesOnlyNudgeSeen: () => set({ hasSeenIndicesOnlyNudge: true }),
       markToolTutorialSeen: (toolKey: ToolKey) => set((s) => ({ hasSeenToolTutorial: { ...s.hasSeenToolTutorial, [toolKey]: true } })),
       markMod05BridgeCTASeen: () => set({ hasSeenMod05BridgeCTA: true }),
+      markPearlTooltipSeen: () => set({ hasSeenPearlTooltip: true }),
       setAppWalkthroughStep: (step: number) => set({ appWalkthroughStep: step }),
       setWalkthroughGlowTab: (tab: string | null) => set({ walkthroughGlowTab: tab }),
       setWalkthroughActiveScreen: (screen: WalkthroughScreen) => set({ walkthroughActiveScreen: screen }),
       setPendingPostWalkthroughCTA: (value: boolean) => set({ pendingPostWalkthroughCTA: value }),
       resetWalkthrough: () => set({ hasSeenAppWalkthrough: false, appWalkthroughStep: 0, walkthroughGlowTab: null, walkthroughActiveScreen: null, walkthroughTriggered: true, pendingPostWalkthroughCTA: false }),
-      reset: () => set({ hasSeenTradingHubIntro: true, hasSeenAppWalkthrough: false, walkthroughTriggered: false, hasChosenChatStyle: false, hasSeenPizzaIndexModal: false, hasSeenCh0BullshitInterstitial: false, hasSeenMod01BarterNotif: false, hasSeenWatchlistHint: false, hasSeenAssetUnlockIntro: false, hasSeenIndicesOnlyNudge: false, hasSeenToolTutorial: {}, hasSeenMod05BridgeCTA: false, appWalkthroughStep: 0, walkthroughGlowTab: null, walkthroughActiveScreen: null, pendingPostWalkthroughCTA: false, _hydrated: false }),
+      reset: () => set({ hasSeenTradingHubIntro: true, hasSeenAppWalkthrough: false, walkthroughTriggered: false, hasChosenChatStyle: false, hasSeenPizzaIndexModal: false, hasSeenCh0BullshitInterstitial: false, hasSeenMod01BarterNotif: false, hasSeenWatchlistHint: false, hasSeenAssetUnlockIntro: false, hasSeenIndicesOnlyNudge: false, hasSeenToolTutorial: {}, hasSeenMod05BridgeCTA: false, hasSeenPearlTooltip: false, appWalkthroughStep: 0, walkthroughGlowTab: null, walkthroughActiveScreen: null, pendingPostWalkthroughCTA: false, _hydrated: false }),
     }),
     {
       name: "tutorial-store-v12",

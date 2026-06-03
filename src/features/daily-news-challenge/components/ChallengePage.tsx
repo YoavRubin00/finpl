@@ -25,7 +25,7 @@ import type { SharedValue } from 'react-native-reanimated';
 import { LinearGradient } from 'expo-linear-gradient';
 import LottieView from 'lottie-react-native';
 import { Image as ExpoImage } from 'expo-image';
-import { ChevronLeft, MessageCircle, Newspaper, ChevronDown } from 'lucide-react-native';
+import { ChevronLeft, MessageCircle, ChevronDown } from 'lucide-react-native';
 
 import { STITCH } from '../../../constants/theme';
 import { tapHaptic, successHaptic, errorHaptic } from '../../../utils/haptics';
@@ -287,25 +287,47 @@ export function ChallengePage({
       style={[styles.page, pageWidth ? { width: pageWidth } : null]}
     >
       <ScrollView
+        style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
-        // bounces=true so RN Web honors momentum + the user can always
-        // tug to reveal the bottom even if our padding is off by a few
-        // pixels on a given device. Web's nested-scroll quirks made the
-        // earlier bounces=false feel like the page was frozen.
+        // Scroll is ALWAYS enabled (2026-06-02 v2). The earlier gate on
+        // `showResult` failed in LAN QA. Yam: "עדיין חסר לי הסקרול, כי
+        // אני פשוט לא יכולה לעבור למשימה הבאה". Two causes layered:
+        //   1) The ScrollView sits INSIDE a horizontal FlatList (the
+        //      pager in DailyNewsChallengeSheet). With `bounces={false}`
+        //      plus a conditional scrollEnabled, iOS often gave the
+        //      vertical gesture to the horizontal pager, eating the
+        //      swipe.
+        //   2) Even when the gate flipped on, content height could be
+        //      shorter than the screen (short summary, no accordions
+        //      opened), so there was nothing to scroll TO. The CTA
+        //      stayed visually pinned under the tab bar in QA.
+        // Fix: keep scroll enabled at all times. The big paddingBottom
+        // on scrollContent guarantees the "המשך לדף הבא" CTA can
+        // always be pulled into view, even if content is short. The
+        // chips-only state still reads as a single screen because the
+        // padding sits BELOW the chips, off-fold.
+        scrollEnabled
+        nestedScrollEnabled
+        keyboardShouldPersistTaps="handled"
         bounces
       >
         <View style={styles.eyebrowRow}>
-          {/* News-strap badge — makes it visually obvious this is a real news
-              item, not a quiz / mini-game. User feedback 2026-05-30. */}
-          <View style={styles.newsStrap}>
-            <Newspaper size={11} color="#dc2626" strokeWidth={2.6} />
-            <Text style={styles.newsStrapText} allowFontScaling={false}>
-              אקטואליה היום · LIVE
+          {/* Task hint pill. The "אקטואליה היום · LIVE" strap was retired
+              2026-06-02 because the parent sheet already carries the
+              persistent LIVE badge. But removing it left the page with
+              zero copy explaining what the user is supposed to DO here
+              (LAN QA 2026-06-02: "הורדת את המלל אז אני לא יכולה לבדוק").
+              This pill replaces it with a task-specific cue that does NOT
+              duplicate the sheet's LIVE chrome: it tells the user the
+              action, not the surface. */}
+          <View style={styles.taskPill}>
+            <Text style={styles.taskPillText} allowFontScaling={false}>
+              {hasV2 ? 'השלימי את הכותרת ←' : 'בחרי תשובה ←'}
             </Text>
           </View>
-          {/* Streak XP multiplier pill — only when streak ≥ 7 (multiplier
-              activates) so we don't crowd the row with a meaningless ×1.0
+          {/* Streak XP multiplier pill, only when streak >= 7 (multiplier
+              activates) so we don't crowd the row with a meaningless x1.0
               for brand-new users. */}
           {xpMultiplier > 1 && (
             <View style={styles.streakPill} accessibilityLabel={`מכפיל ${xpMultiplier.toFixed(1)} XP מסטריק`}>
@@ -491,8 +513,8 @@ export function ChallengePage({
                 accessibilityLabel="המשך"
                 style={styles.continueBtn}
               >
-                <Text style={styles.continueBtnText} allowFontScaling={false}>המשך</Text>
-                <ChevronLeft size={20} color="#0f172a" strokeWidth={3} />
+                <Text style={styles.continueBtnText} allowFontScaling={false}>המשך לדף הבא</Text>
+                <ChevronLeft size={24} color="#ffffff" strokeWidth={3.5} />
               </Pressable>
             </Animated.View>
           </Animated.View>
@@ -513,14 +535,26 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: STITCH.surface,
   },
+  // Explicit flex:1 on the ScrollView itself (2026-06-02 v2). The page
+  // is a LinearGradient with flex:1, but without a `style` on the
+  // ScrollView its measured height collapsed to the content's natural
+  // size, so the vertical pan gesture was being ignored by the outer
+  // horizontal FlatList (pagingEnabled) in DailyNewsChallengeSheet.
+  // Giving the ScrollView its own flex:1 makes it own the full page
+  // height and reliably claim vertical gestures.
+  scrollView: {
+    flex: 1,
+  },
   scrollContent: {
+    // paddingBottom kept tight (2026-06-02 v3): once the horizontal
+    // FlatList was removed (state-driven rendering in
+    // DailyNewsChallengeSheet), the 220px fallback that compensated for
+    // the gesture hijack stopped being needed and read as over-scroll
+    // dead space below the CTA (Yam, LAN QA 2026-06-02). 32px is enough
+    // to clear the home indicator on iOS without leaving an empty gap.
     paddingHorizontal: 20,
     paddingTop: 16,
-    // Generous bottom padding so expanded toggles (💡 למה? + 📰 דוגמה),
-    // chat CTA, and Continue button stay reachable above the iOS/Android
-    // tab bar + safe-area inset. Without this the last 80-120px get
-    // clipped by the parent navigator's tab strip.
-    paddingBottom: 140,
+    paddingBottom: 32,
     gap: 14,
   },
   eyebrowRow: {
@@ -528,6 +562,25 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     gap: 8,
+  },
+  // Task-hint pill, surfaces the per-page action without duplicating the
+  // sheet's LIVE chrome. Soft cyan to read as "instruction" rather than
+  // "alert" (LIVE is already red in the topper). Sits at the visual start
+  // of the eyebrow row (RTL: right side).
+  taskPill: {
+    paddingHorizontal: 12,
+    paddingVertical: 5,
+    borderRadius: 999,
+    backgroundColor: 'rgba(8,145,178,0.10)',
+    borderWidth: 1,
+    borderColor: 'rgba(8,145,178,0.28)',
+  },
+  taskPillText: {
+    fontSize: 12,
+    fontWeight: '800',
+    color: STITCH.primary,
+    writingDirection: 'rtl' as const,
+    letterSpacing: 0.2,
   },
   // Small red "LIVE" pill so the page reads as actual news, not a quiz.
   newsStrap: {
@@ -736,13 +789,18 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   resultPanel: {
+    // overflow: 'hidden' was clipping the DetailToggle accordion bodies
+    // ("למה?" / "דוגמה מהעבר"), which is why opening either felt like
+    // "no scroll" in LAN QA 2026-06-02 even though scrollEnabled=true.
+    // The reward-coin lottie is positioned inside this panel but its small
+    // (36x36) frame fits within the padding, so dropping overflow:hidden
+    // doesn't visually break it.
     padding: 16,
     borderRadius: 16,
     borderWidth: 1.5,
     gap: 10,
     marginTop: 4,
     position: 'relative',
-    overflow: 'hidden',
   },
   resultCorrectBorder: {
     borderColor: '#86efac',
@@ -886,28 +944,36 @@ const styles = StyleSheet.create({
     writingDirection: 'rtl',
   },
   continueBtn: {
+    // Bigger, louder primary CTA after the user answers (LAN QA
+    // 2026-06-02: "מעבר לצעד הבא לא ברור כי אין כפתור או משהו").
+    // The button existed before, but at 16px vertical pad + 17px text it
+    // didn't visually stand out next to the result panel + chat button
+    // stack. Bumped padding + font + arrow size so it reads as the
+    // primary "next step" action, and the swipe (inverted FlatList) is
+    // now an optional secondary path rather than the discovered one.
     flexDirection: 'row-reverse',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 6,
+    gap: 8,
     marginTop: 18,
-    paddingVertical: 16,
-    paddingHorizontal: 18,
-    borderRadius: 16,
+    paddingVertical: 18,
+    paddingHorizontal: 22,
+    borderRadius: 18,
     backgroundColor: '#0891b2',
-    borderBottomWidth: 3,
+    borderBottomWidth: 4,
     borderBottomColor: '#0e7490',
     shadowColor: '#0e7490',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.35,
-    shadowRadius: 10,
-    elevation: 6,
+    shadowOffset: { width: 0, height: 5 },
+    shadowOpacity: 0.4,
+    shadowRadius: 12,
+    elevation: 8,
   },
   continueBtnText: {
-    fontSize: 17,
+    fontSize: 18,
     fontWeight: '900',
     color: '#ffffff',
     writingDirection: 'rtl',
+    letterSpacing: 0.3,
   },
   confettiOverlay: {
     position: 'absolute',
