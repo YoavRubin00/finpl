@@ -369,6 +369,31 @@ export function PearlSheet({ visible, pearl, onClose }: PearlSheetProps): React.
     setActivePage(index);
   }, []);
 
+  // Finalize the pearl in-place: track completion, mark it, fire flying
+  // coins, close the sheet — but do NOT navigate. Used by CTA cards that
+  // navigate themselves (Bridge / Referral / WhatsApp) so the pearl is
+  // properly closed before they push the user out. Avoids the double-
+  // router.push race that previously kept pearls marked unlocked-forever
+  // when the user tapped a CTA on the final stage and never came back.
+  const finalizeWithoutNavigation = useCallback(() => {
+    if (!pearl) return;
+    try {
+      track({
+        name: 'pearl_completed',
+        props: {
+          after_module_id: pearl.afterModuleId,
+          next_module_id: pearl.nextModuleId,
+          chapter_id: pearl.chapterId,
+          stages_count: stages.length,
+          time_to_complete_ms: openedAtRef.current ? Date.now() - openedAtRef.current : undefined,
+          exit_via: 'cta',
+        },
+      });
+    } catch { /* non-fatal */ }
+    markCompleted(pearlIdFor(pearl));
+    onClose();
+  }, [pearl, stages.length, markCompleted, onClose]);
+
   const handleStageDone = useCallback(() => {
     if (!pearl) return;
     const completedStage = stages[activePage];
@@ -511,6 +536,7 @@ export function PearlSheet({ visible, pearl, onClose }: PearlSheetProps): React.
               afterModuleId={pearl.afterModuleId}
               chapterId={pearl.chapterId}
               onContinue={handleStageDone}
+              onTapCta={finalizeWithoutNavigation}
             />
           </View>
         );

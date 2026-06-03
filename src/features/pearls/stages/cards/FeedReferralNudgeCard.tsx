@@ -25,10 +25,14 @@ const RTL_CENTER = { writingDirection: "rtl" as const, textAlign: "center" as co
 
 interface Props {
   isActive?: boolean;
-  /** Pearl flow: fired when the user advances past this CTA (tap CTA OR
-   *  tap "המשך" skip). Without this prop the card behaves like the old
-   *  feed surface (CTA only, no skip). */
+  /** Pearl flow: fired when the user advances past this CTA (tap "המשך"
+   *  skip only). Without this prop the card behaves like the old feed
+   *  surface (CTA only, no skip). */
   onContinue?: () => void;
+  /** Pearl flow: fired when the user TAPS the CTA — closes the pearl and
+   *  marks it completed before this card navigates to /referral. Without
+   *  it the pearl stays unlocked-forever once the CTA is tapped. */
+  onTapCta?: () => void;
   /** Pearl context — threaded through for typed pearl_cta_tapped /
    *  pearl_cta_dismissed analytics. PearlCtaStage emits pearl_cta_shown. */
   afterModuleId?: string;
@@ -38,6 +42,7 @@ interface Props {
 export const FeedReferralNudgeCard = React.memo(function FeedReferralNudgeCard({
   isActive,
   onContinue,
+  onTapCta,
   afterModuleId,
   chapterId,
 }: Props) {
@@ -91,12 +96,13 @@ export const FeedReferralNudgeCard = React.memo(function FeedReferralNudgeCard({
         track({ name: 'pearl_cta_tapped', props: { after_module_id: afterModuleId, chapter_id: chapterId, cta_kind: 'referral', destination_url: '/referral' } });
       } catch { /* non-fatal */ }
     }
-    // DON'T advance the pearl here. The previous version called onContinue()
-    // immediately after router.push, which raced the navigation: if this was
-    // the last pearl stage the pager would close → trigger the next-module
-    // open, which overrode the /referral push. User would tap "הזמינו חברים"
-    // and land on the next module instead of /referral (reported 2026-06-01).
-    // Navigate only; user can return + tap "המשך" to advance the pearl.
+    // Finalize the pearl in-place BEFORE navigating. onTapCta closes the
+    // sheet + marks the pearl completed but does NOT do router.push to
+    // the next module, so there's no race with our /referral push. The
+    // earlier "navigate-only" approach (2026-06-01) left the pearl
+    // unlocked-forever when the user tapped the CTA and never came back
+    // to tap "אחר כך" (QA report 2026-06-03).
+    onTapCta?.();
     router.push("/referral" as never);
   };
 
