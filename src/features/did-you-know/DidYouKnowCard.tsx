@@ -81,7 +81,11 @@ export const DidYouKnowCard = React.memo(function DidYouKnowCard({ isActive: _is
       style={styles.scrollHost}
       contentContainerStyle={styles.container}
       showsVerticalScrollIndicator={false}
-      bounces={true}
+      bounces={false}
+      // Scroll disabled 2026-06-02 (Yam): inside the news sheet this card
+      // is sized to fit the screen and the host pager already handles
+      // horizontal swipe. Restore default scrolling if used standalone.
+      scrollEnabled={false}
       keyboardShouldPersistTaps="handled"
     >
       <View style={[styles.card, { backgroundColor: theme.bg, borderColor: theme.border }]}>

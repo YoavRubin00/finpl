@@ -30,11 +30,12 @@ import { useSafeAreaInsets, SafeAreaView } from 'react-native-safe-area-context'
 import { useRouter } from 'expo-router';
 import Animated, { FadeIn } from 'react-native-reanimated';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
-import { X } from 'lucide-react-native';
+import { ChevronRight } from 'lucide-react-native';
 
 import { STITCH } from '../../constants/theme';
 import { tapHaptic } from '../../utils/haptics';
 import { useSoundEffect } from '../../hooks/useSoundEffect';
+import { SheetCloseButton } from '../../components/ui/SheetCloseButton';
 import { track } from '../../lib/analytics/events';
 import { useAuthStore } from '../auth/useAuthStore';
 import { useIsPro } from '../subscription/useSubscription';
@@ -44,6 +45,7 @@ import type { ProfileQuestionKind } from '../onboarding/InModuleProfileQuestion'
 import { usePearlsStore } from './usePearlsStore';
 import { pearlIdFor, type PearlContent } from './pearlConfig';
 import { PearlProgressBar } from './PearlProgressBar';
+import { useTutorialStore } from '../../stores/useTutorialStore';
 import { PearlGameStage } from './stages/PearlGameStage';
 import { PearlProfileQuestionStage } from './stages/PearlProfileQuestionStage';
 import { PearlDailyConceptStage } from './stages/PearlDailyConceptStage';
@@ -127,6 +129,19 @@ export function PearlSheet({ visible, pearl, onClose }: PearlSheetProps): React.
   const insets = useSafeAreaInsets();
   const markCompleted = usePearlsStore((s) => s.markCompleted);
   const { playSound } = useSoundEffect();
+
+  // One-shot pearl tooltip. Shows the very first time a user enters ANY
+  // pearl, anchoring "פנינה = תוכן בונוס, אפשר לדלג ולחזור" before they
+  // form a wrong mental model (e.g. "is this a required module?"). Read at
+  // render, marked seen on tap-"הבנתי". Persisted in useTutorialStore so a
+  // cold start after first-pearl-seen never reshows it.
+  const hasSeenPearlTooltip = useTutorialStore((s) => s.hasSeenPearlTooltip);
+  const markPearlTooltipSeen = useTutorialStore((s) => s.markPearlTooltipSeen);
+  // Local render gate. Snapshotted at sheet-open from the persisted flag so
+  // tapping "הבנתי" (which flips the global flag) doesn't re-trigger on a
+  // re-render. Stays true for the lifetime of THIS open instance until the
+  // user explicitly dismisses it.
+  const [showTooltip, setShowTooltip] = useState(false);
 
   // Per-render snapshot of profile completeness — drives whether we include
   // the profile-question stage at all. The Pearl asks ONLY if the user
@@ -256,6 +271,10 @@ export function PearlSheet({ visible, pearl, onClose }: PearlSheetProps): React.
       setStages(snapshot);
       setActivePage(0);
       openedAtRef.current = Date.now();
+      // First-pearl tooltip gate. Snapshot the persisted flag at open-time
+      // so marking it seen mid-pearl doesn't flip the local render flag.
+      // The user gets the tooltip exactly once across their lifetime.
+      if (!hasSeenPearlTooltip) setShowTooltip(true);
       try {
         track({
           name: 'pearl_opened',
@@ -581,27 +600,35 @@ export function PearlSheet({ visible, pearl, onClose }: PearlSheetProps): React.
             mode was hiding pieces they expected to see. */}
         <GlobalWealthHeader />
 
-        {/* Back button — absolute, top-right RTL corner. Was inline in a
-            row with the title+progress bar which made the chevron read as
-            "stacked on the progress bar" on smaller phones (user report
-            2026-06-01: "כפתור חזרה עולה על הבר שמסמן את ההתקדמות").
-            Absolute pulls it out of the flow so the title row stays clean. */}
-        <Pressable
-          onPress={() => {
-            tapHaptic();
-            playSound('btn_click_soft_1');
-            handleDismiss();
-            router.replace('/(tabs)/index' as never);
-          }}
-          style={({ pressed }) => [styles.closeBtn, pressed && { opacity: 0.7 }]}
-          accessibilityRole="button"
-          accessibilityLabel="חזרה למסך הלמידה"
-          hitSlop={10}
-        >
-          <X size={22} color={STITCH.onSurface} strokeWidth={2.6} />
-        </Pressable>
-
+        {/* Pearl topper. Title row + progress bar + close chevron, all
+            sitting in their own dedicated band BELOW the GlobalWealthHeader.
+            Earlier the chevron used position:absolute with top:4 right:10,
+            which dropped it on top of the main app topbar (next to the
+            coins/diamonds chips) instead of staying inside the pearl's own
+            topper (user screenshot 2026-06-02). Folding the chevron back
+            into the topper row anchors it visually to the pearl scope
+            where it belongs, and the row position (after the
+            GlobalWealthHeader) keeps it from ever colliding with the
+            main-app icons. The chevron uses a soft background ring so it
+            reads as a pearl-scoped affordance, not a main-tab icon. */}
         <View style={styles.topBar}>
+          {/* SheetCloseButton (2026-06-02), unified gold-ring shape across
+              all sheets. We pass a ChevronRight icon (not the default X)
+              because the Pearl is mid-flow content, not a modal to abort,
+              the chevron reads as "back to the learning map" which is
+              what the route does. The ring + size + soft fill stay
+              identical to DailyNewsChallengeSheet so the affordance feels
+              like one family. */}
+          <SheetCloseButton
+            onPress={() => {
+              playSound('btn_click_soft_1');
+              handleDismiss();
+              router.replace('/(tabs)/index' as never);
+            }}
+            accessibilityLabel="חזרה למסך הלמידה"
+            style={styles.closeBtn}
+            icon={<ChevronRight size={22} color={STITCH.onSurface} strokeWidth={2.6} />}
+          />
           <View style={styles.titleWrap}>
             <Text style={styles.title} allowFontScaling={false}>פנינה</Text>
             <PearlProgressBar total={stages.length} current={activePage} />
@@ -616,40 +643,11 @@ export function PearlSheet({ visible, pearl, onClose }: PearlSheetProps): React.
           {stages[activePage] ? renderStage(stages[activePage]) : null}
         </Animated.View>
 
-        {/* "דלג על הפנינה" footer — always visible, fixed at bottom. Lets
-            the user jump straight to the NEXT module without going through
-            the remaining stages. Per user spec (2026-05-31): pearl is
-            optional, this is the explicit opt-out path.
-            paddingBottom uses safe-area inset so it clears the Android
-            navigation bar (3-button or gesture pill) — user report
-            2026-06-01: "כפתור דלג חורג מהמסך באנדרואיד". */}
-        <View style={[styles.skipPearlFooter, { paddingBottom: Math.max(insets.bottom, 14) + 8 }]}>
-          <Pressable
-            onPress={() => {
-              tapHaptic();
-              playSound('btn_click_soft_1');
-              if (!pearl) { onClose(); return; }
-              try {
-                track({
-                  name: 'pearl_skipped',
-                  props: {
-                    after_module_id: pearl.afterModuleId,
-                    chapter_id: pearl.chapterId,
-                  },
-                });
-              } catch { /* non-fatal */ }
-              markCompleted(pearlIdFor(pearl));
-              onClose();
-              router.push(`/lesson/${pearl.nextModuleId}?chapterId=${pearl.chapterId}` as never);
-            }}
-            style={styles.skipPearlBtn}
-            accessibilityRole="button"
-            accessibilityLabel="דלג על הפנינה והמשך למודולה הבאה"
-            hitSlop={8}
-          >
-            <Text style={styles.skipPearlText} allowFontScaling={false}>דלג על הפנינה ←</Text>
-          </Pressable>
-        </View>
+        {/* Pearl footer skip button was removed 2026-06-02 per user decision.
+            The pearl is optional but the exit path is the chevron in the
+            topper, not a redundant footer CTA. Single exit = clearer mental
+            model; aligns with Duolingo Stories pattern (one X, no dual exits).
+            The in-stage "הבנתי" CTA stays as the forward action. */}
 
         {/* Per-stage flying-coins animation. Key changes each time a content
             stage completes (bumped from handleStageDone) so the FlyingRewards
@@ -665,6 +663,39 @@ export function PearlSheet({ visible, pearl, onClose }: PearlSheetProps): React.
             />
           </View>
         ) : null}
+
+        {/* First-pearl tooltip overlay. Renders ONCE per lifetime, scoped to
+            the very first pearl the user ever enters. Anchors mental model
+            "pearl equals bonus, optional, returnable" before they assume
+            it's a blocking module. Backdrop is non-blocking (pointerEvents
+            on the bubble only) so the user can still tap content underneath
+            after dismissing. Position: just below the topper, arrow
+            pointing UP toward the pearl title so the eye travels topper to
+            tooltip to CTA. */}
+        {showTooltip ? (
+          <View style={styles.tooltipOverlay} pointerEvents="box-none">
+            <View style={styles.tooltipBubble}>
+              <View style={styles.tooltipArrow} />
+              <Text style={styles.tooltipText} allowFontScaling={false}>
+                פנינה ← תוכן בונוס, אפשר לדלג ולחזור מתי שבא לך
+              </Text>
+              <Pressable
+                onPress={() => {
+                  tapHaptic();
+                  playSound('btn_click_soft_1');
+                  markPearlTooltipSeen();
+                  setShowTooltip(false);
+                }}
+                style={({ pressed }) => [styles.tooltipBtn, pressed && { opacity: 0.85 }]}
+                accessibilityRole="button"
+                accessibilityLabel="הבנתי, סגור את ההסבר"
+                hitSlop={10}
+              >
+                <Text style={styles.tooltipBtnText} allowFontScaling={false}>קח אותי לפנינה ←</Text>
+              </Pressable>
+            </View>
+          </View>
+        ) : null}
       </SafeAreaView>
       </GestureHandlerRootView>
     </Modal>
@@ -675,55 +706,95 @@ const styles = StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: '#f8fafc' },
   topBar: {
     paddingHorizontal: 12,
-    paddingTop: 6,
+    paddingTop: 10,
     paddingBottom: 10,
     alignItems: 'center',
+    // Position:relative so the absolutely-positioned closeBtn anchors to
+    // THIS topper (the pearl's own header band) and not to the SafeAreaView
+    // above the GlobalWealthHeader. Without this anchor the chevron would
+    // float into the main app topbar (bug screenshot 2026-06-02).
+    position: 'relative',
   },
   closeBtn: {
+    // Positioning only, the visual chrome (size, gold ring, fill) now
+    // lives inside SheetCloseButton. Anchored inside the pearl topper
+    // itself (relative parent above), so the chevron sits next to the
+    // title/progress bar inside the pearl scope. The earlier top:4/right:10
+    // anchored to the screen-level SafeAreaView and so landed on top of
+    // the GlobalWealthHeader chips.
     position: 'absolute',
-    top: 4,
-    right: 10,
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: 'rgba(0,0,0,0.06)',
-    alignItems: 'center',
-    justifyContent: 'center',
+    top: 6,
+    right: 12,
     zIndex: 10,
   },
-  // paddingTop kept just enough to clear the absolutely-positioned closeBtn
-  // (top:4 + height:40 ≈ 44px) without leaving dead space below the
-  // GlobalWealthHeader. Was 50 — visibly bloated the gap on Android (user
-  // report 2026-06-02: "מרווח מבוזבז בטירוף בין הכותרת לסיידבר העליון").
-  titleWrap: { width: '100%', alignItems: 'center', gap: 8, paddingTop: 12 },
+  titleWrap: { width: '100%', alignItems: 'center', gap: 8 },
   title: {
     fontSize: 13,
     fontWeight: '900',
     color: STITCH.onSurface,
     writingDirection: 'rtl',
   },
-  spacer: { width: 36 },
   pagerWrap: { flex: 1 },
-  skipPearlFooter: {
-    paddingHorizontal: 16,
-    paddingTop: 6,
-    // paddingBottom comes from inline insets.bottom (see render above) —
-    // hardcoded value would clip on Android devices with gesture nav.
+  // First-pearl tooltip. Renders once, dismissed on tap. Backdrop is
+  // pointerEvents:box-none so the tooltip captures taps but the rest of
+  // the screen stays interactive (the user can still tap a stage CTA
+  // through the gap and the tooltip will dismiss along its own button).
+  tooltipOverlay: {
+    position: 'absolute',
+    top: 110,
+    left: 24,
+    right: 24,
     alignItems: 'center',
-    backgroundColor: '#f8fafc',
+    zIndex: 50,
   },
-  skipPearlBtn: {
-    paddingHorizontal: 18,
-    paddingVertical: 10,
-    borderRadius: 999,
-    backgroundColor: 'rgba(148,163,184,0.18)',
-    borderWidth: 1,
-    borderColor: 'rgba(148,163,184,0.4)',
+  tooltipBubble: {
+    backgroundColor: '#0F172A',
+    borderRadius: 14,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    maxWidth: 320,
+    gap: 10,
+    shadowColor: '#000',
+    shadowOpacity: 0.25,
+    shadowOffset: { width: 0, height: 6 },
+    shadowRadius: 16,
+    elevation: 8,
   },
-  skipPearlText: {
-    color: '#475569',
-    fontSize: 13,
+  tooltipArrow: {
+    // Triangle pointing UP toward the topper. Achieved with the classic RN
+    // border-trick: zero-width view with bottom border colored as the
+    // bubble + transparent left/right borders for the V shape.
+    position: 'absolute',
+    top: -8,
+    alignSelf: 'center',
+    width: 0,
+    height: 0,
+    borderLeftWidth: 8,
+    borderRightWidth: 8,
+    borderBottomWidth: 8,
+    borderLeftColor: 'transparent',
+    borderRightColor: 'transparent',
+    borderBottomColor: '#0F172A',
+  },
+  tooltipText: {
+    color: '#F8FAFC',
+    fontSize: 13.5,
     fontWeight: '700',
+    textAlign: 'right',
+    writingDirection: 'rtl' as const,
+    lineHeight: 19,
+  },
+  tooltipBtn: {
+    alignSelf: 'flex-end',
+    backgroundColor: '#22D3EE',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 10,
+  },
+  tooltipBtnText: {
+    color: '#0F172A',
+    fontSize: 13,
+    fontWeight: '900',
     writingDirection: 'rtl' as const,
   },
 });

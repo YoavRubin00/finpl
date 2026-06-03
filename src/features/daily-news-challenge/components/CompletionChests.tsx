@@ -38,9 +38,19 @@ interface CompletionChestsProps {
 }
 
 /**
- * Dual-chest completion view. Visually mirrors the Pass Royale row in
- * DailyQuestsSheet (line 443-480 reference). Pro chest = larger, gold border,
- * on the LEFT. Regular chest = smaller, on the RIGHT.
+ * Single-chest completion view (2026-06-02 rework). The earlier dual-chest
+ * layout (Pro + Regular, with a crown lottie and a "PRO" tilted badge) did
+ * not land in QA, two identical chests with different tags read as a paywall
+ * gimmick, not a reward. Yam called it: one real chest, real reward, real
+ * CTA. The Pro/Crown column was removed entirely, regardless of subscription
+ * status, the regular chest is the only thing on the page.
+ *
+ * The `isPro`, `proOpened`, `onClaimPro`, `onUpgradePress` props are kept in
+ * the interface so the parent (ChestsPage + DailyNewsChallengeSheet) can
+ * keep passing them without a cascading refactor, they are simply unused
+ * here. Re-introducing a Pro reward later should happen as a separate
+ * surface (e.g. a streak-milestone chest), not as a second column on this
+ * end-screen.
  */
 export function CompletionChests({
   unlocked,

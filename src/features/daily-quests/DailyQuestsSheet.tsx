@@ -18,11 +18,13 @@ import type { AnimationObject } from "lottie-react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import { LottieIcon } from "../../components/ui/LottieIcon";
+import { GoldCoinIcon } from "../../components/ui/GoldCoinIcon";
 import { ConfettiExplosion } from "../../components/ui/ConfettiExplosion";
 import { FlyingRewards } from "../../components/ui/FlyingRewards";
 import { STITCH } from "../../constants/theme";
 import { useDailyQuestsStore, previewQuestReward, previewProQuestReward } from "./useDailyQuestsStore";
 import { useIsPro } from "../subscription/useSubscription";
+import { useUpgradeModalStore } from "../../stores/useUpgradeModalStore";
 import { type DailyQuest, QUEST_TEMPLATES } from "./daily-quest-types";
 import { useStreak } from "../economy/useStreak";
 import { FINN_HELLO, FINN_STANDARD, FINN_DANCING } from "../retention-loops/finnMascotConfig";
@@ -35,6 +37,12 @@ import { captureEvent } from "../../lib/posthog";
 const LOTTIE_CHEST = require("../../../assets/lottie/3D Treasure Box.json") as unknown as AnimationObject;
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const LOTTIE_CROWN = require("../../../assets/lottie/Crown.json") as unknown as AnimationObject;
+// PRO chest art, bespoke PNG (Yam, 2026-06-03). Replaces the generic
+// "3D Treasure Box" Lottie for the PRO card so the visual tells the
+// value story: open chest, coins + bills inside, gold trim, built-in
+// PRO tag.
+// eslint-disable-next-line @typescript-eslint/no-var-requires
+const PRO_CHEST_PNG = require("../../../assets/chests/pro-chest.png");
 
 /** Finn-opens-the-chest celebration video, plays after flying rewards complete */
 const CHEST_VIDEO_URL =
@@ -215,6 +223,7 @@ export function DailyQuestsSheet({ visible, onClose, onOpenNewsChallenge, onOpen
   const { data: streakData } = useStreak();
   const streak = streakData?.currentStreak ?? 0;
   const isPro = useIsPro();
+  const showUpgrade = useUpgradeModalStore((s) => s.show);
 
   // Ensure quests are populated whenever the sheet becomes visible.
   // Safe on every open: refreshQuests is date-idempotent (no-op if already fresh),
@@ -421,9 +430,15 @@ export function DailyQuestsSheet({ visible, onClose, onOpenNewsChallenge, onOpen
 
   const handleClaimPro = () => {
     if (!isPro) {
+      // Free user tap on the locked PRO chest. Surface the in-app upgrade
+      // modal instead of routing out to /subscription (the old flow pulled
+      // the user out of the Daily Quests session, which read as a hard
+      // bounce). The 'breaking-news' feature reuses the canonical "תיבת
+      // הבונוס של ה-Pro" copy that DailyNewsChallenge also uses for its
+      // gated chest, so the messaging stays consistent across surfaces.
       tapHaptic();
       onClose();
-      router.push('/subscription' as never);
+      showUpgrade('breaking-news');
       return;
     }
     if (proRewardClaimed || !allDone || showProClaimAnim) return;
@@ -511,74 +526,131 @@ export function DailyQuestsSheet({ visible, onClose, onOpenNewsChallenge, onOpen
             ))}
           </View>
 
-          {/* ── Pass Royale dual-chest row ── */}
-          <Animated.View entering={FadeIn.delay(400).duration(400)} style={{ paddingHorizontal: 12, paddingBottom: 8 }}>
-            <View style={{ flexDirection: "row", gap: 10, alignItems: "flex-end" }}>
+          {/* ── Pass Royale dual-chest row (2026-06-03 redesign) ── */}
+          {/* Yam sent a reference: a CARD-based layout with a headline
+              explaining the value, then two cards side-by-side. PRO card
+              is highlighted (gold border + sparkles), reward icons sit
+              under each chest as small labels (not win-state chips),
+              optional orange CTA at the bottom of the PRO card for free
+              users. The headline does the heavy lifting on telling the
+              story; the cards show the proof. */}
+          <Animated.View entering={FadeIn.delay(400).duration(400)} style={chestCardStyles.section}>
+            {/* Two Text rows so the Hebrew title breaks cleanly after
+                "היומיים" rather than letting RN wrap "תיבה" to its own
+                orphaned line (Yam, 2026-06-03 LAN: "אנחנו רוצים להימנע
+                ממילאי תאומה בעברית"). */}
+            <Text style={chestCardStyles.sectionTitle} allowFontScaling={false}>
+              השלימו את כל האתגרים היומיים
+            </Text>
+            <Text style={chestCardStyles.sectionTitle} allowFontScaling={false}>
+              וקבלו תיבה
+            </Text>
+            <Text style={chestCardStyles.sectionSub} allowFontScaling={false}>
+              ברגיל תקבלו פרס קטן, וב-PRO תפתחו פרס משודרג
+            </Text>
 
-              {/* ── PRO chest (left, larger) ── */}
-              <View style={{ flex: 13, alignItems: "center" }}>
-                <LottieIcon source={LOTTIE_CROWN as unknown as number} size={36} autoPlay={!reduceMotion} loop active={!reduceMotion} />
-                <View style={{ position: "relative" }}>
-                  {allDone && isPro && !proRewardClaimed && (
-                    <Animated.View pointerEvents="none" style={[styles.chestGlowHalo, { backgroundColor: "#d97706" }, chestGlowStyle]} />
-                  )}
-                  <Animated.View style={isPro && allDone && !proRewardClaimed ? chestPulseStyle : undefined}>
-                    <Pressable
-                      onPress={handleClaimPro}
-                      disabled={proRewardClaimed || showProClaimAnim}
-                      accessibilityRole="button"
-                      accessibilityLabel={!isPro ? "שדרגו לפרו לפתיחת התיבה" : proRewardClaimed ? "תיבת פרו נפתחה" : allDone ? "לחצו לפתיחת תיבת הפרו" : "תיבת הפרו נעולה"}
-                      style={({ pressed }) => [
-                        styles.chestWrap,
-                        allDone && isPro && !proRewardClaimed && styles.chestWrapReady,
-                        { borderColor: "#d97706", opacity: proRewardClaimed ? 0.65 : 1 },
-                        pressed && allDone && isPro && !proRewardClaimed && { transform: [{ scale: 0.96 }] },
-                      ]}
-                    >
-                      <LottieIcon source={LOTTIE_CHEST as unknown as number} size={130} autoPlay={false} active={proChestOpen} loop={false} />
-                      <View style={{ position: "absolute", top: -10, right: -6, backgroundColor: "#d97706", borderRadius: 10, paddingHorizontal: 10, paddingVertical: 4, zIndex: 10, borderWidth: 2, borderColor: "#fff", shadowColor: "#000", shadowOpacity: 0.25, shadowRadius: 4, shadowOffset: { width: 0, height: 2 }, elevation: 4, transform: [{ rotate: "8deg" }] }} pointerEvents="none">
-                        <Text style={{ color: "#fff", fontSize: 11, fontWeight: "900", letterSpacing: 1.2 }}>PRO</Text>
-                      </View>
-                      {!isPro && (
-                        <View style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, justifyContent: "center", alignItems: "center", backgroundColor: "rgba(0,0,0,0.5)", borderRadius: 16 }} accessible={false}>
-                          <Text style={{ fontSize: 28 }}>🔒</Text>
-                          {allDone && <Text style={{ color: "#fbbf24", fontSize: 10, fontWeight: "800", marginTop: 4 }}>שדרגו לפרו</Text>}
-                        </View>
-                      )}
-                    </Pressable>
-                  </Animated.View>
+            <View style={chestCardStyles.row}>
+              {/* ── Regular card (visual left in RTL row-reverse) ── */}
+              <Pressable
+                onPress={handleClaim}
+                disabled={rewardClaimed || showClaimAnim || !allDone}
+                accessibilityRole="button"
+                accessibilityLabel={rewardClaimed ? "תיבה רגילה נפתחה" : allDone ? `לחצו לפתיחת תיבה רגילה. בפנים: ${preview.coins} מטבעות` : "התיבה הרגילה נעולה"}
+                style={({ pressed }) => [
+                  chestCardStyles.card,
+                  chestCardStyles.cardRegular,
+                  rewardClaimed && chestCardStyles.cardClaimed,
+                  pressed && allDone && !rewardClaimed && { transform: [{ scale: 0.98 }] },
+                ]}
+              >
+                <View style={chestCardStyles.tag}>
+                  <Text style={chestCardStyles.tagText} allowFontScaling={false}>רגיל</Text>
                 </View>
-              </View>
-
-              {/* ── Regular chest (right, smaller) ── */}
-              <View style={{ flex: 10, alignItems: "center" }}>
-                <View style={{ height: 36 }} accessible={false} />
-                <View style={{ position: "relative" }}>
+                <Text style={chestCardStyles.cardTitle} allowFontScaling={false}>תיבה רגילה</Text>
+                <View style={chestCardStyles.chestArt}>
                   {allDone && !rewardClaimed && (
                     <Animated.View pointerEvents="none" style={[styles.chestGlowHalo, chestGlowStyle]} />
                   )}
                   <Animated.View style={allDone && !rewardClaimed ? chestPulseStyle : undefined}>
-                    <Pressable
-                      onPress={handleClaim}
-                      disabled={rewardClaimed || showClaimAnim}
-                      accessibilityRole="button"
-                      accessibilityLabel={rewardClaimed ? "תיבה נפתחה" : allDone ? "לחצו לפתיחת התיבה" : "התיבה נעולה, השלימו את המשימות"}
-                      style={({ pressed }) => [
-                        styles.chestWrap,
-                        allDone && !rewardClaimed && styles.chestWrapReady,
-                        { opacity: rewardClaimed ? 0.65 : 1 },
-                        pressed && allDone && !rewardClaimed && { transform: [{ scale: 0.96 }] },
-                      ]}
-                    >
-                      <LottieIcon source={LOTTIE_CHEST as unknown as number} size={110} autoPlay={false} active={chestOpen} loop={false} />
-                      <View style={{ position: "absolute", top: -10, right: -6, backgroundColor: "#64748b", borderRadius: 10, paddingHorizontal: 10, paddingVertical: 4, zIndex: 10, borderWidth: 2, borderColor: "#fff", shadowColor: "#000", shadowOpacity: 0.25, shadowRadius: 4, shadowOffset: { width: 0, height: 2 }, elevation: 4, transform: [{ rotate: "8deg" }] }} pointerEvents="none">
-                        <Text style={{ color: "#fff", fontSize: 11, fontWeight: "900", letterSpacing: 1.2 }}>רגיל</Text>
-                      </View>
-                    </Pressable>
+                    <LottieIcon source={LOTTIE_CHEST as unknown as number} size={100} autoPlay={false} active={chestOpen} loop={false} />
                   </Animated.View>
                 </View>
-              </View>
+                <View style={chestCardStyles.rewardsRow}>
+                  <GoldCoinIcon size={18} />
+                  <Text style={chestCardStyles.rewardValue} allowFontScaling={false}>{preview.coins}</Text>
+                  <Text style={chestCardStyles.rewardLabel} allowFontScaling={false}>מטבעות</Text>
+                </View>
+              </Pressable>
 
+              {/* ── PRO card (visual right in RTL row-reverse) ── */}
+              <Pressable
+                onPress={handleClaimPro}
+                disabled={proRewardClaimed || showProClaimAnim || (isPro && !allDone)}
+                accessibilityRole="button"
+                accessibilityLabel={!isPro ? `תיבת PRO נעולה. בפנים: ${previewPro.coins} מטבעות ו-${previewPro.gems} יהלומים. לחץ לשדרג` : proRewardClaimed ? "תיבת פרו נפתחה" : allDone ? "לחצו לפתיחת תיבת הפרו" : "תיבת הפרו נעולה"}
+                style={({ pressed }) => [
+                  chestCardStyles.card,
+                  chestCardStyles.cardPro,
+                  proRewardClaimed && chestCardStyles.cardClaimed,
+                  pressed && (!isPro || (allDone && !proRewardClaimed)) && { transform: [{ scale: 0.98 }] },
+                ]}
+              >
+                <View style={chestCardStyles.crownCorner}>
+                  <LottieIcon source={LOTTIE_CROWN as unknown as number} size={28} autoPlay={!reduceMotion} loop active={!reduceMotion} />
+                </View>
+                {/* The orange "PRO" pill is intentionally still rendered
+                    above the title because the PNG's built-in tag sits in
+                    a different corner and is small; the pill at the top
+                    keeps the card's eyebrow consistent with the regular
+                    card's "רגיל" tag. */}
+                <View style={[chestCardStyles.tag, chestCardStyles.tagPro]}>
+                  <Text style={[chestCardStyles.tagText, chestCardStyles.tagTextPro]} allowFontScaling={false}>PRO</Text>
+                </View>
+                <Text style={[chestCardStyles.cardTitle, chestCardStyles.cardTitlePro]} allowFontScaling={false}>תיבת PRO</Text>
+                {/* PNG has ~25-30px of whitespace around the actual chest.
+                    chestArtPro caps the laid-out height at 130 and the image
+                    visually overflows (top/bottom) thanks to negative
+                    marginVertical, so the title + rewards row sit close to
+                    the chest body rather than the empty bounding box of the
+                    PNG (Yam, 2026-06-03 LAN). */}
+                <View style={chestCardStyles.chestArtPro}>
+                  {allDone && isPro && !proRewardClaimed && (
+                    <Animated.View pointerEvents="none" style={[styles.chestGlowHalo, { backgroundColor: "#d97706" }, chestGlowStyle]} />
+                  )}
+                  <Animated.View style={isPro && allDone && !proRewardClaimed ? chestPulseStyle : undefined}>
+                    <ExpoImage
+                      source={PRO_CHEST_PNG}
+                      style={{ width: 220, height: 220, marginVertical: -38 }}
+                      contentFit="contain"
+                      accessible={false}
+                    />
+                  </Animated.View>
+                </View>
+                {/* Coins + gems on separate rows so each gets its own line
+                    in the card (Yam, 2026-06-03 LAN). Matches the reference
+                    layout where the PRO card stacks the two reward types
+                    vertically. */}
+                <View style={chestCardStyles.rewardsCol}>
+                  <View style={chestCardStyles.rewardsRow}>
+                    <GoldCoinIcon size={18} />
+                    <Text style={chestCardStyles.rewardValue} allowFontScaling={false}>{previewPro.coins}</Text>
+                    <Text style={chestCardStyles.rewardLabel} allowFontScaling={false}>מטבעות</Text>
+                  </View>
+                  <View style={chestCardStyles.rewardsRow}>
+                    <Text style={chestCardStyles.rewardIcon} allowFontScaling={false}>💎</Text>
+                    <Text style={chestCardStyles.rewardValue} allowFontScaling={false}>{previewPro.gems}</Text>
+                    <Text style={chestCardStyles.rewardLabel} allowFontScaling={false}>יהלומים</Text>
+                  </View>
+                </View>
+                {!isPro && (
+                  <View style={chestCardStyles.proCta}>
+                    <Text style={chestCardStyles.proCtaIcon} allowFontScaling={false}>👑</Text>
+                    <Text style={chestCardStyles.proCtaText} allowFontScaling={false}>
+                      שדרגו ל-PRO לקבלת פרס גדול יותר
+                    </Text>
+                  </View>
+                )}
+              </Pressable>
             </View>
           </Animated.View>
 
@@ -835,10 +907,15 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
 
-  // Quests, list container only; individual quest styles live inline in QuestButton
+  // Quests, list container only; individual quest styles live inline in QuestButton.
+  // paddingHorizontal: 8 reserves space for the glow halo on each card, which extends
+  // 6px outside the card's bounding box (see QuestButton glow style). Without this
+  // padding the ScrollView's implicit overflow clipping cuts off the halo on both
+  // edges, making the cards look unfinished (QA 2026-06-02).
   questList: {
     gap: 12,
     marginBottom: 18,
+    paddingHorizontal: 8,
   },
 
   // Reward
@@ -923,5 +1000,194 @@ const styles = StyleSheet.create({
     textAlign: "center",
     letterSpacing: 0.3,
     includeFontPadding: false,
+  },
+});
+
+// Dual-chest card layout (2026-06-03). Replaces the bare chest sprites with
+// two side-by-side cards: a headline explains the value, each card carries
+// a tag + title + chest art + reward icons, and the PRO card adds an orange
+// upsell strip for free users. Pattern matches Yam's reference: clear value
+// prop at top, side-by-side cards, the PRO one visibly premium.
+const chestCardStyles = StyleSheet.create({
+  section: {
+    paddingHorizontal: 16,
+    paddingTop: 14,
+    paddingBottom: 12,
+  },
+  sectionTitle: {
+    fontSize: 15,
+    fontWeight: "900",
+    color: STITCH.onSurface,
+    writingDirection: "rtl",
+    textAlign: "center",
+    letterSpacing: -0.1,
+    marginBottom: 4,
+  },
+  sectionSub: {
+    fontSize: 12,
+    fontWeight: "600",
+    color: STITCH.onSurfaceVariant,
+    writingDirection: "rtl",
+    textAlign: "center",
+    marginBottom: 14,
+  },
+  row: {
+    flexDirection: "row-reverse",
+    gap: 10,
+    alignItems: "stretch",
+  },
+  card: {
+    borderRadius: 18,
+    paddingTop: 14,
+    paddingBottom: 12,
+    paddingHorizontal: 10,
+    alignItems: "center",
+    backgroundColor: "#ffffff",
+    borderWidth: 1.5,
+    borderColor: STITCH.surfaceHighest,
+    position: "relative",
+    overflow: "hidden",
+  },
+  cardRegular: {
+    flex: 1,
+    backgroundColor: STITCH.surfaceLow,
+    borderColor: STITCH.surfaceHighest,
+  },
+  cardPro: {
+    // PRO card is wider (flex 1.5 vs regular flex 1) so the eye reads
+    // PRO as the bigger deal. Bumped from 1.35 after LAN review showed
+    // the cards still felt equal in proportions.
+    flex: 1.5,
+    backgroundColor: "#fffbeb",
+    borderColor: "#f59e0b",
+    borderWidth: 2,
+    shadowColor: "#d97706",
+    shadowOpacity: 0.18,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 4,
+  },
+  cardClaimed: {
+    opacity: 0.6,
+  },
+  crownCorner: {
+    position: "absolute",
+    top: 6,
+    left: 6,
+    zIndex: 5,
+  },
+  tag: {
+    paddingHorizontal: 14,
+    paddingVertical: 4,
+    borderRadius: 999,
+    backgroundColor: "#94a3b8",
+    marginBottom: 6,
+  },
+  tagPro: {
+    backgroundColor: "#f97316",
+    shadowColor: "#c2410c",
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 3,
+  },
+  tagText: {
+    fontSize: 12,
+    fontWeight: "900",
+    color: "#ffffff",
+    letterSpacing: 1.4,
+    writingDirection: "rtl",
+  },
+  tagTextPro: {
+    letterSpacing: 1.6,
+  },
+  cardTitle: {
+    fontSize: 14,
+    fontWeight: "900",
+    color: STITCH.onSurfaceVariant,
+    writingDirection: "rtl",
+    textAlign: "center",
+    marginBottom: 4,
+  },
+  cardTitlePro: {
+    color: "#9a3412",
+  },
+  chestArt: {
+    alignItems: "center",
+    justifyContent: "center",
+    marginVertical: 6,
+    position: "relative",
+  },
+  chestArtPro: {
+    // Shorter laid-out height than the actual PNG (180) so the
+    // surrounding title + rewards close in on the chest body and
+    // ignore the PNG's transparent padding.
+    alignItems: "center",
+    justifyContent: "center",
+    height: 130,
+    position: "relative",
+    overflow: "visible",
+  },
+  rewardsRow: {
+    flexDirection: "row-reverse",
+    alignItems: "center",
+    justifyContent: "center",
+    flexWrap: "wrap",
+    gap: 4,
+    marginTop: 8,
+  },
+  rewardsCol: {
+    flexDirection: "column",
+    alignItems: "center",
+    gap: 2,
+    marginTop: 8,
+  },
+  rewardIcon: {
+    fontSize: 18,
+    lineHeight: 22,
+  },
+  rewardValue: {
+    fontSize: 16,
+    fontWeight: "900",
+    color: STITCH.onSurface,
+    letterSpacing: 0.2,
+  },
+  rewardLabel: {
+    fontSize: 11,
+    fontWeight: "700",
+    color: STITCH.onSurfaceVariant,
+    writingDirection: "rtl",
+    marginLeft: 2,
+  },
+  rewardPlus: {
+    fontSize: 14,
+    fontWeight: "900",
+    color: STITCH.onSurfaceVariant,
+    marginHorizontal: 4,
+  },
+  proCta: {
+    flexDirection: "row-reverse",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+    marginTop: 12,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    borderRadius: 12,
+    backgroundColor: "#f97316",
+    alignSelf: "stretch",
+  },
+  proCtaIcon: {
+    fontSize: 14,
+    lineHeight: 16,
+  },
+  proCtaText: {
+    flex: 1,
+    fontSize: 11,
+    fontWeight: "900",
+    color: "#ffffff",
+    writingDirection: "rtl",
+    textAlign: "center",
+    letterSpacing: 0.2,
   },
 });

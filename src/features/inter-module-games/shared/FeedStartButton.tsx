@@ -34,7 +34,15 @@ export function FeedStartButton({ label, onPress, accessibilityLabel, disabled =
         >
           {label}
         </Text>
-        <Play size={20} color="#ffffff" fill="#ffffff" />
+        {/* Play icon wrapped in a flipped View so the triangle points LEFT
+            in RTL. Hebrew readers parse "forward" as leftward, so a
+            right-pointing Play reads as "back" to a native speaker. The
+            transform sits on a wrapper View (not on the SVG itself)
+            because lucide-react-native drops the icon fill on web when
+            scaleX is applied directly to the component. */}
+        <View style={{ transform: [{ scaleX: -1 }], marginLeft: 10 }}>
+          <Play size={20} color="#ffffff" fill="#ffffff" />
+        </View>
       </LiquidButton>
     </View>
   );

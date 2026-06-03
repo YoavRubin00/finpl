@@ -14,6 +14,7 @@ import { useRouter } from "expo-router";
 import { ChevronRight } from "lucide-react-native";
 import { FINN_HAPPY } from "../retention-loops/finnMascotConfig";
 import { GoogleLogo } from "../../components/ui/GoogleLogo";
+import { AppleLogo } from "../../components/ui/AppleLogo";
 import { useAuthStore } from "../auth/useAuthStore";
 import { useAppleAuth } from "../auth/useAppleAuth";
 import { useGoogleAuthStore } from "../auth/useGoogleAuthStore";
@@ -110,7 +111,7 @@ export function SignupGateStep({ onSignupSuccess, onSkip, saveCollected, onEmail
                 borderBottomColor: "#1f2937",
               }}
             >
-              <Text style={{ fontSize: 18, color: "#ffffff" }}></Text>
+              <AppleLogo size={18} />
               <Text style={{ fontSize: 16, fontWeight: "700", color: "#ffffff" }}>המשך עם Apple</Text>
             </Pressable>
           )}

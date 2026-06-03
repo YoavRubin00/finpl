@@ -50,29 +50,49 @@ export function PearlSwipeStage({
 }: PearlSwipeStageProps): React.ReactElement {
   const insets = useSafeAreaInsets();
   const kind: SwipeKind = swipeKind ?? 'bullshit';
+  // Myth + bull-bear render fixed-height swipeable decks that already cap
+  // themselves to the screen viewport (MythCardDeck CARD_H clamps to
+  // SCREEN_H * 0.55; SwipeGameCard uses aspectRatio 0.78 inside a flex row).
+  // Wrapping them in a vertical ScrollView used to surface a parasitic
+  // scroll gesture inside the pearl, even when nothing was actually below
+  // the fold, so the user saw a janky tug on tap (LAN QA 2026-06-02:
+  // "יש גלילה בקצבת זקנה"). Bullshit deck keeps the ScrollView because its
+  // results screen (5+ ad cards) genuinely needs vertical scroll.
+  const needsScroll = kind === 'bullshit';
+  const body = (
+    <>
+      {kind === 'myth' && (
+        <MythFeedCard isInterModule onSkip={onContinue} />
+      )}
+      {kind === 'bull-bear' && (
+        <SwipeGameCard isActive={isActive} onFinish={onContinue} />
+      )}
+      {kind === 'bullshit' && (
+        <BullshitSwipeCard
+          isActive={isActive}
+          bypassDailyGate
+          adIds={swipeIds}
+          onContinue={onContinue}
+        />
+      )}
+    </>
+  );
   return (
     <View style={{ flex: 1 }}>
-      <ScrollView
-        style={styles.scroll}
-        contentContainerStyle={[styles.scrollContent, { paddingBottom: Math.max(insets.bottom + 24, 48) }]}
-        showsVerticalScrollIndicator={false}
-        keyboardShouldPersistTaps="handled"
-      >
-        {kind === 'myth' && (
-          <MythFeedCard isInterModule onSkip={onContinue} />
-        )}
-        {kind === 'bull-bear' && (
-          <SwipeGameCard isActive={isActive} onFinish={onContinue} />
-        )}
-        {kind === 'bullshit' && (
-          <BullshitSwipeCard
-            isActive={isActive}
-            bypassDailyGate
-            adIds={swipeIds}
-            onContinue={onContinue}
-          />
-        )}
-      </ScrollView>
+      {needsScroll ? (
+        <ScrollView
+          style={styles.scroll}
+          contentContainerStyle={[styles.scrollContent, { paddingBottom: Math.max(insets.bottom + 24, 48) }]}
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+        >
+          {body}
+        </ScrollView>
+      ) : (
+        <View style={[styles.scroll, styles.scrollContent, { paddingBottom: Math.max(insets.bottom + 24, 48) }]}>
+          {body}
+        </View>
+      )}
     </View>
   );
 }
