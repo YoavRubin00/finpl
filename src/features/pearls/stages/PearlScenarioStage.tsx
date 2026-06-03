@@ -1,6 +1,8 @@
 import React, { useCallback, useState } from 'react';
-import { View, ScrollView, StyleSheet, Pressable, Text } from 'react-native';
+import { View, ScrollView, StyleSheet, Pressable, Text, Dimensions } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+
+const SCREEN_HEIGHT = Dimensions.get('window').height;
 
 import { DilemmaCard } from '../../daily-challenges/DilemmaCard';
 import { InvestmentCard } from '../../daily-challenges/InvestmentCard';
@@ -56,6 +58,16 @@ export function PearlScenarioStage({
   // breathing room.
   const SKIP_FOOTER_RESERVE = 60;
 
+  // DilemmaCard / InvestmentCard render FeedGameShell which has flex:1 on
+  // its outer + card containers. Inside a ScrollView with flexGrow:1, that
+  // chain collapses the children to exactly visible height and breaks
+  // scrolling on long dilemmas (4 choices + feedback explanation overflow
+  // the screen — user report 2026-06-03 "לא ניתן לגלול"). Wrapping in a
+  // View with explicit minHeight gives the flex:1 children a definite size
+  // to fill, while leaving the outer ScrollView free to extend past it when
+  // the actual content overflows.
+  const minContentHeight = SCREEN_HEIGHT - insets.top - insets.bottom - 240;
+
   return (
     <View style={{ flex: 1 }}>
       <ScrollView
@@ -70,23 +82,25 @@ export function PearlScenarioStage({
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
       >
-        {scenarioPool === 'investment' ? (
-          <InvestmentCard
-            isActive={isActive}
-            investmentId={scenarioId}
-            onContinue={onContinue}
-            hideContinueButton
-            onReadyToContinue={setReadyToContinue}
-          />
-        ) : (
-          <DilemmaCard
-            isActive={isActive}
-            dilemmaId={scenarioId}
-            onContinue={onContinue}
-            hideContinueButton
-            onReadyToContinue={setReadyToContinue}
-          />
-        )}
+        <View style={{ minHeight: minContentHeight }}>
+          {scenarioPool === 'investment' ? (
+            <InvestmentCard
+              isActive={isActive}
+              investmentId={scenarioId}
+              onContinue={onContinue}
+              hideContinueButton
+              onReadyToContinue={setReadyToContinue}
+            />
+          ) : (
+            <DilemmaCard
+              isActive={isActive}
+              dilemmaId={scenarioId}
+              onContinue={onContinue}
+              hideContinueButton
+              onReadyToContinue={setReadyToContinue}
+            />
+          )}
+        </View>
       </ScrollView>
 
       {readyToContinue ? (
@@ -100,10 +114,17 @@ export function PearlScenarioStage({
             onPress={handlePress}
             accessibilityRole="button"
             accessibilityLabel="המשך"
-            style={({ pressed }) => [styles.continueBtn, pressed && styles.continueBtnPressed]}
             hitSlop={8}
           >
-            <Text style={styles.continueBtnText} allowFontScaling={false}>המשך</Text>
+            {({ pressed }) => (
+              // bg/border live on inner View — Pressable's function-style
+              // style prop drops bg on Android (user report 2026-06-03:
+              // "כפתור המשך בצבע לבן ולא אחיד"). Same workaround as
+              // CrowdQuestionCard option buttons.
+              <View style={[styles.continueBtn, pressed && styles.continueBtnPressed]}>
+                <Text style={styles.continueBtnText} allowFontScaling={false}>המשך</Text>
+              </View>
+            )}
           </Pressable>
         </View>
       ) : null}
