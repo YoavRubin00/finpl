@@ -19,7 +19,7 @@ import { eq } from 'drizzle-orm';
 import { parentalConsents } from '../../../src/db/schema';
 import { enforceRateLimit } from '../_shared/rateLimit';
 import { sanitizeString } from '../_shared/validate';
-import { getDb, htmlPage } from '../_shared/legal-helpers';
+import { getDb, htmlPage } from '../../../src/lib/api/legal-helpers';
 
 export async function GET(request: Request): Promise<Response> {
   const blocked = enforceRateLimit(request, 'legal-parental-consent-revoke', {
