@@ -95,8 +95,12 @@ export const FeedTradingNudgeCard = React.memo(function FeedTradingNudgeCard({
         track({ name: 'pearl_cta_tapped', props: { after_module_id: afterModuleId, chapter_id: chapterId, cta_kind: 'trading', destination_url: '/bridge' } });
       } catch { /* non-fatal */ }
     }
+    // CRITICAL: do NOT call onContinue() here. handleStageDone in PearlSheet
+    // does router.push('/lesson/<next>'), which would race with our
+    // /bridge push and the second one wins — landing the user on the next
+    // lesson instead of Bridge. Same regression that was fixed in
+    // FeedReferralNudgeCard. Tap = leave the pearl to Bridge; skip = advance.
     router.push("/bridge" as never);
-    onContinue?.();
   };
   const handleSkip = () => {
     tapHaptic();

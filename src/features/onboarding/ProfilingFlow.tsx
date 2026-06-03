@@ -2625,17 +2625,23 @@ export function ProfilingFlow({ mode = "onboarding", onRedoComplete }: Profiling
     if (!isAuthenticated) {
       enterGuestMode();
     }
+    // CRITICAL: pass `null` (not defaults) for the three DEFERRED questions
+    // — knowledgeLevel, learningTime, dailyGoalMinutes — so LessonFlowScreen's
+    // `!profile?.<field>` guards still fire when the user reaches
+    // mod-0-1 (inline) / mod-0-3 / mod-0-4. The earlier `?? default`
+    // pattern silently flipped the guards to false on day-1, which disabled
+    // the entire graduate-onboarding architecture (QA report 2026-06-03).
     completeOnboarding({
       displayName,
       financialDream: collected.financialDream ?? null,
       financialGoal: collected.financialGoal ?? "unsure",
-      knowledgeLevel: collected.knowledgeLevel ?? "beginner",
+      knowledgeLevel: collected.knowledgeLevel ?? null,
       ageGroup: collected.ageGroup ?? "adult",
       birthYear: collected.birthYear ?? (CY - 22),
-      learningTime: collected.learningTime ?? "during-day",
+      learningTime: collected.learningTime ?? null,
       learningStyle: collected.learningStyle ?? "no-preference",
       deadlineStress: collected.deadlineStress ?? "maybe",
-      dailyGoalMinutes: collected.dailyGoalMinutes ?? 10,
+      dailyGoalMinutes: collected.dailyGoalMinutes ?? null,
       companionId: collected.companionId ?? "warren-buffett",
       avatarId: collected.avatarId ?? null,
       ownedAvatars: [],
@@ -2735,17 +2741,20 @@ export function ProfilingFlow({ mode = "onboarding", onRedoComplete }: Profiling
           // OAuth re-mount detects profile.financialDream and slides straight
           // to celebration (see useState seed at top of this component).
           saveCollected={() => {
+            // null for deferred-question fields (knowledgeLevel/learningTime/
+            // dailyGoalMinutes) so mod-0-1/0-3/0-4 guards still fire — same
+            // reason as enterFirstModule above.
             const seed = {
               displayName,
               financialDream: collected.financialDream ?? null,
               financialGoal: collected.financialGoal ?? "unsure" as const,
-              knowledgeLevel: collected.knowledgeLevel ?? "beginner" as const,
+              knowledgeLevel: collected.knowledgeLevel ?? null,
               ageGroup: collected.ageGroup ?? "adult" as const,
               birthYear: collected.birthYear ?? (CY - 22),
-              learningTime: collected.learningTime ?? "during-day" as const,
+              learningTime: collected.learningTime ?? null,
               learningStyle: collected.learningStyle ?? "no-preference" as const,
               deadlineStress: collected.deadlineStress ?? "maybe" as const,
-              dailyGoalMinutes: collected.dailyGoalMinutes ?? 10 as const,
+              dailyGoalMinutes: collected.dailyGoalMinutes ?? null,
               companionId: collected.companionId ?? "warren-buffett" as const,
               avatarId: collected.avatarId ?? null,
               ownedAvatars: [] as string[],
@@ -2764,17 +2773,19 @@ export function ProfilingFlow({ mode = "onboarding", onRedoComplete }: Profiling
             if (!isAuthenticated) {
               enterGuestMode();
             }
+            // null for deferred-question fields — same reason as
+            // enterFirstModule above.
             completeOnboarding({
               displayName,
               financialDream: collected.financialDream ?? null,
               financialGoal: collected.financialGoal ?? "unsure",
-              knowledgeLevel: collected.knowledgeLevel ?? "beginner",
+              knowledgeLevel: collected.knowledgeLevel ?? null,
               ageGroup: collected.ageGroup ?? "adult",
               birthYear: collected.birthYear ?? (CY - 22),
-              learningTime: collected.learningTime ?? "during-day",
+              learningTime: collected.learningTime ?? null,
               learningStyle: collected.learningStyle ?? "no-preference",
               deadlineStress: collected.deadlineStress ?? "maybe",
-              dailyGoalMinutes: collected.dailyGoalMinutes ?? 10,
+              dailyGoalMinutes: collected.dailyGoalMinutes ?? null,
               companionId: collected.companionId ?? "warren-buffett",
               avatarId: collected.avatarId ?? null,
               ownedAvatars: [],

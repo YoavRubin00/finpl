@@ -50,19 +50,21 @@ export interface UserProfile {
   financialDream: FinancialDream | null;
   // Q1, Goal
   financialGoal: FinancialGoal;
-  // Q2, Knowledge
-  knowledgeLevel: KnowledgeLevel;
+  // Q2, Knowledge — DEFERRED: asked inline at end of mod-0-1's last quiz.
+  // null until the user answers. Guards in LessonFlowScreen check
+  // `!profile?.knowledgeLevel` to decide whether to ask.
+  knowledgeLevel: KnowledgeLevel | null;
   // Q3, Age gate
   ageGroup: AgeGroup;
   birthYear: number;
-  // Q4, When to learn
-  learningTime: LearningTime;
-  // Q5, How to learn
+  // Q4, When to learn — DEFERRED to mod-0-3 completion.
+  learningTime: LearningTime | null;
+  // Q5, How to learn — collected during onboarding if user reaches that step.
   learningStyle: LearningStyle;
   // Q6, Deadline stress
   deadlineStress: DeadlineStress;
-  // Q7, Daily commitment
-  dailyGoalMinutes: DailyGoalMinutes;
+  // Q7, Daily commitment — DEFERRED to mod-0-4 completion.
+  dailyGoalMinutes: DailyGoalMinutes | null;
   // Q8, Companion
   companionId: CompanionId;
   // Avatar
