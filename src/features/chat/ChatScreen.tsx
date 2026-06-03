@@ -7,7 +7,6 @@ import {
   Text,
   TextInput,
   ScrollView,
-  KeyboardAvoidingView,
   Platform,
   Pressable,
   StyleSheet, Image, Modal,
@@ -19,6 +18,7 @@ import {
   type LayoutChangeEvent,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { KeyboardAvoidingView } from "react-native-keyboard-controller";
 import { Send, Check, CheckCheck, X } from "lucide-react-native";
 import Animated, {
   useSharedValue,

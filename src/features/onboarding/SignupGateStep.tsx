@@ -181,14 +181,28 @@ export function SignupGateStep({ onSignupSuccess, onSkip, saveCollected, onEmail
             <Text style={{ fontSize: 16, fontWeight: "700", color: "#1e293b", writingDirection: "rtl" }}>הירשם עם אימייל</Text>
           </Pressable>
 
-          {/* Skip, explicit but visually softer */}
+          {/* Skip — secondary ghost button. Was a text-only link with muted
+              slate-500 that read as disabled (user report 2026-06-03: "פחות
+              דהוי"). Now a bordered pill with slate-700 weight-700 text so
+              guest-mode is clearly an option without out-shouting the
+              primary signup CTA above. */}
           <Pressable
             onPress={handleSkip}
             accessibilityRole="button"
             accessibilityLabel="המשך כאורח"
-            style={{ width: "100%", alignItems: "center", paddingVertical: 14, marginTop: 4 }}
+            style={({ pressed }) => ({
+              width: "100%",
+              alignItems: "center",
+              paddingVertical: 12,
+              paddingHorizontal: 18,
+              marginTop: 8,
+              borderRadius: 14,
+              borderWidth: 1.5,
+              borderColor: "#cbd5e1",
+              backgroundColor: pressed ? "#f1f5f9" : "#f8fafc",
+            })}
           >
-            <Text style={{ fontSize: 14, fontWeight: "600", color: "#64748b", writingDirection: "rtl" }}>
+            <Text style={{ fontSize: 15, fontWeight: "700", color: "#334155", writingDirection: "rtl" }}>
               {"המשך כאורח"}
             </Text>
           </Pressable>

@@ -50,6 +50,7 @@ import { recordSessionTime as apiRecordSessionTime } from "../src/lib/api/userSt
 import { userStatsQueryKey } from "../src/features/user-stats/useUserStats";
 import { setAudioModeAsync } from "expo-audio";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
+import { KeyboardProvider } from "react-native-keyboard-controller";
 import { useFonts } from "@expo-google-fonts/heebo";
 import {
   Heebo_400Regular,
@@ -541,6 +542,7 @@ function RootLayoutInner() {
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
+      <KeyboardProvider>
       <GlobalErrorBoundary>
         <RewardAnimationProvider>
             <StreakCelebrationProvider>
@@ -600,6 +602,7 @@ function RootLayoutInner() {
         </RewardAnimationProvider>
       </GlobalErrorBoundary>
       {splashVisible && <AppIntroSplash onDismiss={() => setSplashVisible(false)} />}
+      </KeyboardProvider>
     </GestureHandlerRootView>
   );
 }
