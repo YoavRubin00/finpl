@@ -63,10 +63,9 @@ export function SavedItemsScreen() {
       item.chapterId != null &&
       item.moduleId
     ) {
-      router.push({
-        pathname: "/lesson-flow",
-        params: { chapterId: String(item.chapterId), moduleId: item.moduleId },
-      } as never);
+      router.push(
+        `/lesson/${item.moduleId}?chapterId=${item.chapterId}` as never
+      );
     }
   };
 

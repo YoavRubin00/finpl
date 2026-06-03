@@ -90,7 +90,9 @@
       "Bash(git pull *)",
       "Bash(git commit *)",
       "Bash(rm .git/COMMIT_MSG.txt)",
-      "Bash(git ls-tree *)"
+      "Bash(git ls-tree *)",
+      "mcp__claude_ai_Notion__notion-fetch",
+      "mcp__claude_ai_Notion__notion-create-pages"
     ],
     "additionalDirectories": [
       "\\tmp",

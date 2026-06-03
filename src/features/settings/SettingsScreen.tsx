@@ -231,7 +231,7 @@ export function SettingsScreen() {
   function handleSignOut() {
     Alert.alert("התנתקות", "להתנתק מהחשבון?", [
       { text: "ביטול", style: "cancel" },
-      { text: "התנתק", onPress: async () => { await lifecycleSignOut(); router.replace("/login" as never); } },
+      { text: "התנתק", onPress: async () => { await lifecycleSignOut(); router.replace("/(auth)/sign-in"); } },
     ]);
   }
 
@@ -253,7 +253,7 @@ export function SettingsScreen() {
                 onPress: async () => {
                   try {
                     await deleteAccount();
-                    router.replace("/login" as never);
+                    router.replace("/(auth)/sign-in");
                   } catch {
                     Alert.alert("שגיאה", "המחיקה נכשלה. נסה שוב או צור קשר עם התמיכה.");
                   }
