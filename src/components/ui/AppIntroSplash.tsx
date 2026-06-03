@@ -2,14 +2,14 @@ import { useEffect, useRef } from "react";
 import { Pressable, StyleSheet } from "react-native";
 import { useVideoPlayer, VideoView } from "expo-video";
 
-// Reverted to URL load 2026-06-03: the local require() change pulled in a
-// new asset (the 680 KB mp4) that the production native binary doesn't
-// know about. expo-updates was falling back to the binary's bundled JS
-// silently because the new bundle's asset graph didn't match the binary's,
-// which blocked every UI change in the same OTAs from reaching users.
-// Re-bundle locally only once a fresh native binary ships.
-const VIDEO_SOURCE =
-  "https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/finn-videos/finn-daily-return.mp4";
+// Bundled locally (assets/video/finn-daily-return.mp4, ~680 KB) so the
+// splash plays from disk and appears instantly on app open instead of
+// the 2-3 s blank wait we saw when loading the clip from Vercel Blob.
+// Note: this asset is brand-new to the JS bundle's asset graph, so
+// existing native binaries built BEFORE this commit cannot apply OTAs
+// that reference it. Ship this only inside a fresh native build
+// (eas build --platform android --profile preview / production --auto-submit).
+const VIDEO_SOURCE = require("../../../assets/video/finn-daily-return.mp4");
 
 /** Cold-start intro splash: plays finn-daily-return for ~3s, tap to skip. */
 const DISPLAY_MS = 3000;
