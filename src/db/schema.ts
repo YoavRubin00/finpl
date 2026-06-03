@@ -325,3 +325,32 @@ export const dailyNewsChallenge = pgTable("daily_news_challenge", {
   unique("daily_news_challenge_date_uniq").on(table.dateKey),
   index("idx_daily_news_challenge_date").using("btree", table.dateKey.desc()),
 ]);
+
+// Parental consent records — required by Israeli Capacity Act sec. 4-6 for
+// any ongoing transaction by a minor (ageGroup='minor', i.e. 16-17). A row
+// is created when a minor requests Pro; the parent confirms by clicking
+// the unique email link; the row becomes the audit trail proving consent
+// at the moment of purchase. Lifecycle: pending → confirmed | revoked | expired.
+export const parentalConsents = pgTable("parental_consents", {
+  id: uuid().default(sql`uuid_generate_v4()`).primaryKey().notNull(),
+  userId: uuid("user_id").notNull(),
+  parentEmail: text("parent_email").notNull(),
+  token: text().notNull(),
+  // Constrained server-side to: 'pending' | 'confirmed' | 'revoked' | 'expired'
+  status: text().default('pending').notNull(),
+  requestedAt: timestamp("requested_at", { withTimezone: true, mode: 'string' }).notNull().defaultNow(),
+  confirmedAt: timestamp("confirmed_at", { withTimezone: true, mode: 'string' }),
+  revokedAt: timestamp("revoked_at", { withTimezone: true, mode: 'string' }),
+  expiresAt: timestamp("expires_at", { withTimezone: true, mode: 'string' }).notNull(),
+  ipWhenRequested: text("ip_when_requested"),
+  ipWhenConfirmed: text("ip_when_confirmed"),
+  createdAt: timestamp("created_at", { withTimezone: true, mode: 'string' }).notNull().defaultNow(),
+}, (table) => [
+  foreignKey({
+    columns: [table.userId],
+    foreignColumns: [userProfiles.id],
+    name: "parental_consents_user_fk",
+  }).onDelete("cascade"),
+  uniqueIndex("parental_consents_token_uniq").on(table.token),
+  index("parental_consents_user_active_idx").on(table.userId, table.status, table.expiresAt),
+]);

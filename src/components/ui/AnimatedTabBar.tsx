@@ -8,6 +8,7 @@ import {
   type LucideIcon,
 } from "lucide-react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useKeyboardState } from "react-native-keyboard-controller";
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -251,9 +252,17 @@ export function AnimatedTabBar({
   const insets = useSafeAreaInsets();
   const bottomPadding = Math.max(insets.bottom, Platform.OS === "web" ? 8 : 12);
 
+  // Hide the tab bar while the keyboard is open (native platforms) so chat-style
+  // inputs dock directly above the keyboard instead of leaving an 80px gap.
+  const keyboardVisible = useKeyboardState((state) => state.isVisible);
+
   // Walkthrough glow, visual only, tabs always usable
   const glowTabKey = useWalkthroughGlowTab();
   const walkthroughActive = glowTabKey !== null;
+
+  // Collapsing to null lets the navigator's screen container expand to fill.
+  // Placed after all hooks so the rules-of-hooks order stays stable.
+  if (keyboardVisible && Platform.OS !== "web") return null;
 
   return (
     <View

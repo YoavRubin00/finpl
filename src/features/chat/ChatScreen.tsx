@@ -983,13 +983,17 @@ export function ChatScreen({ lessonContext }: { lessonContext?: LessonContext } 
     <View style={{ flex: 1, backgroundColor: '#ffffff' }}>
     <SafeAreaView className="flex-1" edges={['bottom']}>
       <KeyboardAvoidingView
-        className="flex-1"
-        // iOS: 'padding' lifts the input above the keyboard. Android: 'height'
-        // measures the keyboard explicitly so the input bar stays visible — the
-        // previous `undefined` relied on adjustResize alone, which hid the
-        // input on Android. Same pattern as StockAnalystScreen.
-        behavior={Platform.OS === "ios" ? "padding" : "height"}
-        keyboardVerticalOffset={Platform.OS === "ios" ? 100 : 0}
+        // Explicit style (not NativeWind className) — cssInterop isn't wired
+        // for this third-party component, so className would be a no-op.
+        style={{ flex: 1 }}
+        // KeyboardAvoidingView from react-native-keyboard-controller: measures
+        // the keyboard via a native module and animates with reanimated, so it
+        // works correctly even though this screen is nested deep in the tab
+        // tree (global header above + bottom tab bar below). 'padding' on both
+        // platforms; the tab bar hides on keyboard (see AnimatedTabBar) so the
+        // input docks directly above the keyboard with no offset.
+        behavior="padding"
+        keyboardVerticalOffset={0}
       >
         {/* WhatsApp-style header */}
         <View style={headerStyles.container}>
