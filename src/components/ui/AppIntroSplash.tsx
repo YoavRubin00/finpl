@@ -2,14 +2,20 @@ import { useEffect, useRef } from "react";
 import { Pressable, StyleSheet } from "react-native";
 import { useVideoPlayer, VideoView } from "expo-video";
 
-// Bundled locally (assets/video/finn-daily-return.mp4, ~680 KB) so the
+// Bundled locally (assets/splash/finn-daily-return.mp4, ~680 KB) so the
 // splash plays from disk and appears instantly on app open instead of
 // the 2-3 s blank wait we saw when loading the clip from Vercel Blob.
+// Lives under assets/splash/ (NOT assets/video/) because gitignore +
+// easignore both exclude assets/video/, and a !file negation under an
+// excluded parent directory is a no-op in both tools — EAS strips the
+// file from the upload tarball and Metro bundling fails. The mp4 was
+// the only required file in assets/video/, so relocating it sidesteps
+// the directory exclusion entirely.
 // Note: this asset is brand-new to the JS bundle's asset graph, so
 // existing native binaries built BEFORE this commit cannot apply OTAs
 // that reference it. Ship this only inside a fresh native build
 // (eas build --platform android --profile preview / production --auto-submit).
-const VIDEO_SOURCE = require("../../../assets/video/finn-daily-return.mp4");
+const VIDEO_SOURCE = require("../../../assets/splash/finn-daily-return.mp4");
 
 /** Cold-start intro splash: plays finn-daily-return for ~3s, tap to skip. */
 const DISPLAY_MS = 3000;

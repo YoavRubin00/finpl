@@ -20,12 +20,9 @@ public/
 
 # Heavy assets — all served from Vercel Blob CDN
 assets/video/
-# Exception: finn-daily-return.mp4 IS bundled (used by AppIntroSplash
-# require() — splash plays from disk at cold start). Mirrors the same
-# exception in .gitignore. Without this, EAS strips the mp4 from the
-# upload tarball and Metro bundling fails with "Unable to resolve module
-# ../../../assets/video/finn-daily-return.mp4".
-!assets/video/finn-daily-return.mp4
+# Splash mp4 lives under assets/splash/ (NOT here) — a !file negation
+# under an excluded parent directory is a no-op in easignore (same as
+# gitignore). See AppIntroSplash.tsx for the actual require path.
 assets/videos/
 assets/comics/
 # Only exclude subfolders; root PNGs are required by didYouKnowData.ts
