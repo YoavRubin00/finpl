@@ -1,4 +1,4 @@
-import { eq, and } from 'drizzle-orm';
+import { eq } from 'drizzle-orm';
 import { neon } from '@neondatabase/serverless';
 import { drizzle } from 'drizzle-orm/neon-http';
 import { randomBytes } from 'crypto';
@@ -191,17 +191,22 @@ export async function POST(request: Request): Promise<Response> {
 
     // Derive hasCompletedOnboarding from server state. The user_profiles table has
     // no dedicated column for this, so we use module-progress as the source of
-    // truth: any completed module means the user already cleared the onboarding
-    // flow that funnels into mod-0-1. Without this, returning users signing in
-    // on a fresh device (no local state) would be sent back through onboarding.
+    // truth: ANY existing module-progress row means the user has already passed
+    // the onboarding flow that funnels into mod-0-1 (they reached at least the
+    // first lesson). Previously we required a 'completed' row, which forced
+    // returning users who started mod-0-1 but didn't finish a single module
+    // back through onboarding — they reported (2026-06-03) "signed in with
+    // Google → ended up at dream step again". Drop the status filter so any
+    // recorded progress (started / in-progress / completed) counts as
+    // "passed onboarding".
     let hasCompletedOnboarding = false;
     if (profile) {
-      const completedRows = await db
+      const progressRows = await db
         .select({ id: moduleProgress.id })
         .from(moduleProgress)
-        .where(and(eq(moduleProgress.userId, profile.id), eq(moduleProgress.status, 'completed')))
+        .where(eq(moduleProgress.userId, profile.id))
         .limit(1);
-      hasCompletedOnboarding = completedRows.length > 0;
+      hasCompletedOnboarding = progressRows.length > 0;
     }
     const profileWithFlag = profile ? { ...profile, hasCompletedOnboarding } : null;
 
