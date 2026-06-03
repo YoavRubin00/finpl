@@ -2724,7 +2724,12 @@ export function ProfilingFlow({ mode = "onboarding", onRedoComplete }: Profiling
           // intentionally superseded here — profile-summary stays
           // reachable via the redo path + edit-from-summary blocks below,
           // but the live signup-gate is what drives D1 retention.
-          onNext={(ag, by) => slide("signup-gate", { ageGroup: ag, birthYear: by })}
+          // EXCEPT in redo mode: an already-signed-in user retaking the
+          // profiling flow shouldn't be re-prompted with Apple/Google
+          // signup. Route them straight to profile-summary so they can
+          // review/save edits without seeing a sign-up wall (QA report
+          // 2026-06-03).
+          onNext={(ag, by) => slide(isRedo ? "profile-summary" : "signup-gate", { ageGroup: ag, birthYear: by })}
           onBack={() => slide("goal", {})}
         />}
         {step === "signup-gate" && <SignupGateStep

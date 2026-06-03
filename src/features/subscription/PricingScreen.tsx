@@ -391,10 +391,19 @@ export function PricingScreen() {
           <SafeAreaView edges={["top"]}>
             {/* Back button — white + circular bg so it pops on the dark
                 gradient (user reported the default gray ChevronRight was
-                invisible against navy bg, 2026-06-01). */}
+                invisible against navy bg, 2026-06-01).
+                onPress override: if we were sent here from a specific
+                lesson/screen via ?returnTo=, replace with that destination
+                instead of falling through to router.back(). Without this,
+                the back chevron loops back to mod-0-4 (which is what sent
+                the user to /pricing) and re-triggers the paywall — same
+                logic the bottom "noThanks" button already uses. */}
             <View style={styles.backRow}>
               <View style={styles.backBtnBg}>
-                <BackButton color="#ffffff" />
+                <BackButton
+                  color="#ffffff"
+                  onPress={returnTo ? () => router.replace(returnTo as never) : undefined}
+                />
               </View>
             </View>
 
