@@ -30,6 +30,7 @@ const migrationFiles = [
   'src/db/migrations/0002_add_user_stats.sql',
   'src/db/migrations/0003_identity_additive.sql',
   'src/db/migrations/0004_identity_rekey_constraints.sql',
+  'src/db/migrations/0005_add_parental_consents.sql',
 ];
 
 try {
