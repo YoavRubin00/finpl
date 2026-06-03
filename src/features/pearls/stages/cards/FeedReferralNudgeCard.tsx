@@ -143,22 +143,26 @@ export const FeedReferralNudgeCard = React.memo(function FeedReferralNudgeCard({
             hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
             style={({ pressed }) => [styles.cta, pressed && styles.ctaPressed]}
           >
-            <Text style={styles.ctaText}>הזמינו חברים</Text>
+            <Text style={styles.ctaText}>ראו איך לקבל מטבעות 🎁</Text>
           </Pressable>
         </Animated.View>
 
         {/* Pearl-flow skip — only when onContinue is wired (i.e., we're
             inside a pearl, not a standalone surface). Lets the user advance
-            to the next stage without taking the CTA. */}
+            to the next stage without taking the CTA. Renamed from
+            "המשך ←" to "אחר כך" (2026-06-03): the arrow + "המשך" read
+            as forward navigation, making it the visually obvious next-step
+            cue — 12 CTA shows / 0 taps in prod. Softer copy reduces the
+            accidental dismiss rate. */}
         {onContinue ? (
           <Pressable
             onPress={handleSkip}
             accessibilityRole="button"
-            accessibilityLabel="המשך לשלב הבא"
+            accessibilityLabel="דלג לשלב הבא"
             hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
             style={styles.skipBtn}
           >
-            <Text style={styles.skipText}>המשך ←</Text>
+            <Text style={styles.skipText}>אחר כך</Text>
           </Pressable>
         ) : null}
       </Animated.View>
@@ -239,21 +243,19 @@ const styles = StyleSheet.create({
     letterSpacing: 0.5,
     writingDirection: "rtl",
   },
-  // Secondary "המשך" — lighter blue + filled (matches "עזור לי" in TimelineOrderCard).
-  // Was a near-invisible text-only link; user couldn't tell it was tappable.
+  // Tertiary "אחר כך" — visually muted so it doesn't compete with the
+  // primary CTA. Previous styling read as a co-equal action and lost
+  // 100% of CTA conversions in prod (12 shown / 0 tapped → all hit skip).
   skipBtn: {
-    paddingVertical: 12,
-    paddingHorizontal: 22,
-    marginTop: 8,
-    borderRadius: 14,
-    backgroundColor: "rgba(56, 189, 248, 0.18)",
-    borderWidth: 1.5,
-    borderColor: "rgba(56, 189, 248, 0.55)",
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    marginTop: 6,
+    borderRadius: 12,
   },
   skipText: {
-    color: "#bae6fd",
-    fontSize: 14,
-    fontWeight: "800",
+    color: "rgba(186, 230, 253, 0.7)",
+    fontSize: 13,
+    fontWeight: "600",
     writingDirection: "rtl",
   },
 });

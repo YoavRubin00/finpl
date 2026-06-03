@@ -156,7 +156,7 @@ export const FeedTradingNudgeCard = React.memo(function FeedTradingNudgeCard({
             hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
             style={styles.skipBtn}
           >
-            <Text style={styles.skipText}>המשך ←</Text>
+            <Text style={styles.skipText}>אחר כך</Text>
           </Pressable>
         ) : null}
       </Animated.View>

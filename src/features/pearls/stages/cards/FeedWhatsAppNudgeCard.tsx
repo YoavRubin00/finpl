@@ -116,7 +116,7 @@ export const FeedWhatsAppNudgeCard = React.memo(function FeedWhatsAppNudgeCard({
             accessibilityLabel="המשך לשלב הבא"
             style={({ pressed }) => [styles.continueBtn, pressed && styles.continueBtnPressed]}
           >
-            <Text style={styles.continueText} allowFontScaling={false}>המשך לשלב הבא ←</Text>
+            <Text style={styles.continueText} allowFontScaling={false}>אחר כך</Text>
           </Pressable>
         )}
       </Animated.View>
@@ -192,28 +192,21 @@ const styles = StyleSheet.create({
   // Explicit blue continue button — matches the deep-blue palette used by
   // TimelineOrderCard "אני אסתדר", CrowdQuestionCard Continue, and
   // DiamondHandsCard Continue. Replaces the easy-to-miss skip hint text.
+  // Tertiary "אחר כך" — muted text-only so it doesn't compete with the
+  // green WhatsApp CTA above. Was a primary blue button which ate 100%
+  // of the CTA conversion (12 cta_shown / 0 cta_tapped in prod).
   continueBtn: {
-    marginTop: 10,
-    paddingVertical: 14,
-    paddingHorizontal: 24,
-    borderRadius: 14,
-    backgroundColor: "#1d4ed8",
-    borderBottomWidth: 4,
-    borderBottomColor: "#1e3a8a",
+    marginTop: 8,
+    paddingVertical: 8,
+    paddingHorizontal: 16,
     alignItems: "center",
     justifyContent: "center",
-    minWidth: 200,
-    shadowColor: "#1e3a8a",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.35,
-    shadowRadius: 10,
-    elevation: 6,
   },
-  continueBtnPressed: { opacity: 0.9, transform: [{ scale: 0.98 }] },
+  continueBtnPressed: { opacity: 0.7 },
   continueText: {
-    fontSize: 16,
-    fontWeight: "900",
-    color: "#ffffff",
+    fontSize: 13,
+    fontWeight: "600",
+    color: "rgba(255,255,255,0.7)",
     writingDirection: "rtl" as const,
   },
 });
