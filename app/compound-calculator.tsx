@@ -4,6 +4,7 @@ import { useRouter } from 'expo-router';
 import { ChevronRight } from 'lucide-react-native';
 import { CompoundSimScreen } from '../src/features/chapter-1-content/simulations/CompoundSimScreen';
 import { ToolTutorialMount } from '../src/features/financial-tools/components/ToolTutorialMount';
+import { useToolInstrumentation } from '../src/features/financial-tools/hooks/useToolInstrumentation';
 import { useTutorialStore } from '../src/stores/useTutorialStore';
 import { tapHaptic } from '../src/utils/haptics';
 
@@ -12,6 +13,7 @@ import { tapHaptic } from '../src/utils/haptics';
  * for the back button so the user always has an obvious exit.
  */
 export default function CompoundCalculatorRoute() {
+  useToolInstrumentation('compound');
   const router = useRouter();
   // While the 3-step tool tutorial is showing, hold back the sim's own
   // narration so the two Captain Shark tracks don't overlap (user report

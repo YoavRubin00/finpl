@@ -655,33 +655,34 @@ export function PearlSheet({ visible, pearl, onClose }: PearlSheetProps): React.
             main-app icons. The chevron uses a soft background ring so it
             reads as a pearl-scoped affordance, not a main-tab icon. */}
         <View style={styles.topBar}>
-          {/* SheetCloseButton (2026-06-02), unified gold-ring shape across
-              all sheets. We pass a ChevronRight icon (not the default X)
-              because the Pearl is mid-flow content, not a modal to abort,
-              the chevron reads as "back to the learning map" which is
-              what the route does. The ring + size + soft fill stay
-              identical to DailyNewsChallengeSheet so the affordance feels
-              like one family. */}
-          <SheetCloseButton
-            onPress={() => {
-              playSound('btn_click_soft_1');
-              handleDismiss();
-              router.replace('/(tabs)/index' as never);
-            }}
-            accessibilityLabel="חזרה למסך הלמידה"
-            style={styles.closeBtn}
-            icon={<ChevronRight size={22} color={STITCH.onSurface} strokeWidth={2.6} />}
-          />
-          <View style={styles.titleWrap}>
+          {/* Top row — chevron (right) + title (centered) on the same baseline.
+              User report 2026-06-03: the chevron used to float above the title
+              with the title shrunk to 13px, making the header look uneven and
+              the title invisible. Now they share a row and the title is sized
+              to match the rest of the app's sheet titles. */}
+          <View style={styles.topRow}>
+            <SheetCloseButton
+              onPress={() => {
+                playSound('btn_click_soft_1');
+                handleDismiss();
+                router.replace('/(tabs)/index' as never);
+              }}
+              accessibilityLabel="חזרה למסך הלמידה"
+              icon={<ChevronRight size={22} color={STITCH.onSurface} strokeWidth={2.6} />}
+            />
             <Text style={styles.title} allowFontScaling={false}>פנינה</Text>
-            <PearlProgressBar total={stages.length} current={activePage} />
+            {/* Left-side spacer balances the chevron so the title centers
+                visually rather than offsetting toward the chevron. Width
+                matches the SheetCloseButton (44px) for symmetry. */}
+            <View style={styles.topRowSpacer} />
           </View>
+          <PearlProgressBar total={stages.length} current={activePage} />
         </View>
 
         <Animated.View
           key={`stage-${activePage}`}
           entering={FadeIn.duration(180)}
-          style={styles.pagerWrap}
+          style={[styles.pagerWrap, { paddingBottom: insets.bottom }]}
         >
           {stages[activePage] ? renderStage(stages[activePage]) : null}
         </Animated.View>
@@ -751,31 +752,29 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingTop: 10,
     paddingBottom: 10,
+    gap: 10,
+  },
+  topRow: {
+    // row-reverse → chevron lands on the right (RTL), spacer on the left,
+    // title centered between. Children share the same baseline so the
+    // chevron sits at title height, not above it.
+    flexDirection: 'row-reverse',
     alignItems: 'center',
-    // Position:relative so the absolutely-positioned closeBtn anchors to
-    // THIS topper (the pearl's own header band) and not to the SafeAreaView
-    // above the GlobalWealthHeader. Without this anchor the chevron would
-    // float into the main app topbar (bug screenshot 2026-06-02).
-    position: 'relative',
+    justifyContent: 'space-between',
   },
-  closeBtn: {
-    // Positioning only, the visual chrome (size, gold ring, fill) now
-    // lives inside SheetCloseButton. Anchored inside the pearl topper
-    // itself (relative parent above), so the chevron sits next to the
-    // title/progress bar inside the pearl scope. The earlier top:4/right:10
-    // anchored to the screen-level SafeAreaView and so landed on top of
-    // the GlobalWealthHeader chips.
-    position: 'absolute',
-    top: 6,
-    right: 12,
-    zIndex: 10,
+  topRowSpacer: {
+    // Matches SheetCloseButton's footprint (44 size) so the centered title
+    // stays optically centered even though the chevron occupies one side.
+    width: 44,
+    height: 44,
   },
-  titleWrap: { width: '100%', alignItems: 'center', gap: 8 },
   title: {
-    fontSize: 13,
+    fontSize: 20,
     fontWeight: '900',
     color: STITCH.onSurface,
     writingDirection: 'rtl',
+    textAlign: 'center',
+    letterSpacing: 0.2,
   },
   pagerWrap: { flex: 1 },
   // First-pearl tooltip. Renders once, dismissed on tap. Backdrop is

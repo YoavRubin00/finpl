@@ -4,6 +4,7 @@ import { useRouter } from 'expo-router';
 import { ChevronRight } from 'lucide-react-native';
 import { FIRECalcScreen } from '../src/features/chapter-5-content/simulations/FIRECalcScreen';
 import { ToolTutorialMount } from '../src/features/financial-tools/components/ToolTutorialMount';
+import { useToolInstrumentation } from '../src/features/financial-tools/hooks/useToolInstrumentation';
 import { tapHaptic } from '../src/utils/haptics';
 
 /**
@@ -11,6 +12,7 @@ import { tapHaptic } from '../src/utils/haptics';
  * button.
  */
 export default function FireCalculatorRoute() {
+  useToolInstrumentation('fire');
   const router = useRouter();
   const goToTools = () => {
     tapHaptic();

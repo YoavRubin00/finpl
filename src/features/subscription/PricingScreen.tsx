@@ -568,14 +568,11 @@ export function PricingScreen() {
                     ביטול חינם בכל עת
                   </Text>
                 ) : null}
-                {/* Cooling-off disclosure (Israeli Consumer Protection Act +
-                    Apple/Google refund policies). Phase 1-2 — surface the
-                    14-day refund right explicitly so the user doesn't think
-                    they're locked in. */}
-                <Text style={[styles.coolingOff, { color: theme.textMuted }]} allowFontScaling={false}>
-                  ניתן לבטל את המנוי תוך 14 ימים מהרכישה ולקבל החזר מלא
-                  דרך {Platform.OS === "ios" ? "App Store" : "Google Play"}.
-                </Text>
+                {/* Cooling-off disclosure removed from paywall on user
+                    request (2026-06-04) — too tall, ate room above the
+                    feature comparison. Still covered in Terms §11 + the
+                    auto-renew disclosure below + Apple/Google native
+                    refund flows. */}
 
                 {/* Auto-renew disclosure, platform-specific */}
                 <Text style={[styles.disclosure, { color: theme.textMuted }]}>
@@ -847,7 +844,11 @@ const styles = StyleSheet.create({
 
   // CTA
   ctaSection: {
-    marginTop: 4,
+    // Pinned to the bottom of the screen — pushes the feature-comparison
+    // ScrollView upward so the user sees more rows above the fold. User
+    // request 2026-06-04: "תוריד הכל למטה שיהיה יותר מקום לראות את ההבדל
+    // בין חינמי לפרו".
+    marginTop: "auto",
     alignItems: "center",
     paddingBottom: 16,
   },
@@ -970,14 +971,5 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     writingDirection: 'rtl',
     lineHeight: 19,
-  },
-  coolingOff: {
-    fontSize: 11,
-    fontWeight: '600',
-    textAlign: 'center',
-    writingDirection: 'rtl' as const,
-    marginTop: 6,
-    paddingHorizontal: 16,
-    lineHeight: 16,
   },
 });

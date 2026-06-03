@@ -47,11 +47,13 @@ import { FollowupInput } from './components/FollowupInput';
 import { fetchFollowupAnswer } from './services/stockAnalystClient';
 import { toSharkVoiceError } from './services/sharkErrorVoice';
 import { useAnalystHistoryStore } from './useAnalystHistoryStore';
+import { useToolInstrumentation } from '../financial-tools/hooks/useToolInstrumentation';
 import type { AnalystMessage } from './types';
 
 const CONSENT_KEY = 'stock-analyst:consent-v1';
 
 export function StockAnalystScreen(): React.ReactElement {
+  useToolInstrumentation('analyst');
   const mode = useStockAnalystStore((s) => s.mode);
   const horizon = useStockAnalystStore((s) => s.horizon);
   const ticker = useStockAnalystStore((s) => s.ticker);
