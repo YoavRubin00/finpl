@@ -174,16 +174,14 @@ export function SignupGateStep({ onSignupSuccess, onSkip, saveCollected, onEmail
               justifyContent: "center",
               gap: 8,
               borderRadius: 14,
-              backgroundColor: "#ffffff",
+              backgroundColor: "#0ea5e9",
               paddingVertical: 15,
-              borderWidth: 1,
-              borderColor: "#cbd5e1",
               borderBottomWidth: 3,
-              borderBottomColor: "#cbd5e1",
+              borderBottomColor: "#0284c7",
               opacity: googleReady ? 1 : 0.6,
             }}
           >
-            <Text style={{ fontSize: 16, fontWeight: "700", color: "#1e293b" }}>המשך עם Google</Text>
+            <Text style={{ fontSize: 16, fontWeight: "700", color: "#ffffff" }}>המשך עם Google</Text>
             <GoogleLogo size={20} />
           </Pressable>
 
@@ -208,22 +206,19 @@ export function SignupGateStep({ onSignupSuccess, onSkip, saveCollected, onEmail
               alignItems: "center",
               justifyContent: "center",
               borderRadius: 14,
-              backgroundColor: "#ffffff",
+              backgroundColor: "#0ea5e9",
               paddingVertical: 15,
-              borderWidth: 1,
-              borderColor: "#cbd5e1",
               borderBottomWidth: 3,
-              borderBottomColor: "#cbd5e1",
+              borderBottomColor: "#0284c7",
             }}
           >
-            <Text style={{ fontSize: 16, fontWeight: "700", color: "#1e293b", writingDirection: "rtl" }}>הירשם עם אימייל</Text>
+            <Text style={{ fontSize: 16, fontWeight: "700", color: "#ffffff", writingDirection: "rtl" }}>הירשם עם אימייל</Text>
           </Pressable>
 
-          {/* Skip — secondary ghost button. Was a text-only link with muted
-              slate-500 that read as disabled (user report 2026-06-03: "פחות
-              דהוי"). Now a bordered pill with slate-700 weight-700 text so
-              guest-mode is clearly an option without out-shouting the
-              primary signup CTA above. */}
+          {/* Guest CTA — same shape/size as the auth buttons above, just in
+              neutral gray so the colored signup buttons read as the primary
+              path. Sub-copy below the label spells out the cost of guest
+              mode without being scary (user direction 2026-06-03). */}
           <Pressable
             onPress={handleSkip}
             accessibilityRole="button"
@@ -231,20 +226,19 @@ export function SignupGateStep({ onSignupSuccess, onSkip, saveCollected, onEmail
             style={({ pressed }) => ({
               width: "100%",
               alignItems: "center",
-              paddingVertical: 12,
-              paddingHorizontal: 18,
-              marginTop: 8,
+              justifyContent: "center",
               borderRadius: 14,
-              borderWidth: 1.5,
+              backgroundColor: pressed ? "#f1f5f9" : "#ffffff",
+              paddingVertical: 15,
+              borderWidth: 1,
               borderColor: "#cbd5e1",
-              backgroundColor: pressed ? "#f1f5f9" : "#f8fafc",
+              borderBottomWidth: 3,
+              borderBottomColor: "#cbd5e1",
             })}
           >
-            <Text style={{ fontSize: 15, fontWeight: "700", color: "#334155", writingDirection: "rtl", textAlign: "center" }}>
+            <Text style={{ fontSize: 16, fontWeight: "700", color: "#1e293b", writingDirection: "rtl", textAlign: "center" }}>
               {"המשך כאורח"}
             </Text>
-            {/* Soft FOMO sub-copy — explicit cost of guest mode without
-                being scary. Centered to match the main label. */}
             <Text style={{ fontSize: 11, fontWeight: "500", color: "#94a3b8", writingDirection: "rtl", textAlign: "center", marginTop: 2 }}>
               {"ההתקדמות תישמר רק במכשיר הזה"}
             </Text>
