@@ -7,7 +7,8 @@ import { getStreak, recordDailyActivity, type StreakState } from '../../lib/api/
 import { queryClient } from '../../lib/queryClient';
 import { useEconomyUIStore } from './useEconomyUIStore';
 import { useAuthStore } from '../auth/useAuthStore';
-import { captureEvent } from '../../lib/posthog';
+import { captureEvent, setPersonProperties } from '../../lib/posthog';
+import { track } from '../../lib/analytics/events';
 
 export const streakQueryKey = ['streak'] as const;
 
@@ -76,9 +77,29 @@ export function markDailyActivityCompleted(): void {
   try { useEconomyUIStore.getState().completeDailyTask(); } catch { /* non-fatal */ }
   // Server next: async, persists across devices + powers notifications.
   // Server is already idempotent per dateIl, so fire-and-forget is safe.
+  // Snapshot pre-call streak so we can detect a real "extension" after the
+  // server tells us the new value (and not fire on a no-op same-day call).
+  const prevSnapshot = queryClient.getQueryData<StreakState | null>(streakQueryKey);
+  const prevStreakBefore = prevSnapshot?.currentStreak ?? 0;
+
   void recordDailyActivity(todayIsraelDate())
     .then(async (res) => {
       queryClient.setQueryData<StreakState | null>(streakQueryKey, res.streak);
+      const newStreak = res.streak?.currentStreak ?? 0;
+      const longestStreak = res.streak?.longestStreak ?? 0;
+
+      // Push current streak to PostHog as a person property so downstream
+      // cohorts ("users currently holding a streak ≥ 2") can be defined
+      // without joining event tables. Setting on every successful
+      // recordDailyActivity keeps the value fresh including the case where
+      // the server reset the streak (returned 1 or 0).
+      try {
+        setPersonProperties({
+          current_streak: newStreak,
+          longest_streak: longestStreak,
+        });
+      } catch { /* non-fatal */ }
+
       // Fire `daily_active_day` exactly once per Israeli calendar day so
       // NSM Secondary (Active Streaks) becomes a direct PostHog query
       // instead of a server-side join. Guarded by STREAK_DAILY_TICK_KEY:
@@ -89,9 +110,28 @@ export function markDailyActivityCompleted(): void {
         if (last !== today) {
           captureEvent('daily_active_day', {
             date_il: today,
-            streak: res.streak?.currentStreak ?? 0,
-            longest_streak: res.streak?.longestStreak ?? 0,
+            streak: newStreak,
+            longest_streak: longestStreak,
           });
+
+          // Fire `streak_extended` ONLY when the streak actually grew.
+          // `daily_active_day` fires on every active day (including
+          // streak=1 resets after a break); `streak_extended` carries the
+          // delta so the "users holding a streak ≥ 2" cohort and the
+          // 1→2 / 2→3 funnel can be built directly.
+          if (newStreak > prevStreakBefore) {
+            const MILESTONES = new Set([2, 7, 14, 30, 100, 365]);
+            track({
+              name: 'streak_extended',
+              props: {
+                prev_streak: prevStreakBefore,
+                new_streak: newStreak,
+                longest_streak: longestStreak,
+                is_milestone: MILESTONES.has(newStreak),
+                reached_two: prevStreakBefore < 2 && newStreak >= 2,
+              },
+            });
+          }
         }
       } catch { /* non-fatal */ }
       AsyncStorage.setItem(STREAK_DAILY_TICK_KEY, todayIsraelDate()).catch(() => {});

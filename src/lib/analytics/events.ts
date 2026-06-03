@@ -128,6 +128,12 @@ export type AppEvent =
 
   // ── Daily / Engagement ────────────────────────────────────────────────
   | { name: 'daily_active_day'; props: { date_il: string; streak: number; longest_streak: number } }
+  // Fires ONLY when streak actually grew (prev → new). Distinct from
+  // `daily_active_day` (which fires every active day, including streak=1
+  // resets). `is_milestone` lights up at 2/7/14/30/100/365. `reached_two`
+  // is the user's first-ever transition to a streak ≥ 2 — drives the
+  // "holding a streak (≥ 2)" cohort the rest of the metric stack reads.
+  | { name: 'streak_extended'; props: { prev_streak: number; new_streak: number; longest_streak: number; is_milestone: boolean; reached_two: boolean } }
 
   // ── Bandit (Thompson sampling experiments) ────────────────────────────
   // Fires once per component instance when useBandit() locks a variant.
