@@ -34,7 +34,11 @@ import {
   removeTrackedTicker,
 } from './breakingNewsApi';
 
-const ACCENT = '#dc2626';
+// Light-mode STITCH treatment with blue accent — matches the rest of the
+// app (DailyQuests, financial tools, Pearl sheet). User asked for "unified
+// with the rest of the app, not dark mode" 2026-06-03 after a brief dark
+// mode experiment.
+const ACCENT = '#0ea5e9';
 
 /**
  * Main screen for the Breaking News tool.
@@ -379,7 +383,7 @@ const styles = StyleSheet.create({
   },
   scroll: {
     padding: 16,
-    paddingBottom: 80,
+    paddingBottom: 32,
     gap: 12,
   },
   dayHeaderRow: {
@@ -387,19 +391,18 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 4,
+    paddingBottom: 4,
   },
   dayLabel: {
-    fontSize: 11,
+    fontSize: 13,
     fontWeight: '900',
-    color: STITCH.onSurfaceVariant,
+    color: STITCH.onSurface,
     textAlign: 'right',
     writingDirection: 'rtl',
-    letterSpacing: 0.4,
+    letterSpacing: 0.2,
   },
-  // Neon-blue glow chip — solid Chapter-3 blue with shadow at offset 0,0 so
-  // the bloom radiates on all sides. White bell + white text for high
-  // contrast against the strong primary fill (user feedback 2026-06-01:
-  // "שיהיה ברקע כחול עם גלואו").
+  // Sky-blue chip with subtle glow — pairs with the rest of the light-mode
+  // accents (Bridge benefit pills, financial-tools header chips).
   hourChip: {
     flexDirection: 'row-reverse',
     alignItems: 'center',
@@ -407,14 +410,14 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 999,
-    backgroundColor: '#2563eb',
+    backgroundColor: '#0ea5e9',
     borderWidth: 1.5,
-    borderColor: '#1d4ed8',
-    shadowColor: '#3b82f6',
-    shadowOpacity: 0.55,
+    borderColor: '#0284c7',
+    shadowColor: '#0ea5e9',
+    shadowOpacity: 0.35,
     shadowRadius: 10,
-    shadowOffset: { width: 0, height: 0 },
-    elevation: 8,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 6,
   },
   hourChipText: {
     fontSize: 11,
@@ -456,36 +459,42 @@ const styles = StyleSheet.create({
     color: '#92400e',
     writingDirection: 'rtl',
   },
+  // Solid sky-blue Duo-style CTA — matches DailyQuests blue PRO CTA and
+  // the Pearl referral button. Was a red accent (`#dc2626`) which clashed
+  // with everything else in the app (user feedback 2026-06-03). Now blue
+  // for normal-add AND for the upgrade-to-PRO state, so the visual link
+  // to the rest of the app's primary actions is obvious.
   addBtn: {
     flexDirection: 'row-reverse',
     alignItems: 'center',
     justifyContent: 'center',
     gap: 8,
-    paddingVertical: 14,
-    borderRadius: 14,
-    backgroundColor: ACCENT,
+    paddingVertical: 16,
+    borderRadius: 16,
+    backgroundColor: '#0ea5e9',
     marginTop: 8,
-    shadowColor: ACCENT,
-    shadowOpacity: 0.4,
-    shadowRadius: 12,
-    shadowOffset: { width: 0, height: 4 },
-    elevation: 6,
-  },
-  // At-limit + not-Pro state — was slate-gray (#64748b) which read as
-  // "disabled / nothing to do" rather than "this is your upgrade path".
-  // Switched to deep blue to match the rest of the app's primary CTAs and
-  // make the "שדרג ל-PRO" copy visible (user feedback 2026-06-01).
-  addBtnLocked: {
-    backgroundColor: '#1d4ed8',
-    shadowColor: '#1e3a8a',
     borderBottomWidth: 4,
-    borderBottomColor: '#1e3a8a',
+    borderBottomColor: '#0369a1',
+    shadowColor: '#0ea5e9',
+    shadowOpacity: 0.45,
+    shadowRadius: 14,
+    shadowOffset: { width: 0, height: 6 },
+    elevation: 8,
+  },
+  // At-limit + not-Pro state — go gold to scream "premium upgrade".
+  // The previous deep-blue variant blended in with the regular addBtn so
+  // the user couldn't see they hit the limit (screenshot 2026-06-03).
+  addBtnLocked: {
+    backgroundColor: '#f59e0b',
+    borderBottomColor: '#b45309',
+    shadowColor: '#f59e0b',
   },
   addBtnText: {
     color: '#ffffff',
-    fontSize: 14,
+    fontSize: 15,
     fontWeight: '900',
     writingDirection: 'rtl',
+    letterSpacing: 0.2,
   },
   footerHint: {
     fontSize: 11,

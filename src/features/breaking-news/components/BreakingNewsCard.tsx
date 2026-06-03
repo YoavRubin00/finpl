@@ -184,21 +184,21 @@ export function BreakingNewsCard({
 }
 
 const styles = StyleSheet.create({
-  // Gaming-neon card: blue glow border + blue shadow halo. Replaces the
-  // flat white card so the ticker reads as a premium AI surface instead of
-  // a generic note row (user feedback 2026-06-01: "תוסיף כחול, גלואו").
+  // White card with stronger blue border + heavier shadow — pops off the
+  // STITCH light background (was 1.5px @ 22% opacity which read as flat).
+  // Matches the elevation language of DailyQuestsSheet's chest cards.
   card: {
     backgroundColor: '#ffffff',
     borderRadius: 18,
-    padding: 14,
-    borderWidth: 1.5,
-    borderColor: '#93c5fd',
+    padding: 16,
+    borderWidth: 2,
+    borderColor: '#0ea5e9',
     gap: 10,
-    shadowColor: '#2563eb',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.22,
-    shadowRadius: 14,
-    elevation: 6,
+    shadowColor: '#0ea5e9',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.28,
+    shadowRadius: 18,
+    elevation: 8,
   },
   topRow: {
     flexDirection: 'row-reverse',
