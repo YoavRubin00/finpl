@@ -79,14 +79,14 @@
     <p>השירות ניתן כמות שהוא (AS IS). FinPlay, מנהליה ועובדיה לא יישאו באחריות לכל נזק, ישיר או עקיף, הפסד פיננסי, אובדן רווחים, תקלות טכניות או עוגמת נפש שייגרמו משימוש באפליקציה או מהסתמכות על תכניה. סמכות השיפוט הבלעדית תהא נתונה לבתי המשפט בתל אביב-יפו.</p>
 
     <h3>7. כלי בינה מלאכותית (AI) ועיבוד אוטומטי</h3>
-    <p>האפליקציה כוללת מספר כלים המסתמכים על מודלי שפה גדולים (LLMs) של צדדים שלישיים. בעת שימוש בצ'אט עם Captain Shark, בניתוח תלוש שכר, בניתוח מניות (מהיר/עמוק), בתובנות אישיות או ב-Banner Tip — התוכן שאת/ה מספק/ת מועבר באמצעות חיבור מוצפן (TLS 1.2+) לעיבוד אצל Google (Gemini) ו/או Anthropic (Claude), ומתקבלת ממנו תוצאה.
+    <p>האפליקציה כוללת מספר כלים המסתמכים על שירותי AI לעיבוד נתונים. בעת שימוש בצ'אט עם Captain Shark, בניתוח תלוש שכר, בניתוח מניות (מהיר/עמוק), בתובנות אישיות או ב-Banner Tip — התוכן שאת/ה מספק/ת מועבר באמצעות חיבור מוצפן (TLS 1.2+) לעיבוד באמצעות שירותי AI, ומתקבלת ממנו תוצאה.
 
 תוצאות AI נועדו ללמידה והעשרה בלבד, אינן מהוות ייעוץ פיננסי, פנסיוני, מיסויי או משפטי, ועלולות לכלול שגיאות, אי-דיוקים או "הזיות" (hallucinations). FinPlay אינה אחראית לתוצאות אלה ולכל הסתמכות עליהן.</p>
 
     <h3>8. ניתוח תלוש שכר (Payslip Analyzer)</h3>
     <p>כלי ניתוח תלוש השכר מאפשר לך להעלות תמונה או קובץ PDF של תלוש משכורת לעיבוד אוטומטי. הזרימה:
 • הקובץ נשלח בחיבור מוצפן (TLS 1.2+) לשרת FinPlay בלבד למשך זמן העיבוד.
-• מהשרת הקובץ מועבר ל-Google Gemini לניתוח (פחות מ-60 שניות בממוצע).
+• מהשרת הקובץ מועבר לעיבוד באמצעות שירות AI לניתוח (פחות מ-60 שניות בממוצע).
 • הקובץ המקורי לא נשמר בשרת FinPlay, לא בלוגים, ולא אצל Google מעבר לזמן העיבוד.
 • תוצאת הניתוח המלאה נשמרת זמנית רק ב-RAM של המכשיר ונמחקת בסגירת המסך.
 • סטטיסטיקות מצרפיות אנונימיות (טווח שכר ברוטו בקפיצות של 1,000₪, אחוז ניכוי פנסיה מעוגל, נוכחות קרן השתלמות — בלי סכומים מדויקים, בלי שם, בלי פירוט מלא) נשמרות מקומית במכשיר ב-MMKV כדי לאפשר את פיצ'ר השיתוף עם 'הקלאן'.
@@ -123,8 +123,7 @@
     <p>החברה לעולם לא תמכור את המידע האישי המזהה שלך. שיתוף מידע יתבצע במקרים הבאים:
 • העברת לידים למימוש הטבות: בעת לחיצה על "מימוש הטבה" דרך חנות ההטבות, הנך נותן/ת הסכמה מפורשת להעברת פרטי הקשר שלך לאותו גוף ספציפי.
 • ספקי שירות AI:
-  - Google (Gemini API) — לעיבוד אוטומטי של צ'אט, תלוש שכר, תובנות אישיות, Banner Tip וניתוח מהיר של מניות. העיבוד מתבצע בשרתי Google בארה"ב.
-  - Anthropic (Claude API) — לניתוח עומק של מניות. העיבוד מתבצע בשרתי Anthropic בארה"ב.
+  - שירותי AI חיצוניים — לעיבוד אוטומטי של צ'אט, תלוש שכר, תובנות אישיות, Banner Tip וניתוח מניות (מהיר ועומק). העיבוד מתבצע בשרתי הספקים, בארה"ב או באירופה.
 • ספקי שירות טכנולוגיים: שירותי ענן, אחסון וניתוח נתונים הפועלים מטעמנו ותחת הסכמי סודיות קפדניים:
   - RevenueCat — ניהול מנויים והרשמות.
   - Supabase — ניהול חשבונות משתמש ובסיס נתונים.
@@ -137,7 +136,7 @@
   - Google / Apple Sign-In — אימות התחברות.
 • רשויות החוק: מסירת מידע ככל שנידרש לכך על פי חוק או צו שיפוטי.
 
-העברת מידע אל מחוץ לישראל/EU: חלק מהספקים (Google, Anthropic, Vercel, PostHog) מעבדים מידע בשרתים בארה"ב או באירופה. העברה זו מבוצעת בהתאם לדרישות חוק הגנת הפרטיות הישראלי ובאמצעות הסכמי עיבוד מידע (DPA) סטנדרטיים.</p>
+העברת מידע אל מחוץ לישראל/EU: חלק מהספקים (כולל ספקי שירותי AI, Vercel, PostHog) מעבדים מידע בשרתים בארה"ב או באירופה. העברה זו מבוצעת בהתאם לדרישות חוק הגנת הפרטיות הישראלי ובאמצעות הסכמי עיבוד מידע (DPA) סטנדרטיים.</p>
 
     <h3>4. דיוור ישיר והודעות שיווקיות</h3>
     <p>בעצם הרשמתך, הנך מסכים/ה לקבלת הודעות מערכת, תזכורות למידה, התראות פוש, מסרונים ודברי פרסומת מ-FinPlay ומשותפיה, בהתאם לסעיף 30א לחוק התקשורת (בזק ושידורים), התשמ"ב-1982. הודעות פרסומיות יסומנו במילה "פרסומת" בכותרת ההודעה.
@@ -206,14 +205,14 @@ We reserve the exclusive right to change benefit prices, limit redemptions, or c
     <p>The service is provided AS IS. FinPlay, its directors and employees shall not be liable for any direct or indirect damage, financial loss, lost profits, technical failures, or distress arising from use of the App. Exclusive jurisdiction: Tel Aviv-Jaffa courts.</p>
 
     <h3>7. AI Tools & Automated Processing</h3>
-    <p>The App includes several tools that rely on third-party large language models (LLMs). When using the chat with Captain Shark, payslip analysis, stock analysis (quick/deep), personal insights, or Banner Tip, the content you provide is transmitted over an encrypted connection (TLS 1.2+) to Google (Gemini) and/or Anthropic (Claude) for processing, and a result is returned.
+    <p>The App includes several tools that rely on AI services for data processing. When using the chat with Captain Shark, payslip analysis, stock analysis (quick/deep), personal insights, or Banner Tip, the content you provide is transmitted over an encrypted connection (TLS 1.2+) for processing by AI services, and a result is returned.
 
 AI results are intended for learning and enrichment only, do not constitute financial, pension, tax, or legal advice, and may contain errors, inaccuracies, or hallucinations. FinPlay is not responsible for these outputs or any reliance on them.</p>
 
     <h3>8. Payslip Analyzer</h3>
     <p>The payslip analyzer lets you upload a photo or PDF of a payslip for automated analysis. The flow:
 • The file is sent over an encrypted connection (TLS 1.2+) to FinPlay's server for the duration of processing only.
-• The file is then transmitted to Google Gemini for analysis (typically under 60 seconds).
+• The file is then transmitted to an AI service for analysis (typically under 60 seconds).
 • The original file is not persisted on FinPlay's server, in logs, or at Google beyond the processing window.
 • The full analysis result is stored only in device RAM and is cleared when the screen closes.
 • Anonymized aggregate statistics (gross salary range in ₪1,000 buckets, rounded pension percentage, presence of education fund — without exact amounts, name, or full breakdown) are stored locally on your device in MMKV to enable the clan-sharing feature.
@@ -250,8 +249,7 @@ Results are general estimates only and do not constitute tax, pension, investmen
     <p>We will never sell your personally identifiable information. Sharing occurs in the following cases:
 • Benefit redemption: when you actively click "Redeem Benefit" through the rewards store, you give explicit consent to share your contact details with that specific entity.
 • AI service providers:
-  - Google (Gemini API) — for automated processing of chat, payslip, personal insights, Banner Tip, and quick stock analysis. Processing occurs on Google's servers in the US.
-  - Anthropic (Claude API) — for deep stock analysis. Processing occurs on Anthropic's servers in the US.
+  - External AI services — for automated processing of chat, payslip, personal insights, Banner Tip, and stock analysis (quick and deep). Processing occurs on the providers' servers, in the US or Europe.
 • Technology providers: cloud, storage, and analytics services operating on our behalf under strict confidentiality agreements:
   - RevenueCat — subscription and purchase management.
   - Supabase — user accounts and database.
@@ -264,7 +262,7 @@ Results are general estimates only and do not constitute tax, pension, investmen
   - Google / Apple Sign-In — authentication.
 • Law enforcement: as required by law or court order.
 
-International data transfer: Some providers (Google, Anthropic, Vercel, PostHog) process data on servers in the US or Europe. This transfer is performed in compliance with the Israeli Privacy Protection Law and via standard Data Processing Agreements (DPAs).</p>
+International data transfer: Some providers (including AI service providers, Vercel, PostHog) process data on servers in the US or Europe. This transfer is performed in compliance with the Israeli Privacy Protection Law and via standard Data Processing Agreements (DPAs).</p>
 
     <h3>4. Direct Marketing & Communications</h3>
     <p>By registering, you agree to receive system messages, learning reminders, push notifications, SMS, and promotional messages from FinPlay and its partners, per Section 30A of the Communications Law (Bezeq and Broadcasts), 5742-1982. Promotional messages will be marked with the word "פרסומת" (advertisement) in the subject line.

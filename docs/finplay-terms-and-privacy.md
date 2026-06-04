@@ -42,7 +42,7 @@ FinPlay היא פלטפורמה טכנולוגית-חינוכית ללימוד �
 
 ### 7. כלי בינה מלאכותית (AI) ועיבוד אוטומטי
 
-האפליקציה כוללת מספר כלים המסתמכים על מודלי שפה גדולים (LLMs) של צדדים שלישיים. בעת שימוש בצ'אט עם Captain Shark, בניתוח תלוש שכר, בניתוח מניות (מהיר/עמוק), בתובנות אישיות או ב-Banner Tip — התוכן שאת/ה מספק/ת מועבר באמצעות חיבור מוצפן (TLS 1.2+) לעיבוד אצל **Google (Gemini)** ו/או **Anthropic (Claude)**, ומתקבלת ממנו תוצאה.
+האפליקציה כוללת מספר כלים המסתמכים על שירותי AI לעיבוד נתונים. בעת שימוש בצ'אט עם Captain Shark, בניתוח תלוש שכר, בניתוח מניות (מהיר/עמוק), בתובנות אישיות או ב-Banner Tip — התוכן שאת/ה מספק/ת מועבר באמצעות חיבור מוצפן (TLS 1.2+) לעיבוד באמצעות שירותי AI, ומתקבלת ממנו תוצאה.
 
 תוצאות AI נועדו ללמידה והעשרה בלבד, **אינן מהוות ייעוץ פיננסי, פנסיוני, מיסויי או משפטי**, ועלולות לכלול שגיאות, אי-דיוקים או "הזיות" (hallucinations). FinPlay אינה אחראית לתוצאות אלה ולכל הסתמכות עליהן.
 
@@ -51,7 +51,7 @@ FinPlay היא פלטפורמה טכנולוגית-חינוכית ללימוד �
 כלי ניתוח תלוש השכר מאפשר לך להעלות תמונה או קובץ PDF של תלוש משכורת לעיבוד אוטומטי. הזרימה:
 
 - הקובץ נשלח בחיבור מוצפן (TLS 1.2+) לשרת FinPlay בלבד למשך זמן העיבוד.
-- מהשרת הקובץ מועבר ל-**Google Gemini** לניתוח (פחות מ-60 שניות בממוצע).
+- מהשרת הקובץ מועבר לעיבוד באמצעות שירות AI לניתוח (פחות מ-60 שניות בממוצע).
 - **הקובץ המקורי לא נשמר** בשרת FinPlay, לא בלוגים, ולא אצל Google מעבר לזמן העיבוד.
 - תוצאת הניתוח המלאה (סכומי ברוטו/נטו, פירוט ניכויים, מקדמים) נשמרת זמנית רק ב-RAM של המכשיר ונמחקת בסגירת המסך.
 - **סטטיסטיקות מצרפיות אנונימיות** (טווח שכר ברוטו בקפיצות של 1,000₪, אחוז ניכוי פנסיה מעוגל, נוכחות קרן השתלמות — בלי סכומים מדויקים, בלי שם, בלי פירוט מלא) נשמרות מקומית במכשיר ב-MMKV כדי לאפשר את פיצ'ר השיתוף עם 'הקלאן' (clan).
@@ -69,12 +69,11 @@ FinPlay היא פלטפורמה טכנולוגית-חינוכית ללימוד �
 
 לטובת שיפור חוויית המשתמש, FinPlay מבצעת ניסויים אוטומטיים על וריאנטים שונים של מסכים, טקסטים והצעות (Multi-Armed Bandit). השיוך לוריאנט הוא אנונימי, אינו תלוי בזהות אישית, ונשמר ב-PostHog למטרות אנליטיקה ושיפור בלבד.
 
-### 11. מנוי Pro וזכות ביטול (Cooling-Off)
+### 11. מנוי Pro וחידוש אוטומטי
 
-מנוי FinPlay Pro הוא **התקשרות מתמשכת** הנרכשת דרך App Store (Apple) או Google Play (Google). בהתאם לחוק הגנת הצרכן, התשמ"א-1981 ולהוראות פלטפורמות החנויות:
+מנוי FinPlay Pro הוא **התקשרות מתמשכת** הנרכשת דרך App Store (Apple) או Google Play (Google):
 
-- **רכישת המנוי מוגבלת למשתמשים בני 18 ומעלה בלבד.** משתמשים בני 16–17 רשאים להמשיך וליהנות מכל התכנים הלימודיים החינמיים באפליקציה.
-- **זכות ביטול תוך 14 ימים:** ניתן לבטל את המנוי תוך 14 ימים מהרכישה ולקבל החזר מלא, באמצעות בקשת החזר ישירה דרך App Store (iOS) או Google Play (Android).
+- **רכישת המנוי מוגבלת למשתמשים בני 18 ומעלה.** משתמשים בני 16–17 רשאים להמשיך וליהנות מכל התכנים הלימודיים החינמיים, או לרכוש Pro לאחר אישור הורה (סעיף 4).
 - **חידוש אוטומטי:** המנוי מתחדש אוטומטית בסוף כל תקופה (חודשי או שנתי) אלא אם בוטל לפחות 24 שעות לפני סוף התקופה. את הניהול והביטול ניתן לבצע בהגדרות החשבון של ה-App Store / Google Play.
 - **תקופת ניסיון:** במקרים מסוימים מוצעת תקופת ניסיון חינם. ניתן לבטל בכל עת במהלך הניסיון מבלי שיחויב חיוב כספי.
 
@@ -112,8 +111,7 @@ FinPlay מחויבת להגנה על פרטיותך ופועלת בהתאם לח
 
 - **העברת לידים למימוש הטבות:** בעת לחיצה על "מימוש הטבה" דרך חנות ההטבות, הנך נותן/ת הסכמה מפורשת להעברת פרטי הקשר שלך לאותו גוף ספציפי.
 - **ספקי שירות AI:**
-  - **Google (Gemini API)** — לעיבוד אוטומטי של צ'אט, תלוש שכר, תובנות אישיות, Banner Tip וניתוח מהיר של מניות. העיבוד מתבצע בשרתי Google בארה"ב.
-  - **Anthropic (Claude API)** — לניתוח עומק של מניות. העיבוד מתבצע בשרתי Anthropic בארה"ב.
+  - **שירותי AI חיצוניים** — לעיבוד אוטומטי של צ'אט, תלוש שכר, תובנות אישיות, Banner Tip וניתוח מניות (מהיר ועומק). העיבוד מתבצע בשרתי הספקים, בארה"ב או באירופה.
 - **ספקי שירות טכנולוגיים:** שירותי ענן, אחסון וניתוח נתונים הפועלים מטעמנו ותחת הסכמי סודיות קפדניים:
   - **RevenueCat** — ניהול מנויים והרשמות.
   - **Supabase** — ניהול חשבונות משתמש ובסיס נתונים.
@@ -126,7 +124,7 @@ FinPlay מחויבת להגנה על פרטיותך ופועלת בהתאם לח
   - **Google / Apple Sign-In** — אימות התחברות.
 - **רשויות החוק:** מסירת מידע ככל שנידרש לכך על פי חוק או צו שיפוטי.
 
-**העברת מידע אל מחוץ לישראל/EU:** חלק מהספקים (Google, Anthropic, Vercel, PostHog) מעבדים מידע בשרתים בארה"ב או באירופה. העברה זו מבוצעת בהתאם לדרישות חוק הגנת הפרטיות הישראלי ובאמצעות הסכמי עיבוד מידע (DPA) סטנדרטיים.
+**העברת מידע אל מחוץ לישראל/EU:** חלק מהספקים (כולל ספקי שירותי AI, Vercel, PostHog) מעבדים מידע בשרתים בארה"ב או באירופה. העברה זו מבוצעת בהתאם לדרישות חוק הגנת הפרטיות הישראלי ובאמצעות הסכמי עיבוד מידע (DPA) סטנדרטיים.
 
 ### 4. דיוור ישיר והודעות שיווקיות
 
@@ -206,7 +204,7 @@ The service is provided AS IS. FinPlay, its directors and employees shall not be
 
 ### 7. AI Tools & Automated Processing
 
-The App includes several tools that rely on third-party large language models (LLMs). When using the chat with Captain Shark, payslip analysis, stock analysis (quick/deep), personal insights, or Banner Tip, the content you provide is transmitted over an encrypted connection (TLS 1.2+) to **Google (Gemini)** and/or **Anthropic (Claude)** for processing, and a result is returned.
+The App includes several tools that rely on AI services for data processing. When using the chat with Captain Shark, payslip analysis, stock analysis (quick/deep), personal insights, or Banner Tip, the content you provide is transmitted over an encrypted connection (TLS 1.2+) for processing by AI services, and a result is returned.
 
 AI results are intended for learning and enrichment only, **do not constitute financial, pension, tax, or legal advice**, and may contain errors, inaccuracies, or hallucinations. FinPlay is not responsible for these outputs or any reliance on them.
 
@@ -215,7 +213,7 @@ AI results are intended for learning and enrichment only, **do not constitute fi
 The payslip analyzer lets you upload a photo or PDF of a payslip for automated analysis. The flow:
 
 - The file is sent over an encrypted connection (TLS 1.2+) to FinPlay's server for the duration of processing only.
-- The file is then transmitted to **Google Gemini** for analysis (typically under 60 seconds).
+- The file is then transmitted to an AI service for analysis (typically under 60 seconds).
 - **The original file is not persisted** on FinPlay's server, in logs, or at Google beyond the processing window.
 - The full analysis result (gross/net amounts, deduction breakdown, multipliers) is stored only in device RAM and is cleared when the screen closes.
 - **Anonymized aggregate statistics** (gross salary range in ₪1,000 buckets, rounded pension percentage, presence of education fund — without exact amounts, name, or full breakdown) are stored locally on your device in MMKV to enable the clan-sharing feature.
@@ -261,8 +259,7 @@ We will never sell your personally identifiable information. Sharing occurs in t
 
 - **Benefit redemption:** when you actively click "Redeem Benefit" through the rewards store, you give explicit consent to share your contact details with that specific entity.
 - **AI service providers:**
-  - **Google (Gemini API)** — for automated processing of chat, payslip, personal insights, Banner Tip, and quick stock analysis. Processing occurs on Google's servers in the US.
-  - **Anthropic (Claude API)** — for deep stock analysis. Processing occurs on Anthropic's servers in the US.
+  - **External AI services** — for automated processing of chat, payslip, personal insights, Banner Tip, and stock analysis (quick and deep). Processing occurs on the providers' servers, in the US or Europe.
 - **Technology providers:** cloud, storage, and analytics services operating on our behalf under strict confidentiality agreements:
   - **RevenueCat** — subscription and purchase management.
   - **Supabase** — user accounts and database.
@@ -275,7 +272,7 @@ We will never sell your personally identifiable information. Sharing occurs in t
   - **Google / Apple Sign-In** — authentication.
 - **Law enforcement:** as required by law or court order.
 
-**International data transfer:** Some providers (Google, Anthropic, Vercel, PostHog) process data on servers in the US or Europe. This transfer is performed in compliance with the Israeli Privacy Protection Law and via standard Data Processing Agreements (DPAs).
+**International data transfer:** Some providers (including AI service providers, Vercel, PostHog) process data on servers in the US or Europe. This transfer is performed in compliance with the Israeli Privacy Protection Law and via standard Data Processing Agreements (DPAs).
 
 ### 4. Direct Marketing & Communications
 
