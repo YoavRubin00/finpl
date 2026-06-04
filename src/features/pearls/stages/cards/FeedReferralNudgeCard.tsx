@@ -1,5 +1,5 @@
 import React, { useEffect, useRef } from "react";
-import { View, Text, Pressable, StyleSheet, Dimensions } from "react-native";
+import { View, Text, Pressable, StyleSheet, Dimensions, ScrollView } from "react-native";
 import Animated, {
   FadeIn,
   FadeInUp,
@@ -123,55 +123,68 @@ export const FeedReferralNudgeCard = React.memo(function FeedReferralNudgeCard({
         style={StyleSheet.absoluteFill}
       />
 
-      <Animated.View entering={FadeIn.duration(400)} style={styles.card}>
-        <View style={styles.videoWrap} accessible={false}>
-          <VideoView
-            player={player}
-            style={styles.video}
-            nativeControls={false}
-            contentFit="cover"
-          />
-        </View>
+      {/* ScrollView lets the card overflow without clipping when the
+          available vertical space is tight (Samsung mid-size devices
+          with system gesture bar — user report 2026-06-04, card bottom
+          edge cut off). On larger phones flexGrow:1 + justifyContent:
+          center keeps the card visually centered as before; on smaller
+          ones the scroll engages and nothing is lost. */}
+      <ScrollView
+        style={styles.scroll}
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+        bounces={false}
+      >
+        <Animated.View entering={FadeIn.duration(400)} style={styles.card}>
+          <View style={styles.videoWrap} accessible={false}>
+            <VideoView
+              player={player}
+              style={styles.video}
+              nativeControls={false}
+              contentFit="cover"
+            />
+          </View>
 
-        <Text style={[styles.title, RTL_CENTER]}>הזמינו חברים</Text>
-        <Text style={[styles.subtitle, RTL_CENTER]}>
-          שתפו את FinPlay עם החברים שלכם וקבלו מטבעות וגמים
-        </Text>
+          <Text style={[styles.title, RTL_CENTER]}>הזמינו חברים</Text>
+          <Text style={[styles.subtitle, RTL_CENTER]}>
+            שתפו את FinPlay עם החברים שלכם וקבלו מטבעות וגמים
+          </Text>
 
-        <Animated.View
-          entering={FadeInUp.delay(280).duration(360)}
-          style={[styles.ctaGlow, glowStyle]}
-        >
-          <Pressable
-            onPress={handlePress}
-            accessibilityRole="button"
-            accessibilityLabel="הזמינו חברים — קבלו פרסים"
-            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-            style={({ pressed }) => [styles.cta, pressed && styles.ctaPressed]}
+          <Animated.View
+            entering={FadeInUp.delay(280).duration(360)}
+            style={[styles.ctaGlow, glowStyle]}
           >
-            <Text style={styles.ctaText}>ראו איך לקבל מטבעות 🎁</Text>
-          </Pressable>
+            <Pressable
+              onPress={handlePress}
+              accessibilityRole="button"
+              accessibilityLabel="הזמינו חברים — קבלו פרסים"
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              style={({ pressed }) => [styles.cta, pressed && styles.ctaPressed]}
+            >
+              <Text style={styles.ctaText}>ראו איך לקבל מטבעות 🎁</Text>
+            </Pressable>
+          </Animated.View>
+
+          {/* Pearl-flow skip — only when onContinue is wired (i.e., we're
+              inside a pearl, not a standalone surface). Lets the user advance
+              to the next stage without taking the CTA. Renamed from
+              "המשך ←" to "אחר כך" (2026-06-03): the arrow + "המשך" read
+              as forward navigation, making it the visually obvious next-step
+              cue — 12 CTA shows / 0 taps in prod. Softer copy reduces the
+              accidental dismiss rate. */}
+          {onContinue ? (
+            <Pressable
+              onPress={handleSkip}
+              accessibilityRole="button"
+              accessibilityLabel="דלג לשלב הבא"
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              style={styles.skipBtn}
+            >
+              <Text style={styles.skipText}>אחר כך</Text>
+            </Pressable>
+          ) : null}
         </Animated.View>
-
-        {/* Pearl-flow skip — only when onContinue is wired (i.e., we're
-            inside a pearl, not a standalone surface). Lets the user advance
-            to the next stage without taking the CTA. Renamed from
-            "המשך ←" to "אחר כך" (2026-06-03): the arrow + "המשך" read
-            as forward navigation, making it the visually obvious next-step
-            cue — 12 CTA shows / 0 taps in prod. Softer copy reduces the
-            accidental dismiss rate. */}
-        {onContinue ? (
-          <Pressable
-            onPress={handleSkip}
-            accessibilityRole="button"
-            accessibilityLabel="דלג לשלב הבא"
-            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-            style={styles.skipBtn}
-          >
-            <Text style={styles.skipText}>אחר כך</Text>
-          </Pressable>
-        ) : null}
-      </Animated.View>
+      </ScrollView>
     </View>
   );
 });
@@ -180,6 +193,12 @@ const styles = StyleSheet.create({
   container: {
     width: SCREEN_WIDTH,
     flex: 1,
+  },
+  scroll: {
+    flex: 1,
+  },
+  scrollContent: {
+    flexGrow: 1,
     alignItems: "center",
     justifyContent: "center",
     padding: 20,

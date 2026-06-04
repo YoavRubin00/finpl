@@ -211,44 +211,12 @@ export function DiamondHandsCard({ isActive, onContinue }: Props) {
         </Animated.View>
       </View>
 
-      {/* Pinned bottom Continue — sits in a fixed footer bar OUTSIDE the
-          centered card area, so it's always fully visible at the bottom of
-          the stage instead of floating mid-screen / clipped on tall phones.
-          Mirrors CrowdQuestionCard's stickyBar fix; the prior in-card
-          centered button rendered faint and cut off on 19.5:9 screens
-          (user report 2026-06-04: "לא רואים את כפתור המשך"). Full-width
-          deep-blue primary CTA. */}
-      {onContinue && (
-        <View style={{ paddingHorizontal: 20, paddingTop: 10, paddingBottom: 10 }}>
-          <Pressable
-            onPress={() => { tapHaptic(); onContinue(); }}
-            accessibilityRole="button"
-            accessibilityLabel="המשך"
-            style={({ pressed }) => ({
-              paddingVertical: 16,
-              borderRadius: 14,
-              backgroundColor: '#1d4ed8',
-              borderBottomWidth: 4,
-              borderBottomColor: '#1e3a8a',
-              alignItems: 'center',
-              opacity: pressed ? 0.9 : 1,
-              transform: pressed ? [{ scale: 0.99 }] : undefined,
-            })}
-          >
-            <Text
-              style={{
-                color: '#ffffff',
-                fontSize: 16,
-                fontWeight: '900',
-                writingDirection: 'rtl',
-              }}
-              allowFontScaling={false}
-            >
-              המשך
-            </Text>
-          </Pressable>
-        </View>
-      )}
+      {/* Continue CTA used to render here (inside the card). That kept
+          getting clipped on tall Android phones because the centered card
+          area swallows all vertical space and pushes the button below the
+          fold (user report 2026-06-04, second occurrence). The button now
+          lives in PearlGameStage as a sticky bottom bar outside the
+          ScrollView so it's always visible regardless of card height. */}
 
       <DiamondHandsModal visible={open} onClose={handleClose} />
     </View>
