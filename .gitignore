@@ -68,6 +68,8 @@ scripts/*
 !scripts/sql.mjs
 !scripts/db-introspect.sql
 !scripts/db-diagram.template.html
+# Exception: module-intro audio generator (ElevenLabs → Vercel Blob)
+!scripts/generate-module-intro-audio.ts
 notebooklm-py/
 
 # Local scratch folders for one-shot asset generation pipelines

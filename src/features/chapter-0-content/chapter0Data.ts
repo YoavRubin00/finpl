@@ -37,11 +37,6 @@ export const chapter0Data: Chapter = {
           finnTip: 'ריבית על עו"ש בישראל? הבנקים נותנים 0%. ריבית על מינוס? עד 15%. זה המשחק שלהם.',
           text: '[[ריבית]]: המחיר של הכסף. לקחתם הלוואה? אתם משלמים "דמי שכירות" על השימוש בכסף של מישהו אחר. חסכתם בתוכנית מניבה? אתם מקבלים בונוס על זה שהפניתם את הכסף שלכם אליהם.',
         },
-        {
-          id: 'fc-0-2-video',
-          text: '',
-          videoUri: 'https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/0-2.mp4',
-        },
       ],
       quizzes: [
         {
@@ -71,26 +66,28 @@ export const chapter0Data: Chapter = {
       // 2026-06-04: החצי השני של "מושגי יסוד פיננסיים". מופיע אחרי
       // הפנינה שאחרי mod-0-1 (finn-life-treasure / dilemma-1 / myth swipe)
       // ולפני mod-0-2. ראה plans/0-2-toasty-torvalds.md.
-      //
-      // ⚠️ TODO: introAudio להקלטה והעלאה לענן. הסקריפט המוצע (תואם
-      // ל-interactiveIntro למטה):
-      //   "הצד השני של הסיפור: איך מתקבלת הלוואה, מה הופך אשראי לחבית
-      //    של ריבית, ולמה הפנסיה היא המשחק הכי חשוב לטווח הארוך."
-      // העלאה ל-Vercel Blob תחת:
-      //   audio/intros/mod-0-1b-v1.mp3
-      // ואז להוסיף את ה-introAudio field עם ה-URL החדש (ראה mod-0-3
-      // לדוגמת פורמט).
+      // introAudio נוצר ב-2026-06-04 דרך scripts/generate-module-intro-audio.ts
+      // עם ElevenLabs Liam voice (Captain Shark), זהה לקול של ה-walkthrough.
       id: 'mod-0-1b',
       title: 'מושגי יסוד פיננסיים — המשך',
       videoHook:
         'יש עוד שני מושגים שמשנים את כל המשחק: הלוואה, אשראי, ופנסיה.',
       interactiveIntro:
         'הצד השני של הסיפור: איך מתקבלת הלוואה, מה הופך אשראי לחבית של ריבית, ולמה הפנסיה היא המשחק הכי חשוב לטווח הארוך.',
+      introAudio: { uri: 'https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/audio/intros/mod-0-1b-v1-f5HBLPXOnpzcwzUtk8dIdovOAHK6ZW.mp3' },
       flashcards: [
         {
           id: 'fc-0-2-4',
           topAudio: { uri: 'https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/audios/flashcards/fc-0-2-4-top-0sgkvBb89ClA1qjhdBYOcDunrprUoM.mp3' },
           text: 'הלוואה ו[[אשראי]]: לקבל כסף עכשיו כדי לשלם עליו (יותר) בעתיד. קריטי לדעת: כשאתם פורסים ל"תשלומים בקליק" - אתם בעצם לוקחים הלוואה בריבית גבוהה.',
+        },
+        {
+          // 2026-06-04: הסרטון הועבר מ-mod-0-1 ל-mod-0-1b לפי בקשת המשתמש.
+          // ממוקם בין fc-0-2-4 (הלוואה) ל-fc-0-2-5 (פנסיה) — מסכם
+          // ויזואלית את קונספט הבנק/הלוואה לפני המעבר לפנסיה.
+          id: 'fc-0-2-video',
+          text: '',
+          videoUri: 'https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/0-2.mp4',
         },
         {
           id: 'fc-0-2-5',
