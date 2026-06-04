@@ -233,28 +233,30 @@ export function SignupGateStep({ onSignupSuccess, onSkip, saveCollected, onEmail
             <Text style={{ fontSize: 16, fontWeight: "700", color: "#ffffff", writingDirection: "rtl" }}>הירשם עם אימייל</Text>
           </Pressable>
 
-          {/* Guest CTA — identical shape/size to the auth buttons above
-              (width, radius, padding, border, text), just in neutral gray
-              (#64748b, WCAG-passing on white) so the colored signup buttons
-              read as the primary path (user direction 2026-06-04). */}
+          {/* Guest CTA — structurally IDENTICAL to the Google button above
+              (same width/flexDirection/alignItems/justifyContent/gap/radius/
+              padding/border + same white 16/700 text), only the colors are
+              neutral gray (#64748b bg, #475569 border — WCAG-passing on white)
+              and there's no logo. This makes it read as the same kind of
+              button as Google, just secondary (user direction 2026-06-05). */}
           <Pressable
             onPress={handleSkip}
             accessibilityRole="button"
             accessibilityLabel="המשך כאורח"
-            style={({ pressed }) => ({
+            style={{
               width: "100%",
+              flexDirection: "row",
               alignItems: "center",
               justifyContent: "center",
+              gap: 8,
               borderRadius: 14,
-              backgroundColor: pressed ? "#475569" : "#64748b",
+              backgroundColor: "#64748b",
               paddingVertical: 15,
               borderBottomWidth: 3,
               borderBottomColor: "#475569",
-            })}
+            }}
           >
-            <Text style={{ fontSize: 16, fontWeight: "700", color: "#ffffff", writingDirection: "rtl", textAlign: "center" }}>
-              {"המשך כאורח"}
-            </Text>
+            <Text style={{ fontSize: 16, fontWeight: "700", color: "#ffffff" }}>המשך כאורח</Text>
           </Pressable>
         </Animated.View>
       </ScrollView>
