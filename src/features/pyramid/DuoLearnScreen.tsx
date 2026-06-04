@@ -62,6 +62,7 @@ import { useReferralStore } from "../social/useReferralStore";
 import { AnimatedPressable } from "../../components/ui/AnimatedPressable";
 import { SwipeableModal } from "../../components/ui/SwipeableModal";
 import { NotificationPermissionBanner } from "../../components/ui/NotificationPermissionBanner";
+import { PostPricingNotificationBanner } from "../../components/ui/PostPricingNotificationBanner";
 import { NoFreezeUpsellBanner } from "../streak/NoFreezeUpsellBanner";
 import { StreakAtRiskBanner } from "../streak/StreakAtRiskBanner";
 import { StreakCalendarModal } from "../streak/StreakCalendarModal";
@@ -1598,6 +1599,11 @@ export function DuoLearnScreen() {
 
   return (
     <View style={styles.root}>
+      {/* Post-pricing notification banner — narrow window: free user
+          finished mod-0-1, opened /pricing, came back, hasn't started
+          mod-0-2 yet. Stronger framing than the generic banner below;
+          when this is eligible the generic banner self-defers. */}
+      {!isWalkthroughActive && <PostPricingNotificationBanner />}
       {!isWalkthroughActive && <NotificationPermissionBanner />}
       {!isWalkthroughActive && <StreakAtRiskBanner />}
       {!isWalkthroughActive && <NoFreezeUpsellBanner />}
