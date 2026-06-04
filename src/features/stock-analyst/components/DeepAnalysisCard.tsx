@@ -260,8 +260,17 @@ export function DeepAnalysisCard({ data }: Props): React.ReactElement {
           <>
             <Text style={[RTL, { color: '#0c4a6e', fontSize: 13, fontWeight: '800', marginTop: 4 }]}>מתחרים:</Text>
             {sectorMacro.peers.map((p, i) => (
-              <View key={i} style={{ flexDirection: 'row-reverse', justifyContent: 'space-between', gap: 6 }}>
-                <Text style={[RTL, { color: '#475569', fontSize: 13 }]}>
+              // alignItems:flex-start lets the (potentially 2-line) symbol
+              // text align to the top while the single-line delta stays
+              // at the top too. flex:1 + numberOfLines on the left text
+              // prevents the long "symbol — note" string from overflowing
+              // the screen's left edge in RTL (user report 2026-06-04:
+              // "בסקטור ומאקרו יש חריגה של הטקסט מהמסך בחלק השמאלי").
+              <View key={i} style={{ flexDirection: 'row-reverse', alignItems: 'flex-start', gap: 6 }}>
+                <Text
+                  style={[RTL, { color: '#475569', fontSize: 13, flex: 1 }]}
+                  numberOfLines={2}
+                >
                   {p.symbol} — {p.note}
                 </Text>
                 <Text style={[RTL, { color: '#0369a1', fontSize: 12, fontWeight: '700' }]}>{p.delta}</Text>
