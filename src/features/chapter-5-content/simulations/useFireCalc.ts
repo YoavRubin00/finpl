@@ -5,10 +5,10 @@
 
 import { useState, useCallback, useMemo } from 'react';
 
-import type { FIRECalcState, FIRECalcScore, LifestylePreset } from './fireCalcTypes';
+import type { FIRECalcState, FIRECalcScore, LifestyleBand } from './fireCalcTypes';
 import {
   fireCalcConfig,
-  LIFESTYLE_PRESETS,
+  LIFESTYLE_BANDS,
   DEFAULT_MONTHLY_INCOME,
   DEFAULT_CURRENT_AGE,
 } from './fireCalcData';
@@ -75,18 +75,17 @@ function buildProjection(
   return projection;
 }
 
-/** Find the closest lifestyle preset for a given savings rate. */
-function findClosestPreset(savingsRate: number): LifestylePreset {
-  let closest = LIFESTYLE_PRESETS[0];
-  let minDiff = Math.abs(savingsRate - closest.savingsRate);
-  for (const preset of LIFESTYLE_PRESETS) {
-    const diff = Math.abs(savingsRate - preset.savingsRate);
-    if (diff < minDiff) {
-      minDiff = diff;
-      closest = preset;
-    }
+/** Pick the lifestyle band for a given ACTUAL monthly disposable spend.
+ *  Bands are ascending by minMonthly; returns the highest band whose
+ *  minMonthly ≤ spend. Always returns a band (LIFESTYLE_BANDS[0].minMonthly
+ *  is 0), so the result is never null — no non-null assertion needed. */
+function findBandForSpend(monthlySpend: number): LifestyleBand {
+  let match = LIFESTYLE_BANDS[0];
+  for (const band of LIFESTYLE_BANDS) {
+    if (monthlySpend >= band.minMonthly) match = band;
+    else break;
   }
-  return closest;
+  return match;
 }
 
 // ── Initial state ────────────────────────────────────────────────────────
@@ -94,7 +93,8 @@ function findClosestPreset(savingsRate: number): LifestylePreset {
 function createInitialState(): FIRECalcState {
   const savingsRate = 0.20;
   const monthlyInvestment = DEFAULT_MONTHLY_INCOME * savingsRate;
-  const annualExpenses = DEFAULT_MONTHLY_INCOME * (1 - savingsRate) * 12;
+  const monthlyDisposable = DEFAULT_MONTHLY_INCOME * (1 - savingsRate);
+  const annualExpenses = monthlyDisposable * 12;
   const targetPortfolio = annualExpenses / fireCalcConfig.withdrawalRate;
   const yearsToFIRE = calcYearsToFIRE(
     monthlyInvestment,
@@ -109,7 +109,7 @@ function createInitialState(): FIRECalcState {
     monthlyInvestment: Math.round(monthlyInvestment),
     currentAge: DEFAULT_CURRENT_AGE,
     fireAge: DEFAULT_CURRENT_AGE + yearsToFIRE,
-    lifestylePreview: findClosestPreset(savingsRate),
+    lifestylePreview: findBandForSpend(monthlyDisposable),
     isComplete: false,
   };
 }
@@ -125,7 +125,8 @@ export function useFireCalc() {
   const recalc = useCallback(
     (savingsRate: number, income: number, age: number) => {
       const monthlyInvestment = income * savingsRate;
-      const annualExpenses = income * (1 - savingsRate) * 12;
+      const monthlyDisposable = income * (1 - savingsRate);
+      const annualExpenses = monthlyDisposable * 12;
       const targetPortfolio = annualExpenses / fireCalcConfig.withdrawalRate;
       const yearsToFIRE = calcYearsToFIRE(
         monthlyInvestment,
@@ -140,7 +141,7 @@ export function useFireCalc() {
         monthlyInvestment: Math.round(monthlyInvestment),
         currentAge: age,
         fireAge: age + yearsToFIRE,
-        lifestylePreview: findClosestPreset(savingsRate),
+        lifestylePreview: findBandForSpend(monthlyDisposable),
         isComplete: false,
       };
       setState(newState);

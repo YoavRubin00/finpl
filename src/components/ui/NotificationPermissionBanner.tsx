@@ -12,7 +12,6 @@ import { useAuthStore } from "../../features/auth/useAuthStore";
 import { useTutorialStore } from "../../stores/useTutorialStore";
 import { NotificationBanner } from "./NotificationBanner";
 import { FINN_STANDARD } from "../../features/retention-loops/finnMascotConfig";
-import { usePostPricingBannerEligible } from "./PostPricingNotificationBanner";
 
 export function NotificationPermissionBanner() {
   const permissionGranted = useNotificationStore((s) => s.permissionGranted);
@@ -21,11 +20,6 @@ export function NotificationPermissionBanner() {
   const dismissBanner = useNotificationStore((s) => s.dismissBanner);
   const hasCompletedOnboarding = useAuthStore((s) => s.hasCompletedOnboarding);
   const hasSeenWalkthrough = useTutorialStore((s) => s.hasSeenAppWalkthrough);
-  // Defer to the post-pricing variant when its narrow window is active —
-  // it shows the same prompt with stronger, context-aware copy. Once the
-  // user starts mod-0-2 or grants permission, that window closes and this
-  // generic banner resumes its always-on role.
-  const postPricingEligible = usePostPricingBannerEligible();
 
   // Reconcile the cached permission flag with the real OS state on mount. A
   // stale permissionGranted=true (granted in a past test/session, or never
@@ -39,8 +33,7 @@ export function NotificationPermissionBanner() {
     !permissionGranted &&
     !bannerDismissed &&
     hasCompletedOnboarding &&
-    hasSeenWalkthrough &&
-    !postPricingEligible;
+    hasSeenWalkthrough;
 
   // Defer rendering until the global cooldown is clear, then mark shown so
   // the next banner waits its 10s slot.

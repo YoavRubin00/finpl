@@ -32,7 +32,8 @@ import { SPRING_SNAPPY } from '../../../utils/animations';
 import { SimLottieBackground } from '../../../components/ui/SimLottieBackground';
 import { getChapterTheme } from '../../../constants/theme';
 import { useFireCalc } from './useFireCalc';
-import { LIFESTYLE_PRESETS } from './fireCalcData';
+import { SAVINGS_RATE_OPTIONS } from './fireCalcData';
+import type { LifestyleBand } from './fireCalcTypes';
 import { SIM5, SHADOW_STRONG, SHADOW_LIGHT, RTL, sim5Styles } from './simTheme';
 import { formatShekel } from '../../../utils/format';
 
@@ -253,17 +254,26 @@ const timelineStyles = StyleSheet.create({
   },
 });
 
+/** Format a lifestyle band's monthly-spend range for display (₪/month). */
+function formatBandRange(b: LifestyleBand): string {
+  if (b.minMonthly === 0 && b.maxMonthly != null) return `עד ${formatShekel(b.maxMonthly + 1)}`;
+  if (b.maxMonthly == null) return `מעל ${formatShekel(b.minMonthly)}`;
+  return `${formatShekel(b.minMonthly)}–${formatShekel(b.maxMonthly)}`;
+}
+
 /** Lifestyle preview card */
 function LifestyleCard({
   emoji,
   label,
   description,
   luxuryLevel,
+  range,
 }: {
   emoji: string;
   label: string;
   description: string;
   luxuryLevel: number;
+  range: string;
 }) {
   const stars = '⭐'.repeat(luxuryLevel);
   return (
@@ -272,7 +282,10 @@ function LifestyleCard({
         <View style={lifestyleStyles.headerRow}>
           <Text style={lifestyleStyles.emoji}>{emoji}</Text>
           <View style={lifestyleStyles.headerText}>
-            <Text style={[lifestyleStyles.label, RTL]}>{label}</Text>
+            <View style={lifestyleStyles.labelRow}>
+              <Text style={[lifestyleStyles.label, RTL]}>{label}</Text>
+              <Text style={[lifestyleStyles.range, RTL]} allowFontScaling={false}>{range}</Text>
+            </View>
             <Text style={lifestyleStyles.stars}>{stars}</Text>
           </View>
         </View>
@@ -299,10 +312,20 @@ const lifestyleStyles = StyleSheet.create({
   headerText: {
     flex: 1,
   },
+  labelRow: {
+    flexDirection: 'row-reverse',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
   label: {
     fontSize: 18,
     fontWeight: '800',
     color: SIM5.textPrimary,
+  },
+  range: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: SIM5.textSecondary,
   },
   stars: {
     fontSize: 12,
@@ -366,10 +389,10 @@ function ScoreScreen({
         <View style={sim5Styles.scoreCard}>
           <View style={sim5Styles.scoreCardInner}>
             <Text style={[styles.summaryTitle, RTL]}>השוואת שיעורי חיסכון</Text>
-            {LIFESTYLE_PRESETS.map((preset) => {
-              const pct = Math.round(preset.savingsRate * 100);
-              const monthlyInvestment = monthlyIncome * preset.savingsRate;
-              const annualExpenses = monthlyIncome * (1 - preset.savingsRate) * 12;
+            {SAVINGS_RATE_OPTIONS.map((option) => {
+              const pct = Math.round(option.savingsRate * 100);
+              const monthlyInvestment = monthlyIncome * option.savingsRate;
+              const annualExpenses = monthlyIncome * (1 - option.savingsRate) * 12;
               const target = annualExpenses / 0.04;
               const monthlyRate = 0.07 / 12;
               const inner = (target * monthlyRate) / monthlyInvestment + 1;
@@ -377,13 +400,13 @@ function ScoreScreen({
               const isSelected = pct === savingsPct;
               return (
                 <View
-                  key={preset.savingsRate}
+                  key={option.savingsRate}
                   style={[
                     styles.comparisonRow,
                     isSelected && styles.comparisonRowSelected,
                   ]}
                 >
-                  <Text style={styles.comparisonEmoji}>{preset.emoji}</Text>
+                  <Text style={styles.comparisonEmoji}>{option.emoji}</Text>
                   <Text style={[styles.comparisonLabel, RTL]}>{pct}%</Text>
                   <Text style={styles.comparisonYears}>{years} שנים</Text>
                 </View>
@@ -430,9 +453,13 @@ function ScoreScreen({
 
 interface FIRECalcScreenProps {
   onComplete?: () => void;
+  /** When the host route already renders the title in its top bar (the
+   *  standalone /fire-calculator tool), hide the in-screen title so it isn't
+   *  shown twice. Lessons (mod-5-25) leave it visible. */
+  hideTitle?: boolean;
 }
 
-export function FIRECalcScreen({ onComplete }: FIRECalcScreenProps) {
+export function FIRECalcScreen({ onComplete, hideTitle = false }: FIRECalcScreenProps) {
   const {
     state,
     monthlyIncome,
@@ -536,19 +563,21 @@ export function FIRECalcScreen({ onComplete }: FIRECalcScreenProps) {
   return (
     <SimLottieBackground lottieSources={CH5_LOTTIE} chapterColors={_th5.gradient}>
       <ScrollView style={{ flex: 1 }} contentContainerStyle={styles.scrollContent}>
-        {/* Title */}
+        {/* Title — hidden when the host route shows it in its top bar. */}
         <Animated.View entering={FadeInDown.duration(500)} style={styles.header}>
-          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 4 }}>
-            <View accessible={false}>
-              <LottieView
-                source={require('../../../../assets/lottie/wired-flat-2804-fire-flame-hover-pinch.json')}
-                style={{ width: 20, height: 20 }}
-                autoPlay
-                loop
-              />
+          {!hideTitle && (
+            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 4 }}>
+              <View accessible={false}>
+                <LottieView
+                  source={require('../../../../assets/lottie/wired-flat-2804-fire-flame-hover-pinch.json')}
+                  style={{ width: 20, height: 20 }}
+                  autoPlay
+                  loop
+                />
+              </View>
+              <Text accessibilityRole="header" style={[styles.title, RTL]}>מחשבון החופש</Text>
             </View>
-            <Text accessibilityRole="header" style={[styles.title, RTL]}>מחשבון החופש</Text>
-          </View>
+          )}
           <Text style={[styles.subtitle, RTL]}>
             כמה שנים עד שלא תצטרך לעבוד?
           </Text>
@@ -709,6 +738,7 @@ export function FIRECalcScreen({ onComplete }: FIRECalcScreenProps) {
               label={state.lifestylePreview.label}
               description={state.lifestylePreview.description}
               luxuryLevel={state.lifestylePreview.luxuryLevel}
+              range={formatBandRange(state.lifestylePreview)}
             />
           </Animated.View>
         )}

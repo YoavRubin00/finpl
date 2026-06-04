@@ -634,7 +634,7 @@ export function DailyQuestsSheet({ visible, onClose, onOpenNewsChallenge, onOpen
                   <Animated.View style={isPro && allDone && !proRewardClaimed ? chestPulseStyle : undefined}>
                     <ExpoImage
                       source={PRO_CHEST_PNG}
-                      style={{ width: 160, height: 160 }}
+                      style={{ width: 150, height: 150 }}
                       contentFit="contain"
                       accessible={false}
                     />
@@ -1070,14 +1070,12 @@ const chestCardStyles = StyleSheet.create({
     borderColor: STITCH.surfaceHighest,
   },
   cardPro: {
-    // PRO card is wider (flex 1.5 vs regular flex 1) so the eye reads
-    // PRO as the bigger deal. Bumped from 1.35 after LAN review showed
-    // the cards still felt equal in proportions.
-    // Palette swap 2026-06-03 (user request): orange-amber → deep blue
-    // to match every other "שדרגו לפרו" surface in the app
-    // (ProfileScreen, AIInsights, MacroEvent, MythFeed, the proCta below).
-    // Single PRO color across the app = no cognitive load, higher trust.
-    flex: 1.5,
+    // Equal width with the regular card (both flex 1) — user request
+    // 2026-06-04: "חצי חצי, לא שהפרו הרבה יותר גדול". PRO still reads as
+    // premium via the deep-blue palette, crown, border + shadow — not size.
+    // Palette: deep blue to match every other "שדרגו לפרו" surface in the
+    // app (ProfileScreen, AIInsights, MacroEvent, MythFeed, the proCta below).
+    flex: 1,
     backgroundColor: "#eff6ff",
     borderColor: "#1d4ed8",
     borderWidth: 2,
@@ -1146,14 +1144,14 @@ const chestCardStyles = StyleSheet.create({
     position: "relative",
   },
   chestArtPro: {
-    // 2026-06-03 (user report): chest PNG at 220×220 with
-    // marginVertical:-38 over-painted the "תיבת PRO" title above.
-    // Fixed by dropping chest to 160×160 with no negative margin —
-    // contentFit="contain" still keeps the visible chest body
-    // centered inside its frame.
+    // Cards are equal width, but the PRO chest art stays clearly bigger
+    // (150 vs the regular Lottie's 100) per user request 2026-06-04.
+    // The PNG has built-in transparent padding, so the card's overflow:hidden
+    // only clips that empty margin — the chest body itself stays intact.
+    // contentFit="contain" keeps the visible chest centered.
     alignItems: "center",
     justifyContent: "center",
-    height: 160,
+    height: 150,
     position: "relative",
     overflow: "visible",
   },
