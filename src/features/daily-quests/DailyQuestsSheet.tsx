@@ -659,19 +659,20 @@ export function DailyQuestsSheet({ visible, onClose, onOpenNewsChallenge, onOpen
                   {allDone && isPro && !proRewardClaimed && (
                     <Animated.View pointerEvents="none" style={[styles.chestGlowHalo, { backgroundColor: "#1d4ed8" }, chestGlowStyle]} />
                   )}
-                  {/* marginTop nudges the PRO PNG visual content down ~25px so
-                      its visual center aligns with the regular Lottie chest's
-                      visual center (user request 2026-06-04: "המרכז של שתיהן
-                      יהיה באותו גובה"). The two assets have asymmetric vertical
-                      whitespace — the PRO PNG content sits in the upper portion
-                      of a 1024×1536 canvas, while the regular Lottie content
-                      sits in the lower portion of a 500×500 canvas. Centering
-                      each in the slot leaves the visual chests ~32px apart in
-                      Y; this offset closes that gap. */}
-                  <Animated.View style={[{ marginTop: 25 }, isPro && allDone && !proRewardClaimed ? chestPulseStyle : undefined]}>
+                  {/* PRO PNG rendered at 180×180 inside the 190px slot — small
+                      enough to sit fully inside the card width (~150) without
+                      overflowing horizontally into the regular chest's lane
+                      (user report 2026-06-04: "תיבה תהיה ממוקמת ימינה ולמטה
+                      ככה שתהיה סימטרית"). marginTop:30 pushes the PRO down a
+                      hair so its visual center sits at the same Y as the
+                      regular chest's visual center (the regular Lottie's
+                      drawable content is offset downward inside its 500×500
+                      canvas, so plain center-in-slot leaves the PRO body
+                      visually higher). */}
+                  <Animated.View style={[{ marginTop: 30 }, isPro && allDone && !proRewardClaimed ? chestPulseStyle : undefined]}>
                     <ExpoImage
                       source={PRO_CHEST_PNG}
-                      style={{ width: 234, height: 234 }}
+                      style={{ width: 180, height: 180 }}
                       contentFit="contain"
                       accessible={false}
                     />
@@ -712,7 +713,10 @@ export function DailyQuestsSheet({ visible, onClose, onOpenNewsChallenge, onOpen
                 // edge-to-edge of the modal (user request 2026-06-04: "ימלא
                 // את המסך מימין לשמאל"). Keeps the rounded corners 16 so it
                 // still reads as a discrete card, not a sheet-bottom plate.
-                style={({ pressed }) => [{ marginTop: 14, marginHorizontal: -40 }, pressed && { opacity: 0.95, transform: [{ scale: 0.99 }] }]}
+                // marginTop bumped 14→32 to clear the PRO card's two-row
+                // rewards stack (coins + gems) — the banner was sitting on top
+                // of the diamond row at smaller margins.
+                style={({ pressed }) => [{ marginTop: 32, marginHorizontal: -40 }, pressed && { opacity: 0.95, transform: [{ scale: 0.99 }] }]}
               >
                 <Animated.View style={[chestCardStyles.proBanner, proBannerBorderStyle]}>
                   <LinearGradient
