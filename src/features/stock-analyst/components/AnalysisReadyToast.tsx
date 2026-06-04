@@ -111,8 +111,14 @@ const s = StyleSheet.create({
   // Was white card with a green accent — read as a "soft" notification on
   // the dark navy StockAnalyst screen and tested-poorly with the user.
   // New design: cyan/sky gradient feel, brighter borders, larger title.
+  //
+  // 2026-06-04: bumped from #dbeafe (sky-100) → #bfdbfe (sky-200) — the
+  // paler shade read as "transparent" against the deep-navy analyst
+  // background even though it was a solid fill. The slightly more
+  // saturated sky-200 still feels light/friendly but has enough contrast
+  // to register as a real card.
   card: {
-    backgroundColor: '#dbeafe',
+    backgroundColor: '#bfdbfe',
     borderRadius: 20,
     paddingStart: 16,
     paddingEnd: 16,

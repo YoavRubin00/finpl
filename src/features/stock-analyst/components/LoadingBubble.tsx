@@ -225,6 +225,11 @@ export function LoadingBubble({ mode, ticker }: Props): React.ReactElement {
           </View>
 
           {!isReady ? (
+            // bg/border live on an inner View — Pressable's function-style
+            // style prop drops the bg on Android, leaving a white-on-white
+            // button with invisible white text (user report 2026-06-04: "לא
+            // רואים את הכפתור שפותח את המשחקים, צריך להיות כחול"). Same
+            // workaround as PearlScenarioStage / CrowdQuestionCard buttons.
             <Pressable
               onPress={() => {
                 tapHaptic();
@@ -232,32 +237,38 @@ export function LoadingBubble({ mode, ticker }: Props): React.ReactElement {
               }}
               accessibilityRole="button"
               accessibilityLabel="שחק במשחק קצר בזמן ההמתנה"
-              style={({ pressed }) => ({
-                flexDirection: 'row',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: 10,
-                paddingVertical: 12,
-                paddingHorizontal: 18,
-                borderRadius: 14,
-                backgroundColor: '#3b82f6',
-                borderWidth: 2,
-                borderColor: '#2563eb',
-                borderBottomWidth: 4,
-                borderBottomColor: '#1d4ed8',
-                shadowColor: '#3b82f6',
-                shadowOffset: { width: 0, height: 2 },
-                shadowOpacity: 0.4,
-                shadowRadius: 8,
-                elevation: 6,
-                opacity: pressed ? 0.88 : 1,
-                transform: pressed ? [{ scale: 0.98 }] : undefined,
-              })}
+              hitSlop={6}
             >
-              <Gamepad2 size={18} color="#ffffff" strokeWidth={2.6} />
-              <Text style={{ color: '#ffffff', fontWeight: '900', fontSize: 14, writingDirection: 'rtl' }}>
-                שחק בינתיים
-              </Text>
+              {({ pressed }) => (
+                <View
+                  style={{
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: 10,
+                    paddingVertical: 12,
+                    paddingHorizontal: 18,
+                    borderRadius: 14,
+                    backgroundColor: '#2563eb',
+                    borderWidth: 2,
+                    borderColor: '#1d4ed8',
+                    borderBottomWidth: 4,
+                    borderBottomColor: '#1e3a8a',
+                    shadowColor: '#1d4ed8',
+                    shadowOffset: { width: 0, height: 2 },
+                    shadowOpacity: 0.4,
+                    shadowRadius: 8,
+                    elevation: 6,
+                    opacity: pressed ? 0.88 : 1,
+                    transform: pressed ? [{ scale: 0.98 }] : undefined,
+                  }}
+                >
+                  <Gamepad2 size={18} color="#ffffff" strokeWidth={2.6} />
+                  <Text style={{ color: '#ffffff', fontWeight: '900', fontSize: 14, writingDirection: 'rtl' }}>
+                    שחק בינתיים
+                  </Text>
+                </View>
+              )}
             </Pressable>
           ) : null}
         </>

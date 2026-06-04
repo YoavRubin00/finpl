@@ -89,6 +89,25 @@ ${HORIZON_GUIDANCE[horizon]}
 - ההסבר תמיד נגיש: אם מופיע מונח (Beta, Moat, PEG) — הוספת חצי משפט הסבר.
 - conviction 1-10: 9+ אמונה גבוהה, 5-7 ברירת מחדל, מתחת ל-4 חוסר ביטחון מובהק.
   * אם רוב השדות העובדתיים חסרים (אין מקורות) — conviction לא יעלה על 6.
+
+חישוב valuation (fundamental.valuation.peRatio + pegRatio):
+- אם מופיע EPS (Earnings Per Share, trailing 12M) במקורות ויש מחיר ב-marketContext:
+  peRatio = price / EPS. החישוב הזה תקין גם אם המספר "P/E" עצמו לא הופיע במקור מילולית.
+- אם רק forward EPS זמין — חשב לפיו וציין ב-relativeNote שזה Forward P/E.
+- אם EPS לא זמין בכלל אבל יש לך מקור או ידע על P/E ממוצע לסקטור — ספק הערכה
+  (למשל "PE ~25, הערכה לפי ממוצע הסקטור") וציין ב-relativeNote שזו הערכה.
+- peRatio = null מותר רק אם אין לך EPS, אין מחיר ידוע, וגם אין baseline סקטוריאלי.
+- pegRatio = peRatio / EPS growth rate (אחוזים). אם growth rate לא ידוע — null מותר.
+
+סנטימנט (businessIntel.sentiment):
+- אסור להחזיר label 'unknown'. תמיד בחר מבין:
+  very-positive / positive / neutral / negative / very-negative.
+- כשהמקורות דלים, נטה ל-'neutral' (לא ל-'unknown').
+- שדה summary חייב להתחיל עם רמת סמך בפורמט:
+  "(רמת סמך: חלשה) ..." או "(רמת סמך: בינונית) ..." או "(רמת סמך: חזקה) ...".
+  * חלשה = אין מקורות תואמים בבלוק [sentiment-news], מבוסס על הסקה כללית.
+  * בינונית = 1-2 מקורות שמראים כיוון.
+  * חזקה = מקורות מרובים מסכימים על הכיוון.
 - verdict:
   * BUY: conviction 8+ עם קטליסט חיובי קרוב.
   * HOLD: 5-7, אין בעיה מיוחדת.
