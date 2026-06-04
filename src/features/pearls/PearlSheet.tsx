@@ -128,6 +128,7 @@ export function PearlSheet({ visible, pearl, onClose }: PearlSheetProps): React.
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const markCompleted = usePearlsStore((s) => s.markCompleted);
+  const setLastStage = usePearlsStore((s) => s.setLastStage);
   const { playSound } = useSoundEffect();
 
   // One-shot pearl tooltip. Shows the very first time a user enters ANY
@@ -285,12 +286,24 @@ export function PearlSheet({ visible, pearl, onClose }: PearlSheetProps): React.
         snapshot.push({ kind: 'game', index: idx++ });
       }
       setStages(snapshot);
-      setActivePage(0);
+      // Mid-flow resumption — if the user closed this pearl mid-stage on a
+      // prior session, restart at the kind they last reached. Kind-based
+      // (not index-based) so a stages-array change between opens — e.g.
+      // profile-question dropping out because the user answered it last
+      // time — doesn't strand the cursor at a kind that no longer exists.
+      // Falls through to 0 when no saved progress, when the saved kind is
+      // not in the new snapshot, or when the pearl was already completed
+      // (the store auto-clears progress on completion).
+      const savedKind = usePearlsStore.getState().lastStageByPearl[pearlIdFor(pearl)];
+      const resumeIdx = savedKind ? snapshot.findIndex((s) => s.kind === savedKind) : -1;
+      setActivePage(resumeIdx > 0 ? resumeIdx : 0);
       openedAtRef.current = Date.now();
       // First-pearl tooltip gate. Snapshot the persisted flag at open-time
       // so marking it seen mid-pearl doesn't flip the local render flag.
       // The user gets the tooltip exactly once across their lifetime.
-      if (!hasSeenPearlTooltip) setShowTooltip(true);
+      // Don't show on resumed sessions — the tooltip is meant to explain
+      // what a pearl IS, useless if you've already been in one.
+      if (!hasSeenPearlTooltip && resumeIdx <= 0) setShowTooltip(true);
       try {
         track({
           name: 'pearl_opened',
@@ -450,6 +463,13 @@ export function PearlSheet({ visible, pearl, onClose }: PearlSheetProps): React.
     const nextIdx = activePage + 1;
     if (nextIdx < stages.length) {
       goToPage(nextIdx);
+      // Persist mid-flow position so closing the sheet here and reopening
+      // later resumes on the same stage instead of restarting from 0.
+      // Stored as kind (not index) — see usePearlsStore comment.
+      const nextStage = stages[nextIdx];
+      if (nextStage?.kind) {
+        try { setLastStage(pearlIdFor(pearl), nextStage.kind); } catch { /* non-fatal */ }
+      }
       return;
     }
     // Final stage — mark the pearl complete, grant XP + coins, close the
@@ -476,7 +496,7 @@ export function PearlSheet({ visible, pearl, onClose }: PearlSheetProps): React.
     // Push, not replace — keeps the map underneath so the back stack works
     // naturally if the user backs out of the lesson without finishing.
     router.push(`/lesson/${pearl.nextModuleId}?chapterId=${pearl.chapterId}` as never);
-  }, [pearl, activePage, stages, goToPage, markCompleted, onClose, router]);
+  }, [pearl, activePage, stages, goToPage, markCompleted, onClose, router, setLastStage]);
 
   const renderStage = useCallback(
     (item: StageDescriptor) => {

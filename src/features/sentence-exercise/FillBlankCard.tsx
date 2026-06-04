@@ -10,6 +10,7 @@ import Animated, {
   withTiming,
 } from "react-native-reanimated";
 import { successHaptic, errorHaptic, tapHaptic } from "../../utils/haptics";
+import { useSoundEffect } from "../../hooks/useSoundEffect";
 import { ConfettiExplosion } from "../../components/ui/ConfettiExplosion";
 import type { FillBlankChoice, FillBlankPrompt } from "./sentenceTypes";
 
@@ -160,6 +161,8 @@ export function FillBlankCard({
   const onCorrectSettledRef = useRef(onCorrectSettled);
   useEffect(() => { onCorrectSettledRef.current = onCorrectSettled; });
 
+  const { playSound } = useSoundEffect();
+
   const shakeStyle = useAnimatedStyle(() => ({
     transform: [{ translateX: shake.value }],
   }));
@@ -168,9 +171,14 @@ export function FillBlankCard({
     (choice: FillBlankChoice) => {
       if (!activeSlot || placement[activeSlot]) return;
       tapHaptic();
+      // Same sound palette as the quiz options in LessonFlowScreen
+      // (btn_click_soft_3 on tap, modal_open_2 on correct, modal_open_3
+      // on wrong) — keeps the recall + quiz audio identity consistent.
+      playSound('btn_click_soft_3');
       const result = onAttempt(activeSlot, choice.id);
       if (result.correct) {
         successHaptic();
+        setTimeout(() => { playSound('modal_open_2'); }, 100);
         setWrongChoice(null);
         setConfetti((n) => n + 1);
         const nextSlot = prompt.slots.find((s) => s.slotId !== activeSlot && !placement[s.slotId]);
@@ -181,6 +189,7 @@ export function FillBlankCard({
         }
       } else {
         errorHaptic();
+        setTimeout(() => { playSound('modal_open_3'); }, 100);
         setWrongChoice(choice.id);
         if (!reducedMotion) {
           shake.value = withSequence(
@@ -193,7 +202,7 @@ export function FillBlankCard({
         setTimeout(() => setWrongChoice((c) => (c === choice.id ? null : c)), 420);
       }
     },
-    [activeSlot, onAttempt, placement, prompt.slots, shake, reducedMotion],
+    [activeSlot, onAttempt, placement, prompt.slots, shake, reducedMotion, playSound],
   );
 
   const resolvedText = (slotId: string): string => {

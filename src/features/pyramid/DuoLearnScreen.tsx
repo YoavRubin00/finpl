@@ -141,7 +141,14 @@ const ALL_CHAPTERS = [chapter0Data, chapter1Data, chapter2Data, chapter3Data, ch
 /* Portrait summary URLs, used for completed module preview */
 const BLOB = 'https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/infographics';
 const PORTRAIT_SUMMARY_URLS: Record<string, string> = {
+  // 2026-06-04: mod-0-1 was split into mod-0-1 + mod-0-1b. Both halves
+  // share the same combined "Financial Basics" summary infographic
+  // (covers bank/account/interest/loan/pension) because the artwork was
+  // produced before the split and already shows the full concept set.
+  // When the user re-taps either half from the chapter map, the replay
+  // modal shows the same summary card with a "לבצע שוב" CTA.
   'mod-0-1': `${BLOB}/mod-0-1/summary-0-1.png`,
+  'mod-0-1b': `${BLOB}/mod-0-1/summary-0-1.png`,
   'mod-0-2': `${BLOB}/mod-0-2/summary-0-2.png`,
   'mod-0-3': `${BLOB}/mod-0-3/summary-0-3.png`,
   'mod-0-4': `${BLOB}/mod-0-4/summary-0-4.png`,

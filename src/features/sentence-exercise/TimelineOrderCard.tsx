@@ -17,6 +17,7 @@ import Animated, {
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import { ChevronUp, ChevronDown } from "lucide-react-native";
 import { successHaptic, tapHaptic, mediumHaptic, selectionHaptic, errorHaptic } from "../../utils/haptics";
+import { useSoundEffect } from "../../hooks/useSoundEffect";
 import { ConfettiExplosion } from "../../components/ui/ConfettiExplosion";
 import type { TimelineOrderPrompt } from "./sentenceTypes";
 
@@ -315,6 +316,8 @@ export function TimelineOrderCard({
   const onCorrectSettledRef = useRef(onCorrectSettled);
   useEffect(() => { onCorrectSettledRef.current = onCorrectSettled; });
 
+  const { playSound } = useSoundEffect();
+
   const itemMap = useMemo(() => {
     const m: Record<string, (typeof prompt.items)[number]> = {};
     for (const it of prompt.items) m[it.id] = it;
@@ -379,6 +382,10 @@ export function TimelineOrderCard({
 
     if (isCorrect) {
       successHaptic();
+      // Same correct/wrong audio cues as the quiz options in LessonFlowScreen
+      // (modal_open_2 / modal_open_3 after 100ms) — keeps the recall + quiz
+      // audio identity consistent.
+      setTimeout(() => { playSound('modal_open_2'); }, 100);
       setWrong(false);
       if (wrongTimerRef.current) clearTimeout(wrongTimerRef.current);
       setLocked(true);
@@ -387,6 +394,7 @@ export function TimelineOrderCard({
       onSubmit(current);
     } else {
       errorHaptic();
+      setTimeout(() => { playSound('modal_open_3'); }, 100);
       // Sustained buzz on top of the single error haptic so the "wrong" is
       // unmistakable. Android honours the pattern; iOS falls back to a buzz.
       Vibration.vibrate([0, 140, 90, 140, 90, 200]);
@@ -397,7 +405,7 @@ export function TimelineOrderCard({
       if (wrongTimerRef.current) clearTimeout(wrongTimerRef.current);
       wrongTimerRef.current = setTimeout(() => setWrong(false), 1400);
     }
-  }, [locked, prompt.items, onSubmit, triggerShake]);
+  }, [locked, prompt.items, onSubmit, triggerShake, playSound]);
 
   const handleContinue = useCallback(() => {
     onCorrectSettledRef.current();

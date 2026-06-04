@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { View, Text, Pressable, StyleSheet, ScrollView } from "react-native";
 import Animated, { FadeIn, FadeOut } from "react-native-reanimated";
 import { useEconomyUIStore } from "../economy/useEconomyUIStore";
+import { useSoundEffect } from "../../hooks/useSoundEffect";
 import { FinnCoach } from "./FinnCoach";
 import { FillBlankCard } from "./FillBlankCard";
 import { TimelineOrderCard, type TimelineOrderCardState } from "./TimelineOrderCard";
@@ -30,6 +31,7 @@ export function InteractiveRecallScreen({
   const recall = useInteractiveRecall(set);
   const addXP = useEconomyUIStore((s) => s.addXP);
   const addCoins = useEconomyUIStore((s) => s.addCoins);
+  const { playSound } = useSoundEffect();
 
   const recallRef = useRef(recall);
   recallRef.current = recall;
@@ -159,6 +161,11 @@ export function InteractiveRecallScreen({
           <Pressable
             onPress={() => {
               if (!activeCardState) return;
+              // Same tap sound as the quiz options in LessonFlowScreen
+              // (btn_click_soft_3). The downstream check()/continue_()
+              // path inside TimelineOrderCard plays the correct/wrong
+              // feedback sound when the result is known.
+              playSound('btn_click_soft_3');
               if (activeCardState.locked) activeCardState.continue_();
               else activeCardState.check();
             }}
