@@ -1,5 +1,6 @@
 import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import { View, Text, Pressable, StyleSheet } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Animated from 'react-native-reanimated';
 import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -21,6 +22,7 @@ const LOTTIE_CARDS = require('../../../assets/lottie/wired-flat-3154-cards-club-
 
 export const MythFeedCard = React.memo(function MythFeedCard({ isInterModule, onSkip }: { isInterModule?: boolean; onSkip?: () => void }) {
     const router = useRouter();
+    const insets = useSafeAreaInsets();
     const profile = useAuthStore((s) => s.profile);
     const {
         seenIds,
@@ -179,12 +181,12 @@ export const MythFeedCard = React.memo(function MythFeedCard({ isInterModule, on
                         users reported "אחרי שעניתי אין כפתור המשך" — the gate
                         broke the pearl flow on iPhone (2026-06-01). */}
                     {isInterModule && onSkip && (sessionCorrect + sessionWrong) >= 1 ? (
-                        <View style={styles.doneWrap}>
+                        <View style={[styles.doneWrap, { paddingBottom: Math.max(insets.bottom, 8) + 8 }]}>
                             <Pressable
                                 onPress={() => { tapHaptic(); onSkip(); }}
                                 accessibilityRole="button"
                                 accessibilityLabel="סיימתי, המשך"
-                                style={styles.doneBtn}
+                                style={({ pressed }) => [styles.doneBtn, pressed && styles.doneBtnPressed]}
                             >
                                 <Text style={styles.doneBtnText} allowFontScaling={false}>סיימתי, המשך</Text>
                             </Pressable>
@@ -209,45 +211,61 @@ const styles = StyleSheet.create({
     container: {
         minHeight: 560,
         backgroundColor: '#f8fafc',
-        paddingTop: 8,
+        paddingTop: 4,
     },
+    // Sticky-bottom CTA bar — mirrors PearlGameStage.stickyBar so the
+    // pearl's "סיימתי, המשך" looks like the same affordance as every other
+    // Continue inside Pearl flows. paddingBottom is applied INLINE from
+    // useSafeAreaInsets so a 3-button Android nav bar (~48px) gets real
+    // breathing room and the iPhone home-indicator (~34px) sits naturally
+    // below the press depth, instead of the previous flat 18px which
+    // pressed the button up against the system bar.
     doneWrap: {
-        paddingHorizontal: 20,
-        paddingTop: 14,
-        paddingBottom: 18,
+        paddingHorizontal: 16,
+        paddingTop: 12,
+        backgroundColor: 'rgba(248,250,252,0.96)',
+        borderTopWidth: 1,
+        borderTopColor: 'rgba(148,163,184,0.25)',
     },
     doneBtn: {
-        paddingVertical: 12,
-        paddingHorizontal: 22,
-        borderRadius: 14,
-        backgroundColor: '#facc15',
+        backgroundColor: '#0ea5e9',
+        borderRadius: 16,
+        paddingVertical: 16,
+        paddingHorizontal: 24,
         alignItems: 'center',
         justifyContent: 'center',
+        borderBottomWidth: 4,
+        borderBottomColor: '#0284c7',
+    },
+    doneBtnPressed: {
+        opacity: 0.92,
+        transform: [{ scale: 0.99 }],
     },
     doneBtnText: {
-        fontSize: 16,
+        fontSize: 17,
         fontWeight: '900',
-        color: '#0f172a',
+        color: '#ffffff',
         writingDirection: 'rtl',
+        letterSpacing: 0.3,
     },
     header: {
         paddingHorizontal: 20,
-        paddingBottom: 8,
-        gap: 8,
+        paddingBottom: 4,
+        gap: 6,
     },
     titleRow: {
         alignItems: 'flex-end',
         gap: 2,
     },
     title: {
-        fontSize: 22,
+        fontSize: 20,
         fontWeight: '900',
         color: '#111827',
         writingDirection: 'rtl',
         textAlign: 'right',
     },
     subtitle: {
-        fontSize: 13,
+        fontSize: 12,
         color: '#6b7280',
         writingDirection: 'rtl',
         textAlign: 'right',
