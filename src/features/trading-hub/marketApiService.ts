@@ -180,6 +180,18 @@ let lastFetchWasLive = false;
 
 export const isDataLive = (): boolean => lastFetchWasLive;
 
+/** Per-asset liveness: assets whose latest price came from a real source
+ *  (backend quote / direct Yahoo) THIS session. Cleared when an asset falls
+ *  back to mock. Consumers use this to suppress derived figures (e.g. the
+ *  daily % move) when the displayed price is stale/mock — otherwise a stale
+ *  persisted price vs a mismatched previous-close shows an impossible daily
+ *  move (user report 2026-06-04: "רשום שהנאסד״ק עלה 11% ביום — זה לא קרה").
+ *  On web the market API is frequently unreachable (CORS), so this guards the
+ *  common case of showing stale numbers as if they were today's. */
+const livePriceAssets = new Set<string>();
+
+export const isAssetPriceLive = (assetId: string): boolean => livePriceAssets.has(assetId);
+
 /**
  * In-flight quote requests, keyed by assetId. De-dupes concurrent calls so that
  * `fetchLatestPrice` and `fetchPreviousClose` running in parallel share a single
@@ -299,6 +311,7 @@ export const fetchLatestPrice = async (assetId: string): Promise<number> => {
   const json = await fetchQuote1D(assetId);
   if (json) {
     lastFetchWasLive = true;
+    livePriceAssets.add(assetId);
     priceCache.set(assetId, { data: json.price, date: todayKey() });
     if (typeof json.previousClose === 'number' && isFinite(json.previousClose)) {
       previousCloseCache.set(assetId, { data: json.previousClose, date: todayKey() });
@@ -310,12 +323,14 @@ export const fetchLatestPrice = async (assetId: string): Promise<number> => {
   const direct = await fetchYahooPriceDirect(assetId);
   if (direct !== null) {
     lastFetchWasLive = true;
+    livePriceAssets.add(assetId);
     priceCache.set(assetId, { data: direct, date: todayKey() });
     return direct;
   }
 
   // Tertiary: mock (daily-deterministic, not cached so we keep retrying)
   lastFetchWasLive = false;
+  livePriceAssets.delete(assetId);
   if (__DEV__) {
     // eslint-disable-next-line no-console
     console.warn(`[marketApiService] fetchLatestPrice(${assetId}), falling back to mock data. Backend ${API_BASE} unreachable and direct Yahoo failed.`);
@@ -338,6 +353,7 @@ export const fetchPreviousClose = async (assetId: string): Promise<number | null
     previousCloseCache.set(assetId, { data: json.previousClose, date: todayKey() });
     // Opportunistically warm the price cache too, same payload.
     priceCache.set(assetId, { data: json.price, date: todayKey() });
+    livePriceAssets.add(assetId);
     return json.previousClose;
   }
 
