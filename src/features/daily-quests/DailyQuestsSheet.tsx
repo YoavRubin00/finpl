@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { View, Text, Modal, Pressable, StyleSheet, ScrollView } from "react-native";
 import { Image as ExpoImage } from "expo-image";
 import { useVideoPlayer, VideoView } from "expo-video";
+import { LinearGradient } from "expo-linear-gradient";
 import Animated, {
   FadeIn,
   FadeInRight,
@@ -35,8 +36,10 @@ import { captureEvent } from "../../lib/posthog";
 
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const LOTTIE_CHEST = require("../../../assets/lottie/3D Treasure Box.json") as unknown as AnimationObject;
+// Pro mark animation (same lottie used by ProfileScreen's upgrade banner) —
+// rendered inside the wide PRO upsell banner below the chest row.
 // eslint-disable-next-line @typescript-eslint/no-var-requires
-const LOTTIE_CROWN = require("../../../assets/lottie/Crown.json") as unknown as AnimationObject;
+const LOTTIE_PRO_ANIM = require("../../../assets/lottie/Pro Animation 3rd.json") as unknown as AnimationObject;
 // PRO chest art, bespoke PNG (Yam, 2026-06-03). Replaces the generic
 // "3D Treasure Box" Lottie for the PRO card so the visual tells the
 // value story: open chest, coins + bills inside, gold trim, built-in
@@ -407,6 +410,32 @@ export function DailyQuestsSheet({ visible, onClose, onOpenNewsChallenge, onOpen
     opacity: chestGlowOpacity.value,
   }));
 
+  // Pulsing gold border for the PRO upgrade banner — mirrors the
+  // ProfileScreen pattern so the banner reads as the same surface across
+  // contexts. Only animated when the sheet is visible to avoid a stray
+  // background animation while the modal is closed.
+  const proBannerBorderOpacity = useSharedValue(0.4);
+  useEffect(() => {
+    if (!visible || isPro || reduceMotion) {
+      cancelAnimation(proBannerBorderOpacity);
+      proBannerBorderOpacity.value = withTiming(0.4, { duration: 200 });
+      return;
+    }
+    proBannerBorderOpacity.value = withRepeat(
+      withSequence(
+        withTiming(1, { duration: 1000 }),
+        withTiming(0.4, { duration: 1000 }),
+      ),
+      -1,
+      true,
+    );
+    return () => { cancelAnimation(proBannerBorderOpacity); };
+  }, [visible, isPro, reduceMotion, proBannerBorderOpacity]);
+  const proBannerBorderStyle = useAnimatedStyle(() => ({
+    borderColor: `rgba(250,204,21,${proBannerBorderOpacity.value})`,
+    shadowOpacity: proBannerBorderOpacity.value * 0.5,
+  }));
+
   const handleClaim = () => {
     if (rewardClaimed || !allDone || showClaimAnim) return;
     heavyHaptic();
@@ -610,18 +639,11 @@ export function DailyQuestsSheet({ visible, onClose, onOpenNewsChallenge, onOpen
                   pressed && (!isPro || (allDone && !proRewardClaimed)) && { transform: [{ scale: 0.98 }] },
                 ]}
               >
-                {/* Eyebrow marker, top-right. Non-PRO users see a crown +
-                    "GO PRO" text combo (crown to the LEFT of the text, per
-                    user request 2026-06-04). PRO users see the static "PRO"
-                    pill consistent with the regular card. The top-left crown
-                    corner was removed in the same pass — the crown now lives
-                    inline with the GO PRO label. */}
-                {!isPro ? (
-                  <View style={chestCardStyles.goProBadge} pointerEvents="none">
-                    <LottieIcon source={LOTTIE_CROWN as unknown as number} size={22} autoPlay={!reduceMotion} loop active={!reduceMotion} />
-                    <Text style={chestCardStyles.goProText} allowFontScaling={false}>GO PRO</Text>
-                  </View>
-                ) : (
+                {/* PRO users get a static "PRO" pill (top-right). Non-PRO
+                    users get no in-card badge — the upgrade prompt now lives
+                    as a wide banner BELOW both cards (user request
+                    2026-06-04), matching the ProfileScreen pattern. */}
+                {isPro && (
                   <View style={[chestCardStyles.tag, chestCardStyles.tagPro]}>
                     <Text style={[chestCardStyles.tagText, chestCardStyles.tagTextPro]} allowFontScaling={false}>PRO</Text>
                   </View>
@@ -662,19 +684,66 @@ export function DailyQuestsSheet({ visible, onClose, onOpenNewsChallenge, onOpen
                     <Text style={chestCardStyles.rewardLabel} allowFontScaling={false}>יהלומים</Text>
                   </View>
                 </View>
-                {!isPro && (
-                  <Pressable
-                    onPress={() => { tapHaptic(); router.push('/pricing?source=daily_chest_pro' as never); }}
-                    accessibilityRole="button"
-                    accessibilityLabel="שדרג לפרו"
-                    style={({ pressed }) => [chestCardStyles.proCta, pressed && { opacity: 0.9, transform: [{ scale: 0.98 }] }]}
-                  >
-                    <Text style={chestCardStyles.proCtaIcon} allowFontScaling={false}>👑</Text>
-                    <Text style={chestCardStyles.proCtaText} allowFontScaling={false}>שדרג לפרו</Text>
-                  </Pressable>
-                )}
               </Pressable>
             </View>
+
+            {/* Wide PRO upgrade banner — mirrors the gold-bordered, dark
+                gradient ProfileScreen banner so the conversion CTA looks
+                like a first-class surface, not an in-card afterthought. Only
+                shown to non-PRO users (PRO users already see the static PRO
+                pill on the chest card). Sits BELOW the chest row at full
+                section width per user direction 2026-06-04. */}
+            {!isPro && (
+              <Pressable
+                onPress={() => { tapHaptic(); router.push('/pricing?source=daily_chest_pro' as never); }}
+                accessibilityRole="button"
+                accessibilityLabel="שדרג ל-PRO"
+                style={({ pressed }) => [{ marginTop: 14 }, pressed && { opacity: 0.95, transform: [{ scale: 0.99 }] }]}
+              >
+                <Animated.View style={[chestCardStyles.proBanner, proBannerBorderStyle]}>
+                  <LinearGradient
+                    colors={["#0a2540", "#164e63", "#0a2540"]}
+                    start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
+                    style={{ borderRadius: 16, overflow: "hidden" }}
+                  >
+                    {["✦", "✦", "✦", "✦", "✦"].map((s, i) => (
+                      <Text
+                        key={i}
+                        style={{
+                          position: "absolute",
+                          color: i % 2 === 0 ? "#facc15" : "#67e8f9",
+                          fontSize: i === 2 ? 10 : 7,
+                          opacity: 0.6,
+                          top: [8, 16, 6, 22, 12][i],
+                          left: [12, 60, 130, 200, 260][i],
+                        }}
+                      >{s}</Text>
+                    ))}
+                    <View style={{ flexDirection: "row-reverse", alignItems: "center", justifyContent: "space-between", padding: 16 }}>
+                      <View style={{ flexDirection: "row-reverse", alignItems: "center", gap: 12 }}>
+                        <View style={{ width: 48, height: 48, overflow: "hidden", borderRadius: 14, backgroundColor: "rgba(14,116,144,0.3)", borderWidth: 1, borderColor: "rgba(103,232,249,0.5)", alignItems: "center", justifyContent: "center" }} accessible={false}>
+                          <LottieIcon source={LOTTIE_PRO_ANIM as unknown as number} size={40} autoPlay loop active={!reduceMotion} />
+                        </View>
+                        <View style={{ alignItems: "flex-end" }}>
+                          <Text style={{ fontSize: 11, fontWeight: "800", letterSpacing: 2, color: "#facc15", textTransform: "uppercase" }}>
+                            שדרגו ל-PRO
+                          </Text>
+                          <Text style={{ fontSize: 15, fontWeight: "700", color: "#ffffff", marginTop: 2 }}>
+                            לבבות אינסופיים + בוסט XP
+                          </Text>
+                          <Text style={{ fontSize: 11, color: "rgba(103,232,249,0.8)", marginTop: 2 }}>
+                            ✦ ללא הגבלות ✦ בלעדי לחברים ✦
+                          </Text>
+                        </View>
+                      </View>
+                      <View style={{ borderRadius: 20, backgroundColor: "rgba(250,204,21,0.15)", borderWidth: 1.5, borderColor: "rgba(250,204,21,0.5)", paddingHorizontal: 12, paddingVertical: 8 }}>
+                        <Text style={{ fontSize: 13, fontWeight: "900", color: "#facc15" }}>PRO</Text>
+                      </View>
+                    </View>
+                  </LinearGradient>
+                </Animated.View>
+              </Pressable>
+            )}
           </Animated.View>
 
           </ScrollView>
@@ -712,16 +781,41 @@ export function DailyQuestsSheet({ visible, onClose, onOpenNewsChallenge, onOpen
             </View>
           )}
 
-          {/* Finn-opens-the-chest celebration video — plays after flying rewards complete */}
+          {/* Finn-opens-the-chest celebration video — plays after flying
+              rewards complete. Wrapped in its own Modal so it covers the
+              ENTIRE screen (not just the daily-quests sheet, which is a
+              bottom sheet capped at 92% height). Any tap on the overlay
+              skips the video and returns to the main screen — the 5.5s
+              auto-close still fires as a fallback. */}
           {showVideoOverlay && (
-            <View pointerEvents="none" style={[StyleSheet.absoluteFill, styles.videoOverlay]}>
-              <VideoView
-                player={chestVideoPlayer}
-                style={StyleSheet.absoluteFill}
-                nativeControls={false}
-                contentFit="cover"
-              />
-            </View>
+            <Modal visible transparent animationType="fade" statusBarTranslucent onRequestClose={() => {
+              if (videoCloseTimerRef.current) { clearTimeout(videoCloseTimerRef.current); videoCloseTimerRef.current = null; }
+              setShowVideoOverlay(false);
+              try { chestVideoPlayer.pause(); } catch { /* ignore */ }
+              onClose();
+            }}>
+              <View style={[StyleSheet.absoluteFill, styles.videoOverlay]}>
+                <VideoView
+                  player={chestVideoPlayer}
+                  style={StyleSheet.absoluteFill}
+                  nativeControls={false}
+                  contentFit="cover"
+                />
+                {/* Pressable sits AFTER VideoView in the tree so it renders
+                    above it and captures taps anywhere on the screen. */}
+                <Pressable
+                  onPress={() => {
+                    if (videoCloseTimerRef.current) { clearTimeout(videoCloseTimerRef.current); videoCloseTimerRef.current = null; }
+                    setShowVideoOverlay(false);
+                    try { chestVideoPlayer.pause(); } catch { /* ignore */ }
+                    onClose();
+                  }}
+                  style={StyleSheet.absoluteFill}
+                  accessibilityRole="button"
+                  accessibilityLabel="דלג"
+                />
+              </View>
+            </Modal>
           )}
         </Pressable>
       </Pressable>
@@ -1083,7 +1177,7 @@ const chestCardStyles = StyleSheet.create({
     // 2026-06-04: "חצי חצי, לא שהפרו הרבה יותר גדול". PRO still reads as
     // premium via the deep-blue palette, crown, border + shadow — not size.
     // Palette: deep blue to match every other "שדרגו לפרו" surface in the
-    // app (ProfileScreen, AIInsights, MacroEvent, MythFeed, the proCta below).
+    // app (ProfileScreen, AIInsights, MacroEvent, MythFeed).
     flex: 1,
     backgroundColor: "#eff6ff",
     borderColor: "#1d4ed8",
@@ -1097,34 +1191,18 @@ const chestCardStyles = StyleSheet.create({
   cardClaimed: {
     opacity: 0.6,
   },
-  // "GO PRO" badge — crown lottie + text inline. Crown sits to the LEFT of
-  // the text per user direction 2026-06-04 (was a separate animation in the
-  // top-left corner + a lottie GO PRO in the top-right). flexDirection: 'row'
-  // (NOT row-reverse) keeps the crown on the visual left of the latin "GO
-  // PRO" text — the text is LTR so RTL layout doesn't apply.
-  goProBadge: {
-    position: "absolute",
-    top: 6,
-    right: 8,
-    zIndex: 6,
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 999,
-    backgroundColor: "#1d4ed8",
-    shadowColor: "#1e3a8a",
-    shadowOpacity: 0.3,
-    shadowRadius: 4,
-    shadowOffset: { width: 0, height: 2 },
-    elevation: 3,
-  },
-  goProText: {
-    fontSize: 11,
-    fontWeight: "900",
-    color: "#ffffff",
-    letterSpacing: 1.2,
+  // Wide PRO upgrade banner — full-section-width below the chest row.
+  // Mirrors the ProfileScreen banner so the upsell surface is consistent
+  // across contexts (user direction 2026-06-04). Gold border pulses via
+  // proBannerBorderStyle for the same "premium" feel.
+  proBanner: {
+    borderRadius: 16,
+    borderWidth: 1.5,
+    shadowColor: "#facc15",
+    shadowOffset: { width: 0, height: 0 },
+    shadowRadius: 14,
+    elevation: 8,
+    overflow: "hidden",
   },
   // "רגיל" overlay sticker — sits on top of the chest art instead of in a
   // corner. Centered horizontally, sits low on the chest body so it reads
@@ -1255,35 +1333,5 @@ const chestCardStyles = StyleSheet.create({
     fontWeight: "900",
     color: STITCH.onSurfaceVariant,
     marginHorizontal: 4,
-  },
-  // CTA color changed orange→deep-blue 2026-06-03 to match every other
-  // "שדרגו לפרו" surface in the app (ProfileScreen, AIInsights,
-  // MacroEvent, MythFeed all use #1d4ed8). Consistency over novelty.
-  proCta: {
-    flexDirection: "row-reverse",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 6,
-    marginTop: 12,
-    paddingHorizontal: 10,
-    paddingVertical: 10,
-    borderRadius: 12,
-    backgroundColor: "#1d4ed8",
-    borderBottomWidth: 3,
-    borderBottomColor: "#1e3a8a",
-    alignSelf: "stretch",
-  },
-  proCtaIcon: {
-    fontSize: 14,
-    lineHeight: 16,
-  },
-  proCtaText: {
-    flex: 1,
-    fontSize: 11,
-    fontWeight: "900",
-    color: "#ffffff",
-    writingDirection: "rtl",
-    textAlign: "center",
-    letterSpacing: 0.2,
   },
 });
