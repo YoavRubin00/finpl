@@ -608,7 +608,7 @@ export function DailyQuestsSheet({ visible, onClose, onOpenNewsChallenge, onOpen
                     <Animated.View pointerEvents="none" style={[styles.chestGlowHalo, chestGlowStyle]} />
                   )}
                   <Animated.View style={allDone && !rewardClaimed ? chestPulseStyle : undefined}>
-                    <LottieIcon source={LOTTIE_CHEST as unknown as number} size={150} autoPlay={false} active={chestOpen} loop={false} />
+                    <LottieIcon source={LOTTIE_CHEST as unknown as number} size={220} autoPlay={false} active={chestOpen} loop={false} />
                   </Animated.View>
                   {/* "רגיל" sticker sits on top of the chest art (user request
                       2026-06-04) — was previously a corner pill, now an
@@ -651,38 +651,35 @@ export function DailyQuestsSheet({ visible, onClose, onOpenNewsChallenge, onOpen
                   {allDone && isPro && !proRewardClaimed && (
                     <Animated.View pointerEvents="none" style={[styles.chestGlowHalo, { backgroundColor: "#1d4ed8" }, chestGlowStyle]} />
                   )}
-                  {/* PRO PNG at 300×300 (2× the previous 180, then dialled
-                      to 300 per user 2026-06-05). Slot below uses
-                      justifyContent: flex-end so both chests sit on the SAME
-                      baseline ("באותו הקו וסימטרית") regardless of their
-                      actual sizes — the PRO extends higher above the
-                      baseline; the regular fills less of the vertical
-                      space. The card's overflow:hidden clips any horizontal
-                      spill so the chest stays inside its half of the row. */}
+                  {/* PRO PNG at 180×270 — matches the source asset's 2:3
+                      aspect ratio (1024×1536) so contentFit:contain has no
+                      letterbox padding to manage, and the box fits cleanly
+                      inside the ~150px card width with only ~15px overflow
+                      each side (which is the PNG's transparent margin, not
+                      chest body — safe to clip via card overflow:hidden).
+                      Previously 300×300 with 50px overflow each side was
+                      cropping the chest's gold trim (יפיופי 2026-06-05). */}
                   <Animated.View style={isPro && allDone && !proRewardClaimed ? chestPulseStyle : undefined}>
                     <ExpoImage
                       source={PRO_CHEST_PNG}
-                      style={{ width: 300, height: 300 }}
+                      style={{ width: 180, height: 270 }}
                       contentFit="contain"
                       accessible={false}
                     />
                   </Animated.View>
                 </View>
-                {/* Coins + gems on separate rows so each gets its own line
-                    in the card (Yam, 2026-06-03 LAN). Matches the reference
-                    layout where the PRO card stacks the two reward types
-                    vertically. */}
-                <View style={chestCardStyles.rewardsCol}>
-                  <View style={chestCardStyles.rewardsRow}>
-                    <GoldCoinIcon size={18} />
-                    <Text style={chestCardStyles.rewardValue} allowFontScaling={false}>{previewPro.coins}</Text>
-                    <Text style={chestCardStyles.rewardLabel} allowFontScaling={false}>מטבעות</Text>
-                  </View>
-                  <View style={chestCardStyles.rewardsRow}>
-                    <Text style={chestCardStyles.rewardIcon} allowFontScaling={false}>💎</Text>
-                    <Text style={chestCardStyles.rewardValue} allowFontScaling={false}>{previewPro.gems}</Text>
-                    <Text style={chestCardStyles.rewardLabel} allowFontScaling={false}>יהלומים</Text>
-                  </View>
+                {/* Coins + gems unified to a single row so the PRO card's
+                    rewards block matches the regular card's height —
+                    יפיופי 2026-06-05 flagged the two-row PRO vs one-row
+                    regular as breaking visual rhythm under the chests.
+                    Mirror the row pattern: icon → value → label → "+" →
+                    icon → value → label. */}
+                <View style={chestCardStyles.rewardsRow}>
+                  <GoldCoinIcon size={18} />
+                  <Text style={chestCardStyles.rewardValue} allowFontScaling={false}>{previewPro.coins}</Text>
+                  <Text style={chestCardStyles.rewardPlus} allowFontScaling={false}>+</Text>
+                  <Text style={chestCardStyles.rewardIcon} allowFontScaling={false}>💎</Text>
+                  <Text style={chestCardStyles.rewardValue} allowFontScaling={false}>{previewPro.gems}</Text>
                 </View>
               </Pressable>
             </View>
@@ -703,10 +700,10 @@ export function DailyQuestsSheet({ visible, onClose, onOpenNewsChallenge, onOpen
                 // edge-to-edge of the modal (user request 2026-06-04: "ימלא
                 // את המסך מימין לשמאל"). Keeps the rounded corners 16 so it
                 // still reads as a discrete card, not a sheet-bottom plate.
-                // marginTop bumped 14→32 to clear the PRO card's two-row
-                // rewards stack (coins + gems) — the banner was sitting on top
-                // of the diamond row at smaller margins.
-                style={({ pressed }) => [{ marginTop: 32, marginHorizontal: -40 }, pressed && { opacity: 0.95, transform: [{ scale: 0.99 }] }]}
+                // marginTop now 20 (was 32) — after the PRO rewards row was
+                // consolidated from 2 rows → 1 row, the extra clearance is
+                // no longer needed (יפיופי 2026-06-05).
+                style={({ pressed }) => [{ marginTop: 20, marginHorizontal: -40 }, pressed && { opacity: 0.95, transform: [{ scale: 0.99 }] }]}
               >
                 <Animated.View style={[chestCardStyles.proBanner, proBannerBorderStyle]}>
                   <LinearGradient
@@ -1213,12 +1210,13 @@ const chestCardStyles = StyleSheet.create({
     elevation: 8,
     overflow: "hidden",
   },
-  // "רגיל" overlay sticker — sits on top of the chest art instead of in a
-  // corner. Centered horizontally, sits low on the chest body so it reads
-  // as a tag attached to the chest, not floating UI chrome.
+  // "רגיל" overlay sticker — sits low on the chest body so it reads as a
+  // tag attached to the chest, not floating UI chrome. bottom:4 (was 14)
+  // after the slot grew taller — at bottom:14 the sticker visually
+  // detached from the chest body (יפיופי 2026-06-05).
   stickerOnChest: {
     position: "absolute",
-    bottom: 14,
+    bottom: 4,
     alignSelf: "center",
     paddingHorizontal: 10,
     paddingVertical: 3,
@@ -1244,12 +1242,16 @@ const chestCardStyles = StyleSheet.create({
   // is bumped via tag's height + gap so the title still clears it.
   tag: {
     position: "absolute",
-    top: 8,
-    right: 10,
+    top: 6,
+    right: 6,
     paddingHorizontal: 10,
     paddingVertical: 2,
     borderRadius: 999,
     backgroundColor: "#94a3b8",
+    // White hairline border keeps the chip readable when it sits over the
+    // edge of the PRO chest's gold trim (יפיופי 2026-06-05).
+    borderWidth: 1.5,
+    borderColor: "#ffffff",
     zIndex: 4,
   },
   tagPro: {
@@ -1270,36 +1272,26 @@ const chestCardStyles = StyleSheet.create({
   tagTextPro: {
     letterSpacing: 1.6,
   },
-  cardTitle: {
-    fontSize: 14,
-    fontWeight: "900",
-    color: STITCH.onSurfaceVariant,
-    writingDirection: "rtl",
-    textAlign: "center",
-    marginBottom: 4,
-  },
-  cardTitlePro: {
-    color: "#1e3a8a",
-  },
-  // Both slots share a fixed height and bottom-align their chests so the
-  // chest BASES sit on the same horizontal line — "באותו הקו וסימטרית"
-  // (user request 2026-06-05). Slot height is sized for the larger PRO
-  // chest (300); the regular chest (150) just doesn't fill the upper half.
-  // overflow:visible lets each PNG/Lottie's transparent padding bleed
-  // beyond the slot without affecting layout; the parent card's
-  // overflow:hidden clips horizontal spill at the card boundary so the
-  // PRO chest stays inside its half of the row.
+  // Both slots share a fixed 240px height and bottom-align their chests so
+  // the chest BASES sit on the same horizontal line ("באותו הקו וסימטרית",
+  // user request 2026-06-05). After יפיופי's audit: bumped from 300 down
+  // to 240 because the regular Lottie (now 220) was previously living
+  // alone in the lower third of a 300px slot, leaving 150px of dead
+  // vertical space. 240 is just tall enough to hug both chests at the
+  // bottom; the PRO box (270 tall) overflows the top by 30px, but that's
+  // the PNG's transparent padding, not chest body — the parent card's
+  // overflow:hidden clips it cleanly.
   chestArt: {
     alignItems: "center",
     justifyContent: "flex-end",
-    height: 300,
+    height: 240,
     position: "relative",
     overflow: "visible",
   },
   chestArtPro: {
     alignItems: "center",
     justifyContent: "flex-end",
-    height: 300,
+    height: 240,
     position: "relative",
     overflow: "visible",
   },
@@ -1312,12 +1304,6 @@ const chestCardStyles = StyleSheet.create({
     // Rewards hug the chest now (was marginTop 8 — created a visible gap
     // that the user read as "rewards belong to the CTA below, not the
     // chest above", 2026-06-03 user report).
-    marginTop: 0,
-  },
-  rewardsCol: {
-    flexDirection: "column",
-    alignItems: "center",
-    gap: 2,
     marginTop: 0,
   },
   rewardIcon: {
