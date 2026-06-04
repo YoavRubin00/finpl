@@ -74,7 +74,7 @@ const inputStyle = {
 export function RegisterScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { returnTo } = useLocalSearchParams<{ returnTo?: string }>();
+  const { returnTo, onboarding } = useLocalSearchParams<{ returnTo?: string; onboarding?: string }>();
   const signIn = useAuthStore((s) => s.signIn);
   const convertGuestToUser = useAuthStore((s) => s.convertGuestToUser);
   const isGuest = useAuthStore((s) => s.isGuest);
@@ -360,7 +360,11 @@ export function RegisterScreen() {
                 if (isValid && !showSuccess) {
                   captureEvent('signup_method_clicked', { method: 'email' });
                   if (isGuest) {
-                    convertGuestToUser(name.trim(), email.trim());
+                    // ?onboarding=1 means we arrived from the signup-gate email
+                    // button: keep onboarding incomplete so returnTo bounces
+                    // back to /(auth)/onboarding → celebration → streak →
+                    // mod-0-1 (the flag is flipped by enterFirstModule).
+                    convertGuestToUser(name.trim(), email.trim(), { completeOnboarding: onboarding !== "1" });
                   } else {
                     // New registrations: use email as authId placeholder until server profile is created
                     signIn({ userId: email.trim(), authId: email.trim(), displayName: name.trim(), email: email.trim() });

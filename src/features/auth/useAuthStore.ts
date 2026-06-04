@@ -42,10 +42,19 @@ interface SessionActions {
   setIsGuest: (value: boolean) => void;
   /** Enter guest mode (legacy onboarding path). */
   enterGuestMode: () => void;
-  /** Convert an existing guest session into a real user account. */
-  convertGuestToUser: (displayName: string, email: string) => void;
+  /** Convert an existing guest session into a real user account.
+   *  Pass `{ completeOnboarding: false }` when converting mid-onboarding (the
+   *  signup-gate email path) so the celebration → streak → mod-0-1 sequence
+   *  still runs; the flag is then flipped by enterFirstModule on streak dismiss. */
+  convertGuestToUser: (displayName: string, email: string, opts?: { completeOnboarding?: boolean }) => void;
   /** Mark onboarding complete and store collected profile preferences. */
   completeOnboarding: (profile: UserProfile) => void;
+  /** Seed the local profile blob WITHOUT marking onboarding complete. Used by
+   *  the signup-gate (saveCollected / email path) so an OAuth/register re-mount
+   *  of ProfilingFlow detects profile.financialDream and resumes at the
+   *  celebration step — while hasCompletedOnboarding stays false so the streak
+   *  celebration still shows before mod-0-1. */
+  seedProfile: (profile: UserProfile) => void;
   /** Patch the local profile blob (used by ProfilingFlow / EditProfileModal). */
   updateProfile: (partial: Partial<UserProfile>) => void;
   /** Set active avatar. */
@@ -108,10 +117,14 @@ export const useAuthStore = create<SessionState & SessionActions>()(
         setPersonProperties({ is_guest: true });
       },
 
-      convertGuestToUser: (displayName: string, email: string) => {
+      convertGuestToUser: (displayName: string, email: string, opts?: { completeOnboarding?: boolean }) => {
+        // Default true (in-app guest→user upgrade already finished onboarding).
+        // false only for the signup-gate email path, where the streak
+        // celebration must still run — enterFirstModule flips the flag later.
+        const markComplete = opts?.completeOnboarding !== false;
         set((state) => ({
           isGuest: false,
-          hasCompletedOnboarding: true,
+          ...(markComplete ? { hasCompletedOnboarding: true } : {}),
           displayName,
           email,
           profile: state.profile ?? {
@@ -156,11 +169,14 @@ export const useAuthStore = create<SessionState & SessionActions>()(
         // doesn't go through signInWithProfile, so without this call the
         // funnel's step 3 never fires for the email path.
         captureEvent('user_signed_in', { method: 'email' });
-        // Converting a guest also implies they already finished onboarding, since
-        // they reached this conversion through the in-app upgrade flow.
-        logOnboardingComplete();
+        // Converting a guest usually implies they already finished onboarding
+        // (in-app upgrade flow). Skip when converting mid-onboarding — the
+        // signal fires from completeOnboarding in enterFirstModule instead.
+        if (markComplete) logOnboardingComplete();
         pinTermsForNewUser();
       },
+
+      seedProfile: (profile: UserProfile) => set({ profile }),
 
       completeOnboarding: (profile: UserProfile) => {
         set({ hasCompletedOnboarding: true, profile });

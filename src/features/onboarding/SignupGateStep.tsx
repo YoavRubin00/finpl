@@ -6,7 +6,7 @@
 
 import React from "react";
 import { Image as ExpoImage } from "expo-image";
-import { View, Text, Pressable, Platform } from "react-native";
+import { View, Text, Pressable, Platform, ScrollView } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import Animated, { FadeIn, FadeInDown } from "react-native-reanimated";
 import { LinearGradient } from "expo-linear-gradient";
@@ -85,16 +85,21 @@ export function SignupGateStep({ onSignupSuccess, onSkip, saveCollected, onEmail
           <ChevronRight size={26} color="#475569" />
         </Pressable>
       )}
-      <View style={{ flex: 1, paddingHorizontal: 24, justifyContent: "flex-start", alignItems: "center", paddingTop: 16 }}>
+      <ScrollView
+        style={{ flex: 1 }}
+        contentContainerStyle={{ flexGrow: 1, paddingHorizontal: 24, justifyContent: "center", alignItems: "center", paddingTop: 16, paddingBottom: 24 }}
+        showsVerticalScrollIndicator={false}
+        bounces={false}
+      >
         <View style={{ alignItems: "center", width: "100%" }}>
-        <Animated.View entering={FadeIn.duration(400)} style={{ alignItems: "center", marginBottom: 16 }}>
+        <Animated.View entering={FadeIn.duration(400)} style={{ alignItems: "center", marginBottom: 12 }}>
           <LinearGradient
             colors={["#ecfeff", "#f0fdfa"]}
-            style={{ width: 140, height: 140, borderRadius: 70, alignItems: "center", justifyContent: "center" }}
+            style={{ width: 116, height: 116, borderRadius: 58, alignItems: "center", justifyContent: "center" }}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 1 }}
           >
-            <ExpoImage source={FINN_HAPPY} style={{ width: 120, height: 120 }} contentFit="contain" />
+            <ExpoImage source={FINN_HAPPY} style={{ width: 98, height: 98 }} contentFit="contain" />
           </LinearGradient>
         </Animated.View>
 
@@ -124,7 +129,7 @@ export function SignupGateStep({ onSignupSuccess, onSkip, saveCollected, onEmail
         </Animated.View>
         </View>
 
-        <Animated.View entering={FadeInDown.duration(400).delay(300)} style={{ width: "100%", gap: 10, marginTop: 28 }}>
+        <Animated.View entering={FadeInDown.duration(400).delay(300)} style={{ width: "100%", gap: 10, marginTop: 20 }}>
           {authError ? (
             <Text style={{ fontSize: 13, fontWeight: "700", color: "#dc2626", writingDirection: "rtl", textAlign: "center" }}>
               {authError}
@@ -228,10 +233,10 @@ export function SignupGateStep({ onSignupSuccess, onSkip, saveCollected, onEmail
             <Text style={{ fontSize: 16, fontWeight: "700", color: "#ffffff", writingDirection: "rtl" }}>הירשם עם אימייל</Text>
           </Pressable>
 
-          {/* Guest CTA — same shape/size as the auth buttons above, just in
-              neutral gray so the colored signup buttons read as the primary
-              path. Sub-copy below the label spells out the cost of guest
-              mode without being scary (user direction 2026-06-03). */}
+          {/* Guest CTA — identical shape/size to the auth buttons above
+              (width, radius, padding, border, text), just in neutral gray
+              (#64748b, WCAG-passing on white) so the colored signup buttons
+              read as the primary path (user direction 2026-06-04). */}
           <Pressable
             onPress={handleSkip}
             accessibilityRole="button"
@@ -252,7 +257,7 @@ export function SignupGateStep({ onSignupSuccess, onSkip, saveCollected, onEmail
             </Text>
           </Pressable>
         </Animated.View>
-      </View>
+      </ScrollView>
     </SafeAreaView>
   );
 }
