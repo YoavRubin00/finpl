@@ -675,26 +675,28 @@ export function PearlSheet({ visible, pearl, onClose }: PearlSheetProps): React.
             main-app icons. The chevron uses a soft background ring so it
             reads as a pearl-scoped affordance, not a main-tab icon. */}
         <View style={styles.topBar}>
-          {/* Top row — chevron (right) + title (centered) on the same baseline.
-              User report 2026-06-03: the chevron used to float above the title
-              with the title shrunk to 13px, making the header look uneven and
-              the title invisible. Now they share a row and the title is sized
-              to match the rest of the app's sheet titles. */}
+          {/* Top row — title centered, chevron pinned to the right at title
+              height. Previous layout (row-reverse + space-between + 44px
+              spacer) drifted on Android — the chevron rendered ABOVE the
+              title with the title shrunk down (user screenshot 2026-06-04).
+              Switched to absolute positioning for the chevron so it can't
+              drift: the row is a single line that contains only the title,
+              and the chevron floats over it on the right edge, vertically
+              centered. The title's textAlign: 'center' keeps it optically
+              centered in the full row width regardless of the chevron. */}
           <View style={styles.topRow}>
-            <SheetCloseButton
-              onPress={() => {
-                playSound('btn_click_soft_1');
-                handleDismiss();
-                router.replace('/(tabs)/index' as never);
-              }}
-              accessibilityLabel="חזרה למסך הלמידה"
-              icon={<ChevronRight size={22} color={STITCH.onSurface} strokeWidth={2.6} />}
-            />
             <Text style={styles.title} allowFontScaling={false}>פנינה</Text>
-            {/* Left-side spacer balances the chevron so the title centers
-                visually rather than offsetting toward the chevron. Width
-                matches the SheetCloseButton (44px) for symmetry. */}
-            <View style={styles.topRowSpacer} />
+            <View style={styles.closeBtnRight} pointerEvents="box-none">
+              <SheetCloseButton
+                onPress={() => {
+                  playSound('btn_click_soft_1');
+                  handleDismiss();
+                  router.replace('/(tabs)/index' as never);
+                }}
+                accessibilityLabel="חזרה למסך הלמידה"
+                icon={<ChevronRight size={22} color={STITCH.onSurface} strokeWidth={2.6} />}
+              />
+            </View>
           </View>
           <PearlProgressBar total={stages.length} current={activePage} />
         </View>
@@ -775,18 +777,12 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   topRow: {
-    // row-reverse → chevron lands on the right (RTL), spacer on the left,
-    // title centered between. Children share the same baseline so the
-    // chevron sits at title height, not above it.
-    flexDirection: 'row-reverse',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  topRowSpacer: {
-    // Matches SheetCloseButton's footprint (44 size) so the centered title
-    // stays optically centered even though the chevron occupies one side.
-    width: 44,
+    // Single-line container. Title fills the full width and self-centers;
+    // the chevron floats above it (absolute, right) so it can't push the
+    // title or wrap to a second line on narrow Android screens.
     height: 44,
+    justifyContent: 'center',
+    position: 'relative',
   },
   title: {
     fontSize: 20,
@@ -795,6 +791,16 @@ const styles = StyleSheet.create({
     writingDirection: 'rtl',
     textAlign: 'center',
     letterSpacing: 0.2,
+  },
+  closeBtnRight: {
+    // Pinned to the right edge of the topRow at the same vertical center
+    // as the title text. Box-none on the wrapper so taps outside the
+    // 40x40 button still fall through to the title row (no dead zone).
+    position: 'absolute',
+    right: 0,
+    top: 0,
+    bottom: 0,
+    justifyContent: 'center',
   },
   pagerWrap: { flex: 1 },
   // First-pearl tooltip. Renders once, dismissed on tap. Backdrop is

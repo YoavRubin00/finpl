@@ -37,8 +37,6 @@ import { captureEvent } from "../../lib/posthog";
 const LOTTIE_CHEST = require("../../../assets/lottie/3D Treasure Box.json") as unknown as AnimationObject;
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const LOTTIE_CROWN = require("../../../assets/lottie/Crown.json") as unknown as AnimationObject;
-// "GO PRO" animated badge — replaces the static PRO pill for non-PRO users.
-const LOTTIE_GOPRO = require("../../../assets/lottie/Pro Animation 3rd.json") as unknown as AnimationObject;
 // PRO chest art, bespoke PNG (Yam, 2026-06-03). Replaces the generic
 // "3D Treasure Box" Lottie for the PRO card so the visual tells the
 // value story: open chest, coins + bills inside, gold trim, built-in
@@ -576,9 +574,6 @@ export function DailyQuestsSheet({ visible, onClose, onOpenNewsChallenge, onOpen
                   pressed && allDone && !rewardClaimed && { transform: [{ scale: 0.98 }] },
                 ]}
               >
-                <View style={chestCardStyles.tag}>
-                  <Text style={chestCardStyles.tagText} allowFontScaling={false}>רגיל</Text>
-                </View>
                 <Text style={chestCardStyles.cardTitle} allowFontScaling={false}>תיבה רגילה</Text>
                 <View style={chestCardStyles.chestArt}>
                   {allDone && !rewardClaimed && (
@@ -587,6 +582,13 @@ export function DailyQuestsSheet({ visible, onClose, onOpenNewsChallenge, onOpen
                   <Animated.View style={allDone && !rewardClaimed ? chestPulseStyle : undefined}>
                     <LottieIcon source={LOTTIE_CHEST as unknown as number} size={100} autoPlay={false} active={chestOpen} loop={false} />
                   </Animated.View>
+                  {/* "רגיל" sticker sits on top of the chest art (user request
+                      2026-06-04) — was previously a corner pill, now an
+                      overlay so the eye reads "this chest = רגיל" without
+                      having to scan the corner. */}
+                  <View style={chestCardStyles.stickerOnChest} pointerEvents="none">
+                    <Text style={chestCardStyles.stickerText} allowFontScaling={false}>רגיל</Text>
+                  </View>
                 </View>
                 <View style={chestCardStyles.rewardsRow}>
                   <GoldCoinIcon size={18} />
@@ -608,16 +610,16 @@ export function DailyQuestsSheet({ visible, onClose, onOpenNewsChallenge, onOpen
                   pressed && (!isPro || (allDone && !proRewardClaimed)) && { transform: [{ scale: 0.98 }] },
                 ]}
               >
-                <View style={chestCardStyles.crownCorner}>
-                  <LottieIcon source={LOTTIE_CROWN as unknown as number} size={28} autoPlay={!reduceMotion} loop active={!reduceMotion} />
-                </View>
-                {/* Eyebrow marker, top-right. Non-PRO users see the animated
-                    "GO PRO" lottie (a stronger upgrade cue); PRO users keep
-                    the static "PRO" pill consistent with the regular card's
-                    "רגיל" tag. */}
+                {/* Eyebrow marker, top-right. Non-PRO users see a crown +
+                    "GO PRO" text combo (crown to the LEFT of the text, per
+                    user request 2026-06-04). PRO users see the static "PRO"
+                    pill consistent with the regular card. The top-left crown
+                    corner was removed in the same pass — the crown now lives
+                    inline with the GO PRO label. */}
                 {!isPro ? (
                   <View style={chestCardStyles.goProBadge} pointerEvents="none">
-                    <LottieIcon source={LOTTIE_GOPRO as unknown as number} size={60} autoPlay={!reduceMotion} loop active={!reduceMotion} />
+                    <LottieIcon source={LOTTIE_CROWN as unknown as number} size={22} autoPlay={!reduceMotion} loop active={!reduceMotion} />
+                    <Text style={chestCardStyles.goProText} allowFontScaling={false}>GO PRO</Text>
                   </View>
                 ) : (
                   <View style={[chestCardStyles.tag, chestCardStyles.tagPro]}>
@@ -1095,19 +1097,59 @@ const chestCardStyles = StyleSheet.create({
   cardClaimed: {
     opacity: 0.6,
   },
-  crownCorner: {
-    position: "absolute",
-    top: 6,
-    left: 6,
-    zIndex: 5,
-  },
-  // "GO PRO" lottie badge — sits where the static PRO pill used to be
-  // (top-right corner) for non-PRO users.
+  // "GO PRO" badge — crown lottie + text inline. Crown sits to the LEFT of
+  // the text per user direction 2026-06-04 (was a separate animation in the
+  // top-left corner + a lottie GO PRO in the top-right). flexDirection: 'row'
+  // (NOT row-reverse) keeps the crown on the visual left of the latin "GO
+  // PRO" text — the text is LTR so RTL layout doesn't apply.
   goProBadge: {
     position: "absolute",
-    top: 2,
-    right: 4,
+    top: 6,
+    right: 8,
     zIndex: 6,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 999,
+    backgroundColor: "#1d4ed8",
+    shadowColor: "#1e3a8a",
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 3,
+  },
+  goProText: {
+    fontSize: 11,
+    fontWeight: "900",
+    color: "#ffffff",
+    letterSpacing: 1.2,
+  },
+  // "רגיל" overlay sticker — sits on top of the chest art instead of in a
+  // corner. Centered horizontally, sits low on the chest body so it reads
+  // as a tag attached to the chest, not floating UI chrome.
+  stickerOnChest: {
+    position: "absolute",
+    bottom: 14,
+    alignSelf: "center",
+    paddingHorizontal: 10,
+    paddingVertical: 3,
+    borderRadius: 999,
+    backgroundColor: "#94a3b8",
+    shadowColor: "#000",
+    shadowOpacity: 0.2,
+    shadowRadius: 3,
+    shadowOffset: { width: 0, height: 1 },
+    elevation: 2,
+    zIndex: 5,
+  },
+  stickerText: {
+    fontSize: 11,
+    fontWeight: "900",
+    color: "#ffffff",
+    letterSpacing: 1.2,
+    writingDirection: "rtl",
   },
   // Tag (eyebrow chip): pulled OUT of the title flow into absolute top-right
   // so it doesn't overlap the "תיבה רגילה" / "תיבת PRO" headline (user

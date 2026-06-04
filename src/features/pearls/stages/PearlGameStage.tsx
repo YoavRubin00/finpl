@@ -67,13 +67,31 @@ export function PearlGameStage({ isActive, gameKey, macroEventId, onContinue, on
   // advance so the user never gets stuck on a blank stage with no CTA.
   if (!card) return <FallbackContinueOnMount onMount={onContinue} />;
 
+  // Diamond-hands has no inherent "I'm done" state — it's a passive CTA
+  // chip + modal. Previously the card rendered its OWN "המשך" button at
+  // the bottom of its View, but on tall phones the centered card area
+  // swallows the available height inside the ScrollView and pushes the
+  // button below the fold (user report 2026-06-04: "אחרי ידיים של יהלום
+  // לא רואים בכלל את כפתור התקדם"). Lifting the CTA to a sticky bar
+  // OUTSIDE the ScrollView guarantees visibility regardless of card height.
+  const needsStickyContinue = gameKey === 'diamond-hands';
+
+  const handleStickyContinue = (): void => {
+    tapHaptic();
+    playSound('btn_click_soft_2');
+    onContinue();
+  };
+
   return (
     <View style={{ flex: 1 }}>
       <ScrollView
         style={styles.scroll}
         contentContainerStyle={[
           styles.scrollContent,
-          { paddingBottom: Math.max(insets.bottom + 24, 48) },
+          {
+            paddingBottom:
+              Math.max(insets.bottom + 24, 48) + (needsStickyContinue ? 96 : 0),
+          },
         ]}
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
@@ -82,6 +100,28 @@ export function PearlGameStage({ isActive, gameKey, macroEventId, onContinue, on
           {card}
         </View>
       </ScrollView>
+
+      {needsStickyContinue ? (
+        <View
+          style={[styles.stickyBar, { paddingBottom: Math.max(insets.bottom, 8) + 8 }]}
+          pointerEvents="box-none"
+        >
+          <Pressable
+            onPress={handleStickyContinue}
+            accessibilityRole="button"
+            accessibilityLabel="המשך"
+            hitSlop={8}
+            style={styles.continuePressable}
+          >
+            {({ pressed }) => (
+              <View style={[styles.continueBtn, pressed && styles.continueBtnPressed]}>
+                <Text style={styles.continueBtnText} allowFontScaling={false}>המשך</Text>
+              </View>
+            )}
+          </Pressable>
+        </View>
+      ) : null}
+
       {onExit ? (
         // Floating top-right Exit, guaranteed visible during any game.
         // The parent PearlSheet's top bar already has a close button, but
@@ -314,6 +354,44 @@ function FallbackContinueOnMount({ onMount }: { onMount: () => void }): null {
 const styles = StyleSheet.create({
   scroll: { flex: 1, backgroundColor: '#f8fafc' },
   scrollContent: { flexGrow: 1, paddingTop: 12 },
+  // Sticky bottom CTA — mirrors PearlScenarioStage. Pinned to the true
+  // bottom of the stage (above the system safe area only), full-row width
+  // so the button reads as the dominant bottom action.
+  stickyBar: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 0,
+    paddingHorizontal: 16,
+    paddingTop: 12,
+    backgroundColor: 'rgba(248,250,252,0.96)',
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(148,163,184,0.25)',
+  },
+  continuePressable: {
+    alignSelf: 'stretch',
+  },
+  continueBtn: {
+    backgroundColor: '#0ea5e9',
+    borderRadius: 16,
+    paddingVertical: 16,
+    paddingHorizontal: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderBottomWidth: 4,
+    borderBottomColor: '#0284c7',
+  },
+  continueBtnPressed: {
+    opacity: 0.92,
+    transform: [{ scale: 0.99 }],
+  },
+  continueBtnText: {
+    fontSize: 17,
+    fontWeight: '900',
+    color: '#ffffff',
+    writingDirection: 'rtl',
+    letterSpacing: 0.3,
+  },
   exitBtn: {
     position: 'absolute',
     right: 12,
