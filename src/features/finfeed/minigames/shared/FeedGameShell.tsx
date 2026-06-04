@@ -104,7 +104,20 @@ const styles = StyleSheet.create({
     paddingHorizontal: 4,
   },
   card: {
-    flex: 1,
+    // `flex: 1` (= `1 1 0%`) used to clamp the card to the parent's
+    // available height. Inside PearlScenarioStage's fixed-`minHeight`
+    // wrapper, that meant long Dilemma content (scenario + 4 choices +
+    // feedback + reward chip + continue button) overflowed the clamped
+    // height and got clipped by `overflow: hidden` — user report
+    // 2026-06-04: "החלק התחתון של הכרטיסיה נחתך בפנינה" (chip clipped
+    // mid-pixel). Switching to `flexGrow: 1, flexShrink: 0,
+    // flexBasis: 'auto'` keeps the stretch-to-fill behavior when
+    // content is short, while letting the card grow past the parent's
+    // minHeight when content is tall (the surrounding ScrollView then
+    // scrolls). overflow: hidden stays for the borderRadius clip.
+    flexGrow: 1,
+    flexShrink: 0,
+    flexBasis: 'auto',
     borderRadius: 24,
     overflow: 'hidden',
     shadowOpacity: 0.12,
