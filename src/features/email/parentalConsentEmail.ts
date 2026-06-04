@@ -144,3 +144,115 @@ function escapeHtml(s: string): string {
 function escapeAttr(s: string): string {
   return escapeHtml(s).replace(/"/g, '&quot;');
 }
+
+// ─── Hybrid flow: post-purchase notification email ──────────────────────────
+// Fired AFTER a 16-17 user successfully bought Pro. The parent gets a
+// notification (not a permission request) with a one-click revoke link.
+// Israeli Capacity Act sec. 5 — parent has one month from when they learn
+// of the purchase to void it. Sending this email IS the moment they learn.
+
+interface BuildPurchaseNotificationParams {
+  childName: string | null;
+  revokeUrl: string;
+  /** ISO timestamp of the purchase, used to show 'today' / formatted date. */
+  purchasedAt: string;
+}
+
+export function buildPurchasePostNotificationEmail({
+  childName,
+  revokeUrl,
+  purchasedAt,
+}: BuildPurchaseNotificationParams): BuiltEmail {
+  const safeName = childName?.trim() || 'הילד/ה שלך';
+  const dateStr = new Date(purchasedAt).toLocaleDateString('he-IL', {
+    day: '2-digit', month: '2-digit', year: 'numeric',
+  });
+  const subject = `${safeName} רכש/ה מנוי FinPlay Pro`;
+
+  const text = [
+    'שלום,',
+    '',
+    `${safeName} רכש/ה היום (${dateStr}) מנוי FinPlay Pro.`,
+    '',
+    'פרטי הרכישה:',
+    '- מחיר: 14.90 ש"ח/חודש (התחדשות אוטומטית)',
+    '- חיוב דרך App Store / Google Play',
+    '',
+    'אם אתה מאשר/ת — אין צורך לעשות כלום.',
+    '',
+    'אם תרצה/י לבטל את ההסכמה ולקבל החזר:',
+    revokeUrl,
+    '',
+    'לפי חוק הכשרות המשפטית והאפוטרופסות (סע\' 5), זכותך לבטל את הרכישה תוך 30 יום מיום שנודע לך עליה. הביטול שלנו ינטרל את הגישה ל-Pro מיד; את ההחזר הכספי יש לבקש דרך App Store / Google Play.',
+    '',
+    'שאלות? support@finplay.me',
+    '— צוות FinPlay',
+  ].join('\n');
+
+  const html = `<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>${escapeHtml(subject)}</title>
+</head>
+<body style="margin:0;padding:24px;background:#f1f5f9;font-family:-apple-system,'Segoe UI',Helvetica,Arial,sans-serif;color:#0f172a;direction:rtl;text-align:right;">
+  <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="max-width:560px;margin:0 auto;background:#ffffff;border-radius:16px;overflow:hidden;border:1px solid #e2e8f0;">
+    <tr>
+      <td style="padding:28px 28px 8px 28px;background:linear-gradient(135deg,#0a2540,#164e63);color:#ffffff;">
+        <div style="font-size:24px;font-weight:900;letter-spacing:-0.4px;">🦈 FinPlay</div>
+        <div style="font-size:13px;opacity:0.85;margin-top:6px;">הודעה על רכישה</div>
+      </td>
+    </tr>
+    <tr>
+      <td style="padding:24px 28px;">
+        <h1 style="font-size:20px;font-weight:900;margin:0 0 14px;color:#0f172a;">${escapeHtml(safeName)} רכש/ה מנוי Pro</h1>
+        <p style="font-size:15px;line-height:24px;margin:0 0 14px;">
+          הילד/ה שלך רכש/ה היום (${escapeHtml(dateStr)}) מנוי <strong>FinPlay Pro</strong> באפליקציית למידה פיננסית.
+        </p>
+
+        <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;padding:16px;margin:18px 0;">
+          <div style="font-size:13px;font-weight:700;color:#0f172a;margin-bottom:8px;">פרטי הרכישה</div>
+          <ul style="font-size:13px;line-height:21px;margin:0;padding-right:18px;color:#475569;">
+            <li>מחיר: <strong>14.90 ש"ח/חודש</strong> (התחדשות אוטומטית)</li>
+            <li>החיוב מתבצע דרך App Store / Google Play, לא ישירות דרך FinPlay</li>
+            <li>הילד/ה כבר נהנה/ת מהמנוי</li>
+          </ul>
+        </div>
+
+        <p style="font-size:14px;line-height:22px;margin:0 0 14px;color:#475569;">
+          אם אתה מאשר/ת את הרכישה — אין צורך לעשות כלום, המנוי ימשיך כרגיל.
+        </p>
+
+        <div style="background:#fef3c7;border:1px solid #fde68a;border-radius:12px;padding:14px;margin:16px 0;font-size:13px;line-height:20px;color:#92400e;">
+          <strong>לא מסכים/ה?</strong> לפי חוק הכשרות המשפטית (סע' 5), יש לך זכות לבטל את הרכישה תוך 30 יום. לחיצה על הכפתור למטה תבטל את הגישה ל-Pro מיד; את ההחזר הכספי תוכל/י לבקש דרך App Store או Google Play.
+        </div>
+
+        <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="width:100%;margin:20px 0 4px;">
+          <tr>
+            <td align="center">
+              <a href="${escapeAttr(revokeUrl)}"
+                 style="display:inline-block;background:#dc2626;color:#ffffff;text-decoration:none;font-weight:900;font-size:15px;padding:14px 28px;border-radius:12px;letter-spacing:0.2px;">
+                ❌ בטל את הרכישה
+              </a>
+            </td>
+          </tr>
+        </table>
+
+        <p style="font-size:12px;line-height:18px;color:#64748b;margin:20px 0 0;">
+          שאלות? פנו אלינו ב-<a href="mailto:support@finplay.me" style="color:#0c4a6e;">support@finplay.me</a>.
+        </p>
+      </td>
+    </tr>
+    <tr>
+      <td style="padding:14px 28px;background:#f8fafc;border-top:1px solid #e2e8f0;text-align:center;font-size:11px;color:#94a3b8;">
+        FinPlay — אפליקציית למידה פיננסית לבני נוער. <br>
+        <a href="https://finplay.me/privacy-policy" style="color:#94a3b8;">מדיניות פרטיות</a> · <a href="https://finplay.me/terms-of-service" style="color:#94a3b8;">תנאי שימוש</a>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>`;
+
+  return { subject, html, text };
+}

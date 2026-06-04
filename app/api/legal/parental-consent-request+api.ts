@@ -23,6 +23,14 @@ import { generateToken, getClientIp, getDb, getOrigin } from '../../../src/lib/a
 interface RequestBody {
   authId?: string;
   parentEmail?: string;
+  /** When 'hybrid' (the default since 2026-06-04), only the row is created
+   *  and NO email is sent here. The client is expected to fire the actual
+   *  RevenueCat purchase next, then call /parental-consent-notify-purchase
+   *  which flips the row to 'confirmed' and sends the post-purchase email.
+   *  When 'hard_gate' (used only after a previous revoke, where the parent
+   *  has already shown they want a chance to decline before purchase), the
+   *  classic flow runs: insert row + send the confirm/revoke email NOW. */
+  mode?: 'hybrid' | 'hard_gate';
 }
 
 // Light email regex — server-side is a sanity gate, not full RFC validation.
@@ -98,24 +106,33 @@ export async function POST(request: Request): Promise<Response> {
       });
     }
 
-    const origin = getOrigin(request);
-    const confirmUrl = `${origin}/api/legal/parental-consent-confirm?token=${encodeURIComponent(token)}`;
-    const revokeUrl = `${origin}/api/legal/parental-consent-revoke?token=${encodeURIComponent(token)}`;
+    // Default to Hybrid (no email sent now — the notify-purchase endpoint
+    // fires the email after the user actually buys). Only Hard-gate mode
+    // sends the classic pre-purchase consent email here.
+    const mode = body.mode === 'hard_gate' ? 'hard_gate' : 'hybrid';
+    let emailSent = false;
 
-    const emailResult = await sendParentalConsentEmail({
-      parentEmail: parentEmailToUse,
-      childName: user.displayName,
-      confirmUrl,
-      revokeUrl,
-    });
+    if (mode === 'hard_gate') {
+      const origin = getOrigin(request);
+      const confirmUrl = `${origin}/api/legal/parental-consent-confirm?token=${encodeURIComponent(token)}`;
+      const revokeUrl = `${origin}/api/legal/parental-consent-revoke?token=${encodeURIComponent(token)}`;
+      const emailResult = await sendParentalConsentEmail({
+        parentEmail: parentEmailToUse,
+        childName: user.displayName,
+        confirmUrl,
+        revokeUrl,
+      });
+      emailSent = emailResult.ok;
+    }
 
-    // We return ok even if email failed — the row exists, the user can
-    // request a resend. We do surface the error so the client can show
-    // an honest message.
+    // We return ok even if email failed — the row exists either way. The
+    // client can show an honest "email might not have arrived" message in
+    // Hard-gate mode, or just proceed to RevenueCat in Hybrid mode.
     return Response.json({
       ok: true,
       status: 'pending',
-      emailSent: emailResult.ok,
+      mode,
+      emailSent,
       parentEmail: parentEmailToUse,
     });
   } catch (err) {
