@@ -71,6 +71,15 @@ export const chapter0Data: Chapter = {
       // 2026-06-04: החצי השני של "מושגי יסוד פיננסיים". מופיע אחרי
       // הפנינה שאחרי mod-0-1 (finn-life-treasure / dilemma-1 / myth swipe)
       // ולפני mod-0-2. ראה plans/0-2-toasty-torvalds.md.
+      //
+      // ⚠️ TODO: introAudio להקלטה והעלאה לענן. הסקריפט המוצע (תואם
+      // ל-interactiveIntro למטה):
+      //   "הצד השני של הסיפור: איך מתקבלת הלוואה, מה הופך אשראי לחבית
+      //    של ריבית, ולמה הפנסיה היא המשחק הכי חשוב לטווח הארוך."
+      // העלאה ל-Vercel Blob תחת:
+      //   audio/intros/mod-0-1b-v1.mp3
+      // ואז להוסיף את ה-introAudio field עם ה-URL החדש (ראה mod-0-3
+      // לדוגמת פורמט).
       id: 'mod-0-1b',
       title: 'מושגי יסוד פיננסיים — המשך',
       videoHook:
