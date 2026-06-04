@@ -659,7 +659,16 @@ export function DailyQuestsSheet({ visible, onClose, onOpenNewsChallenge, onOpen
                   {allDone && isPro && !proRewardClaimed && (
                     <Animated.View pointerEvents="none" style={[styles.chestGlowHalo, { backgroundColor: "#1d4ed8" }, chestGlowStyle]} />
                   )}
-                  <Animated.View style={isPro && allDone && !proRewardClaimed ? chestPulseStyle : undefined}>
+                  {/* marginTop nudges the PRO PNG visual content down ~25px so
+                      its visual center aligns with the regular Lottie chest's
+                      visual center (user request 2026-06-04: "המרכז של שתיהן
+                      יהיה באותו גובה"). The two assets have asymmetric vertical
+                      whitespace — the PRO PNG content sits in the upper portion
+                      of a 1024×1536 canvas, while the regular Lottie content
+                      sits in the lower portion of a 500×500 canvas. Centering
+                      each in the slot leaves the visual chests ~32px apart in
+                      Y; this offset closes that gap. */}
+                  <Animated.View style={[{ marginTop: 25 }, isPro && allDone && !proRewardClaimed ? chestPulseStyle : undefined]}>
                     <ExpoImage
                       source={PRO_CHEST_PNG}
                       style={{ width: 234, height: 234 }}
