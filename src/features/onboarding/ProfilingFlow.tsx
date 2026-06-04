@@ -2851,7 +2851,13 @@ export function ProfilingFlow({ mode = "onboarding", onRedoComplete }: Profiling
                   autoplay={isGlobalTyping}
                   accessible={false}
                 />
-                <View style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 14, backgroundColor: '#ffffff' }} />
+                {/* White cover over the top of the tablet-shark to hide the grime
+                    band baked into the top of the (animated) source webp. Measured:
+                    the shark's solid fin tip starts at ~12.5px in this 110px box, so
+                    11px clears the top grime while keeping a ~1.5px safety margin
+                    below the shark (user direction 2026-06-05: "remove the dirty
+                    part but leave a tiny safety margin"). */}
+                <View style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 11, backgroundColor: '#ffffff' }} />
               </View>
             </View>
           </SafeAreaView>
