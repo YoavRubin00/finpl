@@ -609,7 +609,7 @@ export function DailyQuestsSheet({ visible, onClose, onOpenNewsChallenge, onOpen
                     <Animated.View pointerEvents="none" style={[styles.chestGlowHalo, chestGlowStyle]} />
                   )}
                   <Animated.View style={allDone && !rewardClaimed ? chestPulseStyle : undefined}>
-                    <LottieIcon source={LOTTIE_CHEST as unknown as number} size={234} autoPlay={false} active={chestOpen} loop={false} />
+                    <LottieIcon source={LOTTIE_CHEST as unknown as number} size={150} autoPlay={false} active={chestOpen} loop={false} />
                   </Animated.View>
                   {/* "רגיל" sticker sits on top of the chest art (user request
                       2026-06-04) — was previously a corner pill, now an
