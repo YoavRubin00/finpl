@@ -20,7 +20,22 @@ import { FlyingRewards } from '../../components/ui/FlyingRewards';
 
 const LOTTIE_CARDS = require('../../../assets/lottie/wired-flat-3154-cards-club-hover-pinch.json');
 
-export const MythFeedCard = React.memo(function MythFeedCard({ isInterModule, onSkip }: { isInterModule?: boolean; onSkip?: () => void }) {
+export const MythFeedCard = React.memo(function MythFeedCard({
+    isInterModule,
+    onSkip,
+    hideContinueButton,
+    onReadyToContinue,
+}: {
+    isInterModule?: boolean;
+    onSkip?: () => void;
+    /** Pearl flow: when true, the in-card "סיימתי, המשך" is suppressed so
+     *  PearlGameStage can render a sticky CTA above the safe-area instead.
+     *  Mirrors the DilemmaCard / InvestmentCard hideContinueButton pattern. */
+    hideContinueButton?: boolean;
+    /** Pearl flow: fires (true) once the user has answered ≥2 swipes, (false)
+     *  on reset. PearlGameStage uses this to flip its sticky CTA on/off. */
+    onReadyToContinue?: (ready: boolean) => void;
+}) {
     const router = useRouter();
     const insets = useSafeAreaInsets();
     const profile = useAuthStore((s) => s.profile);
@@ -74,6 +89,17 @@ export const MythFeedCard = React.memo(function MythFeedCard({ isInterModule, on
     const [wasCorrect, setWasCorrect] = useState(false);
     const [sessionCorrect, setSessionCorrect] = useState(0);
     const [sessionWrong, setSessionWrong] = useState(0);
+
+    // Pearl-flow: report readiness to PearlGameStage so it can show a
+    // sticky bottom continue bar OUTSIDE the ScrollView, matching the
+    // Daily Challenge pearl pattern. Threshold: 2 answered swipes (raised
+    // from the in-card threshold of 1 — user request 2026-06-05 to give
+    // a real chance for the user to engage before the exit appears).
+    const totalAnswered = sessionCorrect + sessionWrong;
+    useEffect(() => {
+        if (!isInterModule || !onReadyToContinue) return;
+        onReadyToContinue(totalAnswered >= 2);
+    }, [isInterModule, onReadyToContinue, totalAnswered]);
     const [modifierWon, setModifierWon] = useState<ModifierType | null>(null);
     const [showFlyingCoins, setShowFlyingCoins] = useState(false);
     const addModifier = useModifiersStore((s) => s.addModifier);
@@ -180,7 +206,7 @@ export const MythFeedCard = React.memo(function MythFeedCard({ isInterModule, on
                         Earlier the threshold was 3 (force engagement) but
                         users reported "אחרי שעניתי אין כפתור המשך" — the gate
                         broke the pearl flow on iPhone (2026-06-01). */}
-                    {isInterModule && onSkip && (sessionCorrect + sessionWrong) >= 1 ? (
+                    {isInterModule && onSkip && !hideContinueButton && (sessionCorrect + sessionWrong) >= 1 ? (
                         <View style={[styles.doneWrap, { paddingBottom: Math.max(insets.bottom, 8) + 8 }]}>
                             <Pressable
                                 onPress={() => { tapHaptic(); onSkip(); }}
