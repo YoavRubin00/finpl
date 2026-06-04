@@ -40,6 +40,9 @@ export function SignupGateStep({ onSignupSuccess, onSkip, saveCollected, onEmail
   const { promptAppleSignIn, isAvailable: appleAvailable } = useAppleAuth();
   const promptGoogleSignIn = useGoogleAuthStore((s) => s.promptGoogleSignIn);
   const googleReady = useGoogleAuthStore((s) => s.isReady);
+  // Surfaced on-screen below — without this the gate failed silently (a Google
+  // tap that set authError showed nothing, reading as "כלום קורה").
+  const authError = useAuthStore((s) => s.authError);
 
   // Track which users close the gate without ever making a decision (no
   // method click, no skip). Currently invisible in the funnel — PostHog
@@ -82,8 +85,9 @@ export function SignupGateStep({ onSignupSuccess, onSkip, saveCollected, onEmail
           <ChevronRight size={26} color="#475569" />
         </Pressable>
       )}
-      <View style={{ flex: 1, paddingHorizontal: 24, justifyContent: "center", alignItems: "center" }}>
-        <Animated.View entering={FadeIn.duration(400)} style={{ alignItems: "center", marginBottom: 24 }}>
+      <View style={{ flex: 1, paddingHorizontal: 24, justifyContent: "space-between", alignItems: "center", paddingVertical: 16 }}>
+        <View style={{ alignItems: "center", width: "100%" }}>
+        <Animated.View entering={FadeIn.duration(400)} style={{ alignItems: "center", marginBottom: 16 }}>
           <LinearGradient
             colors={["#ecfeff", "#f0fdfa"]}
             style={{ width: 140, height: 140, borderRadius: 70, alignItems: "center", justifyContent: "center" }}
@@ -94,7 +98,7 @@ export function SignupGateStep({ onSignupSuccess, onSkip, saveCollected, onEmail
           </LinearGradient>
         </Animated.View>
 
-        <Animated.View entering={FadeInDown.duration(400).delay(150)} style={{ alignItems: "center", marginBottom: 24 }}>
+        <Animated.View entering={FadeInDown.duration(400).delay(150)} style={{ alignItems: "center", marginBottom: 16 }}>
           <Text style={{ fontSize: 22, fontWeight: "900", color: "#0c4a6e", writingDirection: "rtl", textAlign: "center", marginBottom: 8 }}>
             {"כל הכבוד! 🎉"}
           </Text>
@@ -103,7 +107,7 @@ export function SignupGateStep({ onSignupSuccess, onSkip, saveCollected, onEmail
           </Text>
           {/* Value-prop bullets — explicit answer to "why register". Keeps
               the gate informative without out-shouting the buttons below. */}
-          <View style={{ alignSelf: "stretch", gap: 6, paddingHorizontal: 12 }}>
+          <View style={{ alignSelf: "stretch", gap: 6, paddingHorizontal: 0 }}>
             {[
               "סנכרון בין מכשירים",
               "ההתקדמות נשמרת לתמיד",
@@ -111,18 +115,25 @@ export function SignupGateStep({ onSignupSuccess, onSkip, saveCollected, onEmail
             ].map((text) => (
               <View key={text} style={{ flexDirection: "row-reverse", alignItems: "center", gap: 8 }}>
                 <Text style={{ fontSize: 14, fontWeight: "900", color: "#0ea5e9" }}>✓</Text>
-                <Text style={{ fontSize: 14, fontWeight: "600", color: "#334155", writingDirection: "rtl", flex: 1 }}>
+                <Text numberOfLines={1} allowFontScaling={false} style={{ fontSize: 13, fontWeight: "600", color: "#334155", writingDirection: "rtl", flex: 1 }}>
                   {text}
                 </Text>
               </View>
             ))}
           </View>
         </Animated.View>
+        </View>
 
         <Animated.View entering={FadeInDown.duration(400).delay(300)} style={{ width: "100%", gap: 10 }}>
+          {authError ? (
+            <Text style={{ fontSize: 13, fontWeight: "700", color: "#dc2626", writingDirection: "rtl", textAlign: "center" }}>
+              {authError}
+            </Text>
+          ) : null}
           {appleAvailable && (
             <Pressable
               onPress={() => {
+                useAuthStore.getState().setAuthError(null);
                 decisionMadeRef.current = true;
                 try { captureEvent("signup_gate_method_clicked", { method: "apple", source: "post_onboarding_questions" }); } catch { /* non-fatal */ }
                 // Persist the in-progress dream/goal/age BEFORE the OAuth
@@ -154,6 +165,7 @@ export function SignupGateStep({ onSignupSuccess, onSkip, saveCollected, onEmail
 
           <Pressable
             onPress={() => {
+              useAuthStore.getState().setAuthError(null);
               if (!googleReady || !promptGoogleSignIn) {
                 useAuthStore.getState().setAuthError("הכניסה עם Google לא זמינה כרגע. נסה שוב בעוד רגע.");
                 return;
@@ -191,6 +203,7 @@ export function SignupGateStep({ onSignupSuccess, onSkip, saveCollected, onEmail
               user back to the questions (the historical bug). */}
           <Pressable
             onPress={() => {
+              useAuthStore.getState().setAuthError(null);
               decisionMadeRef.current = true;
               try { captureEvent("signup_gate_method_clicked", { method: "email", source: "post_onboarding_questions" }); } catch { /* non-fatal */ }
               if (onEmailPress) {
@@ -228,15 +241,13 @@ export function SignupGateStep({ onSignupSuccess, onSkip, saveCollected, onEmail
               alignItems: "center",
               justifyContent: "center",
               borderRadius: 14,
-              backgroundColor: pressed ? "#f1f5f9" : "#ffffff",
+              backgroundColor: pressed ? "#7c8a9c" : "#94a3b8",
               paddingVertical: 15,
-              borderWidth: 1,
-              borderColor: "#cbd5e1",
               borderBottomWidth: 3,
-              borderBottomColor: "#cbd5e1",
+              borderBottomColor: "#64748b",
             })}
           >
-            <Text style={{ fontSize: 16, fontWeight: "700", color: "#1e293b", writingDirection: "rtl", textAlign: "center" }}>
+            <Text style={{ fontSize: 16, fontWeight: "700", color: "#ffffff", writingDirection: "rtl", textAlign: "center" }}>
               {"המשך כאורח"}
             </Text>
           </Pressable>
