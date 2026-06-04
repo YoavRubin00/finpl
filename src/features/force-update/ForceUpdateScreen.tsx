@@ -65,13 +65,18 @@ export function ForceUpdateScreen({ config, currentVersion }: ForceUpdateScreenP
           <ExpoImage source={FINN_STANDARD} accessible={false} style={styles.finn} contentFit="contain" />
           <Text style={[styles.title, RTL_STYLE]}>{config.title}</Text>
           <Text style={[styles.message, RTL_STYLE]}>{config.message}</Text>
+          {/* Pressable function-style `style` drops backgroundColor on Android
+              (RN bug). Wrap visible styling in an inner View so the blue CTA
+              renders on both platforms. */}
           <Pressable
             onPress={handleUpdate}
-            style={({ pressed }) => [styles.cta, pressed && { opacity: 0.88, transform: [{ scale: 0.98 }] }]}
+            style={({ pressed }) => [styles.ctaWrapper, pressed && { opacity: 0.88, transform: [{ scale: 0.98 }] }]}
             accessibilityRole="button"
             accessibilityLabel={config.ctaLabel}
           >
-            <Text style={styles.ctaText}>{config.ctaLabel}</Text>
+            <View style={styles.cta}>
+              <Text style={styles.ctaText}>{config.ctaLabel}</Text>
+            </View>
           </Pressable>
           <Text style={[styles.versionFootnote, RTL_STYLE]}>
             {`גרסה נוכחית: ${currentVersion} • נדרשת: ${config.minSupportedVersion}`}
@@ -122,6 +127,10 @@ const styles = StyleSheet.create({
     color: '#334155',
     lineHeight: 24,
     marginBottom: 24,
+  },
+  ctaWrapper: {
+    width: '100%',
+    borderRadius: 16,
   },
   cta: {
     width: '100%',
