@@ -21,6 +21,30 @@ import { registerLocalStore } from "../../lib/stores/registry";
 
 interface CompletedModulesState {
   completedIds: string[];
+  /**
+   * 2026-06-04: one-shot flag that gates the mod-0-1 split backfill.
+   *
+   * mod-0-1 ("מושגי יסוד פיננסיים") was split into mod-0-1 (short — bank /
+   * account / interest) + mod-0-1b (continuation — loan / credit / pension).
+   * Existing users who completed the PRE-split long mod-0-1 already saw all
+   * of that content, so we auto-mark mod-0-1b for them on the next launch.
+   *
+   * The flag is critical: without it, the same backfill would also fire for
+   * NEW users who legitimately finished the post-split short mod-0-1 — it
+   * would skip mod-0-1b for them and they'd never see the loan + pension
+   * cards. With the flag, the migration runs exactly ONCE per device, on
+   * the first rehydration after this code ships.
+   *
+   * Edge case NOT covered: a user who completed the long mod-0-1 on
+   * device A, then installs the new app fresh on device B. Their device-B
+   * local store starts empty, so the migration sees no mod-0-1 and writes
+   * nothing. Their server progress will still surface mod-0-1 as completed
+   * (via the React Query cache in useProgress), but mod-0-1b will look
+   * "untouched" on the chapter map. Fix would be a server-side backfill
+   * keyed on completion timestamp < deploy date. Punted for now — most
+   * users are single-device.
+   */
+  splitV1MigrationApplied: boolean;
   markCompleted: (id: string) => void;
   markManyCompleted: (ids: string[]) => void;
   reset: () => void;
@@ -30,6 +54,7 @@ export const useCompletedModulesStore = create<CompletedModulesState>()(
   persist(
     (set, get) => ({
       completedIds: [],
+      splitV1MigrationApplied: false,
 
       markCompleted: (id: string) => {
         if (!id) return;
@@ -45,15 +70,32 @@ export const useCompletedModulesStore = create<CompletedModulesState>()(
         if (merged.length !== current.length) set({ completedIds: merged });
       },
 
-      reset: () => set({ completedIds: [] }),
+      // Logout resets local progress AND the migration flag, so a new user
+      // signing in on the same device gets a fresh evaluation on next launch.
+      reset: () => set({ completedIds: [], splitV1MigrationApplied: false }),
     }),
     {
       name: "completed-modules-store-v1",
       storage: createJSONStorage(() => zustandStorage),
-      partialize: (state) => ({ completedIds: state.completedIds }),
+      partialize: (state) => ({
+        completedIds: state.completedIds,
+        splitV1MigrationApplied: state.splitV1MigrationApplied,
+      }),
       onRehydrateStorage: () => (state) => {
         if (!state) return;
         if (!Array.isArray(state.completedIds)) state.completedIds = [];
+        // One-shot mod-0-1 split backfill — see splitV1MigrationApplied
+        // docstring. Mutating state directly here is the canonical Zustand
+        // persist pattern; the next persist write captures the result.
+        if (!state.splitV1MigrationApplied) {
+          if (
+            state.completedIds.includes('mod-0-1') &&
+            !state.completedIds.includes('mod-0-1b')
+          ) {
+            state.completedIds = [...state.completedIds, 'mod-0-1b'];
+          }
+          state.splitV1MigrationApplied = true;
+        }
       },
     }
   )
