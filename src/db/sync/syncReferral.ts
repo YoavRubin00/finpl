@@ -24,23 +24,42 @@ export interface RedeemResult {
   bonusGranted: number;
 }
 
+export type RegisterCodeResult =
+  | { ok: true }
+  | { ok: false; reason: 'collision' | 'network' | 'invalid' };
+
 /**
  * Register the user's invite code on the server so that other users can
  * redeem it. Idempotent — safe to call repeatedly with the same code.
  *
- * Returns false on collision (the same code is already taken by another
- * user). Caller should regenerate locally and retry.
+ * Returns a discriminated result so the caller can distinguish a real
+ * code COLLISION (409) — which warrants regenerating the local code —
+ * from a transient NETWORK failure (timeout / 5xx / offline) — which
+ * absolutely must NOT regenerate the code (user report 2026-06-04:
+ * "הקישור להזמנה מתחלף בלי הפסקה" — the boolean-only API caused the
+ * store to mint a fresh code on every retry, including network errors,
+ * which the screen then re-displayed on every render).
  */
-export async function registerReferralCode(authId: string, referralCode: string): Promise<boolean> {
+export async function registerReferralCode(
+  authId: string,
+  referralCode: string,
+): Promise<RegisterCodeResult> {
   const base = getApiBase();
-  const res = await fetch(`${base}/api/referral/register-code`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ authId, referralCode }),
-  });
-  if (res.ok) return true;
-  // 409 = collision — caller regenerates. Other errors silently fail.
-  return false;
+  try {
+    const res = await fetch(`${base}/api/referral/register-code`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ authId, referralCode }),
+    });
+    if (res.ok) return { ok: true };
+    if (res.status === 409) return { ok: false, reason: 'collision' };
+    if (res.status === 400) return { ok: false, reason: 'invalid' };
+    // 5xx / unexpected status — treat as transient, do NOT regenerate.
+    return { ok: false, reason: 'network' };
+  } catch {
+    // Thrown fetch = offline / DNS / aborted — definitely transient.
+    return { ok: false, reason: 'network' };
+  }
 }
 
 /**
