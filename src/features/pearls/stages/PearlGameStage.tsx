@@ -74,7 +74,13 @@ export function PearlGameStage({ isActive, gameKey, macroEventId, onContinue, on
   // button below the fold (user report 2026-06-04: "אחרי ידיים של יהלום
   // לא רואים בכלל את כפתור התקדם"). Lifting the CTA to a sticky bar
   // OUTSIDE the ScrollView guarantees visibility regardless of card height.
-  const needsStickyContinue = gameKey === 'diamond-hands';
+  //
+  // Crowd-question has the same shape — it's an infinite-scroll card whose
+  // own internal sticky bar gets buried by the nested ScrollView setup
+  // (outer ScrollView here + inner ScrollView in the card). User report
+  // 2026-06-05: "בחכמת ההמונים אין כפתור התקדמות". Same fix: lift the
+  // continue to this stage's sticky bar.
+  const needsStickyContinue = gameKey === 'diamond-hands' || gameKey === 'crowd-question';
 
   const handleStickyContinue = (): void => {
     tapHaptic();
@@ -194,12 +200,12 @@ function renderGameCard(
       // (user report 2026-06-02: "לא רואים את כפתור המשך").
       return <DiamondHandsCard isActive={isActive} onContinue={onContinue} />;
     case 'crowd-question':
-      // Continue button is rendered INSIDE CrowdQuestionCard's ScrollView
-      // (passed via onContinue) so it always lands below the two explanation
-      // cards in scroll position. The PearlExternalGameWrap version was
-      // getting clipped on Android phones with the nav bar + pearl skip
-      // footer competing for the bottom strip (user report 2026-06-01).
-      return <CrowdQuestionCard isActive={isActive} onContinue={onContinue} />;
+      // Continue button lives at the PearlGameStage level as a sticky bar
+      // (see `needsStickyContinue` above) — the card's own internal sticky
+      // bar gets buried by the outer + inner ScrollView combo. NOT passing
+      // onContinue here so the card skips its internal CTA and only the
+      // outer sticky bar renders.
+      return <CrowdQuestionCard isActive={isActive} />;
     case 'payslip-bonus':
       return <PearlExternalGameWrap onContinue={onContinue}><PayslipBonusCard /></PearlExternalGameWrap>;
     case 'scenario-lab':
