@@ -2467,9 +2467,13 @@ export function LessonFlowScreen() {
     // survives stale/empty server refetches + cold starts (see useProgress.ts).
     useCompletedModulesStore.getState().markCompleted(moduleId);
 
-    // XP + coins
-    useEconomyUIStore.getState().addXP(MODULE_COMPLETE_XP, 'lesson_complete');
-    useEconomyUIStore.getState().addCoins(150, 'lesson');
+    // 2026-06-04: base XP + coins (30 XP + 150 coins) used to fire here.
+    // Moved to the chest onPress handler so the GlobalWealthHeader's flying
+    // animation fires AFTER the user taps the chest — not on summary-phase
+    // entry. Pre-tap flying made the chest feel passive (user complaint
+    // "rewards fly without me touching anything"). Telemetry + server sync
+    // below still fire on summary entry so completion records aren't lost
+    // for a user who exits before tapping.
 
     // Streak: idempotent per day, so calling on every lesson completion is safe.
     try { recordDailyActivity.mutate(); } catch (e) { if (__DEV__) console.warn('[streak] recordDailyActivity failed:', e); }
@@ -4375,6 +4379,15 @@ export function LessonFlowScreen() {
                                 }
                               }
                               const eco = useEconomyUIStore.getState();
+                              // 2026-06-04: base module-completion reward
+                              // moved out of completeModule() to here so the
+                              // GlobalWealthHeader's flying animation fires
+                              // on tap, not on summary-phase entry. The
+                              // !isReplay guard above already prevents this
+                              // from double-firing on a replayed module.
+                              eco.addXP(MODULE_COMPLETE_XP, 'lesson_complete');
+                              eco.addCoins(150, 'lesson');
+                              // Chest bonus reward on top of the base.
                               eco.addCoins(drop.rewards.coins, 'lesson');
                               eco.addXP(drop.rewards.xp, "chest_reward");
                               if (drop.rewards.gems > 0) eco.addGems(drop.rewards.gems);
