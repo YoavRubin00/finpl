@@ -1,5 +1,5 @@
 import React, { useEffect, useRef } from "react";
-import { View, Text, Pressable, StyleSheet, Dimensions } from "react-native";
+import { View, Text, Pressable, StyleSheet, Dimensions, ScrollView } from "react-native";
 import Animated, {
   FadeIn,
   FadeInUp,
@@ -129,51 +129,71 @@ export const FeedTradingNudgeCard = React.memo(function FeedTradingNudgeCard({
         style={StyleSheet.absoluteFill}
       />
 
-      <Animated.View entering={FadeIn.duration(400)} style={styles.card}>
-        <View style={styles.videoWrap} accessible={false}>
-          <VideoView
-            player={player}
-            style={styles.video}
-            nativeControls={false}
-            contentFit="cover"
-          />
-        </View>
+      {/* ScrollView prevents the 220x391 video + title + subtitle + CTA
+          + skip from overflowing the viewport on tighter Android phones
+          (user report 2026-06-04: "הפריים יוצא מהמסך"). flexGrow + center
+          keeps the card visually centered when there's room, switches to
+          scroll when there isn't. Mirrors FeedReferralNudgeCard pattern. */}
+      <ScrollView
+        style={styles.scroll}
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+        bounces={false}
+      >
+        <Animated.View entering={FadeIn.duration(400)} style={styles.card}>
+          <View style={styles.videoWrap} accessible={false}>
+            <VideoView
+              player={player}
+              style={styles.video}
+              nativeControls={false}
+              contentFit="cover"
+            />
+          </View>
 
-        <Text style={[styles.title, RTL_CENTER]}>ידע לבד לא מספיק</Text>
-        <Text style={[styles.subtitle, RTL_CENTER]}>
-          הגיע הזמן לפעול. הגשר מחבר את הלמידה לעולם האמיתי
-        </Text>
+          <Text style={[styles.title, RTL_CENTER]}>ידע לבד לא מספיק</Text>
+          <Text style={[styles.subtitle, RTL_CENTER]}>
+            הגיע הזמן לפעול. הגשר מחבר את הלמידה לעולם האמיתי
+          </Text>
 
-        <Animated.View
-          entering={FadeInUp.delay(280).duration(360)}
-          style={[styles.ctaGlow, glowStyle]}
-        >
-          <Pressable
-            onPress={handlePress}
-            accessibilityRole="button"
-            accessibilityLabel="בואו לגשר — לפתוח חשבון מסחר"
-            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-            style={({ pressed }) => [styles.cta, pressed && styles.ctaPressed]}
+          {/* CTA bg/border live on an inner View — Pressable's function-style
+              style prop drops the backgroundColor on Android, leaving white
+              text on a transparent card with no visible button (user report
+              2026-06-04: "הכפתור בואו לגשר צריך להיות בצבע כחול ונראה"). Same
+              workaround as LoadingBubble / PearlScenarioStage CTAs. */}
+          <Animated.View
+            entering={FadeInUp.delay(280).duration(360)}
+            style={[styles.ctaGlow, glowStyle]}
           >
-            <Text style={styles.ctaText}>בואו לגשר</Text>
-          </Pressable>
+            <Pressable
+              onPress={handlePress}
+              accessibilityRole="button"
+              accessibilityLabel="בואו לגשר — לפתוח חשבון מסחר"
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            >
+              {({ pressed }) => (
+                <View style={[styles.cta, pressed && styles.ctaPressed]}>
+                  <Text style={styles.ctaText}>בואו לגשר</Text>
+                </View>
+              )}
+            </Pressable>
+          </Animated.View>
+
+          {/* Pearl-flow skip — only visible when wired (i.e., we're inside a
+              pearl, not a standalone surface). Advances to next stage without
+              taking the CTA. */}
+          {onContinue ? (
+            <Pressable
+              onPress={handleSkip}
+              accessibilityRole="button"
+              accessibilityLabel="המשך לשלב הבא"
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              style={styles.skipBtn}
+            >
+              <Text style={styles.skipText}>אחר כך</Text>
+            </Pressable>
+          ) : null}
         </Animated.View>
-
-        {/* Pearl-flow skip — only visible when wired (i.e., we're inside a
-            pearl, not a standalone surface). Advances to next stage without
-            taking the CTA. */}
-        {onContinue ? (
-          <Pressable
-            onPress={handleSkip}
-            accessibilityRole="button"
-            accessibilityLabel="המשך לשלב הבא"
-            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-            style={styles.skipBtn}
-          >
-            <Text style={styles.skipText}>אחר כך</Text>
-          </Pressable>
-        ) : null}
-      </Animated.View>
+      </ScrollView>
     </View>
   );
 });
@@ -182,6 +202,12 @@ const styles = StyleSheet.create({
   container: {
     width: SCREEN_WIDTH,
     flex: 1,
+  },
+  scroll: {
+    flex: 1,
+  },
+  scrollContent: {
+    flexGrow: 1,
     alignItems: "center",
     justifyContent: "center",
     padding: 20,
