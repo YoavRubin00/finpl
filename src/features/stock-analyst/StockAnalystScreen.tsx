@@ -314,7 +314,7 @@ export function StockAnalystScreen(): React.ReactElement {
                 <View style={{ width: 180, height: 162, overflow: 'hidden' }}>
                   <ExpoImage
                     source={require('../../../assets/webp/fin-tablet-1.webp')}
-                    style={{ width: 180, height: 180, marginTop: -18 }}
+                    style={{ width: 180, height: 180, marginTop: -14 }}
                     contentFit="contain"
                   />
                 </View>

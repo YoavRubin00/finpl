@@ -85,7 +85,7 @@ export function SignupGateStep({ onSignupSuccess, onSkip, saveCollected, onEmail
           <ChevronRight size={26} color="#475569" />
         </Pressable>
       )}
-      <View style={{ flex: 1, paddingHorizontal: 24, justifyContent: "space-between", alignItems: "center", paddingVertical: 16 }}>
+      <View style={{ flex: 1, paddingHorizontal: 24, justifyContent: "flex-start", alignItems: "center", paddingTop: 16 }}>
         <View style={{ alignItems: "center", width: "100%" }}>
         <Animated.View entering={FadeIn.duration(400)} style={{ alignItems: "center", marginBottom: 16 }}>
           <LinearGradient
@@ -115,7 +115,7 @@ export function SignupGateStep({ onSignupSuccess, onSkip, saveCollected, onEmail
             ].map((text) => (
               <View key={text} style={{ flexDirection: "row-reverse", alignItems: "center", gap: 8 }}>
                 <Text style={{ fontSize: 14, fontWeight: "900", color: "#0ea5e9" }}>✓</Text>
-                <Text numberOfLines={1} allowFontScaling={false} style={{ fontSize: 13, fontWeight: "600", color: "#334155", writingDirection: "rtl", flex: 1 }}>
+                <Text allowFontScaling={false} style={{ fontSize: 13, fontWeight: "600", color: "#334155", writingDirection: "rtl", textAlign: "right", flex: 1 }}>
                   {text}
                 </Text>
               </View>
@@ -124,7 +124,7 @@ export function SignupGateStep({ onSignupSuccess, onSkip, saveCollected, onEmail
         </Animated.View>
         </View>
 
-        <Animated.View entering={FadeInDown.duration(400).delay(300)} style={{ width: "100%", gap: 10 }}>
+        <Animated.View entering={FadeInDown.duration(400).delay(300)} style={{ width: "100%", gap: 10, marginTop: 28 }}>
           {authError ? (
             <Text style={{ fontSize: 13, fontWeight: "700", color: "#dc2626", writingDirection: "rtl", textAlign: "center" }}>
               {authError}
@@ -241,10 +241,10 @@ export function SignupGateStep({ onSignupSuccess, onSkip, saveCollected, onEmail
               alignItems: "center",
               justifyContent: "center",
               borderRadius: 14,
-              backgroundColor: pressed ? "#7c8a9c" : "#94a3b8",
+              backgroundColor: pressed ? "#475569" : "#64748b",
               paddingVertical: 15,
               borderBottomWidth: 3,
-              borderBottomColor: "#64748b",
+              borderBottomColor: "#475569",
             })}
           >
             <Text style={{ fontSize: 16, fontWeight: "700", color: "#ffffff", writingDirection: "rtl", textAlign: "center" }}>
