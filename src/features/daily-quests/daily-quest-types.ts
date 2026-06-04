@@ -11,10 +11,10 @@ export interface DailyQuest {
 export const QUEST_XP_REWARD = 100;
 export const QUEST_COIN_REWARD = 300;
 
-/** PRO track, 2× rewards + guaranteed gem */
+/** PRO track, 2× rewards + guaranteed gems */
 export const QUEST_PRO_XP_MULTIPLIER = 2;
 export const QUEST_PRO_COIN_MULTIPLIER = 2;
-export const QUEST_PRO_GEMS_GUARANTEED = 1;
+export const QUEST_PRO_GEMS_GUARANTEED = 10;
 
 /** Additional variable reward on top of base XP/Coins.
  * Chance tuned below regular-chest rate (25%) to protect gem scarcity / monetization. */

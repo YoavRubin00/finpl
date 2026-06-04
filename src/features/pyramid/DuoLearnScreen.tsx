@@ -62,7 +62,6 @@ import { useReferralStore } from "../social/useReferralStore";
 import { AnimatedPressable } from "../../components/ui/AnimatedPressable";
 import { SwipeableModal } from "../../components/ui/SwipeableModal";
 import { NotificationPermissionBanner } from "../../components/ui/NotificationPermissionBanner";
-import { PostPricingNotificationBanner } from "../../components/ui/PostPricingNotificationBanner";
 import { NoFreezeUpsellBanner } from "../streak/NoFreezeUpsellBanner";
 import { StreakAtRiskBanner } from "../streak/StreakAtRiskBanner";
 import { StreakCalendarModal } from "../streak/StreakCalendarModal";
@@ -741,8 +740,12 @@ function ModuleNode({
         ]}
       >
         <View style={styles.nodeLabelPill}>
+          {/* Force the "— המשך" continuation node to break after "מושגי יסוד"
+              so it reads as two clean lines, scoped to the map label only. */}
           <Text style={styles.nodeLabelText} numberOfLines={2}>
-            {module.title}
+            {module.title === "מושגי יסוד פיננסיים — המשך"
+              ? "מושגי יסוד\nפיננסיים — המשך"
+              : module.title}
           </Text>
         </View>
       </View>
@@ -1112,6 +1115,10 @@ export function DuoLearnScreen() {
   const router = useRouter();
   const isWalkthroughActive = !useTutorialStore((s) => s.hasSeenAppWalkthrough);
   const walkthroughScreen = useTutorialStore((s) => s.walkthroughActiveScreen);
+  // Hold the notification-permission banner back until the guest register CTA
+  // has been handled (flag clears) so the push ask lands AFTER the register
+  // prompt. For registered users the flag is never armed → no-op.
+  const pendingPostWalkthroughCTA = useTutorialStore((s) => s.pendingPostWalkthroughCTA);
   const { data: economyData } = useEconomy();
   const { data: streakData } = useStreak();
   const xp = economyData?.xp ?? 0;
@@ -1606,12 +1613,11 @@ export function DuoLearnScreen() {
 
   return (
     <View style={styles.root}>
-      {/* Post-pricing notification banner — narrow window: free user
-          finished mod-0-1, opened /pricing, came back, hasn't started
-          mod-0-2 yet. Stronger framing than the generic banner below;
-          when this is eligible the generic banner self-defers. */}
-      {!isWalkthroughActive && <PostPricingNotificationBanner />}
-      {!isWalkthroughActive && <NotificationPermissionBanner />}
+      {/* Unified notification-permission banner — the SAME "אתם מפספסים
+          התראות ממני" prompt shows for everyone post-walkthrough. Held back
+          until the guest register CTA is handled (pendingPostWalkthroughCTA
+          clears) so it lands after the register prompt, not competing. */}
+      {!isWalkthroughActive && !pendingPostWalkthroughCTA && <NotificationPermissionBanner />}
       {!isWalkthroughActive && <StreakAtRiskBanner />}
       {!isWalkthroughActive && <NoFreezeUpsellBanner />}
       <StreakCalendarModal visible={showStreakCalendar} onClose={() => setShowStreakCalendar(false)} />
