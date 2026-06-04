@@ -76,8 +76,8 @@
       },
       "android": {
         "serviceAccountKeyPath": "./.secrets/google-play-service-account.json",
-        "track": "internal",
-        "releaseStatus": "draft"
+        "track": "production",
+        "releaseStatus": "completed"
       }
     },
     "testflight": {
