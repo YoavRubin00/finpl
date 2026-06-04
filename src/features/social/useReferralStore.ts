@@ -105,18 +105,27 @@ export const useReferralStore = create<ReferralState>()(
         if (!state.referralCode) {
           set({ referralCode: generateReferralCode() });
         }
-        // Try up to 3 times with regeneration on collision.
+        // Try up to 3 times. Regenerate ONLY on a real collision (409);
+        // on a network failure / 5xx we bail without mutating the code,
+        // because the previous boolean-API was rolling over to a fresh
+        // code on every network error and the screen rendered the new
+        // code each time (user report 2026-06-04: "הקישור מתחלף בלי
+        // הפסקה"). A stable code that re-tries next session is far
+        // safer than a code that flickers in front of the user.
         for (let attempt = 0; attempt < 3; attempt++) {
-          const ok = await registerReferralCode(authId, get().referralCode);
-          if (ok) {
+          const result = await registerReferralCode(authId, get().referralCode);
+          if (result.ok) {
             set({ isRegisteredOnServer: true });
             return;
           }
-          // Collision — regenerate and retry.
+          if (result.reason !== 'collision') {
+            // Transient/invalid — keep the code as-is. Next refresh on this
+            // device retries registration with the same value.
+            return;
+          }
+          // True collision — regenerate and retry up to the loop cap.
           set({ referralCode: generateReferralCode() });
         }
-        // Network down or persistent failure — silently keep the local code.
-        // Next refresh will retry registration.
       },
 
       refresh: async (authId) => {

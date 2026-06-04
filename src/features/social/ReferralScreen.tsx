@@ -90,36 +90,47 @@ export function ReferralScreen() {
   const refresh = useReferralStore((s) => s.refresh);
   const collectFromServer = useReferralStore((s) => s.collectFromServer);
   const registerCodeWithServer = useReferralStore((s) => s.registerCodeWithServer);
-  const isRegisteredOnServer = useReferralStore((s) => s.isRegisteredOnServer);
 
   const userEmail = useAuthStore((s) => s.email);
 
   const inviteUrl = buildInviteUrl(referralCode);
 
-  // On mount: register code with server (idempotent) + fetch latest state.
-  // Fire `referral_screen_viewed` exactly once per mount (not on every store
-  // re-render) so the funnel denominator stays clean. Sentinel ref avoids
-  // double-fire from React 18 strict mode dev-mode double-mount.
+  // On mount (and whenever the auth identity changes): register the code
+  // with the server (idempotent) + fetch latest state ONCE.
+  //
+  // CRITICAL: this effect must depend ONLY on the user identity, never on
+  // state that `refresh()` or `registerCodeWithServer()` themselves mutate
+  // (referralCode, friends count, dividendAvailable, alreadyCollectedToday,
+  // isRegisteredOnServer). The previous wider dep list created an infinite
+  // refresh loop — each successful refresh updated derived state → effect
+  // re-ran → another refresh → … When combined with the pre-fix
+  // registerCodeWithServer behavior of regenerating the code on every
+  // network failure, this caused the visible "הקישור מתחלף בלי הפסקה" bug
+  // (user report 2026-06-04). Read snapshot state via getState() inside the
+  // effect so the analytics payload still reflects current values.
   const viewedFiredRef = React.useRef(false);
+  const registrationFiredRef = React.useRef(false);
   useEffect(() => {
     if (!userEmail) return;
-    if (!isRegisteredOnServer) {
+    if (!registrationFiredRef.current && !useReferralStore.getState().isRegisteredOnServer) {
+      registrationFiredRef.current = true;
       registerCodeWithServer(userEmail).catch(() => { /* non-fatal */ });
     }
     refresh(userEmail).catch(() => { /* non-fatal */ });
     if (!viewedFiredRef.current) {
       viewedFiredRef.current = true;
+      const snap = useReferralStore.getState();
       track({
         name: 'referral_screen_viewed',
         props: {
-          has_code: !!referralCode,
-          friends_count: referredFriends.length,
-          dividend_available: dividendAvailable,
-          already_collected_today: alreadyCollectedToday,
+          has_code: !!snap.referralCode,
+          friends_count: snap.referredFriends.length,
+          dividend_available: snap.dividendAvailable,
+          already_collected_today: snap.alreadyCollectedToday,
         },
       });
     }
-  }, [userEmail, isRegisteredOnServer, registerCodeWithServer, refresh, referralCode, referredFriends.length, dividendAvailable, alreadyCollectedToday]);
+  }, [userEmail, registerCodeWithServer, refresh]);
 
   const handleCopy = useCallback(async () => {
     tapHaptic();
