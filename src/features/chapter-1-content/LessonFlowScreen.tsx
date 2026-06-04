@@ -2302,6 +2302,14 @@ export function LessonFlowScreen() {
         module_id: mod.id,
         chapter_id: chapterId ?? null,
         is_replay: isReplay,
+        // 2026-06-04: mod-0-1 was split into mod-0-1 (short, first half)
+        // + mod-0-1b (continuation). module_variant lets PostHog funnels
+        // measure the NEW short module's completion rate without mixing
+        // with the historical long-version data. Absent for every other
+        // module so existing dashboards keep working unchanged.
+        ...(mod.id === 'mod-0-1' ? { module_variant: 'short' } :
+            mod.id === 'mod-0-1b' ? { module_variant: 'continuation' } :
+            {}),
       });
     }
   }, [mod, chapterId, isReplay]);
@@ -2461,6 +2469,12 @@ export function LessonFlowScreen() {
       chapter_id: chapterId ?? '',
       is_first_lesson: totalCompletedBefore === 0,
       total_completed: totalCompletedBefore + 1,
+      // 2026-06-04: pair with lesson_started.module_variant so the
+      // post-split mod-0-1 + mod-0-1b can be funneled separately from
+      // the historical long-version data. See lesson_started above.
+      ...(moduleId === 'mod-0-1' ? { module_variant: 'short' } :
+          moduleId === 'mod-0-1b' ? { module_variant: 'continuation' } :
+          {}),
     });
 
     // Durable local completion record — unlocks the next module immediately and
