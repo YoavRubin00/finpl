@@ -70,15 +70,16 @@ export function DiamondHandsCard({ isActive, onContinue }: Props) {
   }, []);
 
   return (
-    <View
-      style={{
-        flex: 1,
-        justifyContent: "center",
-        alignItems: "center",
-        paddingHorizontal: 24,
-      }}
-    >
-      <Animated.View
+    <View style={{ flex: 1 }}>
+      <View
+        style={{
+          flex: 1,
+          justifyContent: "center",
+          alignItems: "center",
+          paddingHorizontal: 24,
+        }}
+      >
+        <Animated.View
         style={[
           {
             width: "100%",
@@ -207,43 +208,46 @@ export function DiamondHandsCard({ isActive, onContinue }: Props) {
             )}
           </View>
         </LinearGradient>
-      </Animated.View>
+        </Animated.View>
+      </View>
 
-      {/* Pearl-flow Continue — rendered INSIDE the card area so it's always
-          visible. The wrapper's bottom Continue used to get clipped by the
-          Android nav bar + pearl skip footer (same bug fixed for
-          CrowdQuestionCard 2026-06-01). Same deep-blue palette as the rest
-          of the app's primary CTAs. */}
+      {/* Pinned bottom Continue — sits in a fixed footer bar OUTSIDE the
+          centered card area, so it's always fully visible at the bottom of
+          the stage instead of floating mid-screen / clipped on tall phones.
+          Mirrors CrowdQuestionCard's stickyBar fix; the prior in-card
+          centered button rendered faint and cut off on 19.5:9 screens
+          (user report 2026-06-04: "לא רואים את כפתור המשך"). Full-width
+          deep-blue primary CTA. */}
       {onContinue && (
-        <Pressable
-          onPress={() => { tapHaptic(); onContinue(); }}
-          accessibilityRole="button"
-          accessibilityLabel="המשך לשלב הבא"
-          style={({ pressed }) => ({
-            marginTop: 16,
-            paddingVertical: 14,
-            paddingHorizontal: 28,
-            borderRadius: 14,
-            backgroundColor: '#1d4ed8',
-            borderBottomWidth: 4,
-            borderBottomColor: '#1e3a8a',
-            alignItems: 'center',
-            opacity: pressed ? 0.9 : 1,
-            transform: pressed ? [{ scale: 0.98 }] : undefined,
-          })}
-        >
-          <Text
-            style={{
-              color: '#ffffff',
-              fontSize: 16,
-              fontWeight: '900',
-              writingDirection: 'rtl',
-            }}
-            allowFontScaling={false}
+        <View style={{ paddingHorizontal: 20, paddingTop: 10, paddingBottom: 10 }}>
+          <Pressable
+            onPress={() => { tapHaptic(); onContinue(); }}
+            accessibilityRole="button"
+            accessibilityLabel="המשך"
+            style={({ pressed }) => ({
+              paddingVertical: 16,
+              borderRadius: 14,
+              backgroundColor: '#1d4ed8',
+              borderBottomWidth: 4,
+              borderBottomColor: '#1e3a8a',
+              alignItems: 'center',
+              opacity: pressed ? 0.9 : 1,
+              transform: pressed ? [{ scale: 0.99 }] : undefined,
+            })}
           >
-            המשך לשלב הבא ←
-          </Text>
-        </Pressable>
+            <Text
+              style={{
+                color: '#ffffff',
+                fontSize: 16,
+                fontWeight: '900',
+                writingDirection: 'rtl',
+              }}
+              allowFontScaling={false}
+            >
+              המשך
+            </Text>
+          </Pressable>
+        </View>
       )}
 
       <DiamondHandsModal visible={open} onClose={handleClose} />
