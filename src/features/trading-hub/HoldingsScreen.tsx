@@ -16,7 +16,7 @@ import { ASSET_BY_ID, formatAssetPrice } from './tradingHubData';
 import { useTradingStore } from './useTradingStore';
 import { useEconomy } from '../economy/useEconomy';
 import { useEconomyUIStore } from '../economy/useEconomyUIStore';
-import { clearPriceCache, fetchLatestPrice, fetchPreviousClose } from './marketApiService';
+import { clearPriceCache, fetchLatestPrice, fetchPreviousClose, isAssetPriceLive } from './marketApiService';
 import { tapHaptic, successHaptic } from '../../utils/haptics';
 import type { ActivePosition } from './tradingHubTypes';
 
@@ -111,6 +111,9 @@ export function HoldingsScreen() {
         for (const p of positions) {
             const prevClose = previousClosesByAsset[p.assetId];
             if (!prevClose || p.entryPrice <= 0 || p.currentPrice <= 0) continue;
+            // Skip assets whose price wasn't fetched live this session — the
+            // displayed price is stale/mock and would yield a bogus daily move.
+            if (!isAssetPriceLive(p.assetId)) continue;
             // Exclude positions whose implied single-session move is unrealistic
             // (mismatched snapshot) so they don't pollute the portfolio daily change.
             const impliedDailyMove = Math.abs((p.currentPrice - prevClose) / prevClose) * 100;
@@ -230,7 +233,11 @@ export function HoldingsScreen() {
                                 // user opened the position. Direction sign flips for shorts.
                                 const prevClose = previousClosesByAsset[pos.assetId];
                                 let dailyPct: number | null = null;
-                                if (prevClose && prevClose > 0 && pos.currentPrice > 0) {
+                                // Only show a daily % when this asset's price was fetched
+                                // live this session — otherwise current vs previous-close
+                                // are stale/mock and produce an impossible move (e.g. an
+                                // 11% "daily" jump on QQQ). Suppress rather than mislead.
+                                if (isAssetPriceLive(pos.assetId) && prevClose && prevClose > 0 && pos.currentPrice > 0) {
                                     const rawChange = (pos.currentPrice - prevClose) / prevClose;
                                     const pct = pos.type === 'buy' ? rawChange * 100 : -rawChange * 100;
                                     // Sanity guard: a >25% single-session move is almost always a

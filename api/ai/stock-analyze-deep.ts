@@ -6,6 +6,7 @@ import {
   type StockHorizon,
 } from '../_shared/stockAnalystPrompt';
 import { StockDeepResponseSchema } from '../_shared/stockAnalystSchemas';
+import { searchPerplexityMany, formatGroundingBlock } from '../_shared/perplexitySearch';
 
 /**
  * POST /api/ai/stock-analyze-deep
@@ -77,6 +78,52 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const companyName = typeof body.companyName === 'string' ? body.companyName.slice(0, 80) : ticker;
     const exchange = typeof body.exchange === 'string' ? body.exchange.slice(0, 16) : 'NASDAQ';
 
+    // Grounding fan-out: 4 parallel Perplexity Search queries for the
+    // factual fields Opus's training cutoff (Jan 2026) can't answer
+    // accurately. The 12s budget keeps us well under the 120s Opus
+    // thinking window — if Perplexity is slow or down we degrade to
+    // no-grounding rather than block the whole analysis.
+    //
+    // Query labels are referenced again in the prompt so Opus knows
+    // which results map to which schema fields.
+    const groundingController = new AbortController();
+    const groundingTimeout = setTimeout(() => groundingController.abort(), 12_000);
+    let groundingBlock = '';
+    try {
+      const searches = await searchPerplexityMany(
+        [
+          {
+            label: 'insider-activity',
+            query: `${ticker} ${companyName} insider transactions buying selling SEC Form 4 last 6 months`,
+            maxResults: 5,
+          },
+          {
+            label: 'upcoming-catalysts',
+            query: `${ticker} ${companyName} next earnings date upcoming catalysts product launches 2026`,
+            maxResults: 5,
+          },
+          {
+            label: 'analyst-targets',
+            query: `${ticker} ${companyName} analyst price target consensus Wall Street rating changes recent`,
+            maxResults: 5,
+          },
+          {
+            label: 'sentiment-news',
+            query: `${ticker} ${companyName} stock news market sentiment last two weeks`,
+            maxResults: 5,
+          },
+        ],
+        { signal: groundingController.signal }
+      );
+      groundingBlock = formatGroundingBlock(searches);
+    } catch (err) {
+      console.warn(
+        `[stock-analyze-deep] grounding failed for ${ticker}: ${err instanceof Error ? err.message : 'unknown'}`
+      );
+    } finally {
+      clearTimeout(groundingTimeout);
+    }
+
     const userPrompt = [
       `טיקר: ${ticker}`,
       `שם חברה: ${companyName}`,
@@ -91,6 +138,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       body.marketContext?.avgVolume !== undefined
         ? `נפח ממוצע: ${body.marketContext.avgVolume.toLocaleString()}`
         : '',
+      '',
+      groundingBlock
+        ? `--- מקורות web עדכניים (מ-Perplexity Search) ---\n${groundingBlock}\n--- סוף מקורות ---`
+        : '--- לא הצלחנו למשוך מקורות web עדכניים. סמן כ"לא ידוע" כל שדה עובדתי שאתה לא יכול לתמוך בו מהקונטקסט שלעיל. ---',
       '',
       'החזר ניתוח מעמיק לפי הסכמה. וודא עקביות בין conviction / verdict / ranking / ציוני המשנה.',
       'זכור: כללי ברזל משפטיים, אסור לתת הוראת פעולה ספציפית.',
