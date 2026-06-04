@@ -2439,6 +2439,7 @@ export function ProfilingFlow({ mode = "onboarding", onRedoComplete }: Profiling
   // see comment at the call site in handleDone for rationale.
   const { data: streakData } = useStreak();
   const completeOnboarding = useAuthStore((s) => s.completeOnboarding);
+  const seedProfile = useAuthStore((s) => s.seedProfile);
   const enterGuestMode = useAuthStore((s) => s.enterGuestMode);
   const updateProfile = useAuthStore((s) => s.updateProfile);
   const devResetProgress = useAuthStore((s) => s.devResetProgress);
@@ -2767,7 +2768,14 @@ export function ProfilingFlow({ mode = "onboarding", onRedoComplete }: Profiling
             if (existingProfile) {
               updateProfile(seed);
             } else {
-              completeOnboarding(seed);
+              // Seed the profile WITHOUT completing onboarding. Using
+              // completeOnboarding here flipped hasCompletedOnboarding=true
+              // before the OAuth prompt, so useGoogleAuth/useAppleAuth routed
+              // to /(tabs) (completed=true) and skipped the celebration → streak
+              // → mod-0-1 sequence. seedProfile lets the post-OAuth re-mount
+              // detect profile.financialDream and resume at "celebration" while
+              // the flag stays false until enterFirstModule.
+              seedProfile(seed);
             }
           }}
           // Email path: must mark onboarding complete with the FULL collected
@@ -2778,9 +2786,15 @@ export function ProfilingFlow({ mode = "onboarding", onRedoComplete }: Profiling
             if (!isAuthenticated) {
               enterGuestMode();
             }
+            // Seed (don't complete) so the post-register re-mount of this flow
+            // detects profile.financialDream and resumes at "celebration"
+            // (→ streak → mod-0-1). Completing here would flip the flag and
+            // skip the streak. RegisterScreen, told via ?onboarding=1, calls
+            // convertGuestToUser with completeOnboarding:false to match, and
+            // returns to /(auth)/onboarding instead of /(tabs).
             // null for deferred-question fields — same reason as
             // enterFirstModule above.
-            completeOnboarding({
+            seedProfile({
               displayName,
               financialDream: collected.financialDream ?? null,
               financialGoal: collected.financialGoal ?? "unsure",
@@ -2795,7 +2809,7 @@ export function ProfilingFlow({ mode = "onboarding", onRedoComplete }: Profiling
               avatarId: collected.avatarId ?? null,
               ownedAvatars: [],
             });
-            router.push(`/(auth)/register?returnTo=${encodeURIComponent("/")}` as never);
+            router.push(`/(auth)/register?returnTo=${encodeURIComponent("/(auth)/onboarding")}&onboarding=1` as never);
           }}
         />}
         {/* Edit-only steps reachable from ProfileSummaryScreen → editSummaryStep.
