@@ -99,7 +99,7 @@ export function SignupGateStep({ onSignupSuccess, onSkip, saveCollected, onEmail
             {"כל הכבוד! 🎉"}
           </Text>
           <Text style={{ fontSize: 15, fontWeight: "600", color: "#475569", writingDirection: "rtl", textAlign: "center", lineHeight: 24, marginBottom: 14 }}>
-            {"שמור את ההתקדמות שלך"}
+            {"שמרו את ההתקדמות שלכם"}
           </Text>
           {/* Value-prop bullets — explicit answer to "why register". Keeps
               the gate informative without out-shouting the buttons below. */}
@@ -238,9 +238,6 @@ export function SignupGateStep({ onSignupSuccess, onSkip, saveCollected, onEmail
           >
             <Text style={{ fontSize: 16, fontWeight: "700", color: "#1e293b", writingDirection: "rtl", textAlign: "center" }}>
               {"המשך כאורח"}
-            </Text>
-            <Text style={{ fontSize: 11, fontWeight: "500", color: "#94a3b8", writingDirection: "rtl", textAlign: "center", marginTop: 2 }}>
-              {"ההתקדמות תישמר רק במכשיר הזה"}
             </Text>
           </Pressable>
         </Animated.View>
