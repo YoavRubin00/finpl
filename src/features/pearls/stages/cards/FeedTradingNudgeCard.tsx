@@ -198,6 +198,12 @@ export const FeedTradingNudgeCard = React.memo(function FeedTradingNudgeCard({
   );
 });
 
+// Modest ~10% zoom-out across the card (user request 2026-06-05: "תצמצם
+// בטיפה את המסך... זום אאוט קטן"). The card was triggering a few px of
+// vertical scroll on common Android viewports because the 220×391 video +
+// 24pt title + 16pt CTA padding combined to just exceed the pearl pager
+// height. Shrinking each ingredient by ~10% gets everything visible at
+// once on the same phones without losing readability or impact.
 const styles = StyleSheet.create({
   container: {
     width: SCREEN_WIDTH,
@@ -210,36 +216,36 @@ const styles = StyleSheet.create({
     flexGrow: 1,
     alignItems: "center",
     justifyContent: "center",
-    padding: 20,
+    padding: 14,
   },
   card: {
     width: "100%",
     maxWidth: 360,
     backgroundColor: "rgba(15, 23, 42, 0.55)",
     borderRadius: 24,
-    padding: 20,
+    padding: 16,
     borderWidth: 2,
     borderColor: "rgba(56, 189, 248, 0.35)",
     alignItems: "center",
-    gap: 14,
+    gap: 10,
   },
   videoWrap: {
-    width: 220,
-    height: 391,
+    width: 198,
+    height: 352,
     borderRadius: 18,
     overflow: "hidden",
   },
   video: { width: "100%", height: "100%" },
   title: {
     color: "#f0f9ff",
-    fontSize: 24,
+    fontSize: 22,
     fontWeight: "900",
   },
   subtitle: {
     color: "#bae6fd",
-    fontSize: 15,
+    fontSize: 14,
     fontWeight: "600",
-    lineHeight: 22,
+    lineHeight: 20,
     paddingHorizontal: 8,
   },
   ctaGlow: {
@@ -248,24 +254,24 @@ const styles = StyleSheet.create({
     shadowRadius: 20,
     shadowOffset: { width: 0, height: 0 },
     elevation: 14,
-    marginTop: 4,
+    marginTop: 2,
   },
   cta: {
     backgroundColor: "#0ea5e9",
     borderRadius: 16,
-    paddingHorizontal: 36,
-    paddingVertical: 16,
+    paddingHorizontal: 30,
+    paddingVertical: 14,
     borderBottomWidth: 4,
     borderBottomColor: "#0369a1",
   },
   ctaPressed: { opacity: 0.85, transform: [{ scale: 0.98 }] },
   ctaText: {
     color: "#ffffff",
-    fontSize: 18,
+    fontSize: 17,
     fontWeight: "900",
     letterSpacing: 0.5,
     writingDirection: "rtl",
   },
-  skipBtn: { paddingVertical: 8, paddingHorizontal: 14, marginTop: 4 },
-  skipText: { color: "rgba(186,230,253,0.7)", fontSize: 14, fontWeight: "700", writingDirection: "rtl" as const },
+  skipBtn: { paddingVertical: 6, paddingHorizontal: 14, marginTop: 2 },
+  skipText: { color: "rgba(186,230,253,0.7)", fontSize: 13, fontWeight: "700", writingDirection: "rtl" as const },
 });
