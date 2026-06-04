@@ -3,11 +3,14 @@ import type { ModuleIntroConfig } from './ModuleIntroShort';
 export const MODULE_INTRO_CONFIGS: Record<string, ModuleIntroConfig> = {
   // 2026-05-30 swap: financial-basics content (formerly mod-0-2) now lives at
   // mod-0-1 (the first-slot). This intro config follows the content.
+  // 2026-06-04 split: הלוואה/אשראי + פנסיה הועברו ל-mod-0-1b. השורה
+  // השלישית עודכנה מ"פנסיה 18.5%" ל"פיקדון 5%" כדי שלא תוצג סטטיסטיקה
+  // שלא תתכסה במודולה הזו. הפנסיה תוצג ב-mod-0-1b.
   'mod-0-1': {
     phase0Rows: [
       { label: 'בנק:', value: '₪0 ריבית', note: 'על עו"ש' },
       { label: 'מינוס:', value: 'עד 15%', note: 'ריבית שנתית' },
-      { label: 'פנסיה:', value: '18.5%', note: 'מהמשכורת' },
+      { label: 'פיקדון:', value: '~5%', note: 'ריבית שנתית' },
     ],
     phase1Emoji: '💸',
     phase1Stat: 'הבנק גובה ריבית על המינוס שלך,\nאבל נותן 0% על הפלוס',
