@@ -33,6 +33,7 @@ import { useIsPro, useSyncFromRevenueCat } from "./useSubscription";
 import { useUsageStore } from "./useUsageStore";
 import { useAuthStore } from "../auth/useAuthStore";
 import { ParentalConsentGate } from "../legal/ParentalConsentGate";
+import { ParentalEmailModal } from "../legal/ParentalEmailModal";
 import { selectHasActiveParentalConsent, useParentalConsentStore } from "../legal/useParentalConsent";
 import { getOffering, purchasePackage, RC_ENTITLEMENT_PRO, restorePurchases } from "../../services/revenueCat";
 import type { PurchasesPackage } from "../../services/revenueCat";
@@ -189,17 +190,34 @@ export function PricingScreen() {
   const isCurrentlyPro = useIsPro();
   const hasSeenProWelcome = useUsageStore((s) => s.hasSeenProWelcome);
   const displayName = useAuthStore((s) => s.displayName);
-  // Minor users (ageGroup === 'minor' = 16-17) can purchase Pro only after
-  // a parent has confirmed consent via the ParentalConsentGate flow. The
-  // gate replaces the upgrade CTA until status === 'confirmed'; once
-  // confirmed, the regular CTA reappears and handleUpgrade proceeds.
-  // Israeli Capacity Act sec. 4-6 — parent can void any minor's ongoing
-  // transaction made without their consent. With consent on file, the
-  // purchase is binding.
+  // Minor users (ageGroup === 'minor' = 16-17) take one of two flows:
+  //
+  //   • Hybrid (default) — quick email modal collects parent's address,
+  //     purchase proceeds immediately, parent gets a post-purchase email
+  //     with a one-click revoke link. UX-friendly.
+  //
+  //   • Hard gate (fallback) — full ParentalConsentGate: parent must
+  //     click an emailed confirm link BEFORE purchase. Used only after
+  //     a previous revoke (parent already showed they want upfront control).
   const isMinor = useAuthStore((s) => s.profile?.ageGroup === 'minor');
   const hasParentalConsent = useParentalConsentStore(selectHasActiveParentalConsent);
-  const minorBlocksPurchase = isMinor && !hasParentalConsent;
+  const consentStatus = useParentalConsentStore((s) => s.status);
+  const notifyPurchase = useParentalConsentStore((s) => s.notifyPurchase);
+  const refreshConsentStatus = useParentalConsentStore((s) => s.refreshStatus);
+  // After a previous revoke, fall back to Hard gate (parent already proved
+  // they want upfront control). Any other state (none/pending/expired/
+  // confirmed) uses Hybrid.
+  const useHardGateFallback = isMinor && consentStatus === 'revoked';
+  const minorNeedsHybridModal = isMinor && !hasParentalConsent && !useHardGateFallback;
+  const [emailModalVisible, setEmailModalVisible] = useState(false);
+  const [pendingPurchaseAfterEmail, setPendingPurchaseAfterEmail] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+
+  // Fetch latest consent state on mount so we route correctly even after the
+  // user navigates away and comes back.
+  useEffect(() => {
+    if (isMinor) void refreshConsentStatus({ force: true });
+  }, [isMinor, refreshConsentStatus]);
   const [activePackage, setActivePackage] = useState<PurchasesPackage | null>(null);
   const { mutateAsync: syncFromRC } = useSyncFromRevenueCat();
 
@@ -267,15 +285,26 @@ export function PricingScreen() {
       Alert.alert("שגיאה", "יש להתחבר כדי להירשם.");
       return;
     }
-    // Defense-in-depth: UI already swaps the CTA for ParentalConsentGate
-    // when a minor lacks active consent. Guard the action too in case a
-    // future call-site bypasses the UI.
-    if (minorBlocksPurchase) {
+    // Hard-gate fallback (after a previous revoke): the parent must click
+    // the confirm link in their email BEFORE we let the purchase happen.
+    // The CTA is replaced by ParentalConsentGate in this case, but we
+    // guard the action too in case a future call-site bypasses the UI.
+    if (useHardGateFallback && !hasParentalConsent) {
       Alert.alert(
         "נדרש אישור הורה",
         "רכישת מנוי לגיל 16–17 דורשת אישור הורה. השלם/השלימי את האישור בלוח הירוק למטה.",
         [{ text: "הבנתי" }],
       );
+      return;
+    }
+    // Hybrid flow: minor without an active consent row → first collect
+    // the parent's email via the modal. After submission, this same
+    // handleUpgrade is called again with the consent row in place, and
+    // we fall through to RevenueCat. Set the pending flag so the modal's
+    // success callback knows to fire RC immediately.
+    if (minorNeedsHybridModal) {
+      setPendingPurchaseAfterEmail(true);
+      setEmailModalVisible(true);
       return;
     }
 
@@ -324,6 +353,14 @@ export function PricingScreen() {
         // breakdown=is_pro keep returning them as Free even after the purchase.
         setPersonProperties({ is_pro: true });
         await syncFromRC(customerInfo);
+        // Hybrid flow: minor just bought Pro — flip the pending consent row
+        // to 'confirmed' on the server and fire the post-purchase email to
+        // the parent (with one-click revoke link). Fire-and-forget so a
+        // network error here doesn't block the purchase celebration. The
+        // server is idempotent and the next refreshStatus will reconcile.
+        if (isMinor) {
+          void notifyPurchase().catch(() => { /* non-fatal */ });
+        }
         // Standard FB / GA4 purchase event — feeds Meta Ads + Google Ads
         // optimization (App Campaign for Subscribers, Advantage+ Conversion).
         logPurchase(pkg.product.price, pkg.product.currencyCode, {
@@ -367,7 +404,7 @@ export function PricingScreen() {
     } finally {
       setIsLoading(false);
     }
-  }, [displayName, minorBlocksPurchase, syncFromRC, hasSeenProWelcome, router, trackConversion, trialDays, returnTo]);
+  }, [displayName, useHardGateFallback, hasParentalConsent, minorNeedsHybridModal, isMinor, notifyPurchase, syncFromRC, hasSeenProWelcome, router, trackConversion, trialDays, returnTo]);
 
   const handleRestore = useCallback(async () => {
     setIsLoading(true);
@@ -510,7 +547,9 @@ export function PricingScreen() {
               <View style={styles.currentPlanBadge}>
                 <Text style={styles.currentPlanText}>✦ המנוי שלכם פעיל</Text>
               </View>
-            ) : minorBlocksPurchase ? (
+            ) : useHardGateFallback && !hasParentalConsent ? (
+              // Hard-gate fallback after a previous revoke: parent must
+              // pre-confirm via email before the CTA is shown again.
               <ParentalConsentGate />
             ) : (
               <>
@@ -623,6 +662,28 @@ export function PricingScreen() {
           </View>
         </View>
       </View>
+      {/* Hybrid flow: quick email-collection modal for minors with no
+          existing consent row. Submission writes the pending row + fires
+          handleUpgrade so the RC paywall opens immediately. */}
+      <ParentalEmailModal
+        visible={emailModalVisible}
+        onCancel={() => {
+          setEmailModalVisible(false);
+          setPendingPurchaseAfterEmail(false);
+        }}
+        onEmailSubmitted={() => {
+          setEmailModalVisible(false);
+          if (pendingPurchaseAfterEmail) {
+            setPendingPurchaseAfterEmail(false);
+            // Re-enter handleUpgrade now that the consent row exists; the
+            // minorNeedsHybridModal guard at the top will be false this
+            // pass (consent status flipped to 'pending') so we fall
+            // through to RevenueCat purchase. Small RAF defer so React
+            // commits the state update before re-entry.
+            requestAnimationFrame(() => { void handleUpgrade(); });
+          }
+        }}
+      />
     </View>
   );
 }

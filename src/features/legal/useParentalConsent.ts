@@ -42,11 +42,29 @@ interface ParentalConsentSnapshot {
 
 interface ParentalConsentState extends ParentalConsentSnapshot {
   /**
-   * Send a parental-consent request to the server. The server creates the
-   * row + sends the email. We immediately reflect status='pending' so the
-   * UI updates without a round-trip; the next refreshStatus() will reconcile.
+   * Send a parental-consent request to the server.
+   *
+   * - mode='hybrid' (default): row is created on the server, NO email is
+   *   sent yet. The caller should immediately fire RevenueCat purchase
+   *   and, on success, call notifyPurchase() to send the post-purchase
+   *   email to the parent. This is the default Hybrid flow.
+   *
+   * - mode='hard_gate': classic flow. Row is created AND the email is
+   *   sent immediately, the user must wait for the parent to confirm
+   *   before purchase becomes available. Used as a fallback after a
+   *   previous revoke (parent already showed they want gating up-front).
    */
-  requestConsent: (parentEmail: string) => Promise<{ ok: boolean; error?: string }>;
+  requestConsent: (
+    parentEmail: string,
+    mode?: 'hybrid' | 'hard_gate',
+  ) => Promise<{ ok: boolean; error?: string }>;
+  /**
+   * Hybrid-flow second leg. Fired by the PricingScreen RIGHT AFTER the
+   * RevenueCat purchase succeeds. Server flips the pending row to
+   * 'confirmed' and sends the parent the post-purchase notification email
+   * with a one-click revoke link.
+   */
+  notifyPurchase: () => Promise<{ ok: boolean; error?: string }>;
   /** Refetch status from server. Throttled to once per 30 seconds. */
   refreshStatus: (opts?: { force?: boolean }) => Promise<void>;
   /** Clear local snapshot — used by sign-out / account-delete. */
@@ -91,7 +109,7 @@ export const useParentalConsentStore = create<ParentalConsentState>()(
     (set, get) => ({
       ...EMPTY,
 
-      requestConsent: async (parentEmail) => {
+      requestConsent: async (parentEmail, mode = 'hybrid') => {
         const auth = await getAuthOrNull();
         if (!auth) return { ok: false, error: 'not_authenticated' };
 
@@ -103,7 +121,7 @@ export const useParentalConsentStore = create<ParentalConsentState>()(
               'Content-Type': 'application/json',
               'X-Sync-Token': auth.syncToken,
             },
-            body: JSON.stringify({ authId: auth.authId, parentEmail }),
+            body: JSON.stringify({ authId: auth.authId, parentEmail, mode }),
           });
           if (!res.ok) {
             const errBody = (await res.json().catch(() => ({}))) as { error?: string };
@@ -116,6 +134,39 @@ export const useParentalConsentStore = create<ParentalConsentState>()(
             requestedAt: new Date().toISOString(),
             confirmedAt: null,
             expiresAt: null,
+            lastFetchedAt: Date.now(),
+          });
+          return { ok: true };
+        } catch (err) {
+          const msg = err instanceof Error ? err.message : String(err);
+          return { ok: false, error: msg };
+        }
+      },
+
+      notifyPurchase: async () => {
+        const auth = await getAuthOrNull();
+        if (!auth) return { ok: false, error: 'not_authenticated' };
+
+        const base = getApiBase();
+        try {
+          const res = await fetch(`${base}/api/legal/parental-consent-notify-purchase`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'X-Sync-Token': auth.syncToken,
+            },
+            body: JSON.stringify({ authId: auth.authId }),
+          });
+          if (!res.ok) {
+            const errBody = (await res.json().catch(() => ({}))) as { error?: string };
+            return { ok: false, error: errBody.error ?? `http_${res.status}` };
+          }
+          // Optimistically reflect 'confirmed' locally — selectHasActive
+          // returns true so Pro features unlock immediately, even before
+          // refreshStatus reconciles with the server.
+          set({
+            status: 'confirmed',
+            confirmedAt: new Date().toISOString(),
             lastFetchedAt: Date.now(),
           });
           return { ok: true };
