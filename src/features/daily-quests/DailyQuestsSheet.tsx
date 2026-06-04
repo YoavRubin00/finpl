@@ -609,7 +609,7 @@ export function DailyQuestsSheet({ visible, onClose, onOpenNewsChallenge, onOpen
                     <Animated.View pointerEvents="none" style={[styles.chestGlowHalo, chestGlowStyle]} />
                   )}
                   <Animated.View style={allDone && !rewardClaimed ? chestPulseStyle : undefined}>
-                    <LottieIcon source={LOTTIE_CHEST as unknown as number} size={100} autoPlay={false} active={chestOpen} loop={false} />
+                    <LottieIcon source={LOTTIE_CHEST as unknown as number} size={234} autoPlay={false} active={chestOpen} loop={false} />
                   </Animated.View>
                   {/* "רגיל" sticker sits on top of the chest art (user request
                       2026-06-04) — was previously a corner pill, now an
@@ -662,7 +662,7 @@ export function DailyQuestsSheet({ visible, onClose, onOpenNewsChallenge, onOpen
                   <Animated.View style={isPro && allDone && !proRewardClaimed ? chestPulseStyle : undefined}>
                     <ExpoImage
                       source={PRO_CHEST_PNG}
-                      style={{ width: 180, height: 180 }}
+                      style={{ width: 234, height: 234 }}
                       contentFit="contain"
                       accessible={false}
                     />
@@ -698,7 +698,12 @@ export function DailyQuestsSheet({ visible, onClose, onOpenNewsChallenge, onOpen
                 onPress={() => { tapHaptic(); router.push('/pricing?source=daily_chest_pro' as never); }}
                 accessibilityRole="button"
                 accessibilityLabel="שדרג ל-PRO"
-                style={({ pressed }) => [{ marginTop: 14 }, pressed && { opacity: 0.95, transform: [{ scale: 0.99 }] }]}
+                // marginHorizontal: -40 negates the sheet's paddingHorizontal: 24
+                // and the section's paddingHorizontal: 16 so the banner reaches
+                // edge-to-edge of the modal (user request 2026-06-04: "ימלא
+                // את המסך מימין לשמאל"). Keeps the rounded corners 16 so it
+                // still reads as a discrete card, not a sheet-bottom plate.
+                style={({ pressed }) => [{ marginTop: 14, marginHorizontal: -40 }, pressed && { opacity: 0.95, transform: [{ scale: 0.99 }] }]}
               >
                 <Animated.View style={[chestCardStyles.proBanner, proBannerBorderStyle]}>
                   <LinearGradient
@@ -1272,25 +1277,24 @@ const chestCardStyles = StyleSheet.create({
   cardTitlePro: {
     color: "#1e3a8a",
   },
+  // Both slots share the same height + overflow:visible (user request
+  // 2026-06-04: שתי תיבות באותו גובה). The chests themselves render at 234
+  // and overflow this 190px slot equally on top/bottom — overflow is the
+  // PNG's/Lottie's transparent padding so they never visually collide with
+  // the title above or the rewards row below. The parent card has
+  // overflow:hidden so anything that strays outside the card boundary gets
+  // clipped cleanly.
   chestArt: {
     alignItems: "center",
     justifyContent: "center",
-    height: 110,
-    // Nudge the regular chest up a touch within its slot (user request
-    // 2026-06-04) — paddingBottom shifts the centered chest upward while the
-    // fixed 110 height keeps the rewards row aligned with the PRO card.
-    paddingBottom: 18,
+    height: 190,
     position: "relative",
+    overflow: "visible",
   },
   chestArtPro: {
-    // SAME layout height as the regular chest (110) so the coins+gems rows
-    // line up at the same Y in both cards (user request 2026-06-04). The PRO
-    // image stays bigger at 150 and overflows the 110 box (overflow:visible);
-    // the overflow is the PNG's transparent padding, so the chest body and
-    // the rewards below it never visually collide. contentFit keeps it centered.
     alignItems: "center",
     justifyContent: "center",
-    height: 110,
+    height: 190,
     position: "relative",
     overflow: "visible",
   },
