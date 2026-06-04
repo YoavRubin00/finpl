@@ -37,6 +37,8 @@ import { captureEvent } from "../../lib/posthog";
 const LOTTIE_CHEST = require("../../../assets/lottie/3D Treasure Box.json") as unknown as AnimationObject;
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const LOTTIE_CROWN = require("../../../assets/lottie/Crown.json") as unknown as AnimationObject;
+// "GO PRO" animated badge — replaces the static PRO pill for non-PRO users.
+const LOTTIE_GOPRO = require("../../../assets/lottie/Pro Animation 3rd.json") as unknown as AnimationObject;
 // PRO chest art, bespoke PNG (Yam, 2026-06-03). Replaces the generic
 // "3D Treasure Box" Lottie for the PRO card so the visual tells the
 // value story: open chest, coins + bills inside, gold trim, built-in
@@ -559,9 +561,6 @@ export function DailyQuestsSheet({ visible, onClose, onOpenNewsChallenge, onOpen
             <Text style={chestCardStyles.sectionTitle} allowFontScaling={false}>
               וקבלו תיבה
             </Text>
-            <Text style={chestCardStyles.sectionSub} allowFontScaling={false}>
-              ברגיל תקבלו פרס קטן, וב-PRO תפתחו פרס משודרג
-            </Text>
 
             <View style={chestCardStyles.row}>
               {/* ── Regular card (visual left in RTL row-reverse) ── */}
@@ -612,14 +611,19 @@ export function DailyQuestsSheet({ visible, onClose, onOpenNewsChallenge, onOpen
                 <View style={chestCardStyles.crownCorner}>
                   <LottieIcon source={LOTTIE_CROWN as unknown as number} size={28} autoPlay={!reduceMotion} loop active={!reduceMotion} />
                 </View>
-                {/* The orange "PRO" pill is intentionally still rendered
-                    above the title because the PNG's built-in tag sits in
-                    a different corner and is small; the pill at the top
-                    keeps the card's eyebrow consistent with the regular
-                    card's "רגיל" tag. */}
-                <View style={[chestCardStyles.tag, chestCardStyles.tagPro]}>
-                  <Text style={[chestCardStyles.tagText, chestCardStyles.tagTextPro]} allowFontScaling={false}>PRO</Text>
-                </View>
+                {/* Eyebrow marker, top-right. Non-PRO users see the animated
+                    "GO PRO" lottie (a stronger upgrade cue); PRO users keep
+                    the static "PRO" pill consistent with the regular card's
+                    "רגיל" tag. */}
+                {!isPro ? (
+                  <View style={chestCardStyles.goProBadge} pointerEvents="none">
+                    <LottieIcon source={LOTTIE_GOPRO as unknown as number} size={60} autoPlay={!reduceMotion} loop active={!reduceMotion} />
+                  </View>
+                ) : (
+                  <View style={[chestCardStyles.tag, chestCardStyles.tagPro]}>
+                    <Text style={[chestCardStyles.tagText, chestCardStyles.tagTextPro]} allowFontScaling={false}>PRO</Text>
+                  </View>
+                )}
                 <Text style={[chestCardStyles.cardTitle, chestCardStyles.cardTitlePro]} allowFontScaling={false}>תיבת PRO</Text>
                 {/* PNG has ~25-30px of whitespace around the actual chest.
                     chestArtPro caps the laid-out height at 130 and the image
@@ -634,7 +638,7 @@ export function DailyQuestsSheet({ visible, onClose, onOpenNewsChallenge, onOpen
                   <Animated.View style={isPro && allDone && !proRewardClaimed ? chestPulseStyle : undefined}>
                     <ExpoImage
                       source={PRO_CHEST_PNG}
-                      style={{ width: 150, height: 150 }}
+                      style={{ width: 180, height: 180 }}
                       contentFit="contain"
                       accessible={false}
                     />
@@ -657,12 +661,15 @@ export function DailyQuestsSheet({ visible, onClose, onOpenNewsChallenge, onOpen
                   </View>
                 </View>
                 {!isPro && (
-                  <View style={chestCardStyles.proCta}>
+                  <Pressable
+                    onPress={() => { tapHaptic(); router.push('/pricing?source=daily_chest_pro' as never); }}
+                    accessibilityRole="button"
+                    accessibilityLabel="שדרג לפרו"
+                    style={({ pressed }) => [chestCardStyles.proCta, pressed && { opacity: 0.9, transform: [{ scale: 0.98 }] }]}
+                  >
                     <Text style={chestCardStyles.proCtaIcon} allowFontScaling={false}>👑</Text>
-                    <Text style={chestCardStyles.proCtaText} allowFontScaling={false}>
-                      שדרגו ל-PRO לקבלת פרס גדול יותר
-                    </Text>
-                  </View>
+                    <Text style={chestCardStyles.proCtaText} allowFontScaling={false}>שדרג לפרו</Text>
+                  </Pressable>
                 )}
               </Pressable>
             </View>
@@ -1094,6 +1101,14 @@ const chestCardStyles = StyleSheet.create({
     left: 6,
     zIndex: 5,
   },
+  // "GO PRO" lottie badge — sits where the static PRO pill used to be
+  // (top-right corner) for non-PRO users.
+  goProBadge: {
+    position: "absolute",
+    top: 2,
+    right: 4,
+    zIndex: 6,
+  },
   // Tag (eyebrow chip): pulled OUT of the title flow into absolute top-right
   // so it doesn't overlap the "תיבה רגילה" / "תיבת PRO" headline (user
   // report 2026-06-03: "הסימן של הפרו לא יהיה על הטקסט"). Card paddingTop
@@ -1140,18 +1155,22 @@ const chestCardStyles = StyleSheet.create({
   chestArt: {
     alignItems: "center",
     justifyContent: "center",
-    marginVertical: 6,
+    height: 110,
+    // Nudge the regular chest up a touch within its slot (user request
+    // 2026-06-04) — paddingBottom shifts the centered chest upward while the
+    // fixed 110 height keeps the rewards row aligned with the PRO card.
+    paddingBottom: 18,
     position: "relative",
   },
   chestArtPro: {
-    // Cards are equal width, but the PRO chest art stays clearly bigger
-    // (150 vs the regular Lottie's 100) per user request 2026-06-04.
-    // The PNG has built-in transparent padding, so the card's overflow:hidden
-    // only clips that empty margin — the chest body itself stays intact.
-    // contentFit="contain" keeps the visible chest centered.
+    // SAME layout height as the regular chest (110) so the coins+gems rows
+    // line up at the same Y in both cards (user request 2026-06-04). The PRO
+    // image stays bigger at 150 and overflows the 110 box (overflow:visible);
+    // the overflow is the PNG's transparent padding, so the chest body and
+    // the rewards below it never visually collide. contentFit keeps it centered.
     alignItems: "center",
     justifyContent: "center",
-    height: 150,
+    height: 110,
     position: "relative",
     overflow: "visible",
   },
