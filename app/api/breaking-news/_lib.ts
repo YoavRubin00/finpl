@@ -16,10 +16,13 @@ import { and, eq } from 'drizzle-orm';
 
 import { breakingNewsSummaries } from '../../../src/db/schema';
 import { tavilyNewsSearch } from '../_shared/tavily';
+import { withRetry, isTransientAiError } from '../_shared/retry';
+import { formatFailuresForRetryHint } from '../_shared/simplicityCheck';
 import {
   BREAKING_NEWS_SYSTEM_PROMPT,
   buildBreakingNewsUserPrompt,
   normalizeBreakingNewsSummary,
+  checkBreakingNewsSimplicity,
   type BreakingNewsSummary,
 } from '../ai/_prompts/breakingNewsPrompt';
 
@@ -123,26 +126,53 @@ export async function generateForTicker(
     },
   };
 
-  const geminiRes = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${apiKey}`,
+  // Wrap the Gemini call + parse + simplicity gate in withRetry. Same
+  // pattern as daily-news-challenge: when the model returns dry
+  // journalistic Hebrew that fails simplicityCheck, re-roll up to 2
+  // more times. shouldRetry covers transient HTTP errors AND the
+  // simplicity_failed message so 1 path retries everything.
+  const summary = await withRetry<BreakingNewsSummary>(
+    async () => {
+      const geminiRes = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${apiKey}`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(geminiBody),
+        },
+      );
+
+      if (!geminiRes.ok) {
+        const text = await geminiRes.text().catch(() => '');
+        throw new Error(`Gemini ${geminiRes.status}: ${text.slice(0, 200)}`);
+      }
+
+      const data = (await geminiRes.json()) as GeminiResponse;
+      const rawJson = data.candidates?.[0]?.content?.parts?.[0]?.text;
+      if (!rawJson) throw new Error('Gemini returned empty content');
+
+      const parsed = JSON.parse(rawJson) as unknown;
+      const normalized = normalizeBreakingNewsSummary(parsed);
+
+      // Simplicity gate. 2+ failures = re-roll. 0-1 = accept (1 is noise).
+      const failures = checkBreakingNewsSimplicity(normalized);
+      if (failures.length >= 2) {
+        throw new Error(`simplicity_failed: ${formatFailuresForRetryHint(failures)}`);
+      }
+
+      return normalized;
+    },
     {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(geminiBody),
+      attempts: 3,
+      baseDelayMs: 500,
+      shouldRetry: (err) => {
+        if (isTransientAiError(err)) return true;
+        const msg = err instanceof Error ? err.message : String(err);
+        return /JSON\.parse|Unterminated|malformed|simplicity_failed|missing/i.test(msg);
+      },
+      label: `gemini/breaking-news/${ticker}`,
     },
   );
-
-  if (!geminiRes.ok) {
-    const text = await geminiRes.text().catch(() => '');
-    throw new Error(`Gemini ${geminiRes.status}: ${text.slice(0, 200)}`);
-  }
-
-  const data = (await geminiRes.json()) as GeminiResponse;
-  const rawJson = data.candidates?.[0]?.content?.parts?.[0]?.text;
-  if (!rawJson) throw new Error('Gemini returned empty content');
-
-  const parsed = JSON.parse(rawJson) as unknown;
-  const summary = normalizeBreakingNewsSummary(parsed);
 
   // 3) Persist. `onConflictDoUpdate` so a forced re-run during the day
   //    overwrites the previous summary cleanly.

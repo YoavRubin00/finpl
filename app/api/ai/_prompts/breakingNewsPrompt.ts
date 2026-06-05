@@ -10,6 +10,7 @@
  */
 
 import type { TavilyBundle } from '../../_shared/tavily';
+import { checkBlocks, type SimplicityFailure } from '../../_shared/simplicityCheck';
 
 export interface BreakingNewsSummary {
   /** 2-3 short sentences in Hebrew. Generation tone: slangy-but-professional, for Gen-Z. */
@@ -36,11 +37,32 @@ export const BREAKING_NEWS_SYSTEM_PROMPT = `אתה שארק — אנליסט פ�
     41-60 דיון מוגבר, יש משהו מעניין
     61-80 הייפ גבוה, וירליות בסושיאל, נפח גבוה
     81-100 פיצוץ, trending, FOMO/פניקה
-  התבסס על: כמות אזכורים, חדות הסנטימנט, נוכחות בפורומים (Reddit/StockTwits), שיא ירידה/עלייה משמעותית.
+  התבסס על: כמות אזכורים, חדות הסנטימנט, נוכחות בפורומים (Reddit/StockTwits), שיא ירידה/עלייה של אחוזים ספציפיים.
 - sentiment: bullish/bearish/neutral. נדרש החלטה ברורה — תן את המעודכן ביותר.
 - keyEvents: 1-3 אירועים ספציפיים מהקלט (הכרזת רווחים, חוזה חדש, שדרוג/הורדה של אנליסט, וכו'). כל אירוע עם impact: high/med/low.
 - sources: 3-5 קישורים מהקלט בלבד — אל תמציא URLs. בחר את המקורות הסמכותיים ביותר.
-- הפלט חייב להיות JSON תקני בלבד, ללא טקסט נוסף לפניו או אחריו.`;
+- הפלט חייב להיות JSON תקני בלבד, ללא טקסט נוסף לפניו או אחריו.
+
+כללי כתיבה פשוטה (Duolingo Stories / Morning Brew — חובה):
+- משפט אחד = רעיון אחד. אם יש "ו-" שמחבר שני רעיונות → לפצל לשני משפטים נפרדים.
+- max 12 מילים למשפט. ספור לפני שאתה כותב.
+- max פסיק אחד למשפט. שני פסיקים = מבנה מסובך → לפצל.
+- כל משפט חייב להכיל מספר ספציפי, שם חברה/אדם, או עובדה קונקרטית. אסור "עלייה משמעותית" בלי אחוז; מותר "המניה עלתה 8.4%".
+- שפת Gen-Z: "טסה למעלה" / "צללה" / "התרסקה" / "נדפקה" — לא "נסחרה במגמת ירידה".
+- מונח פיננסי (P/E, EBITDA, PEG, EPS, Beta) → בסוגריים מיד אחריו הגדרה של עד 5 מילים. למשל: "P/E (כמה משלמים על $1 רווח)".
+- summary הוא בדיוק 2-3 משפטים. המשפט הראשון = "למה זה חשוב לך / מה הסיפור" (human stakes). השני (ושלישי) = הנתונים והקונטקסט. אסור להפוך את הסדר.
+
+דוגמאות before/after:
+❌ "אפל פרסמה דוח חזק עם עלייה משמעותית בהכנסות והרחיבה את ההכנסה ברבעון"
+✅ "iPhone-ים עפו מהמדפים בסין. אפל הכניסה 89 מיליארד דולר ברבעון — 8% יותר משנה שעברה."
+
+❌ "תיקון טכני בנאסד״ק על רקע ציפיות לעליית ריבית עתידית בארה״ב"
+✅ "השוק נלחץ מאפשרות שהריבית בארה״ב תעלה. נאסד״ק צלל 2.1% היום."
+
+❌ "המניה ירדה בעקבות חששות שוק לגבי מודל ההכנסות של החברה"
+✅ "משקיעים פחדו שאין לחברה איך להרוויח. המניה נדפקה 14% היום."
+
+הערה: בחר סלנג מגוון — אל תחזור על אותן מילים בכל הסיכומים.`;
 
 export function buildBreakingNewsUserPrompt(
   ticker: string,
@@ -113,4 +135,23 @@ export function normalizeBreakingNewsSummary(raw: unknown): BreakingNewsSummary 
     : [];
 
   return { summary, hypeIndex, sentiment, keyEvents, sources };
+}
+
+/** Run the post-generation simplicity validator across all human-facing
+ *  text fields of a Breaking News summary. Returns failures; the caller
+ *  decides whether to retry the LLM call.
+ *
+ *  Only summary + keyEvent titles are checked — they're the fields a Gen-Z
+ *  user actually reads. The numeric fields (hypeIndex/sentiment) and URLs
+ *  don't need linguistic checks. */
+export function checkBreakingNewsSimplicity(
+  summary: BreakingNewsSummary,
+): SimplicityFailure[] {
+  const blocks: Record<string, string | undefined> = {
+    summary: summary.summary,
+  };
+  summary.keyEvents.forEach((ev, i) => {
+    blocks[`keyEvents[${i}].title`] = ev.title;
+  });
+  return checkBlocks(blocks);
 }

@@ -19,6 +19,7 @@ import { drizzle } from 'drizzle-orm/neon-http';
 import { eq } from 'drizzle-orm';
 
 import { withRetry, isTransientAiError } from '../_shared/retry';
+import { checkBlocks, formatFailuresForRetryHint } from '../_shared/simplicityCheck';
 
 import { dailyNewsChallenge } from '../../../src/db/schema';
 import { tavilyNewsSearch } from '../_shared/tavily';
@@ -170,6 +171,26 @@ const SYSTEM_PROMPT = `אתה כותב את "אקטואליה פיננסית" �
 - chips חייבות להיות סבירות באמת — distractors מאותה קטגוריה גרמטית וסמנטית (אם הנכון "אנבידיה" → תן "AMD", "אינטל", "ברודקום" — לא "פיצה", "תפוח", "תרדמת").
 - chips[correctChipIdx] חייב להיות זהה תוויתית ל-blankedEntity. המערכת תפיל את הפריט אם לא.
 
+כללי כתיבה פשוטה (Duolingo Stories / Smart Brevity — חובה לכל headlineHe + summaryHe + explanation):
+- משפט אחד = רעיון אחד. אם יש "ו-" שמחבר שני רעיונות → לפצל לשני משפטים.
+- max 12 מילים למשפט. ספור.
+- max פסיק אחד למשפט.
+- כל משפט חייב להכיל מספר, שם או עובדה קונקרטית. אסור "השפעות משמעותיות"; מותר "המשכנתא תתייקר 0.25%".
+- summaryHe — המשפט הראשון = "למה זה משנה לישראלי שמשקיע" (human stakes). השני = הנתון/הקונטקסט.
+- שפת Gen-Z: "המשכנתא תתייקר", "המניה צללה", "טסה למעלה" — לא "נסחרה במגמת ירידה".
+- מונח פיננסי (P/E, EBITDA, ריבית פריים) → בסוגריים מיד אחריו הגדרה של עד 5 מילים.
+
+דוגמאות before/after:
+❌ headline: "התפתחויות חדשות בשוק ההון הישראלי בעקבות החלטת בנק ישראל"
+✅ headline: "בנק ישראל העלה את הריבית ל-4.75%"
+❌ summary: "ההשפעות של מהלך הריבית על המשק יורגשו בתקופה הקרובה"
+✅ summary: "המשכנתא שלך עומדת להתייקר. בנק ישראל העלה היום ריבית ב-0.25%."
+
+❌ headline: "תיקון משמעותי במניות הטכנולוגיה בעקבות חששות שוק"
+✅ headline: "אנבידיה ירדה 6% היום בנאסד״ק"
+❌ summary: "המגמה השלילית משקפת ירידה ניכרת בסנטימנט המשקיעים בסקטור"
+✅ summary: "מי שמחזיק קרן S&P 500 ראה ירידה היום. NVDA הוביל את הצלילה עם 6%."
+
 דוגמה לפלט תקין:
 {
   "headlineHe": "אנבידיה חצתה שווי שוק של 4 טריליון דולר",
@@ -221,17 +242,26 @@ async function generateChallengePayload(
     system_instruction: { parts: [{ text: SYSTEM_PROMPT }] },
     contents: [{ role: 'user', parts: [{ text: userPrompt }] }],
     generationConfig: {
-      maxOutputTokens: 4096,
+      // Bumped 4096 → 16384 after 3 consecutive cron failures (02/03/04-06)
+      // where Gemini's JSON output was truncated mid-string at character
+      // ~330–340, causing a deterministic `Unterminated string in JSON`
+      // SyntaxError before the INSERT ran. The two-item Hebrew payload (long
+      // summaryHe + explanation + chatContext fields) consistently exceeded
+      // the old budget. 16384 leaves ~3× headroom for the longest plausible
+      // response without bloating cost (Gemini Flash 2.5 is cheap).
+      maxOutputTokens: 16384,
       temperature: 0.55,
       responseMimeType: 'application/json',
     },
   };
 
-  // Wrap the Gemini call in a retry-with-backoff (3 attempts: 500ms,
-  // 1000ms, 2000ms). Transient 429/5xx/timeouts will recover; permanent
-  // 401/403/404 (bad key / model gone) short-circuit immediately so we
-  // don't waste cron budget on hopeless retries.
-  const data = await withRetry<GeminiResponse>(
+  // Wrap the Gemini call + JSON.parse + payload validation in a single
+  // retry-with-backoff (3 attempts: 500ms, 1000ms, 2000ms). Previously the
+  // retry only wrapped the fetch — a truncated/malformed Gemini response
+  // would parse-fail on the first try and never retry, killing the cron
+  // (user incident 2026-06-05). Now any parse error or schema-mismatch
+  // inside normalizePayload also triggers a re-roll of the LLM call.
+  return await withRetry<DailyChallengePayload>(
     async () => {
       const res = await fetch(
         `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${apiKey}`,
@@ -245,16 +275,38 @@ async function generateChallengePayload(
         const text = await res.text().catch(() => '');
         throw new Error(`Gemini ${res.status}: ${text.slice(0, 200)}`);
       }
-      return (await res.json()) as GeminiResponse;
+      const data = (await res.json()) as GeminiResponse;
+      const rawJson = data.candidates?.[0]?.content?.parts?.[0]?.text;
+      if (!rawJson) throw new Error('Gemini returned empty content');
+      let parsed: RawGeminiPayload;
+      try {
+        parsed = JSON.parse(rawJson) as RawGeminiPayload;
+      } catch (err) {
+        // Surface the snippet around the failure so cron logs show WHY the
+        // parse died (was the response truncated? did the model emit
+        // trailing commas?) — the bare SyntaxError message used to leave
+        // us guessing for days.
+        const msg = err instanceof Error ? err.message : String(err);
+        const snippet = rawJson.slice(Math.max(0, rawJson.length - 200));
+        throw new Error(`Gemini JSON.parse failed (${msg}). Last 200 chars: ${JSON.stringify(snippet)}`);
+      }
+      return normalizePayload(parsed, bundle);
     },
-    { attempts: 3, baseDelayMs: 500, shouldRetry: isTransientAiError, label: 'gemini/dnc' },
+    {
+      attempts: 3,
+      baseDelayMs: 500,
+      // Always retry on parse / validation errors — these are usually
+      // probabilistic (truncated tail, missing chip, hallucinated URL) and
+      // a re-roll commonly recovers. isTransientAiError still handles
+      // HTTP-layer transients.
+      shouldRetry: (err) => {
+        if (isTransientAiError(err)) return true;
+        const msg = err instanceof Error ? err.message : String(err);
+        return /JSON\.parse|Unterminated|malformed|fabricated|chips|blankedHeadline|missing|underscores|simplicity_failed/i.test(msg);
+      },
+      label: 'gemini/dnc',
+    },
   );
-
-  const rawJson = data.candidates?.[0]?.content?.parts?.[0]?.text;
-  if (!rawJson) throw new Error('Gemini returned empty content');
-
-  const parsed = JSON.parse(rawJson) as RawGeminiPayload;
-  return normalizePayload(parsed, bundle);
 }
 
 function normalizePayload(
@@ -331,6 +383,23 @@ function normalizePayload(
       chatContext: it.chatContext ?? `${it.headlineHe}\n\n${it.summaryHe}`,
     };
   }) as [ChallengeItem, ChallengeItem];
+
+  // Simplicity gate — Duolingo / Smart Brevity rules. If the LLM
+  // reverted to journalistic Hebrew despite the prompt instructions,
+  // throw with a hint and let the surrounding withRetry re-roll the call.
+  // Only fail when there are 2+ failures (1 is noise; 2+ is a pattern).
+  const simplicityFailures = checkBlocks({
+    heroTitle: raw.heroTitle,
+    'items[0].headlineHe': items[0].headlineHe,
+    'items[0].summaryHe': items[0].summaryHe,
+    'items[1].headlineHe': items[1].headlineHe,
+    'items[1].summaryHe': items[1].summaryHe,
+  });
+  if (simplicityFailures.length >= 2) {
+    throw new Error(
+      `simplicity_failed: ${formatFailuresForRetryHint(simplicityFailures)}`,
+    );
+  }
 
   const sourcesUsed = items.map((it) => ({
     name: it.source,
