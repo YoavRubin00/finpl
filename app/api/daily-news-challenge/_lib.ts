@@ -221,17 +221,26 @@ async function generateChallengePayload(
     system_instruction: { parts: [{ text: SYSTEM_PROMPT }] },
     contents: [{ role: 'user', parts: [{ text: userPrompt }] }],
     generationConfig: {
-      maxOutputTokens: 4096,
+      // Bumped 4096 → 16384 after 3 consecutive cron failures (02/03/04-06)
+      // where Gemini's JSON output was truncated mid-string at character
+      // ~330–340, causing a deterministic `Unterminated string in JSON`
+      // SyntaxError before the INSERT ran. The two-item Hebrew payload (long
+      // summaryHe + explanation + chatContext fields) consistently exceeded
+      // the old budget. 16384 leaves ~3× headroom for the longest plausible
+      // response without bloating cost (Gemini Flash 2.5 is cheap).
+      maxOutputTokens: 16384,
       temperature: 0.55,
       responseMimeType: 'application/json',
     },
   };
 
-  // Wrap the Gemini call in a retry-with-backoff (3 attempts: 500ms,
-  // 1000ms, 2000ms). Transient 429/5xx/timeouts will recover; permanent
-  // 401/403/404 (bad key / model gone) short-circuit immediately so we
-  // don't waste cron budget on hopeless retries.
-  const data = await withRetry<GeminiResponse>(
+  // Wrap the Gemini call + JSON.parse + payload validation in a single
+  // retry-with-backoff (3 attempts: 500ms, 1000ms, 2000ms). Previously the
+  // retry only wrapped the fetch — a truncated/malformed Gemini response
+  // would parse-fail on the first try and never retry, killing the cron
+  // (user incident 2026-06-05). Now any parse error or schema-mismatch
+  // inside normalizePayload also triggers a re-roll of the LLM call.
+  return await withRetry<DailyChallengePayload>(
     async () => {
       const res = await fetch(
         `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${apiKey}`,
@@ -245,16 +254,38 @@ async function generateChallengePayload(
         const text = await res.text().catch(() => '');
         throw new Error(`Gemini ${res.status}: ${text.slice(0, 200)}`);
       }
-      return (await res.json()) as GeminiResponse;
+      const data = (await res.json()) as GeminiResponse;
+      const rawJson = data.candidates?.[0]?.content?.parts?.[0]?.text;
+      if (!rawJson) throw new Error('Gemini returned empty content');
+      let parsed: RawGeminiPayload;
+      try {
+        parsed = JSON.parse(rawJson) as RawGeminiPayload;
+      } catch (err) {
+        // Surface the snippet around the failure so cron logs show WHY the
+        // parse died (was the response truncated? did the model emit
+        // trailing commas?) — the bare SyntaxError message used to leave
+        // us guessing for days.
+        const msg = err instanceof Error ? err.message : String(err);
+        const snippet = rawJson.slice(Math.max(0, rawJson.length - 200));
+        throw new Error(`Gemini JSON.parse failed (${msg}). Last 200 chars: ${JSON.stringify(snippet)}`);
+      }
+      return normalizePayload(parsed, bundle);
     },
-    { attempts: 3, baseDelayMs: 500, shouldRetry: isTransientAiError, label: 'gemini/dnc' },
+    {
+      attempts: 3,
+      baseDelayMs: 500,
+      // Always retry on parse / validation errors — these are usually
+      // probabilistic (truncated tail, missing chip, hallucinated URL) and
+      // a re-roll commonly recovers. isTransientAiError still handles
+      // HTTP-layer transients.
+      shouldRetry: (err) => {
+        if (isTransientAiError(err)) return true;
+        const msg = err instanceof Error ? err.message : String(err);
+        return /JSON\.parse|Unterminated|malformed|fabricated|chips|blankedHeadline|missing|underscores/i.test(msg);
+      },
+      label: 'gemini/dnc',
+    },
   );
-
-  const rawJson = data.candidates?.[0]?.content?.parts?.[0]?.text;
-  if (!rawJson) throw new Error('Gemini returned empty content');
-
-  const parsed = JSON.parse(rawJson) as RawGeminiPayload;
-  return normalizePayload(parsed, bundle);
 }
 
 function normalizePayload(

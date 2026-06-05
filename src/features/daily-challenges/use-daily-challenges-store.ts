@@ -3,6 +3,7 @@ import { persist, createJSONStorage } from 'zustand/middleware';
 import { zustandStorage } from '../../lib/zustandStorage';
 import { registerLocalStore } from '../../lib/stores/registry';
 import { useEconomyUIStore } from '../economy/useEconomyUIStore';
+import { useDailyQuestsStore } from '../daily-quests/useDailyQuestsStore';
 import { queryClient } from '../../lib/queryClient';
 import type { SubscriptionState } from '../../lib/api/subscription';
 import { subscriptionQueryKey } from '../subscription/useSubscription';
@@ -85,6 +86,10 @@ export const useDailyChallengesStore = create<DailyChallengesState>()(
           dilemmaPlays: incrementPlays(state.dilemmaPlays, date),
           dilemmaCorrectCount: (state.dilemmaCorrectCount || 0) + (wasCorrect ? 1 : 0),
         });
+        // Push the dilemma play into the daily-quests store same tick so
+        // the DuoLearnScreen star fills immediately. See useDailyNewsChallengeStore
+        // for the matching pattern (user report 2026-06-05).
+        try { useDailyQuestsStore.getState().syncCompletions(); } catch { /* non-fatal */ }
       },
 
       answerInvestment: (date: string) => {
@@ -129,6 +134,10 @@ export const useDailyChallengesStore = create<DailyChallengesState>()(
         set({
           swipeGamePlays: incrementPlays(state.swipeGamePlays, date),
         });
+        // Same-tick sync into the daily-quests store so the swipe quest
+        // checkmark + the DuoLearnScreen star fill immediately (user
+        // report 2026-06-05).
+        try { useDailyQuestsStore.getState().syncCompletions(); } catch { /* non-fatal */ }
       },
 
       playBullshitSwipe: (date: string, score: number) => {

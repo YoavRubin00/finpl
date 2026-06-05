@@ -16,6 +16,7 @@ import { zustandStorage } from '../../lib/zustandStorage';
 import { useEconomyUIStore } from '../economy/useEconomyUIStore';
 import { queryClient } from '../../lib/queryClient';
 import { streakQueryKey, markDailyActivityCompleted } from '../economy/useStreak';
+import { useDailyQuestsStore } from '../daily-quests/useDailyQuestsStore';
 import type { StreakState } from '../../lib/api/streak';
 import type { DailyChallenge, ItemAnswer } from './types';
 
@@ -231,6 +232,15 @@ export const useDailyNewsChallengeStore = create<NewsChallengeState>()(
         }
 
         set({ answered: next, lastCompletedDate, perfectDays });
+
+        // Push the news-quest completion into the daily-quests store the
+        // same tick — otherwise the star on DuoLearnScreen only updates
+        // on the next useFocusEffect tick (which doesn't fire when this
+        // sheet was opened as a modal child of that screen). User report
+        // 2026-06-05: "הוא מתמלא, פשוט לאט מדי, צריך מיידית".
+        if (bothAnswered) {
+          try { useDailyQuestsStore.getState().syncCompletions(); } catch { /* non-fatal */ }
+        }
       },
 
       hasCompletedToday: () => {
