@@ -18,13 +18,14 @@
  * across days so a user that ignores today's banner sees a different tool
  * tomorrow.
  */
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "expo-router";
 import { useNotificationStore } from "../../features/notifications/useNotificationStore";
 import { useBannerCooldownStore } from "../../features/notifications/useBannerCooldownStore";
 import { useToolsDiscoveryStore } from "../../features/notifications/useToolsDiscoveryStore";
 import { useAuthStore } from "../../features/auth/useAuthStore";
 import { useTutorialStore } from "../../stores/useTutorialStore";
+import { useCompletedModulesStore } from "../../features/economy/useCompletedModulesStore";
 import { NotificationBanner } from "./NotificationBanner";
 import { FINN_STANDARD } from "../../features/retention-loops/finnMascotConfig";
 import { track } from "../../lib/analytics/events";
@@ -63,14 +64,23 @@ export function ToolsDiscoveryBanner() {
   const isDismissedToday = useToolsDiscoveryStore((s) => s.isDismissedToday);
   const markDismissed = useToolsDiscoveryStore((s) => s.markDismissed);
 
+  // Same gate as NotificationPermissionBanner — don't push a tool CTA at a
+  // user who hasn't tasted the core product yet (would feel like an upsell
+  // before they understood the value). Aligned 2026-06-05.
+  const hasCompletedFirstModule = useCompletedModulesStore((s) =>
+    s.completedIds.includes('mod-0-1'),
+  );
+
   const suggestion = SUGGESTIONS[dayOfYear() % SUGGESTIONS.length]!;
 
   const eligible =
     hasCompletedOnboarding &&
     hasSeenWalkthrough &&
+    hasCompletedFirstModule &&
     !isDismissedToday();
 
   const [visible, setVisible] = useState(false);
+  const trackedShownRef = useRef(false);
 
   useEffect(() => {
     if (!eligible) {
@@ -92,17 +102,28 @@ export function ToolsDiscoveryBanner() {
       const slotTimer = setTimeout(() => {
         setVisible(true);
         useBannerCooldownStore.getState().markShown();
+        if (!trackedShownRef.current) {
+          trackedShownRef.current = true;
+          track({
+            name: 'notification_banner_shown',
+            props: { source: 'tools_discovery', tool_key: suggestion.toolKey },
+          });
+        }
       }, slotDelay);
 
       return () => clearTimeout(slotTimer);
     }, PRESENCE_DELAY_MS);
 
     return () => clearTimeout(presenceTimer);
-  }, [eligible, permissionBannerActive]);
+  }, [eligible, permissionBannerActive, suggestion.toolKey]);
 
   const handleOpen = () => {
     track({
-      name: "tool_opened",
+      name: 'notification_banner_action',
+      props: { source: 'tools_discovery', tool_key: suggestion.toolKey },
+    });
+    track({
+      name: 'tool_opened',
       props: { tool_key: suggestion.toolKey },
     });
     markDismissed();
@@ -111,6 +132,10 @@ export function ToolsDiscoveryBanner() {
   };
 
   const handleDismiss = () => {
+    track({
+      name: 'notification_banner_dismissed',
+      props: { source: 'tools_discovery', tool_key: suggestion.toolKey },
+    });
     markDismissed();
     setVisible(false);
   };

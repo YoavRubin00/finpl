@@ -178,6 +178,7 @@ export const useNotificationStore = create<NotificationState & NotificationActio
       permissionGranted: false,
       scheduled: [],
       bannerDismissed: false,
+      bannerDismissedAt: null as string | null,
       // Apple 4.5.4: ALL notification preferences default to OFF on fresh install.
       // Notifications are only scheduled after the user explicitly toggles a
       // preference ON in Settings, which triggers the system permission prompt.
@@ -186,9 +187,9 @@ export const useNotificationStore = create<NotificationState & NotificationActio
       lastFinnCopyTitle: null as string | null,
       lastAIInsightNotifDate: null as string | null,
 
-      dismissBanner: () => set({ bannerDismissed: true }),
+      dismissBanner: () => set({ bannerDismissed: true, bannerDismissedAt: new Date().toISOString() }),
 
-      resetBannerDismissed: () => set({ bannerDismissed: false }),
+      resetBannerDismissed: () => set({ bannerDismissed: false, bannerDismissedAt: null }),
 
       requestPermission: async (): Promise<boolean> => {
         await ensureAndroidChannels();
@@ -472,6 +473,7 @@ export const useNotificationStore = create<NotificationState & NotificationActio
         permissionGranted: false,
         scheduled: [],
         bannerDismissed: false,
+        bannerDismissedAt: null,
         preferences: { streak: false, chest: false, challenge: false, dailyChallenge: false, squadInvite: false, squadChest: false, morning: false, inactivity: false, marketHook: false, aiInsight: false, upgradeNudge: false },
         lastScheduledDate: null,
         lastFinnCopyTitle: null,
@@ -485,6 +487,7 @@ export const useNotificationStore = create<NotificationState & NotificationActio
         permissionGranted: s.permissionGranted,
         scheduled: s.scheduled,
         bannerDismissed: s.bannerDismissed,
+        bannerDismissedAt: s.bannerDismissedAt,
         preferences: s.preferences,
         lastScheduledDate: s.lastScheduledDate,
         lastFinnCopyTitle: s.lastFinnCopyTitle,

@@ -147,7 +147,15 @@ export type AppEvent =
 
   // ── Daily News Challenge — recap page (June 2026 Duo polish) ────────────
   | { name: 'news_recap_viewed'; props: { date_key: string; perfect: boolean; streak: number } }
-  | { name: 'news_recap_closed'; props: { date_key: string; time_open_ms: number } };
+  | { name: 'news_recap_closed'; props: { date_key: string; time_open_ms: number } }
+
+  // ── Top notification banners (permission, tools-discovery, streak-at-risk, no-freeze) ──
+  // Wired June 2026 after a visibility gap — we had no PostHog signal for whether
+  // banners were rendering or being interacted with. `source` identifies which
+  // wrapper fired the event so funnels can split by banner type.
+  | { name: 'notification_banner_shown'; props: { source: 'permission' | 'tools_discovery' | 'streak_at_risk' | 'no_freeze_upsell' | string; tool_key?: string } }
+  | { name: 'notification_banner_action'; props: { source: 'permission' | 'tools_discovery' | 'streak_at_risk' | 'no_freeze_upsell' | string; tool_key?: string } }
+  | { name: 'notification_banner_dismissed'; props: { source: 'permission' | 'tools_discovery' | 'streak_at_risk' | 'no_freeze_upsell' | string; tool_key?: string } };
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Baseline properties — attached to every wrapped event
