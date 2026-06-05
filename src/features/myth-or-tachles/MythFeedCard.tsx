@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useCallback, useEffect } from 'react';
+import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react';
 import { View, Text, Pressable, StyleSheet } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Animated from 'react-native-reanimated';
@@ -25,6 +25,7 @@ export const MythFeedCard = React.memo(function MythFeedCard({
     onSkip,
     hideContinueButton,
     onReadyToContinue,
+    autoAdvanceAfter,
 }: {
     isInterModule?: boolean;
     onSkip?: () => void;
@@ -35,6 +36,10 @@ export const MythFeedCard = React.memo(function MythFeedCard({
     /** Pearl flow: fires (true) once the user has answered ≥2 swipes, (false)
      *  on reset. PearlGameStage uses this to flip its sticky CTA on/off. */
     onReadyToContinue?: (ready: boolean) => void;
+    /** Pearl flow: after this many answered swipes (and once the feedback
+     *  modal is dismissed) auto-advance to the next stage via onSkip — no
+     *  "המשך" button at all. When set, the in-card Continue is suppressed. */
+    autoAdvanceAfter?: number;
 }) {
     const router = useRouter();
     const insets = useSafeAreaInsets();
@@ -100,6 +105,21 @@ export const MythFeedCard = React.memo(function MythFeedCard({
         if (!isInterModule || !onReadyToContinue) return;
         onReadyToContinue(totalAnswered >= 2);
     }, [isInterModule, onReadyToContinue, totalAnswered]);
+
+    // Pearl auto-advance: once the user has answered `autoAdvanceAfter` cards
+    // AND dismissed the feedback modal of the last one, advance the pearl
+    // automatically — no "המשך" button (user spec 2026-06-05). Fires exactly
+    // once. Gated on !feedbackVisible so it triggers only after the user has
+    // read the final explanation and closed it, never mid-feedback.
+    const autoAdvancedRef = useRef(false);
+    useEffect(() => {
+        if (!autoAdvanceAfter || !isInterModule || !onSkip) return;
+        if (autoAdvancedRef.current) return;
+        if (totalAnswered >= autoAdvanceAfter && !feedbackVisible) {
+            autoAdvancedRef.current = true;
+            onSkip();
+        }
+    }, [autoAdvanceAfter, isInterModule, onSkip, totalAnswered, feedbackVisible]);
     const [modifierWon, setModifierWon] = useState<ModifierType | null>(null);
     const [showFlyingCoins, setShowFlyingCoins] = useState(false);
     const addModifier = useModifiersStore((s) => s.addModifier);
@@ -206,7 +226,7 @@ export const MythFeedCard = React.memo(function MythFeedCard({
                         Earlier the threshold was 3 (force engagement) but
                         users reported "אחרי שעניתי אין כפתור המשך" — the gate
                         broke the pearl flow on iPhone (2026-06-01). */}
-                    {isInterModule && onSkip && !hideContinueButton && (sessionCorrect + sessionWrong) >= 1 ? (
+                    {isInterModule && onSkip && !hideContinueButton && !autoAdvanceAfter && (sessionCorrect + sessionWrong) >= 1 ? (
                         <View style={[styles.doneWrap, { paddingBottom: Math.max(insets.bottom, 8) + 8 }]}>
                             <Pressable
                                 onPress={() => { tapHaptic(); onSkip(); }}
