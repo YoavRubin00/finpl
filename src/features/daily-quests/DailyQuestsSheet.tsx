@@ -608,7 +608,7 @@ export function DailyQuestsSheet({ visible, onClose, onOpenNewsChallenge, onOpen
                     <Animated.View pointerEvents="none" style={[styles.chestGlowHalo, chestGlowStyle]} />
                   )}
                   <Animated.View style={allDone && !rewardClaimed ? chestPulseStyle : undefined}>
-                    <LottieIcon source={LOTTIE_CHEST as unknown as number} size={220} autoPlay={false} active={chestOpen} loop={false} />
+                    <LottieIcon source={LOTTIE_CHEST as unknown as number} size={150} autoPlay={false} active={chestOpen} loop={false} />
                   </Animated.View>
                   {/* "רגיל" sticker sits on top of the chest art (user request
                       2026-06-04) — was previously a corner pill, now an
@@ -651,19 +651,19 @@ export function DailyQuestsSheet({ visible, onClose, onOpenNewsChallenge, onOpen
                   {allDone && isPro && !proRewardClaimed && (
                     <Animated.View pointerEvents="none" style={[styles.chestGlowHalo, { backgroundColor: "#1d4ed8" }, chestGlowStyle]} />
                   )}
-                  {/* PRO PNG at 180×270 — matches the source asset's 2:3
-                      aspect ratio (1024×1536) so contentFit:contain has no
-                      letterbox padding to manage, and the box fits cleanly
-                      inside the ~150px card width with only ~15px overflow
-                      each side (which is the PNG's transparent margin, not
-                      chest body — safe to clip via card overflow:hidden).
-                      Previously 300×300 with 50px overflow each side was
-                      cropping the chest's gold trim (יפיופי 2026-06-05). */}
+                  {/* PRO PNG rendered at a 150×150 square with contentFit:cover so
+                      the chest reaches the same visual mass as the regular Lottie.
+                      The source PNG is 1024×1536 (2:3) with transparent margins on
+                      top/bottom around the centered chest; cover-fit on a square
+                      clips ONLY the transparent strips, never the gold/wood body.
+                      Previous attempts with contentFit:contain left the PNG's full
+                      letterbox in-view, making the chest appear ~40% smaller than
+                      the regular one (user report 2026-06-05). */}
                   <Animated.View style={isPro && allDone && !proRewardClaimed ? chestPulseStyle : undefined}>
                     <ExpoImage
                       source={PRO_CHEST_PNG}
-                      style={{ width: 180, height: 270 }}
-                      contentFit="contain"
+                      style={{ width: 150, height: 150 }}
+                      contentFit="cover"
                       accessible={false}
                     />
                   </Animated.View>
@@ -700,10 +700,11 @@ export function DailyQuestsSheet({ visible, onClose, onOpenNewsChallenge, onOpen
                 // edge-to-edge of the modal (user request 2026-06-04: "ימלא
                 // את המסך מימין לשמאל"). Keeps the rounded corners 16 so it
                 // still reads as a discrete card, not a sheet-bottom plate.
-                // marginTop now 20 (was 32) — after the PRO rewards row was
-                // consolidated from 2 rows → 1 row, the extra clearance is
-                // no longer needed (יפיופי 2026-06-05).
-                style={({ pressed }) => [{ marginTop: 20, marginHorizontal: -40 }, pressed && { opacity: 0.95, transform: [{ scale: 0.99 }] }]}
+                // marginTop bumped back to 32 — at marginTop:20 the banner's
+                // top edge was visually shaving the "600 מטבעות" reward row
+                // under the PRO card (user report 2026-06-05). 32 gives the
+                // rewards a clear breathing strip before the CTA.
+                style={({ pressed }) => [{ marginTop: 32, marginHorizontal: -40 }, pressed && { opacity: 0.95, transform: [{ scale: 0.99 }] }]}
               >
                 <Animated.View style={[chestCardStyles.proBanner, proBannerBorderStyle]}>
                   <LinearGradient
@@ -1275,23 +1276,23 @@ const chestCardStyles = StyleSheet.create({
   // Both slots share a fixed 240px height and bottom-align their chests so
   // the chest BASES sit on the same horizontal line ("באותו הקו וסימטרית",
   // user request 2026-06-05). After יפיופי's audit: bumped from 300 down
-  // to 240 because the regular Lottie (now 220) was previously living
-  // alone in the lower third of a 300px slot, leaving 150px of dead
-  // vertical space. 240 is just tall enough to hug both chests at the
-  // bottom; the PRO box (270 tall) overflows the top by 30px, but that's
-  // the PNG's transparent padding, not chest body — the parent card's
-  // overflow:hidden clips it cleanly.
+  // Both chests now render at 150×150 (regular Lottie size=150, PRO PNG
+  // 150×150 with contentFit:cover). 165 gives 15px buffer below for the
+  // "רגיל"/"PRO" sticker overlay (positioned with bottom:14) without
+  // adding dead space above. flex-end anchors the chest to the bottom so
+  // both stickers land on the same baseline regardless of Lottie/PNG
+  // intrinsic differences.
   chestArt: {
     alignItems: "center",
     justifyContent: "flex-end",
-    height: 240,
+    height: 165,
     position: "relative",
     overflow: "visible",
   },
   chestArtPro: {
     alignItems: "center",
     justifyContent: "flex-end",
-    height: 240,
+    height: 165,
     position: "relative",
     overflow: "visible",
   },
