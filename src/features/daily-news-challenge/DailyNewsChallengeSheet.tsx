@@ -111,6 +111,11 @@ export function DailyNewsChallengeSheet({ visible, onClose, entrySource = 'unkno
   const isPro = useIsPro();
   const showUpgrade = useUpgradeModalStore((s) => s.show);
   const { playSound } = useSoundEffect();
+  // Top inset applied explicitly (not via <SafeAreaView edges={['top']}>) —
+  // inside a RN <Modal> the SafeAreaProvider from app/_layout doesn't always
+  // propagate to the new native window, so SafeAreaView read 0 on iOS and the
+  // header rendered behind the notch / Dynamic Island. Same fix as PearlSheet.
+  const insets = useSafeAreaInsets();
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -499,7 +504,7 @@ export function DailyNewsChallengeSheet({ visible, onClose, entrySource = 'unkno
       onRequestClose={requestClose}
     >
       <GestureHandlerRootView style={styles.container}>
-      <SafeAreaView style={styles.safeArea} edges={['top', 'left', 'right', 'bottom']}>
+      <SafeAreaView style={styles.safeArea} edges={['left', 'right', 'bottom']}>
         {/* Top bar — single "אקטואליה יומית" header strip replaces the
             previous GlobalWealthHeader + topBar stack (user report
             2026-06-01). Layout (revision 2): the title and the close X
@@ -507,7 +512,7 @@ export function DailyNewsChallengeSheet({ visible, onClose, entrySource = 'unkno
             doesn't waste vertical space; ProgressBar sits in row 2.
             row-reverse puts the X visually to the RIGHT of the title for
             Hebrew RTL users — same affordance as the lesson back-arrow. */}
-        <View style={styles.topBar}>
+        <View style={[styles.topBar, { paddingTop: insets.top }]}>
           <View style={styles.titleRow}>
             {/* SheetCloseButton (2026-06-02), unified gold-ring X across all
                 sheets. Owns its own tap haptic; we still play the
