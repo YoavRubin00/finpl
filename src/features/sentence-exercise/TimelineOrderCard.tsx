@@ -460,66 +460,40 @@ export function TimelineOrderCard({
         >
           {/* Order: "אני אסתדר" first → row-reverse puts it visually LEFT.
               "עזור לי" second → visually RIGHT. Darker blue on the left as
-              the "primary refuse" CTA; lighter sky-blue on the right invites help. */}
+              the "primary refuse" CTA; lighter sky-blue on the right invites help.
+              Android quirk: Pressable function-style `style` that sets
+              backgroundColor drops the bg on press/render → white-on-white
+              invisible buttons. Inner View carries the bg + chrome; Pressable
+              only animates opacity. */}
           <Pressable
             onPress={declineHelp}
             accessibilityRole="button"
             accessibilityLabel="לא תודה, אני אסתדר"
-            style={({ pressed }) => ({
-              flex: 1,
-              minHeight: 52,
-              paddingVertical: 14,
-              paddingHorizontal: 8,
-              borderRadius: 14,
-              alignItems: "center",
-              justifyContent: "center",
-              backgroundColor: "#1d4ed8",
-              borderBottomWidth: 4,
-              borderBottomColor: "#1e3a8a",
-              shadowColor: "#1e3a8a",
-              shadowOpacity: 0.4,
-              shadowRadius: 6,
-              shadowOffset: { width: 0, height: 2 },
-              elevation: 5,
-              opacity: pressed ? 0.85 : 1,
-            })}
+            style={({ pressed }) => [styles.helpBtnPressable, { opacity: pressed ? 0.85 : 1 }]}
           >
-            <Text
-              numberOfLines={1}
-              style={{ fontSize: 16, fontWeight: "900", color: "#ffffff", writingDirection: "rtl", textAlign: "center" }}
-            >
-              אני אסתדר
-            </Text>
+            <View style={styles.helpBtnDecline}>
+              <Text
+                numberOfLines={1}
+                style={styles.helpBtnText}
+              >
+                אני אסתדר
+              </Text>
+            </View>
           </Pressable>
           <Pressable
             onPress={applyCorrectOrder}
             accessibilityRole="button"
             accessibilityLabel="כן, עזור לי לסדר"
-            style={({ pressed }) => ({
-              flex: 1,
-              minHeight: 52,
-              paddingVertical: 14,
-              paddingHorizontal: 8,
-              borderRadius: 14,
-              alignItems: "center",
-              justifyContent: "center",
-              backgroundColor: "#38bdf8",
-              borderBottomWidth: 4,
-              borderBottomColor: "#0284c7",
-              shadowColor: "#0ea5e9",
-              shadowOpacity: 0.35,
-              shadowRadius: 6,
-              shadowOffset: { width: 0, height: 2 },
-              elevation: 5,
-              opacity: pressed ? 0.85 : 1,
-            })}
+            style={({ pressed }) => [styles.helpBtnPressable, { opacity: pressed ? 0.85 : 1 }]}
           >
-            <Text
-              numberOfLines={1}
-              style={{ fontSize: 16, fontWeight: "900", color: "#ffffff", writingDirection: "rtl", textAlign: "center" }}
-            >
-              עזור לי
-            </Text>
+            <View style={styles.helpBtnAccept}>
+              <Text
+                numberOfLines={1}
+                style={styles.helpBtnText}
+              >
+                עזור לי
+              </Text>
+            </View>
           </Pressable>
         </Animated.View>
       )}
@@ -709,5 +683,47 @@ const styles = StyleSheet.create({
     gap: 10,
     marginTop: 6,
     marginBottom: 4,
+  },
+  helpBtnPressable: {
+    flex: 1,
+  },
+  helpBtnDecline: {
+    minHeight: 52,
+    paddingVertical: 14,
+    paddingHorizontal: 8,
+    borderRadius: 14,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#1d4ed8",
+    borderBottomWidth: 4,
+    borderBottomColor: "#1e3a8a",
+    shadowColor: "#1e3a8a",
+    shadowOpacity: 0.4,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 5,
+  },
+  helpBtnAccept: {
+    minHeight: 52,
+    paddingVertical: 14,
+    paddingHorizontal: 8,
+    borderRadius: 14,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#38bdf8",
+    borderBottomWidth: 4,
+    borderBottomColor: "#0284c7",
+    shadowColor: "#0ea5e9",
+    shadowOpacity: 0.35,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 5,
+  },
+  helpBtnText: {
+    fontSize: 16,
+    fontWeight: "900",
+    color: "#ffffff",
+    writingDirection: "rtl",
+    textAlign: "center",
   },
 });

@@ -62,6 +62,7 @@ import { useReferralStore } from "../social/useReferralStore";
 import { AnimatedPressable } from "../../components/ui/AnimatedPressable";
 import { SwipeableModal } from "../../components/ui/SwipeableModal";
 import { NotificationPermissionBanner } from "../../components/ui/NotificationPermissionBanner";
+import { ToolsDiscoveryBanner } from "../../components/ui/ToolsDiscoveryBanner";
 import { NoFreezeUpsellBanner } from "../streak/NoFreezeUpsellBanner";
 import { StreakAtRiskBanner } from "../streak/StreakAtRiskBanner";
 import { StreakCalendarModal } from "../streak/StreakCalendarModal";
@@ -1618,6 +1619,10 @@ export function DuoLearnScreen() {
           until the guest register CTA is handled (pendingPostWalkthroughCTA
           clears) so it lands after the register prompt, not competing. */}
       {!isWalkthroughActive && !pendingPostWalkthroughCTA && <NotificationPermissionBanner />}
+      {/* Tools discovery — only on this main learning screen (NOT in the
+          lesson flow). Self-gated to 5s presence + cooldown + 1/day per
+          calendar day. Yields slot to NotificationPermissionBanner. */}
+      {!isWalkthroughActive && !pendingPostWalkthroughCTA && <ToolsDiscoveryBanner />}
       {!isWalkthroughActive && <StreakAtRiskBanner />}
       {!isWalkthroughActive && <NoFreezeUpsellBanner />}
       <StreakCalendarModal visible={showStreakCalendar} onClose={() => setShowStreakCalendar(false)} />
@@ -1757,12 +1762,17 @@ export function DuoLearnScreen() {
               <Pressable
                 onPress={() => {
                   tapHaptic();
-                  try { captureEvent('register_cta_dismissed', { module_id: 'mod-1-1', source: 'skip-intro', trigger: 'skip_button' }); } catch { /* non-fatal */ }
+                  try { captureEvent('register_cta_continue_guest', { module_id: 'mod-1-1', source: 'skip-intro' }); } catch { /* non-fatal */ }
                   setShowSkipIntroRegisterCTA(false);
+                  // Lead the guest straight into mod-1-1 — chapter 0 is already
+                  // marked complete by handleSkipIntro, so the lesson is unlocked
+                  // and accessible without registering. push (not replace) so Back
+                  // returns to the learn map.
+                  router.push('/lesson/mod-1-1?chapterId=chapter-1' as never);
                 }}
                 style={{ marginTop: 12, paddingVertical: 8 }}
                 accessibilityRole="button"
-                accessibilityLabel="המשך כאורח"
+                accessibilityLabel="המשך כאורח לפרק 1"
               >
                 <Text style={{ fontSize: 13, fontWeight: "600", color: "#64748b" }}>המשך כאורח</Text>
               </Pressable>
