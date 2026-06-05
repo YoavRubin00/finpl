@@ -36,6 +36,10 @@ export interface NotificationState {
   permissionGranted: boolean;
   scheduled: ScheduledNotification[];
   bannerDismissed: boolean;
+  /** ISO timestamp of the last permission-banner dismissal. Drives the 14-day
+   *  re-show policy (see NotificationPermissionBanner). Null = never dismissed
+   *  on this build, OR dismissed on a legacy build before the field existed. */
+  bannerDismissedAt: string | null;
   preferences: NotificationPreferences;
   lastScheduledDate: string | null;
   lastFinnCopyTitle: string | null;

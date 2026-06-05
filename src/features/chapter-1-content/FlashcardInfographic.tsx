@@ -53,11 +53,17 @@ export const INFOGRAPHIC_MAP: Record<string, ImageSource | null> = {
   "fc-0-1-5": { uri: 'https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/infographics/mod-0-1/fc-0-1-5.png' },
 
   // Module 0-2: מושגי יסוד
-  "fc-0-2-1": { uri: 'https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/infographics/mod-0-2/fc-0-2-1.png' },
-  "fc-0-2-2": { uri: 'https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/infographics/mod-0-2/fc-0-2-2.png' },
-  "fc-0-2-3": { uri: 'https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/infographics/mod-0-2/fc-0-2-3.png' },
-  "fc-0-2-4": { uri: 'https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/infographics/mod-0-2/fc-0-2-4.png' },
-  "fc-0-2-5": { uri: 'https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/infographics/mod-0-2/fc-0-2-5.png' },
+  // ?v=2 cache-bust appended 2026-06-05 — PostHog showed dozens of cached
+  // 303/403 failures on these specific URLs (iOS CFNetwork + Vercel Blob
+  // throttling). Changing the cache key forces ExpoImage to drop the stale
+  // failure state and re-fetch on next view, even before the retry logic
+  // kicks in. Safe: the Blob ignores query strings, the PNG bytes are
+  // unchanged.
+  "fc-0-2-1": { uri: 'https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/infographics/mod-0-2/fc-0-2-1.png?v=2' },
+  "fc-0-2-2": { uri: 'https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/infographics/mod-0-2/fc-0-2-2.png?v=2' },
+  "fc-0-2-3": { uri: 'https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/infographics/mod-0-2/fc-0-2-3.png?v=2' },
+  "fc-0-2-4": { uri: 'https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/infographics/mod-0-2/fc-0-2-4.png?v=2' },
+  "fc-0-2-5": { uri: 'https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/infographics/mod-0-2/fc-0-2-5.png?v=2' },
   // Module 0-3: אינפלציה
   "fc-0-3-1": { uri: 'https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/infographics/mod-0-3/fc-0-3-1.png' },
   "fc-0-3-2": { uri: 'https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/infographics/mod-0-3/fc-0-3-2.png' },
@@ -448,32 +454,90 @@ interface Props {
   zoomRegions?: [number, number, number][];
 }
 
+// Retry policy for transient image-load failures. iOS CFNetwork errors 303
+// + Vercel Blob intermittent 403s have been observed for the same URLs that
+// curl perfectly (PostHog 2026-06-05: 7 hits on fc-0-2-3 in a single day).
+// Two backoff retries usually clear them. Mirrors useModulePrefetch's
+// audio/video retry pattern, kept smaller (800ms/2400ms vs 1s/3s/9s) because
+// the user is already staring at the card waiting to see it.
+const IMAGE_RETRY_DELAYS_MS = [800, 2400] as const;
+
 export function FlashcardInfographic({ cardId, diveStep = 0, zoomRegions }: Props) {
-  const source = INFOGRAPHIC_MAP[cardId];
+  const baseSource = INFOGRAPHIC_MAP[cardId];
   const lottieSource = LOTTIE_MAP[cardId];
   const finnTapSource = FINN_TAP_MAP[cardId];
   const isLightBg = LIGHT_BG_CARDS.has(cardId);
   const [ratio, setRatio] = useState<number | undefined>(undefined);
   const [finnFullscreen, setFinnFullscreen] = useState(false);
   const [imageError, setImageError] = useState(false);
+  const [retryAttempt, setRetryAttempt] = useState(0);
+  const retryTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => () => {
+    if (retryTimerRef.current) clearTimeout(retryTimerRef.current);
+  }, []);
+
+  // Reset retry state when the cardId changes so a new flashcard gets a
+  // fresh budget of attempts instead of inheriting the previous card's count.
+  useEffect(() => {
+    setImageError(false);
+    setRetryAttempt(0);
+    if (retryTimerRef.current) {
+      clearTimeout(retryTimerRef.current);
+      retryTimerRef.current = null;
+    }
+  }, [cardId]);
+
+  // On retry, append ?r=N to the URI so ExpoImage's memory-disk cache cannot
+  // serve a previously-cached failure for the same URL. The original entry
+  // stays untouched in INFOGRAPHIC_MAP; only the in-flight request is busted.
+  const source: ImageSource | null = (() => {
+    if (!baseSource) return baseSource;
+    if (retryAttempt === 0) return baseSource;
+    if (typeof baseSource === 'object' && 'uri' in baseSource && typeof baseSource.uri === 'string') {
+      const sep = baseSource.uri.includes('?') ? '&' : '?';
+      return { ...baseSource, uri: `${baseSource.uri}${sep}r=${retryAttempt}` };
+    }
+    return baseSource;
+  })();
 
   const handleLoad = useCallback((e: ImageLoadEventData) => {
     const { width, height } = e.source;
     if (width && height) {
       setRatio(width / height);
     }
-  }, []);
+    if (retryAttempt > 0) {
+      const rawUri = typeof baseSource === 'object' && baseSource && 'uri' in baseSource ? baseSource.uri : undefined;
+      captureEvent('infographic_load_recovered', {
+        card_id: cardId,
+        uri: typeof rawUri === 'string' ? rawUri : 'bundled',
+        attempts: retryAttempt + 1,
+        platform: Platform.OS,
+      });
+    }
+  }, [cardId, baseSource, retryAttempt]);
 
   const handleImageError = useCallback((err: unknown) => {
+    if (retryAttempt < IMAGE_RETRY_DELAYS_MS.length) {
+      const delay = IMAGE_RETRY_DELAYS_MS[retryAttempt];
+      const nextAttempt = retryAttempt + 1;
+      if (retryTimerRef.current) clearTimeout(retryTimerRef.current);
+      retryTimerRef.current = setTimeout(() => {
+        setRetryAttempt(nextAttempt);
+      }, delay);
+      return;
+    }
     setImageError(true);
-    const rawUri = typeof source === 'object' && source && 'uri' in source ? source.uri : undefined;
+    const rawUri = typeof baseSource === 'object' && baseSource && 'uri' in baseSource ? baseSource.uri : undefined;
     captureEvent('infographic_load_failed', {
       card_id: cardId,
       uri: typeof rawUri === 'string' ? rawUri : 'bundled',
       error: String((err as { error?: unknown })?.error ?? err),
+      attempts: retryAttempt + 1,
+      had_lottie_fallback: !!lottieSource,
       platform: Platform.OS,
     });
-  }, [cardId, source]);
+  }, [cardId, baseSource, retryAttempt, lottieSource]);
 
   const zoomScale = useSharedValue(1);
   const zoomX = useSharedValue(0);
@@ -547,7 +611,7 @@ export function FlashcardInfographic({ cardId, diveStep = 0, zoomRegions }: Prop
     opacity: interpolate(zoomScale.value, [1, 1.1], [1, 0], Extrapolation.CLAMP),
   }));
 
-  if (!source && !lottieSource && !finnTapSource) return null;
+  if (!baseSource && !lottieSource && !finnTapSource) return null;
 
   return (
     <View>
@@ -564,7 +628,11 @@ export function FlashcardInfographic({ cardId, diveStep = 0, zoomRegions }: Prop
           </Modal>
         </>
       )}
-      {lottieSource && !source && (
+      {/* Lottie shows when (a) there's no remote source at all, OR (b) the
+          remote source exhausted its retry budget — Lottie is a better
+          fallback than nothing for cards that have one configured (e.g. all
+          of mod-0-1's fc-0-2-* cards have matching Lottie entries). */}
+      {lottieSource && (!baseSource || imageError) && (
         <View style={s.lottieContainer}>
           <LottieView
             source={lottieSource as unknown as AnimationObject}
@@ -574,15 +642,15 @@ export function FlashcardInfographic({ cardId, diveStep = 0, zoomRegions }: Prop
           />
         </View>
       )}
-      {source && imageError && (
-        // Fallback graceful — אם התמונה נכשלה לטעון (רשת/CDN חסומים), במקום
-        // placeholder אפור גדול שתופס שטח מסך אנחנו פשוט מסתירים את התמונה.
-        // ה-flashcard text + הסבר עדיין מציגים נכון. analytics נשלח ל-PostHog.
+      {source && imageError && !lottieSource && (
+        // No Lottie fallback available — keep the original behavior of hiding
+        // the slot entirely. Better than a big gray placeholder. Text + Finn
+        // explanation still render. PostHog already logged the failure above.
         null
       )}
       {source && !imageError && (
         <View style={[s.container, isLightBg && s.containerLight, { aspectRatio: ratio ?? 1.2, maxHeight: COMPACT_CARDS.has(cardId) ? 220 : LARGE_CARDS.has(cardId) ? undefined : 270, backgroundColor: '#f1f5f9' }]}>
-          <AnimatedExpoImage source={source} style={[s.image, zoomStyle]} contentFit={COVER_CARDS.has(cardId) ? "cover" : "contain"} cachePolicy="memory-disk" priority="high" transition={200} onLoad={Platform.OS === 'web' ? undefined : handleLoad} onError={handleImageError} />
+          <AnimatedExpoImage key={`img-${cardId}-${retryAttempt}`} source={source} style={[s.image, zoomStyle]} contentFit={COVER_CARDS.has(cardId) ? "cover" : "contain"} cachePolicy="memory-disk" priority="high" transition={200} onLoad={Platform.OS === 'web' ? undefined : handleLoad} onError={handleImageError} />
           {TEXT_OVERLAYS[cardId]?.map((o, i) => (
             <Animated.View
               key={i}

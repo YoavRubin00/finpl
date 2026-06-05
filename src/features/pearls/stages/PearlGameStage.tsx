@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { View, Text, StyleSheet, Pressable } from 'react-native';
 // ScrollView from gesture-handler (not react-native) — RN's ScrollView
 // swallows horizontal pan gestures from child cards (BullshitSwipe,
@@ -61,12 +61,7 @@ export function PearlGameStage({ isActive, gameKey, macroEventId, onContinue, on
   const isPro = useIsPro();
   const { playSound } = useSoundEffect();
 
-  // Readiness gate for the sticky-CTA bar. Cards that can show the bar from
-  // mount (diamond-hands, crowd-question — passive surfaces) start ready;
-  // myth waits for ≥2 swipes and reports back via onReadyToContinue.
-  const [readyToContinue, setReadyToContinue] = useState(gameKey !== 'myth');
-
-  const card = renderGameCard(gameKey, macroEventId, isPro, onContinue, isActive, setReadyToContinue);
+  const card = renderGameCard(gameKey, macroEventId, isPro, onContinue, isActive);
   // Self-heal: if the game can't render (unknown gameKey, macro-event missing
   // its id, event not found in the data), don't dead-end the pager — auto-
   // advance so the user never gets stuck on a blank stage with no CTA.
@@ -86,11 +81,10 @@ export function PearlGameStage({ isActive, gameKey, macroEventId, onContinue, on
   // 2026-06-05: "בחכמת ההמונים אין כפתור התקדמות". Same fix: lift the
   // continue to this stage's sticky bar.
   //
-  // Myth was added 2026-06-05 — same reasoning, plus a readiness gate
-  // (≥2 answered swipes) signaled by MythFeedCard via onReadyToContinue.
-  // User report: "סיימתי, המשך" rendered faded inside the card, exactly
-  // the visibility issue diamond-hands and crowd-question already hit.
-  const needsStickyContinue = gameKey === 'diamond-hands' || gameKey === 'crowd-question' || gameKey === 'myth';
+  // Myth no longer uses the sticky bar: it auto-advances after 2 answered
+  // swipes (autoAdvanceAfter={2} on MythFeedCard) — no button at all
+  // (user spec 2026-06-05). Only the two passive surfaces keep the bar.
+  const needsStickyContinue = gameKey === 'diamond-hands' || gameKey === 'crowd-question';
 
   const handleStickyContinue = (): void => {
     tapHaptic();
@@ -106,10 +100,9 @@ export function PearlGameStage({ isActive, gameKey, macroEventId, onContinue, on
           styles.scrollContent,
           {
             // Reserve room for the sticky bar only when it will actually
-            // render. For myth that's after the readiness gate (≥2 swipes);
-            // for diamond-hands / crowd-question it's from mount.
+            // render (diamond-hands / crowd-question — both from mount).
             paddingBottom:
-              Math.max(insets.bottom + 24, 48) + (needsStickyContinue && readyToContinue ? 96 : 0),
+              Math.max(insets.bottom + 24, 48) + (needsStickyContinue ? 96 : 0),
           },
         ]}
         showsVerticalScrollIndicator={false}
@@ -120,7 +113,7 @@ export function PearlGameStage({ isActive, gameKey, macroEventId, onContinue, on
         </View>
       </ScrollView>
 
-      {needsStickyContinue && readyToContinue ? (
+      {needsStickyContinue ? (
         <View
           style={[styles.stickyBar, { paddingBottom: Math.max(insets.bottom, 8) + 8 }]}
           pointerEvents="box-none"
@@ -167,9 +160,6 @@ function renderGameCard(
   isPro: boolean,
   onContinue: () => void,
   isActive: boolean,
-  /** Readiness signal back to PearlGameStage's sticky-CTA gate. Only myth
-   *  currently consumes it (≥2 answered swipes); other cards ignore. */
-  onReadyToContinue: (ready: boolean) => void,
 ): React.ReactNode {
   // Forward the pager's real isActive into each card. Previously every
   // card was passed `isActive` shorthand (=true) so animations + sounds
@@ -183,16 +173,14 @@ function renderGameCard(
     case 'dilemma':
       return <DilemmaCard isActive={isActive} onContinue={onContinue} />;
     case 'myth':
-      // hideContinueButton + onReadyToContinue route the "סיימתי, המשך"
-      // out of the card and into PearlGameStage's sticky bar, matching
-      // the DilemmaCard pattern in PearlScenarioStage. Threshold is
-      // raised to 2 swipes inside the card.
+      // autoAdvanceAfter={2}: the pearl advances automatically once the user
+      // has answered 2 cards and closed the feedback — no "המשך" button/bar
+      // at all (user spec 2026-06-05).
       return useMythStore.getState().canPlayMyth(isPro)
         ? <MythFeedCard
             isInterModule
             onSkip={onContinue}
-            hideContinueButton
-            onReadyToContinue={onReadyToContinue}
+            autoAdvanceAfter={2}
           />
         : <FallbackContinueOnMount onMount={onContinue} />;
     case 'fomo-killer':

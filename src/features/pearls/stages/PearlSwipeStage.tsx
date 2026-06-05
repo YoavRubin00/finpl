@@ -62,7 +62,7 @@ export function PearlSwipeStage({
   const body = (
     <>
       {kind === 'myth' && (
-        <MythFeedCard isInterModule onSkip={onContinue} />
+        <MythFeedCard isInterModule onSkip={onContinue} autoAdvanceAfter={2} />
       )}
       {kind === 'bull-bear' && (
         <SwipeGameCard isActive={isActive} onFinish={onContinue} />

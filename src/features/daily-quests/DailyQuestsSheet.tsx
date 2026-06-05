@@ -607,7 +607,7 @@ export function DailyQuestsSheet({ visible, onClose, onOpenNewsChallenge, onOpen
                   {allDone && !rewardClaimed && (
                     <Animated.View pointerEvents="none" style={[styles.chestGlowHalo, chestGlowStyle]} />
                   )}
-                  <Animated.View style={allDone && !rewardClaimed ? chestPulseStyle : undefined}>
+                  <Animated.View style={[chestCardStyles.regularChestLift, allDone && !rewardClaimed ? chestPulseStyle : null]}>
                     <LottieIcon source={LOTTIE_CHEST as unknown as number} size={150} autoPlay={false} active={chestOpen} loop={false} />
                   </Animated.View>
                   {/* "רגיל" sticker sits on top of the chest art (user request
@@ -1217,7 +1217,7 @@ const chestCardStyles = StyleSheet.create({
   // detached from the chest body (יפיופי 2026-06-05).
   stickerOnChest: {
     position: "absolute",
-    bottom: 4,
+    bottom: 29,
     alignSelf: "center",
     paddingHorizontal: 10,
     paddingVertical: 3,
@@ -1296,6 +1296,13 @@ const chestCardStyles = StyleSheet.create({
     position: "relative",
     overflow: "visible",
   },
+  regularChestLift: {
+    // הרמת ה-Lottie של התיבה הרגילה כדי שהקצה העליון יישר עם הגוף+מטבעות
+    // של ה-PRO PNG. ה-Lottie ממורכז ב-150×150, לכן היה ~25px buffer ריק
+    // מעל גוף התיבה. marginBottom דוחף את ה-Animated.View מעלה בתוך
+    // chestArt (flex-end). stickerOnChest עוקב — bottom: 4 → 29.
+    marginBottom: 25,
+  },
   rewardsRow: {
     flexDirection: "row-reverse",
     alignItems: "center",
@@ -1305,7 +1312,10 @@ const chestCardStyles = StyleSheet.create({
     // Rewards hug the chest now (was marginTop 8 — created a visible gap
     // that the user read as "rewards belong to the CTA below, not the
     // chest above", 2026-06-03 user report).
-    marginTop: 0,
+    // 2026-06-05: -10 to lift both reward rows up slightly (user request,
+    // both chests felt "bottom-heavy"). Both cards share this style so the
+    // shift is symmetric — left and right rewards remain on the same line.
+    marginTop: -10,
   },
   rewardIcon: {
     fontSize: 18,

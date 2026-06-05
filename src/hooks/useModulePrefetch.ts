@@ -87,6 +87,42 @@ async function prefetchVideo(uri: string): Promise<void> {
   });
 }
 
+// ExpoImage.prefetch returns Promise<boolean | undefined> (`true` on cache
+// hit, `false` on failure) — no HTTP status. Mirror the audio/video retry
+// shape: try a few times with exponential backoff, then log the final
+// outcome. Both `false` resolutions and thrown errors count as failures.
+async function prefetchImageWithRetry(uri: string): Promise<void> {
+  let lastReason: string | undefined;
+  for (let attempt = 0; attempt <= RETRY_DELAYS_MS.length; attempt++) {
+    try {
+      const ok = await ExpoImage.prefetch(uri);
+      if (ok !== false) {
+        if (attempt > 0) {
+          captureEvent('image_prefetch_failed', {
+            uri,
+            file_key: uri.split('/').slice(-2).join('/'),
+            platform: Platform.OS,
+            reason: `recovered_after_${attempt}_retries`,
+          });
+        }
+        return;
+      }
+      lastReason = 'prefetch_returned_false';
+    } catch (err) {
+      lastReason = err instanceof Error ? err.message : 'unknown';
+    }
+    if (attempt < RETRY_DELAYS_MS.length) {
+      await sleep(RETRY_DELAYS_MS[attempt]);
+    }
+  }
+  captureEvent('image_prefetch_failed', {
+    uri,
+    file_key: uri.split('/').slice(-2).join('/'),
+    platform: Platform.OS,
+    reason: lastReason ?? 'unknown',
+  });
+}
+
 async function prefetchAudio(uri: string): Promise<void> {
   const filename = uri.split("/").pop() || "audio.mp3";
   const localPath = AUDIO_CACHE_DIR + filename;
@@ -184,22 +220,7 @@ export function useModulePrefetch(
     setAudioReady(audioUris.length === 0);
 
     if (uris.length > 0) {
-      Promise.allSettled(uris.map((uri) => ExpoImage.prefetch(uri)))
-        .then((results) => {
-          // אנליטיקס לכשלים. בלי זה אנחנו עיוורים — משתמשים מדווחים על
-          // placeholders אפורים אבל לא יודעים אילו URLs נכשלו.
-          results.forEach((r, i) => {
-            if (r.status === 'rejected') {
-              const uri = uris[i];
-              captureEvent('image_prefetch_failed', {
-                uri,
-                file_key: uri.split('/').slice(-2).join('/'),
-                platform: Platform.OS,
-                reason: r.reason instanceof Error ? r.reason.message : String(r.reason),
-              });
-            }
-          });
-        })
+      Promise.allSettled(uris.map((uri) => prefetchImageWithRetry(uri)))
         .finally(() => { if (!cancelled) setImagesReady(true); });
     }
     if (videoUris.length > 0) {
