@@ -52,10 +52,13 @@ interface Props {
   unitColors: { bg: string; dim: string; glow: string; bottom: string };
   config: ModuleIntroConfig;
   audioUri?: string;
+  /** From useModulePrefetch — lets useIntroAudio wait briefly for the
+   *  cached local MP3 instead of cold-fetching from Vercel Blob. */
+  audioReady?: boolean;
 }
 
-export function ModuleIntroShort({ onStart, unitColors, config, audioUri }: Props) {
-  const audioState = useIntroAudio(audioUri);
+export function ModuleIntroShort({ onStart, unitColors, config, audioUri, audioReady }: Props) {
+  const audioState = useIntroAudio(audioUri, audioReady);
   const talkingImgRef = useRef<ExpoImage>(null);
 
   // Freeze webp on pause, resume on play, swap happens via `source` swap below.

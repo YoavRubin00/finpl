@@ -2392,7 +2392,7 @@ export function LessonFlowScreen() {
     if (!mod?.introAudio?.uri) return [];
     return [mod.introAudio.uri];
   }, [mod]);
-  const { imagesReady } = useModulePrefetch(prefetchUris, prefetchVideoUris, prefetchAudioUris);
+  const { imagesReady, audioReady } = useModulePrefetch(prefetchUris, prefetchVideoUris, prefetchAudioUris);
 
   // When the user finishes the intro, we'd like the first flashcard's image
   // already cached so they don't stare at a blank box. Block the transition
@@ -4078,6 +4078,7 @@ export function LessonFlowScreen() {
                 unitColors={unitColors}
                 chartImageUri={mod.introImage?.uri}
                 audioUri={mod.introAudio?.uri}
+                audioReady={audioReady}
               />
             ) : mod.introVariant === 'short' && MODULE_INTRO_CONFIGS[mod.id] ? (
               <ModuleIntroShort
@@ -4085,6 +4086,7 @@ export function LessonFlowScreen() {
                 unitColors={unitColors}
                 config={MODULE_INTRO_CONFIGS[mod.id]}
                 audioUri={mod.introAudio?.uri}
+                audioReady={audioReady}
               />
             ) : mod.introVariant === 'short' ? (
               <WhatIsMoneyIntro
@@ -4095,6 +4097,7 @@ export function LessonFlowScreen() {
               <InteractiveIntroCard
                 introText={mod.interactiveIntro}
                 audioUri={mod.introAudio?.uri}
+                audioReady={audioReady}
                 introImageUri={mod.introImage?.uri}
                 onStart={handleIntroStart}
                 unitColors={unitColors}
