@@ -7,7 +7,8 @@ import {
   Text,
   View,
 } from 'react-native';
-import { Bell, Check } from 'lucide-react-native';
+import { Bell } from 'lucide-react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { STITCH } from '../../../constants/theme';
 import { tapHaptic } from '../../../utils/haptics';
@@ -40,6 +41,7 @@ export function NotificationHourPicker({
   onClose,
   onPick,
 }: NotificationHourPickerProps): React.ReactElement | null {
+  const insets = useSafeAreaInsets();
   if (!visible) return null;
 
   const handlePick = (hour: number) => {
@@ -51,7 +53,7 @@ export function NotificationHourPicker({
     <View style={styles.overlay}>
       <Pressable style={styles.backdrop} onPress={onClose} accessibilityLabel="סגור" />
 
-      <View style={styles.sheet}>
+      <View style={[styles.sheet, { paddingBottom: Math.max(insets.bottom, 12) + 8 }]}>
         <View style={styles.handle} />
 
         <View style={styles.header}>
@@ -65,7 +67,7 @@ export function NotificationHourPicker({
 
         <ScrollView
           style={styles.list}
-          contentContainerStyle={styles.listContent}
+          contentContainerStyle={styles.grid}
           showsVerticalScrollIndicator={false}
         >
           {PICKABLE_HOURS.map((hour) => {
@@ -75,20 +77,20 @@ export function NotificationHourPicker({
                 key={hour}
                 onPress={() => handlePick(hour)}
                 style={({ pressed }) => [
-                  styles.row,
-                  selected && styles.rowSelected,
+                  styles.pill,
+                  selected && styles.pillSelected,
                   pressed && { opacity: 0.7 },
                 ]}
                 accessibilityRole="button"
                 accessibilityState={{ selected }}
                 accessibilityLabel={`שעה ${hour}:00`}
               >
-                <Text style={[styles.hourText, selected && styles.hourTextSelected]} allowFontScaling={false}>
+                <Text
+                  style={[styles.pillText, selected && styles.pillTextSelected]}
+                  allowFontScaling={false}
+                >
                   {String(hour).padStart(2, '0')}:00
                 </Text>
-                {selected ? (
-                  <Check size={18} color={STITCH.primary} strokeWidth={2.6} />
-                ) : null}
               </Pressable>
             );
           })}
@@ -166,31 +168,37 @@ const styles = StyleSheet.create({
   list: {
     flexGrow: 0,
   },
-  listContent: {
-    paddingBottom: 12,
-    gap: 4,
-  },
-  row: {
+  // Wrapped grid of hour pills (4 per row) — far faster to scan than a
+  // 17-row vertical list, and fits without the bottom rows getting clipped
+  // by the system nav bar (user report 2026-06-06: "חריגה מהמסך").
+  grid: {
     flexDirection: 'row-reverse',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingVertical: 14,
-    paddingHorizontal: 12,
-    borderRadius: 10,
-    backgroundColor: '#f8fafc',
+    flexWrap: 'wrap',
+    gap: 8,
+    paddingTop: 4,
+    paddingBottom: 4,
   },
-  rowSelected: {
-    backgroundColor: STITCH.primary + '14',
+  pill: {
+    width: '22%',
+    paddingVertical: 12,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#f8fafc',
     borderWidth: 1.5,
+    borderColor: '#e2e8f0',
+  },
+  pillSelected: {
+    backgroundColor: STITCH.primary,
     borderColor: STITCH.primary,
   },
-  hourText: {
-    fontSize: 16,
+  pillText: {
+    fontSize: 15,
     fontWeight: '800',
     color: STITCH.onSurface,
     writingDirection: 'rtl',
   },
-  hourTextSelected: {
-    color: STITCH.primary,
+  pillTextSelected: {
+    color: '#ffffff',
   },
 });

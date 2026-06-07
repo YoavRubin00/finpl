@@ -40,118 +40,48 @@ const RANKING_HE = {
   Laggard: 'מאחור',
 } as const;
 
-const SECTOR_TREND_HE = {
-  tailwind: 'רוח גבית',
-  neutral: 'ניטרלי',
-  headwind: 'רוח נגדית',
-} as const;
-
-const MARGIN_TREND_HE = {
-  improving: 'בשיפור',
-  stable: 'יציבים',
-  declining: 'בדעיכה',
-  unknown: 'לא ידוע',
-} as const;
-
-const SENTIMENT_HE = {
-  'very-positive': 'חיובי מאוד',
-  positive: 'חיובי',
-  neutral: 'ניטרלי',
-  negative: 'שלילי',
-  'very-negative': 'שלילי מאוד',
-  unknown: 'לא ידוע',
-} as const;
-
-const INSIDER_HE = {
-  buying: 'קונים',
-  selling: 'מוכרים',
-  neutral: 'ניטרליים',
-  unknown: 'לא ידוע',
-} as const;
-
-const IMPACT_HE = { low: 'נמוך', medium: 'בינוני', high: 'גבוה' } as const;
-
 function bullets(items: string[]): string {
   return items.map((b) => `   • ${b}`).join('\n');
 }
 
+/**
+ * Build a COMPACT share summary — not the full deep card.
+ *
+ * Why: the full analysis runs ~6-8KB of Hebrew text. RN's Share.share hands
+ * that to the receiving app (WhatsApp/Telegram/Notes), which silently
+ * truncates long text — users were getting the share cut off mid-sentence
+ * in the thesis section. A tight summary (~1KB) fits under every app's limit
+ * so nothing is lost. The full analysis stays available in-app.
+ */
 function formatDeep(data: StockAnalysisDeep): string {
-  const { summary, thesis, fundamental, businessIntel, sectorMacro, catalysts } = data;
+  const { summary, thesis, fundamental } = data;
   const sb = summary.scoreBreakdown;
   const cy = summary.priceTargets.currency;
-  const valuation = fundamental.valuation;
 
-  const lines: string[] = [
+  const lines: Array<string | false> = [
     `🦈 ניתוח מעמיק: ${data.companyName} (${data.ticker})`,
-    `🎯 תובנת השארק: ${VERDICT_HE[summary.verdict]} · דירוג ${RANKING_HE[summary.ranking]}`,
-    `📊 קונבישן: ${thesis.conviction}/10 — ${thesis.convictionLabel}`,
+    `🎯 ${VERDICT_HE[summary.verdict]} · דירוג ${RANKING_HE[summary.ranking]} · קונבישן ${thesis.conviction}/10`,
     `⏱ טווח: ${HORIZON_HE[data.horizon]}`,
     '',
     `📈 ${summary.oneLiner}`,
     '',
-    `📊 ציוני משנה:`,
-    `   פונדמנטלים ${sb.fundamentals.toFixed(1)} · מומנטום ${sb.momentum.toFixed(1)} · סנטימנט ${sb.sentiment.toFixed(1)} · חפיר ${sb.moat.toFixed(1)} (מתוך 10)`,
+    `📊 ציוני משנה: פונדמנטלים ${sb.fundamentals.toFixed(1)} · מומנטום ${sb.momentum.toFixed(1)} · סנטימנט ${sb.sentiment.toFixed(1)} · חפיר ${sb.moat.toFixed(1)} (מתוך 10)`,
     '',
-    '────── פונדמנטלים ──────',
-    fundamental.headline,
-    `• צמיחת הכנסות: ${fundamental.revenueGrowthYoY !== null ? fundamental.revenueGrowthYoY.toFixed(1) + '%' : 'לא ידוע'}`,
-    `• מרווחים: ${MARGIN_TREND_HE[fundamental.marginTrend]}`,
-    `• מזומן: ${fundamental.cashPosition}`,
-    `• חוב: ${fundamental.debtLoad}`,
-    `• מכפיל רווח (P/E): ${valuation.peRatio !== null ? valuation.peRatio.toFixed(1) : 'לא ידוע'} · PEG: ${valuation.pegRatio !== null ? valuation.pegRatio.toFixed(2) : 'לא ידוע'}`,
-    `   ${valuation.relativeNote}`,
+    fundamental.highlights.length > 0 ? `💪 חוזקות:\n${bullets(fundamental.highlights.slice(0, 2))}` : false,
+    fundamental.risks.length > 0 ? `⚠️ סיכונים:\n${bullets(fundamental.risks.slice(0, 2))}` : false,
     '',
-    `💪 נקודות חוזק:`,
-    bullets(fundamental.highlights),
-    '',
-    `⚠️ סיכונים:`,
-    bullets(fundamental.risks),
-    fundamental.commentary?.message ? `\n🦈 ${fundamental.commentary.message}` : '',
-    '',
-    '────── עומק עסקי ──────',
-    `בעלות: פנימיים ${businessIntel.ownership.insiderPct.toFixed(0)}% · מוסדיים ${businessIntel.ownership.institutionalPct.toFixed(0)}% · ציבור ${businessIntel.ownership.publicPct.toFixed(0)}%`,
-    `   ${businessIntel.ownership.note}`,
-    `פעילות פנים: ${INSIDER_HE[businessIntel.insiderActivity.netDirection]} — ${businessIntel.insiderActivity.detail}`,
-    `פטנטים: ${businessIntel.patentActivity}`,
-    `סנטימנט: ${SENTIMENT_HE[businessIntel.sentiment.label]} — ${businessIntel.sentiment.summary}`,
-    businessIntel.commentary?.message ? `\n🦈 ${businessIntel.commentary.message}` : '',
-    '',
-    '────── התזה — שני הצדדים ──────',
-    `🐂 בולית:`,
-    bullets(thesis.bullCase),
-    '',
-    `🐻 דובית:`,
-    bullets(thesis.bearCase),
-    thesis.commentary?.message ? `\n🦈 ${thesis.commentary.message}` : '',
-    '',
-    '────── סקטור ומאקרו ──────',
-    `${sectorMacro.sector} · ${SECTOR_TREND_HE[sectorMacro.sectorTrend]}`,
-    sectorMacro.peers.length > 0
-      ? `מתחרים: ${sectorMacro.peers.map((p) => `${p.symbol} (${p.delta})`).join(', ')}`
-      : '',
-    sectorMacro.macroNotes.length > 0 ? `סביבה:\n${bullets(sectorMacro.macroNotes)}` : '',
-    sectorMacro.commentary?.message ? `\n🦈 ${sectorMacro.commentary.message}` : '',
-    '',
-    '────── קטליסטים קרובים ──────',
-    catalysts.upcoming
-      .map((c) => `• ${c.title} (${c.timing}) — השפעה ${IMPACT_HE[c.impact]}`)
-      .join('\n'),
-    catalysts.watchList.length > 0 ? `\nשווה לעקוב:\n${bullets(catalysts.watchList)}` : '',
-    catalysts.commentary?.message ? `\n🦈 ${catalysts.commentary.message}` : '',
-    '',
-    '────── יעדי מחיר חינוכיים ──────',
-    `🔻 תרחיש שלילי: ${summary.priceTargets.bear} ${cy}`,
-    `▫ בסיס: ${summary.priceTargets.base} ${cy}`,
-    `🔺 תרחיש חיובי: ${summary.priceTargets.bull} ${cy}`,
-    '',
-    summary.closingNote.message,
+    `🎯 יעדי מחיר חינוכיים: 🔻${summary.priceTargets.bear} · ▫${summary.priceTargets.base} · 🔺${summary.priceTargets.bull} ${cy}`,
     '',
     DISCLAIMER,
     SIGNATURE,
   ];
 
-  // Strip blank duplicate lines / leading-trailing whitespace
-  return lines.filter((l) => l !== undefined).join('\n').replace(/\n{3,}/g, '\n\n').trim();
+  // Drop omitted (false) sections, then collapse blank-line runs.
+  return lines
+    .filter((l): l is string => typeof l === 'string')
+    .join('\n')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim();
 }
 
 /**

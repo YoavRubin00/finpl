@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Pressable,
@@ -10,7 +10,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
-import { AlertTriangle, Bell, LogIn, Newspaper, Plus, Sparkles, X } from 'lucide-react-native';
+import { AlertTriangle, Bell, Crown, LogIn, Newspaper, Plus, Sparkles, X } from 'lucide-react-native';
 
 import { STITCH } from '../../constants/theme';
 import { tapHaptic } from '../../utils/haptics';
@@ -106,10 +106,38 @@ export function BreakingNewsScreen(): React.ReactElement {
     }
   }, [setItems]);
 
+  // Tracks tickers we've already tried to on-demand backfill this session,
+  // so re-renders don't re-fire generation (and rack up cost / hit the 5/hr
+  // server rate limit).
+  const backfillAttempted = useRef<Set<string>>(new Set());
+
   // Initial server refresh on mount — skip for guests (server requires authId).
+  // After the refresh, on-demand backfill any ticker still pending today so
+  // stale tickers (added before the fix / before today's cron) fill in within
+  // seconds instead of waiting until tomorrow's 9:00 cron. Best-effort: a
+  // failed generate leaves the card pending (we do NOT remove the ticker).
   useEffect(() => {
     if (isGuest) return;
-    void refresh();
+    void (async () => {
+      await refresh();
+      const pending = useBreakingNewsStore.getState().items.filter((i) => !i.summary);
+      let didGenerate = false;
+      for (const it of pending) {
+        if (backfillAttempted.current.has(it.ticker)) continue;
+        backfillAttempted.current.add(it.ticker);
+        setGenerating(it.ticker);
+        didGenerate = true;
+        try {
+          await generateBreakingNewsForTicker(it.ticker);
+        } catch {
+          /* best-effort — leave the card pending, user can pull-to-refresh */
+        }
+      }
+      if (didGenerate) {
+        setGenerating(null);
+        await refresh();
+      }
+    })();
   }, [refresh, isGuest]);
 
   // Keep the daily local notification synced with the user's preferred hour.
@@ -320,8 +348,15 @@ export function BreakingNewsScreen(): React.ReactElement {
               accessibilityRole="button"
               accessibilityLabel={atLimit ? 'שדרג ל-PRO' : 'הוסף מניה'}
             >
-              <Plus size={18} color="#ffffff" strokeWidth={2.6} />
-              <Text style={styles.addBtnText} allowFontScaling={false}>
+              {atLimit && !isPro ? (
+                <Crown size={18} color="#78350f" strokeWidth={2.6} />
+              ) : (
+                <Plus size={18} color="#ffffff" strokeWidth={2.6} />
+              )}
+              <Text
+                style={[styles.addBtnText, atLimit && !isPro && styles.addBtnTextLocked]}
+                allowFontScaling={false}
+              >
                 {atLimit && !isPro
                   ? `שדרג ל-PRO לעוד ${BREAKING_NEWS_PRO_TICKER_CAP - items.length} מניות`
                   : atLimit
@@ -481,11 +516,11 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 6 },
     elevation: 8,
   },
-  // At-limit + not-Pro state — go gold to scream "premium upgrade".
-  // The previous deep-blue variant blended in with the regular addBtn so
-  // the user couldn't see they hit the limit (screenshot 2026-06-03).
+  // At-limit + not-Pro state — bright gold with DARK text to scream
+  // "premium upgrade" AND stay legible. White-on-#f59e0b was ~2:1 contrast
+  // (WCAG fail) so the button read as invisible (user report 2026-06-06).
   addBtnLocked: {
-    backgroundColor: '#f59e0b',
+    backgroundColor: '#fbbf24',
     borderBottomColor: '#b45309',
     shadowColor: '#f59e0b',
   },
@@ -495,6 +530,10 @@ const styles = StyleSheet.create({
     fontWeight: '900',
     writingDirection: 'rtl',
     letterSpacing: 0.2,
+  },
+  // Dark amber text for the gold locked button — ~7:1 contrast on #fbbf24.
+  addBtnTextLocked: {
+    color: '#78350f',
   },
   footerHint: {
     fontSize: 11,

@@ -25,7 +25,7 @@ export interface BreakingNewsSummary {
 
 export const BREAKING_NEWS_SYSTEM_PROMPT = `אתה שארק — אנליסט פיננסי שמסכם חדשות מניות לדור Z בעברית.
 
-הקלט שלך הוא חבילה של כותרות חדשות וקטעי טקסט מ-Tavily על מניה ספציפית.
+הקלט שלך הוא חבילה של כותרות חדשות וקטעי טקסט ממקורות חדשות על מניה ספציפית.
 תפקידך: לסכם את מה שקרה היום בשפה עברית סלנגית-אבל-מקצועית, ולתת ציון לרמת ההייפ החברתי סביב המניה.
 
 הנחיות:
@@ -69,7 +69,7 @@ export function buildBreakingNewsUserPrompt(
   bundle: TavilyBundle,
 ): string {
   const tavilyAnswer = bundle.answer
-    ? `סיכום ראשוני של Tavily:\n${bundle.answer}\n\n`
+    ? `סיכום ראשוני:\n${bundle.answer}\n\n`
     : '';
 
   const snippets = bundle.results
