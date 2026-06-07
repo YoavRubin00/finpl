@@ -15,7 +15,8 @@ import { drizzle } from 'drizzle-orm/neon-http';
 import { and, eq } from 'drizzle-orm';
 
 import { breakingNewsSummaries } from '../../../src/db/schema';
-import { tavilyNewsSearch } from '../_shared/tavily';
+import { fetchTickerNews } from '../_shared/perplexityNews';
+import { tavilyNewsSearch, type TavilyBundle } from '../_shared/tavily';
 import { withRetry, isTransientAiError } from '../_shared/retry';
 import { formatFailuresForRetryHint } from '../_shared/simplicityCheck';
 import {
@@ -101,10 +102,29 @@ export async function generateForTicker(
     }
   }
 
-  // 1) Tavily — fetch fresh news + social snippets for this ticker.
-  const bundle = await tavilyNewsSearch(ticker, { timeRange: 'day', maxResults: 10 });
+  // 1) Fetch fresh news + social snippets for this ticker.
+  //    Prefer Tavily when TAVILY_API_KEY is configured (purpose-built for
+  //    news, with domain filtering + a day range). Fall back to Perplexity
+  //    (always available — same key as the deep analyzer) when Tavily isn't
+  //    configured, OR when a configured Tavily errors / returns 0 results.
+  //    This keeps the feature working in every environment: locally (no
+  //    Tavily key → Perplexity) and in production (Tavily, with Perplexity
+  //    as a safety net).
+  let bundle: TavilyBundle;
+  if (process.env.TAVILY_API_KEY) {
+    try {
+      bundle = await tavilyNewsSearch(ticker, { timeRange: 'day', maxResults: 10 });
+      if (bundle.results.length === 0) throw new Error('tavily returned 0 results');
+    } catch (tavilyErr) {
+      const msg = tavilyErr instanceof Error ? tavilyErr.message : String(tavilyErr);
+      console.warn(`[breaking-news] Tavily failed for ${ticker} (${msg}) — falling back to Perplexity`);
+      bundle = await fetchTickerNews(ticker, { maxResults: 10 });
+    }
+  } else {
+    bundle = await fetchTickerNews(ticker, { maxResults: 10 });
+  }
   if (bundle.results.length === 0) {
-    throw new Error(`Tavily returned 0 results for ${ticker}`);
+    throw new Error(`news search returned 0 results for ${ticker}`);
   }
 
   // 2) Gemini — structure the bundle into the JSON shape we persist.
