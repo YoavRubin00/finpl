@@ -39,6 +39,9 @@ interface Props {
   unitColors: { bg: string; dim: string; glow: string; bottom: string };
   chartImageUri?: string;
   audioUri?: string;
+  /** From useModulePrefetch — lets useIntroAudio wait briefly for the
+   *  cached local MP3 instead of cold-fetching from Vercel Blob. */
+  audioReady?: boolean;
 }
 
 // ── Mini bar chart, fixed hooks, no loops ─────────────────────────────────
@@ -88,8 +91,8 @@ function CompoundChart({ animate }: { animate: boolean }) {
 }
 
 // ── Main component ─────────────────────────────────────────────────────────
-export function CompoundInterestIntro({ onStart, unitColors, chartImageUri, audioUri }: Props) {
-  const audioState = useIntroAudio(audioUri);
+export function CompoundInterestIntro({ onStart, unitColors, chartImageUri, audioUri, audioReady }: Props) {
+  const audioState = useIntroAudio(audioUri, audioReady);
   const talkingImgRef = useRef<ExpoImage>(null);
 
   useEffect(() => {

@@ -23,6 +23,7 @@ import Animated, {
     FadeInUp,
 } from 'react-native-reanimated';
 import { LinearGradient } from 'expo-linear-gradient';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LottieIcon } from '../../../components/ui/LottieIcon';
 import { AnimatedPressable } from '../../../components/ui/AnimatedPressable';
 import { SimLottieBackground } from '../../../components/ui/SimLottieBackground';
@@ -591,6 +592,12 @@ export function CompoundSimScreen({ onComplete, suppressAudio = false }: Compoun
     const { state, updateYears, updateInitialAmount, updateMonthlyContribution, reset } =
         useCompoundSim(compoundConfig);
     const safeTimeout = useTimeoutCleanup();
+    // Bottom safe-area inset: the route's SafeAreaView intentionally only
+    // applies `edges={['top']}` (codebase convention — bottom handled per
+    // screen). Without adding insets.bottom to the ScrollView's bottom
+    // padding, the "בואו נמשיך" CTA gets clipped by the Android home
+    // indicator (user report 2026-06-07).
+    const insets = useSafeAreaInsets();
 
     const [isAutoRunning, setIsAutoRunning] = useState(false);
     const [showConfetti, setShowConfetti] = useState(false);
@@ -737,7 +744,7 @@ export function CompoundSimScreen({ onComplete, suppressAudio = false }: Compoun
                 chapterColors={_th1.gradient}
             >
                 <View style={{ flex: 1 }}>
-                  <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 14, paddingTop: 24, paddingBottom: 120, gap: 8 }}>
+                  <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 14, paddingTop: 24, paddingBottom: 120 + insets.bottom, gap: 8 }}>
                     {/* Lesson title */}
                     <Animated.View entering={FadeIn.duration(400)} style={{ alignItems: 'flex-end' }}>
                         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, justifyContent: 'flex-end' }}>

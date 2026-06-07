@@ -62,11 +62,15 @@ interface InteractiveIntroCardProps {
   onStart: () => void;
   unitColors: { bg: string; dim: string; glow: string; bottom: string };
   audioUri?: string;
+  /** Forwarded to useIntroAudio so the hook can defer createAudioPlayer
+   *  briefly while the parallel prefetch lands the MP3 in the local
+   *  file cache. Eliminates the cold-fetch that drove intro_audio_delayed. */
+  audioReady?: boolean;
   introImageUri?: string;
 }
 
-export const InteractiveIntroCard = React.memo(function InteractiveIntroCard({ introText, onStart, unitColors, audioUri, introImageUri }: InteractiveIntroCardProps) {
-  const audioState = useIntroAudio(audioUri);
+export const InteractiveIntroCard = React.memo(function InteractiveIntroCard({ introText, onStart, unitColors, audioUri, audioReady, introImageUri }: InteractiveIntroCardProps) {
+  const audioState = useIntroAudio(audioUri, audioReady);
   const displayText = cleanGlossaryMarkup(introText);
   const { playSound } = useSoundEffect();
   const textStyle = useEntranceAnimation(fadeInUp, { delay: 0 });
