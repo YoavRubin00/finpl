@@ -33,6 +33,21 @@ let lastFiredAuthToken: string | null = null;
 const AUTH_INVALID_MIN_INTERVAL_MS = 120_000;
 let lastFiredAuthInvalidAt = 0;
 
+// Track when the last token rotation happened (via X-Auth-Refreshed-Token).
+// Lets the analytics event surface "how old is this token" — distinguishes
+// "rotation produced a bad token immediately" from "token was valid for hours
+// then suddenly rejected" (e.g. server-side key rotation).
+let lastTokenRotationAt = 0;
+
+/** First few chars + length signature. Never the full token — that's PII /
+ *  a session-grab risk in analytics. 'jwt' = JWT format (eyJ...), 'opaque' =
+ *  anything else, 'empty' = empty string. */
+function tokenSignature(token: string): { format: 'jwt' | 'opaque' | 'empty'; length: number } {
+  if (!token) return { format: 'empty', length: 0 };
+  if (token.startsWith('eyJ')) return { format: 'jwt', length: token.length };
+  return { format: 'opaque', length: token.length };
+}
+
 async function request<TBody, TResponse>(
   method: 'GET' | 'POST',
   path: string,
@@ -61,6 +76,7 @@ async function request<TBody, TResponse>(
   const refreshed = res.headers.get('X-Auth-Refreshed-Token');
   if (refreshed) {
     await tokenStore.set(refreshed);
+    lastTokenRotationAt = Date.now();
   }
 
   if (res.status === 401) {
@@ -85,7 +101,30 @@ async function request<TBody, TResponse>(
       const now = Date.now();
       if (now - lastFiredAuthInvalidAt >= AUTH_INVALID_MIN_INTERVAL_MS) {
         lastFiredAuthInvalidAt = now;
-        try { captureEvent('auth_token_invalid', { endpoint: path }); } catch { /* swallow */ }
+        // Surface enough context to diagnose the 132-user spike PostHog
+        // surfaced 2026-06-05. error_message distinguishes "expired" vs
+        // "invalid signature" vs other server reasons. token_length +
+        // token_format catch truncation / wrong-provider bugs. Token
+        // value itself is NEVER logged. ms_since_token_rotated tells us
+        // if the bad token came from a recent rotation or was stale.
+        const errMessage = (() => {
+          if (errBody && typeof errBody === 'object' && 'error' in errBody) {
+            const e = (errBody as { error?: unknown }).error;
+            if (typeof e === 'string') return e.slice(0, 200);
+          }
+          return errText.slice(0, 200);
+        })();
+        const sig = tokenSignature(token);
+        try {
+          captureEvent('auth_token_invalid', {
+            endpoint: path,
+            method,
+            error_message: errMessage,
+            token_length: sig.length,
+            token_format: sig.format,
+            ms_since_token_rotated: lastTokenRotationAt > 0 ? now - lastTokenRotationAt : null,
+          });
+        } catch { /* swallow */ }
       }
       // onUnauthorizedHandler still fires every time so the UI sign-out path
       // (handler in lifecycle.ts) reacts immediately to ANY rejected token —
