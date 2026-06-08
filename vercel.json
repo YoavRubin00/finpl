@@ -6,6 +6,9 @@
     "api/**/*.ts": {
       "maxDuration": 120,
       "includeFiles": "src/features/email/welcomeEmail.html"
+    },
+    "app/api/**/*.ts": {
+      "maxDuration": 120
     }
   },
   "headers": [

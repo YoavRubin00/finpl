@@ -20,6 +20,7 @@ import { useIsPro } from '../subscription/useSubscription';
 import { BREAKING_NEWS_PRO_TICKER_CAP, BASIC_LIMITS } from '../subscription/subscriptionConstants';
 import { useUpgradeModalStore } from '../../stores/useUpgradeModalStore';
 import { useNotificationStore } from '../notifications/useNotificationStore';
+import { captureEvent } from '../../lib/posthog';
 
 import { BreakingNewsCard } from './components/BreakingNewsCard';
 import { EmptyState } from './components/EmptyState';
@@ -80,6 +81,9 @@ export function BreakingNewsScreen(): React.ReactElement {
   const [pickerOpen, setPickerOpen] = useState(false);
   const [hourPickerOpen, setHourPickerOpen] = useState(false);
   const [generating, setGenerating] = useState<string | null>(null);
+  /** Tickers whose on-demand generation failed this session — drives the
+   *  per-card "נסה שוב" state instead of an endless "מנתח חדשות" spinner. */
+  const [failed, setFailed] = useState<Set<string>>(new Set());
   /** Inline error banner — replaces Alert.alert which doesn't render on
    *  React Native Web. Cleared when the user dismisses it or on next pick. */
   const [errorBanner, setErrorBanner] = useState<string | null>(null);
@@ -129,8 +133,15 @@ export function BreakingNewsScreen(): React.ReactElement {
         didGenerate = true;
         try {
           await generateBreakingNewsForTicker(it.ticker);
-        } catch {
-          /* best-effort — leave the card pending, user can pull-to-refresh */
+        } catch (err) {
+          // Surface the failure (card shows "נסה שוב") + log the real cause so
+          // we can finally see WHY (401/429/500/504) in PostHog. Then STOP —
+          // a failure is almost always systemic, so hammering the rest just
+          // burns the 5/hr generate rate limit and hard-locks the user.
+          const message = err instanceof Error ? err.message : String(err);
+          try { captureEvent('breaking_news_generate_failed', { ticker: it.ticker, message, source: 'backfill' }); } catch { /* non-fatal */ }
+          setFailed((prev) => new Set(prev).add(it.ticker));
+          break;
         }
       }
       if (didGenerate) {
@@ -139,6 +150,25 @@ export function BreakingNewsScreen(): React.ReactElement {
       }
     })();
   }, [refresh, isGuest]);
+
+  // Manual per-card retry after a failed generation. Clears the failed/attempted
+  // marks for that ticker and tries once more.
+  const handleRetryTicker = useCallback(async (ticker: string) => {
+    tapHaptic();
+    setFailed((prev) => { const next = new Set(prev); next.delete(ticker); return next; });
+    backfillAttempted.current.delete(ticker);
+    setGenerating(ticker);
+    try {
+      await generateBreakingNewsForTicker(ticker);
+      await refresh();
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      try { captureEvent('breaking_news_generate_failed', { ticker, message, source: 'retry' }); } catch { /* non-fatal */ }
+      setFailed((prev) => new Set(prev).add(ticker));
+    } finally {
+      setGenerating(null);
+    }
+  }, [refresh]);
 
   // Keep the daily local notification synced with the user's preferred hour.
   // Runs once on mount and again any time `notificationHour` changes.
@@ -187,6 +217,7 @@ export function BreakingNewsScreen(): React.ReactElement {
     } catch (err) {
       removeLocal(ticker);
       const message = err instanceof Error ? err.message : String(err);
+      try { captureEvent('breaking_news_generate_failed', { ticker, message, source: 'add' }); } catch { /* non-fatal */ }
       // Inline banner — Alert.alert silently no-ops on React Native Web, so
       // the user would otherwise see literally nothing.
       setErrorBanner(`לא הצלחנו להוסיף את ${ticker}: ${message.slice(0, 140)}`);
@@ -326,6 +357,9 @@ export function BreakingNewsScreen(): React.ReactElement {
                 serverTradingDay={serverTradingDay}
                 onRemove={handleRemoveTicker}
                 onMarkRead={markRead}
+                hasFailed={failed.has(item.ticker)}
+                isGenerating={generating === item.ticker}
+                onRetry={handleRetryTicker}
               />
             ))}
 

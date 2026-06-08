@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   Platform,
   Pressable,
@@ -42,11 +42,23 @@ export function NotificationHourPicker({
   onPick,
 }: NotificationHourPickerProps): React.ReactElement | null {
   const insets = useSafeAreaInsets();
+  // "Select then confirm" — tapping an hour only sets the pending choice; the
+  // "אשר" button applies it. Reset to the live hour each time the sheet opens.
+  const [pending, setPending] = useState(currentHour);
+  useEffect(() => {
+    if (visible) setPending(currentHour);
+  }, [visible, currentHour]);
+
   if (!visible) return null;
 
-  const handlePick = (hour: number) => {
+  const handleSelect = (hour: number) => {
     tapHaptic();
-    onPick(hour);
+    setPending(hour);
+  };
+
+  const handleConfirm = () => {
+    tapHaptic();
+    onPick(pending);
   };
 
   return (
@@ -71,11 +83,11 @@ export function NotificationHourPicker({
           showsVerticalScrollIndicator={false}
         >
           {PICKABLE_HOURS.map((hour) => {
-            const selected = hour === currentHour;
+            const selected = hour === pending;
             return (
               <Pressable
                 key={hour}
-                onPress={() => handlePick(hour)}
+                onPress={() => handleSelect(hour)}
                 style={({ pressed }) => [
                   styles.pill,
                   selected && styles.pillSelected,
@@ -95,6 +107,17 @@ export function NotificationHourPicker({
             );
           })}
         </ScrollView>
+
+        <Pressable
+          onPress={handleConfirm}
+          style={({ pressed }) => [styles.confirmBtn, pressed && { opacity: 0.9, transform: [{ scale: 0.99 }] }]}
+          accessibilityRole="button"
+          accessibilityLabel={`אשר התראה בשעה ${pending}:00`}
+        >
+          <Text style={styles.confirmBtnText} allowFontScaling={false}>
+            אשר · {String(pending).padStart(2, '0')}:00
+          </Text>
+        </Pressable>
       </View>
     </View>
   );
@@ -178,27 +201,47 @@ const styles = StyleSheet.create({
     paddingTop: 4,
     paddingBottom: 4,
   },
+  // Unselected = white with a clear BLUE outline + blue text (was near-white
+  // #f8fafc on a white sheet → "can't see the buttons", user 2026-06-08).
   pill: {
     width: '22%',
     paddingVertical: 12,
     borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#f8fafc',
+    backgroundColor: '#ffffff',
     borderWidth: 1.5,
-    borderColor: '#e2e8f0',
+    borderColor: '#0ea5e9',
   },
   pillSelected: {
-    backgroundColor: STITCH.primary,
-    borderColor: STITCH.primary,
+    backgroundColor: '#0ea5e9',
+    borderColor: '#0284c7',
   },
   pillText: {
     fontSize: 15,
     fontWeight: '800',
-    color: STITCH.onSurface,
+    color: '#0ea5e9',
     writingDirection: 'rtl',
   },
   pillTextSelected: {
     color: '#ffffff',
+  },
+  // Full-width blue confirm CTA — mirrors the addBtn in BreakingNewsScreen.
+  confirmBtn: {
+    marginTop: 14,
+    paddingVertical: 15,
+    borderRadius: 14,
+    backgroundColor: '#0ea5e9',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderBottomWidth: 4,
+    borderBottomColor: '#0369a1',
+  },
+  confirmBtnText: {
+    fontSize: 16,
+    fontWeight: '900',
+    color: '#ffffff',
+    writingDirection: 'rtl',
+    letterSpacing: 0.3,
   },
 });
