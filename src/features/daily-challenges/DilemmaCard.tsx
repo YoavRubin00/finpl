@@ -21,6 +21,7 @@ import { FINN_STANDARD } from '../retention-loops/finnMascotConfig';
 import { GoldCoinIcon } from '../../components/ui/GoldCoinIcon';
 import { useDailyChallengesStore } from './use-daily-challenges-store';
 import { useDailyLogStore } from '../daily-summary/useDailyLogStore';
+import { israelDayKey } from '../../utils/dateUtils';
 import { getTodayDilemma, getDilemmaById } from './dilemma-data';
 import { MAX_DILEMMA_DAILY, CHALLENGE_XP_REWARD, CHALLENGE_COIN_REWARD } from './daily-challenge-types';
 import type { DilemmaChoice } from './daily-challenge-types';
@@ -144,7 +145,7 @@ export const DilemmaCard = React.memo(function DilemmaCard({ isActive, onContinu
     }
 
     try {
-      const today = new Date().toISOString().slice(0, 10);
+      const today = israelDayKey();
       answerDilemma(today, choice.isCorrect);
 
       const log = useDailyLogStore.getState();

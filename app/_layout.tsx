@@ -46,6 +46,7 @@ import { Slot, useRouter, useSegments, useRootNavigationState, usePathname } fro
 import { useEffect, useRef, useState } from "react";
 import { AppState, Platform, Text, TextInput } from "react-native";
 import { useUserStatsUIStore } from "../src/features/user-stats/useUserStatsUIStore";
+import { useDailyQuestsStore } from "../src/features/daily-quests/useDailyQuestsStore";
 import { recordSessionTime as apiRecordSessionTime } from "../src/lib/api/userStats";
 import { userStatsQueryKey } from "../src/features/user-stats/useUserStats";
 import { setAudioModeAsync } from "expo-audio";
@@ -200,6 +201,11 @@ function RootLayoutInner() {
     const sub = AppState.addEventListener("change", (state) => {
       if (state === "active") {
         foregroundEnteredAt.current = Date.now();
+        // Foreground crossing midnight Israel-time: re-run the lazy day-key
+        // check inside the quests store so the 4 stars + chest reset
+        // immediately on resume, not on the next time the user navigates to
+        // DuoLearnScreen. refreshQuests() is idempotent same-day.
+        try { useDailyQuestsStore.getState().refreshQuests(); } catch { /* non-fatal */ }
       } else if (state === "background" || state === "inactive") {
         if (foregroundEnteredAt.current !== null) {
           const secs = Math.round((Date.now() - foregroundEnteredAt.current) / 1000);

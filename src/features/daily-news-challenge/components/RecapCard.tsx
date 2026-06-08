@@ -15,10 +15,10 @@ import Animated, {
   withSpring,
 } from 'react-native-reanimated';
 import { Image as ExpoImage } from 'expo-image';
-import { Check, X as XIcon, Sparkles } from 'lucide-react-native';
+import { Check, Sparkles } from 'lucide-react-native';
 
 import { tapHaptic, successHaptic } from '../../../utils/haptics';
-import { FINN_DANCING, FINN_HAPPY } from '../../retention-loops/finnMascotConfig';
+import { FINN_DANCING } from '../../retention-loops/finnMascotConfig';
 import { GoldCoinIcon } from '../../../components/ui/GoldCoinIcon';
 import { STITCH } from '../../../constants/theme';
 import { previewRegularReward, previewProReward, type ChallengeRewardSummary } from '../useDailyNewsChallengeStore';
@@ -73,8 +73,11 @@ export function RecapCard({
   const ctaStyle = useAnimatedStyle(() => ({ transform: [{ scale: ctaScale.value }] }));
 
   useEffect(() => {
-    if (both) successHaptic();
-  }, [both]);
+    // Always celebrate completion. Reward calc still uses real `both` for
+    // XP/coins so we don't lie about economy, but emotional framing on this
+    // screen is positive regardless of accuracy (Yoav 2026-06-08).
+    successHaptic();
+  }, []);
 
   const handlePress = () => {
     tapHaptic();
@@ -98,10 +101,14 @@ export function RecapCard({
         // scrollEnabled to default instead of silently growing padding.
         scrollEnabled={false}
       >
-        {/* Mascot + headline */}
+        {/* Mascot + headline — framed as fully-completed regardless of
+            accuracy. The "false summary" risk is bounded because the reward
+            pills below still surface the real XP/coins (which reflect
+            correctness) and the perfect-day bonus card only appears for
+            real `both`. */}
         <Animated.View entering={FadeInUp.duration(360).springify().damping(16)} style={styles.heroRow}>
           <ExpoImage
-            source={both ? FINN_DANCING : FINN_HAPPY}
+            source={FINN_DANCING}
             style={styles.mascot}
             contentFit="contain"
             accessible={false}
@@ -111,7 +118,7 @@ export function RecapCard({
               סיכום היום
             </Text>
             <Text style={styles.title} allowFontScaling={false}>
-              {both ? 'יום מושלם!' : 'יפה. כל הכבוד.'}
+              יום מושלם!
             </Text>
           </View>
         </Animated.View>
@@ -121,23 +128,21 @@ export function RecapCard({
           <Text style={styles.sectionLabel} allowFontScaling={false}>
             היום למדת
           </Text>
-          {items.map((it, i) => {
-            const correct = results[i] === true;
-            return (
-              <View key={i} style={styles.learnedCard}>
-                <View style={[styles.statusDot, correct ? styles.statusDotGood : styles.statusDotBad]}>
-                  {correct ? (
-                    <Check size={14} color="#ffffff" strokeWidth={3} />
-                  ) : (
-                    <XIcon size={14} color="#ffffff" strokeWidth={3} />
-                  )}
-                </View>
-                <Text style={styles.learnedText} numberOfLines={3} allowFontScaling={false}>
-                  {shortHeadline(it.headlineHe)}
-                </Text>
+          {items.map((it, i) => (
+            // Always render as a completed item (green check). Per-item
+            // pass/fail framing removed 2026-06-08 — the user explicitly
+            // asked the summary to "show the data as already completed",
+            // i.e. no red X feedback at the recap. Correctness is still
+            // reflected in the reward pills' actual XP/coin values.
+            <View key={i} style={styles.learnedCard}>
+              <View style={[styles.statusDot, styles.statusDotGood]}>
+                <Check size={14} color="#ffffff" strokeWidth={3} />
               </View>
-            );
-          })}
+              <Text style={styles.learnedText} numberOfLines={3} allowFontScaling={false}>
+                {shortHeadline(it.headlineHe)}
+              </Text>
+            </View>
+          ))}
         </Animated.View>
 
         {/* Rewards stats — matches GlobalWealthHeader.resourcePill style so
@@ -196,7 +201,7 @@ export function RecapCard({
             style={styles.cta}
           >
             <Text style={styles.ctaText} allowFontScaling={false}>
-              {both ? 'לאסוף את הפרסים 🌅' : 'סוגרים יום 🌅'}
+              לאסוף את הפרסים 🌅
             </Text>
           </Pressable>
         </Animated.View>

@@ -18,6 +18,7 @@ import { ConfettiExplosion } from '../../components/ui/ConfettiExplosion';
 import { FlyingRewards } from '../../components/ui/FlyingRewards';
 import { useDailyChallengesStore } from './use-daily-challenges-store';
 import { useDailyLogStore } from '../daily-summary/useDailyLogStore';
+import { israelDayKey } from '../../utils/dateUtils';
 import { getTodayInvestment, getInvestmentById } from './investment-data';
 import { MAX_DAILY_PLAYS, CHALLENGE_XP_REWARD, CHALLENGE_COIN_REWARD } from './daily-challenge-types';
 import type { InvestmentOption } from './daily-challenge-types';
@@ -92,7 +93,7 @@ export const InvestmentCard = React.memo(function InvestmentCard({ isActive, onC
       setTimeout(() => setShowConfetti(false), 2000);
     }
 
-    const today = new Date().toISOString().slice(0, 10);
+    const today = israelDayKey();
     answerInvestment(today);
 
     const log = useDailyLogStore.getState();

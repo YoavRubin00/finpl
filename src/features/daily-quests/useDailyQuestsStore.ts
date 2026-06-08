@@ -10,6 +10,7 @@ import { useDailyChallengesStore } from "../daily-challenges/use-daily-challenge
 import { useDailyNewsChallengeStore } from "../daily-news-challenge/useDailyNewsChallengeStore";
 import { progressQueryKey } from "../chapter-1-content/useProgress";
 import { captureEvent } from "../../lib/posthog";
+import { israelDayKey } from "../../utils/dateUtils";
 import type { ModuleProgressRow } from "../../lib/api/progress";
 import type { DailyQuest, QuestRewardSummary } from "./daily-quest-types";
 import {
@@ -60,9 +61,11 @@ export function previewProQuestReward(streak: number): QuestRewardSummary {
   };
 }
 
-function todayStr(): string {
-  return new Date().toISOString().slice(0, 10);
-}
+// Day key anchored to Asia/Jerusalem midnight — the chest only unlocks for
+// the 4 quests completed within the same local-Israel day. Was UTC, which
+// meant the de-facto reset hit at 02:00 IST / 03:00 IDT and night-owl users
+// who finished a quest at 00:30 saw it count as the "previous" day.
+const todayStr = israelDayKey;
 
 interface DailyQuestsState {
   quests: DailyQuest[];

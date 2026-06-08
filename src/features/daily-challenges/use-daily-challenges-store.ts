@@ -7,6 +7,7 @@ import { useDailyQuestsStore } from '../daily-quests/useDailyQuestsStore';
 import { queryClient } from '../../lib/queryClient';
 import type { SubscriptionState } from '../../lib/api/subscription';
 import { subscriptionQueryKey } from '../subscription/useSubscription';
+import { israelDayKey } from '../../utils/dateUtils';
 import {
   MAX_DAILY_PLAYS,
   MAX_DILEMMA_DAILY,
@@ -15,9 +16,10 @@ import {
 } from './daily-challenge-types';
 import type { DailyChallengesState, PlayCountMap } from './daily-challenge-types';
 
-function todayStr(): string {
-  return new Date().toISOString().slice(0, 10);
-}
+// Day key anchored to Asia/Jerusalem midnight so the "4 stars" reset at 00:00
+// Israel time, not 02:00/03:00 (UTC midnight). Same key shape ('YYYY-MM-DD')
+// as the previous UTC implementation — persisted state stays readable.
+const todayStr = israelDayKey;
 
 function getPlays(map: PlayCountMap | undefined, date: string): number {
   return map?.[date] ?? 0;
