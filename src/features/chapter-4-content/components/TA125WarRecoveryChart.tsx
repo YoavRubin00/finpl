@@ -489,6 +489,16 @@ const styles = StyleSheet.create({
   chipText: { fontSize: 11, fontWeight: "800", color: "#f1f5f9" },
 
   popup: {
+    // Floats above the chips row, above the footer — so opening it never grows
+    // the flex column and pushes the "המשך" button off-screen (RN doesn't clip
+    // overflowing children). bottom:84 clears the footer (~76px) with a gap.
+    // Insets are measured from the container's content box (after padding:16),
+    // so left/right:0 matches the chips/chart width.
+    position: "absolute",
+    left: 0,
+    right: 0,
+    bottom: 84,
+    zIndex: 10,
     flexDirection: "row-reverse",
     alignItems: "flex-start",
     gap: 10,
@@ -497,7 +507,6 @@ const styles = StyleSheet.create({
     borderColor: "#334155",
     borderRadius: 16,
     padding: 12,
-    marginTop: 12,
     shadowColor: "#0ea5e9",
     shadowOpacity: 0.2,
     shadowRadius: 10,

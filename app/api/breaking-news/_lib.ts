@@ -183,8 +183,10 @@ export async function generateForTicker(
       return normalized;
     },
     {
-      attempts: 3,
-      baseDelayMs: 500,
+      // Trimmed from 3/500ms to keep the whole generate pipeline inside the
+      // serverless function timeout (was hitting 504 → stuck "מנתח חדשות").
+      attempts: 2,
+      baseDelayMs: 300,
       shouldRetry: (err) => {
         if (isTransientAiError(err)) return true;
         const msg = err instanceof Error ? err.message : String(err);

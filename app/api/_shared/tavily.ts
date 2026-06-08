@@ -68,7 +68,10 @@ export async function tavilyNewsSearch(
     // marketing pages) and broaden enough to catch social-discussion posts.
     query: `${ticker} stock news sentiment`,
     topic: 'news',
-    search_depth: 'advanced',
+    // 'basic' (not 'advanced') — advanced roughly doubles Tavily latency and
+    // pushed the whole generate pipeline past the function timeout (stuck
+    // "מנתח חדשות" forever). Basic is plenty for a news-headline summary.
+    search_depth: 'basic',
     time_range: options.timeRange ?? 'day',
     max_results: options.maxResults ?? 10,
     include_answer: true,

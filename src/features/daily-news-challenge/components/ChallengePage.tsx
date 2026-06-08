@@ -20,6 +20,7 @@ import Animated, {
   withDelay,
   cancelAnimation,
   useReducedMotion,
+  Easing,
 } from 'react-native-reanimated';
 import type { SharedValue } from 'react-native-reanimated';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -155,9 +156,10 @@ export function ChallengePage({
   // Pulse on the blanked ____ slot — invites the user to look and tap.
   // Cancelled once the answer is revealed OR when reduced motion is on.
   const slotPulse = useSharedValue(1);
+  // Scale-only "breathe" — the opacity flicker (0.75↔1.0) was removed because
+  // it read as a jittery "shake" on the central ____ slot (Yoav 2026-06-07).
   const slotPulseStyle = useAnimatedStyle(() => ({
     transform: [{ scale: slotPulse.value }],
-    opacity: 0.75 + (slotPulse.value - 1) * 5, // 0.75–1.0 mapped from 1.00–1.05
   }));
   useEffect(() => {
     if (reduceMotion || showResult) {
@@ -167,8 +169,8 @@ export function ChallengePage({
     }
     slotPulse.value = withRepeat(
       withSequence(
-        withTiming(1.05, { duration: 700 }),
-        withTiming(1.0, { duration: 700 }),
+        withTiming(1.025, { duration: 1300, easing: Easing.inOut(Easing.ease) }),
+        withTiming(1.0, { duration: 1300, easing: Easing.inOut(Easing.ease) }),
       ),
       -1,
       false,

@@ -15,6 +15,13 @@ interface BreakingNewsCardProps {
   onRemove: (ticker: string) => void;
   /** Called when the card enters view / is tapped — used to clear the red dot. */
   onMarkRead: (ticker: string) => void;
+  /** True when on-demand generation failed for this ticker — show a retry CTA
+   *  instead of the endless "מחפש חדשות…" placeholder. */
+  hasFailed?: boolean;
+  /** True while generation is in flight for this ticker. */
+  isGenerating?: boolean;
+  /** Retry generation for this ticker. */
+  onRetry?: (ticker: string) => void;
 }
 
 /** One row in the Breaking News list. Shows the company badge + hype gauge
@@ -25,10 +32,15 @@ export function BreakingNewsCard({
   serverTradingDay,
   onRemove,
   onMarkRead,
+  hasFailed = false,
+  isGenerating = false,
+  onRetry,
 }: BreakingNewsCardProps): React.ReactElement {
   const catalog = findCatalogEntry(item.ticker);
   const summary = item.summary;
   const pending = !summary;
+  // Failed = generation errored AND we're not currently retrying it.
+  const showFailed = pending && hasFailed && !isGenerating;
   const isFresh = serverTradingDay !== null && item.tradingDay === serverTradingDay;
 
   const handlePress = () => {
@@ -101,6 +113,10 @@ export function BreakingNewsCard({
 
         {summary ? (
           <HypeGauge value={summary.hypeIndex} />
+        ) : showFailed ? (
+          <View style={styles.failedBadge}>
+            <Text style={styles.failedBadgeText}>לא נטען</Text>
+          </View>
         ) : (
           <View style={styles.pendingBadge}>
             <Text style={styles.pendingText}>מחפש חדשות…</Text>
@@ -113,6 +129,21 @@ export function BreakingNewsCard({
         <Text style={styles.summary} allowFontScaling={false}>
           {summary.summary}
         </Text>
+      ) : showFailed ? (
+        <View style={styles.failedWrap}>
+          <Text style={styles.failedHint} allowFontScaling={false}>
+            לא הצלחנו לטעון חדשות על {item.ticker} כרגע.
+          </Text>
+          <Pressable
+            onPress={() => { tapHaptic(); onRetry?.(item.ticker); }}
+            style={({ pressed }) => [styles.retryBtn, pressed && { opacity: 0.85 }]}
+            accessibilityRole="button"
+            accessibilityLabel={`נסה שוב לטעון חדשות על ${item.ticker}`}
+            hitSlop={6}
+          >
+            <Text style={styles.retryBtnText} allowFontScaling={false}>נסה שוב</Text>
+          </Pressable>
+        </View>
       ) : (
         <Text style={styles.pendingHint} allowFontScaling={false}>
           הסיכום הראשון שלך יהיה מוכן תוך כמה שניות — או מחר ב-9:00 לכל המאוחר.
@@ -264,6 +295,45 @@ const styles = StyleSheet.create({
     textAlign: 'right',
     writingDirection: 'rtl',
     lineHeight: 19,
+  },
+  failedBadge: {
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    backgroundColor: '#fee2e2',
+    borderRadius: 999,
+  },
+  failedBadgeText: {
+    fontSize: 11,
+    fontWeight: '800',
+    color: '#991b1b',
+    writingDirection: 'rtl',
+  },
+  failedWrap: {
+    gap: 10,
+    alignItems: 'flex-end',
+  },
+  failedHint: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: STITCH.onSurfaceVariant,
+    textAlign: 'right',
+    writingDirection: 'rtl',
+    lineHeight: 19,
+  },
+  retryBtn: {
+    alignSelf: 'flex-end',
+    paddingHorizontal: 18,
+    paddingVertical: 9,
+    borderRadius: 12,
+    backgroundColor: '#0ea5e9',
+    borderBottomWidth: 3,
+    borderBottomColor: '#0369a1',
+  },
+  retryBtnText: {
+    fontSize: 13,
+    fontWeight: '900',
+    color: '#ffffff',
+    writingDirection: 'rtl',
   },
   eventsList: {
     gap: 6,

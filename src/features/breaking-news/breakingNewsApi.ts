@@ -89,6 +89,12 @@ export async function generateBreakingNewsForTicker(ticker: string): Promise<Gen
     headers: headers(syncToken),
     body: JSON.stringify({ authId, ticker }),
   });
-  if (!res.ok) throw new Error(`generate ${res.status}`);
+  if (!res.ok) {
+    // Include the response body so the caller's analytics/logging captures the
+    // real cause (401 auth / 429 rate-limit / 500 "0 results" / 504 timeout)
+    // instead of a bare status — this is how we diagnose "stuck generating".
+    const detail = await res.text().catch(() => '');
+    throw new Error(`generate ${res.status}: ${detail.slice(0, 160)}`);
+  }
   return (await res.json()) as GenerateResponse;
 }
