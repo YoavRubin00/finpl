@@ -26,6 +26,7 @@ import { GoldCoinIcon } from '../../components/ui/GoldCoinIcon';
 const LOTTIE_BULL = require('../../../assets/lottie/wired-flat-1199-bull-hover-pinch.json');
 const LOTTIE_BEAR = require('../../../assets/lottie/wired-flat-1203-bear-hover-pinch.json');
 import { useDailyChallengesStore } from './use-daily-challenges-store';
+import { israelDayKey } from '../../utils/dateUtils';
 import { useDailyLogStore } from '../daily-summary/useDailyLogStore';
 import { getTodaySwipeCards, type SwipeCard } from './swipe-game-data';
 import { MAX_DAILY_PLAYS, CHALLENGE_XP_REWARD, CHALLENGE_COIN_REWARD } from './daily-challenge-types';
@@ -238,7 +239,7 @@ export const SwipeGameCard = React.memo(function SwipeGameCard({ isActive, onFin
   // Finalize when done
   useEffect(() => {
     if (gameState === 'done' && !hasPlayed) {
-      const today = new Date().toISOString().slice(0, 10);
+      const today = israelDayKey();
       playSwipeGame(today, score);
 
       const log = useDailyLogStore.getState();

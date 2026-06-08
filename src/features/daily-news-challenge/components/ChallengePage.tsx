@@ -20,7 +20,6 @@ import Animated, {
   withDelay,
   cancelAnimation,
   useReducedMotion,
-  Easing,
 } from 'react-native-reanimated';
 import type { SharedValue } from 'react-native-reanimated';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -150,32 +149,13 @@ export function ChallengePage({
   const wasCorrect = showResult && selected === correctIdx;
   const revealEntity = hasV2 ? item.blankedEntity : '';
 
-  const shakeX = useSharedValue(0);
-  const shakeStyle = useAnimatedStyle(() => ({ transform: [{ translateX: shakeX.value }] }));
-
-  // Pulse on the blanked ____ slot — invites the user to look and tap.
-  // Cancelled once the answer is revealed OR when reduced motion is on.
-  const slotPulse = useSharedValue(1);
-  // Scale-only "breathe" — the opacity flicker (0.75↔1.0) was removed because
-  // it read as a jittery "shake" on the central ____ slot (Yoav 2026-06-07).
-  const slotPulseStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: slotPulse.value }],
-  }));
-  useEffect(() => {
-    if (reduceMotion || showResult) {
-      cancelAnimation(slotPulse);
-      slotPulse.value = withTiming(1, { duration: 200 });
-      return;
-    }
-    slotPulse.value = withRepeat(
-      withSequence(
-        withTiming(1.025, { duration: 1300, easing: Easing.inOut(Easing.ease) }),
-        withTiming(1.0, { duration: 1300, easing: Easing.inOut(Easing.ease) }),
-      ),
-      -1,
-      false,
-    );
-  }, [reduceMotion, showResult, slotPulse]);
+  // slotPulse retired 2026-06-08 — the scale-breathing on the central `____`
+  // still read as a subtle shake (Yoav: "תבטל את האנימציה של הרעידות שיש
+  // בהשלמת משפטים"). The opacity flicker variant was already retired
+  // 2026-06-07 for the same reason; this finishes the cleanup. The blank now
+  // renders as a static Text without any Animated wrapper.
+  // shakeX/shakeStyle were dead code (declared but never assigned a value
+  // after the 2026 UX rework retired the wrong-answer shake) — removed too.
 
   // Delayed pulse on the continue button — starts 800ms after the result
   // appears so the eye finishes reading the panel before being invited
@@ -238,7 +218,7 @@ export function ChallengePage({
         playSound('modal_open_1');
       }
     },
-    [showResult, correctIdx, onAnswered, reduceMotion, shakeX, playSound],
+    [showResult, correctIdx, onAnswered, reduceMotion, playSound],
   );
 
   useEffect(() => {
@@ -259,12 +239,10 @@ export function ChallengePage({
     }
     if (!showResult) {
       const parts = item.blankedHeadline.split('____');
-      // Pulse the ____ slot to invite tapping. Wrapped in Animated.Text so
-      // scale/opacity can be driven from a shared value.
       return (
         <Text style={styles.headline} allowFontScaling={false}>
           {parts[0]}
-          <Animated.Text style={[styles.blankedSlot, slotPulseStyle]}>____</Animated.Text>
+          <Text style={styles.blankedSlot}>____</Text>
           {parts[1] ?? ''}
         </Text>
       );
@@ -390,7 +368,7 @@ export function ChallengePage({
           </View>
         )}
 
-        <Animated.View style={shakeStyle}>{renderedHeadline}</Animated.View>
+        <View>{renderedHeadline}</View>
 
         {!showResult && (
           <View style={styles.chipsGrid}>

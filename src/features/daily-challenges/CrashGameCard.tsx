@@ -18,6 +18,7 @@ import { ConfettiExplosion } from '../../components/ui/ConfettiExplosion';
 import { FlyingRewards } from '../../components/ui/FlyingRewards';
 import { useDailyChallengesStore } from './use-daily-challenges-store';
 import { useDailyLogStore } from '../daily-summary/useDailyLogStore';
+import { israelDayKey } from '../../utils/dateUtils';
 import { getTodayCrashRound } from './crash-game-data';
 import { MAX_DAILY_PLAYS, CHALLENGE_XP_REWARD, CHALLENGE_COIN_REWARD } from './daily-challenge-types';
 import { FeedStartButton } from '../finfeed/minigames/shared/FeedStartButton';
@@ -107,7 +108,7 @@ export const CrashGameCard = React.memo(function CrashGameCard({ isActive, onCon
           2,
           false,
         );
-        const today = new Date().toISOString().slice(0, 10);
+        const today = israelDayKey();
         playCrashGame(today, 0);
       }
     }, tickMs);
@@ -127,7 +128,7 @@ export const CrashGameCard = React.memo(function CrashGameCard({ isActive, onCon
     setShowFlyingCoins(true);
     safeTimeout(() => setShowConfetti(false), 2500);
 
-    const today = new Date().toISOString().slice(0, 10);
+    const today = israelDayKey();
     playCrashGame(today, coins);
 
     const log = useDailyLogStore.getState();
