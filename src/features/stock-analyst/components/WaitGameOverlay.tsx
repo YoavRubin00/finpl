@@ -1,6 +1,6 @@
 import React, { useCallback, useState } from 'react';
 import { View, Text, Pressable, StyleSheet, ScrollView, Platform } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import Animated, { FadeIn, FadeInDown } from 'react-native-reanimated';
 import { X, RotateCw } from 'lucide-react-native';
 import { tapHaptic } from '../../../utils/haptics';
@@ -26,6 +26,11 @@ export function WaitGameOverlay({ visible, onClose }: Props): React.ReactElement
   // component (visible flipping false→true) reseeds. Tapping "משחק חדש"
   // swaps to a different one without unmounting.
   const [game, setGame] = useState<WaitGame>(pickRandomGame);
+  // Sheet is absolute-positioned and anchored bottom:0. SafeAreaView edges
+  // bottom prop is unreliable inside absolute containers on Android — read
+  // the inset directly and pad the scroll content so the inner card's
+  // "המשך" CTA clears the home indicator on every device.
+  const insets = useSafeAreaInsets();
 
   const swapGame = useCallback(() => {
     tapHaptic();
@@ -95,7 +100,7 @@ export function WaitGameOverlay({ visible, onClose }: Props): React.ReactElement
           <Animated.View entering={FadeIn.duration(220)} style={{ flex: 0 }}>
             <ScrollView
               style={s.scroll}
-              contentContainerStyle={s.scrollContent}
+              contentContainerStyle={[s.scrollContent, { paddingBottom: 16 + insets.bottom }]}
               showsVerticalScrollIndicator={false}
             >
               {/* Each card normalizes its "finished" callback under either
