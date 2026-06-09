@@ -1,6 +1,3 @@
-import type { AnimationObject } from 'lottie-react-native';
-import type { LucideIcon } from 'lucide-react-native';
-
 /**
  * Discrete component "kind" inside a module. Derived from existing fields on
  * the legacy Module type — no DB / data shape change needed.
@@ -21,26 +18,19 @@ export type TopicKind =
   | 'infographic'
   | 'post-video';
 
-/** Visual spec for a TopicChip in the new icon-tile style (Yoav R5):
- *  pastel rounded square + filled Lucide icon centered. */
-export interface TopicTileSpec {
-  type: 'tile';
-  /** Lucide React Native icon component. */
-  icon: LucideIcon;
-  /** Tile background — pastel from the chapter palette. */
-  bg: string;
-  /** Icon stroke / fill — saturated counterpart of bg. */
-  fg: string;
+/**
+ * R5.2 (2026-06-10) — chip visual is now an emoji string. Matches the
+ * outer ModuleNode style Yoav explicitly pointed to ("שיראו כמו
+ * הכפתורים של המודולות. לא ריבוע מעוגל בקצוות. תשתמש גם באמוגים").
+ * Lottie + tile palettes were retired — uniformity beats variety on
+ * this surface.
+ */
+export interface TopicIconAsset {
+  /** Single grapheme cluster — rendered inside a circular 78px button
+   *  the same way DuoLearnScreen's outer ModuleNode renders module
+   *  emojis. Pick something that reads at 28px font size. */
+  emoji: string;
 }
-
-/** Lottie spec — kept for the intro chip which Yoav explicitly wanted
- *  to remain animated ("רק האינטרו של שארק"). */
-export interface TopicLottieSpec {
-  type: 'lottie';
-  asset: AnimationObject;
-}
-
-export type TopicIconAsset = TopicTileSpec | TopicLottieSpec;
 
 export interface Topic {
   /** Stable id, format `${moduleId}:${kind}`. Used as the persisted progress
@@ -50,7 +40,7 @@ export interface Topic {
   kind: TopicKind;
   /** Hebrew label shown on the chip. */
   titleHe: string;
-  /** Asset for the chip icon — either a colored tile or a Lottie file. */
+  /** Asset for the chip icon — a single emoji per R5.2. */
   iconAsset: TopicIconAsset;
   /** Default ordering inside the module for the "Resume where I left off"
    *  CTA — smaller = earlier in the canonical sequence. NOT used to gate
