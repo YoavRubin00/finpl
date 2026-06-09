@@ -100,7 +100,6 @@ export const ModuleTopicLayout = React.memo(function ModuleTopicLayout({
           const isCompleted = Boolean(isCompletedMap[topic.id]);
           const offsetX = pathOffset(i);
           const nextOffsetX = i < sorted.length - 1 ? pathOffset(i + 1) : null;
-          const showCoin = nextOffsetX !== null && i % 2 === 1;
 
           return (
             <Animated.View
@@ -108,18 +107,6 @@ export const ModuleTopicLayout = React.memo(function ModuleTopicLayout({
               entering={FadeInDown.delay(60 + i * 90).duration(320).springify().damping(14)}
               style={styles.row}
             >
-              {nextOffsetX !== null && (
-                // Vertical offset = NODE_SIZE/2 so the trail emerges
-                // from this chip's CENTER instead of grazing its
-                // bottom edge.
-                <View style={styles.midConnectorSlot} pointerEvents="none">
-                  <PathConnector
-                    fromOffsetX={offsetX}
-                    toOffsetX={nextOffsetX}
-                    done={isCompleted}
-                  />
-                </View>
-              )}
               <View style={[styles.nodeSlot, { transform: [{ translateX: offsetX }] }]}>
                 <TopicChip
                   topic={topic}
@@ -129,16 +116,21 @@ export const ModuleTopicLayout = React.memo(function ModuleTopicLayout({
                 />
               </View>
               {/* Coin stack — falls out from under the chip's bottom
-                  edge, descending toward the next row. Decorative only;
-                  pointerEvents none so taps still land on the chip. */}
-              {showCoin && (
+                  edge, descending toward the next chip. R5.6 (Yoav
+                  2026-06-10 "יש שביל מטבעות כפול"): the dotted
+                  PathConnector between chips was retired — the coin
+                  column is the ONE trail per gap now. Entry & exit
+                  connectors (at the top/bottom of the layout) stay
+                  dotted because they attach to the outer mod node and
+                  pearl which use the dotted style themselves. */}
+              {nextOffsetX !== null && (
                 <View
                   pointerEvents="none"
                   style={[
                     styles.coinStack,
                     {
                       left: '50%',
-                      marginLeft: offsetX - COIN_SIZE / 2,
+                      marginLeft: ((offsetX + nextOffsetX) / 2) - COIN_SIZE / 2,
                     },
                   ]}
                 >

@@ -2823,10 +2823,23 @@ export function LessonFlowScreen() {
   }
 
   const [phase, setPhase] = useState<FlowPhase>(() => {
-    // Topic-tree pilot (R4): explicit startPhase from query overrides
-    // everything else — replay checkpoints, video hooks, hero. Used when
-    // DuoLearnScreen's topic chip taps deep-link straight into a phase.
-    if (startPhase && (RESTORABLE_PHASES.has(startPhase as FlowPhase) || startPhase === 'video' || startPhase === 'intro' || startPhase === 'hero')) {
+    // Topic-tree pilot (R4 → R5.6): explicit startPhase from query
+    // overrides everything else — replay checkpoints, video hooks,
+    // hero. Used when DuoLearnScreen's topic chip taps deep-link
+    // straight into a phase. R5.6 (2026-06-10) widens the allowed set
+    // from just RESTORABLE_PHASES + intro/video/hero to every
+    // user-tappable phase, so taps on the sim / infographic /
+    // post-video chips actually land at those phases instead of
+    // silently falling back to intro (Yoav: "הסרטון לא נפתח", "לא
+    // כל דבר פותח את מה שהוא אמור").
+    const ALLOWED_START_PHASES = new Set<string>([
+      'hero', 'video', 'intro',
+      'flashcards', 'interactive-recall', 'quizzes',
+      'sim-intro', 'sim',
+      'podcast', 'couple-dilemma',
+      'module-infographic', 'post-infographic-video',
+    ]);
+    if (startPhase && ALLOWED_START_PHASES.has(startPhase)) {
       return startPhase as FlowPhase;
     }
     // On replay (user explicitly chose "do it again"), ignore the resume
