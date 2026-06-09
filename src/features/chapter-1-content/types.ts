@@ -152,6 +152,13 @@ export interface Module {
   podcast?: PodcastSegment;
   /** Optional 5-second couple-dilemma video + Daisy narration + Tinder swipe choice */
   coupleDilemma?: CoupleDilemmaSegment;
+  /**
+   * Learning architecture flag (pilot 2026-06-09). When `'topic-tree'`, a
+   * tap on this module opens the new TopicTreeOverlay (sub-components +
+   * growing tree). Default (undefined) falls through to the legacy
+   * LessonFlowScreen. Only mod-1-1 is on the new track at pilot launch.
+   */
+  learningMode?: 'topic-tree' | 'linear-flow';
 }
 
 export interface Chapter {

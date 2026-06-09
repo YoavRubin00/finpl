@@ -87,6 +87,12 @@ import { chapter3Data } from "../chapter-3-content/chapter3Data";
 import { chapter4Data } from "../chapter-4-content/chapter4Data";
 import { chapter5Data } from "../chapter-5-content/chapter5Data";
 import type { Module } from "../chapter-1-content/types";
+import { TopicTreeOverlay } from "../topic-learning/TopicTreeOverlay";
+
+/** Subset of LessonFlowScreen's SIM_FIRST_MODULES surfaced here too so the
+ *  topic tree resume CTA orders sim ahead of cards/quiz for those modules.
+ *  Keep in sync manually — there's only one entry in the pilot (mod-1-1). */
+const SIM_FIRST_MODULE_IDS = new Set(['mod-0-2', 'mod-1-1', 'mod-2-12', 'mod-2-13', 'mod-3-18', 'mod-4-20', 'mod-4-22', 'mod-4-23', 'mod-4-27', 'mod-4-b4']);
 import { tapHaptic, successHaptic } from "../../utils/haptics";
 import { MindMapViewer } from "../../components/ui/MindMapViewer";
 import { useTutorialStore } from "../../stores/useTutorialStore";
@@ -1278,6 +1284,11 @@ export function DuoLearnScreen() {
   const [roadmapVisible, setRoadmapVisible] = useState(false);
   const [mindMapChapter, setMindMapChapter] = useState<number | null>(null);
   const [replayModule, setReplayModule] = useState<{ moduleId: string; chapterId: string; moduleIndex: number } | null>(null);
+  // Topic-tree pilot: a tap on a `learningMode: 'topic-tree'` module opens
+  // the overlay instead of routing to LessonFlowScreen. State is cleared on
+  // close. Stores the chapterId so the overlay can re-enter the legacy
+  // lesson flow when the user picks "התחל את הרכיב".
+  const [topicTreeModule, setTopicTreeModule] = useState<{ module: Module; chapterId: string } | null>(null);
   const insets = useSafeAreaInsets();
   const scrollRef = useRef<ScrollView>(null);
   const [refreshKey, setRefreshKey] = useState(0);
@@ -1498,6 +1509,18 @@ export function DuoLearnScreen() {
 
   const handleModulePress = useCallback(
     (moduleId: string, chapterId: string, moduleIndex: number) => {
+      // Topic-tree pilot: if the module opted into the new architecture,
+      // open the overlay instead of routing to LessonFlowScreen. Pre-empts
+      // the replay/profile/backstop checks below — those gates assume the
+      // legacy linear-flow target. Replay UX on a completed topic-tree
+      // module is future work (Phase 2).
+      const ch = ALL_CHAPTERS.find((c) => c.id === chapterId);
+      const mod = ch?.modules.find((m) => m.id === moduleId);
+      if (mod?.learningMode === 'topic-tree') {
+        setTopicTreeModule({ module: mod, chapterId });
+        return;
+      }
+
       // Check if module is already completed, show summary preview first
       const done = progressData?.filter((m) => m.status === 'completed').map((m) => m.moduleId) ?? [];
       if (done.includes(moduleId)) {
@@ -1967,6 +1990,18 @@ export function DuoLearnScreen() {
             data={MIND_MAP_DATA[mindMapChapter]}
             chapterTitle={ARENAS[mindMapChapter]?.name ?? ''}
             accentColor={ARENA_COLORS[mindMapChapter]?.bg ?? '#3b82f6'}
+          />
+        )}
+
+        {/* Topic-tree overlay (mod-1-1 pilot) — opens when a `topic-tree`
+            module is tapped. Closes back to the module map; "התחל את הרכיב"
+            inside the overlay still routes to the legacy LessonFlowScreen. */}
+        {topicTreeModule && (
+          <TopicTreeOverlay
+            module={topicTreeModule.module}
+            chapterId={topicTreeModule.chapterId}
+            simFirst={SIM_FIRST_MODULE_IDS.has(topicTreeModule.module.id)}
+            onClose={() => setTopicTreeModule(null)}
           />
         )}
 
