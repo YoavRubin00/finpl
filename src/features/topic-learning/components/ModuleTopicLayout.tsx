@@ -84,21 +84,19 @@ export const ModuleTopicLayout = React.memo(function ModuleTopicLayout({
     return () => cancelAnimation(pulse);
   }, [pulse]);
 
-  // Layout: row contains the path on the left half + the tree on the
-  // right half. The tree is positioned absolute so it doesn't push
-  // the path nodes around; it sits in the column's negative space.
+  // Layout: tree sits dead-center BEHIND the path, chips travel through
+  // a sine-wave column on top of it. The orbit-around-tree feel from
+  // R2 is preserved but the orbit is now vertical, not radial.
   return (
     <View style={[styles.container, { height: totalHeight }]}>
-      {/* Tree — absolute on the right, larger + with a soft gold glow
-          backdrop so it reads as the celebratory focal point ("שהעץ יהיה
-          גדול ומרשים יותר"). pointerEvents none so taps fall through to
-          the path on the left, which is the only interactive surface. */}
+      {/* Tree — absolute, centered horizontally + vertically inside the
+          container, behind the chips. zIndex 0 so chips render above. */}
       <View style={styles.treeWrap} pointerEvents="none">
         <View style={styles.treeGlow} />
         <GrowingTree progressPct={progressPct} size={240} />
       </View>
 
-      {/* Path nodes */}
+      {/* Path nodes — centered column over the tree. */}
       <View style={styles.pathColumn}>
         {sorted.map((topic, i) => {
           const isRecommended = recommendedTopicId === topic.id;
@@ -196,21 +194,23 @@ function Connector({
 
 const styles = StyleSheet.create({
   container: {
-    flexDirection: 'row',
-    paddingHorizontal: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
     position: 'relative',
+    paddingVertical: 12,
   },
   treeWrap: {
     position: 'absolute',
-    right: -8,
-    top: 16,
+    top: '50%',
+    marginTop: -120, // half of 240 — vertically center
     width: 240,
     height: 240,
     alignItems: 'center',
     justifyContent: 'center',
+    zIndex: 0,
   },
-  // Soft gold halo behind the tree — adds "presence" without crowding
-  // the path on the left. Sits below the tree image in stacking order.
+  // Soft gold halo behind the tree — adds "presence" + signals "celebratory
+  // focal point" without crowding the chip column on top.
   treeGlow: {
     position: 'absolute',
     width: 220,
@@ -223,11 +223,14 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 0 },
     elevation: 4,
   },
-  // The path occupies the LEFT half. Narrower than before (0.45→0.4)
-  // because the tree grew from 160→240 and now wants more breathing room.
+  // Path column is centered above the tree; chips drift left/right via
+  // the sine-wave offsets so they don't fully obscure the tree. Width
+  // is capped so very wide phones still keep the chips visually paired
+  // with the tree.
   pathColumn: {
-    width: Math.min(SCREEN_W * 0.4, 180),
-    alignSelf: 'flex-start',
+    width: Math.min(SCREEN_W * 0.7, 280),
+    alignSelf: 'center',
+    zIndex: 1,
   },
   row: {
     height: ROW_HEIGHT,

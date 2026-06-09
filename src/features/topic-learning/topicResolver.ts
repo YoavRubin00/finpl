@@ -48,10 +48,19 @@ function buildTopic(kind: TopicKind, moduleId: string, order: number): Topic {
   };
 }
 
+/** Mirrors LessonFlowScreen's SIM_FIRST_MODULES set (line 170 of that
+ *  file). Keep in sync manually when modules opt into sim-first. The
+ *  topic tree uses this to bump sim earlier in the canonical order. */
+const SIM_FIRST_MODULE_IDS = new Set([
+  'mod-0-2', 'mod-1-1', 'mod-2-12', 'mod-2-13',
+  'mod-3-18', 'mod-4-20', 'mod-4-22', 'mod-4-23',
+  'mod-4-27', 'mod-4-b4',
+]);
+
 export interface ResolveTopicsOptions {
-  /** When true, sim becomes a "core early" topic rather than late. Set
-   *  from the module's MODULE_OVERRIDES.SIM_FIRST list (LessonFlowScreen
-   *  encodes that today). */
+  /** When true, sim becomes a "core early" topic rather than late.
+   *  When undefined, the resolver decides automatically by checking
+   *  the module's id against the SIM_FIRST set. */
   simFirst?: boolean;
 }
 
@@ -63,7 +72,8 @@ export interface ResolveTopicsOptions {
  * that topic.
  */
 export function resolveTopics(module: Module, opts: ResolveTopicsOptions = {}): Topic[] {
-  const order = opts.simFirst ? SIM_FIRST_ORDER : CANONICAL_ORDER;
+  const simFirst = opts.simFirst ?? SIM_FIRST_MODULE_IDS.has(module.id);
+  const order = simFirst ? SIM_FIRST_ORDER : CANONICAL_ORDER;
   const present = new Map<TopicKind, boolean>();
 
   if (module.videoHookAsset) present.set('video-hook', true);

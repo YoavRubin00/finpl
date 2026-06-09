@@ -2255,7 +2255,22 @@ function chapterStoreKey(chapterId: string): string {
 
 export function LessonFlowScreen() {
   const isFocused = useIsFocused();
-  const { id, chapterId, replay } = useLocalSearchParams<{ id: string; chapterId?: string; replay?: string }>();
+  const { id, chapterId, replay, startPhase, returnTo } = useLocalSearchParams<{
+    id: string;
+    chapterId?: string;
+    replay?: string;
+    /** Topic-tree pilot (R4 2026-06-09): when present, the lesson jumps
+     *  STRAIGHT to this phase on mount instead of running the regular
+     *  hero/video/intro chain. Used by DuoLearnScreen's chip-tap handler
+     *  so chips open the legacy LessonFlowScreen at the matching phase
+     *  with all the host chrome intact (chat, shark callouts, bottom bar). */
+    startPhase?: string;
+    /** Topic-tree exit signal — when 'topic-tree', the lesson does NOT
+     *  advance to the next phase on phase-complete. Instead it
+     *  router.back()'s with `?completedPhase=X` so DuoLearnScreen can
+     *  mark the matching topic done. */
+    returnTo?: string;
+  }>();
   const isReplay = replay === '1';
   const router = useRouter();
   /** Safe back: go back if possible, otherwise fall back to tabs home */
@@ -2804,6 +2819,12 @@ export function LessonFlowScreen() {
   }
 
   const [phase, setPhase] = useState<FlowPhase>(() => {
+    // Topic-tree pilot (R4): explicit startPhase from query overrides
+    // everything else — replay checkpoints, video hooks, hero. Used when
+    // DuoLearnScreen's topic chip taps deep-link straight into a phase.
+    if (startPhase && (RESTORABLE_PHASES.has(startPhase as FlowPhase) || startPhase === 'video' || startPhase === 'intro' || startPhase === 'hero')) {
+      return startPhase as FlowPhase;
+    }
     // On replay (user explicitly chose "do it again"), ignore the resume
     // checkpoint — they want to start from intro, not pick up at quizzes.
     const r = !isReplay && mod?.id ? useChapterUIStore.getState().moduleResume[mod.id] : undefined;
@@ -2817,6 +2838,28 @@ export function LessonFlowScreen() {
   useEffect(() => {
     setVideoPlaying(phase === "video" || phase === "post-infographic-video");
   }, [phase]);
+
+  // Topic-tree exit (R4): when entering via ?startPhase=X&returnTo=topic-tree,
+  // remember the entry phase. The moment the lesson advances past it (the
+  // user finished the phase + tapped next), bounce back to DuoLearnScreen
+  // with `?completedPhase=X` so the topic tree can mark the matching topic
+  // done. Auto-advances (hero→video→intro) aren't a concern because chips
+  // always deep-link to a concrete user-facing phase.
+  const tt_initialPhaseRef = useRef<FlowPhase | null>(returnTo === 'topic-tree' ? phase : null);
+  const tt_exitFiredRef = useRef(false);
+  useEffect(() => {
+    if (returnTo !== 'topic-tree') return;
+    if (tt_exitFiredRef.current) return;
+    if (!tt_initialPhaseRef.current) return;
+    if (phase === tt_initialPhaseRef.current) return;
+    // Phase advanced — fire the exit. Use replace to drop this lesson route
+    // from history so router.back() inside the next user navigation doesn't
+    // land them back at a half-finished lesson.
+    tt_exitFiredRef.current = true;
+    const completed = tt_initialPhaseRef.current;
+    const path = `/(tabs)/learn?completedPhase=${encodeURIComponent(completed)}&completedModuleId=${encodeURIComponent(id ?? '')}`;
+    router.replace(path as never);
+  }, [phase, returnTo, id, router]);
 
   // Fire once per lesson session when the user actually reaches the summary
   // screen — closes the funnel gap between lesson_started and lesson_completed

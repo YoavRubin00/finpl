@@ -88,10 +88,9 @@ import { chapter4Data } from "../chapter-4-content/chapter4Data";
 import { chapter5Data } from "../chapter-5-content/chapter5Data";
 import type { Module } from "../chapter-1-content/types";
 import { TopicTreeAccordion } from "../topic-learning/TopicTreeAccordion";
-import { TopicPlayerHost } from "../topic-learning/TopicPlayerHost";
 import { useTopicProgressStore } from "../topic-learning/useTopicProgressStore";
 import { resolveTopics } from "../topic-learning/topicResolver";
-import type { Topic } from "../topic-learning/types";
+import type { Topic, TopicKind } from "../topic-learning/types";
 
 import { tapHaptic, successHaptic } from "../../utils/haptics";
 import { MindMapViewer } from "../../components/ui/MindMapViewer";
@@ -1303,6 +1302,50 @@ export function DuoLearnScreen() {
     const pearl = pearlConfigFor(openPearlParam);
     if (pearl) setActivePearl(pearl);
   }, [openPearlParam]);
+
+  // Topic-tree return signal (R4): when LessonFlowScreen finishes a
+  // phase under returnTo=topic-tree, it replaces back here with
+  // ?completedPhase=X&completedModuleId=Y. Mark the matching topic
+  // done in the topic-progress store and clear the params so a refresh
+  // doesn't re-fire. Sentinel ref prevents double-fire when expo-router
+  // re-renders with the same params.
+  const completedPhaseParams = useLocalSearchParams<{
+    completedPhase?: string;
+    completedModuleId?: string;
+  }>();
+  const completedPhaseConsumedRef = useRef<string | null>(null);
+  useEffect(() => {
+    const cp = completedPhaseParams.completedPhase;
+    const cmid = completedPhaseParams.completedModuleId;
+    if (!cp || !cmid) return;
+    const key = `${cmid}:${cp}`;
+    if (completedPhaseConsumedRef.current === key) return;
+    completedPhaseConsumedRef.current = key;
+    const phaseToKind: Record<string, TopicKind> = {
+      'video': 'video-hook',
+      'intro': 'intro',
+      'flashcards': 'cards',
+      'interactive-recall': 'recall',
+      'quizzes': 'quiz',
+      'sim': 'sim',
+      'module-infographic': 'infographic',
+      'post-infographic-video': 'post-video',
+      'podcast': 'podcast',
+      'couple-dilemma': 'couple-dilemma',
+    };
+    const kind = phaseToKind[cp];
+    if (!kind) return;
+    // resolveTopics lookup so the icon/label match the real Topic shape
+    // the store keyed off when the chip was first rendered.
+    const ch = ALL_CHAPTERS.find((c) =>
+      c.modules.some((m) => m.id === cmid));
+    const mod = ch?.modules.find((m) => m.id === cmid);
+    if (!mod) return;
+    const topic = resolveTopics(mod).find((t) => t.kind === kind);
+    if (topic) useTopicProgressStore.getState().markTopicCompleted(topic);
+    // Clear params so a screen rerender doesn't re-fire.
+    router.replace('/(tabs)/learn' as never);
+  }, [completedPhaseParams, router]);
   // Prefetch today's news challenge so the Daily Quests modal can fire the
   // 4th (news) quest cleanly and the sheet renders without a spinner on open.
   const setNewsChallenge = useDailyNewsChallengeStore((s) => s.setTodayChallenge);
@@ -1326,9 +1369,10 @@ export function DuoLearnScreen() {
   // so the per-topic player can re-enter the legacy lesson flow on
   // "התחל את הרכיב".
   const [topicTreeModule, setTopicTreeModule] = useState<{ module: Module; chapterId: string } | null>(null);
-  // Per-topic sheet — opens on chip tap inside the accordion, closes on
-  // back-tap or after the user marks complete / starts the lesson.
-  const [activeTopic, setActiveTopic] = useState<Topic | null>(null);
+  // R4: activeTopic state retired — chip taps deep-link directly to
+  // /lesson/[id]?startPhase=X&returnTo=topic-tree instead of opening
+  // an in-screen modal. Phase completion replaces back here with
+  // ?completedPhase=X which the useEffect above marks done.
   const insets = useSafeAreaInsets();
   const scrollRef = useRef<ScrollView>(null);
   const [refreshKey, setRefreshKey] = useState(0);
@@ -1565,18 +1609,20 @@ export function DuoLearnScreen() {
           return;
         }
         // Decide intro-first vs accordion-first based on persisted state.
-        const introTopic = resolveTopics(mod).find((t) => t.kind === 'intro');
-        const introDone = introTopic
-          ? useTopicProgressStore.getState().isTopicCompleted(introTopic.id)
-          : true;
-        if (introTopic && !introDone) {
-          // Stage the accordion as the post-intro target, then fire intro.
-          // The activeTopic-close effect (below) opens the accordion once
-          // the intro finishes.
-          setTopicTreeModule({ module: mod, chapterId });
-          setActiveTopic(introTopic);
-        } else {
-          setTopicTreeModule({ module: mod, chapterId });
+        // First tap (intro not done) → route directly to the legacy
+        // LessonFlowScreen at the intro phase, returnTo=topic-tree. When
+        // intro finishes, the screen replaces back here with
+        // ?completedPhase=intro, which the focus effect below picks up
+        // and marks the intro topic done. The accordion remains the
+        // post-intro target — we set topicTreeModule now so it's already
+        // expanded on return.
+        const introDone = useTopicProgressStore.getState()
+          .isTopicCompleted(`${mod.id}:intro`);
+        setTopicTreeModule({ module: mod, chapterId });
+        if (!introDone) {
+          router.push(
+            `/lesson/${mod.id}?chapterId=${chapterId}&startPhase=intro&returnTo=topic-tree` as never,
+          );
         }
         return;
       }
@@ -1637,12 +1683,31 @@ export function DuoLearnScreen() {
     [router, setCurrentChapter, setCurrentModule, progressData, knowledgeLevelSet, learningTimeSet, dailyGoalSet, completedPearlIds],
   );
 
-  // Topic-tree chip → opens the per-topic player IMMEDIATELY (no hub).
-  // TopicPlayerHost routes by kind to IntroPlayer (real) or PreviewPlayer
-  // (minimal completion screen for kinds without a dedicated adapter yet).
+  // Topic-tree chip → deep-link to the legacy LessonFlowScreen at the
+  // matching phase (R4 2026-06-09). LessonFlowScreen reads `startPhase`
+  // and jumps directly there; on phase complete it router.replace's
+  // back here with `?completedPhase=X` and the useFocusEffect below
+  // marks the matching topic done.
   const handleTopicSelected = useCallback((topic: Topic) => {
-    setActiveTopic(topic);
-  }, []);
+    const current = topicTreeModule;
+    if (!current) return;
+    const phaseForKind: Record<string, string> = {
+      'video-hook': 'video',
+      'intro': 'intro',
+      'cards': 'flashcards',
+      'recall': 'interactive-recall',
+      'quiz': 'quizzes',
+      'sim': 'sim',
+      'infographic': 'module-infographic',
+      'post-video': 'post-infographic-video',
+      'podcast': 'podcast',
+      'couple-dilemma': 'couple-dilemma',
+    };
+    const targetPhase = phaseForKind[topic.kind] ?? 'intro';
+    router.push(
+      `/lesson/${current.module.id}?chapterId=${current.chapterId}&startPhase=${targetPhase}&returnTo=topic-tree` as never,
+    );
+  }, [topicTreeModule, router]);
 
   // Chest CTA: "המשך עם המודולה" — close chest, keep accordion open
   // so the user can finish the remaining 30% of topics manually.
@@ -1660,7 +1725,6 @@ export function DuoLearnScreen() {
     if (!ch) return;
     const idx = ch.modules.findIndex((m) => m.id === current.module.id);
     const next = idx >= 0 ? ch.modules[idx + 1] : undefined;
-    setActiveTopic(null);
     setTopicTreeModule(null);
     if (next) {
       router.push(`/lesson/${next.id}?chapterId=${current.chapterId}` as never);
@@ -1668,10 +1732,8 @@ export function DuoLearnScreen() {
   }, [topicTreeModule, router]);
 
   // Generic module-completed handler — invoked when the user picks
-  // "next module" inside the chest. Closes the accordion + active topic
-  // sheet so the user lands cleanly elsewhere.
+  // "next module" inside the chest. Closes the accordion.
   const handleModuleCompletedFromTree = useCallback(() => {
-    setActiveTopic(null);
     setTopicTreeModule(null);
   }, []);
 
@@ -2096,15 +2158,10 @@ export function DuoLearnScreen() {
           />
         )}
 
-        {/* Topic-tree per-topic player host. Routes to IntroPlayer for the
-            intro kind (real wrapper around InteractiveIntroCard) and to
-            PreviewPlayer for everything else. Mounts at screen root so it
-            stacks above pearls + locked-module sheets. */}
-        <TopicPlayerHost
-          topic={activeTopic}
-          module={topicTreeModule?.module ?? null}
-          onClose={() => setActiveTopic(null)}
-        />
+        {/* R4: TopicPlayerHost retired — chips deep-link to the legacy
+            LessonFlowScreen. The chest celebration modal stays inside
+            TopicTreeAccordion (it's tightly coupled to the threshold
+            transition). */}
 
         {/* Completed module replay modal, shows summary infographic */}
         {replayModule && (

@@ -12,16 +12,18 @@ import type { TopicKind, TopicIconAsset } from './types';
  */
 export const TOPIC_ICONS: Record<TopicKind, TopicIconAsset> = {
   'video-hook': require('../../../assets/lottie/wired-flat-29-play-pause-circle-hover-pinch.json'),
-  // Captain Finn waving — sets a "your guide is greeting you" vibe rather
-  // than the generic generic Finn standard. WebP, not Lottie — TopicChip
-  // branches on the asset shape.
-  'intro': require('../../../assets/webp/fin-hello.webp') as TopicIconAsset,
+  // Captain Finn excited — Lottie (not WebP) so the chip path renders
+  // through LottieView without the asset-format mismatch that caused
+  // "Invalid Lottie JSON string" on web in R3.
+  'intro': require('../../../assets/lottie/fin-excited.json'),
   'cards': require('../../../assets/lottie/wired-flat-3154-cards-club-hover-pinch.json'),
   'recall': require('../../../assets/lottie/wired-flat-426-brain-hover-pinch.json'),
   'podcast': require('../../../assets/lottie/wired-flat-688-speaker-lecturer-male-hover-pinch.json'),
   'couple-dilemma': require('../../../assets/lottie/wired-flat-20-love-heart-hover-heartbeat.json'),
   'quiz': require('../../../assets/lottie/wired-flat-424-question-bubble-hover-wiggle.json'),
-  'sim': require('../../../assets/lottie/wired-flat-2258-online-learning-hover-pinch.json'),
+  // Game-plan strategy icon reads as "interactive game" — the previous
+  // online-learning book icon felt textbook-y. Yoav 2026-06-09.
+  'sim': require('../../../assets/lottie/wired-flat-974-process-flow-game-plan-hover-pinch.json'),
   // diversified bar chart reads as "infographic summary" more clearly than
   // a single line graph (which is too "sim/trading"). Keeps cards (deck
   // of cards) and infographic (bars+rays) visually distinct.
