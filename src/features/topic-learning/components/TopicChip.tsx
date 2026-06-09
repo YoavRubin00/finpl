@@ -1,5 +1,6 @@
 import React, { useRef } from 'react';
-import { Pressable, View, Text, StyleSheet } from 'react-native';
+import { Pressable, View, StyleSheet } from 'react-native';
+import { Image as ExpoImage } from 'expo-image';
 import Animated, {
   useAnimatedStyle,
   useSharedValue,
@@ -10,8 +11,6 @@ import { Check } from 'lucide-react-native';
 import { tapHaptic } from '../../../utils/haptics';
 import type { Topic } from '../types';
 
-const RTL = { writingDirection: 'rtl' as const, textAlign: 'center' as const };
-
 interface TopicChipProps {
   topic: Topic;
   /** Has the user completed this topic? Drives glow + checkmark badge. */
@@ -20,6 +19,13 @@ interface TopicChipProps {
    *  to direct attention without crowding the whole tree with motion. */
   recommended?: boolean;
   onPress: (topic: Topic) => void;
+}
+
+/** Native `require()` returns a number for bundler-resolved static
+ *  assets (PNG/WebP) and the parsed JSON object for Lottie files. The
+ *  numeric branch routes to expo-image; the object branch to LottieView. */
+function isImageAsset(asset: Topic['iconAsset']): asset is number {
+  return typeof asset === 'number';
 }
 
 const CHIP_SIZE = 76;
@@ -65,18 +71,24 @@ export const TopicChip = React.memo(function TopicChip({
         ]}
       >
         <View style={styles.iconWrap}>
-          <LottieView
-            ref={lottieRef}
-            // iconAsset is typed as bitmap-require OR AnimationObject; the
-            // Lottie pilot only ships the AnimationObject path, so cast
-            // here. When/if PNG topics ship, swap to a branched renderer.
-            source={topic.iconAsset as AnimationObject}
-            autoPlay
-            loop={!completed}
-            // When completed, freeze on the last frame so the chip reads
-            // "done" rather than still-inviting.
-            style={styles.icon}
-          />
+          {isImageAsset(topic.iconAsset) ? (
+            <ExpoImage
+              source={topic.iconAsset}
+              style={styles.icon}
+              contentFit="contain"
+              accessible={false}
+            />
+          ) : (
+            <LottieView
+              ref={lottieRef}
+              source={topic.iconAsset as AnimationObject}
+              autoPlay
+              loop={!completed}
+              // When completed, freeze on the last frame so the chip reads
+              // "done" rather than still-inviting.
+              style={styles.icon}
+            />
+          )}
         </View>
         {completed && (
           <View style={styles.checkBadge} pointerEvents="none">
@@ -84,9 +96,6 @@ export const TopicChip = React.memo(function TopicChip({
           </View>
         )}
       </Pressable>
-      <Text style={[styles.label, RTL]} numberOfLines={1} allowFontScaling={false}>
-        {topic.titleHe}
-      </Text>
     </Animated.View>
   );
 });
@@ -95,24 +104,24 @@ const styles = StyleSheet.create({
   chip: {
     width: CHIP_SIZE,
     height: CHIP_SIZE,
-    borderRadius: 22, // octagon-ish, less sharp than a square
+    borderRadius: CHIP_SIZE / 2, // round to match Duolingo path nodes
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 2,
-    backgroundColor: '#ffffff',
+    borderWidth: 3,
     shadowColor: '#0ea5e9',
-    shadowOpacity: 0.35,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 3 },
-    elevation: 5,
+    shadowOpacity: 0.45,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 6,
   },
   chipIdle: {
-    borderColor: '#7dd3fc', // sky-300
+    borderColor: '#38bdf8', // sky-400, pops on dark bg
+    backgroundColor: '#0f2a4d', // dark slate so the white icon pops
   },
   chipCompleted: {
     borderColor: '#f59e0b', // gold ring
     shadowColor: '#f59e0b',
-    backgroundColor: '#fef3c7', // light gold tint
+    backgroundColor: '#78350f', // deep amber on dark bg
   },
   recommendedHalo: {
     shadowColor: '#0ea5e9',
@@ -143,12 +152,5 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     borderWidth: 2,
     borderColor: '#ffffff',
-  },
-  label: {
-    fontSize: 11,
-    fontWeight: '800',
-    color: '#0c4a6e',
-    marginTop: 6,
-    width: CHIP_SIZE + 14,
   },
 });

@@ -31,6 +31,10 @@ interface TopicTreeAccordionProps {
   /** Fired when a chip is tapped. Parent owns the per-kind player sheet,
    *  the chip layer stays pure presentation. */
   onTopicSelected: (topic: Topic) => void;
+  /** Fired on the first false→true crossing of the 70% threshold. Parent
+   *  uses this to dismiss the accordion (return to the module map) after
+   *  the in-place confetti finishes. */
+  onModuleCompleted?: () => void;
 }
 
 /**
@@ -44,6 +48,7 @@ export const TopicTreeAccordion = React.memo(function TopicTreeAccordion({
   module,
   simFirst,
   onTopicSelected,
+  onModuleCompleted,
 }: TopicTreeAccordionProps): React.ReactElement {
   const topics = useMemo(
     () => resolveTopics(module, { simFirst }),
@@ -121,8 +126,11 @@ export const TopicTreeAccordion = React.memo(function TopicTreeAccordion({
       successHaptic();
       try { playSound('modal_open_4'); } catch { /* non-fatal */ }
       setShowCelebration(true);
+      // 5. Parent dismissal — back to the module map after the confetti
+      // finishes (parent timer drives the actual close, not us).
+      onModuleCompleted?.();
     }
-  }, [summary.isModuleDone, module.id, upsertProgress, economyStore, playSound]);
+  }, [summary.isModuleDone, module.id, upsertProgress, economyStore, playSound, onModuleCompleted]);
 
   return (
     <Animated.View
@@ -130,11 +138,12 @@ export const TopicTreeAccordion = React.memo(function TopicTreeAccordion({
       exiting={FadeOut.duration(180)}
       style={styles.container}
     >
-      {/* Light sky-tinted gradient so the accordion reads as part of the
-          Duolingo-style learning surface rather than a heavy modal — the
-          gold tree pops against this far better than against navy. */}
+      {/* Dark navy gradient — mirrors the Duolingo learning-screen
+          dark theme Yoav referenced. Stars/topic nodes glow against
+          this, and the gold tree on the right pops as the celebratory
+          focal point. */}
       <LinearGradient
-        colors={['#e0f2fe', '#bae6fd']}
+        colors={['#0c1f3a', '#072144']}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
         style={styles.bg}
@@ -231,13 +240,13 @@ const styles = StyleSheet.create({
   headerCount: {
     fontSize: 14,
     fontWeight: '900',
-    color: '#0c4a6e',
+    color: '#e0f2fe',
   },
   headerSpacer: { flex: 1 },
   headerPct: {
     fontSize: 14,
     fontWeight: '900',
-    color: '#b45309', // gold-amber accent, matches the gold tree's tone
+    color: '#fbbf24', // gold accent on dark bg, matches the tree
   },
   cta: {
     marginTop: 14,
