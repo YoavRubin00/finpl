@@ -1721,7 +1721,11 @@ export function DuoLearnScreen() {
       setCurrentModule(moduleIndex);
       router.push(`/lesson/${moduleId}?chapterId=${chapterId}` as never);
     },
-    [router, setCurrentChapter, setCurrentModule, progressData, knowledgeLevelSet, learningTimeSet, dailyGoalSet, completedPearlIds],
+    // R5.5: topicTreeModule added so the toggle branch reads the LIVE
+    // value, not the closure captured at callback creation. Without
+    // this, re-tapping mod-1-1 never matched topicTreeModule.module.id
+    // and the accordion never closed (Yoav reported this three times).
+    [router, setCurrentChapter, setCurrentModule, progressData, knowledgeLevelSet, learningTimeSet, dailyGoalSet, completedPearlIds, topicTreeModule],
   );
 
   // Topic-tree chip → deep-link to the legacy LessonFlowScreen at the
