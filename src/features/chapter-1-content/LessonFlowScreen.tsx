@@ -2255,7 +2255,7 @@ function chapterStoreKey(chapterId: string): string {
 
 export function LessonFlowScreen() {
   const isFocused = useIsFocused();
-  const { id, chapterId, replay, startPhase, returnTo } = useLocalSearchParams<{
+  const { id, chapterId, replay, startPhase, returnTo, cardFilter } = useLocalSearchParams<{
     id: string;
     chapterId?: string;
     replay?: string;
@@ -2270,6 +2270,10 @@ export function LessonFlowScreen() {
      *  router.back()'s with `?completedPhase=X` so DuoLearnScreen can
      *  mark the matching topic done. */
     returnTo?: string;
+    /** R5 cards/tutorial-video split — 'video' keeps only videoUri
+     *  flashcards (tutorial-video chip), 'non-video' filters them out
+     *  (regular cards chip). */
+    cardFilter?: string;
   }>();
   const isReplay = replay === '1';
   const router = useRouter();
@@ -2839,7 +2843,6 @@ export function LessonFlowScreen() {
     setVideoPlaying(phase === "video" || phase === "post-infographic-video");
   }, [phase]);
 
-  // Topic-tree exit (R4): when entering via ?startPhase=X&returnTo=topic-tree,
   // remember the entry phase. The moment the lesson advances past it (the
   // user finished the phase + tapped next), bounce back to DuoLearnScreen
   // with `?completedPhase=X` so the topic tree can mark the matching topic
@@ -2894,6 +2897,32 @@ export function LessonFlowScreen() {
     const r = !isReplay && mod?.id ? useChapterUIStore.getState().moduleResume[mod.id] : undefined;
     return (r && RESTORABLE_PHASES.has(r.phase as FlowPhase)) ? r.flashcardIndex : 0;
   });
+
+  // R5 (2026-06-10) — topic-tree cards chip filters out videoUri
+  // flashcards so the user never sees an "explainer video" card in
+  // the middle of the cards loop (Yoav: "תבטל את הסרטוני אינטרו
+  // בשיטה החדשה"). Whenever the lesson lands on a video flashcard
+  // under returnTo=topic-tree + cardFilter=non-video, auto-advance
+  // past it; if no non-video card remains, bump past the end so the
+  // existing "end of flashcards → next phase" path fires and the
+  // topic-tree exit effect (above) takes over.
+  useEffect(() => {
+    if (returnTo !== 'topic-tree') return;
+    if (cardFilter !== 'non-video') return;
+    if (phase !== 'flashcards') return;
+    if (!mod) return;
+    const flashcards = mod.flashcards;
+    const isVideo = (i: number) => Boolean(flashcards[i]?.videoUri);
+    if (flashcardIndex >= flashcards.length) return;
+    if (!isVideo(flashcardIndex)) return;
+    for (let j = flashcardIndex + 1; j < flashcards.length; j++) {
+      if (!isVideo(j)) {
+        setFlashcardIndex(j);
+        return;
+      }
+    }
+    setFlashcardIndex(flashcards.length);
+  }, [phase, flashcardIndex, cardFilter, returnTo, mod]);
 
   // Podcast injection — appears between flashcards (at midpoint). Replays naturally
   // if the user navigates back to the trigger card; no one-shot lockout.
@@ -4056,7 +4085,18 @@ export function LessonFlowScreen() {
                 : phase === "quizzes" ? 1 + mod.flashcards.length + quizIndex + breakOffset
                 : phase === "sim-intro" || phase === "sim" ? 1 + mod.flashcards.length + mod.quizzes.length + breakOffset
                 : totalSteps);
-            const pct = Math.min((currentStep / totalSteps) * 100, 100);
+            // Topic-tree (R5): the user entered at a specific phase via a
+            // chip, so the bar should reflect only that phase's progress
+            // — not the whole lesson. Otherwise cards reads "12% of lesson"
+            // which is unhelpful inside the topic-tree pilot.
+            const pctLessonWide = Math.min((currentStep / totalSteps) * 100, 100);
+            const pct = returnTo === 'topic-tree'
+              ? (phase === 'flashcards'
+                  ? (flashcardIndex / Math.max(1, mod.flashcards.length)) * 100
+                  : phase === 'quizzes'
+                  ? (quizIndex / Math.max(1, mod.quizzes.length)) * 100
+                  : 0) // singletons (intro/video/sim/recall/infographic/post-video) — bar stays flat until phase exits
+              : pctLessonWide;
             const isOnFire = consecutiveCorrect >= 3;
             const barColors: [string, string, string] = isOnFire ? ['#fbbf24', '#f97316', '#ef4444'] : [unitColors.glow, unitColors.glow, unitColors.bg];
             const barShadow = isOnFire ? '#f97316' : unitColors.glow;

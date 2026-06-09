@@ -3,16 +3,14 @@ import type { Topic, TopicKind } from './types';
 import { TOPIC_ICONS, TOPIC_LABELS } from './topic-icons';
 
 /**
- * Canonical order used when no completion progress exists. Mirrors the
- * legacy LessonFlowScreen sequence so first-time users see the same flow
- * as before if they hit "המשך מאיפה שעצרתי" all the way through.
- *
- * Sim is intentionally placed after the recall+quiz pair (not earlier),
- * matching the "normal module" path; SIM_FIRST modules are handled by the
- * caller via `simFirst` option.
+ * Canonical order — mirrors LessonFlowScreen's normal flow. The hook
+ * video and tutorial-video chip were RETIRED in R5 ("רק האינטרו של
+ * שארק"): the hook still plays inside the legacy intro phase, and the
+ * mid-lesson explainer video is filtered out of the cards loop
+ * entirely so the user never sees a foreign video card. Sim is
+ * separately ordered via SIM_FIRST_ORDER.
  */
 const CANONICAL_ORDER: TopicKind[] = [
-  'video-hook',
   'intro',
   'cards',
   'recall',
@@ -25,7 +23,6 @@ const CANONICAL_ORDER: TopicKind[] = [
 ];
 
 const SIM_FIRST_ORDER: TopicKind[] = [
-  'video-hook',
   'intro',
   'sim',
   'cards',
@@ -67,16 +64,14 @@ export interface ResolveTopicsOptions {
 /**
  * Derive the discrete topic list from a module's existing optional fields.
  * Add-only: a future TopicKind requires touching this resolver plus the
- * three sibling files (`types`, `topic-icons`, `playerAdapters/`). No
- * data migration needed — modules without the source field simply skip
- * that topic.
+ * two sibling files (`types`, `topic-icons`). No data migration needed —
+ * modules without the source field simply skip that topic.
  */
 export function resolveTopics(module: Module, opts: ResolveTopicsOptions = {}): Topic[] {
   const simFirst = opts.simFirst ?? SIM_FIRST_MODULE_IDS.has(module.id);
   const order = simFirst ? SIM_FIRST_ORDER : CANONICAL_ORDER;
   const present = new Map<TopicKind, boolean>();
 
-  if (module.videoHookAsset) present.set('video-hook', true);
   if (module.interactiveIntro?.trim()) present.set('intro', true);
   if (module.flashcards?.length) present.set('cards', true);
   // 'recall' isn't yet a discriminating field on Module — gated on flashcards

@@ -1,15 +1,14 @@
 import React, { useRef } from 'react';
 import { Pressable, View, StyleSheet } from 'react-native';
-import { Image as ExpoImage } from 'expo-image';
 import Animated, {
   useAnimatedStyle,
   useSharedValue,
   withSpring,
 } from 'react-native-reanimated';
-import LottieView, { type AnimationObject } from 'lottie-react-native';
+import LottieView from 'lottie-react-native';
 import { Check } from 'lucide-react-native';
 import { tapHaptic } from '../../../utils/haptics';
-import type { Topic } from '../types';
+import type { Topic, TopicTileSpec, TopicLottieSpec } from '../types';
 
 interface TopicChipProps {
   topic: Topic;
@@ -21,21 +20,17 @@ interface TopicChipProps {
   onPress: (topic: Topic) => void;
 }
 
-/** Native `require()` returns a number for bundler-resolved static
- *  assets (PNG/WebP) and the parsed JSON object for Lottie files. The
- *  numeric branch routes to expo-image; the object branch to LottieView. */
-function isImageAsset(asset: Topic['iconAsset']): asset is number {
-  return typeof asset === 'number';
-}
-
 const CHIP_SIZE = 76;
 
 /**
- * Octagonal-flavored chip that hosts one Lottie icon. The CSS "octagon"
- * effect is approximated with a high border-radius square — full SVG path
- * clipping would be ideal but pulls a third-party Skia/SVG dep that this
- * pilot doesn't yet need. Visual landing zone with completed/normal/dim
- * variants matches the spec in plan §2.2.
+ * R5 (2026-06-10) — flat pastel tile + Lucide icon design. Matches
+ * Yoav's reference screenshot of colored category badges. Intro
+ * remains a Lottie shark (special-cased) per "רק האינטרו של שארק".
+ *
+ * Completed state: green check badge on a corner, gold ring around the
+ * tile, slight gold tint baked into the bg. Recommended state: subtle
+ * outer halo so the next-up node grabs the eye without animating the
+ * whole grid.
  */
 export const TopicChip = React.memo(function TopicChip({
   topic,
@@ -50,12 +45,20 @@ export const TopicChip = React.memo(function TopicChip({
 
   const handlePress = () => {
     tapHaptic();
-    // Spring press-snap mirrors the SupercellButton feel used elsewhere
-    // in the app for chip-style press feedback.
     scale.value = withSpring(0.92, { damping: 14, stiffness: 260 });
     scale.value = withSpring(1, { damping: 12, stiffness: 220 });
     onPress(topic);
   };
+
+  const asset = topic.iconAsset;
+  const isLottie = asset.type === 'lottie';
+  const tile = isLottie ? null : (asset as TopicTileSpec);
+  const IconComp = tile?.icon;
+
+  // Bg color: tile spec for tiles, white for lottie chips so the
+  // Captain Shark animation pops without a colored background.
+  const tileBg = isLottie ? '#ffffff' : tile!.bg;
+  const ringColor = completed ? '#f59e0b' : isLottie ? '#bfdbfe' : tile!.fg;
 
   return (
     <Animated.View style={[animStyle, recommended ? styles.recommendedHalo : null]}>
@@ -67,27 +70,31 @@ export const TopicChip = React.memo(function TopicChip({
         hitSlop={8}
         style={[
           styles.chip,
-          completed ? styles.chipCompleted : styles.chipIdle,
+          {
+            backgroundColor: tileBg,
+            borderColor: ringColor,
+            shadowColor: ringColor,
+          },
+          completed ? styles.chipCompleted : null,
         ]}
       >
         <View style={styles.iconWrap}>
-          {isImageAsset(topic.iconAsset) ? (
-            <ExpoImage
-              source={topic.iconAsset}
-              style={styles.icon}
-              contentFit="contain"
-              accessible={false}
-            />
-          ) : (
+          {isLottie ? (
             <LottieView
               ref={lottieRef}
-              source={topic.iconAsset as AnimationObject}
+              source={(asset as TopicLottieSpec).asset}
               autoPlay
               loop={!completed}
-              // When completed, freeze on the last frame so the chip reads
-              // "done" rather than still-inviting.
-              style={styles.icon}
+              style={styles.lottieIcon}
             />
+          ) : (
+            IconComp && (
+              <IconComp
+                size={36}
+                color={tile!.fg}
+                strokeWidth={2.4}
+              />
+            )
           )}
         </View>
         {completed && (
@@ -104,25 +111,18 @@ const styles = StyleSheet.create({
   chip: {
     width: CHIP_SIZE,
     height: CHIP_SIZE,
-    borderRadius: CHIP_SIZE / 2, // round to match Duolingo path nodes
+    borderRadius: 22, // softly rounded square — matches the reference tiles
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 3,
-    shadowColor: '#3b82f6',
+    borderWidth: 2,
     shadowOpacity: 0.30,
-    shadowRadius: 9,
+    shadowRadius: 8,
     shadowOffset: { width: 0, height: 3 },
     elevation: 5,
   },
-  chipIdle: {
-    borderColor: '#bfdbfe', // chapter-1 glow on light bg
-    backgroundColor: '#ffffff',
-  },
   chipCompleted: {
-    borderColor: '#f59e0b', // gold ring
-    shadowColor: '#f59e0b',
+    borderWidth: 3,
     shadowOpacity: 0.45,
-    backgroundColor: '#fef3c7', // light gold tint
   },
   recommendedHalo: {
     shadowColor: '#0ea5e9',
@@ -137,9 +137,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  icon: {
-    width: 48,
-    height: 48,
+  lottieIcon: {
+    width: 56,
+    height: 56,
   },
   checkBadge: {
     position: 'absolute',

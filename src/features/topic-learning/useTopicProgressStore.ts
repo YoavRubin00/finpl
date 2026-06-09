@@ -17,6 +17,7 @@ interface TopicProgressState {
   markTopicCompleted: (topic: Topic) => void;
   isTopicCompleted: (topicId: string) => boolean;
   summaryForModule: (moduleId: string, topics: Topic[]) => ModuleTopicSummary;
+  resetForModule: (moduleId: string) => void;
   reset: () => void;
 }
 
@@ -73,6 +74,20 @@ export const useTopicProgressStore = create<TopicProgressState>()(
         const nextTopic = sorted.find((t) => !state.completed[t.id]) ?? null;
 
         return { completed: completedCount, total, pct, isModuleDone, nextTopic };
+      },
+
+      /** Clear every completed topic + threshold flag for a single
+       *  module. Used by R5 to wipe pre-R5 stale state for mod-1-1.
+       *  Safe to call repeatedly — leaves other modules untouched. */
+      resetForModule: (moduleId) => {
+        const state = get();
+        const completed = { ...state.completed };
+        Object.keys(completed).forEach((k) => {
+          if (k.startsWith(`${moduleId}:`)) delete completed[k];
+        });
+        const modulesPastThreshold = { ...state.modulesPastThreshold };
+        delete modulesPastThreshold[moduleId];
+        set({ completed, modulesPastThreshold });
       },
 
       reset: () => set({ completed: {}, modulesPastThreshold: {} }),

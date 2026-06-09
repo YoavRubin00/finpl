@@ -1293,6 +1293,21 @@ export function DuoLearnScreen() {
   // LessonFlowScreen). The user sees: finish module -> learn map flashes
   // briefly -> pearl sheet slides up. Sentinel ref so it fires once per
   // navigation, even though the param can survive a re-render.
+  // R5 one-shot reset: pre-R5 builds wrote completed topics under a
+  // resolver that hadn't yet split the tutorial-video out. Wipe the
+  // mod-1-1 slice once so first-time R5 users see all chips fresh.
+  // The synthetic '__reset_r5__' key in `completed` carries the
+  // idempotency signal across reloads — store is persisted via
+  // zustandStorage so this fires exactly once.
+  useEffect(() => {
+    const fired = useTopicProgressStore.getState().completed['__reset_r5__'];
+    if (fired) return;
+    useTopicProgressStore.getState().resetForModule('mod-1-1');
+    useTopicProgressStore.setState((s) => ({
+      completed: { ...s.completed, '__reset_r5__': { completedAt: new Date().toISOString() } },
+    }));
+  }, []);
+
   const openPearlParam = useLocalSearchParams<{ openPearl?: string }>().openPearl;
   const openPearlConsumedRef = useRef<string | null>(null);
   useEffect(() => {
@@ -1312,17 +1327,27 @@ export function DuoLearnScreen() {
   const completedPhaseParams = useLocalSearchParams<{
     completedPhase?: string;
     completedModuleId?: string;
+    /** R5: passed back from LessonFlowScreen so we can disambiguate
+     *  cards-vs-tutorial-video completion. Both use phase=flashcards. */
+    completedKind?: string;
   }>();
   const completedPhaseConsumedRef = useRef<string | null>(null);
   useEffect(() => {
     const cp = completedPhaseParams.completedPhase;
     const cmid = completedPhaseParams.completedModuleId;
+    const ckind = completedPhaseParams.completedKind;
     if (!cp || !cmid) return;
-    const key = `${cmid}:${cp}`;
+    const key = `${cmid}:${cp}:${ckind ?? ''}`;
     if (completedPhaseConsumedRef.current === key) return;
     completedPhaseConsumedRef.current = key;
+    // R5: 'video' phase still exists in LessonFlowScreen (the videoHookAsset
+    // hook auto-plays before intro) — but there's no longer a topic chip
+    // mapped to it. If the lesson somehow exits on phase=video under
+    // returnTo=topic-tree, fall through to 'intro' so the user's intro
+    // chip lights up. This case is mostly defensive — chips deep-link
+    // straight to startPhase=intro, not video.
     const phaseToKind: Record<string, TopicKind> = {
-      'video': 'video-hook',
+      'video': 'intro',
       'intro': 'intro',
       'flashcards': 'cards',
       'interactive-recall': 'recall',
@@ -1333,7 +1358,9 @@ export function DuoLearnScreen() {
       'podcast': 'podcast',
       'couple-dilemma': 'couple-dilemma',
     };
-    const kind = phaseToKind[cp];
+    // completedKind overrides phaseToKind so flashcards-via-tutorial-video
+    // marks the tutorial-video chip, not the cards chip.
+    const kind = (ckind as TopicKind | undefined) ?? phaseToKind[cp];
     if (!kind) return;
     // resolveTopics lookup so the icon/label match the real Topic shape
     // the store keyed off when the chip was first rendered.
@@ -1692,7 +1719,6 @@ export function DuoLearnScreen() {
     const current = topicTreeModule;
     if (!current) return;
     const phaseForKind: Record<string, string> = {
-      'video-hook': 'video',
       'intro': 'intro',
       'cards': 'flashcards',
       'recall': 'interactive-recall',
@@ -1704,8 +1730,12 @@ export function DuoLearnScreen() {
       'couple-dilemma': 'couple-dilemma',
     };
     const targetPhase = phaseForKind[topic.kind] ?? 'intro';
+    // R5: cards chip ALWAYS skips video flashcards. The user retired the
+    // separate "tutorial-video" chip and wants the topic-tree to keep
+    // video out of the cards loop entirely.
+    const cardFilter = topic.kind === 'cards' ? '&cardFilter=non-video' : '';
     router.push(
-      `/lesson/${current.module.id}?chapterId=${current.chapterId}&startPhase=${targetPhase}&returnTo=topic-tree` as never,
+      `/lesson/${current.module.id}?chapterId=${current.chapterId}&startPhase=${targetPhase}&returnTo=topic-tree${cardFilter}` as never,
     );
   }, [topicTreeModule, router]);
 
