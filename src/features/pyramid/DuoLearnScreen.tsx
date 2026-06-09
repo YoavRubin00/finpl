@@ -1739,6 +1739,7 @@ export function DuoLearnScreen() {
     const phaseForKind: Record<string, string> = {
       'intro': 'intro',
       'cards': 'flashcards',
+      'tutorial-video': 'flashcards',
       'recall': 'interactive-recall',
       'quiz': 'quizzes',
       'sim': 'sim',
@@ -1748,10 +1749,13 @@ export function DuoLearnScreen() {
       'couple-dilemma': 'couple-dilemma',
     };
     const targetPhase = phaseForKind[topic.kind] ?? 'intro';
-    // R5: cards chip ALWAYS skips video flashcards. The user retired the
-    // separate "tutorial-video" chip and wants the topic-tree to keep
-    // video out of the cards loop entirely.
-    const cardFilter = topic.kind === 'cards' ? '&cardFilter=non-video' : '';
+    // R5.5: cards chip filters out video flashcards. tutorial-video
+    // chip routes into the same flashcards phase but keeps ONLY video
+    // cards (the explainer). cardFilter rides on the URL so
+    // LessonFlowScreen knows which set to render.
+    const cardFilter = topic.kind === 'cards' ? '&cardFilter=non-video'
+      : topic.kind === 'tutorial-video' ? '&cardFilter=video'
+      : '';
     router.push(
       `/lesson/${current.module.id}?chapterId=${current.chapterId}&startPhase=${targetPhase}&returnTo=topic-tree${cardFilter}` as never,
     );

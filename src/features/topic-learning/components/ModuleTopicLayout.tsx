@@ -1,9 +1,9 @@
 import React, { useMemo } from 'react';
 import { View, StyleSheet, Dimensions } from 'react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
-import LottieView from 'lottie-react-native';
 import { GrowingTree } from './GrowingTree';
 import { TopicChip } from './TopicChip';
+import { GoldCoinIcon } from '../../../components/ui/GoldCoinIcon';
 import type { Topic } from '../types';
 
 const SCREEN_W = Dimensions.get('window').width;
@@ -16,7 +16,13 @@ function pathOffset(i: number): number {
   return Math.round(Math.sin((i * 2 * Math.PI) / WAVE_PERIOD) * WAVE_AMPLITUDE);
 }
 
-const COIN_LOTTIE = require('../../../../assets/lottie/wired-flat-298-coins-hover-jump.json');
+// Vertical stack of gold coins descending from the bottom of each chip
+// (Yoav R5.6 2026-06-10: "המטבעות צריכים להגיע ממתחת לכפתור"). Mirrors
+// the visual in his learn-map screenshot — coins look like they're
+// pouring out the chip's underside.
+const COIN_STACK_COUNT = 5;
+const COIN_SIZE = 18;
+const COIN_OVERLAP = 6; // each next coin nests this many px into the one above
 
 interface ModuleTopicLayoutProps {
   topics: Topic[];
@@ -52,7 +58,11 @@ export const ModuleTopicLayout = React.memo(function ModuleTopicLayout({
     [topics],
   );
 
-  const totalHeight = sorted.length * ROW_HEIGHT + ROW_HEIGHT; // +1 row for the entry/exit padding
+  // Tight reserve at the top (just 12px) so the first chip sits as
+  // close as possible to the outer mod-1-1 node above (Yoav R5.5:
+  // "תקטין את המרחק בין הריבית דריבית לתת הראשונה"). Bottom keeps
+  // half a row for the exit connector reaching down to the pearl.
+  const totalHeight = sorted.length * ROW_HEIGHT + ROW_HEIGHT / 2 + 12;
 
   // First and last chip offsets — drive the entry/exit connector
   // endpoints so the trail emerges from the outer mod node above and
@@ -64,10 +74,12 @@ export const ModuleTopicLayout = React.memo(function ModuleTopicLayout({
 
   return (
     <View style={[styles.container, { height: totalHeight }]}>
-      {/* Tree — top-right corner only, doesn't span the full layout
-          height so it stays clear of chip rows below it. */}
+      {/* Tree — small + tucked in the top-right corner so it never
+          eats a chip slot (Yoav R5.5: "שהעץ לא יעלה על הכפתורי
+          הפעלה"). 100×100 keeps it well outside the centered path
+          column on any phone width. */}
       <View style={styles.treeWrap} pointerEvents="none">
-        <GrowingTree progressPct={progressPct} size={140} />
+        <GrowingTree progressPct={progressPct} size={100} />
       </View>
 
       {/* Entry connector — pulls the trail down from the outer mod
@@ -108,21 +120,6 @@ export const ModuleTopicLayout = React.memo(function ModuleTopicLayout({
                   />
                 </View>
               )}
-              {showCoin && (
-                <View
-                  pointerEvents="none"
-                  style={[
-                    styles.coinSlot,
-                    {
-                      left: '50%',
-                      marginLeft: ((offsetX + nextOffsetX) / 2) - 14,
-                      top: ROW_HEIGHT / 2 + NODE_SIZE / 2 + 8,
-                    },
-                  ]}
-                >
-                  <LottieView source={COIN_LOTTIE} autoPlay loop style={styles.coin} />
-                </View>
-              )}
               <View style={[styles.nodeSlot, { transform: [{ translateX: offsetX }] }]}>
                 <TopicChip
                   topic={topic}
@@ -131,6 +128,34 @@ export const ModuleTopicLayout = React.memo(function ModuleTopicLayout({
                   onPress={onTopicPress}
                 />
               </View>
+              {/* Coin stack — falls out from under the chip's bottom
+                  edge, descending toward the next row. Decorative only;
+                  pointerEvents none so taps still land on the chip. */}
+              {showCoin && (
+                <View
+                  pointerEvents="none"
+                  style={[
+                    styles.coinStack,
+                    {
+                      left: '50%',
+                      marginLeft: offsetX - COIN_SIZE / 2,
+                    },
+                  ]}
+                >
+                  {Array.from({ length: COIN_STACK_COUNT }).map((_, k) => (
+                    <View
+                      key={k}
+                      style={{
+                        position: 'absolute',
+                        top: k * (COIN_SIZE - COIN_OVERLAP),
+                        left: 0,
+                      }}
+                    >
+                      <GoldCoinIcon size={COIN_SIZE} />
+                    </View>
+                  ))}
+                </View>
+              )}
             </Animated.View>
           );
         })}
@@ -324,13 +349,14 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  coinSlot: {
+  // Coin stack anchored to the bottom-center of the chip, hanging
+  // straight down toward the next row. Width = single coin size since
+  // every coin sits at left:0 within the slot.
+  coinStack: {
     position: 'absolute',
-    width: 28,
-    height: 28,
-  },
-  coin: {
-    width: 28,
-    height: 28,
+    top: ROW_HEIGHT / 2 + NODE_SIZE / 2 - 4,
+    width: COIN_SIZE,
+    height: COIN_STACK_COUNT * (COIN_SIZE - COIN_OVERLAP) + COIN_OVERLAP,
+    zIndex: 2,
   },
 });

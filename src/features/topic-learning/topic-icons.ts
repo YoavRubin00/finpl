@@ -13,6 +13,7 @@ export const TOPIC_ICONS: Record<TopicKind, TopicIconAsset> = {
   // the intro screen's content, just not the chip.
   'intro': { emoji: '👋' },
   'cards': { emoji: '📑' },
+  'tutorial-video': { emoji: '🎬' },
   'recall': { emoji: '🧠' },
   'podcast': { emoji: '🎙️' },
   'couple-dilemma': { emoji: '⚖️' },
@@ -28,6 +29,7 @@ export const TOPIC_ICONS: Record<TopicKind, TopicIconAsset> = {
 export const TOPIC_LABELS: Record<TopicKind, string> = {
   'intro': 'אינטרו',
   'cards': 'כרטיסיות',
+  'tutorial-video': 'סרטון הסבר',
   'recall': 'השלמת משפטים',
   'podcast': 'פודקאסט',
   'couple-dilemma': 'דילמה זוגית',

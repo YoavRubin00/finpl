@@ -10,9 +10,17 @@ import { TOPIC_ICONS, TOPIC_LABELS } from './topic-icons';
  * entirely so the user never sees a foreign video card. Sim is
  * separately ordered via SIM_FIRST_ORDER.
  */
+// R5.5 — orders mirror the master LessonFlowScreen flow:
+//   intro → (sim if SIM_FIRST) → cards → tutorial-video → recall →
+//     podcast → couple-dilemma → quiz → infographic → post-video
+// tutorial-video sits right after cards because the legacy flashcards
+// loop traditionally renders the explainer card mid-stack; pulling it
+// out as its own chip keeps the visit order familiar (Yoav:
+// "לשמור על המיקום שלו לפי הסדר שכרגע בגרסה במאסטר").
 const CANONICAL_ORDER: TopicKind[] = [
   'intro',
   'cards',
+  'tutorial-video',
   'recall',
   'podcast',
   'couple-dilemma',
@@ -26,6 +34,7 @@ const SIM_FIRST_ORDER: TopicKind[] = [
   'intro',
   'sim',
   'cards',
+  'tutorial-video',
   'recall',
   'podcast',
   'couple-dilemma',
@@ -74,6 +83,13 @@ export function resolveTopics(module: Module, opts: ResolveTopicsOptions = {}): 
 
   if (module.interactiveIntro?.trim()) present.set('intro', true);
   if (module.flashcards?.length) present.set('cards', true);
+  // R5.5: tutorial-video chip surfaces any flashcard with a videoUri.
+  // mod-1-1 has fc-1-1-video; future modules with embedded explainer
+  // videos pick this up automatically. Cards loop separately filters
+  // these out so the user doesn't see the video twice.
+  if (module.flashcards?.some((c) => Boolean(c.videoUri))) {
+    present.set('tutorial-video', true);
+  }
   // 'recall' isn't yet a discriminating field on Module — gated on flashcards
   // for now since recall reuses flashcard content in LessonFlowScreen. The
   // adapter layer is where this becomes an explicit toggle later.

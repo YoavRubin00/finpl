@@ -9,12 +9,18 @@
  */
 export type TopicKind =
   | 'intro'
+  | 'sim'
   | 'cards'
+  /** R5.5: brought back per Yoav — the mid-lesson explainer (e.g.
+   *  fc-1-1-video for compound interest) was getting filtered out of
+   *  the cards loop with no surface to reach it. Now it's its own
+   *  chip, with the cards loop still filtering video flashcards so
+   *  the user doesn't see them twice. */
+  | 'tutorial-video'
   | 'recall'
   | 'podcast'
   | 'couple-dilemma'
   | 'quiz'
-  | 'sim'
   | 'infographic'
   | 'post-video';
 

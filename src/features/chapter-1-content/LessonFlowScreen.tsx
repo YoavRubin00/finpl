@@ -2860,10 +2860,15 @@ export function LessonFlowScreen() {
     // land them back at a half-finished lesson.
     tt_exitFiredRef.current = true;
     const completed = tt_initialPhaseRef.current;
-    // R5.1: include expandedModule so DuoLearnScreen reopens the
-    // accordion on return — the user lands back on the chip grid,
-    // not on the collapsed map. (Yoav 2026-06-10.)
-    const path = `/(tabs)/learn?completedPhase=${encodeURIComponent(completed)}&completedModuleId=${encodeURIComponent(id ?? '')}&expandedModule=${encodeURIComponent(id ?? '')}`;
+    // R5.5: flashcards phase covers two chips — 'cards' and
+    // 'tutorial-video' — disambiguated by cardFilter. Pass it as
+    // completedKind so the consumer marks the right topic done.
+    const completedKind =
+      completed === 'flashcards' && cardFilter === 'video' ? 'tutorial-video'
+      : completed === 'flashcards' && cardFilter === 'non-video' ? 'cards'
+      : '';
+    const kindParam = completedKind ? `&completedKind=${encodeURIComponent(completedKind)}` : '';
+    const path = `/(tabs)/learn?completedPhase=${encodeURIComponent(completed)}&completedModuleId=${encodeURIComponent(id ?? '')}&expandedModule=${encodeURIComponent(id ?? '')}${kindParam}`;
     router.replace(path as never);
   }, [phase, returnTo, id, router]);
 
@@ -2901,25 +2906,27 @@ export function LessonFlowScreen() {
     return (r && RESTORABLE_PHASES.has(r.phase as FlowPhase)) ? r.flashcardIndex : 0;
   });
 
-  // R5 (2026-06-10) — topic-tree cards chip filters out videoUri
-  // flashcards so the user never sees an "explainer video" card in
-  // the middle of the cards loop (Yoav: "תבטל את הסרטוני אינטרו
-  // בשיטה החדשה"). Whenever the lesson lands on a video flashcard
-  // under returnTo=topic-tree + cardFilter=non-video, auto-advance
-  // past it; if no non-video card remains, bump past the end so the
-  // existing "end of flashcards → next phase" path fires and the
-  // topic-tree exit effect (above) takes over.
+  // R5.5 (2026-06-10) — topic-tree flashcards filter. Two modes:
+  //   cardFilter='non-video' (cards chip) — skip videoUri flashcards
+  //   cardFilter='video' (tutorial-video chip) — skip non-video cards
+  // Whenever the current flashcard doesn't match the desired class,
+  // jump to the next matching one; if none remain, bump past the end
+  // so the "end of flashcards → next phase" path fires and the
+  // topic-tree exit effect takes over.
   useEffect(() => {
     if (returnTo !== 'topic-tree') return;
-    if (cardFilter !== 'non-video') return;
+    if (cardFilter !== 'non-video' && cardFilter !== 'video') return;
     if (phase !== 'flashcards') return;
     if (!mod) return;
     const flashcards = mod.flashcards;
-    const isVideo = (i: number) => Boolean(flashcards[i]?.videoUri);
+    const matches = (i: number) => {
+      const isVideo = Boolean(flashcards[i]?.videoUri);
+      return cardFilter === 'video' ? isVideo : !isVideo;
+    };
     if (flashcardIndex >= flashcards.length) return;
-    if (!isVideo(flashcardIndex)) return;
+    if (matches(flashcardIndex)) return;
     for (let j = flashcardIndex + 1; j < flashcards.length; j++) {
-      if (!isVideo(j)) {
+      if (matches(j)) {
         setFlashcardIndex(j);
         return;
       }
