@@ -17,11 +17,16 @@ export const TOPIC_ICONS: Record<TopicKind, TopicIconAsset> = {
   'recall': { emoji: '🧠' },
   'podcast': { emoji: '🎙️' },
   'couple-dilemma': { emoji: '⚖️' },
-  'quiz': { emoji: '🎯' },
-  // 📈 — compound-interest growth chart, the natural sim metaphor for
-  // mod-1-1. Other modules' sims can read it as "interactive viz" too.
-  'sim': { emoji: '📈' },
-  'infographic': { emoji: '📖' },
+  // R5.7 — quiz emoji swap. 🎯 read as "daily challenge / target"
+  // (Yoav: "תחליף את האמוגי של המטרה"); ❓ is unambiguous.
+  'quiz': { emoji: '❓' },
+  // 🎮 — controller, the universal "play / interactive" sign. Earlier
+  // 📈 chart was being hidden behind the tree on small screens AND
+  // got mistaken for the infographic glyph.
+  'sim': { emoji: '🎮' },
+  // 💡 — Yoav 2026-06-10 ("לא ברור מה הספר פותח"). Light-bulb reads
+  // as "the moment it clicks", much clearer than a generic book glyph.
+  'infographic': { emoji: '💡' },
   'post-video': { emoji: '🏆' },
 };
 

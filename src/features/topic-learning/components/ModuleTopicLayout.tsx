@@ -16,13 +16,13 @@ function pathOffset(i: number): number {
   return Math.round(Math.sin((i * 2 * Math.PI) / WAVE_PERIOD) * WAVE_AMPLITUDE);
 }
 
-// Vertical stack of gold coins descending from the bottom of each chip
-// (Yoav R5.6 2026-06-10: "המטבעות צריכים להגיע ממתחת לכפתור"). Mirrors
-// the visual in his learn-map screenshot — coins look like they're
-// pouring out the chip's underside.
-const COIN_STACK_COUNT = 5;
-const COIN_SIZE = 18;
-const COIN_OVERLAP = 6; // each next coin nests this many px into the one above
+// Vertical stack of gold coins descending between chips. R5.7 tuned
+// to match the outer learn map's visual cadence — more coins, tighter
+// nest (so they read as a single pearl-rope rather than a sparse
+// trail).
+const COIN_STACK_COUNT = 7;
+const COIN_SIZE = 20;
+const COIN_OVERLAP = 11; // tight overlap → coins look "chained"
 
 interface ModuleTopicLayoutProps {
   topics: Topic[];
