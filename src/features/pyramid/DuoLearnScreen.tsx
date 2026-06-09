@@ -847,6 +847,8 @@ const ChapterSection = React.memo(function ChapterSection({
   expandedTopicTreeModuleId,
   onTopicSelected,
   onTopicTreeModuleCompleted,
+  onTopicTreeContinueAfterChest,
+  onTopicTreeAdvanceToNextModule,
 }: {
   arena: ArenaConfig;
   chapter: typeof chapter1Data;
@@ -898,9 +900,16 @@ const ChapterSection = React.memo(function ChapterSection({
    *  per-topic sheet — sheet state lives at the screen root so it stacks
    *  above pearls / locked modals. */
   onTopicSelected?: (topic: Topic) => void;
-  /** First 70%-threshold crossing — parent collapses the accordion so
-   *  the user lands back on the module map. */
+  /** First 70%-threshold crossing → user chose "next module in chapter"
+   *  inside the chest modal — parent collapses the accordion and
+   *  routes to the next module in chapter. */
   onTopicTreeModuleCompleted?: () => void;
+  /** "המשך עם המודולה" inside the chest modal — close modal but
+   *  keep the accordion open. */
+  onTopicTreeContinueAfterChest?: () => void;
+  /** Navigate to the next module in the same chapter — wired by the
+   *  chest's "לשיעור הבא בפרק" CTA. */
+  onTopicTreeAdvanceToNextModule?: () => void;
 }) {
   const firstIncompleteIndex = chapter.modules.findIndex(
     (m) => !completedModules.includes(m.id) && !m.comingSoon && (isPro || !PRO_LOCKED_SIMS.has(m.id)),
@@ -1035,6 +1044,8 @@ const ChapterSection = React.memo(function ChapterSection({
                 <TopicTreeAccordion
                   module={module}
                   onTopicSelected={onTopicSelected}
+                  onContinueAfterChest={onTopicTreeContinueAfterChest}
+                  onAdvanceToNextModule={onTopicTreeAdvanceToNextModule}
                   onModuleCompleted={onTopicTreeModuleCompleted}
                 />
               )}
@@ -1633,15 +1644,35 @@ export function DuoLearnScreen() {
     setActiveTopic(topic);
   }, []);
 
-  // Module completion (70% threshold) → collapse the accordion so the user
-  // lands back on the module map. Yoav 2026-06-09: "בכל סיום תת פרק,
-  // חוזרים למסך הראשי, ולא זזים להבא בתוך הרצף". The accordion's own
-  // celebration confetti + badge plays before this fires (timer-driven).
+  // Chest CTA: "המשך עם המודולה" — close chest, keep accordion open
+  // so the user can finish the remaining 30% of topics manually.
+  const handleTopicTreeContinueAfterChest = useCallback(() => {
+    // No state change here — the modal closes itself; accordion stays
+    // open because topicTreeModule didn't change.
+  }, []);
+
+  // Chest CTA: "לשיעור הבא בפרק" — close accordion AND route to the
+  // next module in this chapter via the legacy LessonFlowScreen.
+  const handleTopicTreeAdvanceToNextModule = useCallback(() => {
+    const current = topicTreeModule;
+    if (!current) return;
+    const ch = ALL_CHAPTERS.find((c) => c.id === current.chapterId);
+    if (!ch) return;
+    const idx = ch.modules.findIndex((m) => m.id === current.module.id);
+    const next = idx >= 0 ? ch.modules[idx + 1] : undefined;
+    setActiveTopic(null);
+    setTopicTreeModule(null);
+    if (next) {
+      router.push(`/lesson/${next.id}?chapterId=${current.chapterId}` as never);
+    }
+  }, [topicTreeModule, router]);
+
+  // Generic module-completed handler — invoked when the user picks
+  // "next module" inside the chest. Closes the accordion + active topic
+  // sheet so the user lands cleanly elsewhere.
   const handleModuleCompletedFromTree = useCallback(() => {
-    setTimeout(() => {
-      setActiveTopic(null);
-      setTopicTreeModule(null);
-    }, 2400);
+    setActiveTopic(null);
+    setTopicTreeModule(null);
   }, []);
 
   // Once the user picks (or skips) the backstop question, navigate to the
@@ -1981,6 +2012,8 @@ export function DuoLearnScreen() {
                 expandedTopicTreeModuleId={topicTreeModule?.module.id ?? null}
                 onTopicSelected={handleTopicSelected}
                 onTopicTreeModuleCompleted={handleModuleCompletedFromTree}
+                onTopicTreeContinueAfterChest={handleTopicTreeContinueAfterChest}
+                onTopicTreeAdvanceToNextModule={handleTopicTreeAdvanceToNextModule}
               />
             );
 

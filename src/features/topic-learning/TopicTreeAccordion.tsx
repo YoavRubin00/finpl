@@ -5,8 +5,8 @@ import { ChevronLeft } from 'lucide-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { successHaptic, tapHaptic } from '../../utils/haptics';
 import { useSoundEffect } from '../../hooks/useSoundEffect';
-import { ConfettiExplosion } from '../../components/ui/ConfettiExplosion';
 import { useUpsertModuleProgress } from '../chapter-1-content/useProgress';
+import { ChestCelebrationModal } from './ChestCelebrationModal';
 import { useCompletedModulesStore } from '../economy/useCompletedModulesStore';
 import { useEconomyUIStore } from '../economy/useEconomyUIStore';
 import type { Module } from '../chapter-1-content/types';
@@ -31,9 +31,17 @@ interface TopicTreeAccordionProps {
   /** Fired when a chip is tapped. Parent owns the per-kind player sheet,
    *  the chip layer stays pure presentation. */
   onTopicSelected: (topic: Topic) => void;
-  /** Fired on the first false→true crossing of the 70% threshold. Parent
-   *  uses this to dismiss the accordion (return to the module map) after
-   *  the in-place confetti finishes. */
+  /** "המשך עם המודולה" inside the chest modal — dismiss the modal but
+   *  keep the accordion open so the user can knock out the remaining
+   *  30%. Optional; if missing, equivalent to onModuleCompleted. */
+  onContinueAfterChest?: () => void;
+  /** "לשיעור הבא בפרק" inside the chest modal — close accordion AND
+   *  navigate to the next module's lesson (legacy LessonFlowScreen for
+   *  non-topic-tree modules). */
+  onAdvanceToNextModule?: () => void;
+  /** Fired on the first false→true crossing of the 70% threshold AND on
+   *  the user's choice in the chest modal. Parent dismisses the
+   *  accordion ("חזרה למסך הראשי") after the user's interaction. */
   onModuleCompleted?: () => void;
 }
 
@@ -48,6 +56,8 @@ export const TopicTreeAccordion = React.memo(function TopicTreeAccordion({
   module,
   simFirst,
   onTopicSelected,
+  onContinueAfterChest,
+  onAdvanceToNextModule,
   onModuleCompleted,
 }: TopicTreeAccordionProps): React.ReactElement {
   const topics = useMemo(
@@ -87,7 +97,7 @@ export const TopicTreeAccordion = React.memo(function TopicTreeAccordion({
   // user already crossed once does NOT re-fire (the ref initializes to
   // the persisted truth, not false).
   const wasDoneRef = useRef<boolean>(false);
-  const [showCelebration, setShowCelebration] = useState(false);
+  const [showChest, setShowChest] = useState(false);
   const upsertProgress = useUpsertModuleProgress();
   const { playSound } = useSoundEffect();
   const economyStore = useEconomyUIStore();
@@ -122,15 +132,15 @@ export const TopicTreeAccordion = React.memo(function TopicTreeAccordion({
       // 'lesson' source matches the legacy chest-tap flow in
       // LessonFlowScreen; analytics keyed on `source` stays comparable.
       economyStore.addCoins(MODULE_TT_COINS, 'lesson');
-      // 4. Celebration UX.
+      // 4. Celebration UX — chest modal opens. The user picks "continue"
+      // (stay in accordion) or "next module in chapter" (navigate +
+      // collapse). Parent dismissal is fired by the user's CTA tap on
+      // the modal, NOT automatically here.
       successHaptic();
       try { playSound('modal_open_4'); } catch { /* non-fatal */ }
-      setShowCelebration(true);
-      // 5. Parent dismissal — back to the module map after the confetti
-      // finishes (parent timer drives the actual close, not us).
-      onModuleCompleted?.();
+      setShowChest(true);
     }
-  }, [summary.isModuleDone, module.id, upsertProgress, economyStore, playSound, onModuleCompleted]);
+  }, [summary.isModuleDone, module.id, upsertProgress, economyStore, playSound]);
 
   return (
     <Animated.View
@@ -138,12 +148,11 @@ export const TopicTreeAccordion = React.memo(function TopicTreeAccordion({
       exiting={FadeOut.duration(180)}
       style={styles.container}
     >
-      {/* Dark navy gradient — mirrors the Duolingo learning-screen
-          dark theme Yoav referenced. Stars/topic nodes glow against
-          this, and the gold tree on the right pops as the celebratory
-          focal point. */}
+      {/* Light theme aligned to the main learn-screen palette. Chapter-1
+          glow (#bfdbfe → #eff6ff) keeps the accordion feeling like a
+          slice of the outer module path rather than a foreign surface. */}
       <LinearGradient
-        colors={['#0c1f3a', '#072144']}
+        colors={['#ffffff', '#eff6ff']}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
         style={styles.bg}
@@ -168,22 +177,22 @@ export const TopicTreeAccordion = React.memo(function TopicTreeAccordion({
           onTopicPress={onTopicSelected}
         />
 
-        {/* 70%-threshold celebration. Confetti fires once and the badge
-            fades out 2.4s later. Server sync + XP/coins grant + local
-            completion already fired in the useEffect above. */}
-        {showCelebration && (
-          <View pointerEvents="none" style={styles.celebrationLayer}>
-            <ConfettiExplosion onComplete={() => setShowCelebration(false)} />
-            <View style={styles.celebrationBadge}>
-              <Text style={styles.celebrationText} allowFontScaling={false}>
-                כל הכבוד! המודולה הושלמה 🎉
-              </Text>
-              <Text style={styles.celebrationSub} allowFontScaling={false}>
-                {`+${MODULE_TT_XP} XP   +${MODULE_TT_COINS} מטבעות`}
-              </Text>
-            </View>
-          </View>
-        )}
+        {/* 70%-threshold celebration. Real chest modal — chest opens on
+            tap, surfaces XP/coins, then offers two paths back. */}
+        <ChestCelebrationModal
+          visible={showChest}
+          xp={MODULE_TT_XP}
+          coins={MODULE_TT_COINS}
+          onContinueModule={() => {
+            setShowChest(false);
+            onContinueAfterChest?.();
+          }}
+          onAdvanceToNextModule={() => {
+            setShowChest(false);
+            onAdvanceToNextModule?.();
+            onModuleCompleted?.();
+          }}
+        />
 
         {/* Bottom CTA — resumes at the first uncompleted topic. When the
             module is fully done, the CTA flips to "סיים מודולה" but
@@ -230,7 +239,7 @@ const styles = StyleSheet.create({
     paddingTop: 16,
     paddingBottom: 18,
     borderWidth: 1,
-    borderColor: 'rgba(14,165,233,0.30)',
+    borderColor: 'rgba(59,130,246,0.22)',
   },
   headerRow: {
     flexDirection: 'row-reverse',
@@ -240,13 +249,13 @@ const styles = StyleSheet.create({
   headerCount: {
     fontSize: 14,
     fontWeight: '900',
-    color: '#e0f2fe',
+    color: '#1e3a8a',
   },
   headerSpacer: { flex: 1 },
   headerPct: {
     fontSize: 14,
     fontWeight: '900',
-    color: '#fbbf24', // gold accent on dark bg, matches the tree
+    color: '#b45309', // amber on light bg, matches the gold tree
   },
   cta: {
     marginTop: 14,
@@ -275,36 +284,5 @@ const styles = StyleSheet.create({
     fontWeight: '900',
     color: '#ffffff',
     letterSpacing: 0.3,
-  },
-  celebrationLayer: {
-    ...StyleSheet.absoluteFillObject,
-    alignItems: 'center',
-    justifyContent: 'flex-start',
-    paddingTop: 8,
-  },
-  celebrationBadge: {
-    paddingHorizontal: 22,
-    paddingVertical: 12,
-    borderRadius: 999,
-    backgroundColor: 'rgba(245, 158, 11, 0.95)',
-    shadowColor: '#f59e0b',
-    shadowOpacity: 0.6,
-    shadowRadius: 14,
-    shadowOffset: { width: 0, height: 4 },
-    elevation: 10,
-    alignItems: 'center',
-  },
-  celebrationText: {
-    fontSize: 16,
-    fontWeight: '900',
-    color: '#ffffff',
-    writingDirection: 'rtl',
-  },
-  celebrationSub: {
-    fontSize: 12,
-    fontWeight: '800',
-    color: '#fffbeb',
-    marginTop: 4,
-    writingDirection: 'rtl',
   },
 });

@@ -108,20 +108,21 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 3,
-    shadowColor: '#0ea5e9',
-    shadowOpacity: 0.45,
-    shadowRadius: 10,
-    shadowOffset: { width: 0, height: 4 },
-    elevation: 6,
+    shadowColor: '#3b82f6',
+    shadowOpacity: 0.30,
+    shadowRadius: 9,
+    shadowOffset: { width: 0, height: 3 },
+    elevation: 5,
   },
   chipIdle: {
-    borderColor: '#38bdf8', // sky-400, pops on dark bg
-    backgroundColor: '#0f2a4d', // dark slate so the white icon pops
+    borderColor: '#bfdbfe', // chapter-1 glow on light bg
+    backgroundColor: '#ffffff',
   },
   chipCompleted: {
     borderColor: '#f59e0b', // gold ring
     shadowColor: '#f59e0b',
-    backgroundColor: '#78350f', // deep amber on dark bg
+    shadowOpacity: 0.45,
+    backgroundColor: '#fef3c7', // light gold tint
   },
   recommendedHalo: {
     shadowColor: '#0ea5e9',

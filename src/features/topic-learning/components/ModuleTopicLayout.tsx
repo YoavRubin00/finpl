@@ -89,9 +89,13 @@ export const ModuleTopicLayout = React.memo(function ModuleTopicLayout({
   // the path nodes around; it sits in the column's negative space.
   return (
     <View style={[styles.container, { height: totalHeight }]}>
-      {/* Tree — absolute on the right, vertically centered to the path */}
+      {/* Tree — absolute on the right, larger + with a soft gold glow
+          backdrop so it reads as the celebratory focal point ("שהעץ יהיה
+          גדול ומרשים יותר"). pointerEvents none so taps fall through to
+          the path on the left, which is the only interactive surface. */}
       <View style={styles.treeWrap} pointerEvents="none">
-        <GrowingTree progressPct={progressPct} size={160} />
+        <View style={styles.treeGlow} />
+        <GrowingTree progressPct={progressPct} size={240} />
       </View>
 
       {/* Path nodes */}
@@ -181,7 +185,7 @@ function Connector({
             styles.dot,
             {
               transform: [{ translateX: d.x }, { translateY: d.y }],
-              backgroundColor: done ? '#f59e0b' : 'rgba(125, 211, 252, 0.55)',
+              backgroundColor: done ? '#f59e0b' : 'rgba(147, 197, 253, 0.75)',
             },
           ]}
         />
@@ -198,17 +202,31 @@ const styles = StyleSheet.create({
   },
   treeWrap: {
     position: 'absolute',
-    right: 0,
-    top: 24,
-    width: 160,
-    height: 160,
+    right: -8,
+    top: 16,
+    width: 240,
+    height: 240,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  // The path occupies the LEFT half. SCREEN_W * 0.45 keeps it clear of
-  // the tree on the right side of the accordion.
+  // Soft gold halo behind the tree — adds "presence" without crowding
+  // the path on the left. Sits below the tree image in stacking order.
+  treeGlow: {
+    position: 'absolute',
+    width: 220,
+    height: 220,
+    borderRadius: 110,
+    backgroundColor: 'rgba(251, 191, 36, 0.18)',
+    shadowColor: '#f59e0b',
+    shadowOpacity: 0.55,
+    shadowRadius: 28,
+    shadowOffset: { width: 0, height: 0 },
+    elevation: 4,
+  },
+  // The path occupies the LEFT half. Narrower than before (0.45→0.4)
+  // because the tree grew from 160→240 and now wants more breathing room.
   pathColumn: {
-    width: Math.min(SCREEN_W * 0.45, 200),
+    width: Math.min(SCREEN_W * 0.4, 180),
     alignSelf: 'flex-start',
   },
   row: {
