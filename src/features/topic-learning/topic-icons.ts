@@ -7,9 +7,11 @@ import type { TopicKind, TopicIconAsset } from './types';
  * באמוגים"). Optimized for legibility at 28px font size.
  */
 export const TOPIC_ICONS: Record<TopicKind, TopicIconAsset> = {
-  // 🦈 — Captain Shark intro, replaces the standalone Lottie chip.
-  // Uniformity with the rest of the chips wins over individual sparkle.
-  'intro': { emoji: '🦈' },
+  // 👋 — Yoav 2026-06-10 ("תשים באינטרו משהוא אחר, לא כריש"). The
+  // waving hand reads as a personal "welcome / let's start" affordance
+  // without being literal about Captain Shark — the mascot still owns
+  // the intro screen's content, just not the chip.
+  'intro': { emoji: '👋' },
   'cards': { emoji: '📑' },
   'recall': { emoji: '🧠' },
   'podcast': { emoji: '🎙️' },

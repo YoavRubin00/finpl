@@ -1,6 +1,7 @@
 import React, { useMemo, useEffect } from 'react';
 import { View, StyleSheet, Dimensions } from 'react-native';
 import Animated, {
+  FadeInDown,
   useAnimatedStyle,
   useSharedValue,
   withRepeat,
@@ -15,38 +16,32 @@ import type { Topic } from '../types';
 
 const SCREEN_W = Dimensions.get('window').width;
 
-/** Same sine-wave math as DuoLearnScreen.getNodeOffset so the inner
- *  topic path reads as a continuation of the outer module path —
- *  visual code-share, not just visual rhyme. */
-const NODE_SIZE = 76;
-const ROW_HEIGHT = NODE_SIZE + 30;
-const WAVE_AMPLITUDE = 42; // same as the outer DuoLearnScreen path
+const NODE_SIZE = 78;
+const ROW_HEIGHT = NODE_SIZE + 36; // mirrors DuoLearnScreen's outer rhythm
+const WAVE_AMPLITUDE = 42;
 const WAVE_PERIOD = 6;
 function pathOffset(i: number): number {
   return Math.round(Math.sin((i * 2 * Math.PI) / WAVE_PERIOD) * WAVE_AMPLITUDE);
 }
 
-// Bouncing-coin Lottie reused from DuoLearnScreen's easter-egg drop —
-// here it doubles as decorative path candy, lit between every other
-// node so the path feels alive without crowding the layout.
 const COIN_LOTTIE = require('../../../../assets/lottie/wired-flat-298-coins-hover-jump.json');
 
 interface ModuleTopicLayoutProps {
   topics: Topic[];
   isCompletedMap: Record<string, boolean>;
-  /** Chip the "Resume" CTA points at — gets a "JUMP HERE" pulse halo. */
   recommendedTopicId?: string | null;
-  /** 0-100 for tree growth. */
   progressPct: number;
   onTopicPress: (topic: Topic) => void;
 }
 
 /**
- * R5.1 (2026-06-10) — path centered horizontally in the container,
- * tree to the right WITHOUT a halo backdrop, decorative coins on the
- * path between alternate nodes. Mirrors the outer DuoLearnScreen
- * visual language one-for-one ("החווית משתמש של הלמידה צריכה להיות
- * כמו של המסך הכללי").
+ * R5.3 (2026-06-10) — visual brought all the way in line with the
+ * outer DuoLearnScreen path:
+ *  - Chips cascade in with FadeInDown one after another (יפיופי vibe).
+ *  - PathConnector cloned 1:1 from DuoLearnScreen (3-layer dot trail,
+ *    sine interpolation, glow on completed segments).
+ *  - Decorative coin Lottie between alternate nodes (R5.1).
+ *  - Tree on the right edge, no halo backdrop (R5.1).
  */
 export const ModuleTopicLayout = React.memo(function ModuleTopicLayout({
   topics,
@@ -60,7 +55,7 @@ export const ModuleTopicLayout = React.memo(function ModuleTopicLayout({
     [topics],
   );
 
-  const totalHeight = sorted.length * ROW_HEIGHT + 20;
+  const totalHeight = sorted.length * ROW_HEIGHT + 40;
 
   const pulse = useSharedValue(1);
   useEffect(() => {
@@ -77,28 +72,32 @@ export const ModuleTopicLayout = React.memo(function ModuleTopicLayout({
 
   return (
     <View style={[styles.container, { height: totalHeight }]}>
-      {/* Tree — no halo backdrop per Yoav R5.1, just the tree itself,
-          floating on the right edge of the column. */}
+      {/* Tree — right edge, no halo backdrop. */}
       <View style={styles.treeWrap} pointerEvents="none">
         <GrowingTree progressPct={progressPct} size={220} />
       </View>
 
-      {/* Path column, centered horizontally inside the container. The
-          sine-wave offsets shift chips left/right around the center. */}
+      {/* Path column centered horizontally; sine-wave offsets fan
+          chips left/right around its midline. */}
       <View style={styles.pathColumn}>
         {sorted.map((topic, i) => {
           const isRecommended = recommendedTopicId === topic.id;
           const isCompleted = Boolean(isCompletedMap[topic.id]);
           const offsetX = pathOffset(i);
           const nextOffsetX = i < sorted.length - 1 ? pathOffset(i + 1) : null;
-          // Decorate every other gap with a bouncing coin Lottie —
-          // matches the outer learn map's "path candy" rhythm.
           const showCoin = nextOffsetX !== null && i % 2 === 1;
 
           return (
-            <View key={topic.id} style={styles.row}>
+            <Animated.View
+              key={topic.id}
+              // Cascading entrance — chips drop in from above one after
+              // another, springy bounce on land. Yoav 2026-06-10:
+              // "אנימציה מדהימה כמו קלפים שנפרסים... כמו פפסנתר".
+              entering={FadeInDown.delay(60 + i * 90).duration(320).springify().damping(14)}
+              style={styles.row}
+            >
               {nextOffsetX !== null && (
-                <Connector
+                <PathConnector
                   fromOffsetX={offsetX}
                   toOffsetX={nextOffsetX}
                   done={isCompleted}
@@ -110,9 +109,6 @@ export const ModuleTopicLayout = React.memo(function ModuleTopicLayout({
                   style={[
                     styles.coinSlot,
                     {
-                      // Sit halfway between this node and the next,
-                      // offset to the OPPOSITE side of the path so it
-                      // doesn't visually collide with the chip.
                       left: '50%',
                       marginLeft: ((offsetX + nextOffsetX) / 2) - 14,
                       top: ROW_HEIGHT / 2 + 8,
@@ -132,7 +128,7 @@ export const ModuleTopicLayout = React.memo(function ModuleTopicLayout({
                   />
                 </PulseHalo>
               </View>
-            </View>
+            </Animated.View>
           );
         })}
       </View>
@@ -140,8 +136,7 @@ export const ModuleTopicLayout = React.memo(function ModuleTopicLayout({
   );
 });
 
-/** Thin wrapper that applies the shared pulse value only when active.
- *  Inert when not — no needless re-renders. */
+/** Thin wrapper that applies the shared pulse value only when active. */
 function PulseHalo({
   active,
   pulse,
@@ -158,8 +153,15 @@ function PulseHalo({
   return <Animated.View style={style}>{children}</Animated.View>;
 }
 
-/** Plain dotted-line connector between two horizontally-offset nodes. */
-function Connector({
+/**
+ * Cloned from DuoLearnScreen.PathConnector (line 296) — the topic tree
+ * connector must match the outer learn map character-for-character
+ * per Yoav R5.3 ("שהשביל שמחבר בינהם יהיה זהה למפת הלמידה הראשית").
+ *
+ * Three layers: outer glow halo (done only), continuous trail fill,
+ * main dots with sine-bulge sizing.
+ */
+function PathConnector({
   fromOffsetX,
   toOffsetX,
   done,
@@ -168,32 +170,101 @@ function Connector({
   toOffsetX: number;
   done: boolean;
 }): React.ReactElement {
-  const dots = useMemo(() => {
-    const out: Array<{ x: number; y: number }> = [];
-    for (let t = 0; t <= 1; t += 1 / 5) {
-      out.push({
-        x: fromOffsetX + (toOffsetX - fromOffsetX) * t,
-        y: (NODE_SIZE / 2) + (ROW_HEIGHT - NODE_SIZE / 2) * t,
-      });
-    }
-    return out;
-  }, [fromOffsetX, toOffsetX]);
+  const NUM_DOTS = 16;
+  const CONNECTOR_H = ROW_HEIGHT;
+  const dotColor = done ? '#f59e0b' : '#d1d5db';
+  const trailColor = done ? '#fde68a' : '#e5e7eb';
+  const glowColor = '#fde68a';
+
+  // Interpolate the x position along the connector relative to the LOCAL
+  // path column's center. DuoLearnScreen uses CENTER_X (screen-wide) —
+  // here the path column is its own coordinate space so we just blend
+  // the two offsets.
+  const interp = (t: number) => {
+    const smooth = 0.5 - 0.5 * Math.cos(t * Math.PI);
+    return fromOffsetX + (toOffsetX - fromOffsetX) * smooth;
+  };
 
   return (
     <View pointerEvents="none" style={styles.connectorAbs}>
-      {dots.map((d, i) => (
-        <View
-          key={i}
-          style={[
-            styles.dot,
-            {
-              left: d.x,
-              top: d.y,
-              backgroundColor: done ? '#f59e0b' : 'rgba(147, 197, 253, 0.75)',
-            },
-          ]}
-        />
-      ))}
+      {/* Outer glow halo (done only) */}
+      {done && Array.from({ length: 60 }).map((_, i) => {
+        const t = i / 59;
+        const cx = interp(t);
+        const cy = t * CONNECTOR_H;
+        return (
+          <View
+            key={`glow-${i}`}
+            style={{
+              position: 'absolute',
+              width: 14,
+              height: 14,
+              borderRadius: 7,
+              backgroundColor: glowColor,
+              left: '50%',
+              marginLeft: cx - 7,
+              top: cy,
+              opacity: 0.18,
+            }}
+          />
+        );
+      })}
+      {/* Continuous trail (background fill) */}
+      {Array.from({ length: NUM_DOTS * 3 }).map((_, i) => {
+        const t = i / (NUM_DOTS * 3 - 1);
+        const cx = interp(t);
+        const cy = t * CONNECTOR_H;
+        const sz = done ? 10 : 6;
+        return (
+          <View
+            key={`trail-${i}`}
+            style={{
+              position: 'absolute',
+              width: sz,
+              height: sz,
+              borderRadius: sz / 2,
+              backgroundColor: trailColor,
+              left: '50%',
+              marginLeft: cx - sz / 2,
+              top: cy,
+              opacity: done ? 0.5 : 0.25,
+            }}
+          />
+        );
+      })}
+      {/* Main dots — sine-bulge sizing for the bow shape */}
+      {Array.from({ length: NUM_DOTS }).map((_, i) => {
+        const t = i / (NUM_DOTS - 1);
+        const cx = interp(t);
+        const cy = t * (CONNECTOR_H - 4);
+        const dotSize = done
+          ? 10 + Math.sin(t * Math.PI) * 3
+          : 7 + Math.sin(t * Math.PI) * 2;
+        return (
+          <View
+            key={`dot-${i}`}
+            style={{
+              position: 'absolute',
+              width: dotSize,
+              height: dotSize,
+              borderRadius: dotSize / 2,
+              backgroundColor: dotColor,
+              left: '50%',
+              marginLeft: cx - dotSize / 2,
+              top: cy,
+              opacity: done ? 1 : 0.55,
+              ...(done && {
+                borderWidth: 1.5,
+                borderColor: '#fffbeb',
+                shadowColor: '#f59e0b',
+                shadowOpacity: 0.6,
+                shadowRadius: 4,
+                elevation: 3,
+              }),
+            }}
+          />
+        );
+      })}
     </View>
   );
 }
@@ -205,8 +276,6 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-start',
     paddingVertical: 12,
   },
-  // Tree floats on the right edge of the layout. No background halo
-  // (Yoav R5.1: "שלא יהיה רקע להעץ").
   treeWrap: {
     position: 'absolute',
     right: 0,
@@ -216,9 +285,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  // Path column centered horizontally inside the container. Width is
-  // capped so chips don't spread too wide on tablets/web; the sine
-  // offsets play around this center.
   pathColumn: {
     width: Math.min(SCREEN_W * 0.5, 220),
     alignSelf: 'center',
@@ -240,14 +306,6 @@ const styles = StyleSheet.create({
     right: 0,
     bottom: 0,
   },
-  dot: {
-    position: 'absolute',
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-  },
-  // Decorative coin between alternating nodes — same Lottie + sizing
-  // as DuoLearnScreen's easter-egg coin so the surfaces feel related.
   coinSlot: {
     position: 'absolute',
     width: 28,

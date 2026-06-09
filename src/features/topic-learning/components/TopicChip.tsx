@@ -5,49 +5,48 @@ import Animated, {
   useSharedValue,
   withSpring,
 } from 'react-native-reanimated';
-import { Check } from 'lucide-react-native';
 import { tapHaptic } from '../../../utils/haptics';
 import type { Topic } from '../types';
 
 interface TopicChipProps {
   topic: Topic;
-  /** Has the user completed this topic? Drives the chapter-blue fill
-   *  + gold check badge. Incomplete chips read as muted/gray. */
+  /** Has the user completed this topic? Drives the soft-green fill —
+   *  no check badge per Yoav R5.3 ("בלי וי, במקום בכחול"). */
   completed: boolean;
   /** Currently focused as the "resume here" candidate — gets a soft
-   *  pulse to direct attention without crowding the whole grid with
-   *  motion. */
+   *  gold halo to direct attention without crowding the whole grid
+   *  with motion. */
   recommended?: boolean;
   onPress: (topic: Topic) => void;
 }
 
 const NODE_SIZE = 78;
 
-// Chapter-1 palette pulled from DuoLearnScreen's ARENA_COLORS[1].
-// Hardcoded here because the pilot is mod-1-1-only and the chip layer
-// shouldn't reach across the codebase for a single integer lookup.
-const CHAPTER_BG = '#3b82f6';     // arena[1].bg
-const CHAPTER_DEPTH = '#1e40af';  // arena[1].bottom
+// R5.3 (2026-06-10): completed chips flip from chapter-blue to a soft
+// pleasant green Yoav called out ("צבע ירוק בהיר ונעים בלי וי, במקום
+// בכחול"). Stays muted enough to read as "done, can revisit" instead of
+// "celebrate me now" — the loud celebration belongs to the chest, not
+// every individual chip.
+const DONE_BG = '#bbf7d0';      // green-200 — pleasant pastel
+const DONE_DEPTH = '#4ade80';   // green-400 — depth shadow
+const DONE_BORDER = '#22c55e';  // green-500 — thin ring for definition
 
-// Light-gray palette for incomplete chips — matches the legacy ModuleNode
-// "locked" state hue Yoav pointed to ("אפרפר לכל מה שלא ביצעתי עדין").
+// Light-gray palette for incomplete chips — matches the legacy
+// ModuleNode "locked" state hue Yoav pointed to ("אפרפר לכל מה שלא
+// ביצעתי עדין").
 const MUTED_BG = '#e5e7eb';
 const MUTED_DEPTH = '#c7cdd4';
 const MUTED_EMOJI_OPACITY = 0.55;
 
 /**
- * R5.2 (2026-06-10) — circular ModuleNode-style chip. Identical visual
- * skeleton to DuoLearnScreen's outer ModuleNode (78px circle + 3D
- * depth shadow behind + white border + emoji centered at 28px).
- *
- * Two color states:
- *  - completed → chapter-1 blue (#3b82f6) on darker depth (#1e40af),
- *    full-opacity emoji, gold check badge top-left
- *  - incomplete → muted gray on darker gray depth, dim emoji
- *
- * Recommended ("resume here") adds an outer halo pulse via the
- * surrounding PulseHalo wrapper — handled by the parent layout, not
- * the chip itself.
+ * R5.3 (2026-06-10) — circular ModuleNode-style chip with three
+ * visual changes from R5.2:
+ *  1. Intro emoji switched to 👋 (no shark) at the icon registry.
+ *  2. Completed state is soft green (`#bbf7d0`) instead of chapter
+ *     blue, no check badge.
+ *  3. Recommended halo moved INSIDE the chip (sized to the circle)
+ *     so the gold glow renders as a circle on web instead of a
+ *     rectangular box-shadow.
  */
 export const TopicChip = React.memo(function TopicChip({
   topic,
@@ -65,11 +64,22 @@ export const TopicChip = React.memo(function TopicChip({
     onPress(topic);
   };
 
-  const bg = completed ? CHAPTER_BG : MUTED_BG;
-  const depth = completed ? CHAPTER_DEPTH : MUTED_DEPTH;
+  const bg = completed ? DONE_BG : MUTED_BG;
+  const depth = completed ? DONE_DEPTH : MUTED_DEPTH;
+  const border = completed ? DONE_BORDER : '#f3f4f6';
 
   return (
-    <Animated.View style={[animStyle, recommended ? styles.recommendedHalo : null, styles.nodeCol]}>
+    <Animated.View style={[animStyle, styles.nodeCol]}>
+      {/* Recommended gold halo — a SEPARATE circle absolute behind the
+          depth + node, so the glow renders round (web's box-shadow
+          inherits the parent shape, which is a rectangle here without
+          this trick). */}
+      {recommended && !completed && (
+        <View style={styles.haloAbs} pointerEvents="none">
+          <View style={styles.haloCircle} />
+        </View>
+      )}
+
       {/* 3D bottom depth — identical block to ModuleNode.nodeDepth */}
       <View
         style={[
@@ -87,8 +97,8 @@ export const TopicChip = React.memo(function TopicChip({
           styles.nodeCircle,
           {
             backgroundColor: bg,
-            borderColor: completed ? '#ffffff' : '#f3f4f6',
-            shadowColor: completed ? CHAPTER_BG : '#9ca3af',
+            borderColor: border,
+            shadowColor: completed ? DONE_DEPTH : '#9ca3af',
           },
         ]}
       >
@@ -99,21 +109,16 @@ export const TopicChip = React.memo(function TopicChip({
           {topic.iconAsset.emoji}
         </Text>
       </Pressable>
-      {completed && (
-        <View style={styles.checkBadge} pointerEvents="none">
-          <Check size={12} color="#ffffff" strokeWidth={3.2} />
-        </View>
-      )}
     </Animated.View>
   );
 });
 
 const styles = StyleSheet.create({
-  // The pressable circle + the depth block + the optional check badge
-  // share this anchor, sized to the NODE_SIZE square.
+  // The pressable circle + the depth block share this anchor, sized to
+  // the NODE_SIZE square.
   nodeCol: {
     width: NODE_SIZE,
-    height: NODE_SIZE + 5, // depth block adds 5px below
+    height: NODE_SIZE + 5,
     alignItems: 'center',
   },
   // Sits 5px below the circle to create the 3D recess — exact mirror of
@@ -145,25 +150,27 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     includeFontPadding: false,
   },
-  recommendedHalo: {
-    shadowColor: '#fbbf24',
-    shadowOpacity: 0.95,
-    shadowRadius: 18,
-    shadowOffset: { width: 0, height: 0 },
-    elevation: 14,
-  },
-  checkBadge: {
+  // Absolute layer for the recommended halo so the glow renders behind
+  // both the depth block and the circle.
+  haloAbs: {
     position: 'absolute',
-    top: -6,
-    right: -6,
-    width: 22,
-    height: 22,
-    borderRadius: 11,
-    backgroundColor: '#22c55e',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 2,
-    borderColor: '#ffffff',
-    zIndex: 6,
+    zIndex: 1,
+  },
+  // Round shape ensures box-shadow on web inherits a circle, not a rect.
+  haloCircle: {
+    width: NODE_SIZE + 18,
+    height: NODE_SIZE + 18,
+    borderRadius: (NODE_SIZE + 18) / 2,
+    shadowColor: '#fbbf24',
+    shadowOpacity: 0.9,
+    shadowRadius: 16,
+    shadowOffset: { width: 0, height: 0 },
+    elevation: 12,
   },
 });
