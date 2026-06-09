@@ -1,14 +1,25 @@
-import React, { useCallback, useMemo } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { View, Text, Pressable, StyleSheet } from 'react-native';
 import Animated, { FadeIn, FadeOut } from 'react-native-reanimated';
 import { ChevronLeft } from 'lucide-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { tapHaptic } from '../../utils/haptics';
+import { successHaptic, tapHaptic } from '../../utils/haptics';
+import { useSoundEffect } from '../../hooks/useSoundEffect';
+import { ConfettiExplosion } from '../../components/ui/ConfettiExplosion';
+import { useUpsertModuleProgress } from '../chapter-1-content/useProgress';
+import { useCompletedModulesStore } from '../economy/useCompletedModulesStore';
+import { useEconomyUIStore } from '../economy/useEconomyUIStore';
 import type { Module } from '../chapter-1-content/types';
 import type { Topic } from './types';
 import { resolveTopics } from './topicResolver';
 import { useTopicProgressStore } from './useTopicProgressStore';
 import { ModuleTopicLayout } from './components/ModuleTopicLayout';
+
+/** Base reward on topic-tree completion. Lower than the legacy
+ *  LessonFlowScreen MODULE_COMPLETE_XP (30) because topics also yield
+ *  per-topic micro-XP in a future loop. Tunable from a single point. */
+const MODULE_TT_XP = 30;
+const MODULE_TT_COINS = 150;
 
 const RTL = { writingDirection: 'rtl' as const, textAlign: 'right' as const };
 
@@ -64,14 +75,66 @@ export const TopicTreeAccordion = React.memo(function TopicTreeAccordion({
     onTopicSelected(summary.nextTopic);
   }, [summary.nextTopic, onTopicSelected]);
 
+  // Module completion side effects on first 70%-threshold crossing.
+  // Detection: useRef to remember the previous frame's `isModuleDone`, fire
+  // the celebration only on the transition false→true. Re-mounting is
+  // handled by `modulesPastThreshold` in the store — a remount AFTER the
+  // user already crossed once does NOT re-fire (the ref initializes to
+  // the persisted truth, not false).
+  const wasDoneRef = useRef<boolean>(false);
+  const [showCelebration, setShowCelebration] = useState(false);
+  const upsertProgress = useUpsertModuleProgress();
+  const { playSound } = useSoundEffect();
+  const economyStore = useEconomyUIStore();
+
+  // Seed ref from the persisted threshold map on mount so a re-mount
+  // post-crossing doesn't re-trigger the celebration.
+  const modulePastThreshold = useTopicProgressStore(
+    (s) => Boolean(s.modulesPastThreshold[module.id]),
+  );
+  useEffect(() => {
+    wasDoneRef.current = modulePastThreshold;
+    // Only on mount; we want React-side state to match the persisted truth
+    // exactly once.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
+    if (summary.isModuleDone && !wasDoneRef.current) {
+      wasDoneRef.current = true;
+      // 1. Server progress sync (optimistic via the existing mutation).
+      upsertProgress.mutate({
+        moduleId: module.id,
+        status: 'completed',
+        xpEarned: MODULE_TT_XP,
+      });
+      // 2. Durable local completion record — same pattern LessonFlowScreen
+      // uses so the DuoLearnScreen node flips to "completed" immediately,
+      // not after the next progressQueryKey refetch.
+      useCompletedModulesStore.getState().markCompleted(module.id);
+      // 3. Direct XP/coins grant (mirrors the chest tap in LessonFlowScreen).
+      economyStore.addXP(MODULE_TT_XP, 'daily_task');
+      // 'lesson' source matches the legacy chest-tap flow in
+      // LessonFlowScreen; analytics keyed on `source` stays comparable.
+      economyStore.addCoins(MODULE_TT_COINS, 'lesson');
+      // 4. Celebration UX.
+      successHaptic();
+      try { playSound('modal_open_4'); } catch { /* non-fatal */ }
+      setShowCelebration(true);
+    }
+  }, [summary.isModuleDone, module.id, upsertProgress, economyStore, playSound]);
+
   return (
     <Animated.View
       entering={FadeIn.duration(260)}
       exiting={FadeOut.duration(180)}
       style={styles.container}
     >
+      {/* Light sky-tinted gradient so the accordion reads as part of the
+          Duolingo-style learning surface rather than a heavy modal — the
+          gold tree pops against this far better than against navy. */}
       <LinearGradient
-        colors={['#0c1f3a', '#072144']}
+        colors={['#e0f2fe', '#bae6fd']}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
         style={styles.bg}
@@ -95,6 +158,23 @@ export const TopicTreeAccordion = React.memo(function TopicTreeAccordion({
           progressPct={summary.pct}
           onTopicPress={onTopicSelected}
         />
+
+        {/* 70%-threshold celebration. Confetti fires once and the badge
+            fades out 2.4s later. Server sync + XP/coins grant + local
+            completion already fired in the useEffect above. */}
+        {showCelebration && (
+          <View pointerEvents="none" style={styles.celebrationLayer}>
+            <ConfettiExplosion onComplete={() => setShowCelebration(false)} />
+            <View style={styles.celebrationBadge}>
+              <Text style={styles.celebrationText} allowFontScaling={false}>
+                כל הכבוד! המודולה הושלמה 🎉
+              </Text>
+              <Text style={styles.celebrationSub} allowFontScaling={false}>
+                {`+${MODULE_TT_XP} XP   +${MODULE_TT_COINS} מטבעות`}
+              </Text>
+            </View>
+          </View>
+        )}
 
         {/* Bottom CTA — resumes at the first uncompleted topic. When the
             module is fully done, the CTA flips to "סיים מודולה" but
@@ -151,13 +231,13 @@ const styles = StyleSheet.create({
   headerCount: {
     fontSize: 14,
     fontWeight: '900',
-    color: '#e0f2fe',
+    color: '#0c4a6e',
   },
   headerSpacer: { flex: 1 },
   headerPct: {
     fontSize: 14,
     fontWeight: '900',
-    color: '#fbbf24',
+    color: '#b45309', // gold-amber accent, matches the gold tree's tone
   },
   cta: {
     marginTop: 14,
@@ -186,5 +266,36 @@ const styles = StyleSheet.create({
     fontWeight: '900',
     color: '#ffffff',
     letterSpacing: 0.3,
+  },
+  celebrationLayer: {
+    ...StyleSheet.absoluteFillObject,
+    alignItems: 'center',
+    justifyContent: 'flex-start',
+    paddingTop: 8,
+  },
+  celebrationBadge: {
+    paddingHorizontal: 22,
+    paddingVertical: 12,
+    borderRadius: 999,
+    backgroundColor: 'rgba(245, 158, 11, 0.95)',
+    shadowColor: '#f59e0b',
+    shadowOpacity: 0.6,
+    shadowRadius: 14,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 10,
+    alignItems: 'center',
+  },
+  celebrationText: {
+    fontSize: 16,
+    fontWeight: '900',
+    color: '#ffffff',
+    writingDirection: 'rtl',
+  },
+  celebrationSub: {
+    fontSize: 12,
+    fontWeight: '800',
+    color: '#fffbeb',
+    marginTop: 4,
+    writingDirection: 'rtl',
   },
 });

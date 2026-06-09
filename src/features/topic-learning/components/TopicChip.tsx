@@ -99,21 +99,20 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 2,
-    backgroundColor: 'rgba(2, 32, 71, 0.55)',
+    backgroundColor: '#ffffff',
     shadowColor: '#0ea5e9',
-    shadowOpacity: 0.4,
-    shadowRadius: 10,
-    shadowOffset: { width: 0, height: 4 },
-    elevation: 6,
+    shadowOpacity: 0.35,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 3 },
+    elevation: 5,
   },
   chipIdle: {
-    borderColor: 'rgba(14, 165, 233, 0.55)',
-    opacity: 0.92,
+    borderColor: '#7dd3fc', // sky-300
   },
   chipCompleted: {
-    borderColor: '#fbbf24', // gold ring
-    shadowColor: '#fbbf24',
-    backgroundColor: 'rgba(120, 53, 15, 0.35)',
+    borderColor: '#f59e0b', // gold ring
+    shadowColor: '#f59e0b',
+    backgroundColor: '#fef3c7', // light gold tint
   },
   recommendedHalo: {
     shadowColor: '#0ea5e9',
@@ -148,7 +147,7 @@ const styles = StyleSheet.create({
   label: {
     fontSize: 11,
     fontWeight: '800',
-    color: '#cbd5e1',
+    color: '#0c4a6e',
     marginTop: 6,
     width: CHIP_SIZE + 14,
   },

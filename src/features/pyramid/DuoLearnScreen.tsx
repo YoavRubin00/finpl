@@ -87,7 +87,9 @@ import { chapter3Data } from "../chapter-3-content/chapter3Data";
 import { chapter4Data } from "../chapter-4-content/chapter4Data";
 import { chapter5Data } from "../chapter-5-content/chapter5Data";
 import type { Module } from "../chapter-1-content/types";
-import { TopicTreeOverlay } from "../topic-learning/TopicTreeOverlay";
+import { TopicTreeAccordion } from "../topic-learning/TopicTreeAccordion";
+import { TopicPlayerSheet } from "../topic-learning/TopicPlayerSheet";
+import type { Topic } from "../topic-learning/types";
 
 /** Subset of LessonFlowScreen's SIM_FIRST_MODULES surfaced here too so the
  *  topic tree resume CTA orders sim ahead of cards/quiz for those modules.
@@ -844,6 +846,8 @@ const ChapterSection = React.memo(function ChapterSection({
   isGlobalActiveChapter,
   onPearlPress,
   completedPearlIds,
+  expandedTopicTreeModuleId,
+  onTopicSelected,
 }: {
   arena: ArenaConfig;
   chapter: typeof chapter1Data;
@@ -887,6 +891,14 @@ const ChapterSection = React.memo(function ChapterSection({
   /** Pearl ids the user has already completed at least once — drives the
    *  green checkmark on the path node. */
   completedPearlIds: string[];
+  /** Module id whose topic-tree is currently expanded inline. When this
+   *  matches a node's id, the TopicTreeAccordion is rendered directly
+   *  underneath that node and the rest of the path slides down. */
+  expandedTopicTreeModuleId?: string | null;
+  /** Topic chip tap inside the expanded accordion. Parent shows the
+   *  per-topic sheet — sheet state lives at the screen root so it stacks
+   *  above pearls / locked modals. */
+  onTopicSelected?: (topic: Topic) => void;
 }) {
   const firstIncompleteIndex = chapter.modules.findIndex(
     (m) => !completedModules.includes(m.id) && !m.comingSoon && (isPro || !PRO_LOCKED_SIMS.has(m.id)),
@@ -1012,6 +1024,16 @@ const ChapterSection = React.memo(function ChapterSection({
                 >
                   {newsBadgeNode}
                 </View>
+              )}
+              {/* Topic-tree pilot — inline accordion lives in the node's
+                  parent View, so when it mounts the pearl + next module
+                  connector + next node slide down naturally with the
+                  ScrollView's content height. */}
+              {expandedTopicTreeModuleId === module.id && onTopicSelected && (
+                <TopicTreeAccordion
+                  module={module}
+                  onTopicSelected={onTopicSelected}
+                />
               )}
               {showQuestBox && questPathNodeProps && (
                 <>
@@ -1284,11 +1306,15 @@ export function DuoLearnScreen() {
   const [roadmapVisible, setRoadmapVisible] = useState(false);
   const [mindMapChapter, setMindMapChapter] = useState<number | null>(null);
   const [replayModule, setReplayModule] = useState<{ moduleId: string; chapterId: string; moduleIndex: number } | null>(null);
-  // Topic-tree pilot: a tap on a `learningMode: 'topic-tree'` module opens
-  // the overlay instead of routing to LessonFlowScreen. State is cleared on
-  // close. Stores the chapterId so the overlay can re-enter the legacy
-  // lesson flow when the user picks "התחל את הרכיב".
+  // Topic-tree pilot: a tap on a `learningMode: 'topic-tree'` module
+  // EXPANDS an inline accordion below it (pushing the pearl + next module
+  // down). Tapping the same module again collapses. chapterId rides along
+  // so the per-topic player can re-enter the legacy lesson flow on
+  // "התחל את הרכיב".
   const [topicTreeModule, setTopicTreeModule] = useState<{ module: Module; chapterId: string } | null>(null);
+  // Per-topic sheet — opens on chip tap inside the accordion, closes on
+  // back-tap or after the user marks complete / starts the lesson.
+  const [activeTopic, setActiveTopic] = useState<Topic | null>(null);
   const insets = useSafeAreaInsets();
   const scrollRef = useRef<ScrollView>(null);
   const [refreshKey, setRefreshKey] = useState(0);
@@ -1510,14 +1536,16 @@ export function DuoLearnScreen() {
   const handleModulePress = useCallback(
     (moduleId: string, chapterId: string, moduleIndex: number) => {
       // Topic-tree pilot: if the module opted into the new architecture,
-      // open the overlay instead of routing to LessonFlowScreen. Pre-empts
-      // the replay/profile/backstop checks below — those gates assume the
-      // legacy linear-flow target. Replay UX on a completed topic-tree
-      // module is future work (Phase 2).
+      // TOGGLE the inline accordion (open if collapsed, collapse if the
+      // user re-taps the same module). Pre-empts the replay/profile/
+      // backstop checks below — those gates assume the legacy linear-flow
+      // target. Replay UX on a completed topic-tree module is Phase 2.
       const ch = ALL_CHAPTERS.find((c) => c.id === chapterId);
       const mod = ch?.modules.find((m) => m.id === moduleId);
       if (mod?.learningMode === 'topic-tree') {
-        setTopicTreeModule({ module: mod, chapterId });
+        setTopicTreeModule((prev) => (
+          prev?.module.id === moduleId ? null : { module: mod, chapterId }
+        ));
         return;
       }
 
@@ -1576,6 +1604,25 @@ export function DuoLearnScreen() {
     },
     [router, setCurrentChapter, setCurrentModule, progressData, knowledgeLevelSet, learningTimeSet, dailyGoalSet, completedPearlIds],
   );
+
+  // Topic-tree chip → open the per-topic player sheet at the root level
+  // so it stacks above pearls and the locked-module modal.
+  const handleTopicSelected = useCallback((topic: Topic) => {
+    setActiveTopic(topic);
+  }, []);
+
+  // "התחל את הרכיב" inside the player sheet → close everything and route
+  // to the legacy LessonFlowScreen so the user still gets the full
+  // existing content (cards/quiz/sim). Future loops replace this with a
+  // per-kind mini player that doesn't leave the topic tree.
+  const handleStartTopicLesson = useCallback((topic: Topic) => {
+    const chapterId = topicTreeModule?.chapterId;
+    setActiveTopic(null);
+    setTopicTreeModule(null);
+    if (chapterId) {
+      router.push(`/lesson/${topic.moduleId}?chapterId=${chapterId}` as never);
+    }
+  }, [router, topicTreeModule]);
 
   // Once the user picks (or skips) the backstop question, navigate to the
   // originally-tapped module. Skipping still proceeds — the question is a
@@ -1911,6 +1958,8 @@ export function DuoLearnScreen() {
                 newsBadgeNode={hasActiveModule ? <BreakingNewsBadge /> : undefined}
                 onPearlPress={handlePearlPress}
                 completedPearlIds={completedPearlIds}
+                expandedTopicTreeModuleId={topicTreeModule?.module.id ?? null}
+                onTopicSelected={handleTopicSelected}
               />
             );
 
@@ -1993,17 +2042,16 @@ export function DuoLearnScreen() {
           />
         )}
 
-        {/* Topic-tree overlay (mod-1-1 pilot) — opens when a `topic-tree`
-            module is tapped. Closes back to the module map; "התחל את הרכיב"
-            inside the overlay still routes to the legacy LessonFlowScreen. */}
-        {topicTreeModule && (
-          <TopicTreeOverlay
-            module={topicTreeModule.module}
-            chapterId={topicTreeModule.chapterId}
-            simFirst={SIM_FIRST_MODULE_IDS.has(topicTreeModule.module.id)}
-            onClose={() => setTopicTreeModule(null)}
-          />
-        )}
+        {/* Topic-tree per-topic player (mod-1-1 pilot) — opens when a chip
+            inside the inline accordion is tapped. Modal so it stacks above
+            pearls and locked-module sheets. The accordion ITSELF lives
+            inline inside ChapterSection so the path below mod-1-1 (pearl,
+            next module) slides down naturally. */}
+        <TopicPlayerSheet
+          topic={activeTopic}
+          onStartLesson={handleStartTopicLesson}
+          onClose={() => setActiveTopic(null)}
+        />
 
         {/* Completed module replay modal, shows summary infographic */}
         {replayModule && (
