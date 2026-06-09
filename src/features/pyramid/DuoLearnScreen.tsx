@@ -1327,9 +1327,13 @@ export function DuoLearnScreen() {
   const completedPhaseParams = useLocalSearchParams<{
     completedPhase?: string;
     completedModuleId?: string;
-    /** R5: passed back from LessonFlowScreen so we can disambiguate
-     *  cards-vs-tutorial-video completion. Both use phase=flashcards. */
+    /** Disambiguator passed from LessonFlowScreen — currently unused
+     *  after R5 retired tutorial-video, but kept for future kinds. */
     completedKind?: string;
+    /** R5.1 — the module whose topic-tree accordion should stay open
+     *  after the lesson exits. Lets the user land back on the chip
+     *  grid instead of having to re-tap the module node. */
+    expandedModule?: string;
   }>();
   const completedPhaseConsumedRef = useRef<string | null>(null);
   useEffect(() => {
@@ -1358,10 +1362,20 @@ export function DuoLearnScreen() {
       'podcast': 'podcast',
       'couple-dilemma': 'couple-dilemma',
     };
-    // completedKind overrides phaseToKind so flashcards-via-tutorial-video
-    // marks the tutorial-video chip, not the cards chip.
     const kind = (ckind as TopicKind | undefined) ?? phaseToKind[cp];
     if (!kind) return;
+    // R5.1: reopen the accordion the user came from. Looked up by the
+    // completedModuleId so the experience returns the user to "the
+    // grid with everything visible" instead of "the map needing a tap"
+    // (Yoav 2026-06-10: "שיוצאים מכל תת פרק - חוזרים למסך שכל
+    // האפשרויות פתוחות ולא למסף שצריך ללחוץ מחדש על המודולה").
+    const reopenModuleId = completedPhaseParams.expandedModule ?? cmid;
+    if (reopenModuleId) {
+      const ch2 = ALL_CHAPTERS.find((c) =>
+        c.modules.some((m) => m.id === reopenModuleId));
+      const mod2 = ch2?.modules.find((m) => m.id === reopenModuleId);
+      if (mod2 && ch2) setTopicTreeModule({ module: mod2, chapterId: ch2.id });
+    }
     // resolveTopics lookup so the icon/label match the real Topic shape
     // the store keyed off when the chip was first rendered.
     const ch = ALL_CHAPTERS.find((c) =>

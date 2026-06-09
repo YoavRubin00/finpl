@@ -2860,7 +2860,10 @@ export function LessonFlowScreen() {
     // land them back at a half-finished lesson.
     tt_exitFiredRef.current = true;
     const completed = tt_initialPhaseRef.current;
-    const path = `/(tabs)/learn?completedPhase=${encodeURIComponent(completed)}&completedModuleId=${encodeURIComponent(id ?? '')}`;
+    // R5.1: include expandedModule so DuoLearnScreen reopens the
+    // accordion on return — the user lands back on the chip grid,
+    // not on the collapsed map. (Yoav 2026-06-10.)
+    const path = `/(tabs)/learn?completedPhase=${encodeURIComponent(completed)}&completedModuleId=${encodeURIComponent(id ?? '')}&expandedModule=${encodeURIComponent(id ?? '')}`;
     router.replace(path as never);
   }, [phase, returnTo, id, router]);
 

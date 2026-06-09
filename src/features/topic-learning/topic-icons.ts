@@ -4,7 +4,7 @@ import {
   Mic,
   GitFork,
   HelpCircle,
-  Gamepad2,
+  BookOpen,
   BarChart3,
   Trophy,
 } from 'lucide-react-native';
@@ -59,17 +59,22 @@ export const TOPIC_ICONS: Record<TopicKind, TopicIconAsset> = {
     bg: '#dbeafe', // blue-100
     fg: '#1e40af', // blue-800
   },
+  // R5.1 2026-06-10 — Yoav reported the Gamepad icon was opening the
+  // infographic phase; the icons in his reference attach BarChart to
+  // "סימולטור" and BookOpen to "שיעור". Swapped accordingly: sim
+  // (interactive calc/sim) gets the chart, infographic (summary card)
+  // gets the lesson-book glyph.
   'sim': {
-    type: 'tile',
-    icon: Gamepad2,
-    bg: '#fce7f3', // pink-100
-    fg: '#9333ea', // purple-600
-  },
-  'infographic': {
     type: 'tile',
     icon: BarChart3,
     bg: '#cffafe', // cyan-100
     fg: '#0e7490', // cyan-700
+  },
+  'infographic': {
+    type: 'tile',
+    icon: BookOpen,
+    bg: '#d1fae5', // emerald-100 — "Lesson" tile in the reference
+    fg: '#065f46', // emerald-800
   },
   'post-video': {
     type: 'tile',

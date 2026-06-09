@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useEffect } from 'react';
 import { View, StyleSheet, Dimensions } from 'react-native';
 import Animated, {
   useAnimatedStyle,
@@ -8,7 +8,7 @@ import Animated, {
   withTiming,
   cancelAnimation,
 } from 'react-native-reanimated';
-import { useEffect } from 'react';
+import LottieView from 'lottie-react-native';
 import { GrowingTree } from './GrowingTree';
 import { TopicChip } from './TopicChip';
 import type { Topic } from '../types';
@@ -17,15 +17,19 @@ const SCREEN_W = Dimensions.get('window').width;
 
 /** Same sine-wave math as DuoLearnScreen.getNodeOffset so the inner
  *  topic path reads as a continuation of the outer module path —
- *  visual code-share, not just visual rhyme. Amplitude tightened to
- *  the narrower accordion width. */
+ *  visual code-share, not just visual rhyme. */
 const NODE_SIZE = 76;
 const ROW_HEIGHT = NODE_SIZE + 30;
-const WAVE_AMPLITUDE = 36;
+const WAVE_AMPLITUDE = 42; // same as the outer DuoLearnScreen path
 const WAVE_PERIOD = 6;
 function pathOffset(i: number): number {
   return Math.round(Math.sin((i * 2 * Math.PI) / WAVE_PERIOD) * WAVE_AMPLITUDE);
 }
+
+// Bouncing-coin Lottie reused from DuoLearnScreen's easter-egg drop —
+// here it doubles as decorative path candy, lit between every other
+// node so the path feels alive without crowding the layout.
+const COIN_LOTTIE = require('../../../../assets/lottie/wired-flat-298-coins-hover-jump.json');
 
 interface ModuleTopicLayoutProps {
   topics: Topic[];
@@ -38,20 +42,11 @@ interface ModuleTopicLayoutProps {
 }
 
 /**
- * Duolingo-style vertical learning path: topic nodes stacked in a
- * sine-wave column, dotted connectors between them, the gold tree
- * floating to the right as a "watch your progress" centerpiece.
- *
- * Replaces the earlier orbital ring (Yoav 2026-06-09: "אני רוצה שיהיה
- * בסגנון הזה, ולא בצורת עיגול, אלא מפת למידה" + "שהעץ יהיה מימין
- * לשביל"). Reuses DuoLearnScreen's getNodeOffset math so the inner
- * path of mod-1-1's sub-units feels like a zoom-in of the outer
- * module path.
- *
- * Design references: Duolingo v2 dark learn map (Section/Unit) — see
- * docs/MEMORY references. יפיופי: decision-point per node (Supercell
- * 30-90s rule). דואו: Duolingo Section nodes are circular ~80px, with
- * an active-node pulse + "START HERE" floating label.
+ * R5.1 (2026-06-10) — path centered horizontally in the container,
+ * tree to the right WITHOUT a halo backdrop, decorative coins on the
+ * path between alternate nodes. Mirrors the outer DuoLearnScreen
+ * visual language one-for-one ("החווית משתמש של הלמידה צריכה להיות
+ * כמו של המסך הכללי").
  */
 export const ModuleTopicLayout = React.memo(function ModuleTopicLayout({
   topics,
@@ -60,7 +55,6 @@ export const ModuleTopicLayout = React.memo(function ModuleTopicLayout({
   progressPct,
   onTopicPress,
 }: ModuleTopicLayoutProps): React.ReactElement {
-  // Sort by defaultOrder so node positions stay stable across rerenders.
   const sorted = useMemo(
     () => [...topics].sort((a, b) => a.defaultOrder - b.defaultOrder),
     [topics],
@@ -68,9 +62,6 @@ export const ModuleTopicLayout = React.memo(function ModuleTopicLayout({
 
   const totalHeight = sorted.length * ROW_HEIGHT + 20;
 
-  // Subtle pulse on the recommended node — drives a halo scale through
-  // the TopicChip's `recommended` prop. Single shared value at the
-  // layout level (vs. one per chip) keeps it cheap.
   const pulse = useSharedValue(1);
   useEffect(() => {
     pulse.value = withRepeat(
@@ -84,37 +75,52 @@ export const ModuleTopicLayout = React.memo(function ModuleTopicLayout({
     return () => cancelAnimation(pulse);
   }, [pulse]);
 
-  // Layout: tree absolute on the RIGHT, path column on the left. Yoav
-  // 2026-06-09 (R5): "שהעץ יהיה מימים לעץ למידה" — reverts the R4
-  // center-overlap experiment back to the R3 right-side layout.
   return (
     <View style={[styles.container, { height: totalHeight }]}>
-      {/* Tree — absolute on the right, large + with a soft gold halo
-          backdrop. pointerEvents none so taps fall through to the path
-          on the left which is the only interactive surface. */}
+      {/* Tree — no halo backdrop per Yoav R5.1, just the tree itself,
+          floating on the right edge of the column. */}
       <View style={styles.treeWrap} pointerEvents="none">
-        <View style={styles.treeGlow} />
-        <GrowingTree progressPct={progressPct} size={240} />
+        <GrowingTree progressPct={progressPct} size={220} />
       </View>
 
-      {/* Path column on the LEFT half. */}
+      {/* Path column, centered horizontally inside the container. The
+          sine-wave offsets shift chips left/right around the center. */}
       <View style={styles.pathColumn}>
         {sorted.map((topic, i) => {
           const isRecommended = recommendedTopicId === topic.id;
           const isCompleted = Boolean(isCompletedMap[topic.id]);
           const offsetX = pathOffset(i);
           const nextOffsetX = i < sorted.length - 1 ? pathOffset(i + 1) : null;
+          // Decorate every other gap with a bouncing coin Lottie —
+          // matches the outer learn map's "path candy" rhythm.
+          const showCoin = nextOffsetX !== null && i % 2 === 1;
 
           return (
             <View key={topic.id} style={styles.row}>
-              {/* Dotted connector to the next node, drawn between this
-                  node and the next. Skipped on the last node. */}
               {nextOffsetX !== null && (
                 <Connector
                   fromOffsetX={offsetX}
                   toOffsetX={nextOffsetX}
                   done={isCompleted}
                 />
+              )}
+              {showCoin && (
+                <View
+                  pointerEvents="none"
+                  style={[
+                    styles.coinSlot,
+                    {
+                      // Sit halfway between this node and the next,
+                      // offset to the OPPOSITE side of the path so it
+                      // doesn't visually collide with the chip.
+                      left: '50%',
+                      marginLeft: ((offsetX + nextOffsetX) / 2) - 14,
+                      top: ROW_HEIGHT / 2 + 8,
+                    },
+                  ]}
+                >
+                  <LottieView source={COIN_LOTTIE} autoPlay loop style={styles.coin} />
+                </View>
               )}
               <View style={[styles.nodeSlot, { transform: [{ translateX: offsetX }] }]}>
                 <PulseHalo active={isRecommended && !isCompleted} pulse={pulse}>
@@ -152,9 +158,7 @@ function PulseHalo({
   return <Animated.View style={style}>{children}</Animated.View>;
 }
 
-/** Plain dotted-line connector between two horizontally-offset nodes.
- *  Mirrors the visual feel of DuoLearnScreen's PathConnector without
- *  importing it (no need for the gold-trail behavior here). */
+/** Plain dotted-line connector between two horizontally-offset nodes. */
 function Connector({
   fromOffsetX,
   toOffsetX,
@@ -196,38 +200,28 @@ function Connector({
 
 const styles = StyleSheet.create({
   container: {
-    flexDirection: 'row',
-    paddingHorizontal: 12,
     position: 'relative',
+    alignItems: 'center',
+    justifyContent: 'flex-start',
+    paddingVertical: 12,
   },
+  // Tree floats on the right edge of the layout. No background halo
+  // (Yoav R5.1: "שלא יהיה רקע להעץ").
   treeWrap: {
     position: 'absolute',
-    right: -8,
-    top: 16,
-    width: 240,
-    height: 240,
+    right: 0,
+    top: 12,
+    width: 220,
+    height: 220,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  // Soft gold halo behind the tree — adds "presence" without crowding
-  // the path on the left. Sits below the tree image in stacking order.
-  treeGlow: {
-    position: 'absolute',
-    width: 220,
-    height: 220,
-    borderRadius: 110,
-    backgroundColor: 'rgba(251, 191, 36, 0.18)',
-    shadowColor: '#f59e0b',
-    shadowOpacity: 0.55,
-    shadowRadius: 28,
-    shadowOffset: { width: 0, height: 0 },
-    elevation: 4,
-  },
-  // Path column on the left — narrower so the tree on the right has
-  // breathing room.
+  // Path column centered horizontally inside the container. Width is
+  // capped so chips don't spread too wide on tablets/web; the sine
+  // offsets play around this center.
   pathColumn: {
-    width: Math.min(SCREEN_W * 0.4, 180),
-    alignSelf: 'flex-start',
+    width: Math.min(SCREEN_W * 0.5, 220),
+    alignSelf: 'center',
   },
   row: {
     height: ROW_HEIGHT,
@@ -245,12 +239,22 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    pointerEvents: 'none',
   },
   dot: {
     position: 'absolute',
     width: 6,
     height: 6,
     borderRadius: 3,
+  },
+  // Decorative coin between alternating nodes — same Lottie + sizing
+  // as DuoLearnScreen's easter-egg coin so the surfaces feel related.
+  coinSlot: {
+    position: 'absolute',
+    width: 28,
+    height: 28,
+  },
+  coin: {
+    width: 28,
+    height: 28,
   },
 });
