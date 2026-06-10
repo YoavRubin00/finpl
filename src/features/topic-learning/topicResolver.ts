@@ -3,6 +3,7 @@ import type { Topic, TopicKind } from './types';
 import { TOPIC_ICONS, TOPIC_LABELS } from './topic-icons';
 import { getDilemma } from '../shark-dilemma/dilemmasData';
 import { getGameForModule } from './moduleGameMap';
+import { getCoupleDilemmaForModule } from '../couple-dilemma/coupleDilemmas';
 
 /**
  * Canonical order — mirrors LessonFlowScreen's normal flow. The hook
@@ -124,7 +125,12 @@ export function resolveTopics(module: Module, opts: ResolveTopicsOptions = {}): 
   // adapter layer is where this becomes an explicit toggle later.
   if (module.flashcards?.length) present.set('recall', true);
   if (module.podcast) present.set('podcast', true);
-  if (module.coupleDilemma) present.set('couple-dilemma', true);
+  // R6 fix: `module.coupleDilemma` is never set on chapter data — the
+  // segments live in a separate registry (`COUPLE_DILEMMAS`) keyed by
+  // moduleId. Yoav 2026-06-10 caught the missing chip in financial
+  // fundamentals ("העלמת את הסרטון דילמה הזוגית"). The registry is
+  // the source of truth.
+  if (getCoupleDilemmaForModule(module.id)) present.set('couple-dilemma', true);
   if (module.quizzes?.length) present.set('quiz', true);
   if (module.simConcept) present.set('sim', true);
   // `game` only surfaces when the moduleGameMap has a curated entry —
