@@ -16,7 +16,10 @@ export const TOPIC_ICONS: Record<TopicKind, TopicIconAsset> = {
   'tutorial-video': { emoji: '🎬' },
   'recall': { emoji: '🧠' },
   'podcast': { emoji: '🎙️' },
-  'couple-dilemma': { emoji: '⚖️' },
+  // 💑 — couple. Earlier ⚖️ scales clashed with the shark-dilemma chip
+  // ("פשוט שהדילמה תראה אחרת. נגיד מאזניים" — Yoav 2026-06-10);
+  // the scales got moved to shark-dilemma and couple gets its own glyph.
+  'couple-dilemma': { emoji: '💑' },
   // R5.7 — quiz emoji swap. 🎯 read as "daily challenge / target"
   // (Yoav: "תחליף את האמוגי של המטרה"); ❓ is unambiguous.
   'quiz': { emoji: '❓' },
@@ -28,10 +31,10 @@ export const TOPIC_ICONS: Record<TopicKind, TopicIconAsset> = {
   // as "the moment it clicks", much clearer than a generic book glyph.
   'infographic': { emoji: '💡' },
   'post-video': { emoji: '🏆' },
-  // 🦈 — Captain Shark dilemma. The 🦈 was intro's earlier emoji but
-  // was retired there per Yoav; it lives on naturally here as the
-  // shark-dilemma's signature glyph.
-  'shark-dilemma': { emoji: '🦈' },
+  // ⚖️ — scales of decision. Yoav 2026-06-10: "פשוט שהדילמה תראה
+  // אחרת. נגיד מאזניים". The 🦈 read as just-another-shark; scales
+  // make the "weigh your choice" framing legible at a glance.
+  'shark-dilemma': { emoji: '⚖️' },
 };
 
 /** Hebrew label shown on the chip. Singular, gender-neutral per BRAND.md. */

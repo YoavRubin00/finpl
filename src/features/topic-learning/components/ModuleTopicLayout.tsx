@@ -11,6 +11,13 @@ const NODE_SIZE = 78;
 const ROW_HEIGHT = NODE_SIZE + 36;
 const WAVE_AMPLITUDE = 42;
 const WAVE_PERIOD = 6;
+// Vertical gap rendered above the first chip and below the last chip.
+// We fill it with a PathConnector so the trail visually continues from
+// the outer mod-1-1 node down INTO the chip column, and from the last
+// chip OUT to the next pearl. Sized so the dot density matches the
+// inter-chip connectors (Yoav R5.9 2026-06-10: "הסוף לא מתחבר טוב
+// לפנינה / הכותרת של המודולה לא מתחברת טוב לאינטרו").
+const EDGE_CONNECTOR_H = 56;
 function pathOffset(i: number): number {
   return Math.round(Math.sin((i * 2 * Math.PI) / WAVE_PERIOD) * WAVE_AMPLITUDE);
 }
@@ -25,19 +32,21 @@ interface ModuleTopicLayoutProps {
 }
 
 /**
- * R5.4 (2026-06-10) — final polish pass:
- *  - Entry & exit connectors render OUTSIDE the row stack so the path
- *    visually attaches to the outer mod-1-1 node above and the pearl
- *    below (Yoav: "שהתת מודולה הראשונה תתחבר לריבית דריבית,
- *    ושהאחרונה תתחבר לפנינה שאחריה").
- *  - Inter-chip connectors offset down by NODE_SIZE/2 so the trail
- *    exits the CENTER of each chip instead of grazing its bottom
- *    ("שהחיבור יצא ממרז הכפתור").
- *  - Tree compressed to 140px in the top-right corner so it never
- *    overlaps a chip ("שהעץ לא יעלה על הכפתורי הפעלה").
- *  - Recommended halo retired — Yoav called it visual noise ("שההבא
- *    שצריך לעשות לא יהיה זוהר"). The "next up" chip just renders as
- *    any other incomplete chip.
+ * R5.9 (2026-06-10) — restore entry/exit connectors:
+ *  - Entry PathConnector fills the gap above the first chip so the
+ *    outer mod-1-1 gold trail visually continues INTO the chip column
+ *    rather than dead-ending in whitespace.
+ *  - Exit PathConnector fills the gap below the last chip so the
+ *    column hands off cleanly to the next pearl's trail. Both are
+ *    rendered in the same dotted style as the inter-chip connectors
+ *    so the entire surface reads as one continuous path.
+ *
+ * Earlier (R5.4 → R5.8): entry/exit oscillated between white-dotted,
+ * coin column, and nothing. None looked right. The cause was
+ * underestimating how visible the gap is on first paint — the outer
+ * DuoLearnScreen trail terminates at mod-1-1's bottom edge and only
+ * resumes BELOW the accordion content; the accordion needs to draw
+ * its own connector across that span.
  */
 export const ModuleTopicLayout = React.memo(function ModuleTopicLayout({
   topics,
@@ -50,11 +59,11 @@ export const ModuleTopicLayout = React.memo(function ModuleTopicLayout({
     [topics],
   );
 
-  // Tight reserve at the top (just 12px) so the first chip sits as
-  // close as possible to the outer mod-1-1 node above (Yoav R5.5:
-  // "תקטין את המרחק בין הריבית דריבית לתת הראשונה"). Bottom keeps
-  // half a row for the exit connector reaching down to the pearl.
-  const totalHeight = sorted.length * ROW_HEIGHT + 12;
+  // Height = entry connector + n chip rows + exit connector.
+  const totalHeight = EDGE_CONNECTOR_H + sorted.length * ROW_HEIGHT + EDGE_CONNECTOR_H;
+  const firstCompleted = sorted.length > 0 && Boolean(isCompletedMap[sorted[0].id]);
+  const lastCompleted =
+    sorted.length > 0 && Boolean(isCompletedMap[sorted[sorted.length - 1].id]);
 
   return (
     <View style={[styles.container, { height: totalHeight }]}>
@@ -64,9 +73,19 @@ export const ModuleTopicLayout = React.memo(function ModuleTopicLayout({
         <GrowingTree progressPct={progressPct} size={100} />
       </View>
 
+      {/* Entry connector — from outer mod-1-1 node into the chip column. */}
+      <View style={[styles.entryConnectorSlot, { height: EDGE_CONNECTOR_H }]} pointerEvents="none">
+        <PathConnector
+          fromOffsetX={0}
+          toOffsetX={sorted.length > 0 ? pathOffset(0) : 0}
+          done={firstCompleted}
+          height={EDGE_CONNECTOR_H}
+        />
+      </View>
+
       {/* Path column centered horizontally; sine-wave offsets fan
           chips left/right around its midline. */}
-      <View style={styles.pathColumn}>
+      <View style={[styles.pathColumn, { marginTop: EDGE_CONNECTOR_H }]}>
         {sorted.map((topic, i) => {
           const isCompleted = Boolean(isCompletedMap[topic.id]);
           const offsetX = pathOffset(i);
@@ -89,6 +108,7 @@ export const ModuleTopicLayout = React.memo(function ModuleTopicLayout({
                     fromOffsetX={offsetX}
                     toOffsetX={nextOffsetX}
                     done={isCompleted}
+                    height={ROW_HEIGHT}
                   />
                 </View>
               )}
@@ -105,6 +125,15 @@ export const ModuleTopicLayout = React.memo(function ModuleTopicLayout({
         })}
       </View>
 
+      {/* Exit connector — from last chip out to the next pearl below. */}
+      <View style={[styles.exitConnectorSlot, { height: EDGE_CONNECTOR_H }]} pointerEvents="none">
+        <PathConnector
+          fromOffsetX={sorted.length > 0 ? pathOffset(sorted.length - 1) : 0}
+          toOffsetX={0}
+          done={lastCompleted}
+          height={EDGE_CONNECTOR_H}
+        />
+      </View>
     </View>
   );
 });
@@ -114,13 +143,15 @@ function PathConnector({
   fromOffsetX,
   toOffsetX,
   done,
+  height,
 }: {
   fromOffsetX: number;
   toOffsetX: number;
   done: boolean;
+  height: number;
 }): React.ReactElement {
   const NUM_DOTS = 16;
-  const CONNECTOR_H = ROW_HEIGHT;
+  const CONNECTOR_H = height;
   const dotColor = done ? '#f59e0b' : '#d1d5db';
   const trailColor = done ? '#fde68a' : '#e5e7eb';
   const glowColor = '#fde68a';
@@ -216,20 +247,30 @@ const styles = StyleSheet.create({
     position: 'relative',
     alignItems: 'center',
     justifyContent: 'flex-start',
-    paddingTop: ROW_HEIGHT / 2 + 8,
-    paddingBottom: ROW_HEIGHT / 2,
   },
   // Tree only in the top-right corner — never crosses below the first
   // chip row, so it can't overlap any button.
   treeWrap: {
     position: 'absolute',
     right: 4,
-    top: -10,
+    top: EDGE_CONNECTOR_H - 10,
     width: 140,
     height: 140,
     alignItems: 'center',
     justifyContent: 'center',
     zIndex: 0,
+  },
+  entryConnectorSlot: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+  },
+  exitConnectorSlot: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
   },
   pathColumn: {
     width: Math.min(SCREEN_W * 0.5, 220),
