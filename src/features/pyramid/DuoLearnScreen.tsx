@@ -955,7 +955,7 @@ const ChapterSection = React.memo(function ChapterSection({
         </AnimatedPressable>
       )}
 
-      <View style={{ marginTop: 16, marginBottom: 28, position: "relative" }}>
+      <View style={{ marginTop: 4, marginBottom: 28, position: "relative" }}>
         {/* Path decorations disabled temporarily */}
 
         {chapter.modules.map((module, i) => {
@@ -2498,7 +2498,7 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     paddingVertical: 14,
     paddingHorizontal: 18,
-    marginBottom: 12,
+    marginBottom: 6,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,

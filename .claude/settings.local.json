@@ -92,7 +92,9 @@
       "Bash(rm .git/COMMIT_MSG.txt)",
       "Bash(git ls-tree *)",
       "mcp__claude_ai_Notion__notion-fetch",
-      "mcp__claude_ai_Notion__notion-create-pages"
+      "mcp__claude_ai_Notion__notion-create-pages",
+      "Bash(vercel ls *)",
+      "Bash(curl -sI -o /dev/null -w 'fc-0-2-__TRACKED_VAR__: %{http_code}\\\\n' https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/infographics/mod-0-2/fc-0-2-__TRACKED_VAR__.png)"
     ],
     "additionalDirectories": [
       "\\tmp",

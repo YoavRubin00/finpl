@@ -149,7 +149,7 @@ import type { LessonContext } from "../chat/buildChatPrompt";
 
 const AnimatedExpoImage = Animated.createAnimatedComponent(ExpoImage);
 
-type FlowPhase = "hero" | "intro" | "flashcards" | "podcast" | "couple-dilemma" | "interactive-recall" | "quizzes" | "sim-intro" | "sim" | "module-infographic" | "post-infographic-video" | "shark-dilemma" | "summary" | "video";
+type FlowPhase = "hero" | "intro" | "flashcards" | "podcast" | "couple-dilemma" | "interactive-recall" | "quizzes" | "mid-quiz-video" | "sim-intro" | "sim" | "module-infographic" | "post-infographic-video" | "shark-dilemma" | "summary" | "video";
 
 /** Full-screen character art shown when first opening a module */
 const MODULE_HERO_MAP: Record<string, { uri: string } | number> = {
@@ -2854,7 +2854,7 @@ export function LessonFlowScreen() {
   const setVideoPlaying = useAudioStore((s) => s.setVideoPlaying);
 
   useEffect(() => {
-    setVideoPlaying(phase === "video" || phase === "post-infographic-video");
+    setVideoPlaying(phase === "video" || phase === "post-infographic-video" || phase === "mid-quiz-video");
   }, [phase]);
 
   // remember the entry phase. The moment the lesson advances past it (the
@@ -2993,6 +2993,7 @@ export function LessonFlowScreen() {
       "couple-dilemma": "other",
       "interactive-recall": "interactive-recall",
       quizzes: "quizzes",
+      "mid-quiz-video": "other",
       "sim-intro": "sim",
       sim: "sim",
       "module-infographic": "other",
@@ -3056,6 +3057,13 @@ export function LessonFlowScreen() {
     const r = !isReplay && mod?.id ? useChapterUIStore.getState().moduleResume[mod.id] : undefined;
     return (r && RESTORABLE_PHASES.has(r.phase as FlowPhase)) ? r.quizIndex : 0;
   });
+  // The module's "fun" Finn video (MODULE_POST_VIDEO_MAP) now plays INLINE
+  // mid-quiz instead of as a standalone phase after the infographic (Yoav
+  // 2026-06-10). This guards against showing it twice: once it's been played
+  // mid-quiz the trailing post-infographic-video phase self-skips. Stays false
+  // when the module has too few quizzes to host a mid-point, so that the
+  // trailing phase still plays it as a fallback.
+  const funVideoShownRef = useRef(false);
   const [consecutiveCorrect, setConsecutiveCorrect] = useState(() => {
     const r = !isReplay && mod?.id ? useChapterUIStore.getState().moduleResume[mod.id] : undefined;
     return (r && RESTORABLE_PHASES.has(r.phase as FlowPhase)) ? r.consecutiveCorrect : 0;
@@ -3547,6 +3555,24 @@ export function LessonFlowScreen() {
 
   const advanceQuiz = useCallback(() => {
     if (!mod) return;
+    // Mid-quiz fun video: play the module's Finn video INLINE between two quiz
+    // questions (right after the middle question) instead of as a standalone
+    // full-screen phase after the infographic (Yoav 2026-06-10: "embedded
+    // mid-quiz, not a unit of its own"). Only when there's a real mid-point
+    // (≥3 quizzes, and the mid index isn't the last) — otherwise it falls
+    // through to the trailing post-infographic-video phase as a fallback.
+    const midIndex = Math.floor(mod.quizzes.length / 2);
+    if (
+      !funVideoShownRef.current &&
+      quizIndex === midIndex &&
+      midIndex < mod.quizzes.length - 1 &&
+      mod.id && MODULE_POST_VIDEO_MAP[mod.id]
+    ) {
+      funVideoShownRef.current = true;
+      mediumHaptic();
+      setPhase("mid-quiz-video");
+      return;
+    }
     if (quizIndex < mod.quizzes.length - 1) {
       setQuizIndex((prev) => prev + 1);
       tapHaptic();
@@ -3851,8 +3877,29 @@ export function LessonFlowScreen() {
     return <View style={{ flex: 1, backgroundColor: "#f8fafc" }} />;
   }
 
-  // Post-infographic video, full-screen, plays after the infographic before the chest
-  if (phase === "post-infographic-video" && mod && MODULE_POST_VIDEO_MAP[mod.id]) {
+  // Mid-quiz fun video — same player as the old post-infographic phase, but
+  // injected between two quiz questions and returning to the quiz run on
+  // finish, so it reads as part of the lesson flow rather than a standalone
+  // ceremony (Yoav 2026-06-10).
+  if (phase === "mid-quiz-video" && mod && MODULE_POST_VIDEO_MAP[mod.id]) {
+    return (
+      <VideoHookPlayer
+        videoUri={getCachedVideoPath(MODULE_POST_VIDEO_MAP[mod.id])}
+        hookText={mod.videoHook ?? ""}
+        onFinish={() => { setQuizIndex((i) => i + 1); setPhase("quizzes"); }}
+        unitColors={unitColors}
+      />
+    );
+  }
+  if (phase === "mid-quiz-video") {
+    setQuizIndex((i) => i + 1);
+    setPhase("quizzes");
+    return <View style={{ flex: 1, backgroundColor: "#f8fafc" }} />;
+  }
+
+  // Post-infographic video, full-screen, plays after the infographic before the
+  // chest. Now a FALLBACK: skipped when the fun video already played mid-quiz.
+  if (phase === "post-infographic-video" && mod && MODULE_POST_VIDEO_MAP[mod.id] && !funVideoShownRef.current) {
     return (
       <VideoHookPlayer
         videoUri={getCachedVideoPath(MODULE_POST_VIDEO_MAP[mod.id])}

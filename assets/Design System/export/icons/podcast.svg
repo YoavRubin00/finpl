@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="96" height="96" viewBox="0 0 48 48">
+  <defs>
+    <linearGradient id="g_podcast" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#d9b8ff"></stop><stop offset="0.5" stop-color="#a368f0"></stop><stop offset="1" stop-color="#8b46e0"></stop>
+    </linearGradient>
+    <filter id="s_podcast" x="-30%" y="-30%" width="160%" height="160%">
+      <feDropShadow dx="0" dy="1.5" stdDeviation="1.2" flood-color="#56209e" flood-opacity="0.34"></feDropShadow>
+    </filter>
+  </defs>
+  <g filter="url(#s_podcast)"><g fill="url(#g_podcast)"><rect x="18" y="6" width="12" height="22" rx="6"></rect><path d="M13 22 a11 11 0 0 0 22 0" fill="none" stroke="#8b46e0" stroke-width="3.2" stroke-linecap="round"></path><rect x="22.4" y="33" width="3.2" height="6" rx="1.6" fill="#8b46e0"></rect><rect x="17" y="38.5" width="14" height="3.4" rx="1.7" fill="#8b46e0"></rect><g stroke="rgba(255,255,255,0.95)" stroke-width="1.6" stroke-linecap="round"><line x1="21" y1="12" x2="27" y2="12"></line><line x1="21" y1="16" x2="27" y2="16"></line><line x1="21" y1="20" x2="27" y2="20"></line></g></g></g>
+  <ellipse cx="20" cy="14" rx="11" ry="6" fill="#fff" opacity="0.18"></ellipse>
+</svg>
