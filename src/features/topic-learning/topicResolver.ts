@@ -18,6 +18,12 @@ import { getDilemma } from '../shark-dilemma/dilemmasData';
 // loop traditionally renders the explainer card mid-stack; pulling it
 // out as its own chip keeps the visit order familiar (Yoav:
 // "לשמור על המיקום שלו לפי הסדר שכרגע בגרסה במאסטר").
+// R5.12 (2026-06-10): `post-video` retired as a chip per Yoav — the
+// celebration/fun Finn video now plays INLINE mid-quiz inside
+// LessonFlowScreen (`funVideoShownRef`), not as a standalone phase.
+// User rule: "כל הסרטוני פאן והדברים בלי ערך למידה, שיכנסו בין דברים
+// בתוך תת מודולה" — fun-only assets get embedded into another chip's
+// flow, not surfaced as their own chip.
 const CANONICAL_ORDER: TopicKind[] = [
   'intro',
   'cards',
@@ -28,7 +34,6 @@ const CANONICAL_ORDER: TopicKind[] = [
   'quiz',
   'sim',
   'infographic',
-  'post-video',
   'shark-dilemma',
 ];
 
@@ -42,7 +47,6 @@ const SIM_FIRST_ORDER: TopicKind[] = [
   'couple-dilemma',
   'quiz',
   'infographic',
-  'post-video',
   'shark-dilemma',
 ];
 
@@ -101,11 +105,10 @@ export function resolveTopics(module: Module, opts: ResolveTopicsOptions = {}): 
   if (module.coupleDilemma) present.set('couple-dilemma', true);
   if (module.quizzes?.length) present.set('quiz', true);
   if (module.simConcept) present.set('sim', true);
-  // Every module currently surfaces an infographic + post-celebration video,
-  // so they're unconditional — keep that until a flagged module turns out
-  // to legitimately lack one.
+  // Infographic stays unconditional — every module surfaces the concept
+  // illustration. `post-video` retired (see CANONICAL_ORDER comment above):
+  // the fun video plays mid-quiz now, no separate chip.
   present.set('infographic', true);
-  present.set('post-video', true);
   // Shark-dilemma surfaces only when the module has data in
   // src/features/shark-dilemma/dilemmasData.ts (mod-1-1 does).
   if (getDilemma(module.id)) present.set('shark-dilemma', true);

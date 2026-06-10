@@ -11,18 +11,18 @@ const ROW_HEIGHT = NODE_SIZE + 36;
 const WAVE_AMPLITUDE = 42;
 const WAVE_PERIOD = 6;
 // Vertical gap rendered above the first chip and below the last chip.
-// We fill it with a PathConnector so the trail visually continues from
-// the outer mod-1-1 node down INTO the chip column, and from the last
-// chip OUT to the next pearl.
-const EDGE_CONNECTOR_H = 96;
+// Kept tight so the transitions read as "natural continuation" rather
+// than dedicated trail segments (Yoav R5.12 2026-06-10: "החיבור בין
+// סוף המודולה לפנינה שאחריו תהיה קצרה יותר וטבעית. כנל בין כפתור
+// המודולה למה שבא אחריו"). Earlier R5.11 ran 96px+40px overlap which
+// felt like a separate trail; this halves both.
+const EDGE_CONNECTOR_H = 44;
 // Entry connector ALSO extends upward into the parent ModuleNode's
-// space. DuoLearnScreen doesn't render any trail between mod-1-1 and
-// the accordion — the outer PathConnector is drawn AFTER the accordion,
-// going to the NEXT module. So we draw the "down into the column"
-// trail ourselves, starting flush against mod-1-1's bottom edge so the
-// transition reads as one continuous path (Yoav R5.11 2026-06-10:
-// "תוודא שהאינטרו מתחבר כמו שצריך למודולה").
-const ENTRY_OVERLAP = 40;
+// space — DuoLearnScreen doesn't render any trail between mod-1-1 and
+// the accordion (its outer PathConnector goes AFTER the accordion to
+// the NEXT module). The overlap is JUST enough to kiss mod-1-1's
+// bottom edge so the transition reads as a short, natural step.
+const ENTRY_OVERLAP = 14;
 function pathOffset(i: number): number {
   return Math.round(Math.sin((i * 2 * Math.PI) / WAVE_PERIOD) * WAVE_AMPLITUDE);
 }
