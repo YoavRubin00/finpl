@@ -89,7 +89,7 @@ import { chapter5Data } from "../chapter-5-content/chapter5Data";
 import type { Module } from "../chapter-1-content/types";
 import { TopicTreeAccordion } from "../topic-learning/TopicTreeAccordion";
 import { useTopicProgressStore } from "../topic-learning/useTopicProgressStore";
-import { resolveTopics } from "../topic-learning/topicResolver";
+import { resolveTopics, shouldUseTopicTree } from "../topic-learning/topicResolver";
 import type { Topic, TopicKind } from "../topic-learning/types";
 
 import { tapHaptic, successHaptic } from "../../utils/haptics";
@@ -1695,7 +1695,12 @@ export function DuoLearnScreen() {
       // accordion opens (effect below handles the second leg).
       const ch = ALL_CHAPTERS.find((c) => c.id === chapterId);
       const mod = ch?.modules.find((m) => m.id === moduleId);
-      if (mod?.learningMode === 'topic-tree') {
+      // R6 Epic 1: topic-tree is now the DEFAULT (was opt-in via
+      // learningMode='topic-tree'). Modules explicitly mark
+      // learningMode='linear-flow' to fall back to legacy; modules with
+      // fewer than 2 resolvable topics also fall back automatically so
+      // we never surface an empty accordion.
+      if (mod && shouldUseTopicTree(mod)) {
         // Re-tap on the already-expanded module collapses.
         if (topicTreeModule?.module.id === moduleId) {
           setTopicTreeModule(null);

@@ -93,6 +93,18 @@ export interface ResolveTopicsOptions {
  * two sibling files (`types`, `topic-icons`). No data migration needed —
  * modules without the source field simply skip that topic.
  */
+/**
+ * Decide whether a module should render as a topic-tree accordion or
+ * fall through to the legacy LessonFlowScreen. R6 Epic 1 default is
+ * topic-tree for everything — `learningMode === 'linear-flow'` is the
+ * explicit opt-out. Modules with too few resolved topics (< 2) fall
+ * back so we never surface an empty accordion.
+ */
+export function shouldUseTopicTree(module: Module): boolean {
+  if (module.learningMode === 'linear-flow') return false;
+  return resolveTopics(module).length >= 2;
+}
+
 export function resolveTopics(module: Module, opts: ResolveTopicsOptions = {}): Topic[] {
   const simFirst = opts.simFirst ?? SIM_FIRST_MODULE_IDS.has(module.id);
   const order = simFirst ? SIM_FIRST_ORDER : CANONICAL_ORDER;
