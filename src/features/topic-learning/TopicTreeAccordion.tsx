@@ -129,7 +129,8 @@ export const TopicTreeAccordion = React.memo(function TopicTreeAccordion({
         />
 
         {/* 70%-threshold celebration. Real chest modal — chest opens on
-            tap, surfaces XP/coins, then offers two paths back. */}
+            tap, surfaces XP/coins, fires the wisdom quote popup, then
+            offers Double-or-Nothing before the CTAs unlock. */}
         <ChestCelebrationModal
           visible={showChest}
           xp={MODULE_TT_XP}
@@ -142,6 +143,16 @@ export const TopicTreeAccordion = React.memo(function TopicTreeAccordion({
             setShowChest(false);
             onAdvanceToNextModule?.();
             onModuleCompleted?.();
+          }}
+          onDoNResolve={(multiplier) => {
+            // multiplier: 0 = lost everything, 1 = kept base, 2 = doubled.
+            // Base coins were already credited in the threshold useEffect
+            // above — here we apply the delta on top.
+            if (multiplier === 2) {
+              economyStore.addCoins(MODULE_TT_COINS, 'lesson');
+            } else if (multiplier === 0) {
+              economyStore.addCoins(-MODULE_TT_COINS, 'lesson');
+            }
           }}
         />
       </View>

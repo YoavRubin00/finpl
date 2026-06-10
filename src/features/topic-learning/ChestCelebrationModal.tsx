@@ -17,8 +17,10 @@ import LottieView from 'lottie-react-native';
 import { ChevronLeft, Sparkles } from 'lucide-react-native';
 import { ConfettiExplosion } from '../../components/ui/ConfettiExplosion';
 import { GoldCoinIcon } from '../../components/ui/GoldCoinIcon';
+import { DoubleOrNothingModal } from '../../components/ui/DoubleOrNothingModal';
 import { doubleHeavyHaptic, successHaptic, tapHaptic } from '../../utils/haptics';
 import { useSoundEffect } from '../../hooks/useSoundEffect';
+import { useWisdomStore } from '../wisdom-flashes/useWisdomStore';
 
 const RTL = { writingDirection: 'rtl' as const, textAlign: 'right' as const };
 const RTL_CENTER = { writingDirection: 'rtl' as const, textAlign: 'center' as const };
@@ -31,6 +33,14 @@ interface ChestCelebrationModalProps {
   coins: number;
   onContinueModule: () => void;
   onAdvanceToNextModule: () => void;
+  /** Called after the user resolves the Double-or-Nothing prompt with
+   *  the multiplier (0 = lost, 1 = kept, 2 = doubled). Parent applies
+   *  the coin delta on top of the base reward. Optional — when not
+   *  provided, DoN is skipped. */
+  onDoNResolve?: (multiplier: number) => void;
+  /** Whether this chest is the FINAL 100% chest rather than the 70%
+   *  threshold one. Drives copy + reward visuals. R6 Epic 5. */
+  isFinale?: boolean;
 }
 
 /**
@@ -51,10 +61,24 @@ export function ChestCelebrationModal({
   coins,
   onContinueModule,
   onAdvanceToNextModule,
+  onDoNResolve,
+  isFinale = false,
 }: ChestCelebrationModalProps): React.ReactElement | null {
   const [opened, setOpened] = useState(false);
+  const [showDoN, setShowDoN] = useState(false);
+  const [donResolved, setDonResolved] = useState(false);
+  const [donMultiplier, setDonMultiplier] = useState(1);
   const lottieRef = useRef<LottieView>(null);
   const { playSound } = useSoundEffect();
+
+  // Wisdom flash hook — when chest opens we trigger a random quote from
+  // the global wisdom store. The popup component (WisdomPopupCard) is
+  // mounted at app root so showing it is a single setter call; we then
+  // listen for activeItem to flip back to null (user dismissed) and use
+  // that as the cue to launch the DoN modal.
+  const wisdomActive = useWisdomStore((s) => s.activeItem);
+  const wisdomFiredRef = useRef(false);
+  const prevWisdomActiveRef = useRef(false);
 
   // Chest animation shared values — mirrors LessonFlowScreen's
   // chestGlowScale / chestGlowOpacity / chestBodyScale rhythm.
@@ -97,8 +121,64 @@ export function ChestCelebrationModal({
 
   // Reset to "closed" state when modal toggles off.
   useEffect(() => {
-    if (!visible) setOpened(false);
+    if (!visible) {
+      setOpened(false);
+      setShowDoN(false);
+      setDonResolved(false);
+      setDonMultiplier(1);
+      wisdomFiredRef.current = false;
+      prevWisdomActiveRef.current = false;
+    }
   }, [visible]);
+
+  // Trigger the wisdom popup ~1.5s after the chest opens so the reward
+  // pills land first, then the quote takes the spotlight. The popup is
+  // a global overlay (mounted in _layout.tsx) so we just call into the
+  // store — it appears over the chest modal.
+  useEffect(() => {
+    if (!opened || wisdomFiredRef.current) return;
+    wisdomFiredRef.current = true;
+    const t1 = setTimeout(() => {
+      useWisdomStore.getState().showRandomWisdom();
+    }, 1500);
+    // Safety fallback: if the wisdom popup never appears (or the user
+    // mutes it via the store), force DoN to surface after 6s so the
+    // CTAs aren't blocked forever.
+    const t2 = setTimeout(() => {
+      if (!useWisdomStore.getState().activeItem && !donResolved) {
+        setShowDoN((prev) => prev || (onDoNResolve ? true : false));
+        if (!onDoNResolve) setDonResolved(true);
+      }
+    }, 6000);
+    return () => {
+      clearTimeout(t1);
+      clearTimeout(t2);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [opened]);
+
+  // Bridge: wisdom dismiss → DoN open. We watch activeItem; the moment
+  // it flips from non-null → null AFTER the user saw the quote, we
+  // launch the Double-or-Nothing modal (skip if parent didn't wire it).
+  useEffect(() => {
+    const isActive = wisdomActive !== null;
+    const justDismissed = prevWisdomActiveRef.current && !isActive;
+    prevWisdomActiveRef.current = isActive;
+    if (!justDismissed) return;
+    if (!wisdomFiredRef.current || donResolved) return;
+    if (onDoNResolve) {
+      setShowDoN(true);
+    } else {
+      setDonResolved(true);
+    }
+  }, [wisdomActive, donResolved, onDoNResolve]);
+
+  const handleDoNResolve = useCallback((multiplier: number) => {
+    setShowDoN(false);
+    setDonResolved(true);
+    setDonMultiplier(multiplier);
+    onDoNResolve?.(multiplier);
+  }, [onDoNResolve]);
 
   const glowStyle = useAnimatedStyle(() => ({
     transform: [{ scale: glowScale.value }],
@@ -146,10 +226,12 @@ export function ChestCelebrationModal({
           {/* Heading */}
           <Animated.View entering={FadeInUp.duration(360)} style={styles.headingWrap}>
             <Text style={[styles.heading, RTL_CENTER]} allowFontScaling={false}>
-              כל הכבוד! 🎉
+              {isFinale ? 'מסטר! 🏆' : 'כל הכבוד! 🎉'}
             </Text>
             <Text style={[styles.subheading, RTL_CENTER]} allowFontScaling={false}>
-              סיימת 70% מהמודולה. הגיע הזמן לפרס.
+              {isFinale
+                ? 'סיימת את כל הרכיבים. תיבת המאסטר נפתחת.'
+                : 'סיימת 70% מהמודולה. הגיע הזמן לפרס.'}
             </Text>
           </Animated.View>
 
@@ -197,16 +279,24 @@ export function ChestCelebrationModal({
                   <View style={styles.rewardPill}>
                     <GoldCoinIcon size={22} />
                     <Text style={styles.rewardValue} allowFontScaling={false}>
-                      {`+${coins}`}
+                      {donResolved && donMultiplier !== 1
+                        ? `+${coins * donMultiplier}`
+                        : `+${coins}`}
                     </Text>
+                    {donResolved && donMultiplier === 2 && (
+                      <Text style={styles.multiplierBadge} allowFontScaling={false}>×2</Text>
+                    )}
+                    {donResolved && donMultiplier === 0 && (
+                      <Text style={styles.multiplierBadgeLost} allowFontScaling={false}>×0</Text>
+                    )}
                   </View>
                 </View>
               </Animated.View>
             )}
           </View>
 
-          {/* CTAs — only after the chest is opened */}
-          {opened && (
+          {/* CTAs — only after the chest is opened AND wisdom+DoN finished */}
+          {opened && donResolved && (
             <Animated.View entering={FadeIn.delay(300).duration(400)} style={styles.ctaWrap}>
               <Pressable
                 onPress={handleAdvance}
@@ -232,6 +322,15 @@ export function ChestCelebrationModal({
             </Animated.View>
           )}
         </SafeAreaView>
+
+        {/* Double-or-Nothing sub-modal. Fires after the wisdom popup is
+            dismissed (see effect above). On resolve we apply the
+            multiplier to the displayed reward, then the CTAs unlock. */}
+        <DoubleOrNothingModal
+          visible={showDoN}
+          rewards={{ coins, xp, gems: 0 }}
+          onResolve={handleDoNResolve}
+        />
       </View>
     </Modal>
   );
@@ -331,6 +430,26 @@ const styles = StyleSheet.create({
     fontSize: 17,
     fontWeight: '900',
     color: '#0c4a6e',
+  },
+  multiplierBadge: {
+    fontSize: 13,
+    fontWeight: '900',
+    color: '#15803d',
+    backgroundColor: '#bbf7d0',
+    borderRadius: 6,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    marginLeft: 4,
+  },
+  multiplierBadgeLost: {
+    fontSize: 13,
+    fontWeight: '900',
+    color: '#991b1b',
+    backgroundColor: '#fecaca',
+    borderRadius: 6,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    marginLeft: 4,
   },
   ctaWrap: {
     gap: 10,

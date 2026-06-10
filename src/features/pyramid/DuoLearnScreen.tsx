@@ -831,6 +831,7 @@ const ChapterSection = React.memo(function ChapterSection({
   onLockedPress,
   friendsOnModule,
   onSkipIntro,
+  onJumpHere,
   onChapterPress,
   onMindMap,
   easterEggNodeId,
@@ -848,6 +849,7 @@ const ChapterSection = React.memo(function ChapterSection({
   onTopicTreeModuleCompleted,
   onTopicTreeContinueAfterChest,
   onTopicTreeAdvanceToNextModule,
+  onPearlReady,
 }: {
   arena: ArenaConfig;
   chapter: typeof chapter1Data;
@@ -860,6 +862,9 @@ const ChapterSection = React.memo(function ChapterSection({
   onLockedPress: () => void;
   friendsOnModule: Record<string, string[]>;
   onSkipIntro?: () => void;
+  /** Duolingo-style "JUMP HERE?" — shown only on chapters the user hasn't
+   *  started. Jumps straight into the chapter (ch-1 free for all; ch-2+ PRO). */
+  onJumpHere?: () => void;
   onChapterPress?: () => void;
   onMindMap?: () => void;
   easterEggNodeId?: string | null;
@@ -909,6 +914,10 @@ const ChapterSection = React.memo(function ChapterSection({
   /** Navigate to the next module in the same chapter — wired by the
    *  chest's "לשיעור הבא בפרק" CTA. */
   onTopicTreeAdvanceToNextModule?: () => void;
+  /** Registers (or clears) a View ref for the bonus pearl that sits
+   *  AFTER the given module. Parent uses this to measure + scroll-to
+   *  the pearl when the chest dismisses (R6 Epic 4). */
+  onPearlReady?: (moduleId: string, ref: View | null) => void;
 }) {
   const firstIncompleteIndex = chapter.modules.findIndex(
     (m) => !completedModules.includes(m.id) && !m.comingSoon && (isPro || !PRO_LOCKED_SIMS.has(m.id)),
@@ -952,6 +961,36 @@ const ChapterSection = React.memo(function ChapterSection({
           </View>
           <Text style={{ fontFamily: 'Heebo_500Medium', color: '#1d4ed8', fontSize: 12 }}>כבר יש לי בסיס, דלג לפרק 1</Text>
           <FastForward size={13} color="#1d4ed8" />
+        </AnimatedPressable>
+      )}
+
+      {/* Duolingo-style "JUMP HERE?" — blue pill above the chapter's first
+          module, shown only on chapters the user hasn't started (wired by the
+          parent). Tapping jumps into the chapter (ch-1 free; ch-2+ PRO). */}
+      {onJumpHere && (
+        <AnimatedPressable
+          onPress={onJumpHere}
+          style={{
+            alignSelf: 'center',
+            marginTop: 16,
+            marginBottom: 28,
+            paddingHorizontal: 18,
+            paddingVertical: 8,
+            backgroundColor: '#1d4ed8',
+            borderRadius: 22,
+            flexDirection: 'row-reverse',
+            alignItems: 'center',
+            gap: 6,
+            shadowColor: '#1d4ed8',
+            shadowOpacity: 0.3,
+            shadowRadius: 8,
+            elevation: 3,
+          }}
+          accessibilityRole="button"
+          accessibilityLabel={`נתחיל מפה? קפיצה לפרק ${sectionIndex}`}
+        >
+          <Text style={{ fontFamily: 'Heebo_700Bold', color: '#ffffff', fontSize: 13 }}>נתחיל מפה?</Text>
+          <FastForward size={14} color="#ffffff" />
         </AnimatedPressable>
       )}
 
@@ -1112,7 +1151,10 @@ const ChapterSection = React.memo(function ChapterSection({
                         connectors so the total row height shrinks ~32px,
                         eliminating the dead band the user reported between
                         the active module and the next pearl. */}
-                    <View style={{ alignItems: 'center', marginTop: -18, marginBottom: -18, zIndex: 2 }}>
+                    <View
+                      ref={(r) => onPearlReady?.(module.id, r)}
+                      style={{ alignItems: 'center', marginTop: -18, marginBottom: -18, zIndex: 2 }}
+                    >
                       <PearlNode
                         state={pearlState}
                         offsetX={pearlOffsetX}
@@ -1419,6 +1461,15 @@ export function DuoLearnScreen() {
   const scrollRef = useRef<ScrollView>(null);
   const [refreshKey, setRefreshKey] = useState(0);
   const isFirstMount = useRef(true);
+  // R6 Epic 4: live scroll Y + per-pearl View refs. Lets the chest
+  // dismiss handler measure the next-pearl's window position then
+  // center it on screen, matching Yoav's brief ("הפנינה במרכז המסך").
+  const scrollYRef = useRef(0);
+  const pearlRefsMap = useRef<Map<string, View | null>>(new Map());
+  const registerPearlRef = useCallback((moduleId: string, ref: View | null) => {
+    if (ref) pearlRefsMap.current.set(moduleId, ref);
+    else pearlRefsMap.current.delete(moduleId);
+  }, []);
 
   const setCurrentChapter = useChapterUIStore((s) => s.setCurrentChapter);
   const setCurrentModule = useChapterUIStore((s) => s.setCurrentModule);
@@ -1768,12 +1819,24 @@ export function DuoLearnScreen() {
     );
   }, [topicTreeModule, router]);
 
-  // Chest CTA: "המשך עם המודולה" — close chest, keep accordion open
-  // so the user can finish the remaining 30% of topics manually.
+  // Chest CTA: "המשך עם המודולה" — close chest, keep accordion open,
+  // and scroll so the NEXT pearl lands in the vertical center of the
+  // viewport (Yoav R6 Epic 4: "במרכז המסך הפנינה אחרי המודולה, שכל
+  // מפת הלמידה של המודולה שסיימתי עדין פתוחה").
   const handleTopicTreeContinueAfterChest = useCallback(() => {
-    // No state change here — the modal closes itself; accordion stays
-    // open because topicTreeModule didn't change.
-  }, []);
+    const current = topicTreeModule;
+    if (!current) return;
+    const ref = pearlRefsMap.current.get(current.module.id);
+    if (!ref) return;
+    const { height: windowH } = Dimensions.get('window');
+    // measure() returns window-relative coords. Translate to scroll
+    // content Y by adding the current scroll offset; subtract half the
+    // viewport so the pearl ends up centered.
+    ref.measure((_x, _y, _w, h, _pageX, pageY) => {
+      const targetY = scrollYRef.current + pageY - windowH / 2 + h / 2;
+      scrollRef.current?.scrollTo({ y: Math.max(0, targetY), animated: true });
+    });
+  }, [topicTreeModule]);
 
   // Chest CTA: "לשיעור הבא בפרק" — close accordion AND route to the
   // next module in this chapter via the legacy LessonFlowScreen.
@@ -1849,6 +1912,22 @@ export function DuoLearnScreen() {
   }, [upsertProgress, setCurrentChapter, setCurrentModule, isGuest]);
 
   // Stable callbacks for ChapterSection (avoids inline arrow re-creation per render)
+  // Duolingo-style "JUMP HERE?" — wired to the blue button on not-yet-started
+  // chapters. Chapter 1 is the free taster (reuses handleSkipIntro: marks ch-0
+  // complete → unlocks ch-1 → routes to mod-1-1). Chapters 2+ are PRO: free
+  // users hit the paywall; PRO users (all chapters already unlocked) jump
+  // straight into the chapter's first module.
+  const handleJumpHere = useCallback(
+    (jumpChapter: typeof chapter1Data, idx: number) => {
+      tapHaptic();
+      try { captureEvent('jump_here_clicked', { chapter_id: jumpChapter.id, chapter_index: idx, is_pro: isPro }); } catch { /* non-fatal */ }
+      if (idx === 1) { handleSkipIntro(); return; }
+      if (!isPro) { router.push('/pricing' as never); return; }
+      router.push(`/lesson/${jumpChapter.modules[0].id}?chapterId=${jumpChapter.id}` as never);
+    },
+    [isPro, handleSkipIntro],
+  );
+
   const handleLockedPress = useCallback(() => setLockedModalVisible(true), []);
   const handleRoadmapPress = useCallback(() => setRoadmapVisible(true), []);
   const handleQuestPress = useCallback(() => setQuestSheetVisible(true), []);
@@ -2030,6 +2109,7 @@ export function DuoLearnScreen() {
           style={styles.scrollView}
           onScroll={(e) => {
             const y = e.nativeEvent.contentOffset.y;
+            scrollYRef.current = y;
             setHasScrolledDown(y > 400);
           }}
           scrollEventThrottle={100}
@@ -2114,6 +2194,11 @@ export function DuoLearnScreen() {
                 easterEggNodeId={easterEggNodeId}
                 onClaimEasterEgg={handleClaimEasterEgg}
                 onSkipIntro={idx === 0 ? handleSkipIntro : undefined}
+                onJumpHere={
+                  idx >= 1 && completedModules.length === 0 && !hasActiveModule
+                    ? () => handleJumpHere(chapter, idx)
+                    : undefined
+                }
                 onChapterPress={handleRoadmapPress}
                 onMindMap={() => handleMindMap(idx)}
                 isGlobalActiveChapter={hasActiveModule}
@@ -2135,6 +2220,7 @@ export function DuoLearnScreen() {
                 onTopicTreeModuleCompleted={handleModuleCompletedFromTree}
                 onTopicTreeContinueAfterChest={handleTopicTreeContinueAfterChest}
                 onTopicTreeAdvanceToNextModule={handleTopicTreeAdvanceToNextModule}
+                onPearlReady={registerPearlRef}
               />
             );
 
