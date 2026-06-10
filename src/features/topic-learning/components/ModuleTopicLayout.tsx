@@ -1,7 +1,6 @@
 import React, { useMemo } from 'react';
 import { View, StyleSheet, Dimensions } from 'react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
-import { GrowingTree } from './GrowingTree';
 import { TopicChip } from './TopicChip';
 import type { Topic } from '../types';
 
@@ -27,7 +26,9 @@ interface ModuleTopicLayoutProps {
   topics: Topic[];
   isCompletedMap: Record<string, boolean>;
   recommendedTopicId?: string | null;
-  progressPct: number;
+  /** Retained for API stability — the GrowingTree it used to drive was
+   *  retired in R5.10 per Yoav ("תוריד בבקשה את העץ, הוא לא מתאים"). */
+  progressPct?: number;
   onTopicPress: (topic: Topic) => void;
 }
 
@@ -51,7 +52,6 @@ interface ModuleTopicLayoutProps {
 export const ModuleTopicLayout = React.memo(function ModuleTopicLayout({
   topics,
   isCompletedMap,
-  progressPct,
   onTopicPress,
 }: ModuleTopicLayoutProps): React.ReactElement {
   const sorted = useMemo(
@@ -67,12 +67,6 @@ export const ModuleTopicLayout = React.memo(function ModuleTopicLayout({
 
   return (
     <View style={[styles.container, { height: totalHeight }]}>
-      {/* Tree — small + tucked in the top-right corner so it never
-          eats a chip slot. */}
-      <View style={styles.treeWrap} pointerEvents="none">
-        <GrowingTree progressPct={progressPct} size={100} />
-      </View>
-
       {/* Entry connector — from outer mod-1-1 node into the chip column. */}
       <View style={[styles.entryConnectorSlot, { height: EDGE_CONNECTOR_H }]} pointerEvents="none">
         <PathConnector
@@ -247,18 +241,6 @@ const styles = StyleSheet.create({
     position: 'relative',
     alignItems: 'center',
     justifyContent: 'flex-start',
-  },
-  // Tree only in the top-right corner — never crosses below the first
-  // chip row, so it can't overlap any button.
-  treeWrap: {
-    position: 'absolute',
-    right: 4,
-    top: EDGE_CONNECTOR_H - 10,
-    width: 140,
-    height: 140,
-    alignItems: 'center',
-    justifyContent: 'center',
-    zIndex: 0,
   },
   entryConnectorSlot: {
     position: 'absolute',
