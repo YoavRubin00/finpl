@@ -138,9 +138,29 @@ export function resolveTopics(module: Module, opts: ResolveTopicsOptions = {}): 
   // src/features/shark-dilemma/dilemmasData.ts (mod-1-1 does).
   if (getDilemma(module.id)) present.set('shark-dilemma', true);
 
+  // Chat surfaces on every module (Yoav R6 2026-06-10) — gated only on
+  // the topic-tree having any other content at all. Single source of
+  // truth for "module has tree" + "chat is always there".
+  if (present.size > 0) present.set('chat', true);
+
   const out: Topic[] = [];
   order.forEach((kind, idx) => {
+    // `chat` is positioned by the post-process below — skip it in the
+    // ordered pass so it doesn't double up.
+    if (kind === 'chat') return;
     if (present.get(kind)) out.push(buildTopic(kind, module.id, idx));
   });
+
+  // R6 — pin `chat` to the second-to-last slot, regardless of which
+  // other kinds survived. Yoav: "שהצאט תמיד יהיה אחד לפני אחרון
+  // במפת למידה היעודית של כל מודולה". Re-stamps defaultOrder on all
+  // following chips so the sort downstream stays stable.
+  if (present.get('chat') && out.length >= 1) {
+    const insertAt = Math.max(0, out.length - 1);
+    const chatTopic = buildTopic('chat', module.id, insertAt);
+    out.splice(insertAt, 0, chatTopic);
+    out.forEach((t, i) => { t.defaultOrder = i; });
+  }
+
   return out;
 }

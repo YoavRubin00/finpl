@@ -90,6 +90,8 @@ import type { Module } from "../chapter-1-content/types";
 import { TopicTreeAccordion } from "../topic-learning/TopicTreeAccordion";
 import { useTopicProgressStore } from "../topic-learning/useTopicProgressStore";
 import { resolveTopics, shouldUseTopicTree } from "../topic-learning/topicResolver";
+import { useTopicChatStore } from "../topic-learning/useTopicChatStore";
+import { getModuleChatFAQs } from "../topic-learning/moduleChatFAQs";
 import type { Topic, TopicKind } from "../topic-learning/types";
 
 import { tapHaptic, successHaptic } from "../../utils/haptics";
@@ -1798,6 +1800,24 @@ export function DuoLearnScreen() {
     // only surfaces for modules curated in `moduleGameMap`, and tapping
     // is a no-op (no module is curated yet).
     if (topic.kind === 'game') return;
+    // R6 Hotfix B: 'chat' chip stashes the module-scoped FAQ preset in
+    // the topic-chat store, then routes to the main /chat screen. The
+    // ChatScreen surfaces the preset as its initial suggestion strip
+    // and clears it on first send.
+    if (topic.kind === 'chat') {
+      const faqs = getModuleChatFAQs(current.module.id) ?? [];
+      if (faqs.length > 0) {
+        useTopicChatStore.getState().setPreset({
+          moduleId: current.module.id,
+          moduleTitle: current.module.title ?? '',
+          questions: faqs,
+        });
+      } else {
+        useTopicChatStore.getState().clear();
+      }
+      router.push('/(tabs)/chat' as never);
+      return;
+    }
     const phaseForKind: Record<string, string> = {
       'intro': 'intro',
       'cards': 'flashcards',

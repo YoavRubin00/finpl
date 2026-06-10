@@ -139,6 +139,59 @@ export const SVG_GAME = `<svg xmlns="http://www.w3.org/2000/svg" width="96" heig
   <ellipse cx="20" cy="14" rx="11" ry="6" fill="#fff" opacity="0.18"></ellipse>
 </svg>`;
 
+// Custom — not part of the Design System pack. Designed inline R6
+// 2026-06-10 to give the shark-dilemma chip its "weigh the choice"
+// metaphor (Yoav: "אולי כמו מאזניים כאלה בשפה העיצובית הזאת"). The
+// orange palette echoes scenario.svg so the two dilemma-class chips
+// read as a family without being identical.
+export const SVG_SCALES = `<svg xmlns="http://www.w3.org/2000/svg" width="96" height="96" viewBox="0 0 48 48">
+  <defs>
+    <linearGradient id="g_scales" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#ffc98a"></stop><stop offset="0.5" stop-color="#ff9330"></stop><stop offset="1" stop-color="#ef7410"></stop>
+    </linearGradient>
+    <filter id="s_scales" x="-30%" y="-30%" width="160%" height="160%">
+      <feDropShadow dx="0" dy="1.5" stdDeviation="1.2" flood-color="#9e4708" flood-opacity="0.34"></feDropShadow>
+    </filter>
+  </defs>
+  <g filter="url(#s_scales)">
+    <rect x="22.5" y="11" width="3" height="28" rx="1.5" fill="#ef7410"></rect>
+    <circle cx="24" cy="10" r="2.6" fill="#ef7410"></circle>
+    <rect x="10" y="13" width="28" height="2.6" rx="1.3" fill="#ef7410"></rect>
+    <line x1="14" y1="15" x2="14" y2="21" stroke="#ef7410" stroke-width="1.6" stroke-linecap="round"></line>
+    <line x1="34" y1="15" x2="34" y2="21" stroke="#ef7410" stroke-width="1.6" stroke-linecap="round"></line>
+    <path d="M9 21 L19 21 L17 27 a3 3 0 0 1-3 1.6 a3 3 0 0 1-3-1.6 Z" fill="url(#g_scales)"></path>
+    <path d="M29 21 L39 21 L37 27 a3 3 0 0 1-3 1.6 a3 3 0 0 1-3-1.6 Z" fill="url(#g_scales)"></path>
+    <ellipse cx="14" cy="21" rx="5" ry="1.4" fill="rgba(255,255,255,0.4)"></ellipse>
+    <ellipse cx="34" cy="21" rx="5" ry="1.4" fill="rgba(255,255,255,0.4)"></ellipse>
+    <rect x="16" y="38" width="16" height="3" rx="1.4" fill="#ef7410"></rect>
+  </g>
+  <ellipse cx="20" cy="14" rx="11" ry="6" fill="#fff" opacity="0.18"></ellipse>
+</svg>`;
+
+// Speech-bubble chat icon — paired with TopicKind 'chat' so every
+// module surfaces an "ask the teacher" chip. Teal-cyan palette so it
+// stands apart from cards (blue) and brain (pink) which already live
+// in the column. Yoav R6 2026-06-10: "צאט עם האייקון של הצאט".
+export const SVG_CHAT = `<svg xmlns="http://www.w3.org/2000/svg" width="96" height="96" viewBox="0 0 48 48">
+  <defs>
+    <linearGradient id="g_chat" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#a2f0e3"></stop><stop offset="0.5" stop-color="#34d4be"></stop><stop offset="1" stop-color="#0fb19a"></stop>
+    </linearGradient>
+    <filter id="s_chat" x="-30%" y="-30%" width="160%" height="160%">
+      <feDropShadow dx="0" dy="1.5" stdDeviation="1.2" flood-color="#085f54" flood-opacity="0.34"></feDropShadow>
+    </filter>
+  </defs>
+  <g filter="url(#s_chat)">
+    <path d="M9 14 a4 4 0 0 1 4-4 h22 a4 4 0 0 1 4 4 v15 a4 4 0 0 1-4 4 H21 l-7 6 v-6 H13 a4 4 0 0 1-4-4 Z" fill="url(#g_chat)"></path>
+    <g fill="rgba(255,255,255,0.95)">
+      <circle cx="17" cy="21" r="2.2"></circle>
+      <circle cx="24" cy="21" r="2.2"></circle>
+      <circle cx="31" cy="21" r="2.2"></circle>
+    </g>
+  </g>
+  <ellipse cx="20" cy="14" rx="11" ry="6" fill="#fff" opacity="0.18"></ellipse>
+</svg>`;
+
 // Custom — not part of the Design System pack. Designed inline R5.14
 // 2026-06-10 to distinguish the sandbox/sim chip from the scored
 // short-game chip (both used to share the gamepad glyph). Green palette

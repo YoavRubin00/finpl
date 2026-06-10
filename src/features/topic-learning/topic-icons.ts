@@ -12,6 +12,8 @@ import {
   SVG_TIP,
   SVG_GAME,
   SVG_LESSON,
+  SVG_SCALES,
+  SVG_CHAT,
 } from './topicSvgs';
 
 /**
@@ -52,8 +54,15 @@ export const TOPIC_ICONS: Record<TopicKind, TopicIconAsset> = {
   'infographic': { svgXml: SVG_TIP },
   // Purple controller — retained for legacy `post-video` references.
   'post-video': { svgXml: SVG_GAME },
-  // Blue document — Captain Shark's brief / advisory scenario.
-  'shark-dilemma': { svgXml: SVG_LESSON },
+  // R6 — orange scales replacing the blue document. Yoav 2026-06-10:
+  // "צריך להחליף את הסמל של הסרטון דילמה. צריך להיות אולי כמו מאזניים
+  // כאלה בשפה העיצובית הזאת". Echoes scenario.svg's palette so the two
+  // dilemma chips read as a family.
+  'shark-dilemma': { svgXml: SVG_SCALES },
+  // R6 — teal speech bubble for the "ask the teacher" chat chip. Pinned
+  // second-to-last in every module's order by the resolver so it always
+  // lands right before shark-dilemma.
+  'chat': { svgXml: SVG_CHAT },
 };
 
 /** Hebrew label shown on the chip. Singular, gender-neutral per BRAND.md. */
@@ -70,4 +79,5 @@ export const TOPIC_LABELS: Record<TopicKind, string> = {
   'infographic': 'אינפוגרפיקה',
   'post-video': 'סרטון סיכום',
   'shark-dilemma': 'דילמה',
+  'chat': 'צ׳אט',
 };

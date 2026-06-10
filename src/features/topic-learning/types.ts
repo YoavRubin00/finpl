@@ -30,6 +30,12 @@ export type TopicKind =
   | 'quiz'
   | 'infographic'
   | 'post-video'
+  /** R6 2026-06-10 — every module gets a chat chip wired to the main
+   *  ChatScreen with topic-scoped preset questions (Yoav: "צאט עם
+   *  המורה... החווית משתמש תהיה כמו של הצאט הראשי"). The resolver
+   *  pins this kind to the second-to-last slot of every module's order
+   *  so it always lands right before shark-dilemma / sim-late. */
+  | 'chat'
   /** Shark-dilemma — Captain Shark "what would you do?" prompt that
    *  fires after the post-video celebration in the legacy flow. Surfaces
    *  here as its own chip because the data backing it (dilemmasData)
