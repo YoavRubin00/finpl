@@ -1,7 +1,9 @@
 import React, { useMemo } from 'react';
 import { View, StyleSheet, Dimensions } from 'react-native';
-import Animated, { FadeInDown } from 'react-native-reanimated';
+import { Image as ExpoImage } from 'expo-image';
+import Animated, { FadeInDown, useReducedMotion } from 'react-native-reanimated';
 import { TopicChip } from './TopicChip';
+import { scenesForModule } from '../pathScenes';
 import type { Topic } from '../types';
 
 const SCREEN_W = Dimensions.get('window').width;
@@ -10,6 +12,15 @@ const NODE_SIZE = 78;
 const ROW_HEIGHT = NODE_SIZE + 36;
 const WAVE_AMPLITUDE = 42;
 const WAVE_PERIOD = 6;
+// Decorative Shark+Daisy loops in the side gutters (Duolingo-style). Sized so
+// the full loop stays ON-screen flush to the edge — NO off-screen bleed (Yoav
+// 2026-06-10: "יצא חתוך"). The WebP already has transparent padding around the
+// characters, so flush-to-edge reads as a comfortable gutter inset.
+const SCENE_SIZE = 110;
+// Exactly TWO scenes per module (Yoav 2026-06-10: "2 וובפים ולא 5"): a themed
+// loop + a generic loop, anchored near these fractions of the column height —
+// one in the upper third, one in the lower third.
+const SCENE_ANCHOR_FRACTIONS = [0.3, 0.72] as const;
 // Vertical gap rendered above the first chip and below the last chip.
 // Kept tight so the transitions read as "natural continuation" rather
 // than dedicated trail segments (Yoav R5.12 2026-06-10: "החיבור בין
@@ -68,6 +79,7 @@ interface ModuleTopicLayoutProps {
 export const ModuleTopicLayout = React.memo(function ModuleTopicLayout({
   topics,
   isCompletedMap,
+  recommendedTopicId,
   onTopicPress,
 }: ModuleTopicLayoutProps): React.ReactElement {
   const sorted = useMemo(
@@ -85,8 +97,68 @@ export const ModuleTopicLayout = React.memo(function ModuleTopicLayout({
   const lastCompleted =
     sorted.length > 0 && Boolean(isCompletedMap[sorted[sorted.length - 1].id]);
 
+  // Decorative side-gutter character loops (Duolingo-style). Distributed down
+  // the column, alternating sides, anchored to chip rows but placed on the
+  // gutter OPPOSITE the chip's lean for max clearance. Suppressed entirely
+  // under reduced-motion (pure decoration). No-ops while PATH_SCENES is empty.
+  const reduceMotion = useReducedMotion();
+  const moduleId = sorted[0]?.moduleId;
+  const scenes = useMemo(() => {
+    const n = sorted.length;
+    if (reduceMotion || n < 2) return [];
+    const [themed, generic] = scenesForModule(moduleId);
+    const pair = [themed, generic];
+
+    // Place the first scene on the gutter OPPOSITE its row's chip lean (max
+    // clearance from the button); force the second scene to the OPPOSITE
+    // gutter so the two loops can never overlap each other.
+    const rowFor = (frac: number) => Math.max(0, Math.min(n - 1, Math.round(n * frac)));
+    const r0 = rowFor(SCENE_ANCHOR_FRACTIONS[0]);
+    const lean0 = endAlignedOffset(r0, n);
+    const side0: 'left' | 'right' = lean0 > 0 ? 'left' : 'right';
+    const side1: 'left' | 'right' = side0 === 'left' ? 'right' : 'left';
+    const sides = [side0, side1] as const;
+
+    return pair.map((scene, idx) => {
+      const anchorRow = rowFor(SCENE_ANCHOR_FRACTIONS[idx]);
+      const rowCenter = EDGE_CONNECTOR_H + anchorRow * ROW_HEIGHT + ROW_HEIGHT / 2;
+      return {
+        id: scene.id,
+        source: scene.source,
+        top: rowCenter - SCENE_SIZE / 2,
+        side: sides[idx],
+        // Flush to the edge (no off-screen bleed) so the loop is never cut.
+        offset: 0,
+      };
+    });
+  }, [sorted.length, moduleId, reduceMotion]);
+
   return (
     <View style={[styles.container, { height: totalHeight }]}>
+      {/* Decorative Shark+Daisy loops in the side gutters. First child +
+          pointerEvents="none" so they paint behind the chips and never
+          intercept a tap. Looping is handled by the animated WebP itself. */}
+      {scenes.length > 0 && (
+        <View style={StyleSheet.absoluteFill} pointerEvents="none">
+          {scenes.map((s) => (
+            <ExpoImage
+              key={s.id}
+              source={s.source}
+              accessible={false}
+              contentFit="contain"
+              style={{
+                position: 'absolute',
+                top: s.top,
+                width: SCENE_SIZE,
+                height: SCENE_SIZE,
+                zIndex: 0,
+                ...(s.side === 'right' ? { right: s.offset } : { left: s.offset }),
+              }}
+            />
+          ))}
+        </View>
+      )}
+
       {/* Entry connector — from outer mod-1-1 node into the chip column.
           Extends UPWARD by ENTRY_OVERLAP so it overlaps the parent
           ModuleNode's bottom edge, killing the visual gap that earlier
@@ -140,7 +212,9 @@ export const ModuleTopicLayout = React.memo(function ModuleTopicLayout({
                 <TopicChip
                   topic={topic}
                   completed={isCompleted}
-                  recommended={false}
+                  recommended={
+                    !isCompleted && recommendedTopicId === topic.id
+                  }
                   onPress={onTopicPress}
                 />
               </View>

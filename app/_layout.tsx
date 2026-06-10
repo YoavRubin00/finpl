@@ -537,12 +537,18 @@ function RootLayoutInner() {
       // guests who want to upgrade to a real account.
       const onAuthOnboarding = inAuthGroup && (segments as string[])[1] === "onboarding";
       if (onAuthOnboarding) {
-        // First-time completion: drop directly into mod-0-1 (matches the
-        // intent of handleDone in ProfilingFlow). Returning user that already
-        // finished mod-0-1 → land on the learn map as before.
-        // Without this branch, this effect can race ProfilingFlow's own
-        // router.replace and override it with "/(tabs)".
-        const target = isMod01Complete ? "/(tabs)" : "/lesson/mod-0-1?chapterId=chapter-0";
+        // First-time completion: drop directly into mod-0-1 INTRO under
+        // topic-tree mode. R7 Epic B1 — after the intro finishes,
+        // LessonFlowScreen.replace ('returnTo=topic-tree') bounces the
+        // user to /(tabs)/learn with the mod-0-1 accordion expanded so
+        // they can see the cards chip glowing as the recommended next
+        // step (Yoav: "לאחר האונבורדינג... מובל לאינטרו... לאחר מכן
+        // נפתח לו מפת הלמידה של המודולה, שכרטיסיות הלמידה זוהרות").
+        // Returning user that already finished mod-0-1 → land on the
+        // learn map as before.
+        const target = isMod01Complete
+          ? "/(tabs)"
+          : "/lesson/mod-0-1?chapterId=chapter-0&startPhase=intro&returnTo=topic-tree";
         router.replace(target as never);
       } else if (!inTabsGroup && !inContentRoute && !inAuthGroup) {
         router.replace("/(tabs)");

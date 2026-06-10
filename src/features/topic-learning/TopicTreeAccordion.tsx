@@ -1,12 +1,17 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { View } from 'react-native';
+import { useRouter } from 'expo-router';
 import Animated, { FadeIn, FadeOut } from 'react-native-reanimated';
 import { successHaptic } from '../../utils/haptics';
 import { useSoundEffect } from '../../hooks/useSoundEffect';
 import { useUpsertModuleProgress } from '../chapter-1-content/useProgress';
 import { ChestCelebrationModal } from './ChestCelebrationModal';
+import { Mod01WalkthroughPromptModal } from './Mod01WalkthroughPromptModal';
 import { useCompletedModulesStore } from '../economy/useCompletedModulesStore';
 import { useEconomyUIStore } from '../economy/useEconomyUIStore';
+import { useTutorialStore } from '../../stores/useTutorialStore';
+import { useAuthStore } from '../auth/useAuthStore';
+import { useIsPro } from '../subscription/useSubscription';
 import type { Module } from '../chapter-1-content/types';
 import type { Topic } from './types';
 import { resolveTopics } from './topicResolver';
@@ -154,6 +159,52 @@ export const TopicTreeAccordion = React.memo(function TopicTreeAccordion({
     setChestState({ xp: MASTER_TT_XP, coins: coinsGranted, isFinale: true });
   }, [summary.pct, module.id, economyStore, playSound]);
 
+  // R7 Epic B3: mod-0-1-only walkthrough prompt. Fires the first time
+  // the user crosses ~30% of mod-0-1 (intro + cards + one more chip),
+  // and only if they've never seen the AppWalkthrough. Yoav: "לאחר
+  // ביצוע של עוד רכבי ב-0-1, יפתח לו קריאה לבצע את ההיכרות עם
+  // האפליקציה, או להמשיך ללמוד".
+  const router = useRouter();
+  const hasSeenAppWalkthrough = useTutorialStore((s) => s.hasSeenAppWalkthrough);
+  const triggerWalkthrough = useTutorialStore((s) => s.triggerWalkthrough);
+  const completeAppWalkthrough = useTutorialStore((s) => s.completeAppWalkthrough);
+  const setPendingPostWalkthroughCTA = useTutorialStore((s) => s.setPendingPostWalkthroughCTA);
+  const isGuest = useAuthStore((s) => s.isGuest);
+  const isPro = useIsPro();
+  const [showWalkthroughPrompt, setShowWalkthroughPrompt] = useState(false);
+  const walkthroughPromptFiredRef = useRef(false);
+  useEffect(() => {
+    if (module.id !== 'mod-0-1') return;
+    if (hasSeenAppWalkthrough) return;
+    if (walkthroughPromptFiredRef.current) return;
+    // ~30% = intro + cards + one more (3 of ~10 chips).
+    if (summary.pct < 25) return;
+    walkthroughPromptFiredRef.current = true;
+    setShowWalkthroughPrompt(true);
+  }, [module.id, summary.pct, hasSeenAppWalkthrough]);
+
+  const handleTakeTour = () => {
+    setShowWalkthroughPrompt(false);
+    triggerWalkthrough();
+  };
+
+  const handleContinueLearning = () => {
+    setShowWalkthroughPrompt(false);
+    // Mirror AppWalkthroughOverlay.completeWalkthrough's "skip" effect:
+    // mark walkthrough seen, schedule the guest register CTA, then push
+    // the Pro paywall (non-Pro) or land on /(tabs) (Pro). The push
+    // notification banner appears automatically when the user returns to
+    // /(tabs)/learn — gated on hasSeenWalkthrough + hasCompletedFirstModule.
+    completeAppWalkthrough();
+    if (isGuest) {
+      try { setPendingPostWalkthroughCTA(true); } catch { /* non-fatal */ }
+    }
+    if (!isPro) {
+      router.replace(`/pricing?returnTo=${encodeURIComponent('/(tabs)')}&source=post_walkthrough_skip` as never);
+    }
+    // If Pro, stay on the learn map — the accordion is already open.
+  };
+
   return (
     <Animated.View
       entering={FadeIn.duration(260)}
@@ -210,6 +261,13 @@ export const TopicTreeAccordion = React.memo(function TopicTreeAccordion({
               economyStore.addCoins(-base, 'lesson');
             }
           }}
+        />
+
+        {/* R7 Epic B3 — mod-0-1-only walkthrough opt-in prompt. */}
+        <Mod01WalkthroughPromptModal
+          visible={showWalkthroughPrompt}
+          onTakeTour={handleTakeTour}
+          onContinueLearning={handleContinueLearning}
         />
       </View>
     </Animated.View>
