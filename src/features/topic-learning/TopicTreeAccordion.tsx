@@ -11,6 +11,7 @@ import type { Module } from '../chapter-1-content/types';
 import type { Topic } from './types';
 import { resolveTopics } from './topicResolver';
 import { useTopicProgressStore } from './useTopicProgressStore';
+import { useTopicTreeAssetPrefetch } from './useTopicTreeAssetPrefetch';
 import { ModuleTopicLayout } from './components/ModuleTopicLayout';
 
 /** Base reward on topic-tree 70% completion. Lower than the legacy
@@ -67,6 +68,12 @@ export const TopicTreeAccordion = React.memo(function TopicTreeAccordion({
     () => resolveTopics(module, { simFirst }),
     [module, simFirst],
   );
+
+  // R6 — start prefetching the module's heavy assets (hero image, hook
+  // video, infographic, flashcard videos/images, intro audio, podcast,
+  // couple dilemma) the moment the accordion mounts. Idempotent via
+  // `useModulePrefetch` so multiple mounts don't re-download.
+  useTopicTreeAssetPrefetch(module);
 
   const completedMap = useTopicProgressStore((s) => s.completed);
   const summarize = useTopicProgressStore((s) => s.summaryForModule);

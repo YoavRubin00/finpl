@@ -152,7 +152,7 @@ const AnimatedExpoImage = Animated.createAnimatedComponent(ExpoImage);
 type FlowPhase = "hero" | "intro" | "flashcards" | "podcast" | "couple-dilemma" | "interactive-recall" | "quizzes" | "mid-quiz-video" | "sim-intro" | "sim" | "module-infographic" | "post-infographic-video" | "shark-dilemma" | "summary" | "video";
 
 /** Full-screen character art shown when first opening a module */
-const MODULE_HERO_MAP: Record<string, { uri: string } | number> = {
+export const MODULE_HERO_MAP: Record<string, { uri: string } | number> = {
   "mod-4-19": require("../../../assets/IMAGES/finn/finn-splash.png") as number,
   "mod-5-25": { uri: 'https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/infographics/finn-freedom.png' },
 };
@@ -198,7 +198,7 @@ const MODULES_WITH_INTERACTIVE_RECALL = new Set([
 ]);
 
 /** Modules with a NotebookLM-generated infographic shown before the summary/chest */
-const MODULE_INFOGRAPHIC_MAP: Record<string, { uri: string }> = {
+export const MODULE_INFOGRAPHIC_MAP: Record<string, { uri: string }> = {
   // 2026-06-04: mod-0-1 entry removed as part of the mod-0-1 split. The
   // infographic appeared BEFORE the summary card; with the summary card
   // moved to mod-0-1b, the infographic no longer fits in mod-0-1's flow.
@@ -211,7 +211,7 @@ const MODULE_INFOGRAPHIC_MAP: Record<string, { uri: string }> = {
 };
 
 /** Modules with a video shown AFTER the infographic (before the chest) */
-const MODULE_POST_VIDEO_MAP: Record<string, string> = {
+export const MODULE_POST_VIDEO_MAP: Record<string, string> = {
   // 2026-06-04: mod-0-1 entry removed as part of the mod-0-1 split. The
   // Finn post-summary video summed up loan/pension content that has moved
   // to mod-0-1b, so it no longer matches mod-0-1's reduced scope. mod-0-1b
