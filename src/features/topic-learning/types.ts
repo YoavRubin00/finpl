@@ -92,3 +92,24 @@ export interface ModuleTopicSummary {
 /** 70% of resolved components done = module completed. Single point of
  *  truth; bumping this re-grades every module's completion gate. */
 export const TOPIC_COMPLETION_THRESHOLD = 0.7;
+
+/** R8 T3.1 — per-module first-chest threshold override map. The default
+ *  70% gate is fine for most modules but feels far in chapter 0 where the
+ *  user is still in onboarding and hasn't yet experienced a variable-reward
+ *  drop. Lowering to 50% on the first two intro modules gives the user
+ *  their first chest at ~3-4 min in instead of ~8-10 min — Brawl Stars
+ *  "90-second variable reward" rule applied to a learning context.
+ *
+ *  IMPORTANT: only the 70% (first-chest) gate is overridden here. The
+ *  master 100% chest still requires every chip to be done.
+ */
+export const MODULE_CHEST_THRESHOLD: Record<string, number> = {
+  'mod-0-1': 0.5,
+  'mod-0-2': 0.5,
+};
+
+/** Resolve the first-chest threshold for a module. Falls back to the
+ *  canonical 70% when there's no override. */
+export function chestThresholdFor(moduleId: string): number {
+  return MODULE_CHEST_THRESHOLD[moduleId] ?? TOPIC_COMPLETION_THRESHOLD;
+}

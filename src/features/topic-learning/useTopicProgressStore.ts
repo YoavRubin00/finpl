@@ -2,8 +2,17 @@ import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import { zustandStorage } from '../../lib/zustandStorage';
 import { registerLocalStore } from '../../lib/stores/registry';
+import { track } from '../../lib/analytics/events';
 import type { Topic, TopicProgressEntry, ModuleTopicSummary } from './types';
-import { TOPIC_COMPLETION_THRESHOLD } from './types';
+import { chestThresholdFor } from './types';
+
+/** Derive the chapter id from a module id (`mod-3-15` → `chapter-3`). The
+ *  Module type doesn't carry its chapter, and the topic-tree layer has no
+ *  route param to read it from, so we parse the canonical id format. */
+function chapterIdFromModuleId(moduleId: string): string {
+  const m = /^mod-(\d+)-/.exec(moduleId);
+  return m ? `chapter-${m[1]}` : '';
+}
 
 interface TopicProgressState {
   /** Persisted: topicId → completion meta. A topic that's not in the map
@@ -66,6 +75,20 @@ export const useTopicProgressStore = create<TopicProgressState>()(
         if (state.completed[topic.id]) return;
         const completed = { ...state.completed, [topic.id]: { completedAt: nowIso() } };
         set({ completed });
+        // Per-chip analytics. The topic-tree method emitted no events before
+        // this — every chip completion was invisible to PostHog. Non-fatal:
+        // analytics must never block a completion write.
+        try {
+          track({
+            name: 'topic_completed',
+            props: {
+              module_id: topic.moduleId,
+              topic_id: topic.id,
+              topic_kind: topic.kind,
+              chapter_id: chapterIdFromModuleId(topic.moduleId),
+            },
+          });
+        } catch { /* non-fatal */ }
       },
 
       isTopicCompleted: (topicId) => Boolean(get().completed[topicId]),
@@ -75,8 +98,12 @@ export const useTopicProgressStore = create<TopicProgressState>()(
         const total = topics.length;
         const completedCount = topics.filter((t) => state.completed[t.id]).length;
         const pct = total === 0 ? 0 : Math.round((completedCount / total) * 100);
+        // R8 T3.1 — first-chest gate uses per-module threshold (mod-0-1
+        // and mod-0-2 fire at 50% so the user gets their first dopamine
+        // hit earlier in onboarding). Default = canonical 0.7.
+        const moduleThreshold = chestThresholdFor(moduleId);
         const isModuleDone =
-          total > 0 && completedCount / total >= TOPIC_COMPLETION_THRESHOLD;
+          total > 0 && completedCount / total >= moduleThreshold;
 
         // Stamp the "first crossed" flips lazily on read — cheaper than wiring
         // a derived effect in every consumer, idempotent because we check
