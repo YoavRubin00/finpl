@@ -492,6 +492,9 @@ function RootLayoutInner() {
       // guard below bounces the user back to /(tabs) before the screen
       // can paint (Yoav: "בפועל הוא לא מצוביל לצאט").
       "topic-chat",
+      // R7 — dedicated full-screen game route reached from the `game`
+      // topic chip; mirror reasoning to topic-chat above.
+      "topic-game",
     ].includes(segments[0] as string);
 
     if (!isAuthenticated) {

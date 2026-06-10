@@ -90,6 +90,7 @@ import type { Module } from "../chapter-1-content/types";
 import { TopicTreeAccordion } from "../topic-learning/TopicTreeAccordion";
 import { useTopicProgressStore } from "../topic-learning/useTopicProgressStore";
 import { resolveTopics, shouldUseTopicTree } from "../topic-learning/topicResolver";
+import { getGameForModule } from "../topic-learning/moduleGameMap";
 import type { Topic, TopicKind } from "../topic-learning/types";
 
 import { tapHaptic, successHaptic } from "../../utils/haptics";
@@ -1793,11 +1794,18 @@ export function DuoLearnScreen() {
   const handleTopicSelected = useCallback((topic: Topic) => {
     const current = topicTreeModule;
     if (!current) return;
-    // R5.14: 'game' chip routes to the inter-module-games registry, not
-    // to a LessonFlowScreen phase. Wire-up deferred — for now the chip
-    // only surfaces for modules curated in `moduleGameMap`, and tapping
-    // is a no-op (no module is curated yet).
-    if (topic.kind === 'game') return;
+    // R7 — 'game' chip opens the dedicated full-screen game route
+    // (`/topic-game/[gameId]`). The route reads moduleId from the URL,
+    // renders the matching minigame card with bypassDailyGate, and
+    // marks the topic complete + replaces back to the learn map with
+    // the module expanded on "המשך".
+    if (topic.kind === 'game') {
+      const gameId = getGameForModule(current.module.id);
+      if (gameId) {
+        router.push(`/topic-game/${gameId}?moduleId=${current.module.id}` as never);
+      }
+      return;
+    }
     // R6 — 'chat' chip opens a DEDICATED scoped chat screen, not the
     // main companion chat. Yoav 2026-06-10: "צריך להפתח כמסך יעודי ולא
     // להוביל לצאט". Free-tier daily limit is enforced inside the

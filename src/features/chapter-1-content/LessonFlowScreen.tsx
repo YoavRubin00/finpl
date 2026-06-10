@@ -4087,7 +4087,7 @@ export function LessonFlowScreen() {
                 : phase === "couple-dilemma"
                   ? "הדילמות של הזוג הצעיר"
                   : phase === "interactive-recall"
-                    ? "בואו נתרגל"
+                    ? "השלמת משפטים"
                     : mod.title;
             if (phase === "flashcards") {
               const cardText = mod.flashcards[flashcardIndex]?.text ?? "";

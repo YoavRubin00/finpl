@@ -183,7 +183,18 @@ export function TopicChatScreen(): React.ReactElement {
           <View style={headerStyles.container}>
             <View style={headerStyles.row}>
               <Pressable
-                onPress={() => router.back()}
+                onPress={() => {
+                  // Back always returns to the learn map with THIS
+                  // module's accordion expanded — covers cold-start /
+                  // deep-link cases where router.canGoBack is false
+                  // (Yoav R7: "כפתור חזרה מהצאט מוביל ל מסך הלמידה
+                  // שהמודולה פתוחה בפני המשתמש").
+                  if (router.canGoBack()) {
+                    router.back();
+                  } else {
+                    router.replace(`/(tabs)/learn?expandedModule=${moduleId}` as never);
+                  }
+                }}
                 style={headerStyles.backBtn}
                 accessibilityRole="button"
                 accessibilityLabel="חזרה"
