@@ -18,7 +18,14 @@ import { ChevronLeft, Sparkles } from 'lucide-react-native';
 import { ConfettiExplosion } from '../../components/ui/ConfettiExplosion';
 import { GoldCoinIcon } from '../../components/ui/GoldCoinIcon';
 import { DoubleOrNothingModal } from '../../components/ui/DoubleOrNothingModal';
-import { doubleHeavyHaptic, successHaptic, tapHaptic } from '../../utils/haptics';
+import { FlyingRewards } from '../../components/ui/FlyingRewards';
+import {
+  doubleHeavyHaptic,
+  heavyHaptic,
+  mediumHaptic,
+  successHaptic,
+  tapHaptic,
+} from '../../utils/haptics';
 import { useSoundEffect } from '../../hooks/useSoundEffect';
 import { useWisdomStore } from '../wisdom-flashes/useWisdomStore';
 import { useTopicProgressStore } from './useTopicProgressStore';
@@ -70,6 +77,10 @@ export function ChestCelebrationModal({
   const [showDoN, setShowDoN] = useState(false);
   const [donResolved, setDonResolved] = useState(false);
   const [donMultiplier, setDonMultiplier] = useState(1);
+  // R8 J3 — flying coins + XP burst, fires once when chest opens.
+  // Separate flags for coins / xp so each can unmount independently.
+  const [flyingCoins, setFlyingCoins] = useState(false);
+  const [flyingXp, setFlyingXp] = useState(false);
   const lottieRef = useRef<LottieView>(null);
   const { playSound } = useSoundEffect();
 
@@ -133,10 +144,24 @@ export function ChestCelebrationModal({
       setShowDoN(false);
       setDonResolved(false);
       setDonMultiplier(1);
+      setFlyingCoins(false);
+      setFlyingXp(false);
       wisdomFiredRef.current = false;
       prevWisdomActiveRef.current = false;
     }
   }, [visible]);
+
+  // R8 J3 — Hay Day standard: when chest reveals, coins + XP "fly out"
+  // toward their respective pills. Delay 350ms so the FadeIn on the
+  // reward pill is mid-animation when the particles start flying.
+  useEffect(() => {
+    if (!opened) return;
+    const t = setTimeout(() => {
+      setFlyingCoins(true);
+      setFlyingXp(true);
+    }, 350);
+    return () => clearTimeout(t);
+  }, [opened]);
 
   // Trigger the wisdom popup ~1.5s after the chest opens so the reward
   // pills land first, then the quote takes the spotlight. The popup is
@@ -197,7 +222,12 @@ export function ChestCelebrationModal({
 
   const handleChestTap = useCallback(() => {
     if (opened) return;
-    doubleHeavyHaptic();
+    // R8 J2 — Supercell-style escalating haptic curve over the 600ms
+    // lottie reveal window. Flat double-heavy felt anticlimactic.
+    tapHaptic();
+    setTimeout(() => mediumHaptic(), 150);
+    setTimeout(() => heavyHaptic(), 320);
+    setTimeout(() => { doubleHeavyHaptic(); successHaptic(); }, 540);
     try { playSound('modal_open_4'); } catch { /* non-fatal */ }
     // Snap the glow + body to a "burst" frame before unmounting the
     // pulse animation by flipping `opened`.
@@ -360,6 +390,27 @@ export function ChestCelebrationModal({
           rewards={{ coins, xp, gems: 0 }}
           onResolve={handleDoNResolve}
         />
+
+        {/* R8 J3 — Hay Day-style flying coins + XP. Originate from the
+            chest area (~55% of screen height) and arc up toward the
+            wallet/XP pills at the top. Each is independently unmounted
+            on its onComplete callback. */}
+        {flyingCoins && (
+          <FlyingRewards
+            type="coins"
+            amount={coins}
+            direction="up"
+            onComplete={() => setFlyingCoins(false)}
+          />
+        )}
+        {flyingXp && (
+          <FlyingRewards
+            type="xp"
+            amount={xp}
+            direction="up"
+            onComplete={() => setFlyingXp(false)}
+          />
+        )}
       </View>
     </Modal>
   );

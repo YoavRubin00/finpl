@@ -215,6 +215,29 @@ export function TopicChatScreen(): React.ReactElement {
                   {loading ? 'מקליד...' : moduleInfo.module.title}
                 </Text>
               </View>
+              {/* R8 U3 — visible quota chip so non-Pro users always
+                  know where they stand with the daily 2-question gate.
+                  Hidden for Pro users (no gate). Color shifts red when
+                  the user is at 0. */}
+              {!isPro && (
+                <View
+                  style={[
+                    headerStyles.quotaChip,
+                    remaining <= 0 && headerStyles.quotaChipExhausted,
+                  ]}
+                  accessibilityLabel={`${remaining} מתוך ${DAILY_LIMIT} שאלות נותרו היום`}
+                >
+                  <Text
+                    style={[
+                      headerStyles.quotaChipText,
+                      remaining <= 0 && headerStyles.quotaChipTextExhausted,
+                    ]}
+                    allowFontScaling={false}
+                  >
+                    {`${remaining}/${DAILY_LIMIT}`}
+                  </Text>
+                </View>
+              )}
             </View>
           </View>
 
@@ -322,7 +345,7 @@ export function TopicChatScreen(): React.ReactElement {
               <Lock size={20} color="#7c2d12" strokeWidth={2.4} />
               <View style={{ flex: 1 }}>
                 <Text style={[limitStyles.title, rtl.text]} allowFontScaling={false}>
-                  {`הגעת ל-${DAILY_LIMIT} השאלות החינמיות של היום`}
+                  {`השתמשת בכל ${DAILY_LIMIT} השאלות החינמיות להיום`}
                 </Text>
                 <Text style={[limitStyles.subtitle, rtl.text]} allowFontScaling={false}>
                   שדרוג ל-Pro מסיר את ההגבלה
@@ -416,6 +439,27 @@ const headerStyles = StyleSheet.create({
   info: { flex: 1, alignItems: 'flex-end' },
   name: { fontSize: 16, fontWeight: '700', color: '#0e7490', writingDirection: 'rtl' },
   status: { fontSize: 12, color: '#059669', writingDirection: 'rtl' },
+  // R8 U3 — quota chip rendered next to the avatar so it's always visible.
+  quotaChip: {
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 999,
+    backgroundColor: '#ecfeff',
+    borderWidth: 1,
+    borderColor: '#a5f3fc',
+  },
+  quotaChipExhausted: {
+    backgroundColor: '#fee2e2',
+    borderColor: '#fca5a5',
+  },
+  quotaChipText: {
+    fontSize: 13,
+    fontWeight: '800',
+    color: '#0e7490',
+  },
+  quotaChipTextExhausted: {
+    color: '#7c2d12',
+  },
 });
 
 const msgStyles = StyleSheet.create({

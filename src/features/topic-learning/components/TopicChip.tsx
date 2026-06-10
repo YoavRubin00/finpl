@@ -1,12 +1,16 @@
-import React from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Pressable, View, StyleSheet } from 'react-native';
 import Animated, {
   useAnimatedStyle,
   useSharedValue,
   withSpring,
+  withTiming,
+  withSequence,
 } from 'react-native-reanimated';
 import { SvgXml } from 'react-native-svg';
-import { tapHaptic } from '../../../utils/haptics';
+import { mediumHaptic, successHaptic } from '../../../utils/haptics';
+import { useSoundEffect } from '../../../hooks/useSoundEffect';
+import { ParticleBurst } from '../../../components/ui/ParticleBurst';
 import type { Topic } from '../types';
 
 interface TopicChipProps {
@@ -61,10 +65,42 @@ export const TopicChip = React.memo(function TopicChip({
   onPress,
 }: TopicChipProps): React.ReactElement {
   const scale = useSharedValue(1);
+  const flashOpacity = useSharedValue(0);
   const animStyle = useAnimatedStyle(() => ({ transform: [{ scale: scale.value }] }));
+  const flashStyle = useAnimatedStyle(() => ({ opacity: flashOpacity.value }));
+  const { playSound } = useSoundEffect();
+
+  // R8 J1 — celebrate the false→true completion transition with a
+  // particle burst + green pulse + success haptic. The press itself
+  // navigates away, so the "you completed it" moment fires when the
+  // user returns to the map and the chip first re-renders as done.
+  const prevCompletedRef = useRef(completed);
+  const [burstTick, setBurstTick] = useState(0);
+  useEffect(() => {
+    if (!prevCompletedRef.current && completed) {
+      successHaptic();
+      try { playSound('btn_click_soft_3'); } catch { /* non-fatal */ }
+      flashOpacity.value = withSequence(
+        withTiming(0.55, { duration: 140 }),
+        withTiming(0, { duration: 320 }),
+      );
+      scale.value = withSequence(
+        withSpring(1.12, { damping: 10, stiffness: 220 }),
+        withSpring(1, { damping: 11, stiffness: 200 }),
+      );
+      setBurstTick((t) => t + 1);
+    }
+    prevCompletedRef.current = completed;
+  }, [completed, flashOpacity, playSound, scale]);
 
   const handlePress = () => {
-    tapHaptic();
+    // R8 J1 — escalate from light tap → medium impact + soft snap sound.
+    mediumHaptic();
+    try { playSound('btn_click_soft_2'); } catch { /* non-fatal */ }
+    flashOpacity.value = withSequence(
+      withTiming(0.35, { duration: 90 }),
+      withTiming(0, { duration: 220 }),
+    );
     scale.value = withSpring(0.92, { damping: 14, stiffness: 260 });
     scale.value = withSpring(1, { damping: 12, stiffness: 220 });
     onPress(topic);
@@ -83,6 +119,18 @@ export const TopicChip = React.memo(function TopicChip({
       {recommended && !completed && (
         <View style={styles.haloAbs} pointerEvents="none">
           <View style={styles.haloCircle} />
+        </View>
+      )}
+
+      {/* R8 J1 — particle burst on the false→true completion transition.
+          Keyed by burstTick so each fresh completion remounts the burst. */}
+      {burstTick > 0 && (
+        <View style={styles.burstAbs} pointerEvents="none" key={burstTick}>
+          <ParticleBurst
+            color="gold"
+            particleCount={10}
+            onComplete={() => { /* noop — chip stays mounted */ }}
+          />
         </View>
       )}
 
@@ -118,6 +166,13 @@ export const TopicChip = React.memo(function TopicChip({
             height={ICON_SIZE}
           />
         </View>
+        {/* R8 J1 — green flash overlay; pulses on tap AND on first
+            transition to completed. Sits inside the clipped circle so
+            it inherits the round mask. */}
+        <Animated.View
+          pointerEvents="none"
+          style={[styles.flashOverlay, flashStyle]}
+        />
       </Pressable>
     </Animated.View>
   );
@@ -177,5 +232,26 @@ const styles = StyleSheet.create({
     shadowRadius: 16,
     shadowOffset: { width: 0, height: 0 },
     elevation: 12,
+  },
+  // R8 J1 — particle burst layer; positioned over the chip center.
+  burstAbs: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 20,
+  },
+  // R8 J1 — bright green flash overlay, inside the circle clip mask.
+  flashOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: '#86efac',
+    borderRadius: NODE_SIZE / 2,
   },
 });
