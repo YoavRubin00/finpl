@@ -71,7 +71,11 @@ export const ModuleTopicLayout = React.memo(function ModuleTopicLayout({
   onTopicPress,
 }: ModuleTopicLayoutProps): React.ReactElement {
   const sorted = useMemo(
-    () => [...topics].sort((a, b) => a.defaultOrder - b.defaultOrder),
+    () =>
+      (topics ?? [])
+        .filter(Boolean)
+        .slice()
+        .sort((a, b) => (a.defaultOrder ?? 0) - (b.defaultOrder ?? 0)),
     [topics],
   );
 

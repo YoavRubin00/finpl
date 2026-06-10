@@ -1737,6 +1737,11 @@ export function DuoLearnScreen() {
   const handleTopicSelected = useCallback((topic: Topic) => {
     const current = topicTreeModule;
     if (!current) return;
+    // R5.14: 'game' chip routes to the inter-module-games registry, not
+    // to a LessonFlowScreen phase. Wire-up deferred — for now the chip
+    // only surfaces for modules curated in `moduleGameMap`, and tapping
+    // is a no-op (no module is curated yet).
+    if (topic.kind === 'game') return;
     const phaseForKind: Record<string, string> = {
       'intro': 'intro',
       'cards': 'flashcards',

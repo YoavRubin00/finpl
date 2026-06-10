@@ -9,7 +9,14 @@
  */
 export type TopicKind =
   | 'intro'
+  /** Open-ended financial playground tied to the module's concept
+   *  (compound calculator, budget tweaker, etc). Yoav 2026-06-10 reframed
+   *  it as "ארגז חול" — distinct from `game`, which is a short scored
+   *  mini-game. Sim has no win condition; game does. */
   | 'sim'
+  /** Short scored mini-game from the inter-module-games registry. Only
+   *  surfaces when `moduleGameMap` has a curated entry for the module. */
+  | 'game'
   | 'cards'
   /** R5.5: brought back per Yoav — the mid-lesson explainer (e.g.
    *  fc-1-1-video for compound interest) was getting filtered out of

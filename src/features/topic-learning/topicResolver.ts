@@ -2,6 +2,7 @@ import type { Module } from '../chapter-1-content/types';
 import type { Topic, TopicKind } from './types';
 import { TOPIC_ICONS, TOPIC_LABELS } from './topic-icons';
 import { getDilemma } from '../shark-dilemma/dilemmasData';
+import { getGameForModule } from './moduleGameMap';
 
 /**
  * Canonical order — mirrors LessonFlowScreen's normal flow. The hook
@@ -28,6 +29,11 @@ import { getDilemma } from '../shark-dilemma/dilemmasData';
 // light-bulb illustration is being folded into another flow, same way
 // `post-video` was in R5.12). User asked "את הנורה? שיהיה חלק." —
 // drop the chip, smooth the trail.
+// R5.14 (2026-06-10): `game` chip added after `sim` per Yoav — the
+// sandbox/sim is the open-ended explorer, the game is a scored short
+// game from the inter-module-games registry. Both surface when present;
+// in CANONICAL they sit late next to sim, in SIM_FIRST they sit at the
+// top alongside sim so the play surfaces lead.
 const CANONICAL_ORDER: TopicKind[] = [
   'intro',
   'cards',
@@ -37,12 +43,14 @@ const CANONICAL_ORDER: TopicKind[] = [
   'couple-dilemma',
   'quiz',
   'sim',
+  'game',
   'shark-dilemma',
 ];
 
 const SIM_FIRST_ORDER: TopicKind[] = [
   'intro',
   'sim',
+  'game',
   'cards',
   'tutorial-video',
   'recall',
@@ -107,6 +115,9 @@ export function resolveTopics(module: Module, opts: ResolveTopicsOptions = {}): 
   if (module.coupleDilemma) present.set('couple-dilemma', true);
   if (module.quizzes?.length) present.set('quiz', true);
   if (module.simConcept) present.set('sim', true);
+  // `game` only surfaces when the moduleGameMap has a curated entry —
+  // Yoav's rule: "אם לא אז שיהיה רק סימולטור" (no entry → sim alone).
+  if (getGameForModule(module.id)) present.set('game', true);
   // `infographic` retired in R5.13 (folded into another flow, same as
   // post-video before it). `post-video` retired in R5.12. Keep no
   // unconditional sets here — only kinds that survive as chips get set

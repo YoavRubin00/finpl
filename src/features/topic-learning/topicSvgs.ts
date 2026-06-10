@@ -139,6 +139,31 @@ export const SVG_GAME = `<svg xmlns="http://www.w3.org/2000/svg" width="96" heig
   <ellipse cx="20" cy="14" rx="11" ry="6" fill="#fff" opacity="0.18"></ellipse>
 </svg>`;
 
+// Custom — not part of the Design System pack. Designed inline R5.14
+// 2026-06-10 to distinguish the sandbox/sim chip from the scored
+// short-game chip (both used to share the gamepad glyph). Green palette
+// matches simulator.svg so the "open-ended exploration" tone carries
+// over; a sand-fill + shovel sells "ארגז חול".
+export const SVG_SANDBOX = `<svg xmlns="http://www.w3.org/2000/svg" width="96" height="96" viewBox="0 0 48 48">
+  <defs>
+    <linearGradient id="g_sandbox" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#a8eea0"></stop><stop offset="0.5" stop-color="#5ccb4f"></stop><stop offset="1" stop-color="#39a82f"></stop>
+    </linearGradient>
+    <filter id="s_sandbox" x="-30%" y="-30%" width="160%" height="160%">
+      <feDropShadow dx="0" dy="1.5" stdDeviation="1.2" flood-color="#1e6e18" flood-opacity="0.34"></feDropShadow>
+    </filter>
+  </defs>
+  <g filter="url(#s_sandbox)">
+    <rect x="8" y="18" width="32" height="22" rx="3" fill="url(#g_sandbox)"></rect>
+    <rect x="6" y="15" width="36" height="5" rx="2" fill="#1e6e18" opacity="0.45"></rect>
+    <rect x="11" y="22" width="26" height="15" rx="2" fill="#ffd966"></rect>
+    <path d="M11 26 Q18 22 24 27 Q31 22 37 26 L37 30 Q31 25 24 30 Q18 25 11 30 Z" fill="#f0b94a" opacity="0.85"></path>
+    <rect x="30" y="6" width="2.4" height="13" rx="1.2" fill="#a85e08" transform="rotate(28 31.2 12.5)"></rect>
+    <path d="M32 17 L38 20 L36 24 L30 21 Z" fill="#cfcfcf"></path>
+  </g>
+  <ellipse cx="20" cy="14" rx="11" ry="6" fill="#fff" opacity="0.18"></ellipse>
+</svg>`;
+
 export const SVG_LESSON = `<svg xmlns="http://www.w3.org/2000/svg" width="96" height="96" viewBox="0 0 48 48">
   <defs>
     <linearGradient id="g_lesson" x1="0" y1="0" x2="0" y2="1">
