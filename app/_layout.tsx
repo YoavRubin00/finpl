@@ -487,6 +487,11 @@ function RootLayoutInner() {
       "salary-net-calculator", "tax-refund-calculator", "mortgage-calculator",
       "pension-fees-comparator", "breaking-news", "coming-soon",
       "net-worth-dashboard", "financial-profile",
+      // R6 topic-tree — dedicated per-module chat screen reached from
+      // the `chat` topic chip. Without listing it here the redirect
+      // guard below bounces the user back to /(tabs) before the screen
+      // can paint (Yoav: "בפועל הוא לא מצוביל לצאט").
+      "topic-chat",
     ].includes(segments[0] as string);
 
     if (!isAuthenticated) {
