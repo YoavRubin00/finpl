@@ -22,6 +22,7 @@ import { doubleHeavyHaptic, successHaptic, tapHaptic } from '../../utils/haptics
 import { useSoundEffect } from '../../hooks/useSoundEffect';
 import { useWisdomStore } from '../wisdom-flashes/useWisdomStore';
 import { useTopicProgressStore } from './useTopicProgressStore';
+import { nextChestForecastTopic } from './chestForecastTopics';
 
 const RTL = { writingDirection: 'rtl' as const, textAlign: 'right' as const };
 const RTL_CENTER = { writingDirection: 'rtl' as const, textAlign: 'center' as const };
@@ -308,6 +309,21 @@ export function ChestCelebrationModal({
             )}
           </View>
 
+          {/* Captain's Forecast — surfaces a teaser for tomorrow's chest
+              just above the CTAs. Drives "come back tomorrow" anticipation
+              (Epic 7-C2). Skipped for the master 100% chest since the
+              user is closing out the module. */}
+          {opened && donResolved && !isFinale && (
+            <Animated.View entering={FadeIn.delay(220).duration(400)} style={styles.forecastWrap}>
+              <Text style={styles.forecastLabel} allowFontScaling={false}>
+                {`🦈 מחר התיבה`}
+              </Text>
+              <Text style={styles.forecastBody} allowFontScaling={false} numberOfLines={2}>
+                {nextChestForecastTopic()}
+              </Text>
+            </Animated.View>
+          )}
+
           {/* CTAs — only after the chest is opened AND wisdom+DoN finished */}
           {opened && donResolved && (
             <Animated.View entering={FadeIn.delay(300).duration(400)} style={styles.ctaWrap}>
@@ -478,6 +494,30 @@ const styles = StyleSheet.create({
     paddingHorizontal: 6,
     paddingVertical: 2,
     marginLeft: 4,
+  },
+  forecastWrap: {
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    marginBottom: 12,
+    borderRadius: 14,
+    backgroundColor: 'rgba(56, 189, 248, 0.16)',
+    borderWidth: 1,
+    borderColor: 'rgba(125, 211, 252, 0.55)',
+  },
+  forecastLabel: {
+    color: '#bae6fd',
+    fontWeight: '900',
+    fontSize: 12,
+    marginBottom: 4,
+    writingDirection: 'rtl',
+  },
+  forecastBody: {
+    color: '#e0f2fe',
+    fontWeight: '700',
+    fontSize: 15,
+    textAlign: 'center',
+    writingDirection: 'rtl',
   },
   ctaWrap: {
     gap: 10,

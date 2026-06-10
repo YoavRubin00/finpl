@@ -2,7 +2,7 @@ import type { Module } from '../chapter-1-content/types';
 import type { Topic, TopicKind } from './types';
 import { TOPIC_ICONS, TOPIC_LABELS } from './topic-icons';
 import { getDilemma } from '../shark-dilemma/dilemmasData';
-import { getGameForModule } from './moduleGameMap';
+import { getGameForModule, isSimReplacedByGame } from './moduleGameMap';
 import { getCoupleDilemmaForModule } from '../couple-dilemma/coupleDilemmas';
 
 /**
@@ -132,9 +132,12 @@ export function resolveTopics(module: Module, opts: ResolveTopicsOptions = {}): 
   // the source of truth.
   if (getCoupleDilemmaForModule(module.id)) present.set('couple-dilemma', true);
   if (module.quizzes?.length) present.set('quiz', true);
-  if (module.simConcept) present.set('sim', true);
-  // `game` only surfaces when the moduleGameMap has a curated entry —
-  // Yoav's rule: "אם לא אז שיהיה רק סימולטור" (no entry → sim alone).
+  // R6 — `isSimReplacedByGame` suppresses the sim chip for modules
+  // whose "sim" is really a matching exercise (chapter 0 mostly).
+  // Yoav: "במושגי יסוד פיננסים אין ארגז חול, אז תשים במקומו איזה משחק".
+  if (module.simConcept && !isSimReplacedByGame(module.id)) {
+    present.set('sim', true);
+  }
   if (getGameForModule(module.id)) present.set('game', true);
   // `infographic` retired in R5.13 (folded into another flow, same as
   // post-video before it). `post-video` retired in R5.12. Keep no
