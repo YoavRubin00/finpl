@@ -2838,6 +2838,7 @@ export function LessonFlowScreen() {
       'sim-intro', 'sim',
       'podcast', 'couple-dilemma',
       'module-infographic', 'post-infographic-video',
+      'shark-dilemma',
     ]);
     if (startPhase && ALLOWED_START_PHASES.has(startPhase)) {
       return startPhase as FlowPhase;

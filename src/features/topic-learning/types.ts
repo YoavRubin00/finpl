@@ -22,7 +22,12 @@ export type TopicKind =
   | 'couple-dilemma'
   | 'quiz'
   | 'infographic'
-  | 'post-video';
+  | 'post-video'
+  /** Shark-dilemma — Captain Shark "what would you do?" prompt that
+   *  fires after the post-video celebration in the legacy flow. Surfaces
+   *  here as its own chip because the data backing it (dilemmasData)
+   *  exists for most modules including mod-1-1. */
+  | 'shark-dilemma';
 
 /**
  * R5.2 (2026-06-10) — chip visual is now an emoji string. Matches the

@@ -3,7 +3,6 @@ import { View, StyleSheet, Dimensions } from 'react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { GrowingTree } from './GrowingTree';
 import { TopicChip } from './TopicChip';
-import { GoldCoinIcon } from '../../../components/ui/GoldCoinIcon';
 import type { Topic } from '../types';
 
 const SCREEN_W = Dimensions.get('window').width;
@@ -16,13 +15,6 @@ function pathOffset(i: number): number {
   return Math.round(Math.sin((i * 2 * Math.PI) / WAVE_PERIOD) * WAVE_AMPLITUDE);
 }
 
-// Vertical stack of gold coins descending between chips. R5.7 tuned
-// to match the outer learn map's visual cadence — more coins, tighter
-// nest (so they read as a single pearl-rope rather than a sparse
-// trail).
-const COIN_STACK_COUNT = 7;
-const COIN_SIZE = 20;
-const COIN_OVERLAP = 11; // tight overlap → coins look "chained"
 
 interface ModuleTopicLayoutProps {
   topics: Topic[];
@@ -62,35 +54,14 @@ export const ModuleTopicLayout = React.memo(function ModuleTopicLayout({
   // close as possible to the outer mod-1-1 node above (Yoav R5.5:
   // "תקטין את המרחק בין הריבית דריבית לתת הראשונה"). Bottom keeps
   // half a row for the exit connector reaching down to the pearl.
-  const totalHeight = sorted.length * ROW_HEIGHT + ROW_HEIGHT / 2 + 12;
-
-  // First and last chip offsets — drive the entry/exit connector
-  // endpoints so the trail emerges from the outer mod node above and
-  // disappears toward the pearl below in a continuous arc.
-  const firstOffsetX = sorted.length > 0 ? pathOffset(0) : 0;
-  const lastOffsetX = sorted.length > 0 ? pathOffset(sorted.length - 1) : 0;
-  const firstCompleted = sorted.length > 0 && Boolean(isCompletedMap[sorted[0].id]);
-  const lastCompleted = sorted.length > 0 && Boolean(isCompletedMap[sorted[sorted.length - 1].id]);
+  const totalHeight = sorted.length * ROW_HEIGHT + 12;
 
   return (
     <View style={[styles.container, { height: totalHeight }]}>
       {/* Tree — small + tucked in the top-right corner so it never
-          eats a chip slot (Yoav R5.5: "שהעץ לא יעלה על הכפתורי
-          הפעלה"). 100×100 keeps it well outside the centered path
-          column on any phone width. */}
+          eats a chip slot. */}
       <View style={styles.treeWrap} pointerEvents="none">
         <GrowingTree progressPct={progressPct} size={100} />
-      </View>
-
-      {/* Entry connector — pulls the trail down from the outer mod
-          node above into the first chip's vertical center. Anchored
-          absolute, ABOVE the first chip's row (negative top). */}
-      <View style={styles.entryConnectorSlot} pointerEvents="none">
-        <PathConnector
-          fromOffsetX={0}
-          toOffsetX={firstOffsetX}
-          done={firstCompleted}
-        />
       </View>
 
       {/* Path column centered horizontally; sine-wave offsets fan
@@ -107,6 +78,20 @@ export const ModuleTopicLayout = React.memo(function ModuleTopicLayout({
               entering={FadeInDown.delay(60 + i * 90).duration(320).springify().damping(14)}
               style={styles.row}
             >
+              {/* Dotted PathConnector — identical to outer DuoLearnScreen
+                  trail, so the topic-tree's chip-to-chip path reads as
+                  the same surface as the outer module-to-module path
+                  (Yoav R5.8: "השביל מטבעות... לא אחיד כמו שאר המפת
+                  למידה"). */}
+              {nextOffsetX !== null && (
+                <View style={styles.midConnectorSlot} pointerEvents="none">
+                  <PathConnector
+                    fromOffsetX={offsetX}
+                    toOffsetX={nextOffsetX}
+                    done={isCompleted}
+                  />
+                </View>
+              )}
               <View style={[styles.nodeSlot, { transform: [{ translateX: offsetX }] }]}>
                 <TopicChip
                   topic={topic}
@@ -115,53 +100,11 @@ export const ModuleTopicLayout = React.memo(function ModuleTopicLayout({
                   onPress={onTopicPress}
                 />
               </View>
-              {/* Coin stack — falls out from under the chip's bottom
-                  edge, descending toward the next chip. R5.6 (Yoav
-                  2026-06-10 "יש שביל מטבעות כפול"): the dotted
-                  PathConnector between chips was retired — the coin
-                  column is the ONE trail per gap now. Entry & exit
-                  connectors (at the top/bottom of the layout) stay
-                  dotted because they attach to the outer mod node and
-                  pearl which use the dotted style themselves. */}
-              {nextOffsetX !== null && (
-                <View
-                  pointerEvents="none"
-                  style={[
-                    styles.coinStack,
-                    {
-                      left: '50%',
-                      marginLeft: ((offsetX + nextOffsetX) / 2) - COIN_SIZE / 2,
-                    },
-                  ]}
-                >
-                  {Array.from({ length: COIN_STACK_COUNT }).map((_, k) => (
-                    <View
-                      key={k}
-                      style={{
-                        position: 'absolute',
-                        top: k * (COIN_SIZE - COIN_OVERLAP),
-                        left: 0,
-                      }}
-                    >
-                      <GoldCoinIcon size={COIN_SIZE} />
-                    </View>
-                  ))}
-                </View>
-              )}
             </Animated.View>
           );
         })}
       </View>
 
-      {/* Exit connector — pulls the trail down from the last chip's
-          center into the pearl below. Bottom-anchored. */}
-      <View style={styles.exitConnectorSlot} pointerEvents="none">
-        <PathConnector
-          fromOffsetX={lastOffsetX}
-          toOffsetX={0}
-          done={lastCompleted}
-        />
-      </View>
     </View>
   );
 });
@@ -319,36 +262,5 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     height: ROW_HEIGHT,
-  },
-  // Entry connector lives ABOVE the first row, anchored to the top of
-  // the layout container. The container's paddingTop reserves the
-  // space; this slot fills it.
-  entryConnectorSlot: {
-    position: 'absolute',
-    top: -NODE_SIZE / 2,
-    left: 0,
-    right: 0,
-    height: ROW_HEIGHT,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  exitConnectorSlot: {
-    position: 'absolute',
-    bottom: -NODE_SIZE / 2,
-    left: 0,
-    right: 0,
-    height: ROW_HEIGHT,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  // Coin stack anchored to the bottom-center of the chip, hanging
-  // straight down toward the next row. Width = single coin size since
-  // every coin sits at left:0 within the slot.
-  coinStack: {
-    position: 'absolute',
-    top: ROW_HEIGHT / 2 + NODE_SIZE / 2 - 4,
-    width: COIN_SIZE,
-    height: COIN_STACK_COUNT * (COIN_SIZE - COIN_OVERLAP) + COIN_OVERLAP,
-    zIndex: 2,
   },
 });

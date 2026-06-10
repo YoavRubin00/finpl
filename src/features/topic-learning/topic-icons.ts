@@ -28,6 +28,10 @@ export const TOPIC_ICONS: Record<TopicKind, TopicIconAsset> = {
   // as "the moment it clicks", much clearer than a generic book glyph.
   'infographic': { emoji: '💡' },
   'post-video': { emoji: '🏆' },
+  // 🦈 — Captain Shark dilemma. The 🦈 was intro's earlier emoji but
+  // was retired there per Yoav; it lives on naturally here as the
+  // shark-dilemma's signature glyph.
+  'shark-dilemma': { emoji: '🦈' },
 };
 
 /** Hebrew label shown on the chip. Singular, gender-neutral per BRAND.md. */
@@ -42,4 +46,5 @@ export const TOPIC_LABELS: Record<TopicKind, string> = {
   'sim': 'סימולטור',
   'infographic': 'אינפוגרפיקה',
   'post-video': 'סרטון סיכום',
+  'shark-dilemma': 'דילמה',
 };

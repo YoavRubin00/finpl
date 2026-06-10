@@ -1361,6 +1361,7 @@ export function DuoLearnScreen() {
       'post-infographic-video': 'post-video',
       'podcast': 'podcast',
       'couple-dilemma': 'couple-dilemma',
+      'shark-dilemma': 'shark-dilemma',
     };
     const kind = (ckind as TopicKind | undefined) ?? phaseToKind[cp];
     if (!kind) return;
@@ -1747,6 +1748,7 @@ export function DuoLearnScreen() {
       'post-video': 'post-infographic-video',
       'podcast': 'podcast',
       'couple-dilemma': 'couple-dilemma',
+      'shark-dilemma': 'shark-dilemma',
     };
     const targetPhase = phaseForKind[topic.kind] ?? 'intro';
     // R5.5: cards chip filters out video flashcards. tutorial-video

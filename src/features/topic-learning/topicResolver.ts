@@ -1,6 +1,7 @@
 import type { Module } from '../chapter-1-content/types';
 import type { Topic, TopicKind } from './types';
 import { TOPIC_ICONS, TOPIC_LABELS } from './topic-icons';
+import { getDilemma } from '../shark-dilemma/dilemmasData';
 
 /**
  * Canonical order — mirrors LessonFlowScreen's normal flow. The hook
@@ -28,6 +29,7 @@ const CANONICAL_ORDER: TopicKind[] = [
   'sim',
   'infographic',
   'post-video',
+  'shark-dilemma',
 ];
 
 const SIM_FIRST_ORDER: TopicKind[] = [
@@ -41,6 +43,7 @@ const SIM_FIRST_ORDER: TopicKind[] = [
   'quiz',
   'infographic',
   'post-video',
+  'shark-dilemma',
 ];
 
 function buildTopic(kind: TopicKind, moduleId: string, order: number): Topic {
@@ -103,6 +106,9 @@ export function resolveTopics(module: Module, opts: ResolveTopicsOptions = {}): 
   // to legitimately lack one.
   present.set('infographic', true);
   present.set('post-video', true);
+  // Shark-dilemma surfaces only when the module has data in
+  // src/features/shark-dilemma/dilemmasData.ts (mod-1-1 does).
+  if (getDilemma(module.id)) present.set('shark-dilemma', true);
 
   const out: Topic[] = [];
   order.forEach((kind, idx) => {
