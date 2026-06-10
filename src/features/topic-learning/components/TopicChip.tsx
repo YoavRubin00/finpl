@@ -1,10 +1,11 @@
 import React from 'react';
-import { Pressable, View, Text, StyleSheet } from 'react-native';
+import { Pressable, View, StyleSheet } from 'react-native';
 import Animated, {
   useAnimatedStyle,
   useSharedValue,
   withSpring,
 } from 'react-native-reanimated';
+import { SvgXml } from 'react-native-svg';
 import { tapHaptic } from '../../../utils/haptics';
 import type { Topic } from '../types';
 
@@ -36,7 +37,12 @@ const DONE_BORDER = '#22c55e';  // green-500 — thin ring for definition
 // ביצעתי עדין").
 const MUTED_BG = '#e5e7eb';
 const MUTED_DEPTH = '#c7cdd4';
-const MUTED_EMOJI_OPACITY = 0.55;
+// Incomplete chips desaturate their SVG icon a little so the bright
+// gradients don't draw attention before the user has completed them.
+const MUTED_ICON_OPACITY = 0.55;
+// Icon visual size inside the 78px circle. Design System SVGs ship at
+// 96px source; rendering at 56 leaves ~11px breathing room on each side.
+const ICON_SIZE = 56;
 
 /**
  * R5.3 (2026-06-10) — circular ModuleNode-style chip with three
@@ -102,12 +108,16 @@ export const TopicChip = React.memo(function TopicChip({
           },
         ]}
       >
-        <Text
-          style={[styles.nodeIcon, { opacity: completed ? 1 : MUTED_EMOJI_OPACITY }]}
-          accessible={false}
+        <View
+          style={{ opacity: completed ? 1 : MUTED_ICON_OPACITY }}
+          pointerEvents="none"
         >
-          {topic.iconAsset.emoji}
-        </Text>
+          <SvgXml
+            xml={topic.iconAsset.svgXml}
+            width={ICON_SIZE}
+            height={ICON_SIZE}
+          />
+        </View>
       </Pressable>
     </Animated.View>
   );
@@ -144,11 +154,6 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.4,
     shadowRadius: 10,
     elevation: 8,
-  },
-  nodeIcon: {
-    fontSize: 32,
-    textAlign: 'center',
-    includeFontPadding: false,
   },
   // Absolute layer for the recommended halo so the glow renders behind
   // both the depth block and the circle.

@@ -13,10 +13,16 @@ const WAVE_PERIOD = 6;
 // Vertical gap rendered above the first chip and below the last chip.
 // We fill it with a PathConnector so the trail visually continues from
 // the outer mod-1-1 node down INTO the chip column, and from the last
-// chip OUT to the next pearl. Sized so the dot density matches the
-// inter-chip connectors (Yoav R5.9 2026-06-10: "הסוף לא מתחבר טוב
-// לפנינה / הכותרת של המודולה לא מתחברת טוב לאינטרו").
-const EDGE_CONNECTOR_H = 56;
+// chip OUT to the next pearl.
+const EDGE_CONNECTOR_H = 96;
+// Entry connector ALSO extends upward into the parent ModuleNode's
+// space. DuoLearnScreen doesn't render any trail between mod-1-1 and
+// the accordion — the outer PathConnector is drawn AFTER the accordion,
+// going to the NEXT module. So we draw the "down into the column"
+// trail ourselves, starting flush against mod-1-1's bottom edge so the
+// transition reads as one continuous path (Yoav R5.11 2026-06-10:
+// "תוודא שהאינטרו מתחבר כמו שצריך למודולה").
+const ENTRY_OVERLAP = 40;
 function pathOffset(i: number): number {
   return Math.round(Math.sin((i * 2 * Math.PI) / WAVE_PERIOD) * WAVE_AMPLITUDE);
 }
@@ -67,13 +73,22 @@ export const ModuleTopicLayout = React.memo(function ModuleTopicLayout({
 
   return (
     <View style={[styles.container, { height: totalHeight }]}>
-      {/* Entry connector — from outer mod-1-1 node into the chip column. */}
-      <View style={[styles.entryConnectorSlot, { height: EDGE_CONNECTOR_H }]} pointerEvents="none">
+      {/* Entry connector — from outer mod-1-1 node into the chip column.
+          Extends UPWARD by ENTRY_OVERLAP so it overlaps the parent
+          ModuleNode's bottom edge, killing the visual gap that earlier
+          rounds left between mod-1-1 and the intro chip. */}
+      <View
+        style={[
+          styles.entryConnectorSlot,
+          { top: -ENTRY_OVERLAP, height: EDGE_CONNECTOR_H + ENTRY_OVERLAP },
+        ]}
+        pointerEvents="none"
+      >
         <PathConnector
           fromOffsetX={0}
           toOffsetX={sorted.length > 0 ? pathOffset(0) : 0}
           done={firstCompleted}
-          height={EDGE_CONNECTOR_H}
+          height={EDGE_CONNECTOR_H + ENTRY_OVERLAP}
         />
       </View>
 
@@ -244,9 +259,11 @@ const styles = StyleSheet.create({
   },
   entryConnectorSlot: {
     position: 'absolute',
-    top: 0,
     left: 0,
     right: 0,
+    // top + height are set inline so we can extend upward into the
+    // parent ModuleNode's space without leaking through the styles
+    // object (each instance computes its own overlap).
   },
   exitConnectorSlot: {
     position: 'absolute',

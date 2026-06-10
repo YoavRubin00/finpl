@@ -1,40 +1,46 @@
 import type { TopicKind, TopicIconAsset } from './types';
+import {
+  SVG_INTRO,
+  SVG_CARDS,
+  SVG_VIDEO,
+  SVG_BRAIN,
+  SVG_PODCAST,
+  SVG_SCENARIO,
+  SVG_QUIZ,
+  SVG_SIMULATOR,
+  SVG_TIP,
+  SVG_GAME,
+  SVG_LESSON,
+} from './topicSvgs';
 
 /**
- * Per-kind emoji glyph used inside the circular topic chip. R5.2
- * picks one emoji per kind to match the outer ModuleNode style
- * (Yoav 2026-06-10: "שיראו כמו הכפתורים של המודולות. תשתמש גם
- * באמוגים"). Optimized for legibility at 28px font size.
+ * R5.11 (2026-06-10) — chip icons swapped from emoji to the Design
+ * System SVG pack Yoav shipped ("תשתמש ברכיבים האלה במקום באמוגים").
+ * Mapping rationale below; tweak by swapping the SVG_* constants.
  */
 export const TOPIC_ICONS: Record<TopicKind, TopicIconAsset> = {
-  // 👋 — Yoav 2026-06-10 ("תשים באינטרו משהוא אחר, לא כריש"). The
-  // waving hand reads as a personal "welcome / let's start" affordance
-  // without being literal about Captain Shark — the mascot still owns
-  // the intro screen's content, just not the chip.
-  'intro': { emoji: '👋' },
-  'cards': { emoji: '📑' },
-  'tutorial-video': { emoji: '🎬' },
-  'recall': { emoji: '🧠' },
-  'podcast': { emoji: '🎙️' },
-  // 💑 — couple. Earlier ⚖️ scales clashed with the shark-dilemma chip
-  // ("פשוט שהדילמה תראה אחרת. נגיד מאזניים" — Yoav 2026-06-10);
-  // the scales got moved to shark-dilemma and couple gets its own glyph.
-  'couple-dilemma': { emoji: '💑' },
-  // R5.7 — quiz emoji swap. 🎯 read as "daily challenge / target"
-  // (Yoav: "תחליף את האמוגי של המטרה"); ❓ is unambiguous.
-  'quiz': { emoji: '❓' },
-  // 🎮 — controller, the universal "play / interactive" sign. Earlier
-  // 📈 chart was being hidden behind the tree on small screens AND
-  // got mistaken for the infographic glyph.
-  'sim': { emoji: '🎮' },
-  // 💡 — Yoav 2026-06-10 ("לא ברור מה הספר פותח"). Light-bulb reads
-  // as "the moment it clicks", much clearer than a generic book glyph.
-  'infographic': { emoji: '💡' },
-  'post-video': { emoji: '🏆' },
-  // ⚖️ — scales of decision. Yoav 2026-06-10: "פשוט שהדילמה תראה
-  // אחרת. נגיד מאזניים". The 🦈 read as just-another-shark; scales
-  // make the "weigh your choice" framing legible at a glance.
-  'shark-dilemma': { emoji: '⚖️' },
+  // Flag with star — welcome / start banner.
+  'intro': { svgXml: SVG_INTRO },
+  // Stacked cards.
+  'cards': { svgXml: SVG_CARDS },
+  // Film/play frame, red.
+  'tutorial-video': { svgXml: SVG_VIDEO },
+  // Brain, pink.
+  'recall': { svgXml: SVG_BRAIN },
+  // Microphone on a stand, purple.
+  'podcast': { svgXml: SVG_PODCAST },
+  // Two-arrow split — fits binary "what would you choose" decision.
+  'couple-dilemma': { svgXml: SVG_SCENARIO },
+  // Clipboard with check.
+  'quiz': { svgXml: SVG_QUIZ },
+  // Green controller — gamification of the sim.
+  'sim': { svgXml: SVG_SIMULATOR },
+  // Light bulb — insight / "the moment it clicks".
+  'infographic': { svgXml: SVG_TIP },
+  // Purple controller — the celebratory wrap-up after the sim/cards.
+  'post-video': { svgXml: SVG_GAME },
+  // Blue document — Captain Shark's brief / advisory scenario.
+  'shark-dilemma': { svgXml: SVG_LESSON },
 };
 
 /** Hebrew label shown on the chip. Singular, gender-neutral per BRAND.md. */

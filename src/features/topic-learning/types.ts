@@ -30,17 +30,15 @@ export type TopicKind =
   | 'shark-dilemma';
 
 /**
- * R5.2 (2026-06-10) — chip visual is now an emoji string. Matches the
- * outer ModuleNode style Yoav explicitly pointed to ("שיראו כמו
- * הכפתורים של המודולות. לא ריבוע מעוגל בקצוות. תשתמש גם באמוגים").
- * Lottie + tile palettes were retired — uniformity beats variety on
- * this surface.
+ * R5.11 (2026-06-10) — chip visual upgraded from emoji to Design System
+ * SVG. Yoav shipped a ready icon pack (`assets/Design System.zip`) and
+ * asked to use it instead of emojis. SVGs render via react-native-svg's
+ * SvgXml; the raw markup lives in `./topicSvgs.ts`.
  */
 export interface TopicIconAsset {
-  /** Single grapheme cluster — rendered inside a circular 78px button
-   *  the same way DuoLearnScreen's outer ModuleNode renders module
-   *  emojis. Pick something that reads at 28px font size. */
-  emoji: string;
+  /** Raw SVG markup. Rendered inside the chip's 78px circle at ~56px
+   *  via <SvgXml xml={svgXml} width={56} height={56}/>. */
+  svgXml: string;
 }
 
 export interface Topic {
