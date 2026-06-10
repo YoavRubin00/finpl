@@ -24,6 +24,10 @@ import { getDilemma } from '../shark-dilemma/dilemmasData';
 // User rule: "כל הסרטוני פאן והדברים בלי ערך למידה, שיכנסו בין דברים
 // בתוך תת מודולה" — fun-only assets get embedded into another chip's
 // flow, not surfaced as their own chip.
+// R5.13 (2026-06-10): `infographic` retired as a chip per Yoav (the
+// light-bulb illustration is being folded into another flow, same way
+// `post-video` was in R5.12). User asked "את הנורה? שיהיה חלק." —
+// drop the chip, smooth the trail.
 const CANONICAL_ORDER: TopicKind[] = [
   'intro',
   'cards',
@@ -33,7 +37,6 @@ const CANONICAL_ORDER: TopicKind[] = [
   'couple-dilemma',
   'quiz',
   'sim',
-  'infographic',
   'shark-dilemma',
 ];
 
@@ -46,7 +49,6 @@ const SIM_FIRST_ORDER: TopicKind[] = [
   'podcast',
   'couple-dilemma',
   'quiz',
-  'infographic',
   'shark-dilemma',
 ];
 
@@ -105,10 +107,10 @@ export function resolveTopics(module: Module, opts: ResolveTopicsOptions = {}): 
   if (module.coupleDilemma) present.set('couple-dilemma', true);
   if (module.quizzes?.length) present.set('quiz', true);
   if (module.simConcept) present.set('sim', true);
-  // Infographic stays unconditional — every module surfaces the concept
-  // illustration. `post-video` retired (see CANONICAL_ORDER comment above):
-  // the fun video plays mid-quiz now, no separate chip.
-  present.set('infographic', true);
+  // `infographic` retired in R5.13 (folded into another flow, same as
+  // post-video before it). `post-video` retired in R5.12. Keep no
+  // unconditional sets here — only kinds that survive as chips get set
+  // above based on real module data.
   // Shark-dilemma surfaces only when the module has data in
   // src/features/shark-dilemma/dilemmasData.ts (mod-1-1 does).
   if (getDilemma(module.id)) present.set('shark-dilemma', true);

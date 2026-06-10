@@ -27,6 +27,16 @@ function pathOffset(i: number): number {
   return Math.round(Math.sin((i * 2 * Math.PI) / WAVE_PERIOD) * WAVE_AMPLITUDE);
 }
 
+// Force the first and last chip to offset 0 so the entry and exit
+// connectors meet the outer DuoLearnScreen trail dead-center, with no
+// horizontal jog. Wave still runs for middle chips (Yoav R5.13
+// 2026-06-10: "שיהיה חלק" — make the trail smooth).
+function endAlignedOffset(i: number, total: number): number {
+  if (total <= 1) return 0;
+  if (i === 0 || i === total - 1) return 0;
+  return pathOffset(i);
+}
+
 
 interface ModuleTopicLayoutProps {
   topics: Topic[];
@@ -76,7 +86,8 @@ export const ModuleTopicLayout = React.memo(function ModuleTopicLayout({
       {/* Entry connector — from outer mod-1-1 node into the chip column.
           Extends UPWARD by ENTRY_OVERLAP so it overlaps the parent
           ModuleNode's bottom edge, killing the visual gap that earlier
-          rounds left between mod-1-1 and the intro chip. */}
+          rounds left between mod-1-1 and the intro chip. First chip is
+          end-aligned at offset 0, so this is a straight vertical column. */}
       <View
         style={[
           styles.entryConnectorSlot,
@@ -86,7 +97,7 @@ export const ModuleTopicLayout = React.memo(function ModuleTopicLayout({
       >
         <PathConnector
           fromOffsetX={0}
-          toOffsetX={sorted.length > 0 ? pathOffset(0) : 0}
+          toOffsetX={0}
           done={firstCompleted}
           height={EDGE_CONNECTOR_H + ENTRY_OVERLAP}
         />
@@ -97,8 +108,8 @@ export const ModuleTopicLayout = React.memo(function ModuleTopicLayout({
       <View style={[styles.pathColumn, { marginTop: EDGE_CONNECTOR_H }]}>
         {sorted.map((topic, i) => {
           const isCompleted = Boolean(isCompletedMap[topic.id]);
-          const offsetX = pathOffset(i);
-          const nextOffsetX = i < sorted.length - 1 ? pathOffset(i + 1) : null;
+          const offsetX = endAlignedOffset(i, sorted.length);
+          const nextOffsetX = i < sorted.length - 1 ? endAlignedOffset(i + 1, sorted.length) : null;
 
           return (
             <Animated.View
@@ -134,10 +145,13 @@ export const ModuleTopicLayout = React.memo(function ModuleTopicLayout({
         })}
       </View>
 
-      {/* Exit connector — from last chip out to the next pearl below. */}
+      {/* Exit connector — from last chip out to the next pearl below.
+          Last chip is end-aligned at offset 0 (see endAlignedOffset), so
+          this is a straight vertical column meeting the outer trail
+          dead-center with no horizontal jog. */}
       <View style={[styles.exitConnectorSlot, { height: EDGE_CONNECTOR_H }]} pointerEvents="none">
         <PathConnector
-          fromOffsetX={sorted.length > 0 ? pathOffset(sorted.length - 1) : 0}
+          fromOffsetX={0}
           toOffsetX={0}
           done={lastCompleted}
           height={EDGE_CONNECTOR_H}
