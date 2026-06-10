@@ -109,6 +109,13 @@ import { TermsReconsentGate } from "../src/features/legal/TermsReconsentGate";
 import { configureRevenueCat } from "../src/services/revenueCat";
 import { AppWalkthroughOverlay } from "../src/features/onboarding/AppWalkthroughOverlay";
 import { StreakFreezeSaveModal } from "../src/features/streak/StreakFreezeSaveModal";
+import {
+  ComebackRewardModal,
+  COMEBACK_COINS,
+} from "../src/features/retention-loops/ComebackRewardModal";
+import { useComebackRewardStore } from "../src/features/retention-loops/useComebackRewardStore";
+import { SharkSkinsGate } from "../src/features/retention-loops/SharkSkinsGate";
+import { useStreakSkinWatcher } from "../src/features/retention-loops/useStreakSkinWatcher";
 import { StreakRepairModal } from "../src/features/streak/StreakRepairModal";
 import { useTutorialStore } from "../src/stores/useTutorialStore";
 import { useGoogleAuth } from "../src/features/auth/useGoogleAuth";
@@ -178,6 +185,28 @@ function StreakRepairModalGate() {
   return <StreakRepairModal visible={pending} onDismiss={dismiss} />;
 }
 
+/** R8 T3.2 — Comeback Reward gate. Reads `pendingClaim` from the
+ *  store (set by the boot hook below on lapse detection); on claim,
+ *  credits the user +200 coins + 1 streak freeze and clears the flag. */
+function ComebackRewardGate() {
+  const pendingClaim = useComebackRewardStore((s) => s.pendingClaim);
+  const lapsedDays = useComebackRewardStore((s) => s.lapsedDays);
+  const claim = useComebackRewardStore((s) => s.claim);
+  const addCoins = useEconomyUIStore((s) => s.addCoins);
+  const addStreakFreezes = useEconomyUIStore((s) => s.addStreakFreezes);
+  return (
+    <ComebackRewardModal
+      visible={pendingClaim}
+      lapsedDays={lapsedDays}
+      onClaim={() => {
+        try { addCoins(COMEBACK_COINS, 'signup-bonus'); } catch { /* non-fatal */ }
+        try { addStreakFreezes(1); } catch { /* non-fatal */ }
+        claim();
+      }}
+    />
+  );
+}
+
 function RootLayoutInner() {
   useGoogleAuth();
   
@@ -195,6 +224,23 @@ function RootLayoutInner() {
   const { visible: aiVisible, dismiss: aiDismiss, navigate: aiNavigate, message: aiMessage } = useAIInsightBanner();
   const upgradeNudge = useUpgradeNudgeBanner();
 
+  // R8 T3.2 — Comeback Reward boot hook. Stamps `lastSeenAt` on every
+  // foreground; if the gap crosses 7 days, queues a pending claim that
+  // ComebackRewardGate surfaces on the next interactive paint. Runs
+  // exactly once per mount — the foreground watcher below handles
+  // subsequent re-opens within the same RN process.
+  useEffect(() => {
+    try {
+      useComebackRewardStore.getState().registerAppOpen(Date.now());
+    } catch { /* non-fatal */ }
+  }, []);
+
+  // R8 T3.5 — Captain Shark cosmetics watcher. Detects the 7-day
+  // streak crossing (unlock Gold + Fire) and streak breaks (revert
+  // to Classic + queue the lost-skin reveal). Idempotent on every
+  // streak change.
+  useStreakSkinWatcher();
+
   // ── Session time tracking: foreground/background events ──
   const foregroundEnteredAt = useRef<number | null>(Date.now());
   useEffect(() => {
@@ -206,6 +252,10 @@ function RootLayoutInner() {
         // immediately on resume, not on the next time the user navigates to
         // DuoLearnScreen. refreshQuests() is idempotent same-day.
         try { useDailyQuestsStore.getState().refreshQuests(); } catch { /* non-fatal */ }
+        // R8 T3.2 — re-check comeback lapse on every foreground (covers
+        // the "phone left charging for 8 days" pattern where the app is
+        // still in memory but the lapse window has elapsed).
+        try { useComebackRewardStore.getState().registerAppOpen(Date.now()); } catch { /* non-fatal */ }
       } else if (state === "background" || state === "inactive") {
         if (foregroundEnteredAt.current !== null) {
           const secs = Math.round((Date.now() - foregroundEnteredAt.current) / 1000);
@@ -618,6 +668,8 @@ function RootLayoutInner() {
               )}
               <FreezeSaveModalGate />
               <StreakRepairModalGate />
+              <ComebackRewardGate />
+              <SharkSkinsGate />
             </StreakCelebrationProvider>
         </RewardAnimationProvider>
       </GlobalErrorBoundary>

@@ -12,11 +12,11 @@ const NODE_SIZE = 78;
 const ROW_HEIGHT = NODE_SIZE + 36;
 const WAVE_AMPLITUDE = 42;
 const WAVE_PERIOD = 6;
-// Decorative Shark+Daisy loops in the side gutters (Duolingo-style). Sized so
-// the full loop stays ON-screen flush to the edge — NO off-screen bleed (Yoav
-// 2026-06-10: "יצא חתוך"). The WebP already has transparent padding around the
-// characters, so flush-to-edge reads as a comfortable gutter inset.
-const SCENE_SIZE = 110;
+// Decorative Shark+Daisy loops in the side gutters (Duolingo-style). The `-v2`
+// WebPs are full-frame with transparent padding (no crop), so NO character is
+// ever clipped and flush-to-edge (offset 0) still reads as a comfortable
+// inset. Bumped 110→140 per Yoav 2026-06-10 ("תגדיל אותם טיפה יותר").
+const SCENE_SIZE = 140;
 // Exactly TWO scenes per module (Yoav 2026-06-10: "2 וובפים ולא 5"): a themed
 // loop + a generic loop, anchored near these fractions of the column height —
 // one in the upper third, one in the lower third.

@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef } from 'react';
 import { Pressable, View, StyleSheet } from 'react-native';
 import Animated, {
   useAnimatedStyle,
@@ -10,7 +10,6 @@ import Animated, {
 import { SvgXml } from 'react-native-svg';
 import { mediumHaptic, successHaptic } from '../../../utils/haptics';
 import { useSoundEffect } from '../../../hooks/useSoundEffect';
-import { ParticleBurst } from '../../../components/ui/ParticleBurst';
 import type { Topic } from '../types';
 
 interface TopicChipProps {

@@ -67,6 +67,13 @@ export type AppEvent =
   | { name: 'lesson_exited_early'; props: { lesson_id: string; chapter_id?: string; reason: 'back_button' | 'navigation' | 'app_background'; phase?: string } }
   | { name: 'module_unlocked'; props: { module_id: string; chapter_id?: string; trigger?: 'completion' | 'pro_subscribe' | 'manual' } }
   | { name: 'chapter_completed'; props: { chapter_id: string; total_modules?: number } }
+  // The topic-tree learning method (learningMode: 'topic-tree') fires one
+  // `topic_completed` per chip. Before this the new method emitted NO learning
+  // events at all — invisible to every PostHog learning metric. Module-level
+  // completion still fires `lesson_completed` (with learning_mode:'topic-tree')
+  // from TopicTreeAccordion's 70% gate, so NSM / retention / streak insights
+  // keep aggregating uniformly across both the legacy and topic-tree methods.
+  | { name: 'topic_completed'; props: { module_id: string; topic_id: string; topic_kind: string; chapter_id?: string } }
 
   // ── Pearl ──────────────────────────────────────────────────────────────
   | { name: 'pearl_opened'; props: { after_module_id: string; next_module_id?: string; chapter_id?: string; game_key?: string; stages_count: number; has_profile_question?: boolean; has_unique_bundle?: boolean } }

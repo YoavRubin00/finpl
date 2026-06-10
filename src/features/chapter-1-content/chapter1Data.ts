@@ -1401,6 +1401,7 @@ export const chapter1Data: Chapter = {
     {
       id: 'mod-1-9',
       title: 'קרן חירום',
+      learningMode: 'topic-tree',
       videoHook:
         'הרכב, הטלפון, הדוד, הכל נשבר באותו שבוע. מאיפה לוקחים כסף?!',
       videoHookAsset: { uri: 'https://pub-34f62012f7364bb5bc3b560ea61b72ce.r2.dev/video/hook/module-9.mp4' },

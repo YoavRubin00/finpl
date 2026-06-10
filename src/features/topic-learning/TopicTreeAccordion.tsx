@@ -13,7 +13,8 @@ import { useEconomyUIStore } from '../economy/useEconomyUIStore';
 import { useTutorialStore } from '../../stores/useTutorialStore';
 import { useAuthStore } from '../auth/useAuthStore';
 import type { Module } from '../chapter-1-content/types';
-import type { Topic } from './types';
+import type { Topic, ChestRarity } from './types';
+import { CHEST_RARITY_BONUS } from './types';
 import { resolveTopics } from './topicResolver';
 import { useTopicProgressStore } from './useTopicProgressStore';
 import { useTopicTreeAssetPrefetch } from './useTopicTreeAssetPrefetch';
@@ -121,6 +122,10 @@ export const TopicTreeAccordion = React.memo(function TopicTreeAccordion({
     xp: number;
     coins: number;
     isFinale: boolean;
+    /** R8 T3.4 — rarity rolled on this open. Drives Captain's Forecast
+     *  copy, chest visuals (gold tint for mythic), and the ×3 reward
+     *  bonus already baked into `coins`. */
+    rarity: ChestRarity;
   } | null>(null);
   const upsertProgress = useUpsertModuleProgress();
   const { playSound } = useSoundEffect();
@@ -195,15 +200,17 @@ export const TopicTreeAccordion = React.memo(function TopicTreeAccordion({
     });
     useCompletedModulesStore.getState().markCompleted(module.id);
     economyStore.addXP(MODULE_TT_XP, 'daily_task');
-    // Apply the chest streak multiplier to the coin grant (Epic 7-C1).
-    const multiplier = useTopicProgressStore.getState().recordChestOpen();
-    const coinsGranted = Math.round(MODULE_TT_COINS * multiplier);
+    // R6 streak + R8 T3.4 rarity. Multiplier from the 48h-streak chain,
+    // rarity from the per-open Brawl Stars-style roll (with pity timer).
+    const { multiplier, rarity } = useTopicProgressStore.getState().recordChestOpen();
+    const rarityBonus = CHEST_RARITY_BONUS[rarity];
+    const coinsGranted = Math.round(MODULE_TT_COINS * multiplier * rarityBonus);
     economyStore.addCoins(coinsGranted, 'lesson');
     successHaptic();
     // R8 T1.4 — regular 70% chest uses the slightly softer `modal_open_3`
     // so the master chest below stays the audible climax.
     try { playSound('modal_open_3'); } catch { /* non-fatal */ }
-    setChestState({ xp: MODULE_TT_XP, coins: coinsGranted, isFinale: false });
+    setChestState({ xp: MODULE_TT_XP, coins: coinsGranted, isFinale: false, rarity });
   }, [summary.isModuleDone, module.id, upsertProgress, economyStore, playSound]);
 
   // 100% master chest — fires the first time pct hits 100.
@@ -214,8 +221,9 @@ export const TopicTreeAccordion = React.memo(function TopicTreeAccordion({
     // user already pocketed that one; this is the bonus for finishing
     // every chip.
     economyStore.addXP(MASTER_TT_XP, 'daily_task');
-    const multiplier = useTopicProgressStore.getState().recordChestOpen();
-    const coinsGranted = Math.round(MASTER_TT_COINS * multiplier);
+    const { multiplier, rarity } = useTopicProgressStore.getState().recordChestOpen();
+    const rarityBonus = CHEST_RARITY_BONUS[rarity];
+    const coinsGranted = Math.round(MASTER_TT_COINS * multiplier * rarityBonus);
     economyStore.addCoins(coinsGranted, 'lesson');
     successHaptic();
     // R8 T1.4 — master 100% chest uses `modal_open_4` (the loudest /
@@ -223,7 +231,7 @@ export const TopicTreeAccordion = React.memo(function TopicTreeAccordion({
     // softer `modal_open_3` used by the regular 70% chest above so
     // the user audibly knows this is THE finale, not just another drop.
     try { playSound('modal_open_4'); } catch { /* non-fatal */ }
-    setChestState({ xp: MASTER_TT_XP, coins: coinsGranted, isFinale: true });
+    setChestState({ xp: MASTER_TT_XP, coins: coinsGranted, isFinale: true, rarity });
   }, [summary.pct, module.id, economyStore, playSound]);
 
   // R8 U1/U2 — mod-0-1-only walkthrough prompt. Fires the first time
@@ -295,6 +303,7 @@ export const TopicTreeAccordion = React.memo(function TopicTreeAccordion({
           xp={chestState?.xp ?? MODULE_TT_XP}
           coins={chestState?.coins ?? MODULE_TT_COINS}
           isFinale={chestState?.isFinale ?? false}
+          rarity={chestState?.rarity ?? 'common'}
           onContinueModule={() => {
             const wasFinale = chestState?.isFinale ?? false;
             setChestState(null);

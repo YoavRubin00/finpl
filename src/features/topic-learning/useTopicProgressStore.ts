@@ -3,8 +3,13 @@ import { persist, createJSONStorage } from 'zustand/middleware';
 import { zustandStorage } from '../../lib/zustandStorage';
 import { registerLocalStore } from '../../lib/stores/registry';
 import { track } from '../../lib/analytics/events';
-import type { Topic, TopicProgressEntry, ModuleTopicSummary } from './types';
-import { chestThresholdFor } from './types';
+import type { Topic, TopicProgressEntry, ModuleTopicSummary, ChestRarity } from './types';
+import {
+  chestThresholdFor,
+  PITY_TIMER_THRESHOLD,
+  MYTHIC_DROP_RATE,
+  RARE_DROP_RATE,
+} from './types';
 
 /** Derive the chapter id from a module id (`mod-3-15` → `chapter-3`). The
  *  Module type doesn't carry its chapter, and the topic-tree layer has no
@@ -30,14 +35,22 @@ interface TopicProgressState {
    *  otherwise. Drives a coin multiplier (1.0 → 1.5 → 2.0 → 2.5). */
   chestStreak: number;
   lastChestAtMs: number;
+  /** R8 T3.4 — counts how many `common` chests the user has opened
+   *  in a row. Resets to 0 the moment a rare or mythic drops. When it
+   *  reaches PITY_TIMER_THRESHOLD, the next chest roll is FORCED to
+   *  rare. This is Clash Royale's "pity timer" — the math behind
+   *  "you can't have 10 bad chests in a row." */
+  commonChestStreak: number;
 
   markTopicCompleted: (topic: Topic) => void;
   isTopicCompleted: (topicId: string) => boolean;
   summaryForModule: (moduleId: string, topics: Topic[]) => ModuleTopicSummary;
   /** Record a chest open NOW. Bumps the streak (or resets it if the
-   *  last open was > 48h ago) and returns the resulting coin
-   *  multiplier the caller should apply to the base reward. */
-  recordChestOpen: () => number;
+   *  last open was > 48h ago) AND rolls rarity (with pity timer).
+   *  Returns both the streak multiplier and the rolled rarity so the
+   *  caller can apply both bonuses to the base reward and pick the
+   *  matching modal visuals. */
+  recordChestOpen: () => { multiplier: number; rarity: ChestRarity };
   resetForModule: (moduleId: string) => void;
   reset: () => void;
 }
@@ -69,6 +82,7 @@ export const useTopicProgressStore = create<TopicProgressState>()(
       modulesFullyComplete: {},
       chestStreak: 0,
       lastChestAtMs: 0,
+      commonChestStreak: 0,
 
       markTopicCompleted: (topic) => {
         const state = get();
@@ -143,8 +157,26 @@ export const useTopicProgressStore = create<TopicProgressState>()(
         const now = Date.now();
         const within = state.lastChestAtMs > 0 && now - state.lastChestAtMs < STREAK_WINDOW_MS;
         const next = within ? state.chestStreak + 1 : 1;
-        set({ chestStreak: next, lastChestAtMs: now });
-        return multiplierForStreak(next);
+        // R8 T3.4 — roll rarity with pity timer. If the user has hit
+        // PITY_TIMER_THRESHOLD commons in a row, force rare on this
+        // open and reset the counter. Mythic stays pure-luck (no
+        // pity-upgrade path) so it remains genuinely rare.
+        let rarity: ChestRarity;
+        if (state.commonChestStreak >= PITY_TIMER_THRESHOLD) {
+          rarity = 'rare';
+        } else {
+          const roll = Math.random();
+          if (roll < MYTHIC_DROP_RATE) rarity = 'mythic';
+          else if (roll < MYTHIC_DROP_RATE + RARE_DROP_RATE) rarity = 'rare';
+          else rarity = 'common';
+        }
+        const nextCommonStreak = rarity === 'common' ? state.commonChestStreak + 1 : 0;
+        set({
+          chestStreak: next,
+          lastChestAtMs: now,
+          commonChestStreak: nextCommonStreak,
+        });
+        return { multiplier: multiplierForStreak(next), rarity };
       },
 
       /** Clear every completed topic + threshold flag for a single
@@ -170,6 +202,7 @@ export const useTopicProgressStore = create<TopicProgressState>()(
           modulesFullyComplete: {},
           chestStreak: 0,
           lastChestAtMs: 0,
+          commonChestStreak: 0,
         }),
     }),
     {
@@ -181,6 +214,7 @@ export const useTopicProgressStore = create<TopicProgressState>()(
         modulesFullyComplete: state.modulesFullyComplete,
         chestStreak: state.chestStreak,
         lastChestAtMs: state.lastChestAtMs,
+        commonChestStreak: state.commonChestStreak,
       }),
     }
   )

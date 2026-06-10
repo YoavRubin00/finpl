@@ -93,6 +93,32 @@ export interface ModuleTopicSummary {
  *  truth; bumping this re-grades every module's completion gate. */
 export const TOPIC_COMPLETION_THRESHOLD = 0.7;
 
+/** R8 T3.4 — chest rarity tiers, surface variable-reward dopamine.
+ *  Brawl Stars / Clash Royale benchmarks: tiered chest rolls keep the
+ *  user engaged past the "I already have one of those" plateau.
+ *
+ *  Distribution per roll (no pity): mythic 1%, rare 12%, common 87%.
+ *  Pity timer kicks in after {@link PITY_TIMER_THRESHOLD} commons in a
+ *  row — the next chest is GUARANTEED rare (no mythic upgrade, that
+ *  stays luck-only).
+ */
+export type ChestRarity = 'common' | 'rare' | 'mythic';
+
+/** Coin bonus multiplier stacked on top of the streak multiplier for
+ *  each rarity. Common = no bonus (baseline). Rare adds 50%. Mythic
+ *  triples the reward. Stays below the streak cap (×2.5) for common
+ *  to avoid economy break, but mythic intentionally goes higher
+ *  because it's < 1% drop rate. */
+export const CHEST_RARITY_BONUS: Record<ChestRarity, number> = {
+  common: 1,
+  rare: 1.5,
+  mythic: 3,
+};
+
+export const PITY_TIMER_THRESHOLD = 3;
+export const MYTHIC_DROP_RATE = 0.01;
+export const RARE_DROP_RATE = 0.12;
+
 /** R8 T3.1 — per-module first-chest threshold override map. The default
  *  70% gate is fine for most modules but feels far in chapter 0 where the
  *  user is still in onboarding and hasn't yet experienced a variable-reward

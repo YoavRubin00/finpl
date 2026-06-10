@@ -30,6 +30,8 @@ import { useSoundEffect } from '../../hooks/useSoundEffect';
 import { useWisdomStore } from '../wisdom-flashes/useWisdomStore';
 import { useTopicProgressStore } from './useTopicProgressStore';
 import { nextChestForecastTopic } from './chestForecastTopics';
+import { ParticleBurst } from '../../components/ui/ParticleBurst';
+import type { ChestRarity } from './types';
 
 const RTL = { writingDirection: 'rtl' as const, textAlign: 'right' as const };
 const RTL_CENTER = { writingDirection: 'rtl' as const, textAlign: 'center' as const };
@@ -50,6 +52,11 @@ interface ChestCelebrationModalProps {
   /** Whether this chest is the FINAL 100% chest rather than the 70%
    *  threshold one. Drives copy + reward visuals. R6 Epic 5. */
   isFinale?: boolean;
+  /** R8 T3.4 — rarity tier rolled by useTopicProgressStore.recordChestOpen.
+   *  Drives the rarity badge + particle palette (gold for mythic, cyan for
+   *  rare, none for common). The coin bonus is already baked into `coins`
+   *  by the caller; this is purely a visual treatment. */
+  rarity?: ChestRarity;
 }
 
 /**
@@ -72,6 +79,7 @@ export function ChestCelebrationModal({
   onAdvanceToNextModule,
   onDoNResolve,
   isFinale = false,
+  rarity = 'common',
 }: ChestCelebrationModalProps): React.ReactElement | null {
   const [opened, setOpened] = useState(false);
   const [showDoN, setShowDoN] = useState(false);
@@ -81,6 +89,9 @@ export function ChestCelebrationModal({
   // Separate flags for coins / xp so each can unmount independently.
   const [flyingCoins, setFlyingCoins] = useState(false);
   const [flyingXp, setFlyingXp] = useState(false);
+  // R8 T3.4 — rarity particle burst (gold for mythic, cyan for rare).
+  // Fires alongside the chest reveal lottie. Common chests skip this.
+  const [rarityBurstActive, setRarityBurstActive] = useState(false);
   const lottieRef = useRef<LottieView>(null);
   const { playSound } = useSoundEffect();
 
@@ -146,6 +157,7 @@ export function ChestCelebrationModal({
       setDonMultiplier(1);
       setFlyingCoins(false);
       setFlyingXp(false);
+      setRarityBurstActive(false);
       wisdomFiredRef.current = false;
       prevWisdomActiveRef.current = false;
     }
@@ -159,9 +171,11 @@ export function ChestCelebrationModal({
     const t = setTimeout(() => {
       setFlyingCoins(true);
       setFlyingXp(true);
+      // R8 T3.4 — light up rarity burst only for non-common drops.
+      if (rarity !== 'common') setRarityBurstActive(true);
     }, 350);
     return () => clearTimeout(t);
-  }, [opened]);
+  }, [opened, rarity]);
 
   // R8 J5 — Wisdom + DoN now run as PARALLEL layers, not sequential.
   // DoN opens 700ms after chest reveal (reward pills mid-fade-in); the
@@ -279,6 +293,21 @@ export function ChestCelebrationModal({
                 ? 'סיימת את כל הרכיבים. תיבת המאסטר נפתחת.'
                 : 'סיימת 70% מהמודולה. הגיע הזמן לפרס.'}
             </Text>
+            {/* R8 T3.4 — rarity badge above the chest. Common stays
+                invisible to avoid noise; rare/mythic surface so the
+                user immediately feels "this drop is special." */}
+            {rarity !== 'common' && (
+              <View
+                style={[
+                  styles.rarityBadge,
+                  rarity === 'mythic' && styles.rarityBadgeMythic,
+                ]}
+              >
+                <Text style={styles.rarityBadgeText} allowFontScaling={false}>
+                  {rarity === 'mythic' ? '✨ תיבת מיתי — נדיר במיוחד' : '⭐ תיבה נדירה'}
+                </Text>
+              </View>
+            )}
           </Animated.View>
 
           {/* Chest stage */}
@@ -322,6 +351,18 @@ export function ChestCelebrationModal({
                   autoPlay
                   loop={false}
                 />
+                {/* R8 T3.4 — rarity particle burst on reveal. Gold for
+                    mythic, cyan for rare. Skipped for common drops to
+                    keep them feeling everyday-baseline. */}
+                {rarityBurstActive && (
+                  <View style={styles.rarityBurstAbs} pointerEvents="none">
+                    <ParticleBurst
+                      color={rarity === 'mythic' ? 'gold' : 'cyan'}
+                      particleCount={rarity === 'mythic' ? 18 : 12}
+                      onComplete={() => setRarityBurstActive(false)}
+                    />
+                  </View>
+                )}
                 <View style={styles.rewardRow}>
                   <View style={styles.rewardPill}>
                     <Sparkles size={20} color="#0c4a6e" strokeWidth={2.6} />
@@ -507,6 +548,39 @@ const styles = StyleSheet.create({
     fontWeight: '900',
     color: '#fb923c',
     writingDirection: 'rtl',
+  },
+  // R8 T3.4 — chest rarity badge (rare = cyan, mythic = gold). Sits
+  // above the chest body, only visible for non-common drops.
+  rarityBadge: {
+    alignSelf: 'center',
+    marginTop: 10,
+    backgroundColor: 'rgba(34, 211, 238, 0.18)',
+    borderColor: '#22d3ee',
+    borderWidth: 1.5,
+    borderRadius: 999,
+    paddingHorizontal: 14,
+    paddingVertical: 6,
+  },
+  rarityBadgeMythic: {
+    backgroundColor: 'rgba(250, 204, 21, 0.22)',
+    borderColor: '#facc15',
+  },
+  rarityBadgeText: {
+    fontSize: 13,
+    fontWeight: '900',
+    color: '#ffffff',
+    writingDirection: 'rtl',
+    textAlign: 'center',
+  },
+  rarityBurstAbs: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 25,
   },
   rewardWrap: {
     alignItems: 'center',

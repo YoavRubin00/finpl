@@ -132,6 +132,12 @@ function getNodeOffset(i: number): number {
 // Per-arena lucide icon mapping for banners
 const ARENA_ICONS: Record<number, typeof Home> = { 0: Home, 1: Home, 2: Shield, 3: Scale, 4: TrendingUp, 5: Crown };
 
+// Glow color for the single ACTIVE node ("what to do next"). Matches the
+// addictive coin-gold used by the top wealth header (CLASH.goldLight in
+// constants/theme.ts → GlobalWealthHeader coins pill) so the next lesson reads
+// as the same gold reward currency rather than the arena's blue.
+const ACTIVE_GOLD = "#f5c842";
+
 // Per-arena color palettes
 const ARENA_COLORS: Record<number, { bg: string; dim: string; text: string; header: string; glow: string; bottom: string }> = {
   0: { bg: "#3b82f6", dim: "#dbeafe", text: "#ffffff", header: "#60a5fa", glow: "#93c5fd", bottom: "#1d4ed8" },
@@ -657,12 +663,12 @@ function ModuleNode({
             {
               backgroundColor: bgColor,
               borderColor: bottomBorderColor,
-              shadowColor: state === "active" ? colors.glow : "transparent",
+              shadowColor: state === "active" ? ACTIVE_GOLD : "transparent",
               opacity: state === "locked" ? 0.7 : 1,
             },
           ]}
         >
-          {state === "active" && <PulsingGlow color={colors.bg} />}
+          {state === "active" && <PulsingGlow color={ACTIVE_GOLD} />}
           <Text style={[styles.nodeIcon, { opacity: state === "locked" ? 0.8 : 1 }]}>
               {icon}
             </Text>
@@ -1113,9 +1119,12 @@ const ChapterSection = React.memo(function ChapterSection({
                 </>
               )}
               {hasNext && !showQuestBox && (() => {
-                // Bonus PEARL between modules[i] and modules[i+1]. Renders on
-                // the OPPOSITE side of the current node (questOffsetX = -offset)
-                // so it lands in the empty half-row of the alternating path.
+                // Bonus PEARL between modules[i] and modules[i+1]. Sits at the
+                // MIDPOINT of the two nodes' horizontal offsets so the two
+                // connectors (node→pearl→next) form one smooth flowing trail
+                // instead of a sharp V/fork — the old -offset routing sent the
+                // pearl to the opposite side and split the path (most visible
+                // around mod-0-2 after the mod-0-1 split).
                 // Locked until module[i] is completed; once completed it
                 // becomes interactive and inherits a green check on subsequent
                 // visits via completedPearlIds.
@@ -1130,7 +1139,7 @@ const ChapterSection = React.memo(function ChapterSection({
                     />
                   );
                 }
-                const pearlOffsetX = -getNodeOffset(i);
+                const pearlOffsetX = Math.round((getNodeOffset(i) + getNodeOffset(i + 1)) / 2);
                 const moduleCompleted = completedModules.includes(module.id);
                 // Pro unlocks EVERYTHING — including pearls. Without this, a
                 // brand-new Pro user lands on the map and sees nothing but
@@ -1460,6 +1469,11 @@ export function DuoLearnScreen() {
   // ?completedPhase=X which the useEffect above marks done.
   const insets = useSafeAreaInsets();
   const scrollRef = useRef<ScrollView>(null);
+  // Mirror of topicTreeModule so the stable useFocusEffect callback can read the
+  // latest expanded module without re-subscribing (an open tree owns the scroll
+  // position — see the dedicated effect below).
+  const topicTreeModuleRef = useRef(topicTreeModule);
+  topicTreeModuleRef.current = topicTreeModule;
   const [refreshKey, setRefreshKey] = useState(0);
   const isFirstMount = useRef(true);
   // R6 Epic 4: live scroll Y + per-pearl View refs. Lets the chest
@@ -1588,6 +1602,21 @@ export function DuoLearnScreen() {
   // Merges server progress + local offline-completed store, same pattern as
   // the chapter-rendering logic at line 1738. Returns null for fresh users
   // who haven't completed anything — caller falls back to calcResumeScrollY.
+  // Content-Y of a given module's node, using the same per-row constants as
+  // calcResumeScrollY (greeting 150 + per-chapter banner/margin + moduleIdx*195).
+  // The TopicTreeAccordion expands BELOW the node, so it never shifts this Y —
+  // scrolling here puts the module at the top with its sub-modules underneath.
+  const calcModuleScrollY = useCallback((chIdx: number, mIdx: number): number => {
+    let y = 150;
+    for (let ci = 0; ci < chIdx; ci++) {
+      y += 80 + 44;
+      y += ALL_CHAPTERS[ci].modules.length * 195;
+    }
+    y += 80 + 16;
+    y += mIdx * 195;
+    return y;
+  }, []);
+
   const calcLastCompletedScrollY = useCallback((): number | null => {
     const completed = new Set<string>([
       ...(progressData?.filter((m) => m.status === 'completed').map((m) => m.moduleId) ?? []),
@@ -1609,20 +1638,8 @@ export function DuoLearnScreen() {
     }
     if (targetChapterIdx < 0) return null;
 
-    // Same per-row constants as calcResumeScrollY:
-    //   greeting padding 150 + per-chapter (banner 80 + container margin 44)
-    //   for completed chapters BEFORE the target, then chapter banner 80 +
-    //   marginTop 16 + moduleIdx * 195 inside the target chapter.
-    let y = 150;
-    for (let ci = 0; ci < targetChapterIdx; ci++) {
-      y += 80 + 44;
-      y += ALL_CHAPTERS[ci].modules.length * 195;
-    }
-    y += 80;
-    y += 16;
-    y += targetModuleIdx * 195;
-    return y;
-  }, [progressData, localCompletedModuleIds]);
+    return calcModuleScrollY(targetChapterIdx, targetModuleIdx);
+  }, [progressData, localCompletedModuleIds, calcModuleScrollY]);
 
   // On every tab focus, scroll to the user's last-completed module (with a
   // fallback to "next active module" for fresh users). Skips the very first
@@ -1635,12 +1652,37 @@ export function DuoLearnScreen() {
         isFirstMount.current = false;
         return;
       }
+      // An open topic tree (returned from a module, or tapped to expand) owns
+      // the scroll position — the dedicated effect below anchors it at the top.
+      // Don't fight it with the last-completed anchor.
+      if (topicTreeModuleRef.current) {
+        setRefreshKey((k) => k + 1);
+        return;
+      }
       const lastY = calcLastCompletedScrollY();
       const targetY = lastY ?? calcResumeScrollY();
       scrollRef.current?.scrollTo({ y: Math.max(0, targetY - 80), animated: true });
       setRefreshKey((k) => k + 1);
     }, [calcResumeScrollY, calcLastCompletedScrollY])
   );
+
+  // Anchor an open topic-tree module at the TOP of the viewport so its expanded
+  // sub-modules (TopicTreeAccordion renders below the node) are spread out
+  // underneath. Fires on return-from-module (completedPhaseParams sets
+  // topicTreeModule) and on tap-to-expand. rAF lets the accordion lay out first.
+  useEffect(() => {
+    if (!topicTreeModule) return;
+    const chIdx = ALL_CHAPTERS.findIndex((c) => c.id === topicTreeModule.chapterId);
+    if (chIdx < 0) return;
+    const mIdx = ALL_CHAPTERS[chIdx].modules.findIndex((m) => m.id === topicTreeModule.module.id);
+    if (mIdx < 0) return;
+    const targetY = calcModuleScrollY(chIdx, mIdx);
+    const TOP_PAD = 12; // small gap below the wealth header
+    const raf = requestAnimationFrame(() => {
+      scrollRef.current?.scrollTo({ y: Math.max(0, targetY - TOP_PAD), animated: true });
+    });
+    return () => cancelAnimationFrame(raf);
+  }, [topicTreeModule, calcModuleScrollY]);
 
   // Auto-scroll on initial mount — prefer last-completed module so the user
   // lands on "where I finished last time" with the next lesson right below.
