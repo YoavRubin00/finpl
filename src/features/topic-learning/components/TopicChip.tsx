@@ -73,8 +73,10 @@ export const TopicChip = React.memo(function TopicChip({
   // particle burst + green pulse + success haptic. The press itself
   // navigates away, so the "you completed it" moment fires when the
   // user returns to the map and the chip first re-renders as done.
+  // R8 follow-up (Yoav 2026-06-10): no gold particle burst — Yoav
+  // wants chip color to stay clean. Celebration is just haptic +
+  // green flash + a soft scale bounce + soft pop sound.
   const prevCompletedRef = useRef(completed);
-  const [burstTick, setBurstTick] = useState(0);
   useEffect(() => {
     if (!prevCompletedRef.current && completed) {
       successHaptic();
@@ -87,7 +89,6 @@ export const TopicChip = React.memo(function TopicChip({
         withSpring(1.12, { damping: 10, stiffness: 220 }),
         withSpring(1, { damping: 11, stiffness: 200 }),
       );
-      setBurstTick((t) => t + 1);
     }
     prevCompletedRef.current = completed;
   }, [completed, flashOpacity, playSound, scale]);
@@ -118,18 +119,6 @@ export const TopicChip = React.memo(function TopicChip({
       {recommended && !completed && (
         <View style={styles.haloAbs} pointerEvents="none">
           <View style={styles.haloCircle} />
-        </View>
-      )}
-
-      {/* R8 J1 — particle burst on the false→true completion transition.
-          Keyed by burstTick so each fresh completion remounts the burst. */}
-      {burstTick > 0 && (
-        <View style={styles.burstAbs} pointerEvents="none" key={burstTick}>
-          <ParticleBurst
-            color="gold"
-            particleCount={10}
-            onComplete={() => { /* noop — chip stays mounted */ }}
-          />
         </View>
       )}
 
@@ -221,27 +210,22 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     zIndex: 1,
   },
-  // Round shape ensures box-shadow on web inherits a circle, not a rect.
+  // R8 follow-up (Yoav 2026-06-10): make the gold halo solidly visible
+  // on every platform, not just iOS. Web/Android shadowColor without
+  // a fill renders nothing — so the ring now uses an actual gold
+  // background tint + a thick gold border. Static (no pulse).
   haloCircle: {
-    width: NODE_SIZE + 18,
-    height: NODE_SIZE + 18,
-    borderRadius: (NODE_SIZE + 18) / 2,
+    width: NODE_SIZE + 22,
+    height: NODE_SIZE + 22,
+    borderRadius: (NODE_SIZE + 22) / 2,
+    backgroundColor: 'rgba(251, 191, 36, 0.22)',
+    borderWidth: 3,
+    borderColor: '#fbbf24',
     shadowColor: '#fbbf24',
     shadowOpacity: 0.9,
     shadowRadius: 16,
     shadowOffset: { width: 0, height: 0 },
     elevation: 12,
-  },
-  // R8 J1 — particle burst layer; positioned over the chip center.
-  burstAbs: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    alignItems: 'center',
-    justifyContent: 'center',
-    zIndex: 20,
   },
   // R8 J1 — bright green flash overlay, inside the circle clip mask.
   flashOverlay: {

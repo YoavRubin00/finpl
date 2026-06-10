@@ -663,12 +663,14 @@ function ModuleNode({
             {
               backgroundColor: bgColor,
               borderColor: bottomBorderColor,
-              shadowColor: state === "active" ? ACTIVE_GOLD : "transparent",
               opacity: state === "locked" ? 0.7 : 1,
             },
           ]}
         >
-          {state === "active" && <PulsingGlow color={ACTIVE_GOLD} />}
+          {/* R8 follow-up (Yoav 2026-06-10): modules return to a clean
+              uniform color — no more pulsing gold halo on the active
+              one. The only gold indicator left is the static halo on
+              the recommended TOPIC chip inside the accordion. */}
           <Text style={[styles.nodeIcon, { opacity: state === "locked" ? 0.8 : 1 }]}>
               {icon}
             </Text>
