@@ -21,6 +21,7 @@ import { DoubleOrNothingModal } from '../../components/ui/DoubleOrNothingModal';
 import { doubleHeavyHaptic, successHaptic, tapHaptic } from '../../utils/haptics';
 import { useSoundEffect } from '../../hooks/useSoundEffect';
 import { useWisdomStore } from '../wisdom-flashes/useWisdomStore';
+import { useTopicProgressStore } from './useTopicProgressStore';
 
 const RTL = { writingDirection: 'rtl' as const, textAlign: 'right' as const };
 const RTL_CENTER = { writingDirection: 'rtl' as const, textAlign: 'center' as const };
@@ -79,6 +80,11 @@ export function ChestCelebrationModal({
   const wisdomActive = useWisdomStore((s) => s.activeItem);
   const wisdomFiredRef = useRef(false);
   const prevWisdomActiveRef = useRef(false);
+
+  // R6 Epic 7-C1: surface the user's current chest streak on the
+  // pre-open chest body so the multiplier is legible BEFORE they tap.
+  // Read-only here — the bump happens upstream in TopicTreeAccordion.
+  const chestStreak = useTopicProgressStore((s) => s.chestStreak);
 
   // Chest animation shared values — mirrors LessonFlowScreen's
   // chestGlowScale / chestGlowOpacity / chestBodyScale rhythm.
@@ -257,6 +263,13 @@ export function ChestCelebrationModal({
                     loop={false}
                   />
                 </Animated.View>
+                {chestStreak >= 2 && (
+                  <View style={styles.streakBadge}>
+                    <Text style={styles.streakBadgeText} allowFontScaling={false}>
+                      {`🔥 ${chestStreak} ימים ברצף`}
+                    </Text>
+                  </View>
+                )}
                 <Text style={[styles.tapHint, RTL_CENTER]} allowFontScaling={false}>
                   הקש על התיבה לפתיחה
                 </Text>
@@ -403,6 +416,21 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     color: '#fcd34d',
     marginTop: 8,
+  },
+  streakBadge: {
+    marginTop: 6,
+    backgroundColor: 'rgba(251, 146, 60, 0.18)',
+    borderColor: '#fb923c',
+    borderWidth: 1.5,
+    borderRadius: 999,
+    paddingHorizontal: 14,
+    paddingVertical: 6,
+  },
+  streakBadgeText: {
+    fontSize: 14,
+    fontWeight: '900',
+    color: '#fb923c',
+    writingDirection: 'rtl',
   },
   rewardWrap: {
     alignItems: 'center',

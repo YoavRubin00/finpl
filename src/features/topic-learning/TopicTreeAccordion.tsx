@@ -13,11 +13,16 @@ import { resolveTopics } from './topicResolver';
 import { useTopicProgressStore } from './useTopicProgressStore';
 import { ModuleTopicLayout } from './components/ModuleTopicLayout';
 
-/** Base reward on topic-tree completion. Lower than the legacy
+/** Base reward on topic-tree 70% completion. Lower than the legacy
  *  LessonFlowScreen MODULE_COMPLETE_XP (30) because topics also yield
  *  per-topic micro-XP in a future loop. Tunable from a single point. */
 const MODULE_TT_XP = 30;
 const MODULE_TT_COINS = 150;
+/** R6 Epic 5 — second chest at 100%. Larger reward than the 70%
+ *  threshold drop. Mirrors the "you actually finished EVERYTHING"
+ *  framing the user gets in the modal copy. */
+const MASTER_TT_XP = 50;
+const MASTER_TT_COINS = 250;
 
 interface TopicTreeAccordionProps {
   module: Module;
@@ -45,11 +50,10 @@ interface TopicTreeAccordionProps {
  * Expandable panel rendered inside DuoLearnScreen directly below a
  * module node when the module is `learningMode: 'topic-tree'`.
  *
- * R4 (2026-06-09): trimmed to a transparent surface — no rectangle
- * background, no progress header, no bottom CTA. It's literally just
- * the tree + chip path, sized to flow inside the outer DuoLearnScreen
- * ScrollView. Chip tap routes to the legacy /lesson/[id] with
- * phase-targeted entry (see DuoLearnScreen.handleTopicSelected).
+ * R6 (2026-06-10): two-chest economy — 70% drops a regular chest with
+ * wisdom + DoN; 100% drops a MASTER chest with a larger reward. Streak
+ * multiplier from `useTopicProgressStore.recordChestOpen` is applied
+ * to the coin grant on both chests.
  */
 export const TopicTreeAccordion = React.memo(function TopicTreeAccordion({
   module,
@@ -78,39 +82,70 @@ export const TopicTreeAccordion = React.memo(function TopicTreeAccordion({
     return out;
   }, [topics, completedMap]);
 
-  // Module completion side effects on first 70%-threshold crossing.
-  const wasDoneRef = useRef<boolean>(false);
-  const [showChest, setShowChest] = useState(false);
+  // Threshold crossing side effects.
+  const past70Ref = useRef<boolean>(false);
+  const past100Ref = useRef<boolean>(false);
+  // Chest display state — driven from either the 70% or 100% useEffects
+  // so the same ChestCelebrationModal can host both reveals. null = not
+  // showing.
+  const [chestState, setChestState] = useState<{
+    xp: number;
+    coins: number;
+    isFinale: boolean;
+  } | null>(null);
   const upsertProgress = useUpsertModuleProgress();
   const { playSound } = useSoundEffect();
   const economyStore = useEconomyUIStore();
 
-  // Seed ref from the persisted threshold map on mount so a re-mount
-  // post-crossing doesn't re-trigger the celebration.
+  // Seed refs from the persisted maps on mount so a re-mount post-crossing
+  // doesn't re-trigger either celebration.
   const modulePastThreshold = useTopicProgressStore(
     (s) => Boolean(s.modulesPastThreshold[module.id]),
   );
+  const moduleFullyComplete = useTopicProgressStore(
+    (s) => Boolean(s.modulesFullyComplete[module.id]),
+  );
   useEffect(() => {
-    wasDoneRef.current = modulePastThreshold;
+    past70Ref.current = modulePastThreshold;
+    past100Ref.current = moduleFullyComplete;
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // 70% chest — fires the first time isModuleDone flips true.
   useEffect(() => {
-    if (summary.isModuleDone && !wasDoneRef.current) {
-      wasDoneRef.current = true;
-      upsertProgress.mutate({
-        moduleId: module.id,
-        status: 'completed',
-        xpEarned: MODULE_TT_XP,
-      });
-      useCompletedModulesStore.getState().markCompleted(module.id);
-      economyStore.addXP(MODULE_TT_XP, 'daily_task');
-      economyStore.addCoins(MODULE_TT_COINS, 'lesson');
-      successHaptic();
-      try { playSound('modal_open_4'); } catch { /* non-fatal */ }
-      setShowChest(true);
-    }
+    if (!summary.isModuleDone || past70Ref.current) return;
+    past70Ref.current = true;
+    upsertProgress.mutate({
+      moduleId: module.id,
+      status: 'completed',
+      xpEarned: MODULE_TT_XP,
+    });
+    useCompletedModulesStore.getState().markCompleted(module.id);
+    economyStore.addXP(MODULE_TT_XP, 'daily_task');
+    // Apply the chest streak multiplier to the coin grant (Epic 7-C1).
+    const multiplier = useTopicProgressStore.getState().recordChestOpen();
+    const coinsGranted = Math.round(MODULE_TT_COINS * multiplier);
+    economyStore.addCoins(coinsGranted, 'lesson');
+    successHaptic();
+    try { playSound('modal_open_4'); } catch { /* non-fatal */ }
+    setChestState({ xp: MODULE_TT_XP, coins: coinsGranted, isFinale: false });
   }, [summary.isModuleDone, module.id, upsertProgress, economyStore, playSound]);
+
+  // 100% master chest — fires the first time pct hits 100.
+  useEffect(() => {
+    if (summary.pct !== 100 || past100Ref.current) return;
+    past100Ref.current = true;
+    // Stack the master reward ON TOP of the 70% chest's grant — the
+    // user already pocketed that one; this is the bonus for finishing
+    // every chip.
+    economyStore.addXP(MASTER_TT_XP, 'daily_task');
+    const multiplier = useTopicProgressStore.getState().recordChestOpen();
+    const coinsGranted = Math.round(MASTER_TT_COINS * multiplier);
+    economyStore.addCoins(coinsGranted, 'lesson');
+    successHaptic();
+    try { playSound('modal_open_4'); } catch { /* non-fatal */ }
+    setChestState({ xp: MASTER_TT_XP, coins: coinsGranted, isFinale: true });
+  }, [summary.pct, module.id, economyStore, playSound]);
 
   return (
     <Animated.View
@@ -128,30 +163,44 @@ export const TopicTreeAccordion = React.memo(function TopicTreeAccordion({
           onTopicPress={onTopicSelected}
         />
 
-        {/* 70%-threshold celebration. Real chest modal — chest opens on
-            tap, surfaces XP/coins, fires the wisdom quote popup, then
-            offers Double-or-Nothing before the CTAs unlock. */}
+        {/* Two-chest celebration. 70% chest fires first with the regular
+            reward; the 100% master chest fires later when every chip is
+            done. Both reveals share the same modal — `isFinale` flips
+            the copy and lottie tone. */}
         <ChestCelebrationModal
-          visible={showChest}
-          xp={MODULE_TT_XP}
-          coins={MODULE_TT_COINS}
+          visible={chestState !== null}
+          xp={chestState?.xp ?? MODULE_TT_XP}
+          coins={chestState?.coins ?? MODULE_TT_COINS}
+          isFinale={chestState?.isFinale ?? false}
           onContinueModule={() => {
-            setShowChest(false);
-            onContinueAfterChest?.();
+            const wasFinale = chestState?.isFinale ?? false;
+            setChestState(null);
+            // The 100% master chest is the END — fully advance like
+            // the "next module" CTA. The 70% chest keeps the accordion
+            // open so the user can finish the remaining 30%.
+            if (wasFinale) {
+              onAdvanceToNextModule?.();
+              onModuleCompleted?.();
+            } else {
+              onContinueAfterChest?.();
+            }
           }}
           onAdvanceToNextModule={() => {
-            setShowChest(false);
+            setChestState(null);
             onAdvanceToNextModule?.();
             onModuleCompleted?.();
           }}
           onDoNResolve={(multiplier) => {
             // multiplier: 0 = lost everything, 1 = kept base, 2 = doubled.
-            // Base coins were already credited in the threshold useEffect
-            // above — here we apply the delta on top.
+            // Coins were already credited above — here we apply the delta
+            // on top of THAT amount (so it stacks on the streak multiplier
+            // too). For the master chest we still use the displayed coin
+            // amount as the base.
+            const base = chestState?.coins ?? 0;
             if (multiplier === 2) {
-              economyStore.addCoins(MODULE_TT_COINS, 'lesson');
+              economyStore.addCoins(base, 'lesson');
             } else if (multiplier === 0) {
-              economyStore.addCoins(-MODULE_TT_COINS, 'lesson');
+              economyStore.addCoins(-base, 'lesson');
             }
           }}
         />
