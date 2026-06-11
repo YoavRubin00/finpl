@@ -289,8 +289,11 @@ export const ModuleTopicLayout = React.memo(function ModuleTopicLayout({
   );
 });
 
-/** Cloned from DuoLearnScreen.PathConnector (line 296). */
-function PathConnector({
+/** Cloned from DuoLearnScreen.PathConnector (line 296). Memoized — each
+ *  instance renders ~124 absolutely-positioned dots, and ModuleTopicLayout
+ *  re-renders on every isCompletedMap change. React.memo skips the whole
+ *  recompute when this connector's own props are unchanged. */
+const PathConnector = React.memo(function PathConnector({
   fromOffsetX,
   toOffsetX,
   done,
@@ -307,10 +310,13 @@ function PathConnector({
   const trailColor = done ? '#fde68a' : '#e5e7eb';
   const glowColor = '#fde68a';
 
-  const interp = (t: number) => {
-    const smooth = 0.5 - 0.5 * Math.cos(t * Math.PI);
-    return fromOffsetX + (toOffsetX - fromOffsetX) * smooth;
-  };
+  const interp = useMemo(
+    () => (t: number) => {
+      const smooth = 0.5 - 0.5 * Math.cos(t * Math.PI);
+      return fromOffsetX + (toOffsetX - fromOffsetX) * smooth;
+    },
+    [fromOffsetX, toOffsetX],
+  );
 
   return (
     <View pointerEvents="none" style={styles.connectorAbs}>
@@ -391,7 +397,7 @@ function PathConnector({
       })}
     </View>
   );
-}
+});
 
 const styles = StyleSheet.create({
   container: {
