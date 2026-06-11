@@ -42,7 +42,7 @@ interface TopicProgressState {
    *  "you can't have 10 bad chests in a row." */
   commonChestStreak: number;
 
-  markTopicCompleted: (topic: Topic) => void;
+  markTopicCompleted: (topic: Topic, via?: 'chip' | 'continuous') => void;
   isTopicCompleted: (topicId: string) => boolean;
   summaryForModule: (moduleId: string, topics: Topic[]) => ModuleTopicSummary;
   /** Idempotently persist the "first crossed 70%" / "first crossed 100%"
@@ -91,14 +91,16 @@ export const useTopicProgressStore = create<TopicProgressState>()(
       lastChestAtMs: 0,
       commonChestStreak: 0,
 
-      markTopicCompleted: (topic) => {
+      markTopicCompleted: (topic, via) => {
         const state = get();
         if (state.completed[topic.id]) return;
         const completed = { ...state.completed, [topic.id]: { completedAt: nowIso() } };
         set({ completed });
         // Per-chip analytics. The topic-tree method emitted no events before
         // this — every chip completion was invisible to PostHog. Non-fatal:
-        // analytics must never block a completion write.
+        // analytics must never block a completion write. `via` discriminates
+        // chip-driven completions from continuous-run ones so the funnel
+        // can split retention by path.
         try {
           track({
             name: 'topic_completed',
@@ -107,6 +109,7 @@ export const useTopicProgressStore = create<TopicProgressState>()(
               topic_id: topic.id,
               topic_kind: topic.kind,
               chapter_id: chapterIdFromModuleId(topic.moduleId),
+              via,
             },
           });
         } catch { /* non-fatal */ }

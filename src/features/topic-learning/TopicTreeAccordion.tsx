@@ -5,6 +5,7 @@ import Animated, { FadeIn, FadeInDown, FadeOut } from 'react-native-reanimated';
 import { mediumHaptic, successHaptic, tapHaptic } from '../../utils/haptics';
 import { useSoundEffect } from '../../hooks/useSoundEffect';
 import { captureEvent } from '../../lib/posthog';
+import { track } from '../../lib/analytics/events';
 import { useUpsertModuleProgress } from '../chapter-1-content/useProgress';
 import { ChestCelebrationModal } from './ChestCelebrationModal';
 import { Mod01WalkthroughPromptModal } from './Mod01WalkthroughPromptModal';
@@ -317,6 +318,23 @@ export const TopicTreeAccordion = React.memo(function TopicTreeAccordion({
       : null;
 
     setChestState({ xp: totalXp, coins: totalCoins, isFinale: false, rarity, offerDoN, quitLabel });
+    // Chest reveal analytics — split by rarity, DoN/quit-offer rolls,
+    // and reward amounts. Pairs with chest_cta_tapped + chest_don_resolved
+    // to understand the post-chest funnel (engagement vs bail).
+    try {
+      track({
+        name: 'chest_opened',
+        props: {
+          module_id: module.id,
+          chapter_id: chapterIdFromModuleId(module.id),
+          rarity,
+          xp: totalXp,
+          coins: totalCoins,
+          offered_don: offerDoN,
+          offered_quit: quitLabel !== null,
+        },
+      });
+    } catch { /* non-fatal */ }
   }, [summary.isModuleDone, summary.pct, module.id, upsertProgress, addXP, addCoins, playSound, modulePastThreshold, moduleFullyComplete, continuousRunActive]);
 
   // R8 U1/U2 — mod-0-1-only walkthrough prompt. Fires the first time
@@ -349,14 +367,17 @@ export const TopicTreeAccordion = React.memo(function TopicTreeAccordion({
     if (completedNonIntroChipCount < 1) return;
     walkthroughPromptFiredRef.current = true;
     setShowWalkthroughPrompt(true);
+    try { track({ name: 'walkthrough_prompt_shown', props: { module_id: module.id } }); } catch { /* non-fatal */ }
   }, [module.id, completedNonIntroChipCount, hasSeenAppWalkthrough]);
 
   const handleTakeTour = () => {
+    try { track({ name: 'walkthrough_prompt_choice', props: { module_id: module.id, choice: 'tour' } }); } catch { /* non-fatal */ }
     setShowWalkthroughPrompt(false);
     triggerWalkthrough();
   };
 
   const handleContinueLearning = () => {
+    try { track({ name: 'walkthrough_prompt_choice', props: { module_id: module.id, choice: 'continue' } }); } catch { /* non-fatal */ }
     setShowWalkthroughPrompt(false);
     // R8 U2 — keep momentum: mark walkthrough as seen so the overlay
     // won't fire later, schedule the guest register CTA, but DO NOT
@@ -392,9 +413,23 @@ export const TopicTreeAccordion = React.memo(function TopicTreeAccordion({
   const handleStartContinuous = useCallback(() => {
     tapHaptic();
     const chId = chapterIdFromModuleId(module.id);
+    // Continuous run started — for retention cohorts (autopilot vs chip
+    // path). chips_already_done lets us split "started fresh" from
+    // "switched mid-way after doing X chips by hand".
+    try {
+      track({
+        name: 'continuous_run_started',
+        props: {
+          module_id: module.id,
+          chapter_id: chId || undefined,
+          chips_already_done: summary.completed,
+          chips_total: summary.total,
+        },
+      });
+    } catch { /* non-fatal */ }
     const chParam = chId ? `?chapterId=${chId}&ttProgress=1` : `?ttProgress=1`;
     router.push(`/lesson/${module.id}${chParam}` as never);
-  }, [module.id, router]);
+  }, [module.id, router, summary.completed, summary.total]);
 
   return (
     <Animated.View
@@ -437,12 +472,14 @@ export const TopicTreeAccordion = React.memo(function TopicTreeAccordion({
           isFinale={chestState?.isFinale ?? false}
           rarity={chestState?.rarity ?? 'common'}
           onContinueModule={() => {
+            try { track({ name: 'chest_cta_tapped', props: { module_id: module.id, chapter_id: chapterIdFromModuleId(module.id), cta: 'finish_module' } }); } catch { /* non-fatal */ }
             setChestState(null);
             // The 70% chest keeps the accordion open so the user can
             // finish the remaining 30%.
             onContinueAfterChest?.();
           }}
           onAdvanceToNextModule={() => {
+            try { track({ name: 'chest_cta_tapped', props: { module_id: module.id, chapter_id: chapterIdFromModuleId(module.id), cta: 'continue' } }); } catch { /* non-fatal */ }
             setChestState(null);
             onAdvanceToNextModule?.();
             onModuleCompleted?.();
@@ -465,6 +502,18 @@ export const TopicTreeAccordion = React.memo(function TopicTreeAccordion({
                   // which handles negative deltas.
                   fireEconomyDelta({ coinsDelta: -base });
                 }
+                try {
+                  const outcome = multiplier === 2 ? 'doubled' : multiplier === 0 ? 'lost' : 'kept';
+                  track({
+                    name: 'chest_don_resolved',
+                    props: {
+                      module_id: module.id,
+                      chapter_id: chapterIdFromModuleId(module.id),
+                      outcome,
+                      base_coins: base,
+                    },
+                  });
+                } catch { /* non-fatal */ }
               }
             : undefined}
           // Yoav 2026-06-12: playful "I'm bailing" CTA. Surfaced on ~30%
@@ -472,6 +521,17 @@ export const TopicTreeAccordion = React.memo(function TopicTreeAccordion({
           // exit the learning map to the home tab.
           quitLabel={chestState?.quitLabel ?? null}
           onQuit={() => {
+            try {
+              track({
+                name: 'chest_cta_tapped',
+                props: {
+                  module_id: module.id,
+                  chapter_id: chapterIdFromModuleId(module.id),
+                  cta: 'quit',
+                  quit_label: chestState?.quitLabel ?? undefined,
+                },
+              });
+            } catch { /* non-fatal */ }
             setChestState(null);
             router.replace('/(tabs)/index' as never);
           }}

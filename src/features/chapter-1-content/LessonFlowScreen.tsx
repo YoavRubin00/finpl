@@ -2947,7 +2947,10 @@ export function LessonFlowScreen() {
     const kind = TT_PHASE_TO_KIND[prev];
     if (kind) {
       const topic = resolveTopics(mod).find((t) => t.kind === kind);
-      if (topic) useTopicProgressStore.getState().markTopicCompleted(topic);
+      if (topic) {
+        useTopicProgressStore.getState().markTopicCompleted(topic, 'continuous');
+        continuousChipsMarkedRef.current += 1;
+      }
     }
     // Yoav 2026-06-11 (rev 3): the previous design stamped the 70%
     // threshold on continuous-run summary so the accordion would NOT
@@ -2968,11 +2971,52 @@ export function LessonFlowScreen() {
   // the run crosses 70% mid-lesson the accordion's ChestCelebrationModal
   // (a RN Modal) pops OVER the running lesson. Cleared on unmount — on return
   // the accordion fires its single chest as the canonical reward.
+  // Analytics: lifecycle bracketed by continuous_run_completed (when phase
+  // reaches summary) and continuous_run_exited (any other unmount).
+  const continuousRunStartMsRef = useRef<number | null>(null);
+  const continuousRunCompletedRef = useRef(false);
+  const continuousChipsMarkedRef = useRef(0);
   useEffect(() => {
     if (!ttProgressActive || !id) return;
     useContinuousRunStore.getState().setActive(id);
-    return () => { useContinuousRunStore.getState().clear(); };
+    continuousRunStartMsRef.current = Date.now();
+    continuousRunCompletedRef.current = false;
+    continuousChipsMarkedRef.current = 0;
+    return () => {
+      const startMs = continuousRunStartMsRef.current ?? Date.now();
+      const duration_ms = Date.now() - startMs;
+      if (!continuousRunCompletedRef.current) {
+        try {
+          captureEvent('continuous_run_exited', {
+            module_id: id,
+            chapter_id: chapterId ?? null,
+            phase,
+            chips_marked_this_run: continuousChipsMarkedRef.current,
+            duration_ms,
+          });
+        } catch { /* non-fatal */ }
+      }
+      useContinuousRunStore.getState().clear();
+    };
   }, [ttProgressActive, id]);
+  // Bracket the completed event from the same place we auto-exit: when the
+  // continuous run reaches phase=summary (= the user actually finished the
+  // module front-to-back), stamp `completed` first so the unmount cleanup
+  // suppresses the redundant `exited` event.
+  useEffect(() => {
+    if (!ttProgressActive) return;
+    if (phase !== 'summary') return;
+    if (continuousRunCompletedRef.current) return;
+    continuousRunCompletedRef.current = true;
+    const startMs = continuousRunStartMsRef.current ?? Date.now();
+    try {
+      captureEvent('continuous_run_completed', {
+        module_id: id,
+        chapter_id: chapterId ?? null,
+        duration_ms: Date.now() - startMs,
+      });
+    } catch { /* non-fatal */ }
+  }, [ttProgressActive, phase, id, chapterId]);
 
   // "למידה רציפה" auto-exit on summary (Yoav 2026-06-11 rev 3). The legacy
   // summary chest is now hidden in continuous mode (render gate below), so we
