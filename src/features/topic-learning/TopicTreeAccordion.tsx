@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { useRouter } from 'expo-router';
 import Animated, { FadeIn, FadeInDown, FadeOut } from 'react-native-reanimated';
@@ -212,8 +212,18 @@ export const TopicTreeAccordion = React.memo(function TopicTreeAccordion({
   // ONCE, and surfaces ONE master modal whose displayed `xp` + `coins`
   // already include both 70% + 100% payouts.
   useEffect(() => {
-    const seventyJustCrossed = summary.isModuleDone && !past70Ref.current;
-    const hundredJustCrossed = summary.pct === 100 && !past100Ref.current;
+    // Also honor the LIVE persisted flags, not just the mount-seeded refs:
+    // the "למידה רציפה" continuous flow can stamp modulesPastThreshold from
+    // INSIDE LessonFlowScreen while this accordion stays mounted beneath it.
+    // On return the refs are still false (seeded at 0% on first mount), so
+    // without this guard the accordion would fire its own 70% chest ON TOP
+    // of the legacy summary chest the continuous flow already showed (double
+    // chest). The flags are false on a normal first crossing (stamped inside
+    // this same effect), so the legacy path is unaffected.
+    const seventyJustCrossed =
+      summary.isModuleDone && !past70Ref.current && !modulePastThreshold;
+    const hundredJustCrossed =
+      summary.pct === 100 && !past100Ref.current && !moduleFullyComplete;
     if (!seventyJustCrossed && !hundredJustCrossed) return;
 
     // Roll once per user action — even if both gates cross, this is a
@@ -274,22 +284,17 @@ export const TopicTreeAccordion = React.memo(function TopicTreeAccordion({
     // R8 T1.4 — master = `modal_open_4` (loudest); regular 70% = softer
     // `modal_open_3`. Same rule when both fire (the combo is still THE finale).
     try { playSound(isFinale ? 'modal_open_4' : 'modal_open_3'); } catch { /* non-fatal */ }
-    // Yoav 2026-06-11: the 70% chest fired first, then the 100% master
-    // chest fired a few chips later — two modals over one module run
-    // ("הפתיחת תיבה הופיעה פעמיים — תמחק את הראשון"). Only the master
-    // (100% / finale) opens the modal now; the 70% crossing stays
-    // SILENT but still credits XP/coins, marks the module complete,
-    // and records the streak/rarity. When the master eventually fires
-    // it includes BOTH the 70% + 100% reward totals (the totalXp/
-    // totalCoins sums above already pool them when both gates cross
-    // in the same commit; when they fire in separate commits, only
-    // the master commit surfaces but the 70% rewards have already
-    // landed in the wallet). Surface a soft haptic + success sound on
-    // the 70% crossing so the moment isn't completely silent.
-    if (isFinale) {
-      setChestState({ xp: totalXp, coins: totalCoins, isFinale, rarity });
-    }
-  }, [summary.isModuleDone, summary.pct, module.id, upsertProgress, addXP, addCoins, playSound]);
+    // Yoav 2026-06-11 (rev 2): BOTH celebrations restored — a regular chest
+    // at 70% (module done) AND a master chest at 100%. An earlier fix
+    // suppressed the 70% modal to kill a perceived "double chest", but that
+    // left users who finish at 70% (without reaching 100%) with NO chest at
+    // all. We only reach here because a gate crossed (early-return above), so
+    // ALWAYS surface a chest. Same-commit 70%+100% still shows ONCE: the
+    // unified effect runs a single pass → one combined master modal whose
+    // xp/coins already pool both payouts (no double). Separate-commit
+    // crossings show two moments by design. isFinale drives master visuals.
+    setChestState({ xp: totalXp, coins: totalCoins, isFinale, rarity });
+  }, [summary.isModuleDone, summary.pct, module.id, upsertProgress, addXP, addCoins, playSound, modulePastThreshold, moduleFullyComplete]);
 
   // R8 U1/U2 — mod-0-1-only walkthrough prompt. Fires the first time
   // the user crosses ~10% of mod-0-1 (intro + 1 card), so the offer
@@ -351,6 +356,23 @@ export const TopicTreeAccordion = React.memo(function TopicTreeAccordion({
   const showWelcomeBanner =
     module.id === 'mod-0-1' && !hasSeenAppWalkthrough && completedNonIntroChipCount < 1;
 
+  // "למידה רציפה" (Yoav 2026-06-11): run the WHOLE module as one continuous
+  // legacy flow (the master-version UX) instead of the broken-down chip
+  // path. We launch LessonFlowScreen WITHOUT startPhase/returnTo=topic-tree
+  // so it behaves exactly like master (auto-advances every phase → summary
+  // chest). `ttProgress=1` tells the lesson to stamp each completed phase
+  // into useTopicProgressStore as it goes, so if the user bails mid-flow the
+  // chips they already cleared light up here — letting them start in
+  // autopilot and switch to the accordion mid-way. chapterId is derived from
+  // the module id (same canonical parse the store uses) since the accordion
+  // has no route param for it.
+  const handleStartContinuous = useCallback(() => {
+    tapHaptic();
+    const chId = chapterIdFromModuleId(module.id);
+    const chParam = chId ? `?chapterId=${chId}&ttProgress=1` : `?ttProgress=1`;
+    router.push(`/lesson/${module.id}${chParam}` as never);
+  }, [module.id, router]);
+
   return (
     <Animated.View
       entering={FadeIn.duration(260)}
@@ -380,6 +402,7 @@ export const TopicTreeAccordion = React.memo(function TopicTreeAccordion({
           progressPct={summary.pct}
           nodeOffsetX={nodeOffsetX}
           onTopicPress={onTopicSelected}
+          onStartContinuous={handleStartContinuous}
         />
 
         {/* Two-chest celebration. 70% chest fires first with the regular

@@ -9,6 +9,10 @@ import { useVideoPlayer, VideoView } from "expo-video";
 import { createAudioPlayer, type AudioPlayer } from "expo-audio";
 import { useAudioStore } from "../../stores/useAudioStore";
 import { useTopicTreeReturnStore } from "../topic-learning/useTopicTreeReturnStore";
+import { useTopicProgressStore } from "../topic-learning/useTopicProgressStore";
+import { useContinuousRunStore } from "../topic-learning/useContinuousRunStore";
+import { resolveTopics } from "../topic-learning/topicResolver";
+import type { TopicKind } from "../topic-learning/types";
 import { useNudgeQueueStore } from "../../stores/useNudgeQueueStore";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import Animated, {
@@ -151,6 +155,26 @@ import type { LessonContext } from "../chat/buildChatPrompt";
 const AnimatedExpoImage = Animated.createAnimatedComponent(ExpoImage);
 
 type FlowPhase = "hero" | "intro" | "flashcards" | "podcast" | "couple-dilemma" | "interactive-recall" | "quizzes" | "mid-quiz-video" | "sim-intro" | "sim" | "module-infographic" | "post-infographic-video" | "shark-dilemma" | "summary" | "video";
+
+/** "למידה רציפה" progress sync (Yoav 2026-06-11): maps a linear FlowPhase
+ *  to the topic-tree chip kind it completes, so the continuous flow can
+ *  light up the accordion chips as it advances. Mirrors DuoLearnScreen's
+ *  phaseToKind. Intentionally OMITS the pre-content / transitional phases
+ *  ('hero', 'video', 'sim-intro', 'mid-quiz-video', 'summary') — leaving a
+ *  phase OUT means we never falsely credit a chip the user merely passed
+ *  through (e.g. the auto-playing hook video before the real intro). */
+const TT_PHASE_TO_KIND: Partial<Record<FlowPhase, TopicKind>> = {
+  intro: 'intro',
+  flashcards: 'cards',
+  'interactive-recall': 'recall',
+  quizzes: 'quiz',
+  sim: 'sim',
+  'module-infographic': 'infographic',
+  'post-infographic-video': 'post-video',
+  podcast: 'podcast',
+  'couple-dilemma': 'couple-dilemma',
+  'shark-dilemma': 'shark-dilemma',
+};
 
 /** Full-screen character art shown when first opening a module */
 export const MODULE_HERO_MAP: Record<string, { uri: string } | number> = {
@@ -2266,7 +2290,7 @@ function chapterStoreKey(chapterId: string): string {
 
 export function LessonFlowScreen() {
   const isFocused = useIsFocused();
-  const { id, chapterId, replay, startPhase, returnTo, cardFilter } = useLocalSearchParams<{
+  const { id, chapterId, replay, startPhase, returnTo, cardFilter, ttProgress } = useLocalSearchParams<{
     id: string;
     chapterId?: string;
     replay?: string;
@@ -2285,6 +2309,12 @@ export function LessonFlowScreen() {
      *  flashcards (tutorial-video chip), 'non-video' filters them out
      *  (regular cards chip). */
     cardFilter?: string;
+    /** "למידה רציפה" (Yoav 2026-06-11): when '1', this is the continuous
+     *  "autopilot" run of the WHOLE module (no startPhase/returnTo, so it
+     *  plays like master). Tells the lesson to stamp each completed phase
+     *  into useTopicProgressStore as it advances, so a mid-flow exit still
+     *  lights up the matching chips back in the accordion. */
+    ttProgress?: string;
   }>();
   const isReplay = replay === '1';
   const router = useRouter();
@@ -2956,6 +2986,39 @@ export function LessonFlowScreen() {
       router.replace(path as never);
     }
   }, [phase, returnTo, id, router, cardFilter]);
+
+  // "למידה רציפה" per-phase progress sync (Yoav 2026-06-11). When the
+  // continuous "autopilot" flow is active (ttProgress=1, no topic-tree
+  // params → master-style linear run), stamp each phase the user FINISHES
+  // into useTopicProgressStore as we leave it. Marking on phase-LEAVE (not
+  // enter) means we only credit a phase the user actually completed, so a
+  // mid-flow exit lights up exactly the chips they cleared — letting them
+  // start in autopilot and switch to the broken-down accordion mid-way.
+  const ttProgressActive = ttProgress === '1' && returnTo !== 'topic-tree';
+  const ttPrevPhaseRef = useRef<FlowPhase | null>(ttProgressActive ? phase : null);
+  useEffect(() => {
+    if (!ttProgressActive || !mod) return;
+    const prev = ttPrevPhaseRef.current;
+    ttPrevPhaseRef.current = phase;
+    if (!prev || prev === phase) return;
+    const kind = TT_PHASE_TO_KIND[prev];
+    if (kind) {
+      const topic = resolveTopics(mod).find((t) => t.kind === kind);
+      if (topic) useTopicProgressStore.getState().markTopicCompleted(topic);
+    }
+    // Reaching 'summary' in a continuous run = the user played the whole
+    // module start-to-finish and the LEGACY summary chest already rewarded
+    // them (master UX). Stamp the 70% threshold UNCONDITIONALLY so the
+    // still-mounted accordion does NOT also fire its own 70% chest on return
+    // (that would be a double chest). Unconditional (not gated on a recomputed
+    // pct) covers the resume-checkpoint edge where fewer chips got marked yet
+    // the module was still completed. We deliberately do NOT stamp 100%: the
+    // linear flow never covers the 'chat' (and often 'game') chips, so the
+    // master 100% chest stays available for the user to earn by finishing them.
+    if (phase === 'summary') {
+      useTopicProgressStore.getState().stampModuleThreshold(mod.id);
+    }
+  }, [phase, ttProgressActive, mod]);
 
   // Fire once per lesson session when the user actually reaches the summary
   // screen — closes the funnel gap between lesson_started and lesson_completed

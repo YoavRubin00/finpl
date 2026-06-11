@@ -1,7 +1,8 @@
 import React, { useMemo } from 'react';
-import { View, StyleSheet, Dimensions } from 'react-native';
+import { View, Text, Pressable, StyleSheet, Dimensions } from 'react-native';
 import { Image as ExpoImage } from 'expo-image';
 import Animated, { FadeInDown, useReducedMotion } from 'react-native-reanimated';
+import { FastForward } from 'lucide-react-native';
 import { TopicChip } from './TopicChip';
 import { scenesForModule } from '../pathScenes';
 import type { Topic } from '../types';
@@ -81,6 +82,14 @@ interface ModuleTopicLayoutProps {
    *  exit routes column→next-connector so both ends meet flush. */
   nodeOffsetX?: number;
   onTopicPress: (topic: Topic) => void;
+  /** "למידה רציפה" (Yoav 2026-06-11): runs the WHOLE module as one
+   *  continuous legacy flow (the master-version UX), instead of the
+   *  broken-down chip-by-chip path. Rendered as a pill in the left
+   *  gutter, vertically aligned with the intro (first) chip. When set,
+   *  the button is shown; the parent (TopicTreeAccordion) owns the
+   *  navigation + per-phase progress sync so a mid-flow exit still
+   *  lights up the completed chips here. */
+  onStartContinuous?: () => void;
 }
 
 /**
@@ -106,6 +115,7 @@ export const ModuleTopicLayout = React.memo(function ModuleTopicLayout({
   recommendedTopicId,
   nodeOffsetX = 0,
   onTopicPress,
+  onStartContinuous,
 }: ModuleTopicLayoutProps): React.ReactElement {
   const sorted = useMemo(
     () =>
@@ -206,6 +216,37 @@ export const ModuleTopicLayout = React.memo(function ModuleTopicLayout({
               />
             </View>
           ))}
+        </View>
+      )}
+
+      {/* "למידה רציפה" — continuous-flow launcher (Yoav 2026-06-11).
+          Sits in the LEFT gutter, vertically centered on the intro (first)
+          chip row. The left gutter is free at the intro row: scene 1 is
+          anchored to fraction 0.06 (≈ intro row) but always lands in the
+          RIGHT gutter there (sideForFrac → 'right' when the chip offset is
+          0), so the button never collides with a decorative loop. Tapping
+          runs the whole module as one legacy flow (master UX); the parent
+          syncs per-phase progress so a mid-flow exit still lights up the
+          chips here. */}
+      {onStartContinuous && sorted.length > 0 && (
+        <View
+          style={[styles.continuousSlot, { top: EDGE_CONNECTOR_H, height: ROW_HEIGHT }]}
+        >
+          <Pressable
+            onPress={onStartContinuous}
+            accessibilityRole="button"
+            accessibilityLabel="למידה רציפה — המודולה כולה ברצף"
+            style={({ pressed }) => [
+              styles.continuousBtn,
+              pressed && styles.continuousBtnPressed,
+            ]}
+            hitSlop={8}
+          >
+            <FastForward size={18} color="#ffffff" fill="#ffffff" strokeWidth={0} />
+            <Text style={styles.continuousLabel} allowFontScaling={false}>
+              למידה{'\n'}רציפה
+            </Text>
+          </Pressable>
         </View>
       )}
 
@@ -440,6 +481,44 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
+  },
+  // Left-gutter slot holding the "למידה רציפה" pill, vertically centered
+  // on the intro row (top + height set inline to that row's band).
+  continuousSlot: {
+    position: 'absolute',
+    left: 4,
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 8,
+  },
+  continuousBtn: {
+    width: 76,
+    paddingVertical: 9,
+    paddingHorizontal: 6,
+    borderRadius: 16,
+    backgroundColor: '#2563eb',
+    borderWidth: 1.5,
+    borderColor: '#60a5fa',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 3,
+    shadowColor: '#2563eb',
+    shadowOpacity: 0.4,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 3 },
+    elevation: 5,
+  },
+  continuousBtnPressed: {
+    backgroundColor: '#1d4ed8',
+    transform: [{ scale: 0.96 }],
+  },
+  continuousLabel: {
+    color: '#ffffff',
+    fontSize: 11,
+    fontWeight: '800',
+    lineHeight: 14,
+    textAlign: 'center',
+    writingDirection: 'rtl',
   },
   // Pull the inter-chip connector down so it emerges from the chip's
   // vertical center (NODE_SIZE/2 below the row top, which is where the
