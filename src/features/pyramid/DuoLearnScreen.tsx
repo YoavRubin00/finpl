@@ -2157,15 +2157,17 @@ export function DuoLearnScreen() {
   const handleLockedPress = useCallback(() => setLockedModalVisible(true), []);
   const handleRoadmapPress = useCallback(() => setRoadmapVisible(true), []);
   const handleQuestPress = useCallback(() => {
-    // Yoav 2026-06-11: during the mod-0-1 onboarding window
-    // (= before the user has seen the app walkthrough), tapping the
-    // active quest widget (Captain Shark on the active module / the
-    // QuestPathNode between modules) must NOT open the daily quests
-    // sheet. The user is meant to focus on tapping the gold-recommended
-    // topic chip first; the daily-challenge surface unlocks afterward.
-    if (isWalkthroughActive) return;
+    // Yoav 2026-06-12: gate is now "mod-0-1 not completed yet" rather
+    // than "walkthrough hasn't run yet". The walkthrough state stayed
+    // false forever for users who skipped/dismissed it, leaving the
+    // daily-challenge sheet permanently unreachable from the shark tap
+    // ("האתגרים היומיים לא עובדים. שאני לוחץ על שארק זה לא מגיב").
+    // The intent — "block during the mod-0-1 onboarding window" — maps
+    // cleanly to the completion flag, which durably flips true.
+    const mod01Done = useCompletedModulesStore.getState().completedIds.includes('mod-0-1');
+    if (!mod01Done) return;
     setQuestSheetVisible(true);
-  }, [isWalkthroughActive]);
+  }, []);
   const handleMindMap = useCallback((idx: number) => { tapHaptic(); setMindMapChapter(idx); }, []);
 
   return (
