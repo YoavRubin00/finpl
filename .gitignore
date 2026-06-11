@@ -106,3 +106,9 @@ PRD_FinPlay_Stich.md
 # Claude Code runtime artifacts — not source. The lock file is created by
 # CronCreate to track session-level scheduled tasks and must not be shared.
 .claude/scheduled_tasks.lock
+.claude/settings.local.json
+
+# Local-only working folders for asset / preview pipelines (frame extracts,
+# upscaled coin previews, raw mp4s pre-WebP conversion). Never source code.
+_qcprev/
+_work/
