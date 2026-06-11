@@ -1929,8 +1929,14 @@ export function DuoLearnScreen() {
     });
   }, [topicTreeModule]);
 
-  // Chest CTA: "לשיעור הבא בפרק" — close accordion AND route to the
-  // next module in this chapter via the legacy LessonFlowScreen.
+  // Chest CTA: "המשך" — close accordion AND route to the next module
+  // in this chapter. Yoav 2026-06-11: must honor topic-tree mode for
+  // the next module, otherwise the next lesson opens in the legacy
+  // linear flow ("שיחקתי בדירוג אשראי, הוא פשוט התחיל לי את המודולה
+  // כמו פעם, בלי התתי מודולות"). Mirror handleModulePress: if the next
+  // module opts into topic-tree, deep-link to its intro with
+  // returnTo=topic-tree so the user bounces back into the accordion
+  // after the intro completes.
   const handleTopicTreeAdvanceToNextModule = useCallback(() => {
     const current = topicTreeModule;
     if (!current) return;
@@ -1940,6 +1946,17 @@ export function DuoLearnScreen() {
     const next = idx >= 0 ? ch.modules[idx + 1] : undefined;
     setTopicTreeModule(null);
     if (next) {
+      if (shouldUseTopicTree(next)) {
+        const introDone = useTopicProgressStore.getState()
+          .isTopicCompleted(`${next.id}:intro`);
+        setTopicTreeModule({ module: next, chapterId: current.chapterId });
+        if (!introDone) {
+          router.push(
+            `/lesson/${next.id}?chapterId=${current.chapterId}&startPhase=intro&returnTo=topic-tree` as never,
+          );
+        }
+        return;
+      }
       router.push(`/lesson/${next.id}?chapterId=${current.chapterId}` as never);
     }
   }, [topicTreeModule, router]);

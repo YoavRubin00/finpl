@@ -3927,6 +3927,21 @@ export function LessonFlowScreen() {
     );
   }
 
+  // Yoav 2026-06-11 — topic-tree chip exit guard. Once the user's
+  // chip phase advances (e.g. shark-dilemma → summary), the bounce-back
+  // effect schedules a router.replace to the learn map. But the new
+  // phase ALSO renders for one frame before the replace lands —
+  // including the legacy summary/chest screen. Suppress that flash by
+  // rendering a blank screen until the navigation fires
+  // ("הביא אותי למסך פתיחת תיבה הישן במקום להביא אותי למפת הלמידה").
+  if (
+    returnTo === 'topic-tree'
+    && tt_initialPhaseRef.current
+    && phase !== tt_initialPhaseRef.current
+  ) {
+    return <View style={{ flex: 1, backgroundColor: '#f8fafc' }} />;
+  }
+
   // Video hook phase, full-screen video with hook text overlay
   if (phase === "video" && mod?.videoHookAsset) {
     return (
