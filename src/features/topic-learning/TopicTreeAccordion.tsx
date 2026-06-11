@@ -147,6 +147,11 @@ export const TopicTreeAccordion = React.memo(function TopicTreeAccordion({
      *  copy, chest visuals (gold tint for mythic), and the ×3 reward
      *  bonus already baked into `coins`. */
     rarity: ChestRarity;
+    /** Yoav 2026-06-12: DoN offer rolled at chest-trigger time. The
+     *  ChestCelebrationModal only opens its DoN flow when this is true,
+     *  so the "הכל או כלום" prompt actually surfaces ~25% of chests
+     *  (was firing on every chest because onDoNResolve was always wired). */
+    offerDoN: boolean;
   } | null>(null);
   const upsertProgress = useUpsertModuleProgress();
   const { playSound } = useSoundEffect();
@@ -238,80 +243,61 @@ export const TopicTreeAccordion = React.memo(function TopicTreeAccordion({
     // of the legacy summary chest the continuous flow already showed (double
     // chest). The flags are false on a normal first crossing (stamped inside
     // this same effect), so the legacy path is unaffected.
+    // Yoav 2026-06-12: ONE chest per module — fired at the 70% threshold
+    // crossing. The 100% master chest was retired per user feedback ("את
+    // התיבה יקבלו פעם אחת בסיום 70 אחוז מהלמידה של המודולה"). The 100%
+    // ref/store flag stays so analytics + future re-enable still work,
+    // but no second modal fires.
     const seventyJustCrossed =
       summary.isModuleDone && !past70Ref.current && !modulePastThreshold;
-    const hundredJustCrossed =
-      summary.pct === 100 && !past100Ref.current && !moduleFullyComplete;
-    if (!seventyJustCrossed && !hundredJustCrossed) return;
+    if (!seventyJustCrossed) return;
 
-    // Roll once per user action — even if both gates cross, this is a
-    // single chest open from a chain-streak / pity-timer perspective.
+    past70Ref.current = true;
+    // Persist the "first crossed 70%" flag (moved out of summaryForModule,
+    // which is now a pure read — was a set()-during-render bug).
+    useTopicProgressStore.getState().stampModuleThreshold(module.id);
+
+    // Module-completion analytics. The topic-tree method previously fired
+    // NO `lesson_completed`, so every module learned this way was invisible
+    // to the NSM / WoW-retention / streak / daily-lessons insights. Mirror
+    // the legacy LessonFlowScreen prop shape + add `learning_mode`. Read
+    // is_first_lesson BEFORE markCompleted mutates the store. Non-fatal.
+    try {
+      const isFirstLesson =
+        useCompletedModulesStore.getState().completedIds.length === 0;
+      captureEvent('lesson_completed', {
+        module_id: module.id,
+        chapter_id: chapterIdFromModuleId(module.id),
+        is_first_lesson: isFirstLesson,
+        learning_mode: 'topic-tree',
+      });
+    } catch { /* non-fatal */ }
+
+    upsertProgress.mutate({
+      moduleId: module.id,
+      status: 'completed',
+      xpEarned: MODULE_TT_XP,
+    });
+    useCompletedModulesStore.getState().markCompleted(module.id);
+
+    // Roll multiplier + rarity for this single chest open.
     const { multiplier, rarity } = useTopicProgressStore.getState().recordChestOpen();
     const rarityBonus = CHEST_RARITY_BONUS[rarity];
-
-    let totalXp = 0;
-    let totalCoins = 0;
-    let isFinale = false;
-
-    if (seventyJustCrossed) {
-      past70Ref.current = true;
-      // Persist the "first crossed 70%" flag (moved out of summaryForModule,
-      // which is now a pure read — was a set()-during-render bug).
-      useTopicProgressStore.getState().stampModuleThreshold(module.id);
-      // Module-completion analytics. The topic-tree method previously fired
-      // NO `lesson_completed`, so every module learned this way was invisible
-      // to the NSM / WoW-retention / streak / daily-lessons insights (all keyed
-      // on `lesson_completed`). Mirror the legacy LessonFlowScreen prop shape
-      // (`module_id` + `chapter_id` + `is_first_lesson`) and add a
-      // `learning_mode` discriminator so topic-tree can be segmented. Read
-      // is_first_lesson BEFORE markCompleted below mutates the store. Non-fatal.
-      try {
-        const isFirstLesson =
-          useCompletedModulesStore.getState().completedIds.length === 0;
-        captureEvent('lesson_completed', {
-          module_id: module.id,
-          chapter_id: chapterIdFromModuleId(module.id),
-          is_first_lesson: isFirstLesson,
-          learning_mode: 'topic-tree',
-        });
-      } catch { /* non-fatal */ }
-      upsertProgress.mutate({
-        moduleId: module.id,
-        status: 'completed',
-        xpEarned: MODULE_TT_XP,
-      });
-      useCompletedModulesStore.getState().markCompleted(module.id);
-      totalXp += MODULE_TT_XP;
-      totalCoins += Math.round(MODULE_TT_COINS * multiplier * rarityBonus);
-    }
-
-    if (hundredJustCrossed) {
-      past100Ref.current = true;
-      // Persist the "first crossed 100%" flag (moved out of summaryForModule).
-      useTopicProgressStore.getState().stampModuleFullyComplete(module.id);
-      totalXp += MASTER_TT_XP;
-      totalCoins += Math.round(MASTER_TT_COINS * multiplier * rarityBonus);
-      // Master modal always wins display when 100% fires (either alone
-      // or as part of a same-action 70%+100% combo).
-      isFinale = true;
-    }
+    const totalXp = MODULE_TT_XP;
+    const totalCoins = Math.round(MODULE_TT_COINS * multiplier * rarityBonus);
 
     addXP(totalXp, 'daily_task');
     addCoins(totalCoins, 'lesson');
     successHaptic();
-    // R8 T1.4 — master = `modal_open_4` (loudest); regular 70% = softer
-    // `modal_open_3`. Same rule when both fire (the combo is still THE finale).
-    try { playSound(isFinale ? 'modal_open_4' : 'modal_open_3'); } catch { /* non-fatal */ }
-    // Yoav 2026-06-11 (rev 2): BOTH celebrations restored — a regular chest
-    // at 70% (module done) AND a master chest at 100%. An earlier fix
-    // suppressed the 70% modal to kill a perceived "double chest", but that
-    // left users who finish at 70% (without reaching 100%) with NO chest at
-    // all. We only reach here because a gate crossed (early-return above), so
-    // ALWAYS surface a chest. Same-commit 70%+100% still shows ONCE: the
-    // unified effect runs a single pass → one combined master modal whose
-    // xp/coins already pool both payouts (no double). Separate-commit
-    // crossings show two moments by design. isFinale drives master visuals.
-    setChestState({ xp: totalXp, coins: totalCoins, isFinale, rarity });
+    try { playSound('modal_open_3'); } catch { /* non-fatal */ }
+
+    // Yoav 2026-06-12: DoN ("הכל או כלום") gated on a 25% roll PER chest
+    // (was 100% — onDoNResolve was wired unconditionally and the modal
+    // opened the DoN flow on every chest). Rolled here once at chest-trigger
+    // time so the modal can read a stable boolean.
+    const offerDoN = Math.random() < 0.25;
+
+    setChestState({ xp: totalXp, coins: totalCoins, isFinale: false, rarity, offerDoN });
   }, [summary.isModuleDone, summary.pct, module.id, upsertProgress, addXP, addCoins, playSound, modulePastThreshold, moduleFullyComplete, continuousRunActive]);
 
   // R8 U1/U2 — mod-0-1-only walkthrough prompt. Fires the first time
@@ -423,10 +409,8 @@ export const TopicTreeAccordion = React.memo(function TopicTreeAccordion({
           onStartContinuous={handleStartContinuous}
         />
 
-        {/* Two-chest celebration. 70% chest fires first with the regular
-            reward; the 100% master chest fires later when every chip is
-            done. Both reveals share the same modal — `isFinale` flips
-            the copy and lottie tone. */}
+        {/* Single chest celebration at 70% (Yoav 2026-06-12). The 100%
+            master chest was retired per user request. */}
         <ChestCelebrationModal
           visible={chestState !== null}
           xp={chestState?.xp ?? MODULE_TT_XP}
@@ -434,40 +418,36 @@ export const TopicTreeAccordion = React.memo(function TopicTreeAccordion({
           isFinale={chestState?.isFinale ?? false}
           rarity={chestState?.rarity ?? 'common'}
           onContinueModule={() => {
-            const wasFinale = chestState?.isFinale ?? false;
             setChestState(null);
-            // The 100% master chest is the END — fully advance like
-            // the "next module" CTA. The 70% chest keeps the accordion
-            // open so the user can finish the remaining 30%.
-            if (wasFinale) {
-              onAdvanceToNextModule?.();
-              onModuleCompleted?.();
-            } else {
-              onContinueAfterChest?.();
-            }
+            // The 70% chest keeps the accordion open so the user can
+            // finish the remaining 30%.
+            onContinueAfterChest?.();
           }}
           onAdvanceToNextModule={() => {
             setChestState(null);
             onAdvanceToNextModule?.();
             onModuleCompleted?.();
           }}
-          onDoNResolve={(multiplier) => {
-            // multiplier: 0 = lost everything, 1 = kept base, 2 = doubled.
-            // Coins were already credited above — here we apply the delta
-            // on top of THAT amount (so it stacks on the streak multiplier
-            // too). For the master chest we still use the displayed coin
-            // amount as the base.
-            const base = chestState?.coins ?? 0;
-            if (multiplier === 2) {
-              addCoins(base, 'lesson');
-            } else if (multiplier === 0) {
-              // `addCoins` early-returns on amount <= 0, so a DoN LOSS was a
-              // silent no-op (Yoav 2026-06-11 QA — user kept everything
-              // despite "lost it all" copy). Deduct via the canonical
-              // economy-delta pipe, which handles negative deltas.
-              fireEconomyDelta({ coinsDelta: -base });
-            }
-          }}
+          // Yoav 2026-06-12: DoN gated on the 25% roll captured in chestState.
+          // Passing undefined skips the entire DoN flow inside the modal so
+          // the prompt never even surfaces on the non-offered ~75%.
+          onDoNResolve={chestState?.offerDoN
+            ? (multiplier) => {
+                // multiplier: 0 = lost everything, 1 = kept base, 2 = doubled.
+                // Coins were already credited above — here we apply the delta
+                // on top of THAT amount (so it stacks on the streak multiplier
+                // too).
+                const base = chestState?.coins ?? 0;
+                if (multiplier === 2) {
+                  addCoins(base, 'lesson');
+                } else if (multiplier === 0) {
+                  // `addCoins` early-returns on amount <= 0, so a DoN LOSS was a
+                  // silent no-op. Deduct via the canonical economy-delta pipe,
+                  // which handles negative deltas.
+                  fireEconomyDelta({ coinsDelta: -base });
+                }
+              }
+            : undefined}
         />
 
         {/* R7 Epic B3 — mod-0-1-only walkthrough opt-in prompt. */}
