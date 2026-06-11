@@ -2289,8 +2289,15 @@ export function LessonFlowScreen() {
   const router = useRouter();
   /** Safe back: go back if possible, otherwise fall back to tabs home */
   function safeGoBack() {
-    // Intercept exit during active lesson phases
-    if (phase === "flashcards" || phase === "interactive-recall" || phase === "quizzes" || phase === "sim") {
+    // Yoav 2026-06-11: topic-tree chip exits skip the "stay another
+    // minute" confirm — each chip is a small unit, no progress is lost
+    // when leaving mid-card ("רשום לו את ההודעה של נשאר עוד דקה הטובה"
+    // shouldn't fire here). The legacy linear flow keeps the guard
+    // because it's a longer, contiguous session.
+    if (
+      returnTo !== 'topic-tree'
+      && (phase === "flashcards" || phase === "interactive-recall" || phase === "quizzes" || phase === "sim")
+    ) {
       setShowExitConfirm(true);
       return;
     }
@@ -3749,6 +3756,17 @@ export function LessonFlowScreen() {
     setRecallProgress({ current, total });
   }, []);
 
+  // Same shape as recall — podcast surfaces (current, total) so the bar
+  // fills 1/5 → 2/5 → ... → 5/5 through the podcast's internal phases
+  // (Yoav 2026-06-11: "תראה כמה רכיבים יש בפודקסט, נגיד 6, ושיתקדם כל
+  // פעם ב 1/6", not by audio time).
+  const [podcastProgress, setPodcastProgress] = useState<{ current: number; total: number }>(
+    { current: 0, total: 0 },
+  );
+  const handlePodcastProgress = useCallback((current: number, total: number) => {
+    setPodcastProgress({ current, total });
+  }, []);
+
   const handleFlashcardNext = useCallback(() => {
     if (!mod) return;
     playSound('btn_click_soft_1');
@@ -4252,13 +4270,18 @@ export function LessonFlowScreen() {
                   // solved (3-ish prompts each). Previously flat 0 →
                   // felt broken.
                   ? (recallProgress.current / recallProgress.total) * 100
-                  // Singleton phases (sim/podcast/couple-dilemma/
+                  : phase === 'podcast' && podcastProgress.total > 0
+                  // Yoav 2026-06-11: tick podcast 1/5 → 5/5 across its
+                  // internal phases (intro → listen → summary → q1 → q2)
+                  // instead of falling back to lesson-wide pct ("שיתקדם
+                  // כל פעם ב 1/N").
+                  ? (podcastProgress.current / podcastProgress.total) * 100
+                  // Remaining singleton phases (sim/couple-dilemma/
                   // shark-dilemma/infographic/post-video/video) don't
                   // expose internal progress. Show a 50% baseline so
                   // the bar reads as "you're inside this section,
                   // making progress" instead of "empty bar = nothing
-                  // happened". Yoav 2026-06-11: "שים דגש על הבר
-                  // התקדמות של כל תת מודולה — שהוא עובד כמו שצריך".
+                  // happened".
                   : 50)
               : pctLessonWide;
             const isOnFire = consecutiveCorrect >= 3;
@@ -4403,6 +4426,7 @@ export function LessonFlowScreen() {
           <Animated.View style={{ flex: 1 }}>
             <PodcastSegmentScreen
               podcast={modPodcast}
+              onProgress={handlePodcastProgress}
               onComplete={() => {
                 const hasMoreFlashcards = flashcardIndex < mod.flashcards.length - 1;
                 if (hasMoreFlashcards) {
