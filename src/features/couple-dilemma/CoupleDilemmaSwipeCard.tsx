@@ -1,5 +1,5 @@
 import { useCallback } from 'react';
-import { View, Text, StyleSheet, Dimensions } from 'react-native';
+import { View, Text, StyleSheet, Dimensions, Pressable } from 'react-native';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -16,7 +16,7 @@ import { Image as ExpoImage } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { mediumHaptic, successHaptic, errorHaptic } from '../../utils/haptics';
+import { tapHaptic, mediumHaptic, successHaptic, errorHaptic } from '../../utils/haptics';
 import {
   DAISY_HAPPY_CELEBRATE_WEBP,
   DAISY_EMPATHIC_WEBP,
@@ -54,6 +54,19 @@ export function CoupleDilemmaSwipeCard({ dilemma, onChoose }: Props) {
       onChoose(option);
     },
     [onChoose],
+  );
+
+  const handleTapChoice = useCallback(
+    (direction: 'left' | 'right') => {
+      if (swiped.value) return;
+      swiped.value = true;
+      tapHaptic();
+      const target = direction === 'right' ? SCREEN_WIDTH * 1.2 : -SCREEN_WIDTH * 1.2;
+      translateX.value = withTiming(target, { duration: 320 });
+      mediumHaptic();
+      finalizeChoice(direction === 'right' ? dilemma.optionA : dilemma.optionB);
+    },
+    [dilemma.optionA, dilemma.optionB, finalizeChoice, swiped, translateX],
   );
 
   const gesture = Gesture.Pan()
@@ -150,20 +163,34 @@ export function CoupleDilemmaSwipeCard({ dilemma, onChoose }: Props) {
             <Text style={styles.cardHeadline}>מה הייתי עושה?</Text>
             <Text style={styles.cardScenario}>{dilemma.scenario}</Text>
 
-            {/* Left/right preview labels for the two options */}
+            {/* Left/right preview labels for the two options. Tappable —
+                tap acts like a full swipe in that direction (alongside the
+                pan gesture). */}
             <View style={styles.optionRow}>
-              <View style={styles.optionLeft}>
+              <Pressable
+                style={({ pressed }) => [styles.optionLeft, pressed && styles.optionPressed]}
+                onPress={() => handleTapChoice('left')}
+                accessibilityRole="button"
+                accessibilityLabel={`בחר: ${dilemma.optionB.label}`}
+                hitSlop={6}
+              >
                 <Text style={styles.optionArrow}>←</Text>
                 <Text style={styles.optionLabel} numberOfLines={3}>
                   {dilemma.optionB.label}
                 </Text>
-              </View>
-              <View style={styles.optionRight}>
+              </Pressable>
+              <Pressable
+                style={({ pressed }) => [styles.optionRight, pressed && styles.optionPressed]}
+                onPress={() => handleTapChoice('right')}
+                accessibilityRole="button"
+                accessibilityLabel={`בחר: ${dilemma.optionA.label}`}
+                hitSlop={6}
+              >
                 <Text style={styles.optionLabel} numberOfLines={3}>
                   {dilemma.optionA.label}
                 </Text>
                 <Text style={styles.optionArrow}>→</Text>
-              </View>
+              </Pressable>
             </View>
 
             {/* Swipe-direction overlays — Daisy reacts in advance to the
@@ -209,7 +236,7 @@ export function CoupleDilemmaSwipeCard({ dilemma, onChoose }: Props) {
         style={[styles.bottomHint, { paddingBottom: insets.bottom + 18 }]}
         pointerEvents="none"
       >
-        <Text style={styles.bottomHintText}>👉 החלק לכיוון שלך</Text>
+        <Text style={styles.bottomHintText}>👉 הקש או החלק לכיוון שלך</Text>
       </Animated.View>
     </Animated.View>
   );
@@ -318,6 +345,10 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(14,165,233,0.12)',
     borderWidth: 1.5,
     borderColor: 'rgba(14,165,233,0.4)',
+  },
+  optionPressed: {
+    opacity: 0.72,
+    transform: [{ scale: 0.97 }],
   },
   optionArrow: {
     fontSize: 22,
