@@ -104,6 +104,13 @@ export function ChestCelebrationModal({
   const wisdomActive = useWisdomStore((s) => s.activeItem);
   const wisdomFiredRef = useRef(false);
   const prevWisdomActiveRef = useRef(false);
+  // Guards async callbacks (FlyingRewards.onComplete) from calling setState
+  // after the modal has unmounted during a fast navigation away.
+  const mountedRef = useRef(true);
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => { mountedRef.current = false; };
+  }, []);
 
   // R6 Epic 7-C1: surface the user's current chest streak on the
   // pre-open chest body so the multiplier is legible BEFORE they tap.
@@ -193,7 +200,11 @@ export function ChestCelebrationModal({
   // chest CTAs become tappable. Compulsion loop now matches Brawl
   // Stars / Hay Day chest UX: open → reward → decision in < 2s.
   useEffect(() => {
-    if (!opened || wisdomFiredRef.current) return;
+    // Gate on `visible` too: when the modal is dismissed mid-sequence this
+    // effect re-runs, returns early, and its previous-run cleanup clears the
+    // pending timers immediately — no orphaned DoN/wisdom firing over a
+    // chest that's already gone.
+    if (!visible || !opened || wisdomFiredRef.current) return;
     wisdomFiredRef.current = true;
     // T1: DoN modal opens — independent of wisdom.
     const tDoN = setTimeout(() => {
@@ -207,14 +218,14 @@ export function ChestCelebrationModal({
     // open, the global wisdom popup z-orders above and the user can tap
     // through it; once dismissed, DoN remains underneath.
     const tWisdom = setTimeout(() => {
-      useWisdomStore.getState().showRandomWisdom();
+      if (mountedRef.current) useWisdomStore.getState().showRandomWisdom();
     }, 1800);
     return () => {
       clearTimeout(tDoN);
       clearTimeout(tWisdom);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [opened]);
+  }, [opened, visible]);
 
   // R8 J5 — Legacy wisdom-dismiss-bridge kept ONLY as a safety net for
   // edge cases where DoN didn't open (e.g. parent didn't wire onDoNResolve
@@ -492,7 +503,7 @@ export function ChestCelebrationModal({
             type="coins"
             amount={coins}
             direction="up"
-            onComplete={() => setFlyingCoins(false)}
+            onComplete={() => { if (mountedRef.current) setFlyingCoins(false); }}
           />
         )}
         {flyingXp && (
@@ -500,7 +511,7 @@ export function ChestCelebrationModal({
             type="xp"
             amount={xp}
             direction="up"
-            onComplete={() => setFlyingXp(false)}
+            onComplete={() => { if (mountedRef.current) setFlyingXp(false); }}
           />
         )}
       </View>

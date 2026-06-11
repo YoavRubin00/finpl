@@ -37,6 +37,9 @@ import type { CompanionId } from '../auth/types';
 const ALL_CHAPTERS = [chapter0Data, chapter1Data, chapter2Data, chapter3Data, chapter4Data, chapter5Data];
 
 interface Message {
+  /** Stable identity for React keys — survives streaming updates and
+   *  insert/append so reconciliation never mixes up bubbles. */
+  id: string;
   role: 'user' | 'assistant';
   text: string;
   timestamp: number;
@@ -96,6 +99,9 @@ export function TopicChatScreen(): React.ReactElement {
   // which double-fired the request AND double-charged the daily quota. The
   // ref flips synchronously so the second tap is dropped immediately.
   const isSendingRef = useRef(false);
+  // Monotonic counter for stable message ids — timestamps can collide when
+  // the user + bot bubbles are created in the same millisecond.
+  const msgIdRef = useRef(0);
   const companionId: CompanionId = profile?.companionId ?? 'warren-buffett';
   const companion = COMPANIONS[companionId];
 
@@ -108,7 +114,7 @@ export function TopicChatScreen(): React.ReactElement {
     isSendingRef.current = true;
     tapHaptic();
     setInput('');
-    const userMsg: Message = { role: 'user', text: trimmed, timestamp: Date.now() };
+    const userMsg: Message = { id: `u${msgIdRef.current++}`, role: 'user', text: trimmed, timestamp: Date.now() };
     // Snapshot the request transcript BEFORE we append the streaming
     // placeholder, and map our 'assistant' role to the API's 'model'.
     const reqMessages = [...messages, userMsg].map((m) => ({
@@ -121,7 +127,7 @@ export function TopicChatScreen(): React.ReactElement {
     setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 60);
 
     // Append an empty bot bubble that we fill as chunks stream in.
-    const botMsg: Message = { role: 'assistant', text: '', timestamp: Date.now() };
+    const botMsg: Message = { id: `b${msgIdRef.current++}`, role: 'assistant', text: '', timestamp: Date.now() };
     setMessages((prev) => [...prev, botMsg]);
     let acc = '';
     try {
@@ -297,11 +303,11 @@ export function TopicChatScreen(): React.ReactElement {
                 </View>
               </Animated.View>
             )}
-            {messages.map((msg, idx) => {
+            {messages.map((msg) => {
               const isBot = msg.role === 'assistant';
               return (
                 <View
-                  key={idx}
+                  key={msg.id}
                   style={[
                     msgStyles.messageRow,
                     isBot ? msgStyles.messageRowBot : msgStyles.messageRowUser,

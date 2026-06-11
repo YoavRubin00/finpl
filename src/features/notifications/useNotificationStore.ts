@@ -308,7 +308,7 @@ export const useNotificationStore = create<NotificationState & NotificationActio
       },
 
       scheduleBreakingNewsDaily: async (hourOfDay: number): Promise<void> => {
-        const { permissionGranted, scheduled, cancelChannel } = get();
+        const { permissionGranted, cancelChannel } = get();
         if (!permissionGranted) return;
         const hour = Math.max(0, Math.min(23, Math.round(hourOfDay)));
         await cancelChannel("breakingNews");
@@ -321,8 +321,14 @@ export const useNotificationStore = create<NotificationState & NotificationActio
             channelId: "breakingNews",
           },
         });
+        // Re-read after cancelChannel's set() (the captured array would be
+        // stale) and filter defensively so the channel never accumulates
+        // duplicate entries on repeated scheduling.
         set({
-          scheduled: [...scheduled, { channelId: "breakingNews", identifier }],
+          scheduled: [
+            ...get().scheduled.filter((s) => s.channelId !== "breakingNews"),
+            { channelId: "breakingNews", identifier },
+          ],
         });
       },
 

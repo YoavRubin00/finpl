@@ -8,6 +8,7 @@ import { Gesture, GestureDetector, GestureHandlerRootView } from "react-native-g
 import { useVideoPlayer, VideoView } from "expo-video";
 import { createAudioPlayer, type AudioPlayer } from "expo-audio";
 import { useAudioStore } from "../../stores/useAudioStore";
+import { useTopicTreeReturnStore } from "../topic-learning/useTopicTreeReturnStore";
 import { useNudgeQueueStore } from "../../stores/useNudgeQueueStore";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import Animated, {
@@ -2287,6 +2288,16 @@ export function LessonFlowScreen() {
   }>();
   const isReplay = replay === '1';
   const router = useRouter();
+  /** Return to the learn map. Under the root <Stack> the map is still mounted
+   *  beneath this lesson, so dismissTo POPS back to it — no remount / "flash",
+   *  and it carries any ?openPearl= param through (Yoav 2026-06-11: fast,
+   *  premium transitions). Cold start (no back-history) falls back to a fresh
+   *  replace. The store-signal chip-completion path (returnTo=topic-tree) has
+   *  its own router.back() above; this covers the module-completion returns. */
+  const returnToMap = useCallback((path: string = "/(tabs)/index") => {
+    if (router.canGoBack()) router.dismissTo(path as never);
+    else router.replace(path as never);
+  }, [router]);
   /** Safe back: go back if possible, otherwise fall back to tabs home */
   function safeGoBack() {
     // Yoav 2026-06-11: topic-tree chip exits skip the "stay another
@@ -2304,7 +2315,7 @@ export function LessonFlowScreen() {
     if (router.canGoBack()) {
       router.back();
     } else {
-      router.replace("/(tabs)/index" as never);
+      returnToMap("/(tabs)/index");
     }
   }
 
@@ -2314,7 +2325,7 @@ export function LessonFlowScreen() {
     if (id === 'mod-0-1') completeModule('mod-0-1');
     setShowExitConfirm(false);
     if (router.canGoBack()) router.back();
-    else router.replace("/(tabs)/index" as never);
+    else returnToMap("/(tabs)/index");
   }
   const safeInsets = useSafeAreaInsets();
   const [activeGlossaryTerm, setActiveGlossaryTerm] = useState<string | null>(null);
@@ -2701,7 +2712,7 @@ export function LessonFlowScreen() {
         // initialRouteName="investments", so a bare /(tabs)?openPearl=... lands
         // on Investments and the openPearl listener (lives only in DuoLearnScreen,
         // index/learn) never sees the param — the pearl would never auto-open.
-        router.replace(`/(tabs)/index?openPearl=${id}` as never);
+        returnToMap(`/(tabs)/index?openPearl=${id}`);
         return;
       }
     }
@@ -2713,7 +2724,7 @@ export function LessonFlowScreen() {
     if (id === 'mod-0-1') {
       setCurrentChapter('ch-0');
       setCurrentModule(1);
-      router.replace("/(tabs)/index" as never);
+      returnToMap("/(tabs)/index");
       return;
     }
     for (const ch of ALL_CHAPTERS_ORDERED) {
@@ -2727,7 +2738,7 @@ export function LessonFlowScreen() {
         return;
       }
     }
-    router.replace("/(tabs)/index" as never);
+    returnToMap("/(tabs)/index");
   }
 
   /** Navigate to user's next sequential module */
@@ -2825,7 +2836,7 @@ export function LessonFlowScreen() {
         // Route to /(tabs)/index explicitly — (tabs)/_layout has
         // initialRouteName="investments", so a bare /(tabs)?openPearl=...
         // lands on Investments and the openPearl listener never sees it.
-        router.replace(`/(tabs)/index?openPearl=${id}` as never);
+        returnToMap(`/(tabs)/index?openPearl=${id}`);
         return;
       }
     }
@@ -2847,7 +2858,7 @@ export function LessonFlowScreen() {
         // layout has initialRouteName="investments" so "/(tabs)" sends the
         // user to the Investments tab instead of seeing the next module
         // highlighted on the learn map (QA blocker 2026-05-31).
-        router.replace("/(tabs)/index" as never);
+        returnToMap("/(tabs)/index");
         return;
       }
     }
@@ -2858,11 +2869,11 @@ export function LessonFlowScreen() {
         const nextMod = ch.modules[nextIdx];
         setCurrentChapter(chapterStoreKey(ch.id));
         setCurrentModule(nextIdx);
-        router.replace("/(tabs)/index" as never);
+        returnToMap("/(tabs)/index");
         return;
       }
     }
-    router.replace("/(tabs)/index" as never);
+    returnToMap("/(tabs)/index");
   }
 
   const [phase, setPhase] = useState<FlowPhase>(() => {
@@ -2924,10 +2935,27 @@ export function LessonFlowScreen() {
       completed === 'flashcards' && cardFilter === 'video' ? 'tutorial-video'
       : completed === 'flashcards' && cardFilter === 'non-video' ? 'cards'
       : '';
-    const kindParam = completedKind ? `&completedKind=${encodeURIComponent(completedKind)}` : '';
-    const path = `/(tabs)/learn?completedPhase=${encodeURIComponent(completed)}&completedModuleId=${encodeURIComponent(id ?? '')}&expandedModule=${encodeURIComponent(id ?? '')}${kindParam}`;
-    router.replace(path as never);
-  }, [phase, returnTo, id, router]);
+    // Premium return (Yoav 2026-06-11): under the root <Stack> the topic-tree
+    // map is still mounted beneath this lesson. Signal the completion to the
+    // map's store and router.back() — popping this lesson so the user lands on
+    // the LIVE map (no remount / "flash"), a fast smooth transition. Only on a
+    // cold start (no back-history) fall back to the URL-param replace, which
+    // the map's cold-start consumer handles. back() also satisfies the original
+    // "drop the half-finished lesson from history" intent — it's popped.
+    if (router.canGoBack()) {
+      useTopicTreeReturnStore.getState().signalReturn({
+        completedPhase: completed,
+        completedModuleId: id ?? '',
+        completedKind: completedKind || undefined,
+        expandedModule: id ?? '',
+      });
+      router.back();
+    } else {
+      const kindParam = completedKind ? `&completedKind=${encodeURIComponent(completedKind)}` : '';
+      const path = `/(tabs)/learn?completedPhase=${encodeURIComponent(completed)}&completedModuleId=${encodeURIComponent(id ?? '')}&expandedModule=${encodeURIComponent(id ?? '')}${kindParam}`;
+      router.replace(path as never);
+    }
+  }, [phase, returnTo, id, router, cardFilter]);
 
   // Fire once per lesson session when the user actually reaches the summary
   // screen — closes the funnel gap between lesson_started and lesson_completed
@@ -3415,10 +3443,17 @@ export function LessonFlowScreen() {
     }
   }, [phase, mod, hasSeenMod01BarterNotif, safeTimeout]);
 
-  // Complete module and show rewards when entering summary phase
+  // Complete module and show rewards when entering summary phase.
+  // SKIP for topic-tree chips (Yoav 2026-06-11): a chip whose last phase
+  // advances to "summary" briefly flashed THIS legacy dark-backdrop chest
+  // before tt_exit's router.back() — then the topic-tree's own
+  // ChestCelebrationModal fired, so the user saw TWO chests back-to-back.
+  // The topic-tree owns its completion + chest (upsertProgress + recordChestOpen),
+  // so the legacy summary chest must not fire (or mark the whole module done)
+  // on this path. The render below is gated the same way.
   useEffect(() => {
     if (!mod) return;
-    if (phase === "summary" && !completedRef.current) {
+    if (phase === "summary" && !completedRef.current && returnTo !== 'topic-tree') {
       completedRef.current = true;
       // Mark the module completed the moment the chest screen appears —
       // earlier the completion fired only on chest-tap, so a user who reached
@@ -3478,7 +3513,7 @@ export function LessonFlowScreen() {
       cancelAnimation(chestGlowOpacity);
       cancelAnimation(chestBodyScale);
     };
-  }, [phase, mod?.id, completeModule, mod, isLastModule, isReplay, playSound, safeTimeout]);
+  }, [phase, mod?.id, completeModule, mod, isLastModule, isReplay, playSound, safeTimeout, returnTo]);
 
   // Post-module celebration ("Continue or Netflix?") is intentionally LAST in the
   // end-of-module nudge sequence. Wait for every other modal AND for the pending
@@ -4411,7 +4446,7 @@ export function LessonFlowScreen() {
               total={mod.flashcards.length}
               onNext={handleFlashcardNext}
               onPrev={handleFlashcardPrev}
-              onClose={() => router.replace("/(tabs)/index" as never)}
+              onClose={() => returnToMap("/(tabs)/index")}
               onSkipAll={() => { mediumHaptic(); setFlashcardIndex(mod.flashcards.length - 1); }}
               unitColors={unitColors}
               onTermPress={setActiveGlossaryTerm}
@@ -4571,7 +4606,10 @@ export function LessonFlowScreen() {
         )}
 
         {/* ── Summary phase ── */}
-        {phase === "summary" && (
+        {/* Hidden on the topic-tree path so the legacy dark-backdrop chest never
+            flashes before tt_exit's back() (Yoav 2026-06-11: "פתיחת תיבה הופיעה
+            פעמיים"). The topic-tree's own ChestCelebrationModal is the keeper. */}
+        {phase === "summary" && returnTo !== 'topic-tree' && (
           <Animated.View style={[contentStyle, { flex: 1, marginHorizontal: -16 }]}>
             {/* Full-screen confetti overlay, only rendered while active */}
             {confettiActive && (
@@ -4816,7 +4854,7 @@ export function LessonFlowScreen() {
                 }
               }}
               onBack={() => {
-                router.replace("/(tabs)/index" as never);
+                returnToMap("/(tabs)/index");
               }}
             />
             </ScrollView>
@@ -5104,7 +5142,7 @@ export function LessonFlowScreen() {
         visible={showOutOfHearts}
         onDismiss={() => {
           setShowOutOfHearts(false);
-          router.replace("/(tabs)/index" as never);
+          returnToMap("/(tabs)/index");
         }}
         onHeartsRefilled={() => {
           setShowOutOfHearts(false);
@@ -5395,7 +5433,7 @@ export function LessonFlowScreen() {
       {showGradeSkipCelebration && (
         <Modal visible transparent animationType="fade" onRequestClose={() => {
           setShowGradeSkipCelebration(false);
-          router.replace("/(tabs)/index" as never);
+          returnToMap("/(tabs)/index");
         }}>
           <Pressable
             style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.6)", justifyContent: "center", alignItems: "center", paddingHorizontal: 24 }}
@@ -5416,7 +5454,7 @@ export function LessonFlowScreen() {
                   tapHaptic();
                   try { captureEvent('expert_grade_skip_continue', {}); } catch { /* non-fatal */ }
                   setShowGradeSkipCelebration(false);
-                  router.replace("/(tabs)/index" as never);
+                  returnToMap("/(tabs)/index");
                 }}
                 style={{ backgroundColor: "#0ea5e9", borderRadius: 16, paddingVertical: 16, width: "100%", alignItems: "center", borderBottomWidth: 4, borderBottomColor: "#0284c7", shadowColor: "#0ea5e9", shadowOpacity: 0.3, shadowRadius: 8, shadowOffset: { width: 0, height: 3 }, elevation: 6 }}
                 accessibilityRole="button"
@@ -5875,7 +5913,7 @@ export function LessonFlowScreen() {
 
       {/* ── Break farewell message ── */}
       {showBreakMessage && (
-        <Pressable style={[StyleSheet.absoluteFill, { zIndex: 9995, backgroundColor: "rgba(0,0,0,0.6)", justifyContent: "center", alignItems: "center", padding: 24 }]} onPress={() => { setShowBreakMessage(false); setShowPostCelebration(false); safeTimeout(() => router.replace("/(tabs)/index" as never), 80); }} accessibilityRole="button" accessibilityLabel="חזור לתפריט">
+        <Pressable style={[StyleSheet.absoluteFill, { zIndex: 9995, backgroundColor: "rgba(0,0,0,0.6)", justifyContent: "center", alignItems: "center", padding: 24 }]} onPress={() => { setShowBreakMessage(false); setShowPostCelebration(false); safeTimeout(() => returnToMap("/(tabs)/index"), 80); }} accessibilityRole="button" accessibilityLabel="חזור לתפריט">
           <Animated.View entering={FadeInUp.duration(400)} style={{ backgroundColor: "#ffffff", borderRadius: 28, padding: 28, width: "100%", maxWidth: 340, alignItems: "center" }}>
             <ExpoImage source={FINN_EMPATHIC} accessible={false} style={{ width: 100, height: 100, marginBottom: 16 }} contentFit="contain" />
             <Text style={{ fontSize: 20, fontWeight: "900", color: "#0f172a", textAlign: "center", marginBottom: 8 }}>{"מצפה לראותך פה מחר! ❤️"}</Text>

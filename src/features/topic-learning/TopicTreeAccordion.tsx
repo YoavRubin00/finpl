@@ -149,7 +149,12 @@ export const TopicTreeAccordion = React.memo(function TopicTreeAccordion({
   } | null>(null);
   const upsertProgress = useUpsertModuleProgress();
   const { playSound } = useSoundEffect();
-  const economyStore = useEconomyUIStore();
+  // Select the methods individually (stable refs) instead of the whole store —
+  // useEconomyUIStore() returned a fresh object every render, which put a
+  // changing reference in the chest-drop effect's deps and re-ran it on every
+  // unrelated economy update.
+  const addXP = useEconomyUIStore((s) => s.addXP);
+  const addCoins = useEconomyUIStore((s) => s.addCoins);
 
   // Seed refs from the persisted maps on mount so a re-mount post-crossing
   // doesn't re-trigger either celebration.
@@ -263,8 +268,8 @@ export const TopicTreeAccordion = React.memo(function TopicTreeAccordion({
       isFinale = true;
     }
 
-    economyStore.addXP(totalXp, 'daily_task');
-    economyStore.addCoins(totalCoins, 'lesson');
+    addXP(totalXp, 'daily_task');
+    addCoins(totalCoins, 'lesson');
     successHaptic();
     // R8 T1.4 — master = `modal_open_4` (loudest); regular 70% = softer
     // `modal_open_3`. Same rule when both fire (the combo is still THE finale).
@@ -284,7 +289,7 @@ export const TopicTreeAccordion = React.memo(function TopicTreeAccordion({
     if (isFinale) {
       setChestState({ xp: totalXp, coins: totalCoins, isFinale, rarity });
     }
-  }, [summary.isModuleDone, summary.pct, module.id, upsertProgress, economyStore, playSound]);
+  }, [summary.isModuleDone, summary.pct, module.id, upsertProgress, addXP, addCoins, playSound]);
 
   // R8 U1/U2 — mod-0-1-only walkthrough prompt. Fires the first time
   // the user crosses ~10% of mod-0-1 (intro + 1 card), so the offer
@@ -413,7 +418,7 @@ export const TopicTreeAccordion = React.memo(function TopicTreeAccordion({
             // amount as the base.
             const base = chestState?.coins ?? 0;
             if (multiplier === 2) {
-              economyStore.addCoins(base, 'lesson');
+              addCoins(base, 'lesson');
             } else if (multiplier === 0) {
               // `addCoins` early-returns on amount <= 0, so a DoN LOSS was a
               // silent no-op (Yoav 2026-06-11 QA — user kept everything

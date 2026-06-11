@@ -21,14 +21,20 @@ import { useCosmeticsStore } from './useCosmeticsStore';
  */
 export function useStreakSkinWatcher(): void {
   const streakQuery = useStreak();
+  // Only a *present* streak value drives transitions. When the query has no
+  // data yet (cold mount) or transiently resets to undefined (error/refetch
+  // /invalidation), `currentStreak` would fall back to 0 and look like a
+  // drop to 0 — falsely firing a streak-break that wipes earned skins.
+  const hasData = streakQuery.data != null;
   const currentStreak = streakQuery.data?.currentStreak ?? 0;
 
   const prevStreakRef = useRef<number | null>(null);
 
   useEffect(() => {
+    if (!hasData) return; // no real value — don't infer a transition
     const prev = prevStreakRef.current;
     prevStreakRef.current = currentStreak;
-    if (prev === null) return; // first render, no transition
+    if (prev === null) return; // first known value, no transition
 
     // 1) Crossed 7 days — unlock cosmetics. Store handles idempotency.
     if (prev < 7 && currentStreak >= 7) {
@@ -44,5 +50,5 @@ export function useStreakSkinWatcher(): void {
     if (isBreak) {
       useCosmeticsStore.getState().revertToClassic();
     }
-  }, [currentStreak]);
+  }, [hasData, currentStreak]);
 }

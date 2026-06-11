@@ -36,10 +36,21 @@ interface ComebackRewardState {
 
   /** Boot-hook entry point. Pass the current epoch ms; the store
    *  decides whether the gap warrants a pending claim. Returns the
-   *  number of lapsed days when a claim was queued, else 0. */
+   *  number of lapsed days when a claim was queued, else 0.
+   *
+   *  IMPORTANT: on a lapse this does NOT advance `lastSeenAt`. The lapse
+   *  stays "owed" — re-derivable from the un-advanced timestamp — until
+   *  {@link claimAndStamp} settles it. That way a crash mid-claim
+   *  re-offers the reward on the next boot instead of silently losing it. */
   registerAppOpen: (nowMs: number) => number;
-  /** User tapped "Claim" — resets the pending flag so the modal
-   *  doesn't re-trigger on the next foreground. */
+  /** User tapped "Claim" AND the reward was credited — settles the
+   *  lapse: clears the flag and advances `lastSeenAt` so it won't
+   *  re-trigger. Call this AFTER addCoins/addStreakFreezes so a crash
+   *  before crediting leaves the reward owed rather than lost. */
+  claimAndStamp: (nowMs: number) => void;
+  /** User deferred ("maybe later") — hides the modal for this session
+   *  only. `lastSeenAt` stays un-advanced, so the reward is re-offered
+   *  on the next boot. Does NOT grant anything. */
   claim: () => void;
   /** Test / dev helper. */
   reset: () => void;
@@ -61,8 +72,10 @@ export const useComebackRewardStore = create<ComebackRewardState>()(
         }
         const diffDays = Math.floor((nowMs - lastSeenAt) / DAY_MS);
         if (diffDays >= LAPSE_THRESHOLD_DAYS) {
+          // Queue the claim WITHOUT advancing lastSeenAt — the lapse stays
+          // owed until claimAndStamp() credits + settles it. Re-derivable
+          // on every boot, so a crash mid-claim can't lose the reward.
           set({
-            lastSeenAt: nowMs,
             pendingClaim: true,
             // Cap the displayed number — 60+ day lapses are unhelpful as
             // copy and only feel mocking ("we missed you for 423 days!").
@@ -70,9 +83,13 @@ export const useComebackRewardStore = create<ComebackRewardState>()(
           });
           return diffDays;
         }
+        // Normal continuity — no reward owed, safe to advance.
         set({ lastSeenAt: nowMs });
         return 0;
       },
+
+      claimAndStamp: (nowMs) =>
+        set({ pendingClaim: false, lapsedDays: 0, lastSeenAt: nowMs }),
 
       claim: () => set({ pendingClaim: false, lapsedDays: 0 }),
 

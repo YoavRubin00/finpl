@@ -42,7 +42,7 @@ try {
 initSentry();
 initPostHog();
 
-import { Slot, useRouter, useSegments, useRootNavigationState, usePathname } from "expo-router";
+import { Stack, useRouter, useSegments, useRootNavigationState, usePathname } from "expo-router";
 import { useEffect, useRef, useState } from "react";
 import { AppState, Platform, Text, TextInput } from "react-native";
 import { useUserStatsUIStore } from "../src/features/user-stats/useUserStatsUIStore";
@@ -192,6 +192,7 @@ function ComebackRewardGate() {
   const pendingClaim = useComebackRewardStore((s) => s.pendingClaim);
   const lapsedDays = useComebackRewardStore((s) => s.lapsedDays);
   const claim = useComebackRewardStore((s) => s.claim);
+  const claimAndStamp = useComebackRewardStore((s) => s.claimAndStamp);
   const addCoins = useEconomyUIStore((s) => s.addCoins);
   const addStreakFreezes = useEconomyUIStore((s) => s.addStreakFreezes);
   return (
@@ -199,10 +200,14 @@ function ComebackRewardGate() {
       visible={pendingClaim}
       lapsedDays={lapsedDays}
       onClaim={() => {
+        // Credit FIRST, then settle. If the app dies between these calls
+        // the lapse stays owed (lastSeenAt un-advanced) and is re-offered
+        // next boot — never silently lost.
         try { addCoins(COMEBACK_COINS, 'comeback'); } catch { /* non-fatal */ }
         try { addStreakFreezes(1); } catch { /* non-fatal */ }
-        claim();
+        claimAndStamp(Date.now());
       }}
+      // Defer ("maybe later") — hides for this session, re-offered next boot.
       onDismiss={() => { claim(); }}
     />
   );
@@ -507,7 +512,7 @@ function RootLayoutInner() {
         await AsyncStorage.removeItem(screenMod.PENDING_REFERRAL_STORAGE_KEY);
         if (cancelled) return;
         if (result) {
-          try { useEconomyUIStore.getState().addCoins(result.bonusGranted); } catch { /* non-fatal */ }
+          try { useEconomyUIStore.getState().addCoins(result.bonusGranted, 'referral-signup-bonus'); } catch { /* non-fatal */ }
         }
       } catch { /* non-fatal — deep link redeem will be retried next launch if user re-enters via link */ }
     })();
@@ -634,7 +639,23 @@ function RootLayoutInner() {
       <GlobalErrorBoundary>
         <RewardAnimationProvider>
             <StreakCelebrationProvider>
-              <Slot />
+              {/* Root navigator. Was <Slot/> — which has NO stack, so pushing
+                  /lesson/[id] swapped the whole (tabs) tree with no animation
+                  and REMOUNTED it on return (the "learn map flashes briefly"
+                  artifact). A native Stack keeps (tabs) mounted underneath,
+                  slides the sub-module lesson in fast, and pops back without a
+                  flash — the premium feel Yoav asked for (2026-06-11). Fast
+                  220ms slide; back-gesture on. headerShown:false preserves the
+                  existing custom headers. */}
+              <Stack
+                screenOptions={{
+                  headerShown: false,
+                  animation: "slide_from_right",
+                  animationDuration: 220,
+                  gestureEnabled: true,
+                  contentStyle: { backgroundColor: "transparent" },
+                }}
+              />
               {/* Yoav 2026-06-11: also mount the walkthrough overlay BEFORE
                   mod-0-1 is fully completed, IF the user has explicitly
                   opted in (walkthroughTriggered=true). The new topic-tree
