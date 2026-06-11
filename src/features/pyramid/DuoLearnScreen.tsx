@@ -39,6 +39,7 @@ import { useProgress, useUpsertModuleProgress, progressQueryKey } from "../chapt
 import type { ModuleProgressRow } from "../../lib/api/progress";
 import { queryClient } from "../../lib/queryClient";
 import { useIsPro } from "../subscription/useSubscription";
+import { useUsageStore } from "../subscription/useUsageStore";
 import { useAuthStore } from "../auth/useAuthStore";
 import { InModuleProfileQuestion, type ProfileQuestionKind } from "../onboarding/InModuleProfileQuestion";
 import { getPyramidStatus } from "../../utils/progression";
@@ -1978,6 +1979,24 @@ export function DuoLearnScreen() {
     const idx = ch.modules.findIndex((m) => m.id === current.module.id);
     const next = idx >= 0 ? ch.modules[idx + 1] : undefined;
     setTopicTreeModule(null);
+    // Yoav 2026-06-11: mirror LessonFlowScreen's goToNextSequentialModule —
+    // after mod-0-1b, non-Pro users see the pricing screen once before
+    // advancing to mod-0-2 ("המסך המרה לפרו — מגיעים אליו אוטומטית
+    // בסיום 1B במקום לעבור ישירות ל 0-2"). The topic-tree chest CTA
+    // was skipping this gate entirely; now it routes via /pricing with
+    // a returnTo that lands on mod-0-2 whether the user dismisses or
+    // purchases.
+    if (
+      current.module.id === 'mod-0-1b'
+      && !isPro
+      && !useUsageStore.getState().hasSeenMod01bPaywall
+    ) {
+      useUsageStore.getState().markMod01bPaywallSeen();
+      try { captureEvent('paywall_viewed', { paywall: 'post_mod_0_1b', source: 'post_mod_0_1b_topic_tree' }); } catch { /* non-fatal */ }
+      const returnTo = '/lesson/mod-0-2?chapterId=chapter-0';
+      router.replace(`/pricing?returnTo=${encodeURIComponent(returnTo)}` as never);
+      return;
+    }
     if (next) {
       if (shouldUseTopicTree(next)) {
         const introDone = useTopicProgressStore.getState()
@@ -1992,7 +2011,7 @@ export function DuoLearnScreen() {
       }
       router.push(`/lesson/${next.id}?chapterId=${current.chapterId}` as never);
     }
-  }, [topicTreeModule, router]);
+  }, [topicTreeModule, router, isPro]);
 
   // Generic module-completed handler — invoked when the user picks
   // "next module" inside the chest. Closes the accordion.

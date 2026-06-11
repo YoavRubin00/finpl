@@ -269,7 +269,21 @@ export const TopicTreeAccordion = React.memo(function TopicTreeAccordion({
     // R8 T1.4 — master = `modal_open_4` (loudest); regular 70% = softer
     // `modal_open_3`. Same rule when both fire (the combo is still THE finale).
     try { playSound(isFinale ? 'modal_open_4' : 'modal_open_3'); } catch { /* non-fatal */ }
-    setChestState({ xp: totalXp, coins: totalCoins, isFinale, rarity });
+    // Yoav 2026-06-11: the 70% chest fired first, then the 100% master
+    // chest fired a few chips later — two modals over one module run
+    // ("הפתיחת תיבה הופיעה פעמיים — תמחק את הראשון"). Only the master
+    // (100% / finale) opens the modal now; the 70% crossing stays
+    // SILENT but still credits XP/coins, marks the module complete,
+    // and records the streak/rarity. When the master eventually fires
+    // it includes BOTH the 70% + 100% reward totals (the totalXp/
+    // totalCoins sums above already pool them when both gates cross
+    // in the same commit; when they fire in separate commits, only
+    // the master commit surfaces but the 70% rewards have already
+    // landed in the wallet). Surface a soft haptic + success sound on
+    // the 70% crossing so the moment isn't completely silent.
+    if (isFinale) {
+      setChestState({ xp: totalXp, coins: totalCoins, isFinale, rarity });
+    }
   }, [summary.isModuleDone, summary.pct, module.id, upsertProgress, economyStore, playSound]);
 
   // R8 U1/U2 — mod-0-1-only walkthrough prompt. Fires the first time
