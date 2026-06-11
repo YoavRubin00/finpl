@@ -1662,23 +1662,56 @@ export function DuoLearnScreen() {
     }, [calcResumeScrollY, calcLastCompletedScrollY])
   );
 
-  // Anchor an open topic-tree module at the TOP of the viewport so its expanded
-  // sub-modules (TopicTreeAccordion renders below the node) are spread out
-  // underneath. Fires on return-from-module (completedPhaseParams sets
-  // topicTreeModule) and on tap-to-expand. rAF lets the accordion lay out first.
+  // Anchor an open topic-tree module so the user's NEXT golden (recommended)
+  // chip lands near the top of the viewport. Earlier rounds anchored the
+  // module node itself at the top — fine on entry, but after a chip exit it
+  // meant the user landed back at "module title" and had to hunt for the
+  // gold chip below (Yoav 2026-06-11: "מרגיש איטי וגושני"). Fires on
+  // return-from-module (completedPhaseParams sets topicTreeModule) and on
+  // tap-to-expand. rAF lets the accordion lay out first.
+  //
+  // Layout constants mirror ModuleTopicLayout (NODE_SIZE/ROW_HEIGHT/
+  // EDGE_CONNECTOR_H/ENTRY_OVERLAP) and the outer ChapterSection row.
+  // Numbers stay literal here on purpose — they are stable visual
+  // constants the user has signed off on, and threading them via context
+  // would obscure the math more than it helps.
+  const completedMap = useTopicProgressStore((s) => s.completed);
   useEffect(() => {
     if (!topicTreeModule) return;
     const chIdx = ALL_CHAPTERS.findIndex((c) => c.id === topicTreeModule.chapterId);
     if (chIdx < 0) return;
     const mIdx = ALL_CHAPTERS[chIdx].modules.findIndex((m) => m.id === topicTreeModule.module.id);
     if (mIdx < 0) return;
-    const targetY = calcModuleScrollY(chIdx, mIdx);
-    const TOP_PAD = 12; // small gap below the wealth header
+    const moduleY = calcModuleScrollY(chIdx, mIdx);
+    const topics = resolveTopics(topicTreeModule.module);
+    // Recommended chip = first uncompleted in the canonical order.
+    const recommendedIdx = topics.findIndex((t) => !completedMap[t.id]);
+    const safeRecommendedIdx = recommendedIdx < 0 ? 0 : recommendedIdx;
+    // Welcome banner above the chip column adds ~80px when it's showing
+    // (mod-0-1 + walkthrough not seen + 0 non-intro chips done).
+    const completedNonIntroCount = topics.filter(
+      (t) => t.kind !== 'intro' && completedMap[t.id],
+    ).length;
+    const welcomeBannerH =
+      topicTreeModule.module.id === 'mod-0-1'
+      && isWalkthroughActive
+      && completedNonIntroCount < 1
+        ? 80
+        : 0;
+    const OUTER_MODULE_ROW_H = 114;     // outer ModuleNode row height
+    const EDGE_CONNECTOR_H = 44;        // accordion top connector
+    const ENTRY_OVERLAP = 14;           // accordion lifts -14 into module
+    const ROW_HEIGHT = 114;             // per-chip row inside accordion
+    const VIEWPORT_TOP_PAD = 96;        // headroom above gold chip
+    const chipOffsetFromModule =
+      OUTER_MODULE_ROW_H - ENTRY_OVERLAP + welcomeBannerH
+      + EDGE_CONNECTOR_H + safeRecommendedIdx * ROW_HEIGHT;
+    const targetY = moduleY + chipOffsetFromModule - VIEWPORT_TOP_PAD;
     const raf = requestAnimationFrame(() => {
-      scrollRef.current?.scrollTo({ y: Math.max(0, targetY - TOP_PAD), animated: true });
+      scrollRef.current?.scrollTo({ y: Math.max(0, targetY), animated: true });
     });
     return () => cancelAnimationFrame(raf);
-  }, [topicTreeModule, calcModuleScrollY]);
+  }, [topicTreeModule, calcModuleScrollY, completedMap, isWalkthroughActive]);
 
   // Auto-scroll on initial mount — prefer last-completed module so the user
   // lands on "where I finished last time" with the next lesson right below.

@@ -67,6 +67,15 @@ interface ModuleTopicLayoutProps {
   /** Retained for API stability — the GrowingTree it used to drive was
    *  retired in R5.10 per Yoav ("תוריד בבקשה את העץ, הוא לא מתאים"). */
   progressPct?: number;
+  /** Horizontal wave offset of the parent ModuleNode on the OUTER map
+   *  (DuoLearnScreen `getNodeOffset(i)`). The chip column is centered
+   *  (first/last chip forced to 0), but the node above and the pearl
+   *  connector below both sit at this offset. Without it the entry/exit
+   *  connectors run dead-center and the trail JOGS horizontally where the
+   *  sub-module map meets the general map (Yoav 2026-06-11: "החיבור בין
+   *  המפת למידה תת מודולה למפה הכללית לוקה בחסר"). Entry routes node→column,
+   *  exit routes column→next-connector so both ends meet flush. */
+  nodeOffsetX?: number;
   onTopicPress: (topic: Topic) => void;
 }
 
@@ -91,6 +100,7 @@ export const ModuleTopicLayout = React.memo(function ModuleTopicLayout({
   topics,
   isCompletedMap,
   recommendedTopicId,
+  nodeOffsetX = 0,
   onTopicPress,
 }: ModuleTopicLayoutProps): React.ReactElement {
   const sorted = useMemo(
@@ -202,7 +212,7 @@ export const ModuleTopicLayout = React.memo(function ModuleTopicLayout({
         pointerEvents="none"
       >
         <PathConnector
-          fromOffsetX={0}
+          fromOffsetX={nodeOffsetX}
           toOffsetX={0}
           done={firstCompleted}
           height={EDGE_CONNECTOR_H + ENTRY_OVERLAP}

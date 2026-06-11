@@ -4238,7 +4238,14 @@ export function LessonFlowScreen() {
                   // solved (3-ish prompts each). Previously flat 0 →
                   // felt broken.
                   ? (recallProgress.current / recallProgress.total) * 100
-                  : 0) // remaining singletons (intro/video/sim/infographic/post-video) — bar stays flat until phase exits
+                  // Singleton phases (sim/podcast/couple-dilemma/
+                  // shark-dilemma/infographic/post-video/video) don't
+                  // expose internal progress. Show a 50% baseline so
+                  // the bar reads as "you're inside this section,
+                  // making progress" instead of "empty bar = nothing
+                  // happened". Yoav 2026-06-11: "שים דגש על הבר
+                  // התקדמות של כל תת מודולה — שהוא עובד כמו שצריך".
+                  : 50)
               : pctLessonWide;
             const isOnFire = consecutiveCorrect >= 3;
             const barColors: [string, string, string] = isOnFire ? ['#fbbf24', '#f97316', '#ef4444'] : [unitColors.glow, unitColors.glow, unitColors.bg];
