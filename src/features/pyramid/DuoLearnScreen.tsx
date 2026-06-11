@@ -1726,27 +1726,37 @@ export function DuoLearnScreen() {
     if (mIdx < 0) return;
     const moduleY = calcModuleScrollY(chIdx, mIdx);
     const topics = resolveTopics(topicTreeModule.module);
-    // Recommended chip = first uncompleted in the canonical order.
-    const recommendedIdx = topics.findIndex((t) => !completedMap[t.id]);
-    const safeRecommendedIdx = recommendedIdx < 0 ? 0 : recommendedIdx;
-    // Welcome banner above the chip column adds ~80px when it's showing
-    // (mod-0-1 + walkthrough not seen + 0 non-intro chips done).
+    // Welcome window for mod-0-1: anchor the MODULE NODE at the top so
+    // the user reads top-down "מושגי יסוד פיננסיים" → "ברוכים הבאים,
+    // {name}" → full accordion (Yoav 2026-06-11: "אני רואה בחלק העליון
+    // את הכפתור של מושגי יסוד פיננסים, שמתחתיו ברוכים הבאים, אורח, ואז
+    // כל האקורדיון למידה, ולא ישר את המוזהב"). The gold-chip auto-scroll
+    // kicks in only AFTER the welcome banner clears (= first chip done).
     const completedNonIntroCount = topics.filter(
       (t) => t.kind !== 'intro' && completedMap[t.id],
     ).length;
-    const welcomeBannerH =
+    const inWelcomeWindow =
       topicTreeModule.module.id === 'mod-0-1'
       && isWalkthroughActive
-      && completedNonIntroCount < 1
-        ? 80
-        : 0;
+      && completedNonIntroCount < 1;
+    if (inWelcomeWindow) {
+      const TOP_PAD = 12; // small gap below the wealth header
+      const raf = requestAnimationFrame(() => {
+        scrollRef.current?.scrollTo({ y: Math.max(0, moduleY - TOP_PAD), animated: true });
+      });
+      return () => cancelAnimationFrame(raf);
+    }
+    // After the first chip completes, anchor on the next gold chip so
+    // the user sees "what's next" instead of a stale module title.
+    const recommendedIdx = topics.findIndex((t) => !completedMap[t.id]);
+    const safeRecommendedIdx = recommendedIdx < 0 ? 0 : recommendedIdx;
     const OUTER_MODULE_ROW_H = 114;     // outer ModuleNode row height
     const EDGE_CONNECTOR_H = 44;        // accordion top connector
     const ENTRY_OVERLAP = 14;           // accordion lifts -14 into module
     const ROW_HEIGHT = 114;             // per-chip row inside accordion
     const VIEWPORT_TOP_PAD = 96;        // headroom above gold chip
     const chipOffsetFromModule =
-      OUTER_MODULE_ROW_H - ENTRY_OVERLAP + welcomeBannerH
+      OUTER_MODULE_ROW_H - ENTRY_OVERLAP
       + EDGE_CONNECTOR_H + safeRecommendedIdx * ROW_HEIGHT;
     const targetY = moduleY + chipOffsetFromModule - VIEWPORT_TOP_PAD;
     const raf = requestAnimationFrame(() => {
