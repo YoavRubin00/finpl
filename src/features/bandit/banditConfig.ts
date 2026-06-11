@@ -274,9 +274,13 @@ export const EXPERIMENT_CONFIGS: AllExperimentConfigs = {
       },
       {
         id: 'paywall_v2',
-        label: 'loss_aversion',
+        // R8 pre-release audit (Yoav + Audrey 2026-06-11): שונה מ-
+        // "loss_aversion" / "הרצף שלכם שווה כסף" — מינוף לחץ כספי על
+        // streak פגע בקו האדום של אודרי (P0). הוחלף ל-value framing
+        // שמתמקד במה שהמשתמש יכול ללמוד, לא במה שיאבד.
+        label: 'momentum',
         payload: {
-          proofText: 'אל תעצרו בדיוק עכשיו — הרצף שלכם שווה כסף',
+          proofText: 'המשיכו את המומנטום שבניתם — כל יום עוד צעד',
           ctaText: 'המשיכו ללא עצירות',
           subText: 'ביטול בכל עת. ללא התחייבות.',
         },

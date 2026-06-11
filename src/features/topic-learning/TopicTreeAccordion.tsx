@@ -108,11 +108,13 @@ export const TopicTreeAccordion = React.memo(function TopicTreeAccordion({
   const past50Ref = useRef<boolean>(false);
   const past70Ref = useRef<boolean>(false);
   const past100Ref = useRef<boolean>(false);
-  // True once the 70% chest effect runs in the current mount. Lets the 100%
-  // effect detect a same-action 70%→100% jump and reuse the same chest roll
-  // instead of calling recordChestOpen twice (double streak/pity bump).
-  const seventyFiredThisMountRef = useRef<boolean>(false);
-  const lastChestRollRef = useRef<{ multiplier: number; rarity: ChestRarity } | null>(null);
+  // R8 pre-release audit (Yoav + הסורק 2026-06-11): removed the
+  // `seventyFiredThisMountRef` + `lastChestRollRef` workaround. They
+  // dedup'd recordChestOpen() but the underlying TWO useEffects still
+  // double-credited the user when a single chip jumped <70% → 100% in
+  // one commit (both `addCoins` calls ran, only the master `setChestState`
+  // persisted → silent double payout, single modal). The two effects are
+  // now unified into one below; the refs are unnecessary.
   // Single timer for the milestone toast. Without it, two crossings (25% then
   // 50%) leave two dangling setTimeouts — the first nulls the second's toast
   // early, and an unmount mid-toast set state on an unmounted component
@@ -190,86 +192,80 @@ export const TopicTreeAccordion = React.memo(function TopicTreeAccordion({
     }
   }, [summary.pct, summary.isModuleDone, playSound]);
 
-  // 70% chest — fires the first time isModuleDone flips true.
+  // R8 pre-release audit (Yoav + הסורק 2026-06-11): UNIFIED chest drop
+  // effect. Previously two separate useEffects (70% + 100%) raced when a
+  // single chip crossed both gates in one commit — both `addCoins` calls
+  // ran (silent double-credit ≈150 + ≈250 coins) but only the second
+  // `setChestState` persisted, so the user saw ONE master modal and
+  // never learned about the 70% drop. Now one effect that, when both
+  // gates cross simultaneously, rolls ONCE, sums the rewards, applies
+  // ONCE, and surfaces ONE master modal whose displayed `xp` + `coins`
+  // already include both 70% + 100% payouts.
   useEffect(() => {
-    if (!summary.isModuleDone || past70Ref.current) return;
-    past70Ref.current = true;
-    // Persist the "first crossed 70%" flag (moved out of summaryForModule,
-    // which is now a pure read — was a set()-during-render bug).
-    useTopicProgressStore.getState().stampModuleThreshold(module.id);
-    // Module-completion analytics. The topic-tree method previously fired
-    // NO `lesson_completed`, so every module learned this way was invisible
-    // to the NSM / WoW-retention / streak / daily-lessons insights (all keyed
-    // on `lesson_completed`). Mirror the legacy LessonFlowScreen prop shape
-    // (`module_id` + `chapter_id` + `is_first_lesson`) and add a
-    // `learning_mode` discriminator so topic-tree can be segmented. Read
-    // is_first_lesson BEFORE markCompleted below mutates the store. Non-fatal.
-    try {
-      const isFirstLesson =
-        useCompletedModulesStore.getState().completedIds.length === 0;
-      captureEvent('lesson_completed', {
-        module_id: module.id,
-        chapter_id: chapterIdFromModuleId(module.id),
-        is_first_lesson: isFirstLesson,
-        learning_mode: 'topic-tree',
-      });
-    } catch { /* non-fatal */ }
-    upsertProgress.mutate({
-      moduleId: module.id,
-      status: 'completed',
-      xpEarned: MODULE_TT_XP,
-    });
-    useCompletedModulesStore.getState().markCompleted(module.id);
-    economyStore.addXP(MODULE_TT_XP, 'daily_task');
-    // R6 streak + R8 T3.4 rarity. Multiplier from the 48h-streak chain,
-    // rarity from the per-open Brawl Stars-style roll (with pity timer).
-    const roll = useTopicProgressStore.getState().recordChestOpen();
-    // Remember this roll so a same-action 70%→100% jump (tiny modules where
-    // one chip crosses both gates) reuses it instead of calling
-    // recordChestOpen AGAIN — which double-bumped streak + pity for a single
-    // module completion (Yoav 2026-06-11 QA).
-    seventyFiredThisMountRef.current = true;
-    lastChestRollRef.current = roll;
-    const { multiplier, rarity } = roll;
-    const rarityBonus = CHEST_RARITY_BONUS[rarity];
-    const coinsGranted = Math.round(MODULE_TT_COINS * multiplier * rarityBonus);
-    economyStore.addCoins(coinsGranted, 'lesson');
-    successHaptic();
-    // R8 T1.4 — regular 70% chest uses the slightly softer `modal_open_3`
-    // so the master chest below stays the audible climax.
-    try { playSound('modal_open_3'); } catch { /* non-fatal */ }
-    setChestState({ xp: MODULE_TT_XP, coins: coinsGranted, isFinale: false, rarity });
-  }, [summary.isModuleDone, module.id, upsertProgress, economyStore, playSound]);
+    const seventyJustCrossed = summary.isModuleDone && !past70Ref.current;
+    const hundredJustCrossed = summary.pct === 100 && !past100Ref.current;
+    if (!seventyJustCrossed && !hundredJustCrossed) return;
 
-  // 100% master chest — fires the first time pct hits 100.
-  useEffect(() => {
-    if (summary.pct !== 100 || past100Ref.current) return;
-    past100Ref.current = true;
-    // Persist the "first crossed 100%" flag (moved out of summaryForModule).
-    useTopicProgressStore.getState().stampModuleFullyComplete(module.id);
-    // Stack the master reward ON TOP of the 70% chest's grant — the
-    // user already pocketed that one; this is the bonus for finishing
-    // every chip.
-    economyStore.addXP(MASTER_TT_XP, 'daily_task');
-    // If the 70% chest fired in this SAME render commit (a one-chip jump from
-    // <70% straight to 100% on a small module), reuse its roll — that was one
-    // user action = one chest open, not two. Only roll a fresh open when the
-    // master chest is genuinely a later, separate session.
-    const roll = (seventyFiredThisMountRef.current && lastChestRollRef.current)
-      ? lastChestRollRef.current
-      : useTopicProgressStore.getState().recordChestOpen();
-    const { multiplier, rarity } = roll;
+    // Roll once per user action — even if both gates cross, this is a
+    // single chest open from a chain-streak / pity-timer perspective.
+    const { multiplier, rarity } = useTopicProgressStore.getState().recordChestOpen();
     const rarityBonus = CHEST_RARITY_BONUS[rarity];
-    const coinsGranted = Math.round(MASTER_TT_COINS * multiplier * rarityBonus);
-    economyStore.addCoins(coinsGranted, 'lesson');
+
+    let totalXp = 0;
+    let totalCoins = 0;
+    let isFinale = false;
+
+    if (seventyJustCrossed) {
+      past70Ref.current = true;
+      // Persist the "first crossed 70%" flag (moved out of summaryForModule,
+      // which is now a pure read — was a set()-during-render bug).
+      useTopicProgressStore.getState().stampModuleThreshold(module.id);
+      // Module-completion analytics. The topic-tree method previously fired
+      // NO `lesson_completed`, so every module learned this way was invisible
+      // to the NSM / WoW-retention / streak / daily-lessons insights (all keyed
+      // on `lesson_completed`). Mirror the legacy LessonFlowScreen prop shape
+      // (`module_id` + `chapter_id` + `is_first_lesson`) and add a
+      // `learning_mode` discriminator so topic-tree can be segmented. Read
+      // is_first_lesson BEFORE markCompleted below mutates the store. Non-fatal.
+      try {
+        const isFirstLesson =
+          useCompletedModulesStore.getState().completedIds.length === 0;
+        captureEvent('lesson_completed', {
+          module_id: module.id,
+          chapter_id: chapterIdFromModuleId(module.id),
+          is_first_lesson: isFirstLesson,
+          learning_mode: 'topic-tree',
+        });
+      } catch { /* non-fatal */ }
+      upsertProgress.mutate({
+        moduleId: module.id,
+        status: 'completed',
+        xpEarned: MODULE_TT_XP,
+      });
+      useCompletedModulesStore.getState().markCompleted(module.id);
+      totalXp += MODULE_TT_XP;
+      totalCoins += Math.round(MODULE_TT_COINS * multiplier * rarityBonus);
+    }
+
+    if (hundredJustCrossed) {
+      past100Ref.current = true;
+      // Persist the "first crossed 100%" flag (moved out of summaryForModule).
+      useTopicProgressStore.getState().stampModuleFullyComplete(module.id);
+      totalXp += MASTER_TT_XP;
+      totalCoins += Math.round(MASTER_TT_COINS * multiplier * rarityBonus);
+      // Master modal always wins display when 100% fires (either alone
+      // or as part of a same-action 70%+100% combo).
+      isFinale = true;
+    }
+
+    economyStore.addXP(totalXp, 'daily_task');
+    economyStore.addCoins(totalCoins, 'lesson');
     successHaptic();
-    // R8 T1.4 — master 100% chest uses `modal_open_4` (the loudest /
-    // most triumphant sound in the library). Differentiates from the
-    // softer `modal_open_3` used by the regular 70% chest above so
-    // the user audibly knows this is THE finale, not just another drop.
-    try { playSound('modal_open_4'); } catch { /* non-fatal */ }
-    setChestState({ xp: MASTER_TT_XP, coins: coinsGranted, isFinale: true, rarity });
-  }, [summary.pct, module.id, economyStore, playSound]);
+    // R8 T1.4 — master = `modal_open_4` (loudest); regular 70% = softer
+    // `modal_open_3`. Same rule when both fire (the combo is still THE finale).
+    try { playSound(isFinale ? 'modal_open_4' : 'modal_open_3'); } catch { /* non-fatal */ }
+    setChestState({ xp: totalXp, coins: totalCoins, isFinale, rarity });
+  }, [summary.isModuleDone, summary.pct, module.id, upsertProgress, economyStore, playSound]);
 
   // R8 U1/U2 — mod-0-1-only walkthrough prompt. Fires the first time
   // the user crosses ~10% of mod-0-1 (intro + 1 card), so the offer
