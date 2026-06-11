@@ -165,11 +165,27 @@ export function useGoogleAuth() {
       }
       await signInWithProfile(verified.profile, verified.token, 'google');
 
+      // Yoav 2026-06-11: consume the "existing-account intent" flag set by
+      // the IntroStep login sub-step. If the user explicitly tapped "כבר
+      // יש לי חשבון" before signing in with Google, they've onboarded on
+      // a prior install by definition — flip hasCompletedOnboarding=true
+      // so the root layout's redirect guard routes them straight to /(tabs)
+      // instead of bouncing them back through onboarding.
+      let existingAccountIntent = false;
+      try {
+        existingAccountIntent = useGoogleAuthStore.getState().pendingExistingAccountIntent === true;
+        if (existingAccountIntent) {
+          useGoogleAuthStore.setState({ pendingExistingAccountIntent: false });
+          useAuthStore.getState().setOnboardingCompleted(true);
+        }
+      } catch { /* non-fatal */ }
+
       // Route by the post-signIn store value rather than the raw server flag.
       // The store preserves prior-session hasCompletedOnboarding when the server
       // doesn't include the field, so returning users on the same device land
       // straight in /(tabs) without bouncing through onboarding.
       const completed =
+        existingAccountIntent ||
         verified.profile.hasCompletedOnboarding === true ||
         useAuthStore.getState().hasCompletedOnboarding === true;
       if (completed) {
