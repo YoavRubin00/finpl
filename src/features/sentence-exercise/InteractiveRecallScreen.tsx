@@ -98,6 +98,11 @@ export function InteractiveRecallScreen({
   if (missingSet) return null;
 
   const prompt = recall.current;
+  // Belt-and-suspenders: missingSet already gates on !recall.current, but TS
+  // can't narrow across the assignment and recall.current could theoretically
+  // be undefined on the boundary tick where currentIndex === total. Bail
+  // before accessing prompt.id so the JSX below never explodes.
+  if (!prompt) return null;
 
   // Only honor cardState if it was pushed by THIS prompt's card. After a
   // prompt change, there's a brief window where the parent still holds the

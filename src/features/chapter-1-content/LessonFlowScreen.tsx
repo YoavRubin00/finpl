@@ -144,6 +144,14 @@ function FallbackToSummary({ setPhase }: { setPhase: (p: "summary") => void }) {
   useEffect(() => { setPhase("summary"); }, [setPhase]);
   return <View style={{ flex: 1, backgroundColor: "#f8fafc" }} />;
 }
+
+// Same idea for any phase transition that needs to fire on mount (used by
+// the video / mid-quiz-video / post-infographic-video fallbacks). Doing the
+// setState in render produces a "Cannot update during render" warning.
+function FallbackToPhaseEffect({ run }: { run: () => void }) {
+  useEffect(() => { run(); }, [run]);
+  return <View style={{ flex: 1, backgroundColor: "#f8fafc" }} />;
+}
 import { FINN_MEME_REACTIONS } from "../fun/finnJokesData";
 import type { FinnAnimationState } from "../retention-loops/finnMascotConfig";
 import { FlashcardInfographic, FINN_MAP, INFOGRAPHIC_MAP } from "./FlashcardInfographic";
@@ -3020,6 +3028,20 @@ export function LessonFlowScreen() {
     }
   }, [phase, ttProgressActive, mod]);
 
+  // "למידה רציפה" mid-run guard: while THIS continuous run is mounted, flag
+  // its module so the (still-mounted, store-subscribed) TopicTreeAccordion
+  // beneath us suppresses its OWN threshold chest. Without this, the moment
+  // the run crosses 70% mid-lesson the accordion's ChestCelebrationModal
+  // (a RN Modal) pops OVER the running lesson. Cleared on unmount — on return
+  // the accordion fires normally (a mid-run exit past 70% then gets its single
+  // 70% chest on the map; a full completion is already suppressed by the
+  // summary threshold-stamp above).
+  useEffect(() => {
+    if (!ttProgressActive || !id) return;
+    useContinuousRunStore.getState().setActive(id);
+    return () => { useContinuousRunStore.getState().clear(); };
+  }, [ttProgressActive, id]);
+
   // Fire once per lesson session when the user actually reaches the summary
   // screen — closes the funnel gap between lesson_started and lesson_completed
   // (some users see the summary then bail before claiming the chest).
@@ -4070,8 +4092,7 @@ export function LessonFlowScreen() {
     );
   }
   if (phase === "video") {
-    advanceFromVideo();
-    return <View style={{ flex: 1, backgroundColor: "#f8fafc" }} />;
+    return <FallbackToPhaseEffect run={advanceFromVideo} />;
   }
 
   // Mid-quiz fun video — same player as the old post-infographic phase, but
@@ -4089,9 +4110,7 @@ export function LessonFlowScreen() {
     );
   }
   if (phase === "mid-quiz-video") {
-    setQuizIndex((i) => i + 1);
-    setPhase("quizzes");
-    return <View style={{ flex: 1, backgroundColor: "#f8fafc" }} />;
+    return <FallbackToPhaseEffect run={() => { setQuizIndex((i) => i + 1); setPhase("quizzes"); }} />;
   }
 
   // Post-infographic video, full-screen, plays after the infographic before the
@@ -4107,8 +4126,7 @@ export function LessonFlowScreen() {
     );
   }
   if (phase === "post-infographic-video") {
-    setPhase(mod && getDilemma(mod.id) ? "shark-dilemma" : "summary");
-    return <View style={{ flex: 1, backgroundColor: "#f8fafc" }} />;
+    return <FallbackToPhaseEffect run={() => setPhase(mod && getDilemma(mod.id) ? "shark-dilemma" : "summary")} />;
   }
 
   // Shark Dilemma ("לייעץ לשארק") — advisory scenario right before the chest.

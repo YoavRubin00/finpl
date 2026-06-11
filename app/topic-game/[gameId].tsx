@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo } from 'react';
+import React, { useCallback, useEffect, useMemo } from 'react';
 import { View, Pressable, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -69,12 +69,16 @@ export default function TopicGameRoute(): React.ReactElement | null {
     }
   }, [gameId, handleFinish]);
 
-  if (!card) {
-    // Unknown gameId — bounce back to the learn map. Don't show an
-    // error UI; this is unreachable under normal flow.
-    router.replace(`/(tabs)/learn?expandedModule=${moduleId}` as never);
-    return null;
-  }
+  // Unknown gameId — bounce back to the learn map. Don't show an error UI;
+  // this is unreachable under normal flow. The replace runs in a useEffect
+  // to avoid "Cannot update during render" warnings and a possible nav loop.
+  useEffect(() => {
+    if (!card) {
+      router.replace(`/(tabs)/learn?expandedModule=${moduleId}` as never);
+    }
+  }, [card, moduleId, router]);
+
+  if (!card) return null;
 
   return (
     <View style={styles.root}>

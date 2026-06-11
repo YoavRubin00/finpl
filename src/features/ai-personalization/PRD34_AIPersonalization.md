@@ -26,7 +26,7 @@ Build the **FinBrain Engine**: a centralized system that collects interaction te
 
 ### 3. Dynamic App Mutations
 Based on the LLM's output, the app will perform the following dynamic changes:
-- **Targeted Monetization (Dynamic IAP):** The AI identifies the user's psychological trigger. It dynamically injects personalized purchase offers—for example, popping up a "Safety Net Bundle" (Gems + Lives) for an anxious user who just failed, or an exclusive "Platinum Avatar" for a competitive user who just won a Duel.
+- **Targeted Monetization (Dynamic IAP):** The AI identifies the user's *value-based* preferences (Frugal vs Status Seeker) and tailors offers around fit, not urgency. **Hard rule (Audrey, enforced in `analyzeProfile.ts`):** emotional state is never a monetization vector. An Anxious user gets help (not a bundle); an Impulse Buyer gets calm value framing (no scarcity, no "rak akhshav", no FOMO). Targeted IAP for the remaining cohorts (Frugal, Status Seeker) uses value framing only. There is no "Safety Net Bundle" — this pattern is explicitly forbidden.
 - **Secret Modules:** Unlock hidden "Bonus Modules" matching the user's specific weaknesses or advanced interests (e.g., if the user maxes out the risk simulator, unlock a "Crypto Advanced" module).
 - **Dynamic UI/UX:** Change the "Finn" mascot's default behavior and dialogue to match the user's need (e.g., more supportive if they fail often, more challenging and sarcastic if they breeze through).
 - **Personalized Feed:** Adjust the `FinFeedScreen` algorithm to heavily prioritize TikTok-style videos and flashes that address the identified `knowledge_gaps`.
