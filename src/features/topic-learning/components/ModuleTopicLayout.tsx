@@ -137,24 +137,41 @@ export const ModuleTopicLayout = React.memo(function ModuleTopicLayout({
     <View style={[styles.container, { height: totalHeight }]}>
       {/* Decorative Shark+Daisy loops in the side gutters. First child +
           pointerEvents="none" so they paint behind the chips and never
-          intercept a tap. Looping is handled by the animated WebP itself. */}
+          intercept a tap. Looping is handled by the animated WebP itself.
+          R8 follow-up (Yoav 2026-06-10, iter 3): the perceived "black
+          bars" on web turned out to be the lack of an explicit
+          transparent background — expo-image on RN-web composites
+          alpha against the View's background, which inherits no color
+          and renders as black on certain Chromium builds. Adding
+          backgroundColor: 'transparent' on both the wrapper AND the
+          image element forces a clean alpha composite without needing
+          to crop. */}
       {scenes.length > 0 && (
         <View style={StyleSheet.absoluteFill} pointerEvents="none">
           {scenes.map((s) => (
-            <ExpoImage
+            <View
               key={s.id}
-              source={s.source}
-              accessible={false}
-              contentFit="contain"
               style={{
                 position: 'absolute',
                 top: s.top,
                 width: SCENE_SIZE,
                 height: SCENE_SIZE,
+                backgroundColor: 'transparent',
                 zIndex: 0,
                 ...(s.side === 'right' ? { right: s.offset } : { left: s.offset }),
               }}
-            />
+            >
+              <ExpoImage
+                source={s.source}
+                accessible={false}
+                contentFit="contain"
+                style={{
+                  width: SCENE_SIZE,
+                  height: SCENE_SIZE,
+                  backgroundColor: 'transparent',
+                }}
+              />
+            </View>
           ))}
         </View>
       )}

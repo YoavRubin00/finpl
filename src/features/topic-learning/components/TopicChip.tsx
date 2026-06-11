@@ -43,6 +43,14 @@ const MUTED_DEPTH = '#c7cdd4';
 // Incomplete chips desaturate their SVG icon a little so the bright
 // gradients don't draw attention before the user has completed them.
 const MUTED_ICON_OPACITY = 0.55;
+// R8 follow-up (Yoav 2026-06-10): the recommended (= next topic) chip
+// is now SOLID gold, not a gray chip surrounded by a gold halo. Yoav:
+// "צריך שמה שמסומן כהבא, יהיה בפועל בצבע זהב, ולא מוקף בזהב".
+const RECOMMENDED_BG = '#fde68a';      // amber-200 — pleasant warm gold
+const RECOMMENDED_DEPTH = '#d97706';   // amber-600 — depth shadow
+const RECOMMENDED_BORDER = '#f59e0b';  // amber-500 — ring for definition
+// Recommended chip keeps the SVG icon at full opacity (it's the
+// "do this next" affordance, not a locked one).
 // Icon visual size inside the 78px circle. Design System SVGs ship at
 // 96px source; rendering at 56 leaves ~11px breathing room on each side.
 const ICON_SIZE = 56;
@@ -101,26 +109,44 @@ export const TopicChip = React.memo(function TopicChip({
       withTiming(0.35, { duration: 90 }),
       withTiming(0, { duration: 220 }),
     );
-    scale.value = withSpring(0.92, { damping: 14, stiffness: 260 });
-    scale.value = withSpring(1, { damping: 12, stiffness: 220 });
+    // Press-down then spring-back as ONE sequence. Two bare assignments ran
+    // in the same tick, so the second (→1) overwrote the first (→0.92) and
+    // the press-down was never seen (Yoav 2026-06-11 QA).
+    scale.value = withSequence(
+      withSpring(0.92, { damping: 14, stiffness: 260 }),
+      withSpring(1, { damping: 12, stiffness: 220 }),
+    );
     onPress(topic);
   };
 
-  const bg = completed ? DONE_BG : MUTED_BG;
-  const depth = completed ? DONE_DEPTH : MUTED_DEPTH;
-  const border = completed ? DONE_BORDER : '#f3f4f6';
+  // R8 follow-up — recommended chip is filled gold (NOT a gray chip
+  // wearing a gold halo). Completed always wins so a completed-but-
+  // recommended edge case still reads as "done".
+  const isRecommended = recommended && !completed;
+  const bg = completed
+    ? DONE_BG
+    : isRecommended
+      ? RECOMMENDED_BG
+      : MUTED_BG;
+  const depth = completed
+    ? DONE_DEPTH
+    : isRecommended
+      ? RECOMMENDED_DEPTH
+      : MUTED_DEPTH;
+  const border = completed
+    ? DONE_BORDER
+    : isRecommended
+      ? RECOMMENDED_BORDER
+      : '#f3f4f6';
+  // Icon stays full opacity for both completed AND recommended chips
+  // (the "do this next" affordance reads as bright, not muted).
+  const iconOpacity = completed || isRecommended ? 1 : MUTED_ICON_OPACITY;
 
   return (
     <Animated.View style={[animStyle, styles.nodeCol]}>
-      {/* Recommended gold halo — a SEPARATE circle absolute behind the
-          depth + node, so the glow renders round (web's box-shadow
-          inherits the parent shape, which is a rectangle here without
-          this trick). */}
-      {recommended && !completed && (
-        <View style={styles.haloAbs} pointerEvents="none">
-          <View style={styles.haloCircle} />
-        </View>
-      )}
+      {/* R8 follow-up: the gold "next" cue lives in the chip's OWN
+          fill now (RECOMMENDED_BG / BORDER / DEPTH above) — no more
+          separate gold halo ring around a gray chip. */}
 
       {/* 3D bottom depth — identical block to ModuleNode.nodeDepth */}
       <View
@@ -140,12 +166,16 @@ export const TopicChip = React.memo(function TopicChip({
           {
             backgroundColor: bg,
             borderColor: border,
-            shadowColor: completed ? DONE_DEPTH : '#9ca3af',
+            shadowColor: completed
+              ? DONE_DEPTH
+              : isRecommended
+                ? RECOMMENDED_DEPTH
+                : '#9ca3af',
           },
         ]}
       >
         <View
-          style={{ opacity: completed ? 1 : MUTED_ICON_OPACITY }}
+          style={{ opacity: iconOpacity }}
           pointerEvents="none"
         >
           <SvgXml
@@ -197,35 +227,6 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.4,
     shadowRadius: 10,
     elevation: 8,
-  },
-  // Absolute layer for the recommended halo so the glow renders behind
-  // both the depth block and the circle.
-  haloAbs: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    alignItems: 'center',
-    justifyContent: 'center',
-    zIndex: 1,
-  },
-  // R8 follow-up (Yoav 2026-06-10): make the gold halo solidly visible
-  // on every platform, not just iOS. Web/Android shadowColor without
-  // a fill renders nothing — so the ring now uses an actual gold
-  // background tint + a thick gold border. Static (no pulse).
-  haloCircle: {
-    width: NODE_SIZE + 22,
-    height: NODE_SIZE + 22,
-    borderRadius: (NODE_SIZE + 22) / 2,
-    backgroundColor: 'rgba(251, 191, 36, 0.22)',
-    borderWidth: 3,
-    borderColor: '#fbbf24',
-    shadowColor: '#fbbf24',
-    shadowOpacity: 0.9,
-    shadowRadius: 16,
-    shadowOffset: { width: 0, height: 0 },
-    elevation: 12,
   },
   // R8 J1 — bright green flash overlay, inside the circle clip mask.
   flashOverlay: {

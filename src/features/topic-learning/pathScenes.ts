@@ -29,6 +29,12 @@ export interface PathScene {
 // All re-processed 2026-06-10 (`-v2`): full-frame transparent pad instead of a
 // square crop, so NO character is ever clipped (Yoav: "כל הוובפים חתוכים").
 // The `-v2` filenames also bust Metro's stale asset cache.
+//
+// Iter 4 (2026-06-10): `shark-coins-v2` + `shark-daisy-chart-v2` had black
+// letterbox bars BAKED INTO THE WEBP frames (not just a render artifact —
+// verified by extracting frame 0 and seeing the black columns directly).
+// They were re-cropped in-place via ffmpeg `crop=` so the bars are gone
+// before metro touches them (no in-app cropping or contentFit trick needed).
 const GENERIC = {
   highfive: { id: "g-highfive", label: "קפטן שארק ודייזי נותנים כיף", source: require("../../../assets/webp/path-scenes/shark-daisy-highfive-v2.webp") },
   coins: { id: "g-coins", label: "קפטן שארק סופר מטבעות זהב", source: require("../../../assets/webp/path-scenes/shark-coins-v2.webp") },
