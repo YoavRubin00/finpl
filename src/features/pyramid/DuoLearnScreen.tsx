@@ -89,6 +89,7 @@ import { chapter5Data } from "../chapter-5-content/chapter5Data";
 import type { Module } from "../chapter-1-content/types";
 import { TopicTreeAccordion } from "../topic-learning/TopicTreeAccordion";
 import { useTopicProgressStore } from "../topic-learning/useTopicProgressStore";
+import { useTopicTreeReturnStore } from "../topic-learning/useTopicTreeReturnStore";
 import { resolveTopics, shouldUseTopicTree } from "../topic-learning/topicResolver";
 import { getGameForModule } from "../topic-learning/moduleGameMap";
 import type { Topic, TopicKind } from "../topic-learning/types";
@@ -1307,6 +1308,20 @@ export function DuoLearnScreen() {
       const done = completedByPrefix(pfx);
       const next = ch.modules.find((m) => !m.comingSoon && (isPro || !PRO_LOCKED_SIMS.has(m.id)) && !done.includes(m.id));
       if (next) {
+        // Yoav 2026-06-11 sweep: daily-quest "next module" also routes
+        // through topic-tree when supported (was the third entry that
+        // dropped users back into the legacy linear flow).
+        if (shouldUseTopicTree(next)) {
+          const introDone = useTopicProgressStore.getState()
+            .isTopicCompleted(`${next.id}:intro`);
+          setTopicTreeModule({ module: next, chapterId: ch.id });
+          if (!introDone) {
+            router.push(
+              `/lesson/${next.id}?chapterId=${ch.id}&startPhase=intro&returnTo=topic-tree` as never,
+            );
+          }
+          return;
+        }
         router.push(`/lesson/${next.id}?chapterId=${ch.id}` as never);
         return;
       }
@@ -1384,6 +1399,71 @@ export function DuoLearnScreen() {
      *  grid instead of having to re-tap the module node. */
     expandedModule?: string;
   }>();
+  // Mark a topic-tree chip done + (re)open its accordion. Shared by the warm
+  // store-signal path (lesson did router.back) and the cold URL-param fallback.
+  const applyTopicCompletion = useCallback(
+    (cp: string, cmid: string, ckind?: string, expandedModule?: string): void => {
+      // R5: 'video' phase still exists in LessonFlowScreen (the videoHookAsset
+      // hook auto-plays before intro) but has no topic chip — fall through to
+      // 'intro' so the user's intro chip lights up. Mostly defensive.
+      const phaseToKind: Record<string, TopicKind> = {
+        'video': 'intro',
+        'intro': 'intro',
+        'flashcards': 'cards',
+        'interactive-recall': 'recall',
+        'quizzes': 'quiz',
+        'sim': 'sim',
+        'module-infographic': 'infographic',
+        'post-infographic-video': 'post-video',
+        'podcast': 'podcast',
+        'couple-dilemma': 'couple-dilemma',
+        'shark-dilemma': 'shark-dilemma',
+      };
+      const kind = (ckind as TopicKind | undefined) ?? phaseToKind[cp];
+      if (!kind) return;
+      // R5.1: reopen the accordion the user came from so they land back on the
+      // chip grid (Yoav 2026-06-10). On the warm path it's already open — a
+      // harmless no-op there.
+      const reopenModuleId = expandedModule ?? cmid;
+      if (reopenModuleId) {
+        const ch2 = ALL_CHAPTERS.find((c) =>
+          c.modules.some((m) => m.id === reopenModuleId));
+        const mod2 = ch2?.modules.find((m) => m.id === reopenModuleId);
+        if (mod2 && ch2) setTopicTreeModule({ module: mod2, chapterId: ch2.id });
+      }
+      // resolveTopics lookup so the icon/label match the real Topic shape the
+      // store keyed off when the chip was first rendered.
+      const ch = ALL_CHAPTERS.find((c) =>
+        c.modules.some((m) => m.id === cmid));
+      const mod = ch?.modules.find((m) => m.id === cmid);
+      if (!mod) return;
+      const topic = resolveTopics(mod).find((t) => t.kind === kind);
+      if (topic) useTopicProgressStore.getState().markTopicCompleted(topic);
+    },
+    // setTopicTreeModule (useState setter) is stable; everything else is a
+    // module-level import or a call argument, so the callback never changes.
+    // (setTopicTreeModule is declared below, so it can't be listed here without
+    // a temporal-dead-zone reference.)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [],
+  );
+
+  // Warm path (premium): the lesson signalled completion + router.back()'d to
+  // this STILL-MOUNTED map — no remount, no "flash". Consume the signal here.
+  const pendingTopicReturn = useTopicTreeReturnStore((s) => s.pending);
+  useEffect(() => {
+    if (!pendingTopicReturn) return;
+    applyTopicCompletion(
+      pendingTopicReturn.completedPhase,
+      pendingTopicReturn.completedModuleId,
+      pendingTopicReturn.completedKind,
+      pendingTopicReturn.expandedModule,
+    );
+    useTopicTreeReturnStore.getState().consumeReturn();
+  }, [pendingTopicReturn, applyTopicCompletion]);
+
+  // Cold-start fallback: lesson opened with no back-history (deep link /
+  // onboarding) → it replace()'d here with ?completedPhase=… params instead.
   const completedPhaseConsumedRef = useRef<string | null>(null);
   useEffect(() => {
     const cp = completedPhaseParams.completedPhase;
@@ -1393,50 +1473,10 @@ export function DuoLearnScreen() {
     const key = `${cmid}:${cp}:${ckind ?? ''}`;
     if (completedPhaseConsumedRef.current === key) return;
     completedPhaseConsumedRef.current = key;
-    // R5: 'video' phase still exists in LessonFlowScreen (the videoHookAsset
-    // hook auto-plays before intro) — but there's no longer a topic chip
-    // mapped to it. If the lesson somehow exits on phase=video under
-    // returnTo=topic-tree, fall through to 'intro' so the user's intro
-    // chip lights up. This case is mostly defensive — chips deep-link
-    // straight to startPhase=intro, not video.
-    const phaseToKind: Record<string, TopicKind> = {
-      'video': 'intro',
-      'intro': 'intro',
-      'flashcards': 'cards',
-      'interactive-recall': 'recall',
-      'quizzes': 'quiz',
-      'sim': 'sim',
-      'module-infographic': 'infographic',
-      'post-infographic-video': 'post-video',
-      'podcast': 'podcast',
-      'couple-dilemma': 'couple-dilemma',
-      'shark-dilemma': 'shark-dilemma',
-    };
-    const kind = (ckind as TopicKind | undefined) ?? phaseToKind[cp];
-    if (!kind) return;
-    // R5.1: reopen the accordion the user came from. Looked up by the
-    // completedModuleId so the experience returns the user to "the
-    // grid with everything visible" instead of "the map needing a tap"
-    // (Yoav 2026-06-10: "שיוצאים מכל תת פרק - חוזרים למסך שכל
-    // האפשרויות פתוחות ולא למסף שצריך ללחוץ מחדש על המודולה").
-    const reopenModuleId = completedPhaseParams.expandedModule ?? cmid;
-    if (reopenModuleId) {
-      const ch2 = ALL_CHAPTERS.find((c) =>
-        c.modules.some((m) => m.id === reopenModuleId));
-      const mod2 = ch2?.modules.find((m) => m.id === reopenModuleId);
-      if (mod2 && ch2) setTopicTreeModule({ module: mod2, chapterId: ch2.id });
-    }
-    // resolveTopics lookup so the icon/label match the real Topic shape
-    // the store keyed off when the chip was first rendered.
-    const ch = ALL_CHAPTERS.find((c) =>
-      c.modules.some((m) => m.id === cmid));
-    const mod = ch?.modules.find((m) => m.id === cmid);
-    if (!mod) return;
-    const topic = resolveTopics(mod).find((t) => t.kind === kind);
-    if (topic) useTopicProgressStore.getState().markTopicCompleted(topic);
+    applyTopicCompletion(cp, cmid, ckind, completedPhaseParams.expandedModule);
     // Clear params so a screen rerender doesn't re-fire.
     router.replace('/(tabs)/learn' as never);
-  }, [completedPhaseParams, router]);
+  }, [completedPhaseParams, router, applyTopicCompletion]);
   // Prefetch today's news challenge so the Daily Quests modal can fire the
   // 4th (news) quest cleanly and the sheet renders without a spinner on open.
   const setNewsChallenge = useDailyNewsChallengeStore((s) => s.setTodayChallenge);
@@ -1910,24 +1950,17 @@ export function DuoLearnScreen() {
     );
   }, [topicTreeModule, router]);
 
-  // Chest CTA: "המשך עם המודולה" — close chest, keep accordion open,
-  // and scroll so the NEXT pearl lands in the vertical center of the
-  // viewport (Yoav R6 Epic 4: "במרכז המסך הפנינה אחרי המודולה, שכל
-  // מפת הלמידה של המודולה שסיימתי עדין פתוחה").
+  // Chest CTA: "סיים את כל המודולה" — close chest, keep accordion open,
+  // user lands on the next gold (recommended) chip so they can finish
+  // the remaining 30%. The scroll-to-gold-chip happens via the
+  // topicTreeModule + completedMap useEffect above (already fired on
+  // the chip-completion bounce-back). No-op here intentionally — the
+  // earlier R6 pearl-scroll was the wrong target after Yoav's 2026-06-11
+  // CTA rename ("סיים את כל המודולה שיוביל למפת המודולה הפתוחה, עם
+  // מה שהמשתמש עוד לא סיים", NOT to the pearl that comes after it).
   const handleTopicTreeContinueAfterChest = useCallback(() => {
-    const current = topicTreeModule;
-    if (!current) return;
-    const ref = pearlRefsMap.current.get(current.module.id);
-    if (!ref) return;
-    const { height: windowH } = Dimensions.get('window');
-    // measure() returns window-relative coords. Translate to scroll
-    // content Y by adding the current scroll offset; subtract half the
-    // viewport so the pearl ends up centered.
-    ref.measure((_x, _y, _w, h, _pageX, pageY) => {
-      const targetY = scrollYRef.current + pageY - windowH / 2 + h / 2;
-      scrollRef.current?.scrollTo({ y: Math.max(0, targetY), animated: true });
-    });
-  }, [topicTreeModule]);
+    /* intentionally empty — see comment above */
+  }, []);
 
   // Chest CTA: "המשך" — close accordion AND route to the next module
   // in this chapter. Yoav 2026-06-11: must honor topic-tree mode for
@@ -2060,7 +2093,22 @@ export function DuoLearnScreen() {
       try { captureEvent('jump_here_clicked', { chapter_id: jumpChapter.id, chapter_index: idx, is_pro: isPro }); } catch { /* non-fatal */ }
       if (idx === 1) { handleSkipIntro(); return; }
       if (!isPro) { router.push('/pricing' as never); return; }
-      router.push(`/lesson/${jumpChapter.modules[0].id}?chapterId=${jumpChapter.id}` as never);
+      // Yoav 2026-06-11 sweep: jump-here also routes through topic-tree
+      // when the destination supports it. Without this, "JUMP HERE?"
+      // dropped the user into the legacy linear flow.
+      const target = jumpChapter.modules[0];
+      if (target && shouldUseTopicTree(target)) {
+        const introDone = useTopicProgressStore.getState()
+          .isTopicCompleted(`${target.id}:intro`);
+        setTopicTreeModule({ module: target, chapterId: jumpChapter.id });
+        if (!introDone) {
+          router.push(
+            `/lesson/${target.id}?chapterId=${jumpChapter.id}&startPhase=intro&returnTo=topic-tree` as never,
+          );
+        }
+        return;
+      }
+      router.push(`/lesson/${target.id}?chapterId=${jumpChapter.id}` as never);
     },
     [isPro, handleSkipIntro],
   );
