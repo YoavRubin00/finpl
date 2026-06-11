@@ -156,9 +156,11 @@ const styles = StyleSheet.create({
     borderRadius: 16,
   },
   ctaPrimary: {
-    backgroundColor: '#0e7490',
+    // Yoav 2026-06-11: matches master's mod-0-1 continue CTA (sky-500
+    // over sky-600 depth) — "כחול ונעים", not the teal we had.
+    backgroundColor: '#0ea5e9',
     borderBottomWidth: 4,
-    borderBottomColor: '#155e75',
+    borderBottomColor: '#0284c7',
   },
   ctaSecondary: {
     backgroundColor: '#e0f2fe',

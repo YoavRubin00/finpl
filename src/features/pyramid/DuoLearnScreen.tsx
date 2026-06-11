@@ -1976,6 +1976,22 @@ export function DuoLearnScreen() {
     if (!pending) return;
     setCurrentChapter(storeKey(pending.nav.chapterId));
     setCurrentModule(pending.nav.moduleIndex);
+    // Yoav 2026-06-11 sweep: if the target module is a topic-tree
+    // module, expand the accordion + auto-enter intro so the user gets
+    // the new flow, not the legacy linear flow.
+    const ch = ALL_CHAPTERS.find((c) => c.id === pending.nav.chapterId);
+    const mod = ch?.modules.find((m) => m.id === pending.nav.moduleId);
+    if (mod && shouldUseTopicTree(mod)) {
+      const introDone = useTopicProgressStore.getState()
+        .isTopicCompleted(`${mod.id}:intro`);
+      setTopicTreeModule({ module: mod, chapterId: pending.nav.chapterId });
+      if (!introDone) {
+        router.push(
+          `/lesson/${pending.nav.moduleId}?chapterId=${pending.nav.chapterId}&startPhase=intro&returnTo=topic-tree` as never,
+        );
+      }
+      return;
+    }
     router.push(`/lesson/${pending.nav.moduleId}?chapterId=${pending.nav.chapterId}` as never);
   }, [pendingProfileQuestion, router, setCurrentChapter, setCurrentModule]);
 
@@ -1983,6 +1999,19 @@ export function DuoLearnScreen() {
     if (!replayModule) return;
     setCurrentChapter(storeKey(replayModule.chapterId));
     setCurrentModule(replayModule.moduleIndex);
+    // Yoav 2026-06-11 sweep: replay also routes through the topic-tree
+    // when the module supports it (replays were the second-most-common
+    // way the legacy flow was leaking through to topic-tree modules).
+    const ch = ALL_CHAPTERS.find((c) => c.id === replayModule.chapterId);
+    const mod = ch?.modules.find((m) => m.id === replayModule.moduleId);
+    if (mod && shouldUseTopicTree(mod)) {
+      setTopicTreeModule({ module: mod, chapterId: replayModule.chapterId });
+      router.push(
+        `/lesson/${replayModule.moduleId}?chapterId=${replayModule.chapterId}&startPhase=intro&returnTo=topic-tree&replay=1` as never,
+      );
+      setReplayModule(null);
+      return;
+    }
     router.push(`/lesson/${replayModule.moduleId}?chapterId=${replayModule.chapterId}&replay=1` as never);
     setReplayModule(null);
   }, [replayModule, router, setCurrentChapter, setCurrentModule]);

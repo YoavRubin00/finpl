@@ -4,6 +4,7 @@ import { TOPIC_ICONS, TOPIC_LABELS } from './topic-icons';
 import { getDilemma } from '../shark-dilemma/dilemmasData';
 import { getGameForModule, isSimReplacedByGame } from './moduleGameMap';
 import { getCoupleDilemmaForModule } from '../couple-dilemma/coupleDilemmas';
+import { getPodcastForModule } from '../podcast-segment/podcasts';
 
 /**
  * Canonical order — mirrors LessonFlowScreen's normal flow. The hook
@@ -121,7 +122,11 @@ export function resolveTopics(module: Module, opts: ResolveTopicsOptions = {}): 
   // for now since recall reuses flashcard content in LessonFlowScreen. The
   // adapter layer is where this becomes an explicit toggle later.
   if (module.flashcards?.length) present.set('recall', true);
-  if (module.podcast) present.set('podcast', true);
+  // Yoav 2026-06-11: same bug shape as couple-dilemma — the podcast
+  // chip never appeared in mod-0-3 ("הגנב השקוף אינפלציה") and other
+  // podcast modules because `module.podcast` is never set on chapter
+  // data. The actual mapping lives in MODULE_TO_PODCAST (podcasts.ts).
+  if (module.podcast || getPodcastForModule(module.id)) present.set('podcast', true);
   // R6 fix: `module.coupleDilemma` is never set on chapter data — the
   // segments live in a separate registry (`COUPLE_DILEMMAS`) keyed by
   // moduleId. Yoav 2026-06-10 caught the missing chip in financial

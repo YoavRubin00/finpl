@@ -318,9 +318,22 @@ function RootLayoutInner() {
       } catch { /* SDK not available in dev without native build */ }
       try {
         const { default: mobileAds } = require("react-native-google-mobile-ads") as {
-          default: () => { initialize(): Promise<unknown> };
+          default: () => {
+            initialize(): Promise<unknown>;
+            setAppMuted(muted: boolean): void;
+            setAppVolume(volume: number): void;
+          };
         };
-        mobileAds().initialize().catch(() => {});
+        const ads = mobileAds();
+        ads.initialize()
+          .then(() => {
+            // Start fully muted. Ad audio is unmuted only for the brief window
+            // of an explicitly user-initiated rewarded show() (useRewardedAd).
+            // Prevents iOS from leaking a preloaded video ad's audio in the
+            // background under the Playback audio session.
+            try { ads.setAppMuted(true); ads.setAppVolume(0); } catch { /* older SDK */ }
+          })
+          .catch(() => {});
       } catch { /* SDK not available in dev without native build */ }
     })();
   }, []);
@@ -437,6 +450,10 @@ function RootLayoutInner() {
   //   handle 0-3/4/5. Old dark-themed GuestRegisterDailyNudge removed
   //   2026-05-30 — it duplicated the post-walkthrough CTA.
   const isMod01Complete = useIsModuleCompleted("mod-0-1");
+  // The walkthrough overlay also activates when the user explicitly opts
+  // in via the topic-tree Mod01WalkthroughPromptModal (before mod-0-1 is
+  // fully completed). See the AppWalkthroughOverlay gate below.
+  const walkthroughTriggered = useTutorialStore((s) => s.walkthroughTriggered);
   const allowAutoPopups = hasCompletedOnboarding && hasSeenWalkthrough && isMod01Complete;
 
   // ── Android Play Install Referrer — runs once on first launch ──
@@ -618,7 +635,16 @@ function RootLayoutInner() {
         <RewardAnimationProvider>
             <StreakCelebrationProvider>
               <Slot />
-              {isAuthenticated && hasCompletedOnboarding && isMod01Complete && <AppWalkthroughOverlay />}
+              {/* Yoav 2026-06-11: also mount the walkthrough overlay BEFORE
+                  mod-0-1 is fully completed, IF the user has explicitly
+                  opted in (walkthroughTriggered=true). The new topic-tree
+                  flow fires the prompt after the first non-intro chip,
+                  long before 70% completion — the old isMod01Complete
+                  gate kept the overlay dark until then, so "התחל סיור"
+                  did nothing. AppWalkthroughOverlay's own internal gate
+                  (walkthroughTriggered + !hasSeenWalkthrough) keeps it
+                  off-screen for non-opted users. */}
+              {isAuthenticated && hasCompletedOnboarding && (isMod01Complete || walkthroughTriggered) && <AppWalkthroughOverlay />}
               <ShopModal />
               {allowAutoPopups && <GlobalUpgradeModal />}
               {allowAutoPopups && <PostStreakIncomeSplash />}
