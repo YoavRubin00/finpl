@@ -6,13 +6,8 @@ import Animated, {
   FadeInUp,
   useAnimatedStyle,
   useSharedValue,
-  withRepeat,
-  withSequence,
   withTiming,
   withSpring,
-  cancelAnimation,
-  useReducedMotion,
-  Easing,
 } from 'react-native-reanimated';
 import LottieView from 'lottie-react-native';
 import { ChevronLeft, Sparkles } from 'lucide-react-native';
@@ -30,7 +25,6 @@ import {
 import { useSoundEffect } from '../../hooks/useSoundEffect';
 import { useWisdomStore } from '../wisdom-flashes/useWisdomStore';
 import { useTopicProgressStore } from './useTopicProgressStore';
-import { nextChestForecastTopic } from './chestForecastTopics';
 import { ParticleBurst } from '../../components/ui/ParticleBurst';
 import type { ChestRarity } from './types';
 
@@ -122,49 +116,18 @@ export function ChestCelebrationModal({
   const glowScale = useSharedValue(1);
   const glowOpacity = useSharedValue(0.4);
   const bodyScale = useSharedValue(1);
-  const reduceMotion = useReducedMotion();
 
   useEffect(() => {
     if (!visible || opened) return;
-    // Honor reduce-motion: hold the chest static (no infinite pulse) for
-    // users with the OS setting on — matches GrowingTree / ModuleTopicLayout
-    // (Yoav 2026-06-11 QA: this modal was the only one ignoring it).
-    if (reduceMotion) {
-      glowScale.value = 1;
-      glowOpacity.value = 0.6;
-      bodyScale.value = 1;
-      return;
-    }
-    glowScale.value = withRepeat(
-      withSequence(
-        withTiming(1.15, { duration: 700, easing: Easing.inOut(Easing.ease) }),
-        withTiming(1.0, { duration: 700, easing: Easing.inOut(Easing.ease) }),
-      ),
-      -1,
-      false,
-    );
-    glowOpacity.value = withRepeat(
-      withSequence(
-        withTiming(0.9, { duration: 700 }),
-        withTiming(0.3, { duration: 700 }),
-      ),
-      -1,
-      false,
-    );
-    bodyScale.value = withRepeat(
-      withSequence(
-        withTiming(1.04, { duration: 800 }),
-        withTiming(0.98, { duration: 800 }),
-      ),
-      -1,
-      false,
-    );
-    return () => {
-      cancelAnimation(glowScale);
-      cancelAnimation(glowOpacity);
-      cancelAnimation(bodyScale);
-    };
-  }, [visible, opened, glowScale, glowOpacity, bodyScale, reduceMotion]);
+    // Yoav 2026-06-11: "תוריד את הבהוב על התיבה שלפני הפתיחה" — the chest
+    // is now STATIC before it's tapped (no infinite glow/body pulse). The
+    // only animation left is the burst on tap (handleChestTap). A steady,
+    // calm glow remains so the chest still reads as interactive, paired with
+    // the plain "לחץ" hint below.
+    glowScale.value = 1;
+    glowOpacity.value = 0.5;
+    bodyScale.value = 1;
+  }, [visible, opened, glowScale, glowOpacity, bodyScale]);
 
   // Reset to "closed" state when modal toggles off.
   useEffect(() => {
@@ -386,7 +349,7 @@ export function ChestCelebrationModal({
                   </View>
                 )}
                 <Text style={[styles.tapHint, RTL_CENTER]} allowFontScaling={false}>
-                  הקש על התיבה לפתיחה
+                  לחץ
                 </Text>
               </Pressable>
             ) : (
@@ -435,20 +398,8 @@ export function ChestCelebrationModal({
             )}
           </View>
 
-          {/* Captain's Forecast — surfaces a teaser for tomorrow's chest
-              just above the CTAs. Drives "come back tomorrow" anticipation
-              (Epic 7-C2). Skipped for the master 100% chest since the
-              user is closing out the module. */}
-          {opened && donResolved && !isFinale && (
-            <Animated.View entering={FadeIn.delay(220).duration(400)} style={styles.forecastWrap}>
-              <Text style={styles.forecastLabel} allowFontScaling={false}>
-                מחר התיבה
-              </Text>
-              <Text style={styles.forecastBody} allowFontScaling={false} numberOfLines={2}>
-                {nextChestForecastTopic()}
-              </Text>
-            </Animated.View>
-          )}
+          {/* Captain's Forecast ("מחר התיבה") removed per Yoav 2026-06-11 —
+              the tomorrow-chest teaser was cluttering the reward moment. */}
 
           {/* CTAs — only after the chest is opened AND wisdom+DoN finished.
               Yoav 2026-06-11: relabeled to "המשך" (move on to the next

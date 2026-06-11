@@ -15,24 +15,26 @@ const WAVE_AMPLITUDE = 42;
 const WAVE_PERIOD = 6;
 // Decorative Shark+Daisy loops in the side gutters (Duolingo-style). The `-v2`
 // WebPs are full-frame with transparent padding (no crop), so NO character is
-// ever clipped and flush-to-edge (offset 0) still reads as a comfortable
-// inset. Bumped 110→140→170→200 (Yoav 2026-06-11: "צריך להיות גדול יותר").
-// Bumped 110→140→170→200, then trimmed back to 160 (Yoav 2026-06-11:
-// "פשוט תקטין אותם טיפה"). Smaller display also means the 240px source is
-// upscaled less (≈2.0× vs 2.5× at 200), so the loops read noticeably crisper
-// AND clear the chip column instead of hiding behind it.
+// ever clipped by the asset itself.
+//
+// Sizing history: bumped 110→200 ("גדול יותר"), trimmed to 160 ("תקטין
+// טיפה"), shrunk to 90 to fit the narrow gutter — then Yoav 2026-06-11
+// asked to restore the previous size ("תגדיל קצת ... לגודל שהם היו קודם"),
+// so back to 160. The chip column is COLUMN_W (~210px) wide and centered,
+// leaving ~70px gutters; at 160 a small off-screen bleed keeps the character
+// clear of the chips (see SCENE_BLEED).
 const SCENE_SIZE = 160;
-// Full-image reveal — earlier rounds used a hard clip to the side GUTTER, but
-// at SCENE_SIZE 170+ that meant the chip-facing 38% of the WebP was hidden
-// AND the character got chopped in half (Yoav 2026-06-11 QA: "הוובפ נחתך").
-// Show the entire WebP (no clip) and bleed it slightly off-screen so the
-// character sits comfortably in the margin without crowding the chips.
 const COLUMN_W = Math.min(SCREEN_W * 0.5, 220);
 const SCENE_VISIBLE_W = SCENE_SIZE;
-// Negative gutter offset pulls the WebP partly past the screen edge so the
-// character peeks in from outside the frame (Duolingo / Hay Day pattern).
-// Combined with offset:0 it would otherwise butt against the chip column.
+// Off-screen tuck — pulls the loop partly past the screen edge so the
+// character peeks in from the margin (Duolingo / Hay Day pattern) instead of
+// butting against the chip column.
 const SCENE_BLEED = 24;
+// "למידה רציפה" pill dimensions — shared by the absolute layout math (the
+// button is center-anchored to the chip column, see styles.continuousBtn) and
+// the inline vertical-centering on the intro row.
+const CONTINUOUS_BTN_W = 78;
+const CONTINUOUS_BTN_H = 64;
 // Exactly TWO scenes per module: themed loop + generic loop. Upper anchor
 // pulled near the very top per Yoav 2026-06-11 ("יותר למעלה"); lower stays
 // in the lower third.
@@ -220,34 +222,33 @@ export const ModuleTopicLayout = React.memo(function ModuleTopicLayout({
       )}
 
       {/* "למידה רציפה" — continuous-flow launcher (Yoav 2026-06-11).
-          Sits in the LEFT gutter, vertically centered on the intro (first)
-          chip row. The left gutter is free at the intro row: scene 1 is
-          anchored to fraction 0.06 (≈ intro row) but always lands in the
-          RIGHT gutter there (sideForFrac → 'right' when the chip offset is
-          0), so the button never collides with a decorative loop. Tapping
-          runs the whole module as one legacy flow (master UX); the parent
-          syncs per-phase progress so a mid-flow exit still lights up the
-          chips here. */}
+          Rendered at CONTAINER level (like the decorative scenes), NOT inside
+          the narrow 220px pathColumn — a button bleeding left out of that
+          column was being clipped, which is why earlier placements were
+          invisible. Horizontally anchored to the container's center (left:'50%'
+          + marginLeft), the SAME center the chip column is centered on, then
+          pushed left by half the column + half the button so it lands in the
+          LEFT gutter just left of the intro chip — tracking the chip on any
+          screen width. Vertically centered on the intro (first) row. Tapping
+          runs the whole module as one legacy flow (master UX); the parent syncs
+          per-phase progress so a mid-flow exit still lights up the chips. */}
       {onStartContinuous && sorted.length > 0 && (
-        <View
-          style={[styles.continuousSlot, { top: EDGE_CONNECTOR_H, height: ROW_HEIGHT }]}
+        <Pressable
+          onPress={onStartContinuous}
+          accessibilityRole="button"
+          accessibilityLabel="למידה רציפה — המודולה כולה ברצף"
+          style={({ pressed }) => [
+            styles.continuousBtn,
+            { top: EDGE_CONNECTOR_H + ROW_HEIGHT / 2 - CONTINUOUS_BTN_H / 2 },
+            pressed && styles.continuousBtnPressed,
+          ]}
+          hitSlop={8}
         >
-          <Pressable
-            onPress={onStartContinuous}
-            accessibilityRole="button"
-            accessibilityLabel="למידה רציפה — המודולה כולה ברצף"
-            style={({ pressed }) => [
-              styles.continuousBtn,
-              pressed && styles.continuousBtnPressed,
-            ]}
-            hitSlop={8}
-          >
-            <FastForward size={18} color="#ffffff" fill="#ffffff" strokeWidth={0} />
-            <Text style={styles.continuousLabel} allowFontScaling={false}>
-              למידה{'\n'}רציפה
-            </Text>
-          </Pressable>
-        </View>
+          <FastForward size={18} color="#ffffff" fill="#ffffff" strokeWidth={0} />
+          <Text style={styles.continuousLabel} allowFontScaling={false}>
+            למידה{'\n'}רציפה
+          </Text>
+        </Pressable>
       )}
 
       {/* Entry connector — from outer mod-1-1 node into the chip column.
@@ -482,17 +483,16 @@ const styles = StyleSheet.create({
     right: 0,
     bottom: 0,
   },
-  // Left-gutter slot holding the "למידה רציפה" pill, vertically centered
-  // on the intro row (top + height set inline to that row's band).
-  continuousSlot: {
-    position: 'absolute',
-    left: 4,
-    alignItems: 'center',
-    justifyContent: 'center',
-    zIndex: 8,
-  },
+  // "למידה רציפה" pill — absolute at CONTAINER level, center-anchored to the
+  // chip column (left:'50%' + marginLeft = -(half column + half button)) so it
+  // lands in the LEFT gutter just left of the intro chip on any screen width.
+  // `top` is supplied inline (intro row center). High zIndex so it's above the
+  // chips/connectors and tappable.
   continuousBtn: {
-    width: 76,
+    position: 'absolute',
+    left: '50%',
+    marginLeft: -(COLUMN_W / 2 + CONTINUOUS_BTN_W / 2),
+    width: CONTINUOUS_BTN_W,
     paddingVertical: 9,
     paddingHorizontal: 6,
     borderRadius: 16,
@@ -502,11 +502,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 3,
+    zIndex: 10,
     shadowColor: '#2563eb',
     shadowOpacity: 0.4,
     shadowRadius: 8,
     shadowOffset: { width: 0, height: 3 },
-    elevation: 5,
+    elevation: 6,
   },
   continuousBtnPressed: {
     backgroundColor: '#1d4ed8',

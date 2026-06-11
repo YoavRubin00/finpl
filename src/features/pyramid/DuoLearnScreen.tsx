@@ -1909,6 +1909,19 @@ export function DuoLearnScreen() {
     [router, setCurrentChapter, setCurrentModule, progressData, knowledgeLevelSet, learningTimeSet, dailyGoalSet, completedPearlIds, topicTreeModule],
   );
 
+  // Single-flight lock for chip → route navigation. Without it a double-tap
+  // (or a web Pressable firing twice) pushed TWO `/lesson` routes, stacking
+  // two LessonFlowScreen instances — which is why the podcast played DOUBLE
+  // and the user had to answer the questions twice before landing back on the
+  // map (Yoav 2026-06-11). Reset on focus so a legit second tap after the
+  // lesson pops back still works.
+  const isNavigatingRef = useRef(false);
+  useFocusEffect(
+    useCallback(() => {
+      isNavigatingRef.current = false;
+    }, []),
+  );
+
   // Topic-tree chip → deep-link to the legacy LessonFlowScreen at the
   // matching phase (R4 2026-06-09). LessonFlowScreen reads `startPhase`
   // and jumps directly there; on phase complete it router.replace's
@@ -1917,6 +1930,8 @@ export function DuoLearnScreen() {
   const handleTopicSelected = useCallback((topic: Topic) => {
     const current = topicTreeModule;
     if (!current) return;
+    // Drop a second navigation while one is already in flight.
+    if (isNavigatingRef.current) return;
     // R7 — 'game' chip opens the dedicated full-screen game route
     // (`/topic-game/[gameId]`). The route reads moduleId from the URL,
     // renders the matching minigame card with bypassDailyGate, and
@@ -1925,6 +1940,7 @@ export function DuoLearnScreen() {
     if (topic.kind === 'game') {
       const gameId = getGameForModule(current.module.id);
       if (gameId) {
+        isNavigatingRef.current = true;
         router.push(`/topic-game/${gameId}?moduleId=${current.module.id}` as never);
       }
       return;
@@ -1934,6 +1950,7 @@ export function DuoLearnScreen() {
     // להוביל לצאט". Free-tier daily limit is enforced inside the
     // screen (2 messages/day → upgrade-to-Pro prompt).
     if (topic.kind === 'chat') {
+      isNavigatingRef.current = true;
       router.push(`/topic-chat/${current.module.id}` as never);
       return;
     }
@@ -1956,6 +1973,7 @@ export function DuoLearnScreen() {
     // so videos stay between cards as Chapter 0 originally intended.
     // No URL filter needed.
     const cardFilter = '';
+    isNavigatingRef.current = true;
     router.push(
       `/lesson/${current.module.id}?chapterId=${current.chapterId}&startPhase=${targetPhase}&returnTo=topic-tree${cardFilter}` as never,
     );
@@ -1973,14 +1991,15 @@ export function DuoLearnScreen() {
     /* intentionally empty — see comment above */
   }, []);
 
-  // Chest CTA: "המשך" — close accordion AND route to the next module
-  // in this chapter. Yoav 2026-06-11: must honor topic-tree mode for
-  // the next module, otherwise the next lesson opens in the legacy
-  // linear flow ("שיחקתי בדירוג אשראי, הוא פשוט התחיל לי את המודולה
-  // כמו פעם, בלי התתי מודולות"). Mirror handleModulePress: if the next
-  // module opts into topic-tree, deep-link to its intro with
-  // returnTo=topic-tree so the user bounces back into the accordion
-  // after the intro completes.
+  // Chest CTA: "המשך" — Yoav 2026-06-11: NO LONGER auto-starts the next
+  // module. Instead it closes the accordion and returns the user to the
+  // GENERAL map, scrolled so Finn (Captain Shark) is pointing at the next
+  // module and any PEARL sitting between the two is visible — the user
+  // decides when to start it ("כפתור המשך לא מתחיל את המודולה הבאה, אלא
+  // לוקח למסך הלמידה הכללי ששארק מצביע על המודולה הבאה ... שיש פנינה
+  // לבצע"). The next module becomes the map's active node automatically
+  // (the current one is now completed), so Finn + the active-node glow
+  // land on it.
   const handleTopicTreeAdvanceToNextModule = useCallback(() => {
     const current = topicTreeModule;
     if (!current) return;
@@ -1989,13 +2008,9 @@ export function DuoLearnScreen() {
     const idx = ch.modules.findIndex((m) => m.id === current.module.id);
     const next = idx >= 0 ? ch.modules[idx + 1] : undefined;
     setTopicTreeModule(null);
-    // Yoav 2026-06-11: mirror LessonFlowScreen's goToNextSequentialModule —
-    // after mod-0-1b, non-Pro users see the pricing screen once before
-    // advancing to mod-0-2 ("המסך המרה לפרו — מגיעים אליו אוטומטית
-    // בסיום 1B במקום לעבור ישירות ל 0-2"). The topic-tree chest CTA
-    // was skipping this gate entirely; now it routes via /pricing with
-    // a returnTo that lands on mod-0-2 whether the user dismisses or
-    // purchases.
+    // mod-0-1b → non-Pro users still see the pricing screen once before
+    // mod-0-2 becomes reachable (business gate, unchanged). This is the one
+    // case that still navigates away rather than just scrolling the map.
     if (
       current.module.id === 'mod-0-1b'
       && !isPro
@@ -2008,20 +2023,17 @@ export function DuoLearnScreen() {
       return;
     }
     if (next) {
-      if (shouldUseTopicTree(next)) {
-        const introDone = useTopicProgressStore.getState()
-          .isTopicCompleted(`${next.id}:intro`);
-        setTopicTreeModule({ module: next, chapterId: current.chapterId });
-        if (!introDone) {
-          router.push(
-            `/lesson/${next.id}?chapterId=${current.chapterId}&startPhase=intro&returnTo=topic-tree` as never,
-          );
-        }
-        return;
-      }
-      router.push(`/lesson/${next.id}?chapterId=${current.chapterId}` as never);
+      // Scroll the general map to the next module. Offset upward so the PEARL
+      // (rendered between this module and the next) plus Finn beside the next
+      // node land in view, instead of pinning the node to the very top.
+      const chIdx = ALL_CHAPTERS.findIndex((c) => c.id === current.chapterId);
+      const mIdx = idx + 1;
+      const moduleY = calcModuleScrollY(chIdx, mIdx);
+      requestAnimationFrame(() => {
+        scrollRef.current?.scrollTo({ y: Math.max(0, moduleY - 240), animated: true });
+      });
     }
-  }, [topicTreeModule, router, isPro]);
+  }, [topicTreeModule, router, isPro, calcModuleScrollY]);
 
   // Generic module-completed handler — invoked when the user picks
   // "next module" inside the chest. Closes the accordion.
