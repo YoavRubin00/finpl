@@ -318,12 +318,35 @@ export const TopicTreeAccordion = React.memo(function TopicTreeAccordion({
     // Intentionally no router.replace — user stays in the learn map.
   };
 
+  // Mod-0-1 onboarding banner — surfaces above the chip column ONLY
+  // during the welcome window (= app walkthrough not yet seen +
+  // no non-intro chip completed). Yoav 2026-06-11: replaces the
+  // pre-walkthrough daily-challenge surface with a direct CTA telling
+  // the user where to tap next.
+  const displayName = useAuthStore((s) => s.displayName) ?? '';
+  const showWelcomeBanner =
+    module.id === 'mod-0-1' && !hasSeenAppWalkthrough && completedNonIntroChipCount < 1;
+
   return (
     <Animated.View
       entering={FadeIn.duration(260)}
       exiting={FadeOut.duration(180)}
     >
       <View>
+        {showWelcomeBanner && (
+          <Animated.View
+            entering={FadeInDown.delay(120).duration(360)}
+            style={welcomeStyles.banner}
+            pointerEvents="none"
+          >
+            <Text style={welcomeStyles.title} allowFontScaling={false}>
+              {displayName ? `ברוכים הבאים, ${displayName}!` : 'ברוכים הבאים!'}
+            </Text>
+            <Text style={welcomeStyles.subtitle} allowFontScaling={false}>
+              לחצו על הכפתור המוזהב כדי להתחיל ⬇️
+            </Text>
+          </Animated.View>
+        )}
         {/* Tree + path chips, no surrounding rectangle so the accordion
             reads as a continuation of the outer module path. */}
         <ModuleTopicLayout
@@ -438,5 +461,41 @@ const milestoneStyles = StyleSheet.create({
     fontWeight: '800',
     writingDirection: 'rtl',
     textAlign: 'right',
+  },
+});
+
+const welcomeStyles = StyleSheet.create({
+  banner: {
+    alignSelf: 'center',
+    marginTop: 4,
+    marginBottom: 18,
+    paddingHorizontal: 20,
+    paddingVertical: 14,
+    borderRadius: 18,
+    backgroundColor: '#fffbeb',
+    borderWidth: 1.5,
+    borderColor: '#f59e0b',
+    shadowColor: '#f59e0b',
+    shadowOpacity: 0.25,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 4,
+    alignItems: 'center',
+    maxWidth: '92%',
+  },
+  title: {
+    fontSize: 18,
+    fontWeight: '900',
+    color: '#92400e',
+    writingDirection: 'rtl',
+    textAlign: 'center',
+  },
+  subtitle: {
+    marginTop: 4,
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#b45309',
+    writingDirection: 'rtl',
+    textAlign: 'center',
   },
 });

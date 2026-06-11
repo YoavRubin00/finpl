@@ -1989,7 +1989,16 @@ export function DuoLearnScreen() {
 
   const handleLockedPress = useCallback(() => setLockedModalVisible(true), []);
   const handleRoadmapPress = useCallback(() => setRoadmapVisible(true), []);
-  const handleQuestPress = useCallback(() => setQuestSheetVisible(true), []);
+  const handleQuestPress = useCallback(() => {
+    // Yoav 2026-06-11: during the mod-0-1 onboarding window
+    // (= before the user has seen the app walkthrough), tapping the
+    // active quest widget (Captain Shark on the active module / the
+    // QuestPathNode between modules) must NOT open the daily quests
+    // sheet. The user is meant to focus on tapping the gold-recommended
+    // topic chip first; the daily-challenge surface unlocks afterward.
+    if (isWalkthroughActive) return;
+    setQuestSheetVisible(true);
+  }, [isWalkthroughActive]);
   const handleMindMap = useCallback((idx: number) => { tapHaptic(); setMindMapChapter(idx); }, []);
 
   return (

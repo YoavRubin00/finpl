@@ -3775,7 +3775,13 @@ export function LessonFlowScreen() {
     }
 
     // Inject couple dilemma (~70% through). Decoupled from the podcast slot.
-    if (modCoupleDilemma && flashcardIndex === coupleDilemmaTriggerAfter) {
+    // Skip when entered via topic-tree's "cards" chip (returnTo='topic-tree'
+    // + cardFilter='non-video'): the dilemma is its own chip in the tree,
+    // so cards should play 1→2→3 cleanly without the interleaved dilemma
+    // (Yoav 2026-06-11: "כשנכנסים לכרטיסיות, מבצעים רק כרטסיות"; the
+    // dilemma "נפתחת בנפרד").
+    const skipDilemmaInjection = returnTo === 'topic-tree' && cardFilter === 'non-video';
+    if (!skipDilemmaInjection && modCoupleDilemma && flashcardIndex === coupleDilemmaTriggerAfter) {
       mediumHaptic();
       setPhase("couple-dilemma");
       return;
@@ -3817,7 +3823,13 @@ export function LessonFlowScreen() {
     }
 
     // Inject couple dilemma (~70% through). Decoupled from the podcast slot.
-    if (modCoupleDilemma && flashcardIndex === coupleDilemmaTriggerAfter) {
+    // Skip when entered via topic-tree's "cards" chip (returnTo='topic-tree'
+    // + cardFilter='non-video'): the dilemma is its own chip in the tree,
+    // so cards should play 1→2→3 cleanly without the interleaved dilemma
+    // (Yoav 2026-06-11: "כשנכנסים לכרטיסיות, מבצעים רק כרטסיות"; the
+    // dilemma "נפתחת בנפרד").
+    const skipDilemmaInjection = returnTo === 'topic-tree' && cardFilter === 'non-video';
+    if (!skipDilemmaInjection && modCoupleDilemma && flashcardIndex === coupleDilemmaTriggerAfter) {
       mediumHaptic();
       setPhase("couple-dilemma");
       return;
