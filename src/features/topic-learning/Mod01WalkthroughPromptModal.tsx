@@ -20,12 +20,13 @@ interface Mod01WalkthroughPromptModalProps {
 }
 
 /**
- * One-shot prompt that fires the first time the user crosses ~30% of
- * mod-0-1 (intro + cards + ~one more chip done). Offers the in-app
- * tour OR lets them skip directly into the Pro funnel.
+ * One-shot prompt that fires the moment the user completes the FIRST
+ * non-intro chip of mod-0-1 (Yoav 2026-06-11 — was previously gated on
+ * `summary.pct >= 10`, which fired after the intro alone). Offers the
+ * in-app tour OR lets them skip directly into the Pro funnel.
  *
- * Yoav R7 2026-06-10: "לאחר ביצוע של עוד רכבי ב-0-1, יפתח לו קריאה
- * לבצע את ההיכרות עם האפליקציה, או להמשיך ללמוד".
+ * Copy tuned for the "you just finished ONE chip" moment — earlier copy
+ * said "התקדמת יפה" which overshot for a single-chip completion.
  */
 export function Mod01WalkthroughPromptModal({
   visible,
@@ -60,10 +61,10 @@ export function Mod01WalkthroughPromptModal({
 
             <Animated.View entering={FadeIn.delay(180).duration(360)}>
               <Text style={[styles.title, RTL_CENTER]} allowFontScaling={false}>
-                כל הכבוד! התקדמת יפה 🎉
+                יופי! סיימת את הצעד הראשון 🎉
               </Text>
               <Text style={[styles.subtitle, RTL_CENTER]} allowFontScaling={false}>
-                עוד שנייה לפני שנמשיך —{'\n'}רוצה סיור קצר באפליקציה?
+                רוצה סיור קצר באפליקציה{'\n'}לפני שנמשיך?
               </Text>
             </Animated.View>
 

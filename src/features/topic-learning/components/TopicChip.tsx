@@ -6,6 +6,9 @@ import Animated, {
   withSpring,
   withTiming,
   withSequence,
+  withRepeat,
+  useReducedMotion,
+  cancelAnimation,
 } from 'react-native-reanimated';
 import { SvgXml } from 'react-native-svg';
 import { mediumHaptic, successHaptic } from '../../../utils/haptics';
@@ -72,10 +75,18 @@ export const TopicChip = React.memo(function TopicChip({
   onPress,
 }: TopicChipProps): React.ReactElement {
   const scale = useSharedValue(1);
+  const pulseScale = useSharedValue(1);
   const flashOpacity = useSharedValue(0);
-  const animStyle = useAnimatedStyle(() => ({ transform: [{ scale: scale.value }] }));
+  // Scale is composed: press/celebration sequences live on `scale`, the
+  // recommended-chip breathing loop lives on `pulseScale`. Multiplying
+  // them keeps both layers independent — a press during the pulse cycle
+  // still feels snappy because the press sequence rides on top.
+  const animStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: scale.value * pulseScale.value }],
+  }));
   const flashStyle = useAnimatedStyle(() => ({ opacity: flashOpacity.value }));
   const { playSound } = useSoundEffect();
+  const reduceMotion = useReducedMotion();
 
   // R8 J1 — celebrate the false→true completion transition with a
   // particle burst + green pulse + success haptic. The press itself
@@ -123,6 +134,27 @@ export const TopicChip = React.memo(function TopicChip({
   // wearing a gold halo). Completed always wins so a completed-but-
   // recommended edge case still reads as "done".
   const isRecommended = recommended && !completed;
+
+  // Audit follow-up (דואו 2026-06-11): the gold chip was static — no
+  // breathing pulse. Brawl Stars / Duolingo "do this next" cues always
+  // animate. Loop 1 → 1.05 → 1 every ~1.4s while the chip is the
+  // recommended next step; cancel on completion / reduced motion.
+  useEffect(() => {
+    if (!isRecommended || reduceMotion) {
+      cancelAnimation(pulseScale);
+      pulseScale.value = withTiming(1, { duration: 180 });
+      return;
+    }
+    pulseScale.value = withRepeat(
+      withSequence(
+        withTiming(1.05, { duration: 700 }),
+        withTiming(1, { duration: 700 }),
+      ),
+      -1,
+      false,
+    );
+    return () => cancelAnimation(pulseScale);
+  }, [isRecommended, reduceMotion, pulseScale]);
   const bg = completed
     ? DONE_BG
     : isRecommended
