@@ -251,15 +251,20 @@ export const ModuleTopicLayout = React.memo(function ModuleTopicLayout({
         </Pressable>
       )}
 
-      {/* Entry connector — from outer mod-1-1 node into the chip column.
+      {/* Entry connector — from outer module node DOWN to the intro chip.
           Extends UPWARD by ENTRY_OVERLAP so it overlaps the parent
-          ModuleNode's bottom edge, killing the visual gap that earlier
-          rounds left between mod-1-1 and the intro chip. First chip is
-          end-aligned at offset 0, so this is a straight vertical column. */}
+          ModuleNode's bottom edge, AND now extends DOWN past the top of the
+          first row all the way to the intro chip's vertical CENTER
+          (ROW_HEIGHT/2 below the row top). Earlier it stopped at the row top
+          (EDGE_CONNECTOR_H), leaving a ~57px empty gap between the trail and
+          the intro chip — the "פער באמצע" Yoav reported 2026-06-11. The chip
+          (drawn after) covers the trail's lower end, so it reads as a single
+          continuous path from the module title into the intro chip. First
+          chip is end-aligned at offset 0 → straight vertical column. */}
       <View
         style={[
           styles.entryConnectorSlot,
-          { top: -ENTRY_OVERLAP, height: EDGE_CONNECTOR_H + ENTRY_OVERLAP },
+          { top: -ENTRY_OVERLAP, height: EDGE_CONNECTOR_H + ENTRY_OVERLAP + ROW_HEIGHT / 2 },
         ]}
         pointerEvents="none"
       >
@@ -267,7 +272,7 @@ export const ModuleTopicLayout = React.memo(function ModuleTopicLayout({
           fromOffsetX={nodeOffsetX}
           toOffsetX={0}
           done={firstCompleted}
-          height={EDGE_CONNECTOR_H + ENTRY_OVERLAP}
+          height={EDGE_CONNECTOR_H + ENTRY_OVERLAP + ROW_HEIGHT / 2}
         />
       </View>
 
@@ -483,15 +488,15 @@ const styles = StyleSheet.create({
     right: 0,
     bottom: 0,
   },
-  // "למידה רציפה" pill — absolute at CONTAINER level, center-anchored to the
-  // chip column (left:'50%' + marginLeft = -(half column + half button)) so it
-  // lands in the LEFT gutter just left of the intro chip on any screen width.
-  // `top` is supplied inline (intro row center). High zIndex so it's above the
-  // chips/connectors and tappable.
+  // "למידה רציפה" pill — absolute at CONTAINER level, anchored to the
+  // container's LEFT EDGE with a plain positive offset (no percentage / no
+  // negative margin — those were rendering off-screen/invisible). The
+  // container is full-width, so left:8 sits in the far-left margin, clearly
+  // left of the centered chip column. `top` is supplied inline (intro row
+  // center). High zIndex/elevation so it's above the chips and tappable.
   continuousBtn: {
     position: 'absolute',
-    left: '50%',
-    marginLeft: -(COLUMN_W / 2 + CONTINUOUS_BTN_W / 2),
+    left: 8,
     width: CONTINUOUS_BTN_W,
     paddingVertical: 9,
     paddingHorizontal: 6,
@@ -502,12 +507,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 3,
-    zIndex: 10,
+    zIndex: 20,
     shadowColor: '#2563eb',
     shadowOpacity: 0.4,
     shadowRadius: 8,
     shadowOffset: { width: 0, height: 3 },
-    elevation: 6,
+    elevation: 12,
   },
   continuousBtnPressed: {
     backgroundColor: '#1d4ed8',
