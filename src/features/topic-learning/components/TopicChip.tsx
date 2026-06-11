@@ -13,7 +13,15 @@ import Animated, {
 import { SvgXml } from 'react-native-svg';
 import { mediumHaptic, successHaptic } from '../../../utils/haptics';
 import { useSoundEffect } from '../../../hooks/useSoundEffect';
+import { track } from '../../../lib/analytics/events';
 import type { Topic } from '../types';
+
+/** Inlined to avoid a cross-feature import for a one-line parse — same shape
+ *  as the helper in useTopicProgressStore.ts. */
+function chapterIdFromModuleId(moduleId: string): string {
+  const m = /^mod-(\d+)-/.exec(moduleId);
+  return m ? `chapter-${m[1]}` : '';
+}
 
 interface TopicChipProps {
   topic: Topic;
@@ -127,6 +135,21 @@ export const TopicChip = React.memo(function TopicChip({
       withSpring(0.92, { damping: 14, stiffness: 260 }),
       withSpring(1, { damping: 12, stiffness: 220 }),
     );
+    // Entry signal for the topic-funnel. Pair with `topic_completed` to
+    // compute tap→complete rate per chip kind, surface drop-off, and
+    // cohort-split engagement between chip path and continuous run.
+    try {
+      track({
+        name: 'topic_chip_tapped',
+        props: {
+          module_id: topic.moduleId,
+          topic_id: topic.id,
+          topic_kind: topic.kind,
+          chapter_id: chapterIdFromModuleId(topic.moduleId),
+          recommended,
+        },
+      });
+    } catch { /* non-fatal */ }
     onPress(topic);
   };
 

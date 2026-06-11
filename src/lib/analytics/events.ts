@@ -67,13 +67,39 @@ export type AppEvent =
   | { name: 'lesson_exited_early'; props: { lesson_id: string; chapter_id?: string; reason: 'back_button' | 'navigation' | 'app_background'; phase?: string } }
   | { name: 'module_unlocked'; props: { module_id: string; chapter_id?: string; trigger?: 'completion' | 'pro_subscribe' | 'manual' } }
   | { name: 'chapter_completed'; props: { chapter_id: string; total_modules?: number } }
+  // ── Topic-tree (R6-R8 architecture) ───────────────────────────────────
   // The topic-tree learning method (learningMode: 'topic-tree') fires one
   // `topic_completed` per chip. Before this the new method emitted NO learning
   // events at all — invisible to every PostHog learning metric. Module-level
   // completion still fires `lesson_completed` (with learning_mode:'topic-tree')
   // from TopicTreeAccordion's 70% gate, so NSM / retention / streak insights
   // keep aggregating uniformly across both the legacy and topic-tree methods.
-  | { name: 'topic_completed'; props: { module_id: string; topic_id: string; topic_kind: string; chapter_id?: string } }
+  //
+  // The funnel reads:
+  //   topic_chip_tapped  →  topic_completed  →  (after 70% of chips)  lesson_completed
+  // `via` on topic_completed splits the path that produced the completion:
+  //   'chip'       — user tapped the chip directly and ran that single phase
+  //   'continuous' — phase was crossed inside a "למידה רציפה" autopilot run
+  | { name: 'topic_chip_tapped'; props: { module_id: string; topic_id: string; topic_kind: string; chapter_id?: string; recommended?: boolean } }
+  | { name: 'topic_completed'; props: { module_id: string; topic_id: string; topic_kind: string; chapter_id?: string; via?: 'chip' | 'continuous' } }
+  // "למידה רציפה" — the autopilot/master-style flow runs the whole module
+  // as one linear lesson, stamping each phase into useTopicProgressStore as
+  // it goes. Compare D1/D7 retention + completion of users who took this
+  // route vs those who broke the module down chip-by-chip.
+  | { name: 'continuous_run_started'; props: { module_id: string; chapter_id?: string; chips_already_done?: number; chips_total?: number } }
+  | { name: 'continuous_run_completed'; props: { module_id: string; chapter_id?: string; duration_ms?: number } }
+  | { name: 'continuous_run_exited'; props: { module_id: string; chapter_id?: string; phase: string; chips_marked_this_run?: number; duration_ms?: number } }
+  // Chest reveal lifecycle. Single chest at the 70% threshold (the 100%
+  // master chest was retired). DoN is offered on a 25% roll per open; the
+  // quit CTA is offered on a 30% roll for mod-0-2+ — both rolls are
+  // emitted on the corresponding _offered events for cohort splits.
+  | { name: 'chest_opened'; props: { module_id: string; chapter_id?: string; rarity: 'common' | 'rare' | 'epic' | 'mythic'; xp: number; coins: number; offered_don: boolean; offered_quit: boolean } }
+  | { name: 'chest_cta_tapped'; props: { module_id: string; chapter_id?: string; cta: 'continue' | 'finish_module' | 'quit'; quit_label?: string } }
+  | { name: 'chest_don_resolved'; props: { module_id: string; chapter_id?: string; outcome: 'kept' | 'doubled' | 'lost'; base_coins: number } }
+  // mod-0-1 walkthrough prompt — fires once. Lets us tie subsequent
+  // retention to whether the user opted into the tour or skipped it.
+  | { name: 'walkthrough_prompt_shown'; props: { module_id: string } }
+  | { name: 'walkthrough_prompt_choice'; props: { module_id: string; choice: 'tour' | 'continue' } }
 
   // ── Pearl ──────────────────────────────────────────────────────────────
   | { name: 'pearl_opened'; props: { after_module_id: string; next_module_id?: string; chapter_id?: string; game_key?: string; stages_count: number; has_profile_question?: boolean; has_unique_bundle?: boolean } }
