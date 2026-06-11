@@ -687,6 +687,16 @@ function FlashcardCard({
   const [finnTipDismissed, setFinnTipDismissed] = useState(false);
   const showFinnPopup = showFinnTip && index === 2 && !finnTipDismissed;
 
+  // R8 pre-release audit (Yoav + ארכיטקט 2026-06-11): Math.random()
+  // previously sat in the JSX render body (line 828) — every re-render
+  // re-rolled the meme caption, producing visible text jitter when the
+  // card animated or a parent state changed. Memoise per card.id so the
+  // caption stays stable for the lifetime of this card.
+  const memeFallback = useMemo(
+    () => FINN_MEME_REACTIONS[Math.floor(Math.random() * FINN_MEME_REACTIONS.length)],
+    [card.id],
+  );
+
   // Audio Playback
   useEffect(() => {
     let playerObj: AudioPlayer | null = null;
@@ -825,7 +835,7 @@ function FlashcardCard({
                   <ExpoImage source={FINN_HAPPY} accessible={false} style={{ width: 64, height: 64 }} contentFit="contain" />
                   <View style={{ flex: 1, backgroundColor: "#334155", borderRadius: 14, padding: 14, borderWidth: 1, borderColor: "#475569" }}>
                     <Text style={{ writingDirection: "rtl", textAlign: "right", fontSize: 16, color: "#f8fafc", fontWeight: "700", lineHeight: 24 }}>
-                      {card.text || FINN_MEME_REACTIONS[Math.floor(Math.random() * FINN_MEME_REACTIONS.length)]}
+                      {card.text || memeFallback}
                     </Text>
                   </View>
                 </View>
@@ -3051,6 +3061,15 @@ export function LessonFlowScreen() {
   // Shark Love, every 3rd module completion
   const [showSharkLove, setShowSharkLove] = useState(false);
   const moduleStartTimeRef = useRef(Date.now());
+  // R8 pre-release audit: snapshot elapsed once when SharkLove first
+  // becomes visible so the inline Date.now() in JSX (now removed) no
+  // longer recomputes every parent render while the modal is open.
+  const sharkLoveElapsedSec = useMemo(
+    () => showSharkLove
+      ? Math.round((Date.now() - moduleStartTimeRef.current) / 1000)
+      : 0,
+    [showSharkLove],
+  );
   // Shark CTA notifications, Bridge (every 4) + Referral (every 5 + dividend content)
   const [showBridgeCTA, setShowBridgeCTA] = useState(false);
   const [showReferralCTA, setShowReferralCTA] = useState(false);
@@ -5627,11 +5646,15 @@ export function LessonFlowScreen() {
       )}
 
       {/* ── Shark Love, "עדיין תאהבו אותי?" every 3rd module ── */}
+      {/* R8 pre-release audit (Yoav + ארכיטקט 2026-06-11): inline
+          Date.now() in the JSX prop re-ran every parent render while
+          the modal was open. Snapshot once via useMemo keyed on the
+          visibility flag so the modal shows a stable elapsed value. */}
       {showSharkLove && (
         <SharkLoveModal
           xpEarned={chestRewards?.xp ?? 30}
           coinsEarned={chestRewards?.coins ?? 150}
-          elapsedSeconds={Math.round((Date.now() - moduleStartTimeRef.current) / 1000)}
+          elapsedSeconds={sharkLoveElapsedSec}
           onClaim={handleSharkLoveDismiss}
         />
       )}
