@@ -174,18 +174,14 @@ export function ChestCelebrationModal({
     }
   }, [visible]);
 
-  // R8 J3 — Hay Day standard: when chest reveals, coins + XP "fly out"
-  // toward their respective pills. Delay 350ms so the FadeIn on the
-  // reward pill is mid-animation when the particles start flying.
+  // Yoav 2026-06-11 (round 2): flying coins + XP now fire IMMEDIATELY
+  // when the chest opens — was 350ms, which felt sluggish against the
+  // tap. Rarity burst stays gated on opened so common drops don't fire it.
   useEffect(() => {
     if (!opened) return;
-    const t = setTimeout(() => {
-      setFlyingCoins(true);
-      setFlyingXp(true);
-      // R8 T3.4 — light up rarity burst only for non-common drops.
-      if (rarity !== 'common') setRarityBurstActive(true);
-    }, 350);
-    return () => clearTimeout(t);
+    setFlyingCoins(true);
+    setFlyingXp(true);
+    if (rarity !== 'common') setRarityBurstActive(true);
   }, [opened, rarity]);
 
   // R8 J5 — Wisdom + DoN now run as PARALLEL layers, not sequential.
@@ -287,20 +283,18 @@ export function ChestCelebrationModal({
     glowOpacity.value = withTiming(0, { duration: 350 });
     bodyScale.value = withSpring(1.18, { damping: 10, stiffness: 200 });
     lottieRef.current?.play();
-    chestTimersRef.current.push(setTimeout(() => setOpened(true), 600));
+    // Was 600ms — reduced to 200ms so the reward pills + flying coins
+    // surface immediately on tap ("שמיד יתעופפו" — Yoav 2026-06-11).
+    chestTimersRef.current.push(setTimeout(() => setOpened(true), 200));
   }, [opened, glowScale, glowOpacity, bodyScale, playSound, isFinale]);
 
-  // Yoav 2026-06-11: auto-open the chest the moment the modal becomes
-  // visible. The earlier "tap the chest 4x to reveal" interaction was
-  // perceived as a delay before getting the gold/XP. The reward grant
-  // already happened upstream — surfacing it ASAP closes the perception
-  // gap. Brief 180ms beat lets the user register "the chest appeared"
-  // before the open sequence starts.
-  useEffect(() => {
-    if (!visible || opened) return;
-    const t = setTimeout(() => handleChestTap(), 180);
-    return () => clearTimeout(t);
-  }, [visible, opened, handleChestTap]);
+  // Yoav 2026-06-11 (round 2): reverted the auto-open — the user wants
+  // to TAP the chest. What was changed instead: handleChestTap now
+  // fires the flying-coins + flying-XP animation IMMEDIATELY (see the
+  // useEffect below — 0ms delay instead of 350ms) and setOpened
+  // accelerates from 600ms → 200ms, so the perceived reward arrival
+  // matches the tap itself ("שמיד יתעופפו הדברים שמקבלים למעלה
+  // באנימציה מספקת").
 
   const handleContinue = useCallback(() => {
     tapHaptic();
@@ -380,11 +374,9 @@ export function ChestCelebrationModal({
                     </Text>
                   </View>
                 )}
-                {/* Chest auto-opens after 180ms (Yoav 2026-06-11) — no
-                    "הקש לפתיחה" hint because the tap is no longer required.
-                    The Pressable is kept as a defensive fallback so a user
-                    who manages to tap before the auto-timer fires still
-                    advances the open sequence cleanly. */}
+                <Text style={[styles.tapHint, RTL_CENTER]} allowFontScaling={false}>
+                  הקש על התיבה לפתיחה
+                </Text>
               </Pressable>
             ) : (
               <Animated.View entering={FadeIn.duration(400)} style={styles.rewardWrap}>

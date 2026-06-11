@@ -16,7 +16,11 @@ const WAVE_PERIOD = 6;
 // WebPs are full-frame with transparent padding (no crop), so NO character is
 // ever clipped and flush-to-edge (offset 0) still reads as a comfortable
 // inset. Bumped 110→140→170→200 (Yoav 2026-06-11: "צריך להיות גדול יותר").
-const SCENE_SIZE = 200;
+// Bumped 110→140→170→200, then trimmed back to 160 (Yoav 2026-06-11:
+// "פשוט תקטין אותם טיפה"). Smaller display also means the 240px source is
+// upscaled less (≈2.0× vs 2.5× at 200), so the loops read noticeably crisper
+// AND clear the chip column instead of hiding behind it.
+const SCENE_SIZE = 160;
 // Full-image reveal — earlier rounds used a hard clip to the side GUTTER, but
 // at SCENE_SIZE 170+ that meant the chip-facing 38% of the WebP was hidden
 // AND the character got chopped in half (Yoav 2026-06-11 QA: "הוובפ נחתך").
@@ -130,15 +134,21 @@ export const ModuleTopicLayout = React.memo(function ModuleTopicLayout({
     const [themed, generic] = scenesForModule(moduleId);
     const pair = [themed, generic];
 
-    // Place the first scene on the gutter OPPOSITE its row's chip lean (max
-    // clearance from the button); force the second scene to the OPPOSITE
-    // gutter so the two loops can never overlap each other.
+    // Place EACH scene on the gutter OPPOSITE the chip lean at ITS OWN anchor
+    // row, so every loop sits in the emptier margin and never hides behind a
+    // chip. Earlier the 2nd scene was just forced to the side opposite the 1st
+    // (for balance) — which dropped it straight onto the chip column whenever
+    // both rows leaned the same way (Yoav 2026-06-11: "הוובפים מוסתרים ע"י
+    // התתי מודולות / צד שמאל צריך להופיע מימין"). A chip offset > 0 leans into
+    // the RIGHT gutter, so the loop goes LEFT, and vice-versa; a centered chip
+    // (offset 0) defaults to the right gutter (the side with free space).
     const rowFor = (frac: number) => Math.max(0, Math.min(n - 1, Math.round(n * frac)));
-    const r0 = rowFor(SCENE_ANCHOR_FRACTIONS[0]);
-    const lean0 = endAlignedOffset(r0, n);
-    const side0: 'left' | 'right' = lean0 > 0 ? 'left' : 'right';
-    const side1: 'left' | 'right' = side0 === 'left' ? 'right' : 'left';
-    const sides = [side0, side1] as const;
+    const sideForFrac = (frac: number): 'left' | 'right' =>
+      endAlignedOffset(rowFor(frac), n) > 0 ? 'left' : 'right';
+    const sides = [
+      sideForFrac(SCENE_ANCHOR_FRACTIONS[0]),
+      sideForFrac(SCENE_ANCHOR_FRACTIONS[1]),
+    ] as const;
 
     return pair.map((scene, idx) => {
       const anchorRow = rowFor(SCENE_ANCHOR_FRACTIONS[idx]);
@@ -270,7 +280,7 @@ export const ModuleTopicLayout = React.memo(function ModuleTopicLayout({
       <View style={[styles.exitConnectorSlot, { height: EDGE_CONNECTOR_H }]} pointerEvents="none">
         <PathConnector
           fromOffsetX={0}
-          toOffsetX={0}
+          toOffsetX={nodeOffsetX}
           done={lastCompleted}
           height={EDGE_CONNECTOR_H}
         />

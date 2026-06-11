@@ -44,6 +44,10 @@ interface TopicTreeAccordionProps {
   /** Whether sim is a SIM_FIRST topic for this module. Reorders the
    *  resolved topic list so sim falls earlier in canonical sequence. */
   simFirst?: boolean;
+  /** Horizontal wave offset of the parent ModuleNode on the outer map,
+   *  forwarded to ModuleTopicLayout so the entry/exit connectors meet the
+   *  general-map trail flush instead of jogging. */
+  nodeOffsetX?: number;
   /** Fired when a chip is tapped. Parent navigates to the legacy
    *  LessonFlowScreen with phase-targeted entry; the topic-tree layer
    *  stays pure presentation. */
@@ -73,6 +77,7 @@ interface TopicTreeAccordionProps {
 export const TopicTreeAccordion = React.memo(function TopicTreeAccordion({
   module,
   simFirst,
+  nodeOffsetX,
   onTopicSelected,
   onContinueAfterChest,
   onAdvanceToNextModule,
@@ -354,6 +359,7 @@ export const TopicTreeAccordion = React.memo(function TopicTreeAccordion({
           isCompletedMap={isCompletedMap}
           recommendedTopicId={summary.nextTopic?.id ?? null}
           progressPct={summary.pct}
+          nodeOffsetX={nodeOffsetX}
           onTopicPress={onTopicSelected}
         />
 

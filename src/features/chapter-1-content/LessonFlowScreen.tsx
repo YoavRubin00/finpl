@@ -3777,21 +3777,22 @@ export function LessonFlowScreen() {
       return;
     }
 
+    // Topic-tree "cards" chip plays ALL flashcards 1→2→3 cleanly. The
+    // podcast and couple-dilemma each have their own chip in the tree,
+    // so the interleaved mid-flow injections must NOT fire when entered
+    // via topic-tree (Yoav 2026-06-11: "כשנכנסים לכרטיסיות, מבצעים רק
+    // כרטסיות"; the podcast / dilemma "יהיו בנפרד, ברצף").
+    const isTopicTreeCardsRun = returnTo === 'topic-tree';
+
     // Inject Daisy podcast at midpoint of flashcards (once per module)
-    if (modPodcast && flashcardIndex === podcastTriggerAfter) {
+    if (!isTopicTreeCardsRun && modPodcast && flashcardIndex === podcastTriggerAfter) {
       mediumHaptic();
       setPhase("podcast");
       return;
     }
 
     // Inject couple dilemma (~70% through). Decoupled from the podcast slot.
-    // Skip when entered via topic-tree's "cards" chip (returnTo='topic-tree'
-    // + cardFilter='non-video'): the dilemma is its own chip in the tree,
-    // so cards should play 1→2→3 cleanly without the interleaved dilemma
-    // (Yoav 2026-06-11: "כשנכנסים לכרטיסיות, מבצעים רק כרטסיות"; the
-    // dilemma "נפתחת בנפרד").
-    const skipDilemmaInjection = returnTo === 'topic-tree' && cardFilter === 'non-video';
-    if (!skipDilemmaInjection && modCoupleDilemma && flashcardIndex === coupleDilemmaTriggerAfter) {
+    if (!isTopicTreeCardsRun && modCoupleDilemma && flashcardIndex === coupleDilemmaTriggerAfter) {
       mediumHaptic();
       setPhase("couple-dilemma");
       return;
@@ -3818,28 +3819,26 @@ export function LessonFlowScreen() {
         safeTimeout(() => setShowQuizIntro(true), 50);
       }
     }
-  }, [mod, flashcardIndex, finnTipText, checkpointIndex, showMidCheckpoint, checkpointReturnIndex, modPodcast, podcastTriggerAfter, modCoupleDilemma, coupleDilemmaTriggerAfter]);
+  }, [mod, flashcardIndex, finnTipText, checkpointIndex, showMidCheckpoint, checkpointReturnIndex, modPodcast, podcastTriggerAfter, modCoupleDilemma, coupleDilemmaTriggerAfter, returnTo]);
 
   const handleDismissFinnTip = useCallback(() => {
     setFinnTipText(null);
     // Advance to next card after dismissing
     if (!mod) return;
 
+    // Topic-tree "cards" chip: skip podcast/dilemma injection (both have
+    // their own chips in the tree). See handleFlashcardNext for context.
+    const isTopicTreeCardsRun = returnTo === 'topic-tree';
+
     // Inject Daisy podcast at midpoint of flashcards (once per module)
-    if (modPodcast && flashcardIndex === podcastTriggerAfter) {
+    if (!isTopicTreeCardsRun && modPodcast && flashcardIndex === podcastTriggerAfter) {
       mediumHaptic();
       setPhase("podcast");
       return;
     }
 
     // Inject couple dilemma (~70% through). Decoupled from the podcast slot.
-    // Skip when entered via topic-tree's "cards" chip (returnTo='topic-tree'
-    // + cardFilter='non-video'): the dilemma is its own chip in the tree,
-    // so cards should play 1→2→3 cleanly without the interleaved dilemma
-    // (Yoav 2026-06-11: "כשנכנסים לכרטיסיות, מבצעים רק כרטסיות"; the
-    // dilemma "נפתחת בנפרד").
-    const skipDilemmaInjection = returnTo === 'topic-tree' && cardFilter === 'non-video';
-    if (!skipDilemmaInjection && modCoupleDilemma && flashcardIndex === coupleDilemmaTriggerAfter) {
+    if (!isTopicTreeCardsRun && modCoupleDilemma && flashcardIndex === coupleDilemmaTriggerAfter) {
       mediumHaptic();
       setPhase("couple-dilemma");
       return;

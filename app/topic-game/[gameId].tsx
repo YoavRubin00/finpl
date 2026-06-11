@@ -1,5 +1,5 @@
 import React, { useCallback, useMemo } from 'react';
-import { View, Pressable, StyleSheet, ScrollView } from 'react-native';
+import { View, Pressable, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { X } from 'lucide-react-native';
@@ -90,14 +90,13 @@ export default function TopicGameRoute(): React.ReactElement | null {
             <X size={22} color="#0c4a6e" strokeWidth={2.6} />
           </Pressable>
         </View>
-        <ScrollView
-          style={{ flex: 1 }}
-          contentContainerStyle={styles.scrollContent}
-          keyboardShouldPersistTaps="handled"
-          showsVerticalScrollIndicator={false}
-        >
+        {/* Yoav 2026-06-11: topic-game cards fit in one screen. Wrapping
+            in a ScrollView made price-slider (and others) scroll
+            unnecessarily; a flex View constrains the card to the
+            viewport so it lays out as designed. */}
+        <View style={styles.cardWrap}>
           {card}
-        </ScrollView>
+        </View>
       </SafeAreaView>
     </View>
   );
@@ -119,9 +118,9 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     backgroundColor: '#e0f2fe',
   },
-  scrollContent: {
-    flexGrow: 1,
+  cardWrap: {
+    flex: 1,
     paddingHorizontal: 12,
-    paddingBottom: 24,
+    paddingBottom: 12,
   },
 });

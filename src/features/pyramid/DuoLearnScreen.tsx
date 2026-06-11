@@ -1084,6 +1084,7 @@ const ChapterSection = React.memo(function ChapterSection({
               {expandedTopicTreeModuleId === module.id && onTopicSelected && (
                 <TopicTreeAccordion
                   module={module}
+                  nodeOffsetX={getNodeOffset(i)}
                   onTopicSelected={onTopicSelected}
                   onContinueAfterChest={onTopicTreeContinueAfterChest}
                   onAdvanceToNextModule={onTopicTreeAdvanceToNextModule}

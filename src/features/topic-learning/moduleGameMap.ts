@@ -31,6 +31,11 @@ const MODULE_GAME_MAP: Record<string, ShortGameId> = {
   // mod-1-1 (ריבית דריבית) — higher-lower is a natural fit per Yoav:
   // "איזה חיסכון גדל יותר ב-25 שנה" style comparisons.
   'mod-1-1': 'higher-lower',
+  // mod-0-2 (מה זה בכלל כסף) — Yoav 2026-06-11 reinstated: the merchant
+  // (barter) sim is the real sandbox here, but price-slider also lives
+  // alongside as a quick scored game. Both chips surface in the tree
+  // ("העלמת את המשחק שהיה עם הסוחרים. צריך להחזיר אותו").
+  'mod-0-2': 'price-slider',
 };
 
 /** Module id → short-game id that REPLACES the sim chip. The sim isn't
@@ -40,10 +45,11 @@ const MODULE_GAME_MAP: Record<string, ShortGameId> = {
 const MODULE_SIM_REPLACEMENT_GAME: Record<string, ShortGameId> = {
   // Chapter 0 — financial fundamentals. The legacy `simConcept` is a
   // matching exercise ("מתאימים מושגים"), not a real sandbox, so the
-  // tree surfaces a scored short-game in its place.
+  // tree surfaces a scored short-game in its place. mod-0-2 was moved
+  // OUT of this map (back into MODULE_GAME_MAP) to restore the barter
+  // sim alongside the price-slider game.
   'mod-0-1': 'higher-lower',
   'mod-0-1b': 'higher-lower',
-  'mod-0-2': 'price-slider',
   'mod-0-3': 'price-slider',
   'mod-0-4': 'budget-ninja',
   'mod-0-5': 'cashout-rush',
