@@ -411,7 +411,7 @@ export const HigherLowerCard = React.memo(function HigherLowerCard({ isActive: _
             <Text style={[styles.headerSub, RTL]}>
               {done
                 ? `סיימתם! ${sessionCorrect}/${deck.length} נכונות`
-                : `שוק ההון מסוכן, אבל אפשר ללמוד. ${remainingPlays}/${MAX_DAILY_PLAYS} סבבים`}
+                : `שוק ההון מסוכן, אבל אפשר ללמוד. ${CARDS_PER_SESSION} סבבים`}
             </Text>
           </View>
         </Animated.View>

@@ -5,6 +5,7 @@ import { getDilemma } from '../shark-dilemma/dilemmasData';
 import { getGameForModule, isSimReplacedByGame } from './moduleGameMap';
 import { getCoupleDilemmaForModule } from '../couple-dilemma/coupleDilemmas';
 import { getPodcastForModule } from '../podcast-segment/podcasts';
+import { getRecallSet } from '../sentence-exercise/sentenceData';
 
 /**
  * Canonical order — mirrors LessonFlowScreen's normal flow. The hook
@@ -118,10 +119,13 @@ export function resolveTopics(module: Module, opts: ResolveTopicsOptions = {}): 
   // videos (fc-*-video) stay INLINE in the cards flow, between regular
   // flashcards, as Chapter 0 originally intended. The standalone chip
   // duplicated the content + broke the 1→2→3 reading rhythm.
-  // 'recall' isn't yet a discriminating field on Module — gated on flashcards
-  // for now since recall reuses flashcard content in LessonFlowScreen. The
-  // adapter layer is where this becomes an explicit toggle later.
-  if (module.flashcards?.length) present.set('recall', true);
+  // Recall chip surfaces only when a real recall set exists in
+  // sentenceData.ts (Yoav 2026-06-12: "במושגי יסוד פיננסיים - המשך, לא
+  // קיים בואו נתרגל. תוריד אותו מהמפת למידה"). Earlier the chip was
+  // gated on `module.flashcards?.length` only — modules with cards but
+  // no recall set (e.g. mod-0-1b) showed an empty chip that auto-
+  // completed on tap. Gating on getRecallSet hides the chip cleanly.
+  if (getRecallSet(module.id)) present.set('recall', true);
   // Yoav 2026-06-11: same bug shape as couple-dilemma — the podcast
   // chip never appeared in mod-0-3 ("הגנב השקוף אינפלציה") and other
   // podcast modules because `module.podcast` is never set on chapter

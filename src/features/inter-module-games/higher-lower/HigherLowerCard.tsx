@@ -406,8 +406,8 @@ export const HigherLowerCard = React.memo(function HigherLowerCard({ isActive: _
               {done
                 ? `סיימתם! ${sessionCorrect}/${deck.length} נכונות`
                 : freePlay
-                  ? 'שוק ההון מסוכן, אבל אפשר ללמוד.'
-                  : `שוק ההון מסוכן, אבל אפשר ללמוד. ${remainingPlays}/${MAX_DAILY_PLAYS} סבבים`}
+                  ? `שוק ההון מסוכן, אבל אפשר ללמוד. ${CARDS_PER_SESSION} סבבים`
+                  : `שוק ההון מסוכן, אבל אפשר ללמוד. ${CARDS_PER_SESSION} סבבים`}
             </Text>
           </View>
         </Animated.View>

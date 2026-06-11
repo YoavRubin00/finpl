@@ -303,8 +303,14 @@ export function TopicChatScreen(): React.ReactElement {
                 </View>
               </Animated.View>
             )}
-            {messages.map((msg) => {
+            {messages.map((msg, idx) => {
               const isBot = msg.role === 'assistant';
+              // The streaming bot bubble is pre-appended empty before the
+              // first chunk arrives; show a spinner INSIDE it instead of
+              // rendering a separate loading row below the list (which
+              // surfaced as a duplicate Finn bubble \u2014 Yoav 2026-06-12).
+              const isStreamingPlaceholder =
+                isBot && loading && idx === messages.length - 1 && msg.text.length === 0;
               return (
                 <View
                   key={msg.id}
@@ -327,8 +333,12 @@ export function TopicChatScreen(): React.ReactElement {
                     style={[
                       msgStyles.bubble,
                       isBot ? msgStyles.botBubble : msgStyles.userBubble,
+                      isStreamingPlaceholder && { paddingVertical: 14 },
                     ]}
                   >
+                    {isStreamingPlaceholder ? (
+                      <ActivityIndicator color="#0e7490" />
+                    ) : (
                     <Text
                       style={[
                         isBot ? msgStyles.botText : msgStyles.userText,
@@ -338,25 +348,18 @@ export function TopicChatScreen(): React.ReactElement {
                     >
                       {isBot ? msg.text : `\u2067${msg.text}\u2069`}
                     </Text>
-                    <View style={msgStyles.metaRow}>
-                      <Text style={msgStyles.timestamp} allowFontScaling={false}>
-                        {formatTime(msg.timestamp)}
-                      </Text>
-                    </View>
+                    )}
+                    {!isStreamingPlaceholder && (
+                      <View style={msgStyles.metaRow}>
+                        <Text style={msgStyles.timestamp} allowFontScaling={false}>
+                          {formatTime(msg.timestamp)}
+                        </Text>
+                      </View>
+                    )}
                   </View>
                 </View>
               );
             })}
-            {loading && (
-              <View style={[msgStyles.messageRow, msgStyles.messageRowBot]}>
-                <View style={msgStyles.avatarCircle}>
-                  <ExpoImage source={FINN_STANDARD} style={{ width: 22, height: 22 }} contentFit="contain" accessible={false} />
-                </View>
-                <View style={[msgStyles.bubble, msgStyles.botBubble, { paddingVertical: 14 }]}>
-                  <ActivityIndicator color="#0e7490" />
-                </View>
-              </View>
-            )}
           </ScrollView>
 
           {/* Preset FAQ chips — only before the first send */}
