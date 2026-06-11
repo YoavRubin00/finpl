@@ -125,7 +125,11 @@ export function resolveTopics(module: Module, opts: ResolveTopicsOptions = {}): 
   // gated on `module.flashcards?.length` only — modules with cards but
   // no recall set (e.g. mod-0-1b) showed an empty chip that auto-
   // completed on tap. Gating on getRecallSet hides the chip cleanly.
-  if (getRecallSet(module.id)) present.set('recall', true);
+  // Require a NON-EMPTY recall set — a set with zero prompts would render an
+  // empty interactive-recall screen that auto-completes (the chip just turns
+  // green on tap with no real content). mod-0-2 / mod-0-1b have no set at all,
+  // so they're already excluded; this also guards future empty sets.
+  if ((getRecallSet(module.id)?.prompts?.length ?? 0) > 0) present.set('recall', true);
   // Yoav 2026-06-11: same bug shape as couple-dilemma — the podcast
   // chip never appeared in mod-0-3 ("הגנב השקוף אינפלציה") and other
   // podcast modules because `module.podcast` is never set on chapter

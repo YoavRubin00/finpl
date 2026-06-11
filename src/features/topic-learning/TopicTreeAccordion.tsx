@@ -152,6 +152,10 @@ export const TopicTreeAccordion = React.memo(function TopicTreeAccordion({
      *  so the "הכל או כלום" prompt actually surfaces ~25% of chests
      *  (was firing on every chest because onDoNResolve was always wired). */
     offerDoN: boolean;
+    /** Yoav 2026-06-12: playful "I'm bailing" CTA label rolled at chest
+     *  open. Set on ~30% of post-mod-0-1b chests; null otherwise so
+     *  the modal hides the button. */
+    quitLabel: string | null;
   } | null>(null);
   const upsertProgress = useUpsertModuleProgress();
   const { playSound } = useSoundEffect();
@@ -297,7 +301,22 @@ export const TopicTreeAccordion = React.memo(function TopicTreeAccordion({
     // time so the modal can read a stable boolean.
     const offerDoN = Math.random() < 0.25;
 
-    setChestState({ xp: totalXp, coins: totalCoins, isFinale: false, rarity, offerDoN });
+    // Yoav 2026-06-12: playful "I'm bailing to Netflix" CTA — 30% of chest
+    // opens, mod-0-2 onwards (mod-0-1 + mod-0-1b stay clean during onboarding).
+    const POST_QUIT_LABELS = [
+      'עפתי לנטפליקס 📺',
+      'עפתי לאינסטגרם 📱',
+      'עפתי לטיקטוק 🎵',
+      'אני הולך לישון 😴',
+      'יש לי שווארמה שמחכה 🌯',
+      'יש לי פיצה שמתקררת 🍕',
+    ];
+    const isOnboardingModule = module.id === 'mod-0-1' || module.id === 'mod-0-1b';
+    const quitLabel = !isOnboardingModule && Math.random() < 0.3
+      ? POST_QUIT_LABELS[Math.floor(Math.random() * POST_QUIT_LABELS.length)]
+      : null;
+
+    setChestState({ xp: totalXp, coins: totalCoins, isFinale: false, rarity, offerDoN, quitLabel });
   }, [summary.isModuleDone, summary.pct, module.id, upsertProgress, addXP, addCoins, playSound, modulePastThreshold, moduleFullyComplete, continuousRunActive]);
 
   // R8 U1/U2 — mod-0-1-only walkthrough prompt. Fires the first time
@@ -448,6 +467,14 @@ export const TopicTreeAccordion = React.memo(function TopicTreeAccordion({
                 }
               }
             : undefined}
+          // Yoav 2026-06-12: playful "I'm bailing" CTA. Surfaced on ~30%
+          // of chests starting from mod-0-2. On tap → close modal and
+          // exit the learning map to the home tab.
+          quitLabel={chestState?.quitLabel ?? null}
+          onQuit={() => {
+            setChestState(null);
+            router.replace('/(tabs)/index' as never);
+          }}
         />
 
         {/* R7 Epic B3 — mod-0-1-only walkthrough opt-in prompt. */}

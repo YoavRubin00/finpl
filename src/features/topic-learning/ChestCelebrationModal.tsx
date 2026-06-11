@@ -52,6 +52,12 @@ interface ChestCelebrationModalProps {
    *  rare, none for common). The coin bonus is already baked into `coins`
    *  by the caller; this is purely a visual treatment. */
   rarity?: ChestRarity;
+  /** Yoav 2026-06-12: optional playful "I'm bailing" CTA below the main two.
+   *  When `quitLabel` is set (the parent rolled the 30%-of-opens gate and
+   *  the module is past mod-0-1b), the modal surfaces a small tertiary
+   *  button — e.g. "עפתי לנטפליקס 📺" — that fires `onQuit` on tap. */
+  quitLabel?: string | null;
+  onQuit?: () => void;
 }
 
 /**
@@ -75,6 +81,8 @@ export function ChestCelebrationModal({
   onDoNResolve,
   isFinale = false,
   rarity = 'common',
+  quitLabel = null,
+  onQuit,
 }: ChestCelebrationModalProps): React.ReactElement | null {
   const [opened, setOpened] = useState(false);
   const [showDoN, setShowDoN] = useState(false);
@@ -432,6 +440,21 @@ export function ChestCelebrationModal({
                   </Text>
                 </Pressable>
               )}
+              {/* Yoav 2026-06-12: playful "I'm bailing" CTA. Surfaced on
+                  ~30% of post-mod-0-1b chests via parent's chestState
+                  roll. Tertiary visual weight (light bg, small text). */}
+              {quitLabel && onQuit && (
+                <Pressable
+                  onPress={() => { tapHaptic(); onQuit(); }}
+                  accessibilityRole="button"
+                  accessibilityLabel={quitLabel}
+                  style={styles.ctaQuit}
+                >
+                  <Text style={[styles.ctaQuitText, RTL]} allowFontScaling={false}>
+                    {quitLabel}
+                  </Text>
+                </Pressable>
+              )}
             </Animated.View>
           )}
         </SafeAreaView>
@@ -693,5 +716,17 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: '800',
     color: '#e0f2fe',
+  },
+  ctaQuit: {
+    marginTop: 4,
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  ctaQuitText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: 'rgba(224,242,254,0.65)',
   },
 });
