@@ -3014,6 +3014,29 @@ const styles = StyleSheet.create({
     textShadowOffset: { width: 0, height: 1 },
     textShadowRadius: 2,
   },
+  // "למידה רציפה" autopilot pill under the module node.
+  continuousPill: {
+    flexDirection: "row-reverse",
+    alignItems: "center",
+    gap: 5,
+    backgroundColor: "#2563eb",
+    borderRadius: 999,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderWidth: 1.5,
+    borderColor: "#60a5fa",
+    shadowColor: "#2563eb",
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.4,
+    shadowRadius: 8,
+    elevation: 6,
+  },
+  continuousPillText: {
+    fontSize: 12.5,
+    color: "#ffffff",
+    fontWeight: "900",
+    writingDirection: "rtl",
+  },
 
   // Finn mascot
   characterWrapper: {
