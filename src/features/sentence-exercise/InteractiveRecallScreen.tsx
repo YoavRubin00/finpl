@@ -20,18 +20,27 @@ interface InteractiveRecallScreenProps {
   moduleId: string;
   unitColors: UnitColors;
   onComplete: (summary: { totalXp: number; totalCoins: number }) => void;
+  /** Yoav 2026-06-11: surface (current, total) so the outer progress
+   *  bar fills as each prompt is solved (default was a flat 0 until the
+   *  whole recall set finished — felt broken). */
+  onProgress?: (current: number, total: number) => void;
 }
 
 export function InteractiveRecallScreen({
   moduleId,
   unitColors,
   onComplete,
+  onProgress,
 }: InteractiveRecallScreenProps) {
   const set = getRecallSet(moduleId);
   const recall = useInteractiveRecall(set);
   const addXP = useEconomyUIStore((s) => s.addXP);
   const addCoins = useEconomyUIStore((s) => s.addCoins);
   const { playSound } = useSoundEffect();
+  const total = set?.prompts.length ?? 0;
+  useEffect(() => {
+    onProgress?.(recall.state.currentIndex, total);
+  }, [recall.state.currentIndex, total, onProgress]);
 
   const recallRef = useRef(recall);
   recallRef.current = recall;

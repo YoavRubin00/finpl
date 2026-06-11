@@ -3739,6 +3739,16 @@ export function LessonFlowScreen() {
     safeTimeout(() => setShowQuizIntro(true), 50);
   }, []);
 
+  // Tracks (currentIndex, total) of the interactive-recall set so the
+  // outer progress bar can fill incrementally per solved prompt. Default
+  // (0/0) keeps the bar flat when no recall is active.
+  const [recallProgress, setRecallProgress] = useState<{ current: number; total: number }>(
+    { current: 0, total: 0 },
+  );
+  const handleInteractiveRecallProgress = useCallback((current: number, total: number) => {
+    setRecallProgress({ current, total });
+  }, []);
+
   const handleFlashcardNext = useCallback(() => {
     if (!mod) return;
     playSound('btn_click_soft_1');
@@ -4223,7 +4233,12 @@ export function LessonFlowScreen() {
                   ? (flashcardIndex / Math.max(1, mod.flashcards.length)) * 100
                   : phase === 'quizzes'
                   ? (quizIndex / Math.max(1, mod.quizzes.length)) * 100
-                  : 0) // singletons (intro/video/sim/recall/infographic/post-video) — bar stays flat until phase exits
+                  : phase === 'interactive-recall' && recallProgress.total > 0
+                  // Yoav 2026-06-11: השלמת משפטים — fill per prompt
+                  // solved (3-ish prompts each). Previously flat 0 →
+                  // felt broken.
+                  ? (recallProgress.current / recallProgress.total) * 100
+                  : 0) // remaining singletons (intro/video/sim/infographic/post-video) — bar stays flat until phase exits
               : pctLessonWide;
             const isOnFire = consecutiveCorrect >= 3;
             const barColors: [string, string, string] = isOnFire ? ['#fbbf24', '#f97316', '#ef4444'] : [unitColors.glow, unitColors.glow, unitColors.bg];
@@ -4411,6 +4426,7 @@ export function LessonFlowScreen() {
               moduleId={mod.id}
               unitColors={unitColors}
               onComplete={handleInteractiveRecallComplete}
+              onProgress={handleInteractiveRecallProgress}
             />
           </Animated.View>
         )}
