@@ -2444,6 +2444,18 @@ export function LessonFlowScreen() {
 
   const handleIntroStart = useCallback(() => {
     if (!mod) return;
+    // mod-0-1 onboarding (Yoav 2026-06-11): after the coin drag, do NOT
+    // start the flashcards phase (audio + image prefetch wait). Bounce
+    // STRAIGHT to the learn map with the module's topic tree expanded.
+    // The user picks the next chip ("הכפתור המוזהב") manually — this is
+    // the moment we hand them the wheel. No transient loading overlay,
+    // no flashcard audio preroll ("בלי השהיה").
+    if (mod.id === 'mod-0-1') {
+      router.replace(
+        `/(tabs)/learn?completedPhase=intro&completedModuleId=${encodeURIComponent(mod.id)}&expandedModule=${encodeURIComponent(mod.id)}&onboardingPhase=welcome` as never,
+      );
+      return;
+    }
     const target: FlowPhase =
       SIM_FIRST_MODULES.has(mod.id) && MODULES_WITH_SIM.has(mod.id) ? "sim" : "flashcards";
     if (imagesReady) {
@@ -2451,7 +2463,7 @@ export function LessonFlowScreen() {
     } else {
       setPendingPostIntroPhase(target);
     }
-  }, [mod, imagesReady]);
+  }, [mod, imagesReady, router]);
 
   // Mark "in-lesson" so the Daily Bridge nudge (and any other session-level
   // CTA) knows not to interrupt the user mid-module.

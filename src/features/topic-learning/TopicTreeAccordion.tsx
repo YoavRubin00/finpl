@@ -281,16 +281,23 @@ export const TopicTreeAccordion = React.memo(function TopicTreeAccordion({
   const isGuest = useAuthStore((s) => s.isGuest);
   const [showWalkthroughPrompt, setShowWalkthroughPrompt] = useState(false);
   const walkthroughPromptFiredRef = useRef(false);
+  // R8 follow-up (Yoav 2026-06-11): walkthrough fires ONLY after the
+  // first non-intro chip ("הכפתור המוזהב הראשון") is completed — not at
+  // a % threshold. The intro alone doesn't count: the user has only
+  // watched a teaser at that point and hasn't yet earned the "I built
+  // something" moment that justifies the tour offer.
+  const completedNonIntroChipCount = useMemo(
+    () => topics.filter((t) => t.kind !== 'intro' && isCompletedMap[t.id]).length,
+    [topics, isCompletedMap],
+  );
   useEffect(() => {
     if (module.id !== 'mod-0-1') return;
     if (hasSeenAppWalkthrough) return;
     if (walkthroughPromptFiredRef.current) return;
-    // R8 U1 — ~10% = intro + 1 card. Brawl Stars rule: decision agency
-    // BEFORE first reward, not after momentum compounds.
-    if (summary.pct < 10) return;
+    if (completedNonIntroChipCount < 1) return;
     walkthroughPromptFiredRef.current = true;
     setShowWalkthroughPrompt(true);
-  }, [module.id, summary.pct, hasSeenAppWalkthrough]);
+  }, [module.id, completedNonIntroChipCount, hasSeenAppWalkthrough]);
 
   const handleTakeTour = () => {
     setShowWalkthroughPrompt(false);
