@@ -10,6 +10,7 @@ export const chapter4Data: Chapter = {
     {
       id: 'mod-4-19',
       title: 'שוק ההון',
+      learningMode: 'topic-tree',
       videoHook:
         'אני לא רק אוכל פה, אני אחד הבעלים של המקום הזה.',
       videoHookAsset: { uri: 'https://pub-34f62012f7364bb5bc3b560ea61b72ce.r2.dev/video/hook/module-19.mp4' },

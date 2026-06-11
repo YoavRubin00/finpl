@@ -6,6 +6,7 @@
 // top of everything else.
 
 import React, { useEffect, useState } from 'react';
+import { Platform } from 'react-native';
 import { fetchAppConfig, type AppConfig } from '../../lib/appConfig';
 import { getAppVersion, compareVersions } from '../../lib/version';
 import { ForceUpdateScreen } from './ForceUpdateScreen';
@@ -14,6 +15,10 @@ export function ForceUpdateGate(): React.JSX.Element | null {
   const [config, setConfig] = useState<AppConfig | null>(null);
 
   useEffect(() => {
+    // Force-update is a native-app concept (there's no App/Play Store build to
+    // install on web). On web `nativeApplicationVersion` is null → getAppVersion
+    // returns "0.0.0" → the gate would wrongly block every web session. Skip it.
+    if (Platform.OS === 'web') return;
     let cancelled = false;
     fetchAppConfig()
       .then((c) => {

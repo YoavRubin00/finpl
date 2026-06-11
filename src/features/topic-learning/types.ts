@@ -1,0 +1,141 @@
+/**
+ * Discrete component "kind" inside a module. Derived from existing fields on
+ * the legacy Module type — no DB / data shape change needed.
+ *
+ * R5 (2026-06-10): `video-hook` and `tutorial-video` retired per Yoav's
+ * spec ("תבטל את הסרטוני אינטרו בשיטה החדשה. רק האינטרו של שארק").
+ * The hook video still plays inside the legacy LessonFlowScreen when
+ * the user enters via the intro phase — it's just not a separate chip.
+ */
+export type TopicKind =
+  | 'intro'
+  /** Open-ended financial playground tied to the module's concept
+   *  (compound calculator, budget tweaker, etc). Yoav 2026-06-10 reframed
+   *  it as "ארגז חול" — distinct from `game`, which is a short scored
+   *  mini-game. Sim has no win condition; game does. */
+  | 'sim'
+  /** Short scored mini-game from the inter-module-games registry. Only
+   *  surfaces when `moduleGameMap` has a curated entry for the module. */
+  | 'game'
+  | 'cards'
+  /** R5.5: brought back per Yoav — the mid-lesson explainer (e.g.
+   *  fc-1-1-video for compound interest) was getting filtered out of
+   *  the cards loop with no surface to reach it. Now it's its own
+   *  chip, with the cards loop still filtering video flashcards so
+   *  the user doesn't see them twice. */
+  | 'tutorial-video'
+  | 'recall'
+  | 'podcast'
+  | 'couple-dilemma'
+  | 'quiz'
+  | 'infographic'
+  | 'post-video'
+  /** R6 2026-06-10 — every module gets a chat chip wired to the main
+   *  ChatScreen with topic-scoped preset questions (Yoav: "צאט עם
+   *  המורה... החווית משתמש תהיה כמו של הצאט הראשי"). The resolver
+   *  pins this kind to the second-to-last slot of every module's order
+   *  so it always lands right before shark-dilemma / sim-late. */
+  | 'chat'
+  /** Shark-dilemma — Captain Shark "what would you do?" prompt that
+   *  fires after the post-video celebration in the legacy flow. Surfaces
+   *  here as its own chip because the data backing it (dilemmasData)
+   *  exists for most modules including mod-1-1. */
+  | 'shark-dilemma';
+
+/**
+ * R5.11 (2026-06-10) — chip visual upgraded from emoji to Design System
+ * SVG. Yoav shipped a ready icon pack (`assets/Design System.zip`) and
+ * asked to use it instead of emojis. SVGs render via react-native-svg's
+ * SvgXml; the raw markup lives in `./topicSvgs.ts`.
+ */
+export interface TopicIconAsset {
+  /** Raw SVG markup. Rendered inside the chip's 78px circle at ~56px
+   *  via <SvgXml xml={svgXml} width={56} height={56}/>. */
+  svgXml: string;
+}
+
+export interface Topic {
+  /** Stable id, format `${moduleId}:${kind}`. Used as the persisted progress
+   *  key — DO NOT include any volatile state (timestamps, randomness). */
+  id: string;
+  moduleId: string;
+  kind: TopicKind;
+  /** Hebrew label shown on the chip. */
+  titleHe: string;
+  /** Asset for the chip icon — a single emoji per R5.2. */
+  iconAsset: TopicIconAsset;
+  /** Default ordering inside the module for the "Resume where I left off"
+   *  CTA — smaller = earlier in the canonical sequence. NOT used to gate
+   *  access; users can tap topics in any order. */
+  defaultOrder: number;
+}
+
+/** Persisted entry per completed topic. Keep it tiny — no transcripts,
+ *  scores, or audio offsets — those belong in the per-kind sub-stores. */
+export interface TopicProgressEntry {
+  completedAt: string; // ISO timestamp
+}
+
+export interface ModuleTopicSummary {
+  completed: number;
+  total: number;
+  /** 0-100 */
+  pct: number;
+  /** True the first time `pct >= TOPIC_COMPLETION_THRESHOLD * 100`. Stays
+   *  true forever once crossed — moves on the chest drop, never reverses. */
+  isModuleDone: boolean;
+  /** The first un-completed topic in canonical order, or null when all
+   *  topics are done. Drives the "המשך מאיפה שעצרתי" CTA. */
+  nextTopic: Topic | null;
+}
+
+/** 70% of resolved components done = module completed. Single point of
+ *  truth; bumping this re-grades every module's completion gate. */
+export const TOPIC_COMPLETION_THRESHOLD = 0.7;
+
+/** R8 T3.4 — chest rarity tiers, surface variable-reward dopamine.
+ *  Brawl Stars / Clash Royale benchmarks: tiered chest rolls keep the
+ *  user engaged past the "I already have one of those" plateau.
+ *
+ *  Distribution per roll (no pity): mythic 1%, rare 12%, common 87%.
+ *  Pity timer kicks in after {@link PITY_TIMER_THRESHOLD} commons in a
+ *  row — the next chest is GUARANTEED rare (no mythic upgrade, that
+ *  stays luck-only).
+ */
+export type ChestRarity = 'common' | 'rare' | 'mythic';
+
+/** Coin bonus multiplier stacked on top of the streak multiplier for
+ *  each rarity. Common = no bonus (baseline). Rare adds 50%. Mythic
+ *  triples the reward. Stays below the streak cap (×2.5) for common
+ *  to avoid economy break, but mythic intentionally goes higher
+ *  because it's < 1% drop rate. */
+export const CHEST_RARITY_BONUS: Record<ChestRarity, number> = {
+  common: 1,
+  rare: 1.5,
+  mythic: 3,
+};
+
+export const PITY_TIMER_THRESHOLD = 3;
+export const MYTHIC_DROP_RATE = 0.01;
+export const RARE_DROP_RATE = 0.12;
+
+/** R8 T3.1 — per-module first-chest threshold override map. The default
+ *  70% gate is fine for most modules but feels far in chapter 0 where the
+ *  user is still in onboarding and hasn't yet experienced a variable-reward
+ *  drop. Lowering to 50% on the first two intro modules gives the user
+ *  their first chest at ~3-4 min in instead of ~8-10 min — Brawl Stars
+ *  "90-second variable reward" rule applied to a learning context.
+ *
+ *  IMPORTANT: only the 70% (first-chest) gate is overridden here. The
+ *  master 100% chest still requires every chip to be done.
+ */
+export const MODULE_CHEST_THRESHOLD: Record<string, number> = {
+  'mod-0-1': 0.5,
+  'mod-0-2': 0.5,
+};
+
+/** Resolve the first-chest threshold for a module. Falls back to the
+ *  canonical 70% when there's no override. */
+export function chestThresholdFor(moduleId: string): number {
+  return MODULE_CHEST_THRESHOLD[moduleId] ?? TOPIC_COMPLETION_THRESHOLD;
+}

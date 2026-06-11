@@ -65,6 +65,9 @@ interface UsageState {
   hasSeenProWelcome: boolean;
   // One-time post-mod-0-4 paywall gate (shown once between mod-0-4 and mod-0-5)
   hasSeenMod04Paywall: boolean;
+  // One-time post-mod-0-1b paywall gate (shown once between mod-0-1b and mod-0-2).
+  // Replaced the old post-walkthrough paywall (2026-06-11) — see LessonFlowScreen.
+  hasSeenMod01bPaywall: boolean;
 }
 
 interface UsageActions {
@@ -79,6 +82,7 @@ interface UsageActions {
   remainingUses: (feature: GatedFeature, isPro: boolean) => number;
   markProWelcomeSeen: () => void;
   markMod04PaywallSeen: () => void;
+  markMod01bPaywallSeen: () => void;
   reset: () => void;
 }
 
@@ -95,6 +99,7 @@ const initialState: UsageState = {
   lastUsageResetMonth: null,
   hasSeenProWelcome: false,
   hasSeenMod04Paywall: false,
+  hasSeenMod01bPaywall: false,
 };
 
 export const useUsageStore = create<UsageState & UsageActions>()(
@@ -262,6 +267,10 @@ export const useUsageStore = create<UsageState & UsageActions>()(
         set({ hasSeenMod04Paywall: true });
       },
 
+      markMod01bPaywallSeen: () => {
+        set({ hasSeenMod01bPaywall: true });
+      },
+
       reset: () => set(initialState),
     }),
     {
@@ -280,6 +289,7 @@ export const useUsageStore = create<UsageState & UsageActions>()(
         lastUsageResetMonth: state.lastUsageResetMonth,
         hasSeenProWelcome: state.hasSeenProWelcome,
         hasSeenMod04Paywall: state.hasSeenMod04Paywall,
+        hasSeenMod01bPaywall: state.hasSeenMod01bPaywall,
       }),
     },
   ),

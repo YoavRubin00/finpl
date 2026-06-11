@@ -45,6 +45,7 @@ import { queryClient } from "../../lib/queryClient";
 import type { SubscriptionState } from "../../lib/api/subscription";
 import { useRouter } from "expo-router";
 import { getConceptLabel } from "../social/LifelineModal";
+import { useTopicChatStore } from "../topic-learning/useTopicChatStore";
 import { AnimatedPressable } from "../../components/ui/AnimatedPressable";
 import { COMPANION_PERSONALITIES, getContextualSuggestions, getContextAwareGreeting } from "./chatData";
 import { buildSystemPrompt, type LessonContext } from "./buildChatPrompt";
@@ -572,6 +573,21 @@ export function ChatScreen({ lessonContext }: { lessonContext?: LessonContext } 
     [allCompletedModules, currentChapterId],
   );
 
+  // R6 Hotfix B: topic-tree chat chip handoff. When the user enters via
+  // a module's chat chip we receive a preset (moduleId + curated Hebrew
+  // FAQs) in the topic-chat store. We surface those as the initial
+  // suggestion strip and clear the preset on first send so a return
+  // visit doesn't keep showing stale module-scoped chips.
+  const topicChatPreset = useTopicChatStore((s) => s.preset);
+  const clearTopicChatPreset = useTopicChatStore((s) => s.clear);
+  const presetSuggestions = useMemo<ChatSuggestion[] | null>(() => {
+    if (!topicChatPreset) return null;
+    return topicChatPreset.questions.map((text) => ({
+      text,
+      moduleId: topicChatPreset.moduleId,
+    }));
+  }, [topicChatPreset]);
+
   const handleSuggestionTap = useCallback((text: string) => {
     setInput(text);
   }, []);
@@ -783,6 +799,11 @@ export function ChatScreen({ lessonContext }: { lessonContext?: LessonContext } 
   const sendMessage = useCallback(async () => {
     const text = input.trim();
     if (!text || loading) return;
+
+    // R6 Hotfix B: clear the topic-chat preset on first send so a later
+    // /chat visit doesn't keep showing stale module-scoped FAQs. The
+    // dynamic AI follow-ups take over from here.
+    clearTopicChatPreset();
 
     // Free-tier daily quota gate — input should already be disabled, this is a safety net
     const subData = queryClient.getQueryData<SubscriptionState | null>(subscriptionQueryKey);
@@ -1059,7 +1080,7 @@ export function ChatScreen({ lessonContext }: { lessonContext?: LessonContext } 
           >
             <Text style={chipStyles.extraText}>?</Text>
           </AnimatedPressable>
-          {(dynamicSuggestions ?? suggestions.slice(0, 2)).map((suggestion, idx) => (
+          {(dynamicSuggestions ?? presetSuggestions ?? suggestions.slice(0, 2)).map((suggestion, idx) => (
             <AnimatedPressable
               key={idx}
               onPress={() => handleSuggestionTap(suggestion.text)}

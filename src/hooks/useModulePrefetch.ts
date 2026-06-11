@@ -63,7 +63,12 @@ async function prefetchVideo(uri: string): Promise<void> {
       if (result.status === 200) {
         videoCache.set(uri, localPath);
         if (attempt > 0) {
-          captureEvent('video_prefetch_failed', {
+          // A retry that SUCCEEDS is a recovery, not a failure. Logging it
+          // under `video_prefetch_failed` inflated the failure dashboards
+          // (Yoav 2026-06-11: +505% spike was mostly transient-then-recovered
+          // Vercel Blob 403s from the new eager topic-tree prefetch). Use a
+          // distinct event so genuine final failures stay legible.
+          captureEvent('video_prefetch_recovered', {
             video_key: videoKeyFromUri(uri),
             platform: Platform.OS,
             reason: `recovered_after_${attempt}_retries`,
@@ -98,7 +103,8 @@ async function prefetchImageWithRetry(uri: string): Promise<void> {
       const ok = await ExpoImage.prefetch(uri);
       if (ok !== false) {
         if (attempt > 0) {
-          captureEvent('image_prefetch_failed', {
+          // Recovery, not failure — see video note above.
+          captureEvent('image_prefetch_recovered', {
             uri,
             file_key: uri.split('/').slice(-2).join('/'),
             platform: Platform.OS,
@@ -142,7 +148,8 @@ async function prefetchAudio(uri: string): Promise<void> {
       if (result.status === 200) {
         audioCache.set(uri, localPath);
         if (attempt > 0) {
-          captureEvent('audio_prefetch_failed', {
+          // Recovery, not failure — see video note above.
+          captureEvent('audio_prefetch_recovered', {
             audio_key: audioKeyFromUri(uri),
             platform: Platform.OS,
             reason: `recovered_after_${attempt}_retries`,

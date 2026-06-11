@@ -414,7 +414,7 @@ export function MortgageCalculator(): React.ReactElement {
             // Opens the native share sheet (iOS) / chooser (Android) so the
             // user can send the result via WhatsApp, Messages, Email, etc.
             Share.share({
-              message: `📊 בדקתי משכנתא ב-FinPlay 🦈\n\nהחזר חודשי: ${formatShekel(result.monthlyPayment)}\nתקופה: ${committedState.years} שנים\nסך ריבית: ${formatShekel(result.totalInterest)}\n\nתבדוק גם אתה ב-FinPlay`,
+              message: `📊 בדקתי משכנתא ב-FinPlay\n\nהחזר חודשי: ${formatShekel(result.monthlyPayment)}\nתקופה: ${committedState.years} שנים\nסך ריבית: ${formatShekel(result.totalInterest)}\n\nתבדוק גם אתה ב-FinPlay`,
             }).catch(() => { /* user dismissed — non-fatal */ });
           }}
         />

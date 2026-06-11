@@ -92,7 +92,20 @@
       "Bash(rm .git/COMMIT_MSG.txt)",
       "Bash(git ls-tree *)",
       "mcp__claude_ai_Notion__notion-fetch",
-      "mcp__claude_ai_Notion__notion-create-pages"
+      "mcp__claude_ai_Notion__notion-create-pages",
+      "Bash(vercel ls *)",
+      "Bash(curl -sI -o /dev/null -w 'fc-0-2-__TRACKED_VAR__: %{http_code}\\\\n' https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/infographics/mod-0-2/fc-0-2-__TRACKED_VAR__.png)",
+      "mcp__claude_ai_higgsfield__media_confirm",
+      "mcp__claude_ai_higgsfield__generate_image",
+      "Bash(ffmpeg -hide_banner -encoders)",
+      "Read(//tmp/**)",
+      "Bash(ffmpeg -y -i highfive.mp4 -filter_complex '[0:v]crop=720:720:280:0,fps=24,chromakey=0x04ab41:0.22:0.12,despill=type=green:mix=0.5,scale=256:256:flags=lanczos,format=yuva420p,split[a][b];[b]reverse[r];[a][r]concat=n=2:v=1[v]' -map [v] -loop 0 -an -c:v libwebp_anim -lossless 0 -q:v 78 -compression_level 6 test-highfive.webp)",
+      "mcp__claude_ai_higgsfield__show_generations",
+      "Bash(curl -sI https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/sound/modal_open_1.mp3)",
+      "Bash(magick identify *)",
+      "Bash(img2webp -loop 0 -d 42 -q 70 -m 6 coins-cropped/f-*.png -o shark-coins-v2-cropped.webp)",
+      "Bash(magick coins-frames/f-0060.png coins-source-frame60.png)",
+      "Bash(curl -s -X PUT -H \"Content-Type: image/png\" --data-binary @/tmp/captain-shark.png 'https://upload.higgsfield.ai/user_3Ag7CTqAcygcnLQdO6PuD3qQkb9/74fc103b-c12f-4c9b-b63f-7f77e5505699.png?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=AKIAYPNTVMCGYPZMTKFK%2F20260611%2Feu-north-1%2Fs3%2Faws4_request&X-Amz-Date=20260611T065108Z&X-Amz-Expires=86400&X-Amz-SignedHeaders=content-type%3Bhost&X-Amz-Signature=2fe68c706681593bef1d9a0770406d98b7e5ffe63cc9a09a9a4fb5e70046847b' -w \"HTTP %{http_code}\\\\n\")"
     ],
     "additionalDirectories": [
       "\\tmp",

@@ -109,6 +109,13 @@ import { TermsReconsentGate } from "../src/features/legal/TermsReconsentGate";
 import { configureRevenueCat } from "../src/services/revenueCat";
 import { AppWalkthroughOverlay } from "../src/features/onboarding/AppWalkthroughOverlay";
 import { StreakFreezeSaveModal } from "../src/features/streak/StreakFreezeSaveModal";
+import {
+  ComebackRewardModal,
+  COMEBACK_COINS,
+} from "../src/features/retention-loops/ComebackRewardModal";
+import { useComebackRewardStore } from "../src/features/retention-loops/useComebackRewardStore";
+import { SharkSkinsGate } from "../src/features/retention-loops/SharkSkinsGate";
+import { useStreakSkinWatcher } from "../src/features/retention-loops/useStreakSkinWatcher";
 import { StreakRepairModal } from "../src/features/streak/StreakRepairModal";
 import { useTutorialStore } from "../src/stores/useTutorialStore";
 import { useGoogleAuth } from "../src/features/auth/useGoogleAuth";
@@ -178,6 +185,29 @@ function StreakRepairModalGate() {
   return <StreakRepairModal visible={pending} onDismiss={dismiss} />;
 }
 
+/** R8 T3.2 — Comeback Reward gate. Reads `pendingClaim` from the
+ *  store (set by the boot hook below on lapse detection); on claim,
+ *  credits the user +200 coins + 1 streak freeze and clears the flag. */
+function ComebackRewardGate() {
+  const pendingClaim = useComebackRewardStore((s) => s.pendingClaim);
+  const lapsedDays = useComebackRewardStore((s) => s.lapsedDays);
+  const claim = useComebackRewardStore((s) => s.claim);
+  const addCoins = useEconomyUIStore((s) => s.addCoins);
+  const addStreakFreezes = useEconomyUIStore((s) => s.addStreakFreezes);
+  return (
+    <ComebackRewardModal
+      visible={pendingClaim}
+      lapsedDays={lapsedDays}
+      onClaim={() => {
+        try { addCoins(COMEBACK_COINS, 'comeback'); } catch { /* non-fatal */ }
+        try { addStreakFreezes(1); } catch { /* non-fatal */ }
+        claim();
+      }}
+      onDismiss={() => { claim(); }}
+    />
+  );
+}
+
 function RootLayoutInner() {
   useGoogleAuth();
   
@@ -195,6 +225,23 @@ function RootLayoutInner() {
   const { visible: aiVisible, dismiss: aiDismiss, navigate: aiNavigate, message: aiMessage } = useAIInsightBanner();
   const upgradeNudge = useUpgradeNudgeBanner();
 
+  // R8 T3.2 — Comeback Reward boot hook. Stamps `lastSeenAt` on every
+  // foreground; if the gap crosses 7 days, queues a pending claim that
+  // ComebackRewardGate surfaces on the next interactive paint. Runs
+  // exactly once per mount — the foreground watcher below handles
+  // subsequent re-opens within the same RN process.
+  useEffect(() => {
+    try {
+      useComebackRewardStore.getState().registerAppOpen(Date.now());
+    } catch { /* non-fatal */ }
+  }, []);
+
+  // R8 T3.5 — Captain Shark cosmetics watcher. Detects the 7-day
+  // streak crossing (unlock Gold + Fire) and streak breaks (revert
+  // to Classic + queue the lost-skin reveal). Idempotent on every
+  // streak change.
+  useStreakSkinWatcher();
+
   // ── Session time tracking: foreground/background events ──
   const foregroundEnteredAt = useRef<number | null>(Date.now());
   useEffect(() => {
@@ -206,6 +253,10 @@ function RootLayoutInner() {
         // immediately on resume, not on the next time the user navigates to
         // DuoLearnScreen. refreshQuests() is idempotent same-day.
         try { useDailyQuestsStore.getState().refreshQuests(); } catch { /* non-fatal */ }
+        // R8 T3.2 — re-check comeback lapse on every foreground (covers
+        // the "phone left charging for 8 days" pattern where the app is
+        // still in memory but the lapse window has elapsed).
+        try { useComebackRewardStore.getState().registerAppOpen(Date.now()); } catch { /* non-fatal */ }
       } else if (state === "background" || state === "inactive") {
         if (foregroundEnteredAt.current !== null) {
           const secs = Math.round((Date.now() - foregroundEnteredAt.current) / 1000);
@@ -487,6 +538,14 @@ function RootLayoutInner() {
       "salary-net-calculator", "tax-refund-calculator", "mortgage-calculator",
       "pension-fees-comparator", "breaking-news", "coming-soon",
       "net-worth-dashboard", "financial-profile",
+      // R6 topic-tree — dedicated per-module chat screen reached from
+      // the `chat` topic chip. Without listing it here the redirect
+      // guard below bounces the user back to /(tabs) before the screen
+      // can paint (Yoav: "בפועל הוא לא מצוביל לצאט").
+      "topic-chat",
+      // R7 — dedicated full-screen game route reached from the `game`
+      // topic chip; mirror reasoning to topic-chat above.
+      "topic-game",
     ].includes(segments[0] as string);
 
     if (!isAuthenticated) {
@@ -529,12 +588,18 @@ function RootLayoutInner() {
       // guests who want to upgrade to a real account.
       const onAuthOnboarding = inAuthGroup && (segments as string[])[1] === "onboarding";
       if (onAuthOnboarding) {
-        // First-time completion: drop directly into mod-0-1 (matches the
-        // intent of handleDone in ProfilingFlow). Returning user that already
-        // finished mod-0-1 → land on the learn map as before.
-        // Without this branch, this effect can race ProfilingFlow's own
-        // router.replace and override it with "/(tabs)".
-        const target = isMod01Complete ? "/(tabs)" : "/lesson/mod-0-1?chapterId=chapter-0";
+        // First-time completion: drop directly into mod-0-1 INTRO under
+        // topic-tree mode. R7 Epic B1 — after the intro finishes,
+        // LessonFlowScreen.replace ('returnTo=topic-tree') bounces the
+        // user to /(tabs)/learn with the mod-0-1 accordion expanded so
+        // they can see the cards chip glowing as the recommended next
+        // step (Yoav: "לאחר האונבורדינג... מובל לאינטרו... לאחר מכן
+        // נפתח לו מפת הלמידה של המודולה, שכרטיסיות הלמידה זוהרות").
+        // Returning user that already finished mod-0-1 → land on the
+        // learn map as before.
+        const target = isMod01Complete
+          ? "/(tabs)"
+          : "/lesson/mod-0-1?chapterId=chapter-0&startPhase=intro&returnTo=topic-tree";
         router.replace(target as never);
       } else if (!inTabsGroup && !inContentRoute && !inAuthGroup) {
         router.replace("/(tabs)");
@@ -604,6 +669,8 @@ function RootLayoutInner() {
               )}
               <FreezeSaveModalGate />
               <StreakRepairModalGate />
+              <ComebackRewardGate />
+              <SharkSkinsGate />
             </StreakCelebrationProvider>
         </RewardAnimationProvider>
       </GlobalErrorBoundary>

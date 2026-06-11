@@ -149,10 +149,10 @@ import type { LessonContext } from "../chat/buildChatPrompt";
 
 const AnimatedExpoImage = Animated.createAnimatedComponent(ExpoImage);
 
-type FlowPhase = "hero" | "intro" | "flashcards" | "podcast" | "couple-dilemma" | "interactive-recall" | "quizzes" | "sim-intro" | "sim" | "module-infographic" | "post-infographic-video" | "shark-dilemma" | "summary" | "video";
+type FlowPhase = "hero" | "intro" | "flashcards" | "podcast" | "couple-dilemma" | "interactive-recall" | "quizzes" | "mid-quiz-video" | "sim-intro" | "sim" | "module-infographic" | "post-infographic-video" | "shark-dilemma" | "summary" | "video";
 
 /** Full-screen character art shown when first opening a module */
-const MODULE_HERO_MAP: Record<string, { uri: string } | number> = {
+export const MODULE_HERO_MAP: Record<string, { uri: string } | number> = {
   "mod-4-19": require("../../../assets/IMAGES/finn/finn-splash.png") as number,
   "mod-5-25": { uri: 'https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/infographics/finn-freedom.png' },
 };
@@ -198,7 +198,7 @@ const MODULES_WITH_INTERACTIVE_RECALL = new Set([
 ]);
 
 /** Modules with a NotebookLM-generated infographic shown before the summary/chest */
-const MODULE_INFOGRAPHIC_MAP: Record<string, { uri: string }> = {
+export const MODULE_INFOGRAPHIC_MAP: Record<string, { uri: string }> = {
   // 2026-06-04: mod-0-1 entry removed as part of the mod-0-1 split. The
   // infographic appeared BEFORE the summary card; with the summary card
   // moved to mod-0-1b, the infographic no longer fits in mod-0-1's flow.
@@ -211,7 +211,7 @@ const MODULE_INFOGRAPHIC_MAP: Record<string, { uri: string }> = {
 };
 
 /** Modules with a video shown AFTER the infographic (before the chest) */
-const MODULE_POST_VIDEO_MAP: Record<string, string> = {
+export const MODULE_POST_VIDEO_MAP: Record<string, string> = {
   // 2026-06-04: mod-0-1 entry removed as part of the mod-0-1 split. The
   // Finn post-summary video summed up loan/pension content that has moved
   // to mod-0-1b, so it no longer matches mod-0-1's reduced scope. mod-0-1b
@@ -2255,7 +2255,26 @@ function chapterStoreKey(chapterId: string): string {
 
 export function LessonFlowScreen() {
   const isFocused = useIsFocused();
-  const { id, chapterId, replay } = useLocalSearchParams<{ id: string; chapterId?: string; replay?: string }>();
+  const { id, chapterId, replay, startPhase, returnTo, cardFilter } = useLocalSearchParams<{
+    id: string;
+    chapterId?: string;
+    replay?: string;
+    /** Topic-tree pilot (R4 2026-06-09): when present, the lesson jumps
+     *  STRAIGHT to this phase on mount instead of running the regular
+     *  hero/video/intro chain. Used by DuoLearnScreen's chip-tap handler
+     *  so chips open the legacy LessonFlowScreen at the matching phase
+     *  with all the host chrome intact (chat, shark callouts, bottom bar). */
+    startPhase?: string;
+    /** Topic-tree exit signal — when 'topic-tree', the lesson does NOT
+     *  advance to the next phase on phase-complete. Instead it
+     *  router.back()'s with `?completedPhase=X` so DuoLearnScreen can
+     *  mark the matching topic done. */
+    returnTo?: string;
+    /** R5 cards/tutorial-video split — 'video' keeps only videoUri
+     *  flashcards (tutorial-video chip), 'non-video' filters them out
+     *  (regular cards chip). */
+    cardFilter?: string;
+  }>();
   const isReplay = replay === '1';
   const router = useRouter();
   /** Safe back: go back if possible, otherwise fall back to tabs home */
@@ -2709,6 +2728,20 @@ export function LessonFlowScreen() {
       navigateToNextModuleNormally();
       return;
     }
+    // After mod-0-1b (non-Pro): show the Pro paywall once, before mod-0-2.
+    // Moved here from the post-walkthrough slot (2026-06-11) — analytics showed
+    // the old early paywall fired before the user got value: ~38% of onboarders
+    // hit it during module 0-1 and first-module completion cratered. Now the
+    // user finishes the full intro module (0-1 + 0-1b) first, THEN sees the
+    // paywall; both dismiss and purchase route forward to mod-0-2 via returnTo,
+    // so they always continue. Shown a single time.
+    if (id === 'mod-0-1b' && !isPro && !useUsageStore.getState().hasSeenMod01bPaywall) {
+      useUsageStore.getState().markMod01bPaywallSeen();
+      try { captureEvent('paywall_viewed', { paywall: 'post_mod_0_1b', source: 'post_mod_0_1b' }); } catch { /* non-fatal */ }
+      const returnTo = '/lesson/mod-0-2?chapterId=chapter-0';
+      router.replace(`/pricing?returnTo=${encodeURIComponent(returnTo)}` as never);
+      return;
+    }
     // Register CTA cadence (guests only): fire after mod-0-2/3/4/5, but ONLY on
     // odd-indexed modules (mod-0-2, mod-0-4) where the PostCelebration "Netflix?"
     // modal doesn't fire. This prevents the two end-of-module modals from stacking
@@ -2804,6 +2837,26 @@ export function LessonFlowScreen() {
   }
 
   const [phase, setPhase] = useState<FlowPhase>(() => {
+    // Topic-tree pilot (R4 → R5.6): explicit startPhase from query
+    // overrides everything else — replay checkpoints, video hooks,
+    // hero. Used when DuoLearnScreen's topic chip taps deep-link
+    // straight into a phase. R5.6 (2026-06-10) widens the allowed set
+    // from just RESTORABLE_PHASES + intro/video/hero to every
+    // user-tappable phase, so taps on the sim / infographic /
+    // post-video chips actually land at those phases instead of
+    // silently falling back to intro (Yoav: "הסרטון לא נפתח", "לא
+    // כל דבר פותח את מה שהוא אמור").
+    const ALLOWED_START_PHASES = new Set<string>([
+      'hero', 'video', 'intro',
+      'flashcards', 'interactive-recall', 'quizzes',
+      'sim-intro', 'sim',
+      'podcast', 'couple-dilemma',
+      'module-infographic', 'post-infographic-video',
+      'shark-dilemma',
+    ]);
+    if (startPhase && ALLOWED_START_PHASES.has(startPhase)) {
+      return startPhase as FlowPhase;
+    }
     // On replay (user explicitly chose "do it again"), ignore the resume
     // checkpoint — they want to start from intro, not pick up at quizzes.
     const r = !isReplay && mod?.id ? useChapterUIStore.getState().moduleResume[mod.id] : undefined;
@@ -2815,8 +2868,37 @@ export function LessonFlowScreen() {
   const setVideoPlaying = useAudioStore((s) => s.setVideoPlaying);
 
   useEffect(() => {
-    setVideoPlaying(phase === "video" || phase === "post-infographic-video");
+    setVideoPlaying(phase === "video" || phase === "post-infographic-video" || phase === "mid-quiz-video");
   }, [phase]);
+
+  // remember the entry phase. The moment the lesson advances past it (the
+  // user finished the phase + tapped next), bounce back to DuoLearnScreen
+  // with `?completedPhase=X` so the topic tree can mark the matching topic
+  // done. Auto-advances (hero→video→intro) aren't a concern because chips
+  // always deep-link to a concrete user-facing phase.
+  const tt_initialPhaseRef = useRef<FlowPhase | null>(returnTo === 'topic-tree' ? phase : null);
+  const tt_exitFiredRef = useRef(false);
+  useEffect(() => {
+    if (returnTo !== 'topic-tree') return;
+    if (tt_exitFiredRef.current) return;
+    if (!tt_initialPhaseRef.current) return;
+    if (phase === tt_initialPhaseRef.current) return;
+    // Phase advanced — fire the exit. Use replace to drop this lesson route
+    // from history so router.back() inside the next user navigation doesn't
+    // land them back at a half-finished lesson.
+    tt_exitFiredRef.current = true;
+    const completed = tt_initialPhaseRef.current;
+    // R5.5: flashcards phase covers two chips — 'cards' and
+    // 'tutorial-video' — disambiguated by cardFilter. Pass it as
+    // completedKind so the consumer marks the right topic done.
+    const completedKind =
+      completed === 'flashcards' && cardFilter === 'video' ? 'tutorial-video'
+      : completed === 'flashcards' && cardFilter === 'non-video' ? 'cards'
+      : '';
+    const kindParam = completedKind ? `&completedKind=${encodeURIComponent(completedKind)}` : '';
+    const path = `/(tabs)/learn?completedPhase=${encodeURIComponent(completed)}&completedModuleId=${encodeURIComponent(id ?? '')}&expandedModule=${encodeURIComponent(id ?? '')}${kindParam}`;
+    router.replace(path as never);
+  }, [phase, returnTo, id, router]);
 
   // Fire once per lesson session when the user actually reaches the summary
   // screen — closes the funnel gap between lesson_started and lesson_completed
@@ -2851,6 +2933,34 @@ export function LessonFlowScreen() {
     const r = !isReplay && mod?.id ? useChapterUIStore.getState().moduleResume[mod.id] : undefined;
     return (r && RESTORABLE_PHASES.has(r.phase as FlowPhase)) ? r.flashcardIndex : 0;
   });
+
+  // R5.5 (2026-06-10) — topic-tree flashcards filter. Two modes:
+  //   cardFilter='non-video' (cards chip) — skip videoUri flashcards
+  //   cardFilter='video' (tutorial-video chip) — skip non-video cards
+  // Whenever the current flashcard doesn't match the desired class,
+  // jump to the next matching one; if none remain, bump past the end
+  // so the "end of flashcards → next phase" path fires and the
+  // topic-tree exit effect takes over.
+  useEffect(() => {
+    if (returnTo !== 'topic-tree') return;
+    if (cardFilter !== 'non-video' && cardFilter !== 'video') return;
+    if (phase !== 'flashcards') return;
+    if (!mod) return;
+    const flashcards = mod.flashcards;
+    const matches = (i: number) => {
+      const isVideo = Boolean(flashcards[i]?.videoUri);
+      return cardFilter === 'video' ? isVideo : !isVideo;
+    };
+    if (flashcardIndex >= flashcards.length) return;
+    if (matches(flashcardIndex)) return;
+    for (let j = flashcardIndex + 1; j < flashcards.length; j++) {
+      if (matches(j)) {
+        setFlashcardIndex(j);
+        return;
+      }
+    }
+    setFlashcardIndex(flashcards.length);
+  }, [phase, flashcardIndex, cardFilter, returnTo, mod]);
 
   // Podcast injection — appears between flashcards (at midpoint). Replays naturally
   // if the user navigates back to the trigger card; no one-shot lockout.
@@ -2897,6 +3007,7 @@ export function LessonFlowScreen() {
       "couple-dilemma": "other",
       "interactive-recall": "interactive-recall",
       quizzes: "quizzes",
+      "mid-quiz-video": "other",
       "sim-intro": "sim",
       sim: "sim",
       "module-infographic": "other",
@@ -2960,6 +3071,13 @@ export function LessonFlowScreen() {
     const r = !isReplay && mod?.id ? useChapterUIStore.getState().moduleResume[mod.id] : undefined;
     return (r && RESTORABLE_PHASES.has(r.phase as FlowPhase)) ? r.quizIndex : 0;
   });
+  // The module's "fun" Finn video (MODULE_POST_VIDEO_MAP) now plays INLINE
+  // mid-quiz instead of as a standalone phase after the infographic (Yoav
+  // 2026-06-10). This guards against showing it twice: once it's been played
+  // mid-quiz the trailing post-infographic-video phase self-skips. Stays false
+  // when the module has too few quizzes to host a mid-point, so that the
+  // trailing phase still plays it as a fallback.
+  const funVideoShownRef = useRef(false);
   const [consecutiveCorrect, setConsecutiveCorrect] = useState(() => {
     const r = !isReplay && mod?.id ? useChapterUIStore.getState().moduleResume[mod.id] : undefined;
     return (r && RESTORABLE_PHASES.has(r.phase as FlowPhase)) ? r.consecutiveCorrect : 0;
@@ -3451,6 +3569,24 @@ export function LessonFlowScreen() {
 
   const advanceQuiz = useCallback(() => {
     if (!mod) return;
+    // Mid-quiz fun video: play the module's Finn video INLINE between two quiz
+    // questions (right after the middle question) instead of as a standalone
+    // full-screen phase after the infographic (Yoav 2026-06-10: "embedded
+    // mid-quiz, not a unit of its own"). Only when there's a real mid-point
+    // (≥3 quizzes, and the mid index isn't the last) — otherwise it falls
+    // through to the trailing post-infographic-video phase as a fallback.
+    const midIndex = Math.floor(mod.quizzes.length / 2);
+    if (
+      !funVideoShownRef.current &&
+      quizIndex === midIndex &&
+      midIndex < mod.quizzes.length - 1 &&
+      mod.id && MODULE_POST_VIDEO_MAP[mod.id]
+    ) {
+      funVideoShownRef.current = true;
+      mediumHaptic();
+      setPhase("mid-quiz-video");
+      return;
+    }
     if (quizIndex < mod.quizzes.length - 1) {
       setQuizIndex((prev) => prev + 1);
       tapHaptic();
@@ -3755,8 +3891,29 @@ export function LessonFlowScreen() {
     return <View style={{ flex: 1, backgroundColor: "#f8fafc" }} />;
   }
 
-  // Post-infographic video, full-screen, plays after the infographic before the chest
-  if (phase === "post-infographic-video" && mod && MODULE_POST_VIDEO_MAP[mod.id]) {
+  // Mid-quiz fun video — same player as the old post-infographic phase, but
+  // injected between two quiz questions and returning to the quiz run on
+  // finish, so it reads as part of the lesson flow rather than a standalone
+  // ceremony (Yoav 2026-06-10).
+  if (phase === "mid-quiz-video" && mod && MODULE_POST_VIDEO_MAP[mod.id]) {
+    return (
+      <VideoHookPlayer
+        videoUri={getCachedVideoPath(MODULE_POST_VIDEO_MAP[mod.id])}
+        hookText={mod.videoHook ?? ""}
+        onFinish={() => { setQuizIndex((i) => i + 1); setPhase("quizzes"); }}
+        unitColors={unitColors}
+      />
+    );
+  }
+  if (phase === "mid-quiz-video") {
+    setQuizIndex((i) => i + 1);
+    setPhase("quizzes");
+    return <View style={{ flex: 1, backgroundColor: "#f8fafc" }} />;
+  }
+
+  // Post-infographic video, full-screen, plays after the infographic before the
+  // chest. Now a FALLBACK: skipped when the fun video already played mid-quiz.
+  if (phase === "post-infographic-video" && mod && MODULE_POST_VIDEO_MAP[mod.id] && !funVideoShownRef.current) {
     return (
       <VideoHookPlayer
         videoUri={getCachedVideoPath(MODULE_POST_VIDEO_MAP[mod.id])}
@@ -3944,7 +4101,7 @@ export function LessonFlowScreen() {
                 : phase === "couple-dilemma"
                   ? "הדילמות של הזוג הצעיר"
                   : phase === "interactive-recall"
-                    ? "בואו נתרגל"
+                    ? "השלמת משפטים"
                     : mod.title;
             if (phase === "flashcards") {
               const cardText = mod.flashcards[flashcardIndex]?.text ?? "";
@@ -4013,7 +4170,18 @@ export function LessonFlowScreen() {
                 : phase === "quizzes" ? 1 + mod.flashcards.length + quizIndex + breakOffset
                 : phase === "sim-intro" || phase === "sim" ? 1 + mod.flashcards.length + mod.quizzes.length + breakOffset
                 : totalSteps);
-            const pct = Math.min((currentStep / totalSteps) * 100, 100);
+            // Topic-tree (R5): the user entered at a specific phase via a
+            // chip, so the bar should reflect only that phase's progress
+            // — not the whole lesson. Otherwise cards reads "12% of lesson"
+            // which is unhelpful inside the topic-tree pilot.
+            const pctLessonWide = Math.min((currentStep / totalSteps) * 100, 100);
+            const pct = returnTo === 'topic-tree'
+              ? (phase === 'flashcards'
+                  ? (flashcardIndex / Math.max(1, mod.flashcards.length)) * 100
+                  : phase === 'quizzes'
+                  ? (quizIndex / Math.max(1, mod.quizzes.length)) * 100
+                  : 0) // singletons (intro/video/sim/recall/infographic/post-video) — bar stays flat until phase exits
+              : pctLessonWide;
             const isOnFire = consecutiveCorrect >= 3;
             const barColors: [string, string, string] = isOnFire ? ['#fbbf24', '#f97316', '#ef4444'] : [unitColors.glow, unitColors.glow, unitColors.bg];
             const barShadow = isOnFire ? '#f97316' : unitColors.glow;
