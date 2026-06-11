@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text, Pressable, Modal, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import Animated, { FadeIn, FadeInUp } from 'react-native-reanimated';
+import Animated, { FadeIn, FadeInUp, useReducedMotion } from 'react-native-reanimated';
 import { Image as ExpoImage } from 'expo-image';
 import { Anchor, Coins, Shield } from 'lucide-react-native';
 import { FINN_HELLO } from './finnMascotConfig';
@@ -20,6 +20,10 @@ interface ComebackRewardModalProps {
   /** Tap "אסוף את המתנה" — parent grants coins + 1 streak freeze and
    *  clears the pending claim. */
   onClaim: () => void;
+  /** Tap "אולי אחר כך" or Android-back — clears the pending claim WITHOUT
+   *  granting the reward. Distinct from onClaim so dismissing isn't a free
+   *  coin grant (Yoav 2026-06-11 QA: skip used to call onClaim → leak). */
+  onDismiss: () => void;
 }
 
 /**
@@ -35,29 +39,38 @@ export function ComebackRewardModal({
   visible,
   lapsedDays,
   onClaim,
+  onDismiss,
 }: ComebackRewardModalProps): React.ReactElement | null {
+  const reduceMotion = useReducedMotion();
   if (!visible) return null;
 
   const handleClaim = () => {
     successHaptic();
     onClaim();
   };
+  const handleDismiss = () => {
+    tapHaptic();
+    onDismiss();
+  };
 
   // Copy adapts to lapse duration — short lapse stays warm, long lapse
   // leans on "we missed you" intimacy instead of pretending nothing
   // happened.
+  // R8 follow-up (Yoav 2026-06-11): drop the shark emoji from the headline.
+  // The FINN_HELLO mascot at the top of the card already carries the
+  // shark identity — no need for the emoji crutch.
   const headline = lapsedDays >= 30
     ? 'ברוך השב! ⚓'
-    : 'התגעגענו אליך! 🦈';
+    : 'התגעגענו אליך!';
   const subhead = lapsedDays >= 30
     ? `עברו ${lapsedDays} ימים — הקפטן שמר לך משהו`
     : `${lapsedDays} ימים בלעדיך — הנה מתנה חוזרת`;
 
   return (
-    <Modal visible transparent animationType="fade" statusBarTranslucent>
-      <View style={styles.backdrop}>
+    <Modal visible transparent animationType="fade" statusBarTranslucent onRequestClose={handleDismiss}>
+      <View style={styles.backdrop} accessibilityViewIsModal>
         <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
-          <Animated.View entering={FadeInUp.duration(380)} style={styles.card}>
+          <Animated.View entering={reduceMotion ? undefined : FadeInUp.duration(380)} style={styles.card}>
             <View style={styles.heroWrap}>
               <ExpoImage
                 source={FINN_HELLO}
@@ -67,7 +80,7 @@ export function ComebackRewardModal({
               />
             </View>
 
-            <Animated.View entering={FadeIn.delay(160).duration(360)}>
+            <Animated.View entering={reduceMotion ? undefined : FadeIn.delay(160).duration(360)}>
               <Text style={[styles.title, RTL_CENTER]} allowFontScaling={false}>
                 {headline}
               </Text>
@@ -77,7 +90,7 @@ export function ComebackRewardModal({
             </Animated.View>
 
             {/* Gift bullets — coins + streak freeze */}
-            <Animated.View entering={FadeIn.delay(240).duration(360)} style={styles.giftWrap}>
+            <Animated.View entering={reduceMotion ? undefined : FadeIn.delay(240).duration(360)} style={styles.giftWrap}>
               <View style={styles.giftRow}>
                 <Coins size={22} color="#b45309" strokeWidth={2.6} />
                 <Text style={[styles.giftText, RTL]} allowFontScaling={false}>
@@ -92,7 +105,7 @@ export function ComebackRewardModal({
               </View>
             </Animated.View>
 
-            <Animated.View entering={FadeIn.delay(320).duration(360)}>
+            <Animated.View entering={reduceMotion ? undefined : FadeIn.delay(320).duration(360)}>
               <Pressable
                 onPress={handleClaim}
                 style={styles.cta}
@@ -105,7 +118,7 @@ export function ComebackRewardModal({
                 </Text>
               </Pressable>
               <Pressable
-                onPress={() => { tapHaptic(); onClaim(); }}
+                onPress={handleDismiss}
                 style={styles.skipBtn}
                 accessibilityRole="button"
                 accessibilityLabel="אולי אחר כך"

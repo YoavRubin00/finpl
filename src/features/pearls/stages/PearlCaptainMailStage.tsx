@@ -104,7 +104,7 @@ export function PearlCaptainMailStage({ isActive, onContinue }: PearlCaptainMail
           ) : (
             <Animated.View entering={FadeInDown.delay(200).duration(300)} style={styles.speechBubble}>
               <Text style={styles.speechText} allowFontScaling={false}>
-                אין דואר חדש להיום. בקרוב יגיע 🦈
+                אין דואר חדש להיום. בקרוב יגיע
               </Text>
               <View style={styles.speechTail} />
             </Animated.View>

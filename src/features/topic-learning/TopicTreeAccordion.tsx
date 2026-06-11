@@ -9,7 +9,7 @@ import { useUpsertModuleProgress } from '../chapter-1-content/useProgress';
 import { ChestCelebrationModal } from './ChestCelebrationModal';
 import { Mod01WalkthroughPromptModal } from './Mod01WalkthroughPromptModal';
 import { useCompletedModulesStore } from '../economy/useCompletedModulesStore';
-import { useEconomyUIStore } from '../economy/useEconomyUIStore';
+import { useEconomyUIStore, fireEconomyDelta } from '../economy/useEconomyUIStore';
 import { useTutorialStore } from '../../stores/useTutorialStore';
 import { useAuthStore } from '../auth/useAuthStore';
 import type { Module } from '../chapter-1-content/types';
@@ -108,6 +108,19 @@ export const TopicTreeAccordion = React.memo(function TopicTreeAccordion({
   const past50Ref = useRef<boolean>(false);
   const past70Ref = useRef<boolean>(false);
   const past100Ref = useRef<boolean>(false);
+  // True once the 70% chest effect runs in the current mount. Lets the 100%
+  // effect detect a same-action 70%→100% jump and reuse the same chest roll
+  // instead of calling recordChestOpen twice (double streak/pity bump).
+  const seventyFiredThisMountRef = useRef<boolean>(false);
+  const lastChestRollRef = useRef<{ multiplier: number; rarity: ChestRarity } | null>(null);
+  // Single timer for the milestone toast. Without it, two crossings (25% then
+  // 50%) leave two dangling setTimeouts — the first nulls the second's toast
+  // early, and an unmount mid-toast set state on an unmounted component
+  // (Yoav 2026-06-11 QA). Clear-before-set + unmount cleanup fixes both.
+  const milestoneTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => () => {
+    if (milestoneTimerRef.current) clearTimeout(milestoneTimerRef.current);
+  }, []);
   // R8 U4 — mid-module micro-celebration toast (25% / 50%).
   // Hay Day / Duolingo rhythm: variable rewards every 1-2 milestones
   // instead of 70%-only silence.
@@ -159,7 +172,8 @@ export const TopicTreeAccordion = React.memo(function TopicTreeAccordion({
       tapHaptic();
       try { playSound('btn_click_soft_4'); } catch { /* non-fatal */ }
       setMilestoneToast({ label: 'התחלת מעולה! ¼ הדרך', emoji: '✨' });
-      setTimeout(() => setMilestoneToast(null), 1800);
+      if (milestoneTimerRef.current) clearTimeout(milestoneTimerRef.current);
+      milestoneTimerRef.current = setTimeout(() => setMilestoneToast(null), 1800);
     }
   }, [summary.pct, summary.isModuleDone, playSound]);
   useEffect(() => {
@@ -167,8 +181,12 @@ export const TopicTreeAccordion = React.memo(function TopicTreeAccordion({
       past50Ref.current = true;
       mediumHaptic();
       try { playSound('btn_click_soft_3'); } catch { /* non-fatal */ }
-      setMilestoneToast({ label: 'אמצע הדרך!', emoji: '🦈' });
-      setTimeout(() => setMilestoneToast(null), 1800);
+      // R8 follow-up (Yoav 2026-06-11): drop the shark emoji per global
+      // "no shark-emoji" rule. The toast color (deep ocean blue) + Captain Shark
+      // mascot elsewhere in the surface already carry the brand identity.
+      setMilestoneToast({ label: 'אמצע הדרך!', emoji: '🌊' });
+      if (milestoneTimerRef.current) clearTimeout(milestoneTimerRef.current);
+      milestoneTimerRef.current = setTimeout(() => setMilestoneToast(null), 1800);
     }
   }, [summary.pct, summary.isModuleDone, playSound]);
 
@@ -176,6 +194,9 @@ export const TopicTreeAccordion = React.memo(function TopicTreeAccordion({
   useEffect(() => {
     if (!summary.isModuleDone || past70Ref.current) return;
     past70Ref.current = true;
+    // Persist the "first crossed 70%" flag (moved out of summaryForModule,
+    // which is now a pure read — was a set()-during-render bug).
+    useTopicProgressStore.getState().stampModuleThreshold(module.id);
     // Module-completion analytics. The topic-tree method previously fired
     // NO `lesson_completed`, so every module learned this way was invisible
     // to the NSM / WoW-retention / streak / daily-lessons insights (all keyed
@@ -202,7 +223,14 @@ export const TopicTreeAccordion = React.memo(function TopicTreeAccordion({
     economyStore.addXP(MODULE_TT_XP, 'daily_task');
     // R6 streak + R8 T3.4 rarity. Multiplier from the 48h-streak chain,
     // rarity from the per-open Brawl Stars-style roll (with pity timer).
-    const { multiplier, rarity } = useTopicProgressStore.getState().recordChestOpen();
+    const roll = useTopicProgressStore.getState().recordChestOpen();
+    // Remember this roll so a same-action 70%→100% jump (tiny modules where
+    // one chip crosses both gates) reuses it instead of calling
+    // recordChestOpen AGAIN — which double-bumped streak + pity for a single
+    // module completion (Yoav 2026-06-11 QA).
+    seventyFiredThisMountRef.current = true;
+    lastChestRollRef.current = roll;
+    const { multiplier, rarity } = roll;
     const rarityBonus = CHEST_RARITY_BONUS[rarity];
     const coinsGranted = Math.round(MODULE_TT_COINS * multiplier * rarityBonus);
     economyStore.addCoins(coinsGranted, 'lesson');
@@ -217,11 +245,20 @@ export const TopicTreeAccordion = React.memo(function TopicTreeAccordion({
   useEffect(() => {
     if (summary.pct !== 100 || past100Ref.current) return;
     past100Ref.current = true;
+    // Persist the "first crossed 100%" flag (moved out of summaryForModule).
+    useTopicProgressStore.getState().stampModuleFullyComplete(module.id);
     // Stack the master reward ON TOP of the 70% chest's grant — the
     // user already pocketed that one; this is the bonus for finishing
     // every chip.
     economyStore.addXP(MASTER_TT_XP, 'daily_task');
-    const { multiplier, rarity } = useTopicProgressStore.getState().recordChestOpen();
+    // If the 70% chest fired in this SAME render commit (a one-chip jump from
+    // <70% straight to 100% on a small module), reuse its roll — that was one
+    // user action = one chest open, not two. Only roll a fresh open when the
+    // master chest is genuinely a later, separate session.
+    const roll = (seventyFiredThisMountRef.current && lastChestRollRef.current)
+      ? lastChestRollRef.current
+      : useTopicProgressStore.getState().recordChestOpen();
+    const { multiplier, rarity } = roll;
     const rarityBonus = CHEST_RARITY_BONUS[rarity];
     const coinsGranted = Math.round(MASTER_TT_COINS * multiplier * rarityBonus);
     economyStore.addCoins(coinsGranted, 'lesson');
@@ -332,7 +369,11 @@ export const TopicTreeAccordion = React.memo(function TopicTreeAccordion({
             if (multiplier === 2) {
               economyStore.addCoins(base, 'lesson');
             } else if (multiplier === 0) {
-              economyStore.addCoins(-base, 'lesson');
+              // `addCoins` early-returns on amount <= 0, so a DoN LOSS was a
+              // silent no-op (Yoav 2026-06-11 QA — user kept everything
+              // despite "lost it all" copy). Deduct via the canonical
+              // economy-delta pipe, which handles negative deltas.
+              fireEconomyDelta({ coinsDelta: -base });
             }
           }}
         />

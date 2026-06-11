@@ -86,7 +86,7 @@ export function htmlPage({ title, heading, bodyHtml, tone }: HtmlPageOptions): R
 <body style="margin:0;padding:48px 16px;background:#f1f5f9;font-family:-apple-system,'Segoe UI',Helvetica,Arial,sans-serif;color:#0f172a;direction:rtl;text-align:right;">
   <div style="max-width:560px;margin:0 auto;background:#ffffff;border-radius:16px;border:1px solid #e2e8f0;overflow:hidden;">
     <div style="padding:24px 28px;background:linear-gradient(135deg,#0a2540,#164e63);color:#ffffff;">
-      <div style="font-size:22px;font-weight:900;letter-spacing:-0.4px;">🦈 FinPlay</div>
+      <div style="font-size:22px;font-weight:900;letter-spacing:-0.4px;">FinPlay</div>
     </div>
     <div style="padding:28px;">
       <div style="display:inline-block;padding:6px 14px;border-radius:999px;background:${accentBg};color:${accent};font-weight:900;font-size:13px;margin-bottom:14px;">

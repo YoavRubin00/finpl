@@ -11,6 +11,7 @@ import Animated, {
   withTiming,
   withSpring,
   cancelAnimation,
+  useReducedMotion,
   Easing,
 } from 'react-native-reanimated';
 import LottieView from 'lottie-react-native';
@@ -114,9 +115,19 @@ export function ChestCelebrationModal({
   const glowScale = useSharedValue(1);
   const glowOpacity = useSharedValue(0.4);
   const bodyScale = useSharedValue(1);
+  const reduceMotion = useReducedMotion();
 
   useEffect(() => {
     if (!visible || opened) return;
+    // Honor reduce-motion: hold the chest static (no infinite pulse) for
+    // users with the OS setting on — matches GrowingTree / ModuleTopicLayout
+    // (Yoav 2026-06-11 QA: this modal was the only one ignoring it).
+    if (reduceMotion) {
+      glowScale.value = 1;
+      glowOpacity.value = 0.6;
+      bodyScale.value = 1;
+      return;
+    }
     glowScale.value = withRepeat(
       withSequence(
         withTiming(1.15, { duration: 700, easing: Easing.inOut(Easing.ease) }),
@@ -146,7 +157,7 @@ export function ChestCelebrationModal({
       cancelAnimation(glowOpacity);
       cancelAnimation(bodyScale);
     };
-  }, [visible, opened, glowScale, glowOpacity, bodyScale]);
+  }, [visible, opened, glowScale, glowOpacity, bodyScale, reduceMotion]);
 
   // Reset to "closed" state when modal toggles off.
   useEffect(() => {
@@ -396,7 +407,7 @@ export function ChestCelebrationModal({
           {opened && donResolved && !isFinale && (
             <Animated.View entering={FadeIn.delay(220).duration(400)} style={styles.forecastWrap}>
               <Text style={styles.forecastLabel} allowFontScaling={false}>
-                {`🦈 מחר התיבה`}
+                מחר התיבה
               </Text>
               <Text style={styles.forecastBody} allowFontScaling={false} numberOfLines={2}>
                 {nextChestForecastTopic()}

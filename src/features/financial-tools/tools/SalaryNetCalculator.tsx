@@ -247,7 +247,7 @@ export function SalaryNetCalculator(): React.ReactElement {
           iconLeft={<Share2 size={18} color="#ffffff" strokeWidth={2.6} />}
           onPress={() => {
             Share.share({
-              message: `💰 בדקתי ברוטו↔נטו ב-FinPlay 🦈\n\nהנטו שלי: ${formatShekel(result.netMonthly)}/חודש\n\nתבדוק גם אתה ב-FinPlay`,
+              message: `💰 בדקתי ברוטו↔נטו ב-FinPlay\n\nהנטו שלי: ${formatShekel(result.netMonthly)}/חודש\n\nתבדוק גם אתה ב-FinPlay`,
             }).catch(() => { /* user dismissed — non-fatal */ });
           }}
         />

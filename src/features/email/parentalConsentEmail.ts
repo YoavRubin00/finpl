@@ -73,7 +73,7 @@ export function buildParentalConsentEmail({
   <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="max-width:560px;margin:0 auto;background:#ffffff;border-radius:16px;overflow:hidden;border:1px solid #e2e8f0;">
     <tr>
       <td style="padding:28px 28px 8px 28px;background:linear-gradient(135deg,#0a2540,#164e63);color:#ffffff;">
-        <div style="font-size:24px;font-weight:900;letter-spacing:-0.4px;">🦈 FinPlay</div>
+        <div style="font-size:24px;font-weight:900;letter-spacing:-0.4px;">FinPlay</div>
         <div style="font-size:13px;opacity:0.85;margin-top:6px;">אפליקציית למידה פיננסית</div>
       </td>
     </tr>
@@ -200,7 +200,7 @@ export function buildPurchasePostNotificationEmail({
   <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="max-width:560px;margin:0 auto;background:#ffffff;border-radius:16px;overflow:hidden;border:1px solid #e2e8f0;">
     <tr>
       <td style="padding:28px 28px 8px 28px;background:linear-gradient(135deg,#0a2540,#164e63);color:#ffffff;">
-        <div style="font-size:24px;font-weight:900;letter-spacing:-0.4px;">🦈 FinPlay</div>
+        <div style="font-size:24px;font-weight:900;letter-spacing:-0.4px;">FinPlay</div>
         <div style="font-size:13px;opacity:0.85;margin-top:6px;">הודעה על רכישה</div>
       </td>
     </tr>

@@ -294,7 +294,7 @@ export function TaxRefundCalculator(): React.ReactElement {
           iconLeft={<Share2 size={18} color="#ffffff" strokeWidth={2.6} />}
           onPress={() => {
             Share.share({
-              message: `🧾 בדקתי החזר מס ב-FinPlay 🦈\n\nמגיע לי החזר מס משוער של ${formatShekel(result.estimatedRefund)}!\n\nתבדוק גם אתה ב-FinPlay`,
+              message: `🧾 בדקתי החזר מס ב-FinPlay\n\nמגיע לי החזר מס משוער של ${formatShekel(result.estimatedRefund)}!\n\nתבדוק גם אתה ב-FinPlay`,
             }).catch(() => { /* user dismissed — non-fatal */ });
           }}
         />

@@ -64,7 +64,7 @@ function mapServerFriend(row: {
   return {
     id: row.authId,
     displayName: row.displayName ?? 'חבר',
-    avatarEmoji: '🦈',
+    avatarEmoji: '👤',
     joinedAt: Date.parse(row.linkedAt) || Date.now(),
     hasCompletedOnboarding: true,
     yesterdayXP: 0,

@@ -22,7 +22,7 @@ interface Props {
 
 /**
  * Polished top bar matching the mockup:
- *   ←  ⋯           [קפטן שארק 🦈 AI · מחובר 🟢]
+ *   ←  ⋯           [קפטן שארק AI · מחובר 🟢]
  * Centered title block with status pill, framed by minimal nav controls.
  */
 export function SharkTabletHeader({ loading, onOpenHistory, historyCount = 0 }: Props): React.ReactElement {

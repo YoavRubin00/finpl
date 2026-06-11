@@ -50,7 +50,7 @@ function getDayContent(
   const days: DayContent[] = [
     // ── 0 · Sunday, Weekly review ──────────────────────────────────────────
     {
-      subject: `פרסומת | שארק עשה לך סיכום שבועי 🦈`,
+      subject: `פרסומת | שארק עשה לך סיכום שבועי`,
       headline: `${name}, הנה השבוע שלך`,
       sharkImg: SHARK_HAPPY,
       sharkAlt: 'שארק שמח',
@@ -77,7 +77,7 @@ function getDayContent(
 
     // ── 1 · Monday, New week ────────────────────────────────────────────────
     {
-      subject: `פרסומת | שבוע חדש. שארק מחכה. 🦈`,
+      subject: `פרסומת | שבוע חדש. שארק מחכה.`,
       headline: `${name}, שני, פתחו דף חדש`,
       sharkImg: SHARK_FIRE,
       sharkAlt: 'שארק עם אש',
@@ -146,7 +146,7 @@ function getDayContent(
 
     // ── 5 · Friday, FOMO / urgency ──────────────────────────────────────────
     {
-      subject: `פרסומת | הסוף שבוע מגיע. הרצף לא מנוח. 🦈`,
+      subject: `פרסומת | הסוף שבוע מגיע. הרצף לא מנוח.`,
       headline: `שישי, עוד שעות ספורות`,
       sharkImg: SHARK_FIRE,
       sharkAlt: 'שארק עם אש',
@@ -165,7 +165,7 @@ function getDayContent(
 
     // ── 6 · Saturday, Warm & light ──────────────────────────────────────────
     {
-      subject: `פרסומת | 🦈 שבת שלום, ${name}!`,
+      subject: `פרסומת | שבת שלום, ${name}!`,
       headline: `שבת שלום מהשארק 💙`,
       sharkImg: SHARK_HAPPY,
       sharkAlt: 'שארק שמח',
@@ -208,7 +208,7 @@ export function buildDailyEmailHtml(params: {
 
   <!-- Header -->
   <div style="background:linear-gradient(135deg,${BLUE},${DARK_BLUE});padding:28px 24px 0;text-align:center;">
-    <h1 style="color:white;margin:0 0 20px;font-size:26px;font-weight:900;letter-spacing:-0.5px;">🦈 FinPlay</h1>
+    <h1 style="color:white;margin:0 0 20px;font-size:26px;font-weight:900;letter-spacing:-0.5px;">FinPlay</h1>
     <!-- Shark mascot, bottom half emerges from header -->
     <img src="${c.sharkImg}" alt="${c.sharkAlt}"
          width="140" height="140"
@@ -319,7 +319,7 @@ export function buildWelcomeEmailHtml(params: {
   // alongside the app deep link, which is enough commercial overtone that
   // adding the prefix is the safer side of the line. User decision
   // 2026-06-03: "תשנה את הכותרת כדי שאני יהיה מוכן".
-  const subject = 'פרסומת | ברוכים הבאים ל-FinPlay 🦈';
+  const subject = 'פרסומת | ברוכים הבאים ל-FinPlay';
 
   const html = loadWelcomeTemplate()
     .split('{{name}}').join(escapeHtml(name))
@@ -369,7 +369,7 @@ interface RetentionVariantCopy {
 const RETENTION_VARIANTS: Record<RetentionVariantId, RetentionVariantCopy> = {
   // V1 — META / self-aware passive-aggressive
   shark_meta_v1: {
-    subject: 'פרסומת | תזכורת מספר שלוש, {{name}} 🦈',
+    subject: 'פרסומת | תזכורת מספר שלוש, {{name}}',
     headline: 'אולי אני עושה משהו לא בסדר?',
     bodyHtml: `<p style="margin:0 0 14px;">ניסיתי בעדינות. ניסיתי באימוג'ים. אפילו ניסיתי עם הבטחות של מטבעות.</p>
       <p style="margin:0 0 14px;">אולי הגיע הזמן שאני פשוט אשאל ישירות:</p>
@@ -416,7 +416,7 @@ const RETENTION_VARIANTS: Record<RetentionVariantId, RetentionVariantCopy> = {
 
   // V5 — WELCOME BACK
   shark_welcome_v1: {
-    subject: 'פרסומת | 🦈 חזרה רכה, {{name}}?',
+    subject: 'פרסומת | חזרה רכה, {{name}}?',
     headline: '{{name}}, נחזור בעדינות?',
     bodyHtml: `<p style="margin:0 0 14px;">בלי לחץ. בלי תזכורות מציקות. רק הזמנה.</p>
       <p style="margin:0 0 14px;">השארנו לך שיעור קל שמתאים בדיוק למי שחוזר אחרי הפסקה — מעניין, קצר, ומחזיר לקצב.</p>
