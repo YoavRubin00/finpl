@@ -17,6 +17,16 @@ const WAVE_PERIOD = 6;
 // ever clipped and flush-to-edge (offset 0) still reads as a comfortable
 // inset. Bumped 110→140 per Yoav 2026-06-10 ("תגדיל אותם טיפה יותר").
 const SCENE_SIZE = 140;
+// Visible viewport width for each scene. Clamped to the side GUTTER so the
+// loop's footprint can NEVER cross into the centered chip column (Yoav
+// 2026-06-11 QA: 140px loops overlapped the buttons). Gutter ≈ half of what's
+// left after the centered column, inside the accordion's ~20px horizontal
+// padding each side, minus a 6px safety gap. The clip reveals the INNER slice
+// (the side facing the path), so the character peeks toward the chips from
+// the margin instead of spilling over them.
+const COLUMN_W = Math.min(SCREEN_W * 0.5, 220);
+const SCENE_GUTTER_W = Math.max(0, (SCREEN_W - 40 - COLUMN_W) / 2);
+const SCENE_VISIBLE_W = Math.max(48, Math.min(Math.round(SCENE_SIZE * 0.62), Math.floor(SCENE_GUTTER_W) - 6));
 // Exactly TWO scenes per module (Yoav 2026-06-10: "2 וובפים ולא 5"): a themed
 // loop + a generic loop, anchored near these fractions of the column height —
 // one in the upper third, one in the lower third.
@@ -154,8 +164,9 @@ export const ModuleTopicLayout = React.memo(function ModuleTopicLayout({
               style={{
                 position: 'absolute',
                 top: s.top,
-                width: SCENE_SIZE,
+                width: SCENE_VISIBLE_W,
                 height: SCENE_SIZE,
+                overflow: 'hidden',
                 backgroundColor: 'transparent',
                 zIndex: 0,
                 ...(s.side === 'right' ? { right: s.offset } : { left: s.offset }),
@@ -169,6 +180,11 @@ export const ModuleTopicLayout = React.memo(function ModuleTopicLayout({
                   width: SCENE_SIZE,
                   height: SCENE_SIZE,
                   backgroundColor: 'transparent',
+                  // Reveal the INNER slice (facing the path): a left-gutter
+                  // loop shows its right portion, a right-gutter loop its
+                  // left — so the character peeks toward the chips, never
+                  // over them.
+                  marginLeft: s.side === 'left' ? -(SCENE_SIZE - SCENE_VISIBLE_W) : 0,
                 }}
               />
             </View>

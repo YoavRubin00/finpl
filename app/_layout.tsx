@@ -199,10 +199,11 @@ function ComebackRewardGate() {
       visible={pendingClaim}
       lapsedDays={lapsedDays}
       onClaim={() => {
-        try { addCoins(COMEBACK_COINS, 'signup-bonus'); } catch { /* non-fatal */ }
+        try { addCoins(COMEBACK_COINS, 'comeback'); } catch { /* non-fatal */ }
         try { addStreakFreezes(1); } catch { /* non-fatal */ }
         claim();
       }}
+      onDismiss={() => { claim(); }}
     />
   );
 }

@@ -2728,6 +2728,20 @@ export function LessonFlowScreen() {
       navigateToNextModuleNormally();
       return;
     }
+    // After mod-0-1b (non-Pro): show the Pro paywall once, before mod-0-2.
+    // Moved here from the post-walkthrough slot (2026-06-11) — analytics showed
+    // the old early paywall fired before the user got value: ~38% of onboarders
+    // hit it during module 0-1 and first-module completion cratered. Now the
+    // user finishes the full intro module (0-1 + 0-1b) first, THEN sees the
+    // paywall; both dismiss and purchase route forward to mod-0-2 via returnTo,
+    // so they always continue. Shown a single time.
+    if (id === 'mod-0-1b' && !isPro && !useUsageStore.getState().hasSeenMod01bPaywall) {
+      useUsageStore.getState().markMod01bPaywallSeen();
+      try { captureEvent('paywall_viewed', { paywall: 'post_mod_0_1b', source: 'post_mod_0_1b' }); } catch { /* non-fatal */ }
+      const returnTo = '/lesson/mod-0-2?chapterId=chapter-0';
+      router.replace(`/pricing?returnTo=${encodeURIComponent(returnTo)}` as never);
+      return;
+    }
     // Register CTA cadence (guests only): fire after mod-0-2/3/4/5, but ONLY on
     // odd-indexed modules (mod-0-2, mod-0-4) where the PostCelebration "Netflix?"
     // modal doesn't fire. This prevents the two end-of-module modals from stacking

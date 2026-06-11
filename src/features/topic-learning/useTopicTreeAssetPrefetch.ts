@@ -1,5 +1,5 @@
-import { useMemo } from 'react';
-import { useModulePrefetch } from '../../hooks/useModulePrefetch';
+import { useEffect, useMemo } from 'react';
+import { useModulePrefetch, prefetchStreamingVideo } from '../../hooks/useModulePrefetch';
 import {
   MODULE_HERO_MAP,
   MODULE_INFOGRAPHIC_MAP,
@@ -66,5 +66,17 @@ export function useTopicTreeAssetPrefetch(module: Module): { imagesReady: boolea
     return [...new Set(audio)];
   }, [module]);
 
-  return useModulePrefetch(imageUris, videoUris, audioUris);
+  // R6 fix (Yoav 2026-06-11): do NOT full-download videos on accordion
+  // expand. That eager `downloadAsync` of every hook/post/flashcard mp4 for
+  // 5 flagship modules drove a +505% `video_prefetch_failed` spike (transient
+  // Vercel Blob 403s × many assets the user may never reach). Instead warm
+  // only the first ~512KB via a Range request — primes the OS/edge cache for
+  // near-instant playback, persists nothing, and logs no failures. The full
+  // download still happens inside LessonFlowScreen once the user actually
+  // enters the lesson (i.e. has committed to the content).
+  useEffect(() => {
+    for (const uri of videoUris) prefetchStreamingVideo(uri);
+  }, [videoUris]);
+
+  return useModulePrefetch(imageUris, [], audioUris);
 }

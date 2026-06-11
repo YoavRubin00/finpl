@@ -22,6 +22,7 @@ import { useChapterUIStore } from '../chapter-1-content/useChapterUIStore';
 import { useProgress } from '../chapter-1-content/useProgress';
 import { useIsPro } from '../subscription/useSubscription';
 import { buildSystemPrompt } from '../chat/buildChatPrompt';
+import { streamChatRequest } from '../../utils/streamChat';
 import { getModuleChatFAQs, getDefaultFAQsForTitle } from './moduleChatFAQs';
 import { useTopicChatLimitStore, DAILY_LIMIT } from './useTopicChatLimitStore';
 import { chapter0Data } from '../chapter-0-content/chapter0Data';
@@ -90,20 +91,39 @@ export function TopicChatScreen(): React.ReactElement {
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
   const scrollRef = useRef<ScrollView>(null);
+  // Synchronous send-lock. `loading` is async state that lags a fast
+  // double-tap (two chips tapped in the same tick both see loading=false),
+  // which double-fired the request AND double-charged the daily quota. The
+  // ref flips synchronously so the second tap is dropped immediately.
+  const isSendingRef = useRef(false);
   const companionId: CompanionId = profile?.companionId ?? 'warren-buffett';
   const companion = COMPANIONS[companionId];
 
   const sendMessage = useCallback(async (text: string) => {
     const trimmed = text.trim();
-    if (!trimmed || loading) return;
-    if (!isPro && remaining <= 0) return;
+    if (!trimmed || loading || isSendingRef.current) return;
+    // Read the quota synchronously from the store at send-time — the
+    // subscribed `remaining` value can be stale across a fast double-tap.
+    if (!isPro && useTopicChatLimitStore.getState().remainingToday() <= 0) return;
+    isSendingRef.current = true;
     tapHaptic();
     setInput('');
     const userMsg: Message = { role: 'user', text: trimmed, timestamp: Date.now() };
+    // Snapshot the request transcript BEFORE we append the streaming
+    // placeholder, and map our 'assistant' role to the API's 'model'.
+    const reqMessages = [...messages, userMsg].map((m) => ({
+      role: (m.role === 'assistant' ? 'model' : 'user') as 'user' | 'model',
+      content: m.text,
+    }));
     setMessages((prev) => [...prev, userMsg]);
     setLoading(true);
     if (!isPro) recordSend();
     setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 60);
+
+    // Append an empty bot bubble that we fill as chunks stream in.
+    const botMsg: Message = { role: 'assistant', text: '', timestamp: Date.now() };
+    setMessages((prev) => [...prev, botMsg]);
+    let acc = '';
     try {
       const systemPrompt = buildSystemPrompt(
         displayName,
@@ -120,34 +140,41 @@ export function TopicChatScreen(): React.ReactElement {
             }
           : undefined,
       );
-      const res = await fetch('/api/chat', {
-        method: 'POST',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({
-          system: systemPrompt,
-          messages: [...messages, userMsg].map((m) => ({
-            role: m.role,
-            content: m.text,
-          })),
-        }),
-      });
-      const json = (await res.json()) as { text?: string; error?: string };
-      const reply = json.text ?? 'אופס, משהו השתבש. ננסה שוב?';
-      setMessages((prev) => [...prev, { role: 'assistant', text: reply, timestamp: Date.now() }]);
-      successHaptic();
+      const { ok } = await streamChatRequest(
+        { systemPrompt, messages: reqMessages },
+        (chunk) => {
+          acc += chunk;
+          setMessages((prev) => {
+            const copy = [...prev];
+            copy[copy.length - 1] = { ...botMsg, text: acc };
+            return copy;
+          });
+          scrollRef.current?.scrollToEnd({ animated: false });
+        },
+      );
+      if (!ok || !acc) {
+        setMessages((prev) => {
+          const copy = [...prev];
+          copy[copy.length - 1] = { ...botMsg, text: 'אופס, משהו השתבש. ננסה שוב?' };
+          return copy;
+        });
+      } else {
+        successHaptic();
+      }
       setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 80);
     } catch {
-      setMessages((prev) => [
-        ...prev,
-        { role: 'assistant', text: 'בעיית חיבור. ננסה שוב בעוד דקה?', timestamp: Date.now() },
-      ]);
+      setMessages((prev) => {
+        const copy = [...prev];
+        copy[copy.length - 1] = { ...botMsg, text: 'בעיית חיבור. ננסה שוב בעוד דקה?' };
+        return copy;
+      });
     } finally {
       setLoading(false);
+      isSendingRef.current = false;
     }
   }, [
     loading,
     isPro,
-    remaining,
     recordSend,
     displayName,
     profile,

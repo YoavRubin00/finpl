@@ -132,12 +132,6 @@ function getNodeOffset(i: number): number {
 // Per-arena lucide icon mapping for banners
 const ARENA_ICONS: Record<number, typeof Home> = { 0: Home, 1: Home, 2: Shield, 3: Scale, 4: TrendingUp, 5: Crown };
 
-// Glow color for the single ACTIVE node ("what to do next"). Matches the
-// addictive coin-gold used by the top wealth header (CLASH.goldLight in
-// constants/theme.ts → GlobalWealthHeader coins pill) so the next lesson reads
-// as the same gold reward currency rather than the arena's blue.
-const ACTIVE_GOLD = "#f5c842";
-
 // Per-arena color palettes
 const ARENA_COLORS: Record<number, { bg: string; dim: string; text: string; header: string; glow: string; bottom: string }> = {
   0: { bg: "#3b82f6", dim: "#dbeafe", text: "#ffffff", header: "#60a5fa", glow: "#93c5fd", bottom: "#1d4ed8" },

@@ -45,6 +45,13 @@ interface TopicProgressState {
   markTopicCompleted: (topic: Topic) => void;
   isTopicCompleted: (topicId: string) => boolean;
   summaryForModule: (moduleId: string, topics: Topic[]) => ModuleTopicSummary;
+  /** Idempotently persist the "first crossed 70%" / "first crossed 100%"
+   *  flags. Called from the chest-drop effects in TopicTreeAccordion — NOT
+   *  from summaryForModule, which must stay a pure read (stamping there ran
+   *  a set() during render → "update during render" warning + re-render
+   *  cascade; Yoav 2026-06-11 QA). */
+  stampModuleThreshold: (moduleId: string) => void;
+  stampModuleFullyComplete: (moduleId: string) => void;
   /** Record a chest open NOW. Bumps the streak (or resets it if the
    *  last open was > 48h ago) AND rolls rarity (with pity timer).
    *  Returns both the streak multiplier and the rolled rarity so the
@@ -119,37 +126,37 @@ export const useTopicProgressStore = create<TopicProgressState>()(
         const isModuleDone =
           total > 0 && completedCount / total >= moduleThreshold;
 
-        // Stamp the "first crossed" flips lazily on read — cheaper than wiring
-        // a derived effect in every consumer, idempotent because we check
-        // before writing. Persisted so analytics can backfill if the chest
-        // drop side-effect is interrupted.
-        if (isModuleDone && !state.modulesPastThreshold[moduleId]) {
-          set({
-            modulesPastThreshold: {
-              ...state.modulesPastThreshold,
-              [moduleId]: { firstCrossedAt: nowIso() },
-            },
-          });
-        }
-        // R6 Epic 5: same pattern for the 100% master chest gate.
-        if (
-          total > 0 &&
-          completedCount === total &&
-          !state.modulesFullyComplete[moduleId]
-        ) {
-          set({
-            modulesFullyComplete: {
-              ...state.modulesFullyComplete,
-              [moduleId]: { firstCrossedAt: nowIso() },
-            },
-          });
-        }
+        // PURE read — no set() here. The "first crossed" flags are stamped by
+        // stampModuleThreshold / stampModuleFullyComplete from the accordion's
+        // chest effects (see interface docstring).
 
         // Canonical "next topic" = first uncompleted in defaultOrder.
         const sorted = [...topics].sort((a, b) => a.defaultOrder - b.defaultOrder);
         const nextTopic = sorted.find((t) => !state.completed[t.id]) ?? null;
 
         return { completed: completedCount, total, pct, isModuleDone, nextTopic };
+      },
+
+      stampModuleThreshold: (moduleId) => {
+        const state = get();
+        if (state.modulesPastThreshold[moduleId]) return;
+        set({
+          modulesPastThreshold: {
+            ...state.modulesPastThreshold,
+            [moduleId]: { firstCrossedAt: nowIso() },
+          },
+        });
+      },
+
+      stampModuleFullyComplete: (moduleId) => {
+        const state = get();
+        if (state.modulesFullyComplete[moduleId]) return;
+        set({
+          modulesFullyComplete: {
+            ...state.modulesFullyComplete,
+            [moduleId]: { firstCrossedAt: nowIso() },
+          },
+        });
       },
 
       recordChestOpen: () => {

@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { View, Text, Pressable, Modal, StyleSheet, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import Animated, { FadeIn, FadeInUp } from 'react-native-reanimated';
+import Animated, { FadeIn, FadeInUp, useReducedMotion } from 'react-native-reanimated';
 import { Image as ExpoImage } from 'expo-image';
 import { Anchor, Check, Lock } from 'lucide-react-native';
 import { FINN_HAPPY } from './finnMascotConfig';
@@ -45,6 +45,7 @@ export function SharkSkinPickerModal({
   onDismiss,
 }: SharkSkinPickerModalProps): React.ReactElement | null {
   const [picked, setPicked] = useState<SharkSkinId>(current);
+  const reduceMotion = useReducedMotion();
   if (!visible) return null;
 
   const handlePick = (skin: SharkSkinId) => {
@@ -58,10 +59,10 @@ export function SharkSkinPickerModal({
   };
 
   return (
-    <Modal visible transparent animationType="fade" statusBarTranslucent>
-      <View style={styles.backdrop}>
+    <Modal visible transparent animationType="fade" statusBarTranslucent onRequestClose={onDismiss}>
+      <View style={styles.backdrop} accessibilityViewIsModal>
         <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
-          <Animated.View entering={FadeInUp.duration(380)} style={styles.card}>
+          <Animated.View entering={reduceMotion ? undefined : FadeInUp.duration(380)} style={styles.card}>
             <View style={styles.heroWrap}>
               <ExpoImage
                 source={FINN_HAPPY}
@@ -71,7 +72,7 @@ export function SharkSkinPickerModal({
               />
             </View>
 
-            <Animated.View entering={FadeIn.delay(160).duration(360)}>
+            <Animated.View entering={reduceMotion ? undefined : FadeIn.delay(160).duration(360)}>
               <Text style={[styles.title, RTL_CENTER]} allowFontScaling={false}>
                 שבעה ימים ברצף! 🔥
               </Text>
@@ -123,7 +124,7 @@ export function SharkSkinPickerModal({
               })}
             </ScrollView>
 
-            <Animated.View entering={FadeIn.delay(280).duration(360)}>
+            <Animated.View entering={reduceMotion ? undefined : FadeIn.delay(280).duration(360)}>
               <Pressable
                 onPress={handleConfirm}
                 style={styles.cta}

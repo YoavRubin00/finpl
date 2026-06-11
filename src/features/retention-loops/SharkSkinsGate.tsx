@@ -1,7 +1,7 @@
-import React from 'react';
+import React, { useEffect, useRef } from 'react';
 import { View, Text, Pressable, Modal, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import Animated, { FadeIn, FadeInUp } from 'react-native-reanimated';
+import Animated, { FadeIn, FadeInUp, useReducedMotion } from 'react-native-reanimated';
 import { Image as ExpoImage } from 'expo-image';
 import { Heart } from 'lucide-react-native';
 import { FINN_EMPATHIC } from './finnMascotConfig';
@@ -58,11 +58,20 @@ export function SharkSkinsGate(): React.ReactElement {
     selectSkin('classic');
   };
 
+  // Synchronous re-buy lock. The button is disabled only by !canAfford, so a
+  // fast double-tap before the modal unmounts fired fireEconomyDelta twice =
+  // -200 instead of -100 (Yoav 2026-06-11 QA). The ref blocks the second tap
+  // synchronously; it's reset whenever a NEW skin-loss surfaces.
+  const isRebuyingRef = useRef(false);
+  useEffect(() => { if (pendingSkinLost) isRebuyingRef.current = false; }, [pendingSkinLost]);
+
   const handleRebuy = (skin: SharkSkinId) => {
+    if (isRebuyingRef.current) return;
     if (coins < SKIN_REBUY_COST) {
       errorHaptic();
       return;
     }
+    isRebuyingRef.current = true;
     // Deduct coins via the canonical economy-delta pipe (mirrors the
     // pattern in useRealAssetsStore / useTradingStore). `fireEconomyDelta`
     // handles the optimistic local update + the persistence side effects.
@@ -103,13 +112,14 @@ interface SkinLostModalProps {
  *  skin was equipped. Offers a re-buy at SKIN_REBUY_COST coins (the
  *  "forgiving fallback" Yoav called out as a punishment-curve safeguard). */
 function SkinLostModal({ lostSkin, coins, onRebuy, onDismiss }: SkinLostModalProps): React.ReactElement {
+  const reduceMotion = useReducedMotion();
   const skinMeta = SHARK_SKINS.find((s) => s.id === lostSkin) ?? SHARK_SKINS[0];
   const canAfford = coins >= SKIN_REBUY_COST;
   return (
-    <Modal visible transparent animationType="fade" statusBarTranslucent>
-      <View style={lostStyles.backdrop}>
+    <Modal visible transparent animationType="fade" statusBarTranslucent onRequestClose={onDismiss}>
+      <View style={lostStyles.backdrop} accessibilityViewIsModal>
         <SafeAreaView style={lostStyles.safe} edges={['top', 'bottom']}>
-          <Animated.View entering={FadeInUp.duration(380)} style={lostStyles.card}>
+          <Animated.View entering={reduceMotion ? undefined : FadeInUp.duration(380)} style={lostStyles.card}>
             <View style={lostStyles.heroWrap}>
               <ExpoImage
                 source={FINN_EMPATHIC}
@@ -119,7 +129,7 @@ function SkinLostModal({ lostSkin, coins, onRebuy, onDismiss }: SkinLostModalPro
               />
             </View>
 
-            <Animated.View entering={FadeIn.delay(160).duration(360)}>
+            <Animated.View entering={reduceMotion ? undefined : FadeIn.delay(160).duration(360)}>
               <Text style={[lostStyles.title, RTL_CENTER]} allowFontScaling={false}>
                 הסקין נשבר 💔
               </Text>
@@ -128,7 +138,7 @@ function SkinLostModal({ lostSkin, coins, onRebuy, onDismiss }: SkinLostModalPro
               </Text>
             </Animated.View>
 
-            <Animated.View entering={FadeIn.delay(260).duration(360)}>
+            <Animated.View entering={reduceMotion ? undefined : FadeIn.delay(260).duration(360)}>
               <Pressable
                 onPress={() => onRebuy(lostSkin)}
                 disabled={!canAfford}

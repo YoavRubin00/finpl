@@ -17,7 +17,6 @@ import Animated, {
 import { ChevronLeft, ChevronRight } from "lucide-react-native";
 import { useTutorialStore } from "../../stores/useTutorialStore";
 import { useAuthStore } from "../auth/useAuthStore";
-import { useIsPro } from "../subscription/useSubscription";
 import { useNotificationStore } from "../notifications/useNotificationStore";
 import { useBannerCooldownStore } from "../notifications/useBannerCooldownStore";
 import { FINN_HELLO } from "../retention-loops/finnMascotConfig";
@@ -173,7 +172,6 @@ export function AppWalkthroughOverlay() {
   const [contentKey, setContentKey] = useState(0);
   const isMinor = useAuthStore((s) => s.profile?.ageGroup === "minor");
   const isGuest = useAuthStore((s) => s.isGuest);
-  const isPro = useIsPro();
   const setPendingPostWalkthroughCTA = useTutorialStore((s) => s.setPendingPostWalkthroughCTA);
 
   // Filter out Bridge step for minors (legal protection, no real-money features)
@@ -238,19 +236,19 @@ export function AppWalkthroughOverlay() {
     }
 
     try {
-      if (!isPro) {
-        try { captureEvent('paywall_viewed', { paywall: 'post_walkthrough', source: 'post_walkthrough', via }); } catch { /* non-fatal */ }
-        router.replace(`/pricing?returnTo=${encodeURIComponent('/(tabs)')}&source=post_walkthrough` as never);
-      } else {
-        // Walkthrough completes AFTER mod-0-1 (2026-05-27 redesign), so
-        // sending the user back to mod-0-1 here would force them to repeat
-        // a lesson they just finished. Drop them on the learn map instead.
-        router.replace("/(tabs)" as never);
-      }
+      // Paywall removed from the post-walkthrough slot (2026-06-11): analytics
+      // showed it fired too early — before the user got any value — and ~38% of
+      // onboarders hit it during module 0-1, cratering first-module completion.
+      // The paywall now fires after mod-0-1b (see LessonFlowScreen
+      // goToNextSequentialModule). Here we just drop the user on the learn map;
+      // the notification-permission banner (re-armed by handleNext above) prompts
+      // at the top and they continue straight into learning.
+      void via;
+      router.replace("/(tabs)" as never);
     } catch {
       // No-op — already on a safe route.
     }
-  }, [isGuest, isPro, router, setActiveScreen, setPendingPostWalkthroughCTA]);
+  }, [isGuest, router, setActiveScreen, setPendingPostWalkthroughCTA]);
 
   const handleNext = useCallback(() => {
     try {
