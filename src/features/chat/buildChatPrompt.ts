@@ -57,7 +57,19 @@ export function buildSystemPrompt(
     expert: "מומחה/ית",
   };
 
-  const ageLabel = profile.ageGroup === "minor" ? "קטין/ה" : "בוגר/ת";
+  // R8 pre-release audit (Yoav + הסורק 2026-06-11): when called with an
+  // empty profile (TopicChatScreen guest path passed `({} as never)`),
+  // the existing template interpolated `${undefined}` for birthYear and
+  // produced "גיל: בוגר/ת (שנת לידה undefined)" in the system prompt —
+  // the LLM saw a literal `undefined` string and replied around it.
+  // Guarding here keeps every caller safe even without sanitising at
+  // the call site.
+  const ageLabel = profile.ageGroup === "minor"
+    ? "קטין/ה"
+    : profile.ageGroup === "adult"
+      ? "בוגר/ת"
+      : "לא נקבע";
+  const birthYearLabel = profile.birthYear ?? "לא נקבע";
 
   const completedText =
     completedModules.length > 0
@@ -112,7 +124,7 @@ ${companion.tone}
 - שם: ${sanitizeForPrompt(displayName)}
 - מטרה: ${goalLabels[profile.financialGoal] ?? profile.financialGoal}
 - רמת ידע: ${profile.knowledgeLevel ? (knowledgeLabels[profile.knowledgeLevel] ?? profile.knowledgeLevel) : "לא נקבע"}
-- גיל: ${ageLabel} (שנת לידה ${profile.birthYear})
+- גיל: ${ageLabel} (שנת לידה ${birthYearLabel})
 
 ## התקדמות בלמידה
 - פרק פעיל: ${currentChapterId}

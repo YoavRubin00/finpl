@@ -252,14 +252,32 @@ export function ChestCelebrationModal({
     transform: [{ scale: bodyScale.value }],
   }));
 
+  // R8 pre-release audit (Yoav + הסורק 2026-06-11): track the 4 timers
+  // that fire over the 600ms reveal window so we can cancel them if
+  // the user dismisses the modal mid-reveal. Without this, setOpened()
+  // / the haptics fired against a component that had already unmounted
+  // (no observable crash thanks to expo-haptics swallowing, but a real
+  // setState-on-unmounted dev warning + wasted haptic on iOS).
+  const chestTimersRef = useRef<Array<ReturnType<typeof setTimeout>>>([]);
+  useEffect(() => {
+    if (!visible) {
+      chestTimersRef.current.forEach(clearTimeout);
+      chestTimersRef.current = [];
+    }
+  }, [visible]);
+  useEffect(() => () => {
+    chestTimersRef.current.forEach(clearTimeout);
+    chestTimersRef.current = [];
+  }, []);
+
   const handleChestTap = useCallback(() => {
     if (opened) return;
     // R8 J2 — Supercell-style escalating haptic curve over the 600ms
     // lottie reveal window. Flat double-heavy felt anticlimactic.
     tapHaptic();
-    setTimeout(() => mediumHaptic(), 150);
-    setTimeout(() => heavyHaptic(), 320);
-    setTimeout(() => { doubleHeavyHaptic(); successHaptic(); }, 540);
+    chestTimersRef.current.push(setTimeout(() => mediumHaptic(), 150));
+    chestTimersRef.current.push(setTimeout(() => heavyHaptic(), 320));
+    chestTimersRef.current.push(setTimeout(() => { doubleHeavyHaptic(); successHaptic(); }, 540));
     // R8 T1.4 — master chest plays `modal_open_4` (loudest); regular
     // 70% chest plays softer `modal_open_3`. Differentiates audibly.
     try { playSound(isFinale ? 'modal_open_4' : 'modal_open_3'); } catch { /* non-fatal */ }
@@ -269,7 +287,7 @@ export function ChestCelebrationModal({
     glowOpacity.value = withTiming(0, { duration: 350 });
     bodyScale.value = withSpring(1.18, { damping: 10, stiffness: 200 });
     lottieRef.current?.play();
-    setTimeout(() => setOpened(true), 600);
+    chestTimersRef.current.push(setTimeout(() => setOpened(true), 600));
   }, [opened, glowScale, glowOpacity, bodyScale, playSound, isFinale]);
 
   const handleContinue = useCallback(() => {

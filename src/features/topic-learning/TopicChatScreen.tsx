@@ -125,9 +125,14 @@ export function TopicChatScreen(): React.ReactElement {
     setMessages((prev) => [...prev, botMsg]);
     let acc = '';
     try {
+      // R8 pre-release audit fix: buildSystemPrompt now self-guards
+       // empty profile fields (birthYear, ageGroup) — see buildChatPrompt.ts.
+       // The previous `({} as never)` cast suppressed TypeScript while leaking
+       // `${undefined}` into the LLM prompt. We still pass an empty object
+       // here so the prompt remains usable for guest users without a profile.
       const systemPrompt = buildSystemPrompt(
         displayName,
-        profile ?? ({} as never),
+        (profile ?? {}) as Parameters<typeof buildSystemPrompt>[1],
         companionId,
         allCompletedModules,
         currentChapterId,
