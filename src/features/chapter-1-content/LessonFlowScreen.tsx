@@ -184,11 +184,13 @@ const TT_PHASE_TO_KIND: Partial<Record<FlowPhase, TopicKind>> = {
   'shark-dilemma': 'shark-dilemma',
 };
 
-/** Full-screen character art shown when first opening a module */
-export const MODULE_HERO_MAP: Record<string, { uri: string } | number> = {
-  "mod-4-19": require("../../../assets/IMAGES/finn/finn-splash.png") as number,
-  "mod-5-25": { uri: 'https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/infographics/finn-freedom.png' },
-};
+// MODULE_HERO_MAP / MODULE_INFOGRAPHIC_MAP / MODULE_POST_VIDEO_MAP were
+// extracted to ./moduleAssetMaps.ts (architect P0 pre-release audit
+// 2026-06-11) so topic-learning's prefetch hook can import them without
+// pulling in this 6k-line module. Re-exported here for back-compat with
+// the dozens of internal callsites still importing from this file.
+export { MODULE_HERO_MAP, MODULE_INFOGRAPHIC_MAP, MODULE_POST_VIDEO_MAP } from './moduleAssetMaps';
+import { MODULE_HERO_MAP, MODULE_INFOGRAPHIC_MAP, MODULE_POST_VIDEO_MAP } from './moduleAssetMaps';
 
 /** Modules that have a playable simulation game.
  *  2026-05-30 chapter-0 swap: BarterPuzzleScreen moved from mod-0-1 to
@@ -230,75 +232,8 @@ const MODULES_WITH_INTERACTIVE_RECALL = new Set([
   "mod-5-25", "mod-5-26",
 ]);
 
-/** Modules with a NotebookLM-generated infographic shown before the summary/chest */
-export const MODULE_INFOGRAPHIC_MAP: Record<string, { uri: string }> = {
-  // 2026-06-04: mod-0-1 entry removed as part of the mod-0-1 split. The
-  // infographic appeared BEFORE the summary card; with the summary card
-  // moved to mod-0-1b, the infographic no longer fits in mod-0-1's flow.
-  // mod-0-1b is short and doesn't need an extra infographic. See
-  // plans/0-2-toasty-torvalds.md.
-  "mod-0-2": { uri: 'https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/infographics/ch0-upgrade/mod-0-1-upgrade.png' },
-  "mod-0-3": { uri: 'https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/infographics/ch0-upgrade/mod-0-3-upgrade.png' },
-  "mod-0-4": { uri: 'https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/infographics/ch0-upgrade/mod-0-4-upgrade.png' },
-  "mod-0-5": { uri: 'https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/infographics/ch0-upgrade/mod-0-5-upgrade.png' },
-};
-
-/** Modules with a video shown AFTER the infographic (before the chest) */
-export const MODULE_POST_VIDEO_MAP: Record<string, string> = {
-  // 2026-06-04: mod-0-1 entry removed as part of the mod-0-1 split. The
-  // Finn post-summary video summed up loan/pension content that has moved
-  // to mod-0-1b, so it no longer matches mod-0-1's reduced scope. mod-0-1b
-  // is short and doesn't need a post-video. See plans/0-2-toasty-torvalds.md.
-  // Chapter 0 — money/banking/interest/credit/pension (NEW first slot — was mod-0-2 content)
-  "mod-0-2": "https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/0-1.mp4",
-  "mod-0-3": "https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/finn-videos/finn-studying.mp4",
-  "mod-0-4": "https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/finn-videos/finn-mod-0-4.mp4",
-  "mod-0-5": "https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/finn-videos/finn-mod-0-5.mp4",
-  // Chapter 1 — Tier 2 specifics (generated for each topic)
-  "mod-1-1": "https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/finn-videos/finn-mod-1-1.mp4", // ריבית דריבית
-  "mod-1-2": "https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/finn-videos/finn-mod-1-2.mp4", // מלכודת המינוס
-  "mod-1-3": "https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/finn-videos/finn-mod-0-4.mp4", // אשראי — recycle credit-card scene
-  "mod-1-4": "https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/finn-videos/finn-ch2-budget.mp4", // תקציב — recycle budget scene
-  "mod-1-5": "https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/finn-videos/finn-mod-1-5.mp4", // תלוש שכר
-  "mod-1-6": "https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/finn-videos/finn-ch1-debt.mp4", // הלוואות — recycle debt scene
-  "mod-1-7": "https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/finn-videos/finn-mod-1-7.mp4", // עמלות
-  "mod-1-8": "https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/finn-videos/finn-mod-1-8.mp4", // מלכודות שיווקיות
-  "mod-1-9": "https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/finn-videos/finn-mod-1-9.mp4", // קרן חירום
-  // Chapter 2 — Tier 2 specifics + recycles
-  "mod-2-10": "https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/finn-videos/finn-mod-2-10.mp4", // דירוג אשראי
-  "mod-2-11": "https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/finn-videos/finn-mod-2-11.mp4", // נקודות זיכוי
-  "mod-2-12": "https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/finn-videos/finn-mod-0-5.mp4", // פנסיה — recycle
-  "mod-2-13": "https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/finn-videos/finn-studying.mp4", // קרן השתלמות — recycle
-  "mod-2-14": "https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/finn-videos/finn-mod-2-14.mp4", // ביטוחים
-  // Chapter 3 — Tier 2 specific (psychology) + recycles
-  "mod-3-15": "https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/finn-videos/finn-ch3-inflation.mp4",
-  "mod-3-16": "https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/finn-videos/finn-mod-3-16.mp4", // פסיכולוגיה של הכסף
-  "mod-3-17": "https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/finn-videos/finn-ch4-invest.mp4", // קופת גמל
-  "mod-3-18": "https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/finn-videos/finn-trading-start.mp4", // מסלולי השקעה
-  // Chapter 4 — Tier 2 specifics (dividend, diversification) + recycles
-  "mod-4-19": "https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/finn-videos/finn-ch4-invest.mp4",
-  "mod-4-20": "https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/finn-videos/finn-trading-start.mp4", // מדדים
-  "mod-4-21": "https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/finn-videos/finn-ch4-invest.mp4", // ETF
-  "mod-4-22": "https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/finn-videos/finn-trading-start.mp4", // פקודות מסחר
-  "mod-4-23": "https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/finn-videos/finn-mod-4-23.mp4", // דיבידנד
-  "mod-4-24": "https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/finn-videos/finn-mod-4-24.mp4", // פיזור סיכונים
-  "mod-4-25": "https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/finn-videos/finn-studying.mp4", // דוחות כספיים
-  "mod-4-26": "https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/finn-videos/finn-trading-start.mp4", // פלטפורמות
-  "mod-4-27": "https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/finn-videos/finn-ch4-invest.mp4",
-  "mod-4-28": "https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/finn-videos/finn-ch4-invest.mp4", // ניתוח גרפים
-  "mod-4-29": "https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/finn-videos/finn-ch4-invest.mp4", // סוגי מניות
-  "mod-4-b1": "https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/finn-videos/finn-studying.mp4", // Graham 7 rules
-  "mod-4-b2": "https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/finn-videos/finn-studying.mp4", // margin safety
-  "mod-4-b3": "https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/finn-videos/finn-ch4-invest.mp4", // price/value
-  "mod-4-b4": "https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/finn-videos/finn-studying.mp4", // AP story
-  // Chapter 5 — all recycled (FIRE / pension / champion themes)
-  "mod-5-25": "https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/finn-videos/finn-ch5-fire.mp4",
-  "mod-5-26": "https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/finn-videos/finn-mod-0-5.mp4",
-  "mod-5-27": "https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/finn-videos/finn-ch5-fire.mp4",
-  "mod-5-28": "https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/finn-videos/finn-streak-365.mp4",
-  "mod-5-29": "https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/finn-videos/finn-mod-0-5.mp4",
-  "mod-5-30": "https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/finn-videos/finn-streak-100.mp4",
-};
+// MODULE_INFOGRAPHIC_MAP + MODULE_POST_VIDEO_MAP records now live in
+// ./moduleAssetMaps.ts (re-exported at the top of this file).
 
 /** Cards that use infographic-top layout: big image at top, text hidden, Finn at bottom */
 const INFOGRAPHIC_TOP_CARDS = new Set([

@@ -77,7 +77,7 @@ export function SharkSkinPickerModal({
                 שבעה ימים ברצף! 🔥
               </Text>
               <Text style={[styles.subtitle, RTL_CENTER]} allowFontScaling={false}>
-                בחר סקין לקפטן שארק.{'\n'}אם תשבור את הרצף — הסקין יתאדה.
+                בחר סקין לקפטן שארק.{'\n'}הסקין שלך — ללא תנאי.
               </Text>
             </Animated.View>
 

@@ -6,16 +6,18 @@ import { registerLocalStore } from '../../lib/stores/registry';
 /**
  * R8 T3.5 — Captain Shark cosmetics (Streak Wager).
  *
- * Duolingo's Owl skin system lifts D30 retention +18-22% via sunk-cost
- * identity ("I can't break a streak — I paid for this skin"). This
- * store is the FinPlay equivalent: the user unlocks Gold + Fire skins
- * at 7-day streak; selecting one stakes their identity on that streak.
+ * Duolingo's Owl skin system uses sunk-cost identity to lift D30. The
+ * FinPlay version deliberately drops the punitive half: the user
+ * unlocks Gold + Fire skins at 7-day streak and can select one to
+ * personalize the Captain. If the streak breaks, the selected skin
+ * reverts to `classic` automatically — but the entitlement stays in
+ * `unlocked`, so re-selecting it costs nothing.
  *
- * If the streak breaks, `revertToClassic()` is fired by the streak
- * watcher and the selected skin reverts to `classic`. The user can
- * buy the skin back at {@link SKIN_REBUY_COST} coins so a single bad
- * day doesn't punish them permanently — Yoav's "forgiving fallback"
- * guardrail.
+ * Audrey pre-release audit (2026-06-11): the previous version stripped
+ * the skin from `unlocked` on break + offered a 100-coin rebuy. That's
+ * a textbook sunk-cost dark pattern (manufacture loss → sell the fix).
+ * Removed. The streak-wager identity hook is preserved via the visual
+ * revert + the picker copy ("ללא תנאי"), not via punishment.
  */
 
 /** Skin identifier — the visual asset key + persisted store value. */
@@ -57,8 +59,10 @@ export const SHARK_SKINS: SharkSkin[] = [
   },
 ];
 
-/** Cost to re-equip a skin that was lost when the streak broke. */
-export const SKIN_REBUY_COST = 100;
+/** Deprecated — kept exported as 0 so any stale import compiles + charges
+ *  nothing while the rebuy UI is removed. Inline removal of all imports
+ *  follows separately. */
+export const SKIN_REBUY_COST = 0;
 
 interface CosmeticsState {
   /** Skins the user has the right to equip. `classic` is always
@@ -84,13 +88,14 @@ interface CosmeticsState {
    *  flips `hasSeen7DayPicker` so the modal doesn't re-fire. */
   selectSkin: (skin: SharkSkinId) => void;
   /** Streak watcher fires this when streak breaks AND a non-classic
-   *  skin was equipped. Reverts to classic, removes the lost skin
-   *  from `unlocked`, and queues the "skin lost" reveal modal. */
+   *  skin was equipped. Reverts the *selected* skin to classic and
+   *  surfaces the empathic notice — but the lost skin STAYS in
+   *  `unlocked` so re-selecting it is free. */
   revertToClassic: () => void;
-  /** User dismissed the skin-lost reveal — clears the pending flag. */
+  /** User dismissed the skin-revert notice — clears the pending flag. */
   acknowledgeSkinLost: () => void;
-  /** User chose to re-buy the lost skin (charged elsewhere). Returns
-   *  the skin to `unlocked` and re-equips it. */
+  /** User re-selected a previously-equipped skin from the notice.
+   *  Identical to selectSkin — kept for callsite clarity. */
   rebuySkin: (skin: SharkSkinId) => void;
   reset: () => void;
 }
@@ -120,13 +125,14 @@ export const useCosmeticsStore = create<CosmeticsState>()(
 
       revertToClassic: () => {
         const state = get();
-        // Classic break = nothing visible to lose.
+        // Classic break = nothing visible to revert.
         if (state.selected === 'classic') return;
         const lost = state.selected;
-        const filtered = state.unlocked.filter((s) => s !== lost);
+        // Audrey 2026-06-11: keep `unlocked` intact. The streak break
+        // changes the *equipped* look only; the entitlement is the
+        // user's forever. No coin charge to re-select later.
         set({
           selected: 'classic',
-          unlocked: filtered.length > 0 ? filtered : ['classic'],
           pendingSkinLost: lost,
         });
       },
@@ -135,9 +141,13 @@ export const useCosmeticsStore = create<CosmeticsState>()(
 
       rebuySkin: (skin) => {
         const state = get();
+        // After Audrey 2026-06-11: re-selecting a previously-unlocked
+        // skin is free. We only ensure unlock — defensive for cohorts
+        // whose persisted state pre-dated the dark-pattern removal and
+        // got their skin stripped from `unlocked`.
         const next = new Set(state.unlocked);
         next.add(skin);
-        set({ unlocked: Array.from(next), selected: skin });
+        set({ unlocked: Array.from(next), selected: skin, pendingSkinLost: null });
       },
 
       reset: () =>

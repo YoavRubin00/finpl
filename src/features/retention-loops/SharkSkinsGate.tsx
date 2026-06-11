@@ -1,19 +1,16 @@
-import React, { useEffect, useRef } from 'react';
+import React from 'react';
 import { View, Text, Pressable, Modal, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Animated, { FadeIn, FadeInUp, useReducedMotion } from 'react-native-reanimated';
 import { Image as ExpoImage } from 'expo-image';
 import { Heart } from 'lucide-react-native';
 import { FINN_EMPATHIC } from './finnMascotConfig';
-import { errorHaptic, tapHaptic } from '../../utils/haptics';
+import { tapHaptic } from '../../utils/haptics';
 import {
   useCosmeticsStore,
   SHARK_SKINS,
-  SKIN_REBUY_COST,
   type SharkSkinId,
 } from './useCosmeticsStore';
-import { fireEconomyDelta } from '../economy/useEconomyUIStore';
-import { useEconomy } from '../economy/useEconomy';
 import { useStreak } from '../economy/useStreak';
 import { SharkSkinPickerModal } from './SharkSkinPickerModal';
 
@@ -40,7 +37,6 @@ export function SharkSkinsGate(): React.ReactElement {
   const rebuySkin = useCosmeticsStore((s) => s.rebuySkin);
 
   const streak = useStreak().data?.currentStreak ?? 0;
-  const coins = useEconomy().data?.coins ?? 0;
 
   const pickerEligible =
     !hasSeen7DayPicker &&
@@ -58,24 +54,10 @@ export function SharkSkinsGate(): React.ReactElement {
     selectSkin('classic');
   };
 
-  // Synchronous re-buy lock. The button is disabled only by !canAfford, so a
-  // fast double-tap before the modal unmounts fired fireEconomyDelta twice =
-  // -200 instead of -100 (Yoav 2026-06-11 QA). The ref blocks the second tap
-  // synchronously; it's reset whenever a NEW skin-loss surfaces.
-  const isRebuyingRef = useRef(false);
-  useEffect(() => { if (pendingSkinLost) isRebuyingRef.current = false; }, [pendingSkinLost]);
-
-  const handleRebuy = (skin: SharkSkinId) => {
-    if (isRebuyingRef.current) return;
-    if (coins < SKIN_REBUY_COST) {
-      errorHaptic();
-      return;
-    }
-    isRebuyingRef.current = true;
-    // Deduct coins via the canonical economy-delta pipe (mirrors the
-    // pattern in useRealAssetsStore / useTradingStore). `fireEconomyDelta`
-    // handles the optimistic local update + the persistence side effects.
-    try { fireEconomyDelta({ coinsDelta: -SKIN_REBUY_COST }); } catch { /* non-fatal */ }
+  // Audrey 2026-06-11: re-select is now free — no coin charge, no double-tap
+  // lock needed. The "rebuy" name is preserved at the store boundary only for
+  // diff readability; it's just selectSkin under the hood.
+  const handleReequip = (skin: SharkSkinId) => {
     rebuySkin(skin);
     acknowledgeSkinLost();
   };
@@ -92,8 +74,7 @@ export function SharkSkinsGate(): React.ReactElement {
       {pendingSkinLost && (
         <SkinLostModal
           lostSkin={pendingSkinLost}
-          coins={coins}
-          onRebuy={handleRebuy}
+          onReequip={handleReequip}
           onDismiss={() => { tapHaptic(); acknowledgeSkinLost(); }}
         />
       )}
@@ -103,18 +84,17 @@ export function SharkSkinsGate(): React.ReactElement {
 
 interface SkinLostModalProps {
   lostSkin: SharkSkinId;
-  coins: number;
-  onRebuy: (skin: SharkSkinId) => void;
+  onReequip: (skin: SharkSkinId) => void;
   onDismiss: () => void;
 }
 
-/** Inline reveal modal — appears when the streak breaks AND a non-classic
- *  skin was equipped. Offers a re-buy at SKIN_REBUY_COST coins (the
- *  "forgiving fallback" Yoav called out as a punishment-curve safeguard). */
-function SkinLostModal({ lostSkin, coins, onRebuy, onDismiss }: SkinLostModalProps): React.ReactElement {
+/** Inline notice — appears when the streak breaks AND a non-classic skin was
+ *  equipped. The skin REMAINS unlocked; we just let the user know the Captain
+ *  reverted to Classic, and offer a free one-tap re-select when the streak
+ *  comes back. No charge, no loss-aversion copy. */
+function SkinLostModal({ lostSkin, onReequip, onDismiss }: SkinLostModalProps): React.ReactElement {
   const reduceMotion = useReducedMotion();
   const skinMeta = SHARK_SKINS.find((s) => s.id === lostSkin) ?? SHARK_SKINS[0];
-  const canAfford = coins >= SKIN_REBUY_COST;
   return (
     <Modal visible transparent animationType="fade" statusBarTranslucent onRequestClose={onDismiss}>
       <View style={lostStyles.backdrop} accessibilityViewIsModal>
@@ -131,25 +111,23 @@ function SkinLostModal({ lostSkin, coins, onRebuy, onDismiss }: SkinLostModalPro
 
             <Animated.View entering={reduceMotion ? undefined : FadeIn.delay(160).duration(360)}>
               <Text style={[lostStyles.title, RTL_CENTER]} allowFontScaling={false}>
-                הסקין נשבר 💔
+                חזרנו לקלאסיק
               </Text>
               <Text style={[lostStyles.subtitle, RTL_CENTER]} allowFontScaling={false}>
-                {`הרצף נגמר, והקפטן חזר ל"קלאסיק". אם תרצה — תקנה את ${skinMeta.label} בחזרה ב-${SKIN_REBUY_COST} מטבעות.`}
+                {`הרצף נשבר, והקפטן חזר לסקין הקלאסי. ${skinMeta.label} עדיין שלך — תוכל להחזיר אותו בכל רגע, בלי תשלום.`}
               </Text>
             </Animated.View>
 
             <Animated.View entering={reduceMotion ? undefined : FadeIn.delay(260).duration(360)}>
               <Pressable
-                onPress={() => onRebuy(lostSkin)}
-                disabled={!canAfford}
-                style={[lostStyles.cta, !canAfford && lostStyles.ctaDisabled]}
+                onPress={() => onReequip(lostSkin)}
+                style={lostStyles.cta}
                 accessibilityRole="button"
-                accessibilityLabel={`קנה את ${skinMeta.label} בחזרה`}
-                accessibilityState={{ disabled: !canAfford }}
+                accessibilityLabel={`החזר את ${skinMeta.label}`}
               >
                 <Heart size={20} color="#ffffff" strokeWidth={2.6} />
                 <Text style={[lostStyles.ctaText, RTL]} allowFontScaling={false}>
-                  {`קנה בחזרה — ${SKIN_REBUY_COST} מטבעות`}
+                  {`החזר את ${skinMeta.label}`}
                 </Text>
               </Pressable>
               <Pressable
@@ -225,9 +203,6 @@ const lostStyles = StyleSheet.create({
     borderBottomWidth: 4,
     borderBottomColor: '#155e75',
     marginTop: 18,
-  },
-  ctaDisabled: {
-    opacity: 0.55,
   },
   ctaText: {
     fontSize: 16,

@@ -4,7 +4,7 @@ import {
   MODULE_HERO_MAP,
   MODULE_INFOGRAPHIC_MAP,
   MODULE_POST_VIDEO_MAP,
-} from '../chapter-1-content/LessonFlowScreen';
+} from '../chapter-1-content/moduleAssetMaps';
 import type { Module } from '../chapter-1-content/types';
 
 /**
