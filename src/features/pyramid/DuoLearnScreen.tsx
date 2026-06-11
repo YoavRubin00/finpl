@@ -851,6 +851,7 @@ const ChapterSection = React.memo(function ChapterSection({
   completedPearlIds,
   expandedTopicTreeModuleId,
   onTopicSelected,
+  onStartContinuous,
   onTopicTreeModuleCompleted,
   onTopicTreeContinueAfterChest,
   onTopicTreeAdvanceToNextModule,
@@ -909,6 +910,9 @@ const ChapterSection = React.memo(function ChapterSection({
    *  per-topic sheet — sheet state lives at the screen root so it stacks
    *  above pearls / locked modals. */
   onTopicSelected?: (topic: Topic) => void;
+  /** "למידה רציפה" — launch the whole module as one continuous flow. Rendered
+   *  as a pill under the active topic-tree module node. */
+  onStartContinuous?: (moduleId: string, chapterId: string) => void;
   /** First 70%-threshold crossing → user chose "next module in chapter"
    *  inside the chest modal — parent collapses the accordion and
    *  routes to the next module in chapter. */
@@ -1061,6 +1065,32 @@ const ChapterSection = React.memo(function ChapterSection({
                   }
                 }}
               />
+              {/* "למידה רציפה" — autopilot launcher, pinned right under the
+                  module node so it's visible during normal map browsing (the
+                  in-accordion placement was always auto-scrolled off-screen).
+                  Shown only for accessible topic-tree modules. Follows the
+                  node's wave offset so it sits centered under the node. */}
+              {onStartContinuous && !isLocked && shouldUseTopicTree(module) && (
+                <View
+                  style={{
+                    alignItems: 'center',
+                    marginTop: 4,
+                    marginBottom: 2,
+                    transform: [{ translateX: getNodeOffset(i) }],
+                    zIndex: 4,
+                  }}
+                >
+                  <AnimatedPressable
+                    onPress={() => onStartContinuous(module.id, chapter.id)}
+                    style={styles.continuousPill}
+                    accessibilityRole="button"
+                    accessibilityLabel="למידה רציפה — המודולה כולה ברצף"
+                  >
+                    <FastForward size={14} color="#ffffff" />
+                    <Text style={styles.continuousPillText}>למידה רציפה</Text>
+                  </AnimatedPressable>
+                </View>
+              )}
               {/* Daily News Challenge — newspaper icon anchored directly
                   under the MIDDLE star of the row that sits below the
                   shark. Zero margins so the next PathConnector / pearl
@@ -1979,6 +2009,16 @@ export function DuoLearnScreen() {
     );
   }, [topicTreeModule, router]);
 
+  // "למידה רציפה" — launch the WHOLE module as ONE continuous legacy flow
+  // (master-version UX) with per-phase progress sync (ttProgress=1, NO
+  // startPhase/returnTo). Rendered next to the module NODE on the map (see
+  // ChapterSection) so it's visible while browsing — the earlier in-accordion
+  // placement was always auto-scrolled off the top of the screen.
+  const handleStartContinuousModule = useCallback((moduleId: string, chapterId: string) => {
+    isNavigatingRef.current = true;
+    router.push(`/lesson/${moduleId}?chapterId=${chapterId}&ttProgress=1` as never);
+  }, [router]);
+
   // Chest CTA: "סיים את כל המודולה" — close chest, keep accordion open,
   // user lands on the next gold (recommended) chip so they can finish
   // the remaining 30%. The scroll-to-gold-chip happens via the
@@ -2157,15 +2197,17 @@ export function DuoLearnScreen() {
   const handleLockedPress = useCallback(() => setLockedModalVisible(true), []);
   const handleRoadmapPress = useCallback(() => setRoadmapVisible(true), []);
   const handleQuestPress = useCallback(() => {
-    // Yoav 2026-06-11: during the mod-0-1 onboarding window
-    // (= before the user has seen the app walkthrough), tapping the
-    // active quest widget (Captain Shark on the active module / the
-    // QuestPathNode between modules) must NOT open the daily quests
-    // sheet. The user is meant to focus on tapping the gold-recommended
-    // topic chip first; the daily-challenge surface unlocks afterward.
-    if (isWalkthroughActive) return;
+    // Yoav 2026-06-12: gate is now "mod-0-1 not completed yet" rather
+    // than "walkthrough hasn't run yet". The walkthrough state stayed
+    // false forever for users who skipped/dismissed it, leaving the
+    // daily-challenge sheet permanently unreachable from the shark tap
+    // ("האתגרים היומיים לא עובדים. שאני לוחץ על שארק זה לא מגיב").
+    // The intent — "block during the mod-0-1 onboarding window" — maps
+    // cleanly to the completion flag, which durably flips true.
+    const mod01Done = useCompletedModulesStore.getState().completedIds.includes('mod-0-1');
+    if (!mod01Done) return;
     setQuestSheetVisible(true);
-  }, [isWalkthroughActive]);
+  }, []);
   const handleMindMap = useCallback((idx: number) => { tapHaptic(); setMindMapChapter(idx); }, []);
 
   return (
@@ -2452,6 +2494,7 @@ export function DuoLearnScreen() {
                 completedPearlIds={completedPearlIds}
                 expandedTopicTreeModuleId={topicTreeModule?.module.id ?? null}
                 onTopicSelected={handleTopicSelected}
+                onStartContinuous={handleStartContinuousModule}
                 onTopicTreeModuleCompleted={handleModuleCompletedFromTree}
                 onTopicTreeContinueAfterChest={handleTopicTreeContinueAfterChest}
                 onTopicTreeAdvanceToNextModule={handleTopicTreeAdvanceToNextModule}
@@ -2970,6 +3013,29 @@ const styles = StyleSheet.create({
     textShadowColor: "rgba(0,0,0,0.18)",
     textShadowOffset: { width: 0, height: 1 },
     textShadowRadius: 2,
+  },
+  // "למידה רציפה" autopilot pill under the module node.
+  continuousPill: {
+    flexDirection: "row-reverse",
+    alignItems: "center",
+    gap: 5,
+    backgroundColor: "#2563eb",
+    borderRadius: 999,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderWidth: 1.5,
+    borderColor: "#60a5fa",
+    shadowColor: "#2563eb",
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.4,
+    shadowRadius: 8,
+    elevation: 6,
+  },
+  continuousPillText: {
+    fontSize: 12.5,
+    color: "#ffffff",
+    fontWeight: "900",
+    writingDirection: "rtl",
   },
 
   // Finn mascot

@@ -221,35 +221,13 @@ export const ModuleTopicLayout = React.memo(function ModuleTopicLayout({
         </View>
       )}
 
-      {/* "למידה רציפה" — continuous-flow launcher (Yoav 2026-06-11).
-          Rendered at CONTAINER level (like the decorative scenes), NOT inside
-          the narrow 220px pathColumn — a button bleeding left out of that
-          column was being clipped, which is why earlier placements were
-          invisible. Horizontally anchored to the container's center (left:'50%'
-          + marginLeft), the SAME center the chip column is centered on, then
-          pushed left by half the column + half the button so it lands in the
-          LEFT gutter just left of the intro chip — tracking the chip on any
-          screen width. Vertically centered on the intro (first) row. Tapping
-          runs the whole module as one legacy flow (master UX); the parent syncs
-          per-phase progress so a mid-flow exit still lights up the chips. */}
-      {onStartContinuous && sorted.length > 0 && (
-        <Pressable
-          onPress={onStartContinuous}
-          accessibilityRole="button"
-          accessibilityLabel="למידה רציפה — המודולה כולה ברצף"
-          style={({ pressed }) => [
-            styles.continuousBtn,
-            { top: EDGE_CONNECTOR_H + ROW_HEIGHT / 2 - CONTINUOUS_BTN_H / 2 },
-            pressed && styles.continuousBtnPressed,
-          ]}
-          hitSlop={8}
-        >
-          <FastForward size={18} color="#ffffff" fill="#ffffff" strokeWidth={0} />
-          <Text style={styles.continuousLabel} allowFontScaling={false}>
-            למידה{'\n'}רציפה
-          </Text>
-        </Pressable>
-      )}
+      {/* "למידה רציפה" button MOVED OUT of the accordion (Yoav 2026-06-12).
+          At the intro row it was always scrolled ABOVE the viewport — when a
+          module expands, DuoLearnScreen auto-scrolls down to the next gold
+          chip, pushing the intro row (and the button) off the top. It now
+          lives next to the MODULE NODE on the map (DuoLearnScreen), visible
+          during normal map browsing. `onStartContinuous` here is retained but
+          unused for back-compat with TopicTreeAccordion. */}
 
       {/* Entry connector — from outer module node DOWN to the intro chip.
           Extends UPWARD by ENTRY_OVERLAP so it overlaps the parent
