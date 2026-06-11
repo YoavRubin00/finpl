@@ -2949,18 +2949,17 @@ export function LessonFlowScreen() {
       const topic = resolveTopics(mod).find((t) => t.kind === kind);
       if (topic) useTopicProgressStore.getState().markTopicCompleted(topic);
     }
-    // Reaching 'summary' in a continuous run = the user played the whole
-    // module start-to-finish and the LEGACY summary chest already rewarded
-    // them (master UX). Stamp the 70% threshold UNCONDITIONALLY so the
-    // still-mounted accordion does NOT also fire its own 70% chest on return
-    // (that would be a double chest). Unconditional (not gated on a recomputed
-    // pct) covers the resume-checkpoint edge where fewer chips got marked yet
-    // the module was still completed. We deliberately do NOT stamp 100%: the
-    // linear flow never covers the 'chat' (and often 'game') chips, so the
-    // master 100% chest stays available for the user to earn by finishing them.
-    if (phase === 'summary') {
-      useTopicProgressStore.getState().stampModuleThreshold(mod.id);
-    }
+    // Yoav 2026-06-11 (rev 3): the previous design stamped the 70%
+    // threshold on continuous-run summary so the accordion would NOT
+    // re-fire its chest on return — but the LEGACY chest was still
+    // visible BEFORE we returned (gated only on returnTo !== 'topic-tree',
+    // which is false in continuous mode). Net effect: user saw the
+    // legacy chest, dismissed it, returned to the map, and the
+    // accordion's chest immediately fired again → two chests in a row.
+    // The accordion's ChestCelebrationModal is the preferred UX, so we
+    // now suppress the LEGACY chest in continuous mode (render gate
+    // below) and SKIP the stamp here, letting the accordion fire its
+    // single chest on return.
   }, [phase, ttProgressActive, mod]);
 
   // "למידה רציפה" mid-run guard: while THIS continuous run is mounted, flag
@@ -2968,14 +2967,27 @@ export function LessonFlowScreen() {
   // beneath us suppresses its OWN threshold chest. Without this, the moment
   // the run crosses 70% mid-lesson the accordion's ChestCelebrationModal
   // (a RN Modal) pops OVER the running lesson. Cleared on unmount — on return
-  // the accordion fires normally (a mid-run exit past 70% then gets its single
-  // 70% chest on the map; a full completion is already suppressed by the
-  // summary threshold-stamp above).
+  // the accordion fires its single chest as the canonical reward.
   useEffect(() => {
     if (!ttProgressActive || !id) return;
     useContinuousRunStore.getState().setActive(id);
     return () => { useContinuousRunStore.getState().clear(); };
   }, [ttProgressActive, id]);
+
+  // "למידה רציפה" auto-exit on summary (Yoav 2026-06-11 rev 3). The legacy
+  // summary chest is now hidden in continuous mode (render gate below), so we
+  // need to actively bounce back to the topic-tree map — otherwise the screen
+  // sits blank after the last chip's phase resolves. On unmount the continuous
+  // guard above clears, and the accordion fires its own ChestCelebrationModal
+  // as the single canonical reward.
+  useEffect(() => {
+    if (!ttProgressActive) return;
+    if (phase !== 'summary') return;
+    // Small delay so any in-flight phase-leave side effects (recall stamping,
+    // analytics) settle before we navigate away.
+    const t = setTimeout(() => returnToMap("/(tabs)/index"), 120);
+    return () => clearTimeout(t);
+  }, [ttProgressActive, phase, returnToMap]);
 
   // Fire once per lesson session when the user actually reaches the summary
   // screen — closes the funnel gap between lesson_started and lesson_completed
@@ -4643,10 +4655,13 @@ export function LessonFlowScreen() {
         )}
 
         {/* ── Summary phase ── */}
-        {/* Hidden on the topic-tree path so the legacy dark-backdrop chest never
-            flashes before tt_exit's back() (Yoav 2026-06-11: "פתיחת תיבה הופיעה
-            פעמיים"). The topic-tree's own ChestCelebrationModal is the keeper. */}
-        {phase === "summary" && returnTo !== 'topic-tree' && (
+        {/* Hidden on BOTH (a) the topic-tree chip path (returnTo='topic-tree')
+            AND (b) the "למידה רציפה" continuous run (ttProgressActive). Both
+            paths return to the map and the accordion's own ChestCelebrationModal
+            is the canonical chest — rendering this legacy one too means the
+            user sees two chests back-to-back. (Yoav 2026-06-11: "שתי תיבות ברצף").
+            The topic-tree's own ChestCelebrationModal is the keeper. */}
+        {phase === "summary" && returnTo !== 'topic-tree' && !ttProgressActive && (
           <Animated.View style={[contentStyle, { flex: 1, marginHorizontal: -16 }]}>
             {/* Full-screen confetti overlay, only rendered while active */}
             {confettiActive && (
