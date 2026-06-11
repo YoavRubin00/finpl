@@ -3184,6 +3184,27 @@ export function LessonFlowScreen() {
   );
   // Post-module celebration
   const [showPostCelebration, setShowPostCelebration] = useState(false);
+  // Architect P2 (2026-06-11): pre-pick the playful "quit" label once when
+  // the post-celebration screen mounts so it doesn't flip-flop on every
+  // re-render (was Math.random() inline in JSX).
+  const POST_QUIT_LABELS = useRef([
+    "עפתי לנטפליקס 📺",
+    "עפתי לאינסטגרם 📱",
+    "עפתי לטיקטוק 🎵",
+    "אני הולך לישון 😴",
+    "יש לי שווארמה שמחכה 🌯",
+    "יש לי פיצה שמתקררת 🍕",
+  ]).current;
+  const postQuitLabel = useMemo(
+    () => POST_QUIT_LABELS[Math.floor(Math.random() * POST_QUIT_LABELS.length)],
+    [showPostCelebration, POST_QUIT_LABELS],
+  );
+  // Yoav 2026-06-11: the playful "I'm bailing to Netflix" quit button is
+  // a treat, not a fixture — show it on ~30% of chest reveals.
+  const showPostQuitOption = useMemo(
+    () => Math.random() < 0.3,
+    [showPostCelebration],
+  );
   const [showBreakMessage, setShowBreakMessage] = useState(false);
   // Auto-next countdown: dataS showed 48% drop between lessons (23 finished
   // mod-0-2 but only 12 started mod-0-3). Netflix-style 3s auto-advance keeps
@@ -4764,7 +4785,9 @@ export function LessonFlowScreen() {
                           const drop = pendingChestDropRef.current;
                           if (drop) {
                             grantChestRewards(drop.rewards, 1);
-                            if (chapterId !== "chapter-0" && Math.random() < 0.15) {
+                            // Yoav 2026-06-11: DoN offer rate = 25% per chest
+                            // (skipped on chapter-0 which stays celebration-only).
+                            if (chapterId !== "chapter-0" && Math.random() < 0.25) {
                               shouldTriggerDoNRef.current = true;
                               setPendingMultiplierRewards(drop.rewards);
                             }
@@ -5981,12 +6004,14 @@ export function LessonFlowScreen() {
                 <Text style={{ fontSize: 13, fontWeight: "600", color: "#94a3b8" }}>{"ביטול ספירה לאחור"}</Text>
               </Pressable>
             )}
-            {/* Quit option */}
-            <AnimatedPressable onPress={() => { autoNextCancelledRef.current = true; setAutoNextSeconds(null); tapHaptic(); setShowBreakMessage(true); }} style={{ width: "100%", backgroundColor: "#f8fafc", borderRadius: 16, paddingVertical: 14, alignItems: "center", borderWidth: 1.5, borderColor: "#e2e8f0" }} accessibilityRole="button" accessibilityLabel="יציאה">
-              <Text style={{ fontSize: 14, fontWeight: "700", color: "#64748b" }}>
-                {["עפתי לנטפליקס 📺", "עפתי לאינסטגרם 📱", "עפתי לטיקטוק 🎵", "אני הולך לישון 😴", "יש לי שווארמה שמחכה 🌯", "יש לי פיצה שמתקררת 🍕"][Math.floor(Math.random() * 6)]}
-              </Text>
-            </AnimatedPressable>
+            {/* Quit option — surfaced on ~30% of chest reveals (Yoav 2026-06-11) */}
+            {showPostQuitOption && (
+              <AnimatedPressable onPress={() => { autoNextCancelledRef.current = true; setAutoNextSeconds(null); tapHaptic(); setShowBreakMessage(true); }} style={{ width: "100%", backgroundColor: "#f8fafc", borderRadius: 16, paddingVertical: 14, alignItems: "center", borderWidth: 1.5, borderColor: "#e2e8f0" }} accessibilityRole="button" accessibilityLabel="יציאה">
+                <Text style={{ fontSize: 14, fontWeight: "700", color: "#64748b" }}>
+                  {postQuitLabel}
+                </Text>
+              </AnimatedPressable>
+            )}
           </Animated.View>
           )}
         </Pressable>

@@ -55,7 +55,7 @@ function PostWalkthroughRegisterCTA(): React.JSX.Element {
             כל הכבוד! סיימת את הסיור 🚢
           </Text>
           <Text style={{ ...RTL_STYLE, fontSize: 15, fontWeight: "600", color: "#334155", lineHeight: 24, textAlign: "center", marginBottom: 20 }}>
-            הירשמו עכשיו כדי לשמור את ההתקדמות ולפתוח את כל הפיצ׳רים
+            הירשמו כדי לשמור את ההתקדמות ולחזור אליה בכל מכשיר
           </Text>
           <Pressable
             onPress={acceptRegister}

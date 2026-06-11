@@ -39,7 +39,9 @@ const STREAK_REMINDER_COPY: Record<StreakTier, CopyPool> = {
     ],
     'broken-1': [
         { title: "😤 יום אחד בלי ללמוד?", body: "השקעה בידע היא ההשקעה הכי טובה שיש. חזרו!" },
-        { title: "⚡ עוד יום אחד ואיבדתם הכל", body: "הרצף שלכם חיכה לכם. בואו נחזיר אותו?" },
+        // Audrey 2026-06-11: replaced "עוד יום אחד ואיבדתם הכל" — loss-aversion
+        // overstatement (no, they didn't lose everything). Soft invite.
+        { title: "🌊 הרצף שלכם עוד כאן", body: "5 דקות והוא חי. בואו נחזיר אותו ביחד?" },
         { title: "שמעו, קפטן שארק לא שופט...", body: "אבל יום אחד בלי ללמוד? בואו נתקן את זה" },
     ],
     'broken-2': [
@@ -106,7 +108,9 @@ const CASUAL_SAFE_COPY: CopyPool = [
 const SERIOUS_SAFE_COPY: CopyPool = [
     { title: "📈 יום חסר, נחזור למסלול", body: "הרצף שלכם הוא משמעת. בואו נסגור היום" },
     { title: "⚡ קפטן שארק: זמן ליעד היומי", body: "20 דקות של מיקוד = שבוע של ידע מצטבר" },
-    { title: "🎯 המסלול שלכם ממתין", body: "אלופים לא מדלגים על ימים. קדימה" },
+    // Audrey 2026-06-11: dropped "אלופים לא מדלגים" — judgmental framing.
+    // Replaced with neutral invitation.
+    { title: "🎯 המסלול שלכם ממתין", body: "20 דקות היום ואנחנו במסלול" },
 ];
 
 /** Returns a streak-reminder CopyPool adjusted for the user's goal tone.

@@ -123,7 +123,7 @@ function deriveMonetizationContext(
         trigger: 'after_win',
         bundleKey: 'platinum_avatar',
         headline: 'אווטאר פלטינום 👑',
-        subtext: 'בלעדי למנצחים, תבלוט מכולם',
+        subtext: 'הכרה על ההישג שלך — לצד דמויות אחרות פתוחות',
         urgency: 'medium',
       });
       offers.push({

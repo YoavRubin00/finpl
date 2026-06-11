@@ -1201,7 +1201,7 @@ function DailyGoalStep({ onNext }: { onNext: (v: DailyGoalMinutes) => void }) {
     <StepShell
       stepIndex={7}
       question="כמה תרצה/י ללמוד ביום?"
-      hint="יעד שאפשר לעמוד בו יעזור לכם להתעשר לאט ובטוח. יצרנו עבורכם רצף (Streak) פיננסי. 🔥"
+      hint="יעד שאפשר לעמוד בו יעזור לכם לבנות יציבות פיננסית. יצרנו עבורכם רצף (Streak) פיננסי. 🔥"
       finnState={sel ? "tablet" : "thinking"}>
       <View style={styles.grid}>
         {DAILY_OPTS.map((g, i) => (

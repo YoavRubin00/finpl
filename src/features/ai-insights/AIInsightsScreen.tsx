@@ -205,7 +205,7 @@ function UpgradeCTA({ onPress }: { onPress: () => void }) {
     <Animated.View entering={FadeInUp.delay(200).duration(400)} style={styles.ctaCard}>
       <ExpoImage source={FINN_HAPPY} style={styles.ctaLottie} contentFit="contain" />
       <View style={styles.ctaText}>
-        <Text style={styles.ctaTitle}>פתחו את הניתוח המלא 🔓</Text>
+        <Text style={styles.ctaTitle}>הניתוח המלא שלך</Text>
         <Text style={styles.ctaSub}>קצב ההתקדמות, נקודות חולשה והצעד הבא שלכם</Text>
       </View>
       <TouchableOpacity
@@ -213,9 +213,9 @@ function UpgradeCTA({ onPress }: { onPress: () => void }) {
         onPress={onPress}
         activeOpacity={0.85}
         accessibilityRole="button"
-        accessibilityLabel="שדרג לפרו"
+        accessibilityLabel="לראות את הניתוח המלא"
       >
-        <Text style={styles.ctaBtnText}>שדרגו עכשיו</Text>
+        <Text style={styles.ctaBtnText}>לראות את הניתוח</Text>
       </TouchableOpacity>
     </Animated.View>
   );

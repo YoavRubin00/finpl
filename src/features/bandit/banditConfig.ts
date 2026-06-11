@@ -269,7 +269,9 @@ export const EXPERIMENT_CONFIGS: AllExperimentConfigs = {
         payload: {
           proofText: 'לבבות אינסופיים, בוסט XP פי 2, אפס מגבלות',
           ctaText: 'התחילו PRO היום',
-          subText: 'הצטרפו ל-10,000+ לומדים פרו',
+          // Audrey 2026-06-11: dropped "הצטרפו ל-10,000+ לומדים פרו" —
+          // social-proof claim we can't actually verify.
+          subText: 'מתחדש אוטומטית. ביטול בכל עת.',
         },
       },
       {

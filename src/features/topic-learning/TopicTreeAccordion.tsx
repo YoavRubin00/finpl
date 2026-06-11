@@ -17,6 +17,7 @@ import type { Topic, ChestRarity } from './types';
 import { CHEST_RARITY_BONUS } from './types';
 import { resolveTopics } from './topicResolver';
 import { useTopicProgressStore } from './useTopicProgressStore';
+import { useContinuousRunStore } from './useContinuousRunStore';
 import { useTopicTreeAssetPrefetch } from './useTopicTreeAssetPrefetch';
 import { ModuleTopicLayout } from './components/ModuleTopicLayout';
 
@@ -164,6 +165,13 @@ export const TopicTreeAccordion = React.memo(function TopicTreeAccordion({
   const moduleFullyComplete = useTopicProgressStore(
     (s) => Boolean(s.modulesFullyComplete[module.id]),
   );
+  // True while a "למידה רציפה" continuous run for THIS module is mounted on
+  // top of us. The run marks topics live as it advances, which can cross the
+  // 70% gate mid-lesson — we must NOT fire (and pop a Modal over the running
+  // lesson) until it's done. See useContinuousRunStore.
+  const continuousRunActive = useContinuousRunStore(
+    (s) => s.activeModuleId === module.id,
+  );
   useEffect(() => {
     past70Ref.current = modulePastThreshold;
     past100Ref.current = moduleFullyComplete;
@@ -178,25 +186,30 @@ export const TopicTreeAccordion = React.memo(function TopicTreeAccordion({
   // R8 U4 — mid-module milestone crossings: 25% + 50%. Light celebration
   // only (toast + haptic + sound, NO modal) so it doesn't compete with
   // the 70% chest gravity. Dismisses itself after 1800ms.
+  // Architect P2 (2026-06-11): consolidated from two parallel useEffects
+  // into one — both watched the same summary.pct + summary.isModuleDone
+  // and only one threshold can cross per commit, so a single effect with
+  // an if/else is simpler and avoids running both bodies in the rare case
+  // pct jumps from <25 directly to >=50.
   useEffect(() => {
-    if (summary.pct >= 25 && !past25Ref.current && !summary.isModuleDone) {
+    if (summary.isModuleDone) return;
+    let toast: { label: string; emoji: string } | null = null;
+    if (summary.pct >= 50 && !past50Ref.current) {
+      past50Ref.current = true;
+      // Also flip past25 so we don't fire a late 25% toast if the user
+      // hit 50% in one jump.
+      past25Ref.current = true;
+      mediumHaptic();
+      try { playSound('btn_click_soft_3'); } catch { /* non-fatal */ }
+      toast = { label: 'אמצע הדרך!', emoji: '🌊' };
+    } else if (summary.pct >= 25 && !past25Ref.current) {
       past25Ref.current = true;
       tapHaptic();
       try { playSound('btn_click_soft_4'); } catch { /* non-fatal */ }
-      setMilestoneToast({ label: 'התחלת מעולה! ¼ הדרך', emoji: '✨' });
-      if (milestoneTimerRef.current) clearTimeout(milestoneTimerRef.current);
-      milestoneTimerRef.current = setTimeout(() => setMilestoneToast(null), 1800);
+      toast = { label: 'התחלת מעולה! ¼ הדרך', emoji: '✨' };
     }
-  }, [summary.pct, summary.isModuleDone, playSound]);
-  useEffect(() => {
-    if (summary.pct >= 50 && !past50Ref.current && !summary.isModuleDone) {
-      past50Ref.current = true;
-      mediumHaptic();
-      try { playSound('btn_click_soft_3'); } catch { /* non-fatal */ }
-      // R8 follow-up (Yoav 2026-06-11): drop the shark emoji per global
-      // "no shark-emoji" rule. The toast color (deep ocean blue) + Captain Shark
-      // mascot elsewhere in the surface already carry the brand identity.
-      setMilestoneToast({ label: 'אמצע הדרך!', emoji: '🌊' });
+    if (toast) {
+      setMilestoneToast(toast);
       if (milestoneTimerRef.current) clearTimeout(milestoneTimerRef.current);
       milestoneTimerRef.current = setTimeout(() => setMilestoneToast(null), 1800);
     }
@@ -212,6 +225,11 @@ export const TopicTreeAccordion = React.memo(function TopicTreeAccordion({
   // ONCE, and surfaces ONE master modal whose displayed `xp` + `coins`
   // already include both 70% + 100% payouts.
   useEffect(() => {
+    // Suppress entirely while a continuous "למידה רציפה" run for this module
+    // is in flight — it marks topics live (crossing 70% mid-lesson) but its
+    // reward is the legacy summary chest, not ours. Firing here would pop a
+    // Modal over the running lesson.
+    if (continuousRunActive) return;
     // Also honor the LIVE persisted flags, not just the mount-seeded refs:
     // the "למידה רציפה" continuous flow can stamp modulesPastThreshold from
     // INSIDE LessonFlowScreen while this accordion stays mounted beneath it.
@@ -294,7 +312,7 @@ export const TopicTreeAccordion = React.memo(function TopicTreeAccordion({
     // xp/coins already pool both payouts (no double). Separate-commit
     // crossings show two moments by design. isFinale drives master visuals.
     setChestState({ xp: totalXp, coins: totalCoins, isFinale, rarity });
-  }, [summary.isModuleDone, summary.pct, module.id, upsertProgress, addXP, addCoins, playSound, modulePastThreshold, moduleFullyComplete]);
+  }, [summary.isModuleDone, summary.pct, module.id, upsertProgress, addXP, addCoins, playSound, modulePastThreshold, moduleFullyComplete, continuousRunActive]);
 
   // R8 U1/U2 — mod-0-1-only walkthrough prompt. Fires the first time
   // the user crosses ~10% of mod-0-1 (intro + 1 card), so the offer
