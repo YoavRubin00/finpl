@@ -113,13 +113,10 @@ export function resolveTopics(module: Module, opts: ResolveTopicsOptions = {}): 
 
   if (module.interactiveIntro?.trim()) present.set('intro', true);
   if (module.flashcards?.length) present.set('cards', true);
-  // R5.5: tutorial-video chip surfaces any flashcard with a videoUri.
-  // mod-1-1 has fc-1-1-video; future modules with embedded explainer
-  // videos pick this up automatically. Cards loop separately filters
-  // these out so the user doesn't see the video twice.
-  if (module.flashcards?.some((c) => Boolean(c.videoUri))) {
-    present.set('tutorial-video', true);
-  }
+  // Yoav 2026-06-11: tutorial-video chip retired — embedded explainer
+  // videos (fc-*-video) stay INLINE in the cards flow, between regular
+  // flashcards, as Chapter 0 originally intended. The standalone chip
+  // duplicated the content + broke the 1→2→3 reading rhythm.
   // 'recall' isn't yet a discriminating field on Module — gated on flashcards
   // for now since recall reuses flashcard content in LessonFlowScreen. The
   // adapter layer is where this becomes an explicit toggle later.

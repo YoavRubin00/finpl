@@ -1866,13 +1866,11 @@ export function DuoLearnScreen() {
       'shark-dilemma': 'shark-dilemma',
     };
     const targetPhase = phaseForKind[topic.kind] ?? 'intro';
-    // R5.5: cards chip filters out video flashcards. tutorial-video
-    // chip routes into the same flashcards phase but keeps ONLY video
-    // cards (the explainer). cardFilter rides on the URL so
-    // LessonFlowScreen knows which set to render.
-    const cardFilter = topic.kind === 'cards' ? '&cardFilter=non-video'
-      : topic.kind === 'tutorial-video' ? '&cardFilter=video'
-      : '';
+    // Yoav 2026-06-11: cards chip now plays ALL flashcards including
+    // embedded videos — the standalone tutorial-video chip was retired
+    // so videos stay between cards as Chapter 0 originally intended.
+    // No URL filter needed.
+    const cardFilter = '';
     router.push(
       `/lesson/${current.module.id}?chapterId=${current.chapterId}&startPhase=${targetPhase}&returnTo=topic-tree${cardFilter}` as never,
     );

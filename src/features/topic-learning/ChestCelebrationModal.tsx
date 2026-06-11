@@ -290,6 +290,18 @@ export function ChestCelebrationModal({
     chestTimersRef.current.push(setTimeout(() => setOpened(true), 600));
   }, [opened, glowScale, glowOpacity, bodyScale, playSound, isFinale]);
 
+  // Yoav 2026-06-11: auto-open the chest the moment the modal becomes
+  // visible. The earlier "tap the chest 4x to reveal" interaction was
+  // perceived as a delay before getting the gold/XP. The reward grant
+  // already happened upstream — surfacing it ASAP closes the perception
+  // gap. Brief 180ms beat lets the user register "the chest appeared"
+  // before the open sequence starts.
+  useEffect(() => {
+    if (!visible || opened) return;
+    const t = setTimeout(() => handleChestTap(), 180);
+    return () => clearTimeout(t);
+  }, [visible, opened, handleChestTap]);
+
   const handleContinue = useCallback(() => {
     tapHaptic();
     onContinueModule();
@@ -368,9 +380,11 @@ export function ChestCelebrationModal({
                     </Text>
                   </View>
                 )}
-                <Text style={[styles.tapHint, RTL_CENTER]} allowFontScaling={false}>
-                  הקש על התיבה לפתיחה
-                </Text>
+                {/* Chest auto-opens after 180ms (Yoav 2026-06-11) — no
+                    "הקש לפתיחה" hint because the tap is no longer required.
+                    The Pressable is kept as a defensive fallback so a user
+                    who manages to tap before the auto-timer fires still
+                    advances the open sequence cleanly. */}
               </Pressable>
             ) : (
               <Animated.View entering={FadeIn.duration(400)} style={styles.rewardWrap}>
@@ -433,30 +447,37 @@ export function ChestCelebrationModal({
             </Animated.View>
           )}
 
-          {/* CTAs — only after the chest is opened AND wisdom+DoN finished */}
+          {/* CTAs — only after the chest is opened AND wisdom+DoN finished.
+              Yoav 2026-06-11: relabeled to "המשך" (move on to the next
+              lesson in the chapter) and "סיים את כל המודולה" (stay in the
+               module's expanded map to finish the remaining chips). The
+               secondary CTA is hidden for the 100% master chest since
+               there's nothing left to complete inside the module. */}
           {opened && donResolved && (
             <Animated.View entering={FadeIn.delay(300).duration(400)} style={styles.ctaWrap}>
               <Pressable
                 onPress={handleAdvance}
                 accessibilityRole="button"
-                accessibilityLabel="לשיעור הבא בפרק"
+                accessibilityLabel="המשך"
                 style={[styles.cta, styles.ctaPrimary]}
               >
                 <ChevronLeft size={20} color="#ffffff" strokeWidth={2.6} />
                 <Text style={[styles.ctaText, RTL]} allowFontScaling={false}>
-                  לשיעור הבא בפרק
+                  המשך
                 </Text>
               </Pressable>
-              <Pressable
-                onPress={handleContinue}
-                accessibilityRole="button"
-                accessibilityLabel="המשך עם המודולה"
-                style={[styles.cta, styles.ctaSecondary]}
-              >
-                <Text style={[styles.ctaSecondaryText, RTL]} allowFontScaling={false}>
-                  המשך עם המודולה
-                </Text>
-              </Pressable>
+              {!isFinale && (
+                <Pressable
+                  onPress={handleContinue}
+                  accessibilityRole="button"
+                  accessibilityLabel="סיים את כל המודולה"
+                  style={[styles.cta, styles.ctaSecondary]}
+                >
+                  <Text style={[styles.ctaSecondaryText, RTL]} allowFontScaling={false}>
+                    סיים את כל המודולה
+                  </Text>
+                </Pressable>
+              )}
             </Animated.View>
           )}
         </SafeAreaView>
