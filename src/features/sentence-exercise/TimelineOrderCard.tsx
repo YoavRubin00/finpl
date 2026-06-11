@@ -22,6 +22,11 @@ import { ConfettiExplosion } from "../../components/ui/ConfettiExplosion";
 import type { TimelineOrderPrompt } from "./sentenceTypes";
 
 const HELP_OFFER_DELAY_MS = 15_000;
+// Yoav 2026-06-11: also offer help after N component moves without a
+// successful "בדוק" (= the user is rearranging without converging on
+// the right order). Tracks moveItem calls; resets when a new prompt
+// mounts or the user dismisses the offer.
+const HELP_OFFER_MOVE_THRESHOLD = 5;
 
 // משוער — גובה item כולל gap. משמש את ה-pan gesture לחישוב כמה מקומות
 // המשתמש גרר. אם תעדכן את itemRow padding או itemsColumn gap, עדכן גם פה.
@@ -277,12 +282,15 @@ export function TimelineOrderCard({
   const [showYears, setShowYears] = useState<boolean>(false);
   const reducedMotion = useReducedMotion();
 
-  // Captain Shark help offer — appears after 15s of inactivity. If the user
-  // accepts, we auto-arrange the items in their correct order. Each user
-  // interaction (drag, arrow tap) resets the inactivity timer.
+  // Captain Shark help offer — appears after 15s of inactivity OR after
+  // the user has moved components 5 times without a successful "בדוק"
+  // (Yoav 2026-06-11: "לאחר 5 הזזות של רכיבים בלי להשלים את השלמת
+  // משפטים, תפתח את אני אסתדר עזור לי כבר"). Resets the move counter
+  // on prompt change or dismissal. Accepting auto-arranges the items.
   const [showHelpOffer, setShowHelpOffer] = useState<boolean>(false);
   const [helpDismissed, setHelpDismissed] = useState<boolean>(false);
   const helpTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const moveCountRef = useRef(0);
   const resetInactivityTimer = useCallback(() => {
     if (helpTimerRef.current) clearTimeout(helpTimerRef.current);
     if (helpDismissed || locked) return;
@@ -296,6 +304,11 @@ export function TimelineOrderCard({
       if (helpTimerRef.current) clearTimeout(helpTimerRef.current);
     };
   }, [resetInactivityTimer]);
+  // Reset the move counter whenever a new prompt mounts (key change on
+  // the prompt id propagates here via the prompt prop).
+  useEffect(() => {
+    moveCountRef.current = 0;
+  }, [prompt.id]);
 
   // Shake animation for incorrect Check attempts. Skipped under reducedMotion.
   const shakeX = useSharedValue(0);
@@ -342,8 +355,17 @@ export function TimelineOrderCard({
       if (wrongTimerRef.current) clearTimeout(wrongTimerRef.current);
       // Any user interaction resets the help-offer countdown.
       resetInactivityTimer();
+      // Move-count gate — surface the help offer after N moves without a
+      // successful "בדוק" so the user isn't stranded rearranging.
+      moveCountRef.current += 1;
+      if (
+        moveCountRef.current >= HELP_OFFER_MOVE_THRESHOLD
+        && !helpDismissed
+      ) {
+        setShowHelpOffer(true);
+      }
     },
-    [locked, resetInactivityTimer],
+    [locked, resetInactivityTimer, helpDismissed],
   );
 
   // Apply the correct order in one shot when the user accepts shark's help.
