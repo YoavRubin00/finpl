@@ -20,18 +20,27 @@ interface InteractiveRecallScreenProps {
   moduleId: string;
   unitColors: UnitColors;
   onComplete: (summary: { totalXp: number; totalCoins: number }) => void;
+  /** Yoav 2026-06-11: surface (current, total) so the outer progress
+   *  bar fills as each prompt is solved (default was a flat 0 until the
+   *  whole recall set finished — felt broken). */
+  onProgress?: (current: number, total: number) => void;
 }
 
 export function InteractiveRecallScreen({
   moduleId,
   unitColors,
   onComplete,
+  onProgress,
 }: InteractiveRecallScreenProps) {
   const set = getRecallSet(moduleId);
   const recall = useInteractiveRecall(set);
   const addXP = useEconomyUIStore((s) => s.addXP);
   const addCoins = useEconomyUIStore((s) => s.addCoins);
   const { playSound } = useSoundEffect();
+  const total = set?.prompts.length ?? 0;
+  useEffect(() => {
+    onProgress?.(recall.state.currentIndex, total);
+  }, [recall.state.currentIndex, total, onProgress]);
 
   const recallRef = useRef(recall);
   recallRef.current = recall;
@@ -89,6 +98,11 @@ export function InteractiveRecallScreen({
   if (missingSet) return null;
 
   const prompt = recall.current;
+  // Belt-and-suspenders: missingSet already gates on !recall.current, but TS
+  // can't narrow across the assignment and recall.current could theoretically
+  // be undefined on the boundary tick where currentIndex === total. Bail
+  // before accessing prompt.id so the JSX below never explodes.
+  if (!prompt) return null;
 
   // Only honor cardState if it was pushed by THIS prompt's card. After a
   // prompt change, there's a brief window where the parent still holds the

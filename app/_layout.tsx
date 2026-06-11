@@ -42,7 +42,7 @@ try {
 initSentry();
 initPostHog();
 
-import { Slot, useRouter, useSegments, useRootNavigationState, usePathname } from "expo-router";
+import { Stack, useRouter, useSegments, useRootNavigationState, usePathname } from "expo-router";
 import { useEffect, useRef, useState } from "react";
 import { AppState, Platform, Text, TextInput } from "react-native";
 import { useUserStatsUIStore } from "../src/features/user-stats/useUserStatsUIStore";
@@ -109,6 +109,13 @@ import { TermsReconsentGate } from "../src/features/legal/TermsReconsentGate";
 import { configureRevenueCat } from "../src/services/revenueCat";
 import { AppWalkthroughOverlay } from "../src/features/onboarding/AppWalkthroughOverlay";
 import { StreakFreezeSaveModal } from "../src/features/streak/StreakFreezeSaveModal";
+import {
+  ComebackRewardModal,
+  COMEBACK_COINS,
+} from "../src/features/retention-loops/ComebackRewardModal";
+import { useComebackRewardStore } from "../src/features/retention-loops/useComebackRewardStore";
+import { SharkSkinsGate } from "../src/features/retention-loops/SharkSkinsGate";
+import { useStreakSkinWatcher } from "../src/features/retention-loops/useStreakSkinWatcher";
 import { StreakRepairModal } from "../src/features/streak/StreakRepairModal";
 import { useTutorialStore } from "../src/stores/useTutorialStore";
 import { useGoogleAuth } from "../src/features/auth/useGoogleAuth";
@@ -178,6 +185,34 @@ function StreakRepairModalGate() {
   return <StreakRepairModal visible={pending} onDismiss={dismiss} />;
 }
 
+/** R8 T3.2 — Comeback Reward gate. Reads `pendingClaim` from the
+ *  store (set by the boot hook below on lapse detection); on claim,
+ *  credits the user +200 coins + 1 streak freeze and clears the flag. */
+function ComebackRewardGate() {
+  const pendingClaim = useComebackRewardStore((s) => s.pendingClaim);
+  const lapsedDays = useComebackRewardStore((s) => s.lapsedDays);
+  const claim = useComebackRewardStore((s) => s.claim);
+  const claimAndStamp = useComebackRewardStore((s) => s.claimAndStamp);
+  const addCoins = useEconomyUIStore((s) => s.addCoins);
+  const addStreakFreezes = useEconomyUIStore((s) => s.addStreakFreezes);
+  return (
+    <ComebackRewardModal
+      visible={pendingClaim}
+      lapsedDays={lapsedDays}
+      onClaim={() => {
+        // Credit FIRST, then settle. If the app dies between these calls
+        // the lapse stays owed (lastSeenAt un-advanced) and is re-offered
+        // next boot — never silently lost.
+        try { addCoins(COMEBACK_COINS, 'comeback'); } catch { /* non-fatal */ }
+        try { addStreakFreezes(1); } catch { /* non-fatal */ }
+        claimAndStamp(Date.now());
+      }}
+      // Defer ("maybe later") — hides for this session, re-offered next boot.
+      onDismiss={() => { claim(); }}
+    />
+  );
+}
+
 function RootLayoutInner() {
   useGoogleAuth();
   
@@ -195,6 +230,23 @@ function RootLayoutInner() {
   const { visible: aiVisible, dismiss: aiDismiss, navigate: aiNavigate, message: aiMessage } = useAIInsightBanner();
   const upgradeNudge = useUpgradeNudgeBanner();
 
+  // R8 T3.2 — Comeback Reward boot hook. Stamps `lastSeenAt` on every
+  // foreground; if the gap crosses 7 days, queues a pending claim that
+  // ComebackRewardGate surfaces on the next interactive paint. Runs
+  // exactly once per mount — the foreground watcher below handles
+  // subsequent re-opens within the same RN process.
+  useEffect(() => {
+    try {
+      useComebackRewardStore.getState().registerAppOpen(Date.now());
+    } catch { /* non-fatal */ }
+  }, []);
+
+  // R8 T3.5 — Captain Shark cosmetics watcher. Detects the 7-day
+  // streak crossing (unlock Gold + Fire) and streak breaks (revert
+  // to Classic + queue the lost-skin reveal). Idempotent on every
+  // streak change.
+  useStreakSkinWatcher();
+
   // ── Session time tracking: foreground/background events ──
   const foregroundEnteredAt = useRef<number | null>(Date.now());
   useEffect(() => {
@@ -206,6 +258,10 @@ function RootLayoutInner() {
         // immediately on resume, not on the next time the user navigates to
         // DuoLearnScreen. refreshQuests() is idempotent same-day.
         try { useDailyQuestsStore.getState().refreshQuests(); } catch { /* non-fatal */ }
+        // R8 T3.2 — re-check comeback lapse on every foreground (covers
+        // the "phone left charging for 8 days" pattern where the app is
+        // still in memory but the lapse window has elapsed).
+        try { useComebackRewardStore.getState().registerAppOpen(Date.now()); } catch { /* non-fatal */ }
       } else if (state === "background" || state === "inactive") {
         if (foregroundEnteredAt.current !== null) {
           const secs = Math.round((Date.now() - foregroundEnteredAt.current) / 1000);
@@ -267,9 +323,22 @@ function RootLayoutInner() {
       } catch { /* SDK not available in dev without native build */ }
       try {
         const { default: mobileAds } = require("react-native-google-mobile-ads") as {
-          default: () => { initialize(): Promise<unknown> };
+          default: () => {
+            initialize(): Promise<unknown>;
+            setAppMuted(muted: boolean): void;
+            setAppVolume(volume: number): void;
+          };
         };
-        mobileAds().initialize().catch(() => {});
+        const ads = mobileAds();
+        ads.initialize()
+          .then(() => {
+            // Start fully muted. Ad audio is unmuted only for the brief window
+            // of an explicitly user-initiated rewarded show() (useRewardedAd).
+            // Prevents iOS from leaking a preloaded video ad's audio in the
+            // background under the Playback audio session.
+            try { ads.setAppMuted(true); ads.setAppVolume(0); } catch { /* older SDK */ }
+          })
+          .catch(() => {});
       } catch { /* SDK not available in dev without native build */ }
     })();
   }, []);
@@ -386,6 +455,10 @@ function RootLayoutInner() {
   //   handle 0-3/4/5. Old dark-themed GuestRegisterDailyNudge removed
   //   2026-05-30 — it duplicated the post-walkthrough CTA.
   const isMod01Complete = useIsModuleCompleted("mod-0-1");
+  // The walkthrough overlay also activates when the user explicitly opts
+  // in via the topic-tree Mod01WalkthroughPromptModal (before mod-0-1 is
+  // fully completed). See the AppWalkthroughOverlay gate below.
+  const walkthroughTriggered = useTutorialStore((s) => s.walkthroughTriggered);
   const allowAutoPopups = hasCompletedOnboarding && hasSeenWalkthrough && isMod01Complete;
 
   // ── Android Play Install Referrer — runs once on first launch ──
@@ -439,7 +512,7 @@ function RootLayoutInner() {
         await AsyncStorage.removeItem(screenMod.PENDING_REFERRAL_STORAGE_KEY);
         if (cancelled) return;
         if (result) {
-          try { useEconomyUIStore.getState().addCoins(result.bonusGranted); } catch { /* non-fatal */ }
+          try { useEconomyUIStore.getState().addCoins(result.bonusGranted, 'referral-signup-bonus'); } catch { /* non-fatal */ }
         }
       } catch { /* non-fatal — deep link redeem will be retried next launch if user re-enters via link */ }
     })();
@@ -487,6 +560,14 @@ function RootLayoutInner() {
       "salary-net-calculator", "tax-refund-calculator", "mortgage-calculator",
       "pension-fees-comparator", "breaking-news", "coming-soon",
       "net-worth-dashboard", "financial-profile",
+      // R6 topic-tree — dedicated per-module chat screen reached from
+      // the `chat` topic chip. Without listing it here the redirect
+      // guard below bounces the user back to /(tabs) before the screen
+      // can paint (Yoav: "בפועל הוא לא מצוביל לצאט").
+      "topic-chat",
+      // R7 — dedicated full-screen game route reached from the `game`
+      // topic chip; mirror reasoning to topic-chat above.
+      "topic-game",
     ].includes(segments[0] as string);
 
     if (!isAuthenticated) {
@@ -529,12 +610,18 @@ function RootLayoutInner() {
       // guests who want to upgrade to a real account.
       const onAuthOnboarding = inAuthGroup && (segments as string[])[1] === "onboarding";
       if (onAuthOnboarding) {
-        // First-time completion: drop directly into mod-0-1 (matches the
-        // intent of handleDone in ProfilingFlow). Returning user that already
-        // finished mod-0-1 → land on the learn map as before.
-        // Without this branch, this effect can race ProfilingFlow's own
-        // router.replace and override it with "/(tabs)".
-        const target = isMod01Complete ? "/(tabs)" : "/lesson/mod-0-1?chapterId=chapter-0";
+        // First-time completion: drop directly into mod-0-1 INTRO under
+        // topic-tree mode. R7 Epic B1 — after the intro finishes,
+        // LessonFlowScreen.replace ('returnTo=topic-tree') bounces the
+        // user to /(tabs)/learn with the mod-0-1 accordion expanded so
+        // they can see the cards chip glowing as the recommended next
+        // step (Yoav: "לאחר האונבורדינג... מובל לאינטרו... לאחר מכן
+        // נפתח לו מפת הלמידה של המודולה, שכרטיסיות הלמידה זוהרות").
+        // Returning user that already finished mod-0-1 → land on the
+        // learn map as before.
+        const target = isMod01Complete
+          ? "/(tabs)"
+          : "/lesson/mod-0-1?chapterId=chapter-0&startPhase=intro&returnTo=topic-tree";
         router.replace(target as never);
       } else if (!inTabsGroup && !inContentRoute && !inAuthGroup) {
         router.replace("/(tabs)");
@@ -552,8 +639,33 @@ function RootLayoutInner() {
       <GlobalErrorBoundary>
         <RewardAnimationProvider>
             <StreakCelebrationProvider>
-              <Slot />
-              {isAuthenticated && hasCompletedOnboarding && isMod01Complete && <AppWalkthroughOverlay />}
+              {/* Root navigator. Was <Slot/> — which has NO stack, so pushing
+                  /lesson/[id] swapped the whole (tabs) tree with no animation
+                  and REMOUNTED it on return (the "learn map flashes briefly"
+                  artifact). A native Stack keeps (tabs) mounted underneath,
+                  slides the sub-module lesson in fast, and pops back without a
+                  flash — the premium feel Yoav asked for (2026-06-11). Fast
+                  220ms slide; back-gesture on. headerShown:false preserves the
+                  existing custom headers. */}
+              <Stack
+                screenOptions={{
+                  headerShown: false,
+                  animation: "slide_from_right",
+                  animationDuration: 220,
+                  gestureEnabled: true,
+                  contentStyle: { backgroundColor: "transparent" },
+                }}
+              />
+              {/* Yoav 2026-06-11: also mount the walkthrough overlay BEFORE
+                  mod-0-1 is fully completed, IF the user has explicitly
+                  opted in (walkthroughTriggered=true). The new topic-tree
+                  flow fires the prompt after the first non-intro chip,
+                  long before 70% completion — the old isMod01Complete
+                  gate kept the overlay dark until then, so "התחל סיור"
+                  did nothing. AppWalkthroughOverlay's own internal gate
+                  (walkthroughTriggered + !hasSeenWalkthrough) keeps it
+                  off-screen for non-opted users. */}
+              {isAuthenticated && hasCompletedOnboarding && (isMod01Complete || walkthroughTriggered) && <AppWalkthroughOverlay />}
               <ShopModal />
               {allowAutoPopups && <GlobalUpgradeModal />}
               {allowAutoPopups && <PostStreakIncomeSplash />}
@@ -604,6 +716,8 @@ function RootLayoutInner() {
               )}
               <FreezeSaveModalGate />
               <StreakRepairModalGate />
+              <ComebackRewardGate />
+              <SharkSkinsGate />
             </StreakCelebrationProvider>
         </RewardAnimationProvider>
       </GlobalErrorBoundary>

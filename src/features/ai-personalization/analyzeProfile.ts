@@ -105,19 +105,17 @@ function deriveMonetizationContext(
 
   switch (vector) {
     case 'Impulse Buyer':
+      // Audrey rule: impulsivity is never a monetization vector. A user
+      // identified as impulsive must NOT receive scarcity ("רק עכשיו"),
+      // discounts presented as urgent ("מבצע בזק"), or loss-aversion
+      // copy ("אל תפסיק עכשיו") — those weaponize the trait against the
+      // user. Value framing only, no urgency.
       offers.push({
         trigger: 'after_win',
-        bundleKey: 'flash_gem_pack',
-        headline: 'מבצע בזק! 💎',
-        subtext: 'חבילת 500 ג׳מס ב-50% הנחה, רק עכשיו',
-        urgency: 'high',
-      });
-      offers.push({
-        trigger: 'hearts_depleted',
-        bundleKey: 'extra_lives',
-        headline: 'אל תפסיק עכשיו!',
-        subtext: '5 לבבות + 100 ג׳מס במחיר מיוחד',
-        urgency: 'high',
+        bundleKey: 'gem_pack',
+        headline: 'חבילת ג׳מס',
+        subtext: 'אם תרצה להאיץ את ההתקדמות — זמין בחנות',
+        urgency: 'low',
       });
       break;
     case 'Status Seeker':
@@ -125,7 +123,7 @@ function deriveMonetizationContext(
         trigger: 'after_win',
         bundleKey: 'platinum_avatar',
         headline: 'אווטאר פלטינום 👑',
-        subtext: 'בלעדי למנצחים, תבלוט מכולם',
+        subtext: 'הכרה על ההישג שלך — לצד דמויות אחרות פתוחות',
         urgency: 'medium',
       });
       offers.push({

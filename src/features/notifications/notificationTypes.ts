@@ -1,5 +1,6 @@
 export type NotificationChannelId =
   | "streak"
+  | "streakFallback"
   | "chest"
   | "challenge"
   | "dailyChallenge"

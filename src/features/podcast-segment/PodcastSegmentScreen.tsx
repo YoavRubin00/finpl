@@ -48,14 +48,33 @@ type Phase = 'intro' | 'listening' | 'summary' | 'question-1' | 'question-2';
 interface Props {
   podcast: PodcastSegment;
   onComplete: (result: { correctCount: number }) => void;
+  /** Yoav 2026-06-11: surface (currentIndex, total) so the outer
+   *  LessonFlowScreen progress bar reflects podcast progress through
+   *  its 5 internal phases (intro → listen → summary → q1 → q2)
+   *  instead of falling back to the lesson-wide pct. */
+  onProgress?: (current: number, total: number) => void;
 }
+
+const PHASE_INDEX: Record<Phase, number> = {
+  intro: 0,
+  listening: 1,
+  summary: 2,
+  'question-1': 3,
+  'question-2': 4,
+};
+const PHASE_TOTAL = 5;
 
 export const PodcastSegmentScreen = React.memo(function PodcastSegmentScreen({
   podcast,
   onComplete,
+  onProgress,
 }: Props) {
   const [phase, setPhase] = useState<Phase>('intro');
   const correctCountRef = useRef(0);
+
+  useEffect(() => {
+    onProgress?.(PHASE_INDEX[phase], PHASE_TOTAL);
+  }, [phase, onProgress]);
 
   if (phase === 'intro') {
     const idx = PODCAST_DRAFTS.findIndex((p) => p.id === podcast.id);

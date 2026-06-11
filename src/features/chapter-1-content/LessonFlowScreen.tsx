@@ -8,6 +8,11 @@ import { Gesture, GestureDetector, GestureHandlerRootView } from "react-native-g
 import { useVideoPlayer, VideoView } from "expo-video";
 import { createAudioPlayer, type AudioPlayer } from "expo-audio";
 import { useAudioStore } from "../../stores/useAudioStore";
+import { useTopicTreeReturnStore } from "../topic-learning/useTopicTreeReturnStore";
+import { useTopicProgressStore } from "../topic-learning/useTopicProgressStore";
+import { useContinuousRunStore } from "../topic-learning/useContinuousRunStore";
+import { resolveTopics } from "../topic-learning/topicResolver";
+import type { TopicKind } from "../topic-learning/types";
 import { useNudgeQueueStore } from "../../stores/useNudgeQueueStore";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import Animated, {
@@ -139,6 +144,14 @@ function FallbackToSummary({ setPhase }: { setPhase: (p: "summary") => void }) {
   useEffect(() => { setPhase("summary"); }, [setPhase]);
   return <View style={{ flex: 1, backgroundColor: "#f8fafc" }} />;
 }
+
+// Same idea for any phase transition that needs to fire on mount (used by
+// the video / mid-quiz-video / post-infographic-video fallbacks). Doing the
+// setState in render produces a "Cannot update during render" warning.
+function FallbackToPhaseEffect({ run }: { run: () => void }) {
+  useEffect(() => { run(); }, [run]);
+  return <View style={{ flex: 1, backgroundColor: "#f8fafc" }} />;
+}
 import { FINN_MEME_REACTIONS } from "../fun/finnJokesData";
 import type { FinnAnimationState } from "../retention-loops/finnMascotConfig";
 import { FlashcardInfographic, FINN_MAP, INFOGRAPHIC_MAP } from "./FlashcardInfographic";
@@ -149,13 +162,35 @@ import type { LessonContext } from "../chat/buildChatPrompt";
 
 const AnimatedExpoImage = Animated.createAnimatedComponent(ExpoImage);
 
-type FlowPhase = "hero" | "intro" | "flashcards" | "podcast" | "couple-dilemma" | "interactive-recall" | "quizzes" | "sim-intro" | "sim" | "module-infographic" | "post-infographic-video" | "shark-dilemma" | "summary" | "video";
+type FlowPhase = "hero" | "intro" | "flashcards" | "podcast" | "couple-dilemma" | "interactive-recall" | "quizzes" | "mid-quiz-video" | "sim-intro" | "sim" | "module-infographic" | "post-infographic-video" | "shark-dilemma" | "summary" | "video";
 
-/** Full-screen character art shown when first opening a module */
-const MODULE_HERO_MAP: Record<string, { uri: string } | number> = {
-  "mod-4-19": require("../../../assets/IMAGES/finn/finn-splash.png") as number,
-  "mod-5-25": { uri: 'https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/infographics/finn-freedom.png' },
+/** "למידה רציפה" progress sync (Yoav 2026-06-11): maps a linear FlowPhase
+ *  to the topic-tree chip kind it completes, so the continuous flow can
+ *  light up the accordion chips as it advances. Mirrors DuoLearnScreen's
+ *  phaseToKind. Intentionally OMITS the pre-content / transitional phases
+ *  ('hero', 'video', 'sim-intro', 'mid-quiz-video', 'summary') — leaving a
+ *  phase OUT means we never falsely credit a chip the user merely passed
+ *  through (e.g. the auto-playing hook video before the real intro). */
+const TT_PHASE_TO_KIND: Partial<Record<FlowPhase, TopicKind>> = {
+  intro: 'intro',
+  flashcards: 'cards',
+  'interactive-recall': 'recall',
+  quizzes: 'quiz',
+  sim: 'sim',
+  'module-infographic': 'infographic',
+  'post-infographic-video': 'post-video',
+  podcast: 'podcast',
+  'couple-dilemma': 'couple-dilemma',
+  'shark-dilemma': 'shark-dilemma',
 };
+
+// MODULE_HERO_MAP / MODULE_INFOGRAPHIC_MAP / MODULE_POST_VIDEO_MAP were
+// extracted to ./moduleAssetMaps.ts (architect P0 pre-release audit
+// 2026-06-11) so topic-learning's prefetch hook can import them without
+// pulling in this 6k-line module. Re-exported here for back-compat with
+// the dozens of internal callsites still importing from this file.
+export { MODULE_HERO_MAP, MODULE_INFOGRAPHIC_MAP, MODULE_POST_VIDEO_MAP } from './moduleAssetMaps';
+import { MODULE_HERO_MAP, MODULE_INFOGRAPHIC_MAP, MODULE_POST_VIDEO_MAP } from './moduleAssetMaps';
 
 /** Modules that have a playable simulation game.
  *  2026-05-30 chapter-0 swap: BarterPuzzleScreen moved from mod-0-1 to
@@ -197,75 +232,8 @@ const MODULES_WITH_INTERACTIVE_RECALL = new Set([
   "mod-5-25", "mod-5-26",
 ]);
 
-/** Modules with a NotebookLM-generated infographic shown before the summary/chest */
-const MODULE_INFOGRAPHIC_MAP: Record<string, { uri: string }> = {
-  // 2026-06-04: mod-0-1 entry removed as part of the mod-0-1 split. The
-  // infographic appeared BEFORE the summary card; with the summary card
-  // moved to mod-0-1b, the infographic no longer fits in mod-0-1's flow.
-  // mod-0-1b is short and doesn't need an extra infographic. See
-  // plans/0-2-toasty-torvalds.md.
-  "mod-0-2": { uri: 'https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/infographics/ch0-upgrade/mod-0-1-upgrade.png' },
-  "mod-0-3": { uri: 'https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/infographics/ch0-upgrade/mod-0-3-upgrade.png' },
-  "mod-0-4": { uri: 'https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/infographics/ch0-upgrade/mod-0-4-upgrade.png' },
-  "mod-0-5": { uri: 'https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/infographics/ch0-upgrade/mod-0-5-upgrade.png' },
-};
-
-/** Modules with a video shown AFTER the infographic (before the chest) */
-const MODULE_POST_VIDEO_MAP: Record<string, string> = {
-  // 2026-06-04: mod-0-1 entry removed as part of the mod-0-1 split. The
-  // Finn post-summary video summed up loan/pension content that has moved
-  // to mod-0-1b, so it no longer matches mod-0-1's reduced scope. mod-0-1b
-  // is short and doesn't need a post-video. See plans/0-2-toasty-torvalds.md.
-  // Chapter 0 — money/banking/interest/credit/pension (NEW first slot — was mod-0-2 content)
-  "mod-0-2": "https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/0-1.mp4",
-  "mod-0-3": "https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/finn-videos/finn-studying.mp4",
-  "mod-0-4": "https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/finn-videos/finn-mod-0-4.mp4",
-  "mod-0-5": "https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/finn-videos/finn-mod-0-5.mp4",
-  // Chapter 1 — Tier 2 specifics (generated for each topic)
-  "mod-1-1": "https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/finn-videos/finn-mod-1-1.mp4", // ריבית דריבית
-  "mod-1-2": "https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/finn-videos/finn-mod-1-2.mp4", // מלכודת המינוס
-  "mod-1-3": "https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/finn-videos/finn-mod-0-4.mp4", // אשראי — recycle credit-card scene
-  "mod-1-4": "https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/finn-videos/finn-ch2-budget.mp4", // תקציב — recycle budget scene
-  "mod-1-5": "https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/finn-videos/finn-mod-1-5.mp4", // תלוש שכר
-  "mod-1-6": "https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/finn-videos/finn-ch1-debt.mp4", // הלוואות — recycle debt scene
-  "mod-1-7": "https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/finn-videos/finn-mod-1-7.mp4", // עמלות
-  "mod-1-8": "https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/finn-videos/finn-mod-1-8.mp4", // מלכודות שיווקיות
-  "mod-1-9": "https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/finn-videos/finn-mod-1-9.mp4", // קרן חירום
-  // Chapter 2 — Tier 2 specifics + recycles
-  "mod-2-10": "https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/finn-videos/finn-mod-2-10.mp4", // דירוג אשראי
-  "mod-2-11": "https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/finn-videos/finn-mod-2-11.mp4", // נקודות זיכוי
-  "mod-2-12": "https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/finn-videos/finn-mod-0-5.mp4", // פנסיה — recycle
-  "mod-2-13": "https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/finn-videos/finn-studying.mp4", // קרן השתלמות — recycle
-  "mod-2-14": "https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/finn-videos/finn-mod-2-14.mp4", // ביטוחים
-  // Chapter 3 — Tier 2 specific (psychology) + recycles
-  "mod-3-15": "https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/finn-videos/finn-ch3-inflation.mp4",
-  "mod-3-16": "https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/finn-videos/finn-mod-3-16.mp4", // פסיכולוגיה של הכסף
-  "mod-3-17": "https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/finn-videos/finn-ch4-invest.mp4", // קופת גמל
-  "mod-3-18": "https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/finn-videos/finn-trading-start.mp4", // מסלולי השקעה
-  // Chapter 4 — Tier 2 specifics (dividend, diversification) + recycles
-  "mod-4-19": "https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/finn-videos/finn-ch4-invest.mp4",
-  "mod-4-20": "https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/finn-videos/finn-trading-start.mp4", // מדדים
-  "mod-4-21": "https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/finn-videos/finn-ch4-invest.mp4", // ETF
-  "mod-4-22": "https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/finn-videos/finn-trading-start.mp4", // פקודות מסחר
-  "mod-4-23": "https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/finn-videos/finn-mod-4-23.mp4", // דיבידנד
-  "mod-4-24": "https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/finn-videos/finn-mod-4-24.mp4", // פיזור סיכונים
-  "mod-4-25": "https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/finn-videos/finn-studying.mp4", // דוחות כספיים
-  "mod-4-26": "https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/finn-videos/finn-trading-start.mp4", // פלטפורמות
-  "mod-4-27": "https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/finn-videos/finn-ch4-invest.mp4",
-  "mod-4-28": "https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/finn-videos/finn-ch4-invest.mp4", // ניתוח גרפים
-  "mod-4-29": "https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/finn-videos/finn-ch4-invest.mp4", // סוגי מניות
-  "mod-4-b1": "https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/finn-videos/finn-studying.mp4", // Graham 7 rules
-  "mod-4-b2": "https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/finn-videos/finn-studying.mp4", // margin safety
-  "mod-4-b3": "https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/finn-videos/finn-ch4-invest.mp4", // price/value
-  "mod-4-b4": "https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/finn-videos/finn-studying.mp4", // AP story
-  // Chapter 5 — all recycled (FIRE / pension / champion themes)
-  "mod-5-25": "https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/finn-videos/finn-ch5-fire.mp4",
-  "mod-5-26": "https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/finn-videos/finn-mod-0-5.mp4",
-  "mod-5-27": "https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/finn-videos/finn-ch5-fire.mp4",
-  "mod-5-28": "https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/finn-videos/finn-streak-365.mp4",
-  "mod-5-29": "https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/finn-videos/finn-mod-0-5.mp4",
-  "mod-5-30": "https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/finn-videos/finn-streak-100.mp4",
-};
+// MODULE_INFOGRAPHIC_MAP + MODULE_POST_VIDEO_MAP records now live in
+// ./moduleAssetMaps.ts (re-exported at the top of this file).
 
 /** Cards that use infographic-top layout: big image at top, text hidden, Finn at bottom */
 const INFOGRAPHIC_TOP_CARDS = new Set([
@@ -687,6 +655,16 @@ function FlashcardCard({
   const [finnTipDismissed, setFinnTipDismissed] = useState(false);
   const showFinnPopup = showFinnTip && index === 2 && !finnTipDismissed;
 
+  // R8 pre-release audit (Yoav + ארכיטקט 2026-06-11): Math.random()
+  // previously sat in the JSX render body (line 828) — every re-render
+  // re-rolled the meme caption, producing visible text jitter when the
+  // card animated or a parent state changed. Memoise per card.id so the
+  // caption stays stable for the lifetime of this card.
+  const memeFallback = useMemo(
+    () => FINN_MEME_REACTIONS[Math.floor(Math.random() * FINN_MEME_REACTIONS.length)],
+    [card.id],
+  );
+
   // Audio Playback
   useEffect(() => {
     let playerObj: AudioPlayer | null = null;
@@ -825,7 +803,7 @@ function FlashcardCard({
                   <ExpoImage source={FINN_HAPPY} accessible={false} style={{ width: 64, height: 64 }} contentFit="contain" />
                   <View style={{ flex: 1, backgroundColor: "#334155", borderRadius: 14, padding: 14, borderWidth: 1, borderColor: "#475569" }}>
                     <Text style={{ writingDirection: "rtl", textAlign: "right", fontSize: 16, color: "#f8fafc", fontWeight: "700", lineHeight: 24 }}>
-                      {card.text || FINN_MEME_REACTIONS[Math.floor(Math.random() * FINN_MEME_REACTIONS.length)]}
+                      {card.text || memeFallback}
                     </Text>
                   </View>
                 </View>
@@ -2255,20 +2233,62 @@ function chapterStoreKey(chapterId: string): string {
 
 export function LessonFlowScreen() {
   const isFocused = useIsFocused();
-  const { id, chapterId, replay } = useLocalSearchParams<{ id: string; chapterId?: string; replay?: string }>();
+  const { id, chapterId, replay, startPhase, returnTo, cardFilter, ttProgress } = useLocalSearchParams<{
+    id: string;
+    chapterId?: string;
+    replay?: string;
+    /** Topic-tree pilot (R4 2026-06-09): when present, the lesson jumps
+     *  STRAIGHT to this phase on mount instead of running the regular
+     *  hero/video/intro chain. Used by DuoLearnScreen's chip-tap handler
+     *  so chips open the legacy LessonFlowScreen at the matching phase
+     *  with all the host chrome intact (chat, shark callouts, bottom bar). */
+    startPhase?: string;
+    /** Topic-tree exit signal — when 'topic-tree', the lesson does NOT
+     *  advance to the next phase on phase-complete. Instead it
+     *  router.back()'s with `?completedPhase=X` so DuoLearnScreen can
+     *  mark the matching topic done. */
+    returnTo?: string;
+    /** R5 cards/tutorial-video split — 'video' keeps only videoUri
+     *  flashcards (tutorial-video chip), 'non-video' filters them out
+     *  (regular cards chip). */
+    cardFilter?: string;
+    /** "למידה רציפה" (Yoav 2026-06-11): when '1', this is the continuous
+     *  "autopilot" run of the WHOLE module (no startPhase/returnTo, so it
+     *  plays like master). Tells the lesson to stamp each completed phase
+     *  into useTopicProgressStore as it advances, so a mid-flow exit still
+     *  lights up the matching chips back in the accordion. */
+    ttProgress?: string;
+  }>();
   const isReplay = replay === '1';
   const router = useRouter();
+  /** Return to the learn map. Under the root <Stack> the map is still mounted
+   *  beneath this lesson, so dismissTo POPS back to it — no remount / "flash",
+   *  and it carries any ?openPearl= param through (Yoav 2026-06-11: fast,
+   *  premium transitions). Cold start (no back-history) falls back to a fresh
+   *  replace. The store-signal chip-completion path (returnTo=topic-tree) has
+   *  its own router.back() above; this covers the module-completion returns. */
+  const returnToMap = useCallback((path: string = "/(tabs)/index") => {
+    if (router.canGoBack()) router.dismissTo(path as never);
+    else router.replace(path as never);
+  }, [router]);
   /** Safe back: go back if possible, otherwise fall back to tabs home */
   function safeGoBack() {
-    // Intercept exit during active lesson phases
-    if (phase === "flashcards" || phase === "interactive-recall" || phase === "quizzes" || phase === "sim") {
+    // Yoav 2026-06-11: topic-tree chip exits skip the "stay another
+    // minute" confirm — each chip is a small unit, no progress is lost
+    // when leaving mid-card ("רשום לו את ההודעה של נשאר עוד דקה הטובה"
+    // shouldn't fire here). The legacy linear flow keeps the guard
+    // because it's a longer, contiguous session.
+    if (
+      returnTo !== 'topic-tree'
+      && (phase === "flashcards" || phase === "interactive-recall" || phase === "quizzes" || phase === "sim")
+    ) {
       setShowExitConfirm(true);
       return;
     }
     if (router.canGoBack()) {
       router.back();
     } else {
-      router.replace("/(tabs)/index" as never);
+      returnToMap("/(tabs)/index");
     }
   }
 
@@ -2278,7 +2298,7 @@ export function LessonFlowScreen() {
     if (id === 'mod-0-1') completeModule('mod-0-1');
     setShowExitConfirm(false);
     if (router.canGoBack()) router.back();
-    else router.replace("/(tabs)/index" as never);
+    else returnToMap("/(tabs)/index");
   }
   const safeInsets = useSafeAreaInsets();
   const [activeGlossaryTerm, setActiveGlossaryTerm] = useState<string | null>(null);
@@ -2415,6 +2435,18 @@ export function LessonFlowScreen() {
 
   const handleIntroStart = useCallback(() => {
     if (!mod) return;
+    // mod-0-1 onboarding (Yoav 2026-06-11): after the coin drag, do NOT
+    // start the flashcards phase (audio + image prefetch wait). Bounce
+    // STRAIGHT to the learn map with the module's topic tree expanded.
+    // The user picks the next chip ("הכפתור המוזהב") manually — this is
+    // the moment we hand them the wheel. No transient loading overlay,
+    // no flashcard audio preroll ("בלי השהיה").
+    if (mod.id === 'mod-0-1') {
+      router.replace(
+        `/(tabs)/learn?completedPhase=intro&completedModuleId=${encodeURIComponent(mod.id)}&expandedModule=${encodeURIComponent(mod.id)}&onboardingPhase=welcome` as never,
+      );
+      return;
+    }
     const target: FlowPhase =
       SIM_FIRST_MODULES.has(mod.id) && MODULES_WITH_SIM.has(mod.id) ? "sim" : "flashcards";
     if (imagesReady) {
@@ -2422,7 +2454,7 @@ export function LessonFlowScreen() {
     } else {
       setPendingPostIntroPhase(target);
     }
-  }, [mod, imagesReady]);
+  }, [mod, imagesReady, router]);
 
   // Mark "in-lesson" so the Daily Bridge nudge (and any other session-level
   // CTA) knows not to interrupt the user mid-module.
@@ -2653,7 +2685,7 @@ export function LessonFlowScreen() {
         // initialRouteName="investments", so a bare /(tabs)?openPearl=... lands
         // on Investments and the openPearl listener (lives only in DuoLearnScreen,
         // index/learn) never sees the param — the pearl would never auto-open.
-        router.replace(`/(tabs)/index?openPearl=${id}` as never);
+        returnToMap(`/(tabs)/index?openPearl=${id}`);
         return;
       }
     }
@@ -2665,7 +2697,7 @@ export function LessonFlowScreen() {
     if (id === 'mod-0-1') {
       setCurrentChapter('ch-0');
       setCurrentModule(1);
-      router.replace("/(tabs)/index" as never);
+      returnToMap("/(tabs)/index");
       return;
     }
     for (const ch of ALL_CHAPTERS_ORDERED) {
@@ -2679,7 +2711,7 @@ export function LessonFlowScreen() {
         return;
       }
     }
-    router.replace("/(tabs)/index" as never);
+    returnToMap("/(tabs)/index");
   }
 
   /** Navigate to user's next sequential module */
@@ -2707,6 +2739,20 @@ export function LessonFlowScreen() {
     // right after their first taste of content.
     if (id === 'mod-0-1') {
       navigateToNextModuleNormally();
+      return;
+    }
+    // After mod-0-1b (non-Pro): show the Pro paywall once, before mod-0-2.
+    // Moved here from the post-walkthrough slot (2026-06-11) — analytics showed
+    // the old early paywall fired before the user got value: ~38% of onboarders
+    // hit it during module 0-1 and first-module completion cratered. Now the
+    // user finishes the full intro module (0-1 + 0-1b) first, THEN sees the
+    // paywall; both dismiss and purchase route forward to mod-0-2 via returnTo,
+    // so they always continue. Shown a single time.
+    if (id === 'mod-0-1b' && !isPro && !useUsageStore.getState().hasSeenMod01bPaywall) {
+      useUsageStore.getState().markMod01bPaywallSeen();
+      try { captureEvent('paywall_viewed', { paywall: 'post_mod_0_1b', source: 'post_mod_0_1b' }); } catch { /* non-fatal */ }
+      const returnTo = '/lesson/mod-0-2?chapterId=chapter-0';
+      router.replace(`/pricing?returnTo=${encodeURIComponent(returnTo)}` as never);
       return;
     }
     // Register CTA cadence (guests only): fire after mod-0-2/3/4/5, but ONLY on
@@ -2763,7 +2809,7 @@ export function LessonFlowScreen() {
         // Route to /(tabs)/index explicitly — (tabs)/_layout has
         // initialRouteName="investments", so a bare /(tabs)?openPearl=...
         // lands on Investments and the openPearl listener never sees it.
-        router.replace(`/(tabs)/index?openPearl=${id}` as never);
+        returnToMap(`/(tabs)/index?openPearl=${id}`);
         return;
       }
     }
@@ -2785,7 +2831,7 @@ export function LessonFlowScreen() {
         // layout has initialRouteName="investments" so "/(tabs)" sends the
         // user to the Investments tab instead of seeing the next module
         // highlighted on the learn map (QA blocker 2026-05-31).
-        router.replace("/(tabs)/index" as never);
+        returnToMap("/(tabs)/index");
         return;
       }
     }
@@ -2796,14 +2842,34 @@ export function LessonFlowScreen() {
         const nextMod = ch.modules[nextIdx];
         setCurrentChapter(chapterStoreKey(ch.id));
         setCurrentModule(nextIdx);
-        router.replace("/(tabs)/index" as never);
+        returnToMap("/(tabs)/index");
         return;
       }
     }
-    router.replace("/(tabs)/index" as never);
+    returnToMap("/(tabs)/index");
   }
 
   const [phase, setPhase] = useState<FlowPhase>(() => {
+    // Topic-tree pilot (R4 → R5.6): explicit startPhase from query
+    // overrides everything else — replay checkpoints, video hooks,
+    // hero. Used when DuoLearnScreen's topic chip taps deep-link
+    // straight into a phase. R5.6 (2026-06-10) widens the allowed set
+    // from just RESTORABLE_PHASES + intro/video/hero to every
+    // user-tappable phase, so taps on the sim / infographic /
+    // post-video chips actually land at those phases instead of
+    // silently falling back to intro (Yoav: "הסרטון לא נפתח", "לא
+    // כל דבר פותח את מה שהוא אמור").
+    const ALLOWED_START_PHASES = new Set<string>([
+      'hero', 'video', 'intro',
+      'flashcards', 'interactive-recall', 'quizzes',
+      'sim-intro', 'sim',
+      'podcast', 'couple-dilemma',
+      'module-infographic', 'post-infographic-video',
+      'shark-dilemma',
+    ]);
+    if (startPhase && ALLOWED_START_PHASES.has(startPhase)) {
+      return startPhase as FlowPhase;
+    }
     // On replay (user explicitly chose "do it again"), ignore the resume
     // checkpoint — they want to start from intro, not pick up at quizzes.
     const r = !isReplay && mod?.id ? useChapterUIStore.getState().moduleResume[mod.id] : undefined;
@@ -2815,8 +2881,113 @@ export function LessonFlowScreen() {
   const setVideoPlaying = useAudioStore((s) => s.setVideoPlaying);
 
   useEffect(() => {
-    setVideoPlaying(phase === "video" || phase === "post-infographic-video");
+    setVideoPlaying(phase === "video" || phase === "post-infographic-video" || phase === "mid-quiz-video");
   }, [phase]);
+
+  // remember the entry phase. The moment the lesson advances past it (the
+  // user finished the phase + tapped next), bounce back to DuoLearnScreen
+  // with `?completedPhase=X` so the topic tree can mark the matching topic
+  // done. Auto-advances (hero→video→intro) aren't a concern because chips
+  // always deep-link to a concrete user-facing phase.
+  const tt_initialPhaseRef = useRef<FlowPhase | null>(returnTo === 'topic-tree' ? phase : null);
+  const tt_exitFiredRef = useRef(false);
+  useEffect(() => {
+    if (returnTo !== 'topic-tree') return;
+    if (tt_exitFiredRef.current) return;
+    if (!tt_initialPhaseRef.current) return;
+    if (phase === tt_initialPhaseRef.current) return;
+    // Phase advanced — fire the exit. Use replace to drop this lesson route
+    // from history so router.back() inside the next user navigation doesn't
+    // land them back at a half-finished lesson.
+    tt_exitFiredRef.current = true;
+    const completed = tt_initialPhaseRef.current;
+    // R5.5: flashcards phase covers two chips — 'cards' and
+    // 'tutorial-video' — disambiguated by cardFilter. Pass it as
+    // completedKind so the consumer marks the right topic done.
+    const completedKind =
+      completed === 'flashcards' && cardFilter === 'video' ? 'tutorial-video'
+      : completed === 'flashcards' && cardFilter === 'non-video' ? 'cards'
+      : '';
+    // Premium return (Yoav 2026-06-11): under the root <Stack> the topic-tree
+    // map is still mounted beneath this lesson. Signal the completion to the
+    // map's store and router.back() — popping this lesson so the user lands on
+    // the LIVE map (no remount / "flash"), a fast smooth transition. Only on a
+    // cold start (no back-history) fall back to the URL-param replace, which
+    // the map's cold-start consumer handles. back() also satisfies the original
+    // "drop the half-finished lesson from history" intent — it's popped.
+    if (router.canGoBack()) {
+      useTopicTreeReturnStore.getState().signalReturn({
+        completedPhase: completed,
+        completedModuleId: id ?? '',
+        completedKind: completedKind || undefined,
+        expandedModule: id ?? '',
+      });
+      router.back();
+    } else {
+      const kindParam = completedKind ? `&completedKind=${encodeURIComponent(completedKind)}` : '';
+      const path = `/(tabs)/learn?completedPhase=${encodeURIComponent(completed)}&completedModuleId=${encodeURIComponent(id ?? '')}&expandedModule=${encodeURIComponent(id ?? '')}${kindParam}`;
+      router.replace(path as never);
+    }
+  }, [phase, returnTo, id, router, cardFilter]);
+
+  // "למידה רציפה" per-phase progress sync (Yoav 2026-06-11). When the
+  // continuous "autopilot" flow is active (ttProgress=1, no topic-tree
+  // params → master-style linear run), stamp each phase the user FINISHES
+  // into useTopicProgressStore as we leave it. Marking on phase-LEAVE (not
+  // enter) means we only credit a phase the user actually completed, so a
+  // mid-flow exit lights up exactly the chips they cleared — letting them
+  // start in autopilot and switch to the broken-down accordion mid-way.
+  const ttProgressActive = ttProgress === '1' && returnTo !== 'topic-tree';
+  const ttPrevPhaseRef = useRef<FlowPhase | null>(ttProgressActive ? phase : null);
+  useEffect(() => {
+    if (!ttProgressActive || !mod) return;
+    const prev = ttPrevPhaseRef.current;
+    ttPrevPhaseRef.current = phase;
+    if (!prev || prev === phase) return;
+    const kind = TT_PHASE_TO_KIND[prev];
+    if (kind) {
+      const topic = resolveTopics(mod).find((t) => t.kind === kind);
+      if (topic) useTopicProgressStore.getState().markTopicCompleted(topic);
+    }
+    // Yoav 2026-06-11 (rev 3): the previous design stamped the 70%
+    // threshold on continuous-run summary so the accordion would NOT
+    // re-fire its chest on return — but the LEGACY chest was still
+    // visible BEFORE we returned (gated only on returnTo !== 'topic-tree',
+    // which is false in continuous mode). Net effect: user saw the
+    // legacy chest, dismissed it, returned to the map, and the
+    // accordion's chest immediately fired again → two chests in a row.
+    // The accordion's ChestCelebrationModal is the preferred UX, so we
+    // now suppress the LEGACY chest in continuous mode (render gate
+    // below) and SKIP the stamp here, letting the accordion fire its
+    // single chest on return.
+  }, [phase, ttProgressActive, mod]);
+
+  // "למידה רציפה" mid-run guard: while THIS continuous run is mounted, flag
+  // its module so the (still-mounted, store-subscribed) TopicTreeAccordion
+  // beneath us suppresses its OWN threshold chest. Without this, the moment
+  // the run crosses 70% mid-lesson the accordion's ChestCelebrationModal
+  // (a RN Modal) pops OVER the running lesson. Cleared on unmount — on return
+  // the accordion fires its single chest as the canonical reward.
+  useEffect(() => {
+    if (!ttProgressActive || !id) return;
+    useContinuousRunStore.getState().setActive(id);
+    return () => { useContinuousRunStore.getState().clear(); };
+  }, [ttProgressActive, id]);
+
+  // "למידה רציפה" auto-exit on summary (Yoav 2026-06-11 rev 3). The legacy
+  // summary chest is now hidden in continuous mode (render gate below), so we
+  // need to actively bounce back to the topic-tree map — otherwise the screen
+  // sits blank after the last chip's phase resolves. On unmount the continuous
+  // guard above clears, and the accordion fires its own ChestCelebrationModal
+  // as the single canonical reward.
+  useEffect(() => {
+    if (!ttProgressActive) return;
+    if (phase !== 'summary') return;
+    // Small delay so any in-flight phase-leave side effects (recall stamping,
+    // analytics) settle before we navigate away.
+    const t = setTimeout(() => returnToMap("/(tabs)/index"), 120);
+    return () => clearTimeout(t);
+  }, [ttProgressActive, phase, returnToMap]);
 
   // Fire once per lesson session when the user actually reaches the summary
   // screen — closes the funnel gap between lesson_started and lesson_completed
@@ -2851,6 +3022,34 @@ export function LessonFlowScreen() {
     const r = !isReplay && mod?.id ? useChapterUIStore.getState().moduleResume[mod.id] : undefined;
     return (r && RESTORABLE_PHASES.has(r.phase as FlowPhase)) ? r.flashcardIndex : 0;
   });
+
+  // R5.5 (2026-06-10) — topic-tree flashcards filter. Two modes:
+  //   cardFilter='non-video' (cards chip) — skip videoUri flashcards
+  //   cardFilter='video' (tutorial-video chip) — skip non-video cards
+  // Whenever the current flashcard doesn't match the desired class,
+  // jump to the next matching one; if none remain, bump past the end
+  // so the "end of flashcards → next phase" path fires and the
+  // topic-tree exit effect takes over.
+  useEffect(() => {
+    if (returnTo !== 'topic-tree') return;
+    if (cardFilter !== 'non-video' && cardFilter !== 'video') return;
+    if (phase !== 'flashcards') return;
+    if (!mod) return;
+    const flashcards = mod.flashcards;
+    const matches = (i: number) => {
+      const isVideo = Boolean(flashcards[i]?.videoUri);
+      return cardFilter === 'video' ? isVideo : !isVideo;
+    };
+    if (flashcardIndex >= flashcards.length) return;
+    if (matches(flashcardIndex)) return;
+    for (let j = flashcardIndex + 1; j < flashcards.length; j++) {
+      if (matches(j)) {
+        setFlashcardIndex(j);
+        return;
+      }
+    }
+    setFlashcardIndex(flashcards.length);
+  }, [phase, flashcardIndex, cardFilter, returnTo, mod]);
 
   // Podcast injection — appears between flashcards (at midpoint). Replays naturally
   // if the user navigates back to the trigger card; no one-shot lockout.
@@ -2897,6 +3096,7 @@ export function LessonFlowScreen() {
       "couple-dilemma": "other",
       "interactive-recall": "interactive-recall",
       quizzes: "quizzes",
+      "mid-quiz-video": "other",
       "sim-intro": "sim",
       sim: "sim",
       "module-infographic": "other",
@@ -2931,6 +3131,27 @@ export function LessonFlowScreen() {
   );
   // Post-module celebration
   const [showPostCelebration, setShowPostCelebration] = useState(false);
+  // Architect P2 (2026-06-11): pre-pick the playful "quit" label once when
+  // the post-celebration screen mounts so it doesn't flip-flop on every
+  // re-render (was Math.random() inline in JSX).
+  const POST_QUIT_LABELS = useRef([
+    "עפתי לנטפליקס 📺",
+    "עפתי לאינסטגרם 📱",
+    "עפתי לטיקטוק 🎵",
+    "אני הולך לישון 😴",
+    "יש לי שווארמה שמחכה 🌯",
+    "יש לי פיצה שמתקררת 🍕",
+  ]).current;
+  const postQuitLabel = useMemo(
+    () => POST_QUIT_LABELS[Math.floor(Math.random() * POST_QUIT_LABELS.length)],
+    [showPostCelebration, POST_QUIT_LABELS],
+  );
+  // Yoav 2026-06-11: the playful "I'm bailing to Netflix" quit button is
+  // a treat, not a fixture — show it on ~30% of chest reveals.
+  const showPostQuitOption = useMemo(
+    () => Math.random() < 0.3,
+    [showPostCelebration],
+  );
   const [showBreakMessage, setShowBreakMessage] = useState(false);
   // Auto-next countdown: dataS showed 48% drop between lessons (23 finished
   // mod-0-2 but only 12 started mod-0-3). Netflix-style 3s auto-advance keeps
@@ -2940,6 +3161,15 @@ export function LessonFlowScreen() {
   // Shark Love, every 3rd module completion
   const [showSharkLove, setShowSharkLove] = useState(false);
   const moduleStartTimeRef = useRef(Date.now());
+  // R8 pre-release audit: snapshot elapsed once when SharkLove first
+  // becomes visible so the inline Date.now() in JSX (now removed) no
+  // longer recomputes every parent render while the modal is open.
+  const sharkLoveElapsedSec = useMemo(
+    () => showSharkLove
+      ? Math.round((Date.now() - moduleStartTimeRef.current) / 1000)
+      : 0,
+    [showSharkLove],
+  );
   // Shark CTA notifications, Bridge (every 4) + Referral (every 5 + dividend content)
   const [showBridgeCTA, setShowBridgeCTA] = useState(false);
   const [showReferralCTA, setShowReferralCTA] = useState(false);
@@ -2960,6 +3190,13 @@ export function LessonFlowScreen() {
     const r = !isReplay && mod?.id ? useChapterUIStore.getState().moduleResume[mod.id] : undefined;
     return (r && RESTORABLE_PHASES.has(r.phase as FlowPhase)) ? r.quizIndex : 0;
   });
+  // The module's "fun" Finn video (MODULE_POST_VIDEO_MAP) now plays INLINE
+  // mid-quiz instead of as a standalone phase after the infographic (Yoav
+  // 2026-06-10). This guards against showing it twice: once it's been played
+  // mid-quiz the trailing post-infographic-video phase self-skips. Stays false
+  // when the module has too few quizzes to host a mid-point, so that the
+  // trailing phase still plays it as a fallback.
+  const funVideoShownRef = useRef(false);
   const [consecutiveCorrect, setConsecutiveCorrect] = useState(() => {
     const r = !isReplay && mod?.id ? useChapterUIStore.getState().moduleResume[mod.id] : undefined;
     return (r && RESTORABLE_PHASES.has(r.phase as FlowPhase)) ? r.consecutiveCorrect : 0;
@@ -3259,10 +3496,17 @@ export function LessonFlowScreen() {
     }
   }, [phase, mod, hasSeenMod01BarterNotif, safeTimeout]);
 
-  // Complete module and show rewards when entering summary phase
+  // Complete module and show rewards when entering summary phase.
+  // SKIP for topic-tree chips (Yoav 2026-06-11): a chip whose last phase
+  // advances to "summary" briefly flashed THIS legacy dark-backdrop chest
+  // before tt_exit's router.back() — then the topic-tree's own
+  // ChestCelebrationModal fired, so the user saw TWO chests back-to-back.
+  // The topic-tree owns its completion + chest (upsertProgress + recordChestOpen),
+  // so the legacy summary chest must not fire (or mark the whole module done)
+  // on this path. The render below is gated the same way.
   useEffect(() => {
     if (!mod) return;
-    if (phase === "summary" && !completedRef.current) {
+    if (phase === "summary" && !completedRef.current && returnTo !== 'topic-tree') {
       completedRef.current = true;
       // Mark the module completed the moment the chest screen appears —
       // earlier the completion fired only on chest-tap, so a user who reached
@@ -3322,7 +3566,7 @@ export function LessonFlowScreen() {
       cancelAnimation(chestGlowOpacity);
       cancelAnimation(chestBodyScale);
     };
-  }, [phase, mod?.id, completeModule, mod, isLastModule, isReplay, playSound, safeTimeout]);
+  }, [phase, mod?.id, completeModule, mod, isLastModule, isReplay, playSound, safeTimeout, returnTo]);
 
   // Post-module celebration ("Continue or Netflix?") is intentionally LAST in the
   // end-of-module nudge sequence. Wait for every other modal AND for the pending
@@ -3451,6 +3695,24 @@ export function LessonFlowScreen() {
 
   const advanceQuiz = useCallback(() => {
     if (!mod) return;
+    // Mid-quiz fun video: play the module's Finn video INLINE between two quiz
+    // questions (right after the middle question) instead of as a standalone
+    // full-screen phase after the infographic (Yoav 2026-06-10: "embedded
+    // mid-quiz, not a unit of its own"). Only when there's a real mid-point
+    // (≥3 quizzes, and the mid index isn't the last) — otherwise it falls
+    // through to the trailing post-infographic-video phase as a fallback.
+    const midIndex = Math.floor(mod.quizzes.length / 2);
+    if (
+      !funVideoShownRef.current &&
+      quizIndex === midIndex &&
+      midIndex < mod.quizzes.length - 1 &&
+      mod.id && MODULE_POST_VIDEO_MAP[mod.id]
+    ) {
+      funVideoShownRef.current = true;
+      mediumHaptic();
+      setPhase("mid-quiz-video");
+      return;
+    }
     if (quizIndex < mod.quizzes.length - 1) {
       setQuizIndex((prev) => prev + 1);
       tapHaptic();
@@ -3572,6 +3834,27 @@ export function LessonFlowScreen() {
     safeTimeout(() => setShowQuizIntro(true), 50);
   }, []);
 
+  // Tracks (currentIndex, total) of the interactive-recall set so the
+  // outer progress bar can fill incrementally per solved prompt. Default
+  // (0/0) keeps the bar flat when no recall is active.
+  const [recallProgress, setRecallProgress] = useState<{ current: number; total: number }>(
+    { current: 0, total: 0 },
+  );
+  const handleInteractiveRecallProgress = useCallback((current: number, total: number) => {
+    setRecallProgress({ current, total });
+  }, []);
+
+  // Same shape as recall — podcast surfaces (current, total) so the bar
+  // fills 1/5 → 2/5 → ... → 5/5 through the podcast's internal phases
+  // (Yoav 2026-06-11: "תראה כמה רכיבים יש בפודקסט, נגיד 6, ושיתקדם כל
+  // פעם ב 1/6", not by audio time).
+  const [podcastProgress, setPodcastProgress] = useState<{ current: number; total: number }>(
+    { current: 0, total: 0 },
+  );
+  const handlePodcastProgress = useCallback((current: number, total: number) => {
+    setPodcastProgress({ current, total });
+  }, []);
+
   const handleFlashcardNext = useCallback(() => {
     if (!mod) return;
     playSound('btn_click_soft_1');
@@ -3600,15 +3883,22 @@ export function LessonFlowScreen() {
       return;
     }
 
+    // Topic-tree "cards" chip plays ALL flashcards 1→2→3 cleanly. The
+    // podcast and couple-dilemma each have their own chip in the tree,
+    // so the interleaved mid-flow injections must NOT fire when entered
+    // via topic-tree (Yoav 2026-06-11: "כשנכנסים לכרטיסיות, מבצעים רק
+    // כרטסיות"; the podcast / dilemma "יהיו בנפרד, ברצף").
+    const isTopicTreeCardsRun = returnTo === 'topic-tree';
+
     // Inject Daisy podcast at midpoint of flashcards (once per module)
-    if (modPodcast && flashcardIndex === podcastTriggerAfter) {
+    if (!isTopicTreeCardsRun && modPodcast && flashcardIndex === podcastTriggerAfter) {
       mediumHaptic();
       setPhase("podcast");
       return;
     }
 
     // Inject couple dilemma (~70% through). Decoupled from the podcast slot.
-    if (modCoupleDilemma && flashcardIndex === coupleDilemmaTriggerAfter) {
+    if (!isTopicTreeCardsRun && modCoupleDilemma && flashcardIndex === coupleDilemmaTriggerAfter) {
       mediumHaptic();
       setPhase("couple-dilemma");
       return;
@@ -3635,22 +3925,26 @@ export function LessonFlowScreen() {
         safeTimeout(() => setShowQuizIntro(true), 50);
       }
     }
-  }, [mod, flashcardIndex, finnTipText, checkpointIndex, showMidCheckpoint, checkpointReturnIndex, modPodcast, podcastTriggerAfter, modCoupleDilemma, coupleDilemmaTriggerAfter]);
+  }, [mod, flashcardIndex, finnTipText, checkpointIndex, showMidCheckpoint, checkpointReturnIndex, modPodcast, podcastTriggerAfter, modCoupleDilemma, coupleDilemmaTriggerAfter, returnTo]);
 
   const handleDismissFinnTip = useCallback(() => {
     setFinnTipText(null);
     // Advance to next card after dismissing
     if (!mod) return;
 
+    // Topic-tree "cards" chip: skip podcast/dilemma injection (both have
+    // their own chips in the tree). See handleFlashcardNext for context.
+    const isTopicTreeCardsRun = returnTo === 'topic-tree';
+
     // Inject Daisy podcast at midpoint of flashcards (once per module)
-    if (modPodcast && flashcardIndex === podcastTriggerAfter) {
+    if (!isTopicTreeCardsRun && modPodcast && flashcardIndex === podcastTriggerAfter) {
       mediumHaptic();
       setPhase("podcast");
       return;
     }
 
     // Inject couple dilemma (~70% through). Decoupled from the podcast slot.
-    if (modCoupleDilemma && flashcardIndex === coupleDilemmaTriggerAfter) {
+    if (!isTopicTreeCardsRun && modCoupleDilemma && flashcardIndex === coupleDilemmaTriggerAfter) {
       mediumHaptic();
       setPhase("couple-dilemma");
       return;
@@ -3739,6 +4033,21 @@ export function LessonFlowScreen() {
     );
   }
 
+  // Yoav 2026-06-11 — topic-tree chip exit guard. Once the user's
+  // chip phase advances (e.g. shark-dilemma → summary), the bounce-back
+  // effect schedules a router.replace to the learn map. But the new
+  // phase ALSO renders for one frame before the replace lands —
+  // including the legacy summary/chest screen. Suppress that flash by
+  // rendering a blank screen until the navigation fires
+  // ("הביא אותי למסך פתיחת תיבה הישן במקום להביא אותי למפת הלמידה").
+  if (
+    returnTo === 'topic-tree'
+    && tt_initialPhaseRef.current
+    && phase !== tt_initialPhaseRef.current
+  ) {
+    return <View style={{ flex: 1, backgroundColor: '#f8fafc' }} />;
+  }
+
   // Video hook phase, full-screen video with hook text overlay
   if (phase === "video" && mod?.videoHookAsset) {
     return (
@@ -3751,12 +4060,30 @@ export function LessonFlowScreen() {
     );
   }
   if (phase === "video") {
-    advanceFromVideo();
-    return <View style={{ flex: 1, backgroundColor: "#f8fafc" }} />;
+    return <FallbackToPhaseEffect run={advanceFromVideo} />;
   }
 
-  // Post-infographic video, full-screen, plays after the infographic before the chest
-  if (phase === "post-infographic-video" && mod && MODULE_POST_VIDEO_MAP[mod.id]) {
+  // Mid-quiz fun video — same player as the old post-infographic phase, but
+  // injected between two quiz questions and returning to the quiz run on
+  // finish, so it reads as part of the lesson flow rather than a standalone
+  // ceremony (Yoav 2026-06-10).
+  if (phase === "mid-quiz-video" && mod && MODULE_POST_VIDEO_MAP[mod.id]) {
+    return (
+      <VideoHookPlayer
+        videoUri={getCachedVideoPath(MODULE_POST_VIDEO_MAP[mod.id])}
+        hookText={mod.videoHook ?? ""}
+        onFinish={() => { setQuizIndex((i) => i + 1); setPhase("quizzes"); }}
+        unitColors={unitColors}
+      />
+    );
+  }
+  if (phase === "mid-quiz-video") {
+    return <FallbackToPhaseEffect run={() => { setQuizIndex((i) => i + 1); setPhase("quizzes"); }} />;
+  }
+
+  // Post-infographic video, full-screen, plays after the infographic before the
+  // chest. Now a FALLBACK: skipped when the fun video already played mid-quiz.
+  if (phase === "post-infographic-video" && mod && MODULE_POST_VIDEO_MAP[mod.id] && !funVideoShownRef.current) {
     return (
       <VideoHookPlayer
         videoUri={getCachedVideoPath(MODULE_POST_VIDEO_MAP[mod.id])}
@@ -3767,8 +4094,7 @@ export function LessonFlowScreen() {
     );
   }
   if (phase === "post-infographic-video") {
-    setPhase(mod && getDilemma(mod.id) ? "shark-dilemma" : "summary");
-    return <View style={{ flex: 1, backgroundColor: "#f8fafc" }} />;
+    return <FallbackToPhaseEffect run={() => setPhase(mod && getDilemma(mod.id) ? "shark-dilemma" : "summary")} />;
   }
 
   // Shark Dilemma ("לייעץ לשארק") — advisory scenario right before the chest.
@@ -3944,7 +4270,7 @@ export function LessonFlowScreen() {
                 : phase === "couple-dilemma"
                   ? "הדילמות של הזוג הצעיר"
                   : phase === "interactive-recall"
-                    ? "בואו נתרגל"
+                    ? "השלמת משפטים"
                     : mod.title;
             if (phase === "flashcards") {
               const cardText = mod.flashcards[flashcardIndex]?.text ?? "";
@@ -4013,7 +4339,35 @@ export function LessonFlowScreen() {
                 : phase === "quizzes" ? 1 + mod.flashcards.length + quizIndex + breakOffset
                 : phase === "sim-intro" || phase === "sim" ? 1 + mod.flashcards.length + mod.quizzes.length + breakOffset
                 : totalSteps);
-            const pct = Math.min((currentStep / totalSteps) * 100, 100);
+            // Topic-tree (R5): the user entered at a specific phase via a
+            // chip, so the bar should reflect only that phase's progress
+            // — not the whole lesson. Otherwise cards reads "12% of lesson"
+            // which is unhelpful inside the topic-tree pilot.
+            const pctLessonWide = Math.min((currentStep / totalSteps) * 100, 100);
+            const pct = returnTo === 'topic-tree'
+              ? (phase === 'flashcards'
+                  ? (flashcardIndex / Math.max(1, mod.flashcards.length)) * 100
+                  : phase === 'quizzes'
+                  ? (quizIndex / Math.max(1, mod.quizzes.length)) * 100
+                  : phase === 'interactive-recall' && recallProgress.total > 0
+                  // Yoav 2026-06-11: השלמת משפטים — fill per prompt
+                  // solved (3-ish prompts each). Previously flat 0 →
+                  // felt broken.
+                  ? (recallProgress.current / recallProgress.total) * 100
+                  : phase === 'podcast' && podcastProgress.total > 0
+                  // Yoav 2026-06-11: tick podcast 1/5 → 5/5 across its
+                  // internal phases (intro → listen → summary → q1 → q2)
+                  // instead of falling back to lesson-wide pct ("שיתקדם
+                  // כל פעם ב 1/N").
+                  ? (podcastProgress.current / podcastProgress.total) * 100
+                  // Remaining singleton phases (sim/couple-dilemma/
+                  // shark-dilemma/infographic/post-video/video) don't
+                  // expose internal progress. Show a 50% baseline so
+                  // the bar reads as "you're inside this section,
+                  // making progress" instead of "empty bar = nothing
+                  // happened".
+                  : 50)
+              : pctLessonWide;
             const isOnFire = consecutiveCorrect >= 3;
             const barColors: [string, string, string] = isOnFire ? ['#fbbf24', '#f97316', '#ef4444'] : [unitColors.glow, unitColors.glow, unitColors.bg];
             const barShadow = isOnFire ? '#f97316' : unitColors.glow;
@@ -4141,7 +4495,7 @@ export function LessonFlowScreen() {
               total={mod.flashcards.length}
               onNext={handleFlashcardNext}
               onPrev={handleFlashcardPrev}
-              onClose={() => router.replace("/(tabs)/index" as never)}
+              onClose={() => returnToMap("/(tabs)/index")}
               onSkipAll={() => { mediumHaptic(); setFlashcardIndex(mod.flashcards.length - 1); }}
               unitColors={unitColors}
               onTermPress={setActiveGlossaryTerm}
@@ -4156,6 +4510,7 @@ export function LessonFlowScreen() {
           <Animated.View style={{ flex: 1 }}>
             <PodcastSegmentScreen
               podcast={modPodcast}
+              onProgress={handlePodcastProgress}
               onComplete={() => {
                 const hasMoreFlashcards = flashcardIndex < mod.flashcards.length - 1;
                 if (hasMoreFlashcards) {
@@ -4200,6 +4555,7 @@ export function LessonFlowScreen() {
               moduleId={mod.id}
               unitColors={unitColors}
               onComplete={handleInteractiveRecallComplete}
+              onProgress={handleInteractiveRecallProgress}
             />
           </Animated.View>
         )}
@@ -4299,7 +4655,13 @@ export function LessonFlowScreen() {
         )}
 
         {/* ── Summary phase ── */}
-        {phase === "summary" && (
+        {/* Hidden on BOTH (a) the topic-tree chip path (returnTo='topic-tree')
+            AND (b) the "למידה רציפה" continuous run (ttProgressActive). Both
+            paths return to the map and the accordion's own ChestCelebrationModal
+            is the canonical chest — rendering this legacy one too means the
+            user sees two chests back-to-back. (Yoav 2026-06-11: "שתי תיבות ברצף").
+            The topic-tree's own ChestCelebrationModal is the keeper. */}
+        {phase === "summary" && returnTo !== 'topic-tree' && !ttProgressActive && (
           <Animated.View style={[contentStyle, { flex: 1, marginHorizontal: -16 }]}>
             {/* Full-screen confetti overlay, only rendered while active */}
             {confettiActive && (
@@ -4373,7 +4735,9 @@ export function LessonFlowScreen() {
                           const drop = pendingChestDropRef.current;
                           if (drop) {
                             grantChestRewards(drop.rewards, 1);
-                            if (chapterId !== "chapter-0" && Math.random() < 0.15) {
+                            // Yoav 2026-06-11: DoN offer rate = 25% per chest
+                            // (skipped on chapter-0 which stays celebration-only).
+                            if (chapterId !== "chapter-0" && Math.random() < 0.25) {
                               shouldTriggerDoNRef.current = true;
                               setPendingMultiplierRewards(drop.rewards);
                             }
@@ -4544,7 +4908,7 @@ export function LessonFlowScreen() {
                 }
               }}
               onBack={() => {
-                router.replace("/(tabs)/index" as never);
+                returnToMap("/(tabs)/index");
               }}
             />
             </ScrollView>
@@ -4832,7 +5196,7 @@ export function LessonFlowScreen() {
         visible={showOutOfHearts}
         onDismiss={() => {
           setShowOutOfHearts(false);
-          router.replace("/(tabs)/index" as never);
+          returnToMap("/(tabs)/index");
         }}
         onHeartsRefilled={() => {
           setShowOutOfHearts(false);
@@ -5123,7 +5487,7 @@ export function LessonFlowScreen() {
       {showGradeSkipCelebration && (
         <Modal visible transparent animationType="fade" onRequestClose={() => {
           setShowGradeSkipCelebration(false);
-          router.replace("/(tabs)/index" as never);
+          returnToMap("/(tabs)/index");
         }}>
           <Pressable
             style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.6)", justifyContent: "center", alignItems: "center", paddingHorizontal: 24 }}
@@ -5144,7 +5508,7 @@ export function LessonFlowScreen() {
                   tapHaptic();
                   try { captureEvent('expert_grade_skip_continue', {}); } catch { /* non-fatal */ }
                   setShowGradeSkipCelebration(false);
-                  router.replace("/(tabs)/index" as never);
+                  returnToMap("/(tabs)/index");
                 }}
                 style={{ backgroundColor: "#0ea5e9", borderRadius: 16, paddingVertical: 16, width: "100%", alignItems: "center", borderBottomWidth: 4, borderBottomColor: "#0284c7", shadowColor: "#0ea5e9", shadowOpacity: 0.3, shadowRadius: 8, shadowOffset: { width: 0, height: 3 }, elevation: 6 }}
                 accessibilityRole="button"
@@ -5459,11 +5823,15 @@ export function LessonFlowScreen() {
       )}
 
       {/* ── Shark Love, "עדיין תאהבו אותי?" every 3rd module ── */}
+      {/* R8 pre-release audit (Yoav + ארכיטקט 2026-06-11): inline
+          Date.now() in the JSX prop re-ran every parent render while
+          the modal was open. Snapshot once via useMemo keyed on the
+          visibility flag so the modal shows a stable elapsed value. */}
       {showSharkLove && (
         <SharkLoveModal
           xpEarned={chestRewards?.xp ?? 30}
           coinsEarned={chestRewards?.coins ?? 150}
-          elapsedSeconds={Math.round((Date.now() - moduleStartTimeRef.current) / 1000)}
+          elapsedSeconds={sharkLoveElapsedSec}
           onClaim={handleSharkLoveDismiss}
         />
       )}
@@ -5586,12 +5954,14 @@ export function LessonFlowScreen() {
                 <Text style={{ fontSize: 13, fontWeight: "600", color: "#94a3b8" }}>{"ביטול ספירה לאחור"}</Text>
               </Pressable>
             )}
-            {/* Quit option */}
-            <AnimatedPressable onPress={() => { autoNextCancelledRef.current = true; setAutoNextSeconds(null); tapHaptic(); setShowBreakMessage(true); }} style={{ width: "100%", backgroundColor: "#f8fafc", borderRadius: 16, paddingVertical: 14, alignItems: "center", borderWidth: 1.5, borderColor: "#e2e8f0" }} accessibilityRole="button" accessibilityLabel="יציאה">
-              <Text style={{ fontSize: 14, fontWeight: "700", color: "#64748b" }}>
-                {["עפתי לנטפליקס 📺", "עפתי לאינסטגרם 📱", "עפתי לטיקטוק 🎵", "אני הולך לישון 😴", "יש לי שווארמה שמחכה 🌯", "יש לי פיצה שמתקררת 🍕"][Math.floor(Math.random() * 6)]}
-              </Text>
-            </AnimatedPressable>
+            {/* Quit option — surfaced on ~30% of chest reveals (Yoav 2026-06-11) */}
+            {showPostQuitOption && (
+              <AnimatedPressable onPress={() => { autoNextCancelledRef.current = true; setAutoNextSeconds(null); tapHaptic(); setShowBreakMessage(true); }} style={{ width: "100%", backgroundColor: "#f8fafc", borderRadius: 16, paddingVertical: 14, alignItems: "center", borderWidth: 1.5, borderColor: "#e2e8f0" }} accessibilityRole="button" accessibilityLabel="יציאה">
+                <Text style={{ fontSize: 14, fontWeight: "700", color: "#64748b" }}>
+                  {postQuitLabel}
+                </Text>
+              </AnimatedPressable>
+            )}
           </Animated.View>
           )}
         </Pressable>
@@ -5599,7 +5969,7 @@ export function LessonFlowScreen() {
 
       {/* ── Break farewell message ── */}
       {showBreakMessage && (
-        <Pressable style={[StyleSheet.absoluteFill, { zIndex: 9995, backgroundColor: "rgba(0,0,0,0.6)", justifyContent: "center", alignItems: "center", padding: 24 }]} onPress={() => { setShowBreakMessage(false); setShowPostCelebration(false); safeTimeout(() => router.replace("/(tabs)/index" as never), 80); }} accessibilityRole="button" accessibilityLabel="חזור לתפריט">
+        <Pressable style={[StyleSheet.absoluteFill, { zIndex: 9995, backgroundColor: "rgba(0,0,0,0.6)", justifyContent: "center", alignItems: "center", padding: 24 }]} onPress={() => { setShowBreakMessage(false); setShowPostCelebration(false); safeTimeout(() => returnToMap("/(tabs)/index"), 80); }} accessibilityRole="button" accessibilityLabel="חזור לתפריט">
           <Animated.View entering={FadeInUp.duration(400)} style={{ backgroundColor: "#ffffff", borderRadius: 28, padding: 28, width: "100%", maxWidth: 340, alignItems: "center" }}>
             <ExpoImage source={FINN_EMPATHIC} accessible={false} style={{ width: 100, height: 100, marginBottom: 16 }} contentFit="contain" />
             <Text style={{ fontSize: 20, fontWeight: "900", color: "#0f172a", textAlign: "center", marginBottom: 8 }}>{"מצפה לראותך פה מחר! ❤️"}</Text>

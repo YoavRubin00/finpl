@@ -45,6 +45,15 @@ import type { ProfileQuestionKind } from '../onboarding/InModuleProfileQuestion'
 import { usePearlsStore } from './usePearlsStore';
 import { pearlIdFor, type PearlContent } from './pearlConfig';
 import { PearlProgressBar } from './PearlProgressBar';
+import { shouldUseTopicTree } from '../topic-learning/topicResolver';
+import { useTopicProgressStore } from '../topic-learning/useTopicProgressStore';
+import { chapter0Data } from '../chapter-0-content/chapter0Data';
+import { chapter1Data } from '../chapter-1-content/chapter1Data';
+import { chapter2Data } from '../chapter-2-content/chapter2Data';
+import { chapter3Data } from '../chapter-3-content/chapter3Data';
+import { chapter4Data } from '../chapter-4-content/chapter4Data';
+import { chapter5Data } from '../chapter-5-content/chapter5Data';
+const ALL_CHAPTERS_PEARL = [chapter0Data, chapter1Data, chapter2Data, chapter3Data, chapter4Data, chapter5Data];
 import { useTutorialStore } from '../../stores/useTutorialStore';
 import { PearlGameStage } from './stages/PearlGameStage';
 import { PearlProfileQuestionStage } from './stages/PearlProfileQuestionStage';
@@ -493,6 +502,22 @@ export function PearlSheet({ visible, pearl, onClose }: PearlSheetProps): React.
     // progresses, not at the end.
     markCompleted(pearlIdFor(pearl));
     onClose();
+    // Yoav 2026-06-11: when the pearl's next module supports the topic
+    // tree, route the intro with returnTo=topic-tree so the user lands
+    // on the expanded accordion at the END of the intro instead of
+    // dropping into the legacy flashcards flow ("שהתחלתי את המודולה
+    // מושגי יסוד המשך דרך הפנינה ... התחיל את הכרטיסיות בפורמט הישן").
+    const nextChapter = ALL_CHAPTERS_PEARL.find((c) => c.id === pearl.chapterId);
+    const nextModule = nextChapter?.modules.find((m) => m.id === pearl.nextModuleId);
+    if (nextModule && shouldUseTopicTree(nextModule)) {
+      const introDone = useTopicProgressStore.getState()
+        .isTopicCompleted(`${nextModule.id}:intro`);
+      const tail = introDone ? '' : '&startPhase=intro&returnTo=topic-tree';
+      router.push(
+        `/lesson/${pearl.nextModuleId}?chapterId=${pearl.chapterId}${tail}` as never,
+      );
+      return;
+    }
     // Push, not replace — keeps the map underneath so the back stack works
     // naturally if the user backs out of the lesson without finishing.
     router.push(`/lesson/${pearl.nextModuleId}?chapterId=${pearl.chapterId}` as never);

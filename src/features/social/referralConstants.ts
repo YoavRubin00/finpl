@@ -33,6 +33,7 @@ export const COIN_EVENT_SOURCES = [
   "quiz",
   "daily-quest",
   "signup-bonus",
+  "comeback",
   "referral-signup-bonus",
   "referral-dividend",
   "trading",
@@ -50,7 +51,7 @@ export function buildInviteUrl(code: string): string {
 export function buildInviteShareMessage(code: string): string {
   const url = buildInviteUrl(code);
   return [
-    "הצטרפו אליי ל-FinPlay — אפליקציית הלמידה הפיננסית 🦈",
+    "הצטרפו אליי ל-FinPlay — אפליקציית הלמידה הפיננסית",
     "",
     `${REFERRAL_SIGNUP_BONUS_COINS} מטבעות מתנה לכם כשתירשמו + ${REFERRAL_SIGNUP_BONUS_COINS} מטבעות גם לי 🎁`,
     `בנוסף: ${Math.round(REFERRAL_DAILY_DIVIDEND_RATE * 100)}% מהמטבעות שתרוויחו בלמידה ישר לחשבון שלי — כל יום 💙`,

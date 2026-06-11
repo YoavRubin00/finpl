@@ -10,6 +10,7 @@ export const chapter5Data: Chapter = {
     {
       id: 'mod-5-25',
       title: 'יציאה לחופש כלכלי',
+      learningMode: 'topic-tree',
       videoHook:
         'כולם בעבודה עכשיו, ואני? הגעתי למספר שלי. רוצים לדעת מה המספר שלכם?',
       videoHookAsset: { uri: 'https://pub-34f62012f7364bb5bc3b560ea61b72ce.r2.dev/video/hook/module-25.mp4' },

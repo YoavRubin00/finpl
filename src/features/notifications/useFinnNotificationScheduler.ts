@@ -50,6 +50,15 @@ export function useFinnNotificationScheduler() {
     const preferences = useNotificationStore((s) => s.preferences);
     const lastScheduledDate = useNotificationStore((s) => s.lastScheduledDate);
     const lastFinnCopyTitle = useNotificationStore((s) => s.lastFinnCopyTitle);
+    // R8 T3.3 — react to today's task completion by canceling any pending
+    // 23:00 fallback push. Watcher is keyed on lastDailyTaskDate so as
+    // soon as the user logs a session it fires.
+    const lastDailyTaskDate = useEconomyUIStore((s) => s.lastDailyTaskDate);
+    useEffect(() => {
+        if (!permissionGranted) return;
+        if (lastDailyTaskDate !== todayISO()) return;
+        useNotificationStore.getState().cancelChannel('streakFallback').catch(() => { /* non-fatal */ });
+    }, [permissionGranted, lastDailyTaskDate]);
 
     useEffect(() => {
         if (!permissionGranted) return;
@@ -104,14 +113,17 @@ export function useFinnNotificationScheduler() {
                     );
                     store.setLastFinnCopyTitle(copy.title);
 
-                    // US-009: 23:00 fallback only if task not done and primary isn't at 23
+                    // R8 T3.3 — US-009: 23:00 fallback on its OWN channel
+                    // (`streakFallback`) so it doesn't overwrite the primary
+                    // streak reminder scheduled above. Watcher below cancels
+                    // this when the user logs a session same-day.
                     if (economyCompat.lastDailyTaskDate !== today && primaryHour < 23) {
                         const streakDays = economyCompat.streak;
                         // CALM theme: emoji-free titles (matches 2026-05-30 push copy audit).
                         const fallbackCopy = streakDays > 0
                             ? { title: `רצף של ${streakDays} ימים בסכנה`, body: 'שעה אחרונה לשמור עליו. 2 דקות וזהו.' }
                             : { title: 'שעה אחרונה ליום', body: 'לא מאוחר מדי להתחיל רצף חדש היום.' };
-                        await store.scheduleStreakReminderWithCopy(
+                        await store.scheduleStreakFallbackWithCopy(
                             { title: fallbackCopy.title, body: fallbackCopy.body, data: { screen: '/(tabs)/learn' } },
                             23,
                         );

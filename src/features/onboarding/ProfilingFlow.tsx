@@ -1201,7 +1201,7 @@ function DailyGoalStep({ onNext }: { onNext: (v: DailyGoalMinutes) => void }) {
     <StepShell
       stepIndex={7}
       question="כמה תרצה/י ללמוד ביום?"
-      hint="יעד שאפשר לעמוד בו יעזור לכם להתעשר לאט ובטוח. יצרנו עבורכם רצף (Streak) פיננסי. 🔥"
+      hint="יעד שאפשר לעמוד בו יעזור לכם לבנות יציבות פיננסית. יצרנו עבורכם רצף (Streak) פיננסי. 🔥"
       finnState={sel ? "tablet" : "thinking"}>
       <View style={styles.grid}>
         {DAILY_OPTS.map((g, i) => (
@@ -2166,7 +2166,17 @@ function IntroStep({ onRegister: _onRegister, onGuest, onLoginSuccess }: IntroSt
           {/* Apple Sign-In, required by App Store Guideline 4.8 (iOS only) */}
           {appleAvailable && (
             <Pressable
-              onPress={() => { promptAppleSignIn().then(onLoginSuccess); }}
+              onPress={() => {
+                // Same intent as the email branch below: this IS the
+                // "I already have an account" sub-step. If Apple succeeds
+                // and the user is still flagged as not-onboarded locally
+                // (fresh install of a returning user), flip the flag so
+                // the root layout doesn't bounce them back into onboarding.
+                promptAppleSignIn().then(() => {
+                  useAuthStore.getState().setOnboardingCompleted(true);
+                  onLoginSuccess();
+                });
+              }}
               accessibilityRole="button"
               accessibilityLabel="המשך עם Apple"
               style={{
@@ -2196,6 +2206,10 @@ function IntroStep({ onRegister: _onRegister, onGuest, onLoginSuccess }: IntroSt
                 useAuthStore.getState().setAuthError("הכניסה עם Google לא זמינה כרגע. נסה שוב בעוד רגע.");
                 return;
               }
+              // Signal the post-verify routing inside useGoogleAuth that this
+              // sign-in came from the "כבר יש לי חשבון" sub-step, so it flips
+              // hasCompletedOnboarding=true on success and routes to /(tabs).
+              useGoogleAuthStore.setState({ pendingExistingAccountIntent: true });
               promptGoogleSignIn();
             }}
             accessibilityRole="button"
@@ -2265,11 +2279,18 @@ function IntroStep({ onRegister: _onRegister, onGuest, onLoginSuccess }: IntroSt
                   ok: boolean;
                   token?: string;
                   syncToken?: string;
-                  profile: { id: string; authId: string; displayName: string | null; email: string | null } | null;
+                  profile: { id: string; authId: string; displayName: string | null; email: string | null; hasCompletedOnboarding?: boolean } | null;
                 };
                 const resolvedToken = data.token ?? data.syncToken ?? null;
                 if (res.ok && data?.ok && data.profile && resolvedToken) {
                   await signInWithProfile(data.profile, resolvedToken, 'email');
+                  // Yoav 2026-06-11: this branch IS the "כבר יש לי חשבון" login,
+                  // by definition the user already onboarded on a prior install.
+                  // hasCompletedOnboarding is local-only state and is `false` on a
+                  // fresh install — without flipping it here, root layout's
+                  // redirect guard bounces the user straight back into onboarding
+                  // after sign-in. (Same fix that LoginScreen.tsx already does.)
+                  useAuthStore.getState().setOnboardingCompleted(true);
                 }
               } catch { /* non-fatal — let onLoginSuccess route */ }
               onLoginSuccess();

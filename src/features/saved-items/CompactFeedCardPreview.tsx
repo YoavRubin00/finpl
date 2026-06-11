@@ -24,7 +24,7 @@ function getPreviewMeta(item: FeedItem): PreviewMeta {
     case "quote":
       return { gradient: ["#f0f4ff", "#fef3f2"], badge: "ציטוט", emoji: "💬" };
     case "comic":
-      return { gradient: ["#fef3c7", "#fde68a"], badge: "קומיקס", emoji: "🦈" };
+      return { gradient: ["#fef3c7", "#fde68a"], badge: "קומיקס", emoji: "💭" };
     case "module-hook":
       return { gradient: ["#e0f2fe", "#bae6fd"], badge: "הצצה", emoji: "🎯" };
     case "macro-event":
@@ -62,7 +62,7 @@ function getPreviewMeta(item: FeedItem): PreviewMeta {
     case "diamond-hands":
       return { gradient: ["#dbeafe", "#bfdbfe"], badge: "Diamond Hands", emoji: "💎" };
     case "shark-feedback":
-      return { gradient: ["#cffafe", "#a5f3fc"], badge: "סקר", emoji: "🦈" };
+      return { gradient: ["#cffafe", "#a5f3fc"], badge: "סקר", emoji: "📝" };
     case "trading-nudge":
       return { gradient: ["#0c4a6e", "#0e7490"], badge: "מסחר", emoji: "📊" };
     case "referral-nudge":
@@ -76,7 +76,7 @@ function getPreviewMeta(item: FeedItem): PreviewMeta {
     case "crowd-question":
       return { gradient: ["#1e293b", "#334155"], badge: "שאלת קהל", emoji: "👥" };
     case "finn-hero":
-      return { gradient: ["#0c4a6e", "#0369a1"], badge: "פין", emoji: "🦈" };
+      return { gradient: ["#0c4a6e", "#0369a1"], badge: "פין", emoji: "⚓" };
     case "lesson":
       return { gradient: ["#f0f9ff", "#dbeafe"], badge: "שיעור", emoji: "📚" };
     default: {

@@ -10,6 +10,10 @@ export const chapter1Data: Chapter = {
     {
       id: 'mod-1-1',
       title: 'ריבית דריבית',
+      // Pilot 2026-06-09: tap opens TopicTreeOverlay (octagonal chips
+      // orbiting the growing gold tree). Legacy LessonFlowScreen still
+      // reachable via "התחל את הרכיב" inside the overlay.
+      learningMode: 'topic-tree',
       videoHook:
         'תראו את הגרף הזה... רגע, מה?!',
       videoHookAsset: { uri: 'https://pub-34f62012f7364bb5bc3b560ea61b72ce.r2.dev/video/hook/module-4.mp4' },
@@ -1397,6 +1401,7 @@ export const chapter1Data: Chapter = {
     {
       id: 'mod-1-9',
       title: 'קרן חירום',
+      learningMode: 'topic-tree',
       videoHook:
         'הרכב, הטלפון, הדוד, הכל נשבר באותו שבוע. מאיפה לוקחים כסף?!',
       videoHookAsset: { uri: 'https://pub-34f62012f7364bb5bc3b560ea61b72ce.r2.dev/video/hook/module-9.mp4' },

@@ -21,6 +21,10 @@ interface MobileAdsInstance {
     tagForUnderAgeOfConsent?: boolean;
     tagForChildDirectedTreatment?: boolean;
   }): Promise<void>;
+  // Global ad audio controls. We keep ads muted except during an explicitly
+  // user-initiated show() — see setAdsMuted() below.
+  setAppMuted(muted: boolean): void;
+  setAppVolume(volume: number): void;
 }
 interface AdsModuleShape {
   TestIds: { REWARDED: string };
@@ -81,6 +85,12 @@ let rewardCb: (() => void) | null = null;
 let rewardEarned = false;
 let adClosed = false;
 let graceTimer: ReturnType<typeof setTimeout> | null = null;
+// Most recent age-group signal from the active hook. The self-rescheduling
+// preloads (CLOSED/ERROR below) must tag the NEXT ad with the CURRENT value,
+// not the one captured when this ad loaded — ageGroup can flip (minor↔adult)
+// between loads (e.g. profile completes after onboarding) and TFUA must
+// follow it for compliance. Kept in sync by useRewardedAd's effect + each load.
+let latestIsMinor = false;
 
 // Subscribers (hooks) notified when isAdLoaded flips, so each useRewardedAd()
 // re-renders with the current readiness.
@@ -88,6 +98,26 @@ const loadedListeners = new Set<(v: boolean) => void>();
 function setLoaded(v: boolean): void {
   isAdLoaded = v;
   loadedListeners.forEach((fn) => fn(v));
+}
+
+// ───────────────────────────── Global ad audio gate
+// iOS bug: with the AVAudioSession in the Playback category (we set
+// `playsInSilentMode: true` so Captain Shark is audible on Silent), a
+// PRELOADED rewarded video ad's AVPlayer can leak audio in the background
+// during normal use — the ad UI is never presented, but its sound plays.
+// Fix: keep AdMob GLOBALLY MUTED at all times, and unmute ONLY for the brief
+// window of an explicitly user-initiated show() (re-muting on CLOSED/ERROR).
+// Net effect: ad audio is heard if, and only if, the user opened the ad via
+// the "watch ad" button — never spontaneously in the background.
+function setAdsMuted(muted: boolean): void {
+  if (!AdsModule) return;
+  try {
+    const inst = AdsModule.default();
+    inst.setAppMuted(muted);
+    inst.setAppVolume(muted ? 0 : 1);
+  } catch (e) {
+    if (__DEV__) console.warn("[AdMob] setAppMuted failed:", e);
+  }
 }
 
 function clearUnsubs(): void {
@@ -109,6 +139,9 @@ function maybeComplete(): void {
 }
 
 function loadAdSingleton(isMinor: boolean): void {
+  // Record the value this load tagged with so later self-reschedules read
+  // the freshest age-group signal rather than a stale captured param.
+  latestIsMinor = isMinor;
   if (isLoading || currentAd || !AdsModule) {
     if (!AdsModule) console.warn("[AdMob] loadAd skipped — AdsModule unavailable");
     return;
@@ -126,6 +159,10 @@ function loadAdSingleton(isMinor: boolean): void {
       tagForChildDirectedTreatment: false, // we don't target <13
     })
     .catch((cfgErr) => console.warn("[AdMob] setRequestConfiguration failed:", cfgErr));
+
+  // Mute before the ad loads so a preloaded/buffering iOS video creative can't
+  // leak audio in the background. Unmuted only inside showAdSingleton().
+  setAdsMuted(true);
 
   try {
     // Non-personalized only — avoids ATT/IDFA, safer for App Store review.
@@ -155,6 +192,8 @@ function loadAdSingleton(isMinor: boolean): void {
       ad.addAdEventListener(mod.AdEventType.CLOSED, () => {
         console.log("[AdMob] Ad closed");
         adClosed = true;
+        // Re-mute immediately so nothing audible can leak between ads.
+        setAdsMuted(true);
         // Tear down THIS ad's listeners + reference so it can be GC'd cleanly
         // and a fresh one is loaded.
         clearUnsubs();
@@ -177,19 +216,21 @@ function loadAdSingleton(isMinor: boolean): void {
           maybeComplete();
         }
 
-        // Preload the next ad.
-        setTimeout(() => loadAdSingleton(isMinor), 1000);
+        // Preload the next ad — use the latest age-group signal, not the
+        // value captured when this ad loaded.
+        setTimeout(() => loadAdSingleton(latestIsMinor), 1000);
       }),
     );
 
     unsubs.push(
       ad.addAdEventListener(mod.AdEventType.ERROR, (error: unknown) => {
         console.warn("[AdMob] Ad load/show error:", error);
+        setAdsMuted(true);
         clearUnsubs();
         currentAd = null;
         isLoading = false;
         setLoaded(false);
-        setTimeout(() => loadAdSingleton(isMinor), 30000);
+        setTimeout(() => loadAdSingleton(latestIsMinor), 30000);
       }),
     );
 
@@ -212,6 +253,9 @@ function showAdSingleton(onReward: () => void): void {
   rewardEarned = false;
   adClosed = false;
   if (graceTimer) { clearTimeout(graceTimer); graceTimer = null; }
+  // This is the ONLY place ads become audible: the user explicitly tapped a
+  // "watch ad" button. CLOSED/ERROR re-mute immediately afterwards.
+  setAdsMuted(false);
   currentAd.show();
 }
 
@@ -235,6 +279,9 @@ export function useRewardedAd() {
     const listener = (v: boolean) => setLoadedState(v);
     loadedListeners.add(listener);
     setLoadedState(isAdLoaded);
+    // Keep the singleton's age-group signal current even when an ad is
+    // already loaded — the next preload (post-show) will pick it up.
+    latestIsMinor = isMinor;
     if (!currentAd && !isLoading) loadAdSingleton(isMinor);
     return () => {
       loadedListeners.delete(listener);

@@ -39,6 +39,7 @@ import { useProgress, useUpsertModuleProgress, progressQueryKey } from "../chapt
 import type { ModuleProgressRow } from "../../lib/api/progress";
 import { queryClient } from "../../lib/queryClient";
 import { useIsPro } from "../subscription/useSubscription";
+import { useUsageStore } from "../subscription/useUsageStore";
 import { useAuthStore } from "../auth/useAuthStore";
 import { InModuleProfileQuestion, type ProfileQuestionKind } from "../onboarding/InModuleProfileQuestion";
 import { getPyramidStatus } from "../../utils/progression";
@@ -87,6 +88,13 @@ import { chapter3Data } from "../chapter-3-content/chapter3Data";
 import { chapter4Data } from "../chapter-4-content/chapter4Data";
 import { chapter5Data } from "../chapter-5-content/chapter5Data";
 import type { Module } from "../chapter-1-content/types";
+import { TopicTreeAccordion } from "../topic-learning/TopicTreeAccordion";
+import { useTopicProgressStore } from "../topic-learning/useTopicProgressStore";
+import { useTopicTreeReturnStore } from "../topic-learning/useTopicTreeReturnStore";
+import { resolveTopics, shouldUseTopicTree } from "../topic-learning/topicResolver";
+import { getGameForModule } from "../topic-learning/moduleGameMap";
+import type { Topic, TopicKind } from "../topic-learning/types";
+
 import { tapHaptic, successHaptic } from "../../utils/haptics";
 import { MindMapViewer } from "../../components/ui/MindMapViewer";
 import { useTutorialStore } from "../../stores/useTutorialStore";
@@ -651,12 +659,14 @@ function ModuleNode({
             {
               backgroundColor: bgColor,
               borderColor: bottomBorderColor,
-              shadowColor: state === "active" ? colors.glow : "transparent",
               opacity: state === "locked" ? 0.7 : 1,
             },
           ]}
         >
-          {state === "active" && <PulsingGlow color={colors.bg} />}
+          {/* R8 follow-up (Yoav 2026-06-10): modules return to a clean
+              uniform color — no more pulsing gold halo on the active
+              one. The only gold indicator left is the static halo on
+              the recommended TOPIC chip inside the accordion. */}
           <Text style={[styles.nodeIcon, { opacity: state === "locked" ? 0.8 : 1 }]}>
               {icon}
             </Text>
@@ -826,6 +836,7 @@ const ChapterSection = React.memo(function ChapterSection({
   onLockedPress,
   friendsOnModule,
   onSkipIntro,
+  onJumpHere,
   onChapterPress,
   onMindMap,
   easterEggNodeId,
@@ -838,6 +849,12 @@ const ChapterSection = React.memo(function ChapterSection({
   isGlobalActiveChapter,
   onPearlPress,
   completedPearlIds,
+  expandedTopicTreeModuleId,
+  onTopicSelected,
+  onTopicTreeModuleCompleted,
+  onTopicTreeContinueAfterChest,
+  onTopicTreeAdvanceToNextModule,
+  onPearlReady,
 }: {
   arena: ArenaConfig;
   chapter: typeof chapter1Data;
@@ -850,6 +867,9 @@ const ChapterSection = React.memo(function ChapterSection({
   onLockedPress: () => void;
   friendsOnModule: Record<string, string[]>;
   onSkipIntro?: () => void;
+  /** Duolingo-style "JUMP HERE?" — shown only on chapters the user hasn't
+   *  started. Jumps straight into the chapter (ch-1 free for all; ch-2+ PRO). */
+  onJumpHere?: () => void;
   onChapterPress?: () => void;
   onMindMap?: () => void;
   easterEggNodeId?: string | null;
@@ -881,6 +901,28 @@ const ChapterSection = React.memo(function ChapterSection({
   /** Pearl ids the user has already completed at least once — drives the
    *  green checkmark on the path node. */
   completedPearlIds: string[];
+  /** Module id whose topic-tree is currently expanded inline. When this
+   *  matches a node's id, the TopicTreeAccordion is rendered directly
+   *  underneath that node and the rest of the path slides down. */
+  expandedTopicTreeModuleId?: string | null;
+  /** Topic chip tap inside the expanded accordion. Parent shows the
+   *  per-topic sheet — sheet state lives at the screen root so it stacks
+   *  above pearls / locked modals. */
+  onTopicSelected?: (topic: Topic) => void;
+  /** First 70%-threshold crossing → user chose "next module in chapter"
+   *  inside the chest modal — parent collapses the accordion and
+   *  routes to the next module in chapter. */
+  onTopicTreeModuleCompleted?: () => void;
+  /** "המשך עם המודולה" inside the chest modal — close modal but
+   *  keep the accordion open. */
+  onTopicTreeContinueAfterChest?: () => void;
+  /** Navigate to the next module in the same chapter — wired by the
+   *  chest's "לשיעור הבא בפרק" CTA. */
+  onTopicTreeAdvanceToNextModule?: () => void;
+  /** Registers (or clears) a View ref for the bonus pearl that sits
+   *  AFTER the given module. Parent uses this to measure + scroll-to
+   *  the pearl when the chest dismisses (R6 Epic 4). */
+  onPearlReady?: (moduleId: string, ref: View | null) => void;
 }) {
   const firstIncompleteIndex = chapter.modules.findIndex(
     (m) => !completedModules.includes(m.id) && !m.comingSoon && (isPro || !PRO_LOCKED_SIMS.has(m.id)),
@@ -927,7 +969,37 @@ const ChapterSection = React.memo(function ChapterSection({
         </AnimatedPressable>
       )}
 
-      <View style={{ marginTop: 16, marginBottom: 28, position: "relative" }}>
+      {/* Duolingo-style "JUMP HERE?" — blue pill above the chapter's first
+          module, shown only on chapters the user hasn't started (wired by the
+          parent). Tapping jumps into the chapter (ch-1 free; ch-2+ PRO). */}
+      {onJumpHere && (
+        <AnimatedPressable
+          onPress={onJumpHere}
+          style={{
+            alignSelf: 'center',
+            marginTop: 16,
+            marginBottom: 28,
+            paddingHorizontal: 18,
+            paddingVertical: 8,
+            backgroundColor: '#1d4ed8',
+            borderRadius: 22,
+            flexDirection: 'row-reverse',
+            alignItems: 'center',
+            gap: 6,
+            shadowColor: '#1d4ed8',
+            shadowOpacity: 0.3,
+            shadowRadius: 8,
+            elevation: 3,
+          }}
+          accessibilityRole="button"
+          accessibilityLabel={`נתחיל מפה? קפיצה לפרק ${sectionIndex}`}
+        >
+          <Text style={{ fontFamily: 'Heebo_700Bold', color: '#ffffff', fontSize: 13 }}>נתחיל מפה?</Text>
+          <FastForward size={14} color="#ffffff" />
+        </AnimatedPressable>
+      )}
+
+      <View style={{ marginTop: 4, marginBottom: 28, position: "relative" }}>
         {/* Path decorations disabled temporarily */}
 
         {chapter.modules.map((module, i) => {
@@ -1007,6 +1079,20 @@ const ChapterSection = React.memo(function ChapterSection({
                   {newsBadgeNode}
                 </View>
               )}
+              {/* Topic-tree pilot — inline accordion lives in the node's
+                  parent View, so when it mounts the pearl + next module
+                  connector + next node slide down naturally with the
+                  ScrollView's content height. */}
+              {expandedTopicTreeModuleId === module.id && onTopicSelected && (
+                <TopicTreeAccordion
+                  module={module}
+                  nodeOffsetX={getNodeOffset(i)}
+                  onTopicSelected={onTopicSelected}
+                  onContinueAfterChest={onTopicTreeContinueAfterChest}
+                  onAdvanceToNextModule={onTopicTreeAdvanceToNextModule}
+                  onModuleCompleted={onTopicTreeModuleCompleted}
+                />
+              )}
               {showQuestBox && questPathNodeProps && (
                 <>
                   <PathConnector
@@ -1032,9 +1118,12 @@ const ChapterSection = React.memo(function ChapterSection({
                 </>
               )}
               {hasNext && !showQuestBox && (() => {
-                // Bonus PEARL between modules[i] and modules[i+1]. Renders on
-                // the OPPOSITE side of the current node (questOffsetX = -offset)
-                // so it lands in the empty half-row of the alternating path.
+                // Bonus PEARL between modules[i] and modules[i+1]. Sits at the
+                // MIDPOINT of the two nodes' horizontal offsets so the two
+                // connectors (node→pearl→next) form one smooth flowing trail
+                // instead of a sharp V/fork — the old -offset routing sent the
+                // pearl to the opposite side and split the path (most visible
+                // around mod-0-2 after the mod-0-1 split).
                 // Locked until module[i] is completed; once completed it
                 // becomes interactive and inherits a green check on subsequent
                 // visits via completedPearlIds.
@@ -1049,7 +1138,7 @@ const ChapterSection = React.memo(function ChapterSection({
                     />
                   );
                 }
-                const pearlOffsetX = -getNodeOffset(i);
+                const pearlOffsetX = Math.round((getNodeOffset(i) + getNodeOffset(i + 1)) / 2);
                 const moduleCompleted = completedModules.includes(module.id);
                 // Pro unlocks EVERYTHING — including pearls. Without this, a
                 // brand-new Pro user lands on the map and sees nothing but
@@ -1071,7 +1160,10 @@ const ChapterSection = React.memo(function ChapterSection({
                         connectors so the total row height shrinks ~32px,
                         eliminating the dead band the user reported between
                         the active module and the next pearl. */}
-                    <View style={{ alignItems: 'center', marginTop: -18, marginBottom: -18, zIndex: 2 }}>
+                    <View
+                      ref={(r) => onPearlReady?.(module.id, r)}
+                      style={{ alignItems: 'center', marginTop: -18, marginBottom: -18, zIndex: 2 }}
+                    >
                       <PearlNode
                         state={pearlState}
                         offsetX={pearlOffsetX}
@@ -1217,6 +1309,20 @@ export function DuoLearnScreen() {
       const done = completedByPrefix(pfx);
       const next = ch.modules.find((m) => !m.comingSoon && (isPro || !PRO_LOCKED_SIMS.has(m.id)) && !done.includes(m.id));
       if (next) {
+        // Yoav 2026-06-11 sweep: daily-quest "next module" also routes
+        // through topic-tree when supported (was the third entry that
+        // dropped users back into the legacy linear flow).
+        if (shouldUseTopicTree(next)) {
+          const introDone = useTopicProgressStore.getState()
+            .isTopicCompleted(`${next.id}:intro`);
+          setTopicTreeModule({ module: next, chapterId: ch.id });
+          if (!introDone) {
+            router.push(
+              `/lesson/${next.id}?chapterId=${ch.id}&startPhase=intro&returnTo=topic-tree` as never,
+            );
+          }
+          return;
+        }
         router.push(`/lesson/${next.id}?chapterId=${ch.id}` as never);
         return;
       }
@@ -1252,6 +1358,21 @@ export function DuoLearnScreen() {
   // LessonFlowScreen). The user sees: finish module -> learn map flashes
   // briefly -> pearl sheet slides up. Sentinel ref so it fires once per
   // navigation, even though the param can survive a re-render.
+  // R5 one-shot reset: pre-R5 builds wrote completed topics under a
+  // resolver that hadn't yet split the tutorial-video out. Wipe the
+  // mod-1-1 slice once so first-time R5 users see all chips fresh.
+  // The synthetic '__reset_r5__' key in `completed` carries the
+  // idempotency signal across reloads — store is persisted via
+  // zustandStorage so this fires exactly once.
+  useEffect(() => {
+    const fired = useTopicProgressStore.getState().completed['__reset_r5__'];
+    if (fired) return;
+    useTopicProgressStore.getState().resetForModule('mod-1-1');
+    useTopicProgressStore.setState((s) => ({
+      completed: { ...s.completed, '__reset_r5__': { completedAt: new Date().toISOString() } },
+    }));
+  }, []);
+
   const openPearlParam = useLocalSearchParams<{ openPearl?: string }>().openPearl;
   const openPearlConsumedRef = useRef<string | null>(null);
   useEffect(() => {
@@ -1261,6 +1382,102 @@ export function DuoLearnScreen() {
     const pearl = pearlConfigFor(openPearlParam);
     if (pearl) setActivePearl(pearl);
   }, [openPearlParam]);
+
+  // Topic-tree return signal (R4): when LessonFlowScreen finishes a
+  // phase under returnTo=topic-tree, it replaces back here with
+  // ?completedPhase=X&completedModuleId=Y. Mark the matching topic
+  // done in the topic-progress store and clear the params so a refresh
+  // doesn't re-fire. Sentinel ref prevents double-fire when expo-router
+  // re-renders with the same params.
+  const completedPhaseParams = useLocalSearchParams<{
+    completedPhase?: string;
+    completedModuleId?: string;
+    /** Disambiguator passed from LessonFlowScreen — currently unused
+     *  after R5 retired tutorial-video, but kept for future kinds. */
+    completedKind?: string;
+    /** R5.1 — the module whose topic-tree accordion should stay open
+     *  after the lesson exits. Lets the user land back on the chip
+     *  grid instead of having to re-tap the module node. */
+    expandedModule?: string;
+  }>();
+  // Mark a topic-tree chip done + (re)open its accordion. Shared by the warm
+  // store-signal path (lesson did router.back) and the cold URL-param fallback.
+  const applyTopicCompletion = useCallback(
+    (cp: string, cmid: string, ckind?: string, expandedModule?: string): void => {
+      // R5: 'video' phase still exists in LessonFlowScreen (the videoHookAsset
+      // hook auto-plays before intro) but has no topic chip — fall through to
+      // 'intro' so the user's intro chip lights up. Mostly defensive.
+      const phaseToKind: Record<string, TopicKind> = {
+        'video': 'intro',
+        'intro': 'intro',
+        'flashcards': 'cards',
+        'interactive-recall': 'recall',
+        'quizzes': 'quiz',
+        'sim': 'sim',
+        'module-infographic': 'infographic',
+        'post-infographic-video': 'post-video',
+        'podcast': 'podcast',
+        'couple-dilemma': 'couple-dilemma',
+        'shark-dilemma': 'shark-dilemma',
+      };
+      const kind = (ckind as TopicKind | undefined) ?? phaseToKind[cp];
+      if (!kind) return;
+      // R5.1: reopen the accordion the user came from so they land back on the
+      // chip grid (Yoav 2026-06-10). On the warm path it's already open — a
+      // harmless no-op there.
+      const reopenModuleId = expandedModule ?? cmid;
+      if (reopenModuleId) {
+        const ch2 = ALL_CHAPTERS.find((c) =>
+          c.modules.some((m) => m.id === reopenModuleId));
+        const mod2 = ch2?.modules.find((m) => m.id === reopenModuleId);
+        if (mod2 && ch2) setTopicTreeModule({ module: mod2, chapterId: ch2.id });
+      }
+      // resolveTopics lookup so the icon/label match the real Topic shape the
+      // store keyed off when the chip was first rendered.
+      const ch = ALL_CHAPTERS.find((c) =>
+        c.modules.some((m) => m.id === cmid));
+      const mod = ch?.modules.find((m) => m.id === cmid);
+      if (!mod) return;
+      const topic = resolveTopics(mod).find((t) => t.kind === kind);
+      if (topic) useTopicProgressStore.getState().markTopicCompleted(topic);
+    },
+    // setTopicTreeModule (useState setter) is stable; everything else is a
+    // module-level import or a call argument, so the callback never changes.
+    // (setTopicTreeModule is declared below, so it can't be listed here without
+    // a temporal-dead-zone reference.)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [],
+  );
+
+  // Warm path (premium): the lesson signalled completion + router.back()'d to
+  // this STILL-MOUNTED map — no remount, no "flash". Consume the signal here.
+  const pendingTopicReturn = useTopicTreeReturnStore((s) => s.pending);
+  useEffect(() => {
+    if (!pendingTopicReturn) return;
+    applyTopicCompletion(
+      pendingTopicReturn.completedPhase,
+      pendingTopicReturn.completedModuleId,
+      pendingTopicReturn.completedKind,
+      pendingTopicReturn.expandedModule,
+    );
+    useTopicTreeReturnStore.getState().consumeReturn();
+  }, [pendingTopicReturn, applyTopicCompletion]);
+
+  // Cold-start fallback: lesson opened with no back-history (deep link /
+  // onboarding) → it replace()'d here with ?completedPhase=… params instead.
+  const completedPhaseConsumedRef = useRef<string | null>(null);
+  useEffect(() => {
+    const cp = completedPhaseParams.completedPhase;
+    const cmid = completedPhaseParams.completedModuleId;
+    const ckind = completedPhaseParams.completedKind;
+    if (!cp || !cmid) return;
+    const key = `${cmid}:${cp}:${ckind ?? ''}`;
+    if (completedPhaseConsumedRef.current === key) return;
+    completedPhaseConsumedRef.current = key;
+    applyTopicCompletion(cp, cmid, ckind, completedPhaseParams.expandedModule);
+    // Clear params so a screen rerender doesn't re-fire.
+    router.replace('/(tabs)/learn' as never);
+  }, [completedPhaseParams, router, applyTopicCompletion]);
   // Prefetch today's news challenge so the Daily Quests modal can fire the
   // 4th (news) quest cleanly and the sheet renders without a spinner on open.
   const setNewsChallenge = useDailyNewsChallengeStore((s) => s.setTodayChallenge);
@@ -1278,10 +1495,34 @@ export function DuoLearnScreen() {
   const [roadmapVisible, setRoadmapVisible] = useState(false);
   const [mindMapChapter, setMindMapChapter] = useState<number | null>(null);
   const [replayModule, setReplayModule] = useState<{ moduleId: string; chapterId: string; moduleIndex: number } | null>(null);
+  // Topic-tree pilot: a tap on a `learningMode: 'topic-tree'` module
+  // EXPANDS an inline accordion below it (pushing the pearl + next module
+  // down). Tapping the same module again collapses. chapterId rides along
+  // so the per-topic player can re-enter the legacy lesson flow on
+  // "התחל את הרכיב".
+  const [topicTreeModule, setTopicTreeModule] = useState<{ module: Module; chapterId: string } | null>(null);
+  // R4: activeTopic state retired — chip taps deep-link directly to
+  // /lesson/[id]?startPhase=X&returnTo=topic-tree instead of opening
+  // an in-screen modal. Phase completion replaces back here with
+  // ?completedPhase=X which the useEffect above marks done.
   const insets = useSafeAreaInsets();
   const scrollRef = useRef<ScrollView>(null);
+  // Mirror of topicTreeModule so the stable useFocusEffect callback can read the
+  // latest expanded module without re-subscribing (an open tree owns the scroll
+  // position — see the dedicated effect below).
+  const topicTreeModuleRef = useRef(topicTreeModule);
+  topicTreeModuleRef.current = topicTreeModule;
   const [refreshKey, setRefreshKey] = useState(0);
   const isFirstMount = useRef(true);
+  // R6 Epic 4: live scroll Y + per-pearl View refs. Lets the chest
+  // dismiss handler measure the next-pearl's window position then
+  // center it on screen, matching Yoav's brief ("הפנינה במרכז המסך").
+  const scrollYRef = useRef(0);
+  const pearlRefsMap = useRef<Map<string, View | null>>(new Map());
+  const registerPearlRef = useCallback((moduleId: string, ref: View | null) => {
+    if (ref) pearlRefsMap.current.set(moduleId, ref);
+    else pearlRefsMap.current.delete(moduleId);
+  }, []);
 
   const setCurrentChapter = useChapterUIStore((s) => s.setCurrentChapter);
   const setCurrentModule = useChapterUIStore((s) => s.setCurrentModule);
@@ -1399,6 +1640,21 @@ export function DuoLearnScreen() {
   // Merges server progress + local offline-completed store, same pattern as
   // the chapter-rendering logic at line 1738. Returns null for fresh users
   // who haven't completed anything — caller falls back to calcResumeScrollY.
+  // Content-Y of a given module's node, using the same per-row constants as
+  // calcResumeScrollY (greeting 150 + per-chapter banner/margin + moduleIdx*195).
+  // The TopicTreeAccordion expands BELOW the node, so it never shifts this Y —
+  // scrolling here puts the module at the top with its sub-modules underneath.
+  const calcModuleScrollY = useCallback((chIdx: number, mIdx: number): number => {
+    let y = 150;
+    for (let ci = 0; ci < chIdx; ci++) {
+      y += 80 + 44;
+      y += ALL_CHAPTERS[ci].modules.length * 195;
+    }
+    y += 80 + 16;
+    y += mIdx * 195;
+    return y;
+  }, []);
+
   const calcLastCompletedScrollY = useCallback((): number | null => {
     const completed = new Set<string>([
       ...(progressData?.filter((m) => m.status === 'completed').map((m) => m.moduleId) ?? []),
@@ -1420,20 +1676,8 @@ export function DuoLearnScreen() {
     }
     if (targetChapterIdx < 0) return null;
 
-    // Same per-row constants as calcResumeScrollY:
-    //   greeting padding 150 + per-chapter (banner 80 + container margin 44)
-    //   for completed chapters BEFORE the target, then chapter banner 80 +
-    //   marginTop 16 + moduleIdx * 195 inside the target chapter.
-    let y = 150;
-    for (let ci = 0; ci < targetChapterIdx; ci++) {
-      y += 80 + 44;
-      y += ALL_CHAPTERS[ci].modules.length * 195;
-    }
-    y += 80;
-    y += 16;
-    y += targetModuleIdx * 195;
-    return y;
-  }, [progressData, localCompletedModuleIds]);
+    return calcModuleScrollY(targetChapterIdx, targetModuleIdx);
+  }, [progressData, localCompletedModuleIds, calcModuleScrollY]);
 
   // On every tab focus, scroll to the user's last-completed module (with a
   // fallback to "next active module" for fresh users). Skips the very first
@@ -1446,12 +1690,80 @@ export function DuoLearnScreen() {
         isFirstMount.current = false;
         return;
       }
+      // An open topic tree (returned from a module, or tapped to expand) owns
+      // the scroll position — the dedicated effect below anchors it at the top.
+      // Don't fight it with the last-completed anchor.
+      if (topicTreeModuleRef.current) {
+        setRefreshKey((k) => k + 1);
+        return;
+      }
       const lastY = calcLastCompletedScrollY();
       const targetY = lastY ?? calcResumeScrollY();
       scrollRef.current?.scrollTo({ y: Math.max(0, targetY - 80), animated: true });
       setRefreshKey((k) => k + 1);
     }, [calcResumeScrollY, calcLastCompletedScrollY])
   );
+
+  // Anchor an open topic-tree module so the user's NEXT golden (recommended)
+  // chip lands near the top of the viewport. Earlier rounds anchored the
+  // module node itself at the top — fine on entry, but after a chip exit it
+  // meant the user landed back at "module title" and had to hunt for the
+  // gold chip below (Yoav 2026-06-11: "מרגיש איטי וגושני"). Fires on
+  // return-from-module (completedPhaseParams sets topicTreeModule) and on
+  // tap-to-expand. rAF lets the accordion lay out first.
+  //
+  // Layout constants mirror ModuleTopicLayout (NODE_SIZE/ROW_HEIGHT/
+  // EDGE_CONNECTOR_H/ENTRY_OVERLAP) and the outer ChapterSection row.
+  // Numbers stay literal here on purpose — they are stable visual
+  // constants the user has signed off on, and threading them via context
+  // would obscure the math more than it helps.
+  const completedMap = useTopicProgressStore((s) => s.completed);
+  useEffect(() => {
+    if (!topicTreeModule) return;
+    const chIdx = ALL_CHAPTERS.findIndex((c) => c.id === topicTreeModule.chapterId);
+    if (chIdx < 0) return;
+    const mIdx = ALL_CHAPTERS[chIdx].modules.findIndex((m) => m.id === topicTreeModule.module.id);
+    if (mIdx < 0) return;
+    const moduleY = calcModuleScrollY(chIdx, mIdx);
+    const topics = resolveTopics(topicTreeModule.module);
+    // Welcome window for mod-0-1: anchor the MODULE NODE at the top so
+    // the user reads top-down "מושגי יסוד פיננסיים" → "ברוכים הבאים,
+    // {name}" → full accordion (Yoav 2026-06-11: "אני רואה בחלק העליון
+    // את הכפתור של מושגי יסוד פיננסים, שמתחתיו ברוכים הבאים, אורח, ואז
+    // כל האקורדיון למידה, ולא ישר את המוזהב"). The gold-chip auto-scroll
+    // kicks in only AFTER the welcome banner clears (= first chip done).
+    const completedNonIntroCount = topics.filter(
+      (t) => t.kind !== 'intro' && completedMap[t.id],
+    ).length;
+    const inWelcomeWindow =
+      topicTreeModule.module.id === 'mod-0-1'
+      && isWalkthroughActive
+      && completedNonIntroCount < 1;
+    if (inWelcomeWindow) {
+      const TOP_PAD = 12; // small gap below the wealth header
+      const raf = requestAnimationFrame(() => {
+        scrollRef.current?.scrollTo({ y: Math.max(0, moduleY - TOP_PAD), animated: true });
+      });
+      return () => cancelAnimationFrame(raf);
+    }
+    // After the first chip completes, anchor on the next gold chip so
+    // the user sees "what's next" instead of a stale module title.
+    const recommendedIdx = topics.findIndex((t) => !completedMap[t.id]);
+    const safeRecommendedIdx = recommendedIdx < 0 ? 0 : recommendedIdx;
+    const OUTER_MODULE_ROW_H = 114;     // outer ModuleNode row height
+    const EDGE_CONNECTOR_H = 44;        // accordion top connector
+    const ENTRY_OVERLAP = 14;           // accordion lifts -14 into module
+    const ROW_HEIGHT = 114;             // per-chip row inside accordion
+    const VIEWPORT_TOP_PAD = 96;        // headroom above gold chip
+    const chipOffsetFromModule =
+      OUTER_MODULE_ROW_H - ENTRY_OVERLAP
+      + EDGE_CONNECTOR_H + safeRecommendedIdx * ROW_HEIGHT;
+    const targetY = moduleY + chipOffsetFromModule - VIEWPORT_TOP_PAD;
+    const raf = requestAnimationFrame(() => {
+      scrollRef.current?.scrollTo({ y: Math.max(0, targetY), animated: true });
+    });
+    return () => cancelAnimationFrame(raf);
+  }, [topicTreeModule, calcModuleScrollY, completedMap, isWalkthroughActive]);
 
   // Auto-scroll on initial mount — prefer last-completed module so the user
   // lands on "where I finished last time" with the next lesson right below.
@@ -1498,6 +1810,45 @@ export function DuoLearnScreen() {
 
   const handleModulePress = useCallback(
     (moduleId: string, chapterId: string, moduleIndex: number) => {
+      // Topic-tree pilot: if the module opted into the new architecture,
+      // open the inline tree experience instead of routing to LessonFlowScreen.
+      // Auto-intro flow (Yoav 2026-06-09): on a first tap where the user
+      // hasn't completed the intro yet, jump STRAIGHT to IntroPlayer —
+      // they should hear/see Captain Shark before the orbital chips. After
+      // the intro finishes, the intro topic is marked done and the
+      // accordion opens (effect below handles the second leg).
+      const ch = ALL_CHAPTERS.find((c) => c.id === chapterId);
+      const mod = ch?.modules.find((m) => m.id === moduleId);
+      // R6 Epic 1: topic-tree is now the DEFAULT (was opt-in via
+      // learningMode='topic-tree'). Modules explicitly mark
+      // learningMode='linear-flow' to fall back to legacy; modules with
+      // fewer than 2 resolvable topics also fall back automatically so
+      // we never surface an empty accordion.
+      if (mod && shouldUseTopicTree(mod)) {
+        // Re-tap on the already-expanded module collapses.
+        if (topicTreeModule?.module.id === moduleId) {
+          setTopicTreeModule(null);
+          return;
+        }
+        // Decide intro-first vs accordion-first based on persisted state.
+        // First tap (intro not done) → route directly to the legacy
+        // LessonFlowScreen at the intro phase, returnTo=topic-tree. When
+        // intro finishes, the screen replaces back here with
+        // ?completedPhase=intro, which the focus effect below picks up
+        // and marks the intro topic done. The accordion remains the
+        // post-intro target — we set topicTreeModule now so it's already
+        // expanded on return.
+        const introDone = useTopicProgressStore.getState()
+          .isTopicCompleted(`${mod.id}:intro`);
+        setTopicTreeModule({ module: mod, chapterId });
+        if (!introDone) {
+          router.push(
+            `/lesson/${mod.id}?chapterId=${chapterId}&startPhase=intro&returnTo=topic-tree` as never,
+          );
+        }
+        return;
+      }
+
       // Check if module is already completed, show summary preview first
       const done = progressData?.filter((m) => m.status === 'completed').map((m) => m.moduleId) ?? [];
       if (done.includes(moduleId)) {
@@ -1551,8 +1902,144 @@ export function DuoLearnScreen() {
       setCurrentModule(moduleIndex);
       router.push(`/lesson/${moduleId}?chapterId=${chapterId}` as never);
     },
-    [router, setCurrentChapter, setCurrentModule, progressData, knowledgeLevelSet, learningTimeSet, dailyGoalSet, completedPearlIds],
+    // R5.5: topicTreeModule added so the toggle branch reads the LIVE
+    // value, not the closure captured at callback creation. Without
+    // this, re-tapping mod-1-1 never matched topicTreeModule.module.id
+    // and the accordion never closed (Yoav reported this three times).
+    [router, setCurrentChapter, setCurrentModule, progressData, knowledgeLevelSet, learningTimeSet, dailyGoalSet, completedPearlIds, topicTreeModule],
   );
+
+  // Single-flight lock for chip → route navigation. Without it a double-tap
+  // (or a web Pressable firing twice) pushed TWO `/lesson` routes, stacking
+  // two LessonFlowScreen instances — which is why the podcast played DOUBLE
+  // and the user had to answer the questions twice before landing back on the
+  // map (Yoav 2026-06-11). Reset on focus so a legit second tap after the
+  // lesson pops back still works.
+  const isNavigatingRef = useRef(false);
+  useFocusEffect(
+    useCallback(() => {
+      isNavigatingRef.current = false;
+    }, []),
+  );
+
+  // Topic-tree chip → deep-link to the legacy LessonFlowScreen at the
+  // matching phase (R4 2026-06-09). LessonFlowScreen reads `startPhase`
+  // and jumps directly there; on phase complete it router.replace's
+  // back here with `?completedPhase=X` and the useFocusEffect below
+  // marks the matching topic done.
+  const handleTopicSelected = useCallback((topic: Topic) => {
+    const current = topicTreeModule;
+    if (!current) return;
+    // Drop a second navigation while one is already in flight.
+    if (isNavigatingRef.current) return;
+    // R7 — 'game' chip opens the dedicated full-screen game route
+    // (`/topic-game/[gameId]`). The route reads moduleId from the URL,
+    // renders the matching minigame card with bypassDailyGate, and
+    // marks the topic complete + replaces back to the learn map with
+    // the module expanded on "המשך".
+    if (topic.kind === 'game') {
+      const gameId = getGameForModule(current.module.id);
+      if (gameId) {
+        isNavigatingRef.current = true;
+        router.push(`/topic-game/${gameId}?moduleId=${current.module.id}` as never);
+      }
+      return;
+    }
+    // R6 — 'chat' chip opens a DEDICATED scoped chat screen, not the
+    // main companion chat. Yoav 2026-06-10: "צריך להפתח כמסך יעודי ולא
+    // להוביל לצאט". Free-tier daily limit is enforced inside the
+    // screen (2 messages/day → upgrade-to-Pro prompt).
+    if (topic.kind === 'chat') {
+      isNavigatingRef.current = true;
+      router.push(`/topic-chat/${current.module.id}` as never);
+      return;
+    }
+    const phaseForKind: Record<string, string> = {
+      'intro': 'intro',
+      'cards': 'flashcards',
+      'tutorial-video': 'flashcards',
+      'recall': 'interactive-recall',
+      'quiz': 'quizzes',
+      'sim': 'sim',
+      'infographic': 'module-infographic',
+      'post-video': 'post-infographic-video',
+      'podcast': 'podcast',
+      'couple-dilemma': 'couple-dilemma',
+      'shark-dilemma': 'shark-dilemma',
+    };
+    const targetPhase = phaseForKind[topic.kind] ?? 'intro';
+    // Yoav 2026-06-11: cards chip now plays ALL flashcards including
+    // embedded videos — the standalone tutorial-video chip was retired
+    // so videos stay between cards as Chapter 0 originally intended.
+    // No URL filter needed.
+    const cardFilter = '';
+    isNavigatingRef.current = true;
+    router.push(
+      `/lesson/${current.module.id}?chapterId=${current.chapterId}&startPhase=${targetPhase}&returnTo=topic-tree${cardFilter}` as never,
+    );
+  }, [topicTreeModule, router]);
+
+  // Chest CTA: "סיים את כל המודולה" — close chest, keep accordion open,
+  // user lands on the next gold (recommended) chip so they can finish
+  // the remaining 30%. The scroll-to-gold-chip happens via the
+  // topicTreeModule + completedMap useEffect above (already fired on
+  // the chip-completion bounce-back). No-op here intentionally — the
+  // earlier R6 pearl-scroll was the wrong target after Yoav's 2026-06-11
+  // CTA rename ("סיים את כל המודולה שיוביל למפת המודולה הפתוחה, עם
+  // מה שהמשתמש עוד לא סיים", NOT to the pearl that comes after it).
+  const handleTopicTreeContinueAfterChest = useCallback(() => {
+    /* intentionally empty — see comment above */
+  }, []);
+
+  // Chest CTA: "המשך" — Yoav 2026-06-11: NO LONGER auto-starts the next
+  // module. Instead it closes the accordion and returns the user to the
+  // GENERAL map, scrolled so Finn (Captain Shark) is pointing at the next
+  // module and any PEARL sitting between the two is visible — the user
+  // decides when to start it ("כפתור המשך לא מתחיל את המודולה הבאה, אלא
+  // לוקח למסך הלמידה הכללי ששארק מצביע על המודולה הבאה ... שיש פנינה
+  // לבצע"). The next module becomes the map's active node automatically
+  // (the current one is now completed), so Finn + the active-node glow
+  // land on it.
+  const handleTopicTreeAdvanceToNextModule = useCallback(() => {
+    const current = topicTreeModule;
+    if (!current) return;
+    const ch = ALL_CHAPTERS.find((c) => c.id === current.chapterId);
+    if (!ch) return;
+    const idx = ch.modules.findIndex((m) => m.id === current.module.id);
+    const next = idx >= 0 ? ch.modules[idx + 1] : undefined;
+    setTopicTreeModule(null);
+    // mod-0-1b → non-Pro users still see the pricing screen once before
+    // mod-0-2 becomes reachable (business gate, unchanged). This is the one
+    // case that still navigates away rather than just scrolling the map.
+    if (
+      current.module.id === 'mod-0-1b'
+      && !isPro
+      && !useUsageStore.getState().hasSeenMod01bPaywall
+    ) {
+      useUsageStore.getState().markMod01bPaywallSeen();
+      try { captureEvent('paywall_viewed', { paywall: 'post_mod_0_1b', source: 'post_mod_0_1b_topic_tree' }); } catch { /* non-fatal */ }
+      const returnTo = '/lesson/mod-0-2?chapterId=chapter-0';
+      router.replace(`/pricing?returnTo=${encodeURIComponent(returnTo)}` as never);
+      return;
+    }
+    if (next) {
+      // Scroll the general map to the next module. Offset upward so the PEARL
+      // (rendered between this module and the next) plus Finn beside the next
+      // node land in view, instead of pinning the node to the very top.
+      const chIdx = ALL_CHAPTERS.findIndex((c) => c.id === current.chapterId);
+      const mIdx = idx + 1;
+      const moduleY = calcModuleScrollY(chIdx, mIdx);
+      requestAnimationFrame(() => {
+        scrollRef.current?.scrollTo({ y: Math.max(0, moduleY - 240), animated: true });
+      });
+    }
+  }, [topicTreeModule, router, isPro, calcModuleScrollY]);
+
+  // Generic module-completed handler — invoked when the user picks
+  // "next module" inside the chest. Closes the accordion.
+  const handleModuleCompletedFromTree = useCallback(() => {
+    setTopicTreeModule(null);
+  }, []);
 
   // Once the user picks (or skips) the backstop question, navigate to the
   // originally-tapped module. Skipping still proceeds — the question is a
@@ -1563,6 +2050,22 @@ export function DuoLearnScreen() {
     if (!pending) return;
     setCurrentChapter(storeKey(pending.nav.chapterId));
     setCurrentModule(pending.nav.moduleIndex);
+    // Yoav 2026-06-11 sweep: if the target module is a topic-tree
+    // module, expand the accordion + auto-enter intro so the user gets
+    // the new flow, not the legacy linear flow.
+    const ch = ALL_CHAPTERS.find((c) => c.id === pending.nav.chapterId);
+    const mod = ch?.modules.find((m) => m.id === pending.nav.moduleId);
+    if (mod && shouldUseTopicTree(mod)) {
+      const introDone = useTopicProgressStore.getState()
+        .isTopicCompleted(`${mod.id}:intro`);
+      setTopicTreeModule({ module: mod, chapterId: pending.nav.chapterId });
+      if (!introDone) {
+        router.push(
+          `/lesson/${pending.nav.moduleId}?chapterId=${pending.nav.chapterId}&startPhase=intro&returnTo=topic-tree` as never,
+        );
+      }
+      return;
+    }
     router.push(`/lesson/${pending.nav.moduleId}?chapterId=${pending.nav.chapterId}` as never);
   }, [pendingProfileQuestion, router, setCurrentChapter, setCurrentModule]);
 
@@ -1570,6 +2073,19 @@ export function DuoLearnScreen() {
     if (!replayModule) return;
     setCurrentChapter(storeKey(replayModule.chapterId));
     setCurrentModule(replayModule.moduleIndex);
+    // Yoav 2026-06-11 sweep: replay also routes through the topic-tree
+    // when the module supports it (replays were the second-most-common
+    // way the legacy flow was leaking through to topic-tree modules).
+    const ch = ALL_CHAPTERS.find((c) => c.id === replayModule.chapterId);
+    const mod = ch?.modules.find((m) => m.id === replayModule.moduleId);
+    if (mod && shouldUseTopicTree(mod)) {
+      setTopicTreeModule({ module: mod, chapterId: replayModule.chapterId });
+      router.push(
+        `/lesson/${replayModule.moduleId}?chapterId=${replayModule.chapterId}&startPhase=intro&returnTo=topic-tree&replay=1` as never,
+      );
+      setReplayModule(null);
+      return;
+    }
     router.push(`/lesson/${replayModule.moduleId}?chapterId=${replayModule.chapterId}&replay=1` as never);
     setReplayModule(null);
   }, [replayModule, router, setCurrentChapter, setCurrentModule]);
@@ -1607,9 +2123,49 @@ export function DuoLearnScreen() {
   }, [upsertProgress, setCurrentChapter, setCurrentModule, isGuest]);
 
   // Stable callbacks for ChapterSection (avoids inline arrow re-creation per render)
+  // Duolingo-style "JUMP HERE?" — wired to the blue button on not-yet-started
+  // chapters. Chapter 1 is the free taster (reuses handleSkipIntro: marks ch-0
+  // complete → unlocks ch-1 → routes to mod-1-1). Chapters 2+ are PRO: free
+  // users hit the paywall; PRO users (all chapters already unlocked) jump
+  // straight into the chapter's first module.
+  const handleJumpHere = useCallback(
+    (jumpChapter: typeof chapter1Data, idx: number) => {
+      tapHaptic();
+      try { captureEvent('jump_here_clicked', { chapter_id: jumpChapter.id, chapter_index: idx, is_pro: isPro }); } catch { /* non-fatal */ }
+      if (idx === 1) { handleSkipIntro(); return; }
+      if (!isPro) { router.push('/pricing' as never); return; }
+      // Yoav 2026-06-11 sweep: jump-here also routes through topic-tree
+      // when the destination supports it. Without this, "JUMP HERE?"
+      // dropped the user into the legacy linear flow.
+      const target = jumpChapter.modules[0];
+      if (target && shouldUseTopicTree(target)) {
+        const introDone = useTopicProgressStore.getState()
+          .isTopicCompleted(`${target.id}:intro`);
+        setTopicTreeModule({ module: target, chapterId: jumpChapter.id });
+        if (!introDone) {
+          router.push(
+            `/lesson/${target.id}?chapterId=${jumpChapter.id}&startPhase=intro&returnTo=topic-tree` as never,
+          );
+        }
+        return;
+      }
+      router.push(`/lesson/${target.id}?chapterId=${jumpChapter.id}` as never);
+    },
+    [isPro, handleSkipIntro],
+  );
+
   const handleLockedPress = useCallback(() => setLockedModalVisible(true), []);
   const handleRoadmapPress = useCallback(() => setRoadmapVisible(true), []);
-  const handleQuestPress = useCallback(() => setQuestSheetVisible(true), []);
+  const handleQuestPress = useCallback(() => {
+    // Yoav 2026-06-11: during the mod-0-1 onboarding window
+    // (= before the user has seen the app walkthrough), tapping the
+    // active quest widget (Captain Shark on the active module / the
+    // QuestPathNode between modules) must NOT open the daily quests
+    // sheet. The user is meant to focus on tapping the gold-recommended
+    // topic chip first; the daily-challenge surface unlocks afterward.
+    if (isWalkthroughActive) return;
+    setQuestSheetVisible(true);
+  }, [isWalkthroughActive]);
   const handleMindMap = useCallback((idx: number) => { tapHaptic(); setMindMapChapter(idx); }, []);
 
   return (
@@ -1788,6 +2344,7 @@ export function DuoLearnScreen() {
           style={styles.scrollView}
           onScroll={(e) => {
             const y = e.nativeEvent.contentOffset.y;
+            scrollYRef.current = y;
             setHasScrolledDown(y > 400);
           }}
           scrollEventThrottle={100}
@@ -1872,6 +2429,11 @@ export function DuoLearnScreen() {
                 easterEggNodeId={easterEggNodeId}
                 onClaimEasterEgg={handleClaimEasterEgg}
                 onSkipIntro={idx === 0 ? handleSkipIntro : undefined}
+                onJumpHere={
+                  idx >= 1 && completedModules.length === 0 && !hasActiveModule
+                    ? () => handleJumpHere(chapter, idx)
+                    : undefined
+                }
                 onChapterPress={handleRoadmapPress}
                 onMindMap={() => handleMindMap(idx)}
                 isGlobalActiveChapter={hasActiveModule}
@@ -1888,6 +2450,12 @@ export function DuoLearnScreen() {
                 newsBadgeNode={hasActiveModule ? <BreakingNewsBadge /> : undefined}
                 onPearlPress={handlePearlPress}
                 completedPearlIds={completedPearlIds}
+                expandedTopicTreeModuleId={topicTreeModule?.module.id ?? null}
+                onTopicSelected={handleTopicSelected}
+                onTopicTreeModuleCompleted={handleModuleCompletedFromTree}
+                onTopicTreeContinueAfterChest={handleTopicTreeContinueAfterChest}
+                onTopicTreeAdvanceToNextModule={handleTopicTreeAdvanceToNextModule}
+                onPearlReady={registerPearlRef}
               />
             );
 
@@ -1969,6 +2537,11 @@ export function DuoLearnScreen() {
             accentColor={ARENA_COLORS[mindMapChapter]?.bg ?? '#3b82f6'}
           />
         )}
+
+        {/* R4: TopicPlayerHost retired — chips deep-link to the legacy
+            LessonFlowScreen. The chest celebration modal stays inside
+            TopicTreeAccordion (it's tightly coupled to the threshold
+            transition). */}
 
         {/* Completed module replay modal, shows summary infographic */}
         {replayModule && (
@@ -2251,7 +2824,7 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     paddingVertical: 14,
     paddingHorizontal: 18,
-    marginBottom: 12,
+    marginBottom: 6,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,

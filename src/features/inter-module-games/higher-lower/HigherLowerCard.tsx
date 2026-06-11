@@ -38,7 +38,9 @@ const SWIPE_OUT_X = SCREEN_W * 1.4;
 const BLUE_GRADIENT: [string, string] = ['#0ea5e9', '#0369a1'];
 const DEEP_BLUE_GRADIENT: [string, string] = ['#1e3a8a', '#0c4a6e'];
 
-const CARDS_PER_SESSION = 4;
+// Yoav 2026-06-11: bumped 4→2 to match the finfeed/minigames variant
+// ("מי מנצח במודולה 0-1 שיהיה רק פעמיים ולא ארבע").
+const CARDS_PER_SESSION = 2;
 
 interface Props {
   isActive: boolean;
@@ -404,8 +406,8 @@ export const HigherLowerCard = React.memo(function HigherLowerCard({ isActive: _
               {done
                 ? `סיימתם! ${sessionCorrect}/${deck.length} נכונות`
                 : freePlay
-                  ? 'שוק ההון מסוכן, אבל אפשר ללמוד.'
-                  : `שוק ההון מסוכן, אבל אפשר ללמוד. ${remainingPlays}/${MAX_DAILY_PLAYS} סבבים`}
+                  ? `שוק ההון מסוכן, אבל אפשר ללמוד. ${CARDS_PER_SESSION} סבבים`
+                  : `שוק ההון מסוכן, אבל אפשר ללמוד. ${CARDS_PER_SESSION} סבבים`}
             </Text>
           </View>
         </Animated.View>

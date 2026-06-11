@@ -16,12 +16,12 @@ const HORIZON_HE = {
 } as const;
 
 const DISCLAIMER = '⚠️ תוכן חינוכי בלבד · אינו ייעוץ השקעות · ביצועי עבר אינם מנבאים את העתיד.';
-const SIGNATURE = '🦈 קפטן שארק · FinPlay';
+const SIGNATURE = 'קפטן שארק · FinPlay';
 
 function formatQuick(data: StockAnalysisQuick): string {
   const dir = data.priceChangePct >= 0 ? '+' : '';
   return [
-    `🦈 ניתוח מהיר: ${data.companyName} (${data.ticker})`,
+    `ניתוח מהיר: ${data.companyName} (${data.ticker})`,
     `💰 מחיר: $${data.price.toFixed(2)} (${dir}${data.priceChangePct.toFixed(2)}%)`,
     `🎯 תובנת השארק: ${VERDICT_HE[data.verdict]} · רמת ביטחון ${data.confidence}%`,
     `⏱ טווח: ${HORIZON_HE[data.horizon]}`,
@@ -59,7 +59,7 @@ function formatDeep(data: StockAnalysisDeep): string {
   const cy = summary.priceTargets.currency;
 
   const lines: Array<string | false> = [
-    `🦈 ניתוח מעמיק: ${data.companyName} (${data.ticker})`,
+    `ניתוח מעמיק: ${data.companyName} (${data.ticker})`,
     `🎯 ${VERDICT_HE[summary.verdict]} · דירוג ${RANKING_HE[summary.ranking]} · קונבישן ${thesis.conviction}/10`,
     `⏱ טווח: ${HORIZON_HE[data.horizon]}`,
     '',

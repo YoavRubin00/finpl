@@ -10,6 +10,7 @@ export const chapter3Data: Chapter = {
     {
       id: 'mod-3-15',
       title: 'אינפלציה',
+      learningMode: 'topic-tree',
       videoHook:
         'מי גנב לי את הכסף?!',
       videoHookAsset: { uri: 'https://pub-34f62012f7364bb5bc3b560ea61b72ce.r2.dev/video/hook/module-15.mp4' },

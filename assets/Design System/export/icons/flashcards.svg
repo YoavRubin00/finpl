@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="96" height="96" viewBox="0 0 48 48">
+  <defs>
+    <linearGradient id="g_flashcards" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#a3e2f5"></stop><stop offset="0.5" stop-color="#36c2e6"></stop><stop offset="1" stop-color="#16a3c9"></stop>
+    </linearGradient>
+    <filter id="s_flashcards" x="-30%" y="-30%" width="160%" height="160%">
+      <feDropShadow dx="0" dy="1.5" stdDeviation="1.2" flood-color="#0c6883" flood-opacity="0.34"></feDropShadow>
+    </filter>
+  </defs>
+  <g filter="url(#s_flashcards)"><g><rect x="16" y="11" width="22" height="16" rx="4" fill="#16a3c9" transform="rotate(-12 27 19)"></rect><rect x="11" y="18" width="24" height="20" rx="4.5" fill="url(#g_flashcards)"></rect><g stroke="rgba(255,255,255,0.95)" stroke-width="2.4" stroke-linecap="round"><line x1="16" y1="26" x2="30" y2="26"></line><line x1="16" y1="32" x2="25" y2="32"></line></g></g></g>
+  <ellipse cx="20" cy="14" rx="11" ry="6" fill="#fff" opacity="0.18"></ellipse>
+</svg>

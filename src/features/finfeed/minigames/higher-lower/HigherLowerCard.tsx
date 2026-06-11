@@ -38,7 +38,11 @@ const SWIPE_OUT_X = SCREEN_W * 1.4;
 const BLUE_GRADIENT: [string, string] = ['#0ea5e9', '#0369a1'];
 const DEEP_BLUE_GRADIENT: [string, string] = ['#1e3a8a', '#0c4a6e'];
 
-const CARDS_PER_SESSION = 4;
+// Yoav 2026-06-11: bumped 4→2 so "מי מנצח" in the mod-0-1 game chip
+// (and every other higher-lower surface) plays a shorter 2-round set.
+// The header's "X קלפים נותרו" + done copy read from this constant,
+// so the visible counter updates with the round count.
+const CARDS_PER_SESSION = 2;
 
 interface Props {
   isActive: boolean;
@@ -407,7 +411,7 @@ export const HigherLowerCard = React.memo(function HigherLowerCard({ isActive: _
             <Text style={[styles.headerSub, RTL]}>
               {done
                 ? `סיימתם! ${sessionCorrect}/${deck.length} נכונות`
-                : `שוק ההון מסוכן, אבל אפשר ללמוד. ${remainingPlays}/${MAX_DAILY_PLAYS} סבבים`}
+                : `שוק ההון מסוכן, אבל אפשר ללמוד. ${CARDS_PER_SESSION} סבבים`}
             </Text>
           </View>
         </Animated.View>

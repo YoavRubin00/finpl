@@ -26,6 +26,13 @@ const CONTENT: Record<NotificationChannelId, Notifications.NotificationContentIn
     body: "לא למדתם היום עדיין. שמרו על הסטריק שלכם.",
     data: { screen: "/(tabs)/learn" },
   },
+  // US-009 23:00 last-chance fallback — title/body are overridden per-call
+  // via scheduleStreakFallbackWithCopy; this default is the safety net.
+  streakFallback: {
+    title: "שעה אחרונה ליום",
+    body: "לא מאוחר מדי. 2 דקות וזה ירוץ עוד יום ברצף.",
+    data: { screen: "/(tabs)/learn" },
+  },
   chest: {
     title: "ארגז מחכה לפתיחה",
     body: "הארגז שלכם חיכה מספיק. פתחו ואספו את הפרס.",
@@ -94,6 +101,11 @@ async function ensureAndroidChannels() {
     importance: Notifications.AndroidImportance.HIGH,
     vibrationPattern: [0, 250, 250, 250],
   });
+  await Notifications.setNotificationChannelAsync("streakFallback", {
+    name: "שעה אחרונה לרצף",
+    importance: Notifications.AndroidImportance.HIGH,
+    vibrationPattern: [0, 250, 250, 250],
+  });
   await Notifications.setNotificationChannelAsync("chest", {
     name: "ארגזים מוכנים",
     importance: Notifications.AndroidImportance.DEFAULT,
@@ -153,6 +165,10 @@ interface NotificationActions {
   reset: () => void;
   scheduleStreakReminder: (hourOfDay?: number) => Promise<void>;
   scheduleStreakReminderWithCopy: (content: Notifications.NotificationContentInput, hourOfDay?: number) => Promise<void>;
+  /** US-009 — schedule a 23:00 "save your streak" fallback on a SEPARATE
+   *  channel so it doesn't overwrite the primary streak reminder. The
+   *  scheduler can cancel just this channel when the user logs a session. */
+  scheduleStreakFallbackWithCopy: (content: Notifications.NotificationContentInput, hourOfDay?: number) => Promise<void>;
   scheduleMorningMotivation: (content: Notifications.NotificationContentInput) => Promise<void>;
   scheduleInactivityEscalation: (notifications: Array<{ content: Notifications.NotificationContentInput; delayHours: number }>) => Promise<void>;
   scheduleMarketHook: (content: Notifications.NotificationContentInput) => Promise<void>;
@@ -292,7 +308,7 @@ export const useNotificationStore = create<NotificationState & NotificationActio
       },
 
       scheduleBreakingNewsDaily: async (hourOfDay: number): Promise<void> => {
-        const { permissionGranted, scheduled, cancelChannel } = get();
+        const { permissionGranted, cancelChannel } = get();
         if (!permissionGranted) return;
         const hour = Math.max(0, Math.min(23, Math.round(hourOfDay)));
         await cancelChannel("breakingNews");
@@ -305,8 +321,14 @@ export const useNotificationStore = create<NotificationState & NotificationActio
             channelId: "breakingNews",
           },
         });
+        // Re-read after cancelChannel's set() (the captured array would be
+        // stale) and filter defensively so the channel never accumulates
+        // duplicate entries on repeated scheduling.
         set({
-          scheduled: [...scheduled, { channelId: "breakingNews", identifier }],
+          scheduled: [
+            ...get().scheduled.filter((s) => s.channelId !== "breakingNews"),
+            { channelId: "breakingNews", identifier },
+          ],
         });
       },
 
@@ -410,6 +432,25 @@ export const useNotificationStore = create<NotificationState & NotificationActio
           },
         });
         set({ scheduled: [...scheduled.filter((s) => s.channelId !== "streak"), { channelId: "streak" as const, identifier }] });
+      },
+
+      /** US-009 — 23:00 fallback push on its OWN channel so the primary
+       *  streak reminder isn't overwritten. Independently cancellable
+       *  by the scheduler when the user logs a session before 23:00. */
+      scheduleStreakFallbackWithCopy: async (content, hourOfDay = 23): Promise<void> => {
+        const { permissionGranted, scheduled, cancelChannel } = get();
+        if (!permissionGranted) return;
+        await cancelChannel("streakFallback");
+        const identifier = await Notifications.scheduleNotificationAsync({
+          content,
+          trigger: {
+            type: Notifications.SchedulableTriggerInputTypes.DAILY,
+            hour: hourOfDay,
+            minute: 0,
+            channelId: "streakFallback",
+          },
+        });
+        set({ scheduled: [...scheduled.filter((s) => s.channelId !== "streakFallback"), { channelId: "streakFallback" as const, identifier }] });
       },
 
       /** Schedule morning motivation at 09:00 */

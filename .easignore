@@ -18,6 +18,14 @@ skills/
 public/
 /db/
 
+# R8 pre-release audit (Yoav + ארכיטקט 2026-06-11): dev scratch files
+# under src/features/. Ralph-loop progress logs and ralph prompts add
+# ~7.7k LOC to Metro's bundle metadata without any runtime use. Keep
+# them in-tree (engineering history stays greppable) but exclude from
+# production builds.
+**/progress*.txt
+**/ralph-prompt.txt
+
 # Heavy assets — all served from Vercel Blob CDN
 assets/video/
 # Splash mp4 lives under assets/splash/ (NOT here) — a !file negation

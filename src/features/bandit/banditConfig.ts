@@ -269,14 +269,20 @@ export const EXPERIMENT_CONFIGS: AllExperimentConfigs = {
         payload: {
           proofText: 'לבבות אינסופיים, בוסט XP פי 2, אפס מגבלות',
           ctaText: 'התחילו PRO היום',
-          subText: 'הצטרפו ל-10,000+ לומדים פרו',
+          // Audrey 2026-06-11: dropped "הצטרפו ל-10,000+ לומדים פרו" —
+          // social-proof claim we can't actually verify.
+          subText: 'מתחדש אוטומטית. ביטול בכל עת.',
         },
       },
       {
         id: 'paywall_v2',
-        label: 'loss_aversion',
+        // R8 pre-release audit (Yoav + Audrey 2026-06-11): שונה מ-
+        // "loss_aversion" / "הרצף שלכם שווה כסף" — מינוף לחץ כספי על
+        // streak פגע בקו האדום של אודרי (P0). הוחלף ל-value framing
+        // שמתמקד במה שהמשתמש יכול ללמוד, לא במה שיאבד.
+        label: 'momentum',
         payload: {
-          proofText: 'אל תעצרו בדיוק עכשיו — הרצף שלכם שווה כסף',
+          proofText: 'המשיכו את המומנטום שבניתם — כל יום עוד צעד',
           ctaText: 'המשיכו ללא עצירות',
           subText: 'ביטול בכל עת. ללא התחייבות.',
         },

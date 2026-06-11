@@ -38,7 +38,7 @@ const MOOD_TO_SOURCE: Record<ToolSharkMood, ImageSource> = {
 };
 
 /**
- * שארק tip card — RTL, replaces the old `🦈` emoji + italic-text pattern with
+ * שארק tip card — RTL, replaces the old shark-emoji + italic-text pattern with
  * the actual Fin mascot webp + speech bubble. Used inside tool screens to
  * deliver one short personality line without breaking the form/result rhythm.
  */
