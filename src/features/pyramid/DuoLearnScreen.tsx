@@ -851,6 +851,7 @@ const ChapterSection = React.memo(function ChapterSection({
   completedPearlIds,
   expandedTopicTreeModuleId,
   onTopicSelected,
+  onStartContinuous,
   onTopicTreeModuleCompleted,
   onTopicTreeContinueAfterChest,
   onTopicTreeAdvanceToNextModule,
@@ -909,6 +910,9 @@ const ChapterSection = React.memo(function ChapterSection({
    *  per-topic sheet — sheet state lives at the screen root so it stacks
    *  above pearls / locked modals. */
   onTopicSelected?: (topic: Topic) => void;
+  /** "למידה רציפה" — launch the whole module as one continuous flow. Rendered
+   *  as a pill under the active topic-tree module node. */
+  onStartContinuous?: (moduleId: string, chapterId: string) => void;
   /** First 70%-threshold crossing → user chose "next module in chapter"
    *  inside the chest modal — parent collapses the accordion and
    *  routes to the next module in chapter. */
@@ -1061,6 +1065,32 @@ const ChapterSection = React.memo(function ChapterSection({
                   }
                 }}
               />
+              {/* "למידה רציפה" — autopilot launcher, pinned right under the
+                  module node so it's visible during normal map browsing (the
+                  in-accordion placement was always auto-scrolled off-screen).
+                  Shown only for accessible topic-tree modules. Follows the
+                  node's wave offset so it sits centered under the node. */}
+              {onStartContinuous && !isLocked && shouldUseTopicTree(module) && (
+                <View
+                  style={{
+                    alignItems: 'center',
+                    marginTop: 4,
+                    marginBottom: 2,
+                    transform: [{ translateX: getNodeOffset(i) }],
+                    zIndex: 4,
+                  }}
+                >
+                  <AnimatedPressable
+                    onPress={() => onStartContinuous(module.id, chapter.id)}
+                    style={styles.continuousPill}
+                    accessibilityRole="button"
+                    accessibilityLabel="למידה רציפה — המודולה כולה ברצף"
+                  >
+                    <FastForward size={14} color="#ffffff" />
+                    <Text style={styles.continuousPillText}>למידה רציפה</Text>
+                  </AnimatedPressable>
+                </View>
+              )}
               {/* Daily News Challenge — newspaper icon anchored directly
                   under the MIDDLE star of the row that sits below the
                   shark. Zero margins so the next PathConnector / pearl
@@ -1979,6 +2009,16 @@ export function DuoLearnScreen() {
     );
   }, [topicTreeModule, router]);
 
+  // "למידה רציפה" — launch the WHOLE module as ONE continuous legacy flow
+  // (master-version UX) with per-phase progress sync (ttProgress=1, NO
+  // startPhase/returnTo). Rendered next to the module NODE on the map (see
+  // ChapterSection) so it's visible while browsing — the earlier in-accordion
+  // placement was always auto-scrolled off the top of the screen.
+  const handleStartContinuousModule = useCallback((moduleId: string, chapterId: string) => {
+    isNavigatingRef.current = true;
+    router.push(`/lesson/${moduleId}?chapterId=${chapterId}&ttProgress=1` as never);
+  }, [router]);
+
   // Chest CTA: "סיים את כל המודולה" — close chest, keep accordion open,
   // user lands on the next gold (recommended) chip so they can finish
   // the remaining 30%. The scroll-to-gold-chip happens via the
@@ -2454,6 +2494,7 @@ export function DuoLearnScreen() {
                 completedPearlIds={completedPearlIds}
                 expandedTopicTreeModuleId={topicTreeModule?.module.id ?? null}
                 onTopicSelected={handleTopicSelected}
+                onStartContinuous={handleStartContinuousModule}
                 onTopicTreeModuleCompleted={handleModuleCompletedFromTree}
                 onTopicTreeContinueAfterChest={handleTopicTreeContinueAfterChest}
                 onTopicTreeAdvanceToNextModule={handleTopicTreeAdvanceToNextModule}
