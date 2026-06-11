@@ -15,22 +15,23 @@ const WAVE_PERIOD = 6;
 // Decorative Shark+Daisy loops in the side gutters (Duolingo-style). The `-v2`
 // WebPs are full-frame with transparent padding (no crop), so NO character is
 // ever clipped and flush-to-edge (offset 0) still reads as a comfortable
-// inset. Bumped 110→140 per Yoav 2026-06-10 ("תגדיל אותם טיפה יותר").
-const SCENE_SIZE = 140;
-// Visible viewport width for each scene. Clamped to the side GUTTER so the
-// loop's footprint can NEVER cross into the centered chip column (Yoav
-// 2026-06-11 QA: 140px loops overlapped the buttons). Gutter ≈ half of what's
-// left after the centered column, inside the accordion's ~20px horizontal
-// padding each side, minus a 6px safety gap. The clip reveals the INNER slice
-// (the side facing the path), so the character peeks toward the chips from
-// the margin instead of spilling over them.
+// inset. Bumped 110→140→170→200 (Yoav 2026-06-11: "צריך להיות גדול יותר").
+const SCENE_SIZE = 200;
+// Full-image reveal — earlier rounds used a hard clip to the side GUTTER, but
+// at SCENE_SIZE 170+ that meant the chip-facing 38% of the WebP was hidden
+// AND the character got chopped in half (Yoav 2026-06-11 QA: "הוובפ נחתך").
+// Show the entire WebP (no clip) and bleed it slightly off-screen so the
+// character sits comfortably in the margin without crowding the chips.
 const COLUMN_W = Math.min(SCREEN_W * 0.5, 220);
-const SCENE_GUTTER_W = Math.max(0, (SCREEN_W - 40 - COLUMN_W) / 2);
-const SCENE_VISIBLE_W = Math.max(48, Math.min(Math.round(SCENE_SIZE * 0.62), Math.floor(SCENE_GUTTER_W) - 6));
-// Exactly TWO scenes per module (Yoav 2026-06-10: "2 וובפים ולא 5"): a themed
-// loop + a generic loop, anchored near these fractions of the column height —
-// one in the upper third, one in the lower third.
-const SCENE_ANCHOR_FRACTIONS = [0.3, 0.72] as const;
+const SCENE_VISIBLE_W = SCENE_SIZE;
+// Negative gutter offset pulls the WebP partly past the screen edge so the
+// character peeks in from outside the frame (Duolingo / Hay Day pattern).
+// Combined with offset:0 it would otherwise butt against the chip column.
+const SCENE_BLEED = 24;
+// Exactly TWO scenes per module: themed loop + generic loop. Upper anchor
+// pulled near the very top per Yoav 2026-06-11 ("יותר למעלה"); lower stays
+// in the lower third.
+const SCENE_ANCHOR_FRACTIONS = [0.06, 0.74] as const;
 // Vertical gap rendered above the first chip and below the last chip.
 // Kept tight so the transitions read as "natural continuation" rather
 // than dedicated trail segments (Yoav R5.12 2026-06-10: "החיבור בין
@@ -137,8 +138,10 @@ export const ModuleTopicLayout = React.memo(function ModuleTopicLayout({
         source: scene.source,
         top: rowCenter - SCENE_SIZE / 2,
         side: sides[idx],
-        // Flush to the edge (no off-screen bleed) so the loop is never cut.
-        offset: 0,
+        // Negative offset bleeds part of the loop off-screen so the character
+        // peeks in from the margin (Duolingo pattern) without crowding the
+        // chip column or getting chopped by an overflow clip.
+        offset: -SCENE_BLEED,
       };
     });
   }, [sorted.length, moduleId, reduceMotion]);
@@ -166,7 +169,6 @@ export const ModuleTopicLayout = React.memo(function ModuleTopicLayout({
                 top: s.top,
                 width: SCENE_VISIBLE_W,
                 height: SCENE_SIZE,
-                overflow: 'hidden',
                 backgroundColor: 'transparent',
                 zIndex: 0,
                 ...(s.side === 'right' ? { right: s.offset } : { left: s.offset }),
@@ -180,11 +182,6 @@ export const ModuleTopicLayout = React.memo(function ModuleTopicLayout({
                   width: SCENE_SIZE,
                   height: SCENE_SIZE,
                   backgroundColor: 'transparent',
-                  // Reveal the INNER slice (facing the path): a left-gutter
-                  // loop shows its right portion, a right-gutter loop its
-                  // left — so the character peeks toward the chips, never
-                  // over them.
-                  marginLeft: s.side === 'left' ? -(SCENE_SIZE - SCENE_VISIBLE_W) : 0,
                 }}
               />
             </View>

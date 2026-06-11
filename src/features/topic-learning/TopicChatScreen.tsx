@@ -209,7 +209,7 @@ export function TopicChatScreen(): React.ReactElement {
 
   return (
     <View style={{ flex: 1, backgroundColor: '#ffffff' }}>
-      <SafeAreaView style={{ flex: 1 }} edges={['bottom']}>
+      <SafeAreaView style={{ flex: 1 }} edges={['top', 'bottom']}>
         <KeyboardAvoidingView behavior="padding" style={{ flex: 1 }} keyboardVerticalOffset={0}>
           {/* WhatsApp-style header — companion avatar + name + status */}
           <View style={headerStyles.container}>
