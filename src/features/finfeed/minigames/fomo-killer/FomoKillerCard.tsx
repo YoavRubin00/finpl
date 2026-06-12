@@ -14,6 +14,7 @@ import {
 } from '../../../daily-challenges/daily-challenge-types';
 import { FeedStartButton } from '../shared/FeedStartButton';
 import { tapHaptic } from '../../../../utils/haptics';
+import { israelDayKey } from '../../../../utils/dateUtils';
 
 import { FOMO_TOKENS, FOMO_MOTION } from './theme';
 import { ChatBubble } from './ChatBubble';
@@ -173,12 +174,20 @@ export const FomoKillerCard = React.memo(function FomoKillerCard({ isActive: _is
     [index, messageQueue, scheduleNextMessage],
   );
 
-  // Reveal → finalize rewards once
-  const perfect = session.added === 0 && session.reportedCount >= SESSION_LENGTH;
+  // Reveal → finalize rewards once.
+  // "perfect" = classified every message correctly (reported the scams,
+  // IGNORED social-proof/noise/bait-truth) without adding money. The old
+  // condition demanded reportedCount >= 4, but CORRECT_ACTION says half the
+  // categories should be ignored — so an optimal player could never hit
+  // perfect and the coin reward never fired (code-review 2026-06-12 P0).
+  const perfect = session.added === 0 && session.correct >= SESSION_LENGTH;
   useEffect(() => {
     if (phase !== 'reveal' || finalizedRef.current) return;
     finalizedRef.current = true;
-    const today = new Date().toISOString().slice(0, 10);
+    // israelDayKey (not UTC) — the store's daily gate checks israelDayKey(),
+    // so a UTC stamp written between 00:00-02:00 IL time blocked tomorrow's
+    // play (code-review 2026-06-12).
+    const today = israelDayKey();
     playFomoKiller(today, perfect);
 
     const log = useDailyLogStore.getState();

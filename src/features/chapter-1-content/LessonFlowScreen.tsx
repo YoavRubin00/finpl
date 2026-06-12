@@ -68,7 +68,7 @@ import { useAITelemetryStore } from "../ai-personalization/useAITelemetryStore";
 import { useEconomy, economyQueryKey } from "../economy/useEconomy";
 import { useEconomyUIStore, fireEconomyDelta } from "../economy/useEconomyUIStore";
 import { useCompletedModulesStore } from "../economy/useCompletedModulesStore";
-import { useStreak, useRecordDailyActivity } from "../economy/useStreak";
+import { useStreak, useRecordDailyActivity, markDailyActivityCompleted } from "../economy/useStreak";
 import type { Economy } from "../../lib/api/economy";
 import { recordModuleDuration as apiRecordModuleDuration } from "../../lib/api/userStats";
 import { userStatsQueryKey } from "../user-stats/useUserStats";
@@ -3016,7 +3016,36 @@ export function LessonFlowScreen() {
         duration_ms: Date.now() - startMs,
       });
     } catch { /* non-fatal */ }
-  }, [ttProgressActive, phase, id, chapterId]);
+    // Completion side-effects that the LEGACY summary chest's onPress used to
+    // run. In continuous mode that chest never renders (gate below) and the
+    // legacy completeModule effect is skipped (the accordion owns the single
+    // lesson_completed + upsert + chest on return) — so without these calls a
+    // continuous run lost its daily-activity credit, kept a stale resume
+    // pointer, and never recorded duration (code-review 2026-06-12 P0).
+    // Reward parity note: XP/coins intentionally NOT granted here — the
+    // accordion's ChestCelebrationModal is the canonical reward, same as the
+    // chip path. Only the quiz-skill streak bonus is kept (earned in-run).
+    if (!isReplay && id) {
+      if (peakStreak >= 3) {
+        const bonusMultiplier = peakStreak >= 7 ? 1.0 : peakStreak >= 5 ? 0.75 : 0.5;
+        useEconomyUIStore.getState().addXP(Math.round(30 * bonusMultiplier), "streak_bonus");
+      }
+      // Local daily-task counter + server streak day, both idempotent.
+      try { markDailyActivityCompleted(); } catch { /* non-fatal */ }
+      clearResume(id);
+      const durationSec = Math.round((Date.now() - moduleStartTimeRef.current) / 1000);
+      if (durationSec >= 5 && durationSec <= 7200) {
+        apiRecordModuleDuration(id, durationSec)
+          .then(() => queryClient.invalidateQueries({ queryKey: userStatsQueryKey }))
+          .catch(() => { /* fire-and-forget */ });
+      }
+    }
+    // peakStreak + moduleStartTimeRef are declared LATER in the component —
+    // referencing them in the deps array would evaluate during render (TDZ
+    // crash). Closure reads inside the callback are safe (run post-render),
+    // and the value is final by the time phase reaches 'summary'.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ttProgressActive, phase, id, chapterId, isReplay, clearResume]);
 
   // "למידה רציפה" auto-exit on summary (Yoav 2026-06-11 rev 3). The legacy
   // summary chest is now hidden in continuous mode (render gate below), so we
@@ -3550,7 +3579,15 @@ export function LessonFlowScreen() {
   // on this path. The render below is gated the same way.
   useEffect(() => {
     if (!mod) return;
-    if (phase === "summary" && !completedRef.current && returnTo !== 'topic-tree') {
+    // ttProgressActive (continuous "למידה רציפה") is excluded too: the run
+    // marks topics live, so on return the accordion fires lesson_completed
+    // (learning_mode='topic-tree') + upsertProgress + its own chest. Running
+    // completeModule here as well double-fired lesson_completed and skewed
+    // NSM / WoW-retention / is_first_lesson (code-review 2026-06-12). The
+    // non-event side-effects this effect used to provide for continuous runs
+    // (daily activity, resume clear, duration) moved to the
+    // continuous-run-completed effect above.
+    if (phase === "summary" && !completedRef.current && returnTo !== 'topic-tree' && !ttProgressActive) {
       completedRef.current = true;
       // Mark the module completed the moment the chest screen appears —
       // earlier the completion fired only on chest-tap, so a user who reached
@@ -3610,7 +3647,7 @@ export function LessonFlowScreen() {
       cancelAnimation(chestGlowOpacity);
       cancelAnimation(chestBodyScale);
     };
-  }, [phase, mod?.id, completeModule, mod, isLastModule, isReplay, playSound, safeTimeout, returnTo]);
+  }, [phase, mod?.id, completeModule, mod, isLastModule, isReplay, playSound, safeTimeout, returnTo, ttProgressActive]);
 
   // Post-module celebration ("Continue or Netflix?") is intentionally LAST in the
   // end-of-module nudge sequence. Wait for every other modal AND for the pending
@@ -3765,19 +3802,25 @@ export function LessonFlowScreen() {
     // Last quiz done. Resolve the next phase first, then decide whether to
     // inject an inline onboarding-style question before transitioning.
     const advanceToNextPhase = () => {
+      // Resolve the post-sim phase up front so a Free user whose simulator quota
+      // is exhausted still has somewhere to go after dismissing the upgrade
+      // modal. Without this, the previous code returned with phase='quizzes' and
+      // the last quiz remained on screen with no advance affordance — a hard
+      // dead-end for the highest-intent monetization moment (QA 2026-06-12).
+      const postSimPhase =
+        mod.id && MODULE_INFOGRAPHIC_MAP[mod.id] ? "module-infographic" :
+        mod.id && MODULE_POST_VIDEO_MAP[mod.id] ? "post-infographic-video" :
+        mod.id && getDilemma(mod.id) ? "shark-dilemma" : "summary";
       if (MODULES_WITH_SIM.has(mod.id) && !SIM_FIRST_MODULES.has(mod.id)) {
         if (PRO_LOCKED_SIMS.has(mod.id) && !useUsageStore.getState().canUse("simulator", queryClient.getQueryData<SubscriptionState | null>(subscriptionQueryKey)?.isPro === true)) {
           useUpgradeModalStore.getState().show("simulator");
+          setPhase(postSimPhase);
           return;
         }
         setPhase("sim-intro");
         mediumHaptic();
       } else {
-        setPhase(
-          mod.id && MODULE_INFOGRAPHIC_MAP[mod.id] ? "module-infographic" :
-          mod.id && MODULE_POST_VIDEO_MAP[mod.id] ? "post-infographic-video" :
-          mod.id && getDilemma(mod.id) ? "shark-dilemma" : "summary"
-        );
+        setPhase(postSimPhase);
       }
     };
     // mod-0-1 (post-2026-05-30 swap = financial basics, first lesson) acts as a
@@ -4530,7 +4573,13 @@ export function LessonFlowScreen() {
         )}
 
         {/* ── Flashcards phase ── */}
-        {phase === "flashcards" && (
+        {/* Guard before destructuring mod.flashcards[flashcardIndex] — the
+            cardFilter effect (line ~3095) sets flashcardIndex = flashcards.length
+            when no card matches the filter (e.g. cardFilter='video' on a module
+            with no video flashcards). Without this guard, `card[…].id` threw
+            synchronously and crashed the screen. Self-heal: skip to quizzes
+            so the user is never trapped on a blank phase (QA 2026-06-12). */}
+        {phase === "flashcards" && mod.flashcards[flashcardIndex] && (
           <Animated.View style={[contentStyle, { flex: 1 }]}>
             <FlashcardCard
               key={mod.flashcards[flashcardIndex].id}
@@ -4547,6 +4596,9 @@ export function LessonFlowScreen() {
               showFinnTip={mod.id === "mod-0-1"}
             />
           </Animated.View>
+        )}
+        {phase === "flashcards" && !mod.flashcards[flashcardIndex] && (
+          <FallbackToPhaseEffect run={() => setPhase("quizzes")} />
         )}
 
         {/* ── Daisy Podcast phase (between flashcards) ── */}

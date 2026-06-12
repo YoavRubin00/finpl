@@ -293,6 +293,31 @@ export const ModuleTopicLayout = React.memo(function ModuleTopicLayout({
                   onPress={onTopicPress}
                 />
               </View>
+
+              {/* "למידה רציפה" — to the LEFT of the intro chip, shown ONLY once
+                  the intro itself is completed (Yoav 2026-06-12: "שיופיע רק
+                  אחרי ביצוע האינטרו, משמאל למה שמסמל אותו"). Anchored to the
+                  chip's center (left:'50%' + marginLeft) so it tracks the
+                  centered chip on any column width, bleeding into the left
+                  gutter just left of the chip. Tapping runs the whole module as
+                  one continuous flow (master UX). */}
+              {onStartContinuous && topic.kind === 'intro' && isCompleted && (
+                <Pressable
+                  onPress={onStartContinuous}
+                  accessibilityRole="button"
+                  accessibilityLabel="למידה רציפה — המודולה כולה ברצף"
+                  style={({ pressed }) => [
+                    styles.continuousBtn,
+                    pressed && styles.continuousBtnPressed,
+                  ]}
+                  hitSlop={8}
+                >
+                  <FastForward size={16} color="#ffffff" fill="#ffffff" strokeWidth={0} />
+                  <Text style={styles.continuousLabel} allowFontScaling={false}>
+                    למידה{'\n'}רציפה
+                  </Text>
+                </Pressable>
+              )}
             </Animated.View>
           );
         })}
@@ -466,15 +491,16 @@ const styles = StyleSheet.create({
     right: 0,
     bottom: 0,
   },
-  // "למידה רציפה" pill — absolute at CONTAINER level, anchored to the
-  // container's LEFT EDGE with a plain positive offset (no percentage / no
-  // negative margin — those were rendering off-screen/invisible). The
-  // container is full-width, so left:8 sits in the far-left margin, clearly
-  // left of the centered chip column. `top` is supplied inline (intro row
-  // center). High zIndex/elevation so it's above the chips and tappable.
+  // "למידה רציפה" pill — absolute INSIDE the intro row, anchored to the chip
+  // column's center (left:'50%') and pushed left by half the chip + a gap +
+  // its own width, so it lands just LEFT of the centered intro chip and tracks
+  // it on any column width. Vertically centered on the row. No ancestor clips
+  // overflow, so bleeding into the left gutter is fine.
   continuousBtn: {
     position: 'absolute',
-    left: 8,
+    top: ROW_HEIGHT / 2 - CONTINUOUS_BTN_H / 2,
+    left: '50%',
+    marginLeft: -(NODE_SIZE / 2 + 8 + CONTINUOUS_BTN_W),
     width: CONTINUOUS_BTN_W,
     paddingVertical: 9,
     paddingHorizontal: 6,

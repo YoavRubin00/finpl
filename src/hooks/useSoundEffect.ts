@@ -14,17 +14,33 @@ export type SoundEffectName =
     | 'modal_open_4'
     | 'bubble_transition';
 
+// Yoav 2026-06-12: SFX are now BUNDLED locally (require) instead of streamed
+// from Vercel blob storage. Remote SFX via expo-audio were unreliable in
+// production — `createAudioPlayer({uri}).play()` fires before the HTTP
+// download finishes (and remote native players are flaky), so "כל הסאונד
+// בפרודקשן לא עובד". These clips are tiny (~45-50KB each, ~500KB total), so
+// bundling them makes playback instant, offline, and bulletproof.
 const SOUND_FILES: Record<SoundEffectName, AudioSource> = {
-    'btn_click_heavy': { uri: 'https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/sound/btn_click_heavy.mp3' },
-    'btn_click_soft_1': { uri: 'https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/sound/btn_click_soft_1.mp3' },
-    'btn_click_soft_2': { uri: 'https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/sound/btn_click_soft_2.mp3' },
-    'btn_click_soft_3': { uri: 'https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/sound/btn_click_soft_3.mp3' },
-    'btn_click_soft_4': { uri: 'https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/sound/btn_click_soft_4.mp3' },
-    'modal_open_1': { uri: 'https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/sound/modal_open_1.mp3' },
-    'modal_open_2': { uri: 'https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/sound/modal_open_2.mp3' },
-    'modal_open_3': { uri: 'https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/sound/modal_open_3.mp3' },
-    'modal_open_4': { uri: 'https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/sound/modal_open_4.mp3' },
-    'bubble_transition': { uri: 'https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/sound/bubble_transition.mp3' },
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    'btn_click_heavy': require('../../assets/sfx/btn_click_heavy.mp3'),
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    'btn_click_soft_1': require('../../assets/sfx/btn_click_soft_1.mp3'),
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    'btn_click_soft_2': require('../../assets/sfx/btn_click_soft_2.mp3'),
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    'btn_click_soft_3': require('../../assets/sfx/btn_click_soft_3.mp3'),
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    'btn_click_soft_4': require('../../assets/sfx/btn_click_soft_4.mp3'),
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    'modal_open_1': require('../../assets/sfx/modal_open_1.mp3'),
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    'modal_open_2': require('../../assets/sfx/modal_open_2.mp3'),
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    'modal_open_3': require('../../assets/sfx/modal_open_3.mp3'),
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    'modal_open_4': require('../../assets/sfx/modal_open_4.mp3'),
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    'bubble_transition': require('../../assets/sfx/bubble_transition.mp3'),
 };
 
 // Module-level cache: one player per sound, loaded once from the remote URL

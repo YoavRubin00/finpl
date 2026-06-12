@@ -935,8 +935,12 @@ const GOAL_REACTIONS: Record<FinancialGoal, string> = {
   "unsure": "תהיו כנים, נתחיל בדיוק מהמקום הנכון לכם.",
 };
 
-function KnowledgeStep({ goal, onNext }: { goal: FinancialGoal | null; onNext: (v: KnowledgeLevel) => void }) {
-  const [sel, setSel] = useState<KnowledgeLevel | null>(null);
+function KnowledgeStep({ goal, onNext, onBack, initialValue }: { goal: FinancialGoal | null; onNext: (v: KnowledgeLevel) => void; onBack?: () => void; initialValue?: KnowledgeLevel | null }) {
+  // Preselect the current value when entering via ProfileSummary edit so the
+  // user sees what they picked before. Pre-2026-06-12 this rendered with no
+  // highlight and no Back — a "dead-end" per QA: the only way out was to
+  // pick something different than what was already saved.
+  const [sel, setSel] = useState<KnowledgeLevel | null>(initialValue ?? null);
   // Double-tap guard. Without this a fast tap on two different options
   // inside AUTO_ADVANCE_MS calls onNext twice → slide() twice → state
   // corruption (QA audit 2026-05-31).
@@ -952,7 +956,7 @@ function KnowledgeStep({ goal, onNext }: { goal: FinancialGoal | null; onNext: (
   const dynamicHint = goal ? GOAL_REACTIONS[goal] : "תהיה כנה, נתחיל בדיוק מהמקום הנכון";
 
   return (
-    <StepShell stepIndex={3} question="כמה אתם מבינים בכסף?" hint={dynamicHint} finnState={sel ? (sel === "none" ? "empathy" : "tablet") : "thinking"} compact>
+    <StepShell stepIndex={3} question="כמה אתם מבינים בכסף?" hint={dynamicHint} finnState={sel ? (sel === "none" ? "empathy" : "tablet") : "thinking"} compact onBack={onBack}>
       {LEVELS.map((l, i) => (
         <AnimatedCard key={l.id} index={i} label={l.label} sublabel={l.sub}
           selected={sel === l.id} onPress={() => tap(l.id)}
@@ -1185,24 +1189,27 @@ const DAILY_OPTS: { id: DailyGoalMinutes; emoji: string; label: string; sub: str
   { id: 30, emoji: "", label: "30 דקות", sub: "נחוש" },
 ];
 
-function DailyGoalStep({ onNext }: { onNext: (v: DailyGoalMinutes) => void }) {
-  const [sel, setSel] = useState<DailyGoalMinutes | null>(null);
+function DailyGoalStep({ onNext, onBack, initialValue, skipCommitOverlay }: { onNext: (v: DailyGoalMinutes) => void; onBack?: () => void; initialValue?: DailyGoalMinutes | null; skipCommitOverlay?: boolean }) {
+  const [sel, setSel] = useState<DailyGoalMinutes | null>(initialValue ?? null);
   const advancedRef = useRef(false);
   useEffect(() => { advancedRef.current = false; }, []);
   const tap = useCallback((id: DailyGoalMinutes) => {
     if (advancedRef.current) return;
     advancedRef.current = true;
     setSel(id);
-    const delay = (id === 15 || id === 30) ? 1400 : AUTO_ADVANCE_MS;
+    // Skip the 1400ms 'commitment' overlay when re-entering from ProfileSummary
+    // — it's a celebratory beat for first-time picks, not for edits.
+    const delay = (id === 15 || id === 30) && !skipCommitOverlay ? 1400 : AUTO_ADVANCE_MS;
     setTimeout(() => onNext(id), delay);
-  }, [onNext]);
+  }, [onNext, skipCommitOverlay]);
 
   return (
     <StepShell
       stepIndex={7}
       question="כמה תרצה/י ללמוד ביום?"
       hint="יעד שאפשר לעמוד בו יעזור לכם לבנות יציבות פיננסית. יצרנו עבורכם רצף (Streak) פיננסי. 🔥"
-      finnState={sel ? "tablet" : "thinking"}>
+      finnState={sel ? "tablet" : "thinking"}
+      onBack={onBack}>
       <View style={styles.grid}>
         {DAILY_OPTS.map((g, i) => (
           <AnimatedGridCard key={g.id} index={i} emoji={g.emoji} label={g.label}
@@ -1211,8 +1218,8 @@ function DailyGoalStep({ onNext }: { onNext: (v: DailyGoalMinutes) => void }) {
         ))}
       </View>
 
-      {/* Full-screen commitment notification */}
-      {(sel === 15 || sel === 30) && (
+      {/* Full-screen commitment notification — first-time picks only. */}
+      {!skipCommitOverlay && (sel === 15 || sel === 30) && (
         <Animated.View
           entering={FadeIn.duration(300)}
           style={{
@@ -2840,16 +2847,21 @@ export function ProfilingFlow({ mode = "onboarding", onRedoComplete }: Profiling
             after the user picks a new value. */}
         {step === "knowledge" && <KnowledgeStep
           goal={collected.financialGoal}
+          initialValue={collected.knowledgeLevel}
           onNext={(v) => {
             if (returnToSummary) { setReturnToSummary(false); slide("profile-summary", { knowledgeLevel: v }); }
             else { slide("profile-summary", { knowledgeLevel: v }); }
           }}
+          onBack={returnToSummary ? () => { setReturnToSummary(false); slide("profile-summary", {}); } : undefined}
         />}
         {step === "daily-goal" && <DailyGoalStep
+          initialValue={collected.dailyGoalMinutes}
+          skipCommitOverlay={returnToSummary}
           onNext={(v) => {
             if (returnToSummary) { setReturnToSummary(false); slide("profile-summary", { dailyGoalMinutes: v }); }
             else { slide("profile-summary", { dailyGoalMinutes: v }); }
           }}
+          onBack={returnToSummary ? () => { setReturnToSummary(false); slide("profile-summary", {}); } : undefined}
         />}
       </Animated.View>
 

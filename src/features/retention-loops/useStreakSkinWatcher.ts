@@ -34,7 +34,18 @@ export function useStreakSkinWatcher(): void {
     if (!hasData) return; // no real value — don't infer a transition
     const prev = prevStreakRef.current;
     prevStreakRef.current = currentStreak;
-    if (prev === null) return; // first known value, no transition
+    if (prev === null) {
+      // First known value: no break inference possible, but an EXISTING
+      // user already holding streak ≥ 7 (e.g. upgraded to the R8 build
+      // mid-streak) deserves the unlock right now — waiting for a future
+      // <7 → ≥7 transition means they'd never see the skin picker
+      // (code-review 2026-06-12). unlockSevenDayRewards is idempotent
+      // (gated on hasSeen7DayPicker) so repeated cold starts are safe.
+      if (currentStreak >= 7) {
+        useCosmeticsStore.getState().unlockSevenDayRewards();
+      }
+      return;
+    }
 
     // 1) Crossed 7 days — unlock cosmetics. Store handles idempotency.
     if (prev < 7 && currentStreak >= 7) {

@@ -58,6 +58,12 @@ interface ChestCelebrationModalProps {
    *  button — e.g. "עפתי לנטפליקס 📺" — that fires `onQuit` on tap. */
   quitLabel?: string | null;
   onQuit?: () => void;
+  /** Hardware-back / system dismiss. Closes the modal WITHOUT firing the
+   *  parent's CTA analytics — wiring onRequestClose to onContinueModule
+   *  made every Android back press register as a fake
+   *  chest_cta_tapped='finish_module' (code-review 2026-06-12). Falls back
+   *  to onContinueModule when not provided (legacy callers). */
+  onDismiss?: () => void;
 }
 
 /**
@@ -83,6 +89,7 @@ export function ChestCelebrationModal({
   rarity = 'common',
   quitLabel = null,
   onQuit,
+  onDismiss,
 }: ChestCelebrationModalProps): React.ReactElement | null {
   const [opened, setOpened] = useState(false);
   const [showDoN, setShowDoN] = useState(false);
@@ -152,15 +159,21 @@ export function ChestCelebrationModal({
     }
   }, [visible]);
 
-  // Yoav 2026-06-11 (round 2): flying coins + XP now fire IMMEDIATELY
-  // when the chest opens — was 350ms, which felt sluggish against the
-  // tap. Rarity burst stays gated on opened so common drops don't fire it.
+  // Yoav 2026-06-11 (round 2): flying XP fires IMMEDIATELY when the chest
+  // opens — was 350ms, which felt sluggish against the tap. Rarity burst
+  // stays gated on opened so common drops don't fire it.
+  // Code-review 2026-06-12: COINS now wait for the DoN gamble when one is
+  // offered — previously the full +N flew to the wallet at open, then a
+  // lost DoN flipped the pill to ×0 while the coins had already visually
+  // "landed". When no DoN is wired, coins still fly at open as before;
+  // otherwise handleDoNResolve launches them with the resolved amount
+  // (and skips the flight entirely on a loss).
   useEffect(() => {
     if (!opened) return;
-    setFlyingCoins(true);
+    if (!onDoNResolve) setFlyingCoins(true);
     setFlyingXp(true);
     if (rarity !== 'common') setRarityBurstActive(true);
-  }, [opened, rarity]);
+  }, [opened, rarity, onDoNResolve]);
 
   // R8 J5 — Wisdom + DoN now run as PARALLEL layers, not sequential.
   // DoN opens 700ms after chest reveal (reward pills mid-fade-in); the
@@ -219,6 +232,9 @@ export function ChestCelebrationModal({
     setShowDoN(false);
     setDonResolved(true);
     setDonMultiplier(multiplier);
+    // Launch the deferred coin flight with the RESOLVED outcome: ×1 kept /
+    // ×2 doubled fly their final amount; ×0 lost flies nothing.
+    if (multiplier > 0) setFlyingCoins(true);
     onDoNResolve?.(multiplier);
   }, [onDoNResolve]);
 
@@ -295,7 +311,7 @@ export function ChestCelebrationModal({
       visible
       transparent
       animationType="fade"
-      onRequestClose={onContinueModule}
+      onRequestClose={onDismiss ?? onContinueModule}
       statusBarTranslucent
     >
       <View style={styles.backdrop}>
@@ -475,7 +491,7 @@ export function ChestCelebrationModal({
         {flyingCoins && (
           <FlyingRewards
             type="coins"
-            amount={coins}
+            amount={coins * donMultiplier}
             direction="up"
             onComplete={() => { if (mountedRef.current) setFlyingCoins(false); }}
           />
