@@ -93,6 +93,8 @@
             "useFrameworks": "static"
           },
           "android": {
+            "compileSdkVersion": 36,
+            "targetSdkVersion": 35,
             "extractNativeLibs": false
           }
         }
