@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Platform } from 'react-native';
 import { createAudioPlayer, type AudioPlayer } from 'expo-audio';
 import { captureEvent } from '../lib/posthog';
-import { getCachedAudioPath } from './useModulePrefetch';
+import { getCachedAudioPath, prefetchModuleAudio } from './useModulePrefetch';
 
 export type IntroAudioState =
   | 'idle'
@@ -72,10 +72,20 @@ export function useIntroAudio(
     let prefetchWaitTimer: ReturnType<typeof setTimeout> | undefined;
     let hasStartedPlaying = false;
 
-    const start = () => {
+    // Build (or REBUILD) the player from the BEST currently-available source:
+    // the locally-cached file if the robust prefetch has landed it, otherwise
+    // the remote URL as a best-effort. Rebuilding on retry is the core fix —
+    // Vercel Blob intermittently 403s the remote STREAM on-device (documented
+    // in useModulePrefetch; same URLs serve 200 to curl), and a streamed 403
+    // fails hard with no recovery. Once the retrying download caches the file,
+    // the next rebuild plays it from disk → cloud loading "just works".
+    const buildPlayer = () => {
       if (cancelled) return;
-      // Prefer the prefetched local copy when available — eliminates the cold
-      // download that was the source of intro_audio_delayed retry_stage:2.
+      if (sub) { try { sub.remove(); } catch { /* ignore */ } sub = null; }
+      if (player) {
+        try { player.pause(); } catch { /* ignore */ }
+        try { player.remove(); } catch { /* ignore */ }
+      }
       const resolvedUri = getCachedAudioPath(audioUri);
       player = createAudioPlayer({ uri: resolvedUri });
       playerRef.current = player;
@@ -110,6 +120,17 @@ export function useIntroAudio(
           }
         }
       });
+    };
+
+    const start = () => {
+      if (cancelled) return;
+      // Always kick off the robust, RETRYING download (RETRY_DELAYS_MS handles
+      // Vercel Blob's intermittent on-device http_403). Idempotent — no-op if
+      // already cached. This is what makes "cloud loading with prefetch"
+      // actually reliable instead of a fragile one-shot remote stream.
+      prefetchModuleAudio(audioUri);
+      retriedRef.current = false;
+      buildPlayer();
 
       // Visual hint after 500ms — gives the user proof of life before any retry
       // or failure UI surfaces.
@@ -117,37 +138,32 @@ export function useIntroAudio(
         if (!hasStartedPlaying) setState('slow');
       }, 500);
 
-      // Two-stage retry. 400ms catches the common iOS cold-launch race; 1000ms
-      // is a slower-network safety net before users perceive a silent intro.
+      // Retries now REBUILD the player from the (by-now-likely-cached) local
+      // path instead of just re-calling play() on a dead remote stream — that
+      // was useless against a 403'd source. By 1.2s / 3.5s the retrying
+      // download has usually landed the file locally.
       retry1 = setTimeout(() => {
-        if (!hasStartedPlaying && !retriedRef.current) {
-          retriedRef.current = true;
-          try { player?.play(); } catch { /* ignore */ }
-          captureEvent('intro_audio_delayed', {
-            retry_stage: 1,
-            platform: Platform.OS,
-          });
+        if (!hasStartedPlaying) {
+          buildPlayer();
+          captureEvent('intro_audio_delayed', { retry_stage: 1, platform: Platform.OS });
         }
-      }, 400);
+      }, 1200);
       retry2 = setTimeout(() => {
         if (!hasStartedPlaying) {
-          try { player?.play(); } catch { /* ignore */ }
-          captureEvent('intro_audio_delayed', {
-            retry_stage: 2,
-            platform: Platform.OS,
-          });
+          buildPlayer();
+          captureEvent('intro_audio_delayed', { retry_stage: 2, platform: Platform.OS });
         }
-      }, 1000);
+      }, 3500);
 
-      // After 3s with no playback start, surface a "continue without audio"
-      // fallback in the UI. Without this the user is stranded on the intro
-      // card watching Finn's mouth move silently.
+      // After 6s (was 3s) with no playback, surface a "continue without audio"
+      // fallback. Extended so the download's retry backoff (up to ~9s) has a
+      // fair chance to land the file before we give up.
       failTimer = setTimeout(() => {
         if (!hasStartedPlaying) {
           setState('failed');
           captureEvent('intro_audio_failed', { platform: Platform.OS });
         }
-      }, 3000);
+      }, 6000);
     };
 
     if (audioReady === false) {
