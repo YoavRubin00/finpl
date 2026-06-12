@@ -127,17 +127,24 @@ export const useAuthStore = create<SessionState & SessionActions>()(
           ...(markComplete ? { hasCompletedOnboarding: true } : {}),
           displayName,
           email,
+          // Fallback profile must leave the DEFERRED fields (knowledgeLevel,
+          // learningTime, dailyGoalMinutes) as null so the inline questions in
+          // mod-0-1 / mod-0-3 / mod-0-4 still trigger. Previously these were
+          // hard-coded to 'beginner' / 'during-day' / 10 and the graduate
+          // onboarding architecture silently broke for any user whose
+          // RegisterScreen path bypassed seedProfile. See CLAUDE memory
+          // graduate_onboarding_architecture (QA 2026-06-12).
           profile: state.profile ?? {
             displayName,
             financialDream: null,
             financialGoal: 'unsure',
-            knowledgeLevel: 'beginner',
+            knowledgeLevel: null,
             ageGroup: 'adult',
             birthYear: 2002,
-            learningTime: 'during-day',
+            learningTime: null,
             learningStyle: 'no-preference',
             deadlineStress: 'maybe',
-            dailyGoalMinutes: 10,
+            dailyGoalMinutes: null,
             companionId: 'warren-buffett',
             avatarId: null,
             ownedAvatars: [],
@@ -236,6 +243,12 @@ export const useAuthStore = create<SessionState & SessionActions>()(
       onRehydrateStorage: () => (state) => {
         // Backfill: authenticated non-guest users who completed onboarding but
         // profile is null — initialize a safe default so screens never crash.
+        // The DEFERRED fields (knowledgeLevel / learningTime / dailyGoalMinutes)
+        // MUST stay null so the inline questions in mod-0-1 / 0-3 / 0-4 still
+        // ask the user. Previously these were hardcoded to 'beginner' /
+        // 'during-day' / 10, which made the graduate-onboarding architecture
+        // silently skip those questions for any user that hit this race (QA
+        // 2026-06-12, CLAUDE memory graduate_onboarding_architecture).
         if (
           state &&
           state.isAuthenticated &&
@@ -247,13 +260,13 @@ export const useAuthStore = create<SessionState & SessionActions>()(
             displayName: state.displayName ?? 'משתמש',
             financialDream: null,
             financialGoal: 'unsure',
-            knowledgeLevel: 'beginner',
+            knowledgeLevel: null,
             ageGroup: 'adult',
             birthYear: 2002,
-            learningTime: 'during-day',
+            learningTime: null,
             learningStyle: 'no-preference',
             deadlineStress: 'maybe',
-            dailyGoalMinutes: 10,
+            dailyGoalMinutes: null,
             companionId: 'warren-buffett',
             avatarId: null,
             ownedAvatars: [],

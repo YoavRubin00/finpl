@@ -315,7 +315,12 @@ export const SwipeGameCard = React.memo(function SwipeGameCard({ isActive, onFin
   const [showEdu, setShowEdu] = useState(false);
   const remaining = MAX_DAILY_PLAYS - playsToday;
 
-  // All plays used
+  // All plays used. When rendered inside a Pearl (onFinish set) we MUST
+  // surface a Continue affordance or the Pearl pager dead-ends. Mirrors
+  // InvestmentCard / CrashGameCard / DilemmaCard's pattern. Today the
+  // store returns hasSwipeGamePlayedToday() === false unconditionally so
+  // this branch is unreachable, but if the daily-cap is ever re-enabled
+  // the host pearl must still have an escape (QA 2026-06-12).
   if (hasPlayed) {
     return (
       <View style={styles.container}>
@@ -323,6 +328,16 @@ export const SwipeGameCard = React.memo(function SwipeGameCard({ isActive, onFin
           <View style={{ alignItems: 'center' }} accessible={false}><LottieIcon source={LOTTIE_BULL} size={48} /></View>
           <Text style={[styles.answeredTitle, RTL]}>שורט או לונג הושלם!</Text>
           <Text style={[styles.answeredSub, RTL]}>חזור מחר לכרטיסיות חדשות</Text>
+          {onFinish ? (
+            <Pressable
+              onPress={() => { successHaptic(); playSound('btn_click_soft_2'); onFinish(); }}
+              accessibilityRole="button"
+              accessibilityLabel="המשך"
+              style={styles.continueBtn}
+            >
+              <Text style={styles.continueBtnText} allowFontScaling={false}>המשך</Text>
+            </Pressable>
+          ) : null}
         </View>
       </View>
     );
@@ -852,6 +867,24 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#64748b',
     textAlign: 'center',
+  },
+  continueBtn: {
+    marginTop: 14,
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    borderRadius: 12,
+    backgroundColor: '#0ea5e9',
+    borderBottomWidth: 3,
+    borderBottomColor: '#0369a1',
+    alignSelf: 'stretch',
+    alignItems: 'center',
+  },
+  continueBtnText: {
+    color: '#ffffff',
+    fontSize: 16,
+    fontWeight: '900',
+    letterSpacing: 0.3,
+    writingDirection: 'rtl' as const,
   },
   eduToggle: {
     flexDirection: 'row',

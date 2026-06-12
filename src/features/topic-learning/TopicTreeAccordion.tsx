@@ -182,7 +182,28 @@ export const TopicTreeAccordion = React.memo(function TopicTreeAccordion({
   const continuousRunActive = useContinuousRunStore(
     (s) => s.activeModuleId === module.id,
   );
+  // Hydration gate for the milestone refs: seeding them at mount read
+  // summary.pct BEFORE zustand-persist rehydrated topic-progress from
+  // AsyncStorage — a returning user mounted at pct=0, hydration landed,
+  // pct jumped to its real value, and the 25/50% toast re-fired on every
+  // cold start (code-review 2026-06-12). Seed only once hydration is done;
+  // the toast effect below stays silent until then. The 70/100 chest is
+  // already safe via the live modulePastThreshold selector guard.
+  const [progressHydrated, setProgressHydrated] = useState<boolean>(
+    () => useTopicProgressStore.persist.hasHydrated(),
+  );
   useEffect(() => {
+    if (progressHydrated) return;
+    const unsub = useTopicProgressStore.persist.onFinishHydration(() =>
+      setProgressHydrated(true),
+    );
+    // Race guard: hydration may have finished between the initial state
+    // read and the subscription above.
+    if (useTopicProgressStore.persist.hasHydrated()) setProgressHydrated(true);
+    return unsub;
+  }, [progressHydrated]);
+  useEffect(() => {
+    if (!progressHydrated) return;
     past70Ref.current = modulePastThreshold;
     past100Ref.current = moduleFullyComplete;
     // R8 U4 — seed 25/50% refs from current pct so re-mount after
@@ -191,7 +212,7 @@ export const TopicTreeAccordion = React.memo(function TopicTreeAccordion({
     if (summary.pct >= 25) past25Ref.current = true;
     if (summary.pct >= 50) past50Ref.current = true;
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [progressHydrated]);
 
   // R8 U4 — mid-module milestone crossings: 25% + 50%. Light celebration
   // only (toast + haptic + sound, NO modal) so it doesn't compete with
@@ -202,6 +223,9 @@ export const TopicTreeAccordion = React.memo(function TopicTreeAccordion({
   // an if/else is simpler and avoids running both bodies in the rare case
   // pct jumps from <25 directly to >=50.
   useEffect(() => {
+    // Pre-hydration silence: refs aren't seeded yet, so any crossing seen
+    // here would be hydration catching up, not real user progress.
+    if (!progressHydrated) return;
     if (summary.isModuleDone) return;
     let toast: { label: string; emoji: string } | null = null;
     if (summary.pct >= 50 && !past50Ref.current) {
@@ -223,7 +247,7 @@ export const TopicTreeAccordion = React.memo(function TopicTreeAccordion({
       if (milestoneTimerRef.current) clearTimeout(milestoneTimerRef.current);
       milestoneTimerRef.current = setTimeout(() => setMilestoneToast(null), 1800);
     }
-  }, [summary.pct, summary.isModuleDone, playSound]);
+  }, [summary.pct, summary.isModuleDone, playSound, progressHydrated]);
 
   // R8 pre-release audit (Yoav + הסורק 2026-06-11): UNIFIED chest drop
   // effect. Previously two separate useEffects (70% + 100%) raced when a
@@ -475,8 +499,26 @@ export const TopicTreeAccordion = React.memo(function TopicTreeAccordion({
             try { track({ name: 'chest_cta_tapped', props: { module_id: module.id, chapter_id: chapterIdFromModuleId(module.id), cta: 'finish_module' } }); } catch { /* non-fatal */ }
             setChestState(null);
             // The 70% chest keeps the accordion open so the user can
-            // finish the remaining 30%.
-            onContinueAfterChest?.();
+            // finish the remaining 30% — but when the chest fired at 100%
+            // (e.g. a continuous run completed every chip before returning)
+            // there's nothing left to finish; collapse via onModuleCompleted
+            // instead of stranding an open accordion (code-review 2026-06-12).
+            if (summary.pct >= 100) {
+              onModuleCompleted?.();
+            } else {
+              onContinueAfterChest?.();
+            }
+          }}
+          // Hardware back / system dismiss: close WITHOUT chest_cta_tapped —
+          // wiring this to onContinueModule made every Android back press
+          // count as a fake 'finish_module' CTA in the conversion funnel.
+          onDismiss={() => {
+            setChestState(null);
+            if (summary.pct >= 100) {
+              onModuleCompleted?.();
+            } else {
+              onContinueAfterChest?.();
+            }
           }}
           onAdvanceToNextModule={() => {
             try { track({ name: 'chest_cta_tapped', props: { module_id: module.id, chapter_id: chapterIdFromModuleId(module.id), cta: 'continue' } }); } catch { /* non-fatal */ }
