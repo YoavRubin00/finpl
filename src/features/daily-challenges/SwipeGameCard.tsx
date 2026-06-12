@@ -59,13 +59,22 @@ const SWIPE_BGS: Record<string, { uri: string } | undefined> = {
 function SwipeableCard({
   card,
   onSwipe,
+  onThresholdCross,
 }: {
   card: SwipeCard;
   onSwipe: (isLong: boolean) => void;
+  /** Fired (JS thread) the moment the drag crosses SWIPE_THRESHOLD — the
+   *  point where releasing commits the card. Edge-triggered with hysteresis
+   *  so jitter at the boundary doesn't machine-gun the sound (Yoav
+   *  2026-06-12: "אנימציות סאונד לכל המשחקי סוויפ לזמן הגלילה"). */
+  onThresholdCross?: () => void;
 }) {
   const translateX = useSharedValue(0);
   const cardRotation = useSharedValue(0);
   const swiped = useSharedValue(false);
+  // Threshold-crossing latch: 1 while past the commit threshold, re-arms
+  // only after pulling back under 80% of it (hysteresis).
+  const crossed = useSharedValue(0);
 
   // activeOffsetX gates the gesture so it only takes over after a clear
   // horizontal intent (>12px). Without it the Pan competes with the host
@@ -83,6 +92,14 @@ function SwipeableCard({
         [-15, 0, 15],
         Extrapolation.CLAMP,
       );
+      // Mid-drag commit-point feedback (edge-triggered + hysteresis).
+      const abs = Math.abs(event.translationX);
+      if (abs > SWIPE_THRESHOLD && crossed.value === 0) {
+        crossed.value = 1;
+        if (onThresholdCross) runOnJS(onThresholdCross)();
+      } else if (abs < SWIPE_THRESHOLD * 0.8 && crossed.value === 1) {
+        crossed.value = 0;
+      }
     })
     .onEnd((event) => {
       if (swiped.value) return;
@@ -268,6 +285,12 @@ export const SwipeGameCard = React.memo(function SwipeGameCard({ isActive, onFin
     }
   }, [gameState, hasPlayed, score, playSwipeGame, onFinish, playSound]);
 
+  // Soft tick the moment the drag crosses the commit threshold — tactile
+  // "release now and it counts" feedback during the swipe itself.
+  const handleThresholdCross = useCallback(() => {
+    playSound('btn_click_soft_2');
+  }, [playSound]);
+
   const handleSwipe = useCallback(
     (isLong: boolean) => {
       if (gameState === 'done') return;
@@ -411,6 +434,7 @@ export const SwipeGameCard = React.memo(function SwipeGameCard({ isActive, onFin
                 key={cards[currentIndex].id}
                 card={cards[currentIndex]}
                 onSwipe={handleSwipe}
+                onThresholdCross={handleThresholdCross}
               />
             </View>
 

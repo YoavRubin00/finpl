@@ -17,6 +17,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { mediumHaptic, successHaptic, errorHaptic } from '../../utils/haptics';
+import { useSoundEffect } from '../../hooks/useSoundEffect';
 import {
   DAISY_HAPPY_CELEBRATE_WEBP,
   DAISY_EMPATHIC_WEBP,
@@ -46,6 +47,20 @@ export function CoupleDilemmaSwipeCard({ dilemma, onChoose }: Props) {
   const insets = useSafeAreaInsets();
   const translateX = useSharedValue(0);
   const swiped = useSharedValue(false);
+  // Threshold-crossing latch: 1 while past the commit threshold, re-arms
+  // only after pulling back under 80% of it (hysteresis).
+  const crossed = useSharedValue(0);
+  const { playSound } = useSoundEffect();
+
+  // Swipe-gesture audio (Yoav 2026-06-12): soft tick at the commit
+  // threshold, whoosh as the card flies off. Same pattern as the
+  // bullshit-swipe / SwipeGameCard decks.
+  const playTick = useCallback(() => {
+    playSound('btn_click_soft_2');
+  }, [playSound]);
+  const playWhoosh = useCallback(() => {
+    playSound('bubble_transition');
+  }, [playSound]);
 
   const finalizeChoice = useCallback(
     (option: CoupleDilemmaOption) => {
@@ -60,6 +75,14 @@ export function CoupleDilemmaSwipeCard({ dilemma, onChoose }: Props) {
     .onUpdate((e) => {
       if (swiped.value) return;
       translateX.value = e.translationX;
+      // Mid-drag commit-point feedback (edge-triggered + hysteresis).
+      const abs = Math.abs(e.translationX);
+      if (abs > SWIPE_THRESHOLD && crossed.value === 0) {
+        crossed.value = 1;
+        runOnJS(playTick)();
+      } else if (abs < SWIPE_THRESHOLD * 0.8 && crossed.value === 1) {
+        crossed.value = 0;
+      }
     })
     .onEnd((e) => {
       if (swiped.value) return;
@@ -67,11 +90,13 @@ export function CoupleDilemmaSwipeCard({ dilemma, onChoose }: Props) {
         swiped.value = true;
         translateX.value = withTiming(SCREEN_WIDTH * 1.2, { duration: 280 });
         runOnJS(mediumHaptic)();
+        runOnJS(playWhoosh)();
         runOnJS(finalizeChoice)(dilemma.optionA);
       } else if (e.translationX < -SWIPE_THRESHOLD) {
         swiped.value = true;
         translateX.value = withTiming(-SCREEN_WIDTH * 1.2, { duration: 280 });
         runOnJS(mediumHaptic)();
+        runOnJS(playWhoosh)();
         runOnJS(finalizeChoice)(dilemma.optionB);
       } else {
         translateX.value = withSpring(0, { damping: 14 });
