@@ -30,8 +30,15 @@ const PREFETCH_WAIT_MAX_MS = 800;
 // so the data layer stays unchanged — when an intro's audioUri matches, we
 // play the bundled asset directly: instant, offline, immune to the CDN.
 // Everything else keeps the prefetch+rebuild cloud path.
+// ⚠️ FILENAME TRAP (caught in verification 2026-06-12): the 2026-06-04 module
+// split left LEGACY blob filenames — mod-0-1's intro audio is the file named
+// "mod-0-2-short-…", while the file named "mod-0-1-v2" belongs to mod-0-2.
+// The map is keyed by what chapter0Data ACTUALLY ships for mod-0-1, verified
+// against the live data (chapter0Data.ts line ~18). The local asset is named
+// by ROLE (mod-0-1.mp3 = mod-0-1's intro) and is a bit-identical copy of the
+// remote file (md5 cb8ec0bd…, 11.6s mp3).
 const BUNDLED_INTRO_AUDIO: Record<string, number> = {
-  'https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/audio/intros/mod-0-1-v2.mp3':
+  'https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/audio/shorts/mod-0-2-short-H4gu5Wa32VkKfcIiXNulOPZ1ux4QjP.mp3':
     // eslint-disable-next-line @typescript-eslint/no-require-imports
     require('../../assets/intro-audio/mod-0-1.mp3') as number,
 };
