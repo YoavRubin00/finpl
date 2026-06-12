@@ -22,6 +22,20 @@ export type IntroAudioState =
  *  retry_stage:2 (1000ms) and then maybe failing at 3000ms. */
 const PREFETCH_WAIT_MAX_MS = 800;
 
+// Yoav 2026-06-12: the mod-0-1 intro narration is BUNDLED into the app. It is
+// the very first audio a new user ever hears, and Vercel Blob's intermittent
+// per-client http_403 episodes (see useModulePrefetch) were killing exactly
+// that first impression ("במפגש הראשון של המשתמש עם האפליקציה הוא לא יתקל
+// במצב שהסאונד לא עובד"). Keyed by the EXACT remote URL chapter0Data ships,
+// so the data layer stays unchanged — when an intro's audioUri matches, we
+// play the bundled asset directly: instant, offline, immune to the CDN.
+// Everything else keeps the prefetch+rebuild cloud path.
+const BUNDLED_INTRO_AUDIO: Record<string, number> = {
+  'https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/audio/intros/mod-0-1-v2.mp3':
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    require('../../assets/intro-audio/mod-0-1.mp3') as number,
+};
+
 /**
  * Manages a single intro audio clip with tight sync to the Finn mascot.
  *
@@ -79,6 +93,8 @@ export function useIntroAudio(
     // in useModulePrefetch; same URLs serve 200 to curl), and a streamed 403
     // fails hard with no recovery. Once the retrying download caches the file,
     // the next rebuild plays it from disk → cloud loading "just works".
+    const bundled = BUNDLED_INTRO_AUDIO[audioUri];
+
     const buildPlayer = () => {
       if (cancelled) return;
       if (sub) { try { sub.remove(); } catch { /* ignore */ } sub = null; }
@@ -86,8 +102,11 @@ export function useIntroAudio(
         try { player.pause(); } catch { /* ignore */ }
         try { player.remove(); } catch { /* ignore */ }
       }
-      const resolvedUri = getCachedAudioPath(audioUri);
-      player = createAudioPlayer({ uri: resolvedUri });
+      // Bundled asset (mod-0-1) → play straight from the app binary; no
+      // network, no cache lookup. Otherwise prefer the prefetched local copy.
+      player = bundled !== undefined
+        ? createAudioPlayer(bundled)
+        : createAudioPlayer({ uri: getCachedAudioPath(audioUri) });
       playerRef.current = player;
       player.play();
 
@@ -124,11 +143,10 @@ export function useIntroAudio(
 
     const start = () => {
       if (cancelled) return;
-      // Always kick off the robust, RETRYING download (RETRY_DELAYS_MS handles
+      // Kick off the robust, RETRYING download (RETRY_DELAYS_MS handles
       // Vercel Blob's intermittent on-device http_403). Idempotent — no-op if
-      // already cached. This is what makes "cloud loading with prefetch"
-      // actually reliable instead of a fragile one-shot remote stream.
-      prefetchModuleAudio(audioUri);
+      // already cached. Skipped for bundled assets — nothing to download.
+      if (bundled === undefined) prefetchModuleAudio(audioUri);
       retriedRef.current = false;
       buildPlayer();
 
@@ -166,13 +184,14 @@ export function useIntroAudio(
       }, 6000);
     };
 
-    if (audioReady === false) {
+    if (audioReady === false && bundled === undefined) {
       // Prefetch still in flight. Defer createAudioPlayer briefly so the
       // local cached file (which getCachedAudioPath will return once the
       // download completes) can be used. If the prefetch resolves before
       // the timeout, the parent re-renders with audioReady=true → this
       // effect re-runs from its cleanup, cancelling the timer and starting
-      // immediately with the now-cached path.
+      // immediately with the now-cached path. Bundled assets skip the wait —
+      // there is nothing to prefetch.
       prefetchWaitTimer = setTimeout(start, PREFETCH_WAIT_MAX_MS);
     } else {
       start();
