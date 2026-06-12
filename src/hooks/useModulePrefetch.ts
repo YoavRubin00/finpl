@@ -37,14 +37,66 @@ function audioKeyFromUri(uri: string): string {
 // fully-transient: a short backoff usually clears them before the user even
 // reaches the playback screen. Also covers Android `Connection reset` /
 // `Unable to resolve host` blips on flaky cellular.
-const RETRY_DELAYS_MS = [1000, 3000, 9000] as const;
+// PostHog audit 2026-06-12: recoveries were nearly ZERO against ~180 http_403
+// failures in 7 days (recovered_after_*: 11 total) — the 403 episodes outlive
+// the old [1s,3s,9s] ladder. Lengthened + jittered so retries also stop
+// synchronizing across the many assets of one module (a synchronized re-burst
+// re-triggers the same rate-limit that caused the 403 in the first place).
+const RETRY_DELAYS_MS = [2000, 8000, 20000] as const;
 const RETRYABLE_HTTP_STATUSES = new Set([403, 408, 429, 500, 502, 503, 504]);
 
 function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
+/** ±30% jitter so parallel failures don't retry in lock-step. */
+function jittered(ms: number): number {
+  return Math.round(ms * (0.7 + Math.random() * 0.6));
+}
+
+// ───────────────────────────── Download concurrency gate
+// PostHog audit 2026-06-12: opening a topic-tree accordion fired EVERY module
+// asset (hero + infographic + all flashcard images/memes + intro audio +
+// podcast + video warmups) through Promise.allSettled — 15-20 simultaneous
+// requests from one device IP. Vercel Blob's rate-limiting/WAF answers such
+// bursts with a SUSTAINED per-client http_403 (same URLs serve 200 to curl
+// elsewhere), which then breaks intro audio, videos, and images for that
+// session ("פשוט לא מצליח לקבל את האודיו", "גם הוידאואים לא נטענים").
+// Cap concurrent downloads at 3; slots are held only for the network attempt
+// itself (released during retry backoff). Queue is FIFO, so callers control
+// priority by enqueue order (audio first — see useModulePrefetch).
+const MAX_CONCURRENT_FETCHES = 3;
+let activeFetches = 0;
+const fetchWaiters: Array<() => void> = [];
+function acquireFetchSlot(): Promise<void> {
+  if (activeFetches < MAX_CONCURRENT_FETCHES) {
+    activeFetches += 1;
+    return Promise.resolve();
+  }
+  return new Promise((resolve) => {
+    fetchWaiters.push(() => { activeFetches += 1; resolve(); });
+  });
+}
+function releaseFetchSlot(): void {
+  activeFetches -= 1;
+  const next = fetchWaiters.shift();
+  if (next) next();
+}
+async function withFetchSlot<T>(fn: () => Promise<T>): Promise<T> {
+  await acquireFetchSlot();
+  try {
+    return await fn();
+  } finally {
+    releaseFetchSlot();
+  }
+}
+
 async function prefetchVideo(uri: string): Promise<void> {
+  // expo-file-system downloadAsync doesn't exist on web — the call itself
+  // throws, producing hundreds of noisy *_prefetch_failed events (PostHog
+  // 2026-06-12: 254 video + 130 audio from 2 web users). Web streams
+  // straight from the CDN anyway, so prefetch is a no-op there.
+  if (Platform.OS === 'web') return;
   const filename = uri.split("/").pop() || "video.mp4";
   const localPath = VIDEO_CACHE_DIR + filename;
   try {
@@ -59,7 +111,7 @@ async function prefetchVideo(uri: string): Promise<void> {
   let lastReason: string | undefined;
   for (let attempt = 0; attempt <= RETRY_DELAYS_MS.length; attempt++) {
     try {
-      const result = await FileSystem.downloadAsync(uri, localPath);
+      const result = await withFetchSlot(() => FileSystem.downloadAsync(uri, localPath));
       if (result.status === 200) {
         videoCache.set(uri, localPath);
         if (attempt > 0) {
@@ -82,7 +134,7 @@ async function prefetchVideo(uri: string): Promise<void> {
       lastReason = err instanceof Error ? err.message : 'unknown';
     }
     if (attempt < RETRY_DELAYS_MS.length) {
-      await sleep(RETRY_DELAYS_MS[attempt]);
+      await sleep(jittered(RETRY_DELAYS_MS[attempt]));
     }
   }
   captureEvent('video_prefetch_failed', {
@@ -100,7 +152,7 @@ async function prefetchImageWithRetry(uri: string): Promise<void> {
   let lastReason: string | undefined;
   for (let attempt = 0; attempt <= RETRY_DELAYS_MS.length; attempt++) {
     try {
-      const ok = await ExpoImage.prefetch(uri);
+      const ok = await withFetchSlot(() => ExpoImage.prefetch(uri));
       if (ok !== false) {
         if (attempt > 0) {
           // Recovery, not failure — see video note above.
@@ -118,7 +170,7 @@ async function prefetchImageWithRetry(uri: string): Promise<void> {
       lastReason = err instanceof Error ? err.message : 'unknown';
     }
     if (attempt < RETRY_DELAYS_MS.length) {
-      await sleep(RETRY_DELAYS_MS[attempt]);
+      await sleep(jittered(RETRY_DELAYS_MS[attempt]));
     }
   }
   captureEvent('image_prefetch_failed', {
@@ -130,6 +182,8 @@ async function prefetchImageWithRetry(uri: string): Promise<void> {
 }
 
 async function prefetchAudio(uri: string): Promise<void> {
+  // downloadAsync is unavailable on web — see prefetchVideo note.
+  if (Platform.OS === 'web') return;
   const filename = uri.split("/").pop() || "audio.mp3";
   const localPath = AUDIO_CACHE_DIR + filename;
   try {
@@ -144,7 +198,7 @@ async function prefetchAudio(uri: string): Promise<void> {
   let lastReason: string | undefined;
   for (let attempt = 0; attempt <= RETRY_DELAYS_MS.length; attempt++) {
     try {
-      const result = await FileSystem.downloadAsync(uri, localPath);
+      const result = await withFetchSlot(() => FileSystem.downloadAsync(uri, localPath));
       if (result.status === 200) {
         audioCache.set(uri, localPath);
         if (attempt > 0) {
@@ -163,7 +217,7 @@ async function prefetchAudio(uri: string): Promise<void> {
       lastReason = err instanceof Error ? err.message : 'unknown';
     }
     if (attempt < RETRY_DELAYS_MS.length) {
-      await sleep(RETRY_DELAYS_MS[attempt]);
+      await sleep(jittered(RETRY_DELAYS_MS[attempt]));
     }
   }
   captureEvent('audio_prefetch_failed', {
@@ -195,10 +249,15 @@ export function prefetchStreamingVideo(uri: string | undefined): void {
   if (!uri) return;
   if (streamingWarmupAttempted.has(uri)) return;
   streamingWarmupAttempted.add(uri);
-  fetch(uri, {
-    method: 'GET',
-    headers: { Range: 'bytes=0-524287' },
-  }).catch(() => {
+  // Routed through the same download pool as full prefetches — an accordion
+  // expand fires one warmup per video, and unthrottled they stack onto the
+  // image/audio burst that trips Vercel Blob's per-client rate limit.
+  withFetchSlot(() =>
+    fetch(uri, {
+      method: 'GET',
+      headers: { Range: 'bytes=0-524287' },
+    }),
+  ).catch(() => {
     // Network failure on warmup is non-fatal; the real player will retry
     // when it mounts. Don't even log — this is a best-effort optimization.
     streamingWarmupAttempted.delete(uri);
@@ -226,6 +285,16 @@ export function useModulePrefetch(
     setVideosReady(videoUris.length === 0);
     setAudioReady(audioUris.length === 0);
 
+    // AUDIO FIRST: the download pool (withFetchSlot) is FIFO, so enqueue
+    // order = priority. The intro narration is the first asset the user
+    // actually consumes (the intro card is already on screen waiting for
+    // it), while images/videos can trickle in behind. PostHog 2026-06-12:
+    // 972 intro_audio_delayed events — audio was losing the bandwidth race
+    // against a dozen flashcard images fired in the same burst.
+    if (audioUris.length > 0) {
+      Promise.allSettled(audioUris.map(prefetchAudio))
+        .finally(() => { if (!cancelled) setAudioReady(true); });
+    }
     if (uris.length > 0) {
       Promise.allSettled(uris.map((uri) => prefetchImageWithRetry(uri)))
         .finally(() => { if (!cancelled) setImagesReady(true); });
@@ -233,10 +302,6 @@ export function useModulePrefetch(
     if (videoUris.length > 0) {
       Promise.allSettled(videoUris.map(prefetchVideo))
         .finally(() => { if (!cancelled) setVideosReady(true); });
-    }
-    if (audioUris.length > 0) {
-      Promise.allSettled(audioUris.map(prefetchAudio))
-        .finally(() => { if (!cancelled) setAudioReady(true); });
     }
     return () => { cancelled = true; };
   // All arrays are memoized by caller (keyed on mod.id).
