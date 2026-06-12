@@ -91,6 +91,12 @@
         {
           "ios": {
             "useFrameworks": "static"
+          },
+          "android": {
+            "minSdkVersion": 24,
+            "compileSdkVersion": 35,
+            "targetSdkVersion": 35,
+            "extractNativeLibs": false
           }
         }
       ],
