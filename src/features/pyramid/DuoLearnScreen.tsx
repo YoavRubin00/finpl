@@ -90,6 +90,8 @@ import { chapter5Data } from "../chapter-5-content/chapter5Data";
 import type { Module } from "../chapter-1-content/types";
 import { TopicTreeAccordion } from "../topic-learning/TopicTreeAccordion";
 import { useTopicProgressStore } from "../topic-learning/useTopicProgressStore";
+import { prefetchModuleAudio } from "../../hooks/useModulePrefetch";
+import { isBundledIntroAudio } from "../../hooks/useIntroAudio";
 import { useTopicTreeReturnStore } from "../topic-learning/useTopicTreeReturnStore";
 import { resolveTopics, shouldUseTopicTree } from "../topic-learning/topicResolver";
 import { getGameForModule } from "../topic-learning/moduleGameMap";
@@ -1372,6 +1374,30 @@ export function DuoLearnScreen() {
       completed: { ...s.completed, '__reset_r5__': { completedAt: new Date().toISOString() } },
     }));
   }, []);
+
+  // Warm-up prefetch (Yoav 2026-06-12, option #3): the moment the learn map
+  // mounts (≈ app start), quietly download the NEXT module's intro narration
+  // so it's already on disk when the user reaches it — instead of cold-
+  // fetching only when its accordion expands. Runs through the throttled
+  // 3-slot download pool, so it never bursts; ~150KB per clip. Delayed 3.5s
+  // so the map's first paint + any in-flight asset work settle first.
+  // Re-runs when a module is completed → warms the new "next". Bundled
+  // chapter-0 intros are skipped (they ship in the binary).
+  useEffect(() => {
+    const t = setTimeout(() => {
+      const done = new Set(localCompletedModuleIds);
+      for (const ch of ALL_CHAPTERS) {
+        for (const m of ch.modules) {
+          if (m.comingSoon) continue;
+          if (done.has(m.id)) continue;
+          const uri = m.introAudio?.uri;
+          if (uri && !isBundledIntroAudio(uri)) prefetchModuleAudio(uri);
+          return; // first incomplete module only
+        }
+      }
+    }, 3500);
+    return () => clearTimeout(t);
+  }, [localCompletedModuleIds]);
 
   const openPearlParam = useLocalSearchParams<{ openPearl?: string }>().openPearl;
   const openPearlConsumedRef = useRef<string | null>(null);
