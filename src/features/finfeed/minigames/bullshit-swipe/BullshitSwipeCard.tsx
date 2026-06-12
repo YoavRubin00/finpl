@@ -22,6 +22,7 @@ import Animated, {
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 
 import { errorHaptic, heavyHaptic, successHaptic, tapHaptic } from '../../../../utils/haptics';
+import { useSoundEffect } from '../../../../hooks/useSoundEffect';
 import { ConfettiExplosion } from '../../../../components/ui/ConfettiExplosion';
 import { FlyingRewards } from '../../../../components/ui/FlyingRewards';
 import { LottieIcon } from '../../../../components/ui/LottieIcon';
@@ -242,13 +243,25 @@ function DropStamp({ kind }: { kind: 'bullshit' | 'legit' }) {
 function SwipeableAdCard({
   ad,
   onSwipe,
+  onThresholdCross,
+  onSwipeOut,
 }: {
   ad: BullshitAd;
   onSwipe: (userSaidBullshit: boolean) => void;
+  /** Soft tick (JS thread) when the drag crosses SWIPE_THRESHOLD —
+   *  edge-triggered with hysteresis so boundary jitter doesn't spam
+   *  (Yoav 2026-06-12: sound during the swipe itself). */
+  onThresholdCross?: () => void;
+  /** Whoosh as the card commits and flies off — physical-swipe only
+   *  (the tap-to-vote fallback keeps its own tap feedback). */
+  onSwipeOut?: () => void;
 }) {
   const translateX = useSharedValue(0);
   const rotation = useSharedValue(0);
   const swiped = useSharedValue(false);
+  // Threshold-crossing latch: 1 while past the commit threshold, re-arms
+  // only after pulling back under 80% of it (hysteresis).
+  const crossed = useSharedValue(0);
 
   // activeOffsetX gates the gesture so it only takes over after a clear
   // horizontal intent (>12px). Mirrors the SwipeGameCard fix — without
@@ -265,16 +278,26 @@ function SwipeableAdCard({
         [-12, 0, 12],
         Extrapolation.CLAMP,
       );
+      // Mid-drag commit-point feedback (edge-triggered + hysteresis).
+      const abs = Math.abs(event.translationX);
+      if (abs > SWIPE_THRESHOLD && crossed.value === 0) {
+        crossed.value = 1;
+        if (onThresholdCross) runOnJS(onThresholdCross)();
+      } else if (abs < SWIPE_THRESHOLD * 0.8 && crossed.value === 1) {
+        crossed.value = 0;
+      }
     })
     .onEnd((event) => {
       if (swiped.value) return;
       if (event.translationX < -SWIPE_THRESHOLD) {
         swiped.value = true;
         translateX.value = withTiming(-SCREEN_WIDTH * 1.4, { duration: 280 });
+        if (onSwipeOut) runOnJS(onSwipeOut)();
         runOnJS(onSwipe)(true);
       } else if (event.translationX > SWIPE_THRESHOLD) {
         swiped.value = true;
         translateX.value = withTiming(SCREEN_WIDTH * 1.4, { duration: 280 });
+        if (onSwipeOut) runOnJS(onSwipeOut)();
         runOnJS(onSwipe)(false);
       } else {
         translateX.value = withSpring(0);
@@ -383,6 +406,17 @@ export const BullshitSwipeCard = React.memo(function BullshitSwipeCard({
   const playBullshitSwipe = useDailyChallengesStore((s) => s.playBullshitSwipe);
   const hasPlayedToday = useDailyChallengesStore((s) => s.hasBullshitSwipePlayedToday());
   const playsToday = useDailyChallengesStore((s) => s.getBullshitSwipePlaysToday());
+  const { playSound } = useSoundEffect();
+
+  // Swipe-gesture audio (Yoav 2026-06-12): soft tick when the drag crosses
+  // the commit threshold, whoosh as the card flies off. Stable callbacks so
+  // SwipeableAdCard's worklets get unchanging runOnJS targets.
+  const handleThresholdCross = useCallback(() => {
+    playSound('btn_click_soft_2');
+  }, [playSound]);
+  const handleSwipeOutSound = useCallback(() => {
+    playSound('bubble_transition');
+  }, [playSound]);
 
   // Prefetch every remote URI used by the card (7 ad-bg templates + 2
   // dropstamp frames) the moment the component mounts. expo-image keeps
@@ -546,6 +580,8 @@ export const BullshitSwipeCard = React.memo(function BullshitSwipeCard({
               key={adsThisRound[currentIndex].id}
               ad={adsThisRound[currentIndex]}
               onSwipe={handleSwipe}
+              onThresholdCross={handleThresholdCross}
+              onSwipeOut={handleSwipeOutSound}
             />
           </View>
         )}

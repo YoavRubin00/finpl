@@ -1,4 +1,4 @@
-import React, { useCallback } from 'react';
+import React, { useCallback, useRef } from 'react';
 import { View, Text, StyleSheet, Dimensions } from 'react-native';
 import Animated, {
     useSharedValue,
@@ -11,6 +11,7 @@ import Animated, {
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import type { MythCard } from './mythTypes';
 import { FadeIn } from 'react-native-reanimated';
+import { useSoundEffect } from '../../hooks/useSoundEffect';
 
 const MYTH_BGS: Record<string, number | undefined> = {
   'בנקים ועו"ש': require('../../../assets/IMAGES/myths/bg_banks.png'),
@@ -45,6 +46,12 @@ interface SwipeCardProps {
 function SwipeCard({ card, onSwipe, isTop, lightTheme }: SwipeCardProps) {
     const translateX = useSharedValue(0);
     const translateY = useSharedValue(0);
+    const { playSound } = useSoundEffect();
+    // Threshold-crossing latch (Yoav 2026-06-12: sound during the swipe).
+    // Plain ref is fine — the Pan below is .runOnJS(true), so onUpdate runs
+    // on the JS thread. Resets naturally per card (SwipeCard remounts via
+    // key=cards[0].id) and re-arms with hysteresis at 80% of the threshold.
+    const crossedRef = useRef(false);
 
     const fireSwipe = useCallback(
         (direction: 'left' | 'right') => {
@@ -59,6 +66,16 @@ function SwipeCard({ card, onSwipe, isTop, lightTheme }: SwipeCardProps) {
             if (!isTop) return;
             translateX.value = e.translationX;
             translateY.value = e.translationY * 0.3;
+            // Mid-drag commit-point tick (edge-triggered + hysteresis). The
+            // commit itself already plays 'btn_click_heavy' in MythFeedCard's
+            // handleSwipe, so the deck only adds the during-drag feedback.
+            const abs = Math.abs(e.translationX);
+            if (abs > SWIPE_THRESHOLD && !crossedRef.current) {
+                crossedRef.current = true;
+                try { playSound('btn_click_soft_2'); } catch { /* non-fatal */ }
+            } else if (abs < SWIPE_THRESHOLD * 0.8 && crossedRef.current) {
+                crossedRef.current = false;
+            }
         })
         .onEnd((e) => {
             if (!isTop) return;
