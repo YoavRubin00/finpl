@@ -461,7 +461,7 @@ export const TopicTreeAccordion = React.memo(function TopicTreeAccordion({
       entering={FadeIn.duration(260)}
       exiting={FadeOut.duration(180)}
     >
-      <View>
+      <View style={{ position: 'relative' }}>
         {showWelcomeBanner && (
           <Animated.View
             entering={FadeInDown.delay(120).duration(360)}
@@ -476,29 +476,26 @@ export const TopicTreeAccordion = React.memo(function TopicTreeAccordion({
             </Text>
           </Animated.View>
         )}
-        {/* "למידה רציפה" autopilot HEADER (Yoav 2026-06-13). A wide, clearly
-            LABELED bar at the TOP of the accordion — NOT a chip-row pill. As a
-            pill beside the freshly-green intro chip it was (a) mistapped as
-            "continue" → launched the whole module continuously, and (b)
-            scrolled off-screen. Shown only in the early window (intro done, no
-            non-intro chip yet) — the "how do you want to do this module?"
-            moment; DuoLearnScreen's scroll anchors the accordion top in that
-            same window so it's visible. Once the user taps a real chip they've
-            chosen the manual path and it hides. */}
+        {/* "למידה רציפה" — a standalone KEY (מקש) to the LEFT of the intro chip
+            (Yoav 2026-06-13: "משמאל לאינטרו, כמקש, לא כחלק מהאקורדיון"). It is
+            an absolute OVERLAY in the accordion wrapper — NOT woven into the
+            chip column — positioned at the intro (first) chip's row, just left
+            of the centered chip. Shown only in the early window (intro done, no
+            real chip yet); DuoLearnScreen's scroll anchors the accordion top in
+            that same window so the key is on-screen. left:'50%' + negative
+            marginLeft tracks the centered chip on any width. */}
         {!showWelcomeBanner && completedNonIntroChipCount < 1 && (
           <Pressable
             onPress={handleStartContinuous}
             accessibilityRole="button"
             accessibilityLabel="למידה רציפה — למד את כל המודולה ברצף, בלי לעצור"
-            style={({ pressed }) => [autopilotStyles.bar, pressed && autopilotStyles.barPressed]}
+            style={({ pressed }) => [autopilotStyles.key, pressed && autopilotStyles.keyPressed]}
+            hitSlop={8}
           >
-            <View style={autopilotStyles.iconWrap}>
-              <FastForward size={18} color="#ffffff" fill="#ffffff" strokeWidth={0} />
-            </View>
-            <View style={autopilotStyles.textCol}>
-              <Text style={autopilotStyles.title} allowFontScaling={false}>למידה רציפה</Text>
-              <Text style={autopilotStyles.sub} allowFontScaling={false}>למד את כל המודולה ברצף — בלי לעצור</Text>
-            </View>
+            <FastForward size={17} color="#ffffff" fill="#ffffff" strokeWidth={0} />
+            <Text style={autopilotStyles.keyLabel} allowFontScaling={false}>
+              למידה{'\n'}רציפה
+            </Text>
           </Pressable>
         )}
         {/* Tree + path chips, no surrounding rectangle so the accordion
@@ -633,60 +630,50 @@ export const TopicTreeAccordion = React.memo(function TopicTreeAccordion({
   );
 });
 
-// "למידה רציפה" autopilot header — a wide, labeled CTA bar (deliberately NOT
-// circular like a chip, and with explicit title+subtitle) so it can't be
-// mistaken for "continue to the next chip".
+// "למידה רציפה" — a standalone KEY (מקש) overlaid to the LEFT of the intro
+// chip. Absolute so it is NOT part of the chip column flow. Layout constants
+// mirror ModuleTopicLayout (EDGE_CONNECTOR_H 44 + ROW_HEIGHT/2 57 = intro-chip
+// center 101; NODE_SIZE/2 39) and are hardcoded here like the scroll math.
+// Raised borderBottom = the "key" look; high zIndex so it sits above the chips.
+const KEY_W = 66;
+const KEY_H = 56;
 const autopilotStyles = StyleSheet.create({
-  bar: {
-    flexDirection: 'row-reverse',
+  key: {
+    position: 'absolute',
+    top: 101 - KEY_H / 2,
+    left: '50%',
+    marginLeft: -(39 + 10 + KEY_W),
+    width: KEY_W,
     alignItems: 'center',
-    alignSelf: 'center',
-    gap: 12,
-    maxWidth: 340,
-    width: '92%',
-    marginTop: 8,
-    marginBottom: 6,
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    borderRadius: 18,
+    justifyContent: 'center',
+    gap: 2,
+    paddingVertical: 8,
+    paddingHorizontal: 4,
+    borderRadius: 14,
     backgroundColor: '#2563eb',
     borderWidth: 1.5,
     borderColor: '#60a5fa',
+    borderBottomWidth: 4,
+    borderBottomColor: '#1e40af',
+    zIndex: 30,
     shadowColor: '#2563eb',
-    shadowOpacity: 0.35,
-    shadowRadius: 10,
-    shadowOffset: { width: 0, height: 4 },
-    elevation: 6,
+    shadowOpacity: 0.4,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 3 },
+    elevation: 12,
   },
-  barPressed: {
+  keyPressed: {
     backgroundColor: '#1d4ed8',
-    transform: [{ scale: 0.98 }],
+    borderBottomWidth: 2,
+    transform: [{ translateY: 2 }],
   },
-  iconWrap: {
-    width: 34,
-    height: 34,
-    borderRadius: 17,
-    backgroundColor: 'rgba(255,255,255,0.18)',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  textCol: {
-    flex: 1,
-  },
-  title: {
+  keyLabel: {
     color: '#ffffff',
-    fontSize: 16,
+    fontSize: 10.5,
     fontWeight: '900',
+    lineHeight: 13,
+    textAlign: 'center',
     writingDirection: 'rtl',
-    textAlign: 'right',
-  },
-  sub: {
-    color: '#dbeafe',
-    fontSize: 12,
-    fontWeight: '600',
-    writingDirection: 'rtl',
-    textAlign: 'right',
-    marginTop: 1,
   },
 });
 
