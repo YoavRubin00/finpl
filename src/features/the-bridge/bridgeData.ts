@@ -17,7 +17,11 @@ export const BRIDGE_BENEFITS: Benefit[] = [
     partnerName: 'אלטשולר שחם טרייד',
     partnerLogo: '📈',
     partnerLogoImage: { uri: 'https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/bridge-logos/altshuler.png' },
-    costCoins: 4000,
+    // Re-priced 4000→3000 (Moni 2026-06-13): top/premium tier. PostHog 30d:
+    // median bridge-viewer balance ~694 coins (P90 ~3,089), so 4000 was above
+    // even the 90th percentile → ~0 redemptions. 3000 ≈ reachable by committed
+    // users. Coins are only an affiliate-unlock gate, so lowering is pure upside.
+    costCoins: 3000,
     category: 'investments',
     isAvailable: true,
     reward: 'מתנת הצטרפות ₪200 + קורס שוק ההון בשווי ₪1,400 במתנה',
@@ -41,7 +45,8 @@ export const BRIDGE_BENEFITS: Benefit[] = [
     partnerName: 'אינטראקטיב ישראל',
     partnerLogo: '🌎',
     partnerLogoImage: { uri: 'https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/bridge-logos/interactive.jpg' },
-    costCoins: 4000,
+    // Re-priced 4000→2500 (Moni 2026-06-13): premium tier, reachable by engaged users.
+    costCoins: 2500,
     category: 'investments',
     isAvailable: true,
     reward: 'עמלות קניה ומכירה הכי זולות בישראל',
@@ -77,7 +82,12 @@ export const BRIDGE_BENEFITS: Benefit[] = [
     partnerName: 'Cover',
     partnerLogo: '🛡️',
     partnerLogoImage: { uri: 'https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/bridge-logos/cover.png' },
-    costCoins: 2000,
+    // Re-priced 2000→500 (Moni 2026-06-13): ENTRY tier. A free, no-commitment
+    // tracking service is the natural FIRST redemption. 500 ≤ the p25 balance
+    // (~635), so most bridge viewers can unlock it today → kicks off the
+    // first-redemption habit that the whole coin economy currently lacks
+    // (1 redemption in 30 days). See dashboard 746425.
+    costCoins: 500,
     category: 'insurance',
     isAvailable: true,
     reward: 'מעקב חינמי אחר כל הביטוחים והחסכונות שלך — בלי התחייבות',
