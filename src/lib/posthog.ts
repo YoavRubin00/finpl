@@ -6,7 +6,11 @@ import type { PostHogEventProperties } from '@posthog/core';
 export type EventProperties = PostHogEventProperties;
 
 const API_KEY = process.env.EXPO_PUBLIC_POSTHOG_KEY;
-const HOST = process.env.EXPO_PUBLIC_POSTHOG_HOST ?? 'https://us.i.posthog.com';
+// EU project (176605) — default to the EU ingestion host so a missing env var
+// can't silently divert analytics to the US region (Moni 2026-06-13). Currently
+// masked on the client (the env var IS set in the build), but the server-side
+// RevenueCat webhook shared this US default and lost every event — see that file.
+const HOST = process.env.EXPO_PUBLIC_POSTHOG_HOST ?? 'https://eu.i.posthog.com';
 
 let client: PostHog | null = null;
 
