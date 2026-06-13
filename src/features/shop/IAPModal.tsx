@@ -118,7 +118,10 @@ export function IAPModal({ visible, bundle, onDismiss, onPurchaseSuccess }: IAPM
           return;
         }
         track({ name: 'purchase_failed', props: { bundle_id: bundle.id, bundle_type: 'gem_bundle', error_message: msg } });
-        Alert.alert('שגיאת רכישה', msg);
+        // Friendly Hebrew copy — never surface the raw SDK/StoreKit string
+        // (often English, e.g. "Product ... not available"). App Review 2.1a
+        // treats a hard error on a purchase as a blocker (2026-06-13).
+        Alert.alert('הרכישה לא הושלמה', 'לא הצלחנו להשלים את הרכישה כרגע. נסו שוב בעוד רגע.');
         return;
       }
     }
