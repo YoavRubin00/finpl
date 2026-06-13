@@ -299,6 +299,14 @@ export const TopicTreeAccordion = React.memo(function TopicTreeAccordion({
         chapter_id: chapterIdFromModuleId(module.id),
         is_first_lesson: isFirstLesson,
         learning_mode: 'topic-tree',
+        // Mirror the legacy completeModule() variant tag so the post-split
+        // mod-0-1 / mod-0-1b funnel separately on the topic-tree path too.
+        // Topic-tree is now the DEFAULT completion path, so without this the
+        // `module_variant` breakdown only saw the rare legacy completions and
+        // under-counted the split. See LessonFlowScreen.completeModule.
+        ...(module.id === 'mod-0-1' ? { module_variant: 'short' } :
+            module.id === 'mod-0-1b' ? { module_variant: 'continuation' } :
+            {}),
       });
     } catch { /* non-fatal */ }
 
