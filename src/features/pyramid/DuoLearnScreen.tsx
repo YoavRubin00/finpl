@@ -1066,8 +1066,13 @@ const ChapterSection = React.memo(function ChapterSection({
               {/* Daily News Challenge — newspaper icon anchored directly
                   under the MIDDLE star of the row that sits below the
                   shark. Zero margins so the next PathConnector / pearl
-                  hugs right under it without leaving an empty band. */}
-              {isActive && newsBadgeNode && (
+                  hugs right under it without leaving an empty band.
+                  Hidden while THIS module's topic-tree accordion is expanded:
+                  otherwise it sits between the module node and the accordion
+                  and pushes the intro chip down into a big gap, leaving the
+                  autopilot key floating above the intro (Yoav 2026-06-13). It
+                  reappears when the accordion collapses. */}
+              {isActive && newsBadgeNode && expandedTopicTreeModuleId !== module.id && (
                 <View
                   style={{
                     alignItems: 'center',

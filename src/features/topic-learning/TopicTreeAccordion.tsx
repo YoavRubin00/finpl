@@ -2,7 +2,6 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { View, Text, Pressable, StyleSheet } from 'react-native';
 import { useRouter } from 'expo-router';
 import Animated, { FadeIn, FadeInDown, FadeOut } from 'react-native-reanimated';
-import { FastForward } from 'lucide-react-native';
 import { mediumHaptic, successHaptic, tapHaptic } from '../../utils/haptics';
 import { useSoundEffect } from '../../hooks/useSoundEffect';
 import { captureEvent } from '../../lib/posthog';
@@ -476,28 +475,11 @@ export const TopicTreeAccordion = React.memo(function TopicTreeAccordion({
             </Text>
           </Animated.View>
         )}
-        {/* "למידה רציפה" — a standalone KEY (מקש) to the LEFT of the intro chip
-            (Yoav 2026-06-13: "משמאל לאינטרו, כמקש, לא כחלק מהאקורדיון"). It is
-            an absolute OVERLAY in the accordion wrapper — NOT woven into the
-            chip column — positioned at the intro (first) chip's row, just left
-            of the centered chip. Shown only in the early window (intro done, no
-            real chip yet); DuoLearnScreen's scroll anchors the accordion top in
-            that same window so the key is on-screen. left:'50%' + negative
-            marginLeft tracks the centered chip on any width. */}
-        {!showWelcomeBanner && completedNonIntroChipCount < 1 && (
-          <Pressable
-            onPress={handleStartContinuous}
-            accessibilityRole="button"
-            accessibilityLabel="למידה רציפה — למד את כל המודולה ברצף, בלי לעצור"
-            style={({ pressed }) => [autopilotStyles.key, pressed && autopilotStyles.keyPressed]}
-            hitSlop={8}
-          >
-            <FastForward size={17} color="#ffffff" fill="#ffffff" strokeWidth={0} />
-            <Text style={autopilotStyles.keyLabel} allowFontScaling={false}>
-              למידה{'\n'}רציפה
-            </Text>
-          </Pressable>
-        )}
+        {/* "למידה רציפה" autopilot KEY now lives INSIDE ModuleTopicLayout's
+            first-chip row (wired via onStartContinuous below) so it sits beside
+            the intro chip instead of floating in the gap above it. Gated to the
+            early window (no content chip done) + suppressed during the mod-0-1
+            welcome banner (Yoav 2026-06-13). */}
         {/* Tree + path chips, no surrounding rectangle so the accordion
             reads as a continuation of the outer module path. */}
         <ModuleTopicLayout
@@ -507,6 +489,11 @@ export const TopicTreeAccordion = React.memo(function TopicTreeAccordion({
           progressPct={summary.pct}
           nodeOffsetX={nodeOffsetX}
           onTopicPress={onTopicSelected}
+          onStartContinuous={
+            !showWelcomeBanner && completedNonIntroChipCount < 1
+              ? handleStartContinuous
+              : undefined
+          }
         />
 
         {/* Single chest celebration at 70% (Yoav 2026-06-12). The 100%
@@ -628,53 +615,6 @@ export const TopicTreeAccordion = React.memo(function TopicTreeAccordion({
       </View>
     </Animated.View>
   );
-});
-
-// "למידה רציפה" — a standalone KEY (מקש) overlaid to the LEFT of the intro
-// chip. Absolute so it is NOT part of the chip column flow. Layout constants
-// mirror ModuleTopicLayout (EDGE_CONNECTOR_H 44 + ROW_HEIGHT/2 57 = intro-chip
-// center 101; NODE_SIZE/2 39) and are hardcoded here like the scroll math.
-// Raised borderBottom = the "key" look; high zIndex so it sits above the chips.
-const KEY_W = 66;
-const KEY_H = 56;
-const autopilotStyles = StyleSheet.create({
-  key: {
-    position: 'absolute',
-    top: 101 - KEY_H / 2,
-    left: '50%',
-    marginLeft: -(39 + 10 + KEY_W),
-    width: KEY_W,
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 2,
-    paddingVertical: 8,
-    paddingHorizontal: 4,
-    borderRadius: 14,
-    backgroundColor: '#2563eb',
-    borderWidth: 1.5,
-    borderColor: '#60a5fa',
-    borderBottomWidth: 4,
-    borderBottomColor: '#1e40af',
-    zIndex: 30,
-    shadowColor: '#2563eb',
-    shadowOpacity: 0.4,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 3 },
-    elevation: 12,
-  },
-  keyPressed: {
-    backgroundColor: '#1d4ed8',
-    borderBottomWidth: 2,
-    transform: [{ translateY: 2 }],
-  },
-  keyLabel: {
-    color: '#ffffff',
-    fontSize: 10.5,
-    fontWeight: '900',
-    lineHeight: 13,
-    textAlign: 'center',
-    writingDirection: 'rtl',
-  },
 });
 
 const milestoneStyles = StyleSheet.create({

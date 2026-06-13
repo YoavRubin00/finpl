@@ -1,7 +1,8 @@
 import React, { useMemo } from 'react';
-import { View, StyleSheet, Dimensions } from 'react-native';
+import { View, Text, Pressable, StyleSheet, Dimensions } from 'react-native';
 import { Image as ExpoImage } from 'expo-image';
 import Animated, { FadeInDown, useReducedMotion } from 'react-native-reanimated';
+import { FastForward } from 'lucide-react-native';
 import { TopicChip } from './TopicChip';
 import { scenesForModule } from '../pathScenes';
 import type { Topic } from '../types';
@@ -78,6 +79,13 @@ interface ModuleTopicLayoutProps {
    *  exit routes column→next-connector so both ends meet flush. */
   nodeOffsetX?: number;
   onTopicPress: (topic: Topic) => void;
+  /** "למידה רציפה" autopilot launcher. When provided, a KEY (מקש) renders to
+   *  the LEFT of the FIRST chip's row — anchored INSIDE that row so it always
+   *  sits beside the chip and never floats above it in the gap (Yoav
+   *  2026-06-13). Parent (TopicTreeAccordion) passes this only in the early
+   *  window (no content chip completed yet); we additionally gate on the live
+   *  completed-count so it hides the moment a real chip is done. */
+  onStartContinuous?: () => void;
 }
 
 /**
@@ -103,6 +111,7 @@ export const ModuleTopicLayout = React.memo(function ModuleTopicLayout({
   recommendedTopicId,
   nodeOffsetX = 0,
   onTopicPress,
+  onStartContinuous,
 }: ModuleTopicLayoutProps): React.ReactElement {
   const sorted = useMemo(
     () =>
@@ -112,6 +121,16 @@ export const ModuleTopicLayout = React.memo(function ModuleTopicLayout({
         .sort((a, b) => (a.defaultOrder ?? 0) - (b.defaultOrder ?? 0)),
     [topics],
   );
+
+  // Early-window gate for the autopilot KEY: visible only until the user
+  // completes their first NON-intro (content) chip. Mirrors the count the
+  // parent uses to anchor the accordion top, so the key is always on-screen
+  // while shown.
+  const completedNonIntroCount = useMemo(
+    () => sorted.filter((t) => t.kind !== 'intro' && isCompletedMap[t.id]).length,
+    [sorted, isCompletedMap],
+  );
+  const showAutopilotKey = Boolean(onStartContinuous) && completedNonIntroCount < 1;
 
   // Height = entry connector + n chip rows + exit connector.
   const totalHeight = EDGE_CONNECTOR_H + sorted.length * ROW_HEIGHT + EDGE_CONNECTOR_H;
@@ -277,6 +296,29 @@ export const ModuleTopicLayout = React.memo(function ModuleTopicLayout({
                   onPress={onTopicPress}
                 />
               </View>
+
+              {/* "למידה רציפה" autopilot KEY — rendered INSIDE the first chip's
+                  row (not as a parent overlay at a hardcoded top), so it's
+                  always vertically beside the chip and never floats above it in
+                  the gap. Absolute → no layout shift; bleeds into the left
+                  gutter just left of the centered chip. */}
+              {i === 0 && showAutopilotKey && onStartContinuous && (
+                <Pressable
+                  onPress={onStartContinuous}
+                  accessibilityRole="button"
+                  accessibilityLabel="למידה רציפה — למד את כל המודולה ברצף, בלי לעצור"
+                  hitSlop={8}
+                  style={({ pressed }) => [
+                    styles.autopilotKey,
+                    pressed && styles.autopilotKeyPressed,
+                  ]}
+                >
+                  <FastForward size={17} color="#ffffff" fill="#ffffff" strokeWidth={0} />
+                  <Text style={styles.autopilotKeyLabel} allowFontScaling={false}>
+                    למידה{'\n'}רציפה
+                  </Text>
+                </Pressable>
+              )}
             </Animated.View>
           );
         })}
@@ -459,5 +501,46 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     height: ROW_HEIGHT,
+  },
+  // "למידה רציפה" autopilot KEY — absolute INSIDE the first chip's row, so it
+  // tracks the chip vertically (centered in the ROW_HEIGHT row) and bleeds
+  // into the left gutter just left of the centered chip. left:'50%' + negative
+  // marginLeft = NODE_SIZE/2 (half chip) + 10 gap + KEY width.
+  autopilotKey: {
+    position: 'absolute',
+    top: (ROW_HEIGHT - 56) / 2,
+    left: '50%',
+    marginLeft: -(NODE_SIZE / 2 + 10 + 66),
+    width: 66,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 2,
+    paddingVertical: 8,
+    paddingHorizontal: 4,
+    borderRadius: 14,
+    backgroundColor: '#2563eb',
+    borderWidth: 1.5,
+    borderColor: '#60a5fa',
+    borderBottomWidth: 4,
+    borderBottomColor: '#1e40af',
+    zIndex: 30,
+    shadowColor: '#2563eb',
+    shadowOpacity: 0.4,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 3 },
+    elevation: 12,
+  },
+  autopilotKeyPressed: {
+    backgroundColor: '#1d4ed8',
+    borderBottomWidth: 2,
+    transform: [{ translateY: 2 }],
+  },
+  autopilotKeyLabel: {
+    color: '#ffffff',
+    fontSize: 10.5,
+    fontWeight: '900',
+    lineHeight: 13,
+    textAlign: 'center',
+    writingDirection: 'rtl',
   },
 });
