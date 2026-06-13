@@ -353,6 +353,14 @@ export function PricingScreen() {
       // Initiate-checkout signal — fires BEFORE the native paywall opens, so we
       // still get attribution even if the user abandons at the system payment sheet.
       logTrialStart(pkg.packageType);
+      // PostHog funnel step (Moni 2026-06-13): the Pro funnel had NO "tapped
+      // subscribe" event — it jumped from paywall_viewed straight to the
+      // OUTCOME (trial_started / subscription_cancelled_at_checkout / _failed),
+      // so we couldn't tell how many reached the native sheet vs bounced on the
+      // pricing screen itself (the real drop is 252→~12). Reuse purchase_initiated
+      // with bundle_type:'subscription' as that intent step; `source` carries the
+      // placement so post_walkthrough vs subscription_pricing stays sliceable.
+      track({ name: 'purchase_initiated', props: { bundle_id: pkg.identifier, bundle_type: 'subscription', real_money: true } });
 
       const customerInfo = await purchasePackage(pkg);
       const entitlement = customerInfo.entitlements.active[RC_ENTITLEMENT_PRO];
