@@ -1768,11 +1768,15 @@ export function DuoLearnScreen() {
     const completedNonIntroCount = topics.filter(
       (t) => t.kind !== 'intro' && completedMap[t.id],
     ).length;
-    const inWelcomeWindow =
-      topicTreeModule.module.id === 'mod-0-1'
-      && isWalkthroughActive
-      && completedNonIntroCount < 1;
-    if (inWelcomeWindow) {
+    // Anchor the MODULE NODE near the top (instead of jumping to the gold
+    // chip) for the early window of EVERY topic-tree module — intro done, no
+    // real chip yet. This (a) keeps the mod-0-1 welcome reading order, and (b)
+    // surfaces the "למידה רציפה" autopilot HEADER that TopicTreeAccordion
+    // renders at the accordion top in exactly this window (Yoav 2026-06-13:
+    // the header was invisible because the gold-chip anchor scrolled it off).
+    // Once the user clears their first chip, the gold-chip anchor takes over.
+    const anchorAccordionTop = completedNonIntroCount < 1;
+    if (anchorAccordionTop) {
       const TOP_PAD = 12; // small gap below the wealth header
       const raf = requestAnimationFrame(() => {
         scrollRef.current?.scrollTo({ y: Math.max(0, moduleY - TOP_PAD), animated: true });

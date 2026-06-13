@@ -192,18 +192,26 @@ export function useIntroAudio(
         if (!hasStartedPlaying) setState('slow');
       }, 500);
 
-      // Retries now REBUILD the player from the (by-now-likely-cached) local
-      // path instead of just re-calling play() on a dead remote stream — that
-      // was useless against a 403'd source. By 1.2s / 3.5s the retrying
-      // download has usually landed the file locally.
+      // Retries REBUILD the player from the (by-now-likely-cached) local path
+      // instead of just re-calling play() on a dead remote stream — useless
+      // against a 403'd source. By 1.2s / 3.5s the retrying download has
+      // usually landed the file locally.
+      // ⚠️ BUNDLED assets are EXEMPT (Yoav 2026-06-12 bug): buildPlayer() is
+      // destructive (pause+remove+recreate), and `hasStartedPlaying` only
+      // flips once a playbackStatusUpdate tick reports currentTime>0.05 — with
+      // expo-audio's default 500ms updateInterval, that first qualifying tick
+      // can slip past 1200ms on a cold launch. For a bundled local clip the
+      // rebuild can NEVER help (same fully-loaded source) and would just CUT
+      // the shark's voice mid-sentence and restart it from 0. Remote keeps the
+      // rebuild (it's the 403 recovery).
       retry1 = setTimeout(() => {
-        if (!hasStartedPlaying) {
+        if (!hasStartedPlaying && bundled === undefined) {
           buildPlayer();
           captureEvent('intro_audio_delayed', { retry_stage: 1, platform: Platform.OS });
         }
       }, 1200);
       retry2 = setTimeout(() => {
-        if (!hasStartedPlaying) {
+        if (!hasStartedPlaying && bundled === undefined) {
           buildPlayer();
           captureEvent('intro_audio_delayed', { retry_stage: 2, platform: Platform.OS });
         }

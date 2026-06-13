@@ -1,7 +1,8 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { View, Text, Pressable, StyleSheet } from 'react-native';
 import { useRouter } from 'expo-router';
 import Animated, { FadeIn, FadeInDown, FadeOut } from 'react-native-reanimated';
+import { FastForward } from 'lucide-react-native';
 import { mediumHaptic, successHaptic, tapHaptic } from '../../utils/haptics';
 import { useSoundEffect } from '../../hooks/useSoundEffect';
 import { captureEvent } from '../../lib/posthog';
@@ -475,6 +476,31 @@ export const TopicTreeAccordion = React.memo(function TopicTreeAccordion({
             </Text>
           </Animated.View>
         )}
+        {/* "למידה רציפה" autopilot HEADER (Yoav 2026-06-13). A wide, clearly
+            LABELED bar at the TOP of the accordion — NOT a chip-row pill. As a
+            pill beside the freshly-green intro chip it was (a) mistapped as
+            "continue" → launched the whole module continuously, and (b)
+            scrolled off-screen. Shown only in the early window (intro done, no
+            non-intro chip yet) — the "how do you want to do this module?"
+            moment; DuoLearnScreen's scroll anchors the accordion top in that
+            same window so it's visible. Once the user taps a real chip they've
+            chosen the manual path and it hides. */}
+        {!showWelcomeBanner && completedNonIntroChipCount < 1 && (
+          <Pressable
+            onPress={handleStartContinuous}
+            accessibilityRole="button"
+            accessibilityLabel="למידה רציפה — למד את כל המודולה ברצף, בלי לעצור"
+            style={({ pressed }) => [autopilotStyles.bar, pressed && autopilotStyles.barPressed]}
+          >
+            <View style={autopilotStyles.iconWrap}>
+              <FastForward size={18} color="#ffffff" fill="#ffffff" strokeWidth={0} />
+            </View>
+            <View style={autopilotStyles.textCol}>
+              <Text style={autopilotStyles.title} allowFontScaling={false}>למידה רציפה</Text>
+              <Text style={autopilotStyles.sub} allowFontScaling={false}>למד את כל המודולה ברצף — בלי לעצור</Text>
+            </View>
+          </Pressable>
+        )}
         {/* Tree + path chips, no surrounding rectangle so the accordion
             reads as a continuation of the outer module path. */}
         <ModuleTopicLayout
@@ -484,7 +510,6 @@ export const TopicTreeAccordion = React.memo(function TopicTreeAccordion({
           progressPct={summary.pct}
           nodeOffsetX={nodeOffsetX}
           onTopicPress={onTopicSelected}
-          onStartContinuous={handleStartContinuous}
         />
 
         {/* Single chest celebration at 70% (Yoav 2026-06-12). The 100%
@@ -606,6 +631,63 @@ export const TopicTreeAccordion = React.memo(function TopicTreeAccordion({
       </View>
     </Animated.View>
   );
+});
+
+// "למידה רציפה" autopilot header — a wide, labeled CTA bar (deliberately NOT
+// circular like a chip, and with explicit title+subtitle) so it can't be
+// mistaken for "continue to the next chip".
+const autopilotStyles = StyleSheet.create({
+  bar: {
+    flexDirection: 'row-reverse',
+    alignItems: 'center',
+    alignSelf: 'center',
+    gap: 12,
+    maxWidth: 340,
+    width: '92%',
+    marginTop: 8,
+    marginBottom: 6,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 18,
+    backgroundColor: '#2563eb',
+    borderWidth: 1.5,
+    borderColor: '#60a5fa',
+    shadowColor: '#2563eb',
+    shadowOpacity: 0.35,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 6,
+  },
+  barPressed: {
+    backgroundColor: '#1d4ed8',
+    transform: [{ scale: 0.98 }],
+  },
+  iconWrap: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    backgroundColor: 'rgba(255,255,255,0.18)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  textCol: {
+    flex: 1,
+  },
+  title: {
+    color: '#ffffff',
+    fontSize: 16,
+    fontWeight: '900',
+    writingDirection: 'rtl',
+    textAlign: 'right',
+  },
+  sub: {
+    color: '#dbeafe',
+    fontSize: 12,
+    fontWeight: '600',
+    writingDirection: 'rtl',
+    textAlign: 'right',
+    marginTop: 1,
+  },
 });
 
 const milestoneStyles = StyleSheet.create({
