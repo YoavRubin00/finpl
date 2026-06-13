@@ -91,19 +91,59 @@ async function withFetchSlot<T>(fn: () => Promise<T>): Promise<T> {
   }
 }
 
-async function prefetchVideo(uri: string): Promise<void> {
-  // expo-file-system downloadAsync doesn't exist on web — the call itself
-  // throws, producing hundreds of noisy *_prefetch_failed events (PostHog
-  // 2026-06-12: 254 video + 130 audio from 2 web users). Web streams
-  // straight from the CDN anyway, so prefetch is a no-op there.
-  if (Platform.OS === 'web') return;
+// ───────────────────────────── Per-URI de-duplication + failure cooldown
+// PostHog 2026-06-13: one user emitted 85 `audio_prefetch_failed` events for a
+// SINGLE asset in 2.7s (~31/sec) — impossible from the retry ladder alone,
+// which emits at most once per ~30s per call. Root cause: a re-rendering caller
+// (topic-tree accordion / intro effect) invoked prefetch* repeatedly for the
+// same URI with NO de-dup, so every render spun a fresh retry loop and its own
+// final failure event. 1.3.2 (pre-pool) never looped — this is a regression
+// that rode in with the eager prefetch.
+//   • In-flight dedup: concurrent calls for the same URI share ONE loop/event.
+//   • Failure cooldown: after a FINAL failure, ignore re-requests for a short
+//     window so a 403'ing host isn't re-burst — the re-burst itself sustains
+//     Vercel Blob's per-client rate-limit (see the concurrency-gate note).
+// Successful downloads are already deduped by the on-disk cache (the
+// getInfoAsync short-circuit at the top of each runPrefetch*).
+const FAILURE_COOLDOWN_MS = 60_000;
+const inFlightVideo = new Map<string, Promise<void>>();
+const inFlightAudio = new Map<string, Promise<void>>();
+const inFlightImage = new Map<string, Promise<void>>();
+const videoFailedAt = new Map<string, number>();
+const audioFailedAt = new Map<string, number>();
+const imageFailedAt = new Map<string, number>();
+
+/** Collapse repeat calls for one URI onto a single run; suppress re-runs for
+ *  FAILURE_COOLDOWN_MS after a final failure. `run` resolves true on
+ *  success/cache-hit, false on final failure (it logs its own outcome). */
+function dedupGuard(
+  inFlight: Map<string, Promise<void>>,
+  failedAt: Map<string, number>,
+  uri: string,
+  run: () => Promise<boolean>,
+): Promise<void> {
+  const existing = inFlight.get(uri);
+  if (existing) return existing;
+  const failed = failedAt.get(uri);
+  if (failed !== undefined && Date.now() - failed < FAILURE_COOLDOWN_MS) {
+    return Promise.resolve();
+  }
+  const task = run()
+    .then((ok) => { if (ok) failedAt.delete(uri); else failedAt.set(uri, Date.now()); })
+    .catch(() => { failedAt.set(uri, Date.now()); })
+    .finally(() => { inFlight.delete(uri); });
+  inFlight.set(uri, task);
+  return task;
+}
+
+async function runPrefetchVideo(uri: string): Promise<boolean> {
   const filename = uri.split("/").pop() || "video.mp4";
   const localPath = VIDEO_CACHE_DIR + filename;
   try {
     const info = await FileSystem.getInfoAsync(localPath);
     if (info.exists && info.size && info.size > 1000) {
       videoCache.set(uri, localPath);
-      return;
+      return true;
     }
     await FileSystem.makeDirectoryAsync(VIDEO_CACHE_DIR, { intermediates: true }).catch(() => {});
   } catch {/* fall through to download attempt */}
@@ -112,7 +152,10 @@ async function prefetchVideo(uri: string): Promise<void> {
   for (let attempt = 0; attempt <= RETRY_DELAYS_MS.length; attempt++) {
     try {
       const result = await withFetchSlot(() => FileSystem.downloadAsync(uri, localPath));
-      if (result.status === 200) {
+      // 206 = Partial Content (a resumed download returns the remaining bytes);
+      // it's a success, not a failure. Treating it as one logged spurious
+      // `*_prefetch_failed` with reason http_206 (PostHog 2026-06-13).
+      if (result.status === 200 || result.status === 206) {
         videoCache.set(uri, localPath);
         if (attempt > 0) {
           // A retry that SUCCEEDS is a recovery, not a failure. Logging it
@@ -126,7 +169,7 @@ async function prefetchVideo(uri: string): Promise<void> {
             reason: `recovered_after_${attempt}_retries`,
           });
         }
-        return;
+        return true;
       }
       lastReason = `http_${result.status}`;
       if (!RETRYABLE_HTTP_STATUSES.has(result.status)) break;
@@ -142,13 +185,23 @@ async function prefetchVideo(uri: string): Promise<void> {
     platform: Platform.OS,
     reason: lastReason ?? 'unknown',
   });
+  return false;
+}
+
+// expo-file-system downloadAsync doesn't exist on web — the call itself throws,
+// producing hundreds of noisy *_prefetch_failed events (PostHog 2026-06-12:
+// 254 video + 130 audio from 2 web users). Web streams straight from the CDN
+// anyway, so prefetch is a no-op there. De-duped per URI (see dedupGuard).
+function prefetchVideo(uri: string): Promise<void> {
+  if (Platform.OS === 'web') return Promise.resolve();
+  return dedupGuard(inFlightVideo, videoFailedAt, uri, () => runPrefetchVideo(uri));
 }
 
 // ExpoImage.prefetch returns Promise<boolean | undefined> (`true` on cache
 // hit, `false` on failure) — no HTTP status. Mirror the audio/video retry
 // shape: try a few times with exponential backoff, then log the final
 // outcome. Both `false` resolutions and thrown errors count as failures.
-async function prefetchImageWithRetry(uri: string): Promise<void> {
+async function runPrefetchImage(uri: string): Promise<boolean> {
   let lastReason: string | undefined;
   for (let attempt = 0; attempt <= RETRY_DELAYS_MS.length; attempt++) {
     try {
@@ -163,7 +216,7 @@ async function prefetchImageWithRetry(uri: string): Promise<void> {
             reason: `recovered_after_${attempt}_retries`,
           });
         }
-        return;
+        return true;
       }
       lastReason = 'prefetch_returned_false';
     } catch (err) {
@@ -179,18 +232,24 @@ async function prefetchImageWithRetry(uri: string): Promise<void> {
     platform: Platform.OS,
     reason: lastReason ?? 'unknown',
   });
+  return false;
 }
 
-async function prefetchAudio(uri: string): Promise<void> {
-  // downloadAsync is unavailable on web — see prefetchVideo note.
-  if (Platform.OS === 'web') return;
+// De-duped per URI (see dedupGuard) — the topic-tree accordion can re-render
+// and re-request the same flashcard images many times per second (PostHog
+// 2026-06-12: image_prefetch_failed was concentrated in a handful of users).
+function prefetchImageWithRetry(uri: string): Promise<void> {
+  return dedupGuard(inFlightImage, imageFailedAt, uri, () => runPrefetchImage(uri));
+}
+
+async function runPrefetchAudio(uri: string): Promise<boolean> {
   const filename = uri.split("/").pop() || "audio.mp3";
   const localPath = AUDIO_CACHE_DIR + filename;
   try {
     const info = await FileSystem.getInfoAsync(localPath);
     if (info.exists && info.size && info.size > 1000) {
       audioCache.set(uri, localPath);
-      return;
+      return true;
     }
     await FileSystem.makeDirectoryAsync(AUDIO_CACHE_DIR, { intermediates: true }).catch(() => {});
   } catch {/* fall through to download attempt */}
@@ -199,7 +258,8 @@ async function prefetchAudio(uri: string): Promise<void> {
   for (let attempt = 0; attempt <= RETRY_DELAYS_MS.length; attempt++) {
     try {
       const result = await withFetchSlot(() => FileSystem.downloadAsync(uri, localPath));
-      if (result.status === 200) {
+      // 206 = success (resumed/partial GET that returns the body) — see runPrefetchVideo.
+      if (result.status === 200 || result.status === 206) {
         audioCache.set(uri, localPath);
         if (attempt > 0) {
           // Recovery, not failure — see video note above.
@@ -209,7 +269,7 @@ async function prefetchAudio(uri: string): Promise<void> {
             reason: `recovered_after_${attempt}_retries`,
           });
         }
-        return;
+        return true;
       }
       lastReason = `http_${result.status}`;
       if (!RETRYABLE_HTTP_STATUSES.has(result.status)) break;
@@ -225,6 +285,15 @@ async function prefetchAudio(uri: string): Promise<void> {
     platform: Platform.OS,
     reason: lastReason ?? 'unknown',
   });
+  return false;
+}
+
+// downloadAsync is unavailable on web — see prefetchVideo note. De-duped per
+// URI so a re-rendering caller can't spin parallel retry loops for one file
+// (PostHog 2026-06-13: 85 failures on one asset in 2.7s from a single user).
+function prefetchAudio(uri: string): Promise<void> {
+  if (Platform.OS === 'web') return Promise.resolve();
+  return dedupGuard(inFlightAudio, audioFailedAt, uri, () => runPrefetchAudio(uri));
 }
 
 // Fire-and-forget eager prefetch. Call this right before `router.push('/lesson/...')`
