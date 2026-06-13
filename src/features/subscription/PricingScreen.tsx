@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import { Image as ExpoImage } from "expo-image";
 import {
   View,
@@ -219,6 +219,21 @@ export function PricingScreen() {
     if (isMinor) void refreshConsentStatus({ force: true });
   }, [isMinor, refreshConsentStatus]);
   const [activePackage, setActivePackage] = useState<PurchasesPackage | null>(null);
+  // Offering availability state machine. Drives the CTA so the user can NEVER
+  // tap into a raw error: 'loading' shows a spinner, 'unavailable' turns the
+  // CTA into a silent retry, only 'ready' exposes the real purchase button.
+  // App Review 2.1a rejected 1.3.3 for an error alert on a purchase attempt —
+  // when offerings don't load in the review sandbox the old code popped
+  // Alert("שגיאה","לא נמצאו חבילות מנוי"). This makes that impossible.
+  const [offerState, setOfferState] = useState<'loading' | 'ready' | 'unavailable'>('loading');
+  // Soft, non-blocking notice for a genuine (non-cancel) purchase failure —
+  // replaces the old Alert("שגיאת תשלום", rawSdkString).
+  const [purchaseNotice, setPurchaseNotice] = useState<string | null>(null);
+  const mountedRef = useRef(true);
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => { mountedRef.current = false; };
+  }, []);
   const { mutateAsync: syncFromRC } = useSyncFromRevenueCat();
 
   const { payload: paywallPayload, trackImpression, trackConversion, trackDismiss } = useBandit('upgrade_paywall_headline');
@@ -229,22 +244,31 @@ export function PricingScreen() {
     track({ name: 'paywall_viewed', props: { paywall: 'subscription_pricing', source } });
   }, [trackImpression, source]);
 
-  // Load offering once so we can show the localized price + period before purchase.
-  useEffect(() => {
-    let mounted = true;
-    (async () => {
-      try {
-        const offering = await getOffering();
-        if (!offering || !mounted) return;
-        const pkg =
-          offering.monthly ?? offering.annual ?? offering.availablePackages[0];
-        if (pkg) setActivePackage(pkg);
-      } catch {
-        // silent, user can still tap CTA which will fetch again
+  // Load the offering so we can show the localized price + gate the CTA on a
+  // real, purchasable package. Reused as the 'unavailable' retry handler.
+  const loadOffering = useCallback(async () => {
+    if (mountedRef.current) setOfferState('loading');
+    try {
+      const offering = await getOffering();
+      const pkg =
+        offering?.monthly ?? offering?.annual ?? offering?.availablePackages?.[0] ?? null;
+      if (!mountedRef.current) return;
+      if (pkg) {
+        setActivePackage(pkg);
+        setOfferState('ready');
+      } else {
+        // Offerings empty / not loaded (the classic App Review sandbox case) —
+        // degrade to a silent retry CTA, never a raw error alert.
+        setOfferState('unavailable');
       }
-    })();
-    return () => { mounted = false; };
+    } catch {
+      if (mountedRef.current) setOfferState('unavailable');
+    }
   }, []);
+
+  useEffect(() => {
+    void loadOffering();
+  }, [loadOffering]);
 
   const priceString = activePackage?.product.priceString ?? "";
   const periodLabel = (() => {
@@ -309,18 +333,20 @@ export function PricingScreen() {
     }
 
     setIsLoading(true);
+    setPurchaseNotice(null);
     try {
-      const offering = await getOffering();
-      if (!offering) {
-        Alert.alert("שגיאה", "לא נמצאו חבילות מנוי. נסה שוב מאוחר יותר.");
-        return;
-      }
-
-      // Prefer monthly package
-      const pkg: PurchasesPackage | undefined =
-        offering.monthly ?? offering.annual ?? offering.availablePackages[0];
+      // The CTA only reaches here when offerState === 'ready', so activePackage
+      // is already a valid purchasable package. Re-fetch only as a fallback
+      // (e.g. the minor email-modal path re-invokes this). If still nothing,
+      // flip to the 'unavailable' retry state — NO raw error alert. This is the
+      // path App Review hit on 1.3.3 (empty offerings → Alert popup).
+      let pkg: PurchasesPackage | null = activePackage;
       if (!pkg) {
-        Alert.alert("שגיאה", "לא נמצאה חבילת מנוי.");
+        const offering = await getOffering();
+        pkg = offering?.monthly ?? offering?.annual ?? offering?.availablePackages?.[0] ?? null;
+      }
+      if (!pkg) {
+        setOfferState('unavailable');
         return;
       }
 
@@ -397,14 +423,19 @@ export function PricingScreen() {
       if (isCancelled) {
         track({ name: 'subscription_cancelled_at_checkout' });
       } else {
-        const fallbackMessage = message || "שגיאה לא צפויה";
-        track({ name: 'subscription_purchase_failed', props: { error_message: fallbackMessage } });
-        Alert.alert("שגיאת תשלום", fallbackMessage);
+        track({ name: 'subscription_purchase_failed', props: { error_message: message || 'unknown' } });
+        // Soft, non-blocking inline notice instead of Alert("שגיאת תשלום", raw).
+        // Never surface the raw SDK/StoreKit string in a popup — App Review
+        // 2.1a treats a hard error on a purchase attempt as a blocker. The user
+        // can just tap the CTA again.
+        if (mountedRef.current) {
+          setPurchaseNotice("התשלום לא הושלם. אפשר לנסות שוב בעוד רגע.");
+        }
       }
     } finally {
       setIsLoading(false);
     }
-  }, [displayName, useHardGateFallback, hasParentalConsent, minorNeedsHybridModal, isMinor, notifyPurchase, syncFromRC, hasSeenProWelcome, router, trackConversion, trialDays, returnTo]);
+  }, [displayName, useHardGateFallback, hasParentalConsent, minorNeedsHybridModal, isMinor, notifyPurchase, syncFromRC, hasSeenProWelcome, router, trackConversion, trialDays, returnTo, activePackage]);
 
   const handleRestore = useCallback(async () => {
     setIsLoading(true);
@@ -555,15 +586,19 @@ export function PricingScreen() {
               <>
                 <Animated.View style={[styles.ctaWrapper, ctaGlowStyle]}>
                   <Pressable
-                    onPress={handleUpgrade}
-                    disabled={isLoading}
+                    // 'unavailable' → the button silently retries loading the
+                    // offering (no purchase attempt, no error popup). Otherwise
+                    // it's the real purchase CTA. Disabled while a purchase is
+                    // in flight OR the offering is still loading.
+                    onPress={offerState === 'unavailable' ? loadOffering : handleUpgrade}
+                    disabled={isLoading || offerState === 'loading'}
                     accessibilityRole="button"
-                    accessibilityLabel="שדרג עכשיו ל-PRO"
-                    accessibilityState={{ disabled: isLoading }}
+                    accessibilityLabel={offerState === 'unavailable' ? 'נסה שוב' : 'שדרג עכשיו ל-PRO'}
+                    accessibilityState={{ disabled: isLoading || offerState === 'loading' }}
                     style={({ pressed }) => [
                       styles.ctaButtonBase,
                       pressed && { opacity: 0.9, transform: [{ scale: 0.98 }] },
-                      isLoading && { opacity: 0.6 },
+                      (isLoading || offerState === 'loading') && { opacity: 0.6 },
                     ]}
                   >
                     <LinearGradient
@@ -571,8 +606,15 @@ export function PricingScreen() {
                       start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
                       style={styles.ctaButtonGradient}
                     >
-                      {isLoading ? (
-                        <ActivityIndicator color="#ffffff" size="small" />
+                      {(isLoading || offerState === 'loading') ? (
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, justifyContent: 'center' }}>
+                          <ActivityIndicator color="#ffffff" size="small" />
+                          {offerState === 'loading' && !isLoading ? (
+                            <Text style={styles.ctaText}>טוען מסלולים…</Text>
+                          ) : null}
+                        </View>
+                      ) : offerState === 'unavailable' ? (
+                        <Text style={styles.ctaText}>נסה שוב</Text>
                       ) : (
                         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, justifyContent: 'center' }}>
                           <View accessible={false}>
@@ -591,6 +633,19 @@ export function PricingScreen() {
                     </LinearGradient>
                   </Pressable>
                 </Animated.View>
+
+                {/* Silent "unavailable" / soft purchase-failure notices —
+                    friendly, non-blocking, never a hard error alert. */}
+                {offerState === 'unavailable' ? (
+                  <Text style={[styles.priceMain, { color: theme.textMuted, fontSize: 12, marginTop: 6 }]}>
+                    המנוי אינו זמין כרגע. נסו שוב בעוד רגע.
+                  </Text>
+                ) : null}
+                {purchaseNotice ? (
+                  <Text style={[styles.priceMain, { color: theme.textMuted, fontSize: 12, marginTop: 6 }]}>
+                    {purchaseNotice}
+                  </Text>
+                ) : null}
 
                 {/* Localized price + period (Apple 3.1.2(a)). Trial framing
                     pushes the "after the trial" disclosure into the same

@@ -131,7 +131,9 @@ export function StarterPackModal({ visible, onDismiss, onPurchaseSuccess }: Prop
         return;
       }
       track({ name: 'purchase_failed', props: { bundle_id: pack.id, bundle_type: 'starter_pack', error_message: msg } });
-      Alert.alert('הרכישה נכשלה', msg);
+      // Friendly Hebrew copy — never surface the raw SDK/StoreKit string in a
+      // popup (App Review 2.1a blocker on a purchase error, 2026-06-13).
+      Alert.alert('הרכישה לא הושלמה', 'לא הצלחנו להשלים את הרכישה כרגע. נסו שוב בעוד רגע.');
     } finally {
       setPurchasing(false);
     }
