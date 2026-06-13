@@ -1,8 +1,7 @@
 import React, { useMemo } from 'react';
-import { View, Text, Pressable, StyleSheet, Dimensions } from 'react-native';
+import { View, StyleSheet, Dimensions } from 'react-native';
 import { Image as ExpoImage } from 'expo-image';
 import Animated, { FadeInDown, useReducedMotion } from 'react-native-reanimated';
-import { FastForward } from 'lucide-react-native';
 import { TopicChip } from './TopicChip';
 import { scenesForModule } from '../pathScenes';
 import type { Topic } from '../types';
@@ -30,11 +29,6 @@ const SCENE_VISIBLE_W = SCENE_SIZE;
 // character peeks in from the margin (Duolingo / Hay Day pattern) instead of
 // butting against the chip column.
 const SCENE_BLEED = 24;
-// "למידה רציפה" pill dimensions — shared by the absolute layout math (the
-// button is center-anchored to the chip column, see styles.continuousBtn) and
-// the inline vertical-centering on the intro row.
-const CONTINUOUS_BTN_W = 78;
-const CONTINUOUS_BTN_H = 64;
 // Exactly TWO scenes per module: themed loop + generic loop. Upper anchor
 // pulled near the very top per Yoav 2026-06-11 ("יותר למעלה"); lower stays
 // in the lower third.
@@ -84,14 +78,6 @@ interface ModuleTopicLayoutProps {
    *  exit routes column→next-connector so both ends meet flush. */
   nodeOffsetX?: number;
   onTopicPress: (topic: Topic) => void;
-  /** "למידה רציפה" (Yoav 2026-06-11): runs the WHOLE module as one
-   *  continuous legacy flow (the master-version UX), instead of the
-   *  broken-down chip-by-chip path. Rendered as a pill in the left
-   *  gutter, vertically aligned with the intro (first) chip. When set,
-   *  the button is shown; the parent (TopicTreeAccordion) owns the
-   *  navigation + per-phase progress sync so a mid-flow exit still
-   *  lights up the completed chips here. */
-  onStartContinuous?: () => void;
 }
 
 /**
@@ -117,7 +103,6 @@ export const ModuleTopicLayout = React.memo(function ModuleTopicLayout({
   recommendedTopicId,
   nodeOffsetX = 0,
   onTopicPress,
-  onStartContinuous,
 }: ModuleTopicLayoutProps): React.ReactElement {
   const sorted = useMemo(
     () =>
@@ -221,13 +206,12 @@ export const ModuleTopicLayout = React.memo(function ModuleTopicLayout({
         </View>
       )}
 
-      {/* "למידה רציפה" button MOVED OUT of the accordion (Yoav 2026-06-12).
-          At the intro row it was always scrolled ABOVE the viewport — when a
-          module expands, DuoLearnScreen auto-scrolls down to the next gold
-          chip, pushing the intro row (and the button) off the top. It now
-          lives next to the MODULE NODE on the map (DuoLearnScreen), visible
-          during normal map browsing. `onStartContinuous` here is retained but
-          unused for back-compat with TopicTreeAccordion. */}
+      {/* The "למידה רציפה" autopilot launcher is no longer a chip-row pill —
+          it's a clearly-labeled HEADER rendered by TopicTreeAccordion ABOVE
+          this layout (Yoav 2026-06-13). As an intro-row pill it (a) sat right
+          beside the freshly-green intro chip and got mistapped as "continue",
+          launching the whole module continuously, and (b) was scrolled off the
+          top. The header is distinct + the accordion scroll surfaces it. */}
 
       {/* Entry connector — from outer module node DOWN to the intro chip.
           Extends UPWARD by ENTRY_OVERLAP so it overlaps the parent
@@ -293,31 +277,6 @@ export const ModuleTopicLayout = React.memo(function ModuleTopicLayout({
                   onPress={onTopicPress}
                 />
               </View>
-
-              {/* "למידה רציפה" — to the LEFT of the intro chip, shown ONLY once
-                  the intro itself is completed (Yoav 2026-06-12: "שיופיע רק
-                  אחרי ביצוע האינטרו, משמאל למה שמסמל אותו"). Anchored to the
-                  chip's center (left:'50%' + marginLeft) so it tracks the
-                  centered chip on any column width, bleeding into the left
-                  gutter just left of the chip. Tapping runs the whole module as
-                  one continuous flow (master UX). */}
-              {onStartContinuous && topic.kind === 'intro' && isCompleted && (
-                <Pressable
-                  onPress={onStartContinuous}
-                  accessibilityRole="button"
-                  accessibilityLabel="למידה רציפה — המודולה כולה ברצף"
-                  style={({ pressed }) => [
-                    styles.continuousBtn,
-                    pressed && styles.continuousBtnPressed,
-                  ]}
-                  hitSlop={8}
-                >
-                  <FastForward size={16} color="#ffffff" fill="#ffffff" strokeWidth={0} />
-                  <Text style={styles.continuousLabel} allowFontScaling={false}>
-                    למידה{'\n'}רציפה
-                  </Text>
-                </Pressable>
-              )}
             </Animated.View>
           );
         })}
@@ -490,45 +449,6 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-  },
-  // "למידה רציפה" pill — absolute INSIDE the intro row, anchored to the chip
-  // column's center (left:'50%') and pushed left by half the chip + a gap +
-  // its own width, so it lands just LEFT of the centered intro chip and tracks
-  // it on any column width. Vertically centered on the row. No ancestor clips
-  // overflow, so bleeding into the left gutter is fine.
-  continuousBtn: {
-    position: 'absolute',
-    top: ROW_HEIGHT / 2 - CONTINUOUS_BTN_H / 2,
-    left: '50%',
-    marginLeft: -(NODE_SIZE / 2 + 8 + CONTINUOUS_BTN_W),
-    width: CONTINUOUS_BTN_W,
-    paddingVertical: 9,
-    paddingHorizontal: 6,
-    borderRadius: 16,
-    backgroundColor: '#2563eb',
-    borderWidth: 1.5,
-    borderColor: '#60a5fa',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 3,
-    zIndex: 20,
-    shadowColor: '#2563eb',
-    shadowOpacity: 0.4,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 3 },
-    elevation: 12,
-  },
-  continuousBtnPressed: {
-    backgroundColor: '#1d4ed8',
-    transform: [{ scale: 0.96 }],
-  },
-  continuousLabel: {
-    color: '#ffffff',
-    fontSize: 11,
-    fontWeight: '800',
-    lineHeight: 14,
-    textAlign: 'center',
-    writingDirection: 'rtl',
   },
   // Pull the inter-chip connector down so it emerges from the chip's
   // vertical center (NODE_SIZE/2 below the row top, which is where the
