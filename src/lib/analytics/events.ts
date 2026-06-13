@@ -131,6 +131,12 @@ export type AppEvent =
   | { name: 'subscription_purchased'; props: { plan: string; price?: string; trial_days?: number; source?: string } }
   | { name: 'subscription_cancelled_at_checkout'; props?: Record<string, never> }
   | { name: 'subscription_purchase_failed'; props: { error_message: string } }
+  // Diagnostic (Moni 2026-06-13): is the purchase even POSSIBLE? Fires once per
+  // pricing visit when the RevenueCat offering resolves to 'ready' (a buyable
+  // CTA) or 'unavailable' (no packages → the CTA degrades to a silent "נסה שוב"
+  // and the user CANNOT buy). A high `unavailable` rate means the ₪0 is broken
+  // offerings, not behavioral. App Review 2.1a already hit this path in sandbox.
+  | { name: 'paywall_cta_state'; props: { state: 'ready' | 'unavailable'; source?: string } }
 
   // ── Store / Shop / Purchases ───────────────────────────────────────────
   | { name: 'shop_screen_viewed'; props: { coins: number; gems: number; is_pro: boolean } }

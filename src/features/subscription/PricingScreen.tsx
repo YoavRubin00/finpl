@@ -270,6 +270,18 @@ export function PricingScreen() {
     void loadOffering();
   }, [loadOffering]);
 
+  // Diagnostic (Moni 2026-06-13): report whether the user actually got a buyable
+  // CTA. 137 paywall views / 0 purchase signals could mean "offerings never load
+  // → purchase impossible" (the App Review 2.1a path) rather than low intent.
+  // Fire once per settled state so PostHog can show the 'unavailable' rate.
+  const ctaStateTrackedRef = useRef<'ready' | 'unavailable' | null>(null);
+  useEffect(() => {
+    if (offerState === 'loading') return;
+    if (ctaStateTrackedRef.current === offerState) return;
+    ctaStateTrackedRef.current = offerState;
+    track({ name: 'paywall_cta_state', props: { state: offerState, source } });
+  }, [offerState, source]);
+
   const priceString = activePackage?.product.priceString ?? "";
   const periodLabel = (() => {
     const t = activePackage?.packageType;
