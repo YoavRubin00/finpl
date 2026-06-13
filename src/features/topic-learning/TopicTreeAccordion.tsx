@@ -299,6 +299,14 @@ export const TopicTreeAccordion = React.memo(function TopicTreeAccordion({
         chapter_id: chapterIdFromModuleId(module.id),
         is_first_lesson: isFirstLesson,
         learning_mode: 'topic-tree',
+        // Mirror the legacy completeModule() variant tag so the post-split
+        // mod-0-1 / mod-0-1b funnel separately on the topic-tree path too.
+        // Topic-tree is now the DEFAULT completion path, so without this the
+        // `module_variant` breakdown only saw the rare legacy completions and
+        // under-counted the split. See LessonFlowScreen.completeModule.
+        ...(module.id === 'mod-0-1' ? { module_variant: 'short' } :
+            module.id === 'mod-0-1b' ? { module_variant: 'continuation' } :
+            {}),
       });
     } catch { /* non-fatal */ }
 
@@ -437,23 +445,13 @@ export const TopicTreeAccordion = React.memo(function TopicTreeAccordion({
   const handleStartContinuous = useCallback(() => {
     tapHaptic();
     const chId = chapterIdFromModuleId(module.id);
-    // Continuous run started — for retention cohorts (autopilot vs chip
-    // path). chips_already_done lets us split "started fresh" from
-    // "switched mid-way after doing X chips by hand".
-    try {
-      track({
-        name: 'continuous_run_started',
-        props: {
-          module_id: module.id,
-          chapter_id: chId || undefined,
-          chips_already_done: summary.completed,
-          chips_total: summary.total,
-        },
-      });
-    } catch { /* non-fatal */ }
+    // continuous_run_started is now fired by LessonFlowScreen (the lifecycle
+    // owner) when ttProgress=1 mounts — so it brackets completed/exited
+    // symmetrically and covers EVERY entry path, not just this key. Firing it
+    // here too would double-count and still miss the other paths.
     const chParam = chId ? `?chapterId=${chId}&ttProgress=1` : `?ttProgress=1`;
     router.push(`/lesson/${module.id}${chParam}` as never);
-  }, [module.id, router, summary.completed, summary.total]);
+  }, [module.id, router]);
 
   return (
     <Animated.View

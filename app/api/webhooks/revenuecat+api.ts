@@ -13,7 +13,13 @@ function getDb() {
 
 const RC_WEBHOOK_SECRET = process.env.RC_WEBHOOK_SECRET;
 
-const POSTHOG_HOST = process.env.EXPO_PUBLIC_POSTHOG_HOST ?? 'https://us.i.posthog.com';
+// EU project (176605). The default MUST be the EU ingestion host: this webhook
+// runs in the Vercel function runtime, which often LACKS EXPO_PUBLIC_POSTHOG_HOST
+// (an EXPO_PUBLIC_* var baked into the CLIENT build, not the server env). A US
+// default silently shipped every server capture to the wrong region — 0
+// `source='revenuecat_webhook'` events reached the EU project in 120 days, so
+// trial→paid conversions / renewals / churn were entirely invisible. Moni 2026-06-13.
+const POSTHOG_HOST = process.env.EXPO_PUBLIC_POSTHOG_HOST ?? 'https://eu.i.posthog.com';
 const POSTHOG_KEY = process.env.EXPO_PUBLIC_POSTHOG_KEY;
 
 /**

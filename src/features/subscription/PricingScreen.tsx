@@ -270,6 +270,18 @@ export function PricingScreen() {
     void loadOffering();
   }, [loadOffering]);
 
+  // Diagnostic (Moni 2026-06-13): report whether the user actually got a buyable
+  // CTA. 137 paywall views / 0 purchase signals could mean "offerings never load
+  // → purchase impossible" (the App Review 2.1a path) rather than low intent.
+  // Fire once per settled state so PostHog can show the 'unavailable' rate.
+  const ctaStateTrackedRef = useRef<'ready' | 'unavailable' | null>(null);
+  useEffect(() => {
+    if (offerState === 'loading') return;
+    if (ctaStateTrackedRef.current === offerState) return;
+    ctaStateTrackedRef.current = offerState;
+    track({ name: 'paywall_cta_state', props: { state: offerState, source } });
+  }, [offerState, source]);
+
   const priceString = activePackage?.product.priceString ?? "";
   const periodLabel = (() => {
     const t = activePackage?.packageType;
@@ -353,6 +365,14 @@ export function PricingScreen() {
       // Initiate-checkout signal — fires BEFORE the native paywall opens, so we
       // still get attribution even if the user abandons at the system payment sheet.
       logTrialStart(pkg.packageType);
+      // PostHog funnel step (Moni 2026-06-13): the Pro funnel had NO "tapped
+      // subscribe" event — it jumped from paywall_viewed straight to the
+      // OUTCOME (trial_started / subscription_cancelled_at_checkout / _failed),
+      // so we couldn't tell how many reached the native sheet vs bounced on the
+      // pricing screen itself (the real drop is 252→~12). Reuse purchase_initiated
+      // with bundle_type:'subscription' as that intent step; `source` carries the
+      // placement so post_walkthrough vs subscription_pricing stays sliceable.
+      track({ name: 'purchase_initiated', props: { bundle_id: pkg.identifier, bundle_type: 'subscription', real_money: true } });
 
       const customerInfo = await purchasePackage(pkg);
       const entitlement = customerInfo.entitlements.active[RC_ENTITLEMENT_PRO];

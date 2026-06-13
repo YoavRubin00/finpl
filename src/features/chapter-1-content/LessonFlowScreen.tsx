@@ -2982,6 +2982,18 @@ export function LessonFlowScreen() {
     continuousRunStartMsRef.current = Date.now();
     continuousRunCompletedRef.current = false;
     continuousChipsMarkedRef.current = 0;
+    // continuous_run_started — fire from the lifecycle owner (here) so it
+    // brackets continuous_run_completed/exited SYMMETRICALLY and fires for
+    // EVERY entry path (autopilot key, jump-here, a direct ttProgress=1 URL),
+    // not only TopicTreeAccordion's key. The key-only wiring fired `started`
+    // just 1× vs 15 completed/exited, so the D7 retention cohort read ~0
+    // (Moni 2026-06-14).
+    try {
+      captureEvent('continuous_run_started', {
+        module_id: id,
+        chapter_id: chapterId ?? null,
+      });
+    } catch { /* non-fatal */ }
     return () => {
       const startMs = continuousRunStartMsRef.current ?? Date.now();
       const duration_ms = Date.now() - startMs;
