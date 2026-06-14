@@ -396,7 +396,7 @@ export function PricingScreen() {
       // pricing screen itself (the real drop is 252→~12). Reuse purchase_initiated
       // with bundle_type:'subscription' as that intent step; `source` carries the
       // placement so post_walkthrough vs subscription_pricing stays sliceable.
-      track({ name: 'purchase_initiated', props: { bundle_id: pkg.identifier, bundle_type: 'subscription', real_money: true } });
+      track({ name: 'purchase_initiated', props: { bundle_id: pkg.identifier, bundle_type: 'subscription', real_money: true, source } });
 
       const customerInfo = await purchasePackage(pkg);
       const entitlement = customerInfo.entitlements.active[RC_ENTITLEMENT_PRO];
