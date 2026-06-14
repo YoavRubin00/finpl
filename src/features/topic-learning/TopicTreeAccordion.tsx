@@ -593,6 +593,11 @@ export const TopicTreeAccordion = React.memo(function TopicTreeAccordion({
           // count as a fake 'finish_module' CTA in the conversion funnel.
           onDismiss={() => {
             setChestState(null);
+            // Same as the CTA path: a hardware-back dismiss of the chest must
+            // not skip the guest signup gate (#8) / pending profile question
+            // (#6) — pre-release audit P2. The once-guards make this idempotent
+            // vs onContinueModule, so no double-show.
+            if (isGuest) { maybeShowSignupGate(); } else { maybeShowProfileQuestion(); }
             if (summary.pct >= 100) {
               onModuleCompleted?.();
             } else {
