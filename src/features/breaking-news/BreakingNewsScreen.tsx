@@ -41,6 +41,17 @@ import {
 // mode experiment.
 const ACCENT = '#0ea5e9';
 
+/** Turn a raw API error (e.g. `generate 500: {"error":...,"reqId":"abc-123"}`)
+ *  into a friendly Hebrew banner — never surface server JSON to the user. Keeps
+ *  the short reqId (when present) so support can grep the Vercel logs for it. */
+function friendlyAddError(ticker: string, rawMessage: string): string {
+  const reqId = rawMessage.match(/"reqId":"([^"]+)"/)?.[1];
+  const code = reqId ? ` (קוד: ${reqId})` : '';
+  if (/\b429\b/.test(rawMessage)) return 'יותר מדי בקשות כרגע. נסו שוב בעוד כמה דקות.';
+  if (/\b401\b/.test(rawMessage)) return 'צריך להתחבר מחדש כדי להוסיף מניות.';
+  return `לא הצלחנו ליצור סיכום ל-${ticker} כרגע. נסו שוב בעוד רגע${code}.`;
+}
+
 /**
  * Main screen for the Breaking News tool.
  *
@@ -218,9 +229,11 @@ export function BreakingNewsScreen(): React.ReactElement {
       removeLocal(ticker);
       const message = err instanceof Error ? err.message : String(err);
       try { captureEvent('breaking_news_generate_failed', { ticker, message, source: 'add' }); } catch { /* non-fatal */ }
-      // Inline banner — Alert.alert silently no-ops on React Native Web, so
-      // the user would otherwise see literally nothing.
-      setErrorBanner(`לא הצלחנו להוסיף את ${ticker}: ${message.slice(0, 140)}`);
+      // Friendly banner — never dump the raw server JSON
+      // (`generate 500: {"error":...}`) at the user. Keep the full raw message
+      // in the PostHog event above for diagnosis, and surface only a short
+      // reqId here so support can correlate it with the Vercel logs.
+      setErrorBanner(friendlyAddError(ticker, message));
     } finally {
       setGenerating(null);
     }
@@ -383,7 +396,7 @@ export function BreakingNewsScreen(): React.ReactElement {
               accessibilityLabel={atLimit ? 'שדרג ל-PRO' : 'הוסף מניה'}
             >
               {atLimit && !isPro ? (
-                <Crown size={18} color="#78350f" strokeWidth={2.6} />
+                <Crown size={18} color="#ffffff" strokeWidth={2.6} />
               ) : (
                 <Plus size={18} color="#ffffff" strokeWidth={2.6} />
               )}
@@ -470,26 +483,29 @@ const styles = StyleSheet.create({
     writingDirection: 'rtl',
     letterSpacing: 0.2,
   },
-  // Sky-blue chip with subtle glow — pairs with the rest of the light-mode
-  // accents (Bridge benefit pills, financial-tools header chips).
+  // Deep-blue Duo-style BUTTON (Yoav 2026-06-15: the hour control "מופיע בצבע
+  // לבן ולא ככפתור"). Was a thin sky-blue (#0ea5e9) pill that read as a passive
+  // chip; now a rounded-rect with a darker bottom edge + elevation so it
+  // unmistakably reads as a tappable button — same deep-blue family as the
+  // profile / upgrade CTAs.
   hourChip: {
     flexDirection: 'row-reverse',
     alignItems: 'center',
-    gap: 5,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 999,
-    backgroundColor: '#0ea5e9',
-    borderWidth: 1.5,
-    borderColor: '#0284c7',
-    shadowColor: '#0ea5e9',
+    gap: 6,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 12,
+    backgroundColor: '#0c4a6e',
+    borderBottomWidth: 3,
+    borderBottomColor: '#082f49',
+    shadowColor: '#0c4a6e',
     shadowOpacity: 0.35,
-    shadowRadius: 10,
-    shadowOffset: { width: 0, height: 2 },
-    elevation: 6,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 3 },
+    elevation: 5,
   },
   hourChipText: {
-    fontSize: 11,
+    fontSize: 12,
     fontWeight: '900',
     color: '#ffffff',
     writingDirection: 'rtl',
@@ -528,11 +544,10 @@ const styles = StyleSheet.create({
     color: '#92400e',
     writingDirection: 'rtl',
   },
-  // Solid sky-blue Duo-style CTA — matches DailyQuests blue PRO CTA and
-  // the Pearl referral button. Was a red accent (`#dc2626`) which clashed
-  // with everything else in the app (user feedback 2026-06-03). Now blue
-  // for normal-add AND for the upgrade-to-PRO state, so the visual link
-  // to the rest of the app's primary actions is obvious.
+  // Deep-blue Duo-style CTA. Was sky-#0ea5e9 whose white label sat at ~2:1
+  // contrast and washed out on bright screens (same class as the hourChip /
+  // retry bugs, Yoav 2026-06-15) — deepened to #0c4a6e for legible white text,
+  // unified with the hour button + upgrade CTA + profile CTA.
   addBtn: {
     flexDirection: 'row-reverse',
     alignItems: 'center',
@@ -540,23 +555,25 @@ const styles = StyleSheet.create({
     gap: 8,
     paddingVertical: 16,
     borderRadius: 16,
-    backgroundColor: '#0ea5e9',
+    backgroundColor: '#0c4a6e',
     marginTop: 8,
     borderBottomWidth: 4,
-    borderBottomColor: '#0369a1',
-    shadowColor: '#0ea5e9',
+    borderBottomColor: '#082f49',
+    shadowColor: '#0c4a6e',
     shadowOpacity: 0.45,
     shadowRadius: 14,
     shadowOffset: { width: 0, height: 6 },
     elevation: 8,
   },
-  // At-limit + not-Pro state — bright gold with DARK text to scream
-  // "premium upgrade" AND stay legible. White-on-#f59e0b was ~2:1 contrast
-  // (WCAG fail) so the button read as invisible (user report 2026-06-06).
+  // At-limit + not-Pro upgrade state — DEEP BLUE to match the profile / chat
+  // upgrade CTA (Yoav 2026-06-15: "קריאה לשדרג כמו בפרופיל, כחול עמוק"). Was
+  // gold (#fbbf24) for a "premium" feel; deep-blue-on-white text actually has
+  // higher contrast than the gold (which had failed WCAG white-on-amber before
+  // 2026-06-06), so the legibility fix is preserved.
   addBtnLocked: {
-    backgroundColor: '#fbbf24',
-    borderBottomColor: '#b45309',
-    shadowColor: '#f59e0b',
+    backgroundColor: '#0c4a6e',
+    borderBottomColor: '#082f49',
+    shadowColor: '#0c4a6e',
   },
   addBtnText: {
     color: '#ffffff',
@@ -565,9 +582,9 @@ const styles = StyleSheet.create({
     writingDirection: 'rtl',
     letterSpacing: 0.2,
   },
-  // Dark amber text for the gold locked button — ~7:1 contrast on #fbbf24.
+  // White text on the deep-blue upgrade button — high contrast.
   addBtnTextLocked: {
-    color: '#78350f',
+    color: '#ffffff',
   },
   footerHint: {
     fontSize: 11,
