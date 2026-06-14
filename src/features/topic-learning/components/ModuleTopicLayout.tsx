@@ -80,11 +80,12 @@ interface ModuleTopicLayoutProps {
   nodeOffsetX?: number;
   onTopicPress: (topic: Topic) => void;
   /** "למידה רציפה" autopilot launcher. When provided, a KEY (מקש) renders to
-   *  the LEFT of the FIRST chip's row — anchored INSIDE that row so it always
-   *  sits beside the chip and never floats above it in the gap (Yoav
-   *  2026-06-13). Parent (TopicTreeAccordion) passes this only in the early
-   *  window (no content chip completed yet); we additionally gate on the live
-   *  completed-count so it hides the moment a real chip is done. */
+   *  the LEFT of the FIRST chip — anchored in the FULL-WIDTH container (NOT the
+   *  narrow pathColumn, which clips it on Android), so it reliably shows in the
+   *  left gutter beside the intro chip (Yoav 2026-06-14). Parent
+   *  (TopicTreeAccordion) passes this only in the early window (no content chip
+   *  completed yet, chapter 1+); we additionally gate on the live completed
+   *  count so it hides the moment a real chip is done. */
   onStartContinuous?: () => void;
 }
 
@@ -225,12 +226,10 @@ export const ModuleTopicLayout = React.memo(function ModuleTopicLayout({
         </View>
       )}
 
-      {/* The "למידה רציפה" autopilot launcher is no longer a chip-row pill —
-          it's a clearly-labeled HEADER rendered by TopicTreeAccordion ABOVE
-          this layout (Yoav 2026-06-13). As an intro-row pill it (a) sat right
-          beside the freshly-green intro chip and got mistapped as "continue",
-          launching the whole module continuously, and (b) was scrolled off the
-          top. The header is distinct + the accordion scroll surfaces it. */}
+      {/* The "למידה רציפה" autopilot KEY renders further down, in the
+          full-width container (see styles.autopilotKey), anchored to the first
+          chip's row in the left gutter. It can't live inside the narrow
+          pathColumn — Android clips children that overflow it (Yoav 2026-06-14). */}
 
       {/* Entry connector — from outer module node DOWN to the intro chip.
           Extends UPWARD by ENTRY_OVERLAP so it overlaps the parent
@@ -296,29 +295,6 @@ export const ModuleTopicLayout = React.memo(function ModuleTopicLayout({
                   onPress={onTopicPress}
                 />
               </View>
-
-              {/* "למידה רציפה" autopilot KEY — rendered INSIDE the first chip's
-                  row (not as a parent overlay at a hardcoded top), so it's
-                  always vertically beside the chip and never floats above it in
-                  the gap. Absolute → no layout shift; bleeds into the left
-                  gutter just left of the centered chip. */}
-              {i === 0 && showAutopilotKey && onStartContinuous && (
-                <Pressable
-                  onPress={onStartContinuous}
-                  accessibilityRole="button"
-                  accessibilityLabel="למידה רציפה — למד את כל המודולה ברצף, בלי לעצור"
-                  hitSlop={8}
-                  style={({ pressed }) => [
-                    styles.autopilotKey,
-                    pressed && styles.autopilotKeyPressed,
-                  ]}
-                >
-                  <FastForward size={17} color="#ffffff" fill="#ffffff" strokeWidth={0} />
-                  <Text style={styles.autopilotKeyLabel} allowFontScaling={false}>
-                    למידה{'\n'}רציפה
-                  </Text>
-                </Pressable>
-              )}
             </Animated.View>
           );
         })}
@@ -336,6 +312,33 @@ export const ModuleTopicLayout = React.memo(function ModuleTopicLayout({
           height={EDGE_CONNECTOR_H}
         />
       </View>
+
+      {/* "למידה רציפה" autopilot KEY — rendered in the FULL-WIDTH container
+          (sibling of the gutter scenes), NOT inside the half-width pathColumn.
+          On Android a child that overflows the narrow pathColumn's bounds gets
+          clipped, so the key was invisible whenever it sat in the left gutter
+          (Yoav 2026-06-14: "ראו אותו רק כשהיה מתחת לציפ הראשי"). Absolutely
+          anchored to the FIRST chip's row, in the left gutter beside the intro
+          chip — left:50% is the container (=chip) center, marginLeft pulls it
+          one chip-half + gap + key-width to the left. zIndex keeps it tappable
+          above the chips. */}
+      {showAutopilotKey && onStartContinuous && (
+        <Pressable
+          onPress={onStartContinuous}
+          accessibilityRole="button"
+          accessibilityLabel="למידה רציפה — למד את כל המודולה ברצף, בלי לעצור"
+          hitSlop={8}
+          style={({ pressed }) => [
+            styles.autopilotKey,
+            pressed && styles.autopilotKeyPressed,
+          ]}
+        >
+          <FastForward size={17} color="#ffffff" fill="#ffffff" strokeWidth={0} />
+          <Text style={styles.autopilotKeyLabel} allowFontScaling={false}>
+            למידה{'\n'}רציפה
+          </Text>
+        </Pressable>
+      )}
     </View>
   );
 });
@@ -502,13 +505,14 @@ const styles = StyleSheet.create({
     right: 0,
     height: ROW_HEIGHT,
   },
-  // "למידה רציפה" autopilot KEY — absolute INSIDE the first chip's row, so it
-  // tracks the chip vertically (centered in the ROW_HEIGHT row) and bleeds
-  // into the left gutter just left of the centered chip. left:'50%' + negative
-  // marginLeft = NODE_SIZE/2 (half chip) + 10 gap + KEY width.
+  // "למידה רציפה" autopilot KEY — absolute in the FULL-WIDTH container (NOT the
+  // narrow pathColumn, which clips it on Android). Anchored to the FIRST chip's
+  // row center: top = entry-connector height + (row − key)/2. left:'50%' is the
+  // container/chip center; the negative marginLeft = NODE_SIZE/2 (half chip) +
+  // 10 gap + KEY width, putting it in the left gutter beside the intro chip.
   autopilotKey: {
     position: 'absolute',
-    top: (ROW_HEIGHT - 56) / 2,
+    top: EDGE_CONNECTOR_H + (ROW_HEIGHT - 56) / 2,
     left: '50%',
     marginLeft: -(NODE_SIZE / 2 + 10 + 66),
     width: 66,

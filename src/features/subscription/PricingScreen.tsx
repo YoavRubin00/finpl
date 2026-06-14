@@ -41,7 +41,7 @@ import { BackButton } from "../../components/ui/BackButton";
 import { useTheme } from "../../hooks/useTheme";
 import { useMonetizationIntentStore } from "../monetization/useMonetizationIntentStore";
 import { useBandit } from "../bandit/useBandit";
-import { setPersonProperties } from "../../lib/posthog";
+import { setPersonProperties, captureEvent } from "../../lib/posthog";
 import { track } from "../../lib/analytics/events";
 import { logTrialStart, logPurchase } from "../../utils/fbEvents";
 
@@ -190,6 +190,7 @@ export function PricingScreen() {
   const isCurrentlyPro = useIsPro();
   const hasSeenProWelcome = useUsageStore((s) => s.hasSeenProWelcome);
   const displayName = useAuthStore((s) => s.displayName);
+  const isGuest = useAuthStore((s) => s.isGuest);
   // Minor users (ageGroup === 'minor' = 16-17) take one of two flows:
   //
   //   • Hybrid (default) — quick email modal collects parent's address,
@@ -317,6 +318,29 @@ export function PricingScreen() {
   const proBadgeStyle = useProBadgePulse();
 
   const handleUpgrade = useCallback(async () => {
+    // #9 (Yoav 2026-06-15): a guest can't really go Pro — their RevenueCat
+    // app_user_id is anonymous, so a purchase can't be attributed to an account
+    // and is lost on reinstall. Send them to register first, then bounce back
+    // to THIS paywall as a real user to complete the purchase.
+    if (isGuest) {
+      captureEvent('register_cta_shown', { source: 'pro_purchase' });
+      Alert.alert(
+        'רגע לפני Pro 🦈',
+        'כדי לפתוח את Pro צריך חשבון — ההרשמה חינמית ולוקחת שנייה. נרשמים, וחוזרים בדיוק לכאן.',
+        [
+          { text: 'אולי אחר כך', style: 'cancel', onPress: () => captureEvent('register_cta_dismissed', { source: 'pro_purchase' }) },
+          {
+            text: 'הרשמה והמשך',
+            onPress: () => {
+              captureEvent('register_cta_accepted', { source: 'pro_purchase' });
+              const back = `/pricing?source=${encodeURIComponent(source)}`;
+              router.replace(`/(auth)/register?returnTo=${encodeURIComponent(back)}` as never);
+            },
+          },
+        ],
+      );
+      return;
+    }
     if (!displayName) {
       Alert.alert("שגיאה", "יש להתחבר כדי להירשם.");
       return;
@@ -455,7 +479,7 @@ export function PricingScreen() {
     } finally {
       setIsLoading(false);
     }
-  }, [displayName, useHardGateFallback, hasParentalConsent, minorNeedsHybridModal, isMinor, notifyPurchase, syncFromRC, hasSeenProWelcome, router, trackConversion, trialDays, returnTo, activePackage]);
+  }, [displayName, isGuest, source, useHardGateFallback, hasParentalConsent, minorNeedsHybridModal, isMinor, notifyPurchase, syncFromRC, hasSeenProWelcome, router, trackConversion, trialDays, returnTo, activePackage]);
 
   const handleRestore = useCallback(async () => {
     setIsLoading(true);

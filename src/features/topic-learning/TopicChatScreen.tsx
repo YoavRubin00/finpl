@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   View,
   Text,
@@ -22,9 +22,13 @@ import { useChapterUIStore } from '../chapter-1-content/useChapterUIStore';
 import { useProgress } from '../chapter-1-content/useProgress';
 import { useIsPro } from '../subscription/useSubscription';
 import { buildSystemPrompt } from '../chat/buildChatPrompt';
+import { MarkdownText } from '../chat/MarkdownText';
 import { streamChatRequest } from '../../utils/streamChat';
+import { captureEvent } from '../../lib/posthog';
 import { getModuleChatFAQs, getDefaultFAQsForTitle } from './moduleChatFAQs';
 import { useTopicChatLimitStore, DAILY_LIMIT } from './useTopicChatLimitStore';
+import { useTopicProgressStore } from './useTopicProgressStore';
+import { resolveTopics } from './topicResolver';
 import { chapter0Data } from '../chapter-0-content/chapter0Data';
 import { chapter1Data } from '../chapter-1-content/chapter1Data';
 import { chapter2Data } from '../chapter-2-content/chapter2Data';
@@ -105,6 +109,21 @@ export function TopicChatScreen(): React.ReactElement {
   const companionId: CompanionId = profile?.companionId ?? 'warren-buffett';
   const companion = COMPANIONS[companionId];
 
+  // Entering the chat = completing it. Mark the module's `chat` topic done on
+  // entry so the chip flips to complete and counts toward the 70% chest
+  // threshold (Yoav 2026-06-14: "הצאט צריך להסתמן כמושלם בתתי מודולות מעצם זה
+  // שהמשתמש נכנס אליו"). markTopicCompleted is idempotent, so re-runs are no-ops;
+  // topic_completed fires from inside it, closing the chat analytics gap too.
+  useEffect(() => {
+    const mod = moduleInfo?.module;
+    if (!mod) return;
+    captureEvent('topic_chat_entered', { module_id: mod.id });
+    const chatTopic = resolveTopics(mod).find((t) => t.kind === 'chat');
+    if (chatTopic) {
+      useTopicProgressStore.getState().markTopicCompleted(chatTopic, 'chip');
+    }
+  }, [moduleInfo]);
+
   const sendMessage = useCallback(async (text: string) => {
     const trimmed = text.trim();
     if (!trimmed || loading || isSendingRef.current) return;
@@ -160,7 +179,8 @@ export function TopicChatScreen(): React.ReactElement {
             copy[copy.length - 1] = { ...botMsg, text: acc };
             return copy;
           });
-          scrollRef.current?.scrollToEnd({ animated: false });
+          // No mid-stream scroll — chasing the bottom made the view "fall to the
+          // bottom of the answer". Let it fill from the top, like the main chat.
         },
       );
       if (!ok || !acc) {
@@ -172,7 +192,7 @@ export function TopicChatScreen(): React.ReactElement {
       } else {
         successHaptic();
       }
-      setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 80);
+      // No final scroll either — keep the answer anchored where it began.
     } catch {
       setMessages((prev) => {
         const copy = [...prev];
@@ -338,15 +358,20 @@ export function TopicChatScreen(): React.ReactElement {
                   >
                     {isStreamingPlaceholder ? (
                       <ActivityIndicator color="#0e7490" />
+                    ) : isBot ? (
+                      // Match the main chat: render bot replies through the shared
+                      // markdown renderer so **bold**, lists and spacing look the
+                      // same here as in ChatScreen (was bare <Text> = flat text).
+                      <MarkdownText content={msg.text} baseStyle={[msgStyles.botText, rtl.text]} />
                     ) : (
                     <Text
                       style={[
-                        isBot ? msgStyles.botText : msgStyles.userText,
+                        msgStyles.userText,
                         rtl.text,
                       ]}
                       allowFontScaling={false}
                     >
-                      {isBot ? msg.text : `\u2067${msg.text}\u2069`}
+                      {`\u2067${msg.text}\u2069`}
                     </Text>
                     )}
                     {!isStreamingPlaceholder && (
@@ -383,7 +408,7 @@ export function TopicChatScreen(): React.ReactElement {
           {/* Limit banner or input bar */}
           {limitHit ? (
             <View style={limitStyles.wrap}>
-              <Lock size={20} color="#7c2d12" strokeWidth={2.4} />
+              <Lock size={20} color="#0c4a6e" strokeWidth={2.4} />
               <View style={{ flex: 1 }}>
                 <Text style={[limitStyles.title, rtl.text]} allowFontScaling={false}>
                   {`השתמשת בכל ${DAILY_LIMIT} השאלות החינמיות להיום`}
@@ -611,18 +636,18 @@ const inputStyles = StyleSheet.create({
 
 const limitStyles = StyleSheet.create({
   wrap: {
-    backgroundColor: '#fff7ed',
+    backgroundColor: '#e0f2fe',
     borderTopWidth: 1,
-    borderTopColor: '#fdba74',
+    borderTopColor: '#7dd3fc',
     padding: 16,
     flexDirection: 'row-reverse',
     alignItems: 'center',
     gap: 12,
   },
-  title: { color: '#7c2d12', fontWeight: '900', fontSize: 13 },
-  subtitle: { color: '#9a3412', fontWeight: '600', fontSize: 11, marginTop: 2 },
+  title: { color: '#0c4a6e', fontWeight: '900', fontSize: 13 },
+  subtitle: { color: '#0369a1', fontWeight: '600', fontSize: 11, marginTop: 2 },
   upgradeBtn: {
-    backgroundColor: '#7c2d12',
+    backgroundColor: '#0e7490',
     paddingHorizontal: 18,
     paddingVertical: 10,
     borderRadius: 999,

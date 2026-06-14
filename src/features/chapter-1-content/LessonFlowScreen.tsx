@@ -3020,6 +3020,23 @@ export function LessonFlowScreen() {
     if (phase !== 'summary') return;
     if (continuousRunCompletedRef.current) return;
     continuousRunCompletedRef.current = true;
+    // Reachability fix (Yoav 2026-06-15: "במודולה 0-1 פתיחת התיבה כן עבדה"):
+    // a full front-to-back continuous run finished the module, but the per-phase
+    // LEAVE marking never credits the FINAL phase (it transitions straight into
+    // summary) and the optional `chat` chip is never opened during a run. So a
+    // complete run could end stuck just below the 70% gate → the accordion's
+    // single chest never fired. mod-0-1 / mod-0-2 slipped through only because
+    // their gate is 50%, which is why those felt fine. Credit every CONTENT
+    // topic here so isModuleDone is reliably true across all thresholds; `chat`
+    // stays excluded — it's marked only on real chat entry. Idempotent, so chips
+    // already lit by the LEAVE effect are no-ops.
+    if (mod) {
+      resolveTopics(mod).forEach((t) => {
+        if (t.kind !== 'chat') {
+          useTopicProgressStore.getState().markTopicCompleted(t, 'continuous');
+        }
+      });
+    }
     const startMs = continuousRunStartMsRef.current ?? Date.now();
     try {
       captureEvent('continuous_run_completed', {
@@ -4741,7 +4758,12 @@ export function LessonFlowScreen() {
 
         {/* ── Module infographic phase (before chest) ── */}
         {phase === "module-infographic" && mod && MODULE_INFOGRAPHIC_MAP[mod.id] && (
-          <Animated.View entering={FadeIn.duration(400)} style={{ flex: 1, alignItems: "center", justifyContent: "center", paddingHorizontal: 16 }}>
+          <Animated.ScrollView
+            entering={FadeIn.duration(400)}
+            style={{ flex: 1 }}
+            contentContainerStyle={{ flexGrow: 1, alignItems: "center", justifyContent: "center", paddingHorizontal: 16, paddingVertical: 16 }}
+            showsVerticalScrollIndicator={false}
+          >
             <View style={{ borderRadius: 18, overflow: "hidden", shadowColor: "#0ea5e9", shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.15, shadowRadius: 16, elevation: 6, backgroundColor: "#fff" }}>
               <ExpoImage
                 source={MODULE_INFOGRAPHIC_MAP[mod.id]}
@@ -4759,7 +4781,7 @@ export function LessonFlowScreen() {
             >
               <Text style={{ fontSize: 16, fontWeight: "800", color: "#fff" }}>המשך</Text>
             </Pressable>
-          </Animated.View>
+          </Animated.ScrollView>
         )}
 
         {/* ── Summary phase ── */}

@@ -24,6 +24,7 @@ import { useAppleAuth } from "./useAppleAuth";
 import { AvatarImage } from "../avatars/AvatarImage";
 import { ConfettiExplosion } from "../../components/ui/ConfettiExplosion";
 import { captureEvent } from "../../lib/posthog";
+import { loginRevenueCat } from "../../services/revenueCat";
 
 const strengthLabels: Record<PasswordStrength, string> = {
   weak: "סיסמה חלשה",
@@ -373,6 +374,24 @@ export function RegisterScreen() {
                     // path too. (Convert-guest path already fires it from the store action.)
                     captureEvent('user_signed_in', { method: 'email' });
                   }
+                  // ── RevenueCat attribution (both branches) ──
+                  // Email registration NEVER flows through signInWithProfile,
+                  // which is the only place that calls loginRevenueCat for the
+                  // OAuth / email-login / cold-boot paths. Without this, an
+                  // in-session Pro/gem purchase (the PricingScreen guest-gate
+                  // sends guests straight here, then back to /pricing) attaches
+                  // to RevenueCat's ANONYMOUS app_user_id, and the webhook —
+                  // which resolves userProfiles by id-or-email — can never match
+                  // it → Pro silently never granted server-side. Identify RC by
+                  // email now (the same key the server profile + PostHog use for
+                  // this path); the next real sign-in re-logs in with the
+                  // canonical profile.id (UUID) and RevenueCat aliases
+                  // email→UUID, transferring the entitlement. Fire-and-forget —
+                  // a failed RC login must never block the celebration/nav.
+                  loginRevenueCat(email.trim()).then(
+                    () => captureEvent('rc_login_succeeded', { path: 'email_register' }),
+                    (err: unknown) => captureEvent('rc_login_failed', { path: 'email_register', reason: err instanceof Error ? err.message : String(err) }),
+                  );
                   // Navigation deferred to the useEffect below — it waits for
                   // the zustand state to actually reflect isAuthenticated before
                   // replacing, so the routing layer in _layout.tsx can't bounce
