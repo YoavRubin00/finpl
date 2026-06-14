@@ -17,33 +17,33 @@ interface Option<T> {
 
 const KNOWLEDGE_OPTIONS: Option<KnowledgeLevel>[] = [
   { id: "none", label: "כלום ושום דבר", sub: "מאפס מוחלט" },
-  { id: "beginner", label: "יודע/ת קצת", sub: "שמעתי על זה" },
+  { id: "beginner", label: "קצת בעניינים", sub: "שמעתי על זה" },
   { id: "some", label: "ממוצע", sub: "הבסיס מוכר לי" },
-  { id: "experienced", label: "מתקדם/ת", sub: "יודע, אבל עדיין יש מה ללמוד" },
+  { id: "experienced", label: "מנוסה", sub: "יש ידע, אבל תמיד יש מה ללמוד" },
   { id: "expert", label: "כריש מוול סטריט", sub: "שוחה בעולם הפיננסי" },
 ];
 
 const TIME_OPTIONS: Option<LearningTime>[] = [
-  { id: "morning", label: "בוקר עם הקפה", sub: "מתחיל/ה את היום חכם/ה" },
-  { id: "evening", label: "לפני השינה", sub: "מסיים/ת ב-level up" },
+  { id: "morning", label: "בוקר עם הקפה", sub: "פתיחה חכמה ליום" },
+  { id: "evening", label: "לפני השינה", sub: "לסגור את היום ב-level up" },
   { id: "during-day", label: "כשיש זמן", sub: "5 דקות בכל מקום" },
 ];
 
 const DAILY_OPTIONS: Option<DailyGoalMinutes>[] = [
   { id: 5, label: "5 דקות", sub: "על הדרך" },
   { id: 10, label: "10 דקות", sub: "רגיל" },
-  { id: 15, label: "15 דקות", sub: "רציני" },
-  { id: 30, label: "30 דקות", sub: "נחוש" },
+  { id: 15, label: "15 דקות", sub: "ברצינות" },
+  { id: 30, label: "30 דקות", sub: "בלי פשרות" },
 ];
 
 const TITLES: Record<ProfileQuestionKind, string> = {
   knowledgeLevel: "איך הרגשת עם המודולה?",
   learningTime: "מתי הכי קל לך ללמוד?",
-  dailyGoal: "כמה דקות ביום את/ה מתחייב/ת?",
+  dailyGoal: "כמה דקות ביום בא לך להתחייב?",
 };
 
 const SUBTITLES: Record<ProfileQuestionKind, string> = {
-  knowledgeLevel: "תיקח/י שנייה לעזור לי להבין אותך טוב יותר",
+  knowledgeLevel: "רק שנייה כדי שאכיר אותך טוב יותר",
   learningTime: "נכוון לך תזכורות נכון לפי השעה שלך",
   dailyGoal: "נשמור על הקצב שמתאים לחיים שלך",
 };
