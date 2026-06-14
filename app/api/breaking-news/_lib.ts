@@ -140,9 +140,18 @@ export async function generateForTicker(
       },
     ],
     generationConfig: {
-      maxOutputTokens: 1024,
+      // thinkingBudget:0 + 2048 (was 1024): gemini-2.5-flash runs "thinking" by
+      // default, which consumed most of the 1024-token output budget and left
+      // the actual JSON answer truncated mid-string → JSON.parse "Unterminated
+      // string at position 69" → a deterministic 500 on EVERY generate (Yoav
+      // 2026-06-15 Vercel log, reqId mqeeet7u-cxs8). The retry on /Unterminated/
+      // couldn't help — same truncation every attempt. Disabling thinking frees
+      // the full budget for the structured summary (no chain-of-thought needed)
+      // and the bump adds headroom.
+      maxOutputTokens: 2048,
       temperature: 0.3,
       responseMimeType: 'application/json',
+      thinkingConfig: { thinkingBudget: 0 },
     },
   };
 
@@ -168,7 +177,16 @@ export async function generateForTicker(
       }
 
       const data = (await geminiRes.json()) as GeminiResponse;
-      const rawJson = data.candidates?.[0]?.content?.parts?.[0]?.text;
+      // Concatenate ALL parts — gemini-2.5-flash can split a JSON response
+      // across multiple parts[] entries; reading only parts[0] yields a
+      // truncated fragment that fails JSON.parse. Strip a ```json fence
+      // defensively (shouldn't appear with responseMimeType:'application/json',
+      // but cheap insurance).
+      const rawText = (data.candidates?.[0]?.content?.parts ?? [])
+        .map((p) => p.text ?? '')
+        .join('')
+        .trim();
+      const rawJson = rawText.replace(/^```(?:json)?\s*/i, '').replace(/```$/i, '').trim();
       if (!rawJson) throw new Error('Gemini returned empty content');
 
       const parsed = JSON.parse(rawJson) as unknown;

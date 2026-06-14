@@ -35,17 +35,30 @@ export function TradingChart({
   const [ready, setReady] = useState(false);
   const [errored, setErrored] = useState(false);
 
+  // An MA period can only render when there are at least that many candles
+  // (mirrors the showIndicators guard in chartHtml). 1D is hourly bars (~33
+  // points), so only MA20 fits there; a longer period persisted from a 1W
+  // session (chartMAPeriod is persisted) would push showIndicators to false and
+  // make the MA *and* RSI silently vanish. Clamp the RENDERED period to the
+  // largest option the current data supports — without mutating the stored
+  // preference, so it returns intact when the user switches to a denser
+  // timeframe. periodFits is also used to disable the unusable selector pills.
+  const periodFits = useCallback((p: number) => ohlcv.length >= Math.max(p, 15), [ohlcv.length]);
+  const effectiveMaPeriod = periodFits(maPeriod)
+    ? maPeriod
+    : ([...MA_PERIOD_OPTIONS].reverse().find(periodFits) ?? maPeriod);
+
   // Signature of all inputs that affect the rendered chart. Used both to drive
   // state reset and to remount the WebView (via `key`) on change — without the
   // remount, rapid MA changes can leave the WebView in a half-loaded state and
   // the 4.5s timeout below trips, falling the user back to the simple chart.
-  const sig = `${mode}|${timeframe}|${maPeriod}|${ohlcv.length}|${ohlcv[0]?.timestamp ?? 0}|${ohlcv[ohlcv.length - 1]?.timestamp ?? 0}`;
+  const sig = `${mode}|${timeframe}|${effectiveMaPeriod}|${ohlcv.length}|${ohlcv[0]?.timestamp ?? 0}|${ohlcv[ohlcv.length - 1]?.timestamp ?? 0}`;
 
   // Rebuild the HTML whenever the sig changes. Pure derivation only — the state
   // reset lives in the effect below, so React's batching is respected.
   const html = useMemo(
-    () => buildChartHtml({ mode, data: ohlcv, timeframe, maPeriod }),
-    [mode, timeframe, maPeriod, ohlcv]
+    () => buildChartHtml({ mode, data: ohlcv, timeframe, maPeriod: effectiveMaPeriod }),
+    [mode, timeframe, effectiveMaPeriod, ohlcv]
   );
 
   // Reset ready/errored when the sig changes. Doing this in an effect (not
@@ -85,10 +98,10 @@ export function TradingChart({
   }, [onIndicatorInfoPress]);
 
   const handlePeriodPress = useCallback((period: number) => {
-    if (period === maPeriod) return;
+    if (period === effectiveMaPeriod) return;
     tapHaptic();
     onMAPeriodChange(period);
-  }, [maPeriod, onMAPeriodChange]);
+  }, [effectiveMaPeriod, onMAPeriodChange]);
 
   // Fallback skeletons
   if (isLoading || ohlcv.length < 2) {
@@ -121,8 +134,13 @@ export function TradingChart({
     );
   }
 
-  const showIndicatorBadges = mode === 'advanced' && (timeframe === '1D' || timeframe === '1W') && ohlcv.length >= Math.max(maPeriod, 15);
-  const showTimeframeNote = mode === 'advanced' && timeframe === '1D';
+  const showIndicatorBadges = mode === 'advanced' && (timeframe === '1D' || timeframe === '1W') && periodFits(effectiveMaPeriod);
+  // Show the explanatory note ONLY when indicators can't render (insufficient
+  // data). Previously this was `timeframe === '1D'` with copy claiming
+  // "indicators only in weekly" — both stale (1D now renders indicators) and
+  // positioned over the RSI sub-pane, so it covered the live RSI. Now it never
+  // overlaps the RSI: when indicators render, there's no note.
+  const showTimeframeNote = mode === 'advanced' && !showIndicatorBadges;
   const showMAPeriodBar = mode === 'advanced';
 
   return (
@@ -132,18 +150,20 @@ export function TradingChart({
         <View style={styles.periodBar}>
           <Text style={styles.periodLabel}>MA</Text>
           {MA_PERIOD_OPTIONS.map((p) => {
-            const active = p === maPeriod;
+            const enabled = periodFits(p);
+            const active = p === effectiveMaPeriod;
             return (
               <Pressable
                 key={p}
-                onPress={() => handlePeriodPress(p)}
+                onPress={() => { if (enabled) handlePeriodPress(p); }}
+                disabled={!enabled}
                 accessibilityRole="button"
-                accessibilityLabel={`ממוצע נע ${p} ימים`}
-                accessibilityState={{ selected: active }}
+                accessibilityLabel={`ממוצע נע ${p}`}
+                accessibilityState={{ selected: active, disabled: !enabled }}
                 hitSlop={6}
-                style={[styles.periodPill, active && styles.periodPillActive]}
+                style={[styles.periodPill, active && styles.periodPillActive, !enabled && styles.periodPillDisabled]}
               >
-                <Text style={[styles.periodPillText, active && styles.periodPillTextActive]}>{p}</Text>
+                <Text style={[styles.periodPillText, active && styles.periodPillTextActive, !enabled && styles.periodPillTextDisabled]}>{p}</Text>
               </Pressable>
             );
           })}
@@ -200,7 +220,7 @@ export function TradingChart({
               style={({ pressed }) => [styles.badge, styles.badgeMa, pressed && styles.badgePressed]}
             >
               <Info size={18} color="#60a5fa" strokeWidth={2.6} />
-              <Text style={styles.badgeText}>MA{maPeriod}</Text>
+              <Text style={styles.badgeText}>MA{effectiveMaPeriod}</Text>
             </Pressable>
             <Pressable
               onPress={() => handleInfoPress('rsi')}
@@ -217,7 +237,7 @@ export function TradingChart({
 
         {showTimeframeNote && (
           <View style={styles.noteWrap} pointerEvents="none">
-            <Text style={[RTL, styles.noteText]}>אינדיקטורים מוצגים רק בטווח שבועי</Text>
+            <Text style={[RTL, styles.noteText]}>אין עדיין מספיק נתונים להצגת האינדיקטורים</Text>
           </View>
         )}
       </View>
@@ -286,6 +306,17 @@ const styles = StyleSheet.create({
   },
   periodPillTextActive: {
     color: '#1d4ed8',
+  },
+  // Periods the current timeframe's data can't support (e.g. MA50/100/200 on
+  // 1D's ~33 hourly bars) — greyed + non-tappable so the user can't pick a
+  // period that makes the MA + RSI silently vanish.
+  periodPillDisabled: {
+    opacity: 0.4,
+    borderColor: '#eef2f6',
+    backgroundColor: '#f8fafc',
+  },
+  periodPillTextDisabled: {
+    color: '#cbd5e1',
   },
 
   // ── Indicator badges (tap for explanation) ──

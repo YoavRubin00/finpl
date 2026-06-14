@@ -115,7 +115,12 @@ export type AppEvent =
   // ── Bridge ─────────────────────────────────────────────────────────────
   | { name: 'bridge_viewed'; props: { category?: string; coins_at_view?: number; benefits_in_category?: number; came_from_deeplink_tab?: boolean } }
   | { name: 'bridge_tab_switched'; props: { from_category: string; to_category: string; coins_at_switch?: number } }
-  | { name: 'bridge_benefit_tapped'; props: { benefit_id: string; partner_name?: string; category?: string; can_afford_coins?: boolean } }
+  // NOTE: fired via raw captureEvent in BridgeScreen (not track()), so this type
+  // is documentation only — but it MUST mirror the real payload, or a future
+  // migration to track() would silently rename props and break the dashboards.
+  // The monetization dashboard breaks down by `can_afford` (was wrongly typed
+  // `can_afford_coins` here — Yoav 2026-06-15 PostHog audit).
+  | { name: 'bridge_benefit_tapped'; props: { benefit_id: string; partner_name?: string; category?: string; cost_coins?: number; coins_at_tap?: number; can_afford?: boolean; is_pro?: boolean; is_available?: boolean; already_redeemed?: boolean } }
   | { name: 'bridge_redeem_confirmed'; props: { benefit_id: string; partner_name?: string; partner_type?: string; cost_coins?: number; user_email?: string | null } }
   | { name: 'bridge_redeem_failed'; props: { benefit_id: string; partner_name?: string; reason: string } }
   | { name: 'bridge_partner_url_opened'; props: { benefit_id: string; partner_name?: string } }
@@ -142,7 +147,7 @@ export type AppEvent =
   | { name: 'shop_screen_viewed'; props: { coins: number; gems: number; is_pro: boolean } }
   | { name: 'shop_item_tapped'; props: { item_id: string; item_type?: string; category?: string; cost_value?: number; cost_currency?: 'coins' | 'gems' | 'ils'; can_afford?: boolean } }
   | { name: 'shop_gem_exchange_tapped'; props: { gems_cost: number; coins_reward: number; can_afford: boolean } }
-  | { name: 'purchase_initiated'; props: { bundle_id: string; bundle_type: 'starter_pack' | 'gem_bundle' | 'coin_bundle' | string; price_ils?: number | null; real_money?: boolean } }
+  | { name: 'purchase_initiated'; props: { bundle_id: string; bundle_type: 'starter_pack' | 'gem_bundle' | 'coin_bundle' | string; price_ils?: number | null; real_money?: boolean; source?: string } }
   | { name: 'purchase_completed'; props: { bundle_id: string; bundle_type: string; coins?: number; gems?: number; price_ils?: number; real_money?: boolean; avatars?: number } }
   | { name: 'purchase_failed'; props: { bundle_id: string; bundle_type?: string; reason?: string; error_message?: string } }
   | { name: 'purchase_cancelled'; props: { bundle_id: string; bundle_type: string } }

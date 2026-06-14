@@ -320,14 +320,18 @@ const styles = StyleSheet.create({
     writingDirection: 'rtl',
     lineHeight: 19,
   },
+  // Deep blue (was sky-#0ea5e9, whose white label was ~2:1 contrast and washed
+  // out to "white" / invisible on bright screens — Yoav 2026-06-15 "את נסה שוב
+  // לא רואים"). Deep-blue-on-white-text is high contrast + matches the hour
+  // button + upgrade CTA.
   retryBtn: {
     alignSelf: 'flex-end',
     paddingHorizontal: 18,
     paddingVertical: 9,
     borderRadius: 12,
-    backgroundColor: '#0ea5e9',
+    backgroundColor: '#0c4a6e',
     borderBottomWidth: 3,
-    borderBottomColor: '#0369a1',
+    borderBottomColor: '#082f49',
   },
   retryBtnText: {
     fontSize: 13,
