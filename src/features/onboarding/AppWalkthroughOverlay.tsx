@@ -352,7 +352,7 @@ export function AppWalkthroughOverlay() {
       <View style={s.overlay}>
         {/* ── Top: Step title pill with counter (hidden on step 0 — welcome card has no pill) ── */}
         {step > 0 && (
-          <SafeAreaView edges={["top"]} style={{ alignItems: "center", paddingTop: 36 }}>
+          <SafeAreaView edges={["top"]} style={{ alignItems: "center", paddingTop: 56 }}>
             <Animated.View
               key={`pill-${contentKey}`}
               entering={reducedMotion ? undefined : FadeInDown.duration(350)}

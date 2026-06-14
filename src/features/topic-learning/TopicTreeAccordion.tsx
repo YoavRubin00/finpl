@@ -8,6 +8,8 @@ import { captureEvent } from '../../lib/posthog';
 import { track } from '../../lib/analytics/events';
 import { useUpsertModuleProgress } from '../chapter-1-content/useProgress';
 import { ChestCelebrationModal } from './ChestCelebrationModal';
+import { InModuleProfileQuestion, type ProfileQuestionKind } from '../onboarding/InModuleProfileQuestion';
+import { ModuleEndSignupGate } from '../auth/ModuleEndSignupGate';
 import { Mod01WalkthroughPromptModal } from './Mod01WalkthroughPromptModal';
 import { useCompletedModulesStore } from '../economy/useCompletedModulesStore';
 import { useEconomyUIStore, fireEconomyDelta } from '../economy/useEconomyUIStore';
@@ -381,6 +383,49 @@ export const TopicTreeAccordion = React.memo(function TopicTreeAccordion({
   const completeAppWalkthrough = useTutorialStore((s) => s.completeAppWalkthrough);
   const setPendingPostWalkthroughCTA = useTutorialStore((s) => s.setPendingPostWalkthroughCTA);
   const isGuest = useAuthStore((s) => s.isGuest);
+
+  // #6 Graduate onboarding inside the topic-tree: collect the staged profile
+  // questions (knowledgeLevel → learningTime → dailyGoal) at the 70% chest
+  // moment when the linear chapter-0 flow never asked them. Fired ONLY after the
+  // chest modal closes (see onContinueModule) so it never interrupts the reward
+  // sequence (Yoav 2026-06-15: "שהגרדיואייטד יגיע רק לאחר סיום רצף ... פתיחת
+  // התיבה ולא יפול באמצע"). One question per chest, until all are answered.
+  const [profileQuestionKind, setProfileQuestionKind] = useState<ProfileQuestionKind | null>(null);
+  const profileQTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => () => { if (profileQTimerRef.current) clearTimeout(profileQTimerRef.current); }, []);
+  const maybeShowProfileQuestion = useCallback(() => {
+    // Skip the pure onboarding modules — mod-0-1 collects knowledgeLevel via its
+    // own inline flow; keep the first-run experience clean.
+    if (module.id === 'mod-0-1' || module.id === 'mod-0-1b') return;
+    const profile = useAuthStore.getState().profile;
+    const next: ProfileQuestionKind | null =
+      !profile?.knowledgeLevel ? 'knowledgeLevel'
+      : !profile?.learningTime ? 'learningTime'
+      : !profile?.dailyGoalMinutes ? 'dailyGoal'
+      : null;
+    if (!next) return;
+    // Delay so the chest modal is fully gone before this one fades in.
+    if (profileQTimerRef.current) clearTimeout(profileQTimerRef.current);
+    profileQTimerRef.current = setTimeout(() => setProfileQuestionKind(next), 450);
+  }, [module.id]);
+
+  // #8 Module-end signup gate — GUESTS ONLY, once per module (mod-0-2+), shown
+  // AFTER the chest sequence. Mutually exclusive with the profile question
+  // (registered users) so we never stack two modals after one chest.
+  const [signupGateVisible, setSignupGateVisible] = useState(false);
+  const maybeShowSignupGate = useCallback(() => {
+    if (module.id === 'mod-0-1' || module.id === 'mod-0-1b') return;
+    if (useTutorialStore.getState().moduleEndGateShown[module.id]) return;
+    if (profileQTimerRef.current) clearTimeout(profileQTimerRef.current);
+    // Mark "shown" only when the modal actually opens — if the user navigates
+    // away within the 450ms delay, the cleanup clears this timer and the gate
+    // must stay eligible for next time (was marked synchronously here before,
+    // which locked guests out of the gate forever — pre-release audit P1).
+    profileQTimerRef.current = setTimeout(() => {
+      useTutorialStore.getState().markModuleEndGateShown(module.id);
+      setSignupGateVisible(true);
+    }, 450);
+  }, [module.id]);
   const [showWalkthroughPrompt, setShowWalkthroughPrompt] = useState(false);
   const walkthroughPromptFiredRef = useRef(false);
   // R8 follow-up (Yoav 2026-06-11): walkthrough fires ONLY after the
@@ -488,10 +533,33 @@ export const TopicTreeAccordion = React.memo(function TopicTreeAccordion({
           nodeOffsetX={nodeOffsetX}
           onTopicPress={onTopicSelected}
           onStartContinuous={
-            !showWelcomeBanner && completedNonIntroChipCount < 1
+            // Autopilot is offered only on REAL modules (chapter 1+), in the
+            // early window (no content chip done yet), and never during the
+            // mod-0-1 welcome banner. Chapter 0 is the intro/tutorial chapter
+            // ("מה זה בכלל כסף" = mod-0-2 etc.) — it must be done manually so a
+            // new user actually learns the app, never accidentally autopiloted
+            // (Yoav 2026-06-14).
+            !showWelcomeBanner &&
+            completedNonIntroChipCount < 1 &&
+            !module.id.startsWith('mod-0-')
               ? handleStartContinuous
               : undefined
           }
+        />
+
+        {/* #6 Graduate onboarding — a still-unanswered staged profile question,
+            surfaced only AFTER the chest sequence closes (never mid-sequence). */}
+        <InModuleProfileQuestion
+          visible={profileQuestionKind !== null}
+          kind={profileQuestionKind ?? 'knowledgeLevel'}
+          onDone={() => setProfileQuestionKind(null)}
+        />
+
+        {/* #8 Module-end signup gate — guests only, once per module (mod-0-2+). */}
+        <ModuleEndSignupGate
+          visible={signupGateVisible}
+          moduleId={module.id}
+          onClose={() => setSignupGateVisible(false)}
         />
 
         {/* Single chest celebration at 70% (Yoav 2026-06-12). The 100%
@@ -505,6 +573,10 @@ export const TopicTreeAccordion = React.memo(function TopicTreeAccordion({
           onContinueModule={() => {
             try { track({ name: 'chest_cta_tapped', props: { module_id: module.id, chapter_id: chapterIdFromModuleId(module.id), cta: 'finish_module' } }); } catch { /* non-fatal */ }
             setChestState(null);
+            // After the chest closes (never mid-sequence): guests get the signup
+            // gate (#8), registered users get any pending staged profile question
+            // (#6). Mutually exclusive so we never stack two modals.
+            if (isGuest) { maybeShowSignupGate(); } else { maybeShowProfileQuestion(); }
             // The 70% chest keeps the accordion open so the user can
             // finish the remaining 30% — but when the chest fired at 100%
             // (e.g. a continuous run completed every chip before returning)

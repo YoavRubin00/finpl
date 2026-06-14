@@ -45,9 +45,9 @@ const STITCH_BLUE = {
 // Section Header
 // ---------------------------------------------------------------------------
 
-function SectionHeader({ title }: { title: string }) {
+function SectionHeader({ title, first }: { title: string; first?: boolean }) {
   return (
-    <View style={styles.sectionHeader} accessibilityRole="header">
+    <View style={[styles.sectionHeader, first && styles.sectionHeaderFirst]} accessibilityRole="header">
       <Text style={[styles.sectionTitle, RTL]}>{title}</Text>
     </View>
   );
@@ -159,7 +159,7 @@ export function MoreScreen() {
           showsVerticalScrollIndicator={false}
         >
           {/* ── Section 1: Features ── */}
-          <SectionHeader title="פיצ'רים" />
+          <SectionHeader title="פיצ'רים" first />
           <Animated.View entering={FadeInUp.delay(100).duration(400)}>
             <GlowCard chapterGlow={STITCH_BLUE.glow} style={styles.cardGlow} pressable={false}>
               <View style={styles.cardInner}>
@@ -326,13 +326,18 @@ const styles = StyleSheet.create({
   scrollContent: {
     paddingHorizontal: 20,
     paddingBottom: 40,
-    paddingTop: 8,
+    paddingTop: 2,
   },
   sectionHeader: {
     marginTop: 28,
     marginBottom: 12,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  // First section sits right under the back-button row — no big top gap
+  // (Yoav 2026-06-14: "חלק גדול במסך מתבזבז, תמצם את הכותרת למעלה").
+  sectionHeaderFirst: {
+    marginTop: 2,
   },
   sectionTitle: {
     fontSize: 15,

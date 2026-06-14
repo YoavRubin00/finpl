@@ -37,23 +37,24 @@ interface TopicChipProps {
 
 const NODE_SIZE = 78;
 
-// R5.3 (2026-06-10): completed chips flip from chapter-blue to a soft
-// pleasant green Yoav called out ("צבע ירוק בהיר ונעים בלי וי, במקום
-// בכחול"). Stays muted enough to read as "done, can revisit" instead of
-// "celebrate me now" — the loud celebration belongs to the chest, not
-// every individual chip.
-const DONE_BG = '#bbf7d0';      // green-200 — pleasant pastel
-const DONE_DEPTH = '#4ade80';   // green-400 — depth shadow
-const DONE_BORDER = '#22c55e';  // green-500 — thin ring for definition
+// Completed chips: clean light SKY-BLUE (Yoav 2026-06-14: "מה שבוצע בכחול").
+// Reverts the R5.3 green — the whole grid is now blue-on-brand, and ONLY the
+// "next" chip is gold. Light + clean so it reads as "done, can revisit".
+const DONE_BG = '#bae6fd';      // sky-200 — clean pastel blue
+const DONE_DEPTH = '#38bdf8';   // sky-400 — depth shadow
+const DONE_BORDER = '#0ea5e9';  // sky-500 — thin ring for definition
 
-// Light-gray palette for incomplete chips — matches the legacy
-// ModuleNode "locked" state hue Yoav pointed to ("אפרפר לכל מה שלא
-// ביצעתי עדין").
-const MUTED_BG = '#e5e7eb';
-const MUTED_DEPTH = '#c7cdd4';
-// Incomplete chips desaturate their SVG icon a little so the bright
-// gradients don't draw attention before the user has completed them.
-const MUTED_ICON_OPACITY = 0.55;
+// Incomplete chips: DEEP, muddy blue — never gray (gray read as
+// locked/disabled and confused, Yoav 2026-06-14: "כחול עכור יותר אבל עדיין
+// כחול, כחול עמוק"). Deeper + more muted than the completed (light sky) chips,
+// so it still reads as "to do, not done yet" while staying clearly blue.
+const MUTED_BG = '#7e9dc4';      // deep muted steel-blue
+const MUTED_DEPTH = '#5b779c';   // deeper blue for the 3D recess
+const MUTED_BORDER = '#6e8db4';  // muted blue ring
+// Incomplete chips keep the SVG icon only slightly dimmed — enough to read as
+// "not done yet" but clearly visible on the deeper blue fill (raised from 0.55
+// when the fill went gray→deep-blue, Yoav 2026-06-14).
+const MUTED_ICON_OPACITY = 0.8;
 // R8 follow-up (Yoav 2026-06-10): the recommended (= next topic) chip
 // is now SOLID gold, not a gray chip surrounded by a gold halo. Yoav:
 // "צריך שמה שמסומן כהבא, יהיה בפועל בצבע זהב, ולא מוקף בזהב".
@@ -192,7 +193,7 @@ export const TopicChip = React.memo(function TopicChip({
     ? DONE_BORDER
     : isRecommended
       ? RECOMMENDED_BORDER
-      : '#f3f4f6';
+      : MUTED_BORDER;
   // Icon stays full opacity for both completed AND recommended chips
   // (the "do this next" affordance reads as bright, not muted).
   const iconOpacity = completed || isRecommended ? 1 : MUTED_ICON_OPACITY;
@@ -225,7 +226,7 @@ export const TopicChip = React.memo(function TopicChip({
               ? DONE_DEPTH
               : isRecommended
                 ? RECOMMENDED_DEPTH
-                : '#9ca3af',
+                : MUTED_DEPTH,
           },
         ]}
       >
@@ -283,14 +284,15 @@ const styles = StyleSheet.create({
     shadowRadius: 10,
     elevation: 8,
   },
-  // R8 J1 — bright green flash overlay, inside the circle clip mask.
+  // R8 J1 — bright flash overlay (tap + first-completion pulse), inside the
+  // circle clip mask. Blue to match the blue chip grid (Yoav 2026-06-14).
   flashOverlay: {
     position: 'absolute',
     top: 0,
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: '#86efac',
+    backgroundColor: '#7dd3fc',
     borderRadius: NODE_SIZE / 2,
   },
 });

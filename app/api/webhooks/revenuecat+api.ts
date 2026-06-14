@@ -63,11 +63,32 @@ async function captureToPostHog(
 
 interface RevenueCatEvent {
   type: string;
-  app_user_id: string; // our userProfiles.id (UUID) — client sets it via loginRevenueCat(profile.id), NOT the email
+  // Usually our userProfiles.id (UUID): OAuth / email-login / cold-boot all set
+  // it via loginRevenueCat(profile.id). The ONE exception is the email
+  // REGISTRATION path (RegisterScreen), which has no server UUID yet and logs
+  // RC in with the EMAIL instead — so resolveMatchClause below accepts both.
+  app_user_id: string;
   product_id: string;
   entitlement_ids?: string[];
   purchased_at_ms: number;
   expiration_at_ms?: number;
+}
+
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/**
+ * Resolve which column the RC app_user_id matches on. The id column is a
+ * Postgres `uuid` type — comparing it against a non-UUID string (e.g. an email
+ * or a `$RCAnonymousID:…`) forces an invalid-uuid CAST error and 500s the whole
+ * webhook, so we MUST branch on the format rather than `OR`-ing both columns.
+ * UUID → userProfiles.id (the common path); anything else that looks like an
+ * email → userProfiles.email (the in-session email-registration purchase). A
+ * pure-anonymous RC id matches neither column → 0 rows, which is the correct
+ * no-op (there is no account to grant to yet).
+ */
+function resolveMatchClause(appUserId: string) {
+  if (UUID_RE.test(appUserId)) return eq(userProfiles.id, appUserId);
+  return eq(userProfiles.email, appUserId);
 }
 
 interface WebhookBody {
@@ -93,12 +114,15 @@ export async function POST(request: Request): Promise<Response> {
       return Response.json({ error: 'Invalid payload' }, { status: 400 });
     }
 
-    // RC `app_user_id` is our userProfiles.id (UUID), set client-side via
-    // loginRevenueCat(profile.id) — it is NOT the email. Every DB lookup below
-    // therefore matches on `userProfiles.id`; matching on `email` (the previous
-    // behaviour) compared a UUID against the email column → 0 rows updated, so
-    // Pro/gems were silently never granted server-side. See src/services/revenueCat.ts.
+    // RC `app_user_id` is USUALLY our userProfiles.id (UUID), set client-side
+    // via loginRevenueCat(profile.id). The email-registration path is the one
+    // exception (RC logged in with the email — no server UUID exists yet), so
+    // we resolve the match column by format. Matching a UUID value against the
+    // email column (the original pre-fix behaviour) silently updated 0 rows →
+    // Pro/gems never granted; matching an email value against the uuid id column
+    // 500s on the cast. resolveMatchClause handles both. See src/services/revenueCat.ts.
     const appUserId = event.app_user_id;
+    const matchClause = resolveMatchClause(appUserId);
     const db = getDb();
 
     console.log(`[RevenueCat Webhook] ${event.type}`);
@@ -128,7 +152,7 @@ export async function POST(request: Request): Promise<Response> {
             gems: sql`${userProfiles.gems} + ${gemsToAdd}`,
             updatedAt: new Date().toISOString()
           })
-          .where(eq(userProfiles.id, appUserId));
+          .where(matchClause);
 
         console.log(`[RevenueCat Webhook] Added ${gemsToAdd} gems`);
         return Response.json({ ok: true, message: `Added ${gemsToAdd} gems` });
@@ -153,7 +177,7 @@ export async function POST(request: Request): Promise<Response> {
             proExpiresAt: expiresAt,
             updatedAt: new Date().toISOString()
           })
-          .where(eq(userProfiles.id, appUserId));
+          .where(matchClause);
 
         console.log(`[RevenueCat Webhook] Granted PRO`);
 
@@ -187,7 +211,7 @@ export async function POST(request: Request): Promise<Response> {
             isPro: false,
             updatedAt: new Date().toISOString()
           })
-          .where(eq(userProfiles.id, appUserId));
+          .where(matchClause);
 
         console.log(`[RevenueCat Webhook] Revoked PRO`);
 
