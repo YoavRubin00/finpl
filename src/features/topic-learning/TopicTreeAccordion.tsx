@@ -533,14 +533,16 @@ export const TopicTreeAccordion = React.memo(function TopicTreeAccordion({
           nodeOffsetX={nodeOffsetX}
           onTopicPress={onTopicSelected}
           onStartContinuous={
-            // Autopilot is offered only on REAL modules (chapter 1+), in the
-            // early window (no content chip done yet), and never during the
-            // mod-0-1 welcome banner. Chapter 0 is the intro/tutorial chapter
-            // ("מה זה בכלל כסף" = mod-0-2 etc.) — it must be done manually so a
-            // new user actually learns the app, never accidentally autopiloted
-            // (Yoav 2026-06-14).
+            // Autopilot is offered on REAL modules (chapter 1+), as long as the
+            // module isn't fully complete, and never during the mod-0-1 welcome
+            // banner. Chapter 0 is the intro/tutorial chapter ("מה זה בכלל כסף"
+            // = mod-0-2 etc.) — it must be done manually so a new user actually
+            // learns the app, never accidentally autopiloted (Yoav 2026-06-14).
+            // Earlier this also required "no content chip done yet", which hid
+            // the key the moment one chip was cleared — Yoav 2026-06-15: "לא
+            // רואה את כפתור האוטופיילוט בשום מקום". Now shows until 100%.
             !showWelcomeBanner &&
-            completedNonIntroChipCount < 1 &&
+            summary.pct < 100 &&
             !module.id.startsWith('mod-0-')
               ? handleStartContinuous
               : undefined

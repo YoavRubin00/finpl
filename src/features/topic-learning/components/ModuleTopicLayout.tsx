@@ -123,15 +123,13 @@ export const ModuleTopicLayout = React.memo(function ModuleTopicLayout({
     [topics],
   );
 
-  // Early-window gate for the autopilot KEY: visible only until the user
-  // completes their first NON-intro (content) chip. Mirrors the count the
-  // parent uses to anchor the accordion top, so the key is always on-screen
-  // while shown.
-  const completedNonIntroCount = useMemo(
-    () => sorted.filter((t) => t.kind !== 'intro' && isCompletedMap[t.id]).length,
-    [sorted, isCompletedMap],
-  );
-  const showAutopilotKey = Boolean(onStartContinuous) && completedNonIntroCount < 1;
+  // Render the autopilot KEY whenever the parent offers it. The parent
+  // (TopicTreeAccordion) is the single source of truth for the gating —
+  // chapter 1+, not during the mod-0-1 welcome banner, and only while the
+  // module isn't 100% complete. This used to ALSO re-gate on "no content chip
+  // done yet", which made the key vanish the moment the user cleared one chip
+  // (Yoav 2026-06-15: "לא רואה את כפתור האוטופיילוט בשום מקום").
+  const showAutopilotKey = Boolean(onStartContinuous);
 
   // Height = entry connector + n chip rows + exit connector.
   const totalHeight = EDGE_CONNECTOR_H + sorted.length * ROW_HEIGHT + EDGE_CONNECTOR_H;
