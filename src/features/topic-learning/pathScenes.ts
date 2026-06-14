@@ -44,7 +44,12 @@ const GENERIC = {
 
 // ── Module-themed loops (1 per flagship module) ───────────────────────
 const THEMED = {
-  "mod-1-1": { id: "t-1-1", label: "ערימת מטבעות שמתרבה — ריבית דריבית", source: require("../../../assets/webp/path-scenes/m1-1-coin-growth-v2.webp") },
+  // m1-1-coin-growth-v2.webp shipped with BOTH characters cropped at the frame
+  // edges (Captain Shark cut through the middle, Daisy clipped) — Yoav
+  // 2026-06-15. Swapped to the whole, well-padded shark-coins loop (coin-themed,
+  // fits compound interest) so nothing is cut. Restore a bespoke growing-pile
+  // asset here once it's regenerated with ≥15% padding (finplay-mascot-webp).
+  "mod-1-1": { id: "t-1-1", label: "קפטן שארק עם מטבע — ריבית דריבית", source: require("../../../assets/webp/path-scenes/shark-coins-v2.webp") },
   "mod-1-9": { id: "t-1-9", label: "מטרייה וצנצנת חיסכון — קרן חירום", source: require("../../../assets/webp/path-scenes/m1-9-emergency-umbrella-v2.webp") },
   "mod-3-15": { id: "t-3-15", label: "מחירים עולים — אינפלציה", source: require("../../../assets/webp/path-scenes/m3-15-inflation-prices-v2.webp") },
   "mod-4-19": { id: "t-4-19", label: "גרף נרות עולה — שוק ההון", source: require("../../../assets/webp/path-scenes/m4-19-market-rising-v2.webp") },
