@@ -34,8 +34,9 @@ const POSTHOG_KEY = process.env.EXPO_PUBLIC_POSTHOG_KEY;
  * add a new server dependency. Fire-and-forget on the network call — webhook
  * MUST always respond 200 to RC, so any PostHog error is swallowed.
  *
- * distinct_id = the user's email (which equals RC `app_user_id`). The client
- * also identifies the user by email after login → events merge automatically.
+ * distinct_id = our userProfiles.id (UUID) — the SAME id the client passes to
+ * RevenueCat via loginRevenueCat(profile.id) AND to PostHog via
+ * identifyUser(profile.id), so server + client events merge onto one person.
  */
 async function captureToPostHog(
   eventName: string,
@@ -62,7 +63,7 @@ async function captureToPostHog(
 
 interface RevenueCatEvent {
   type: string;
-  app_user_id: string; // our email
+  app_user_id: string; // our userProfiles.id (UUID) — client sets it via loginRevenueCat(profile.id), NOT the email
   product_id: string;
   entitlement_ids?: string[];
   purchased_at_ms: number;
@@ -87,12 +88,17 @@ export async function POST(request: Request): Promise<Response> {
 
     const body = (await request.json()) as WebhookBody;
     const { event } = body;
-    
+
     if (!event || !event.app_user_id) {
       return Response.json({ error: 'Invalid payload' }, { status: 400 });
     }
 
-    const email = event.app_user_id;
+    // RC `app_user_id` is our userProfiles.id (UUID), set client-side via
+    // loginRevenueCat(profile.id) — it is NOT the email. Every DB lookup below
+    // therefore matches on `userProfiles.id`; matching on `email` (the previous
+    // behaviour) compared a UUID against the email column → 0 rows updated, so
+    // Pro/gems were silently never granted server-side. See src/services/revenueCat.ts.
+    const appUserId = event.app_user_id;
     const db = getDb();
 
     console.log(`[RevenueCat Webhook] ${event.type}`);
@@ -118,11 +124,11 @@ export async function POST(request: Request): Promise<Response> {
         // Increment the gems securely in DB using SQL expression
         await db
           .update(userProfiles)
-          .set({ 
+          .set({
             gems: sql`${userProfiles.gems} + ${gemsToAdd}`,
             updatedAt: new Date().toISOString()
           })
-          .where(eq(userProfiles.email, email));
+          .where(eq(userProfiles.id, appUserId));
 
         console.log(`[RevenueCat Webhook] Added ${gemsToAdd} gems`);
         return Response.json({ ok: true, message: `Added ${gemsToAdd} gems` });
@@ -131,7 +137,7 @@ export async function POST(request: Request): Promise<Response> {
 
     // Handle Pro Subscriptions
     const isProEvent = event.entitlement_ids?.includes('FinPlay Pro');
-    
+
     if (
       event.type === 'INITIAL_PURCHASE' ||
       event.type === 'RENEWAL' ||
@@ -147,7 +153,7 @@ export async function POST(request: Request): Promise<Response> {
             proExpiresAt: expiresAt,
             updatedAt: new Date().toISOString()
           })
-          .where(eq(userProfiles.email, email));
+          .where(eq(userProfiles.id, appUserId));
 
         console.log(`[RevenueCat Webhook] Granted PRO`);
 
@@ -163,7 +169,7 @@ export async function POST(request: Request): Promise<Response> {
         };
         const phEvent = eventNameByType[event.type];
         if (phEvent) {
-          await captureToPostHog(phEvent, email, {
+          await captureToPostHog(phEvent, appUserId, {
             rc_event_type: event.type,
             product_id: event.product_id,
             entitlement: 'FinPlay Pro',
@@ -181,7 +187,7 @@ export async function POST(request: Request): Promise<Response> {
             isPro: false,
             updatedAt: new Date().toISOString()
           })
-          .where(eq(userProfiles.email, email));
+          .where(eq(userProfiles.id, appUserId));
 
         console.log(`[RevenueCat Webhook] Revoked PRO`);
 
@@ -190,7 +196,7 @@ export async function POST(request: Request): Promise<Response> {
         // method failed — distinct from voluntary churn for funnel purposes.
         await captureToPostHog(
           event.type === 'BILLING_ISSUE' ? 'subscription_billing_issue' : 'subscription_expired',
-          email,
+          appUserId,
           {
             rc_event_type: event.type,
             product_id: event.product_id,
@@ -204,7 +210,7 @@ export async function POST(request: Request): Promise<Response> {
       // cancellation usually means the user will NOT convert. Persist the
       // signal for the funnel; do NOT flip isPro (entitlement still active).
       if (isProEvent) {
-        await captureToPostHog('subscription_cancelled', email, {
+        await captureToPostHog('subscription_cancelled', appUserId, {
           rc_event_type: event.type,
           product_id: event.product_id,
           entitlement: 'FinPlay Pro',
