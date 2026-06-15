@@ -192,7 +192,7 @@ export function BreakingNewsScreen(): React.ReactElement {
 
   const handleEnableNotifications = useCallback(async () => {
     tapHaptic();
-    await requestNotifPermission();
+    await requestNotifPermission('breaking_news');
     // If the user already has a ticker, sync the daily push right away.
     if (items.length > 0) {
       void scheduleBreakingNewsDaily(notificationHour);

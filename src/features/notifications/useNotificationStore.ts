@@ -3,6 +3,7 @@ import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
 import { zustandStorage } from '../../lib/zustandStorage';
 import { registerLocalStore } from '../../lib/stores/registry';
+import { track } from '../../lib/analytics/events';
 import type { NotificationChannelId, NotificationState } from "./notificationTypes";
 
 // ─── Default handler, show banners in foreground ───────────────────────────
@@ -151,7 +152,9 @@ async function ensureAndroidChannels() {
 
 // ─── Store ────────────────────────────────────────────────────────────────────
 interface NotificationActions {
-  requestPermission: () => Promise<boolean>;
+  /** Request OS notification permission. `source` tags the analytics event with
+   *  the entry point (e.g. 'permission' banner, 'breaking_news', 'settings'). */
+  requestPermission: (source?: string) => Promise<boolean>;
   /** Reconcile the cached permissionGranted flag with the real OS permission
    *  state WITHOUT prompting. The cached flag can drift (granted in a past
    *  session then revoked in OS settings, or never synced), which would
@@ -207,16 +210,21 @@ export const useNotificationStore = create<NotificationState & NotificationActio
 
       resetBannerDismissed: () => set({ bannerDismissed: false, bannerDismissedAt: null }),
 
-      requestPermission: async (): Promise<boolean> => {
+      requestPermission: async (source?: string): Promise<boolean> => {
         await ensureAndroidChannels();
         const { status: existing } = await Notifications.getPermissionsAsync();
+        // `prompted` = the OS dialog was actually shown. When already granted we
+        // skip the dialog, so that's a reconciliation, not a fresh user choice.
+        const prompted = existing !== "granted";
         let finalStatus = existing;
-        if (existing !== "granted") {
+        if (prompted) {
           const { status } = await Notifications.requestPermissionsAsync();
           finalStatus = status;
         }
         const granted = finalStatus === "granted";
         set({ permissionGranted: granted });
+        // The opt-in signal: granted ÷ prompted = the real approval rate.
+        try { track({ name: 'notification_permission_result', props: { granted, prompted, source: source ?? 'unknown' } }); } catch { /* non-fatal */ }
         return granted;
       },
 
