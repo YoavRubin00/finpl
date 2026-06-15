@@ -89,7 +89,7 @@ export function NotificationPermissionBanner() {
 
   const handleAllow = async () => {
     track({ name: 'notification_banner_action', props: { source: 'permission' } });
-    await requestPermission();
+    await requestPermission('permission');
     // Finn scheduler (useFinnNotificationScheduler) handles all scheduling, 1/day max
   };
 

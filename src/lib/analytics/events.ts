@@ -199,7 +199,17 @@ export type AppEvent =
   // wrapper fired the event so funnels can split by banner type.
   | { name: 'notification_banner_shown'; props: { source: 'permission' | 'tools_discovery' | 'streak_at_risk' | 'no_freeze_upsell' | string; tool_key?: string } }
   | { name: 'notification_banner_action'; props: { source: 'permission' | 'tools_discovery' | 'streak_at_risk' | 'no_freeze_upsell' | string; tool_key?: string } }
-  | { name: 'notification_banner_dismissed'; props: { source: 'permission' | 'tools_discovery' | 'streak_at_risk' | 'no_freeze_upsell' | string; tool_key?: string } };
+  | { name: 'notification_banner_dismissed'; props: { source: 'permission' | 'tools_discovery' | 'streak_at_risk' | 'no_freeze_upsell' | string; tool_key?: string } }
+
+  // ── Notification OS-permission result ──────────────────────────────────
+  // Fires from useNotificationStore.requestPermission — the SINGLE choke point
+  // for every permission request (the top permission banner, the Breaking-News
+  // empty state, Settings). `granted` is the actual OS decision; `prompted` is
+  // whether the system dialog was really shown (false = an already-granted
+  // reconciliation, NOT a user choice). `source` is the entry point. This is
+  // what measures the true opt-in RATE (granted ÷ prompted) — distinct from
+  // `notification_banner_action`, which only means "tapped אשר".
+  | { name: 'notification_permission_result'; props: { granted: boolean; prompted: boolean; source?: string } };
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Baseline properties — attached to every wrapped event
