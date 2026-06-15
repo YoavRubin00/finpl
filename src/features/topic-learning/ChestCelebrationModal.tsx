@@ -26,10 +26,18 @@ import { useSoundEffect } from '../../hooks/useSoundEffect';
 import { useWisdomStore } from '../wisdom-flashes/useWisdomStore';
 import { useTopicProgressStore } from './useTopicProgressStore';
 import { ParticleBurst } from '../../components/ui/ParticleBurst';
+import { useRewardedAd } from '../../hooks/useRewardedAd';
+import { useEconomyUIStore } from '../economy/useEconomyUIStore';
+import { captureEvent } from '../../lib/posthog';
 import type { ChestRarity } from './types';
 
 const RTL = { writingDirection: 'rtl' as const, textAlign: 'right' as const };
 const RTL_CENTER = { writingDirection: 'rtl' as const, textAlign: 'center' as const };
+/** AdMob rewarded BONUS offered after a chest opens — watch a video → +500
+ *  coins. Non-Pro only, one claim per chest. Granted via the same
+ *  addCoins(..., 'lesson') pipe the chest reward itself uses, so it persists
+ *  to the server identically (no new coin source / DB change). Yoav 2026-06-15. */
+const AD_BONUS_COINS = 500;
 
 interface ChestCelebrationModalProps {
   visible: boolean;
@@ -102,6 +110,10 @@ export function ChestCelebrationModal({
   // R8 T3.4 — rarity particle burst (gold for mythic, cyan for rare).
   // Fires alongside the chest reveal lottie. Common chests skip this.
   const [rarityBurstActive, setRarityBurstActive] = useState(false);
+  // Post-chest rewarded-ad bonus (+500 coins) — one claim per chest open.
+  const [adClaimed, setAdClaimed] = useState(false);
+  const { showAd, isLoaded: adReady, isPro } = useRewardedAd();
+  const addCoins = useEconomyUIStore((s) => s.addCoins);
   const lottieRef = useRef<LottieView>(null);
   const { playSound } = useSoundEffect();
 
@@ -154,6 +166,7 @@ export function ChestCelebrationModal({
       setFlyingCoins(false);
       setFlyingXp(false);
       setRarityBurstActive(false);
+      setAdClaimed(false);
       wisdomFiredRef.current = false;
       prevWisdomActiveRef.current = false;
     }
@@ -299,6 +312,20 @@ export function ChestCelebrationModal({
     onContinueModule();
   }, [onContinueModule]);
 
+  // Watch a rewarded video → +500 coins on top of the chest reward. Pro users
+  // never see the button (they're ad-free). Granted via addCoins('lesson') —
+  // the identical pipe the chest coins use — so it persists server-side.
+  const handleWatchAdBonus = useCallback(() => {
+    if (adClaimed) return;
+    tapHaptic();
+    showAd(() => {
+      addCoins(AD_BONUS_COINS, 'lesson');
+      successHaptic();
+      setAdClaimed(true);
+      try { captureEvent('rewarded_ad_completed', { source: 'chest_bonus', coins: AD_BONUS_COINS }); } catch { /* non-fatal */ }
+    });
+  }, [adClaimed, showAd, addCoins]);
+
   const handleAdvance = useCallback(() => {
     successHaptic();
     onAdvanceToNextModule();
@@ -433,6 +460,33 @@ export function ChestCelebrationModal({
                there's nothing left to complete inside the module. */}
           {opened && donResolved && (
             <Animated.View entering={FadeIn.delay(300).duration(400)} style={styles.ctaWrap}>
+              {/* Yoav 2026-06-15: rewarded-ad bonus — watch a video for +500
+                  coins. Non-Pro only; gold to read as a "treasure" bonus,
+                  distinct from the blue continue CTA. Shows a loading state
+                  rather than hiding while the ad preloads, and flips to a
+                  confirmation once claimed (one claim per chest). */}
+              {!isPro && (
+                adClaimed ? (
+                  <View style={styles.adBonusClaimed}>
+                    <Text style={styles.adBonusClaimedText} allowFontScaling={false}>
+                      {`✓ קיבלתם +${AD_BONUS_COINS} מטבעות!`}
+                    </Text>
+                  </View>
+                ) : (
+                  <Pressable
+                    onPress={adReady ? handleWatchAdBonus : undefined}
+                    disabled={!adReady}
+                    accessibilityRole="button"
+                    accessibilityLabel={adReady ? `צפו בפרסומת וקבלו ${AD_BONUS_COINS} מטבעות` : 'המודעה נטענת'}
+                    accessibilityState={{ disabled: !adReady }}
+                    style={[styles.cta, styles.ctaAdBonus, !adReady && { opacity: 0.6 }]}
+                  >
+                    <Text style={[styles.ctaAdBonusText, RTL_CENTER]} allowFontScaling={false}>
+                      {adReady ? `🎬 צפו בפרסומת — קבלו +${AD_BONUS_COINS} מטבעות` : 'טוען פרסומת...'}
+                    </Text>
+                  </Pressable>
+                )
+              )}
               <Pressable
                 onPress={handleAdvance}
                 accessibilityRole="button"
@@ -732,6 +786,33 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: '800',
     color: '#e0f2fe',
+  },
+  // Gold rewarded-ad bonus button — dark amber text on the gold fill (white
+  // on #f59e0b is ~2:1 contrast / WCAG fail). Reads as "coins/treasure".
+  ctaAdBonus: {
+    backgroundColor: '#f59e0b',
+    borderBottomWidth: 4,
+    borderBottomColor: '#b45309',
+    shadowColor: '#f59e0b',
+    shadowOpacity: 0.5,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 10,
+  },
+  ctaAdBonusText: {
+    fontSize: 16,
+    fontWeight: '900',
+    color: '#78350f',
+  },
+  adBonusClaimed: {
+    paddingVertical: 12,
+    alignItems: 'center',
+  },
+  adBonusClaimedText: {
+    fontSize: 14,
+    fontWeight: '900',
+    color: '#fcd34d',
+    writingDirection: 'rtl',
   },
   ctaQuit: {
     marginTop: 4,
