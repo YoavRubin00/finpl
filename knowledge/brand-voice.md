@@ -16,14 +16,23 @@
 - **משפטים קצרים** (≤15 מילים ב-UI), 0–2 אמוג'י ליחידת קופי, עברית ישראלית (לא ז'רגון בנקאי).
 - **אם נשמע כמו פרסומת או כמו מורה — כתוב מחדש.**
 
+## 🦈 קנון המסקוט: קפטן שארק (לא "Finn")
+המסקוט הקנוני היחיד הוא **קפטן שארק**. **"Finn" = השם הישן שיצא לגמלאות** — אותה דמות, שם קודם. בכל קופי/תוכן/תקשורת חדשים: **קפטן שארק בלבד**.
+- **שיווק** — כבר הוחלף (`docs/marketing/BRAND/voice.md` + `brand-kit.md`, "החלפת Finn → קפטן שארק", 2026-05-08).
+- **קוד** — עדיין שרידי `Finn*` (קונפיג/קומפוננטות/נכסים, `FINN_*` ב-~116 קבצים). זה **חוב-קוד פנימי, לא שם פונה-משתמש** → ניקוי בנפרד ([[gaps]] G5). קופי שמופיע למשתמש כבר אומר "קפטן שארק".
+
 ## איפה בקוד הקול חי (רפרנס)
 - `app/api/ai/_prompts/sharkVoicePrompt.ts` — פרומפט שיחת הקול (יחיד).
 - `src/features/chat/chatData.ts` — 4 הפרסונליטיז של קפטן שארק.
-- `src/features/notifications/finnNotificationCopy.ts` — בנק קופי התראות.
+- `src/features/notifications/finnNotificationCopy.ts` — בנק קופי התראות (השם הפנימי `finn*` — חוב-קוד; הקופי עצמו = קפטן שארק).
 
-## ⚠️ פער ידוע — מסמכי שיווק חסרים
-הסוכן **בר** (CMO) מפנה במפורש ל-`docs/marketing/BRAND/` (content-pillars.md, voice.md, brand-kit.md, soul-ids.md, prompt-library.md) ו-`docs/marketing/CONTENT/`. **התיקייה `docs/marketing/` אינה קיימת בפרויקט.** `docs/BRAND.md` עצמו מפנה למסמכים ב-`higgsfield-marketing-studio` שמחוץ לפרויקט.
-**המשמעות:** בר לא יכול לטעון את עמודי-התוכן ובנק-הרעיונות שעליהם הוא בנוי. דורש החלטת יואב — ראה [[gaps]]. עד אז, בר נשען על `docs/BRAND.md` בלבד לקול.
+## 📚 מסמכי שיווק (נפתר — 2026-06-15)
+מסמכי המותג והתוכן של בר חיים ב-**`docs/marketing/`**:
+- **`BRAND/`** — content-pillars.md (5 עמודי תוכן), voice.md, brand-kit.md, soul-ids.md, prompt-library.md.
+- **`CONTENT/`** — calendar.md, ideas-bank.md + ארכיון קמפיינים תחת `2026-05/`.
+- **`ANALYTICS/instagram-baseline-2026-05.md`** — מקור ה-baseline שכל קבצי BRAND מצטטים.
+
+כולם נטענים ע"י בר. `docs/BRAND.md` נשאר ה-source-of-truth לקול קפטן שארק בתוך האפליקציה.
 
 ## הקשר עסקי לקול
 הקול משרת את היעד: תוכן שמרגיש אותנטי = save/share גבוה = top-of-funnel חזק = יותר התקנות ([[business-facts]]). ה-KPI של איכות-קול נמדד ע"י `/אודרי` (Save/Share/Trust) ו-בר (install by source).
