@@ -265,6 +265,34 @@ export async function bootFromToken(): Promise<{ isAuthenticated: boolean }> {
         if (__DEV__) console.warn('[boot] legacy session migration failed:', e);
       }
     }
+
+    // Ghost-session heal. The email-registration path (convertGuestToUser)
+    // marks the auth store `isAuthenticated` WITHOUT minting a JWT or creating
+    // a server profile row. Such a user is a "ghost": every /api/sync/economy
+    // call 401s (no JWT) so nothing persists, and the balance resets to 0 on
+    // every cold start. 28% of email signups were stranded this way (incident
+    // 2026-06-16). If the persisted store still claims a signed-in email user
+    // but we have no JWT (and it wasn't an old `auth-store-v2` legacy session
+    // handled above), re-mint here: verifyEmail creates/finds the row by email
+    // and returns a JWT, after which the economy endpoints work normally.
+    const auth = useAuthStore.getState();
+    if (auth.isAuthenticated && !auth.isGuest && auth.email) {
+      try {
+        captureEvent('ghost_session_heal_started');
+        const res = await verifyEmail(auth.email, auth.displayName ?? null);
+        if (res?.ok && res.profile && res.token) {
+          await signInWithProfile(res.profile, res.token, 'email');
+          captureEvent('ghost_session_heal_succeeded');
+          return { isAuthenticated: true };
+        }
+      } catch (e) {
+        captureEvent('ghost_session_heal_failed', {
+          reason: e instanceof Error ? e.message : String(e),
+        });
+        if (__DEV__) console.warn('[boot] ghost session heal failed:', e);
+      }
+    }
+
     return { isAuthenticated: false };
   }
 

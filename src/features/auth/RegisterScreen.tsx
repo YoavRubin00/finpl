@@ -392,6 +392,30 @@ export function RegisterScreen() {
                     () => captureEvent('rc_login_succeeded', { path: 'email_register' }),
                     (err: unknown) => captureEvent('rc_login_failed', { path: 'email_register', reason: err instanceof Error ? err.message : String(err) }),
                   );
+                  // ── Mint a real JWT + server profile row (ghost-account fix) ──
+                  // convertGuestToUser / signIn above only set LOCAL auth state.
+                  // Without a JWT, /api/sync/economy 401s and nothing persists →
+                  // the account is a "ghost" whose balance resets every cold
+                  // start (28% of email signups, incident 2026-06-16).
+                  // verifyEmail creates/finds the row by email and returns a JWT;
+                  // signInWithProfile stores it, upgrades the local email
+                  // placeholder authId to the real profile.id, runs the one-time
+                  // backfill (pushes guest-era local progress to the server) and
+                  // re-logs RevenueCat with the canonical UUID. Fire-and-forget —
+                  // nav isn't blocked, and any failure self-heals on next cold
+                  // boot via bootFromToken's ghost-heal path.
+                  void (async () => {
+                    try {
+                      const { verifyEmail } = await import('../../lib/api/auth');
+                      const res = await verifyEmail(email.trim(), name.trim());
+                      if (res?.ok && res.profile && res.token) {
+                        const { signInWithProfile } = await import('../../lib/auth/lifecycle');
+                        await signInWithProfile(res.profile, res.token, 'email');
+                      }
+                    } catch {
+                      /* healed at next boot */
+                    }
+                  })();
                   // Navigation deferred to the useEffect below — it waits for
                   // the zustand state to actually reflect isAuthenticated before
                   // replacing, so the routing layer in _layout.tsx can't bounce
