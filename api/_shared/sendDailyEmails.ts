@@ -153,7 +153,10 @@ export async function runDailyEmailBatch(): Promise<DailyEmailResult> {
       const sig = trackingSecret ? signEmailClick(user.id, variantId, trackingSecret) : '';
       const clickUrl = trackingSecret
         ? `${baseUrl}/api/email/track-click?u=${encodeURIComponent(user.id)}&v=${encodeURIComponent(variantId)}&s=${sig}`
-        : 'finpl://learn';
+        // No tracking secret → skip conversion logging but STILL route through the
+        // /api/go interstitial so the CTA reliably opens the app (a bare finpl://
+        // link is ignored by Android/Gmail from an email tap).
+        : `${baseUrl}/api/go?to=learn`;
 
       let subject: string;
       let html: string;
