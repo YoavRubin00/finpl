@@ -382,7 +382,7 @@ const RETENTION_VARIANTS: Record<RetentionVariantId, RetentionVariantCopy> = {
     sharkImg: SHARK_STANDARD,
     sharkAlt: 'קפטן שארק רגוע',
     ctaText: 'טוב, ניסיון אחד 🤝',
-    cardImg: 'https://d8j0ntlcm91z4.cloudfront.net/user_3Ag7CTqAcygcnLQdO6PuD3qQkb9/hf_20260616_143904_94a6be98-5891-449d-87e2-766d586210fd.png',
+    cardImg: 'https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/images/cta/retention-welcome.png',
   },
 
   // V2 — SAD / missing-you
@@ -395,7 +395,7 @@ const RETENTION_VARIANTS: Record<RetentionVariantId, RetentionVariantCopy> = {
     sharkImg: SHARK_EMPATHIC,
     sharkAlt: 'קפטן שארק אמפתי',
     ctaText: 'באתי לבדוק ←',
-    cardImg: 'https://d8j0ntlcm91z4.cloudfront.net/user_3Ag7CTqAcygcnLQdO6PuD3qQkb9/hf_20260616_143904_94a6be98-5891-449d-87e2-766d586210fd.png',
+    cardImg: 'https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/images/cta/retention-welcome.png',
   },
 
   // V3 — STREAK URGENCY
@@ -408,7 +408,7 @@ const RETENTION_VARIANTS: Record<RetentionVariantId, RetentionVariantCopy> = {
     sharkImg: SHARK_FIRE,
     sharkAlt: 'קפטן שארק נחוש',
     ctaText: 'להציל את הרצף 🔥',
-    cardImg: 'https://d8j0ntlcm91z4.cloudfront.net/user_3Ag7CTqAcygcnLQdO6PuD3qQkb9/hf_20260616_143857_f6abb143-2641-4010-8ae5-9010c815006d.png',
+    cardImg: 'https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/images/cta/retention-streak.png',
   },
 
   // V4 — MINIMAL ASK
@@ -420,7 +420,7 @@ const RETENTION_VARIANTS: Record<RetentionVariantId, RetentionVariantCopy> = {
     sharkImg: SHARK_STANDARD,
     sharkAlt: 'קפטן שארק רגוע',
     ctaText: 'יאללה 3 דקות ←',
-    cardImg: 'https://d8j0ntlcm91z4.cloudfront.net/user_3Ag7CTqAcygcnLQdO6PuD3qQkb9/hf_20260616_143910_6ad5e6b6-cd75-47d3-9167-f2a2960359bf.png',
+    cardImg: 'https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/images/cta/retention-minute.png',
   },
 
   // V5 — WELCOME BACK
@@ -433,7 +433,7 @@ const RETENTION_VARIANTS: Record<RetentionVariantId, RetentionVariantCopy> = {
     sharkImg: SHARK_HAPPY,
     sharkAlt: 'קפטן שארק שמח',
     ctaText: 'כן, בואו נחזור ☀️',
-    cardImg: 'https://d8j0ntlcm91z4.cloudfront.net/user_3Ag7CTqAcygcnLQdO6PuD3qQkb9/hf_20260616_143904_94a6be98-5891-449d-87e2-766d586210fd.png',
+    cardImg: 'https://8mnwcjygpqev3keg.public.blob.vercel-storage.com/images/cta/retention-welcome.png',
   },
 };
 
