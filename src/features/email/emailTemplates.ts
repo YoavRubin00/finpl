@@ -230,7 +230,7 @@ export function buildDailyEmailHtml(params: {
 
     <!-- CTA buttons -->
     <div style="text-align:center;margin:0 0 12px;">
-      <a href="finpl://learn"
+      <a href="https://finpl.vercel.app/api/go?to=learn"
          style="display:inline-block;background:${BLUE};color:white;padding:16px 40px;
                 border-radius:14px;font-size:18px;font-weight:900;text-decoration:none;
                 box-shadow:0 4px 14px rgba(14,165,233,0.45);">
@@ -238,7 +238,7 @@ export function buildDailyEmailHtml(params: {
       </a>
     </div>
     <div style="text-align:center;margin:0 0 32px;">
-      <a href="finpl://index"
+      <a href="https://finpl.vercel.app/api/go?to=index"
          style="display:inline-block;background:${ORANGE};color:white;padding:14px 32px;
                 border-radius:14px;font-size:16px;font-weight:900;text-decoration:none;
                 box-shadow:0 4px 14px rgba(249,115,22,0.4);">
@@ -311,7 +311,10 @@ export function buildWelcomeEmailHtml(params: {
   whatsappUrl?: string;
 }): { subject: string; html: string; text: string } {
   const { name } = params;
-  const appDeepLink = params.appDeepLink ?? 'finpl://learn';
+  // Route through the /api/go interstitial so the CTA reliably opens the app
+  // from email taps (a bare finpl:// link is ignored by Android/Gmail). The
+  // interstitial falls back to the web if the app isn't installed.
+  const appDeepLink = params.appDeepLink ?? 'https://finpl.vercel.app/api/go?to=learn';
   const appStoreFallback = params.appStoreFallback ?? 'https://finplay.me';
   const whatsappUrl = params.whatsappUrl ?? 'https://chat.whatsapp.com/JzyPhMvOOcyBbiwzlm4psT';
   // Subject includes "פרסומת | " prefix per the Israeli Communications Law
@@ -363,6 +366,8 @@ interface RetentionVariantCopy {
   sharkImg: string;
   sharkAlt: string;
   ctaText: string;
+  /** Full come-back-to-play CTA card shown in the email body (Bar/CMO asset). */
+  cardImg: string;
 }
 
 /** Returns the variant copy. {{name}} and {{streak}} in any string get substituted by the caller. */
@@ -377,6 +382,7 @@ const RETENTION_VARIANTS: Record<RetentionVariantId, RetentionVariantCopy> = {
     sharkImg: SHARK_STANDARD,
     sharkAlt: 'קפטן שארק רגוע',
     ctaText: 'טוב, ניסיון אחד 🤝',
+    cardImg: 'https://d8j0ntlcm91z4.cloudfront.net/user_3Ag7CTqAcygcnLQdO6PuD3qQkb9/hf_20260616_143904_94a6be98-5891-449d-87e2-766d586210fd.png',
   },
 
   // V2 — SAD / missing-you
@@ -389,6 +395,7 @@ const RETENTION_VARIANTS: Record<RetentionVariantId, RetentionVariantCopy> = {
     sharkImg: SHARK_EMPATHIC,
     sharkAlt: 'קפטן שארק אמפתי',
     ctaText: 'באתי לבדוק ←',
+    cardImg: 'https://d8j0ntlcm91z4.cloudfront.net/user_3Ag7CTqAcygcnLQdO6PuD3qQkb9/hf_20260616_143904_94a6be98-5891-449d-87e2-766d586210fd.png',
   },
 
   // V3 — STREAK URGENCY
@@ -401,6 +408,7 @@ const RETENTION_VARIANTS: Record<RetentionVariantId, RetentionVariantCopy> = {
     sharkImg: SHARK_FIRE,
     sharkAlt: 'קפטן שארק נחוש',
     ctaText: 'להציל את הרצף 🔥',
+    cardImg: 'https://d8j0ntlcm91z4.cloudfront.net/user_3Ag7CTqAcygcnLQdO6PuD3qQkb9/hf_20260616_143857_f6abb143-2641-4010-8ae5-9010c815006d.png',
   },
 
   // V4 — MINIMAL ASK
@@ -412,6 +420,7 @@ const RETENTION_VARIANTS: Record<RetentionVariantId, RetentionVariantCopy> = {
     sharkImg: SHARK_STANDARD,
     sharkAlt: 'קפטן שארק רגוע',
     ctaText: 'יאללה 3 דקות ←',
+    cardImg: 'https://d8j0ntlcm91z4.cloudfront.net/user_3Ag7CTqAcygcnLQdO6PuD3qQkb9/hf_20260616_143910_6ad5e6b6-cd75-47d3-9167-f2a2960359bf.png',
   },
 
   // V5 — WELCOME BACK
@@ -424,6 +433,7 @@ const RETENTION_VARIANTS: Record<RetentionVariantId, RetentionVariantCopy> = {
     sharkImg: SHARK_HAPPY,
     sharkAlt: 'קפטן שארק שמח',
     ctaText: 'כן, בואו נחזור ☀️',
+    cardImg: 'https://d8j0ntlcm91z4.cloudfront.net/user_3Ag7CTqAcygcnLQdO6PuD3qQkb9/hf_20260616_143904_94a6be98-5891-449d-87e2-766d586210fd.png',
   },
 };
 
@@ -475,6 +485,7 @@ export function buildRetentionEmailHtml(params: {
     .split('{{sharkImg}}').join(v.sharkImg)
     .split('{{sharkAlt}}').join(escapeHtml(v.sharkAlt))
     .split('{{ctaText}}').join(escapeHtml(v.ctaText))
+    .split('{{cardImg}}').join(v.cardImg)
     .split('{{ctaUrl}}').join(escapeHtml(params.ctaUrl))
     .split('{{unsubscribeUrl}}').join(escapeHtml(params.unsubscribeUrl));
 

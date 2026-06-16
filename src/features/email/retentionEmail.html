@@ -26,8 +26,17 @@
     <div style="background:white;border-radius:16px;padding:24px;margin:0 0 20px;
                 box-shadow:0 2px 12px rgba(0,0,0,0.08);text-align:right;">
 
-      <div style="font-size:17px;color:#374151;line-height:1.7;margin:0 0 24px;">
+      <div style="font-size:17px;color:#374151;line-height:1.7;margin:0 0 20px;">
         {{bodyHtml}}
+      </div>
+
+      <!-- Come-back-to-play visual (Bar/CMO asset). onerror hides it if the
+           image host is unreachable so the email never shows a broken icon.
+           TODO: re-host on Vercel Blob for permanence. -->
+      <div style="text-align:center;margin:0 0 20px;">
+        <img src="{{cardImg}}" alt="חזרו לשחק ב-FinPlay" width="260"
+             style="display:inline-block;width:260px;max-width:100%;height:auto;border-radius:14px;"
+             onerror="this.style.display='none'">
       </div>
 
       <!-- CTA -->
