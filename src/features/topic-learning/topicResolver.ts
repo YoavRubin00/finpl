@@ -115,10 +115,16 @@ export function resolveTopics(module: Module, opts: ResolveTopicsOptions = {}): 
 
   if (module.interactiveIntro?.trim()) present.set('intro', true);
   if (module.flashcards?.length) present.set('cards', true);
-  // Yoav 2026-06-11: tutorial-video chip retired — embedded explainer
-  // videos (fc-*-video) stay INLINE in the cards flow, between regular
-  // flashcards, as Chapter 0 originally intended. The standalone chip
-  // duplicated the content + broke the 1→2→3 reading rhythm.
+  // R5.5 redux (Yoav 2026-06-16): the standalone "סרטון הסבר" chip is BACK.
+  // After the 2026-06-11 retirement the embedded explainer video (e.g.
+  // ribit-darbit.mp4 in mod-1-1) effectively VANISHED — the cards loop never
+  // surfaced it and there was no chip to reach it. Gate the chip on a real
+  // videoUri flashcard so it only appears where a video actually exists; the
+  // cards chip filters videos out (cardFilter=non-video) so it's not shown
+  // twice. Currently: mod-1-1 + two chapter-0 modules.
+  if (module.flashcards?.some((fc) => typeof fc.videoUri === 'string' && fc.videoUri.length > 0)) {
+    present.set('tutorial-video', true);
+  }
   // Recall chip surfaces only when a real recall set exists in
   // sentenceData.ts (Yoav 2026-06-12: "במושגי יסוד פיננסיים - המשך, לא
   // קיים בואו נתרגל. תוריד אותו מהמפת למידה"). Earlier the chip was

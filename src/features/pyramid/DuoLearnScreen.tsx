@@ -2061,11 +2061,14 @@ export function DuoLearnScreen() {
       'shark-dilemma': 'shark-dilemma',
     };
     const targetPhase = phaseForKind[topic.kind] ?? 'intro';
-    // Yoav 2026-06-11: cards chip now plays ALL flashcards including
-    // embedded videos — the standalone tutorial-video chip was retired
-    // so videos stay between cards as Chapter 0 originally intended.
-    // No URL filter needed.
-    const cardFilter = '';
+    // Yoav 2026-06-16: tutorial-video chip restored — the explainer video
+    // gets its own chip (cardFilter=video plays ONLY the video cards), while
+    // the cards chip filters videos out (cardFilter=non-video) so the user
+    // never sees the same video twice. Any other kind carries no filter.
+    const cardFilter =
+      topic.kind === 'tutorial-video' ? '&cardFilter=video'
+      : topic.kind === 'cards' ? '&cardFilter=non-video'
+      : '';
     isNavigatingRef.current = true;
     router.push(
       `/lesson/${current.module.id}?chapterId=${current.chapterId}&startPhase=${targetPhase}&returnTo=topic-tree${cardFilter}` as never,
