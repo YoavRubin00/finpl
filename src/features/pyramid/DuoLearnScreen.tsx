@@ -112,6 +112,10 @@ import { PearlSheet } from "../pearls/PearlSheet";
 import { InvestorQuizNode } from "../graham-personality/InvestorQuizNode";
 import { pearlConfigFor, pearlIdFor, type PearlContent } from "../pearls/pearlConfig";
 import { usePearlsStore } from "../pearls/usePearlsStore";
+import { MondialMailBadge } from "../mondial/MondialMailBadge";
+import { MondialCarouselSheet } from "../mondial/MondialCarouselSheet";
+import { useMondialStore } from "../mondial/useMondialStore";
+import { MONDIAL_LAUNCH_DATE, localDateISO } from "../mondial/mondialCarouselData";
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -1379,6 +1383,15 @@ export function DuoLearnScreen() {
   // Without this, completing a module while offline leaves it marked as
   // "active" on the map until the next successful server sync (QA 2026-05-31).
   const localCompletedModuleIds = useCompletedModulesStore((s) => s.completedIds);
+  // Featured "מאחורי המונדיאל" carousel — surfaces to RETURNING users (≥1
+  // completed module) from MONDIAL_LAUNCH_DATE onward, via a mail badge under
+  // the shark's stars. The red "new" dot clears after the first open; the
+  // badge itself stays so the carousel remains re-openable.
+  const [mondialVisible, setMondialVisible] = useState(false);
+  const mondialOpenedAt = useMondialStore((s) => s.openedAt);
+  const mondialMarkOpened = useMondialStore((s) => s.markOpened);
+  const mondialBadgeVisible =
+    localCompletedModuleIds.length > 0 && localDateISO() >= MONDIAL_LAUNCH_DATE;
   // Per-session memory of which modules already triggered the
   // PROFILE_QUESTION_BACKSTOPS modal. Skipping the modal doesn't flip the
   // store flag — without this guard a user could be re-prompted on every
@@ -2349,6 +2362,7 @@ export function DuoLearnScreen() {
         </View>
       </Modal>
       <PearlSheet visible={!!activePearl} pearl={activePearl} onClose={() => setActivePearl(null)} />
+      <MondialCarouselSheet visible={mondialVisible} onClose={() => setMondialVisible(false)} />
 
       {/* Profile-question backstop before gated chapter-0/1 modules.
           Mapping lives in PROFILE_QUESTION_BACKSTOPS (top of file). */}
@@ -2532,7 +2546,21 @@ export function DuoLearnScreen() {
                 questCompletedCount={hasActiveModule ? questCompletedCount : undefined}
                 questTotalCount={hasActiveModule ? questTotalCount : undefined}
                 onQuestPress={hasActiveModule ? handleQuestPress : undefined}
-                newsBadgeNode={hasActiveModule ? <BreakingNewsBadge /> : undefined}
+                newsBadgeNode={hasActiveModule ? (
+                  <View style={{ flexDirection: "row-reverse", alignItems: "center", gap: 8 }}>
+                    <BreakingNewsBadge />
+                    {mondialBadgeVisible ? (
+                      <MondialMailBadge
+                        isNew={!mondialOpenedAt}
+                        onPress={() => {
+                          mondialMarkOpened();
+                          setMondialVisible(true);
+                          try { captureEvent("mondial_carousel_opened", { source: "learn_map" }); } catch { /* non-fatal */ }
+                        }}
+                      />
+                    ) : null}
+                  </View>
+                ) : undefined}
                 onPearlPress={handlePearlPress}
                 onInvestorQuizPress={handleInvestorQuizPress}
                 completedPearlIds={completedPearlIds}
