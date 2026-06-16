@@ -8,7 +8,11 @@ import { runDailyEmailBatch } from '../_shared/sendDailyEmails';
  * Sends a re-engagement email to inactive users with a per-user 3-day cooldown.
  */
 export default async function handler(req: VercelRequest, res: VercelResponse) {
-  if (req.method !== 'POST') {
+  // Vercel Cron invokes this path with a GET (see the sibling crons that use
+  // toVercelHandler({ GET })). The previous POST-only guard rejected every cron
+  // run with 405, so the re-engagement emails never sent. Accept GET (cron) and
+  // POST (manual trigger); CRON_SECRET below is the real gate.
+  if (req.method !== 'POST' && req.method !== 'GET') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
