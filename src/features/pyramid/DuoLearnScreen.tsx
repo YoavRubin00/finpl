@@ -64,6 +64,7 @@ import { AnimatedPressable } from "../../components/ui/AnimatedPressable";
 import { SwipeableModal } from "../../components/ui/SwipeableModal";
 import { NotificationPermissionBanner } from "../../components/ui/NotificationPermissionBanner";
 import { ToolsDiscoveryBanner } from "../../components/ui/ToolsDiscoveryBanner";
+import { BridgeCTABanner } from "../../components/ui/BridgeCTABanner";
 import { NoFreezeUpsellBanner } from "../streak/NoFreezeUpsellBanner";
 import { StreakAtRiskBanner } from "../streak/StreakAtRiskBanner";
 import { StreakCalendarModal } from "../streak/StreakCalendarModal";
@@ -2223,6 +2224,9 @@ export function DuoLearnScreen() {
           lesson flow). Self-gated to 5s presence + cooldown + 1/day per
           calendar day. Yields slot to NotificationPermissionBanner. */}
       {!isWalkthroughActive && !pendingPostWalkthroughCTA && <ToolsDiscoveryBanner />}
+      {/* Bridge "→ לגשר" nudge — rotating real-world-benefits copy, same banner
+          base + slot-cooldown as the others so it never overlaps them. */}
+      {!isWalkthroughActive && !pendingPostWalkthroughCTA && <BridgeCTABanner />}
       {!isWalkthroughActive && <StreakAtRiskBanner />}
       {!isWalkthroughActive && <NoFreezeUpsellBanner />}
       <StreakCalendarModal visible={showStreakCalendar} onClose={() => setShowStreakCalendar(false)} />
