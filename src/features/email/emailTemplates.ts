@@ -230,7 +230,7 @@ export function buildDailyEmailHtml(params: {
 
     <!-- CTA buttons -->
     <div style="text-align:center;margin:0 0 12px;">
-      <a href="finpl://learn"
+      <a href="https://finpl.vercel.app/api/go?to=learn"
          style="display:inline-block;background:${BLUE};color:white;padding:16px 40px;
                 border-radius:14px;font-size:18px;font-weight:900;text-decoration:none;
                 box-shadow:0 4px 14px rgba(14,165,233,0.45);">
@@ -238,7 +238,7 @@ export function buildDailyEmailHtml(params: {
       </a>
     </div>
     <div style="text-align:center;margin:0 0 32px;">
-      <a href="finpl://index"
+      <a href="https://finpl.vercel.app/api/go?to=index"
          style="display:inline-block;background:${ORANGE};color:white;padding:14px 32px;
                 border-radius:14px;font-size:16px;font-weight:900;text-decoration:none;
                 box-shadow:0 4px 14px rgba(249,115,22,0.4);">
@@ -311,7 +311,10 @@ export function buildWelcomeEmailHtml(params: {
   whatsappUrl?: string;
 }): { subject: string; html: string; text: string } {
   const { name } = params;
-  const appDeepLink = params.appDeepLink ?? 'finpl://learn';
+  // Route through the /api/go interstitial so the CTA reliably opens the app
+  // from email taps (a bare finpl:// link is ignored by Android/Gmail). The
+  // interstitial falls back to the web if the app isn't installed.
+  const appDeepLink = params.appDeepLink ?? 'https://finpl.vercel.app/api/go?to=learn';
   const appStoreFallback = params.appStoreFallback ?? 'https://finplay.me';
   const whatsappUrl = params.whatsappUrl ?? 'https://chat.whatsapp.com/JzyPhMvOOcyBbiwzlm4psT';
   // Subject includes "פרסומת | " prefix per the Israeli Communications Law
