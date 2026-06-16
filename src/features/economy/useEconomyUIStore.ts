@@ -251,7 +251,26 @@ export function fireEconomyDelta(delta: {
     // Server response IS the authoritative economy — write it straight to the
     // cache instead of invalidating (which would trigger a second GET round-trip
     // for data we already have in hand).
-    .then((res) => queryClient.setQueryData<Economy | null>(economyQueryKey, res.economy))
+    .then((res) => {
+      queryClient.setQueryData<Economy | null>(economyQueryKey, res.economy);
+      // Mirror the server-authoritative economy to the profile row (keyed by
+      // email via /api/sync/profile). CRITICAL: we mirror the SERVER's values
+      // from `res.economy`, never the optimistic React Query cache. The old
+      // per-action upsertInventory calls read the cache — which on a cold-start
+      // race is still empty (coins/gems = 0) before the economy GET resolves —
+      // and wrote 0/0 absolute, wiping the real balance. Active users lost all
+      // coins+gems this way (QA 2026-06-16). Sourcing from res.economy makes the
+      // mirror impossible to clobber.
+      const eco = res.economy;
+      const authId = useAuthStore.getState().email;
+      if (eco && authId) {
+        upsertInventory(authId, {
+          xp: eco.xp ?? 0,
+          coins: eco.coins ?? 0,
+          gems: eco.gems ?? 0,
+        }).catch(() => { /* non-fatal mirror */ });
+      }
+    })
     .catch(() => { /* swallow — optimistic state stays until server is reachable */ });
 }
 
@@ -303,15 +322,11 @@ export const useEconomyUIStore = create<EconomyUIState>()(
             }).catch(() => {});
           }
         }
-        // Server-backed: fire delta
+        // Server-backed: fire delta. The /api/sync/profile mirror is handled
+        // centrally in fireEconomyDelta using the server's authoritative values
+        // (see note there) — never from the optimistic cache, which used to
+        // clobber coins/gems to 0 on cold-start races.
         fireEconomyDelta({ xpDelta: finalAmount });
-        // Also upsert inventory (best-effort with optimistic values)
-        const authId = useAuthStore.getState().email;
-        if (authId) {
-          const coins = cached?.coins ?? 0;
-          const gems = cached?.gems ?? 0;
-          upsertInventory(authId, { xp: newXP, coins, gems }).catch(() => {});
-        }
       },
 
       dismissLevelUp: () => set({ pendingLevelUp: null }),
@@ -328,32 +343,20 @@ export const useEconomyUIStore = create<EconomyUIState>()(
           if (boostCoins > 1.0) finalAmount = Math.round(finalAmount * boostCoins);
         }
         fireEconomyDelta({ coinsDelta: finalAmount });
+        // The profile-row mirror is centralized in fireEconomyDelta (server
+        // truth). Here we only append the referral-dividend telemetry event.
         const authId = useAuthStore.getState().email;
-        if (authId) {
-          const cached = queryClient.getQueryData<Economy | null>(economyQueryKey);
-          const xp = cached?.xp ?? 0;
-          const coins = (cached?.coins ?? 0) + finalAmount;
-          const gems = cached?.gems ?? 0;
-          upsertInventory(authId, { xp, coins, gems }).catch(() => {});
-          if (source) {
-            import('../../db/sync/syncCoinEvents')
-              .then((m) => m.logCoinGrant(authId, finalAmount, source))
-              .catch(() => { /* non-fatal */ });
-          }
+        if (authId && source) {
+          import('../../db/sync/syncCoinEvents')
+            .then((m) => m.logCoinGrant(authId, finalAmount, source))
+            .catch(() => { /* non-fatal */ });
         }
       },
 
       addGems: (amount: number) => {
         if (amount <= 0) return;
+        // Profile-row mirror handled centrally in fireEconomyDelta (server truth).
         fireEconomyDelta({ gemsDelta: amount });
-        const authId = useAuthStore.getState().email;
-        if (authId) {
-          const cached = queryClient.getQueryData<Economy | null>(economyQueryKey);
-          const xp = cached?.xp ?? 0;
-          const coins = cached?.coins ?? 0;
-          const gems = (cached?.gems ?? 0) + amount;
-          upsertInventory(authId, { xp, coins, gems }).catch(() => {});
-        }
       },
 
       completeDailyTask: () => {
