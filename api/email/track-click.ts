@@ -3,12 +3,24 @@ import { sql } from 'drizzle-orm';
 import { neon } from '@neondatabase/serverless';
 import { drizzle } from 'drizzle-orm/neon-http';
 import { verifyEmailClickSig } from '../../src/features/email/emailClickSig';
+import { appRedirectHtml } from '../_shared/appRedirectPage';
 
 const EXPERIMENT_ID = 'daily_email_variant';
 // Deep link straight into the app — the live click target. Was previously
 // the marketing landing page, which made the email feel like a redirect to
 // an ad rather than "open the game" (user report 2026-06-03).
 const REDIRECT_URL = 'finpl://learn';
+// Web fallback if the app isn't installed / the scheme doesn't resolve.
+const FALLBACK_URL = 'https://finplay.me';
+
+/** Serve the JS interstitial (200) instead of a 302 to a custom scheme — a
+ *  302 to finpl:// isn't followed by most browsers from an email tap, so the
+ *  CTA never opened the app. See api/_shared/appRedirectPage.ts. */
+function sendAppRedirect(res: VercelResponse): VercelResponse {
+  res.setHeader('Content-Type', 'text/html; charset=utf-8');
+  res.status(200).send(appRedirectHtml(REDIRECT_URL, FALLBACK_URL));
+  return res;
+}
 
 function getDb() {
   const dbSql = neon(process.env.DATABASE_URL ?? '');
@@ -39,22 +51,22 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   const secret = process.env.EMAIL_TRACKING_SECRET ?? '';
   if (!secret) {
     console.error('[email/track-click] EMAIL_TRACKING_SECRET not configured');
-    return res.redirect(302, REDIRECT_URL);
+    return sendAppRedirect(res);
   }
 
   if (!userId || !variantId || !sig) {
-    return res.redirect(302, REDIRECT_URL);
+    return sendAppRedirect(res);
   }
 
   // Reject obviously invalid inputs before HMAC check.
   if (userId.length > 64 || variantId.length > 64 || sig.length !== 16) {
-    return res.redirect(302, REDIRECT_URL);
+    return sendAppRedirect(res);
   }
 
   if (!verifyEmailClickSig(userId, variantId, sig, secret)) {
     // Bad signature — possibly forged. Don't record the conversion, but
     // don't expose the check either: still redirect normally.
-    return res.redirect(302, REDIRECT_URL);
+    return sendAppRedirect(res);
   }
 
   try {
@@ -74,5 +86,5 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     // Conversion logging is non-critical — still redirect.
   }
 
-  return res.redirect(302, REDIRECT_URL);
+  return sendAppRedirect(res);
 }
