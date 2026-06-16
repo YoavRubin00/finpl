@@ -109,6 +109,7 @@ import { DailyQuestsSheet } from "../daily-quests/DailyQuestsSheet";
 import { QuestPathNode } from "../daily-quests/QuestPathNode";
 import { PearlNode } from "../pearls/PearlNode";
 import { PearlSheet } from "../pearls/PearlSheet";
+import { InvestorQuizNode } from "../graham-personality/InvestorQuizNode";
 import { pearlConfigFor, pearlIdFor, type PearlContent } from "../pearls/pearlConfig";
 import { usePearlsStore } from "../pearls/usePearlsStore";
 
@@ -133,6 +134,12 @@ const WAVE_PERIOD = 6; // complete S-curve every 6 nodes
 function getNodeOffset(i: number): number {
   return Math.round(Math.sin((i * 2 * Math.PI) / WAVE_PERIOD) * WAVE_AMPLITUDE);
 }
+
+/** The single chapter-1 spot where the standalone "איזה משקיע יש בך?" quiz node
+ *  appears, sitting PARALLEL to this module's bonus pearl. One fixed anchor (not
+ *  per-session random) so the node has a stable home on the map; move this id to
+ *  relocate it within chapter 1. */
+const INVESTOR_QUIZ_ANCHOR_MODULE_ID = 'mod-1-4';
 
 // Per-arena lucide icon mapping for banners
 const ARENA_ICONS: Record<number, typeof Home> = { 0: Home, 1: Home, 2: Shield, 3: Scale, 4: TrendingUp, 5: Crown };
@@ -858,6 +865,7 @@ const ChapterSection = React.memo(function ChapterSection({
   onTopicTreeContinueAfterChest,
   onTopicTreeAdvanceToNextModule,
   onPearlReady,
+  onInvestorQuizPress,
 }: {
   arena: ArenaConfig;
   chapter: typeof chapter1Data;
@@ -926,6 +934,9 @@ const ChapterSection = React.memo(function ChapterSection({
    *  AFTER the given module. Parent uses this to measure + scroll-to
    *  the pearl when the chest dismisses (R6 Epic 4). */
   onPearlReady?: (moduleId: string, ref: View | null) => void;
+  /** Opens the standalone investor-personality quiz. Wired only for the
+   *  chapter-1 anchor module; navigates to /graham-personality. */
+  onInvestorQuizPress?: () => void;
 }) {
   const firstIncompleteIndex = chapter.modules.findIndex(
     (m) => !completedModules.includes(m.id) && !m.comingSoon && (isPro || !PRO_LOCKED_SIMS.has(m.id)),
@@ -1190,6 +1201,23 @@ const ChapterSection = React.memo(function ChapterSection({
                             : () => onPearlPress(pearl)
                         }
                       />
+                      {/* Standalone investor-personality quiz node — sits
+                          PARALLEL to this pearl (one anchored spot in chapter 1).
+                          Absolutely overlaid so it shares the pearl's vertical
+                          band without disturbing the path's connector flow, then
+                          translated ~94px to the inner side of the pearl.
+                          Always interactive (independent of Pro / pearl lock). */}
+                      {module.id === INVESTOR_QUIZ_ANCHOR_MODULE_ID && onInvestorQuizPress ? (
+                        <View
+                          pointerEvents="box-none"
+                          style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, alignItems: 'center', justifyContent: 'center', zIndex: 3 }}
+                        >
+                          <InvestorQuizNode
+                            offsetX={pearlOffsetX + (pearlOffsetX >= 0 ? -94 : 94)}
+                            onPress={onInvestorQuizPress}
+                          />
+                        </View>
+                      ) : null}
                     </View>
                     <PathConnector
                       fromOffsetX={pearlOffsetX}
@@ -1360,6 +1388,15 @@ export function DuoLearnScreen() {
     tapHaptic();
     setActivePearl(pearl);
   }, []);
+
+  // Standalone investor-personality quiz node (chapter-1 map, parallel to a
+  // pearl). Routes to the existing /graham-personality screen — which works
+  // self-contained: its X / "המשך" both router.back() to the map.
+  const handleInvestorQuizPress = useCallback(() => {
+    tapHaptic();
+    try { captureEvent('investor_quiz_opened', { source: 'learn_map', anchor_module_id: INVESTOR_QUIZ_ANCHOR_MODULE_ID }); } catch { /* non-fatal */ }
+    router.push('/graham-personality' as never);
+  }, [router]);
 
   // Auto-open the pearl when the lesson screen returns us here with
   // `?openPearl=<moduleId>` (set by navigateToNextModuleNormally in
@@ -2497,6 +2534,7 @@ export function DuoLearnScreen() {
                 onQuestPress={hasActiveModule ? handleQuestPress : undefined}
                 newsBadgeNode={hasActiveModule ? <BreakingNewsBadge /> : undefined}
                 onPearlPress={handlePearlPress}
+                onInvestorQuizPress={handleInvestorQuizPress}
                 completedPearlIds={completedPearlIds}
                 expandedTopicTreeModuleId={topicTreeModule?.module.id ?? null}
                 onTopicSelected={handleTopicSelected}
