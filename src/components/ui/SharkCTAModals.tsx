@@ -24,13 +24,15 @@ import Animated, {
   FadeOutDown,
   SlideInDown,
 } from "react-native-reanimated";
-import { X, ArrowLeft, Users, Flame } from "lucide-react-native";
+import { X, ArrowLeft, Users, Flame, Wrench } from "lucide-react-native";
 import { FINN_HAPPY } from "../../features/retention-loops/finnMascotConfig";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useNudgeQueueStore } from "../../stores/useNudgeQueueStore";
 import { STITCH } from "../../constants/theme";
 import { useBandit } from "../../features/bandit/useBandit";
 import { REFERRAL_SIGNUP_BONUS_COINS } from "../../features/social/referralConstants";
+import { toolOfTheDay } from "../../features/financial-tools/toolOfTheDay";
+import { track } from "../../lib/analytics/events";
 
 /* ────────────────────────────────────────────────────────────────────────────
    BridgeCTA, "למדנו יפה. עכשיו הזמן לעבור לעולם האמיתי."
@@ -231,6 +233,103 @@ export function SharkReferralCTA({
             >
               <Text style={[s.pillBtnText, { color: STITCH.surfaceLowest }]}>{v.cta}</Text>
               <ArrowLeft size={14} color={STITCH.surfaceLowest} />
+            </Pressable>
+          </View>
+
+          <Pressable onPress={handleDismiss} hitSlop={12} style={s.dismissX} accessibilityRole="button" accessibilityLabel="סגור">
+            <X size={15} color={STITCH.outlineVariant} />
+          </Pressable>
+        </View>
+      </Animated.View>
+    </View>
+  );
+}
+
+/* ────────────────────────────────────────────────────────────────────────────
+   ToolCTA, "תכיר את הכלי של היום" — drives financial-tool discovery
+   ──────────────────────────────────────────────────────────────────────────── */
+
+interface ToolCTAProps {
+  visible: boolean;
+  /** Receives the tool's route to navigate to. */
+  onOpenTool: (route: string) => void;
+  onDismiss: () => void;
+}
+
+/**
+ * Same toast template as SharkBridgeCTA (blue ctaBtn + ArrowLeft) so the
+ * "→ tool" CTA is visually uniform with the bridge CTA. Surfaces the SHARED
+ * toolOfTheDay() so the in-lesson nudge matches the home banner + the daily
+ * push on any given day. Frequency is governed by the caller (once/day via
+ * useToolNudgeStore) + the nudge-queue 'tools' session-lock/cooldown.
+ */
+export function SharkToolCTA({ visible, onOpenTool, onDismiss }: ToolCTAProps) {
+  const insets = useSafeAreaInsets();
+  const canShow = useNudgeQueueStore((s) => s.canShow);
+  const recordDismiss = useNudgeQueueStore((s) => s.recordDismiss);
+  const recordAct = useNudgeQueueStore((s) => s.recordAct);
+  const recordShown = useNudgeQueueStore((s) => s.recordShown);
+
+  const tool = toolOfTheDay();
+
+  useEffect(() => {
+    if (visible) {
+      recordShown('tools');
+      try {
+        track({ name: 'notification_banner_shown', props: { source: 'tools_lesson_cta', tool_key: tool.toolKey } });
+      } catch { /* non-fatal */ }
+    }
+  }, [visible, recordShown, tool.toolKey]);
+
+  if (!visible || !canShow('tools')) return null;
+
+  const handleAct = () => {
+    recordAct('tools');
+    try {
+      track({ name: 'notification_banner_action', props: { source: 'tools_lesson_cta', tool_key: tool.toolKey } });
+      track({ name: 'tool_opened', props: { tool_key: tool.toolKey } });
+    } catch { /* non-fatal */ }
+    onOpenTool(tool.route);
+  };
+
+  const handleDismiss = () => {
+    recordDismiss('tools');
+    try {
+      track({ name: 'notification_banner_dismissed', props: { source: 'tools_lesson_cta', tool_key: tool.toolKey } });
+    } catch { /* non-fatal */ }
+    onDismiss();
+  };
+
+  return (
+    <View style={[s.toastContainer, { bottom: Math.max(insets.bottom, 16) + 16 }]} pointerEvents="box-none">
+      <Animated.View
+        entering={SlideInDown.springify().damping(18).stiffness(140)}
+        exiting={FadeOutDown.duration(250)}
+        style={s.toastCard}
+      >
+        <View style={[s.accentLine, { backgroundColor: STITCH.primaryCyan }]} />
+
+        <View style={s.contentRow}>
+          <View style={s.avatarWrap}>
+            <ExpoImage source={FINN_HAPPY} accessible={false} style={s.avatar} contentFit="contain" />
+          </View>
+
+          <View style={s.textBlock}>
+            <View style={s.streakPill}>
+              <Wrench size={11} color={STITCH.tertiaryGold} />
+              <Text style={s.streakText}>הכלי של היום</Text>
+            </View>
+
+            <Text style={s.nudgeTitle}>{tool.title}</Text>
+
+            <Pressable
+              onPress={handleAct}
+              style={s.ctaBtn}
+              accessibilityRole="button"
+              accessibilityLabel="פתח את הכלי"
+            >
+              <ArrowLeft size={18} color="#ffffff" />
+              <Text style={s.ctaBtnText}>לכלי</Text>
             </Pressable>
           </View>
 

@@ -22,6 +22,12 @@ import {
     buildInactivityEscalation,
     pickFinnCopy,
 } from './finnNotificationCopy';
+import { toolOfTheDay } from '../financial-tools/toolOfTheDay';
+
+/** Midday discovery slot for the tool-of-the-day push — distinct from the
+ *  morning (09:00) and evening streak (personalised) windows so the day's
+ *  notification load is spread, never stacked at one minute. */
+const TOOL_PUSH_HOUR = 12;
 
 /** US-007: personalized send hour from recent activity pattern.
  *  Returns hour-of-day (0-23). Falls back to 20 if insufficient data (<7 entries). */
@@ -135,6 +141,25 @@ export function useFinnNotificationScheduler() {
                         { title: copy.title, body: copy.body, data: { screen: '/(tabs)/learn' } },
                     );
                     store.setLastFinnCopyTitle(copy.title);
+                }
+
+                // ── Tool-of-the-day discovery — a SECONDARY push for ENGAGED
+                // users only (active today → daysSinceActive < 1, so it never
+                // competes with a retention nudge for a churning user). At most
+                // ONE tool push/day (own 'tools' channel, midday slot). The
+                // 2/day cap below still wins: if a streak primary + streak
+                // fallback already fill both slots (an at-risk user), this
+                // tool push is cancelled — retention keeps priority.
+                if (preferences.tools && ctx.daysSinceActive < 1) {
+                    const tool = toolOfTheDay();
+                    await store.scheduleToolDiscovery(
+                        {
+                            title: tool.pushTitle,
+                            body: tool.pushBody,
+                            data: { screen: tool.route, source: 'tool_push', tool_key: tool.toolKey },
+                        },
+                        TOOL_PUSH_HOUR,
+                    );
                 }
 
                 // Safety net: never leave more than 2 notifications scheduled

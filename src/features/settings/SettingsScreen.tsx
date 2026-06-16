@@ -511,6 +511,33 @@ export function SettingsScreen() {
                     />
                   }
                 />
+                <SettingsRow
+                  icon={
+                    <LottieView
+                      source={require("../../../assets/lottie/wired-flat-153-bar-chart-hover-pinch.json")}
+                      style={styles.lottieIcon}
+                      autoPlay
+                      loop
+                    />
+                  }
+                  label="הכלי הפיננסי של היום"
+                  subtitle="כל יום כלי אחר שיכול לחסוך לך כסף"
+                  right={
+                    <Switch
+                      value={preferences.tools}
+                      onValueChange={async (v) => {
+                        if (v && !permissionGranted) { const g = await requestPermission(); if (!g) { showPermissionDeniedAlert(); return; } }
+                        if (!v) cancelChannel("tools").catch(() => {});
+                        setPreference("tools", v);
+                      }}
+                      trackColor={{ false: STITCH_BLUE.dim, true: STITCH_BLUE.success }}
+                      thumbColor="#ffffff"
+                      ios_backgroundColor={STITCH_BLUE.dim}
+                      accessibilityLabel="הכלי הפיננסי של היום"
+                      accessibilityRole="switch"
+                    />
+                  }
+                />
               </View>
             </GlowCard>
           </Animated.View>

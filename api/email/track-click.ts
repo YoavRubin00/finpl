@@ -4,6 +4,7 @@ import { neon } from '@neondatabase/serverless';
 import { drizzle } from 'drizzle-orm/neon-http';
 import { verifyEmailClickSig } from '../../src/features/email/emailClickSig';
 import { appRedirectHtml } from '../_shared/appRedirectPage';
+import { capturePostHog } from '../_shared/posthogCapture';
 
 const EXPERIMENT_ID = 'daily_email_variant';
 // Deep link straight into the app — the live click target. Was previously
@@ -85,6 +86,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     console.error('[email/track-click] bandit update failed', err);
     // Conversion logging is non-critical — still redirect.
   }
+
+  // PostHog click event — merges onto the same person as in-app events
+  // (distinct_id = userProfiles.id). Completes the email funnel
+  // sent → opened → CLICKED → (daily_active_day). Fire-and-forget.
+  await capturePostHog('retention_email_clicked', userId, { variant_id: variantId });
 
   return sendAppRedirect(res);
 }

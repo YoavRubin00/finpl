@@ -13,7 +13,7 @@ import { persist, createJSONStorage } from 'zustand/middleware';
 import { zustandStorage } from '../lib/zustandStorage';
 import { registerLocalStore } from '../lib/stores/registry';
 
-export type NudgeType = 'bridge' | 'referral';
+export type NudgeType = 'bridge' | 'referral' | 'tools';
 
 interface NudgeState {
   /** last 2 dismissal timestamps per CTA type (most recent first). Empty array if never dismissed. */
@@ -58,7 +58,7 @@ const COOLDOWN_MS = 48 * 60 * 60 * 1000; // 48h per Duolingo A/B
 const DISMISS_THRESHOLD = 2; // 2 consecutive dismisses triggers cooldown
 
 function emptyMap<T>(defaultVal: T): Record<NudgeType, T> {
-  return { bridge: defaultVal, referral: defaultVal };
+  return { bridge: defaultVal, referral: defaultVal, tools: defaultVal };
 }
 
 export const useNudgeQueueStore = create<NudgeState>()(

@@ -25,6 +25,7 @@ import { GlowCard } from "../../components/ui/GlowCard";
 import { BackButton } from "../../components/ui/BackButton";
 import { useFunStore } from "../../stores/useFunStore";
 import { FinnMailModal } from "../fun/FinnMailModal";
+import { track } from "../../lib/analytics/events";
 
 const WHATSAPP_URL = "https://chat.whatsapp.com/Clx7d0eFQmyHuQPppH6f7m?mode=gi_t";
 // Official WhatsApp glyph (brand green) for the community row, replacing the
@@ -235,7 +236,10 @@ export function MoreScreen() {
                 <MoreRow
                   icon={<SvgXml xml={WHATSAPP_SVG} width={28} height={28} />}
                   label="קהילת WhatsApp"
-                  onPress={() => Linking.openURL(WHATSAPP_URL).catch(() => Alert.alert("שגיאה"))}
+                  onPress={() => {
+                    try { track({ name: 'whatsapp_cta_tapped', props: { source: 'more_screen' } }); } catch { /* non-fatal */ }
+                    Linking.openURL(WHATSAPP_URL).catch(() => Alert.alert("שגיאה"));
+                  }}
                 />
                 <MoreRow
                   icon={<SafeLottie source={require('../../../assets/lottie/wired-flat-142-share-arrow-hover-slide.json')} style={styles.lottieIcon} autoPlay loop  />}

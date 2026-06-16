@@ -464,6 +464,9 @@ export function buildRetentionEmailHtml(params: {
   streak: number;
   ctaUrl: string;
   unsubscribeUrl: string;
+  /** Absolute URL of the open-tracking pixel (/api/email/track-open?u=..&v=..).
+   *  When omitted (e.g. previews) the pixel slot collapses to empty. */
+  openPixelUrl?: string;
 }): { subject: string; html: string } {
   const v = RETENTION_VARIANTS[params.variantId];
   if (!v) throw new Error(`Unknown retention variant: ${params.variantId}`);
@@ -476,6 +479,10 @@ export function buildRetentionEmailHtml(params: {
 
   const subject = interpolate(v.subject);
 
+  const openPixel = params.openPixelUrl
+    ? `<img src="${escapeHtml(params.openPixelUrl)}" width="1" height="1" alt="" style="display:none;width:1px;height:1px;">`
+    : '';
+
   const html = loadRetentionTemplate()
     .split('{{subject}}').join(escapeHtml(subject))
     .split('{{name}}').join(safeName)
@@ -487,6 +494,7 @@ export function buildRetentionEmailHtml(params: {
     .split('{{ctaText}}').join(escapeHtml(v.ctaText))
     .split('{{cardImg}}').join(v.cardImg)
     .split('{{ctaUrl}}').join(escapeHtml(params.ctaUrl))
+    .split('{{openPixel}}').join(openPixel)
     .split('{{unsubscribeUrl}}').join(escapeHtml(params.unsubscribeUrl));
 
   return { subject, html };

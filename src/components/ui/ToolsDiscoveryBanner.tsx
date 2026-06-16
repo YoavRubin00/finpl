@@ -14,9 +14,10 @@
  *  4. Global top-banner cooldown (10s) — yields slot to higher-priority banners
  *     like NotificationPermissionBanner / StreakAtRisk so they never overlap.
  *
- * Rotation: SUGGESTIONS[dayOfYear % 3] — same suggestion all day, rotates
- * across days so a user that ignores today's banner sees a different tool
- * tomorrow.
+ * Rotation: toolOfTheDay() — the SHARED engine (all 7 tools, dayOfYear % 7),
+ * so the same tool surfaces here, in the in-lesson SharkToolCTA, and in the
+ * daily push on any given day. A user that ignores today's banner sees a
+ * different tool tomorrow, and the full set cycles roughly weekly.
  */
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "expo-router";
@@ -29,27 +30,9 @@ import { useCompletedModulesStore } from "../../features/economy/useCompletedMod
 import { NotificationBanner } from "./NotificationBanner";
 import { FINN_STANDARD } from "../../features/retention-loops/finnMascotConfig";
 import { track } from "../../lib/analytics/events";
-
-interface Suggestion {
-  toolKey: string;
-  route: string;
-  message: string;
-}
-
-const SUGGESTIONS: Suggestion[] = [
-  { toolKey: "fire", route: "/fire-calculator", message: "מתי תוכל להפסיק לעבוד? תחשב עכשיו" },
-  { toolKey: "compound", route: "/compound-calculator", message: "תראה איך 100₪ הופכים ל-10,000₪" },
-  { toolKey: "payslip", route: "/payslip-analyzer", message: "נתח את התלוש שלך עם AI" },
-];
+import { toolOfTheDay } from "../../features/financial-tools/toolOfTheDay";
 
 const PRESENCE_DELAY_MS = 5_000;
-
-function dayOfYear(): number {
-  const now = new Date();
-  const start = new Date(now.getFullYear(), 0, 0);
-  const diff = now.getTime() - start.getTime();
-  return Math.floor(diff / (1000 * 60 * 60 * 24));
-}
 
 export function ToolsDiscoveryBanner() {
   const router = useRouter();
@@ -71,7 +54,7 @@ export function ToolsDiscoveryBanner() {
     s.completedIds.includes('mod-0-1'),
   );
 
-  const suggestion = SUGGESTIONS[dayOfYear() % SUGGESTIONS.length]!;
+  const suggestion = toolOfTheDay();
 
   const eligible =
     hasCompletedOnboarding &&
@@ -143,7 +126,7 @@ export function ToolsDiscoveryBanner() {
   return (
     <NotificationBanner
       visible={visible}
-      message={suggestion.message}
+      message={suggestion.title}
       actionLabel="לכלי"
       onAction={handleOpen}
       onDismiss={handleDismiss}

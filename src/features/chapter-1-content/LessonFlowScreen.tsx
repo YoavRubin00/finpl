@@ -85,7 +85,8 @@ import { GlobalWealthHeader } from "../../components/ui/GlobalWealthHeader";
 import { ConfettiExplosion } from "../../components/ui/ConfettiExplosion";
 import { DoubleOrNothingModal } from "../../components/ui/DoubleOrNothingModal";
 import { SharkLoveModal } from "../../components/ui/SharkLoveModal";
-import { SharkBridgeCTA, SharkReferralCTA, moduleHasDividendContent } from "../../components/ui/SharkCTAModals";
+import { SharkBridgeCTA, SharkReferralCTA, SharkToolCTA, moduleHasDividendContent } from "../../components/ui/SharkCTAModals";
+import { useToolNudgeStore } from "../../features/notifications/useToolNudgeStore";
 import { InvestmentCard } from "../daily-challenges/InvestmentCard";
 import { CrashGameCard } from "../daily-challenges/CrashGameCard";
 import { MythFeedCard } from "../myth-or-tachles/MythFeedCard";
@@ -3275,6 +3276,9 @@ export function LessonFlowScreen() {
   // Shark CTA notifications, Bridge (every 4) + Referral (every 5 + dividend content)
   const [showBridgeCTA, setShowBridgeCTA] = useState(false);
   const [showReferralCTA, setShowReferralCTA] = useState(false);
+  // Tool-of-the-day CTA — lowest-priority post-chest nudge; fires only on
+  // modules where no bridge/referral/cover is due, once/day (useToolNudgeStore).
+  const [showToolCTA, setShowToolCTA] = useState(false);
   // Triggering metadata for copy variant rotation (Duolingo A/B: +8-12% CTR)
   const [ctaModuleCount, setCtaModuleCount] = useState(0);
   const [referralByDividend, setReferralByDividend] = useState(false);
@@ -3386,7 +3390,7 @@ export function LessonFlowScreen() {
   // FIFO chokepoint for post-chest nudges: only fire Bridge/Referral after any
   // higher-priority modal (SharkLove/DoubleOrNothing/AdBonus/PostCelebration/etc)
   // has been dismissed, so the user sees them one at a time, not stacked.
-  const [pendingPostChestNudge, setPendingPostChestNudge] = useState<'referral' | 'bridge' | 'cover' | null>(null);
+  const [pendingPostChestNudge, setPendingPostChestNudge] = useState<'referral' | 'bridge' | 'cover' | 'tools' | null>(null);
   const [showCoverCTA, setShowCoverCTA] = useState(false);
   const [coverCTAShownCount, setCoverCTAShownCount] = useState(0);
 
@@ -3433,6 +3437,7 @@ export function LessonFlowScreen() {
     setShowSharkLove(false);
     setShowBridgeCTA(false);
     setShowReferralCTA(false);
+    setShowToolCTA(false);
     setPendingPostChestNudge(null);
     moduleStartTimeRef.current = Date.now();
     shouldTriggerDoNRef.current = false;
@@ -3556,6 +3561,9 @@ export function LessonFlowScreen() {
       else if (pendingPostChestNudge === 'cover') {
         setCoverCTAShownCount(c => c + 1);
         setShowCoverCTA(true);
+      } else if (pendingPostChestNudge === 'tools') {
+        useToolNudgeStore.getState().markShown();
+        setShowToolCTA(true);
       }
       setPendingPostChestNudge(null);
     }, 600);
@@ -3690,6 +3698,7 @@ export function LessonFlowScreen() {
       showReferralCTA ||
       showBridgeCTA ||
       showCoverCTA ||
+      showToolCTA ||
       showWisdom ||
       showPartyInvite ||
       showPostCelebration ||
@@ -3705,7 +3714,7 @@ export function LessonFlowScreen() {
     // Wait 2s after all higher-priority nudges have cleared
     const timer = setTimeout(() => setShowPostCelebration(true), 2000);
     return () => clearTimeout(timer);
-  }, [chestClaimed, showDoubleOrNothing, showSharkLove, showAdBonus, showReferralCTA, showBridgeCTA, showCoverCTA, showWisdom, showPartyInvite, currentModIdx, showPostCelebration, showBreakMessage, pendingPostChestNudge, id, isGuest]);
+  }, [chestClaimed, showDoubleOrNothing, showSharkLove, showAdBonus, showReferralCTA, showBridgeCTA, showCoverCTA, showToolCTA, showWisdom, showPartyInvite, currentModIdx, showPostCelebration, showBreakMessage, pendingPostChestNudge, id, isGuest]);
 
   // Auto-next countdown: when the celebration modal opens, start a 3s timer
   // that fires goToNextSequentialModule unless the user cancels or quits.
@@ -4983,6 +4992,16 @@ export function LessonFlowScreen() {
                             } else if (willShowBridge) {
                               setCtaModuleCount(totalCompletedNow);
                               safeTimeout(() => setPendingPostChestNudge('bridge'), 2000);
+                            } else if (
+                              // Lowest priority: tool-of-the-day discovery on a
+                              // module where no bridge/referral/cover is due.
+                              // Once/day (useToolNudgeStore) so it never nags;
+                              // skip the very first module (too early to upsell tools).
+                              totalCompletedNow > 0 &&
+                              id !== "mod-0-1" &&
+                              !useToolNudgeStore.getState().isShownToday()
+                            ) {
+                              safeTimeout(() => setPendingPostChestNudge('tools'), 2000);
                             }
                           }, 2000);
                         }
@@ -5990,6 +6009,13 @@ export function LessonFlowScreen() {
         onDismiss={() => setShowReferralCTA(false)}
         moduleCount={ctaModuleCount}
         triggeredByDividend={referralByDividend}
+      />
+
+      {/* ── Tool-of-the-day CTA — lowest priority, once/day ── */}
+      <SharkToolCTA
+        visible={showToolCTA && !showSharkLove && !showDoubleOrNothing && !showPostCelebration && !showBridgeCTA && !showReferralCTA && !showPartyInvite}
+        onOpenTool={(route) => { setShowToolCTA(false); router.push(route as never); }}
+        onDismiss={() => setShowToolCTA(false)}
       />
 
       {/* ── Post-module celebration ── */}

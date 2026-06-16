@@ -1,4 +1,4 @@
-import React, { useCallback, useRef } from "react";
+import React, { useCallback, useEffect, useRef } from "react";
 import { View, Text, Pressable, StyleSheet, Dimensions, Linking } from "react-native";
 import { Image as ExpoImage } from "expo-image";
 import Animated, { FadeIn, FadeInUp } from "react-native-reanimated";
@@ -57,9 +57,21 @@ export const FeedWhatsAppNudgeCard = React.memo(function FeedWhatsAppNudgeCard({
   const { playSound } = useSoundEffect();
   const mountedAtRef = useRef<number>(Date.now());
 
+  // Dedicated whatsapp_cta_shown — measures the community-join funnel
+  // independently of the pearl funnel (which PearlCtaStage owns). source
+  // splits in-game vs email so we can compare acquisition channels.
+  useEffect(() => {
+    try {
+      track({ name: 'whatsapp_cta_shown', props: { source: 'pearl_feed' } });
+    } catch { /* non-fatal */ }
+  }, []);
+
   const handleJoin = useCallback(() => {
     successHaptic();
     playSound("btn_click_soft_1");
+    try {
+      track({ name: 'whatsapp_cta_tapped', props: { source: 'pearl_feed' } });
+    } catch { /* non-fatal */ }
     if (afterModuleId) {
       try {
         track({

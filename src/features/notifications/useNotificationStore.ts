@@ -93,6 +93,13 @@ const CONTENT: Record<NotificationChannelId, Notifications.NotificationContentIn
     body: "ניסיתם להשתמש בפיצ'רים PRO. בואו נסגור את זה?",
     data: { screen: "/pricing" },
   },
+  // Tool-of-the-day discovery push. title/body/screen are overridden per-call
+  // (scheduleToolDiscovery) with the actual rotated tool — this is the fallback.
+  tools: {
+    title: "כלי שיכול לחסוך לך כסף",
+    body: "גלה את הכלי הפיננסי של היום. בדיקה של דקה.",
+    data: { screen: "/fire-calculator" },
+  },
 };
 
 // ─── Android channel setup ───────────────────────────────────────────────────
@@ -148,6 +155,10 @@ async function ensureAndroidChannels() {
     name: "הצעות PRO",
     importance: Notifications.AndroidImportance.DEFAULT,
   });
+  await Notifications.setNotificationChannelAsync("tools", {
+    name: "הכלי הפיננסי של היום",
+    importance: Notifications.AndroidImportance.DEFAULT,
+  });
 }
 
 // ─── Store ────────────────────────────────────────────────────────────────────
@@ -168,6 +179,9 @@ interface NotificationActions {
   reset: () => void;
   scheduleStreakReminder: (hourOfDay?: number) => Promise<void>;
   scheduleStreakReminderWithCopy: (content: Notifications.NotificationContentInput, hourOfDay?: number) => Promise<void>;
+  /** Tool-of-the-day discovery push at the personalised hour. Lowest-priority
+   *  daily push — only scheduled for engaged users (no streak/inactivity risk). */
+  scheduleToolDiscovery: (content: Notifications.NotificationContentInput, hourOfDay?: number) => Promise<void>;
   /** US-009 — schedule a 23:00 "save your streak" fallback on a SEPARATE
    *  channel so it doesn't overwrite the primary streak reminder. The
    *  scheduler can cancel just this channel when the user logs a session. */
@@ -201,7 +215,7 @@ export const useNotificationStore = create<NotificationState & NotificationActio
       // Apple 4.5.4: ALL notification preferences default to OFF on fresh install.
       // Notifications are only scheduled after the user explicitly toggles a
       // preference ON in Settings, which triggers the system permission prompt.
-      preferences: { streak: false, chest: false, challenge: false, dailyChallenge: false, squadInvite: false, squadChest: false, morning: false, inactivity: false, marketHook: false, aiInsight: false, upgradeNudge: false },
+      preferences: { streak: false, chest: false, challenge: false, dailyChallenge: false, squadInvite: false, squadChest: false, morning: false, inactivity: false, marketHook: false, aiInsight: false, upgradeNudge: false, tools: false },
       lastScheduledDate: null as string | null,
       lastFinnCopyTitle: null as string | null,
       lastAIInsightNotifDate: null as string | null,
@@ -415,7 +429,7 @@ export const useNotificationStore = create<NotificationState & NotificationActio
       cancelAll: async (): Promise<void> => {
         await Notifications.cancelAllScheduledNotificationsAsync();
         // Apple 4.5.4: reset preferences to all-OFF (mirrors initial state).
-        set({ scheduled: [], preferences: { streak: false, chest: false, challenge: false, dailyChallenge: false, squadInvite: false, squadChest: false, morning: false, inactivity: false, marketHook: false, aiInsight: false, upgradeNudge: false } });
+        set({ scheduled: [], preferences: { streak: false, chest: false, challenge: false, dailyChallenge: false, squadInvite: false, squadChest: false, morning: false, inactivity: false, marketHook: false, aiInsight: false, upgradeNudge: false, tools: false } });
       },
 
       setPreference: (channelId, enabled) => {
@@ -478,6 +492,23 @@ export const useNotificationStore = create<NotificationState & NotificationActio
         set({ scheduled: [...scheduled.filter((s) => s.channelId !== "morning"), { channelId: "morning" as const, identifier }] });
       },
 
+      /** Schedule the tool-of-the-day discovery push at a personalised hour. */
+      scheduleToolDiscovery: async (content, hourOfDay = 20): Promise<void> => {
+        const { permissionGranted, scheduled, cancelChannel } = get();
+        if (!permissionGranted) return;
+        await cancelChannel("tools");
+        const identifier = await Notifications.scheduleNotificationAsync({
+          content,
+          trigger: {
+            type: Notifications.SchedulableTriggerInputTypes.DAILY,
+            hour: hourOfDay,
+            minute: 0,
+            channelId: "tools",
+          },
+        });
+        set({ scheduled: [...scheduled.filter((s) => s.channelId !== "tools"), { channelId: "tools" as const, identifier }] });
+      },
+
       /** Schedule inactivity notification, capped to 1 only */
       scheduleInactivityEscalation: async (notifications): Promise<void> => {
         const { permissionGranted, scheduled, cancelChannel } = get();
@@ -523,7 +554,7 @@ export const useNotificationStore = create<NotificationState & NotificationActio
         scheduled: [],
         bannerDismissed: false,
         bannerDismissedAt: null,
-        preferences: { streak: false, chest: false, challenge: false, dailyChallenge: false, squadInvite: false, squadChest: false, morning: false, inactivity: false, marketHook: false, aiInsight: false, upgradeNudge: false },
+        preferences: { streak: false, chest: false, challenge: false, dailyChallenge: false, squadInvite: false, squadChest: false, morning: false, inactivity: false, marketHook: false, aiInsight: false, upgradeNudge: false, tools: false },
         lastScheduledDate: null,
         lastFinnCopyTitle: null,
         lastAIInsightNotifDate: null,

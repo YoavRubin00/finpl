@@ -152,6 +152,16 @@ export type AppEvent =
   | { name: 'purchase_failed'; props: { bundle_id: string; bundle_type?: string; reason?: string; error_message?: string } }
   | { name: 'purchase_cancelled'; props: { bundle_id: string; bundle_type: string } }
 
+  // ── WhatsApp community ─────────────────────────────────────────────────
+  // The "join the WhatsApp community" CTA appears in several places (the
+  // in-lesson/pearl FeedWhatsAppNudgeCard, the More screen, and the welcome
+  // email). `source` splits which surface drove the join so we can see
+  // whether in-game or email is the stronger acquisition channel for the
+  // community. The welcome-email tap is captured server-side (api/email/
+  // wa-click.ts) with the same event name + source:'welcome_email'.
+  | { name: 'whatsapp_cta_shown'; props: { source: 'pearl_feed' | 'more_screen' | string } }
+  | { name: 'whatsapp_cta_tapped'; props: { source: 'pearl_feed' | 'more_screen' | 'welcome_email' | string } }
+
   // ── Referral / Friends ─────────────────────────────────────────────────
   | { name: 'referral_screen_viewed'; props: { has_code: boolean; friends_count: number; dividend_available: number; already_collected_today: boolean } }
   | { name: 'referral_link_copied'; props: { code: string } }

@@ -11,6 +11,7 @@ import {
 } from '../../src/features/email/emailTemplates';
 import { signEmailClick } from '../../src/features/email/emailClickSig';
 import { selectBestVariant } from '../../src/features/bandit/sampleBetaBandit';
+import { capturePostHog } from './posthogCapture';
 
 const EXPERIMENT_ID = 'daily_email_variant';
 
@@ -158,6 +159,11 @@ export async function runDailyEmailBatch(): Promise<DailyEmailResult> {
         // link is ignored by Android/Gmail from an email tap).
         : `${baseUrl}/api/go?to=learn`;
 
+      // Open-tracking pixel — fires retention_email_opened to PostHog. No
+      // signature needed: an open is low-stakes (worst case a forged open),
+      // unlike a click which mutates the bandit posterior.
+      const openPixelUrl = `${baseUrl}/api/email/track-open?u=${encodeURIComponent(user.id)}&v=${encodeURIComponent(variantId)}`;
+
       let subject: string;
       let html: string;
       try {
@@ -167,6 +173,7 @@ export async function runDailyEmailBatch(): Promise<DailyEmailResult> {
           streak: user.currentStreak ?? 0,
           ctaUrl: clickUrl,
           unsubscribeUrl,
+          openPixelUrl,
         });
         subject = built.subject;
         html = built.html;
@@ -210,6 +217,14 @@ export async function runDailyEmailBatch(): Promise<DailyEmailResult> {
       } catch (err) {
         console.error('[send-daily] bandit impression record failed', err);
       }
+
+      // PostHog SENT event — the top of the funnel. variant_id lets every
+      // downstream metric (opened/clicked/returned) be sliced per A/B arm.
+      await capturePostHog('retention_email_sent', user.id, {
+        variant_id: variantId,
+        cohort: 'daily_cron',
+        streak: user.currentStreak ?? 0,
+      });
 
       sent++;
     } catch (err) {
