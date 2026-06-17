@@ -104,6 +104,7 @@ import { GlobalQuestCompletionModal } from "../src/features/daily-quests/GlobalQ
 import { DailyBridgeNudgeModal } from "../src/components/ui/DailyBridgeNudgeModal";
 import { InviteFriendsNudgeModal } from "../src/components/ui/InviteFriendsNudgeModal";
 import { PostWalkthroughRegisterCTAGate } from "../src/features/auth/PostWalkthroughRegisterCTA";
+import { PostWalkthroughProTeaserGate } from "../src/features/subscription/PostWalkthroughProTeaser";
 import { ForceUpdateGate } from "../src/features/force-update/ForceUpdateGate";
 import { TermsReconsentGate } from "../src/features/legal/TermsReconsentGate";
 import { configureRevenueCat } from "../src/services/revenueCat";
@@ -678,6 +679,11 @@ function RootLayoutInner() {
                   set by AppWalkthroughOverlay on completion + isGuest +
                   pathname check (only on the learn map, not /pricing). */}
               <PostWalkthroughRegisterCTAGate />
+              {/* Soft post-walkthrough Pro teaser (non-Pro users). Self-gated:
+                  pendingPostWalkthroughProTeaser flag + !isPro + NOT pending the
+                  register CTA (never stacks) + learn-map pathname. Restores the
+                  paywall_viewed{post_walkthrough} moment without blocking. */}
+              <PostWalkthroughProTeaserGate />
               {/* Force-update gate. Mounted unconditionally — internal fetch
                   decides whether to block based on remote config. Rendered
                   AFTER other modals so its full-screen Modal sits on top of
