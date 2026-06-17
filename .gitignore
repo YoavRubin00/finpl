@@ -5,6 +5,12 @@ node_modules
 .env.production
 .expo/
 dist/
+
+# Marketing / Higgsfield outputs (carousels, reels, brand cards, CTA images,
+# Story graphics). Generated social/brand media NEVER belongs in the app — keep
+# it out of git AND the build (also listed in .easignore). NEVER save generated
+# marketing media under assets/ (that bundles into the .aab/.ipa).
+marketing-output/
 *.jks
 *.p8
 *.p12

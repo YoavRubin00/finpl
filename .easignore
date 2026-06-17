@@ -13,6 +13,9 @@ BRAND_VOICE.md
 
 # Non-essential dirs
 docs/
+# Marketing / Higgsfield outputs (carousels, reels, brand cards, CTA images).
+# Generated social/brand media — never part of the app bundle.
+marketing-output/
 stitch-skills/
 skills/
 public/
