@@ -17,22 +17,22 @@ export const MONDIAL_SLIDES: MondialSlide[] = [
   {
     id: "cover",
     source: require("../../../assets/IMAGES/mondial-carousel/slide1-cover.webp"),
-    alt: "5 מספרים מטורפים מאחורי המונדיאל",
+    alt: "3 מספרים מטורפים מאחורי המונדיאל",
   },
   {
     id: "betting",
     source: require("../../../assets/IMAGES/mondial-carousel/slide2-betting.webp"),
-    alt: "50 מיליארד דולר יהמרו על המונדיאל — הבית תמיד מנצח",
+    alt: "הערכה: ההימורים הרשמיים על המונדיאל יסתכמו ב-50 מיליארד דולר",
   },
   {
     id: "tickets",
     source: require("../../../assets/IMAGES/mondial-carousel/slide3-tickets.webp"),
-    alt: "כרטיס לגמר עד 11,000 דולר ל-90 דקות",
+    alt: "מחיר כרטיס בסיסי לגמר: 11,000 דולר",
   },
   {
     id: "ronaldo",
     source: require("../../../assets/IMAGES/mondial-carousel/slide4-ronaldo.webp"),
-    alt: "רונאלדו מרוויח 767 אלף דולר ביום, גם כשהוא ישן",
+    alt: "רונאלדו, במונדיאל האחרון שלו, עדיין מרוויח 767,000 דולר ביום",
   },
   {
     id: "cta",

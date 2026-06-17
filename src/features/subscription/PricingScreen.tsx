@@ -634,15 +634,21 @@ export function PricingScreen() {
                     // offering (no purchase attempt, no error popup). Otherwise
                     // it's the real purchase CTA. Disabled while a purchase is
                     // in flight OR the offering is still loading.
-                    onPress={offerState === 'unavailable' ? loadOffering : handleUpgrade}
-                    disabled={isLoading || offerState === 'loading'}
+                    // Guest takes precedence: a guest has no real RC account, so
+                    // the offering resolves to 'unavailable' and the CTA used to
+                    // get stuck in the silent retry loop ("המנוי אינו זמין"). For a
+                    // guest the real blocker is the missing account — route them to
+                    // register (handleUpgrade already handles the guest→register
+                    // flow), and don't gate the button on the offering loading.
+                    onPress={isGuest ? handleUpgrade : (offerState === 'unavailable' ? loadOffering : handleUpgrade)}
+                    disabled={isLoading || (!isGuest && offerState === 'loading')}
                     accessibilityRole="button"
-                    accessibilityLabel={offerState === 'unavailable' ? 'נסה שוב' : 'שדרג עכשיו ל-PRO'}
-                    accessibilityState={{ disabled: isLoading || offerState === 'loading' }}
+                    accessibilityLabel={isGuest ? 'להירשם עכשיו' : (offerState === 'unavailable' ? 'נסה שוב' : 'שדרג עכשיו ל-PRO')}
+                    accessibilityState={{ disabled: isLoading || (!isGuest && offerState === 'loading') }}
                     style={({ pressed }) => [
                       styles.ctaButtonBase,
                       pressed && { opacity: 0.9, transform: [{ scale: 0.98 }] },
-                      (isLoading || offerState === 'loading') && { opacity: 0.6 },
+                      (isLoading || (!isGuest && offerState === 'loading')) && { opacity: 0.6 },
                     ]}
                   >
                     <LinearGradient
@@ -650,12 +656,24 @@ export function PricingScreen() {
                       start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
                       style={styles.ctaButtonGradient}
                     >
-                      {(isLoading || offerState === 'loading') ? (
+                      {(isLoading || (!isGuest && offerState === 'loading')) ? (
                         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, justifyContent: 'center' }}>
                           <ActivityIndicator color="#ffffff" size="small" />
                           {offerState === 'loading' && !isLoading ? (
                             <Text style={styles.ctaText}>טוען מסלולים…</Text>
                           ) : null}
+                        </View>
+                      ) : isGuest ? (
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, justifyContent: 'center' }}>
+                          <View accessible={false}>
+                            <LottieView
+                              source={require("../../../assets/lottie/Pro Animation 3rd.json")}
+                              style={styles.ctaLottie}
+                              autoPlay
+                              loop
+                            />
+                          </View>
+                          <Text style={styles.ctaText}>להירשם עכשיו</Text>
                         </View>
                       ) : offerState === 'unavailable' ? (
                         <Text style={styles.ctaText}>נסה שוב</Text>
@@ -680,7 +698,11 @@ export function PricingScreen() {
 
                 {/* Silent "unavailable" / soft purchase-failure notices —
                     friendly, non-blocking, never a hard error alert. */}
-                {offerState === 'unavailable' ? (
+                {isGuest ? (
+                  <Text style={[styles.priceMain, { color: theme.textMuted, fontSize: 12, marginTop: 6 }]}>
+                    כדי להפעיל Pro צריך חשבון — חינם, לוקח שנייה
+                  </Text>
+                ) : offerState === 'unavailable' ? (
                   <Text style={[styles.priceMain, { color: theme.textMuted, fontSize: 12, marginTop: 6 }]}>
                     המנוי אינו זמין כרגע. נסו שוב בעוד רגע.
                   </Text>
